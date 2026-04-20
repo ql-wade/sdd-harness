@@ -4,12 +4,14 @@ import { program } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 import chalk from 'chalk';
+import os from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const TEMPLATES_DIR = path.join(__dirname, '..', 'templates');
-const VERSION = '2.5.0';
+const VERSION = '2.6.0';
 
 // 平台配置
 const PLATFORMS = {
@@ -47,6 +49,72 @@ function detectPlatform(cwd) {
   if (hasClaude) return 'claude';
   if (hasOpencode) return 'opencode';
   return 'both'; // 默认双平台安装
+}
+
+async function ensureDependencies(platforms, dryRun, cwd) {
+  const homeDir = os.homedir();
+  let installed = 0;
+
+  console.log(chalk.blue('\n🔍 Checking prerequisites...\n'));
+
+  try {
+    const version = execSync('openspec --version', { encoding: 'utf8' }).trim();
+    console.log(chalk.green(`  ✅ openspec CLI: ${version}`));
+  } catch {
+    if (dryRun) {
+      console.log(chalk.cyan('  [dry-run] Would install openspec CLI via brew'));
+    } else {
+      console.log(chalk.yellow('  ⚠️  openspec CLI not found, installing...'));
+      try {
+        execSync('brew install openspec', { encoding: 'utf8', stdio: 'inherit' });
+        console.log(chalk.green('  ✅ openspec CLI installed'));
+        installed++;
+      } catch {
+        console.log(chalk.red('  ❌ Failed to install openspec CLI. Install manually: brew install openspec'));
+      }
+    }
+  }
+
+  const globalSkills = [
+    { name: 'planning-with-files', repo: 'https://github.com/OthmanAdi/planning-with-files' },
+    { name: 'superpowers', repo: 'https://github.com/obra/superpowers' },
+  ];
+
+  for (const plat of platforms) {
+    const config = PLATFORMS[plat];
+    const globalSkillsDir = path.join(homeDir, config.skillsDir.replace(/^\./, '.'));
+
+    for (const skill of globalSkills) {
+      const skillPath = path.join(globalSkillsDir, skill.name);
+
+      if (await fs.pathExists(skillPath)) {
+        console.log(chalk.green(`  ✅ ${config.name}: ${skill.name}`));
+      } else if (await fs.pathExists(path.join(cwd, config.skillsDir, skill.name))) {
+        console.log(chalk.green(`  ✅ ${config.name}: ${skill.name} (project-level)`));
+      } else {
+        if (dryRun) {
+          console.log(chalk.cyan(`  [dry-run] Would clone ${skill.name} to ${globalSkillsDir}/`));
+        } else {
+          console.log(chalk.yellow(`  ⚠️  ${config.name}: ${skill.name} not found, cloning...`));
+          try {
+            await fs.ensureDir(globalSkillsDir);
+            execSync(`git clone --depth 1 ${skill.repo} "${skillPath}"`, { encoding: 'utf8', stdio: 'pipe' });
+            console.log(chalk.green(`  ✅ ${config.name}: ${skill.name} cloned to ${config.skillsDir}/`));
+            installed++;
+          } catch (e) {
+            console.log(chalk.red(`  ❌ Failed to clone ${skill.name}: ${e.message}`));
+            console.log(chalk.gray(`     Manual: git clone ${skill.repo} ${skillPath}`));
+          }
+        }
+      }
+    }
+  }
+
+  if (installed > 0) {
+    console.log(chalk.green(`\n  ✓ Installed ${installed} missing prerequisite(s)`));
+  }
+
+  console.log();
 }
 
 // 复制 skills 目录
@@ -191,7 +259,8 @@ program
     }
 
     try {
-      // 0. P0#3: 清理旧命令
+      await ensureDependencies(platformsToInstall, options.dryRun, cwd);
+
       const legacyCount = await cleanupLegacyCommands(cwd, platformsToInstall, options.dryRun);
       if (legacyCount > 0 && !options.dryRun) {
         console.log(chalk.green(`✓ Cleaned ${legacyCount} legacy command(s)\n`));
@@ -314,7 +383,8 @@ program
 program
   .command('doctor')
   .description('Diagnose SDD workflow health')
-  .action(async () => {
+  .option('--fix', 'Auto-fix issues (install missing dependencies)', false)
+  .action(async (options) => {
     const cwd = process.cwd();
     let issues = 0;
 
@@ -390,7 +460,6 @@ program
 
     // Check openspec CLI
     try {
-      const { execSync } = await import('child_process');
       const version = execSync('openspec --version', { encoding: 'utf8' }).trim();
       console.log(chalk.green(`✅ openspec CLI: ${version}`));
     } catch {
@@ -401,8 +470,14 @@ program
     console.log();
     if (issues === 0) {
       console.log(chalk.green.bold('✅ All checks passed! SDD workflow is healthy.\n'));
+    } else if (options.fix) {
+      console.log(chalk.yellow.bold(`⚠️  Found ${issues} issue(s). Auto-fixing...\n`));
+      const detected = detectPlatform(cwd);
+      const platforms = detected === 'both' ? ['claude', 'opencode'] : [detected];
+      await ensureDependencies(platforms, false, cwd);
+      console.log(chalk.green('✅ Auto-fix complete. Run `sdd doctor` again to verify.\n'));
     } else {
-      console.log(chalk.yellow.bold(`⚠️  Found ${issues} issue(s). Fix them for optimal workflow.\n`));
+      console.log(chalk.yellow.bold(`⚠️  Found ${issues} issue(s). Run \`sdd doctor --fix\` to auto-fix, or fix manually.\n`));
     }
   });
 
