@@ -394,7 +394,7 @@ program
       const version = execSync('openspec --version', { encoding: 'utf8' }).trim();
       console.log(chalk.green(`✅ openspec CLI: ${version}`));
     } catch {
-      console.log(chalk.yellow('⚠️  openspec CLI not found — install with `npm install -g openspec`'));
+      console.log(chalk.yellow('⚠️  openspec CLI not found — install with `brew install openspec`'));
       issues++;
     }
 

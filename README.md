@@ -13,7 +13,13 @@ npx sdd-ql-workflow init          # 自动检测平台，双平台安装
 npx sdd-ql-workflow init --dry-run # 预览，不写文件
 ```
 
-前置依赖：[planning-with-files](https://github.com/OthmanAdi/planning-with-files)、[superpowers](https://github.com/obra/superpowers)（需提前安装到对应平台 skills 目录）。
+前置依赖：
+
+| 依赖 | 安装方式 | 说明 |
+|------|---------|------|
+| [OpenSpec CLI](https://github.com/Fission-AI/OpenSpec) | `brew install openspec` | 工作流引擎，Skills 调用它管理变更状态 |
+| [planning-with-files](https://github.com/OthmanAdi/planning-with-files) | 克隆到 `~/.claude/skills/` 或 `~/.opencode/skills/` | 上下文追踪文件管理 |
+| [superpowers](https://github.com/obra/superpowers) | 克隆到 `~/.claude/skills/` 或 `~/.opencode/skills/` | 专业开发技能集 |
 
 ---
 
