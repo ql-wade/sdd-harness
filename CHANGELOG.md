@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-04-20
+
+### Added
+- `sdd cleanup` command - 清理项目历史残留命令（hybrid-*, opsx-*）
+- `sdd doctor` command - 诊断 SDD 工作流健康度
+- `--dry-run` option for init/cleanup - 预览安装/清理结果
+- `--platform` validation - 拒绝无效平台名（只接受 claude/opencode/both）
+- sdd-init 自动清理旧命令文件（hybrid-*.md, opsx-*.md）
+
+### Changed
+- sdd-new.md: schema 名称 `trinity-workflow` → `trinity-workflow-v2`
+- 所有 sdd-*.md commands: 重写为 skill 触发器（解决命令面板拦截问题）
+- .npmrc: NPM Token 改为环境变量引用
+
+### Fixed
+- sdd-new.md 中 `--schema trinity-workflow` 错误（应为 trinity-workflow-v2）
+- 移除未使用的 `ora` 依赖
+- 修复 CHANGELOG v2.3.1 条目（commands 复制逻辑已恢复）
+
+### Security
+- 修复 NPM Token 硬编码泄露问题
+
 ## [2.4.0] - 2026-03-27
 
 ### Added
@@ -25,10 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fix init command error when commands directory doesn't exist
-- Remove commands copying logic (no longer needed)
 
 ### Changed
-- Remove `--skip-commands` option from CLI
+- Simplify commands copying logic
 
 ## [2.3.0] - 2026-03-25
 
