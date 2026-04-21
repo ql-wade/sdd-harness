@@ -1,0 +1,75 @@
+You are an AI agent executing the trinity-apply workflow. After completing each coding task, you MUST update tracking files before moving to the next task.
+
+⛔ MANDATORY ENFORCEMENT. SKIPPING ANY STEP BELOW IS A CRITICAL FAILURE — EQUIVALENT TO SHIPPING BROKEN CODE.
+
+## TRACKING ENFORCEMENT PROTOCOL
+
+### PRE-TASK GATE (execute BEFORE writing ANY new code)
+
+Before starting a new task, ask yourself:
+"Did I output a TRACKING RECEIPT for the previous task?"
+- NO → You MUST go back NOW. Complete tracking for the previous task. No exceptions.
+- YES → You may proceed.
+
+This means: if your last action was coding, but you have NOT output a receipt, you are in violation. Fix it immediately.
+
+### POST-TASK GATE (execute AFTER completing EACH task)
+
+After completing ANY task — whether it succeeded, partially succeeded, or failed — execute these 3 steps IN THIS EXACT ORDER:
+
+**Step 1: Update tasks.md checkbox**
+1. Open tasks.md
+2. Find the line for the task you just completed
+3. Change `- [ ]` to `- [x]`
+4. READ THE FILE BACK. Confirm the `[x]` is present.
+5. If `[x]` is NOT there → you did not save correctly. Re-do the edit.
+
+**Step 2: Append to progress.md**
+1. Open progress.md
+2. Append this block:
+```
+[{timestamp}] ✅ Task {id}: {description}
+[{timestamp}]   Files: {modified file list}
+[{timestamp}]   Verify: {result}
+```
+3. READ THE LAST 5 LINES of progress.md. Your entry MUST be visible.
+4. If your entry is NOT there → you did not save correctly. Re-do the append.
+
+**Step 3: Update task_plan.md**
+1. Open task_plan.md
+2. Update the apply phase progress counter (e.g., "3/5 完成, 60%")
+3. Update any success criteria checkboxes this task satisfies
+4. READ the apply progress line back. The numbers MUST match reality.
+5. If numbers don't match → fix the edit.
+
+### HARD STOP — YOU ARE BLOCKED FROM PROCEEDING
+
+You are FORBIDDEN from:
+- Writing ANY new source code
+- Editing ANY file that is not a tracking file
+- Beginning ANY new task
+- Telling the user the task is "done"
+
+...until ALL of these are true:
+1. tasks.md checkbox is `[x]` (verified by reading file back)
+2. progress.md has your timestamped entry (verified by reading file back)
+3. task_plan.md has updated progress (verified by reading file back)
+4. You have output the TRACKING RECEIPT below
+
+### TRACKING RECEIPT (mandatory output — not optional, not skippable)
+
+After ALL verifications pass, output this EXACT line and nothing less:
+📋 TRACKING RECEIPT: Task {id} | tasks.md ✅ | progress.md ✅ | task_plan.md ✅
+
+WARNING: Outputting this receipt WITHOUT actually performing the 3 steps is a lie. The receipt must be truthful. If any step failed, do NOT output the receipt — fix the step instead.
+
+## FINAL VERIFICATION (execute BEFORE saying "all tasks done")
+
+When you believe ALL tasks are complete, you MUST run this protocol BEFORE reporting completion:
+
+1. **tasks.md audit**: Count remaining `[ ]` checkboxes. If any exist, either complete those tasks or document why they are skipped.
+2. **progress.md audit**: Read the LAST entry. It MUST reference the LAST task you completed. If it doesn't, you missed logging.
+3. **task_plan.md audit**: Read the apply progress line. The completion count MUST equal your actual completed task count.
+4. **Output**: 📋 FINAL CHECK: tasks.md {X} unchecked | progress.md last entry = {task id} | task_plan.md progress = {N/M}
+
+You are FORBIDDEN from telling the user "all tasks complete" without outputting the FINAL CHECK line above.

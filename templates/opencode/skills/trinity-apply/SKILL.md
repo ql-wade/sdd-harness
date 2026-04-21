@@ -5,7 +5,7 @@ license: MIT
 compatibility: 需要 openspec CLI 和 planning-with-files skill
 metadata:
   author: trinity
-  version: "2.2"
+  version: "2.3"
   generatedBy: "trinity-workflow-v2"
 ---
 
@@ -137,12 +137,70 @@ openspec instructions apply --change "<change-id>" --json
 4. 运行验证步骤（类型检查、单元测试等）
 ```
 
-#### 2.5 每个任务完成后
+#### 2.5 PRE-TASK GATE（开始新任务前执行）
+
+⛔ MANDATORY ENFORCEMENT. 跳过任何步骤 = 严重缺陷（等同发布损坏代码）。
 
 ```
-1. 更新 tasks.md 的 checkbox: `- [ ]` → `- [x]`
-2. 调用 planning-with-files 更新进度（见 Phase 3）
-3. 继续下一个任务
+在编写任何新代码之前，自检：
+"上一个任务是否输出了 TRACKING RECEIPT？"
+  → 没有：立即停止，回去完成上一个任务的追踪更新
+  → 有：可以继续新任务
+```
+
+#### 2.6 POST-TASK GATE（每个任务完成后执行）
+
+```
+每个任务完成后——无论成功、部分成功还是失败——必须按以下精确顺序执行：
+
+⛔ POST-TASK GATE: 3 步验证，缺一不可。每步都必须 READ-BACK 验证。
+
+GATE-1: 更新 tasks.md
+  1. 打开 tasks.md
+  2. 找到当前任务行，将 `- [ ]` 改为 `- [x]`
+  3. READ-BACK: 重新读取该行，确认 `[x]` 存在
+  4. 如果 `[x]` 不存在 → 保存失败，重新编辑
+
+GATE-2: 更新 progress.md
+  1. 打开 progress.md，追加以下内容:
+     [{timestamp}] ✅ 任务 {id}: {描述}
+     [{timestamp}]   文件: {修改的文件列表}
+     [{timestamp}]   验证: {结果}
+  2. READ-BACK: 读取最后 5 行，确认新条目可见
+  3. 如果条目不存在 → 保存失败，重新追加
+
+GATE-3: 更新 task_plan.md
+  1. 打开 task_plan.md
+  2. 更新 apply 阶段进度计数器 (例如 "3/5 完成, 60%")
+  3. 更新成功指标 checkbox（如有对应实现）
+  4. READ-BACK: 读取进度行，确认数字与实际一致
+  5. 数字不一致 → 修复编辑
+```
+
+#### 2.7 HARD STOP（禁止继续）
+
+```
+⛔ 以下行为被禁止，直到所有追踪更新完成并验证：
+  - 编写任何新的源代码
+  - 编辑任何非追踪文件
+  - 开始任何新任务
+  - 告诉用户任务"已完成"
+
+只有当以下条件全部满足时才可继续：
+  1. tasks.md checkbox 已更新 (通过 READ-BACK 验证)
+  2. progress.md 已追加日志 (通过 READ-BACK 验证)
+  3. task_plan.md 进度已更新 (通过 READ-BACK 验证)
+  4. 已输出 TRACKING RECEIPT（见下方）
+```
+
+#### 2.8 TRACKING RECEIPT（必须输出）
+
+```
+所有验证通过后，输出以下精确行：
+📋 TRACKING RECEIPT: Task {id} | tasks.md ✅ | progress.md ✅ | task_plan.md ✅
+
+⚠️ 警告：在未实际执行 3 步更新的情况下输出此 receipt 是虚假报告。
+如果任何步骤失败，不要输出 receipt——先修复步骤。
 ```
 
 ---
@@ -271,4 +329,39 @@ Use the Skill tool with skill: "planning-with-files"
 - 不侵入修改 planning-with-files skill
 - 不侵入修改 OpenSpec 官方 skills
 - 通过调用实现集成，而非内联逻辑
-- 每个任务完成都调用 planning-with-files 更新追踪
+- 每个任务完成都更新追踪文件（PRE-TASK GATE + POST-TASK GATE + HARD STOP）
+- READ-BACK 验证：每次文件更新后必须读取确认
+- TRACKING RECEIPT：任务间传递的强制凭证
+- FINAL CHECK：阶段结束前的审计协议
+
+---
+
+## 自检协议（所有任务完成后 — 最终验证）
+
+⛔ 在告诉用户"所有任务完成"之前，必须执行以下协议。
+
+```
+FINAL VERIFICATION — 如果任何一项失败，修复后再继续：
+
+1. tasks.md 审计:
+   未完成数 = grep -c '\- \[ \]' tasks.md
+   IF 未完成数 > 0:
+     → 逐个检查未勾选的任务，确认是真的未做还是忘记勾选
+     → 忘记勾选的立即修复
+     → 确实未做的要完成或记录原因
+
+2. progress.md 审计:
+   读取最后一条日志
+   确认该条目引用的是你最后完成的任务
+   如果不是 → 你遗漏了日志记录，修复
+
+3. task_plan.md 审计:
+   读取 apply 进度行
+   确认完成计数等于你实际完成的任务数
+   数字不匹配 → 修复进度行
+
+4. 输出（必须）:
+   📋 FINAL CHECK: tasks.md {X} unchecked | progress.md last={task_id} | task_plan.md progress={N/M}
+
+⛔ 未输出 FINAL CHECK 行，禁止报告"所有任务完成"。
+```
