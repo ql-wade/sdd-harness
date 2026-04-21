@@ -11,7 +11,7 @@ import os from 'os';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const TEMPLATES_DIR = path.join(__dirname, '..', 'templates');
-const VERSION = '2.6.2';
+const VERSION = '2.6.3';
 
 // 平台配置
 const PLATFORMS = {

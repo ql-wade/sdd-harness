@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.2] - 2026-04-21
+
+### Fixed
+- **trinity-apply 追踪文件强制更新**：AI Agent 执行任务时不再跳过追踪文件更新
+- 通过 Autoresearch 4 轮优化（28→40 分）强化追踪执行机制
+- 新增 PRE-TASK GATE：开始新任务前检查上一个 TRACKING RECEIPT
+- 新增 POST-TASK GATE：3 步 READ-BACK 验证（写后读回确认）
+- 新增 HARD STOP：追踪未完成前禁止编写新代码
+- 新增 TRACKING RECEIPT：任务间强制凭证 + 虚假报告警告
+- 新增 FINAL VERIFICATION：阶段结束审计协议
+- 修复 CLI `VERSION` 常量未与 `package.json` 同步的问题
+
+### Changed
+- `trinity-apply` SKILL.md v2.2 → v2.3（autoresearch 优化）
+- Claude Code + OpenCode 双模板同步更新
+
+## [2.6.0] - 2026-04-21
+
+### Added
+- `sdd init` 自动安装前置依赖（openspec CLI、planning-with-files、superpowers）
+- `sdd doctor --fix` 一键修复所有问题
+- 前置依赖检测逻辑（`ensureDependencies()`）
+
+### Changed
+- README 添加 OpenSpec CLI 到前置依赖表
+- `doctor` 命令安装提示修正：`npm install` → `brew install openspec`
+
 ## [2.5.0] - 2026-04-20
 
 ### Added
