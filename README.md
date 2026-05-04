@@ -9,7 +9,7 @@
 ## 安装
 
 ```bash
-npx sdd-ql-workflow init          # 自动检测平台，双平台安装
+npx sdd-ql-workflow init          # 自动检测平台；未检测到时安装全部支持平台
 npx sdd-ql-workflow init --dry-run # 预览，不写文件
 ```
 
@@ -18,8 +18,8 @@ npx sdd-ql-workflow init --dry-run # 预览，不写文件
 | 依赖 | 安装方式 | 说明 |
 |------|---------|------|
 | [OpenSpec CLI](https://github.com/Fission-AI/OpenSpec) | `brew install openspec` | 工作流引擎，Skills 调用它管理变更状态 |
-| [planning-with-files](https://github.com/OthmanAdi/planning-with-files) | 克隆到 `~/.claude/skills/` 或 `~/.opencode/skills/` | 上下文追踪文件管理 |
-| [superpowers](https://github.com/obra/superpowers) | 克隆到 `~/.claude/skills/` 或 `~/.opencode/skills/` | 专业开发技能集 |
+| [planning-with-files](https://github.com/OthmanAdi/planning-with-files) | 克隆到 `~/.claude/skills/`、`~/.opencode/skills/` 或 `~/.codex/skills/` | 上下文追踪文件管理 |
+| [superpowers](https://github.com/obra/superpowers) | 克隆到 `~/.claude/skills/`、`~/.opencode/skills/` 或 `~/.codex/skills/` | 专业开发技能集 |
 
 ---
 
@@ -32,6 +32,7 @@ npx sdd-ql-workflow init
 # 2. 告诉 AI 创建变更
 # Claude Code: /sdd-new "feature-x"
 # OpenCode:    直接说 "执行 trinity-new 创建 feature-x"
+# Codex:       直接说 "使用 trinity-new 创建 feature-x"
 
 # 3. AI 自动执行完整工作流
 # /trinity:continue → /trinity:apply → /trinity:verify → /trinity:archive
@@ -48,7 +49,7 @@ sdd init [options]
 
 Options:
   -f, --force           覆盖已存在文件
-  --platform <name>     claude | opencode | both（默认自动检测）
+  --platform <name>     claude | opencode | codex | both | all（默认自动检测）
   --dry-run             预览模式，不写文件
   --skip-schema         跳过 openspec schema
   --skip-skills         跳过 skills
@@ -89,7 +90,7 @@ sdd list
 | `/trinity:archive` | 归档变更 |
 | `/trinity:ff "描述"` | 快速流程（一键 proposal→tasks） |
 
-> **OpenCode 用户注意**：`/` 开头的命令可能被命令面板拦截。用自然语言触发更可靠，例如"执行 trinity-apply"。
+> **OpenCode/Codex 用户注意**：`/` 开头的命令可能不可用或被命令面板拦截。用自然语言触发更可靠，例如"执行 trinity-apply"。
 
 ---
 
@@ -98,7 +99,7 @@ sdd list
 ```
 ┌──────────────────────────────────────────────────┐
 │  Skills（核心逻辑）                                │
-│  .claude/skills/trinity-*/  或  .opencode/skills/ │
+│  .claude/skills/、.opencode/skills/ 或 .codex/skills/ │
 │  每个 skill 包含完整的三段式流程：                  │
 │    1. planning-with-files → 读取上下文             │
 │    2. openspec CLI        → 管理变更状态           │
@@ -146,9 +147,11 @@ your-project/
 ├── .claude/                              # Claude Code（如果检测到）
 │   ├── skills/trinity-*/                 # 7 个 Trinity skills
 │   └── commands/sdd-*.md                 # 4 个快捷命令
-└── .opencode/                            # OpenCode（如果检测到）
-    ├── skills/trinity-*/
-    └── commands/sdd-*.md
+├── .opencode/                            # OpenCode（如果检测到）
+│   ├── skills/trinity-*/
+│   └── commands/sdd-*.md
+└── .codex/                               # Codex（如果检测到）
+    └── skills/trinity-*/
 ```
 
 ---
@@ -159,14 +162,16 @@ your-project/
 |------|--------|----------|---------|
 | Claude Code | `.claude/skills/` | `.claude/commands/` | `.claude/` 目录存在 |
 | OpenCode | `.opencode/skills/` | `.opencode/commands/` | `.opencode/` 目录存在 |
-| 双平台 | 两者都安装 | 两者都安装 | 默认 |
+| Codex | `.codex/skills/` | 不适用 | `.codex/` 目录存在 |
+| both | Claude Code + OpenCode | 两者都安装 | 兼容旧用法 |
+| all | 三个平台都安装 | Claude Code + OpenCode commands | 未检测到平台目录时默认 |
 
 ---
 
 ## 开发
 
 ```bash
-cd packages/sdd-cli && npm install
+cd sdd-cli && npm install
 node bin/cli.js init --dry-run    # 本地测试
 node bin/cli.js doctor            # 健康检查
 ```
