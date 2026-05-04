@@ -26,8 +26,16 @@ const PLATFORMS = {
     skillsDir: '.opencode/skills',
     commandsDir: '.opencode/commands',
     templateDir: 'opencode',
+  },
+  codex: {
+    name: 'Codex',
+    skillsDir: '.codex/skills',
+    commandsDir: null,
+    templateDir: 'codex',
   }
 };
+
+const ALL_PLATFORMS = Object.keys(PLATFORMS);
 
 // 需要清理的旧命令文件
 const LEGACY_COMMANDS = [
@@ -38,17 +46,27 @@ const LEGACY_COMMANDS = [
 ];
 
 // 有效的 platform 参数值
-const VALID_PLATFORMS = ['claude', 'opencode', 'both'];
+const VALID_PLATFORMS = [...ALL_PLATFORMS, 'both', 'all'];
 
-// 自动检测平台
-function detectPlatform(cwd) {
-  const hasClaude = fs.existsSync(path.join(cwd, '.claude'));
-  const hasOpencode = fs.existsSync(path.join(cwd, '.opencode'));
+// 自动检测平台。没有检测到平台目录时，默认安装所有支持的平台。
+function detectPlatforms(cwd) {
+  const detected = ALL_PLATFORMS.filter(platform => {
+    const platformRoot = PLATFORMS[platform].skillsDir.split('/')[0];
+    return fs.existsSync(path.join(cwd, platformRoot));
+  });
 
-  if (hasClaude && hasOpencode) return 'both';
-  if (hasClaude) return 'claude';
-  if (hasOpencode) return 'opencode';
-  return 'both'; // 默认双平台安装
+  return detected.length > 0 ? detected : ALL_PLATFORMS;
+}
+
+function resolvePlatforms(platformOption, cwd) {
+  if (platformOption === 'all') return ALL_PLATFORMS;
+  if (platformOption === 'both') return ['claude', 'opencode'];
+  if (platformOption) return [platformOption];
+  return detectPlatforms(cwd);
+}
+
+function formatPlatforms(platforms) {
+  return platforms.map(p => PLATFORMS[p].name).join(' + ');
 }
 
 async function ensureDependencies(platforms, dryRun, cwd) {
@@ -220,7 +238,7 @@ async function cleanupLegacyCommands(cwd, platforms, dryRun) {
 
 program
   .name('sdd-cli')
-  .description('SDD (Skill-Driven Development) CLI Tool - Trinity Workflow v2 (Claude Code + OpenCode)')
+  .description('SDD (Skill-Driven Development) CLI Tool - Trinity Workflow v2 (Claude Code + OpenCode + Codex)')
   .version(VERSION);
 
 program
@@ -230,7 +248,7 @@ program
   .option('--skip-schema', 'Skip copying schema files', false)
   .option('--skip-skills', 'Skip copying skill files', false)
   .option('--skip-commands', 'Skip copying command files', false)
-  .option('--platform <name>', 'Target platform: claude | opencode | both (auto-detect by default)')
+  .option('--platform <name>', 'Target platform: claude | opencode | codex | both | all (auto-detect by default)')
   .option('--dry-run', 'Preview changes without writing files', false)
   .action(async (options) => {
     const cwd = process.cwd();
@@ -242,15 +260,12 @@ program
       process.exit(1);
     }
 
-    const detected = detectPlatform(cwd);
-    const platform = options.platform || detected;
-
-    // 确定要安装的平台列表
-    const platformsToInstall = platform === 'both' ? ['claude', 'opencode'] : [platform];
+    const detectedPlatforms = detectPlatforms(cwd);
+    const platformsToInstall = resolvePlatforms(options.platform, cwd);
 
     console.log(chalk.blue(`\n🚀 Initializing SDD workflow v${VERSION}...\n`));
-    console.log(chalk.gray(`Detected: ${detected === 'both' ? 'Claude Code + OpenCode' : PLATFORMS[detected]?.name || 'Unknown'}`));
-    console.log(chalk.gray(`Installing: ${platformsToInstall.map(p => PLATFORMS[p].name).join(' + ')}`));
+    console.log(chalk.gray(`Detected: ${formatPlatforms(detectedPlatforms)}`));
+    console.log(chalk.gray(`Installing: ${formatPlatforms(platformsToInstall)}`));
     console.log(chalk.gray(`Schema: trinity-workflow-v2`));
     if (options.dryRun) {
       console.log(chalk.yellow(`Mode: DRY RUN (no files will be written)\n`));
@@ -362,8 +377,7 @@ program
   .option('--all', 'Clean all known legacy files', false)
   .action(async (options) => {
     const cwd = process.cwd();
-    const detected = detectPlatform(cwd);
-    const platforms = detected === 'both' ? ['claude', 'opencode'] : [detected];
+    const platforms = detectPlatforms(cwd);
 
     console.log(chalk.blue('\n🧹 Cleaning up legacy SDD files...\n'));
 
@@ -415,8 +429,7 @@ program
     }
 
     // Check skills per platform
-    const detected = detectPlatform(cwd);
-    const platforms = detected === 'both' ? ['claude', 'opencode'] : [detected];
+    const platforms = detectPlatforms(cwd);
 
     for (const plat of platforms) {
       const config = PLATFORMS[plat];
@@ -445,6 +458,7 @@ program
     // Check legacy commands
     for (const plat of platforms) {
       const config = PLATFORMS[plat];
+      if (!config.commandsDir) continue;
       const commandsDir = path.join(cwd, config.commandsDir);
       if (await fs.pathExists(commandsDir)) {
         const existing = await fs.readdir(commandsDir);
@@ -472,8 +486,7 @@ program
       console.log(chalk.green.bold('✅ All checks passed! SDD workflow is healthy.\n'));
     } else if (options.fix) {
       console.log(chalk.yellow.bold(`⚠️  Found ${issues} issue(s). Auto-fixing...\n`));
-      const detected = detectPlatform(cwd);
-      const platforms = detected === 'both' ? ['claude', 'opencode'] : [detected];
+      const platforms = detectPlatforms(cwd);
       await ensureDependencies(platforms, false, cwd);
       console.log(chalk.green('✅ Auto-fix complete. Run `sdd doctor` again to verify.\n'));
     } else {
@@ -499,7 +512,9 @@ program
     console.log(chalk.bold('\n🖥️ Supported Platforms:'));
     console.log('   claude   - Claude Code (.claude/skills/, .claude/commands/)');
     console.log('   opencode - OpenCode (.opencode/skills/, .opencode/commands/)');
-    console.log('   both     - Install for both platforms (default)\n');
+    console.log('   codex    - Codex (.codex/skills/)');
+    console.log('   both     - Install for Claude Code and OpenCode');
+    console.log('   all      - Install for all supported platforms (default when no platform is detected)\n');
   });
 
 program.parse();

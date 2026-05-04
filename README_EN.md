@@ -58,6 +58,7 @@ Trinity Skills supports multiple AI coding assistants:
 |----------|-----------------|--------|
 | **Claude Code** | `.claude/skills/` | ✅ Supported |
 | **OpenCode** | `.opencode/skills/` | ✅ Supported |
+| **Codex** | `.codex/skills/` | ✅ Supported |
 | **Cursor** | `.cursor/skills/` | 🚧 Planned |
 
 ---
@@ -78,6 +79,9 @@ git clone https://github.com/OthmanAdi/planning-with-files ~/.claude/skills/plan
 
 # OpenCode
 git clone https://github.com/OthmanAdi/planning-with-files ~/.opencode/skills/planning-with-files
+
+# Codex
+git clone https://github.com/OthmanAdi/planning-with-files ~/.codex/skills/planning-with-files
 ```
 
 #### 2. superpowers
@@ -90,6 +94,9 @@ git clone https://github.com/obra/superpowers ~/.claude/skills/superpowers
 
 # OpenCode
 git clone https://github.com/obra/superpowers ~/.opencode/skills/superpowers
+
+# Codex
+git clone https://github.com/obra/superpowers ~/.codex/skills/superpowers
 ```
 
 ### Install sdd-cli
@@ -114,9 +121,8 @@ npx sdd-ql-workflow init
 # Specify platform
 npx sdd-ql-workflow init --platform claude
 npx sdd-ql-workflow init --platform opencode
-
-# Use v2 schema (recommended)
-npx sdd-ql-workflow init --schema trinity-workflow-v2
+npx sdd-ql-workflow init --platform codex
+npx sdd-ql-workflow init --platform all
 
 # After initialization, available commands:
 # /trinity:new "description"    - Create new change (with tracking)
@@ -233,8 +239,7 @@ Options:
   --skip-commands       Skip command file copying
   --skip-schema         Skip schema file copying
   --skip-skills         Skip skill file copying
-  --platform <name>     Target platform: claude | opencode (default: auto-detect)
-  --schema <name>       Schema name: trinity-workflow-v2 | trinity-workflow | hybrid-workflow
+  --platform <name>     Target platform: claude | opencode | codex | both | all (default: auto-detect)
 ```
 
 ### `list`
@@ -307,15 +312,24 @@ your-project/
         └── trinity-*/
 ```
 
+### Codex Project
+
+```
+your-project/
+├── openspec/
+│   └── ...
+└── .codex/
+    └── skills/
+        └── trinity-*/
+```
+
 ---
 
 ## Available Schemas
 
 | Schema | Description |
 |--------|-------------|
-| `trinity-workflow-v2` | Trinity Architecture Workflow v2 (Recommended) |
-| `trinity-workflow` | Trinity Architecture Workflow v1 |
-| `hybrid-workflow` | Hybrid Workflow |
+| `trinity-workflow-v2` | Trinity Architecture Workflow v2 |
 
 ---
 
@@ -331,13 +345,18 @@ your-project/
 - Commands stored in `.opencode/commands/` directory
 - Requires oh-my-opencode plugin
 
+### Codex
+- Skills stored in `.codex/skills/` directory
+- Uses `SKILL.md` file format
+- Trigger Trinity skills with natural language, for example: "use trinity-new to create feature-x"
+
 ---
 
 ## Development
 
 ```bash
 # Install dependencies
-cd packages/sdd-cli
+cd sdd-cli
 npm install
 
 # Local testing
@@ -393,7 +412,7 @@ node bin/cli.js list
 - Support Delta Specs mechanism
 - Profile mode auto-selection
 - 3-Strike Protocol integration
-- **Multi-platform support**: Claude Code + OpenCode
+- **Multi-platform support**: Claude Code + OpenCode + Codex
 
 ### v0.4.1
 - Initial version
