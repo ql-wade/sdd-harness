@@ -1,75 +1,26 @@
-# Spec: {{feature-name}}
+# Spec: {{capability-name}}
 
 > Created: {{date}}
-> Based on: design.md
+> Status: Draft
 
-## Feature: {{feature-name}}
+## ADDED Requirements
 
-**Description:**
-<!-- 功能描述 -->
+### Requirement: [需求标题]
 
----
+<!-- 用自然语言描述这个需求要实现什么 -->
 
-## Scenario 1: [场景名称]
+#### Scenario: [场景名称] (Happy Path)
 
-### Happy Path
+**Given** <!-- 前置条件 -->
 
-```gherkin
-Feature: {{feature-name}}
+**When** <!-- 触发动作 -->
 
-  Scenario: [成功场景]
-    Given [前置条件]
-    When [触发动作]
-    Then [期望结果]
+**Then** <!-- 预期结果 -->
 
-  Scenario: [另一个成功场景]
-    Given [前置条件]
-    And [额外条件]
-    When [触发动作]
-    Then [期望结果]
-    And [额外验证]
-```
+#### Scenario: [异常场景名称] (Edge Case)
 
-### Edge Cases
+**Given**
 
-```gherkin
-  Scenario: [边界情况]
-    Given [边界条件]
-    When [触发动作]
-    Then [期望处理]
-```
+**When**
 
-### Error Cases
-
-```gherkin
-  Scenario: [错误情况]
-    Given [错误前置条件]
-    When [触发动作]
-    Then [错误提示]
-```
-
----
-
-## Acceptance Criteria
-
-- [ ] Given 条件 A，执行操作 B，结果 C
-- [ ] 错误情况正确处理
-- [ ] 边界情况正确处理
-- [ ] 性能符合预期
-
-## Test Data
-
-```json
-{
-  "testInput": "value",
-  "expectedOutput": "expected"
-}
-```
-
-## Notes
-
-<!-- 补充说明 -->
-
----
-
-*Part of change: {{change-name}}*
+**Then**

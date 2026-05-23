@@ -7,68 +7,26 @@ schema: trinity-workflow-v2
 # ================================================
 # Trinity 扩展：Context 文件声明
 # ================================================
-# Trinity Skills 会读取这些文件，合并到 context 中注入所有 artifacts
-# 支持多个文件，按顺序合并
 contextFiles:
   - path: openspec/project.md
-    description: 项目架构、子项目、设计文档引用
-    required: false  # 文件不存在时不报错，仅警告
+    description: 项目架构、子模块、设计文档引用
+    required: false
 
 # ================================================
 # 项目上下文（注入所有产出物）
+#
+# ⚠️ 重要：此字段应包含项目特定的技术栈和编码规范。
+#   不要在此处写入通用工作流说明（那些属于 schema.yaml）。
+#   模板是通用的（零技术栈假设），此处负责"我是谁"。
+#
+# 官方限制: context 最大 50KB。建议控制在 50 行以内。
 # ================================================
 context: |
-  语言：中文（简体）
-  所有产出物必须用简体中文撰写。
+  语言：中文（简体）。所有产出物必须用简体中文撰写。
 
-  # 项目技术栈（根据项目实际情况修改）
-  Tech stack: TypeScript, React, Node.js
-
-  # ═══════════════════════════════════════════════
-  # Trinity Workflow v2（三位一体架构 v2）
-  # ═══════════════════════════════════════════════
-
-  本项目使用 trinity-workflow-v2 schema，它深度集成了 OpenSpec 最佳实践：
-
-  ## 1. 统一追踪层（Planning-with-Files 作为上下文锚点）
-  - task_plan.md: 阶段、目标、决策、错误日志
-  - findings.md: 技术发现、架构决策 (ADR)
-  - progress.md: 会话进度日志、操作记录
-  - delta-log.md: Delta Specs 变更记录 (ADDED/MODIFIED/REMOVED)
-
-  Agent 可随时读取这些文件了解：
-  - 当前在哪个阶段？
-  - 哪些文件已修改？
-  - 为什么修改？
-  - 下一步是什么？
-
-  ## 2. Schema 驱动的 Artifact 依赖图
-  proposal.md ──→ specs/ (Delta) ──→ design.md ──→ tasks.md
-
-  ## 3. Profile 模式（自动选择）
-  - Quick: proposal → tasks → apply (单文件修改、Bug Fix)
-  - Core: proposal → specs → design → tasks → apply (新功能、多文件)
-  - Expanded: 全流程 + verify (复杂功能、跨模块)
-
-  ## 4. 执行层（3-Strike 协议 + Verify 集成）
-  - Attempt 1: 诊断并修复
-  - Attempt 2: 尝试替代方案
-  - Attempt 3: 重新思考问题
-  - 3次失败后: 升级给用户
-
-  ## 5. Trinity Skills（内联 OpenSpec 逻辑 + 追踪）
-  - /trinity:new - 创建新变更
-  - /trinity:continue - 继续下一个 artifact
-  - /trinity:apply - 执行任务
-  - /trinity:verify - 验证实现
-  - /trinity:archive - 归档变更
-  - /trinity:ff - 快速流程
-
-  [MUST] 使用 Trinity Skills 自动管理追踪文件。
-
-  ## 6. 平台兼容性
-  - Claude Code: Skills 在 .claude/skills/
-  - OpenCode: Skills 在 .opencode/skills/
+  # ⚠️ 请根据实际项目修改以下内容！
+  # Tech stack: [根据你的项目填写，例如]
+  # 代码规范: [snake_case / camelCase / PascalCase 等]
 
 # ================================================
 # 产出物规则（按 artifact 类型）
@@ -84,7 +42,7 @@ rules:
     - 必须列出风险与缓解措施
     - 必须说明 Breaking Changes
   specs:
-    - 使用 Given/When/Then 格式
+    - 使用 Given/When/Then Gherkin 格式
     - 覆盖 Happy Path、Edge Cases、Error Cases
   tasks:
     - 每个任务 2-5 分钟可完成
@@ -121,7 +79,7 @@ trinity:
     archive:
       trigger: "/trinity:archive"
       file: "trinity-archive/SKILL.md"
-      description: "归档变更（带追踪）"
+      description: "归档变更"
 
     ff:
       trigger: "/trinity:ff"
