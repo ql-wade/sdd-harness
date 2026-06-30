@@ -387,13 +387,14 @@ async function copySDDHarnessLayer(cwd, dryRun, force) {
     const hookWiring = {
       SessionStart: [{ matcher: 'startup|resume', hooks: [{ type: 'command', command: '${CLAUDE_PROJECT_DIR}/.sdd/hooks/session-start.sh' }] }],
       PreToolUse: [{ matcher: 'Edit|Write|MultiEdit|Bash', hooks: [{ type: 'command', command: '${CLAUDE_PROJECT_DIR}/.sdd/hooks/pre-tool-gate.sh' }] }],
+      PostToolUse: [{ matcher: 'Edit|Write|MultiEdit', hooks: [{ type: 'command', command: '${CLAUDE_PROJECT_DIR}/.sdd/hooks/post-tool-tracker.sh' }] }],
       PreCompact: [{ matcher: 'manual|auto', hooks: [{ type: 'command', command: '${CLAUDE_PROJECT_DIR}/.sdd/hooks/pre-compact-save.sh' }] }],
       SubagentStop: [{ hooks: [{ type: 'command', command: '${CLAUDE_PROJECT_DIR}/.sdd/hooks/subagent-stop-contract.sh' }] }],
       Stop: [{ hooks: [{ type: 'command', command: '${CLAUDE_PROJECT_DIR}/.sdd/hooks/stop-gate.sh' }] }],
     };
     settings.hooks = { ...settings.hooks, ...hookWiring };
     await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
-    console.log(chalk.green(`  ✓ .claude/settings.json hooks 接线（5 hook）`));
+    console.log(chalk.green(`  ✓ .claude/settings.json hooks 接线（6 hook）`));
   }
 
   // config.yaml + dependencies.yaml
