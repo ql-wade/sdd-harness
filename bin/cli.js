@@ -4,14 +4,57 @@ import { program } from 'commander';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import chalk from 'chalk';
 import os from 'os';
+import { validateProbe } from '../lib/probe-validator.js';
+import { evaluateStageAdvanceGate } from '../lib/stage-gates.js';
+import { auditEvidence } from '../lib/evidence-audit.js';
+import { captureTestInventory, evaluateGeneratedTests } from '../lib/generation-gate.js';
+import { runProjectTestGate } from '../lib/project-test-gate.js';
+import { auditWorkflowRun } from '../lib/workflow-audit.js';
+import { auditDeliverables } from '../lib/deliverable-audit.js';
+
+// 异步流式执行 claude（非 execSync 阻塞；stdin 走临时文件 redirect；慷慨超时）
+//
+// 关键修复（autoresearch 发现）：必须分配真 PTY。
+//   claude -p 在非 TTY 环境下写完文件后不退出，会 hang 并变孤儿进程。
+//   - macOS: script -q /dev/null bash -c '...' 分配 pseudo-terminal，claude 正常退出
+//   - 其他平台: 回退到裸 spawn（无 PTY，但保留进程组 kill 避免孤儿）
+//
+// 进程管理：detached:true 建新进程组，超时用 process.kill(-pid) 杀整组（bash+claude），
+//   修复旧版 SIGKILL 只杀 bash 导致 claude 成孤儿进程的 bug。
+async function ptyClaude(prompt, { cwd, model = 'sonnet', timeoutMs = 600000 } = {}) {
+  const tmp = path.join(os.tmpdir(), `sdd-prompt-${process.pid}-${Date.now()}.txt`);
+  await fs.writeFile(tmp, prompt);
+  const inner = `claude -p --bare --dangerously-skip-permissions --model ${model} < "${tmp}"`;
+  // macOS: 真 PTY 让 claude -p 写完即正常退出
+  const usePTY = os.platform() === 'darwin';
+  const wrapped = usePTY
+    ? `script -q /dev/null bash -c '${inner.replace(/'/g, "'\\''")}'`
+    : inner;
+  return new Promise((resolve) => {
+    const sh = spawn('bash', ['-c', wrapped], {
+      cwd: cwd || process.cwd(),
+      detached: true,               // 新进程组：可整组 kill
+      stdio: ['ignore', 'inherit', 'inherit'],
+    });
+    let done = false;
+    const finish = (result) => { if (done) return; done = true; fs.remove(tmp).catch(() => {}); resolve(result); };
+    const timer = timeoutMs ? setTimeout(() => {
+      try { process.kill(-sh.pid, 'SIGKILL'); }   // 杀整个进程组（bash + claude）
+      catch { try { sh.kill('SIGKILL'); } catch {} }
+      finish({ exitCode: null, killed: true, timedOut: true });
+    }, timeoutMs) : null;
+    sh.on('exit', (code) => { if (timer) clearTimeout(timer); finish({ exitCode: code, killed: false, timedOut: false }); });
+    sh.on('error', () => { if (timer) clearTimeout(timer); finish({ exitCode: 1, killed: false, timedOut: false }); });
+  });
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const TEMPLATES_DIR = path.join(__dirname, '..', 'templates');
-const VERSION = '2.6.3';
+const VERSION = '0.1.0';
 
 // 平台配置
 const PLATFORMS = {
@@ -69,70 +112,326 @@ function formatPlatforms(platforms) {
   return platforms.map(p => PLATFORMS[p].name).join(' + ');
 }
 
+// 真实执行 shell 命令，捕获结果
+function run(cmd, opts = {}) {
+  return execSync(cmd, { encoding: 'utf8', stdio: 'pipe', ...opts });
+}
+
+function cmdExists(cmd) {
+  try { run(`${cmd} --version 2>&1 || ${cmd} -v 2>&1`); return true; }
+  catch { try { run(`command -v ${cmd}`); return true; } catch { return false; } }
+}
+
+// clone 一个 git repo 到目标路径（已存在则跳过）
+async function cloneRepo(repo, dest, dryRun) {
+  if (await fs.pathExists(dest) && (await fs.readdir(dest)).length > 0) {
+    console.log(chalk.green(`  ✅ 已存在: ${path.basename(dest)}`));
+    return 'exists';
+  }
+  if (dryRun) {
+    console.log(chalk.cyan(`  [dry-run] git clone ${repo} → ${dest}`));
+    return 'dryrun';
+  }
+  console.log(chalk.yellow(`  ⏳ clone ${repo}...`));
+  try {
+    await fs.ensureDir(path.dirname(dest));
+    // 用 inherit 让 git progress 直接到终端，避免 pipe buffer 撑爆（大 repo 如 Understand-Anything）
+    execSync(`git clone --depth 1 ${repo} "${dest}"`, { encoding: 'utf8', stdio: 'inherit' });
+    console.log(chalk.green(`  ✅ cloned: ${path.basename(dest)}`));
+    return 'installed';
+  } catch (e) {
+    console.log(chalk.red(`  ❌ clone 失败: ${repo}`));
+    console.log(chalk.gray(`     ${String(e.message).split('\n')[0]}`));
+    return 'failed';
+  }
+}
+
+// §13.1 完整依赖安装（真实执行）
 async function ensureDependencies(platforms, dryRun, cwd) {
   const homeDir = os.homedir();
-  let installed = 0;
+  const skillsDir = path.join(homeDir, '.claude', 'skills');
+  let installed = 0, failed = 0;
 
-  console.log(chalk.blue('\n🔍 Checking prerequisites...\n'));
+  console.log(chalk.blue('\n🔍 [1/8] pre-doctor: 检测环境\n'));
 
-  try {
-    const version = execSync('openspec --version', { encoding: 'utf8' }).trim();
-    console.log(chalk.green(`  ✅ openspec CLI: ${version}`));
-  } catch {
-    if (dryRun) {
-      console.log(chalk.cyan('  [dry-run] Would install openspec CLI via brew'));
-    } else {
-      console.log(chalk.yellow('  ⚠️  openspec CLI not found, installing...'));
-      try {
-        execSync('brew install openspec', { encoding: 'utf8', stdio: 'inherit' });
-        console.log(chalk.green('  ✅ openspec CLI installed'));
-        installed++;
-      } catch {
-        console.log(chalk.red('  ❌ Failed to install openspec CLI. Install manually: brew install openspec'));
-      }
-    }
+  // === Step 2: 系统级 CLI ===
+  console.log(chalk.blue('🔧 [2/8] 系统级 CLI\n'));
+
+  // OpenSpec CLI
+  if (cmdExists('openspec')) {
+    console.log(chalk.green(`  ✅ openspec CLI: ${run('openspec --version').trim()}`));
+  } else if (dryRun) {
+    console.log(chalk.cyan('  [dry-run] brew install openspec'));
+  } else {
+    console.log(chalk.yellow('  ⏳ 安装 openspec CLI (brew)...'));
+    try { run('brew install openspec 2>&1', { stdio: 'inherit' }); installed++; console.log(chalk.green('  ✅ openspec installed')); }
+    catch { console.log(chalk.red('  ❌ brew install openspec 失败 — 请手动: brew install openspec')); failed++; }
   }
 
-  const globalSkills = [
-    { name: 'planning-with-files', repo: 'https://github.com/OthmanAdi/planning-with-files' },
+  // open-code-review CLI
+  if (cmdExists('ocr')) {
+    console.log(chalk.green(`  ✅ open-code-review: ${run('ocr --version').trim()}`));
+  } else if (dryRun) {
+    console.log(chalk.cyan('  [dry-run] npm i -g @alibaba-group/open-code-review'));
+  } else {
+    console.log(chalk.yellow('  ⏳ 安装 open-code-review (npm -g)...'));
+    try { run('npm install -g @alibaba-group/open-code-review 2>&1', { stdio: 'inherit' }); installed++; console.log(chalk.green('  ✅ open-code-review installed')); }
+    catch { console.log(chalk.red('  ❌ npm install -g 失败 — 请手动: npm i -g @alibaba-group/open-code-review')); failed++; }
+  }
+
+  // === Step 3: clone skills ===
+  console.log(chalk.blue('\n📦 [3/8] clone skills → ~/.claude/skills/\n'));
+  const skills = [
     { name: 'superpowers', repo: 'https://github.com/obra/superpowers' },
+    { name: 'planning-with-files', repo: 'https://github.com/OthmanAdi/planning-with-files' },
+    // grill-with-docs: 作为独立 skill 期望已存在（与 superpowers/planning-with-files 同级）。
+    // 不在此 clone（避免重复 clone superpowers）。doctor 会检测缺失并提示。
   ];
+  for (const s of skills) {
+    const dest = path.join(skillsDir, s.name);
+    const r = await cloneRepo(s.repo, dest, dryRun);
+    if (r === 'installed') installed++;
+    if (r === 'failed') failed++;
+  }
 
-  for (const plat of platforms) {
-    const config = PLATFORMS[plat];
-    const globalSkillsDir = path.join(homeDir, config.skillsDir.replace(/^\./, '.'));
+  // === Step 4 + 5: LLMWiki (真实 repo + 初始化) ===
+  console.log(chalk.blue('\n📚 [4/8] LLMWiki repo + MCP\n'));
+  const llmwikiRepoDir = path.join(homeDir, '.sdd', 'repos', 'llmwiki');
+  const r1 = await cloneRepo('https://github.com/lucasastorian/llmwiki', llmwikiRepoDir, dryRun);
+  if (r1 === 'installed') installed++;
+  if (r1 === 'failed') failed++;
 
-    for (const skill of globalSkills) {
-      const skillPath = path.join(globalSkillsDir, skill.name);
+  // LLMWiki 是 Python，需 3.11+。优先找 brew 装的 3.11+（系统 python3 可能是 3.9）
+  const findPy311 = () => {
+    for (const cand of ['python3.14', 'python3.13', 'python3.12', 'python3.11']) {
+      try { run(`command -v ${cand}`); return cand; } catch {}
+    }
+    return null;
+  };
+  const py311Bin = findPy311();
+  const pyVersion = (() => {
+    const bin = py311Bin || 'python3';
+    try { const v = run(`${bin} --version`); const m = v.match(/Python (\d+)\.(\d+)/); return [parseInt(m[1]), parseInt(m[2])]; }
+    catch { return [0, 0]; }
+  })();
+  const pyOk = pyVersion[0] > 3 || (pyVersion[0] === 3 && pyVersion[1] >= 11);
+  const pyBin = py311Bin || 'python3';
+  const mcpReqPath = path.join(llmwikiRepoDir, 'mcp', 'requirements.txt');
 
-      if (await fs.pathExists(skillPath)) {
-        console.log(chalk.green(`  ✅ ${config.name}: ${skill.name}`));
-      } else if (await fs.pathExists(path.join(cwd, config.skillsDir, skill.name))) {
-        console.log(chalk.green(`  ✅ ${config.name}: ${skill.name} (project-level)`));
-      } else {
-        if (dryRun) {
-          console.log(chalk.cyan(`  [dry-run] Would clone ${skill.name} to ${globalSkillsDir}/`));
-        } else {
-          console.log(chalk.yellow(`  ⚠️  ${config.name}: ${skill.name} not found, cloning...`));
-          try {
-            await fs.ensureDir(globalSkillsDir);
-            execSync(`git clone --depth 1 ${skill.repo} "${skillPath}"`, { encoding: 'utf8', stdio: 'pipe' });
-            console.log(chalk.green(`  ✅ ${config.name}: ${skill.name} cloned to ${config.skillsDir}/`));
-            installed++;
-          } catch (e) {
-            console.log(chalk.red(`  ❌ Failed to clone ${skill.name}: ${e.message}`));
-            console.log(chalk.gray(`     Manual: git clone ${skill.repo} ${skillPath}`));
-          }
-        }
+  if (!dryRun && await fs.pathExists(mcpReqPath)) {
+    if (pyOk) {
+      console.log(chalk.green(`  ✅ ${pyBin} (Python ${pyVersion[0]}.${pyVersion[1]}, 满足 3.11+)`));
+      console.log(chalk.yellow(`  ⏳ venv + 装 LLMWiki Python deps...`));
+      const venvDir = path.join(llmwikiRepoDir, '.venv');
+      if (!await fs.pathExists(venvDir)) {
+        try { run(`${pyBin} -m venv ${venvDir}`); } catch { console.log(chalk.yellow('  ⚠️ venv 创建失败')); }
       }
+      const pip = path.join(venvDir, 'bin', 'pip');
+      try { run(`${pip} install -r ${mcpReqPath} 2>&1`, { stdio: 'inherit' }); console.log(chalk.green('  ✅ LLMWiki Python deps installed')); }
+      catch { console.log(chalk.yellow('  ⚠️ pip install 失败 — LLMWiki MCP 需手动装')); failed++; }
+    } else {
+      console.log(chalk.yellow(`  ⚠️ 无 Python 3.11+ (当前 ${pyBin} ${pyVersion[0]}.${pyVersion[1]})`));
+      console.log(chalk.gray('     LLMWiki MCP 未启用。装 Python 3.11+: brew install python@3.12，然后重跑 sdd init'));
+      console.log(chalk.gray('     或用 LLMWiki remote 模式 (llmwiki.app)'));
+      failed++;
     }
   }
 
-  if (installed > 0) {
-    console.log(chalk.green(`\n  ✓ Installed ${installed} missing prerequisite(s)`));
+  // 注册 LLMWiki MCP 到项目 .mcp.json
+  if (!dryRun && pyOk) {
+    const mcpConfig = path.join(cwd, '.mcp.json');
+    let config = {};
+    if (await fs.pathExists(mcpConfig)) {
+      try { config = JSON.parse(await fs.readFile(mcpConfig, 'utf8')); } catch {}
+    }
+    config.mcpServers = config.mcpServers || {};
+    if (!config.mcpServers['llmwiki']) {
+      const venvPy = path.join(llmwikiRepoDir, '.venv', 'bin', 'python');
+      config.mcpServers['llmwiki'] = {
+        command: await fs.pathExists(venvPy) ? venvPy : pyBin,
+        args: ['-m', 'local_server', '--workspace', path.join(cwd, 'llmwiki')],
+        cwd: path.join(llmwikiRepoDir, 'mcp'),
+      };
+      await fs.writeFile(mcpConfig, JSON.stringify(config, null, 2));
+      console.log(chalk.green(`  ✅ 注册 LLMWiki MCP → ${path.relative(cwd, mcpConfig)}`));
+    }
   }
 
-  console.log();
+  // === Step 5: LLMWiki 实例初始化（项目级 wiki 内容目录） ===
+  console.log(chalk.blue('\n🗂️  [5/8] LLMWiki 实例初始化（wiki 内容目录）\n'));
+  const wikiDir = path.join(cwd, 'llmwiki');
+  if (!dryRun) {
+    await fs.ensureDir(wikiDir);
+    // 按 §9.1 建三大流程骨架
+    const wikiSubdirs = [
+      'raw', 'wiki/sources', 'wiki/concepts', 'wiki/entities', 'wiki/outputs',
+      'wiki/product/requirements', 'wiki/product/acceptance-criteria',
+      'wiki/product/user-stories', 'wiki/product/prototypes', 'wiki/product/decisions',
+      'wiki/engineering', 'wiki/testing/cases', 'wiki/testing/suites',
+      'wiki/testing/matrices', 'wiki/testing/plans', 'wiki/testing/reports', 'wiki/testing/regression',
+      'wiki/_shared/glossary', 'wiki/_shared/traceability', 'wiki/_shared/runbooks', 'wiki/_shared/releases',
+    ];
+    for (const d of wikiSubdirs) await fs.ensureDir(path.join(wikiDir, d));
+    // index.md + log.md
+    if (!await fs.pathExists(path.join(wikiDir, 'index.md'))) {
+      await fs.writeFile(path.join(wikiDir, 'index.md'), '# LLMWiki Index\n\nSDD Harness 知识中枢。三大流程：product / engineering / testing。\n');
+    }
+    if (!await fs.pathExists(path.join(wikiDir, 'log.md'))) {
+      await fs.writeFile(path.join(wikiDir, 'log.md'), '# Log\n\n## [init] LLMWiki 实例初始化\n');
+    }
+    if (!await fs.pathExists(path.join(wikiDir, 'wiki', '_schema.md'))) {
+      await fs.writeFile(path.join(wikiDir, 'wiki', '_schema.md'), '# Wiki Schema\n\n详见 docs/llmwiki-structure.md\n');
+    }
+    console.log(chalk.green(`  ✅ wiki 内容目录已建: ${path.relative(cwd, wikiDir)}/ (含 ${wikiSubdirs.length} 子目录)`));
+  } else {
+    console.log(chalk.cyan(`  [dry-run] 建 ${wikiDir} 骨架`));
+  }
+
+  // === Step 6: Understand-Anything —— 按需，不在 init 内 clone（repo 巨大 60s+，且 agent pipeline 需 Claude Code 会话）===
+  // init 只建占位 + 提示；真实 clone + 图谱生成由 `sdd graph refresh` 按需触发
+  console.log(chalk.blue('\n🧠 [6/8] Understand-Anything（按需，init 仅建占位）\n'));
+  const graphPath = path.join(cwd, '.understand-anything', 'knowledge-graph.json');
+  if (!dryRun) {
+    if (!await fs.pathExists(graphPath)) {
+      await fs.ensureDir(path.dirname(graphPath));
+      await fs.writeFile(graphPath, JSON.stringify({
+        note: '占位。真实图谱由 sdd graph refresh 触发 Understand-Anything agent pipeline 生成（在 Claude Code 会话内）',
+        nodes: [], edges: [], layers: [], generated_at: null,
+      }, null, 2));
+      console.log(chalk.yellow('  ⚠️ knowledge-graph.json 为占位'));
+      console.log(chalk.gray('     启用 code graph: 运行 sdd graph refresh（clone UA + 触发 agent pipeline）'));
+    } else {
+      console.log(chalk.green('  ✅ knowledge-graph.json 已存在'));
+    }
+  }
+
+  // === mcp-keys.env 模板 ===
+  if (!dryRun) {
+    const keysFile = path.join(homeDir, '.sdd', 'mcp-keys.env');
+    if (!await fs.pathExists(keysFile)) {
+      await fs.ensureDir(path.dirname(keysFile));
+      const keysTpl = await fs.readFile(path.join(TEMPLATES_DIR, 'sdd-harness', 'mcp-keys.env'), 'utf8').catch(() => '# MCP keys\nLLMWIKI_ENDPOINT=\nLLMWIKI_API_KEY=\nGITHUB_TOKEN=\n');
+      await fs.writeFile(keysFile, keysTpl);
+      console.log(chalk.gray(`  ℹ️  MCP keys 模板: ${keysFile} (填后启用 LLMWiki MCP)`));
+    }
+  }
+
+  console.log(chalk.blue('\n'));
+  if (installed > 0) console.log(chalk.green(`✓ 新装 ${installed} 个依赖`));
+  if (failed > 0) console.log(chalk.yellow(`⚠️  ${failed} 个失败（见上，部分需手动）`));
+
+  return { installed, failed };
+}
+
+// §13.1 step 7: 落 SDD Harness 层（skills/commands/hooks/templates/config）
+async function copySDDHarnessLayer(cwd, dryRun, force) {
+  console.log(chalk.blue('\n🎯 [7/8] 落 SDD Harness 层\n'));
+  let count = 0;
+
+  // SDD-* skills（grill/product/dev/test/code/review/verify/release/archive + harness）
+  const srcSkills = path.join(TEMPLATES_DIR, 'claude', 'skills');
+  const destSkills = path.join(cwd, '.claude', 'skills');
+  if (!dryRun) {
+    await fs.ensureDir(destSkills);
+    for (const entry of await fs.readdir(srcSkills)) {
+      if (!entry.startsWith('sdd-')) continue;
+      const src = path.join(srcSkills, entry);
+      const dest = path.join(destSkills, entry);
+      if ((await fs.stat(src)).isDirectory() && (!await fs.pathExists(dest) || force)) {
+        await fs.copy(src, dest, { overwrite: force });
+        count++;
+      }
+    }
+    console.log(chalk.green(`  ✓ ${count} 个 sdd-* skill → .claude/skills/`));
+  }
+
+  // SDD commands
+  const srcCmds = path.join(TEMPLATES_DIR, 'claude', 'commands');
+  const destCmds = path.join(cwd, '.claude', 'commands');
+  if (!dryRun) {
+    await fs.ensureDir(destCmds);
+    let cmdCount = 0;
+    for (const entry of await fs.readdir(srcCmds)) {
+      if (!entry.startsWith('sdd-')) continue;
+      const dest = path.join(destCmds, entry);
+      if (!await fs.pathExists(dest) || force) {
+        await fs.copy(path.join(srcCmds, entry), dest, { overwrite: force });
+        cmdCount++;
+      }
+    }
+    console.log(chalk.green(`  ✓ ${cmdCount} 个 /sdd:* command → .claude/commands/`));
+  }
+
+  // hooks
+  const srcHooks = path.join(TEMPLATES_DIR, 'claude', 'hooks');
+  const destHooks = path.join(cwd, '.sdd', 'hooks');
+  if (!dryRun) {
+    await fs.ensureDir(destHooks);
+    let hookCount = 0;
+    for (const entry of await fs.readdir(srcHooks)) {
+      const dest = path.join(destHooks, entry);
+      await fs.copy(path.join(srcHooks, entry), dest, { overwrite: force });
+      await fs.chmod(dest, 0o755);
+      hookCount++;
+    }
+    console.log(chalk.green(`  ✓ ${hookCount} 个 hook → .sdd/hooks/ (可执行)`));
+
+    // ★ 接线：写 .claude/settings.json 的 hooks 块（否则 Claude Code 不会加载 hook）
+    const settingsPath = path.join(cwd, '.claude', 'settings.json');
+    let settings = {};
+    if (await fs.pathExists(settingsPath)) {
+      try { settings = JSON.parse(await fs.readFile(settingsPath, 'utf8')); } catch {}
+    }
+    settings.hooks = settings.hooks || {};
+    const hookWiring = {
+      SessionStart: [{ matcher: 'startup|resume', hooks: [{ type: 'command', command: '${CLAUDE_PROJECT_DIR}/.sdd/hooks/session-start.sh' }] }],
+      PreToolUse: [{ matcher: 'Edit|Write|MultiEdit|Bash', hooks: [{ type: 'command', command: '${CLAUDE_PROJECT_DIR}/.sdd/hooks/pre-tool-gate.sh' }] }],
+      PreCompact: [{ matcher: 'manual|auto', hooks: [{ type: 'command', command: '${CLAUDE_PROJECT_DIR}/.sdd/hooks/pre-compact-save.sh' }] }],
+      SubagentStop: [{ hooks: [{ type: 'command', command: '${CLAUDE_PROJECT_DIR}/.sdd/hooks/subagent-stop-contract.sh' }] }],
+      Stop: [{ hooks: [{ type: 'command', command: '${CLAUDE_PROJECT_DIR}/.sdd/hooks/stop-gate.sh' }] }],
+    };
+    settings.hooks = { ...settings.hooks, ...hookWiring };
+    await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
+    console.log(chalk.green(`  ✓ .claude/settings.json hooks 接线（5 hook）`));
+  }
+
+  // config.yaml + dependencies.yaml
+  if (!dryRun) {
+    await fs.ensureDir(path.join(cwd, '.sdd'));
+
+    // steering 持久指导目录（借鉴 cc-sdd `.kiro/steering/`）——跨 change 的项目级 AI 指导
+    const steeringDir = path.join(cwd, '.sdd', 'steering');
+    await fs.ensureDir(steeringDir);
+    const steeringTpl = path.join(steeringDir, 'project.md');
+    if (!await fs.pathExists(steeringTpl)) {
+      await fs.writeFile(steeringTpl, `# Project Steering\n\n跨 change 持久的项目级指导（agent 每个 stage 都读）。\n\n## Tech Stack\n- \n\n## Architecture\n- \n\n## Coding Standards\n- \n\n## Domain Knowledge\n- \n`);
+      console.log(chalk.green('  ✓ .sdd/steering/project.md（持久指导，请填写）'));
+    }
+
+    const cfgSrc = path.join(TEMPLATES_DIR, 'sdd-harness', 'config.yaml');
+    const cfgDest = path.join(cwd, '.sdd', 'config.yaml');
+    if (!await fs.pathExists(cfgDest) || force) {
+      await fs.copy(cfgSrc, cfgDest, { overwrite: force });
+      console.log(chalk.green('  ✓ .sdd/config.yaml'));
+    }
+    const depsSrc = path.join(TEMPLATES_DIR, 'sdd-harness', 'dependencies.yaml');
+    const depsDest = path.join(cwd, '.sdd', 'dependencies.yaml');
+    if (await fs.pathExists(depsSrc) && !await fs.pathExists(depsDest)) {
+      await fs.copy(depsSrc, depsDest);
+      console.log(chalk.green('  ✓ .sdd/dependencies.yaml'));
+    }
+
+    // .gitignore 加 .sdd/runs/
+    const gitignore = path.join(cwd, '.gitignore');
+    let gi = await fs.readFile(gitignore, 'utf8').catch(() => '');
+    if (!gi.includes('.sdd/runs/')) {
+      gi += '\n# SDD Harness runtime\n.sdd/runs/\n.understand-anything/\n';
+      await fs.writeFile(gitignore, gi);
+      console.log(chalk.green('  ✓ .gitignore (+ .sdd/runs/, .understand-anything/)'));
+    }
+  }
+
+  return count;
 }
 
 // 复制 skills 目录
@@ -237,8 +536,8 @@ async function cleanupLegacyCommands(cwd, platforms, dryRun) {
 }
 
 program
-  .name('sdd-cli')
-  .description('SDD (Skill-Driven Development) CLI Tool - Trinity Workflow v2 (Claude Code + OpenCode + Codex)')
+  .name('sdd')
+  .description('SDD Harness — AI DevOps workflow wrapper (9-stage spec-driven governance + knowledge closed-loop)')
   .version(VERSION);
 
 program
@@ -275,6 +574,9 @@ program
 
     try {
       await ensureDependencies(platformsToInstall, options.dryRun, cwd);
+
+      // SDD Harness 层（sdd-* skills/commands/hooks/templates/config）
+      await copySDDHarnessLayer(cwd, options.dryRun, options.force);
 
       const legacyCount = await cleanupLegacyCommands(cwd, platformsToInstall, options.dryRun);
       if (legacyCount > 0 && !options.dryRun) {
@@ -348,16 +650,20 @@ program
         }
       }
 
-      console.log('\n' + chalk.green.bold(`✅ SDD workflow v${VERSION} initialized successfully!`));
+      console.log('\n' + chalk.green.bold(`✅ SDD Harness v${VERSION} initialized!`));
 
       // Show available commands
-      console.log('\n📚 Trinity Workflow v2 Commands:');
-      console.log(chalk.cyan('   /trinity:new "描述"') + '      - 创建新变更（带追踪）');
-      console.log(chalk.cyan('   /trinity:continue') + '        - 继续下一个 artifact');
-      console.log(chalk.cyan('   /trinity:apply') + '           - 执行任务（3-Strike）');
-      console.log(chalk.cyan('   /trinity:verify') + '          - 验证实现（三维度）');
-      console.log(chalk.cyan('   /trinity:archive') + '         - 归档变更');
-      console.log(chalk.cyan('   /trinity:ff "描述"') + '       - 快速流程\n');
+      console.log('\n📚 SDD Harness 9 阶段命令:');
+      console.log(chalk.cyan('   /sdd:grill "描述"') + '     - 澄清（业务/术语/边界）');
+      console.log(chalk.cyan('   /sdd:product') + '          - 产品草案（PRD/AC）');
+      console.log(chalk.cyan('   /sdd:dev') + '             - 工程 spec（OpenSpec）');
+      console.log(chalk.cyan('   /sdd:test') + '            - 测试矩阵 → LLMWiki');
+      console.log(chalk.cyan('   /sdd:code') + '            - 实现（TDD）');
+      console.log(chalk.cyan('   /sdd:review') + '          - Review（Superpowers + OCR）');
+      console.log(chalk.cyan('   /sdd:verify') + '          - 交付验证（证据）');
+      console.log(chalk.cyan('   /sdd:release') + '         - 部署（manual|auto|skip）');
+      console.log(chalk.cyan('   /sdd:archive') + '         - 归档 + 知识沉淀\n');
+      console.log(chalk.gray('   维护: sdd doctor | sdd upgrade | sdd graph refresh | sdd wiki init\n'));
 
       if (options.dryRun) {
         console.log(chalk.yellow('⚠ This was a dry run. No files were written.\n'));
@@ -481,9 +787,67 @@ program
       issues++;
     }
 
+    // === SDD Harness 专属检查 ===
+    console.log(chalk.blue('\n── SDD Harness 依赖 ──'));
+
+    // open-code-review CLI
+    if (cmdExists('ocr')) {
+      console.log(chalk.green('✅ open-code-review CLI (review 阶段)'));
+    } else {
+      console.log(chalk.yellow('⚠️  open-code-review 缺失 (review 行级降级) — npm i -g @alibaba-group/open-code-review'));
+      issues++;
+    }
+
+    // sdd-* skills
+    const sddSkillsDir = path.join(cwd, '.claude', 'skills');
+    if (await fs.pathExists(sddSkillsDir)) {
+      const sddSkills = (await fs.readdir(sddSkillsDir)).filter(d => d.startsWith('sdd-'));
+      if (sddSkills.length >= 10) {
+        console.log(chalk.green(`✅ SDD skills: ${sddSkills.length} 个`));
+      } else {
+        console.log(chalk.yellow(`⚠️  SDD skills 仅 ${sddSkills.length}/10 — 运行 sdd init --force`));
+        issues++;
+      }
+    }
+
+    // /sdd commands
+    const sddCmdsDir = path.join(cwd, '.claude', 'commands');
+    if (await fs.pathExists(sddCmdsDir)) {
+      const sddCmds = (await fs.readdir(sddCmdsDir)).filter(f => f.startsWith('sdd-') && (f === 'sdd-grill.md' || f === 'sdd-product.md' || f === 'sdd-dev.md' || f === 'sdd-test.md' || f === 'sdd-code.md' || f === 'sdd-review.md' || f === 'sdd-verify.md' || f === 'sdd-release.md' || f === 'sdd-archive.md'));
+      console.log(sddCmds.length >= 9 ? chalk.green(`✅ /sdd:* commands: ${sddCmds.length} 个`) : chalk.yellow(`⚠️  /sdd commands ${sddCmds.length}/9`));
+    }
+
+    // LLMWiki repo + wiki 内容
+    const llmwikiRepo = path.join(os.homedir(), '.sdd', 'repos', 'llmwiki');
+    if (await fs.pathExists(llmwikiRepo)) {
+      console.log(chalk.green('✅ LLMWiki repo (test/archive 阶段)'));
+    } else {
+      console.log(chalk.yellow('⚠️  LLMWiki repo 缺失 (用例/知识无法持久化) — sdd init 重试或手动 clone'));
+      issues++;
+    }
+    const wikiContent = path.join(cwd, 'llmwiki', 'wiki');
+    console.log(await fs.pathExists(wikiContent) ? chalk.green('✅ LLMWiki wiki 内容目录') : chalk.yellow('⚠️  wiki 内容目录缺失 — sdd wiki init'));
+
+    // knowledge-graph (按需，不算 issue)
+    const graph = path.join(cwd, '.understand-anything', 'knowledge-graph.json');
+    if (await fs.pathExists(graph)) {
+      const g = JSON.parse(await fs.readFile(graph, 'utf8'));
+      const isEmpty = !g.nodes || g.nodes.length === 0;
+      console.log(isEmpty ? chalk.gray('ℹ️  knowledge-graph 占位 (code graph 按需) — sdd graph --install 启用') : chalk.green('✅ knowledge-graph 已生成'));
+    } else {
+      console.log(chalk.gray('ℹ️  knowledge-graph 未建 — sdd graph --install'));
+    }
+
+    // hooks
+    const hooksDir = path.join(cwd, '.sdd', 'hooks');
+    if (await fs.pathExists(hooksDir)) {
+      const hooks = (await fs.readdir(hooksDir)).filter(f => f.endsWith('.sh'));
+      console.log(chalk.green(`✅ hooks: ${hooks.length} 个`));
+    }
+
     console.log();
     if (issues === 0) {
-      console.log(chalk.green.bold('✅ All checks passed! SDD workflow is healthy.\n'));
+      console.log(chalk.green.bold('✅ All checks passed! SDD Harness ready.\n'));
     } else if (options.fix) {
       console.log(chalk.yellow.bold(`⚠️  Found ${issues} issue(s). Auto-fixing...\n`));
       const platforms = detectPlatforms(cwd);
@@ -498,16 +862,19 @@ program
   .command('list')
   .description('List available commands and schemas')
   .action(() => {
-    console.log(chalk.bold('\n📚 Trinity Workflow v2 Commands:'));
-    console.log('   /trinity:new "描述"   - 创建新变更（带追踪）');
-    console.log('   /trinity:continue    - 继续下一个 artifact');
-    console.log('   /trinity:apply       - 执行任务（3-Strike）');
-    console.log('   /trinity:verify      - 验证实现（三维度）');
-    console.log('   /trinity:archive     - 归档变更');
-    console.log('   /trinity:ff "描述"   - 快速流程');
+    console.log(chalk.bold('\n📚 SDD Harness 9 阶段命令:'));
+    console.log('   /sdd:grill "描述"   - 澄清（discovery 路由）');
+    console.log('   /sdd:product        - 产品草案（PRD/AC）');
+    console.log('   /sdd:dev            - 工程 spec（OpenSpec）');
+    console.log('   /sdd:test           - 测试矩阵 → LLMWiki');
+    console.log('   /sdd:code           - 实现（TDD）');
+    console.log('   /sdd:review         - Review（Superpowers + OCR）');
+    console.log('   /sdd:verify         - 交付验证');
+    console.log('   /sdd:release        - 部署（manual|auto|skip）');
+    console.log('   /sdd:archive        - 归档 + 知识沉淀');
 
-    console.log(chalk.bold('\n📦 Schema:'));
-    console.log('   trinity-workflow-v2  - 三位一体架构工作流 v2');
+    console.log(chalk.bold('\n🔧 维护命令:'));
+    console.log('   sdd init / sdd doctor / sdd graph --install / sdd wiki init / sdd upgrade');
 
     console.log(chalk.bold('\n🖥️ Supported Platforms:'));
     console.log('   claude   - Claude Code (.claude/skills/, .claude/commands/)');
@@ -515,6 +882,1050 @@ program
     console.log('   codex    - Codex (.codex/skills/)');
     console.log('   both     - Install for Claude Code and OpenCode');
     console.log('   all      - Install for all supported platforms (default when no platform is detected)\n');
+  });
+
+// sdd run <stage> —— CLI 驱动 stage：bootstrap run + scaffold artifact + 推进 frame
+const STAGE_CONTRACTS = {
+  grill:    { next: 'product',  artifacts: ['findings.md'], scaffold: { 'findings.md': '# Findings\n\n## 术语\n- \n\n## 边界\n- \n\n## ADR 候选\n- \n' } },
+  product:  { next: 'dev',      artifacts: ['proposal.md','acceptance-criteria.md','functional-test-draft.yaml'], scaffold: {
+              'proposal.md': '# Proposal\n\n## User\n- \n## Problem\n- \n## Scope\n- \n## Non-goals\n- \n## Metrics\n- \n',
+              'acceptance-criteria.md': '# Acceptance Criteria\n\n## AC-1\nGIVEN \nWHEN \nTHEN \n',
+              'functional-test-draft.yaml': 'feature: \nscenarios:\n  happy-path: []\n  edge-cases: []\n  error-cases: []\n' } },
+  dev:      { next: 'test',     artifacts: ['design.md','tasks.md'], scaffold: {
+              'design.md': '# Design\n\n## File Structure Plan\n- \n\n## Boundary\n_Boundary_: \n_Depends_: \n',
+              'tasks.md': '# Tasks\n- [ ] T1: _Boundary: _\n' } },
+  test:     { next: 'code',     artifacts: [], wiki: 'testing/matrices/test-matrix.md' },
+  code:     { next: 'review',   artifacts: ['progress.md'], scaffold: { 'progress.md': '# Progress\n\n## [code]\n- \n' } },
+  review:   { next: 'verify',   artifacts: [], runtime: 'review-notes.md' },
+  verify:   { next: 'release',  artifacts: [], note: '证据写进 progress.md' },
+  release:  { next: 'archive',  artifacts: [], modes: ['manual','automated','skip'] },
+  archive:  { next: null,       artifacts: [], promote: 'openspec/specs/' },
+};
+
+program
+  .command('run <stage>')
+  .description('Drive a SDD stage via CLI: bootstrap run + scaffold artifacts + advance frame (grill|product|dev|test|code|review|verify|release|archive)')
+  .option('--change <id>', 'Use existing change-id (skip bootstrap)')
+  .option('--goal <text>', 'Goal for the change (grill bootstrap)')
+  .option('--slug <slug>', 'Explicit slug for change-id (default: derive from goal or timestamp)')
+  .option('--mode <m>', 'Release mode: manual|automated|skip', 'manual')
+  .action(async (stage, options) => {
+    const cwd = process.cwd();
+    if (!STAGE_CONTRACTS[stage]) {
+      console.log(chalk.red(`❌ 未知 stage: ${stage}`));
+      console.log(chalk.gray('   可用: ' + Object.keys(STAGE_CONTRACTS).join(' | ')));
+      process.exit(1);
+    }
+    const contract = STAGE_CONTRACTS[stage];
+    const activeRunFile = path.join(cwd, '.sdd', 'active-run');
+
+    console.log(chalk.blue(`\n▶ /sdd:${stage}${stage==='release' ? ` (mode=${options.mode})` : ''} (CLI-driven)\n`));
+
+    // release skip 模式：直接跳到 archive
+    if (stage === 'release' && options.mode === 'skip') {
+      console.log(chalk.yellow('  ⏭  skip 模式：跳过 release，直接推进 verify→archive'));
+      // 直接推进 frame 到 archive（若 active run 存在）
+      if (await fs.pathExists(activeRunFile)) {
+        const cid = (await fs.readFile(activeRunFile, 'utf8')).trim();
+        const skipRunsDir = path.join(cwd, '.sdd', 'runs', cid);
+        const wfPath = path.join(skipRunsDir, 'workflow-frame.yaml');
+        if (await fs.pathExists(wfPath)) {
+          let wf = await fs.readFile(wfPath, 'utf8');
+          const current = wf.match(/current:\s*(\w+)/)?.[1];
+          const archiveGate = await evaluateStageAdvanceGate({
+            stage: 'archive',
+            runsDir: skipRunsDir,
+          });
+          if (!['verify', 'release'].includes(current) || !archiveGate.pass) {
+            wf = wf.replace(/status:\s*\w+/, 'status: failed');
+            await fs.writeFile(wfPath, wf);
+            const reason = !['verify', 'release'].includes(current)
+              ? `current stage is ${current || 'unknown'}`
+              : archiveGate.failures.map(item => item.reason).join('; ');
+            console.log(chalk.red(`  ⛔ release skip 被阻止：${reason}`));
+            process.exitCode = 2;
+            return;
+          }
+          wf = wf.replace(/current: \w+/, 'current: archive').replace(/status:\s*\w+/, 'status: passed');
+          await fs.writeFile(wfPath, wf);
+          console.log(chalk.green(`  ✓ workflow-frame stage → archive (skip no-deploy)`));
+          // 记录 no-deploy 理由到 progress
+          const prog = path.join(cwd, 'openspec', 'changes', cid, 'progress.md');
+          if (await fs.pathExists(prog)) {
+            await fs.appendFile(prog, `\n## [release skip] no-deploy（CLI 标记，reason: skip 模式）\n`);
+          }
+        }
+      }
+      console.log(chalk.green('  🏁 跳过完成。\n'));
+      return;
+    }
+
+    // Bootstrap run（首次或指定 --change）
+    let changeId = options.change;
+    if (!changeId && await fs.pathExists(activeRunFile)) {
+      changeId = (await fs.readFile(activeRunFile, 'utf8')).trim();
+    }
+    let bootstrap = false;
+    if (!changeId) {
+      // 生成 slug：优先 --slug，其次 goal 拉丁字符，最后 timestamp（避免中文/纯非拉丁 → 空）
+      let slug = options.slug;
+      if (!slug) {
+        const raw = (options.goal || '').toLowerCase();
+        slug = raw.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      }
+      if (!slug) {
+        // goal 无拉丁字符（如纯中文）→ 用 timestamp slug
+        slug = 'change-' + Date.now().toString(36);
+      }
+      slug = slug.slice(0, 24);
+      const hash = Math.random().toString(16).slice(2, 6);
+      changeId = `${slug}-${hash}`;
+      bootstrap = true;
+    }
+
+    // 归档路径回退：change 已 archive 时在 changes/archive/<date>-<id>/ 下
+    let changesDir = path.join(cwd, 'openspec', 'changes', changeId);
+    if (!await fs.pathExists(changesDir)) {
+      const archiveBase = path.join(cwd, 'openspec', 'changes', 'archive');
+      if (await fs.pathExists(archiveBase)) {
+        const match = (await fs.readdir(archiveBase)).find(d => d.endsWith('-' + changeId));
+        if (match) changesDir = path.join(archiveBase, match);
+      }
+    }
+    const runsDir = path.join(cwd, '.sdd', 'runs', changeId);
+    const wfPath = path.join(runsDir, 'workflow-frame.yaml');
+
+    if (bootstrap) {
+      console.log(chalk.cyan(`📦 bootstrap run: ${changeId}`));
+      await fs.ensureDir(path.join(changesDir, 'specs'));
+      await fs.ensureDir(runsDir);
+      // 实例化 workflow-frame
+      await fs.writeFile(path.join(runsDir, 'workflow-frame.yaml'),
+        `run_id: ${changeId}\nstage:\n  current: ${stage}\n  history: []\ngoal: "${options.goal || ''}"\nartifacts:\n  required: ${JSON.stringify(contract.artifacts)}\n  produced: []\ngates:\n  status: pending\n`);
+      await fs.writeFile(activeRunFile, changeId);
+      console.log(chalk.green(`  ✓ openspec/changes/${changeId}/`));
+      console.log(chalk.green(`  ✓ .sdd/runs/${changeId}/workflow-frame.yaml (stage=${stage})`));
+      console.log(chalk.green(`  ✓ .sdd/active-run → ${changeId}`));
+    } else {
+      console.log(chalk.cyan(`▶ resume run: ${changeId}`));
+      if (await fs.pathExists(wfPath)) {
+        const wf = await fs.readFile(wfPath, 'utf8');
+        const current = wf.match(/current:\s*(\w+)/)?.[1];
+        if (current && current !== stage) {
+          console.log(chalk.red(`  ⛔ stage entry 被阻止：workflow 当前为 ${current}，不能执行 ${stage}`));
+          process.exitCode = 2;
+          return;
+        }
+      }
+    }
+
+    // Scaffold 该 stage 的 artifact
+    if (contract.scaffold) {
+      for (const [file, content] of Object.entries(contract.scaffold)) {
+        const fp = path.join(changesDir, file);
+        if (!await fs.pathExists(fp)) {
+          await fs.writeFile(fp, content);
+          console.log(chalk.green(`  ✓ scaffold ${file}`));
+        } else {
+          console.log(chalk.gray(`  · ${file} 已存在，跳过`));
+        }
+      }
+    }
+    if (contract.wiki) {
+      const wp = path.join(cwd, 'llmwiki', contract.wiki);
+      await fs.ensureDir(path.dirname(wp));
+      if (!await fs.pathExists(wp)) {
+        await fs.writeFile(wp, `# Test Matrix\n\n| feature | unit | integration | e2e |\n|---------|------|-------------|-----|\n|  |  |  |  |\n`);
+        console.log(chalk.green(`  ✓ scaffold ${contract.wiki}`));
+      }
+    }
+    if (contract.runtime) {
+      const rp = path.join(runsDir, contract.runtime);
+      if (!await fs.pathExists(rp)) {
+        await fs.writeFile(rp, `# ${contract.runtime}\n\n(Superpowers verdict + OCR 评论 — 由 agent 填)\n`);
+        console.log(chalk.green(`  ✓ scaffold .sdd/runs/${changeId}/${contract.runtime}`));
+      }
+    }
+
+    // Gate 检查（CLI 验存在性）
+    console.log(chalk.blue('\n🔍 Gate 检查（存在性）:'));
+    let gateOk = true;
+    for (const art of contract.artifacts) {
+      const exists = await fs.pathExists(path.join(changesDir, art));
+      console.log(`   ${exists ? chalk.green('✅') : chalk.yellow('⚠️')} ${art} ${exists ? '' : '(skeleton 已 scaffold，待 agent 填内容)'}`);
+    }
+    if (contract.promote) {
+      const promoted = await fs.pathExists(path.join(cwd, contract.promote, changeId.split('-').slice(0,-1).join('-')));
+      console.log(`   ${promoted ? chalk.green('✅') : chalk.gray('ℹ️')} spec promotion (archive 阶段做)`);
+    }
+
+    const stageGate = await evaluateStageAdvanceGate({ stage, runsDir });
+    if (!stageGate.pass) {
+      gateOk = false;
+      for (const item of stageGate.failures) {
+        console.log(chalk.red(`   ❌ ${item.gate}: ${item.reason}`));
+      }
+    }
+
+    // 推进 frame
+    if (!gateOk) {
+      if (await fs.pathExists(wfPath)) {
+        let wf = await fs.readFile(wfPath, 'utf8');
+        wf = wf.replace(/status:\s*\w+/, 'status: failed');
+        await fs.writeFile(wfPath, wf);
+      }
+      console.log(chalk.red(`\n⛔ ${stage} gate 未通过，stage 保持不变。\n`));
+      process.exitCode = 2;
+      return;
+    }
+    if (await fs.pathExists(wfPath) && contract.next) {
+      let wf = await fs.readFile(wfPath, 'utf8');
+      wf = wf.replace(/current: \w+/, `current: ${contract.next}`);
+      wf = wf.replace(/status:\s*\w+/, 'status: passed');
+      await fs.writeFile(wfPath, wf);
+      console.log(chalk.blue(`\n➡ stage 推进: ${stage} → ${contract.next}`));
+    } else if (!contract.next) {
+      console.log(chalk.green('\n🏁 最终 stage (archive)。workflow 完成。'));
+    }
+
+    console.log(chalk.gray(`\n   注: CLI scaffold 了 artifact 骨架 + 推进 frame。实际内容（spec/code/review）需 agent 跟随 /sdd:${stage} skill 填充。\n`));
+  });
+
+// sdd graph —— 按需 clone Understand-Anything + 提示在 Claude Code 内跑 agent pipeline
+program
+  .command('graph')
+  .description('Refresh code knowledge graph (Understand-Anything)')
+  .option('--install', 'Clone Understand-Anything repo if missing', false)
+  .action(async (options) => {
+    const cwd = process.cwd();
+    const homeDir = os.homedir();
+    const uaRepoDir = path.join(homeDir, '.sdd', 'repos', 'Understand-Anything');
+    const graphPath = path.join(cwd, '.understand-anything', 'knowledge-graph.json');
+    console.log(chalk.blue('\n🧠 SDD Harness - Code Graph Refresh\n'));
+    if (options.install && !await fs.pathExists(uaRepoDir)) {
+      console.log(chalk.yellow('⏳ clone Understand-Anything (大 repo，约 60-90s)...'));
+      const r = await cloneRepo('https://github.com/Egonex-AI/Understand-Anything', uaRepoDir, false);
+      if (r === 'failed') { console.log(chalk.red('\n❌ clone 失败')); process.exit(1); }
+      if (await fs.pathExists(path.join(uaRepoDir, 'install.sh'))) {
+        try { execSync(`cd ${uaRepoDir} && bash install.sh`, { stdio: 'inherit' }); } catch {}
+      }
+    } else if (await fs.pathExists(uaRepoDir)) {
+      console.log(chalk.green(`✅ Understand-Anything 已存在`));
+    } else {
+      console.log(chalk.yellow('⚠️ 未安装。运行: sdd graph --install'));
+    }
+    console.log(chalk.gray('\n   agent pipeline 需在 Claude Code 会话内跑生成图谱\n'));
+  });
+
+program
+  const wikiCmd = program.command('wiki').description('管理 LLMWiki（init / ingest）');
+  wikiCmd.command('init')
+    .description('Initialize or rebuild LLMWiki instance skeleton')
+    .option('--rebuild', 'Wipe and rebuild', false)
+    .action(async (options) => {
+      const cwd = process.cwd();
+      const wikiDir = path.join(cwd, 'llmwiki');
+      if (options.rebuild && await fs.pathExists(wikiDir)) await fs.remove(wikiDir);
+      const subs = ['raw','wiki/sources','wiki/concepts','wiki/entities','wiki/outputs','wiki/product/requirements','wiki/product/acceptance-criteria','wiki/engineering','wiki/testing/cases','wiki/testing/matrices','wiki/_shared/glossary','wiki/_shared/traceability'];
+      for (const d of subs) await fs.ensureDir(path.join(wikiDir, d));
+      if (!await fs.pathExists(path.join(wikiDir, 'index.md'))) await fs.writeFile(path.join(wikiDir, 'index.md'), '# LLMWiki Index\n');
+      console.log(chalk.green(`✅ LLMWiki 骨架 (${subs.length} 子目录)\n`));
+    });
+ wikiCmd.command('ingest')
+   .description('读取 raw/ 源，驱动 claude 生成 wiki/sources/ 摘要（§5 ingest）')
+   .option('--source <name>', '只处理指定 raw 文件（不含 .md）', '')
+   .option('--force', '重新生成已有摘要', false)
+   .option('--model <m>', 'claude model', 'sonnet')
+    .option('--promote', 'ingest 后把 sources 派生为下游角色知识（§5 ingest ④更新下游）', false)
+   .action(async (options) => {
+      const cwd = process.cwd();
+      const rawDir = path.join(cwd, 'llmwiki', 'raw');
+      const sourcesDir = path.join(cwd, 'llmwiki', 'wiki', 'sources');
+      await fs.ensureDir(rawDir); await fs.ensureDir(sourcesDir);
+      const today = new Date().toISOString().slice(0, 10);
+      const rawFiles = options.source ? [options.source + '.md'] : (await fs.readdir(rawDir).catch(() => [])).filter(f => f.endsWith('.md'));
+      if (rawFiles.length === 0) { console.log(chalk.yellow('⚠️ raw/ 无 .md 源文件。先把源文档放入 llmwiki/raw/')); process.exit(1); }
+      let ingested = 0, skipped = 0;
+      for (const rf of rawFiles) {
+        const rawPath = path.join(rawDir, rf); const sourcePath = path.join(sourcesDir, rf);
+        if (!await fs.pathExists(rawPath)) { console.log(chalk.yellow(`  ⚠️ 跳过：${rf} 不存在`)); continue; }
+        if (await fs.pathExists(sourcePath) && !options.force) { console.log(chalk.gray(`  ✓ 已有摘要：${rf}（--force 重生成）`)); skipped++; continue; }
+        console.log(chalk.blue(`\n  ▶ ingest: ${rf}`));
+        const ingestPrompt = `你是 LLMWiki ingest agent。执行 ingest workflow（§5）：
+
+1. 读 raw 源文件：${rawPath}
+2. 生成 sources 摘要页写入：${sourcePath}，YAML frontmatter 必须含：
+   type: source-summary, source_file: ${rf}, ingest_date: ${today}
+   key_claims: [3-5 条关键声明], contradicts: [矛盾处无则 []], supports: [下游知识无则 []]
+3. 正文：1-2 段提炼摘要，不重复全文。
+4. 追加 ingest 记录到 ${cwd}/llmwiki/log.md：
+   ## [ingest] ${today} | ${rf}
+   - key_claims: N 条 / 矛盾: X 处
+用 Write 工具写文件。立刻完成。`;
+        try {
+          const result = await ptyClaude(ingestPrompt, { cwd, model: options.model, timeoutMs: 300000 });
+          if (!result.timedOut && await fs.pathExists(sourcePath)) { ingested++; console.log(chalk.green(`    ✓ ${rf} ingest 完成`)); }
+          else { console.log(chalk.red(`    ❌ ${rf} 未生成摘要（exit=${result.exitCode}）`)); }
+        } catch (e) { console.log(chalk.red(`    ❌ ${rf} 失败：${String(e.message).split('\n')[0]}`)); }
+      }
+     console.log(chalk.green(`\n✅ ingest：${ingested} 新 / ${skipped} 跳过\n`));
+      // §5 ingest 第④步：sources → 下游角色知识（product/engineering）
+      if (options.promote) {
+        const allSources = (await fs.readdir(sourcesDir).catch(() => [])).filter(f => f.endsWith('.md'));
+        console.log(chalk.blue(`\n  ▶ promote：${allSources.length} 个 source → 下游角色知识\n`));
+        const sourcesContent = allSources.map(f => `## ${f}\n${fs.readFileSync(path.join(sourcesDir,f),'utf8').slice(0,400)}`).join('\n');
+        const promotePrompt = `你是 LLMWiki ingest agent。执行 §5 ingest 第④步（更新下游）：基于已生成的 sources 摘要，派生下游角色知识。
+
+## sources 摘要
+${sourcesContent}
+
+## 任务
+读 sources 的 key_claims，判断每条属于哪个角色，写入对应角色知识目录（frontmatter 必须含 raw 指回其 source 摘要）：
+- 产品相关（需求/目标/边界/用户）→ ${cwd}/llmwiki/wiki/product/REQ-<slug>.md（type: requirement, raw: ../wiki/sources/<对应source>.md）
+- 工程相关（架构/设计/决策/技术约束）→ ${cwd}/llmwiki/wiki/engineering/EN-<slug>.md（type: engineering-note, raw: ../wiki/sources/<对应source>.md）
+每条知识是简短的知识视角（不是全文复制），backlink 到 source 摘要。只产出有价值的，不为凑数。用 Write。`;
+        try {
+          await ptyClaude(promotePrompt, { cwd, model: options.model, timeoutMs: 300000 });
+          console.log(chalk.green(`    ✓ promote 完成\n`));
+        } catch (e) { console.log(chalk.red(`    ❌ promote 失败：${String(e.message).split('\n')[0]}`)); }
+      }
+   });
+program
+  .command('upgrade')
+  .description('Upgrade from original sdd-cli to SDD Harness')
+  .action(async () => {
+    const cwd = process.cwd();
+    console.log(chalk.blue('\n🔄 Upgrade from sdd-cli\n'));
+    const oldConfig = path.join(cwd, 'openspec', 'config.yaml');
+    if (await fs.pathExists(oldConfig)) { await fs.copy(oldConfig, oldConfig + '.bak'); console.log(chalk.green('✅ 备份旧 config')); }
+    await copySDDHarnessLayer(cwd, false, true);
+    console.log(chalk.green('\n✅ 升级完成\n'));
+  });
+
+function extractMetricsBlock(raw, stage) {
+  const stageRegex = new RegExp(`\\n${stage}:([\\s\\S]*?)(?=\\n[a-zA-Z_][a-zA-Z0-9_-]*:|$)`);
+  const normalized = `\n${raw}`;
+  return normalized.match(stageRegex)?.[1] ?? '';
+}
+
+// 指标评估器：读 stage-metrics.yaml，对 change 的 artifact 跑各 metric 的 check
+async function evalStageMetrics(stage, changeId, cwd, options = {}) {
+  const metricsPath = path.join(TEMPLATES_DIR, 'sdd-harness', 'stage-metrics.yaml');
+  if (!await fs.pathExists(metricsPath)) return { error: 'stage-metrics.yaml 未找到' };
+  const raw = await fs.readFile(metricsPath, 'utf8');
+  let block = extractMetricsBlock(raw, stage);
+  if (!block) return { error: `stage ${stage} 无指标定义` };
+
+  if (options.profile) {
+    const profilePath = path.join(
+      TEMPLATES_DIR,
+      'sdd-harness',
+      'probe-profiles',
+      `${options.profile}.yaml`,
+    );
+    if (!await fs.pathExists(profilePath)) {
+      return { error: `probe profile ${options.profile} 未找到` };
+    }
+    const profileRaw = await fs.readFile(profilePath, 'utf8');
+    const profileBlock = extractMetricsBlock(profileRaw, stage);
+    if (profileBlock) block += `\n${profileBlock}`;
+  }
+
+  // 解析 change 路径：优先 openspec/changes/<id>/，归档后回落 openspec/changes/archive/*/<id>/
+  let changesDir = path.join(cwd, 'openspec', 'changes', changeId);
+  if (!await fs.pathExists(changesDir)) {
+    const archDir = path.join(cwd, 'openspec', 'changes', 'archive');
+    if (await fs.pathExists(archDir)) {
+      for (const d of await fs.readdir(archDir)) {
+        if (d.endsWith(changeId) || d === changeId) { changesDir = path.join(archDir, d); break; }
+      }
+    }
+  }
+  const runsDir = path.join(cwd, '.sdd', 'runs', changeId);
+  const results = [];
+
+  // 解析 metrics 下的每个 - name/check/op/threshold
+  const metricRegex = /- name:\s*(.+?)\n\s*check:\s*"(.+?)"\n\s*op:\s*(\S+)\n\s*threshold:\s*(\S+)/g;
+  let mm;
+  while ((mm = metricRegex.exec(block)) !== null) {
+    let [, name, check, op, threshold] = mm;
+    // 剥 YAML 引号（op: ">=" 被正则连引号捕获）
+    op = op.replace(/^["']|["']$/g, '');
+    threshold = threshold.replace(/^["']|["']$/g, '');
+    const actual = runMetricCheck(check, changeId, changesDir, runsDir, cwd);
+    const thr = isNaN(threshold) ? threshold : Number(threshold);
+    const pass = compareMetric(actual, op, thr);
+    results.push({ name, check, op, threshold: thr, actual, pass });
+  }
+  return { results, allPass: results.every(r => r.pass) };
+}
+
+function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
+  // 替换 artifact 路径引用
+  let cmd = check
+    .replace(/\bfindings\.md\b/g, `"${changesDir}/findings.md"`)
+    .replace(/\bbrief\.md\b/g, `"${changesDir}/brief.md"`)
+    .replace(/\bproposal\.md\b/g, `"${changesDir}/proposal.md"`)
+    .replace(/\bacceptance-criteria\.md\b/g, `"${changesDir}/acceptance-criteria.md"`)
+    .replace(/\bfunctional-test-draft\.yaml\b/g, `"${changesDir}/functional-test-draft.yaml"`)
+    .replace(/\bdesign\.md\b/g, `"${changesDir}/design.md"`)
+    .replace(/\btasks\.md\b/g, `"${changesDir}/tasks.md"`)
+    .replace(/\bprogress\.md\b/g, `"${changesDir}/progress.md"`)
+    .replace(/\breview-notes\.md\b/g, `"${runsDir}/review-notes.md"`)
+    .replace(/\btest-matrix\.md\b/g, `"${cwd}/llmwiki/wiki/testing/matrices/test-matrix.md"`)
+    .replace(/(?<!openspec\/)specs\//g, `"${changesDir}/specs/"`)
+    .replace(/<slug>/g, changeId.split('-').slice(0, -1).join('-') || changeId);
+
+  // 特殊命令处理
+  if (cmd.startsWith('yaml_has_keys')) {
+    // yaml_has_keys <file> [k1,k2,k3]
+    const parts = cmd.match(/yaml_has_keys\s+"([^"]+)"\s+\[([^\]]+)\]/);
+    if (parts) {
+      const [, file, keys] = parts;
+      try {
+        const content = execSync(`cat ${file}`, { encoding: 'utf8' });
+        const allPresent = keys.split(',').every(k => content.includes(k.trim()));
+        return allPresent ? 'true' : 'false';
+      } catch { return 'false'; }
+    }
+    return 'false';
+  }
+  if (cmd.startsWith('count_files')) {
+    // count_files <dir> <pattern>  (pattern 可能带引号或不带)
+    const parts = cmd.match(/count_files\s+(\S+)\s+'([^']+)'|count_files\s+(\S+)\s+(\S+)/);
+    if (parts) {
+      const dir = parts[1] || parts[3];
+      const pat = parts[2] || parts[4];
+      try { return execSync(`find ${dir} -name '${pat}' 2>/dev/null | wc -l`, { encoding: 'utf8' }).trim(); }
+      catch { return '0'; }
+    }
+    return '0';
+  }
+  if (cmd.startsWith('cmd_exit')) {
+    // cmd_exit <command> —— 返回命令 exit code（真实运行验证）
+    const real = cmd.replace(/^cmd_exit\s+/, '');
+    try { execSync(real, { encoding: 'utf8', cwd, stdio: ['ignore','ignore','ignore'] }); return '0'; }
+    catch (e) { return String(e.status ?? 1); }
+  }
+  if (cmd.startsWith('exists')) {
+    const target = cmd.replace('exists ', '').split(' ')[0].replace(/"/g, '');
+    return fs.pathExistsSync(target) ? '1' : '0';
+  }
+  if (cmd.includes('git diff')) {
+    try { return execSync(cmd, { encoding: 'utf8', cwd }).trim() || '0'; } catch { return '0'; }
+  }
+
+  // 默认 grep/find 命令：artifact 文件已替换为绝对路径，故在项目根 cwd 跑（src/ 等项目相对路径也能解析）
+  try {
+    const out = execSync(cmd, { encoding: 'utf8', cwd }).trim();
+    return out || '0';
+  } catch {
+    return '0';
+  }
+}
+
+function compareMetric(actual, op, threshold) {
+  let a = String(actual).trim();
+  // files>= : 数输出里的非空行数（grep -rl 返回文件列表）
+  if (op === 'files>=' || op === 'files>') {
+    const lines = a === '' ? 0 : a.split('\n').filter(l => l.trim()).length;
+    const tn = Number(threshold);
+    return op === 'files>=' ? lines >= tn : lines > tn;
+  }
+  const t = String(threshold);
+  if (op === '==') return a === t;
+  const an = parseFloat(a), tn = parseFloat(t);
+  if (isNaN(an) || isNaN(tn)) return a === t;
+  if (op === '>=') return an >= tn;
+  if (op === '>') return an > tn;
+  if (op === '<=') return an <= tn;
+  if (op === '<') return an < tn;
+  return a === t;
+}
+
+program
+  .command('check <stage>')
+  .description('Evaluate a stage output against stage-metrics.yaml (objective reasonableness check)')
+  .option('--change <id>', 'change-id (default: active-run)')
+  .option('--profile <name>', 'add project/probe-specific metrics from templates/sdd-harness/probe-profiles')
+  .action(async (stage, options) => {
+    const cwd = process.cwd();
+    const activeRun = path.join(cwd, '.sdd', 'active-run');
+    let changeId = options.change;
+    if (!changeId && await fs.pathExists(activeRun)) changeId = (await fs.readFile(activeRun, 'utf8')).trim();
+    if (!changeId) { console.log(chalk.red('❌ 无 active run。先 sdd run grill')); process.exit(1); }
+
+    const profileLabel = options.profile ? ` + profile:${options.profile}` : '';
+    console.log(chalk.blue(`\n🔍 /sdd:${stage} 产出合理性评估（stage-metrics.yaml${profileLabel}）\n`));
+    const r = await evalStageMetrics(stage, changeId, cwd, { profile: options.profile });
+    if (r.error) { console.log(chalk.red('❌ ' + r.error)); process.exit(1); }
+
+    let passCount = 0;
+    for (const m of r.results) {
+      const mark = m.pass ? chalk.green('✅') : chalk.red('❌');
+      console.log(`  ${mark} ${m.name}: ${m.actual} ${m.op} ${m.threshold} ${m.pass ? '' : chalk.red('(未达标)')}`);
+      if (m.pass) passCount++;
+    }
+    console.log(chalk.blue(`\n${passCount}/${r.results.length} 指标达标`));
+    if (r.allPass) {
+      console.log(chalk.green.bold(`✅ ${stage} 阶段产出合理，达标。\n`));
+    } else {
+      console.log(chalk.yellow.bold(`⚠️  ${stage} 阶段产出未完全达标。agent 需补充内容使上述 ❌ 指标通过。\n`));
+      process.exit(2);
+    }
+  });
+
+program
+  .command('fill <stage>')
+  .description('LLM-fill a stage artifacts to meet stage-metrics (invokes claude -p headless). Framework generates content, not you.')
+  .option('--change <id>', 'change-id (default: active-run)')
+  .option('--model <m>', 'claude model', 'sonnet')
+  .action(async (stage, options) => {
+    const cwd = process.cwd();
+    if (!STAGE_CONTRACTS[stage]) { console.log(chalk.red(`❌ 未知 stage: ${stage}`)); process.exit(1); }
+    const activeRun = path.join(cwd, '.sdd', 'active-run');
+    let changeId = options.change;
+    if (!changeId && await fs.pathExists(activeRun)) changeId = (await fs.readFile(activeRun, 'utf8')).trim();
+    if (!changeId) { console.log(chalk.red('❌ 无 active run。先 sdd run grill --slug X --goal "..."')); process.exit(1); }
+
+    // 读 goal + steering
+    const wfPath = path.join(cwd, '.sdd', 'runs', changeId, 'workflow-frame.yaml');
+    let goal = '';
+    if (await fs.pathExists(wfPath)) {
+      const wf = await fs.readFile(wfPath, 'utf8');
+      goal = (wf.match(/^goal:\s*"(.*)"/m) || [])[1] || '';
+    }
+    const steering = path.join(cwd, '.sdd', 'steering', 'project.md');
+    const steeringContent = await fs.pathExists(steering) ? await fs.readFile(steering, 'utf8') : '(无 steering，按通用最佳实践)';
+
+    // 读该 stage 的指标（作为达标要求）
+    const metricsPath = path.join(TEMPLATES_DIR, 'sdd-harness', 'stage-metrics.yaml');
+    let metricsReq = '';
+    if (await fs.pathExists(metricsPath)) {
+      const raw = await fs.readFile(metricsPath, 'utf8');
+      const m = raw.match(new RegExp(stage + ":([\\s\\S]*?)(?=\\n[a-z]+:|$)"));
+      if (m) metricsReq = m[1];
+    }
+
+    // 归档路径回退（fill）：change 已 archive 时在 changes/archive/<date>-<id>/ 下
+    let changesDir = path.join(cwd, 'openspec', 'changes', changeId);
+    if (!await fs.pathExists(changesDir)) {
+      const archiveBase = path.join(cwd, 'openspec', 'changes', 'archive');
+      if (await fs.pathExists(archiveBase)) {
+        const match = (await fs.readdir(archiveBase)).find(d => d.endsWith('-' + changeId));
+        if (match) changesDir = path.join(archiveBase, match);
+      }
+    }
+    const runsDir = path.join(cwd, '.sdd', 'runs', changeId);
+
+    console.log(chalk.blue(`\n🤖 sdd fill ${stage}（claude -p headless 生成达标内容）\n`));
+    console.log(chalk.gray(`   change: ${changeId}`));
+    console.log(chalk.gray(`   goal: ${goal}`));
+    console.log(chalk.gray(`   model: ${options.model}\n`));
+
+    // verify 阶段：实证——真实跑 npm run build，失败则调 claude 修，循环到通过
+    if (stage === 'verify') {
+      console.log(chalk.cyan(`   实证：npm run build 真实构建 + 失败自动修\n`));
+      let buildOk = false;
+      let lastErr = '';
+      for (let attempt = 1; attempt <= 3 && !buildOk; attempt++) {
+        console.log(chalk.blue(`▶ build 尝试 ${attempt}`));
+        let buildOut = '';
+        try {
+          buildOut = execSync('npm run build 2>&1', { encoding: 'utf8', cwd, timeout: 120000 });
+          // exit 0 但有 "failed to resolve" 警告也算失败（vite 对 unresolved import 有时 exit 0）
+          if (/failed to resolve|Could not resolve/i.test(buildOut)) throw new Error('resolve warning');
+          buildOk = true;
+          console.log(chalk.green('  ✅ build 通过\n'));
+        } catch (e) {
+          if (!buildOut) { try { buildOut = execSync('npm run build 2>&1', { encoding: 'utf8', cwd, timeout: 120000 }); } catch (e2) { buildOut = e2.stdout || String(e2.message); } }
+          const errTail = String(buildOut).split('\n').slice(-15).join('\n');
+          console.log(chalk.yellow(`  ⚠️ build 失败，调 claude 修（带真实错误）...\n`));
+          const fixPrompt = `项目 ${cwd} 的 \`npm run build\` 失败。真实错误（最后 15 行）:
+
+\`\`\`
+${errTail}
+\`\`\`
+
+针对该错误修 src/ 代码 或 vite.config / tsconfig / package.json，使 build 通过。
+常见错误对照:
+- "node:crypto does not provide getRandomValues" → vite 浏览器构建误用 Node crypto；修法：建 vite.config.ts 加 define: { global: 'globalThis' } 或在代码里用 globalThis.crypto，或装 vite-plugin-node-polyfills
+- "Cannot find module / import 路径错" → 改 import 路径（如 /main.ts → /src/main.ts）
+- TS 类型错 → 修类型或 tsconfig 改 strict
+
+直接改文件（Bash/Write），改完重跑 npm run build 确认 exit 0。`;
+          try {
+            await ptyClaude(fixPrompt, { cwd, model: options.model, timeoutMs: 180000 });
+          } catch (e2) { if (String(e2.message).includes('TIMEDOUT')) console.log(chalk.gray('   (fix 超时)')); }
+        }
+      }
+      // 写证据到 progress.md
+      const prog = path.join(changesDir, 'progress.md');
+      await fs.appendFile(prog, `\n## [verify] 实证构建\n- npm run build: ${buildOk ? 'PASS (exit 0)' : 'FAIL'}\n- 非功能: Lighthouse/waiver 待 preview\n- failure 分类: ${buildOk ? '无' : 'build error'}\n`);
+      console.log(chalk.green(`✓ verify 实证完成（build ${buildOk ? 'PASS' : 'FAIL'}）\n`));
+      const r = await evalStageMetrics('verify', changeId, cwd);
+      let pc = 0; for (const m of r.results) { const ok = m.pass; console.log(`  ${ok?chalk.green('✅'):chalk.red('❌')} ${m.name}: ${m.actual} ${m.op} ${m.threshold}`); if (ok) pc++; }
+      console.log(chalk.blue(`\n${pc}/${r.results.length} 达标`));
+      return;
+    }
+
+    // code 阶段：通用化——从 steering（tech stack）+ specs（功能）+ design（File Structure Plan）派生，零项目专属硬编码
+    if (stage === 'code') {
+      // 读 design.md 的 File Structure Plan（决定 src 文件结构）+ specs + tasks
+      const designPath = path.join(changesDir, 'design.md');
+      const designContent = await fs.readFile(designPath, 'utf8').catch(() => '');
+      const fspMatch = designContent.match(/File Structure Plan[\s\S]*?(?=\n##|\n## Boundary|$)/i);
+      const fileStructurePlan = fspMatch ? fspMatch[0] : '(无 File Structure Plan，按 specs 推断)';
+      const specsDir = path.join(changesDir, 'specs');
+      let specsSummary = '';
+      if (await fs.pathExists(specsDir)) {
+        for (const cap of await fs.readdir(specsDir)) {
+          const sp = path.join(specsDir, cap, 'spec.md');
+          if (await fs.pathExists(sp)) specsSummary += `\n## ${cap}\n${(await fs.readFile(sp,'utf8')).slice(0,600)}\n`;
+        }
+      }
+      const probeGenerationContractPath = path.join(
+        TEMPLATES_DIR,
+        'sdd-harness',
+        'generation-contracts',
+        'browser-probe.md',
+      );
+      const probeGenerationContract = await fs.readFile(
+        probeGenerationContractPath,
+        'utf8',
+      ).catch(() => '');
+      const lockedProbeProfileName = (
+        await fs.readFile(path.join(runsDir, 'probe-profile'), 'utf8').catch(() => '')
+      ).trim();
+      const lockedProbeProfile = lockedProbeProfileName
+        ? await fs.readFile(
+          path.join(
+            TEMPLATES_DIR,
+            'sdd-harness',
+            'probe-profiles',
+            `${lockedProbeProfileName}.yaml`,
+          ),
+          'utf8',
+        ).catch(() => '')
+        : '';
+
+      console.log(chalk.cyan(`   通用化分解实现（src + config 两个小调用，零硬编码）\n`));
+
+      // 调用 1: src 源码（按 specs + steering + File Structure Plan）
+      const srcPrompt = `你是 SDD code agent。基于项目上下文实现源码，**不预设技术栈/玩法**。
+
+## steering（tech stack — 决定技术）
+${steeringContent}
+
+## specs（决定功能）
+${specsSummary || '(无)'}
+
+## File Structure Plan（决定文件结构）
+${fileStructurePlan}
+
+## Browser Probeability Generation Contract
+${probeGenerationContract || '(非 browser 项目可忽略)'}
+
+## Active Probe Profile
+${lockedProbeProfile || '(当前 run 未锁定 probe profile)'}
+
+实现 ${cwd}/src/ 下所有源文件（按 File Structure Plan 的结构 + steering 的技术 + specs 的功能）。
+- 技术栈按 steering（可能是 three.js/Babylon/Canvas/React/... — 你读 steering 决定，别套预设）
+- 真实可运行，不占位
+- browser 项目按上述契约暴露只读 globalThis.__sddProbe.snapshot()，禁止 debug DOM
+用 Write 工具，立刻完成。`;
+      try {
+        await ptyClaude(srcPrompt, { cwd, model: options.model, timeoutMs: 600000 });
+      } catch (e) { if (String(e.message).includes('TIMEDOUT')) console.log(chalk.gray('   (src 超时)')); }
+
+      // 调用 2: 配置文件（package.json + 入口，按 steering 构建工具）
+      // manifest 配置：按 steering 语言决定（autoresearch 优化：区分 JS/Python，修复 JS 中心主义）
+      const cfgPrompt = `写 manifest 配置文件，按 steering 的技术栈决定：
+- JS/TS 项目：写 ${cwd}/package.json（scripts 必须含 build 和 test，如 build: "tsc && vite build", test: "vitest run"）+ ${cwd}/index.html（若 web，入口指向 src 主文件）
+- Python 项目：写 ${cwd}/pyproject.toml，必须含 [build-system]（setuptools）+ [project.scripts]（CLI 入口）+ [tool.pytest.ini_options]（测试配置 testpaths）+ ${cwd}/tests/__init__.py
+- 其他语言：按该语言惯例配置构建与测试入口
+立刻完成。用 Write。`;
+      try {
+        await ptyClaude(cfgPrompt, { cwd, model: options.model, timeoutMs: 120000 });
+      } catch (e) { if (String(e.message).includes('TIMEDOUT')) console.log(chalk.gray('   (config 超时)')); }
+
+      // 调用 3: 测试代码（按 specs + generation contract 验证真实实现）
+      const testPrompt = `你是 SDD test-generation agent。为当前实现生成可运行的自动化测试，**测试真实生产路径，不复制实现逻辑**。
+
+## steering（决定测试框架）
+${steeringContent}
+
+## specs（决定功能行为）
+${specsSummary || '(无)'}
+
+## Browser Probeability Regression Tests
+${probeGenerationContract || '(非 browser 项目可忽略)'}
+
+## Active Probe Profile
+${lockedProbeProfile || '(当前 run 未锁定 probe profile)'}
+
+在项目惯例的测试目录或源码旁生成测试文件：
+- 覆盖 specs 的核心行为与错误路径
+- browser/canvas 项目必须调用真实 resize controller，证明尺寸源是 viewport 或稳定外部容器
+- 测试必须能阻止 canvas client size → renderer setSize 的 resize feedback；只测 aspect helper 不算
+- 覆盖 debug DOM 禁止项与 globalThis.__sddProbe.snapshot() 的只读可用性
+- 若 profile 声明 requiredInteractions / transitionContracts，为其生成状态转移测试
+只写测试文件，不修改生产实现。用 Write 工具，立刻完成。`;
+      const beforeTestInventory = await captureTestInventory(cwd);
+      const testGenerationResult = await ptyClaude(
+        testPrompt,
+        { cwd, model: options.model, timeoutMs: 300000 },
+      );
+      const generationGate = await evaluateGeneratedTests({
+        projectDir: cwd,
+        generationResult: testGenerationResult,
+        beforeTestInventory,
+      });
+      if (!generationGate.pass) {
+        console.log(chalk.red(`   ⛔ test generation gate failed: ${generationGate.reason}`));
+        process.exitCode = 2;
+        return;
+      }
+      const projectTestGate = runProjectTestGate({ projectDir: cwd, evidenceDir: runsDir });
+      if (!projectTestGate.pass) {
+        console.log(chalk.red(`   ⛔ project test gate failed: ${projectTestGate.reason}`));
+        process.exitCode = 2;
+        return;
+      }
+
+      const prog = path.join(changesDir, 'progress.md');
+      await fs.appendFile(prog, `\n## [code] 通用化实现\n- 按 steering tech stack + specs 功能 + File Structure Plan 结构\n- src/ + 入口 + package.json\n- browser probeability contract + active probe profile 已注入源码与测试生成上下文\n- 测试: 已生成/修改 ${generationGate.changedTestFiles.length} 个文件；${projectTestGate.command} PASS (exit 0)\n- test evidence: ${projectTestGate.evidence.reportPath}; output SHA-256 ${projectTestGate.evidence.outputSha256}\n`);
+      console.log(chalk.green(`\n✓ 通用化实现 + progress.md\n`));
+      const r = await evalStageMetrics('code', changeId, cwd);
+      let pc = 0; for (const m of r.results) { const ok = m.pass; console.log(`  ${ok?chalk.green('✅'):chalk.red('❌')} ${m.name}: ${m.actual} ${m.op} ${m.threshold}`); if (ok) pc++; }
+      console.log(chalk.blue(`\n${pc}/${r.results.length} 达标`));
+      return;
+    }
+
+    // 构建完整目标文件列表（changesDir + wiki + runtime）
+    const contract = STAGE_CONTRACTS[stage];
+    const targets = [];
+    for (const a of contract.artifacts) targets.push(`${changesDir}/${a}`);
+    if (stage === 'grill') targets.push(`${changesDir}/brief.md（含 'route: new|extend|direct_impl|decompose'）`);
+    if (contract.wiki) targets.push(`${cwd}/llmwiki/${contract.wiki}`);
+   if (contract.runtime) targets.push(`${runsDir}/${contract.runtime}`);
+    // test 阶段：通用化——扫描真实 src（不硬编码文件名）+ steering 测试框架 + specs 派生测试
+    // 架构 §5.4：归一化测试用例写入 LLMWiki（markdown + frontmatter）
+    if (stage === 'test') {
+      // 扫描真实 src 结构 + 读取核心源码内容（让 claude 基于实现而非推测写测试）
+      let srcStructure = '(未发现 src/)';
+      let srcSource = '';
+      try {
+        const srcFiles = execSync(`find src -type f \\( -name '*.ts' -o -name '*.js' -o -name '*.py' \\) ! -name '*.test.*' 2>/dev/null | sort`, { encoding: 'utf8', cwd }).trim().split('\n').filter(Boolean);
+        srcStructure = srcFiles.join('\n') || '(src/ 为空)';
+        for (const sf of srcFiles.slice(0, 12)) {
+          try { srcSource += `\n// ${sf}\n${(await fs.readFile(path.join(cwd, sf), 'utf8')).slice(0, 400)}\n`; } catch {}
+        }
+      } catch { srcStructure = '(扫描失败)'; }
+      const specsDir2 = path.join(changesDir, 'specs');
+      let specsForTest = '';
+      if (await fs.pathExists(specsDir2)) {
+        for (const cap of await fs.readdir(specsDir2)) {
+          const sp = path.join(specsDir2, cap, 'spec.md');
+          if (await fs.pathExists(sp)) specsForTest += `\n## ${cap}\n${(await fs.readFile(sp,'utf8')).slice(0,500)}\n`;
+        }
+      }
+      console.log(chalk.cyan(`   通用化测试生成（扫描真实 src + steering 测试框架，零硬编码）\n`));
+      const testPrompt = `你是 SDD test agent。基于已有源码和规格生成测试，**不预设文件名/框架**。
+
+## steering（测试框架 — 决定用什么测）
+${steeringContent}
+
+## specs（决定测什么功能）
+${specsForTest || '(无 specs)'}
+
+## 已有源码结构（决定测试放哪）
+${srcStructure}
+
+## 核心源码实现（决定测试细节——基于真实行为而非推测）
+${srcSource || '(未能读取)'}
+
+生成：
+1. test matrix: ${cwd}/llmwiki/wiki/testing/matrices/test-matrix.md（feature × test type 表格）
+2. 单测文件：为 src/ 下核心模块生成对应测试文件，**基于上方源码结构决定文件名，不要预设 world.test.ts/camera.test.ts**
+3. 归一化用例（§5.4）：每个写 ${cwd}/llmwiki/wiki/testing/cases/TC-<slug>.md，frontmatter: type: test-case, id: TC-<slug>, spec, status, suite
+4. 测试配置：按 steering（JS→vitest.config.ts，Python→conftest.py）
+5. manifest：package.json scripts 含 test 或 pyproject.toml 含 pytest 配置
+真实测试，覆盖 specs 核心功能，断言基于上方源码的真实行为。用 Write 立刻完成。`;
+      try { await ptyClaude(testPrompt, { cwd, model: options.model, timeoutMs: 600000 }); } catch (e) { if (String(e.message).includes('TIMEDOUT')) console.log(chalk.gray('   (test 超时)')); }
+
+      // test-fix 闭环：跑测试，失败调 claude 修（对齐 verify 的 build-fix 模式）
+      console.log(chalk.cyan(`   test-fix 闭环：验证测试通过\n`));
+      let testOk = false; let testErr = '';
+      for (let attempt = 1; attempt <= 3 && !testOk; attempt++) {
+        try {
+          testErr = execSync('npm test 2>&1', { encoding: 'utf8', cwd, timeout: 120000 });
+          if (/failed.*\(0\)|Tests.*passed/.test(testErr) && !/✗|×|FAIL\b/.test(testErr)) testOk = true;
+          if (testOk) { console.log(chalk.green(`  ✅ npm test 通过\n`)); break; }
+        } catch (e) { testErr = (e.stdout || String(e.message)); }
+        const errTail = String(testErr).split('\n').slice(-20).join('\n');
+        console.log(chalk.yellow(`  ⚠️ 测试失败，调 claude 修（attempt ${attempt}）...\n`));
+        const fixPrompt = `项目 ${cwd} 的 \`npm test\` 失败。真实错误（最后 20 行）:
+
+\`\`\`
+${errTail}
+\`\`\`
+
+针对失败修测试文件（修测试断言以匹配真实源码行为，或修 src/ 里的 bug）。直接改文件，改完重跑 npm test 确认。`;
+        try { await ptyClaude(fixPrompt, { cwd, model: options.model, timeoutMs: 300000 }); } catch (e2) { if (String(e2.message).includes('TIMEDOUT')) console.log(chalk.gray('   (fix 超时)')); }
+      }
+      const prog = path.join(changesDir, 'progress.md');
+      await fs.appendFile(prog, `\n## [test] 通用化测试\n- 扫描真实 src 结构（不硬编码）\n- test-matrix + 单测 + LLMWiki TC-* 归一化用例\n- 框架按 steering\n`);
+      console.log(chalk.green(`\n✓ 通用化测试 + progress.md\n`));
+      const r = await evalStageMetrics('test', changeId, cwd);
+      let pc = 0; for (const m of r.results) { const ok = m.pass; console.log(`  ${ok?chalk.green('✅'):chalk.red('❌')} ${m.name}: ${m.actual} ${m.op} ${m.threshold}`); if (ok) pc++; }
+      console.log(chalk.blue(`\n${pc}/${r.results.length} 达标`));
+      return;
+    }
+    if (stage === 'code') {
+      targets.push(`src/ 下的真实源码实现（基于 specs/ 和 tasks.md，写可运行的 TypeScript + Three.js 代码：world/render/input/player 四层模块 + index.html + package.json）`);
+      targets.push(`${changesDir}/progress.md（追加 code 阶段条目，记录实现的文件 + 测试结果）`);
+    }
+    if (stage === 'verify' || stage === 'release') targets.push(`${changesDir}/progress.md（追加该阶段条目）`);
+
+    const prompt = `你是 SDD Harness "${stage}" 阶段执行 agent。严格按以下要求填写 artifact，产出必须客观达标。
+
+## 项目目标
+${goal}
+
+## 项目 steering（tech stack / 规范）
+${steeringContent}
+
+## ${stage} 阶段达标要求（stage-metrics.yaml，必须每条满足）
+${metricsReq}
+
+## 你的任务
+基于目标和 steering，填写以下文件，使其满足上述全部指标:
+${targets.map(t => `- ${t}`).join('\n')}
+
+要求:
+1. 内容真实合理，基于目标和 steering，不要泛泛或占位
+2. 必须满足达标要求里的每一条指标（数量、结构）—— 这是最重要约束
+3. 中文叙述 + 英文技术术语
+4. 直接用 Write 工具写文件，不要只输出到对话
+
+开始。`;
+
+    // 调 claude -p headless（--bare 跳过 hooks/skills/memory 重启动开销，prompt 走 stdin；8min 超时）
+    try {
+      await ptyClaude(prompt, { cwd, model: options.model, timeoutMs: 480000 });
+    } catch (e) {
+      if (!String(e.message).includes('TIMEDOUT') && !String(e.message).includes('timeout')) {
+        console.log(chalk.red('⚠️ claude headless 调用失败: ' + String(e.message).split('\n')[0]));
+      } else {
+        console.log(chalk.gray('   (claude 超时，但文件可能已写，继续验证)'));
+      }
+    }
+
+    // 填完后自动 check
+    console.log(chalk.blue('\n🔍 自动验证（sdd check）\n'));
+    const r = await evalStageMetrics(stage, changeId, cwd);
+    if (r.error) { console.log(chalk.red(r.error)); process.exit(1); }
+    let passCount = 0;
+    for (const m of r.results) {
+      const mark = m.pass ? chalk.green('✅') : chalk.red('❌');
+      console.log(`  ${mark} ${m.name}: ${m.actual} ${m.op} ${m.threshold}`);
+      if (m.pass) passCount++;
+    }
+    console.log(chalk.blue(`\n${passCount}/${r.results.length} 达标`));
+    if (r.allPass) console.log(chalk.green.bold(`✅ ${stage} 填充完成且达标\n`));
+    else { console.log(chalk.yellow(`⚠️ 仍有指标未达标，可重跑 sdd fill ${stage}\n`)); process.exit(2); }
+  });
+
+program
+  .command('workflow-audit')
+  .description('Re-evaluate an existing workflow run against its current stage prerequisites')
+  .requiredOption('--project <dir>', 'Project directory containing .sdd/runs')
+  .requiredOption('--run <id>', 'Runtime run id to audit')
+  .option('--json', 'Print a machine-readable report', false)
+  .action(async (options) => {
+    try {
+      const report = await auditWorkflowRun({
+        projectDir: path.resolve(options.project),
+        run: options.run,
+      });
+      if (options.json) {
+        console.log(JSON.stringify(report));
+      } else {
+        console.log(chalk.blue('\n🧭 SDD Workflow State Audit\n'));
+        for (const item of report.issues) {
+          console.log(chalk.red(`❌ ${item.gate}: ${item.reason}`));
+        }
+        if (report.pass) console.log(chalk.green('✅ workflow stage prerequisites are valid'));
+      }
+      process.exitCode = report.pass ? 0 : 2;
+    } catch (error) {
+      const report = {
+        schemaVersion: 1,
+        pass: false,
+        issues: [{
+          code: 'INVALID_WORKFLOW_AUDIT',
+          message: error.message,
+        }],
+      };
+      if (options.json) console.log(JSON.stringify(report));
+      else console.error(chalk.red(`❌ Invalid workflow audit: ${error.message}`));
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command('deliverable-audit')
+  .description('Audit stage deliverables — verify that each completed stage produced its expected outputs')
+  .requiredOption('--project <dir>', 'Project directory')
+  .requiredOption('--run <id>', 'Runtime run id')
+  .option('--stage <name>', 'Only check a specific stage (default: all completed stages)')
+  .option('--json', 'Print a machine-readable report', false)
+  .action(async (options) => {
+    try {
+      const report = await auditDeliverables({
+        projectDir: path.resolve(options.project),
+        run: options.run,
+        stage: options.stage,
+      });
+      if (options.json) {
+        console.log(JSON.stringify(report));
+      } else {
+        console.log(chalk.blue('\n📦 SDD Deliverable Audit\n'));
+        console.log(chalk.gray(`   Stages checked: ${report.checkedStages.join(' → ')}\n`));
+        for (const r of report.results) {
+          const icon = r.pass ? '✅' : (r.severity === 'required' ? '❌' : '⚠️');
+          const sev = r.severity === 'required' ? chalk.red : chalk.yellow;
+          console.log(`  ${icon} [${r.stage}/${r.id}] ${r.describe}`);
+          if (!r.pass && r.detail) console.log(sev(`     → ${r.detail}`));
+        }
+        const reqFail = report.requiredFailures.length;
+        const expFail = report.expectedFailures.length;
+        console.log(chalk.gray(`\n   ${report.totalRules} rules: ${report.totalRules - reqFail - expFail} pass, ${reqFail} required fail, ${expFail} expected fail`));
+        if (report.pass) console.log(chalk.green.bold('\n✅ All required deliverables present\n'));
+        else { console.log(chalk.red.bold(`\n❌ ${reqFail} required deliverable(s) missing\n`)); }
+      }
+      process.exitCode = report.pass ? 0 : 2;
+    } catch (error) {
+      const report = { schemaVersion: 1, pass: false, error: error.message };
+      if (options.json) console.log(JSON.stringify(report));
+      else console.error(chalk.red(`❌ Deliverable audit failed: ${error.message}`));
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command('probe')
+  .description('Evaluate deterministic browser/runtime probe evidence')
+  .requiredOption('--project <dir>', 'Project directory that produced the evidence')
+  .requiredOption('--evidence <file>', 'Runtime evidence JSON captured by Browser/Playwright MCP')
+  .option('--profile <name>', 'apply project/probe-specific contract from templates/sdd-harness/probe-profiles')
+  .option('--json', 'Print a machine-readable report', false)
+  .action(async (options) => {
+    try {
+      const projectDir = path.resolve(options.project);
+      const evidencePath = path.resolve(options.evidence);
+      let requiredInteractions = [];
+      let transitionContracts = {};
+      let observationAdapter;
+      if (options.profile) {
+        const profilePath = path.join(
+          TEMPLATES_DIR,
+          'sdd-harness',
+          'probe-profiles',
+          `${options.profile}.yaml`,
+        );
+        if (!await fs.pathExists(profilePath)) {
+          throw new Error(`probe profile not found: ${options.profile}`);
+        }
+        const profileRaw = await fs.readFile(profilePath, 'utf8');
+        const requiredMatch = profileRaw.match(/^requiredInteractions:\s*\[([^\]]*)\]/m);
+        requiredInteractions = requiredMatch
+          ? requiredMatch[1].split(',').map((item) => item.trim()).filter(Boolean)
+          : [];
+        const transitionContractsMatch = profileRaw.match(/^transitionContracts:\s*(\{.*\})\s*$/m);
+        transitionContracts = transitionContractsMatch
+          ? JSON.parse(transitionContractsMatch[1])
+          : {};
+        const observationAdapterMatch = profileRaw.match(/^observationAdapter:\s*["']?([^"'#\n]+)["']?\s*$/m);
+        observationAdapter = observationAdapterMatch?.[1]?.trim();
+      }
+      const report = await validateProbe({
+        projectDir,
+        evidencePath,
+        requiredInteractions,
+        transitionContracts,
+        observationAdapter,
+      });
+      if (options.profile) report.profile = options.profile;
+
+      if (options.json) {
+        console.log(JSON.stringify(report));
+      } else {
+        console.log(chalk.blue('\n🔬 SDD Harness Probe Gate\n'));
+        for (const item of report.issues) {
+          console.log(chalk.red(`❌ ${item.code}: ${item.message}`));
+        }
+        if (report.pass) console.log(chalk.green('✅ probe evidence passed'));
+      }
+      process.exitCode = report.pass ? 0 : 2;
+    } catch (error) {
+      if (options.json) {
+        console.log(JSON.stringify({
+          schemaVersion: 1,
+          pass: false,
+          issues: [{
+            code: 'INVALID_PROBE_EVIDENCE',
+            message: error.message,
+          }],
+        }));
+      } else {
+        console.error(chalk.red(`❌ Invalid probe evidence: ${error.message}`));
+      }
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command('evidence-audit')
+  .description('Audit SDD evidence against disk facts and captured command output')
+  .requiredOption('--project <dir>', 'Project directory that produced the evidence')
+  .requiredOption('--change <id>', 'OpenSpec/SDD change id')
+  .option('--run <id>', 'Runtime run id when it differs from the OpenSpec change path')
+  .option('--test-output <file>', 'Captured npm/vitest test output to compare against markdown claims')
+  .option('--json', 'Print a machine-readable report', false)
+  .action(async (options) => {
+    try {
+      const report = await auditEvidence({
+        projectDir: path.resolve(options.project),
+        change: options.change,
+        run: options.run,
+        testOutputPath: options.testOutput ? path.resolve(options.testOutput) : undefined,
+      });
+
+      if (options.json) {
+        console.log(JSON.stringify(report));
+      } else {
+        console.log(chalk.blue('\n🧾 SDD Evidence Audit Gate\n'));
+        for (const item of report.issues) {
+          console.log(chalk.red(`❌ ${item.code}: ${item.message}`));
+        }
+        if (report.pass) console.log(chalk.green('✅ evidence matches disk and command output'));
+      }
+      process.exitCode = report.pass ? 0 : 2;
+    } catch (error) {
+      const report = {
+        schemaVersion: 1,
+        pass: false,
+        issues: [{
+          code: 'INVALID_EVIDENCE_AUDIT',
+          message: error.message,
+        }],
+      };
+      if (options.json) console.log(JSON.stringify(report));
+      else console.error(chalk.red(`❌ Invalid evidence audit: ${error.message}`));
+      process.exitCode = 1;
+    }
   });
 
 program.parse();
