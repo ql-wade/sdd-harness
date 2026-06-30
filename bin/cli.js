@@ -1838,9 +1838,13 @@ program
           console.log(chalk.green(`  ✅ [${f.stage}/${f.id}] ${f.action}`));
         }
         for (const m of report.manual) {
-          console.log(chalk.yellow(`  ⚠️  [${m.stage}/${m.id}] ${m.reason}`));
+          const icon = m.needsLLM ? '🤖' : '⚠️ ';
+          console.log(chalk.cyan(`  ${icon} [${m.stage}/${m.id}] ${m.reason}`));
+          if (m.instruction) console.log(chalk.gray(`     → ${m.instruction}`));
         }
-        console.log(chalk.gray(`\n   ${report.fixedCount} fixed, ${report.manualCount} need manual`));
+        const llmCount = report.manual.filter(m => m.needsLLM).length;
+        const manualCount = report.manualCount - llmCount;
+        console.log(chalk.gray(`\n   ${report.fixedCount} auto-fixed, ${llmCount} need LLM (sdd-archive skill), ${manualCount} need manual`));
         if (report.fixedCount > 0) {
           console.log(chalk.green.bold('\n✅ Re-run deliverable-audit to verify fixes\n'));
         }
