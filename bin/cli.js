@@ -14,6 +14,7 @@ import { captureTestInventory, evaluateGeneratedTests } from '../lib/generation-
 import { runProjectTestGate } from '../lib/project-test-gate.js';
 import { auditWorkflowRun } from '../lib/workflow-audit.js';
 import { auditDeliverables } from '../lib/deliverable-audit.js';
+import { fixDeliverables } from '../lib/deliverable-fixer.js';
 
 // 异步流式执行 claude（非 execSync 阻塞；stdin 走临时文件 redirect；慷慨超时）
 //
@@ -1810,6 +1811,44 @@ program
       const report = { schemaVersion: 1, pass: false, error: error.message };
       if (options.json) console.log(JSON.stringify(report));
       else console.error(chalk.red(`❌ Deliverable audit failed: ${error.message}`));
+      process.exitCode = 1;
+    }
+  });
+
+program
+  .command('fill-deliverables')
+  .description('Auto-fix expected deliverable gaps (ADR archive, AC split, learnings propagation, concepts extraction, etc.)')
+  .requiredOption('--project <dir>', 'Project directory')
+  .requiredOption('--run <id>', 'Runtime run id')
+  .option('--stage <name>', 'Only fix a specific stage')
+  .option('--json', 'Print machine-readable report', false)
+  .action(async (options) => {
+    try {
+      const report = await fixDeliverables({
+        projectDir: path.resolve(options.project),
+        run: options.run,
+        stage: options.stage,
+      });
+      if (options.json) {
+        console.log(JSON.stringify(report));
+      } else {
+        console.log(chalk.blue('\n🔧 SDD Deliverable Auto-Fix\n'));
+        console.log(chalk.gray(`   Gaps found: ${report.totalGaps}\n`));
+        for (const f of report.fixed) {
+          console.log(chalk.green(`  ✅ [${f.stage}/${f.id}] ${f.action}`));
+        }
+        for (const m of report.manual) {
+          console.log(chalk.yellow(`  ⚠️  [${m.stage}/${m.id}] ${m.reason}`));
+        }
+        console.log(chalk.gray(`\n   ${report.fixedCount} fixed, ${report.manualCount} need manual`));
+        if (report.fixedCount > 0) {
+          console.log(chalk.green.bold('\n✅ Re-run deliverable-audit to verify fixes\n'));
+        }
+      }
+      process.exitCode = 0;
+    } catch (error) {
+      if (options.json) console.log(JSON.stringify({ error: error.message }));
+      else console.error(chalk.red(`❌ Fix failed: ${error.message}`));
       process.exitCode = 1;
     }
   });
