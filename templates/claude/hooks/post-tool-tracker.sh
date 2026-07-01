@@ -29,7 +29,7 @@ if [ ! -f "$WF_FILE" ]; then
   exit 0
 fi
 
-CURRENT_STAGE=$(grep -E '^\s+current:' "$WF_FILE" | head -1 | awk '{print $2}')
+CURRENT_STAGE=$(grep -E '^\s*current:' "$WF_FILE" | head -1 | awk '{print $2}')
 
 # 只在有文件写入时追踪
 if [ -z "$TARGET_PATH" ]; then

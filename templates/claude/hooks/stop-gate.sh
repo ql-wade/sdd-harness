@@ -35,8 +35,8 @@ if [ -f "${SDD_DIR}/hooks/bypass" ]; then
   exit 0
 fi
 
-CURRENT_STAGE=$(grep -E '^\s+current:' "$WF_FILE" | head -1 | awk '{print $2}')
-GATE_STATUS=$(grep -E '^\s+status:' "$WF_FILE" | head -1 | awk '{print $2}')
+CURRENT_STAGE=$(grep -E '^\s*current:' "$WF_FILE" | head -1 | awk '{print $2}')
+GATE_STATUS=$(grep -E '^\s*status:' "$WF_FILE" | head -1 | awk '{print $2}')
 
 # ── 检查 1: workflow-frame gate status ──────────────────
 
@@ -55,7 +55,7 @@ fi
 # ── 检查 2: deliverable 独立验证（内联，不依赖 CLI）─────
 # 不信 agent 自声明的 gate status——独立检查产出真实存在。
 
-DELIVERABLE_RESULT=$(python3 -c "
+DELIVERABLE_RESULT=$(SDD_PROJECT_DIR="${SDD_PROJECT_DIR}" CHANGE_ID="${CHANGE_ID}" CURRENT_STAGE="${CURRENT_STAGE}" python3 -c "
 import os, sys, json
 
 project_dir = os.environ.get('SDD_PROJECT_DIR', '')

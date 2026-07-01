@@ -25,8 +25,8 @@ if [ ! -f "$WF_FILE" ]; then
   exit 0
 fi
 
-CURRENT_STAGE=$(grep -E '^\s+current:' "$WF_FILE" | head -1 | awk '{print $2}')
-GOAL=$(grep -E '^\s+goal:' "$WF_FILE" | head -1 | cut -d'"' -f2)
+CURRENT_STAGE=$(grep -E '^\s*current:' "$WF_FILE" | head -1 | awk '{print $2}')
+GOAL=$(grep -E '^\s*goal:' "$WF_FILE" | head -1 | cut -d'"' -f2)
 
 echo "---"
 echo "SDD Harness active run: ${CHANGE_ID}"
