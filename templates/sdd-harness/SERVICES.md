@@ -12,7 +12,7 @@
 ├──────────────────────────────────────────────────────────────┤
 │  SDD Harness — 持久服务层 (Docker)                            │
 │  docker compose -f ~/.sdd/docker-compose.sdd.yml up -d       │
-│  └─ opendeepwiki  :8090  AI 仓库知识库 + MCP endpoint         │
+│  └─ opendeepwiki  :8095  AI 仓库知识库 + MCP endpoint         │
 │  └─ opendeepwiki  :3001  Web UI (导入仓库、查看 wiki)         │
 ├──────────────────────────────────────────────────────────────┤
 │  SDD Harness — 会话层 (AI 工具 spawn，不进 docker)            │
@@ -107,6 +107,6 @@ LLMWiki MCP 和 Understand-Anything 不能容器化：
 | `OPENDEEPWIKI_API_KEY` | $OPENAI_API_KEY | OpenDeepWiki 的 LLM 调用（优先） |
 | `OPENDEEPWIKI_LLM_ENDPOINT` | https://api.openai.com/v1 | LLM endpoint |
 | `OPENDEEPWIKI_MODEL` | gpt-4o | wiki 生成模型 |
-| `OPENDEEPWIKI_PORT` | 8090 | API + MCP 端口 |
+| `OPENDEEPWIKI_PORT` | 8095 | API + MCP 端口 |
 | `OPENDEEPWIKI_WEB_PORT` | 3001 | Web UI 端口 |
 | `OPENDEEPWIKI_JWT_SECRET` | (dev default) | JWT 密钥（生产环境必改） |

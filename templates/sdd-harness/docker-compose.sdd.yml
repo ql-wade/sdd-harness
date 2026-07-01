@@ -40,7 +40,7 @@
 #     OPENAI_API_KEY 或 OPENDEEPWIKI_API_KEY: LLM API key (必填)
 #     OPENDEEPWIKI_LLM_ENDPOINT: LLM endpoint (默认 https://api.openai.com/v1)
 #     OPENDEEPWIKI_MODEL: wiki 生成模型 (默认 gpt-4o)
-#     OPENDEEPWIKI_PORT: API+MCP 端口 (默认 8090)
+#     OPENDEEPWIKI_PORT: API+MCP 端口 (默认 8095)
 #     OPENDEEPWIKI_WEB_PORT: Web UI 端口 (默认 3001)
 #
 # 增量更新:
@@ -67,7 +67,7 @@ services:
   #   5. 之后增量更新全自动
   #
   # MCP 查询 (agent 在会话中使用):
-  #   http://localhost:8090/api/mcp/{owner}/{repo}
+  #   http://localhost:8095/api/mcp/{owner}/{repo}
   #   sdd init 自动检测运行状态并注册到 .mcp.json
   #
   opendeepwiki:
@@ -75,7 +75,7 @@ services:
     container_name: sdd-opendeepwiki
     restart: unless-stopped
     ports:
-      - "${OPENDEEPWIKI_PORT:-8090}:8080"      # Backend API + MCP endpoint
+      - "${OPENDEEPWIKI_PORT:-8095}:8080"      # Backend API + MCP endpoint
       - "${OPENDEEPWIKI_WEB_PORT:-3001}:3000"   # Web UI (admin console)
     environment:
       ASPNETCORE_ENVIRONMENT: Production

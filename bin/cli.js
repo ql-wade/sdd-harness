@@ -1278,8 +1278,8 @@ svcCmd.command('up')
     if (result.success) {
       console.log(chalk.green('\n✅ OpenDeepWiki 启动成功'));
       console.log(chalk.gray('   Web UI: http://localhost:3001'));
-      console.log(chalk.gray('   API:    http://localhost:8090'));
-      console.log(chalk.gray('   MCP:    http://localhost:8090/api/mcp/{owner}/{repo}'));
+      console.log(chalk.gray('   API:    http://localhost:8095'));
+      console.log(chalk.gray('   MCP:    http://localhost:8095/api/mcp/{owner}/{repo}'));
       console.log(chalk.gray('\n   首次使用需在 Web UI 导入仓库。导入后增量更新自动运行（每 60 分钟）'));
       // Try to register MCP for current project
       const cwd = process.cwd();
