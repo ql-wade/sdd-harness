@@ -1,0 +1,103 @@
+# ================================================
+# SDD Harness 配置（扩展 OpenSpec config.yaml）
+# 由 sdd init 写入业务 repo 的 .sdd/config.yaml
+# ================================================
+
+# --- 继承自 openspec/config.yaml ---
+schema: trinity-workflow-v2
+contextFiles:
+  - path: .sdd/steering/project.md
+    description: 跨 change 持久的项目级 AI 指导（tech stack/architecture/coding standards）
+    required: false
+  - path: openspec/project.md
+    description: 项目架构、子模块、设计文档引用
+    required: false
+context: |
+  语言：中文（简体）。所有产出物必须用简体中文撰写。
+  # 请根据实际项目修改技术栈！
+
+rules:
+  proposal:
+    - 字数控制在 500 字以内
+    - 必须包含 Non-goals 章节
+    - 必须定义成功指标
+  specs:
+    - 使用 Given/When/Then Gherkin 格式
+    - 覆盖 Happy Path、Edge Cases、Error Cases
+  tasks:
+    - 每个任务 2-5 分钟可完成
+    - 每个任务有明确的验证步骤
+
+trinity:
+  enabled: true
+  skills:
+    new:    { trigger: "/trinity:new",      file: "trinity-new/SKILL.md" }
+    continue: { trigger: "/trinity:continue",  file: "trinity-continue/SKILL.md" }
+    apply:  { trigger: "/trinity:apply",     file: "trinity-apply/SKILL.md" }
+    verify: { trigger: "/trinity:verify",    file: "trinity-verify/SKILL.md" }
+    archive: { trigger: "/trinity:archive",   file: "trinity-archive/SKILL.md" }
+    ff:     { trigger: "/trinity:ff",        file: "trinity-ff/SKILL.md" }
+
+tracking:
+  templates_dir: "trinity-workflow/templates"
+  auto_update: true
+  files: [task_plan.md, findings.md, progress.md, delta-log.md]
+
+profiles:
+  quick:    { artifacts: [proposal, tasks], estimated_time: "30min" }
+  core:     { artifacts: [proposal, specs, design, tasks], estimated_time: "1-2h" }
+  expanded: { artifacts: [proposal, specs, design, tasks, verify], estimated_time: "2-4h" }
+
+# --- SDD Harness 扩展 ---
+sdd:
+  version: "0.1.0"
+
+  # Stage workflow
+  stages:
+    - grill
+    - product
+    - dev
+    - test
+    - code
+    - review
+    - verify
+    - release
+    - archive
+  stage_default: grill
+
+  # Hooks
+  hooks:
+    mvp: [SessionStart, PreToolUse, Stop, PreCompact, SubagentStop]
+    override: "touch .sdd/hooks/bypass  # 临时绕过 hook block"
+    block_log: ".sdd/hooks/block-log.md"
+
+  # Review
+  review:
+    architecture: superpowers-code-reviewer  # 先跑
+    line_level: open-code-review             # 后跑
+    auto_debug_after_rejections: 2
+
+  # Knowledge
+  knowledge:
+    backend: llmwiki-mcp
+    sediment_on: archive
+
+  # MCP keys
+  mcp_keys_file: "~/.sdd/mcp-keys.env"
+
+  # Domain registry
+  domain_registry:
+    enabled: false          # 单 dev team 关；多 team 开
+    domains: []
+
+  # SDD commands
+  commands:
+    grill:    /sdd:grill
+    product:  /sdd:product
+    dev:      /sdd:dev
+    test:     /sdd:test
+    code:     /sdd:code
+    review:   /sdd:review
+    verify:   /sdd:verify
+    release:  /sdd:release
+    archive:  /sdd:archive

@@ -1,0 +1,170 @@
+# SDD Harness 9 阶段产出合理性指标（Definition of Done）
+# 全部用 grep -F（固定字符串）/ grep -cF / wc，避免 regex 转义陷阱。
+# harness gate 基于此判断"达标"。
+
+grill:
+  goal: "业务澄清：术语/边界/冲突/ADR 候选"
+  artifacts: [findings.md, brief.md]
+  metrics:
+    - name: 术语定义数
+      check: "grep -cF '**' findings.md"
+      op: ">="
+      threshold: 3
+    - name: 显式 non-goals
+      check: "grep -ciE 'non-goal|❌|OUT|不做' findings.md"
+      op: ">="
+      threshold: 2
+    - name: ADR 候选
+      check: "grep -cF 'ADR-' findings.md"
+      op: ">="
+      threshold: 1
+    - name: brief 路由决策
+      check: "grep -cF 'route:' brief.md"
+      op: ">="
+      threshold: 1
+
+product:
+  goal: "PRD + 可测 AC + 功能测试草案"
+  artifacts: [proposal.md, acceptance-criteria.md, functional-test-draft.yaml]
+  metrics:
+    - name: PRD 五段齐全
+      check: "grep -cE '## (User|Problem|Scope|Non-goals|Metrics)' proposal.md"
+      op: ">="
+      threshold: 5
+    - name: AC 可测（GIVEN/WHEN/THEN）
+      check: "grep -cF 'GIVEN' acceptance-criteria.md"
+      op: ">="
+      threshold: 3
+    - name: 功能测试草案 YAML 有效 + 三类场景
+      check: "yaml_has_keys functional-test-draft.yaml [happy-path, edge-cases, error-cases]"
+      op: "=="
+      threshold: true
+
+dev:
+  goal: "OpenSpec specs + design（含 File Structure Plan + boundary）+ tasks"
+  artifacts: [specs/, design.md, tasks.md]
+  metrics:
+    - name: spec 含 ADDED Requirements
+      check: "grep -rl 'ADDED Requirements' specs/"
+      op: "files>="
+      threshold: 1
+    - name: design 含 File Structure Plan
+      check: "grep -cF 'File Structure Plan' design.md"
+      op: ">="
+      threshold: 1
+    - name: boundary 注解（design）
+      check: "grep -cF '_Boundary:_' design.md"
+      op: ">="
+      threshold: 1
+    - name: boundary 注解（tasks）
+      check: "grep -cF '_Boundary:_' tasks.md"
+      op: ">="
+      threshold: 1
+    - name: tasks 数（checkbox）
+      check: "grep -cF -e '- [ ]' tasks.md"
+      op: ">="
+      threshold: 2
+
+test:
+  goal: "test matrix + automated tests + LLMWiki 用例"
+  artifacts: [test-matrix.md, project tests, llmwiki/testing/cases/]
+  metrics:
+    - name: matrix 是表格 ≥2 feature
+      check: "grep -cF '|' test-matrix.md"
+      op: ">="
+      threshold: 4
+    - name: 自动化测试文件
+      check: "find . -path './node_modules' -prune -o -path './.git' -prune -o -type f -print 2>/dev/null | grep -E '([.]test[.]|[.]spec[.]|_test[.]|^[.]/tests/)' | wc -l"
+      op: ">="
+      threshold: 1
+    - name: LLMWiki 测试用例
+      check: "find llmwiki/wiki/testing/cases -type f 2>/dev/null | wc -l"
+      op: ">="
+      threshold: 1
+
+code:
+  goal: "实现真实源码 + 交互完整 + 测试已跑"
+  artifacts: [progress.md, src/]
+  metrics:
+    - name: 进度日志条目
+      check: "grep -cE '^## ' progress.md"
+      op: ">="
+      threshold: 1
+    - name: 源码文件
+      check: "find src -type f 2>/dev/null | grep -E '[.](ts|tsx|js|jsx|py|go|rs|java)$' | wc -l"
+      op: ">="
+      threshold: 2
+    - name: 项目 manifest
+      check: "find . -maxdepth 1 -type f 2>/dev/null | grep -E '/(package.json|pyproject.toml|Cargo.toml|go.mod|pom.xml)$' | wc -l"
+      op: ">="
+      threshold: 1
+    - name: 测试已跑或 waiver
+      check: "grep -ciE 'test|测试.*(pass|通过)|waiver' progress.md"
+      op: ">="
+      threshold: 1
+
+review:
+  goal: "Superpowers verdict + OCR triage + auto-debug（若触发）"
+  artifacts: [review-notes.md]
+  metrics:
+    - name: Superpowers verdict 存在
+      check: "grep -ciE 'verdict.*(ready|needs-fix|rejected)' review-notes.md"
+      op: ">="
+      threshold: 1
+    - name: OCR 评论 triage 状态
+      check: "grep -ciE 'fixed|risk|deferred|triage' review-notes.md"
+      op: ">="
+      threshold: 1
+
+verify:
+  goal: "功能 + 非功能证据 + failure 分类 + 真实构建通过"
+  artifacts: [progress.md, build 产物]
+  metrics:
+    - name: 证据记录（CI/结果）
+      check: "grep -ciE 'CI|pass|fail|coverage|证据' progress.md"
+      op: ">="
+      threshold: 2
+    - name: 非功能（Lighthouse/perf）或 waiver
+      check: "grep -ciE 'lighthouse|perf|waiver' progress.md"
+      op: ">="
+      threshold: 1
+    - name: failure 分类
+      check: "grep -ciE 'failure|失败.*(new|known|flaky)|分类' progress.md"
+      op: ">="
+      threshold: 1
+
+release:
+  goal: "deploy mode + 产物 + 回滚路径"
+  artifacts: [progress.md]
+  metrics:
+    - name: mode 声明
+      check: "grep -ciE 'mode.*(manual|automated|skip)|manual|automated|skip' progress.md"
+      op: ">="
+      threshold: 1
+    - name: 回滚路径或 no-deploy 理由
+      check: "grep -ciE 'rollback|回滚|no-deploy|skip' progress.md"
+      op: ">="
+      threshold: 1
+
+archive:
+  goal: "spec 提升 + LLMWiki writeback"
+  artifacts: [openspec/specs/, llmwiki/]
+  metrics:
+    - name: spec 提升到 openspec/specs/
+      check: "ls openspec/specs/ | wc -l"
+      op: ">="
+      threshold: 1
+    - name: LLMWiki writeback（testing/engineering/product 有内容）
+      check: "find llmwiki/wiki/engineering llmwiki/wiki/product llmwiki/wiki/testing -type f 2>/dev/null | wc -l"
+      op: ">="
+      threshold: 1
+
+verify_render_fidelity:
+  goal: "渲染保真度：像素输出达到项目声明的质量阈值（验质，非验形）"
+  note: "preview_eval 类型——需 preview server 运行 + 浏览器 eval；sdd check CLI 无法自动跑，标注'需 preview'"
+  metrics:
+    - name: 像素质量（颜色多样性+亮度方差）
+      check: "preview_eval: 像素采样"
+      op: "preview_eval"
+      threshold: "prototype+"
+      note: "preserveDrawingBuffer:true 后 readPixels；uniqueColors>20 + variance>200 = prototype；>50+>5000 = production"

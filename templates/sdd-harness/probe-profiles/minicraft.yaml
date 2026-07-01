@@ -1,0 +1,49 @@
+profile: minicraft
+description: "MiniCraft browser voxel-sandbox probe metrics. Keep these out of core stage-metrics."
+requiredInteractions: [move, place, break]
+transitionContracts: {"move":{"assertion":"vector-distance>=","minimumThreshold":0.1},"place":{"assertion":"delta","expected":1},"break":{"assertion":"delta","expected":-1}}
+observationAdapter: "__sddProbe.snapshot"
+
+test:
+  metrics:
+    - name: MiniCraft whitebox tests
+      check: "find src -name '*.test.ts' 2>/dev/null | wc -l"
+      op: ">="
+      threshold: 3
+    - name: MiniCraft core module coverage
+      check: "grep -rlE 'chunk|Chunk|camera|Camera|input|Input' $(find src -name '*.test.ts' 2>/dev/null) 2>/dev/null | wc -l"
+      op: ">="
+      threshold: 2
+
+code:
+  metrics:
+    - name: MiniCraft render primitives
+      check: "grep -roE 'Scene|PerspectiveCamera|WebGLRenderer' src 2>/dev/null | wc -l"
+      op: ">="
+      threshold: 3
+    - name: MiniCraft interaction wiring
+      check: "grep -roE 'PointerLock|keydown|keyup|click|mousedown' src 2>/dev/null | wc -l"
+      op: ">="
+      threshold: 3
+
+verify:
+  metrics:
+    - name: MiniCraft build passes
+      check: "cmd_exit npm run build"
+      op: "=="
+      threshold: 0
+    - name: MiniCraft typecheck passes
+      check: "cmd_exit npm run typecheck"
+      op: "=="
+      threshold: 0
+    - name: MiniCraft tests pass
+      check: "cmd_exit npm test"
+      op: "=="
+      threshold: 0
+
+verify_render_fidelity:
+  metrics:
+    - name: MiniCraft rendered voxel fidelity
+      check: "preview_eval: (()=>{const g=(globalThis).__sdd;const m=[...g.ctx.scene.children].filter(o=>o.isMesh);let inst=0;m.forEach(x=>inst+=(x.isInstancedMesh?x.count:0));let t=0;m.forEach(x=>t+=x.geometry?.index?.count||x.geometry?.attributes?.position?.count/3||0);const b=g.countSolid();const ok=(inst>=b*0.5)||(t>=5000);return ok?'PASS:inst='+inst+'/tri='+t+'/'+b+'blocks':'FAIL:inst='+inst+'/tri='+t+'/'+b;})()"
+      op: "preview_eval"
+      threshold: "PASS"

@@ -1,0 +1,32 @@
+# workflow-frame.yaml — SDD Harness governance core
+# 每个 change 一份，放在 .sdd/runs/<change-id>/workflow-frame.yaml
+
+run_id: ""                       # = change-id
+project: ""                      # 来自 .sdd/config.yaml
+domain: ""                       # 当前变更归属的 domain
+created: ""                      # ISO 8601
+
+stage:
+  current: grill                 # grill | product | dev | test | code | review | verify | release | archive
+  history: []                    # [{from: "", to: "", at: "", reason: ""}]
+  allowed_actions: []            # 当前 stage 允许的操作列表
+
+goal: ""                         # 来自 proposal.md
+
+artifacts:
+  required: []                   # 当前 stage 必产 artifact
+  produced: []                   # 已产出的 artifact 路径
+  superseded: []                 # 回退时标废弃的 artifact
+
+gates:
+  last_check: ""                 # 最后一次 gate 检查时间
+  status: pending                # pending | passed | failed
+  failures: []                   # [{gate: "", reason: "", at: ""}]
+
+evidence:
+  ci_links: []                   # CI run 链接
+  lighthouse: {}                 # {score: 0, url: ""}
+  perf_trace: ""                 # trace 文件路径
+  coverage: ""                   # 覆盖率报告链接
+
+reversals: []                    # [{from_stage: "", to_stage: "", reason: "", at: ""}]

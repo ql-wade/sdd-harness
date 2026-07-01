@@ -1,0 +1,65 @@
+# SDD Harness 依赖清单
+# 由 sdd doctor 读取，每项含安装命令 + 检测命令
+# 层级: core（init 强制）| stage（进 stage 时检查，缺则降级）| optional
+
+core:
+  - name: Node.js
+    check: node -v
+    install: "系统包管理器 (brew install node / apt install nodejs)"
+    min_version: "18.0.0"
+
+  - name: Git
+    check: git --version
+    install: "系统包管理器 (brew install git / apt install git)"
+
+  - name: OpenSpec CLI
+    check: openspec --version
+    install: brew install openspec
+
+  - name: Superpowers
+    check: "ls ~/.claude/skills/superpowers/agents/code-reviewer.md"
+    install: "git clone https://github.com/obra/superpowers ~/.claude/skills/superpowers"
+
+  - name: planning-with-files
+    check: "ls ~/.claude/skills/planning-with-files/SKILL.md"
+    install: "git clone https://github.com/OthmanAdi/planning-with-files ~/.claude/skills/planning-with-files"
+
+  - name: Understand-Anything
+    check: "ls .understand-anything/knowledge-graph.json"
+    install: "sdd graph --install（clone UA + install.sh；agent pipeline 在 Claude Code 会话内跑）"
+    skills_installed_after: "sdd graph --install"  # understand-chat/diff/domain 在 graph --install 后随 plugin 装入
+
+stage:
+  grill:
+    - name: grill-with-docs
+      check: "ls ~/.claude/skills/grill-with-docs/SKILL.md"
+      install: "期望作为独立 skill 预装（与 superpowers/planning-with-files 同级）；缺失则 grill 降级为无文档澄清"
+
+  review:
+    - name: open-code-review CLI
+      check: ocr --version
+      install: npm i -g @alibaba-group/open-code-review
+
+  test:
+    - name: LLMWiki MCP
+      check: "mcp 连通检查"
+      install: "MCP config 注册 + ~/.sdd/mcp-keys.env"
+
+  verify:
+    - name: Playwright MCP
+      check: "mcp 连通检查"
+      install: npx playwright install
+
+    - name: chrome-devtools MCP
+      check: "mcp 连通检查"
+      install: "MCP config 注册"
+
+  archive:
+    - name: LLMWiki MCP
+      check: "mcp 连通检查"
+      install: "MCP config 注册"
+
+optional:
+  - name: GitHub MCP
+    check: "mcp 连通检查"
+    install: "MCP config 注册 + token"
