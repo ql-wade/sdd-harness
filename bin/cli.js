@@ -1603,6 +1603,21 @@ program
     if (!changeId && await fs.pathExists(activeRun)) changeId = (await fs.readFile(activeRun, 'utf8')).trim();
     if (!changeId) { console.log(chalk.red('❌ 无 active run。先 sdd run grill')); process.exit(1); }
 
+    // Verify change directory exists
+    let changeDir = path.join(cwd, 'openspec', 'changes', changeId);
+    if (!await fs.pathExists(changeDir)) {
+      const archBase = path.join(cwd, 'openspec', 'changes', 'archive');
+      if (await fs.pathExists(archBase)) {
+        const match = (await fs.readdir(archBase)).find(d => d.endsWith('-' + changeId));
+        if (match) changeDir = path.join(archBase, match);
+      }
+    }
+    if (!await fs.pathExists(changeDir)) {
+      console.log(chalk.red(`❌ change 不存在: ${changeId}`));
+      console.log(chalk.gray('   先 sdd run grill --slug <name> --goal "..." 创建'));
+      process.exit(1);
+    }
+
     const profileLabel = options.profile ? ` + profile:${options.profile}` : '';
     console.log(chalk.blue(`\n🔍 /sdd:${stage} 产出合理性评估（stage-metrics.yaml${profileLabel}）\n`));
     const r = await evalStageMetrics(stage, changeId, cwd, { profile: options.profile });
