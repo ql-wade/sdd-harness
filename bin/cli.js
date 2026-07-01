@@ -350,7 +350,7 @@ async function ensureDependencies(platforms, dryRun, cwd) {
       }, null, 2));
       if (hasCode) {
         console.log(chalk.yellow(`  ⚠️ knowledge-graph.json placeholder (${codeFileCount} code files detected in: ${detectedSourceDirs.join(', ')})`));
-        console.log(chalk.cyan.bold('\n     📌 Run in Claude Code to generate knowledge graph:\n'));
+        console.log(chalk.cyan.bold('\n     📌 Fix: sdd graph --refresh (auto-trigger /understand)\n'));
         console.log(chalk.white('         /understand\n'));
         console.log(chalk.gray('     Used by dev/code/review/test/verify for impact/boundary/domain queries\n'));
         console.log(chalk.gray('     If not installed: sdd graph --install\n'));
@@ -361,7 +361,7 @@ async function ensureDependencies(platforms, dryRun, cwd) {
     } else if (graphHealth.existence === 'placeholder') {
       console.log(chalk.yellow('  ⚠️ knowledge-graph.json placeholder (0 nodes)'));
       if (hasCode) {
-        console.log(chalk.cyan.bold('\n     📌 Run in Claude Code: /understand\n'));
+        console.log(chalk.cyan.bold('\n     📌 Fix: sdd graph --refresh\n'));
       }
     } else {
       // Graph exists with nodes — deep health check
@@ -372,7 +372,7 @@ async function ensureDependencies(platforms, dryRun, cwd) {
         for (const issue of graphHealth.issues) {
           console.log(chalk.yellow(`     → ${issue}`));
         }
-        console.log(chalk.cyan.bold('\n     📌 Run in Claude Code to refresh knowledge graph:\n'));
+        console.log(chalk.cyan.bold('\n     📌 Fix: sdd graph --refresh (auto-trigger /understand)\n'));
         console.log(chalk.white('         /understand\n'));
         console.log(chalk.gray('     Used by dev/code/review/test/verify for impact/boundary/domain queries\n'));
       }
@@ -1197,30 +1197,88 @@ program
     console.log(chalk.gray(`\n   注: CLI scaffold 了 artifact 骨架 + 推进 frame。实际内容（spec/code/review）需 agent 跟随 /sdd:${stage} skill 填充。\n`));
   });
 
-// sdd graph —— 按需 clone Understand-Anything + 提示在 Claude Code 内跑 agent pipeline
+// sdd graph —— clone UA + auto-trigger /understand to generate/refresh graph
 program
   .command('graph')
   .description('Refresh code knowledge graph (Understand-Anything)')
   .option('--install', 'Clone Understand-Anything repo if missing', false)
+  .option('--refresh', 'Force trigger /understand via claude -p', false)
   .action(async (options) => {
     const cwd = process.cwd();
     const homeDir = os.homedir();
     const uaRepoDir = path.join(homeDir, '.sdd', 'repos', 'Understand-Anything');
     const graphPath = path.join(cwd, '.understand-anything', 'knowledge-graph.json');
-    console.log(chalk.blue('\n🧠 SDD Harness - Code Graph Refresh\n'));
+    console.log(chalk.blue('\n🧠 SDD Harness - Code Graph\n'));
+
     if (options.install && !await fs.pathExists(uaRepoDir)) {
-      console.log(chalk.yellow('⏳ clone Understand-Anything (大 repo，约 60-90s)...'));
+      console.log(chalk.yellow('⏳ clone Understand-Anything...'));
       const r = await cloneRepo('https://github.com/Egonex-AI/Understand-Anything', uaRepoDir, false);
       if (r === 'failed') { console.log(chalk.red('\n❌ clone 失败')); process.exit(1); }
       if (await fs.pathExists(path.join(uaRepoDir, 'install.sh'))) {
         try { execSync(`cd ${uaRepoDir} && bash install.sh`, { stdio: 'inherit' }); } catch {}
       }
+      console.log(chalk.green('✅ Understand-Anything installed'));
     } else if (await fs.pathExists(uaRepoDir)) {
-      console.log(chalk.green(`✅ Understand-Anything 已存在`));
+      console.log(chalk.green('✅ Understand-Anything 已存在'));
     } else {
       console.log(chalk.yellow('⚠️ 未安装。运行: sdd graph --install'));
+      return;
     }
-    console.log(chalk.gray('\n   agent pipeline 需在 Claude Code 会话内跑生成图谱\n'));
+
+    // Health check
+    const health = graphHealthCheck(cwd);
+    if (health.existence === 'ok' && health.issues.length === 0) {
+      console.log(chalk.green(`✅ knowledge-graph healthy (${health.nodeCount} nodes, ${health.edgeCount} edges, ${health.layerCount} layers)`));
+      return;
+    }
+    if (health.existence === 'ok' && health.issues.length > 0) {
+      console.log(chalk.yellow(`⚠️ knowledge-graph has ${health.issues.length} issue(s):`));
+      for (const i of health.issues) console.log(chalk.yellow(`   → ${i}`));
+    } else {
+      console.log(chalk.yellow('⚠️ knowledge-graph.json missing or placeholder'));
+    }
+
+    // Try auto-refresh via claude -p
+    const hasClaude = cmdExists('claude');
+    if (!hasClaude) {
+      console.log(chalk.gray('\n   📌 Run /understand in your AI tool session to generate'));
+      console.log(chalk.gray('   Or install Claude Code: sdd graph --refresh'));
+      return;
+    }
+
+    if (!options.refresh && health.issues.length === 0 && health.existence === 'ok') {
+      return; // healthy, no action needed
+    }
+
+    console.log(chalk.cyan('\n   🤖 Triggering /understand via claude -p headless...\n'));
+    console.log(chalk.gray('   This may take 5-15 minutes depending on repo size.\n'));
+
+    // If graph is a symlink (shared from another worktree), break it
+    try {
+      const stats = await fs.lstat(graphPath);
+      if (stats.isSymbolicLink()) {
+        await fs.unlink(graphPath);
+        console.log(chalk.gray('   Removed symlink to shared graph; generating project-specific graph.\n'));
+      }
+    } catch {}
+
+    const result = await ptyClaude(
+      `Run the /understand command to analyze this codebase at ${cwd} and generate ` +
+      `.understand-anything/knowledge-graph.json with nodes, edges, and layers. ` +
+      `Use the understand skill pipeline.`,
+      { cwd, model: 'sonnet', timeoutMs: 900000 }
+    );
+
+    if (result.timedOut) {
+      console.log(chalk.yellow('⚠️ /understand timed out (15 min). Graph may be partial.'));
+    } else {
+      const postHealth = graphHealthCheck(cwd);
+      if (postHealth.existence === 'ok' && postHealth.nodeCount > 0) {
+        console.log(chalk.green(`\n✅ Knowledge graph refreshed (${postHealth.nodeCount} nodes, ${postHealth.edgeCount} edges)`));
+      } else {
+        console.log(chalk.yellow('\n⚠️ Graph may not have completed. Run /understand manually.'));
+      }
+    }
   });
 
 program
