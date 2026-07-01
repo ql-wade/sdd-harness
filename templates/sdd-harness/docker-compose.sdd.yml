@@ -78,7 +78,6 @@ services:
     restart: unless-stopped
     ports:
       - "${OPENDEEPWIKI_PORT:-8095}:8080"      # Backend API + MCP endpoint
-      - "${OPENDEEPWIKI_WEB_PORT:-3001}:3000"   # Web UI (admin console)
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       URLS: http://+:8080
@@ -139,6 +138,26 @@ services:
   # - 代码搜索引擎 (如 Sourcegraph)
   # 但会话层依赖（LLMWiki MCP、Understand-Anything）不在此处——
   # 它们由 AI 工具 spawn，生命周期跟着 session 走。
+
+  # ── OpenDeepWiki Web UI — Next.js frontend ──────────────────────────────────
+  #
+  # 与 backend 分离的 Next.js 应用。通过 API_PROXY_URL 反向代理到 backend。
+  # 访问: http://localhost:${OPENDEEPWIKI_WEB_PORT:-3001}
+  #
+  opendeepwiki-web:
+    platform: linux/amd64
+    image: crpi-j9ha7sxwhatgtvj4.cn-shenzhen.personal.cr.aliyuncs.com/open-deepwiki/opendeepwiki-web
+    container_name: sdd-opendeepwiki-web
+    restart: unless-stopped
+    ports:
+      - "${OPENDEEPWIKI_WEB_PORT:-3001}:3000"
+    environment:
+      NODE_ENV: production
+      API_PROXY_URL: http://opendeepwiki:8080
+    depends_on:
+      opendeepwiki:
+        condition: service_healthy
+
 
 volumes:
   sdd-opendeepwiki-data:
