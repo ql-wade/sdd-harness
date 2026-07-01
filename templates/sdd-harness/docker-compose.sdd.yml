@@ -1,0 +1,79 @@
+# =============================================================================
+# SDD Harness 基础设施层 — OpenDeepWiki（AI 仓库知识库）
+#
+# 这是 harness 的内置服务，不是被构建应用的运行时。
+# 类似 Understand-Anything 和 LLMWiki，它是研发工具链的一环。
+#
+# 启动: sdd services up     （或手动: docker compose -f ~/.sdd/docker-compose.sdd.yml up -d）
+# 停止: sdd services down
+# 检查: sdd doctor
+#
+# OpenDeepWiki 内置增量更新 worker：
+#   - 每 60 秒轮询，每 60 分钟检查每个仓库的远程 commit
+#   - 发现新 commit → 只重新生成变更文件的文档
+#   - 全自动，不需要 webhook 或手动触发
+#
+# 环境变量从 ~/.sdd/mcp-keys.env 或 shell 环境读取。
+# =============================================================================
+
+services:
+  opendeepwiki:
+    image: crpi-j9ha7sxwhatgtvj4.cn-shenzhen.personal.cr.aliyuncs.com/open-deepwiki/opendeepwiki
+    container_name: sdd-opendeepwiki
+    restart: unless-stopped
+    ports:
+      - "${OPENDEEPWIKI_PORT:-8090}:8080"   # Backend + MCP
+      - "${OPENDEEPWIKI_WEB_PORT:-3001}:3000"  # Web UI
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      URLS: http://+:8080
+
+      # 数据库（独立 SQLite，不侵入目标项目的数据库）
+      Database__Type: sqlite
+      ConnectionStrings__Default: "Data Source=/data/opendeepwiki.db"
+
+      # JWT
+      JWT_SECRET_KEY: ${OPENDEEPWIKI_JWT_SECRET:-sdd-harness-dev-secret-change-in-production}
+
+      # 仓库存储
+      REPOSITORIES_DIRECTORY: /data/repos
+
+      # AI 配置（从环境读取）
+      CHAT_API_KEY: ${OPENDEEPWIKI_API_KEY:-${OPENAI_API_KEY:-}}
+      ENDPOINT: ${OPENDEEPWIKI_LLM_ENDPOINT:-https://api.openai.com/v1}
+      CHAT_REQUEST_TYPE: OpenAI
+
+      # Wiki 生成器
+      WIKI_CATALOG_MODEL: ${OPENDEEPWIKI_MODEL:-gpt-4o}
+      WIKI_CATALOG_ENDPOINT: ${OPENDEEPWIKI_LLM_ENDPOINT:-https://api.openai.com/v1}
+      WIKI_CATALOG_API_KEY: ${OPENDEEPWIKI_API_KEY:-${OPENAI_API_KEY:-}}
+      WIKI_CATALOG_REQUEST_TYPE: OpenAI
+      WIKI_CONTENT_MODEL: ${OPENDEEPWIKI_MODEL:-gpt-4o}
+      WIKI_CONTENT_ENDPOINT: ${OPENDEEPWIKI_LLM_ENDPOINT:-https://api.openai.com/v1}
+      WIKI_CONTENT_API_KEY: ${OPENDEEPWIKI_API_KEY:-${OPENAI_API_KEY:-}}
+      WIKI_CONTENT_REQUEST_TYPE: OpenAI
+
+      # 多语言 + 并行
+      WIKI_LANGUAGES: en,zh
+      WIKI_PARALLEL_COUNT: 5
+
+      # 增量更新 worker（全自动）
+      IncrementalUpdate__Enabled: "true"
+      IncrementalUpdate__PollingIntervalSeconds: "60"
+      IncrementalUpdate__DefaultUpdateIntervalMinutes: "60"
+      IncrementalUpdate__MinUpdateIntervalMinutes: "5"
+      IncrementalUpdate__MaxRepositoriesPerPoll: "10"
+
+      # MCP
+      MCP_ENABLED: "true"
+    volumes:
+      - sdd-opendeepwiki-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health > /dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  sdd-opendeepwiki-data:
