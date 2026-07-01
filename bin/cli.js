@@ -288,9 +288,29 @@ async function ensureDependencies(platforms, dryRun, cwd) {
     console.log(chalk.cyan(`  [dry-run] 建 ${wikiDir} 骨架`));
   }
 
-  // === Step 6: Understand-Anything —— 按需，不在 init 内 clone（repo 巨大 60s+，且 agent pipeline 需 Claude Code 会话）===
-  // init 只建占位 + 提示；真实 clone + 图谱生成由 `sdd graph refresh` 按需触发
-  console.log(chalk.blue('\n🧠 [6/8] Understand-Anything（按需，init 仅建占位）\n'));
+  // === Step 6: Understand-Anything —— 检测代码库，引导生成知识图谱 ===
+  const codeDirs = ['src', 'lib', 'app', 'packages', 'internal', 'cmd'];
+  const codeExtensions = ['.ts', '.js', '.py', '.go', '.rs', '.java', '.rb', '.cs'];
+  let hasCode = false;
+  let codeFileCount = 0;
+  for (const dir of codeDirs) {
+    const dirPath = path.join(cwd, dir);
+    if (await fs.pathExists(dirPath)) {
+      try {
+        const out = run(`find "${dirPath}" -type f \\( ${codeExtensions.map(e => `-name "*${e}"`).join(' -o ')} \\) 2>/dev/null | wc -l`, { encoding: 'utf8' });
+        codeFileCount += parseInt(out.trim()) || 0;
+      } catch {}
+    }
+  }
+  try {
+    const rootFiles = await fs.readdir(cwd);
+    for (const f of rootFiles) {
+      if (codeExtensions.some(ext => f.endsWith(ext))) { codeFileCount++; hasCode = true; }
+    }
+  } catch {}
+  if (codeFileCount > 0) hasCode = true;
+
+  console.log(chalk.blue('\n🧠 [6/8] Understand-Anything（代码知识图谱）\n'));
   const graphPath = path.join(cwd, '.understand-anything', 'knowledge-graph.json');
   if (!dryRun) {
     if (!await fs.pathExists(graphPath)) {
@@ -299,10 +319,30 @@ async function ensureDependencies(platforms, dryRun, cwd) {
         note: '占位。真实图谱由 sdd graph refresh 触发 Understand-Anything agent pipeline 生成（在 Claude Code 会话内）',
         nodes: [], edges: [], layers: [], generated_at: null,
       }, null, 2));
-      console.log(chalk.yellow('  ⚠️ knowledge-graph.json 为占位'));
-      console.log(chalk.gray('     启用 code graph: 运行 sdd graph refresh（clone UA + 触发 agent pipeline）'));
+      if (hasCode) {
+        console.log(chalk.yellow(`  ⚠️ knowledge-graph.json 为占位（检测到 ${codeFileCount} 个代码文件）`));
+        console.log(chalk.cyan.bold('\n     📌 在 Claude Code 会话内执行，生成代码知识图谱：\n'));
+        console.log(chalk.white('         /understand\n'));
+        console.log(chalk.gray('     知识图谱将用于 dev/code/review/test/verify 的 impact/boundary/domain 查询\n'));
+        console.log(chalk.gray('     如未安装 Understand-Anything: sdd graph --install\n'));
+      } else {
+        console.log(chalk.yellow('  ⚠️ knowledge-graph.json 为占位'));
+        console.log(chalk.gray('     项目暂无代码。code 阶段实现后运行: /understand\n'));
+      }
     } else {
-      console.log(chalk.green('  ✅ knowledge-graph.json 已存在'));
+      try {
+        const graph = JSON.parse(await fs.readFile(graphPath, 'utf8'));
+        if (graph.nodes && graph.nodes.length > 0) {
+          console.log(chalk.green(`  ✅ knowledge-graph.json 已生成（${graph.nodes.length} nodes）`));
+        } else {
+          console.log(chalk.yellow('  ⚠️ knowledge-graph.json 为占位（nodes 为空）'));
+          if (hasCode) {
+            console.log(chalk.cyan.bold('\n     📌 在 Claude Code 会话内执行: /understand\n'));
+          }
+        }
+      } catch {
+        console.log(chalk.green('  ✅ knowledge-graph.json 已存在'));
+      }
     }
   }
 
