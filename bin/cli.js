@@ -1206,20 +1206,29 @@ program
   .action(async (options) => {
     const cwd = process.cwd();
     const homeDir = os.homedir();
-    const uaRepoDir = path.join(homeDir, '.sdd', 'repos', 'Understand-Anything');
     const graphPath = path.join(cwd, '.understand-anything', 'knowledge-graph.json');
     console.log(chalk.blue('\n🧠 SDD Harness - Code Graph\n'));
 
-    if (options.install && !await fs.pathExists(uaRepoDir)) {
+    // Detect UA installation in multiple locations
+    const uaCandidates = [
+      path.join(homeDir, '.sdd', 'repos', 'Understand-Anything'),
+      path.join(homeDir, '.understand-anything', 'repo', 'understand-anything-plugin'),
+    ];
+    const uaRepoDir = uaCandidates.find(d => fs.pathExistsSync(d));
+    const uaInstalled = !!uaRepoDir ||
+      fs.pathExistsSync(path.join(homeDir, '.understand-anything', 'repo'));
+
+    if (options.install && !uaInstalled) {
+      const installDir = path.join(homeDir, '.sdd', 'repos', 'Understand-Anything');
       console.log(chalk.yellow('⏳ clone Understand-Anything...'));
-      const r = await cloneRepo('https://github.com/Egonex-AI/Understand-Anything', uaRepoDir, false);
+      const r = await cloneRepo('https://github.com/Egonex-AI/Understand-Anything', installDir, false);
       if (r === 'failed') { console.log(chalk.red('\n❌ clone 失败')); process.exit(1); }
-      if (await fs.pathExists(path.join(uaRepoDir, 'install.sh'))) {
-        try { execSync(`cd ${uaRepoDir} && bash install.sh`, { stdio: 'inherit' }); } catch {}
+      if (await fs.pathExists(path.join(installDir, 'install.sh'))) {
+        try { execSync(`cd ${installDir} && bash install.sh`, { stdio: 'inherit' }); } catch {}
       }
       console.log(chalk.green('✅ Understand-Anything installed'));
-    } else if (await fs.pathExists(uaRepoDir)) {
-      console.log(chalk.green('✅ Understand-Anything 已存在'));
+    } else if (uaInstalled) {
+      console.log(chalk.green(`✅ Understand-Anything 已安装`));
     } else {
       console.log(chalk.yellow('⚠️ 未安装。运行: sdd graph --install'));
       return;
