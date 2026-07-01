@@ -1,65 +1,104 @@
 # SDD Harness 依赖清单
 # 由 sdd doctor 读取，每项含安装命令 + 检测命令
-# 层级: core（init 强制）| stage（进 stage 时检查，缺则降级）| optional
+#
+# 三层架构（LLM 必须理解）:
+#   1. docker_services — 持久服务，docker compose 起，一直运行
+#   2. system_tools    — 全局 CLI，brew/npm 安装
+#   3. session_layer   — 随 AI 工具 session 启停，不进 docker
+#
+# init 安装顺序: docker_services → system_tools → session_layer → skills
 
-core:
-  - name: Node.js
-    check: node -v
-    install: "系统包管理器 (brew install node / apt install nodejs)"
-    min_version: "18.0.0"
+docker_services:
+  - name: OpenDeepWiki
+    layer: 持久服务（AI 仓库知识库）
+    check: "curl -sf http://localhost:${OPENDEEPWIKI_PORT:-8090}/health"
+    install: "sdd services up"
+    provides:
+      - "AI 生成的架构 wiki 文档（模块叙述、数据流、依赖关系）"
+      - "MCP endpoint: http://localhost:8090/api/mcp/{owner}/{repo}"
+      - "增量更新 worker（每 60 分钟自动检查 commit 变更）"
+    required_by: [grill, dev, code, review]
+    fallback: "缺失时 SDD 阶段 agent 依赖 Understand-Anything + LLMWiki knowledge-seed"
 
-  - name: Git
-    check: git --version
-    install: "系统包管理器 (brew install git / apt install git)"
+system_tools:
+  core:
+    - name: Node.js
+      check: node -v
+      install: "brew install node / apt install nodejs"
+      min_version: "18.0.0"
 
-  - name: OpenSpec CLI
-    check: openspec --version
-    install: brew install openspec
+    - name: Git
+      check: git --version
+      install: "brew install git / apt install git"
 
-  - name: Superpowers
-    check: "ls ~/.claude/skills/superpowers/agents/code-reviewer.md"
-    install: "git clone https://github.com/obra/superpowers ~/.claude/skills/superpowers"
+    - name: Docker
+      check: docker --version
+      install: "Docker Desktop (macOS) / docker engine (Linux)"
 
-  - name: planning-with-files
-    check: "ls ~/.claude/skills/planning-with-files/SKILL.md"
-    install: "git clone https://github.com/OthmanAdi/planning-with-files ~/.claude/skills/planning-with-files"
+    - name: OpenSpec CLI
+      check: openspec --version
+      install: brew install openspec
 
-  - name: Understand-Anything
-    check: "ls .understand-anything/knowledge-graph.json"
-    install: "sdd graph --install（clone UA + install.sh；agent pipeline 在 Claude Code 会话内跑）"
-    skills_installed_after: "sdd graph --install"  # understand-chat/diff/domain 在 graph --install 后随 plugin 装入
-
-stage:
-  grill:
-    - name: grill-with-docs
-      check: "ls ~/.claude/skills/grill-with-docs/SKILL.md"
-      install: "期望作为独立 skill 预装（与 superpowers/planning-with-files 同级）；缺失则 grill 降级为无文档澄清"
-
-  review:
-    - name: open-code-review CLI
+    - name: open-code-review
       check: ocr --version
       install: npm i -g @alibaba-group/open-code-review
 
-  test:
-    - name: LLMWiki MCP
-      check: "mcp 连通检查"
-      install: "MCP config 注册 + ~/.sdd/mcp-keys.env"
+  skills:
+    - name: Superpowers
+      check: "ls ~/.claude/skills/superpowers/agents/code-reviewer.md"
+      install: "git clone https://github.com/obra/superpowers ~/.claude/skills/superpowers"
 
-  verify:
-    - name: Playwright MCP
-      check: "mcp 连通检查"
-      install: npx playwright install
+    - name: planning-with-files
+      check: "ls ~/.claude/skills/planning-with-files/SKILL.md"
+      install: "git clone https://github.com/OthmanAdi/planning-with-files ~/.claude/skills/planning-with-files"
 
-    - name: chrome-devtools MCP
-      check: "mcp 连通检查"
-      install: "MCP config 注册"
+    - name: grill-with-docs
+      check: "ls ~/.claude/skills/grill-with-docs/SKILL.md"
+      install: "期望作为独立 skill 预装；缺失则 grill 降级为无文档澄清"
 
-  archive:
-    - name: LLMWiki MCP
-      check: "mcp 连通检查"
-      install: "MCP config 注册"
+session_layer:
+  - name: Understand-Anything
+    layer: 会话内 agent pipeline
+    check: "ls .understand-anything/knowledge-graph.json"
+    install: "sdd graph --install（clone UA + install.sh）"
+    provides:
+      - "代码结构知识图谱（nodes/edges/layers）"
+      - "impact analysis、boundary check、domain mapping"
+    trigger: "在 Claude Code 会话内执行 /understand"
+    required_by: [dev, code, review, test, verify]
+    fallback: "缺失时 SDD 阶段 agent 依赖 OpenDeepWiki + LLMWiki"
+
+  - name: LLMWiki MCP
+    layer: 会话内 MCP 子进程
+    check: "mcp 连通检查（.mcp.json 中 llmwiki 条目）"
+    install: "sdd init 自动 clone + venv + 注册 MCP"
+    provides:
+      - "知识库读写（product/engineering/testing）"
+      - "术语表、测试用例归一化、知识沉淀"
+    required_by: [test, archive]
+
+  - name: sdd-context-mcp
+    layer: 会话内 MCP 子进程
+    check: "mcp 连通检查"
+    install: "sdd init 自动注册"
+    provides:
+      - "knowledge-pack 组装（聚合 OpenSpec > LLMWiki > UA > OpenDeepWiki）"
+    required_by: [grill, dev, test, code, verify]
 
 optional:
+  - name: Playwright MCP
+    layer: 会话内
+    check: "mcp 连通检查"
+    install: npx playwright install
+    required_by: [verify]
+
+  - name: chrome-devtools MCP
+    layer: 会话内
+    check: "mcp 连通检查"
+    install: "MCP config 注册"
+    required_by: [verify]
+
   - name: GitHub MCP
+    layer: 会话内
     check: "mcp 连通检查"
     install: "MCP config 注册 + token"

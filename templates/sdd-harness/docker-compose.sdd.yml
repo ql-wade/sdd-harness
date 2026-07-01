@@ -1,49 +1,103 @@
 # =============================================================================
-# SDD Harness 基础设施层 — OpenDeepWiki（AI 仓库知识库）
+# SDD Harness 基础设施层
+# =============================================================================
 #
-# 这是 harness 的内置服务，不是被构建应用的运行时。
-# 类似 Understand-Anything 和 LLMWiki，它是研发工具链的一环。
+# 本文件定义 SDD Harness 的持久服务。这些是研发工具，不是被构建应用的运行时。
 #
-# 启动: sdd services up     （或手动: docker compose -f ~/.sdd/docker-compose.sdd.yml up -d）
-# 停止: sdd services down
-# 检查: sdd doctor
+# 架构分层（LLM 必须理解）:
 #
-# OpenDeepWiki 内置增量更新 worker：
-#   - 每 60 秒轮询，每 60 分钟检查每个仓库的远程 commit
-#   - 发现新 commit → 只重新生成变更文件的文档
-#   - 全自动，不需要 webhook 或手动触发
+#   ┌─ 被构建的项目 (PAV2/your-project)
+#   │   有自己的 docker-compose.yml (postgres, redis, app servers...)
+#   │   ← 不要把 harness 服务混进去
+#   │
+#   ├─ SDD Harness 基础设施层 (本文件)
+#   │   持久服务，docker compose up 后一直运行
+#   │   └─ opendeepwiki: AI 仓库知识库 (HTTP + MCP)
+#   │
+#   ├─ SDD Harness 会话层 (AI 工具内)
+#   │   随 Claude Code/Codex session 启停，不进 docker
+#   │   ├─ LLMWiki MCP: Python 子进程，由 .mcp.json 注册
+#   │   ├─ Understand-Anything: agent pipeline，会话内触发 /understand
+#   │   └─ sdd-context-mcp: context pack 组装器
+#   │
+#   └─ 系统层 (全局安装)
+#       ├─ Node.js 18+: harness CLI 运行时
+#       ├─ OpenSpec CLI: 规格管理
+#       ├─ open-code-review: review 阶段行级审查
+#       └─ git, docker
 #
-# 环境变量从 ~/.sdd/mcp-keys.env 或 shell 环境读取。
+# 启动方式:
+#   sdd services up      # 通过 harness CLI（推荐，自动注册 MCP）
+#   sdd services down    # 停止
+#   sdd services status  # 检查健康
+#
+# 或手动:
+#   docker compose -f ~/.sdd/docker-compose.sdd.yml up -d
+#   docker compose -f ~/.sdd/docker-compose.sdd.yml down
+#
+# 环境变量:
+#   从 shell 环境或 ~/.sdd/mcp-keys.env 读取。关键变量:
+#     OPENAI_API_KEY 或 OPENDEEPWIKI_API_KEY: LLM API key (必填)
+#     OPENDEEPWIKI_LLM_ENDPOINT: LLM endpoint (默认 https://api.openai.com/v1)
+#     OPENDEEPWIKI_MODEL: wiki 生成模型 (默认 gpt-4o)
+#     OPENDEEPWIKI_PORT: API+MCP 端口 (默认 8090)
+#     OPENDEEPWIKI_WEB_PORT: Web UI 端口 (默认 3001)
+#
+# 增量更新:
+#   OpenDeepWiki 内置后台 worker，全自动:
+#   - 每 60 秒轮询 pending tasks
+#   - 每 60 分钟检查每个仓库的远程 HEAD commit
+#   - 发现新 commit → 只重新生成 git diff 中变更文件的文档
+#   - 不需要 webhook、不需要 GitHub App、不需要手动触发
 # =============================================================================
 
 services:
+
+  # ── OpenDeepWiki — AI 仓库知识库 ────────────────────────────────────────────
+  #
+  # 作用: 分析代码库，用 LLM 自动生成架构 wiki 文档
+  #       为 SDD 各阶段 agent 提供"这个模块为什么存在"、"数据怎么流动"等架构叙述
+  #       补充 Understand-Anything 的结构图谱（node/edge）和 LLMWiki 的项目文档
+  #
+  # 首次使用:
+  #   1. sdd services up
+  #   2. 打开 http://localhost:3001 (admin@routin.ai / Admin@123)
+  #   3. 导入仓库 (Git URL 或本地路径)
+  #   4. 等待 AI 生成 wiki (首次约 5-15 分钟，取决于仓库大小)
+  #   5. 之后增量更新全自动
+  #
+  # MCP 查询 (agent 在会话中使用):
+  #   http://localhost:8090/api/mcp/{owner}/{repo}
+  #   sdd init 自动检测运行状态并注册到 .mcp.json
+  #
   opendeepwiki:
     image: crpi-j9ha7sxwhatgtvj4.cn-shenzhen.personal.cr.aliyuncs.com/open-deepwiki/opendeepwiki
     container_name: sdd-opendeepwiki
     restart: unless-stopped
     ports:
-      - "${OPENDEEPWIKI_PORT:-8090}:8080"   # Backend + MCP
-      - "${OPENDEEPWIKI_WEB_PORT:-3001}:3000"  # Web UI
+      - "${OPENDEEPWIKI_PORT:-8090}:8080"      # Backend API + MCP endpoint
+      - "${OPENDEEPWIKI_WEB_PORT:-3001}:3000"   # Web UI (admin console)
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       URLS: http://+:8080
 
-      # 数据库（独立 SQLite，不侵入目标项目的数据库）
+      # ── 数据库 ──
+      # 独立 SQLite，不侵入目标项目的数据库
       Database__Type: sqlite
       ConnectionStrings__Default: "Data Source=/data/opendeepwiki.db"
 
-      # JWT
+      # ── 认证 ──
       JWT_SECRET_KEY: ${OPENDEEPWIKI_JWT_SECRET:-sdd-harness-dev-secret-change-in-production}
 
-      # 仓库存储
+      # ── 仓库存储 ──
       REPOSITORIES_DIRECTORY: /data/repos
 
-      # AI 配置（从环境读取）
+      # ── AI 配置 (Chat + Wiki 生成器共用) ──
+      # 优先用 OPENDEEPWIKI_API_KEY，回退到 OPENAI_API_KEY
       CHAT_API_KEY: ${OPENDEEPWIKI_API_KEY:-${OPENAI_API_KEY:-}}
       ENDPOINT: ${OPENDEEPWIKI_LLM_ENDPOINT:-https://api.openai.com/v1}
       CHAT_REQUEST_TYPE: OpenAI
 
-      # Wiki 生成器
       WIKI_CATALOG_MODEL: ${OPENDEEPWIKI_MODEL:-gpt-4o}
       WIKI_CATALOG_ENDPOINT: ${OPENDEEPWIKI_LLM_ENDPOINT:-https://api.openai.com/v1}
       WIKI_CATALOG_API_KEY: ${OPENDEEPWIKI_API_KEY:-${OPENAI_API_KEY:-}}
@@ -53,19 +107,21 @@ services:
       WIKI_CONTENT_API_KEY: ${OPENDEEPWIKI_API_KEY:-${OPENAI_API_KEY:-}}
       WIKI_CONTENT_REQUEST_TYPE: OpenAI
 
-      # 多语言 + 并行
+      # ── 多语言 + 并行度 ──
       WIKI_LANGUAGES: en,zh
       WIKI_PARALLEL_COUNT: 5
 
-      # 增量更新 worker（全自动）
+      # ── 增量更新 worker ──
+      # 全自动：定时 git fetch → 比较 commit → 只重生成变更文件文档
       IncrementalUpdate__Enabled: "true"
-      IncrementalUpdate__PollingIntervalSeconds: "60"
-      IncrementalUpdate__DefaultUpdateIntervalMinutes: "60"
-      IncrementalUpdate__MinUpdateIntervalMinutes: "5"
-      IncrementalUpdate__MaxRepositoriesPerPoll: "10"
+      IncrementalUpdate__PollingIntervalSeconds: "60"       # worker 轮询周期
+      IncrementalUpdate__DefaultUpdateIntervalMinutes: "60"  # 每仓库检查间隔
+      IncrementalUpdate__MinUpdateIntervalMinutes: "5"       # 最小间隔（防刷）
+      IncrementalUpdate__MaxRepositoriesPerPoll: "10"        # 每轮最多检查仓库数
 
-      # MCP
+      # ── MCP ──
       MCP_ENABLED: "true"
+
     volumes:
       - sdd-opendeepwiki-data:/data
     healthcheck:
@@ -74,6 +130,13 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  # ── 未来可扩展 ──
+  # 其他持久服务可在此追加，例如:
+  # - 私有 LLM gateway (如本地 Ollama)
+  # - 代码搜索引擎 (如 Sourcegraph)
+  # 但会话层依赖（LLMWiki MCP、Understand-Anything）不在此处——
+  # 它们由 AI 工具 spawn，生命周期跟着 session 走。
 
 volumes:
   sdd-opendeepwiki-data:
