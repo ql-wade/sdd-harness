@@ -1000,7 +1000,7 @@ const STAGE_CONTRACTS = {
   dev:      { next: 'test',     artifacts: ['design.md','tasks.md'], scaffold: {
               'design.md': '# Design\n\n## File Structure Plan\n- \n\n## Boundary\n_Boundary_: \n_Depends_: \n',
               'tasks.md': '# Tasks\n- [ ] T1: _Boundary: _\n' } },
-  test:     { next: 'code',     artifacts: [], wiki: 'testing/matrices/test-matrix.md' },
+  test:     { next: 'code',     artifacts: [], wiki: 'wiki/testing/matrices/test-matrix.md' },
   code:     { next: 'review',   artifacts: ['progress.md'], scaffold: { 'progress.md': '# Progress\n\n## [code]\n- \n' } },
   review:   { next: 'verify',   artifacts: [], runtime: 'review-notes.md' },
   verify:   { next: 'release',  artifacts: [], note: '证据写进 progress.md' },
