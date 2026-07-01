@@ -16,6 +16,7 @@ import { auditWorkflowRun } from '../lib/workflow-audit.js';
 import { auditDeliverables } from '../lib/deliverable-audit.js';
 import { fixDeliverables } from '../lib/deliverable-fixer.js';
 import { graphHealthCheck, getSourceDirs, countSourceFiles, detectProjectType, detectMonorepo } from '../lib/project-context.js';
+import { discoverKnowledgeSources, generateSeedContent } from '../lib/knowledge-seed.js';
 
 // 异步流式执行 claude（非 execSync 阻塞；stdin 走临时文件 redirect；慷慨超时）
 //
@@ -301,6 +302,23 @@ async function ensureDependencies(platforms, dryRun, cwd) {
       await fs.writeFile(path.join(wikiDir, 'wiki', '_schema.md'), '# Wiki Schema\n\n详见 docs/llmwiki-structure.md\n');
     }
     console.log(chalk.green(`  ✅ wiki 内容目录已建: ${path.relative(cwd, wikiDir)}/ (含 ${wikiSubdirs.length} 子目录)`));
+
+    // --- Knowledge seed: scan project for existing docs/specs and seed wiki ---
+    const ks = discoverKnowledgeSources(cwd);
+    const ksCount = ks.docs.length + ks.specs.length + ks.steering.length + ks.agentDocs.length;
+    if (ksCount > 0 || ks.catalog) {
+      console.log(chalk.cyan(`  📖 发现 ${ksCount} 个知识源 (${ks.docs.length} docs, ${ks.specs.length} specs, ${ks.steering.length} steering${ks.catalog ? ', CODEBASE-CATALOG' : ''})`));
+      if (!dryRun) {
+        const seedResult = generateSeedContent(cwd, ks);
+        console.log(chalk.green(`  ✅ knowledge seed: ${seedResult.files.length} 个 wiki 条目写入`));
+        for (const f of seedResult.files.slice(0, 8)) {
+          console.log(chalk.gray(`     → ${f.path}`));
+        }
+        if (seedResult.files.length > 8) console.log(chalk.gray(`     … +${seedResult.files.length - 8} more`));
+      }
+    } else {
+      console.log(chalk.gray('  ℹ️  无已有知识源可 seed（后续文档放入 llmwiki/raw/ 后 sdd wiki ingest）'));
+    }
   } else {
     console.log(chalk.cyan(`  [dry-run] 建 ${wikiDir} 骨架`));
   }
@@ -1217,7 +1235,17 @@ program
       const subs = ['raw','wiki/sources','wiki/concepts','wiki/entities','wiki/outputs','wiki/product/requirements','wiki/product/acceptance-criteria','wiki/engineering','wiki/testing/cases','wiki/testing/matrices','wiki/_shared/glossary','wiki/_shared/traceability'];
       for (const d of subs) await fs.ensureDir(path.join(wikiDir, d));
       if (!await fs.pathExists(path.join(wikiDir, 'index.md'))) await fs.writeFile(path.join(wikiDir, 'index.md'), '# LLMWiki Index\n');
-      console.log(chalk.green(`✅ LLMWiki 骨架 (${subs.length} 子目录)\n`));
+      console.log(chalk.green(`✅ LLMWiki 骨架 (${subs.length} 子目录)`));
+      // Knowledge seed from existing project sources
+      const ks = discoverKnowledgeSources(cwd);
+      const ksCount = ks.docs.length + ks.specs.length + ks.steering.length + ks.agentDocs.length;
+      if (ksCount > 0 || ks.catalog) {
+        const seedResult = generateSeedContent(cwd, ks);
+        console.log(chalk.green(`✅ Knowledge seed: ${seedResult.files.length} entries (${ksCount} sources scanned)`));
+      } else {
+        console.log(chalk.gray('ℹ️  No existing knowledge sources found to seed'));
+      }
+      console.log();
     });
  wikiCmd.command('ingest')
    .description('读取 raw/ 源，驱动 claude 生成 wiki/sources/ 摘要（§5 ingest）')
