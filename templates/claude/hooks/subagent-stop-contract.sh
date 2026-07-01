@@ -2,9 +2,13 @@
 # SubagentStop hook — subagent 返回时检查输出契约
 # 基于消息文本检测，非结构性强制（prompt 约束 + 关键词解析）
 
+# Resolve project dir (platform-agnostic: Claude Code / Codex / OpenCode)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/_resolve-project-dir.sh"
+
 SUBAEGNT_OUTPUT="$1"
 
-SDD_DIR="${CLAUDE_PROJECT_DIR}/.sdd"
+SDD_DIR="${SDD_PROJECT_DIR}/.sdd"
 ACTIVE_RUN_FILE="${SDD_DIR}/active-run"
 
 if [ ! -f "$ACTIVE_RUN_FILE" ]; then

@@ -7,7 +7,11 @@
 #   2. 当前阶段产出状态摘要（deliverable-audit 摘要）
 #   3. 缺失产出提示（如有）
 
-SDD_DIR="${CLAUDE_PROJECT_DIR}/.sdd"
+# Resolve project dir (platform-agnostic: Claude Code / Codex / OpenCode)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/_resolve-project-dir.sh"
+
+SDD_DIR="${SDD_PROJECT_DIR}/.sdd"
 ACTIVE_RUN_FILE="${SDD_DIR}/active-run"
 
 if [ ! -f "$ACTIVE_RUN_FILE" ]; then
@@ -31,10 +35,10 @@ echo "Goal: ${GOAL}"
 echo "Workflow frame: ${WF_FILE}"
 
 # ── 产出状态摘要（内联检查，不依赖 CLI）──────────────────
-DELIVERABLE_SUMMARY=$(CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR}" CHANGE_ID="${CHANGE_ID}" CURRENT_STAGE="${CURRENT_STAGE}" python3 -c "
+DELIVERABLE_SUMMARY=$(SDD_PROJECT_DIR="${SDD_PROJECT_DIR}" CHANGE_ID="${CHANGE_ID}" CURRENT_STAGE="${CURRENT_STAGE}" python3 -c "
 import os, json, sys
 
-project_dir = os.environ.get('CLAUDE_PROJECT_DIR', '')
+project_dir = os.environ.get('SDD_PROJECT_DIR', '')
 change_id = os.environ.get('CHANGE_ID', '')
 stage = os.environ.get('CURRENT_STAGE', '')
 

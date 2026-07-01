@@ -1,6 +1,9 @@
 # SDD Harness 9 阶段产出合理性指标（Definition of Done）
 # 全部用 grep -F（固定字符串）/ grep -cF / wc，避免 regex 转义陷阱。
 # harness gate 基于此判断"达标"。
+#
+# 多栈支持：code/test 阶段的 source/test 检测使用 `auto` 占位符，
+# 由 lib/project-context.js 在运行时根据 manifest 检测（monorepo 感知）。
 
 grill:
   goal: "业务澄清：术语/边界/冲突/ADR 候选"
@@ -74,9 +77,10 @@ test:
       op: ">="
       threshold: 4
     - name: 自动化测试文件
-      check: "find . -path './node_modules' -prune -o -path './.git' -prune -o -type f -print 2>/dev/null | grep -E '([.]test[.]|[.]spec[.]|_test[.]|^[.]/tests/)' | wc -l"
+      check: "auto:find_tests"
       op: ">="
       threshold: 1
+      note: "Multi-stack: *.test.*/*.spec.* (JS/TS), *_test.*/*Test.* (Java/Go), test_*.py (Python)"
     - name: LLMWiki 测试用例
       check: "find llmwiki/wiki/testing/cases -type f 2>/dev/null | wc -l"
       op: ">="
@@ -84,20 +88,22 @@ test:
 
 code:
   goal: "实现真实源码 + 交互完整 + 测试已跑"
-  artifacts: [progress.md, src/]
+  artifacts: [progress.md, <source-dirs>]
   metrics:
     - name: 进度日志条目
       check: "grep -cE '^## ' progress.md"
       op: ">="
       threshold: 1
     - name: 源码文件
-      check: "find src -type f 2>/dev/null | grep -E '[.](ts|tsx|js|jsx|py|go|rs|java)$' | wc -l"
+      check: "auto:find_source"
       op: ">="
       threshold: 2
+      note: "Multi-stack/monorepo-aware: detects src dirs from manifest (pom.xml→src/main/java, package.json→src, etc.)"
     - name: 项目 manifest
-      check: "find . -maxdepth 1 -type f 2>/dev/null | grep -E '/(package.json|pyproject.toml|Cargo.toml|go.mod|pom.xml)$' | wc -l"
+      check: "find . -maxdepth 2 -type f 2>/dev/null | grep -E '/(package.json|pyproject.toml|Cargo.toml|go.mod|pom.xml|build.gradle|build.gradle.kts)$' | wc -l"
       op: ">="
       threshold: 1
+      note: "maxdepth 2 to support monorepo subdirectories"
     - name: 测试已跑或 waiver
       check: "grep -ciE 'test|测试.*(pass|通过)|waiver' progress.md"
       op: ">="

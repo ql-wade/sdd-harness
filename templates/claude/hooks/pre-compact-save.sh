@@ -2,7 +2,11 @@
 # PreCompact hook — context 压缩前 flush findings/progress 到磁盘
 # 防止 context 丢失
 
-SDD_DIR="${CLAUDE_PROJECT_DIR}/.sdd"
+# Resolve project dir (platform-agnostic: Claude Code / Codex / OpenCode)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/_resolve-project-dir.sh"
+
+SDD_DIR="${SDD_PROJECT_DIR}/.sdd"
 ACTIVE_RUN_FILE="${SDD_DIR}/active-run"
 
 if [ ! -f "$ACTIVE_RUN_FILE" ]; then

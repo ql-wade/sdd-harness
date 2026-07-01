@@ -12,7 +12,11 @@
 #   1 = 非阻塞警告
 #   2 = 硬性拦截（stderr 反馈给模型）
 
-SDD_DIR="${CLAUDE_PROJECT_DIR}/.sdd"
+# Resolve project dir (platform-agnostic: Claude Code / Codex / OpenCode)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/_resolve-project-dir.sh"
+
+SDD_DIR="${SDD_PROJECT_DIR}/.sdd"
 ACTIVE_RUN_FILE="${SDD_DIR}/active-run"
 
 if [ ! -f "$ACTIVE_RUN_FILE" ]; then
@@ -54,7 +58,7 @@ fi
 DELIVERABLE_RESULT=$(python3 -c "
 import os, sys, json
 
-project_dir = os.environ.get('CLAUDE_PROJECT_DIR', '')
+project_dir = os.environ.get('SDD_PROJECT_DIR', '')
 change_id = os.environ.get('CHANGE_ID', '')
 stage = os.environ.get('CURRENT_STAGE', '')
 

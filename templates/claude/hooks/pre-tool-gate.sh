@@ -11,13 +11,17 @@
 #     2 = 硬性拦截（工具中止，stderr 反馈给模型）← 正确
 #   拦截原因必须输出到 stderr（exit 2 的反馈通道）。
 
+# Resolve project dir (platform-agnostic: Claude Code / Codex / OpenCode)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/_resolve-project-dir.sh"
+
 # 从 stdin 读 JSON（Claude Code 的 hook 输入格式）
 INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_name',''))" 2>/dev/null)
 # 从 tool_input.file_path（Write/Edit）或 tool_input.command（Bash）提取路径
 TARGET_PATH=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); ti=d.get('tool_input',{}); print(ti.get('file_path','') or ti.get('notebook_path','') or ti.get('path','') or '')" 2>/dev/null)
 
-SDD_DIR="${CLAUDE_PROJECT_DIR}/.sdd"
+SDD_DIR="${SDD_PROJECT_DIR}/.sdd"
 ACTIVE_RUN_FILE="${SDD_DIR}/active-run"
 
 # 无 active run，不拦（SessionStart 已提示）

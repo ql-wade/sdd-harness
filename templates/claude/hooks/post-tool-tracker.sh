@@ -7,11 +7,15 @@
 #   2. 产出全完成时提示 agent 可推进到下一阶段
 #   3. 不拦截（exit 0），只追踪和提示
 
+# Resolve project dir (platform-agnostic: Claude Code / Codex / OpenCode)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/_resolve-project-dir.sh"
+
 INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_name',''))" 2>/dev/null)
 TARGET_PATH=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); ti=d.get('tool_input',{}); print(ti.get('file_path','') or ti.get('path','') or '')" 2>/dev/null)
 
-SDD_DIR="${CLAUDE_PROJECT_DIR}/.sdd"
+SDD_DIR="${SDD_PROJECT_DIR}/.sdd"
 ACTIVE_RUN_FILE="${SDD_DIR}/active-run"
 
 if [ ! -f "$ACTIVE_RUN_FILE" ]; then
@@ -33,10 +37,10 @@ if [ -z "$TARGET_PATH" ]; then
 fi
 
 # 跑产出检查（内联，复用 stop-gate 的检查逻辑）
-RESULT=$(CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR}" CHANGE_ID="${CHANGE_ID}" CURRENT_STAGE="${CURRENT_STAGE}" python3 -c "
+RESULT=$(SDD_PROJECT_DIR="${SDD_PROJECT_DIR}" CHANGE_ID="${CHANGE_ID}" CURRENT_STAGE="${CURRENT_STAGE}" python3 -c "
 import os, json, sys
 
-project_dir = os.environ.get('CLAUDE_PROJECT_DIR', '')
+project_dir = os.environ.get('SDD_PROJECT_DIR', '')
 change_id = os.environ.get('CHANGE_ID', '')
 stage = os.environ.get('CURRENT_STAGE', '')
 
