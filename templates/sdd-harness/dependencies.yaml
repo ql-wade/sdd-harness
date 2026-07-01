@@ -1,24 +1,11 @@
 # SDD Harness 依赖清单
 # 由 sdd doctor 读取，每项含安装命令 + 检测命令
 #
-# 三层架构（LLM 必须理解）:
-#   1. docker_services — 持久服务，docker compose 起，一直运行
-#   2. system_tools    — 全局 CLI，brew/npm 安装
-#   3. session_layer   — 随 AI 工具 session 启停，不进 docker
+# 两层架构（LLM 必须理解）:
+#   1. system_tools    — 全局 CLI，brew/npm 安装
+#   2. session_layer   — 随 AI 工具 session 启停，不进 docker
 #
-# init 安装顺序: docker_services → system_tools → session_layer → skills
-
-docker_services:
-  - name: OpenDeepWiki
-    layer: 持久服务（AI 仓库知识库）
-    check: "curl -sf http://localhost:${OPENDEEPWIKI_PORT:-8095}/health"
-    install: "sdd services up"
-    provides:
-      - "AI 生成的架构 wiki 文档（模块叙述、数据流、依赖关系）"
-      - "MCP endpoint: http://localhost:8095/api/mcp/{owner}/{repo}"
-      - "增量更新 worker（每 60 分钟自动检查 commit 变更）"
-    required_by: [grill, dev, code, review]
-    fallback: "缺失时 SDD 阶段 agent 依赖 Understand-Anything + LLMWiki knowledge-seed"
+# init 安装顺序: system_tools → session_layer → skills
 
 system_tools:
   core:
@@ -66,7 +53,7 @@ session_layer:
       - "impact analysis、boundary check、domain mapping"
     trigger: "在 Claude Code 会话内执行 /understand"
     required_by: [dev, code, review, test, verify]
-    fallback: "缺失时 SDD 阶段 agent 依赖 OpenDeepWiki + LLMWiki"
+    fallback: "缺失时 SDD 阶段 agent 依赖 Understand-Anything + LLMWiki"
 
   - name: LLMWiki MCP
     layer: 会话内 MCP 子进程
@@ -82,7 +69,7 @@ session_layer:
     check: "mcp 连通检查"
     install: "sdd init 自动注册"
     provides:
-      - "knowledge-pack 组装（聚合 OpenSpec > LLMWiki > UA > OpenDeepWiki）"
+      - "knowledge-pack 组装（聚合 OpenSpec > LLMWiki > Understand-Anything）"
     required_by: [grill, dev, test, code, verify]
 
 optional:

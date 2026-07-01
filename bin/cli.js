@@ -17,7 +17,6 @@ import { auditDeliverables } from '../lib/deliverable-audit.js';
 import { fixDeliverables } from '../lib/deliverable-fixer.js';
 import { graphHealthCheck, getSourceDirs, countSourceFiles, detectProjectType, detectMonorepo } from '../lib/project-context.js';
 import { discoverKnowledgeSources, generateSeedContent } from '../lib/knowledge-seed.js';
-import { checkOpenDeepWikiHealth, registerOpenDeepWikiMCP, ensureComposeFile, startOpenDeepWiki, stopOpenDeepWiki } from '../lib/opendeepwiki.js';
 
 // 异步流式执行 claude（非 execSync 阻塞；stdin 走临时文件 redirect；慷慨超时）
 //
@@ -276,31 +275,6 @@ async function ensureDependencies(platforms, dryRun, cwd) {
       console.log(chalk.green(`  ✅ 注册 LLMWiki MCP → ${path.relative(cwd, mcpConfig)}`));
     }
  }
-
-  // === OpenDeepWiki — harness 内置 AI 仓库知识库 ===
-  console.log(chalk.blue('\n🌐 OpenDeepWiki（AI 仓库知识库）\n'));
-  if (!dryRun) {
-    // Install compose file to ~/.sdd/
-    await ensureComposeFile(TEMPLATES_DIR);
-
-    // Check if OpenDeepWiki is running
-    const odwHealth = checkOpenDeepWikiHealth();
-    if (odwHealth.running) {
-      console.log(chalk.green(`  ✅ OpenDeepWiki 运行中 (${odwHealth.url})`));
-      // Auto-register MCP
-      const mcpResult = await registerOpenDeepWikiMCP(cwd);
-      if (mcpResult.registered && !mcpResult.skipped) {
-        console.log(chalk.green(`  ✅ 注册 OpenDeepWiki MCP → ${mcpResult.url}`));
-      } else if (mcpResult.registered && mcpResult.skipped) {
-        console.log(chalk.gray(`  ✓ OpenDeepWiki MCP 已注册`));
-      } else {
-        console.log(chalk.gray(`  ℹ️  MCP 未注册: ${mcpResult.reason}`));
-      }
-    } else {
-      console.log(chalk.gray(`  ℹ️  OpenDeepWiki 未运行。启动: sdd services up`));
-      console.log(chalk.gray(`     MCP 自动注册将在服务启动后执行`));
-    }
-  }
 
   // === Step 5: LLMWiki 实例初始化（项目级 wiki 内容目录） ===
   console.log(chalk.blue('\n🗂️  [5/8] LLMWiki 实例初始化（wiki 内容目录）\n'));
@@ -973,25 +947,7 @@ program
       console.log(chalk.green(`✅ hooks: ${hooks.length} 个`));
     }
 
-    // OpenDeepWiki
-    const odwHealth = checkOpenDeepWikiHealth();
-    if (odwHealth.running) {
-      console.log(chalk.green(`✅ OpenDeepWiki 运行中 (${odwHealth.url})`));
-      // Check if MCP is registered
-      const mcpPath = path.join(cwd, '.mcp.json');
-      if (await fs.pathExists(mcpPath)) {
-        const mcp = JSON.parse(await fs.readFile(mcpPath, 'utf8'));
-        if (mcp.mcpServers?.opendeepwiki) {
-          console.log(chalk.green('   └─ MCP 已注册'));
-        } else {
-          console.log(chalk.gray('   └─ MCP 未注册（运行 sdd services up 自动注册）'));
-        }
-      }
-    } else {
-      console.log(chalk.gray('ℹ️  OpenDeepWiki 未运行 — sdd services up'));
-    }
-
-    console.log();
+        console.log();
     // Graph issues are warnings (not hard blockers), but should be reported
     const graphIssues = graphHealthCheck(cwd).issues.length;
     if (issues === 0 && graphIssues === 0) {
@@ -1265,50 +1221,6 @@ program
       console.log(chalk.yellow('⚠️ 未安装。运行: sdd graph --install'));
     }
     console.log(chalk.gray('\n   agent pipeline 需在 Claude Code 会话内跑生成图谱\n'));
-  });
-
-// sdd services — 管理 OpenDeepWiki（AI 仓库知识库）
-const svcCmd = program.command('services').description('管理 SDD Harness 内置服务（OpenDeepWiki）');
-svcCmd.command('up')
-  .description('Start OpenDeepWiki service (Docker)')
-  .action(async () => {
-    console.log(chalk.blue('\n🐳 启动 OpenDeepWiki...\n'));
-    await ensureComposeFile(TEMPLATES_DIR);
-    const result = startOpenDeepWiki();
-    if (result.success) {
-      console.log(chalk.green('\n✅ OpenDeepWiki 启动成功'));
-      console.log(chalk.gray('   Web UI: http://localhost:3001'));
-      console.log(chalk.gray('   API:    http://localhost:8095'));
-      console.log(chalk.gray('   MCP:    http://localhost:8095/api/mcp/{owner}/{repo}'));
-      console.log(chalk.gray('\n   首次使用需在 Web UI 导入仓库。导入后增量更新自动运行（每 60 分钟）'));
-      // Try to register MCP for current project
-      const cwd = process.cwd();
-      await new Promise(r => setTimeout(r, 5000)); // wait for healthcheck
-      const mcpResult = await registerOpenDeepWikiMCP(cwd);
-      if (mcpResult.registered && !mcpResult.skipped) {
-        console.log(chalk.green(`   ✅ MCP 已注册: ${mcpResult.url}`));
-      }
-    } else {
-      console.log(chalk.red(`\n❌ 启动失败: ${result.reason}\n`));
-    }
-  });
-svcCmd.command('down')
-  .description('Stop OpenDeepWiki service')
-  .action(() => {
-    console.log(chalk.blue('\n🐳 停止 OpenDeepWiki...\n'));
-    const result = stopOpenDeepWiki();
-    console.log(result.success ? chalk.green('✅ 已停止\n') : chalk.red(`❌ ${result.reason}\n`));
-  });
-svcCmd.command('status')
-  .description('Check OpenDeepWiki service health')
-  .action(() => {
-    const health = checkOpenDeepWikiHealth();
-    if (health.running) {
-      console.log(chalk.green(`\n✅ OpenDeepWiki 运行中 (${health.url})\n`));
-    } else {
-      console.log(chalk.yellow(`\n⚠️  OpenDeepWiki 未运行 (${health.url})\n`));
-      console.log(chalk.gray('   启动: sdd services up\n'));
-    }
   });
 
 program
