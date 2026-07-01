@@ -17,6 +17,8 @@ import { auditDeliverables } from '../lib/deliverable-audit.js';
 import { fixDeliverables } from '../lib/deliverable-fixer.js';
 import { graphHealthCheck, getSourceDirs, countSourceFiles, detectProjectType, detectMonorepo } from '../lib/project-context.js';
 import { discoverKnowledgeSources, generateSeedContent } from '../lib/knowledge-seed.js';
+import { sedimentStage } from '../lib/llmwiki-sediment.js';
+import { installDailyGraphRefresh, uninstallDailyGraphRefresh, checkDailyGraphRefresh } from '../lib/daily-scheduler.js';
 
 // 异步流式执行 claude（非 execSync 阻塞；stdin 走临时文件 redirect；慷慨超时）
 //
@@ -1229,12 +1231,58 @@ program
       wf = wf.replace(/status:\s*\w+/, 'status: passed');
       await fs.writeFile(wfPath, wf);
       console.log(chalk.blue(`\n✅ ${stage} 内容达标，推进 → ${contract.next}`));
+
+      // Auto-sediment stage artifacts to LLMWiki
+      try {
+        const sed = await sedimentStage(changeId, stage, cwd);
+        if (sed.sediments && sed.sediments.length > 0) {
+          console.log(chalk.gray(`   📝 LLMWiki sediment: ${sed.sediments.length} 条 → llmwiki/`));
+        }
+      } catch (e) {
+        // sediment failure is non-blocking
+      }
     } else if (!contract.next) {
       console.log(chalk.green('\n🏁 最终 stage (archive)。workflow 完成。'));
     }
   });
 
 // sdd graph —— clone UA + auto-trigger /understand to generate/refresh graph
+// sdd schedule — 定时刷新 UA 知识图谱（每日 02:00）
+program
+  .command('schedule')
+  .description('Manage daily knowledge graph refresh (Understand-Anything)')
+  .option('--install', 'Install daily UA graph refresh job (launchd/cron)', false)
+  .option('--uninstall', 'Remove daily UA graph refresh job', false)
+  .option('--status', 'Check if daily refresh is installed', false)
+  .action(async (options) => {
+    const cwd = process.cwd();
+
+    if (options.install) {
+      console.log(chalk.blue('\n⏰ Installing daily UA graph refresh...\n'));
+      const result = await installDailyGraphRefresh(cwd);
+      console.log(chalk.green(`✅ Daily refresh installed (${result.schedule})`));
+      console.log(chalk.gray(`   Platform: ${result.platform}`));
+      console.log(chalk.gray(`   Script: ${result.scriptPath}`));
+      console.log(chalk.gray(`   Project: ${cwd}`));
+      console.log(chalk.gray('\n   UA knowledge graph will auto-refresh every day at 02:00.'));
+      console.log(chalk.gray('   Logs: ~/.sdd/logs/graph-refresh.log'));
+    } else if (options.uninstall) {
+      console.log(chalk.blue('\n⏰ Removing daily UA graph refresh...\n'));
+      const result = await uninstallDailyGraphRefresh();
+      console.log(chalk.green('✅ Daily refresh removed'));
+    } else {
+      // Default: show status
+      const status = await checkDailyGraphRefresh();
+      if (status.installed) {
+        console.log(chalk.green('\n✅ Daily UA graph refresh is installed\n'));
+        if (status.plistPath) console.log(chalk.gray(`   ${status.plistPath}`));
+      } else {
+        console.log(chalk.yellow('\n⚠️  Daily UA graph refresh not installed\n'));
+        console.log(chalk.gray('   Install: sdd schedule --install'));
+      }
+    }
+  });
+
 program
   .command('graph')
   .description('Refresh code knowledge graph (Understand-Anything)')
@@ -1773,10 +1821,24 @@ ${errTail}
         ).catch(() => '')
         : '';
 
-      console.log(chalk.cyan(`   通用化分解实现（src + config 两个小调用，零硬编码）\n`));
+      // Detect real source dirs for this project (monorepo-aware)
+      const detectedSourceDirs = getSourceDirs(cwd);
+      const projectType = detectProjectType(cwd);
+      const monoRepos = detectMonorepo(cwd);
+      const sourceDirsLabel = monoRepos.length >= 2
+        ? monoRepos.map(m => `${m.dir}/ (${m.type})`).join(', ')
+        : (projectType ? `${projectType.type}: ${detectedSourceDirs.join(', ')}` : detectedSourceDirs.join(', '));
 
-      // 调用 1: src 源码（按 specs + steering + File Structure Plan）
-      const srcPrompt = `你是 SDD code agent。基于项目上下文实现源码，**不预设技术栈/玩法**。
+      console.log(chalk.cyan(`   通用化实现（source: ${sourceDirsLabel}）\n`));
+
+      // Only include browser probe contract for JS/web projects
+      const isWebProject = !projectType || projectType.type === 'node';
+      const probeContext = isWebProject
+        ? `## Browser Probeability Generation Contract\n${probeGenerationContract || '(非 browser 项目可忽略)'}\n## Active Probe Profile\n${lockedProbeProfile || '(当前 run 未锁定 probe profile)'}`
+        : '(非 browser 项目，跳过 probe contract)';
+
+      // 调用 1: src 源码（按 specs + steering + File Structure Plan + REAL source dirs）
+      const srcPrompt = `你是 SDD code agent。基于项目上下文实现源码。
 
 ## steering（tech stack — 决定技术）
 ${steeringContent}
@@ -1787,16 +1849,17 @@ ${specsSummary || '(无)'}
 ## File Structure Plan（决定文件结构）
 ${fileStructurePlan}
 
-## Browser Probeability Generation Contract
-${probeGenerationContract || '(非 browser 项目可忽略)'}
+## 项目源码位置（必须在此结构下创建文件）
+${sourceDirsLabel}
 
-## Active Probe Profile
-${lockedProbeProfile || '(当前 run 未锁定 probe profile)'}
+${probeContext}
 
-实现 ${cwd}/src/ 下所有源文件（按 File Structure Plan 的结构 + steering 的技术 + specs 的功能）。
-- 技术栈按 steering（可能是 three.js/Babylon/Canvas/React/... — 你读 steering 决定，别套预设）
-- 真实可运行，不占位
-- browser 项目按上述契约暴露只读 globalThis.__sddProbe.snapshot()，禁止 debug DOM
+## 要求
+1. 按 File Structure Plan 的结构 + steering 的技术栈 + specs 的功能实现源码
+2. 文件放在上面的真实源码目录中（不要放在根目录 src/）
+3. 真实可运行，不占位
+4. 遵循 steering 中的编码规范（如 WebFlux reactive、pnpm 等）
+${isWebProject ? '5. browser 项目按上述契约暴露只读 globalThis.__sddProbe.snapshot()，禁止 debug DOM' : ''}
 用 Write 工具，立刻完成。`;
       try {
         await ptyClaude(srcPrompt, { cwd, model: options.model, timeoutMs: 600000 });
@@ -1805,15 +1868,27 @@ ${lockedProbeProfile || '(当前 run 未锁定 probe profile)'}
       // 调用 2: 配置文件（package.json + 入口，按 steering 构建工具）
       // manifest 配置：按 steering 语言决定（autoresearch 优化：区分 JS/Python，修复 JS 中心主义）
       const cfgPrompt = `写 manifest 配置文件，按 steering 的技术栈决定：
-- JS/TS 项目：写 ${cwd}/package.json（scripts 必须含 build 和 test，如 build: "tsc && vite build", test: "vitest run"）+ ${cwd}/index.html（若 web，入口指向 src 主文件）
-- Python 项目：写 ${cwd}/pyproject.toml，必须含 [build-system]（setuptools）+ [project.scripts]（CLI 入口）+ [tool.pytest.ini_options]（测试配置 testpaths）+ ${cwd}/tests/__init__.py
-- 其他语言：按该语言惯例配置构建与测试入口
+- JS/TS 项目：写 ${cwd}/package.json（scripts 必须含 build 和 test）
+- Python 项目：写 ${cwd}/pyproject.toml
+- Java/Maven 项目：pom.xml 已存在则不重写，仅确认 build/test 命令可用（mvn package / mvn test）
+- Monorepo（多子项目）：每个子项目已有自己的 manifest，跳过——不要在根目录创建新的
 立刻完成。用 Write。`;
       try {
         await ptyClaude(cfgPrompt, { cwd, model: options.model, timeoutMs: 120000 });
       } catch (e) { if (String(e.message).includes('TIMEDOUT')) console.log(chalk.gray('   (config 超时)')); }
 
       // 调用 3: 测试代码（按 specs + generation contract 验证真实实现）
+      const testContextSection = isWebProject
+        ? `## Browser Probeability Regression Tests\n${probeGenerationContract || '(非 browser 项目可忽略)'}\n## Active Probe Profile\n${lockedProbeProfile || '(当前 run 未锁定 probe profile)'}`
+        : '';
+
+      const browserSpecificRules = isWebProject
+        ? `- browser/canvas 项目必须调用真实 resize controller，证明尺寸源是 viewport 或稳定外部容器
+- 测试必须能阻止 canvas client size → renderer setSize 的 resize feedback；只测 aspect helper 不算
+- 覆盖 debug DOM 禁止项与 globalThis.__sddProbe.snapshot() 的只读可用性
+- 若 profile 声明 requiredInteractions / transitionContracts，为其生成状态转移测试`
+        : '- 测试框架按 steering（Java → JUnit5/Mockito, JS/TS → Vitest/Jest, Python → pytest）';
+
       const testPrompt = `你是 SDD test-generation agent。为当前实现生成可运行的自动化测试，**测试真实生产路径，不复制实现逻辑**。
 
 ## steering（决定测试框架）
@@ -1822,18 +1897,11 @@ ${steeringContent}
 ## specs（决定功能行为）
 ${specsSummary || '(无)'}
 
-## Browser Probeability Regression Tests
-${probeGenerationContract || '(非 browser 项目可忽略)'}
-
-## Active Probe Profile
-${lockedProbeProfile || '(当前 run 未锁定 probe profile)'}
+${testContextSection}
 
 在项目惯例的测试目录或源码旁生成测试文件：
 - 覆盖 specs 的核心行为与错误路径
-- browser/canvas 项目必须调用真实 resize controller，证明尺寸源是 viewport 或稳定外部容器
-- 测试必须能阻止 canvas client size → renderer setSize 的 resize feedback；只测 aspect helper 不算
-- 覆盖 debug DOM 禁止项与 globalThis.__sddProbe.snapshot() 的只读可用性
-- 若 profile 声明 requiredInteractions / transitionContracts，为其生成状态转移测试
+${browserSpecificRules}
 只写测试文件，不修改生产实现。用 Write 工具，立刻完成。`;
       const beforeTestInventory = await captureTestInventory(cwd);
       const testGenerationResult = await ptyClaude(
@@ -1858,7 +1926,7 @@ ${lockedProbeProfile || '(当前 run 未锁定 probe profile)'}
       }
 
       const prog = path.join(changesDir, 'progress.md');
-      await fs.appendFile(prog, `\n## [code] 通用化实现\n- 按 steering tech stack + specs 功能 + File Structure Plan 结构\n- src/ + 入口 + package.json\n- browser probeability contract + active probe profile 已注入源码与测试生成上下文\n- 测试: 已生成/修改 ${generationGate.changedTestFiles.length} 个文件；${projectTestGate.command} PASS (exit 0)\n- test evidence: ${projectTestGate.evidence.reportPath}; output SHA-256 ${projectTestGate.evidence.outputSha256}\n`);
+      await fs.appendFile(prog, `\n## [code] 实现\n- 源码目录: ${sourceDirsLabel}\n- 按 steering tech stack + specs 功能 + File Structure Plan 结构\n${isWebProject ? '- browser probeability contract 已注入\n' : ''}- 测试: 已生成/修改 ${generationGate.changedTestFiles.length} 个文件；${projectTestGate.command} PASS (exit 0)\n- test evidence: ${projectTestGate.evidence.reportPath}; output SHA-256 ${projectTestGate.evidence.outputSha256}\n`);
       console.log(chalk.green(`\n✓ 通用化实现 + progress.md\n`));
       const r = await evalStageMetrics('code', changeId, cwd);
       let pc = 0; for (const m of r.results) { const ok = m.pass; console.log(`  ${ok?chalk.green('✅'):chalk.red('❌')} ${m.name}: ${m.actual} ${m.op} ${m.threshold}`); if (ok) pc++; }

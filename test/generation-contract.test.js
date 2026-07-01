@@ -49,7 +49,7 @@ test('code generation explicitly generates browser probeability regression tests
 
   assert.match(contract, /automated regression test/i);
   assert.match(contract, /invoke the actual resize/i);
-  assert.match(cli, /const testPrompt = `[\s\S]*Browser Probeability Regression Tests/);
+  assert.match(cli, /Browser Probeability Regression Tests/);
   assert.match(cli, /ptyClaude\(testPrompt/);
   assert.match(codeSkill, /resize feedback.*regression test/i);
 });
