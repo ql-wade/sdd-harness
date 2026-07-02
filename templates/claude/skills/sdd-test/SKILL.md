@@ -1,6 +1,6 @@
 ---
 name: sdd-test
-description: SDD Harness 测试阶段 —— 产出 test matrix + 归一化测试用例写入 LLMWiki
+description: SDD Harness 测试阶段 —— 产出 test matrix + 归一化测试用例（TC-*.md 写入 llmwiki/wiki/testing/cases/，由 sdd fill test 或 sediment 处理）
 license: MIT
 compatibility: 需要 LLMWiki MCP
 metadata:
@@ -10,7 +10,7 @@ metadata:
 
 # /sdd:test — 测试矩阵与用例
 
-> **SDD Harness Stage 4/9**。产出 test matrix，归一化测试用例写入 LLMWiki。
+> **SDD Harness Stage 4/9**。产出 test matrix，归一化测试用例（TC-*.md 写入 llmwiki/wiki/testing/cases/，由 sdd fill test 或 sediment 处理）。
 > 底层：LLMWiki MCP（via sdd-harness §5）。公共逻辑委托给 sdd-harness。
 
 ---

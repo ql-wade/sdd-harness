@@ -88,8 +88,8 @@ change_id = "<slug>-<4位 hash>"
 #   - ADR 候选列表
 #   - 未解决问题
 
-# 写入 LLMWiki (sdd-harness → LLMWiki MCP):
-#   - wiki/_shared/glossary/ 写术语页（term-*.md）
+# LLMWiki 沉淀（sdd run grill 推进后自动触发，agent 无需手动写）:
+#   - wiki/_shared/glossary/ 自动提取术语
 #   - 有冲突的术语标注 contradiction flag
 ```
 

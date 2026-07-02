@@ -158,12 +158,30 @@ sdd-context-mcp.build_<phase>_pack(run_id, phase, change_files)
 
 ## 5. LLMWiki 操作
 
-所有 LLMWiki 读写集中在本 skill，9 个 stage skill 不各自写 wiki。
+LLMWiki 的知识沉淀分两层，职责分离：
 
-### 写入
+**自动沉淀（CLI 层）**：`sdd run` 在 stage 推进成功后自动触发 `sedimentStage()`，
+将阶段产出物写入 llmwiki/ 对应目录。agent **无需手动写 wiki**——只需把产出物
+写到 `openspec/changes/<id>/` 下（findings/proposal/design/tasks/progress 等），
+sediment 会自动提取并归档。
+
+| 来源 stage | 自动沉淀到 | 触发时机 |
+|-----------|-----------|---------|
+| grill | wiki/_shared/glossary/ 术语 | sdd run grill 推进后 |
+| product | wiki/product/requirements/ + acceptance-criteria/ | sdd run product 推进后 |
+| dev | wiki/engineering/ 设计笔记 | sdd run dev 推进后 |
+| code | wiki/engineering/ 实现笔记 | sdd run code 推进后 |
+| review | wiki/engineering/ review learnings | sdd run review 推进后 |
+| verify | wiki/testing/reports/ 验证报告 | sdd run verify 推进后 |
+
+**主动写入（agent 层，仅 archive 阶段）**：archive 阶段需要做深度知识提取
+（concepts、entities、traceability），sediment 只处理简单归档，深度提取由
+agent 通过本 skill 的 LLMWiki MCP 接口主动完成。
+
+### 写入（仅 archive 阶段 agent 使用）
 
 ```yaml
-# 输入: wiki 路径（如 testing/cases/TC-xxx.md）、内容、frontmatter
+# 输入: wiki 路径（如 wiki/concepts/CON-xxx.md）、内容、frontmatter
 # 操作: 通过 LLMWiki MCP 写 markdown + frontmatter
 # 后置: 更新各级 _index.md、追加 log.md
 ```
@@ -171,19 +189,18 @@ sdd-context-mcp.build_<phase>_pack(run_id, phase, change_files)
 ### 读取
 
 ```yaml
-# 输入: wiki 路径或搜索条件
-# 操作: 通过 LLMWiki MCP 读取
-# 后置: 无
+# 所有阶段 agent 都可以读 LLMWiki 获取已有知识：
+#   glossary 术语、product 需求、engineering 笔记、testing 用例
+# 通过 LLMWiki MCP 查询
 ```
 
-### 写入路由
+### archive 阶段写入路由（agent 主动写入）
 
-| 来源 stage | 写入目标 |
-|-----------|---------|
-| product | wiki/product/ |
-| dev/code/review | wiki/engineering/<domain>/ |
-| test/verify | wiki/testing/ |
-| archive | 各流程目录 + backlink 补全 |
+| 写入目标 | 内容 |
+|---------|------|
+| wiki/concepts/ | 从整个 change 提取的概念 |
+| wiki/entities/ | 识别的实体 |
+| wiki/_shared/traceability/ | spec → code → test 追溯 |
 
 ---
 
