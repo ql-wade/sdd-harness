@@ -1,0 +1,30 @@
+# Project Steering — MiniCraft
+
+## Decision Principles
+- spec 是真相，代码是实现（非反过来）
+- 遇到冲突优先级：OpenSpec > PRD > 代码
+- 不可逆决策需 ADR
+- 不加无 review 的外部依赖
+- 产出语言：中文（简体）
+
+## Tech Stack
+- 语言: TypeScript 5.x
+- 引擎: Three.js (3D 渲染) + WebGL
+- 构建: Vite
+- 测试: Vitest
+- 运行时: 浏览器 (ESM)
+
+## Architecture
+- 单页应用，无后端（MVP）
+- 分层: world (体素数据) / render (Three.js 网格) / input (键鼠) / player (位置/碰撞)
+- 数据: 体素世界用 Chunk 三维数组，block type 枚举
+
+## Coding Standards
+- 严格 TypeScript (no any)
+- 每个模块单一职责
+- 函数 ≤ 50 行，复杂逻辑拆分
+
+## Domain Knowledge
+- Chunk: 16×16×16 体素块
+- Voxel: 一个立方体格子，有 block type
+- Block types: grass / dirt / stone / wood

@@ -482,8 +482,37 @@ async function copySDDHarnessLayer(cwd, dryRun, force) {
       Stop: [{ hooks: [{ type: 'command', command: '${CLAUDE_PROJECT_DIR}/.sdd/hooks/stop-gate.sh' }] }],
     };
     settings.hooks = { ...settings.hooks, ...hookWiring };
+
+    // Status Line：永远显示当前 SDD stage
+    settings.statusLine = { type: 'command', command: 'ID=$(cat .sdd/active-run 2>/dev/null); STAGE=$(grep current .sdd/runs/$ID/workflow-frame.yaml 2>/dev/null | awk "{print \\$2}"); echo "SDD:${STAGE:-idle}"' };
+
     await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
-    console.log(chalk.green(`  ✓ .claude/settings.json hooks 接线（6 hook）`));
+    console.log(chalk.green(`  ✓ .claude/settings.json hooks 接线（6 hook）+ statusLine`));
+  }
+
+  // .claude/rules/ — CC 原生注入 SDD 规则
+  if (!dryRun) {
+    const rulesDir = path.join(cwd, '.claude', 'rules');
+    await fs.ensureDir(rulesDir);
+    const rulesFile = path.join(rulesDir, 'sdd-harness.md');
+    if (!await fs.pathExists(rulesFile)) {
+      await fs.writeFile(rulesFile, `# SDD Harness Rules（CC 原生注入）
+
+## 当前项目
+- 技术栈/架构/决策原则 → 读 .sdd/steering/project.md
+- 当前 stage → 读 .sdd/runs/$(cat .sdd/active-run)/workflow-frame.yaml
+
+## 决策原则
+- spec 是真相，代码是实现
+- 冲突优先级：OpenSpec > PRD > 代码
+- 不可逆决策需 ADR
+- 不加无 review 的外部依赖
+
+## 5-Question Reboot（重大决策前必须答）
+1. 当前 stage？　2. 下一步？　3. 目标？　4. 学到什么？（findings.md）　5. 做了什么？（progress.md）
+`);
+      console.log(chalk.green('  ✓ .claude/rules/sdd-harness.md（CC 原生注入）'));
+    }
   }
 
   // config.yaml + dependencies.yaml

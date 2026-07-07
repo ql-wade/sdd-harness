@@ -46,29 +46,25 @@ echo "$change_id" > .sdd/active-run
 
 ---
 
-## 1. 入口：加载当前 Run 状态
+## 1. 入口：5-Question Reboot Test（借鉴 planning-with-files）
 
-每阶段开始时，先读 governance core：
+**Before ANY decision** — stage 开始、artifact 写、阶段推进、subagent 交接、context 压缩、完成前，必须能从文件回答这 5 问（非对话记忆）：
 
 ```bash
-# 找到 active change
 change_id=$(cat .sdd/active-run 2>/dev/null || echo "")
-# 读 workflow frame
-cat .sdd/runs/$change_id/workflow-frame.yaml
-# 读 steering 持久指导（跨 change，每个 stage 都读）
-cat .sdd/steering/project.md 2>/dev/null
 ```
 
-### workflow-frame 字段说明
+| # | 问题 | 答案来源 | 答不出来怎么办 |
+|---|------|---------|-------------|
+| 1 | **Where am I?**（当前 stage） | `.sdd/runs/$change_id/workflow-frame.yaml` → `stage.current` | 无 active-run → bootstrap（§0） |
+| 2 | **Where am I going?**（下一步） | `workflow-frame.yaml` → stage 推进链 + `openspec/changes/$change_id/tasks.md` | 无 tasks → 上一个 stage gate 没过 |
+| 3 | **What's the goal?**（变更目标） | `openspec/changes/$change_id/proposal.md` | 无 proposal → product stage 未完成 |
+| 4 | **What have I learned?**（已发现） | `openspec/changes/$change_id/findings.md` | 无 findings → grill stage 未完成 |
+| 5 | **What have I done?**（已执行） | `openspec/changes/$change_id/progress.md` | 无 progress → 首次进入此 change |
 
-| 字段 | 含义 |
-|------|------|
-| `stage.current` | 当前 stage（grill/product/dev/test/code/review/verify/release/archive） |
-| `stage.allowed_actions` | 当前 stage 允许的操作列表 |
-| `goal` | 本 change 目标（来自 proposal.md） |
-| `artifacts.required` | 当前 stage 必须产出的 artifact |
-| `artifacts.produced` | 已产出的 artifact |
-| `gates.status` | 当前 gate 状态 |
+**5 问全答出 → 状态完整，可以工作。** 任何 1 问答不出 → 停，先修复对应文件。
+
+**2-Action Rule**（防 context 丢失）：每 2 次 Read/Search/Grep → 立即写 `findings.md`。多模态信息（截图/搜索结果）在 context 压缩后必丢——先落盘。
 
 ---
 
