@@ -15,7 +15,7 @@ SDD Harness = sdd-cli 底座 + cc-sdd 工程模式 + 治理层 + knowledge/evide
 
 | 阶段 | 干什么 | 底层 |
 |------|--------|------|
-| grill | 业务澄清（discovery 路由 + 术语/边界） | grill-with-docs + MCP |
+| grill | 业务澄清（discovery 路由 + 术语/边界） | grill-me (mattpocock/skills) + MCP |
 | product | PRD / AC / 功能测试草案 | to-prd + prototype |
 | dev | OpenSpec proposal/specs/design/tasks | trinity-new/continue |
 | test | 测试矩阵 → LLMWiki 用例 | LLMWiki MCP |

@@ -29,6 +29,10 @@ import { installDailyGraphRefresh, uninstallDailyGraphRefresh, checkDailyGraphRe
 //
 // 进程管理：detached:true 建新进程组，超时用 process.kill(-pid) 杀整组（bash+claude），
 //   修复旧版 SIGKILL 只杀 bash 导致 claude 成孤儿进程的 bug。
+//
+// 契约：本函数永远 resolve，绝不 reject。失败信息（exitCode/timedOut/killed）
+//   通过返回对象传递。调用方应检查 result.timedOut / result.exitCode，
+//   不要用 try/catch 包裹——那是死代码（spawn 失败也走 resolve(exitCode:1)）。
 async function ptyClaude(prompt, { cwd, model = 'sonnet', timeoutMs = 600000 } = {}) {
   const tmp = path.join(os.tmpdir(), `sdd-prompt-${process.pid}-${Date.now()}.txt`);
   await fs.writeFile(tmp, prompt);
@@ -138,6 +142,18 @@ function run(cmd, opts = {}) {
   return execSync(cmd, { encoding: 'utf8', stdio: 'pipe', ...opts });
 }
 
+// run_id / change_id 校验：防 path traversal（..）和 shell 元字符。
+// 允许字母数字、-_/.（archive 路径如 archive/2026-06-27-foo），拒 .. 和 ;|$&`() 等。
+// undefined/null 直接放行（缺省值由调用方/requiredOption 处理），只校验实际传入的字符串。
+const ID_UNSAFE_RE = /(?:^|\/)\.\.(?:\/|$)|[;|&`$(){}<>*?!\n\r]/;
+function validateId(id, label = 'id') {
+  if (id == null) return id;
+  if (typeof id !== 'string' || ID_UNSAFE_RE.test(id)) {
+    throw new Error(`Invalid ${label}: ${JSON.stringify(id)}`);
+  }
+  return id;
+}
+
 function cmdExists(cmd) {
   try { run(`${cmd} --version 2>&1 || ${cmd} -v 2>&1`); return true; }
   catch { try { run(`command -v ${cmd}`); return true; } catch { return false; } }
@@ -200,19 +216,72 @@ async function ensureDependencies(platforms, dryRun, cwd) {
     catch { console.log(chalk.red('  ❌ npm install -g 失败 — 请手动: npm i -g @alibaba-group/open-code-review')); failed++; }
   }
 
+  // OCR LLM 后端配置检查 —— 装完 CLI 不等于能用，必须配 LLM backend
+  if (!dryRun && cmdExists('ocr')) {
+    let ocrReady = false;
+    try { run('ocr llm test 2>&1', { stdio: 'pipe' }); ocrReady = true; } catch {}
+    if (!ocrReady) {
+      console.log(chalk.yellow('\n  ⚠️  open-code-review LLM 后端未配置。三步配好：\n'));
+      console.log(chalk.white('     Step 1 — 选 provider:'));
+      console.log(chalk.cyan('       ocr config set provider anthropic'));
+      console.log(chalk.white('     Step 2 — 配 API key (二选一):'));
+      console.log(chalk.gray('       A) 环境变量（推荐，CC session 内自动继承）:'));
+      console.log(chalk.cyan('         echo \'export ANTHROPIC_API_KEY="sk-ant-..."\' >> ~/.zshrc'));
+      console.log(chalk.gray('       B) 写入 OCR 配置文件:'));
+      console.log(chalk.cyan('         ocr config set providers.anthropic.api_key "$ANTHROPIC_API_KEY"'));
+      console.log(chalk.white('     Step 3 — 选模型:'));
+      console.log(chalk.cyan('       ocr config set model claude-sonnet-5'));
+      console.log(chalk.white('\n     配完验证:'));
+      console.log(chalk.cyan('       ocr llm test'));
+      console.log(chalk.white('     交互式配置（TUI 引导，更友好）:'));
+      console.log(chalk.cyan('       ocr config provider'));
+      console.log();
+    } else {
+      console.log(chalk.green('  ✅ open-code-review LLM 后端已配置'));
+    }
+  }
+
   // === Step 3: clone skills ===
   console.log(chalk.blue('\n📦 [3/8] clone skills → ~/.claude/skills/\n'));
   const skills = [
     { name: 'superpowers', repo: 'https://github.com/obra/superpowers' },
     { name: 'planning-with-files', repo: 'https://github.com/OthmanAdi/planning-with-files' },
-    // grill-with-docs: 作为独立 skill 期望已存在（与 superpowers/planning-with-files 同级）。
-    // 不在此 clone（避免重复 clone superpowers）。doctor 会检测缺失并提示。
+    // grill-me (mattpocock/skills): 业务澄清核心 skill。文件极小（~10 行），直接写盘
+    // 无需 clone 整个 monorepo。同级的 grilling 是 grill-me 的底层方法论。
+    // sdd fill grill 内嵌 grilling 方法论，在 headless 模式也能工作。
   ];
   for (const s of skills) {
     const dest = path.join(skillsDir, s.name);
     const r = await cloneRepo(s.repo, dest, dryRun);
     if (r === 'installed') installed++;
     if (r === 'failed') failed++;
+  }
+
+  // grill-me + grilling（mattpocock/skills）—— 直接写 SKILL.md，不 clone 整个 monorepo
+  // 两个文件加起来不到 30 行，极其稳定，不需要跟随上游更新
+  const grillMeDir = path.join(skillsDir, 'grill-me');
+  const grillingDir = path.join(skillsDir, 'grilling');
+  if (!dryRun) {
+    await fs.ensureDir(grillMeDir);
+    if (!await fs.pathExists(path.join(grillMeDir, 'SKILL.md'))) {
+      await fs.writeFile(path.join(grillMeDir, 'SKILL.md'),
+        '---\nname: grill-me\ndescription: A relentless interview to sharpen a plan or design.\ndisable-model-invocation: true\n---\n\nRun a `/grilling` session.\n');
+      console.log(chalk.green('  ✅ grill-me skill (mattpocock/skills)'));
+      installed++;
+    } else {
+      console.log(chalk.green('  ✅ 已存在: grill-me'));
+    }
+    await fs.ensureDir(grillingDir);
+    if (!await fs.pathExists(path.join(grillingDir, 'SKILL.md'))) {
+      await fs.writeFile(path.join(grillingDir, 'SKILL.md'),
+        '---\nname: grilling\ndescription: Grill the user relentlessly about a plan or design. Use when the user wants to stress-test a plan before building, or uses any \'grill\' trigger phrases.\n---\n\nInterview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.\n\nAsk the questions one at a time, waiting for feedback on each question before continuing. Asking multiple questions at once is bewildering.\n\nIf a question can be answered by exploring the codebase, explore the codebase instead.\n\nDo not enact the plan until I confirm we have reached a shared understanding.\n');
+      console.log(chalk.green('  ✅ grilling skill (grill-me 底层方法论)'));
+      installed++;
+    } else {
+      console.log(chalk.green('  ✅ 已存在: grilling'));
+    }
+  } else {
+    console.log(chalk.cyan('  [dry-run] grill-me + grilling → ~/.claude/skills/'));
   }
 
   // === Step 4 + 5: LLMWiki (真实 repo + 初始化) ===
@@ -563,12 +632,13 @@ async function copySkills(cwd, platform, force, dryRun) {
   if (!await fs.pathExists(templateSkillsDir)) return 0;
 
   if (dryRun) {
-    const skills = (await fs.readdir(templateSkillsDir)).filter(async s => {
-      const stat = await fs.stat(path.join(templateSkillsDir, s));
-      return stat.isDirectory();
-    });
-    console.log(chalk.cyan(`  [dry-run] Would copy ${skills.length} skills to ${config.skillsDir}/`));
-    return skills.length;
+    const entries = await fs.readdir(templateSkillsDir);
+    let dirCount = 0;
+    for (const s of entries) {
+      if ((await fs.stat(path.join(templateSkillsDir, s))).isDirectory()) dirCount++;
+    }
+    console.log(chalk.cyan(`  [dry-run] Would copy ${dirCount} skills to ${config.skillsDir}/`));
+    return dirCount;
   }
 
   await fs.ensureDir(destSkillsDir);
@@ -600,12 +670,13 @@ async function copyCommands(cwd, platform, force, dryRun) {
   if (!await fs.pathExists(templateCommandsDir)) return 0;
 
   if (dryRun) {
-    const commands = (await fs.readdir(templateCommandsDir)).filter(async c => {
-      const stat = await fs.stat(path.join(templateCommandsDir, c));
-      return stat.isFile();
-    });
-    console.log(chalk.cyan(`  [dry-run] Would copy ${commands.length} commands to ${config.commandsDir}/`));
-    return commands.length;
+    const entries = await fs.readdir(templateCommandsDir);
+    let fileCount = 0;
+    for (const c of entries) {
+      if ((await fs.stat(path.join(templateCommandsDir, c))).isFile()) fileCount++;
+    }
+    console.log(chalk.cyan(`  [dry-run] Would copy ${fileCount} commands to ${config.commandsDir}/`));
+    return fileCount;
   }
 
   await fs.ensureDir(destCommandsDir);
@@ -1404,7 +1475,6 @@ program
     }
   });
 
-program
   const wikiCmd = program.command('wiki').description('管理 LLMWiki（init / ingest）');
   wikiCmd.command('init')
     .description('Initialize or rebuild LLMWiki instance skeleton')
@@ -1679,6 +1749,7 @@ program
     let changeId = options.change;
     if (!changeId && await fs.pathExists(activeRun)) changeId = (await fs.readFile(activeRun, 'utf8')).trim();
     if (!changeId) { console.log(chalk.red('❌ 无 active run。先 sdd run grill')); process.exit(1); }
+    validateId(changeId, 'change-id');
 
     // Verify change directory exists
     let changeDir = path.join(cwd, 'openspec', 'changes', changeId);
@@ -1727,6 +1798,7 @@ program
     let changeId = options.change;
     if (!changeId && await fs.pathExists(activeRun)) changeId = (await fs.readFile(activeRun, 'utf8')).trim();
     if (!changeId) { console.log(chalk.red('❌ 无 active run。先 sdd run grill --slug X --goal "..."')); process.exit(1); }
+    validateId(changeId, 'change-id');
 
     // 读 goal + steering
     const wfPath = path.join(cwd, '.sdd', 'runs', changeId, 'workflow-frame.yaml');
@@ -1963,11 +2035,155 @@ ${browserSpecificRules}
       return;
     }
 
+    // grill 阶段：discovery routing + grilling (mattpocock/skills) 方法论
+    if (stage === 'grill') {
+      // Discovery routing: 扫描已有 specs/changes/steering → 判断 route
+      const existingSpecs = (await fs.readdir(path.join(cwd, 'openspec', 'specs')).catch(() => [])).filter(d => !d.startsWith('.'));
+      const existingChanges = (await fs.readdir(path.join(cwd, 'openspec', 'changes')).catch(() => []))
+        .filter(d => !d.startsWith('.') && d !== 'archive');
+      const steering = path.join(cwd, '.sdd', 'steering', 'project.md');
+      const steeringContent = await fs.readFile(steering, 'utf8').catch(() => '');
+
+      console.log(chalk.cyan(`   Discovery: ${existingSpecs.length} specs, ${existingChanges.length} active changes`));
+      console.log(chalk.cyan(`   执行 grilling session（grill-me 方法论）...\n`));
+
+      const metricsPath = path.join(TEMPLATES_DIR, 'sdd-harness', 'stage-metrics.yaml');
+      let metricsReq = '';
+      if (await fs.pathExists(metricsPath)) {
+        const raw = await fs.readFile(metricsPath, 'utf8');
+        const m = raw.match(new RegExp('grill' + ':([\\s\\S]*?)(?=\\n[a-z]+:|$)'));
+        if (m) metricsReq = m[1];
+      }
+
+      // 扫描已有 specs 摘要（供 routing 和 grilling 上下文）
+      let existingSpecsSummary = '';
+      for (const s of existingSpecs.slice(0, 10)) {
+        const sp = path.join(cwd, 'openspec', 'specs', s, 'spec.md');
+        if (await fs.pathExists(sp)) {
+          existingSpecsSummary += `\n- ${s}: ${(await fs.readFile(sp, 'utf8')).slice(0, 200)}`;
+        }
+      }
+
+      const grillPrompt = `你是 SDD Harness "grill" 阶段 agent。用 grill-me (mattpocock/skills) 的 grilling 方法论做 relentless interview + discovery routing。
+
+## 目标
+${goal}
+
+## 项目 steering（tech stack / 规范 / 领域知识）
+${steeringContent || '(无 — 按通用最佳实践)'}
+
+## 已有 specs（判断是否 extend 或直接实现）
+${existingSpecsSummary || '(无已有 specs — 这是该项目的首个 change)'}
+
+## 已有 active changes
+${existingChanges.length > 0 ? existingChanges.join(', ') : '(无)'}
+
+---
+
+## Step 1: Discovery 路由
+
+分析目标 + 已有 specs/changes/steering，判断一条路由并写入 ${changesDir}/brief.md：
+
+\`\`\`markdown
+# Brief — Discovery 路由决策
+
+- route: <new|extend|direct_impl|decompose>
+- reason: <一句话解释为什么选这条路>
+- 受影响 spec: <若 extend，指出现有 spec>
+\`\`\`
+
+路由规则：
+- **extend**: 已有相关 spec/change，改为增量改动 → 跳过完整 grill，直接进 dev
+- **direct_impl**: 小改动（typo/单文件/配置），无需 spec → 跳过 grill→dev，直接进 code
+- **new**: 全新功能 → 走完整 9 阶段
+- **decompose**: 大型 initiative → 写 roadmap.md 列出子 change 列表
+
+---
+
+## Step 2: Grilling Session
+
+用 Matt Pocock grilling 方法论做深度自我访谈。关键原则：
+- **逐个方面深入**，不跳跃（术语→边界→假设→冲突→风险）
+- **每问基于证据**（steering + 已有 specs），不凭空
+- **对模糊点标注 "未解决"**，不假装知道
+- **Walk down each branch of the design tree**, resolving dependencies between decisions one-by-one
+
+逐问清单（至少覆盖）：
+1. 核心术语——有无歧义？与已有 glossary 冲突吗？
+2. 边界——scope 在哪里？明确 non-goals
+3. 假设——哪些是隐式假设？如果假设不成立会怎样？
+4. 冲突——与已有 spec/steering/dependencies 矛盾吗？
+5. 架构决策——哪些需要 ADR？（标注 ADR 候选）
+6. 风险——最大的未知是什么？
+
+---
+
+## Step 3: 写入 findings.md
+
+将 grilling 产出写入 ${changesDir}/findings.md：
+
+\`\`\`markdown
+# Findings
+
+## 术语
+- **<术语>**: <定义>（来源: <steering/glossary/新定义>）
+
+## 边界
+- IN:
+- OUT (non-goals):
+
+## ADR 候选
+- ADR-001: <决策标题> — <简述>
+
+## 未解决问题
+-
+
+## 冲突
+-
+\`\`\`
+
+## 达标要求（必须满足每一条！）
+${metricsReq}
+
+---
+
+要求：
+1. 内容真实基于目标+steering，不泛泛
+2. 术语定义 ≥3，non-goals ≥2，ADR 候选 ≥1
+3. 中文叙述 + 英文技术术语
+4. 用 Write 工具直接写 brief.md 和 findings.md
+
+立刻开始 grilling。`;
+      try {
+        await ptyClaude(grillPrompt, { cwd, model: options.model, timeoutMs: 480000 });
+      } catch (e) {
+        if (!String(e.message).includes('TIMEDOUT') && !String(e.message).includes('timeout')) {
+          console.log(chalk.red('⚠️ claude headless 调用失败: ' + String(e.message).split('\n')[0]));
+        } else {
+          console.log(chalk.gray('   (claude 超时，但文件可能已写，继续验证)'));
+        }
+      }
+
+      // Metrics check
+      console.log(chalk.blue('\n🔍 自动验证（sdd check grill）\n'));
+      const r = await evalStageMetrics('grill', changeId, cwd);
+      if (r.error) { console.log(chalk.red(r.error)); process.exit(1); }
+      let passCount = 0;
+      for (const m of r.results) {
+        const mark = m.pass ? chalk.green('✅') : chalk.red('❌');
+        console.log(`  ${mark} ${m.name}: ${m.actual} ${m.op} ${m.threshold}`);
+        if (m.pass) passCount++;
+      }
+      console.log(chalk.blue(`\n${passCount}/${r.results.length} 达标`));
+      if (r.allPass) console.log(chalk.green.bold('✅ grill 完成且达标\n'));
+      else { console.log(chalk.yellow('⚠️ 仍有指标未达标，可重跑 sdd fill grill\n')); process.exit(2); }
+      return;
+    }
+
     // 构建完整目标文件列表（changesDir + wiki + runtime）
     const contract = STAGE_CONTRACTS[stage];
     const targets = [];
     for (const a of contract.artifacts) targets.push(`${changesDir}/${a}`);
-    if (stage === 'grill') targets.push(`${changesDir}/brief.md（含 'route: new|extend|direct_impl|decompose'）`);
     if (contract.wiki) targets.push(`${cwd}/llmwiki/${contract.wiki}`);
    if (contract.runtime) targets.push(`${runsDir}/${contract.runtime}`);
     // test 阶段：通用化——扫描真实 src（不硬编码文件名）+ steering 测试框架 + specs 派生测试
@@ -2044,10 +2260,6 @@ ${errTail}
       console.log(chalk.blue(`\n${pc}/${r.results.length} 达标`));
       return;
     }
-    if (stage === 'code') {
-      targets.push(`src/ 下的真实源码实现（基于 specs/ 和 tasks.md，写可运行的 TypeScript + Three.js 代码：world/render/input/player 四层模块 + index.html + package.json）`);
-      targets.push(`${changesDir}/progress.md（追加 code 阶段条目，记录实现的文件 + 测试结果）`);
-    }
     if (stage === 'verify' || stage === 'release') targets.push(`${changesDir}/progress.md（追加该阶段条目）`);
 
     const prompt = `你是 SDD Harness "${stage}" 阶段执行 agent。严格按以下要求填写 artifact，产出必须客观达标。
@@ -2107,6 +2319,7 @@ program
   .option('--json', 'Print a machine-readable report', false)
   .action(async (options) => {
     try {
+      validateId(options.run, 'run');
       const report = await auditWorkflowRun({
         projectDir: path.resolve(options.project),
         run: options.run,
@@ -2145,6 +2358,7 @@ program
   .option('--json', 'Print a machine-readable report', false)
   .action(async (options) => {
     try {
+      validateId(options.run, 'run');
       const report = await auditDeliverables({
         projectDir: path.resolve(options.project),
         run: options.run,
@@ -2185,6 +2399,7 @@ program
   .option('--json', 'Print machine-readable report', false)
   .action(async (options) => {
     try {
+      validateId(options.run, 'run');
       const report = await fixDeliverables({
         projectDir: path.resolve(options.project),
         run: options.run,
@@ -2300,6 +2515,8 @@ program
   .option('--json', 'Print a machine-readable report', false)
   .action(async (options) => {
     try {
+      validateId(options.run, 'run');
+      if (options.change) validateId(options.change, 'change');
       const report = await auditEvidence({
         projectDir: path.resolve(options.project),
         change: options.change,

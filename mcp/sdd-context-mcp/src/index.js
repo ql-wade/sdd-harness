@@ -15,6 +15,16 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import fs from 'fs-extra';
+import path from 'node:path';
+
+// run_id 白名单：防 path traversal（../../etc 逃逸）
+const RUN_ID_RE = /^[a-zA-Z0-9_-]+$/;
+function validateRunId(runId) {
+  if (!runId || typeof runId !== 'string' || !RUN_ID_RE.test(runId)) {
+    throw new Error(`Invalid run_id: ${runId}`);
+  }
+}
 
 const server = new Server(
   { name: 'sdd-context-mcp', version: '0.1.0' },
@@ -145,8 +155,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const pack = await buildPack(args.run_id, name.replace('build_', '').replace('_pack', ''), args.project_dir);
 
   // 写入 knowledge-pack.md
-  const fs = await import('fs-extra');
-  const path = await import('path');
+  validateRunId(args.run_id);
+  if (!args.project_dir || typeof args.project_dir !== 'string') {
+    throw new Error('Missing or invalid project_dir');
+  }
   const packPath = path.join(args.project_dir, '.sdd', 'runs', args.run_id, 'knowledge-pack.md');
   await fs.ensureDir(path.dirname(packPath));
 

@@ -56,7 +56,7 @@ templates/claude/commands/
 - [ ] **Step 1: 创建 sdd-product SKILL.md**
 
 对照架构文档 §5.2 的 stage contract，写 skill 文件。关键差异于 sdd-grill：
-- **底层**：to-prd、prototype（非 grill-with-docs）
+- **底层**：to-prd、prototype（非 grill-me）
 - **读取**：grill findings（`openspec/changes/<id>/findings.md`）、LLMWiki product 知识
 - **写入**：`openspec/changes/<id>/proposal.md`、`acceptance-criteria.md`、`functional-test-draft.yaml`
 - **Gate**：proposal.md 存在、AC 可测、功能测试草案齐、progress 有记录

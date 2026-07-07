@@ -19,7 +19,7 @@ notify = "osascript -e 'display notification \"✅ {{ branch }} merged\" with ti
 # ==============
 
 [pre-merge]
-test = "npm test 2>/dev/null || echo 'No tests'"
+test = "if [ -f package.json ] && grep -q '\"test\"' package.json; then npm test; else echo 'No tests'; fi"
 check-archive = """
 if [ -d "openspec/changes" ] && find openspec/changes -name '*.md' -type f | grep -v '/archived/' | grep -q .; then
   echo '❌ ERROR: Unarchived active changes found in openspec/changes/' >&2
@@ -52,7 +52,6 @@ echo '   wt switch --create feat-xxx   # Create new feature'
 echo '   /trinity:new <name>           # Create change (inside Agent)'
 echo '   /trinity:apply                # Execute tasks'
 echo ''
-}
 """
 
 # ==============

@@ -19,10 +19,24 @@ test('generation gate accepts a successful generator that produced a test file',
   const result = await evaluateGeneratedTests({
     projectDir: project,
     generationResult: { exitCode: 0, timedOut: false },
+    beforeTestInventory: [],
   });
 
   assert.equal(result.pass, true);
   assert.deepEqual(result.testFiles, ['src/main.test.ts']);
+});
+
+test('generation gate rejects when beforeTestInventory was not captured', async () => {
+  const project = makeProject();
+  fs.writeFileSync(path.join(project, 'src', 'main.test.ts'), 'export {};\n');
+
+  const result = await evaluateGeneratedTests({
+    projectDir: project,
+    generationResult: { exitCode: 0, timedOut: false },
+  });
+
+  assert.equal(result.pass, false);
+  assert.match(result.reason, /beforeTestInventory missing/);
 });
 
 test('generation gate rejects timeout, non-zero exit, and empty test output', async () => {

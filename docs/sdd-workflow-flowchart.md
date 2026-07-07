@@ -26,7 +26,7 @@ flowchart TB
     subgraph S1 ["① Grill — 澄清阶段"]
         S1R["**角色**: Architect (主) + Stakeholder"]
         S1C["**命令**: `/sdd:grill`"]
-        S1T["**工具/技能**:\n• grill-with-docs\n• sdd-context-mcp\n• LLMWiki MCP"]
+        S1T["**工具/技能**:\n• grill-me (mattpocock/skills)\n• sdd-context-mcp\n• LLMWiki MCP"]
         S1A["**产出** → findings.md\n(术语/边界/冲突/ADR候选)"]:::artifactBox
     end
 

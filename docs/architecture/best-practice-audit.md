@@ -133,6 +133,6 @@
 
 当前：`sdd fill grill` → spawn `claude -p --bare` → 失去 hooks/skills/memory → 产出的内容不在 CC 治理内。
 
-改良后：`sdd fill grill` → Task 工具派发 `sdd-grill-filler` subagent → subagent 有隔离 context（不污染主 session）+ hooks 触发（治理保留）+ skills 可用（superpowers/grill-with-docs）+ memory 可读（steering/context）。
+改良后：`sdd fill grill` → Task 工具派发 `sdd-grill-filler` subagent → subagent 有隔离 context（不污染主 session）+ hooks 触发（治理保留）+ skills 可用（superpowers/grill-me）+ memory 可读（steering/context）。
 
 **这是从"spawn 外部进程"到"派发内部 subagent"的架构跃迁**——让 SDD Harness 成为 CC 原生工作流的一部分，而不是一个外挂。
