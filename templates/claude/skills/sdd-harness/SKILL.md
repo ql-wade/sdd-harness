@@ -39,7 +39,7 @@ mkdir -p .sdd/runs/$change_id
 echo "$change_id" > .sdd/active-run
 
 # 5. 生成首轮 knowledge-pack
-# sdd-context-mcp.build_grill_pack(run_id=$change_id, ...) → .sdd/runs/$change_id/knowledge-pack.md
+# 本 skill 内联组装（读 OpenSpec + LLMWiki + git diff）→ .sdd/runs/$change_id/knowledge-pack.md
 ```
 
 **幂等**：若 `.sdd/active-run` 已存在且对应 workflow-frame.yaml 的 stage 与当前请求一致，跳过 bootstrap 直接 resume。
@@ -141,11 +141,12 @@ exit 1 表示 workflow 输入无效。审计失败时应回退 stage，不得继
 
 ## 4. Knowledge-Pack 组装
 
-委托给 `sdd-context-mcp`：
+由本 skill 内联组装（不再委托外部 MCP，避免 stub 依赖）：
 
 ```
-sdd-context-mcp.build_<phase>_pack(run_id, phase, change_files)
-→ 写入 .sdd/runs/<change_id>/knowledge-pack.md
+build_knowledge_pack(run_id, phase, change_files)
+→ 读 OpenSpec changes/specs + LLMWiki（经 mcp__llmwiki__search）+ git diff + Understand-Anything graph
+→ 写 .sdd/runs/<change_id>/knowledge-pack.md
 ```
 
 **数据源优先级**：OpenSpec > LLMWiki > git diff > Understand-Anything > DeepWiki
@@ -177,9 +178,10 @@ agent 通过本 skill 的 LLMWiki MCP 接口主动完成。
 ### 写入（仅 archive 阶段 agent 使用）
 
 ```yaml
-# 输入: wiki 路径（如 wiki/concepts/CON-xxx.md）、内容、frontmatter
-# 操作: 通过 LLMWiki MCP 写 markdown + frontmatter
-# 后置: 更新各级 _index.md、追加 log.md
+# 输入: wiki 路径（如 /wiki/concepts/CON-xxx）、title、content、tags
+# 操作: 调 mcp__llmwiki__create（同步 SQLite + FTS + 引用图；tags 必填）
+#       已存在则用 mcp__llmwiki__edit / append
+# 注意: 不要 fs.writeFile 直接写——绕过索引，search 找不到
 ```
 
 ### 读取
@@ -187,7 +189,7 @@ agent 通过本 skill 的 LLMWiki MCP 接口主动完成。
 ```yaml
 # 所有阶段 agent 都可以读 LLMWiki 获取已有知识：
 #   glossary 术语、product 需求、engineering 笔记、testing 用例
-# 通过 LLMWiki MCP 查询
+# 调 mcp__llmwiki__search / read 查询（走 SQLite + FTS 索引）
 ```
 
 ### archive 阶段写入路由（agent 主动写入）

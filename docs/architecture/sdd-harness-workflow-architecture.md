@@ -109,7 +109,7 @@ SDD Harness 是在其上扩展，不是重造。
 
 - **Wrapper skill**：`sdd-grill`（封装 grill-me + MCP context pack + discovery 路由）
 - **Discovery 路由**（借鉴 cc-sdd `/kiro-discovery`）：grill 不默认建新 change，先分析意图路由到 extend / direct_impl / new / decompose，写 brief.md 支持 workstream 恢复
-- **底层**：grill-me、`sdd-context-mcp.build_grill_pack`
+- **底层**：grill-me、sdd-harness skill（knowledge-pack 内联组装）
 - **读取**：LLMWiki glossary、Understand-Anything graph、DeepWiki pages、OpenSpec 已有 specs
 - **写入**：`openspec/changes/<id>/findings.md`（术语、边界、冲突、ADR 候选）
 - **Gate（Grill）**：术语冲突已解决或显式延后；glossary 术语已写入 LLMWiki；列出 ADR 候选。
@@ -430,11 +430,11 @@ tags: [auth, login, smoke]
 | 浏览器 E2E（功能） | Playwright MCP（已有） |
 | 非功能审计（perf/a11y） | chrome-devtools MCP（已有） |
 | GitHub issue/PR/CI | GitHub MCP（已有） |
-| 为 grill/dev/test/code/verify 组装 context pack | `sdd-context-mcp`（新建） |
+| 为 grill/dev/test/code/verify 组装 context pack | sdd-harness skill §4 内联组装（v2 移除独立 MCP） |
 | 只读 code graph 查询 | Understand-Anything skills（已有，sdd-harness §8.5 封装调用） |
 | 封装 OpenSpec/Trinity CLI 操作 | `openspec-sdd-mcp`（新建，较后 phase） |
 
-### Context pack 契约（`sdd-context-mcp.build_<phase>_pack`）
+### Context pack 契约（sdd-harness skill `build_knowledge_pack`）
 
 ```yaml
 run_id: ""
@@ -568,7 +568,7 @@ domain_registry:
 1. 生成 `change-id` = `<slug>-<4位 hash>`；创建 `openspec/changes/<change-id>/`。
 2. `trinity-new` 脚手架生成 proposal/specs/design/tasks 占位 + tracking 文件。
 3. 写 `.sdd/runs/<change-id>/workflow-frame.yaml`（stage = grill、目标、允许的操作）。
-4. `sdd-context-mcp.build_grill_pack` 组装 `.sdd/runs/<change-id>/knowledge-pack.md`。
+4. sdd-harness skill 内联组装 `.sdd/runs/<change-id>/knowledge-pack.md`。
 
 后续每个 `/sdd:*` command 读取 `workflow-frame.yaml`，在 gate 通过后推进 stage 指针，并更新 `progress.md`。
 
@@ -685,8 +685,7 @@ sdd-harness/                          ← SDD Harness 自己的 repo
 ├── commands/
 │   └── sdd-{grill,product,dev,test,code,review,verify,release,archive}.md
 ├── mcp/
-│   ├── sdd-context-mcp/              ← 3 个新建 MCP
-│   └── openspec-sdd-mcp/
+│   └── openspec-sdd-mcp/              ← v2: sdd-context-mcp 已移除（knowledge-pack 下沉 skill）
 ├── hooks/
 │   ├── session-start.sh
 │   ├── pre-tool-gate.sh
@@ -710,8 +709,8 @@ sdd-harness/                          ← SDD Harness 自己的 repo
 
 | skill | 职责 | 读 | 写 | 依赖 |
 |---|---|---|---|---|
-| `sdd-harness`（共享） | artifact 读写、stage 推进、gate 检查、knowledge-pack 组装、LLMWiki 操作 | workflow-frame, config | workflow-frame, progress | LLMWiki MCP, sdd-context-mcp |
-| `sdd-grill` | 业务澄清 | grill context pack | findings.md | grill-me, sdd-context-mcp |
+| `sdd-harness`（共享） | artifact 读写、stage 推进、gate 检查、knowledge-pack 组装、LLMWiki 操作 | workflow-frame, config | workflow-frame, progress | LLMWiki MCP |
+| `sdd-grill` | 业务澄清 | grill context pack | findings.md | grill-me, sdd-harness skill |
 | `sdd-product` | 产品草案 | findings | proposal.md, AC, test draft | to-prd, prototype |
 | `sdd-dev` | spec / design / tasks | proposal, AC, code graph | specs/, design.md, tasks.md | trinity-new/continue, Understand-Anything skills（via sdd-harness） |
 | `sdd-test` | 测试矩阵 + 用例 | scenarios, AC | LLMWiki cases | LLMWiki MCP |
@@ -727,7 +726,7 @@ sdd-harness/                          ← SDD Harness 自己的 repo
 
 | MCP | 类型 | 核心 tools | 依赖 | Phase |
 |---|---|---|---|---|
-| `sdd-context-mcp` | 新建 | `build_grill_pack` / `build_dev_pack` / `build_test_pack` / `build_code_pack` / `build_verify_pack` | 本地文件、OpenSpec、git diff、LLMWiki | Phase 4 |
+| ~~`sdd-context-mcp`~~ | ~~新建~~ | _v2 移除：knowledge-pack 组装下沉到 sdd-harness skill §4，避免 stub + 职责重叠_ | — | — |
 | `openspec-sdd-mcp` | 新建 | 把 trinity / openspec CLI 操作封装为 MCP tools | OpenSpec CLI、sdd-cli | Phase 8 |
 | LLMWiki MCP | 复用 | 知识读写 + 测试用例 CRUD | `lucasastorian/llmwiki` | Phase 5 |
 | Playwright MCP | 复用 | 功能 E2E | `microsoft/playwright-mcp` | Phase 6 |
@@ -783,7 +782,7 @@ flowchart TB
   SS --> OCR["open-code-review CLI"]
   SS --> QA["Playwright / chrome-devtools MCP"]
   SH --> LLM["LLMWiki MCP"]
-  SH --> SCM["sdd-context-mcp"]
+  SH --> KS["sdd-harness skill (knowledge-pack)"]
   TRI --> OS["OpenSpec CLI"]
 ```
 
@@ -802,7 +801,7 @@ flowchart TB
 - **Phase 1 —— Skills 与 commands**：9 个 stage skill + `sdd-harness` 共享 skill；9 个 `/sdd:*` command；`workflow-frame.yaml` / `knowledge-pack.md` / `review-notes.md` 模板；扩展 sdd-cli `init`。
 - **Phase 2 —— Hook MVP**：5 个 hook（SessionStart、PreToolUse、Stop、PreCompact、SubagentStop）；接好 settings.json；只拦三件事：无 active run 的复杂工作、wrong-phase 写入、必备 artifact/evidence 缺失就 stop。
 - **Phase 3 —— Review stage**：把 Superpowers code-reviewer + open-code-review CLI 接进 `/sdd:review`；移植 auto-debug + boundary discipline + learnings propagation。
-- **Phase 4 —— MCP context MVP**：`sdd-context-mcp` v0（聚合本地文件、OpenSpec、git diff、LLMWiki pages → `knowledge-pack.md`）；code graph 查询集成 Understand-Anything 已有 skills（sdd-harness §8.5 封装）。
+- **Phase 4 —— knowledge-pack 组装**：sdd-harness skill §4 内联组装（聚合本地文件、OpenSpec、git diff、LLMWiki pages → `knowledge-pack.md`）；code graph 查询集成 Understand-Anything 已有 skills（sdd-harness §8.5 封装）。_v2：原 sdd-context-mcp 移除，下沉 skill。_
 - **Phase 5 —— Knowledge 闭环**：`/sdd:test` 用 LLMWiki 写测试用例定义；`/sdd:archive` 做 LLMWiki writeback。
 - **Phase 6 —— Release stage**：`/sdd:release` 的 manual + automated + skip 模式；skip 路径放行 verify → archive。
 - **Phase 7 —— 全流程试跑**：在一个 worktree 里把一个 change 从 grill 跑到 archive。

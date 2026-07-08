@@ -10,6 +10,6 @@ Evidence-driven 业务澄清。调 sdd-grill skill。
 
 ## 说明
 
-- 底层：grill-me (mattpocock/skills) + sdd-context-mcp + LLMWiki MCP
+- 底层：grill-me (mattpocock/skills) + sdd-harness skill（knowledge-pack 组装）+ LLMWiki MCP
 - 产出：术语定义、边界、冲突日志、ADR 候选 → `openspec/changes/<id>/findings.md`
 - 之后自动推进到 `/sdd:product`

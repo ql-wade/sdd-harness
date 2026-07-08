@@ -16,7 +16,7 @@ import { auditWorkflowRun } from '../lib/workflow-audit.js';
 import { auditDeliverables } from '../lib/deliverable-audit.js';
 import { fixDeliverables } from '../lib/deliverable-fixer.js';
 import { graphHealthCheck, getSourceDirs, countSourceFiles, detectProjectType, detectMonorepo } from '../lib/project-context.js';
-import { discoverKnowledgeSources, generateSeedContent } from '../lib/knowledge-seed.js';
+import { discoverKnowledgeSources, copySourcesToRaw } from '../lib/knowledge-seed.js';
 import { sedimentStage } from '../lib/llmwiki-sediment.js';
 import { installDailyGraphRefresh, uninstallDailyGraphRefresh, checkDailyGraphRefresh } from '../lib/daily-scheduler.js';
 
@@ -337,10 +337,13 @@ async function ensureDependencies(platforms, dryRun, cwd) {
     config.mcpServers = config.mcpServers || {};
     if (!config.mcpServers['llmwiki']) {
       const venvPy = path.join(llmwikiRepoDir, '.venv', 'bin', 'python');
+      // 注意：Claude Code 忽略 .mcp.json 的 cwd 字段，固定用项目根 spawn。
+      // `python -m local_server` 找不到模块 → No module named local_server → 进程秒退。
+      // 改用 env.PYTHONPATH 让 Python 能定位 local_server + tools/ + vaultfs/（均在 mcp/ 下）。
       config.mcpServers['llmwiki'] = {
         command: await fs.pathExists(venvPy) ? venvPy : pyBin,
         args: ['-m', 'local_server', '--workspace', path.join(cwd, 'llmwiki')],
-        cwd: path.join(llmwikiRepoDir, 'mcp'),
+        env: { PYTHONPATH: path.join(llmwikiRepoDir, 'mcp') },
       };
       await fs.writeFile(mcpConfig, JSON.stringify(config, null, 2));
       console.log(chalk.green(`  ✅ 注册 LLMWiki MCP → ${path.relative(cwd, mcpConfig)}`));
@@ -374,21 +377,22 @@ async function ensureDependencies(platforms, dryRun, cwd) {
     }
     console.log(chalk.green(`  ✅ wiki 内容目录已建: ${path.relative(cwd, wikiDir)}/ (含 ${wikiSubdirs.length} 子目录)`));
 
-    // --- Knowledge seed: scan project for existing docs/specs and seed wiki ---
+    // --- Knowledge sources: 发现并复制到 raw/（待 LLM 经 MCP ingest，不预写 wiki/） ---
     const ks = discoverKnowledgeSources(cwd);
     const ksCount = ks.docs.length + ks.specs.length + ks.steering.length + ks.agentDocs.length;
-    if (ksCount > 0 || ks.catalog) {
-      console.log(chalk.cyan(`  📖 发现 ${ksCount} 个知识源 (${ks.docs.length} docs, ${ks.specs.length} specs, ${ks.steering.length} steering${ks.catalog ? ', CODEBASE-CATALOG' : ''})`));
+    if (ksCount > 0 || ks.catalog || ks.domainGraph || ks.openspecConfig) {
+      console.log(chalk.cyan(`  📖 发现 ${ksCount + (ks.catalog?1:0) + (ks.domainGraph?1:0) + (ks.openspecConfig?1:0)} 个知识源 (docs/specs/steering/agentDocs${ks.catalog ? '/catalog' : ''})`));
       if (!dryRun) {
-        const seedResult = generateSeedContent(cwd, ks);
-        console.log(chalk.green(`  ✅ knowledge seed: ${seedResult.files.length} 个 wiki 条目写入`));
-        for (const f of seedResult.files.slice(0, 8)) {
+        const copyResult = await copySourcesToRaw(cwd, ks);
+        console.log(chalk.green(`  ✅ ${copyResult.copied} 个源 → llmwiki/raw/（slug 命名，待 ingest）`));
+        for (const f of copyResult.files.slice(0, 8)) {
           console.log(chalk.gray(`     → ${f.path}`));
         }
-        if (seedResult.files.length > 8) console.log(chalk.gray(`     … +${seedResult.files.length - 8} more`));
+        if (copyResult.copied > 8) console.log(chalk.gray(`     … +${copyResult.copied - 8} more`));
+        console.log(chalk.gray(`     下一步：sdd wiki ingest 或在 session 内用 mcp__llmwiki__create 写 wiki`));
       }
     } else {
-      console.log(chalk.gray('  ℹ️  无已有知识源可 seed（后续文档放入 llmwiki/raw/ 后 sdd wiki ingest）'));
+      console.log(chalk.gray('  ℹ️  无已有知识源（后续文档放入 llmwiki/raw/ 后 sdd wiki ingest）'));
     }
   } else {
     console.log(chalk.cyan(`  [dry-run] 建 ${wikiDir} 骨架`));
@@ -610,13 +614,13 @@ async function copySDDHarnessLayer(cwd, dryRun, force) {
       console.log(chalk.green('  ✓ .sdd/dependencies.yaml'));
     }
 
-    // .gitignore 加 .sdd/runs/
+    // .gitignore 加 .sdd/runs/ + staging
     const gitignore = path.join(cwd, '.gitignore');
     let gi = await fs.readFile(gitignore, 'utf8').catch(() => '');
     if (!gi.includes('.sdd/runs/')) {
-      gi += '\n# SDD Harness runtime\n.sdd/runs/\n.understand-anything/\n';
+      gi += '\n# SDD Harness runtime\n.sdd/runs/\n.understand-anything/\nllmwiki/.staging/\n';
       await fs.writeFile(gitignore, gi);
-      console.log(chalk.green('  ✓ .gitignore (+ .sdd/runs/, .understand-anything/)'));
+      console.log(chalk.green('  ✓ .gitignore (+ .sdd/runs/, .understand-anything/, llmwiki/.staging/)'));
     }
   }
 
@@ -855,6 +859,14 @@ program
       console.log(chalk.cyan('   /sdd:release') + '         - 部署（manual|auto|skip）');
       console.log(chalk.cyan('   /sdd:archive') + '         - 归档 + 知识沉淀\n');
       console.log(chalk.gray('   维护: sdd doctor | sdd upgrade | sdd graph --refresh | sdd wiki init\n'));
+
+      // LLMWiki MCP 批准提示（.mcp.json 写了，但需 session 内批准才生效）
+      if (!options.dryRun) {
+        console.log(chalk.yellow('⚠️  LLMWiki MCP 需在 Claude Code 内批准'));
+        console.log(chalk.gray('   重启 Claude Code session，首次进入项目会弹安全提示确认 .mcp.json 的 llmwiki server。'));
+        console.log(chalk.gray('   批准后验证：session 内能看到 mcp__llmwiki__create / search / lint 工具。'));
+        console.log(chalk.gray('   wiki 内容由 LLM 经 MCP 写（create/edit/append 同步 SQLite+FTS+引用图），CLI 只建骨架 + 复制源到 raw/。\n'));
+      }
 
       if (options.dryRun) {
         console.log(chalk.yellow('⚠ This was a dry run. No files were written.\n'));
@@ -1332,11 +1344,11 @@ program
       await fs.writeFile(wfPath, wf);
       console.log(chalk.blue(`\n✅ ${stage} 内容达标，推进 → ${contract.next}`));
 
-      // Auto-sediment stage artifacts to LLMWiki
+      // Auto-sediment stage artifacts to staging（不进 wiki/，待 MCP 提交）
       try {
         const sed = await sedimentStage(changeId, stage, cwd);
         if (sed.sediments && sed.sediments.length > 0) {
-          console.log(chalk.gray(`   📝 LLMWiki sediment: ${sed.sediments.length} 条 → llmwiki/`));
+          console.log(chalk.gray(`   📝 staged: ${sed.sediments.length} 条 → llmwiki/.staging/${stage}/（待 mcp__llmwiki__create 提交）`));
         }
       } catch (e) {
         // sediment failure is non-blocking
@@ -1487,14 +1499,15 @@ program
       for (const d of subs) await fs.ensureDir(path.join(wikiDir, d));
       if (!await fs.pathExists(path.join(wikiDir, 'index.md'))) await fs.writeFile(path.join(wikiDir, 'index.md'), '# LLMWiki Index\n');
       console.log(chalk.green(`✅ LLMWiki 骨架 (${subs.length} 子目录)`));
-      // Knowledge seed from existing project sources
+      // 知识源复制到 raw/（不预写 wiki/——wiki 由 LLM 经 MCP ingest）
       const ks = discoverKnowledgeSources(cwd);
       const ksCount = ks.docs.length + ks.specs.length + ks.steering.length + ks.agentDocs.length;
-      if (ksCount > 0 || ks.catalog) {
-        const seedResult = generateSeedContent(cwd, ks);
-        console.log(chalk.green(`✅ Knowledge seed: ${seedResult.files.length} entries (${ksCount} sources scanned)`));
+      if (ksCount > 0 || ks.catalog || ks.domainGraph || ks.openspecConfig) {
+        const copyResult = await copySourcesToRaw(cwd, ks);
+        console.log(chalk.green(`✅ ${copyResult.copied} 个源 → llmwiki/raw/（待 ingest）`));
+        console.log(chalk.gray('   下一步：sdd wiki ingest 或 session 内用 mcp__llmwiki__create'));
       } else {
-        console.log(chalk.gray('ℹ️  No existing knowledge sources found to seed'));
+        console.log(chalk.gray('ℹ️  无已有知识源（文档放入 llmwiki/raw/ 后 sdd wiki ingest）'));
       }
       console.log();
     });

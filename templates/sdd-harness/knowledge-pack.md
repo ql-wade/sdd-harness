@@ -1,5 +1,5 @@
-# knowledge-pack.md — MCP 聚合的 Context Pack
-# 由 sdd-context-mcp 在每阶段开始时生成，agent 干活前读此文件
+# knowledge-pack.md — sdd-harness skill 组装的 Context Pack
+# 由 sdd-harness skill 在每阶段开始时组装，agent 干活前读此文件
 # 放在 .sdd/runs/<change-id>/knowledge-pack.md
 
 # Knowledge Pack: {{change-id}}

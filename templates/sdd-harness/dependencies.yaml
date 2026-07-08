@@ -68,13 +68,8 @@ session_layer:
       - "术语表、测试用例归一化、知识沉淀"
     required_by: [test, archive]
 
-  - name: sdd-context-mcp
-    layer: 会话内 MCP 子进程
-    check: "mcp 连通检查"
-    install: "sdd init 自动注册"
-    provides:
-      - "knowledge-pack 组装（聚合 OpenSpec > LLMWiki > Understand-Anything）"
-    required_by: [grill, dev, test, code, verify]
+  # 注：sdd-context-mcp 已移除（v2）。knowledge-pack 组装下沉到 sdd-harness skill §4。
+  # 不再有独立 context MCP——避免 stub 依赖 + 与 skill 职责重叠。
 
 optional:
   - name: Playwright MCP
