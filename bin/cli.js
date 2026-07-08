@@ -183,9 +183,15 @@ async function cloneRepo(repo, dest, dryRun) {
   }
 }
 
+// SDD home 目录：$SDD_HOME 优先，否则 ~/.sdd。所有 ~/.sdd 引用都走这里，支持 env 覆盖。
+function getSddHome() {
+  return process.env.SDD_HOME || path.join(os.homedir(), '.sdd');
+}
+
 // §13.1 完整依赖安装（真实执行）
 async function ensureDependencies(platforms, dryRun, cwd) {
   const homeDir = os.homedir();
+  const sddHome = getSddHome();
   const skillsDir = path.join(homeDir, '.claude', 'skills');
   let installed = 0, failed = 0;
 
@@ -286,7 +292,7 @@ async function ensureDependencies(platforms, dryRun, cwd) {
 
   // === Step 4 + 5: LLMWiki (真实 repo + 初始化) ===
   console.log(chalk.blue('\n📚 [4/8] LLMWiki repo + MCP\n'));
-  const llmwikiRepoDir = path.join(homeDir, '.sdd', 'repos', 'llmwiki');
+  const llmwikiRepoDir = path.join(sddHome, 'repos', 'llmwiki');
   const r1 = await cloneRepo('https://github.com/lucasastorian/llmwiki', llmwikiRepoDir, dryRun);
   if (r1 === 'installed') installed++;
   if (r1 === 'failed') failed++;
@@ -336,17 +342,40 @@ async function ensureDependencies(platforms, dryRun, cwd) {
     }
     config.mcpServers = config.mcpServers || {};
     if (!config.mcpServers['llmwiki']) {
-      const venvPy = path.join(llmwikiRepoDir, '.venv', 'bin', 'python');
-      // 注意：Claude Code 忽略 .mcp.json 的 cwd 字段，固定用项目根 spawn。
-      // `python -m local_server` 找不到模块 → No module named local_server → 进程秒退。
-      // 改用 env.PYTHONPATH 让 Python 能定位 local_server + tools/ + vaultfs/（均在 mcp/ 下）。
+      // 生成 env-driven wrapper 脚本（运行时解析 $SDD_HOME/$HOME/$LLMWIKI_PYTHON）
+      // .mcp.json 不写绝对路径——通过 ${CLAUDE_PROJECT_DIR} 定位 wrapper，可移植 + 可 commit
+      const wrapperPath = path.join(cwd, '.sdd', 'run-llmwiki-mcp.sh');
+      const wrapperScript = `#!/usr/bin/env bash
+# LLMWiki MCP launcher — 运行时解析路径，零硬编码绝对路径。
+# 覆盖默认值：export SDD_HOME=... / LLMWIKI_PYTHON=...
+set -euo pipefail
+SDD_HOME="\${SDD_HOME:-\$HOME/.sdd}"
+LLMWIKI_DIR="\$SDD_HOME/repos/llmwiki"
+# Python: 显式覆盖 > venv python > 报错
+if [ -n "\${LLMWIKI_PYTHON:-}" ]; then
+  PY="\$LLMWIKI_PYTHON"
+elif [ -x "\$LLMWIKI_DIR/.venv/bin/python" ]; then
+  PY="\$LLMWIKI_DIR/.venv/bin/python"
+else
+  echo "❌ LLMWiki venv 未找到: \$LLMWIKI_DIR/.venv/bin/python" >&2
+  echo "   跑 sdd init 安装，或 export LLMWIKI_PYTHON=<path-to-python-with-mcp-pkg>" >&2
+  exit 1
+fi
+# 项目根: CLAUDE_PROJECT_DIR (Claude Code 注入) > 脚本相对推导
+PROJ="\${CLAUDE_PROJECT_DIR:-\$(cd "\$(dirname "\$0")/.." && pwd)}"
+export PYTHONPATH="\$LLMWIKI_DIR/mcp"
+exec "\$PY" -m local_server --workspace "\$PROJ/llmwiki"
+`;
+      await fs.ensureDir(path.dirname(wrapperPath));
+      await fs.writeFile(wrapperPath, wrapperScript);
+      await fs.chmod(wrapperPath, 0o755);
+
       config.mcpServers['llmwiki'] = {
-        command: await fs.pathExists(venvPy) ? venvPy : pyBin,
-        args: ['-m', 'local_server', '--workspace', path.join(cwd, 'llmwiki')],
-        env: { PYTHONPATH: path.join(llmwikiRepoDir, 'mcp') },
+        command: '${CLAUDE_PROJECT_DIR}/.sdd/run-llmwiki-mcp.sh',
+        args: [],
       };
       await fs.writeFile(mcpConfig, JSON.stringify(config, null, 2));
-      console.log(chalk.green(`  ✅ 注册 LLMWiki MCP → ${path.relative(cwd, mcpConfig)}`));
+      console.log(chalk.green(`  ✅ LLMWiki MCP: .sdd/run-llmwiki-mcp.sh (env-driven) → .mcp.json`));
     }
  }
 
@@ -456,7 +485,7 @@ async function ensureDependencies(platforms, dryRun, cwd) {
 
   // === mcp-keys.env 模板 ===
   if (!dryRun) {
-    const keysFile = path.join(homeDir, '.sdd', 'mcp-keys.env');
+    const keysFile = path.join(getSddHome(), 'mcp-keys.env');
     if (!await fs.pathExists(keysFile)) {
       await fs.ensureDir(path.dirname(keysFile));
       const keysTpl = await fs.readFile(path.join(TEMPLATES_DIR, 'sdd-harness', 'mcp-keys.env'), 'utf8').catch(() => '# MCP keys\nLLMWIKI_ENDPOINT=\nLLMWIKI_API_KEY=\nGITHUB_TOKEN=\n');
@@ -1021,7 +1050,7 @@ program
     }
 
     // LLMWiki repo + wiki 内容
-    const llmwikiRepo = path.join(os.homedir(), '.sdd', 'repos', 'llmwiki');
+    const llmwikiRepo = path.join(getSddHome(), 'repos', 'llmwiki');
     if (await fs.pathExists(llmwikiRepo)) {
       console.log(chalk.green('✅ LLMWiki repo (test/archive 阶段)'));
     } else {
@@ -1408,7 +1437,7 @@ program
 
     // Detect UA installation in multiple locations
     const uaCandidates = [
-      path.join(homeDir, '.sdd', 'repos', 'Understand-Anything'),
+      path.join(getSddHome(), 'repos', 'Understand-Anything'),
       path.join(homeDir, '.understand-anything', 'repo', 'understand-anything-plugin'),
     ];
     const uaRepoDir = uaCandidates.find(d => fs.pathExistsSync(d));
@@ -1416,7 +1445,7 @@ program
       fs.pathExistsSync(path.join(homeDir, '.understand-anything', 'repo'));
 
     if (options.install && !uaInstalled) {
-      const installDir = path.join(homeDir, '.sdd', 'repos', 'Understand-Anything');
+      const installDir = path.join(getSddHome(), 'repos', 'Understand-Anything');
       console.log(chalk.yellow('⏳ clone Understand-Anything...'));
       const r = await cloneRepo('https://github.com/Egonex-AI/Understand-Anything', installDir, false);
       if (r === 'failed') { console.log(chalk.red('\n❌ clone 失败')); process.exit(1); }
