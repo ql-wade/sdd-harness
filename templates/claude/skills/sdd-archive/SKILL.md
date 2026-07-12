@@ -107,8 +107,8 @@ metadata:
 ### Step 8: Run 收口（sdd-harness）
 
 ```yaml
-# 终态阶段 —— 无后续 stage 推进
-# workflow-frame.yaml 标 run 状态 = completed
+# 执行 sdd run archive --change <id>
+# CLI 重新验证全部证据后写入 run_status: completed
 # progress.md 记录最终收口
 ```
 
@@ -129,4 +129,4 @@ metadata:
 - backlinks（specs ↔ concepts/entities、test cases ↔ specs/requirements/AC）
 - deferred 记录（spec 提升 deferred、LLMWiki writeback deferred，各附 reason）
 - `openspec/changes/<id>/progress.md`
-- `.sdd/runs/<id>/workflow-frame.yaml`（run 状态 = completed）
+- CLI control-plane completion receipt

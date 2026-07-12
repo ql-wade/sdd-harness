@@ -169,7 +169,7 @@ SDD Harness 是在其上扩展，不是重造。
 - **读取**：verify gate 通过、review-notes
 - **写入**：release note / changelog；deploy 结果；回滚路径 或 显式 no-op；skip 模式下记录 no-deploy 理由
 - **Gate（Release）**：最新 review verdict 仍为 ready；verify gate 针对当前磁盘证据重新执行并通过（硬前置，不接受历史 passed 状态）；已声明 deploy mode；manual 下有 checklist、automated 下有结果、skip 下有 no-deploy 理由；非 skip 模式下 smoke 通过或记为风险、已记录回滚路径。
-- **推进**：skip 模式下 `workflow-frame.yaml` 的 stage 指针从 verify 直接跳到 archive，不阻塞。
+- **推进**：skip 模式由 adapter 调用 `sdd run release --mode skip`；CLI 重新验证 review、tasks、probe 与 evidence 后，才把 stage 从 verify/release 推进到 archive。
 
 ### 5.9 `/sdd:archive` —— 归档与知识沉淀
 
@@ -472,7 +472,7 @@ MVP 发 5 个 hook（SessionStart、PreToolUse、Stop、PreCompact、SubagentSto
 
 ### 11.2 Gates（轻量 —— 只查存在性 + verdict）
 
-每个 gate 读取 `workflow-frame.yaml` 并检查必备 artifact 是否存在；不跑重活（测试/review 在各自 stage 跑完，gate 只验产出存在）。共 9 个 gate：Grill、Product、Dev、Test、Code、Review、Verify、Release、Archive —— 已在 §5 内联定义。
+每个 gate 读取 `workflow-frame.yaml`，检查必备 artifact，并对 grill→review 执行轻量内容指标；测试、review、browser 等重活仍在各自 stage 完成，gate 只核验其已落盘且可绑定的证据。存在性、内容指标或证据重校验任一失败时，CLI 保持当前 stage、记录失败/待定 gate 状态并返回 exit 2，不能以“scaffold 已生成”冒充成功。共 9 个 gate：Grill、Product、Dev、Test、Code、Review、Verify、Release、Archive —— 已在 §5 内联定义。
 
 ### 11.3 Skills
 
@@ -482,7 +482,7 @@ MVP 发 5 个 hook（SessionStart、PreToolUse、Stop、PreCompact、SubagentSto
 
 ### 12.1 change 内回退（stage 可逆）
 
-如果 review/verify 暴露了上游错误，把 `workflow-frame.yaml` 里的 stage 指针拨回去（如 review → dev），`progress.md` 记录 `reverted: review → dev, reason: …`，下游 artifact 标记为 `superseded`（不删除）。`change-id` 不变；证据链不断。一个 hook 在回退时校验下游 artifact 已标 superseded。
+如果 review/verify 暴露了上游错误，adapter 调用 `sdd rollback --change <id> --to dev --reason "..."`。CLI 负责更新 stage/history/status；`progress.md` 记录原因，下游 artifact 标记为 `superseded`（不删除）。`change-id` 不变，证据链不断；hook 只校验/阻断，不修改状态。
 
 恢复、迁移或接管历史 run 时，先运行 `sdd workflow-audit --project <dir> --run <id> --json`。
 该命令不信任 frame 中声明的 `status: passed`，而是针对当前 stage 重新执行持续成立的
@@ -570,7 +570,7 @@ domain_registry:
 3. 写 `.sdd/runs/<change-id>/workflow-frame.yaml`（stage = grill、目标、允许的操作）。
 4. sdd-harness skill 内联组装 `.sdd/runs/<change-id>/knowledge-pack.md`。
 
-后续每个 `/sdd:*` command 读取 `workflow-frame.yaml`，在 gate 通过后推进 stage 指针，并更新 `progress.md`。
+后续每个 `/sdd:*` command 读取 `workflow-frame.yaml`、生产 artifacts 并调用 `sdd run <stage>` 请求转换。只有 CLI 在重新执行 gate 后推进 stage/history/status；command 与 hook 都不能直接修改 control-plane 状态。
 
 ### 13.4 Hook 接线示意（`.claude/settings.json`）
 

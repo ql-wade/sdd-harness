@@ -18,6 +18,17 @@ import { fixDeliverables } from '../lib/deliverable-fixer.js';
 import { graphHealthCheck, getSourceDirs, countSourceFiles, detectProjectType, detectMonorepo } from '../lib/project-context.js';
 import { discoverKnowledgeSources, copySourcesToRaw } from '../lib/knowledge-seed.js';
 import { sedimentStage } from '../lib/llmwiki-sediment.js';
+import { getSddHome, getWikiHome } from '../lib/sdd-paths.js';
+import { evaluateStageCapabilities } from '../lib/capabilities.js';
+import {
+  advanceWorkflowState,
+  completeWorkflowState,
+  createWorkflowState,
+  readWorkflowStage,
+  rollbackWorkflowState,
+  setWorkflowDeploymentMode,
+  setWorkflowGateStatus,
+} from '../lib/workflow-state.js';
 import { installDailyGraphRefresh, uninstallDailyGraphRefresh, checkDailyGraphRefresh } from '../lib/daily-scheduler.js';
 
 // 异步流式执行 claude（非 execSync 阻塞；stdin 走临时文件 redirect；慷慨超时）
@@ -115,15 +126,17 @@ const LEGACY_COMMANDS = [
 
 // 有效的 platform 参数值
 const VALID_PLATFORMS = [...ALL_PLATFORMS, 'both', 'all'];
+const VALID_ADAPTERS = [...ALL_PLATFORMS, 'all'];
+const VALID_INSTALL_CAPABILITIES = new Set(['wiki', 'graph', 'review']);
 
-// 自动检测平台。没有检测到平台目录时，默认安装所有支持的平台。
+// 自动检测已经落盘的平台；空项目保持 Core-only，不隐式选择任何 adapter。
 function detectPlatforms(cwd) {
   const detected = ALL_PLATFORMS.filter(platform => {
     const platformRoot = PLATFORMS[platform].skillsDir.split('/')[0];
     return fs.existsSync(path.join(cwd, platformRoot));
   });
 
-  return detected.length > 0 ? detected : ALL_PLATFORMS;
+  return detected;
 }
 
 function resolvePlatforms(platformOption, cwd) {
@@ -183,19 +196,20 @@ async function cloneRepo(repo, dest, dryRun) {
   }
 }
 
-// SDD home 目录：$SDD_HOME 优先，否则 ~/.sdd。所有 ~/.sdd 引用都走这里，支持 env 覆盖。
-function getSddHome() {
-  return process.env.SDD_HOME || path.join(os.homedir(), '.sdd');
-}
+// getSddHome / getWikiHome 从 lib/sdd-paths.js 导入（worktree-safe，支持 SDD_HOME/SDD_WIKI_HOME env 覆盖）。
 
 // §13.1 完整依赖安装（真实执行）
-async function ensureDependencies(platforms, dryRun, cwd) {
+async function ensureDependencies(platforms, dryRun, cwd, requestedCapabilities = new Set()) {
   const homeDir = os.homedir();
   const sddHome = getSddHome();
   const skillsDir = path.join(homeDir, '.claude', 'skills');
+  const withClaude = platforms.includes('claude');
+  const withReview = requestedCapabilities.has('review');
+  const withWiki = requestedCapabilities.has('wiki');
+  const withGraph = requestedCapabilities.has('graph');
   let installed = 0, failed = 0;
 
-  console.log(chalk.blue('\n🔍 [1/8] pre-doctor: 检测环境\n'));
+  console.log(chalk.blue('\n🔍 Core pre-doctor: 检测环境\n'));
 
   // === Step 2: 系统级 CLI ===
   console.log(chalk.blue('🔧 [2/8] 系统级 CLI\n'));
@@ -211,19 +225,19 @@ async function ensureDependencies(platforms, dryRun, cwd) {
     catch { console.log(chalk.red('  ❌ brew install openspec 失败 — 请手动: brew install openspec')); failed++; }
   }
 
-  // open-code-review CLI
-  if (cmdExists('ocr')) {
+  // open-code-review CLI（review capability）
+  if (withReview && cmdExists('ocr')) {
     console.log(chalk.green(`  ✅ open-code-review: ${run('ocr --version').trim()}`));
-  } else if (dryRun) {
+  } else if (withReview && dryRun) {
     console.log(chalk.cyan('  [dry-run] npm i -g @alibaba-group/open-code-review'));
-  } else {
+  } else if (withReview) {
     console.log(chalk.yellow('  ⏳ 安装 open-code-review (npm -g)...'));
     try { run('npm install -g @alibaba-group/open-code-review 2>&1', { stdio: 'inherit' }); installed++; console.log(chalk.green('  ✅ open-code-review installed')); }
     catch { console.log(chalk.red('  ❌ npm install -g 失败 — 请手动: npm i -g @alibaba-group/open-code-review')); failed++; }
   }
 
   // OCR LLM 后端配置检查 —— 装完 CLI 不等于能用，必须配 LLM backend
-  if (!dryRun && cmdExists('ocr')) {
+  if (withReview && !dryRun && cmdExists('ocr')) {
     let ocrReady = false;
     try { run('ocr llm test 2>&1', { stdio: 'pipe' }); ocrReady = true; } catch {}
     if (!ocrReady) {
@@ -248,7 +262,7 @@ async function ensureDependencies(platforms, dryRun, cwd) {
   }
 
   // === Step 3: clone skills ===
-  console.log(chalk.blue('\n📦 [3/8] clone skills → ~/.claude/skills/\n'));
+  if (withClaude) console.log(chalk.blue('\n📦 Claude reference adapter skills → ~/.claude/skills/\n'));
   const skills = [
     { name: 'superpowers', repo: 'https://github.com/obra/superpowers' },
     { name: 'planning-with-files', repo: 'https://github.com/OthmanAdi/planning-with-files' },
@@ -256,7 +270,7 @@ async function ensureDependencies(platforms, dryRun, cwd) {
     // 无需 clone 整个 monorepo。同级的 grilling 是 grill-me 的底层方法论。
     // sdd fill grill 内嵌 grilling 方法论，在 headless 模式也能工作。
   ];
-  for (const s of skills) {
+  for (const s of withClaude ? skills : []) {
     const dest = path.join(skillsDir, s.name);
     const r = await cloneRepo(s.repo, dest, dryRun);
     if (r === 'installed') installed++;
@@ -267,7 +281,7 @@ async function ensureDependencies(platforms, dryRun, cwd) {
   // 两个文件加起来不到 30 行，极其稳定，不需要跟随上游更新
   const grillMeDir = path.join(skillsDir, 'grill-me');
   const grillingDir = path.join(skillsDir, 'grilling');
-  if (!dryRun) {
+  if (withClaude && !dryRun) {
     await fs.ensureDir(grillMeDir);
     if (!await fs.pathExists(path.join(grillMeDir, 'SKILL.md'))) {
       await fs.writeFile(path.join(grillMeDir, 'SKILL.md'),
@@ -286,14 +300,16 @@ async function ensureDependencies(platforms, dryRun, cwd) {
     } else {
       console.log(chalk.green('  ✅ 已存在: grilling'));
     }
-  } else {
+  } else if (withClaude) {
     console.log(chalk.cyan('  [dry-run] grill-me + grilling → ~/.claude/skills/'));
   }
 
   // === Step 4 + 5: LLMWiki (真实 repo + 初始化) ===
-  console.log(chalk.blue('\n📚 [4/8] LLMWiki repo + MCP\n'));
+  if (withWiki) console.log(chalk.blue('\n📚 LLMWiki capability: repo + MCP\n'));
   const llmwikiRepoDir = path.join(sddHome, 'repos', 'llmwiki');
-  const r1 = await cloneRepo('https://github.com/lucasastorian/llmwiki', llmwikiRepoDir, dryRun);
+  const r1 = withWiki
+    ? await cloneRepo('https://github.com/lucasastorian/llmwiki', llmwikiRepoDir, dryRun)
+    : 'skipped';
   if (r1 === 'installed') installed++;
   if (r1 === 'failed') failed++;
 
@@ -314,7 +330,7 @@ async function ensureDependencies(platforms, dryRun, cwd) {
   const pyBin = py311Bin || 'python3';
   const mcpReqPath = path.join(llmwikiRepoDir, 'mcp', 'requirements.txt');
 
-  if (!dryRun && await fs.pathExists(mcpReqPath)) {
+  if (withWiki && !dryRun && await fs.pathExists(mcpReqPath)) {
     if (pyOk) {
       console.log(chalk.green(`  ✅ ${pyBin} (Python ${pyVersion[0]}.${pyVersion[1]}, 满足 3.11+)`));
       console.log(chalk.yellow(`  ⏳ venv + 装 LLMWiki Python deps...`));
@@ -334,7 +350,7 @@ async function ensureDependencies(platforms, dryRun, cwd) {
   }
 
   // 注册 LLMWiki MCP 到项目 .mcp.json
-  if (!dryRun && pyOk) {
+  if (withWiki && !dryRun && pyOk) {
     const mcpConfig = path.join(cwd, '.mcp.json');
     let config = {};
     if (await fs.pathExists(mcpConfig)) {
@@ -342,16 +358,23 @@ async function ensureDependencies(platforms, dryRun, cwd) {
     }
     config.mcpServers = config.mcpServers || {};
     if (!config.mcpServers['llmwiki']) {
-      // 生成 env-driven wrapper 脚本（运行时解析 $SDD_HOME/$HOME/$LLMWIKI_PYTHON）
-      // .mcp.json 不写绝对路径——通过 ${CLAUDE_PROJECT_DIR} 定位 wrapper，可移植 + 可 commit
-      const wrapperPath = path.join(cwd, '.sdd', 'run-llmwiki-mcp.sh');
+      // 共享 wrapper（一台机器一份，所有 project/worktree 复用）。
+      // wiki home 经 args[0] 传入——绝对路径。CC 2.1.153 不展开 ${CLAUDE_PROJECT_DIR}/env，
+      // 所以 command + args 都用 getSddHome()/getWikiHome() 解析的绝对路径（init 时写死，machine-specific）。
+      const wikiHome = getWikiHome(cwd);
+      const wrapperDir = path.join(getSddHome(), 'scripts');
+      const wrapperPath = path.join(wrapperDir, 'run-llmwiki-mcp.sh');
       const wrapperScript = `#!/usr/bin/env bash
-# LLMWiki MCP launcher — 运行时解析路径，零硬编码绝对路径。
+# LLMWiki MCP launcher — 共享 wrapper，wiki home 经 \$1 传入。
 # 覆盖默认值：export SDD_HOME=... / LLMWIKI_PYTHON=...
 set -euo pipefail
 SDD_HOME="\${SDD_HOME:-\$HOME/.sdd}"
 LLMWIKI_DIR="\$SDD_HOME/repos/llmwiki"
-# Python: 显式覆盖 > venv python > 报错
+WIKI_HOME="\${1:-}"
+if [ -z "\$WIKI_HOME" ]; then
+  echo "❌ WIKI_HOME 未指定：.mcp.json args[0] 传入，或 export SDD_WIKI_HOME" >&2
+  exit 1
+fi
 if [ -n "\${LLMWIKI_PYTHON:-}" ]; then
   PY="\$LLMWIKI_PYTHON"
 elif [ -x "\$LLMWIKI_DIR/.venv/bin/python" ]; then
@@ -361,28 +384,30 @@ else
   echo "   跑 sdd init 安装，或 export LLMWIKI_PYTHON=<path-to-python-with-mcp-pkg>" >&2
   exit 1
 fi
-# 项目根: CLAUDE_PROJECT_DIR (Claude Code 注入) > 脚本相对推导
-PROJ="\${CLAUDE_PROJECT_DIR:-\$(cd "\$(dirname "\$0")/.." && pwd)}"
 export PYTHONPATH="\$LLMWIKI_DIR/mcp"
-exec "\$PY" -m local_server --workspace "\$PROJ/llmwiki"
+exec "\$PY" -m local_server --workspace "\$WIKI_HOME"
 `;
-      await fs.ensureDir(path.dirname(wrapperPath));
+      await fs.ensureDir(wrapperDir);
       await fs.writeFile(wrapperPath, wrapperScript);
       await fs.chmod(wrapperPath, 0o755);
 
+      // .mcp.json 用 bash -c + ${SDD_HOME:-$HOME/.sdd} —— bash 自己展开，不依赖 CC 展开 env。
+      // 可移植：bash 走 PATH，$HOME 总在，slug 是 project 身份（跨机器一致）。零 /Users/<user>/ 硬编码。
+      const slug = path.basename(wikiHome);
       config.mcpServers['llmwiki'] = {
-        command: '${CLAUDE_PROJECT_DIR}/.sdd/run-llmwiki-mcp.sh',
-        args: [],
+        command: 'bash',
+        args: ['-c', `exec "\${SDD_HOME:-\$HOME/.sdd}/scripts/run-llmwiki-mcp.sh" "\${SDD_HOME:-\$HOME/.sdd}/wiki/${slug}"`],
       };
       await fs.writeFile(mcpConfig, JSON.stringify(config, null, 2));
-      console.log(chalk.green(`  ✅ LLMWiki MCP: .sdd/run-llmwiki-mcp.sh (env-driven) → .mcp.json`));
+      console.log(chalk.green(`  ✅ LLMWiki MCP: 共享 wrapper ${wrapperPath}`));
+      console.log(chalk.green(`     wiki home: ${wikiHome}（所有 worktree 共享，不随 worktree 生灭）`));
     }
  }
 
   // === Step 5: LLMWiki 实例初始化（项目级 wiki 内容目录） ===
-  console.log(chalk.blue('\n🗂️  [5/8] LLMWiki 实例初始化（wiki 内容目录）\n'));
-  const wikiDir = path.join(cwd, 'llmwiki');
-  if (!dryRun) {
+  if (withWiki) console.log(chalk.blue('\n🗂️  LLMWiki 实例初始化（wiki 内容目录）\n'));
+  const wikiDir = getWikiHome(cwd);
+  if (withWiki && !dryRun) {
     await fs.ensureDir(wikiDir);
     // 按 §9.1 建三大流程骨架
     const wikiSubdirs = [
@@ -404,7 +429,7 @@ exec "\$PY" -m local_server --workspace "\$PROJ/llmwiki"
     if (!await fs.pathExists(path.join(wikiDir, 'wiki', '_schema.md'))) {
       await fs.writeFile(path.join(wikiDir, 'wiki', '_schema.md'), '# Wiki Schema\n\n详见 docs/llmwiki-structure.md\n');
     }
-    console.log(chalk.green(`  ✅ wiki 内容目录已建: ${path.relative(cwd, wikiDir)}/ (含 ${wikiSubdirs.length} 子目录)`));
+    console.log(chalk.green(`  ✅ wiki 内容目录已建: ${wikiDir}/ (含 ${wikiSubdirs.length} 子目录)`));
 
     // --- Knowledge sources: 发现并复制到 raw/（待 LLM 经 MCP ingest，不预写 wiki/） ---
     const ks = discoverKnowledgeSources(cwd);
@@ -412,8 +437,8 @@ exec "\$PY" -m local_server --workspace "\$PROJ/llmwiki"
     if (ksCount > 0 || ks.catalog || ks.domainGraph || ks.openspecConfig) {
       console.log(chalk.cyan(`  📖 发现 ${ksCount + (ks.catalog?1:0) + (ks.domainGraph?1:0) + (ks.openspecConfig?1:0)} 个知识源 (docs/specs/steering/agentDocs${ks.catalog ? '/catalog' : ''})`));
       if (!dryRun) {
-        const copyResult = await copySourcesToRaw(cwd, ks);
-        console.log(chalk.green(`  ✅ ${copyResult.copied} 个源 → llmwiki/raw/（slug 命名，待 ingest）`));
+        const copyResult = await copySourcesToRaw(cwd, wikiDir, ks);
+        console.log(chalk.green(`  ✅ ${copyResult.copied} 个源 → ${wikiDir}/raw/（slug 命名，待 ingest）`));
         for (const f of copyResult.files.slice(0, 8)) {
           console.log(chalk.gray(`     → ${f.path}`));
         }
@@ -421,9 +446,9 @@ exec "\$PY" -m local_server --workspace "\$PROJ/llmwiki"
         console.log(chalk.gray(`     下一步：sdd wiki ingest 或在 session 内用 mcp__llmwiki__create 写 wiki`));
       }
     } else {
-      console.log(chalk.gray('  ℹ️  无已有知识源（后续文档放入 llmwiki/raw/ 后 sdd wiki ingest）'));
+      console.log(chalk.gray(`  ℹ️  无已有知识源（后续文档放入 ${wikiDir}/raw/ 后 sdd wiki ingest）`));
     }
-  } else {
+  } else if (withWiki) {
     console.log(chalk.cyan(`  [dry-run] 建 ${wikiDir} 骨架`));
   }
 
@@ -441,9 +466,9 @@ exec "\$PY" -m local_server --workspace "\$PROJ/llmwiki"
     }
   } catch {}
 
-  console.log(chalk.blue('\n🧠 [6/8] Understand-Anything（代码知识图谱）\n'));
+  if (withGraph) console.log(chalk.blue('\n🧠 Understand-Anything capability（代码知识图谱）\n'));
   const graphPath = path.join(cwd, '.understand-anything', 'knowledge-graph.json');
-  if (!dryRun) {
+  if (withGraph && !dryRun) {
     // Deep graph health check (freshness + orphans + layers)
     const graphHealth = graphHealthCheck(cwd);
     if (graphHealth.existence === 'missing') {
@@ -484,7 +509,7 @@ exec "\$PY" -m local_server --workspace "\$PROJ/llmwiki"
   }
 
   // === mcp-keys.env 模板 ===
-  if (!dryRun) {
+  if (withWiki && !dryRun) {
     const keysFile = path.join(getSddHome(), 'mcp-keys.env');
     if (!await fs.pathExists(keysFile)) {
       await fs.ensureDir(path.dirname(keysFile));
@@ -501,15 +526,44 @@ exec "\$PY" -m local_server --workspace "\$PROJ/llmwiki"
   return { installed, failed };
 }
 
+function previewSkill(adapter, entry) {
+  const stage = entry.replace(/^sdd-/, '');
+  const transition = entry === 'sdd-harness'
+    ? 'sdd run <stage>'
+    : `sdd run ${stage} --change <id>`;
+  return `---
+name: ${entry}
+description: SDD Harness ${adapter} preview adapter thin shell
+license: MIT
+metadata:
+  adapter: ${adapter}
+  support: preview
+---
+
+# ${entry} — ${adapter} preview adapter
+
+This preview adapter does not claim Claude-specific commands, hooks, MCP tools,
+Superpowers, or OCR parity. Produce stage artifacts with capabilities actually
+available in this host. Report missing capabilities with \`sdd doctor --stage ${entry === 'sdd-harness' ? '<stage>' : stage} --json\`;
+use \`not-applicable\` only with a concrete reason.
+
+Workflow state is owned exclusively by the CLI. Never edit
+\`.sdd/runs/<id>/workflow-frame.yaml\` or \`.sdd/active-run\` directly.
+Request the transition with:
+
+\`\`\`bash
+${transition}
+\`\`\`
+`;
+}
+
 // §13.1 step 7: 落 SDD Harness 层（skills/commands/hooks/templates/config）
-async function copySDDHarnessLayer(cwd, dryRun, force) {
+async function copySDDHarnessLayer(cwd, dryRun, force, platforms = []) {
   console.log(chalk.blue('\n🎯 [7/8] 落 SDD Harness 层\n'));
   let count = 0;
 
-  // SDD-* skills — install to ALL detected platforms for parity
-  // (claude, codex, opencode all get sdd-* skills, not just claude)
+  // Claude 使用 reference assets；preview host 只安装诚实的 host-neutral thin shell。
   const srcSkills = path.join(TEMPLATES_DIR, 'claude', 'skills');
-  const platforms = resolvePlatforms(undefined, cwd);
   const sddSkillDirs = {
     claude: path.join(cwd, '.claude', 'skills'),
     codex: path.join(cwd, '.codex', 'skills'),
@@ -526,7 +580,12 @@ async function copySDDHarnessLayer(cwd, dryRun, force) {
         const src = path.join(srcSkills, entry);
         const dest = path.join(destSkills, entry);
         if ((await fs.stat(src)).isDirectory() && (!await fs.pathExists(dest) || force)) {
-          await fs.copy(src, dest, { overwrite: force });
+          if (platform === 'claude') {
+            await fs.copy(src, dest, { overwrite: force });
+          } else {
+            await fs.ensureDir(dest);
+            await fs.writeFile(path.join(dest, 'SKILL.md'), previewSkill(platform, entry));
+          }
           pCount++;
         }
       }
@@ -540,7 +599,7 @@ async function copySDDHarnessLayer(cwd, dryRun, force) {
   // SDD commands (Claude Code only — commands are Claude-specific slash commands)
   const srcCmds = path.join(TEMPLATES_DIR, 'claude', 'commands');
   const destCmds = path.join(cwd, '.claude', 'commands');
-  if (!dryRun) {
+  if (platforms.includes('claude') && !dryRun) {
     await fs.ensureDir(destCmds);
     let cmdCount = 0;
     for (const entry of await fs.readdir(srcCmds)) {
@@ -557,7 +616,7 @@ async function copySDDHarnessLayer(cwd, dryRun, force) {
   // hooks
   const srcHooks = path.join(TEMPLATES_DIR, 'claude', 'hooks');
   const destHooks = path.join(cwd, '.sdd', 'hooks');
-  if (!dryRun) {
+  if (platforms.includes('claude') && !dryRun) {
     await fs.ensureDir(destHooks);
     let hookCount = 0;
     for (const entry of await fs.readdir(srcHooks)) {
@@ -593,11 +652,11 @@ async function copySDDHarnessLayer(cwd, dryRun, force) {
   }
 
   // .claude/rules/ — CC 原生注入 SDD 规则
-  if (!dryRun) {
+  if (platforms.includes('claude') && !dryRun) {
     const rulesDir = path.join(cwd, '.claude', 'rules');
     await fs.ensureDir(rulesDir);
     const rulesFile = path.join(rulesDir, 'sdd-harness.md');
-    if (!await fs.pathExists(rulesFile)) {
+    if (!await fs.pathExists(rulesFile) || force) {
       await fs.writeFile(rulesFile, `# SDD Harness Rules（CC 原生注入）
 
 ## 当前项目
@@ -638,8 +697,8 @@ async function copySDDHarnessLayer(cwd, dryRun, force) {
     }
     const depsSrc = path.join(TEMPLATES_DIR, 'sdd-harness', 'dependencies.yaml');
     const depsDest = path.join(cwd, '.sdd', 'dependencies.yaml');
-    if (await fs.pathExists(depsSrc) && !await fs.pathExists(depsDest)) {
-      await fs.copy(depsSrc, depsDest);
+    if (await fs.pathExists(depsSrc) && (!await fs.pathExists(depsDest) || force)) {
+      await fs.copy(depsSrc, depsDest, { overwrite: force });
       console.log(chalk.green('  ✓ .sdd/dependencies.yaml'));
     }
 
@@ -647,9 +706,9 @@ async function copySDDHarnessLayer(cwd, dryRun, force) {
     const gitignore = path.join(cwd, '.gitignore');
     let gi = await fs.readFile(gitignore, 'utf8').catch(() => '');
     if (!gi.includes('.sdd/runs/')) {
-      gi += '\n# SDD Harness runtime\n.sdd/runs/\n.understand-anything/\nllmwiki/.staging/\n';
+      gi += '\n# SDD Harness runtime\n.sdd/runs/\n.sdd/staging/\n.understand-anything/\n';
       await fs.writeFile(gitignore, gi);
-      console.log(chalk.green('  ✓ .gitignore (+ .sdd/runs/, .understand-anything/, llmwiki/.staging/)'));
+      console.log(chalk.green('  ✓ .gitignore (+ .sdd/runs/, .sdd/staging/, .understand-anything/)'));
     }
   }
 
@@ -771,7 +830,10 @@ program
   .option('--skip-schema', 'Skip copying schema files', false)
   .option('--skip-skills', 'Skip copying skill files', false)
   .option('--skip-commands', 'Skip copying command files', false)
-  .option('--platform <name>', 'Target platform: claude | opencode | codex | both | all (auto-detect by default)')
+  .option('--adapter <name>', 'Install an agent adapter: claude | opencode | codex | all')
+  .option('--with <capabilities>', 'Install optional capabilities: wiki,graph,review')
+  .option('--skip-dependencies', 'Install project files only; do not install or change global dependencies', false)
+  .option('--platform <name>', 'Deprecated alias: claude | opencode | codex | both | all')
   .option('--dry-run', 'Preview changes without writing files', false)
   .action(async (options) => {
     const cwd = process.cwd();
@@ -782,13 +844,40 @@ program
       console.error(chalk.red(`   Valid options: ${VALID_PLATFORMS.join(', ')}`));
       process.exit(1);
     }
+    if (options.adapter && !VALID_ADAPTERS.includes(options.adapter)) {
+      console.error(chalk.red(`\n❌ Invalid adapter: "${options.adapter}"`));
+      console.error(chalk.red(`   Valid options: ${VALID_ADAPTERS.join(', ')}`));
+      process.exit(1);
+    }
+    if (options.adapter && options.platform) {
+      console.error(chalk.red('\n❌ Use --adapter or --platform, not both'));
+      process.exit(1);
+    }
+
+    const requestedCapabilities = new Set(
+      String(options.with || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+    );
+    const invalidCapabilities = [...requestedCapabilities]
+      .filter((item) => !VALID_INSTALL_CAPABILITIES.has(item));
+    if (invalidCapabilities.length > 0) {
+      console.error(chalk.red(`\n❌ Invalid capabilities: ${invalidCapabilities.join(', ')}`));
+      console.error(chalk.red(`   Valid options: ${[...VALID_INSTALL_CAPABILITIES].join(', ')}`));
+      process.exit(1);
+    }
 
     const detectedPlatforms = detectPlatforms(cwd);
-    const platformsToInstall = resolvePlatforms(options.platform, cwd);
+    const adapterOption = options.adapter || options.platform;
+    const platformsToInstall = adapterOption
+      ? resolvePlatforms(adapterOption, cwd)
+      : [];
 
     console.log(chalk.blue(`\n🚀 Initializing SDD workflow v${VERSION}...\n`));
     console.log(chalk.gray(`Detected: ${formatPlatforms(detectedPlatforms)}`));
-    console.log(chalk.gray(`Installing: ${formatPlatforms(platformsToInstall)}`));
+    console.log(chalk.gray(`Installing: Core${platformsToInstall.length ? ` + ${formatPlatforms(platformsToInstall)} adapter` : ''}`));
+    console.log(chalk.gray(`Capabilities: ${requestedCapabilities.size ? [...requestedCapabilities].join(', ') : 'none (stage-scoped install)'}`));
     console.log(chalk.gray(`Schema: trinity-workflow-v2`));
     if (options.dryRun) {
       console.log(chalk.yellow(`Mode: DRY RUN (no files will be written)\n`));
@@ -797,10 +886,14 @@ program
     }
 
     try {
-      await ensureDependencies(platformsToInstall, options.dryRun, cwd);
+      if (options.skipDependencies) {
+        console.log(chalk.yellow('⏭ Skipping dependency installation (project files only)'));
+      } else {
+        await ensureDependencies(platformsToInstall, options.dryRun, cwd, requestedCapabilities);
+      }
 
       // SDD Harness 层（sdd-* skills/commands/hooks/templates/config）
-      await copySDDHarnessLayer(cwd, options.dryRun, options.force);
+      await copySDDHarnessLayer(cwd, options.dryRun, options.force, platformsToInstall);
 
       const legacyCount = await cleanupLegacyCommands(cwd, platformsToInstall, options.dryRun);
       if (legacyCount > 0 && !options.dryRun) {
@@ -876,21 +969,15 @@ program
 
       console.log('\n' + chalk.green.bold(`✅ SDD Harness v${VERSION} initialized!`));
 
-      // Show available commands
-      console.log('\n📚 SDD Harness 9 阶段命令:');
-      console.log(chalk.cyan('   /sdd:grill "描述"') + '     - 澄清（业务/术语/边界）');
-      console.log(chalk.cyan('   /sdd:product') + '          - 产品草案（PRD/AC）');
-      console.log(chalk.cyan('   /sdd:dev') + '             - 工程 spec（OpenSpec）');
-      console.log(chalk.cyan('   /sdd:test') + '            - 测试矩阵 → LLMWiki');
-      console.log(chalk.cyan('   /sdd:code') + '            - 实现（TDD）');
-      console.log(chalk.cyan('   /sdd:review') + '          - Review（Superpowers + OCR）');
-      console.log(chalk.cyan('   /sdd:verify') + '          - 交付验证（证据）');
-      console.log(chalk.cyan('   /sdd:release') + '         - 部署（manual|auto|skip）');
-      console.log(chalk.cyan('   /sdd:archive') + '         - 归档 + 知识沉淀\n');
-      console.log(chalk.gray('   维护: sdd doctor | sdd upgrade | sdd graph --refresh | sdd wiki init\n'));
+      if (platformsToInstall.length > 0) {
+        console.log('\n📚 Adapter 已安装。九阶段状态转换统一调用 `sdd run <stage>`.');
+        console.log(chalk.gray('   维护: sdd doctor --stage <stage> | sdd upgrade\n'));
+      } else {
+        console.log(chalk.gray('\n   Core only. Add an adapter with: sdd init --adapter claude\n'));
+      }
 
       // LLMWiki MCP 批准提示（.mcp.json 写了，但需 session 内批准才生效）
-      if (!options.dryRun) {
+      if (requestedCapabilities.has('wiki') && !options.dryRun) {
         console.log(chalk.yellow('⚠️  LLMWiki MCP 需在 Claude Code 内批准'));
         console.log(chalk.gray('   重启 Claude Code session，首次进入项目会弹安全提示确认 .mcp.json 的 llmwiki server。'));
         console.log(chalk.gray('   批准后验证：session 内能看到 mcp__llmwiki__create / search / lint 工具。'));
@@ -936,8 +1023,30 @@ program
   .command('doctor')
   .description('Diagnose SDD workflow health')
   .option('--fix', 'Auto-fix issues (install missing dependencies)', false)
+  .option('--stage <name>', 'Check capabilities required by a workflow stage')
+  .option('--json', 'Print a machine-readable report', false)
   .action(async (options) => {
     const cwd = process.cwd();
+    if (options.stage) {
+      try {
+        const report = evaluateStageCapabilities({ projectDir: cwd, stage: options.stage });
+        if (options.json) console.log(JSON.stringify(report));
+        else {
+          console.log(chalk.blue(`\n🩺 Stage capability doctor: ${options.stage}\n`));
+          for (const item of report.capabilities) {
+            const icon = item.status === 'available' ? '✅' : item.status === 'not-applicable' ? '➖' : '❌';
+            console.log(`  ${icon} ${item.id}: ${item.status}${item.reason ? ` (${item.reason})` : ''}`);
+          }
+        }
+        process.exitCode = report.pass ? 0 : 2;
+      } catch (error) {
+        const report = { schemaVersion: 1, pass: false, error: error.message };
+        if (options.json) console.log(JSON.stringify(report));
+        else console.error(chalk.red(`❌ ${error.message}`));
+        process.exitCode = 1;
+      }
+      return;
+    }
     let issues = 0;
 
     console.log(chalk.blue('\n🔍 SDD Workflow Health Check\n'));
@@ -1010,24 +1119,20 @@ program
       }
     }
 
-    // Check openspec CLI
+    // Stage-scoped tools are informational here. Use doctor --stage for gates.
     try {
       const version = execSync('openspec --version', { encoding: 'utf8' }).trim();
-      console.log(chalk.green(`✅ openspec CLI: ${version}`));
+      console.log(chalk.gray(`ℹ️  spec-engine available: ${version}`));
     } catch {
-      console.log(chalk.yellow('⚠️  openspec CLI not found — install with `brew install openspec`'));
-      issues++;
+      console.log(chalk.gray('ℹ️  spec-engine not installed (checked when a stage requires it)'));
     }
 
-    // === SDD Harness 专属检查 ===
-    console.log(chalk.blue('\n── SDD Harness 依赖 ──'));
+    console.log(chalk.blue('\n── Optional stage capabilities ──'));
 
-    // open-code-review CLI
     if (cmdExists('ocr')) {
-      console.log(chalk.green('✅ open-code-review CLI (review 阶段)'));
+      console.log(chalk.gray('ℹ️  line-review available: open-code-review'));
     } else {
-      console.log(chalk.yellow('⚠️  open-code-review 缺失 (review 行级降级) — npm i -g @alibaba-group/open-code-review'));
-      issues++;
+      console.log(chalk.gray('ℹ️  line-review not installed (checked at review)'));
     }
 
     // sdd-* skills
@@ -1037,7 +1142,7 @@ program
       if (sddSkills.length >= 10) {
         console.log(chalk.green(`✅ SDD skills: ${sddSkills.length} 个`));
       } else {
-        console.log(chalk.yellow(`⚠️  SDD skills 仅 ${sddSkills.length}/10 — 运行 sdd init --force`));
+        console.log(chalk.yellow(`⚠️  Claude adapter SDD skills 仅 ${sddSkills.length}/10 — 运行 sdd init --adapter claude --force`));
         issues++;
       }
     }
@@ -1049,16 +1154,16 @@ program
       console.log(sddCmds.length >= 9 ? chalk.green(`✅ /sdd:* commands: ${sddCmds.length} 个`) : chalk.yellow(`⚠️  /sdd commands ${sddCmds.length}/9`));
     }
 
-    // LLMWiki repo + wiki 内容
+    // Optional capabilities never make Core doctor fail.
     const llmwikiRepo = path.join(getSddHome(), 'repos', 'llmwiki');
     if (await fs.pathExists(llmwikiRepo)) {
-      console.log(chalk.green('✅ LLMWiki repo (test/archive 阶段)'));
+      console.log(chalk.gray('ℹ️  knowledge-base provider installed: LLMWiki'));
     } else {
-      console.log(chalk.yellow('⚠️  LLMWiki repo 缺失 (用例/知识无法持久化) — sdd init 重试或手动 clone'));
-      issues++;
+      console.log(chalk.gray('ℹ️  knowledge-base provider not installed (checked at test/archive)'));
     }
-    const wikiContent = path.join(cwd, 'llmwiki', 'wiki');
-    console.log(await fs.pathExists(wikiContent) ? chalk.green('✅ LLMWiki wiki 内容目录') : chalk.yellow('⚠️  wiki 内容目录缺失 — sdd wiki init'));
+    const wikiHome = getWikiHome(cwd);
+    const wikiContent = path.join(wikiHome, 'wiki');
+    console.log(await fs.pathExists(wikiContent) ? chalk.gray(`ℹ️  wiki workspace: ${wikiHome}`) : chalk.gray('ℹ️  wiki workspace not initialized'));
 
     // knowledge-graph — deep health check (freshness + orphan detection)
     const graphHealth = graphHealthCheck(cwd);
@@ -1067,8 +1172,7 @@ program
     } else if (graphHealth.existence === 'placeholder') {
       console.log(chalk.gray('ℹ️  knowledge-graph 占位 (code graph 按需) — sdd graph --install 启用'));
     } else if (graphHealth.existence === 'corrupt') {
-      console.log(chalk.red('❌ knowledge-graph.json is corrupt — sdd graph --install'));
-      issues++;
+      console.log(chalk.yellow('⚠️  installed knowledge-graph.json is corrupt — sdd graph --install'));
     } else {
       // Graph exists with nodes — check freshness and orphans
       const hasIssues = graphHealth.issues.length > 0;
@@ -1091,19 +1195,12 @@ program
     }
 
         console.log();
-    // Graph issues are warnings (not hard blockers), but should be reported
-    const graphIssues = graphHealthCheck(cwd).issues.length;
-    if (issues === 0 && graphIssues === 0) {
-      console.log(chalk.green.bold('✅ All checks passed! SDD Harness ready.\n'));
-    } else if (issues === 0 && graphIssues > 0) {
-      console.log(chalk.yellow.bold(`⚠️  Core checks passed, but knowledge-graph has ${graphIssues} issue(s). Run /understand to refresh.\n`));
+    if (issues === 0) {
+      console.log(chalk.green.bold('✅ Core and installed adapter checks passed. Use `sdd doctor --stage <stage>` for stage capabilities.\n'));
     } else if (options.fix) {
-      console.log(chalk.yellow.bold(`⚠️  Found ${issues} issue(s). Auto-fixing...\n`));
-      const platforms = detectPlatforms(cwd);
-      await ensureDependencies(platforms, false, cwd);
-      console.log(chalk.green('✅ Auto-fix complete. Run `sdd doctor` again to verify.\n'));
+      console.log(chalk.yellow.bold(`⚠️  Found ${issues} project-file issue(s). Re-run the matching \`sdd init --adapter ... --force\`.\n`));
     } else {
-      console.log(chalk.yellow.bold(`⚠️  Found ${issues} issue(s). Run \`sdd doctor --fix\` to auto-fix, or fix manually.\n`));
+      console.log(chalk.yellow.bold(`⚠️  Found ${issues} Core/installed-adapter issue(s).\n`));
     }
   });
 
@@ -1150,6 +1247,7 @@ const STAGE_CONTRACTS = {
   release:  { next: 'archive',  artifacts: [], modes: ['manual','automated','skip'] },
   archive:  { next: null,       artifacts: [], promote: 'openspec/specs/' },
 };
+const STAGE_ORDER = Object.keys(STAGE_CONTRACTS);
 
 program
   .command('run <stage>')
@@ -1179,15 +1277,13 @@ program
         const skipRunsDir = path.join(cwd, '.sdd', 'runs', cid);
         const wfPath = path.join(skipRunsDir, 'workflow-frame.yaml');
         if (await fs.pathExists(wfPath)) {
-          let wf = await fs.readFile(wfPath, 'utf8');
-          const current = wf.match(/current:\s*(\w+)/)?.[1];
+          const current = await readWorkflowStage(wfPath);
           const archiveGate = await evaluateStageAdvanceGate({
             stage: 'archive',
             runsDir: skipRunsDir,
           });
           if (!['verify', 'release'].includes(current) || !archiveGate.pass) {
-            wf = wf.replace(/status:\s*\w+/, 'status: failed');
-            await fs.writeFile(wfPath, wf);
+            await setWorkflowGateStatus({ workflowPath: wfPath, status: 'failed' });
             const reason = !['verify', 'release'].includes(current)
               ? `current stage is ${current || 'unknown'}`
               : archiveGate.failures.map(item => item.reason).join('; ');
@@ -1195,8 +1291,13 @@ program
             process.exitCode = 2;
             return;
           }
-          wf = wf.replace(/current: \w+/, 'current: archive').replace(/status:\s*\w+/, 'status: passed');
-          await fs.writeFile(wfPath, wf);
+          await setWorkflowDeploymentMode({ workflowPath: wfPath, mode: 'skip' });
+          await advanceWorkflowState({
+            workflowPath: wfPath,
+            from: current,
+            to: 'archive',
+            reason: 'release-skip',
+          });
           console.log(chalk.green(`  ✓ workflow-frame stage → archive (skip no-deploy)`));
           // 记录 no-deploy 理由到 progress
           const prog = path.join(cwd, 'openspec', 'changes', cid, 'progress.md');
@@ -1249,8 +1350,13 @@ program
       await fs.ensureDir(path.join(changesDir, 'specs'));
       await fs.ensureDir(runsDir);
       // 实例化 workflow-frame
-      await fs.writeFile(path.join(runsDir, 'workflow-frame.yaml'),
-        `run_id: ${changeId}\nstage:\n  current: ${stage}\n  history: []\ngoal: "${options.goal || ''}"\nartifacts:\n  required: ${JSON.stringify(contract.artifacts)}\n  produced: []\ngates:\n  status: pending\n`);
+      await createWorkflowState({
+        workflowPath: path.join(runsDir, 'workflow-frame.yaml'),
+        runId: changeId,
+        stage,
+        goal: options.goal || '',
+        requiredArtifacts: contract.artifacts,
+      });
       await fs.writeFile(activeRunFile, changeId);
       console.log(chalk.green(`  ✓ openspec/changes/${changeId}/`));
       console.log(chalk.green(`  ✓ .sdd/runs/${changeId}/workflow-frame.yaml (stage=${stage})`));
@@ -1258,8 +1364,7 @@ program
     } else {
       console.log(chalk.cyan(`▶ resume run: ${changeId}`));
       if (await fs.pathExists(wfPath)) {
-        const wf = await fs.readFile(wfPath, 'utf8');
-        const current = wf.match(/current:\s*(\w+)/)?.[1];
+        const current = await readWorkflowStage(wfPath);
         if (current && current !== stage) {
           console.log(chalk.red(`  ⛔ stage entry 被阻止：workflow 当前为 ${current}，不能执行 ${stage}`));
           process.exitCode = 2;
@@ -1281,7 +1386,7 @@ program
       }
     }
     if (contract.wiki) {
-      const wp = path.join(cwd, 'llmwiki', contract.wiki);
+      const wp = path.join(getWikiHome(cwd), contract.wiki);
       await fs.ensureDir(path.dirname(wp));
       if (!await fs.pathExists(wp)) {
         await fs.writeFile(wp, `# Test Matrix\n\n| feature | unit | integration | e2e |\n|---------|------|-------------|-----|\n|  |  |  |  |\n`);
@@ -1319,9 +1424,7 @@ program
     // 推进 frame
     if (!gateOk) {
       if (await fs.pathExists(wfPath)) {
-        let wf = await fs.readFile(wfPath, 'utf8');
-        wf = wf.replace(/status:\s*\w+/, 'status: failed');
-        await fs.writeFile(wfPath, wf);
+        await setWorkflowGateStatus({ workflowPath: wfPath, status: 'failed' });
       }
       console.log(chalk.red(`\n⛔ ${stage} gate 未通过，stage 保持不变。\n`));
       process.exitCode = 2;
@@ -1357,33 +1460,75 @@ program
     if (!metricsPass) {
       // Update frame: gate exists but content not ready
       if (await fs.pathExists(wfPath)) {
-        let wf = await fs.readFile(wfPath, 'utf8');
-        wf = wf.replace(/status:\s*\w+/, 'status: pending');
-        await fs.writeFile(wfPath, wf);
+        await setWorkflowGateStatus({ workflowPath: wfPath, status: 'pending' });
       }
       console.log(chalk.cyan(`\n📌 ${stage} scaffold 完成，但内容未达标。stage 保持 ${stage}。`));
       console.log(chalk.gray(`   填充内容后重跑 sdd run ${stage} 推进，或 sdd fill ${stage} 自动生成。\n`));
+      process.exitCode = 2;
       return;
     }
 
     if (await fs.pathExists(wfPath) && contract.next) {
-      let wf = await fs.readFile(wfPath, 'utf8');
-      wf = wf.replace(/current: \w+/, `current: ${contract.next}`);
-      wf = wf.replace(/status:\s*\w+/, 'status: passed');
-      await fs.writeFile(wfPath, wf);
+      if (stage === 'release') {
+        await setWorkflowDeploymentMode({ workflowPath: wfPath, mode: options.mode });
+      }
+      await advanceWorkflowState({
+        workflowPath: wfPath,
+        from: stage,
+        to: contract.next,
+        reason: 'gate-passed',
+      });
       console.log(chalk.blue(`\n✅ ${stage} 内容达标，推进 → ${contract.next}`));
 
       // Auto-sediment stage artifacts to staging（不进 wiki/，待 MCP 提交）
       try {
         const sed = await sedimentStage(changeId, stage, cwd);
         if (sed.sediments && sed.sediments.length > 0) {
-          console.log(chalk.gray(`   📝 staged: ${sed.sediments.length} 条 → llmwiki/.staging/${stage}/（待 mcp__llmwiki__create 提交）`));
+          console.log(chalk.gray(`   📝 staged: ${sed.sediments.length} 条 → .sdd/staging/${stage}/（待 mcp__llmwiki__create 提交）`));
         }
       } catch (e) {
         // sediment failure is non-blocking
       }
     } else if (!contract.next) {
+      await completeWorkflowState({ workflowPath: wfPath, stage });
       console.log(chalk.green('\n🏁 最终 stage (archive)。workflow 完成。'));
+    }
+  });
+
+program
+  .command('rollback')
+  .description('Rollback an active workflow to an earlier stage through the CLI control plane')
+  .requiredOption('--change <id>', 'change-id to rollback')
+  .requiredOption('--to <stage>', 'earlier target stage')
+  .requiredOption('--reason <text>', 'auditable rollback reason')
+  .action(async (options) => {
+    const cwd = process.cwd();
+    try {
+      validateId(options.change, 'change-id');
+      if (!STAGE_CONTRACTS[options.to]) throw new Error(`unknown stage: ${options.to}`);
+      if (!options.reason.trim()) throw new Error('rollback reason is required');
+      const workflowPath = path.join(
+        cwd,
+        '.sdd',
+        'runs',
+        options.change,
+        'workflow-frame.yaml',
+      );
+      if (!await fs.pathExists(workflowPath)) {
+        throw new Error(`workflow-frame.yaml is missing for ${options.change}`);
+      }
+      const transition = await rollbackWorkflowState({
+        workflowPath,
+        to: options.to,
+        reason: options.reason,
+        stageOrder: STAGE_ORDER,
+      });
+      console.log(chalk.green(
+        `✅ rollback ${transition.from} → ${transition.to}; gate status reset to pending`,
+      ));
+    } catch (error) {
+      console.error(chalk.red(`❌ rollback failed: ${error.message}`));
+      process.exitCode = 2;
     }
   });
 
@@ -1522,8 +1667,11 @@ program
     .option('--rebuild', 'Wipe and rebuild', false)
     .action(async (options) => {
       const cwd = process.cwd();
-      const wikiDir = path.join(cwd, 'llmwiki');
-      if (options.rebuild && await fs.pathExists(wikiDir)) await fs.remove(wikiDir);
+      const wikiDir = getWikiHome(cwd);
+      if (options.rebuild && await fs.pathExists(wikiDir)) {
+        console.log(chalk.yellow(`  ⚠️ --rebuild 将删除共享 wiki: ${wikiDir}（影响该 project 所有 worktree）`));
+        await fs.remove(wikiDir);
+      }
       const subs = ['raw','wiki/sources','wiki/concepts','wiki/entities','wiki/outputs','wiki/product/requirements','wiki/product/acceptance-criteria','wiki/engineering','wiki/testing/cases','wiki/testing/matrices','wiki/_shared/glossary','wiki/_shared/traceability'];
       for (const d of subs) await fs.ensureDir(path.join(wikiDir, d));
       if (!await fs.pathExists(path.join(wikiDir, 'index.md'))) await fs.writeFile(path.join(wikiDir, 'index.md'), '# LLMWiki Index\n');
@@ -1532,11 +1680,11 @@ program
       const ks = discoverKnowledgeSources(cwd);
       const ksCount = ks.docs.length + ks.specs.length + ks.steering.length + ks.agentDocs.length;
       if (ksCount > 0 || ks.catalog || ks.domainGraph || ks.openspecConfig) {
-        const copyResult = await copySourcesToRaw(cwd, ks);
-        console.log(chalk.green(`✅ ${copyResult.copied} 个源 → llmwiki/raw/（待 ingest）`));
+        const copyResult = await copySourcesToRaw(cwd, wikiDir, ks);
+        console.log(chalk.green(`✅ ${copyResult.copied} 个源 → ${wikiDir}/raw/（待 ingest）`));
         console.log(chalk.gray('   下一步：sdd wiki ingest 或 session 内用 mcp__llmwiki__create'));
       } else {
-        console.log(chalk.gray('ℹ️  无已有知识源（文档放入 llmwiki/raw/ 后 sdd wiki ingest）'));
+        console.log(chalk.gray(`ℹ️  无已有知识源（文档放入 ${wikiDir}/raw/ 后 sdd wiki ingest）`));
       }
       console.log();
     });
@@ -1548,12 +1696,13 @@ program
     .option('--promote', 'ingest 后把 sources 派生为下游角色知识（§5 ingest ④更新下游）', false)
    .action(async (options) => {
       const cwd = process.cwd();
-      const rawDir = path.join(cwd, 'llmwiki', 'raw');
-      const sourcesDir = path.join(cwd, 'llmwiki', 'wiki', 'sources');
+      const wikiHome = getWikiHome(cwd);
+      const rawDir = path.join(wikiHome, 'raw');
+      const sourcesDir = path.join(wikiHome, 'wiki', 'sources');
       await fs.ensureDir(rawDir); await fs.ensureDir(sourcesDir);
       const today = new Date().toISOString().slice(0, 10);
       const rawFiles = options.source ? [options.source + '.md'] : (await fs.readdir(rawDir).catch(() => [])).filter(f => f.endsWith('.md'));
-      if (rawFiles.length === 0) { console.log(chalk.yellow('⚠️ raw/ 无 .md 源文件。先把源文档放入 llmwiki/raw/')); process.exit(1); }
+      if (rawFiles.length === 0) { console.log(chalk.yellow(`⚠️ raw/ 无 .md 源文件。先把源文档放入 ${rawDir}/`)); process.exit(1); }
       let ingested = 0, skipped = 0;
       for (const rf of rawFiles) {
         const rawPath = path.join(rawDir, rf); const sourcePath = path.join(sourcesDir, rf);
@@ -1567,7 +1716,7 @@ program
    type: source-summary, source_file: ${rf}, ingest_date: ${today}
    key_claims: [3-5 条关键声明], contradicts: [矛盾处无则 []], supports: [下游知识无则 []]
 3. 正文：1-2 段提炼摘要，不重复全文。
-4. 追加 ingest 记录到 ${cwd}/llmwiki/log.md：
+4. 追加 ingest 记录到 ${wikiHome}/log.md：
    ## [ingest] ${today} | ${rf}
    - key_claims: N 条 / 矛盾: X 处
 用 Write 工具写文件。立刻完成。`;
@@ -1590,8 +1739,8 @@ ${sourcesContent}
 
 ## 任务
 读 sources 的 key_claims，判断每条属于哪个角色，写入对应角色知识目录（frontmatter 必须含 raw 指回其 source 摘要）：
-- 产品相关（需求/目标/边界/用户）→ ${cwd}/llmwiki/wiki/product/REQ-<slug>.md（type: requirement, raw: ../wiki/sources/<对应source>.md）
-- 工程相关（架构/设计/决策/技术约束）→ ${cwd}/llmwiki/wiki/engineering/EN-<slug>.md（type: engineering-note, raw: ../wiki/sources/<对应source>.md）
+- 产品相关（需求/目标/边界/用户）→ ${wikiHome}/wiki/product/REQ-<slug>.md（type: requirement, raw: ../wiki/sources/<对应source>.md）
+- 工程相关（架构/设计/决策/技术约束）→ ${wikiHome}/wiki/engineering/EN-<slug>.md（type: engineering-note, raw: ../wiki/sources/<对应source>.md）
 每条知识是简短的知识视角（不是全文复制），backlink 到 source 摘要。只产出有价值的，不为凑数。用 Write。`;
         try {
           await ptyClaude(promotePrompt, { cwd, model: options.model, timeoutMs: 300000 });
@@ -1670,6 +1819,7 @@ async function evalStageMetrics(stage, changeId, cwd, options = {}) {
 }
 
 function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
+  const wikiHome = getWikiHome(cwd);
   // 替换 artifact 路径引用
   let cmd = check
     .replace(/\bfindings\.md\b/g, `"${changesDir}/findings.md"`)
@@ -1681,7 +1831,11 @@ function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
     .replace(/\btasks\.md\b/g, `"${changesDir}/tasks.md"`)
     .replace(/\bprogress\.md\b/g, `"${changesDir}/progress.md"`)
     .replace(/\breview-notes\.md\b/g, `"${runsDir}/review-notes.md"`)
-    .replace(/\btest-matrix\.md\b/g, `"${cwd}/llmwiki/wiki/testing/matrices/test-matrix.md"`)
+    .replace(/\btest-matrix\.md\b/g, `"${wikiHome}/wiki/testing/matrices/test-matrix.md"`)
+    .replace(/\bllmwiki\/wiki\/testing\/cases\b/g, `"${wikiHome}/wiki/testing/cases"`)
+    .replace(/\bllmwiki\/wiki\/engineering\b/g, `"${wikiHome}/wiki/engineering"`)
+    .replace(/\bllmwiki\/wiki\/product\b/g, `"${wikiHome}/wiki/product"`)
+    .replace(/\bllmwiki\/wiki\/testing\b/g, `"${wikiHome}/wiki/testing"`)
     .replace(/(?<!openspec\/)specs\//g, `"${changesDir}/specs/"`)
     .replace(/<slug>/g, changeId.split('-').slice(0, -1).join('-') || changeId);
 
@@ -2226,7 +2380,7 @@ ${metricsReq}
     const contract = STAGE_CONTRACTS[stage];
     const targets = [];
     for (const a of contract.artifacts) targets.push(`${changesDir}/${a}`);
-    if (contract.wiki) targets.push(`${cwd}/llmwiki/${contract.wiki}`);
+    if (contract.wiki) targets.push(`${getWikiHome(cwd)}/${contract.wiki}`);
    if (contract.runtime) targets.push(`${runsDir}/${contract.runtime}`);
     // test 阶段：通用化——扫描真实 src（不硬编码文件名）+ steering 测试框架 + specs 派生测试
     // 架构 §5.4：归一化测试用例写入 LLMWiki（markdown + frontmatter）
@@ -2265,9 +2419,9 @@ ${srcStructure}
 ${srcSource || '(未能读取)'}
 
 生成：
-1. test matrix: ${cwd}/llmwiki/wiki/testing/matrices/test-matrix.md（feature × test type 表格）
+1. test matrix: ${getWikiHome(cwd)}/wiki/testing/matrices/test-matrix.md（feature × test type 表格）
 2. 单测文件：为 src/ 下核心模块生成对应测试文件，**基于上方源码结构决定文件名，不要预设 world.test.ts/camera.test.ts**
-3. 归一化用例（§5.4）：每个写 ${cwd}/llmwiki/wiki/testing/cases/TC-<slug>.md，frontmatter: type: test-case, id: TC-<slug>, spec, status, suite
+3. 归一化用例（§5.4）：每个写 ${getWikiHome(cwd)}/wiki/testing/cases/TC-<slug>.md，frontmatter: type: test-case, id: TC-<slug>, spec, status, suite
 4. 测试配置：按 steering（JS→vitest.config.ts，Python→conftest.py）
 5. manifest：package.json scripts 含 test 或 pyproject.toml 含 pytest 配置
 真实测试，覆盖 specs 核心功能，断言基于上方源码的真实行为。用 Write 立刻完成。`;

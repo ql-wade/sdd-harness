@@ -81,9 +81,9 @@ metadata:
 #   ✅ test obligations 已声明（每个 task 标注验证方式）
 ```
 
-### Step 6: Stage 推进（sdd-harness）
+### Step 6: 请求 CLI 状态转换
 
-gate passed → workflow-frame stage.current = "test" → progress.md 追加。
+执行 `sdd run dev --change <id>`；只有 CLI gate 通过后才会转换到 test 并记录 history。
 
 ---
 
@@ -96,4 +96,4 @@ gate passed → workflow-frame stage.current = "test" → progress.md 追加。
 ## 写入
 
 - `openspec/changes/<id>/specs/`、`design.md`、`tasks.md`
-- `.sdd/runs/<id>/workflow-frame.yaml`（stage 推进）
+- CLI control-plane transition receipt

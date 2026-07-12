@@ -112,6 +112,17 @@ function passingAudit(project) {
   });
 }
 
+test('content metric failure keeps the stage and exits non-zero', () => {
+  const { project, changesDir, runsDir } = makeProject('grill');
+  fs.writeFileSync(path.join(changesDir, 'findings.md'), '# Findings\n\ninsufficient\n');
+
+  const result = runStage(project, 'grill');
+
+  assert.equal(result.status, 2, result.stderr || result.stdout);
+  assert.match(result.stdout, /内容未达标/);
+  assert.equal(currentStage(runsDir), 'grill');
+});
+
 test('review gate blocks advancement when verdict is not ready', () => {
   const { project, runsDir } = makeProject('review');
   fs.writeFileSync(
@@ -636,3 +647,31 @@ for (const stage of ['release', 'archive']) {
     assert.equal(currentStage(runsDir), stage);
   });
 }
+
+test('archive marks the workflow run completed after revalidating current evidence', () => {
+  const { project, changesDir, runsDir } = makeProject('archive');
+  fs.writeFileSync(path.join(changesDir, 'tasks.md'), '# Tasks\n- [x] T1 complete\n');
+  const evidencePath = writeProbeEvidence(runsDir);
+  fs.writeFileSync(
+    path.join(runsDir, 'probe-report.json'),
+    JSON.stringify({
+      schemaVersion: 1,
+      projectDir: project,
+      pass: true,
+      issues: [],
+      evidencePath,
+      evidenceSha256: sha256File(evidencePath),
+    }),
+  );
+  fs.writeFileSync(
+    path.join(runsDir, 'evidence-audit-report.json'),
+    passingAudit(project),
+  );
+
+  const result = runStage(project, 'archive');
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const workflow = fs.readFileSync(path.join(runsDir, 'workflow-frame.yaml'), 'utf8');
+  assert.match(workflow, /^run_status:\s*completed$/m);
+  assert.equal(currentStage(runsDir), 'archive');
+});

@@ -88,9 +88,9 @@ metadata:
 #   ✅ 若触发，2 次拒绝的 auto-debug 已完成
 ```
 
-### Step 7: Stage 推进（sdd-harness）
+### Step 7: 请求 CLI 状态转换
 
-gate passed → workflow-frame stage.current = "verify" → progress.md 追加。
+执行 `sdd run review --change <id>`；只有 CLI gate 通过后才会转换到 verify 并记录 history。
 
 ---
 
@@ -104,4 +104,4 @@ gate passed → workflow-frame stage.current = "verify" → progress.md 追加�
 
 - `.sdd/runs/<id>/review-notes.md`
 - `openspec/changes/<id>/findings.md`（learnings 传播）
-- `.sdd/runs/<id>/workflow-frame.yaml`（stage 推进）
+- CLI control-plane transition receipt

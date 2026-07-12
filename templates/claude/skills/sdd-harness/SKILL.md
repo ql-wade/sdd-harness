@@ -1,6 +1,6 @@
 ---
 name: sdd-harness
-description: SDD Harness 共享 skill —— artifact 读写、stage 推进、gate 检查、knowledge-pack 组装、LLMWiki 操作。9 个 stage skill 的公共底层。
+description: SDD Harness Claude reference adapter —— artifact 生产、CLI control-plane 请求、knowledge-pack 组装与 LLMWiki 操作。
 license: MIT
 compatibility: 需要 OpenSpec CLI、Trinity skills、planning-with-files、Superpowers
 metadata:
@@ -10,36 +10,19 @@ metadata:
 
 # sdd-harness（共享 skill）
 
-SDD Harness 的公共逻辑层。9 个 stage skill（sdd-grill … sdd-archive）是薄壳，各自只做阶段特定工作，公共操作全部委托给本 skill。
+SDD Harness 的 Claude reference adapter 公共层。`sdd` CLI 是唯一 workflow control plane；本 skill 与 9 个 stage skills 只读取状态、生产 artifacts、调用外部能力，并通过 `sdd run <stage>` 请求 CLI 复核和转换。
 
 ---
 
-## 0. Bootstrap Run（首次进入一个 change 时调用）
+## 0. Bootstrap Run（委托 CLI）
 
-grill 阶段 Step 1（或其他阶段发现 active-run 缺失时）调本节，创建 run 状态：
+grill 阶段 Step 1（或其他阶段发现 active-run 缺失时）只能通过 CLI 创建 run：
 
 ```bash
-# 1. 生成 change-id（slug + 4 位 hash，保证 worktree 并发唯一）
-change_id="<slug>-<4位 hash>"
-
-# 2. 创建 canonical change 目录（Trinity 域，进 git）
-mkdir -p openspec/changes/$change_id/specs
-# trinity-new 脚手架生成 proposal/specs/design/tasks 占位 + tracking 文件
-
-# 3. 创建 governance runtime（SDD 域，gitignore）
-mkdir -p .sdd/runs/$change_id
-# 从 templates/sdd-harness/workflow-frame.yaml 实例化，填入:
-#   run_id: $change_id
-#   stage.current: grill
-#   goal: <来自用户输入>
-#   artifacts.required: [findings.md]  # grill 的必产
-#   gates.status: pending
-
-# 4. 写 active-run 指针（hook 和后续 stage 读它定位当前 run）
-echo "$change_id" > .sdd/active-run
-
-# 5. 生成首轮 knowledge-pack
-# 本 skill 内联组装（读 OpenSpec + LLMWiki + git diff）→ .sdd/runs/$change_id/knowledge-pack.md
+sdd run grill --goal "<来自用户输入>" --slug "<slug>"
+change_id=$(cat .sdd/active-run)
+# CLI 创建 canonical change、governance runtime 与 active-run；
+# scaffold 未达指标时保持 grill/pending，属于正常 bootstrap 结果。
 ```
 
 **幂等**：若 `.sdd/active-run` 已存在且对应 workflow-frame.yaml 的 stage 与当前请求一致，跳过 bootstrap 直接 resume。
@@ -68,16 +51,12 @@ change_id=$(cat .sdd/active-run 2>/dev/null || echo "")
 
 ---
 
-## 2. Stage 推进
+## 2. Stage 状态转换请求
 
-```yaml
-# 推进到下一 stage
-# 前条件: gate 通过
-# 操作:
-#   1. workflow-frame: stage.current = <next_stage>
-#   2. workflow-frame: stage.history.append({from, to, at, reason})
-#   3. workflow-frame: artifacts.required = <next_stage 的必产 artifact 列表>
-#   4. progress.md: append "stage advance: <from> → <to>"
+```bash
+# stage skill 完成 artifact 后请求 CLI 复核。
+sdd run <stage> --change "$change_id"
+# CLI 独占：gate status、stage current/history、run_status 与 active-run。
 ```
 
 ### Stage 顺序
@@ -90,18 +69,21 @@ release mode=skip 时：verify → archive（跳过 release）。
 
 ### 回退
 
-```
-stage.current = <target_stage>
-stage.history.append({from, to, at, reason: "...回退原因..."})
-当前 stage 已产出的 artifact → artifacts.superseded
-progress.md: append "reverted: <from> → <to>, reason: ..."
+```bash
+sdd rollback --change "$change_id" --to "<target_stage>" --reason "<回退原因>"
 ```
 
 ---
 
-## 3. Gate 检查（轻量：只查存在 + verdict）
+## 3. Gate 检查（委托 CLI）
 
-每个 stage 的 gate 规则见各自 stage contract。公共检查逻辑：
+每个 stage 的 gate 规则见各自 stage contract。Adapter 不自行宣布 gate passed，必须调用：
+
+```bash
+sdd run <stage> --change "$change_id"
+```
+
+CLI 公共检查逻辑：
 
 ```yaml
 # 输入: stage name
@@ -157,10 +139,9 @@ build_knowledge_pack(run_id, phase, change_files)
 
 LLMWiki 的知识沉淀分两层，职责分离：
 
-**自动沉淀（CLI 层）**：`sdd run` 在 stage 推进成功后自动触发 `sedimentStage()`，
-将阶段产出物写入 llmwiki/ 对应目录。agent **无需手动写 wiki**——只需把产出物
-写到 `openspec/changes/<id>/` 下（findings/proposal/design/tasks/progress 等），
-sediment 会自动提取并归档。
+**自动沉淀（CLI 层）**：`sdd run` 在 stage 转换成功后自动触发 `sedimentStage()`，
+将阶段产出物写入 `.sdd/staging/<stage>/`。agent 无需直接写共享 wiki；archive
+阶段通过 LLMWiki MCP 提交 staging，避免绕过 SQLite、FTS 与引用图索引。
 
 | 来源 stage | 自动沉淀到 | 触发时机 |
 |-----------|-----------|---------|
@@ -288,7 +269,7 @@ Knowledge-graph.json 由 Understand-Anything 的 agent pipeline 在 init step 6 
 
 ### 依赖声明
 
-Understand-Anything 已在 core 依赖中（init step 6 生成 knowledge-graph.json）。init 同时安装其 skills（`understand-chat` / `understand-diff` / `understand-domain`）到平台 skills 目录。各阶段 agent 通过 `sdd-harness.query_graph()` 获得 code graph 能力，无需了解底层 Understand-Anything 的具体调用方式。
+Understand-Anything 属于显式 `graph` capability，不是 Core 隐式依赖。通过 `sdd init --adapter claude --with graph` 安装；各阶段先运行 `sdd doctor --stage <stage>`，只有 contract 要求且 capability available 时才查询图谱。
 
 ---
 
@@ -296,12 +277,12 @@ Understand-Anything 已在 core 依赖中（init step 6 生成 knowledge-graph.j
 
 | stage skill | 调用 sdd-harness 的操作 |
 |-------------|----------------------|
-| sdd-grill | 加载 run、knowledge-pack 组装、findings 写、glossary 写 LLMWiki |
-| sdd-product | 加载 run、gate 检查、proposal/AC 写、LLMWiki product/ 写 |
-| sdd-dev | 加载 run、gate 检查（dev gate）、Trinity new/continue |
-| sdd-test | 加载 run、gate 检查（test gate）、LLMWiki testing/cases 写 |
-| sdd-code | 加载 run、gate 检查（code gate）、Trinity apply、progress 更新 |
-| sdd-review | 加载 run、gate 检查（review gate）、review-notes 写、learnings 传播 |
-| sdd-verify | 加载 run、gate 检查（verify gate）、evidence 汇总、LLMWiki coverage 查 |
-| sdd-release | 加载 run、gate 检查（release gate）、release note 写 |
-| sdd-archive | 加载 run、gate 检查（archive gate）、Trinity archive、LLMWiki writeback |
+| sdd-grill | 加载 run、knowledge-pack、findings；请求 `sdd run grill` |
+| sdd-product | proposal/AC；请求 `sdd run product` |
+| sdd-dev | Trinity new/continue；请求 `sdd run dev` |
+| sdd-test | LLMWiki testing/cases；请求 `sdd run test` |
+| sdd-code | Trinity apply、progress；请求 `sdd run code` |
+| sdd-review | review-notes、learnings；请求 `sdd run review` |
+| sdd-verify | evidence、coverage；请求 `sdd run verify` |
+| sdd-release | release note；请求 `sdd run release` |
+| sdd-archive | Trinity archive、writeback；请求 `sdd run archive` |

@@ -31,3 +31,20 @@ resolve_sdd_project_dir() {
 }
 
 export SDD_PROJECT_DIR="$(resolve_sdd_project_dir)"
+
+resolve_sdd_wiki_home() {
+  if [ -n "${SDD_WIKI_HOME:-}" ]; then
+    echo "$SDD_WIKI_HOME"
+    return 0
+  fi
+  local sdd_home="${SDD_HOME:-$HOME/.sdd}"
+  local common main_repo slug
+  common=$(git -C "$SDD_PROJECT_DIR" rev-parse --git-common-dir 2>/dev/null || true)
+  if [ -n "$common" ]; then
+    main_repo=$(cd "$SDD_PROJECT_DIR/$common/.." 2>/dev/null && pwd)
+  fi
+  slug=$(basename "${main_repo:-$SDD_PROJECT_DIR}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_-]/-/g')
+  echo "$sdd_home/wiki/${slug:-default}"
+}
+
+export SDD_WIKI_HOME_RESOLVED="$(resolve_sdd_wiki_home)"

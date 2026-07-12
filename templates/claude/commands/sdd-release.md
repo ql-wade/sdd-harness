@@ -15,6 +15,6 @@
 
 - mode：manual（deploy checklist）/ automated（触发 pipeline + 记录结果）/ skip（记录 no-deploy 理由）
 - 硬前置：verify gate 已过
-- skip 模式：workflow-frame stage 指针从 verify 直接跳 archive
+- skip 模式：调用 `sdd run release --mode skip`，由 CLI 重新验证后推进到 archive
 - 产出：release note / changelog / deploy 结果 / 回滚路径
 - 之后推进到 `/sdd:archive`

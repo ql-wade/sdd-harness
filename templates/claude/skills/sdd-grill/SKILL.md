@@ -35,7 +35,7 @@ metadata:
 ### 3. 沉淀（委托 sdd-harness）
 - 写 `openspec/changes/<id>/findings.md`（术语/边界/ADR候选/未解决问题）
 - 写 `openspec/changes/<id>/brief.md`（discovery 路由决策：new|extend|direct_impl|decompose）
-- 调 sdd-harness Gate Check → passed 后推进 stage→product
+- 执行 `sdd run grill --change <id>` 请求 CLI control plane 复核 gate 并转换到 product
 
 ---
 

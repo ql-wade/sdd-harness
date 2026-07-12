@@ -185,9 +185,9 @@ Canvas/WebGL 项目还必须避免 resize 正反馈：不要用 canvas 自身
 #   ✅ risks 已记录
 ```
 
-### Step 8: Stage 推进（sdd-harness）
+### Step 8: 请求 CLI 状态转换
 
-gate passed → workflow-frame stage.current = "release" → progress.md 追加。
+执行 `sdd run verify --change <id>`；只有 CLI 重新验证当前证据后才会转换到 release 并记录 history。
 
 ---
 
@@ -205,4 +205,4 @@ gate passed → workflow-frame stage.current = "release" → progress.md 追加�
 - `.sdd/runs/<id>/probe-profile`（可选；声明本 run 必须使用的 probe profile）
 - `.sdd/runs/<id>/probe-report.json`（确定性 gate 报告）
 - `.sdd/runs/<id>/evidence-audit-report.json`（磁盘/命令输出一致性 gate 报告）
-- `.sdd/runs/<id>/workflow-frame.yaml`（stage 推进）
+- CLI control-plane transition receipt

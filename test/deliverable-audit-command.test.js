@@ -17,18 +17,23 @@ function makeProject(opts = {}) {
   const changeDir = opts.archived
     ? path.join(project, 'openspec', 'changes', 'archive', `2026-01-01-${run}`)
     : path.join(project, 'openspec', 'changes', run);
-  const wikiDir = path.join(project, 'llmwiki', 'wiki');
+  const wikiHome = path.join(project, '.sdd', 'wiki');
+  const wikiDir = path.join(wikiHome, 'wiki');
   fs.mkdirSync(runsDir, { recursive: true });
   fs.mkdirSync(changeDir, { recursive: true });
   fs.mkdirSync(wikiDir, { recursive: true });
-  return { project, run, runsDir, changeDir, wikiDir };
+  return { project, run, runsDir, changeDir, wikiHome, wikiDir };
 }
 
 function runAudit(project, run, extraArgs = []) {
   return spawnSync(
     process.execPath,
     [cliPath, 'deliverable-audit', '--project', project, '--run', run, '--json', ...extraArgs],
-    { cwd: repoRoot, encoding: 'utf8' },
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: { ...process.env, SDD_WIKI_HOME: path.join(project, '.sdd', 'wiki') },
+    },
   );
 }
 

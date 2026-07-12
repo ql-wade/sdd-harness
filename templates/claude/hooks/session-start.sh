@@ -51,7 +51,7 @@ if not os.path.isdir(change_dir):
             if entry == change_id or entry.endswith('-' + change_id):
                 change_dir = os.path.join(archive_base, entry)
                 break
-wiki_dir = os.path.join(project_dir, 'llmwiki', 'wiki', '')
+wiki_dir = os.path.join(os.environ.get('SDD_WIKI_HOME_RESOLVED', ''), 'wiki', '')
 
 CHECKS = {
     'grill': [('findings.md', os.path.join(change_dir, 'findings.md'), 'size>50')],

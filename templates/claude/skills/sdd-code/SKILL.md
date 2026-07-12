@@ -88,9 +88,9 @@ metadata:
 #   ✅ progress.md 已更新
 ```
 
-### Step 6: Stage 推进（sdd-harness）
+### Step 6: 请求 CLI 状态转换
 
-gate passed → workflow-frame stage.current = "review" → progress.md 追加。
+执行 `sdd run code --change <id>`；只有 CLI gate 通过后才会转换到 review 并记录 history。
 
 ---
 
@@ -106,4 +106,4 @@ gate passed → workflow-frame stage.current = "review" → progress.md 追加�
 - `openspec/changes/<id>/progress.md`
 - `.sdd/runs/<id>/code-test-output.txt`
 - `.sdd/runs/<id>/code-test-report.json`
-- `.sdd/runs/<id>/workflow-frame.yaml`（stage 推进）
+- CLI control-plane transition receipt

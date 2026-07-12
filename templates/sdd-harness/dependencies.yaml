@@ -1,90 +1,69 @@
-# SDD Harness 依赖清单
-# 由 sdd doctor 读取，每项含安装命令 + 检测命令
+# SDD Harness capability manifest
 #
-# 两层架构（LLM 必须理解）:
-#   1. system_tools    — 全局 CLI，brew/npm 安装
-#   2. session_layer   — 随 AI 工具 session 启停，不进 docker
-#
-# init 安装顺序: system_tools → session_layer → skills
+# 安装原则：Core 保持轻量；Adapter 与 Stage 能力显式请求、按需检测。
+# `sdd doctor --stage <name> --json` 是运行时权威结果。缺失工具必须报告
+# missing；只有确实不适用且提供 reason 时才能标记 not-applicable。
 
-system_tools:
-  core:
-    - name: Node.js
+core:
+  required:
+    - id: node
+      name: Node.js
       check: node -v
-      install: "brew install node / apt install nodejs"
       min_version: "18.0.0"
-
-    - name: Git
+    - id: git
+      name: Git
       check: git --version
-      install: "brew install git / apt install git"
 
-    - name: Docker
-      check: docker --version
-      install: "Docker Desktop (macOS) / docker engine (Linux)"
+adapters:
+  claude:
+    support: reference
+    install: "sdd init --adapter claude"
+    assets: [skills, commands, hooks]
+  codex:
+    support: preview
+    install: "sdd init --adapter codex"
+    assets: [skills]
+  opencode:
+    support: preview
+    install: "sdd init --adapter opencode"
+    assets: [skills]
 
-    - name: OpenSpec CLI
-      check: openspec --version
-      install: brew install openspec
+optional_install_sets:
+  wiki:
+    install: "sdd init --adapter claude --with wiki"
+    provides: [knowledge-base]
+  graph:
+    install: "sdd init --adapter claude --with graph"
+    provides: [code-graph]
+  review:
+    install: "sdd init --adapter claude --with review"
+    provides: [architecture-review, line-review]
 
-    - name: open-code-review
-      check: ocr --version
-      install: npm i -g @alibaba-group/open-code-review
+stage_capabilities:
+  grill: [spec-engine, agent-host, discovery]
+  product: [product-design]
+  dev: [spec-engine, workflow-executor, code-graph]
+  test: [project-tests, knowledge-base]
+  code: [workflow-executor, project-tests]
+  review: [architecture-review, line-review]
+  verify: [project-tests, runtime-probe, performance-audit, knowledge-base, evidence-audit]
+  release: [deploy]
+  archive: [spec-engine, knowledge-base]
 
-  skills:
-    - name: Superpowers
-      check: "ls ~/.claude/skills/superpowers/agents/code-reviewer.md"
-      install: "git clone https://github.com/obra/superpowers ~/.claude/skills/superpowers"
-
-    - name: planning-with-files
-      check: "ls ~/.claude/skills/planning-with-files/SKILL.md"
-      install: "git clone https://github.com/OthmanAdi/planning-with-files ~/.claude/skills/planning-with-files"
-
-    - name: grill-me
-      check: "ls ~/.claude/skills/grill-me/SKILL.md"
-      install: "sdd init 自动安装（从 mattpocock/skills 写 grill-me + grilling SKILL.md）"
-
-    - name: grilling
-      check: "ls ~/.claude/skills/grilling/SKILL.md"
-      install: "sdd init 自动安装（grill-me 的底层 grilling 方法论）"
-
-session_layer:
-  - name: Understand-Anything
-    layer: 会话内 agent pipeline
-    check: "ls .understand-anything/knowledge-graph.json"
-    install: "sdd graph --install（clone UA + install.sh）"
-    provides:
-      - "代码结构知识图谱（nodes/edges/layers）"
-      - "impact analysis、boundary check、domain mapping"
-    trigger: "在 Claude Code 会话内执行 /understand"
-    required_by: [dev, code, review, test, verify]
-    fallback: "缺失时 SDD 阶段 agent 依赖 Understand-Anything + LLMWiki"
-
-  - name: LLMWiki MCP
-    layer: 会话内 MCP 子进程
-    check: "mcp 连通检查（.mcp.json 中 llmwiki 条目）"
-    install: "sdd init 自动 clone + venv + 注册 MCP"
-    provides:
-      - "知识库读写（product/engineering/testing）"
-      - "术语表、测试用例归一化、知识沉淀"
-    required_by: [test, archive]
-
-  # 注：sdd-context-mcp 已移除（v2）。knowledge-pack 组装下沉到 sdd-harness skill §4。
-  # 不再有独立 context MCP——避免 stub 依赖 + 与 skill 职责重叠。
-
-optional:
-  - name: Playwright MCP
-    layer: 会话内
-    check: "mcp 连通检查"
-    install: npx playwright install
-    required_by: [verify]
-
-  - name: chrome-devtools MCP
-    layer: 会话内
-    check: "mcp 连通检查"
-    install: "MCP config 注册"
-    required_by: [verify]
-
-  - name: GitHub MCP
-    layer: 会话内
-    check: "mcp 连通检查"
-    install: "MCP config 注册 + token"
+tool_hints:
+  spec-engine:
+    check: openspec --version
+    install: brew install openspec
+  line-review:
+    check: ocr llm test
+    install: npm i -g @alibaba-group/open-code-review
+  code-graph:
+    check: ".understand-anything/knowledge-graph.json contains nodes"
+    install: "sdd graph --install"
+  knowledge-base:
+    check: ".mcp.json contains mcpServers.llmwiki"
+    install: "sdd init --adapter claude --with wiki"
+  runtime-probe:
+    check: "Browser/Playwright adapter is callable and emits probe evidence"
+  deploy:
+    check: "project deploy adapter or an explicit not-applicable reason"

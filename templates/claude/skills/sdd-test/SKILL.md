@@ -81,9 +81,9 @@ metadata:
 #   ✅ coverage gaps 已记录
 ```
 
-### Step 6: Stage 推进（sdd-harness）
+### Step 6: 请求 CLI 状态转换
 
-gate passed → workflow-frame stage.current = "code" → progress.md 追加。
+执行 `sdd run test --change <id>`；只有 CLI gate 通过后才会转换到 code 并记录 history。
 
 ---
 
@@ -97,4 +97,4 @@ gate passed → workflow-frame stage.current = "code" → progress.md 追加。
 
 - LLMWiki `wiki/testing/cases/TC-*.md`（带 frontmatter）
 - LLMWiki `wiki/testing/matrices/`（test matrix）
-- `.sdd/runs/<id>/workflow-frame.yaml`（stage 推进）
+- CLI control-plane transition receipt

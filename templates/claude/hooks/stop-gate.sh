@@ -3,7 +3,7 @@
 # session 结束时执行
 #
 # 三层检查：
-#   1. workflow-frame gate status（agent 自声明）
+#   1. workflow-frame gate status（CLI control plane 写入）
 #   2. deliverable-audit 独立验证（系统证明，不信自声明）
 #   3. expected gap 提醒（非阻断）
 #
@@ -75,7 +75,7 @@ if not os.path.isdir(change_dir):
                 change_dir = os.path.join(archive_base, entry)
                 break
 
-wiki_dir = os.path.join(project_dir, 'llmwiki', 'wiki', '')
+wiki_dir = os.path.join(os.environ.get('SDD_WIKI_HOME_RESOLVED', ''), 'wiki', '')
 
 # 按 stage 定义 required 检查
 CHECKS = {

@@ -77,9 +77,9 @@ metadata:
 #   ✅ progress 有记录
 ```
 
-### Step 6: Stage 推进（sdd-harness）
+### Step 6: 请求 CLI 状态转换
 
-gate passed → workflow-frame stage.current = "dev" → progress.md 追加推进日志。
+执行 `sdd run product --change <id>`；只有 CLI gate 通过后才会转换到 dev 并记录 history。
 
 ---
 
@@ -95,4 +95,4 @@ gate passed → workflow-frame stage.current = "dev" → progress.md 追加推�
 - `openspec/changes/<id>/acceptance-criteria.md`
 - `openspec/changes/<id>/functional-test-draft.yaml`
 - LLMWiki `wiki/product/requirements/REQ-*.md`、`wiki/product/acceptance-criteria/AC-*.md`
-- `.sdd/runs/<id>/workflow-frame.yaml`（stage 推进）
+- CLI control-plane transition receipt

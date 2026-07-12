@@ -1,0 +1,36 @@
+name: SDD live integration
+
+on:
+  schedule:
+    - cron: "17 18 * * *"
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  live-integration:
+    runs-on: [self-hosted, sdd-live]
+    timeout-minutes: 90
+    env:
+      SDD_LIVE_FIXTURE: ${{ vars.SDD_LIVE_FIXTURE }}
+      SDD_LIVE_DRIVER: ${{ vars.SDD_LIVE_DRIVER }}
+      SDD_LIVE_OUTPUT: ${{ github.workspace }}/reports/live-e2e
+      SDD_LIVE_DRIVER_TIMEOUT_MS: "3600000"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Run real Live Integration E2E
+        run: npm run test:e2e:live:nightly
+      - name: Upload receipts and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-e2e-${{ github.run_id }}
+          path: reports/live-e2e
+          if-no-files-found: error

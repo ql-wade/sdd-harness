@@ -44,7 +44,7 @@ metadata:
 #   - automated: 触发 pipeline + 记录 result
 #   - skip:      无需部署（纯 spec/docs/refactor，或由外部 CI 部署）→ 记录 no-deploy reason
 #
-# 选定后写 workflow-frame.yaml: deploy_mode = <manual|automated|skip>
+# 选定后只在 release-note.md / progress.md 记录选择；workflow-frame 的 deploy_mode 由 `sdd run release --mode ...` 写入
 ```
 
 ### Step 3: 执行（按 mode 分支）
@@ -98,12 +98,12 @@ metadata:
 #   ✅ 非 skip: rollback path 已记录
 ```
 
-### Step 6: Stage 推进（sdd-harness）
+### Step 6: 请求 CLI 状态转换
 
 ```yaml
-# 非 skip: gate passed → workflow-frame stage.current = "archive"
-# skip:    gate passed → workflow-frame stage 指针直接跳 verify → archive
-# progress.md 追加推进日志
+# 非 skip: sdd run release --change <id> --mode manual|automated
+# skip:    sdd run release --change <id> --mode skip
+# 只有 CLI 重新验证 review、tasks、probe 与 evidence 后才会转换并记录 history
 ```
 
 ---
@@ -120,4 +120,4 @@ metadata:
 - rollback path 或 no-op（skip）
 - skip mode: no-deploy reason
 - `openspec/changes/<id>/progress.md`
-- `.sdd/runs/<id>/workflow-frame.yaml`（stage 推进）
+- CLI control-plane transition receipt
