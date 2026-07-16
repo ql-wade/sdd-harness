@@ -34,6 +34,30 @@ npx sdd-harness init    # 一键全装依赖 + LLMWiki MCP + 9 skills/commands/h
 /sdd:grill "加个用户认证功能"
 ```
 
+### Codex 本地快速开始
+
+```powershell
+cd your-project
+sdd init --platform codex --skip-dependencies
+sdd run grill --slug user-auth --goal "增加用户认证"
+sdd fill grill --runner auto
+```
+
+Codex 项目 skills 安装到官方发现目录 `.agents/skills/`（[Build skills](https://learn.chatgpt.com/docs/build-skills)）。初始化会在 `AGENTS.md` 中维护一个带边界标记的简短 SDD Harness 段落（[AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)）；不会创建 Claude 项目目录，也不会创建或覆盖 `.codex/config.toml`。
+
+在 Codex 对话中，`--runner auto` 会选择 `session`：CLI 将 handoff 写入 `.sdd/runs/<run-id>/`，打印应调用的 `$sdd-<stage>` skill，并以 exit 3 返回，表示等待当前 agent 执行。它不会把等待状态伪装成成功，也不会隐式调用 Claude。
+
+需要独立 headless 进程时，显式选择 Codex runner：
+
+```powershell
+sdd fill grill --runner codex --agent-bin "C:\absolute\path\to\codex.exe"
+sdd graph --refresh --runner codex --agent-bin "C:\absolute\path\to\codex.exe"
+```
+
+也可设置 `SDD_CODEX_BIN`。实际调用形式为 `codex exec --ephemeral -C <project> -s workspace-write -`。`sdd graph` 不带 `--refresh` 时仅报告健康状态，不启动 agent。
+
+Windows 本地升级前建议备份全局安装目录和 `sdd`, `sdd.cmd`, `sdd.ps1` shim。回滚时先卸载当前包，再恢复备份目录与 shim，最后运行 `sdd --version` 和一个只读 `sdd check` 验证。不要在活跃业务仓库中做写入型 smoke test；使用临时副本或 worktree。
+
 ## 差异化（相对 cc-sdd）
 
 - **知识闭环**：LLMWiki MCP（真实可用）—— spec→code→test→archive→knowledge
@@ -53,9 +77,14 @@ npx sdd-harness init    # 一键全装依赖 + LLMWiki MCP + 9 skills/commands/h
 
 ```bash
 sdd init              # 一键初始化（装依赖 + LLMWiki + 落 SDD 层）
+sdd init --platform codex --skip-dependencies
+                      # 仅安装 Codex 项目资产，不安装外部依赖
 sdd init --force      # 覆盖已存在文件
 sdd doctor            # 健康检查
 sdd graph --install   # 按需装 Understand-Anything + 生成 code graph
+sdd graph             # 只读健康报告，不启动 agent
+sdd graph --refresh --runner session|claude|codex
+sdd fill <stage> --runner auto|session|claude|codex
 sdd wiki init         # 重建 LLMWiki 骨架
 sdd probe --project . --evidence .sdd/runs/<id>/probe-evidence.json --json
                       # 判定 Browser/Playwright 采集的 runtime evidence

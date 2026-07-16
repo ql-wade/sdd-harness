@@ -29,7 +29,7 @@ metadata:
 读 `.sdd/runs/<id>/workflow-frame.yaml` → 确认 stage=grill、goal。
 
 ### 2. 澄清（委托 grill-me）
-调 `Skill("grill-me")` → 触发 `/grilling` session。
+调用已安装的 `grill-me` skill，进入逐问逐答的 grilling session。
 以 sdd-harness 加载的上下文（steering + 已有 specs + LLMWiki glossary）为背景，对 goal 做 relentless interview。
 
 ### 3. 沉淀（委托 sdd-harness）

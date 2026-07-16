@@ -50,7 +50,7 @@ test('code generation explicitly generates browser probeability regression tests
   assert.match(contract, /automated regression test/i);
   assert.match(contract, /invoke the actual resize/i);
   assert.match(cli, /Browser Probeability Regression Tests/);
-  assert.match(cli, /ptyClaude\(testPrompt/);
+  assert.match(cli, /runFillAgent\(testPrompt/);
   assert.match(codeSkill, /resize feedback.*regression test/i);
 });
 
@@ -59,7 +59,7 @@ test('code generation blocks when test generation fails or leaves tests unchange
 
   assert.match(cli, /import \{ captureTestInventory, evaluateGeneratedTests \}/);
   assert.match(cli, /const beforeTestInventory = await captureTestInventory\(cwd\)/);
-  assert.match(cli, /const testGenerationResult = await ptyClaude\(\s*testPrompt/);
+  assert.match(cli, /const testGenerationResult = await runFillAgent\(\s*testPrompt/);
   assert.match(cli, /const generationGate = await evaluateGeneratedTests\(/);
   assert.match(cli, /beforeTestInventory/);
   assert.match(cli, /if \(!generationGate\.pass\)/);
