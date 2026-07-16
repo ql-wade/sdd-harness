@@ -19,6 +19,12 @@ import { graphHealthCheck, getSourceDirs, countSourceFiles, detectProjectType, d
 import { discoverKnowledgeSources, copySourcesToRaw } from '../lib/knowledge-seed.js';
 import { sedimentStage } from '../lib/llmwiki-sediment.js';
 import { installDailyGraphRefresh, uninstallDailyGraphRefresh, checkDailyGraphRefresh } from '../lib/daily-scheduler.js';
+import {
+  advanceWorkflowFrame,
+  clearActiveRunIfMatches,
+  completeWorkflowFrame,
+  setWorkflowGateStatus,
+} from '../lib/workflow-frame.js';
 
 // 异步流式执行 claude（非 execSync 阻塞；stdin 走临时文件 redirect；慷慨超时）
 //
@@ -152,6 +158,16 @@ function validateId(id, label = 'id') {
     throw new Error(`Invalid ${label}: ${JSON.stringify(id)}`);
   }
   return id;
+}
+
+function normalizeChangeSlug(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 24)
+    .replace(/-+$/g, '');
 }
 
 function cmdExists(cmd) {
@@ -1135,7 +1151,9 @@ program
 
 // sdd run <stage> —— CLI 驱动 stage：bootstrap run + scaffold artifact + 推进 frame
 const STAGE_CONTRACTS = {
-  grill:    { next: 'product',  artifacts: ['findings.md'], scaffold: { 'findings.md': '# Findings\n\n## 术语\n- \n\n## 边界\n- \n\n## ADR 候选\n- \n' } },
+  grill:    { next: 'product',  artifacts: ['findings.md','brief.md'], scaffold: {
+              'findings.md': '# Findings\n\n## 术语\n- \n\n## 边界\n- \n\n## ADR 候选\n- \n',
+              'brief.md': '# Brief\n\nroute: \n\n## Goal\n- \n' } },
   product:  { next: 'dev',      artifacts: ['proposal.md','acceptance-criteria.md','functional-test-draft.yaml'], scaffold: {
               'proposal.md': '# Proposal\n\n## User\n- \n## Problem\n- \n## Scope\n- \n## Non-goals\n- \n## Metrics\n- \n',
               'acceptance-criteria.md': '# Acceptance Criteria\n\n## AC-1\nGIVEN \nWHEN \nTHEN \n',
@@ -1186,8 +1204,7 @@ program
             runsDir: skipRunsDir,
           });
           if (!['verify', 'release'].includes(current) || !archiveGate.pass) {
-            wf = wf.replace(/status:\s*\w+/, 'status: failed');
-            await fs.writeFile(wfPath, wf);
+            await setWorkflowGateStatus(wfPath, 'failed');
             const reason = !['verify', 'release'].includes(current)
               ? `current stage is ${current || 'unknown'}`
               : archiveGate.failures.map(item => item.reason).join('; ');
@@ -1195,14 +1212,18 @@ program
             process.exitCode = 2;
             return;
           }
-          wf = wf.replace(/current: \w+/, 'current: archive').replace(/status:\s*\w+/, 'status: passed');
-          await fs.writeFile(wfPath, wf);
+          await advanceWorkflowFrame({
+            workflowPath: wfPath,
+            from: current,
+            to: 'archive',
+            requiredArtifacts: STAGE_CONTRACTS.archive.artifacts,
+            reason: 'release skipped: no deploy',
+            fields: {
+              deploy_mode: 'skip',
+              release_reason: 'skip mode: no deploy',
+            },
+          });
           console.log(chalk.green(`  ✓ workflow-frame stage → archive (skip no-deploy)`));
-          // 记录 no-deploy 理由到 progress
-          const prog = path.join(cwd, 'openspec', 'changes', cid, 'progress.md');
-          if (await fs.pathExists(prog)) {
-            await fs.appendFile(prog, `\n## [release skip] no-deploy（CLI 标记，reason: skip 模式）\n`);
-          }
         }
       }
       console.log(chalk.green('  🏁 跳过完成。\n'));
@@ -1217,16 +1238,12 @@ program
     let bootstrap = false;
     if (!changeId) {
       // 生成 slug：优先 --slug，其次 goal 拉丁字符，最后 timestamp（避免中文/纯非拉丁 → 空）
-      let slug = options.slug;
-      if (!slug) {
-        const raw = (options.goal || '').toLowerCase();
-        slug = raw.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      }
+      let slug = normalizeChangeSlug(options.slug);
+      if (!slug) slug = normalizeChangeSlug(options.goal);
       if (!slug) {
         // goal 无拉丁字符（如纯中文）→ 用 timestamp slug
         slug = 'change-' + Date.now().toString(36);
       }
-      slug = slug.slice(0, 24);
       const hash = Math.random().toString(16).slice(2, 6);
       changeId = `${slug}-${hash}`;
       bootstrap = true;
@@ -1319,9 +1336,7 @@ program
     // 推进 frame
     if (!gateOk) {
       if (await fs.pathExists(wfPath)) {
-        let wf = await fs.readFile(wfPath, 'utf8');
-        wf = wf.replace(/status:\s*\w+/, 'status: failed');
-        await fs.writeFile(wfPath, wf);
+        await setWorkflowGateStatus(wfPath, 'failed');
       }
       console.log(chalk.red(`\n⛔ ${stage} gate 未通过，stage 保持不变。\n`));
       process.exitCode = 2;
@@ -1334,11 +1349,13 @@ program
     // verify/release/archive use stage-gates.js (probe/evidence checks).
     const CONTENT_STAGES = new Set(['grill', 'product', 'dev', 'test', 'code', 'review']);
     let metricsPass = true;
+    let metricsError = null;
     if (CONTENT_STAGES.has(stage)) {
     try {
       const r = await evalStageMetrics(stage, changeId, cwd);
       if (r.error) {
-        // No metrics for this stage — skip content check
+        metricsPass = false;
+        metricsError = r.error;
       } else {
         metricsPass = r.allPass;
         if (!r.allPass) {
@@ -1350,27 +1367,32 @@ program
         }
       }
     } catch (e) {
-      // metrics eval failed — proceed with existence gate only
+      metricsPass = false;
+      metricsError = `metrics evaluation failed: ${e.message}`;
     }
     } // end CONTENT_STAGES check
 
     if (!metricsPass) {
       // Update frame: gate exists but content not ready
       if (await fs.pathExists(wfPath)) {
-        let wf = await fs.readFile(wfPath, 'utf8');
-        wf = wf.replace(/status:\s*\w+/, 'status: pending');
-        await fs.writeFile(wfPath, wf);
+        await setWorkflowGateStatus(wfPath, 'pending');
       }
+      if (metricsError) console.log(chalk.red(`\n⛔ ${metricsError}`));
       console.log(chalk.cyan(`\n📌 ${stage} scaffold 完成，但内容未达标。stage 保持 ${stage}。`));
       console.log(chalk.gray(`   填充内容后重跑 sdd run ${stage} 推进，或 sdd fill ${stage} 自动生成。\n`));
+      process.exitCode = 2;
       return;
     }
 
     if (await fs.pathExists(wfPath) && contract.next) {
-      let wf = await fs.readFile(wfPath, 'utf8');
-      wf = wf.replace(/current: \w+/, `current: ${contract.next}`);
-      wf = wf.replace(/status:\s*\w+/, 'status: passed');
-      await fs.writeFile(wfPath, wf);
+      await advanceWorkflowFrame({
+        workflowPath: wfPath,
+        from: stage,
+        to: contract.next,
+        requiredArtifacts: STAGE_CONTRACTS[contract.next].artifacts,
+        producedArtifacts: contract.artifacts,
+        reason: `${stage} gate and metrics passed`,
+      });
       console.log(chalk.blue(`\n✅ ${stage} 内容达标，推进 → ${contract.next}`));
 
       // Auto-sediment stage artifacts to staging（不进 wiki/，待 MCP 提交）
@@ -1383,6 +1405,8 @@ program
         // sediment failure is non-blocking
       }
     } else if (!contract.next) {
+      await completeWorkflowFrame({ workflowPath: wfPath });
+      await clearActiveRunIfMatches(activeRunFile, changeId);
       console.log(chalk.green('\n🏁 最终 stage (archive)。workflow 完成。'));
     }
   });
@@ -1654,7 +1678,7 @@ async function evalStageMetrics(stage, changeId, cwd, options = {}) {
   const results = [];
 
   // 解析 metrics 下的每个 - name/check/op/threshold
-  const metricRegex = /- name:\s*(.+?)\n\s*check:\s*"(.+?)"\n\s*op:\s*(\S+)\n\s*threshold:\s*(\S+)/g;
+  const metricRegex = /- name:\s*(.+?)\r?\n\s*check:\s*"(.+?)"\r?\n\s*op:\s*(\S+)\r?\n\s*threshold:\s*(\S+)/g;
   let mm;
   while ((mm = metricRegex.exec(block)) !== null) {
     let [, name, check, op, threshold] = mm;
@@ -1666,23 +1690,45 @@ async function evalStageMetrics(stage, changeId, cwd, options = {}) {
     const pass = compareMetric(actual, op, thr);
     results.push({ name, check, op, threshold: thr, actual, pass });
   }
+  if (results.length === 0) {
+    return { error: `stage ${stage} 指标解析结果为空`, results, allPass: false };
+  }
   return { results, allPass: results.every(r => r.pass) };
 }
 
+function resolveMetricShell() {
+  if (process.platform !== 'win32') return undefined;
+  try {
+    const gitExe = execSync('where.exe git', { encoding: 'utf8' })
+      .split(/\r?\n/)
+      .find(Boolean);
+    if (!gitExe) return undefined;
+    const bashExe = path.resolve(path.dirname(gitExe), '..', 'bin', 'bash.exe');
+    return fs.pathExistsSync(bashExe) ? bashExe.split(path.sep).join('/') : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function execMetricSync(command, options = {}) {
+  return execSync(command, { ...options, shell: resolveMetricShell() });
+}
+
 function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
+  const portable = (filePath) => filePath.split(path.sep).join('/');
   // 替换 artifact 路径引用
   let cmd = check
-    .replace(/\bfindings\.md\b/g, `"${changesDir}/findings.md"`)
-    .replace(/\bbrief\.md\b/g, `"${changesDir}/brief.md"`)
-    .replace(/\bproposal\.md\b/g, `"${changesDir}/proposal.md"`)
-    .replace(/\bacceptance-criteria\.md\b/g, `"${changesDir}/acceptance-criteria.md"`)
-    .replace(/\bfunctional-test-draft\.yaml\b/g, `"${changesDir}/functional-test-draft.yaml"`)
-    .replace(/\bdesign\.md\b/g, `"${changesDir}/design.md"`)
-    .replace(/\btasks\.md\b/g, `"${changesDir}/tasks.md"`)
-    .replace(/\bprogress\.md\b/g, `"${changesDir}/progress.md"`)
-    .replace(/\breview-notes\.md\b/g, `"${runsDir}/review-notes.md"`)
-    .replace(/\btest-matrix\.md\b/g, `"${cwd}/llmwiki/wiki/testing/matrices/test-matrix.md"`)
-    .replace(/(?<!openspec\/)specs\//g, `"${changesDir}/specs/"`)
+    .replace(/\bfindings\.md\b/g, `"${portable(changesDir)}/findings.md"`)
+    .replace(/\bbrief\.md\b/g, `"${portable(changesDir)}/brief.md"`)
+    .replace(/\bproposal\.md\b/g, `"${portable(changesDir)}/proposal.md"`)
+    .replace(/\bacceptance-criteria\.md\b/g, `"${portable(changesDir)}/acceptance-criteria.md"`)
+    .replace(/\bfunctional-test-draft\.yaml\b/g, `"${portable(changesDir)}/functional-test-draft.yaml"`)
+    .replace(/\bdesign\.md\b/g, `"${portable(changesDir)}/design.md"`)
+    .replace(/\btasks\.md\b/g, `"${portable(changesDir)}/tasks.md"`)
+    .replace(/\bprogress\.md\b/g, `"${portable(changesDir)}/progress.md"`)
+    .replace(/\breview-notes\.md\b/g, `"${portable(runsDir)}/review-notes.md"`)
+    .replace(/\btest-matrix\.md\b/g, `"${portable(cwd)}/llmwiki/wiki/testing/matrices/test-matrix.md"`)
+    .replace(/(?<!openspec\/)specs\//g, `"${portable(changesDir)}/specs/"`)
     .replace(/<slug>/g, changeId.split('-').slice(0, -1).join('-') || changeId);
 
   // 特殊命令处理
@@ -1692,7 +1738,7 @@ function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
     if (parts) {
       const [, file, keys] = parts;
       try {
-        const content = execSync(`cat ${file}`, { encoding: 'utf8' });
+        const content = execMetricSync(`cat ${file}`, { encoding: 'utf8' });
         const allPresent = keys.split(',').every(k => content.includes(k.trim()));
         return allPresent ? 'true' : 'false';
       } catch { return 'false'; }
@@ -1705,7 +1751,7 @@ function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
     if (parts) {
       const dir = parts[1] || parts[3];
       const pat = parts[2] || parts[4];
-      try { return execSync(`find ${dir} -name '${pat}' 2>/dev/null | wc -l`, { encoding: 'utf8' }).trim(); }
+      try { return execMetricSync(`find ${dir} -name '${pat}' 2>/dev/null | wc -l`, { encoding: 'utf8' }).trim(); }
       catch { return '0'; }
     }
     return '0';
@@ -1713,7 +1759,7 @@ function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
   if (cmd.startsWith('cmd_exit')) {
     // cmd_exit <command> —— 返回命令 exit code（真实运行验证）
     const real = cmd.replace(/^cmd_exit\s+/, '');
-    try { execSync(real, { encoding: 'utf8', cwd, stdio: ['ignore','ignore','ignore'] }); return '0'; }
+    try { execMetricSync(real, { encoding: 'utf8', cwd, stdio: ['ignore','ignore','ignore'] }); return '0'; }
     catch (e) { return String(e.status ?? 1); }
   }
  if (cmd.startsWith('exists')) {
@@ -1737,7 +1783,7 @@ function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
       let total = 0;
       for (const dir of searchDirs) {
         try {
-          const out = execSync(
+          const out = execMetricSync(
             `find "${dir}" -type f \\( ${testPatterns.join(' -o ')} \\) ` +
             `-not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/target/*' 2>/dev/null | wc -l`,
             { encoding: 'utf8', cwd }
@@ -1749,12 +1795,12 @@ function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
     } catch { return '0'; }
   }
  if (cmd.includes('git diff')) {
-    try { return execSync(cmd, { encoding: 'utf8', cwd }).trim() || '0'; } catch { return '0'; }
+    try { return execMetricSync(cmd, { encoding: 'utf8', cwd }).trim() || '0'; } catch { return '0'; }
   }
 
   // 默认 grep/find 命令：artifact 文件已替换为绝对路径，故在项目根 cwd 跑（src/ 等项目相对路径也能解析）
   try {
-    const out = execSync(cmd, { encoding: 'utf8', cwd }).trim();
+    const out = execMetricSync(cmd, { encoding: 'utf8', cwd }).trim();
     return out || '0';
   } catch {
     return '0';
@@ -1811,7 +1857,7 @@ program
     const profileLabel = options.profile ? ` + profile:${options.profile}` : '';
     console.log(chalk.blue(`\n🔍 /sdd:${stage} 产出合理性评估（stage-metrics.yaml${profileLabel}）\n`));
     const r = await evalStageMetrics(stage, changeId, cwd, { profile: options.profile });
-    if (r.error) { console.log(chalk.red('❌ ' + r.error)); process.exit(1); }
+    if (r.error) { console.log(chalk.red('❌ ' + r.error)); process.exit(2); }
 
     let passCount = 0;
     for (const m of r.results) {
