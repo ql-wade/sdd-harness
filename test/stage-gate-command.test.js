@@ -578,6 +578,70 @@ test('release skip cannot bypass incomplete tasks', () => {
   assert.equal(currentStage(runsDir), 'verify');
 });
 
+test('release skip records workflow metadata without mutating audited progress', () => {
+  const { project, changesDir, runsDir } = makeProject('verify');
+  fs.writeFileSync(path.join(changesDir, 'tasks.md'), '# Tasks\n- [x] T1 complete\n');
+  const evidencePath = writeProbeEvidence(runsDir);
+  fs.writeFileSync(
+    path.join(runsDir, 'probe-report.json'),
+    JSON.stringify({
+      schemaVersion: 1,
+      projectDir: project,
+      pass: true,
+      issues: [],
+      evidencePath,
+      evidenceSha256: sha256File(evidencePath),
+    }),
+  );
+  fs.writeFileSync(
+    path.join(runsDir, 'evidence-audit-report.json'),
+    passingAudit(project),
+  );
+  const progressPath = path.join(changesDir, 'progress.md');
+  const beforeProgress = fs.readFileSync(progressPath, 'utf8');
+
+  const result = runStage(project, 'release', ['--mode', 'skip']);
+  const frame = fs.readFileSync(path.join(runsDir, 'workflow-frame.yaml'), 'utf8');
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(currentStage(runsDir), 'archive');
+  assert.equal(fs.readFileSync(progressPath, 'utf8'), beforeProgress);
+  assert.match(frame, /^deploy_mode:\s*skip$/m);
+  assert.match(frame, /^release_reason:\s*"skip mode: no deploy"$/m);
+  assert.match(frame, /from:\s*"verify"/);
+  assert.match(frame, /to:\s*"archive"/);
+  assert.match(frame, /^artifacts:\r?\n  required:\s*\[\]\r?\n  produced:\s*\[\]$/m);
+});
+
+test('archive completion marks the run terminal and clears only its active pointer', () => {
+  const { project, changesDir, runsDir } = makeProject('archive');
+  fs.writeFileSync(path.join(changesDir, 'tasks.md'), '# Tasks\n- [x] T1 complete\n');
+  const evidencePath = writeProbeEvidence(runsDir);
+  fs.writeFileSync(
+    path.join(runsDir, 'probe-report.json'),
+    JSON.stringify({
+      schemaVersion: 1,
+      projectDir: project,
+      pass: true,
+      issues: [],
+      evidencePath,
+      evidenceSha256: sha256File(evidencePath),
+    }),
+  );
+  fs.writeFileSync(
+    path.join(runsDir, 'evidence-audit-report.json'),
+    passingAudit(project),
+  );
+
+  const result = runStage(project, 'archive');
+  const frame = fs.readFileSync(path.join(runsDir, 'workflow-frame.yaml'), 'utf8');
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(frame, /^run_status:\s*completed$/m);
+  assert.match(frame, /^completed_at:\s*".+"$/m);
+  assert.equal(fs.existsSync(path.join(project, '.sdd', 'active-run')), false);
+});
+
 for (const stage of ['release', 'archive']) {
   test(`${stage} gate revalidates a failed verify probe after stage advancement`, () => {
     const { project, runsDir } = makeProject(stage);

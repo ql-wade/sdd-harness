@@ -19,6 +19,19 @@ import { graphHealthCheck, getSourceDirs, countSourceFiles, detectProjectType, d
 import { discoverKnowledgeSources, copySourcesToRaw } from '../lib/knowledge-seed.js';
 import { sedimentStage } from '../lib/llmwiki-sediment.js';
 import { installDailyGraphRefresh, uninstallDailyGraphRefresh, checkDailyGraphRefresh } from '../lib/daily-scheduler.js';
+import {
+  advanceWorkflowFrame,
+  clearActiveRunIfMatches,
+  completeWorkflowFrame,
+  setWorkflowGateStatus,
+} from '../lib/workflow-frame.js';
+import {
+  resolveAgentRunner,
+  resolveCodexExecutable,
+  runCodexPrompt,
+  VALID_AGENT_RUNNERS,
+  writeSessionHandoff,
+} from '../lib/agent-runner.js';
 
 // 异步流式执行 claude（非 execSync 阻塞；stdin 走临时文件 redirect；慷慨超时）
 //
@@ -97,7 +110,7 @@ const PLATFORMS = {
   },
   codex: {
     name: 'Codex',
-    skillsDir: '.codex/skills',
+    skillsDir: '.agents/skills',
     commandsDir: null,
     templateDir: 'codex',
   }
@@ -119,6 +132,10 @@ const VALID_PLATFORMS = [...ALL_PLATFORMS, 'both', 'all'];
 // 自动检测平台。没有检测到平台目录时，默认安装所有支持的平台。
 function detectPlatforms(cwd) {
   const detected = ALL_PLATFORMS.filter(platform => {
+    if (platform === 'codex') {
+      return fs.existsSync(path.join(cwd, '.agents'))
+        || fs.existsSync(path.join(cwd, '.codex'));
+    }
     const platformRoot = PLATFORMS[platform].skillsDir.split('/')[0];
     return fs.existsSync(path.join(cwd, platformRoot));
   });
@@ -152,6 +169,16 @@ function validateId(id, label = 'id') {
     throw new Error(`Invalid ${label}: ${JSON.stringify(id)}`);
   }
   return id;
+}
+
+function normalizeChangeSlug(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 24)
+    .replace(/-+$/g, '');
 }
 
 function cmdExists(cmd) {
@@ -501,22 +528,57 @@ exec "\$PY" -m local_server --workspace "\$PROJ/llmwiki"
   return { installed, failed };
 }
 
+const AGENTS_START = '<!-- SDD-HARNESS:START -->';
+const AGENTS_END = '<!-- SDD-HARNESS:END -->';
+const AGENTS_BLOCK = `${AGENTS_START}
+## SDD Harness
+
+- Current stage: read \`.sdd/active-run\`, then \`.sdd/runs/<run-id>/workflow-frame.yaml\`.
+- Stage entry: invoke the matching \`$sdd-<stage>\` skill.
+- Verify before advancing: run \`sdd check <stage>\` and the project tests required by the stage.
+- A stage is complete only when its artifacts and gates pass; archive completes the run.
+${AGENTS_END}`;
+
+async function updateAgentsGuidance(cwd, dryRun) {
+  const agentsPath = path.join(cwd, 'AGENTS.md');
+  if (dryRun) {
+    console.log(chalk.cyan('  [dry-run] Would update managed SDD Harness block in AGENTS.md'));
+    return;
+  }
+  const existing = await fs.readFile(agentsPath, 'utf8').catch(() => '');
+  const blockPattern = new RegExp(
+    `${AGENTS_START.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?${AGENTS_END.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+  );
+  const next = blockPattern.test(existing)
+    ? existing.replace(blockPattern, AGENTS_BLOCK)
+    : `${existing.trimEnd()}${existing.trim() ? '\n\n' : ''}${AGENTS_BLOCK}\n`;
+  if (next !== existing) await fs.writeFile(agentsPath, next);
+  console.log(chalk.green('  ✓ AGENTS.md managed SDD Harness block'));
+}
+
 // §13.1 step 7: 落 SDD Harness 层（skills/commands/hooks/templates/config）
-async function copySDDHarnessLayer(cwd, dryRun, force) {
+async function copySDDHarnessLayer(
+  cwd,
+  dryRun,
+  force,
+  platforms = resolvePlatforms(undefined, cwd),
+) {
   console.log(chalk.blue('\n🎯 [7/8] 落 SDD Harness 层\n'));
   let count = 0;
 
   // SDD-* skills — install to ALL detected platforms for parity
   // (claude, codex, opencode all get sdd-* skills, not just claude)
   const srcSkills = path.join(TEMPLATES_DIR, 'claude', 'skills');
-  const platforms = resolvePlatforms(undefined, cwd);
   const sddSkillDirs = {
     claude: path.join(cwd, '.claude', 'skills'),
-    codex: path.join(cwd, '.codex', 'skills'),
+    codex: path.join(cwd, '.agents', 'skills'),
     opencode: path.join(cwd, '.opencode', 'skills'),
   };
-  if (!dryRun) {
-    for (const platform of platforms) {
+  for (const platform of platforms) {
+    if (dryRun) {
+      console.log(chalk.cyan(`  [dry-run] Would copy sdd-* skills to ${PLATFORMS[platform].skillsDir}/`));
+      continue;
+    }
       const destSkills = sddSkillDirs[platform];
       if (!destSkills) continue;
       await fs.ensureDir(destSkills);
@@ -534,13 +596,12 @@ async function copySDDHarnessLayer(cwd, dryRun, force) {
         console.log(chalk.green(`  ✓ ${pCount} 个 sdd-* skill → ${PLATFORMS[platform].skillsDir}/`));
         count += pCount;
       }
-    }
   }
 
   // SDD commands (Claude Code only — commands are Claude-specific slash commands)
   const srcCmds = path.join(TEMPLATES_DIR, 'claude', 'commands');
   const destCmds = path.join(cwd, '.claude', 'commands');
-  if (!dryRun) {
+  if (platforms.includes('claude') && !dryRun) {
     await fs.ensureDir(destCmds);
     let cmdCount = 0;
     for (const entry of await fs.readdir(srcCmds)) {
@@ -557,7 +618,7 @@ async function copySDDHarnessLayer(cwd, dryRun, force) {
   // hooks
   const srcHooks = path.join(TEMPLATES_DIR, 'claude', 'hooks');
   const destHooks = path.join(cwd, '.sdd', 'hooks');
-  if (!dryRun) {
+  if (platforms.includes('claude') && !dryRun) {
     await fs.ensureDir(destHooks);
     let hookCount = 0;
     for (const entry of await fs.readdir(srcHooks)) {
@@ -593,7 +654,7 @@ async function copySDDHarnessLayer(cwd, dryRun, force) {
   }
 
   // .claude/rules/ — CC 原生注入 SDD 规则
-  if (!dryRun) {
+  if (platforms.includes('claude') && !dryRun) {
     const rulesDir = path.join(cwd, '.claude', 'rules');
     await fs.ensureDir(rulesDir);
     const rulesFile = path.join(rulesDir, 'sdd-harness.md');
@@ -614,6 +675,15 @@ async function copySDDHarnessLayer(cwd, dryRun, force) {
 1. 当前 stage？　2. 下一步？　3. 目标？　4. 学到什么？（findings.md）　5. 做了什么？（progress.md）
 `);
       console.log(chalk.green('  ✓ .claude/rules/sdd-harness.md（CC 原生注入）'));
+    }
+  }
+
+  if (platforms.includes('codex')) {
+    await updateAgentsGuidance(cwd, dryRun);
+    if (await fs.pathExists(path.join(cwd, '.codex', 'skills'))) {
+      console.log(chalk.yellow(
+        '  ⚠️  检测到旧 .codex/skills；新项目使用 .agents/skills。请确认迁移后手动清理，当前不会删除。',
+      ));
     }
   }
 
@@ -771,6 +841,7 @@ program
   .option('--skip-schema', 'Skip copying schema files', false)
   .option('--skip-skills', 'Skip copying skill files', false)
   .option('--skip-commands', 'Skip copying command files', false)
+  .option('--skip-dependencies', 'Skip external dependency installation and only initialize project assets', false)
   .option('--platform <name>', 'Target platform: claude | opencode | codex | both | all (auto-detect by default)')
   .option('--dry-run', 'Preview changes without writing files', false)
   .action(async (options) => {
@@ -797,10 +868,19 @@ program
     }
 
     try {
-      await ensureDependencies(platformsToInstall, options.dryRun, cwd);
+      if (options.skipDependencies) {
+        console.log(chalk.gray('⏭️  Skipping external dependency installation'));
+      } else {
+        await ensureDependencies(platformsToInstall, options.dryRun, cwd);
+      }
 
       // SDD Harness 层（sdd-* skills/commands/hooks/templates/config）
-      await copySDDHarnessLayer(cwd, options.dryRun, options.force);
+      await copySDDHarnessLayer(
+        cwd,
+        options.dryRun,
+        options.force,
+        platformsToInstall,
+      );
 
       const legacyCount = await cleanupLegacyCommands(cwd, platformsToInstall, options.dryRun);
       if (legacyCount > 0 && !options.dryRun) {
@@ -878,19 +958,22 @@ program
 
       // Show available commands
       console.log('\n📚 SDD Harness 9 阶段命令:');
-      console.log(chalk.cyan('   /sdd:grill "描述"') + '     - 澄清（业务/术语/边界）');
-      console.log(chalk.cyan('   /sdd:product') + '          - 产品草案（PRD/AC）');
-      console.log(chalk.cyan('   /sdd:dev') + '             - 工程 spec（OpenSpec）');
-      console.log(chalk.cyan('   /sdd:test') + '            - 测试矩阵 → LLMWiki');
-      console.log(chalk.cyan('   /sdd:code') + '            - 实现（TDD）');
-      console.log(chalk.cyan('   /sdd:review') + '          - Review（Superpowers + OCR）');
-      console.log(chalk.cyan('   /sdd:verify') + '          - 交付验证（证据）');
-      console.log(chalk.cyan('   /sdd:release') + '         - 部署（manual|auto|skip）');
-      console.log(chalk.cyan('   /sdd:archive') + '         - 归档 + 知识沉淀\n');
+      const stagePrefix = platformsToInstall.includes('codex')
+        && !platformsToInstall.includes('claude')
+        ? '$sdd-'
+        : '/sdd:';
+      for (const stage of ['grill', 'product', 'dev', 'test', 'code', 'review', 'verify', 'release', 'archive']) {
+        console.log(chalk.cyan(`   ${stagePrefix}${stage}`));
+      }
+      if (stagePrefix === '$sdd-') {
+        console.log(chalk.gray('   CLI handoff: sdd fill <stage> --runner auto\n'));
+      } else {
+        console.log();
+      }
       console.log(chalk.gray('   维护: sdd doctor | sdd upgrade | sdd graph --refresh | sdd wiki init\n'));
 
       // LLMWiki MCP 批准提示（.mcp.json 写了，但需 session 内批准才生效）
-      if (!options.dryRun) {
+      if (!options.dryRun && platformsToInstall.includes('claude')) {
         console.log(chalk.yellow('⚠️  LLMWiki MCP 需在 Claude Code 内批准'));
         console.log(chalk.gray('   重启 Claude Code session，首次进入项目会弹安全提示确认 .mcp.json 的 llmwiki server。'));
         console.log(chalk.gray('   批准后验证：session 内能看到 mcp__llmwiki__create / search / lint 工具。'));
@@ -1135,7 +1218,9 @@ program
 
 // sdd run <stage> —— CLI 驱动 stage：bootstrap run + scaffold artifact + 推进 frame
 const STAGE_CONTRACTS = {
-  grill:    { next: 'product',  artifacts: ['findings.md'], scaffold: { 'findings.md': '# Findings\n\n## 术语\n- \n\n## 边界\n- \n\n## ADR 候选\n- \n' } },
+  grill:    { next: 'product',  artifacts: ['findings.md','brief.md'], scaffold: {
+              'findings.md': '# Findings\n\n## 术语\n- \n\n## 边界\n- \n\n## ADR 候选\n- \n',
+              'brief.md': '# Brief\n\nroute: \n\n## Goal\n- \n' } },
   product:  { next: 'dev',      artifacts: ['proposal.md','acceptance-criteria.md','functional-test-draft.yaml'], scaffold: {
               'proposal.md': '# Proposal\n\n## User\n- \n## Problem\n- \n## Scope\n- \n## Non-goals\n- \n## Metrics\n- \n',
               'acceptance-criteria.md': '# Acceptance Criteria\n\n## AC-1\nGIVEN \nWHEN \nTHEN \n',
@@ -1186,8 +1271,7 @@ program
             runsDir: skipRunsDir,
           });
           if (!['verify', 'release'].includes(current) || !archiveGate.pass) {
-            wf = wf.replace(/status:\s*\w+/, 'status: failed');
-            await fs.writeFile(wfPath, wf);
+            await setWorkflowGateStatus(wfPath, 'failed');
             const reason = !['verify', 'release'].includes(current)
               ? `current stage is ${current || 'unknown'}`
               : archiveGate.failures.map(item => item.reason).join('; ');
@@ -1195,14 +1279,18 @@ program
             process.exitCode = 2;
             return;
           }
-          wf = wf.replace(/current: \w+/, 'current: archive').replace(/status:\s*\w+/, 'status: passed');
-          await fs.writeFile(wfPath, wf);
+          await advanceWorkflowFrame({
+            workflowPath: wfPath,
+            from: current,
+            to: 'archive',
+            requiredArtifacts: STAGE_CONTRACTS.archive.artifacts,
+            reason: 'release skipped: no deploy',
+            fields: {
+              deploy_mode: 'skip',
+              release_reason: 'skip mode: no deploy',
+            },
+          });
           console.log(chalk.green(`  ✓ workflow-frame stage → archive (skip no-deploy)`));
-          // 记录 no-deploy 理由到 progress
-          const prog = path.join(cwd, 'openspec', 'changes', cid, 'progress.md');
-          if (await fs.pathExists(prog)) {
-            await fs.appendFile(prog, `\n## [release skip] no-deploy（CLI 标记，reason: skip 模式）\n`);
-          }
         }
       }
       console.log(chalk.green('  🏁 跳过完成。\n'));
@@ -1217,16 +1305,12 @@ program
     let bootstrap = false;
     if (!changeId) {
       // 生成 slug：优先 --slug，其次 goal 拉丁字符，最后 timestamp（避免中文/纯非拉丁 → 空）
-      let slug = options.slug;
-      if (!slug) {
-        const raw = (options.goal || '').toLowerCase();
-        slug = raw.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      }
+      let slug = normalizeChangeSlug(options.slug);
+      if (!slug) slug = normalizeChangeSlug(options.goal);
       if (!slug) {
         // goal 无拉丁字符（如纯中文）→ 用 timestamp slug
         slug = 'change-' + Date.now().toString(36);
       }
-      slug = slug.slice(0, 24);
       const hash = Math.random().toString(16).slice(2, 6);
       changeId = `${slug}-${hash}`;
       bootstrap = true;
@@ -1319,9 +1403,7 @@ program
     // 推进 frame
     if (!gateOk) {
       if (await fs.pathExists(wfPath)) {
-        let wf = await fs.readFile(wfPath, 'utf8');
-        wf = wf.replace(/status:\s*\w+/, 'status: failed');
-        await fs.writeFile(wfPath, wf);
+        await setWorkflowGateStatus(wfPath, 'failed');
       }
       console.log(chalk.red(`\n⛔ ${stage} gate 未通过，stage 保持不变。\n`));
       process.exitCode = 2;
@@ -1334,11 +1416,13 @@ program
     // verify/release/archive use stage-gates.js (probe/evidence checks).
     const CONTENT_STAGES = new Set(['grill', 'product', 'dev', 'test', 'code', 'review']);
     let metricsPass = true;
+    let metricsError = null;
     if (CONTENT_STAGES.has(stage)) {
     try {
       const r = await evalStageMetrics(stage, changeId, cwd);
       if (r.error) {
-        // No metrics for this stage — skip content check
+        metricsPass = false;
+        metricsError = r.error;
       } else {
         metricsPass = r.allPass;
         if (!r.allPass) {
@@ -1350,27 +1434,32 @@ program
         }
       }
     } catch (e) {
-      // metrics eval failed — proceed with existence gate only
+      metricsPass = false;
+      metricsError = `metrics evaluation failed: ${e.message}`;
     }
     } // end CONTENT_STAGES check
 
     if (!metricsPass) {
       // Update frame: gate exists but content not ready
       if (await fs.pathExists(wfPath)) {
-        let wf = await fs.readFile(wfPath, 'utf8');
-        wf = wf.replace(/status:\s*\w+/, 'status: pending');
-        await fs.writeFile(wfPath, wf);
+        await setWorkflowGateStatus(wfPath, 'pending');
       }
+      if (metricsError) console.log(chalk.red(`\n⛔ ${metricsError}`));
       console.log(chalk.cyan(`\n📌 ${stage} scaffold 完成，但内容未达标。stage 保持 ${stage}。`));
       console.log(chalk.gray(`   填充内容后重跑 sdd run ${stage} 推进，或 sdd fill ${stage} 自动生成。\n`));
+      process.exitCode = 2;
       return;
     }
 
     if (await fs.pathExists(wfPath) && contract.next) {
-      let wf = await fs.readFile(wfPath, 'utf8');
-      wf = wf.replace(/current: \w+/, `current: ${contract.next}`);
-      wf = wf.replace(/status:\s*\w+/, 'status: passed');
-      await fs.writeFile(wfPath, wf);
+      await advanceWorkflowFrame({
+        workflowPath: wfPath,
+        from: stage,
+        to: contract.next,
+        requiredArtifacts: STAGE_CONTRACTS[contract.next].artifacts,
+        producedArtifacts: contract.artifacts,
+        reason: `${stage} gate and metrics passed`,
+      });
       console.log(chalk.blue(`\n✅ ${stage} 内容达标，推进 → ${contract.next}`));
 
       // Auto-sediment stage artifacts to staging（不进 wiki/，待 MCP 提交）
@@ -1383,6 +1472,8 @@ program
         // sediment failure is non-blocking
       }
     } else if (!contract.next) {
+      await completeWorkflowFrame({ workflowPath: wfPath });
+      await clearActiveRunIfMatches(activeRunFile, changeId);
       console.log(chalk.green('\n🏁 最终 stage (archive)。workflow 完成。'));
     }
   });
@@ -1428,7 +1519,9 @@ program
   .command('graph')
   .description('Refresh code knowledge graph (Understand-Anything)')
   .option('--install', 'Clone Understand-Anything repo if missing', false)
-  .option('--refresh', 'Force trigger /understand via claude -p', false)
+  .option('--refresh', 'Trigger an agent to generate or refresh the graph', false)
+  .option('--runner <runner>', `Agent runner: ${VALID_AGENT_RUNNERS.join(' | ')}`, 'auto')
+  .option('--agent-bin <absolute-path>', 'Absolute path to the Codex executable')
   .action(async (options) => {
     const cwd = process.cwd();
     const homeDir = os.homedir();
@@ -1462,9 +1555,12 @@ program
 
     // Health check
     const health = graphHealthCheck(cwd);
-    if (health.existence === 'ok' && health.issues.length === 0) {
+    if (health.existence === 'ok' && health.issues.length === 0 && !options.refresh) {
       console.log(chalk.green(`✅ knowledge-graph healthy (${health.nodeCount} nodes, ${health.edgeCount} edges, ${health.layerCount} layers)`));
       return;
+    }
+    if (health.existence === 'ok' && health.issues.length === 0) {
+      console.log(chalk.green(`✅ knowledge-graph currently healthy (${health.nodeCount} nodes)`));
     }
     if (health.existence === 'ok' && health.issues.length > 0) {
       console.log(chalk.yellow(`⚠️ knowledge-graph has ${health.issues.length} issue(s):`));
@@ -1473,19 +1569,39 @@ program
       console.log(chalk.yellow('⚠️ knowledge-graph.json missing or placeholder'));
     }
 
-    // Try auto-refresh via claude -p
-    const hasClaude = cmdExists('claude');
-    if (!hasClaude) {
-      console.log(chalk.gray('\n   📌 Run /understand in your AI tool session to generate'));
-      console.log(chalk.gray('   Or install Claude Code: sdd graph --refresh'));
+    if (!options.refresh) {
+      console.log(chalk.gray('\n   📌 Health report only. Run sdd graph --refresh to start an agent.'));
       return;
     }
 
-    if (!options.refresh && health.issues.length === 0 && health.existence === 'ok') {
-      return; // healthy, no action needed
+    let runner;
+    try {
+      runner = resolveAgentRunner(options.runner, { cwd });
+    } catch (error) {
+      console.log(chalk.red(`❌ ${error.message}`));
+      process.exitCode = 1;
+      return;
     }
 
-    console.log(chalk.cyan('\n   🤖 Triggering /understand via claude -p headless...\n'));
+    const graphPrompt = `Run the /understand command to analyze this codebase at ${cwd} and generate ` +
+      `.understand-anything/knowledge-graph.json with nodes, edges, and layers. ` +
+      `Use the understand skill pipeline.`;
+
+    if (runner === 'session') {
+      const handoff = await writeSessionHandoff({
+        cwd,
+        operation: 'graph-refresh',
+        skill: 'understand',
+        prompt: graphPrompt,
+      });
+      console.log(chalk.yellow('\n⏸️  等待当前 agent 执行（exit 3）'));
+      console.log(chalk.gray(`   handoff: ${path.relative(cwd, handoff.path).replaceAll('\\', '/')}`));
+      console.log(chalk.gray('   当前 Codex 对话请调用 $understand；完成后重跑 sdd graph 检查健康状态。\n'));
+      process.exitCode = 3;
+      return;
+    }
+
+    console.log(chalk.cyan(`\n   🤖 Triggering /understand via ${runner} runner...\n`));
     console.log(chalk.gray('   This may take 5-15 minutes depending on repo size.\n'));
 
     // If graph is a symlink (shared from another worktree), break it
@@ -1497,15 +1613,28 @@ program
       }
     } catch {}
 
-    const result = await ptyClaude(
-      `Run the /understand command to analyze this codebase at ${cwd} and generate ` +
-      `.understand-anything/knowledge-graph.json with nodes, edges, and layers. ` +
-      `Use the understand skill pipeline.`,
-      { cwd, model: 'sonnet', timeoutMs: 900000 }
-    );
+    const result = runner === 'codex'
+      ? await runCodexPrompt(graphPrompt, {
+        cwd,
+        agentBin: options.agentBin,
+        timeoutMs: 900000,
+      })
+      : await ptyClaude(graphPrompt, { cwd, model: 'sonnet', timeoutMs: 900000 });
 
     if (result.timedOut) {
       console.log(chalk.yellow('⚠️ /understand timed out (15 min). Graph may be partial.'));
+    } else if (result.exitCode !== 0) {
+      console.log(chalk.red(`❌ ${runner} runner failed (exit ${result.exitCode ?? 'unknown'})`));
+      if (result.error) console.log(chalk.gray(`   ${result.error}`));
+      if (runner === 'codex') {
+        if (result.error) {
+          console.log(chalk.gray('   Fix: sdd graph --refresh --runner codex --agent-bin <absolute-codex-path>'));
+        } else {
+          console.log(chalk.gray('   Codex started but exited non-zero. Inspect its output; run `codex login` for authentication errors.'));
+          console.log(chalk.gray('   Binary override: --agent-bin <absolute-codex-path> or SDD_CODEX_BIN.'));
+        }
+      }
+      process.exitCode = 1;
     } else {
       const postHealth = graphHealthCheck(cwd);
       if (postHealth.existence === 'ok' && postHealth.nodeCount > 0) {
@@ -1654,7 +1783,7 @@ async function evalStageMetrics(stage, changeId, cwd, options = {}) {
   const results = [];
 
   // 解析 metrics 下的每个 - name/check/op/threshold
-  const metricRegex = /- name:\s*(.+?)\n\s*check:\s*"(.+?)"\n\s*op:\s*(\S+)\n\s*threshold:\s*(\S+)/g;
+  const metricRegex = /- name:\s*(.+?)\r?\n\s*check:\s*"(.+?)"\r?\n\s*op:\s*(\S+)\r?\n\s*threshold:\s*(\S+)/g;
   let mm;
   while ((mm = metricRegex.exec(block)) !== null) {
     let [, name, check, op, threshold] = mm;
@@ -1666,23 +1795,45 @@ async function evalStageMetrics(stage, changeId, cwd, options = {}) {
     const pass = compareMetric(actual, op, thr);
     results.push({ name, check, op, threshold: thr, actual, pass });
   }
+  if (results.length === 0) {
+    return { error: `stage ${stage} 指标解析结果为空`, results, allPass: false };
+  }
   return { results, allPass: results.every(r => r.pass) };
 }
 
+function resolveMetricShell() {
+  if (process.platform !== 'win32') return undefined;
+  try {
+    const gitExe = execSync('where.exe git', { encoding: 'utf8' })
+      .split(/\r?\n/)
+      .find(Boolean);
+    if (!gitExe) return undefined;
+    const bashExe = path.resolve(path.dirname(gitExe), '..', 'bin', 'bash.exe');
+    return fs.pathExistsSync(bashExe) ? bashExe.split(path.sep).join('/') : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function execMetricSync(command, options = {}) {
+  return execSync(command, { ...options, shell: resolveMetricShell() });
+}
+
 function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
+  const portable = (filePath) => filePath.split(path.sep).join('/');
   // 替换 artifact 路径引用
   let cmd = check
-    .replace(/\bfindings\.md\b/g, `"${changesDir}/findings.md"`)
-    .replace(/\bbrief\.md\b/g, `"${changesDir}/brief.md"`)
-    .replace(/\bproposal\.md\b/g, `"${changesDir}/proposal.md"`)
-    .replace(/\bacceptance-criteria\.md\b/g, `"${changesDir}/acceptance-criteria.md"`)
-    .replace(/\bfunctional-test-draft\.yaml\b/g, `"${changesDir}/functional-test-draft.yaml"`)
-    .replace(/\bdesign\.md\b/g, `"${changesDir}/design.md"`)
-    .replace(/\btasks\.md\b/g, `"${changesDir}/tasks.md"`)
-    .replace(/\bprogress\.md\b/g, `"${changesDir}/progress.md"`)
-    .replace(/\breview-notes\.md\b/g, `"${runsDir}/review-notes.md"`)
-    .replace(/\btest-matrix\.md\b/g, `"${cwd}/llmwiki/wiki/testing/matrices/test-matrix.md"`)
-    .replace(/(?<!openspec\/)specs\//g, `"${changesDir}/specs/"`)
+    .replace(/\bfindings\.md\b/g, `"${portable(changesDir)}/findings.md"`)
+    .replace(/\bbrief\.md\b/g, `"${portable(changesDir)}/brief.md"`)
+    .replace(/\bproposal\.md\b/g, `"${portable(changesDir)}/proposal.md"`)
+    .replace(/\bacceptance-criteria\.md\b/g, `"${portable(changesDir)}/acceptance-criteria.md"`)
+    .replace(/\bfunctional-test-draft\.yaml\b/g, `"${portable(changesDir)}/functional-test-draft.yaml"`)
+    .replace(/\bdesign\.md\b/g, `"${portable(changesDir)}/design.md"`)
+    .replace(/\btasks\.md\b/g, `"${portable(changesDir)}/tasks.md"`)
+    .replace(/\bprogress\.md\b/g, `"${portable(changesDir)}/progress.md"`)
+    .replace(/\breview-notes\.md\b/g, `"${portable(runsDir)}/review-notes.md"`)
+    .replace(/\btest-matrix\.md\b/g, `"${portable(cwd)}/llmwiki/wiki/testing/matrices/test-matrix.md"`)
+    .replace(/(?<!openspec\/)specs\//g, `"${portable(changesDir)}/specs/"`)
     .replace(/<slug>/g, changeId.split('-').slice(0, -1).join('-') || changeId);
 
   // 特殊命令处理
@@ -1692,7 +1843,7 @@ function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
     if (parts) {
       const [, file, keys] = parts;
       try {
-        const content = execSync(`cat ${file}`, { encoding: 'utf8' });
+        const content = execMetricSync(`cat ${file}`, { encoding: 'utf8' });
         const allPresent = keys.split(',').every(k => content.includes(k.trim()));
         return allPresent ? 'true' : 'false';
       } catch { return 'false'; }
@@ -1705,7 +1856,7 @@ function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
     if (parts) {
       const dir = parts[1] || parts[3];
       const pat = parts[2] || parts[4];
-      try { return execSync(`find ${dir} -name '${pat}' 2>/dev/null | wc -l`, { encoding: 'utf8' }).trim(); }
+      try { return execMetricSync(`find ${dir} -name '${pat}' 2>/dev/null | wc -l`, { encoding: 'utf8' }).trim(); }
       catch { return '0'; }
     }
     return '0';
@@ -1713,7 +1864,7 @@ function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
   if (cmd.startsWith('cmd_exit')) {
     // cmd_exit <command> —— 返回命令 exit code（真实运行验证）
     const real = cmd.replace(/^cmd_exit\s+/, '');
-    try { execSync(real, { encoding: 'utf8', cwd, stdio: ['ignore','ignore','ignore'] }); return '0'; }
+    try { execMetricSync(real, { encoding: 'utf8', cwd, stdio: ['ignore','ignore','ignore'] }); return '0'; }
     catch (e) { return String(e.status ?? 1); }
   }
  if (cmd.startsWith('exists')) {
@@ -1737,7 +1888,7 @@ function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
       let total = 0;
       for (const dir of searchDirs) {
         try {
-          const out = execSync(
+          const out = execMetricSync(
             `find "${dir}" -type f \\( ${testPatterns.join(' -o ')} \\) ` +
             `-not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/target/*' 2>/dev/null | wc -l`,
             { encoding: 'utf8', cwd }
@@ -1749,12 +1900,12 @@ function runMetricCheck(check, changeId, changesDir, runsDir, cwd) {
     } catch { return '0'; }
   }
  if (cmd.includes('git diff')) {
-    try { return execSync(cmd, { encoding: 'utf8', cwd }).trim() || '0'; } catch { return '0'; }
+    try { return execMetricSync(cmd, { encoding: 'utf8', cwd }).trim() || '0'; } catch { return '0'; }
   }
 
   // 默认 grep/find 命令：artifact 文件已替换为绝对路径，故在项目根 cwd 跑（src/ 等项目相对路径也能解析）
   try {
-    const out = execSync(cmd, { encoding: 'utf8', cwd }).trim();
+    const out = execMetricSync(cmd, { encoding: 'utf8', cwd }).trim();
     return out || '0';
   } catch {
     return '0';
@@ -1811,7 +1962,7 @@ program
     const profileLabel = options.profile ? ` + profile:${options.profile}` : '';
     console.log(chalk.blue(`\n🔍 /sdd:${stage} 产出合理性评估（stage-metrics.yaml${profileLabel}）\n`));
     const r = await evalStageMetrics(stage, changeId, cwd, { profile: options.profile });
-    if (r.error) { console.log(chalk.red('❌ ' + r.error)); process.exit(1); }
+    if (r.error) { console.log(chalk.red('❌ ' + r.error)); process.exit(2); }
 
     let passCount = 0;
     for (const m of r.results) {
@@ -1830,9 +1981,11 @@ program
 
 program
   .command('fill <stage>')
-  .description('LLM-fill a stage artifacts to meet stage-metrics (invokes claude -p headless). Framework generates content, not you.')
+  .description('Fill stage artifacts with the current session, Claude, or Codex runner.')
   .option('--change <id>', 'change-id (default: active-run)')
-  .option('--model <m>', 'claude model', 'sonnet')
+  .option('--model <m>', 'Optional model override for the selected headless runner')
+  .option('--runner <runner>', `Agent runner: ${VALID_AGENT_RUNNERS.join(' | ')}`, 'auto')
+  .option('--agent-bin <absolute-path>', 'Absolute path to the Codex executable')
   .action(async (stage, options) => {
     const cwd = process.cwd();
     if (!STAGE_CONTRACTS[stage]) { console.log(chalk.red(`❌ 未知 stage: ${stage}`)); process.exit(1); }
@@ -1872,10 +2025,90 @@ program
     }
     const runsDir = path.join(cwd, '.sdd', 'runs', changeId);
 
-    console.log(chalk.blue(`\n🤖 sdd fill ${stage}（claude -p headless 生成达标内容）\n`));
+    let runner;
+    try {
+      runner = resolveAgentRunner(options.runner, { cwd });
+    } catch (error) {
+      console.log(chalk.red(`❌ ${error.message}`));
+      process.exitCode = 1;
+      return;
+    }
+
+    if (runner === 'codex') {
+      let executable;
+      try {
+        executable = resolveCodexExecutable({ agentBin: options.agentBin });
+      } catch (error) {
+        console.log(chalk.red(`❌ ${error.message}`));
+        process.exitCode = 1;
+        return;
+      }
+      if (!executable) {
+        console.log(chalk.red('❌ Codex executable not found.'));
+        console.log(chalk.gray('   Fix: sdd fill <stage> --runner codex --agent-bin <absolute-codex-path>'));
+        console.log(chalk.gray('   Or set SDD_CODEX_BIN to the absolute codex executable path.'));
+        process.exitCode = 1;
+        return;
+      }
+    }
+
+    console.log(chalk.blue(`\n🤖 sdd fill ${stage}（runner: ${runner}）\n`));
     console.log(chalk.gray(`   change: ${changeId}`));
     console.log(chalk.gray(`   goal: ${goal}`));
-    console.log(chalk.gray(`   model: ${options.model}\n`));
+    if (options.model) console.log(chalk.gray(`   model: ${options.model}`));
+    console.log();
+
+    const sessionPrompt = `Continue change ${changeId} at stage ${stage}.
+
+Goal: ${goal || '(not recorded)'}
+Workflow frame: .sdd/runs/${changeId}/workflow-frame.yaml
+Change artifacts: ${path.relative(cwd, changesDir).replaceAll('\\', '/')}
+Required metrics:
+${metricsReq || '(read templates/sdd-harness/stage-metrics.yaml)'}`;
+
+    if (runner === 'session') {
+      const handoff = await writeSessionHandoff({
+        cwd,
+        runId: changeId,
+        operation: `fill-${stage}`,
+        skill: `sdd-${stage}`,
+        prompt: sessionPrompt,
+      });
+      console.log(chalk.yellow('⏸️  等待当前 agent 执行（exit 3）'));
+      console.log(chalk.gray(`   handoff: ${path.relative(cwd, handoff.path).replaceAll('\\', '/')}`));
+      console.log(chalk.gray(`   当前 Codex 对话请调用 $sdd-${stage}，完成后重跑 sdd check ${stage}。\n`));
+      process.exitCode = 3;
+      return;
+    }
+
+    const runFillAgent = async (prompt, { timeoutMs } = {}) => {
+      const result = runner === 'codex'
+        ? await runCodexPrompt(prompt, {
+          cwd,
+          agentBin: options.agentBin,
+          model: options.model,
+          timeoutMs,
+        })
+        : await ptyClaude(prompt, {
+          cwd,
+          model: options.model || 'sonnet',
+          timeoutMs,
+        });
+      if (!result.timedOut && result.exitCode !== 0) {
+        console.log(chalk.red(`❌ ${runner} runner failed (exit ${result.exitCode ?? 'unknown'})`));
+        if (result.error) console.log(chalk.gray(`   ${result.error}`));
+        if (runner === 'codex') {
+          if (result.error) {
+            console.log(chalk.gray('   Fix: pass --agent-bin <absolute-codex-path> or set SDD_CODEX_BIN.'));
+          } else {
+            console.log(chalk.gray('   Codex started but exited non-zero. Inspect its output; run `codex login` for authentication errors.'));
+            console.log(chalk.gray('   Binary override: --agent-bin <absolute-codex-path> or SDD_CODEX_BIN.'));
+          }
+        }
+        process.exit(1);
+      }
+      return result;
+    };
 
     // verify 阶段：实证——真实跑 build，失败则调 claude 修，循环到通过
     if (stage === 'verify') {
@@ -1910,7 +2143,7 @@ ${errTail}
 
 直接改文件（Bash/Write），改完重跑 ${buildCmd} 确认 exit 0。`;
           try {
-            await ptyClaude(fixPrompt, { cwd, model: options.model, timeoutMs: 180000 });
+            await runFillAgent(fixPrompt, { timeoutMs: 180000 });
           } catch (e2) { if (String(e2.message).includes('TIMEDOUT')) console.log(chalk.gray('   (fix 超时)')); }
         }
       }
@@ -2005,7 +2238,7 @@ ${probeContext}
 ${isWebProject ? '5. browser 项目按上述契约暴露只读 globalThis.__sddProbe.snapshot()，禁止 debug DOM' : ''}
 用 Write 工具，立刻完成。`;
       try {
-        await ptyClaude(srcPrompt, { cwd, model: options.model, timeoutMs: 600000 });
+        await runFillAgent(srcPrompt, { timeoutMs: 600000 });
       } catch (e) { if (String(e.message).includes('TIMEDOUT')) console.log(chalk.gray('   (src 超时)')); }
 
       // 调用 2: 配置文件（package.json + 入口，按 steering 构建工具）
@@ -2017,7 +2250,7 @@ ${isWebProject ? '5. browser 项目按上述契约暴露只读 globalThis.__sddP
 - Monorepo（多子项目）：每个子项目已有自己的 manifest，跳过——不要在根目录创建新的
 立刻完成。用 Write。`;
       try {
-        await ptyClaude(cfgPrompt, { cwd, model: options.model, timeoutMs: 120000 });
+        await runFillAgent(cfgPrompt, { timeoutMs: 120000 });
       } catch (e) { if (String(e.message).includes('TIMEDOUT')) console.log(chalk.gray('   (config 超时)')); }
 
       // 调用 3: 测试代码（按 specs + generation contract 验证真实实现）
@@ -2047,9 +2280,9 @@ ${testContextSection}
 ${browserSpecificRules}
 只写测试文件，不修改生产实现。用 Write 工具，立刻完成。`;
       const beforeTestInventory = await captureTestInventory(cwd);
-      const testGenerationResult = await ptyClaude(
+      const testGenerationResult = await runFillAgent(
         testPrompt,
-        { cwd, model: options.model, timeoutMs: 300000 },
+        { timeoutMs: 300000 },
       );
       const generationGate = await evaluateGeneratedTests({
         projectDir: cwd,
@@ -2197,7 +2430,7 @@ ${metricsReq}
 
 立刻开始 grilling。`;
       try {
-        await ptyClaude(grillPrompt, { cwd, model: options.model, timeoutMs: 480000 });
+        await runFillAgent(grillPrompt, { timeoutMs: 480000 });
       } catch (e) {
         if (!String(e.message).includes('TIMEDOUT') && !String(e.message).includes('timeout')) {
           console.log(chalk.red('⚠️ claude headless 调用失败: ' + String(e.message).split('\n')[0]));
@@ -2271,7 +2504,7 @@ ${srcSource || '(未能读取)'}
 4. 测试配置：按 steering（JS→vitest.config.ts，Python→conftest.py）
 5. manifest：package.json scripts 含 test 或 pyproject.toml 含 pytest 配置
 真实测试，覆盖 specs 核心功能，断言基于上方源码的真实行为。用 Write 立刻完成。`;
-      try { await ptyClaude(testPrompt, { cwd, model: options.model, timeoutMs: 600000 }); } catch (e) { if (String(e.message).includes('TIMEDOUT')) console.log(chalk.gray('   (test 超时)')); }
+      try { await runFillAgent(testPrompt, { timeoutMs: 600000 }); } catch (e) { if (String(e.message).includes('TIMEDOUT')) console.log(chalk.gray('   (test 超时)')); }
 
       // test-fix 闭环：跑测试，失败调 claude 修（对齐 verify 的 build-fix 模式）
       console.log(chalk.cyan(`   test-fix 闭环：验证测试通过\n`));
@@ -2292,7 +2525,7 @@ ${errTail}
 \`\`\`
 
 针对失败修测试文件（修测试断言以匹配真实源码行为，或修 src/ 里的 bug）。直接改文件，改完重跑 ${testCmd} 确认。`;
-        try { await ptyClaude(fixPrompt, { cwd, model: options.model, timeoutMs: 300000 }); } catch (e2) { if (String(e2.message).includes('TIMEDOUT')) console.log(chalk.gray('   (fix 超时)')); }
+        try { await runFillAgent(fixPrompt, { timeoutMs: 300000 }); } catch (e2) { if (String(e2.message).includes('TIMEDOUT')) console.log(chalk.gray('   (fix 超时)')); }
       }
       const prog = path.join(changesDir, 'progress.md');
       await fs.appendFile(prog, `\n## [test] 通用化测试\n- 扫描真实 src 结构（不硬编码）\n- test-matrix + 单测 + LLMWiki TC-* 归一化用例\n- 框架按 steering\n`);
@@ -2329,7 +2562,7 @@ ${targets.map(t => `- ${t}`).join('\n')}
 
     // 调 claude -p headless（--bare 跳过 hooks/skills/memory 重启动开销，prompt 走 stdin；8min 超时）
     try {
-      await ptyClaude(prompt, { cwd, model: options.model, timeoutMs: 480000 });
+      await runFillAgent(prompt, { timeoutMs: 480000 });
     } catch (e) {
       if (!String(e.message).includes('TIMEDOUT') && !String(e.message).includes('timeout')) {
         console.log(chalk.red('⚠️ claude headless 调用失败: ' + String(e.message).split('\n')[0]));
