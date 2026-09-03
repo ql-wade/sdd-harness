@@ -22,6 +22,14 @@ else
 fi
 
 INPUT=$(cat)
+
+# Fail closed：JSON 解析依赖 python3。解析器不可用时拒绝工具调用，
+# 而不是静默放行（deny 策略失效比误拦截更危险）。
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "❌ pre-tool-gate: python3 不可用，deny 策略无法求值 — 拦截本次调用（fail closed）。修复：安装 python3 或移除 hooks.yaml deny 策略" >&2
+  exit 2
+fi
+
 TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tool_name',''))" 2>/dev/null || echo "")
 
 case "$TOOL_NAME" in

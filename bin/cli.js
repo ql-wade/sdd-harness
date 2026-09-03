@@ -42,6 +42,10 @@ function validateId(id, label = 'id') {
 
 // ptyClaude — 流式执行 claude 子进程（wiki ingest 用）。
 // 必须 PTY：claude -p 在非 TTY 下写完不退出（孤儿进程）。macOS 用 script -q /dev/null。
+// ⚠️ 提权面（如实声明）：--dangerously-skip-permissions 让子 agent 无权限提示地写文件。
+//    ingest prompt 内嵌 raw/ 文件内容 → 存在 prompt-injection → 无约束写入的风险面。
+//    缓解：ingest 仅由用户显式调用 `sdd wiki ingest` 触发；raw/ 源视为已审阅输入。
+//    不要把此模式用于未审阅的第三方内容。
 // 契约：永远 resolve；失败经返回对象（exitCode/timedOut/killed）传递。
 async function ptyClaude(prompt, { cwd, model = 'sonnet', timeoutMs = 600000 } = {}) {
   const tmp = path.join(os.tmpdir(), `sdd-prompt-${process.pid}-${Date.now()}.txt`);

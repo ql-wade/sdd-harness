@@ -63,10 +63,12 @@ if [ "$WITH_LLMWIKI" = true ]; then
   LLMWIKI_DIR="$SDD_HOME/repos/llmwiki"
   if [ ! -x "$LLMWIKI_DIR/.venv/bin/python" ]; then
     say "📦 clone lucasastorian/llmwiki → $LLMWIKI_DIR"
-    git clone --depth 1 https://github.com/lucasastorian/llmwiki "$LLMWIKI_DIR"
-    say "🐍 创建 venv + 安装 mcp 包…"
+    git clone https://github.com/lucasastorian/llmwiki "$LLMWIKI_DIR"
+    # 供应链 pin：固定到已验证 commit（升级 = 显式改这里 + 重跑 bootstrap）
+    git -C "$LLMWIKI_DIR" checkout 075c5b4996ff4e07f9d3c57c1f14fd2b54a955db
+    say "🐍 创建 venv + 安装 mcp 包（pinned）…"
     python3 -m venv "$LLMWIKI_DIR/.venv"
-    "$LLMWIKI_DIR/.venv/bin/pip" install --quiet "mcp[cli]"
+    "$LLMWIKI_DIR/.venv/bin/pip" install --quiet "mcp[cli]==1.27.0"
   fi
   say "✅ LLMWiki venv 就绪：$LLMWIKI_DIR/.venv"
   node "$SCRIPT_DIR/register-mcps.mjs" --with-llmwiki

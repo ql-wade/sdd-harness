@@ -40,16 +40,22 @@ function add(name, entry) {
   registered.push(`${name} [${status}]`);
 }
 
+const MCP_PINS = {
+  playwright: '@playwright/mcp@0.0.80',
+  'chrome-devtools': 'chrome-devtools-mcp@1.8.0',
+  github: '@modelcontextprotocol/server-github@2025.4.8',
+};
+
 if (statusOf('playwright') === 'ready') {
-  add('playwright', { command: 'npx', args: ['@playwright/mcp@latest'] });
+  add('playwright', { command: 'npx', args: [MCP_PINS.playwright] });
 }
 if (statusOf('chrome-devtools') === 'ready') {
-  add('chrome-devtools', { command: 'npx', args: ['chrome-devtools-mcp@latest'] });
+  add('chrome-devtools', { command: 'npx', args: [MCP_PINS['chrome-devtools']] });
 }
 if (statusOf('github') === 'degraded') {
   add('github', {
     command: 'npx',
-    args: ['-y', '@modelcontextprotocol/server-github'],
+    args: ['-y', MCP_PINS.github],
     env: { GITHUB_TOKEN: '${GITHUB_TOKEN}' },
   });
 }

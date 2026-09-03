@@ -29,5 +29,11 @@ mcps:
   - name: llmwiki
     status: ready
     provides: [知识库 create/edit/append/read/search/lint, SQLite+FTS+引用索引]
-    depends: [python3 venv + mcp 包（bootstrap --with-llmwiki 安装）]
+    depends: [python3 venv + mcp 包（bootstrap --with-llmwiki 安装，commit/版本已 pin）]
     note: "写入必须走 MCP；直接 fs.write 绕过索引（hooks 策略 kb-write-protection 拦截）"
+
+  - name: opendeepwiki
+    status: degraded
+    provides: [本地 DeepWiki 查询（repo 文档/结构问答）]
+    depends: [用户本机 localhost:8095 服务]
+    note: "user-local：不随 scaffold 分发，其他成员机器上不可用；服务未启动时降级"

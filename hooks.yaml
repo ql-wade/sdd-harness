@@ -5,6 +5,11 @@
 #
 # hook 取值: PreToolUse | PostToolUse | SessionStart | Stop | PreCompact | SubagentStop
 # action:   deny（硬拦截，exit 2）| warn（提示，exit 0）| run（执行脚本，stdout 进上下文）
+#
+# ⚠️ 局限（如实声明）：deny 匹配是子串/前缀匹配，best-effort 防线而非沙箱——
+#    引号拼接、变量展开、base64 等变形可绕过模式（如 'git push  --force' 双空格）。
+#    硬安全边界仍是 agent 权限系统与人工审查；本清单的定位是"让 agent 在危险边
+#    缘停下来被看见"，不是对抗性防御。
 
 policies:
   # ---- 约束（PreToolUse 拦截）----

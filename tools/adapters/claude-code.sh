@@ -87,14 +87,40 @@ pre = os.path.relpath(os.path.join(root, "hooks/pre-tool-gate.sh"), root)
 session = os.path.relpath(os.path.join(root, "hooks/session-context.sh"), root)
 stop = os.path.relpath(os.path.join(root, "hooks/stop-reminder.sh"), root)
 
-# matcher 提取自 hooks.yaml（首个 PreToolUse deny 策略的 matcher，多策略取并集场景留 adapter 扩展）
-pre_matcher = next((field(p, "matcher") for p in policies
-                    if field(p, "hook") == "PreToolUse" and field(p, "action") == "deny"), "Bash|Edit|Write|MultiEdit")
+# matcher = 所有 PreToolUse deny 策略 matcher 的并集（顺序保留）。
+# 只取第一个会让后续策略（如 dangerous-command-blocklist 的 Bash）成为死代码。
+deny_matchers = []
+for p in policies:
+    if field(p, "hook") == "PreToolUse" and field(p, "action") == "deny":
+        m = field(p, "matcher")
+        if not m:
+            raise SystemExit(f"❌ deny policy {field(p,'id')} has no matcher — refusing to compile")
+        for part in m.split("|"):
+            if part and part not in deny_matchers:
+                deny_matchers.append(part)
+if not deny_matchers:
+    raise SystemExit("❌ no PreToolUse deny policies found in hooks.yaml")
+pre_matcher = "|".join(deny_matchers)
 
-settings.setdefault("hooks", {})
-settings["hooks"]["PreToolUse"] = [{"matcher": pre_matcher, "hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + pre}]}]
-settings["hooks"]["SessionStart"] = [{"matcher": "startup|resume", "hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + session}]}]
-settings["hooks"]["Stop"] = [{"hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + stop}]}]
+def upsert_hook_array(group, ours):
+    """合并而非覆盖：保留用户已有 hook 条目，按 command 去重后追加我们的。"""
+    arr = settings.get("hooks", {}).get(group, [])
+    ours_cmd = ours["hooks"][0]["command"]
+    arr = [e for e in arr if not any(h.get("command") == ours_cmd for h in e.get("hooks", []))]
+    arr.append(ours)
+    settings.setdefault("hooks", {})[group] = arr
+
+upsert_hook_array("PreToolUse", {"matcher": pre_matcher, "hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + pre}]})
+upsert_hook_array("SessionStart", {"matcher": "startup|resume", "hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + session}]})
+upsert_hook_array("Stop", {"hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + stop}]})
+
+# 编译期断言：每个 deny 策略的 matcher 部件必须出现在产物 matcher 中
+emitted = set(pre_matcher.split("|"))
+for p in policies:
+    if field(p, "hook") == "PreToolUse" and field(p, "action") == "deny":
+        missing = [part for part in field(p, "matcher").split("|") if part and part not in emitted]
+        if missing:
+            raise SystemExit(f"❌ policy {field(p,'id')} matchers {missing} missing from compiled settings — aborting")
 
 os.makedirs(os.path.dirname(settings_path), exist_ok=True)
 json.dump(settings, open(settings_path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
