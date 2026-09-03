@@ -42,7 +42,7 @@
 
 ```bash
 npm install                 # 依赖（node >=18）
-npm test                    # gate/audit + adapter 回归（37 用例）
+npm test                    # gate/audit + adapter 装配级回归套件
 bash scripts/check.sh       # 提交前总入口：规则层 + 技能层 + 回归 + YAML/JSON
 bash tools/bootstrap.sh     # hooks 落地 + 技能软链 + MCP 注册（幂等）
 ```

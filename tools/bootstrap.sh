@@ -14,8 +14,12 @@ ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT"
 
 WITH_LLMWIKI=false
-for arg in "$@"; do
-  [ "$arg" = "--with-llmwiki" ] && WITH_LLMWIKI=true
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --with-llmwiki) WITH_LLMWIKI=true ;;
+    *) echo "❌ 未知参数: $1（支持: --with-llmwiki）" >&2; exit 1 ;;
+  esac
+  shift
 done
 
 say()  { printf '%s\n' "$*"; }

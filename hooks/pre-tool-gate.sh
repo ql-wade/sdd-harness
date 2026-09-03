@@ -8,6 +8,7 @@
 # stdin JSON: {tool_name, tool_input:{file_path|notebook_path|command, ...}}
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+OLDIFS="${IFS:-}"
 source "${SCRIPT_DIR}/_resolve-project-dir.sh"
 
 COMPILED="${SCRIPT_DIR}/.compiled.env"

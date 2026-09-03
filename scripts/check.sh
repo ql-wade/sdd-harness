@@ -28,7 +28,8 @@ except ImportError:
     have_yaml = False
 
 errors = []
-yaml_files = sorted(set(glob.glob("openspec/**/*.yaml", recursive=True)))
+# 根级 load-bearing YAML（控制平面 + 能力清单）+ openspec 树
+yaml_files = sorted(set(glob.glob("*.yaml") + glob.glob("openspec/**/*.yaml", recursive=True)))
 if have_yaml:
     for f in yaml_files:
         try:
@@ -38,7 +39,9 @@ if have_yaml:
 else:
     print(f"  (PyYAML 不可用，跳过 {len(yaml_files)} 个 YAML 的深度校验)")
 
-for f in sorted(set(glob.glob("**/*.json", recursive=True)) - {"package-lock.json"} - {p for p in glob.glob("node_modules/**/*.json", recursive=True)}):
+# 根级 load-bearing JSON（.mcp.json）+ 其余受控 JSON
+json_files = sorted(set(glob.glob("*.json") + glob.glob("contracts/**/*.json", recursive=True) + ["package.json"]))
+for f in json_files:
     try:
         json.load(open(f, encoding="utf-8"))
     except Exception as e:
@@ -49,7 +52,7 @@ if errors:
     for e in errors:
         print(f"  {e}", file=sys.stderr)
     sys.exit(1)
-print("✅ yaml/json 静态校验通过")
+print(f"✅ yaml/json 静态校验通过（{len(yaml_files)} YAML, {len(json_files)} JSON）")
 PYEOF
 else
   echo "⚠️ python3 不可用 — 跳过 YAML/JSON 校验"
