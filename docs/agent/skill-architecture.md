@@ -38,7 +38,7 @@
 | `whitebox-verify` | 内部演化 | 三模式验证：调试模式（浏览器链路白盒）/ Journey 验收（No GREEN without Journey closure）/ Slice 模式（本地 TDD） |
 | `claude-parallel-tdd-planner` | 内部 | 并行计划协议：context pack、任务 DAG、CONFIRM_ALIGNMENT、RED/GREEN ledger |
 
-**约束**：项目约束只写在 `AGENTS.md` 和 `docs/agent/`，不改技能正文、不加项目品牌前缀。技能升级 = 显式替换 `.agents/skills/` 下的快照 + 跑 `bash scripts/agent-skill-check.sh`。
+**约束**：项目约束只写在 `AGENTS.md` 和 `docs/agent/`，不改技能正文、不加项目品牌前缀。技能以真实目录快照分发（禁止符号链接——可移植性红线），升级 = 显式替换 `.agents/skills/` 下的快照 + 跑 `bash scripts/agent-skill-check.sh`（校验存在性与 frontmatter 完整性；内容级防篡改 hash 清单为计划项）。
 
 ## 4. 触发矩阵
 

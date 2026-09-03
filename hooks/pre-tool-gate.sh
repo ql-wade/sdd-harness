@@ -32,6 +32,12 @@ fi
 
 TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tool_name',''))" 2>/dev/null || echo "")
 
+# Fail closed：非空输入解析失败 → 无法判定策略 → 拒绝（不能静默放行）
+if [ -z "$TOOL_NAME" ] && [ -n "$INPUT" ]; then
+  echo "❌ pre-tool-gate: hook 输入 JSON 解析失败，deny 策略无法求值 — 拦截本次调用（fail closed）" >&2
+  exit 2
+fi
+
 case "$TOOL_NAME" in
   Write|Edit|MultiEdit)
     TARGET_PATH=$(echo "$INPUT" | python3 -c "import sys,json; ti=json.load(sys.stdin).get('tool_input',{}); print(ti.get('file_path','') or ti.get('notebook_path','') or '')" 2>/dev/null || echo "")

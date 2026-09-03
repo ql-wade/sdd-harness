@@ -129,16 +129,35 @@ PYEOF
 
 # ---- 3. .claude/skills 软链注入 ----
 mkdir -p "$ROOT/.claude/skills"
+# 清除 stage 时代遗留的真实技能目录（sdd-* / trinity-* / sdd-harness 等）：
+# 它们不在 .agents/skills 基础层清单内，留着会与新控制平面矛盾（共识评审 F2）。
+for dir in "$ROOT"/.claude/skills/*/; do
+  [ -d "$dir" ] || continue
+  name="$(basename "$dir")"
+  case "$name" in
+    sdd-*|trinity-*)
+      rm -rf "${dir%/}"
+      echo "  🧹 移除遗留技能目录: $name"
+      ;;
+  esac
+done
 linked=0
 for dir in "$ROOT"/.agents/skills/*/; do
   name="$(basename "$dir")"
   [ "$name" = "superpowers" ] && continue  # superpowers 子技能单独铺
-  ln -sfn "../.agents/skills/$name" "$ROOT/.claude/skills/$name"
+  ln -sfn "../../.agents/skills/$name" "$ROOT/.claude/skills/$name"
   linked=$((linked+1))
 done
 for dir in "$ROOT"/.agents/skills/superpowers/*/; do
   name="$(basename "$dir")"
-  ln -sfn "../.agents/skills/superpowers/$name" "$ROOT/.claude/skills/$name"
+  ln -sfn "../../.agents/skills/superpowers/$name" "$ROOT/.claude/skills/$name"
   linked=$((linked+1))
 done
-echo "✅ .claude/skills 注入 ${linked} 个技能软链"
+# 链接解析断言：每个注入的软链必须能解析到存在的 SKILL.md（共识评审 F-003）
+broken=0
+for link in "$ROOT"/.claude/skills/*/; do
+  name="$(basename "${link%/}")"
+  [ -f "${link%/}/SKILL.md" ] || { echo "❌ broken skill link: $name" >&2; broken=$((broken+1)); }
+done
+[ "$broken" -eq 0 ] || exit 1
+echo "✅ .claude/skills 注入 ${linked} 个技能软链（全部可解析）"

@@ -29,7 +29,7 @@ import { getWikiHome } from '../lib/sdd-paths.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CONTRACTS_DIR = path.join(__dirname, '..', 'contracts');
 const TOOLS_DIR = path.join(__dirname, '..', 'tools');
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 
 const ID_UNSAFE_RE = /(?:^|\/)\.\.(?:\/|$)|[;|&`$(){}<>*?!\n\r]/;
 function validateId(id, label = 'id') {

@@ -57,6 +57,36 @@ test('pre-tool-gate denies blocked commands and allows normal ones', () => {
   assert.equal(allow.status, 0, 'normal command must pass');
 });
 
+test('pre-tool-gate fails closed on unparseable non-empty input (r2 F4)', () => {
+  const deny = spawnSync('bash', [path.join(repoRoot, 'hooks', 'pre-tool-gate.sh')], {
+    input: 'not-json{{',
+    encoding: 'utf8',
+  });
+  assert.equal(deny.status, 2, 'unparseable input must deny, not silently pass');
+});
+
+test('.mcp.json carries pinned versions, never @latest (r2 F-001/zcode F1)', () => {
+  const mcpJsonPath = path.join(repoRoot, '.mcp.json');
+  if (!fs.existsSync(mcpJsonPath)) return;
+  const raw = fs.readFileSync(mcpJsonPath, 'utf8');
+  assert.ok(!raw.includes('@latest'), '.mcp.json contains floating @latest — supply chain unpinned');
+  const servers = JSON.parse(raw).mcpServers ?? {};
+  const pins = { playwright: '@playwright/mcp@0.0.80', 'chrome-devtools': 'chrome-devtools-mcp@1.8.0' };
+  for (const [name, pin] of Object.entries(pins)) {
+    if (servers[name]) {
+      assert.ok(
+        (servers[name].args ?? []).some((a) => String(a).startsWith(pin)),
+        `${name} not pinned to ${pin}`,
+      );
+    }
+  }
+  // 清单不变量：.mcp.json 中每个 scaffold 管理的服务都必须出现在能力清单
+  const manifest = fs.readFileSync(path.join(repoRoot, 'mcp-capabilities.yaml'), 'utf8');
+  for (const name of Object.keys(servers)) {
+    assert.ok(manifest.includes(`- name: ${name}`), `server "${name}" in .mcp.json is absent from mcp-capabilities.yaml`);
+  }
+});
+
 test('pre-tool-gate denies direct wiki writes (kb-write-protection)', () => {
   const deny = spawnSync('bash', [path.join(repoRoot, 'hooks', 'pre-tool-gate.sh')], {
     input: JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/p/llmwiki/wiki/product/x.md' } }),
@@ -90,21 +120,27 @@ test('compiled settings.json PreToolUse matcher covers every deny policy', { ski
 });
 
 // 回归（F-HOOKS-002）：adapter 必须保留用户已有 hook 条目（合并而非覆盖）。
+// 测试结束后恢复 settings.json，避免 sentinel 残留进活控制平面（r2 评审 zcode F4）。
 test('adapter preserves user hook entries it does not own', { skip: !hasPython3 && 'python3 unavailable' }, () => {
   const settingsPath = path.join(repoRoot, '.claude', 'settings.json');
   if (!fs.existsSync(settingsPath)) return;
-  const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-  const sentinel = 'echo user-sentinel-hook';
-  settings.hooks ??= {};
-  settings.hooks.SessionStart ??= [];
-  settings.hooks.SessionStart.push({ matcher: 'startup', hooks: [{ type: 'command', command: sentinel }] });
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+  const original = fs.readFileSync(settingsPath, 'utf8');
+  try {
+    const settings = JSON.parse(original);
+    const sentinel = 'echo user-sentinel-hook';
+    settings.hooks ??= {};
+    settings.hooks.SessionStart ??= [];
+    settings.hooks.SessionStart.push({ matcher: 'startup', hooks: [{ type: 'command', command: sentinel }] });
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
 
-  const run = spawnSync('bash', [adapterPath], { cwd: repoRoot, encoding: 'utf8' });
-  assert.equal(run.status, 0, run.stderr || run.stdout);
+    const run = spawnSync('bash', [adapterPath], { cwd: repoRoot, encoding: 'utf8' });
+    assert.equal(run.status, 0, run.stderr || run.stdout);
 
-  const after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-  const cmds = (after.hooks?.SessionStart ?? []).flatMap((e) => (e.hooks ?? []).map((h) => h.command));
-  assert.ok(cmds.includes(sentinel), 'user hook entry was clobbered by adapter');
+    const after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    const cmds = (after.hooks?.SessionStart ?? []).flatMap((e) => (e.hooks ?? []).map((h) => h.command));
+    assert.ok(cmds.includes(sentinel), 'user hook entry was clobbered by adapter');
+  } finally {
+    fs.writeFileSync(settingsPath, original);
+  }
 });
 

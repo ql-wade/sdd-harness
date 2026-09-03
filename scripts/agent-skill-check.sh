@@ -30,6 +30,13 @@ for f in "${required_skills[@]}"; do
   head -10 "$f" | grep -q "^description:" || fail "skill missing frontmatter description: $f"
 done
 
+# 可移植性红线：vendored 技能必须是真实目录，不允许符号链接（共识评审 F-002：
+# symlink 会指向构建机特定路径，teammate 机器上断链）
+if [ -n "$(find .agents/skills -type l -print -quit 2>/dev/null)" ]; then
+  find .agents/skills -type l >&2
+  fail "vendored skills must be real directories, not symlinks"
+fi
+
 # 触发矩阵引用的技能必须已 vendored（防矩阵与技能层漂移）
 for s in grill-me whitebox-verify claude-parallel-tdd-planner; do
   grep -q "$s" docs/agent/skill-architecture.md || fail "触发矩阵缺少技能引用: $s"

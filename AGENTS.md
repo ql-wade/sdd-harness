@@ -1,85 +1,96 @@
-# <项目名> 开发约束（AGENTS.md 骨架）
+# AI Coding Scaffold（本仓库）开发约束
 
-> 本文件是仓库级 Coding Agent 入口，遵守 [AGENTS.md 开放标准](https://agents.md)。
-> 段落结构固定，内容由团队填空。`<!-- TODO(team): -->` 标记处必须在本项目首次提交前填写。
-> 修改子目录时，同时读取该路径下最近的 `AGENTS.md`（局部规则必须链接回本文件，不得削弱全局红线）。
+> 仓库级 Coding Agent 入口，遵守 [AGENTS.md 开放标准](https://agents.md)。
+> 本文件是 scaffold 项目自身的实例化规则；给团队用的填空骨架见
+> [AGENTS-template](docs/agent/AGENTS-template.md)。指令冲突时：当前用户明确要求 >
+> 最近 `AGENTS.md` > 父级逐层回溯 > 本文件。
 
 ## 0. 指令语义
 
-- 开始任务前先读取本文件；指令冲突时：当前用户明确要求 > 离目标文件最近的 `AGENTS.md` > 父级逐层回溯 > 本文件。
-- 局部 `AGENTS.md` 只补充局部规则，必须链接回父级，不得悄悄改变安全、数据和验证边界。
+- 开始任务前先读取本文件；修改子目录时同时读取该路径下最近的 `AGENTS.md`。
 - 本文件是活文档：命令、目录职责或架构变化时，在同一变更中更新它。
 - 只修改与当前目标直接相关的文件；不重排、不覆盖用户已有改动。
 
 ## 1. 项目目标与仓库范围
 
-<!-- TODO(team): 一段话说明项目目标；列出顶层目录及职责；明确 non-goals（明确不做什么、不建哪些目录）。示例：
-- `apps/`：xx 应用
-- `packages/`：共享包
-- non-goals：消费者端不在本仓库，不要创建 apps/consumer-app/
--->
+本仓库是**团队 AI coding 项目的 scaffold**：统一规则入口 + 方法论技能 + hooks 控制平面 + MCP 能力清单 + 验证工具。不规定工作流（ADR-0015）。
+
+- `AGENTS.md` / `CLAUDE.md -> AGENTS.md`：规则入口（CLAUDE.md 只是兼容软链，check 强制）
+- `docs/agent/`：技能触发矩阵、任务交接模板、AGENTS 填空模板
+- `.agents/skills/`：vendored 技能快照（必须为真实目录，禁止符号链接——可移植性红线）
+- `hooks.yaml` + `hooks/`：控制平面策略源与脚本实现
+- `mcp-capabilities.yaml` / `.mcp.json`：MCP 能力唯一事实源 + 注册产物（无绝对路径、版本 pin）
+- `openspec/`：变更工件
+- `bin/cli.js` + `lib/` + `contracts/`：验证工具薄 CLI 与 gate/audit 机械证据库
+- `tools/`：bootstrap、CC adapter、MCP 注册器
+- non-goals：不引入工作流编排/阶段状态机；不在技能正文里写项目约束；不提交本地产物（`.claude/`、`.sdd/` 等）
 
 ## 2. 开始任务前必须读取
 
-<!-- TODO(team): 按顺序列出建立上下文的必读文件。固定骨架如下，填项目特定文档：
-1. README.md
-2. docs/architecture/（架构文档与 ADR 索引）
-3. docs/agent/skill-architecture.md（技能触发矩阵）
-4. 与目标模块对应的 specs / contracts / 迁移
--->
+1. `README.md`：定位与快速开始
+2. `docs/architecture/scaffold-architecture.md`：权威架构（分层、决策、迁移）
+3. `docs/architecture/adr/`：不可逆决策（尤其 ADR-0015）
+4. `docs/agent/skill-architecture.md`：触发矩阵与验证层分工
 
-文档、契约、迁移和代码不一致时，不要默默选一个版本；先说明冲突，并通过 ADR/OpenSpec 固化决定。
+文档与代码不一致时，先说明冲突并通过 ADR 固化决定，不默默选边。
 
 ### 局部 AGENTS.md 索引
 
-<!-- TODO(team): 有局部规则文件时在此列出路径 + 一句话边界说明；没有则写"暂无"。 -->
+- `.agents/skills/AGENTS.md`：技能层约束（不改技能正文、不加品牌前缀、升级走显式替换）
 
 ## 3. 环境、构建与验证命令
 
-<!-- TODO(team): 填写安装 / 构建 / 全量检查 / 按范围验证命令。骨架：
 ```bash
-<包管理器> install
-bash scripts/check.sh        # 提交前总入口
+npm install                 # 依赖（node >=18）
+npm test                    # gate/audit + adapter 回归（37 用例）
+bash scripts/check.sh       # 提交前总入口：规则层 + 技能层 + 回归 + YAML/JSON
+bash tools/bootstrap.sh     # hooks 落地 + 技能软链 + MCP 注册（幂等）
 ```
--->
 
-不能运行外部依赖（Docker、真实第三方服务）时，完成静态/单元验证即可，但交接时必须明确标记"未验证"，不能把推测写成通过。
+验证失败的修复必须改根因，不允许通过放宽断言转绿。adapter/hooks 是控制平面：
+改动后必须同时验证"脚本行为"与"settings.json 装配"（matcher 注册），二者缺一即是
+共识评审 F-HOOKS-001 的复刻。
 
 ## 4. 事实来源与目录所有权
 
 | 内容 | 事实来源 | 变更要求 |
 | --- | --- | --- |
-| 对外接口契约 | <!-- TODO(team): 如 openapi/ --> | 先改契约，再同步实现、类型、Mock 和契约测试 |
+| 控制平面策略 | `hooks.yaml` | 策略只在这里定义；adapter 是编译器，产物（.compiled.env）不手改 |
+| MCP 能力 | `mcp-capabilities.yaml` | ready/degraded/planned 三态如实标注；注册器据此生成 .mcp.json |
+| 技能正文 | 上游（mattpocock/obra）| 不修改 vendored 快照；升级 = 显式替换 + skill-check |
 | 架构决策 | `docs/architecture/adr/` | 不可逆决策必须先有 ADR |
-| 数据结构 | <!-- TODO(team): 迁移目录 --> | 用迁移文件，不用运行时自动建表 |
-| 外部事实源 | <!-- TODO(team): 有外部导入源时填 docs/business/source-manifest.yaml 模式；无则删除本行 --> | 记录上游 URL + 导入 commit；事实层/决策层分离，冲突走 ADR |
+| 变更工件 | `openspec/changes/<change-id>/` | 高风险变更先提案后实施 |
+| MCP 供应链 | `tools/register-mcps.mjs` 的 MCP_PINS + bootstrap 的 commit/pip pin | 禁止 @latest / HEAD / 浮动版本 |
 
-<!-- TODO(team): 领域硬规则（示例：金额用最小货币单位整数带币种、状态机幂等键），按项目填写。 -->
+领域硬规则：所有相对路径符号链接必须从其所在目录可解析（`.claude/skills/* -> ../../.agents/...`）；分发内容不得引用 `$HOME` 或机器特定路径。
 
 ## 5. 编码和接口约定
 
-<!-- TODO(team): 语言/框架版本锁定、API 必备字段（鉴权/错误码/幂等）、日志红线（不记录密钥/敏感数据）、.env 不提交等。 -->
+- Node ESM（`"type": "module"`），依赖最少化（chalk/commander/fs-extra），不加未使用依赖。
+- CLI 退出码契约：`0` 通过 / `1` 输入无效 / `2` 验证不通过；机器可读输出用 `--json`。
+- shell 脚本一律 `set -euo pipefail`；生成"将被 source 的文件"时值必须强制单引号（事故 2026-09-03）。
+- 安全姿态：deny 门 fail closed（解析器缺失/输入不可解析都拦截）；提权路径（如 ingest 的 skip-permissions）必须在代码内如实声明风险面。
+- 测试污染红线：测试不得向 `.claude/settings.json` 等活配置残留状态；需要写入的必须在 finally 恢复。
 
 ## 6. 任务执行循环
 
-每个变更按以下闭环执行，并在最终交接留下证据：
-
-1. **理解**：确认目标、范围、事实来源、依赖和明确不做的内容。
-2. **风险判断**：按 [技能触发矩阵](docs/agent/skill-architecture.md) 选择技能与验证深度。
-3. **计划**：跨模块/高风险任务创建 `openspec/changes/<change-id>/`，写清背景、方案、验收、迁移和回滚。
-4. **实施**：优先更新契约/迁移/测试边界，再实现代码；保持改动小而可审查。
-5. **验证**：运行与改动范围匹配的窄检查，最后 `bash scripts/check.sh`；失败就修复或如实记录。
-6. **交接**：列出改动文件、已执行命令及结果、未验证项、风险和后续人工决策（模板见 [task-template](docs/agent/task-template.md)）。
+1. **理解**：确认目标、范围、事实来源和明确不做的内容。
+2. **风险判断**：按[触发矩阵](docs/agent/skill-architecture.md)选择技能与验证深度。
+3. **计划**：跨模块/高风险任务创建 `openspec/changes/<change-id>/`。
+4. **实施**：优先更新契约/测试边界，再实现；改动小而可审查。
+5. **验证**：窄检查 + `bash scripts/check.sh`；失败就修复或如实记录。
+6. **交接**：改动文件、真实执行的命令与结果、未验证项、风险（模板见 [task-template](docs/agent/task-template.md)）。
 
 ## 7. 高风险与安全红线
 
-<!-- TODO(team): 列出默认按高风险处理的操作（支付/权限/迁移/不可逆操作等）及对应要求（幂等/回滚/人工审查）。固定红线： -->
-- 不执行 `git reset --hard`、批量删除、覆盖用户文件或破坏性数据库操作；目标不明确时先停下请求确认。
-- 外部副作用操作（真实外部服务、消息发送）未经明确授权只做静态检查或隔离环境验证。
-- 不绕过鉴权、签名、风控或幂等检查来"快速联调"。
+- 控制平面（hooks/adapter/settings.json）：改动必须有装配级验证（不是只测脚本）。
+- 供应链：依赖升级必须显式改 pin 并注明验证方式。
+- 不可逆决策（定位、分层、删除既有能力）：先写 ADR。
+- 不执行破坏性命令模式演示时，使用拼接构造载荷，避免活 hook 自触（实证：会拦）。
+- 外部副作用操作未经明确授权只做静态验证。
 
 ## 8. 交接格式
 
-普通任务用 [task-template](docs/agent/task-template.md)；跨模块和高风险任务用 `openspec/changes/<change-id>/`。最终消息至少包含：目标与实际完成范围、关键改动文件及事实来源、真实执行过的验证命令和结果、未验证项与需要人工确认的事项。
+普通任务用 [task-template](docs/agent/task-template.md)；高风险任务用 `openspec/changes/<change-id>/`。最终消息至少包含：目标与完成范围、关键改动文件及事实来源、真实执行的验证命令和结果、未验证项与需人工确认事项。
 
 不要把 agent 的隐式记忆、模型名称、内部提示词或未验证的推理写入项目文件。
