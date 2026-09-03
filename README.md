@@ -1,96 +1,90 @@
-# SDD Harness
+# AI Coding Scaffold
 
-**企业级 AI DevOps workflow wrapper** —— 用平台无关 Core 管理九阶段状态机、gate 与 evidence，再按 Adapter 和 Stage 按需接入 OpenSpec、LLMWiki、代码图谱、review、browser 与 deploy 能力。
+团队 AI coding 项目的脚手架：**统一规则入口 + 方法论技能 + hooks 控制平面 + MCP 能力清单 + 验证工具**。
+
+不规定工作流——阶段划分、任务编排、模型选择由执行 agent 和团队自定。scaffold 只提供设施和方法论（[ADR-0015](docs/architecture/adr/0015-scaffold-repositioning.md)）。
+
+## 分层
 
 ```text
-SDD Harness = sdd-cli 底座 + cc-sdd 工程模式 + 治理层 + knowledge/evidence 闭环
+约定层   AGENTS.md（单一规则入口；CLAUDE.md 软链兼容）
+协作层   docs/agent/（技能触发矩阵、任务交接模板）
+技能层   .agents/skills/（vendored 版本化快照）
+控制层   hooks.yaml → adapter → agent 原生 hooks（约束 + 触发）
+工具层   mcp-capabilities.yaml + .mcp.json（诚实能力清单）
+工件层   openspec/ + docs/architecture/adr/
+验证层   lib/ gate/audit 程序化验证 + scripts/check.sh
 ```
 
-## 9 阶段闭环
-
-```
-/sdd:grill → /sdd:product → /sdd:dev → /sdd:test → /sdd:code
-         → /sdd:review → /sdd:verify → /sdd:release → /sdd:archive
-```
-
-| 阶段 | 干什么 | 底层 |
-|------|--------|------|
-| grill | 业务澄清（discovery 路由 + 术语/边界） | grill-me (mattpocock/skills) + MCP |
-| product | PRD / AC / 功能测试草案 | to-prd + prototype |
-| dev | OpenSpec proposal/specs/design/tasks | trinity-new/continue |
-| test | 测试矩阵 → LLMWiki 用例 | LLMWiki MCP |
-| code | 实现（TDD） | trinity-apply + Superpowers |
-| review | 架构 + 行级 review | Superpowers + open-code-review |
-| verify | 交付验证（功能 + 非功能证据） | trinity-verify + Playwright/chrome-devtools |
-| release | 部署（manual/auto/skip） | deploy pipeline |
-| archive | 归档 + 知识沉淀 | trinity-archive + LLMWiki writeback |
+详见 [docs/architecture/scaffold-architecture.md](docs/architecture/scaffold-architecture.md)。
 
 ## 快速开始
 
 ```bash
-cd your-project
-npx sdd-harness init                         # 轻量 Core
-npx sdd-harness init --adapter claude        # Claude reference adapter
-npx sdd-harness init --adapter codex         # Codex preview adapter
-npx sdd-harness init --adapter opencode      # OpenCode preview adapter
-npx sdd-harness init --adapter claude --with wiki,graph,review
-                                             # 显式安装重能力
-# 然后在 Claude Code 里
-/sdd:grill "加个用户认证功能"
+git clone <本仓库> my-project && cd my-project
+bash tools/bootstrap.sh                # hooks 落地 + skills 注入 + MCP 注册
+bash tools/bootstrap.sh --with-llmwiki # 额外安装 LLMWiki MCP（python venv）
 ```
 
-`sdd` CLI 是唯一的 workflow control plane。Adapter 只生产 artifacts，并通过 `sdd run <stage>` 请求转换；hooks 只阻断或记录。
+然后：
 
-| 层 | 状态 | 说明 |
-|---|---|---|
-| Core | stable | CLI、workflow state、artifact/gate/evidence；只依赖 Node.js 与 Git |
-| Claude Code adapter | reference | commands、skills、hooks 的正式行为基准 |
-| Codex adapter | preview | 安装 stage skills；升级为 stable 前需完整 parity E2E |
-| OpenCode adapter | preview | 安装 stage skills；升级为 stable 前需完整 parity E2E |
+1. 填 `AGENTS.md` 和 `openspec/project.md` 的 `TODO(team)` 内容
+2. `bash scripts/check.sh` 确认骨架完整
+3. 重启 Claude Code 会话，hooks/skills 生效
 
-## 差异化（相对 cc-sdd）
+## 技能（基础层）
 
-- **知识闭环**：LLMWiki MCP（真实可用）—— spec→code→test→archive→knowledge
-- **治理**：5 hooks + 9 gates + 12 问 reboot + artifact ownership
-- **多角色**：product / dev / test 三角色显式 stage
-- **release 阶段**：manual / automated / skip
-- **按需依赖**：Core 默认不安装重工具；`--adapter` 与 `--with wiki,graph,review` 显式启用
-- **三级门禁**：Core E2E、Claude Adapter E2E、Live Integration E2E 分层验证
+| 技能 | 职责 |
+|------|------|
+| grill-me + grilling | 前置事实质询（一次一问、推荐答案、消除歧义） |
+| superpowers 核心子集 | brainstorming / writing-plans / TDD / verification / code review |
+| whitebox-verify | 三模式验证（调试 / Journey 验收 / Slice TDD） |
+| claude-parallel-tdd-planner | 并行计划协议（DAG / RED-GREEN ledger） |
 
-## 文档
+触发矩阵：[docs/agent/skill-architecture.md](docs/agent/skill-architecture.md)。技能以版本化快照 vendor 在 `.agents/skills/`，项目约束不改技能正文。
 
-- 架构：`docs/architecture/sdd-harness-workflow-architecture.md`
-- E2E 发布门禁：`docs/architecture/e2e-release-gates.md`
-- LLMWiki 结构：`docs/architecture/llmwiki-structure.md`
-- ADR：`docs/architecture/adr/`
-- cc-sdd 对比：`docs/architecture/cc-sdd-comparison.md`
-
-## 命令
+## 验证工具（lib/ 机械证据层）
 
 ```bash
-sdd init              # 初始化轻量 Core
-sdd init --adapter claude
-                      # 安装 Claude reference adapter
-sdd init --adapter codex|opencode
-                      # 安装 preview adapter
-sdd init --adapter claude --with wiki,graph,review
-                      # 显式安装阶段能力
-sdd init --adapter claude --skip-dependencies
-                      # 只落项目文件，不修改全局依赖
-sdd init --force      # 覆盖已存在文件
-sdd doctor --stage verify --json
-                      # 按 stage 检查能力；missing 不会被伪装成通过
-sdd graph --install   # 按需装 Understand-Anything + 生成 code graph
-sdd wiki init         # 重建 LLMWiki 骨架
-sdd probe --project . --evidence .sdd/runs/<id>/probe-evidence.json --json
-                      # 判定 Browser/Playwright 采集的 runtime evidence
-sdd evidence-audit --project . --change <change-id> --run <run-id> \
-  --test-output .sdd/runs/<run-id>/npm-test.txt --json
-                      # 判定 progress/review evidence 是否与磁盘和命令输出一致
-sdd upgrade           # 从原版 sdd-cli 升级
-npm run test:e2e:core
-npm run test:e2e:claude
-npm run test:adapter:preview
+node bin/cli.js test-gate --project . --evidence-dir .sdd/evidence   # 跑测试 + sha256 证据
+node bin/cli.js probe --project . --evidence evidence.json           # probe 证据校验
+node bin/cli.js generation-capture --project . --out before.json     # 测试清单（生成前）
+node bin/cli.js generation-evaluate --project . --before before.json # 测试编写完整性
+node bin/cli.js deliverable-audit --project . --run <id>             # 交付物审计
+node bin/cli.js evidence-audit --project . --change <id>             # 证据审计
+node bin/cli.js workflow-audit --project . --run <id>                # 运行状态审计
+node bin/cli.js wiki init                                            # LLMWiki 骨架 + raw/ 复制
+node bin/cli.js doctor                                               # 环境自检
 ```
 
-License: MIT. Fork 自 [ql-wade/sdd-cli](https://github.com/ql-wade/sdd-cli)。
+退出码契约：`0` 通过，`1` 输入无效，`2` 验证不通过。
+
+## MCP 能力清单（诚实标注）
+
+| MCP | status | 说明 |
+|-----|--------|------|
+| chrome-devtools | ready | 浏览器调试 / trace（whitebox-verify 调试模式依赖） |
+| playwright | ready | 浏览器自动化 |
+| github | degraded | 需 `GITHUB_TOKEN`，未配置时降级 |
+| llmwiki | ready | 知识库（需 venv；`bootstrap --with-llmwiki`） |
+
+唯一事实源：[mcp-capabilities.yaml](mcp-capabilities.yaml)。`planned` 状态的 MCP 禁止被文档当作可用。
+
+## Hooks 控制平面
+
+策略定义一次（[hooks.yaml](hooks.yaml)），adapter 落地：
+
+- `kb-write-protection` — 禁止直接写 `llmwiki/wiki/`（绕过索引），必须走 MCP
+- `dangerous-command-blocklist` — `git push --force` / `git reset --hard` / `rm -rf /` 等禁入
+- `session-context-injection` — SessionStart 注入规则入口 + ADR 索引
+- `stop-sediment-reminder` — Stop 时提醒未沉淀的 findings/ADR
+
+新增 agent 支持 = 写一个 `tools/adapters/<agent>.sh`；首日只实现 Claude Code。
+
+## 开发（本仓库自身）
+
+```bash
+npm install
+npm test               # gate/audit 回归套件
+bash scripts/check.sh  # 总检查（规则层 + 技能层 + 回归 + YAML/JSON）
+```

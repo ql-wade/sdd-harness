@@ -1,0 +1,43 @@
+# hooks.yaml — 控制平面策略源（中立格式）
+#
+# 一次定义，各 agent adapter 落地为原生配置：
+#   Claude Code: tools/adapters/claude-code.sh → .claude/settings.json + hooks/.compiled.env
+#
+# hook 取值: PreToolUse | PostToolUse | SessionStart | Stop | PreCompact | SubagentStop
+# action:   deny（硬拦截，exit 2）| warn（提示，exit 0）| run（执行脚本，stdout 进上下文）
+
+policies:
+  # ---- 约束（PreToolUse 拦截）----
+
+  - id: kb-write-protection
+    hook: PreToolUse
+    matcher: Write|Edit|MultiEdit
+    action: deny
+    target:
+      - "llmwiki/wiki/"
+    message: "直接写知识库 wiki/ 会绕过索引（SQLite+FTS），必须走 mcp__llmwiki__create / edit / append"
+
+  - id: dangerous-command-blocklist
+    hook: PreToolUse
+    matcher: Bash
+    action: deny
+    patterns:
+      - "git push --force"
+      - "git push -f "
+      - "git reset --hard"
+      - "rm -rf /"
+      - "DROP TABLE"
+      - "DROP DATABASE"
+    message: "破坏性命令在团队禁入清单，确需执行请人工操作"
+
+  # ---- 触发（SessionStart / Stop 注入）----
+
+  - id: session-context-injection
+    hook: SessionStart
+    action: run
+    script: hooks/session-context.sh
+
+  - id: stop-sediment-reminder
+    hook: Stop
+    action: run
+    script: hooks/stop-reminder.sh
