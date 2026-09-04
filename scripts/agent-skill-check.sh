@@ -14,14 +14,6 @@ required_skills=(
   ".agents/skills/grilling/SKILL.md"
   ".agents/skills/whitebox-verify/SKILL.md"
   ".agents/skills/claude-parallel-tdd-planner/SKILL.md"
-  ".agents/skills/superpowers/using-superpowers/SKILL.md"
-  ".agents/skills/superpowers/brainstorming/SKILL.md"
-  ".agents/skills/superpowers/writing-plans/SKILL.md"
-  ".agents/skills/superpowers/test-driven-development/SKILL.md"
-  ".agents/skills/superpowers/verification-before-completion/SKILL.md"
-  ".agents/skills/superpowers/requesting-code-review/SKILL.md"
-  ".agents/skills/superpowers/receiving-code-review/SKILL.md"
-  ".agents/skills/superpowers/subagent-driven-development/SKILL.md"
 )
 
 for f in "${required_skills[@]}"; do

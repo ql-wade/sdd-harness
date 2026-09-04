@@ -1,5 +1,10 @@
 # AI Coding Scaffold Changelog
 
+## 0.2.2 (2026-09-04)
+
+### Removed（ADR-0016）
+- **superpowers 技能层移除**：全局插件（superpowers@claude-plugins-official）卸载 + 项目 vendored 子集（`.agents/skills/superpowers/`）删除。职责替代：TDD/verification → whitebox-verify（Slice）+ test-gate 机械证据；brainstorming/writing-plans → grill-me 质询 + claude-parallel-tdd-planner。基础层技能 12 → 4。
+
 ## 0.2.1 (2026-09-03)
 
 ### Repositioned（ADR-0015）

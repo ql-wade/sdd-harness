@@ -34,9 +34,10 @@
 | 技能 | 来源 | 职责 |
 | --- | --- | --- |
 | `grill-me` + `grilling` | mattpocock/skills | 前置事实质询：一次一问、给推荐答案、消除分支和术语歧义，直到共同理解 |
-| `superpowers:*` 核心子集 | obra/superpowers | brainstorming、writing-plans、TDD、verification-before-completion、code review、subagent 并行 |
 | `whitebox-verify` | 内部演化 | 三模式验证：调试模式（浏览器链路白盒）/ Journey 验收（No GREEN without Journey closure）/ Slice 模式（本地 TDD） |
 | `claude-parallel-tdd-planner` | 内部 | 并行计划协议：context pack、任务 DAG、CONFIRM_ALIGNMENT、RED/GREEN ledger |
+
+> superpowers 核心子集已于 v0.2.2 移除（ADR-0016）：其 TDD/verification 职责由 whitebox-verify（Slice 模式）承接，brainstorming/writing-plans 职责由 grill-me 质询与 claude-parallel-tdd-planner 承接。
 
 **约束**：项目约束只写在 `AGENTS.md` 和 `docs/agent/`，不改技能正文、不加项目品牌前缀。技能以真实目录快照分发（禁止符号链接——可移植性红线），升级 = 显式替换 `.agents/skills/` 下的快照 + 跑 `bash scripts/agent-skill-check.sh`（校验存在性与 frontmatter 完整性；内容级防篡改 hash 清单为计划项）。
 
@@ -46,12 +47,12 @@
 
 | 任务 | 必读技能 | 必须产出 |
 | --- | --- | --- |
-| 需求不清、事实不足 | `grill-me` + `superpowers:brainstorming` | 事实来源、已确认目标、范围、非目标、未决问题和决策 owner |
-| 单文件低风险修复 | `superpowers:test-driven-development` + `superpowers:verification-before-completion` | 窄测试/静态检查 |
-| 多文件、新能力规划 | `grill-me` + `claude-parallel-tdd-planner` + `superpowers:writing-plans` | context pack、DAG、CONFIRM_ALIGNMENT、RED/GREEN 计划 |
+| 需求不清、事实不足 | `grill-me` | 事实来源、已确认目标、范围、非目标、未决问题和决策 owner |
+| 单文件低风险修复 | `whitebox-verify`（Slice 模式） | 失败测试先行、窄测试/静态检查 |
+| 多文件、新能力规划 | `grill-me` + `claude-parallel-tdd-planner` | context pack、DAG、CONFIRM_ALIGNMENT、RED/GREEN 计划 |
 | 跨模块/跨服务验收 | `whitebox-verify`（Journey 模式） | 终态业务 oracle、真实 first-party 路径证据 |
-| 本地规则/组件 TDD | `whitebox-verify`（Slice 模式）或 `superpowers:TDD` | 失败测试先行、窄验证 |
-| 完成、合并前 | `whitebox-verify` + `superpowers:verification-before-completion` + 人工审查 | 真实命令、结果、未验证项清单 |
+| 本地规则/组件 TDD | `whitebox-verify`（Slice 模式） | 失败测试先行、窄验证 |
+| 完成、合并前 | `whitebox-verify` + `test-gate` 机械证据 + 人工审查 | 真实命令、结果、未验证项清单 |
 | 实现中发现事实冲突 | 重新调用 `grill-me` | 冲突事实、决策 owner、更新后的 ADR/计划 |
 
 机械证据与技能方法互补：技能定义"怎么验"；`lib/` 的验证工具提供"验过了"的程序化证据——

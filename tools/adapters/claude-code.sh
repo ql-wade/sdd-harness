@@ -144,13 +144,7 @@ done
 linked=0
 for dir in "$ROOT"/.agents/skills/*/; do
   name="$(basename "$dir")"
-  [ "$name" = "superpowers" ] && continue  # superpowers 子技能单独铺
   ln -sfn "../../.agents/skills/$name" "$ROOT/.claude/skills/$name"
-  linked=$((linked+1))
-done
-for dir in "$ROOT"/.agents/skills/superpowers/*/; do
-  name="$(basename "$dir")"
-  ln -sfn "../../.agents/skills/superpowers/$name" "$ROOT/.claude/skills/$name"
   linked=$((linked+1))
 done
 # 链接解析断言：每个注入的软链必须能解析到存在的 SKILL.md（共识评审 F-003）

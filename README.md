@@ -37,7 +37,6 @@ bash tools/bootstrap.sh --with-llmwiki # 额外安装 LLMWiki MCP（python venv�
 | 技能 | 职责 |
 |------|------|
 | grill-me + grilling | 前置事实质询（一次一问、推荐答案、消除歧义） |
-| superpowers 核心子集 | brainstorming / writing-plans / TDD / verification / code review |
 | whitebox-verify | 三模式验证（调试 / Journey 验收 / Slice TDD） |
 | claude-parallel-tdd-planner | 并行计划协议（DAG / RED-GREEN ledger） |
 

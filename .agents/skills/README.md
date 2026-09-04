@@ -5,7 +5,6 @@
 | 目录 | 来源 | 职责 |
 |------|------|------|
 | `grill-me/` + `grilling/` | mattpocock/skills | 前置事实质询 |
-| `superpowers/` 核心子集 | obra/superpowers | brainstorming / plans / TDD / verification / review / subagent |
 | `whitebox-verify/` | 内部 | 三模式验证（调试 / Journey / Slice） |
 | `claude-parallel-tdd-planner/` | 内部 | 并行计划协议（DAG / RED-GREEN ledger） |
 

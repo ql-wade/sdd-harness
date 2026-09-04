@@ -92,7 +92,6 @@
 | 技能 | 来源 | 职责 |
 |------|------|------|
 | grill-me + grilling | mattpocock/skills | 前置事实质询，一次一问、给推荐答案、消除歧义 |
-| superpowers 核心子集 | obra/superpowers | brainstorming / writing-plans / TDD / verification / code review |
 | whitebox-verify (v2.2+) | 内部演化 | 三模式验证：调试（Chrome MCP 链路）/ Journey 验收 / Slice TDD |
 | claude-parallel-tdd-planner | 内部 | 并行计划协议：context pack、DAG、CONFIRM_ALIGNMENT、RED/GREEN ledger |
 
@@ -102,11 +101,11 @@
 
 | 任务 | 必读技能 | 必须产出 |
 |------|---------|---------|
-| 需求不清、事实不足 | grill-me + superpowers:brainstorming | 事实来源、范围、非目标、未决 owner |
-| 多文件/新能力规划 | grill-me + claude-parallel-tdd-planner + superpowers:writing-plans | context pack、DAG、RED/GREEN 计划 |
+| 需求不清、事实不足 | grill-me | 事实来源、范围、非目标、未决 owner |
+| 多文件/新能力规划 | grill-me + claude-parallel-tdd-planner | context pack、DAG、RED/GREEN 计划 |
 | 跨模块/跨服务验收 | whitebox-verify（Journey 模式） | 终态业务 oracle、真实路径证据 |
-| 本地规则/组件 TDD | whitebox-verify（Slice 模式）或 superpowers:TDD | 失败测试先行、窄验证 |
-| 完成/合并前 | whitebox-verify + superpowers:verification + 人工审查 | 真实命令、结果、未验证项清单 |
+| 本地规则/组件 TDD | whitebox-verify（Slice 模式） | 失败测试先行、窄验证 |
+| 完成/合并前 | whitebox-verify + test-gate 机械证据 + 人工审查 | 真实命令、结果、未验证项清单 |
 
 ## 4. Hooks 控制平面
 
@@ -207,7 +206,7 @@ git 历史保留，不 squash。
 
 1. ✅ 架构定稿（本文）
 2. 模板内容平铺到根（AGENTS.md 骨架、docs/agent/、openspec/、ADR）
-3. 技能 vendoring：从 mono `.agents/skills/` 与最新上游同步 whitebox-verify / planner / grill-me / superpowers
+3. 技能 vendoring：从 mono `.agents/skills/` 与最新上游同步 whitebox-verify / planner / grill-me（superpowers 已移除，见 ADR-0016）
 4. hooks.yaml + hooks/ 脚本 + CC adapter + bootstrap.sh
 5. scripts/ 最小 check 核心（instructions/skill check，从 mono 移植去业务化）
 6. mcp-capabilities.yaml + .mcp.json wrapper（沿用 env-driven 方案）
