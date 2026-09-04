@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import os from 'node:os';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -26,4 +28,22 @@ test('release version metadata is consistent across all sources', () => {
   assert.match(cli, new RegExp(`const VERSION = '${version.replace(/\./g, '\\.')}'`), 'bin/cli.js VERSION drifts from package.json');
 
   assert.match(changelog, new RegExp(`^## ${version.replace(/\./g, '\\.')} `, 'm'), 'CHANGELOG.md has no entry for current version');
+});
+
+// 负路径（共识 next-plan #8）：版本漂移必须被门禁抓住，而不是恒绿
+test('version gate fails on drift (negative path)', () => {
+  const src = fs.readFileSync(path.join(repoRoot, 'bin', 'cli.js'), 'utf8');
+  const drifted = src.replace(/const VERSION = '[^']+';/, "const VERSION = '9.9.9';");
+  assert.notEqual(drifted, src, 'VERSION anchor not found — test is vacuous');
+  // 放 repo 内（node_modules 可解析；/tmp 下 ESM 解析不到依赖）
+  const tmp = path.join(repoRoot, 'test', '.tmp-drift-cli.js');
+  fs.writeFileSync(tmp, drifted);
+  try {
+    const run = spawnSync(process.execPath, [tmp, '--version'], { encoding: 'utf8' });
+    assert.match(run.stdout, /9\.9\.9/, 'drifted CLI must report drifted version');
+    const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+    assert.notEqual(pkg.version, '9.9.9');
+  } finally {
+    fs.rmSync(tmp, { force: true });
+  }
 });

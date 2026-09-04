@@ -19,7 +19,7 @@ else
   # 无编译产物时用内置默认（与 hooks.yaml 保持一致）
   KB_PROTECT_PATHS="llmwiki/wiki/"
   DENY_PATTERNS="git push --force|git push -f |git reset --hard|rm -rf /|DROP TABLE|DROP DATABASE"
-  DENY_MESSAGE="破坏性命令在团队禁入清单"
+  DENY_MESSAGE="破坏性命令在团队禁入清单，确需执行请人工操作"
 fi
 
 INPUT=$(cat)
@@ -40,7 +40,7 @@ if [ -z "$TOOL_NAME" ] && [ -n "$INPUT" ]; then
 fi
 
 case "$TOOL_NAME" in
-  Write|Edit|MultiEdit)
+  Write|Edit|MultiEdit|NotebookEdit)
     TARGET_PATH=$(echo "$INPUT" | python3 -c "import sys,json; ti=json.load(sys.stdin).get('tool_input',{}); print(ti.get('file_path','') or ti.get('notebook_path','') or '')" 2>/dev/null || echo "")
     if [ -n "$TARGET_PATH" ]; then
       # 按 IFS=: 拆分保护路径前缀

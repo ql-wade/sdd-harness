@@ -58,7 +58,7 @@ else:
     print(f"  (PyYAML 不可用，跳过 {len(yaml_files)} 个 YAML 的深度校验)")
 
 # 根级 load-bearing JSON（.mcp.json）+ 其余受控 JSON
-json_files = sorted(set(glob.glob("*.json") + glob.glob("contracts/**/*.json", recursive=True) + ["package.json"]))
+json_files = sorted(set(glob.glob("*.json") + glob.glob("contracts/**/*.json", recursive=True) + ["package.json", ".mcp.json"]))
 for f in json_files:
     try:
         json.load(open(f, encoding="utf-8"))

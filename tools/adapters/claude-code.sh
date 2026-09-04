@@ -47,8 +47,17 @@ for line in raw.splitlines():
     if m: cur["script"] = m.group(1).strip(); continue
     m = re.match(r"^    message: (.+)$", line)
     if m: cur["message"] = m.group(1).strip().strip('"'); continue
+    m = re.match(r"^    (target|patterns):", line)
+    if m:
+        cur["_list_key"] = m.group(1); continue
     m = re.match(r"^      - \"?(.+?)\"?$", line)
     if m:
+        list_key = cur.setdefault("_list_key", "target")
+        prior = cur.get("_first_list_key")
+        if prior is None:
+            cur["_first_list_key"] = list_key
+        elif prior != list_key:
+            raise SystemExit(f"❌ policy {cur.get('id')}: multiple list keys ({prior} + {list_key}) not supported by this parser — refusing to silently miscompile")
         cur.setdefault("items", []).append(m.group(1)); continue
 
 def field(p, key, default=""):

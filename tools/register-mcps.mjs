@@ -36,6 +36,13 @@ const skipped = [];
 function add(name, entry) {
   const status = statusOf(name);
   if (status === 'planned') { skipped.push(`${name} (planned, 见 mcp-capabilities.yaml)`); return; }
+  // user-local（能力清单 note 声明）不进分发的 .mcp.json——本机 overlay 用户自配
+  const block = capRaw.split(`- name: ${name}`)[1]?.split('- name:')[0] ?? '';
+  if (/user-local/.test(block)) {
+    delete config.mcpServers[name];
+    skipped.push(`${name} [${status}, user-local 不分发]`);
+    return;
+  }
   config.mcpServers[name] = entry;
   registered.push(`${name} [${status}]`);
 }
@@ -47,10 +54,10 @@ const MCP_PINS = {
 };
 
 if (statusOf('playwright') === 'ready') {
-  add('playwright', { command: 'npx', args: [MCP_PINS.playwright] });
+  add('playwright', { command: 'npx', args: ['-y', MCP_PINS.playwright] });
 }
 if (statusOf('chrome-devtools') === 'ready') {
-  add('chrome-devtools', { command: 'npx', args: [MCP_PINS['chrome-devtools']] });
+  add('chrome-devtools', { command: 'npx', args: ['-y', MCP_PINS['chrome-devtools']] });
 }
 if (statusOf('github') === 'degraded') {
   add('github', {
@@ -73,6 +80,15 @@ if (withLlmwiki || fs.existsSync(venvPython)) {
   }
 } else {
   skipped.push('llmwiki (未安装 venv；bash tools/bootstrap.sh --with-llmwiki)');
+}
+
+// 存量清扫：已在 .mcp.json 但清单标注 user-local 的条目一并剥离（保持分发的 .mcp.json 与清单一致）
+for (const name of Object.keys(config.mcpServers)) {
+  const block = capRaw.split(`- name: ${name}`)[1]?.split('- name:')[0] ?? '';
+  if (/user-local/.test(block)) {
+    delete config.mcpServers[name];
+    skipped.push(`${name} [存量剥离: user-local]`);
+  }
 }
 
 fs.writeFileSync(mcpJsonPath, JSON.stringify(config, null, 2) + '\n');
