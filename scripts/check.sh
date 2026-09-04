@@ -9,6 +9,17 @@ cd "$ROOT_DIR"
 bash scripts/agent-instructions-check.sh
 bash scripts/agent-skill-check.sh
 
+# whitebox-verify 技能自测：GREEN 夹具（run.py 自带 mtime 重建，免疫 vendoring 拷贝）
+# + negative corpus（8 个伪造/残缺证据必须全被拒）
+WBV="$(pwd)/.agents/skills/whitebox-verify"
+if [ -f "$WBV/tests/green-fixture/run.py" ]; then
+  python3 "$WBV/tests/green-fixture/run.py" >/dev/null || { echo "❌ whitebox-verify green fixture failed" >&2; exit 1; }
+  if [ -f "$WBV/tests/negative-corpus/cmp.sh" ]; then
+    bash "$WBV/tests/negative-corpus/cmp.sh" 2>&1 | grep -q "SUMMARY: 8 ok / 0 fail" || { echo "❌ whitebox-verify negative corpus mismatch" >&2; exit 1; }
+  fi
+  echo "✅ whitebox-verify: GREEN fixture + negative corpus (8/8) 通过"
+fi
+
 # 验证工具库回归（gate/audit 机械证据层）
 if [ -f package.json ] && grep -q '"test"' package.json; then
   npm test
