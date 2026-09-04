@@ -36,6 +36,7 @@
 | `grill-me` + `grilling` | mattpocock/skills | 前置事实质询：一次一问、给推荐答案、消除分支和术语歧义，直到共同理解 |
 | `whitebox-verify` | 内部演化 | 三模式验证：调试模式（浏览器链路白盒）/ Journey 验收（No GREEN without Journey closure）/ Slice 模式（本地 TDD） |
 | `claude-parallel-tdd-planner` | 内部 | 并行计划协议：context pack、任务 DAG、CONFIRM_ALIGNMENT、RED/GREEN ledger |
+| `multi-agent-consensus-review` | 内部 | 三方全票共识评审：多 agent 独立冷启动投票、unanimous gate（全票 APPROVE + 分数门槛 + 同 digest）、分歧走 evidence-based debate；默认 quorum claude-code/zcode/codex-agent |
 
 > superpowers 核心子集已于 v0.2.2 移除（ADR-0016）：其 TDD/verification 职责由 whitebox-verify（Slice 模式）承接，brainstorming/writing-plans 职责由 grill-me 质询与 claude-parallel-tdd-planner 承接。
 
@@ -53,6 +54,7 @@
 | 跨模块/跨服务验收 | `whitebox-verify`（Journey 模式） | 终态业务 oracle、真实 first-party 路径证据 |
 | 本地规则/组件 TDD | `whitebox-verify`（Slice 模式） | 失败测试先行、窄验证 |
 | 完成、合并前 | `whitebox-verify` + `test-gate` 机械证据 + 人工审查 | 真实命令、结果、未验证项清单 |
+| 架构/跨 agent 决策、高风险变更授权 | `multi-agent-consensus-review` | 三方独立 ballot、tally 报告、final/blocked report + next-step plan |
 | 实现中发现事实冲突 | 重新调用 `grill-me` | 冲突事实、决策 owner、更新后的 ADR/计划 |
 
 机械证据与技能方法互补：技能定义"怎么验"；`lib/` 的验证工具提供"验过了"的程序化证据——

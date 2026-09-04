@@ -39,6 +39,7 @@ bash tools/bootstrap.sh --with-llmwiki # 额外安装 LLMWiki MCP（python venv�
 | grill-me + grilling | 前置事实质询（一次一问、推荐答案、消除歧义） |
 | whitebox-verify | 三模式验证（调试 / Journey 验收 / Slice TDD） |
 | claude-parallel-tdd-planner | 并行计划协议（DAG / RED-GREEN ledger） |
+| multi-agent-consensus-review | 三方全票共识评审（unanimous gate + evidence-based debate） |
 
 触发矩阵：[docs/agent/skill-architecture.md](docs/agent/skill-architecture.md)。技能以版本化快照 vendor 在 `.agents/skills/`，项目约束不改技能正文。
 

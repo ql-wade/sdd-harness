@@ -7,5 +7,6 @@
 | `grill-me/` + `grilling/` | mattpocock/skills | 前置事实质询 |
 | `whitebox-verify/` | 内部 | 三模式验证（调试 / Journey / Slice） |
 | `claude-parallel-tdd-planner/` | 内部 | 并行计划协议（DAG / RED-GREEN ledger） |
+| `multi-agent-consensus-review/` | 内部 | 三方全票共识评审（unanimous gate + evidence-based debate） |
 
 触发矩阵见 [docs/agent/skill-architecture.md](../../docs/agent/skill-architecture.md)。

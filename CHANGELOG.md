@@ -1,5 +1,10 @@
 # AI Coding Scaffold Changelog
 
+## 0.2.3 (2026-09-04)
+
+### Added
+- **multi-agent-consensus-review 技能 vendor 进基础层**（第 5 个）：三方全票共识评审（unanimous gate + evidence-based debate）。自带 12 个 gate 回归测试；check.sh 已将其纳入技能自测范围（本仓库 v0.2.1 的 PASSED 评审即由该技能驱动，4 轮收敛 BLOCKED→BLOCKED→DEBATE→PASSED）。
+
 ## 0.2.2 (2026-09-04)
 
 ### Removed（ADR-0016）

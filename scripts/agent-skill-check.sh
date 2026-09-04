@@ -14,6 +14,7 @@ required_skills=(
   ".agents/skills/grilling/SKILL.md"
   ".agents/skills/whitebox-verify/SKILL.md"
   ".agents/skills/claude-parallel-tdd-planner/SKILL.md"
+  ".agents/skills/multi-agent-consensus-review/SKILL.md"
 )
 
 for f in "${required_skills[@]}"; do

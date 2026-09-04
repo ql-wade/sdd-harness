@@ -94,6 +94,7 @@
 | grill-me + grilling | mattpocock/skills | 前置事实质询，一次一问、给推荐答案、消除歧义 |
 | whitebox-verify (v2.2+) | 内部演化 | 三模式验证：调试（Chrome MCP 链路）/ Journey 验收 / Slice TDD |
 | claude-parallel-tdd-planner | 内部 | 并行计划协议：context pack、DAG、CONFIRM_ALIGNMENT、RED/GREEN ledger |
+| multi-agent-consensus-review | 内部 | 三方全票共识评审（unanimous gate + evidence-based debate） |
 
 **约束**（继承 mono 实践）：项目约束只写在 AGENTS.md / docs/agent/，不改技能正文、不加项目品牌前缀；`.agents/skills/` 是版本化快照，升级 = 显式替换 + `agent-skill-check.sh` 校验。
 
@@ -106,6 +107,7 @@
 | 跨模块/跨服务验收 | whitebox-verify（Journey 模式） | 终态业务 oracle、真实路径证据 |
 | 本地规则/组件 TDD | whitebox-verify（Slice 模式） | 失败测试先行、窄验证 |
 | 完成/合并前 | whitebox-verify + test-gate 机械证据 + 人工审查 | 真实命令、结果、未验证项清单 |
+| 架构/跨 agent 决策授权 | multi-agent-consensus-review | 三方 ballot、tally、final/blocked report |
 
 ## 4. Hooks 控制平面
 

@@ -20,6 +20,13 @@ if [ -f "$WBV/tests/green-fixture/run.py" ]; then
   echo "✅ whitebox-verify: GREEN fixture + negative corpus (8/8) 通过"
 fi
 
+# multi-agent-consensus-review 技能自测：gate 机械验证（review init/validate/tally）
+MCR="$(pwd)/.agents/skills/multi-agent-consensus-review"
+if [ -f "$MCR/scripts/test_review_gate.py" ]; then
+  python3 "$MCR/scripts/test_review_gate.py" >/dev/null 2>&1 || { echo "❌ multi-agent-consensus-review gate tests failed" >&2; exit 1; }
+  echo "✅ multi-agent-consensus-review: gate 回归通过"
+fi
+
 # 验证工具库回归（gate/audit 机械证据层）
 if [ -f package.json ] && grep -q '"test"' package.json; then
   npm test
