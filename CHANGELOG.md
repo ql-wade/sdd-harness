@@ -1,5 +1,13 @@
 # AI Coding Scaffold Changelog
 
+## 0.2.4 (2026-09-04)
+
+### Removed（ADR-0017，三方共识必要性审计授权 8.8/8.8/8.6）
+- **lib 孤儿 ×6**：llmwiki-sediment / capabilities / daily-scheduler / deliverable-fixer / project-context / workflow-state（0 引用，9-stage 机器遗留；lib 15→9）
+- **9-stage 文档 ×10**：TUTORIAL、CONTEXT、flowchart、openspec-vs-speckit、superpowers/plans、architecture/{workflow-architecture, best-practice-audit, cc-sdd-comparison, e2e-release-gates, stitch-upgrade}
+- **untrack**：hooks/.compiled.env（生成物）+ vendoring 误提交的 __pycache__/*.pyc
+- 文档同步：ADR-0017（append-only，ADR-0015 不改写）、scaffold-architecture 三处、fix-plan 历史标注、minicraft 摘要历史标注 + probe-profiles README
+
 ## 0.2.3 (2026-09-04)
 
 ### Added

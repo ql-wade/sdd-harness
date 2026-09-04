@@ -1,4 +1,6 @@
-# LLMWiki MCP 集成修复方案（v2 — 纳入 Codex 评审反馈）
+# LLMWiki MCP（历史修复计划）
+
+> 注：sediment→staging 相关章节已随 ADR-0017 移除实现（llmwiki-sediment.js 删除）；本文保留为修复思路的历史记录。 集成修复方案（v2 — 纳入 Codex 评审反馈）
 
 ## 背景
 

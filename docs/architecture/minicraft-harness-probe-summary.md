@@ -1,5 +1,7 @@
 # MiniCraft 故障探针与 SDD Harness 架构优化总结
 
+> 历史文档（9-stage 时代产物）：probe 契约本体在 contracts/probe-profiles/minicraft.yaml（测试依赖，活跃）。
+
 > 状态日期：2026-06-30  
 > 探针项目：`/Users/mac/Code/minicraft`  
 > Harness 项目：`/Users/mac/Code/sdd-harness`  

@@ -1,7 +1,7 @@
 # 团队 AI Coding Scaffold 架构
 
 > 状态：权威（v2 定位）。本文是仓库重构的实施依据。
-> 前身：SDD Harness 9-stage 工作流（见 sdd-harness-workflow-architecture.md，已归档）。
+> 前身：SDD Harness 9-stage 工作流（2026-09-04 必要性审计移除其文档，历史见 git log 与 ADR-0015/0017）。
 
 ## 0. 定位
 
@@ -75,8 +75,7 @@
 │   ├── probe-validator.js           # probe 行为验证（真实路径证据）
 │   ├── deliverable-audit.js         # 交付物审计
 │   ├── workflow-audit.js            # 运行状态审计
-│   ├── knowledge-seed.js            # 知识源发现 + raw/ 复制
-│   └── llmwiki-sediment.js          # 阶段产出沉淀到 staging
+│   └── knowledge-seed.js            # 知识源发现 + raw/ 复制
 ├── test/                            # 上述库的测试（随库保留）
 ├── .mcp.json                        # MCP 注册（bootstrap 生成/合并）
 ├── mcp-capabilities.yaml            # MCP 能力清单（见 §5）
@@ -193,7 +192,7 @@ mcps:
 | lib/probe-validator.js（probe 行为验证） | **保留** — 真实路径证据校验，供 whitebox-verify 及人工验证调用 |
 | lib/deliverable-audit.js（交付物审计） | **保留** |
 | lib/workflow-audit.js（运行状态审计） | **保留** |
-| lib/knowledge-seed.js + llmwiki-sediment.js | **保留** — LLMWiki 集成（raw/ 复制、staging） |
+| lib/knowledge-seed.js | **保留** — LLMWiki 集成（raw/ 复制；llmwiki-sediment 已删，ADR-0017） |
 | lib 中的 DoS 加固、symlink 跳过等防御手法 | **保留**（已在库内，check 脚本沿用同思路） |
 | test/（64 个 gate/audit 测试） | **保留**，随库走；stage 专属测试随 stage 代码删除 |
 | templates/claude/skills/sdd-*（9 个 stage skill） | 删除（工作流出局） |
