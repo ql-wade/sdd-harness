@@ -1,7 +1,7 @@
 # 知识架构（终版）— AI DevOps 知识闭环
 
 > 状态：**已定稿**（knowledge-layer-plan v4.5 + 用户裁决接受 2/3 + documented dissent）。
-> 本文是知识层的**架构总览**；完整规格（谓词、journal schema、门禁五要素、29 项闭合账）见 [knowledge-layer-plan.md](knowledge-layer-plan.md)。
+> 本文是 AI DevOps 总纲（[ai-devops-architecture.md](ai-devops-architecture.md)）中**知识环节（11-12 + recall 上下文源）的深化视图**；完整规格（谓词、journal schema、门禁五要素、29 项闭合账）见 [knowledge-layer-plan.md](knowledge-layer-plan.md)。
 > 共识状态：claude-code 8.8 ✅ / zcode 8.8 ✅ / codex-agent 6.1 ❌（3 项规格级 dissent 存证 [consensus-runs/knowledge-v45-final-verdict.md](consensus-runs/knowledge-v45-final-verdict.md)，转入 K 阶段实现时验收）。
 
 ## 1. 设计原则
