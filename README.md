@@ -16,7 +16,7 @@
 验证层   lib/ gate/audit 程序化验证 + scripts/check.sh
 ```
 
-详见 [docs/architecture/scaffold-architecture.md](docs/architecture/scaffold-architecture.md)；交付生命周期视角（角色×环节×能力）见 [ai-devops-architecture.md](docs/architecture/ai-devops-architecture.md)。
+详见 [docs/architecture/scaffold-architecture.md](docs/architecture/scaffold-architecture.md)；交付生命周期视角（角色×环节×能力）见 [ai-devops-architecture.md](docs/architecture/ai-devops-architecture.md)；知识闭环架构（生产×消费×桥）见 [knowledge-architecture.md](docs/architecture/knowledge-architecture.md)。
 
 ## 快速开始
 

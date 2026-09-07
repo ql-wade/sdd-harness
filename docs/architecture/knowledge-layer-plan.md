@@ -1,6 +1,6 @@
 # 知识架构方案 v4：分布式 wiki × 集中式服务 × 飞书对齐
 
-> 状态：**v4.5（终版）**——v2/v3/v4/v4.1/v4.2 全部 findings **逐 ID 闭合账**（§5 全枚举 29 项）且全部内联正文；publish-gate 具五要素契约（§4 行 P）；回滚唯一权威算法块（§2.2）；ACL 增源头 owner 审批门。
+> 状态：**v4.5（已定稿）**——用户裁决：接受 2/3 全票批准（claude 8.8 / zcode 8.8）+ codex 3 项规格级 dissent 存证，dissent 项转入 K 阶段实现验收。架构总览见 [knowledge-architecture.md](knowledge-architecture.md)。——v2/v3/v4/v4.1/v4.2 全部 findings **逐 ID 闭合账**（§5 全枚举 29 项）且全部内联正文；publish-gate 具五要素契约（§4 行 P）；回滚唯一权威算法块（§2.2）；ACL 增源头 owner 审批门。
 > 调研：[obsidian-wiki](https://github.com/ar9av/obsidian-wiki)（3,364★，活跃）、[deepwiki-open](https://github.com/AsyncFuncAI/deepwiki-open)、[lark-cli](https://github.com/larksuite/cli)（官方，MIT）、gbrain（升级路径）、teamai（ADR-0018）、LLMWiki（已集成）。
 > ⚠️ 厂商自报基准（LongMemEval 93.19%、44%→83%）仅选型参考，不作验收输入。
 
