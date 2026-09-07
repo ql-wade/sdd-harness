@@ -88,72 +88,35 @@ flowchart LR
   style KNOWLOOP fill:#e8f5e9
 ```
 
-## 0.2 双引擎细化：哪一步做什么
+## 0.2 双引擎细化：哪一步、哪个 agent、做什么、为什么
 
-### 0.2.1 分发引擎（teamai-cli）——设施如何到达每个成员
+### 0.2.1 分发引擎（teamai-cli）——设施同步的执行者与职责
 
-```mermaid
-flowchart TB
-  subgraph ADMIN["管理员侧（变更设施）"]
-    A1["① teamai push<br/>本地改动→分支+MR<br/>（已在未合并 PR 的资源<br/>就地更新不重复开）"]
-    A2["② 评审合并<br/>（Git 平台原生审查）"]
-    A1 --> A2
-  end
-  subgraph MEMBER["成员侧（每次会话）"]
-    B0["③ SessionStart hook 触发<br/>teamai pull"]
-    B1["④ 增量同步<br/>HEAD vs lastPullRev<br/>一致即跳过"]
-    B2["⑤ 按角色/标签过滤<br/>roles 命名空间<br/>tags 订阅"]
-    B3["⑥ reconcile 落地<br/>skills/rules/hooks/MCP<br/>→ 各 agent 原生格式<br/>（幂等，不覆盖用户配置）"]
-    B0 --> B1 --> B2 --> B3
-  end
-  subgraph RUNTIME["运行时（会话中）"]
-    C1["⑦ hook-dispatch<br/>统一调度团队 hooks<br/>前台/后台 handler"]
-    C2["⑧ 摩擦信号检测<br/>Stop hook 评分<br/>（打断/拒绝/重试）"]
-  end
-  subgraph FEEDBACK["回流（CI）"]
-    D1["⑨ teamai ci extract-mr<br/>MR 知识提取→评论→合并入库"]
-  end
-  A2 -->|"合并后"| B0
-  B3 --> C1 --> C2
-  C2 -.->|"达标提示分享"| A1
-  D1 -.->|"知识回流"| A1
-```
+分发不是"管理员/成员"的工具操作，而是**四个时机上不同执行主体的职责链**：
 
-| 步 | 何时 | 做什么 | 我们的约束 |
-|----|------|--------|-----------|
-| ①② | 管理员改设施时 | push→MR→评审合并 | deny 策略语义源仍在本仓库 hooks.yaml（adapter 生成 teamai 格式注册产物） |
-| ③④⑤ | 每次会话启动 | 增量 pull + 角色/标签过滤 | mcp/mcp.yaml 为 register-mcps 第二产物（清单仍是唯一事实源） |
-| ⑥ | pull 后 | 幂等 reconcile 到 9 agent | P0 验证与 CC adapter 组合幂等（ADR-0018 闸门） |
-| ⑦⑧ | 会话运行中 | hooks 调度 + 摩擦评分 | 与我们 fail-closed deny 门共存（各管各的策略面） |
-| ⑨ | CI 阶段 | MR 知识提取回流 | 入 teamwiki（T2，只读图谱层） |
+| 时机（挂载点） | 执行主体 | 职责（做什么） | 目的（为什么存在） |
+|---------------|---------|---------------|-------------------|
+| **设施变更**（横切，人发起） | **管理员（人）+ coding agent 起草** | agent 起草 hooks/skills/MCP 变更 → 人审 → push 建 MR → 评审合并 | 设施与代码同等治理：每个成员的护栏变更必须可评审可回滚，杜绝"某人本地改了 deny 规则" |
+| **会话启动**（SessionStart，每次自动） | **teamai pull daemon**（hook 触发的同步 agent，非对话 agent） | 增量拉取团队 repo（HEAD vs lastPullRev）→ 按该成员角色/标签过滤 → 幂等 reconcile 为各 coding agent 原生格式（skills/rules/hooks/MCP） | 保证成员的 agent 与团队设施零漂移——"规则入口、技能、门禁人人同一版本"，消除"我这里没有这个 skill/规则" |
+| **会话运行中**（横切，每次工具调用） | **hook-dispatcher**（宿主 coding agent 的 hook 层） | 调度团队 hooks（前台/后台）；与本仓库 fail-closed deny 门各管各策略面 | 团队级自动约束（如密钥扫描）挂到每个成员的 agent 上，无需成员手动配置 |
+| **会话结束**（Stop hook） | **摩擦评分器**（teamai 内置信号 agent） | 对 session 评分（用户打断/工具拒绝/重试次数）；达标提示 `/teamai-share-learnings` | 找出"值得记录的挣扎"，触发改进回路——不是所有 session 都值得沉淀，较劲过的才是 |
+| **CI 环节**（生命周期 9） | **CI runner + teamai ci extract-mr** | 从 MR 提取知识（改了什么/为什么/踩了什么）→ 评论→合并后写入 teamwiki | 交付过程的知识自动回流，不依赖人记得记录 |
 
-### 0.2.2 知识引擎——知识如何流动（七步）
+**与生命周期环节的关系**：分发引擎不占交付环节编号——它是环节 0 号位"设施就位"的保障 + 环节 9（CI）的回流执行者 + 环节 12（知识对齐）的摩擦信号源。
 
-```mermaid
-flowchart LR
-  E1["① 抽取<br/>extract job<br/>飞书→Git外staging"]
-  E2["② 准入<br/>P1-P5谓词+DLP<br/>+ACL+黑名单<br/>fail-closed"]
-  E3["③ 提炼<br/>obsidian-wiki<br/>compile-not-<br/>accumulate+人审"]
-  E4["④ 检索 recall<br/>四层各入口→<br/>agent 上下文"]
-  E5["⑤ 沉淀<br/>spec archive→<br/>promotion 晋升<br/>摩擦→learnings"]
-  E6["⑥ 对齐<br/>vault 精华→PR<br/>→publish-gate<br/>→飞书"]
-  E7["⑦ 消费<br/>deepwiki 再生<br/>wiki+chat（只读）"]
-  E1 --> E2 --> E3 --> E4
-  E5 --> E4
-  E3 --> E6 --> E7
-  style E2 fill:#f8d7da
-  style E6 fill:#f8d7da
-```
+### 0.2.2 知识引擎——七个执行主体，各司其职
 
-| 步 | 输入 | 动作 | 输出 | 门禁 |
-|----|------|------|------|------|
-| ① 抽取 | 飞书文档/妙记/群聊 | lark-cli 应用A只读拉取 | Git 外 staging（永不直进 repo） | 源 allowlist |
-| ② 准入 | staging 内容 | 谓词代数+DLP+ACL 快照+路径黑名单 | 写入 `wiki-vault/raw/`（untrusted）或拒绝 | P1-P5 任一假即 fail-closed |
-| ③ 提炼 | raw/ 过审内容 | obsidian-wiki ingest（合并入既有页、矛盾标记、置信标注）+ 人审 | `wiki-vault/` 提炼页 | K0 lint 种子门；注入 diff=0 |
-| ④ 检索 | agent 任务上下文 | T0 文件读 / T1 MCP search / T2 teamai recall（BM25+图谱）/ T3 CLI query | 结构化知识摘要（带 Sources 锚点） | raw/ 只当数据读 |
-| ⑤ 沉淀 | 归档变更/摩擦 session | spec→wiki promotion（单向，带 provenance）；share-learnings | T0/T1/T3c 晋升页 | promotion-verify schema 校验 |
-| ⑥ 对齐 | vault 精华页 | preflight 快照 journal → publish-gate → 应用B写入 | 飞书知识库对齐页 | attestation+版本绑定，回滚=权威算法 |
-| ⑦ 消费 | git repo（只读） | deepwiki-open 自动生成 wiki + RAG chat | 团队浏览/问答（非权威） | pre-K3 七项安全负向门 |
+| 步（对应环节） | 执行主体 | 职责 | 目的 |
+|---------------|---------|------|------|
+| **① 抽取**（12 对齐的输入侧） | **桥 extract job**（CI 上的服务层 job，飞书应用A只读凭证） | 拉取飞书文档/妙记纪要/群聊决策 → 落 Git 外 staging | 把人侧知识引入 Git 流程的**唯一入口**——人不需要学会往 repo 写文件 |
+| **② 准入**（12，机械门） | **准入 gate**（谓词脚本，无 LLM） | P1-P5 谓词 + DLP + ACL 快照 + 路径黑名单，判定通过/拒绝 | 安全边界：注入内容挡在隔离区外、敏感内容永不进 Git——**故意无智能**，可复现可审计 |
+| **③ 提炼**（12） | **coding agent（ingest 模式）+ 人审** | compile-not-accumulate：合并入既有页、标矛盾、置信标注；人审后入 vault | 知识增值：原始记录 → 可检索可复用的结构化知识（垃圾进垃圾出在这里拦截） |
+| **④ 检索**（环节 1/3/6 横切） | **各环节的 coding agent** | 澄清前查术语、设计前查 ADR/教训、实现前查惯例——四层各入口（T0 读/T1 MCP/T2 recall/T3 query） | 让每个环节站在团队已知之上，不重复踩坑 |
+| **⑤ 沉淀**（环节 11 归档） | **archive 时的 coding agent + promotion-verify**（机械校验器） | spec→wiki 单向晋升（带 provenance）；摩擦经验→learnings | 变更的长期结论资产化——archive 不做晋升，知识就死在归档目录里 |
+| **⑥ 对齐**（12 的输出侧） | **桥 publish job**（CI 服务层，飞书应用B仅写）+ **publish-gate**（机械门） | preflight 快照 → 信任根/attestation 校验 → 推送评审过的 vault 精华 | 知识回到人的工作界面（飞书）；未评审内容永不出 repo |
+| **⑦ 消费**（横切，人侧） | **deepwiki-open 服务**（无 agent，只读再生） | 从 git repo 自动生成 wiki + RAG chat | 团队最低门槛的知识浏览/问答入口（不用 clone repo） |
+
+**职责边界三原则**：机械门（②⑥ gate）**故意无智能**——判定可复现；提炼/检索（③④）**必有智能**——coding agent 的本职；服务层 job（①⑥）**人不可直接用**——攻击面收敛到 CI。
 
 ## 0.3 人机分工三原则
 
