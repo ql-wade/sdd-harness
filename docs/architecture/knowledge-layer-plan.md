@@ -1,6 +1,6 @@
 # 知识架构方案 v4：分布式 wiki × 集中式服务 × 飞书对齐
 
-> 状态：**v4.3（终版候选）**——v2/v3/v4/v4.1/v4.2 全部 findings **逐 ID 闭合账**（§5 全枚举 29 项）且全部内联正文；publish-gate 具五要素契约（§4 行 P）；回滚唯一权威算法块（§2.2）；ACL 增源头 owner 审批门。
+> 状态：**v4.4（终版候选）**——v2/v3/v4/v4.1/v4.2 全部 findings **逐 ID 闭合账**（§5 全枚举 29 项）且全部内联正文；publish-gate 具五要素契约（§4 行 P）；回滚唯一权威算法块（§2.2）；ACL 增源头 owner 审批门。
 > 调研：[obsidian-wiki](https://github.com/ar9av/obsidian-wiki)（3,364★，活跃）、[deepwiki-open](https://github.com/AsyncFuncAI/deepwiki-open)、[lark-cli](https://github.com/larksuite/cli)（官方，MIT）、gbrain（升级路径）、teamai（ADR-0018）、LLMWiki（已集成）。
 > ⚠️ 厂商自报基准（LongMemEval 93.19%、44%→83%）仅选型参考，不作验收输入。
 
@@ -53,11 +53,12 @@ T3=obsidian-wiki（**CLI-only，pip version+sha256 pin，零技能注入**，AGE
 - **读写分离凭证**：抽取用飞书应用 A（只 docs:read/wiki:read）；对齐用应用 B（只 wiki:write）；两应用独立、最小 scope、env 注入（`${LARK_EXTRACT_APP_*}` / `${LARK_SYNC_APP_*}`，不入 git）。
 - **写绑定**：对齐推送必须绑定已合并 PR 的 commit SHA + 页面 payload digest（推送脚本校验"该 digest 来自已批准 commit"才执行）。写前快照由 preflight job 承担（见发布流水线）；回滚语义统一按 A9——仅删除本批次新建页，更新页按 `prior_content_ref` 恢复，幂等可重跑。
 - **发布流水线（A8/A9/A10，三 job）**：extract（应用 A 读）→ preflight（应用 A 只读快照：`{page_id, remote_version, content_digest, prior_content_ref, page_existed}`）→ publish（应用 B 仅写，强制经 `tools/bridge/publish-gate.sh`）：正文字节取自批准 commit 对象（`git show`，不信中转文件）；信任根 = 保护分支可达 + required-review（CI 身份查询）；attestation 五元组校验。publish-gate 契约见 §4 行 P。
-- **源头 owner 审批门（ACL 补强）**：抽取入库不仅靠启发式 DLP——知识库域 allowlist 注册时须**源头 owner 显式批准记录**（批准人/范围/日期入库）；每批次抽取附 owner 批次审批引用（`owner_approval_ref`）；DLP 启发式命中灰色地带 → 转人工裁决，不自动入库。
+- **源头 owner 审批门（ACL 补强）**：抽取入库不仅靠启发式 DLP——审批记录 schema（入库 `contracts/bridge-fixtures/owner-approvals.yaml`，可信签发者=allowlist 注册时由源头 owner 本人提交并经 PR 合并）：`{source_domain, approver, audience, scope, approved_at, expires_at}`；每批次抽取绑定 `owner_approval_ref`（域+审批哈希）；校验：域匹配、未过期（freshness ≤90 天）、未被撤销（撤销表 `revoked: []` 同文件维护）；校验失败 → fail closed 拒抽。负向 fixture（同目录 `negative/`）：过期审批 / 域不匹配 / 已撤销 三类，`tools/bridge/publish-gate.sh --check-approvals` 必须全部 exit 2。DLP 灰色地带 → 转人工裁决，不自动入库。
 - **回滚权威算法（规范来源，全文档唯一；K2 回滚格即本条）**：对快照集逐页执行——
-  1. `page_existed == false` → 删除该页（仅本批次创建的页才可删）
+  1. `page_existed == false` → **compare-and-delete**：仅当远端当前 digest 仍等于本批次产物时删除；不匹配则跳过并告警（防删他人并发编辑）
   2. `page_existed == true` → 仅当远端当前版本/digest **仍等于本批次记录的产物**时，以 `prior_content_ref` 的先前字节作为**新版本**写入（不覆盖他人并发更新）；否则跳过该页并告警（人工裁决）
-  3. 幂等：按快照清单重跑安全（已删除/已恢复的页跳过）；验收含混合 create/update 中途失败重试 fixture
+  3. 幂等：按快照清单重跑安全（已删除/已恢复/已告警的页跳过）；快照工件为回滚唯一持久事实源（preflight 落盘后才允许 publish）
+  （规范唯一性：本块是全文唯一回滚规范；§4 各行的"回滚"字样均为非规范引用，指向本块）
 - **并发（A10，fail closed）**：目标 API 无原子 version 绑定更新时**拒绝发布**（不启用写后比对回退）；启用条件 = 单写者串行发布队列（CI 串行 job）可执行证明 + 竞态测试（并发更新无丢失）；残留并发风险声明进 §7。
 - 全程 `--dry-run` 先行；lark-cli 厂商自述注入/越权风险面如实继承。
 - **服务层专用**：bootstrap 不装给员工；桥脚本只跑在 CI/服务节点。
@@ -82,10 +83,10 @@ T3=obsidian-wiki（**CLI-only，pip version+sha256 pin，零技能注入**，AGE
 |----|----------------------|---------|------|------|------|
 | **K0** vault 质量 | `contracts/wiki-vault-seeds/`（defects.yaml 10 缺陷 + expected-lint-report.txt oracle） | `tools/bridge/vault-seed-check.sh`（NFC/LF 规范化比对；exit 0=全检出且无误报，2=fail）+ clone 无状态断言（`git status --porcelain` 空 且 `.ow-*` 无残留） | 检出 10/10；**误报=0**（报告任一非种子问题即 fail）；`clone → 状态残留 grep` 命令 | lint 原始输出 + diff 报告（存 `docs/architecture/consensus-runs/`） | 卸载 CLI，vault 删除 |
 | **K1** scaffold 集成 | 本仓库 | `bash scripts/check.sh` | 全绿（含新增 raw/ 黑名单校验） | check 输出 | revert bootstrap 分支 |
-| **K2** 桥试点 | 1 个预注册知识库域（全量）+ 成对抗 fixture `contracts/wiki-vault-seeds/adversarial/`（3 载荷+3 干净） | `tools/bridge/injection-diff.sh`（side-effect 可观测集：vault git 差异/审计日志命令清单/egress 三态，载荷组≡干净组 → exit 0）；`tools/bridge/field-retention.sh`（字段 100% → exit 0）；人审固定 10 篇（`human-review-list.md`）9/10 | 注入 diff=0；字段保留 100%；人审固定 10 篇通过 9/10（无抽样） | preflight 快照工件 + injection/field diff 报告 + 固定 10 篇人审记录（无抽样） | 飞书侧 A9 语义：删本批新建页 + 更新页按 prior_content_ref 恢复（仅当当前版本仍为本批产物）；Git 侧：删除本批次引入的 wiki-vault/raw/ 抽取物与 vault 产物页（staging 本在 Git 外） |
+| **K2** 桥试点 | 1 个预注册知识库域（全量）+ 成对抗 fixture `contracts/wiki-vault-seeds/adversarial/`（3 载荷+3 干净） | `tools/bridge/injection-diff.sh`（side-effect 可观测集：vault git 差异 / 审计命令集（固定清单入库 `contracts/bridge-fixtures/ingest-command-allowlist.txt`，超出即差异）/ egress 三态，载荷组≡干净组 → exit 0）；`tools/bridge/field-retention.sh`（字段 100% → exit 0）；人审固定 10 篇（`contracts/wiki-vault-seeds/human-review-list.md`，模板含逐篇判定列）9/10 | 注入 diff=0；字段保留 100%；人审固定 10 篇通过 9/10（无抽样） | preflight 快照工件 + injection/field diff 报告 + 固定 10 篇人审记录（无抽样） | 飞书侧 A9 语义：删本批新建页 + 更新页按 prior_content_ref 恢复（仅当当前版本仍为本批产物）；Git 侧：删除本批次引入的 wiki-vault/raw/ 抽取物与 vault 产物页（staging 本在 Git 外） |
 | **K3** deepwiki | 2-3 repo + `contracts/deepwiki-questions/30-questions.yaml`（oracle 入库） | `tools/bridge/deepwiki-consistency.sh`（分母 30；grounded ≥24；幻觉=0 容忍；exit 0/2）+ `deepwiki-pregate.sh`（§3 七项） | ≥80% 一致；**幻觉（无来源断言）=0 容忍** | 逐题对照表 | 下线服务（生成物可再生，无清理负担） |
-| **P** publish-gate（K2 起常驻） | `contracts/bridge-fixtures/publish-gate/`：有效 attestation / 篡改 digest / 已撤销身份 / create+update 混合中途失败重试 / 陈旧 remote_version 五类 fixture | `tools/bridge/publish-gate.sh --attestation <file> --snapshot <file>`（信任根+五元组+回滚算法执行；拒绝即 exit 2 不写飞书） | 五类 fixture 全部按预期判定（放行 1/拒 4）；重试幂等 | 逐 fixture 判定记录入 `consensus-runs/publish-gate.md` | 回滚按 §2.2 权威算法 |
-| **K4** 试点综合 | 2 项目 × 4 周（周报输入模板入库） | `tools/bridge/k4-weekly.sh <week-n>`（汇总维护时长/冲突计数/评分中位数，阈值判定 exit 0/2） | 中位数 ≥3.5；维护 ≤30min/周；冲突 ≤2 次/月 | 周报四份 | 全量回滚：K2+K3 回滚 + ADR 重审 |
+| **P** publish-gate（K2 起常驻） | `contracts/bridge-fixtures/publish-gate/`（五 fixture，逐个声明预期退出码与远端状态 oracle）：F1 有效 → **exit 0**，远端=批内容；F2 篡改 digest → **exit 2**，远端零写入；F3 已撤销身份 → **exit 2**，远端零写入；F4 create+update 混合中途失败 → **exit 2 后执行回滚**，远端=新建页已删、更新页恢复 prior、重跑收敛（幂等 oracle：二次运行 exit 0 且远端不变）；F5 陈旧 remote_version → **exit 2**，远端零写入 | `tools/bridge/publish-gate.sh --attestation <f> --snapshot <f>` | 五 fixture 退出码与远端 oracle 逐一匹配 | 逐 fixture 判定记录入 `consensus-runs/publish-gate.md` | 回滚规范=§2.2 权威算法（本行为非规范引用） |
+| **K4** 试点综合 | 2 项目 × 4 周（周报输入模板入库 `contracts/bridge-fixtures/k4-weekly-template.md`；runner 启动时校验模板与清单存在，缺失 → exit 1） | `tools/bridge/k4-weekly.sh <week-n>`（汇总维护时长/冲突计数/评分中位数，阈值判定 exit 0/2） | 中位数 ≥3.5；维护 ≤30min/周；冲突 ≤2 次/月 | 周报四份 | 全量回滚：K2+K3 回滚 + ADR 重审 |
 | **K5** gbrain 评估 | 触发：≥15 人或 ACL/synthesis 需求（评估触发器，非门禁） | 独立 ADR + 独立评审 run | — | — | — |
 
 ## 5. 闭合追溯矩阵（闭合 Z3-R0-001/KLP3-CLOSURE-001）
@@ -138,7 +139,9 @@ T3=obsidian-wiki（**CLI-only，pip version+sha256 pin，零技能注入**，AGE
 | v4.1 | KLP41-ACL-003 / R1-v41-003 | ACL 失败无状态机 | §2.1 入库后 fail-closed 状态机 ✓ |
 | v4.1 | R1-v41-001 / ZC-001 | B1 未落正文 | v4.2 落正文（v4.1 run 因此 abandoned，教训记录）✓ |
 | v4.1 | R1-ZC-002 | K4/K5 无 runner | §4 k4-weekly + K5 评估触发器行 ✓ |
-| v4.1 | KLP41-R1-*（RB/GATE/ACL 复审） | 复审仍见旧文 | 同上三行处置 ✓ |
+| v4.1 | KLP41-R1-RB-001 | 复审仍见旧回滚文本 | §2.2 权威算法块（v4.3）✓ |
+| v4.1 | KLP41-R1-GATE-002 | 复审 runner 仍缺 | §4 全 runner 具名 + 行 P ✓ |
+| v4.1 | KLP41-R1-ACL-003 | 复审 ACL 仍无状态机 | §2.1 fail-closed 状态机 ✓ |
 | v4.2 | V42-R0-CLOSURE-GAP / KLP42-CLOSURE-001 | 闭合账计数与枚举不符 | 本逐 ID 表（29 项全枚举）✓ |
 | v4.2 | V42-PUBLISH-GATE-UNNAMED / KLP42-GATE-001 | publish-gate 无契约 | §4 行 P（五类 fixture + 契约）✓ |
 | v4.2 | KLP42-RB-001 | 算法未成唯一规范块 | §2.2 权威算法块（含版本守卫与告警分支）✓ |
