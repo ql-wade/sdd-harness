@@ -1,0 +1,299 @@
+{
+  "artifact_changed": true,
+  "artifact_error": null,
+  "artifact_sha256": "fbf9daabd67d263d084465694ab87c9bea9afcff6a6a5fc0b91ddcce8caf9d27",
+  "ballots": [
+    {
+      "agent": "claude-code",
+      "blocking_findings": 1,
+      "min_criterion": 7.0,
+      "overall": 7.6,
+      "summary": "v3 is architecturally sound and a large step up from the rejected predecessors: the production/consumption/bridge topology is coherent with repo invariants (Git-native per-repo vault, D2 CLI-only with hash-pinned install, kb-write-protection unchanged in D4, deepwiki read-only and regenerable per D6 with generated artifacts kept out of git), the wiki-vs-spec separation with one-way archive-time promotion is well-motivated, supply-chain pinning is consistent across pip/docker/npm, and K0-K5 are mostly quantitative with explicit rollback (K4's uninstall-plus-ADR trigger, K0's 100% seed-defect detection). Self-reported vendor benchmarks are correctly excluded from acceptance. Two things keep it below authorization: (1) a blocking gap in D5 — the vendor documents prompt-injection/privilege risk, D5 fences the privilege and outbound-write side thoroughly (env creds, minimal scope, dry-run, reviewed-artifacts-only), but the inbound side is silent: Feishu-extracted content enters agent-readable raw/ with no untrusted-content policy, no injection criterion in the K2 gate, and no read-side row in the risk table, which falls short of this repo's own fail-closed posture; (2) no per-finding closure map for KL-1..8/F1..4/KLP-001..005, so claimed closure of the prior REJECT round is unverifiable from the artifact. Both are cheap, targeted fixes that do not require architectural change; a v4 delta adding the raw/ trust policy + K2 injection test + closure appendix should clear approval.",
+      "verdict": "REJECT"
+    },
+    {
+      "agent": "zcode",
+      "blocking_findings": 2,
+      "min_criterion": 5.0,
+      "overall": 6.8,
+      "summary": "The v3 topology (distributed T0-T3 production, centralized deepwiki consumption, lark-cli service bridge, spec/wiki separation with one-way promotion) is architecturally coherent with the repo's invariants — D4 was verified against the actual kb-write-protection hook/README, and D6 correctly keeps deepwiki regenerable and non-authoritative. However, two blocking gaps remain: (1) the plan asserts absorption of the prior three-way REJECT findings but neither the plan nor the repo's review records contain the KL/F/KLP finding IDs or a closure mapping, so the mandated verification that all prior blockers are closed is impossible from the artifact; (2) D5's security discipline addresses lark-cli's authorization surface but not its documented content-borne injection risk — untrusted Feishu text flows into repo raw/ and then into agent-driven distillation with no quarantine or screening gate. Gates are mostly quantitative but K0 is self-referential and K3 has an escape hatch, and rollback is only defined for K4. Fix the traceability matrix and extend D5 with content quarantine, then this plan is close to approvable.",
+      "verdict": "REJECT"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking_findings": 7,
+      "min_criterion": 3.1,
+      "overall": 4.2,
+      "summary": "REJECT. The distributed production and read-only consumption direction, CLI-only D2, unchanged write protection, and wiki/spec conceptual separation are directionally compatible with the stated repository invariants. Authorization is nevertheless unsafe: prior findings lack traceable closure evidence, D5 does not contain prompt-injection or privilege risks, Feishu extraction lacks ACL and sensitive-data controls, the phase gates are not reproducible or rollback-capable, canonical paths and feedback-loop behavior are unresolved, deepwiki lacks confidentiality isolation, and spec-to-wiki promotion is not operationally defined.",
+      "verdict": "REJECT"
+    }
+  ],
+  "blocking_findings": [
+    {
+      "agent": "claude-code",
+      "blocking": true,
+      "claim": "D5 security disciplines cover the privilege/write side of lark-cli but leave the inbound content side uncontrolled: Feishu-extracted documents land in repo raw/ with no untrusted-content policy, and neither D5, the risk table, nor the K2 acceptance gate addresses prompt injection carried by extracted content into the ingest pipeline and agent-readable repo files.",
+      "evidence": "Line 19 defines extraction into 'repo wiki 的 raw/ 源'; line 28 makes raw/ the knowledge entrance of the direction flow; line 59 (D5) covers env creds, minimal scope, dry-run, and write-gating, and only acknowledges ('如实继承') the vendor's documented injection risk without any control for extracted content; line 76 risk table lists only the write side ('lark-cli 副作用面（写飞书）'); line 68 (K2 gate) tests round-trip semantic fidelity and scope minimization with no injection-safety criterion.",
+      "id": "KLP3-001",
+      "recommendation": "Before K2 execution: (1) declare raw/ untrusted data in D5/AGENTS guidance — agents and ingest prompts must treat it as content, never instructions; (2) add a seed-injection test to the K2 human-audit checklist (pre-planted instruction payloads in a test Feishu doc must not alter distillate behavior); (3) add a read-side risk row to section 4 mirroring the write-side row.",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "zcode",
+      "blocking": true,
+      "claim": "v3 claims to absorb the three-way v2 REJECT findings but provides no traceability mapping, and the repo's recorded review docs do not contain the KL-1..8 / F1..4 / KLP-001..005 IDs, so closure of prior blockers cannot be verified from the artifact.",
+      "evidence": "docs/architecture/knowledge-layer-plan.md line 3 says v3 absorbs '共识评审 v2 轮的三方 findings' but the document contains no findings table; grep of docs/architecture/consensus-review-2026-09-03.md and the whole docs/architecture directory finds no KL-*, KLP-*, or F1..F4 IDs matching the review scope.",
+      "id": "Z3-R0-001",
+      "recommendation": "Add a closure matrix mapping each prior finding ID to the specific v3 section/decision that addresses it (and where the fix lands in K0-K5), so reviewers can verify each blocker is actually closed rather than assumed closed.",
+      "severity": "MAJOR"
+    },
+    {
+      "agent": "zcode",
+      "blocking": true,
+      "claim": "D5 covers credential, scope, dry-run, and review disciplines for lark-cli itself, but does not address prompt-injection carried in extracted content: Feishu docs/minutes/chat decisions written into repo raw/ are untrusted text that agents will later ingest during obsidian-wiki compile and distillation.",
+      "evidence": "knowledge-layer-plan.md D5 (line 59) governs only the tool's authorization surface ('env 凭证、最小 scope、--dry-run、评审产物'), and line 28/line 19 route raw Feishu extractions directly into 'repo wiki-raw/' as the knowledge entrance with no sanitization, provenance-tagging-as-untrusted, or human-screen step on the ingest path; the risk section (line 76) only mentions credential leakage, not content-borne injection.",
+      "id": "Z3-R0-002",
+      "recommendation": "Extend D5 with a content-quarantine rule: raw/ extractions marked untrusted (frontmatter provenance + no-instruction-execution rule in AGENTS routing), and require the K2 human-audit sample to explicitly check for injected instructions before content enters the提炼 path.",
+      "severity": "MAJOR"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "The artifact does not provide evidence that every prior KL-1..8, F1..4, and KLP-001..005 finding is closed.",
+      "evidence": "The document header merely states that v3 absorbs the prior review findings. Sections D1-D6 and K0-K5 contain no finding-by-finding closure ledger identifying the original claim, its resolution, concrete evidence, and residual risk. Therefore the required closure check cannot be reproduced from the reviewed artifact.",
+      "id": "KLP3-CLOSURE-001",
+      "recommendation": "Add a traceability table covering every prior finding ID, with original issue, resolving section, planned or observed evidence, status, and residual risk. Unresolved or evidence-free entries must remain open.",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "D5 is insufficient against prompt injection and privilege escalation because its controls are procedural and do not contain untrusted content or mechanically bind reviewed input to an authorized write.",
+      "evidence": "Section D5 specifies environment credentials, minimal scopes, dry-run, and reviewed-artifacts-only writes. Section 0 nevertheless sends Feishu documents, minutes, and chat decisions through raw storage and automated ingestion. The plan defines no quarantine, instruction-neutral representation, path/file-name allowlist, content validation, adversarial-payload testing, command/target allowlist, split read/write identities, immutable payload digest, approval enforcement, or audit record. Dry-run and PR review alone do not prevent content-borne instructions, command substitution, target manipulation, or a review-to-execution TOCTOU change.",
+      "id": "KLP3-LARK-SEC-002",
+      "recommendation": "Define and gate a concrete bridge threat model: separate read and write applications/credentials; sandbox extraction; treat imported text strictly as data; forbid control filenames such as AGENTS.md and executable content; validate paths, sizes, formats, and targets; bind writes to an approved commit and payload digest; require independent approval; log immutable command, actor, target, and result metadata; test adversarial content; and verify rather than assume each CLI dry-run guarantee.",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "The extraction design can copy ACL-restricted or sensitive Feishu material into durable Git history, contradicting the canonical-source policy.",
+      "evidence": "D3 says sensitive or permission-isolated knowledge must enter no layer, while D5 and K2 extract a Feishu document domain into repository raw storage. The plan contains no source allowlist, per-document authorization check, ACL-to-repository access mapping, pre-Git DLP/classification gate, consent rule, retention policy, deletion propagation, or incident purge procedure. Application-level minimal scopes limit API reach but do not establish that every copied document is authorized for every repository reader.",
+      "id": "KLP3-DATA-ACL-003",
+      "recommendation": "Stage extracts outside Git until source ownership, classification, ACL compatibility, and DLP checks pass. Define explicit source/target allowlists, redaction and rejection rules, provenance plus source ACL metadata, retention/deletion propagation, and a tested leak-response procedure before K2 can execute.",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "K0-K5 do not form reproducible quantitative gates and do not provide rollback for durable Git, Feishu, or indexing side effects.",
+      "evidence": "K0 requires 100% seed detection without defining the corpus, oracle, false-positive bound, or clone-state assertion. K2 uses an unspecified human-reviewed sample and has no semantic-loss threshold. K3 uses an undefined spot check for ≥80% consistency. K4 uses a subjective ≥60% retrieval score without a fixed query set, sample size, raters, or scoring rubric. K0-K3 lack explicit failure rollback, and K4's “uninstall verification + ADR review” cannot reverse Git history, Feishu writes, credentials, embeddings, logs, or cached generated content. K5 has triggers but no acceptance gate.",
+      "id": "KLP3-GATES-004",
+      "recommendation": "For every phase, define fixtures, denominators, sampling and scoring rules, false-positive/false-negative limits, evidence artifacts, responsible approver, pass/fail command, stop condition, and phase-specific rollback. Include idempotency/replay tests, Feishu pre-write snapshots and compensating actions, index/data deletion verification, credential revocation, and proof that failed trials leave no residual state.",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "Canonical ownership, storage paths, and Feishu feedback-loop behavior remain internally ambiguous.",
+      "evidence": "Section 0 calls T3 a per-repository vault but says cross-project knowledge uses a separate team-knowledge repository; D3 assigns single-project knowledge to T1 and cross-project knowledge to T3, leaving the authority of a per-repository T3 unclear. The flow alternates between raw/, wiki-raw/, and vault/docs, without specifying whether generated docs overlap authoritative T0 docs/. Feishu is both an authoritative source for native collaboration and a sink for vault distillates, yet no origin marker, managed-mirror rule, re-extraction exclusion, idempotency key, or conflict policy prevents pushed pages from being re-ingested and amplified.",
+      "id": "KLP3-TOPOLOGY-005",
+      "recommendation": "Publish an exact directory and ownership contract for every layer, clarify whether T3 exists per project or only in the team-knowledge repository, and distinguish T0 paths from generated vault paths. Define Feishu managed mirrors with stable origin IDs and hashes, loop suppression, idempotent updates, manual-edit policy, drift resolution, and deletion behavior.",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "D6 establishes non-authoritativeness but not a sufficient security boundary for a centralized service indexing multiple repositories.",
+      "evidence": "D6 only states that deepwiki is read-only, regenerable, non-authoritative, and configuration-pinned. K3 connects two or three repositories, potentially private ones. The plan specifies no service authentication, per-repository authorization, cross-repository query isolation, read-token scope, secret exclusion, prompt-injection containment, network egress rule, encryption, log/embedding retention, deletion verification, or audit requirements. Read-only protects repository integrity, not confidentiality or tenant isolation.",
+      "id": "KLP3-DEEPWIKI-006",
+      "recommendation": "Add a pre-K3 security gate covering authenticated access, repository-scoped read identities, query isolation, secret scanning/exclusions, untrusted-repository-content handling, egress controls, encryption, retention and deletion, audit logs, and adversarial tests for cross-repository disclosure and RAG prompt injection.",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "Wiki-versus-spec separation is sound in principle, but the archive-to-wiki promotion contract is too ambiguous to preserve the stated boundaries and ADR-0015 discipline.",
+      "evidence": "D3 mandates one-way promotion of long-lived conclusions during OpenSpec archive and says specs do not absorb wiki content, while K1 only requires a template declaration. The plan does not define eligibility, target-layer routing, owner, provenance identity, duplicate/update handling, idempotency, PR reviewer, archive failure semantics, or whether promotion modifies the archive workflow. The phrase that specs do not absorb wiki content also leaves unclear whether authoritative wiki knowledge may inform a new spec.",
+      "id": "KLP3-PROMOTION-007",
+      "recommendation": "Clarify that wiki knowledge may inform specs without becoming a spec-owned duplicate. Define promotion as an explicit Git-native post-archive operation with archive ID and digest, target routing, deduplication, backlinks, PR approval, and deterministic validation; state whether archive completion is independent of promotion and avoid introducing a workflow state machine.",
+      "severity": "BLOCKER"
+    }
+  ],
+  "created_at": "2026-09-07T06:01:50Z",
+  "current_artifact_sha256": "c582c65610e297b715931617d9acff41058044e6b5592a420cc96d0b2d5767c3",
+  "dissenters": [
+    "claude-code",
+    "zcode",
+    "codex-agent"
+  ],
+  "finding_fingerprint": "e02af4ff8420489059054d8dfcd68b9ce3489834301162e29b56439068592e58",
+  "findings": [
+    {
+      "agent": "claude-code",
+      "blocking": true,
+      "claim": "D5 security disciplines cover the privilege/write side of lark-cli but leave the inbound content side uncontrolled: Feishu-extracted documents land in repo raw/ with no untrusted-content policy, and neither D5, the risk table, nor the K2 acceptance gate addresses prompt injection carried by extracted content into the ingest pipeline and agent-readable repo files.",
+      "evidence": "Line 19 defines extraction into 'repo wiki 的 raw/ 源'; line 28 makes raw/ the knowledge entrance of the direction flow; line 59 (D5) covers env creds, minimal scope, dry-run, and write-gating, and only acknowledges ('如实继承') the vendor's documented injection risk without any control for extracted content; line 76 risk table lists only the write side ('lark-cli 副作用面（写飞书）'); line 68 (K2 gate) tests round-trip semantic fidelity and scope minimization with no injection-safety criterion.",
+      "id": "KLP3-001",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "The plan claims absorption of the three-way REJECT round findings but provides no per-finding closure mapping, so closure of KL-1..8 / F1..4 / KLP-001..005 cannot be verified from the artifact.",
+      "evidence": "Line 3 states v3 '吸收共识评审 v2 轮的三方 findings' without enumerating any finding ID or its resolution; no closure appendix exists in the 80-line document.",
+      "id": "KLP3-002",
+      "severity": "MAJOR"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "K3's no-external-LLM criterion has an escape hatch ('服务端无外网 LLM 依赖（或如实声明）') that lets a deployment pass the same gate by disclosing the violation rather than satisfying it.",
+      "evidence": "Line 69, K3 acceptance column: '服务端无外网 LLM 依赖（或如实声明）'.",
+      "id": "KLP3-003",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "Path naming is inconsistent between the flow description and the rest of the document for the extraction target directory.",
+      "evidence": "Line 28 says 'repo `wiki-raw/`' while lines 19 and 54 use 'raw/'.",
+      "id": "KLP3-004",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "The spec→wiki promotion at openspec archive time does not assign an owner or process for the distillation step, making the one-way promotion rule operationally unassigned.",
+      "evidence": "Line 57: 'openspec archive 时其长期结论（设计取舍/踩坑）由 archive 流程提炼进对应层' — 'archive 流程' is not defined as human or automated, and no review path for the promoted distillate is specified.",
+      "id": "KLP3-005",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "K4's headline retrieval metric (≥60% hit, 主观评分) lacks a measurement protocol, so the gate is quantitative in form but not reproducible.",
+      "evidence": "Line 70: '检索命中 ≥60%（主观评分）' with no definition of query set, scorer count, or scoring rubric; contrast with K0's reproducible seed-defect gate (line 66).",
+      "id": "KLP3-006",
+      "severity": "NOTE"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "The artifact does not provide evidence that every prior KL-1..8, F1..4, and KLP-001..005 finding is closed.",
+      "evidence": "The document header merely states that v3 absorbs the prior review findings. Sections D1-D6 and K0-K5 contain no finding-by-finding closure ledger identifying the original claim, its resolution, concrete evidence, and residual risk. Therefore the required closure check cannot be reproduced from the reviewed artifact.",
+      "id": "KLP3-CLOSURE-001",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "The extraction design can copy ACL-restricted or sensitive Feishu material into durable Git history, contradicting the canonical-source policy.",
+      "evidence": "D3 says sensitive or permission-isolated knowledge must enter no layer, while D5 and K2 extract a Feishu document domain into repository raw storage. The plan contains no source allowlist, per-document authorization check, ACL-to-repository access mapping, pre-Git DLP/classification gate, consent rule, retention policy, deletion propagation, or incident purge procedure. Application-level minimal scopes limit API reach but do not establish that every copied document is authorized for every repository reader.",
+      "id": "KLP3-DATA-ACL-003",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "D6 establishes non-authoritativeness but not a sufficient security boundary for a centralized service indexing multiple repositories.",
+      "evidence": "D6 only states that deepwiki is read-only, regenerable, non-authoritative, and configuration-pinned. K3 connects two or three repositories, potentially private ones. The plan specifies no service authentication, per-repository authorization, cross-repository query isolation, read-token scope, secret exclusion, prompt-injection containment, network egress rule, encryption, log/embedding retention, deletion verification, or audit requirements. Read-only protects repository integrity, not confidentiality or tenant isolation.",
+      "id": "KLP3-DEEPWIKI-006",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "K0-K5 do not form reproducible quantitative gates and do not provide rollback for durable Git, Feishu, or indexing side effects.",
+      "evidence": "K0 requires 100% seed detection without defining the corpus, oracle, false-positive bound, or clone-state assertion. K2 uses an unspecified human-reviewed sample and has no semantic-loss threshold. K3 uses an undefined spot check for ≥80% consistency. K4 uses a subjective ≥60% retrieval score without a fixed query set, sample size, raters, or scoring rubric. K0-K3 lack explicit failure rollback, and K4's “uninstall verification + ADR review” cannot reverse Git history, Feishu writes, credentials, embeddings, logs, or cached generated content. K5 has triggers but no acceptance gate.",
+      "id": "KLP3-GATES-004",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "D5 is insufficient against prompt injection and privilege escalation because its controls are procedural and do not contain untrusted content or mechanically bind reviewed input to an authorized write.",
+      "evidence": "Section D5 specifies environment credentials, minimal scopes, dry-run, and reviewed-artifacts-only writes. Section 0 nevertheless sends Feishu documents, minutes, and chat decisions through raw storage and automated ingestion. The plan defines no quarantine, instruction-neutral representation, path/file-name allowlist, content validation, adversarial-payload testing, command/target allowlist, split read/write identities, immutable payload digest, approval enforcement, or audit record. Dry-run and PR review alone do not prevent content-borne instructions, command substitution, target manipulation, or a review-to-execution TOCTOU change.",
+      "id": "KLP3-LARK-SEC-002",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "Wiki-versus-spec separation is sound in principle, but the archive-to-wiki promotion contract is too ambiguous to preserve the stated boundaries and ADR-0015 discipline.",
+      "evidence": "D3 mandates one-way promotion of long-lived conclusions during OpenSpec archive and says specs do not absorb wiki content, while K1 only requires a template declaration. The plan does not define eligibility, target-layer routing, owner, provenance identity, duplicate/update handling, idempotency, PR reviewer, archive failure semantics, or whether promotion modifies the archive workflow. The phrase that specs do not absorb wiki content also leaves unclear whether authoritative wiki knowledge may inform a new spec.",
+      "id": "KLP3-PROMOTION-007",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "Canonical ownership, storage paths, and Feishu feedback-loop behavior remain internally ambiguous.",
+      "evidence": "Section 0 calls T3 a per-repository vault but says cross-project knowledge uses a separate team-knowledge repository; D3 assigns single-project knowledge to T1 and cross-project knowledge to T3, leaving the authority of a per-repository T3 unclear. The flow alternates between raw/, wiki-raw/, and vault/docs, without specifying whether generated docs overlap authoritative T0 docs/. Feishu is both an authoritative source for native collaboration and a sink for vault distillates, yet no origin marker, managed-mirror rule, re-extraction exclusion, idempotency key, or conflict policy prevents pushed pages from being re-ingested and amplified.",
+      "id": "KLP3-TOPOLOGY-005",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "zcode",
+      "blocking": true,
+      "claim": "v3 claims to absorb the three-way v2 REJECT findings but provides no traceability mapping, and the repo's recorded review docs do not contain the KL-1..8 / F1..4 / KLP-001..005 IDs, so closure of prior blockers cannot be verified from the artifact.",
+      "evidence": "docs/architecture/knowledge-layer-plan.md line 3 says v3 absorbs '共识评审 v2 轮的三方 findings' but the document contains no findings table; grep of docs/architecture/consensus-review-2026-09-03.md and the whole docs/architecture directory finds no KL-*, KLP-*, or F1..F4 IDs matching the review scope.",
+      "id": "Z3-R0-001",
+      "severity": "MAJOR"
+    },
+    {
+      "agent": "zcode",
+      "blocking": true,
+      "claim": "D5 covers credential, scope, dry-run, and review disciplines for lark-cli itself, but does not address prompt-injection carried in extracted content: Feishu docs/minutes/chat decisions written into repo raw/ are untrusted text that agents will later ingest during obsidian-wiki compile and distillation.",
+      "evidence": "knowledge-layer-plan.md D5 (line 59) governs only the tool's authorization surface ('env 凭证、最小 scope、--dry-run、评审产物'), and line 28/line 19 route raw Feishu extractions directly into 'repo wiki-raw/' as the knowledge entrance with no sanitization, provenance-tagging-as-untrusted, or human-screen step on the ingest path; the risk section (line 76) only mentions credential leakage, not content-borne injection.",
+      "id": "Z3-R0-002",
+      "severity": "MAJOR"
+    },
+    {
+      "agent": "zcode",
+      "blocking": false,
+      "claim": "Gate thresholds are mostly quantitative but two are self-weakening: K0 demands 100% detection on a self-authored seed set (tautological — the seed is defined by what the tool detects), and K3's '服务端无外网 LLM 依赖（或如实声明）' lets an escape hatch satisfy a security-adjacent gate.",
+      "evidence": "knowledge-layer-plan.md lines 66 and 69: '预埋断链/孤儿/矛盾，检出 100% 才过' and '服务端无外网 LLM 依赖（或如实声明）'.",
+      "id": "Z3-R0-003",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "zcode",
+      "blocking": false,
+      "claim": "Rollback is explicitly defined only for K4; K1-K3 phases introduce bootstrap changes, a write path to Feishu, and a server deployment without stated rollback criteria.",
+      "evidence": "knowledge-layer-plan.md lines 67-70: only K4 row contains '任一不达 → 卸载验证 + ADR 重审'; K1 (bootstrap flag), K2 (Feishu write pilot), K3 (deepwiki deployment) rows have acceptance gates but no rollback clause, while the risk section (line 79) defers drift detection to K4 observation.",
+      "id": "Z3-R0-004",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "zcode",
+      "blocking": false,
+      "claim": "Topology and separation decisions are coherent with repo invariants: D4 leaves kb-write-protection semantics unchanged as verified in README/hook, D2 CLI-only aligns with the minimal-skills posture, and the one-way spec->wiki promotion direction is soundly specified.",
+      "evidence": "README.md line 77 documents kb-write-protection as guarding llmwiki/wiki/ only, matching D4's 'kb-write-protection 仅守 llmwiki/wiki/**'; knowledge-layer-plan.md lines 22-25 and 57 define openspec as change artifacts with single-direction promotion at archive with provenance metadata (promoted_from/superseded_by).",
+      "id": "Z3-R0-005",
+      "severity": "NOTE"
+    }
+  ],
+  "invalid_ballots": [],
+  "missing_agents": [],
+  "next_action": "reinitialize the review against the current artifact revision",
+  "participants": [
+    "claude-code",
+    "zcode",
+    "codex-agent"
+  ],
+  "present_agents": [
+    "claude-code",
+    "codex-agent",
+    "zcode"
+  ],
+  "review_id": "knowledge-plan-v3",
+  "round": 0,
+  "status": "BLOCKED",
+  "version": 1,
+  "votes": {
+    "ABSTAIN": 0,
+    "APPROVE": 0,
+    "REJECT": 3
+  }
+}

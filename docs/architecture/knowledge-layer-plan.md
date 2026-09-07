@@ -2,6 +2,7 @@
 
 > 状态：**v3**——融合架构输入（分布式 obsidian-wiki / 集中式 deepwiki / 服务层 lark-cli；wiki 与 spec 分离），并吸收共识评审 v2 轮的三方 findings。
 > 调研：[ar9av/obsidian-wiki](https://github.com/ar9av/obsidian-wiki)（3,364★，活跃，Karpathy 模式）、[AsyncFuncAI/deepwiki-open](https://github.com/AsyncFuncAI/deepwiki-open)（自托管 RAG wiki 生成服务）、[larksuite/cli](https://github.com/larksuite/cli)（飞书官方 CLI，200+ 命令 26 skills，MIT）、gbrain（升级路径）、teamai teamwiki（ADR-0018）、LLMWiki（已集成）。
+> **v3 评审状态（诚实记录）**：BLOCKED——run 因评审期间 artifact 变更（digest 漂移，流程失误）作废 + 三方 REJECT（claude 7.6 / zcode 6.8 / codex 4.2，10 项 blocking）。证据存 `consensus-runs/knowledge-v3-round00-tally.json`。**v4 必修清单**：① lark-cli 抽取内容的注入面（raw/ 隔离区+内容消毒+agent 读取前声明，三方同命中）② ACL 敏感内容禁入 Git 永久历史（抽取前置敏感度检查+撤销路径）③ v2→v3 findings 闭合追溯表 ④ K 门禁可复现化+Git/飞书/索引持久副作用的回滚设计 ⑤ 拓扑路径/权威声明消歧 ⑥ deepwiki 服务安全边界（多 repo 索引面）⑦ spec→wiki 晋升契约精确化。
 > ⚠️ 自报基准声明：所有厂商自测数据（LongMemEval 93.19%、44%→83% 等）仅作选型参考，不作验收输入。
 
 ## 0. 总架构：生产面 × 消费面 × 桥
