@@ -6,93 +6,76 @@
 
 ## 0. 架构视图
 
-### 0.0 活动图（主视图）：谁、在哪一步、做什么、用什么能力
+### 0.0 泳道活动图（主视图）：谁、在哪一步、做什么、用什么能力
 
-泳道 = 角色（人：产品/架构/研发测试/平台；agent：coding agent 主执行、专项 agent 组、设施守护 agent）。底部 = **能力依赖池**（虚线标注每个活动依赖的设施能力）。
+泳道 = 角色（sequence 泳道：每列一个角色，时间自上而下）。〔闸〕= 人必审点；→ 能力池 的箭头 = 该步依赖的设施能力。
 
 ```mermaid
-flowchart TB
-  subgraph PO["👤 人·产品"]
-    P1["①提需求<br/>目标/痛点/约束"]
-    P2["③拍板范围与优先级<br/>〔人闸〕"]
-    P3["⑫批对齐内容<br/>〔人闸〕"]
-  end
-  subgraph AR["👤 人·架构"]
-    A1["④设计决策<br/>参与质询与ADR"]
-    A2["⑤批不可逆决策<br/>〔人闸〕"]
-  end
-  subgraph DEV["👤 人·研发/测试"]
-    D1["⑦确认计划<br/>CONFIRM〔人闸〕"]
-    D2["⑨拒绝/放行 review<br/>〔人闸〕"]
-    D3["⑪批发布<br/>〔人闸〕"]
-  end
-  subgraph CA["🤖 coding agent（主执行）"]
-    C1["②grill-me 质询<br/>一次一问消歧→findings<br/>目的:问题暴露在澄清期"]
-    C2["⑥起草 PRD/AC+设计<br/>目的:判断性产出人审"]
-    C3["⑧TDD 实现<br/>RED→GREEN+双gate证据<br/>目的:用例完整+证据可复核"]
-    C4["⑩Journey 验证<br/>终态oracle+probe证据<br/>目的:验证真实路径非自报"]
-    C5["⑬归档+晋升<br/>spec→wiki(provenance)<br/>目的:变更结论资产化"]
-  end
-  subgraph SA["🤖 专项 agent 组"]
-    S1["consensus trio<br/>三方全票评审<br/>目的:分歧被证据关闭"]
-    S2["planner<br/>DAG+RED/GREEN ledger<br/>目的:并行不漂移"]
-    S3["桥 jobs（CI 服务层）<br/>抽取/准入/对齐发布<br/>目的:飞书⇄Git 唯一通道"]
-    S4["摩擦评分器（Stop）<br/>目的:只沉淀较劲的session"]
-  end
-  subgraph FA["⚙️ 设施守护 agent（自动）"]
-    F1["pull daemon<br/>SessionStart 同步设施<br/>目的:成员零漂移"]
-    F2["hook 层<br/>运行时 deny fail-closed<br/>目的:越界即拦"]
-    F3["CI runner<br/>check.sh 总门+MR知识回流<br/>目的:第三层拦截"]
-  end
-  subgraph CAP["🧰 能力依赖池"]
-    K1["grill-me 技能<br/>+知识recall(四层)"]
-    K2["openspec 工件<br/>+ADR"]
-    K3["consensus 技能<br/>(三方冷启动)"]
-    K4["planner 技能"]
-    K5["hooks 控制平面<br/>(hooks.yaml→adapter)"]
-    K6["gate/audit 六件套<br/>(sha256 证据链)"]
-    K7["whitebox-verify 技能"]
-    K8["teamai-cli<br/>(分发+teamwiki+摩擦)"]
-    K9["lark-cli 桥<br/>+publish-gate+谓词门"]
-    K10["LLMWiki MCP<br/>+obsidian-wiki CLI"]
-    K11["deepwiki-open<br/>(只读消费)"]
+sequenceDiagram
+  autonumber
+  participant PO as 👤 人·产品
+  participant AR as 👤 人·架构
+  participant DV as 👤 人·研发/测试
+  participant CA as 🤖 coding agent<br/>(主执行)
+  participant SA as 🤖 专项 agent 组<br/>(consensus/planner/桥/评分)
+  participant FA as ⚙️ 自动设施层<br/>(pull/hook/CI)
+  participant CAP as 🧰 能力池
+
+  Note over FA: 会话启动：pull daemon 同步设施<br/>目的:成员零漂移
+  FA->>CAP: teamai-cli 分发 skills/hooks/MCP
+
+  PO->>CA: ①提需求（目标/痛点/约束）
+  CA->>CAP: 依赖: grill-me 技能 + 知识 recall(四层)
+  CA-->>PO: ②一次一问质询 → findings
+  Note over CA,PO: 目的: 问题暴露在澄清期<br/>不在 review 期爆炸
+  PO->>CA: ③拍板范围与优先级〔闸〕
+
+  CA->>CAP: 依赖: openspec 工件 + 知识 recall
+  CA-->>AR: ⑥起草 PRD/AC + 设计草案
+  AR->>CA: ④设计决策（参与质询、定 ADR）
+  CA->>SA: 提交 consensus 评审
+  SA->>CAP: 依赖: consensus 技能(三方冷启动)
+  SA-->>AR: ⑤全票 verdict（分歧被证据关闭）
+  AR->>SA: 批不可逆决策〔闸〕
+
+  SA->>CAP: 依赖: planner 技能
+  SA-->>DV: ⑦DAG+RED/GREEN 计划
+  DV->>CA: CONFIRM_ALIGNMENT〔闸〕
+
+  loop 每个任务
+    CA->>CAP: 依赖: whitebox-verify + hooks 控制平面 + gate 六件套
+    CA->>CA: ⑧TDD：RED→GREEN（generation/test-gate 证据）
+    FA->>CA: hook 层：越界/danger 即拦（fail-closed）
   end
 
-  P1 --> C1 --> P2
-  C1 -.->|"依赖"| K1
-  P2 --> C2 --> A1
-  C2 -.-> K2
-  A1 --> S1
-  S1 -.-> K3
-  S1 -->|"全票"| A2
-  A2 --> S2
-  S2 -.-> K4
-  S2 --> D1 --> C3
-  C3 -.-> K5
-  C3 -.-> K6
-  F2 -.-> K5
-  C3 --> S1
-  S1 -->|"verdict+audit"| D2
-  D2 --> C4
-  C4 -.-> K7
-  C4 --> F3
-  F3 -.-> K6
-  F3 -.-> K8
-  F3 --> D3
-  D3 --> C5
-  C5 -.-> K2
-  C5 --> S3
-  S3 -.-> K9
-  S3 -.-> K10
-  S3 --> P3
-  S4 -.-> K8
-  F1 -.-> K8
-  S4 -.->|"沉淀入"| K10
-  C1 & C2 & C3 -.->|"recall 上下文"| K10
-  K11 -.->|"人侧浏览（无agent）"| PO
+  CA->>SA: ⑨提交评审
+  SA->>CAP: 依赖: evidence-audit（声明↔磁盘↔输出）
+  SA-->>DV: verdict + 证据链
+  alt 人闸：拒绝
+    DV-->>CA: 返工（2 次触发根因分析）
+  else 人闸：放行
+    DV->>CA: 继续
+  end
+
+  CA->>CAP: 依赖: whitebox Journey + probe 契约
+  CA->>CA: ⑩终态 oracle 验证（真实路径非自报）
+  FA->>FA: CI：check.sh 全绿 + MR 知识回流
+  FA->>CAP: 依赖: gate 六件套 + teamai extract-mr
+  DV->>CA: ⑪批发布〔闸〕→ CD（回滚路径绑定）
+
+  CA->>CAP: 依赖: openspec promotion-verify
+  CA->>CA: ⑫归档 + spec→wiki 单向晋升
+  Note over CA: 目的: 变更结论资产化<br/>archive 不晋升=知识死在归档目录
+  CA->>SA: vault 精华 → 桥 jobs
+  SA->>CAP: 依赖: lark-cli + publish-gate(谓词/attestation)
+  SA-->>PO: ⑬对齐页入飞书〔闸:批内容〕
+  Note over SA,CAP: 未评审内容永不出 repo
+
+  Note over SA,CAP: Stop 摩擦评分器：只沉淀"较劲过"的 session
+  Note over PO,CAP: deepwiki：人侧浏览/问答（只读消费，无 agent）
 ```
 
-**读图法**：实线 = 变更推进（①→⑬ 按生命周期）；〔人闸〕= 人必审点；虚线 = 活动依赖的设施能力。**四个专项 agent 各有专职**（评审/计划/桥/评分），coding agent 是唯一贯穿全程的主执行者；设施守护 agent（pull/hook/CI）全程自动，无对话角色。
+**读图法**：纵向时间即生命周期（①需求→⑬对齐）；消息发起者 = 该步的**执行角色**；`→能力池` 箭头 = 该步依赖的设施能力；〔闸〕alt 分支 = 人必审点。coding agent 是唯一贯穿者；专项组按消息名区分（consensus/planner/桥/评分）；自动设施层只在 loop 和 CI 处出现（全程静默值守）。
 
 ### 0.1 静态总图（三正交维度）
 
