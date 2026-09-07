@@ -1,0 +1,210 @@
+{
+  "artifact_changed": false,
+  "artifact_error": null,
+  "artifact_sha256": "93db33551a1f60933564ed455a8cc9fe5d82495c071ad9870170f2c7c5617aca",
+  "ballots": [
+    {
+      "agent": "claude-code",
+      "blocking_findings": 0,
+      "min_criterion": 8.5,
+      "overall": 8.8,
+      "summary": "v4.5 as written delivers all three promised v4.4 residuals inline and verifiable in the text: (1) executable owner-approval predicates P1-P5 at §2.2 lines 57-61, each formal and fail-closed, with three negative fixture classes wired to `publish-gate.sh --check-approvals` exit 2; (2) the per-operation snapshot journal at §2.2 lines 65-67 with the exact claimed fields (op_id, stable target_page_id, page_existed, prior_state{version,digest,content_ref}, intended_payload_digest, optional actual_created_page_id/post_write, outcome state machine pending|written|failed|rolled_back) plus a non-pending-skip idempotency rule, anchored as the document's sole normative rollback source with §4 rows explicitly marked non-normative references; (3) per-runner fixture-presence validation with exit 1: injection-diff checks ingest-command-allowlist.txt exists and is non-empty, field-retention checks human-review-list.md exists with 10 complete judgment rows, k4-weekly checks its template path (K4's '清单' is the one unnamed path — KP45-005). Internal consistency holds: closure arithmetic checks out (v2=12, v3=10, v4-era ledger=29=10+12+7), K2/K3 thresholds are computable (24/30 grounded, hallucination=0), exit codes match the repo contract (0 pass / 1 invalid input / 2 gate fail), rollback semantics are stated once and referenced consistently, and the compare-and-delete/version-guard design plus F4's rerun-convergence oracle make the rollback physically and logically idempotent. Residual risks are honestly declared in §7. Remaining findings are five MINOR/NOTE spec-depth items — an unused expires_at field, a direction-blind idempotency sentence (behaviorally pinned by F4), partial negative-fixture coverage for P2/P3/P4, an unspecified revoked-set fact source, and the unnamed K4 list — none of which undermine correctness, executability, or the security posture of the plan. I would authorize the gated next step.",
+      "verdict": "APPROVE"
+    },
+    {
+      "agent": "zcode",
+      "blocking_findings": 0,
+      "min_criterion": 8.0,
+      "overall": 8.8,
+      "summary": "Reviewed v4.5 (terminal) as written. All three v4.4 residuals are verifiably closed in the document: §2.2 owner-approval gate defines executable fail-closed predicates P1–P5 with negative fixtures; §2.2 gives the per-operation snapshot journal schema with a pending|written|failed|rolled_back state machine and idempotent rerun semantics, declared the sole normative rollback source; §4 enumerates startup fixture-presence validation for injection-diff.sh, field-retention.sh, and k4-weekly.sh with exit-1 fail behavior plus a non-empty injection allowlist and a 10-row complete human-review list. The gate table (K0–K5, P) consistently names runners, fixtures, thresholds, evidence paths, and rollback references. Closure matrix accounts for 29 findings across v2–v4.2 runs. Only minor editorial issues found (a run-on sentence at P5, implicit revoked-set source); no material flaw. I would authorize the gated next step.",
+      "verdict": "APPROVE"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking_findings": 3,
+      "min_criterion": 5.4,
+      "overall": 6.1,
+      "summary": "REJECT. The plan is detailed, but authorization cannot proceed while the normative rollback replay rule can skip or duplicate mutations, the owner gate can accept expired, future-dated, or unverified-owner approvals, and K4 lacks a frozen executable population contract.",
+      "verdict": "REJECT"
+    }
+  ],
+  "blocking_findings": [
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "The rollback journal is not replay-safe and its skip rule prevents required rollback processing.",
+      "evidence": "§2.2 defines outcomes as pending|written|failed|rolled_back, then says all non-pending operations are skipped. A successful mutation has outcome written, so this rule skips the operation that rollback must undo. Additionally, a create can succeed remotely before actual_created_page_id, post_write, and written are persisted; replay then sees pending and can create a duplicate. These behaviors contradict §4 P/F4's rollback and rerun-convergence oracle.",
+      "id": "KLP45-RB-001",
+      "recommendation": "Specify operation-specific transitions: publish consumes pending, rollback consumes written, and rolled_back is skipped. Add an uncertain/reconciliation path, remote idempotency keyed by op_id or deterministic lookup, persistence ordering, and crash fixtures covering remote success before journal update and rollback success before journal update.",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "The owner-approval predicates remain fail-open for time validity and do not mechanically prove source-domain ownership.",
+      "evidence": "§2.2 includes expires_at in the approval schema, but P5 checks only now-approved_at <= 90d and approver not revoked. It therefore accepts an approval whose expires_at is already past and also accepts future-dated approved_at values. P4 checks only that the PR submitter equals approval.approver; no P1-P5 predicate checks that this identity is a registered owner for approval.source_domain or binds that owner to the exact approval digest at the reviewed PR head.",
+      "id": "KLP45-OWNER-001",
+      "recommendation": "Require approved_at <= now <= min(expires_at, approved_at+90d), define clock-skew handling, and add expired-at/future-date fixtures. Add a versioned source_domain-to-owner registry and verify owner membership plus approval of the exact record digest/head SHA.",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "The K4 fixture population and denominator are not reproducibly frozen.",
+      "evidence": "§4 K4 says k4-weekly validates a template and a list, but names only contracts/bridge-fixtures/k4-weekly-template.md; its command description validates only that template. No exact manifest path identifies the two projects and four weeks. The threshold states 2 projects × 4 weeks while the evidence column says four weekly reports, without defining whether aggregation is over four weeks or eight project-weeks or how missing observations are handled.",
+      "id": "KLP45-K4-001",
+      "recommendation": "Name a committed pilot manifest containing project IDs, week IDs, expected report paths, and freeze time; validate it at startup. Define aggregation units, per-project versus combined thresholds, and missing-data behavior in the runner contract.",
+      "severity": "MAJOR"
+    }
+  ],
+  "created_at": "2026-09-07T07:43:38Z",
+  "current_artifact_sha256": "93db33551a1f60933564ed455a8cc9fe5d82495c071ad9870170f2c7c5617aca",
+  "dissenters": [
+    "codex-agent"
+  ],
+  "finding_fingerprint": "51d4d8a5a27ef38e27a5e808ecd963e510a2ff75c0ecd3d3b2f2dbb9fe4c5b98",
+  "findings": [
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "The K4 fixture population and denominator are not reproducibly frozen.",
+      "evidence": "§4 K4 says k4-weekly validates a template and a list, but names only contracts/bridge-fixtures/k4-weekly-template.md; its command description validates only that template. No exact manifest path identifies the two projects and four weeks. The threshold states 2 projects × 4 weeks while the evidence column says four weekly reports, without defining whether aggregation is over four weeks or eight project-weeks or how missing observations are handled.",
+      "id": "KLP45-K4-001",
+      "severity": "MAJOR"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "The owner-approval predicates remain fail-open for time validity and do not mechanically prove source-domain ownership.",
+      "evidence": "§2.2 includes expires_at in the approval schema, but P5 checks only now-approved_at <= 90d and approver not revoked. It therefore accepts an approval whose expires_at is already past and also accepts future-dated approved_at values. P4 checks only that the PR submitter equals approval.approver; no P1-P5 predicate checks that this identity is a registered owner for approval.source_domain or binds that owner to the exact approval digest at the reviewed PR head.",
+      "id": "KLP45-OWNER-001",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "The rollback journal is not replay-safe and its skip rule prevents required rollback processing.",
+      "evidence": "§2.2 defines outcomes as pending|written|failed|rolled_back, then says all non-pending operations are skipped. A successful mutation has outcome written, so this rule skips the operation that rollback must undo. Additionally, a create can succeed remotely before actual_created_page_id, post_write, and written are persisted; replay then sees pending and can create a duplicate. These behaviors contradict §4 P/F4's rollback and rerun-convergence oracle.",
+      "id": "KLP45-RB-001",
+      "severity": "BLOCKER"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "The owner-approval schema defines a field that no predicate consumes: expires_at appears in the record schema but P5 freshness is defined as now - approved_at ≤ 90d, leaving expires_at dead on arrival and creating a risk of implementation drift (implementer may honor expires_at, or a stale record may pass/fail inconsistently with the stated predicate).",
+      "evidence": "§2.2 line 56 schema: `{source_domain, approver, audience, scope, approved_at, expires_at}`; line 61 P5: `now - approved_at ≤ 90d 且 approval.approver ∉ revoked` — expires_at is never referenced by P1-P5.",
+      "id": "KP45-001",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "The journal idempotency rule conflates the publish-rerun and rollback-rerun skip predicates: 'outcome 非 pending 的操作跳过' is correct for re-running publish (do not re-execute ops already written), but for re-running rollback the set that must be processed is exactly outcome==written (non-pending); a literal reading would skip written ops and never roll them back after a crash mid-rollback.",
+      "evidence": "§2.2 lines 66-67: journal outcome state machine `pending|written|failed|rolled_back` and '幂等：按 journal 重跑安全（outcome 非 pending 的操作跳过；rolled_back 不重复处理）'; §4 row P fixture F4 (line 95) requires '重跑收敛（幂等 oracle：二次运行 exit 0 且远端不变）', which behaviorally forces the correct direction-specific implementation.",
+      "id": "KP45-002",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "Negative approval fixtures cover only three of the five predicates: 过期审批 (P5), 域不匹配 (P1), 已撤销 (P5-revoked); no negative fixtures are enumerated for P2 (audience subset violation), P3 (scope containment violation), or P4 (submitter/approver identity mismatch), so three fail-closed predicates ship without mechanical adversarial coverage.",
+      "evidence": "§2.2 line 61: '负向 fixture（同目录 negative/）：过期审批 / 域不匹配 / 已撤销 三类，tools/bridge/publish-gate.sh --check-approvals 必须全部 exit 2' — exactly three classes named against five predicates defined at lines 57-60.",
+      "id": "KP45-003",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "The P5 revocation check references a revoked set whose location and schema are never declared: the owner-approvals.yaml record schema has no revoked field and no separate revocation registry path is named, so 'approval.approver ∉ revoked' has no specified fact source despite having a negative fixture (已撤销) that presumes one exists.",
+      "evidence": "§2.2 line 56 (schema without revoked) vs line 61 (P5 references `revoked` and a 已撤销 negative fixture requiring exit 2).",
+      "id": "KP45-004",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "K4's fixture cell promises startup validation of '模板与清单' (template AND list), but only the template path is specified; the 清单 has no named path, so the promised check is not fully actionable as written.",
+      "evidence": "§4 K4 row (line 96): fixture cell 'runner 启动时校验模板与清单存在，缺失 → exit 1' while the command cell names only '启动即校验 contracts/bridge-fixtures/k4-weekly-template.md 存在，缺失 exit 1'.",
+      "id": "KP45-005",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "Field-name drift between the preflight snapshot and the journal schema is inferable but not mapped explicitly, and the header's '全枚举 29 项' could be misread as covering all rounds (actual total across v2-v4.2 tables is 51 IDs; 29 correctly describes only the v4/v4.1/v4.2 ledger, which is internally consistent at 10+12+7).",
+      "evidence": "§2.2 line 55 preflight snapshot `{page_id, remote_version, content_digest, prior_content_ref, page_existed}` vs line 66 journal `target_page_id ... prior_state{version, digest, content_ref}`; line 3 '（§5 全枚举 29 项）' vs line 130 'v4 run 10 项 / v4.1 run 12 项 / v4.2 run 7 项'.",
+      "id": "KP45-006",
+      "severity": "NOTE"
+    },
+    {
+      "agent": "zcode",
+      "blocking": false,
+      "claim": "The owner-approval gate predicates P1–P5 are present, executable, and fail-closed as claimed, closing residual (1).",
+      "evidence": "§2.2 lines 56–61 define the approval record schema {source_domain, approver, audience, scope, approved_at, expires_at} and five concrete predicates P1–P5 (domain equality, audience subset, per-(obj,action) scope containment, PR-submitter==approver via CI gh api, freshness ≤90d plus non-revoked), with negative fixtures required to exit 2 and DLP gray areas routed to human decision.",
+      "id": "Z-F1",
+      "severity": "NOTE"
+    },
+    {
+      "agent": "zcode",
+      "blocking": false,
+      "claim": "The rollback snapshot journal schema is specified with the exact fields named in the round scope, and is declared the sole normative rollback source, closing residual (2).",
+      "evidence": "§2.2 line 65–68: journal schema {op_id, target_page_id(稳定身份), page_existed, prior_state{version, digest, content_ref}, intended_payload_digest, actual_created_page_id?, post_write{version, digest}?, outcome: pending|written|failed|rolled_back}; idempotent rerun skips non-pending ops; line 68 states this block is the document's only normative rollback spec and §4 references are non-normative.",
+      "id": "Z-F2",
+      "severity": "NOTE"
+    },
+    {
+      "agent": "zcode",
+      "blocking": false,
+      "claim": "Fixture-presence validation is enumerated per consuming runner with fail-fast behavior, closing residual (3).",
+      "evidence": "§4 K2 row: injection-diff.sh validates contracts/bridge-fixtures/ingest-command-allowlist.txt exists and is non-empty else exit 1; field-retention.sh validates human-review-list.md exists with 10 complete judgment rows else exit 1; K4 row: k4-weekly.sh validates the template and lists at startup, exit 1 on missing.",
+      "id": "Z-F3",
+      "severity": "NOTE"
+    },
+    {
+      "agent": "zcode",
+      "blocking": false,
+      "claim": "Minor editorial defect: the P5 predicate sentence is concatenated with the negative-fixture clause without separation, and the revoked-set source is implicit.",
+      "evidence": "Line 61: 'P5 新鲜度：now - approved_at ≤ 90d 且 approval.approver ∉ revoked负向 fixture（同目录 negative/）：…' — no space or punctuation between 'revoked' and '负向 fixture', and where the revoked set is loaded from is not named (presumably the negative/ fixtures directory or a registry).",
+      "id": "Z-F4",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "zcode",
+      "blocking": false,
+      "claim": "The F4 rollback fixture's idempotency oracle is specified concretely, making the publish-gate contract reproducible.",
+      "evidence": "§4 row P: F4 mixed create+update mid-batch failure → exit 2 then rollback, remote state = new pages deleted / updated pages restored to prior, and the idempotency oracle is a second run exiting 0 with unchanged remote state.",
+      "id": "Z-F5",
+      "severity": "NOTE"
+    },
+    {
+      "agent": "zcode",
+      "blocking": false,
+      "claim": "Residual risks are honestly declared rather than hidden, supporting the risk criterion.",
+      "evidence": "§7 lines 169–173 explicitly state injection isolation is mitigation not eradication, DLP is heuristic with a default-off capability switch for high-sensitivity teams, deepwiki isolation depends on deployment discipline, and out-of-queue human concurrency remains possible.",
+      "id": "Z-F6",
+      "severity": "NOTE"
+    }
+  ],
+  "invalid_ballots": [],
+  "missing_agents": [],
+  "next_action": "open debate round 01, resolve dissent, and re-ballot",
+  "participants": [
+    "claude-code",
+    "zcode",
+    "codex-agent"
+  ],
+  "present_agents": [
+    "claude-code",
+    "codex-agent",
+    "zcode"
+  ],
+  "review_id": "knowledge-plan-v45",
+  "round": 0,
+  "status": "DEBATE_REQUIRED",
+  "version": 1,
+  "votes": {
+    "ABSTAIN": 0,
+    "APPROVE": 2,
+    "REJECT": 1
+  }
+}
