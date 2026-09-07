@@ -6,6 +6,23 @@
 
 ## 1. 设计原则
 
+### 1.0 选型依据（用什么、为什么、拒绝了什么）
+
+| 组件 | 选型 | 关键依据 | 拒绝的替代 | 拒因 |
+|------|------|---------|-----------|------|
+| **T0** 项目自我描述 | repo 原生（docs/+AGENTS.md+ADR） | 零成本零依赖，Git 即权威 | — | — |
+| **T1** 策展知识 | LLMWiki MCP（lucasastorian） | MCP 原生（create/edit/search 走 SQLite+FTS+引用索引）；已在仓库 ready（commit pin）；hooks 保护已实证 | gbrain 做策展层 | 服务端+Postgres+embedding API，违反三原则 |
+| **T2** 代码图谱 | teamai teamwiki（内置） | tree-sitter WASM AST 双轨（精确边+启发式兜底）；随分发引擎免费获得；替代已删的 understand-anything（单点工具+调度复杂） | understand-anything 复活 | 已在 ADR-0015 判死：生成器命令删除，仅保留可选输入消费 |
+| **T3** vault 提炼 | **obsidian-wiki**（ar9av） | ① 3,364★/活跃（2026-09 仍在 push）/MIT/33 PyPI 版本 ② Karpathy LLM-Wiki 模式的成熟工程化——与我们知识闭环**同源同构**（raw→ingest→lint 三操作一致）③ 纯 Markdown+Git：零服务端、零 API key、零 vendor ④ compile-not-accumulate + lint/dedup/矛盾检测 + 置信标注（extracted/inferred/ambiguous）⑤ 自报结构性问题 44%→83% 正确、4.4× 加速（n=2 小样本，仅参考） | **gbrain**（garrytan/YC） | 能力最强（synthesis/gap/OAuth 隔离）但=服务器+Supabase+embedding API+~$100/月/25人——违反 Git-native/零服务端/供应链可 pin 三条默认原则；列为升级路径（K5，触发：≥15 人或需 ACL/synthesis） |
+| | | | 纯手工 vault（无工具） | 无 lint/dedup/增量 manifest，vault 必然腐化 |
+| **消费面** wiki 再生 | deepwiki-open（AsyncFuncAI） | 自托管、多 LLM/embedder 后端（可 Ollama 全本地）、私有 repo 支持、Next.js+FastAPI 标准栈；**用户本机已跑实例**（localhost:8095 实证可用） | Devin DeepWiki（SaaS） | 云端服务，私有 repo 需外发，违反零服务端 |
+| **桥** 飞书抽取/对齐 | **lark-cli**（larksuite/cli 官方） | ① 飞书**官方**维护（vs 三方逆向），MIT ② 200+ 命令 26 skills，覆盖 docs/wiki/妙记/群聊 ③ AI 友好设计：JSON 输出契约（ok 信封）、`--dry-run`、schema 自省、OAuth 最小 scope ④ 团队真实用飞书（本地已装全套 lark-* 技能）⑤ 安全文档诚实（自述注入/越权风险——我们的威胁模型正是针对它设计） | 自研飞书 API 脚本 | 维护成本高，凭据/scope/重试/分页轮子重造 |
+| | | | 员工直接用 lark-cli | 用户明确约束：仅服务层（CI/服务节点），员工不接触——减攻击面 |
+| **升级路径** company brain | gbrain（planned） | 权限隔离（SQL 层强制+零泄漏 fuzz 自报）、synthesis、gap analysis——T0-T3 均不提供的三大能力；生产规模自报 155k 页 | — | 触发条件显式（K5）；届时独立 ADR |
+
+**选型总依据（三条默认原则，一票否决）**：Git-native（无服务端无数据库）、供应链可 pin（commit/版本/sha256）、零外部 API 依赖（或如实标注 degraded）。凡违反者只能作为可选升级路径（planned），不作默认。
+
+
 1. **Git 是唯一权威源**——所有知识层的真身都在 Git 里（版本化、可审计、可回滚）；消费面只读可再生。
 2. **wiki ≠ spec**——wiki 回答"团队知道什么"（随 repo 演进的沉淀）；spec 回答"这次变更做什么"（openspec/ 变更工件，生命周期随变更）。单向晋升：spec archive → wiki，不反向。
 3. **不可信内容是数据不是指令**——飞书抽取物进不可信隔离区，机械校验（黑名单/格式/大小/ACL 谓词）通过才入库，agent 永不执行其中指令性文本。

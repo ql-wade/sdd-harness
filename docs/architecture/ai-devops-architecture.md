@@ -88,7 +88,74 @@ flowchart LR
   style KNOWLOOP fill:#e8f5e9
 ```
 
-## 0.2 人机分工三原则
+## 0.2 双引擎细化：哪一步做什么
+
+### 0.2.1 分发引擎（teamai-cli）——设施如何到达每个成员
+
+```mermaid
+flowchart TB
+  subgraph ADMIN["管理员侧（变更设施）"]
+    A1["① teamai push<br/>本地改动→分支+MR<br/>（已在未合并 PR 的资源<br/>就地更新不重复开）"]
+    A2["② 评审合并<br/>（Git 平台原生审查）"]
+    A1 --> A2
+  end
+  subgraph MEMBER["成员侧（每次会话）"]
+    B0["③ SessionStart hook 触发<br/>teamai pull"]
+    B1["④ 增量同步<br/>HEAD vs lastPullRev<br/>一致即跳过"]
+    B2["⑤ 按角色/标签过滤<br/>roles 命名空间<br/>tags 订阅"]
+    B3["⑥ reconcile 落地<br/>skills/rules/hooks/MCP<br/>→ 各 agent 原生格式<br/>（幂等，不覆盖用户配置）"]
+    B0 --> B1 --> B2 --> B3
+  end
+  subgraph RUNTIME["运行时（会话中）"]
+    C1["⑦ hook-dispatch<br/>统一调度团队 hooks<br/>前台/后台 handler"]
+    C2["⑧ 摩擦信号检测<br/>Stop hook 评分<br/>（打断/拒绝/重试）"]
+  end
+  subgraph FEEDBACK["回流（CI）"]
+    D1["⑨ teamai ci extract-mr<br/>MR 知识提取→评论→合并入库"]
+  end
+  A2 -->|"合并后"| B0
+  B3 --> C1 --> C2
+  C2 -.->|"达标提示分享"| A1
+  D1 -.->|"知识回流"| A1
+```
+
+| 步 | 何时 | 做什么 | 我们的约束 |
+|----|------|--------|-----------|
+| ①② | 管理员改设施时 | push→MR→评审合并 | deny 策略语义源仍在本仓库 hooks.yaml（adapter 生成 teamai 格式注册产物） |
+| ③④⑤ | 每次会话启动 | 增量 pull + 角色/标签过滤 | mcp/mcp.yaml 为 register-mcps 第二产物（清单仍是唯一事实源） |
+| ⑥ | pull 后 | 幂等 reconcile 到 9 agent | P0 验证与 CC adapter 组合幂等（ADR-0018 闸门） |
+| ⑦⑧ | 会话运行中 | hooks 调度 + 摩擦评分 | 与我们 fail-closed deny 门共存（各管各的策略面） |
+| ⑨ | CI 阶段 | MR 知识提取回流 | 入 teamwiki（T2，只读图谱层） |
+
+### 0.2.2 知识引擎——知识如何流动（七步）
+
+```mermaid
+flowchart LR
+  E1["① 抽取<br/>extract job<br/>飞书→Git外staging"]
+  E2["② 准入<br/>P1-P5谓词+DLP<br/>+ACL+黑名单<br/>fail-closed"]
+  E3["③ 提炼<br/>obsidian-wiki<br/>compile-not-<br/>accumulate+人审"]
+  E4["④ 检索 recall<br/>四层各入口→<br/>agent 上下文"]
+  E5["⑤ 沉淀<br/>spec archive→<br/>promotion 晋升<br/>摩擦→learnings"]
+  E6["⑥ 对齐<br/>vault 精华→PR<br/>→publish-gate<br/>→飞书"]
+  E7["⑦ 消费<br/>deepwiki 再生<br/>wiki+chat（只读）"]
+  E1 --> E2 --> E3 --> E4
+  E5 --> E4
+  E3 --> E6 --> E7
+  style E2 fill:#f8d7da
+  style E6 fill:#f8d7da
+```
+
+| 步 | 输入 | 动作 | 输出 | 门禁 |
+|----|------|------|------|------|
+| ① 抽取 | 飞书文档/妙记/群聊 | lark-cli 应用A只读拉取 | Git 外 staging（永不直进 repo） | 源 allowlist |
+| ② 准入 | staging 内容 | 谓词代数+DLP+ACL 快照+路径黑名单 | 写入 `wiki-vault/raw/`（untrusted）或拒绝 | P1-P5 任一假即 fail-closed |
+| ③ 提炼 | raw/ 过审内容 | obsidian-wiki ingest（合并入既有页、矛盾标记、置信标注）+ 人审 | `wiki-vault/` 提炼页 | K0 lint 种子门；注入 diff=0 |
+| ④ 检索 | agent 任务上下文 | T0 文件读 / T1 MCP search / T2 teamai recall（BM25+图谱）/ T3 CLI query | 结构化知识摘要（带 Sources 锚点） | raw/ 只当数据读 |
+| ⑤ 沉淀 | 归档变更/摩擦 session | spec→wiki promotion（单向，带 provenance）；share-learnings | T0/T1/T3c 晋升页 | promotion-verify schema 校验 |
+| ⑥ 对齐 | vault 精华页 | preflight 快照 journal → publish-gate → 应用B写入 | 飞书知识库对齐页 | attestation+版本绑定，回滚=权威算法 |
+| ⑦ 消费 | git repo（只读） | deepwiki-open 自动生成 wiki + RAG chat | 团队浏览/问答（非权威） | pre-K3 七项安全负向门 |
+
+## 0.3 人机分工三原则
 
 | 类型 | 归属 | 例 |
 |------|------|----|
