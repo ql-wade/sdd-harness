@@ -4,9 +4,99 @@
 > 原则（继承 ADR-0015）：**映射而非编排**。scaffold 提供每个环节的能力、门禁与人机边界；不规定阶段顺序，不造状态机。团队按变更风险裁剪环节。
 > 文档矩阵：横向分层 [scaffold-architecture.md](scaffold-architecture.md) ｜ 知识环节深化 [knowledge-architecture.md](knowledge-architecture.md) ｜ 演进对齐+图集 [architecture-blueprint.md](architecture-blueprint.md) ｜ 知识规格 [knowledge-layer-plan.md](knowledge-layer-plan.md) ｜ 分发层方案 [teamai-integration-plan.md](teamai-integration-plan.md)
 
-## 0. 总架构图
+## 0. 架构视图
 
-三个正交维度构成整体：**交付生命周期**（横轴：变更从需求到知识沉淀）× **设施分层**（纵轴：所有环节共享的设施）× **人机边界**（贯穿：门禁自动化 + 人审点）。
+### 0.0 活动图（主视图）：谁、在哪一步、做什么、用什么能力
+
+泳道 = 角色（人：产品/架构/研发测试/平台；agent：coding agent 主执行、专项 agent 组、设施守护 agent）。底部 = **能力依赖池**（虚线标注每个活动依赖的设施能力）。
+
+```mermaid
+flowchart TB
+  subgraph PO["👤 人·产品"]
+    P1["①提需求<br/>目标/痛点/约束"]
+    P2["③拍板范围与优先级<br/>〔人闸〕"]
+    P3["⑫批对齐内容<br/>〔人闸〕"]
+  end
+  subgraph AR["👤 人·架构"]
+    A1["④设计决策<br/>参与质询与ADR"]
+    A2["⑤批不可逆决策<br/>〔人闸〕"]
+  end
+  subgraph DEV["👤 人·研发/测试"]
+    D1["⑦确认计划<br/>CONFIRM〔人闸〕"]
+    D2["⑨拒绝/放行 review<br/>〔人闸〕"]
+    D3["⑪批发布<br/>〔人闸〕"]
+  end
+  subgraph CA["🤖 coding agent（主执行）"]
+    C1["②grill-me 质询<br/>一次一问消歧→findings<br/>目的:问题暴露在澄清期"]
+    C2["⑥起草 PRD/AC+设计<br/>目的:判断性产出人审"]
+    C3["⑧TDD 实现<br/>RED→GREEN+双gate证据<br/>目的:用例完整+证据可复核"]
+    C4["⑩Journey 验证<br/>终态oracle+probe证据<br/>目的:验证真实路径非自报"]
+    C5["⑬归档+晋升<br/>spec→wiki(provenance)<br/>目的:变更结论资产化"]
+  end
+  subgraph SA["🤖 专项 agent 组"]
+    S1["consensus trio<br/>三方全票评审<br/>目的:分歧被证据关闭"]
+    S2["planner<br/>DAG+RED/GREEN ledger<br/>目的:并行不漂移"]
+    S3["桥 jobs（CI 服务层）<br/>抽取/准入/对齐发布<br/>目的:飞书⇄Git 唯一通道"]
+    S4["摩擦评分器（Stop）<br/>目的:只沉淀较劲的session"]
+  end
+  subgraph FA["⚙️ 设施守护 agent（自动）"]
+    F1["pull daemon<br/>SessionStart 同步设施<br/>目的:成员零漂移"]
+    F2["hook 层<br/>运行时 deny fail-closed<br/>目的:越界即拦"]
+    F3["CI runner<br/>check.sh 总门+MR知识回流<br/>目的:第三层拦截"]
+  end
+  subgraph CAP["🧰 能力依赖池"]
+    K1["grill-me 技能<br/>+知识recall(四层)"]
+    K2["openspec 工件<br/>+ADR"]
+    K3["consensus 技能<br/>(三方冷启动)"]
+    K4["planner 技能"]
+    K5["hooks 控制平面<br/>(hooks.yaml→adapter)"]
+    K6["gate/audit 六件套<br/>(sha256 证据链)"]
+    K7["whitebox-verify 技能"]
+    K8["teamai-cli<br/>(分发+teamwiki+摩擦)"]
+    K9["lark-cli 桥<br/>+publish-gate+谓词门"]
+    K10["LLMWiki MCP<br/>+obsidian-wiki CLI"]
+    K11["deepwiki-open<br/>(只读消费)"]
+  end
+
+  P1 --> C1 --> P2
+  C1 -.->|"依赖"| K1
+  P2 --> C2 --> A1
+  C2 -.-> K2
+  A1 --> S1
+  S1 -.-> K3
+  S1 -->|"全票"| A2
+  A2 --> S2
+  S2 -.-> K4
+  S2 --> D1 --> C3
+  C3 -.-> K5
+  C3 -.-> K6
+  F2 -.-> K5
+  C3 --> S1
+  S1 -->|"verdict+audit"| D2
+  D2 --> C4
+  C4 -.-> K7
+  C4 --> F3
+  F3 -.-> K6
+  F3 -.-> K8
+  F3 --> D3
+  D3 --> C5
+  C5 -.-> K2
+  C5 --> S3
+  S3 -.-> K9
+  S3 -.-> K10
+  S3 --> P3
+  S4 -.-> K8
+  F1 -.-> K8
+  S4 -.->|"沉淀入"| K10
+  C1 & C2 & C3 -.->|"recall 上下文"| K10
+  K11 -.->|"人侧浏览（无agent）"| PO
+```
+
+**读图法**：实线 = 变更推进（①→⑬ 按生命周期）；〔人闸〕= 人必审点；虚线 = 活动依赖的设施能力。**四个专项 agent 各有专职**（评审/计划/桥/评分），coding agent 是唯一贯穿全程的主执行者；设施守护 agent（pull/hook/CI）全程自动，无对话角色。
+
+### 0.1 静态总图（三正交维度）
+
+活动图回答"谁做什么"，本图回答"整体结构"——三个正交维度构成整体：**交付生命周期**（横轴：变更从需求到知识沉淀）× **设施分层**（纵轴：所有环节共享的设施）× **人机边界**（贯穿：门禁自动化 + 人审点）。
 
 ```mermaid
 flowchart TB
