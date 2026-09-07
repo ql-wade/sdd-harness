@@ -1,6 +1,6 @@
 # 知识架构方案 v4：分布式 wiki × 集中式服务 × 飞书对齐
 
-> 状态：**v4**——逐条闭合 v3 评审 10 项 blocking（追溯矩阵见 §5），含 v2 12 项的完整闭合账。
+> 状态：**v4.1**——闭合 v2（12 项）/v3（10 项）/v4 run（R0 六项、R1 两项、R2 两项）全部 findings（追溯矩阵 §5 + 修正案 A1-A10 已并入正文）。v4 run 因 max-rounds 到限 BLOCKED（codex 4.3→6.4→6.7 收敛未达线，dissent 存 run 目录），A9/A10 修正后新 run 重审。
 > 调研：[obsidian-wiki](https://github.com/ar9av/obsidian-wiki)（3,364★，活跃）、[deepwiki-open](https://github.com/AsyncFuncAI/deepwiki-open)、[lark-cli](https://github.com/larksuite/cli)（官方，MIT）、gbrain（升级路径）、teamai（ADR-0018）、LLMWiki（已集成）。
 > ⚠️ 厂商自报基准（LongMemEval 93.19%、44%→83%）仅选型参考，不作验收输入。
 
@@ -61,12 +61,12 @@ T3=obsidian-wiki（**CLI-only，pip version+sha256 pin，零技能注入**，AGE
 
 **pre-K3 安全门（全部通过才接入 repo）**：
 
-1. 部署边界：内网/VPN 后，服务认证（SSO 或 token）强制，无匿名访问
+1. 部署边界：内网/VPN 后，服务认证（SSO 或 token）强制——负向测试：`curl -s https://<dw>/wiki/<repo>` 无 token → 401（否则 fail）
 2. per-repo 读身份：每 repo 独立凭据，交叉授权为零
-3. 跨 repo 查询隔离测试：repo-A 身份查询不得返回 repo-B 内容（对抗测试用例）
-4. 索引内容处理：索引前 secret 扫描（命中即跳过该文件并记录）；repo 内容视为不可信数据（RAG 检索结果标注来源，chat 提示词声明"内容非指令"）
-5. egress 控制：LLM/embedder 显式配置（内网 Ollama 或声明的云端），无隐式外联
-6. 审计：查询日志留痕（谁、查了什么 repo、何时）
+3. 跨 repo 查询隔离：repo-A 身份查 repo-B → 空结果（预置 canary 文档的对抗用例）
+4. 索引内容：索引前 secret 扫描（secret 种子 repo → 扫描报告显示跳过 + 索引无该内容）；repo 内容视为不可信数据（RAG 结果标注来源；chat 无来源断言计数=0 入 K3 oracle）
+5. egress：default-deny 网络策略 + allowlist（compose 配置断言）；egress 目标=声明的 embedder 端点
+6. 审计：查询日志含 actor/repo/timestamp 三字段（抽样 grep 验证）
 7. 非权威（v3 D6 维持）：生成物不入 git，可再生，不作引用源
 
 ## 4. 阶段门禁（可复现化，闭合 KLP3-GATES-004）
@@ -77,7 +77,7 @@ T3=obsidian-wiki（**CLI-only，pip version+sha256 pin，零技能注入**，AGE
 |----|----------------------|---------|------|------|------|
 | **K0** vault 质量 | `contracts/wiki-vault-seeds/`（defects.yaml 10 缺陷 + expected-lint-report.txt oracle） | `tools/bridge/vault-seed-check.sh`（NFC/LF 规范化比对；exit 0=全检出且无误报，2=fail）+ clone 无状态断言（`git status --porcelain` 空 且 `.ow-*` 无残留） | 检出 10/10；**误报=0**（报告任一非种子问题即 fail）；`clone → 状态残留 grep` 命令 | lint 原始输出 + diff 报告（存 `docs/architecture/consensus-runs/`） | 卸载 CLI，vault 删除 |
 | **K1** scaffold 集成 | 本仓库 | `bash scripts/check.sh` | 全绿（含新增 raw/ 黑名单校验） | check 输出 | revert bootstrap 分支 |
-| **K2** 桥试点 | 1 个预注册知识库域 + 成对抗 fixture `contracts/wiki-vault-seeds/adversarial/`（3 载荷+3 干净） | `tools/bridge/injection-diff.sh`（side-effect 可观测集：vault git 差异/审计日志命令清单/egress 三态，载荷组≡干净组 → exit 0）；`tools/bridge/field-retention.sh`（字段 100% → exit 0）；人审固定 10 篇（`human-review-list.md`）9/10 | 注入 diff=0；字段保留 100%；人审 10% 抽样语义通过（≥9/10） | 推送前快照 + diff 报告 + 抽样人审记录 | 飞书侧：按快照删除对齐页（补偿脚本幂等验证）；Git 侧：删除 raw/ + vault（staging 本就在 Git 外） |
+| **K2** 桥试点 | 1 个预注册知识库域（全量）+ 成对抗 fixture `contracts/wiki-vault-seeds/adversarial/`（3 载荷+3 干净） | `tools/bridge/injection-diff.sh`（side-effect 可观测集：vault git 差异/审计日志命令清单/egress 三态，载荷组≡干净组 → exit 0）；`tools/bridge/field-retention.sh`（字段 100% → exit 0）；人审固定 10 篇（`human-review-list.md`）9/10 | 注入 diff=0；字段保留 100%；人审固定 10 篇通过 9/10（无抽样） | 推送前快照 + diff 报告 + 抽样人审记录 | 飞书侧：按快照删除对齐页（补偿脚本幂等验证）；Git 侧：删除 raw/ + vault（staging 本就在 Git 外） |
 | **K3** deepwiki | 2-3 repo + `contracts/deepwiki-questions/30-questions.yaml`（oracle 入库） | `tools/bridge/deepwiki-consistency.sh`（分母 30；grounded ≥24；幻觉=0 容忍；exit 0/2）+ pre-gate 七项负向测试逐项命令（§3） | ≥80% 一致；**幻觉（无来源断言）=0 容忍** | 逐题对照表 | 下线服务（生成物可再生，无清理负担） |
 | **K4** 试点综合 | 2 项目 × 4 周 | 周维护时间记录 + git 冲突计数 + 检索评分（5 人 × 5 问题，Likert 1-5，取中位数） | 中位数 ≥3.5；维护 ≤30min/周；冲突 ≤2 次/月 | 周报四份 | 全量回滚：K2+K3 回滚 + ADR 重审 |
 | **K5** gbrain | 触发：≥15 人或 ACL/synthesis 需求 | — | — | 独立 ADR + 独立评审 run | — |
