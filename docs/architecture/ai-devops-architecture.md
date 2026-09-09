@@ -30,8 +30,9 @@ sequenceDiagram
   Note over CA,PO: 目的: 问题暴露在澄清期<br/>不在 review 期爆炸
   PO->>CA: ③拍板范围与优先级〔闸〕
 
-  CA->>CAP: 依赖: openspec 工件 + 知识 recall
-  CA-->>AR: ⑥起草 PRD/AC + 设计草案
+  CA->>CAP: 依赖: openspec 工件 + 知识 recall + code graph(T2)
+  CA->>CA: ⑥a 影响面分析：改模块上下游/波及边界 → 写入设计
+  CA-->>AR: ⑥起草 PRD/AC + 设计草案（含影响面）
   AR->>CA: ④设计决策（参与质询、定 ADR）
   CA->>SA: 提交 consensus 评审
   SA->>CAP: 依赖: consensus 技能(三方冷启动)
@@ -44,12 +45,13 @@ sequenceDiagram
 
   loop 每个任务
     CA->>CAP: 依赖: whitebox-verify + hooks 控制平面 + gate 六件套
+    CA->>CA: ⑧a boundary check：实现不跨模块边界（查 T2 图谱依赖边）
     CA->>CA: ⑧TDD：RED→GREEN（generation/test-gate 证据）
     FA->>CA: hook 层：越界/danger 即拦（fail-closed）
   end
 
   CA->>SA: ⑨提交评审
-  SA->>CAP: 依赖: evidence-audit（声明↔磁盘↔输出）
+  SA->>CAP: 依赖: evidence-audit + code graph（变更文件边界违规扫描）
   SA-->>DV: verdict + 证据链
   alt 人闸：拒绝
     DV-->>CA: 返工（2 次触发根因分析）
@@ -57,10 +59,11 @@ sequenceDiagram
     DV->>CA: 继续
   end
 
-  CA->>CAP: 依赖: whitebox Journey + probe 契约
+  CA->>CAP: 依赖: whitebox Journey + probe 契约 + code graph（回归风险定位：受影响消费方）
   CA->>CA: ⑩终态 oracle 验证（真实路径非自报）
   FA->>FA: CI：check.sh 全绿 + MR 知识回流
-  FA->>CAP: 依赖: gate 六件套 + teamai extract-mr
+  FA->>FA: teamai import 增量刷新 T2 图谱（AST 双轨）
+  FA->>CAP: 依赖: gate 六件套 + teamai extract-mr + teamwiki 生成
   DV->>CA: ⑪批发布〔闸〕→ CD（回滚路径绑定）
 
   CA->>CAP: 依赖: openspec promotion-verify
