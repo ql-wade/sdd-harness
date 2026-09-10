@@ -69,66 +69,70 @@ sequenceDiagram
 ```
 
 **读图法**：七条 agent 泳道 = 七个环节主责；箭头发起者 = 执行者；〔人闸〕= 人必审；→POOL = 该 agent 调用的共享能力；Notes = 目的。**agent 间传递的只有工件**（findings/PRD/ADR/用例集/证据链/verdict）——无隐式对话，全部落盘可审计。
-### 0.1 静态总图（三正交维度）
+### 0.1 静态总图（七 agent 架构：人格层 × 共享池 × 双引擎 × 人闸）
 
-活动图回答"谁做什么"，本图回答"整体结构"——三个正交维度构成整体：**交付生命周期**（横轴：变更从需求到知识沉淀）× **设施分层**（纵轴：所有环节共享的设施）× **人机边界**（贯穿：门禁自动化 + 人审点）。
+活动图回答"谁在哪步做什么"，本图回答"整体结构"——四层：**人闸层**（四个必审闸）→ **人格层**（七个环节 agent 配置）→ **共享池**（技能/MCP/知识/门禁的单一供给）→ **双引擎**（分发同步设施、知识供检索沉淀）。关键结构事实：人格层只声明差异，全部实能力住在共享池——**升级池 = 七个 agent 同时升级**。
 
 ```mermaid
 flowchart TB
-  subgraph LIFECYCLE["🔄 交付生命周期（12 环节，按风险裁剪）"]
+  subgraph GATES["👤 人闸层（四闸，唯一不可自动化层）"]
+    G1["审批闸<br/>不可逆决策"]
+    G2["放行闸<br/>review verdict"]
+    G3["发布闸<br/>CI→CD"]
+    G4["对齐闸<br/>内容出 repo"]
+  end
+
+  subgraph PERSONAS["🎭 人格层（同一运行时 · 七份配置 · 只声明差异）"]
     direction LR
-    L1["1-2 需求澄清<br/>→产品定义"]
-    L2["3-4 架构设计<br/>→变更提案"]
-    L3["5-6 任务分解<br/>→TDD 实现"]
-    L4["7-8 评审<br/>→测试验证"]
-    L5["9-10 CI<br/>→CD"]
-    L6["11-12 归档沉淀<br/>→知识对齐"]
-    L1 --> L2 --> L3 --> L4 --> L5 --> L6
+    P1["📋 prd-agent<br/>环节1-2<br/>质询+PRD/AC"]
+    P2["🏛 arch-agent<br/>环节3-4<br/>设计+ADR+影响面"]
+    P3["🧪 tc-agent<br/>用例生成<br/>(PRD+设计双上游)"]
+    P4["💻 coding-agent<br/>环节5-6<br/>TDD+boundary"]
+    P5["🔍 review-agent<br/>环节7<br/>verdict+audit"]
+    P6["✅ verify-agent<br/>环节8<br/>Journey oracle"]
+    P7["🚀 cicd-agent<br/>环节9-12<br/>CI/CD+归档+对齐"]
   end
 
-  subgraph INFRA["🏗 设施分层（全环节共享）"]
-    direction TB
-    subgraph RULES["约定层"]
-      AGENTS["AGENTS.md 单一规则入口<br/>+ CLAUDE.md 软链"]
-    end
-    subgraph SKILLS["技能层（5 方法论）"]
-      S_G["grill-me 质询"]
-      S_W["whitebox-verify 三模式验证"]
-      S_P["planner 并行计划"]
-      S_C["consensus 全票评审"]
-    end
-    subgraph CONTROL["控制平面"]
-      HOOKS["hooks.yaml → adapter<br/>deny fail-closed"]
-    end
-    subgraph VERIFY["验证层（机械证据）"]
-      GATES["gate/audit 六件套<br/>sha256 证据链"]
-    end
-    subgraph TOOLS["工具层"]
-      MCPS["MCP 能力清单<br/>（诚实三态）"]
-    end
+  subgraph SHARED["🧰 共享能力池（单一供给，全部实能力所在）"]
+    direction LR
+    SK["技能<br/>grill-me · whitebox-verify<br/>(Slice/TDD/Journey) · planner<br/>· consensus"]
+    MCP["MCP（pin）<br/>LLMWiki · chrome-devtools<br/>· playwright · github"]
+    KNOW["知识引擎<br/>T0-T3 四层生产<br/>+ deepwiki/飞书 消费<br/>+ code graph(T2)"]
+    GATELIB["gate/audit 六件套<br/>sha256 证据链"]
+    OPEN["openspec 工件链<br/>+ promotion-verify"]
   end
 
-  subgraph ENGINES["⚡ 双引擎"]
-    DIST["分发引擎<br/>teamai-cli（9-agent）<br/>hooks/MCP/skills reconcile"]
-    KNOW["知识引擎<br/>四层生产 + 消费面 + 飞书桥<br/>（环节 11-12 深化）"]
+  subgraph CONTROL["🛡 控制平面（fail-closed，横切全 agent）"]
+    HOOKS["hooks.yaml 策略源<br/>→ adapter 编译<br/>→ 运行时 deny 拦截"]
   end
 
-  HUMAN["👤 人：必审点（不可逆/发布/架构决策/对齐内容）"]
-  AGENT_L["🤖 coding agent：起草+执行，门禁不得绕过"]
+  subgraph ENGINES["⚡ 双引擎（池的供给侧）"]
+    TEAMAI["分发引擎 teamai-cli<br/>pull 同步设施到 9-agent<br/>+ teamwiki 图谱生成<br/>+ 摩擦评分"]
+    BRIDGE["桥 lark-cli<br/>飞书⇄Git 三 job<br/>(P1-P5+publish-gate)"]
+  end
 
-  AGENT_L -->|"调用"| SKILLS
-  AGENT_L -->|"被拦截"| CONTROL
-  CONTROL -->|"fail-closed"| AGENT_L
-  LIFECYCLE -->|"每环节用"| INFRA
-  DIST -->|"pull 分发"| INFRA
-  KNOW <-->|"recall 上下文 / 沉淀产物"| LIFECYCLE
-  HUMAN -.->|"审批闸"| L2
-  HUMAN -.->|"放行闸"| L4
-  HUMAN -.->|"发布闸"| L5
-  HUMAN -.->|"对齐闸"| L6
+  REPO["📁 Git 权威源<br/>(代码+工件+知识真身)"]
+
+  G1 --> P2
+  G2 --> P5
+  G3 --> P7
+  G4 --> P7
+  P1 & P2 & P3 & P4 & P5 & P6 & P7 ==>|"调用（按人格子集）"| SHARED
+  HOOKS ==>|"拦截所有 agent 的越界动作"| PERSONAS
+  TEAMAI ==>|"供给/刷新"| SHARED
+  BRIDGE ==>|"抽取入 raw/ · 对齐出评审产物"| KNOW
+  SHARED -->|"读写"| REPO
+  KNOW -->|"recall 上下文"| PERSONAS
+
+  style PERSONAS fill:#e8eaf6
+  style SHARED fill:#e8f5e9
+  style CONTROL fill:#f8d7da
+  style GATES fill:#fff9c4
 ```
 
-**一句话总纲**：agent 在门禁护栏内沿生命周期推进变更，人在四个闸口决策，双引擎（分发+知识）让每次交付的设施保持同步、经验持续积累——**信任来自证据，不来自汇报**。
+**读图法**：粗箭头 = 主要供给/约束关系；人格层无独立能力（边框虚能不能执行，实能力全在共享池）；控制平面在人格层**之下**——任何 agent 的越界动作先被拦，再谈流程。
+
+**一句话总纲**：四个闸口的人决策 + 七份人格配置 + 一个共享池 + fail-closed 控制平面 + 双引擎供给——**升级共享池 = 全体升级，动控制平面 = 装配级验证**。
 
 ## 0.2 知识环节在整个架构中的位置
 
