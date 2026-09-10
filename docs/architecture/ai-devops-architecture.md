@@ -195,7 +195,7 @@ flowchart LR
 
 | agent | 主责环节 | 输入（上游工件） | 专属能力 | 共享能力（全 agent 复用） | 人闸 | 产出工件 |
 |-------|---------|----------------|---------|------------------------|------|---------|
-| **prd-agent** | 1 需求澄清、2 产品定义 | 需求（人）+ 知识recall | grill-me 质询 + to-prd/AC 模板 | 知识recall(T0-T3) · openspec · hooks · gate链 | 范围拍板 | findings、PRD、AC |
+| **prd-agent** | 1 需求澄清、2 产品定义 | 需求（人）+ 知识recall（含飞书抽取） | grill-me 质询 + to-prd/AC 模板 | 知识recall(T0-T3) · openspec · hooks · gate链 | 范围拍板 | findings、PRD、AC |
 | **arch-agent** | 3 架构设计、4 变更提案 | PRD/AC | **deepwiki**（repo理解）+ **code graph 影响面** + consensus 全票 + ADR 模板 | 同上 | 不可逆决策批准 | 设计、ADR、openspec change |
 | **tc-agent** | 测试用例生成 | **PRD + 设计拆解**（双上游） | generation-gate + whitebox(Slice) + 用例归一（TC-*） | 同上 + code graph 回归分母 | 用例评审（随⑨） | TC-*.md 用例集 |
 | **coding-agent** | 5 计划执行、6 实现 | 用例集 + openspec tasks | planner(DAG) + whitebox(TDD) + boundary check(T2) | 同上 + hooks 拦截 + test-gate | CONFIRM〔⑨人闸随DV〕 | 代码+测试+sha256证据 |
