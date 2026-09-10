@@ -6,80 +6,69 @@
 
 ## 0. 架构视图
 
-### 0.0 泳道活动图（主视图）：谁、在哪一步、做什么、用什么能力
+### 0.0 泳道活动图（主视图）：七个环节 agent × 人闸 × 共享能力池
 
-泳道 = 角色（sequence 泳道：每列一个角色，时间自上而下）。〔闸〕= 人必审点；→ 能力池 的箭头 = 该步依赖的设施能力。
+**设计原则**：环节 agent = 同一 agent 运行时的**七种人格配置**（系统提示 + 技能子集 + MCP 子集），不是七个重型独立产品——配置即人格，共享池即共性（守"尽量少创建、调用最佳实践"红线）。
 
 ```mermaid
 sequenceDiagram
   autonumber
-  participant PO as 👤 人·产品
-  participant AR as 👤 人·架构
-  participant DV as 👤 人·研发/测试
-  participant CA as 🤖 coding agent<br/>(主执行)
-  participant SA as 🤖 专项 agent 组<br/>(consensus/planner/桥/评分)
-  participant FA as ⚙️ 自动设施层<br/>(pull/hook/CI)
-  participant CAP as 🧰 能力池
+  participant PO as 👤人·产品
+  participant AR as 👤人·架构
+  participant DV as 👤人·研发/测试
+  participant PRD as 📋 prd-agent<br/>(环节1-2)
+  participant ARC as 🏛 arch-agent<br/>(环节3-4)
+  participant TC as 🧪 tc-agent<br/>(测试用例生成)
+  participant CODE as 💻 coding-agent<br/>(环节5-6实施)
+  participant VER as ✅ verify-agent<br/>(环节8验证)
+  participant REV as 🔍 review-agent<br/>(环节7评审)
+  participant CICD as 🚀 cicd-agent<br/>(环节9-10)
+  participant POOL as 🧰 共享池<br/>(skills+MCP+知识+gate)
 
-  Note over FA: 会话启动：pull daemon 同步设施<br/>目的:成员零漂移
-  FA->>CAP: teamai-cli 分发 skills/hooks/MCP
+  Note over POOL: 共享：知识recall(四层) · openspec · grill-me · hooks控制平面 · gate/audit证据链 · code graph(T2) · whitebox-verify
+  Note over CICD: 会话启动：pull daemon 已同步设施（teamai）
 
-  PO->>CA: ①提需求（目标/痛点/约束）
-  CA->>CAP: 依赖: grill-me 技能 + 知识 recall(四层)
-  CA-->>PO: ②一次一问质询 → findings
-  Note over CA,PO: 目的: 问题暴露在澄清期<br/>不在 review 期爆炸
-  PO->>CA: ③拍板范围与优先级〔闸〕
+  PO->>PRD: ①需求（目标/痛点/约束）
+  PRD->>POOL: 知识recall + grill-me + to-prd模板
+  PRD-->>PO: ②质询→findings + PRD/AC草案
+  PO->>PRD: ③拍板范围〔人闸〕
 
-  CA->>CAP: 依赖: openspec 工件 + 知识 recall + code graph(T2)
-  CA->>CA: ⑥a 影响面分析：改模块上下游/波及边界 → 写入设计
-  CA-->>AR: ⑥起草 PRD/AC + 设计草案（含影响面）
-  AR->>CA: ④设计决策（参与质询、定 ADR）
-  CA->>SA: 提交 consensus 评审
-  SA->>CAP: 依赖: consensus 技能(三方冷启动)
-  SA-->>AR: ⑤全票 verdict（分歧被证据关闭）
-  AR->>SA: 批不可逆决策〔闸〕
+  AR->>ARC: ④设计任务（含PRD）
+  ARC->>POOL: deepwiki + code graph影响面 + 知识recall + consensus
+  ARC-->>AR: ⑤设计+ADR草案+影响面
+  AR->>ARC: ⑥批不可逆决策〔人闸〕
 
-  SA->>CAP: 依赖: planner 技能
-  SA-->>DV: ⑦DAG+RED/GREEN 计划
-  DV->>CA: CONFIRM_ALIGNMENT〔闸〕
+  ARC->>TC: ⑦设计/PRD拆解 → 用例生成
+  TC->>POOL: 依赖上游产物 + generation-gate + whitebox(Slice)
+  TC-->>DV: ⑧测试用例集（TC-*.md，给定/当/则）
+  DV->>CODE: ⑨CONFIRM计划〔人闸〕+ 用例集下发
 
-  loop 每个任务
-    CA->>CAP: 依赖: whitebox-verify + hooks 控制平面 + gate 六件套
-    CA->>CA: ⑧a boundary check：实现不跨模块边界（查 T2 图谱依赖边）
-    CA->>CA: ⑧TDD：RED→GREEN（generation/test-gate 证据）
-    FA->>CA: hook 层：越界/danger 即拦（fail-closed）
+  loop 每任务（TDD）
+    CODE->>POOL: whitebox(TDD)+hooks拦截+test-gate
+    CODE->>CODE: ⑩RED→GREEN（证据绑定）
   end
 
-  CA->>SA: ⑨提交评审
-  SA->>CAP: 依赖: evidence-audit + code graph（变更文件边界违规扫描）
-  SA-->>DV: verdict + 证据链
-  alt 人闸：拒绝
-    DV-->>CA: 返工（2 次触发根因分析）
-  else 人闸：放行
-    DV->>CA: 继续
+  CODE->>REV: ⑪提交（diff+证据链）
+  REV->>POOL: evidence-audit + code graph边界扫描 + consensus
+  REV-->>DV: ⑫verdict
+  alt 拒绝〔人闸〕
+    DV-->>CODE: 返工
+  else 放行〔人闸〕
+    CODE->>VER: ⑬进入验证
   end
 
-  CA->>CAP: 依赖: whitebox Journey + probe 契约 + code graph（回归风险定位：受影响消费方）
-  CA->>CA: ⑩终态 oracle 验证（真实路径非自报）
-  FA->>FA: CI：check.sh 全绿 + MR 知识回流
-  FA->>FA: teamai import 增量刷新 T2 图谱（AST 双轨）
-  FA->>CAP: 依赖: gate 六件套 + teamai extract-mr + teamwiki 生成
-  DV->>CA: ⑪批发布〔闸〕→ CD（回滚路径绑定）
+  VER->>POOL: whitebox(Journey终态oracle)+probe+code graph回归分母
+  VER-->>DV: ⑭验证报告（真实路径证据）
+  DV->>CICD: ⑮批发布〔人闸〕
+  CICD->>POOL: check.sh全绿 + workflow-audit + 回滚路径绑定
+  CICD->>CICD: ⑯CI→CD
 
-  CA->>CAP: 依赖: openspec promotion-verify
-  CA->>CA: ⑫归档 + spec→wiki 单向晋升
-  Note over CA: 目的: 变更结论资产化<br/>archive 不晋升=知识死在归档目录
-  CA->>SA: vault 精华 → 桥 jobs
-  SA->>CAP: 依赖: lark-cli + publish-gate(谓词/attestation)
-  SA-->>PO: ⑬对齐页入飞书〔闸:批内容〕
-  Note over SA,CAP: 未评审内容永不出 repo
-
-  Note over SA,CAP: Stop 摩擦评分器：只沉淀"较劲过"的 session
-  Note over PO,CAP: deepwiki：人侧浏览/问答（只读消费，无 agent）
+  CICD->>POOL: ⑰归档+promotion（provenance）+ MR知识回流(teamai) + 桥对齐(lark/publish-gate)
+  Note over POOL,PO: 知识回流四层 → 下一次①的recall更准（闭环）
+  PO->>CICD: ⑱批对齐内容〔人闸〕
 ```
 
-**读图法**：纵向时间即生命周期（①需求→⑬对齐）；消息发起者 = 该步的**执行角色**；`→能力池` 箭头 = 该步依赖的设施能力；〔闸〕alt 分支 = 人必审点。coding agent 是唯一贯穿者；专项组按消息名区分（consensus/planner/桥/评分）；自动设施层只在 loop 和 CI 处出现（全程静默值守）。
-
+**读图法**：七条 agent 泳道 = 七个环节主责；箭头发起者 = 执行者；〔人闸〕= 人必审；→POOL = 该 agent 调用的共享能力；Notes = 目的。**agent 间传递的只有工件**（findings/PRD/ADR/用例集/证据链/verdict）——无隐式对话，全部落盘可审计。
 ### 0.1 静态总图（三正交维度）
 
 活动图回答"谁做什么"，本图回答"整体结构"——三个正交维度构成整体：**交付生命周期**（横轴：变更从需求到知识沉淀）× **设施分层**（纵轴：所有环节共享的设施）× **人机边界**（贯穿：门禁自动化 + 人审点）。
@@ -201,6 +190,22 @@ flowchart LR
 | **不可逆 / 外部副作用 / 红线** | **人**（必审点） | 删库、生产发布、架构不可逆决策、写飞书对齐内容 |
 | **机械可验证** | **门禁自动化**（agent 不得绕过） | 测试全绿、证据 sha256 绑定、probe 契约、check.sh |
 | **判断性** | **agent 起草 + 人审** | PRD、设计、review 结论、知识提炼 |
+
+## 0.5 环节 × 主责 agent 矩阵（七 agent 人格配置）
+
+| agent | 主责环节 | 输入（上游工件） | 专属能力 | 共享能力（全 agent 复用） | 人闸 | 产出工件 |
+|-------|---------|----------------|---------|------------------------|------|---------|
+| **prd-agent** | 1 需求澄清、2 产品定义 | 需求（人）+ 知识recall | grill-me 质询 + to-prd/AC 模板 | 知识recall(T0-T3) · openspec · hooks · gate链 | 范围拍板 | findings、PRD、AC |
+| **arch-agent** | 3 架构设计、4 变更提案 | PRD/AC | **deepwiki**（repo理解）+ **code graph 影响面** + consensus 全票 + ADR 模板 | 同上 | 不可逆决策批准 | 设计、ADR、openspec change |
+| **tc-agent** | 测试用例生成 | **PRD + 设计拆解**（双上游） | generation-gate + whitebox(Slice) + 用例归一（TC-*） | 同上 + code graph 回归分母 | 用例评审（随⑨） | TC-*.md 用例集 |
+| **coding-agent** | 5 计划执行、6 实现 | 用例集 + openspec tasks | planner(DAG) + whitebox(TDD) + boundary check(T2) | 同上 + hooks 拦截 + test-gate | CONFIRM〔⑨人闸随DV〕 | 代码+测试+sha256证据 |
+| **review-agent** | 7 评审 | diff + 证据链 | consensus + evidence-audit + code graph 边界扫描 | 同上 | 拒绝/放行 | verdict + audit 报告 |
+| **verify-agent** | 8 测试验证 | 已放行变更 | whitebox(Journey 终态oracle) + probe + deliverable-audit | 同上 + code graph 回归定位 | —（闸在⑨/⑮） | 验证报告 + probe 证据 |
+| **cicd-agent** | 9 CI、10 CD、11-12 归档对齐 | 全部上游工件 | check.sh 编排 + workflow-audit + promotion-verify + teamai ci + lark 桥 | 同上 + 全部 gate | 发布批准、对齐内容批准 | 绿流水线、release、晋升页、对齐页 |
+
+**共享池构成**（七 agent 复用的同一批设施）：知识 recall（T0 docs / T1 LLMWiki / T2 teamwiki / T3 vault）、openspec 工件链、grill-me 质询法、whitebox-verify（按环节取 Slice/TDD/Journey 模式）、hooks 控制平面（fail-closed）、gate/audit 证据链、code graph（T2）、供应链 pin 的 MCP 注册。
+
+**人格配置原则**：专属能力只声明差异（提示词角色 + 技能子集 + MCP 白名单），运行时是同一个 agent 引擎——升级共享池 = 全部环节受益；新增环节 agent = 写一份人格配置，不写新引擎。
 
 ## 1. 环节 × 能力 × 门禁 × 人决策点
 
