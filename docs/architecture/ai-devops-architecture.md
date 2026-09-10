@@ -8,7 +8,7 @@
 
 ### 0.0 泳道活动图（主视图）：七个环节 agent × 人闸 × 共享能力池
 
-**设计原则**：环节 agent = 同一 agent 运行时的**七种人格配置**（系统提示 + 技能子集 + MCP 子集），不是七个重型独立产品——配置即人格，共享池即共性（守"尽量少创建、调用最佳实践"红线）。
+**设计原则**：七个环节 Agent 各自具备**具体能力**（技能子集 + MCP 白名单 + 角色提示词），与对应人类角色配合完成环节——共享池提供共性，遵守"尽量少创建、调用最佳实践"红线。
 
 ```mermaid
 sequenceDiagram
@@ -69,70 +69,79 @@ sequenceDiagram
 ```
 
 **读图法**：七条 agent 泳道 = 七个环节主责；箭头发起者 = 执行者；〔人闸〕= 人必审；→POOL = 该 agent 调用的共享能力；Notes = 目的。**agent 间传递的只有工件**（findings/PRD/ADR/用例集/证据链/verdict）——无隐式对话，全部落盘可审计。
-### 0.1 静态总图（七 agent 架构：人格层 × 共享池 × 双引擎 × 人闸）
+### 0.1 静态总图：人 + 具体 AI Agent 配合完成交付
 
-活动图回答"谁在哪步做什么"，本图回答"整体结构"——四层：**人闸层**（四个必审闸）→ **人格层**（七个环节 agent 配置）→ **共享池**（技能/MCP/知识/门禁的单一供给）→ **双引擎**（分发同步设施、知识供检索沉淀）。关键结构事实：人格层只声明差异，全部实能力住在共享池——**升级池 = 七个 agent 同时升级**。
+活动图回答"谁在哪步做什么"，本图回答"整体结构"。**协作模型**：每个环节由一个**具备具体能力的 AI Agent** 主责执行，对应的人类角色**配合并审核该环节产物**——人发起与审核，agent 干活，环节产物是配合的交接物。
 
 ```mermaid
 flowchart TB
-  subgraph GATES["👤 人闸层（四闸，唯一不可自动化层）"]
-    G1["审批闸<br/>不可逆决策"]
-    G2["放行闸<br/>review verdict"]
-    G3["发布闸<br/>CI→CD"]
-    G4["对齐闸<br/>内容出 repo"]
+  subgraph HUMANS["👤 人（发起 · 配合 · 审核具体环节）"]
+    HP["人·产品<br/>发起需求 · 审核 findings/PRD/AC"]
+    HA["人·架构<br/>审核设计/ADR · 批不可逆决策"]
+    HD["人·研发/测试<br/>CONFIRM · 审核verdict/用例 · 批发布"]
+    HPLAT["人·平台<br/>审核流水线/对齐内容"]
   end
 
-  subgraph PERSONAS["🎭 人格层（同一运行时 · 七份配置 · 只声明差异）"]
+  subgraph AGENTS["🤖 AI Agent（每个具备具体能力，与对应人角色配合完成环节）"]
     direction LR
-    P1["📋 prd-agent<br/>环节1-2<br/>质询+PRD/AC"]
-    P2["🏛 arch-agent<br/>环节3-4<br/>设计+ADR+影响面"]
-    P3["🧪 tc-agent<br/>用例生成<br/>(PRD+设计双上游)"]
-    P4["💻 coding-agent<br/>环节5-6<br/>TDD+boundary"]
-    P5["🔍 review-agent<br/>环节7<br/>verdict+audit"]
-    P6["✅ verify-agent<br/>环节8<br/>Journey oracle"]
-    P7["🚀 cicd-agent<br/>环节9-12<br/>CI/CD+归档+对齐"]
+    A1["PRD Agent<br/>能力: grill-me质询<br/>+ 知识recall + to-prd/AC模板<br/>配合: 人·产品"]
+    A2["架构 Agent<br/>能力: deepwiki + code graph影响面<br/>+ consensus + ADR起草<br/>配合: 人·架构"]
+    A3["测试用例 Agent<br/>能力: generation-gate<br/>+ whitebox(Slice) 用例归一<br/>配合: 人·研发/测试<br/>(上游=PRD+设计拆解)"]
+    A4["Coding Agent<br/>能力: planner + whitebox(TDD)<br/>+ boundary check + test-gate<br/>配合: 人·研发/测试"]
+    A5["Code Review Agent<br/>能力: consensus + evidence-audit<br/>+ code graph边界扫描<br/>配合: 人·研发/测试"]
+    A6["Verify Agent<br/>能力: whitebox(Journey终态oracle)<br/>+ probe + 回归定位<br/>配合: 人·研发/测试"]
+    A7["CI/CD Agent<br/>能力: check.sh编排 + workflow-audit<br/>+ promotion + teamai ci + lark桥<br/>配合: 人·平台"]
   end
 
-  subgraph SHARED["🧰 共享能力池（单一供给，全部实能力所在）"]
+  subgraph SHARED["🧰 共享能力（多个 Agent 复用的同一批设施）"]
     direction LR
-    SK["技能<br/>grill-me · whitebox-verify<br/>(Slice/TDD/Journey) · planner<br/>· consensus"]
-    MCP["MCP（pin）<br/>LLMWiki · chrome-devtools<br/>· playwright · github"]
-    KNOW["知识引擎<br/>T0-T3 四层生产<br/>+ deepwiki/飞书 消费<br/>+ code graph(T2)"]
+    KNOW["知识引擎<br/>T0-T3四层 + code graph<br/>+ deepwiki/飞书消费面"]
+    SK["共享技能<br/>grill-me · whitebox三模式<br/>· planner · consensus"]
+    MCPS["MCP（pin）<br/>LLMWiki · devtools<br/>· playwright · github"]
     GATELIB["gate/audit 六件套<br/>sha256 证据链"]
-    OPEN["openspec 工件链<br/>+ promotion-verify"]
+    OPEN["openspec 链<br/>+ promotion-verify"]
   end
 
-  subgraph CONTROL["🛡 控制平面（fail-closed，横切全 agent）"]
-    HOOKS["hooks.yaml 策略源<br/>→ adapter 编译<br/>→ 运行时 deny 拦截"]
+  subgraph CONTROL["🛡 控制平面（fail-closed，约束所有 Agent）"]
+    HOOKS["hooks.yaml → adapter<br/>→ 运行时 deny 拦截"]
   end
 
-  subgraph ENGINES["⚡ 双引擎（池的供给侧）"]
-    TEAMAI["分发引擎 teamai-cli<br/>pull 同步设施到 9-agent<br/>+ teamwiki 图谱生成<br/>+ 摩擦评分"]
-    BRIDGE["桥 lark-cli<br/>飞书⇄Git 三 job<br/>(P1-P5+publish-gate)"]
+  subgraph ENGINES["⚡ 双引擎（能力供给与知识进出）"]
+    TEAMAI["teamai-cli<br/>pull同步设施 · teamwiki图谱<br/>· 摩擦评分 · ci extract-mr"]
+    BRIDGE["lark-cli 桥<br/>飞书⇄Git 三job<br/>(P1-P5+publish-gate)"]
   end
 
-  REPO["📁 Git 权威源<br/>(代码+工件+知识真身)"]
+  REPO["📁 Git 权威源（代码+工件+知识真身）"]
 
-  G1 --> P2
-  G2 --> P5
-  G3 --> P7
-  G4 --> P7
-  P1 & P2 & P3 & P4 & P5 & P6 & P7 ==>|"调用（按人格子集）"| SHARED
-  HOOKS ==>|"拦截所有 agent 的越界动作"| PERSONAS
+  HP -->|"发起·审核"| A1
+  A1 -->|"findings+PRD/AC 送审"| HP
+  HA -->|"发起·审核"| A2
+  A2 -->|"设计+ADR送审"| HA
+  HD -->|"发起·审核"| A3
+  A3 -->|"用例集"| A4
+  HD -->|"CONFIRM"| A4
+  A4 -->|"diff+证据链"| A5
+  A5 -->|"verdict送审"| HD
+  A6 -->|"验证报告送审"| HD
+  HPLAT -->|"发起·审核"| A7
+  A7 -->|"流水线/对齐页送审"| HPLAT
+
+  A1 & A2 & A3 & A4 & A5 & A6 & A7 ==>|"复用"| SHARED
+  HOOKS ==>|"拦截越界动作"| AGENTS
   TEAMAI ==>|"供给/刷新"| SHARED
-  BRIDGE ==>|"抽取入 raw/ · 对齐出评审产物"| KNOW
+  BRIDGE ==>|"抽取入raw/ · 对齐出评审产物"| KNOW
   SHARED -->|"读写"| REPO
-  KNOW -->|"recall 上下文"| PERSONAS
+  KNOW -.->|"recall：下次更准"| HP
 
-  style PERSONAS fill:#e8eaf6
+  style HUMANS fill:#fff9c4
+  style AGENTS fill:#e8eaf6
   style SHARED fill:#e8f5e9
   style CONTROL fill:#f8d7da
-  style GATES fill:#fff9c4
 ```
 
-**读图法**：粗箭头 = 主要供给/约束关系；人格层无独立能力（边框虚能不能执行，实能力全在共享池）；控制平面在人格层**之下**——任何 agent 的越界动作先被拦，再谈流程。
+**协作模型三要素**：① 每个环节 = 一个具体能力 AI Agent 主责 + 对应人角色配合（人发起、审该环节产物、握闸口）；② **配合的交接物只有环节产物**（findings/PRD/设计/用例集/diff+证据/verdict/验证报告/对齐页）——全部落盘，审核即审产物不审过程；③ 实能力住共享池（七 Agent 复用），控制平面约束所有 Agent，双引擎供给。
 
-**一句话总纲**：四个闸口的人决策 + 七份人格配置 + 一个共享池 + fail-closed 控制平面 + 双引擎供给——**升级共享池 = 全体升级，动控制平面 = 装配级验证**。
+**一句话总纲**：人发起并审核，Agent 干活并交证据，池供给，门禁兜底——**信任来自证据，不来自汇报**。
 
 ## 0.2 知识环节在整个架构中的位置
 
@@ -195,21 +204,21 @@ flowchart LR
 | **机械可验证** | **门禁自动化**（agent 不得绕过） | 测试全绿、证据 sha256 绑定、probe 契约、check.sh |
 | **判断性** | **agent 起草 + 人审** | PRD、设计、review 结论、知识提炼 |
 
-## 0.5 环节 × 主责 agent 矩阵（七 agent 人格配置）
+## 0.5 环节 × 主责 Agent 矩阵（人机配合 · 具体 AI Agent）
 
 | agent | 主责环节 | 输入（上游工件） | 专属能力 | 共享能力（全 agent 复用） | 人闸 | 产出工件 |
 |-------|---------|----------------|---------|------------------------|------|---------|
-| **prd-agent** | 1 需求澄清、2 产品定义 | 需求（人）+ 知识recall（含飞书抽取） | grill-me 质询 + to-prd/AC 模板 | 知识recall(T0-T3) · openspec · hooks · gate链 | 范围拍板 | findings、PRD、AC |
-| **arch-agent** | 3 架构设计、4 变更提案 | PRD/AC | **deepwiki**（repo理解）+ **code graph 影响面** + consensus 全票 + ADR 模板 | 同上 | 不可逆决策批准 | 设计、ADR、openspec change |
-| **tc-agent** | 测试用例生成 | **PRD + 设计拆解**（双上游） | generation-gate + whitebox(Slice) + 用例归一（TC-*） | 同上 + code graph 回归分母 | 用例评审（随⑨） | TC-*.md 用例集 |
-| **coding-agent** | 5 计划执行、6 实现 | 用例集 + openspec tasks | planner(DAG) + whitebox(TDD) + boundary check(T2) | 同上 + hooks 拦截 + test-gate | CONFIRM〔⑨人闸随DV〕 | 代码+测试+sha256证据 |
-| **review-agent** | 7 评审 | diff + 证据链 | consensus + evidence-audit + code graph 边界扫描 | 同上 | 拒绝/放行 | verdict + audit 报告 |
-| **verify-agent** | 8 测试验证 | 已放行变更 | whitebox(Journey 终态oracle) + probe + deliverable-audit | 同上 + code graph 回归定位 | —（闸在⑨/⑮） | 验证报告 + probe 证据 |
-| **cicd-agent** | 9 CI、10 CD、11-12 归档对齐 | 全部上游工件 | check.sh 编排 + workflow-audit + promotion-verify + teamai ci + lark 桥 | 同上 + 全部 gate | 发布批准、对齐内容批准 | 绿流水线、release、晋升页、对齐页 |
+| **PRD Agent** | 1 需求澄清、2 产品定义 | 需求（人）+ 知识recall（含飞书抽取） | grill-me 质询 + to-prd/AC 模板 | 知识recall(T0-T3) · openspec · hooks · gate链 | 范围拍板 | findings、PRD、AC |
+| **架构 Agent** | 3 架构设计、4 变更提案 | PRD/AC | **deepwiki**（repo理解）+ **code graph 影响面** + consensus 全票 + ADR 模板 | 同上 | 不可逆决策批准 | 设计、ADR、openspec change |
+| **测试用例 Agent** | 测试用例生成 | **PRD + 设计拆解**（双上游） | generation-gate + whitebox(Slice) + 用例归一（TC-*） | 同上 + code graph 回归分母 | 用例评审（随⑨） | TC-*.md 用例集 |
+| **Coding Agent** | 5 计划执行、6 实现 | 用例集 + openspec tasks | planner(DAG) + whitebox(TDD) + boundary check(T2) | 同上 + hooks 拦截 + test-gate | CONFIRM〔⑨人闸随DV〕 | 代码+测试+sha256证据 |
+| **Code Review Agent** | 7 评审 | diff + 证据链 | consensus + evidence-audit + code graph 边界扫描 | 同上 | 拒绝/放行 | verdict + audit 报告 |
+| **Verify Agent** | 8 测试验证 | 已放行变更 | whitebox(Journey 终态oracle) + probe + deliverable-audit | 同上 + code graph 回归定位 | —（闸在⑨/⑮） | 验证报告 + probe 证据 |
+| **CI/CD Agent** | 9 CI、10 CD、11-12 归档对齐 | 全部上游工件 | check.sh 编排 + workflow-audit + promotion-verify + teamai ci + lark 桥 | 同上 + 全部 gate | 发布批准、对齐内容批准 | 绿流水线、release、晋升页、对齐页 |
 
 **共享池构成**（七 agent 复用的同一批设施）：知识 recall（T0 docs / T1 LLMWiki / T2 teamwiki / T3 vault）、openspec 工件链、grill-me 质询法、whitebox-verify（按环节取 Slice/TDD/Journey 模式）、hooks 控制平面（fail-closed）、gate/audit 证据链、code graph（T2）、供应链 pin 的 MCP 注册。
 
-**人格配置原则**：专属能力只声明差异（提示词角色 + 技能子集 + MCP 白名单），运行时是同一个 agent 引擎——升级共享池 = 全部环节受益；新增环节 agent = 写一份人格配置，不写新引擎。
+**配置原则**：新增环节 Agent = 声明其具体能力（技能子集 + MCP 白名单 + 配合的人角色），复用共享池——升级池 = 全部 Agent 受益。
 
 ## 1. 环节 × 能力 × 门禁 × 人决策点
 
