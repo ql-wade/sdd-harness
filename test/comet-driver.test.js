@@ -144,6 +144,23 @@ test('Runner.Dispatch.v1: a read-only driver cannot back a dispatching runner', 
   );
 });
 
+test('F07: dispatch and verification are refused when run or runner identity does not match the bound authority', () => {
+  const authority = comet.cometLaunchAuthority({ secret: SECRET, runId: 'run-A' });
+  assert.throws(
+    () => authority.issueDispatch(bindingFixture({ run: 'run-B' })),
+    (error) => error.code === 'RUN_MISMATCH',
+    'a dispatch bound to another run must be refused (F07: 核对 backend/attempt/关联 ID)',
+  );
+  assert.throws(
+    () => authority.issueDispatch(bindingFixture({ run: 'run-A', runnerId: 'other-runner' })),
+    (error) => error.code === 'RUNNER_MISMATCH',
+    'a dispatch claiming another runner id must be refused',
+  );
+  const foreign = authority.verifyDispatch(bindingFixture({ run: 'run-B' }));
+  assert.equal(foreign.ok, false);
+  assert.equal(foreign.error, 'RUN_MISMATCH', 'verification of a foreign-run dispatch record must return RUN_MISMATCH, not ok');
+});
+
 test('F07: a replayed receipt from the same execution is refused, not double-counted', () => {
   const authority = comet.cometLaunchAuthority({ secret: SECRET, runId: 'run-31430922' });
   const writer = harness.defineDriver({

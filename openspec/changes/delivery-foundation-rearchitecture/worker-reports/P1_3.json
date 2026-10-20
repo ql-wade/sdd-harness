@@ -5,7 +5,14 @@
   "worker": "P1_3 implementation worker",
   "final_status": "GREEN",
   "acceptance_ids": {
-    "targeted": ["F05", "F07", "A09", "OV01", "OV03", "OV08"]
+    "targeted": [
+      "F05",
+      "F07",
+      "A09",
+      "OV01",
+      "OV03",
+      "OV08"
+    ]
   },
   "red_cases": [
     {
@@ -48,9 +55,24 @@
   "channel_probe": {
     "note": "隔离 HOME + PATH stub + $TMPDIR scratch 项目（patched 构建 fingerprint cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187），change 处于 open 阶段，载荷为真实 host hook 契约（PreToolUse JSON stdin）",
     "results": [
-      { "channel": "edit（编辑类工具）", "attempt": "open 阶段写 src/product.ts（越阶段产品写入）", "result": "实际拒绝", "detail": "COMET PHASE GUARD — WRITE BLOCKED，exit 2；对照：同渠道写 tasks.md（in-phase artifact）allowed——拒绝为 phase 定向" },
-      { "channel": "shell（Shell 写入）", "attempt": "Bash heredoc 写 src/product.ts；以及 sed 直改 .comet.yaml phase", "result": "能力缺口（guard 未归因此渠道，写入本身成功）", "detail": "matcher Write|Edit 不含 Bash；guard 工具名集合视 Bash 为 intent unknown → allowed。下游托管 gate 兜底：伪造 phase 在 archive 入口被 verify_result 检查拒绝（exit 1）。修复承接：guard hook 契约扩展（上游 patch seam）" },
-      { "channel": "mcp（MCP 写入）", "attempt": "mcp__filesystem__write_file 写 src/product.ts", "result": "能力缺口（guard 未归因此渠道）", "detail": "MCP 工具名不在 WRITE_TOOL_NAMES → intent unknown → allowed；matcher 同样不覆盖。另：本会话无通用文件系统 MCP 写服务器可做更真实尝试（llmwiki MCP ENOENT，其余 MCP 写面为 vault/notion 作用域）——见 unverified" }
+      {
+        "channel": "edit（编辑类工具）",
+        "attempt": "open 阶段写 src/product.ts（越阶段产品写入）",
+        "result": "实际拒绝",
+        "detail": "COMET PHASE GUARD — WRITE BLOCKED，exit 2；对照：同渠道写 tasks.md（in-phase artifact）allowed——拒绝为 phase 定向"
+      },
+      {
+        "channel": "shell（Shell 写入）",
+        "attempt": "Bash heredoc 写 src/product.ts；以及 sed 直改 .comet.yaml phase",
+        "result": "能力缺口（guard 未归因此渠道，写入本身成功）",
+        "detail": "matcher Write|Edit 不含 Bash；guard 工具名集合视 Bash 为 intent unknown → allowed。下游托管 gate 兜底：伪造 phase 在 archive 入口被 verify_result 检查拒绝（exit 1）。修复承接：guard hook 契约扩展（上游 patch seam）"
+      },
+      {
+        "channel": "mcp（MCP 写入）",
+        "attempt": "mcp__filesystem__write_file 写 src/product.ts",
+        "result": "能力缺口（guard 未归因此渠道）",
+        "detail": "MCP 工具名不在 WRITE_TOOL_NAMES → intent unknown → allowed；matcher 同样不覆盖。另：本会话无通用文件系统 MCP 写服务器可做更真实尝试（llmwiki MCP ENOENT，其余 MCP 写面为 vault/notion 作用域）——见 unverified"
+      }
     ],
     "evidence": [
       "openspec/changes/delivery-foundation-rearchitecture/host-probes/1_3-channel-probes.json",
@@ -60,11 +82,41 @@
     ]
   },
   "commands": [
-    { "cmd": "node(22.13.1) --test test/comet-driver.test.js test/delivery-cases/1_3.mjs  # RED", "exit_code": 1, "note": "真实失败：ERR_MODULE_NOT_FOUND lib/adapters/harness.js（driver 抽象不存在）；日志 worker-reports/P1_3/evidence/red-combined.txt" },
-    { "cmd": "node(24.15.0) tools/comet/build.mjs --archive .sdd/cache/artifacts/comet-source-c90af44….tar.gz", "exit_code": 0, "note": "本工作树内对 patched 构建做 manifest 逐文件校验 reuse：fingerprint cb1151b4…，reused:true（BUILD_BASELINE_DRIFT 纪律）" },
-    { "cmd": "node(22.13.1) --test test/comet-driver.test.js test/delivery-cases/1_3.mjs  # GREEN", "exit_code": 0, "note": "21/21 pass（12 driver 单测 + 9 任务级 case，全部真实 patched 构建/真实 CLI 交互，零 mock）；日志 worker-reports/P1_3/evidence/green-combined.txt" },
-    { "cmd": "npm test  # 全量回归", "exit_code": 1, "note": "211 tests：210 pass + 1 fail = test/infra-code-knowledge.test.js:146（I01 catalog stale-fixture，即 execution-ledger I05 条目记录的第 4 例在途修复；与 P1_3 无关——stash 本任务改动后该文件单测仍 13 pass/1 fail 复现）；基线 199 中该失败已在案。日志 worker-reports/P1_3/evidence/green-npm-test-full.txt" },
-    { "cmd": "node --test test/delivery-cases/*.mjs  # 交付 case 合跑", "exit_code": 0, "note": "47 tests：46 pass / 1 skip（既有前置缺失 skip）/ 0 fail" }
+    {
+      "cmd": "node(22.13.1) --test test/comet-driver.test.js test/delivery-cases/1_3.mjs  # RED",
+      "exit_code": 1,
+      "note": "真实失败：ERR_MODULE_NOT_FOUND lib/adapters/harness.js（driver 抽象不存在）；日志 worker-reports/P1_3/evidence/red-combined.txt"
+    },
+    {
+      "cmd": "node(24.15.0) tools/comet/build.mjs --archive .sdd/cache/artifacts/comet-source-c90af44….tar.gz",
+      "exit_code": 0,
+      "note": "本工作树内对 patched 构建做 manifest 逐文件校验 reuse：fingerprint cb1151b4…，reused:true（BUILD_BASELINE_DRIFT 纪律）"
+    },
+    {
+      "cmd": "node(22.13.1) --test test/comet-driver.test.js test/delivery-cases/1_3.mjs  # GREEN",
+      "exit_code": 0,
+      "note": "21/21 pass（12 driver 单测 + 9 任务级 case，全部真实 patched 构建/真实 CLI 交互，零 mock）；日志 worker-reports/P1_3/evidence/green-combined.txt"
+    },
+    {
+      "cmd": "npm test  # 全量回归",
+      "exit_code": 1,
+      "note": "211 tests：210 pass + 1 fail = test/infra-code-knowledge.test.js:146（I01 catalog stale-fixture，即 execution-ledger I05 条目记录的第 4 例在途修复；与 P1_3 无关——stash 本任务改动后该文件单测仍 13 pass/1 fail 复现）；基线 199 中该失败已在案。日志 worker-reports/P1_3/evidence/green-npm-test-full.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/*.mjs  # 交付 case 合跑",
+      "exit_code": 0,
+      "note": "47 tests：46 pass / 1 skip（既有前置缺失 skip）/ 0 fail"
+    },
+    {
+      "cmd": "node --test test/comet-driver.test.js test/delivery-cases/1_3.mjs  # post-review",
+      "exit_code": 0,
+      "note": "22/22 pass（含新增 RUN/RUNNER_MISMATCH 测试）"
+    },
+    {
+      "cmd": "npm test  # post-review",
+      "exit_code": 1,
+      "note": "212 tests：211 pass + 1 已知 I05 在途失败（如实报数）"
+    }
   ],
   "commits": {
     "tests": "6e7f9eb test(p1_3): RED — comet driver layering, per-channel probes, single closeout ownership",
@@ -110,10 +162,29 @@
     "test/comet-driver.test.js (new)",
     "test/delivery-cases/1_3.mjs (new)",
     "openspec/changes/delivery-foundation-rearchitecture/host-probes/ (new: 1_3-channel-probes.json, 1_3-state-tamper-oracle.txt, 1_3-archive-exclusivity.txt, 1_3-workspace-discovery.json)",
-    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_3/ (new: evidence/red-combined.txt, evidence/green-combined.txt, evidence/green-npm-test-full.txt, P1_3.json)"
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_3/ (new: evidence/red-combined.txt, evidence/green-combined.txt, evidence/green-npm-test-full.txt, P1_3.json)",
+    "test/comet-driver.test.js (review fix: RUN/RUNNER_MISMATCH coverage)"
   ],
   "blockers_or_questions": [
     "Shell/MCP 渠道缺口的修复归属：guard hook 契约扩展应落在哪个 patch seam（0002-managed-delivery-runtime.patch 或新 patch）由 parent 决策；本任务按授权不触碰 tools/comet/*、patches、contracts、lib/delivery。",
     "OV08 的真实宿主三方共存验证需要一次可重启/可接入 TeamAI+Ponytail 的宿主会话，建议单列任务。"
-  ]
+  ],
+  "review_fix": {
+    "review": "INDEPENDENT_REVIEW: CHANGES_REQUESTED — 1 阻断（其余 8 项全过）",
+    "blocking_finding": "RUN_MISMATCH / RUNNER_MISMATCH（lib/adapters/comet.js issueDispatch/verifyDispatch）已实现但零测试触达——worker report runner_binding 段声称的 F07 关联 ID 拒绝语义是未测代码",
+    "fix": "test/comet-driver.test.js 新增 1 测试：cometLaunchAuthority({runId:'run-A'}) 下 (a) issueDispatch 传 run:'run-B' 抛 RUN_MISMATCH；(b) 传 runnerId:'other-runner'（run 匹配）抛 RUNNER_MISMATCH；(c) verifyDispatch 对外来 run 的 dispatch 记录返回 {ok:false, error:'RUN_MISMATCH'}。实现行为与已声称语义一致，未改实现。",
+    "commands": [
+      {
+        "cmd": "node --test test/comet-driver.test.js test/delivery-cases/1_3.mjs",
+        "exit_code": 0,
+        "note": "22/22 pass（21 + 新增 1）；日志 worker-reports/P1_3/evidence/green-combined-post-review.txt"
+      },
+      {
+        "cmd": "npm test",
+        "exit_code": 1,
+        "note": "212 tests：211 pass + 1 fail = 同一已知 I05/I01 stale-catalog fixture（在途修复，非 P1_3）；日志 worker-reports/P1_3/evidence/green-npm-test-post-review.txt"
+      }
+    ],
+    "commit": "<本提交>"
+  }
 }
