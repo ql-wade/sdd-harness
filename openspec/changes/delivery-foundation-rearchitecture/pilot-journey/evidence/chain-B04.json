@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "tool": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/run-role-chain.mjs",
+  "scenario": "B04",
+  "variant": null,
+  "runId": "p32-deba30878fce",
+  "controller": {
+    "runnerId": "comet-classic"
+  },
+  "environment": "pilot-role-chain-local-tmpdir",
+  "toolchain": "node v22.13.1",
+  "policy": {
+    "ref": "policy/managed-pilot",
+    "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+  },
+  "plan": {
+    "ok": true,
+    "errors": [],
+    "bundle": {
+      "schemaVersion": 1,
+      "change": "pilot-role-chain-fixture",
+      "schedulerOwner": "comet-classic",
+      "tasks": [
+        {
+          "id": "t1"
+        },
+        {
+          "id": "t2",
+          "dependsOn": [
+            "t1"
+          ]
+        },
+        {
+          "id": "t3",
+          "dependsOn": [
+            "t2"
+          ]
+        }
+      ],
+      "allowedPaths": [
+        "test/",
+        "src/",
+        "probe/",
+        "artifacts/",
+        "state/"
+      ],
+      "worktree": "fixture",
+      "acceptanceRefs": [
+        "B01"
+      ]
+    },
+    "rolePaths": {
+      "planner": [],
+      "test-author": [
+        "test/",
+        "artifacts/"
+      ],
+      "builder": [
+        "src/",
+        "state/",
+        "artifacts/"
+      ],
+      "whitebox": [
+        "probe/",
+        "artifacts/"
+      ]
+    }
+  },
+  "candidate": {
+    "file": "src/feature.js",
+    "digestBefore": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+    "digestAfter": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84"
+  },
+  "frozenTests": [
+    {
+      "file": "test/feature.weak.test.js",
+      "digestBefore": "72088e05bc4a1d287a689fa1560956110b11e3eb384f34d6bde762f7fb97b2cd",
+      "digestAfter": "72088e05bc4a1d287a689fa1560956110b11e3eb384f34d6bde762f7fb97b2cd"
+    },
+    {
+      "file": "test/feature.strong.test.js",
+      "digestBefore": "08dd8406c9ae19c11d38485d9e2de8fac1101b88e305c9d656e5c41e07a737fb",
+      "digestAfter": "08dd8406c9ae19c11d38485d9e2de8fac1101b88e305c9d656e5c41e07a737fb"
+    }
+  ],
+  "runState": {
+    "file": "control/run-state.json",
+    "digestBefore": null,
+    "digestAfter": "ec30d55027c7ab8beed9ec5ef9ae1be3ffaa0640a42c64d7e851618025bb1c6d",
+    "unchanged": false
+  },
+  "transitions": [
+    {
+      "seq": 1,
+      "role": "whitebox",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "mutation-probe",
+      "inputSummary": {
+        "suite": "test/feature.weak.test.js",
+        "probeCandidate": "variants/defective.js (identity slugify)"
+      },
+      "verdict": "pass",
+      "basis": {
+        "kind": "weak-oracle",
+        "note": "the suite passed on the defective probe candidate — the oracle cannot detect the AC violation"
+      },
+      "dispatch": {
+        "execution": "exec-whitebox-1",
+        "role": "verifier",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "probe:test/feature.weak.test.js",
+        "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+        "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+        "integrity": "65e548cb3493029d34c7e7f9aa20c4bb4e4ad121229761fb9ef773d988b9bbad"
+      },
+      "artifacts": [
+        {
+          "uri": "artifacts/b04-probe-feature.weak.tap.txt",
+          "sha256": "b2ed54608311921a61b3b51b9ec583d2b636202a6bdf54e1a7063f75c505c2db"
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "role": "whitebox",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "mutation-probe",
+      "inputSummary": {
+        "suite": "test/feature.strong.test.js",
+        "probeCandidate": "variants/defective.js (identity slugify)"
+      },
+      "verdict": "red",
+      "basis": {
+        "kind": "detects-defect",
+        "note": "the suite fails on the defective probe candidate"
+      },
+      "dispatch": {
+        "execution": "exec-whitebox-2",
+        "role": "verifier",
+        "attempt": 2,
+        "epoch": 1,
+        "gate": "probe:test/feature.strong.test.js",
+        "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+        "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+        "integrity": "4cb7559de3884d0e66447e2ab13e74a081e32c2798e38b636c1eeeb09b8d78aa"
+      },
+      "artifacts": [
+        {
+          "uri": "artifacts/b04-probe-feature.strong.tap.txt",
+          "sha256": "cfd97473e9034677aa079e1fdee3e7063db09293b348475aa5f8db1cd5a9c94e"
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "role": "whitebox",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "route",
+      "inputSummary": {
+        "gap": {
+          "kind": "weak-oracle",
+          "suite": "test/feature.weak.test.js",
+          "probeOutcome": "pass",
+          "basis": "the suite passed on the defective probe candidate — the oracle cannot detect the AC violation"
+        }
+      },
+      "verdict": "routed",
+      "basis": {
+        "kind": "weak-oracle",
+        "note": "test/feature.weak.test.js passed on the defective probe candidate; the gap is returned to the test author — the frozen test is not patched here"
+      },
+      "route": "test-author"
+    }
+  ],
+  "dispatchLedger": [
+    {
+      "runnerId": "comet-classic",
+      "run": "p32-deba30878fce",
+      "gate": "probe:test/feature.weak.test.js",
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+      "attempt": 1,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-whitebox-1",
+      "integrity": "65e548cb3493029d34c7e7f9aa20c4bb4e4ad121229761fb9ef773d988b9bbad"
+    },
+    {
+      "runnerId": "comet-classic",
+      "run": "p32-deba30878fce",
+      "gate": "probe:test/feature.strong.test.js",
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+      "attempt": 2,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-whitebox-2",
+      "integrity": "4cb7559de3884d0e66447e2ab13e74a081e32c2798e38b636c1eeeb09b8d78aa"
+    }
+  ],
+  "refusals": [],
+  "admitted": [],
+  "gate": null,
+  "gatePhases": {},
+  "gateStale": null,
+  "gaps": [
+    {
+      "kind": "weak-oracle",
+      "suite": "test/feature.weak.test.js",
+      "probeOutcome": "pass",
+      "basis": "the suite passed on the defective probe candidate — the oracle cannot detect the AC violation"
+    }
+  ],
+  "probes": [
+    {
+      "suite": "test/feature.weak.test.js",
+      "probeOutcome": "pass",
+      "gap": {
+        "kind": "weak-oracle",
+        "suite": "test/feature.weak.test.js",
+        "probeOutcome": "pass",
+        "basis": "the suite passed on the defective probe candidate — the oracle cannot detect the AC violation"
+      },
+      "artifact": {
+        "uri": "artifacts/b04-probe-feature.weak.tap.txt",
+        "sha256": "b2ed54608311921a61b3b51b9ec583d2b636202a6bdf54e1a7063f75c505c2db"
+      }
+    },
+    {
+      "suite": "test/feature.strong.test.js",
+      "probeOutcome": "red",
+      "gap": null,
+      "artifact": {
+        "uri": "artifacts/b04-probe-feature.strong.tap.txt",
+        "sha256": "cfd97473e9034677aa079e1fdee3e7063db09293b348475aa5f8db1cd5a9c94e"
+      }
+    }
+  ],
+  "sessions": [],
+  "capabilityInventory": [],
+  "checkpoints": [
+    {
+      "id": "plan-validated",
+      "ok": true,
+      "detail": "PlanBundle v1 validates"
+    },
+    {
+      "id": "weak-gap-raised",
+      "ok": true,
+      "detail": "[{\"kind\":\"weak-oracle\",\"suite\":\"test/feature.weak.test.js\",\"probeOutcome\":\"pass\",\"basis\":\"the suite passed on the defective probe candidate — the oracle cannot detect the AC violation\"}]"
+    },
+    {
+      "id": "strong-no-gap",
+      "ok": true,
+      "detail": "strong probe outcome red"
+    },
+    {
+      "id": "frozen-feature.weak.test.js",
+      "ok": true,
+      "detail": "test/feature.weak.test.js byte-identical through the probe"
+    },
+    {
+      "id": "frozen-feature.strong.test.js",
+      "ok": true,
+      "detail": "test/feature.strong.test.js byte-identical through the probe"
+    },
+    {
+      "id": "routed-test-author",
+      "ok": true,
+      "detail": "weak-oracle gap routes back to the test author"
+    }
+  ],
+  "journey": "weak-oracle-routed-to-test-author",
+  "verdict": "OBSERVED",
+  "finishedAt": "2026-10-20T17:16:27.400Z"
+}

@@ -1,0 +1,335 @@
+{
+  "schemaVersion": 1,
+  "tool": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/run-role-chain.mjs",
+  "scenario": "B06",
+  "variant": null,
+  "runId": "p32-583c96d1ab20",
+  "controller": {
+    "runnerId": "comet-classic"
+  },
+  "environment": "pilot-role-chain-local-tmpdir",
+  "toolchain": "node v22.13.1",
+  "policy": {
+    "ref": "policy/managed-pilot",
+    "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+  },
+  "plan": {
+    "ok": true,
+    "errors": [],
+    "bundle": {
+      "schemaVersion": 1,
+      "change": "pilot-role-chain-fixture",
+      "schedulerOwner": "comet-classic",
+      "tasks": [
+        {
+          "id": "t1"
+        },
+        {
+          "id": "t2",
+          "dependsOn": [
+            "t1"
+          ]
+        },
+        {
+          "id": "t3",
+          "dependsOn": [
+            "t2"
+          ]
+        }
+      ],
+      "allowedPaths": [
+        "test/",
+        "src/",
+        "probe/",
+        "artifacts/",
+        "state/"
+      ],
+      "worktree": "fixture",
+      "acceptanceRefs": [
+        "B01"
+      ]
+    },
+    "rolePaths": {
+      "planner": [],
+      "test-author": [
+        "test/",
+        "artifacts/"
+      ],
+      "builder": [
+        "src/",
+        "state/",
+        "artifacts/"
+      ],
+      "whitebox": [
+        "probe/",
+        "artifacts/"
+      ]
+    }
+  },
+  "candidate": {
+    "file": "src/feature.js",
+    "digestBefore": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+    "digestAfter": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84"
+  },
+  "frozenTests": [],
+  "runState": {
+    "file": "control/run-state.json",
+    "digestBefore": null,
+    "digestAfter": "455ae015c10e993cfdd8e13e6952f972c337b1fe852c8ebfe9c07bb1450066d0",
+    "unchanged": false
+  },
+  "transitions": [
+    {
+      "seq": 1,
+      "role": "test-author",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "write",
+      "inputSummary": "write test/dom.test.js from staged authoring source",
+      "verdict": "written",
+      "basis": {
+        "kind": "authoring",
+        "note": "DOM check authored"
+      }
+    },
+    {
+      "seq": 2,
+      "role": "whitebox",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "capture-console",
+      "inputSummary": {
+        "check": "console",
+        "command": "node src/feature.js"
+      },
+      "verdict": "pass",
+      "basis": {
+        "kind": "real-capture",
+        "note": "the console observation is the captured stdout stream of the real program run"
+      },
+      "dispatch": {
+        "execution": "exec-whitebox-4",
+        "role": "verifier",
+        "attempt": 4,
+        "epoch": 1,
+        "gate": "console",
+        "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+        "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+        "integrity": "d3087226cb08779efac1405e8bc44dde06b57b29b39fb0a1cbd459a60d1a501d"
+      },
+      "artifacts": [
+        {
+          "uri": "artifacts/b06-console-capture.txt",
+          "sha256": "68bf7098d4d3b9870b12579a8a3c97aeea64b437fc20a87ea800d3cb706f8eaa"
+        }
+      ]
+    }
+  ],
+  "dispatchLedger": [
+    {
+      "runnerId": "comet-classic",
+      "run": "p32-583c96d1ab20",
+      "gate": "dom",
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+      "attempt": 1,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-whitebox-1",
+      "integrity": "6131ed2b6c0cc7ee43a1964961485e686d0282899f6bd8230eb813743d7330cf"
+    },
+    {
+      "runnerId": "comet-classic",
+      "run": "p32-583c96d1ab20",
+      "gate": "service-log",
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+      "attempt": 2,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-whitebox-2",
+      "integrity": "60d77840bf30b98342a70b5f84982c3bf09de9fd6afb81c1cb817ec7dbd40cef"
+    },
+    {
+      "runnerId": "comet-classic",
+      "run": "p32-583c96d1ab20",
+      "gate": "service-log",
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+      "attempt": 3,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-whitebox-3",
+      "integrity": "92fb66987202b9423928082663149f3d9cbdcf40deb4517ba07cb7afb4f48586"
+    },
+    {
+      "runnerId": "comet-classic",
+      "run": "p32-583c96d1ab20",
+      "gate": "console",
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+      "attempt": 4,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-whitebox-4",
+      "integrity": "d3087226cb08779efac1405e8bc44dde06b57b29b39fb0a1cbd459a60d1a501d"
+    }
+  ],
+  "refusals": [
+    {
+      "where": "admit",
+      "code": "CHECK_BINDING_MISMATCH",
+      "reason": "envelope declares check \"console\" but the execution was dispatched for \"service-log\" — an execution cannot observe a check it was not dispatched for"
+    }
+  ],
+  "admitted": [
+    {
+      "execution": "exec-whitebox-1",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "dom",
+      "result": "pass",
+      "envelopeDigest": "ba1a6cff1e68f52f7a3503fef68ab372dc9ebd23b90244a602eb93bedb437640"
+    },
+    {
+      "execution": "exec-whitebox-2",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "service-log",
+      "result": "pass",
+      "envelopeDigest": "80d45666ffa2b2dcd4eae66af088bd5aa6cfe167513322267ac9dde810d395cd"
+    },
+    {
+      "execution": "exec-whitebox-4",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "console",
+      "result": "pass",
+      "envelopeDigest": "87a129367e08b0254c1b962675b9025a2e48409c9e0fdfe19d5913593c7618b1"
+    }
+  ],
+  "gate": {
+    "requiredChecks": [
+      {
+        "level": "ui",
+        "capability": "console"
+      },
+      {
+        "level": "ui",
+        "capability": "dom"
+      }
+    ],
+    "verdict": "pass",
+    "receipt": {
+      "schemaVersion": 1,
+      "policy": {
+        "ref": "policy/managed-pilot",
+        "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+      },
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "evidence": [
+        "80d45666ffa2b2dcd4eae66af088bd5aa6cfe167513322267ac9dde810d395cd",
+        "87a129367e08b0254c1b962675b9025a2e48409c9e0fdfe19d5913593c7618b1",
+        "ba1a6cff1e68f52f7a3503fef68ab372dc9ebd23b90244a602eb93bedb437640"
+      ],
+      "requiredDenominator": {
+        "required": 2,
+        "valid": 2
+      },
+      "blocked": [],
+      "sourceAttestation": {
+        "origin": "comet-classic",
+        "execution": "exec-whitebox-1,exec-whitebox-2,exec-whitebox-4"
+      },
+      "verdict": "pass"
+    }
+  },
+  "gatePhases": {
+    "negative": {
+      "verdict": "blocked",
+      "receipt": {
+        "schemaVersion": 1,
+        "policy": {
+          "ref": "policy/managed-pilot",
+          "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+        },
+        "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+        "evidence": [
+          "80d45666ffa2b2dcd4eae66af088bd5aa6cfe167513322267ac9dde810d395cd",
+          "ba1a6cff1e68f52f7a3503fef68ab372dc9ebd23b90244a602eb93bedb437640"
+        ],
+        "requiredDenominator": {
+          "required": 2,
+          "valid": 1
+        },
+        "blocked": [
+          "MISSING_OBSERVATION: required check ui/console has no receipt"
+        ],
+        "sourceAttestation": {
+          "origin": "comet-classic",
+          "execution": "exec-whitebox-1,exec-whitebox-2"
+        },
+        "verdict": "blocked"
+      }
+    }
+  },
+  "gateStale": null,
+  "gaps": [],
+  "probes": [],
+  "sessions": [],
+  "capabilityInventory": [],
+  "checkpoints": [
+    {
+      "id": "plan-validated",
+      "ok": true,
+      "detail": "PlanBundle v1 validates"
+    },
+    {
+      "id": "dom-pass",
+      "ok": true,
+      "detail": "dom pass"
+    },
+    {
+      "id": "service-log-admitted",
+      "ok": true,
+      "detail": "the service-log observation is admitted for what it is"
+    },
+    {
+      "id": "binding-refused",
+      "ok": true,
+      "detail": "a service-log execution cannot observe the console check"
+    },
+    {
+      "id": "console-open",
+      "ok": true,
+      "detail": "MISSING_OBSERVATION: required check ui/console has no receipt"
+    },
+    {
+      "id": "dom-closed",
+      "ok": true,
+      "detail": "the DOM check closes with its real receipt"
+    },
+    {
+      "id": "console-captured",
+      "ok": true,
+      "detail": "real console stream captured"
+    },
+    {
+      "id": "console-admitted",
+      "ok": true,
+      "detail": "console receipt admitted"
+    },
+    {
+      "id": "gate-pass-both",
+      "ok": true,
+      "detail": "gate pass, valid 2"
+    }
+  ],
+  "journey": "console-closed-after-real-capture",
+  "verdict": "OBSERVED",
+  "finishedAt": "2026-10-20T17:16:28.082Z"
+}

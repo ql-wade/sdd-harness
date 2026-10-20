@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "tool": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/run-role-chain.mjs",
+  "scenario": "A15",
+  "variant": "claim-only",
+  "runId": "p32-ec37062ac7ef",
+  "controller": {
+    "runnerId": "comet-classic"
+  },
+  "environment": "pilot-role-chain-local-tmpdir",
+  "toolchain": "node v22.13.1",
+  "policy": {
+    "ref": "policy/managed-pilot",
+    "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+  },
+  "plan": {
+    "ok": true,
+    "errors": [],
+    "bundle": {
+      "schemaVersion": 1,
+      "change": "pilot-role-chain-fixture",
+      "schedulerOwner": "comet-classic",
+      "tasks": [
+        {
+          "id": "t1"
+        },
+        {
+          "id": "t2",
+          "dependsOn": [
+            "t1"
+          ]
+        },
+        {
+          "id": "t3",
+          "dependsOn": [
+            "t2"
+          ]
+        }
+      ],
+      "allowedPaths": [
+        "test/",
+        "src/",
+        "probe/",
+        "artifacts/",
+        "state/"
+      ],
+      "worktree": "fixture",
+      "acceptanceRefs": [
+        "B01"
+      ]
+    },
+    "rolePaths": {
+      "planner": [],
+      "test-author": [
+        "test/",
+        "artifacts/"
+      ],
+      "builder": [
+        "src/",
+        "state/",
+        "artifacts/"
+      ],
+      "whitebox": [
+        "probe/",
+        "artifacts/"
+      ]
+    }
+  },
+  "candidate": {
+    "file": "src/feature.js",
+    "digestBefore": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+    "digestAfter": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84"
+  },
+  "frozenTests": [],
+  "runState": {
+    "file": "control/run-state.json",
+    "digestBefore": null,
+    "digestAfter": "7805fcc57a77eb0c51f55df1802c27c67a185ba235b6b0874c0a727ba821d9df",
+    "unchanged": false
+  },
+  "transitions": [
+    {
+      "seq": 1,
+      "role": "builder",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "save-claim",
+      "inputSummary": "claims the save without performing the write (claim-only variant)",
+      "verdict": "claim-success",
+      "basis": {
+        "kind": "claim",
+        "note": "the builder reports save success"
+      }
+    },
+    {
+      "seq": 2,
+      "role": "whitebox",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "independent-readback",
+      "inputSummary": {
+        "file": "state/saved-state.json"
+      },
+      "verdict": "failed",
+      "basis": {
+        "kind": "not-persisted",
+        "note": "the success claim never reached disk (A15)"
+      },
+      "artifacts": [
+        {
+          "uri": "artifacts/a15-readback-claim.json",
+          "sha256": "ec4f63f59b289dd1e58238b82d8e1f643243f8a52f32517ce0c7be72f57c0053"
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "role": "whitebox",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "route",
+      "inputSummary": {
+        "persisted": false
+      },
+      "verdict": "routed",
+      "basis": {
+        "kind": "not-persisted",
+        "note": "save claim not persisted — independent readback found no bytes; the journey fails and returns to the Builder (A15)"
+      },
+      "route": "builder"
+    }
+  ],
+  "dispatchLedger": [],
+  "refusals": [],
+  "admitted": [],
+  "gate": null,
+  "gatePhases": {},
+  "gateStale": null,
+  "gaps": [],
+  "probes": [],
+  "sessions": [],
+  "capabilityInventory": [],
+  "checkpoints": [
+    {
+      "id": "plan-validated",
+      "ok": true,
+      "detail": "PlanBundle v1 validates"
+    },
+    {
+      "id": "journey-fails",
+      "ok": true,
+      "detail": "not persisted means the journey fails, regardless of the success claim"
+    }
+  ],
+  "journey": "journey-failed-not-persisted",
+  "verdict": "OBSERVED",
+  "finishedAt": "2026-10-20T17:16:28.668Z"
+}

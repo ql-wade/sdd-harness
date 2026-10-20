@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 1,
+  "tool": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/run-role-chain.mjs",
+  "scenario": "B03",
+  "variant": null,
+  "runId": "p32-45b21ee15670",
+  "controller": {
+    "runnerId": "comet-classic"
+  },
+  "environment": "pilot-role-chain-local-tmpdir",
+  "toolchain": "node v22.13.1",
+  "policy": {
+    "ref": "policy/managed-pilot",
+    "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+  },
+  "plan": {
+    "ok": true,
+    "errors": [],
+    "bundle": {
+      "schemaVersion": 1,
+      "change": "pilot-role-chain-fixture",
+      "schedulerOwner": "comet-classic",
+      "tasks": [
+        {
+          "id": "t1"
+        },
+        {
+          "id": "t2",
+          "dependsOn": [
+            "t1"
+          ]
+        },
+        {
+          "id": "t3",
+          "dependsOn": [
+            "t2"
+          ]
+        }
+      ],
+      "allowedPaths": [
+        "test/",
+        "src/",
+        "probe/",
+        "artifacts/",
+        "state/"
+      ],
+      "worktree": "fixture",
+      "acceptanceRefs": [
+        "B01"
+      ]
+    },
+    "rolePaths": {
+      "planner": [],
+      "test-author": [
+        "test/",
+        "artifacts/"
+      ],
+      "builder": [
+        "src/",
+        "state/",
+        "artifacts/"
+      ],
+      "whitebox": [
+        "probe/",
+        "artifacts/"
+      ]
+    }
+  },
+  "candidate": {
+    "file": "src/feature.js",
+    "digestBefore": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+    "digestAfter": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84"
+  },
+  "frozenTests": [],
+  "runState": {
+    "file": "control/run-state.json",
+    "digestBefore": null,
+    "digestAfter": "ff2266890c47655775fa03e301254688726574a8d3adad0027ead4b3fddda4ce",
+    "unchanged": false
+  },
+  "transitions": [
+    {
+      "seq": 1,
+      "role": "test-author",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "write",
+      "inputSummary": "write test/feature.strong.test.js from staged authoring source test-sources/feature.strong.test.js",
+      "verdict": "written",
+      "basis": {
+        "kind": "authoring",
+        "note": "authored bytes sha256 08dd8406c9ae19c11d38485d9e2de8fac1101b88e305c9d656e5c41e07a737fb"
+      }
+    },
+    {
+      "seq": 2,
+      "role": "test-author",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "run-own-suite",
+      "inputSummary": {
+        "suite": "test/feature.strong.test.js",
+        "label": "b03-author-strong"
+      },
+      "verdict": "pass",
+      "basis": {
+        "kind": "pass",
+        "validRed": false,
+        "fail": 0,
+        "total": 2,
+        "note": "run passed; there is no RED to record"
+      },
+      "dispatch": {
+        "execution": "exec-test-author-1",
+        "role": "test-author",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "unit:slugify",
+        "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+        "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+        "integrity": "5caf7e47828d407cbc15969f2423187613852676c9e958d72a70743a4ee3561a"
+      },
+      "artifacts": [
+        {
+          "uri": "artifacts/b03-author-strong.tap.txt",
+          "sha256": "7b84115d447bd8c001fa6a91351f941eaa4a5ce027a5a387414ea4725cb42e53"
+        }
+      ]
+    }
+  ],
+  "dispatchLedger": [
+    {
+      "runnerId": "comet-classic",
+      "run": "p32-45b21ee15670",
+      "gate": "unit:slugify",
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+      "attempt": 1,
+      "epoch": 1,
+      "role": "test-author",
+      "execution": "exec-test-author-1",
+      "integrity": "5caf7e47828d407cbc15969f2423187613852676c9e958d72a70743a4ee3561a"
+    }
+  ],
+  "refusals": [],
+  "admitted": [
+    {
+      "execution": "exec-test-author-1",
+      "role": "test-author",
+      "class": "authoring-self-check",
+      "check": "unit:slugify",
+      "result": "pass",
+      "envelopeDigest": "9145fd9ddc5debaf05b0a05e096a60bfd186bb0a778ea49f75c0402bd6f23b47"
+    }
+  ],
+  "gate": {
+    "requiredChecks": [
+      {
+        "level": "unit",
+        "capability": "unit:slugify"
+      }
+    ],
+    "verdict": "blocked",
+    "receipt": {
+      "schemaVersion": 1,
+      "policy": {
+        "ref": "policy/managed-pilot",
+        "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+      },
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "evidence": [
+        "9145fd9ddc5debaf05b0a05e096a60bfd186bb0a778ea49f75c0402bd6f23b47"
+      ],
+      "requiredDenominator": {
+        "required": 1,
+        "valid": 0
+      },
+      "blocked": [
+        "AUTHORING_SELF_CHECK_ONLY: unit:slugify is covered only by authoring self-check receipts, which cannot sign independent acceptance (B03)"
+      ],
+      "sourceAttestation": {
+        "origin": "comet-classic",
+        "execution": "exec-test-author-1"
+      },
+      "verdict": "blocked"
+    }
+  },
+  "gatePhases": {},
+  "gateStale": null,
+  "gaps": [],
+  "probes": [],
+  "sessions": [],
+  "capabilityInventory": [],
+  "checkpoints": [
+    {
+      "id": "plan-validated",
+      "ok": true,
+      "detail": "PlanBundle v1 validates"
+    },
+    {
+      "id": "author-outcome-b03-author-strong",
+      "ok": true,
+      "detail": "expected pass, observed pass"
+    },
+    {
+      "id": "author-red-valid-b03-author-strong",
+      "ok": true,
+      "detail": "run passed; there is no RED to record"
+    },
+    {
+      "id": "authoring-class",
+      "ok": true,
+      "detail": "the author self-check was admitted"
+    },
+    {
+      "id": "authoring-class-label",
+      "ok": true,
+      "detail": "admitted class authoring-self-check"
+    },
+    {
+      "id": "gate-blocked",
+      "ok": true,
+      "detail": "gate verdict blocked"
+    },
+    {
+      "id": "gate-reason",
+      "ok": true,
+      "detail": "AUTHORING_SELF_CHECK_ONLY: unit:slugify is covered only by authoring self-check receipts, which cannot sign independent acceptance (B03)"
+    },
+    {
+      "id": "nothing-accepted",
+      "ok": true,
+      "detail": "no required check independently closed"
+    }
+  ],
+  "journey": "blocked-authoring-self-check-only",
+  "verdict": "OBSERVED",
+  "finishedAt": "2026-10-20T17:16:27.048Z"
+}

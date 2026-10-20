@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 1,
+  "tool": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/run-role-chain.mjs",
+  "scenario": "F08",
+  "variant": null,
+  "runId": "p32-62980430baae",
+  "controller": {
+    "runnerId": "comet-classic"
+  },
+  "environment": "pilot-role-chain-local-tmpdir",
+  "toolchain": "node v22.13.1",
+  "policy": {
+    "ref": "policy/managed-pilot",
+    "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+  },
+  "plan": {
+    "ok": true,
+    "errors": [],
+    "bundle": {
+      "schemaVersion": 1,
+      "change": "pilot-role-chain-fixture",
+      "schedulerOwner": "comet-classic",
+      "tasks": [
+        {
+          "id": "t1"
+        },
+        {
+          "id": "t2",
+          "dependsOn": [
+            "t1"
+          ]
+        },
+        {
+          "id": "t3",
+          "dependsOn": [
+            "t2"
+          ]
+        }
+      ],
+      "allowedPaths": [
+        "test/",
+        "src/",
+        "probe/",
+        "artifacts/",
+        "state/"
+      ],
+      "worktree": "fixture",
+      "acceptanceRefs": [
+        "B01"
+      ]
+    },
+    "rolePaths": {
+      "planner": [],
+      "test-author": [
+        "test/",
+        "artifacts/"
+      ],
+      "builder": [
+        "src/",
+        "state/",
+        "artifacts/"
+      ],
+      "whitebox": [
+        "probe/",
+        "artifacts/"
+      ]
+    }
+  },
+  "candidate": {
+    "file": "src/feature.js",
+    "digestBefore": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+    "digestAfter": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84"
+  },
+  "frozenTests": [],
+  "runState": {
+    "file": "control/run-state.json",
+    "digestBefore": null,
+    "digestAfter": "11b3e552383355ca61f5d79dad102518d989d48df78f5a411ec0e935ec813af8",
+    "unchanged": false
+  },
+  "transitions": [],
+  "dispatchLedger": [
+    {
+      "runnerId": "comet-classic",
+      "run": "p32-62980430baae",
+      "gate": "cli-interaction",
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+      "attempt": 1,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-whitebox-1",
+      "integrity": "34700f060319d9b76b39b6c6ef9dd185290e903d66c007e00f82c510961d60a5"
+    },
+    {
+      "runnerId": "comet-classic",
+      "run": "p32-62980430baae",
+      "gate": "browser-console",
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+      "attempt": 2,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-whitebox-2",
+      "integrity": "64a3dede64961360d35342c3658cdf471c62e2bfb9b149c3d14659b19d2624a7"
+    }
+  ],
+  "refusals": [
+    {
+      "where": "correlation",
+      "code": "CORRELATION_INCOMPLETE",
+      "reason": "session s-28917ee4 collected capture and request but the independent business readback found no persisted state at state/business-state-s2.json — a partial session never issues a pass"
+    }
+  ],
+  "admitted": [
+    {
+      "execution": "exec-whitebox-1",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "cli-interaction",
+      "result": "pass",
+      "envelopeDigest": "ff14927a9f1f3cae46e0281210dd63c753c1059681f830b98b918f8dbcb4cbcb"
+    },
+    {
+      "execution": "exec-whitebox-2",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "browser-console",
+      "result": "unverified",
+      "envelopeDigest": "28c55f11a09d4a59c3b34d8dbb8953bf98ab419ad57a43251992b8ce51920819"
+    }
+  ],
+  "gate": {
+    "requiredChecks": [
+      {
+        "level": "ui",
+        "capability": "cli-interaction"
+      },
+      {
+        "level": "ui",
+        "capability": "browser-console"
+      }
+    ],
+    "verdict": "blocked",
+    "receipt": {
+      "schemaVersion": 1,
+      "policy": {
+        "ref": "policy/managed-pilot",
+        "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+      },
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "evidence": [
+        "28c55f11a09d4a59c3b34d8dbb8953bf98ab419ad57a43251992b8ce51920819",
+        "ff14927a9f1f3cae46e0281210dd63c753c1059681f830b98b918f8dbcb4cbcb"
+      ],
+      "requiredDenominator": {
+        "required": 2,
+        "valid": 1
+      },
+      "blocked": [
+        "UNVERIFIED_CAPABILITY: browser-console receipt result is unverified with 0 valid execution(s) (A18)"
+      ],
+      "sourceAttestation": {
+        "origin": "comet-classic",
+        "execution": "exec-whitebox-1,exec-whitebox-2"
+      },
+      "verdict": "blocked"
+    }
+  },
+  "gatePhases": {},
+  "gateStale": null,
+  "gaps": [],
+  "probes": [],
+  "sessions": [
+    {
+      "sessionId": "s-d97bafe2",
+      "kinds": [
+        "capture",
+        "request",
+        "readback"
+      ],
+      "complete": true,
+      "artifacts": [
+        {
+          "kind": "capture",
+          "uri": "artifacts/f08-s-d97bafe2-capture.txt",
+          "sha256": "68bf7098d4d3b9870b12579a8a3c97aeea64b437fc20a87ea800d3cb706f8eaa"
+        },
+        {
+          "kind": "request",
+          "uri": "artifacts/f08-s-d97bafe2-request.json",
+          "sha256": "9aa858b9bc6fdabb5eb042428c56c330ca55af49d8256dff32aff7a864b5aa55"
+        },
+        {
+          "kind": "readback",
+          "uri": "artifacts/f08-s-d97bafe2-readback.json",
+          "sha256": "441ef582e483bd5451777a86e825eae3ee4a61dba208655e9326da9de2395e17"
+        }
+      ]
+    },
+    {
+      "sessionId": "s-28917ee4",
+      "kinds": [
+        "capture",
+        "request"
+      ],
+      "complete": false,
+      "artifacts": [
+        {
+          "kind": "capture",
+          "uri": "artifacts/f08-s-28917ee4-capture.txt",
+          "sha256": "68bf7098d4d3b9870b12579a8a3c97aeea64b437fc20a87ea800d3cb706f8eaa"
+        },
+        {
+          "kind": "request",
+          "uri": "artifacts/f08-s-28917ee4-request.json",
+          "sha256": "541587c44900ad7a77d6d15f03be280eadd6aa79314b93ce484db0a1b1d7f3f0"
+        }
+      ]
+    }
+  ],
+  "capabilityInventory": [
+    {
+      "capability": "cli-stdout-capture",
+      "available": true,
+      "basis": "real program runs are captured to artifacts in this choreography"
+    },
+    {
+      "capability": "file-readback",
+      "available": true,
+      "basis": "independent file readback is available in this choreography"
+    },
+    {
+      "capability": "native-browser",
+      "available": false,
+      "basis": "pilot registered CLI-only surface (pilot-contract.md negativeAc.ui); no native browser automation is registered in this environment"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "plan-validated",
+      "ok": true,
+      "detail": "PlanBundle v1 validates"
+    },
+    {
+      "id": "correlation-complete",
+      "ok": true,
+      "detail": "capture + request + independent readback are correlated under one session id"
+    },
+    {
+      "id": "readback-matches-disk",
+      "ok": true,
+      "detail": "the recorded readback digest equals the persisted state bytes"
+    },
+    {
+      "id": "cli-interaction-admitted",
+      "ok": true,
+      "detail": "the correlated CLI interaction evidence is admitted"
+    },
+    {
+      "id": "partial-refused",
+      "ok": true,
+      "detail": "the partial session is refused, never converted into a pass"
+    },
+    {
+      "id": "browser-unverified",
+      "ok": true,
+      "detail": "the absent capability is recorded as unverified, never as pass"
+    },
+    {
+      "id": "gate-blocked-on-unverified",
+      "ok": true,
+      "detail": "UNVERIFIED_CAPABILITY: browser-console receipt result is unverified with 0 valid execution(s) (A18)"
+    },
+    {
+      "id": "only-correlated-check-closed",
+      "ok": true,
+      "detail": "valid 1"
+    }
+  ],
+  "journey": "cli-correlated-browser-unverified",
+  "verdict": "OBSERVED",
+  "finishedAt": "2026-10-20T17:16:28.552Z"
+}
