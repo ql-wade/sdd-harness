@@ -134,5 +134,26 @@
     "Build reproduced in this worktree from the freshly downloaded pinned archive; fingerprint 72e5ce0eb3ce1ca7c6b898cf5d63bc466a717e4ea2eaf7de761b86d2867af1f6 is byte-identical to the historical main-checkout build, confirming the archive+patches+toolchain fingerprint is deterministic.",
     "First V_COMET_NATIVE GREEN attempt failed BUILD_BASELINE_DRIFT because running the smoke checks rewrites their own vitest caches under node_modules/.vite*; fixed at root cause by excluding those ephemeral caches from the manifest on both write and verify (real content changes still fail loudly).",
     "tasks.md checkboxes, execution-state.json, execution-ledger.jsonl, drift-lock/contract and tools/verify were not touched per scope."
+  ],
+  "review_fixes": [
+    {
+      "id": "nb-1",
+      "source": "independent review APPROVED with non-blocking finding",
+      "finding": "qualified_at, the three npm_artifact.verified_at values and host.observed_at were UTC instants mislabeled with a +08:00 suffix (generator bug: toISOString() followed by suffix swap), an 8-hour offset against the evidence-log timeline.",
+      "fix": "The same five instants re-rendered as true local +08:00 (no instant changed, only the offset representation); whole file now consistently local +08:00, matching worktree_build.date, runtime_claims.executed_at and the evidence logs. No other fields touched.",
+      "fields_changed": [
+        "qualified_at: 2026-10-20T03:38:21+08:00 -> 2026-10-20T11:38:21+08:00",
+        "comet.npm_artifact.verified_at: 2026-10-20T03:38:20+08:00 -> 2026-10-20T11:38:20+08:00",
+        "teamai.npm_artifact.verified_at: 2026-10-20T03:38:20+08:00 -> 2026-10-20T11:38:20+08:00",
+        "openspec.npm_artifact.verified_at: 2026-10-20T03:38:20+08:00 -> 2026-10-20T11:38:20+08:00",
+        "host.observed_at: 2026-10-20T03:38:21+08:00 -> 2026-10-20T11:38:21+08:00"
+      ],
+      "oracle_rerun": {
+        "command": "node openspec/changes/delivery-foundation-rearchitecture/package-probes/probe-toolchain-baseline.mjs",
+        "exit_code": 0,
+        "result": "all checks PASS; no oracle change required (it asserts parseability, not format)",
+        "evidence": "package-probes/1_1.a-green-baseline-qualified-review-nb1.log"
+      }
+    }
   ]
 }
