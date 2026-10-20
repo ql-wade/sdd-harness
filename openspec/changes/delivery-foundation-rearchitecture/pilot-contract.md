@@ -21,3 +21,68 @@ Comet 权威状态、策略、签发材料由受管主体保护；worker 无控�
 复用原92场景身份，不把配置有效、Docker可用或原版CLI可运行提升为端到端验收。首个实际业务试点需独立 UI/API/持久化与权限负向案例；测试作者、Builder、独立验收各守其角色，真实 Comet 派发和恢复必须读回。同 Run 的项目知识、规格归档、Outline团队发布和整体完成分别观察。
 
 配置检查按 configValid、infrastructureObserved、controllerReady、actionReadiness、deliveryVerified 分层。未知/未登记/分页不全/版本不符阻断对应动作，不能从前层自动推导后层。R10 A 保留未完成工作区，G15 A 仅在健康依赖下目标5分钟隔离；故障暴露与违约必须留痕。
+
+## 冻结登记（P3_1，机读）
+
+Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10-20）将本登记结构化：试点仓库=本仓库（用户已授权，execution-state.pilot_environment_choice）、owner 登记引用 I01 registry（`infra/delivery/registry.json`，project `sdd-harness-pilot`）、目标验证环境=本地隔离（本 worktree + `$TMPDIR`）、身份=运行时观测。Product/Design/TestContract/PlanBundle 四件以文件指针+摘要方式冻结（引用已接纳工件，不复制内容）；PlanBundle 摘要与 `lib/delivery/baseline.js` 的 `taskDefinitionDigest` 同一归一化——checkbox 勾选状态不构成计划漂移，定义文本变更构成漂移。`tools/verify/delivery-journey.mjs` 以下方 ```pilot-contract 机读块为唯一冻结基线来源：任一工件缺失/漂移即结构化拒绝派发并列缺项（A01 语义），PlanBundle 摘要校验绑定计划冻结（A15 语义）。重冻结程序：任何被冻结工件变更后，必须显式更新本块 sha256 并留下可审计 diff，不存在自动续期。
+
+### 试点负向 AC 面板（首个实际业务试点的四类负向边界）
+
+- **UI（交互面，本试点为 CLI/诊断面）**：缺登记、缺前置或基线漂移时不得显示成功/就绪，必须结构化拒绝并列缺项（A01）；任何成功提示必须可被独立读回证伪，显示成功不构成事实（A15）；未知场景/未知 profile 不得落入默认成功路径。
+- **API（CLI/进程/HTTP 入口）**：未登记来源/主体的动作请求被拒绝并留审计，public 可读不构成放权；caller 自报身份或自写 pass JSON 不作为认证与验收证据（A05/A06）；输入/前置无效以退出码 1 显式拒绝，语义验证失败以退出码 2 表达，缺失环境显式 UNVERIFIED，不静默降级。
+- **持久化**：任何"已保存"声明必须以独立落盘读回证明，未落盘即 Journey 失败（A15）；冻结工件任一漂移即拒绝派发，重冻结必须是显式登记变更；内存态、回显或静态清单不得替代持久化/行为证据，零有效执行（0 tests/全 skip）不得判 PASS。
+- **权限**：worker/诊断进程对控制平面（hooks.yaml、settings.json、受管状态、Comet 权威状态）无写权限，越权写必须失败并留痕；登记/权限缺失只阻断对应动作，不得把计划字段当作已满足，不得以提权重试替代登记；认证账号管理员可读不替代目标受众核验，readback 成功前不执行需要授权的动作。
+
+```pilot-contract
+{
+  "schemaVersion": 1,
+  "profile": "managed-pilot",
+  "pilot": {
+    "repository": "sdd-harness（本仓库工作树；I01 registry project id: sdd-harness-pilot；repoId 1285806550）",
+    "ownerRegistry": "infra/delivery/registry.json#project.sdd-harness-pilot（owner ql-wade，principalId 262266039；authority.readbackStatus=UNVERIFIED，执行时读回成功前不执行需要授权的动作）",
+    "environment": "local-isolated-worktree-tmpdir（本 worktree + $TMPDIR，loopback-only；无生产写入、无远端分支保护修改、不复用其他项目资源）",
+    "identity": "runtime-observed（身份运行时观测登记；未登记只阻断对应动作，不把计划字段当已满足）"
+  },
+  "frozenArtifacts": {
+    "product": {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/proposal.md",
+      "sha256": "8d7a0caabaec8eb0f6abe27f093922947608aadfdbec5613575bb79be852d7a1"
+    },
+    "design": {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/design.md",
+      "sha256": "25d0856d31e1484fa9a9ad2d1b25b3c53cccf10f2e1bb6bf52b2dbd48789bcdc"
+    },
+    "testContract": {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md",
+      "sha256": "27ae2cb385448d9f8783807b53bd168c0044e7d9e60c4cbe5c103954aebbbf07"
+    },
+    "planBundle": {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
+      "sha256": "809c1fd19828fb05a99bf2265164502b697bbe27aeb2b5f24994ccc96a91cc45",
+      "digestNormalization": "checkbox-state-agnostic（与 lib/delivery/baseline.js taskDefinitionDigest 同一归一化；勾选状态不构成计划漂移）"
+    }
+  },
+  "negativeAc": {
+    "ui": [
+      "缺登记、缺前置或基线漂移时不得显示成功/就绪；必须结构化拒绝并列缺项（A01 语义）",
+      "任何成功提示必须可被独立读回证伪；显示成功不构成事实（A15 语义）",
+      "未知场景/未知 profile 的请求不得落入默认成功路径；必须显式 NOT-EXERCISED 或拒绝"
+    ],
+    "api": [
+      "未登记来源/主体的动作请求被拒绝并留审计；public 可读不构成放权",
+      "caller 自报身份或自写 pass JSON 不作为认证与验收证据（A05/A06 语义）",
+      "输入/前置无效以退出码 1 显式拒绝，语义验证失败以退出码 2 表达，缺失环境显式 UNVERIFIED；不静默降级"
+    ],
+    "persistence": [
+      "任何已保存声明必须以独立落盘读回证明；未落盘即 Journey 失败（A15 语义）",
+      "冻结工件（Product/Design/TestContract/PlanBundle）任一漂移即拒绝派发；重冻结必须是显式登记变更，不自动续期",
+      "内存态、回显或静态清单不得替代持久化/行为证据；零有效执行（0 tests/全 skip）不得判 PASS"
+    ],
+    "permissions": [
+      "worker/诊断进程对控制平面（hooks.yaml、settings.json、受管状态、Comet 权威状态）无写权限；越权写必须失败并留痕",
+      "登记/权限缺失只阻断对应动作；不得把计划字段当作已满足，不得以提权重试替代登记",
+      "认证账号管理员可读不替代目标受众核验；readback 成功前不执行需要授权的动作（I01 registry authority.readbackStatus=UNVERIFIED）"
+    ]
+  }
+}
+```
