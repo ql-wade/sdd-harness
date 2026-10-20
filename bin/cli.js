@@ -23,6 +23,8 @@ import { captureTestInventory, evaluateGeneratedTests } from '../lib/generation-
 import { runProjectTestGate } from '../lib/project-test-gate.js';
 import { auditWorkflowRun } from '../lib/workflow-audit.js';
 import { auditDeliverables } from '../lib/deliverable-audit.js';
+import { parseContract } from '../contracts/delivery/index.js';
+import { evaluate } from '../lib/delivery/gate.js';
 import { discoverKnowledgeSources, copySourcesToRaw } from '../lib/knowledge-seed.js';
 import { getWikiHome } from '../lib/sdd-paths.js';
 
@@ -38,6 +40,17 @@ function validateId(id, label = 'id') {
     throw new Error(`Invalid ${label}: ${JSON.stringify(id)}`);
   }
   return id;
+}
+
+// 退出码契约前置（0=通过/1=无效输入/2=验证失败）：--project 必须是已存在的
+// 目录。缺失或非目录属于无效输入（缺前置），抛给各命令的 catch —— JSON 模式
+// 输出 INVALID_* 报告，退出码 1；不得冒充"执行了但验证失败"的退出码 2。
+async function requireProjectDir(project) {
+  const dir = path.resolve(project ?? '');
+  if (!await fs.pathExists(dir) || !(await fs.stat(dir)).isDirectory()) {
+    throw new Error(`project directory not found: ${dir}`);
+  }
+  return dir;
 }
 
 // ptyClaude — 流式执行 claude 子进程（wiki ingest 用）。
@@ -169,6 +182,7 @@ program
   .option('--json', 'Print a machine-readable report', false)
   .action(async (options) => {
     try {
+      await requireProjectDir(options.project);
       validateId(options.run, 'run');
       const report = await auditDeliverables({ projectDir: path.resolve(options.project), run: options.run, stage: options.stage });
       if (options.json) {
@@ -228,6 +242,7 @@ program
   .option('--json', 'Print a machine-readable report', false)
   .action(async (options) => {
     try {
+      await requireProjectDir(options.project);
       validateId(options.run, 'run');
       if (options.change) validateId(options.change, 'change');
       const report = await auditEvidence({
@@ -261,11 +276,20 @@ program
   .option('--timeout <ms>', 'Test command timeout (ms)', '120000')
   .option('--json', 'Print a machine-readable report', false)
   .action(async (options) => {
-    const report = runProjectTestGate({
-      projectDir: path.resolve(options.project),
-      evidenceDir: options.evidenceDir ? path.resolve(options.evidenceDir) : undefined,
-      timeoutMs: Number(options.timeout),
-    });
+    let report;
+    try {
+      await requireProjectDir(options.project);
+      report = runProjectTestGate({
+        projectDir: path.resolve(options.project),
+        evidenceDir: options.evidenceDir ? path.resolve(options.evidenceDir) : undefined,
+        timeoutMs: Number(options.timeout),
+      });
+    } catch (error) {
+      if (options.json) console.log(JSON.stringify({ schemaVersion: 1, pass: false, error: error.message }));
+      else console.error(chalk.red(`❌ Invalid test-gate input: ${error.message}`));
+      process.exitCode = 1;
+      return;
+    }
     if (options.json) {
       console.log(JSON.stringify({ schemaVersion: 1, pass: report.pass, command: report.command, exitCode: report.exitCode, reason: report.reason, evidence: report.evidence }));
     } else {
@@ -329,6 +353,50 @@ program
       console.log(`  pass: ${report.pass ? chalk.green('true') : chalk.red('false')}${report.reason ? chalk.gray(`  (${report.reason})`) : ''}`);
     }
     process.exitCode = report.pass ? 0 : 2;
+  });
+
+// ---- delivery-gate（SDD.Gate.v1 纯判定入口，P2_3）----
+// 只判定：evaluate(inputs, receipts, policy) 纯函数；本命令不派发、不写入、
+// 不持有 launcher secret —— receipts 必须来自受信 launcher 的准入路径。
+// 退出码契约：0 = 判定通过；1 = 输入无效（文件不可读/schema 不符/形状错误）；
+// 2 = 判定已执行但验收失败（verdict blocked）。
+program
+  .command('delivery-gate')
+  .description('Pure SDD.Gate.v1 evaluation — frozen TestContract + admitted receipts + policy; no dispatch, no writes')
+  .requiredOption('--contract <file>', 'TestContract JSON (SDD.Delivery.TestContract v1)')
+  .requiredOption('--receipts <file>', 'Admitted evidence entries JSON array (produced by the trusted-launcher admission path)')
+  .requiredOption('--policy <file>', 'Policy JSON { ref, digest }')
+  .requiredOption('--input-digest <sha256>', 'Current full input digest (sha256 hex)')
+  .requiredOption('--builder-execution <id>', 'Builder execution id')
+  .option('--json', 'Print a machine-readable report', false)
+  .action(async (options) => {
+    try {
+      const readJson = async (file) => JSON.parse(await fs.readFile(path.resolve(file), 'utf8'));
+      const parsedContract = parseContract('SDD.Delivery.TestContract', await readJson(options.contract));
+      if (!parsedContract.ok) throw new Error(`invalid TestContract: ${parsedContract.errors.join('; ')}`);
+      const receipts = await readJson(options.receipts);
+      if (!Array.isArray(receipts)) throw new Error('receipts file must contain a JSON array of admitted evidence entries');
+      const policy = await readJson(options.policy);
+      if (!/^[a-f0-9]{64}$/.test(options.inputDigest ?? '')) throw new Error('--input-digest must be a sha256 hex digest');
+      if (typeof options.builderExecution !== 'string' || options.builderExecution.length === 0) throw new Error('--builder-execution must be a non-empty execution id');
+      const result = evaluate(
+        { inputDigest: options.inputDigest, testContract: parsedContract.value, builderExecution: options.builderExecution },
+        receipts,
+        policy,
+      );
+      if (options.json) {
+        console.log(JSON.stringify({ schemaVersion: 1, verdict: result.verdict, receipt: result.receipt }));
+      } else {
+        console.log(chalk.blue('\n🚦 Delivery Gate\n'));
+        for (const reason of result.receipt.blocked) console.log(chalk.red(`❌ ${reason}`));
+        console.log(`  verdict: ${result.receipt.verdict}  required checks: ${result.receipt.requiredDenominator.valid}/${result.receipt.requiredDenominator.required}`);
+      }
+      process.exitCode = result.verdict === 'pass' ? 0 : 2;
+    } catch (error) {
+      if (options.json) console.log(JSON.stringify({ schemaVersion: 1, pass: false, error: error.message }));
+      else console.error(chalk.red(`❌ Invalid delivery-gate input: ${error.message}`));
+      process.exitCode = 1;
+    }
   });
 
 // ---- wiki（LLMWiki 集成）----

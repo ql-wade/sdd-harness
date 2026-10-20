@@ -1,7 +1,5 @@
 > 2026-10-20：三方同摘要架构共识已通过，允许分批实施；本文件描述目标，运行启用尚未验收。原92场景与所有权不变。
 
-> 冻结后补充：用户要求将 Ponytail 方法及 Hook 协作应用到架构。详见 classic-closeout-and-hook-contract.md §6–8 与主架构 §6.9；本补充尚未独立评审/重冻结，原共识票不覆盖新制品。不修改当前执行者的状态、任务勾选或旧锁；按 halt-and-replan 接纳后再实施受影响任务。
-
 ## Context
 
 现场基线 c42d3ce，OpenSpec 1.3.1，无已有活动变更。既有 ADR-0015 排除编排；历史 Foundation 设计曾评估 TeamAI workflow；本轮用户已确认 TeamAI 只分发、Comet 唯一交付主控候选、目标后默认自动推进。
@@ -21,7 +19,6 @@
 - 自评伪造证据：受管 Runner/受保护策略；本机模式明确协作信任限制。
 - 状态重复或漂移：唯一 owner、关联 ID、旧 attempt 拒绝、恢复读回。
 - 旧技能 controller 活跃：profile 切换需显式停用/接管实证，不能仅改文案。
-- Ponytail 与项目 Hook 重复注入、模式串扰或静默失败：分别管理注册、固定方法资产并逐宿主验证实际上下文；模式不作角色授权，方法缺失不能放松 Runtime 门禁。首期 full 是受管 profile 的设计默认，尚未修改插件配置。
 
 ## Breaking Changes
 

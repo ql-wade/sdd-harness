@@ -1,0 +1,107 @@
+# Comet Runner 角色隔离声明（RunnerInfra.v1 / RoleBoundary.v1）—— 仅声明，绝不自动启动。
+# 镜像一律从 infra/delivery/runner/image.lock.json 解析后注入（${VAR:?} 占位）；
+# lock 未 ready（无任何已认证 digest）时 tools/infra/runner.mjs up 必须拒绝，本文件绝不内嵌 tag/digest。
+# 六角色（role-policy.json）：controller/author/test-author/reviewer/publisher/isolator —— 独立 principal、独立卷、独立凭据作用域。
+# 只读根文件系统、drop ALL capabilities、no-new-privileges；除具名卷外不挂载任何宿主路径；无 docker.sock、无宿主 HOME。
+# 控制卷（/comet/*）只挂 comet-controller；worker 角色只挂各自 ws-* 卷（workspace-mounts.json 结构表达）。
+# 端口仅绑定 loopback；专用 internal 网络（出网策略在资源准入时显式修订，当前 UNVERIFIED）。
+# restart 策略保持 "no"：原实例监督与复制状态拒绝属 Authority.v1 启动检查，由 probe duplicate-authority 实测而非 restart 策略假设。
+
+services:
+  comet-controller:
+    image: ${COMET_RUNNER_IMAGE:?must be resolved from infra/delivery/runner/image.lock.json before up}
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - runner-internal
+    ports:
+      - "127.0.0.1:${COMET_RUNNER_PORT:-7300}:7300"
+    volumes:
+      - comet-control-state:/comet/state
+      - comet-receipts:/comet/receipts
+      - comet-issuance:/comet/issuance
+      - ws-controller:/workspace
+
+  comet-author:
+    image: ${COMET_RUNNER_IMAGE:?must be resolved from infra/delivery/runner/image.lock.json before up}
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - runner-internal
+    volumes:
+      - ws-author:/workspace
+
+  comet-test-author:
+    image: ${COMET_RUNNER_IMAGE:?must be resolved from infra/delivery/runner/image.lock.json before up}
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - runner-internal
+    volumes:
+      - ws-test-author:/workspace
+
+  comet-reviewer:
+    image: ${COMET_RUNNER_IMAGE:?must be resolved from infra/delivery/runner/image.lock.json before up}
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - runner-internal
+    volumes:
+      - ws-reviewer:/workspace
+
+  comet-publisher:
+    image: ${COMET_RUNNER_IMAGE:?must be resolved from infra/delivery/runner/image.lock.json before up}
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - runner-internal
+    volumes:
+      - ws-publisher:/workspace
+
+  comet-isolator:
+    image: ${COMET_RUNNER_IMAGE:?must be resolved from infra/delivery/runner/image.lock.json before up}
+    restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - runner-internal
+    volumes:
+      - ws-isolator:/workspace
+
+volumes:
+  comet-control-state:
+  comet-receipts:
+  comet-issuance:
+  ws-controller:
+  ws-author:
+  ws-test-author:
+  ws-reviewer:
+  ws-publisher:
+  ws-isolator:
+
+networks:
+  runner-internal:
+    internal: true

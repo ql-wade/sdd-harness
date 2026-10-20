@@ -1,0 +1,40 @@
+# check.sh per-subgate results — run: impl-dfr-20261020-r1, P2_3, worktree impl-p2-3 @ 79d0212
+# date: 2026-10-20T06:52:49Z
+
+## gate 1: agent-instructions-check.sh
+exit=0
+
+## gate 2: agent-skill-check.sh
+exit=0
+
+## gate 3: whitebox-verify GREEN fixture — as-is (fresh worktree)
+exit=1
+diagnosis: ledger references artifacts/{producer,wire,consumer,risk,service,surface}.log;
+these 6 files are gitignored (*.log, .gitignore:21), exist only as untracked copies in the main
+checkout, and are absent from any fresh worktree. Exact match to the P1_6 environment note
+(worker-reports/P1_6.json findings: 'green fixture 需要 6 个从未 git 跟踪的合成证据文件').
+
+## gate 3 proof that only the env gap blocks it: byte-copy the 6 gitignored logs from the
+## main checkout (P1_6 precedent), rerun, then remove the copies. No snapshot file is modified.
+STRUCTURE_PASS: 1 Journey(s), 1 mandatory hop(s), 1 mandatory path(s) internally consistent (local-observed; execution and authenticity require independent verification)
+with-files exit=0
+(copies removed)
+
+## gate 4: whitebox-verify NEGATIVE corpus — as-is (fresh worktree)
+- evidence reference 'E_SCOPE' is absent from evidence_catalog
+- evidence_catalog.E_CORR: unused evidence entry
+SUMMARY: 7 ok / 1 fail
+expected per P1_6 note: 'SUMMARY: 7 ok / 1 fail' (Journey case depends on file mtime inside a
+run window; fresh checkout mtimes are identical). Gate needs '8 ok / 0 fail' -> fails.
+## gate 5: multi-agent-consensus-review gate tests
+exit=0
+
+## gate 6: npm test (full repo suite)
+exit=0 (172 tests, 172 pass — see p23-npm-test-2.txt in run log)
+
+## gate 7: YAML/JSON static validation
+PASS (3 YAML, 3 JSON)
+exit=0
+
+## overall: bash scripts/check.sh as-is
+exit=1  (stops at gate 3 whitebox-verify green fixture — environment gap documented above; NOT a P2_3 regression: identical failure at base 85560df per P1_6 note, and gate 3 passes with the 6 gitignored fixture files present)

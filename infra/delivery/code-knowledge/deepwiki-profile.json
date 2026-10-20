@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "interface": "CodeWiki.v1",
+  "kind": "code-wiki-service",
+  "component": "codewiki-app",
+  "service": {
+    "kind": "selfhost-deepwiki-open",
+    "publicHostedServiceSubstitute": false,
+    "substitutePolicy": "敏感代码不得用公共托管服务作为自托管 code wiki 的替代；本字段翻转为 true 即结构性违规",
+    "upstream": {
+      "repository": null,
+      "commit": null,
+      "release": null,
+      "license": null,
+      "status": "UNSELECTED",
+      "reason": "deepwiki-open 上游仓库/精确 commit/发行物、镜像 digest、许可证与启动/API 契约在实施时核验；选定而未固定 commit 属结构性违规（UPSTREAM_COMMIT_NOT_PINNED）"
+    },
+    "imageLockRef": "infra/delivery/code-knowledge/images.lock.json",
+    "composeRef": "infra/delivery/code-knowledge/compose.yaml"
+  },
+  "provider": {
+    "credentialRef": "secret-ref:sdd-harness-pilot/codewiki-provider",
+    "sourceReadCredentialRef": "secret-ref:sdd-harness-pilot/codewiki-source-read",
+    "noTokenBorrowing": true,
+    "borrowingPolicy": "每源独立只读 Git 凭据与独立生成服务 provider 引用；资料外发范围/目的必须已有授权，不向其它服务借 token",
+    "status": "NOT_PROVISIONED"
+  },
+  "generation": {
+    "manifestRequired": true,
+    "manifestFields": [
+      "immutableId",
+      "commit",
+      "generation.status",
+      "languageCoverage"
+    ],
+    "freshness": {
+      "commitPinRequired": true,
+      "policy": "FAIL_CLOSED",
+      "maxCommitAgeDays": null,
+      "languageCoverageMin": null,
+      "status": "UNVERIFIED",
+      "reason": "试点语言/仓库规模/索引资源上限/更新策略未定；阈值未定前新鲜度一律 fail-closed（FRESHNESS_POLICY_UNSET），不得默认启动中心服务，不得报通过"
+    }
+  },
+  "access": {
+    "apiAuthRequired": true,
+    "mcpReadbackRequired": true,
+    "readbackPolicy": "policy 要求 code wiki 时必须真实 API/MCP 独立读回；私有认证/分页/版本暴露能力必须实证后才能 VERIFIED",
+    "status": "UNVERIFIED"
+  }
+}

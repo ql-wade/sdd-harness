@@ -1,0 +1,25 @@
+{
+  "interface": "ProjectRoot.v1",
+  "component": "llmwiki",
+  "recordedAt": "2026-10-20",
+  "projectId": "sdd-harness-pilot",
+  "repoId": "rpamis/sdd-harness",
+  "canonicalWiki": {
+    "root": "llmwiki",
+    "resolution": "git rev-parse --git-common-dir -> main working tree -> <main-tree>/llmwiki",
+    "rule": "exactly one wiki root per project; every CLI / MCP host / worktree must resolve to it"
+  },
+  "worktreeMapping": {
+    "strategy": "git-worktree-list",
+    "rule": "every linked worktree resolves to the SAME canonical main-tree wiki root; a per-worktree llmwiki/ copy is never a wiki root and paths under it are uncontained by definition"
+  },
+  "denials": {
+    "traversal": true,
+    "symlinkEscape": true,
+    "foreignWikiRoot": true,
+    "projectIdMismatch": true,
+    "uncontainedPaths": true
+  },
+  "hardInvariants": "containment denials (traversal, symlink escape, uncontained paths) are enforced unconditionally by the resolver; the declarative flags above are records of intent — disabling a flag in this file can never weaken the resolver, and validate rejects any such mutation",
+  "identityLabels": "structured receipts carry stable labels (<main-working-tree>/<root>) and booleans only; raw host paths are redacted per the house displayPath rule"
+}

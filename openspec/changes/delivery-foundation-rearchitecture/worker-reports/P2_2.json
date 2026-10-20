@@ -1,0 +1,76 @@
+{
+  "task": "P2_2",
+  "task_title": "原任务 2.2 — 实现 EvidenceEnvelope/来源准入和 GateReceipt；先 RED 拒绝自签 pass、同执行身份、旧 policy/环境/输入摘要、缺观察能力，再 GREEN（A05–A06/A18–A19/B03/B06–B07）",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/p2-2-evidence-gate",
+  "status": "DONE",
+  "tests_commit": "e98193b",
+  "implementation_commit": "336d17b",
+  "red_cases": [
+    {
+      "case": "pre-implementation RED (all three suites against absent modules)",
+      "actually_failed": true,
+      "evidence": "node --test test/delivery-evidence.test.js test/delivery-gate.test.js test/delivery-cases/2_2.mjs exit=1, 3/3 files failed, 0 pass; all fail with ERR_MODULE_NOT_FOUND for lib/delivery/evidence.js and lib/delivery/gate.js (none existed). Evidence: worker-reports/P2_2/evidence/red-node-test.txt"
+    },
+    {
+      "case": "2.2.a/2.2.c hole in the pre-change system: the only existing evidence check (lib/evidence-audit.js auditEvidence) admits fully self-written evidence",
+      "actually_failed": true,
+      "evidence": "one hand wrote progress.md claims, the 'independent' review-notes.md and the test output file; auditEvidence returned pass=true, issues=[], with no notion of evidence origin or execution identity anywhere in its API. This is the A05/A06 gap the new admission closes. Evidence: worker-reports/P2_2/evidence/red-current-self-written-evidence.txt"
+    }
+  ],
+  "green_summary": {
+    "2.2.a_evidence_admission_and_identity_binding": "lib/delivery/evidence.js. createLaunchAuthority(secret) is the local trusted launcher (Runner.Dispatch.v1 equivalent): issueDispatch binds runnerId/run/gate/inputDigest/policyDigest/attempt/epoch/role/execution under an HMAC-SHA256 integrity digest; the secret stays in the closure and never appears on any exported surface. admitEvidence consumes the P2_1 EvidenceEnvelope schema via parseContract and enforces, in deterministic order: schema validity with explicit version boundary (B07: legacy 0 / future 2 refused, never field-fabricated); registered source (no authority-issued dispatch => UNREGISTERED_SOURCE, A05); launcher integrity (any field mutation or hand-built record => FORGED_DISPATCH); identity (builder execution cannot sign acceptance => IDENTITY_CONFLICT, A06); envelope pinned to the dispatch (execution/origin/candidateDigest re-declarations refused, so self-declared role labels and env strings grant nothing); currency (stale policy digest, stale candidate input digest, foreign environment string, expired envelope all refused); duplicate issuance (one execution identity signs exactly one envelope, replay refused); real observation data (pass/fail/red with zero valid executions or contradictory counts => NO_OBSERVATION, A18 — while a truthful unverified envelope carrying a real probe artifact is admitted so the gate can block). Refusals return a complete audit record (origin, execution, caseId, envelopeDigest, dispatchExecution). Evidence class ('independent-acceptance' | 'authoring-self-check') is derived from the dispatch role, never from the envelope.",
+    "2.2.b_pure_gate_evaluation_and_rejection_reasons": "lib/delivery/gate.js. evaluate(inputs, receipts, policy) is the SDD.Gate.v1 pure judgment: it returns only { verdict, receipt }, the receipt is validated against contracts/delivery GateReceipt v1 before returning (fail-closed internal invariant), and the module imports no fs/child_process channel at all — no dispatch, no current-stage writes, byte-identical receipts for identical inputs (all proven by test). Structural defense re-verifies every admission entry: digest-vs-envelope (TAMPERED_RECEIPT), identity-vs-binding (TAMPERED_RECEIPT), policy rotation (STALE_POLICY), input rotation (STALE_INPUT), and receipt execution == builder execution (IDENTITY_CONFLICT, A06 — admission cannot see this, the gate can). Per required check from the frozen TestContract: exact capability match only (B06: 'service-log' and 'dom' receipts cannot close a required 'console' check), independent-acceptance class only (B03: authoring self-check produces AUTHORING_SELF_CHECK_ONLY and stays visible in sourceAttestation), and result pass with real valid executions (A18: MISSING_OBSERVATION for absent receipts, UNVERIFIED_CAPABILITY with the observed count for unverified/zero-execution receipts). Malformed TestContract/policy/inputs throw INVALID_* — the gate refuses to judge rather than guessing. An empty judged set is represented honestly by EMPTY_EVIDENCE_SET_DIGEST (sha256 of '[]') since the schema requires a non-empty evidence array; sourceAttestation is 'none/none' in that case.",
+    "2.2.c_protected_source_boundary_local_half": "Expressed with real permission negatives, not file-lock theater: (1) fixtures are structural only — a hand-written envelope shaped like a registered-runner pass is UNREGISTERED_SOURCE and a hand-shaped dispatch is FORGED_DISPATCH; (2) a real spawnSync child process receives the public binding fields with a scrubbed environment (no launcher secret to inherit — children inherit no identity), forges a well-shaped verifier dispatch plus a self-signed pass envelope, and parent-side admission refuses it FORGED_DISPATCH; (3) the authority object exposes only issueDispatch/verifyDispatch and no serialization surface contains the secret (A19 local half: key isolation by construction). The real protected-Runner registration/publication-key isolation is explicitly NOT claimed here — see unverified."
+  },
+  "commands": [
+    {
+      "cmd": "node --test test/delivery-evidence.test.js test/delivery-gate.test.js test/delivery-cases/2_2.mjs (RED)",
+      "exit_code": 1,
+      "summary": "3 files / 3 tests failed, 0 pass — ERR_MODULE_NOT_FOUND for lib/delivery/evidence.js and lib/delivery/gate.js"
+    },
+    {
+      "cmd": "node --test test/delivery-evidence.test.js test/delivery-gate.test.js test/delivery-cases/2_2.mjs (GREEN)",
+      "exit_code": 0,
+      "summary": "36 tests, 36 pass, 0 fail, 0 skipped (17 evidence admission + 11 gate + 8 task-level cases; the case module spawns real node --test child processes)"
+    },
+    {
+      "cmd": "npm test (full repo suite, worktree)",
+      "exit_code": 0,
+      "summary": "135 tests, 135 pass, 0 fail, 0 skipped — 107 baseline + 28 new (case module is outside the test/*.test.js glob by repo pattern and runs via the explicit command above)"
+    }
+  ],
+  "test_fixes_between_red_and_green": [
+    {
+      "finding": "five RED-phase test corrections were needed before GREEN; two of them were the new implementation correctly catching bad fixtures",
+      "details": "(1) STALE_CANDIDATE unit test changed only the dispatch digest while the envelope still carried the current digest, so the pinning check (CANDIDATE_BINDING_MISMATCH) fired before the currency check — test now builds envelope and dispatch consistent with each other but both lagging the current input; (2) the two digest-related refusals were asserted against the digest label ('policy/managed-pilot@r0') although a one-way digest can only surface as its hex value — assertions now match the bound hex digest; (3) the case module's V_A05 helper (admitOne) silently issued a launcher dispatch, which would have made the self-signed envelope admissible — the test now calls admitEvidence directly with no dispatch, the actual self-signing situation; (4) the V_B06 fixture pointed node --test at a nonexistent 'log' target, producing a zero-observation run whose pass claim admission correctly refused (NO_OBSERVATION) — the fixture now uses a real passing run and binds it to the service-log check; (5) the V_A18 crash-case expectation hardcoded '0 valid execution' while the real crashed run legitimately shows pass+fail=1 executed test per the P2_1 TAP semantics — the assertion now derives the expected count from the observed envelope instead of a hardcoded number, and the V_A05 audit-capture line was moved next to the direct admission call. None of these weaken an oracle; (3) and (4) are positive evidence that admission rejects fabricated observation data."
+    }
+  ],
+  "unverified": [
+    {
+      "item": "A19 real protected-Runner half: trusted-Runner registration and release/publication-key isolation proven by real permission negatives (dev identity denied release secrets / control ledger by platform permissions, with audit)",
+      "reason": "no real Runner or protected CI exists in this local environment; per the task boundary and delivery-architecture.md section 4, same-OS-account writes cannot be claimed as tamper resistance — the local module deliberately proves only the forgeability half (fixtures and secret-less workers are refused) and the secret-in-closure isolation. The real-permission negative is owed by the managed Runner side (Comet runtime integration P2_4 and the verify runner P3_1 on the managed-pilot profile); this task hands them the admission API and the refusal taxonomy (UNREGISTERED_SOURCE / FORGED_DISPATCH / IDENTITY_CONFLICT / audit records) to bind against."
+    },
+    {
+      "item": "V_A05/V_A06/V_A18 CLI journeys (node tools/verify/delivery-journey.mjs --scenario A05/A06/A18) with 'actual execution count > 0' recorded against the managed-pilot profile",
+      "reason": "the verify CLI is implementedBy P3_1 (same unverified item as P2_1); P2_2 owns the lib layer and case module only. Locally provable equivalents were executed: the case module spawns real node --test processes, reads observed TAP counts into envelopes (never declared numbers), and drives the real admission + gate path; all 8 task-level cases green."
+    }
+  ],
+  "files_changed": [
+    "lib/delivery/evidence.js",
+    "lib/delivery/gate.js",
+    "test/delivery-evidence.test.js",
+    "test/delivery-gate.test.js",
+    "test/delivery-cases/2_2.mjs",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2/evidence/red-node-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2/evidence/red-current-self-written-evidence.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2/evidence/green-node-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2/evidence/green-npm-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2.json"
+  ],
+  "blockers_or_questions": [
+    "GateReceipt v1 requires a non-empty evidence array, so a gate receipt over an empty judged set cannot literally list zero digests; evaluate uses EMPTY_EVIDENCE_SET_DIGEST (sha256 of the canonical '[]') as the honest digest of the empty set and attests origin/execution 'none'. If a later task prefers a nullable evidence field, that is a schema change on top of contracts/delivery (P2_1 owner), not something P2_2 should do unilaterally.",
+    "The launch-authority HMAC secret is the local stand-in for the protected Runner's dispatch-signing identity. Real key custody (protected CI/service side only, per architecture) and the second Verifier-instance identity independence across machines remain Runner-side obligations; the module's API is shaped so the Runner can substitute a real signature without changing admission semantics.",
+    "test/delivery-cases/2_2.mjs is deliberately outside the npm test glob (repo pattern: test/*.test.js only, same as 2_1.mjs); reviewers should run the explicit three-file command recorded above."
+  ]
+}

@@ -6,6 +6,14 @@
 
 const SHA256_RE = /^[a-f0-9]{64}$/;
 
+// Same semantics as tools/infra/secret-refs.mjs ABSOLUTE_PATH_FORBIDDEN:
+// committed contract payloads carry repo-relative references, never host paths.
+const HOST_PATH_PATTERN = /(^|[\s"'=(:/])\/(Users|home|root|private|var|usr|etc|opt|tmp)\//;
+// Floating/unpinned versions: exact floating tags, pkg@latest forms, semver
+// ranges (^ ~ > < =) and wildcard minors (1.x). Pinned releases pass untouched.
+const FLOATING_VERSION_EXACT = /^(latest|head|\*|x)$/i;
+const UNPINNED_VERSION_PATTERN = /@latest|@head|[~^><=]|\d+\.(x|\*)$/i;
+
 function validateValue(errors, label, value, rule) {
   switch (rule.type) {
     case 'string':
@@ -24,6 +32,15 @@ function validateValue(errors, label, value, rule) {
       break;
     case 'iso8601':
       if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) errors.push(`${label}: must be an ISO-8601 timestamp`);
+      break;
+    case 'path':
+      if (typeof value !== 'string' || value.length === 0) errors.push(`${label}: must be a non-empty repo-relative path`);
+      else if (HOST_PATH_PATTERN.test(value)) errors.push(`${label}: machine absolute paths are forbidden (ABSOLUTE_PATH_FORBIDDEN)`);
+      break;
+    case 'pinnedVersion':
+      if (typeof value !== 'string' || value.length === 0) errors.push(`${label}: must be a non-empty version`);
+      else if (HOST_PATH_PATTERN.test(value)) errors.push(`${label}: machine absolute paths are forbidden (ABSOLUTE_PATH_FORBIDDEN)`);
+      else if (FLOATING_VERSION_EXACT.test(value) || UNPINNED_VERSION_PATTERN.test(value)) errors.push(`${label}: floating versions are forbidden (latest/HEAD/unpinned) — pin an exact release`);
       break;
     case 'enum':
       if (!rule.values.includes(value)) errors.push(`${label}: must be one of ${rule.values.join('|')}`);
@@ -77,7 +94,10 @@ function validateFields(errors, prefix, payload, fields) {
   }
 }
 
-export function defineContract({ name, version, description, fields }) {
+// unknownFields: 'allow' (default) keeps the additive extra-field evolution
+// path for contracts that opt out of strictness; 'reject' gives a contract a
+// closed top-level field set (fail-closed) once its surface is fully modeled.
+export function defineContract({ name, version, description, fields, unknownFields = 'allow' }) {
   return {
     name,
     version,
@@ -98,6 +118,13 @@ export function defineContract({ name, version, description, fields }) {
         errors.push(`schemaVersion: ${declared} is older than supported v${version} — no compatibility mapping declared, explicitly rejected`);
       }
       validateFields(errors, '', payload, fields);
+      if (unknownFields === 'reject') {
+        for (const key of Object.keys(payload)) {
+          if (key !== 'schemaVersion' && !fields[key]) {
+            errors.push(`${key}: unknown field — ${name} v${version} has a closed field set`);
+          }
+        }
+      }
       return errors.length > 0 ? { ok: false, errors } : { ok: true, value: payload };
     },
   };

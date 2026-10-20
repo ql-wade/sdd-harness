@@ -1,0 +1,41 @@
+# caller compatibility sweep — every reference to bin/cli or the sdd entry across the repo
+# date: 2026-10-20T06:53:52Z  @ 79d0212
+
+package-lock.json:17:        "sdd": "bin/cli.js"
+README.md:51:node bin/cli.js test-gate --project . --evidence-dir .sdd/evidence   # 跑测试 + sha256 证据
+README.md:52:node bin/cli.js probe --project . --evidence evidence.json           # probe 证据校验
+README.md:53:node bin/cli.js generation-capture --project . --out before.json     # 测试清单（生成前）
+README.md:54:node bin/cli.js generation-evaluate --project . --before before.json # 测试编写完整性
+README.md:55:node bin/cli.js deliverable-audit --project . --run <id>             # 交付物审计
+README.md:56:node bin/cli.js evidence-audit --project . --change <id>             # 证据审计
+README.md:57:node bin/cli.js workflow-audit --project . --run <id>                # 运行状态审计
+README.md:58:node bin/cli.js wiki init                                            # LLMWiki 骨架 + raw/ 复制
+README.md:59:node bin/cli.js doctor                                               # 环境自检
+package.json:7:    "sdd": "bin/cli.js"
+AGENTS.md:24:- `bin/cli.js` + `lib/` + `contracts/`：验证工具薄 CLI 与 gate/audit 机械证据库
+test/version-consistency.test.js:10:// package.json / package-lock.json（顶层 + root 条目）/ bin/cli.js VERSION /
+test/version-consistency.test.js:28:  assert.match(cli, new RegExp(`const VERSION = '${version.replace(/\./g, '\\.')}'`), 'bin/cli.js VERSION drifts from package.json');
+docs/agent/skill-architecture.md:70:| `node bin/cli.js test-gate` | 运行项目测试并持久化证据（sha256 绑定） | 完成/合并前 |
+docs/agent/skill-architecture.md:71:| `node bin/cli.js probe` | 校验浏览器/运行时 probe 证据（debug 泄漏、布局越界、状态迁移） | UI 验收 |
+docs/agent/skill-architecture.md:72:| `node bin/cli.js generation-capture / generation-evaluate` | 测试用例编写完整性（前后清单比对） | TDD 生成后 |
+docs/agent/skill-architecture.md:73:| `node bin/cli.js deliverable-audit / evidence-audit / workflow-audit` | 交付物 / 证据 / 运行状态审计 | 高风险变更、归档前 |
+docs/architecture/delivery-architecture.md:309:| bin/cli.js、lib/ gate/audit | 保留旧 CLI；新接口增量引入，复用验证器不扩大证明范围 |
+docs/architecture/scaffold-architecture.md:73:├── bin/cli.js                       # 薄 CLI：init/bootstrap + 验证工具入口
+docs/architecture/scaffold-architecture.md:190:| bin/cli.js 的 stage 编排（run/fill + 9-stage 安装分支） | 删除；doctor 的依赖检测逻辑移植进 bootstrap.sh |
+docs/architecture/scaffold-architecture.md:191:| bin/cli.js 的验证工具入口 | **保留**，重定位为 gate/audit 的薄 CLI 入口 |
+docs/architecture/minicraft-harness-probe-summary.md:326:node bin/cli.js probe \
+docs/architecture/minicraft-harness-probe-summary.md:333:node bin/cli.js workflow-audit \
+docs/architecture/minicraft-harness-probe-summary.md:339:node bin/cli.js evidence-audit \
+docs/architecture/llmwiki-mcp-fix-plan.md:28:`lib/llmwiki-sediment.js::sedimentStage()` 在 `sdd run` stage 推进后自动触发（`bin/cli.js:1335`），用 `fs-extra` 直接写 glossary / requirements / AC / engineering notes / test reports。**同类问题**，v1 方案漏了。
+docs/architecture/llmwiki-mcp-fix-plan.md:42:**文件**：`bin/cli.js` Step 5（~line 350-394）+ `sdd wiki init`（~line 1430）+ `lib/knowledge-seed.js`
+docs/architecture/llmwiki-mcp-fix-plan.md:55:**文件**：`lib/llmwiki-sediment.js` + `bin/cli.js:1335`（触发点）
+docs/architecture/llmwiki-mcp-fix-plan.md:72:**文件**：`bin/cli.js` init 命令末尾
+docs/architecture/adr/0015-scaffold-repositioning.md:22:- bin/cli.js 从 ~2400 行收缩到验证工具薄入口；stage 编排（run/fill/check/gate-advance）删除。
+
+# disposition:
+# - package.json / package-lock.json: bin path 'sdd' -> bin/cli.js unchanged; entry preserved
+# - test/version-consistency.test.js: VERSION const format preserved ('0.2.4'); passes
+# - test/*-command.test.js (7 CLI command suites): all pass in npm test 172/172
+# - README.md / AGENTS.md / docs/**: documented commands unchanged (no command removed or renamed;
+#   delivery-gate is additive); no doc edits needed
+# - hooks/, tools/, scripts/: no references to bin/cli found in the sweep above
