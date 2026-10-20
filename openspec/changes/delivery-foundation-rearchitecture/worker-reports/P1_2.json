@@ -5,7 +5,11 @@
   "worktree": "/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p1-2",
   "branch": "impl/p1-2-foundation-export (base d9a4532)",
   "final_status": "DONE",
-  "acceptance_ids": ["F02", "F04", "B09"],
+  "acceptance_ids": [
+    "F02",
+    "F04",
+    "B09"
+  ],
   "commits": {
     "tests": "6529a75",
     "implementation": "cf9aee3",
@@ -34,16 +38,40 @@
     }
   ],
   "green_summary": {
-    "1.2.a_exporter_foundation_lock": "tools/foundation-export.mjs builds the FoundationLock from the unique sources only: .agents/skills/ (TRACKED file set per skill — matches the P1_6 method-profile-manifest digest basis 10/10 and git-history resolution), hooks.yaml (policy digest), .mcp.json registrations (per-entry digests, pins enforced), integrations/comet/upstream.lock.json + package.json (toolchain), method-profile-manifest.json (profile). Emission gates refuse machine absolute paths, floating versions (@latest/HEAD/branch/unpinned), unpinned npx MCP registrations, and empty skills; output validates against contracts/delivery FoundationLock v1 (parseContract ok). Release view artifacts committed under foundation/ (lock + release/hooks/hooks.yaml + release/mcp/* + release/skills/MANIFEST.json; full skill bodies via --skills-copy on demand). verify detects dual-write drift in BOTH directions (source edit → lock drift; hand-edited release view → release drift); repeated export is byte-identical (deterministic canonical JSON, no timestamps, no machine state); repo-level drift gate test pins the committed artifacts to live sources."
-  , "1.2.b_composition_idempotency_managed_handover": "tools/adapters/claude-code.sh now does managed-block handover: any settings entry whose command references hooks/{pre-tool-gate,session-context,stop-reminder}.sh is treated as managed and REPLACED on re-init (legacy formats leave no residue, exactly one Guard), while user-owned entries are never touched; SDD_TARGET_ROOT isolates settings.json, .compiled.env and skill symlinks into a temp config (fixtures under $TMPDIR; repo live settings byte-compared untouched in tests); --uninstall removes managed entries + compiled env + generated skill symlinks only, is idempotent, and re-init restores; target mode compiles the target's own hooks.yaml so script behavior and settings matcher derive from the same policy source. tools/bootstrap.sh gains target mode (adapter + exporter pull composed; repeat pull byte-identical; skips repo-root actions), a production foundation-verify step, and --uninstall passthrough. Tests cover reverse order A (user config first), reverse order B (install → user edit → re-pulls), ×2/×3 repeat pulls (no duplicate Guard, user additions kept), upgrade over a stale-format managed entry, uninstall/re-init round trip, and matcher-vs-gate-script co-testing (new deny policy matcher 'Task' must appear in the registered matcher; gate script denies the fixture blocklist pattern via the fixture's compiled env; staged matcher drift is repaired by re-bootstrap)."
-  , "1.2.c_old_run_pinning_and_fallback": "foundation-export check-run resolves an old run's pinned baseline from the frozen release commit via git (byte-exact, binary-safe): all 10 skills + hooks.yaml resolve at the committed lock's release commit (F04 keep-old-baseline). Asset drift + active run → silent-rebaseline-blocked (non-zero) with an explicit migration path ('--migrate --owner <owner> after review, or close and start a new run'); drift + closed run → informational only. Unresolvable baseline (bogus commit) → baseline-unresolvable, explicit block, never silently swapped. B09: --acquire by a different owner on an active run → second-writer-refused with run state unchanged; owner re-claim allowed. --migrate requires the run owner AND a resolvable old baseline; on success the old commit+exportDigest are preserved in run-state.json migrations[] and the run re-pins explicitly. CLI transcript with all flows: worker-reports/P1_2/evidence/green-3-cli-flows.txt"
+    "1.2.a_exporter_foundation_lock": "tools/foundation-export.mjs builds the FoundationLock from the unique sources only: .agents/skills/ (TRACKED file set per skill — matches the P1_6 method-profile-manifest digest basis 10/10 and git-history resolution), hooks.yaml (policy digest), .mcp.json registrations (per-entry digests, pins enforced), integrations/comet/upstream.lock.json + package.json (toolchain), method-profile-manifest.json (profile). Emission gates refuse machine absolute paths, floating versions (@latest/HEAD/branch/unpinned), unpinned npx MCP registrations, and empty skills; output validates against contracts/delivery FoundationLock v1 (parseContract ok). Release view artifacts committed under foundation/ (lock + release/hooks/hooks.yaml + release/mcp/* + release/skills/MANIFEST.json; full skill bodies via --skills-copy on demand). verify detects dual-write drift in BOTH directions (source edit → lock drift; hand-edited release view → release drift); repeated export is byte-identical (deterministic canonical JSON, no timestamps, no machine state); repo-level drift gate test pins the committed artifacts to live sources.",
+    "1.2.b_composition_idempotency_managed_handover": "tools/adapters/claude-code.sh now does managed-block handover: any settings entry whose command references hooks/{pre-tool-gate,session-context,stop-reminder}.sh is treated as managed and REPLACED on re-init (legacy formats leave no residue, exactly one Guard), while user-owned entries are never touched; SDD_TARGET_ROOT isolates settings.json, .compiled.env and skill symlinks into a temp config (fixtures under $TMPDIR; repo live settings byte-compared untouched in tests); --uninstall removes managed entries + compiled env + generated skill symlinks only, is idempotent, and re-init restores; target mode compiles the target's own hooks.yaml so script behavior and settings matcher derive from the same policy source. tools/bootstrap.sh gains target mode (adapter + exporter pull composed; repeat pull byte-identical; skips repo-root actions), a production foundation-verify step, and --uninstall passthrough. Tests cover reverse order A (user config first), reverse order B (install → user edit → re-pulls), ×2/×3 repeat pulls (no duplicate Guard, user additions kept), upgrade over a stale-format managed entry, uninstall/re-init round trip, and matcher-vs-gate-script co-testing (new deny policy matcher 'Task' must appear in the registered matcher; gate script denies the fixture blocklist pattern via the fixture's compiled env; staged matcher drift is repaired by re-bootstrap).",
+    "1.2.c_old_run_pinning_and_fallback": "foundation-export check-run resolves an old run's pinned baseline from the frozen release commit via git (byte-exact, binary-safe): all 10 skills + hooks.yaml resolve at the committed lock's release commit (F04 keep-old-baseline). Asset drift + active run → silent-rebaseline-blocked (non-zero) with an explicit migration path ('--migrate --owner <owner> after review, or close and start a new run'); drift + closed run → informational only. Unresolvable baseline (bogus commit) → baseline-unresolvable, explicit block, never silently swapped. B09: --acquire by a different owner on an active run → second-writer-refused with run state unchanged; owner re-claim allowed. --migrate requires the run owner AND a resolvable old baseline; on success the old commit+exportDigest are preserved in run-state.json migrations[] and the run re-pins explicitly. CLI transcript with all flows: worker-reports/P1_2/evidence/green-3-cli-flows.txt"
   },
   "commands": [
-    { "cmd": "node --test test/foundation-distribution.test.js test/delivery-cases/1_2.mjs", "exit_code": 1, "phase": "RED (pre-implementation)", "evidence": "worker-reports/P1_2/evidence/red-1-node-test.txt" },
-    { "cmd": "node --test test/foundation-distribution.test.js test/delivery-cases/1_2.mjs", "exit_code": 0, "phase": "GREEN (23/23)", "evidence": "worker-reports/P1_2/evidence/green-1-node-test.txt" },
-    { "cmd": "npm test", "exit_code": 0, "phase": "GREEN full suite 125/125 (baseline 107 + 18 new; 0 fail, 0 skip)", "evidence": "worker-reports/P1_2/evidence/green-2-npm-test.txt" },
-    { "cmd": "node tools/foundation-export.mjs export --root . --out foundation && node tools/foundation-export.mjs verify --root . --lock foundation/foundation-lock.json", "exit_code": 0, "phase": "committed artifacts generated + verified" },
-    { "cmd": "node --test ... && npm test (rerun at implementation commit cf9aee3)", "exit_code": 0, "phase": "post-commit rerun: targeted 23/23, npm 125/125", "evidence": "worker-reports/P1_2/evidence/green-4-postcommit-rerun.txt" }
+    {
+      "cmd": "node --test test/foundation-distribution.test.js test/delivery-cases/1_2.mjs",
+      "exit_code": 1,
+      "phase": "RED (pre-implementation)",
+      "evidence": "worker-reports/P1_2/evidence/red-1-node-test.txt"
+    },
+    {
+      "cmd": "node --test test/foundation-distribution.test.js test/delivery-cases/1_2.mjs",
+      "exit_code": 0,
+      "phase": "GREEN (23/23)",
+      "evidence": "worker-reports/P1_2/evidence/green-1-node-test.txt"
+    },
+    {
+      "cmd": "npm test",
+      "exit_code": 0,
+      "phase": "GREEN full suite 125/125 (baseline 107 + 18 new; 0 fail, 0 skip)",
+      "evidence": "worker-reports/P1_2/evidence/green-2-npm-test.txt"
+    },
+    {
+      "cmd": "node tools/foundation-export.mjs export --root . --out foundation && node tools/foundation-export.mjs verify --root . --lock foundation/foundation-lock.json",
+      "exit_code": 0,
+      "phase": "committed artifacts generated + verified"
+    },
+    {
+      "cmd": "node --test ... && npm test (rerun at implementation commit cf9aee3)",
+      "exit_code": 0,
+      "phase": "post-commit rerun: targeted 23/23, npm 125/125",
+      "evidence": "worker-reports/P1_2/evidence/green-4-postcommit-rerun.txt"
+    }
   ],
   "files_changed": [
     "tools/foundation-export.mjs (new)",
@@ -75,5 +103,55 @@
     "Layer limitation (pre-existing, noted not fixed): hooks/pre-tool-gate.sh only evaluates Write|Edit|MultiEdit|NotebookEdit and Bash tool classes; hooks.yaml could declare deny policies for other matchers (e.g. Task) and the adapter would register them in settings, but the gate script would not evaluate those tool classes. The 1.2.b co-test asserts registration coverage plus script behavior within the script's supported classes.",
     "F02 semantics note: '不重复 Guard' is enforced by script-reference-based managed-block replacement (survives command-format drift across versions), not by exact-command dedup — the RED probe showed exact-command dedup leaves duplicate Guards on upgrade."
   ],
-  "blockers_or_questions": []
+  "blockers_or_questions": [],
+  "supplement_delta": {
+    "amendment": "ponytail-supplement-20261020 (user decision A; plan re-frozen)",
+    "contract": "V_P1_2_PLUGIN_REGISTRATION_DIVISION (§7.2 注册分工 / §7.3 固定事件集)",
+    "red": {
+      "actually_failed": true,
+      "evidence": "worker-reports/P1_2/evidence/supplement-red-registration-division.txt",
+      "detail": "9 new cases fail against pre-fix adapter/exporter (plugin entries absorbed by handover/uninstall; duplicate registrations composed silently; fixed-event-set YAML append silently no-ops; plugin-sourced hooks.yaml policies silently dropped and freely frozen) — 23 pre-existing cases still pass"
+    },
+    "green": {
+      "evidence": "worker-reports/P1_2/evidence/supplement-green-registration-division.txt",
+      "detail": "same suite 32/32 pass: plugin lifecycle hooks source-marked (CLAUDE_PLUGIN_ROOT/.claude/plugins/) and preserved through install/upgrade/uninstall; plugin entry wrapping the managed command refused with conflict list, settings untouched; hooks.yaml events outside PreToolUse/SessionStart/Stop refused explicitly; plugin-sourced hooks.yaml scripts refused at adapter compile AND exporter freeze"
+    },
+    "files": [
+      "tools/adapters/claude-code.sh",
+      "tools/foundation-export.mjs",
+      "test/foundation-distribution.test.js",
+      "test/delivery-cases/1_2.mjs"
+    ],
+    "scope_note": "hooks.yaml untouched (source of record documents six neutral events; the FIXED-SET boundary is enforced by the CC adapter compiler and declared in its head comment + test assertions per supplement item 2)",
+    "re_freeze": {
+      "trigger": "P1_6 Ponytail delta (impl/p1-6-method-profile d05d105) changed method-profile-manifest.json — foundation/ went stale by design (DAG: P1_2 depends_on P1_6); re-freeze is the P1_2 owner's duty",
+      "merges": [
+        "master @ 856f411 (a97943d merge)",
+        "impl/p1-6-method-profile @ d05d105 (6ec46aa merge)"
+      ],
+      "command": "node tools/foundation-export.mjs export --root . --out foundation; node tools/foundation-export.mjs verify --root . --lock foundation/foundation-lock.json",
+      "before": {
+        "verify_exit": 1,
+        "drifts": [
+          "method-profile digest ac5a0e7d4342 -> 2f55b5a42efb",
+          "release/skills/MANIFEST.json drifted"
+        ]
+      },
+      "after": {
+        "verify_exit": 0,
+        "release_commit": "6ec46aab61c2",
+        "export_digest": "dc3a352a1382f267",
+        "skills_frozen": 11,
+        "ponytail_included": true,
+        "method_profile_digest": "2f55b5a42efb5800",
+        "method_profile": "comet-classic"
+      },
+      "registration_division_on_refrozen_view": "combined suite (foundation-distribution + delivery-case 1_2) 32/32 PASS on the re-frozen tree, including the repo-level committed-artifacts drift test and all 9 V_P1_2_PLUGIN_REGISTRATION_DIVISION cases; release/hooks/hooks.yaml remains a byte-copy of the plugin-script-free source",
+      "regression": {
+        "combined": "32/32 exit 0",
+        "npm_test": "225/225 exit 0 (merged tree, all worker suites)"
+      },
+      "evidence": "worker-reports/P1_2/evidence/supplement-refreeze-foundation.txt"
+    }
+  }
 }

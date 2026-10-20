@@ -7,8 +7,21 @@
 #   3. 建立 .claude/skills/<name> → .agents/skills/<name> 软链（CC 原生技能注入）
 #
 # 幂等：重复运行安全。受管块边界：凡 command 引用 hooks/{pre-tool-gate,
-# session-context,stop-reminder}.sh 的条目都是本 adapter 的受管条目——升级时
-# 整体替换（旧格式不残留、不产生第二个 Guard），用户自有条目永不动。
+# session-context,stop-reminder}.sh 且不指向插件基础设施的条目都是本 adapter
+# 的受管条目——升级时整体替换（旧格式不残留、不产生第二个 Guard），用户自有
+# 条目永不动。
+#
+# 注册分工与固定事件集（V_P1_2_PLUGIN_REGISTRATION_DIVISION，契约 §7.2/§7.3）：
+#   - 插件生命周期 Hook（Ponytail 入口管理的 SessionStart/SubagentStart/
+#     UserPromptSubmit 等）由插件入口注册；来源标记 = command 引用插件基础设施
+#     （CLAUDE_PLUGIN_ROOT / .claude/plugins/）。插件条目不参与项目受管块的
+#     移交与去重，安装/升级/卸载都不移除；项目正确性不依赖插件与项目 Hook 的
+#     执行先后。
+#   - 本 adapter 固定生成 PreToolUse、SessionStart(startup|resume)、Stop 三个
+#     事件——不是任意事件/脚本的通用编译器。hooks.yaml 出现固定事件集之外的
+#     事件（如 SubagentStart/UserPromptSubmit/PostToolUse）或携带插件来源脚本
+#     时显式拒绝并列出冲突；新增事件必须修改受管生成逻辑并验证 settings
+#     matcher，YAML 追加不生效。
 #
 # 隔离测试：SDD_TARGET_ROOT=<dir> 时，settings.json / .compiled.env / skills
 # 软链都落到该目录（临时配置），源仓库的活配置不被触碰（P1_2/F02）。
@@ -96,6 +109,17 @@ import json, os, re, sys
 
 settings_path = sys.argv[1]
 MANAGED_SCRIPT_RE = re.compile(r"hooks/(pre-tool-gate|session-context|stop-reminder)\.sh")
+PLUGIN_SOURCE_RE = re.compile(r"CLAUDE_PLUGIN_ROOT|\.claude/plugins/")
+
+# 来源分类（§7.2）：插件条目（命令引用插件基础设施）与用户条目一样不可移除；
+# 只有本项目受管脚本条目参与卸载。
+def hook_source(hook):
+    text = str(hook.get("command", ""))
+    if PLUGIN_SOURCE_RE.search(text):
+        return "plugin"
+    if MANAGED_SCRIPT_RE.search(text):
+        return "managed"
+    return "user"
 
 if os.path.exists(settings_path):
     try:
@@ -104,13 +128,18 @@ if os.path.exists(settings_path):
         print(f"❌ uninstall: settings.json unreadable, refusing to edit ({err})", file=sys.stderr)
         raise SystemExit(1)
     hooks = settings.get("hooks", {})
+    removed = 0
     for group in list(hooks.keys()):
         entries = hooks.get(group) or []
         kept = []
         for entry in entries:
             entry_hooks = entry.get("hooks", []) if isinstance(entry, dict) else []
-            is_managed = any(MANAGED_SCRIPT_RE.search(str(h.get("command", ""))) for h in entry_hooks if isinstance(h, dict))
-            if not is_managed:
+            sources = {hook_source(h) for h in entry_hooks}
+            if "plugin" in sources:
+                kept.append(entry)
+            elif "managed" in sources:
+                removed += 1
+            else:
                 kept.append(entry)
         if kept:
             hooks[group] = kept
@@ -120,7 +149,7 @@ if os.path.exists(settings_path):
         settings.pop("hooks", None)
     os.makedirs(os.path.dirname(settings_path), exist_ok=True)
     json.dump(settings, open(settings_path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-    print("✅ uninstall：受管 hook 条目已移除，用户条目保留")
+    print("✅ uninstall：受管 hook 条目已移除 %d 个，用户与插件条目保留（插件条目由插件入口管理）" % removed)
 else:
     print("✅ uninstall：无 settings.json，无需清理")
 PYUNINSTALL
@@ -176,6 +205,24 @@ for line in raw.splitlines():
 def field(p, key, default=""):
     return p.get(key, default)
 
+# ---- 注册分工与固定事件集门（§7.2/§7.3，V_P1_2_PLUGIN_REGISTRATION_DIVISION）----
+# 在任何产物写入之前判定：违规策略既不进 settings.json 也不进 hooks/.compiled.env。
+PLUGIN_SOURCE_RE = re.compile(r"CLAUDE_PLUGIN_ROOT|\.claude/plugins/")
+FIXED_EVENT_SET = ("PreToolUse", "SessionStart", "Stop")
+unknown_events = [f"{field(p, 'id')} (hook: {field(p, 'hook')})" for p in policies
+                  if field(p, "hook") and field(p, "hook") not in FIXED_EVENT_SET]
+plugin_scripts = [f"{field(p, 'id')} (script: {field(p, 'script')})" for p in policies
+                  if field(p, "script") and PLUGIN_SOURCE_RE.search(field(p, "script"))]
+if unknown_events:
+    raise SystemExit(
+        "❌ hooks.yaml 使用了 adapter 固定事件集之外的事件: " + ", ".join(unknown_events)
+        + "。本 adapter 只生成 PreToolUse/SessionStart(startup|resume)/Stop；新增事件必须"
+          "修改受管生成逻辑并验证 settings matcher，YAML 追加不生效（§7.3）")
+if plugin_scripts:
+    raise SystemExit(
+        "❌ hooks.yaml 携带插件来源的生命周期脚本（§7.2 注册分工）: " + ", ".join(plugin_scripts)
+        + "。插件生命周期 Hook 由插件入口注册，项目受管块不得复制——请从 hooks.yaml 移除该条目")
+
 # ---- 1. 编译 deny 策略 ----
 kb_paths = [i.rstrip("/") + "/" for p in policies
             if field(p, "id") == "kb-write-protection" for i in p.get("items", [])]
@@ -208,6 +255,28 @@ if os.path.exists(settings_path):
 
 MANAGED_SCRIPT_RE = re.compile(r"hooks/(pre-tool-gate|session-context|stop-reminder)\.sh")
 
+def entry_hooks(entry):
+    return [h for h in (entry.get("hooks") or []) if isinstance(h, dict)]
+
+# 来源分类（§7.2）：插件标记优先——即使插件条目引用了与本项目同名的受管脚本，
+# 只要命令指向插件基础设施就归插件入口管理，绝不参与项目受管块的移交与去重。
+def hook_source(hook):
+    text = str(hook.get("command", ""))
+    if PLUGIN_SOURCE_RE.search(text):
+        return "plugin"
+    if MANAGED_SCRIPT_RE.search(text):
+        return "managed"
+    return "user"
+
+def is_ours(entry):
+    return any(hook_source(h) == "managed" for h in entry_hooks(entry))
+
+def is_plugin(entry):
+    return any(hook_source(h) == "plugin" for h in entry_hooks(entry))
+
+def normalize_command(text):
+    return str(text).strip(" \t" + chr(34) + chr(39))
+
 pre = os.path.relpath(os.path.join(root, "hooks/pre-tool-gate.sh"), root)
 session = os.path.relpath(os.path.join(root, "hooks/session-context.sh"), root)
 stop = os.path.relpath(os.path.join(root, "hooks/stop-reminder.sh"), root)
@@ -228,19 +297,53 @@ if not deny_matchers:
 pre_matcher = "|".join(deny_matchers)
 
 def upsert_hook_array(group, ours):
-    """受管块移交：先移除一切引用本 adapter 受管脚本的条目（含旧格式），再追加当前格式。
-    用户自有条目（不引用受管脚本）永不触碰。这样升级不会留下第二个 Guard。"""
+    """受管块移交：只移除本项目受管脚本条目（来源分类 = managed，含旧格式），再追加当前格式。
+    插件条目（plugin）与用户自有条目（user）永不触碰——插件 Hook 由插件入口管理，
+    项目正确性不依赖对它们的改写。这样升级不会留下第二个 Guard。"""
     arr = settings.get("hooks", {}).get(group, [])
-    arr = [
-        e for e in arr
-        if not any(MANAGED_SCRIPT_RE.search(str(h.get("command", ""))) for h in e.get("hooks", []) if isinstance(h, dict))
-    ]
+    arr = [e for e in arr if not is_ours(e)]
     arr.append(ours)
     settings.setdefault("hooks", {})[group] = arr
 
-upsert_hook_array("PreToolUse", {"matcher": pre_matcher, "hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + pre}]})
-upsert_hook_array("SessionStart", {"matcher": "startup|resume", "hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + session}]})
-upsert_hook_array("Stop", {"hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + stop}]})
+MANAGED_ENTRIES = {
+    "PreToolUse": {"matcher": pre_matcher, "hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + pre}]},
+    "SessionStart": {"matcher": "startup|resume", "hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + session}]},
+    "Stop": {"hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + stop}]},
+}
+for group, ours in MANAGED_ENTRIES.items():
+    upsert_hook_array(group, ours)
+
+# ---- 相同事件/命令重复注册检查（§7.2：接入时检查，拒绝并列出冲突）----
+# 组合视图写入前扫描受管事件组：插件条目按来源标记、不参与本项目去重；
+# 用户条目或用户条目与本项目受管条目之间出现相同 event+command 即为重复注册。
+conflicts = []
+for group, ours in MANAGED_ENTRIES.items():
+    ours_commands = {normalize_command(h.get("command", "")) for h in entry_hooks(ours)}
+    seen = {}
+    for entry in settings.get("hooks", {}).get(group, []):
+        if is_ours(entry):
+            continue
+        for hook in entry_hooks(entry):
+            source = hook_source(hook)
+            command = normalize_command(hook.get("command", ""))
+            if source == "plugin":
+                # 插件条目不参与项目受管块的去重/移交；但若它注册了与项目受管块
+                # 相同的事件+命令（例如插件包装器内嵌本项目脚本），属于双重注册，
+                # 显式拒绝并列出冲突——处置权在插件入口，本 adapter 绝不改写它。
+                if any(ours in command for ours in ours_commands):
+                    conflicts.append((group, entry.get("matcher", ""), str(hook.get("command", "")), "plugin entry duplicates the project managed command (resolve at the plugin entry)"))
+                continue
+            if command in ours_commands:
+                conflicts.append((group, entry.get("matcher", ""), str(hook.get("command", "")), "user entry duplicates the project managed command"))
+            elif command in seen:
+                conflicts.append((group, entry.get("matcher", ""), str(hook.get("command", "")), "user entry duplicates another user registration"))
+            seen[command] = True
+if conflicts:
+    listing = "\n".join(f"  - [{group}] matcher={matcher!r} command={command!r} — {reason}" for group, matcher, command, reason in conflicts)
+    raise SystemExit("❌ 相同事件/命令的重复注册，拒绝写入组合视图（§7.2）:\n" + listing
+                     + "\n  请先移除重复条目（或确认其为插件入口管理的注册，移入插件配置）")
+
+plugin_marked = sum(1 for entries in settings.get("hooks", {}).values() for entry in (entries or []) if is_plugin(entry))
 
 # 编译期断言：每个 deny 策略的 matcher 部件必须出现在产物 matcher 中
 emitted = set(pre_matcher.split("|"))
@@ -258,6 +361,8 @@ print("✅ hooks 策略已编译：%s + %s (%d deny 策略)%s" % (
     len(kb_paths + deny_patterns),
     "" if target_root == root else "  [SDD_TARGET_ROOT 隔离模式]",
 ))
+if plugin_marked:
+    print("ℹ️  插件 Hook 条目 %d 个：按来源标记为插件注册，保留原样，不参与项目受管块移交/去重（§7.2）" % plugin_marked)
 PYEOF
 
 link_skills
