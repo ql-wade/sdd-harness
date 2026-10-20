@@ -1,0 +1,456 @@
+TAP version 13
+# Subtest: baseline is in a qualified state with qualification metadata
+ok 1 - baseline is in a qualified state with qualification metadata
+  ---
+  duration_ms: 0.885375
+  ...
+# Subtest: comet pins the npm distribution artifact, not only the source commit
+ok 2 - comet pins the npm distribution artifact, not only the source commit
+  ---
+  duration_ms: 0.146666
+  ...
+# Subtest: teamai and openspec distribution artifacts are pinned with re-verified integrity
+ok 3 - teamai and openspec distribution artifacts are pinned with re-verified integrity
+  ---
+  duration_ms: 0.068666
+  ...
+# Subtest: host, toolchain and skills digests are recorded
+ok 4 - host, toolchain and skills digests are recorded
+  ---
+  duration_ms: 0.118583
+  ...
+# Subtest: runtime claims record executed probes with existing evidence logs
+ok 5 - runtime claims record executed probes with existing evidence logs
+  ---
+  duration_ms: 6.580042
+  ...
+# Subtest: compatibility matrix replays the local OpenSpec dependency-edge gap and verifies the candidate
+ok 6 - compatibility matrix replays the local OpenSpec dependency-edge gap and verifies the candidate
+  ---
+  duration_ms: 0.203458
+  ...
+# Subtest: extension delivery contract is finalized at concrete existing paths
+ok 7 - extension delivery contract is finalized at concrete existing paths
+  ---
+  duration_ms: 1.655541
+  ...
+# Subtest: integrated build passes the V_COMET_NATIVE contract command when prepared locally
+ok 8 - integrated build passes the V_COMET_NATIVE contract command when prepared locally # SKIP prepared Comet source and completed build are not present in this project; run tools/comet/build.mjs --archive first
+  ---
+  duration_ms: 1.243625
+  ...
+# Subtest: CLI export produces a contract-valid lock and verify accepts it (real repo)
+ok 9 - CLI export produces a contract-valid lock and verify accepts it (real repo)
+  ---
+  duration_ms: 1094.298792
+  ...
+# Subtest: CLI verify fails on drifted assets and check-run blocks an active run (explicit migration path)
+ok 10 - CLI verify fails on drifted assets and check-run blocks an active run (explicit migration path)
+  ---
+  duration_ms: 229.270958
+  ...
+# Subtest: CLI check-run refuses a second writer on an active run (B09) and allows the owner
+ok 11 - CLI check-run refuses a second writer on an active run (B09) and allows the owner
+  ---
+  duration_ms: 6217.430666
+  ...
+# Subtest: forward then reverse composition: init, user edit, re-pull, uninstall, re-init
+ok 12 - forward then reverse composition: init, user edit, re-pull, uninstall, re-init
+  ---
+  duration_ms: 729.498583
+  ...
+# Subtest: plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched
+ok 13 - plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched
+  ---
+  duration_ms: 490.432334
+  ...
+# Subtest: duplicate same event/command registration (plugin entry wrapping the managed command) is refused via bootstrap with a conflict list
+ok 14 - duplicate same event/command registration (plugin entry wrapping the managed command) is refused via bootstrap with a conflict list
+  ---
+  duration_ms: 41.750584
+  ...
+# Subtest: repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable
+ok 15 - repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable
+  ---
+  duration_ms: 921.895542
+  ...
+# Subtest: setup: the patched pinned build named by the source lock is manifest-verified in this project
+not ok 16 - setup: the patched pinned build named by the source lock is manifest-verified in this project
+  ---
+  duration_ms: 0.85325
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:116:1'
+  failureType: 'testCodeFailure'
+  error: 'pristine Comet source has not been prepared; run tools/comet/prepare-source.mjs first'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:119:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: 1.3.a: init installs the real guard hook and the workspace layout is the discovered one
+not ok 17 - 1.3.a: init installs the real guard hook and the workspace layout is the discovered one
+  ---
+  duration_ms: 120.473959
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:126:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    comet init failed: node:internal/modules/cjs/loader:1479
+      throw err;
+      ^
+    
+    Error: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187/work/bin/comet.js'
+        at Module._resolveFilename (node:internal/modules/cjs/loader:1476:15)
+        at wrapResolveFilename (node:inte
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Module._resolveFilename (node:internal/modules/cjs/loader:1476:15)
+    wrapResolveFilename (node:inte
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:128:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: 1.3.a: Runner dispatch binds the real run id and leaves no phase trace on the run state
+not ok 18 - 1.3.a: Runner dispatch binds the real run id and leaves no phase trace on the run state
+  ---
+  duration_ms: 33.827
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:144:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    state init failed: 
+    
+    undefined !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:146:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: 1.3.b/A09: cross-phase writes are probed per channel — edit rejected, Shell and MCP recorded as gaps
+not ok 19 - 1.3.b/A09: cross-phase writes are probed per channel — edit rejected, Shell and MCP recorded as gaps
+  ---
+  duration_ms: 3.918959
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:178:1'
+  failureType: 'testCodeFailure'
+  error: 'the project has no .claude/settings.local.json hook registration; run comet init first'
+  code: 'WORKSPACE_HOOK_MISSING'
+  stack: |-
+    async open (node:internal/fs/promises:638:25)
+    async Object.readFile (node:internal/fs/promises:1242:14)
+    async describeWorkspace (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/lib/adapters/comet.js:99:27)
+    async probeWriteChannels (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/lib/adapters/comet.js:159:21)
+    async TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:179:19)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: 1.3.b/A09: a Shell-written control state cannot pass the managed gate — verify_result is required
+not ok 20 - 1.3.b/A09: a Shell-written control state cannot pass the managed gate — verify_result is required
+  ---
+  duration_ms: 0.532834
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:201:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/tmp/claude-501/p13-case-bCzPsN/project/docs/openspec/changes/probe-change/.comet.yaml'"
+  code: 'ENOENT'
+  stack: |-
+    async open (node:internal/fs/promises:638:25)
+    async Object.readFile (node:internal/fs/promises:1242:14)
+    async TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:203:18)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: 1.3.c: a premature archive is refused outside the archive phase
+not ok 21 - 1.3.c: a premature archive is refused outside the archive phase
+  ---
+  duration_ms: 28.819083
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:219:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    archive must be refused outside the archive phase
+    
+    undefined !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:221:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: 1.3.b/OV01: the verified managed write executor completes the lifecycle the read-only observer cannot
+not ok 22 - 1.3.b/OV01: the verified managed write executor completes the lifecycle the read-only observer cannot
+  ---
+  duration_ms: 0.882917
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:225:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/tmp/claude-501/p13-case-bCzPsN/project/docs/openspec/changes/probe-change/proposal.md'"
+  code: 'ENOENT'
+  stack: |-
+    async open (node:internal/fs/promises:638:25)
+    async Object.writeFile (node:internal/fs/promises:1212:14)
+    async TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:226:3)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: 1.3.c: the archive succeeds exactly once and a duplicate closeout execution is refused by the driver
+not ok 23 - 1.3.c: the archive succeeds exactly once and a duplicate closeout execution is refused by the driver
+  ---
+  duration_ms: 30.736833
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:284:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    archive failed: 
+    
+    undefined !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p3-1/test/delivery-cases/1_3.mjs:286:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: cleanup removes the scratch project
+ok 24 - cleanup removes the scratch project
+  ---
+  duration_ms: 2.551875
+  ...
+# Subtest: method profile fixes one Comet Classic controller with Matt primitives and no nested controller
+ok 25 - method profile fixes one Comet Classic controller with Matt primitives and no nested controller
+  ---
+  duration_ms: 0.865084
+  ...
+# Subtest: snapshot manifest pins real directories byte-for-byte with sources and no symlinks
+ok 26 - snapshot manifest pins real directories byte-for-byte with sources and no symlinks
+  ---
+  duration_ms: 84.849917
+  ...
+# Subtest: RED cases are eliminated: no Superpowers hard calls in the snapshot layer and evidence is kept
+ok 27 - RED cases are eliminated: no Superpowers hard calls in the snapshot layer and evidence is kept
+  ---
+  duration_ms: 39.340833
+  ...
+# Subtest: Ponytail supplement: snapshot fixed from the plugin cache and registration/default declarations recorded
+ok 28 - Ponytail supplement: snapshot fixed from the plugin cache and registration/default declarations recorded
+  ---
+  duration_ms: 1.309459
+  ...
+# Subtest: patches are sha256-pinned in the source lock and scoped to their declared files
+ok 29 - patches are sha256-pinned in the source lock and scoped to their declared files
+  ---
+  duration_ms: 1.420917
+  ...
+# Subtest: patched build proves the method profile: init cannot install Superpowers and ships no nested controller identities
+ok 30 - patched build proves the method profile: init cannot install Superpowers and ships no nested controller identities # SKIP patched Comet build is not present in this project; run tools/comet/build.mjs --archive first
+  ---
+  duration_ms: 0.763167
+  ...
+# Subtest: V_A01: implementation dispatch without product/design/usecase baselines is refused with the missing list
+ok 31 - V_A01: implementation dispatch without product/design/usecase baselines is refused with the missing list
+  ---
+  duration_ms: 1.166125
+  ...
+# Subtest: V_A02: AC/scope change invalidates bound downstream receipts and old approvals only
+ok 32 - V_A02: AC/scope change invalidates bound downstream receipts and old approvals only
+  ---
+  duration_ms: 0.216166
+  ...
+# Subtest: V_A03: zero-test and all-skip runs are invalid executions for acceptance (real node --test)
+ok 33 - V_A03: zero-test and all-skip runs are invalid executions for acceptance (real node --test)
+  ---
+  duration_ms: 192.905625
+  ...
+# Subtest: V_A04: an environment crash is refused as behavior RED while a real assertion failure is a valid RED
+ok 34 - V_A04: an environment crash is refused as behavior RED while a real assertion failure is a valid RED
+  ---
+  duration_ms: 246.663542
+  ...
+# Subtest: V_A07: a passed report cannot be reused after source, lockfile or migration inputs change
+ok 35 - V_A07: a passed report cannot be reused after source, lockfile or migration inputs change
+  ---
+  duration_ms: 2.007334
+  ...
+# Subtest: V_A08: Java/Python/deploy drift changes the full-input digest and missing inputs are explicit scope errors
+ok 36 - V_A08: Java/Python/deploy drift changes the full-input digest and missing inputs are explicit scope errors
+  ---
+  duration_ms: 2.830542
+  ...
+# Subtest: frozen plan boundary: task definition digest ignores checkbox state in this change tasks.md
+ok 37 - frozen plan boundary: task definition digest ignores checkbox state in this change tasks.md
+  ---
+  duration_ms: 1.764583
+  ...
+# Subtest: V_A18: a real passing run is admitted as pass and the gate issues a schema-valid pass receipt
+ok 38 - V_A18: a real passing run is admitted as pass and the gate issues a schema-valid pass receipt
+  ---
+  duration_ms: 137.283708
+  ...
+# Subtest: V_A18: an environment crash is recorded truthfully as unverified and stays blocked, and a missing capability is never fabricated
+ok 39 - V_A18: an environment crash is recorded truthfully as unverified and stays blocked, and a missing capability is never fabricated
+  ---
+  duration_ms: 235.335958
+  ...
+# Subtest: V_A05: a worker process self-signing a pass JSON is refused as an unregistered source and the audit is kept
+ok 40 - V_A05: a worker process self-signing a pass JSON is refused as an unregistered source and the audit is kept
+  ---
+  duration_ms: 0.233458
+  ...
+# Subtest: V_A06: one execution identity cannot be both builder and verifier
+ok 41 - V_A06: one execution identity cannot be both builder and verifier
+  ---
+  duration_ms: 132.606625
+  ...
+# Subtest: V_B03: authoring self-check evidence never signs independent acceptance
+ok 42 - V_B03: authoring self-check evidence never signs independent acceptance
+  ---
+  duration_ms: 117.506375
+  ...
+# Subtest: V_B06: a service log and a DOM check cannot close a required console check
+ok 43 - V_B06: a service log and a DOM check cannot close a required console check
+  ---
+  duration_ms: 233.436208
+  ...
+# Subtest: V_B07: an imported report with an incompatible contract version is refused explicitly
+ok 44 - V_B07: an imported report with an incompatible contract version is refused explicitly
+  ---
+  duration_ms: 115.729583
+  ...
+# Subtest: V_A19 (local half): a child process with a scrubbed environment cannot mint a trusted dispatch
+ok 45 - V_A19 (local half): a child process with a scrubbed environment cannot mint a trusted dispatch
+  ---
+  duration_ms: 54.245042
+  ...
+# Subtest: 2.3: a real old-channel report enters the new gate and a passing delivery check exits 0 with a schema-valid receipt (B10 layer honesty)
+ok 46 - 2.3: a real old-channel report enters the new gate and a passing delivery check exits 0 with a schema-valid receipt (B10 layer honesty)
+  ---
+  duration_ms: 202.023792
+  ...
+# Subtest: 2.3: the same legacy evidence cannot close a product capability — executed but blocked exits 2 (B10: no product-closure claim)
+ok 47 - 2.3: the same legacy evidence cannot close a product capability — executed but blocked exits 2 (B10: no product-closure claim)
+  ---
+  duration_ms: 91.381041
+  ...
+# Subtest: 2.3: invalid inputs exit 1 at the task level — unreadable contract, schema-invalid contract, bad receipts (0/1/2 triple complete)
+ok 48 - 2.3: invalid inputs exit 1 at the task level — unreadable contract, schema-invalid contract, bad receipts (0/1/2 triple complete)
+  ---
+  duration_ms: 262.065084
+  ...
+# Subtest: 2.3 B07: an incompatible legacy report version is refused explicitly by the adapter — no field fabrication, no silent migration
+ok 49 - 2.3 B07: an incompatible legacy report version is refused explicitly by the adapter — no field fabrication, no silent migration
+  ---
+  duration_ms: 4.277083
+  ...
+# Subtest: 2.3 A20 (executable half): the delivery gate chain runs correctly as plain node children under a scrubbed environment
+ok 50 - 2.3 A20 (executable half): the delivery gate chain runs correctly as plain node children under a scrubbed environment
+  ---
+  duration_ms: 91.660375
+  ...
+# Subtest: 3.1.a pilot contract freeze: the machine block pins pilot/owner/environment/identity, four frozen artifact digests and the UI/API/persistence/permissions negative AC panel
+ok 51 - 3.1.a pilot contract freeze: the machine block pins pilot/owner/environment/identity, four frozen artifact digests and the UI/API/persistence/permissions negative AC panel
+  ---
+  duration_ms: 2.113958
+  ...
+# Subtest: 3.1.b runner PASS on real case scenario A01: executes test/delivery-cases/2_1.mjs with execution count > 0 and persists evidence
+ok 52 - 3.1.b runner PASS on real case scenario A01: executes test/delivery-cases/2_1.mjs with execution count > 0 and persists evidence
+  ---
+  duration_ms: 667.743667
+  ...
+# Subtest: 3.1.b runner PASS on real scenario A02 (2_1.mjs) and A20 (2_3.mjs) from different modules
+ok 53 - 3.1.b runner PASS on real scenario A02 (2_1.mjs) and A20 (2_3.mjs) from different modules
+  ---
+  duration_ms: 1632.432458
+  ...
+# Subtest: 3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario token in its test names — the module-level green stands whether the environment-conditional build probe skips or really runs, with zero FAIL and the coverage mode truthfully recorded
+ok 54 - 3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario token in its test names — the module-level green stands whether the environment-conditional build probe skips or really runs, with zero FAIL and the coverage mode truthfully recorded
+  ---
+  duration_ms: 259.687958
+  ...
+# Subtest: 3.1.b runner FAIL verdict without green-washing: a genuinely failing action fails once and is never retried
+ok 55 - 3.1.b runner FAIL verdict without green-washing: a genuinely failing action fails once and is never retried
+  ---
+  duration_ms: 112.9785
+  ...
+# Subtest: 3.1.b runner NOT-EXERCISED: unregistered scenario and all-skip module are structured non-zero, never a pass
+ok 56 - 3.1.b runner NOT-EXERCISED: unregistered scenario and all-skip module are structured non-zero, never a pass
+  ---
+  duration_ms: 465.689292
+  ...
+# Subtest: 3.1.b schema enforcement: a case definition violating delivery-case-schema.json is refused with named paths
+ok 57 - 3.1.b schema enforcement: a case definition violating delivery-case-schema.json is refused with named paths
+  ---
+  duration_ms: 71.030291
+  ...
+# Subtest: 3.1.b invalid input exits 1: missing required option and malformed scenario id
+ok 58 - 3.1.b invalid input exits 1: missing required option and malformed scenario id
+  ---
+  duration_ms: 105.9
+  ...
+# Subtest: 3.1.c A01 landing: dispatch without TestContract/PlanBundle in the pilot baseline is refused with the missing list
+ok 59 - 3.1.c A01 landing: dispatch without TestContract/PlanBundle in the pilot baseline is refused with the missing list
+  ---
+  duration_ms: 71.5965
+  ...
+# Subtest: 3.1.c A01 landing: a gap in the negative AC panel is named in the missing list
+ok 60 - 3.1.c A01 landing: a gap in the negative AC panel is named in the missing list
+  ---
+  duration_ms: 69.908541
+  ...
+# Subtest: 3.1.c A15 landing: PlanBundle freeze binding is checkbox-state-agnostic but definition-sensitive
+ok 61 - 3.1.c A15 landing: PlanBundle freeze binding is checkbox-state-agnostic but definition-sensitive
+  ---
+  duration_ms: 457.722209
+  ...
+# Subtest: 3.1.c A15 landing: frozen Product drift refuses dispatch with expected/observed digests
+ok 62 - 3.1.c A15 landing: frozen Product drift refuses dispatch with expected/observed digests
+  ---
+  duration_ms: 69.180208
+  ...
+# Subtest: V_A15: an independent persistence readback fails the journey when a success claim never reached disk
+ok 63 - V_A15: an independent persistence readback fails the journey when a success claim never reached disk
+  ---
+  duration_ms: 92.67075
+  ...
+1..63
+# tests 63
+# suites 0
+# pass 53
+# fail 8
+# cancelled 0
+# skipped 2
+# todo 0
+# duration_ms 9856.372667

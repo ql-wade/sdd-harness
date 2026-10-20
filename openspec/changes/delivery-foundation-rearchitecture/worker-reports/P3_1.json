@@ -98,6 +98,26 @@
    "cmd": "npm test (after B09 dual-outcome fix, merged tree 28d820f)",
    "exit_code": 0,
    "summary": "218 tests / 218 pass / 0 fail"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/3_1.mjs (after count-literal removal, merged tree 2997caf)",
+   "exit_code": 0,
+   "summary": "13/13"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/*.mjs (env A: unprepared worktree)",
+   "exit_code": 1,
+   "summary": "53/63 pass, 8 fail — all 1_3.mjs setup/tests requiring the prepared Comet build; environment, not this change"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/*.mjs (env B: real temp git worktree + prepared .sdd build)",
+   "exit_code": 0,
+   "summary": "63 tests, 62 pass, 0 fail, 1 env-conditional skip — coordinator 0-fail expectation met on prepared tree"
+  },
+  {
+   "cmd": "npm test (after count-literal fix)",
+   "exit_code": 0,
+   "summary": "226 tests / 226 pass / 0 fail"
   }
  ],
  "runner_capability_matrix": {
@@ -160,6 +180,13 @@
    "verification_env_a_skip": "impl-p3-1 worktree (no .sdd): node --test test/delivery-cases/3_1.mjs exit 0, 13/13; runner B09: PASS tests=5 pass=4 fail=0 skipped=1. Evidence: worker-reports/P3_1/evidence/green-3_1-skip-env.txt",
    "verification_env_b_prepared": "$TMPDIR git-archive copy of the branch + real .sdd/vendor/comet prepared build copied from impl-p1-3 (lock-identical, commit c90af44a4474662d7853aae76ce785404974fb0a, fingerprint cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187; node_modules deps copied because ESM resolution from the temp copy cannot walk to the main checkout): node --test test/delivery-cases/3_1.mjs exit 0, 13/13; runner B09: PASS tests=5 pass=5 fail=0 skipped=0. Evidence: worker-reports/P3_1/evidence/green-3_1-prepared-env.txt",
    "npm_test_after_fix": "exit 0, 218/218 (evidence: worker-reports/P3_1/evidence/green-npm-test-b09-fix.txt)"
+  },
+  {
+   "integration_regression_fix_2_count_literal": "Second integration regression in the B09 case, same \"assert live state\" family, different root cause: master 45ed944 (P1_6 Ponytail delta, review APPROVED 8de8f00) legally added a sixth top-level test to 1_6.mjs, so the literal assertions `tests === 5` / \"five top-level test points\" and `skipped in {0, 1}` encoded stale counts of another file (6 !== 5).",
+   "fix_2": "Per coordinator: deleted both count literals (the skipped-range literal was the same family — it encoded how many env-conditional tests 1_6.mjs has). Retained hard assertions unchanged: execution.fail === 0 (real submodule defects still refuse the pass), the TAP reconciliation invariant (tests == pass + fail + skipped — the recorded coverage mode cannot lie), target.found === false and pass > 0. Discipline acknowledged and adopted: 3_1.mjs no longer makes literal count/state assertions about other files; cross-file truth is pinned by reconciliation invariants and self-verifying digests (T1) instead.",
+   "verification_2_env_a": "Merged tree 2997caf: node --test test/delivery-cases/3_1.mjs exit 0, 13/13 (evidence green-3_1-after-count-fix.txt). npm test exit 0, 226/226 (evidence green-npm-test-count-fix.txt). Honest note: full delivery-cases directory in the UNPREPARED worktree is exit 1 with 53/63 — all 8 failures are 1_3.mjs setup+tests that hard-fail without the prepared Comet build (P1_3 design; environment, not this change; evidence green-all-delivery-cases-after-count-fix.txt).",
+   "verification_2_env_b_prepared": "Temporary real git worktree at the merged HEAD + prepared .sdd build from impl-p1-3 (lock-identical fingerprint cb1151b4) + copied deps: full delivery-cases directory exit 0 — 63 tests, 62 pass, 0 fail, 1 env-conditional skip (evidence green-all-delivery-cases-prepared-env-v2.txt); 3_1.mjs exit 0, 13/13 (green-3_1-prepared-env-v2.txt); runner B09: PASS tests=6 pass=6 fail=0 skipped=0 target.found=false — the grown 1_6 module (6 top-level tests incl. the Ponytail supplement) passes through the reconciliation invariant with no count literal. Temp worktree removed after verification.",
+   "frozen_baseline_note": "The Ponytail merge changed tasks.md checkbox state only among the four frozen artifacts; the checkbox-agnostic planBundle digest is unaffected (recorded aac0152e… still matches; live A01 journey PASS with no drift). No re-freeze needed for this merge."
   }
  ],
  "commands_status_note": "Pre-review command entries describe the pre-merge state (205/205); post-review entries describe the merged state (218/218). Both are real runs with saved evidence where indicated."

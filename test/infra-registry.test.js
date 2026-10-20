@@ -340,7 +340,7 @@ test('authority readback is honestly recorded as UNVERIFIED with the exact failu
   }
 });
 
-test('every planned secret ref (I01+I02+I03+I05 freeze list, 18) is registered with distinct purposes and bound roles', () => {
+test('every planned secret ref (I01+I02+I03+I05+I06 freeze list, 23) is registered with distinct purposes and bound roles', () => {
   const refsDoc = JSON.parse(fs.readFileSync(refsExamplePath, 'utf8'));
   const expected = [
     'source-git-read',
@@ -358,7 +358,12 @@ test('every planned secret ref (I01+I02+I03+I05 freeze list, 18) is registered w
     'codewiki-source-read',
     'codewiki-provider',
     'codegraph-source-read',
+    'ci-source-read',
+    'ci-check-publisher',
     'ci-registry',
+    'artifact-reader',
+    'pilot-deployer',
+    'pilot-rollback',
     'monitor-alert',
     'backup-encryption',
   ];
