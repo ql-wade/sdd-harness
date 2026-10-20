@@ -1,0 +1,48 @@
+{
+  "task": "P1_4",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-20T11:03:39.766778+00:00",
+  "head_reviewed": "fddc24d",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "RED 根因表述过宽（8/11 为 MODE_QUALIFICATION_MISSING，3 个为 RED 版测试自身错误假设，GREEN 中修正为更强断言）",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-2",
+      "summary": "c07Entrances 第 7 行证据指针漂移 + '6/6' 数字与探针 5/5 不符（实质已由实跑测试验证）",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-3",
+      "summary": "qualifiedAt 早于 probedAt 约 13 分钟（排序异常，内容与活体复现一致）",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-4",
+      "summary": "观察 ID 前缀笔误 OVS-（兄弟 OBS-）",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-5",
+      "summary": "toolchain-baseline built_entrypoint 仍记 pristine 72e5ce0e，现行 patched cb1151b4（P1_3 起）→ 1_1.mjs integrated-build 测试恒 skip",
+      "disposition": "parent-awareness: P1_1-owned baseline currency note, recorded"
+    },
+    {
+      "id": "nb-6",
+      "summary": "探针生成脚本未入仓（实跑测试兜底可复现）",
+      "disposition": "recorded"
+    }
+  ],
+  "reviewer_independently_reverified": [
+    "净室 d3e7531 RED 复现 exit 1（8× MODE_QUALIFICATION_MISSING）",
+    "构建第二调用：fingerprint cb1151b4 + smoke 243/2 与声明逐字一致",
+    "9 行矩阵抽验 4 行逐条核对 + 活体重演（非仅读旧探针）",
+    "B2/B3 原生阻断负例真实重演；B1/B4/B6 缺口实跑复现且状态未被平滑",
+    "知识边界：remember 落盘 HOME cache 实测 + archive 入口 5/5 零回执双证"
+  ],
+  "tests_run_by_reviewer": "13/13 ×2; npm test 218/218 ×2; 净室 RED; build verify 模式"
+}

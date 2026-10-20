@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "interface": "PlatformInfra.v1",
+  "kind": "repository-registration",
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "repository": {
+    "repoId": 1285806550,
+    "repoFullname": "rpamis/sdd-harness",
+    "url": "https://github.com/rpamis/sdd-harness",
+    "owner": "ql-wade",
+    "principalId": 262266039,
+    "sameOriginRef": "infra/delivery/registry.json#project.github",
+    "sameOriginNote": "Identity facts are referenced from the I01 registry, never re-registered here as a second source of truth. A previous session observed admin for this principal; that observation is NOT carried forward as fact."
+  },
+  "identity": {
+    "readback": {
+      "status": "UNVERIFIED",
+      "command": "gh api repos/rpamis/sdd-harness",
+      "error": "Get \"https://api.github.com/repos/rpamis/sdd-harness\": tls: failed to verify certificate: x509: OSStatus -26276",
+      "ghAuthStatus": "INVALID",
+      "observedAt": "2026-10-20T10:11:13Z",
+      "note": "Read-back must succeed at execution time before any authorized action; the token is invalid and TLS interception breaks the read path."
+    },
+    "permissions": {
+      "status": "UNVERIFIED",
+      "previousAdminObservation": "NOT_CARRIED_FORWARD"
+    }
+  },
+  "branchProtection": {
+    "configuredStatus": "UNVERIFIED",
+    "requiredChecksSource": "infra/delivery/platform/ci-policy.json#requiredChecks",
+    "evidenceRule": "Only protected-check history read back from the platform counts as protection evidence; workflow YAML, admin readability, simulated green status or local push success must never be claimed as platform protection."
+  },
+  "credentialRefs": [
+    "secret-ref:sdd-harness-pilot/ci-source-read"
+  ],
+  "remotePolicyWrites": {
+    "allowed": false,
+    "mode": "LOCAL_ONLY",
+    "basis": "infrastructure-plan.md I06: this stage is design/read-only verification only; admin identity is not this run approval to modify branch protection, and no remote policy write authorization exists."
+  },
+  "localOnly": true
+}

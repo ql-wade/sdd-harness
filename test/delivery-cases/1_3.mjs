@@ -1,5 +1,5 @@
 // P1_3 delivery case: the Comet Classic single-master contract over the
-// patched pinned build (fingerprint cb1151b4…, distribution.json
+// patched pinned build (fingerprint 9b95a0ff… after the P2_4 lock revision, distribution.json
 // manifest-verified on reuse) — the driver/workspace/authority interface is
 // the real one discovered from the built CLI (1.3.a), write channels are
 // probed separately as edit / Shell / MCP with refusals and capability gaps
@@ -114,8 +114,9 @@ const allOutput = (result) => plain(result.stdout) + plain(result.stderr);
 const CHANGE = 'probe-change';
 
 test('setup: the patched pinned build named by the source lock is manifest-verified in this project', () => {
-  assert.equal(lock.patches.length, 2, 'the patched build must carry the two locked patches');
-  assert.match(fingerprint, /^cb1151b4/, `patched fingerprint drifted: ${fingerprint}`);
+  // lock revision: 4 patches @ 9b95a0ff (P2_4 0002 + tests/2_4)
+  assert.equal(lock.patches.length, 4, 'the patched build must carry the four locked patches');
+  assert.match(fingerprint, /^9b95a0ff/, `patched fingerprint drifted: ${fingerprint}`);
   assert.ok(prepared, 'pristine Comet source has not been prepared; run tools/comet/prepare-source.mjs first');
   assert.ok(built, 'patched Comet build is not present; run tools/comet/build.mjs --archive first');
   const version = comet(['--version']);

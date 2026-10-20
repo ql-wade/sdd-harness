@@ -1,0 +1,50 @@
+{
+  "probedAt": "2026-10-20T10:33:38.279Z",
+  "fingerprint": "cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187",
+  "change": "qualify-change",
+  "changePhase": "build",
+  "records": [
+    {
+      "id": "entrance-state-transition",
+      "command": "comet state transition qualify-change build-complete --json (no check)",
+      "exitCode": 1,
+      "refusesWithoutCheck": true,
+      "detail": "direct transition refused"
+    },
+    {
+      "id": "entrance-guard-preview",
+      "command": "comet guard qualify-change build --json",
+      "exitCode": 1,
+      "refusesWithoutCheck": true,
+      "detail": "guard preview refused"
+    },
+    {
+      "id": "entrance-guard-apply",
+      "command": "comet guard qualify-change build --apply --json",
+      "exitCode": 1,
+      "refusesWithoutCheck": true,
+      "detail": "guard --apply refused, phase stayed build"
+    },
+    {
+      "id": "entrance-next-continuation",
+      "command": "comet state next qualify-change --json",
+      "exitCode": 0,
+      "refusesWithoutCheck": "guidance-only",
+      "detail": "next/continuation is guidance; it never claims completion past the missing check"
+    },
+    {
+      "id": "entrance-archive-request",
+      "command": "comet archive qualify-change --json",
+      "exitCode": 1,
+      "refusesWithoutCheck": true,
+      "detail": ""
+    },
+    {
+      "id": "entrance-phase-guard-write-hook",
+      "command": "probeWriteChannels (lib/adapters/comet.js) — Write tool payload to the real guard router",
+      "exitCode": 2,
+      "refusesWithoutCheck": true,
+      "detail": "edit channel: rejected (exit 2); shell/mcp channels: capability gap, never recorded as blocked (A09)"
+    }
+  ]
+}

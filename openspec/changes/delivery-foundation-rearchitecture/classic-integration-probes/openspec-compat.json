@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "task": "P1_5",
+  "scope": "C08 — the actual OpenSpec compatibility failure is reproduced and resolved inside the isolated tool environment: the pinned host CLI (no global upgrade) lacks per-artifact dependency edges and the real Classic closure predicate refuses it; the fixed isolated candidate 1.11.0 exposes the edges and the same predicate accepts it",
+  "fixedEnvironment": {
+    "isolatedInstall": ".sdd/tools/openspec-1.11.0",
+    "installBasis": "pinned registry tarball @fission-ai/openspec@1.11.0 (tarball_sha256 84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f, verified at P1_1); installed with an isolated npm cache and private package.json — never a global upgrade",
+    "scratchRecipe": "fresh scratch project: openspec/config.yaml schema spec-driven; change .openspec.yaml schema spec-driven + skip_specs true; proposal.md; tasks.md — identical input to both CLIs",
+    "predicateSource": "dist/domains/comet-classic/classic-artifact-requirements.js requiredArtifactClosure from the patched pinned build (fingerprint cb1151b4…), imported unmodified"
+  },
+  "generatedBy": "live generator run (worktree impl/p1-5-classic-integration); test/classic-integration.test.js re-runs both CLIs fresh and must agree",
+  "reproduction": "node --test test/classic-integration.test.js",
+  "negative": {
+    "role": "host-global validator CLI, pinned by toolchain-baseline.json (openspec.current), upgrade policy: isolated installs only",
+    "cliVersion": "1.3.1",
+    "statusExit": 0,
+    "artifactsRequireEdges": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "closureResult": "REJECTED",
+    "closureError": "OpenSpec must expose dependency edges for every artifact; upgrade to a supported version"
+  },
+  "positive": {
+    "role": "isolated compatibility candidate",
+    "isolatedInstall": ".sdd/tools/openspec-1.11.0",
+    "cliVersion": "1.11.0",
+    "statusExit": 0,
+    "artifactsRequireEdgesExposed": true,
+    "closureResult": "ACCEPTED",
+    "closure": {
+      "proposal": "done",
+      "specs": "skipped",
+      "design": "ready",
+      "tasks": "done"
+    }
+  },
+  "noGlobalUpgrade": "the host-global CLI remains the toolchain-baseline pinned version after every probe; the classic-init floating upgrade attempt (B6) is absorbed by the isolated PATH stubs (see bypass-recovery.json record floating-global-upgrade-attempt)"
+}

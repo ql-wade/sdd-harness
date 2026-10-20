@@ -1,0 +1,44 @@
+{
+  "task": "P2_4",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-20T15:16:55.589375+00:00",
+  "head_reviewed": "2827f5a",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "external 类 Kt 座位归档后死锁边（预发 K dispatch 路径无文档无测试；D07 只走 file 类）",
+      "disposition": "登记到 classic-post-archive-recovery 范围/P4_6 域 + D07 后续验证"
+    },
+    {
+      "id": "nb-2",
+      "summary": "报告 cross_task_impact 两处归属小误（2_1.mjs 无 patches pin；失败清单本身准确）",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-3",
+      "summary": "D08 无真实中断注入（构造保证 + 代码验证可接受）",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-4",
+      "summary": "delivery-cases node 版本敏感（2_1.mjs 6 用例 node24 下失败；与 DELIVERY_CASES_NODE_PIN 同族）",
+      "disposition": "并入 DELIVERY_CASES_NODE_PIN OPEN_FACT"
+    },
+    {
+      "id": "nb-5",
+      "summary": "化妆级：acceptGate effects[0].from null 不精确；managedStateRecord 重复调用 stateFile",
+      "disposition": "recorded"
+    }
+  ],
+  "reviewer_independently_reverified": [
+    "构建第二调用独立复现 fingerprint 9b95a0ff + smoke 248/2",
+    "D01–D08 全量独立复跑 10/10",
+    "C07 七入口代码读验（design-complete 无 Run 投影也强制）",
+    "B1 注册表/B4 SKIP 两处短路+FORCE_PHASE 上游拒+unmanaged 对照/Kt 三处一致——代码+测试双证",
+    "四 patch sha256 实算与 lock 一致；0001 零交叠；无第二账本/相位重写/走私",
+    "对 cb1151b4 旧构建 RED 探针复证（Unknown subcommand）"
+  ],
+  "tests_run_by_reviewer": "2_4.mjs 10/10; npm test 263/263; smoke 248/2; 旧构建 RED 探针; node24 对照 13 fail 定性"
+}

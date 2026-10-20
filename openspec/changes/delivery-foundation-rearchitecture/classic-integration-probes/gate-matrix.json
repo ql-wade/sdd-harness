@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "task": "P1_5",
+  "scope": "C01-C05 gate-level separation matrix over the accepted infrastructure entries (imports unmodified): gate.evaluate (SDD.Gate.v1), admitEvidence (Runner.Dispatch.v1 local), harness driver exclusivity, baseline frozen-plan semantics",
+  "generatedBy": "live generator run (worktree impl/p1-5-classic-integration); test/classic-integration.test.js re-runs every scenario fresh and must agree",
+  "reproduction": "node --test test/classic-integration.test.js",
+  "records": [
+    {
+      "id": "c01-r-baseline-admits-architecture",
+      "entry": "gate.evaluate (lib/delivery/gate.js, SDD.Gate.v1) over admitEvidence receipt",
+      "oracle": "an architecture request passes only with the current requirement-baseline receipt admitted from the launcher dispatch",
+      "observed": {
+        "verdict": "blocked",
+        "policyDigestBound": true
+      }
+    },
+    {
+      "id": "c01-gate-receipts-not-interchangeable",
+      "entry": "gate.evaluate",
+      "oracle": "T-design and A-review receipts cannot stand in for the R baseline; the capability string is the substitution boundary",
+      "observed": {
+        "verdict": "blocked",
+        "codes": [
+          "MISSING_OBSERVATION"
+        ]
+      }
+    },
+    {
+      "id": "c01-artifact-existence-not-confirmation",
+      "entry": "gate.evaluate + admitEvidence",
+      "oracle": "an R receipt with zero valid observations never reads as confirmed scope; a pass claim with zero observations is refused at admission",
+      "observed": {
+        "verdict": "blocked",
+        "codes": [
+          "UNVERIFIED_CAPABILITY"
+        ],
+        "admissionRefusal": "NO_OBSERVATION"
+      }
+    },
+    {
+      "id": "c02-fresh-a-t-admit-managed-write",
+      "entry": "gate.evaluate + harness.requireWriteDriver",
+      "oracle": "with R confirmed, fresh A and T receipts admit the verified managed write executor",
+      "observed": {
+        "verdictA": "pass",
+        "verdictT": "pass",
+        "writerAdmitted": true
+      }
+    },
+    {
+      "id": "c02-stale-design-evidence-refuses-write",
+      "entry": "admitEvidence + gate.evaluate",
+      "oracle": "a source write is refused while the A/T receipt binds a superseded input or policy digest; the stale admissions are named",
+      "observed": {
+        "admissionRefusal": "STALE_CANDIDATE",
+        "gateCodes": [
+          "STALE_INPUT",
+          "MISSING_OBSERVATION"
+        ],
+        "rotatedPolicyCodes": [
+          "STALE_POLICY",
+          "MISSING_OBSERVATION"
+        ]
+      }
+    },
+    {
+      "id": "c02-write-driver-exclusivity",
+      "entry": "harness.defineDriver + requireWriteDriver",
+      "oracle": "a read-only observer physically cannot carry an execute surface and is refused for product writes; the managed executor is named",
+      "observed": {
+        "writeRefusal": {
+          "code": "DRIVER_WRITE_REFUSED",
+          "message": "driver planner-observer is a read-only observer; write product source before A/T/P are current requires the verified man"
+        },
+        "surfaceRefusal": "DRIVER_SURFACE_REFUSED"
+      }
+    },
+    {
+      "id": "c03-design-only-structure-not-sufficiency",
+      "entry": "baseline.traceAcToCases + gate.evaluate",
+      "oracle": "a structurally legal design-only TestPack stays blocked when only the author self-check signs it, an expectation is unresolved, or an AC is unmapped; it returns to the test author",
+      "observed": {
+        "structureOk": true,
+        "selfCheckClass": "authoring-self-check",
+        "selfCheckCodes": [
+          "AUTHORING_SELF_CHECK_ONLY"
+        ],
+        "unresolvedCodes": [
+          "UNVERIFIED_CAPABILITY"
+        ],
+        "unmappedAc": [
+          "C99"
+        ]
+      }
+    },
+    {
+      "id": "c03-independent-t-passes",
+      "entry": "gate.evaluate",
+      "oracle": "an independent (verifier-class) T receipt over the complete AC mapping passes the test design gate",
+      "observed": {
+        "receiptClass": "independent-acceptance",
+        "verdict": "pass"
+      }
+    },
+    {
+      "id": "c04-derived-view-checkbox-agnostic",
+      "entry": "baseline.taskDefinitionDigest + verifyReportCurrency",
+      "oracle": "the derived Classic plan view binds the same frozen task definitions regardless of checkbox state; a second writable authority with drifted task text is refused on digest mismatch",
+      "observed": {
+        "derivedViewDigestInvariant": true,
+        "secondAuthorityRefusal": {
+          "ok": false,
+          "error": "DIGEST_MISMATCH",
+          "reason": "report bound to input digest b7a2dce80aeab9907a98951ee73e16e6b7739e894ee04d3324f8c71ce66d76c9 but current full-input dig"
+        }
+      }
+    },
+    {
+      "id": "c05-self-signed-refused-at-admission",
+      "entry": "admitEvidence",
+      "oracle": "self-written (no dispatch), forged-integrity, foreign-secret, builder-role and envelope-redeclaring receipts are all refused; only launcher-dispatched identity is a registered source",
+      "observed": {
+        "noDispatch": "UNREGISTERED_SOURCE",
+        "forged": "FORGED_DISPATCH",
+        "foreignSecret": "FORGED_DISPATCH",
+        "builderRole": "IDENTITY_CONFLICT",
+        "redeclaredExecution": "EXECUTION_BINDING_MISMATCH"
+      }
+    },
+    {
+      "id": "c05-duplicate-expired-unobserved-refused",
+      "entry": "admitEvidence",
+      "oracle": "duplicate issuance from one execution identity, expired envelopes and pass claims without real observation data are refused",
+      "observed": {
+        "duplicate": "DUPLICATE_ISSUANCE",
+        "expired": "EXPIRED_ENVELOPE",
+        "zeroObservation": "NO_OBSERVATION"
+      }
+    },
+    {
+      "id": "c05-builder-execution-cannot-sign-acceptance",
+      "entry": "gate.evaluate (A06)",
+      "oracle": "a receipt whose execution is the builder execution is excluded from satisfaction and named as an identity conflict",
+      "observed": {
+        "verdict": "blocked",
+        "codes": [
+          "IDENTITY_CONFLICT",
+          "MISSING_OBSERVATION"
+        ]
+      }
+    },
+    {
+      "id": "c05-verifier-dispatch-signs-acceptance",
+      "entry": "admitEvidence + gate.evaluate",
+      "oracle": "a launcher-dispatched verifier receipt is admitted as independent acceptance, bound to gate V, and passes with its source attestation",
+      "observed": {
+        "receiptClass": "independent-acceptance",
+        "dispatchGate": "V",
+        "verdict": "pass",
+        "sourceAttestation": {
+          "origin": "comet-classic",
+          "execution": "exec-v-independent"
+        }
+      }
+    }
+  ]
+}

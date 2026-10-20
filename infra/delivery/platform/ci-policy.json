@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "interface": "PlatformInfra.v1",
+  "kind": "ci-policy",
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "mode": "LOCAL_ONLY",
+  "provider": {
+    "status": "UNSELECTED",
+    "note": "The actual CI provider/runner and the source of the protected policy are unprovided inputs; required-check names must be registered by the repo admin before anything is configured. Nothing is invented here."
+  },
+  "requiredChecks": {
+    "registrationStatus": "UNSELECTED",
+    "names": [],
+    "binding": {
+      "mode": "exact-sha",
+      "description": "Every required check's evidence must be bound to the exact integration merge SHA of the candidate; a new head/mergeSHA must never reuse an older check's evidence (STALE_EVIDENCE blocks promotion)."
+    },
+    "blockingSemantics": [
+      "MISSING",
+      "SKIPPED",
+      "TIMED_OUT",
+      "STALE_EVIDENCE"
+    ],
+    "failClosed": true,
+    "evidenceRule": "Protected-check history is preserved; after a restore, old evidence can never authorize a new SHA (infra/delivery/platform/artifact-retention.json#rollbackRetention)."
+  },
+  "authorization": {
+    "remotePolicyWriteAuthorized": false,
+    "writerOwner": "Platform policy writes belong to the existing P tasks and the Comet closeout authorization; the real P4_1 gate stays with the platform.",
+    "basis": "infrastructure-plan.md I06: this stage is design/read-only verification only; the admin identity is not this run approval to modify branch protection, so configuring required checks must be refused."
+  },
+  "credentialRefs": [
+    "secret-ref:sdd-harness-pilot/ci-source-read",
+    "secret-ref:sdd-harness-pilot/ci-check-publisher",
+    "secret-ref:sdd-harness-pilot/ci-registry"
+  ],
+  "localOnly": true
+}

@@ -1,0 +1,145 @@
+{
+  "task": "P1_4 (原 1.4): 基于固定 Comet 发行包比较 Classic/Native；验证无关成功命令、漏必需检查、旧/手工回执、普通执行可达的跳过/运维逃生路径均不能放行受管交付；确认内置项目记忆与 LLMWiki/Outline 唯一知识源不冲突",
+  "run": "impl-dfr-20261020-r1",
+  "worktree": "impl/p1-4-mode-qualification (base 1755db1)",
+  "worker": "P1_4 implementation worker",
+  "final_status": "GREEN",
+  "acceptance_ids": {
+    "targeted": [
+      "C07",
+      "F06",
+      "M01"
+    ],
+    "note": "C07 全部受管入口同前置规则已实证（transition/guard preview/guard --apply/next/archive/write-hook + state check 入口语义注记）；F06 原生阻断面实证、缺口面（B1/B4）登记为扩展验收不改判定；M01 固定 Classic 方法、无 Superpowers 运行时（status 输出断言）"
+  },
+  "red_cases": [
+    {
+      "id": "RED (1.4.a/1.4.b/1.4.c)",
+      "claim": "无 mode-qualification.json 时 Classic/Native 能力差异、Classic 准入、四类放行漏洞与知识边界均无结构化登记",
+      "evidence": "worker-reports/P1_4/evidence/red-1_4-mjs.txt（11/13 fail，根因 MODE_QUALIFICATION_MISSING；commit d3e7531 先行提交 RED 测试）"
+    }
+  ],
+  "green_summary": {
+    "1_4_a": {
+      "mode_matrix": "capabilityMatrix 9 行（mode-authority / openspec-authority / default-progression / real-command-evidence / no-bypass / knowledge-closeout / roles-verification / background-driving / closeout-exclusivity），每行 Classic 与 Native 均为本 patched 构建（cb1151b4…）上的真实探测并引用 mode-probes/ 证据。",
+      "classic_surface": "init --workflow classic 装 guard hook（PreToolUse matcher Write|Edit → comet-hook-router.mjs）、classic 技能面与 state/check/guard/archive 状态机；workflow resolve 返回 comet.workflow-resolution.v1 workflow=classic。",
+      "native_surface": "init --workflow native 写同一 config schema（default_workflow: native, workflows=[native]），装 comet-native 12 个脚本（自身方法面）；workflow resolve 返回 workflow=native skill=comet-native source=project-config；classic 控制命令在 native 项目拒绝（state init exit 1 'Classic artifact layout is unavailable because Classic is not enabled'）。",
+      "no_auto_switch": "模式绑定是 init 时写入的项目配置（source=project-config），无运行时/自动切换路径；classicAdmission.autoSwitch.allowed=false。",
+      "classic_admission": "Classic 准入为唯一受管模式，附带 6 个必须阻断项 B1–B6 与准入门条件（显式 init 绑定、OpenSpec 仅隔离安装、受管 launch authority 环境 × B4、知识回执仅外部证据 × B5）。"
+    },
+    "1_4_b": {
+      "class2_missing_check": "原生已阻断：零检查证据下 transition build-complete（exit 1 '[FAIL] Build passes'）、guard preview（exit 1）、guard --apply（exit 1 且 phase 不变）全部拒绝；state next 仅给指引不宣称完成；archive 从 build 相位拒绝（FATAL: phase is 'build', expected 'archive'）。state check <phase> 为进入该相位的入口检查集（6/6，与退出门语义不同）——已登记注记。",
+      "class1_irrelevant_command": "跨 scope 原生已阻断（真实 verify scope 成功不满足 build gate）；缺口如实登记（B1, review SC-01）：必需 scope 下任意平凡成功命令（探针脚本仅 process.exit(0)）可通过 build gate 并推进相位——无必需检查身份注册表。扩展验收：受管 check policy 固定每 scope 必需命令身份 + runner 侧 argv 校验（上游 patch seam），不改判定转绿。",
+      "class3_stale_manual": "原生已阻断：手工 record-check 被拒（'Manual declarations never satisfy the guard…shadow the earlier runtime evidence'）；真实检查后修改源码被拒（'check inputs changed since execution. Changed inputs: src/feature.js'）；evaluateCommandCheck 另有环境指纹/日志完整性/被替代重验（代码级观察一并登记）。",
+      "class4_escape_path": "缺口如实登记（B4, review SC-02）：COMET_SKIP_BUILD=1 一个普通环境变量即可废掉整条证据链——零 check run 调用下 build-complete/verify-pass(verify_result 被 stamp 为 pass)/archive-confirm/archive 全部 exit 0、change 以零检查日志归档（'archived successfully'）；COMET_FORCE_PHASE=1 可直接改写 phase（默认拒绝并指名 escape）。下游入口检查仍拒伪造状态（'FATAL: verify_result is pending, expected pass'）。扩展验收：受管 launch authority 环境卫生（剥离/拒绝该类 env）+ 受保护 CI 复验，不改上游判定。",
+      "c07_entrances": "c07Entrances 登记 7 入口（transition/guard preview/guard --apply/next/archive/write-hook/state check 入口语义）；write-hook 经 P1_3 adapter（import 不修改）实测：edit 渠道真拒（exit 2 WRITE BLOCKED），Shell/MCP 渠道维持 A09 能力缺口如实记录。"
+    },
+    "1_4_c": {
+      "boundary": "内置 Project Memory 为 HOME 缓存（knowledge remember 写 $HOME/Library/Caches/Comet/project-knowledge/<hash>/memory/<slug>.md，list 另有 Comet 自生成拓扑记录）；archive 入口检查 5/5 通过且信封零知识要求、不含 llmwiki/outline——原生命中无 Kp 前置。",
+      "registration": "knowledgeBoundary 登记：LLMWiki/Outline/DeepWiki 仍为唯一知识源；内置记忆 authoritative=false、非第四知识主库（SC-03）；冲突策略=不覆盖/不替代/不作为 Kp/Kt 回执/不能禁用或隔离时不启用冲突功能；Kp 强制座位=driver gate（Knowledge.Closeout.v1，P1_3 sealCloseout 原样复用）；两模式 SKILL 的 comet knowledge remember 提示仅为缓存便利（B5 同时登记为必须阻断项）。"
+    }
+  },
+  "commands": [
+    {
+      "cmd": "node(24.15.0) tools/comet/prepare-source.mjs --archive <pinned comet-source-c90af44….tar.gz> --json",
+      "exit_code": 0,
+      "note": "本 worktree .sdd 为空，先装 pristine 源（reused=false，digest 与 upstream.lock 一致）"
+    },
+    {
+      "cmd": "node(24.15.0) tools/comet/build.mjs --archive <pinned> --json",
+      "exit_code": 0,
+      "note": "两 patch 应用后全新构建：fingerprint cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187（reused:false）"
+    },
+    {
+      "cmd": "node(24.15.0) tools/comet/build.mjs --check-generated --runtime-smoke --json",
+      "exit_code": 0,
+      "note": "PASS：check-generated classic/native/entry 全 PASS；runtime smoke 243 passed / 2 skipped（与基线一致）"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/1_4.mjs  # RED",
+      "exit_code": 1,
+      "note": "11/13 fail，根因 MODE_QUALIFICATION_MISSING；日志 worker-reports/P1_4/evidence/red-1_4-mjs.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/1_4.mjs  # GREEN",
+      "exit_code": 0,
+      "note": "13/13 pass（真实 patched 构建/真实 CLI 交互，隔离 HOME+PATH stub+$TMPDIR，零 mock）；日志 worker-reports/P1_4/evidence/green-1_4-mjs.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/*.mjs",
+      "exit_code": 0,
+      "note": "60 tests：59 pass / 1 skip（既有环境条件 skip）/ 0 fail；日志 green-delivery-cases-all.txt"
+    },
+    {
+      "cmd": "npm test  # 全量回归",
+      "exit_code": 0,
+      "note": "218/218 pass / 0 fail（基线 218 全绿）；日志 green-npm-test-full.txt"
+    }
+  ],
+  "mode_qualification_summary": {
+    "matrix_rows": 9,
+    "classic_admission": "admitted=true；绑定=init 时项目配置（workflow-resolve-config-binding），无自动切换；必须阻断项 B1–B6 全部登记",
+    "natively_covered": [
+      "B2 漏必需检查（全部受管入口拒绝）",
+      "B3 旧/手工回执（手工声明拒绝 + 陈旧输入拒绝 + 环境/日志/替代重验）",
+      "B1 的跨 scope 面",
+      "B4 的下游伪造状态拒绝面"
+    ],
+    "gaps": [
+      "B1 无必需检查身份注册表：必需 scope 下平凡成功命令可通过 gate（SC-01）→ 扩展验收=受管 check policy 固定命令身份 + runner argv 校验",
+      "B4 COMET_SKIP_BUILD=1 全链废证（零检查日志归档成功）+ COMET_FORCE_PHASE=1 直写相位（SC-02）→ 扩展验收=launch authority 环境卫生 + 受保护 CI 复验",
+      "B5 原生门无任何知识回执要求（archive 入口 5/5 零回执）→ 扩展验收=driver gate Kp/Kt 仅收 LLMWiki/Outline 外部证据",
+      "B6 classic init 对不满足宿主尝试 npm install -g @fission-ai/openspec@latest（浮动版本+全局变更）→ 扩展验收=隔离安装唯一（1.11.0 isolated）+ launch authority PATH 控制"
+    ],
+    "knowledge_boundary": "LLMWiki/Outline/DeepWiki 唯一源不冲突成立：内置记忆=HOME 缓存、非权威、不作回执；Kp 座位=driver gate（P1_3 原样复用）；冲突功能不能禁用或隔离时不启用"
+  },
+  "unverified": [
+    {
+      "item": "Native 模式自身门禁/逃生路径的等价探测（native 侧只做能力对照与拒绝面探测，未跑 SKIP/FORCE 等价链）",
+      "reason": "Native 未被准入为受管模式，matrix 判定为 comparison-only；对其门禁语义的完整定性属独立准出（若未来评估 Native 需单列）",
+      "owner": "parent（Native 永不被用作受管回退的前提下保持 open）"
+    },
+    {
+      "item": "B1/B4 扩展验收的实现本体（必需检查身份注册表、launch authority env 剥离）",
+      "reason": "本任务授权文件不含 lib/contracts/tools；扩展验收只登记验收标准与 seam，不以改判定转绿",
+      "owner": "后继实现任务（受管 check policy patch seam / Runner 环境卫生）"
+    },
+    {
+      "item": "受保护 CI 对受管交付的复验（F06 后半句）",
+      "reason": "沙箱无受保护 CI 实体；B4 扩展验收中该countermeasure仅在登记层面闭合",
+      "owner": "受保护 CI 接入任务（P1_6 之后的基础设施项）"
+    },
+    {
+      "item": "Knowledge.Closeout.v1 的 Kt（整体完成前的知识闭合）在 run 级的强制",
+      "reason": "driver gate 已强制 Kp 先于 archive（P1_3 ARCHIVE/KNOWLEDGE 语义）；Kt 属整体完成语义，本任务仅登记边界与座位，不动 lib",
+      "owner": "closeout 契约的 run 级接线任务（contracts/Knowledge.Closeout.v1 已存在）"
+    },
+    {
+      "item": "guard 对 Shell/MCP 写渠道的归因缺口（A09）",
+      "reason": "本任务经同一 adapter 复测仍为缺口（如实记录）；修复 seam 归属为 P1_3 已提请的 guard hook 契约扩展",
+      "owner": "guard hook 契约扩展（上游 patch seam，parent 决策落点）"
+    }
+  ],
+  "findings_for_parent": [
+    "B4 是最严重实证缺口：一个普通环境变量 COMET_SKIP_BUILD=1 即可让整个生命周期以零检查证据归档（verify_result 被直接 stamp 为 pass）。受管 launch authority 的环境控制不是加固项而是必须阻断项。",
+    "design 确认的严格路径已被原生强制：complete-design 要求设计文档 frontmatter 三元组（comet_change/role: technical-design/canonical_spec: openspec）才 exit 0；无三元组时拒绝但保留 design_doc 引用，transition design-complete 充当相位驱动。受管做法应写三元组走严格路径（已登记 OBS-design-confirmation）。",
+    "verification_report 字段会在 build-complete/verify-pass 转换重写 .comet.yaml 时被丢弃，必须在 verify 相位（重）设置且文件须先存在——探针与测试已按此顺序固化（OBS-verification-report-field）。",
+    "Native 绑定面干净：同一 config schema、workflow resolve source=project-config、classic 命令在 native 绑定下硬拒——单主控无自动切换的结论可直接引用。",
+    "guard 对 Bash/MCP 写渠道仍未归因（A09 缺口维持），但下游受管入口检查的兜底（伪造相位被 verify_result 检查拒绝）再次实证——强制点在入口 checks 而非文件系统保护。"
+  ],
+  "files_changed": [
+    "openspec/changes/delivery-foundation-rearchitecture/mode-qualification.json (new)",
+    "openspec/changes/delivery-foundation-rearchitecture/mode-probes/ (new: 1_4-classic-init.json, 1_4-native-mode.json, 1_4-gate-negatives.json, 1_4-escape-paths.json, 1_4-knowledge-boundary.json, 1_4-c07-entrances.json)",
+    "test/delivery-cases/1_4.mjs (new)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_4.json (new, this commit) + worker-reports/P1_4/evidence/ (red-1_4-mjs.txt, green-1_4-mjs.txt, green-delivery-cases-all.txt, green-npm-test-full.txt)"
+  ],
+  "commits": {
+    "tests": "d3e7531 test(p1_4): RED — mode qualification probes for classic/native, four loophole classes, knowledge boundary",
+    "implementation": "a526c7b feat(p1_4): mode qualification — classic admission, four loophole classes, knowledge boundary (GREEN)",
+    "report": "<本提交：worker-reports/P1_4.json + evidence>"
+  },
+  "blockers_or_questions": [
+    "B1/B4/B5/B6 扩展验收的落位 seam（哪个 patch / 哪一层 runner 职责）需 parent 决策；本任务仅登记验收标准。",
+    "探针生成脚本位于 $TMPDIR（p14-probe-gen.mjs），未入仓；若 review 需要复现 probe 文件可要求 worker 侧重跑或由 review 直接以 test/delivery-cases/1_4.mjs 的实时断言为准（测试对 registration 与 fresh 探针做一致性断言）。"
+  ]
+}

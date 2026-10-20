@@ -183,14 +183,14 @@
 **Parallel safe:** false
 **Acceptance IDs:** C07, F06, M01
 
-- [ ] **Step 1 [5 min]: Test** 1.4.a 固定两模式能力差异与 Classic 准入：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保留 Classic 既定接入设计，Native 仅兼容/能力对照，不自动切换路径。
-- [ ] **Step 2 [5 min]: Implement** 1.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 1.4.b 复现漏检查/伪回执/逃生路径：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：把无关成功命令、旧/手工回执、跳过入口做真实负例；原生缺口写扩展验收，不改判定转绿。
-- [ ] **Step 4 [5 min]: Implement** 1.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Test** 1.4.c 确认知识主库边界：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：Comet 自有记忆不覆盖 LLMWiki/Outline/DeepWiki；不能禁用或隔离时不启用冲突功能。
-- [ ] **Step 6 [5 min]: Implement** 1.4.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 1.4.a 固定两模式能力差异与 Classic 准入：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保留 Classic 既定接入设计，Native 仅兼容/能力对照，不自动切换路径。
+- [x] **Step 2 [5 min]: Implement** 1.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 1.4.b 复现漏检查/伪回执/逃生路径：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：把无关成功命令、旧/手工回执、跳过入口做真实负例；原生缺口写扩展验收，不改判定转绿。
+- [x] **Step 4 [5 min]: Implement** 1.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Test** 1.4.c 确认知识主库边界：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：Comet 自有记忆不覆盖 LLMWiki/Outline/DeepWiki；不能禁用或隔离时不启用冲突功能。
+- [x] **Step 6 [5 min]: Implement** 1.4.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P2_1: 原任务 2.1 — contracts/delivery/ 定义共享 schema；lib/delivery/ 实现全输入基线与 AC→case 追踪。先 RED 验证缺基线、零测试、错误 RED、非 JS 文件漂移，再 GREEN 实现（A01–A04/A07–A08）。node --test 目标测试和 npm test。
 
@@ -219,12 +219,12 @@
 **Parallel safe:** false
 **Acceptance IDs:** C01, C02, C03, C04, C05, C06, C07, C08
 
-- [ ] **Step 1 [5 min]: Test** 1.5.a 验证 OpenSpec/TestPack/计划引用映射：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：固定兼容环境，tasks 唯一可写；Classic plan 为派生只读视图，不双写 checkbox。
-- [ ] **Step 2 [5 min]: Implement** 1.5.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 1.5.b 按真实入口建立扩展 RED 基线：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：C01–C08 覆盖 R/A/T/P/V/K 以及恢复/旁路；保留原生不能阻断的证据，交 2.4 实现。
-- [ ] **Step 4 [5 min]: Implement** 1.5.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 1.5.a 验证 OpenSpec/TestPack/计划引用映射：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：固定兼容环境，tasks 唯一可写；Classic plan 为派生只读视图，不双写 checkbox。
+- [x] **Step 2 [5 min]: Implement** 1.5.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 1.5.b 按真实入口建立扩展 RED 基线：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：C01–C08 覆盖 R/A/T/P/V/K 以及恢复/旁路；保留原生不能阻断的证据，交 2.4 实现。
+- [x] **Step 4 [5 min]: Implement** 1.5.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P2_2: 原任务 2.2 — 实现 EvidenceEnvelope/来源准入和 GateReceipt；先 RED 拒绝自签 pass、同执行身份、旧 policy/环境/输入摘要、缺观察能力，再 GREEN（A05–A06/A18–A19/B03/B06–B07）。可信来源单独实测，schema 夹具不冒充认证。
 
@@ -269,16 +269,16 @@
 **Parallel safe:** false
 **Acceptance IDs:** D01, D02, D03, D04, D05, D06, D07, D08, C07
 
-- [ ] **Step 1 [5 min]: Test** 2.4.a 接入共同 policy/receipt/evaluate：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：只在 1.1.c 确定的同一 Runtime 扩展；Guard、直接转换、受管写入共用谓词。
-- [ ] **Step 2 [5 min]: Implement** 2.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 2.4.b 扩展同 Run 的 R/A/T/P/V 接纳与返工：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：来源/attempt/摘要接纳、固定修复路由、短锁登记→长执行→短锁接纳，不持锁等网络。
-- [ ] **Step 4 [5 min]: Implement** 2.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Test** 2.4.c 实现保守失效：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：需求/设计改动全部下游失效；正常代码写入只失效候选相关证据；进度勾选不循环失效 P。
-- [ ] **Step 6 [5 min]: Implement** 2.4.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 7 [5 min]: Test** 2.4.d 接入 resolver/恢复/完成事务：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：中断、并发接纳、archived 但缺必需义务不能 completed；复用原 Run/锁/事务，不造第二账本。
-- [ ] **Step 8 [5 min]: Implement** 2.4.d 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 9 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 10 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 2.4.a 接入共同 policy/receipt/evaluate：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：只在 1.1.c 确定的同一 Runtime 扩展；Guard、直接转换、受管写入共用谓词。
+- [x] **Step 2 [5 min]: Implement** 2.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 2.4.b 扩展同 Run 的 R/A/T/P/V 接纳与返工：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：来源/attempt/摘要接纳、固定修复路由、短锁登记→长执行→短锁接纳，不持锁等网络。
+- [x] **Step 4 [5 min]: Implement** 2.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Test** 2.4.c 实现保守失效：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：需求/设计改动全部下游失效；正常代码写入只失效候选相关证据；进度勾选不循环失效 P。
+- [x] **Step 6 [5 min]: Implement** 2.4.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 7 [5 min]: Test** 2.4.d 接入 resolver/恢复/完成事务：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：中断、并发接纳、archived 但缺必需义务不能 completed；复用原 Run/锁/事务，不造第二账本。
+- [x] **Step 8 [5 min]: Implement** 2.4.d 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 9 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 10 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P2_5: 原任务 2.5 — 架构 A 接入 grill-me 加独立全票共识：冻结审查包、保持 exact quorum/阈值/同摘要、绑定真实机械 tally/finalize、拒绝旧票/缺票/多数票和未闭合承重问题；Comet 只持有一个评审作业。按 E03/E04 验证需求/设计改变后保守失效，不扩展测试 T 为未经要求的相同 quorum。
 
@@ -323,12 +323,12 @@
 **Parallel safe:** false
 **Acceptance IDs:** A11, B08
 
-- [ ] **Step 1 [5 min]: Test** 3.4.a 实现唯一 Spec Adapter：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：真实临时 OpenSpec 工程预演、目标摘要、MODIFIED 全场景保留；明确 archive 已含 sync 时不再重复 sync。
-- [ ] **Step 2 [5 min]: Implement** 3.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 3.4.b 验证冲突与中断读回：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：主 specs 并发改动阻断；移动前后故障恢复原事务；归档后重新读回场景与稳定 Run 引用。
-- [ ] **Step 4 [5 min]: Implement** 3.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 3.4.a 实现唯一 Spec Adapter：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：真实临时 OpenSpec 工程预演、目标摘要、MODIFIED 全场景保留；明确 archive 已含 sync 时不再重复 sync。
+- [x] **Step 2 [5 min]: Implement** 3.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 3.4.b 验证冲突与中断读回：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：主 specs 并发改动阻断；移动前后故障恢复原事务；归档后重新读回场景与稳定 Run 引用。
+- [x] **Step 4 [5 min]: Implement** 3.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P3_2: 原任务 3.2 — Comet 单一主控安排角色和开发任务，独立 Whitebox 执行真实业务读回；验证弱测试回作者、产品缺陷回 Builder、环境缺口回适配器、候选改变重验（B01–B07/F08）。不批量改 vendored 技能，必要升级另做显式替换。
 
@@ -981,10 +981,10 @@
 **Parallel safe:** false
 **Acceptance IDs:** A13, A14, A16, A17, A19, F06, F09, B08
 
-- [ ] **Step 1 [5 min]: Test** RED：无远端修改授权时申请配置required checks拒绝；开发身份不能读取release/rollback secret；新head/mergeSHA复用旧check、缺项/skip/超时、tag改指不同digest实际阻断候选提升；部署成功但响应丢失先按原关联ID查询；未批准回滚请求被拒绝，已批准回滚要独立业务终态。
-- [ ] **Step 2 [5 min]: Implement** GREEN：只登记读回Git/CI/Registry/隔离环境身份和权限；提供最小scope专用credential引用；将精确integration SHA、build digest、部署receipt与目标readback贯通；平台writer归既有P任务和Comet closeout授权；无真实平台写授权则本地试点保持LOCAL_ONLY，不伪报required checks已配置或生产交付。
-- [ ] **Step 3 [5 min]: Review** 独立读回：实际Git/平台只读回执、精确SHA/digest与隔离部署身份；后续P4_1真实缺check阻断合并记录另验；禁止只以workflow YAML、管理员可读、模拟Status green或本地push成功宣称平台已保护。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 1 [5 min]: Test** RED：无远端修改授权时申请配置required checks拒绝；开发身份不能读取release/rollback secret；新head/mergeSHA复用旧check、缺项/skip/超时、tag改指不同digest实际阻断候选提升；部署成功但响应丢失先按原关联ID查询；未批准回滚请求被拒绝，已批准回滚要独立业务终态。
+- [x] **Step 2 [5 min]: Implement** GREEN：只登记读回Git/CI/Registry/隔离环境身份和权限；提供最小scope专用credential引用；将精确integration SHA、build digest、部署receipt与目标readback贯通；平台writer归既有P任务和Comet closeout授权；无真实平台写授权则本地试点保持LOCAL_ONLY，不伪报required checks已配置或生产交付。
+- [x] **Step 3 [5 min]: Review** 独立读回：实际Git/平台只读回执、精确SHA/digest与隔离部署身份；后续P4_1真实缺check阻断合并记录另验；禁止只以workflow YAML、管理员可读、模拟Status green或本地push成功宣称平台已保护。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
 
 ### Task I07: 独立监控、告警与原Runner进程监督
 
