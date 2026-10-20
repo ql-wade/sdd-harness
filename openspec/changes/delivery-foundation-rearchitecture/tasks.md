@@ -995,10 +995,10 @@
 **Parallel safe:** false
 **Acceptance IDs:** L08, L09, L10, L11, A11, H09
 
-- [ ] **Step 1 [5 min]: Test** RED：Comet进程宕机、主机不可达、心跳正常扫描卡死分别注入；同机监控随主机停止时必须标故障域未满足，不能PASS；首次隔离失败即时事件未投递/主渠道失败转备用/值班未确认升级真实计时；未经授权仅prepare不发送；监督器不得改phase、创建Comet维护operation或直接写Outline ACL；重启原实例与停止旧写者分别审计。
-- [ ] **Step 2 [5 min]: Implement** GREEN：外部监控读既有Comet事实，分开心跳/接收游标/完整扫描水位/隔离结果；告警投递重投与业务重试分离；监督器仅进程级restart，Comet自己恢复事务、补偿、重试；未知旧写者存活或存储归属不明时停止双启；未登记外部监控和投递渠道则无人值守发布pre-enable阻断，允许标本地进程探针完成但不偷换主机故障能力。
-- [ ] **Step 3 [5 min]: Review** 独立读回：外部时间戳+失联起点+监控判定+已授权渠道送达/升级回执，分别计算检测与投递，不把告警当已隔离；原authority/RunID恢复后仍只有一个业务owner；遗漏权限由Comet全量对账接纳，不让monitor维护第二重试循环。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 1 [5 min]: Test** RED：Comet进程宕机、主机不可达、心跳正常扫描卡死分别注入；同机监控随主机停止时必须标故障域未满足，不能PASS；首次隔离失败即时事件未投递/主渠道失败转备用/值班未确认升级真实计时；未经授权仅prepare不发送；监督器不得改phase、创建Comet维护operation或直接写Outline ACL；重启原实例与停止旧写者分别审计。
+- [x] **Step 2 [5 min]: Implement** GREEN：外部监控读既有Comet事实，分开心跳/接收游标/完整扫描水位/隔离结果；告警投递重投与业务重试分离；监督器仅进程级restart，Comet自己恢复事务、补偿、重试；未知旧写者存活或存储归属不明时停止双启；未登记外部监控和投递渠道则无人值守发布pre-enable阻断，允许标本地进程探针完成但不偷换主机故障能力。
+- [x] **Step 3 [5 min]: Review** 独立读回：外部时间戳+失联起点+监控判定+已授权渠道送达/升级回执，分别计算检测与投递，不把告警当已隔离；原authority/RunID恢复后仍只有一个业务owner；遗漏权限由Comet全量对账接纳，不让monitor维护第二重试循环。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
 
 ### Task I08: 备份恢复、单权威迁移与R10未完成保留
 
