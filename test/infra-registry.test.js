@@ -340,7 +340,7 @@ test('authority readback is honestly recorded as UNVERIFIED with the exact failu
   }
 });
 
-test('the 12 planned secret refs are all registered with distinct purposes and bound roles', () => {
+test('every planned secret ref (I01+I03 freeze list, 13) is registered with distinct purposes and bound roles', () => {
   const refsDoc = JSON.parse(fs.readFileSync(refsExamplePath, 'utf8'));
   const expected = [
     'source-git-read',
@@ -350,6 +350,7 @@ test('the 12 planned secret refs are all registered with distinct purposes and b
     'outline-oidc-client',
     'outline-db',
     'outline-redis',
+    'outline-app-session',
     'outline-object-store',
     'codewiki-provider',
     'ci-registry',
