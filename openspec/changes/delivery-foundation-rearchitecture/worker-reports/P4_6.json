@@ -234,7 +234,7 @@
     "integrations/comet/patches/0003-post-archive-closeout.patch (new, 8 upstream files, ~1014 行)",
     "integrations/comet/patches/tests/4_6.patch (new: comet-scripts.test.ts post-archive closeout 块, 5 tests)",
     "test/delivery-cases/4_6.mjs (new, 10 tests, H01–H09 正负例)",
-    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6.json (本提交) + worker-reports/P4_6/evidence/ (red-4_6-mjs-f2.log, green-4_6-mjs.log, green-npm-test-full.log, green-delivery-cases-all-default-lock.log, green-v-comet-native.json, green-v-comet-native.log)"
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6.json (本提交) + worker-reports/P4_6/evidence/ 6 个文件（.gitignore:21 *.log 会静默排除日志，证据按 P1_6 先例以 .txt 入库并 git add -f）：red-4_6-mjs-f2.txt, green-4_6-mjs.txt, green-npm-test-full.txt, green-delivery-cases-all-default-lock.txt, green-v-comet-native.txt, green-v-comet-native.json"
   ],
   "commits": {
     "patch": "(本提交) feat(p4_6): post-archive closeout runtime — same-run discovery/selection, atomic job-key claim, fixed document UUID + lastRevision ledger, waiting completion, authority binding (0003)",
@@ -244,5 +244,29 @@
   "blockers_or_questions": [
     "无实现阻塞。集成波次动作一项：upstream.lock.json 按 staged 顺序登记 0003-post-archive-closeout.patch 与 tests/4_6.patch（sha256 = 已提交文件内容摘要），随后按既有流程 repin master 侧 7 处 pin 至 beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966。",
     "设计裁决记录：(1) 构建/验证经由 build.mjs --lock 传参完成，未触碰 upstream.lock.json（brief 边界覆盖 P1_6/P2_4 的'patch 提交随登记 lock'先例）；(2) H05 的'不盲覆盖'落为三条 Comet 侧不变量——链上冲突未解拒新修订、重试不可漂移 baseRevision、文档 UUID 单一属主——HTTP 层 409 语义仍由薄适配在部署侧证实；(3) waiting 作为 closeout-parked 状态（design doc §1 预案），reconcile 与 archive 两处一致；(4) knowledge-closeout 外部目标在 P2_4 的 K-dispatch 前提上追加'已登记操作 + readback 匹配'前提（保持 D06 的 /K dispatch/ 拒因顺序不变，2_4.mjs 全部断言不受影响）。"
-  ]
+  ],
+  "review_fix": {
+    "date": "2026-10-21",
+    "trigger": "独立审查 CHANGES_REQUESTED（唯一阻断：5 个 .log 证据被 .gitignore:21 *.log 静默排除未入库，files_changed 表述与实际提交不符）",
+    "base": "merge --no-ff master @ cd2e8d4 -> merge commit 908794c（master 带入 P4_6.review.json 与 P4_2 等任务文件；对 integrations/comet/、tools/comet/ 仅新增 test/delivery-cases/4_2.mjs，lock 与构建工具未变，beab355d 构建仍有效）",
+    "fixes": [
+      "5 个 .log 证据更名 .txt（内容零改动，mv 字节不变）：red-4_6-mjs-f2.log→red-4_6-mjs-f2.txt、green-4_6-mjs.log→green-4_6-mjs.txt、green-npm-test-full.log→green-npm-test-full.txt、green-delivery-cases-all-default-lock.log→green-delivery-cases-all-default-lock.txt、green-v-comet-native.log→green-v-comet-native.txt；git add -f 入库",
+      "P4_6.json files_changed 改为与实际提交一致的 .txt 清单并注明 gitignore 缘由"
+    ],
+    "reverification": [
+      {
+        "cmd": "SDD_COMET_LOCK=<staged lock> node --test test/delivery-cases/4_6.mjs  # merge 后复跑",
+        "exit_code": 0,
+        "note": "10/10 pass / 0 fail（对 beab355d 构建；证据 green-4_6-mjs.txt 即同一文件状态的 10/10 运行）"
+      },
+      {
+        "cmd": "npm test  # merge 后复跑",
+        "exit_code": 0,
+        "note": "341 tests：340 pass / 0 fail / 1 skip（master 带入的 P4_2 release-protocol 等新 host 测试并入总数，全绿）"
+      }
+    ],
+    "commits": {
+      "review_fix": "(本提交) fix(p4_6): land evidence logs as .txt past the *.log ignore rule; align files_changed; re-verify post-merge"
+    }
+  }
 }
