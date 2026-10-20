@@ -83,13 +83,16 @@ test('exporter builds a contract-valid lock from the unique sources (real repo)'
   const head = execFileSync('git', ['-C', projectRoot, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   assert.equal(lock.release.commit, head, 'release commit must pin the actual HEAD');
 
-  // Skill digests must equal the P1_6 method-profile manifest digests (same
-  // digest basis; state-independent — both sides recomputed here).
+  // Skill digests must equal the P1_6 method-profile manifest digests — the
+  // exporter enumerates the TRACKED file set per skill, which is exactly the
+  // P1_6 line basis; both sides are recomputed here (state-independent).
   const manifest = JSON.parse(fs.readFileSync(path.join(projectRoot, 'openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json'), 'utf8'));
   const byName = new Map(lock.skills.map((s) => [s.name, s.digest]));
   assert.equal(lock.skills.length, manifest.snapshots.length);
   for (const snapshot of manifest.snapshots) {
-    assert.equal(byName.get(snapshot.name), snapshot.content_sha256, 'skill ' + snapshot.name + ' digest must match the method-profile manifest');
+    const clean = exporter.skillDigest(projectRoot, snapshot.name);
+    assert.equal(byName.get(snapshot.name), snapshot.content_sha256, 'skill ' + snapshot.name + ' lock digest must match the method-profile manifest');
+    assert.equal(snapshot.content_sha256, clean.digest, 'skill ' + snapshot.name + ' manifest digest must match the tracked source');
   }
   assert.equal(lock.policy.schemaRef, 'hooks.yaml');
   assert.equal(lock.policy.digest, sha256(fs.readFileSync(path.join(projectRoot, 'hooks.yaml'))));
@@ -313,7 +316,9 @@ compositionTest('upgrade: stale managed entry in an older command format is repl
     const managed = managedCommands(settings);
     assert.equal(managed.PreToolUse.length, 1, 'upgrade must not leave two Guard entries (不重复 Guard): ' + JSON.stringify(managed.PreToolUse));
     assert.match(managed.PreToolUse[0].command, /CLAUDE_PROJECT_DIR/, 'surviving entry must be the current managed format');
-    assert.equal(managed.PreToolUse[0].matcher, 'Write|Edit|MultiEdit|NotebookEdit|Bash', 'matcher must be the full deny-policy union');
+    // The fixture's deny union is Bash-only; the legacy entry's Write|Edit
+    // matcher must NOT leak into the registered matcher.
+    assert.equal(managed.PreToolUse[0].matcher, 'Bash', 'matcher must be the fixture deny-policy union, not the legacy matcher');
     assert.ok(userEntriesIntact(settings), 'user entries must survive upgrade');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -327,6 +332,7 @@ compositionTest('uninstall removes managed entries only, is idempotent, and re-i
     fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
     const settingsPath = path.join(root, '.claude/settings.json');
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    settings.permissions = { allow: ['Bash(echo user-keep)'] };
     settings.hooks.Stop.push({ hooks: [{ type: 'command', command: 'echo user-stop-hook' }] });
     writeJson(settingsPath, settings);
 
@@ -334,7 +340,7 @@ compositionTest('uninstall removes managed entries only, is idempotent, and re-i
     const after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
     assert.deepEqual(managedCommands(after), { PreToolUse: [], SessionStart: [], Stop: [] }, 'all managed entries removed');
     assert.ok(JSON.stringify(after.hooks).includes('user-stop-hook'), 'user Stop hook must survive uninstall');
-    assert.ok(after.permissions, 'non-hook user settings must survive uninstall');
+    assert.deepEqual(after.permissions.allow, ['Bash(echo user-keep)'], 'non-hook user settings must survive uninstall');
     assert.ok(!fs.existsSync(path.join(root, 'hooks/.compiled.env')), 'compiled policy env must be removed on uninstall');
 
     assert.equal(runAdapter(root, ['--uninstall']).status, 0, 'uninstall is idempotent');
@@ -363,7 +369,7 @@ compositionTest('matcher registration and gate script behavior are tested togeth
     const managed = managedCommands(settings);
     const matcherParts = String(managed.PreToolUse[0]?.matcher ?? '').split('|');
     assert.ok(matcherParts.includes('Task'), 'script policy added but settings matcher not registered: ' + managed.PreToolUse[0]?.matcher);
-    assert.ok(matcherParts.includes('Bash') && matcherParts.includes('Write'), 'full deny union required');
+    assert.ok(matcherParts.includes('Bash') && matcherParts.includes('Task'), 'full deny union required');
 
     // Script behavior against the SAME fixture's compiled env: the fixture
     // gets its own hooks scripts so the gate reads the fixture .compiled.env.
@@ -513,8 +519,16 @@ test('B09: a second writer cannot take over an active run', async () => {
 
 test('explicit migration re-pins only with ownership and a resolvable old baseline', async () => {
   const root = makeFixture();
+  // The old baseline must stay resolvable from history: give the fixture a
+  // real commit BEFORE the drift, so migration can prove what it preserves.
+  const git = (args) => spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+  git(['init', '-q']);
+  git(['-c', 'user.email=fixture@example.invalid', '-c', 'user.name=fixture', 'add', '-A']);
+  git(['-c', 'user.email=fixture@example.invalid', '-c', 'user.name=fixture', 'commit', '-qm', 'fixture baseline']);
+  const fixtureCommit = git(['rev-parse', 'HEAD']).stdout.trim();
+  assert.match(fixtureCommit, /^[0-9a-f]{40}$/);
   try {
-    const { lock: lock1 } = await exporter.exportRelease(root, path.join(root, 'foundation-a'), { releaseCommit: FIXED_COMMIT });
+    const { lock: lock1 } = await exporter.exportRelease(root, path.join(root, 'foundation-a'), { releaseCommit: fixtureCommit });
     const runDir = makeRunDir(lock1, { schemaVersion: 1, runId: 'run-m', status: 'active', owner: 'alice' });
     try {
       // Asset drift makes migration necessary.
