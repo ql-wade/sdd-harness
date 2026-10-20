@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+import assert, { AssertionError } from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -69,7 +69,7 @@ function parseJsonOut(result, label) {
   try {
     return JSON.parse(result.stdout);
   } catch {
-    throw new AssertionError(`${label}: stdout is not JSON: ${result.stdout}\nstderr: ${result.stderr}`);
+    throw new AssertionError({ message: `${label}: stdout is not JSON: ${result.stdout}\nstderr: ${result.stderr}` });
   }
 }
 
@@ -613,4 +613,17 @@ test('CLI input contract: malformed chain fixtures are input failures (exit 1), 
   const unparseable = tmpFile('chain-unparseable', 'not json');
   fs.writeFileSync(unparseable, '{nope');
   assert.equal(runCli(['probe', '--case', 'registry-environment-identity', '--chain', unparseable, '--json']).status, 1);
+});
+
+test('parseJsonOut raises a real AssertionError (not a ReferenceError) when the tool prints no JSON', () => {
+  // input-failure path: validate exits 1 with usage on stderr and an empty stdout,
+  // so the JSON.parse inside parseJsonOut fails and the guard branch executes.
+  const missing = path.join(os.tmpdir(), `infra-i06-nope-${Date.now()}.json`);
+  const result = runCli(['validate', '--registry', missing, '--json']);
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, '');
+  assert.throws(
+    () => parseJsonOut(result, 'no-json probe'),
+    (err) => err instanceof AssertionError && /stdout is not JSON/.test(err.message),
+  );
 });
