@@ -207,6 +207,55 @@
    "delivery_cases_full": "node --test test/delivery-cases/*.mjs -> exit 0: 92 tests, 91 pass / 0 fail / 1 skip (1_1 pristine-build env-conditional skip); evidence repin-green-delivery-cases-all.txt",
    "npm_test": "npm test -> exit 0: 263/263 pass; evidence repin-green-npm-test-full.txt",
    "fingerprint_now": "9b95a0ff54ee00abd03ba9fb507cd93f03c8a464a743658898c474a51dc89b10 (build present and manifest-verified in this worktree .sdd)"
+  },
+  "six_pin_repin": {
+   "date": "2026-10-21",
+   "trigger": "P4_6 merged into master (9557433; lock 4236517 registers the 6-patch stack 0001/tests-1_6/0002/tests-2_4/0003/tests-4_6); coordinator assigned the integration-wave 6-pin repin to this task",
+   "base_for_repin": "merge --no-ff master @ 4236517 -> merge commit b7ab97c",
+   "repin_commit": "2cdf0dc chore(p2_4): repin the six cross-task lock pins to 6 patches @ beab355d",
+   "pins_updated": [
+    {
+     "file": "test/delivery-cases/1_3.mjs",
+     "change": "patches.length 4->6; fingerprint prefix 9b95a0ff -> beab355d; header comment; lock-revision comment updated",
+     "lines": "2, 117-119"
+    },
+    {
+     "file": "test/delivery-cases/1_4.mjs",
+     "change": "same pair + header comment",
+     "lines": "2, 162-164"
+    },
+    {
+     "file": "test/delivery-cases/1_5.mjs",
+     "change": "same pair + header comment (C06 B5 verdict-surface assertion carries no fingerprint literal — no change)",
+     "lines": "2, 184-186"
+    },
+    {
+     "file": "test/delivery-cases/1_6.mjs",
+     "change": "patch-scoping pin 4->6; lock-revision comment updated",
+     "lines": "157-159"
+    },
+    {
+     "file": "test/delivery-cases/2_4.mjs",
+     "change": "own lock-count pin 4->6 with the full 6-patch stack named",
+     "lines": "213-215"
+    },
+    {
+     "file": "openspec/changes/delivery-foundation-rearchitecture/mode-qualification.json",
+     "change": "build.fingerprint 9b95a0ff -> beab355d; build.patches 4 -> 6 entries; build.verification re-verified on the repinned build; repinNote appended with the P4_6 provenance (mode-probes/ and knowledgeBoundary verifiedOn historical records untouched)",
+     "lines": "9-24 area"
+    },
+    {
+     "file": "(no edit needed)",
+     "change": "3_1.mjs B09 meta-assertion re-runs 1_6.mjs (passes once repinned; carries no fingerprint literal); 1_1.mjs pristine-fingerprint probe (72e5ce0e) intentionally untouched",
+     "lines": "-"
+    }
+   ],
+   "build": "beab355d distribution built in this worktree via tools/comet/build.mjs --archive (reused=false, node 24.15.0); it is the default-lock build after the merge",
+   "verification": {
+    "delivery_cases_full": "node --test test/delivery-cases/*.mjs -> exit 0: 138 tests, 137 pass / 0 fail / 1 skip (1_1 pristine-build env-conditional skip); evidence repin6-green-delivery-cases-all.txt",
+    "npm_test": "npm test -> exit 0: 341/341 pass; evidence repin6-green-npm-test-full.txt",
+    "fingerprint_now": "beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966"
+   }
   }
  }
 }
