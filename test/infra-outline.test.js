@@ -95,10 +95,11 @@ test('V_INFRA_I03 contract: committed outline domain validates clean; qualify/up
   assert.equal(report.interface, 'OutlineInfra.v1');
   assert.ok(report.domain, 'OutlineDomain.v1 summary must be present');
   assert.ok(report.state, 'OutlineState.v1 summary must be present');
-  // catalog 登记缺口必须显式暴露，不得静默（outline-app-session 不在 I01 目录中）。
+  // I01 修正案（master 7a55664）已补登 outline-app-session：已提交域文件必须 validate 干净且无该缺口。
+  // 缺口上报行为本身由下方的合成负例单独覆盖，不再依赖这个已被修复的真实缺口。
   assert.ok(
-    (report.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/outline-app-session'),
-    'validate must explicitly report the unregistered outline-app-session ref instead of hiding it',
+    !(report.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/outline-app-session'),
+    'outline-app-session must be registered in the I01 catalog (registered by amendment 7a55664)',
   );
 
   // 配置有效 ≠ 运行 ready：qualify 必须诚实 NOT_READY 且退出 2。
@@ -126,6 +127,23 @@ test('V_INFRA_I03 contract: committed outline domain validates clean; qualify/up
   const missing = runCli(['validate', '--registry', registryPath, '--dir', partial, '--json']);
   assert.equal(missing.status, 1, 'a missing domain file is an input/prerequisite failure');
   assert.doesNotMatch(missing.stdout + missing.stderr, HOST_PATH_OUTPUT_RE);
+});
+
+test('gap-reporting behavior: a ref missing from a supplied catalog is explicitly reported as a catalogGap, never silent', () => {
+  // 合成负例（临时 fixture，不动活配置）：从 refs 目录副本中移除一个已知已登记的 ref，
+  // 断言 validate 仍显式上报缺口——覆盖不依赖已被 I01 修正案修复的真实缺口。
+  const refsDoc = JSON.parse(fs.readFileSync(path.join(repoRoot, 'infra', 'delivery', 'secrets.refs.example.json'), 'utf8'));
+  refsDoc.refs = refsDoc.refs.filter((entry) => entry.ref !== 'secret-ref:sdd-harness-pilot/outline-publisher');
+  const refsFixture = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i03-refs-')), 'refs.json');
+  fs.writeFileSync(refsFixture, JSON.stringify(refsDoc, null, 2) + '\n');
+  const result = runCli(['validate', '--registry', registryPath, '--dir', outlineDir, '--refs', refsFixture, '--json']);
+  assert.equal(result.status, 0, 'a catalog gap is readiness evidence (qualify), not a structural violation');
+  const report = parseJsonOut(result, 'validate gaps');
+  assert.ok(
+    (report.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/outline-publisher'),
+    'validate must explicitly report the missing ref as a catalogGap instead of passing silently',
+  );
+  assert.doesNotMatch(result.stdout, HOST_PATH_OUTPUT_RE);
 });
 
 test('RED image gate: images.lock without any authenticated digest refuses up (committed state, nothing fabricated)', () => {
