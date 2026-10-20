@@ -129,14 +129,14 @@
 **Parallel safe:** false
 **Acceptance IDs:** M01, M02, B01, B09
 
-- [ ] **Step 1 [5 min]: Test** 1.6.a 选择兼容的方法导出入口：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保留旧 plan_guard 负例，固定去 Superpowers 且无第二 controller 的方法/校验协议；若共享新版仍拥有 controller，不能直接全量引入。
-- [ ] **Step 2 [5 min]: Implement** 1.6.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 1.6.b 显式替换真实目录快照：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：按技能层 AGENTS 和升级纪律引入选定 planner/test-authoring/Whitebox/Matt 内容与摘要，保留来源，不手改上游正文。
-- [ ] **Step 4 [5 min]: Implement** 1.6.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 1 [5 min]: Test** 1.6.a 选择兼容的方法导出入口：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保留旧 plan_guard 负例，固定去 Superpowers 且无第二 controller 的方法/校验协议；若共享新版仍拥有 controller，不能直接全量引入。
+- [x] **Step 2 [5 min]: Implement** 1.6.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 1.6.b 显式替换真实目录快照：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：按技能层 AGENTS 和升级纪律引入选定 planner/test-authoring/Whitebox/Matt 内容与摘要，保留来源，不手改上游正文。
+- [x] **Step 4 [5 min]: Implement** 1.6.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
 - [ ] **Step 5 [5 min]: Test** 1.6.c 修改 Classic 方法及初始化集成：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：在 1.1.c 确定的源码交付处替换硬安装/硬调用；新会话实际证明不重启 Superpowers、无 planner/implement-spec 重复派发。
-- [ ] **Step 6 [5 min]: Implement** 1.6.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 6 [5 min]: Implement** 1.6.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P1_2: 原任务 1.2 — 在临时隔离配置先 RED 复现双写/漂移负例，再实现 exporter 与 FoundationLock；验证正反序 bootstrap/init、重复 pull、升级、卸载、用户条目与 matcher 注册（F02/F04/B09）。不得修改活配置。
 
