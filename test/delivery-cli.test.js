@@ -97,7 +97,7 @@ function currentFor(report) {
   };
 }
 
-async function admitFixtureReport(launcher, report, { role = 'verifier', execution = 'exec-verifier-1' } = {}) {
+async function admitFixtureReport(launcher, report, { role = 'verifier', execution = 'exec-verifier-1', issuedExecutions = [] } = {}) {
   const { admitLegacyReport } = await import('../lib/adapters/legacy-evidence.js');
   return admitLegacyReport({
     report,
@@ -105,6 +105,7 @@ async function admitFixtureReport(launcher, report, { role = 'verifier', executi
     authority: launcher,
     current: currentFor(report),
     dispatch: { role },
+    issuedExecutions,
   });
 }
 
@@ -170,14 +171,22 @@ test('evidence-audit: nonexistent --project is invalid input, exit 1 (measured R
   assert.equal(report.pass, false);
 });
 
-test('evidence-audit: existing project with required evidence inputs missing is a missing prerequisite, exit 1 (measured RED: exited 2)', () => {
+test('evidence-audit: existing project with required evidence inputs missing stays exit 2 — pre-existing pinned oracle (nonzero, never a fake pass)', () => {
+  // Exit-code classification note: EVIDENCE_INPUT_MISSING is prerequisite
+  // language, but the pre-existing suite (test/evidence-audit-command.test.js
+  // "rejects missing progress, review, or captured test output") pins exit 2
+  // for a real project whose inputs are missing — the audit executed against
+  // a real project and returned a verification finding. The frozen contract's
+  // hard requirement (nonzero, never skip-to-PASS) holds either way; only the
+  // nonexistent --project case (nothing was executable) is invalid input = 1.
   const { project } = makeProject({ progress: '', review: '', testOutput: '' });
   fs.rmSync(path.join(project, 'openspec', 'changes', 'demo-change', 'progress.md'));
   fs.rmSync(path.join(project, '.sdd', 'runs', 'demo-change', 'review-notes.md'));
   const run = runCli(['evidence-audit', '--project', project, '--change', 'demo-change', '--json']);
-  assert.equal(run.status, 1, run.stdout);
+  assert.equal(run.status, 2, run.stdout);
   const report = parseJsonOut(run);
   assert.equal(report.pass, false);
+  assert.ok(report.issues.some((issue) => issue.code === 'EVIDENCE_INPUT_MISSING'));
 });
 
 test('deliverable-audit: nonexistent --project is invalid input, exit 1 (measured RED: exited 2)', () => {
@@ -338,7 +347,10 @@ test('adapter: admission trust is untouched admitEvidence behavior — no dispat
 
   const first = await admitFixtureReport(launcher, report);
   assert.equal(first.ok, true, first.reason ?? '');
-  const replay = await admitFixtureReport(launcher, report);
+  // Duplicate issuance is judged against the caller-maintained ledger of
+  // issued executions (admitEvidence's documented contract): the replay with
+  // the same execution identity recorded in the ledger is refused.
+  const replay = await admitFixtureReport(launcher, report, { issuedExecutions: [first.entry.execution] });
   assert.equal(replay.ok, false);
   assert.equal(replay.error, 'DUPLICATE_ISSUANCE');
 });

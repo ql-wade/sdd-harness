@@ -30,3 +30,15 @@ exit=2
 ## (EVIDENCE_INPUT_MISSING = prerequisite missing) exits 2, must exit 1
 {"schemaVersion":1,"projectDir":"/tmp/claude-501/sdd-p23-red-P9yCRL","change":"foo","run":"foo","pass":false,"actual":{"sourceFiles":1,"testFiles":0,"packageScripts":{}},"commandOutput":{},"evidenceFiles":{"progress":"/tmp/claude-501/sdd-p23-red-P9yCRL/openspec/changes/foo/progress.md","review":"/tmp/claude-501/sdd-p23-red-P9yCRL/.sdd/runs/foo/review-notes.md"},"evidenceSha256":{"progress":null,"review":null,"testOutput":null,"packageJson":null,"sourceTree":"39bc3e5c6f597a9afbd2e52f284a934b6e7fd0bbdb021555a3e249be60cec866"},"issues":[{"code":"EVIDENCE_INPUT_MISSING","message":"Required evidence inputs must exist before the audit can pass.","evidence":{"missing":["progress","review","testOutput"]}}]}
 exit=2
+
+# ADDENDUM (post-RED review): VIOLATION 4 reclassified.
+# test/evidence-audit-command.test.js ("evidence-audit rejects missing
+# progress, review, or captured test output", line 237, pre-existing and
+# outside P2_3's owned files) pins exit 2 for a REAL project whose required
+# evidence inputs are missing: the audit executed and returned a verification
+# finding, satisfying the frozen contract's hard requirement (nonzero, never
+# skip-to-PASS). P2_3 keeps that pinned semantics and fixes only the
+# unambiguous invalid-input cases (VIOLATIONS 1-3: the --project directory
+# itself does not exist -> exit 1). Open question for the planner recorded in
+# worker-reports/P2_3.json: whether EVIDENCE_INPUT_MISSING should map to 1,
+# which would require updating the pinned oracle in a file P2_3 may not touch.
