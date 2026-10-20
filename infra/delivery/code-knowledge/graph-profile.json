@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "interface": "CodeGraph.v1",
+  "kind": "structure-index",
+  "component": "codegraph",
+  "role": "optional-structure-query",
+  "enabled": false,
+  "status": "DISABLED",
+  "reason": "graph 部署为可选独立结构查询组件；当前停用，正确性协议不依赖它（probe graph-disabled-correctness 真实重跑主校验链验证）",
+  "removableOptimization": {
+    "removable": true,
+    "gateAuthority": false,
+    "knowledgeAuthority": false,
+    "policy": "CodeGraph 是可删除的独立优化件：删除/停用后正确性协议照常执行；它不得持有 gate 或知识权威，翻转任一权威字段属结构性违规"
+  },
+  "imageLockRef": "infra/delivery/code-knowledge/images.lock.json",
+  "source": {
+    "credentialRef": "secret-ref:sdd-harness-pilot/codegraph-source-read",
+    "structureOnly": true,
+    "inputCommitPinRequired": true,
+    "coverage": {
+      "requiredFields": [
+        "inputCommit",
+        "filesIndexed",
+        "languages",
+        "symbols"
+      ],
+      "status": "UNVERIFIED",
+      "reason": "独立 coverage 证据需要真实运行的 graph 组件；停用期间不要求也不声称已验证"
+    }
+  },
+  "lifecycle": {
+    "separateLifecycleFromWiki": true,
+    "rebuildRequiresFreshPull": true,
+    "rebuildPolicy": "graph 可重建；重建必须以当前权限重新拉取，不得复用已撤销代码源缓存",
+    "noAutoFeedOutlineOrLlmWiki": true,
+    "autoFeedPolicy": "结构索引单独生命周期；不能把整仓自动送 Outline/LLMWiki"
+  }
+}
