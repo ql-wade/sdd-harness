@@ -1,0 +1,282 @@
+$ node tools/infra/outline.mjs validate --registry infra/delivery/registry.json --json  # 2026-10-20T04:22:52Z
+{
+  "interface": "OutlineInfra.v1",
+  "command": "validate",
+  "registry": "infra/delivery/registry.json",
+  "refs": "infra/delivery/secrets.refs.example.json",
+  "dir": "infra/delivery/outline",
+  "ok": true,
+  "violations": [],
+  "catalogGaps": [
+    "secret-ref:sdd-harness-pilot/outline-app-session"
+  ],
+  "domain": {
+    "interface": "OutlineDomain.v1",
+    "instance": {
+      "id": null,
+      "url": null,
+      "immutableId": null,
+      "status": "UNVERIFIED",
+      "reason": "专用 loopback 实例尚未部署；不可变实例 ID 须从真实部署观测"
+    },
+    "collections": [
+      {
+        "name": "managed-source-collection",
+        "purpose": "受管源文集：交付资料的受控发布面",
+        "id": null,
+        "ownerStatus": "UNREGISTERED",
+        "audienceStatus": "UNVERIFIED"
+      },
+      {
+        "name": "isolation-collection",
+        "purpose": "隔离文集：撤回/隔离路径的专用容器",
+        "id": null,
+        "ownerStatus": "UNREGISTERED",
+        "audienceStatus": "UNVERIFIED"
+      }
+    ]
+  },
+  "state": {
+    "interface": "OutlineState.v1",
+    "database": {
+      "engine": "postgres",
+      "durable": true,
+      "credentialRef": "secret-ref:sdd-harness-pilot/outline-db",
+      "note": "唯一权威数据存储"
+    },
+    "attachments": {
+      "durable": true,
+      "credentialRef": "secret-ref:sdd-harness-pilot/outline-object-store",
+      "note": "附件持久存储，与数据库一致性备份并列"
+    },
+    "cache": {
+      "engine": "redis",
+      "durable": false,
+      "rightsAuthority": false,
+      "credentialRef": "secret-ref:sdd-harness-pilot/outline-redis",
+      "note": "仅缓存；权限判定永不以 cache 为准"
+    },
+    "apiContracts": {
+      "observationRef": "openspec/changes/delivery-foundation-rearchitecture/outline-public-api-observation.json",
+      "fixedCreateUuid": {
+        "declaredBySpec": true,
+        "status": "UNVERIFIED",
+        "reason": "官方 API spec 声明了 client-supplied create UUID；仅真实部署验证后才可 VERIFIED"
+      },
+      "lastRevision": {
+        "declaredBySpec": true,
+        "conflictStatusDeclared": 409,
+        "status": "UNVERIFIED",
+        "reason": "官方 API spec 声明了 lastRevision 冲突 409；仅真实部署验证后才可 VERIFIED，更新冲突不盲覆盖"
+      }
+    }
+  },
+  "checkedAt": "2026-10-20T04:22:52.116Z"
+}
+exit=0
+$ node tools/infra/outline.mjs qualify --registry infra/delivery/registry.json --json  # 2026-10-20T04:22:52Z
+{
+  "interface": "Qualification.v1",
+  "domain": "outline",
+  "dir": "infra/delivery/outline",
+  "ready": false,
+  "unverifiedCount": 10,
+  "catalogGaps": [
+    "secret-ref:sdd-harness-pilot/outline-app-session"
+  ],
+  "categories": {
+    "image-digest-authenticated": {
+      "status": "UNVERIFIED",
+      "reason": "no required component image has an authenticated digest (outline-app, outline-postgres, outline-redis, outline-object-store); inventing tags/digests is forbidden (images_policy.invented_tags_or_digests=false)"
+    },
+    "oidc-registration": {
+      "status": "UNVERIFIED",
+      "reason": "issuer/discovery unprovisioned; no discovery readback performed"
+    },
+    "oidc-login-proof": {
+      "status": "UNVERIFIED",
+      "reason": "no real issuance or login evidence; requires a live instance and a real issuer"
+    },
+    "object-store-access": {
+      "status": "UNVERIFIED",
+      "reason": "storage type/endpoint/bucket unselected; no bucket access proof"
+    },
+    "credentials-provisioned": {
+      "status": "UNVERIFIED",
+      "reason": "all 7 secret refs are NOT_PROVISIONED; no runtime secret store authorization exists"
+    },
+    "secret-refs-registered": {
+      "status": "UNVERIFIED",
+      "reason": "refs missing from the I01 catalog (catalog is I01-owned and needs a registration update): secret-ref:sdd-harness-pilot/outline-app-session"
+    },
+    "domain-registration": {
+      "status": "UNVERIFIED",
+      "reason": "immutable instance/collection IDs and effective reader sets not observed from a real deployment"
+    },
+    "state-durability": {
+      "status": "UNVERIFIED",
+      "reason": "restart-persistence probe never executed against a live instance; durable DB+attachment readback unproven"
+    },
+    "health-api": {
+      "status": "UNVERIFIED",
+      "reason": "no running service; health evidence requires the stack up"
+    },
+    "backup-compatibility": {
+      "status": "UNVERIFIED",
+      "reason": "no restore drill registered"
+    }
+  },
+  "inputs": {
+    "registrySha256": "e3e0469e50d34a635b6528bce9812111bb2fe51a3571cf4622a9fcbe167c60e5",
+    "domainFiles": {
+      "compose.yaml": "3f85b01234061ecb6619f10f322f16269533098c372a5c779d42fbfbdb190079",
+      "outline.env.example": "5c8669a5f35f8760e17330f7eda896b5eaf0625e7cb0ecacb4152b0bbce60939",
+      "images.lock.json": "0bd3362a340d18068edc1faa0093e8726c97822d77699000184c66237318e50b",
+      "oidc-registration.example.json": "24e844e76782928b7cb9686331f548cee6e68b1fd81c79f3947b5f03e98c32df",
+      "storage-policy.json": "d75984adaab777bcbc06a2c16e68acc106d7d947a514aa150e451595cc7102e6",
+      "collection-registration.example.json": "74bc228cd461b27bfdc26d9ec8454626edfe18e88d5ce7ca70e0dbb6b4921d34"
+    }
+  },
+  "unreadyComponents": [
+    {
+      "component": "outline-app",
+      "status": "UNVERIFIED",
+      "reason": "reference=UNSELECTED, digest=absent, digestAuthenticated=false"
+    },
+    {
+      "component": "outline-postgres",
+      "status": "UNVERIFIED",
+      "reason": "reference=UNSELECTED, digest=absent, digestAuthenticated=false"
+    },
+    {
+      "component": "outline-redis",
+      "status": "UNVERIFIED",
+      "reason": "reference=UNSELECTED, digest=absent, digestAuthenticated=false"
+    },
+    {
+      "component": "outline-object-store",
+      "status": "UNVERIFIED",
+      "reason": "reference=UNSELECTED, digest=absent, digestAuthenticated=false"
+    }
+  ],
+  "checkedAt": "2026-10-20T04:22:52.171Z"
+}
+exit=2
+$ node tools/infra/outline.mjs up --registry infra/delivery/registry.json --json  # 2026-10-20T04:22:52Z
+{
+  "interface": "Qualification.v1",
+  "command": "up",
+  "domain": "outline",
+  "refused": true,
+  "ready": false,
+  "error": "UP_REFUSED_IMAGES_LOCK_NOT_READY: 4 component images lack an authenticated digest",
+  "unverifiedComponents": [
+    {
+      "component": "outline-app",
+      "status": "UNVERIFIED",
+      "reason": "reference=UNSELECTED, digest=absent, digestAuthenticated=false"
+    },
+    {
+      "component": "outline-postgres",
+      "status": "UNVERIFIED",
+      "reason": "reference=UNSELECTED, digest=absent, digestAuthenticated=false"
+    },
+    {
+      "component": "outline-redis",
+      "status": "UNVERIFIED",
+      "reason": "reference=UNSELECTED, digest=absent, digestAuthenticated=false"
+    },
+    {
+      "component": "outline-object-store",
+      "status": "UNVERIFIED",
+      "reason": "reference=UNSELECTED, digest=absent, digestAuthenticated=false"
+    }
+  ],
+  "receipt": {
+    "interface": "Qualification.v1",
+    "domain": "outline",
+    "dir": "infra/delivery/outline",
+    "ready": false,
+    "unverifiedCount": 10,
+    "catalogGaps": [
+      "secret-ref:sdd-harness-pilot/outline-app-session"
+    ],
+    "categories": {
+      "image-digest-authenticated": {
+        "status": "UNVERIFIED",
+        "reason": "no required component image has an authenticated digest (outline-app, outline-postgres, outline-redis, outline-object-store); inventing tags/digests is forbidden (images_policy.invented_tags_or_digests=false)"
+      },
+      "oidc-registration": {
+        "status": "UNVERIFIED",
+        "reason": "issuer/discovery unprovisioned; no discovery readback performed"
+      },
+      "oidc-login-proof": {
+        "status": "UNVERIFIED",
+        "reason": "no real issuance or login evidence; requires a live instance and a real issuer"
+      },
+      "object-store-access": {
+        "status": "UNVERIFIED",
+        "reason": "storage type/endpoint/bucket unselected; no bucket access proof"
+      },
+      "credentials-provisioned": {
+        "status": "UNVERIFIED",
+        "reason": "all 7 secret refs are NOT_PROVISIONED; no runtime secret store authorization exists"
+      },
+      "secret-refs-registered": {
+        "status": "UNVERIFIED",
+        "reason": "refs missing from the I01 catalog (catalog is I01-owned and needs a registration update): secret-ref:sdd-harness-pilot/outline-app-session"
+      },
+      "domain-registration": {
+        "status": "UNVERIFIED",
+        "reason": "immutable instance/collection IDs and effective reader sets not observed from a real deployment"
+      },
+      "state-durability": {
+        "status": "UNVERIFIED",
+        "reason": "restart-persistence probe never executed against a live instance; durable DB+attachment readback unproven"
+      },
+      "health-api": {
+        "status": "UNVERIFIED",
+        "reason": "no running service; health evidence requires the stack up"
+      },
+      "backup-compatibility": {
+        "status": "UNVERIFIED",
+        "reason": "no restore drill registered"
+      }
+    },
+    "inputs": {
+      "registrySha256": "e3e0469e50d34a635b6528bce9812111bb2fe51a3571cf4622a9fcbe167c60e5",
+      "domainFiles": {
+        "compose.yaml": "3f85b01234061ecb6619f10f322f16269533098c372a5c779d42fbfbdb190079",
+        "outline.env.example": "5c8669a5f35f8760e17330f7eda896b5eaf0625e7cb0ecacb4152b0bbce60939",
+        "images.lock.json": "0bd3362a340d18068edc1faa0093e8726c97822d77699000184c66237318e50b",
+        "oidc-registration.example.json": "24e844e76782928b7cb9686331f548cee6e68b1fd81c79f3947b5f03e98c32df",
+        "storage-policy.json": "d75984adaab777bcbc06a2c16e68acc106d7d947a514aa150e451595cc7102e6",
+        "collection-registration.example.json": "74bc228cd461b27bfdc26d9ec8454626edfe18e88d5ce7ca70e0dbb6b4921d34"
+      }
+    },
+    "unreadyComponents": [
+      {
+        "component": "outline-app",
+        "status": "UNVERIFIED",
+        "reason": "reference=UNSELECTED, digest=absent, digestAuthenticated=false"
+      },
+      {
+        "component": "outline-postgres",
+        "status": "UNVERIFIED",
+        "reason": "reference=UNSELECTED, digest=absent, digestAuthenticated=false"
+      },
+      {
+        "component": "outline-redis",
+        "status": "UNVERIFIED",
+        "reason": "reference=UNSELECTED, digest=absent, digestAuthenticated=false"
+      },
+      {
+        "component": "outline-object-store",
+        "status": "UNVERIFIED",
+        "reason": "reference=UNSELECTED, digest=absent, digestAuthenticated=false"
+      }
+    ]
+  },
+  "checkedAt": "2026-10-20T04:22:52.226Z"
+}
+exit=2

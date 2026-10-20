@@ -347,7 +347,7 @@ test('probes are real subcommands: without a live instance they exit 2 with stru
 
   // 有 --endpoint 但不可达：必须真实尝试并如实报告连接失败（未来有真实实例时同一命令直接可跑）。
   const unreachable = runCli([
-    'probe', '--case', 'restart-persistence', '--endpoint', 'http://127.0.0.1:9',
+    'probe', '--case', 'restart-persistence', '--endpoint', 'http://127.0.0.1:59999',
     '--registry', registryPath, '--dir', outlineDir, '--json',
   ]);
   assert.equal(unreachable.status, 2, 'unreachable endpoint must stay UNVERIFIED with exit 2');

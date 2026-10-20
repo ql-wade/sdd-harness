@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "interface": "OutlineDomain.v1",
+  "project": "sdd-harness-pilot",
+  "note": "示例登记：结构与绑定声明在位；不可变 ID、有效读者集与真实 owner 全部未观测（UNVERIFIED/UNREGISTERED），不得用占位值冒充事实。publisher/isolator grant 须由有权主体分别签发，本任务不代签。",
+  "instance": {
+    "id": null,
+    "url": null,
+    "immutableId": null,
+    "status": "UNVERIFIED",
+    "reason": "专用 loopback 实例尚未部署；不可变实例 ID 须从真实部署观测"
+  },
+  "collections": [
+    {
+      "name": "managed-source-collection",
+      "purpose": "受管源文集：交付资料的受控发布面",
+      "id": null,
+      "owner": {
+        "principal": null,
+        "grantRef": "secret-ref:sdd-harness-pilot/outline-publisher",
+        "status": "UNREGISTERED"
+      },
+      "audience": {
+        "readers": [],
+        "effectiveReaderSet": null,
+        "status": "UNVERIFIED",
+        "reason": "有效受众闭包须覆盖 collection/parents/page/groups/shares/public 全部入口后才能宣称隔离"
+      }
+    },
+    {
+      "name": "isolation-collection",
+      "purpose": "隔离文集：撤回/隔离路径的专用容器",
+      "id": null,
+      "owner": {
+        "principal": null,
+        "grantRef": "secret-ref:sdd-harness-pilot/outline-isolator",
+        "status": "UNREGISTERED"
+      },
+      "audience": {
+        "readers": [],
+        "effectiveReaderSet": null,
+        "status": "UNVERIFIED",
+        "reason": "离组用户/普通读者对子树、公开分享、搜索与附件通道的拒绝必须逐通道实测"
+      }
+    }
+  ],
+  "evidence": {
+    "effectiveAudienceClosure": "UNVERIFIED",
+    "note": "admin 能读不代表目标受众被允许；受管发布阻断不能以 admin 读得到替代"
+  }
+}

@@ -1,0 +1,119 @@
+$ node tools/infra/outline.mjs probe --case oidc-principal-acl --registry infra/delivery/registry.json --json  # 2026-10-20T04:22:52Z
+{
+  "interface": "OutlineInfra.v1",
+  "command": "probe",
+  "case": "oidc-principal-acl",
+  "endpoint": null,
+  "executed": false,
+  "status": "UNVERIFIED",
+  "reason": "no live Outline instance endpoint configured; probes require a real authenticated instance (up refuses until the images lock qualifies and admission is granted). Pass --endpoint <url> once the stack exists — this command never mocks and never skips.",
+  "requiredInputs": [
+    "live Outline instance endpoint (--endpoint <url> or a registered instance.url)",
+    "real OIDC issuer with issued sessions for owner/member/offboarded principals",
+    "registered managed + isolation collections with real immutable IDs"
+  ],
+  "plannedSteps": [
+    "GET /api/config — instance reachable and identity observed",
+    "authenticated owner session reads managed collection (expect success)",
+    "unauthenticated read of collection/page/subtree (expect denial)",
+    "off-group principal across collection/page/subtree/public-share/search/attachment channels (expect per-channel denial)",
+    "record effective reader set closure across all entry points (admin-readable never substitutes for audience)"
+  ],
+  "observedSteps": [],
+  "checkedAt": "2026-10-20T04:22:52.278Z"
+}
+exit=2
+
+$ node tools/infra/outline.mjs probe --case restart-persistence --registry infra/delivery/registry.json --json  # 2026-10-20T04:22:52Z
+{
+  "interface": "OutlineInfra.v1",
+  "command": "probe",
+  "case": "restart-persistence",
+  "endpoint": null,
+  "executed": false,
+  "status": "UNVERIFIED",
+  "reason": "no live Outline instance endpoint configured; probes require a real authenticated instance (up refuses until the images lock qualifies and admission is granted). Pass --endpoint <url> once the stack exists — this command never mocks and never skips.",
+  "requiredInputs": [
+    "live stack (application + database + object store)",
+    "authenticated author principal",
+    "disposable test page and attachment"
+  ],
+  "plannedSteps": [
+    "create test page — observe returned identifier (fixed create UUID contract)",
+    "upload attachment and read it back",
+    "restart application and database",
+    "read back test page and attachment (durable readback)",
+    "stale lastRevision update (expect 409, never blind overwrite)"
+  ],
+  "observedSteps": [],
+  "checkedAt": "2026-10-20T04:22:52.330Z"
+}
+exit=2
+
+$ node tools/infra/outline.mjs probe --case attachment-denial --registry infra/delivery/registry.json --json  # 2026-10-20T04:22:52Z
+{
+  "interface": "OutlineInfra.v1",
+  "command": "probe",
+  "case": "attachment-denial",
+  "endpoint": null,
+  "executed": false,
+  "status": "UNVERIFIED",
+  "reason": "no live Outline instance endpoint configured; probes require a real authenticated instance (up refuses until the images lock qualifies and admission is granted). Pass --endpoint <url> once the stack exists — this command never mocks and never skips.",
+  "requiredInputs": [
+    "live object store with signed-URL issuance",
+    "attachment owned by the managed collection",
+    "unauthorized and off-group principals"
+  ],
+  "plannedSteps": [
+    "unauthenticated attachment fetch (expect denial)",
+    "off-group principal attachment fetch (expect denial)",
+    "revoke attachment then re-fetch — record signed-URL residual validity (no immediate-effect assumption)"
+  ],
+  "observedSteps": [],
+  "checkedAt": "2026-10-20T04:22:52.383Z"
+}
+exit=2
+
+$ node tools/infra/outline.mjs probe --case restart-persistence --endpoint http://127.0.0.1:59999 --json  # 2026-10-20T04:22:52Z
+{
+  "interface": "OutlineInfra.v1",
+  "command": "probe",
+  "case": "restart-persistence",
+  "endpoint": "http://127.0.0.1:59999",
+  "executed": false,
+  "status": "UNVERIFIED",
+  "reason": "endpoint unreachable (GET /api/config): EPERM",
+  "requiredInputs": [
+    "live stack (application + database + object store)",
+    "authenticated author principal",
+    "disposable test page and attachment"
+  ],
+  "plannedSteps": [
+    "create test page — observe returned identifier (fixed create UUID contract)",
+    "upload attachment and read it back",
+    "restart application and database",
+    "read back test page and attachment (durable readback)",
+    "stale lastRevision update (expect 409, never blind overwrite)"
+  ],
+  "observedSteps": [
+    {
+      "step": "GET /api/config",
+      "status": "UNVERIFIED",
+      "error": "EPERM"
+    }
+  ],
+  "checkedAt": "2026-10-20T04:22:52.449Z"
+}
+exit=2
+
+$ node tools/infra/outline.mjs stop --registry infra/delivery/registry.json --json  # 2026-10-20T04:22:52Z
+{
+  "interface": "OutlineInfra.v1",
+  "command": "stop",
+  "executed": false,
+  "status": "UNVERIFIED",
+  "reason": "no Outline stack was ever started by this tool (up refuses until the images lock qualifies and admission is granted); there is nothing this tool can stop. A stack started outside this tool must be stopped by its own supervisor.",
+  "checkedAt": "2026-10-20T04:22:52.501Z"
+}
+exit=2
+
