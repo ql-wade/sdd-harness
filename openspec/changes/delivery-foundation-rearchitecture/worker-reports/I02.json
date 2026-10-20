@@ -184,5 +184,21 @@
       "worker-reports/I02/evidence/npm-test-merge.txt — npm test 全量：171/171 pass，0 fail，0 skipped，exit 0"
     ],
     "commit": "3069791"
+  },
+  "supplement_delta": {
+    "trigger": "用户裁决 A 接纳 Ponytail 补充；计划重冻结新增契约检查 V_I02_METHOD_STATE_SCOPE（§6/§7.4 方法状态作用域，amendment ponytail-supplement-20261020）",
+    "merge": "git merge --no-ff master（含 I01 修正 3 目录 18 refs、I04 接纳、refreeze 提交）-> 2085f47，无冲突",
+    "changes": [
+      "role-policy.json 新增 methodStateScope：declaration=METHOD_STATE_SHARED_DECLARED、model=cooperative-local；§6 已知事实注记（同仓库并发会话共享 mode 文件最后写入生效；hook exit 0/模式徽章/地图存在不证明规则送达或被遵守——列入 nonEvidence）；identityBasis/permissionBasis/completionBasis 全部 false；modeFilesInWorkerWritableSurface=FORBIDDEN；dispatchRecord 三字段（actualAssetDigest/effectiveLevel/injectionObservation 分开记录）+ inferIdentityFromSharedMode=FORBIDDEN，status=UNVERIFIED（无真实派发，运行时填充）",
+      "workspace-mounts.json 新增 methodState：mode 文件 workerWritable=false、mountedIntoRunner=false、identityOrPermissionBasis=false——不进任何 worker 角色可写面的结构表达",
+      "runner.mjs validate 新增结构门：METHOD_STATE_SCOPE_MISSING（声明缺失）、METHOD_STATE_AS_BASIS_FORBIDDEN（三 basis 任一翻 true）、METHOD_STATE_SCOPE_INVALID（可写面门松动）、DISPATCH_RECORD_SCHEMA_INCOMPLETE（三字段缺失或状态非 UNVERIFIED）、MODE_FILE_WORKER_WRITABLE_FORBIDDEN（挂载策略翻 true）；validate 回执新增 methodState 摘要",
+      "测试：committed 契约断言扩展（test 12）+ 新增 RED method-state gate 测试（4 个负例 fixture），套件 13→14"
+    ],
+    "verification": {
+      "node_test": "node --test test/infra-runner-isolation.test.js -> exit 0，14/14 pass，0 fail，0 skipped（evidence/green-node-test-method-state.txt）",
+      "npm_test": "npm test 全量（合并树：I01 修正 3 + I04 + refreeze）-> exit 0，206/206 pass，0 fail，0 skipped（evidence/npm-test-method-state.txt）",
+      "validate": "committed 域 validate 仍 exit 0（新门在 committed 状态下全过）"
+    },
+    "commit": "ec64bdb"
   }
 }
