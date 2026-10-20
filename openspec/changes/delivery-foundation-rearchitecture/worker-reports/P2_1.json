@@ -166,5 +166,18 @@
       "fix": "toggle made state-independent: parse the line's current checkbox state and flip to the opposite ([ ]<->[x]/[X]); keep asserting the flip really happened, the definition digest is unchanged across the flip, and an edited definition changes the digest. Validated on the real merged state (tasks.md line 204 is \"- [x]\").",
       "regression_guard": "node --test test/delivery-cases/2_1.mjs 7/7 exit 0; target suite 35/35 exit 0; npm test 107/107 exit 0, 0 skipped (post-merge master c9c3b18 via merge commit b2918da)"
     }
+  ],
+  "schema_hardening": [
+    {
+      "date": "2026-10-20",
+      "source": "P1_2 independent reviewer + coordinator double confirmation (cross-task gap: parseContract(FoundationLock) accepted machine paths /Users/... and floating versions @latest/HEAD; unknown fields mcps/methodProfile were silently allowed)",
+      "changes": [
+        "contracts/delivery/schema-kernel.js: two new rule types — \"path\" (repo-relative reference; rejects machine absolute paths reusing the exact ABSOLUTE_PATH_FORBIDDEN semantics of tools/infra/secret-refs.mjs) and \"pinnedVersion\" (rejects floating/unpinned versions: exact latest/HEAD/*/x, pkg@latest/@head forms, semver ranges ^ ~ > < =, wildcard minors 1.x; ALSO rejects machine absolute paths, which is the confirmed exploit shape). New per-contract unknownFields option: default \"allow\" preserves the additive extra-field evolution path; \"reject\" gives a contract a closed top-level field set.",
+        "contracts/delivery/foundation-lock.schema.js: mcps (array of {name, version?: pinnedVersion, digest}) and methodProfile ({path: path, digest, profile}) modeled after the artifact tools/foundation-export.mjs actually emits (foundation/foundation-lock.json), both optional for pre-P1_2 payloads; toolchain.cli.version / runner.version / node switched to pinnedVersion; policy.schemaRef switched to path; FoundationLock opts into unknownFields: \"reject\" (closed field set)."
+      ],
+      "fail_open_vs_fail_closed_decision": "Kept the kernel fail-open by default and made FoundationLock the strict exception (coordinator option 2). Reason: tightening every contract to fail-closed would break the sanctioned additive evolution path for all eight frozen contracts — every future optional field would force a schemaVersion bump or coordinated consumer changes, and the other seven contracts have no confirmed smuggling surface. The confirmed hole is FoundationLock-specific (it is the machine-reachability surface: MCP launchers and method-profile paths), so its top-level field set is closed now; other contracts can opt into unknownFields: \"reject\" the same way when their surface demands it. Unknown versions were already rejected by the compat boundary, so unknown fields inside a known version are the only remaining evolution mechanism and are preserved where not explicitly closed.",
+      "layering": "P1_2 launcher gate unchanged — this is contract-layer defense per F02 semantics; the two layers are the plan intent (double defense).",
+      "verification": "node --test test/delivery-baseline.test.js test/delivery-test-contract.test.js test/delivery-cases/2_1.mjs exit 0 (40/40: +5 new — valid mcps/methodProfile payload, real foundation/foundation-lock.json artifact parses, machine-path negatives in version+path fields, floating-version negatives incl. mcps[].version, closed-set vs BaselineRef evolution-path pairing). npm test exit 0 (130/130, 0 skipped). Count reconciliation vs coordinator target: 107 pre-merge + 18 P1_2 tests = 125 post-merge, +5 hardening = 130; the stated >=143 appears to double-count the 18 P1_2 tests — the >=125 floor is met and the suite is fully green."
+    }
   ]
 }
