@@ -1,0 +1,13 @@
+# RED-2: pristine Comet 0.4.5 init auto-installs Superpowers (2026-10-20, worktree impl/p1-6-method-profile)
+# baseline build (patches=[]), fingerprint 72e5ce0eb3ce1ca7c6b898cf5d63bc466a717e4ea2eaf7de761b86d2867af1f6 (reproduces P1_1 record exactly)
+# probe: isolated HOME (clean host, no plugin-cache remnant, no skills preinstalled) + stub npx/npm on PATH + stub openspec
+# command: HOME=<fakehome> PATH=<stub>:$PATH node <baseline>/bin/comet.js init scratch-red --yes --scope project --workflow classic --platform claude --codegraph skip --language en
+# note: on the real host the leftover ~/.claude/plugins/cache/claude-plugins-official/superpowers remnant makes hasSkills('superpowers')=true and init prints 'all skipped'; the install path below is what a clean host executes.
+
+--- init output (superpowers lines) ---
+  Installing Superpowers for: claude
+  Superpowers: installed
+    Superpowers: docs/superpowers/specs/, docs/superpowers/plans/, docs/superpowers/reports/
+
+--- npx/npm stub call log (the install path firing) ---
+npx skills add obra/superpowers -y --skill brainstorming --skill dispatching-parallel-agents --skill executing-plans --skill finishing-a-development-branch --skill receiving-code-review --skill requesting-code-review --skill subagent-driven-development --skill systematic-debugging --skill test-driven-development --skill using-git-worktrees --skill verification-before-completion --skill writing-plans --skill writing-skills --agent claude-code

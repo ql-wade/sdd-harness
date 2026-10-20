@@ -35,14 +35,18 @@
 
 | 技能 | 来源 | 职责 |
 | --- | --- | --- |
-| `grill-me` + `grilling` | mattpocock/skills | 前置事实质询：一次一问、给推荐答案、消除分支和术语歧义，直到共同理解 |
-| `whitebox-verify` | 内部演化 | 三模式验证：调试模式（浏览器链路白盒）/ Journey 验收（No GREEN without Journey closure）/ Slice 模式（本地 TDD） |
-| `claude-parallel-tdd-planner` | 内部 | 并行计划协议：context pack、任务 DAG、CONFIRM_ALIGNMENT、RED/GREEN ledger |
+| `tdd` + `diagnosing-bugs` + `code-review` | Matt Pocock (mattpocock/skills) | 基础实现方法（P1_6 方法档案）：测试先行 TDD、困难缺陷诊断循环、Standards/Spec 双轴审查 |
+| `grill-me` + `grilling` | mattpocock/skills | 前置事实质询：一次一问、给推荐答案、消除分支和术语歧义，直到共同理解（架构共识入口） |
+| `whitebox-verify` | 内部演化 | 三模式验证：调试模式（浏览器链路白盒）/ Journey 验收（No GREEN without Journey closure）/ Slice 模式（本地 TDD）；独立验收权威 |
+| `test-authoring` | 内部演化 | 测试设计与可执行测试编写，独立于实现与独立验收 |
+| `openspec-lifecycle-guard` | 内部演化 | OpenSpec 变更生命周期守护：证据化任务完成、严格校验、归档就绪 |
+| `claude-parallel-tdd-planner` | 内部（共享源快照，P1_6 升级） | 并行计划协议与数据契约/校验工具：context pack、任务 DAG、CONFIRM_ALIGNMENT、RED/GREEN ledger、plan_guard；已去 Superpowers 硬依赖，交付中不作为第二 controller 激活 |
 | `multi-agent-consensus-review` | 内部 | 三方全票共识评审：多 agent 独立冷启动投票、unanimous gate（全票 APPROVE + 分数门槛 + 同 digest）、分歧走 evidence-based debate；默认 quorum claude-code/zcode/codex-agent |
 
 > superpowers 核心子集已于 v0.2.2 移除（ADR-0016）：其 TDD/verification 职责由 whitebox-verify（Slice 模式）承接，brainstorming/writing-plans 职责由 grill-me 质询与 claude-parallel-tdd-planner 承接。
+> P1_6 方法档案（method-profile-manifest.json）：交付主控是 Comet Classic（单一 controller，禁止嵌套 planner/implement-spec），实现方法默认 Matt tdd/diagnosing-bugs/code-review，专门方法（test-authoring、Whitebox、grill-me/共识等）保留各自职责；Superpowers 不是安装或执行依赖，`docs/superpowers` 等旧名仅是受控兼容产物路径。
 
-**约束**：项目约束只写在 `AGENTS.md` 和 `docs/agent/`，不改技能正文、不加项目品牌前缀。技能以真实目录快照分发（禁止符号链接——可移植性红线），升级 = 显式替换 `.agents/skills/` 下的快照 + 跑 `bash scripts/agent-skill-check.sh`（校验存在性与 frontmatter 完整性；内容级防篡改 hash 清单为计划项）。
+**约束**：项目约束只写在 `AGENTS.md` 和 `docs/agent/`，不改技能正文、不加项目品牌前缀。技能以真实目录快照分发（禁止符号链接——可移植性红线），升级 = 显式替换 `.agents/skills/` 下的快照 + 更新 `openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json` 的来源与摘要 + 跑 `bash scripts/agent-skill-check.sh`（校验存在性与 frontmatter 完整性；内容级 hash 清单自 P1_6 起由 method-profile-manifest 固定）。
 
 ## 4. 触发矩阵
 
