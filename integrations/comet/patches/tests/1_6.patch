@@ -1,0 +1,15 @@
+diff --git a/test/app/init-e2e.test.ts b/test/app/init-e2e.test.ts
+index 3774dc2..b6f67a2 100644
+--- a/test/app/init-e2e.test.ts
++++ b/test/app/init-e2e.test.ts
+@@ -397,6 +397,10 @@ describe('comet init E2E', () => {
+       ).find((r) => r.platform === 'claude');
+       expect(claudeResult?.comet).toBe('installed');
+       expect(claudeResult?.openspec).toBe('skipped');
++      // Delivery contract (patches/tests/1_6.patch): Superpowers is a disabled
++      // method dependency. Project delivery keeps it non-installable from init
++      // selection; behavioral probes live in the receiving project's
++      // test/delivery-cases/1_6.mjs.
+       expect(claudeResult?.superpowers).toBe('skipped');
+ 
+       const manifest = await readManifest();
