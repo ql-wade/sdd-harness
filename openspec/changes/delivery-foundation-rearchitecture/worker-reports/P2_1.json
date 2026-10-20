@@ -47,23 +47,55 @@
     {
       "cmd": "node --test test/delivery-baseline.test.js test/delivery-test-contract.test.js test/delivery-cases/2_1.mjs (GREEN)",
       "exit_code": 0,
-      "summary": "34 tests, 34 pass, 0 fail, 0 skipped (10 baseline + 17 contract/exec + 7 case module)"
+      "summary": "35 tests, 35 pass, 0 fail, 0 skipped (11 baseline incl. nb-2 hardening + 17 contract/exec + 7 case module)"
     },
     {
-      "cmd": "npm test (full repo suite, worktree)",
+      "cmd": "npm test (full repo suite, worktree, post-review rerun)",
       "exit_code": 0,
-      "summary": "106 tests, 106 pass, 0 fail, 0 skipped — 79 baseline + 27 new, no regressions"
+      "summary": "107 tests, 107 pass, 0 fail, 0 skipped — 79 baseline + 28 new, no regressions; evidence refreshed in green-npm-test.txt"
     }
   ],
   "contracts": [
-    { "name": "SDD.Delivery.FoundationLock", "file": "contracts/delivery/foundation-lock.schema.js", "version_strategy": "v1; release.commit + release.exportDigest + skills[].digest + policy.{schemaRef,digest} + toolchain.{cli,runner,node,platforms} + profile; unknown/legacy/future schemaVersion explicitly rejected" },
-    { "name": "SDD.Delivery.BaselineRef", "file": "contracts/delivery/baseline-ref.schema.js", "version_strategy": "v1; kind enum product|design|usecase, revision, sha256 digest, confirmedBy, confirmationScope; version boundary via shared kernel" },
-    { "name": "SDD.Delivery.TestContract", "file": "contracts/delivery/test-contract.schema.js", "version_strategy": "v1; cases[]{id,ac,oracle} (min 1), requiredChecks[]{level,capability}, executionDenominator.totalCases >= 1, cleanup.{environment,data}, dependencyBaselines[]{kind,digest}; version boundary via shared kernel" },
-    { "name": "SDD.Delivery.PlanBundle", "file": "contracts/delivery/plan-bundle.schema.js", "version_strategy": "v1; tasks[]{id,dependsOn}, schedulerOwner (single scheduler owner), allowedPaths, worktree, acceptanceRefs; version boundary via shared kernel" },
-    { "name": "SDD.Delivery.CandidateRef", "file": "contracts/delivery/candidate-ref.schema.js", "version_strategy": "v1; run/attempt>=1, backendCandidate, inputDigest (full-input sha256), builderExecution; version boundary via shared kernel" },
-    { "name": "SDD.Delivery.EvidenceEnvelope", "file": "contracts/delivery/evidence-envelope.schema.js", "version_strategy": "v1; candidateDigest, caseId/check, origin{id,kind}, execution.id, environment, toolchain, executions.{total,valid}, result enum pass|fail|red|blocked|unverified, evidence[]{uri,sha256} (min 1), expiry ISO-8601; version boundary via shared kernel" },
-    { "name": "SDD.Delivery.GateReceipt", "file": "contracts/delivery/gate-receipt.schema.js", "version_strategy": "v1; policy.{ref,digest}, inputDigest, evidence[] sha256 (min 1), requiredDenominator.{required>=1,valid>=0}, blocked[], sourceAttestation.{origin,execution}, verdict enum pass|blocked; version boundary via shared kernel" },
-    { "name": "SDD.Delivery.ReleaseReceipt", "file": "contracts/delivery/release-receipt.schema.js", "version_strategy": "v1; integrationSha, buildDigest, targetEnvironment, configVersions.{config,migration}, deployIdentity, rollbackIdentity, readback.{ok===true enforced,at,evidenceDigest}; version boundary via shared kernel + semantic readback rule" }
+    {
+      "name": "SDD.Delivery.FoundationLock",
+      "file": "contracts/delivery/foundation-lock.schema.js",
+      "version_strategy": "v1; release.commit + release.exportDigest + skills[].digest + policy.{schemaRef,digest} + toolchain.{cli,runner,node,platforms} + profile; unknown/legacy/future schemaVersion explicitly rejected"
+    },
+    {
+      "name": "SDD.Delivery.BaselineRef",
+      "file": "contracts/delivery/baseline-ref.schema.js",
+      "version_strategy": "v1; kind enum product|design|usecase, revision, sha256 digest, confirmedBy, confirmationScope; version boundary via shared kernel"
+    },
+    {
+      "name": "SDD.Delivery.TestContract",
+      "file": "contracts/delivery/test-contract.schema.js",
+      "version_strategy": "v1; cases[]{id,ac,oracle} (min 1), requiredChecks[]{level,capability}, executionDenominator.totalCases >= 1, cleanup.{environment,data}, dependencyBaselines[]{kind,digest}; version boundary via shared kernel"
+    },
+    {
+      "name": "SDD.Delivery.PlanBundle",
+      "file": "contracts/delivery/plan-bundle.schema.js",
+      "version_strategy": "v1; tasks[]{id,dependsOn}, schedulerOwner (single scheduler owner), allowedPaths, worktree, acceptanceRefs; version boundary via shared kernel"
+    },
+    {
+      "name": "SDD.Delivery.CandidateRef",
+      "file": "contracts/delivery/candidate-ref.schema.js",
+      "version_strategy": "v1; run/attempt>=1, backendCandidate, inputDigest (full-input sha256), builderExecution; version boundary via shared kernel"
+    },
+    {
+      "name": "SDD.Delivery.EvidenceEnvelope",
+      "file": "contracts/delivery/evidence-envelope.schema.js",
+      "version_strategy": "v1; candidateDigest, caseId/check, origin{id,kind}, execution.id, environment, toolchain, executions.{total,valid}, result enum pass|fail|red|blocked|unverified, evidence[]{uri,sha256} (min 1), expiry ISO-8601; version boundary via shared kernel"
+    },
+    {
+      "name": "SDD.Delivery.GateReceipt",
+      "file": "contracts/delivery/gate-receipt.schema.js",
+      "version_strategy": "v1; policy.{ref,digest}, inputDigest, evidence[] sha256 (min 1), requiredDenominator.{required>=1,valid>=0}, blocked[], sourceAttestation.{origin,execution}, verdict enum pass|blocked; version boundary via shared kernel"
+    },
+    {
+      "name": "SDD.Delivery.ReleaseReceipt",
+      "file": "contracts/delivery/release-receipt.schema.js",
+      "version_strategy": "v1; integrationSha, buildDigest, targetEnvironment, configVersions.{config,migration}, deployIdentity, rollbackIdentity, readback.{ok===true enforced,at,evidenceDigest}; version boundary via shared kernel + semantic readback rule"
+    }
   ],
   "test_fixes_between_red_and_green": [
     {
@@ -106,5 +138,24 @@
   "blockers_or_questions": [
     "The conservative environment-failure classifier is intentionally fail-closed: a legitimate behavior RED whose captured output happens to contain a signature substring (e.g. asserting on 'ENOENT' text) classifies as environment failure and blocks RED recording rather than fabricating one. If 2.2/P3_1 need finer separation (signature scoped to the failure location rather than the whole output), that is a follow-up on top of classifyRunOutcome, not a scope change.",
     "test/delivery-cases/2_1.mjs is deliberately outside the npm test glob (matches repo pattern: test/*.test.js only); it runs via the explicit node --test command recorded above and later through the P3_1 verify runner. Reviewers should run the explicit command, not expect it in npm test."
+  ],
+  "review_fixes": [
+    {
+      "finding": "nb-1",
+      "fix": "test/delivery-test-contract.test.js: the version-boundary loop now also sets payload.schemaVersion=\"1\" (string) for every contract and asserts explicit rejection with \"schemaVersion: must be an integer\" — the kernel already implemented this refusal (!Number.isInteger); only the test was missing. Test renamed to cover non-integer. No production change needed.",
+      "regression_guard": "the added assertion runs for all eight SDD.Delivery.* contracts inside the same loop; target suite 35/35"
+    },
+    {
+      "finding": "nb-2",
+      "fix": "lib/delivery/baseline.js digestInputs: replaced localeCompare ordering with deterministic UTF-16 code-unit comparison (plain < / >), matching the code-unit sort already used for the MISSING_INPUT list; comment documents the cross-machine/locale rationale. New test pins the canonical serialization and asserts B.txt precedes a.txt by code unit (host collation provably differs: \"B\".localeCompare(\"a\") === 1 while \"B\" < \"a\").",
+      "regression_guard": "test/delivery-baseline.test.js \"digestInputs ordering is code-unit deterministic, not locale-dependent (nb-2)\"; order-independence and content-binding tests unchanged and passing"
+    }
+  ],
+  "clarifications": [
+    {
+      "date": "2026-10-20",
+      "source": "independent review (coordinator)",
+      "note": "The frozen provenance of the eight SDD.Delivery.* contract names is the tasks.md P2_1 Step 1 text, not the drift-lock frozen_interfaces list; the contracts/delivery registry matches that text exactly. No action required."
+    }
   ]
 }

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -193,4 +194,19 @@ test('digestInputs is order-independent and binds every entry', () => {
   assert.equal(digestInputs(e1), digestInputs(e2));
   const mutated = [{ path: 'a.js', group: 'sources', sha256: '3'.repeat(64) }, e1[1]];
   assert.notEqual(digestInputs(mutated), digestInputs(e1));
+});
+
+test('digestInputs ordering is code-unit deterministic, not locale-dependent (nb-2)', () => {
+  // 'B' is U+0042, 'a' is U+0061: code-unit order puts B.txt first, while ICU
+  // collation (localeCompare) puts a.txt first on this host. The frozen
+  // digest must follow code units, so pin the canonical serialization.
+  assert.equal('B'.localeCompare('a') > 0, true, 'precondition: host collation differs from code-unit order');
+  const lower = { path: 'a.txt', group: 'sources', sha256: '1'.repeat(64) };
+  const upper = { path: 'B.txt', group: 'sources', sha256: '2'.repeat(64) };
+  assert.equal(digestInputs([lower, upper]), digestInputs([upper, lower]));
+  const canonical = [upper, lower]
+    .map((entry) => `${entry.group}\u0000${entry.path}\u0000${entry.sha256}`)
+    .join('\n');
+  const expected = crypto.createHash('sha256').update(canonical).digest('hex');
+  assert.equal(digestInputs([lower, upper]), expected, 'B.txt must precede a.txt by code unit');
 });

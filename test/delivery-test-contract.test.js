@@ -169,7 +169,7 @@ test('a missing schemaVersion is rejected explicitly for every contract (never g
   }
 });
 
-test('unknown future and legacy versions are explicitly refused, never silently accepted', () => {
+test('unknown future, legacy and non-integer versions are explicitly refused, never silently accepted', () => {
   for (const [name, fixture] of Object.entries(FIXTURES)) {
     const future = fixture();
     future.schemaVersion = 2;
@@ -182,6 +182,12 @@ test('unknown future and legacy versions are explicitly refused, never silently 
     const legacyParsed = parseContract(name, legacy);
     assert.equal(legacyParsed.ok, false, `${name} must explicitly refuse older versions with no declared mapping`);
     assert.match(legacyParsed.errors.join('\n'), /older than supported/);
+
+    const nonInteger = fixture();
+    nonInteger.schemaVersion = '1';
+    const nonIntegerParsed = parseContract(name, nonInteger);
+    assert.equal(nonIntegerParsed.ok, false, `${name} must refuse a non-integer schemaVersion`);
+    assert.match(nonIntegerParsed.errors.join('\n'), /schemaVersion: must be an integer/);
   }
 });
 
