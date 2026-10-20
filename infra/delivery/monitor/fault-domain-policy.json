@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "interface": "FaultDomain.v1",
+  "kind": "fault-domain-policy",
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "domains": {
+    "runnerProcessFailure": {
+      "capabilityScope": "PROCESS_LEVEL",
+      "provableOnRunnerHost": true,
+      "note": "a same-host monitor/container can prove process death by injection (SIGKILL + heartbeat staleness); this capability is real and may be marked complete at process level."
+    },
+    "runnerHostFailure": {
+      "requiresExternalMonitor": true,
+      "coHostedMonitorInsufficient": true,
+      "latestDiscoverySeconds": 120,
+      "note": "proving host-down detection within 2 minutes requires a monitoring instance outside the Runner fault domain; a monitor that dies with the host can never prove it."
+    }
+  },
+  "rules": {
+    "coHostedMonitorMustNotPassHostFailure": true,
+    "unregisteredExternalMonitorBlocksUnattendedRelease": true,
+    "monitorSelfFailureDiscoveredBy": "existing-platform-monitor",
+    "unregisteredMonitorIsAdmissionGap": true,
+    "note": "when the co-hosted monitor stops with the host, the fault domain must be marked NOT satisfied — never PASS; failure of the monitoring system itself must be discovered by the existing platform monitoring, and an unregistered monitor keeps the admission gap open."
+  },
+  "alertAuditPersistence": {
+    "independentOfRunnerBackup": true,
+    "note": "alert delivery audit lives outside the Runner backup domain so a Runner volume failure cannot destroy all alert evidence."
+  },
+  "localOnly": true
+}

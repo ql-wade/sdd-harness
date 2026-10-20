@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "interface": "MonitorRegistration.v1",
+  "kind": "monitor-registration",
+  "example": true,
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "externalMonitor": {
+    "status": "UNREGISTERED",
+    "instance": "UNSELECTED",
+    "owner": "UNSELECTED",
+    "network": "UNSELECTED",
+    "persistence": "UNSELECTED",
+    "coHostedWithRunner": false,
+    "note": "The real monitoring instance outside the Runner fault domain (instance, owner, network, persistence) is an unprovided input; nothing is invented here. A co-hosted monitor can prove process failure only and dies with the host (fault-domain-policy.json)."
+  },
+  "onCall": {
+    "platform": {
+      "primary": "UNREGISTERED",
+      "backup": "UNREGISTERED"
+    },
+    "knowledgePermission": {
+      "primary": "UNREGISTERED",
+      "backup": "UNREGISTERED"
+    },
+    "note": "Names, backup persons and channels must be registered before unattended release can be enabled; this task implies no notification-send authorization."
+  },
+  "channels": {
+    "primary": "UNREGISTERED",
+    "backup": "UNREGISTERED",
+    "registered": []
+  },
+  "isolationOperationAuthorization": {
+    "registered": false,
+    "note": "Isolation emergency-action authorization belongs to the platform/knowledge-permission on-call owners and must be registered separately."
+  },
+  "deliveryAuthorization": {
+    "alertDeliveryAuthorized": false,
+    "authorizationRecord": null,
+    "basis": "The current task implies no notification-send authorization; delivery stays PREPARE_ONLY until a separately recorded owner approval exists."
+  },
+  "unattendedRelease": {
+    "enabled": false,
+    "requiresAll": [
+      "external-monitor-registered",
+      "oncall-platform-primary",
+      "oncall-platform-backup",
+      "channel-primary",
+      "channel-backup",
+      "delivery-authorized",
+      "isolation-operation-authorized"
+    ],
+    "note": "Unregistered external monitor, on-call or backup channel blocks the unattended-release precondition (pre-enable gate, fail-closed)."
+  },
+  "credentialRefs": [
+    "secret-ref:sdd-harness-pilot/monitor-health-read",
+    "secret-ref:sdd-harness-pilot/monitor-alert"
+  ],
+  "localOnly": true
+}

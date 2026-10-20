@@ -1,0 +1,65 @@
+{
+  "interface": "MonitorInfra.v1",
+  "command": "probe",
+  "case": "runner-process-failure",
+  "executed": true,
+  "status": "VERIFIED",
+  "capabilityScope": "PROCESS_LEVEL",
+  "hostFailureCapabilityClaimed": false,
+  "injectionParameters": {
+    "heartbeatIntervalMs": 50,
+    "staleAfterMs": 400,
+    "authorityId": "monitor-probe-comet-authority-local",
+    "note": "scaled local timescales prove the mechanism; the production contract deadlines below stay frozen and their capacity/failure evidence remains UNVERIFIED"
+  },
+  "contractDeadlines": {
+    "heartbeatIntervalSeconds": 30,
+    "heartbeatAlertAfterSeconds": 90,
+    "detectionLatestSeconds": 120
+  },
+  "observedSteps": [
+    {
+      "step": "spawn-runner-instance",
+      "status": "VERIFIED",
+      "pid": 90017,
+      "authorityId": "monitor-probe-comet-authority-local"
+    },
+    {
+      "step": "health-read-before-failure",
+      "status": "VERIFIED",
+      "heartbeatAgeMs": 9
+    },
+    {
+      "step": "inject-process-death",
+      "status": "VERIFIED",
+      "method": "SIGKILL",
+      "pid": 90017,
+      "oldWriterConfirmedGone": true
+    },
+    {
+      "step": "detect-heartbeat-stale",
+      "status": "VERIFIED",
+      "heartbeatAgeMs": 409,
+      "staleAfterMs": 400,
+      "code": "HEARTBEAT_AGE_ALERT"
+    },
+    {
+      "step": "supervised-restart",
+      "status": "VERIFIED",
+      "newPid": 90019,
+      "oldPid": 90017,
+      "sameAuthorityId": true,
+      "oldWriterConfirmedGone": true,
+      "singleLiveInstance": true,
+      "restartsUsed": 1,
+      "restartBudget": {
+        "windowSeconds": 300,
+        "maxRestarts": 3
+      },
+      "withinBudget": true,
+      "businessRetryBySupervisor": false
+    }
+  ],
+  "reason": "process-level fault injection verified: real child process, real SIGKILL, stale-heartbeat detection, old writer confirmed gone, same-authority restart, exactly one live instance",
+  "checkedAt": "2026-10-20T17:00:17.391Z"
+}

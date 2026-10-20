@@ -1,0 +1,161 @@
+{
+  "task": "I07",
+  "task_title": "独立监控、告警与原Runner进程监督",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/i07-monitoring",
+  "base_commit": "39a891e",
+  "status": "DONE",
+  "implementation_commit": "c94c26a",
+  "environment_setup": {
+    "worktree_bootstrap": "worktree .sdd was absent; ran the two-step prepare-source + build against the pinned archive (codeload URL from integrations/comet/upstream.lock.json); downloaded archive sha256 28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f matched the lock exactly; build fingerprint 9b95a0ff54ee00abd03ba9fb507cd93f03c8a464a743658898c474a51dc89b10 recorded here only — not written back to any committed lock/history (toolchain node 24.15.0 from nvm per lock.toolchain; default node 22.13.1 fails TOOLCHAIN_MISMATCH). Deterministic fingerprint matches the impl-p2-4 build. Baseline before build: 278 tests, 1 fail (C08 negative: missing patched Comet build), 1 legitimate skip; after build: 0 fail.",
+    "monitor_ref_catalog_finding": "The task brief said monitor-health-read AND monitor-alert are both in the 23-ref I01 catalog. Actual catalog state: only secret-ref:sdd-harness-pilot/monitor-alert exists (boundRole monitor, principal svc:sdd-harness-pilot/monitor); monitor-health-read is ABSENT. Handled per the I02/I03/I06 precedent: validate reports it as an explicit catalogGap (exit 0 — a membership gap is I01-owned readiness evidence, not a structural violation) and the I01 resolver refuses it with REF_NOT_REGISTERED (asserted in the committed test). I did NOT edit secrets.refs.example.json (I01-owned, out of my file scope)."
+  },
+  "red_cases": [
+    {
+      "case": "pre-implementation RED: whole V_INFRA_I07 suite against absent infra/delivery/monitor/* and tools/infra/monitor.mjs",
+      "actually_failed": true,
+      "evidence": "evidence/red-node-test.txt — node --test test/infra-monitor.test.js exit=1, 16/16 failed, 0 skipped (domain files and CLI did not exist). evidence/red-cli.txt — all 6 planned CLI forms (validate/health/supervise + 3 probes) exit=1 with node MODULE_NOT_FOUND for tools/infra/monitor.mjs. Honesty note: this is the module-absent stage, same shape as I06's red-node-test; per-case behavioral RED is the post-GREEN negative suite below, each of which exercises a real refusal path through the shipped CLI."
+    },
+    {
+      "case": "unregistered external monitor/on-call/backup channel blocks the unattended-release precondition (pre-enable gate)",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'RED pre-enable gate': fixture flipping unattendedRelease.enabled=true on the committed example registration -> validate exit=2 PRE_ENABLE_REGISTRATION_INCOMPLETE with the 7-item missing list (external monitor, both platform on-call entries, both channels, delivery authorization, isolation-operation authorization). The complete fixture (all REGISTERED + authorizationRecord) passes the structural gate -> exit=0, proving the gate is the registration, not the flag. Committed receipt: preEnableGate.allowed=false with all 7 missing."
+    },
+    {
+      "case": "Comet process death injected — provable locally at process level",
+      "actually_failed": true,
+      "evidence": "RED: probe --case runner-process-failure MODULE_NOT_FOUND (evidence/red-cli.txt). GREEN: real injection — the probe spawns a real node child writing a 50ms heartbeat, reads fresh heartbeat, SIGKILLs it, confirms the old writer terminated (kill(pid,0) ESRCH after exit reap), detects heartbeat staleness >400ms (scaled timescale; contract deadlines recorded alongside), then supervised-restarts the SAME authority id (new pid, old pid dead, exactly one live instance, 1 restart <= budget 3). Receipt evidence/green-probe-runner-process-failure.json: executed=true status=VERIFIED capabilityScope=PROCESS_LEVEL, all 5 observedSteps VERIFIED, hostFailureCapabilityClaimed=false — the process proof is never smuggled as a host-failure capability."
+    },
+    {
+      "case": "monitor co-hosted with the runner cannot PASS host-failure detection — fault domain must be FAIL, not PASS",
+      "actually_failed": true,
+      "evidence": "RED: probe --case external-host-down MODULE_NOT_FOUND. GREEN: no real external monitoring instance exists (registration status UNREGISTERED) -> structured UNVERIFIED exit=2 (evidence/green-probe-external-host-down.json): faultDomainSatisfied=false, mustNotPass=true, reason states a co-hosted monitor dies with the host, requiredInputs + plannedSteps listed, no skip:true. Structural backstop: fault-domain-policy flipping coHostedMonitorMustNotPassHostFailure=false -> validate exit=2 COHOSTED_CLAIM_FORBIDDEN (post-GREEN test 'RED fault-domain gate')."
+    },
+    {
+      "case": "first isolation failure immediate event undelivered / primary channel failure fails over to backup / unacknowledged on-call escalates — three segments timed separately from real timestamps",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'Monitor.v1 three-segment timing': green timeline (primary unreachable -> backup delivered in 25s, unacked, escalated after >=300s) -> exit=0 with three separate fields detectionSeconds/deliverySeconds/escalationSeconds and failover.used=true; no totalDeliverySeconds field can exist (structural: adding one -> exit=2 SEGMENTS_NOT_SEPARATE; dropping any segment -> exit=2). Negative: detection 190s -> DETECTION_DEADLINE_BREACH; delivery 45s (detection in budget) -> DELIVERY_TARGET_BREACH — proving segments are judged separately; undelivered + ackedAt -> UNDELIVERED_MARKED_ACKED; unacked without escalation -> ESCALATION_MISSING. Unauthorized send claim -> SEND_WITHOUT_AUTHORIZATION. All alerts produced without authorization are PREPARE_ONLY with sentByThisTool=false (the current task implies no notification-send authorization)."
+    },
+    {
+      "case": "supervisor overreach: changing phase / creating a Comet maintenance operation / writing Outline ACL directly is refused (process-level restart of the original instance only)",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'Supervisor.v1: out-of-scope actions are refused': all six actions (change-phase, create-maintenance-operation, write-outline-acl, copy-state, start-second-owner, business-retry) -> supervise exit=2 FORBIDDEN_ACTION_REFUSED decision=REFUSED. Structural backstop: removing any of the six from supervisor-policy forbiddenActions -> validate exit=2 SUPERVISOR_ACTIONS_INCOMPLETE; cometSelfRecovery.supervisorBusinessRetry=false is enforced (SUPERVISOR_BUSINESS_RETRY_FORBIDDEN) — Comet recovers its own transactions/compensation/retries."
+    },
+    {
+      "case": "dual start while the old writer is not quarantined is refused; restart budget (3 per 5 minutes) exceeded -> stop + escalate",
+      "actually_failed": true,
+      "evidence": "post-GREEN tests: oldWriterAlive=true -> exit=2 OLD_WRITER_ALIVE_REFUSED; storageOwnershipKnown=false -> exit=2 STORAGE_OWNERSHIP_UNKNOWN_REFUSED; 3 restarts inside the 300s window + a 4th request -> exit=2 RESTART_BUDGET_EXCEEDED decision=STOP_AND_ESCALATE with a PREPARE_ONLY escalation to the platform on-call; 3 restarts all outside the window -> exit=0 withinBudget=true (window arithmetic uses real timestamps). Structural backstops: maxRestarts=10 or onExceeded=CONTINUE_RESTARTING -> RESTART_BUDGET_INVALID; refuseWhileOldWriterAlive=ALLOW -> START_GATE_REFUSE_REQUIRED."
+    },
+    {
+      "case": "cross-project refs rejected; missing registration refused at resolution (I01 semantics)",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'RED I01 isolation': fixture credentialRef secret-ref:pav-legacy/monitor-alert -> validate exit=2 CROSS_PROJECT_REF. monitor-health-read (absent from the I01 catalog): validate reports the explicit catalogGap (exit 0, I01-owned gap) and resolveSecretRef throws REF_NOT_REGISTERED with the monitor principal (asserted against the real committed catalog); monitor-alert with the same principal resolves read-only status=UNRESOLVED resolved=false — never a value."
+    }
+  ],
+  "green_summary": {
+    "Health.v1": "tools/infra/monitor.mjs health --facts: read-only evaluation over existing Comet facts (sourceOfTruth=existing-comet-facts, readOnly=true enforced structurally). Read model: heartbeat_age, receive_cursor (observed, no threshold invented — thresholdStatus UNVERIFIED), complete_scan_watermark, unresolved_isolation + deadlines, authority identity. Heartbeat age >90s -> HEARTBEAT_AGE_ALERT; scan watermark >120s -> SCAN_WATERMARK_STALL with heartbeatIndependent=true; the stalled-scan scenario with a fresh heartbeat fires ONLY the stall breach (independence proven both ways). Overdue isolation deadline -> ISOLATION_DEADLINE_BREACH; missing authorityId -> AUTHORITY_IDENTITY_MISSING. Contract deadlines frozen in health-contract.json and re-asserted by validate (DEADLINE_CONTRACT_INVALID on tamper). Exit 0 healthy / 2 breach / 1 missing-unparseable facts. realCometReadback stays honestly UNVERIFIED (facts files are declared inputs; real readback needs the external monitor + monitor-health-read ref).",
+    "Monitor.v1": "alert --facts prepares alerts (HEARTBEAT_AGE_ALERT / SCAN_WATERMARK_STALL / ISOLATION_FAILURE_IMMEDIATE) with per-alert detectedAt; delivery is PREPARE_ONLY with sentByThisTool=false because monitor-registration carries alertDeliveryAuthorized=false (the task implies no send authorization); a timeline claiming sentByThisTool=true without a recorded authorization -> SEND_WITHOUT_AUTHORIZATION. alert --timeline evaluates the three segments separately from real ISO timestamps: detection <=120s, delivery <=30s (primary unreachable -> backup failover recorded, undelivered never marked acknowledged), escalation for unacked alerts (>=300s recommended ack timeout, freezeStatus UNVERIFIED_RECOMMENDED — the recommended value still needs owner freeze). A combined total-delivery budget is structurally forbidden (forbiddenCombinedBudgetFields + SEGMENTS_NOT_SEPARATE). Unattended-release pre-enable gate: enabled=true requires all seven registered prerequisites including the authorization record, else PRE_ENABLE_REGISTRATION_INCOMPLETE exit 2; delivery-authorization claims without a record are DELIVERY_AUTHORIZATION_CLAIM_FORBIDDEN (I06 protection-claim guard pattern).",
+    "Supervisor.v1": "supervise --request: decisions only — restart is the sole allowed action (six overreach actions refused with FORBIDDEN_ACTION_REFUSED); start gate refuses while the old writer is unconfirmed-terminated (OLD_WRITER_ALIVE_REFUSED) or storage ownership is unknown (STORAGE_OWNERSHIP_UNKNOWN_REFUSED); restart budget 3 per 300s window from real timestamps, exhaustion -> STOP_AND_ESCALATE with a PREPARE_ONLY escalation to the platform on-call. ALLOW receipts carry authorityIdentity mode=SAME_FIXED_AUTHORITY_ONLY with stateCopy/secondBusinessOwner FORBIDDEN, cometSelfRecovery (transactions/compensation/retry true, supervisorBusinessRetry false), recoveryTargetSeconds=600 with recoveryFreezeStatus=UNVERIFIED_RECOMMENDED, executed=false (a decision receipt is not a process restart). The actual process-level restart capability is proven by the probe: spawn -> SIGKILL -> confirm old writer gone -> same-authority respawn -> exactly one live instance, restart audit recorded (restartsUsed=1 vs budget 3).",
+    "FaultDomain.v1 + validate": "fault-domain-policy.json separates runnerProcessFailure (PROCESS_LEVEL, provable on the runner host — may be marked complete) from runnerHostFailure (requiresExternalMonitor, coHostedMonitorInsufficient, 120s latest discovery — can never PASS from a co-hosted claim; the probe external-host-down returns UNVERIFIED with faultDomainSatisfied=false and mustNotPass=true). monitor-self-failure is discoverable only by the existing platform monitoring; an unregistered monitor keeps the admission gap open. validate checks all five domain files fail-closed: interfaces, project binding to infra/delivery/registry.json, example declaration, frozen deadlines (30/30/90/120/120/30/300/3-per-300/600), pre-enable gate, delivery-authorization claim guard, segment separation, undelivered-ack rule, noBusinessWrites completeness, supervisor structure (forbiddenActions/budget/startGate/authorityBinding/cometSelfRecovery), co-host guard, secret-ref format + project namespace + forbidden-value scans, catalogGaps reported explicitly (monitor-health-read). Exit contract 0/1/2 per V_INFRA_I07.cli_contract; host-path redaction on all structured output; zero new npm dependencies; all negative fixtures in os.tmpdir().",
+    "secret_refs": "Two refs referenced, never valued: secret-ref:sdd-harness-pilot/monitor-health-read (health-contract.json readAuthorizationRef + registration credentialRefs) and secret-ref:sdd-harness-pilot/monitor-alert (alert-policy.json deliveryAuthorizationRef + registration credentialRefs). monitor-alert is registered in the I01 catalog (boundRole monitor) and resolves read-only UNRESOLVED; monitor-health-read is absent and is reported as an explicit catalogGap + REF_NOT_REGISTERED at resolution. No secret values, no host paths in any committed file (scanForForbiddenValues asserted in tests)."
+  },
+  "commands": [
+    {
+      "cmd": "node --test test/infra-monitor.test.js (pre-implementation)",
+      "exit_code": 1,
+      "summary": "RED: 16/16 failed, 0 skipped (evidence/red-node-test.txt); 6 raw CLI forms MODULE_NOT_FOUND (evidence/red-cli.txt)"
+    },
+    {
+      "cmd": "node --test test/infra-monitor.test.js (post-implementation)",
+      "exit_code": 0,
+      "summary": "GREEN: 16 tests, 16 pass, 0 fail, 0 skipped (evidence/green-node-test.txt)"
+    },
+    {
+      "cmd": "node tools/infra/monitor.mjs validate --registry infra/delivery/registry.json --json",
+      "exit_code": 0,
+      "summary": "committed domain validates clean; catalogGaps=[monitor-health-read] explicit; preEnableGate blocked with 7 missing; deadlines frozen at 30/30/90/120/120/30/300/3-per-300/600 (evidence/green-validate.json)"
+    },
+    {
+      "cmd": "node tools/infra/monitor.mjs probe --case runner-process-failure --json",
+      "exit_code": 0,
+      "summary": "real process injection VERIFIED at PROCESS_LEVEL: spawn/SIGKILL/stale-heartbeat detection/old-writer-gone/same-authority restart/single live instance; hostFailureCapabilityClaimed=false (evidence/green-probe-runner-process-failure.json)"
+    },
+    {
+      "cmd": "node tools/infra/monitor.mjs probe --case external-host-down --json",
+      "exit_code": 2,
+      "summary": "structured UNVERIFIED, faultDomainSatisfied=false, mustNotPass=true — no registered external monitoring instance exists; co-hosted monitor cannot prove host-down (evidence/green-probe-external-host-down.json)"
+    },
+    {
+      "cmd": "node tools/infra/monitor.mjs probe --case scan-watermark-stall --json",
+      "exit_code": 0,
+      "summary": "VERIFIED detection mechanism from a declared facts fixture (fresh heartbeat + 150s-stale watermark vs real clock), heartbeatIndependent=true, delivery PREPARE_ONLY, realCometReadback UNVERIFIED (evidence/green-probe-scan-watermark-stall.json)"
+    },
+    {
+      "cmd": "npm test",
+      "exit_code": 0,
+      "summary": "full suite: 294 tests (278 baseline + 16 new), 293 pass, 0 fail, 1 skipped — the skip is pre-existing and legitimate (isolated openspec 1.11.0 not installed under .sdd/tools; never a global upgrade) (evidence/green-npm-test-full.txt)"
+    }
+  ],
+  "unverified": [
+    {
+      "item": "host-failure detection within 2 minutes (external-host-down)",
+      "reason": "no monitoring instance outside the Runner fault domain is registered; a same-host probe can never produce host-down evidence",
+      "successor": "infrastructure owner registers the real external monitor instance/owner/network/persistence in monitor-registration (example today), then a change-controlled host-down drill with external timestamps"
+    },
+    {
+      "item": "real alert delivery / ack / escalation sends",
+      "reason": "the current task implies no notification-send authorization; everything ships PREPARE_ONLY and the authorization claim guard blocks unaudited claims",
+      "successor": "owner approval record + registered channels + runtime authorization for secret-ref:.../monitor-alert; then real receipts feed alert --timeline evaluation unchanged"
+    },
+    {
+      "item": "monitor-health-read catalog registration",
+      "reason": "absent from the 23-ref I01 catalog (only monitor-alert is registered); resolution refuses REF_NOT_REGISTERED and validate reports the explicit catalogGap",
+      "successor": "I01 owner (catalog is I01-owned; outside this task's file scope)"
+    },
+    {
+      "item": "real Comet facts readback (heartbeat/receive cursor/scan watermark/isolation state)",
+      "reason": "health/alert evaluate declared facts fixtures; reading real Comet facts requires the registered external monitor and the monitor-health-read ref",
+      "successor": "P4_8 knowledge isolation verification (I07 lands before it) once the monitoring instance and ref registration exist"
+    },
+    {
+      "item": "capacity/failure evidence freezing the contract deadlines; escalation ack timeout (300s) and recovery target (600s) values",
+      "reason": "values are frozen from the original contract (knowledge-revocation-and-restoration.md); the ack timeout and recovery target are explicitly recommended (建议) values — freezeStatus UNVERIFIED_RECOMMENDED; operational capacity/failure evidence pending",
+      "successor": "infrastructure owner freeze with capacity/failure evidence from the real monitoring instance"
+    },
+    {
+      "item": "production-timing evidence for heartbeat detection (30s interval / 90s alert / 120s discovery)",
+      "reason": "the process probe proves the mechanism at scaled local timescales (50ms heartbeat / 400ms stale) and records the contract deadlines alongside; production timing needs the real deployment",
+      "successor": "the external monitor's first real failover drill"
+    },
+    {
+      "item": "receive_cursor alert threshold",
+      "reason": "the cursor is read and reported (readModel) but no threshold is invented in this task (thresholdSeconds null, thresholdStatus UNVERIFIED)",
+      "successor": "owner decision on whether the receive cursor needs its own deadline"
+    },
+    {
+      "item": "supervisor restart of a real Comet service",
+      "reason": "proven at process level with a real child process; restarting the real Comet service requires a real runner runtime (I02 up stays gated; no container daemon evidence on this host)",
+      "successor": "runner admission (I02) + the first real failover exercise; decision gates are already enforced"
+    }
+  ],
+  "files_changed": [
+    "infra/delivery/monitor/monitor-registration.example.json (new)",
+    "infra/delivery/monitor/health-contract.json (new)",
+    "infra/delivery/monitor/alert-policy.json (new)",
+    "infra/delivery/monitor/supervisor-policy.json (new)",
+    "infra/delivery/monitor/fault-domain-policy.json (new)",
+    "tools/infra/monitor.mjs (new)",
+    "test/infra-monitor.test.js (new)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I07.json (this report)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I07/evidence/* (RED/GREEN logs and CLI receipts)"
+  ],
+  "commits": {
+    "tests": "43cfbd6",
+    "implementation": "c94c26a",
+    "report": "carried by HEAD of impl/i07-monitoring (this file's commit)"
+  },
+  "blockers_or_questions": [
+    "None blocking. Disclosure: one committed RED expectation needed a one-line fix during GREEN alignment (prepared alert kind HEARTBEAT_AGE -> HEARTBEAT_AGE_ALERT to match the health breach code used everywhere else); the initial run's failure was in my own test fixture naming, caught by the GREEN run and fixed in the implementation commit — the RED evidence (16/16 fail, module absent) was captured before any implementation existed.",
+    "Task-brief discrepancy recorded: monitor-health-read was described as already registered in the 23-ref catalog but is not; handled as an explicit gap per house precedent and listed under unverified."
+  ]
+}

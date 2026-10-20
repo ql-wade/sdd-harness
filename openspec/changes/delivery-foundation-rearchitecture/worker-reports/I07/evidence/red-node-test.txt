@@ -1,0 +1,471 @@
+# I07 RED evidence — node --test test/infra-monitor.test.js
+# date: 2026-10-20T16:55:12Z
+# state: test/infra-monitor.test.js present; infra/delivery/monitor/* and tools/infra/monitor.mjs ABSENT (pre-implementation)
+
+TAP version 13
+# Subtest: V_INFRA_I07 contract: committed monitor domain validates clean with honest gaps and spec-frozen deadlines
+not ok 1 - V_INFRA_I07 contract: committed monitor domain validates clean with honest gaps and spec-frozen deadlines
+  ---
+  duration_ms: 57.050042
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:128:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    validate must PASS on committed files: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/tools/infra/monitor.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:130:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: RED pre-enable gate: unattended release enabled without registered external monitor/on-call/backup channel is blocked
+not ok 2 - RED pre-enable gate: unattended release enabled without registered external monitor/on-call/backup channel is blocked
+  ---
+  duration_ms: 1.0015
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:174:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/infra/delivery/monitor/monitor-registration.example.json' -> '/tmp/claude-501/infra-i07-PZIRi8/monitor-registration.example.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:94:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:175:19)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: RED delivery authorization claim guard: no notification-send authorization exists in this task
+not ok 3 - RED delivery authorization claim guard: no notification-send authorization exists in this task
+  ---
+  duration_ms: 0.120167
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:216:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/infra/delivery/monitor/monitor-registration.example.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readMonitorJson (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:87:24)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:218:24)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED deadline freeze: tampering with the contract timings is rejected (30s/30s/90s/120s/120s/30s)
+not ok 4 - RED deadline freeze: tampering with the contract timings is rejected (30s/30s/90s/120s/120s/30s)
+  ---
+  duration_ms: 0.607625
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:232:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/infra/delivery/monitor/monitor-registration.example.json' -> '/tmp/claude-501/infra-i07-Q68xOt/monitor-registration.example.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:94:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:233:21)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED segment separation: a combined "total delivery" budget is rejected; three segments must stay separately timed
+not ok 5 - RED segment separation: a combined "total delivery" budget is rejected; three segments must stay separately timed
+  ---
+  duration_ms: 0.737792
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:261:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/infra/delivery/monitor/monitor-registration.example.json' -> '/tmp/claude-501/infra-i07-heQNfu/monitor-registration.example.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:94:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:264:21)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED supervisor gate: forbidden actions, restart budget and start gate are structurally enforced in the policy
+not ok 6 - RED supervisor gate: forbidden actions, restart budget and start gate are structurally enforced in the policy
+  ---
+  duration_ms: 0.473583
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:295:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/infra/delivery/monitor/monitor-registration.example.json' -> '/tmp/claude-501/infra-i07-bWGsnz/monitor-registration.example.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:94:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:298:22)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED fault-domain gate: a co-hosted monitor can never be declared sufficient for host-failure detection
+not ok 7 - RED fault-domain gate: a co-hosted monitor can never be declared sufficient for host-failure detection
+  ---
+  duration_ms: 0.114833
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:338:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/infra/delivery/monitor/fault-domain-policy.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readMonitorJson (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:87:24)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:339:21)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED I01 isolation: cross-project refs are structural violations; unregistered ref stays an explicit gap and resolver refuses
+not ok 8 - RED I01 isolation: cross-project refs are structural violations; unregistered ref stays an explicit gap and resolver refuses
+  ---
+  duration_ms: 0.513959
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:354:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/infra/delivery/monitor/monitor-registration.example.json' -> '/tmp/claude-501/infra-i07-ikmkzv/monitor-registration.example.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:94:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:355:24)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: Health.v1: read-only evaluation of heartbeat age, scan watermark, isolation deadlines and authority identity
+not ok 9 - Health.v1: read-only evaluation of heartbeat age, scan watermark, isolation deadlines and authority identity
+  ---
+  duration_ms: 49.52275
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:389:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    healthy facts must pass: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/tools/infra/monitor.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:392:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: Monitor.v1: alerts are prepared only (never sent without authorization) and prepared from the exact breaches
+not ok 10 - Monitor.v1: alerts are prepared only (never sent without authorization) and prepared from the exact breaches
+  ---
+  duration_ms: 47.702458
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:452:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    preparing alerts is the correct behavior and must succeed: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/tools/infra/monitor.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:459:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: Monitor.v1 three-segment timing: detection/delivery/escalation are computed separately from real timestamps
+not ok 11 - Monitor.v1 three-segment timing: detection/delivery/escalation are computed separately from real timestamps
+  ---
+  duration_ms: 55.480875
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:479:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    green timeline must pass: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/tools/infra/monitor.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:493:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: Supervisor.v1: out-of-scope actions are refused; the supervisor is process-level restart only
+not ok 12 - Supervisor.v1: out-of-scope actions are refused; the supervisor is process-level restart only
+  ---
+  duration_ms: 124.744542
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:580:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    supervisor action change-phase must be refused
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:590:12)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: Supervisor.v1: dual start with a live old writer is refused; unknown storage ownership is refused
+not ok 13 - Supervisor.v1: dual start with a live old writer is refused; unknown storage ownership is refused
+  ---
+  duration_ms: 76.25075
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:597:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    restart while the old writer is unconfirmed-terminated must be refused
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:605:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: Supervisor.v1: exceeding 3 restarts within 5 minutes stops and escalates
+not ok 14 - Supervisor.v1: exceeding 3 restarts within 5 minutes stops and escalates
+  ---
+  duration_ms: 69.097
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:639:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    a 4th restart inside the 5-minute window must be refused
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:647:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: probes are real subcommands: runner-process-failure is provable at process level; external-host-down stays UNVERIFIED; scan-watermark-stall is locally provable
+not ok 15 - probes are real subcommands: runner-process-failure is provable at process level; external-host-down stays UNVERIFIED; scan-watermark-stall is locally provable
+  ---
+  duration_ms: 63.684834
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:666:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    process-level injection must be provable: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/tools/infra/monitor.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:669:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: committed contract shape: interfaces, example declaration, read-only health and no secret values
+not ok 16 - committed contract shape: interfaces, example declaration, read-only health and no secret values
+  ---
+  duration_ms: 9.885208
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:720:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/infra/delivery/monitor/monitor-registration.example.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readMonitorJson (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:87:24)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i07/test/infra-monitor.test.js:723:17)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 0
+# fail 16
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 632.714667
+exit=1
