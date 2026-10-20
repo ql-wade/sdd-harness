@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "interface": "PlatformInfra.v1",
+  "kind": "registry-registration",
+  "example": true,
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "registry": {
+    "endpoint": "UNSELECTED",
+    "kind": "UNSELECTED",
+    "note": "The dedicated registry/artifact store is an unprovided input; this example fixes the contract shape only. Local registries only ever prove the local mechanism; the real promotion gate stays with the platform (P4_1/P4_2).",
+    "credentialRef": "secret-ref:sdd-harness-pilot/ci-registry",
+    "readerCredentialRef": "secret-ref:sdd-harness-pilot/artifact-reader",
+    "pushIdentity": {
+      "digestPinnedRequired": true,
+      "floatingTagsForbidden": true
+    },
+    "signing": {
+      "mechanism": "UNSELECTED",
+      "status": "UNVERIFIED"
+    },
+    "provenance": {
+      "mechanism": "UNSELECTED",
+      "status": "UNVERIFIED"
+    }
+  },
+  "artifactIdentity": {
+    "digestFormat": "sha256:<64 lowercase hex>",
+    "tagBinding": "A tag must resolve to exactly one immutable digest; a tag repointed to a different digest blocks candidate promotion (TAG_DIGEST_DRIFT).",
+    "buildBinding": "An artifact digest must be built from the integration merge SHA of the candidate (ARTIFACT_NOT_FROM_MERGE otherwise)."
+  },
+  "localOnly": true
+}

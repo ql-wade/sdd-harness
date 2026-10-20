@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "interface": "PlatformInfra.v1",
+  "kind": "artifact-retention",
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "retention": {
+    "rpo": "UNVERIFIED",
+    "rto": "UNVERIFIED",
+    "retentionPeriod": "UNVERIFIED",
+    "encryptionOwner": "UNVERIFIED",
+    "destructionPrecondition": "UNVERIFIED",
+    "autoCleanupEnabled": false,
+    "note": "RPO/RTO and the rest of the lifecycle values are unconfirmed pilot policy decisions; they stay UNVERIFIED and fail closed (auto cleanup can never be enabled on top of them)."
+  },
+  "manifest": {
+    "preserveExactSourceAndPolicyAndArtifactManifest": true,
+    "preserveProtectedCheckHistory": true
+  },
+  "rollbackRetention": {
+    "retainLastApprovedArtifact": true,
+    "sameDigestRollbackRequired": true,
+    "oldEvidenceNeverAuthorizesNewSha": true,
+    "revocationCheckOnRestore": true,
+    "note": "After a restore, old evidence can never authorize a new SHA; rollback targets the same digest and keeps the last approved artifact; a credential rotation or revocation forces re-verification because a backup cannot restore revoked capabilities."
+  },
+  "localOnly": true
+}

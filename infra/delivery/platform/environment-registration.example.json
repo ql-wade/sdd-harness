@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "interface": "Environment.v1",
+  "kind": "environment-registration",
+  "example": true,
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "environment": {
+    "id": "UNSELECTED",
+    "endpoint": "UNSELECTED",
+    "owner": "UNSELECTED",
+    "note": "The isolated target environment (endpoint, owner) is an unprovided input; this example fixes the Environment.v1 contract shape only.",
+    "networkIsolation": {
+      "status": "UNVERIFIED",
+      "crossProjectIsolation": "Must not share PAV or any other project's resources, credentials, networks, databases or volumes."
+    },
+    "deployCredentialRef": "secret-ref:sdd-harness-pilot/pilot-deployer",
+    "rollback": {
+      "credentialRef": "secret-ref:sdd-harness-pilot/pilot-rollback",
+      "approvalRequired": true,
+      "sameDigestRequired": true,
+      "retainLastApprovedArtifact": true,
+      "independentBusinessTerminalStateRequired": true
+    },
+    "readbackOracle": {
+      "kind": "independent-business-readback",
+      "correlationIdRequired": true,
+      "onTimeout": "A deployment whose response is lost is queried by its original correlation ID; confirmation requires the independent business terminal state.",
+      "status": "UNVERIFIED"
+    }
+  },
+  "localOnly": true
+}

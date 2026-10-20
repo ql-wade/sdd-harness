@@ -1,0 +1,212 @@
+{
+  "task": "I06",
+  "task_title": "Git/CI、Registry、制品与隔离目标环境连通",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/i06-platform",
+  "base_commit": "02487d1",
+  "status": "DONE",
+  "implementation_commit": "5f98a51",
+  "red_cases": [
+    {
+      "case": "pre-implementation RED (V_INFRA_I06 suite against absent platform domain files and CLI)",
+      "actually_failed": true,
+      "evidence": "evidence/red-node-test.txt — node --test test/infra-platform.test.js exit=1, 14/15 failed, 0 skipped (infra/delivery/platform/* and tools/infra/platform.mjs did not exist). Honesty note: the passing 'CLI input contract' test was vacuous pre-implementation (node MODULE_NOT_FOUND also exits status 1, so the exit-1 assertions coincidentally held); every substantive assertion failed."
+    },
+    {
+      "case": "pre-implementation CLI probes (validate/probe entry points absent)",
+      "actually_failed": true,
+      "evidence": "evidence/red-cli.txt — CLEAN-ROOM RE-CAPTURE (review fix): git archive 9a3f21e unpacked into a fresh $TMPDIR directory (host path redacted as <tmp-clean-room>), 4 commands invoked from there, stdout+stderr captured by the outer shell redirection only. All 4 exit=1 with node's own 'Error: Cannot find module .../tools/infra/platform.mjs' code=MODULE_NOT_FOUND. HISTORY: the originally committed red-cli.txt was invalid — it had captured zsh redirection failures (operation not permitted: /tmp/i06-out.txt; the sandbox forbids /tmp writes) so node never executed and the exit=1 values were zsh's, while the file header and this report claimed node MODULE_NOT_FOUND exit codes. Replaced wholesale by the genuine capture; RED node-test evidence (red-node-test.txt) was independently confirmed genuine by the reviewer and is unchanged."
+    },
+    {
+      "case": "configuring required checks without remote write authorization is refused; admin identity is not this run approval",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'RED authorization gate...' — probe --case required-checks-authorization exit=2 refused=true code=REMOTE_POLICY_WRITE_NOT_AUTHORIZED with plan-rule basis; same refusal with --principal 262266039 (the registered admin principal): the gate keys on this run's authorization, not identity. Fixture ci-policy with remotePolicyWriteAuthorized=true -> validate exit=2 REMOTE_POLICY_WRITE_FORBIDDEN (structural guard)."
+    },
+    {
+      "case": "development identity cannot read release/rollback secrets (SecretRef.v1 tier semantics)",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'RED credential tier...' via I01 resolver: dev principal on pilot-rollback -> PRINCIPAL_NOT_AUTHORIZED; dev principal borrowing the deployer role on pilot-deployer -> PRINCIPAL_NOT_AUTHORIZED; authorized deployer principal -> UNRESOLVED (I01 deliberately has no runtime secret store; no value is ever produced). CLI tier report: all 6 platform refs appear, every outcome is REFUSED_* or UNRESOLVED with resolution=false."
+    },
+    {
+      "case": "new head/mergeSHA reusing an old check blocks candidate promotion",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'RED stale evidence...': merge=SHA('e') with check evidence bound to SHA('b') -> exit=2 blocked=true code=CHECK_STALE_EVIDENCE (exact-SHA binding to the integration merge SHA)"
+    },
+    {
+      "case": "missing / skipped / timed-out checks each block promotion with distinct codes",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'RED missing/skipped/timed-out...': no evidence -> CHECK_MISSING; conclusion=skipped -> CHECK_SKIPPED; timedOut=true -> CHECK_TIMED_OUT; all exit=2"
+    },
+    {
+      "case": "tag repointed to a different digest blocks promotion; artifact must build from the integration merge SHA",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'RED tag drift...': tagResolvedDigest != digest -> TAG_DIGEST_DRIFT exit=2; builtFromMerge != merge -> ARTIFACT_NOT_FROM_MERGE exit=2"
+    },
+    {
+      "case": "deployment identity breaks (digest mismatch / receipt without correlation ID) block promotion",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'RED deployment identity...': deployment.artifactDigest != artifact.digest -> DEPLOYMENT_DIGEST_MISMATCH; receipt.correlationId missing -> RECEIPT_CORRELATION_MISSING; both exit=2"
+    },
+    {
+      "case": "deployment succeeded but response lost: confirmation goes through the original correlation ID; wrong or absent confirmation stays nonzero",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'timeout query path...': responseLost=true + readback.correlationId == receipt.correlationId + observed business terminal state -> exit=0 with readback step via=QUERY_BY_CORRELATION_ID; different correlationId -> READBACK_CORRELATION_MISMATCH exit=2; no terminal state -> READBACK_UNCONFIRMED exit=2 (blocked=false, status=UNVERIFIED — missing evidence stays nonzero, never skip-to-pass)"
+    },
+    {
+      "case": "unapproved rollback refused; approved rollback requires same digest plus an independent business terminal state",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'RED rollback gate...': approved=false -> ROLLBACK_NOT_APPROVED exit=2; approved=true with different digest -> ROLLBACK_DIGEST_MISMATCH exit=2; approved=true same digest without terminal state -> ROLLBACK_TERMINAL_STATE_UNCONFIRMED exit=2; approved=true same digest with observed businessTerminalState -> exit=0"
+    },
+    {
+      "case": "cross-project references (pav-*) and foreign project bindings are rejected; missing platform registration is an input failure",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'RED isolation...': repository-registration credentialRef secret-ref:pav-legacy/source-read -> validate exit=2 CROSS_PROJECT_REF; chain deployment.project=pav-prod -> ENVIRONMENT_PROJECT_MISMATCH exit=2; empty platform dir -> validate exit=1 (prerequisite, not semantic)"
+    },
+    {
+      "case": "fail-closed structure: rollback approval, correlation oracle, retention and protection-claim rules cannot be flipped off without a violation",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'fail-closed structure...' — 10 flips each produce a distinct violation: ROLLBACK_APPROVAL_REQUIRED, READBACK_ORACLE_CORRELATION_REQUIRED, EXAMPLE_DECLARATION_REQUIRED, RETENTION_STALE_EVIDENCE_RULE_REQUIRED, RETENTION_REVOCATION_RECHECK_REQUIRED, RETENTION_LAST_APPROVED_REQUIRED, BLOCKING_SEMANTICS_INCOMPLETE, REQUIRED_CHECK_NAMES_UNREGISTERED (names without REGISTERED status = fabrication), PLATFORM_PROTECTION_CLAIM_FORBIDDEN (configuredStatus=CONFIGURED), AUTO_CLEANUP_WITHOUT_CONFIRMED_RECOVERY"
+    }
+  ],
+  "green_summary": {
+    "PlatformInfra.v1": "tools/infra/platform.mjs validate|probe — no up subcommand (I06 is read-only verification; platform policy writes belong to existing P tasks + Comet closeout). Exit contract 0=PASS / 1=input-or-prerequisite / 2=verification-failure (execution-contract.json V_INFRA_I06.cli_contract), fail-closed loads, displayPath/redactHostPaths on structured output, no host paths in receipts. validate checks all five domain files: PlatformInfra.v1/Environment.v1 interfaces, project binding to infra/delivery/registry.json, same-origin identity (repoId 1285806550 / principalId 262266039 / owner ql-wade referenced from I01, never re-registered), honest UNVERIFIED readback (invalid gh token + TLS x509 OSStatus -26276 recorded verbatim), protection-claim guard (configuredStatus must stay UNVERIFIED/NOT_CONFIGURED — CONFIGURED is PLATFORM_PROTECTION_CLAIM_FORBIDDEN), remotePolicyWrites.allowed must be false, required-check names forbidden without REGISTERED status, four blocking semantics + failClosed, example files must declare example=true, Environment.v1 rollback/readback gates, retention fail-closed rules, credentialRef format + project namespace, secret-value/host-path scans; catalog membership gaps reported as explicit catalogGaps (I01-owned, validate stays exit 0 — outline/code-knowledge precedent). Probes are real: repository-identity performs one actual read-only gh api call (honest UNVERIFIED with the raw TLS error; local same-origin consistency checked locally), required-checks-authorization refuses remote policy writes with the plan-rule basis and reports per-ref credential tiers (every ref explicitly refused or UNRESOLVED, never a value).",
+    "IntegrationIdentity.v1": "registry-environment-identity probe evaluates the full chain from a --chain fixture (LOCAL_ONLY mechanism proof): PR head -> mergeSHA -> build artifact digest -> deployment identity -> readback. Exact-SHA check binding with four blocking semantics (CHECK_MISSING / CHECK_SKIPPED / CHECK_TIMED_OUT / CHECK_STALE_EVIDENCE), TAG_DIGEST_DRIFT + ARTIFACT_NOT_FROM_MERGE on the artifact, ENVIRONMENT_PROJECT_MISMATCH + DEPLOYMENT_DIGEST_MISMATCH + RECEIPT_CORRELATION_MISSING on deployment, QUERY_BY_CORRELATION_ID recovery for lost responses (READBACK_CORRELATION_MISMATCH / READBACK_UNCONFIRMED), rollback gate (ROLLBACK_NOT_APPROVED / ROLLBACK_RETENTION_MISSING / ROLLBACK_DIGEST_MISMATCH / ROLLBACK_TERMINAL_STATE_UNCONFIRMED). Input-format errors (bad SHA/digest, unparseable fixture) exit 1, semantic blocks exit 2 — strictly separated. Bare invocation (no fixture) is structured UNVERIFIED with requiredInputs + plannedSteps, executed=false, no skip:true, and never claims the real platform (real merge-gate/environment readback stay with P4_1/P4_2). Green chain and green rollback exit 0 with scope=LOCAL_ONLY.",
+    "Environment.v1 + artifact-retention": "environment-registration.example.json carries the Environment.v1 contract shape: UNSELECTED endpoint/owner (unprovided input — nothing invented), networkIsolation with cross-project rule, deploy/rollback credentialRefs, rollback fail-closed (approvalRequired + sameDigestRequired + retainLastApprovedArtifact + independentBusinessTerminalStateRequired), readbackOracle with correlationIdRequired and the timeout rule (query by original correlation ID, confirmation requires the independent business terminal state). artifact-retention.json: rpo/rto/retentionPeriod/encryptionOwner/destructionPrecondition all UNVERIFIED with autoCleanupEnabled=false (AUTO_CLEANUP_WITHOUT_CONFIRMED_RECOVERY if flipped), manifest preservation of exact source/policy/artifact manifests and protected-check history, rollbackRetention rules (old evidence never authorizes a new SHA; revocation forces re-verification because a backup cannot restore revoked capabilities)."
+  },
+  "commands": [
+    {
+      "cmd": "node --test test/infra-platform.test.js",
+      "exit_code": 0,
+      "summary": "V_INFRA_I06 contract: 16 tests, 16 pass, 0 fail, 0 skipped (post-merge re-run after review fix added the parseJsonOut branch test; evidence/green-node-test.txt)"
+    },
+    {
+      "cmd": "node tools/infra/platform.mjs validate --registry infra/delivery/registry.json --json",
+      "exit_code": 0,
+      "summary": "ok=true, violations=[], mode=LOCAL_ONLY, catalogGaps=[] post-merge (I01 amendment 4 registered all 6 platform refs; the implementation-time capture in green-cli.txt showed the honest 5-ref gap set), required checks honestly UNSELECTED/[], branchProtection UNVERIFIED, no host paths in output"
+    },
+    {
+      "cmd": "node tools/infra/platform.mjs probe --case repository-identity --read-only --json",
+      "exit_code": 2,
+      "summary": "executed=true: one real gh api repos/rpamis/sdd-harness attempt; raw error preserved verbatim (tls: failed to verify certificate: x509: OSStatus -26276), readback.status=UNVERIFIED, localConsistency=PASS; exit 2 is the designed UNVERIFIED contract (missing environment must be nonzero, no skip)"
+    },
+    {
+      "cmd": "node tools/infra/platform.mjs probe --case required-checks-authorization --json",
+      "exit_code": 2,
+      "summary": "refused=true, code=REMOTE_POLICY_WRITE_NOT_AUTHORIZED, basis names the plan rule (admin identity is not this run approval); same refusal with --principal 262266039; credentialTiers for all 6 refs all REFUSED_*/explicit, resolution=false"
+    },
+    {
+      "cmd": "node tools/infra/platform.mjs probe --case registry-environment-identity --json",
+      "exit_code": 2,
+      "summary": "executed=false, status=UNVERIFIED, scope=LOCAL_ONLY, 5 requiredInputs + 5 plannedSteps, no skip:true (no real registry/environment exists; local chain evaluation available via --chain fixtures and covered by 12 chain tests)"
+    },
+    {
+      "cmd": "npm test",
+      "exit_code": 0,
+      "summary": "full suite: 242 tests, 242 pass, 0 fail, 0 skipped (post-merge re-run: master baseline moved with I01 amendment 4 + review records; evidence/npm-test.txt)"
+    }
+  ],
+  "unverified": [
+    {
+      "item": "GitHub repository/principal identity readback (repo 1285806550, principal 262266039): gh token INVALID + TLS interception x509 OSStatus -26276 on both repos/<fullname> and repos/<id>; no identity or permission fact verified this run (previous admin observation NOT carried forward)",
+      "successor": "execution-time re-verification by the platform admission owner once a valid token and an unintercepted TLS path exist; probe --case repository-identity --read-only is ready and will flip to VERIFIED with observed repoId/fullName cross-check"
+    },
+    {
+      "item": "branch protection / required checks configured platform-side: no remote write authorization this run (plan: admin identity is not this run approval); ci-policy is design/read-only, LOCAL_ONLY — it is NOT claimed configured",
+      "successor": "P4_1 platform writer + Comet closeout authorization; the real missing-check merge-blocking record is verified there (plan oracle explicitly reserves this)"
+    },
+    {
+      "item": "required-check names, CI provider and runner registration: unprovided inputs, UNSELECTED — deliberately empty (names without REGISTERED status are rejected as fabrication)",
+      "successor": "repo admin registration; then fill ci-policy requiredChecks.names with registrationStatus=REGISTERED"
+    },
+    {
+      "item": "dedicated registry/artifact store, signing and provenance mechanisms: endpoint/kind/mechanism UNSELECTED, status UNVERIFIED (example file fixes the contract shape only); local tag/digest binding rules proven by fixtures only",
+      "successor": "resource admission owner (I01 qualification) + P4_1/P4_2 gates for the real promotion path"
+    },
+    {
+      "item": "isolated target environment endpoint/owner and real independent business readback: UNSELECTED/UNVERIFIED; timeout query and rollback flows proven by local chain fixtures only",
+      "successor": "environment owner + P4_2 gate; probe accepts a real deployment receipt/readback once an environment is registered"
+    },
+    {
+      "item": "platform secret-refs registration closed by I01 amendment 4 (merged at 5e34ba0): all 6 refs are now in the I01 catalog and committed validate reports catalogGaps=[]; all 6 remain NOT_PROVISIONED (no runtime secret store)",
+      "successor": "I01/runtime owner provisions the credentials; resolution stays UNRESOLVED-by-design until a runtime-authorized secret store exists"
+    },
+    {
+      "item": "retention lifecycle values: rpo/rto/retentionPeriod/encryptionOwner/destructionPrecondition UNVERIFIED, autoCleanupEnabled=false (fail-closed)",
+      "successor": "pilot policy decision owner; auto cleanup structurally cannot be enabled until the values are confirmed"
+    },
+    {
+      "item": "rollback approval flow in reality: approving principal identity and the independent business terminal state are unproven (no real environment/deployment exists)",
+      "successor": "environment owner defines the approver tier (pilot-rollback is tiered separately from pilot-deployer in the fixture contract) and demonstrates the terminal-state readback under P4_2"
+    }
+  ],
+  "files_changed": [
+    "infra/delivery/platform/repository-registration.json",
+    "infra/delivery/platform/ci-policy.json",
+    "infra/delivery/platform/registry-registration.example.json",
+    "infra/delivery/platform/environment-registration.example.json",
+    "infra/delivery/platform/artifact-retention.json",
+    "tools/infra/platform.mjs",
+    "test/infra-platform.test.js",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I06.json",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I06/evidence/env-probe.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I06/evidence/red-node-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I06/evidence/red-cli.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I06/evidence/green-node-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I06/evidence/green-cli.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I06/evidence/npm-test.txt"
+  ],
+  "commits": {
+    "tests": "9a3f21e",
+    "implementation": "5f98a51",
+    "report": "carried by HEAD of impl/i06-platform (this file's commit)"
+  },
+  "blockers_or_questions": [
+    "RESOLVED by I01 amendment 4 (5e34ba0, merged into impl/i06-platform): the five platform secret-refs flagged as catalogGaps at implementation time are registered; post-merge validate reports catalogGaps=[].",
+    "Identity fact still to reconcile at execution time: worktree remote is ql-wade/sdd-harness while the I01 registry records repoFullname rpamis/sdd-harness (repoId 1285806550); both remain UNVERIFIED labels until the gh readback succeeds (probe --case repository-identity --read-only).",
+    "Evidence-integrity lesson recorded in review_fix: a capture harness that fails before the tool runs (sandbox /tmp redirect denial) produces an exit code that belongs to the shell, not the tool; captures must go directly into the evidence file (or $TMPDIR), and headers must describe the capture method."
+  ],
+  "review_fix": {
+    "trigger": "独立审查 CHANGES_REQUESTED（1 项阻断）：red-cli.txt 的四次捕获全部是 zsh 失败记录（operation not permitted: /tmp/i06-out.txt —— 沙箱禁写 /tmp，重定向失败，node 进程从未执行，exit=1 是 zsh 的），而文件 header 与 I06.json red_cases[1] 均声称 '4 条 MODULE_NOT_FOUND、exit codes are node's own' —— 三处互相矛盾且与事实相反。RED 结论本身（14/15 失败）被三条独立通道证实不受影响。",
+    "fix": [
+      "净室重取 RED CLI 证据：git archive 9a3f21e 解包到 $TMPDIR 净室目录，4 条 probe/validate 调用从该目录发起，stdout+stderr 仅经外层重定向直接进证据文件（无中间文件、无管道、无 /tmp 重定向）；确认为真实 node MODULE_NOT_FOUND + node 原生 exit 1。red-cli.txt 整体重写：真实输出 + 准确 header（写明净室方法、脱敏替换 <tmp-clean-room>、并声明取代旧捕获的原因）。",
+      "I06.json red_cases[1] 改写为与事实一致（含无效旧捕获的完整历史）。",
+      "顺带 NB（同文件族）：parseJsonOut 的 AssertionError 守卫双重潜伏——未具名导入（触及时 ReferenceError），且 assert.AssertionError 构造器不接受字符串（修正后仍会 TypeError）；改为具名导入 + { message } 选项对象，并新增触达该分支的测试（validate 缺失 registry → exit 1 + 空 stdout → 断言抛出真实 AssertionError）。"
+    ],
+    "verification": [
+      {
+        "cmd": "git merge --no-ff master",
+        "result": "clean merge at 5e34ba0 (I01 amendment 4: 6 platform refs registered; review record ec703a5)"
+      },
+      {
+        "cmd": "node --test test/infra-platform.test.js",
+        "exit_code": 0,
+        "summary": "16 tests, 16 pass, 0 fail, 0 skipped (evidence/green-node-test.txt)"
+      },
+      {
+        "cmd": "npm test",
+        "exit_code": 0,
+        "summary": "242 tests, 242 pass, 0 fail, 0 skipped (evidence/npm-test.txt)"
+      },
+      {
+        "cmd": "node tools/infra/platform.mjs validate --registry infra/delivery/registry.json --json",
+        "exit_code": 0,
+        "summary": "post-merge: catalogGaps=[] (I01 amendment 4), ok=true, mode=LOCAL_ONLY (green-cli.txt post-merge section)"
+      },
+      {
+        "cmd": "node tools/infra/platform.mjs probe --case repository-identity --read-only --json",
+        "exit_code": 2,
+        "summary": "unchanged honest UNVERIFIED: real gh attempt, raw TLS x509 OSStatus -26276 preserved"
+      },
+      {
+        "cmd": "node tools/infra/platform.mjs probe --case registry-environment-identity --json",
+        "exit_code": 2,
+        "summary": "unchanged structured UNVERIFIED (executed=false, requiredInputs+plannedSteps, no skip)"
+      }
+    ],
+    "policy_note": "证据捕获纪律：任何重定向/管道必须在 node 进程真正执行前建立成功，否则捕获到的是 shell 的失败；证据文件 header 必须写明捕获方式。捕获直接进证据文件或 $TMPDIR，绝不写 /tmp。",
+    "commits": {
+      "test_fix": "168fc8d",
+      "evidence_and_report": "(this file's commit)"
+    }
+  }
+}
