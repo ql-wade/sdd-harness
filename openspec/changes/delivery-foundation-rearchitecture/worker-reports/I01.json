@@ -1,0 +1,104 @@
+{
+  "task": "I01",
+  "task_title": "独立资源登记、版本准入与秘密引用",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/i01-registry",
+  "status": "DONE",
+  "implementation_commit": "95ee00b",
+  "red_cases": [
+    {
+      "case": "pre-implementation RED (V_INFRA_I01 suite against absent tools)",
+      "actually_failed": true,
+      "evidence": "node --test test/infra-registry.test.js exit=1, 15/15 failed; node tools/infra/registry.mjs validate --registry infra/delivery/registry.json --json exit=1 MODULE_NOT_FOUND; qualify exit=1 MODULE_NOT_FOUND (tools did not exist)"
+    },
+    {
+      "case": "unknown owner rejected",
+      "actually_failed": true,
+      "evidence": "validate with resource.owner=mallory-unregistered exit=2 codes=[UNKNOWN_OWNER]"
+    },
+    {
+      "case": "credentialRef cross-project (pav-*) rejected",
+      "actually_failed": true,
+      "evidence": "validate with credentialRef=secret-ref:pav-legacy/outline-db exit=2 codes=[CROSS_PROJECT_REF]"
+    },
+    {
+      "case": "ordinary agent identity denied publisher/isolator material",
+      "actually_failed": true,
+      "evidence": "resolveSecretRef with principalId=svc:sdd-harness-pilot/ordinary-agent role=author on outline-publisher and outline-isolator throws PRINCIPAL_NOT_AUTHORIZED; authorized principal still gets resolved=false status=UNRESOLVED with no value key (no runtime secret store in I01)"
+    },
+    {
+      "case": "floating image tag rejected",
+      "actually_failed": true,
+      "evidence": "validate with image.reference=ghcr.io/example/outline:latest exit=2 codes=[FLOATING_TAG_FORBIDDEN, IMAGE_NOT_DIGEST_PINNED]"
+    },
+    {
+      "case": "fake/malformed digest rejected",
+      "actually_failed": true,
+      "evidence": "validate with digest=sha256:deadbeef exit=2 codes=[DIGEST_FORMAT_INVALID]; qualify with wrong archive exit=2 categories.source-digest.status=MISMATCH observed=5ad40ba4c186abf53f6c10f03e70f8b338f2eca5826a9f7c10d19dc4d8f996c2 expected=28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f, receipt bound to actual input sha256"
+    },
+    {
+      "case": "missing license/platform/backup evidence blocks up",
+      "actually_failed": true,
+      "evidence": "up --resource comet-source exit=2 error=UP_REFUSED_QUALIFICATION_NOT_READY: 5 evidence categories are not VERIFIED (license/platform/image-digest/health-api/backup-compatibility UNVERIFIED with reasons)"
+    },
+    {
+      "case": "secret plaintext in refs rejected",
+      "actually_failed": true,
+      "evidence": "validate with refs entry carrying value=ghp_AAA... exit=2 codes=[ROLE_REUSE, SECRET_VALUE_KEY_FORBIDDEN, SECRET_PLAINTEXT_FORBIDDEN]; registry field clientSecret=sk-xxx exit=2 codes=[SECRET_VALUE_KEY_FORBIDDEN]"
+    },
+    {
+      "case": "host absolute path rejected",
+      "actually_failed": true,
+      "evidence": "validate with resource field /Users/mac/secret-stuff/comet exit=2 codes=[ABSOLUTE_PATH_FORBIDDEN]; committed registry/refs pass the same scanner with zero violations"
+    },
+    {
+      "case": "one credential reused across high-privilege roles rejected",
+      "actually_failed": true,
+      "evidence": "validate with duplicate ref entry bound to a different role exit=2 codes=[ROLE_REUSE]"
+    },
+    {
+      "case": "auto cleanup without confirmed recovery rejected",
+      "actually_failed": true,
+      "evidence": "validate with retention.autoCleanupEnabled=true while rpo/rto/retentionPeriod/encryptionOwner UNVERIFIED exit=2 codes=[AUTO_CLEANUP_WITHOUT_CONFIRMED_RECOVERY]"
+    }
+  ],
+  "green_summary": {
+    "Registry.v1": "infra/delivery/registry.json + registry.schema.json. project(id/owner/delegates/github repoId=1285806550 principalId=262266039/authority readback) + resources[] (id/kind/owner/backupOwner/purpose/audience/credentialRef/lockRef/runtimeRequirement/domain/retention). First real resource comet-source pinned to integrations/comet/upstream.lock.json. Hand-rolled validator (no new deps): known-owner set, cross-project ref refusal, image digest pinning/format, retention auto-cleanup gate, plaintext/host-path scan; refs+policy load is fail-closed (missing file = input error, never silent empty rules).",
+    "SecretRef.v1": "tools/infra/secret-refs.mjs. parseSecretRef (secret-ref:<project>/<name> kebab), validateRefsCatalog (purpose-bound, single binding per ref, roles constrained by qualification-policy.json, ROLE_REUSE on any duplicate binding), resolveSecretRef read-only gate: parse -> project match -> registered -> principal+role, then returns UNRESOLVED/NO_RUNTIME_SECRET_STORE_AUTHORIZATION and never a value; plaintext/secret-key/host-path scanners are compiled invariants. secrets.refs.example.json registers the 12 planned sdd-harness-pilot refs, all NOT_PROVISIONED, no values.",
+    "Qualification.v1": "tools/infra/registry.mjs validate|qualify|status|up|readback. Exit contract 0=PASS 1=input/prerequisite 2=verification failure. qualify evaluates 8 policy-declared evidence categories with an honest ladder: VERIFIED (recomputed this run) / RECORDED (in lock only) / UNVERIFIED (reason required) / MISMATCH. Receipt binds inputs to actual sha256 (registry, lock, archive, npm metadata). Deep run with the real comet archive: source-commit VERIFIED via tar listing, source-digest VERIFIED (28a7e2fa... = lock, 40474019 bytes), license VERIFIED (MIT bound via npm version+integrity). ready requires all VERIFIED; up refuses with UP_REFUSED_QUALIFICATION_NOT_READY while not ready and would refuse UP_NOT_AUTHORIZED even when ready (policy upGate.enabled=false in I01). Runtime observation includes node v22.13.1 vs required ^22.16.0||>=24.0.0 -> satisfied=false, and tool-redacted host paths in runtime error text."
+  },
+  "commands": [
+    { "cmd": "node --test test/infra-registry.test.js", "exit_code": 0, "summary": "V_INFRA_I01 contract: 15 tests, 15 pass, 0 fail, 0 skipped" },
+    { "cmd": "node tools/infra/registry.mjs validate --registry infra/delivery/registry.json --json", "exit_code": 0, "summary": "ok=true, violations=[]" },
+    { "cmd": "node tools/infra/registry.mjs qualify --resource comet-source --json", "exit_code": 2, "summary": "ready=false, 5 UNVERIFIED (image-digest/platform/license/health-api/backup-compatibility), 3 RECORDED (commit/digest/size without archive), exit 2 is the designed NOT_READY contract" },
+    { "cmd": "node tools/infra/registry.mjs qualify --resource comet-source --archive <real archive> --npm-metadata <fresh npm readback> --json", "exit_code": 2, "summary": "source-commit/source-digest/artifact-size/license VERIFIED against real archive sha256=28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f bytes=40474019 and npm MIT+integrity; still NOT_READY on image/platform/health/backup" },
+    { "cmd": "node tools/infra/registry.mjs up --resource comet-source --registry infra/delivery/registry.json --json", "exit_code": 2, "summary": "refused=true, UP_REFUSED_QUALIFICATION_NOT_READY" },
+    { "cmd": "node tools/infra/registry.mjs status --registry infra/delivery/registry.json --json", "exit_code": 0, "summary": "comet-source lockPresent=true, autoCleanupEnabled=false, unconfirmedFields=[rpo,rto,retentionPeriod,encryptionOwner]" },
+    { "cmd": "node tools/infra/registry.mjs readback --kind github --json", "exit_code": 2, "summary": "status=UNVERIFIED with exact TLS error, honest structure" },
+    { "cmd": "npm test (full repo suite)", "exit_code": 0, "summary": "65 tests, 65 pass, 0 fail, 0 skipped — no regressions" }
+  ],
+  "unverified": [
+    { "item": "GitHub authority readback (repo 1285806550, principal 262266039)", "reason": "gh api repos/rpamis/sdd-harness and gh api repos/1285806550 / user/262266039 all fail: tls: failed to verify certificate: x509: OSStatus -26276; recorded verbatim in registry.project.authority with readbackStatus=UNVERIFIED; must re-readback at execution time before any authorized action" },
+    { "item": "image digest for comet-source", "reason": "source-archive resource has no image lock; per plan no Outline/db/redis/oidc/object-store image tags exist yet and none were fabricated" },
+    { "item": "container platform", "reason": "docker binary 29.6.2 present but daemon unreachable from this session (permission denied on local docker socket); no pinned image to inspect" },
+    { "item": "health-api evidence", "reason": "no running service; evidence requires the component up (owned by later infra tasks) and is required before up" },
+    { "item": "backup-compatibility evidence", "reason": "no restore drill registered" },
+    { "item": "retention rpo/rto/retentionPeriod/encryptionOwner/destructionPrecondition and backupOwner", "reason": "unconfirmed; autoCleanupEnabled stays false and the validator enforces it cannot be true while these are UNVERIFIED" },
+    { "item": "all 12 secret refs", "reason": "NOT_PROVISIONED; I01 deliberately implements no secret store connection — resolution is read-only and returns UNRESOLVED even for authorized principals" }
+  ],
+  "files_changed": [
+    "infra/delivery/registry.json",
+    "infra/delivery/registry.schema.json",
+    "infra/delivery/secrets.refs.example.json",
+    "infra/delivery/qualification-policy.json",
+    "tools/infra/registry.mjs",
+    "tools/infra/secret-refs.mjs",
+    "test/infra-registry.test.js",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I01.json"
+  ],
+  "blockers_or_questions": [
+    "docker socket is denied in this session's sandbox; I02 image/platform verification needs a context with docker access",
+    "gh TLS failure appears environmental (certificate verification), so token validity could not be determined; treat ql-wade/262266039 authority as unproven until a readback succeeds",
+    "local node v22.13.1 does not satisfy comet's recorded requirement ^22.16.0 || >=24.0.0; build/qualify environments must use node >=24 (toolchain-baseline already observed 24.15.0 locally)"
+  ]
+}
