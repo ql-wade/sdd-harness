@@ -1,0 +1,8 @@
+zero-tests      : exit=0 testsSummary=# tests 0 pass=# pass 0 fail=# fail 0 skipped=# skipped 0 envSignature=false
+  -> naive exit-code gate: exit 0 = PASS (zero tests treated as valid acceptance)
+all-skip        : exit=0 testsSummary=# tests 2 pass=# pass 0 fail=# fail 0 skipped=# skipped 2 envSignature=false
+  -> naive exit-code gate: exit 0 = PASS (zero effective executions treated as valid acceptance)
+env-crash       : exit=1 testsSummary=# tests 1 pass=# pass 0 fail=# fail 1 skipped=# skipped 0 envSignature=true
+  -> naive exit-code classifier: nonzero exit = "valid behavior RED" (environment failure misrecorded as A04 RED)
+behavior-red    : exit=1 testsSummary=# tests 1 pass=# pass 0 fail=# fail 1 skipped=# skipped 0 envSignature=false
+  -> the only case that should count as a valid behavior RED
