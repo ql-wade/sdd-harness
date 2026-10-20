@@ -1,0 +1,190 @@
+{
+  "task": "P1_3 (原 1.3): 验证 Comet 单主控模式、受管驱动、OpenSpec 接入、不可省略检查集合、独立验证回执和唯一 closeout owner（TeamAI 只验证分发）；真实渠道探针覆盖编辑/Shell/MCP（F05/F07/A09）。失败 NO-GO，不扩建第二调度器。",
+  "run": "impl-dfr-20261020-r1",
+  "worktree": "impl/p1-3-single-master (base b017d97)",
+  "worker": "P1_3 implementation worker",
+  "final_status": "GREEN",
+  "acceptance_ids": {
+    "targeted": [
+      "F05",
+      "F07",
+      "A09",
+      "OV01",
+      "OV03",
+      "OV08"
+    ]
+  },
+  "red_cases": [
+    {
+      "id": "RED-1 (1.3.a)",
+      "claim": "无 driver 抽象时\"能写实现\"与\"只读观察者\"不可区分：仓库中不存在任何 driver 类型/能力标记层，requireWriteDriver 式拒绝无从谈起",
+      "evidence": "worker-reports/P1_3/evidence/red-combined.txt（ERR_MODULE_NOT_FOUND: lib/adapters/harness.js — 两个测试套件同一根因失败，exit 1）"
+    },
+    {
+      "id": "RED-2 (1.3.b)",
+      "claim": "不做渠道区分时单渠道测试冒充全覆盖：不存在渠道感知探针，无法防止把单渠道结果记成全渠道覆盖",
+      "evidence": "worker-reports/P1_3/evidence/red-combined.txt（test/delivery-cases/1_3.mjs 同根因失败：lib/adapters/comet.js 不存在）"
+    },
+    {
+      "id": "RED-3 (1.3.c)",
+      "claim": "重复 controller/重复归档在当前接口下不被拒：无 closeout 排他判定，重复 archive 语义无法表达拒绝",
+      "evidence": "worker-reports/P1_3/evidence/red-combined.txt（同上）"
+    }
+  ],
+  "green_summary": {
+    "1_3_a": {
+      "driver_layering": "lib/adapters/harness.js：DRIVER_KINDS = ['managed-write','read-only']，defineDriver 冻结名称/能力标记；read-only driver 物理上不带 execute 面（defineDriver 拒绝 DRIVER_SURFACE_REFUSED），requireWriteDriver 对 read-only driver 的一切产品写入抛 DRIVER_WRITE_REFUSED 并指名必须改用 verified managed write executor（F05）。",
+      "runner_binding": "createRunner 组合 P2_2 受信 launcher（lib/delivery/evidence.js createLaunchAuthority，Runner.Dispatch.v1 本地等价）：dispatch 绑定 runnerId/run/gate/inputDigest/policyDigest/attempt/epoch/execution + HMAC integrity；RUN_MISMATCH/RUNNER_MISMATCH 拒绝跨 run/跨 master 绑定；binding 含 phase/currentPhase/current_phase 一律 RUNNER_PHASE_FIELD_REFUSED；runner 对象只暴露 dispatch/verify/admit，不存任何 phase，无控制状态写面。",
+      "real_interface": "lib/adapters/comet.js 对 patched 构建（fingerprint cb1151b4…，distribution.json manifest 逐文件校验后 reuse）实测确定 authority/workspace/execution 真实接口：.comet.yaml（YAML、原子 rename 提交点、phase: open|design|build|verify|archive）、.comet/run-state.json（engine RunState、tmp+rename 原子写）、.comet-state.lock（可恢复文件锁）、.comet-state-transaction.json（beforeYaml/afterYaml+Run）、.comet/current-change.json（selection v2）、.comet/checks/<uuid>.log（真实运行时检查日志）、.claude/settings.local.json PreToolUse matcher \"Write|Edit\" → comet-hook-router.mjs。1_3.mjs 实测：dispatch 后 .comet.yaml 逐字节不变、无新增控制文件（Runner 不另存 phase）；readback 单一 run_id 链接保持（无第二 phase 权威，OV01）。"
+    },
+    "1_3_b": {
+      "channel_probes": "probeWriteChannels 对运行中的 Comet（隔离 HOME + PATH stub + $TMPDIR scratch，参照 P1_6 手法）逐渠道尝试越阶段写：edit（Write 工具载荷 → 真实 guard router）在 open 阶段对 src/product.ts 被 COMET PHASE GUARD — WRITE BLOCKED 真拒（exit 2，claude hook deny 契约），同渠道对 tasks.md 的 in-phase 写保持 allowed（拒绝是 phase 定向的，非一刀切）；shell（Bash 载荷）与 mcp（mcp__filesystem__write_file 载荷）guard 均未归因（intent unknown → allowed）——如实记为能力缺口，绝不记为已拦截（A09）。缺口双重根因记录：hook 注册 matcher 只覆盖 Write|Edit；guard 工具名集合不含 Bash/MCP 写工具。",
+      "downstream_gate": "渠道缺口的后果实测：Shell 直接 sed 改 .comet.yaml phase: open→archive 成功（write 本身无阻挡），但托管 gate 立即拒绝——comet state check archive exit 1，CLASSIC_ENTRY_CHECK_FAILED verify_result=pending (expected: pass)：伪造的 phase 字符串无法替代真实验证回执。修数（successor）：guard hook 契约扩展覆盖 Shell/MCP 写工具（上游 patch seam，非第二调度器）。",
+      "no_single_channel_coverage": "1_3.mjs 断言 records.length===3 且逐渠道结果各不相同，单渠道冒充全覆盖在测试层不可通过。"
+    },
+    "1_3_c": {
+      "unique_owner": "归档入口检查（premature archive: FATAL: phase is 'open' expected 'archive'）、每相 required checks（真实 check run 写 .comet/checks 日志）、手工声明拒绝（OV03：state record-check 手工记录后 guard 仍拒 'Manual declarations never satisfy the guard'）——独立验证回执只能来自真实执行。driver 层唯一 closeout owner：readArchiveSeal 经 CLI 托管读取 seal 事实（archived/verify_result/archive_confirmation/check_epoch），sealCloseout 纯判定：无 Kp 拒绝（KNOWLEDGE_CLOSEOUT_REQUIRED，Knowledge.Closeout.v1 Kp 先于 archive）、已 seal 后任何第二次 closeout 执行（不同执行或同执行重放）拒绝（ARCHIVE_ALREADY_SEALED）。排他判定复用 SDD.Gate.v1：evaluateGate === lib/delivery/gate.js evaluate（import 不修改，测试断言同一函数引用 + 同输入字节一致 receipt）。",
+      "upstream_idempotence_recorded": "上游 CLI 对重复 comet archive 幂等收敛（第二次 exit 0、仍一个 archive 目录、archived: true）——如实记录为观察事实（host-probes/1_3-archive-exclusivity.txt）；排他性由 driver gate 表达，不扩建第二调度器。"
+    },
+    "overlay_scope": {
+      "OV01": "driver 无 phase 写面 + dispatch 不产生控制文件 + archive 后单一 run_id 链接保持 + continuation 均从原状态推导（CLI envelope 的 continuation/nextAction 字段），未创建第二 Run/phase；未实现也无需 control override 路径。",
+      "OV03": "无 authority-issued dispatch 的回执 UNREGISTERED_SOURCE（admitEvidence）；builder 执行 IDENTITY_CONFLICT 拒签；手工 record-check 声明被 guard 真拒（实测）；marker 文件存在（openspec stub 造的 .claude/commands/openspec.md）不等于真实调用——真实 runtime check 仍必需。",
+      "OV08": "部分覆盖：每受管块唯一写者 = Comet CLI 单主控（单 .comet.yaml + 状态锁 + 事务恢复）已实证；hook 注册装配（settings.local.json 的 matcher/command/args 两层核验：脚本行为 + 注册面）已实证。TeamAI + 项目 adapter + Ponytail 同时接入实际宿主（重复安装/更新、压缩/子角色事件、方法模式切换、Hook 失败/关闭）本沙箱无法真实接入，未验证——见 unverified。"
+    }
+  },
+  "channel_probe": {
+    "note": "隔离 HOME + PATH stub + $TMPDIR scratch 项目（patched 构建 fingerprint cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187），change 处于 open 阶段，载荷为真实 host hook 契约（PreToolUse JSON stdin）",
+    "results": [
+      {
+        "channel": "edit（编辑类工具）",
+        "attempt": "open 阶段写 src/product.ts（越阶段产品写入）",
+        "result": "实际拒绝",
+        "detail": "COMET PHASE GUARD — WRITE BLOCKED，exit 2；对照：同渠道写 tasks.md（in-phase artifact）allowed——拒绝为 phase 定向"
+      },
+      {
+        "channel": "shell（Shell 写入）",
+        "attempt": "Bash heredoc 写 src/product.ts；以及 sed 直改 .comet.yaml phase",
+        "result": "能力缺口（guard 未归因此渠道，写入本身成功）",
+        "detail": "matcher Write|Edit 不含 Bash；guard 工具名集合视 Bash 为 intent unknown → allowed。下游托管 gate 兜底：伪造 phase 在 archive 入口被 verify_result 检查拒绝（exit 1）。修复承接：guard hook 契约扩展（上游 patch seam）"
+      },
+      {
+        "channel": "mcp（MCP 写入）",
+        "attempt": "mcp__filesystem__write_file 写 src/product.ts",
+        "result": "能力缺口（guard 未归因此渠道）",
+        "detail": "MCP 工具名不在 WRITE_TOOL_NAMES → intent unknown → allowed；matcher 同样不覆盖。另：本会话无通用文件系统 MCP 写服务器可做更真实尝试（llmwiki MCP ENOENT，其余 MCP 写面为 vault/notion 作用域）——见 unverified"
+      }
+    ],
+    "evidence": [
+      "openspec/changes/delivery-foundation-rearchitecture/host-probes/1_3-channel-probes.json",
+      "openspec/changes/delivery-foundation-rearchitecture/host-probes/1_3-state-tamper-oracle.txt",
+      "openspec/changes/delivery-foundation-rearchitecture/host-probes/1_3-archive-exclusivity.txt",
+      "openspec/changes/delivery-foundation-rearchitecture/host-probes/1_3-workspace-discovery.json"
+    ]
+  },
+  "commands": [
+    {
+      "cmd": "node(22.13.1) --test test/comet-driver.test.js test/delivery-cases/1_3.mjs  # RED",
+      "exit_code": 1,
+      "note": "真实失败：ERR_MODULE_NOT_FOUND lib/adapters/harness.js（driver 抽象不存在）；日志 worker-reports/P1_3/evidence/red-combined.txt"
+    },
+    {
+      "cmd": "node(24.15.0) tools/comet/build.mjs --archive .sdd/cache/artifacts/comet-source-c90af44….tar.gz",
+      "exit_code": 0,
+      "note": "本工作树内对 patched 构建做 manifest 逐文件校验 reuse：fingerprint cb1151b4…，reused:true（BUILD_BASELINE_DRIFT 纪律）"
+    },
+    {
+      "cmd": "node(22.13.1) --test test/comet-driver.test.js test/delivery-cases/1_3.mjs  # GREEN",
+      "exit_code": 0,
+      "note": "21/21 pass（12 driver 单测 + 9 任务级 case，全部真实 patched 构建/真实 CLI 交互，零 mock）；日志 worker-reports/P1_3/evidence/green-combined.txt"
+    },
+    {
+      "cmd": "npm test  # 全量回归",
+      "exit_code": 1,
+      "note": "211 tests：210 pass + 1 fail = test/infra-code-knowledge.test.js:146（I01 catalog stale-fixture，即 execution-ledger I05 条目记录的第 4 例在途修复；与 P1_3 无关——stash 本任务改动后该文件单测仍 13 pass/1 fail 复现）；基线 199 中该失败已在案。日志 worker-reports/P1_3/evidence/green-npm-test-full.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/*.mjs  # 交付 case 合跑",
+      "exit_code": 0,
+      "note": "47 tests：46 pass / 1 skip（既有前置缺失 skip）/ 0 fail"
+    },
+    {
+      "cmd": "node --test test/comet-driver.test.js test/delivery-cases/1_3.mjs  # post-review",
+      "exit_code": 0,
+      "note": "22/22 pass（含新增 RUN/RUNNER_MISMATCH 测试）"
+    },
+    {
+      "cmd": "npm test  # post-review",
+      "exit_code": 1,
+      "note": "212 tests：211 pass + 1 已知 I05 在途失败（如实报数）"
+    }
+  ],
+  "commits": {
+    "tests": "6e7f9eb test(p1_3): RED — comet driver layering, per-channel probes, single closeout ownership",
+    "implementation": "d19c633 feat(p1_3): comet adapter + harness driver layering (GREEN)",
+    "report": "<本提交：host-probes 证据 + worker-reports/P1_3.json>"
+  },
+  "unverified": [
+    {
+      "item": "OV08 全量：TeamAI、项目 adapter 与 Ponytail 同时接入实际宿主（重复安装/更新、启动/压缩/子角色事件、方法模式切换、Hook 失败/关闭下的唯一写者与控制隔离）",
+      "reason": "本沙箱无法真实接入 TeamAI/Ponytail 运行时（无会话重启、无第三方 harness 宿主）；P1_6 合同亦声明运行时硬门禁与三方共存待实证",
+      "owner": "后续真实宿主集成任务 / P1_4 comet-single-controller-review.md 证据范围承接"
+    },
+    {
+      "item": "MCP 渠道的更真实尝试（经真实 MCP server 写通用文件路径）",
+      "reason": "本会话无通用文件系统 MCP 写服务器：llmwiki MCP 连接失败（ENOENT），可用 MCP 写面为 vault/notion 等特定作用域；渠道缺口本身已按规格如实记录（不能把缺口记已拦截）",
+      "owner": "在有 filesystem-MCP 的宿主会话中由白盒验证承接；或 guard hook 契约扩展后一并复测"
+    },
+    {
+      "item": "编辑渠道的真实宿主新会话轨迹（PreToolUse hook 由 Claude Code 运行中宿主实际触发）",
+      "reason": "本 worker 无法观测宿主内部 hook 触发；最强可得实证 = 以真实载荷直呼已安装 router（与宿主同一入口、同一 stdin 契约、同一拒绝输出）",
+      "owner": "后续宿主新会话验证承接"
+    },
+    {
+      "item": "Comet 上游全量 vitest 套件在 patched 源上的运行",
+      "reason": "P1_1 即声明范围外；本任务 gate = 构建清单校验 + 真实 CLI 行为探针",
+      "owner": "维持 P1_1 范围声明"
+    },
+    {
+      "item": "Knowledge.Closeout.v1 的 Kp 在上游 Comet 中的原生强制",
+      "reason": "上游 archive 无 Kp 前置检查（观察记录）；Kp 先于 archive 的排他在本任务 driver gate 表达（KNOWLEDGE_CLOSEOUT_REQUIRED）",
+      "owner": "0003-post-archive-closeout.patch seam（architecture.md 已登记，本任务禁止改 tools/comet/* 与 patches）"
+    }
+  ],
+  "findings_for_parent": [
+    "上游 CLI 重复 archive 幂等收敛（exit 0）而非拒绝：规格要求的\"拒绝重复 archive\"在 driver/gate 层表达（本任务已做）；若产品层也要显式拒绝，需上游 patch（0003 seam）。",
+    "guard hook 对 Shell/MCP 渠道无归因（matcher Write|Edit + 工具名集合）：真实缺口，已如实记录未记为拦截；修复路径 = hook 契约扩展（上游 patch seam），非第二调度器。",
+    "真实 gate 的强大兜底已实证：直改 .comet.yaml 的伪造 phase 被 verify_result 入口检查拒绝——单主控的强制点在 entry checks（不可省略检查集合），不在文件系统保护。",
+    "全量 npm test 的唯一失败为 I05 在途修复的 stale-catalog fixture（ledger 在案第 4 例），stash 验证与 P1_3 无关。"
+  ],
+  "files_changed": [
+    "lib/adapters/comet.js (new)",
+    "lib/adapters/harness.js (new)",
+    "test/comet-driver.test.js (new)",
+    "test/delivery-cases/1_3.mjs (new)",
+    "openspec/changes/delivery-foundation-rearchitecture/host-probes/ (new: 1_3-channel-probes.json, 1_3-state-tamper-oracle.txt, 1_3-archive-exclusivity.txt, 1_3-workspace-discovery.json)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_3/ (new: evidence/red-combined.txt, evidence/green-combined.txt, evidence/green-npm-test-full.txt, P1_3.json)",
+    "test/comet-driver.test.js (review fix: RUN/RUNNER_MISMATCH coverage)"
+  ],
+  "blockers_or_questions": [
+    "Shell/MCP 渠道缺口的修复归属：guard hook 契约扩展应落在哪个 patch seam（0002-managed-delivery-runtime.patch 或新 patch）由 parent 决策；本任务按授权不触碰 tools/comet/*、patches、contracts、lib/delivery。",
+    "OV08 的真实宿主三方共存验证需要一次可重启/可接入 TeamAI+Ponytail 的宿主会话，建议单列任务。"
+  ],
+  "review_fix": {
+    "review": "INDEPENDENT_REVIEW: CHANGES_REQUESTED — 1 阻断（其余 8 项全过）",
+    "blocking_finding": "RUN_MISMATCH / RUNNER_MISMATCH（lib/adapters/comet.js issueDispatch/verifyDispatch）已实现但零测试触达——worker report runner_binding 段声称的 F07 关联 ID 拒绝语义是未测代码",
+    "fix": "test/comet-driver.test.js 新增 1 测试：cometLaunchAuthority({runId:'run-A'}) 下 (a) issueDispatch 传 run:'run-B' 抛 RUN_MISMATCH；(b) 传 runnerId:'other-runner'（run 匹配）抛 RUNNER_MISMATCH；(c) verifyDispatch 对外来 run 的 dispatch 记录返回 {ok:false, error:'RUN_MISMATCH'}。实现行为与已声称语义一致，未改实现。",
+    "commands": [
+      {
+        "cmd": "node --test test/comet-driver.test.js test/delivery-cases/1_3.mjs",
+        "exit_code": 0,
+        "note": "22/22 pass（21 + 新增 1）；日志 worker-reports/P1_3/evidence/green-combined-post-review.txt"
+      },
+      {
+        "cmd": "npm test",
+        "exit_code": 1,
+        "note": "212 tests：211 pass + 1 fail = 同一已知 I05/I01 stale-catalog fixture（在途修复，非 P1_3）；日志 worker-reports/P1_3/evidence/green-npm-test-post-review.txt"
+      }
+    ],
+    "commit": "<本提交>"
+  }
+}
