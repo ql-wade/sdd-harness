@@ -1,0 +1,115 @@
+{
+  "task": "I04",
+  "task_title": "项目LLMWiki MCP、索引与worktree安全路径",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/i04-llmwiki",
+  "base_commit": "10b37bf (declared) — branch was cut from b3f1316; base-synced via explicit merge 51d9da3, see notes",
+  "status": "DONE_WITH_HONEST_UNVERIFIED",
+  "implementation_commit": "019fdc9",
+  "red_cases": [
+    {
+      "case": "pre-implementation RED (V_INFRA_I04 suite against absent domain files and CLI)",
+      "actually_failed": true,
+      "evidence": "evidence/red-node-test.txt — node --test test/infra-llmwiki-paths.test.js exit=1, 6/6 failed, 0 skipped (infra/delivery/llmwiki/ and tools/infra/llmwiki.mjs did not exist)"
+    },
+    {
+      "case": "pre-implementation CLI probes (validate/qualify/probe entry points absent)",
+      "actually_failed": true,
+      "evidence": "evidence/red-cli.txt — all four node tools/infra/llmwiki.mjs invocations exit=1 with MODULE_NOT_FOUND"
+    },
+    {
+      "case": "不同worktree/CLI/MCP指向另一 wiki → 拒绝（ProjectRoot.v1）",
+      "actually_failed": true,
+      "evidence": "GREEN-enforced by test 2 + probe escape-denial: claimed root = linked worktree's own llmwiki/ copy → FOREIGN_WIKI_ROOT_DENIED; all real worktrees must resolve to the same canonical main-tree root (worktree-mcp-readback: 14/14 worktrees consistent, worktreesCanonicalRootsConsistent=true)"
+    },
+    {
+      "case": "目录穿越（..）与符号链接越域 → 拒绝",
+      "actually_failed": true,
+      "evidence": "probe escape-denial: PATH_TRAVERSAL_DENIED (llmwiki/../../outside.md, target really exists on disk) and SYMLINK_ESCAPE_DENIED (real symlink inside canonical root pointing outside); hardInvariantsHeld=true proves both denials survive disabling every declarative policy flag"
+    },
+    {
+      "case": "错误 project ID → 拒绝",
+      "actually_failed": true,
+      "evidence": "probe escape-denial: claimed pav-legacy vs policy sdd-harness-pilot → PROJECT_ID_MISMATCH_DENIED; validate fixture with policy projectId=pav-legacy → exit=2 PROJECT_ID_MISMATCH (test 4)"
+    },
+    {
+      "case": "源码/正式 spec/tasks 勾选被当 wiki 事实权威 → 拒绝（KnowledgeWrite.v1）",
+      "actually_failed": true,
+      "evidence": "probe escape-denial knowledgeWrite: factAuthority=openspec-tasks → KNOWLEDGE_AUTHORITY_DENIED; validate fixture adding 'openspec-tasks' to wikiFactAuthorities → exit=2 KNOWLEDGE_AUTHORITY_FORBIDDEN (test 4)"
+    },
+    {
+      "case": "未经批准的全 Git 代码摄入 → 拒绝",
+      "actually_failed": true,
+      "evidence": "probe escape-denial knowledgeWrite: intake=full-git-history → UNAPPROVED_INTAKE_DENIED; validate fixture declaring fullGitIngestWithoutApproval=allowed → exit=2 UNAPPROVED_INTAKE_FORBIDDEN (test 4)"
+    },
+    {
+      "case": "MCP 写成功但独立索引/存储读回不一致 → 判 Kp 失败信号，不因本地文件存在放行",
+      "actually_failed": true,
+      "evidence": "probe worktree-mcp-readback fileLevelEquivalent step index-mismatch-detection: wiki file written, independent sqlite3 index query finds no row → consistency=INCONSISTENT recorded as a Kp failure signal (test 5 asserts this is DETECTED, status VERIFIED for the detection, never a pass); positive control registers the row independently and only then reads CONSISTENT"
+    },
+    {
+      "case": "1 个 secret-ref（sdd-harness-pilot/llmwiki-source-read）只引用不存值",
+      "actually_failed": true,
+      "evidence": "test 6: scanForForbiddenValues deep-equal [] on all four domain files; ref present as a reference only; validate explicitly reports it under catalogGaps (I01-owned catalog, gap never silent); qualify keeps secret-provisioned UNVERIFIED"
+    }
+  ],
+  "green_summary": {
+    "ProjectWikiInfra.v1": "tools/infra/llmwiki.mjs validate|qualify|probe. Exit contract 0=PASS 1=input/prerequisite 2=verification failure (house I01/I02/I03 pattern: registry+refs loads fail-closed, displayPath/redactHostPaths on every structured field, host paths never echoed, no skip:true anywhere). validate checks all four domain files: package lock shape + 40-hex commit + upGate closed, ProjectRoot policy binding and denial declarations, index policy semantics (tiers, index non-authoritative/non-overriding, KnowledgeWrite gates required), MCP component-profile-only scope (host registration claims rejected), secret-ref catalog gaps; returns interfaces summary + violations + catalogGaps. qualify builds the evidence ladder from REAL observations — launcher present/executable + sha256 vs lock, requirements.lock digest recompute via SDD_HOME, local clone HEAD vs lock commit, venv python --version, mcp package version vs lock, canonical workspace identity — and keeps mcp-host-discovery / mcp-write-channel / index-consistency / secret-provisioned honestly UNVERIFIED.",
+    "ProjectRoot.v1": "projectID/repoID/wikiRoot/worktree mapping: git rev-parse --git-common-dir -> main working tree -> <main-tree>/llmwiki; every linked worktree must resolve to that one canonical root (verified for all 14 worktrees of this repo). Containment denials (.. traversal, symlink realpath escape, foreign per-worktree wiki root, project-id mismatch) are enforced unconditionally by the resolver — probe proves hardInvariantsHeld with every declarative flag disabled; validate rejects any policy fixture that declares a denial as false. Structured receipts carry stable labels (<main-working-tree>/llmwiki) and booleans only, never host paths.",
+    "KnowledgeWrite.v1": "only tier=curated entries with approvedBy + source + revision (and factAuthority=approved-curated-entry) are admissible; forbidden authorities (openspec-specs/openspec-tasks/task-checkmarks/source-code/comet-state) and unapproved full-git intake are denied; every write requires independent file readback AND independent index readback — file existence alone reads INCONSISTENT and blocks. Policy keeps project knowledge strictly separated from OpenSpec specs/tasks checkmarks and Comet state.",
+    "index-policy": "raw/staging/curated tri-state with only curated authoritative; index is rebuildable cache — never knowledge authority, never overrides source records; curated source artifacts/versions are the backup unit; R10 unfinished-run staging + approved payloads must survive index rebuild and worktree recycling (declared in index-policy.json:retention).",
+    "package.lock.json": "observed facts only: upstream https://github.com/lucasastorian/llmwiki commit 075c5b4996ff4e07f9d3c57c1f14fd2b54a955db (RECORDED from the local clone, remote confirmation pending), launcher tools/mcp/llmwiki.sh sha256 9789a888…, requirements.lock sha256 678bd730… (154140 bytes), venv python 3.14.7 (requirements.lock compiled for 3.11 — drift recorded, not reconciled), mcp package 1.27.0, observed MCP session (protocol 2024-11-05, server LLM Wiki 1.27.0, tools guide/list_knowledge_bases/search/read/create/edit/append/delete/lint/ping), workspace layout (wiki/ truth, .llmwiki/index.db rebuildable index), upGate.enabled=false.",
+    "mcp-profile.json": "component profile only: registrationScope=component-profile-only; hostEntry ${CLAUDE_PROJECT_DIR}/tools/mcp/llmwiki.sh stdio with SDD_HOME/LLMWIKI_PYTHON env overrides; observed capability list; observation records BOTH session facts (host entry ENOENT in the 2026-10-20 session; direct venv initialize works while create hangs) and keeps hostDiscovered=false/UNVERIFIED. Live config (.mcp.json, mcp-capabilities.yaml) untouched — adoption is the P task's."
+  },
+  "commands": [
+    { "cmd": "node --test test/infra-llmwiki-paths.test.js", "exit_code": 0, "summary": "6 tests, 6 pass, 0 fail, 0 skipped (evidence/green-node-test.txt)" },
+    { "cmd": "node tools/infra/llmwiki.mjs validate --registry infra/delivery/registry.json --json", "exit_code": 0, "summary": "ok=true, violations=[], catalogGaps=[secret-ref:sdd-harness-pilot/llmwiki-source-read] (explicit I01 catalog gap, never silent); no host paths in stdout (evidence/green-validate.txt)" },
+    { "cmd": "node tools/infra/llmwiki.mjs qualify --registry infra/delivery/registry.json --json", "exit_code": 2, "summary": "honest NOT_READY: launcher-entry/requirements-lock-digest/upstream-source/venv-runtime/mcp-package-version/workspace-identity VERIFIED from real observations; mcp-host-discovery/mcp-write-channel/index-consistency/secret-provisioned UNVERIFIED with exact reasons" },
+    { "cmd": "node tools/infra/llmwiki.mjs probe --case worktree-mcp-readback --json", "exit_code": 2, "summary": "executed for real: 14/14 worktrees -> one canonical root (consistent); real stdio MCP initialize VERIFIED (LLM Wiki 1.27.0) + tools/list VERIFIED; create write UNVERIFIED (no response within 20s — hang recorded, not mocked); file-level equivalent all VERIFIED including INCONSISTENT negative control (evidence/green-probe-worktree-mcp-readback.txt)" },
+    { "cmd": "node tools/infra/llmwiki.mjs probe --case escape-denial --json", "exit_code": 0, "summary": "status VERIFIED: PATH_TRAVERSAL_DENIED + SYMLINK_ESCAPE_DENIED + FOREIGN_WIKI_ROOT_DENIED + PROJECT_ID_MISMATCH_DENIED all enforced, hardInvariantsHeld=true, KNOWLEDGE_AUTHORITY_DENIED + UNAPPROVED_INTAKE_DENIED + ENTRY_ADMISSION_DENIED enforced, positive controls admitted/resolved (evidence/green-probe-escape-denial.txt)" },
+    { "cmd": "npm test", "exit_code": 0, "summary": "191 tests, 191 pass, 0 fail, 0 skipped = baseline 185 + I04's 6 (evidence/npm-test.txt)" }
+  ],
+  "unverified": [
+    {
+      "item": "MCP host discovery (文件存在不算宿主已发现)",
+      "reason": "no real host admission evidence exists; the 2026-10-20 session observed the .mcp.json entry failing with ENOENT on tools/mcp/llmwiki.sh; host registration belongs to the P task via mcp-capabilities.yaml (single source of truth)",
+      "successor": "P task owning mcp-capabilities.yaml llmwiki adoption"
+    },
+    {
+      "item": "MCP write channel round-trip",
+      "reason": "direct venv launch initializes and lists tools, but tools/call create produced no response within 20s (45s in the recording session) — the venv runs Python 3.14.7 against a requirements.lock compiled for 3.11; drift recorded in package.lock.json, hang recorded, never mocked",
+      "successor": "environment owner: align the venv with the 3.11 lock (or re-pin) so probe --case worktree-mcp-readback can exit 0 with a real MCP write + independent file+index readback in the same project"
+    },
+    {
+      "item": "Upstream remote confirmation of llmwiki commit 075c5b4",
+      "reason": "verified against the local clone only; no network evidence was fetched",
+      "successor": "any task with authorized network egress (I05-style source verification)"
+    },
+    {
+      "item": "secret-ref:sdd-harness-pilot/llmwiki-source-read provisioning and I01 catalog registration",
+      "reason": "referenced only; absent from infra/delivery/secrets.refs.example.json (I01-owned file, outside my write scope) — validate reports the gap under catalogGaps",
+      "successor": "I01 owner (catalog registration) + runtime secret store authorization task (provisioning)"
+    },
+    {
+      "item": "Real cross-worktree wiki write through the canonical root",
+      "reason": "the repo's llmwiki/ data directory is not this task's write target (data, not policy); oracle '同一批准条目通过真实MCP写入、独立CLI/文件/索引查询读回' needs the write channel fixed above",
+      "successor": "P task / environment owner after MCP write channel works; probe worktree-mcp-readback already encodes the full step list"
+    }
+  ],
+  "files_changed": [
+    "infra/delivery/llmwiki/package.lock.json",
+    "infra/delivery/llmwiki/project-root-policy.json",
+    "infra/delivery/llmwiki/index-policy.json",
+    "infra/delivery/llmwiki/mcp-profile.json",
+    "tools/infra/llmwiki.mjs",
+    "test/infra-llmwiki-paths.test.js",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I04.json",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I04/evidence/*"
+  ],
+  "blockers_or_questions": [
+    "GITIGNORE (for .gitignore owner): the committed rule 'llmwiki/' (line 43, added for the root data directory) also matches infra/delivery/llmwiki/; the four policy files were force-added (git add -f). Consider anchoring the rule to '/llmwiki/' so future edits to the policy files stop hitting the ignore warning.",
+    "BASE-SYNC (for integrator): the worktree branch was cut from b3f1316 although the task declares base 10b37bf; I merged 10b37bf in (merge commit 51d9da3) to fix 2 pre-existing failures in I02's test/infra-runner-isolation.test.js (stale gap assertions already fixed on master). No I04-owned file overlaps that range. If the integrator prefers a rebase instead, the three I04 commits apply cleanly.",
+    "ENVIRONMENT (for environment owner): llmwiki venv runs Python 3.14.7 while mcp/requirements.lock targets 3.11; the create write tool hangs (initialize/tools/list fine). Until reconciled, llmwiki MCP stays unusable for real writes from any host, and qualify keeps mcp-write-channel UNVERIFIED."
+  ],
+  "notes": "llmwiki/ content directory (data) received zero writes from this task — all probe writes land in mkdtemp sandbox workspaces under $TMPDIR and are removed afterwards; state-independent fixture discipline as in I02/I03 (negative fixtures are tmp copies of the committed domain). The probes attempt the real MCP channel first and only fall back to the file-level equivalent; both fallback results are labeled as such and never substitute for MCP evidence. No new npm dependencies; sqlite3 usage is the macOS system CLI (/usr/bin/sqlite3), recorded as a probe requiredInput."
+}
