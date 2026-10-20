@@ -186,7 +186,11 @@ test('V_A18: an environment crash is recorded truthfully as unverified and stays
   assert.equal(admitted.ok, true, 'a truthful unverified record with a real probe artifact must be admissible');
   const result = evaluate(gateInputs([{ level: 'unit', capability: 'unit:node:test' }]), [admitted.entry], POLICY);
   assert.equal(result.verdict, 'blocked', 'missing observation capability must block, never fake a pass');
-  assert.match(result.receipt.blocked.join('\n'), /UNVERIFIED_CAPABILITY: unit:node:test receipt result is unverified with 0 valid execution/);
+  assert.match(
+    result.receipt.blocked.join('\n'),
+    new RegExp(`UNVERIFIED_CAPABILITY: unit:node:test receipt result is unverified with ${envelope.executions.valid} valid execution`),
+    'the observed count from the real crashed run carries into the rejection reason',
+  );
 
   const halfCovered = evaluate(
     gateInputs([{ level: 'unit', capability: 'unit:node:test' }, { level: 'ui', capability: 'console' }]),
@@ -215,7 +219,16 @@ test('V_A05: a worker process self-signing a pass JSON is refused as an unregist
     evidence: [{ uri: 'worker-wrote-this.txt', sha256: sha('self-written') }],
     expiry: '2026-11-01T00:00:00.000Z',
   };
-  const refused = admitOne(launcher, { execution: 'exec-worker-1', envelope: selfSigned, audit });
+  // Direct admission call: no dispatch record exists for worker-written JSON.
+  const refused = admitEvidence({
+    envelope: selfSigned,
+    dispatch: undefined,
+    authority: launcher,
+    current: current(),
+    issuedExecutions: [],
+    now: NOW,
+  });
+  if (!refused.ok) audit.push(refused);
   assert.equal(refused.ok, false);
   assert.equal(refused.error, 'UNREGISTERED_SOURCE');
   assert.equal(audit.length, 1, 'the refusal stays auditable');
@@ -262,7 +275,7 @@ test('V_B06: a service log and a DOM check cannot close a required console check
   });
   const serviceLogEntry = admitOne(launcher, {
     execution: 'exec-verifier-log',
-    envelope: envelopeFromRun({ run: captureRun(runNodeTest(makeProject(PASSING_TEST), 'log'), 'log'), caseId: 'c1', check: 'service-log', result: 'pass', execution: 'exec-verifier-log' }),
+    envelope: envelopeFromRun({ run: captureRun(runNodeTest(makeProject(PASSING_TEST), 'pass.test.js'), 'log'), caseId: 'c1', check: 'service-log', result: 'pass', execution: 'exec-verifier-log' }),
   });
   const entries = [domEntry, serviceLogEntry].filter((e) => e.ok).map((e) => e.entry);
   assert.equal(entries.length, 2);

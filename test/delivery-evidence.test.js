@@ -184,16 +184,18 @@ test('receipts bound to an old policy digest are refused (STALE_POLICY)', () => 
   const refused = admit(launcher, { envelope: envelopeFixture(), dispatch });
   assert.equal(refused.ok, false);
   assert.equal(refused.error, 'STALE_POLICY');
-  assert.match(refused.reason, /policy\/managed-pilot@r0/);
+  assert.match(refused.reason, new RegExp(sha('policy/managed-pilot@r0')), 'the refusal names the stale bound digest');
 });
 
 test('receipts bound to an old candidate input digest are refused (STALE_CANDIDATE)', () => {
   const launcher = authority();
-  const dispatch = verifierDispatch(launcher, { inputDigest: sha('full-input-r0') });
-  const refused = admit(launcher, { envelope: envelopeFixture(), dispatch });
+  const staleDigest = sha('full-input-r0');
+  // Envelope and dispatch agree with each other but both lag the current input.
+  const dispatch = verifierDispatch(launcher, { inputDigest: staleDigest });
+  const refused = admit(launcher, { envelope: envelopeFixture({ candidateDigest: staleDigest }), dispatch });
   assert.equal(refused.ok, false);
   assert.equal(refused.error, 'STALE_CANDIDATE');
-  assert.match(refused.reason, /full-input-r0/);
+  assert.match(refused.reason, new RegExp(sha('full-input-r0')), 'the refusal names the stale bound digest');
 });
 
 test('receipts observed in a different environment are refused (STALE_ENVIRONMENT)', () => {
