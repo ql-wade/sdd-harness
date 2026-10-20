@@ -323,12 +323,12 @@
 **Parallel safe:** false
 **Acceptance IDs:** A11, B08
 
-- [ ] **Step 1 [5 min]: Test** 3.4.a 实现唯一 Spec Adapter：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：真实临时 OpenSpec 工程预演、目标摘要、MODIFIED 全场景保留；明确 archive 已含 sync 时不再重复 sync。
-- [ ] **Step 2 [5 min]: Implement** 3.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 3.4.b 验证冲突与中断读回：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：主 specs 并发改动阻断；移动前后故障恢复原事务；归档后重新读回场景与稳定 Run 引用。
-- [ ] **Step 4 [5 min]: Implement** 3.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 3.4.a 实现唯一 Spec Adapter：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：真实临时 OpenSpec 工程预演、目标摘要、MODIFIED 全场景保留；明确 archive 已含 sync 时不再重复 sync。
+- [x] **Step 2 [5 min]: Implement** 3.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 3.4.b 验证冲突与中断读回：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：主 specs 并发改动阻断；移动前后故障恢复原事务；归档后重新读回场景与稳定 Run 引用。
+- [x] **Step 4 [5 min]: Implement** 3.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P3_2: 原任务 3.2 — Comet 单一主控安排角色和开发任务，独立 Whitebox 执行真实业务读回；验证弱测试回作者、产品缺陷回 Builder、环境缺口回适配器、候选改变重验（B01–B07/F08）。不批量改 vendored 技能，必要升级另做显式替换。
 
@@ -995,10 +995,10 @@
 **Parallel safe:** false
 **Acceptance IDs:** L08, L09, L10, L11, A11, H09
 
-- [ ] **Step 1 [5 min]: Test** RED：Comet进程宕机、主机不可达、心跳正常扫描卡死分别注入；同机监控随主机停止时必须标故障域未满足，不能PASS；首次隔离失败即时事件未投递/主渠道失败转备用/值班未确认升级真实计时；未经授权仅prepare不发送；监督器不得改phase、创建Comet维护operation或直接写Outline ACL；重启原实例与停止旧写者分别审计。
-- [ ] **Step 2 [5 min]: Implement** GREEN：外部监控读既有Comet事实，分开心跳/接收游标/完整扫描水位/隔离结果；告警投递重投与业务重试分离；监督器仅进程级restart，Comet自己恢复事务、补偿、重试；未知旧写者存活或存储归属不明时停止双启；未登记外部监控和投递渠道则无人值守发布pre-enable阻断，允许标本地进程探针完成但不偷换主机故障能力。
-- [ ] **Step 3 [5 min]: Review** 独立读回：外部时间戳+失联起点+监控判定+已授权渠道送达/升级回执，分别计算检测与投递，不把告警当已隔离；原authority/RunID恢复后仍只有一个业务owner；遗漏权限由Comet全量对账接纳，不让monitor维护第二重试循环。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 1 [5 min]: Test** RED：Comet进程宕机、主机不可达、心跳正常扫描卡死分别注入；同机监控随主机停止时必须标故障域未满足，不能PASS；首次隔离失败即时事件未投递/主渠道失败转备用/值班未确认升级真实计时；未经授权仅prepare不发送；监督器不得改phase、创建Comet维护operation或直接写Outline ACL；重启原实例与停止旧写者分别审计。
+- [x] **Step 2 [5 min]: Implement** GREEN：外部监控读既有Comet事实，分开心跳/接收游标/完整扫描水位/隔离结果；告警投递重投与业务重试分离；监督器仅进程级restart，Comet自己恢复事务、补偿、重试；未知旧写者存活或存储归属不明时停止双启；未登记外部监控和投递渠道则无人值守发布pre-enable阻断，允许标本地进程探针完成但不偷换主机故障能力。
+- [x] **Step 3 [5 min]: Review** 独立读回：外部时间戳+失联起点+监控判定+已授权渠道送达/升级回执，分别计算检测与投递，不把告警当已隔离；原authority/RunID恢复后仍只有一个业务owner；遗漏权限由Comet全量对账接纳，不让monitor维护第二重试循环。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
 
 ### Task I08: 备份恢复、单权威迁移与R10未完成保留
 
