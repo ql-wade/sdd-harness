@@ -1,9 +1,17 @@
 {
   "schema_version": 1,
-  "status": "PLAN_HANDOFF_READY_PENDING_USER_EXECUTOR",
+  "status": "IMPLEMENTATION_ACTIVE",
   "objective": "按照我们架构，端到端完成验证，出具验证报告",
   "target_controller": "Comet Classic",
-  "implementation_executor": "UNBOUND: user will choose other Agent; no implementation dispatch",
+  "implementation_executor": {
+    "kind": "claude-code-desktop-session (receiving controller)",
+    "run_id": "impl-dfr-20261020-r1",
+    "bound_at": "2026-10-20T03:04:53.456337+00:00",
+    "workspace": "/Users/mac/Code/sdd-harness",
+    "branch": "master",
+    "baseline_commit": "6510e3a8215cc670c60699a82bc675a120b1098f",
+    "controller_role": "sole implementation controller; sole writer of this state file and tasks.md acceptance"
+  },
   "progress_source": "tasks.md evidence-backed parent checkboxes",
   "total_tasks": 30,
   "accepted_tasks": 4,
@@ -44,11 +52,20 @@
     "decision": "staged implementation only"
   },
   "monitor": {
-    "id": "sdd",
-    "status": "PAUSED",
-    "interval_minutes": 20,
-    "view_readback": true,
-    "reason": "User selected planning-only handoff to another Agent; old implementation monitor must not resume this chat"
+    "id": "impl-dfr-r1",
+    "status": "ACTIVE",
+    "interval_minutes": 30,
+    "backend": "native session cron",
+    "job_id": "7c609f82",
+    "timezone": "Asia/Shanghai",
+    "notification_policy": "仅实质变化/失败/完成/需用户动作时通知",
+    "prior_monitor": {
+      "id": "sdd",
+      "status": "PAUSED",
+      "reason": "not inherited; fresh controller binding"
+    },
+    "user_override": "user requested 30-minute supervision on 2026-10-20 (overrides plan default 20min per execution-prompt override rule)",
+    "quality_directive": "高质量实施：RED→GREEN→独立审查→串行接纳门禁保持不变"
   },
   "load_bearing_prerequisites": [
     "architecture unanimous approval",
@@ -61,7 +78,7 @@
     "timezone": "Asia/Shanghai",
     "reason": "Receiving executor qualifies actual host, resources and throughput before estimating implementation"
   },
-  "updated_at": "2026-10-20T02:27:58.613623+00:00",
+  "updated_at": "2026-10-20T03:59:32.561605+00:00",
   "preparatory_checks": {
     "scaffold_scoped_tests": "41/41 PASS",
     "scaffold_npm_test": "41/41 PASS on Node22.13.1",
@@ -86,7 +103,7 @@
     "Resume existing monitor sdd; never create duplicate monitor",
     "Continue original full goal, do not mark 92 scenarios accepted from baseline tests"
   ],
-  "last_progress_at": "2026-10-20T00:09:50.408280+00:00",
+  "last_progress_at": "2026-10-20T03:59:32.561605+00:00",
   "authorization_blocker_audit": {
     "consecutive_goal_turns": 0,
     "decision_received": true,
@@ -114,5 +131,57 @@
   },
   "total_plan_nodes": 39,
   "infrastructure_tasks": 8,
-  "required_checks": 105
+  "required_checks": 105,
+  "approved_replan_parallel": {
+    "authorized_by": "user goal 2026-10-20: 按照计划，并行实施。最终出具验证报告",
+    "recorded_at": "2026-10-20T03:04:53.456337+00:00",
+    "effective_max_workers": 2,
+    "isolation": "per-worker git worktree under .claude/worktrees/impl-* + dedicated branch; no shared-checkout writes",
+    "ownership_proof": "allowed_paths_by_task (drift-lock.json) disjoint across concurrently dispatched tasks; verified per wave before dispatch",
+    "frozen_files_untouched": true,
+    "conservative_fallback": "contract runtime.parallel_backend=serial/max_workers=1 remains valid if isolation proof fails; revert recorded in ledger"
+  },
+  "goal_binding": {
+    "native_option": "auto",
+    "mechanism": "session goal hook (native)",
+    "objective_ref": "execution-contract.json goal.objective",
+    "status": "active"
+  },
+  "run_started_at": "2026-10-20T03:04:53.456337+00:00",
+  "status_revision": 2,
+  "lifecycle_guard": {
+    "skill": "openspec-lifecycle-guard",
+    "path": "/Users/mac/.claude/skills/openspec-lifecycle-guard/SKILL.md",
+    "sha256": "e04ba2a8894eaa5d5f9bc521fea3d5f3fc468672ecd39749788e424a1d9a7850",
+    "loaded_at": "2026-10-20T03:40:19.299726+00:00",
+    "application": "evidence-backed checkbox flips only; flip box without editing task text; strict validation before phase moves; record evidence pointer per flip"
+  },
+  "controller_policy": {
+    "worker_commit_discipline": "tests commit separate from implementation commit; raw RED output logs preserved under worker-reports/<TASK>/evidence/"
+  },
+  "node_status": {
+    "I01": {
+      "status": "PARTIAL_ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "4"
+      ],
+      "step_3": "NOT_DONE — 原始 GitHub owner/权限读回 UNVERIFIED（gh TLS x509 -26276，环境级）；其余审查项（拒绝日志、秘密卫生、回执绑定）已由独立审查员复核通过",
+      "commits": [
+        "95ee00b",
+        "b1b4be7",
+        "64841ef"
+      ],
+      "merged_to_master": "64841ef",
+      "regression": "node --test 15/15; npm test 65/65 (worktree-verified, content identical to master)",
+      "review": "worker-reports/I01.review.json (APPROVED, 0 blocking)"
+    }
+  },
+  "environment_notes": [
+    {
+      "note": "main-checkout npm test: adapter-quoting 2 cases EPERM — sandbox denies writing .claude/settings.json (denyWithinAllow); integration regression must run in a worktree (65/65 verified at 64841ef)",
+      "recorded_at": "2026-10-20T03:59:32.561605+00:00"
+    }
+  ]
 }

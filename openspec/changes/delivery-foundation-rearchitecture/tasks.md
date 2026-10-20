@@ -911,10 +911,10 @@
 **Parallel safe:** false
 **Acceptance IDs:** F01, A19, U01, U07
 
-- [ ] **Step 1 [5 min]: Test** RED：未知owner/用途或凭据引用跨项目解析失败；将普通Agent身份访问签发/发布材料实际拒绝；未固定镜像digest、缺许可证/平台/备份兼容证据时up入口拒绝；浮动tag或假digest不通过；引用包含秘密明文、宿主绝对路径或同一个凭据被不同高权角色复用时校验拒绝。
-- [ ] **Step 2 [5 min]: Implement** GREEN：仅实现注册表schema、只读解析与逐资源qualification gate；秘密只通过运行时授权挂载/secret store，不写入Git/报告；生成各组件配置所需引用，但不写mcp-capabilities/hooks等其它owner的唯一源；由对应P任务串行接纳；所有启动工具先解析相同registry与组件lock，状态ready前仅可validate/qualify。
+- [x] **Step 1 [5 min]: Test** RED：未知owner/用途或凭据引用跨项目解析失败；将普通Agent身份访问签发/发布材料实际拒绝；未固定镜像digest、缺许可证/平台/备份兼容证据时up入口拒绝；浮动tag或假digest不通过；引用包含秘密明文、宿主绝对路径或同一个凭据被不同高权角色复用时校验拒绝。
+- [x] **Step 2 [5 min]: Implement** GREEN：仅实现注册表schema、只读解析与逐资源qualification gate；秘密只通过运行时授权挂载/secret store，不写入Git/报告；生成各组件配置所需引用，但不写mcp-capabilities/hooks等其它owner的唯一源；由对应P任务串行接纳；所有启动工具先解析相同registry与组件lock，状态ready前仅可validate/qualify。
 - [ ] **Step 3 [5 min]: Review** 独立读回：原始owner/权限读回与拒绝日志匹配project1285806550和真实principal；无秘密值输出；资格回执绑定实际image digest/commit、平台和输入摘要；配置有效与运行ready分开。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
 
 ### Task I02: 固定Comet Runner及真实OS/container角色隔离
 
