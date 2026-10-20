@@ -235,14 +235,14 @@
 **Parallel safe:** false
 **Acceptance IDs:** A05, A06, A18, A19, B03, B06, B07
 
-- [ ] **Step 1 [5 min]: Test** 2.2.a 实现证据准入与身份绑定：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：RED 自签、同 execution、旧 policy/候选/环境；GREEN 固定派发来源，不信角色标签。
-- [ ] **Step 2 [5 min]: Implement** 2.2.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 2.2.b 实现纯 Gate 求值与拒绝原因：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：缺能力/未验证/观察项不完整保持阻断；只返回判定与回执，不派发、不保存 current-stage。
-- [ ] **Step 4 [5 min]: Implement** 2.2.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Test** 2.2.c 验证受保护来源边界：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：夹具只证结构；可信 Runner 登记/发布密钥隔离由真实权限负例另证，不夸大本机文件锁。
-- [ ] **Step 6 [5 min]: Implement** 2.2.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 2.2.a 实现证据准入与身份绑定：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：RED 自签、同 execution、旧 policy/候选/环境；GREEN 固定派发来源，不信角色标签。
+- [x] **Step 2 [5 min]: Implement** 2.2.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 2.2.b 实现纯 Gate 求值与拒绝原因：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：缺能力/未验证/观察项不完整保持阻断；只返回判定与回执，不派发、不保存 current-stage。
+- [x] **Step 4 [5 min]: Implement** 2.2.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Test** 2.2.c 验证受保护来源边界：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：夹具只证结构；可信 Runner 登记/发布密钥隔离由真实权限负例另证，不夸大本机文件锁。
+- [x] **Step 6 [5 min]: Implement** 2.2.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P2_3: 原任务 2.3 — 保留旧 CLI 和报告 adapter；验证错误输入退出 1、验收失败退出 2、有效检查退出 0，旧 npm test 及 bash scripts/check.sh 通过（B10/A20）。
 
@@ -925,10 +925,10 @@
 **Parallel safe:** false
 **Acceptance IDs:** A09, A10, A11, A19, C07, D01, D08, H03, H09, U07, F05, F07, M02
 
-- [ ] **Step 1 [5 min]: Test** RED：以实际worker身份经Edit/Shell/MCP分别写.comet/run-state.json、策略、回执与签发目录；实际拒绝并保留errno/请求；挂载宿主凭据/访问Docker socket、使用只读driver写产品文件、复制state后第二实例启动分别拒绝；杀掉controller后不能由worker自行领取phase/重试；旧owner/attempt结果由Comet拒绝，基础设施不伪造新operation。
-- [ ] **Step 2 [5 min]: Implement** GREEN：镜像由精确已锁Comet源及项目补丁构建，启动前固定image digest；只读根文件系统、最小capabilities/权限和独立角色挂载；唯一Comet状态/锁/事务仍在其受管持久卷；infra仅启动/停止进程，不维护DAG/phase/job queue；工件/角色结果通过受控入口交原Comet；普通Agent不可构造可信dispatch身份，不能只靠env角色字符串或同主体签名。
+- [x] **Step 1 [5 min]: Test** RED：以实际worker身份经Edit/Shell/MCP分别写.comet/run-state.json、策略、回执与签发目录；实际拒绝并保留errno/请求；挂载宿主凭据/访问Docker socket、使用只读driver写产品文件、复制state后第二实例启动分别拒绝；杀掉controller后不能由worker自行领取phase/重试；旧owner/attempt结果由Comet拒绝，基础设施不伪造新operation。
+- [x] **Step 2 [5 min]: Implement** GREEN：镜像由精确已锁Comet源及项目补丁构建，启动前固定image digest；只读根文件系统、最小capabilities/权限和独立角色挂载；唯一Comet状态/锁/事务仍在其受管持久卷；infra仅启动/停止进程，不维护DAG/phase/job queue；工件/角色结果通过受控入口交原Comet；普通Agent不可构造可信dispatch身份，不能只靠env角色字符串或同主体签名。
 - [ ] **Step 3 [5 min]: Review** 独立读回：真实container inspect/UID/mount/权限和负向写结果，分别对应Edit/Shell/MCP，不以容器配置文本代替实测；原RunID和operation恢复读回；两个启动请求只有一个有效Comet写者，控制目录不存在worker可写路径。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
 
 ### Task I03: Outline独立资料域、Postgres/Redis、OIDC与对象存储
 
