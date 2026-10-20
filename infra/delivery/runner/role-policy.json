@@ -160,5 +160,37 @@
       "tier": "worker",
       "note": "reviewer 受管 API 凭据；I01 目录未登记（缺口由 validate 显式上报）"
     }
-  ]
+  ],
+  "methodStateScope": {
+    "declaration": "METHOD_STATE_SHARED_DECLARED",
+    "model": "cooperative-local",
+    "isolationAchieved": false,
+    "knownFacts": {
+      "ref": "classic-closeout-and-hook-contract.md §6（Ponytail 补充，用户裁决 A）",
+      "facts": [
+        "同仓库并发会话可能共享 mode 文件，最后写入生效",
+        "hook exit 0、模式徽章和地图存在均不能证明实际规则已送达或被遵守"
+      ]
+    },
+    "scopeRule": "本环境 method-state 为共享 cooperative-local：不得作为角色/权限/身份依据，不得作为任何完成判定依据；无法隔离时不能承诺并发角色级不同模式（§7.4）",
+    "identityBasis": false,
+    "permissionBasis": false,
+    "completionBasis": false,
+    "modeFilesInWorkerWritableSurface": "FORBIDDEN",
+    "nonEvidence": [
+      "hook exit 0",
+      "mode badge",
+      "codebase map"
+    ],
+    "dispatchRecord": {
+      "note": "§7.4：每次派发记录以下字段；有效资产摘要与注入观察分开记录。本任务无真实派发，运行时填充前如实 UNVERIFIED",
+      "fields": {
+        "actualAssetDigest": "实际资产摘要（本次派发方法资产的 sha256）",
+        "effectiveLevel": "有效级别（实际生效的方法模式级别）",
+        "injectionObservation": "注入观察（上下文实际送达/遵守的独立观察，与资产摘要分开记录）"
+      },
+      "inferIdentityFromSharedMode": "FORBIDDEN",
+      "status": "UNVERIFIED"
+    }
+  }
 }
