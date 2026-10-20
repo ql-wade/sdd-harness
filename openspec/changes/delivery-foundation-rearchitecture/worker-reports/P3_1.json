@@ -78,6 +78,26 @@
    "cmd": "npm test (post-merge full repo suite)",
    "exit_code": 0,
    "summary": "218 tests / 218 pass / 0 fail — master baseline grew 205 -> 218 (P1_3 + comet-driver), no regressions"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/3_1.mjs (env A: worktree without prepared build)",
+   "exit_code": 0,
+   "summary": "13/13; B09 dual-outcome verdict PASS pass=4 skipped=1"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/3_1.mjs (env B: prepared copy with real patched Comet build)",
+   "exit_code": 0,
+   "summary": "13/13; B09 dual-outcome verdict PASS pass=5 skipped=0 — probe really runs"
+  },
+  {
+   "cmd": "node tools/verify/delivery-journey.mjs --scenario B09 ... (env B)",
+   "exit_code": 0,
+   "summary": "PASS pass=5 fail=0 skipped=0 — run-outcome coverage recorded truthfully"
+  },
+  {
+   "cmd": "npm test (after B09 dual-outcome fix, merged tree 28d820f)",
+   "exit_code": 0,
+   "summary": "218 tests / 218 pass / 0 fail"
   }
  ],
  "runner_capability_matrix": {
@@ -132,6 +152,14 @@
    "NB-4": "NOT-EXERCISED count corrected. Applied as recomputed post-merge: the coordinator figure 68 (92-24) was pre-merge; the instructed `git merge --no-ff master` (f57ead9) brought 1_3.mjs (A09/F05/F07), so the honest post-merge figures are 27 executable / 65 NOT-EXERCISED-by-design. Report updated to 65.",
    "consequential_refreeze": "The instructed merge changed all four frozen artifacts on master (P1_3 acceptance moved proposal/design/spec/tasks). Per the pilot contract re-freeze procedure the four digests were explicitly updated with an audit note (refreeze record 1, commit-level diff) — without it every journey refuses frozen-baseline-drift and the demanded V_A01/V_A15 exit 0 is unreachable. pilot-contract.md is this task's owned file.",
    "recorded_not_changed": "NB-3 (exit-code asymmetry: both refusal lanes nonzero, satisfies the frozen expected text), NB-5 (evidence gate is an existence check; VERIFY consumers must treat persisted bytes as necessary-not-sufficient), NB-6 (B09 module-level green with target.found=false, already disclosed design). .whitebox gitignore handled by control plane (a92284b)."
+  },
+  {
+   "integration_regression_fix": "B09 convention-less case carried an environment assumption from this worker's worktree (no .sdd prepared build => 1_6.mjs patched-build probe skips). On a prepared+patched worktree (impl-p1-3 detached at merge baseline 856f411) the probe really runs, so the `skipped >= 1` assertion failed in integration.",
+   "root_cause": "The test asserted one environment state instead of the contract. The contract for a convention-less module (no scenario tokens in test names) is: module-level green with zero FAIL and the actually-occurring coverage mode truthfully recorded — regardless of whether the environment-conditional probe skips or runs.",
+   "fix": "test/delivery-cases/3_1.mjs B09 case rewritten dual-outcome: both legal outcomes must PASS; assertions now require execution.fail === 0 (a real submodule defect still refuses the pass — no weakening), tests === 5 (1_6.mjs top-level count), skipped in {0, 1}, and verdict counts reconciling exactly with the executed TAP summary (tests == pass + fail + skipped) so the recorded coverage mode cannot lie. Also normalized the T2 candidate.gitHead assertion for non-git copies (null fallback on both sides) — same environment-assumption class, required because the prepared-environment verification runs from a git-archive copy.",
+   "verification_env_a_skip": "impl-p3-1 worktree (no .sdd): node --test test/delivery-cases/3_1.mjs exit 0, 13/13; runner B09: PASS tests=5 pass=4 fail=0 skipped=1. Evidence: worker-reports/P3_1/evidence/green-3_1-skip-env.txt",
+   "verification_env_b_prepared": "$TMPDIR git-archive copy of the branch + real .sdd/vendor/comet prepared build copied from impl-p1-3 (lock-identical, commit c90af44a4474662d7853aae76ce785404974fb0a, fingerprint cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187; node_modules deps copied because ESM resolution from the temp copy cannot walk to the main checkout): node --test test/delivery-cases/3_1.mjs exit 0, 13/13; runner B09: PASS tests=5 pass=5 fail=0 skipped=0. Evidence: worker-reports/P3_1/evidence/green-3_1-prepared-env.txt",
+   "npm_test_after_fix": "exit 0, 218/218 (evidence: worker-reports/P3_1/evidence/green-npm-test-b09-fix.txt)"
   }
  ],
  "commands_status_note": "Pre-review command entries describe the pre-merge state (205/205); post-review entries describe the merged state (218/218). Both are real runs with saved evidence where indicated."
