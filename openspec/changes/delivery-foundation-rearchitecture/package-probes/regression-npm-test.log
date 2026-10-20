@@ -1,0 +1,264 @@
+
+> ai-coding-scaffold@0.2.4 test
+> node --test test/*.test.js
+
+TAP version 13
+# Subtest: claude-code adapter compiles hooks.yaml to safely-sourceable env
+ok 1 - claude-code adapter compiles hooks.yaml to safely-sourceable env
+  ---
+  duration_ms: 173.162042
+  ...
+# Subtest: sourcing .compiled.env has no side effects and preserves deny patterns
+ok 2 - sourcing .compiled.env has no side effects and preserves deny patterns
+  ---
+  duration_ms: 25.865167
+  ...
+# Subtest: pre-tool-gate denies blocked commands and allows normal ones
+ok 3 - pre-tool-gate denies blocked commands and allows normal ones
+  ---
+  duration_ms: 308.423041
+  ...
+# Subtest: pre-tool-gate fails closed on unparseable non-empty input (r2 F4)
+ok 4 - pre-tool-gate fails closed on unparseable non-empty input (r2 F4)
+  ---
+  duration_ms: 102.6725
+  ...
+# Subtest: .mcp.json carries pinned versions, never @latest (r2 F-001/zcode F1)
+ok 5 - .mcp.json carries pinned versions, never @latest (r2 F-001/zcode F1)
+  ---
+  duration_ms: 0.830959
+  ...
+# Subtest: pre-tool-gate denies direct wiki writes (kb-write-protection)
+ok 6 - pre-tool-gate denies direct wiki writes (kb-write-protection)
+  ---
+  duration_ms: 82.846583
+  ...
+# Subtest: compiled settings.json PreToolUse matcher covers every deny policy
+ok 7 - compiled settings.json PreToolUse matcher covers every deny policy
+  ---
+  duration_ms: 0.725625
+  ...
+# Subtest: adapter preserves user hook entries it does not own
+ok 8 - adapter preserves user hook entries it does not own
+  ---
+  duration_ms: 79.362417
+  ...
+# Subtest: rejects an exact Node pin mismatch before reading source or writing project state
+ok 9 - rejects an exact Node pin mismatch before reading source or writing project state
+  ---
+  duration_ms: 4.226291
+  ...
+# Subtest: rejects a source archive with the wrong SHA before creating the vendor target
+ok 10 - rejects a source archive with the wrong SHA before creating the vendor target
+  ---
+  duration_ms: 115.534792
+  ...
+# Subtest: prepares a verified synthetic upstream archive into the pristine source directory
+ok 11 - prepares a verified synthetic upstream archive into the pristine source directory
+  ---
+  duration_ms: 204.198917
+  ...
+# Subtest: reuses an identical verified archive without rewriting the pristine source
+ok 12 - reuses an identical verified archive without rewriting the pristine source
+  ---
+  duration_ms: 194.369625
+  ...
+# Subtest: rejects pristine source drift without overwriting the changed baseline
+ok 13 - rejects pristine source drift without overwriting the changed baseline
+  ---
+  duration_ms: 154.227208
+  ...
+# Subtest: rejects an integrity-matching traversal archive without committing or escaping files
+ok 14 - rejects an integrity-matching traversal archive without committing or escaping files
+  ---
+  duration_ms: 87.03525
+  ...
+# Subtest: rejects an injected pristine file named __proto__ without deleting it
+ok 15 - rejects an injected pristine file named __proto__ without deleting it
+  ---
+  duration_ms: 116.922
+  ...
+# Subtest: rejects executable-bit drift without changing the pristine script mode or bytes
+ok 16 - rejects executable-bit drift without changing the pristine script mode or bytes
+  ---
+  duration_ms: 120.801833
+  ...
+# Subtest: rejects an injected empty pristine directory without deleting it
+ok 17 - rejects an injected empty pristine directory without deleting it
+  ---
+  duration_ms: 151.021792
+  ...
+# Subtest: deliverable-audit reports all required deliverables present for a complete run
+ok 18 - deliverable-audit reports all required deliverables present for a complete run
+  ---
+  duration_ms: 132.140958
+  ...
+# Subtest: deliverable-audit flags missing required deliverables
+ok 19 - deliverable-audit flags missing required deliverables
+  ---
+  duration_ms: 194.949375
+  ...
+# Subtest: deliverable-audit reports expected (non-blocking) gaps
+ok 20 - deliverable-audit reports expected (non-blocking) gaps
+  ---
+  duration_ms: 148.66325
+  ...
+# Subtest: deliverable-audit respects --stage filter
+ok 21 - deliverable-audit respects --stage filter
+  ---
+  duration_ms: 110.080833
+  ...
+# Subtest: evidence-audit rejects stale markdown claims that contradict disk and command output
+ok 22 - evidence-audit rejects stale markdown claims that contradict disk and command output
+  ---
+  duration_ms: 137.773958
+  ...
+# Subtest: evidence-audit accepts claims that match disk and command output
+ok 23 - evidence-audit accepts claims that match disk and command output
+  ---
+  duration_ms: 210.839291
+  ...
+# Subtest: evidence-audit can compare archived OpenSpec evidence with a separate runtime run id
+ok 24 - evidence-audit can compare archived OpenSpec evidence with a separate runtime run id
+  ---
+  duration_ms: 122.485916
+  ...
+# Subtest: evidence-audit resolves an archived change when given its bare archive id
+ok 25 - evidence-audit resolves an archived change when given its bare archive id
+  ---
+  duration_ms: 115.254375
+  ...
+# Subtest: evidence-audit rejects missing progress, review, or captured test output
+ok 26 - evidence-audit rejects missing progress, review, or captured test output
+  ---
+  duration_ms: 93.364625
+  ...
+# Subtest: generation gate accepts a successful generator that produced a test file
+ok 27 - generation gate accepts a successful generator that produced a test file
+  ---
+  duration_ms: 8.9225
+  ...
+# Subtest: generation gate rejects when beforeTestInventory was not captured
+ok 28 - generation gate rejects when beforeTestInventory was not captured
+  ---
+  duration_ms: 3.302917
+  ...
+# Subtest: generation gate rejects timeout, non-zero exit, and empty test output
+ok 29 - generation gate rejects timeout, non-zero exit, and empty test output
+  ---
+  duration_ms: 2.511667
+  ...
+# Subtest: generation gate rejects an unchanged pre-existing test inventory
+ok 30 - generation gate rejects an unchanged pre-existing test inventory
+  ---
+  duration_ms: 2.445417
+  ...
+# Subtest: published package includes probe runtime modules
+ok 31 - published package includes probe runtime modules
+  ---
+  duration_ms: 0.453833
+  ...
+# Subtest: package exposes executable regressions without running browser source fixtures
+ok 32 - package exposes executable regressions without running browser source fixtures
+  ---
+  duration_ms: 0.079333
+  ...
+# Subtest: probe rejects debug leakage and runaway canvas dimensions
+ok 33 - probe rejects debug leakage and runaway canvas dimensions
+  ---
+  duration_ms: 130.579292
+  ...
+# Subtest: probe accepts bounded layout, clean DOM, passing commands and interactions
+ok 34 - probe accepts bounded layout, clean DOM, passing commands and interactions
+  ---
+  duration_ms: 205.196125
+  ...
+# Subtest: probe rejects command evidence whose exit code is not a number
+ok 35 - probe rejects command evidence whose exit code is not a number
+  ---
+  duration_ms: 135.364459
+  ...
+# Subtest: probe rejects self-reported interactions without state transition proof
+ok 36 - probe rejects self-reported interactions without state transition proof
+  ---
+  duration_ms: 115.813125
+  ...
+# Subtest: probe rejects passed interactions that do not have matching state transitions
+ok 37 - probe rejects passed interactions that do not have matching state transitions
+  ---
+  duration_ms: 93.955791
+  ...
+# Subtest: probe profile requires project-critical interactions to be present
+ok 38 - probe profile requires project-critical interactions to be present
+  ---
+  duration_ms: 83.57475
+  ...
+# Subtest: probe profile requires every project-critical interaction to have state transition proof
+ok 39 - probe profile requires every project-critical interaction to have state transition proof
+  ---
+  duration_ms: 82.283417
+  ...
+# Subtest: probe profile enforces project-specific state transition semantics
+ok 40 - probe profile enforces project-specific state transition semantics
+  ---
+  duration_ms: 86.062833
+  ...
+# Subtest: probe profile requires its declared observation adapter in project source
+ok 41 - probe profile requires its declared observation adapter in project source
+  ---
+  duration_ms: 82.77475
+  ...
+# Subtest: probe profile requires runtime evidence that its observation adapter is callable
+ok 42 - probe profile requires runtime evidence that its observation adapter is callable
+  ---
+  duration_ms: 117.097667
+  ...
+# Subtest: probe rejects source-level debug markers and canvas resize feedback loops
+ok 43 - probe rejects source-level debug markers and canvas resize feedback loops
+  ---
+  duration_ms: 82.2835
+  ...
+# Subtest: probe rejects debug DOM markers injected dynamically from project source
+ok 44 - probe rejects debug DOM markers injected dynamically from project source
+  ---
+  duration_ms: 78.800625
+  ...
+# Subtest: probe rejects incomplete evidence instead of treating missing observations as passing
+ok 45 - probe rejects incomplete evidence instead of treating missing observations as passing
+  ---
+  duration_ms: 78.194334
+  ...
+# Subtest: project test gate runs the manifest test command and captures success
+ok 46 - project test gate runs the manifest test command and captures success
+  ---
+  duration_ms: 392.283625
+  ...
+# Subtest: project test gate rejects a failing or missing test command
+ok 47 - project test gate rejects a failing or missing test command
+  ---
+  duration_ms: 245.280125
+  ...
+# Subtest: release version metadata is consistent across all sources
+ok 48 - release version metadata is consistent across all sources
+  ---
+  duration_ms: 3.408917
+  ...
+# Subtest: version gate fails on drift (negative path)
+ok 49 - version gate fails on drift (negative path)
+  ---
+  duration_ms: 181.642792
+  ...
+# Subtest: workflow-audit rejects an archived run whose latest review is not ready
+ok 50 - workflow-audit rejects an archived run whose latest review is not ready
+  ---
+  duration_ms: 188.943917
+  ...
+1..50
+# tests 50
+# suites 0
+# pass 50
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1467.629

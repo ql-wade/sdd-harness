@@ -1,0 +1,17 @@
+# V_COMET_NATIVE GREEN — contract command after implementing --check-generated/--runtime-smoke (+volatile-cache exclusion on both manifest and live tree, step output forwarded)
+# command: /Users/mac/.nvm/versions/node/v24.15.0/bin/node tools/comet/build.mjs --check-generated --runtime-smoke --json (cwd=worktree root)
+# attempt history: (1) INPUT_INVALID RED before flags existed; (2) BUILD_BASELINE_DRIFT exposed vitest cache mutation; fixed by excluding ephemeral node_modules/.vite* from manifest comparison
+# started: 2026-10-20T11:43:51+0800
+--- stdout/stderr ---
+
+ RUN  v4.1.11 /Users/mac/Code/sdd-harness/.claude/worktrees/impl-p1-1/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/72e5ce0eb3ce1ca7c6b898cf5d63bc466a717e4ea2eaf7de761b86d2867af1f6/work
+
+
+ Test Files  4 passed (4)
+      Tests  243 passed | 2 skipped (245)
+   Start at  11:44:21
+   Duration  87.73s (transform 4.58s, setup 0ms, import 5.52s, tests 113.35s, environment 0ms)
+
+{"schemaVersion":1,"status":"PASS","version":"0.4.5","sourceCommit":"c90af44a4474662d7853aae76ce785404974fb0a","fingerprint":"72e5ce0eb3ce1ca7c6b898cf5d63bc466a717e4ea2eaf7de761b86d2867af1f6","verifiedPreparedSource":"/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p1-1/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/pristine","steps":[{"name":"check-generated:classic","command":"/Users/mac/.nvm/versions/node/v24.15.0/bin/node scripts/build/build-classic-runtime.mjs --check","exitCode":0,"status":"PASS"},{"name":"check-generated:native","command":"/Users/mac/.nvm/versions/node/v24.15.0/bin/node scripts/build/build-native-runtime.mjs --check","exitCode":0,"status":"PASS"},{"name":"check-generated:entry","command":"/Users/mac/.nvm/versions/node/v24.15.0/bin/node scripts/build/build-entry-runtime.mjs --check","exitCode":0,"status":"PASS"},{"name":"runtime-smoke","command":"/Users/mac/.nvm/versions/node/v24.15.0/bin/node node_modules/vitest/vitest.mjs run test/domains/comet-classic/comet-scripts.test.ts test/repository/native-runtime-assets.test.ts test/repository/comet-entry-runtime-assets.test.ts test/app/cli-smoke.test.ts","exitCode":0,"status":"PASS"}]}
+--- exit=0 ---
+# finished: 2026-10-20T11:45:48+0800
