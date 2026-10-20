@@ -3411,7 +3411,7 @@
   "openspec": {
     "change_id": "delivery-foundation-rearchitecture",
     "policy": "in-change",
-    "baseline_sha256": "a89cfcf9cde72459df180e7ca11ca9be5b1b402f894f05d82984f5ba8025d86a"
+    "baseline_sha256": "605f29e5a53f332a20dd4cb3b89c98f148d2483ae1c6c90056b34af7e4172ad8"
   },
   "verification_runner_invariant": "tools/verify/delivery-journey.mjs is a test action/observer adapter only, not a controller. It cannot own phase, DAG, retries, job lease or auto-recovery; scenario faults/requests enter same Comet, whose persisted state is read back. All92 case recipes retain original WHEN/THEN.",
   "handoff": {
@@ -3443,6 +3443,18 @@
   "revision_gate": {
     "task_id": "OVR",
     "status": "PENDING",
-    "rule": "Old architecture ballot or structural plan guard does not authorize this revision. Preserve original runtime executor state; receiving controller must acknowledge replan and review before affected dispatch."
+    "rule": "Old architecture ballot or structural plan guard does not authorize this revision. Preserve original runtime executor state; receiving controller must acknowledge replan and review before affected dispatch.",
+    "authoritative_document_hashes": {
+      "docs/architecture/delivery-architecture.md": "633f5285b6d8b4a200ee369d09d0f891d0b6df8eff8173a3e8043cd3929fe85a",
+      "docs/architecture/adr/0019-delivery-foundation.md": "30cbf458634573ab7e27ef379c1d730194477d2c42131061b93583e4c0336ee0",
+      "openspec/changes/delivery-foundation-rearchitecture/overlay-integration-design.md": "1ee9a14ae8e48408eafafdf3d222034bf26b088ccfd411ce4a59c23cdaa06b19",
+      "openspec/changes/delivery-foundation-rearchitecture/classic-closeout-and-hook-contract.md": "adf37692f5a443e20901fe618c61be8bdb030f76198fa2391e231211a80ac795",
+      "openspec/changes/delivery-foundation-rearchitecture/classic-integration-design.md": "f4993d10d17bf1a795a5d784cdaabd76fa71a8a1336ea9e9f54a429ec4435b36",
+      "openspec/changes/delivery-foundation-rearchitecture/classic-gate-runtime-contract.md": "92760d9f228504585c5df1df94a95e088d9e9ed688ebc08e09df85a2c3cec399",
+      "openspec/changes/delivery-foundation-rearchitecture/matt-method-profile-migration.md": "31f7b03aeb33f8a936a1af1f0a1c0d8c76daeec11fc78db31112ade46bbf65a3",
+      "openspec/changes/delivery-foundation-rearchitecture/overlay-prestudy/probe.mjs": "9517142cd1ef2dcbee59ad683d4e6bcca3f4b012f115f783afd84cea6ade09c6",
+      "openspec/changes/delivery-foundation-rearchitecture/overlay-prestudy/results.json": "cae8833ab27dc7d79a67eefe79e115d6b291e5261849d7deefbb01f9a6268096"
+    },
+    "document_hash_check": "Receiving controller compares these byte digests before OVR artifact freeze, dispatch and acceptance; stock plan_guard covers its declared frozen inputs only."
   }
 }
