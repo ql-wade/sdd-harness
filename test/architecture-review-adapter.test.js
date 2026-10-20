@@ -62,6 +62,7 @@ function makeTmp(label) {
 // A real frozen review package file: requirements + design digests are bound
 // in the content, so any requirements/design change moves the artifact digest.
 function writePackageFile(dir, { requirementsDigest, designDigest, note = 'frozen review package' }) {
+  fsSync.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, 'architecture-package.json');
   fsSync.writeFileSync(file, JSON.stringify({
     change: 'delivery-foundation-rearchitecture',
@@ -298,6 +299,49 @@ test('a review package edited after init is caught by the real tally (artifact_c
   assert.ok(refusalCodes(judged).includes('ARTIFACT_CHANGED'), 'the drift is named');
 });
 
+test('a passed tally without the real finalize output refuses with exactly FINAL_REPORT_REQUIRED, and finalizing the same run admits it', () => {
+  const dir = makeTmp('sdd-p25-nofinal-');
+  // real mechanical journey without finalize: tally exit 0, refusals empty, no report
+  const { pkg, runRoot, tally } = runConsensus({ dir, reviewId: 'arch-nofinal-r1', requirementsDigest: sha('req'), designDigest: sha('design'), finalize: false });
+  assert.equal(tally.exitCode, 0, 'precondition: the mechanical tally itself passed');
+  const judged = judgeArchitectureGate({ package: pkg, runRoot, questions: [] });
+  assert.equal(judged.status, 'REFUSED');
+  assert.deepEqual(refusalCodes(judged), ['FINAL_REPORT_REQUIRED'], 'no receipt without the real finalize output');
+  assert.equal(judged.receipt.final_report_sha256, null, 'the receipt carries no fabricated report digest');
+
+  // finalizing the SAME run admits it — the refusal is completable, not fatal
+  const fin = mechanicalFinalize({ package: pkg, runRoot, conclusion: 'unanimous approval finalized after the gate demanded the report', nextPlan: 'non-blocking notes tracked in implementation tasks' });
+  assert.equal(fin.ok, true, `real finalize: ${fin.stderr ?? ''}`);
+  const accepted = judgeArchitectureGate({ package: pkg, runRoot, questions: [] });
+  assert.equal(accepted.status, 'PASSED');
+  assert.equal(accepted.receipt.final_report_sha256, shaFile(path.join(runRoot, 'arch-nofinal-r1', 'final-report.md')));
+  assert.deepEqual(refusalCodes(accepted), []);
+});
+
+test('E04: the frozen new revision completes its own cold-start review end to end', () => {
+  const dir = makeTmp('sdd-p25-e04journey-');
+  const first = runConsensus({ dir: path.join(dir, 'r1'), reviewId: 'arch-e04j-r1', requirementsDigest: sha('req-r1'), designDigest: sha('design-r1') });
+  assert.equal(first.judged.status, 'PASSED', 'precondition: revision 1 passed');
+
+  // design changes → revision 2 freezes its own package and reviews cold
+  const pkg2 = freezeReviewPackage({ reviewId: 'arch-e04j-r2', artifactPath: writePackageFile(path.join(dir, 'r2'), { requirementsDigest: sha('req-r1'), designDigest: sha('design-r2') }), revision: 2 });
+  const runRoot2 = path.join(dir, 'r2', 'review-runs');
+  const init2 = initConsensusRun({ package: pkg2, runRoot: runRoot2, initiator: 'claude-code' });
+  assert.equal(init2.ok, true, 'the new revision inits its own independent manifest');
+  for (const agent of P0_QUORUM) {
+    const admitted = admitBallot({ package: pkg2, runRoot: runRoot2, participant: agent, ballot: ballot({ reviewId: 'arch-e04j-r2', agent, artifactSha256: pkg2.artifactSha256 }) });
+    assert.equal(admitted.ok, true, `a fresh ballot of ${agent} validates against the new revision`);
+  }
+  const tally2 = mechanicalTally({ package: pkg2, runRoot: runRoot2 });
+  assert.equal(tally2.exitCode, 0, 'the cold-start revision reaches unanimous PASSED on its own ballots');
+  const fin2 = mechanicalFinalize({ package: pkg2, runRoot: runRoot2, conclusion: 'revision 2 re-reviewed from scratch after the design change', nextPlan: 'carry forward only the still-valid non-blocking notes' });
+  assert.equal(fin2.ok, true, `real finalize for revision 2: ${fin2.stderr ?? ''}`);
+  const judged2 = judgeArchitectureGate({ package: pkg2, runRoot: runRoot2, questions: [] });
+  assert.equal(judged2.status, 'PASSED', 're-freezing a new revision and re-reviewing is completable');
+  assert.equal(judged2.receipt.review_id, 'arch-e04j-r2');
+  assert.notEqual(judged2.receipt.mechanical_tally_sha256, first.judged.receipt.mechanical_tally_sha256, 'the new revision keeps its own manifest and tally — nothing inherited from revision 1');
+});
+
 // --- E04: requirements/design change conservatively invalidates --------------
 
 test('E04: a design change invalidates every old ballot for the new package; the real gate refuses mixing them in', () => {
@@ -404,6 +448,7 @@ test('H06: stale attempts and superseded revisions cannot complete the job; a ne
 
   const notPassed = seat.admitResult({ jobKey: key, reviewId: 'arch-h06-r1', artifactSha256: sha('pkg-r1'), revision: 1, attempt: 2, tally: { status: 'DEBATE_REQUIRED' } });
   assert.equal(notPassed.ok, false, 'a non-PASSED mechanical result does not complete the job');
+  assert.equal(notPassed.error, 'NOT_PASSED', 'the refusal names the missing unanimity like its sibling stale refusals');
 
   // the design moves → a new revision with an independent manifest supersedes
   const superseded = seat.claim({ jobKey: key, reviewId: 'arch-h06-r2', artifactSha256: sha('pkg-r2'), revision: 2 });

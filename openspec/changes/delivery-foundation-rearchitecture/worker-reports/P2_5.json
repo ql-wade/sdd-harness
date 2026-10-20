@@ -17,21 +17,26 @@
  "coverage_matrix": {
   "E03": {
    "positive": 1,
-   "negative": 9,
-   "detail": "正例：承重问题全闭合 + 三方全票 + 阈值达标 + 无 blocker + 同一 digest → 真实 tally exit 0 PASSED + finalize 报告 → 回执逐字段复刻 P0（14 字段 + 5 ballot 子字段精确匹配 receipt.json）。负例（全部真实 gate exit 1/2 或判官拒绝）：未闭合承重问题（含部分闭合仍拒）、缺票 INCOMPLETE、多数票 2/3 DEBATE_REQUIRED、低分 7.9<8.0、未闭合 BLOCKER、旧 digest 票准入被拒、手改降阈 manifest THRESHOLD_DRIFT、删员 manifest QUORUM_DRIFT、无 finalize 报告 FINAL_REPORT_REQUIRED。"
+   "negative": 8,
+   "detail": "正例：承重问题全闭合 + 三方全票 + 阈值达标 + 无 blocker + 同一 digest → 真实 tally exit 0 PASSED + finalize 报告 → 回执逐字段复刻 P0（14 字段 + 5 ballot 子字段精确匹配 receipt.json）。负例（全部真实 gate exit 1 或判官拒绝，均实际执行）：未闭合承重问题（含部分闭合仍拒 LOAD_BEARING_OPEN）、缺票 INCOMPLETE（MISSING_BALLOT）、多数票 2/3 DEBATE_REQUIRED（QUORUM_NOT_UNANIMOUS）、低分 7.9<8.0（THRESHOLD_SHORT）、未闭合 BLOCKER（BLOCKING_FINDINGS）、旧 digest 票准入被拒且 tally INVALID（STALE_DIGEST）、手改降阈 manifest（THRESHOLD_DRIFT）、删员 manifest（QUORUM_DRIFT）。"
   },
   "E04": {
    "positive": 2,
    "negative": 4,
-   "detail": "正例：新 revision 冷启动独立 manifest 后真实重新评审可通过；下游证据经 P2_1 invalidateOnScopeChange（原样复用，未修改 baseline.js）按 architecture-review kind 精确失效、无关 receipt 保留。负例：design 变更后旧票 3/3 被 review_gate validate 以 review_id 拒绝（无法混入新轮）、冷启动轮无有效票（MISSING_BALLOT+INVALID_BALLOT）、旧 run manifest 冒充新 revision 被 REVIEW_REVISION_MISMATCH 拒（adapter 判定×2 场景 + case×1）、恢复旧字节（digest 相同、revision 前移）不自动复活旧回执、init 后改动冻结包被真实 tally 以 artifact_changed BLOCKED。"
+   "detail": "正例（均已实际执行）：revision-2 冻结独立包后端到端冷启动旅程——init 独立 manifest → 3 张新票 validate 通过 → 真实 tally exit 0 PASSED → finalize → 判官 PASSED，mechanical_tally_sha256 与 revision 1 不同（零继承）；下游证据经 P2_1 invalidateOnScopeChange（原样复用，未修改 baseline.js）按 architecture-review kind 精确失效、无关 receipt 保留。负例：design 变更后旧票 3/3 被 review_gate validate 以 review_id 拒绝（无法混入新轮）、冷启动轮无有效票（MISSING_BALLOT+INVALID_BALLOT）、旧 run manifest 冒充新 revision 被 REVIEW_REVISION_MISMATCH 拒（adapter 判定×2 场景 + case×1）、恢复旧字节（digest 相同、revision 前移）不自动复活旧回执、init 后改动冻结包被真实 tally 以 artifact_changed BLOCKED。"
   },
   "H06": {
    "positive": 4,
    "negative": 6,
-   "detail": "正例：首次 claim 占座、同 job_key+同绑定恢复原作业（同一对象、无第二 manifest）、同 manifest 内 re-ballot attempt+1、匹配的机械 PASSED 结果完成唯一作业。负例：第二 job_key 被 SINGLE_REVIEW_JOB 拒（Comet 只持一个评审作业）、真实 gate 拒绝对在持 run 重复 init（same job_key 不重复评审）、迟到旧 attempt 结果 STALE_ATTEMPT、异 digest 结果 STALE_INPUT、非 PASSED 机械结果 NOT_PASSED、被取代 manifest 的结果 STALE_REVIEW、revision 回退 REVISION_REGRESSION。"
+   "detail": "正例：首次 claim 占座、同 job_key+同绑定恢复原作业（同一对象、无第二 manifest）、同 manifest 内 re-ballot attempt+1、匹配的机械 PASSED 结果完成唯一作业。负例：第二 job_key 被 SINGLE_REVIEW_JOB 拒（Comet 只持一个评审作业）、真实 gate 拒绝对在持 run 重复 init（same job_key 不重复评审）、迟到旧 attempt 结果 STALE_ATTEMPT、异 digest 结果 STALE_INPUT、非 PASSED 机械结果 NOT_PASSED（修复轮补按名断言）、被取代 manifest 的结果 STALE_REVIEW、revision 回退 REVISION_REGRESSION。"
   },
   "boundary_T": {
    "detail": "测试 T 保持单独自动审查（边界断言，未扩展为相同 quorum）：SDD.Gate.v1 evaluate 以单条 independent-acceptance 回执即 pass required check（真实 node --test 运行 + 真实 launcher dispatch + admitEvidence）；同一条证据无法替代架构共识——无机械 run 时判官以 MECHANICAL_RUN_MISSING 拒绝；quorum 常量只存在于 architecture-review 判定面，gate.js/evidence.js 未被修改。"
+  },
+  "finalize_binding": {
+   "positive": 1,
+   "negative": 1,
+   "detail": "负例（review 修复轮新增，blk-1 修复）：真实 tally exit 0 PASSED 且 refusals 空但 final-report.md 缺失 → 判官拒绝且 codes 精确等于 ['FINAL_REPORT_REQUIRED']，回执不伪造 final_report_sha256；正例：对同一 run 真实 finalize 后同一判官转 PASSED 且报告 digest 与磁盘字节对账。"
   }
  },
  "red_cases": [
@@ -58,19 +63,39 @@
    "exit_code": 1
   },
   {
-   "cmd": "node --test test/architecture-review-adapter.test.js  # GREEN",
+   "cmd": "node --test test/architecture-review-adapter.test.js  # GREEN (initial round)",
    "exit_code": 0,
    "result": "13/13 pass"
   },
   {
-   "cmd": "node --test test/delivery-cases/2_5.mjs  # GREEN",
+   "cmd": "node --test test/delivery-cases/2_5.mjs  # GREEN (initial round)",
    "exit_code": 0,
    "result": "5/5 pass"
   },
   {
-   "cmd": "npm test  # GREEN 全量回归",
+   "cmd": "npm test  # GREEN 全量回归 (initial round)",
    "exit_code": 0,
-   "result": "276 tests / 275 pass / 1 pre-existing skip / 0 fail（基线 263 + 新增 13）"
+   "result": "276 tests / 275 pass / 1 pre-existing skip / 0 fail"
+  },
+  {
+   "cmd": "git merge --no-ff master  # review 修复轮前",
+   "exit_code": 0,
+   "result": "merge commit ad10e7a（master 9a1fe3e，无冲突）"
+  },
+  {
+   "cmd": "node --test test/architecture-review-adapter.test.js  # GREEN (review-fix round)",
+   "exit_code": 0,
+   "result": "15/15 pass（含 blk-1/nb-2 新增）"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/2_5.mjs  # GREEN (review-fix round)",
+   "exit_code": 0,
+   "result": "5/5 pass"
+  },
+  {
+   "cmd": "npm test  # GREEN 全量回归 (review-fix round, merge 后)",
+   "exit_code": 0,
+   "result": "278 tests / 277 pass / 1 pre-existing skip / 0 fail"
   }
  ],
  "test_fixes_between_red_and_green": [
@@ -96,8 +121,18 @@
  "commits": {
   "tests": "c7c0f30 test(P2_5): RED for the architecture-review adapter — frozen package, exact P0 quorum, real mechanical gate, E03/E04/H06",
   "implementation": "6770a1b feat(P2_5): architecture-review adapter — frozen package, exact P0 quorum bound to real mechanical tally/finalize, E03/E04 conservative invalidation, single review job seat",
-  "report": "a6fa1d3"
+  "report": "32b202a docs(P2_5): worker report — coverage matrix over E03/E04/H06, RED/GREEN evidence, honest unverified items",
+  "review_fix": "586fa89"
  },
  "blockers_or_questions": [],
- "environment_note": "gitignored 的 .sdd/vendor/comet 构建产物从同基座 worktree impl-p2-4 复制到本 worktree 以消除既有的 C08 环境性失败（classic-integration.test.js 要求已构建的 patched Comet）；未触碰任何受控文件，npm test 全量 0 fail 达成。零新 npm 依赖；测试状态全部位于 $TMPDIR，主机配置未动。"
+ "environment_note": "gitignored 的 .sdd/vendor/comet 构建产物从同基座 worktree impl-p2-4 复制到本 worktree 以消除既有的 C08 环境性失败（classic-integration.test.js 要求已构建的 patched Comet）；未触碰任何受控文件，npm test 全量 0 fail 达成。零新 npm 依赖；测试状态全部位于 $TMPDIR，主机配置未动。 review-fix 轮先 merge --no-ff master(9a1fe3e→ad10e7a) 再修复；master 合入仅 openspec 记录文件，无代码冲突。",
+ "review_fixes": {
+  "review": "CHANGES_REQUESTED (P2_5.review.json, head_reviewed 32b202a, blk-1)",
+  "merge": "git merge --no-ff master(9a1fe3e) → ad10e7a（合入 review 记录与 execution-state/ledger；无冲突）",
+  "blk-1": "FINAL_REPORT_REQUIRED 拒绝面补真实测试：tally exit 0 + refusals 空 + final-report.md 缺失 → judge codes deepEqual ['FINAL_REPORT_REQUIRED']（真实 review_gate.py 子进程，无 mock）；并断言同 run finalize 后转 PASSED（evidence/green-adapter-test.review-fix.txt）",
+  "nb-2": "E04 正例 1 升级为实际执行：新增 revision-2 端到端冷启动旅程测试（init→新票→tally PASSED→finalize→judge PASSED，独立 manifest/tally），coverage_matrix 宣称与执行一致",
+  "nb-4": "H06 座位 NOT_PASSED 负例补 error 按名断言（与 STALE_ATTEMPT/STALE_INPUT/STALE_REVIEW/REVISION_REGRESSION 对齐）",
+  "coverage_matrix_correction": "E03 negative 9→8：FINAL_REPORT_REQUIRED 移出 E03（非 E03 共识条件），归入新增 finalize_binding 桶（negative 1 / positive 1，均已实际执行）",
+  "regression": "adapter 15/15、case 5/5、npm test 278 run / 277 pass / 1 pre-existing skip / 0 fail（merge 后全量）"
+ }
 }
