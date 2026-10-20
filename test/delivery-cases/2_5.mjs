@@ -34,6 +34,7 @@ function makeTmp(label) {
 }
 
 function writePackageFile(dir, { requirementsDigest, designDigest }) {
+  fsSync.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, 'architecture-package.json');
   fsSync.writeFileSync(file, JSON.stringify({
     change: 'delivery-foundation-rearchitecture',
@@ -61,6 +62,7 @@ function ballot({ reviewId, agent, artifactSha256, verdict = 'APPROVE', overall 
 
 // A complete real mechanical run (real gate subprocesses, real files).
 function fullRun({ root, reviewId, requirementsDigest, designDigest, questions = [], verdictFor }) {
+  fsSync.mkdirSync(root, { recursive: true });
   const artifactPath = writePackageFile(root, { requirementsDigest, designDigest });
   const pkg = freezeReviewPackage({ reviewId, artifactPath, revision: 1 });
   const runRoot = path.join(root, 'review-runs');
@@ -97,9 +99,10 @@ test('2.5.a E03: unclosed grill-me load-bearing questions refuse submission; clo
   assert.deepEqual(codes(judgedOpen), ['LOAD_BEARING_OPEN']);
 
   const pkg = freezeReviewPackage({ reviewId: 'arch-case25-r1', artifactPath: path.join(root, 'architecture-package.json'), revision: 1 });
-  const step1 = judgeArchitectureGate({ package: pkg, runRoot: ran.runRoot, questions: closeLoadBearingQuestion(questions, 'q-single-owner', 'resolved: the adapter is pure judgment + registration; no phase write surface exists') });
+  const closedOne = closeLoadBearingQuestion(questions, 'q-single-owner', 'resolved: the adapter is pure judgment + registration; no phase write surface exists');
+  const step1 = judgeArchitectureGate({ package: pkg, runRoot: ran.runRoot, questions: closedOne });
   assert.equal(step1.status, 'REFUSED', 'partial closure keeps the gate closed');
-  const accepted = judgeArchitectureGate({ package: pkg, runRoot: ran.runRoot, questions: closeLoadBearingQuestion(closed, 'q-boundary', 'resolved: artifact_sha256 is the boundary every ballot cites') });
+  const accepted = judgeArchitectureGate({ package: pkg, runRoot: ran.runRoot, questions: closeLoadBearingQuestion(closedOne, 'q-boundary', 'resolved: artifact_sha256 is the boundary every ballot cites') });
   assert.equal(accepted.status, 'PASSED', 'closure of every load-bearing question admits the consensus');
 });
 
@@ -184,7 +187,7 @@ test('2.5.b H06: the same job_key resumes the original review job — no duplica
   assert.equal(done.completed, true);
 });
 
-test('2.5.b E04: a requirements/design change conservatively invalidates; restored bytes never auto-revive; T stays single-review', () => {
+test('2.5.b E04: a requirements/design change conservatively invalidates; restored bytes never auto-revive', () => {
   const root = makeTmp('sdd-p25case-e04-');
   const first = fullRun({ root: path.join(root, 'v1'), reviewId: 'arch-case25-v1', requirementsDigest: sha('req-1'), designDigest: sha('design-1') });
   assert.equal(first.tally.status, 'PASSED', 'precondition: v1 passed unanimously');
@@ -199,12 +202,14 @@ test('2.5.b E04: a requirements/design change conservatively invalidates; restor
   }
   const judgedNew = judgeArchitectureGate({ package: pkg2, runRoot: run2, questions: [] });
   assert.equal(judgedNew.status, 'REFUSED', 'the new revision cold-starts with no inherited approval');
+  fsSync.cpSync(path.join(first.runRoot, 'arch-case25-v1'), path.join(first.runRoot, 'arch-case25-v2'), { recursive: true });
   const oldOnNew = judgeArchitectureGate({ package: pkg2, runRoot: first.runRoot, questions: [] });
   assert.ok(codes(oldOnNew).includes('REVIEW_REVISION_MISMATCH'), 'the old receipt never satisfies the new package');
 
   // restore the exact old design bytes — no auto-revival
   const restored = freezeReviewPackage({ reviewId: 'arch-case25-v3', artifactPath: writePackageFile(path.join(root, 'v3'), { requirementsDigest: sha('req-1'), designDigest: sha('design-1') }), revision: 3 });
   assert.equal(restored.artifactSha256, first.pkg.artifactSha256, 'the restored digest equals the original');
+  fsSync.cpSync(path.join(first.runRoot, 'arch-case25-v1'), path.join(first.runRoot, 'arch-case25-v3'), { recursive: true });
   const revived = judgeArchitectureGate({ package: restored, runRoot: first.runRoot, questions: [] });
   assert.equal(revived.status, 'REFUSED', 'restoring the digest does not revive the old consensus');
   assert.ok(codes(revived).includes('REVIEW_REVISION_MISMATCH'));

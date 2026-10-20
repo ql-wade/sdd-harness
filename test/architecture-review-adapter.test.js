@@ -51,7 +51,7 @@ test('precondition: the real mechanical gate script is present', () => {
   assert.ok(fsSync.existsSync(GATE_SCRIPT), `review_gate.py missing at ${GATE_SCRIPT}`);
   assert.deepEqual(REVIEW_PARTICIPANTS, P0_QUORUM, 'quorum must be the exact P0 three-party quorum');
   assert.deepEqual(REVIEW_THRESHOLDS, P0_THRESHOLDS, 'thresholds must be the exact P0 thresholds');
-  assert.deepEqual([...ARCHITECTURE_CRITERIA].sort(), P0_CRITERIA, 'criteria must be the exact P0 architecture criteria');
+  assert.deepEqual([...ARCHITECTURE_CRITERIA].sort(), [...P0_CRITERIA].sort(), 'criteria must be the exact P0 architecture criteria');
 });
 
 // --- fixtures ----------------------------------------------------------------
@@ -100,6 +100,7 @@ const MINOR_FINDING = (id) => ({ ...BLOCKING_FINDING(id), severity: 'MINOR', cla
 // Full real mechanical journey: freeze → init → 3 validated ballots → tally
 // → finalize. Every step runs the real python gate; returns the run world.
 function runConsensus({ dir, reviewId, requirementsDigest, designDigest, ballots, thresholdsOverride, finalize = true, questions = [] }) {
+  fsSync.mkdirSync(dir, { recursive: true });
   const artifactPath = writePackageFile(dir, { requirementsDigest, designDigest });
   const pkg = freezeReviewPackage({ reviewId, artifactPath, revision: 1 });
   const runRoot = path.join(dir, 'review-runs');
@@ -319,11 +320,17 @@ test('E04: a design change invalidates every old ballot for the new package; the
     assert.equal(outcome.ok, false, `old ballot of ${agent} is refused for the new package`);
     assert.match(outcome.errors.join(' '), /review_id/i, 'the real gate names the review_id mismatch');
   }
+  const coldTally = mechanicalTally({ package: pkg2, runRoot: runRoot2 });
+  assert.equal(coldTally.exitCode, 1, 'the real tally refuses the cold-start round: only stale ballots are present');
+  assert.equal(coldTally.status, 'INCOMPLETE');
   const judged2 = judgeArchitectureGate({ package: pkg2, runRoot: runRoot2, questions: [] });
   assert.equal(judged2.status, 'REFUSED', 'the new revision cold-starts: no inherited approval');
-  assert.ok(refusalCodes(judged2).includes('MISSING_BALLOT'), 'the new round has no ballots of its own');
+  assert.ok(refusalCodes(judged2).includes('MISSING_BALLOT'), 'the new round has no valid ballots of its own');
+  assert.ok(refusalCodes(judged2).includes('INVALID_BALLOT'), 'the forwarded old ballots count only as invalid');
 
-  // the old receipt, presented as the new package's evidence, is refused
+  // the old receipt, presented as the new package's evidence (its run dir
+  // forwarded under the new revision's name), is refused by review identity
+  fsSync.cpSync(path.join(first.runRoot, 'arch-e04-r1'), path.join(first.runRoot, 'arch-e04-r2'), { recursive: true });
   const oldReceiptOnNew = judgeArchitectureGate({ package: pkg2, runRoot: first.runRoot, questions: [] });
   assert.equal(oldReceiptOnNew.status, 'REFUSED');
   assert.ok(refusalCodes(oldReceiptOnNew).includes('REVIEW_REVISION_MISMATCH'), 'an old run manifest never satisfies a new frozen package');
@@ -341,6 +348,10 @@ test('E04: restoring the old design bytes does not auto-revive the old consensus
   const pkg3 = freezeReviewPackage({ reviewId: 'arch-e04-r3', artifactPath: restored, revision: 3 });
   assert.equal(pkg3.artifactSha256, first.pkg.artifactSha256, 'the restored bytes digest back to the original');
 
+  // the real presentation path: the old run directory forwarded under the new
+  // revision's name — the judge refuses it by review identity, not by digest
+  const forwarded = path.join(first.runRoot, 'arch-e04-r3');
+  fsSync.cpSync(path.join(first.runRoot, 'arch-e04-r1'), forwarded, { recursive: true });
   const oldReceiptJudged = judgeArchitectureGate({ package: pkg3, runRoot: first.runRoot, questions: [] });
   assert.equal(oldReceiptJudged.status, 'REFUSED', 'restoring the digest does not auto-revive the old receipt');
   assert.ok(refusalCodes(oldReceiptJudged).includes('REVIEW_REVISION_MISMATCH'), 'the old review never matches a newer frozen revision');
