@@ -1,0 +1,84 @@
+{
+  "task": "P1_5 (原任务 1.5): 按 classic-integration-design.md 验证 R/A/T 分离、P 计划单一权威、V 独立回执及 Kp/Kt 读回门禁；覆盖 C01–C08 的正常与旁路/恢复负例；在隔离工具环境解决实际 OpenSpec 兼容失败并固定 test-authoring/Whitebox/planner 分发内容",
+  "run": "impl-dfr-20261020-r1",
+  "worktree": "impl/p1-5-classic-integration (base d519431)",
+  "worker": "P1_5 implementation worker",
+  "final_status": "GREEN",
+  "deliverable_nature": "验证型任务：交付物即 C01–C08 的真实入口负例/正例测试套件 + classic-integration-probes/ 结构化探针登记（全部 observed 值由 live generator 从真实执行捕获，测试对 registration 与 fresh 行为做一致性断言）",
+  "acceptance_ids": {
+    "targeted": ["C01", "C02", "C03", "C04", "C05", "C06", "C07", "C08"],
+    "note": "C01–C05 走 lib/delivery/gate.js evaluate（SDD.Gate.v1 原样 import）+ P2_2 admitEvidence/Runner.Dispatch.v1 + P1_3 driver 排他；C04 另有 Comet CLI 写票证语义实测；C06 走 P1_3 sealCloseout + readArchiveSeal + 真实 CLI archive 链；C07 七入口全在 patched build CLI 实测（补齐 P1_4 未实跑的 state check + write-hook 两入口并交叉验证）；C08 双读法全覆盖——spec 读法（真实 1.3.1 拒绝/隔离 1.11.0 接受 + requiredArtifactClosure 原函数）与任务矩阵读法（改 phase 文件、手工 record-check、伪造 seal、直接写 phase、浮动全局升级尝试全拒/被吸收，断点恢复语义）"
+  },
+  "coverage_matrix": [
+    { "id": "C01", "positives": 1, "negatives": 2, "real_entries": "gate.evaluate + admitEvidence（cometLaunchAuthority 签发 dispatch）", "facets": "R 回执在场架构请求放行；T/A 回执不可替代 R（MISSING_OBSERVATION requirements-baseline）；产物存在≠确认——零观察 unverified 回执保持阻断（UNVERIFIED_CAPABILITY）、零观察 pass 声明准入即拒（NO_OBSERVATION）" },
+    { "id": "C02", "positives": 1, "negatives": 2, "real_entries": "gate.evaluate + admitEvidence + harness.requireWriteDriver/defineDriver", "facets": "新鲜 A/T 回执 + managed-write driver 放行；输入/策略轮换后 STALE_CANDIDATE/STALE_INPUT/STALE_POLICY 全拒；read-only driver 无 execute 表面（DRIVER_SURFACE_REFUSED）、写产品被拒并指名 managed executor（DRIVER_WRITE_REFUSED）" },
+    { "id": "C03", "positives": 1, "negatives": 1, "real_entries": "baseline.traceAcToCases + gate.evaluate", "facets": "design_only TestPack 结构合法（parseContract 过）但语义不充分三面：仅作者自签（AUTHORING_SELF_CHECK_ONLY, B03）、预期未决（blocked 观察 → UNVERIFIED_CAPABILITY）、AC 无 case 映射（trace 缺口）——保持阻断退回测试作者；独立 T 回执全映射放行" },
+    { "id": "C04", "positives": 2, "negatives": 3, "real_entries": "baseline.taskDefinitionDigest/verifyReportCurrency（纯）+ Comet CLI state tasks --assign-ids / task-complete --expect（真实 CLI）", "facets": "派生 Classic plan 视图勾选无关（tick 不动冻结摘要）；第二可写权威定义漂移被 DIGEST_MISMATCH 拒；CLI 侧写票证：tick 不动 revision（与冻结摘要同语义）、定义漂移动 revision、stale 票证写进度 exit 70 'Task requirements changed; reload the task list'、无票证 exit 1、刷新票证后放行" },
+    { "id": "C05", "positives": 1, "negatives": 3, "real_entries": "admitEvidence + gate.evaluate", "facets": "八类拒：UNREGISTERED_SOURCE（无 dispatch 自签）、FORGED_DISPATCH（篡改 integrity + 异 secret launcher）、IDENTITY_CONFLICT（builder 角色）、EXECUTION_BINDING_MISMATCH、DUPLICATE_ISSUANCE、EXPIRED_ENVELOPE、NO_OBSERVATION、gate 层 builder execution 签验收（A06）；verifier dispatch → independent-acceptance 放行并带 sourceAttestation" },
+    { "id": "C06", "positives": 2, "negatives": 4, "real_entries": "sealCloseout + readArchiveSeal（managed 读）+ Comet CLI archive/state check（真实链）", "facets": "Kp 缺失/无真实摘要 → KNOWLEDGE_CLOSEOUT_REQUIRED；伪造 seal（phase 非可封）→ ARCHIVE_ENTRY_INVALID；真实 archive 后第二次 closeout → ARCHIVE_ALREADY_SEALED；正例：真实 CLI 读出的 sealable state 一次封存并冻结 knowledgeCloseout+epoch；原生 archive 入口 5/5 零知识回执（B5 缺口如实登记，Kp 座位=driver gate）；内置 remember 存 HOME 缓存非 LLMWiki/Outline" },
+    { "id": "C07", "positives": 3, "negatives": 6, "real_entries": "Comet CLI transition / guard preview / guard --apply / next / archive / state check + lib/adapters/comet.js probeWriteChannels（真实 PreToolUse hook）", "facets": "七入口零检查证据一致前置：transition exit 1（[FAIL] Build passes）、guard preview 1、guard --apply 1 且 phase 不动、archive 1（FATAL phase）、state check 语义=进入相位的入口检查集（build 入口 0/不自推进；archive 入口集自 build 相位 1）、write-hook edit 渠道 exit 2 WRITE BLOCKED、next=continuation 指引（kind plan）非完成声明；与 P1_4 c07Entrances 登记交叉验证（≥6 入口在前，本登记补齐 state check 并全部实跑）" },
+    { "id": "C08", "positives": 2, "negatives": 6, "real_entries": "真实 openspec 1.3.1（host pinned）与 1.11.0（.sdd/tools 隔离安装）CLI + patched build 内 requiredArtifactClosure 原函数 + Comet CLI 旁路面 + sealCloseout", "facets": "spec 读法：同一 scratch 输入下 1.3.1 status 无 requires 边 → 谓词拒绝 'OpenSpec must expose dependency edges…'；隔离 1.11.0 暴露边 → 同谓词接受（specs skipped/design ready/tasks done）；不猜测依赖、不全局升级（host CLI 在全部探针后仍为 pinned 1.3.1，浮动升级尝试被隔离 PATH stub 吸收=登记的 B6）；任务矩阵读法：改 phase 文件、手工 record-check、伪造 seal、直接写 phase（COMET_FORCE_PHASE 默认拒并指名）全在下游受管入口被拒；断点恢复语义=next 指引/刷新票证后续写" }
+  ],
+  "red_cases": [
+    {
+      "id": "RED (1.5.a/1.5.b)",
+      "claim": "无 classic-integration-probes/ 登记时，C01–C08 行为无结构化真实入口证据；测试以 CLASSIC_INTEGRATION_PROBE_MISSING 显式失败",
+      "evidence": "worker-reports/P1_5/evidence/red-combined.txt（27 tests：4 pass / 23 fail，全部 23 个失败根因为 CLASSIC_INTEGRATION_PROBE_MISSING；host node 22.13.1；commit 8855103 先行提交 RED 测试）"
+    }
+  ],
+  "commands": [
+    { "cmd": "node(24.15.0) tools/comet/prepare-source.mjs --archive .sdd/cache/artifacts/comet-source-c90af44….tar.gz --json", "exit_code": 0, "note": "本 worktree .sdd 为空，先装 pristine 源（reused=false，archive sha256 28a7e2fa… 与 lock 一致）" },
+    { "cmd": "node(24.15.0) tools/comet/build.mjs --archive .sdd/cache/artifacts/comet-source-c90af44….tar.gz --json", "exit_code": 0, "note": "两 patch 后全新构建：fingerprint cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187（reused=false，与 P1_4 一致）" },
+    { "cmd": "npm install --no-save --cache .sdd/cache/npm <openspec-1.11.0.tgz>（.sdd/tools/openspec-1.11.0，独立 package.json）；node …/bin/openspec.js --version", "exit_code": 0, "note": "隔离候选安装（tgz sha256 84820b17… 与 P1_1 基线一致）；1.11.0；误装到根 node_modules 的一次已 npm uninstall --no-save 撤销，根目录 git 干净" },
+    { "cmd": "node --test test/classic-integration.test.js test/delivery-cases/1_5.mjs  # RED", "exit_code": 1, "note": "27 tests：4 pass / 23 fail（全部 CLASSIC_INTEGRATION_PROBE_MISSING）；日志 worker-reports/P1_5/evidence/red-combined.txt" },
+    { "cmd": "node --test test/classic-integration.test.js test/delivery-cases/1_5.mjs  # GREEN（host node 22.13.1）", "exit_code": 0, "note": "27/27 pass / 0 fail / 0 skip（真实 CLI + 隔离工具环境，$TMPDIR + 隔离 HOME/PATH stubs，零 mock）；日志 green-combined.txt" },
+    { "cmd": "npm test  # 全量回归（host node 22.13.1）", "exit_code": 0, "note": "263/263 pass / 0 fail（基线 242 + 本任务 test/classic-integration.test.js 新增 21）；日志 green-npm-test-full.txt" },
+    { "cmd": "node --test test/delivery-cases/*.mjs（host node 22.13.1）", "exit_code": 0, "note": "82 tests：81 pass / 1 skip / 0 fail；唯一 skip=1_1 V_COMET_NATIVE 环境条件 skip（toolchain-baseline 记录的是未打补丁指纹 72e5ce…，本 worktree 只构建了 patched cb1151b4…——如实报数，非本任务文件）；日志 green-delivery-cases-all.txt" }
+  ],
+  "method_dispatch_content": "classic-integration-probes/method-dispatch-content.json 固定三技能 vendored 快照：claude-parallel-tdd-planner（P，16 files，digest faec5f4c84b5…，派生只读 plan 视图、不启动自带执行/监控/归档）、test-authoring（T，1.0.0，17 files，7533bd8598ed…，design-only 只写测试意图、作者自检不签 T/V）、whitebox-verify（V，2.2.0，93 files，a5fe673a13e9…，只读独立执行绑定候选）；digest 公式=对技能目录内全部文件的 '<sha256>  <相对路径>' 排序行取 sha256；测试每轮重算比对，漂移即失败要求重录",
+  "isolated_tool_environment": "openspec 1.11.0 候选仅在 .sdd/tools/openspec-1.11.0（独立 package.json + 隔离 npm cache），host-global 1.3.1 未升级；Comet 为 patched pinned build（cb1151b4…，manifest 复核）；全部 CLI 交互在 $TMPDIR scratch + 隔离 HOME + PATH stubs；未写任何活配置",
+  "unverified": [
+    {
+      "item": "Knowledge.Closeout.v1 的 Kt（整体完成前的知识闭合）run 级强制实现",
+      "reason": "driver seal 冻结 Kp 回执（Knowledge-closeout.json ktBoundary 已登记边界）；Kt 座位属 closeout 契约的 run 级接线，本任务授权文件不含 lib/contracts",
+      "owner": "任务 2.4（P1_4 已同向登记，本登记与其一致）"
+    },
+    {
+      "item": "B4 逃生路径（COMET_SKIP_BUILD=1 / COMET_FORCE_PHASE=1）本体修复",
+      "reason": "本任务仅复验下游入口拒绝面与登记（C06 封存链即经登记的 SKIP 逃生驱动）；修复 seam=受管 launch authority 环境卫生 + 受保护 CI 复验",
+      "owner": "任务 2.4 / 受保护 CI 接入任务"
+    },
+    {
+      "item": "guard 对 Shell/MCP 写渠道的归因缺口（A09）",
+      "reason": "经同一 adapter 复测仍为缺口（write-hook 记录如实记 gap，不记 blocked）",
+      "owner": "guard hook 契约扩展（上游 patch seam，parent 决策）"
+    },
+    {
+      "item": "2_2.mjs / 3_1.mjs 在 Node 24.15.0 下失败（TAP reporter 变更致 parseTapSummary 失效）、1_1.mjs 的 V_COMET_NATIVE skip（基线指纹 72e5ce… 未在本 worktree 构建）",
+      "reason": "均为既有文件的环境敏感/基线指纹问题，非本任务改动引入（host node 22.13.1 下 81/82 pass + 1 skip，0 fail；git 确认本任务未触碰这些文件）；不越界修",
+      "owner": "parent 决策：钉 host node 跑 delivery-cases，或另开任务使该批 case 文件 reporter 无关/更新 built_entrypoint 指纹"
+    }
+  ],
+  "findings_for_parent": [
+    "C04 实测语义比预期更强：Comet CLI 的 tasks revision 天然 checkbox-agnostic（进度 tick 不动 revision、定义漂移才动，stale 票证 exit 70 'Task requirements changed; reload the task list before recording completion'）——与 baseline.taskDefinitionDigest 冻结语义同构，Classic plan 派生视图 + tasks 唯一权威的等价性可直接引用这对同构证据。",
+    "C08 双读法已闭合：spec 的'明确拒绝兼容性+固定版本重实证'由真实 CLI 对 + 原谓词完成（1.3.1 REJECTED / 1.11.0 ACCEPTED，同 scratch 输入）；任务矩阵的旁路负例全部在真实入口观察拒绝。两者共用 classic-integration-probes/openspec-compat.json 与 bypass-recovery.json。",
+    "原生 archive 入口 5/5 检查零知识回执再次实证（B5），Kp 唯一座位=driver gate（sealCloseout），第二次 closeout 在真实 archive 后被 ARCHIVE_ALREADY_SEALED 拒——上游 CLI 幂等收敛与 driver 单一 owner 的分工与 P1_3 结论一致。",
+    "state check <phase> 语义=进入该相位的入口检查集（不推进、不等于退出门）：build 入口 0/自 build 相位、archive 入口集自 build 相位为 1——已作为第 7 入口登记，补齐 P1_4 的语义注记为实跑证据。",
+    "delivery-cases/*.mjs 对 Node 版本敏感（2_2/3_1 依赖 TAP 输出）：建议 parent 在验收命令中固定 host node 22.13.1（npm test 默认即 host），避免 24.x 误跑。"
+  ],
+  "files_changed": [
+    "test/classic-integration.test.js (new, 21 tests)",
+    "test/delivery-cases/1_5.mjs (new, 6 tests)",
+    "openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/ (new: gate-matrix.json 13 records, entrances-c07.json 7 records, bypass-recovery.json 8 records, knowledge-closeout.json 5 records, openspec-compat.json, method-dispatch-content.json 3 skills)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json (this commit) + worker-reports/P1_5/evidence/ (red-combined.txt, green-combined.txt, green-npm-test-full.txt, green-delivery-cases-all.txt)"
+  ],
+  "commits": {
+    "tests": "8855103 test(p1_5): RED — classic integration gates over real entries (C01-C08 matrix, C07 entrances, C04 ticket, C06 seal, C08 compat/bypass)",
+    "implementation": "35195a7 feat(p1_5): classic integration probes — R/A/T/P/V/K gate matrix, C07 seven entrances, C04 write ticket, C06 closeout seal, C08 compat pair + bypass negatives (GREEN)",
+    "report": "<本提交：worker-reports/P1_5.json>"
+  },
+  "blockers_or_questions": [
+    "无阻塞。两个 parent 决策点已列入 unverified：delivery-cases 的 Node 版本钉定（22.13.1 实测全绿）、1_1 基线指纹与本 worktree patched 指纹不一致导致的 env-conditional skip 归属。",
+    "探针由 live generator 生成后入仓（$TMPDIR 脚本未入仓）；复现以 test 文件的 fresh 断言为准——测试对每条登记记录做一致性断言，登记漂移即失败。"
+  ]
+}
