@@ -1,0 +1,85 @@
+# delivery-gate — the CI-side delivery gate (delivery-foundation-rearchitecture
+# P4_1; acceptance A13/F06/F09).
+#
+# The required-check policy is owned by the protected baseline
+# infra/delivery/platform/ci-policy.json. This file never declares required-
+# check names itself: that set is an admin-registered platform input
+# (PLATFORM_REQUIRED_CHECK_AUTHORITY_REQUIRED) and fabricating it here would be
+# exactly the "plan field treated as satisfied" failure. Every step fails
+# closed — a failed readback, missing gate receipts, an unregistered set, or
+# any missing/skipped/timed-out/stale-evidence check exits nonzero, the
+# delivery-gate check fails and the protected merge stays blocked. Workflow
+# success never substitutes for the delivery verdict.
+name: delivery-gate
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+  checks: read
+
+concurrency:
+  group: delivery-gate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  delivery-gate:
+    name: delivery-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SDD_DELIVERY_LAUNCH_AUTHORITY: ${{ secrets.SDD_DELIVERY_LAUNCH_AUTHORITY }}
+    steps:
+      - name: Checkout the exact integration candidate (A13 never reuses an older SHA verdict)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.event.merge_group.head_sha || github.sha }}
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Protected baseline must validate (fail-closed read-only precondition)
+        run: node tools/infra/platform.mjs validate --json
+      - name: Collect protected check evidence for the exact merge SHA (read-only platform readback)
+        env:
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha || github.event.merge_group.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          HEAD_SHA="$(git rev-parse HEAD)"
+          export HEAD_SHA
+          # Read-only readback of the check runs bound to the exact integration SHA;
+          # a failed read is a failed gate, never a skip to pass.
+          gh api "repos/${GITHUB_REPOSITORY}/commits/${MERGE_SHA}/check-runs" \
+            --jq '[.check_runs[] | {name: .name, boundSha: .head_sha, conclusion: .conclusion}]' \
+            > "$RUNNER_TEMP/check-runs.json"
+          # The required-check set comes from the protected baseline, never from this file.
+          node --input-type=module -e "
+            import fs from 'node:fs';
+            const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
+            const policy = readJson('infra/delivery/platform/ci-policy.json');
+            const readback = readJson(process.env.RUNNER_TEMP + '/check-runs.json');
+            let gate = null;
+            try {
+              gate = readJson('.whitebox/delivery-foundation/gate/chain-gate.json');
+            } catch {
+              gate = null;
+            }
+            const chain = {
+              project: policy.project.id,
+              head: process.env.HEAD_SHA,
+              merge: process.env.MERGE_SHA,
+              requiredChecks: policy.requiredChecks.names,
+              checks: readback.checks ?? [],
+              gate: gate,
+            };
+            fs.writeFileSync(process.env.RUNNER_TEMP + '/chain.json', JSON.stringify(chain, null, 2));
+          "
+      - name: Verify the delivery gate (missing, skip, timeout and stale evidence block the merge)
+        run: node tools/ci/verify-delivery.mjs --chain "$RUNNER_TEMP/chain.json" --json
