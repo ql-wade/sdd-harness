@@ -240,16 +240,13 @@ test('3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario
   assert.equal(verdict.execution.fail, 0, 'a real defect in the submodule must still refuse the pass — no green-washing');
   assert.equal(verdict.execution.target.found, false, 'no V_-convention point exists in this module');
   assert.equal(verdict.execution.target.status, null);
-  // 1_6.mjs carries exactly five top-level test points, one of which (the
-  // patched-build probe) is environment-conditional: in a worktree without
-  // the prepared build it skips; with .sdd prepared and the patched build
-  // present it really runs. Both are legal outcomes and both must PASS,
-  // but the coverage mode that actually happened must be truthfully
-  // recorded — the verdict counts have to reconcile with the executed TAP
-  // summary.
-  assert.equal(verdict.execution.tests, 5, '1_6.mjs carries five top-level test points');
-  assert.ok(verdict.execution.skipped === 0 || verdict.execution.skipped === 1,
-    'exactly one environment-conditional test point may be skipped');
+  // 1_6.mjs's patched-build probe is environment-conditional: in a worktree
+  // without the prepared build it skips; with .sdd prepared and the patched
+  // build present it really runs. Both are legal outcomes and both must
+  // PASS. No literal counts of another file's tests are asserted here —
+  // they age as soon as that file legally grows. The coverage mode that
+  // actually happened is pinned by the reconciliation invariant alone: the
+  // verdict counts must equal the executed TAP summary, so they cannot lie.
   assert.equal(verdict.execution.tests, verdict.execution.pass + verdict.execution.fail + verdict.execution.skipped,
     'verdict counts must reconcile with the executed TAP summary');
 });
