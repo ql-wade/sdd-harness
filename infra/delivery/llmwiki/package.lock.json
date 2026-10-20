@@ -1,0 +1,58 @@
+{
+  "interface": "PackageLock.v1",
+  "component": "llmwiki",
+  "recordedAt": "2026-10-20",
+  "recordedBy": "I04 (run impl-dfr-20261020-r1)",
+  "purpose": "项目 LLMWiki MCP 分发盘点：只登记实测事实（本地 clone / venv / 启动脚本观察值）；缺失或未证实一律 UNVERIFIED/RECORDED，绝不虚构版本或摘要",
+  "source": {
+    "upstream": "https://github.com/lucasastorian/llmwiki",
+    "commit": "075c5b4996ff4e07f9d3c57c1f14fd2b54a955db",
+    "commitStatus": "RECORDED",
+    "commitStatusReason": "observed via git rev-parse HEAD in the local clone resolved through SDD_HOME at runtime; independent confirmation against the upstream remote requires network evidence and has not been performed",
+    "cloneResolution": "runtime env SDD_HOME (default $HOME/.sdd) -> repos/llmwiki; no host path is committed"
+  },
+  "distribution": {
+    "launcher": {
+      "path": "tools/mcp/llmwiki.sh",
+      "sha256": "9789a888b3b644e0f2ce95faedf1cf6b89b62075ed16613f5751fe389e3db316",
+      "role": "stdio MCP launcher; resolves SDD_HOME / LLMWIKI_PYTHON at runtime, binds the workspace to ${CLAUDE_PROJECT_DIR}/llmwiki"
+    },
+    "python": {
+      "observedVersion": "3.14.7",
+      "resolution": "LLMWIKI_PYTHON override > SDD_HOME/repos/llmwiki/.venv/bin/python",
+      "note": "requirements.lock was compiled for python 3.11 (uv header inside the lock); the venv actually runs 3.14.7 — version drift recorded as an observed fact, not reconciled here"
+    },
+    "packages": [
+      {
+        "name": "mcp",
+        "observedVersion": "1.27.0",
+        "status": "RECORDED",
+        "observedVia": "importlib.metadata in the resolved venv python"
+      }
+    ],
+    "requirementsLock": {
+      "logicalPath": "SDD_HOME/repos/llmwiki/mcp/requirements.lock",
+      "sha256": "678bd7301d80a602336e8fd3a81f98adcd4c5beaec4e2f1f2bfb8d2e04a9e732",
+      "bytes": 154140,
+      "note": "uv-compiled lock with hashes; digest recomputed against the local clone at record time"
+    }
+  },
+  "workspaceLayout": {
+    "wikiDir": "wiki/",
+    "indexDb": ".llmwiki/index.db",
+    "cacheDir": ".llmwiki/cache/",
+    "semantics": "filesystem is truth; SQLite is a rebuildable index (server docstring: one workspace = one MCP server)"
+  },
+  "mcpSession": {
+    "protocolVersionObserved": "2024-11-05",
+    "serverNameObserved": "LLM Wiki",
+    "serverVersionObserved": "1.27.0",
+    "toolsObserved": ["guide", "list_knowledge_bases", "search", "read", "create", "edit", "append", "delete", "lint", "ping"],
+    "observedVia": "stdio JSON-RPC initialize + tools/list against a disposable sandbox workspace",
+    "writeToolObservation": "tools/call create did not return within 45s in the recording session; recorded honestly, write-channel verification belongs to probe --case worktree-mcp-readback"
+  },
+  "upGate": {
+    "enabled": false,
+    "reason": "I04 registers and qualifies the llmwiki distribution only; MCP host registration is owned by a later P task through mcp-capabilities.yaml (single source of truth) and runtime up needs authorization that does not exist"
+  }
+}
