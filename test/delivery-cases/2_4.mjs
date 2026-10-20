@@ -210,7 +210,8 @@ const skipIfNoBuild = (t) => {
 
 test('setup: the managed delivery build is manifest-verified and carries the 0002 extension', (t) => {
   if (skipIfNoBuild(t)) return;
-  assert.equal(lock.patches.length, 4, 'the lock must register 0001, tests/1_6, 0002 and tests/2_4');
+  // lock revision: 6 patches @ beab355d (P2_4 0002 + P4_6 0003 + tests)
+  assert.equal(lock.patches.length, 6, 'the lock must register 0001, tests/1_6, 0002, tests/2_4, 0003 and tests/4_6');
   assert.notEqual(fingerprint, CB1151B4, 'the 0002 managed delivery patch must produce a new fingerprint');
   const version = comet(['--version']);
   assert.equal(version.status, 0);
