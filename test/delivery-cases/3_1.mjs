@@ -197,7 +197,10 @@ test('3.1.b runner PASS on real case scenario A01: executes test/delivery-cases/
   assert.equal(verdict.execution.fail, 0);
   assert.equal(verdict.execution.target.found, true, 'the V_A01 test point must be located in the TAP');
   assert.equal(verdict.execution.target.status, 'ok');
-  assert.equal(verdict.candidate.gitHead, spawnSync('git', ['rev-parse', 'HEAD'], { cwd: projectRoot, encoding: 'utf8' }).stdout.trim());
+  // Candidate observation must reflect the actual environment: the real HEAD
+  // in a git checkout, null outside one (same fallback semantics as the runner).
+  const headRun = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: projectRoot, encoding: 'utf8' });
+  assert.equal(verdict.candidate.gitHead, headRun.status === 0 ? headRun.stdout.trim() : null);
   for (const file of ['case-definition.json', 'pilot-baseline.json', 'action-1-stdout.txt', 'verdict.json']) {
     assert.ok(fs.existsSync(path.join(evidenceDir, file)), `evidence artifact ${file} must be persisted`);
   }
@@ -226,7 +229,7 @@ test('3.1.b runner PASS on real scenario A02 (2_1.mjs) and A20 (2_3.mjs) from di
   }
 });
 
-test('3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario token in its test names, so the module-level green stands with the coverage mode recorded', () => {
+test('3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario token in its test names — the module-level green stands whether the environment-conditional build probe skips or really runs, with zero FAIL and the coverage mode truthfully recorded', () => {
   const evidenceDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-b09-')), 'evidence');
   const run = runJourney(['--scenario', 'B09', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir, '--json']);
   assert.equal(run.status, 0, `module-level green with real executions must pass, got ${run.status}: ${run.stderr}`);
@@ -234,10 +237,21 @@ test('3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario
   assert.equal(verdict.verdict, 'PASS');
   assert.equal(verdict.caseModule, 'test/delivery-cases/1_6.mjs');
   assert.ok(verdict.execution.pass > 0, 'actual execution count must be greater than 0');
-  assert.equal(verdict.execution.fail, 0);
+  assert.equal(verdict.execution.fail, 0, 'a real defect in the submodule must still refuse the pass — no green-washing');
   assert.equal(verdict.execution.target.found, false, 'no V_-convention point exists in this module');
   assert.equal(verdict.execution.target.status, null);
-  assert.ok(verdict.execution.skipped >= 1, 'the environment-conditional build probe is skipped in this environment and must be recorded');
+  // 1_6.mjs carries exactly five top-level test points, one of which (the
+  // patched-build probe) is environment-conditional: in a worktree without
+  // the prepared build it skips; with .sdd prepared and the patched build
+  // present it really runs. Both are legal outcomes and both must PASS,
+  // but the coverage mode that actually happened must be truthfully
+  // recorded — the verdict counts have to reconcile with the executed TAP
+  // summary.
+  assert.equal(verdict.execution.tests, 5, '1_6.mjs carries five top-level test points');
+  assert.ok(verdict.execution.skipped === 0 || verdict.execution.skipped === 1,
+    'exactly one environment-conditional test point may be skipped');
+  assert.equal(verdict.execution.tests, verdict.execution.pass + verdict.execution.fail + verdict.execution.skipped,
+    'verdict counts must reconcile with the executed TAP summary');
 });
 
 test('3.1.b runner FAIL verdict without green-washing: a genuinely failing action fails once and is never retried', () => {
