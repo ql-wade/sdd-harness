@@ -109,6 +109,7 @@ function comet(args, { timeout = 180_000 } = {}) {
 }
 
 const plain = (text) => String(text ?? '').replace(/\x1b\[[0-9;]*m/g, '');
+const allOutput = (result) => plain(result.stdout) + plain(result.stderr);
 
 const CHANGE = 'probe-change';
 
@@ -141,6 +142,8 @@ test('1.3.a: init installs the real guard hook and the workspace layout is the d
 });
 
 test('1.3.a: Runner dispatch binds the real run id and leaves no phase trace on the run state', async () => {
+  const changeInit = comet(['state', 'init', CHANGE, 'full', '--json']);
+  assert.equal(changeInit.json?.exitCode, 0, `state init failed: ${plain(changeInit.json?.stderr).slice(0, 300)}`);
   const selected = comet(['state', 'select', CHANGE, '--json']);
   assert.equal(selected.json?.exitCode, 0, `state select failed: ${plain(selected.stderr).slice(0, 300)}`);
 
@@ -173,8 +176,8 @@ test('1.3.a: Runner dispatch binds the real run id and leaves no phase trace on 
 });
 
 test('1.3.b/A09: cross-phase writes are probed per channel — edit rejected, Shell and MCP recorded as gaps', async () => {
-  const records = await probeWriteChannels({ projectRoot: project, nodeExecutable, change: CHANGE });
-  assert.equal(records.length, 3, 'all three channels must be probed separately');
+  const records = await probeWriteChannels({ projectRoot: project, nodeExecutable, change: CHANGE, env: childEnv() });
+  assert.equal(records.length, 3, 'all three channels must be probed separately — one channel cannot stand in for another');
   const byChannel = Object.fromEntries(records.map((record) => [record.channel, record]));
 
   assert.equal(byChannel.edit.toolName, 'Write');
@@ -184,7 +187,7 @@ test('1.3.b/A09: cross-phase writes are probed per channel — edit rejected, Sh
 
   // Control: the same channel toward the change's own artifact is allowed —
   // the rejection is phase-targeted, not a blanket denial.
-  assert.equal(byChannel.editArtifactControl.outcome, 'allowed');
+  assert.equal(byChannel.edit.control.outcome, 'allowed', 'an in-phase artifact write must stay allowed for the edit channel');
 
   assert.equal(byChannel.shell.toolName, 'Bash');
   assert.equal(byChannel.shell.outcome, 'gap', 'the phase guard does not attribute Shell writes — record the gap honestly');
@@ -213,19 +216,10 @@ test('1.3.b/A09: a Shell-written control state cannot pass the managed gate — 
   assert.equal((restored.stdout ?? '').trim(), 'open', 'fixture must be restored state-independently');
 });
 
-test('1.3.c/OV03: a premature archive is refused and a manual check record never satisfies the guard', async () => {
+test('1.3.c: a premature archive is refused outside the archive phase', () => {
   const premature = comet(['archive', CHANGE, '--json']);
   assert.equal(premature.json?.exitCode, 1, 'archive must be refused outside the archive phase');
   assert.match(plain(premature.json?.stderr), /FATAL: phase is 'open', expected 'archive'/);
-
-  // The managed write executor runs a real check through the CLI, but the
-  // manual declaration path must never satisfy the build guard (OV03: an
-  // authored receipt is not a real invocation).
-  const manual = comet(['state', 'record-check', CHANGE, 'build', '--command', 'node -e 0', '--exit-code', '0', '--json']);
-  assert.equal(manual.json?.exitCode, 0, 'recording the manual declaration itself is allowed');
-  const guarded = comet(['state', 'transition', CHANGE, 'build-complete', '--json']);
-  assert.equal(guarded.json?.exitCode, 1, 'the guard must refuse a manual declaration');
-  assert.match(plain(guarded.json?.stderr), /Manual declarations never satisfy the guard/);
 });
 
 test('1.3.b/OV01: the verified managed write executor completes the lifecycle the read-only observer cannot', async () => {
@@ -250,16 +244,24 @@ test('1.3.b/OV01: the verified managed write executor completes the lifecycle th
   const complete = comet(['state', 'task-complete', CHANGE, markerId, '--expect', revision, '--json']);
   assert.equal(complete.json?.exitCode, 0, `task-complete failed: ${plain(complete.json?.stderr).slice(0, 300)}`);
 
+  // OV03: a manual record-check declaration is recordable but must never
+  // satisfy the guard — an authored receipt is not a real invocation.
+  const manual = comet(['state', 'record-check', CHANGE, 'build', '--command', 'node -e 0', '--exit-code', '0', '--json']);
+  assert.equal(manual.json?.exitCode, 0, 'recording the manual declaration itself is allowed');
+  const guarded = comet(['state', 'transition', CHANGE, 'build-complete', '--json']);
+  assert.equal(guarded.json?.exitCode, 1, 'the guard must refuse a manual declaration');
+  assert.match(plain(guarded.json?.stderr), /Manual declarations never satisfy the guard/);
+
   const probe = path.join(scratch, 'true.js');
   await fs.writeFile(probe, 'process.exit(0)\n');
   const buildCheck = comet(['check', 'run', CHANGE, 'build', '--local', '--', nodeExecutable, probe]);
-  assert.match(plain(buildCheck.stderr ?? buildCheck.stdout), /exit=0/, 'the real build check must run and pass');
+  assert.match(allOutput(buildCheck), /Check build: exit=0/, 'the real build check must run and pass');
 
   const buildComplete = comet(['state', 'transition', CHANGE, 'build-complete', '--json']);
   assert.equal(buildComplete.json?.exitCode, 0, `build-complete with real runtime evidence failed: ${plain(buildComplete.json?.stderr).slice(0, 400)}`);
 
   const verifyCheck = comet(['check', 'run', CHANGE, 'verify', '--local', '--', nodeExecutable, probe]);
-  assert.match(plain(verifyCheck.stderr ?? verifyCheck.stdout), /exit=0/, 'the real verify check must run and pass');
+  assert.match(allOutput(verifyCheck), /Check verify: exit=0/, 'the real verify check must run and pass');
   const report = path.join(project, 'docs/openspec/changes', CHANGE, 'verification.md');
   await fs.writeFile(report, '# Verification Report\n\nReal runtime checks recorded by the managed executor.\n');
   const setReport = comet(['state', 'set', CHANGE, 'verification_report', `docs/openspec/changes/${CHANGE}/verification.md`, '--json']);
@@ -268,6 +270,15 @@ test('1.3.b/OV01: the verified managed write executor completes the lifecycle th
   assert.equal(verifyPass.json?.exitCode, 0, `verify-pass failed: ${plain(verifyPass.json?.stderr).slice(0, 300)}`);
   const archiveConfirm = comet(['state', 'transition', CHANGE, 'archive-confirm', '--json']);
   assert.equal(archiveConfirm.json?.exitCode, 0, `archive-confirm failed: ${plain(archiveConfirm.json?.stderr).slice(0, 300)}`);
+
+  // The driver issues exactly one closeout permit: Kp recorded first, the
+  // archive entry facts valid, one execution bound. The managed executor (the
+  // CLI archive in the next test) is the only closeout this permit covers.
+  const sealBefore = await readArchiveSeal({ projectRoot: project, change: CHANGE, nodeExecutable, entrypoint, env: childEnv() });
+  assert.equal(sealBefore.archived, false);
+  const permit = sealCloseout({ seal: sealBefore, execution: 'exec-closeout-case', knowledgeCloseout: { id: 'Kp-case-1', digest: sha(Buffer.from('knowledge-closeout-case')) } });
+  assert.equal(permit.change, CHANGE);
+  assert.equal(permit.execution, 'exec-closeout-case');
 });
 
 test('1.3.c: the archive succeeds exactly once and a duplicate closeout execution is refused by the driver', async () => {
@@ -281,16 +292,22 @@ test('1.3.c: the archive succeeds exactly once and a duplicate closeout executio
   const archiveDirs = (await fs.readdir(path.join(changesDir, 'archive'), { withFileTypes: true })).filter((entry) => entry.isDirectory());
   assert.equal(archiveDirs.length, 1, 'exactly one archive directory must exist');
 
-  const seal = await readArchiveSeal({ projectRoot: project, change: CHANGE, nodeExecutable, entrypoint });
+  const seal = await readArchiveSeal({ projectRoot: project, change: CHANGE, nodeExecutable, entrypoint, env: childEnv() });
   assert.equal(seal.archived, true);
   assert.equal(seal.verifyResult, 'pass');
   const knowledgeCloseout = { id: 'Kp-case-1', digest: sha(Buffer.from('knowledge-closeout-case')) };
-  const receipt = sealCloseout({ seal, execution: 'exec-closeout-once', knowledgeCloseout });
-  assert.equal(receipt.archived, true);
+  // The runtime closeout has happened exactly once; every further closeout
+  // request — new execution or replay of the permitted one — is refused by
+  // the driver even though the upstream CLI itself converges idempotently.
   assert.throws(
     () => sealCloseout({ seal, execution: 'exec-closeout-second', knowledgeCloseout }),
     (error) => error.code === 'ARCHIVE_ALREADY_SEALED',
     'the upstream CLI converges idempotently, but the driver must refuse a second closeout execution',
+  );
+  assert.throws(
+    () => sealCloseout({ seal, execution: 'exec-closeout-case', knowledgeCloseout }),
+    (error) => error.code === 'ARCHIVE_ALREADY_SEALED',
+    'a replay of the permitted execution is likewise a second closeout',
   );
 
   // OV01: the overlay/continuation derives from the original state — the

@@ -43,6 +43,7 @@ const bindingFixture = (overrides = {}) => ({
 
 function envelopeFixture(overrides = {}) {
   return {
+    schemaVersion: 1,
     candidateDigest: sha('candidate-input-r1'),
     caseId: 'case-1',
     origin: { kind: 'harness', id: 'comet-classic' },
@@ -236,13 +237,17 @@ test('1.3.c: a duplicate archive request from a second execution is refused at t
   };
   const first = comet.sealCloseout({ seal, execution: 'exec-closeout-1', knowledgeCloseout: { id: 'Kp-1', digest: sha('kp') } });
   assert.equal(first.archived, true);
+  // After the first closeout the managed readback shows the change sealed;
+  // the driver judges on that readback, so any second closeout — a different
+  // execution or a replay by the same one — is refused.
+  const sealed = { ...seal, archived: true };
   assert.throws(
-    () => comet.sealCloseout({ seal, execution: 'exec-closeout-2', knowledgeCloseout: { id: 'Kp-1', digest: sha('kp') } }),
+    () => comet.sealCloseout({ seal: sealed, execution: 'exec-closeout-2', knowledgeCloseout: { id: 'Kp-1', digest: sha('kp') } }),
     (error) => error.code === 'ARCHIVE_ALREADY_SEALED',
     'the second closeout execution must be refused even though the upstream CLI converges idempotently',
   );
   assert.throws(
-    () => comet.sealCloseout({ seal, execution: 'exec-closeout-1', knowledgeCloseout: { id: 'Kp-1', digest: sha('kp') } }),
+    () => comet.sealCloseout({ seal: sealed, execution: 'exec-closeout-1', knowledgeCloseout: { id: 'Kp-1', digest: sha('kp') } }),
     (error) => error.code === 'ARCHIVE_ALREADY_SEALED',
     'even a replay by the same execution is a second closeout and is refused',
   );
@@ -265,7 +270,7 @@ test('1.3.c/SDD.Gate.v1: the driver reuses the pure gate judgment unmodified and
   };
   const admitted = runner.admit({ envelope: envelopeFixture({ check: 'console' }), dispatch, current });
   assert.equal(admitted.ok, true);
-  const inputs = { inputDigest: sha('candidate-input-r1'), builderExecution: 'exec-builder-1', testContract: comet.gateTestContractFixture(['console']) };
+  const inputs = { inputDigest: sha('candidate-input-r1'), builderExecution: 'exec-builder-1', testContract: comet.gateTestContractFixture([{ level: 'independent', capability: 'console' }]) };
   const policy = { ref: 'policy/managed-pilot@r1', digest: sha('policy/managed-pilot@r1') };
   const first = comet.evaluateGate(inputs, [admitted.entry], policy);
   const second = comet.evaluateGate(inputs, [admitted.entry], policy);
