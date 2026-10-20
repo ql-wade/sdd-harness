@@ -1,0 +1,48 @@
+{
+  "task": "P4_7",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-20T23:58:39.820322+00:00",
+  "head_reviewed": "e8f1c4e",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "REVIEW_TIMESTAMP_INVALID 已实现未测（矩阵列 U04 负例）",
+      "disposition": "随波次补一例"
+    },
+    {
+      "id": "nb-2",
+      "summary": "GRANT_NOT_YET_EFFECTIVE/GRANT_VALIDITY_INVALID 已实现未测未声明",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-3",
+      "summary": "tasks.md Owns 路径与实际落位分歧——集成波次二选一（改 Owns 或迁移文件）",
+      "disposition": "集成波次对账"
+    },
+    {
+      "id": "nb-4",
+      "summary": "红证据 .txt location 行含 worktree 绝对路径（与 P4_6 先例一致）",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-5",
+      "summary": ".sdd vendored 构建跨 worktree 复制（披露诚实，环境事实）",
+      "disposition": "controller 知晓"
+    },
+    {
+      "id": "nb-6",
+      "summary": "KnowledgeAuthz.v1 未 import gate.js/evidence.js（决策面自持，组合留 P4_4）",
+      "disposition": "recorded"
+    }
+  ],
+  "reviewer_independently_reverified": [
+    "U01 9 条拒绝码全部真实断言（含 2020 真实时钟过期/撤销后使用/role 升格）",
+    "U02 交集语义 + AUDIENCE_OUTSIDE_INTERSECTION 且 review verdict 不变",
+    "U03 decide→revoke→recheck 时序 + TAMPERED_DECISION 决策覆盖全字段",
+    "U07 author 解析 publisher ref → 真实 I01 PRINCIPAL_NOT_AUTHORIZED；author revoke 后 sha256 台账零字节变",
+    "净室 00ced3e RED 14 fail/1 pass 复现"
+  ],
+  "tests_run_by_reviewer": "15/15 + 9/9; npm test 356/355/1; 净室 RED ×2"
+}
