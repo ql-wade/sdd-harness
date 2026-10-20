@@ -152,12 +152,13 @@ test('V_INFRA_I07 contract: committed monitor domain validates clean with honest
   assert.equal(report.deadlines.restartMax, CONTRACT.restartMax);
   assert.equal(report.deadlines.recoveryTargetSeconds, CONTRACT.recoveryTargetSeconds);
 
-  // I01 目录缺口如实上报（缺口是 readiness 证据，不是结构违规——沿 I02/I03/I06 先例）：
-  // monitor-alert 已登记（I01 目录 23 refs），monitor-health-read 尚未登记。
-  assert.ok(!(report.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/monitor-alert'),
-    'monitor-alert is registered in the I01 catalog and must not be reported as a gap');
-  assert.ok((report.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/monitor-health-read'),
-    'monitor-health-read is not in the I01 catalog yet; validate must report the gap explicitly instead of passing silently');
+  // I01 目录缺口如实上报（缺口是 readiness 证据，不是结构违规——沿 I02/I03/I06 先例）。
+  // I01 修正案 5（master 964df4e）已登记全部两个 monitor ref（目录 24 refs）：
+  // committed 域 validate 必须干净且不再报任何 monitor ref 缺口（正向断言，防回归）。
+  for (const ref of MONITOR_REFS) {
+    assert.ok(!(report.catalogGaps ?? []).includes(ref), `${ref} is registered in the I01 catalog and must not be reported as a gap`);
+  }
+  assert.deepEqual(report.catalogGaps, [], 'no catalog gaps remain after I01 amendment 5');
 
   // 无人值守发布 pre-enable 门：当前登记为空 → 结构上必须保持阻断（fail-closed）。
   assert.equal(report.preEnableGate.enabled, false);
@@ -361,29 +362,37 @@ test('RED I01 isolation: cross-project refs are structural violations; unregiste
   assert.equal(crossRun.status, 2, 'a cross-project credential ref must be rejected');
   assert.ok(codes(parseJsonOut(crossRun, 'validate cross-project')).includes('CROSS_PROJECT_REF'));
 
-  // 缺 registration（ref 不在 I01 目录）→ validate 显式 catalogGap（exit 0），解析门 REF_NOT_REGISTERED（I01 语义）。
+  // I01 修正案 5 后两个 monitor ref 均已登记：monitor 主体解析走只读 UNRESOLVED 语义
+  // （ref 已登记但 NOT_PROVISIONED——解析器永不产生值，I01 无运行时 secret store 授权）。
   const secretRefs = await import(secretRefsModuleUrl);
   const refsDoc = JSON.parse(fs.readFileSync(refsPath, 'utf8'));
-  assert.throws(
-    () => secretRefs.resolveSecretRef({
-      ref: 'secret-ref:sdd-harness-pilot/monitor-health-read',
+  for (const ref of MONITOR_REFS) {
+    const resolved = secretRefs.resolveSecretRef({
+      ref,
       principalId: 'svc:sdd-harness-pilot/monitor',
       role: 'monitor',
       refsDoc,
       project: 'sdd-harness-pilot',
-    }),
-    (error) => error.code === 'REF_NOT_REGISTERED',
-    'monitor-health-read is absent from the I01 catalog; the resolver must refuse it',
+    });
+    assert.equal(resolved.status, 'UNRESOLVED', `${ref} resolves read-only UNRESOLVED — never a value`);
+    assert.equal(resolved.resolved, false);
+    assert.equal(resolved.boundRole, 'monitor');
+  }
+
+  // 缺口上报行为改由合成 fixture 覆盖（I02 先例）：从目录副本删一个已知已登记 ref，
+  // validate 仍显式上报缺口且保持 exit 0（缺口是 readiness 证据，不是结构违规）。
+  const trimmed = JSON.parse(JSON.stringify(refsDoc));
+  trimmed.refs = trimmed.refs.filter((entry) => entry.ref !== 'secret-ref:sdd-harness-pilot/monitor-alert');
+  const refsFixture = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i07-refs-')), 'refs.json');
+  fs.writeFileSync(refsFixture, JSON.stringify(trimmed, null, 2) + '\n');
+  const gapRun = runCli(['validate', '--registry', registryPath, '--refs', refsFixture, '--json']);
+  assert.equal(gapRun.status, 0, 'a catalog gap is readiness evidence, not a structural violation');
+  const gapReport = parseJsonOut(gapRun, 'validate synthetic gap');
+  assert.ok(
+    (gapReport.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/monitor-alert'),
+    'validate must explicitly report the missing ref as a catalogGap instead of passing silently',
   );
-  const resolved = secretRefs.resolveSecretRef({
-    ref: 'secret-ref:sdd-harness-pilot/monitor-alert',
-    principalId: 'svc:sdd-harness-pilot/monitor',
-    role: 'monitor',
-    refsDoc,
-    project: 'sdd-harness-pilot',
-  });
-  assert.equal(resolved.status, 'UNRESOLVED', 'registered ref resolves read-only UNRESOLVED — never a value');
-  assert.equal(resolved.resolved, false);
+  assert.doesNotMatch(gapRun.stdout, HOST_PATH_OUTPUT_RE);
 });
 
 test('Health.v1: read-only evaluation of heartbeat age, scan watermark, isolation deadlines and authority identity', () => {

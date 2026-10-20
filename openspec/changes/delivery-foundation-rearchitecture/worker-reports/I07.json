@@ -157,5 +157,16 @@
   "blockers_or_questions": [
     "None blocking. Disclosure: one committed RED expectation needed a one-line fix during GREEN alignment (prepared alert kind HEARTBEAT_AGE -> HEARTBEAT_AGE_ALERT to match the health breach code used everywhere else); the initial run's failure was in my own test fixture naming, caught by the GREEN run and fixed in the implementation commit — the RED evidence (16/16 fail, module absent) was captured before any implementation existed.",
     "Task-brief discrepancy recorded: monitor-health-read was described as already registered in the 23-ref catalog but is not; handled as an explicit gap per house precedent and listed under unverified."
-  ]
+  ],
+  "integration_fix": {
+    "trigger": "Integration regression on master ccfeb13+ found two assertions stale after I01 amendment 5 (commit 964df4e) registered secret-ref:sdd-harness-pilot/monitor-health-read (catalog now 24 refs). Same family as catalogGap issue #6 — stale assertions, not an implementation defect: both were true on this branch's base (catalog 23 refs) and false after the amendment.",
+    "merged": "git merge --no-ff master -> d31cf90 (brings I01 amendment 5 + P3_4 + I07 review records; no conflicts with I07-owned files).",
+    "changes": [
+      "test/infra-monitor.test.js contract test: the two monitor refs are now asserted POSITIVELY registered — validate ok=true and catalogGaps is empty (deepEqual []) after amendment 5, replacing the assertion that validate must report monitor-health-read as a gap.",
+      "test/infra-monitor.test.js I01 isolation test: resolver now asserts monitor-health-read resolves read-only UNRESOLVED with the monitor principal (registered, boundRole monitor, NOT_PROVISIONED — I01 has no runtime secret store, resolver never yields a value), replacing the REF_NOT_REGISTERED assertion; both monitor refs covered in a loop (status UNRESOLVED, resolved=false, boundRole monitor).",
+      "test/infra-monitor.test.js: gap-reporting behavior now covered by a synthetic fixture (I02 precedent): temp-dir copy of the refs catalog with monitor-alert removed -> validate still exit 0 and explicitly lists it in catalogGaps.",
+      "evidence: integration-fix-node-test.txt (16/16 pass, exit 0), integration-fix-npm-test-full.txt (306 tests, 305 pass, 0 fail, 1 pre-existing legitimate skip, exit 0), integration-fix-validate.json (ok=true, catalogGaps=[])."
+    ],
+    "noted_followup": "tools/infra/monitor.mjs carries two UNVERIFIED-reason strings (health realCometReadback and probe scan-watermark-stall receipts) that still say the monitor-health-read ref 'is not in the I01 catalog yet' — factually stale after amendment 5, outside this fix's authorized file scope (test + report only), asserted by no test (tests assert status only). A follow-up should reword those two reason strings to cite NOT_PROVISIONED/runtime-authorization instead of catalog absence."
+  }
 }
