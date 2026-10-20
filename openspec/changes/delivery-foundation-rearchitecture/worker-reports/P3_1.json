@@ -1,0 +1,118 @@
+{
+ "task": "P3_1",
+ "task_title": "原任务 3.1 — 指定业务试点仓库、owner、目标验证环境、所需身份和 UI/API/持久化/权限负向 AC；冻结 Product/Design/TestContract/PlanBundle（A01/A15）。无生产副作用。",
+ "run": "impl-dfr-20261020-r1",
+ "branch": "impl/p3-1-journey-runner",
+ "status": "DONE",
+ "tests_commit": "1bcb34d (RED suite) + e85cb2f (GREEN convergence)",
+ "implementation_commit": "b3d05d6",
+ "red_cases": [
+  {
+   "case": "pre-implementation RED: pilot contract has no machine block and tools/verify/{delivery-journey.mjs,delivery-case-schema.json} do not exist",
+   "actually_failed": true,
+   "evidence": "node --test test/delivery-cases/3_1.mjs exit=1, 12 tests / 2 pass / 10 fail. Fails: T1 (no fenced ```pilot-contract block), T2-T6+T8-T11 (spawnSync ENOENT for the runner / missing schema file). Evidence: worker-reports/P3_1/evidence/red-node-test-3_1.txt"
+  },
+  {
+   "case": "RED-state honesty note",
+   "actually_failed": null,
+   "evidence": "Two tests passed in RED for non-behavioral reasons: T7 (invalid input exits 1) coincidentally because the missing runner's Cannot-find-module exit is also 1; T12 (V_A15 persistence probe) is runner-independent by design. Both are behaviorally exercised in GREEN."
+  }
+ ],
+ "green_summary": {
+  "3.1.a_pilot_contract_freeze": "pilot-contract.md keeps all existing prose and adds: (1) the freeze section — pilot repo = this repository (user-authorized per execution-state.pilot_environment_choice), owner referenced to the I01 registry (infra/delivery/registry.json#project.sdd-harness-pilot, owner ql-wade, principalId 262266039, authority.readbackStatus=UNVERIFIED so readback must succeed before authorized actions), target verification environment = local isolation (this worktree + $TMPDIR, loopback-only), identity = runtime-observed; (2) the UI/API/persistence/permissions negative AC panel (3 concrete boundaries each); (3) a fenced ```pilot-contract machine block: profile managed-pilot; frozenArtifacts product=proposal.md sha256 8d7a0caabaec8eb0f6abe27f093922947608aadfdbec5613575bb79be852d7a1, design=design.md sha256 25d0856d31e1484fa9a9ad2d1b25b3c53cccf10f2e1bb6bf52b2dbd48789bcdc, testContract=specs/delivery-foundation/spec.md sha256 27ae2cb385448d9f8783807b53bd168c0044e7d9e60c4cbe5c103954aebbbf07 (raw sha256), planBundle=tasks.md sha256 809c1fd19828fb05a99bf2265164502b697bbe27aeb2b5f24994ccc96a91cc45 (checkbox-state-agnostic normalization, same as lib/delivery/baseline.js taskDefinitionDigest); re-freeze is an explicit auditable change, no auto-renewal. The freeze is self-verifying: 3_1.mjs T1 recomputes all four digests against the accepted bytes.",
+  "3.1.b_case_schema_and_journey_runner": "tools/verify/delivery-case-schema.json: JSON Schema (draft 2020-12 subset) for case definitions — schemaVersion, scenario id pattern, acceptanceIds, caseModule, sourceBinding, actions[] (type=spawn|readState|inspect; command required for spawn, path for readState/inspect, expected always; if/then enforcement), evidence.artifacts, and the four verdictSemantics keys. tools/verify/delivery-journey.mjs: test action/observer adapter ONLY (header-declared and structurally enforced — no phase, no DAG, no retries, no job lease, no auto-recovery). Loads the case plan (default verification-case-plan.json or --case-plan), the pilot contract machine block (--pilot-contract), synthesizes canonical actions (spawn `node --test <caseModule>` + readState of the persisted TAP + inspect git HEAD) or takes an explicit schema-validated --case-definition, executes each action exactly once, parses TAP summaries/points, enforces the declared evidence artifacts exist on disk, writes case-definition.json/pilot-baseline.json/action-N-stdout.txt/action-N-stderr.txt/verdict.json into --evidence-dir, and emits the verdict JSON (--json stdout identical to verdict.json). CLI compatible verbatim with the execution-contract check commands: --scenario <ID> --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/<ID> --json. Exit contract: 0=PASS; 1=invalid input (bad args, unreadable explicit override paths); 2=FAIL and every NOT-EXERCISED/NOT-APPLICABLE (unregistered scenario, missing case module/definition/schema, unregistered profile, baseline-missing with list, frozen-baseline-drift, target-scenario-skipped, no-effective-execution incl. all-skip). Skips are never converted into passes; PASS requires pass>0 and fail==0 and no failed action. Strips NODE_TEST_CONTEXT on spawns (repo convention from 2_1.mjs/2_2.mjs) so nested node --test children really run; no-retry proven by an invocation-counter fixture (exactly one execution).",
+  "3.1.c_A01_A15_landings": "A01: dispatch without registered TestContract/PlanBundle is refused exit 2 NOT-EXERCISED baseline-missing with the exact missing list ([planBundle, testContract]); a negativeAc gap is named as negativeAc.permissions; the real V_A01 command passes exit 0 with 7 executions and the V_A01 TAP point ok. A15: PlanBundle freeze binding is checkbox-state-agnostic (checkbox flip passes, definition-word edit refuses with drift[0].artifact=planBundle) and product digest drift refuses with expected/observed digests; the runner fails the journey when declared evidence never reached disk; V_A15 probe (in 3_1.mjs, the V_A15 case module per the plan) proves with real child processes that a success claim without persisted bytes fails the independent readback (reason not-persisted). V_A15 command verbatim: exit 0, 13 executions (the full 3_1 suite), V_A15 point ok."
+ },
+ "commands": [
+  {
+   "cmd": "node --test test/delivery-cases/3_1.mjs (RED)",
+   "exit_code": 1,
+   "summary": "12 tests / 2 pass / 10 fail — machine block absent, runner and schema absent; evidence red-node-test-3_1.txt"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/3_1.mjs (GREEN)",
+   "exit_code": 0,
+   "summary": "13 tests / 13 pass / 0 fail / 0 skipped; evidence green-node-test-3_1.txt"
+  },
+  {
+   "cmd": "node tools/verify/delivery-journey.mjs --scenario A01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A01 --json",
+   "exit_code": 0,
+   "summary": "PASS; 2_1.mjs executed, pass=7 fail=0, target A01 found/ok; evidence check-V_A01.json"
+  },
+  {
+   "cmd": "node tools/verify/delivery-journey.mjs --scenario A15 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A15 --json",
+   "exit_code": 0,
+   "summary": "PASS; 3_1.mjs executed, pass=13 fail=0, target A15 found/ok; evidence check-V_A15.json"
+  },
+  {
+   "cmd": "node tools/verify/delivery-journey.mjs --scenario A02|A20|B09 ... --json (capability runs)",
+   "exit_code": 0,
+   "summary": "A02 PASS 2_1.mjs pass=7; A20 PASS 2_3.mjs pass=5 target ok; B09 PASS 1_6.mjs pass=4 skip=1 target.found=false (no scenario tokens in that module, coverage mode recorded); evidence capability-A02/A20/B09.json"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/1_1.mjs 1_2.mjs 1_6.mjs 2_1.mjs 2_2.mjs 2_3.mjs 3_1.mjs",
+   "exit_code": 0,
+   "summary": "51 tests / 49 pass / 0 fail / 2 skipped — the 2 skips are the known environment-conditional probes (1_1 V_COMET_NATIVE integrated build, 1_6 Comet build probe); evidence green-all-delivery-cases.txt"
+  },
+  {
+   "cmd": "npm test (full repo suite)",
+   "exit_code": 0,
+   "summary": "205 tests / 205 pass / 0 fail / 0 skipped — baseline preserved, no regressions; evidence green-npm-test.txt"
+  }
+ ],
+ "runner_capability_matrix": {
+  "executable_today": [
+   "A01",
+   "A02",
+   "A03",
+   "A04",
+   "A07",
+   "A08 (2_1.mjs)",
+   "A05",
+   "A06",
+   "A18",
+   "A19",
+   "B03",
+   "B06",
+   "B07 (2_2.mjs)",
+   "A20",
+   "B10 (2_3.mjs)",
+   "B09, M01, M02 (1_6.mjs)",
+   "F01, F02, F03, F04 (1_1.mjs)",
+   "B01 (1_2.mjs)",
+   "A15 (3_1.mjs, this task)"
+  ],
+  "journey_verified_this_task": {
+   "A01": "PASS exit 0",
+   "A02": "PASS exit 0",
+   "A15": "PASS exit 0",
+   "A20": "PASS exit 0",
+   "B09": "PASS exit 0 (module-level, target token absent, env-conditional skip recorded)"
+  },
+  "not_exercised_by_design": "The remaining scenarios' case modules (1_3, 1_4, 1_5, 2_4, 2_5, 3_2, 3_3, 3_4, 4_*, 5_2, overlay) do not exist yet; the runner returns structured NOT-EXERCISED exit 2 (scenario registered but case-module-missing) — never a fabricated PASS. Unknown scenario ids return NOT-EXERCISED scenario-not-registered-in-case-plan."
+ },
+ "unverified": [
+  "execution-contract.json V_A01/V_A15 implementation_status/availability fields remain PLANNED_NOT_EXECUTED/TO_IMPLEMENT — updating them is the controller's (not this worker's file). Local proof of execution count > 0 is in worker-reports/P3_1/evidence/check-V_A01.json and check-V_A15.json.",
+  "69 scenarios whose case modules are not yet delivered: NOT-EXERCISED by the runner until their implementedBy tasks land.",
+  "I01 registry authority.readbackStatus=UNVERIFIED (GitHub readback): the pilot contract carries this forward; journeys requiring authorized actions stay blocked until an execution-time readback succeeds."
+ ],
+ "files_changed": [
+  "openspec/changes/delivery-foundation-rearchitecture/pilot-contract.md",
+  "tools/verify/delivery-journey.mjs (new, includes tools/verify/ directory)",
+  "tools/verify/delivery-case-schema.json (new)",
+  "test/delivery-cases/3_1.mjs (new)",
+  "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_1.json + worker-reports/P3_1/evidence/* (report + RED/GREEN evidence)"
+ ],
+ "test_fixes_between_red_and_green": [
+  "B09 maps to 1_6.mjs whose test names carry no scenario tokens: corrected expectation to module-level PASS with target.found=false and the environment-conditional skip recorded; the skip-to-green refusal (tagged target skipped => exit 2 target-scenario-skipped) is covered deterministically by a tagged fixture.",
+  "PlanBundle fixture digest initially hashed the path string instead of the file content — fixed to hash content.",
+  "Third real PASS scenario switched from the wrong-module B09 to A20 (2_3.mjs) for cross-module coverage.",
+  "Runner fixes driven by RED/GREEN: explicit --case-definition must bypass the scenario registry (schema/FAIL fixtures were refused as unregistered scenarios); NODE_TEST_CONTEXT stripped on spawns (nested node --test silently ran zero files under node --test — caught by the readState zero-byte TAP check, not by exit codes); required-property schema errors now report the field path (/actions/0/command)."
+ ],
+ "blockers_or_questions": [
+  ".whitebox/ is not in .gitignore, so the verbatim V_* check commands leave untracked evidence dirs in the repo. This worker does not own .gitignore; the controller/VERIFY task should decide (add .whitebox/ or treat as evidence to commit). The untracked .whitebox output from local verification runs was removed to keep the tree clean; commands regenerate it.",
+  "Exit-code nuance: the task directive requires exit 2 (structured UNVERIFIED) for missing case definition/prerequisites; execution-contract cli_contract phrases 1=invalid input/prerequisite. Implemented: 1 only for malformed arguments and unreadable explicit override paths; every missing case/prerequisite/baseline/environment path exits 2 as UNVERIFIED. All refusal paths are nonzero, satisfying the frozen V_* expected text ('依赖缺失退出非零/UNVERIFIED，不得跳过判PASS').",
+  "Conservative invalidation is now load-bearing: any edit to the definition text of proposal.md/design.md/specs/delivery-foundation/spec.md/tasks.md (checkbox state excepted) makes every journey refuse with frozen-baseline-drift until pilot-contract.md digests are explicitly re-frozen. This is the designed A01/A15 behavior; future workers editing those artifacts must re-freeze in the same change.",
+  "tasks.md/execution-state/ledger untouched; no production side effects; all fixtures in os.tmpdir(); zero new npm dependencies."
+ ]
+}
