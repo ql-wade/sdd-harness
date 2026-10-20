@@ -310,7 +310,7 @@ test('RED compose gate: read-only rootfs, minimal capabilities, internal network
   assert.ok(codes(parseJsonOut(privilegedRun, 'validate')).includes('PRIVILEGED_FORBIDDEN'));
 
   const unknownService = makeFixtureDir(({ read, write }) => {
-    write('compose.yaml', `${read('compose.yaml')}\n  comet-root:\n    image: \${COMET_RUNNER_IMAGE:?x}\n`);
+    write('compose.yaml', read('compose.yaml').replace('services:\n', 'services:\n  comet-root:\n    image: ${COMET_RUNNER_IMAGE:?x}\n'));
   });
   const unknownRun = runCli(['validate', '--registry', registryPath, '--dir', unknownService, '--json']);
   assert.equal(unknownRun.status, 2, 'services outside the six role-policy roles must be rejected');
@@ -426,7 +426,7 @@ test('RED authority gate: duplicate registrations, copied state and concurrent w
 test('RED secret tier gate: ordinary roles cannot reach publisher/isolator-tier refs (I01 resolution semantics reused)', async () => {
   const tier = makeFixtureDir(({ json, writeJson }) => {
     const policy = json('role-policy.json');
-    policy.roles.find((r) => r.role === 'author').secretRefs.push('secret-ref:sdd-harness-pilot/outline-publisher');
+    policy.roles.find((r) => r.role === 'author').grantedRefs.push('secret-ref:sdd-harness-pilot/outline-publisher');
     writeJson('role-policy.json', policy);
   });
   const tierRun = runCli(['validate', '--registry', registryPath, '--dir', tier, '--json']);
@@ -438,7 +438,7 @@ test('RED secret tier gate: ordinary roles cannot reach publisher/isolator-tier 
 
   const tierIsolator = makeFixtureDir(({ json, writeJson }) => {
     const policy = json('role-policy.json');
-    policy.roles.find((r) => r.role === 'test-author').secretRefs.push('secret-ref:sdd-harness-pilot/outline-isolator');
+    policy.roles.find((r) => r.role === 'test-author').grantedRefs.push('secret-ref:sdd-harness-pilot/outline-isolator');
     writeJson('role-policy.json', policy);
   });
   const tierIsolatorRun = runCli(['validate', '--registry', registryPath, '--dir', tierIsolator, '--json']);
