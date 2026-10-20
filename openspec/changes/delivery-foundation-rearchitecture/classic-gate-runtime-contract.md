@@ -1,7 +1,5 @@
 # Classic Gate 的推进、返工与证据失效契约
 
-> 2026-10-20 官方能力复用修订：overlay 接方法/产物合同，原 Classic 继续独占 phase/Run。隔离预研已确认手填 required-skill 标记和 null 摘要可通过生成 Guard，因此本文件的可信接纳、共同判定、事务/失效/完成义务保持；按 OVQ 实证 gap 缩小改动，不重复实现原生 canonical plan/handoff。详见 overlay-integration-design.md；原共识不覆盖本修订，OVR 待完成。
-
 日期：2026-10-19。状态：最小受控扩展设计，尚未实现。
 
 ## 0. 已确认的约束

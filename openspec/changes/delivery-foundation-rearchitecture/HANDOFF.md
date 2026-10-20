@@ -1,12 +1,10 @@
 # 架构迁移实施交接
 
-> 当前修订提示（2026-10-20）：先预研并复核合理性后，形成官方 overlay 优先的显式重规划候选；见 overlay-integration-design.md 和 overlay-prestudy/results.json。新锁仅证明结构/来源绑定，OVR 必须独立批准当前制品后才继续受影响新实施。旧包摘要/本地历史见 overlay-prestudy/previous-bundle.json；旧票和旧完成勾选仅支持旧范围，不扩大为 overlay 已接入。
-
-本轮只更新架构与计划、运行隔离预研；现有实施者及监控以 execution-state.json 为准，本轮未接管/修改其状态，不绑定新执行器、不启动业务派发或发布。既有控制器先接纳此修订并核对新增节点/检查/进度投影，再读 execution-prompt.md。
+本包只做计划，由用户另选 Agent 实施；没有启动实施、服务、发布或远端策略修改。接收方先读此文，再读 execution-prompt.md。
 
 ## 权威与当前事实
 
-目标架构是 docs/architecture/delivery-architecture.md、ADR-0019 和本 Change design/spec。原架构共识支持旧冻结基线，本次由 OVR 审查；tasks.md 是唯一任务定义与证据勾选源，DAG 是依赖/归属投影。原30父任务、69工作包、92场景全部保留；原I01–I08/VERIFY之外增加OVR/OVQ、OV01–OV08，当前41节点、100场景、114项 required 检查。历史验证报告的0/92不覆盖新增8项，新增项目验收均未执行。
+目标架构是 docs/architecture/delivery-architecture.md、ADR-0019 和本 Change design/spec。架构共识已通过，仅授权分批实施。tasks.md 是唯一任务进度，task-dag.json 是依赖/归属投影；原30父任务、69工作包和92场景保留，新增I01–I08和最终VERIFY，共39节点、105项required检查。原0.1–0.4文档完成状态保留，产品受管运行验收为0/92。
 
 迁移期间接收 Agent 以 planner 作为唯一实施控制器；被建设系统运行后仅由 Comet 控制业务阶段、状态、重试和恢复。TeamAI只分发，Ponytail只辅助。不得同时启动第二个planner/implement-spec或让worker改控制状态。
 
@@ -15,12 +13,12 @@
 1. 读取AGENTS/README/权威架构/技能分工，检查工作区和已有改动；只接纳本任务文件，不整体覆盖或提交当前脏工作区。此包未提交，先建立可回滚的本地变更基线。
 2. 先运行下方可用的静态校验，核对 planning-toolkit/manifest.json 的所有摘要。工具是选定planner的原样静态快照，不是新调度器；不要调用仓库旧版planner guard，它还依赖Superpowers且不支持本包schema2。
 3. 绑定一个实际可用的接收方控制器/进度源。当前串行波次是能力保守值；若选择并行，先证明隔离工作区、原生派发/等待/恢复和归属无冲突，记录批准的重规划并重新冻结，不能直接改max_workers。
-4. 先完成OVR的当前修订独立评审并复核P1_1/I02；OVQ资格识别可复用方法合同与原生gap，再继续P1_6剩余方法集成。优先用官方overlay来源解析/生成/producer schema、原生canonical plan和handoff；保持Matt/test-authoring/Whitebox/Ponytail分工。完整planner controller不作为普通方法加载，control节点不override；旧init切片/方法快照完成不意味着新组合已验收。可信来源、共同推进、事务和收尾gap由原任务补齐。
+4. 从P1_1和P1_6前置开始：复核精确工具链、源码及现有部分实现；显式备份并替换原样方法快照，固定Matt tdd/diagnosing-bugs/code-review、planner、test-authoring、whitebox-verify、openspec-lifecycle-guard，保留grill及共识。不得依赖本机共享技能路径、软链接分发或重启Superpowers。方法不可用是阻塞，不可改成提示词跳过。
 5. 按DAG接入I01–I08；详见infrastructure-plan.md与infrastructure-tasks.json。I01登记实际owner、镜像/源码摘要、secretRefs和授权，值不入Git。缺项的组件不启动；不得复用PAV等其它项目资源。
 6. 各任务执行独立测试设计→实际行为RED→最小GREEN→回归→独立审查→串行接纳。环境错误不是行为RED。测试不足回test-authoring，产品缺陷回Builder；Whitebox不替作者修测试。部分已有源码准备/构建工具不等于P1_1完成，构建工具仍须独立审查和完整资格验证。
 7. runner及case尚未实现的检查见execution-contract.json的availability/implementedBy；先由归属任务编写，再执行。0=通过、1=无效输入/前置缺失、2=验证失败；缺真实环境标UNVERIFIED并非零退出。第三方工具保留自己的退出码约定。不得以不存在的命令、静态清单、fixture或skip声称运行通过。
 8. 绑定实际宿主Goal与20分钟监督再实施，含未知ETA/证据/阻塞汇报；本聊天旧sdd监督已暂停，不继承它的执行身份。监督只观察，不能派发或写业务phase。
-9. VERIFY依赖全部前置，执行114检查及100场景的独立Whitebox Journey和证据Grill；预研生成包的scaffold-blocked分类、标记检查和旧报告不是新增产品通过。OpenSpec归档需Kp，Outline Kt未完成时同一Comet Run仍须恢复并阻断整体完成。归档后审计与实际权限读回不可省略。
+9. VERIFY依赖全部前置，执行105检查及92场景的独立Whitebox Journey和证据Grill；缺必需项保留未验收。OpenSpec归档需Kp，Outline Kt未完成时同一Comet Run仍须恢复并阻断整体完成。归档后审计与实际权限读回不可省略。
 
 ## 基础设施准入与授权
 
