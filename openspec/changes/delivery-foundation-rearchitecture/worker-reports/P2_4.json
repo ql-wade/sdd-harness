@@ -160,5 +160,53 @@
  "blockers_or_questions": [
   "无实现阻塞。parent 决策点一项：delivery-cases 的 7 个跨任务 pin 失败的归属（建议集成波次由各原任务更新 pin，或授权一次'lock 重钉'维护提交——本任务因边界未动其文件）。",
   "设计裁决记录（均有契约依据）：(1) upstream.lock.json 登记随 patch 提交——P1_6 先例 acb0452 且其 review APPROVED；(2) Kt 字段经由 .comet.yaml wire keys 进既有 schema/transaction（contract §1 '新增持久字段须进入现有 schema/序列化/迁移与事务范围'）；(3) verify_result 在 managed 下转为 Runtime-stamped（受管写入 verify_result 语义）；(4) test-design-repair 允许自 verify 相位（contract §5 'V 发现用例设计缺陷 → 受控 test-intent 修订回 Design'）。"
- ]
+ ],
+ "supplement_delta": {
+  "date": "2026-10-20",
+  "trigger": "P2_4 review APPROVED (merged e868d48); coordinator assigned the mechanical 7-pin re-pin to the task that drove the sanctioned lock evolution",
+  "base_for_repin": "merge --no-ff master @ 9ebcd06 (includes ed1078d) -> merge commit 21c8f04",
+  "repin_commit": "0cd49cb chore(p2_4): repin the seven cross-task lock pins to 4 patches @ 9b95a0ff",
+  "pins_updated": [
+   {
+    "file": "test/delivery-cases/1_3.mjs",
+    "change": "setup pin patches.length 2->4; fingerprint prefix cb1151b4 -> 9b95a0ff; header comment",
+    "lines": "2, 117-119"
+   },
+   {
+    "file": "test/delivery-cases/1_4.mjs",
+    "change": "setup pin patches.length 2->4; fingerprint prefix cb1151b4 -> 9b95a0ff; header comment",
+    "lines": "2, 162-164"
+   },
+   {
+    "file": "test/delivery-cases/1_5.mjs",
+    "change": "setup pin patches.length 2->4; fingerprint prefix cb1151b4 -> 9b95a0ff; header comment",
+    "lines": "2, 184-186"
+   },
+   {
+    "file": "test/delivery-cases/1_5.mjs",
+    "change": "C06 B5 assertion retargeted from the whole check envelope to the check verdict surface (data.checks counters + data.issues): the dormant managed_delivery wire fields in the serialized configuration were never gate consultations — B5 semantic claim unchanged",
+    "lines": "307-317"
+   },
+   {
+    "file": "test/delivery-cases/1_6.mjs",
+    "change": "patch-scoping pin patches.length 2->4 (the two-entry declared-file loop still pins 0001/tests-1_6 at indexes 0/1; 0002/tests-2_4 scoping is covered by test/delivery-cases/2_4.mjs)",
+    "lines": "157-159"
+   },
+   {
+    "file": "openspec/changes/delivery-foundation-rearchitecture/mode-qualification.json",
+    "change": "build.fingerprint cb1151b4 -> 9b95a0ff; build.patches 2 -> 4 entries; build.verification updated to the re-verified 248/2 smoke; build.repinNote added (probe evidence provenance: mode-probes/ records keep their historical cb1151b4 provenance)",
+    "lines": "9-24 area"
+   },
+   {
+    "file": "(no edit needed)",
+    "change": "3_1.mjs B09 meta-assertion re-running 1_6.mjs — passes once 1_6 is repinned; 1_1.mjs pristine-fingerprint probe (72e5ce0e, toolchain-baseline historical record) intentionally untouched; mode-probes/*.json and knowledgeBoundary verifiedOn records keep historical cb1151b4 provenance",
+    "lines": "-"
+   }
+  ],
+  "verification": {
+   "delivery_cases_full": "node --test test/delivery-cases/*.mjs -> exit 0: 92 tests, 91 pass / 0 fail / 1 skip (1_1 pristine-build env-conditional skip); evidence repin-green-delivery-cases-all.txt",
+   "npm_test": "npm test -> exit 0: 263/263 pass; evidence repin-green-npm-test-full.txt",
+   "fingerprint_now": "9b95a0ff54ee00abd03ba9fb507cd93f03c8a464a743658898c474a51dc89b10 (build present and manifest-verified in this worktree .sdd)"
+  }
+ }
 }
