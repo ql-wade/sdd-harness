@@ -939,10 +939,10 @@
 **Parallel safe:** false
 **Acceptance IDs:** U01, U02, U03, U04, U05, U06, U07, U08, H04, H05, L02, L04
 
-- [ ] **Step 1 [5 min]: Test** RED：未登录/普通读者/离组用户对集合、页面、子树、公开分享、搜索和附件逐通道访问负例；实际拒绝/残留路径分别报告；来源交集不包含目标读者、分页失败、无法映射principal、过期grant时受管发布阻断；不能以admin读得到替代；重启应用/数据库后测试页和附件可读回；更新冲突409不盲覆盖；超时/403不能解释为目标不存在。
-- [ ] **Step 2 [5 min]: Implement** GREEN：锁定镜像后搭建独立Postgres/Redis/应用/存储和最小网络权限；loopback暴露不得自动开公网；接OIDC及专用受管文集，保存真实ID和有效受众查询能力；一般用户不能改issuer/secret/isolator角色；分别验证健康、登录、CRUD/readback/附件持久化、权限负例和受管发布/隔离API的真实参数；缺MCP参数时对应P任务建设薄adapter。
+- [x] **Step 1 [5 min]: Test** RED：未登录/普通读者/离组用户对集合、页面、子树、公开分享、搜索和附件逐通道访问负例；实际拒绝/残留路径分别报告；来源交集不包含目标读者、分页失败、无法映射principal、过期grant时受管发布阻断；不能以admin读得到替代；重启应用/数据库后测试页和附件可读回；更新冲突409不盲覆盖；超时/403不能解释为目标不存在。
+- [x] **Step 2 [5 min]: Implement** GREEN：锁定镜像后搭建独立Postgres/Redis/应用/存储和最小网络权限；loopback暴露不得自动开公网；接OIDC及专用受管文集，保存真实ID和有效受众查询能力；一般用户不能改issuer/secret/isolator角色；分别验证健康、登录、CRUD/readback/附件持久化、权限负例和受管发布/隔离API的真实参数；缺MCP参数时对应P任务建设薄adapter。
 - [ ] **Step 3 [5 min]: Review** 独立读回：原生浏览器登录/页面/分享行为截图+关联请求，独立用户权限/API/数据库与对象存储读回；不共享其它应用会话；effective audience闭包含collection/parents/page/groups/shares/public入口，未覆盖访问路径不能宣称隔离；记录附件URL缓存残留风险。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
 
 ### Task I04: 项目LLMWiki MCP、索引与worktree安全路径
 
