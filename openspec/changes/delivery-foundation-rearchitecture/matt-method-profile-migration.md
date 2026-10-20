@@ -1,5 +1,7 @@
 # Matt 方法迁移核对与 Comet 显式选择
 
+> 当前修订（2026-10-20）：下面是迁移时历史核对；本仓库部分方法快照和 init 修复已有切片，不能据此认定整体方法/协调已迁移。新增优先路线为官方 overlay 的方法绑定/producer override，先满足原 schema 与 canonical plan，再证明任务协调、审查、恢复和真实调用；完整 planner/controller 不作普通 required Skill。详见 overlay-integration-design.md，OVR/OVQ 尚未完成。
+
 日期：2026-10-19。状态：当前本机读回 + 目标接入约束，未实施项目技能升级。
 
 ## 1. 已读取的证据
