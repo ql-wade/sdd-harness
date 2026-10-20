@@ -407,14 +407,14 @@
 **Parallel safe:** false
 **Acceptance IDs:** H01, H02, H03, H04, H05, H06, H07, H08, H09
 
-- [ ] **Step 1 [5 min]: Test** 4.6.a 扩展 pending archived 的发现/选择/输出：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：Git complete 但知识 pending 仍找到原 Run；resolver/status/clear-current 同一完成条件。
-- [ ] **Step 2 [5 min]: Implement** 4.6.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 4.6.b 实现原子操作登记和稳定文档身份：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：同 key 领取、owner/attempt、UUID 与 lastRevision 协议；403/超时不当不存在，409 不盲覆盖。
-- [ ] **Step 4 [5 min]: Implement** 4.6.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Test** 4.6.c 验证权威环境和安全清理：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：复制状态不能第二写者；按已确认 R10 A，整体 completed 前保留唯一工作区；提前清理或迁移只在另行确认并证明恢复后启用。
-- [ ] **Step 6 [5 min]: Implement** 4.6.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 4.6.a 扩展 pending archived 的发现/选择/输出：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：Git complete 但知识 pending 仍找到原 Run；resolver/status/clear-current 同一完成条件。
+- [x] **Step 2 [5 min]: Implement** 4.6.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 4.6.b 实现原子操作登记和稳定文档身份：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：同 key 领取、owner/attempt、UUID 与 lastRevision 协议；403/超时不当不存在，409 不盲覆盖。
+- [x] **Step 4 [5 min]: Implement** 4.6.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Test** 4.6.c 验证权威环境和安全清理：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：复制状态不能第二写者；按已确认 R10 A，整体 completed 前保留唯一工作区；提前清理或迁移只在另行确认并证明恢复后启用。
+- [x] **Step 6 [5 min]: Implement** 4.6.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P4_7: 原任务 4.7 — 按 knowledge-preauthorization-contract.md，在真实受管源/目标中验证 U01–U08：有效 owner/委托与可信签发、grant 撤销/过期、多源披露交集、完整 principal 映射、目标继承/单页/公开分享、写前版本重验、作者/审查/Publisher/issuer 隔离与正向自动发布。先登记试点源域/目标/真实 owner，不能只用 schema/自签 JSON/管理员可读证明权限继承。
 
