@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-10-20T20:26:59.187Z",
+  "tool": "tools/ci/release.mjs",
+  "interface": "ReleaseProtocol.v1",
+  "mode": "LOCAL_ONLY",
+  "steps": 12,
+  "runs": [
+    {
+      "label": "promote v1 (candidate m1) — same-digest promotion into the isolated environment",
+      "exitCode": 0
+    },
+    {
+      "label": "I06 independent evaluation of the promoted v1 chain",
+      "exitCode": 0
+    },
+    {
+      "label": "tag drift refusal — tag repointed out-of-band away from the served digest",
+      "exitCode": 2
+    },
+    {
+      "label": "I06 independent evaluation of the drifted world",
+      "exitCode": 2
+    },
+    {
+      "label": "promote v2 (candidate m2) — sequential release moves the tag as the promotion effect",
+      "exitCode": 0
+    },
+    {
+      "label": "re-promote v2 — same-digest lock returns the existing receipt",
+      "exitCode": 0
+    },
+    {
+      "label": "reconcile v2 by its correlation ID — original result bound, no duplicate deployment",
+      "exitCode": 0
+    },
+    {
+      "label": "I06 independent evaluation of the reconciled chain (QUERY_BY_CORRELATION_ID)",
+      "exitCode": 0
+    },
+    {
+      "label": "unapproved rollback refused",
+      "exitCode": 2
+    },
+    {
+      "label": "I06 independent evaluation of the unapproved rollback",
+      "exitCode": 2
+    },
+    {
+      "label": "approved same-digest rollback with independent business readback",
+      "exitCode": 0
+    },
+    {
+      "label": "I06 independent evaluation of the approved rollback chain",
+      "exitCode": 0
+    }
+  ]
+}

@@ -44,8 +44,9 @@ const platformCli = path.join(projectRoot, 'tools', 'infra', 'platform.mjs');
 const committedPolicyDir = path.join(projectRoot, 'infra', 'delivery', 'platform');
 
 const RUN_TIMEOUT_MS = 120_000;
-const SHA = (ch) => ch.repeat(40);
+const SHA = (label) => crypto.createHash('sha256').update(`sha-label-${label}`).digest('hex').slice(0, 40);
 const DIGEST = (label) => `sha256:${crypto.createHash('sha256').update(label).digest('hex')}`;
+const BARE = (label) => crypto.createHash('sha256').update(label).digest('hex');
 const NOW = '2026-10-21T12:00:00.000Z';
 const LAUNCH_ENV = 'SDD_DELIVERY_LAUNCH_AUTHORITY';
 const FIXTURE_SECRET = 'delivery-case-p4-2-fixture-launch-authority-0123456789';
@@ -59,7 +60,7 @@ function childEnv(root, overrides = {}) {
 }
 
 function runRelease(args, root, extraEnv = {}) {
-  return spawnSync(process.execPath, [cliPath, ...args], {
+  return spawnSync(process.execPath, [cliPath, ...args, '--json'], {
     cwd: projectRoot, encoding: 'utf8', timeout: RUN_TIMEOUT_MS, env: childEnv(root, extraEnv),
   });
 }
@@ -95,14 +96,14 @@ function contractFixture(capability) {
     requiredChecks: [{ level: 'gate', capability }],
     executionDenominator: { totalCases: 1 },
     cleanup: { environment: 'tmp fixture removed after run', data: 'none persisted' },
-    dependencyBaselines: [{ kind: 'product', digest: DIGEST('product-case-p4-2') }],
+    dependencyBaselines: [{ kind: 'product', digest: BARE('product-case-p4-2') }],
   };
 }
 
 function gateSectionFixture({ candidateLabel = 'p4-2-candidate-r1', execution = 'exec-verifier-p4-2' } = {}) {
   const launcher = createLaunchAuthority({ secret: FIXTURE_SECRET });
-  const inputDigest = DIGEST(candidateLabel);
-  const policyDigest = DIGEST('policy/managed-pilot@r1');
+  const inputDigest = BARE(candidateLabel);
+  const policyDigest = BARE('policy/managed-pilot@r1');
   const envelope = {
     schemaVersion: 1,
     candidateDigest: inputDigest,
@@ -114,7 +115,7 @@ function gateSectionFixture({ candidateLabel = 'p4-2-candidate-r1', execution = 
     toolchain: `node ${process.versions.node}`,
     executions: { total: 3, valid: 2 },
     result: 'pass',
-    evidence: [{ uri: '.whitebox/c1/tap.txt', sha256: DIGEST('tap-output-p4-2') }],
+    evidence: [{ uri: '.whitebox/c1/tap.txt', sha256: BARE('tap-output-p4-2') }],
     expiry: '2026-11-01T00:00:00.000Z',
   };
   const dispatch = launcher.issueDispatch({
@@ -273,6 +274,10 @@ test('4.2.a negative: a deployment tag pointing at another digest is refused and
   const digestV1 = parseJson(first, 'promote v1').artifact.digest;
   const activeBefore = fs.readFileSync(path.join(root, 'env', 'active.json'), 'utf8');
 
+  // Real out-of-band drift: the deployment tag is repointed behind the protocol's back.
+  const outOfBand = DIGEST('out-of-band-repoint');
+  fs.writeFileSync(path.join(root, 'registry', 'refs', 'tags', 'stable'), `${outOfBand}\n`);
+
   const drifted = runRelease(['promote', '--chain', writeJson(root, 'chain-v2.json', candidateChain({ merge: SHA('m2'), head: SHA('h2') })),
     '--source', writeSource(root, 'src-v2', 'v2'), '--tag', 'stable',
     '--registry', path.join(root, 'registry'), '--environment', path.join(root, 'env'),
@@ -280,7 +285,8 @@ test('4.2.a negative: a deployment tag pointing at another digest is refused and
   const refusal = parseJson(drifted, 'drift');
   assert.equal(drifted.status, 2);
   assert.ok(refusal.codes.includes('TAG_DIGEST_DRIFT'), `codes: ${JSON.stringify(refusal.codes)}`);
-  assert.equal(refusal.artifact.tagResolvedDigest, digestV1, 'the actual identity mismatch is recorded');
+  assert.equal(refusal.artifact.tagResolvedDigest, outOfBand, 'the actual identity mismatch is recorded');
+  assert.equal(refusal.artifact.expectedDigest, digestV1, 'the served reality the tag drifted away from is recorded');
   assert.equal(fs.readFileSync(path.join(root, 'env', 'active.json'), 'utf8'), activeBefore);
 
   const probe = runPlatformProbe(path.join(root, 'chain-drift.json'), root);

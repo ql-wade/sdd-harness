@@ -44,7 +44,7 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const cliPath = path.join(projectRoot, 'tools', 'ci', 'release.mjs');
 const platformCli = path.join(projectRoot, 'tools', 'infra', 'platform.mjs');
 const RUN_TIMEOUT_MS = 120_000;
-const SHA = (ch) => ch.repeat(40);
+const SHA = (label) => crypto.createHash('sha256').update(`sha-label-${label}`).digest('hex').slice(0, 40);
 const DIGEST = (label) => `sha256:${crypto.createHash('sha256').update(label).digest('hex')}`;
 const PROJECT = 'sdd-harness-pilot';
 
@@ -55,7 +55,7 @@ function childEnv(root) {
 }
 
 function runRelease(args, root) {
-  return spawnSync(process.execPath, [cliPath, ...args], {
+  return spawnSync(process.execPath, [cliPath, ...args, '--json'], {
     cwd: projectRoot, encoding: 'utf8', timeout: RUN_TIMEOUT_MS, env: childEnv(root),
   });
 }
@@ -219,7 +219,12 @@ test('V_A14 negative: tag drift is refused with the actual identity mismatch rec
   const activeBefore = fs.readFileSync(path.join(root, 'env', 'active.json'), 'utf8');
   const ledgerBefore = ledgerRecords(path.join(root, 'env'));
 
-  // New candidate (new head/merge, checks bound to the new merge); the tag still points at v1.
+  // Real out-of-band drift: the deployment tag is repointed behind the
+  // protocol's back, away from the digest the environment actually serves.
+  const outOfBand = DIGEST('out-of-band-repoint');
+  fs.writeFileSync(path.join(root, 'registry', 'refs', 'tags', 'stable'), `${outOfBand}\n`);
+
+  // New candidate (new head/merge, checks bound to the new merge).
   const sourceV2 = writeSource(root, 'src-v2', 'v2');
   const drifted = runRelease(
     promoteArgs({ root, chain: chainFixture({ merge: SHA('m2'), head: SHA('h2') }), source: sourceV2, chainOut: 'chain-drift.json' }).args,
@@ -229,8 +234,9 @@ test('V_A14 negative: tag drift is refused with the actual identity mismatch rec
   assert.equal(drifted.status, 2, 'a drifted tag must never promote');
   assert.equal(refusal.status, 'BLOCKED');
   assert.ok(refusal.codes.includes('TAG_DIGEST_DRIFT'), `codes: ${JSON.stringify(refusal.codes)}`);
-  assert.equal(refusal.artifact.tagResolvedDigest, digestV1, 'the refusal records the digest the tag actually resolves to');
-  assert.notEqual(refusal.artifact.digest, digestV1, 'the refusal records the actually built digest');
+  assert.equal(refusal.artifact.tagResolvedDigest, outOfBand, 'the refusal records the digest the tag actually resolves to');
+  assert.equal(refusal.artifact.expectedDigest, digestV1, 'the refusal records the digest the environment actually serves');
+  assert.notEqual(refusal.artifact.digest, outOfBand, 'the refusal records the actually built digest');
   assert.equal(fs.readFileSync(path.join(root, 'env', 'active.json'), 'utf8'), activeBefore, 'no deployment state changed');
   assert.deepEqual(ledgerRecords(path.join(root, 'env')), ledgerBefore, 'no deployment was written');
 
@@ -535,9 +541,9 @@ test('input contract: malformed chains and arguments are input errors (exit 1) r
   const badHead = runRelease(['promote', '--chain', writeJson(root, 'c1.json', chainFixture({ merge: 'not-a-sha' })), '--source', source, '--tag', 'stable', '--registry', registry, '--environment', env], root);
   assert.equal(badHead.status, 1);
   assert.match(badHead.stderr, /merge must be a 40-hex SHA/, 'the tool names the malformed field itself');
-  const noChecks = runRelease(['promote', '--chain', writeJson(root, 'c2.json', chainFixture({ overrides: { checks: [] } })), '--source', source, '--tag', 'stable', '--registry', registry, '--environment', env], root);
+  const noChecks = runRelease(['promote', '--chain', writeJson(root, 'c2.json', chainFixture({ overrides: { requiredChecks: [] } })), '--source', source, '--tag', 'stable', '--registry', registry, '--environment', env], root);
   assert.equal(noChecks.status, 1);
-  assert.match(noChecks.stderr, /checks must be a non-empty array/, 'the tool names the empty check set itself');
+  assert.match(noChecks.stderr, /requiredChecks must be a non-empty array/, 'the tool names the empty check set itself');
   const noChain = runRelease(['promote', '--source', source, '--tag', 'stable', '--registry', registry, '--environment', env], root);
   assert.equal(noChain.status, 1, 'missing --chain is an input error');
   assert.match(noChain.stderr, /--chain is required/, 'the tool names the missing argument itself');

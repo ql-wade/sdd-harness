@@ -1,0 +1,45 @@
+{
+  "label": "I06 independent evaluation of the drifted world",
+  "exitCode": 2,
+  "payload": {
+    "interface": "IntegrationIdentity.v1",
+    "case": "registry-environment-identity",
+    "executed": true,
+    "scope": "LOCAL_ONLY",
+    "mode": "LOCAL_ONLY",
+    "project": "sdd-harness-pilot",
+    "head": "4273407602a002ec9a1f152199044db6d4aad068",
+    "merge": "2a776465877cd81ce9ee3c5b899ae753c37b2087",
+    "blocked": true,
+    "status": "BLOCKED",
+    "codes": [
+      "TAG_DIGEST_DRIFT",
+      "DEPLOYMENT_DIGEST_MISMATCH"
+    ],
+    "steps": [
+      {
+        "step": "checks",
+        "binding": "EXACT_SHA",
+        "verdict": "PASS"
+      },
+      {
+        "step": "artifact",
+        "binding": "TAG_TO_DIGEST",
+        "verdict": "BLOCKED"
+      },
+      {
+        "step": "deployment",
+        "binding": "DIGEST_AND_CORRELATION_ID",
+        "verdict": "BLOCKED"
+      },
+      {
+        "step": "readback",
+        "via": "RECEIPT_DIRECT",
+        "verdict": "BLOCKED"
+      }
+    ],
+    "note": "local mechanism proof only; the real platform merge gate and environment readback stay with P4_1/P4_2",
+    "checkedAt": "2026-10-20T20:26:58.749Z"
+  },
+  "stderr": null
+}
