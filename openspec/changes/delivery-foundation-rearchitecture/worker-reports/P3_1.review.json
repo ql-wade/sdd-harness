@@ -1,0 +1,52 @@
+{
+  "task": "P3_1",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-20T09:28:49.383329+00:00",
+  "head_reviewed": "35510b3",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "delivery-journey.mjs:459 变量遮蔽 → case-definition.json 丢 sourceBinding（审计工件降级）",
+      "disposition": "REPAIR_REQUESTED -> w-p3-1"
+    },
+    {
+      "id": "nb-2",
+      "summary": "死变量 evidenceFilesBefore",
+      "disposition": "REPAIR_REQUESTED -> w-p3-1"
+    },
+    {
+      "id": "nb-3",
+      "summary": "退出码不对称（默认 case-plan 不可读走 1，对称 pilot-contract 走 2）——两路均非零满足冻结文本",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-4",
+      "summary": "报告 NOT-EXERCISED 计数 69 应为 68",
+      "disposition": "REPAIR_REQUESTED -> w-p3-1（报告更正）"
+    },
+    {
+      "id": "nb-5",
+      "summary": "evidence 门只查存在性——显式 --case-definition 模式复用 evidence-dir 可能被陈旧文件满足",
+      "disposition": "recorded; VERIFY 消费方须知"
+    },
+    {
+      "id": "nb-6",
+      "summary": "PASS 不要求 target.found（B09 模块级绿）",
+      "disposition": "已披露设计选择，VERIFY 消费方须知"
+    },
+    {
+      "id": "nb-7",
+      "summary": ".whitebox 未忽略",
+      "disposition": "controller fixed (a92284b)"
+    }
+  ],
+  "reviewer_independently_reverified": [
+    "净室 1bcb34d RED 复现 12/2/10",
+    "runner 不变量：全文 grep 仅否定声明 + no-retry invocation-counter 实证 + 六种 NOT-EXERCISED/FAIL 场景复跑",
+    "四指针独立重算全 MATCH；planBundle checkbox 归一化与 taskDefinitionDigest 同语义；A15 翻转/编辑双向真实测试",
+    "V_A01/V_A15 逐字命令复跑 exit 0（7 exec/13 exec）"
+  ],
+  "tests_run_by_reviewer": "13/13; V_A01/V_A15 逐字; npm test 205/205; 净室 RED; 缺 --scenario=1; case-module-missing=2; wrong-profile=2"
+}

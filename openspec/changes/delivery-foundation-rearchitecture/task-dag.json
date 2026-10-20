@@ -84,25 +84,6 @@
       "conditional_pre_enable": false
     },
     {
-      "id": "OVR",
-      "depends_on": [
-        "P0_4"
-      ],
-      "owns": [
-        "openspec/changes/delivery-foundation-rearchitecture/overlay-review"
-      ],
-      "acceptance_ids": [
-        "E03",
-        "E04"
-      ],
-      "parallel_safe": false,
-      "work_packages": [],
-      "preconditions": [
-        "Exact new revision and approved source/model disclosure scope before independent ballots"
-      ],
-      "revision_role": "Independent review of this overlay-first revision; old P0_4 remains historical"
-    },
-    {
       "id": "P1_1",
       "depends_on": [
         "P0_4"
@@ -134,109 +115,9 @@
       "conditional_pre_enable": false
     },
     {
-      "id": "I01",
-      "depends_on": [
-        "P0_4"
-      ],
-      "owns": [
-        "infra/delivery/registry.json",
-        "infra/delivery/registry.schema.json",
-        "infra/delivery/secrets.refs.example.json",
-        "infra/delivery/qualification-policy.json",
-        "tools/infra/registry.mjs",
-        "tools/infra/secret-refs.mjs",
-        "test/infra-registry.test.js"
-      ],
-      "acceptance_ids": [
-        "F01",
-        "A19",
-        "U01",
-        "U07"
-      ],
-      "parallel_safe": false,
-      "completed_at_planning": false,
-      "infrastructure": true,
-      "preconditions": [
-        "I01 registry qualification and component image/source digest/owner/secrets readiness verified"
-      ]
-    },
-    {
-      "id": "I02",
-      "depends_on": [
-        "I01",
-        "P1_1",
-        "OVR"
-      ],
-      "owns": [
-        "infra/delivery/runner/compose.yaml",
-        "infra/delivery/runner/Dockerfile",
-        "infra/delivery/runner/image.lock.json",
-        "infra/delivery/runner/role-policy.json",
-        "infra/delivery/runner/workspace-mounts.json",
-        "infra/delivery/runner/authority-registration.example.json",
-        "tools/infra/runner.mjs",
-        "test/infra-runner-isolation.test.js"
-      ],
-      "acceptance_ids": [
-        "A09",
-        "A10",
-        "A11",
-        "A19",
-        "C07",
-        "D01",
-        "D08",
-        "H03",
-        "H09",
-        "U07",
-        "F05",
-        "F07",
-        "M02",
-        "OV03",
-        "OV06",
-        "OV08"
-      ],
-      "parallel_safe": false,
-      "completed_at_planning": false,
-      "infrastructure": true,
-      "preconditions": [
-        "I01 registry qualification and component image/source digest/owner/secrets readiness verified"
-      ]
-    },
-    {
-      "id": "OVQ",
-      "depends_on": [
-        "P1_1",
-        "OVR",
-        "I02"
-      ],
-      "owns": [
-        "integrations/comet/overlay",
-        "test/comet-overlay-qualification.test.js",
-        "test/delivery-cases/overlay.mjs",
-        "openspec/changes/delivery-foundation-rearchitecture/overlay-qualification"
-      ],
-      "acceptance_ids": [
-        "OV01",
-        "OV02",
-        "OV03",
-        "OV04",
-        "OV05",
-        "OV06",
-        "OV07",
-        "OV08"
-      ],
-      "parallel_safe": false,
-      "work_packages": [],
-      "preconditions": [
-        "Fixed upstream and method inventory; no hosted role claim from generated scaffold"
-      ],
-      "revision_role": "Qualify reuse/method compatibility and inventory gaps; project-level security acceptance remains required after dependent implementation"
-    },
-    {
       "id": "P1_6",
       "depends_on": [
-        "P1_1",
-        "OVQ"
+        "P1_1"
       ],
       "owns": [
         ".agents/skills",
@@ -251,10 +132,7 @@
         "M01",
         "M02",
         "B01",
-        "B09",
-        "OV01",
-        "OV02",
-        "OV03"
+        "B09"
       ],
       "work_packages": [
         "1.6.a",
@@ -284,9 +162,7 @@
       "acceptance_ids": [
         "F02",
         "F04",
-        "B09",
-        "OV05",
-        "OV08"
+        "B09"
       ],
       "work_packages": [
         "1.2.a",
@@ -301,8 +177,7 @@
     {
       "id": "P2_1",
       "depends_on": [
-        "P1_1",
-        "OVQ"
+        "P1_1"
       ],
       "owns": [
         "contracts/delivery",
@@ -319,9 +194,7 @@
         "A03",
         "A04",
         "A07",
-        "A08",
-        "OV02",
-        "OV05"
+        "A08"
       ],
       "work_packages": [
         "2.1.a",
@@ -336,8 +209,7 @@
     {
       "id": "P2_2",
       "depends_on": [
-        "P2_1",
-        "OVQ"
+        "P2_1"
       ],
       "owns": [
         "lib/delivery/evidence.js",
@@ -354,9 +226,7 @@
         "A19",
         "B03",
         "B06",
-        "B07",
-        "OV03",
-        "OV05"
+        "B07"
       ],
       "work_packages": [
         "2.2.a",
@@ -394,6 +264,71 @@
       "conditional_pre_enable": false
     },
     {
+      "id": "I01",
+      "depends_on": [
+        "P0_4"
+      ],
+      "owns": [
+        "infra/delivery/registry.json",
+        "infra/delivery/registry.schema.json",
+        "infra/delivery/secrets.refs.example.json",
+        "infra/delivery/qualification-policy.json",
+        "tools/infra/registry.mjs",
+        "tools/infra/secret-refs.mjs",
+        "test/infra-registry.test.js"
+      ],
+      "acceptance_ids": [
+        "F01",
+        "A19",
+        "U01",
+        "U07"
+      ],
+      "parallel_safe": false,
+      "completed_at_planning": false,
+      "infrastructure": true,
+      "preconditions": [
+        "I01 registry qualification and component image/source digest/owner/secrets readiness verified"
+      ]
+    },
+    {
+      "id": "I02",
+      "depends_on": [
+        "I01",
+        "P1_1"
+      ],
+      "owns": [
+        "infra/delivery/runner/compose.yaml",
+        "infra/delivery/runner/Dockerfile",
+        "infra/delivery/runner/image.lock.json",
+        "infra/delivery/runner/role-policy.json",
+        "infra/delivery/runner/workspace-mounts.json",
+        "infra/delivery/runner/authority-registration.example.json",
+        "tools/infra/runner.mjs",
+        "test/infra-runner-isolation.test.js"
+      ],
+      "acceptance_ids": [
+        "A09",
+        "A10",
+        "A11",
+        "A19",
+        "C07",
+        "D01",
+        "D08",
+        "H03",
+        "H09",
+        "U07",
+        "F05",
+        "F07",
+        "M02"
+      ],
+      "parallel_safe": false,
+      "completed_at_planning": false,
+      "infrastructure": true,
+      "preconditions": [
+        "I01 registry qualification and component image/source digest/owner/secrets readiness verified"
+      ]
+    },
+    {
       "id": "P1_3",
       "depends_on": [
         "P1_2",
@@ -410,10 +345,7 @@
       "acceptance_ids": [
         "F05",
         "F07",
-        "A09",
-        "OV01",
-        "OV03",
-        "OV08"
+        "A09"
       ],
       "work_packages": [
         "1.3.a",
@@ -471,10 +403,7 @@
         "C05",
         "C06",
         "C07",
-        "C08",
-        "OV02",
-        "OV04",
-        "OV07"
+        "C08"
       ],
       "work_packages": [
         "1.5.a",
@@ -490,8 +419,7 @@
       "id": "P2_4",
       "depends_on": [
         "P1_5",
-        "P2_3",
-        "OVQ"
+        "P2_3"
       ],
       "owns": [
         "integrations/comet/patches/0002-managed-delivery-runtime.patch",
@@ -508,11 +436,7 @@
         "D06",
         "D07",
         "D08",
-        "C07",
-        "OV03",
-        "OV04",
-        "OV05",
-        "OV06"
+        "C07"
       ],
       "work_packages": [
         "2.4.a",
@@ -714,8 +638,7 @@
         "A10",
         "A11",
         "A12",
-        "F07",
-        "OV06"
+        "F07"
       ],
       "work_packages": [
         "3.3.a",
@@ -967,8 +890,7 @@
       "acceptance_ids": [
         "E05",
         "E06",
-        "H02",
-        "OV08"
+        "H02"
       ],
       "work_packages": [
         "4.5.a",
@@ -1227,9 +1149,7 @@
         "I05",
         "I06",
         "I07",
-        "I08",
-        "OVR",
-        "OVQ"
+        "I08"
       ],
       "owns": [
         "openspec/changes/delivery-foundation-rearchitecture/verification-report.md",
@@ -1332,15 +1252,7 @@
         "U05",
         "U06",
         "U07",
-        "U08",
-        "OV01",
-        "OV02",
-        "OV03",
-        "OV04",
-        "OV05",
-        "OV06",
-        "OV07",
-        "OV08"
+        "U08"
       ],
       "work_packages": [],
       "preconditions": []
@@ -1360,19 +1272,7 @@
       "P0_4"
     ],
     [
-      "OVR"
-    ],
-    [
       "P1_1"
-    ],
-    [
-      "I01"
-    ],
-    [
-      "I02"
-    ],
-    [
-      "OVQ"
     ],
     [
       "P1_6"
@@ -1388,6 +1288,12 @@
     ],
     [
       "P2_3"
+    ],
+    [
+      "I01"
+    ],
+    [
+      "I02"
     ],
     [
       "P1_3"
@@ -1474,5 +1380,5 @@
   "controller": "existing host performs project implementation; target delivery runtime Comet only",
   "progress_source": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
   "alias_policy": "Mechanical schema2 aliases map bijectively to original dotted IDs. No new task or progress authority.",
-  "execution_scope": "Reviewed replan candidate; OVR pending for current revision; no execution activated by this update"
+  "execution_scope": "candidate only; not activated"
 }

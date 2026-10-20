@@ -19,7 +19,7 @@
     "target_runtime": "Comet Classic sole runtime controller"
   },
   "goal": {
-    "objective": "保留原30父任务/69工作包/92场景，优先复用官方overlay后完成100场景、114检查的受管交付独立验证；OVR通过当前修订才实施，prestudy不计产品通过。",
+    "objective": "原30父任务和69工作包按原92场景实现、独立端到端验证并交付报告；未启用团队能力不冒充已认证，未满足required场景不关闭整体目标。",
     "native_option": "auto",
     "activation": "on-execution",
     "completion_acceptance_ids": [
@@ -114,15 +114,7 @@
       "U05",
       "U06",
       "U07",
-      "U08",
-      "OV01",
-      "OV02",
-      "OV03",
-      "OV04",
-      "OV05",
-      "OV06",
-      "OV07",
-      "OV08"
+      "U08"
     ],
     "reuse_existing": true,
     "backend_observation": "Receiving executor must observe actual native goal; current chat goal is not portable",
@@ -3115,283 +3107,88 @@
       "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
     },
     {
-      "id": "V_OV01",
+      "id": "V_P1_6_PONYTAIL_ASSETS",
       "task_ids": [
-        "OVQ",
         "P1_6",
-        "P1_3",
         "VERIFY"
       ],
       "acceptance_ids": [
-        "OV01"
+        "M01",
+        "M02",
+        "B01"
       ],
-      "command": "node tools/verify/delivery-journey.mjs --scenario OV01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/OV01 --json",
-      "expected": "OV01 的冻结 GIVEN/WHEN/THEN 必须真实执行并独立读回；prestudy/native gap 只作基线，不算受管产品通过；缺宿主/权限/工具明确UNVERIFIED且非零。",
+      "command": "node --test test/delivery-cases/1_6.mjs --scenario ponytail-assets --json",
+      "expected": "- **GIVEN** classic-closeout-and-hook-contract.md §7.1 要求固定 Ponytail 实际分发版本与摘要\n- **WHEN** method-profile-manifest 缺 Ponytail 5.3.2 资产条目或缺逐文件 sha256/来源/用途，或 hook 注册分工（插件入口 vs hooks.yaml vs adapter 受管生成）未显式声明\n- **THEN** 检查失败；manifest 必须含 Ponytail 资产快照且不改上游正文/插件缓存。依赖缺失退出非零/UNVERIFIED，不得 skip 转 PASS。",
       "required": true,
       "implementation_status": "PLANNED_NOT_EXECUTED",
-      "observation_scope": "Qualification baseline then integrated managed CLI/role/receipt enforcement; no self-reported marker accepted as trusted pass",
+      "availability": {
+        "implementedBy": "PLANNED_NOT_EXECUTED"
+      },
       "evidence": {
         "data": "required",
-        "screenshots": "not-applicable",
-        "logs": "required"
+        "logs": "required",
+        "screenshots": "not-applicable"
       },
       "not_applicable_reasons": {
-        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+        "screenshots": "CLI/文件级检查：无 UI 面，截图不适用；证据为 manifest 摘要断言与命令日志"
       },
-      "case_module": "test/delivery-cases/overlay.mjs",
-      "conditional_pre_enable": false,
-      "no_conditional_waiver": true,
-      "availability": "TO_IMPLEMENT",
-      "implementedBy": "OVQ",
-      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+      "amendment": "ponytail-supplement-20261020"
     },
     {
-      "id": "V_OV02",
+      "id": "V_P1_2_PLUGIN_REGISTRATION_DIVISION",
       "task_ids": [
-        "OVQ",
-        "P1_6",
-        "P2_1",
-        "P1_5",
-        "VERIFY"
-      ],
-      "acceptance_ids": [
-        "OV02"
-      ],
-      "command": "node tools/verify/delivery-journey.mjs --scenario OV02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/OV02 --json",
-      "expected": "OV02 的冻结 GIVEN/WHEN/THEN 必须真实执行并独立读回；prestudy/native gap 只作基线，不算受管产品通过；缺宿主/权限/工具明确UNVERIFIED且非零。",
-      "required": true,
-      "implementation_status": "PLANNED_NOT_EXECUTED",
-      "observation_scope": "Qualification baseline then integrated managed CLI/role/receipt enforcement; no self-reported marker accepted as trusted pass",
-      "evidence": {
-        "data": "required",
-        "screenshots": "not-applicable",
-        "logs": "required"
-      },
-      "not_applicable_reasons": {
-        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
-      },
-      "case_module": "test/delivery-cases/overlay.mjs",
-      "conditional_pre_enable": false,
-      "no_conditional_waiver": true,
-      "availability": "TO_IMPLEMENT",
-      "implementedBy": "OVQ",
-      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
-    },
-    {
-      "id": "V_OV03",
-      "task_ids": [
-        "I02",
-        "OVQ",
-        "P1_6",
-        "P2_2",
-        "P1_3",
-        "P2_4",
-        "VERIFY"
-      ],
-      "acceptance_ids": [
-        "OV03"
-      ],
-      "command": "node tools/verify/delivery-journey.mjs --scenario OV03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/OV03 --json",
-      "expected": "OV03 的冻结 GIVEN/WHEN/THEN 必须真实执行并独立读回；prestudy/native gap 只作基线，不算受管产品通过；缺宿主/权限/工具明确UNVERIFIED且非零。",
-      "required": true,
-      "implementation_status": "PLANNED_NOT_EXECUTED",
-      "observation_scope": "Qualification baseline then integrated managed CLI/role/receipt enforcement; no self-reported marker accepted as trusted pass",
-      "evidence": {
-        "data": "required",
-        "screenshots": "not-applicable",
-        "logs": "required"
-      },
-      "not_applicable_reasons": {
-        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
-      },
-      "case_module": "test/delivery-cases/overlay.mjs",
-      "conditional_pre_enable": false,
-      "no_conditional_waiver": true,
-      "availability": "TO_IMPLEMENT",
-      "implementedBy": "OVQ",
-      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
-    },
-    {
-      "id": "V_OV04",
-      "task_ids": [
-        "OVQ",
-        "P1_5",
-        "P2_4",
-        "VERIFY"
-      ],
-      "acceptance_ids": [
-        "OV04"
-      ],
-      "command": "node tools/verify/delivery-journey.mjs --scenario OV04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/OV04 --json",
-      "expected": "OV04 的冻结 GIVEN/WHEN/THEN 必须真实执行并独立读回；prestudy/native gap 只作基线，不算受管产品通过；缺宿主/权限/工具明确UNVERIFIED且非零。",
-      "required": true,
-      "implementation_status": "PLANNED_NOT_EXECUTED",
-      "observation_scope": "Qualification baseline then integrated managed CLI/role/receipt enforcement; no self-reported marker accepted as trusted pass",
-      "evidence": {
-        "data": "required",
-        "screenshots": "not-applicable",
-        "logs": "required"
-      },
-      "not_applicable_reasons": {
-        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
-      },
-      "case_module": "test/delivery-cases/overlay.mjs",
-      "conditional_pre_enable": false,
-      "no_conditional_waiver": true,
-      "availability": "TO_IMPLEMENT",
-      "implementedBy": "OVQ",
-      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
-    },
-    {
-      "id": "V_OV05",
-      "task_ids": [
-        "OVQ",
         "P1_2",
-        "P2_1",
-        "P2_2",
-        "P2_4",
         "VERIFY"
       ],
       "acceptance_ids": [
-        "OV05"
+        "F02",
+        "F04",
+        "B09"
       ],
-      "command": "node tools/verify/delivery-journey.mjs --scenario OV05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/OV05 --json",
-      "expected": "OV05 的冻结 GIVEN/WHEN/THEN 必须真实执行并独立读回；prestudy/native gap 只作基线，不算受管产品通过；缺宿主/权限/工具明确UNVERIFIED且非零。",
+      "command": "node --test test/foundation-distribution.test.js test/delivery-cases/1_2.mjs --scenario plugin-registration-division --json",
+      "expected": "- **GIVEN** §7.2 插件生命周期 Hook 由插件入口管理、项目规则来自 hooks.yaml、注册分别管理\n- **WHEN** exporter/adapter 组合视图把插件整套 Hook 复制进项目受管块，或相同事件/命令重复注册\n- **THEN** 拒绝并列出冲突；用户条目保留；不依赖插件与项目 Hook 执行先后获得正确性；adapter 只生成固定事件集，新增事件必须走受管生成逻辑而非 YAML 追加。",
       "required": true,
       "implementation_status": "PLANNED_NOT_EXECUTED",
-      "observation_scope": "Qualification baseline then integrated managed CLI/role/receipt enforcement; no self-reported marker accepted as trusted pass",
+      "availability": {
+        "implementedBy": "PLANNED_NOT_EXECUTED"
+      },
       "evidence": {
         "data": "required",
-        "screenshots": "not-applicable",
-        "logs": "required"
+        "logs": "required",
+        "screenshots": "not-applicable"
       },
       "not_applicable_reasons": {
-        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+        "screenshots": "CLI/文件级检查：无 UI 面，截图不适用；证据为组合视图 diff 断言与命令日志"
       },
-      "case_module": "test/delivery-cases/overlay.mjs",
-      "conditional_pre_enable": false,
-      "no_conditional_waiver": true,
-      "availability": "TO_IMPLEMENT",
-      "implementedBy": "OVQ",
-      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+      "amendment": "ponytail-supplement-20261020"
     },
     {
-      "id": "V_OV06",
+      "id": "V_I02_METHOD_STATE_SCOPE",
       "task_ids": [
         "I02",
-        "OVQ",
-        "P2_4",
-        "P3_3",
         "VERIFY"
       ],
       "acceptance_ids": [
-        "OV06"
+        "A09",
+        "A10",
+        "A11"
       ],
-      "command": "node tools/verify/delivery-journey.mjs --scenario OV06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/OV06 --json",
-      "expected": "OV06 的冻结 GIVEN/WHEN/THEN 必须真实执行并独立读回；prestudy/native gap 只作基线，不算受管产品通过；缺宿主/权限/工具明确UNVERIFIED且非零。",
+      "command": "node --test test/infra-runner-isolation.test.js test/delivery-cases/1_3.mjs --scenario method-state-scope --json",
+      "expected": "- **GIVEN** §6 同仓库并发会话可能共享 mode 文件（最后写入生效），§7.4 要求角色执行使用经验证的独立方法状态作用域\n- **WHEN** worker 角色工作区能读写共享 mode 文件，或以 mode 内容推断角色/权限\n- **THEN** 结构拒绝（mode 文件不进 worker 可写面或不作为身份依据显式声明）；无法隔离时如实标 cooperative-local 限制；有效资产摘要与注入观察分开记录。",
       "required": true,
       "implementation_status": "PLANNED_NOT_EXECUTED",
-      "observation_scope": "Qualification baseline then integrated managed CLI/role/receipt enforcement; no self-reported marker accepted as trusted pass",
+      "availability": {
+        "implementedBy": "PLANNED_NOT_EXECUTED"
+      },
       "evidence": {
         "data": "required",
-        "screenshots": "not-applicable",
-        "logs": "required"
+        "logs": "required",
+        "screenshots": "not-applicable"
       },
       "not_applicable_reasons": {
-        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+        "screenshots": "CLI/文件级检查：无 UI 面，截图不适用；证据为挂载策略断言与命令日志"
       },
-      "case_module": "test/delivery-cases/overlay.mjs",
-      "conditional_pre_enable": false,
-      "no_conditional_waiver": true,
-      "availability": "TO_IMPLEMENT",
-      "implementedBy": "OVQ",
-      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
-    },
-    {
-      "id": "V_OV07",
-      "task_ids": [
-        "OVQ",
-        "P1_5",
-        "VERIFY"
-      ],
-      "acceptance_ids": [
-        "OV07"
-      ],
-      "command": "node tools/verify/delivery-journey.mjs --scenario OV07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/OV07 --json",
-      "expected": "OV07 的冻结 GIVEN/WHEN/THEN 必须真实执行并独立读回；prestudy/native gap 只作基线，不算受管产品通过；缺宿主/权限/工具明确UNVERIFIED且非零。",
-      "required": true,
-      "implementation_status": "PLANNED_NOT_EXECUTED",
-      "observation_scope": "Qualification baseline then integrated managed CLI/role/receipt enforcement; no self-reported marker accepted as trusted pass",
-      "evidence": {
-        "data": "required",
-        "screenshots": "not-applicable",
-        "logs": "required"
-      },
-      "not_applicable_reasons": {
-        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
-      },
-      "case_module": "test/delivery-cases/overlay.mjs",
-      "conditional_pre_enable": false,
-      "no_conditional_waiver": true,
-      "availability": "TO_IMPLEMENT",
-      "implementedBy": "OVQ",
-      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
-    },
-    {
-      "id": "V_OV08",
-      "task_ids": [
-        "I02",
-        "OVQ",
-        "P1_2",
-        "P1_3",
-        "P4_5",
-        "VERIFY"
-      ],
-      "acceptance_ids": [
-        "OV08"
-      ],
-      "command": "node tools/verify/delivery-journey.mjs --scenario OV08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/OV08 --json",
-      "expected": "OV08 的冻结 GIVEN/WHEN/THEN 必须真实执行并独立读回；prestudy/native gap 只作基线，不算受管产品通过；缺宿主/权限/工具明确UNVERIFIED且非零。",
-      "required": true,
-      "implementation_status": "PLANNED_NOT_EXECUTED",
-      "observation_scope": "Qualification baseline then integrated managed CLI/role/receipt enforcement; no self-reported marker accepted as trusted pass",
-      "evidence": {
-        "data": "required",
-        "screenshots": "required",
-        "logs": "required"
-      },
-      "not_applicable_reasons": {},
-      "case_module": "test/delivery-cases/overlay.mjs",
-      "conditional_pre_enable": false,
-      "no_conditional_waiver": true,
-      "availability": "TO_IMPLEMENT",
-      "implementedBy": "OVQ",
-      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
-    },
-    {
-      "id": "V_OVERLAY_REVIEW",
-      "task_ids": [
-        "OVR",
-        "VERIFY"
-      ],
-      "acceptance_ids": [
-        "E03",
-        "E04"
-      ],
-      "command": "python3 .agents/skills/multi-agent-consensus-review/scripts/review_gate.py finalize --manifest openspec/changes/delivery-foundation-rearchitecture/overlay-review/manifest.json --tally openspec/changes/delivery-foundation-rearchitecture/overlay-review/round-00/tally.json --conclusion-file openspec/changes/delivery-foundation-rearchitecture/overlay-review/conclusion.md --next-plan-file openspec/changes/delivery-foundation-rearchitecture/tasks.md --output openspec/changes/delivery-foundation-rearchitecture/overlay-review/final.md",
-      "expected": "当前修订冻结制品、原quorum、阈值、同摘要全票且无blocker；缺票/旧票/未授权披露拒绝，必须解析机械status为PASSED，不能只看命令退出。",
-      "required": true,
-      "evidence": {
-        "data": "required",
-        "screenshots": "not-applicable",
-        "logs": "required"
-      },
-      "not_applicable_reasons": {
-        "screenshots": "本项是冻结制品与机械票据审查，不含UI操作；OV08另需宿主证据。"
-      },
-      "availability": "PREREQUISITE_NOT_CREATED",
-      "implementedBy": "OVR",
-      "implementation_status": "PLANNED_NOT_EXECUTED"
+      "amendment": "ponytail-supplement-20261020"
     }
   ],
   "commands_status": "All scenario runner commands are planned interfaces to implement, not evidence of completed tests.",
@@ -3411,56 +3208,16 @@
   "openspec": {
     "change_id": "delivery-foundation-rearchitecture",
     "policy": "in-change",
-    "baseline_sha256": "605f29e5a53f332a20dd4cb3b89c98f148d2483ae1c6c90056b34af7e4172ad8"
+    "baseline_sha256": "a89cfcf9cde72459df180e7ca11ca9be5b1b402f894f05d82984f5ba8025d86a"
   },
   "verification_runner_invariant": "tools/verify/delivery-journey.mjs is a test action/observer adapter only, not a controller. It cannot own phase, DAG, retries, job lease or auto-recovery; scenario faults/requests enter same Comet, whose persisted state is read back. All92 case recipes retain original WHEN/THEN.",
   "handoff": {
-    "mode": "candidate-replan-not-execution-activation",
+    "mode": "planning-only",
     "recipient": "user-selected other Agent",
     "implementation_dispatched": false,
     "toolkit": "planning-toolkit/manifest.json",
     "method_migration_owner": "P1_6",
     "infrastructure_tasks": 8,
-    "total_nodes": 41,
-    "original_scenarios": 92,
-    "overlay_scenarios": 8,
-    "required_scenarios": 100,
-    "required_checks": 114,
-    "revision": "overlay-first-20261020",
-    "architecture_review": "PENDING_CURRENT_REVISION_OVR",
-    "prestudy": "overlay-prestudy/results.json"
-  },
-  "overlay_reuse": {
-    "kind": "comet-five-phase-overlay",
-    "phase_owner": "original Comet Classic Run",
-    "producer_strategy": "design/plan override only after original schemas and canonical task authority compatibility; control require/augment only",
-    "trust": "sidecar/completedChecks are untrusted submissions, not GateReceipt",
-    "qualification_owner": "OVQ",
-    "remaining_enforcement_owner": "P2_4",
-    "schema_policy": "freeze original and final content; no same-id weakening; project additions use sdd namespace",
-    "method_policy": "no full planner/controller as a required method; Ponytail advisory"
-  },
-  "revision_gate": {
-    "task_id": "OVR",
-    "status": "PENDING",
-    "rule": "Old architecture ballot or structural plan guard does not authorize this revision. Preserve original runtime executor state; receiving controller must acknowledge replan and review before affected dispatch.",
-    "authoritative_document_hashes": {
-      "docs/architecture/delivery-architecture.md": "b13ffce0337ed37484bd2c315a6e36d024ca14a46f317f41323acd6cc006e922",
-      "docs/architecture/adr/0019-delivery-foundation.md": "30cbf458634573ab7e27ef379c1d730194477d2c42131061b93583e4c0336ee0",
-      "openspec/changes/delivery-foundation-rearchitecture/overlay-integration-design.md": "5f77f9ec8504c6c17837202367e987d591c989dba8ce4c1e16eabe9597cb8a2d",
-      "openspec/changes/delivery-foundation-rearchitecture/classic-closeout-and-hook-contract.md": "adf37692f5a443e20901fe618c61be8bdb030f76198fa2391e231211a80ac795",
-      "openspec/changes/delivery-foundation-rearchitecture/classic-integration-design.md": "f4993d10d17bf1a795a5d784cdaabd76fa71a8a1336ea9e9f54a429ec4435b36",
-      "openspec/changes/delivery-foundation-rearchitecture/classic-gate-runtime-contract.md": "92760d9f228504585c5df1df94a95e088d9e9ed688ebc08e09df85a2c3cec399",
-      "openspec/changes/delivery-foundation-rearchitecture/matt-method-profile-migration.md": "31f7b03aeb33f8a936a1af1f0a1c0d8c76daeec11fc78db31112ade46bbf65a3",
-      "openspec/changes/delivery-foundation-rearchitecture/overlay-prestudy/probe.mjs": "9517142cd1ef2dcbee59ad683d4e6bcca3f4b012f115f783afd84cea6ade09c6",
-      "openspec/changes/delivery-foundation-rearchitecture/overlay-prestudy/results.json": "cae8833ab27dc7d79a67eefe79e115d6b291e5261849d7deefbb01f9a6268096"
-    },
-    "document_hash_check": "Receiving controller compares these byte digests before OVR artifact freeze, dispatch and acceptance; stock plan_guard covers its declared frozen inputs only.",
-    "documentation_clarification": {
-      "id": "node-infra-wiring-20261020-6cc270cf",
-      "scope": "Node/CLI/MCP/Hook/Runner mapping and existing pilot qualification; no task/scenario/authorization change",
-      "previous_bundle": ".local/plan-history/node-infra-wiring-20261020-6cc270cf",
-      "review_status": "OVR remains pending"
-    }
+    "total_nodes": 39
   }
 }

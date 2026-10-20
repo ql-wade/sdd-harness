@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "HALTED_PENDING_USER_REPLAN_DECISION",
+  "status": "IMPLEMENTATION_ACTIVE",
   "objective": "按照我们架构，端到端完成验证，出具验证报告",
   "target_controller": "Comet Classic",
   "implementation_executor": {
@@ -78,7 +78,7 @@
     "timezone": "Asia/Shanghai",
     "reason": "Receiving executor qualifies actual host, resources and throughput before estimating implementation"
   },
-  "updated_at": "2026-10-20T08:26:57.923567+00:00",
+  "updated_at": "2026-10-20T09:25:20.613544+00:00",
   "preparatory_checks": {
     "scaffold_scoped_tests": "41/41 PASS",
     "scaffold_npm_test": "41/41 PASS on Node22.13.1",
@@ -103,7 +103,7 @@
     "Resume existing monitor sdd; never create duplicate monitor",
     "Continue original full goal, do not mark 92 scenarios accepted from baseline tests"
   ],
-  "last_progress_at": "2026-10-20T08:26:57.923567+00:00",
+  "last_progress_at": "2026-10-20T09:25:20.613544+00:00",
   "authorization_blocker_audit": {
     "consecutive_goal_turns": 0,
     "decision_received": true,
@@ -148,7 +148,7 @@
     "status": "active"
   },
   "run_started_at": "2026-10-20T03:04:53.456337+00:00",
-  "status_revision": 21,
+  "status_revision": 24,
   "lifecycle_guard": {
     "skill": "openspec-lifecycle-guard",
     "path": "/Users/mac/.claude/skills/openspec-lifecycle-guard/SKILL.md",
@@ -290,7 +290,11 @@
         "report": "a007bfc"
       },
       "merged_to_master": "c9c3b18",
-      "review": "worker-reports/P1_6.review.json (APPROVED, 0 blocking)"
+      "review": "worker-reports/P1_6.review.json (APPROVED, 0 blocking)",
+      "supplement_delta": {
+        "check": "Ponytail 5.3.2 资产快照 + 注册分工声明 (V_P1_6_PONYTAIL_ASSETS)",
+        "status": "REPAIR_DISPATCHED"
+      }
     },
     "P1_2": {
       "status": "ACCEPTED",
@@ -311,7 +315,11 @@
       },
       "merged_to_master": "83034d4",
       "regression": "npm test 125/125 + delivery-cases 23 pass/2 env-skip on merged master",
-      "review": "worker-reports/P1_2.review.json (APPROVED, 0 blocking)"
+      "review": "worker-reports/P1_2.review.json (APPROVED, 0 blocking)",
+      "supplement_delta": {
+        "check": "插件/项目注册分工去重门 (V_P1_2_PLUGIN_REGISTRATION_DIVISION)",
+        "status": "REPAIR_DISPATCHED"
+      }
     },
     "P2_2": {
       "status": "ACCEPTED",
@@ -361,7 +369,10 @@
         ],
         "result": "13/13; npm test 185/185 on merged master 10b37bf; integration acceptance complete"
       },
-      "supplement_delta": "Ponytail 补充 §8 I02 细化（方法状态作用域）待 replan 决定后 delta-review"
+      "supplement_delta": {
+        "check": "方法状态作用域声明 (V_I02_METHOD_STATE_SCOPE)",
+        "status": "REPAIR_DISPATCHED"
+      }
     },
     "P2_3": {
       "status": "ACCEPTED",
@@ -423,6 +434,35 @@
       },
       "merged_to_master": "67191f1",
       "review": "worker-reports/I04.review.json (APPROVED, 0 blocking)"
+    },
+    "P1_3": {
+      "status": "ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ],
+      "commits": {
+        "tests": "6e7f9eb",
+        "implementation": "d19c633",
+        "report": "9293977",
+        "review_fix": "1987d71"
+      },
+      "merged_to_master": "c7c9d84",
+      "regression": "npm test 218/218 + delivery-cases 46 pass/1 env-skip (in .sdd-equipped worktree)",
+      "review": "worker-reports/P1_3.review.json (1 blocking -> fixed 1987d71)",
+      "unverified_within_boundary": [
+        "OV08 三方共存全量 -> 真实宿主集成/P1_4 承接",
+        "MCP 真实 server 渠道 -> 白盒宿主",
+        "宿主新会话 hook 轨迹 -> 宿主验证",
+        "上游全量 vitest",
+        "Kp 上游原生强制 -> 0003 patch seam"
+      ]
     }
   },
   "environment_notes": [
@@ -441,6 +481,10 @@
     {
       "note": "external parallel session continues editing main-checkout files: ADR-0019 overlay, delivery-architecture.md planning table, test/delivery-cases/2_2.mjs (P2_2-owned) — uncommitted, not in this run branch; included in pending user adjudication",
       "recorded_at": "2026-10-20T08:01:29.650746+00:00"
+    },
+    {
+      "note": "1_3.mjs setup hard-depends on .sdd prepared source+patched build (fails fast with instruction); comet-dependent regression must run in .sdd-equipped worktree (impl-p1-3 has it)",
+      "recorded_at": "2026-10-20T09:25:20.613544+00:00"
     }
   ],
   "open_decisions": [
@@ -464,27 +508,10 @@
     }
   ],
   "halt": {
-    "raised_at": "2026-10-20T07:07:53.971911+00:00",
-    "cause": "frozen architecture.md drifted post-freeze (external Ponytail supplement swept into 21923be by controller add -A; classic-closeout-and-hook-contract.md §6-8 expanded likewise)",
-    "plan_guard": "DRIFT: architecture_sha256 mismatch + OPENSPEC_LIFECYCLE SOURCE_DRIFT (exit 1) — matches the supplement self-description",
-    "preserved": "old drift-lock + all evidence in history; completed-task commits intact",
-    "affected": {
-      "done_needs_delta_review": [
-        "P1_6",
-        "P1_2",
-        "I02"
-      ],
-      "pending_refinement": [
-        "P4_5"
-      ],
-      "unaffected_ongoing": [
-        "P2_3 integration"
-      ]
-    },
-    "new_dispatches": "suspended until user decision",
-    "options": [
-      "A: accept supplement -> controller runs documented mini-replan (refine P1_6/P1_2/I02/P4_5 boundaries in tasks/DAG/contract, re-freeze, delta-review 3 done tasks, resume)",
-      "B: reject -> restore frozen architecture.md 8bd5316, supplement stays as unaccepted docs, resume original plan"
-    ]
+    "resolved_at": "2026-10-20T09:08:28.078488+00:00",
+    "resolution": "A (accept supplement)",
+    "refreeze": "complete — plan_guard exit 0; contract 108 checks (105+3 delta); spec-baseline re-frozen; plan/dag restored to frozen structure + 60 evidenced flips",
+    "remaining": "delta-review/repair for P1_6/P1_2/I02 dispatched; overlay corpus cleanup in progress",
+    "delta": "A 接纳后的 delta 修复已全部派发"
   }
 }
