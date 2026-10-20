@@ -1,0 +1,159 @@
+{
+  "task": "I05",
+  "task_title": "自托管deepwiki-open及独立CodeGraph",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/i05-code-knowledge",
+  "base_commit": "10b37bf",
+  "status": "DONE",
+  "implementation_commit": "9458bfd",
+  "red_cases": [
+    {
+      "case": "pre-implementation RED (V_INFRA_I05 suite against absent domain files and CLI)",
+      "actually_failed": true,
+      "evidence": "evidence/red-node-test.txt — node --test test/infra-code-knowledge.test.js exit=1, 14/14 failed, 0 skipped (domain files and tools/infra/code-knowledge.mjs did not exist)"
+    },
+    {
+      "case": "pre-implementation CLI probes (validate/qualify/up/probe entry points absent)",
+      "actually_failed": true,
+      "evidence": "evidence/red-cli.txt — all five node tools/infra/code-knowledge.mjs invocations exit=1 with MODULE_NOT_FOUND"
+    },
+    {
+      "case": "up refuses while images.lock has no authenticated digest (committed state; nothing fabricated)",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'RED image gate: images.lock without any authenticated digest refuses up': up exit=2 refused=true error=UP_REFUSED_IMAGES_LOCK_NOT_READY: 2 component images lack an authenticated digest; committed lock has reference=null digest=null status=UNVERIFIED for codewiki-app/codegraph, upGate.enabled=false — no tag/digest/version invented (evidence/green-cli.txt up exit=2)"
+    },
+    {
+      "case": "floating tag / malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED",
+      "actually_failed": true,
+      "evidence": "tests 'RED image gate: floating tag is rejected' (fixture :latest -> exit=2 FLOATING_TAG_FORBIDDEN) and 'RED image gate: malformed digest...' (sha256:deadbeef -> DIGEST_FORMAT_INVALID; fixture format-valid digest with digestAuthenticated=false keeps qualify image-digest-authenticated UNVERIFIED and up still exit=2 UP_REFUSED_IMAGES_LOCK_NOT_READY) — fixture-only probe values, never committed"
+    },
+    {
+      "case": "unpinned commit / unauthorized source / wrong project source refuse startup and ingest",
+      "actually_failed": true,
+      "evidence": "test 'RED source scope gate...': committed deny-by-default scope with zero approved sources + fixture with both digests authenticated -> up exit=2 UP_REFUSED_SOURCE_SCOPE_NOT_AUTHORIZED; approved entry with project=pav-legacy -> exit=2 CROSS_PROJECT_SOURCE; commit=null -> SOURCE_COMMIT_NOT_PINNED; immutableId=null -> SOURCE_IMMUTABLE_ID_MISSING"
+    },
+    {
+      "case": "sensitive code via public hosted service substitute is policy-forbidden",
+      "actually_failed": true,
+      "evidence": "test 'RED substitute gate...': deepwiki-profile.service.publicHostedServiceSubstitute=true -> exit=2 PUBLIC_SERVICE_SUBSTITUTE_FORBIDDEN; repository-scope.scope.publicHostedServiceSubstitute.allowed=true -> exit=2 PUBLIC_SERVICE_SUBSTITUTE_FORBIDDEN"
+    },
+    {
+      "case": "wiki generation failure / stale commit / foreign index / undecided language policy never report freshness pass",
+      "actually_failed": true,
+      "evidence": "test 'RED freshness gate...' via probe pinned-code-wiki --manifest (tmp fixtures): generation.status=failed -> freshness.passed=false GENERATION_NOT_CONFIRMED; commit mismatch vs approved pinned commit -> COMMIT_MISMATCH_STALE; immutableId outside approved scope -> SOURCE_NOT_AUTHORIZED; perfect manifest under undecided policy (maxCommitAgeDays/languageCoverageMin null) -> FRESHNESS_POLICY_UNSET fail-closed; unparseable manifest -> exit=1"
+    },
+    {
+      "case": "graph deletion/deactivation keeps the correctness protocol executable (real re-run, not flag text)",
+      "actually_failed": true,
+      "evidence": "test 'CodeGraph.v1: removable optimization...': committed graph enabled=false -> probe graph-disabled-correctness exit=0 executed=true with observedStep 'main validation chain re-run' violations=0; fixture enabled=true -> probe still exit=0 (orthogonality); gateAuthority=true -> validate exit=2 GRAPH_GATE_AUTHORITY_FORBIDDEN; knowledgeAuthority=true -> GRAPH_KNOWLEDGE_AUTHORITY_FORBIDDEN; removable=false -> GRAPH_REMOVABILITY_REQUIRED"
+    },
+    {
+      "case": "repository-scope missing or cross-project refs are rejected; I01 catalog gaps explicit",
+      "actually_failed": true,
+      "evidence": "missing repository-scope.json -> exit=1 (input/prerequisite); pav-legacy credentialRefs -> exit=2 CROSS_PROJECT_REF; committed validate reports codewiki-source-read + codegraph-source-read as catalogGaps (I01-owned registration pending) while codewiki-provider is not a gap; synthetic refs-catalog removal keeps gap reporting (test 'gap-reporting behavior...')"
+    },
+    {
+      "case": "compose gates: non-loopback port, concrete image tag, host bind mount rejected",
+      "actually_failed": true,
+      "evidence": "test 'compose declaration gate...': 7400:7400 -> exit=2 PORT_BINDING_NOT_LOOPBACK; image ghcr.io/example/deepwiki-open:latest -> COMPOSE_IMAGE_NOT_LOCK_RESOLVED; appended /Users/example/data:/data -> HOST_MOUNT_FORBIDDEN"
+    },
+    {
+      "case": "probes must not mock-green or skip without runtime evidence",
+      "actually_failed": true,
+      "evidence": "pre-implementation no implementation existed (14/14 fail); post-GREEN: pinned-code-wiki bare exit=2 executed=false status=UNVERIFIED with requiredInputs+plannedSteps and no \"skip\": true; --endpoint unreachable records a real GET attempt with raw connection error and stays UNVERIFIED exit=2 (test 'probes are real subcommands...')"
+    }
+  ],
+  "green_summary": {
+    "CodeKnowledgeInfra.v1": "tools/infra/code-knowledge.mjs validate|qualify|up|probe. Exit contract 0=PASS / 1=input-or-prerequisite / 2=verification-failure (execution-contract V_INFRA_I05.cli_contract), fail-closed loads, displayPath/redactHostPaths on every structured field, no host paths in any receipt. validate checks all five domain files: lock component coverage/floating tag/digest format/auth-flag/upGate-closed, CodeWiki profile policies (selfhost-only, pinned-upstream-on-selection, manifest, freshness commit-pin, authenticated API/MCP readback), CodeGraph profile invariants (removable, no gate/knowledge authority, structure-only, commit-pin, fresh-pull rebuild, no autofeed to Outline/LLMWiki), repository-scope policies (deny-by-default, no public substitute, ingest-requires-authorization, per-entry project/immutableId/commit/grantRef), cross-project refs, JSON safety scan, compose declaration gate. qualify evaluates 10 evidence categories on the VERIFIED/RECORDED/UNVERIFIED ladder and exits 2 NOT_READY with per-category reasons; receipt binds sha256 of registry + all five domain files. up refuses through a gate chain: UP_REFUSED_IMAGES_LOCK_NOT_READY (2 unauthenticated components) -> UP_REFUSED_SOURCE_SCOPE_NOT_AUTHORIZED (deny-by-default, 0 authorized sources) -> UP_NOT_AUTHORIZED (closed upGate) -> UP_REFUSED_CONTAINER_DAEMON_UNREACHABLE (sandbox EPERM observed) -> UP_NOT_EXECUTED; no path to a fake launch. Probes are real subcommands: pinned-code-wiki evaluates a --manifest against the approved scope for real (freshness verdicts are facts; outer gate judges per policy) and genuinely attempts --endpoint reachability; graph-disabled-correctness re-runs the full main validation chain locally and reports the real violation count (exit 0 only when the chain is green).",
+    "CodeWiki.v1": "infra/delivery/code-knowledge/deepwiki-profile.json + repository-scope.json carry interface CodeWiki.v1. deepwiki-profile: service.kind=selfhost-deepwiki-open, publicHostedServiceSubstitute=false (flip = structural violation), upstream repository/commit/release/license null with status UNSELECTED (deepwiki-open upstream unselected — nothing fabricated; claiming SELECTED without a pinned commit is rejected), provider credentialRef=secret-ref:sdd-harness-pilot/codewiki-provider + sourceReadCredentialRef=secret-ref:sdd-harness-pilot/codewiki-source-read referenced only (noTokenBorrowing=true), generation.manifestRequired=true with freshness FAIL_CLOSED (maxCommitAgeDays=null, languageCoverageMin=null: undecided pilot language/repo-scale/update policy can never report pass), access.apiAuthRequired+mcpReadbackRequired=true. repository-scope: denyByDefault=true, approvedSources=[] (authorizationEvidence UNAUTHORIZED — grants must be issued by authorized principals, this task does not self-sign), entry contract immutableID + 40-hex pinned commit + purpose-bound grantRef + project binding; foreign project entries, unpinned commits, missing immutableIds and missing grantRefs are each rejected with distinct codes.",
+    "CodeGraph.v1": "infra/delivery/code-knowledge/graph-profile.json carries interface CodeGraph.v1: enabled=false (DISABLED) as the committed state, removableOptimization {removable=true, gateAuthority=false, knowledgeAuthority=false} (any authority flip or removability removal is a structural violation), source.structureOnly=true with inputCommitPinRequired=true and coverage.requiredFields [inputCommit, filesIndexed, languages, symbols] (status UNVERIFIED — requires a live component; not claimed while disabled), lifecycle {separateLifecycleFromWiki=true, rebuildRequiresFreshPull=true, noAutoFeedOutlineOrLlmWiki=true}. Correctness independence is enforced by the real local probe: graph-disabled-correctness re-executes the main validation chain and exits 0 only when green with graph disabled; the enabled=true fixture proves orthogonality (chain stays green either way)."
+  },
+  "commands": [
+    {
+      "cmd": "node --test test/infra-code-knowledge.test.js",
+      "exit_code": 0,
+      "summary": "V_INFRA_I05 contract: 14 tests, 14 pass, 0 fail, 0 skipped (evidence/green-node-test.txt)"
+    },
+    {
+      "cmd": "node tools/infra/code-knowledge.mjs validate --registry infra/delivery/registry.json --json",
+      "exit_code": 0,
+      "summary": "ok=true, violations=[], catalogGaps=[secret-ref:sdd-harness-pilot/codewiki-source-read, secret-ref:sdd-harness-pilot/codegraph-source-read] (honest I01-owned gaps), wiki+graph+scope summaries present, no host paths in output"
+    },
+    {
+      "cmd": "node tools/infra/code-knowledge.mjs qualify --registry infra/delivery/registry.json --json",
+      "exit_code": 2,
+      "summary": "ready=false, 9 UNVERIFIED + 1 RECORDED categories with exact reasons (image-digest-authenticated, upstream-release-selected, source-authorization, secret-refs-registered, credentials-provisioned, wiki-generation-manifest, wiki-freshness, api-mcp-readback, backup-compatibility; graph-optional-disabled RECORDED); receipt binds input sha256s; exit 2 is the designed NOT_READY contract"
+    },
+    {
+      "cmd": "node tools/infra/code-knowledge.mjs up --registry infra/delivery/registry.json --json",
+      "exit_code": 2,
+      "summary": "refused=true, UP_REFUSED_IMAGES_LOCK_NOT_READY: 2 component images lack an authenticated digest (upstream releases UNSELECTED)"
+    },
+    {
+      "cmd": "node tools/infra/code-knowledge.mjs probe --case pinned-code-wiki --registry infra/delivery/registry.json --json",
+      "exit_code": 2,
+      "summary": "executed=false, status=UNVERIFIED, exact reason (no live self-hosted endpoint; freshness requires real authenticated API/MCP readback), 4 requiredInputs, 5 plannedSteps"
+    },
+    {
+      "cmd": "node tools/infra/code-knowledge.mjs probe --case graph-disabled-correctness --registry infra/delivery/registry.json --json",
+      "exit_code": 0,
+      "summary": "executed=true, status=VERIFIED: committed graph disabled, main validation chain re-run for real with violations=0 — the graph-off correctness oracle holds locally"
+    },
+    {
+      "cmd": "npm test",
+      "exit_code": 0,
+      "summary": "full suite: 199 tests, 199 pass, 0 fail, 0 skipped (baseline 185 + 14 new) (evidence/npm-test.txt)"
+    }
+  ],
+  "unverified": [
+    {
+      "item": "image-digest-authenticated + upstream-release-selected: deepwiki-open upstream repository/commit/release, image digests, license, startup/API contract",
+      "successor": "resource admission owner (I05 upstream selection decision + registry qualification I01); must be verified at execution time before upGate can open"
+    },
+    {
+      "item": "source-authorization: no approved source; codewiki-source-read / codegraph-source-read not yet registered in the I01 secrets catalog and all 3 refs NOT_PROVISIONED",
+      "successor": "I01 catalog registration update + authorized grant issuers; ingest/startup refuse until an approved source with immutableID + pinned commit exists"
+    },
+    {
+      "item": "wiki-generation-manifest / wiki-freshness: no real generation; freshness policy thresholds undecided (maxCommitAgeDays/languageCoverageMin null, fail-closed)",
+      "successor": "pilot policy decision owner (language/repo-scale/update strategy) then execution-time generation + probe pinned-code-wiki --manifest with a live endpoint"
+    },
+    {
+      "item": "api-mcp-readback: no live self-hosted instance; private auth/pagination/version-exposure capabilities unproven",
+      "successor": "runtime admission (after upGate opens); probe pinned-code-wiki --endpoint <url> is ready to run against the real stack"
+    },
+    {
+      "item": "graph coverage evidence: graph is disabled by design; coverage required fields stay UNVERIFIED until a live component runs",
+      "successor": "optional CodeGraph enablement decision; correctness protocol does not depend on it (proven by graph-disabled-correctness)"
+    },
+    {
+      "item": "backup-compatibility: no restore drill for generation policy/source versions/authorization mapping and required wiki artifacts",
+      "successor": "lifecycle/backup owner; rebuild of graph must re-pull under current permissions (declared, unverified)"
+    }
+  ],
+  "files_changed": [
+    "infra/delivery/code-knowledge/compose.yaml",
+    "infra/delivery/code-knowledge/images.lock.json",
+    "infra/delivery/code-knowledge/deepwiki-profile.json",
+    "infra/delivery/code-knowledge/graph-profile.json",
+    "infra/delivery/code-knowledge/repository-scope.json",
+    "tools/infra/code-knowledge.mjs",
+    "test/infra-code-knowledge.test.js",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I05.json",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I05/evidence/red-node-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I05/evidence/red-cli.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I05/evidence/green-node-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I05/evidence/green-cli.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I05/evidence/npm-test.txt"
+  ],
+  "commits": {
+    "tests": "0a60d93",
+    "implementation": "9458bfd",
+    "report": "carried by HEAD of impl/i05-code-knowledge (report commit cff3083, amended once for hash fixup; see git log)"
+  },
+  "blockers_or_questions": [
+    "Session tooling note (transparency): this subagent's Write/Edit tools were hook-anchored to the launching worktree and could not target impl-i05; EnterWorktree refused because the agent cwd is the repo root. The directory was granted through the sanctioned request_directory flow (OS sandbox now allowlists impl-i05 for writes), and all files were created via sandboxed Bash heredocs inside the designated worktree only. No file outside impl-i05 and the mandated worker-report/evidence paths was touched; nothing was pushed.",
+    "I01-owned follow-up: secrets.refs.example.json needs codewiki-source-read and codegraph-source-read registrations (both referenced by committed domain files and reported as catalogGaps; validate stays exit 0 with gaps explicit, mirroring the outline-app-session precedent).",
+    "deepwiki-open upstream remains UNSELECTED per plan; no tag/digest/version was invented anywhere in committed files (fixture-only probe values in tmp)."
+  ]
+}

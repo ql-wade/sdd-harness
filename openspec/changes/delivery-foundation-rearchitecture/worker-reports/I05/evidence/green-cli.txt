@@ -1,0 +1,48 @@
+=== V_INFRA_I05 GREEN verification matrix ===
+
+$ node --test test/infra-code-knowledge.test.js
+# tests 14
+# pass 14
+# fail 0
+# skipped 0
+exit=0
+
+$ node tools/infra/code-knowledge.mjs validate --registry infra/delivery/registry.json --json
+  "ok": true,
+      "status": "UNSELECTED",
+    "status": "DISABLED",
+exit=0
+
+$ node tools/infra/code-knowledge.mjs qualify --registry infra/delivery/registry.json --json
+  "ready": false,
+      "status": "UNVERIFIED",
+      "status": "UNVERIFIED",
+      "status": "UNVERIFIED",
+      "status": "UNVERIFIED",
+      "status": "UNVERIFIED",
+      "status": "UNVERIFIED",
+      "status": "UNVERIFIED",
+exit=2
+
+$ node tools/infra/code-knowledge.mjs up --registry infra/delivery/registry.json --json
+  "refused": true,
+  "ready": false,
+  "error": "UP_REFUSED_IMAGES_LOCK_NOT_READY: 2 component images lack an authenticated digest (upstream releases are UNSELECTED; inventing tags/digests/versions is forbidden)",
+      "status": "UNVERIFIED",
+      "status": "UNVERIFIED",
+    "ready": false,
+        "status": "UNVERIFIED",
+        "status": "UNVERIFIED",
+exit=2
+
+$ node tools/infra/code-knowledge.mjs probe --case pinned-code-wiki --registry infra/delivery/registry.json --json
+  "executed": false,
+  "status": "UNVERIFIED",
+exit=2
+
+$ node tools/infra/code-knowledge.mjs probe --case graph-disabled-correctness --registry infra/delivery/registry.json --json
+  "executed": true,
+  "status": "VERIFIED",
+      "status": "VERIFIED",
+      "status": "VERIFIED",
+exit=0
