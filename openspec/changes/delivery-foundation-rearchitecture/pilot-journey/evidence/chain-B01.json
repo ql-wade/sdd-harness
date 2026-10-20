@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "tool": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/run-role-chain.mjs",
+  "scenario": "B01",
+  "variant": null,
+  "runId": "p32-989bb8c137a2",
+  "controller": {
+    "runnerId": "comet-classic"
+  },
+  "environment": "pilot-role-chain-local-tmpdir",
+  "toolchain": "node v22.13.1",
+  "policy": {
+    "ref": "policy/managed-pilot",
+    "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+  },
+  "plan": {
+    "ok": true,
+    "errors": [],
+    "bundle": {
+      "schemaVersion": 1,
+      "change": "pilot-role-chain-fixture",
+      "schedulerOwner": "comet-classic",
+      "tasks": [
+        {
+          "id": "t1"
+        },
+        {
+          "id": "t2",
+          "dependsOn": [
+            "t1"
+          ]
+        },
+        {
+          "id": "t3",
+          "dependsOn": [
+            "t2"
+          ]
+        }
+      ],
+      "allowedPaths": [
+        "test/",
+        "src/",
+        "probe/",
+        "artifacts/",
+        "state/"
+      ],
+      "worktree": "fixture",
+      "acceptanceRefs": [
+        "B01"
+      ]
+    },
+    "rolePaths": {
+      "planner": [],
+      "test-author": [
+        "test/",
+        "artifacts/"
+      ],
+      "builder": [
+        "src/",
+        "state/",
+        "artifacts/"
+      ],
+      "whitebox": [
+        "probe/",
+        "artifacts/"
+      ]
+    }
+  },
+  "candidate": {
+    "file": "src/feature.js",
+    "digestBefore": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+    "digestAfter": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84"
+  },
+  "frozenTests": [],
+  "runState": {
+    "file": "control/run-state.json",
+    "digestBefore": null,
+    "digestAfter": null,
+    "unchanged": true
+  },
+  "transitions": [
+    {
+      "seq": 1,
+      "role": "planner",
+      "driver": {
+        "id": "pilot-planner",
+        "kind": "read-only"
+      },
+      "action": "plan",
+      "inputSummary": "plan-only request: plan-bundle.json",
+      "verdict": "plan-bundle-emitted",
+      "basis": {
+        "kind": "plan-only",
+        "note": "the only output is the validated PlanBundle (pilot-role-chain-fixture); no dispatch, no monitoring, no run-state write"
+      }
+    }
+  ],
+  "dispatchLedger": [],
+  "refusals": [
+    {
+      "where": "driver-write",
+      "code": "DRIVER_WRITE_REFUSED",
+      "reason": "driver pilot-planner is a read-only observer; product write requires the verified managed write executor (F05)"
+    },
+    {
+      "where": "runner-dispatch",
+      "code": "RUNNER_PHASE_FIELD_REFUSED",
+      "reason": "dispatch binding carries phase; the runner stores no phase and control state belongs to the single Runtime — there is no phase write surface on the runner"
+    }
+  ],
+  "admitted": [],
+  "gate": null,
+  "gatePhases": {},
+  "gateStale": null,
+  "gaps": [],
+  "probes": [],
+  "sessions": [],
+  "capabilityInventory": [],
+  "checkpoints": [
+    {
+      "id": "plan-validated",
+      "ok": true,
+      "detail": "PlanBundle v1 validates"
+    },
+    {
+      "id": "read-only-refused",
+      "ok": true,
+      "detail": "driver pilot-planner is a read-only observer; product write requires the verified managed write executor (F05)"
+    },
+    {
+      "id": "phase-field-refused",
+      "ok": true,
+      "detail": "dispatch binding carries phase; the runner stores no phase and control state belongs to the single Runtime — there is no phase write surface on the runner"
+    },
+    {
+      "id": "no-dispatch",
+      "ok": true,
+      "detail": "dispatch ledger length 0"
+    },
+    {
+      "id": "run-state-unchanged",
+      "ok": true,
+      "detail": "a plan-only request persists no control state (byte-level oracle)"
+    }
+  ],
+  "journey": "plan-only-observed",
+  "verdict": "OBSERVED",
+  "finishedAt": "2026-10-20T17:16:26.529Z"
+}

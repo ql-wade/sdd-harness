@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "tool": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/run-role-chain.mjs",
+  "scenario": "A15",
+  "variant": "persisted",
+  "runId": "p32-3ff25ba20e11",
+  "controller": {
+    "runnerId": "comet-classic"
+  },
+  "environment": "pilot-role-chain-local-tmpdir",
+  "toolchain": "node v22.13.1",
+  "policy": {
+    "ref": "policy/managed-pilot",
+    "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+  },
+  "plan": {
+    "ok": true,
+    "errors": [],
+    "bundle": {
+      "schemaVersion": 1,
+      "change": "pilot-role-chain-fixture",
+      "schedulerOwner": "comet-classic",
+      "tasks": [
+        {
+          "id": "t1"
+        },
+        {
+          "id": "t2",
+          "dependsOn": [
+            "t1"
+          ]
+        },
+        {
+          "id": "t3",
+          "dependsOn": [
+            "t2"
+          ]
+        }
+      ],
+      "allowedPaths": [
+        "test/",
+        "src/",
+        "probe/",
+        "artifacts/",
+        "state/"
+      ],
+      "worktree": "fixture",
+      "acceptanceRefs": [
+        "B01"
+      ]
+    },
+    "rolePaths": {
+      "planner": [],
+      "test-author": [
+        "test/",
+        "artifacts/"
+      ],
+      "builder": [
+        "src/",
+        "state/",
+        "artifacts/"
+      ],
+      "whitebox": [
+        "probe/",
+        "artifacts/"
+      ]
+    }
+  },
+  "candidate": {
+    "file": "src/feature.js",
+    "digestBefore": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+    "digestAfter": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84"
+  },
+  "frozenTests": [],
+  "runState": {
+    "file": "control/run-state.json",
+    "digestBefore": "7805fcc57a77eb0c51f55df1802c27c67a185ba235b6b0874c0a727ba821d9df",
+    "digestAfter": "584193289e301a4702b3c70a4d91b75cca2a39fd6fb70d83686b55f6fb667bb4",
+    "unchanged": false
+  },
+  "transitions": [
+    {
+      "seq": 1,
+      "role": "builder",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "save-claim",
+      "inputSummary": "write state/saved-state.json (sha256 6088dbf9cc2a62967c377b5ccfb7d3330e32f931073c551491c917a183a72aec)",
+      "verdict": "claim-success",
+      "basis": {
+        "kind": "claim",
+        "note": "the builder reports save success"
+      }
+    },
+    {
+      "seq": 2,
+      "role": "whitebox",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "independent-readback",
+      "inputSummary": {
+        "file": "state/saved-state.json"
+      },
+      "verdict": "ok",
+      "basis": {
+        "kind": "persisted",
+        "note": "the claimed save is on disk"
+      },
+      "artifacts": [
+        {
+          "uri": "artifacts/a15-readback-ok.json",
+          "sha256": "6088dbf9cc2a62967c377b5ccfb7d3330e32f931073c551491c917a183a72aec"
+        }
+      ]
+    }
+  ],
+  "dispatchLedger": [],
+  "refusals": [],
+  "admitted": [],
+  "gate": null,
+  "gatePhases": {},
+  "gateStale": null,
+  "gaps": [],
+  "probes": [],
+  "sessions": [],
+  "capabilityInventory": [],
+  "checkpoints": [
+    {
+      "id": "plan-validated",
+      "ok": true,
+      "detail": "PlanBundle v1 validates"
+    },
+    {
+      "id": "persisted-readback",
+      "ok": true,
+      "detail": "the readback digest matches the real bytes"
+    }
+  ],
+  "journey": "persisted-readback-ok",
+  "verdict": "OBSERVED",
+  "finishedAt": "2026-10-20T17:16:28.731Z"
+}

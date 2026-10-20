@@ -1,0 +1,338 @@
+{
+  "schemaVersion": 1,
+  "tool": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/run-role-chain.mjs",
+  "scenario": "B05",
+  "variant": null,
+  "runId": "p32-75d1bd67d7e9",
+  "controller": {
+    "runnerId": "comet-classic"
+  },
+  "environment": "pilot-role-chain-local-tmpdir",
+  "toolchain": "node v22.13.1",
+  "policy": {
+    "ref": "policy/managed-pilot",
+    "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+  },
+  "plan": {
+    "ok": true,
+    "errors": [],
+    "bundle": {
+      "schemaVersion": 1,
+      "change": "pilot-role-chain-fixture",
+      "schedulerOwner": "comet-classic",
+      "tasks": [
+        {
+          "id": "t1"
+        },
+        {
+          "id": "t2",
+          "dependsOn": [
+            "t1"
+          ]
+        },
+        {
+          "id": "t3",
+          "dependsOn": [
+            "t2"
+          ]
+        }
+      ],
+      "allowedPaths": [
+        "test/",
+        "src/",
+        "probe/",
+        "artifacts/",
+        "state/"
+      ],
+      "worktree": "fixture",
+      "acceptanceRefs": [
+        "B01"
+      ]
+    },
+    "rolePaths": {
+      "planner": [],
+      "test-author": [
+        "test/",
+        "artifacts/"
+      ],
+      "builder": [
+        "src/",
+        "state/",
+        "artifacts/"
+      ],
+      "whitebox": [
+        "probe/",
+        "artifacts/"
+      ]
+    }
+  },
+  "candidate": {
+    "file": "src/feature.js",
+    "digestBefore": "0760af27a64fb65aaded49e6f3d3788290a03c2752f7f28d2ba31b56fa2db5ef",
+    "digestAfter": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84"
+  },
+  "frozenTests": [],
+  "runState": {
+    "file": "control/run-state.json",
+    "digestBefore": null,
+    "digestAfter": "8337b644ad1efb198640c3352fcb9c240bdf4f19ea7dc4a5ea1c0acbbbaba88a",
+    "unchanged": false
+  },
+  "transitions": [
+    {
+      "seq": 1,
+      "role": "whitebox",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "verify-candidate",
+      "inputSummary": {
+        "candidate": "0760af27a64fb65aaded49e6f3d3788290a03c2752f7f28d2ba31b56fa2db5ef",
+        "suite": "test/feature.strong.test.js"
+      },
+      "verdict": "red",
+      "basis": {
+        "kind": "behavior-red",
+        "note": "product defect: slugify violates the AC on candidate v1"
+      },
+      "dispatch": {
+        "execution": "exec-whitebox-1",
+        "role": "verifier",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "unit:slugify",
+        "inputDigest": "0760af27a64fb65aaded49e6f3d3788290a03c2752f7f28d2ba31b56fa2db5ef",
+        "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+        "integrity": "8a95cf0bee6b130dcb15e807282507c8d0904ae964b70edf49d25cea480cd7e8"
+      },
+      "artifacts": [
+        {
+          "uri": "artifacts/b05-whitebox-v1.tap.txt",
+          "sha256": "88fa43584ec21d857c5342d03b395f9d40213879b107f6a1b3a5739202f91bbb"
+        }
+      ]
+    },
+    {
+      "seq": 2,
+      "role": "whitebox",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "route",
+      "inputSummary": {
+        "red": true,
+        "candidate": "0760af27a64fb65aaded49e6f3d3788290a03c2752f7f28d2ba31b56fa2db5ef"
+      },
+      "verdict": "routed",
+      "basis": {
+        "kind": "behavior-red",
+        "note": "product defect found by independent verification; returned to the Builder"
+      },
+      "route": "builder"
+    },
+    {
+      "seq": 3,
+      "role": "builder",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "write",
+      "inputSummary": "write src/feature.js from variants/correct.js (new candidate sha256 53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84)",
+      "verdict": "written",
+      "basis": {
+        "kind": "candidate",
+        "note": "the Builder fixes the product defect; the candidate digest rotates"
+      }
+    },
+    {
+      "seq": 4,
+      "role": "whitebox",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "reverify-candidate",
+      "inputSummary": {
+        "candidate": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+        "suite": "test/feature.strong.test.js"
+      },
+      "verdict": "pass",
+      "basis": {
+        "kind": "pass",
+        "note": "re-verification executed on the new candidate with a fresh dispatch (attempt 2)"
+      },
+      "dispatch": {
+        "execution": "exec-whitebox-2",
+        "role": "verifier",
+        "attempt": 2,
+        "epoch": 1,
+        "gate": "unit:slugify",
+        "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+        "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+        "integrity": "9ac787e9c417ca280577412c0dfb1826601cab01e1b90d6dfc717f266eb767fd"
+      },
+      "artifacts": [
+        {
+          "uri": "artifacts/b05-whitebox-v2.tap.txt",
+          "sha256": "18b76d6d828a5cd3bee0b3841486637ecad2729c1585239afee5ee1ae56a206d"
+        }
+      ]
+    }
+  ],
+  "dispatchLedger": [
+    {
+      "runnerId": "comet-classic",
+      "run": "p32-75d1bd67d7e9",
+      "gate": "unit:slugify",
+      "inputDigest": "0760af27a64fb65aaded49e6f3d3788290a03c2752f7f28d2ba31b56fa2db5ef",
+      "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+      "attempt": 1,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-whitebox-1",
+      "integrity": "8a95cf0bee6b130dcb15e807282507c8d0904ae964b70edf49d25cea480cd7e8"
+    },
+    {
+      "runnerId": "comet-classic",
+      "run": "p32-75d1bd67d7e9",
+      "gate": "unit:slugify",
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+      "attempt": 2,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-whitebox-2",
+      "integrity": "9ac787e9c417ca280577412c0dfb1826601cab01e1b90d6dfc717f266eb767fd"
+    }
+  ],
+  "refusals": [
+    {
+      "where": "admit-stale",
+      "code": "STALE_CANDIDATE",
+      "reason": "dispatch bound to input digest 0760af27a64fb65aaded49e6f3d3788290a03c2752f7f28d2ba31b56fa2db5ef but current input digest is 53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84"
+    }
+  ],
+  "admitted": [
+    {
+      "execution": "exec-whitebox-1",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "unit:slugify",
+      "result": "red",
+      "envelopeDigest": "a984345fbaae990be104560c3230bfbdebbec2561225b9c138851e8564aad32f"
+    },
+    {
+      "execution": "exec-whitebox-2",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "unit:slugify",
+      "result": "pass",
+      "envelopeDigest": "d66ccea8c55cfe0a4f251c54251674d6cc35c383aced76dc5417e1e9e85d5e6a"
+    }
+  ],
+  "gate": {
+    "requiredChecks": [
+      {
+        "level": "unit",
+        "capability": "unit:slugify"
+      }
+    ],
+    "verdict": "pass",
+    "receipt": {
+      "schemaVersion": 1,
+      "policy": {
+        "ref": "policy/managed-pilot",
+        "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+      },
+      "inputDigest": "53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84",
+      "evidence": [
+        "d66ccea8c55cfe0a4f251c54251674d6cc35c383aced76dc5417e1e9e85d5e6a"
+      ],
+      "requiredDenominator": {
+        "required": 1,
+        "valid": 1
+      },
+      "blocked": [],
+      "sourceAttestation": {
+        "origin": "comet-classic",
+        "execution": "exec-whitebox-2"
+      },
+      "verdict": "pass"
+    }
+  },
+  "gatePhases": {},
+  "gateStale": {
+    "verdict": "blocked",
+    "blocked": [
+      "STALE_INPUT: receipt bound to input digest 0760af27a64fb65aaded49e6f3d3788290a03c2752f7f28d2ba31b56fa2db5ef but current input digest is 53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84 (exec-whitebox-1)",
+      "MISSING_OBSERVATION: required check unit/unit:slugify has no receipt"
+    ]
+  },
+  "gaps": [],
+  "probes": [],
+  "sessions": [],
+  "capabilityInventory": [],
+  "checkpoints": [
+    {
+      "id": "plan-validated",
+      "ok": true,
+      "detail": "PlanBundle v1 validates"
+    },
+    {
+      "id": "v1-red",
+      "ok": true,
+      "detail": "v1 run outcome behavior-red"
+    },
+    {
+      "id": "v1-admitted",
+      "ok": true,
+      "detail": "v1 RED receipt admitted"
+    },
+    {
+      "id": "builder-wrote",
+      "ok": true,
+      "detail": "the builder write of the new candidate is recorded"
+    },
+    {
+      "id": "new-candidate",
+      "ok": true,
+      "detail": "the new candidate digest differs from v1"
+    },
+    {
+      "id": "stale-candidate-refused",
+      "ok": true,
+      "detail": "dispatch bound to input digest 0760af27a64fb65aaded49e6f3d3788290a03c2752f7f28d2ba31b56fa2db5ef but current input digest is 53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84"
+    },
+    {
+      "id": "stale-gate-input",
+      "ok": true,
+      "detail": "STALE_INPUT: receipt bound to input digest 0760af27a64fb65aaded49e6f3d3788290a03c2752f7f28d2ba31b56fa2db5ef but current input digest is 53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84 (exec-whitebox-1) | MISSING_OBSERVATION: required check unit/unit:slugify has no receipt"
+    },
+    {
+      "id": "v2-pass",
+      "ok": true,
+      "detail": "v2 run outcome pass"
+    },
+    {
+      "id": "v2-admitted",
+      "ok": true,
+      "detail": "v2 pass receipt admitted"
+    },
+    {
+      "id": "reverify-bound-to-new-candidate",
+      "ok": true,
+      "detail": "attempt 2, inputDigest bound to the new candidate"
+    },
+    {
+      "id": "gate-pass-new-candidate",
+      "ok": true,
+      "detail": "gate pass bound to 53cbe8faebc3e97f75b5e997f6a49054dc008523bf627d2382f19b5314736a84"
+    }
+  ],
+  "journey": "re-accepted-on-new-candidate",
+  "verdict": "OBSERVED",
+  "finishedAt": "2026-10-20T17:16:27.774Z"
+}

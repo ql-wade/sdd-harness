@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "tool": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/run-role-chain.mjs",
+  "scenario": "B02",
+  "variant": null,
+  "runId": "p32-d26bf766ec44",
+  "controller": {
+    "runnerId": "comet-classic"
+  },
+  "environment": "pilot-role-chain-local-tmpdir",
+  "toolchain": "node v22.13.1",
+  "policy": {
+    "ref": "policy/managed-pilot",
+    "digest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed"
+  },
+  "plan": {
+    "ok": true,
+    "errors": [],
+    "bundle": {
+      "schemaVersion": 1,
+      "change": "pilot-role-chain-fixture",
+      "schedulerOwner": "comet-classic",
+      "tasks": [
+        {
+          "id": "t1"
+        },
+        {
+          "id": "t2",
+          "dependsOn": [
+            "t1"
+          ]
+        },
+        {
+          "id": "t3",
+          "dependsOn": [
+            "t2"
+          ]
+        }
+      ],
+      "allowedPaths": [
+        "test/",
+        "src/",
+        "probe/",
+        "artifacts/",
+        "state/"
+      ],
+      "worktree": "fixture",
+      "acceptanceRefs": [
+        "B01"
+      ]
+    },
+    "rolePaths": {
+      "planner": [],
+      "test-author": [
+        "test/",
+        "artifacts/"
+      ],
+      "builder": [
+        "src/",
+        "state/",
+        "artifacts/"
+      ],
+      "whitebox": [
+        "probe/",
+        "artifacts/"
+      ]
+    }
+  },
+  "candidate": {
+    "file": "src/feature.js",
+    "digestBefore": "aa5fff1f5d9153e5f4301f4aa7a3b0b24ff9bb6efc23776e3c49d5a72dc21d41",
+    "digestAfter": "aa5fff1f5d9153e5f4301f4aa7a3b0b24ff9bb6efc23776e3c49d5a72dc21d41"
+  },
+  "frozenTests": [],
+  "runState": {
+    "file": "control/run-state.json",
+    "digestBefore": null,
+    "digestAfter": "9ad5fd5c22be94bc1019b8bdd5572c4c996a49d4c034899afb773050dab87769",
+    "unchanged": false
+  },
+  "transitions": [
+    {
+      "seq": 1,
+      "role": "test-author",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "write",
+      "inputSummary": "write test/feature.strong.test.js from staged authoring source test-sources/feature.strong.test.js",
+      "verdict": "written",
+      "basis": {
+        "kind": "authoring",
+        "note": "authored bytes sha256 08dd8406c9ae19c11d38485d9e2de8fac1101b88e305c9d656e5c41e07a737fb"
+      }
+    },
+    {
+      "seq": 2,
+      "role": "test-author",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "run-own-suite",
+      "inputSummary": {
+        "suite": "test/feature.strong.test.js",
+        "label": "b02-author-strong"
+      },
+      "verdict": "red",
+      "basis": {
+        "kind": "behavior-red",
+        "validRed": true,
+        "fail": 2,
+        "total": 2,
+        "note": "valid behavior RED from a real node --test run"
+      },
+      "dispatch": {
+        "execution": "exec-test-author-1",
+        "role": "test-author",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "unit:slugify",
+        "inputDigest": "aa5fff1f5d9153e5f4301f4aa7a3b0b24ff9bb6efc23776e3c49d5a72dc21d41",
+        "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+        "integrity": "94051a2277cacc15716ec245c8d1ee4ef498a132521fca40b97739457f8bf868"
+      },
+      "artifacts": [
+        {
+          "uri": "artifacts/b02-author-strong.tap.txt",
+          "sha256": "39a414afd68c9c7dd62fa0fd2b3b9a9272d8000e0c0cab24142e886c52d4e117"
+        }
+      ]
+    },
+    {
+      "seq": 3,
+      "role": "test-author",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "route",
+      "inputSummary": {
+        "red": true,
+        "suite": "test/feature.strong.test.js"
+      },
+      "verdict": "routed",
+      "basis": {
+        "kind": "behavior-red",
+        "note": "valid behavior RED kept and handed to the Builder (product source untouched)"
+      },
+      "route": "builder"
+    },
+    {
+      "seq": 4,
+      "role": "test-author",
+      "driver": {
+        "id": "pilot-managed-writer",
+        "kind": "managed-write"
+      },
+      "action": "write",
+      "inputSummary": "attempted write src/feature.js (out of the author dev-task bounds)",
+      "verdict": "refused",
+      "basis": {
+        "kind": "role-paths",
+        "note": "role test-author is dispatched for [\"test/\",\"artifacts/\"] and cannot write src/feature.js"
+      }
+    }
+  ],
+  "dispatchLedger": [
+    {
+      "runnerId": "comet-classic",
+      "run": "p32-d26bf766ec44",
+      "gate": "unit:slugify",
+      "inputDigest": "aa5fff1f5d9153e5f4301f4aa7a3b0b24ff9bb6efc23776e3c49d5a72dc21d41",
+      "policyDigest": "b19428b5bf8cfbffc4d183777e59477a320da5add59519b248617153d9f053ed",
+      "attempt": 1,
+      "epoch": 1,
+      "role": "test-author",
+      "execution": "exec-test-author-1",
+      "integrity": "94051a2277cacc15716ec245c8d1ee4ef498a132521fca40b97739457f8bf868"
+    }
+  ],
+  "refusals": [
+    {
+      "where": "driver-write",
+      "code": "ROLE_PATH_REFUSED",
+      "reason": "role test-author is dispatched for [\"test/\",\"artifacts/\"] and cannot write src/feature.js"
+    }
+  ],
+  "admitted": [
+    {
+      "execution": "exec-test-author-1",
+      "role": "test-author",
+      "class": "authoring-self-check",
+      "check": "unit:slugify",
+      "result": "red",
+      "envelopeDigest": "13629e058a93cbd18ec31a7ca2febdc52bbba5c438459884fbc566db09be8158"
+    }
+  ],
+  "gate": null,
+  "gatePhases": {},
+  "gateStale": null,
+  "gaps": [],
+  "probes": [],
+  "sessions": [],
+  "capabilityInventory": [],
+  "checkpoints": [
+    {
+      "id": "plan-validated",
+      "ok": true,
+      "detail": "PlanBundle v1 validates"
+    },
+    {
+      "id": "author-outcome-b02-author-strong",
+      "ok": true,
+      "detail": "expected behavior-red, observed behavior-red"
+    },
+    {
+      "id": "author-red-valid-b02-author-strong",
+      "ok": true,
+      "detail": "valid RED"
+    },
+    {
+      "id": "author-path-refused",
+      "ok": true,
+      "detail": "role test-author is dispatched for [\"test/\",\"artifacts/\"] and cannot write src/feature.js"
+    },
+    {
+      "id": "product-unchanged",
+      "ok": true,
+      "detail": "product source stayed byte-identical"
+    },
+    {
+      "id": "red-kept",
+      "ok": true,
+      "detail": "the RED is recorded, not silently resolved by the author"
+    }
+  ],
+  "journey": "red-kept-routed-to-builder",
+  "verdict": "OBSERVED",
+  "finishedAt": "2026-10-20T17:16:53.647Z"
+}
