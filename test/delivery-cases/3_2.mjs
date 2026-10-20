@@ -331,8 +331,10 @@ test('V_B04: the Whitebox mutation probe finds the weak oracle (passes on a real
   const project = makeProject('b04', 'correct.js');
   const weakFile = path.join(project, 'test', 'feature.weak.test.js');
   const strongFile = path.join(project, 'test', 'feature.strong.test.js');
-  const weakBefore = digestFile(weakFile);
-  const strongBefore = digestFile(strongFile);
+  // The frozen tests are landed by the author role during the run; the
+  // byte-level oracle is against the staged authoring sources.
+  const stagedWeak = digestFile(path.join(project, 'test-sources', 'feature.weak.test.js'));
+  const stagedStrong = digestFile(path.join(project, 'test-sources', 'feature.strong.test.js'));
 
   const result = runChain('B04', project);
   const evidence = assertObserved(result, 'V_B04');
@@ -353,9 +355,10 @@ test('V_B04: the Whitebox mutation probe finds the weak oracle (passes on a real
   assert.ok(routing, 'the weak-oracle routing transition must be recorded');
   assert.equal(routing.route, 'test-author');
 
-  // 不偷偷改冻结测试: frozen test files stay byte-identical.
-  assert.equal(digestFile(weakFile), weakBefore, 'the frozen weak test must stay byte-identical');
-  assert.equal(digestFile(strongFile), strongBefore, 'the frozen strong test must stay byte-identical');
+  // 不偷偷改冻结测试: the landed tests are byte-identical to the staged
+  // authoring sources, and stay that way through the probe.
+  assert.equal(digestFile(weakFile), stagedWeak, 'the frozen weak test must stay byte-identical to the authoring source');
+  assert.equal(digestFile(strongFile), stagedStrong, 'the frozen strong test must stay byte-identical to the authoring source');
   for (const frozen of evidence.frozenTests ?? []) {
     assert.equal(frozen.digestBefore, frozen.digestAfter, `frozen test ${frozen.file} unchanged`);
   }
@@ -434,7 +437,7 @@ test('V_B06: a service log cannot close a required console check while the DOM c
   assert.doesNotMatch(negativeGate.receipt.blocked.join('\n'), /MISSING_OBSERVATION: required check ui\/dom/, 'the DOM check is closed by its real receipt');
 
   // Positive phase: the console closes after a real captured console run.
-  const consoleStep = transitionByRole(evidence, 'whitebox').find((step) => step.inputSummary?.check === 'ui/console');
+  const consoleStep = transitionByRole(evidence, 'whitebox').find((step) => step.inputSummary?.check === 'console');
   assert.ok(consoleStep, 'the console capture transition must be recorded');
   const consoleArtifact = path.join(project, consoleStep.artifacts[0].uri);
   assert.ok(fs.existsSync(consoleArtifact), 'the console capture artifact must be persisted');
@@ -491,9 +494,9 @@ test('V_F08: correlated capture + request + independent readback closes the CLI 
   // Missing capability: the native browser is absent in this pilot — unverified.
   const unverified = (evidence.admitted ?? []).find((entry) => entry.result === 'unverified');
   assert.ok(unverified, 'the browser check must be admitted as unverified');
-  assert.equal(unverified.check, 'ui/browser-console');
+  assert.equal(unverified.check, 'browser-console');
   assert.equal(evidence.gate.verdict, 'blocked', 'the gate stays blocked: a required capability is unverified');
-  assert.match(evidence.gate.receipt.blocked.join('\n'), /UNVERIFIED_CAPABILITY: ui\/browser-console/);
+  assert.match(evidence.gate.receipt.blocked.join('\n'), /UNVERIFIED_CAPABILITY: browser-console/);
   assert.equal(evidence.gate.receipt.requiredDenominator.valid, 1, 'only the correlated CLI check closed');
   const capability = (evidence.capabilityInventory ?? []).find((entry) => entry.capability === 'native-browser');
   assert.ok(capability && capability.available === false && capability.basis, 'the absent capability is recorded honestly with its basis');

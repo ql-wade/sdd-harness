@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "tool": "tools/verify/delivery-journey.mjs",
+  "runnerInvariant": "test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery",
+  "scenario": "F08",
+  "acceptanceIds": [
+    "F08"
+  ],
+  "profile": "managed-pilot",
+  "caseModule": "test/delivery-cases/3_2.mjs",
+  "sourceBinding": [
+    {
+      "path": "specs/delivery-foundation/spec.md",
+      "requirement": "Foundation distribution and deployment",
+      "scenario": "F08"
+    }
+  ],
+  "verdict": "PASS",
+  "reason": null,
+  "missing": [],
+  "drift": [],
+  "schemaErrors": [],
+  "execution": {
+    "command": "node --test test/delivery-cases/3_2.mjs",
+    "actions": [
+      {
+        "index": 1,
+        "type": "spawn",
+        "expected": "exit 0; TAP summary fail=0 with pass>0; test point matching F08 (V_F08 or bare id) is ok when present",
+        "ok": true,
+        "exitCode": 0,
+        "durationMs": 2306,
+        "note": null,
+        "observed": null,
+        "command": "node --test test/delivery-cases/3_2.mjs"
+      },
+      {
+        "index": 2,
+        "type": "readState",
+        "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0",
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": {
+          "path": "<host-path-redacted>",
+          "bytes": 3665
+        },
+        "command": null
+      },
+      {
+        "index": 3,
+        "type": "inspect",
+        "expected": "candidate digest is recorded in the verdict",
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": "3565404b50fd41523085498941feba909e180cc5",
+        "command": null
+      }
+    ],
+    "tests": 10,
+    "pass": 10,
+    "fail": 0,
+    "skipped": 0,
+    "effectiveExecutions": 10,
+    "target": {
+      "token": "F08",
+      "found": true,
+      "status": "ok"
+    }
+  },
+  "candidate": {
+    "gitHead": "3565404b50fd41523085498941feba909e180cc5",
+    "node": "v22.13.1",
+    "platform": "darwin"
+  },
+  "timing": {
+    "startedAt": "2026-10-20T17:17:27.144Z",
+    "finishedAt": "2026-10-20T17:17:29.480Z",
+    "durationMs": 2336
+  },
+  "evidence": {
+    "dir": "<host-path-redacted>",
+    "files": [
+      "pilot-baseline.json",
+      "case-definition.json",
+      "verdict.json"
+    ]
+  },
+  "exitCode": 0
+}
