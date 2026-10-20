@@ -157,5 +157,14 @@
       "source": "independent review (coordinator)",
       "note": "The frozen provenance of the eight SDD.Delivery.* contract names is the tasks.md P2_1 Step 1 text, not the drift-lock frozen_interfaces list; the contracts/delivery registry matches that text exactly. No action required."
     }
+  ],
+  "integration_fixes": [
+    {
+      "date": "2026-10-20",
+      "source": "integration regression on master c9c3b18 (dedicated integrate worktree)",
+      "finding": "test/delivery-cases/2_1.mjs frozen-plan boundary case assumed the P2_1 Step 1 line in tasks.md starts unchecked (\"- [ ]\") and toggled it to \"- [x]\"; after the acceptance pass ticked all eight P2_1 steps on master, the toggle produced no change and the precondition \"toggle really changed the checkbox state\" failed. The invariant under guard was correct; only the starting-state assumption was stale.",
+      "fix": "toggle made state-independent: parse the line's current checkbox state and flip to the opposite ([ ]<->[x]/[X]); keep asserting the flip really happened, the definition digest is unchanged across the flip, and an edited definition changes the digest. Validated on the real merged state (tasks.md line 204 is \"- [x]\").",
+      "regression_guard": "node --test test/delivery-cases/2_1.mjs 7/7 exit 0; target suite 35/35 exit 0; npm test 107/107 exit 0, 0 skipped (post-merge master c9c3b18 via merge commit b2918da)"
+    }
   ]
 }
