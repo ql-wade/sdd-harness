@@ -1,0 +1,40 @@
+{
+  "probedAt": "2026-10-20T10:33:37.229Z",
+  "fingerprint": "cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187",
+  "change": "escape-change / force-change",
+  "records": [
+    {
+      "id": "skip-build-full-chain",
+      "command": "COMET_SKIP_BUILD=1 comet state transition escape-change {build-complete,verify-pass,archive-confirm} && COMET_SKIP_BUILD=1 comet archive escape-change --json — zero comet check run invocations",
+      "exitCode": 0,
+      "records": {
+        "buildExit": 0,
+        "verifyExit": 0,
+        "confirmExit": 0,
+        "verifyResult": "pass",
+        "archiveExit": 0,
+        "checkLogs": 0,
+        "archiveMessage": "archived successfully"
+      },
+      "detail": "one ordinary environment variable voids the entire evidence chain: verify_result=pass stamped with zero check logs, lifecycle archived ('archived successfully') — REGISTERED GAP (review SC-02; extension acceptance B4: managed launch-authority env hygiene + protected CI re-verification)"
+    },
+    {
+      "id": "force-phase-default-refused",
+      "command": "comet state set force-change phase archive --json (no escape env)",
+      "exitCode": 1,
+      "detail": "default refusal points at the repair-only escape (COMET_FORCE_PHASE)"
+    },
+    {
+      "id": "force-phase-escape-allowed",
+      "command": "COMET_FORCE_PHASE=1 comet state set force-change phase archive --json",
+      "exitCode": 0,
+      "detail": "phase now=archive — ordinary-execution-reachable direct phase write; REGISTERED GAP under B4"
+    },
+    {
+      "id": "forged-archive-entry-refused",
+      "command": "comet archive force-change --json (phase forged to archive)",
+      "exitCode": 1,
+      "detail": "FATAL: verify_result is 'pending', expected 'pass'. Run comet-verify first. — the downstream archive entry check still refuses forged state (the holding native facet)"
+    }
+  ]
+}
