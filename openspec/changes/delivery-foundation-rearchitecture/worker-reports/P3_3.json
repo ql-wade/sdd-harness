@@ -1,0 +1,134 @@
+{
+  "task": "P3_3",
+  "task_title": "原任务 3.3 — 重复/乱序回执、旧 attempt/epoch、并发推进、断点恢复与失联调和；保留真实日志和持久化读回（A10–A12/F07）。只承诺已验证单环境语义。",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/p3-3-recovery-reconciliation",
+  "base_commit": "5eb855c",
+  "final_status": "DONE",
+  "implementation_commit": "812182f",
+  "tests_commit": "6948c18 (RED suite) + 271d51d (GREEN convergence)",
+  "report_commit": "HEAD of impl/p3-3-recovery-reconciliation at handoff（P3_3.json 与全量日志在 report 提交落盘）",
+  "semantics_source_note": [
+    "语义唯一来源按任务指令取 specs/delivery-foundation/spec.md 的场景文本。",
+    "任务概括语与 spec.md 的 ID 分组存在一次轮转错位：任务把 重复回执→A10、乱序/旧attempt/epoch→A11、并发推进→A12、断点恢复+失联→F07；spec.md 文本则是 A10=并发推进+重复派发+旧epoch回调（有效推进唯一/重复幂等/过期拒绝）、A11=中断后从权威状态与外部读回续接、A12=父目标阻断并对新候选重验、F07=失联/回执重复乱序时核对 backend/attempt/关联 ID 且不重复叶子派发。",
+    "本实现按行为并集逐条落地：重复幂等拒绝、乱序/旧 attempt/epoch 拒绝留痕、并发推进恰一胜者、杀进程后恢复原 operation 不重开叶子、父 Journey 失败不因子任务通过而放行——五个行为全部真实入口覆盖（duplicate=A10/F07 重复、stale=A10/A11 旧 epoch+乱序、concurrent=A10 推进唯一、kill-recovery=A11/F07、parent-block=A12/F07 失联）。套件测试名按任务操作映射（V_A10 重复、V_A11 乱序/旧、V_A12 并发、V_F07 恢复、V_A12b 失联=A12 spec 文本）。归档评审时建议以 spec.md 文本为准（与 P3_2 同类错位，需接收控制器确认）。",
+    "A11 的 epoch 门语义按任务指令复用 P2_4 runtime（D08：状态锁+epoch 门槛）——在 import 的 gate 层断言（admitEvidence 前置包装：epoch→attempt→执行绑定→lib admission），未修改任何 lib 文件。"
+  ],
+  "red_cases": [
+    {
+      "case": "pre-implementation RED: openspec/changes/.../pilot-recovery/run-recovery-chain.mjs 不存在（无恢复/调和执行器），3_3.mjs 全部用例失败",
+      "actually_failed": true,
+      "evidence": "node --test test/delivery-cases/3_3.mjs exit=1，5 tests / 0 pass / 5 fail（全部因执行器缺失，真实 spawn ENOENT 路径）。原始日志：openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_3/evidence/red-node-test-3_3.txt（提交 6948c18）"
+    }
+  ],
+  "green_summary": {
+    "executor": "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/run-recovery-chain.mjs（实现提交 812182f）：在 P3_2 同一条链上（comet.js run 绑定 authority + harness.js driver 排他 + evidence.js admission + gate.js 纯判定 + test-contract.js 真实 TAP 分类，全部 import 零修改）新增恢复/调和语义——单一控制账本 control/run-state.json 每次变更磁盘读-改-写（原子 tmp+rename）且判定一律从磁盘字节读回；epoch 门（接管 epoch+1 留痕 history，被取代 epoch/attempt 的回执拒绝且账本字节不变）；重复纪律（派发 key=叶子×候选代，同 key 二次派发拒绝，重放回执经 admitEvidence DUPLICATE_ISSUANCE 拒绝，候选轮换后新 key 全量重验）；并发推进（真实 runner 子进程 O_EXCL claim 竞争恰一胜者，败者读回胜者 claim，旧 epoch 领取者拒绝并释放 claim，账本单写者代记）；断点恢复（真实 SIGKILL 注入于观察已写/回执未交接窗口，kill→确认旧写者终止→接管快照→epoch 2→死亡 attempt 迟到回执拒绝→原 operation attempt 2 恢复，完成叶子 execution+receipt 逐字节不变）；失联调和（叶子各自 pass 而父 Journey 真实 RED → blocked-phase gate UNVERIFIED_CAPABILITY + RELEASE_REFUSED → Builder 轮换候选 → v1 回执 STALE_CANDIDATE 拒绝 → 三叶子新候选全量重验 → gate pass 绑定新候选 digest）。",
+    "leaf_work_real": "每个叶子 worker 是真实子进程（node -e 内嵌脚本）真实运行 node --test 于夹具套件，观察文件（含 TAP 全文）落盘后由控制器经 gate 层接纳；worker TAP/refusals/注入记录/账本快照全部内嵌证据 JSON（真实日志保留）。",
+    "suite": "test/delivery-cases/3_3.mjs：5 用例（V_A10/V_A11/V_A12/V_F07/V_A12b），逐场景以隔离 HOME/PATH/TMPDIR 子进程真实执行恢复链，独立复核：账本字节读回 deepEqual/digest 相等、拒绝记录的 before==after 字节不变、迟到观察文件在盘且被拒绝信封 digest 钉住、竞速 claim/result 文件字节读回、SIGKILL 注入 method/confirmedGone、跨恢复 L1 deepEqual、套件自跑真实 node --test 复现父 RED（v1 候选）与父 GREEN（新候选）、V_A10 另经 import 的 admitEvidence 结构性复核重放不可接纳（无 authority → UNREGISTERED_SOURCE，A05）。"
+  },
+  "coverage_matrix": [
+    {
+      "id": "A10 (spec: 并发推进/重复派发/旧epoch回调 → 推进唯一、重复幂等、过期拒绝)",
+      "spec_then": "有效推进唯一、重复幂等、过期拒绝",
+      "positive": "同一 run 的两次合法派发/接纳正常推进；concurrent 场景恰一胜者推进（advanceSeq=1）",
+      "negative": "同 key 二次派发 DUPLICATE_DISPATCH；重放回执 DUPLICATE_ISSUANCE（import 层）；旧 epoch 回执 STALE_EPOCH；乱序旧 attempt 回执 STALE_ATTEMPT；每次拒绝账本字节不变（幂等）且留痕",
+      "real_entry": "真实子进程执行器 + 真实 node --test 叶子 + 真实 lib admitEvidence"
+    },
+    {
+      "id": "A11 (spec: 进程中断再恢复 → 从权威状态和外部读回续接，不重复副作用)",
+      "spec_then": "从权威状态和外部读回续接，不重复副作用",
+      "positive": "kill-recovery：SIGKILL 后从磁盘账本恢复原 operation（attempt 2、新 epoch 绑定），L1 完成 receipt 逐字节保持；stale：接管后 L1/L2 仅经当前绑定完成，gate pass",
+      "negative": "死亡 attempt 的迟到回执 STALE_EPOCH 拒绝；交接超时 attempt 轮转后迟到 attempt-1 回执 STALE_ATTEMPT 拒绝（seq 证明乱序：attempt-2 先接纳）；拒绝不改账本字节（无重复副作用）",
+      "real_entry": "真实 SIGKILL 进程注入 + 磁盘字节读回（快照 deepEqual）"
+    },
+    {
+      "id": "A12 (spec: 父任务阻断并对新候选重验)",
+      "spec_then": "父任务阻断并对新候选重验",
+      "positive": "parent-block：Builder 轮换候选（字节级等于 correct 变体）后，L1/L2/L-INT 全部在新候选 digest 上重验（attempt 2），gate pass valid=3 绑定新候选 digest；套件独立复现父 GREEN",
+      "negative": "叶子各自 pass 而父集成真实 RED：blocked-phase gate blocked（UNVERIFIED_CAPABILITY: leaf:L-INT）+ RELEASE_REFUSED（不因子任务通过而放行）；v1 回执对新候选 STALE_CANDIDATE 拒绝；错误关联回执 CORRELATION_MISMATCH 拒绝；套件独立复现父 RED（v1 候选字节）",
+      "real_entry": "真实 node --test 集成 RED/正例 + 真实 gate.evaluate 两相判定"
+    },
+    {
+      "id": "F07 (spec: 失联/回执重复乱序 → 核对 backend/attempt/关联 ID，不重复叶子派发；恢复单一主控)",
+      "spec_then": "核对 backend/attempt/关联 ID，不重复叶子派发",
+      "positive": "kill-recovery：恢复单一主控（接管 seat epoch 2），核对 run/attempt/关联 ID 后恢复原 operation，叶子集合不变、L1 派发执行不重复；concurrent：并发双 runner 恰一成功、账本单写者",
+      "negative": "死亡 attempt 回执（dispatch.execution=死亡绑定）STALE_EPOCH 拒绝；关联 ID 不符 CORRELATION_MISMATCH 拒绝；advance 绑定带 phase 字段 RUNNER_PHASE_FIELD_REFUSED（无第二 currentPhase）；推进后二次领取 CONCURRENT_ADVANCE_REFUSED",
+      "real_entry": "真实 SIGKILL + 真实 O_EXCL 竞速 + 真实 authority verifyDispatch"
+    }
+  ],
+  "commands": [
+    {
+      "cmd": "node --test test/delivery-cases/3_3.mjs",
+      "exit_code": 1,
+      "when": "RED（执行器未存在，5/5 fail）",
+      "evidence": "worker-reports/P3_3/evidence/red-node-test-3_3.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/3_3.mjs",
+      "exit_code": 0,
+      "when": "GREEN（5/5 pass, 0 fail, 0 skip；另经 5 次连跑稳定性验证全部 5/5）",
+      "evidence": "worker-reports/P3_3/evidence/green-node-test-3_3.txt"
+    },
+    {
+      "cmd": "node openspec/changes/.../pilot-recovery/run-recovery-chain.mjs --scenario <duplicate|stale|concurrent|kill-recovery|parent-block> --project <夹具> --evidence <json>",
+      "exit_code": 0,
+      "when": "5 次记录运行全部 OBSERVED",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/evidence/recovery-*.json"
+    },
+    {
+      "cmd": "npm test",
+      "exit_code": 0,
+      "when": "GREEN（306/306 pass, 0 fail, 0 skip；本 base 上的全量基线——P3_2 报告时点为 290，差额 16 来自本 base 已合并的其他任务测试文件，非本任务新增；.sdd 两步 prepare+build 于 pinned node v24.15.0 后）",
+      "evidence": "worker-reports/P3_3/evidence/green-npm-test.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/*.mjs",
+      "exit_code": 0,
+      "when": "GREEN（116 tests：115 pass / 0 fail / 1 skip——skip 为 1_1.mjs V_COMET_NATIVE 既有环境条件，见 unverified）",
+      "evidence": "worker-reports/P3_3/evidence/green-all-delivery-cases.txt"
+    },
+    {
+      "cmd": "node(24.15.0) tools/comet/prepare-source.mjs --archive .sdd/cache/artifacts/comet-source-c90af44….tar.gz --json",
+      "exit_code": 0,
+      "when": "环境准备（本 worktree .sdd 从空建起，reused=false）",
+      "evidence": ".sdd/prepare.log（gitignored）"
+    },
+    {
+      "cmd": "node(24.15.0) tools/comet/build.mjs --archive .sdd/cache/artifacts/comet-source-c90af44….tar.gz --json",
+      "exit_code": 0,
+      "when": "环境准备（fingerprint 9b95a0ff…，与 P2_4/P3_2 记录的现行 lock 构建一致）",
+      "evidence": ".sdd/build.log（gitignored）"
+    }
+  ],
+  "unverified": [
+    {
+      "item": "delivery-cases 显式运行中的 1 个 skip：1_1.mjs 'integrated build passes the V_COMET_NATIVE contract command when prepared locally'",
+      "reason": "既有环境条件：toolchain-baseline.json 的 extension_delivery.built_entrypoint 钉在 P1_1 期构建指纹（72e5ce0e…），本 worktree 按现行已接纳 lock 真实构建出的指纹是 9b95a0ff…（build EXIT=0）。该文件非本任务所有；同一 skip 在同 base 的 P3_1/P3_2 自留证据中同样存在。",
+      "successor": "P1 系列/接收控制器：重钉 toolchain-baseline 的 built_entrypoint 或重冻结（显式登记变更）"
+    },
+    {
+      "item": "跨机器分布式互斥语义",
+      "reason": "任务明确只承诺已验证单环境语义：并发推进以同机双真实进程 + 文件 O_EXCL 序列化证明机制（Comet .comet-state.lock 的试点镜像）；跨机器互斥不在本任务范围。",
+      "successor": "未来分布式 runner 契约任务（需显式立项）"
+    }
+  ],
+  "files_changed": [
+    "test/delivery-cases/3_3.mjs（新建，512 行，5 用例）",
+    "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/run-recovery-chain.mjs（新建，恢复/调和执行器）",
+    "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/README.md（新建，执行记录+边界）",
+    "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/evidence/recovery-*.json（新建，5 次真实执行证据，全部 OBSERVED）",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_3/evidence/*（RED/GREEN/全量日志）",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_3.json（本报告）"
+  ],
+  "commits": {
+    "tests": "6948c18 (RED suite) + 271d51d (GREEN convergence)",
+    "implementation": "812182f",
+    "report": "见最终 git log（P3_3.json + green-npm-test + green-all-delivery-cases 在 report 提交）"
+  },
+  "blockers_or_questions": [
+    "spec.md 与 tasks.md 概括语的 ID 分组轮转错位（见 semantics_source_note）：五个行为全部真实覆盖，但归档评审需确认验收 ID 归组以哪份为准（建议 spec.md 文本，与 P3_2 错位同类）。",
+    "工具层冲突（与 P3_2 相同）：Write 工具的 worktree 保护钩子锚在 festive-cohen-c1b5e4，拒绝写入任务指派的 impl-p3-3 工作树；按任务授权改用 Bash 在沙箱允许的 /Users/mac/Code/sdd-harness 下写入，且仅限授权文件路径。请 orchestrator 知悉。",
+    "环境准备：worktree .sdd 从空建起——comet 两步程序（pinned node 24.15.0）真实跑通（prepare+build EXIT=0，fingerprint 9b95a0ff…）；comet 源归档复制自 impl-p3-2 的 gitignored .sdd/cache，隔离 openspec-1.11.0 工具复制自 impl-p3-4 的 gitignored .sdd/tools（P2_5/P3_2 先例）；零新 npm 依赖；未触碰任何受控文件（git show --stat 可证：仅 3_3.mjs + pilot-recovery/ + worker-reports/P3_3/）。"
+  ],
+  "notes": "夹具全部位于 os.tmpdir 且状态无关（suite 是夹具作者，执行器只消费 staged 源）；隔离 HOME/PATH/TMPDIR；套件不写任何活配置；evidence.js/gate.js/comet.js/harness.js/test-contract.js 等已接纳基建全部 import 复用、零修改（git diff 可证）；pilot-journey/ 未触碰（run-role-chain.mjs 以 process.exit(main()) 结尾不可安全 import，同链复用落点为同批 lib 原语 + 同构链结构，README 已如实登记）。"
+}
