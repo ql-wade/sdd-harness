@@ -1,0 +1,874 @@
+
+> ai-coding-scaffold@0.2.4 test
+> node --test test/*.test.js
+
+TAP version 13
+# Subtest: claude-code adapter compiles hooks.yaml to safely-sourceable env
+ok 1 - claude-code adapter compiles hooks.yaml to safely-sourceable env
+  ---
+  duration_ms: 277.541542
+  ...
+# Subtest: sourcing .compiled.env has no side effects and preserves deny patterns
+ok 2 - sourcing .compiled.env has no side effects and preserves deny patterns
+  ---
+  duration_ms: 8.452667
+  ...
+# Subtest: pre-tool-gate denies blocked commands and allows normal ones
+ok 3 - pre-tool-gate denies blocked commands and allows normal ones
+  ---
+  duration_ms: 283.534125
+  ...
+# Subtest: pre-tool-gate fails closed on unparseable non-empty input (r2 F4)
+ok 4 - pre-tool-gate fails closed on unparseable non-empty input (r2 F4)
+  ---
+  duration_ms: 102.6875
+  ...
+# Subtest: .mcp.json carries pinned versions, never @latest (r2 F-001/zcode F1)
+ok 5 - .mcp.json carries pinned versions, never @latest (r2 F-001/zcode F1)
+  ---
+  duration_ms: 0.504584
+  ...
+# Subtest: pre-tool-gate denies direct wiki writes (kb-write-protection)
+ok 6 - pre-tool-gate denies direct wiki writes (kb-write-protection)
+  ---
+  duration_ms: 148.762541
+  ...
+# Subtest: compiled settings.json PreToolUse matcher covers every deny policy
+ok 7 - compiled settings.json PreToolUse matcher covers every deny policy
+  ---
+  duration_ms: 0.676625
+  ...
+# Subtest: adapter preserves user hook entries it does not own
+ok 8 - adapter preserves user hook entries it does not own
+  ---
+  duration_ms: 211.130166
+  ...
+# Subtest: rejects an exact Node pin mismatch before reading source or writing project state
+ok 9 - rejects an exact Node pin mismatch before reading source or writing project state
+  ---
+  duration_ms: 4.276708
+  ...
+# Subtest: rejects a source archive with the wrong SHA before creating the vendor target
+ok 10 - rejects a source archive with the wrong SHA before creating the vendor target
+  ---
+  duration_ms: 246.574333
+  ...
+# Subtest: prepares a verified synthetic upstream archive into the pristine source directory
+ok 11 - prepares a verified synthetic upstream archive into the pristine source directory
+  ---
+  duration_ms: 142.794917
+  ...
+# Subtest: reuses an identical verified archive without rewriting the pristine source
+ok 12 - reuses an identical verified archive without rewriting the pristine source
+  ---
+  duration_ms: 206.063625
+  ...
+# Subtest: rejects pristine source drift without overwriting the changed baseline
+ok 13 - rejects pristine source drift without overwriting the changed baseline
+  ---
+  duration_ms: 188.772
+  ...
+# Subtest: rejects an integrity-matching traversal archive without committing or escaping files
+ok 14 - rejects an integrity-matching traversal archive without committing or escaping files
+  ---
+  duration_ms: 168.285959
+  ...
+# Subtest: rejects an injected pristine file named __proto__ without deleting it
+ok 15 - rejects an injected pristine file named __proto__ without deleting it
+  ---
+  duration_ms: 207.904667
+  ...
+# Subtest: rejects executable-bit drift without changing the pristine script mode or bytes
+ok 16 - rejects executable-bit drift without changing the pristine script mode or bytes
+  ---
+  duration_ms: 149.764167
+  ...
+# Subtest: rejects an injected empty pristine directory without deleting it
+ok 17 - rejects an injected empty pristine directory without deleting it
+  ---
+  duration_ms: 177.781125
+  ...
+# Subtest: deliverable-audit reports all required deliverables present for a complete run
+ok 18 - deliverable-audit reports all required deliverables present for a complete run
+  ---
+  duration_ms: 223.803833
+  ...
+# Subtest: deliverable-audit flags missing required deliverables
+ok 19 - deliverable-audit flags missing required deliverables
+  ---
+  duration_ms: 127.585
+  ...
+# Subtest: deliverable-audit reports expected (non-blocking) gaps
+ok 20 - deliverable-audit reports expected (non-blocking) gaps
+  ---
+  duration_ms: 140.996875
+  ...
+# Subtest: deliverable-audit respects --stage filter
+ok 21 - deliverable-audit respects --stage filter
+  ---
+  duration_ms: 126.400709
+  ...
+# Subtest: full-input baseline binds code, tests, lockfiles, migrations, deploy configs and non-JS inputs into one digest
+ok 22 - full-input baseline binds code, tests, lockfiles, migrations, deploy configs and non-JS inputs into one digest
+  ---
+  duration_ms: 2.710125
+  ...
+# Subtest: A08: non-JS drift (Java, Python, deploy config) changes the full-input digest
+ok 23 - A08: non-JS drift (Java, Python, deploy config) changes the full-input digest
+  ---
+  duration_ms: 10.125791
+  ...
+# Subtest: migration drift changes the full-input digest (2.1.b)
+ok 24 - migration drift changes the full-input digest (2.1.b)
+  ---
+  duration_ms: 12.504208
+  ...
+# Subtest: missing declared lockfile is an explicit scope error, never a silent pass (2.1.b)
+ok 25 - missing declared lockfile is an explicit scope error, never a silent pass (2.1.b)
+  ---
+  duration_ms: 4.690583
+  ...
+# Subtest: task definition digest separates the frozen definition from progress checkboxes (2.1.b)
+ok 26 - task definition digest separates the frozen definition from progress checkboxes (2.1.b)
+  ---
+  duration_ms: 0.247166
+  ...
+# Subtest: AC-to-case traceability reports the exact missing acceptance mappings (2.1.b)
+ok 27 - AC-to-case traceability reports the exact missing acceptance mappings (2.1.b)
+  ---
+  duration_ms: 0.200042
+  ...
+# Subtest: A01: implementation dispatch is refused with the missing baseline list
+ok 28 - A01: implementation dispatch is refused with the missing baseline list
+  ---
+  duration_ms: 0.190667
+  ...
+# Subtest: A02: scope change invalidates related downstream receipts and old approvals, keeps unrelated ones
+ok 29 - A02: scope change invalidates related downstream receipts and old approvals, keeps unrelated ones
+  ---
+  duration_ms: 0.2975
+  ...
+# Subtest: A07: a passed report is refused after inputs change and accepted while current
+ok 30 - A07: a passed report is refused after inputs change and accepted while current
+  ---
+  duration_ms: 13.060458
+  ...
+# Subtest: digestInputs is order-independent and binds every entry
+ok 31 - digestInputs is order-independent and binds every entry
+  ---
+  duration_ms: 0.555958
+  ...
+# Subtest: digestInputs ordering is code-unit deterministic, not locale-dependent (nb-2)
+ok 32 - digestInputs ordering is code-unit deterministic, not locale-dependent (nb-2)
+  ---
+  duration_ms: 8.066792
+  ...
+# Subtest: evidence-audit: claims matching disk and command output exit 0 with a passing JSON report
+ok 33 - evidence-audit: claims matching disk and command output exit 0 with a passing JSON report
+  ---
+  duration_ms: 194.352625
+  ...
+# Subtest: evidence-audit: a claim contradicting disk or command output is a verification failure, exit 2
+ok 34 - evidence-audit: a claim contradicting disk or command output is a verification failure, exit 2
+  ---
+  duration_ms: 124.484542
+  ...
+# Subtest: evidence-audit: nonexistent --project is invalid input, exit 1 (measured RED: exited 2)
+ok 35 - evidence-audit: nonexistent --project is invalid input, exit 1 (measured RED: exited 2)
+  ---
+  duration_ms: 120.902667
+  ...
+# Subtest: evidence-audit: existing project with required evidence inputs missing stays exit 2 — pre-existing pinned oracle (nonzero, never a fake pass)
+ok 36 - evidence-audit: existing project with required evidence inputs missing stays exit 2 — pre-existing pinned oracle (nonzero, never a fake pass)
+  ---
+  duration_ms: 126.606125
+  ...
+# Subtest: deliverable-audit: nonexistent --project is invalid input, exit 1 (measured RED: exited 2)
+ok 37 - deliverable-audit: nonexistent --project is invalid input, exit 1 (measured RED: exited 2)
+  ---
+  duration_ms: 96.334833
+  ...
+# Subtest: test-gate: nonexistent --project is invalid input, exit 1 (measured RED: exited 2)
+ok 38 - test-gate: nonexistent --project is invalid input, exit 1 (measured RED: exited 2)
+  ---
+  duration_ms: 111.9895
+  ...
+# Subtest: delivery-gate: a satisfied report-layer check exits 0 and prints a schema-shaped receipt
+ok 39 - delivery-gate: a satisfied report-layer check exits 0 and prints a schema-shaped receipt
+  ---
+  duration_ms: 171.8655
+  ...
+# Subtest: delivery-gate: the legacy report layer cannot close a product capability — verdict blocked, exit 2 (B10)
+ok 40 - delivery-gate: the legacy report layer cannot close a product capability — verdict blocked, exit 2 (B10)
+  ---
+  duration_ms: 111.482792
+  ...
+# Subtest: delivery-gate: invalid inputs exit 1 — unreadable file, schema-invalid contract, non-array receipts, malformed policy, bad digest
+ok 41 - delivery-gate: invalid inputs exit 1 — unreadable file, schema-invalid contract, non-array receipts, malformed policy, bad digest
+  ---
+  duration_ms: 606.264042
+  ...
+# Subtest: adapter: a valid old-channel report adapts to a schema-valid envelope and is admitted unchanged through admitEvidence
+ok 42 - adapter: a valid old-channel report adapts to a schema-valid envelope and is admitted unchanged through admitEvidence
+  ---
+  duration_ms: 1.101208
+  ...
+# Subtest: adapter: a failing old-channel report maps to result fail, never to a fabricated pass
+ok 43 - adapter: a failing old-channel report maps to result fail, never to a fabricated pass
+  ---
+  duration_ms: 0.334042
+  ...
+# Subtest: adapter B07: missing fields are refused explicitly by name, never fabricated
+ok 44 - adapter B07: missing fields are refused explicitly by name, never fabricated
+  ---
+  duration_ms: 0.330125
+  ...
+# Subtest: adapter B07: incompatible versions are refused explicitly (older and newer)
+ok 45 - adapter B07: incompatible versions are refused explicitly (older and newer)
+  ---
+  duration_ms: 0.096291
+  ...
+# Subtest: adapter: admission trust is untouched admitEvidence behavior — no dispatch is UNREGISTERED_SOURCE, replay is DUPLICATE_ISSUANCE
+ok 46 - adapter: admission trust is untouched admitEvidence behavior — no dispatch is UNREGISTERED_SOURCE, replay is DUPLICATE_ISSUANCE
+  ---
+  duration_ms: 0.639833
+  ...
+# Subtest: A05: an envelope with no authority-issued dispatch is refused as an unregistered source, audit kept
+ok 47 - A05: an envelope with no authority-issued dispatch is refused as an unregistered source, audit kept
+  ---
+  duration_ms: 2.759875
+  ...
+# Subtest: A05: a self-declared role label or origin string grants nothing
+ok 48 - A05: a self-declared role label or origin string grants nothing
+  ---
+  duration_ms: 0.297084
+  ...
+# Subtest: 2.2.c: a forged dispatch record (fixture or worker-built) fails the launcher integrity check
+ok 49 - 2.2.c: a forged dispatch record (fixture or worker-built) fails the launcher integrity check
+  ---
+  duration_ms: 1.043458
+  ...
+# Subtest: A06: the builder execution cannot sign acceptance evidence (identity conflict)
+ok 50 - A06: the builder execution cannot sign acceptance evidence (identity conflict)
+  ---
+  duration_ms: 0.267791
+  ...
+# Subtest: A06: verifier evidence is admitted only when pinned to the dispatch the launcher issued
+ok 51 - A06: verifier evidence is admitted only when pinned to the dispatch the launcher issued
+  ---
+  duration_ms: 0.355875
+  ...
+# Subtest: A06: the same execution identity cannot issue evidence twice (duplicate issuance refused)
+ok 52 - A06: the same execution identity cannot issue evidence twice (duplicate issuance refused)
+  ---
+  duration_ms: 0.166875
+  ...
+# Subtest: receipts bound to an old policy digest are refused (STALE_POLICY)
+ok 53 - receipts bound to an old policy digest are refused (STALE_POLICY)
+  ---
+  duration_ms: 0.189333
+  ...
+# Subtest: receipts bound to an old candidate input digest are refused (STALE_CANDIDATE)
+ok 54 - receipts bound to an old candidate input digest are refused (STALE_CANDIDATE)
+  ---
+  duration_ms: 2.286458
+  ...
+# Subtest: receipts observed in a different environment are refused (STALE_ENVIRONMENT)
+ok 55 - receipts observed in a different environment are refused (STALE_ENVIRONMENT)
+  ---
+  duration_ms: 1.114625
+  ...
+# Subtest: expired envelopes are refused
+ok 56 - expired envelopes are refused
+  ---
+  duration_ms: 3.148625
+  ...
+# Subtest: A18: a pass claim without real observation data is refused at admission
+ok 57 - A18: a pass claim without real observation data is refused at admission
+  ---
+  duration_ms: 0.54225
+  ...
+# Subtest: A18: a truthful unverified envelope (capability missing, real probe log attached) is admitted to block the gate
+ok 58 - A18: a truthful unverified envelope (capability missing, real probe log attached) is admitted to block the gate
+  ---
+  duration_ms: 0.134875
+  ...
+# Subtest: B03: test-author execution evidence is admitted only as authoring self-check
+ok 59 - B03: test-author execution evidence is admitted only as authoring self-check
+  ---
+  duration_ms: 0.121834
+  ...
+# Subtest: B07: imported reports with an incompatible contract version are refused explicitly, never field-fabricated
+ok 60 - B07: imported reports with an incompatible contract version are refused explicitly, never field-fabricated
+  ---
+  duration_ms: 0.171083
+  ...
+# Subtest: A19 (local half): the launch authority never exposes its signing secret
+ok 61 - A19 (local half): the launch authority never exposes its signing secret
+  ---
+  duration_ms: 0.645334
+  ...
+# Subtest: 2.2.c: a worker process that does not inherit the launcher secret cannot mint a dispatch (real spawnSync)
+ok 62 - 2.2.c: a worker process that does not inherit the launcher secret cannot mint a dispatch (real spawnSync)
+  ---
+  duration_ms: 95.599875
+  ...
+# Subtest: envelopeDigest binds envelope content deterministically
+ok 63 - envelopeDigest binds envelope content deterministically
+  ---
+  duration_ms: 0.239167
+  ...
+# Subtest: the gate passes a fully covered candidate and the receipt validates against SDD.Delivery.GateReceipt
+ok 64 - the gate passes a fully covered candidate and the receipt validates against SDD.Delivery.GateReceipt
+  ---
+  duration_ms: 2.333708
+  ...
+# Subtest: A18: a required capability with no receipt stays blocked (never fabricated as pass)
+ok 65 - A18: a required capability with no receipt stays blocked (never fabricated as pass)
+  ---
+  duration_ms: 0.392666
+  ...
+# Subtest: A18: an UNVERIFIED receipt cannot pass its required capability
+ok 66 - A18: an UNVERIFIED receipt cannot pass its required capability
+  ---
+  duration_ms: 0.365166
+  ...
+# Subtest: B06: required observation kinds cannot substitute each other (service log is not console)
+ok 67 - B06: required observation kinds cannot substitute each other (service log is not console)
+  ---
+  duration_ms: 0.424708
+  ...
+# Subtest: B03: authoring self-check receipts are recorded but never sign independent acceptance
+ok 68 - B03: authoring self-check receipts are recorded but never sign independent acceptance
+  ---
+  duration_ms: 0.235541
+  ...
+# Subtest: A06: a receipt whose execution equals the builder execution is blocked at the gate
+ok 69 - A06: a receipt whose execution equals the builder execution is blocked at the gate
+  ---
+  duration_ms: 1.905834
+  ...
+# Subtest: stale receipts are blocked when the policy or input digest rotated after admission
+ok 70 - stale receipts are blocked when the policy or input digest rotated after admission
+  ---
+  duration_ms: 0.719959
+  ...
+# Subtest: tampered receipts (entry digest not matching its envelope) are blocked
+ok 71 - tampered receipts (entry digest not matching its envelope) are blocked
+  ---
+  duration_ms: 0.679625
+  ...
+# Subtest: with zero receipts the receipt still validates (empty evidence set digest, honest blocked verdict)
+ok 72 - with zero receipts the receipt still validates (empty evidence set digest, honest blocked verdict)
+  ---
+  duration_ms: 0.489833
+  ...
+# Subtest: the gate refuses to judge without a valid frozen TestContract or policy
+ok 73 - the gate refuses to judge without a valid frozen TestContract or policy
+  ---
+  duration_ms: 0.640625
+  ...
+# Subtest: evaluate is pure: deterministic output, no filesystem side effects, no stage writes
+ok 74 - evaluate is pure: deterministic output, no filesystem side effects, no stage writes
+  ---
+  duration_ms: 0.945958
+  ...
+# Subtest: the eight frozen delivery contracts are registered at v1
+ok 75 - the eight frozen delivery contracts are registered at v1
+  ---
+  duration_ms: 0.921334
+  ...
+# Subtest: each contract parses its valid v1 payload
+ok 76 - each contract parses its valid v1 payload
+  ---
+  duration_ms: 1.34675
+  ...
+# Subtest: a missing schemaVersion is rejected explicitly for every contract (never guessed)
+ok 77 - a missing schemaVersion is rejected explicitly for every contract (never guessed)
+  ---
+  duration_ms: 0.230708
+  ...
+# Subtest: unknown future, legacy and non-integer versions are explicitly refused, never silently accepted
+ok 78 - unknown future, legacy and non-integer versions are explicitly refused, never silently accepted
+  ---
+  duration_ms: 0.368
+  ...
+# Subtest: unknown contract names are refused by the registry
+ok 79 - unknown contract names are refused by the registry
+  ---
+  duration_ms: 0.069834
+  ...
+# Subtest: required content is enforced per contract with field-level errors
+ok 80 - required content is enforced per contract with field-level errors
+  ---
+  duration_ms: 0.201542
+  ...
+# Subtest: FoundationLock models the exporter artifact: mcps and methodProfile payloads pass
+ok 81 - FoundationLock models the exporter artifact: mcps and methodProfile payloads pass
+  ---
+  duration_ms: 0.09975
+  ...
+# Subtest: FoundationLock v1 accepts the real exported foundation lock artifact
+ok 82 - FoundationLock v1 accepts the real exported foundation lock artifact
+  ---
+  duration_ms: 3.482708
+  ...
+# Subtest: FoundationLock rejects machine absolute paths in version and path fields (ABSOLUTE_PATH_FORBIDDEN)
+ok 83 - FoundationLock rejects machine absolute paths in version and path fields (ABSOLUTE_PATH_FORBIDDEN)
+  ---
+  duration_ms: 1.365542
+  ...
+# Subtest: FoundationLock rejects floating versions (latest/HEAD/@latest/unpinned ranges) in version fields
+ok 84 - FoundationLock rejects floating versions (latest/HEAD/@latest/unpinned ranges) in version fields
+  ---
+  duration_ms: 1.97825
+  ...
+# Subtest: FoundationLock v1 has a closed top-level field set; BaselineRef keeps the additive evolution path
+ok 85 - FoundationLock v1 has a closed top-level field set; BaselineRef keeps the additive evolution path
+  ---
+  duration_ms: 0.222209
+  ...
+# Subtest: parseTapSummary reads the top-level TAP summary and rejects output without one
+ok 86 - parseTapSummary reads the top-level TAP summary and rejects output without one
+  ---
+  duration_ms: 0.39875
+  ...
+# Subtest: A03: zero-test and all-skip runs are classified as empty, not pass
+ok 87 - A03: zero-test and all-skip runs are classified as empty, not pass
+  ---
+  duration_ms: 0.364208
+  ...
+# Subtest: A04: environment crashes are classified as environment failures, never behavior RED
+ok 88 - A04: environment crashes are classified as environment failures, never behavior RED
+  ---
+  duration_ms: 0.218875
+  ...
+# Subtest: real behavior failures without environment signatures are behavior RED
+ok 89 - real behavior failures without environment signatures are behavior RED
+  ---
+  duration_ms: 0.057584
+  ...
+# Subtest: an exit code contradicting a passing TAP summary is a conservative environment failure
+ok 90 - an exit code contradicting a passing TAP summary is a conservative environment failure
+  ---
+  duration_ms: 0.063209
+  ...
+# Subtest: the execution denominator refuses zero tests and zero effective executions
+ok 91 - the execution denominator refuses zero tests and zero effective executions
+  ---
+  duration_ms: 0.098291
+  ...
+# Subtest: A04: requireValidRed accepts behavior RED and refuses environment/empty/pass runs
+ok 92 - A04: requireValidRed accepts behavior RED and refuses environment/empty/pass runs
+  ---
+  duration_ms: 0.101542
+  ...
+# Subtest: evaluateExecution accepts a passing run that meets the declared denominator
+ok 93 - evaluateExecution accepts a passing run that meets the declared denominator
+  ---
+  duration_ms: 0.123041
+  ...
+# Subtest: A03: evaluateExecution refuses zero-test, all-skip and environment-crash runs
+ok 94 - A03: evaluateExecution refuses zero-test, all-skip and environment-crash runs
+  ---
+  duration_ms: 0.123375
+  ...
+# Subtest: evaluateExecution refuses an invalid TestContract and an unmet declared denominator
+ok 95 - evaluateExecution refuses an invalid TestContract and an unmet declared denominator
+  ---
+  duration_ms: 0.093792
+  ...
+# Subtest: a behavior-red run is refused as acceptance evidence even when the denominator is met
+ok 96 - a behavior-red run is refused as acceptance evidence even when the denominator is met
+  ---
+  duration_ms: 0.698167
+  ...
+# Subtest: evidence-audit rejects stale markdown claims that contradict disk and command output
+ok 97 - evidence-audit rejects stale markdown claims that contradict disk and command output
+  ---
+  duration_ms: 142.425084
+  ...
+# Subtest: evidence-audit accepts claims that match disk and command output
+ok 98 - evidence-audit accepts claims that match disk and command output
+  ---
+  duration_ms: 154.982625
+  ...
+# Subtest: evidence-audit can compare archived OpenSpec evidence with a separate runtime run id
+ok 99 - evidence-audit can compare archived OpenSpec evidence with a separate runtime run id
+  ---
+  duration_ms: 149.248958
+  ...
+# Subtest: evidence-audit resolves an archived change when given its bare archive id
+ok 100 - evidence-audit resolves an archived change when given its bare archive id
+  ---
+  duration_ms: 106.97725
+  ...
+# Subtest: evidence-audit rejects missing progress, review, or captured test output
+ok 101 - evidence-audit rejects missing progress, review, or captured test output
+  ---
+  duration_ms: 123.545709
+  ...
+# Subtest: exporter builds a contract-valid lock from the unique sources (real repo)
+ok 102 - exporter builds a contract-valid lock from the unique sources (real repo)
+  ---
+  duration_ms: 1046.312083
+  ...
+# Subtest: lock emission gates: full digests, no machine paths, no floating versions
+ok 103 - lock emission gates: full digests, no machine paths, no floating versions
+  ---
+  duration_ms: 342.845292
+  ...
+# Subtest: exporter refuses to emit when an MCP registration floats (@latest)
+ok 104 - exporter refuses to emit when an MCP registration floats (@latest)
+  ---
+  duration_ms: 27.505
+  ...
+# Subtest: release view + lock are byte-stable across repeated exports (repeat-pull idempotency)
+ok 105 - release view + lock are byte-stable across repeated exports (repeat-pull idempotency)
+  ---
+  duration_ms: 54.203166
+  ...
+# Subtest: dual-write drift is detected in both directions (source edit and hand-edited view)
+ok 106 - dual-write drift is detected in both directions (source edit and hand-edited view)
+  ---
+  duration_ms: 158.956167
+  ...
+# Subtest: committed foundation artifacts match live sources (repo-level drift gate)
+ok 107 - committed foundation artifacts match live sources (repo-level drift gate)
+  ---
+  duration_ms: 277.021375
+  ...
+# Subtest: composition requires adapter fixture isolation and uninstall capability
+ok 108 - composition requires adapter fixture isolation and uninstall capability
+  ---
+  duration_ms: 0.085417
+  ...
+# Subtest: reverse order A: existing user config survives bootstrap, guard installed once
+ok 109 - reverse order A: existing user config survives bootstrap, guard installed once
+  ---
+  duration_ms: 51.2165
+  ...
+# Subtest: reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept
+ok 110 - reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept
+  ---
+  duration_ms: 155.4525
+  ...
+# Subtest: upgrade: stale managed entry in an older command format is replaced, not duplicated
+ok 111 - upgrade: stale managed entry in an older command format is replaced, not duplicated
+  ---
+  duration_ms: 71.545875
+  ...
+# Subtest: uninstall removes managed entries only, is idempotent, and re-init restores
+ok 112 - uninstall removes managed entries only, is idempotent, and re-init restores
+  ---
+  duration_ms: 188.111209
+  ...
+# Subtest: matcher registration and gate script behavior are tested together
+ok 113 - matcher registration and gate script behavior are tested together
+  ---
+  duration_ms: 206.115833
+  ...
+# Subtest: bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo
+ok 114 - bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo
+  ---
+  duration_ms: 509.727958
+  ...
+# Subtest: old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+ok 115 - old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+  ---
+  duration_ms: 2426.189167
+  ...
+# Subtest: active run blocks silent re-baseline after asset drift; closed run only notes it
+ok 116 - active run blocks silent re-baseline after asset drift; closed run only notes it
+  ---
+  duration_ms: 93.924625
+  ...
+# Subtest: unresolvable pinned baseline is blocked explicitly, never silently swapped
+ok 117 - unresolvable pinned baseline is blocked explicitly, never silently swapped
+  ---
+  duration_ms: 248.630625
+  ...
+# Subtest: B09: a second writer cannot take over an active run
+ok 118 - B09: a second writer cannot take over an active run
+  ---
+  duration_ms: 4522.841167
+  ...
+# Subtest: explicit migration re-pins only with ownership and a resolvable old baseline
+ok 119 - explicit migration re-pins only with ownership and a resolvable old baseline
+  ---
+  duration_ms: 421.577458
+  ...
+# Subtest: generation gate accepts a successful generator that produced a test file
+ok 120 - generation gate accepts a successful generator that produced a test file
+  ---
+  duration_ms: 4.989125
+  ...
+# Subtest: generation gate rejects when beforeTestInventory was not captured
+ok 121 - generation gate rejects when beforeTestInventory was not captured
+  ---
+  duration_ms: 3.333334
+  ...
+# Subtest: generation gate rejects timeout, non-zero exit, and empty test output
+ok 122 - generation gate rejects timeout, non-zero exit, and empty test output
+  ---
+  duration_ms: 3.280958
+  ...
+# Subtest: generation gate rejects an unchanged pre-existing test inventory
+ok 123 - generation gate rejects an unchanged pre-existing test inventory
+  ---
+  duration_ms: 3.353375
+  ...
+# Subtest: V_INFRA_I03 contract: committed outline domain validates clean; qualify/up/probe/stop honor the exit contract
+ok 124 - V_INFRA_I03 contract: committed outline domain validates clean; qualify/up/probe/stop honor the exit contract
+  ---
+  duration_ms: 457.674708
+  ...
+# Subtest: gap-reporting behavior: a ref missing from a supplied catalog is explicitly reported as a catalogGap, never silent
+ok 125 - gap-reporting behavior: a ref missing from a supplied catalog is explicitly reported as a catalogGap, never silent
+  ---
+  duration_ms: 68.778916
+  ...
+# Subtest: RED image gate: images.lock without any authenticated digest refuses up (committed state, nothing fabricated)
+ok 126 - RED image gate: images.lock without any authenticated digest refuses up (committed state, nothing fabricated)
+  ---
+  duration_ms: 73.978416
+  ...
+# Subtest: RED image gate: floating tag is rejected
+ok 127 - RED image gate: floating tag is rejected
+  ---
+  duration_ms: 86.775042
+  ...
+# Subtest: RED image gate: malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED
+ok 128 - RED image gate: malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED
+  ---
+  duration_ms: 311.03275
+  ...
+# Subtest: RED oidc gate: missing issuer/client registration is rejected; non-loopback redirect is rejected
+ok 129 - RED oidc gate: missing issuer/client registration is rejected; non-loopback redirect is rejected
+  ---
+  duration_ms: 218.770708
+  ...
+# Subtest: RED storage-policy gate: missing file exits 1; incomplete or policy-violating content exits 2
+ok 130 - RED storage-policy gate: missing file exits 1; incomplete or policy-violating content exits 2
+  ---
+  duration_ms: 178.459042
+  ...
+# Subtest: RED env gate: secret plaintext, host absolute paths and unbound raw values are rejected
+ok 131 - RED env gate: secret plaintext, host absolute paths and unbound raw values are rejected
+  ---
+  duration_ms: 212.090833
+  ...
+# Subtest: RED cross-project gate: credential refs resolving into another project (pav-*) are rejected
+ok 132 - RED cross-project gate: credential refs resolving into another project (pav-*) are rejected
+  ---
+  duration_ms: 116.4385
+  ...
+# Subtest: RED domain gate: collection registration without owner or audience registration is rejected
+ok 133 - RED domain gate: collection registration without owner or audience registration is rejected
+  ---
+  duration_ms: 193.300084
+  ...
+# Subtest: probes are real subcommands: without a live instance they exit 2 with structured UNVERIFIED, never mock-green, never skip
+ok 134 - probes are real subcommands: without a live instance they exit 2 with structured UNVERIFIED, never mock-green, never skip
+  ---
+  duration_ms: 231.141834
+  ...
+# Subtest: stop without an instance started by this tool is honestly UNVERIFIED and refuses
+ok 135 - stop without an instance started by this tool is honestly UNVERIFIED and refuses
+  ---
+  duration_ms: 66.912333
+  ...
+# Subtest: OutlineState.v1 contract: durable db+attachments declared, cache not rights authority, API contracts stay UNVERIFIED until real API evidence
+ok 136 - OutlineState.v1 contract: durable db+attachments declared, cache not rights authority, API contracts stay UNVERIFIED until real API evidence
+  ---
+  duration_ms: 6.951333
+  ...
+# Subtest: compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders
+ok 137 - compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders
+  ---
+  duration_ms: 175.415625
+  ...
+# Subtest: V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract
+ok 138 - V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract
+  ---
+  duration_ms: 1064.913958
+  ...
+# Subtest: RED owner gate: resource owned by an unregistered owner is rejected
+ok 139 - RED owner gate: resource owned by an unregistered owner is rejected
+  ---
+  duration_ms: 94.039833
+  ...
+# Subtest: RED cross-project gate: credentialRef resolving into another project (pav-*) is rejected
+ok 140 - RED cross-project gate: credentialRef resolving into another project (pav-*) is rejected
+  ---
+  duration_ms: 56.478958
+  ...
+# Subtest: RED principal gate: ordinary agent identity is denied publisher/isolator material
+ok 141 - RED principal gate: ordinary agent identity is denied publisher/isolator material
+  ---
+  duration_ms: 4.25275
+  ...
+# Subtest: RED image gate: floating tag and fake digest do not pass
+ok 142 - RED image gate: floating tag and fake digest do not pass
+  ---
+  duration_ms: 115.215042
+  ...
+# Subtest: RED evidence gate: license/platform/backup compatibility missing means NOT_READY and up refuses
+ok 143 - RED evidence gate: license/platform/backup compatibility missing means NOT_READY and up refuses
+  ---
+  duration_ms: 642.089333
+  ...
+# Subtest: RED digest binding: qualify receipt recomputes the actual input archive and rejects mismatch
+ok 144 - RED digest binding: qualify receipt recomputes the actual input archive and rejects mismatch
+  ---
+  duration_ms: 316.443666
+  ...
+# Subtest: RED plaintext gate: secret-shaped values and secret-value keys are rejected
+ok 145 - RED plaintext gate: secret-shaped values and secret-value keys are rejected
+  ---
+  duration_ms: 110.589625
+  ...
+# Subtest: RED host-path gate: host absolute paths are rejected in committed structure
+ok 146 - RED host-path gate: host absolute paths are rejected in committed structure
+  ---
+  duration_ms: 62.311417
+  ...
+# Subtest: RED role-reuse gate: one credential bound to two high-privilege roles is rejected
+ok 147 - RED role-reuse gate: one credential bound to two high-privilege roles is rejected
+  ---
+  duration_ms: 58.87175
+  ...
+# Subtest: retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED
+ok 148 - retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED
+  ---
+  duration_ms: 58.070916
+  ...
+# Subtest: committed registry and refs catalog contain no secret material
+ok 149 - committed registry and refs catalog contain no secret material
+  ---
+  duration_ms: 1.014084
+  ...
+# Subtest: SecretRef.v1 format: parse accepts only well-formed project-bound refs
+ok 150 - SecretRef.v1 format: parse accepts only well-formed project-bound refs
+  ---
+  duration_ms: 0.107792
+  ...
+# Subtest: authority readback is honestly recorded as UNVERIFIED with the exact failure
+ok 151 - authority readback is honestly recorded as UNVERIFIED with the exact failure
+  ---
+  duration_ms: 441.676042
+  ...
+# Subtest: every planned secret ref (I01+I03 freeze list, 13) is registered with distinct purposes and bound roles
+ok 152 - every planned secret ref (I01+I03 freeze list, 13) is registered with distinct purposes and bound roles
+  ---
+  duration_ms: 0.258167
+  ...
+# Subtest: published package includes probe runtime modules
+ok 153 - published package includes probe runtime modules
+  ---
+  duration_ms: 0.484
+  ...
+# Subtest: package exposes executable regressions without running browser source fixtures
+ok 154 - package exposes executable regressions without running browser source fixtures
+  ---
+  duration_ms: 0.08275
+  ...
+# Subtest: probe rejects debug leakage and runaway canvas dimensions
+ok 155 - probe rejects debug leakage and runaway canvas dimensions
+  ---
+  duration_ms: 118.6775
+  ...
+# Subtest: probe accepts bounded layout, clean DOM, passing commands and interactions
+ok 156 - probe accepts bounded layout, clean DOM, passing commands and interactions
+  ---
+  duration_ms: 123.992209
+  ...
+# Subtest: probe rejects command evidence whose exit code is not a number
+ok 157 - probe rejects command evidence whose exit code is not a number
+  ---
+  duration_ms: 101.525583
+  ...
+# Subtest: probe rejects self-reported interactions without state transition proof
+ok 158 - probe rejects self-reported interactions without state transition proof
+  ---
+  duration_ms: 125.045041
+  ...
+# Subtest: probe rejects passed interactions that do not have matching state transitions
+ok 159 - probe rejects passed interactions that do not have matching state transitions
+  ---
+  duration_ms: 130.358792
+  ...
+# Subtest: probe profile requires project-critical interactions to be present
+ok 160 - probe profile requires project-critical interactions to be present
+  ---
+  duration_ms: 96.612625
+  ...
+# Subtest: probe profile requires every project-critical interaction to have state transition proof
+ok 161 - probe profile requires every project-critical interaction to have state transition proof
+  ---
+  duration_ms: 146.555417
+  ...
+# Subtest: probe profile enforces project-specific state transition semantics
+ok 162 - probe profile enforces project-specific state transition semantics
+  ---
+  duration_ms: 97.270708
+  ...
+# Subtest: probe profile requires its declared observation adapter in project source
+ok 163 - probe profile requires its declared observation adapter in project source
+  ---
+  duration_ms: 114.374166
+  ...
+# Subtest: probe profile requires runtime evidence that its observation adapter is callable
+ok 164 - probe profile requires runtime evidence that its observation adapter is callable
+  ---
+  duration_ms: 88.830791
+  ...
+# Subtest: probe rejects source-level debug markers and canvas resize feedback loops
+ok 165 - probe rejects source-level debug markers and canvas resize feedback loops
+  ---
+  duration_ms: 83.895209
+  ...
+# Subtest: probe rejects debug DOM markers injected dynamically from project source
+ok 166 - probe rejects debug DOM markers injected dynamically from project source
+  ---
+  duration_ms: 82.350084
+  ...
+# Subtest: probe rejects incomplete evidence instead of treating missing observations as passing
+ok 167 - probe rejects incomplete evidence instead of treating missing observations as passing
+  ---
+  duration_ms: 122.466458
+  ...
+# Subtest: project test gate runs the manifest test command and captures success
+ok 168 - project test gate runs the manifest test command and captures success
+  ---
+  duration_ms: 300.29
+  ...
+# Subtest: project test gate rejects a failing or missing test command
+ok 169 - project test gate rejects a failing or missing test command
+  ---
+  duration_ms: 292.165042
+  ...
+# Subtest: release version metadata is consistent across all sources
+ok 170 - release version metadata is consistent across all sources
+  ---
+  duration_ms: 6.148166
+  ...
+# Subtest: version gate fails on drift (negative path)
+ok 171 - version gate fails on drift (negative path)
+  ---
+  duration_ms: 105.877917
+  ...
+# Subtest: workflow-audit rejects an archived run whose latest review is not ready
+ok 172 - workflow-audit rejects an archived run whose latest review is not ready
+  ---
+  duration_ms: 146.738667
+  ...
+1..172
+# tests 172
+# suites 0
+# pass 172
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11093.743791

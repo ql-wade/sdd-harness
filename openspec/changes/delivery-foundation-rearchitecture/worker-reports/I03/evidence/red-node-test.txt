@@ -1,0 +1,301 @@
+# RED run: node --test test/infra-outline.test.js
+# timestamp: 2026-10-20T04:11:24Z
+# expect: all tests FAIL (domain files + tools/infra/outline.mjs do not exist yet)
+TAP version 13
+# Subtest: V_INFRA_I03 contract: committed outline domain validates clean; qualify/up/probe/stop honor the exit contract
+not ok 1 - V_INFRA_I03 contract: committed outline domain validates clean; qualify/up/probe/stop honor the exit contract
+  ---
+  duration_ms: 49.111166
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:86:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    validate must PASS on committed files: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/tools/infra/outline.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:88:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: RED image gate: images.lock without any authenticated digest refuses up (committed state, nothing fabricated)
+not ok 2 - RED image gate: images.lock without any authenticated digest refuses up (committed state, nothing fabricated)
+  ---
+  duration_ms: 0.200959
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:131:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/infra/delivery/outline/images.lock.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readDomainFile (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:61:13)
+    readDomainJson (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:65:21)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:132:16)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: RED image gate: floating tag is rejected
+not ok 3 - RED image gate: floating tag is rejected
+  ---
+  duration_ms: 0.523917
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:152:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/infra/delivery/outline/compose.yaml' -> '/tmp/claude-501/infra-i03-oxnHZ4/compose.yaml'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:72:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:153:15)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED image gate: malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED
+not ok 4 - RED image gate: malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED
+  ---
+  duration_ms: 0.295417
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:164:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/infra/delivery/outline/compose.yaml' -> '/tmp/claude-501/infra-i03-KoTjB5/compose.yaml'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:72:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:165:21)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED oidc gate: missing issuer/client registration is rejected; non-loopback redirect is rejected
+not ok 5 - RED oidc gate: missing issuer/client registration is rejected; non-loopback redirect is rejected
+  ---
+  duration_ms: 0.494666
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:197:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/infra/delivery/outline/compose.yaml' -> '/tmp/claude-501/infra-i03-jMv8nO/compose.yaml'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:72:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:198:22)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED storage-policy gate: missing file exits 1; incomplete or policy-violating content exits 2
+not ok 6 - RED storage-policy gate: missing file exits 1; incomplete or policy-violating content exits 2
+  ---
+  duration_ms: 0.255459
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:227:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/infra/delivery/outline/compose.yaml' -> '/tmp/claude-501/infra-i03-ruF8tY/compose.yaml'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:72:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:229:22)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED env gate: secret plaintext, host absolute paths and unbound raw values are rejected
+not ok 7 - RED env gate: secret plaintext, host absolute paths and unbound raw values are rejected
+  ---
+  duration_ms: 0.187333
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:259:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/infra/delivery/outline/compose.yaml' -> '/tmp/claude-501/infra-i03-VflyrO/compose.yaml'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:72:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:260:21)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED cross-project gate: credential refs resolving into another project (pav-*) are rejected
+not ok 8 - RED cross-project gate: credential refs resolving into another project (pav-*) are rejected
+  ---
+  duration_ms: 0.149333
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:283:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/infra/delivery/outline/compose.yaml' -> '/tmp/claude-501/infra-i03-rlejlz/compose.yaml'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:72:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:284:23)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED domain gate: collection registration without owner or audience registration is rejected
+not ok 9 - RED domain gate: collection registration without owner or audience registration is rejected
+  ---
+  duration_ms: 0.434416
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:303:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/infra/delivery/outline/compose.yaml' -> '/tmp/claude-501/infra-i03-VT2hnh/compose.yaml'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:72:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:304:19)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: probes are real subcommands: without a live instance they exit 2 with structured UNVERIFIED, never mock-green, never skip
+not ok 10 - probes are real subcommands: without a live instance they exit 2 with structured UNVERIFIED, never mock-green, never skip
+  ---
+  duration_ms: 45.989041
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:332:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    probe oidc-principal-acl must exit 2 without a live instance
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:335:12)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: stop without an instance started by this tool is honestly UNVERIFIED and refuses
+not ok 11 - stop without an instance started by this tool is honestly UNVERIFIED and refuses
+  ---
+  duration_ms: 46.788375
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:361:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    stop must not claim success when nothing was started
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:363:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: OutlineState.v1 contract: durable db+attachments declared, cache not rights authority, API contracts stay UNVERIFIED until real API evidence
+not ok 12 - OutlineState.v1 contract: durable db+attachments declared, cache not rights authority, API contracts stay UNVERIFIED until real API evidence
+  ---
+  duration_ms: 0.344125
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:371:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/infra/delivery/outline/storage-policy.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readDomainFile (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:61:13)
+    readDomainJson (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:65:21)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:372:18)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders
+not ok 13 - compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders
+  ---
+  duration_ms: 0.164083
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:415:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/infra/delivery/outline/compose.yaml'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readDomainFile (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:61:13)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i03/test/infra-outline.test.js:416:19)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 0
+# fail 13
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 228.305625
+red-test-exit=1

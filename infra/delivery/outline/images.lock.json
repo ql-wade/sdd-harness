@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "interface": "OutlineImageLock.v1",
+  "project": "sdd-harness-pilot",
+  "note": "当前不存在已认证的 Outline/Postgres/Redis/对象存储镜像：版本未选定，reference/digest 保持 null，严禁虚构 tag/digest（images_policy.invented_tags_or_digests=false）。每个组件必须经 registry 认证 digest 后才允许 up。",
+  "resolution": {
+    "lockSource": "infra/delivery/outline/images.lock.json",
+    "composeMapping": {
+      "OUTLINE_IMAGE": "outline-app",
+      "OUTLINE_POSTGRES_IMAGE": "outline-postgres",
+      "OUTLINE_REDIS_IMAGE": "outline-redis",
+      "OUTLINE_OBJECT_STORE_IMAGE": "outline-object-store"
+    },
+    "rule": "compose 的 image 一律经由本锁解析注入；本锁未 ready 时 tools/infra/outline.mjs up 必须拒绝"
+  },
+  "upGate": {
+    "enabled": false,
+    "requireAllComponentsAuthenticated": true,
+    "reason": "I03 仅声明独立资料域与准入结构；组件镜像没有任何已认证 digest，up 在资源准入完成前必须拒绝"
+  },
+  "components": [
+    {
+      "component": "outline-app",
+      "role": "application",
+      "required": true,
+      "reference": null,
+      "digest": null,
+      "digestAuthenticated": false,
+      "selectionStatus": "UNSELECTED",
+      "status": "UNVERIFIED",
+      "reason": "版本未选定；精确镜像与兼容矩阵、许可证/所需功能按选定版本核验前不得编造 tag"
+    },
+    {
+      "component": "outline-postgres",
+      "role": "database",
+      "required": true,
+      "reference": null,
+      "digest": null,
+      "digestAuthenticated": false,
+      "selectionStatus": "UNSELECTED",
+      "status": "UNVERIFIED",
+      "reason": "版本未选定；与 Outline 兼容矩阵核验前不得编造 tag"
+    },
+    {
+      "component": "outline-redis",
+      "role": "cache",
+      "required": true,
+      "reference": null,
+      "digest": null,
+      "digestAuthenticated": false,
+      "selectionStatus": "UNSELECTED",
+      "status": "UNVERIFIED",
+      "reason": "版本未选定；仅缓存角色，兼容矩阵核验前不得编造 tag"
+    },
+    {
+      "component": "outline-object-store",
+      "role": "object-storage",
+      "required": true,
+      "reference": null,
+      "digest": null,
+      "digestAuthenticated": false,
+      "selectionStatus": "UNSELECTED",
+      "status": "UNVERIFIED",
+      "reason": "对象存储类型未选定；不得编造 tag"
+    }
+  ]
+}

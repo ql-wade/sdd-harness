@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "interface": "OutlineStoragePolicy.v1",
+  "project": "sdd-harness-pilot",
+  "note": "对象存储与状态策略（OutlineState.v1）：结构在位，endpoint/bucket/TTL 全部未选定；不得假定附件撤回立即生效；cache 仅缓存，永非权限权威。",
+  "storage": {
+    "type": "UNSELECTED",
+    "endpoint": null,
+    "bucket": null,
+    "region": null,
+    "credentialRef": "secret-ref:sdd-harness-pilot/outline-object-store",
+    "status": "UNVERIFIED"
+  },
+  "signedUrl": {
+    "defaultTtlSeconds": null,
+    "maxTtlSeconds": null,
+    "status": "UNVERIFIED",
+    "reason": "签名 URL 期限与密钥轮换输入未确定；期限选定前不得启用公开附件分发"
+  },
+  "keyRotation": {
+    "policy": "UNVERIFIED",
+    "rotationInputRequired": true
+  },
+  "revocation": {
+    "immediateEffectAssumed": false,
+    "note": "附件 URL 缓存残留风险已登记：撤回后已签发 URL 的残留有效性必须实测，不得假定立即失效"
+  },
+  "state": {
+    "database": {
+      "engine": "postgres",
+      "durable": true,
+      "credentialRef": "secret-ref:sdd-harness-pilot/outline-db",
+      "note": "唯一权威数据存储"
+    },
+    "attachments": {
+      "durable": true,
+      "credentialRef": "secret-ref:sdd-harness-pilot/outline-object-store",
+      "note": "附件持久存储，与数据库一致性备份并列"
+    },
+    "cache": {
+      "engine": "redis",
+      "durable": false,
+      "rightsAuthority": false,
+      "credentialRef": "secret-ref:sdd-harness-pilot/outline-redis",
+      "note": "仅缓存；权限判定永不以 cache 为准"
+    }
+  },
+  "apiContracts": {
+    "observationRef": "openspec/changes/delivery-foundation-rearchitecture/outline-public-api-observation.json",
+    "fixedCreateUuid": {
+      "declaredBySpec": true,
+      "status": "UNVERIFIED",
+      "reason": "官方 API spec 声明了 client-supplied create UUID；仅真实部署验证后才可 VERIFIED"
+    },
+    "lastRevision": {
+      "declaredBySpec": true,
+      "conflictStatusDeclared": 409,
+      "status": "UNVERIFIED",
+      "reason": "官方 API spec 声明了 lastRevision 冲突 409；仅真实部署验证后才可 VERIFIED，更新冲突不盲覆盖"
+    }
+  }
+}

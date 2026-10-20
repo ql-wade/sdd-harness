@@ -3105,6 +3105,90 @@
       },
       "not_applicable_reasons": {},
       "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_P1_6_PONYTAIL_ASSETS",
+      "task_ids": [
+        "P1_6",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "M01",
+        "M02",
+        "B01"
+      ],
+      "command": "node --test test/delivery-cases/1_6.mjs --scenario ponytail-assets --json",
+      "expected": "- **GIVEN** classic-closeout-and-hook-contract.md §7.1 要求固定 Ponytail 实际分发版本与摘要\n- **WHEN** method-profile-manifest 缺 Ponytail 5.3.2 资产条目或缺逐文件 sha256/来源/用途，或 hook 注册分工（插件入口 vs hooks.yaml vs adapter 受管生成）未显式声明\n- **THEN** 检查失败；manifest 必须含 Ponytail 资产快照且不改上游正文/插件缓存。依赖缺失退出非零/UNVERIFIED，不得 skip 转 PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "availability": {
+        "implementedBy": "PLANNED_NOT_EXECUTED"
+      },
+      "evidence": {
+        "data": "required",
+        "logs": "required",
+        "screenshots": "not-applicable"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "CLI/文件级检查：无 UI 面，截图不适用；证据为 manifest 摘要断言与命令日志"
+      },
+      "amendment": "ponytail-supplement-20261020"
+    },
+    {
+      "id": "V_P1_2_PLUGIN_REGISTRATION_DIVISION",
+      "task_ids": [
+        "P1_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "F02",
+        "F04",
+        "B09"
+      ],
+      "command": "node --test test/foundation-distribution.test.js test/delivery-cases/1_2.mjs --scenario plugin-registration-division --json",
+      "expected": "- **GIVEN** §7.2 插件生命周期 Hook 由插件入口管理、项目规则来自 hooks.yaml、注册分别管理\n- **WHEN** exporter/adapter 组合视图把插件整套 Hook 复制进项目受管块，或相同事件/命令重复注册\n- **THEN** 拒绝并列出冲突；用户条目保留；不依赖插件与项目 Hook 执行先后获得正确性；adapter 只生成固定事件集，新增事件必须走受管生成逻辑而非 YAML 追加。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "availability": {
+        "implementedBy": "PLANNED_NOT_EXECUTED"
+      },
+      "evidence": {
+        "data": "required",
+        "logs": "required",
+        "screenshots": "not-applicable"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "CLI/文件级检查：无 UI 面，截图不适用；证据为组合视图 diff 断言与命令日志"
+      },
+      "amendment": "ponytail-supplement-20261020"
+    },
+    {
+      "id": "V_I02_METHOD_STATE_SCOPE",
+      "task_ids": [
+        "I02",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A09",
+        "A10",
+        "A11"
+      ],
+      "command": "node --test test/infra-runner-isolation.test.js test/delivery-cases/1_3.mjs --scenario method-state-scope --json",
+      "expected": "- **GIVEN** §6 同仓库并发会话可能共享 mode 文件（最后写入生效），§7.4 要求角色执行使用经验证的独立方法状态作用域\n- **WHEN** worker 角色工作区能读写共享 mode 文件，或以 mode 内容推断角色/权限\n- **THEN** 结构拒绝（mode 文件不进 worker 可写面或不作为身份依据显式声明）；无法隔离时如实标 cooperative-local 限制；有效资产摘要与注入观察分开记录。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "availability": {
+        "implementedBy": "PLANNED_NOT_EXECUTED"
+      },
+      "evidence": {
+        "data": "required",
+        "logs": "required",
+        "screenshots": "not-applicable"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "CLI/文件级检查：无 UI 面，截图不适用；证据为挂载策略断言与命令日志"
+      },
+      "amendment": "ponytail-supplement-20261020"
     }
   ],
   "commands_status": "All scenario runner commands are planned interfaces to implement, not evidence of completed tests.",

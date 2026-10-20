@@ -1,0 +1,188 @@
+{
+  "task": "I02",
+  "task_title": "固定Comet Runner及真实OS/container角色隔离",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/i02-runner-isolation",
+  "base_commit": "6c3b047",
+  "final_status": "GREEN",
+  "acceptance_ids": [
+    "A09",
+    "A10",
+    "A11",
+    "A19",
+    "C07",
+    "D01",
+    "D08",
+    "H03",
+    "H09",
+    "U07",
+    "F05",
+    "F07",
+    "M02"
+  ],
+  "red_cases": [
+    {
+      "case": "pre-implementation RED (V_INFRA_I02 suite against absent domain files and CLI)",
+      "actually_failed": true,
+      "evidence": "worker-reports/I02/evidence/red-node-test.txt — node --test test/infra-runner-isolation.test.js: 13/13 failed, 0 pass, 0 skipped (infra/delivery/runner/ and tools/infra/runner.mjs did not exist)"
+    },
+    {
+      "case": "pre-implementation CLI probes (validate/qualify/up/probe/stop entry points absent)",
+      "actually_failed": true,
+      "evidence": "worker-reports/I02/evidence/red-cli.txt — all six planned runner.mjs invocations exit=1 with MODULE_NOT_FOUND"
+    },
+    {
+      "case": "role-policy 无角色定义/角色缺 principal 绑定/同主体复用多角色 → validate/qualify 拒绝",
+      "actually_failed": true,
+      "evidence": "tests 'RED role gate...': roles deleted -> exit 2 ROLES_MISSING; author principal deleted -> exit 2 ROLE_PRINCIPAL_BINDING_MISSING; author reusing reviewer's principal label -> exit 2 ROLE_IDENTITY_REUSE; qualify on the reuse fixture keeps role-boundary-declaration UNVERIFIED citing ROLE_IDENTITY_REUSE (green-node-test.txt)"
+    },
+    {
+      "case": "image.lock 无 digest（本机无 docker，无法认证镜像 → 结构上不允许 ready）时 up 拒绝（upGate.enabled=false，同 I01/I03）",
+      "actually_failed": true,
+      "evidence": "test 'RED image gate: image.lock without any authenticated digest refuses up': committed lock has reference=null/digest=null/status=UNVERIFIED for comet-runner and runner-base, containerBuildStatus=UNVERIFIED, hostBuildFingerprint=cb1151b4... recorded; up exit=2 refused=true UP_REFUSED_RUNNER_LOCK_NOT_READY with 2 unverifiedComponents; fixture with format-valid but unauthenticated digest stays UNVERIFIED and up still refuses (green-node-test.txt, green-cli.txt)"
+    },
+    {
+      "case": "compose 含宿主敏感挂载（/Users、docker.sock、宿主 HOME）或非 loopback 端口 → 校验拒绝（HOST_MOUNT_FORBIDDEN/PORT_BINDING_NOT_LOOPBACK 语义）",
+      "actually_failed": true,
+      "evidence": "tests 'RED compose gate...': appended - /Users/example/data:/data -> exit 2 HOST_MOUNT_FORBIDDEN; appended /var/run/docker.sock mount -> exit 2 DOCKER_SOCK_MOUNT_FORBIDDEN (raw socket path redacted in output); appended /root/home-dir mount -> exit 2 HOST_MOUNT_FORBIDDEN; port 7300:7300 -> exit 2 PORT_BINDING_NOT_LOOPBACK; read_only removed from all services -> exit 2 READ_ONLY_ROOTFS_REQUIRED; cap_drop ALL removed -> exit 2 CAP_DROP_ALL_REQUIRED; privileged: true -> exit 2 PRIVILEGED_FORBIDDEN; comet-root service outside the six roles -> exit 2 SERVICE_ROLE_UNKNOWN; concrete image tag -> exit 2 COMPOSE_IMAGE_NOT_LOCK_RESOLVED (green-node-test.txt)"
+    },
+    {
+      "case": "workspace-mounts 出现 worker 可写控制目录路径（.comet 控制状态/锁/回执/签发目录）→ 拒绝（worker 无控制状态写权的结构表达）",
+      "actually_failed": true,
+      "evidence": "tests 'RED workspace gate...': author workspace mountPath moved onto a control path -> exit 2 WORKER_CONTROL_PATH_FORBIDDEN; control volume mountedBy gains 'author' -> exit 2 WORKER_CONTROL_PATH_FORBIDDEN; reviewer workspace gains a host bind path -> exit 2 HOST_BIND_FORBIDDEN (path redacted in output); workspace volume diverging from role-policy -> exit 2 WORKSPACE_VOLUME_MISMATCH (green-node-test.txt)"
+    },
+    {
+      "case": "authority-registration 双实例/复制 state 启动 → 拒绝（Authority.v1 单一权威：登记含 authority/workspace 唯一性约束，第二个登记同 authority 被拒）",
+      "actually_failed": true,
+      "evidence": "tests 'RED authority gate...': second registration on the same authority+workspace -> exit 2 AUTHORITY_DUPLICATE_REGISTRATION; stateOrigin=copied -> exit 2 COPIED_STATE_FORBIDDEN; writerExclusivity=shared -> exit 2 CONCURRENT_WRITER_FORBIDDEN; incomplete entry -> exit 2 AUTHORITY_REGISTRATION_INCOMPLETE (green-node-test.txt)"
+    },
+    {
+      "case": "普通角色（author/reviewer 等）访问 publisher/isolator 级 secret-ref → 拒绝（复用 I01 secret-refs 解析语义）",
+      "actually_failed": true,
+      "evidence": "test 'RED secret tier gate...': author grantedRefs gains outline-publisher (I01 boundRole=publisher) -> exit 2 SECRET_REF_TIER_FORBIDDEN; test-author gains outline-isolator (boundRole=isolator) -> exit 2 SECRET_REF_TIER_FORBIDDEN; independent of the structural gate, I01 resolveSecretRef with an author principal against outline-publisher throws PRINCIPAL_NOT_AUTHORIZED (green-node-test.txt)"
+    }
+  ],
+  "green_summary": {
+    "RunnerInfra.v1": "tools/infra/runner.mjs validate|qualify|up|probe|stop. Exit contract 0=PASS 1=input/prerequisite 2=verification failure, matching I01/I03 (registry+refs loads fail-closed, displayPath/redactHostPaths on every structured field, host paths never echoed, no skip/mock anywhere). validate runs the full structural gate over the six domain files (image lock pins/upGate closed, role boundary invariants, worker-unwritable control volumes, authority uniqueness REFUSE rules, compose declaration gate incl. read-only rootfs + cap_drop ALL + no-new-privileges + loopback + internal network + named-volumes-only + docker.sock ban + 1:1 service/role mapping, Dockerfile lock-resolved base + non-root USER) and exits 0 on committed files with catalogGaps reported explicitly (3 refs missing from the I01-owned catalog). qualify evaluates 8 evidence categories on the VERIFIED/RECORDED/UNVERIFIED ladder (6 UNVERIFIED: container-image, role-isolation-enforcement, control-directory-closure, authority-exclusivity, secret-refs-registered, credentials-provisioned; 2 RECORDED: source-pins, role-boundary-declaration), binds sha256 of registry + all six domain files, exits 2 NOT_READY by design. up refuses in stages exactly like outline: UP_REFUSED_RUNNER_LOCK_NOT_READY (2 components without authenticated digests) -> UP_NOT_AUTHORIZED (closed gate) -> UP_REFUSED_CONTAINER_DAEMON_UNREACHABLE (docker EPERM observed, reported verbatim) -> UP_NOT_EXECUTED; infra starts/stops nothing and holds no DAG/phase/job queue.",
+    "RoleBoundary.v1": "infra/delivery/runner/role-policy.json: six roles (controller/author/test-author/reviewer/publisher/isolator), each with a distinct principal label + credential scope (controller=runner-authority, author=worker-author-api, reviewer=worker-review-api; test-author/publisher/isolator honestly UNASSIGNED rather than inventing refs), distinct workspace volumes, readOnlyRootFilesystem=true, capabilities drop ALL, internal-only network. grantedRefs tier rule: a ref resolves only to its single bound role; publisher/isolator-tier refs can never appear in ordinary worker scopes. infra/delivery/runner/workspace-mounts.json: control volumes (comet state/locks, receipts/approval payloads, issuance material) are worker-unwritable and mount for the controller only; worker workspaces are named volumes with no host binds; docker socket forbidden everywhere. infra/delivery/runner/compose.yaml declares all six role services with independent volumes, read-only rootfs, cap_drop ALL, no-new-privileges, loopback port (controller only), internal network; images only via ${COMET_RUNNER_IMAGE:?} resolved from the lock. infra/delivery/runner/Dockerfile: build declaration from the pinned source + two SHA256-pinned patches via the qualified tools/comet build contract (P1_1/P1_6, fingerprint cb1151b4...), base image and hashes only via --build-arg from the lock, non-root USER comet; the containerized build step itself is UNVERIFIED on this host (no daemon, EPERM).",
+    "Authority.v1": "infra/delivery/runner/authority-registration.example.json: one fixed authority + workspace, ids deliberately null/UNVERIFIED until a real runner start reads them back; uniqueness block declares and the validator enforces REFUSE for concurrent writers and copied state; at most one registration per (authorityId, workspaceId) — a second registration on the same authority is AUTHORITY_DUPLICATE_REGISTRATION; registrations stays empty until the real Runner exists. probes are real subcommands: probe --case role-denial and --case duplicate-authority exit 2 with structured UNVERIFIED + exact reason + requiredInputs + plannedSteps (per-channel Edit/Shell/MCP negative-write matrix, docker.sock/host-HOME denial, controller-kill phase-pickup rejection, copied-state second-writer refusal, one-writer readback); with --endpoint they genuinely attempt a real request and report the raw failure (EPERM observed in this sandbox) — the same command runs unchanged against a future live runner. stop is honestly UNVERIFIED: this tool never started a stack."
+  },
+  "commands": [
+    {
+      "cmd": "node --test test/infra-runner-isolation.test.js",
+      "exit_code": 0,
+      "summary": "V_INFRA_I02 contract: 13 tests, 13 pass, 0 fail, 0 skipped"
+    },
+    {
+      "cmd": "node tools/infra/runner.mjs validate --registry infra/delivery/registry.json --json",
+      "exit_code": 0,
+      "summary": "ok=true, violations=[], catalogGaps=[worker-author-api, worker-review-api, runner-source-read] (honest gaps: refs missing from the I01-owned catalog; runner-authority correctly not reported), six-role + authority + image-lock summaries present, no host paths in output"
+    },
+    {
+      "cmd": "node tools/infra/runner.mjs qualify --registry infra/delivery/registry.json --json",
+      "exit_code": 2,
+      "summary": "ready=false, unverifiedCount=6 with exact reasons (container-image, role-isolation-enforcement, control-directory-closure, authority-exclusivity, secret-refs-registered, credentials-provisioned); source-pins and role-boundary-declaration RECORDED; receipt binds input sha256s; exit 2 is the designed NOT_READY contract"
+    },
+    {
+      "cmd": "node tools/infra/runner.mjs up --registry infra/delivery/registry.json --json",
+      "exit_code": 2,
+      "summary": "refused=true, UP_REFUSED_RUNNER_LOCK_NOT_READY: 2 component images lack an authenticated digest (no containerized build has ever run on this host)"
+    },
+    {
+      "cmd": "node tools/infra/runner.mjs probe --case role-denial --json",
+      "exit_code": 2,
+      "summary": "executed=false, status=UNVERIFIED, exact reason (no live runner runtime), 3 requiredInputs, 5 plannedSteps incl. per-channel Edit/Shell/MCP denial matrix and controller-kill phase-pickup rejection"
+    },
+    {
+      "cmd": "node tools/infra/runner.mjs probe --case duplicate-authority --json",
+      "exit_code": 2,
+      "summary": "same structured UNVERIFIED contract, 4 plannedSteps incl. copied-state refusal and one-writer readback across two start requests"
+    },
+    {
+      "cmd": "node tools/infra/runner.mjs probe --case role-denial --endpoint http://127.0.0.1:59999 --json",
+      "exit_code": 2,
+      "summary": "real attempt performed: GET failed with EPERM (sandbox denies connect), reported verbatim, stays UNVERIFIED — the same command runs unchanged against a future live runner"
+    },
+    {
+      "cmd": "node tools/infra/runner.mjs stop --json",
+      "exit_code": 2,
+      "summary": "executed=false, status=UNVERIFIED: nothing was ever started by this tool, nothing to stop"
+    },
+    {
+      "cmd": "npm test (full repo suite in worktree)",
+      "exit_code": 0,
+      "summary": "138 tests, 138 pass, 0 fail, 0 skipped — no regressions (125 baseline + 13 new V_INFRA_I02)"
+    }
+  ],
+  "unverified": [
+    {
+      "item": "Runner/base 镜像 digest（comet-runner、runner-base）",
+      "reason": "本会话 docker daemon socket 被沙箱拒绝（EPERM）：容器化构建从未执行，无任何已认证 digest；构建输入（commit c90af44a…、archive sha256、两 patch sha256、toolchain、fingerprint cb1151b4…）已按 P1_1/P1_6 固定记录，tag/digest 保持 null，严禁虚构",
+      "owner": "I02 准入阶段（具备 daemon 的受控环境先重建 fingerprint 再认证 digest）；运行时承接 I07（真实 Runner 阶段）"
+    },
+    {
+      "item": "role-isolation-enforcement（真实 UID/GID/挂载 inspect + Edit/Shell/MCP 逐渠道负向写）",
+      "reason": "需要真实 Runner 运行时与已供给的 worker principals；结构声明（RoleBoundary.v1）不替代实测拒绝——oracle 明确要求不以容器配置文本代替实测",
+      "owner": "I07 / 受保护 Runner 阶段（probe --case role-denial 同命令直接可跑）"
+    },
+    {
+      "item": "authority-exclusivity（复制 state 第二写者拒绝 + 原 RunID/operation 恢复读回）",
+      "reason": "需要权威 Comet state 卷与两个候选实例；probe --case duplicate-authority 计划步骤已固定，未执行",
+      "owner": "I07 / 受保护 Runner 阶段；跨主机恢复归 I08"
+    },
+    {
+      "item": "4 个 secret-ref 全部未供给（runner-authority NOT_PROVISIONED；worker-author-api/worker-review-api 未登记；runner-source-read 未登记）",
+      "reason": "引用只出现在域文件，永不存值；I01 无运行时 secret store（resolve 恒 UNRESOLVED 是设计）",
+      "owner": "I01 owner 更新目录（3 个缺口已由 validate 显式上报，同 I03 outline-app-session 先例）；供给属后续运行时授权机制"
+    },
+    {
+      "item": "Dockerfile 容器内构建步骤",
+      "reason": "声明性固定（输入 sha256 校验 + 受控 build.mjs + 非 root），本宿主无法实构建；UNVERIFIED 如实标注于 image.lock.json sourceInputs.containerBuildStatus",
+      "owner": "I02 准入阶段在受控环境实构建并认证 digest"
+    },
+    {
+      "item": "固定 authority/workspace 标识",
+      "reason": "真实标识只能在真实 Runner 首次启动读回后记录；登记保持空，id=null/UNVERIFIED",
+      "owner": "I07（真实 Runner 首次启动时读回登记）"
+    }
+  ],
+  "files_changed": [
+    "infra/delivery/runner/compose.yaml",
+    "infra/delivery/runner/Dockerfile",
+    "infra/delivery/runner/image.lock.json",
+    "infra/delivery/runner/role-policy.json",
+    "infra/delivery/runner/workspace-mounts.json",
+    "infra/delivery/runner/authority-registration.example.json",
+    "tools/infra/runner.mjs",
+    "test/infra-runner-isolation.test.js",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I02.json",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I02/evidence/red-node-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I02/evidence/red-cli.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I02/evidence/green-node-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I02/evidence/green-cli.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I02/evidence/npm-test.txt"
+  ],
+  "commits": {
+    "tests": "5854edf test(infra): V_INFRA_I02 RED — runner isolation contract suite, 13/13 fail on absent implementation",
+    "implementation": "d9e628a feat(infra): I02 comet runner isolation — green implementation behind RED gates",
+    "report": "committed with this file (docs commit following this report)"
+  },
+  "blockers_or_questions": [
+    "I01 目录缺口：worker-author-api / worker-review-api / runner-source-read 三个 ref 未登记（runner-authority 已登记）。同 I03 的 outline-app-session 先例，需要 I01 owner 修订 secrets.refs.example.json；validate/qualify 已把缺口显式上报为 readiness 证据，不阻塞本任务结构交付。",
+    "publisher/isolator 专属凭据不在 I02 四 ref 集内（outline-publisher/outline-isolator 归 I03 域、由有权主体签发）：role-policy 对这两个角色如实标 UNASSIGNED 而不代签；若后续要求 Runner 六角色全部持独立凭据，需要计划层面的 ref 扩充决定。",
+    "真实 container 构建/inspect/负向写探针在本会话被沙箱 EPERM 拦截（docker daemon 不可达）：全部按契约如实 UNVERIFIED 并指定承接者，未绕过、未 mock。"
+  ],
+  "integration_fix": {
+    "trigger": "master 98de901 集成回归发现两处过时断言（I03 outline-app-session 同款交互，非实现缺陷）：协调者合并 I01 修正案 2（05fb404，目录 13→16 refs），worker-author-api / worker-review-api / runner-source-read 三个 runner ref 已登记，qualify 的 secret-refs-registered 由 UNVERIFIED 升 RECORDED，原断言固化的“3 个缺口”不再成立",
+    "merge": "git merge --no-ff master (98de901) -> 3d65712，无冲突；合并树上复现失败恰为测试 1 与测试 13，与其余 11 测试无交互",
+    "changes": [
+      "测试 1：三个“catalogGaps 含未登记 ref”断言改为正向断言——四个 runner ref 均不得再报缺口，且 catalogGaps deepEqual []（防回归）",
+      "测试 13：重组为“已登记读 RECORDED + 合成缺口行为覆盖”——committed 目录期望 secret-refs-registered=RECORDED（仍 NOT_PROVISIONED、qualify 仍 exit 2）；从目录临时副本删除 runner-authority 合成缺口，validate 仍显式上报该 catalogGap、qualify 降级 UNVERIFIED——行为覆盖保留，不再依赖已被修复的真实缺口"
+    ],
+    "evidence": [
+      "worker-reports/I02/evidence/green-node-test-integration-fix.txt — 合并树上 node --test test/infra-runner-isolation.test.js：13/13 pass，0 fail，0 skipped",
+      "worker-reports/I02/evidence/npm-test-merge.txt — npm test 全量：171/171 pass，0 fail，0 skipped，exit 0"
+    ],
+    "commit": "3069791"
+  }
+}

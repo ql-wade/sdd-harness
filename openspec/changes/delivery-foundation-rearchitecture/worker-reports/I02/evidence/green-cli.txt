@@ -1,0 +1,409 @@
+# V_INFRA_I02 GREEN — runner.mjs CLI contract
+# date: 2026-10-20T06:51:51Z  head: 5854edf (implementation uncommitted)
+
+$ node tools/infra/runner.mjs validate --registry infra/delivery/registry.json --json
+{
+  "interface": "RunnerInfra.v1",
+  "command": "validate",
+  "registry": "infra/delivery/registry.json",
+  "refs": "infra/delivery/secrets.refs.example.json",
+  "dir": "infra/delivery/runner",
+  "ok": true,
+  "violations": [],
+  "catalogGaps": [
+    "secret-ref:sdd-harness-pilot/runner-source-read",
+    "secret-ref:sdd-harness-pilot/worker-author-api",
+    "secret-ref:sdd-harness-pilot/worker-review-api"
+  ],
+  "roles": [
+    {
+      "role": "controller",
+      "principalLabel": "runner-controller",
+      "credentialRef": "secret-ref:sdd-harness-pilot/runner-authority",
+      "provisioningStatus": "NOT_PROVISIONED",
+      "workspaceVolume": "ws-controller",
+      "grantedRefCount": 2
+    },
+    {
+      "role": "author",
+      "principalLabel": "worker-author",
+      "credentialRef": "secret-ref:sdd-harness-pilot/worker-author-api",
+      "provisioningStatus": "NOT_PROVISIONED",
+      "workspaceVolume": "ws-author",
+      "grantedRefCount": 1
+    },
+    {
+      "role": "test-author",
+      "principalLabel": "worker-test-author",
+      "credentialRef": null,
+      "provisioningStatus": "UNASSIGNED",
+      "workspaceVolume": "ws-test-author",
+      "grantedRefCount": 0
+    },
+    {
+      "role": "reviewer",
+      "principalLabel": "worker-reviewer",
+      "credentialRef": "secret-ref:sdd-harness-pilot/worker-review-api",
+      "provisioningStatus": "NOT_PROVISIONED",
+      "workspaceVolume": "ws-reviewer",
+      "grantedRefCount": 1
+    },
+    {
+      "role": "publisher",
+      "principalLabel": "runner-publisher",
+      "credentialRef": null,
+      "provisioningStatus": "UNASSIGNED",
+      "workspaceVolume": "ws-publisher",
+      "grantedRefCount": 0
+    },
+    {
+      "role": "isolator",
+      "principalLabel": "runner-isolator",
+      "credentialRef": null,
+      "provisioningStatus": "UNASSIGNED",
+      "workspaceVolume": "ws-isolator",
+      "grantedRefCount": 0
+    }
+  ],
+  "authority": {
+    "interface": "Authority.v1",
+    "authorityStatus": "UNVERIFIED",
+    "registrations": 0,
+    "concurrentWriterPolicy": "REFUSE",
+    "copiedStatePolicy": "REFUSE"
+  },
+  "imageLock": {
+    "interface": "RunnerImageLock.v1",
+    "upGate": {
+      "enabled": false,
+      "requireAllComponentsAuthenticated": true,
+      "reason": "I02 仅声明 Runner 角色隔离与准入结构；镜像没有任何已认证 digest，up 在资源准入完成前必须拒绝"
+    },
+    "containerBuildStatus": "UNVERIFIED",
+    "components": [
+      {
+        "component": "comet-runner",
+        "reference": null,
+        "digest": null,
+        "status": "UNVERIFIED"
+      },
+      {
+        "component": "runner-base",
+        "reference": null,
+        "digest": null,
+        "status": "UNVERIFIED"
+      }
+    ]
+  },
+  "checkedAt": "2026-10-20T06:51:51.685Z"
+}
+exit=0
+
+$ node tools/infra/runner.mjs qualify --registry infra/delivery/registry.json --json
+{
+  "interface": "Qualification.v1",
+  "domain": "comet-runner",
+  "dir": "infra/delivery/runner",
+  "ready": false,
+  "unverifiedCount": 6,
+  "catalogGaps": [
+    "secret-ref:sdd-harness-pilot/runner-source-read",
+    "secret-ref:sdd-harness-pilot/worker-author-api",
+    "secret-ref:sdd-harness-pilot/worker-review-api"
+  ],
+  "categories": {
+    "source-pins": {
+      "status": "RECORDED",
+      "reason": "comet commit/archive sha256, 2 patch sha256s, toolchain and host build fingerprint cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187 recorded from integrations/comet/upstream.lock.json + P1_6; no independent recomputation was performed on this host"
+    },
+    "container-image": {
+      "status": "UNVERIFIED",
+      "reason": "no runner/base image has an authenticated digest: the containerized build never executed (docker daemon unreachable on this host: EPERM); inventing tags/digests is forbidden (comet-runner, runner-base)"
+    },
+    "role-boundary-declaration": {
+      "status": "RECORDED",
+      "reason": "six roles with distinct principals/credentials/volumes, read-only rootfs, dropped capabilities, worker-unwritable control paths — structurally declared and self-consistent"
+    },
+    "role-isolation-enforcement": {
+      "status": "UNVERIFIED",
+      "reason": "probe role-denial never executed against a live runner: real container inspect (UID/GID/mounts) and per-channel (Edit/Shell/MCP) negative-write evidence is required; declared structure never substitutes for measured denial"
+    },
+    "control-directory-closure": {
+      "status": "UNVERIFIED",
+      "reason": "probe role-denial (control-path writes) and live mount inspection must prove no worker-writable control path exists on a running stack"
+    },
+    "authority-exclusivity": {
+      "status": "UNVERIFIED",
+      "reason": "probe duplicate-authority never executed: one-writer evidence across two start requests (copied state refused, old owner/attempt rejected) requires the authoritative state volume"
+    },
+    "secret-refs-registered": {
+      "status": "UNVERIFIED",
+      "reason": "refs missing from the I01 catalog (catalog is I01-owned and needs a registration update): secret-ref:sdd-harness-pilot/runner-source-read, secret-ref:sdd-harness-pilot/worker-author-api, secret-ref:sdd-harness-pilot/worker-review-api"
+    },
+    "credentials-provisioned": {
+      "status": "UNVERIFIED",
+      "reason": "all runner refs are NOT_PROVISIONED or UNASSIGNED; no runtime secret store authorization exists (I01 resolves read-only UNRESOLVED by design)"
+    }
+  },
+  "inputs": {
+    "registrySha256": "e3e0469e50d34a635b6528bce9812111bb2fe51a3571cf4622a9fcbe167c60e5",
+    "domainFiles": {
+      "compose.yaml": "5a82958f36ca47409a034249eb4be1694c07133b7f9e314b5743603480de547d",
+      "Dockerfile": "2157a73e4eecec1406f6f872b5b2b4159ff2c84b46a840297dcddd891c223b67",
+      "image.lock.json": "2666be2c9919097d81858b927d1332274d44ef35cb2db35f5c09d6ad45923a5f",
+      "role-policy.json": "d9d2f881ab1cf7bba9c8115496d21c1accacd0f73cceaca11dd53fe9c930da37",
+      "workspace-mounts.json": "4f76ca242848b21786d01f32abfd2a7010c121e5bb93684d3a169128fadce65a",
+      "authority-registration.example.json": "b80447335a6ccf6523ece2f9329f1219c139db110a333b8745caf467f50e0fbe"
+    }
+  },
+  "unreadyComponents": [
+    {
+      "component": "comet-runner",
+      "status": "UNVERIFIED",
+      "reason": "reference=UNBUILT/UNSELECTED, digest=absent, digestAuthenticated=false"
+    },
+    {
+      "component": "runner-base",
+      "status": "UNVERIFIED",
+      "reason": "reference=UNBUILT/UNSELECTED, digest=absent, digestAuthenticated=false"
+    }
+  ],
+  "checkedAt": "2026-10-20T06:51:51.748Z"
+}
+exit=2
+
+$ node tools/infra/runner.mjs up --registry infra/delivery/registry.json --json
+{
+  "interface": "Qualification.v1",
+  "command": "up",
+  "domain": "comet-runner",
+  "refused": true,
+  "ready": false,
+  "error": "UP_REFUSED_RUNNER_LOCK_NOT_READY: 2 component images lack an authenticated digest (no containerized build has ever run on this host)",
+  "unverifiedComponents": [
+    {
+      "component": "comet-runner",
+      "status": "UNVERIFIED",
+      "reason": "reference=UNBUILT/UNSELECTED, digest=absent, digestAuthenticated=false"
+    },
+    {
+      "component": "runner-base",
+      "status": "UNVERIFIED",
+      "reason": "reference=UNBUILT/UNSELECTED, digest=absent, digestAuthenticated=false"
+    }
+  ],
+  "receipt": {
+    "interface": "Qualification.v1",
+    "domain": "comet-runner",
+    "dir": "infra/delivery/runner",
+    "ready": false,
+    "unverifiedCount": 6,
+    "catalogGaps": [
+      "secret-ref:sdd-harness-pilot/runner-source-read",
+      "secret-ref:sdd-harness-pilot/worker-author-api",
+      "secret-ref:sdd-harness-pilot/worker-review-api"
+    ],
+    "categories": {
+      "source-pins": {
+        "status": "RECORDED",
+        "reason": "comet commit/archive sha256, 2 patch sha256s, toolchain and host build fingerprint cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187 recorded from integrations/comet/upstream.lock.json + P1_6; no independent recomputation was performed on this host"
+      },
+      "container-image": {
+        "status": "UNVERIFIED",
+        "reason": "no runner/base image has an authenticated digest: the containerized build never executed (docker daemon unreachable on this host: EPERM); inventing tags/digests is forbidden (comet-runner, runner-base)"
+      },
+      "role-boundary-declaration": {
+        "status": "RECORDED",
+        "reason": "six roles with distinct principals/credentials/volumes, read-only rootfs, dropped capabilities, worker-unwritable control paths — structurally declared and self-consistent"
+      },
+      "role-isolation-enforcement": {
+        "status": "UNVERIFIED",
+        "reason": "probe role-denial never executed against a live runner: real container inspect (UID/GID/mounts) and per-channel (Edit/Shell/MCP) negative-write evidence is required; declared structure never substitutes for measured denial"
+      },
+      "control-directory-closure": {
+        "status": "UNVERIFIED",
+        "reason": "probe role-denial (control-path writes) and live mount inspection must prove no worker-writable control path exists on a running stack"
+      },
+      "authority-exclusivity": {
+        "status": "UNVERIFIED",
+        "reason": "probe duplicate-authority never executed: one-writer evidence across two start requests (copied state refused, old owner/attempt rejected) requires the authoritative state volume"
+      },
+      "secret-refs-registered": {
+        "status": "UNVERIFIED",
+        "reason": "refs missing from the I01 catalog (catalog is I01-owned and needs a registration update): secret-ref:sdd-harness-pilot/runner-source-read, secret-ref:sdd-harness-pilot/worker-author-api, secret-ref:sdd-harness-pilot/worker-review-api"
+      },
+      "credentials-provisioned": {
+        "status": "UNVERIFIED",
+        "reason": "all runner refs are NOT_PROVISIONED or UNASSIGNED; no runtime secret store authorization exists (I01 resolves read-only UNRESOLVED by design)"
+      }
+    },
+    "inputs": {
+      "registrySha256": "e3e0469e50d34a635b6528bce9812111bb2fe51a3571cf4622a9fcbe167c60e5",
+      "domainFiles": {
+        "compose.yaml": "5a82958f36ca47409a034249eb4be1694c07133b7f9e314b5743603480de547d",
+        "Dockerfile": "2157a73e4eecec1406f6f872b5b2b4159ff2c84b46a840297dcddd891c223b67",
+        "image.lock.json": "2666be2c9919097d81858b927d1332274d44ef35cb2db35f5c09d6ad45923a5f",
+        "role-policy.json": "d9d2f881ab1cf7bba9c8115496d21c1accacd0f73cceaca11dd53fe9c930da37",
+        "workspace-mounts.json": "4f76ca242848b21786d01f32abfd2a7010c121e5bb93684d3a169128fadce65a",
+        "authority-registration.example.json": "b80447335a6ccf6523ece2f9329f1219c139db110a333b8745caf467f50e0fbe"
+      }
+    },
+    "unreadyComponents": [
+      {
+        "component": "comet-runner",
+        "status": "UNVERIFIED",
+        "reason": "reference=UNBUILT/UNSELECTED, digest=absent, digestAuthenticated=false"
+      },
+      {
+        "component": "runner-base",
+        "status": "UNVERIFIED",
+        "reason": "reference=UNBUILT/UNSELECTED, digest=absent, digestAuthenticated=false"
+      }
+    ]
+  },
+  "checkedAt": "2026-10-20T06:51:51.806Z"
+}
+exit=2
+
+$ node tools/infra/runner.mjs probe --case role-denial --json
+{
+  "interface": "RunnerInfra.v1",
+  "command": "probe",
+  "case": "role-denial",
+  "endpoint": null,
+  "executed": false,
+  "status": "UNVERIFIED",
+  "reason": "no live runner runtime configured; probes require a real runner stack started by an authorized operator (up refuses until the image lock authenticates and admission is granted). Pass --endpoint <url> once the stack exists — this command never mocks and never skips.",
+  "requiredInputs": [
+    "a live runner stack started by an authorized operator (up refuses until the image lock authenticates and admission is granted)",
+    "real worker principals for controller/author/test-author/reviewer/publisher/isolator with runtime-resolved credentials (all refs are NOT_PROVISIONED/UNASSIGNED today)",
+    "a controlled write-channel matrix (Edit/Shell/MCP) executed inside each role container, retaining errno/request evidence per channel"
+  ],
+  "plannedSteps": [
+    "docker inspect each role service: record UID/GID, read-only rootfs, cap_drop, mounts and network scope",
+    "as each worker role, attempt writes to control state, policy, receipts and issuance paths via Edit/Shell/MCP channels (expect per-channel denial; keep errno/request evidence)",
+    "attempt docker.sock access and host HOME reads from a worker container (expect denial)",
+    "kill the controller, then attempt phase pickup/retry as a worker role (expect Comet to reject the old owner/attempt; infrastructure must not fabricate a new operation)",
+    "record the effective denial per channel; capability gaps stay UNVERIFIED and are never recorded as enforced"
+  ],
+  "observedSteps": [],
+  "domain": {
+    "roles": [
+      "controller",
+      "author",
+      "test-author",
+      "reviewer",
+      "publisher",
+      "isolator"
+    ],
+    "authority": {
+      "interface": "Authority.v1",
+      "registrations": 0,
+      "concurrentWriterPolicy": "REFUSE",
+      "copiedStatePolicy": "REFUSE"
+    }
+  },
+  "checkedAt": "2026-10-20T06:51:51.861Z"
+}
+exit=2
+
+$ node tools/infra/runner.mjs probe --case duplicate-authority --json
+{
+  "interface": "RunnerInfra.v1",
+  "command": "probe",
+  "case": "duplicate-authority",
+  "endpoint": null,
+  "executed": false,
+  "status": "UNVERIFIED",
+  "reason": "no live runner runtime configured; probes require a real runner stack started by an authorized operator (up refuses until the image lock authenticates and admission is granted). Pass --endpoint <url> once the stack exists — this command never mocks and never skips.",
+  "requiredInputs": [
+    "the authoritative Comet state volume with the original RunID/authority registration",
+    "a copied state clone (second volume or second host)",
+    "two candidate runner instances pointing at the same authority/workspace"
+  ],
+  "plannedSteps": [
+    "start instance A against the authoritative state; record the single accepted writer identity",
+    "start instance B against the copied state with the same authority id (expect startup refusal; COPIED_STATE_FORBIDDEN semantics)",
+    "resume the original RunID/operation from the authoritative state (old owner/attempt results rejected by Comet; no fabricated new operation)",
+    "read back exactly one valid Comet writer across both start requests"
+  ],
+  "observedSteps": [],
+  "domain": {
+    "roles": [
+      "controller",
+      "author",
+      "test-author",
+      "reviewer",
+      "publisher",
+      "isolator"
+    ],
+    "authority": {
+      "interface": "Authority.v1",
+      "registrations": 0,
+      "concurrentWriterPolicy": "REFUSE",
+      "copiedStatePolicy": "REFUSE"
+    }
+  },
+  "checkedAt": "2026-10-20T06:51:51.915Z"
+}
+exit=2
+
+$ node tools/infra/runner.mjs probe --case role-denial --endpoint http://127.0.0.1:59999 --json
+{
+  "interface": "RunnerInfra.v1",
+  "command": "probe",
+  "case": "role-denial",
+  "endpoint": "http://127.0.0.1:59999",
+  "executed": false,
+  "status": "UNVERIFIED",
+  "reason": "runner endpoint unreachable (GET http://127.0.0.1:59999/): EPERM",
+  "requiredInputs": [
+    "a live runner stack started by an authorized operator (up refuses until the image lock authenticates and admission is granted)",
+    "real worker principals for controller/author/test-author/reviewer/publisher/isolator with runtime-resolved credentials (all refs are NOT_PROVISIONED/UNASSIGNED today)",
+    "a controlled write-channel matrix (Edit/Shell/MCP) executed inside each role container, retaining errno/request evidence per channel"
+  ],
+  "plannedSteps": [
+    "docker inspect each role service: record UID/GID, read-only rootfs, cap_drop, mounts and network scope",
+    "as each worker role, attempt writes to control state, policy, receipts and issuance paths via Edit/Shell/MCP channels (expect per-channel denial; keep errno/request evidence)",
+    "attempt docker.sock access and host HOME reads from a worker container (expect denial)",
+    "kill the controller, then attempt phase pickup/retry as a worker role (expect Comet to reject the old owner/attempt; infrastructure must not fabricate a new operation)",
+    "record the effective denial per channel; capability gaps stay UNVERIFIED and are never recorded as enforced"
+  ],
+  "observedSteps": [
+    {
+      "step": "GET http://127.0.0.1:59999/",
+      "status": "UNVERIFIED",
+      "error": "EPERM"
+    }
+  ],
+  "domain": {
+    "roles": [
+      "controller",
+      "author",
+      "test-author",
+      "reviewer",
+      "publisher",
+      "isolator"
+    ],
+    "authority": {
+      "interface": "Authority.v1",
+      "registrations": 0,
+      "concurrentWriterPolicy": "REFUSE",
+      "copiedStatePolicy": "REFUSE"
+    }
+  },
+  "checkedAt": "2026-10-20T06:51:51.982Z"
+}
+exit=2
+
+$ node tools/infra/runner.mjs stop --json
+{
+  "interface": "RunnerInfra.v1",
+  "command": "stop",
+  "executed": false,
+  "status": "UNVERIFIED",
+  "reason": "no runner stack was ever started by this tool (up refuses until the image lock qualifies and admission is granted); there is nothing this tool can stop. A stack started outside this tool must be stopped by its own supervisor.",
+  "checkedAt": "2026-10-20T06:51:52.034Z"
+}
+exit=2
+

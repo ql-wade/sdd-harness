@@ -78,7 +78,7 @@
     "timezone": "Asia/Shanghai",
     "reason": "Receiving executor qualifies actual host, resources and throughput before estimating implementation"
   },
-  "updated_at": "2026-10-20T04:16:03.434826+00:00",
+  "updated_at": "2026-10-20T09:11:01.182200+00:00",
   "preparatory_checks": {
     "scaffold_scoped_tests": "41/41 PASS",
     "scaffold_npm_test": "41/41 PASS on Node22.13.1",
@@ -103,7 +103,7 @@
     "Resume existing monitor sdd; never create duplicate monitor",
     "Continue original full goal, do not mark 92 scenarios accepted from baseline tests"
   ],
-  "last_progress_at": "2026-10-20T04:16:03.434826+00:00",
+  "last_progress_at": "2026-10-20T09:11:01.182200+00:00",
   "authorization_blocker_audit": {
     "consecutive_goal_turns": 0,
     "decision_received": true,
@@ -148,7 +148,7 @@
     "status": "active"
   },
   "run_started_at": "2026-10-20T03:04:53.456337+00:00",
-  "status_revision": 3,
+  "status_revision": 23,
   "lifecycle_guard": {
     "skill": "openspec-lifecycle-guard",
     "path": "/Users/mac/.claude/skills/openspec-lifecycle-guard/SKILL.md",
@@ -157,7 +157,9 @@
     "application": "evidence-backed checkbox flips only; flip box without editing task text; strict validation before phase moves; record evidence pointer per flip"
   },
   "controller_policy": {
-    "worker_commit_discipline": "tests commit separate from implementation commit; raw RED output logs preserved under worker-reports/<TASK>/evidence/"
+    "worker_commit_discipline": "tests commit separate from implementation commit; raw RED output logs preserved under worker-reports/<TASK>/evidence/",
+    "integration_regression": "npm test AND explicit node --test test/delivery-cases/*.mjs on merged master in a worktree; delivery-cases are not covered by npm test glob",
+    "worktree_isolation": "controller never checks out / mutates an ACTIVE worker worktree; use a dedicated integrate worktree for merged-master regressions"
   },
   "node_status": {
     "I01": {
@@ -175,7 +177,20 @@
       ],
       "merged_to_master": "64841ef",
       "regression": "node --test 15/15; npm test 65/65 (worktree-verified, content identical to master)",
-      "review": "worker-reports/I01.review.json (APPROVED, 0 blocking)"
+      "review": "worker-reports/I01.review.json (APPROVED, 0 blocking)",
+      "amendment": {
+        "commit": "7a55664",
+        "merged": "54c6964",
+        "detail": "outline-app-session ref registered (13 total, plan-list completion); I03 catalogGap cleared on master"
+      },
+      "amendment_2": {
+        "commit": "05fb404",
+        "detail": "3 runner refs registered (catalog 16); I02 catalogGap cleared on merge"
+      },
+      "amendment_3": {
+        "commit": "f8c982b",
+        "detail": "2 codewiki refs registered (catalog 18); I05 catalogGap cleared on merge"
+      }
     },
     "P1_1": {
       "status": "ACCEPTED",
@@ -203,13 +218,267 @@
         "F01/F03 journey (P3_1 owns runner)",
         "OpenSpec 1.11.0 adoption",
         "skills snapshot (P1_6 owns)"
+      ],
+      "evidence_followup": {
+        "commit": "7243244",
+        "merged": "957de2e",
+        "detail": "21 evidence logs committed; 1_1.mjs 8/8 on merged master; fresh-checkout symptom eliminated"
+      }
+    },
+    "I03": {
+      "status": "PARTIAL_ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "4"
+      ],
+      "step_3": "NOT_DONE — 独立读回 oracle（原生浏览器登录/分享/权限/API/DB/对象存储读回）需真实 Outline 实例；环境无 docker/无已认证镜像/无 OIDC issuer，全部如实 UNVERIFIED",
+      "commits": {
+        "implementation": "ff86061",
+        "tests": "e400bfe",
+        "report": "bebc6e6",
+        "integration_fix": [
+          "a05a84a",
+          "a4c076f"
+        ]
+      },
+      "merged_to_master": "a4c076f",
+      "regression": "npm test 79/79 on merged master (worktree-verified)",
+      "review": "worker-reports/I03.review.json (APPROVED, 0 blocking; clean-room RED reproduction at tests-first commit)"
+    },
+    "P2_1": {
+      "status": "ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ],
+      "commits": {
+        "tests": "ed2c0c7",
+        "implementation": "a08dae6",
+        "report": "373a6bf",
+        "review_fixes": "53eec70"
+      },
+      "merged_to_master": "bc38e3b",
+      "regression": "npm test 107/107 + delivery-cases 14 pass/1 env-conditional skip on merged master",
+      "review": "worker-reports/P2_1.review.json (APPROVED, 0 blocking; clean-room RED repro; checkbox-invariant boundary verified against real tasks.md)",
+      "schema_hardening": {
+        "commit": "853907b",
+        "detail": "FoundationLock closed set + pinnedVersion/path types; per-contract unknownFields opt-in; dual-layer defense with P1_2 emission gate intact"
+      }
+    },
+    "P1_6": {
+      "status": "PARTIAL_ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "6",
+        "7",
+        "8"
+      ],
+      "step_5": "NOT_DONE — 步骤边界含\"新会话实际证明不重启 Superpowers、无重复派发\"；patched 构建级探针已证（隔离 HOME/PATH stub、判别力经审查确认），宿主会话级实证 UNVERIFIED，由真实 Runner/后续会话承接",
+      "commits": {
+        "tests": "2dc32ad",
+        "implementation": "acb0452",
+        "report": "a007bfc"
+      },
+      "merged_to_master": "c9c3b18",
+      "review": "worker-reports/P1_6.review.json (APPROVED, 0 blocking)",
+      "supplement_delta": {
+        "check": "Ponytail 5.3.2 资产快照 + 注册分工声明 (V_P1_6_PONYTAIL_ASSETS)",
+        "status": "REPAIR_DISPATCHED"
+      }
+    },
+    "P1_2": {
+      "status": "ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ],
+      "commits": {
+        "tests": "6529a75",
+        "implementation": "cf9aee3",
+        "report": "37965e6"
+      },
+      "merged_to_master": "83034d4",
+      "regression": "npm test 125/125 + delivery-cases 23 pass/2 env-skip on merged master",
+      "review": "worker-reports/P1_2.review.json (APPROVED, 0 blocking)",
+      "supplement_delta": {
+        "check": "插件/项目注册分工去重门 (V_P1_2_PLUGIN_REGISTRATION_DIVISION)",
+        "status": "REPAIR_DISPATCHED"
+      }
+    },
+    "P2_2": {
+      "status": "ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ],
+      "commits": {
+        "tests": "e98193b",
+        "implementation": "336d17b",
+        "report": "4d1ae3d"
+      },
+      "merged_to_master": "289e1d0",
+      "regression": "npm test 153/153 + delivery-cases 31 pass/2 env-skip on merged master",
+      "review": "worker-reports/P2_2.review.json (APPROVED, 0 blocking)",
+      "unverified_within_boundary": [
+        "A19 real-Runner half -> P2_4/P3_1",
+        "V_A05/A06/A18 journey CLI -> P3_1"
       ]
+    },
+    "I02": {
+      "status": "PARTIAL_ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "4"
+      ],
+      "step_3": "NOT_DONE — 独立读回 oracle（真实 container inspect/UID/mount/权限 + Edit/Shell/MCP 负向写）需 docker/真实 Runner；docker socket 被沙箱拒绝，如实 UNVERIFIED；承接者 I07/准入阶段",
+      "commits": {
+        "tests": "5854edf",
+        "implementation": "d9e628a",
+        "report": "571e848"
+      },
+      "merged_to_master": "98de901",
+      "review": "worker-reports/I02.review.json (APPROVED, 0 blocking)",
+      "integration_fix": {
+        "commits": [
+          "3d65712",
+          "3069791",
+          "58080ae"
+        ],
+        "result": "13/13; npm test 185/185 on merged master 10b37bf; integration acceptance complete"
+      },
+      "supplement_delta": {
+        "check": "方法状态作用域声明 (V_I02_METHOD_STATE_SCOPE)",
+        "status": "REPAIR_DISPATCHED"
+      }
+    },
+    "P2_3": {
+      "status": "ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "note": "true step structure is 6 steps (2 packages + Review + Commit), not the 8-step template; corrective commit follows b3f1316 whose message said 8/8",
+      "commits": {
+        "tests": "79d0212",
+        "implementation": "b9fafa4",
+        "report": "0974e8e"
+      },
+      "merged_to_master": "9c5db5f",
+      "review": "worker-reports/P2_3.review.json (APPROVED, 0 blocking)",
+      "caveat": "check.sh heading clause: environment-bounded (whitebox corpus gap, pre-existing); B10/A20 semantics covered by npm test + exit-code contract tests + truth table"
+    },
+    "I05": {
+      "status": "PARTIAL_ACCEPTED_INTEGRATION_PENDING",
+      "steps_done": [
+        "1",
+        "2",
+        "4"
+      ],
+      "step_3": "NOT_DONE — 独立读回 oracle（实际容器/API-MCP 响应/repoID-commit manifest 一致）需真实部署；上游未选定+docker 拒绝，如实 UNVERIFIED；承接者资源准入 owner/运行时准入",
+      "commits": {
+        "tests": "0a60d93",
+        "implementation": "9458bfd",
+        "report": "cff3083"
+      },
+      "merged_to_master": "e4ad42d",
+      "review": "worker-reports/I05.review.json (APPROVED, 0 blocking)",
+      "integration_fix": {
+        "commits": [
+          "452bfe8",
+          "9e51d92",
+          "012aedf"
+        ],
+        "result": "14/14; npm test 199/199 on merged master; integration acceptance complete"
+      }
+    },
+    "I04": {
+      "status": "PARTIAL_ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "4"
+      ],
+      "step_3": "NOT_DONE — 独立读回 oracle 的真实 MCP 写读回 UNVERIFIED（stdio initialize/tools-list VERIFIED，create 20s 挂起如实记录）；文件级等价探针全 VERIFIED；承接者 mcp-capabilities 接纳 P 任务 + 环境 owner（venv 对齐）",
+      "commits": {
+        "tests": "fcc9a9e",
+        "implementation": "019fdc9",
+        "report": "b2ff32d",
+        "base_sync": "51d9da3"
+      },
+      "merged_to_master": "67191f1",
+      "review": "worker-reports/I04.review.json (APPROVED, 0 blocking)"
     }
   },
   "environment_notes": [
     {
       "note": "main-checkout npm test: adapter-quoting 2 cases EPERM — sandbox denies writing .claude/settings.json (denyWithinAllow); integration regression must run in a worktree (65/65 verified at 64841ef)",
       "recorded_at": "2026-10-20T03:59:32.561605+00:00"
+    },
+    {
+      "note": "host ~/.claude/plugins/cache retains superpowers 7.0.0 residue (b36e0829c6d0) — forbidden location, untouched; host-owner cleanup decision",
+      "recorded_at": "2026-10-20T04:57:08.672221+00:00"
+    },
+    {
+      "note": "scripts/check.sh whitebox fixture gap in fresh worktrees (pre-existing at base); VERIFY must run in main checkout or fix fixtures",
+      "recorded_at": "2026-10-20T04:57:08.672221+00:00"
+    },
+    {
+      "note": "external parallel session continues editing main-checkout files: ADR-0019 overlay, delivery-architecture.md planning table, test/delivery-cases/2_2.mjs (P2_2-owned) — uncommitted, not in this run branch; included in pending user adjudication",
+      "recorded_at": "2026-10-20T08:01:29.650746+00:00"
     }
-  ]
+  ],
+  "open_decisions": [
+    {
+      "id": "UTILS_SECRET_REF",
+      "raised": "2026-10-20T04:26:09.546774+00:00",
+      "by": "I03 worker",
+      "question": "Outline UTILS_SECRET lacks a plan ref; add ref (plan amendment) or map to existing secret at deployment gate"
+    },
+    {
+      "id": "PUBLISHER_ISOLATOR_CREDS",
+      "raised": "2026-10-20T06:56:03.525611+00:00",
+      "by": "I02 worker",
+      "question": "publisher/isolator dedicated credentials not in frozen I02 ref set; UNASSIGNED marked; decide ref expansion at enablement gate"
+    },
+    {
+      "id": "EVIDENCE_INPUT_MISSING_EXIT_CODE",
+      "raised": "2026-10-20T06:57:00.054381+00:00",
+      "by": "P2_3 worker",
+      "question": "contract wording 1 vs pinned oracle 2 for EVIDENCE_INPUT_MISSING; pinned value kept; adjudicate at VERIFY"
+    }
+  ],
+  "halt": {
+    "resolved_at": "2026-10-20T09:08:28.078488+00:00",
+    "resolution": "A (accept supplement)",
+    "refreeze": "complete — plan_guard exit 0; contract 108 checks (105+3 delta); spec-baseline re-frozen; plan/dag restored to frozen structure + 60 evidenced flips",
+    "remaining": "delta-review/repair for P1_6/P1_2/I02 dispatched; overlay corpus cleanup in progress",
+    "delta": "A 接纳后的 delta 修复已全部派发"
+  }
 }

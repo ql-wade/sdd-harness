@@ -340,18 +340,24 @@ test('authority readback is honestly recorded as UNVERIFIED with the exact failu
   }
 });
 
-test('the 12 planned secret refs are all registered with distinct purposes and bound roles', () => {
+test('every planned secret ref (I01+I02+I03+I05 freeze list, 18) is registered with distinct purposes and bound roles', () => {
   const refsDoc = JSON.parse(fs.readFileSync(refsExamplePath, 'utf8'));
   const expected = [
     'source-git-read',
     'runner-authority',
+    'worker-author-api',
+    'worker-review-api',
+    'runner-source-read',
     'outline-publisher',
     'outline-isolator',
     'outline-oidc-client',
     'outline-db',
     'outline-redis',
+    'outline-app-session',
     'outline-object-store',
+    'codewiki-source-read',
     'codewiki-provider',
+    'codegraph-source-read',
     'ci-registry',
     'monitor-alert',
     'backup-encryption',

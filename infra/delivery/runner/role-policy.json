@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "interface": "RoleBoundary.v1",
+  "project": "sdd-harness-pilot",
+  "note": "六角色边界（controller/author/test-author/reviewer/publisher/isolator）：独立 principal、独立卷、独立凭据作用域；只读根文件系统、最小能力、internal 网络。运行时强制（真实 UID/挂载/负向写）属真实 Runner 阶段（probe role-denial），本文件固定结构声明。worker 无 Docker socket、宿主 HOME、控制状态/策略/回执/签发材料读写权。",
+  "roles": [
+    {
+      "role": "controller",
+      "principal": {
+        "label": "runner-controller",
+        "credentialRef": "secret-ref:sdd-harness-pilot/runner-authority",
+        "provisioningStatus": "NOT_PROVISIONED"
+      },
+      "workspaceVolume": "ws-controller",
+      "networkScope": "runner-internal",
+      "readOnlyRootFilesystem": true,
+      "capabilities": {
+        "drop": [
+          "ALL"
+        ],
+        "add": []
+      },
+      "note": "唯一 Comet 控制平面持有者（唯一写者）；派发凭据按动作隔离，不读写签发材料",
+      "grantedRefs": [
+        "secret-ref:sdd-harness-pilot/runner-authority",
+        "secret-ref:sdd-harness-pilot/runner-source-read"
+      ]
+    },
+    {
+      "role": "author",
+      "principal": {
+        "label": "worker-author",
+        "credentialRef": "secret-ref:sdd-harness-pilot/worker-author-api",
+        "provisioningStatus": "NOT_PROVISIONED"
+      },
+      "workspaceVolume": "ws-author",
+      "networkScope": "runner-internal",
+      "readOnlyRootFilesystem": true,
+      "capabilities": {
+        "drop": [
+          "ALL"
+        ],
+        "add": []
+      },
+      "note": "实现写入走受管执行器；源由镜像内置，无源读取凭据；无任何控制状态写权",
+      "grantedRefs": [
+        "secret-ref:sdd-harness-pilot/worker-author-api"
+      ]
+    },
+    {
+      "role": "test-author",
+      "principal": {
+        "label": "worker-test-author",
+        "credentialRef": null,
+        "provisioningStatus": "UNASSIGNED"
+      },
+      "workspaceVolume": "ws-test-author",
+      "networkScope": "runner-internal",
+      "readOnlyRootFilesystem": true,
+      "capabilities": {
+        "drop": [
+          "ALL"
+        ],
+        "add": []
+      },
+      "note": "本任务四 ref 集内无专用凭据：签发属后续任务/准入的显式决定，此处不代签、不虚构",
+      "grantedRefs": []
+    },
+    {
+      "role": "reviewer",
+      "principal": {
+        "label": "worker-reviewer",
+        "credentialRef": "secret-ref:sdd-harness-pilot/worker-review-api",
+        "provisioningStatus": "NOT_PROVISIONED"
+      },
+      "workspaceVolume": "ws-reviewer",
+      "networkScope": "runner-internal",
+      "readOnlyRootFilesystem": true,
+      "capabilities": {
+        "drop": [
+          "ALL"
+        ],
+        "add": []
+      },
+      "note": "独立审查身份；审查通过不扩大任何资料或发布授权",
+      "grantedRefs": [
+        "secret-ref:sdd-harness-pilot/worker-review-api"
+      ]
+    },
+    {
+      "role": "publisher",
+      "principal": {
+        "label": "runner-publisher",
+        "credentialRef": null,
+        "provisioningStatus": "UNASSIGNED"
+      },
+      "workspaceVolume": "ws-publisher",
+      "networkScope": "runner-internal",
+      "readOnlyRootFilesystem": true,
+      "capabilities": {
+        "drop": [
+          "ALL"
+        ],
+        "add": []
+      },
+      "note": "publisher 级凭据（outline-publisher，I01 目录 boundRole=publisher）由有权主体另行签发；本任务不声明、不引用为自身凭据",
+      "grantedRefs": []
+    },
+    {
+      "role": "isolator",
+      "principal": {
+        "label": "runner-isolator",
+        "credentialRef": null,
+        "provisioningStatus": "UNASSIGNED"
+      },
+      "workspaceVolume": "ws-isolator",
+      "networkScope": "runner-internal",
+      "readOnlyRootFilesystem": true,
+      "capabilities": {
+        "drop": [
+          "ALL"
+        ],
+        "add": []
+      },
+      "note": "isolator 级凭据（outline-isolator，I01 目录 boundRole=isolator）由有权主体另行签发；本任务不声明、不引用为自身凭据",
+      "grantedRefs": []
+    }
+  ],
+  "boundaryInvariants": {
+    "distinctPrincipals": true,
+    "distinctWorkspaceVolumes": true,
+    "readOnlyRootFilesystem": true,
+    "dropAllCapabilities": true,
+    "noNewPrivileges": true,
+    "network": "internal-only",
+    "workerControlWrite": "FORBIDDEN"
+  },
+  "runnerRefs": [
+    {
+      "ref": "secret-ref:sdd-harness-pilot/runner-authority",
+      "bindingRole": "controller",
+      "tier": "controller",
+      "note": "Runner 单实例权威凭据；I01 目录已登记（boundRole=controller，NOT_PROVISIONED）"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/runner-source-read",
+      "bindingRole": "controller",
+      "tier": "worker-read",
+      "note": "源读取/构建 staging 用（controller 持有）；worker 的源由镜像内置，无需源凭据；源读取权不等于外发权"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/worker-author-api",
+      "bindingRole": "author",
+      "tier": "worker",
+      "note": "author 受管 API 凭据；I01 目录未登记（缺口由 validate 显式上报）"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/worker-review-api",
+      "bindingRole": "reviewer",
+      "tier": "worker",
+      "note": "reviewer 受管 API 凭据；I01 目录未登记（缺口由 validate 显式上报）"
+    }
+  ]
+}

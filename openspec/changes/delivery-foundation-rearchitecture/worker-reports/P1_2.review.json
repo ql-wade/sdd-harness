@@ -1,0 +1,42 @@
+{
+  "task": "P1_2",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-20T06:16:43.406085+00:00",
+  "head_reviewed": "37965e6",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "MANAGED_SCRIPT_RE 无前缀锚定（误伤概率低，worker 已披露为设计边界）",
+      "disposition": "recorded; 后续 P1_2 跟进批次加固"
+    },
+    {
+      "id": "nb-2",
+      "summary": "已提交 lock provenance 指向 tests 提交（verify 只比 digest，无功能影响）",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-3",
+      "summary": "用户条目保留为语义级断言（JSON deepEqual）",
+      "disposition": "recorded; F02 语义已满足"
+    },
+    {
+      "id": "nb-4",
+      "summary": "--skills-copy walkFiles 排除 __pycache__ 与 digest 基准非对称",
+      "disposition": "recorded; .pyc 清理后自然消失"
+    },
+    {
+      "id": "nb-5",
+      "summary": "两条跨任务 finding 实测属实（FoundationLock schema fail-open + 14 tracked .pyc）",
+      "disposition": "schema 修复派回 w-p2-1；.pyc 归 P1_6/whitebox 属主清单"
+    }
+  ],
+  "reviewer_independently_reverified": [
+    "净室 git archive 6529a75 复现 6 fail/0 pass RED",
+    "parseContract 对机器路径+@latest ok=true vs guardLock 3 条拒绝——'洞在 schema/门在发射侧'实测属实",
+    "旧 adapter 2 Guard → 新 adapter 收敛 1、用户条目原样保留（亲自复现）",
+    "exporter 幂等字节一致；自实现摘要器重算 whitebox-verify(93 files)/test-authoring(17 files) 与 manifest/lock 一致"
+  ],
+  "tests_run_by_reviewer": "23/23 targeted; npm test 125/125; 幂等 diff -r 空; check-run 正/负例; parseContract vs guardLock 对比"
+}

@@ -155,5 +155,15 @@
         "evidence": "package-probes/1_1.a-green-baseline-qualified-review-nb1.log"
       }
     }
+  ],
+  "followup": [
+    {
+      "id": "integration-followup-evidence-logs",
+      "date": "2026-10-20T13:05:00+08:00",
+      "finding": "All probe evidence .log files were silently excluded from the original commits by the repo-wide *.log gitignore rule: test/delivery-cases/1_1.mjs test 5 (runtime-claim evidence existence) and every baseline evidence reference only resolved inside the authoring worktree, failing in other checkouts.",
+      "fix": "Force-added all 21 RED/GREEN/regression evidence logs under package-probes/ (evidence only; oracle scripts and data files were already tracked; .gitignore itself untouched as it is outside this task's ownership).",
+      "note": "npm test's test/*.test.js glob does not include test/delivery-cases/*.mjs; integration regression now includes them explicitly per coordinator policy.",
+      "verification": "delivery case 8/8 PASS and npm test PASS on the fixed tree; fresh-checkout simulation (git archive extract) runs the delivery case without test-5 failure (7 pass + 1 environment skip)."
+    }
   ]
 }

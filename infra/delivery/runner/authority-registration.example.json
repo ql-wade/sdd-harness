@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "interface": "Authority.v1",
+  "project": "sdd-harness-pilot",
+  "note": "唯一固定 Comet authority + workspace：真实标识只能在真实 Runner 首次启动后读回；本示例文件 registrations 保持为空，只声明唯一性约束与登记结构。两个启动请求只允许一个有效 Comet 写者；复制 state / 并发写者 / 同 authority 第二登记一律拒绝。",
+  "authority": {
+    "id": null,
+    "workspaceId": null,
+    "controllerPrincipal": null,
+    "credentialRef": "secret-ref:sdd-harness-pilot/runner-authority",
+    "status": "UNVERIFIED",
+    "reason": "固定 authority/workspace 标识须在真实 Runner 首次启动并读回后才能记录；此前保持 UNVERIFIED，严禁虚构"
+  },
+  "uniqueness": {
+    "authorityWorkspace": "每个 (authorityId, workspaceId) 只允许一条登记；同 authority 的第二登记启动必须拒绝",
+    "stateOrigin": "authoritative-only：state 复制自另一实例的登记启动必须拒绝（H09）",
+    "writerExclusivity": "single-writer：已有存活写者持有时启动必须拒绝（H03）；restart 监督仅限原实例",
+    "concurrentWriterPolicy": "REFUSE",
+    "copiedStatePolicy": "REFUSE",
+    "crossHostMigration": "跨主机恢复交 I08 证明受控迁移；未确认旧写者终止不得复制卷另启"
+  },
+  "registrationShape": {
+    "registrationId": "登记标识（非空）",
+    "authorityId": "固定 Comet authority 标识",
+    "workspaceId": "固定 workspace 标识",
+    "instanceId": "Runner 实例标识（非空）",
+    "stateOrigin": "authoritative | copied（仅 authoritative 可启动）",
+    "writerExclusivity": "single | shared（仅 single 可启动）"
+  },
+  "registrations": []
+}
