@@ -1,0 +1,152 @@
+{
+  "task": "P4_1",
+  "task_title": "原任务 4.1 — 受保护 required checks 对精确集成 SHA 重算契约/来源；缺项、skip、超时、旧证据实际阻断平台合并（A13/F06/F09）。检查策略来自受保护基线。",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/p4-1-required-checks",
+  "base_commit": "8d3c6ff",
+  "final_status": "DONE",
+  "implementation_commit": "d44c7b1",
+  "tests_commit": "f1741ec (RED suite) + 7c15723 (AssertionError import fix in the harness guard)",
+  "report_commit": "HEAD of impl/p4-1-required-checks at handoff (本 JSON 与全部 RED/GREEN/回归日志在本提交落盘)",
+  "semantics_source_note": "语义唯一来源: specs/delivery-foundation/spec.md A13(旧检查过/SHA 变化→对精确新候选重验)/F06(workflow success 不代替交付; 缺失/过期/失败必验项实际阻断)/F09(精确 integration SHA 与同 digest 贯通)。步骤结构取自 tasks.md '### Task P4_1:' 段(365-381 行, 段尾边界 383 行 '### Task P4_2:')。已接纳基建 import 复用零修改: lib/delivery/gate.js(evaluate)+lib/delivery/evidence.js(admitEvidence/createLaunchAuthority) 直接 import; tools/infra/platform.mjs 因 process.exit(main()) 于模块加载执行不可安全 import, 其 IntegrationIdentity check-step 契约逐码镜像(CHECK_MISSING/CHECK_STALE_EVIDENCE 精确 merge-SHA 绑定/CHECK_TIMED_OUT/CHECK_SKIPPED/CHECK_NOT_SUCCESS, EXACT_SHA binding), 头注声明层级关系(它是平台只读核验, 本工具是 CI 侧 delivery gate)。前置 PLATFORM_REQUIRED_CHECK_AUTHORITY_REQUIRED 语义落实: 登记缺失只阻断相关动作(platform-merge 授权 UNVERIFIED), 本地链路判定照常诚实输出, 计划字段不充当已满足。",
+  "red_cases": [
+    {
+      "case": "test/ci-delivery-gate.test.js 全套 18 例",
+      "red_evidence": "delivery-gate.yml 不存在(ENOENT) + tools/ci/verify-delivery.mjs 不存在(spawn ENOENT)",
+      "log": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1/evidence/red-ci-delivery-gate.txt (exit=1, tests 18 / pass 0 / fail 18)"
+    },
+    {
+      "case": "test/delivery-cases/4_1.mjs 全套 6 例",
+      "red_evidence": "同一真实缺失: workflow 文件 ENOENT + verifier ENOENT",
+      "log": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1/evidence/red-delivery-case-4_1.txt (exit=1, tests 6 / pass 0 / fail 6)"
+    }
+  ],
+  "green_summary": "node --test test/ci-delivery-gate.test.js → 18/18 pass, 0 fail, 0 skip (green-ci-delivery-gate.txt)。node --test test/delivery-cases/4_1.mjs → 6/6 pass, 0 fail, 0 skip (green-delivery-case-4_1.txt)。npm test 全量 → tests 324 = 基线 306 + 本任务 18, pass 323 / fail 0 / skipped 1(既有环境条件 V_COMET_NATIVE) (green-npm-test.txt)。node --test test/delivery-cases/*.mjs → tests 122, pass 120 / fail 0 / skipped 2(既有: 1_1 V_COMET_NATIVE prepared-build、C08 isolated openspec 1.11.0, 均非本任务新增) (green-all-delivery-cases.txt)。",
+  "coverage_matrix": [
+    {
+      "acceptance": "A13",
+      "scenario": "旧 PR 检查已通过; PR head 或合并队列 SHA 变化 → 对精确新集成候选重验",
+      "positive": [
+        "证据精确绑定新 merge SHA(boundSha==merge) + 全绿 gate + 已登记基线 → exit 0, status VERIFIED, mergeBlocked=false, gate 回执落盘",
+        "yml 结构(真实文件解析): checkout ref 与 check-runs 读回均钉精确 merge SHA(merge_commit_sha/merge_group head_sha 表达式, boundSha←head_sha)"
+      ],
+      "negative": [
+        "checks=[] → CHECK_MISSING, BLOCKED, mergeBlocked=true, exit 2",
+        "新候选(head c/merge d)携带旧候选 boundSha(b) 证据 → CHECK_STALE_EVIDENCE, exit 2",
+        "chain.requiredChecks 与已登记基线集合漂移 → REQUIRED_CHECKS_POLICY_MISMATCH, exit 2",
+        "已提交 UNSELECTED 基线 + 全绿链 → UNVERIFIED + PLATFORM_REQUIRED_CHECK_AUTHORITY_REQUIRED, mergeBlocked=true, exit 2(登记缺失只阻断相关动作)"
+      ],
+      "real_entry": "tools/ci/verify-delivery.mjs 真实子进程 + 真实 chain/policy 文件; delivery-gate.yml 真实文件解析; 零 mock"
+    },
+    {
+      "acceptance": "F06",
+      "scenario": "workflow 步骤成功或被 skip; 必验项缺失、过期或失败 → Gate 和受保护 CI 实际阻断; workflow success 不代替交付",
+      "positive": [
+        "结构层面: 全 checks success 但 gate 证据流过期/伪造/为空时判定仍 BLOCKED(exit 2) — workflow 级成功从结构上不可能代替交付判定"
+      ],
+      "negative": [
+        "gate receipts 绑定旧候选 digest(dispatch/envelope 旧 inputDigest, gate.inputDigest 新) → 真实 admitEvidence 拒绝 STALE_CANDIDATE → ADMISSION_REFUSED, exit 2",
+        "伪造 dispatch(篡改 attempt 不重签) → verifyDispatch FORGED_DISPATCH → ADMISSION_REFUSED, exit 2",
+        "空证据流(entries=[]) → gate.evaluate 回执 blocked(blocked 理由非空 MISSING_OBSERVATION 族), exit 2",
+        "缺 trusted-launcher secret(env 缺失/<32 字符) → LAUNCH_AUTHORITY_MISSING, UNVERIFIED, exit 2",
+        "yml fail-closed 结构: platform.mjs validate 前置; gh 读回失败即 job 失败; gate receipts 缺失 → chain.gate null → verifier exit 1"
+      ],
+      "real_entry": "全部经真实 admission 路径(lib/delivery/evidence.js, fixture launch authority 真实 HMAC 签发/校验) + gate.evaluate 真实判定(import 复用)"
+    },
+    {
+      "acceptance": "F09",
+      "scenario": "集成候选和制品已冻结; CI 验证并提升 → 精确 integration SHA 和同 digest 贯通验证/目标环境",
+      "positive": [
+        "精确 digest 贯通: envelope.candidateDigest==dispatch.inputDigest==gate.inputDigest(候选 digest) → gate pass 且 receipt.inputDigest 等于候选 digest"
+      ],
+      "negative": [
+        "conclusion=skipped → CHECK_SKIPPED, exit 2",
+        "conclusion=success+timedOut=true → CHECK_TIMED_OUT, exit 2",
+        "conclusion=timed_out → CHECK_TIMED_OUT, exit 2",
+        "conclusion=failure → CHECK_NOT_SUCCESS, exit 2",
+        "receipt 绑定另一 digest → ADMISSION_REFUSED, exit 2",
+        "基线 failClosed=false → PROTECTED_BASELINE_INVALID, exit 2(fail-closed)"
+      ],
+      "real_entry": "I06 check-step 语义逐码镜像 + 真实子进程; digest→部署/环境贯通的其余链节(artifact/deployment/readback)属 I06 IntegrationIdentity 已核验范围与 P4_2 提升协议, 非本任务重复实现"
+    }
+  ],
+  "commands": [
+    {
+      "cmd": "node --test test/ci-delivery-gate.test.js",
+      "exit_code": 1,
+      "when": "RED (workflow 与 verifier 未存在, 18/18 fail, ENOENT)",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1/evidence/red-ci-delivery-gate.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/4_1.mjs",
+      "exit_code": 1,
+      "when": "RED (同一真实缺失, 6/6 fail)",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1/evidence/red-delivery-case-4_1.txt"
+    },
+    {
+      "cmd": "node --test test/ci-delivery-gate.test.js",
+      "exit_code": 0,
+      "when": "GREEN (18/18 pass, 0 fail, 0 skip)",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1/evidence/green-ci-delivery-gate.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/4_1.mjs",
+      "exit_code": 0,
+      "when": "GREEN (6/6 pass, 0 fail, 0 skip)",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1/evidence/green-delivery-case-4_1.txt"
+    },
+    {
+      "cmd": "npm test",
+      "exit_code": 0,
+      "when": "GREEN (324 tests = 基线 306 + 新增 18; 323 pass / 0 fail / 1 skip 既有 V_COMET_NATIVE 环境条件; 环境 prep: comet prepare+build 于 pinned node v24.15.0, fingerprint 9b95a0ff…)",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1/evidence/green-npm-test.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/*.mjs",
+      "exit_code": 0,
+      "when": "GREEN (122 tests: 120 pass / 0 fail / 2 skip, 两个 skip 均为既有环境条件)",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1/evidence/green-all-delivery-cases.txt"
+    },
+    {
+      "cmd": "gh api repos/rpamis/sdd-harness/branches/master/protection",
+      "exit_code": 1,
+      "when": "一次真实只读平台读回尝试, 失败原样保留: tls: failed to verify certificate: x509: OSStatus -26276 (与 I06 实测一致)",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1/evidence/gh-protection-readback-attempt.txt"
+    }
+  ],
+  "unverified": [
+    {
+      "item": "真实平台侧 required-check 注册/分支保护与合并拒绝",
+      "reason": "本任务无平台写授权(REMOTE_POLICY_WRITE_NOT_AUTHORIZED 语义, I06 已实测), 且 gh 只读读回失效(TLS x509 OSStatus -26276, 本次一次真实尝试留证失败原样保留); 交付物为本地可验证的 CI 工作流定义 + verify 脚本, 其受保护基线语义由测试与结构断言证明",
+      "successor": "平台准入 owner(真实注册 delivery-gate required check + secrets.SDD_DELIVERY_LAUNCH_AUTHORITY) + P4_2"
+    },
+    {
+      "item": "delivery-gate workflow 在真实 GitHub runner 上的端到端执行",
+      "reason": "结构(checkout/读回/装配/verifier 步骤, 权限, 并发, 超时)已由真实 yml 解析断言, 但真实 runner 执行需要平台准入后的真实事件与凭据",
+      "successor": "平台准入 owner + P4_2"
+    },
+    {
+      "item": "test/delivery-cases 全量运行中的 2 个既有 skip (1_1.mjs V_COMET_NATIVE prepared-build, C08 isolated openspec 1.11.0)",
+      "reason": "既有环境条件, 非本任务新增; 与 P3_3 报告记录同源",
+      "successor": "P1 系列/接收控制器(重钉 toolchain-baseline 或显式重冻结)"
+    }
+  ],
+  "files_changed": [
+    ".github/workflows/delivery-gate.yml (新建)",
+    "tools/ci/verify-delivery.mjs (新建)",
+    "test/ci-delivery-gate.test.js (新建)",
+    "test/delivery-cases/4_1.mjs (新建)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1.json (本报告)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1/evidence/* (RED/GREEN/回归/平台尝试日志)"
+  ],
+  "commits": {
+    "tests": "f1741ec",
+    "tests_fix": "7c15723",
+    "implementation": "d44c7b1",
+    "report": "HEAD of impl/p4-1-required-checks at handoff"
+  },
+  "blockers_or_questions": [
+    "无阻塞。实现过程中两次同因内失败均已定位修复(1: 测试 harness 缺 AssertionError import; 2: evaluateGateReceipts 返回形状与 main 预期不一致导致 gate.verdict 变字符串), 均低于同因 3 次停阈值。"
+  ],
+  "notes": "夹具全部位于 os.tmpdir() 且状态无关(已登记基线 REGISTERED 夹具由已提交 ci-policy 拷贝后仅 tmpdir 内突变, 活配置零写入; .github/workflows/delivery-gate.yml 为任务授权新建文件, 非活配置修改)。lib/delivery/gate.js、lib/delivery/evidence.js、tools/infra/platform.mjs 及其它已接纳基建零修改(git diff 可证; platform.mjs 因模块加载即 process.exit 不可 import, 采用逐码镜像契约并在脚本头注声明层级)。零新 npm 依赖(yml 解析为测试内最小 block-YAML 子集解析器, 覆盖本 workflow 所用语法)。脚本内不落宿主私有路径(与 platform.mjs 同源 HOST_PATH_REDACTION 规则), 结构化回执经测试断言不含 /Users/ 路径。verify-delivery.mjs 退出码契约: 0=PASS, 1=输入/前置无效, 2=BLOCKED/UNVERIFIED; skip 永不转 PASS。"
+}
