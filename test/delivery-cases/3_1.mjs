@@ -205,17 +205,33 @@ test('3.1.b runner PASS on real case scenario A01: executes test/delivery-cases/
   assert.match(tap, /V_A01/, 'TAP evidence must contain the executed scenario test point');
 });
 
-test('3.1.b runner PASS on real scenario A02 from the same module and B09 from another module (1_2)', () => {
-  for (const scenario of ['A02', 'B09']) {
+test('3.1.b runner PASS on real scenario A02 (2_1.mjs) and A20 (2_3.mjs) from different modules', () => {
+  const expectedModule = { A02: 'test/delivery-cases/2_1.mjs', A20: 'test/delivery-cases/2_3.mjs' };
+  for (const scenario of ['A02', 'A20']) {
     const evidenceDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), `sdd-p31-${scenario.toLowerCase()}-`)), 'evidence');
     const run = runJourney(['--scenario', scenario, '--profile', 'managed-pilot', '--evidence-dir', evidenceDir, '--json']);
     assert.equal(run.status, 0, `runner must exit 0 for ${scenario} PASS, got ${run.status}: ${run.stderr}`);
     const verdict = readVerdict(run, evidenceDir);
     assert.equal(verdict.verdict, 'PASS', `${scenario} must genuinely pass`);
+    assert.equal(verdict.caseModule, expectedModule[scenario]);
     assert.ok(verdict.execution.pass > 0);
     assert.equal(verdict.execution.target.found, true, `${scenario} test point must be located in the TAP`);
     assert.equal(verdict.execution.target.status, 'ok');
   }
+});
+
+test('3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario token in its test names, so the module-level green stands with the coverage mode recorded', () => {
+  const evidenceDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-b09-')), 'evidence');
+  const run = runJourney(['--scenario', 'B09', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir, '--json']);
+  assert.equal(run.status, 0, `module-level green with real executions must pass, got ${run.status}: ${run.stderr}`);
+  const verdict = readVerdict(run, evidenceDir);
+  assert.equal(verdict.verdict, 'PASS');
+  assert.equal(verdict.caseModule, 'test/delivery-cases/1_6.mjs');
+  assert.ok(verdict.execution.pass > 0, 'actual execution count must be greater than 0');
+  assert.equal(verdict.execution.fail, 0);
+  assert.equal(verdict.execution.target.found, false, 'no V_-convention point exists in this module');
+  assert.equal(verdict.execution.target.status, null);
+  assert.ok(verdict.execution.skipped >= 1, 'the environment-conditional build probe is skipped in this environment and must be recorded');
 });
 
 test('3.1.b runner FAIL verdict without green-washing: a genuinely failing action fails once and is never retried', () => {
@@ -277,6 +293,25 @@ test('3.1.b runner NOT-EXERCISED: unregistered scenario and all-skip module are 
   assert.match(verdict.reason, /no-effective-execution/);
   assert.ok(verdict.execution.skipped >= 2);
   assert.equal(verdict.execution.pass, 0);
+
+  // A tagged target point that is skipped while other tests pass is still not
+  // an exercise of the scenario: skips are never converted into a pass.
+  const rootTagged = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-targetskip-'));
+  const taggedModule = fixtureModule(rootTagged, 'x97b.test.mjs', [
+    "test('V_X97B: genuine point', () => { assert.ok(true); });",
+    "test('V_X97: the scenario point', { skip: 'capability not provisioned in this environment' }, () => {});",
+  ].join('\n'));
+  const taggedPlanPath = fixtureCasePlan(rootTagged, [{ scenario: 'X97', caseModule: taggedModule }]);
+  const taggedDir = path.join(rootTagged, 'evidence');
+  const targetSkipped = runJourney(['--scenario', 'X97', '--profile', 'managed-pilot', '--evidence-dir', taggedDir,
+    '--case-plan', taggedPlanPath, '--json']);
+  assert.equal(targetSkipped.status, 2, 'a skipped target point must exit 2 even when the module is green');
+  const taggedVerdict = readVerdict(targetSkipped, taggedDir);
+  assert.equal(taggedVerdict.verdict, 'NOT-EXERCISED');
+  assert.match(taggedVerdict.reason, /target-scenario-skipped/);
+  assert.equal(taggedVerdict.execution.target.found, true);
+  assert.equal(taggedVerdict.execution.target.status, 'skipped');
+  assert.ok(taggedVerdict.execution.pass > 0, 'other tests passing does not excuse the skipped target');
 });
 
 test('3.1.b schema enforcement: a case definition violating delivery-case-schema.json is refused with named paths', () => {
@@ -362,7 +397,7 @@ test('3.1.c A15 landing: PlanBundle freeze binding is checkbox-state-agnostic bu
   ].join('\n'));
   const contractPath = fixturePilotContract(root, {
     artifactOverrides: {
-      planBundle: { path: planFile, sha256: planContentDigest(planFile) },
+      planBundle: { path: planFile, sha256: planContentDigest(fs.readFileSync(planFile, 'utf8')) },
     },
   });
   const run = (label) => {
