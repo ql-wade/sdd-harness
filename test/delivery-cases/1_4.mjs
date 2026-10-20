@@ -1,5 +1,5 @@
 // P1_4 delivery case: mode qualification of the fixed Comet distribution
-// (patched build, fingerprint 9b95a0ff… after the P2_4 lock revision, manifest-verified on reuse) —
+// (patched build, fingerprint beab355d… after the P4_6 lock revision, manifest-verified on reuse) —
 // 1.4.a pins the Classic/Native capability matrix and the Classic admission
 // decision over the real built CLI (no automatic mode switch exists), 1.4.b
 // reproduces the four release loopholes for real against the patched build —
@@ -159,9 +159,9 @@ const gateVerdict = (result) => {
 const CHANGE = 'qualify-change';
 
 test('setup: the patched pinned build named by the source lock is manifest-verified in this project', () => {
-  // lock revision: 4 patches @ 9b95a0ff (P2_4 0002 + tests/2_4)
-  assert.equal(lock.patches.length, 4, 'the patched build must carry the four locked patches');
-  assert.match(fingerprint, /^9b95a0ff/, `patched fingerprint drifted: ${fingerprint}`);
+  // lock revision: 6 patches @ beab355d (P2_4 0002 + P4_6 0003 + tests)
+  assert.equal(lock.patches.length, 6, 'the patched build must carry the six locked patches');
+  assert.match(fingerprint, /^beab355d/, `patched fingerprint drifted: ${fingerprint}`);
   assert.ok(prepared, 'pristine Comet source has not been prepared; run tools/comet/prepare-source.mjs first');
   assert.ok(built, 'patched Comet build is not present; run tools/comet/build.mjs --archive first');
   const version = comet(['--version']);

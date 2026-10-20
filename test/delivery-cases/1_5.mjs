@@ -1,5 +1,5 @@
 // P1_5 delivery case: the Classic integration gates over the real patched
-// build (fingerprint 9b95a0ff… after the P2_4 lock revision, manifest-verified on reuse). Per
+// build (fingerprint beab355d… after the P4_6 lock revision, manifest-verified on reuse). Per
 // classic-integration-design.md and acceptance C04/C06/C07/C08 this drives
 // one real Classic run through the managed entrances and records that:
 // C07 — all seven entrances (transition, guard preview, guard --apply,
@@ -181,9 +181,9 @@ const get = (change, field) => comet(['state', 'get', change, field]).stdout?.tr
 
 test('setup: the patched pinned build named by the source lock is manifest-verified in this project', (t) => {
   if (skipIfNoBuild(t)) return;
-  // lock revision: 4 patches @ 9b95a0ff (P2_4 0002 + tests/2_4)
-  assert.equal(lock.patches.length, 4, 'the patched build must carry the four locked patches');
-  assert.match(fingerprint, /^9b95a0ff/, `patched fingerprint drifted: ${fingerprint}`);
+  // lock revision: 6 patches @ beab355d (P2_4 0002 + P4_6 0003 + tests)
+  assert.equal(lock.patches.length, 6, 'the patched build must carry the six locked patches');
+  assert.match(fingerprint, /^beab355d/, `patched fingerprint drifted: ${fingerprint}`);
   const version = comet(['--version']);
   assert.equal(version.status, 0);
   assert.equal((version.stdout ?? '').trim(), lock.package.version);
