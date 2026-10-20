@@ -1,0 +1,29 @@
+{
+  "interface": "McpComponentProfile.v1",
+  "component": "llmwiki",
+  "recordedAt": "2026-10-20",
+  "registrationScope": "component-profile-only",
+  "hostRegistration": {
+    "owner": "a later P task, via mcp-capabilities.yaml as the single source of truth",
+    "thisFileDoesNotRegister": true,
+    "liveConfigDoubleWriteForbidden": true,
+    "note": "本文件只产出组件能力清单与宿主入口声明，供 P 任务接纳；.mcp.json 与 mcp-capabilities.yaml 均非本任务可写"
+  },
+  "hostEntry": {
+    "command": "${CLAUDE_PROJECT_DIR}/tools/mcp/llmwiki.sh",
+    "args": [],
+    "transport": "stdio",
+    "workspaceBinding": "launcher binds the workspace to ${CLAUDE_PROJECT_DIR}/llmwiki",
+    "env": {
+      "SDD_HOME": "optional override for the llmwiki distribution root (default $HOME/.sdd)",
+      "LLMWIKI_PYTHON": "optional explicit python override"
+    }
+  },
+  "capabilities": ["guide", "list_knowledge_bases", "search", "read", "create", "edit", "append", "delete", "lint", "ping"],
+  "capabilitySource": "observed via stdio JSON-RPC tools/list against a disposable sandbox workspace; see package.lock.json:mcpSession",
+  "observation": {
+    "hostDiscovered": false,
+    "hostDiscoveryStatus": "UNVERIFIED",
+    "sessionObservation": "2026-10-20 会话中宿主经 .mcp.json 入口启动 tools/mcp/llmwiki.sh 失败（ENOENT）；同机直连 venv 启动则 initialize/tools/list 成功而 create 写调用长时间无返回。两条观察都如实登记，宿主发现只有真实宿主证据出现后才可 VERIFIED（文件存在不算宿主已发现）"
+  }
+}
