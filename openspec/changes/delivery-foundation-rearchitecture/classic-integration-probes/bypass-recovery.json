@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "task": "P1_5",
+  "scope": "C04 single tasks authority (write ticket) + C08 bypass/recovery negatives: hand-edited phase file, manual record-check, forged seal, direct phase write, floating global upgrade attempt; interruption recovery semantics; second closeout after real archive",
+  "generatedBy": "live generator run (worktree impl/p1-5-classic-integration); test/delivery-cases/1_5.mjs re-runs every scenario fresh and must agree",
+  "reproduction": "node --test test/delivery-cases/1_5.mjs",
+  "records": [
+    {
+      "id": "tasks-revision-ticket",
+      "entry": "comet state tasks --assign-ids / task-complete --expect <revision> (patched build CLI)",
+      "oracle": "tasks/DAG is the single writable authority: progress ticks never move the write ticket (checkbox-agnostic, same semantics as the frozen plan digest), definition drift from a second authority does, and a progress write with a stale ticket is refused with a reload instruction",
+      "observed": {
+        "firstWriteExit": 0,
+        "tickMovesRevision": false,
+        "driftMovesRevision": true,
+        "staleTicketExit": 70,
+        "staleTicketMessage": "Task requirements changed; reload the task list before recording completion",
+        "refreshedTicketWriteExit": 0,
+        "noTicketWriteExit": 1
+      }
+    },
+    {
+      "id": "tampered-phase-file",
+      "entry": "hand edit of docs/openspec/changes/<change>/.comet.yaml phase field, then the managed entrances",
+      "oracle": "a hand-edited phase file cannot carry the verify transition or the archive entry checks; the entrance checks consult the real state, so the bypass is refused on every downstream entrance",
+      "observed": {
+        "verifyPassExit": 1,
+        "archiveExit": 1
+      }
+    },
+    {
+      "id": "manual-record-check",
+      "entry": "comet state record-check then state transition build-complete",
+      "oracle": "a manual check declaration never satisfies the guard — the transition still refuses and names the rule",
+      "observed": {
+        "recordExit": 0,
+        "transitionExit": 1,
+        "message": "Manual declarations never satisfy the guard, and they shadow the earlier runtime evidence until a new runtime check runs."
+      }
+    },
+    {
+      "id": "forged-seal",
+      "entry": "lib/adapters/comet.js sealCloseout over a CLI-read seal with phase forced to build",
+      "oracle": "a seal whose phase/verify_result/archive_confirmation is forged is refused as not sealable (ARCHIVE_ENTRY_INVALID)",
+      "observed": {
+        "code": "ARCHIVE_ENTRY_INVALID"
+      }
+    },
+    {
+      "id": "direct-phase-write",
+      "entry": "comet state set <change> phase archive",
+      "oracle": "a direct phase write refuses by default and names the COMET_FORCE_PHASE escape instead of silently applying",
+      "observed": {
+        "exitCode": 1,
+        "namesEscape": true
+      }
+    },
+    {
+      "id": "floating-global-upgrade-attempt",
+      "entry": "comet init (classic) on a host without the required OpenSpec, under an isolated PATH with stub npm",
+      "oracle": "the registered B6 attempt (npm install -g @fission-ai/openspec@latest) is observed and absorbed by the isolated environment; the host-global CLI stays at its pinned version",
+      "observed": {
+        "initExit": 0,
+        "stubAbsorbed": true,
+        "hostCliVersionAfter": "1.3.1",
+        "pinnedHostVersion": "1.3.1"
+      }
+    },
+    {
+      "id": "recovery-continuation",
+      "entry": "comet state next <change> after an interrupted build phase",
+      "oracle": "interruption recovers as continuation guidance (kind plan), never as a completion claim past the missing evidence",
+      "observed": {
+        "exitCode": 0,
+        "kind": "plan"
+      }
+    },
+    {
+      "id": "second-closeout-after-real-archive",
+      "entry": "comet archive <change> twice; readArchiveSeal + sealCloseout between and after",
+      "oracle": "the upstream CLI converges idempotently, but the driver gate is the single closeout owner: a second closeout execution is refused (ARCHIVE_ALREADY_SEALED) once archived is really true",
+      "observed": {
+        "firstArchiveExit": 0,
+        "archivedAfterFirst": true,
+        "secondCloseoutRefusal": "ARCHIVE_ALREADY_SEALED"
+      }
+    }
+  ]
+}

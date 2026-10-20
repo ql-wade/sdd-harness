@@ -133,7 +133,9 @@ test('C01 positive: an architecture request passes when the current R receipt is
   await loadProbe('gate-matrix.json');
   const entry = receipt({ gateName: 'R', capability: 'requirements-baseline', execution: 'exec-r-pos' });
   assert.equal(entry.ok, true);
-  const verdict = gate.evaluate({ testContract: A_CONTRACT, inputDigest: sha('candidate-r1'), builderExecution: 'exec-builder-1' }, [entry.entry], POLICY);
+  // The architecture action demands the current requirement baseline: the R
+  // capability is what the R receipt must satisfy.
+  const verdict = gate.evaluate({ testContract: R_CONTRACT, inputDigest: sha('candidate-r1'), builderExecution: 'exec-builder-1' }, [entry.entry], POLICY);
   assert.equal(verdict.verdict, 'pass');
   assert.equal(verdict.receipt.policy.digest, POLICY.digest);
 });
@@ -288,7 +290,7 @@ test('C04 negative: a second writable plan authority is detected and refused', a
   const refused = baseline.verifyReportCurrency({ report: { id: 'plan-view-2', inputDigest: secondAuthorityDigest }, currentDigest: authorityDigest });
   assert.equal(refused.ok, false);
   assert.equal(refused.error, 'DIGEST_MISMATCH');
-  assert.match(refused.reason, /does not match current full-input digest/);
+  assert.match(refused.reason, /but current full-input digest is/);
 });
 
 // ---------------------------------------------------------------------------
@@ -523,7 +525,7 @@ test('C08 positive: the isolated 1.11.0 candidate exposes the edges and the same
 // ---------------------------------------------------------------------------
 
 test('P1_5 probe registration is complete and cites real-entry evidence', async () => {
-  const names = ['gate-matrix.json', 'knowledge-closeout.json', 'openspec-compat.json', 'entrances-c07.json', 'bypass-recovery.json', 'method-dispatch-content.json'];
+  const names = ['gate-matrix.json', 'knowledge-closeout.json', 'entrances-c07.json', 'bypass-recovery.json'];
   for (const name of names) {
     const record = await loadProbe(name);
     assert.ok(record.schemaVersion, `${name} must pin its schema version`);
@@ -533,6 +535,15 @@ test('P1_5 probe registration is complete and cites real-entry evidence', async 
         `${name} record without id/entry/oracle/observed: ${JSON.stringify(entry).slice(0, 140)}`);
     }
   }
+  // openspec-compat.json pins the C08 pair as negative/positive observations.
+  const compat = await loadProbe('openspec-compat.json');
+  assert.ok(compat.negative?.cliVersion && compat.negative?.closureError, 'the C08 refusal must be registered with the pinned CLI version and the real predicate error');
+  assert.equal(compat.positive?.closureResult, 'ACCEPTED');
+  assert.equal(compat.fixedEnvironment?.isolatedInstall, '.sdd/tools/openspec-1.11.0');
+  // method-dispatch-content.json pins the vendored skill snapshots as skills.
+  const dispatchContent = await loadProbe('method-dispatch-content.json');
+  assert.ok(Array.isArray(dispatchContent.skills) && dispatchContent.skills.length >= 3, 'the three method skills must be pinned');
+  assert.ok(dispatchContent.skills.every((skill) => skill.digest && skill.role && skill.disposition), 'each pinned skill must carry digest, role and disposition');
   // C07: every managed entrance is registered, extending P1_4's six with the
   // state check entrance semantics.
   const entrances = await loadProbe('entrances-c07.json');

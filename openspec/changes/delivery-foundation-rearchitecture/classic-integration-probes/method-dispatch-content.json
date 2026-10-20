@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "task": "P1_5",
+  "scope": "fixed dispatch content of the three method skills (classic-integration-design.md section 5): the vendored snapshots this change binds R/A/T/P/V dispatches to",
+  "generatedBy": "live generator run (worktree impl/p1-5-classic-integration); test/classic-integration.test.js recomputes every digest fresh and must agree",
+  "reproduction": "node --test test/classic-integration.test.js",
+  "note": "test-authoring is vendored here as the real directory snapshot (design doc section 5 flagged the shared-dir version as not team-available; the vendored snapshot under .agents/skills is what dispatches bind to). P1_6 owns the replacement snapshot discipline; re-record this file if the vendored content legitimately changes.",
+  "skills": [
+    {
+      "name": "claude-parallel-tdd-planner",
+      "role": "P",
+      "path": ".agents/skills/claude-parallel-tdd-planner",
+      "version": null,
+      "disposition": "plan-authoring only: consumes the frozen proposal/spec/design and T intent, writes the OpenSpec tasks/DAG (the single checkbox authority), emits the Classic plan as a derived read-only view with base-ref + native task authority/ref markers; its own execution/monitoring/archive controllers are not started",
+      "digest": "faec5f4c84b55686a68e366ec430562df57bb84598b2fe57b60189490bb29023",
+      "files": 16,
+      "digestFormula": "sha256 over the sorted lines \"<file sha256>  <path relative to the skill dir>\" of every file under the skill dir"
+    },
+    {
+      "name": "test-authoring",
+      "role": "T",
+      "path": ".agents/skills/test-authoring",
+      "version": "1.0.0",
+      "disposition": "design mode writes test-intent artifacts only (case/oracle/coverage), automate mode writes authorized tests/fixtures and runs authoring self-checks; authoring self-checks never sign the T gate or the V gate (B03); oracle changes invalidate T and downstream",
+      "digest": "7533bd8598edcdfa61b68cb6a445b69689fe520a8c3764c4131b06ba331bed10",
+      "files": 17,
+      "digestFormula": "sha256 over the sorted lines \"<file sha256>  <path relative to the skill dir>\" of every file under the skill dir"
+    },
+    {
+      "name": "whitebox-verify",
+      "role": "V",
+      "path": ".agents/skills/whitebox-verify",
+      "version": "2.2.0",
+      "disposition": "independent acceptance only: read-only execution bound to the frozen candidate and TestPack, real command receipts; a Whitebox execution never writes source, tests or oracles, and its report is invalid once candidate or test set changes",
+      "digest": "a5fe673a13e92cc2853baf15efc4fd7c0739a91492040f540407487a2e66d71c",
+      "files": 93,
+      "digestFormula": "sha256 over the sorted lines \"<file sha256>  <path relative to the skill dir>\" of every file under the skill dir"
+    }
+  ]
+}

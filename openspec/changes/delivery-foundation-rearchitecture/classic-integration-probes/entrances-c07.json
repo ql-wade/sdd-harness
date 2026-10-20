@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "task": "P1_5",
+  "scope": "C07 — all seven managed entrances enforce the same precondition rule with zero check evidence (extends P1_4 mode-qualification.json c07Entrances, which registered transition/guard preview/guard --apply/next/archive/write-hook; this registration adds the state check entrance semantics and re-verifies all seven on the same patched build)",
+  "generatedBy": "live generator run (worktree impl/p1-5-classic-integration); test/delivery-cases/1_5.mjs re-runs every entrance fresh and must agree",
+  "reproduction": "node --test test/delivery-cases/1_5.mjs",
+  "records": [
+    {
+      "id": "transition",
+      "entry": "comet state transition build-complete (patched build CLI)",
+      "oracle": "the direct transition entrance refuses without the build check and names the failed rule",
+      "observed": {
+        "exitCode": 1,
+        "message": "=== Guard: build → verify ===",
+        "namedRule": "Build passes",
+        "guardRefusalSentence": "Change p15-integrate is not ready to leave the build stage yet: 1 of 14 checks failed. The failing items below are the Agent's checklist, not user actions."
+      }
+    },
+    {
+      "id": "guard-preview",
+      "entry": "comet guard <change> build (preview)",
+      "oracle": "the guard preview refuses without the build check",
+      "observed": {
+        "exitCode": 1
+      }
+    },
+    {
+      "id": "guard-apply",
+      "entry": "comet guard <change> build --apply",
+      "oracle": "the guard apply refuses without the build check and the phase does not move",
+      "observed": {
+        "exitCode": 1,
+        "phaseAfter": "build"
+      }
+    },
+    {
+      "id": "next-continuation",
+      "entry": "comet state next <change>",
+      "oracle": "an interrupted run resumes as continuation guidance, never as a completion claim past the missing check",
+      "observed": {
+        "exitCode": 0,
+        "kind": "plan"
+      }
+    },
+    {
+      "id": "archive",
+      "entry": "comet archive <change>",
+      "oracle": "the archive entrance refuses outside the archive phase",
+      "observed": {
+        "exitCode": 1,
+        "stderr": "FATAL: phase is 'build', expected 'archive'"
+      }
+    },
+    {
+      "id": "write-hook",
+      "entry": "lib/adapters/comet.js probeWriteChannels over .claude/settings.local.json PreToolUse comet-hook-router.mjs",
+      "oracle": "the attributed edit channel refuses a cross-phase product write with the guard contract exit code; unattributed channels stay recorded capability gaps (A09), never blocked claims",
+      "observed": {
+        "exitCode": 2,
+        "outcome": "rejected",
+        "unattributedGaps": [
+          "shell",
+          "mcp"
+        ]
+      }
+    },
+    {
+      "id": "state-check",
+      "entry": "comet state check <change> <phase>",
+      "oracle": "state check answers the ENTRY check set of the phase being entered, never itself advances a phase; the archive entry set is unsatisfied from the build phase with zero evidence",
+      "observed": {
+        "buildEntryExit": 0,
+        "phaseAfterBuildCheck": "build",
+        "archiveFromBuildExit": 1
+      }
+    }
+  ]
+}

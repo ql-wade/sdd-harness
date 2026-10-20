@@ -173,6 +173,8 @@ const driveToBuild = async (change) => {
   comet(['state', 'complete-design', change, '--design-doc', `docs/openspec/changes/${change}/design.md`, '--json']);
   assert.equal(comet(['state', 'transition', change, 'design-complete', '--json']).json?.exitCode, 0);
   assert.equal(comet(['state', 'set', change, 'build_mode', 'executing-plans', 'tdd_mode', 'tdd', 'isolation', 'current', '--json']).json?.exitCode, 0);
+  const tasks = comet(['state', 'tasks', change, '--assign-ids', '--json']).json;
+  assert.equal(comet(['state', 'task-complete', change, tasks?.data?.tasks?.[0]?.id, '--expect', tasks?.data?.revision, '--json']).json?.exitCode, 0);
 };
 
 const get = (change, field) => comet(['state', 'get', change, field]).stdout?.trim();
@@ -376,14 +378,19 @@ test('C08: bypass and recovery negatives — tampered phase file, manual record-
 
   // (d) the floating global OpenSpec upgrade attempt is observed and
   // neutralized by the isolated environment (B6) — the stub npm log is the
-  // witness that no real global mutation ran.
-  const stubCalls = await fs.readFile(stubLog, 'utf8');
-  assert.match(stubCalls, /npm install -g @fission-ai\/openspec@latest/,
-    'classic init must attempt the floating global upgrade on a mismatched host (B6) — and the stub must have absorbed it');
-  const hostAfter = spawnSync('openspec', ['--version'], { encoding: 'utf8', timeout: 30_000 });
+  // witness that no real global mutation ran. The attempt only happens on a
+  // host whose CLI is below the candidate, so a drifted pin skips honestly.
   const baselineToolchain = JSON.parse(await fs.readFile(path.join(changeRoot, 'toolchain-baseline.json'), 'utf8'));
-  if (hostAfter.status === 0 && hostAfter.stdout) {
-    assert.equal(hostAfter.stdout.trim(), baselineToolchain.openspec.current, 'the host-global CLI must remain at its pinned version after every probe');
+  const hostBefore = spawnSync('openspec', ['--version'], { encoding: 'utf8', timeout: 30_000 });
+  const hostPinned = hostBefore.status === 0 && hostBefore.stdout?.trim() === baselineToolchain.openspec.current;
+  if (hostPinned) {
+    const stubCalls = await fs.readFile(stubLog, 'utf8');
+    assert.match(stubCalls, /npm install -g @fission-ai\/openspec@latest/,
+      'classic init must attempt the floating global upgrade on a mismatched host (B6) — and the stub must have absorbed it');
+    const hostAfter = spawnSync('openspec', ['--version'], { encoding: 'utf8', timeout: 30_000 });
+    assert.equal(hostAfter.stdout?.trim(), baselineToolchain.openspec.current, 'the host-global CLI must remain at its pinned version after every probe');
+  } else {
+    t.skip(`host-global openspec is not at the toolchain-baseline pin ${baselineToolchain.openspec.current}; the B6 attempt probe premise does not hold here`);
   }
 
   // (e) the fixed compatible environment is the isolated candidate install.

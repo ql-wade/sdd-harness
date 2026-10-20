@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "task": "P1_5",
+  "scope": "C06 Kp/Kt readback gates: Knowledge.Closeout.v1 ordering (Kp before archive), single-owner sealing, forged seal refusal, native archive-entry zero-knowledge observation (B5) and built-in memory boundary",
+  "generatedBy": "live generator run (worktree impl/p1-5-classic-integration); test/classic-integration.test.js and test/delivery-cases/1_5.mjs re-run every scenario fresh and must agree",
+  "reproduction": "node --test test/classic-integration.test.js test/delivery-cases/1_5.mjs",
+  "ktBoundary": "the driver seal freezes the recorded Kp closeout; the Kt (pre-overall-completion) enforcement seat is the closeout contract run-level wiring owned by task 2.4 (registered, not implementable in this task without touching lib/)",
+  "records": [
+    {
+      "id": "kp-required-before-archive",
+      "entry": "lib/adapters/comet.js sealCloseout over a real CLI-read sealable state without a knowledge closeout",
+      "oracle": "Knowledge.Closeout.v1: the knowledge obligation (Kp) must be recorded before the archive seal",
+      "observed": {
+        "code": "KNOWLEDGE_CLOSEOUT_REQUIRED"
+      }
+    },
+    {
+      "id": "readback-digest-required",
+      "entry": "sealCloseout with a knowledge closeout lacking a sha256 content digest",
+      "oracle": "a knowledge closeout without a real content digest is not an independent readback",
+      "observed": {
+        "code": "KNOWLEDGE_CLOSEOUT_REQUIRED"
+      }
+    },
+    {
+      "id": "seal-exactly-once",
+      "entry": "sealCloseout over the real CLI-read sealable state (phase archive, verify pass, archive confirmed, archived false, epoch read by readArchiveSeal)",
+      "oracle": "the seal succeeds exactly once and freezes the knowledge closeout and the sealed-from epoch",
+      "observed": {
+        "archived": true,
+        "execution": "exec-closeout-1",
+        "knowledgeCloseoutFrozen": true,
+        "sealedFromEpoch": 5
+      }
+    },
+    {
+      "id": "native-archive-entry-zero-knowledge",
+      "entry": "comet state check <change> archive at the archive phase (run driven through the registered COMET_SKIP_BUILD escape, B4)",
+      "oracle": "the native archive entry check set carries no knowledge obligation at all — the Kp seat is the driver gate, never the native gate (B5)",
+      "observed": {
+        "exitCode": 0,
+        "checks": {
+          "passed": 5,
+          "total": 5,
+          "blocked": false
+        },
+        "mentionsKnowledge": false
+      }
+    },
+    {
+      "id": "builtin-memory-not-a-receipt",
+      "entry": "comet knowledge remember under an isolated HOME",
+      "oracle": "the built-in project memory stores into a HOME cache, never an LLMWiki/Outline/DeepWiki artifact, and cannot serve as a Kp/Kt receipt",
+      "observed": {
+        "exitCode": 0,
+        "storageShape": "<HOME>/Library/Caches/Comet/project-knowledge/classic-d99c87ff/memory/<slug>.md"
+      }
+    }
+  ]
+}
