@@ -981,10 +981,10 @@
 **Parallel safe:** false
 **Acceptance IDs:** A13, A14, A16, A17, A19, F06, F09, B08
 
-- [ ] **Step 1 [5 min]: Test** RED：无远端修改授权时申请配置required checks拒绝；开发身份不能读取release/rollback secret；新head/mergeSHA复用旧check、缺项/skip/超时、tag改指不同digest实际阻断候选提升；部署成功但响应丢失先按原关联ID查询；未批准回滚请求被拒绝，已批准回滚要独立业务终态。
-- [ ] **Step 2 [5 min]: Implement** GREEN：只登记读回Git/CI/Registry/隔离环境身份和权限；提供最小scope专用credential引用；将精确integration SHA、build digest、部署receipt与目标readback贯通；平台writer归既有P任务和Comet closeout授权；无真实平台写授权则本地试点保持LOCAL_ONLY，不伪报required checks已配置或生产交付。
-- [ ] **Step 3 [5 min]: Review** 独立读回：实际Git/平台只读回执、精确SHA/digest与隔离部署身份；后续P4_1真实缺check阻断合并记录另验；禁止只以workflow YAML、管理员可读、模拟Status green或本地push成功宣称平台已保护。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 1 [5 min]: Test** RED：无远端修改授权时申请配置required checks拒绝；开发身份不能读取release/rollback secret；新head/mergeSHA复用旧check、缺项/skip/超时、tag改指不同digest实际阻断候选提升；部署成功但响应丢失先按原关联ID查询；未批准回滚请求被拒绝，已批准回滚要独立业务终态。
+- [x] **Step 2 [5 min]: Implement** GREEN：只登记读回Git/CI/Registry/隔离环境身份和权限；提供最小scope专用credential引用；将精确integration SHA、build digest、部署receipt与目标readback贯通；平台writer归既有P任务和Comet closeout授权；无真实平台写授权则本地试点保持LOCAL_ONLY，不伪报required checks已配置或生产交付。
+- [x] **Step 3 [5 min]: Review** 独立读回：实际Git/平台只读回执、精确SHA/digest与隔离部署身份；后续P4_1真实缺check阻断合并记录另验；禁止只以workflow YAML、管理员可读、模拟Status green或本地push成功宣称平台已保护。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
 
 ### Task I07: 独立监控、告警与原Runner进程监督
 
