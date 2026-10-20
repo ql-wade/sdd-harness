@@ -1,0 +1,398 @@
+{
+  "schemaVersion": 1,
+  "tool": "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/run-recovery-chain.mjs",
+  "scenario": "concurrent",
+  "runId": "p33-f41a6210d056",
+  "controller": {
+    "runnerId": "comet-classic"
+  },
+  "environment": "pilot-recovery-local-tmpdir",
+  "toolchain": "node v22.13.1",
+  "policy": {
+    "ref": "policy/managed-pilot-recovery",
+    "digest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379"
+  },
+  "plan": {
+    "ok": true,
+    "errors": [],
+    "bundle": {
+      "schemaVersion": 1,
+      "change": "pilot-recovery-fixture",
+      "schedulerOwner": "comet-classic",
+      "tasks": [
+        {
+          "id": "L1",
+          "dependsOn": []
+        },
+        {
+          "id": "L2",
+          "dependsOn": []
+        },
+        {
+          "id": "L-INT",
+          "dependsOn": [
+            "L1",
+            "L2"
+          ]
+        }
+      ],
+      "allowedPaths": [
+        "src/",
+        "test/",
+        "workers/",
+        "artifacts/"
+      ],
+      "worktree": "worktree/impl-p3-3 (recorded run; recovery chain confined to assigned path prefixes)",
+      "acceptanceRefs": [
+        "A10",
+        "A11",
+        "A12",
+        "F07"
+      ]
+    }
+  },
+  "candidate": {
+    "files": [
+      "src/feature.js",
+      "src/pipeline.js"
+    ],
+    "digestBefore": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+    "digestAfter": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1"
+  },
+  "ledger": {
+    "file": "control/run-state.json",
+    "final": {
+      "label": "final",
+      "digest": "d9991e8a6abdc05f66dad43949a345d67e90c8c30c9f22695d1b73f67c4db4e5",
+      "state": {
+        "schemaVersion": 1,
+        "runId": "p33-f41a6210d056",
+        "epoch": 1,
+        "planDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "candidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "leaves": [
+          {
+            "id": "L1",
+            "status": "pending",
+            "attempt": 0,
+            "dispatchExecution": null,
+            "dispatchEpoch": null,
+            "receiptCandidateDigest": null,
+            "receiptDigest": null
+          },
+          {
+            "id": "L2",
+            "status": "pending",
+            "attempt": 0,
+            "dispatchExecution": null,
+            "dispatchEpoch": null,
+            "receiptCandidateDigest": null,
+            "receiptDigest": null
+          },
+          {
+            "id": "L-INT",
+            "status": "pending",
+            "attempt": 0,
+            "dispatchExecution": null,
+            "dispatchEpoch": null,
+            "receiptCandidateDigest": null,
+            "receiptDigest": null
+          }
+        ],
+        "dispatchLedger": [],
+        "receiptDigests": [],
+        "issuedExecutions": [],
+        "evidenceExecutions": [],
+        "advance": {
+          "execution": "r-race-1",
+          "epoch": 1,
+          "claimedAt": "2026-10-20T18:27:33.217Z"
+        },
+        "advanceSeq": 1,
+        "history": [
+          {
+            "event": "run-open",
+            "epoch": 1,
+            "at": "2026-10-20T18:27:33.121Z"
+          },
+          {
+            "event": "advance-claimed",
+            "epoch": 1,
+            "execution": "r-race-1",
+            "at": "2026-10-20T18:27:33.221Z"
+          }
+        ],
+        "updatedAt": "2026-10-20T18:27:33.221Z"
+      }
+    },
+    "snapshots": {
+      "initial": {
+        "label": "initial",
+        "digest": "b4c95e2c7f5b82c1731c6aea7b789e3cfb2c6783a51aa7b90e7c908621daaba3",
+        "state": {
+          "schemaVersion": 1,
+          "runId": "p33-f41a6210d056",
+          "epoch": 1,
+          "planDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+          "candidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+          "leaves": [
+            {
+              "id": "L1",
+              "status": "pending",
+              "attempt": 0,
+              "dispatchExecution": null,
+              "dispatchEpoch": null,
+              "receiptCandidateDigest": null,
+              "receiptDigest": null
+            },
+            {
+              "id": "L2",
+              "status": "pending",
+              "attempt": 0,
+              "dispatchExecution": null,
+              "dispatchEpoch": null,
+              "receiptCandidateDigest": null,
+              "receiptDigest": null
+            },
+            {
+              "id": "L-INT",
+              "status": "pending",
+              "attempt": 0,
+              "dispatchExecution": null,
+              "dispatchEpoch": null,
+              "receiptCandidateDigest": null,
+              "receiptDigest": null
+            }
+          ],
+          "dispatchLedger": [],
+          "receiptDigests": [],
+          "issuedExecutions": [],
+          "evidenceExecutions": [],
+          "advance": null,
+          "advanceSeq": 0,
+          "history": [
+            {
+              "event": "run-open",
+              "epoch": 1,
+              "at": "2026-10-20T18:27:33.121Z"
+            }
+          ],
+          "updatedAt": "2026-10-20T18:27:33.122Z"
+        }
+      },
+      "final": {
+        "label": "final",
+        "digest": "d9991e8a6abdc05f66dad43949a345d67e90c8c30c9f22695d1b73f67c4db4e5",
+        "state": {
+          "schemaVersion": 1,
+          "runId": "p33-f41a6210d056",
+          "epoch": 1,
+          "planDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+          "candidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+          "leaves": [
+            {
+              "id": "L1",
+              "status": "pending",
+              "attempt": 0,
+              "dispatchExecution": null,
+              "dispatchEpoch": null,
+              "receiptCandidateDigest": null,
+              "receiptDigest": null
+            },
+            {
+              "id": "L2",
+              "status": "pending",
+              "attempt": 0,
+              "dispatchExecution": null,
+              "dispatchEpoch": null,
+              "receiptCandidateDigest": null,
+              "receiptDigest": null
+            },
+            {
+              "id": "L-INT",
+              "status": "pending",
+              "attempt": 0,
+              "dispatchExecution": null,
+              "dispatchEpoch": null,
+              "receiptCandidateDigest": null,
+              "receiptDigest": null
+            }
+          ],
+          "dispatchLedger": [],
+          "receiptDigests": [],
+          "issuedExecutions": [],
+          "evidenceExecutions": [],
+          "advance": {
+            "execution": "r-race-1",
+            "epoch": 1,
+            "claimedAt": "2026-10-20T18:27:33.217Z"
+          },
+          "advanceSeq": 1,
+          "history": [
+            {
+              "event": "run-open",
+              "epoch": 1,
+              "at": "2026-10-20T18:27:33.121Z"
+            },
+            {
+              "event": "advance-claimed",
+              "epoch": 1,
+              "execution": "r-race-1",
+              "at": "2026-10-20T18:27:33.221Z"
+            }
+          ],
+          "updatedAt": "2026-10-20T18:27:33.221Z"
+        }
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seq": 1,
+      "role": "test-author",
+      "action": "stage-suites",
+      "inputSummary": "test/leaf-slugify.test.js, test/leaf-render.test.js, test/integration.test.js",
+      "verdict": "written",
+      "basis": {
+        "kind": "authoring",
+        "note": "leaf suites landed from staged sources through the managed writer"
+      }
+    }
+  ],
+  "dispatchLedger": [],
+  "refusals": [
+    {
+      "seq": 2,
+      "where": "runner-dispatch",
+      "code": "RUNNER_PHASE_FIELD_REFUSED",
+      "reason": "dispatch binding carries phase; the runner stores no phase and control state belongs to the single Runtime — there is no phase write surface on the runner",
+      "ledgerDigestBefore": "d9991e8a6abdc05f66dad43949a345d67e90c8c30c9f22695d1b73f67c4db4e5",
+      "ledgerDigestAfter": "d9991e8a6abdc05f66dad43949a345d67e90c8c30c9f22695d1b73f67c4db4e5"
+    }
+  ],
+  "admitted": [],
+  "workers": [],
+  "advance": {
+    "winnerExecution": "r-race-1",
+    "claim": {
+      "uri": "control/advance-claim.json",
+      "execution": "r-race-1",
+      "epoch": 1,
+      "pid": 74072,
+      "claimedAt": "2026-10-20T18:27:33.217Z"
+    },
+    "result": {
+      "uri": "control/advance-result.json",
+      "execution": "r-race-1",
+      "from": 0,
+      "to": 1
+    },
+    "runners": {
+      "r-stale-epoch": {
+        "execution": "r-stale-epoch",
+        "phase": "pre-race",
+        "epoch": 0,
+        "exitCode": 2,
+        "signal": null,
+        "outUri": "control/runner-r-stale-epoch.json",
+        "outcome": "refused",
+        "code": "CLAIM_EPOCH_STALE",
+        "existing": null,
+        "claimReleased": true
+      },
+      "r-race-1": {
+        "execution": "r-race-1",
+        "phase": "race",
+        "epoch": 1,
+        "exitCode": 0,
+        "signal": null,
+        "outUri": "control/runner-r-race-1.json",
+        "outcome": "advanced",
+        "code": null,
+        "existing": null,
+        "claimReleased": null
+      },
+      "r-race-2": {
+        "execution": "r-race-2",
+        "phase": "race",
+        "epoch": 1,
+        "exitCode": 2,
+        "signal": null,
+        "outUri": "control/runner-r-race-2.json",
+        "outcome": "refused",
+        "code": "CONCURRENT_ADVANCE_REFUSED",
+        "existing": {
+          "execution": "r-race-1",
+          "epoch": 1,
+          "pid": 74072,
+          "claimedAt": "2026-10-20T18:27:33.217Z"
+        },
+        "claimReleased": null
+      },
+      "r-duplicate": {
+        "execution": "r-duplicate",
+        "phase": "post-advance",
+        "epoch": 1,
+        "exitCode": 2,
+        "signal": null,
+        "outUri": "control/runner-r-duplicate.json",
+        "outcome": "refused",
+        "code": "CONCURRENT_ADVANCE_REFUSED",
+        "existing": {
+          "execution": "r-race-1",
+          "epoch": 1,
+          "pid": 74072,
+          "claimedAt": "2026-10-20T18:27:33.217Z"
+        },
+        "claimReleased": null
+      }
+    }
+  },
+  "gate": {},
+  "journeyPhases": null,
+  "checkpoints": [
+    {
+      "id": "plan-validated",
+      "ok": true,
+      "detail": "PlanBundle v1 validates"
+    },
+    {
+      "id": "stale-epoch-claim-refused",
+      "ok": true,
+      "detail": "CLAIM_EPOCH_STALE (ledger epoch 1, claimant epoch 0, released=true)"
+    },
+    {
+      "id": "race-exactly-one-winner",
+      "ok": true,
+      "detail": "race outcomes: r-race-1=advanced, r-race-2=refused(CONCURRENT_ADVANCE_REFUSED)"
+    },
+    {
+      "id": "loser-refused-with-winner-claim",
+      "ok": true,
+      "detail": "loser r-race-2 observed the winner claim of r-race-1"
+    },
+    {
+      "id": "claim-and-result-consistent",
+      "ok": true,
+      "detail": "claim r-race-1 @epoch 1; result r-race-1 0->1"
+    },
+    {
+      "id": "advance-recorded-once",
+      "ok": true,
+      "detail": "advanceSeq 1"
+    },
+    {
+      "id": "post-advance-claim-refused",
+      "ok": true,
+      "detail": "CONCURRENT_ADVANCE_REFUSED (existing claim owner r-race-1)"
+    },
+    {
+      "id": "phase-field-refused",
+      "ok": true,
+      "detail": "dispatch binding carries phase; the runner stores no phase and control state belongs to the single Runtime — there is no phase write surface on the runner"
+    }
+  ],
+  "journey": "single-advance-winner",
+  "verdict": "OBSERVED",
+  "finishedAt": "2026-10-20T18:27:33.266Z"
+}
