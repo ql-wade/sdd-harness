@@ -1,0 +1,110 @@
+{
+  "task": "P2_1",
+  "task_title": "contracts/delivery/ 定义共享 schema；lib/delivery/ 实现全输入基线与 AC→case 追踪（A01–A04/A07–A08）",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/p2-1-contracts",
+  "status": "DONE",
+  "tests_commit": "ed2c0c7",
+  "implementation_commit": "a08dae6",
+  "red_cases": [
+    {
+      "case": "pre-implementation RED (all three suites against absent modules)",
+      "actually_failed": true,
+      "evidence": "node --test test/delivery-baseline.test.js test/delivery-test-contract.test.js test/delivery-cases/2_1.mjs exit=1, 3/3 files failed, 0 pass; all fail with ERR_MODULE_NOT_FOUND for lib/delivery/baseline.js, lib/delivery/test-contract.js, contracts/delivery/index.js (none existed). Evidence: worker-reports/P2_1/evidence/red-node-test.txt"
+    },
+    {
+      "case": "2.1.c hole: zero-test run currently treated as pass (A03)",
+      "actually_failed": true,
+      "evidence": "node --test '**/*.no-such-tests.test.js' exit=0, TAP '# tests 0' — a naive exit-code gate accepts it. Evidence: worker-reports/P2_1/evidence/red-current-pass-through.txt"
+    },
+    {
+      "case": "2.1.c hole: all-skip run currently treated as pass (A03)",
+      "actually_failed": true,
+      "evidence": "node --test skip.test.js (2 tests, both {skip:true}) exit=0, '# tests 2 / pass 0 / fail 0 / skipped 2' — zero effective executions accepted by exit-code-only classification. Evidence: worker-reports/P2_1/evidence/red-current-pass-through.txt"
+    },
+    {
+      "case": "2.1.c hole: environment crash currently misclassified as a valid behavior RED (A04)",
+      "actually_failed": true,
+      "evidence": "env.test.js importing a missing package: exit=1, '# fail 1' with 'Cannot find package' signature — under the only existing classifier (lib/project-test-gate.js pass = exitCode===0; nonzero = failure=RED) this records an environment failure as a behavior RED. Evidence: worker-reports/P2_1/evidence/red-current-pass-through.txt"
+    },
+    {
+      "case": "2.1.b RED requirements (non-JS drift, missing lockfile, migration drift, AC→case gap) reproduced as module-absent failures",
+      "actually_failed": true,
+      "evidence": "the four 2.1.b behaviors lived in test/delivery-baseline.test.js, which failed wholesale with ERR_MODULE_NOT_FOUND before GREEN; each now has a dedicated positive/negative test (see green cases)"
+    }
+  ],
+  "green_summary": {
+    "2.1.a_shared_contracts": "contracts/delivery/schema-kernel.js + eight *.schema.js + index.js registry. Handwritten zero-dependency validators (node builtins only, tools/infra fail-closed style). Compat boundary: payload.schemaVersion mandatory; > version rejected as 'newer than supported', < version rejected as 'older than supported — no compatibility mapping declared', missing/non-integer rejected; unknown contract names refused by parseContract with the registered set listed. Field-level errors with paths (e.g. release.commit, executionDenominator.totalCases, must be one of product|design|usecase). Semantic fail-closed rule beyond structure: ReleaseReceipt requires readback.ok === true.",
+    "2.1.b_full_input_baseline": "lib/delivery/baseline.js. computeFullInputBaseline digests six declared groups (sources/tests/lockfiles/migrations/deployConfigs/artifacts) — non-JS inputs (.java/.py/.sql/.yaml) bind the digest, per A08; any declared-but-missing file returns error=MISSING_INPUT with the sorted missing list (explicit scope error, never silent). taskDefinitionDigest normalizes [x]/[ ] so progress checkboxes cannot move the frozen definition digest. traceAcToCases lists exact missing acceptance mappings. requireImplementationBaselines refuses implementation dispatch listing missing product/design/usecase (A01). invalidateOnScopeChange invalidates only receipts bound to the changed baseline kind, on digest drift or revision drift, keeping unrelated receipts valid (A02). verifyReportCurrency returns DIGEST_MISMATCH with bound vs current digest (A07).",
+    "2.1.c_valid_red_and_denominator": "lib/delivery/test-contract.js. parseTapSummary reads the top-level TAP summary (nested suite summaries cannot shadow it). classifyRunOutcome: spawnError or known environment signatures (module-not-found, ECONNREFUSED/ETIMEDOUT family, ENOENT/EACCES, spawn failures) or missing TAP summary => environment-failure (conservative fail-closed: doubtful runs must be re-executed, never trusted); tests==0 or pass+fail==0 => empty; fail>0 without signatures => behavior-red; exit code contradicting a passing summary => environment-failure. evaluateExecutionDenominator refuses 'zero tests executed' and 'zero effective executions: N skipped, M cancelled'. requireValidRed accepts only behavior-red with a real executed count and refuses environment/empty/pass runs with explicit reasons. evaluateExecution validates the TestContract through the schema and refuses acceptance unless the run is a real passing execution meeting the declared denominator ('execution denominator unmet: declared N, observed M'); observed counts always come from run output, so declared numbers alone cannot close the behavior."
+  },
+  "commands": [
+    {
+      "cmd": "node --test test/delivery-baseline.test.js test/delivery-test-contract.test.js test/delivery-cases/2_1.mjs (RED)",
+      "exit_code": 1,
+      "summary": "3 files / 3 tests failed, 0 pass — ERR_MODULE_NOT_FOUND for lib/delivery/* and contracts/delivery/*"
+    },
+    {
+      "cmd": "node --test test/delivery-baseline.test.js test/delivery-test-contract.test.js test/delivery-cases/2_1.mjs (GREEN)",
+      "exit_code": 0,
+      "summary": "34 tests, 34 pass, 0 fail, 0 skipped (10 baseline + 17 contract/exec + 7 case module)"
+    },
+    {
+      "cmd": "npm test (full repo suite, worktree)",
+      "exit_code": 0,
+      "summary": "106 tests, 106 pass, 0 fail, 0 skipped — 79 baseline + 27 new, no regressions"
+    }
+  ],
+  "contracts": [
+    { "name": "SDD.Delivery.FoundationLock", "file": "contracts/delivery/foundation-lock.schema.js", "version_strategy": "v1; release.commit + release.exportDigest + skills[].digest + policy.{schemaRef,digest} + toolchain.{cli,runner,node,platforms} + profile; unknown/legacy/future schemaVersion explicitly rejected" },
+    { "name": "SDD.Delivery.BaselineRef", "file": "contracts/delivery/baseline-ref.schema.js", "version_strategy": "v1; kind enum product|design|usecase, revision, sha256 digest, confirmedBy, confirmationScope; version boundary via shared kernel" },
+    { "name": "SDD.Delivery.TestContract", "file": "contracts/delivery/test-contract.schema.js", "version_strategy": "v1; cases[]{id,ac,oracle} (min 1), requiredChecks[]{level,capability}, executionDenominator.totalCases >= 1, cleanup.{environment,data}, dependencyBaselines[]{kind,digest}; version boundary via shared kernel" },
+    { "name": "SDD.Delivery.PlanBundle", "file": "contracts/delivery/plan-bundle.schema.js", "version_strategy": "v1; tasks[]{id,dependsOn}, schedulerOwner (single scheduler owner), allowedPaths, worktree, acceptanceRefs; version boundary via shared kernel" },
+    { "name": "SDD.Delivery.CandidateRef", "file": "contracts/delivery/candidate-ref.schema.js", "version_strategy": "v1; run/attempt>=1, backendCandidate, inputDigest (full-input sha256), builderExecution; version boundary via shared kernel" },
+    { "name": "SDD.Delivery.EvidenceEnvelope", "file": "contracts/delivery/evidence-envelope.schema.js", "version_strategy": "v1; candidateDigest, caseId/check, origin{id,kind}, execution.id, environment, toolchain, executions.{total,valid}, result enum pass|fail|red|blocked|unverified, evidence[]{uri,sha256} (min 1), expiry ISO-8601; version boundary via shared kernel" },
+    { "name": "SDD.Delivery.GateReceipt", "file": "contracts/delivery/gate-receipt.schema.js", "version_strategy": "v1; policy.{ref,digest}, inputDigest, evidence[] sha256 (min 1), requiredDenominator.{required>=1,valid>=0}, blocked[], sourceAttestation.{origin,execution}, verdict enum pass|blocked; version boundary via shared kernel" },
+    { "name": "SDD.Delivery.ReleaseReceipt", "file": "contracts/delivery/release-receipt.schema.js", "version_strategy": "v1; integrationSha, buildDigest, targetEnvironment, configVersions.{config,migration}, deployIdentity, rollbackIdentity, readback.{ok===true enforced,at,evidenceDigest}; version boundary via shared kernel + semantic readback rule" }
+  ],
+  "test_fixes_between_red_and_green": [
+    {
+      "finding": "four RED-phase test corrections were needed before GREEN",
+      "details": "(1) test/delivery-baseline.test.js asserted 6 manifest files where DEMO_MANIFEST lists 7 (authoring arithmetic error, implementation was correct); (2) expected missing-list order assumed locale sort while the implementation uses deterministic code-unit sort — expectation corrected to the implementation's documented order; (3) frozen-contract list compared unsorted against Object.keys().sort() — comparison now sorts both sides; (4) test/delivery-cases/2_1.mjs runNodeTest inherited NODE_TEST_CONTEXT=child-v8 from the outer node --test, which makes a nested node --test skip running files entirely (exit 0, no TAP output — captured during debugging); the fixture now strips that variable so spawned runs are real top-level executions. None of these weaken an oracle; one genuine implementation bug found the same way (evaluateExecution initially dropped denominator.reasons from the rejection list) was fixed in lib/delivery/test-contract.js."
+    }
+  ],
+  "unverified": [
+    {
+      "item": "V_A01–V_A08 CLI runs (node tools/verify/delivery-journey.mjs --scenario A0x) with 'actual execution count > 0' recorded against the managed-pilot profile",
+      "reason": "the verify CLI itself is implementedBy P3_1 (execution-contract.json availability=TO_IMPLEMENT); P2_1 owns the lib layer and case modules only. Locally provable equivalents were executed: test/delivery-cases/2_1.mjs spawns real node --test processes and asserts parsed TAP counts > 0 (e.g. V_A03 asserts a real all-skip run with tests=2/skipped=2; V_A04 asserts a real crash and a real behavior RED with tests>0/fail>0), all green. No mock or fixture was substituted for the runtime behavior."
+    },
+    {
+      "item": "origin trust of evidence (A05/A06 adjacency)",
+      "reason": "schema validates structure only, by design: per delivery-architecture.md section 4, digest proves content binding, not origin trust; source attestation and registered-runner checks are 2.2 scope. The EvidenceEnvelope/GateReceipt sourceAttestation fields are structural placeholders for that gate."
+    }
+  ],
+  "files_changed": [
+    "contracts/delivery/schema-kernel.js",
+    "contracts/delivery/foundation-lock.schema.js",
+    "contracts/delivery/baseline-ref.schema.js",
+    "contracts/delivery/test-contract.schema.js",
+    "contracts/delivery/plan-bundle.schema.js",
+    "contracts/delivery/candidate-ref.schema.js",
+    "contracts/delivery/evidence-envelope.schema.js",
+    "contracts/delivery/gate-receipt.schema.js",
+    "contracts/delivery/release-receipt.schema.js",
+    "contracts/delivery/index.js",
+    "lib/delivery/baseline.js",
+    "lib/delivery/test-contract.js",
+    "test/delivery-baseline.test.js",
+    "test/delivery-test-contract.test.js",
+    "test/delivery-cases/2_1.mjs",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1/evidence/red-node-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1/evidence/red-current-pass-through.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1/evidence/green-node-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1/evidence/green-npm-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1.json"
+  ],
+  "blockers_or_questions": [
+    "The conservative environment-failure classifier is intentionally fail-closed: a legitimate behavior RED whose captured output happens to contain a signature substring (e.g. asserting on 'ENOENT' text) classifies as environment failure and blocks RED recording rather than fabricating one. If 2.2/P3_1 need finer separation (signature scoped to the failure location rather than the whole output), that is a follow-up on top of classifyRunOutcome, not a scope change.",
+    "test/delivery-cases/2_1.mjs is deliberately outside the npm test glob (matches repo pattern: test/*.test.js only); it runs via the explicit node --test command recorded above and later through the P3_1 verify runner. Reviewers should run the explicit command, not expect it in npm test."
+  ]
+}
