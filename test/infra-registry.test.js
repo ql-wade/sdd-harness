@@ -72,6 +72,8 @@ test('V_INFRA_I01 contract: committed registry validates clean and canonical com
   const report = parseJsonOut(validate, 'validate');
   assert.equal(report.ok, true);
   assert.deepEqual(report.violations, []);
+  // nb-2 回归：validate 的结构化输出不得回显宿主绝对路径（文件字段一律 repo 相对）。
+  assert.doesNotMatch(validate.stdout, /\/(Users|home|root|private|var|usr|etc|opt|tmp)\//);
 
   // 配置有效 ≠ 运行 ready：committed 证据不含可独立复算的 archive，qualify 必须 NOT_READY 且非零退出。
   const qualify = runRegistry(['qualify', '--resource', 'comet-source', '--registry', registryPath, '--json']);
@@ -254,7 +256,7 @@ test('RED plaintext gate: secret-shaped values and secret-value keys are rejecte
 
 test('RED host-path gate: host absolute paths are rejected in committed structure', () => {
   const fixture = patchRegistry((r) => {
-    r.resources[0].localWorkspace = '/Users/mac/secret-stuff/comet';
+    r.resources[0].localWorkspace = '/Users/example/secret-stuff/comet';
   });
   const result = runRegistry(['validate', '--registry', fixture, '--json']);
   assert.equal(result.status, 2);

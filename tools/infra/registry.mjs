@@ -30,6 +30,12 @@ const sha256File = (file) => crypto.createHash('sha256').update(fs.readFileSync(
 const HOST_PATH_REDACTION = /(^|[\s"'=(:/])\/(Users|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
 const redactHostPaths = (text) => String(text ?? '').replace(HOST_PATH_REDACTION, '$1<host-path-redacted>');
 
+// 结构化输出里的文件字段一律 repo 相对；repo 之外（fixture/临时文件）则复用宿主路径脱敏。
+const displayPath = (file) => {
+  const rel = path.relative(repoRoot, String(file ?? ''));
+  return rel.startsWith('..') ? redactHostPaths(String(file)) : rel;
+};
+
 function usage() {
   return [
     'usage:',
@@ -323,7 +329,7 @@ function main(argv) {
   try {
     registry = readJson(registryFile);
   } catch (err) {
-    return failInput(`registry unreadable: ${err.message}`);
+    return failInput(`registry unreadable: ${redactHostPaths(err.message)}`);
   }
   // 门禁必须 fail-closed：refs 目录与 policy 文件缺失 = 前置无效，绝不静默降级为空规则。
   const refsFile = opts.refs ?? path.join(repoRoot, 'infra', 'delivery', 'secrets.refs.example.json');
@@ -333,17 +339,17 @@ function main(argv) {
   try {
     refsDoc = readJson(refsFile);
   } catch (err) {
-    return failInput(`refs catalog unreadable (${refsFile}): ${err.message}`);
+    return failInput(`refs catalog unreadable (${displayPath(refsFile)}): ${redactHostPaths(err.message)}`);
   }
   try {
     policy = readJson(policyFile);
   } catch (err) {
-    return failInput(`qualification policy unreadable (${policyFile}): ${err.message}`);
+    return failInput(`qualification policy unreadable (${displayPath(policyFile)}): ${redactHostPaths(err.message)}`);
   }
 
   if (command === 'validate') {
     const violations = validateRegistry(registry, refsDoc, policy);
-    print({ interface: 'Registry.v1', registry: registryFile, refs: refsFile, ok: violations.length === 0, violations });
+    print({ interface: 'Registry.v1', registry: displayPath(registryFile), refs: displayPath(refsFile), ok: violations.length === 0, violations });
     return violations.length === 0 ? EXIT_PASS : EXIT_VERIFY;
   }
 
@@ -374,7 +380,7 @@ function main(argv) {
     });
     print({
       interface: 'Registry.v1',
-      registry: registryFile,
+      registry: displayPath(registryFile),
       project: { id: project.id, owner: project.owner, authorityReadback: project.authority?.readbackStatus ?? 'UNRECORDED' },
       resources,
     });
