@@ -1,0 +1,165 @@
+{
+  "task": "P4_2",
+  "task_title": "原任务 4.2 — 隔离环境构建并提升同 digest，验证 tag 漂移拒绝、部署超时查询、不重复部署、批准回滚及业务读回（A14–A17/F09）。生产授权不包含在本任务中。",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/p4-2-promotion-rollback",
+  "base_commit": "d9b87f3",
+  "final_status": "DONE",
+  "implementation_commit": "e84decb",
+  "tests_commit": "ba35644 (RED suite) + 676b4e5 (GREEN harness alignment + release-journey evidence)",
+  "report_commit": "本 JSON 与全部 RED/GREEN 日志所在提交（HEAD of impl/p4-2-promotion-rollback）",
+  "semantics_source_note": "语义唯一来源: specs/delivery-foundation/spec.md A14(已验证构建 digest 的部署 tag 指向另一 digest → 拒绝提升并记录实际身份不符)/A16(部署请求超时但外部已成功 → 按原关联 ID 查询绑定原结果不重复部署)/A17(发布失败且有批准回滚方案 → 读回回滚 digest、环境和关键业务终态)/F09(集成候选与制品冻结 → 精确 integration SHA 和同 digest 贯通验证/目标环境)。步骤结构取自 tasks.md '### Task P4_2:' 段(383-390 行, 段尾边界 392 行 '### Task P4_6:'): Step1 Test 4.2.a / Step2 Implement 4.2.a / Step3 Test 4.2.b / Step4 Implement 4.2.b / Step5 Review / Step6 Commit。已接纳基建 import 复用零修改: tools/ci/verify-delivery.mjs(P4_1, 在 4_2 journey 中作为真实前置子进程调用)与 lib/delivery/*(未直接使用——release 协议为纯 stdlib 执行器); tools/infra/platform.mjs(I06)因 process.exit(main()) 于模块加载执行不可安全 import, 其 IntegrationIdentity 负例码逐码契约镜像(TAG_DIGEST_DRIFT/ARTIFACT_NOT_FROM_MERGE/ENVIRONMENT_PROJECT_MISMATCH/DEPLOYMENT_DIGEST_MISMATCH/RECEIPT_CORRELATION_MISSING/READBACK_CORRELATION_MISMATCH/READBACK_UNCONFIRMED/ROLLBACK_NOT_APPROVED/ROLLBACK_RETENTION_MISSING/ROLLBACK_DIGEST_MISMATCH/ROLLBACK_TERMINAL_STATE_UNCONFIRMED), 头注声明层级, 且每条命令 --chain-out 产出的链都由真实 platform.mjs 'probe --case registry-environment-identity' 子进程独立复评(执行器事实与已接纳评估器正负双向一致, 12 条 journey 证据含 6 条 I06 复评)。前置 ISOLATED_RELEASE_ENVIRONMENT_REQUIRED 语义落实: 环境登记缺失/损坏只阻断环境相关动作(promote/reconcile/rollback 全部 exit 2 拒绝、零写入), 本地目录形态隔离 Registry/环境($TMPDIR, OCI 形 blobs+tag refs / registration+账本+active+业务终态)即真实被测物, 计划字段不充当已满足; 每份回执 mode=LOCAL_ONLY 且 note 声明真实生产提升/部署 UNVERIFIED(承接者: 环境 owner + P4_2 之后的运行时准入)。",
+  "red_cases": [
+    {
+      "case": "test/release-protocol.test.js 全套 17 例",
+      "red_evidence": "tools/ci/release.mjs 不存在(spawn ENOENT); 补强后规避两个假 RED: spawnSync 对缺失文件的启动失败本身返回 status 1(输入契约例改为断言工具自报的 stderr 文案), parseJson 守卫缺 AssertionError import",
+      "log": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2/evidence/red-release-protocol.txt (exit=1, tests 17 / pass 0 / fail 17)"
+    },
+    {
+      "case": "test/delivery-cases/4_2.mjs 全套 6 例",
+      "red_evidence": "同一真实缺失: release.mjs ENOENT",
+      "log": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2/evidence/red-delivery-case-4_2.txt (exit=1, tests 6 / pass 0 / fail 6)"
+    }
+  ],
+  "green_summary": "node --test test/release-protocol.test.js → 17/17 pass, 0 fail, 0 skip (green-release-protocol.txt)。node --test test/delivery-cases/4_2.mjs → 6/6 pass, 0 fail, 0 skip (green-delivery-case-4_2.txt)。npm test 全量 → tests 341 = 基线 324 + 本任务 17, pass 340 / fail 0 / skipped 1(既有环境条件 V_COMET_NATIVE; 环境 prep: 本次工作树先行 tools/comet/build.mjs --archive 于 pinned node v24.15.0, fingerprint 9b95a0ff…, 归档复用 P4_1 工作树 .sdd/cache 缓存, 无网络下载) (green-npm-test.txt)。node --test test/delivery-cases/*.mjs → tests 128 = 既有 122 + 本任务 6, pass 126 / fail 0 / skipped 2(既有: 1_1 V_COMET_NATIVE prepared-build、C08 isolated openspec 1.11.0, 均非本任务新增) (green-all-delivery-cases.txt)。release-journey/: 一次真实 12 步旅程落盘(promote v1 → I06 VERIFIED → 带外改指后提升拒绝+I06 同码 → 顺序发布 v2 → 同 digest 锁 → 关联 ID 调和+QUERY_BY_CORRELATION_ID → 未批准回滚拒绝+I06 同码 → 批准同 digest 回滚+业务读回+I06 VERIFIED), 12/12 证据 exitCode 与语义断言逐一核对通过。",
+  "coverage_matrix": [
+    {
+      "acceptance": "A14",
+      "scenario": "已验证一个构建 digest; 部署 tag 指向另一个 digest → 拒绝提升并记录实际身份不符",
+      "positive": [
+        "构建为真实 sha256(对真实源文件字节的确定性 manifest, 同输入重构建同 digest 有断言); promote 后 tag/active/账本/业务终态全部贯穿同 digest, exit 0 VERIFIED",
+        "顺序发布语义真实成立: tag==active(环境实际服务的 digest)校验通过后, 本协议提升自身把 tag 移到新 verified digest — 漂移防护精确针对带外改指, 不误杀正常发布"
+      ],
+      "negative": [
+        "真实带外改指(registry refs/tags 文件改写为另一 digest)后 promote → TAG_DIGEST_DRIFT, exit 2, 回执记录实际身份三元不符 {tagResolvedDigest(带外 digest), expectedDigest(环境实际服务), digest(实际构建)}; active/账本字节级不变(零状态变更)",
+        "同一漂移世界喂给已接纳 I06 评估器 → exit 2 且 codes 含 TAG_DIGEST_DRIFT(跨工具双向一致)",
+        "chain.artifact.builtFromMerge ≠ merge → ARTIFACT_NOT_FROM_MERGE, exit 2, 零写入"
+      ],
+      "real_entry": "tools/ci/release.mjs 真实子进程 + 真实 $TMPDIR 隔离 Registry/环境文件系统 + tools/infra/platform.mjs 真实子进程; 零 mock"
+    },
+    {
+      "acceptance": "A16",
+      "scenario": "部署请求超时但外部已成功; 恢复同一关联操作 → 查询后绑定原结果，不重复部署",
+      "positive": [
+        "响应丢失形态真实构造: promote 完成后调用方弃用响应, 环境账本即外部已成功的权威事实; reconcile --correlation-id → found=true, 绑定原 correlationId 与原 requestedAt, deployed=false, 账本恒为 1 条",
+        "I06 复评调和链: exit 0 VERIFIED 且 readback step via=QUERY_BY_CORRELATION_ID"
+      ],
+      "negative": [
+        "未知关联 ID → READBACK_UNCONFIRMED, exit 2, found=false, 账本零变化(查询先行, 不确定绝不转为部署)",
+        "业务终态缺失(真实删除 state.json)时 reconcile → READBACK_UNCONFIRMED, 不 redeploy 不假确认",
+        "账本记录 digest 与其 registry tag 解析分叉(真实改写账本) → DEPLOYMENT_DIGEST_MISMATCH, exit 2, 不静默修复不重复部署"
+      ],
+      "real_entry": "真实账本/active/业务终态文件 + correlation-ID 文件寻址查询; 无任何注入桩"
+    },
+    {
+      "acceptance": "A17",
+      "scenario": "发布失败且有批准回滚方案; 执行回滚 → 读回回滚 digest、环境和关键业务终态",
+      "positive": [
+        "批准(approval: digest+environment+approver+approvedAt) + 同 digest(等于保留的上一已批准制品) → exit 0 VERIFIED; 读回三元组 {digest, environment, businessTerminalState(serving=回滚 digest)} 全部为回滚后真实读回"
+      ],
+      "negative": [
+        "无批准文件 → ROLLBACK_NOT_APPROVED, exit 2, active/业务终态字节级不变; I06 独立复评同码 BLOCKED",
+        "批准指向另一环境 → ROLLBACK_NOT_APPROVED; 批准 digest 与保留制品不符 → ROLLBACK_DIGEST_MISMATCH(均零状态变更)",
+        "无保留的上一已批准制品 → ROLLBACK_RETENTION_MISSING",
+        "业务目录不可写(chmod 0o555, 回滚效果真实无法施加) → 回滚如实 UNVERIFIED + ROLLBACK_TERMINAL_STATE_UNCONFIRMED, 绝不报告 verified"
+      ],
+      "real_entry": "真实批准文档/保留文件/回滚账本/业务终态文件; 批准门 fail-closed(登记策略字段缺失按必需处理, 不把计划字段当已满足)"
+    },
+    {
+      "acceptance": "F09",
+      "scenario": "集成候选和制品已冻结; CI 验证并提升 → 精确 integration SHA 和同 digest 贯通验证/目标环境",
+      "positive": [
+        "4_2 journey 全链: P4_1 delivery gate(verify-delivery.mjs 真实子进程, REGISTERED 基线夹具)VERIFIED → promote(同 chain)exit 0 且 builtFromMerge=精确 merge SHA → digest 贯通 tag/active/账本/业务终态 → --chain-out 喂真实 platform.mjs probe → I06 VERIFIED(deployment step binding=DIGEST_AND_CORRELATION_ID)",
+        "同 digest 锁定: 重复提升同 digest 返回既有回执(idempotent=true, 同 correlationId), 账本恒 1 条; 确定性: 同源重构建同 digest"
+      ],
+      "negative": [
+        "漂移链 I06 复评 TAG_DIGEST_DRIFT + DEPLOYMENT_DIGEST_MISMATCH(执行器事实与已接纳评估器一致)",
+        "ISOLATED_RELEASE_ENVIRONMENT_REQUIRED: 环境未登记 → promote/rollback 全部 exit 2 零写入(登记缺失只阻断相关动作, 计划形状不充当登记); ENVIRONMENT_PROJECT_MISMATCH(他项目环境)同验",
+        "输入契约: 坏 SHA/空 requiredChecks/缺参/未知命令 → exit 1 且工具自报名目(绝不当作语义判定)"
+      ],
+      "real_entry": "三工具真实子进程串联(verify-delivery.mjs → release.mjs → platform.mjs); 本地机制全真, 生产段如实 LOCAL_ONLY"
+    }
+  ],
+  "commands": [
+    {
+      "cmd": "node --test test/release-protocol.test.js",
+      "exit_code": 1,
+      "when": "RED (tools/ci/release.mjs 不存在, 17/17 fail)",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2/evidence/red-release-protocol.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/4_2.mjs",
+      "exit_code": 1,
+      "when": "RED (同一真实缺失, 6/6 fail)",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2/evidence/red-delivery-case-4_2.txt"
+    },
+    {
+      "cmd": "node --test test/release-protocol.test.js",
+      "exit_code": 0,
+      "when": "GREEN (17/17 pass, 0 fail, 0 skip)",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2/evidence/green-release-protocol.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/4_2.mjs",
+      "exit_code": 0,
+      "when": "GREEN (6/6 pass, 0 fail, 0 skip)",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2/evidence/green-delivery-case-4_2.txt"
+    },
+    {
+      "cmd": "npm test",
+      "exit_code": 0,
+      "when": "GREEN (341 tests = 基线 324 + 新增 17; 340 pass / 0 fail / 1 skip 既有 V_COMET_NATIVE; 环境 prep: comet build 于 pinned node v24.15.0, fingerprint 9b95a0ff…)",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2/evidence/green-npm-test.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/*.mjs",
+      "exit_code": 0,
+      "when": "GREEN (128 tests: 126 pass / 0 fail / 2 skip, 两个 skip 均为既有环境条件)",
+      "evidence": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2/evidence/green-all-delivery-cases.txt"
+    }
+  ],
+  "unverified": [
+    {
+      "item": "真实生产提升/部署与环境读回(真实 Registry endpoint、真实隔离环境)",
+      "reason": "本任务无生产/平台授权(任务前置 ISOLATED_RELEASE_ENVIRONMENT_REQUIRED 明示); 本地目录形态 Registry/环境证明的是本地机制(同 digest 锁定/漂移拒绝/幂等/批准门/读回), 每份回执如实 LOCAL_ONLY",
+      "successor": "环境 owner + P4_2 之后的运行时准入(真实端点登记后, release.mjs 的 --registry/--environment 即指向真实形态)"
+    },
+    {
+      "item": "Registry 签名与 provenance 机制",
+      "reason": "本地隔离 Registry 无签名/provenance 基础设施; 已提交 registry-registration.example.json 的 endpoint/signing/provenance 保持 UNSELECTED/UNVERIFIED, 工具不伪造签名事实",
+      "successor": "Registry owner(真实签名/provenance 机制选定后接入 promote 的 putArtifact 路径)"
+    },
+    {
+      "item": "隔离环境的网络隔离(networkIsolation)与真实 owner 登记",
+      "reason": "environment-registration.example.json 仅为契约形状(NetworkIsolation UNVERIFIED); 本地夹具登记是机制被测物, 不声称真实环境已登记",
+      "successor": "环境 owner(真实登记后 readbackOracle/rollback 策略字段由工具按同一路径强制)"
+    },
+    {
+      "item": "P4_1 审查移交项 NB-2: delivery-gate.yml node 24 vs quality-gates.yml node 22 主版本不一致",
+      "reason": "本任务交付物(tools/ci/release.mjs、两套测试、release-journey)不涉及任何 workflow 文件, 无权且无由处理 .github/; 本地验证在 node v22.13.1(quality-gates 版本)下全绿, release.mjs 无版本敏感 API",
+      "successor": "P4 系列 workflow 统一任务或平台准入 owner(将 delivery-gate.yml 的 node-version 与 quality-gates.yml 对齐或反向提升)"
+    },
+    {
+      "item": "npm test 全量中 1 个既有 skip(V_COMET_NATIVE)与 delivery-cases 全量中 2 个既有 skip(1_1 prepared-build、C08 isolated openspec)",
+      "reason": "既有环境条件, 与 P3_3/P4_1 报告同源, 非本任务新增",
+      "successor": "P1 系列/接收控制器"
+    }
+  ],
+  "files_changed": [
+    "tools/ci/release.mjs (新建)",
+    "test/release-protocol.test.js (新建)",
+    "test/delivery-cases/4_2.mjs (新建)",
+    "openspec/changes/delivery-foundation-rearchitecture/release-journey/README.md + evidence/* (新建, 12 条真实执行证据)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2.json (本报告)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2/evidence/* (RED/GREEN 日志)"
+  ],
+  "commits": {
+    "tests": "ba35644 (RED) + 676b4e5 (GREEN harness alignment + journey evidence)",
+    "implementation": "e84decb",
+    "report": "见 report_commit"
+  },
+  "blockers_or_questions": [
+    "无阻塞。实现过程中失败均为不同原因且各 ≤2 次(假 RED 两处: spawn 启动失败返回 status 1、AssertionError 缺 import; SHA 夹具非 hex 字符; --json 未在严格 parseArgs 声明; A14 语义一轮重设计——漂移基准从『tag vs 本次构建』修正为『tag vs 环境实际服务(active)』, 否则顺序发布被误杀; expectedDigest 字段补记), 均低于同因 3 次停阈值。"
+  ],
+  "notes": "零新 npm 依赖(release.mjs 纯 node stdlib: fs/crypto/path/process/util.parseArgs)。夹具全部位于 os.tmpdir() 且状态无关, 活配置与 change-control 文件零写入(git diff 可证: 变更仅限任务授权文件)。launch secret 为夹具值, 非真实凭据。结构化回执不含宿主私有路径(工具侧 redactHostPaths 同 P4_1 规则, 测试断言 /Users// 不出现)。退出码契约: 0=VERIFIED, 1=输入/前置无效, 2=BLOCKED/UNVERIFIED; 未确认绝不转 PASS。A14 语义要点(供后续任务复用): drift 基准是『tag 解析 vs 环境实际服务(active.artifactDigest)』——带外改指拒绝并记录三元身份不符; 协议内的顺序发布在 tag==active 校验后把 tag 移到新 verified digest, 这是提升自身效果而非漂移。I06 契约镜像声明: platform.mjs 模块加载即 process.exit 不可 import, 逐码镜像于 release.mjs 头注, 并以真实子进程复评闭环。"
+}
