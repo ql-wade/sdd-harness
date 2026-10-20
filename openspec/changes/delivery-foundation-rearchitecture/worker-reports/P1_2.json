@@ -122,6 +122,36 @@
       "test/foundation-distribution.test.js",
       "test/delivery-cases/1_2.mjs"
     ],
-    "scope_note": "hooks.yaml untouched (source of record documents six neutral events; the FIXED-SET boundary is enforced by the CC adapter compiler and declared in its head comment + test assertions per supplement item 2)"
+    "scope_note": "hooks.yaml untouched (source of record documents six neutral events; the FIXED-SET boundary is enforced by the CC adapter compiler and declared in its head comment + test assertions per supplement item 2)",
+    "re_freeze": {
+      "trigger": "P1_6 Ponytail delta (impl/p1-6-method-profile d05d105) changed method-profile-manifest.json — foundation/ went stale by design (DAG: P1_2 depends_on P1_6); re-freeze is the P1_2 owner's duty",
+      "merges": [
+        "master @ 856f411 (a97943d merge)",
+        "impl/p1-6-method-profile @ d05d105 (6ec46aa merge)"
+      ],
+      "command": "node tools/foundation-export.mjs export --root . --out foundation; node tools/foundation-export.mjs verify --root . --lock foundation/foundation-lock.json",
+      "before": {
+        "verify_exit": 1,
+        "drifts": [
+          "method-profile digest ac5a0e7d4342 -> 2f55b5a42efb",
+          "release/skills/MANIFEST.json drifted"
+        ]
+      },
+      "after": {
+        "verify_exit": 0,
+        "release_commit": "6ec46aab61c2",
+        "export_digest": "dc3a352a1382f267",
+        "skills_frozen": 11,
+        "ponytail_included": true,
+        "method_profile_digest": "2f55b5a42efb5800",
+        "method_profile": "comet-classic"
+      },
+      "registration_division_on_refrozen_view": "combined suite (foundation-distribution + delivery-case 1_2) 32/32 PASS on the re-frozen tree, including the repo-level committed-artifacts drift test and all 9 V_P1_2_PLUGIN_REGISTRATION_DIVISION cases; release/hooks/hooks.yaml remains a byte-copy of the plugin-script-free source",
+      "regression": {
+        "combined": "32/32 exit 0",
+        "npm_test": "225/225 exit 0 (merged tree, all worker suites)"
+      },
+      "evidence": "worker-reports/P1_2/evidence/supplement-refreeze-foundation.txt"
+    }
   }
 }
