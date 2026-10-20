@@ -225,10 +225,16 @@ test('frozen plan boundary: task definition digest ignores checkbox state in thi
   const tasksText = fs.readFileSync(tasksPath, 'utf8');
   const stepLine = tasksText.split('\n').find((line) => /\*\*Step 1 \[5 min\]: Test\*\* 2\.1\.a /.test(line));
   assert.ok(stepLine, 'precondition: the tasks.md P2_1 definition line is present');
-  const toggled = tasksText.replace(stepLine, stepLine.replace(/^- \[ \] /, '- [x] '));
-  assert.notEqual(tasksText, toggled, 'precondition: the toggle really changed the checkbox state');
+  // State-independent toggle: whatever the current checkbox state is (the
+  // acceptance pass may already have ticked it), flip to the opposite state.
+  const stateMatch = stepLine.match(/^- \[([ xX])\] /);
+  assert.ok(stateMatch, 'precondition: the P2_1 Step 1 line carries a checkbox');
+  const flipped = stateMatch[1] === ' ' ? 'x' : ' ';
+  const toggledLine = stepLine.replace(/^- \[([ xX])\] /, `- [${flipped}] `);
+  assert.notEqual(stepLine, toggledLine, 'precondition: the toggle really flipped the checkbox state');
+  const toggled = tasksText.replace(stepLine, toggledLine);
   assert.equal(taskDefinitionDigest(tasksText), taskDefinitionDigest(toggled),
-    'ticking a checkbox must not change the frozen definition digest');
+    'flipping a checkbox must not change the frozen definition digest');
   const edited = tasksText.replace(stepLine, stepLine.replace('定义共享契约及版本', '定义共享契约及错误边界'));
   assert.notEqual(taskDefinitionDigest(tasksText), taskDefinitionDigest(edited),
     'an edited definition must change the digest');
