@@ -194,5 +194,28 @@
     "Commit separation per new policy: e400bfe = tests + RED evidence (suite actually failing 13/13, CLI MODULE_NOT_FOUND), ff86061 = implementation + GREEN evidence. One test-internal amendment rode with the implementation commit: the unreachable-endpoint fixture port changed 9 -> 59999 because undici hard-blocks port 9 as a bad port (a refused connection is the intended real attempt); the CLI's error-reason extraction was fixed in the same commit to report cause code/message verbatim.",
     "No secrets, no fabricated tags/digests, no host absolute paths in any committed artifact; structured outputs are host-path-redacted and verified by tests.",
     "Full regression ran inside the worktree only; the main checkout was not touched and nothing was pushed."
-  ]
+  ],
+  "integration_fix": {
+    "trigger": "集成回归发现合并顺序交互（非实现缺陷）：I01 修正案 7a55664（经 54c6964 合入 master，合并提交 c53aa30）补登了 secret-ref:sdd-harness-pilot/outline-app-session，原 V_INFRA_I03 契约测试断言 \"validate 必显式上报该未登记 ref\" 在合并树上反转（master 上 77/78）。",
+    "changes": [
+      "test/infra-outline.test.js 契约测试断言改为正向现实：已提交域文件 validate → ok=true 且 catalogGaps 不含 outline-app-session（显式断言该 ref 已登记）。",
+      "缺口上报行为覆盖保留：新增合成负例 fixture（tmp 目录中删去 refs 目录副本里的 outline-publisher 条目），断言 validate 仍 exit 0 且 catalogGaps 显式列出缺失 ref —— 行为覆盖不再依赖已被修复的真实缺口。",
+      "仅改动 test/infra-outline.test.js；工具与域文件零改动。"
+    ],
+    "merge_note": "worktree 树已包含 master（7e6e4b2 为 c53aa30 之后的最新 master + openspec chore；git merge-base --is-ancestor master HEAD 为真），故无需再执行 merge --no-ff；全量回归即在该合并树上运行。",
+    "commands": [
+      {
+        "cmd": "node --test test/infra-outline.test.js",
+        "exit_code": 0,
+        "summary": "14 tests, 14 pass, 0 fail, 0 skipped（13 改 1 加 1）"
+      },
+      {
+        "cmd": "npm test（合并树全量，evidence/npm-test-merge.txt）",
+        "exit_code": 0,
+        "summary": "79 tests, 79 pass, 0 fail, 0 skipped —— 原 77/78 的失败断言已随本修正转绿"
+      }
+    ],
+    "commit": "a05a84a",
+    "evidence": "worker-reports/I03/evidence/green-node-test-integration-fix.txt（14/14）、worker-reports/I03/evidence/npm-test-merge.txt（79/79）"
+  }
 }
