@@ -15,7 +15,7 @@
     {
       "case": "pre-implementation CLI probes (validate/probe entry points absent)",
       "actually_failed": true,
-      "evidence": "evidence/red-cli.txt — all four node tools/infra/platform.mjs invocations exit=1 with MODULE_NOT_FOUND (exit codes are node's own, captured without pipes)"
+      "evidence": "evidence/red-cli.txt — CLEAN-ROOM RE-CAPTURE (review fix): git archive 9a3f21e unpacked into a fresh $TMPDIR directory (host path redacted as <tmp-clean-room>), 4 commands invoked from there, stdout+stderr captured by the outer shell redirection only. All 4 exit=1 with node's own 'Error: Cannot find module .../tools/infra/platform.mjs' code=MODULE_NOT_FOUND. HISTORY: the originally committed red-cli.txt was invalid — it had captured zsh redirection failures (operation not permitted: /tmp/i06-out.txt; the sandbox forbids /tmp writes) so node never executed and the exit=1 values were zsh's, while the file header and this report claimed node MODULE_NOT_FOUND exit codes. Replaced wholesale by the genuine capture; RED node-test evidence (red-node-test.txt) was independently confirmed genuine by the reviewer and is unchanged."
     },
     {
       "case": "configuring required checks without remote write authorization is refused; admin identity is not this run approval",
@@ -77,12 +77,12 @@
     {
       "cmd": "node --test test/infra-platform.test.js",
       "exit_code": 0,
-      "summary": "V_INFRA_I06 contract: 15 tests, 15 pass, 0 fail, 0 skipped (evidence/green-node-test.txt)"
+      "summary": "V_INFRA_I06 contract: 16 tests, 16 pass, 0 fail, 0 skipped (post-merge re-run after review fix added the parseJsonOut branch test; evidence/green-node-test.txt)"
     },
     {
       "cmd": "node tools/infra/platform.mjs validate --registry infra/delivery/registry.json --json",
       "exit_code": 0,
-      "summary": "ok=true, violations=[], mode=LOCAL_ONLY, catalogGaps=[artifact-reader, ci-check-publisher, ci-source-read, pilot-deployer, pilot-rollback] (honest I01-owned gaps; ci-registry registered), required checks honestly UNSELECTED/[], branchProtection UNVERIFIED, no host paths in output"
+      "summary": "ok=true, violations=[], mode=LOCAL_ONLY, catalogGaps=[] post-merge (I01 amendment 4 registered all 6 platform refs; the implementation-time capture in green-cli.txt showed the honest 5-ref gap set), required checks honestly UNSELECTED/[], branchProtection UNVERIFIED, no host paths in output"
     },
     {
       "cmd": "node tools/infra/platform.mjs probe --case repository-identity --read-only --json",
@@ -102,7 +102,7 @@
     {
       "cmd": "npm test",
       "exit_code": 0,
-      "summary": "full suite: 241 tests, 241 pass, 0 fail, 0 skipped (baseline 226 + 15 new) (evidence/npm-test.txt)"
+      "summary": "full suite: 242 tests, 242 pass, 0 fail, 0 skipped (post-merge re-run: master baseline moved with I01 amendment 4 + review records; evidence/npm-test.txt)"
     }
   ],
   "unverified": [
@@ -127,8 +127,8 @@
       "successor": "environment owner + P4_2 gate; probe accepts a real deployment receipt/readback once an environment is registered"
     },
     {
-      "item": "5 of the 6 platform secret-refs are not in the I01 catalog (ci-source-read, ci-check-publisher, artifact-reader, pilot-deployer, pilot-rollback) and all 6 stay NOT_PROVISIONED",
-      "successor": "I01 catalog registration update (catalog frozen at 18 refs — same follow-up shape as the codewiki-source-read precedent); validate stays exit 0 with catalogGaps explicit until then"
+      "item": "platform secret-refs registration closed by I01 amendment 4 (merged at 5e34ba0): all 6 refs are now in the I01 catalog and committed validate reports catalogGaps=[]; all 6 remain NOT_PROVISIONED (no runtime secret store)",
+      "successor": "I01/runtime owner provisions the credentials; resolution stays UNRESOLVED-by-design until a runtime-authorized secret store exists"
     },
     {
       "item": "retention lifecycle values: rpo/rto/retentionPeriod/encryptionOwner/destructionPrecondition UNVERIFIED, autoCleanupEnabled=false (fail-closed)",
@@ -161,8 +161,52 @@
     "report": "carried by HEAD of impl/i06-platform (this file's commit)"
   },
   "blockers_or_questions": [
-    "I01-owned follow-up: register ci-source-read, ci-check-publisher, artifact-reader, pilot-deployer and pilot-rollback in infra/delivery/secrets.refs.example.json (all five are referenced by committed platform files and reported as catalogGaps; validate stays exit 0 with gaps explicit, mirroring the codewiki-source-read precedent).",
-    "The git remote of this worktree is ql-wade/sdd-harness while the I01 registry records repoFullname rpamis/sdd-harness (repoId 1285806550); both are UNVERIFIED labels until the gh readback succeeds. I referenced the I01 registry as the single source of truth and did not invent a reconciliation; execution-time readback should reconcile the remote URL against the registered identity.",
-    "RED honesty note: pre-implementation run was 14/15 failed — the one passing 'CLI input contract' test held vacuously because node MODULE_NOT_FOUND also exits status 1; every substantive assertion failed and the test exercises real input validation post-GREEN (evidence/red-node-test.txt)."
-  ]
+    "RESOLVED by I01 amendment 4 (5e34ba0, merged into impl/i06-platform): the five platform secret-refs flagged as catalogGaps at implementation time are registered; post-merge validate reports catalogGaps=[].",
+    "Identity fact still to reconcile at execution time: worktree remote is ql-wade/sdd-harness while the I01 registry records repoFullname rpamis/sdd-harness (repoId 1285806550); both remain UNVERIFIED labels until the gh readback succeeds (probe --case repository-identity --read-only).",
+    "Evidence-integrity lesson recorded in review_fix: a capture harness that fails before the tool runs (sandbox /tmp redirect denial) produces an exit code that belongs to the shell, not the tool; captures must go directly into the evidence file (or $TMPDIR), and headers must describe the capture method."
+  ],
+  "review_fix": {
+    "trigger": "独立审查 CHANGES_REQUESTED（1 项阻断）：red-cli.txt 的四次捕获全部是 zsh 失败记录（operation not permitted: /tmp/i06-out.txt —— 沙箱禁写 /tmp，重定向失败，node 进程从未执行，exit=1 是 zsh 的），而文件 header 与 I06.json red_cases[1] 均声称 '4 条 MODULE_NOT_FOUND、exit codes are node's own' —— 三处互相矛盾且与事实相反。RED 结论本身（14/15 失败）被三条独立通道证实不受影响。",
+    "fix": [
+      "净室重取 RED CLI 证据：git archive 9a3f21e 解包到 $TMPDIR 净室目录，4 条 probe/validate 调用从该目录发起，stdout+stderr 仅经外层重定向直接进证据文件（无中间文件、无管道、无 /tmp 重定向）；确认为真实 node MODULE_NOT_FOUND + node 原生 exit 1。red-cli.txt 整体重写：真实输出 + 准确 header（写明净室方法、脱敏替换 <tmp-clean-room>、并声明取代旧捕获的原因）。",
+      "I06.json red_cases[1] 改写为与事实一致（含无效旧捕获的完整历史）。",
+      "顺带 NB（同文件族）：parseJsonOut 的 AssertionError 守卫双重潜伏——未具名导入（触及时 ReferenceError），且 assert.AssertionError 构造器不接受字符串（修正后仍会 TypeError）；改为具名导入 + { message } 选项对象，并新增触达该分支的测试（validate 缺失 registry → exit 1 + 空 stdout → 断言抛出真实 AssertionError）。"
+    ],
+    "verification": [
+      {
+        "cmd": "git merge --no-ff master",
+        "result": "clean merge at 5e34ba0 (I01 amendment 4: 6 platform refs registered; review record ec703a5)"
+      },
+      {
+        "cmd": "node --test test/infra-platform.test.js",
+        "exit_code": 0,
+        "summary": "16 tests, 16 pass, 0 fail, 0 skipped (evidence/green-node-test.txt)"
+      },
+      {
+        "cmd": "npm test",
+        "exit_code": 0,
+        "summary": "242 tests, 242 pass, 0 fail, 0 skipped (evidence/npm-test.txt)"
+      },
+      {
+        "cmd": "node tools/infra/platform.mjs validate --registry infra/delivery/registry.json --json",
+        "exit_code": 0,
+        "summary": "post-merge: catalogGaps=[] (I01 amendment 4), ok=true, mode=LOCAL_ONLY (green-cli.txt post-merge section)"
+      },
+      {
+        "cmd": "node tools/infra/platform.mjs probe --case repository-identity --read-only --json",
+        "exit_code": 2,
+        "summary": "unchanged honest UNVERIFIED: real gh attempt, raw TLS x509 OSStatus -26276 preserved"
+      },
+      {
+        "cmd": "node tools/infra/platform.mjs probe --case registry-environment-identity --json",
+        "exit_code": 2,
+        "summary": "unchanged structured UNVERIFIED (executed=false, requiredInputs+plannedSteps, no skip)"
+      }
+    ],
+    "policy_note": "证据捕获纪律：任何重定向/管道必须在 node 进程真正执行前建立成功，否则捕获到的是 shell 的失败；证据文件 header 必须写明捕获方式。捕获直接进证据文件或 $TMPDIR，绝不写 /tmp。",
+    "commits": {
+      "test_fix": "168fc8d",
+      "evidence_and_report": "(this file's commit)"
+    }
+  }
 }

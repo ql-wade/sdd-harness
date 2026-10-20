@@ -227,3 +227,111 @@ exit=2
   ],
   "checkedAt": "2026-10-20T10:28:50.169Z"
 }
+
+# ---- post-merge re-run (master merged at 5e34ba0: I01 amendment 4 registered all 6 platform refs) ----
+# 2026-10-20T10:47:27Z
+
+$ node tools/infra/platform.mjs validate --registry infra/delivery/registry.json --json
+exit=0
+{
+  "interface": "PlatformInfra.v1",
+  "platformDir": "infra/delivery/platform",
+  "registry": "infra/delivery/registry.json",
+  "refs": "infra/delivery/secrets.refs.example.json",
+  "mode": "LOCAL_ONLY",
+  "ok": true,
+  "violations": [],
+  "catalogGaps": [],
+  "summary": {
+    "repository": {
+      "readbackStatus": "UNVERIFIED",
+      "branchProtection": {
+        "configuredStatus": "UNVERIFIED"
+      },
+      "remotePolicyWritesAllowed": false
+    },
+    "ci": {
+      "providerStatus": "UNSELECTED",
+      "requiredChecks": {
+        "registrationStatus": "UNSELECTED",
+        "names": [],
+        "blockingSemantics": [
+          "MISSING",
+          "SKIPPED",
+          "TIMED_OUT",
+          "STALE_EVIDENCE"
+        ],
+        "failClosed": true
+      }
+    },
+    "registryExample": {
+      "endpoint": "UNSELECTED",
+      "signingStatus": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED"
+    },
+    "environmentExample": {
+      "id": "UNSELECTED",
+      "rollback": {
+        "approvalRequired": true,
+        "sameDigestRequired": true,
+        "independentBusinessTerminalStateRequired": true
+      },
+      "readbackOracle": {
+        "correlationIdRequired": true
+      }
+    },
+    "retention": {
+      "autoCleanupEnabled": false,
+      "unconfirmedFields": [
+        "rpo",
+        "rto",
+        "retentionPeriod",
+        "encryptionOwner"
+      ]
+    }
+  },
+  "checkedAt": "2026-10-20T10:47:27.928Z"
+}
+
+$ node tools/infra/platform.mjs probe --case repository-identity --read-only --json
+exit=2
+{
+  "interface": "PlatformInfra.v1",
+  "case": "repository-identity",
+  "readOnly": true,
+  "executed": true,
+  "mode": "LOCAL_ONLY",
+  "localConsistency": "PASS",
+  "readback": {
+    "status": "UNVERIFIED",
+    "command": "gh api repos/rpamis/sdd-harness",
+    "error": "Get \"https://api.github.com/repos/rpamis/sdd-harness\": tls: failed to verify certificate: x509: OSStatus -26276"
+  },
+  "checkedAt": "2026-10-20T10:47:28.474Z"
+}
+
+$ node tools/infra/platform.mjs probe --case registry-environment-identity --json
+exit=2
+{
+  "interface": "IntegrationIdentity.v1",
+  "case": "registry-environment-identity",
+  "executed": false,
+  "status": "UNVERIFIED",
+  "scope": "LOCAL_ONLY",
+  "reason": "no dedicated registry/artifact store and no isolated target environment are registered; the chain can only be evaluated from a local --chain fixture",
+  "requiredInputs": [
+    "registry endpoint + signing/provenance readback (registry-registration is an example; endpoint UNSELECTED)",
+    "an integration candidate: PR head SHA, merge SHA and required-check evidence bound to the exact merge SHA",
+    "a build artifact digest built from the merge SHA, with the tag resolving to that digest",
+    "a target deployment receipt carrying the original correlation ID",
+    "an isolated environment endpoint with an independent business readback oracle and an approval-gated rollback path"
+  ],
+  "plannedSteps": [
+    "bind required checks to the exact integration merge SHA (missing/skipped/timed-out/stale evidence block promotion)",
+    "resolve the artifact tag to an immutable digest and verify it was built from the merge SHA",
+    "match the deployment identity digest to the artifact digest",
+    "confirm deployment via the original correlation ID when the response is lost",
+    "refuse unapproved rollbacks; require same digest plus an independent business terminal state for approved ones"
+  ],
+  "checkedAt": "2026-10-20T10:47:28.545Z"
+}

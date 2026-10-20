@@ -1,26 +1,89 @@
-# I06 RED CLI probes (tools/infra/platform.mjs absent — MODULE_NOT_FOUND). Exit codes are node's own.
-# 2026-10-20T10:21:04Z
+# I06 RED CLI probes — CLEAN-ROOM RE-CAPTURE (review fix)
+# 2026-10-20T10:45:27Z
+# Method: git archive 9a3f21e (tests commit, implementation absent) unpacked into a fresh
+# $TMPDIR directory (host path redacted below as <tmp-clean-room>); each command invoked
+# from that directory; stdout+stderr captured directly into this file via the outer shell
+# redirection. No intermediate files, no pipes on the node invocation, no /tmp redirects.
+# Exit codes below are node's own ($?). Node version: v22.13.1.
+#
+# Supersedes the previously committed red-cli.txt, which had recorded zsh redirection
+# failures (operation not permitted: /tmp/i06-out.txt) instead of node output — node never
+# executed in that capture. The RED node-test evidence (red-node-test.txt) was and remains
+# genuine.
 
 $ node tools/infra/platform.mjs validate --registry infra/delivery/registry.json --json
-(eval):1: operation not permitted: /tmp/i06-out.txt
+node:internal/modules/cjs/loader:1247
+  throw err;
+  ^
+
+Error: Cannot find module '<tmp-clean-room>/tools/infra/platform.mjs'
+    at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    at Function._load (node:internal/modules/cjs/loader:1070:27)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v22.13.1
 exit=1
-head: /tmp/i06-err.txt: No such file or directory
-head: /tmp/i06-out.txt: No such file or directory
 
 $ node tools/infra/platform.mjs probe --case repository-identity --read-only --json
-(eval):1: operation not permitted: /tmp/i06-out.txt
+node:internal/modules/cjs/loader:1247
+  throw err;
+  ^
+
+Error: Cannot find module '<tmp-clean-room>/tools/infra/platform.mjs'
+    at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    at Function._load (node:internal/modules/cjs/loader:1070:27)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v22.13.1
 exit=1
-head: /tmp/i06-err.txt: No such file or directory
-head: /tmp/i06-out.txt: No such file or directory
 
 $ node tools/infra/platform.mjs probe --case required-checks-authorization --json
-(eval):1: operation not permitted: /tmp/i06-out.txt
+node:internal/modules/cjs/loader:1247
+  throw err;
+  ^
+
+Error: Cannot find module '<tmp-clean-room>/tools/infra/platform.mjs'
+    at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    at Function._load (node:internal/modules/cjs/loader:1070:27)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v22.13.1
 exit=1
-head: /tmp/i06-err.txt: No such file or directory
-head: /tmp/i06-out.txt: No such file or directory
 
 $ node tools/infra/platform.mjs probe --case registry-environment-identity --json
-(eval):1: operation not permitted: /tmp/i06-out.txt
+node:internal/modules/cjs/loader:1247
+  throw err;
+  ^
+
+Error: Cannot find module '<tmp-clean-room>/tools/infra/platform.mjs'
+    at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    at Function._load (node:internal/modules/cjs/loader:1070:27)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v22.13.1
 exit=1
-head: /tmp/i06-err.txt: No such file or directory
-head: /tmp/i06-out.txt: No such file or directory
+
