@@ -104,11 +104,11 @@ test('V_INFRA_I02 contract: committed runner domain validates clean; qualify hon
   assert.ok(report.roles, 'RoleBoundary.v1 summary must be present');
   assert.ok(report.authority, 'Authority.v1 summary must be present');
   assert.equal(report.roles.length, RUNNER_ROLES.length, 'six runner roles must be declared');
-  // I01 目录缺口必须显式上报（三个 runner ref 未登记），runner-authority 已登记、不得误报。
-  assert.ok((report.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/worker-author-api'));
-  assert.ok((report.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/worker-review-api'));
-  assert.ok((report.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/runner-source-read'));
-  assert.ok(!(report.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/runner-authority'));
+  // I01 修正案 2（05fb404）已登记全部四个 runner ref：committed 域不得再报缺口（正向断言，防回归）。
+  for (const ref of RUNNER_REFS) {
+    assert.ok(!(report.catalogGaps ?? []).includes(ref), `${ref} is registered in the I01 catalog and must not be reported as a gap`);
+  }
+  assert.deepEqual(report.catalogGaps, [], 'no catalog gaps remain after I01 amendment 2');
 
   // 配置有效 ≠ 运行 ready：qualify 必须诚实 NOT_READY 且退出 2。
   const qualify = runCli(['qualify', '--registry', registryPath, '--dir', runnerDir, '--json']);
@@ -569,7 +569,24 @@ test('RoleBoundary.v1 / Authority.v1 contract holds on committed files; refs are
   }
 });
 
-test('catalog gap reporting: the three unregistered runner refs are explicit readiness evidence, never silent', () => {
+test('catalog gap reporting: registered refs read RECORDED; a missing ref is still explicit readiness evidence, never silent', () => {
+  // 已登记状态（I01 修正案 2，目录 16 refs）：committed 域 validate 干净且无任何 runner ref 缺口；
+  // qualify 的 secret-refs-registered 升为 RECORDED（ref 已登记但仍 NOT_PROVISIONED，不等于可解析）。
+  const clean = runCli(['validate', '--registry', registryPath, '--dir', runnerDir, '--json']);
+  assert.equal(clean.status, 0, `committed domain must validate clean: ${clean.stderr || clean.stdout}`);
+  const cleanReport = parseJsonOut(clean, 'validate clean');
+  for (const ref of RUNNER_REFS) {
+    assert.ok(!(cleanReport.catalogGaps ?? []).includes(ref), `${ref} is registered in the I01 catalog and must not be reported as a gap`);
+  }
+  const qualify = runCli(['qualify', '--registry', registryPath, '--dir', runnerDir, '--json']);
+  assert.equal(qualify.status, 2, 'registered refs do not make the runner ready');
+  const receipt = parseJsonOut(qualify, 'qualify');
+  assert.equal(receipt.categories['secret-refs-registered'].status, 'RECORDED');
+  assert.match(JSON.stringify(receipt.categories['secret-refs-registered']), /NOT_PROVISIONED/);
+  assert.doesNotMatch(qualify.stdout, HOST_PATH_OUTPUT_RE);
+
+  // 合成缺口（临时 fixture，不动活配置）：从目录副本删除一个已知已登记 ref，
+  // validate 仍显式上报缺口、qualify 相应降级 UNVERIFIED——行为覆盖不再依赖已被修复的真实缺口。
   const refsDoc = JSON.parse(fs.readFileSync(refsPath, 'utf8'));
   const trimmed = JSON.parse(JSON.stringify(refsDoc));
   trimmed.refs = trimmed.refs.filter((entry) => entry.ref !== 'secret-ref:sdd-harness-pilot/runner-authority');
@@ -582,12 +599,10 @@ test('catalog gap reporting: the three unregistered runner refs are explicit rea
     (report.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/runner-authority'),
     'validate must explicitly report the missing ref as a catalogGap instead of passing silently',
   );
-
-  // qualify 的 secret-refs-registered 类别必须因缺口保持 UNVERIFIED（committed 目录即有 3 个缺口）。
-  const qualify = runCli(['qualify', '--registry', registryPath, '--dir', runnerDir, '--json']);
-  assert.equal(qualify.status, 2);
-  const receipt = parseJsonOut(qualify, 'qualify');
-  assert.equal(receipt.categories['secret-refs-registered'].status, 'UNVERIFIED');
-  assert.match(JSON.stringify(receipt.categories['secret-refs-registered']), /worker-author-api/);
-  assert.doesNotMatch(qualify.stdout, HOST_PATH_OUTPUT_RE);
+  const degraded = runCli(['qualify', '--registry', registryPath, '--refs', refsFixture, '--dir', runnerDir, '--json']);
+  assert.equal(degraded.status, 2);
+  const degradedReceipt = parseJsonOut(degraded, 'qualify degraded');
+  assert.equal(degradedReceipt.categories['secret-refs-registered'].status, 'UNVERIFIED');
+  assert.match(JSON.stringify(degradedReceipt.categories['secret-refs-registered']), /runner-authority/);
+  assert.doesNotMatch(degraded.stdout, HOST_PATH_OUTPUT_RE);
 });

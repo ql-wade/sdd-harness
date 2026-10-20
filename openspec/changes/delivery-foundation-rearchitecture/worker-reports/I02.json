@@ -5,7 +5,21 @@
   "branch": "impl/i02-runner-isolation",
   "base_commit": "6c3b047",
   "final_status": "GREEN",
-  "acceptance_ids": ["A09", "A10", "A11", "A19", "C07", "D01", "D08", "H03", "H09", "U07", "F05", "F07", "M02"],
+  "acceptance_ids": [
+    "A09",
+    "A10",
+    "A11",
+    "A19",
+    "C07",
+    "D01",
+    "D08",
+    "H03",
+    "H09",
+    "U07",
+    "F05",
+    "F07",
+    "M02"
+  ],
   "red_cases": [
     {
       "case": "pre-implementation RED (V_INFRA_I02 suite against absent domain files and CLI)",
@@ -157,5 +171,18 @@
     "I01 目录缺口：worker-author-api / worker-review-api / runner-source-read 三个 ref 未登记（runner-authority 已登记）。同 I03 的 outline-app-session 先例，需要 I01 owner 修订 secrets.refs.example.json；validate/qualify 已把缺口显式上报为 readiness 证据，不阻塞本任务结构交付。",
     "publisher/isolator 专属凭据不在 I02 四 ref 集内（outline-publisher/outline-isolator 归 I03 域、由有权主体签发）：role-policy 对这两个角色如实标 UNASSIGNED 而不代签；若后续要求 Runner 六角色全部持独立凭据，需要计划层面的 ref 扩充决定。",
     "真实 container 构建/inspect/负向写探针在本会话被沙箱 EPERM 拦截（docker daemon 不可达）：全部按契约如实 UNVERIFIED 并指定承接者，未绕过、未 mock。"
-  ]
+  ],
+  "integration_fix": {
+    "trigger": "master 98de901 集成回归发现两处过时断言（I03 outline-app-session 同款交互，非实现缺陷）：协调者合并 I01 修正案 2（05fb404，目录 13→16 refs），worker-author-api / worker-review-api / runner-source-read 三个 runner ref 已登记，qualify 的 secret-refs-registered 由 UNVERIFIED 升 RECORDED，原断言固化的“3 个缺口”不再成立",
+    "merge": "git merge --no-ff master (98de901) -> 3d65712，无冲突；合并树上复现失败恰为测试 1 与测试 13，与其余 11 测试无交互",
+    "changes": [
+      "测试 1：三个“catalogGaps 含未登记 ref”断言改为正向断言——四个 runner ref 均不得再报缺口，且 catalogGaps deepEqual []（防回归）",
+      "测试 13：重组为“已登记读 RECORDED + 合成缺口行为覆盖”——committed 目录期望 secret-refs-registered=RECORDED（仍 NOT_PROVISIONED、qualify 仍 exit 2）；从目录临时副本删除 runner-authority 合成缺口，validate 仍显式上报该 catalogGap、qualify 降级 UNVERIFIED——行为覆盖保留，不再依赖已被修复的真实缺口"
+    ],
+    "evidence": [
+      "worker-reports/I02/evidence/green-node-test-integration-fix.txt — 合并树上 node --test test/infra-runner-isolation.test.js：13/13 pass，0 fail，0 skipped",
+      "worker-reports/I02/evidence/npm-test-merge.txt — npm test 全量：171/171 pass，0 fail，0 skipped，exit 0"
+    ],
+    "commit": "3069791"
+  }
 }
