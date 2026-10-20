@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: A11 happy path: rehearse then closeout archives once, syncs specs, readback matches, state completes and lock releases
+ok 1 - A11 happy path: rehearse then closeout archives once, syncs specs, readback matches, state completes and lock releases
+  ---
+  duration_ms: 927.938125
+  ...
+# Subtest: sole writer: second writer refused by O_EXCL lock in-process and from a real child process
+ok 2 - sole writer: second writer refused by O_EXCL lock in-process and from a real child process
+  ---
+  duration_ms: 110.026458
+  ...
+# Subtest: sole writer: two concurrent full closeouts produce exactly one archive and one refusal
+ok 3 - sole writer: two concurrent full closeouts produce exactly one archive and one refusal
+  ---
+  duration_ms: 968.927
+  ...
+# Subtest: B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+ok 4 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+  ---
+  duration_ms: 903.5645
+  ...
+# Subtest: B08 MODIFIED target missing from main specs is refused before archive
+ok 5 - B08 MODIFIED target missing from main specs is refused before archive
+  ---
+  duration_ms: 11.292667
+  ...
+# Subtest: B08 drift: main-spec or change mutation between rehearsal and closeout blocks execution and demands a fresh rehearsal
+ok 6 - B08 drift: main-spec or change mutation between rehearsal and closeout blocks execution and demands a fresh rehearsal
+  ---
+  duration_ms: 1841.867042
+  ...
+# Subtest: Knowledge.Closeout.v1 ordering: closeout refuses without a recorded Kp knowledge obligation, before any archive
+ok 7 - Knowledge.Closeout.v1 ordering: closeout refuses without a recorded Kp knowledge obligation, before any archive
+  ---
+  duration_ms: 548.964667
+  ...
+# Subtest: A11 pre-archive interruption: stale lock reclaimed, closeout re-run archives exactly once
+ok 8 - A11 pre-archive interruption: stale lock reclaimed, closeout re-run archives exactly once
+  ---
+  duration_ms: 1000.275
+  ...
+# Subtest: A11 post-archive interruption: recovery detects the completed CLI archive and completes by readback WITHOUT repeating the sync
+ok 9 - A11 post-archive interruption: recovery detects the completed CLI archive and completes by readback WITHOUT repeating the sync
+  ---
+  duration_ms: 236.328375
+  ...
+# Subtest: A11 post-archive drift: recovery readback detects real main-spec corruption and refuses to mark complete
+ok 10 - A11 post-archive drift: recovery readback detects real main-spec corruption and refuses to mark complete
+  ---
+  duration_ms: 230.725792
+  ...
+# Subtest: A11 ambiguous recovery: multiple archives of the same change name block recovery instead of guessing the newest
+ok 11 - A11 ambiguous recovery: multiple archives of the same change name block recovery instead of guessing the newest
+  ---
+  duration_ms: 2.741
+  ...
+# Subtest: A11 silent CLI abort: exit-0-with-abort (unwritable rebuild) is detected as not-applied, real project untouched
+ok 12 - A11 silent CLI abort: exit-0-with-abort (unwritable rebuild) is detected as not-applied, real project untouched
+  ---
+  duration_ms: 558.248625
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7638.850292
