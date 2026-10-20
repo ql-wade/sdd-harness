@@ -10,12 +10,20 @@ SKILL_NAME = "claude-parallel-tdd-planner"
 RUNTIME_MANIFEST = (
     "SKILL.md",
     "references/architecture-intake.md",
+    "references/openspec-workflow.md",
+    "references/openspec-closeout.md",
+    "references/automation.md",
+    "references/completion-verification.md",
     "references/plan-contract.md",
     "references/parallel-execution.md",
     "references/execution-prompt-template.md",
     "scripts/plan_guard.py",
+    "scripts/openspec_lifecycle.py",
     "scripts/render_execution_prompt.py",
     "scripts/install_global.py",
+    "tests/test_planner.py",
+    "tests/test_lifecycle.py",
+    "tests/run_all.sh",
 )
 
 

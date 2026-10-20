@@ -1,0 +1,43 @@
+{
+  "task": "P2_1",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-20T05:06:23.272501+00:00",
+  "head_reviewed": "373a6bf",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "非整数 schemaVersion 无专项测试（实现正确 fail-closed）",
+      "disposition": "REPAIR_REQUESTED -> w-p2-1"
+    },
+    {
+      "id": "nb-2",
+      "summary": "digestInputs localeCompare 排序与跨机器冻结摘要语义相悖；与 missing 列表的 code-unit sort 不一致",
+      "disposition": "REPAIR_REQUESTED -> w-p2-1"
+    },
+    {
+      "id": "nb-3",
+      "summary": "保守分类器按签名子串误伤面（worker 已披露，符合 A04 语义）",
+      "disposition": "recorded; 2.2/P3_1 演进"
+    },
+    {
+      "id": "nb-4",
+      "summary": "术语澄清：8 契约名冻结出处为 tasks.md Step 1 文本而非 drift-lock frozen_interfaces",
+      "disposition": "controller brief corrected; registry 与文本一致"
+    }
+  ],
+  "reviewer_independently_reverified": [
+    "净室 git archive ed2c0c7 复现 RED：3/3 ERR_MODULE_NOT_FOUND exit 1",
+    "勾选分离硬边界：真实 tasks.md 级测试（切换 P2_1 Step 1 勾选→摘要不变；改文本→摘要变）",
+    "NODE_TEST_CONTEXT 剥离独立验证：是加强而非弱化 oracle",
+    "A08 非 JS 摘要绑定真实测试在案；零新 npm 依赖（package.json/lock diff 为空）"
+  ],
+  "tests_run_by_reviewer": "34/34 targeted; npm test 106/106; 净室 RED exit 1; NODE_TEST_CONTEXT 探针",
+  "review_fixes": {
+    "commits": [
+      "53eec70"
+    ],
+    "result": "35/35 targeted; npm test 107/107; locale-determinism guard test added"
+  }
+}

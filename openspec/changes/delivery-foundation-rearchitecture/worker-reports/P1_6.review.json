@@ -1,0 +1,43 @@
+{
+  "task": "P1_6",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-20T05:12:20.147501+00:00",
+  "head_reviewed": "a007bfc",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "retained 4 快照与宿主当前源已漂移（38 文件，7 个宿主删除均为 __pycache__）；manifest 诚实（provenance: retained-previous-vendor），但 verbatim_copy+source_path 可能被误读为'与宿主当前一致'",
+      "disposition": "recorded; 未来刷新必须是显式升级"
+    },
+    {
+      "id": "nb-2",
+      "summary": "vendored whitebox-verify 含 14 个被跟踪 .pyc（先前已有）",
+      "disposition": "recorded; 快照卫生，后续清理需 owner 决定"
+    },
+    {
+      "id": "nb-3",
+      "summary": "1_6.mjs 测试 5 在无 .sdd patched 构建时按设计 t.skip",
+      "disposition": "recorded; 验收时需知 green 探针依赖 .sdd 构建"
+    },
+    {
+      "id": "nb-4",
+      "summary": "宿主插件缓存 superpowers 残留",
+      "disposition": "already recorded as environment note"
+    },
+    {
+      "id": "nb-5",
+      "summary": "P1_6.json 报告字面哈希指向修订前对象（525b19e vs a007bfc，透明标注）",
+      "disposition": "recorded"
+    }
+  ],
+  "reviewer_independently_reverified": [
+    "全部 10 快照 × 152 文件 sha256 重算全匹配宿主源；0 符号链接 0 MISSING",
+    "升级版 planner 无 superpowers 硬调用；plan_guard REQUIRED_HEADER_PARTS 干净",
+    "契约检查复现 exit 0（243 pass/2 skip, fingerprint cb1151b4）；两 patch 净室 git apply --check 通过",
+    "M01 探针判别力证明：还原 patch 会使两个断言同时失败",
+    "lock 增量恰 2 条 pin，无其它字段变动"
+  ],
+  "tests_run_by_reviewer": "1_6.mjs 5/5; V_COMET_NATIVE exit 0; agent-skill-check 0; npm test 65/65 (branch basis); 1_1.mjs 7/8 (P1_1 缺陷已在 957de2e 修复)"
+}
