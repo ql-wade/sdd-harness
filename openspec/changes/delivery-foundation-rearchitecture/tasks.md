@@ -323,12 +323,12 @@
 **Parallel safe:** false
 **Acceptance IDs:** A11, B08
 
-- [ ] **Step 1 [5 min]: Test** 3.4.a 实现唯一 Spec Adapter：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：真实临时 OpenSpec 工程预演、目标摘要、MODIFIED 全场景保留；明确 archive 已含 sync 时不再重复 sync。
-- [ ] **Step 2 [5 min]: Implement** 3.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 3.4.b 验证冲突与中断读回：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：主 specs 并发改动阻断；移动前后故障恢复原事务；归档后重新读回场景与稳定 Run 引用。
-- [ ] **Step 4 [5 min]: Implement** 3.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 3.4.a 实现唯一 Spec Adapter：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：真实临时 OpenSpec 工程预演、目标摘要、MODIFIED 全场景保留；明确 archive 已含 sync 时不再重复 sync。
+- [x] **Step 2 [5 min]: Implement** 3.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 3.4.b 验证冲突与中断读回：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：主 specs 并发改动阻断；移动前后故障恢复原事务；归档后重新读回场景与稳定 Run 引用。
+- [x] **Step 4 [5 min]: Implement** 3.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P3_2: 原任务 3.2 — Comet 单一主控安排角色和开发任务，独立 Whitebox 执行真实业务读回；验证弱测试回作者、产品缺陷回 Builder、环境缺口回适配器、候选改变重验（B01–B07/F08）。不批量改 vendored 技能，必要升级另做显式替换。
 
