@@ -1,0 +1,103 @@
+{
+ "task": "P2_5",
+ "task_title": "原任务 2.5 — 架构 A 接入 grill-me 加独立全票共识：冻结审查包、保持 exact quorum/阈值/同摘要、绑定真实机械 tally/finalize、拒绝旧票/缺票/多数票和未闭合承重问题；Comet 只持有一个评审作业。按 E03/E04 验证需求/设计改变后保守失效，不扩展测试 T 为未经要求的相同 quorum",
+ "run": "impl-dfr-20261020-r1",
+ "branch": "impl/p2-5-architecture-review (base c0c1f40)",
+ "worktree": "/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-5",
+ "worker": "P2_5 implementation worker",
+ "final_status": "GREEN",
+ "acceptance_ids": {
+  "targeted": [
+   "E03",
+   "E04",
+   "H06"
+  ],
+  "note": "全部经真实 review_gate.py（.agents/skills/multi-agent-consensus-review，P0 回提炼自 architecture-review/receipt.json 的机械面）子进程正负例验证，零 mock。"
+ },
+ "coverage_matrix": {
+  "E03": {
+   "positive": 1,
+   "negative": 9,
+   "detail": "正例：承重问题全闭合 + 三方全票 + 阈值达标 + 无 blocker + 同一 digest → 真实 tally exit 0 PASSED + finalize 报告 → 回执逐字段复刻 P0（14 字段 + 5 ballot 子字段精确匹配 receipt.json）。负例（全部真实 gate exit 1/2 或判官拒绝）：未闭合承重问题（含部分闭合仍拒）、缺票 INCOMPLETE、多数票 2/3 DEBATE_REQUIRED、低分 7.9<8.0、未闭合 BLOCKER、旧 digest 票准入被拒、手改降阈 manifest THRESHOLD_DRIFT、删员 manifest QUORUM_DRIFT、无 finalize 报告 FINAL_REPORT_REQUIRED。"
+  },
+  "E04": {
+   "positive": 2,
+   "negative": 4,
+   "detail": "正例：新 revision 冷启动独立 manifest 后真实重新评审可通过；下游证据经 P2_1 invalidateOnScopeChange（原样复用，未修改 baseline.js）按 architecture-review kind 精确失效、无关 receipt 保留。负例：design 变更后旧票 3/3 被 review_gate validate 以 review_id 拒绝（无法混入新轮）、冷启动轮无有效票（MISSING_BALLOT+INVALID_BALLOT）、旧 run manifest 冒充新 revision 被 REVIEW_REVISION_MISMATCH 拒（adapter 判定×2 场景 + case×1）、恢复旧字节（digest 相同、revision 前移）不自动复活旧回执、init 后改动冻结包被真实 tally 以 artifact_changed BLOCKED。"
+  },
+  "H06": {
+   "positive": 4,
+   "negative": 6,
+   "detail": "正例：首次 claim 占座、同 job_key+同绑定恢复原作业（同一对象、无第二 manifest）、同 manifest 内 re-ballot attempt+1、匹配的机械 PASSED 结果完成唯一作业。负例：第二 job_key 被 SINGLE_REVIEW_JOB 拒（Comet 只持一个评审作业）、真实 gate 拒绝对在持 run 重复 init（same job_key 不重复评审）、迟到旧 attempt 结果 STALE_ATTEMPT、异 digest 结果 STALE_INPUT、非 PASSED 机械结果 NOT_PASSED、被取代 manifest 的结果 STALE_REVIEW、revision 回退 REVISION_REGRESSION。"
+  },
+  "boundary_T": {
+   "detail": "测试 T 保持单独自动审查（边界断言，未扩展为相同 quorum）：SDD.Gate.v1 evaluate 以单条 independent-acceptance 回执即 pass required check（真实 node --test 运行 + 真实 launcher dispatch + admitEvidence）；同一条证据无法替代架构共识——无机械 run 时判官以 MECHANICAL_RUN_MISSING 拒绝；quorum 常量只存在于 architecture-review 判定面，gate.js/evidence.js 未被修改。"
+  }
+ },
+ "red_cases": [
+  {
+   "id": "RED (工作包 2.5.a + 2.5.b 全部)",
+   "classification": "缺口已复现",
+   "claim": "对 base c0c1f40：lib/adapters/architecture-review.js 不存在——冻结审查包、exact quorum/阈值绑定、真实机械 tally/finalize 驱动、承重问题闭合判定、保守失效与单作业座位全部缺失；两个测试文件均以 ERR_MODULE_NOT_FOUND 真实失败",
+   "evidence": "worker-reports/P2_5/evidence/red-adapter-test.txt（exit 1）、worker-reports/P2_5/evidence/red-case-2_5.txt（exit 1，Cannot find module .../lib/adapters/architecture-review.js）"
+  }
+ ],
+ "green_summary": {
+  "mechanical_binding": "initConsensusRun/admitBallot/mechanicalTally/mechanicalFinalize 为 review_gate.py 真实子进程封装；PASSED 回执的 mechanical_tally_sha256/final_report_sha256 绑定真实 tally.json/final-report.md 字节（测试逐一与磁盘 sha256 对账）；判官从真实文件重读并独立复核 quorum/阈值/同摘要/无 blocker/票 digest，不信任任何内存态 tally",
+  "receipt_parity": "回执字段集合与 P0 回执（receipt.json）精确一致：schema_version/status/decision/artifact_sha256/review_id/round/quorum/ballots/blocking_findings/nonblocking_findings/raw_evidence_root/mechanical_tally_sha256/final_report_sha256/adapters；ballots 子字段 participant/verdict/score/sha256/path",
+  "conservative_invalidation": "E03/E04 语义按 spec 实测：改变 digest → 旧票全拒（真实 gate 以 review_id 拒绝混入）；恢复 digest → 不自动复活（revision 前移 + review 身份校验）；下游证据随 architecture-review kind 绑定精确失效",
+  "single_job": "座位即 Comet 唯一评审作业：无派发面、无第二 currentPhase、无控制态写入（SDD.Gate.v1/Comet.Run.managedDelivery.v1 边界保持）；复用 P1_3 的单作业排他语义（第二作业拒、幂等恢复、迟到结果只观察）"
+ },
+ "commands": [
+  {
+   "cmd": "node --test test/architecture-review-adapter.test.js  # RED",
+   "exit_code": 1
+  },
+  {
+   "cmd": "node --test test/delivery-cases/2_5.mjs  # RED",
+   "exit_code": 1
+  },
+  {
+   "cmd": "node --test test/architecture-review-adapter.test.js  # GREEN",
+   "exit_code": 0,
+   "result": "13/13 pass"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/2_5.mjs  # GREEN",
+   "exit_code": 0,
+   "result": "5/5 pass"
+  },
+  {
+   "cmd": "npm test  # GREEN 全量回归",
+   "exit_code": 0,
+   "result": "276 tests / 275 pass / 1 pre-existing skip / 0 fail（基线 263 + 新增 13）"
+  }
+ ],
+ "test_fixes_between_red_and_green": [
+  "test: ARCHITECTURE_CRITERIA 断言两侧统一 sort（P0 顺序断言误用）",
+  "test: runConsensus/fullRun/writePackageFile 补 mkdirSync（嵌套 r1/v2 目录 ENOENT）",
+  "test: 2_5.mjs 未闭合承重问题用例补 closed 列表绑定（ReferenceError）",
+  "test: E04 '旧回执冒充新 revision' 改为真实呈现路径（旧 run 目录按新 revision 名转发后判官拒绝）",
+  "impl: fail() 消息补 code 前缀（assert.throws 按消息匹配）",
+  "impl: seat claim/admitResult 补 attempt=1 缺省（首 claim 无 attempt 时 re-ballot 误判 ATTEMPT_MISMATCH）"
+ ],
+ "unverified": [
+  "真实三方 CLI 派发（claude-code/zcode/codex-agent 实际产生选票）不在本 adapter 边界内——adapter 是纯判定+登记、无派发（任务指定）；测试中选票是真实 gate 消费的数据记录，每个判定都跑真实 review_gate.py。三方 CLI 存活探测属 multi-agent-consensus-review 技能自身资格（probe_agents.py），非本任务文件范围",
+  "座位与活体 Comet Run 控制态（.comet-state/run-state.json）的物理绑定属 P2_4 已接纳 Runtime 面，本 adapter 按边界不写任何控制态；跨进程座位持久化未在本任务实现（接手者：P3_2 pilot journey 若需跨会话座位持久化，应经 P2_4 的 Runtime 状态事务落盘，不得在 adapter 内私开存储）",
+  "freezeReviewPackage 仅接受常规文件制品（与本次冻结审查包材料化方式一致）；review_gate.py 本身支持目录制品，目录冻结未接（接手者：如需整目录冻结，按 digest_path 的目录哈希扩展 freeze 层并保持与 gate init 的对账断言）"
+ ],
+ "files_changed": [
+  "lib/adapters/architecture-review.js (new)",
+  "test/architecture-review-adapter.test.js (new)",
+  "test/delivery-cases/2_5.mjs (new)",
+  "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_5.json (this report)",
+  "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_5/evidence/{red-adapter-test.txt,red-case-2_5.txt,green-adapter-test.txt,green-case-2_5.txt,green-npm-test.txt}"
+ ],
+ "commits": {
+  "tests": "c7c0f30 test(P2_5): RED for the architecture-review adapter — frozen package, exact P0 quorum, real mechanical gate, E03/E04/H06",
+  "implementation": "6770a1b feat(P2_5): architecture-review adapter — frozen package, exact P0 quorum bound to real mechanical tally/finalize, E03/E04 conservative invalidation, single review job seat",
+  "report": "a6fa1d3"
+ },
+ "blockers_or_questions": [],
+ "environment_note": "gitignored 的 .sdd/vendor/comet 构建产物从同基座 worktree impl-p2-4 复制到本 worktree 以消除既有的 C08 环境性失败（classic-integration.test.js 要求已构建的 patched Comet）；未触碰任何受控文件，npm test 全量 0 fail 达成。零新 npm 依赖；测试状态全部位于 $TMPDIR，主机配置未动。"
+}
