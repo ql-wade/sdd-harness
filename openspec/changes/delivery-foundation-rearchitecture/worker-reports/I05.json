@@ -155,5 +155,33 @@
     "Session tooling note (transparency): this subagent's Write/Edit tools were hook-anchored to the launching worktree and could not target impl-i05; EnterWorktree refused because the agent cwd is the repo root. The directory was granted through the sanctioned request_directory flow (OS sandbox now allowlists impl-i05 for writes), and all files were created via sandboxed Bash heredocs inside the designated worktree only. No file outside impl-i05 and the mandated worker-report/evidence paths was touched; nothing was pushed.",
     "I01-owned follow-up: secrets.refs.example.json needs codewiki-source-read and codegraph-source-read registrations (both referenced by committed domain files and reported as catalogGaps; validate stays exit 0 with gaps explicit, mirroring the outline-app-session precedent).",
     "deepwiki-open upstream remains UNSELECTED per plan; no tag/digest/version was invented anywhere in committed files (fixture-only probe values in tmp)."
-  ]
+  ],
+  "integration_fix": {
+    "trigger": "集成回归（master，I01 修正案 f8c982b 已合入：codewiki-source-read/codegraph-source-read 登记，目录 18 refs）发现原 gap-reporting 测试是状态依赖断言（同类第四次）：它断言两 ref \"不在 I01 目录 → 必须报 catalogGap\"，合并树上该断言 actual=false。",
+    "red_on_merged_tree": "evidence/integration-red-state-dependent.txt — git merge --no-ff master (b017d97) 后 node --test exit=1，恰 1 个失败（gap-reporting 测试），13/14 通过",
+    "fix": "仅改 test/infra-code-knowledge.test.js 的 gap-reporting 测试：(1) 改为正向断言——committed 域 validate exit 0/ok=true 且 catalogGaps 不含 codewiki-source-read/codewiki-provider/codegraph-source-read（显式断言已登记，引用修正案 f8c982b）；(2) 缺口上报行为覆盖保留为合成 fixture——临时 refs 副本删除已知已登记 ref，断言 validate 仍显式报 catalogGap。不再断言活目录成员状态。",
+    "verification": [
+      {
+        "cmd": "git merge --no-ff master",
+        "result": "clean merge, no conflicts; catalog 18 refs with both codewiki refs registered"
+      },
+      {
+        "cmd": "node --test test/infra-code-knowledge.test.js",
+        "exit_code": 0,
+        "summary": "14/14 pass on merged tree (evidence/green-node-test-integration-fix.txt)"
+      },
+      {
+        "cmd": "npm test",
+        "exit_code": 0,
+        "summary": "199 tests, 199 pass, 0 fail, 0 skipped (evidence/npm-test-integration-fix.txt)"
+      }
+    ],
+    "policy_note": "协调者已入政策：断言活仓库状态（目录成员/勾选框/登记表）的测试一律用合成 fixture 或\"解析当前态再翻转\"；I01 目录冻结在 18 refs。",
+    "post_fix_matrix": {
+      "validate": "exit 0, catalogGaps=[] (all three refs registered by f8c982b)",
+      "qualify": "exit 2 NOT_READY; secret-refs-registered shifted UNVERIFIED -> RECORDED (refs registered but still NOT_PROVISIONED); remaining 9 UNVERIFIED categories unchanged",
+      "up": "exit 2 refused (UP_REFUSED_IMAGES_LOCK_NOT_READY)",
+      "probes": "graph-disabled-correctness exit 0 VERIFIED; pinned-code-wiki exit 2 UNVERIFIED"
+    }
+  }
 }

@@ -143,22 +143,21 @@ test('V_INFRA_I05 contract: committed code-knowledge domain validates clean; qua
   assert.doesNotMatch(missing.stdout + missing.stderr, HOST_PATH_OUTPUT_RE);
 });
 
-test('gap-reporting behavior: I01 catalog gaps for codewiki-source-read / codegraph-source-read are explicit, never silent', () => {
-  // 已提交状态：codewiki-provider 已由 I01 登记；另外两个 ref 尚未登记（I01-owned，缺口必须显式上报）。
+test('gap-reporting behavior: registered refs are never reported as gaps; a missing ref is always explicitly reported (synthetic fixture)', () => {
+  // 正向断言：I01 修正案 f8c982b 已登记全部 3 个 code-knowledge ref（目录 18 refs）——
+  // committed 域 validate 必须干净且不把它们报成 catalogGap。
+  // 纪律：断言活仓库状态（目录成员/登记表）一律解析当前态再翻转或用合成 fixture；
+  // 缺口上报行为覆盖由下方合成负例承担，不依赖活目录状态。
   const validate = runCli(['validate', '--registry', registryPath, '--dir', domainDir, '--json']);
+  assert.equal(validate.status, 0, `validate must PASS with the amended I01 catalog: ${validate.stderr || validate.stdout}`);
   const report = parseJsonOut(validate, 'validate');
-  assert.ok(
-    (report.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/codewiki-source-read'),
-    'codewiki-source-read missing from the I01 catalog must be reported as a catalogGap',
-  );
-  assert.ok(
-    (report.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/codegraph-source-read'),
-    'codegraph-source-read missing from the I01 catalog must be reported as a catalogGap',
-  );
-  assert.ok(
-    !(report.catalogGaps ?? []).includes('secret-ref:sdd-harness-pilot/codewiki-provider'),
-    'codewiki-provider is registered by I01 and must not be reported as a gap',
-  );
+  assert.equal(report.ok, true);
+  for (const name of ['codewiki-source-read', 'codewiki-provider', 'codegraph-source-read']) {
+    assert.ok(
+      !(report.catalogGaps ?? []).includes(`secret-ref:sdd-harness-pilot/${name}`),
+      `${name} is registered in the I01 catalog (amendment f8c982b) and must not be reported as a catalogGap`,
+    );
+  }
 
   // 合成负例（临时 fixture）：从 refs 目录副本中移除一个已登记 ref，validate 仍显式上报缺口。
   const refsDoc = JSON.parse(fs.readFileSync(path.join(repoRoot, 'infra', 'delivery', 'secrets.refs.example.json'), 'utf8'));
