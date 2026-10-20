@@ -1,0 +1,594 @@
+TAP version 13
+# Subtest: baseline is in a qualified state with qualification metadata
+ok 1 - baseline is in a qualified state with qualification metadata
+  ---
+  duration_ms: 0.79625
+  ...
+# Subtest: comet pins the npm distribution artifact, not only the source commit
+ok 2 - comet pins the npm distribution artifact, not only the source commit
+  ---
+  duration_ms: 0.138458
+  ...
+# Subtest: teamai and openspec distribution artifacts are pinned with re-verified integrity
+ok 3 - teamai and openspec distribution artifacts are pinned with re-verified integrity
+  ---
+  duration_ms: 0.064542
+  ...
+# Subtest: host, toolchain and skills digests are recorded
+ok 4 - host, toolchain and skills digests are recorded
+  ---
+  duration_ms: 0.116083
+  ...
+# Subtest: runtime claims record executed probes with existing evidence logs
+ok 5 - runtime claims record executed probes with existing evidence logs
+  ---
+  duration_ms: 4.846375
+  ...
+# Subtest: compatibility matrix replays the local OpenSpec dependency-edge gap and verifies the candidate
+ok 6 - compatibility matrix replays the local OpenSpec dependency-edge gap and verifies the candidate
+  ---
+  duration_ms: 0.150166
+  ...
+# Subtest: extension delivery contract is finalized at concrete existing paths
+ok 7 - extension delivery contract is finalized at concrete existing paths
+  ---
+  duration_ms: 1.777375
+  ...
+# Subtest: integrated build passes the V_COMET_NATIVE contract command when prepared locally
+ok 8 - integrated build passes the V_COMET_NATIVE contract command when prepared locally # SKIP prepared Comet source and completed build are not present in this project; run tools/comet/build.mjs --archive first
+  ---
+  duration_ms: 1.870125
+  ...
+# Subtest: CLI export produces a contract-valid lock and verify accepts it (real repo)
+ok 9 - CLI export produces a contract-valid lock and verify accepts it (real repo)
+  ---
+  duration_ms: 1331.120875
+  ...
+# Subtest: CLI verify fails on drifted assets and check-run blocks an active run (explicit migration path)
+ok 10 - CLI verify fails on drifted assets and check-run blocks an active run (explicit migration path)
+  ---
+  duration_ms: 250.310875
+  ...
+# Subtest: CLI check-run refuses a second writer on an active run (B09) and allows the owner
+ok 11 - CLI check-run refuses a second writer on an active run (B09) and allows the owner
+  ---
+  duration_ms: 7252.755542
+  ...
+# Subtest: forward then reverse composition: init, user edit, re-pull, uninstall, re-init
+ok 12 - forward then reverse composition: init, user edit, re-pull, uninstall, re-init
+  ---
+  duration_ms: 850.276458
+  ...
+# Subtest: plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched
+ok 13 - plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched
+  ---
+  duration_ms: 570.3295
+  ...
+# Subtest: duplicate same event/command registration (plugin entry wrapping the managed command) is refused via bootstrap with a conflict list
+ok 14 - duplicate same event/command registration (plugin entry wrapping the managed command) is refused via bootstrap with a conflict list
+  ---
+  duration_ms: 53.944708
+  ...
+# Subtest: repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable
+ok 15 - repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable
+  ---
+  duration_ms: 936.442208
+  ...
+# Subtest: setup: the patched pinned build named by the source lock is manifest-verified in this project
+not ok 16 - setup: the patched pinned build named by the source lock is manifest-verified in this project
+  ---
+  duration_ms: 1.517833
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/1_3.mjs:116:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the patched build must carry the two locked patches
+    
+    4 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 4
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/1_3.mjs:117:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: 1.3.a: init installs the real guard hook and the workspace layout is the discovered one
+ok 17 - 1.3.a: init installs the real guard hook and the workspace layout is the discovered one
+  ---
+  duration_ms: 2088.519
+  ...
+# Subtest: 1.3.a: Runner dispatch binds the real run id and leaves no phase trace on the run state
+ok 18 - 1.3.a: Runner dispatch binds the real run id and leaves no phase trace on the run state
+  ---
+  duration_ms: 693.881
+  ...
+# Subtest: 1.3.b/A09: cross-phase writes are probed per channel — edit rejected, Shell and MCP recorded as gaps
+ok 19 - 1.3.b/A09: cross-phase writes are probed per channel — edit rejected, Shell and MCP recorded as gaps
+  ---
+  duration_ms: 537.469292
+  ...
+# Subtest: 1.3.b/A09: a Shell-written control state cannot pass the managed gate — verify_result is required
+ok 20 - 1.3.b/A09: a Shell-written control state cannot pass the managed gate — verify_result is required
+  ---
+  duration_ms: 412.226041
+  ...
+# Subtest: 1.3.c: a premature archive is refused outside the archive phase
+ok 21 - 1.3.c: a premature archive is refused outside the archive phase
+  ---
+  duration_ms: 85.660291
+  ...
+# Subtest: 1.3.b/OV01: the verified managed write executor completes the lifecycle the read-only observer cannot
+ok 22 - 1.3.b/OV01: the verified managed write executor completes the lifecycle the read-only observer cannot
+  ---
+  duration_ms: 8309.519375
+  ...
+# Subtest: 1.3.c: the archive succeeds exactly once and a duplicate closeout execution is refused by the driver
+ok 23 - 1.3.c: the archive succeeds exactly once and a duplicate closeout execution is refused by the driver
+  ---
+  duration_ms: 1761.984458
+  ...
+# Subtest: cleanup removes the scratch project
+ok 24 - cleanup removes the scratch project
+  ---
+  duration_ms: 21.980667
+  ...
+# Subtest: setup: the patched pinned build named by the source lock is manifest-verified in this project
+not ok 25 - setup: the patched pinned build named by the source lock is manifest-verified in this project
+  ---
+  duration_ms: 1.01125
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/1_4.mjs:161:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the patched build must carry the two locked patches
+    
+    4 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 4
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/1_4.mjs:162:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: 1.4.a: the structured mode registration exists and pins this exact patched build
+not ok 26 - 1.4.a: the structured mode registration exists and pins this exact patched build
+  ---
+  duration_ms: 5.520542
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/1_4.mjs:171:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the qualification must be bound to the patched build fingerprint
+    + actual - expected
+    
+    + 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187'
+    - '9b95a0ff54ee00abd03ba9fb507cd93f03c8a464a743658898c474a51dc89b10'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '9b95a0ff54ee00abd03ba9fb507cd93f03c8a464a743658898c474a51dc89b10'
+  actual: 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/1_4.mjs:174:10)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: 1.4.a: Classic init exposes the real state machine, guard hook and check runtime — the surfaces the registration pins
+ok 27 - 1.4.a: Classic init exposes the real state machine, guard hook and check runtime — the surfaces the registration pins
+  ---
+  duration_ms: 4100.180125
+  ...
+# Subtest: 1.4.a: Native mode is a capability comparison only — own surfaces, no classic control plane, not a fallback
+ok 28 - 1.4.a: Native mode is a capability comparison only — own surfaces, no classic control plane, not a fallback
+  ---
+  duration_ms: 1610.330334
+  ...
+# Subtest: 1.4.b class 2 (missing required check): every gated entrance refuses, next stays guidance
+ok 29 - 1.4.b class 2 (missing required check): every gated entrance refuses, next stays guidance
+  ---
+  duration_ms: 7178.36825
+  ...
+# Subtest: 1.4.b class 1 (irrelevant successful command): a cross-scope success is refused natively; the registered gap is the missing required-check identity
+ok 30 - 1.4.b class 1 (irrelevant successful command): a cross-scope success is refused natively; the registered gap is the missing required-check identity
+  ---
+  duration_ms: 866.30575
+  ...
+# Subtest: 1.4.b class 3 (hand written receipt): the guard refuses a manual record-check declaration
+ok 31 - 1.4.b class 3 (hand written receipt): the guard refuses a manual record-check declaration
+  ---
+  duration_ms: 549.389
+  ...
+# Subtest: 1.4.b class 1b (registered gap, real): a trivial exit-0 command under the build scope satisfies the gate
+ok 32 - 1.4.b class 1b (registered gap, real): a trivial exit-0 command under the build scope satisfies the gate
+  ---
+  duration_ms: 1532.452667
+  ...
+# Subtest: 1.4.b class 3 (stale receipt): evidence that predates a source mutation is refused at the verify gate
+ok 33 - 1.4.b class 3 (stale receipt): evidence that predates a source mutation is refused at the verify gate
+  ---
+  duration_ms: 1296.529375
+  ...
+# Subtest: 1.4.b class 4 (escape path, real): COMET_SKIP_BUILD=1 alone voids the whole evidence chain — registered gap with extension acceptance
+ok 34 - 1.4.b class 4 (escape path, real): COMET_SKIP_BUILD=1 alone voids the whole evidence chain — registered gap with extension acceptance
+  ---
+  duration_ms: 6187.590208
+  ...
+# Subtest: 1.4.c: the built-in project memory is a HOME-scoped cache, never an LLMWiki/Outline receipt — boundary registered
+ok 35 - 1.4.c: the built-in project memory is a HOME-scoped cache, never an LLMWiki/Outline receipt — boundary registered
+  ---
+  duration_ms: 626.566042
+  ...
+# Subtest: 1.4.b/C07: the registered entrance matrix covers the write channel and every record cites real probe files
+ok 36 - 1.4.b/C07: the registered entrance matrix covers the write channel and every record cites real probe files
+  ---
+  duration_ms: 445.891041
+  ...
+# Subtest: cleanup removes the scratch world
+ok 37 - cleanup removes the scratch world
+  ---
+  duration_ms: 17.724833
+  ...
+# Subtest: setup: the patched pinned build named by the source lock is manifest-verified in this project
+not ok 38 - setup: the patched pinned build named by the source lock is manifest-verified in this project
+  ---
+  duration_ms: 0.866417
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/1_5.mjs:182:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the patched build must carry the two locked patches
+    
+    4 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 4
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/1_5.mjs:184:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: C07: with zero check evidence all seven managed entrances refuse or stay short of completion
+ok 39 - C07: with zero check evidence all seven managed entrances refuse or stay short of completion
+  ---
+  duration_ms: 12403.806125
+  ...
+# Subtest: C04: tasks is the single writable authority — ticks never move the ticket, definition drift does, stale tickets are refused
+ok 40 - C04: tasks is the single writable authority — ticks never move the ticket, definition drift does, stale tickets are refused
+  ---
+  duration_ms: 1847.003958
+  ...
+# Subtest: C06: the archive seal requires the knowledge closeout, exactly once — the native gate itself carries no knowledge receipt
+not ok 41 - C06: the archive seal requires the knowledge closeout, exactly once — the native gate itself carries no knowledge receipt
+  ---
+  duration_ms: 4776.246583
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/1_5.mjs:288:1'
+  failureType: 'testCodeFailure'
+  error: 'the native gate must not consult any knowledge receipt — B5 stays reproducible'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: '{"projectRoot":"/private/tmp/claude-501/p15-case-yjhwFn/classic","workspace":{"projectRoot":"/private/tmp/claude-501/p15-case-yjhwFn/classic"},"status":"running","stateVersion":null,"iteration":6,"changeDir":"/private/tmp/claude-501/p15-case-yjhwFn/classic/docs/openspec/changes/p15-seal-run","artifactRefs":{"change":"docs/openspec/changes/p15-seal-run","tasks":"docs/openspec/changes/p15-seal-run/tasks.md","designDoc":"docs/openspec/changes/p15-seal-run/design.md","plan":null,"plansRoot":"docs/superpowers/plans","handoffContext":"docs/openspec/changes/p15-seal-run/.comet/handoff/design-context.json"},"layout":{"schema":"comet.classic-layout.v1","openSpecRoot":"/private/tmp/claude-501/p15-case-yjhwFn/classic/docs/openspec","changesRoot":"/private/tmp/claude-501/p15-case-yjhwFn/classic/docs/openspec/changes","archiveRoot":"/private/tmp/claude-501/p15-case-yjhwFn/classic/docs/openspec/changes/archive","specsRoot":"/private/tmp/claude-501/p15-case-yjhwFn/classic/docs/openspec/specs","superpowersRoot":"/private/tmp/claude-501/p15-case-yjhwFn/classic/docs/superpowers"},"configurationReadiness":{"missingFields":[],"invalidFields":[]},"nextAction":{"kind":"archive","reason":"Preserve explicit archive and delivery authorization; do not infer it from branch_status."},"continuation":{"kind":"archive","reason":"Preserve explicit archive and delivery authorization; do not infer it from branch_status.","cwd":"/private/tmp/claude-501/p15-case-yjhwFn/classic","skill":"comet-archive","automatic":true},"evidence":{"status":"not-revalidated","reason":"entry"},"nextTask":null,"taskState":{"authority":"/private/tmp/claude-501/p15-case-yjhwFn/classic/docs/openspec/changes/p15-seal-run/tasks.md","exists":true,"revision":"8cd8369a8ebbcf334ed84eeaa925409a59c7ec104e1c24c4690266d617451457","total":1,"completed":1,"needsIds":false,"next":null},"planMapping":{"status":"ready","unmappedCount":0},"coordination":{"path":null,"stale":false},"delivery":{"delivery":null,"verification":{"status":"needsAuthorization"}},"requiredFiles":["/private/tmp/claude-501/p15-case-yjhwFn/classic/docs/openspec/changes/p15-seal-run/tasks.md"],"change":"p15-seal-run","phase":"archive","requestedPhase":"archive","configuration":{"workflow":"full","language":"en","phase":"archive","contextCompression":"off","buildMode":"executing-plans","buildPause":null,"subagentDispatch":null,"tddMode":"tdd","reviewMode":"standard","isolation":"current","boundBranch":null,"verifyMode":null,"autoTransition":true,"baseRef":null,"designDoc":"docs/openspec/changes/p15-seal-run/design.md","plan":null,"verifyResult":"pass","verifyFailures":0,"checkEpoch":5,"verificationReport":"docs/openspec/changes/p15-seal-run/verification.md","branchStatus":"pending","createdAt":"2026-10-20","verifiedAt":"2026-10-20","archiveConfirmation":"confirmed","archived":false,"directOverride":null,"handoffContext":"docs/openspec/changes/p15-seal-run/.comet/handoff/design-context.json","handoffHash":"8fe5c01c7b8c8200bee782cebc9583b19fccf0cb99acfd9c41cd39c796c04b5e","classicProfile":"full","classicMigration":1,"managedDelivery":false,"knowledgeCloseoutRequired":false,"testIntent":null,"gateReceipts":null,"knowledgeCloseout":null},"checks":{"passed":5,"total":5,"blocked":false},"issues":[]}'
+  operator: 'doesNotMatch'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/1_5.mjs:306:10)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: C08: bypass and recovery negatives — tampered phase file, manual record-check, forged seal and force-phase all refuse; the floating global upgrade attempt stays neutralized
+ok 42 - C08: bypass and recovery negatives — tampered phase file, manual record-check, forged seal and force-phase all refuse; the floating global upgrade attempt stays neutralized
+  ---
+  duration_ms: 1659.415833
+  ...
+# Subtest: cleanup removes the scratch world
+ok 43 - cleanup removes the scratch world
+  ---
+  duration_ms: 13.765333
+  ...
+# Subtest: method profile fixes one Comet Classic controller with Matt primitives and no nested controller
+ok 44 - method profile fixes one Comet Classic controller with Matt primitives and no nested controller
+  ---
+  duration_ms: 0.490125
+  ...
+# Subtest: snapshot manifest pins real directories byte-for-byte with sources and no symlinks
+ok 45 - snapshot manifest pins real directories byte-for-byte with sources and no symlinks
+  ---
+  duration_ms: 186.396166
+  ...
+# Subtest: RED cases are eliminated: no Superpowers hard calls in the snapshot layer and evidence is kept
+ok 46 - RED cases are eliminated: no Superpowers hard calls in the snapshot layer and evidence is kept
+  ---
+  duration_ms: 96.238875
+  ...
+# Subtest: Ponytail supplement: snapshot fixed from the plugin cache and registration/default declarations recorded
+ok 47 - Ponytail supplement: snapshot fixed from the plugin cache and registration/default declarations recorded
+  ---
+  duration_ms: 2.108875
+  ...
+# Subtest: patches are sha256-pinned in the source lock and scoped to their declared files
+not ok 48 - patches are sha256-pinned in the source lock and scoped to their declared files
+  ---
+  duration_ms: 16.390375
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/1_6.mjs:156:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(Array.isArray(lock.patches) && lock.patches.length === 2)
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/1_6.mjs:157:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: patched build proves the method profile: init cannot install Superpowers and ships no nested controller identities
+ok 49 - patched build proves the method profile: init cannot install Superpowers and ships no nested controller identities
+  ---
+  duration_ms: 2175.581167
+  ...
+# Subtest: V_A01: implementation dispatch without product/design/usecase baselines is refused with the missing list
+ok 50 - V_A01: implementation dispatch without product/design/usecase baselines is refused with the missing list
+  ---
+  duration_ms: 1.111958
+  ...
+# Subtest: V_A02: AC/scope change invalidates bound downstream receipts and old approvals only
+ok 51 - V_A02: AC/scope change invalidates bound downstream receipts and old approvals only
+  ---
+  duration_ms: 0.215833
+  ...
+# Subtest: V_A03: zero-test and all-skip runs are invalid executions for acceptance (real node --test)
+ok 52 - V_A03: zero-test and all-skip runs are invalid executions for acceptance (real node --test)
+  ---
+  duration_ms: 229.44525
+  ...
+# Subtest: V_A04: an environment crash is refused as behavior RED while a real assertion failure is a valid RED
+ok 53 - V_A04: an environment crash is refused as behavior RED while a real assertion failure is a valid RED
+  ---
+  duration_ms: 337.253375
+  ...
+# Subtest: V_A07: a passed report cannot be reused after source, lockfile or migration inputs change
+ok 54 - V_A07: a passed report cannot be reused after source, lockfile or migration inputs change
+  ---
+  duration_ms: 2.647541
+  ...
+# Subtest: V_A08: Java/Python/deploy drift changes the full-input digest and missing inputs are explicit scope errors
+ok 55 - V_A08: Java/Python/deploy drift changes the full-input digest and missing inputs are explicit scope errors
+  ---
+  duration_ms: 3.116125
+  ...
+# Subtest: frozen plan boundary: task definition digest ignores checkbox state in this change tasks.md
+ok 56 - frozen plan boundary: task definition digest ignores checkbox state in this change tasks.md
+  ---
+  duration_ms: 2.971292
+  ...
+# Subtest: V_A18: a real passing run is admitted as pass and the gate issues a schema-valid pass receipt
+ok 57 - V_A18: a real passing run is admitted as pass and the gate issues a schema-valid pass receipt
+  ---
+  duration_ms: 190.633708
+  ...
+# Subtest: V_A18: an environment crash is recorded truthfully as unverified and stays blocked, and a missing capability is never fabricated
+ok 58 - V_A18: an environment crash is recorded truthfully as unverified and stays blocked, and a missing capability is never fabricated
+  ---
+  duration_ms: 320.537042
+  ...
+# Subtest: V_A05: a worker process self-signing a pass JSON is refused as an unregistered source and the audit is kept
+ok 59 - V_A05: a worker process self-signing a pass JSON is refused as an unregistered source and the audit is kept
+  ---
+  duration_ms: 0.275583
+  ...
+# Subtest: V_A06: one execution identity cannot be both builder and verifier
+ok 60 - V_A06: one execution identity cannot be both builder and verifier
+  ---
+  duration_ms: 137.831041
+  ...
+# Subtest: V_B03: authoring self-check evidence never signs independent acceptance
+ok 61 - V_B03: authoring self-check evidence never signs independent acceptance
+  ---
+  duration_ms: 122.64625
+  ...
+# Subtest: V_B06: a service log and a DOM check cannot close a required console check
+ok 62 - V_B06: a service log and a DOM check cannot close a required console check
+  ---
+  duration_ms: 242.385792
+  ...
+# Subtest: V_B07: an imported report with an incompatible contract version is refused explicitly
+ok 63 - V_B07: an imported report with an incompatible contract version is refused explicitly
+  ---
+  duration_ms: 149.689625
+  ...
+# Subtest: V_A19 (local half): a child process with a scrubbed environment cannot mint a trusted dispatch
+ok 64 - V_A19 (local half): a child process with a scrubbed environment cannot mint a trusted dispatch
+  ---
+  duration_ms: 54.81475
+  ...
+# Subtest: 2.3: a real old-channel report enters the new gate and a passing delivery check exits 0 with a schema-valid receipt (B10 layer honesty)
+ok 65 - 2.3: a real old-channel report enters the new gate and a passing delivery check exits 0 with a schema-valid receipt (B10 layer honesty)
+  ---
+  duration_ms: 296.59325
+  ...
+# Subtest: 2.3: the same legacy evidence cannot close a product capability — executed but blocked exits 2 (B10: no product-closure claim)
+ok 66 - 2.3: the same legacy evidence cannot close a product capability — executed but blocked exits 2 (B10: no product-closure claim)
+  ---
+  duration_ms: 119.538542
+  ...
+# Subtest: 2.3: invalid inputs exit 1 at the task level — unreadable contract, schema-invalid contract, bad receipts (0/1/2 triple complete)
+ok 67 - 2.3: invalid inputs exit 1 at the task level — unreadable contract, schema-invalid contract, bad receipts (0/1/2 triple complete)
+  ---
+  duration_ms: 304.161791
+  ...
+# Subtest: 2.3 B07: an incompatible legacy report version is refused explicitly by the adapter — no field fabrication, no silent migration
+ok 68 - 2.3 B07: an incompatible legacy report version is refused explicitly by the adapter — no field fabrication, no silent migration
+  ---
+  duration_ms: 3.9185
+  ...
+# Subtest: 2.3 A20 (executable half): the delivery gate chain runs correctly as plain node children under a scrubbed environment
+ok 69 - 2.3 A20 (executable half): the delivery gate chain runs correctly as plain node children under a scrubbed environment
+  ---
+  duration_ms: 94.156917
+  ...
+# Subtest: setup: the managed delivery build is manifest-verified and carries the 0002 extension
+ok 70 - setup: the managed delivery build is manifest-verified and carries the 0002 extension
+  ---
+  duration_ms: 2309.063084
+  ...
+# Subtest: D01 base: managed init wires machine-owned runtime fields; hand-written receipts are impossible
+ok 71 - D01 base: managed init wires machine-owned runtime fields; hand-written receipts are impossible
+  ---
+  duration_ms: 987.563666
+  ...
+# Subtest: D01: acceptance without a Runtime dispatch is refused; the dispatched path accepts
+ok 72 - D01: acceptance without a Runtime dispatch is refused; the dispatched path accepts
+  ---
+  duration_ms: 2861.838792
+  ...
+# Subtest: D02: inputs modified while the review is in flight make the result stale — it cannot be accepted
+ok 73 - D02: inputs modified while the review is in flight make the result stale — it cannot be accepted
+  ---
+  duration_ms: 3222.970292
+  ...
+# Subtest: D03: a structured rejection routes rework on the SAME run — architecture-repair, never hand phase edits
+ok 74 - D03: a structured rejection routes rework on the SAME run — architecture-repair, never hand phase edits
+  ---
+  duration_ms: 6499.275334
+  ...
+# Subtest: B1: a scope with registered required identities refuses trivial exit-0 evidence and accepts the registered command
+ok 75 - B1: a scope with registered required identities refuses trivial exit-0 evidence and accepts the registered command
+  ---
+  duration_ms: 9694.2425
+  ...
+# Subtest: B4: COMET_SKIP_BUILD and COMET_FORCE_PHASE do not lower managed gates (source hygiene, upstream side)
+ok 76 - B4: COMET_SKIP_BUILD and COMET_FORCE_PHASE do not lower managed gates (source hygiene, upstream side)
+  ---
+  duration_ms: 10126.470875
+  ...
+# Subtest: D04: a design revision silently invalidates A/T/P at every managed entrance, and recovery routes through repair
+ok 77 - D04: a design revision silently invalidates A/T/P at every managed entrance, and recovery routes through repair
+  ---
+  duration_ms: 15169.208292
+  ...
+# Subtest: D05: implementation changes keep R/A/T/P current and only invalidate candidate-scoped evidence
+ok 78 - D05: implementation changes keep R/A/T/P current and only invalidate candidate-scoped evidence
+  ---
+  duration_ms: 8806.116166
+  ...
+# Subtest: C07/D08: full managed lifecycle reaches archive; knowledge unknown reads back; archived is not completed (D07/D06/Kt)
+ok 79 - C07/D08: full managed lifecycle reaches archive; knowledge unknown reads back; archived is not completed (D07/D06/Kt)
+  ---
+  duration_ms: 16937.774708
+  ...
+# Subtest: 3.1.a pilot contract freeze: the machine block pins pilot/owner/environment/identity, four frozen artifact digests and the UI/API/persistence/permissions negative AC panel
+ok 80 - 3.1.a pilot contract freeze: the machine block pins pilot/owner/environment/identity, four frozen artifact digests and the UI/API/persistence/permissions negative AC panel
+  ---
+  duration_ms: 3.774417
+  ...
+# Subtest: 3.1.b runner PASS on real case scenario A01: executes test/delivery-cases/2_1.mjs with execution count > 0 and persists evidence
+ok 81 - 3.1.b runner PASS on real case scenario A01: executes test/delivery-cases/2_1.mjs with execution count > 0 and persists evidence
+  ---
+  duration_ms: 678.8795
+  ...
+# Subtest: 3.1.b runner PASS on real scenario A02 (2_1.mjs) and A20 (2_3.mjs) from different modules
+ok 82 - 3.1.b runner PASS on real scenario A02 (2_1.mjs) and A20 (2_3.mjs) from different modules
+  ---
+  duration_ms: 1555.514334
+  ...
+# Subtest: 3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario token in its test names — the module-level green stands whether the environment-conditional build probe skips or really runs, with zero FAIL and the coverage mode truthfully recorded
+not ok 83 - 3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario token in its test names — the module-level green stands whether the environment-conditional build probe skips or really runs, with zero FAIL and the coverage mode truthfully recorded
+  ---
+  duration_ms: 2248.106334
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/3_1.mjs:232:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    module-level green with real executions must pass, got 2: 
+    
+    2 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-4/test/delivery-cases/3_1.mjs:235:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: 3.1.b runner FAIL verdict without green-washing: a genuinely failing action fails once and is never retried
+ok 84 - 3.1.b runner FAIL verdict without green-washing: a genuinely failing action fails once and is never retried
+  ---
+  duration_ms: 124.306041
+  ...
+# Subtest: 3.1.b runner NOT-EXERCISED: unregistered scenario and all-skip module are structured non-zero, never a pass
+ok 85 - 3.1.b runner NOT-EXERCISED: unregistered scenario and all-skip module are structured non-zero, never a pass
+  ---
+  duration_ms: 555.884917
+  ...
+# Subtest: 3.1.b schema enforcement: a case definition violating delivery-case-schema.json is refused with named paths
+ok 86 - 3.1.b schema enforcement: a case definition violating delivery-case-schema.json is refused with named paths
+  ---
+  duration_ms: 152.993417
+  ...
+# Subtest: 3.1.b invalid input exits 1: missing required option and malformed scenario id
+ok 87 - 3.1.b invalid input exits 1: missing required option and malformed scenario id
+  ---
+  duration_ms: 154.422
+  ...
+# Subtest: 3.1.c A01 landing: dispatch without TestContract/PlanBundle in the pilot baseline is refused with the missing list
+ok 88 - 3.1.c A01 landing: dispatch without TestContract/PlanBundle in the pilot baseline is refused with the missing list
+  ---
+  duration_ms: 84.261542
+  ...
+# Subtest: 3.1.c A01 landing: a gap in the negative AC panel is named in the missing list
+ok 89 - 3.1.c A01 landing: a gap in the negative AC panel is named in the missing list
+  ---
+  duration_ms: 81.249125
+  ...
+# Subtest: 3.1.c A15 landing: PlanBundle freeze binding is checkbox-state-agnostic but definition-sensitive
+ok 90 - 3.1.c A15 landing: PlanBundle freeze binding is checkbox-state-agnostic but definition-sensitive
+  ---
+  duration_ms: 526.072833
+  ...
+# Subtest: 3.1.c A15 landing: frozen Product drift refuses dispatch with expected/observed digests
+ok 91 - 3.1.c A15 landing: frozen Product drift refuses dispatch with expected/observed digests
+  ---
+  duration_ms: 79.426709
+  ...
+# Subtest: V_A15: an independent persistence readback fails the journey when a success claim never reached disk
+ok 92 - V_A15: an independent persistence readback fails the journey when a success claim never reached disk
+  ---
+  duration_ms: 100.094875
+  ...
+1..92
+# tests 92
+# suites 0
+# pass 84
+# fail 7
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 76830.299208

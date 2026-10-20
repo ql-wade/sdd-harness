@@ -1,0 +1,1979 @@
+diff --git a/domains/comet-classic/classic-check-policy.ts b/domains/comet-classic/classic-check-policy.ts
+index a5f5035..84dd985 100644
+--- a/domains/comet-classic/classic-check-policy.ts
++++ b/domains/comet-classic/classic-check-policy.ts
+@@ -44,9 +44,25 @@ export interface CheckPolicyCommand {
+   env?: string[];
+   git: 'all' | 'none';
+   taskCheckboxes: 'include' | 'ignore';
++  /**
++   * B1 required-check identity registry (0002): when declared, this command
++   * identity is THE registered evidence for that scope. Guard acceptance for
++   * a scope with required identities only accepts recorded runtime evidence
++   * matching one of them — a trivial exit-0 command no longer passes.
++   */
++  requiredScope?: 'build' | 'verify';
+ }
+ 
+-const COMMAND_KEYS = ['argv', 'cwd', 'files', 'outputs', 'env', 'git', 'taskCheckboxes'];
++const COMMAND_KEYS = [
++  'argv',
++  'cwd',
++  'files',
++  'outputs',
++  'env',
++  'git',
++  'taskCheckboxes',
++  'requiredScope',
++];
+ 
+ function parseCommandEntry(value: unknown, label: string): CheckPolicyCommand {
+   if (!value || typeof value !== 'object' || Array.isArray(value))
+@@ -117,6 +133,11 @@ function parseCommandEntry(value: unknown, label: string): CheckPolicyCommand {
+       throw new Error(`${label} has an invalid taskCheckboxes mode`);
+     command.taskCheckboxes = record.taskCheckboxes as 'include' | 'ignore';
+   }
++  if (record.requiredScope !== undefined) {
++    if (!['build', 'verify'].includes(record.requiredScope as string))
++      throw new Error(`${label} requiredScope must be build or verify`);
++    command.requiredScope = record.requiredScope as 'build' | 'verify';
++  }
+   return command;
+ }
+ 
+@@ -131,6 +152,7 @@ function commandEntryDigest(command: CheckPolicyCommand): string {
+         env: command.env ?? null,
+         git: command.git,
+         taskCheckboxes: command.taskCheckboxes,
++        requiredScope: command.requiredScope ?? null,
+       }),
+     )
+     .digest('hex');
+@@ -262,3 +284,41 @@ export async function readCheckPolicy(
+     );
+   }
+ }
++
++// B1 required-check identity registry: every v2 command entry that declares a
++// requiredScope, keyed by that scope. An empty registry keeps the historical
++// behavior (any recorded runtime evidence for the scope can satisfy it).
++export async function readRequiredCheckIdentities(
++  root: string,
++): Promise<Partial<Record<'build' | 'verify', CheckPolicyCommand[]>>> {
++  if (
++    !(await classicProjectTargetExists(root, CHECK_POLICY_PATH, {
++      label: 'Classic check policy',
++      expected: 'file',
++    }))
++  )
++    return {};
++  const raw = await readClassicProjectFile(root, CHECK_POLICY_PATH, {
++    label: 'Classic check policy',
++  });
++  let value: unknown;
++  try {
++    value = JSON.parse(raw);
++  } catch (error) {
++    throw new Error(`Invalid Classic check policy: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
++  }
++  if (!value || typeof value !== 'object' || Array.isArray(value) || (value as Record<string, unknown>).version !== 2) {
++    return {};
++  }
++  const registry: Partial<Record<'build' | 'verify', CheckPolicyCommand[]>> = {};
++  for (const entry of (value as Record<string, unknown>).commands as unknown[]) {
++    const command = parseCommandEntry(entry, 'Classic check policy commands');
++    if (!command.requiredScope) continue;
++    (registry[command.requiredScope] ??= []).push(command);
++  }
++  return registry;
++}
++
++export function checkIdentityMatches(identity: CheckIdentity, command: CheckPolicyCommand): boolean {
++  return matchesIdentity(command, identity);
++}
+diff --git a/domains/comet-classic/classic-evidence.ts b/domains/comet-classic/classic-evidence.ts
+index ad04e00..5098bc8 100644
+--- a/domains/comet-classic/classic-evidence.ts
++++ b/domains/comet-classic/classic-evidence.ts
+@@ -11,6 +11,7 @@ import {
+   type ClassicLayoutPaths,
+ } from './classic-layout.js';
+ import { readLegacyArchivedHandoffFallback } from './classic-archive-pointer.js';
++import { collectGateEvidence } from './classic-gate-runtime.js';
+ import {
+   inspectProtectedProjectPath,
+   protectedProjectFileExists,
+@@ -297,5 +298,18 @@ export async function collectClassicEvidence(
+     satisfied: classic?.archiveConfirmation === 'confirmed',
+   });
+ 
++  // Managed delivery gate currency (0002): one evidence item per gate, so the
++  // synchronous resolver can enforce premises without I/O. Unmanaged changes
++  // contribute no gate evidence at all.
++  if (classic?.managedDelivery) {
++    const gateItems = await collectGateEvidence({
++      projectRoot,
++      changeDir,
++      classic: classic as unknown as Record<string, unknown>,
++      run: projection.run,
++    });
++    evidence.push(...gateItems);
++  }
++
+   return evidence;
+ }
+diff --git a/domains/comet-classic/classic-gate-runtime.ts b/domains/comet-classic/classic-gate-runtime.ts
+new file mode 100644
+index 0000000..9dcc161
+--- /dev/null
++++ b/domains/comet-classic/classic-gate-runtime.ts
+@@ -0,0 +1,634 @@
++// Managed delivery gate runtime (patch 0002-managed-delivery-runtime).
++//
++// The single Classic Run gains one shared gate surface per
++// classic-gate-runtime-contract.md: classic-gate-policy (fixed required gate
++// sets, rework routes and budgets), classic-gate-receipts (Runtime-dispatched,
++// input-bound receipts carried inside the change's own .comet.yaml
++// transaction) and classic-gate-evaluate (the premise evaluation every
++// managed entrance consumes). Roles submit artifacts; they can never set a
++// gate or a phase to passing: acceptance requires a Runtime-issued dispatch
++// record whose input binding is re-verified against the current artifacts at
++// acceptance time, and receipts are re-evaluated — never deleted — on every
++// dispatch, acceptance, managed write, transition, recovery and completion
++// decision. Stale or rejected receipts degrade to explicit rework routes on
++// the same Run; there is no second controller and no second ledger, and all
++// of it stays dormant unless the change is in managed delivery
++// (managed_delivery: true in .comet.yaml).
++import { createHash } from 'node:crypto';
++import { promises as fs, type Dirent } from 'node:fs';
++import path from 'path';
++import {
++  readOptionalEngineRunText,
++  writeEngineRunText,
++} from '../../domains/engine/protected-run-file.js';
++import type { RunState } from '../../domains/engine/types.js';
++import { readProtectedProjectFile } from '../workflow-contract/protected-project-path.js';
++import { latestCommandCheck } from './classic-command-checks.js';
++import { parseClassicTasks } from './classic-tasks.js';
++
++export const GATE_POLICY_VERSION = 'managed-delivery.v1';
++// Fixed per gate and input version: rejection budget is counted on the
++// accepting Runtime surface, never reset by starting a new session.
++export const GATE_REWORK_BUDGET = 3;
++export const MAX_GATE_RECEIPTS = 100;
++export const MAX_GATE_DISPATCHES = 500;
++
++// Typed block: entrance surfaces surface it as recovery-required; purely
++// derived recomputations (state writes, run reconciliation) catch it and keep
++// the recorded step — the block resolves through the rework route, and every
++// entrance re-evaluates before anything dispatches.
++export class ManagedGatePremisesError extends Error {
++  constructor(message: string) {
++    super(message);
++    this.name = 'ManagedGatePremisesError';
++  }
++}
++
++export type GateId = 'R' | 'A' | 'T' | 'P' | 'V' | 'K';
++export const GATE_IDS = ['R', 'A', 'T', 'P', 'V', 'K'] as const;
++
++export function isGateId(value: string): value is GateId {
++  return (GATE_IDS as readonly string[]).includes(value);
++}
++
++// Execution roles are Runtime-assigned at dispatch time and are never read
++// from worker-submitted files (D01: a role label inside a report grants
++// nothing).
++export const GATE_ROLES: Record<GateId, string> = {
++  R: 'requirements-owner',
++  A: 'reviewer',
++  T: 'reviewer',
++  P: 'planner',
++  V: 'verifier',
++  K: 'knowledge-publisher',
++};
++
++// Fixed policy: the required gate set per managed action. K is deliberately
++// not part of phase premises — Knowledge.Closeout.v1 keeps Kp before archive
++// at the driver gate, while Kt is the run-level seat that blocks overall
++// completion (knowledgeCloseoutBlocked) and is recorded on the Run itself.
++export type GateAction = 'enter-build' | 'enter-verify' | 'enter-archive' | 'product-write';
++
++export function requiredGates(action: GateAction): readonly GateId[] {
++  switch (action) {
++    case 'enter-build':
++      return ['R', 'A', 'T'];
++    case 'enter-verify':
++      return ['R', 'A', 'T', 'P'];
++    case 'enter-archive':
++      return ['R', 'A', 'T', 'P', 'V'];
++    case 'product-write':
++      return ['R', 'A', 'T', 'P'];
++  }
++}
++
++// Fixed rework routes (contract section 5). Every route names a Runtime
++// action on the SAME run; none of them creates a parallel controller.
++export function repairRoute(gate: GateId): string {
++  switch (gate) {
++    case 'R':
++      return 'requirements-repair: revise the requirement baseline (proposal/specs), then re-dispatch and re-accept R';
++    case 'A':
++      return 'architecture-repair: comet state transition <change> architecture-repair, revise the design, re-dispatch and re-accept A';
++    case 'T':
++      return 'test-design-repair: comet state transition <change> test-design-repair, revise the test intent, re-dispatch and re-accept T';
++    case 'P':
++      return 'plan-repair: revise the plan/tasks definitions, then re-dispatch and re-accept P';
++    case 'V':
++      return 'verify rework: comet state transition <change> verify-fail, produce a new candidate, then re-verify';
++    case 'K':
++      return 'knowledge-closeout: comet state knowledge-closeout <change> --file <receipt.json>';
++  }
++}
++
++const SHA256_RE = /^[a-f0-9]{64}$/u;
++const nonEmpty = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
++
++export function stableStringify(value: unknown): string {
++  if (Array.isArray(value)) return `[${value.map((entry) => stableStringify(entry)).join(',')}]`;
++  if (value !== null && typeof value === 'object') {
++    return `{${Object.keys(value as Record<string, unknown>)
++      .sort()
++      .map((key) => `${JSON.stringify(key)}:${stableStringify((value as Record<string, unknown>)[key])}`)
++      .join(',')}}`;
++  }
++  return JSON.stringify(value) ?? 'null';
++}
++
++const sha256Text = (value: string): string => createHash('sha256').update(value).digest('hex');
++
++// ---- receipts ---------------------------------------------------------------
++
++export interface GateReceipt {
++  gate: GateId;
++  verdict: 'pass' | 'reject';
++  digest: string;
++  dependsOn: Partial<Record<GateId, string>>;
++  execution: string;
++  attempt: number;
++  epoch: number;
++  policyVersion: string;
++  acceptedAt: string;
++  report: string | null;
++  reportDigest: string | null;
++  findings: string[];
++}
++
++function receiptFrom(value: unknown, label: string): GateReceipt {
++  if (!value || typeof value !== 'object' || Array.isArray(value)) {
++    throw new Error(`Invalid Classic gate receipts: ${label} must be an object`);
++  }
++  const record = value as Record<string, unknown>;
++  const fail = (detail: string): never => {
++    throw new Error(`Invalid Classic gate receipts: ${label}.${detail}`);
++  };
++  if (typeof record.gate !== 'string' || !isGateId(record.gate)) fail('gate must be one of R/A/T/P/V/K');
++  if (record.verdict !== 'pass' && record.verdict !== 'reject') fail('verdict must be pass or reject');
++  if (!nonEmpty(record.digest) || !SHA256_RE.test(record.digest)) fail('digest must be a sha256 hex digest');
++  const dependsOn: Partial<Record<GateId, string>> = {};
++  if (record.dependsOn !== null && record.dependsOn !== undefined) {
++    if (typeof record.dependsOn !== 'object' || Array.isArray(record.dependsOn)) {
++      fail('dependsOn must be an object');
++    }
++    for (const [key, digest] of Object.entries(record.dependsOn as Record<string, unknown>)) {
++      if (!isGateId(key)) fail('dependsOn must bind gate ids to sha256 digests');
++      if (!nonEmpty(digest) || !SHA256_RE.test(digest)) {
++        fail('dependsOn must bind gate ids to sha256 digests');
++      }
++      dependsOn[key as GateId] = digest as string;
++    }
++  }
++  if (!nonEmpty(record.execution)) fail('execution must be a non-empty string');
++  if (!Number.isInteger(record.attempt) || (record.attempt as number) < 1) fail('attempt must be an integer >= 1');
++  if (!Number.isInteger(record.epoch) || (record.epoch as number) < 0) fail('epoch must be an integer >= 0');
++  if (record.policyVersion !== GATE_POLICY_VERSION) fail(`policyVersion must be ${GATE_POLICY_VERSION}`);
++  if (!nonEmpty(record.acceptedAt)) fail('acceptedAt must be a timestamp string');
++  for (const key of ['report', 'reportDigest'] as const) {
++    const value = record[key];
++    if (value !== null && value !== undefined && !nonEmpty(value)) fail(`${key} must be a non-empty string or null`);
++  }
++  if (record.reportDigest !== null && record.reportDigest !== undefined) {
++    if (!nonEmpty(record.reportDigest) || !SHA256_RE.test(record.reportDigest)) {
++      fail('reportDigest must be a sha256 hex digest or null');
++    }
++  }
++  if (record.findings !== undefined && !Array.isArray(record.findings)) fail('findings must be an array of strings');
++  const findings = (record.findings as unknown[] | undefined) ?? [];
++  if (!findings.every((finding) => nonEmpty(finding))) fail('findings must be non-empty strings');
++  return {
++    gate: record.gate as GateId,
++    verdict: record.verdict as 'pass' | 'reject',
++    digest: record.digest as string,
++    dependsOn,
++    execution: record.execution as string,
++    attempt: record.attempt as number,
++    epoch: record.epoch as number,
++    policyVersion: GATE_POLICY_VERSION,
++    acceptedAt: record.acceptedAt as string,
++    report: (record.report as string | null | undefined) ?? null,
++    reportDigest: (record.reportDigest as string | null | undefined) ?? null,
++    findings: findings as string[],
++  };
++}
++
++// The wire form of gate_receipts is a JSON document (the run_retries
++// precedent): .comet.yaml stays scalar-friendly for `state get`, and the
++// receipts ride the existing YAML transaction unchanged.
++export function parseGateReceipts(raw: unknown): GateReceipt[] {
++  if (raw === null || raw === undefined || raw === '') return [];
++  let value = raw;
++  if (typeof raw === 'string') {
++    try {
++      value = JSON.parse(raw);
++    } catch (error) {
++      throw new Error('Invalid Classic gate receipts: gate_receipts must be a JSON document', { cause: error });
++    }
++  }
++  if (!Array.isArray(value)) {
++    throw new Error('Invalid Classic gate receipts: gate_receipts must be a JSON array');
++  }
++  if (value.length > MAX_GATE_RECEIPTS) {
++    throw new Error(`Invalid Classic gate receipts: more than ${MAX_GATE_RECEIPTS} receipts`);
++  }
++  return value.map((entry, index) => receiptFrom(entry, `receipts[${index}]`));
++}
++
++// ---- knowledge closeout (Kt run-level seat) ---------------------------------
++
++export interface KnowledgeCloseout {
++  targetKind: 'file' | 'external';
++  target: string;
++  revision: string;
++  readbackDigest: string;
++  execution: string;
++  recordedAt: string;
++}
++
++export function parseKnowledgeCloseout(raw: unknown): KnowledgeCloseout | null {
++  if (raw === null || raw === undefined || raw === '') return null;
++  let value = raw;
++  if (typeof raw === 'string') {
++    try {
++      value = JSON.parse(raw);
++    } catch (error) {
++      throw new Error('Invalid Classic knowledge closeout: must be a JSON document', { cause: error });
++    }
++  }
++  if (!value || typeof value !== 'object' || Array.isArray(value)) {
++    throw new Error('Invalid Classic knowledge closeout: must be an object');
++  }
++  const record = value as Record<string, unknown>;
++  if (
++    (record.targetKind !== 'file' && record.targetKind !== 'external') ||
++    !nonEmpty(record.target) ||
++    !nonEmpty(record.revision) ||
++    !nonEmpty(record.readbackDigest) ||
++    !SHA256_RE.test(record.readbackDigest) ||
++    !nonEmpty(record.execution) ||
++    !nonEmpty(record.recordedAt)
++  ) {
++    throw new Error(
++      'Invalid Classic knowledge closeout: requires targetKind file|external, target, revision, readbackDigest (sha256), execution, recordedAt',
++    );
++  }
++  return {
++    targetKind: record.targetKind,
++    target: record.target,
++    revision: record.revision,
++    readbackDigest: record.readbackDigest,
++    execution: record.execution,
++    recordedAt: record.recordedAt,
++  };
++}
++
++// Sync completion predicate (resolver status): a managed Run with a required
++// knowledge obligation is not completed while the seat is empty. E02/D07:
++// archived stays "not completed" until this returns false.
++export function knowledgeCloseoutBlocked(classic: {
++  managedDelivery?: boolean;
++  knowledgeCloseoutRequired?: boolean;
++  knowledgeCloseout?: unknown;
++}): boolean {
++  if (!classic.managedDelivery || !classic.knowledgeCloseoutRequired) return false;
++  return parseKnowledgeCloseout(classic.knowledgeCloseout) === null;
++}
++
++// ---- dispatch registry --------------------------------------------------------
++
++export interface GateDispatch {
++  gate: GateId;
++  role: string;
++  execution: string;
++  attempt: number;
++  inputDigest: string;
++  dependsOn: Partial<Record<GateId, string>>;
++  issuedAt: string;
++  epoch: number;
++  state: 'open' | 'consumed' | 'stale';
++  verdict?: 'pass' | 'reject';
++}
++
++export interface GateDispatchFile {
++  schema: 'comet.classic.gate-dispatches.v1';
++  dispatches: GateDispatch[];
++}
++
++const DISPATCHES_FILE = '.comet/gate-dispatches.json';
++
++export function dispatchFileFrom(raw: string | null): GateDispatchFile {
++  if (raw === null) return { schema: 'comet.classic.gate-dispatches.v1', dispatches: [] };
++  const value = JSON.parse(raw) as GateDispatchFile;
++  if (!value || value.schema !== 'comet.classic.gate-dispatches.v1' || !Array.isArray(value.dispatches)) {
++    throw new Error('Invalid Classic gate dispatch registry');
++  }
++  return value;
++}
++
++export async function readGateDispatches(changeDir: string): Promise<GateDispatchFile> {
++  const raw = await readOptionalEngineRunText(changeDir, DISPATCHES_FILE, Number.MAX_SAFE_INTEGER, 'Gate dispatch registry');
++  return dispatchFileFrom(raw);
++}
++
++export async function writeGateDispatches(changeDir: string, file: GateDispatchFile): Promise<void> {
++  if (file.dispatches.length > MAX_GATE_DISPATCHES) {
++    throw new Error(
++      `Gate dispatch registry exceeds ${MAX_GATE_DISPATCHES} entries; reconcile ${DISPATCHES_FILE} before dispatching again`,
++    );
++  }
++  await writeEngineRunText(
++    changeDir,
++    DISPATCHES_FILE,
++    `${stableStringify(file)}\n`,
++    Number.MAX_SAFE_INTEGER,
++    'Gate dispatch registry',
++  );
++}
++
++// ---- input bindings -----------------------------------------------------------
++
++export interface GateStateInput {
++  designDoc: string | null;
++  plan: string | null;
++  testIntent: string | null;
++  gateReceipts: unknown;
++}
++
++const readChangeArtifact = async (root: string, absolute: string, label: string): Promise<string | null> => {
++  try {
++    const file = await readProtectedProjectFile(
++      root,
++      path.relative(root, absolute).replaceAll('\\', '/'),
++      64 * 1024 * 1024,
++      { label },
++    );
++    return file.bytes.toString('utf8');
++  } catch (error) {
++    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
++    throw error;
++  }
++};
++
++async function hashProjectFile(root: string, absolute: string): Promise<string | null> {
++  const content = await readChangeArtifact(root, absolute, 'Gate input artifact');
++  return content === null ? null : sha256Text(content);
++}
++
++async function hashDirectoryFiles(root: string, directory: string): Promise<Record<string, string>> {
++  const files: Record<string, string> = {};
++  let listed: Dirent[];
++  try {
++    listed = await fs.readdir(directory, { withFileTypes: true });
++  } catch (error) {
++    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return files;
++    throw error;
++  }
++  for (const entry of listed.sort((a, b) => (a.name < b.name ? -1 : 1))) {
++    const target = path.join(directory, entry.name);
++    if (entry.isDirectory()) {
++      Object.assign(files, await hashDirectoryFiles(root, target));
++    } else if (entry.isFile()) {
++      const digest = await hashProjectFile(root, target);
++      if (digest !== null) files[path.relative(root, target).replaceAll('\\', '/')] = digest;
++    }
++  }
++  return files;
++}
++
++// Tasks DEFINITION digest only: normal progress ticks must not invalidate the
++// plan gate (C04/D05), while definition edits do.
++async function gateTasksDefinition(changeDir: string): Promise<string> {
++  const source = await readChangeArtifact(changeDir, path.join(changeDir, 'tasks.md'), 'Gate tasks artifact');
++  if (source === null) return sha256Text('missing:tasks.md');
++  try {
++    const tasks = parseClassicTasks(source);
++    return sha256Text(stableStringify(tasks.map((task) => ({ id: task.id, text: task.text }))));
++  } catch {
++    return sha256Text(`malformed:tasks.md:${source.length}`);
++  }
++}
++
++export interface GateInputs {
++  digest: string;
++  dependsOn: Partial<Record<GateId, string>>;
++  missing: string[];
++}
++
++const dependencyGates: Partial<Record<GateId, readonly GateId[]>> = {
++  A: ['R'],
++  T: ['R', 'A'],
++  P: ['R', 'A', 'T'],
++  V: ['R', 'A', 'T', 'P'],
++};
++
++// The declared, conservative input binding of one gate: full content digests
++// of the change's declared artifacts plus the CURRENT input digests of its
++// dependency gates. First version computes conservative full-artifact
++// digests; any change of a declared artifact invalidates the gate because the
++// recomputed binding no longer matches the accepted receipt.
++export async function computeGateInputs(options: {
++  projectRoot: string;
++  changeDir: string;
++  gate: GateId;
++  state: GateStateInput;
++  run?: RunState | null;
++  currentDigestOf?: (gate: GateId) => Promise<string>;
++}): Promise<GateInputs> {
++  const { projectRoot, changeDir, gate, state } = options;
++  const run = options.run ?? null;
++  const resolveDependency = options.currentDigestOf ?? ((dependency) => computeGateInputs({ ...options, gate: dependency }).then((inputs) => inputs.digest));
++  const missing: string[] = [];
++  const files: Record<string, string> = {};
++  const extra: Record<string, unknown> = {};
++
++  const addFile = async (label: string, relative: string | null): Promise<void> => {
++    if (!relative || relative === 'null') {
++      missing.push(`${label}: not declared`);
++      return;
++    }
++    const digest = await hashProjectFile(projectRoot, path.resolve(projectRoot, relative));
++    if (digest === null) {
++      missing.push(`${label}: ${relative} is missing`);
++      return;
++    }
++    files[relative.replaceAll('\\', '/')] = digest;
++  };
++
++  if (gate === 'R' || gate === 'A' || gate === 'T' || gate === 'P') {
++    Object.assign(files, await hashDirectoryFiles(projectRoot, path.join(changeDir, 'specs')));
++    await addFile('proposal.md', path.relative(projectRoot, path.join(changeDir, 'proposal.md')));
++  }
++  if (gate === 'A' || gate === 'T' || gate === 'P') {
++    await addFile('design_doc', state.designDoc);
++  }
++  if (gate === 'T' || gate === 'P') {
++    await addFile('test_intent', state.testIntent);
++  }
++  if (gate === 'P') {
++    await addFile('plan', state.plan);
++    extra.tasksDefinition = await gateTasksDefinition(changeDir);
++  }
++  if (gate === 'V') {
++    // The receipt binds the IDENTITY of the latest runtime verification
++    // record — deliberately not evaluateCommandCheck, whose phase-boundary
++    // epoch rule must not make the V receipt self-stale after verify-pass
++    // advances the epoch. Candidate staleness on later code changes stays
++    // with the native check layer (it refuses stale inputs on rerun).
++    if (run) {
++      const record = await latestCommandCheck(projectRoot, changeDir, run, 'verify');
++      extra.verifyRecord = record
++        ? {
++            argv: record.argv ?? null,
++            cwd: record.cwd,
++            exitCode: record.exitCode,
++            inputAfter: record.inputAfter ?? null,
++            provenance: record.provenance,
++            timestamp: record.timestamp,
++          }
++        : 'unavailable: no runtime verification record';
++    } else {
++      extra.verifyRecord = 'unavailable: no Run context';
++    }
++  }
++
++  const dependsOn: Partial<Record<GateId, string>> = {};
++  for (const dependency of dependencyGates[gate] ?? []) {
++    dependsOn[dependency] = await resolveDependency(dependency);
++  }
++
++  const digest = sha256Text(stableStringify({ gate, files, extra, dependsOn }));
++  return { digest, dependsOn, missing };
++}
++
++// ---- evaluation -----------------------------------------------------------------
++
++export interface GateEvaluation {
++  managed: boolean;
++  action: GateAction;
++  allowed: boolean;
++  missing: GateId[];
++  stale: GateId[];
++  rejected: GateId[];
++  routes: string[];
++  details: string[];
++}
++
++const gateStateInput = (classic: Record<string, unknown>): GateStateInput => ({
++  designDoc: (classic.designDoc as string | null) ?? null,
++  plan: (classic.plan as string | null) ?? null,
++  testIntent: (classic.testIntent as string | null) ?? null,
++  gateReceipts: classic.gateReceipts,
++});
++
++// The premise evaluation every managed entrance consumes. Receipts are never
++// modified here: staleness and rejection are derived from the last receipt per
++// gate against the freshly recomputed input binding (D02/D04/D05), and each
++// blocked gate degrades to its fixed rework route (D03).
++export async function evaluateGatePremises(options: {
++  projectRoot: string;
++  changeDir: string;
++  classic: Record<string, unknown>;
++  run?: RunState | null;
++  action: GateAction;
++}): Promise<GateEvaluation> {
++  const managed = options.classic.managedDelivery === true;
++  const evaluation: GateEvaluation = {
++    managed,
++    action: options.action,
++    allowed: true,
++    missing: [],
++    stale: [],
++    rejected: [],
++    routes: [],
++    details: [],
++  };
++  if (!managed) return evaluation;
++
++  const receipts = parseGateReceipts(options.classic.gateReceipts);
++  const cache = new Map<GateId, Promise<string>>();
++  const currentDigestOf = (gate: GateId): Promise<string> => {
++    const cached = cache.get(gate);
++    if (cached) return cached;
++    const pending = computeGateInputs({ ...options, state: gateStateInput(options.classic), gate }).then(
++      (inputs) => inputs.digest,
++    );
++    cache.set(gate, pending);
++    return pending;
++  };
++
++  for (const gate of requiredGates(options.action)) {
++    const latest = [...receipts].reverse().find((receipt) => receipt.gate === gate);
++    if (!latest) {
++      evaluation.missing.push(gate);
++      evaluation.routes.push(repairRoute(gate));
++      evaluation.details.push(`gate ${gate}: no accepted receipt (dispatch and accept through the Runtime before this action)`);
++      continue;
++    }
++    if (latest.verdict === 'reject') {
++      evaluation.rejected.push(gate);
++      evaluation.routes.push(repairRoute(gate));
++      evaluation.details.push(`gate ${gate}: rejected at epoch ${latest.epoch} — ${latest.findings[0] ?? 'structured rejection recorded'}`);
++      continue;
++    }
++    const current = await currentDigestOf(gate);
++    if (current !== latest.digest) {
++      evaluation.stale.push(gate);
++      evaluation.routes.push(repairRoute(gate));
++      evaluation.details.push(`gate ${gate}: receipt from epoch ${latest.epoch} is stale against the current input binding (inputs changed after acceptance)`);
++    }
++  }
++  evaluation.allowed = evaluation.missing.length === 0 && evaluation.stale.length === 0 && evaluation.rejected.length === 0;
++  return evaluation;
++}
++
++// Sync resolver status over PRE-COLLECTED evidence items: the resolver has no
++// I/O, so collectGateEvidence computes gate currency asynchronously and the
++// resolver consumes the satisfied flags only.
++export interface GateEvidenceItem {
++  code: string;
++  satisfied: boolean;
++  detail?: string;
++}
++
++export async function collectGateEvidence(options: {
++  projectRoot: string;
++  changeDir: string;
++  classic: Record<string, unknown>;
++  run?: RunState | null;
++}): Promise<GateEvidenceItem[]> {
++  const classic = options.classic;
++  if (classic.managedDelivery !== true) return [];
++  const items: GateEvidenceItem[] = [];
++  const receipts = parseGateReceipts(classic.gateReceipts);
++  const cache = new Map<GateId, Promise<string>>();
++  const currentDigestOf = (gate: GateId): Promise<string> => {
++    const cached = cache.get(gate);
++    if (cached) return cached;
++    const pending = computeGateInputs({ ...options, state: gateStateInput(classic), gate }).then((inputs) => inputs.digest);
++    cache.set(gate, pending);
++    return pending;
++  };
++  for (const gate of GATE_IDS) {
++    if (gate === 'K') continue;
++    const latest = [...receipts].reverse().find((receipt) => receipt.gate === gate);
++    if (!latest || latest.verdict !== 'pass') {
++      items.push({ code: `gate.${gate}.current`, satisfied: false, detail: latest ? 'rejected' : 'missing' });
++      continue;
++    }
++    const current = await currentDigestOf(gate);
++    items.push({
++      code: `gate.${gate}.current`,
++      satisfied: current === latest.digest,
++      detail: current === latest.digest ? undefined : 'stale against current inputs',
++    });
++  }
++  return items;
++}
++
++// The resolver's managed premise check for phases that would dispatch
++// implementation or verification work against invalid premises (contract
++// section 1, resolver row: never dispatch old implementation steps while
++// stale). Design phase is exempt — it IS the repair route.
++export function managedPremisesBlocked(
++  classic: { managedDelivery?: boolean },
++  evidence: ReadonlyArray<{ code: string; satisfied: boolean }>,
++  phase: string,
++): { blocked: boolean; route: string | null } {
++  if (!classic.managedDelivery) return { blocked: false, route: null };
++  // verify dispatches verification work: its premises are the verify-entry
++  // inputs (R/A/T/P), not V itself — V is what verify produces.
++  const action: GateAction | null =
++    phase === 'build' ? 'product-write' : phase === 'verify' ? 'enter-verify' : null;
++  if (!action) return { blocked: false, route: null };
++  for (const gate of requiredGates(action)) {
++    const item = evidence.find((entry) => entry.code === `gate.${gate}.current`);
++    if (item && !item.satisfied) return { blocked: true, route: repairRoute(gate) };
++    if (!item) return { blocked: true, route: repairRoute(gate) };
++  }
++  return { blocked: false, route: null };
++}
++
++// Independent readback helper for file-kind knowledge closeout targets (D06):
++// the Runtime re-derives the digest itself before recording the seat.
++export async function knowledgeTargetDigest(projectRoot: string, target: string): Promise<string | null> {
++  return hashProjectFile(projectRoot, path.resolve(projectRoot, target));
++}
+diff --git a/domains/comet-classic/classic-guard.ts b/domains/comet-classic/classic-guard.ts
+index 6926f3a..e93c73b 100644
+--- a/domains/comet-classic/classic-guard.ts
++++ b/domains/comet-classic/classic-guard.ts
+@@ -27,7 +27,19 @@ import {
+   type CommandCheckScope,
+   type RecordedCommandCheck,
+ } from './classic-command-checks.js';
+-import { readCheckPolicy } from './classic-check-policy.js';
++import {
++  checkIdentityMatches,
++  readCheckPolicy,
++  readRequiredCheckIdentities,
++} from './classic-check-policy.js';
++import {
++  evaluateGatePremises,
++  type GateAction,
++  GATE_POLICY_VERSION,
++  parseKnowledgeCloseout,
++  repairRoute,
++  requiredGates,
++} from './classic-gate-runtime.js';
+ import { inspectClassicChange } from './classic-diagnostics.js';
+ import { assertClassicLayoutWritable, classicProjectRelative } from './classic-layout.js';
+ import {
+@@ -427,6 +439,12 @@ function removedProjectCommandRun(field: 'build_command' | 'verify_command'): Co
+   };
+ }
+ 
++// Managed delivery is a per-change property of the SAME run state (0002);
++// every guard entrance reads it through the standard state reader.
++async function managedDeliveryActive(changeDir: string): Promise<boolean> {
++  return (await readClassicState(changeDir, { migrate: false })).classic?.managedDelivery === true;
++}
++
+ function invocationTarget(relative: string): string {
+   return path.resolve(classicCommandInvocationCwd(), relative);
+ }
+@@ -590,7 +608,10 @@ async function commandCheckPasses(
+   run: ClassicRunContext['run'],
+   scope: CommandCheckScope,
+ ): Promise<CommandRun> {
+-  if (process.env.COMET_SKIP_BUILD === '1') {
++  // B4 (0002): inside managed delivery the skip escape never lowers a gate —
++  // no skip pseudo-evidence is produced and the scope is evaluated for real.
++  const managed = await managedDeliveryActive(changeDir);
++  if (process.env.COMET_SKIP_BUILD === '1' && !managed) {
+     return { status: 0, output: 'SKIPPED via COMET_SKIP_BUILD=1' };
+   }
+   const removedFields: Array<'build_command' | 'verify_command'> =
+@@ -612,6 +633,23 @@ async function commandCheckPasses(
+       recorded = null;
+     }
+   }
++  // B1 (0002): a scope with registered required check identities only accepts
++  // runtime evidence recorded by one of them; a trivial exit-0 command that
++  // happens to succeed for the scope is refused.
++  if (recorded) {
++    const required = (await readRequiredCheckIdentities(root))[scope] ?? [];
++    if (required.length > 0 && !required.some((command) => checkIdentityMatches({ argv: recorded!.argv ?? [], cwd: recorded!.cwd }, command))) {
++      return {
++        status: 1,
++        output: [
++          `The latest ${scope} record is not a registered required check identity for this scope.`,
++          `Recorded: ${recorded.command} in '${recorded.cwd}'.`,
++          `Registered required ${scope} identities: ${required.map((command) => `${command.argv.join(' ')} (cwd ${command.cwd})`).join('; ')}.`,
++          `Next: ${recoveryCommand(change, scope, required[0].argv)}`,
++        ].join('\n'),
++      };
++    }
++  }
+   // Never let heuristic command discovery replace a deliberate Runtime check,
+   // including a failed, manual, stale or cwd-mismatched record. The existing
+   // evidence must be surfaced with its recovery action first.
+@@ -620,8 +658,9 @@ async function commandCheckPasses(
+     !recorded && !previous
+       ? await latestInterruptedCommandCheck(root, changeDir, run, scope)
+       : null;
++  const scopeRegistry = await readRequiredCheckIdentities(root);
+   const inferred =
+-    scope === 'build' && !recorded && !previous && !interrupted
++    scope === 'build' && !recorded && !previous && !interrupted && (scopeRegistry[scope] ?? []).length === 0
+       ? await inferredBuildCommand()
+       : null;
+   if (inferred !== null && typeof inferred !== 'object') {
+@@ -1190,6 +1229,13 @@ async function guardDesignChecks(
+       yellow('  [WARN] No design_doc recorded in .comet.yaml (optional for hotfix/tweak)'),
+     );
+   }
++  if (!blocked) {
++    // Managed gates for design → build (C02): R/A/T current is a premise of
++    // every entrance into build, the guard included.
++    blocked = await runChecks(output, [
++      guardGateCheck(changeDir, 'enter-build'),
++    ]);
++  }
+   return blocked;
+ }
+ 
+@@ -1232,12 +1278,44 @@ async function guardBuildChecks(
+     }),
+   ]);
+   if (blocked) return true;
+-  return runChecks(output, [
++  const buildChecks = await runChecks(output, [
+     check('Build passes', async () => {
+       const buildResult = await commandCheckPasses(changeDir, change, run, 'build');
+       return buildResult.status === 0 ? pass(buildResult.output) : fail(buildResult.output);
+     }),
+   ]);
++  // Managed gates for build → verify (C02/D04): R/A/T/P receipts must be
++  // current against the current inputs.
++  const gateChecks = await runChecks(output, [
++    guardGateCheck(changeDir, 'enter-verify'),
++  ]);
++  return buildChecks || gateChecks;
++}
++
++
++// Guard-side premise evaluation; `run` is only needed for the V record
++// binding, which the verify → archive action reads itself.
++function guardGateCheck(
++  changeDir: string,
++  action: GateAction,
++  run: ClassicRunContext['run'] | null = null,
++): () => Promise<CheckOutcome> {
++  return check(`managed delivery gate premises (${action})`, async () => {
++    const state = (await readClassicState(changeDir, { migrate: false })).classic;
++    if (!state) return fail('Classic state is missing');
++    const evaluation = await evaluateGatePremises({
++      projectRoot: classicCommandProjectRoot(),
++      changeDir,
++      classic: state as unknown as Record<string, unknown>,
++      run,
++      action,
++    });
++    if (!evaluation.managed) return pass('managed delivery is not enabled for this change');
++    if (evaluation.allowed) {
++      return pass(`gates ${requiredGates(action).join('/')} current (policy ${GATE_POLICY_VERSION})`);
++    }
++    return fail([...evaluation.details, ...evaluation.routes].join('\n'));
++  });
+ }
+ 
+ async function guardVerifyChecks(
+@@ -1259,12 +1337,17 @@ async function guardVerifyChecks(
+     }),
+   ]);
+   if (blocked) return true;
+-  return runChecks(output, [
++  const verifyChecks = await runChecks(output, [
+     check('Verification passes', async () => {
+       const result = await commandCheckPasses(changeDir, change, run, 'verify');
+       return result.status === 0 ? pass(result.output) : fail(result.output);
+     }),
+   ]);
++  // Managed gates for verify → archive (C07): R/A/T/P/V receipts current.
++  const gateChecks = await runChecks(output, [
++    guardGateCheck(changeDir, 'enter-archive', run),
++  ]);
++  return verifyChecks || gateChecks;
+ }
+ 
+ async function guardArchiveChecks(
+@@ -1289,6 +1372,16 @@ async function guardArchiveChecks(
+     check('branch_status=handled', async () =>
+       (await branchStatusHandled(changeDir)) ? pass() : fail(''),
+     ),
++    check('run-level knowledge closeout obligation', async () => {
++      const state = (await readClassicState(changeDir, { migrate: false })).classic;
++      if (!state) return fail('Classic state is missing');
++      if (!state.managedDelivery) return pass('managed delivery is not enabled for this change');
++      if (!state.knowledgeCloseoutRequired) return pass('no run-level knowledge obligation');
++      const closeout = parseKnowledgeCloseout(state.knowledgeCloseout);
++      return closeout
++        ? pass(`knowledge closeout recorded: ${closeout.targetKind}:${closeout.target} rev ${closeout.revision}`)
++        : fail(`the run-level knowledge closeout obligation is unmet; archived does not complete this run. ${repairRoute('K')}`);
++    }),
+   ]);
+ }
+ 
+@@ -1316,7 +1409,11 @@ async function applyStateUpdateLocked(
+   // boundBranchMatches may have lazily healed bound_branch on disk, and a
+   // stale projection would write the pre-heal null back over it.
+   const context = await ensureClassicRuntimeRun(changeDir);
+-  if ((phase === 'build' || phase === 'verify') && process.env.COMET_SKIP_BUILD !== '1') {
++  const managedTransition = await managedDeliveryActive(changeDir);
++  if (
++    (phase === 'build' || phase === 'verify') &&
++    (process.env.COMET_SKIP_BUILD !== '1' || managedTransition)
++  ) {
+     const evaluation = await evaluateCommandCheck(
+       classicCommandProjectRoot(),
+       changeDir,
+@@ -1329,6 +1426,28 @@ async function applyStateUpdateLocked(
+       path.resolve(classicCommandProjectRoot(), record.cwd) !==
+         path.resolve(await guardEvidenceCwd(classicCommandProjectRoot(), record)),
+     );
++    if (record && managedTransition) {
++      const required = (await readRequiredCheckIdentities(classicCommandProjectRoot()))[
++        phase as 'build' | 'verify'
++      ] ?? [];
++      if (
++        required.length > 0 &&
++        !required.some((command) =>
++          checkIdentityMatches({ argv: record.argv ?? [], cwd: record.cwd }, command),
++        )
++      ) {
++        throw new GuardFailure(
++          [
++            `The ${phase} evidence is not a registered required check identity for this scope.`,
++            `Recorded: ${record.command} in '${record.cwd}'.`,
++            `Registered required ${phase} identities: ${required
++              .map((command) => `${command.argv.join(' ')} (cwd ${command.cwd})`)
++              .join('; ')}.`,
++            `Next: ${recoveryCommand(change, phase as 'build' | 'verify', required[0].argv)}`,
++          ].join('\n'),
++        );
++      }
++    }
+     if (!record || record.tier === 'incremental' || cwdMismatched) {
+       const reason =
+         record?.tier === 'incremental'
+diff --git a/domains/comet-classic/classic-hook-guard.ts b/domains/comet-classic/classic-hook-guard.ts
+index 25f3f53..bcb4674 100644
+--- a/domains/comet-classic/classic-hook-guard.ts
++++ b/domains/comet-classic/classic-hook-guard.ts
+@@ -24,6 +24,7 @@ import {
+ import { resolveCurrentChange } from './classic-current-change.js';
+ import { classicGuardUserMessage, classicLocale } from './classic-output-language.js';
+ import { readClassicState, readLegacyState } from './classic-store.js';
++import { evaluateGatePremises } from './classic-gate-runtime.js';
+ import type { ClassicPhase, ClassicState } from './classic-state.js';
+ import {
+   inspectClassicPlanReadiness,
+@@ -1110,6 +1111,29 @@ async function inspectClassicHookTarget(
+     }
+   }
+   if (phase === 'build') {
++    // Managed delivery write entrance (C07/D04): a product write in build is
++    // a managed write and re-evaluates the R/A/T/P premises FIRST — stale or
++    // rejected gates route to the repair action instead of the write, and no
++    // later check can be reached to excuse the stale premises.
++    if (governing.classic?.managedDelivery && governing.changeDir) {
++      const evaluation = await evaluateGatePremises({
++        projectRoot,
++        changeDir: governing.changeDir,
++        classic: governing.classic as unknown as Record<string, unknown>,
++        run: null,
++        action: 'product-write',
++      });
++      if (evaluation.managed && !evaluation.allowed) {
++        return result(
++          2,
++          [
++            `[COMET-HOOK] blocked: managed delivery gate premises are not current for the build write to ${relativePath}.`,
++            ...evaluation.details,
++            ...evaluation.routes.map((routeName) => `ROUTE: ${routeName}`),
++          ].join('\n'),
++        );
++      }
++    }
+     if (governing.classic?.buildMode === 'autonomous') {
+       const problems = await inspectClassicAutonomousBuildProblems(
+         projectRoot,
+diff --git a/domains/comet-classic/classic-resolver.ts b/domains/comet-classic/classic-resolver.ts
+index 0b274c7..01a68cf 100644
+--- a/domains/comet-classic/classic-resolver.ts
++++ b/domains/comet-classic/classic-resolver.ts
+@@ -3,6 +3,11 @@ import type { ClassicEvidence } from './classic-evidence.js';
+ import { evidenceSatisfied } from './classic-evidence.js';
+ import type { ClassicProfile, ClassicState } from './classic-state.js';
+ import { classicConfigurationReady } from './classic-build-configuration.js';
++import {
++  ManagedGatePremisesError,
++  knowledgeCloseoutBlocked,
++  managedPremisesBlocked,
++} from './classic-gate-runtime.js';
+ 
+ export interface ClassicResolverContext {
+   classic: ClassicState;
+@@ -79,7 +84,26 @@ export function resolveClassicStepId(
+   if (classic.archived && classic.phase !== 'archive') {
+     throw new Error('archived=true requires phase=archive');
+   }
+-  if (classic.archived) return 'completed';
++  if (classic.archived) {
++    // D07/E02: archived only proves the spec operation. A managed run with an
++    // unmet knowledge-closeout obligation is not completed; it parks on the
++    // post-archive closeout step of the SAME run until the obligation is
++    // recorded (comet state knowledge-closeout).
++    if (knowledgeCloseoutBlocked(classic)) return 'full.closeout.knowledge';
++    return 'completed';
++  }
++
++  // Managed premise enforcement on the resolver (contract section 1): never
++  // dispatch implementation or verification steps while a required gate
++  // receipt is missing, stale or rejected — recovery-required blocking with
++  // the fixed rework route. Design phase is exempt: it IS the repair route.
++  // Gate currency arrives as pre-collected evidence items (no resolver I/O).
++  const premises = managedPremisesBlocked(classic, evidence, classic.phase);
++  if (premises.blocked) {
++    throw new ManagedGatePremisesError(
++      `GATE_PREMISES_INVALID: a required managed delivery gate receipt is missing, stale or rejected; recovery-required before dispatching ${classic.phase} steps. Route: ${premises.route ?? 're-dispatch and accept the gate'}`,
++    );
++  }
+   if (profile !== 'full' && classic.phase === 'design') {
+     throw new Error(`${profile} workflow cannot enter design`);
+   }
+diff --git a/domains/comet-classic/classic-runtime-run.ts b/domains/comet-classic/classic-runtime-run.ts
+index 96d7550..68e0dd4 100644
+--- a/domains/comet-classic/classic-runtime-run.ts
++++ b/domains/comet-classic/classic-runtime-run.ts
+@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
+ import path from 'path';
+ import { fileURLToPath } from 'url';
+ import { collectClassicEvidence } from './classic-evidence.js';
++import { ManagedGatePremisesError } from './classic-gate-runtime.js';
+ import { ensureClassicRun, type ClassicRunContext } from './classic-migrate.js';
+ import { resolveClassicStepId } from './classic-resolver.js';
+ import { readClassicState, writeClassicState, withClassicStateLock } from './classic-store.js';
+@@ -153,6 +154,15 @@ function embeddedClassicRuntimePackage(root: string): SkillPackage {
+             action: { type: 'invoke_skill', ref: 'comet-archive' },
+             next: 'completed',
+           },
++          {
++            // Post-archive knowledge closeout (0002, D07/E02): a managed run
++            // with an unmet run-level knowledge obligation parks here instead
++            // of completed — the archive is NOT the overall completion. The
++            // next() guidance names the knowledge-closeout command.
++            id: 'full.closeout.knowledge',
++            action: { type: 'invoke_skill', ref: 'comet-archive' },
++            next: 'completed',
++          },
+           {
+             id: 'hotfix.open',
+             action: { type: 'invoke_skill', ref: 'comet-hotfix' },
+@@ -404,7 +414,15 @@ async function reconcileClassicRuntimeRunLocked(
+   }
+   const validated = await loadValidatedClassicRuntime(changeDir, projection);
+   const evidence = await collectClassicEvidence(changeDir, projection);
+-  const currentStep = resolveClassicStepId(validated.classic, evidence);
++  let currentStep: string;
++  try {
++    currentStep = resolveClassicStepId(validated.classic, evidence);
++  } catch (error) {
++    if (!(error instanceof ManagedGatePremisesError)) throw error;
++    // Blocked managed premises are a resolution state, not drift: keep the
++    // recorded step and let the entrance surfaces enforce the block.
++    currentStep = validated.run.currentStep ?? 'unknown';
++  }
+   if (validated.run.currentStep === currentStep) {
+     return {
+       context: { ...validated, evidence, migrated: false },
+diff --git a/domains/comet-classic/classic-state-command.ts b/domains/comet-classic/classic-state-command.ts
+index 00699b4..b3217fc 100644
+--- a/domains/comet-classic/classic-state-command.ts
++++ b/domains/comet-classic/classic-state-command.ts
+@@ -1,5 +1,7 @@
+ import { measureCometGitCommand } from '../../platform/process/runtime-metrics.js';
+ import { spawnSync } from 'child_process';
++import { randomBytes } from 'crypto';
++import { promises as fs } from 'fs';
+ import path from 'path';
+ import { Document, parseDocument } from 'yaml';
+ import { samePath } from '../../platform/paths/git-worktree.js';
+@@ -35,8 +37,9 @@ import {
+   withProjectContext,
+ } from './classic-command-context.js';
+ import { resolveClassicStepId } from './classic-resolver.js';
++import { ManagedGatePremisesError } from './classic-gate-runtime.js';
+ import { reconcileClassicRuntimeRun, transitionClassicRuntimeRun } from './classic-runtime-run.js';
+-import { appendClassicStateEvent } from './classic-state-events.js';
++import { appendClassicStateEvent, type ClassicStateEventInput } from './classic-state-events.js';
+ import { parseClassicStateDocument, type ClassicState } from './classic-state.js';
+ import { FIELD_ENUMS, MACHINE_OWNED_FIELDS, SETTABLE_FIELDS } from './classic-state-options.js';
+ import { readClassicState, writeClassicState, withClassicStateLock } from './classic-store.js';
+@@ -46,6 +49,24 @@ import {
+   type ClassicTransitionEvent,
+ } from './classic-transitions.js';
+ import { readRunState } from '../../domains/engine/state.js';
++import {
++  computeGateInputs,
++  evaluateGatePremises,
++  GATE_POLICY_VERSION,
++  GATE_REWORK_BUDGET,
++  GATE_ROLES,
++  isGateId,
++  knowledgeCloseoutBlocked,
++  knowledgeTargetDigest,
++  parseGateReceipts,
++  parseKnowledgeCloseout,
++  readGateDispatches,
++  repairRoute,
++  requiredGates,
++  stableStringify,
++  writeGateDispatches,
++  type GateId,
++} from './classic-gate-runtime.js';
+ import { appendTrajectory, readTrajectory } from '../../domains/engine/run-store.js';
+ import {
+   recordCommandCheck,
+@@ -100,7 +121,7 @@ const PROFILES = ['full', 'hotfix', 'tweak'] as const;
+ const PHASES = ['open', 'design', 'build', 'verify', 'archive'] as const;
+ const ARTIFACT_LANGUAGES = ['en', 'zh-CN'] as const;
+ const EVENTS = CLASSIC_TRANSITION_EVENTS;
+-const PATH_FIELDS = new Set(['design_doc', 'plan', 'verification_report', 'handoff_context']);
++const PATH_FIELDS = new Set(['design_doc', 'plan', 'verification_report', 'handoff_context', 'test_intent']);
+ const CLASSIC_FIELD_WIRE_NAMES: Partial<Record<keyof ClassicState, string>> = {
+   archived: 'archived',
+   branchStatus: 'branch_status',
+@@ -371,6 +392,11 @@ function sparseClassicState(record: Record<string, unknown>): ClassicState {
+     classicProfile: enumRecordValue(record, 'classic_profile', PROFILES, workflow),
+     classicMigration:
+       typeof record.classic_migration === 'number' ? record.classic_migration : null,
++    managedDelivery: record.managed_delivery === true,
++    knowledgeCloseoutRequired: record.knowledge_closeout_required === true,
++    testIntent: typeof record.test_intent === 'string' && record.test_intent !== 'null' ? record.test_intent : null,
++    gateReceipts: typeof record.gate_receipts === 'string' ? record.gate_receipts : null,
++    knowledgeCloseout: typeof record.knowledge_closeout === 'string' ? record.knowledge_closeout : null,
+   };
+ }
+ 
+@@ -557,7 +583,22 @@ async function setFieldsLocked(
+   const { file, directory } = await stateFile(name);
+   const document = await readDocument(file);
+   const previousRecord = (document.toJS() ?? {}) as Record<string, unknown>;
++  const managedDelivery = previousRecord.managed_delivery === true;
+   for (const [field, value] of updates) {
++    if (managedDelivery && field === 'verify_result') {
++      fail(
++        "ERROR: 'verify_result' is Runtime-stamped in managed delivery; it changes only through the verify-pass transition",
++      );
++    }
++    if (field === 'phase' && managedDelivery && !options.internal) {
++      // B4 upstream hygiene: inside managed delivery the FORCE_PHASE escape
++      // never rewrites the phase — rework goes through the Runtime
++      // transitions (architecture-repair / test-design-repair / verify-fail).
++      fail(
++        "ERROR: Setting 'phase' directly is not allowed in managed delivery; the COMET_FORCE_PHASE escape hatch does not lower managed gates.\n" +
++          '  Use the Runtime rework transitions: architecture-repair / test-design-repair / verify-fail.',
++      );
++    }
+     document.set(field, parsedValue(field, value));
+     if (field === 'phase' && previousRecord.phase !== value) {
+       const epoch = nonNegativeRecordInteger(previousRecord, 'check_epoch');
+@@ -602,7 +643,15 @@ async function setFieldsLocked(
+   if (projection.run) {
+     if (!projection.classic) fail('ERROR: migrated Run is missing its Classic projection');
+     const evidence = await collectClassicEvidence(directory, projection);
+-    const currentStep = resolveClassicStepId(projection.classic, evidence);
++    let currentStep: string;
++    try {
++      currentStep = resolveClassicStepId(projection.classic, evidence);
++    } catch (error) {
++      if (!(error instanceof ManagedGatePremisesError)) throw error;
++      // Remediation writes stay possible while managed premises are blocked;
++      // the entrance surfaces still enforce the block.
++      currentStep = projection.run.currentStep ?? 'unknown';
++    }
+     const stepChanged = currentStep !== projection.run.currentStep;
+     const run = {
+       ...projection.run,
+@@ -653,10 +702,15 @@ async function init(
+   name: string,
+   workflow: string,
+   isolation: string | null = null,
++  managedDelivery = false,
++  knowledgeCloseoutRequired = false,
+ ): Promise<void> {
+   validateChangeName(name);
+   validateEnum(workflow, PROFILES);
+   if (isolation !== null) validateEnum(isolation, ['current', 'branch', 'worktree']);
++  if (managedDelivery && workflow !== 'full') {
++    fail(`ERROR: managed delivery requires the full workflow (R/A/T separation), got '${workflow}'`);
++  }
+   const boundBranch = isolation !== null ? liveGitBranch(classicCommandProjectRoot()) : null;
+   if (isolation !== null && isolation !== 'current' && boundBranch === null) {
+     fail(
+@@ -694,6 +748,17 @@ async function init(
+     verified_at: null,
+     archive_confirmation: null,
+     archived: false,
++    // Managed delivery fields are written only when the run is initialized
++    // as managed; unmanaged changes keep the exact historical document.
++    ...(managedDelivery
++      ? {
++          managed_delivery: true,
++          knowledge_closeout_required: knowledgeCloseoutRequired,
++          test_intent: null,
++          gate_receipts: null,
++          knowledge_closeout: null,
++        }
++      : {}),
+   });
+   if (isolation !== null) document.set('bound_branch', boundBranch);
+   await atomicWrite(file, document.toString());
+@@ -707,6 +772,69 @@ async function requirePhase(name: string, expected: string): Promise<void> {
+   }
+ }
+ 
++// Managed gate premises on the direct-transition entrance (C07): the same
++// evaluation the guard, write hook, resolver and completion consume — this
++// works with or without a Run projection, so no managed entrance can bypass
++// the premises when the run has not been reconciled yet.
++async function requireGatePremises(name: string, action: 'enter-build' | 'enter-verify' | 'enter-archive'): Promise<void> {
++  const { directory, record } = await managedStateRecord(name);
++  if (record.managed_delivery !== true) return;
++  const evaluation = await evaluateGatePremises({
++    projectRoot: classicCommandProjectRoot(),
++    changeDir: directory,
++    classic: { ...gateStateInputFrom(record), managedDelivery: true },
++    run: await readRunState(directory),
++    action,
++  });
++  if (!evaluation.allowed) {
++    const reasons = [...evaluation.details, ...evaluation.routes].join('\n  ');
++    fail(
++      `ERROR: Cannot transition '${name}': managed delivery gate premises are not current for ${action}\n  ${reasons}`,
++    );
++  }
++}
++
++async function requireManagedDelivery(name: string, purpose: string): Promise<void> {
++  const { file } = await stateFile(name);
++  const record = (await readDocument(file)).toJS() as Record<string, unknown>;
++  if (record.managed_delivery !== true) {
++    fail(`ERROR: ${purpose} requires managed delivery; '${name}' is not initialized with --managed-delivery`);
++  }
++}
++
++// Raw state record access shared by the managed gate subcommands. All of them
++// judge on the same .comet.yaml document the Runtime transactions own.
++async function managedStateRecord(name: string): Promise<{ directory: string; record: Record<string, unknown> }> {
++  const { directory } = await stateFile(name);
++  const { file } = await stateFile(name);
++  const document = await readDocument(file);
++  const record = (document.toJS() ?? {}) as Record<string, unknown>;
++  return { directory, record };
++}
++
++function gateStateInputFrom(record: Record<string, unknown>) {
++  return {
++    designDoc: typeof record.design_doc === 'string' && record.design_doc !== 'null' ? record.design_doc : null,
++    plan: typeof record.plan === 'string' && record.plan !== 'null' ? record.plan : null,
++    testIntent: typeof record.test_intent === 'string' && record.test_intent !== 'null' ? record.test_intent : null,
++    gateReceipts: record.gate_receipts ?? null,
++  };
++}
++
++async function currentGateInputs(
++  directory: string,
++  record: Record<string, unknown>,
++  gate: GateId,
++) {
++  return computeGateInputs({
++    projectRoot: classicCommandProjectRoot(),
++    changeDir: directory,
++    gate,
++    state: gateStateInputFrom(record),
++    run: await readRunState(directory),
++  });
++}
++
+ async function requireBuildDecisions(name: string): Promise<void> {
+   const { file } = await stateFile(name);
+   const record = (await readDocument(file)).toJS() as Record<string, unknown>;
+@@ -877,6 +1005,7 @@ async function transitionLocked(output: CommandOutput, name: string, event: stri
+   } else if (event === 'design-complete') {
+     await requirePhase(name, 'design');
+     await requireDesignEvidence(name);
++    await requireGatePremises(name, 'enter-build');
+   } else if (event === 'build-complete') {
+     await requirePhase(name, 'build');
+     await requireBuildDecisions(name);
+@@ -916,6 +1045,18 @@ async function transitionLocked(output: CommandOutput, name: string, event: stri
+     if ((await readField(name, 'archived')) === 'true') {
+       fail(`ERROR: Cannot transition '${name}': already archived`);
+     }
++  } else if (event === 'architecture-repair' || event === 'test-design-repair') {
++    // Managed rework routes (contract section 5): the SAME run returns to
++    // design for the named repair. Only managed delivery exposes them, so
++    // hand phase edits stay impossible everywhere else.
++    await requireManagedDelivery(name, `transition '${event}'`);
++    const phaseNow = await readField(name, 'phase');
++    const allowedPhases = event === 'architecture-repair' ? ['build'] : ['build', 'verify'];
++    if (!allowedPhases.includes(phaseNow)) {
++      fail(
++        `ERROR: Cannot transition '${name}': ${event} requires phase ${allowedPhases.join(' or ')}, got ${phaseNow}`,
++      );
++    }
+   } else if (event === 'preset-escalate') {
+     // preset (hotfix/tweak) → full: rewind phase to design so the agent can
+     // supplement a Design Doc before continuing. Unlike verify-fail /
+@@ -976,6 +1117,25 @@ async function next(output: CommandOutput, name: string): Promise<void> {
+     configuration: sparseClassicState(record),
+   };
+   if (scalar(record.archived) === 'true') {
++    // D07/E02/H07: archived proves the spec operation only. A managed run
++    // with an unmet run-level knowledge obligation keeps the SAME run open
++    // and points next at the closeout — it is never completed here.
++    if (knowledgeCloseoutBlocked({
++      managedDelivery: record.managed_delivery === true,
++      knowledgeCloseoutRequired: record.knowledge_closeout_required === true,
++      knowledgeCloseout: record.knowledge_closeout ?? null,
++    })) {
++      output.data = {
++        change: name,
++        phase,
++        configuration: sparseClassicState(record),
++        nextAction: { kind: 'knowledge-closeout' },
++        completion: 'blocked: the run-level knowledge closeout obligation is unmet; archived does not complete this run',
++      };
++      output.stdout.push('NEXT: knowledge-closeout');
++      output.stdout.push(`ROUTE: ${repairRoute('K')}`);
++      return;
++    }
+     const delivery = await readClassicDelivery(classicCommandProjectRoot(), directory);
+     const complete = ['complete', 'local-verified'].includes(delivery.verification.status);
+     output.data = {
+@@ -1020,6 +1180,26 @@ async function next(output: CommandOutput, name: string): Promise<void> {
+   if (!skill) {
+     fail(`ERROR: Cannot resolve next step for '${name}': unknown phase '${phase || 'null'}'`);
+   }
++  // Managed gates: next carries the same premise evaluation every other
++  // entrance consumes, with the fixed rework route when blocked.
++  if (record.managed_delivery === true && ['design', 'build', 'verify'].includes(phase)) {
++    const { directory: gateDir } = await stateFile(name);
++    const action = phase === 'design' ? 'enter-build' : phase === 'build' ? 'enter-verify' : 'enter-archive';
++    const evaluation = await evaluateGatePremises({
++      projectRoot: classicCommandProjectRoot(),
++      changeDir: gateDir,
++      classic: { ...gateStateInputFrom(record), managedDelivery: true },
++      run: await readRunState(gateDir),
++      action,
++    });
++    output.data = {
++      ...(output.data && typeof output.data === 'object' ? output.data : {}),
++      gates: evaluation,
++    };
++    if (!evaluation.allowed) {
++      output.stdout.push(`ROUTE: ${evaluation.routes[0]}`);
++    }
++  }
+   output.envelope = classicNextEnvelope({
+     name,
+     phase,
+@@ -1330,6 +1510,25 @@ async function check(
+         : `archived=${archived} (ready for archive confirmation)`,
+     );
+   }
++  // Managed delivery entry gates (C07 7th entrance semantics): the entry
++  // check set for a phase includes the same gate premises the guard,
++  // transitions, write hook, resolver and completion predicate consume.
++  if (record.managed_delivery === true && ['design', 'build', 'verify'].includes(phase)) {
++    const action = phase === 'design' ? 'enter-build' : phase === 'build' ? 'enter-verify' : 'enter-archive';
++    const evaluation = await evaluateGatePremises({
++      projectRoot: classicCommandProjectRoot(),
++      changeDir: directory,
++      classic: { ...gateStateInputFrom(record), managedDelivery: true },
++      run: await readRunState(directory),
++      action,
++    });
++    for (const gate of requiredGates(action)) {
++      if (evaluation.missing.includes(gate)) reject(`managed gate ${gate}: no accepted receipt (dispatch and accept through the Runtime)`);
++      else if (evaluation.stale.includes(gate)) reject(`managed gate ${gate}: receipt is stale against current inputs`);
++      else if (evaluation.rejected.includes(gate)) reject(`managed gate ${gate}: rejected — rework required`);
++      else pass(`managed gate ${gate}: current`);
++    }
++  }
+   const binding = await resolveBranchBinding(directory, {
+     heal: true,
+     cwd: classicCommandInvocationCwd(),
+@@ -1795,6 +1994,298 @@ async function recordCheck(
+   }
+ }
+ 
++// ---- managed delivery gate runtime commands (0002) -------------------------
++
++async function gatesStatus(output: CommandOutput, name: string): Promise<void> {
++  validateChangeName(name);
++  const { directory, record } = await managedStateRecord(name);
++  const managed = record.managed_delivery === true;
++  const phase = typeof record.phase === 'string' ? record.phase : null;
++  const action =
++    phase === 'design' ? 'enter-build' : phase === 'build' ? 'enter-verify' : phase === 'verify' ? 'enter-archive' : null;
++  let evaluation = null;
++  if (managed && action) {
++    evaluation = await evaluateGatePremises({
++      projectRoot: classicCommandProjectRoot(),
++      changeDir: directory,
++      classic: { ...gateStateInputFrom(record), managedDelivery: true },
++      run: await readRunState(directory),
++      action,
++    });
++  }
++  const completionBlocked = knowledgeCloseoutBlocked({
++    managedDelivery: managed,
++    knowledgeCloseoutRequired: record.knowledge_closeout_required === true,
++    knowledgeCloseout: record.knowledge_closeout ?? null,
++  });
++  output.data = {
++    change: name,
++    managed,
++    phase,
++    policyVersion: GATE_POLICY_VERSION,
++    action,
++    evaluation,
++    knowledgeCloseoutRequired: record.knowledge_closeout_required === true,
++    knowledgeCloseoutRecorded: Boolean(record.knowledge_closeout),
++    completionBlocked,
++    receipts: parseGateReceipts(record.gate_receipts ?? null),
++  };
++  if (completionBlocked) {
++    output.stdout.push(`COMPLETION: blocked — ${repairRoute('K')}`);
++  } else {
++    output.stdout.push(`COMPLETION: ${managed ? 'allowed' : 'unmanaged'}`);
++  }
++  if (evaluation && !evaluation.allowed) {
++    for (const detail of evaluation.details) output.stdout.push(`GATE: ${detail}`);
++    for (const route of evaluation.routes) output.stdout.push(`ROUTE: ${route}`);
++  }
++}
++
++async function dispatchGate(output: CommandOutput, name: string, gate: string): Promise<void> {
++  validateChangeName(name);
++  if (!isGateId(gate)) fail(`ERROR: gate must be one of R/A/T/P/V/K, got '${gate}'`);
++  const { directory, record } = await managedStateRecord(name);
++  if (record.managed_delivery !== true) {
++    fail(`ERROR: gate dispatching requires managed delivery; '${name}' is not managed`);
++  }
++  if (record.archived === true) fail(`ERROR: '${name}' is archived; gate dispatching is closed`);
++  await withClassicStateLock(directory, async () => {
++    const registry = await readGateDispatches(directory);
++    const inputs = await currentGateInputs(directory, record, gate);
++    if (inputs.missing.length > 0) {
++      fail(
++        `ERROR: gate ${gate} inputs are incomplete:\n  ${inputs.missing.join('\n  ')}\n  Declare the artifacts (design_doc / test_intent / plan) before dispatching.`,
++      );
++    }
++    const priorForVersion = registry.dispatches.filter(
++      (entry) => entry.gate === gate && entry.inputDigest === inputs.digest,
++    );
++    const rejections = priorForVersion.filter((entry) => entry.verdict === 'reject').length;
++    if (rejections >= GATE_REWORK_BUDGET) {
++      fail(
++        `ERROR: gate ${gate} exhausted its rework budget (${rejections} rejections for this input version)\n  Route: waiting-decision — report the blocking findings to the owning role`,
++      );
++    }
++    const epoch = typeof record.check_epoch === 'number' ? record.check_epoch : 0;
++    const execution = `gate-${gate.toLowerCase()}-${Date.now().toString(36)}-${randomBytes(4).toString('hex')}`;
++    const dispatch = {
++      gate,
++      role: GATE_ROLES[gate],
++      execution,
++      attempt: priorForVersion.length + 1,
++      inputDigest: inputs.digest,
++      dependsOn: inputs.dependsOn,
++      issuedAt: new Date().toISOString(),
++      epoch,
++      state: 'open' as const,
++    };
++    registry.dispatches.push(dispatch);
++    await writeGateDispatches(directory, registry);
++    output.data = { change: name, gate, dispatch };
++    output.stdout.push(
++      JSON.stringify({
++        execution,
++        attempt: dispatch.attempt,
++        role: dispatch.role,
++        inputDigest: inputs.digest,
++        dependsOn: inputs.dependsOn,
++      }),
++    );
++    output.stderr.push(green(`[DISPATCHED] gate ${gate} execution ${execution} (attempt ${dispatch.attempt})`));
++  });
++}
++
++async function acceptGate(
++  output: CommandOutput,
++  name: string,
++  gate: string,
++  resultFile: string,
++): Promise<void> {
++  validateChangeName(name);
++  if (!isGateId(gate)) fail(`ERROR: gate must be one of R/A/T/P/V/K, got '${gate}'`);
++  let raw: string;
++  try {
++    raw = await fs.readFile(path.resolve(classicCommandInvocationCwd(), resultFile), 'utf8');
++  } catch (error) {
++    fail(`ERROR: cannot read gate result file ${resultFile}: ${error instanceof Error ? error.message : String(error)}`);
++  }
++  let result: Record<string, unknown>;
++  try {
++    result = JSON.parse(raw) as Record<string, unknown>;
++  } catch (error) {
++    fail(`ERROR: gate result file is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
++  }
++  if (
++    typeof result.execution !== 'string' ||
++    !result.execution ||
++    !Number.isInteger(result.attempt) ||
++    (result.attempt as number) < 1 ||
++    (result.verdict !== 'pass' && result.verdict !== 'reject')
++  ) {
++    fail('ERROR: gate result requires { execution, attempt, verdict: pass|reject, findings? }');
++  }
++  if (result.verdict === 'reject' && (!Array.isArray(result.findings) || result.findings.length === 0)) {
++    fail('ERROR: a gate rejection must carry structured findings (the rework route needs them)');
++  }
++  const { directory } = await stateFile(name);
++  await withClassicStateLock(directory, async () => {
++    const registry = await readGateDispatches(directory);
++    const dispatch = registry.dispatches.find(
++      (entry) =>
++        entry.gate === gate &&
++        entry.execution === result.execution &&
++        entry.attempt === result.attempt,
++    );
++    if (!dispatch) {
++      fail(
++        `ERROR: no Runtime dispatch for gate ${gate} execution ${result.execution} attempt ${result.attempt}; author-written results are never acceptable without a Runtime-issued dispatch (D01)`,
++      );
++    }
++    if (dispatch.state !== 'open') {
++      fail(`ERROR: dispatch ${dispatch.execution} is already ${dispatch.state}; a dispatch accepts exactly one result (idempotent refusal)`);
++    }
++    const { record } = await managedStateRecord(name);
++    const inputs = await currentGateInputs(directory, record, gate);
++    if (inputs.digest !== dispatch.inputDigest) {
++      dispatch.state = 'stale';
++      await writeGateDispatches(directory, registry);
++      fail(
++        `ERROR: gate ${gate} inputs changed after dispatch — the review result is stale and cannot be accepted (D02)\n  Route: re-dispatch and re-review the current inputs`,
++      );
++    }
++    const projection = await readClassicState(directory, { migrate: false });
++    if (!projection.classic) fail('ERROR: Classic state is missing');
++    const receipts = parseGateReceipts(projection.classic.gateReceipts);
++    const receipt = {
++      gate,
++      verdict: result.verdict as 'pass' | 'reject',
++      digest: inputs.digest,
++      dependsOn: inputs.dependsOn,
++      execution: dispatch.execution,
++      attempt: dispatch.attempt,
++      epoch: (projection.classic.checkEpoch ?? 0) + 1,
++      policyVersion: GATE_POLICY_VERSION,
++      acceptedAt: new Date().toISOString(),
++      report: typeof result.report === 'string' ? result.report : null,
++      reportDigest: typeof result.reportDigest === 'string' ? result.reportDigest : null,
++      findings: Array.isArray(result.findings) ? result.findings.map(String) : [],
++    };
++    // Consume the dispatch first: an interrupted acceptance re-evaluates as
++    // "no receipt" (safe retry) instead of allowing a duplicate accept.
++    dispatch.state = 'consumed';
++    dispatch.verdict = receipt.verdict;
++    await writeGateDispatches(directory, registry);
++    const classic: ClassicState = {
++      ...projection.classic,
++      gateReceipts: stableStringify([...receipts, receipt]),
++      checkEpoch: (projection.classic.checkEpoch ?? 0) + 1,
++    };
++    await writeClassicState(directory, {
++      classic,
++      run: projection.run,
++      unknownKeys: projection.unknownKeys,
++    });
++    await appendClassicStateEvent(directory, {
++      change: name,
++      event: `gate-${gate.toLowerCase()}-${receipt.verdict}` as ClassicStateEventInput['event'],
++      source: 'comet-state',
++      from: projection.classic,
++      to: classic,
++      effects: [{ field: 'gateReceipts', from: null, to: receipt.verdict }],
++    });
++    output.data = { change: name, gate, verdict: receipt.verdict, receipt };
++    output.stderr.push(
++      green(`[ACCEPTED] gate ${gate} ${receipt.verdict} execution ${dispatch.execution} (epoch ${classic.checkEpoch})`),
++    );
++    if (receipt.verdict === 'reject') {
++      output.stderr.push(yellow(`ROUTE: ${repairRoute(gate)}`));
++    }
++  });
++}
++
++async function recordKnowledgeCloseout(
++  output: CommandOutput,
++  name: string,
++  receiptFile: string,
++): Promise<void> {
++  validateChangeName(name);
++  let raw: string;
++  try {
++    raw = await fs.readFile(path.resolve(classicCommandInvocationCwd(), receiptFile), 'utf8');
++  } catch (error) {
++    fail(`ERROR: cannot read knowledge closeout file ${receiptFile}: ${error instanceof Error ? error.message : String(error)}`);
++  }
++  let closeout;
++  try {
++    closeout = parseKnowledgeCloseout(JSON.parse(raw));
++  } catch (error) {
++    fail(error instanceof Error ? error.message : String(error));
++  }
++  if (!closeout) fail('ERROR: knowledge closeout receipt is empty');
++  const { directory } = await stateFile(name);
++  await withClassicStateLock(directory, async () => {
++    if (closeout.targetKind === 'file') {
++      // D06: the Runtime reads the target back itself before recording; an
++      // unknown or changed target is never accepted.
++      const actual = await knowledgeTargetDigest(classicCommandProjectRoot(), closeout.target);
++      if (actual === null) {
++        fail(`ERROR: knowledge target ${closeout.target} is missing; the independent readback cannot confirm the publication`);
++      }
++      if (actual !== closeout.readbackDigest) {
++        fail(
++          `ERROR: knowledge target ${closeout.target} read back as ${actual.slice(0, 12)}… but the receipt recorded ${closeout.readbackDigest.slice(0, 12)}…; result unknown is never accepted (D06)`,
++        );
++      }
++    } else {
++      // External publication target (LLMWiki/Outline): only acceptable with a
++      // Runtime-issued K dispatch — the driver registers the publication.
++      const registry = await readGateDispatches(directory);
++      const dispatch = registry.dispatches.find(
++        (entry) => entry.gate === 'K' && entry.execution === closeout.execution,
++      );
++      if (!dispatch) {
++        fail(
++          `ERROR: external knowledge closeout execution ${closeout.execution} has no Runtime K dispatch; driver-registered publication is required`,
++        );
++      }
++      if (dispatch.state === 'open') {
++        dispatch.state = 'consumed';
++        dispatch.verdict = 'pass';
++        await writeGateDispatches(directory, registry);
++      }
++    }
++    const projection = await readClassicState(directory, { migrate: false });
++    if (!projection.classic) fail('ERROR: Classic state is missing');
++    if (!projection.classic.managedDelivery) {
++      fail(`ERROR: knowledge closeout requires managed delivery; '${name}' is not managed`);
++    }
++    const previous = parseKnowledgeCloseout(projection.classic.knowledgeCloseout);
++    if (previous) {
++      if (stableStringify(previous) !== stableStringify(closeout)) {
++        fail('ERROR: a different knowledge closeout is already recorded; conflicting re-recording is refused');
++      }
++      output.data = { change: name, knowledgeCloseout: previous, alreadyRecorded: true };
++      output.stderr.push(green(`[UNCHANGED] knowledge closeout already recorded for '${name}'`));
++      return;
++    }
++    const classic: ClassicState = {
++      ...projection.classic,
++      knowledgeCloseout: stableStringify(closeout),
++      checkEpoch: (projection.classic.checkEpoch ?? 0) + 1,
++    };
++    await writeClassicState(directory, {
++      classic,
++      run: projection.run,
++      unknownKeys: projection.unknownKeys,
++    });
++    // Refresh the derived run status: with the seat filled, the resolver may
++    // now legitimately return completed (D07 recovery).
++    await reconcileClassicRuntimeRun(directory);
++    output.data = { change: name, knowledgeCloseout: closeout, alreadyRecorded: false };
++    output.stderr.push(green(`[RECORDED] knowledge closeout ${closeout.targetKind}:${closeout.target} rev ${closeout.revision}`));
++  });
++}
++
+ function required(args: string[], count: number, usage: string): void {
+   if (args.length < count) fail(usage);
+ }
+@@ -1816,6 +2307,9 @@ const MUTATING_STATE_COMMANDS = new Set([
+   'select',
+   'clear-selection',
+   'complete-design',
++  'dispatch-gate',
++  'accept-gate',
++  'knowledge-closeout',
+ ]);
+ 
+ async function assertStateCommandWritable(subcommand: string | undefined): Promise<void> {
+@@ -1949,13 +2443,25 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
+         required(rest, 2, 'Usage: comet state init <change-name> <workflow>');
+         const initOptions = rest.slice(2);
+         let isolation: string | null = null;
+-        if (initOptions.length > 0) {
+-          if (initOptions.length !== 2 || initOptions[0] !== '--isolation') {
+-            fail('Usage: comet state init <change-name> <workflow> [--isolation <mode>]');
++        let managedDelivery = false;
++        let knowledgeCloseoutRequired = false;
++        for (let index = 0; index < initOptions.length; index++) {
++          const option = initOptions[index];
++          if (option === '--isolation') {
++            if (index + 1 >= initOptions.length) fail('Usage: comet state init <change-name> <workflow> [--isolation <mode>] [--managed-delivery] [--knowledge-closeout-required <true|false>]');
++            isolation = initOptions[++index];
++          } else if (option === '--managed-delivery') {
++            managedDelivery = true;
++          } else if (option === '--knowledge-closeout-required') {
++            if (index + 1 >= initOptions.length || !['true', 'false'].includes(initOptions[index + 1])) {
++              fail('Usage: comet state init <change-name> <workflow> [--isolation <mode>] [--managed-delivery] [--knowledge-closeout-required <true|false>]');
++            }
++            knowledgeCloseoutRequired = initOptions[++index] === 'true';
++          } else {
++            fail('Usage: comet state init <change-name> <workflow> [--isolation <mode>] [--managed-delivery] [--knowledge-closeout-required <true|false>]');
+           }
+-          isolation = initOptions[1];
+         }
+-        await init(output, rest[0], rest[1], isolation);
++        await init(output, rest[0], rest[1], isolation, managedDelivery, knowledgeCloseoutRequired);
+       } else if (subcommand === 'get') {
+         required(rest, 2, 'Usage: comet state get <change-name> <field>');
+         validateChangeName(rest[0]);
+@@ -2051,6 +2557,22 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
+       } else if (subcommand === 'next') {
+         required(rest, 1, 'Usage: comet state next <change-name>');
+         await next(output, rest[0]);
++      } else if (subcommand === 'gates') {
++        requiredExact(rest, 1, 'Usage: comet state gates <change-name>');
++        await gatesStatus(output, rest[0]);
++      } else if (subcommand === 'dispatch-gate') {
++        requiredExact(rest, 2, 'Usage: comet state dispatch-gate <change-name> <R|A|T|P|V|K>');
++        await dispatchGate(output, rest[0], rest[1]);
++      } else if (subcommand === 'accept-gate') {
++        if (rest.length !== 4 || rest[2] !== '--file') {
++          fail('Usage: comet state accept-gate <change-name> <R|A|T|P|V|K> --file <result.json>');
++        }
++        await acceptGate(output, rest[0], rest[1], rest[3]);
++      } else if (subcommand === 'knowledge-closeout') {
++        if (rest.length !== 3 || rest[1] !== '--file') {
++          fail('Usage: comet state knowledge-closeout <change-name> --file <receipt.json>');
++        }
++        await recordKnowledgeCloseout(output, rest[0], rest[2]);
+       } else {
+         fail(`Unknown subcommand: ${subcommand ?? ''}`);
+       }
+diff --git a/domains/comet-classic/classic-state-events.ts b/domains/comet-classic/classic-state-events.ts
+index 4e7c8c9..12e48be 100644
+--- a/domains/comet-classic/classic-state-events.ts
++++ b/domains/comet-classic/classic-state-events.ts
+@@ -7,7 +7,7 @@ export type ClassicStateEventSource = 'comet-state' | 'comet-guard' | 'comet-arc
+ 
+ export interface ClassicStateEventInput {
+   change: string;
+-  event: ClassicTransitionEvent | 'rebind';
++  event: ClassicTransitionEvent | 'rebind' | `gate-${string}-${'pass' | 'reject'}`;
+   source: ClassicStateEventSource;
+   from: ClassicState;
+   to: ClassicState;
+diff --git a/domains/comet-classic/classic-state-options.ts b/domains/comet-classic/classic-state-options.ts
+index 798f913..6b237a3 100644
+--- a/domains/comet-classic/classic-state-options.ts
++++ b/domains/comet-classic/classic-state-options.ts
+@@ -8,6 +8,10 @@ export const MACHINE_OWNED_FIELDS = new Set<string>([
+   'classic_profile',
+   'classic_migration',
+   'bound_branch',
++  'managed_delivery',
++  'knowledge_closeout_required',
++  'gate_receipts',
++  'knowledge_closeout',
+ ]);
+ export const SETTABLE_FIELDS = new Set<string>(
+   CLASSIC_WIRE_KEYS.filter((field) => !MACHINE_OWNED_FIELDS.has(field)),
+@@ -31,4 +35,6 @@ export const FIELD_ENUMS: Record<string, readonly string[]> = {
+   direct_override: ['true', 'false'],
+   classic_profile: ['full', 'hotfix', 'tweak'],
+   classic_migration: ['1'],
++  managed_delivery: ['true', 'false'],
++  knowledge_closeout_required: ['true', 'false'],
+ };
+diff --git a/domains/comet-classic/classic-state.ts b/domains/comet-classic/classic-state.ts
+index 3181d17..723c1ea 100644
+--- a/domains/comet-classic/classic-state.ts
++++ b/domains/comet-classic/classic-state.ts
+@@ -58,6 +58,11 @@ export interface ClassicState {
+   handoffHash: string | null;
+   classicProfile: ClassicProfile | null;
+   classicMigration: number | null;
++  managedDelivery: boolean;
++  knowledgeCloseoutRequired: boolean;
++  testIntent: string | null;
++  gateReceipts: string | null;
++  knowledgeCloseout: string | null;
+ }
+ 
+ export interface ClassicStateProjection {
+@@ -97,6 +102,11 @@ export const CLASSIC_WIRE_KEYS = [
+   'handoff_hash',
+   'classic_profile',
+   'classic_migration',
++  'managed_delivery',
++  'knowledge_closeout_required',
++  'test_intent',
++  'gate_receipts',
++  'knowledge_closeout',
+ ] as const;
+ 
+ /** Fields that appear in .comet.yaml to link to the Run state. */
+@@ -190,6 +200,22 @@ function sha256(doc: StateDocument, key: string): string | null {
+   return value;
+ }
+ 
++function booleanOrMissing(doc: StateDocument, key: string, fallback: boolean): boolean {
++  const value = doc[key];
++  if (value === null || value === undefined || value === '') return fallback;
++  return booleanValue(doc, key, false)!;
++}
++
++function jsonDocumentValue(doc: StateDocument, key: string): string | null {
++  const value = doc[key];
++  if (value === null || value === undefined || value === '') return null;
++  if (typeof value === 'string') {
++    JSON.parse(value); // validity gate: the wire form is a JSON document
++    return value;
++  }
++  return JSON.stringify(value);
++}
++
+ function migrationVersion(doc: StateDocument): number | null {
+   const value = doc.classic_migration;
+   if (value === null || value === undefined || value === '') return null;
+@@ -240,6 +266,11 @@ function classicStateFromDocument(doc: StateDocument): ClassicState | null {
+     handoffHash: sha256(doc, 'handoff_hash'),
+     classicProfile: enumValue(doc, 'classic_profile', CLASSIC_PROFILES),
+     classicMigration: migrationVersion(doc),
++    managedDelivery: booleanOrMissing(doc, 'managed_delivery', false),
++    knowledgeCloseoutRequired: booleanOrMissing(doc, 'knowledge_closeout_required', false),
++    testIntent: relativePath(doc, 'test_intent'),
++    gateReceipts: jsonDocumentValue(doc, 'gate_receipts'),
++    knowledgeCloseout: jsonDocumentValue(doc, 'knowledge_closeout'),
+   };
+ }
+ 
+@@ -331,5 +362,10 @@ export function classicStateToDocument(state: ClassicState): StateDocument {
+     handoff_hash: state.handoffHash,
+     classic_profile: state.classicProfile,
+     classic_migration: state.classicMigration,
++    managed_delivery: state.managedDelivery,
++    knowledge_closeout_required: state.knowledgeCloseoutRequired,
++    test_intent: state.testIntent,
++    gate_receipts: state.gateReceipts,
++    knowledge_closeout: state.knowledgeCloseout,
+   };
+ }
+diff --git a/domains/comet-classic/classic-transitions.ts b/domains/comet-classic/classic-transitions.ts
+index b517351..3f6f9d9 100644
+--- a/domains/comet-classic/classic-transitions.ts
++++ b/domains/comet-classic/classic-transitions.ts
+@@ -10,6 +10,8 @@ export const CLASSIC_TRANSITION_EVENTS = [
+   'archive-reopen',
+   'archived',
+   'preset-escalate',
++  'architecture-repair',
++  'test-design-repair',
+ ] as const;
+ 
+ export type ClassicTransitionEvent = (typeof CLASSIC_TRANSITION_EVENTS)[number];
+@@ -79,6 +81,20 @@ export const CLASSIC_TRANSITION_TABLE: Record<ClassicTransitionEvent, ClassicTra
+       from: 'build',
+       guardRefs: ['preset-workflow'],
+     },
++    // Managed rework routes (contract section 5): the Runtime moves the SAME
++    // run back to design for the named repair; there is no hand phase edit
++    // and no second controller. Gated to managed delivery at the command
++    // surface.
++    'architecture-repair': {
++      event: 'architecture-repair',
++      from: 'build',
++      guardRefs: ['managed-delivery'],
++    },
++    'test-design-repair': {
++      event: 'test-design-repair',
++      from: 'build',
++      guardRefs: ['managed-delivery'],
++    },
+   };
+ 
+ export const CLASSIC_GUARD_TRANSITION_EVENT: Partial<Record<ClassicPhase, ClassicTransitionEvent>> =
+@@ -110,7 +126,15 @@ export function applyClassicTransition(
+   options: { now?: Date } = {},
+ ): ClassicTransitionResult {
+   const definition = CLASSIC_TRANSITION_TABLE[event];
+-  if (current.phase !== definition.from) {
++  // test-design-repair is reachable from build and from verify (a V finding
++  // can be a test-intent defect): the route always lands in design.
++  if (event === 'test-design-repair') {
++    if (current.phase !== 'build' && current.phase !== 'verify') {
++      throw new Error(
++        `Cannot apply ${event}: phase is '${current.phase}', expected 'build' or 'verify'`,
++      );
++    }
++  } else if (current.phase !== definition.from) {
+     throw new Error(
+       `Cannot apply ${event}: phase is '${current.phase}', expected '${definition.from}'`,
+     );
+@@ -149,6 +173,18 @@ export function applyClassicTransition(
+     setField(classic, effects, 'verifyFailures', classic.verifyFailures + 1);
+     setField(classic, effects, 'phase', 'build');
+     setField(classic, effects, 'branchStatus', 'pending');
++  } else if (event === 'architecture-repair' || event === 'test-design-repair') {
++    // The same run returns to design for the named repair. A repair from a
++    // verify-phase rejection resets the verification surface exactly like
++    // archive-reopen does; from build only the phase moves.
++    if (event === 'test-design-repair' && current.phase === 'verify') {
++      setField(classic, effects, 'verifyResult', 'pending');
++      setField(classic, effects, 'verifyFailures', 0);
++      setField(classic, effects, 'verifiedAt', null);
++      setField(classic, effects, 'archiveConfirmation', null);
++      setField(classic, effects, 'branchStatus', 'pending');
++    }
++    setField(classic, effects, 'phase', 'design');
+   } else if (event === 'preset-escalate') {
+     if (classic.workflow !== 'hotfix' && classic.workflow !== 'tweak') {
+       throw new Error(

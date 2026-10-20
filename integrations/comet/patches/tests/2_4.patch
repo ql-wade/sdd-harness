@@ -1,0 +1,125 @@
+diff --git a/test/domains/comet-classic/comet-scripts.test.ts b/test/domains/comet-classic/comet-scripts.test.ts
+index 3344526..f9d97a7 100644
+--- a/test/domains/comet-classic/comet-scripts.test.ts
++++ b/test/domains/comet-classic/comet-scripts.test.ts
+@@ -7082,3 +7082,120 @@ describe('comet scripts', () => {
+     );
+   });
+ });
++
++describe('managed delivery gate runtime (0002-managed-delivery-runtime)', () => {
++  let tmpDir: string;
++  let stateScript: string;
++  let tmpScriptsDir: string;
++
++  const writeManagedArtifacts = async (change: string) => {
++    const dir = path.join(tmpDir, 'openspec', 'changes', change);
++    await fs.mkdir(dir, { recursive: true });
++    await fs.writeFile(path.join(dir, 'proposal.md'), '# Proposal\n\nManaged smoke probe.\n');
++    return dir;
++  };
++
++  beforeEach(async () => {
++    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'comet-managed-'));
++    await fs.mkdir(tmpDir, { recursive: true });
++    tmpScriptsDir = path.join(tmpDir, 'scripts');
++    await fs.mkdir(tmpScriptsDir, { recursive: true });
++    for (const name of ['comet-runtime.mjs', 'comet-state.mjs', 'comet-yaml-validate.mjs']) {
++      const content = await fs.readFile(path.join(scriptsDir, name), 'utf-8');
++      const destination = path.join(tmpScriptsDir, name);
++      await fs.writeFile(destination, content.replace(/\r\n/g, '\n'));
++      await fs.chmod(destination, 0o755);
++    }
++    stateScript = path.join(tmpScriptsDir, 'comet-state.mjs');
++    await writeFile(path.join(tmpDir, '.comet', 'config.yaml'), canonicalProjectConfig());
++    await writeFile(path.join(tmpDir, 'openspec', 'config.yaml'), 'schema: spec-driven\n');
++  });
++
++  afterEach(async () => {
++    await fs.rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
++  });
++
++  it('writes the managed delivery wire fields only for --managed-delivery (full workflow only)', async () => {
++    const managed = runNode(tmpDir, stateScript, [
++      'init', 'managed-change', 'full', '--managed-delivery', '--knowledge-closeout-required', 'true',
++    ]);
++    expect(managed.status).toBe(0);
++    const yaml = await fs.readFile(path.join(tmpDir, 'openspec', 'changes', 'managed-change', '.comet.yaml'), 'utf-8');
++    expect(yaml).toContain('managed_delivery: true');
++    expect(yaml).toContain('knowledge_closeout_required: true');
++    expect(yaml).toContain('gate_receipts: null');
++
++    const preset = runNode(tmpDir, stateScript, [
++      'init', 'preset-managed', 'hotfix', '--managed-delivery',
++    ]);
++    expect(preset.status).not.toBe(0);
++    expect(preset.stderr).toContain('full workflow');
++
++    const unmanaged = runNode(tmpDir, stateScript, ['init', 'plain-change', 'full']);
++    expect(unmanaged.status).toBe(0);
++    const plainYaml = await fs.readFile(path.join(tmpDir, 'openspec', 'changes', 'plain-change', '.comet.yaml'), 'utf-8');
++    expect(plainYaml).not.toContain('managed_delivery');
++  }, 20_000);
++
++  it('keeps gate receipts machine-owned: hand-written receipts are refused (D01)', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'd01', 'full', '--managed-delivery']).status).toBe(0);
++    const forged = runNode(tmpDir, stateScript, [
++      'set', 'd01', 'gate_receipts', '[{"gate":"R","verdict":"pass"}]',
++    ]);
++    expect(forged.status).not.toBe(0);
++    expect(forged.stderr).toContain('machine-owned');
++    const forgedAuthor = runNode(tmpDir, stateScript, [
++      'set', 'd01', 'gate_receipts',
++      '[{"gate":"R","verdict":"pass","digest":"' + 'a'.repeat(64) + '","execution":"author","attempt":1,"epoch":0,"policyVersion":"managed-delivery.v1","acceptedAt":"2026-10-20"}]',
++    ]);
++    expect(forgedAuthor.status).not.toBe(0);
++    const resultFile = path.join(tmpDir, 'forged-result.json');
++    await fs.writeFile(resultFile, JSON.stringify({ execution: 'author-fabricated', attempt: 1, verdict: 'pass' }));
++    const refused = runNode(tmpDir, stateScript, ['accept-gate', 'd01', 'R', '--file', resultFile]);
++    expect(refused.status).not.toBe(0);
++    expect(refused.stderr).toContain('no Runtime dispatch');
++  }, 20_000);
++
++  it('dispatches a gate with a Runtime role and accepts exactly one result', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'happy', 'full', '--managed-delivery']).status).toBe(0);
++    await writeManagedArtifacts('happy');
++    const dispatched = runNode(tmpDir, stateScript, ['dispatch-gate', 'happy', 'R']);
++    expect(dispatched.status).toBe(0);
++    const binding = JSON.parse(dispatched.stdout.trim().split('\n').pop() ?? '{}');
++    expect(binding.role).toBe('requirements-owner');
++    expect(binding.inputDigest).toMatch(/^[a-f0-9]{64}$/);
++    const resultFile = path.join(tmpDir, 'r-result.json');
++    await fs.writeFile(resultFile, JSON.stringify({ execution: binding.execution, attempt: binding.attempt, verdict: 'pass' }));
++    const accepted = runNode(tmpDir, stateScript, ['accept-gate', 'happy', 'R', '--file', resultFile]);
++    expect(accepted.status).toBe(0);
++    const replay = runNode(tmpDir, stateScript, ['accept-gate', 'happy', 'R', '--file', resultFile]);
++    expect(replay.status).not.toBe(0);
++    expect(replay.stderr).toContain('already consumed');
++  }, 20_000);
++
++  it('refuses a review result whose inputs changed after dispatch (D02)', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'd02', 'full', '--managed-delivery']).status).toBe(0);
++    const dir = await writeManagedArtifacts('d02');
++    const dispatched = runNode(tmpDir, stateScript, ['dispatch-gate', 'd02', 'R']);
++    expect(dispatched.status).toBe(0);
++    const binding = JSON.parse(dispatched.stdout.trim().split('\n').pop() ?? '{}');
++    await fs.writeFile(path.join(dir, 'proposal.md'), '# Proposal\n\nRevised mid-review.\n');
++    const resultFile = path.join(tmpDir, 'stale.json');
++    await fs.writeFile(resultFile, JSON.stringify({ execution: binding.execution, attempt: binding.attempt, verdict: 'pass' }));
++    const refused = runNode(tmpDir, stateScript, ['accept-gate', 'd02', 'R', '--file', resultFile]);
++    expect(refused.status).not.toBe(0);
++    expect(refused.stderr).toContain('changed after dispatch');
++  }, 20_000);
++
++  it('refuses the phase escape hatch and Runtime-stamped fields in managed delivery (B4)', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'b4', 'full', '--managed-delivery']).status).toBe(0);
++    const forced = runNode(tmpDir, stateScript, ['set', 'b4', 'phase', 'build'], { COMET_FORCE_PHASE: '1' });
++    expect(forced.status).not.toBe(0);
++    expect(forced.stderr).toContain('does not lower managed gates');
++    const stamped = runNode(tmpDir, stateScript, ['set', 'b4', 'verify_result', 'pass']);
++    expect(stamped.status).not.toBe(0);
++    expect(stamped.stderr).toContain('Runtime-stamped');
++    const knowledge = runNode(tmpDir, stateScript, ['set', 'b4', 'knowledge_closeout_required', 'false']);
++    expect(knowledge.status).not.toBe(0);
++  }, 20_000);
++});

@@ -1,0 +1,164 @@
+{
+ "task": "P2_4 (原任务 2.4): 按 classic-gate-runtime-contract.md 评审并最小扩展同一 Classic 的 policy/receipt/evaluate、共同转换条件、受管写入、resolver/continuation、状态事务和 archive/completed；先用 D01–D08 真实入口负例复现，再实现阻断/返工/失效与恢复",
+ "run": "impl-dfr-20261020-r1",
+ "worktree": "impl/p2-4-managed-delivery-runtime (base 1259636)",
+ "worker": "P2_4 implementation worker",
+ "final_status": "GREEN",
+ "acceptance_ids": {
+  "targeted": [
+   "D01",
+   "D02",
+   "D03",
+   "D04",
+   "D05",
+   "D06",
+   "D07",
+   "D08",
+   "C07",
+   "B1",
+   "B4",
+   "Kt"
+  ],
+  "note": "D01–D08+C07 为任务指定验收；B1/B4 为 brief 指定的 seam（P1_4 路由，登记于其 SC-01/SC-02）；Kt 为 P1_5 路由的 run 级座位。全部经真实 0002 构建 CLI 正负例。"
+ },
+ "final_fingerprint": "9b95a0ff54ee00abd03ba9fb507cd93f03c8a464a743658898c474a51dc89b10",
+ "fingerprint_note": "0001+tests/1_6+0002+tests/2_4 四 patch 叠加后的合法新 fingerprint（fingerprintOf = archive+patches+toolchain 的 sha256）；未回写任何历史记录（toolchain-baseline.json/mode-qualification.json 等历史登记保持原样，归属各原任务在集成时再更新）",
+ "red_cases": [
+  {
+   "id": "RED (全部工作包 2.4.a–2.4.d)",
+   "classification": "缺口已复现",
+   "claim": "对未打 0002 的构建（cb1151b4，0001+tests/1_6）：受管交付运行时面完全缺失——state init --managed-delivery 被 usage 拒绝（选项不存在）；dispatch-gate/accept-gate/gates/knowledge-closeout/architecture-repair/test-design-repair 全部 Unknown subcommand；B1 无必需检查身份注册表（平凡 exit-0 可放行，P1_4 SC-01 复验）；B4 COMET_SKIP_BUILD 可零检查归档（P1_4 SC-02 复验）；无 run 级 Kt 座位（archived 即 completed）",
+   "evidence": "worker-reports/P2_4/evidence/red-2_4-mjs.txt（终版测试文件对 cb1151b4 构建：10/10 fail / 0 pass，node --test）",
+   "note": "P1_4 的 B2（漏必需检查）/B3（旧/手工回执）原生阻断在 1_4.mjs 全目录回归中持续复验通过（见 regression-lock-revert-proof.txt，32/32），与 P1_4 探针登记一致，本任务不重复造证"
+  }
+ ],
+ "green_summary": {
+  "D_series": {
+   "D01": "author 自写 passed 回执（state set gate_receipts）被 machine-owned 拒绝；无 Runtime dispatch 的 accept-gate（伪造 execution）被拒并指名 D01；正例：dispatch-gate 签发 role=requirements-owner/execution/inputDigest 绑定 → accept 入账（epoch+1）",
+   "D02": "审查在途修改 design.md 后 accept 被拒（STALE，指名 D02）；dispatch registry 标记 stale 留痕；同 gate 新输入版本 re-dispatch（attempt 按输入版本计数）后接纳",
+   "D03": "accept verdict=reject + 结构化 findings 入账为 rejection receipt；gates 输出 rejected+ROUTE architecture-repair；design-complete 在 A rejected 时被 GATE_PREMISES_INVALID 阻断；managed 专用 transition architecture-repair（build→design）与 test-design-repair（build|verify→design）落在原 Run 的 transition 表；手改 phase（含 COMET_FORCE_PHASE）全拒；修复后 re-dispatch/re-accept 解除阻断",
+   "D04": "不调用任何修订动作、直接编辑 design.md：派生失效使 A/T/P 全部 stale（R 保持有效）；六个入口同判——direct transition 拒、guard preview 拒、guard --apply 拒且 phase 不动、next 携带 evaluation+ROUTE、state check build 出 gate FAIL 行、PreToolUse Write 渠道 exit 2 指名 gate premises；恢复：architecture-repair→design→修复→re-dispatch A/T/P→complete-design 重新进入 build",
+   "D05": "实现写入（src/feature.js v1→v2）后 enter-verify 前提评估 allowed=true（R/A/T/P receipts 全部保持 current，0 stale/0 rejected）；候选域证据由原生检查层拒绝（'Check evidence changed before transition'）——digest 域隔离实现'只有候选证据失效'；tasks 勾选（task-complete）不动 P receipt（tasksDefinition digest 忽略 checkbox，C04 同构）",
+   "D06": "knowledge-closeout 的 file 类目标由 Runtime 独立读回：digest 不符被拒（'result unknown is never accepted', D06）；external 类目标必须有 Runtime K dispatch（driver 登记）；正确 digest 记录座位",
+   "D07": "archived=true 且 knowledge_closeout_required=true 未记录时：next 返回 nextAction kind=knowledge-closeout（非 done/completed）、gates completionBlocked=true、resolver 停在 full.closeout.knowledge（run status=running）；记录座位后 reconcile → status=completed（E02/H07 同面）",
+   "D08": "接纳与状态更新同一 .comet.yaml 原子 rename（commit point）+ epoch，receipts 进既有 state transaction；dispatch 先于 receipt 消费（先 consume registry 再写 state）——中断后安全重试不重复接纳；并发由状态锁+epoch 门槛约束",
+   "C07": "同一 evaluateGatePremises 消费面接线七入口：guard preview / guard --apply / direct transition（design-complete 增加 requireGatePremises，无 Run 投影也强制）/ source write hook（build 相位产品写，置于其它 build 拒因之前）/ next+continuation / state check <phase> 行 / archive 完整性+完成谓词；阻断时全部给出固定 rework route"
+  },
+  "seams": {
+   "B1": "check-policy v2 entry 新增 requiredScope：scope 有注册必需身份时，commandCheckPasses 与 guard --apply 只接受匹配身份的 runtime 证据；平凡 exit-0 被拒并列出注册身份；registry 存在时禁用 auto-infer（SC-01 闭合）",
+   "B4": "上游源头卫生：managed 下 COMET_SKIP_BUILD 不产生 skip 伪证据（commandCheckPasses 与 applyStateUpdateLocked 两处均不短路）、COMET_FORCE_PHASE 不改写 phase（setFields 强制拒绝）；unmanaged 行为逐一保持（对照变更通过）——P1_4 的下游拒面复验不变",
+   "Kt": "run 级座位接线：init --knowledge-closeout-required（machine-owned，事后不可降级）；state knowledge-closeout 记录（file 类目标 Runtime 独立读回、external 类必须 K dispatch）；完成谓词=archived+全部 gate receipts current+（如要求）Kt receipt；next/continuation/archived 状态一致保留恢复入口"
+  }
+ },
+ "commands": [
+  {
+   "cmd": "node(24.15.0) tools/comet/prepare-source.mjs --archive .sdd/cache/artifacts/comet-source-c90af44….tar.gz --json",
+   "exit_code": 0,
+   "note": "本 worktree .sdd 为空，先装 pristine 源（reused=false，archive sha256 28a7e2fa… 与 lock 一致）"
+  },
+  {
+   "cmd": "node(24.15.0) tools/comet/build.mjs --archive <pinned> --json",
+   "exit_code": 0,
+   "note": "四 patch（0001+tests/1_6+0002+tests/2_4）叠加全新构建：fingerprint 9b95a0ff54ee00abd03ba9fb507cd93f03c8a464a743658898c474a51dc89b10（reused=false）；tsc/esbuild/generated bundle 全部成功"
+  },
+  {
+   "cmd": "node(24.15.0) tools/comet/build.mjs --check-generated --runtime-smoke --json",
+   "exit_code": 0,
+   "note": "PASS：check-generated classic/native/entry 全 PASS；runtime smoke 248 passed / 2 skipped（基线 243+本任务 tests/2_4.patch 新增 5）"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/2_4.mjs  # RED（对未打 0002 的 cb1151b4 构建）",
+   "exit_code": 1,
+   "note": "10/10 fail：managed 运行时面缺失（usage 拒绝/Unknown subcommand）+ B1/B4/Kt 缺口；日志 worker-reports/P2_4/evidence/red-2_4-mjs.txt"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/2_4.mjs  # GREEN（对 9b95a0ff 构建）",
+   "exit_code": 0,
+   "note": "10/10 pass / 0 fail（真实 CLI 交互，隔离 HOME+PATH stubs+$TMPDIR，零 mock）；日志 worker-reports/P2_4/evidence/green-2_4-mjs.txt"
+  },
+  {
+   "cmd": "npm test  # 全量回归（host node 22.13.1）",
+   "exit_code": 0,
+   "note": "263/263 pass / 0 fail（与 base 一致，本任务未动 lib/contracts；2_4.mjs 不在 test/*.test.js glob）；日志 green-npm-test-full.txt"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/*.mjs  # 全目录回归",
+   "exit_code": 1,
+   "note": "92 tests：84 pass / 1 skip（1_1 环境条件 skip）/ 7 fail——7 个全部是其它任务文件对共享 upstream.lock.json 旧状态（patches 数量=2、fingerprint cb1151b4、B5 字段名正则）的硬 pin，见 cross_task_impact；本任务文件 10/10 绿；日志 green-delivery-cases-all.txt"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/{1_4,1_5,1_6,2_1}.mjs  # lock 回退对照",
+   "exit_code": 0,
+   "note": "base lock（2 patches）下同四文件 32/32 全绿——证明 7 个失败全部由合法 lock 注册驱动，零 0002 运行时回归；日志 regression-lock-revert-proof.txt"
+  }
+ ],
+ "patch_summary": {
+  "file": "integrations/comet/patches/0002-managed-delivery-runtime.patch",
+  "upstream_files": [
+   "domains/comet-classic/classic-gate-runtime.ts (NEW: policy/receipts/evaluate 共用模块)",
+   "domains/comet-classic/classic-state.ts (5 个新 wire 字段进 schema/序列化/迁移)",
+   "domains/comet-classic/classic-state-options.ts (machine-owned 扩展)",
+   "domains/comet-classic/classic-transitions.ts (architecture-repair/test-design-repair)",
+   "domains/comet-classic/classic-resolver.ts (完成谓词 + 受管前提 recovery-required)",
+   "domains/comet-classic/classic-evidence.ts (gate currency 证据项, resolver 零 IO)",
+   "domains/comet-classic/classic-check-policy.ts (requiredScope 身份注册表)",
+   "domains/comet-classic/classic-guard.ts (B1/B4/各相位 gate 检查)",
+   "domains/comet-classic/classic-hook-guard.ts (build 写入口 gate 前提, 置于其它 build 拒因之前)",
+   "domains/comet-classic/classic-state-command.ts (init 旗标/managed 拒因/新子命令/next/check 接线)",
+   "domains/comet-classic/classic-state-events.ts (审计事件联合类型扩展)",
+   "domains/comet-classic/classic-runtime-run.ts (full.closeout.knowledge 步骤 + reconcile 作用域化放行)"
+  ],
+  "design_lines": [
+   "receipts 存于 .comet.yaml（JSON 文档, run_retries 先例），与 phase/epoch 同一原子 rename 提交点、同一 state transaction——D08 由构造保证",
+   "dispatch registry .comet/gate-dispatches.json 走 run-state 同款 protected-run-file 原子写 + state lock；先消费 dispatch 再写 receipt（中断安全重试）",
+   "失效全部派生：receipt 绑定 input digest + dependsOn 级联（评估时重算对比），不存删除标记——D02/D04/D05 由 digest 域隔离一次性取得",
+   "resolver 经 collectClassicEvidence 的 gate 证据项保持零 IO；前提阻断抛 ManagedGatePremisesError，仅入口面执行阻断，state 写/reconcile 捕获以保证修复通道可达",
+   "全部行为 gated behind managed_delivery: true——unmanaged 变更零行为变化（smoke 基线 243 不变即为证）"
+  ]
+ },
+ "smoke_count_change": "243 pass / 2 skip → 248 pass / 2 skip（+5 = tests/2_4.patch 的 managed delivery 块, 全部真实 CLI 交互测试）",
+ "cross_task_impact": {
+  "fact": "delivery-cases 全目录回归 7 个失败，全部位于其它任务的测试文件，全部由本任务对共享 integrations/comet/upstream.lock.json 的合法注册（P1_6 先例：patch 任务在 patch 提交中登记 lock）触发：1_4.mjs/1_5.mjs/1_6.mjs setup 硬 pin lock.patches.length===2 与 fingerprint cb1151b4；1_4.a 硬 pin mode-qualification.json 内旧 fingerprint；2_1.mjs hard pin patches 数量；1_5.mjs C06 的 B5 断言用 /knowledge/i 正则匹配到序列化 configuration 中休眠新字段名（managedDelivery:false 且 knowledgeCloseoutRequired:false, checks 仍 5/5 零知识征用——B5 语义主张对 unmanaged 不变）",
+  "proof": "regression-lock-revert-proof.txt：base lock 下同批文件 32/32 全绿",
+  "owner": "parent/集成：P1_4/P1_5/P1_6/2_1/3_1 的 pin 类断言需在各任务名下于集成时更新（本任务禁止改动其文件）",
+  "not_a_regression": "npm test 263/263 绿；2_4.mjs 10/10 绿；smoke PASS；7 个失败无一是 0002 运行时行为回归"
+ },
+ "unverified": [
+  {
+   "item": "7 个跨任务 pin 类断言的更新（1_4/1_5/1_6/2_1/3_1）",
+   "reason": "文件归属其它任务，本任务禁改；已提供逐项定位与 base-lock 对照证明",
+   "owner": "parent/集成波次（各原任务名下）"
+  },
+  {
+   "item": "受保护 CI 对精确候选/集成 SHA 的复验（F06 后半）",
+   "reason": "沙箱无受保护 CI 实体；B4 的受管源头卫生已闭合上游侧",
+   "owner": "受保护 CI 接入任务"
+  },
+  {
+   "item": "guard 对 Shell/MCP 写渠道的归因缺口（A09）",
+   "reason": "维持 P1_3/P1_4 登记：matcher Write|Edit 未归因的渠道记 gap 不记 blocked；本任务未改 hook matcher",
+   "owner": "guard hook 契约扩展（上游 patch seam, parent 决策）"
+  },
+  {
+   "item": "gate dispatch 的对抗性防篡改（同 OS 账户写 registry/状态文件）",
+   "reason": "与 P2_2 同一边界立场：协作级检查（state lock + protected path + machine-owned 字段），不宣称对抗性不可绕过；真实隔离属受保护 Runner",
+   "owner": "RunnerInfra/受保护 Runner 任务"
+  }
+ ],
+ "files_changed": [
+  "integrations/comet/patches/0002-managed-delivery-runtime.patch (new, 12 upstream files, ~2100 行)",
+  "integrations/comet/patches/tests/2_4.patch (new: comet-scripts.test.ts managed delivery 块, 5 tests)",
+  "integrations/comet/upstream.lock.json (patches 2→4, sha256 登记)",
+  "test/delivery-cases/2_4.mjs (new, 10 tests)",
+  "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4.json (本提交) + worker-reports/P2_4/evidence/ (red-2_4-mjs.txt, green-2_4-mjs.txt, green-npm-test-full.txt, green-delivery-cases-all.txt, green-v-comet-native.json, green-v-comet-native.log, regression-lock-revert-proof.txt)"
+ ],
+ "commits": {
+  "patch": "987c76d feat(p2_4): managed delivery runtime — shared gate policy/receipts/evaluate on the same Classic Run (0002)",
+  "tests": "7671ff6 test(p2_4): D01-D08/C07/B1/B4/Kt over the real 0002 CLI — RED 10/10 against cb1151b4, GREEN 10/10 against 9b95a0ff",
+  "report": "<本提交：worker-reports/P2_4.json + evidence/>"
+ },
+ "blockers_or_questions": [
+  "无实现阻塞。parent 决策点一项：delivery-cases 的 7 个跨任务 pin 失败的归属（建议集成波次由各原任务更新 pin，或授权一次'lock 重钉'维护提交——本任务因边界未动其文件）。",
+  "设计裁决记录（均有契约依据）：(1) upstream.lock.json 登记随 patch 提交——P1_6 先例 acb0452 且其 review APPROVED；(2) Kt 字段经由 .comet.yaml wire keys 进既有 schema/transaction（contract §1 '新增持久字段须进入现有 schema/序列化/迁移与事务范围'）；(3) verify_result 在 managed 下转为 Runtime-stamped（受管写入 verify_result 语义）；(4) test-design-repair 允许自 verify 相位（contract §5 'V 发现用例设计缺陷 → 受控 test-intent 修订回 Design'）。"
+ ]
+}
