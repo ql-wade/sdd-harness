@@ -1,0 +1,72 @@
+{
+  "interface": "MonitorInfra.v1",
+  "command": "validate",
+  "registry": "infra/delivery/registry.json",
+  "refs": "infra/delivery/secrets.refs.example.json",
+  "dir": "infra/delivery/monitor",
+  "ok": true,
+  "violations": [],
+  "catalogGaps": [
+    "secret-ref:sdd-harness-pilot/monitor-health-read"
+  ],
+  "files": {
+    "monitor-registration.example.json": {
+      "interface": "MonitorRegistration.v1"
+    },
+    "health-contract.json": {
+      "interface": "Health.v1"
+    },
+    "alert-policy.json": {
+      "interface": "AlertPolicy.v1"
+    },
+    "supervisor-policy.json": {
+      "interface": "Supervisor.v1"
+    },
+    "fault-domain-policy.json": {
+      "interface": "FaultDomain.v1"
+    }
+  },
+  "deadlines": {
+    "heartbeatIntervalSeconds": 30,
+    "monitorCheckIntervalSeconds": 30,
+    "heartbeatAlertAfterSeconds": 90,
+    "scanStallAlertAfterSeconds": 120,
+    "detectionLatestSeconds": 120,
+    "deliveryTargetSeconds": 30,
+    "escalationAckTimeoutSeconds": 300,
+    "restartWindowSeconds": 300,
+    "restartMax": 3,
+    "recoveryTargetSeconds": 600
+  },
+  "preEnableGate": {
+    "enabled": false,
+    "allowed": false,
+    "missing": [
+      "external-monitor-registered",
+      "oncall-platform-primary",
+      "oncall-platform-backup",
+      "channel-primary",
+      "channel-backup",
+      "delivery-authorized",
+      "isolation-operation-authorized"
+    ],
+    "state": {
+      "external-monitor-registered": false,
+      "oncall-platform-primary": false,
+      "oncall-platform-backup": false,
+      "channel-primary": false,
+      "channel-backup": false,
+      "delivery-authorized": false,
+      "isolation-operation-authorized": false
+    }
+  },
+  "deliveryAuthorization": {
+    "authorized": false,
+    "record": null
+  },
+  "faultDomain": {
+    "coHostedMonitorCannotClaimHostFailure": true,
+    "hostFailureRequiresExternalMonitor": true
+  },
+  "checkedAt": "2026-10-20T17:00:39.412Z"
+}

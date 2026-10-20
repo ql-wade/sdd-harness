@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "interface": "Health.v1",
+  "kind": "health-contract",
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "readOnly": true,
+  "sourceOfTruth": "existing-comet-facts",
+  "readModel": [
+    "heartbeat_age",
+    "receive_cursor",
+    "complete_scan_watermark",
+    "unresolved_isolation",
+    "deadlines",
+    "authority_identity"
+  ],
+  "heartbeat": {
+    "intervalSeconds": 30,
+    "alertAfterAgeSeconds": 90,
+    "basis": "knowledge-revocation-and-restoration.md: heartbeat every 30 seconds; independent monitor checks every 30 seconds; heartbeat age >90s alerts."
+  },
+  "monitorCheckIntervalSeconds": 30,
+  "receiveCursor": {
+    "tracked": true,
+    "thresholdSeconds": null,
+    "thresholdStatus": "UNVERIFIED",
+    "note": "The receive cursor is observed and reported; no alert threshold is invented for it in this task."
+  },
+  "completeScanWatermark": {
+    "stallAlertAfterSeconds": 120,
+    "independentOfHeartbeat": true,
+    "basis": "heartbeat normal but more than 2 minutes without a complete scan also alerts."
+  },
+  "detection": {
+    "latestDiscoverySeconds": 120,
+    "basis": "discovery takes at most 2 minutes (30s heartbeat / 30s check budget)."
+  },
+  "authorityIdentity": {
+    "required": true,
+    "note": "Health reads report the fixed Comet authority identity; the supervisor and reconciliation both key on it."
+  },
+  "readAuthorizationRef": "secret-ref:sdd-harness-pilot/monitor-health-read",
+  "evidence": {
+    "capacityAndFailureFreeze": "UNVERIFIED",
+    "note": "Deadline values are frozen from the original contract; capacity/failure evidence that freezes them operationally is still to be supplied by a real monitoring instance."
+  },
+  "localOnly": true
+}

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "interface": "Supervisor.v1",
+  "kind": "supervisor-policy",
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "scope": "PROCESS_LEVEL_RESTART_ONLY",
+  "note": "the process supervisor only restarts the same Comet service on the original Runner; Comet itself recovers its own transactions, compensation and retries. The supervisor never becomes a second control plane.",
+  "forbiddenActions": [
+    "change-phase",
+    "create-maintenance-operation",
+    "write-outline-acl",
+    "copy-state",
+    "start-second-owner",
+    "business-retry"
+  ],
+  "restartBudget": {
+    "windowSeconds": 300,
+    "maxRestarts": 3,
+    "onExceeded": "STOP_AND_ESCALATE",
+    "basis": "recommended at most 3 restarts within 5 minutes; beyond that the supervisor stops and escalates to the platform on-call."
+  },
+  "recoveryTargetSeconds": 600,
+  "recoveryFreezeStatus": "UNVERIFIED_RECOMMENDED",
+  "recoveryBasis": "recommended: the original instance recovers and begins reconciliation within 10 minutes; this is not a 5-minute isolation guarantee during the fault window.",
+  "startGate": {
+    "oldWriterMustBeConfirmedGone": true,
+    "refuseWhileOldWriterAlive": "REFUSE",
+    "storageOwnershipUnknown": "REFUSE",
+    "note": "no concurrent recovery writes while the old process is unconfirmed-terminated or the storage ownership is unknown; a second business owner is never started."
+  },
+  "authorityBinding": {
+    "mode": "SAME_FIXED_AUTHORITY_ONLY",
+    "authorityId": null,
+    "authorityStatus": "UNVERIFIED",
+    "stateCopy": "FORBIDDEN",
+    "secondBusinessOwner": "FORBIDDEN",
+    "note": "after recovery the original authority/RunID still has exactly one business owner; authorityId is pinned only when a real runner exists."
+  },
+  "cometSelfRecovery": {
+    "transactions": true,
+    "compensation": true,
+    "retry": true,
+    "supervisorBusinessRetry": false,
+    "note": "transaction recovery, compensation and retries belong to Comet; the supervisor must not maintain a second retry loop for missed permissions."
+  },
+  "audit": {
+    "restartAuditRequired": true,
+    "oldWriterStopSeparatelyAudited": true,
+    "note": "restarting the original instance and stopping the old writer are audited as separate events."
+  },
+  "localOnly": true
+}

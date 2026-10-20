@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "interface": "AlertPolicy.v1",
+  "kind": "alert-policy",
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "segments": {
+    "detection": {
+      "latestDiscoverySeconds": 120,
+      "basis": "monitor verdict or first isolation failure detection within 2 minutes at the latest."
+    },
+    "delivery": {
+      "targetSeconds": 30,
+      "failoverToBackupOnPrimaryUnreachable": true,
+      "basis": "delivery to a registered channel within 30 seconds of the monitor verdict or first isolation failure; unreachable primary channels fail over to the backup channel."
+    },
+    "escalation": {
+      "onCallAckTimeoutSeconds": 300,
+      "freezeStatus": "UNVERIFIED_RECOMMENDED",
+      "escalateTo": "backup-oncall",
+      "basis": "recommended: primary on-call unacknowledged for 5 minutes escalates to the backup on-call; the recommended value still needs owner freeze."
+    }
+  },
+  "immediateEvents": {
+    "isolationFirstFailure": {
+      "required": true,
+      "deliveryTargetSeconds": 30,
+      "note": "the first isolation failure immediately raises an event to the independent alert system; it does not wait for the budget to expire."
+    }
+  },
+  "rules": {
+    "undeliveredIsNeverAcknowledged": true,
+    "redeliverySeparateFromBusinessRetry": true,
+    "segmentsRecordedSeparately": true,
+    "note": "detection, delivery and escalation are timed as three separate segments from real timestamps; they are never collapsed into one total-delivery budget."
+  },
+  "forbiddenCombinedBudgetFields": [
+    "totalDeliverySeconds",
+    "endToEndSeconds",
+    "totalAlertSeconds"
+  ],
+  "noBusinessWrites": [
+    "phase",
+    "business-retry",
+    "acl",
+    "agent-dispatch"
+  ],
+  "note": "the independent alert system only stores delivery/escalation state; it never maintains business phases, dispatches agents or writes ACLs. Alert redelivery restores delivery state only.",
+  "deliveryAuthorizationRef": "secret-ref:sdd-harness-pilot/monitor-alert",
+  "unauthorizedMode": "PREPARE_ONLY",
+  "alertAuditPersistence": {
+    "independentOfRunnerBackup": true,
+    "note": "monitor configuration, on-call mapping and alert delivery audit are independent of the Runner backup; a Runner volume failure must not destroy all alert evidence."
+  },
+  "localOnly": true
+}

@@ -464,7 +464,7 @@ test('Monitor.v1: alerts are prepared only (never sent without authorization) an
   assert.equal(report.delivery.authorized, false);
   const kinds = report.prepared.map((alert) => alert.kind);
   assert.ok(kinds.includes('ISOLATION_FAILURE_IMMEDIATE'), 'first isolation failure must raise the immediate event');
-  assert.ok(kinds.includes('HEARTBEAT_AGE'), 'the stale heartbeat must raise the heartbeat alert');
+  assert.ok(kinds.includes('HEARTBEAT_AGE_ALERT'), 'the stale heartbeat must raise the heartbeat alert');
   for (const alert of report.prepared) {
     assert.ok(alert.detectedAt, 'every prepared alert records its own detection timestamp');
   }
