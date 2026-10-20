@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "HALTED_PENDING_USER_REPLAN_DECISION",
+  "status": "IMPLEMENTATION_ACTIVE",
   "objective": "按照我们架构，端到端完成验证，出具验证报告",
   "target_controller": "Comet Classic",
   "implementation_executor": {
@@ -78,7 +78,7 @@
     "timezone": "Asia/Shanghai",
     "reason": "Receiving executor qualifies actual host, resources and throughput before estimating implementation"
   },
-  "updated_at": "2026-10-20T07:17:24.518313+00:00",
+  "updated_at": "2026-10-20T10:16:09.111086+00:00",
   "preparatory_checks": {
     "scaffold_scoped_tests": "41/41 PASS",
     "scaffold_npm_test": "41/41 PASS on Node22.13.1",
@@ -103,7 +103,7 @@
     "Resume existing monitor sdd; never create duplicate monitor",
     "Continue original full goal, do not mark 92 scenarios accepted from baseline tests"
   ],
-  "last_progress_at": "2026-10-20T07:17:24.518313+00:00",
+  "last_progress_at": "2026-10-20T10:16:09.111086+00:00",
   "authorization_blocker_audit": {
     "consecutive_goal_turns": 0,
     "decision_received": true,
@@ -148,7 +148,7 @@
     "status": "active"
   },
   "run_started_at": "2026-10-20T03:04:53.456337+00:00",
-  "status_revision": 17,
+  "status_revision": 29,
   "lifecycle_guard": {
     "skill": "openspec-lifecycle-guard",
     "path": "/Users/mac/.claude/skills/openspec-lifecycle-guard/SKILL.md",
@@ -186,6 +186,10 @@
       "amendment_2": {
         "commit": "05fb404",
         "detail": "3 runner refs registered (catalog 16); I02 catalogGap cleared on merge"
+      },
+      "amendment_3": {
+        "commit": "f8c982b",
+        "detail": "2 codewiki refs registered (catalog 18); I05 catalogGap cleared on merge"
       }
     },
     "P1_1": {
@@ -286,7 +290,12 @@
         "report": "a007bfc"
       },
       "merged_to_master": "c9c3b18",
-      "review": "worker-reports/P1_6.review.json (APPROVED, 0 blocking)"
+      "review": "worker-reports/P1_6.review.json (APPROVED, 0 blocking)",
+      "supplement_delta": {
+        "check": "Ponytail 5.3.2 资产快照 + 注册分工声明 (V_P1_6_PONYTAIL_ASSETS)",
+        "status": "REPAIR_DISPATCHED",
+        "delta_review": "APPROVED (worker-reports/P1_6.delta-review.json)"
+      }
     },
     "P1_2": {
       "status": "ACCEPTED",
@@ -307,7 +316,12 @@
       },
       "merged_to_master": "83034d4",
       "regression": "npm test 125/125 + delivery-cases 23 pass/2 env-skip on merged master",
-      "review": "worker-reports/P1_2.review.json (APPROVED, 0 blocking)"
+      "review": "worker-reports/P1_2.review.json (APPROVED, 0 blocking)",
+      "supplement_delta": {
+        "check": "插件/项目注册分工去重门 (V_P1_2_PLUGIN_REGISTRATION_DIVISION)",
+        "status": "REPAIR_DISPATCHED",
+        "delta_review": "APPROVED (worker-reports/P1_2-I02.delta-review.json); integrated 45ed944"
+      }
     },
     "P2_2": {
       "status": "ACCEPTED",
@@ -357,7 +371,11 @@
         ],
         "result": "13/13; npm test 185/185 on merged master 10b37bf; integration acceptance complete"
       },
-      "supplement_delta": "Ponytail 补充 §8 I02 细化（方法状态作用域）待 replan 决定后 delta-review"
+      "supplement_delta": {
+        "check": "方法状态作用域声明 (V_I02_METHOD_STATE_SCOPE)",
+        "status": "REPAIR_DISPATCHED",
+        "delta_review": "APPROVED (worker-reports/P1_2-I02.delta-review.json); integrated 45ed944"
+      }
     },
     "P2_3": {
       "status": "ACCEPTED",
@@ -378,6 +396,90 @@
       "merged_to_master": "9c5db5f",
       "review": "worker-reports/P2_3.review.json (APPROVED, 0 blocking)",
       "caveat": "check.sh heading clause: environment-bounded (whitebox corpus gap, pre-existing); B10/A20 semantics covered by npm test + exit-code contract tests + truth table"
+    },
+    "I05": {
+      "status": "PARTIAL_ACCEPTED_INTEGRATION_PENDING",
+      "steps_done": [
+        "1",
+        "2",
+        "4"
+      ],
+      "step_3": "NOT_DONE — 独立读回 oracle（实际容器/API-MCP 响应/repoID-commit manifest 一致）需真实部署；上游未选定+docker 拒绝，如实 UNVERIFIED；承接者资源准入 owner/运行时准入",
+      "commits": {
+        "tests": "0a60d93",
+        "implementation": "9458bfd",
+        "report": "cff3083"
+      },
+      "merged_to_master": "e4ad42d",
+      "review": "worker-reports/I05.review.json (APPROVED, 0 blocking)",
+      "integration_fix": {
+        "commits": [
+          "452bfe8",
+          "9e51d92",
+          "012aedf"
+        ],
+        "result": "14/14; npm test 199/199 on merged master; integration acceptance complete"
+      }
+    },
+    "I04": {
+      "status": "PARTIAL_ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "4"
+      ],
+      "step_3": "NOT_DONE — 独立读回 oracle 的真实 MCP 写读回 UNVERIFIED（stdio initialize/tools-list VERIFIED，create 20s 挂起如实记录）；文件级等价探针全 VERIFIED；承接者 mcp-capabilities 接纳 P 任务 + 环境 owner（venv 对齐）",
+      "commits": {
+        "tests": "fcc9a9e",
+        "implementation": "019fdc9",
+        "report": "b2ff32d",
+        "base_sync": "51d9da3"
+      },
+      "merged_to_master": "67191f1",
+      "review": "worker-reports/I04.review.json (APPROVED, 0 blocking)"
+    },
+    "P1_3": {
+      "status": "ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ],
+      "commits": {
+        "tests": "6e7f9eb",
+        "implementation": "d19c633",
+        "report": "9293977",
+        "review_fix": "1987d71"
+      },
+      "merged_to_master": "c7c9d84",
+      "regression": "npm test 218/218 + delivery-cases 46/1 env-skip (in .sdd-equipped worktree)",
+      "review": "worker-reports/P1_3.review.json (1 blocking -> fixed 1987d71)"
+    },
+    "P3_1": {
+      "status": "ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "commits": {
+        "tests": "1bcb34d+e85cb2f",
+        "implementation": "b3d05d6",
+        "report": "35510b3",
+        "review_fixes": "dc22b4c",
+        "b09_fix": "e895cfb"
+      },
+      "merged_to_master": "045e5a5",
+      "regression": "npm test 226/226 + delivery-cases 62 pass/1 env-skip/0 fail (.sdd-equipped worktree)",
+      "review": "worker-reports/P3_1.review.json (APPROVED, 0 blocking; nb-1/nb-2/nb-4 fixed)"
     }
   },
   "environment_notes": [
@@ -392,6 +494,14 @@
     {
       "note": "scripts/check.sh whitebox fixture gap in fresh worktrees (pre-existing at base); VERIFY must run in main checkout or fix fixtures",
       "recorded_at": "2026-10-20T04:57:08.672221+00:00"
+    },
+    {
+      "note": "external parallel session continues editing main-checkout files: ADR-0019 overlay, delivery-architecture.md planning table, test/delivery-cases/2_2.mjs (P2_2-owned) — uncommitted, not in this run branch; included in pending user adjudication",
+      "recorded_at": "2026-10-20T08:01:29.650746+00:00"
+    },
+    {
+      "note": "1_3.mjs setup hard-depends on .sdd prepared source+patched build (fails fast with instruction); comet-dependent regression must run in .sdd-equipped worktree (impl-p1-3 has it)",
+      "recorded_at": "2026-10-20T09:25:20.613544+00:00"
     }
   ],
   "open_decisions": [
@@ -415,27 +525,9 @@
     }
   ],
   "halt": {
-    "raised_at": "2026-10-20T07:07:53.971911+00:00",
-    "cause": "frozen architecture.md drifted post-freeze (external Ponytail supplement swept into 21923be by controller add -A; classic-closeout-and-hook-contract.md §6-8 expanded likewise)",
-    "plan_guard": "DRIFT: architecture_sha256 mismatch + OPENSPEC_LIFECYCLE SOURCE_DRIFT (exit 1) — matches the supplement self-description",
-    "preserved": "old drift-lock + all evidence in history; completed-task commits intact",
-    "affected": {
-      "done_needs_delta_review": [
-        "P1_6",
-        "P1_2",
-        "I02"
-      ],
-      "pending_refinement": [
-        "P4_5"
-      ],
-      "unaffected_ongoing": [
-        "P2_3 integration"
-      ]
-    },
-    "new_dispatches": "suspended until user decision",
-    "options": [
-      "A: accept supplement -> controller runs documented mini-replan (refine P1_6/P1_2/I02/P4_5 boundaries in tasks/DAG/contract, re-freeze, delta-review 3 done tasks, resume)",
-      "B: reject -> restore frozen architecture.md 8bd5316, supplement stays as unaccepted docs, resume original plan"
-    ]
+    "raised_at": "2026-10-20T08:2x (see ledger)",
+    "resolved_at": "2026-10-20T09:53:44.389658+00:00",
+    "resolution": "A (accept Ponytail supplement)",
+    "refreeze": "complete on master — plan_guard exit 0; contract 108 checks; spec-baseline digest a89cfcf9 (pristine)"
   }
 }

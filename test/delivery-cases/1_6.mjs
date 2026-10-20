@@ -59,7 +59,7 @@ test('method profile fixes one Comet Classic controller with Matt primitives and
 });
 
 test('snapshot manifest pins real directories byte-for-byte with sources and no symlinks', async () => {
-  const required = ['tdd', 'diagnosing-bugs', 'code-review', 'test-authoring', 'whitebox-verify', 'openspec-lifecycle-guard', 'grill-me', 'grilling', 'multi-agent-consensus-review', 'claude-parallel-tdd-planner'];
+  const required = ['tdd', 'diagnosing-bugs', 'code-review', 'test-authoring', 'whitebox-verify', 'openspec-lifecycle-guard', 'grill-me', 'grilling', 'multi-agent-consensus-review', 'claude-parallel-tdd-planner', 'ponytail'];
   const names = manifest.snapshots.map((snapshot) => snapshot.name);
   for (const name of required) assert.ok(names.includes(name), `snapshot missing: ${name}`);
   for (const snapshot of manifest.snapshots) {
@@ -120,6 +120,37 @@ test('RED cases are eliminated: no Superpowers hard calls in the snapshot layer 
   }
   const red2 = await fs.readFile(path.join(evidenceDir, 'red-2-comet-init-superpowers-install.txt'), 'utf8');
   assert.match(red2, /skills add obra\/superpowers/, 'RED-2 evidence must record the pristine install invocation');
+});
+
+test('Ponytail supplement: snapshot fixed from the plugin cache and registration/default declarations recorded', async () => {
+  const ponytail = manifest.snapshots.find((snapshot) => snapshot.name === 'ponytail');
+  assert.ok(ponytail, 'ponytail snapshot entry missing from the manifest');
+  assert.equal(ponytail.source_form, 'codex-plugin-cache');
+  assert.equal(ponytail.upstream_version, '5.3.2');
+  assert.match(ponytail.source_path, /\.codex\/plugins\/cache\/ponytail\/ponytail\/5\.3\.2/);
+  assert.match(ponytail.purpose, /V_P1_6_PONYTAIL_ASSETS|supplement_delta/);
+  assert.ok(ponytail.file_count >= 30, 'ponytail selection should carry method skills, rules, hooks and commands');
+  const skill = await fs.readFile(path.join(projectRoot, '.agents/skills/ponytail/skills/ponytail/SKILL.md'), 'utf8');
+  assert.match(skill, /^name: ponytail/m);
+  const rules = await fs.readFile(path.join(projectRoot, '.agents/skills/ponytail/.agents/rules/ponytail.md'), 'utf8');
+  assert.ok(rules.trim().length > 0);
+
+  const division = manifest.hook_registration_division;
+  assert.ok(division, 'hook registration division declaration missing');
+  assert.match(division.plugin_lifecycle_hooks, /Ponytail 插件入口/);
+  assert.match(division.project_rules_and_recovery_prompts, /hooks\.yaml/);
+  assert.match(division.cc_adapter_scope, /PreToolUse/);
+  assert.match(division.cc_adapter_scope, /SessionStart/);
+  assert.match(division.no_cross_copying, /不互相复制/);
+  assert.match(division.no_cross_copying, /不依赖/);
+
+  const isolation = manifest.method_default_and_isolation;
+  assert.ok(isolation, 'method default and isolation declaration missing');
+  assert.equal(isolation.managed_profile_default, 'full');
+  assert.match(isolation.user_toggle_scope, /方法上下文/);
+  assert.match(isolation.user_toggle_scope, /Gate/);
+  assert.match(isolation.isolation_limitation, /最后写入生效/);
+  assert.match(isolation.isolation_limitation, /不得承诺并发角色级不同模式/);
 });
 
 test('patches are sha256-pinned in the source lock and scoped to their declared files', async () => {

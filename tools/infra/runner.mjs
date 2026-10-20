@@ -283,6 +283,33 @@ function validateRolePolicy({ policy, refsDoc, projectId, catalogBoundRoles }) {
       add('ROLE_INVALID', 'role-policy.json:runnerRefs', { role: entry?.bindingRole ?? null });
     }
   }
+  // 方法状态作用域（V_I02_METHOD_STATE_SCOPE，§6/§7.4）：共享 mode 状态永不作为角色/权限/身份/完成依据。
+  const scope = policy.methodStateScope;
+  if (!scope || scope.declaration !== 'METHOD_STATE_SHARED_DECLARED') {
+    add('METHOD_STATE_SCOPE_MISSING', 'role-policy.json:methodStateScope', {
+      reason: 'declare METHOD_STATE_SHARED_DECLARED: shared cooperative-local method state must never serve as a role/permission/identity basis',
+    });
+  } else {
+    if (scope.identityBasis !== false || scope.permissionBasis !== false || scope.completionBasis !== false) {
+      add('METHOD_STATE_AS_BASIS_FORBIDDEN', 'role-policy.json:methodStateScope', {
+        reason: 'shared mode state (last-write-wins) must never serve as identity, permission or completion basis',
+      });
+    }
+    if (scope.modeFilesInWorkerWritableSurface !== 'FORBIDDEN') {
+      add('METHOD_STATE_SCOPE_INVALID', 'role-policy.json:methodStateScope', {
+        reason: 'mode files are forbidden in any worker-writable surface',
+      });
+    }
+    const dispatchFields = scope.dispatchRecord?.fields ?? {};
+    const missingDispatch = ['actualAssetDigest', 'effectiveLevel', 'injectionObservation'].filter((field) => !dispatchFields[field]);
+    if (missingDispatch.length > 0 || scope.dispatchRecord?.status !== 'UNVERIFIED') {
+      add('DISPATCH_RECORD_SCHEMA_INCOMPLETE', 'role-policy.json:methodStateScope.dispatchRecord', {
+        missing: missingDispatch,
+        reason: 'every dispatch records actual asset digest, effective level and injection observation as separate fields; runtime-filled and UNVERIFIED until a real dispatch',
+      });
+    }
+  }
+
   violations.push(...scanForForbiddenValues(policy));
   return { violations, roles };
 }
@@ -341,6 +368,14 @@ function validateWorkspaceMounts({ mounts, policy }) {
   if (mounts.rules?.hostBindMounts !== 'FORBIDDEN' || mounts.rules?.dockerSocket !== 'FORBIDDEN') {
     add('WORKSPACE_INTERFACE_INVALID', 'workspace-mounts.json:rules', { reason: 'hostBindMounts and dockerSocket must be FORBIDDEN' });
   }
+  // mode 文件不进 worker 可写面（V_I02_METHOD_STATE_SCOPE）：共享 mode 状态不挂载、不可写、不作依据。
+  const methodState = mounts.methodState;
+  if (!methodState || methodState.workerWritable !== false || methodState.mountedIntoRunner !== false) {
+    add('MODE_FILE_WORKER_WRITABLE_FORBIDDEN', 'workspace-mounts.json:methodState', {
+      reason: 'shared Ponytail/mode files (last-write-wins across concurrent sessions) never enter any worker-writable surface or the runner mounts',
+    });
+  }
+
   violations.push(...scanForForbiddenValues(mounts));
   return violations;
 }
@@ -744,6 +779,14 @@ async function main(argv) {
         workspaceVolume: role.workspaceVolume,
         grantedRefCount: (role.grantedRefs ?? []).length,
       })),
+      methodState: {
+        declaration: rolePolicy.methodStateScope?.declaration ?? null,
+        model: rolePolicy.methodStateScope?.model ?? null,
+        identityBasis: rolePolicy.methodStateScope?.identityBasis ?? null,
+        permissionBasis: rolePolicy.methodStateScope?.permissionBasis ?? null,
+        completionBasis: rolePolicy.methodStateScope?.completionBasis ?? null,
+        dispatchRecordStatus: rolePolicy.methodStateScope?.dispatchRecord?.status ?? null,
+      },
       authority: {
         interface: authority.interface,
         authorityStatus: authority.authority?.status ?? null,

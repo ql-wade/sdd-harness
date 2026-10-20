@@ -177,7 +177,18 @@ export async function buildLock(root, options = {}) {
   });
 
   const hooksPath = path.join(root, 'hooks.yaml');
-  const policy = { schemaRef: 'hooks.yaml', digest: sha256Bytes(fs.readFileSync(hooksPath)) };
+  const hooksRaw = fs.readFileSync(hooksPath, 'utf8');
+  // 注册分工门（V_P1_2_PLUGIN_REGISTRATION_DIVISION，契约 §7.2）：插件生命周期
+  // Hook 由 Ponytail 插件入口注册；项目策略源不得携带插件来源脚本，否则发布
+  // 视图会把插件 Hook 分发进每个成员的项目受管块。与 adapter 侧
+  // PLUGIN_SOURCE_RE 同义（宿主语言不同，模式成对维护）。
+  const pluginScripts = [...hooksRaw.matchAll(/^\s*script:\s*(.+)$/gm)]
+    .map((m) => m[1].trim())
+    .filter((value) => /CLAUDE_PLUGIN_ROOT|\.claude\/plugins\//.test(value));
+  if (pluginScripts.length > 0) {
+    throw new Error(`hooks.yaml carries plugin-managed lifecycle scripts (registration division §7.2 — plugin hooks are registered by the plugin entry, never distributed through the project policy source): ${pluginScripts.join('; ')}`);
+  }
+  const policy = { schemaRef: 'hooks.yaml', digest: sha256Bytes(Buffer.from(hooksRaw, 'utf8')) };
 
   const mcpJsonPath = path.join(root, '.mcp.json');
   const mcpRaw = options.mcpRaw !== undefined ? options.mcpRaw : (fs.existsSync(mcpJsonPath) ? fs.readFileSync(mcpJsonPath, 'utf8') : undefined);

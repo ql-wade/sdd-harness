@@ -1,0 +1,43 @@
+== premature archive (phase open) ==
+exitCode: 1
+=== Comet Archive: evidence-change ===
+FATAL: phase is 'open', expected 'archive'
+
+== OV03: manual record-check declaration cannot satisfy the build guard ==
+record-check exitCode: 0
+build-complete after manual declaration exitCode: 1
+guard refusal:   [FAIL] Build passes |     Manual declarations never satisfy the guard, and they shadow the earlier runtime evidence until a new runtime check runs.
+
+== real runtime checks by the managed executor ==
+Check build: exit=0; reused=false; tier=full; log=docs/openspec/changes/evidence-change/.comet/checks/10bf433f-5041-428a-a830-1ce7f6ccc11d.log
+Check verify: exit=0; reused=true; tier=full; log=docs/openspec/changes/evidence-change/.comet/checks/10bf433f-5041-428a-a830-1ce7f6ccc11d.log
+
+== first archive (the single real closeout) ==
+exitCode: 0
+=== Comet Archive: evidence-change ===
+  [OK] Entry state verified
+  [OK] Archive target available
+  [OK] OpenSpec archive completed: /private/tmp/claude-501/p13-hostprobe-4WKcck/project/docs/openspec/changes/archive/2026-10-20-evidence-change
+  [OK] Main specs verified clean
+  [OK] Annotated: docs/openspec/changes/archive/2026-10-20-evidence-change/design.md
+  [OK] archived: true
+  [OK] Final archive integrity verified
+
+Change evidence-change was archived successfully (7/7 steps).
+Archive complete. 7/7 steps succeeded.
+
+== duplicate archive attempt at CLI level (upstream behavior, recorded as observed) ==
+exitCode: 0
+=== Comet Archive: evidence-change ===
+  [OK] Entry state verified
+  [OK] Archive target available
+  [OK] OpenSpec archive completed: /private/tmp/claude-501/p13-hostprobe-4WKcck/project/docs/openspec/changes/archive/2026-10-20-evidence-change
+  [OK] Main specs verified clean
+  [OK] archived: true
+  [OK] Final archive integrity verified
+
+Change evidence-change was archived successfully (6/6 steps).
+Archive complete. 6/6 steps succeeded.
+
+upstream converges idempotently (no second archive directory, archived stays true);
+the P1_3 driver gate refuses any second closeout execution regardless (ARCHIVE_ALREADY_SEALED — see test/delivery-cases/1_3.mjs).

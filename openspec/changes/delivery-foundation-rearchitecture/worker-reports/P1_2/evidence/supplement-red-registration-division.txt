@@ -1,0 +1,17 @@
+# V_P1_2_PLUGIN_REGISTRATION_DIVISION — pre-fix RED (supplement delta, ponytail-supplement-20261020)
+# command: node --test test/foundation-distribution.test.js test/delivery-cases/1_2.mjs (branch impl/p1-2-foundation-export @ 134ef44, post master merge 134ef44)
+# started: 2026-10-20T17:24:09+0800
+--- suite exit=1 (RED against current adapter/exporter; 9 fail / 23 pass) ---
+# 9 new cases fail (each a real behavioral gap, not environment):
+not ok 5 - plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched
+not ok 6 - duplicate managed-command registration is refused via bootstrap with a conflict list, settings untouched
+not ok 20 - adapter declares the fixed event set and the plugin registration division
+not ok 21 - plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall
+not ok 22 - same event/command duplicate registration is refused with an explicit conflict list, settings untouched
+not ok 23 - duplicate user entries for the same event/command are refused, not composed twice
+not ok 24 - hooks.yaml events outside the adapter fixed event set are refused, never silently dropped
+not ok 25 - plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2)
+not ok 26 - exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts
+# 23 pre-existing cases still pass (no regression in RED state)
+# key observed failures:
+# finished: 2026-10-20T17:24:09+0800

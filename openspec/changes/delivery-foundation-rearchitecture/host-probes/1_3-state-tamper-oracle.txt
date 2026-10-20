@@ -1,0 +1,15 @@
+P1_3 state-tamper oracle (A09 downstream): Shell writes the control state directly
+command: sed -i '' 's/^phase: open$/phase: archive/' <changeDir>/.comet.yaml
+exit: 0 (the Shell write itself succeeds — the guard does not attribute this channel)
+
+managed readback via the CLI (comet state check archive):
+exitCode: 1
+=== Entry Check: comet-archive ===
+  [PASS] .comet.yaml exists
+  [PASS] phase=archive (expected: archive)
+  [FAIL] verify_result=pending (expected: pass)
+  [PASS] archived=false (ready for archive confirmation)
+Entry checks for evidence-change entering the archive stage: 1 of 4 failed.
+issues: [{"code":"CLASSIC_ENTRY_CHECK_FAILED","message":"verify_result=pending (expected: pass)","path":"/private/tmp/claude-501/p13-hostprobe-4WKcck/project/docs/openspec/changes/evidence-change/.comet.yaml","remediation":"Repair the reported prerequisite, then retry this entry check.","field":"verify_result","actual":"pending","expected":"pass"}]
+
+fixture restored: phase=open

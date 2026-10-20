@@ -146,5 +146,37 @@
     "test/delivery-cases/1_6.mjs (new)",
     "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_6/evidence/* (new)"
   ],
-  "blockers_or_questions": []
+  "blockers_or_questions": [],
+  "supplement_delta": {
+    "check": "V_P1_6_PONYTAIL_ASSETS",
+    "basis": "用户裁决 A：接纳 Ponytail 补充（classic-closeout-and-hook-contract.md §6-8，随 master refreeze 合入 5efd7be）",
+    "snapshot_increment": {
+      "added": [
+        "ponytail"
+      ],
+      "source_path": "~/.codex/plugins/cache/ponytail/ponytail/5.3.2（宿主 Codex 插件缓存形态，只读，缓存未改动）",
+      "upstream_version": "5.3.2（package.json 核对）",
+      "selection": "逐字快照方法/规则文件：skills/（6 个 SKILL.md）、hooks/（生命周期脚本与注册声明）、.agents/rules/ponytail.md + plugins/marketplace.json、commands/、plugin.json、plugin.yaml、package.json、AGENTS.md、README.md、LICENSE",
+      "excluded": ".git（13MB VCS 内部）、assets/（11MB 图片）、benchmarks/、examples/、tests/、i18n/ README 译本、各宿主生成镜像（.cursor/.windsurf/.qoder 等）",
+      "files": 42,
+      "symlinks": 0,
+      "aggregate_sha256_note": "逐文件 sha256 + 聚合 sha256 已入 method-profile-manifest.json（快照总数 11 / 194 文件）；快照根 SKILL.md 为插件自带 skills/ponytail/SKILL.md 的逐字节副本，满足技能层'一目录一根 SKILL.md'约定（agent-skill-check、adapter F-003 链接解析、P1_2 exporter）"
+    },
+    "manifest_declarations": [
+      "hook_registration_division（§7.2）：插件生命周期 Hook 由 Ponytail 插件入口管理；项目规则/恢复提示来自 hooks.yaml 由项目 adapter 落地；CC adapter 只生成固定事件集（PreToolUse、SessionStart startup/resume、Stop）；三者不互相复制、不依赖执行先后；接入时查重复注册并保留用户条目",
+      "method_default_and_isolation（§7.4）：受管 profile 默认 full；用户启停/切换只改变方法上下文不改变 Gate/权限，停止 Ponytail 后必需门禁仍成立；同仓库共享 mode 文件最后写入生效（cooperative-local 限制）如实声明，不承诺并发角色级不同模式，不得从共享 mode 反推执行身份；派发记录实际资产摘要/有效级别/注入观察"
+    ],
+    "pin_status": "按 §7.1：5.3.2 是本次阅读与快照基线，不是新增已认证 pin；分发认证属 P1_2/后续任务",
+    "verification": {
+      "node --test test/delivery-cases/1_6.mjs": "6 pass / 0 fail（新增 supplement 断言）",
+      "node --test test/adapter-quoting.test.js": "8 pass / 0 fail（SKILL.md 根修复后 broken-link 断言通过）",
+      "npm test（合并 master 后全量，205 项）": "201 pass / 4 fail；4 个失败同根因：master 上 P1_2 冻结的 foundation/foundation-lock.json + release/skills/MANIFEST.json 基于其当时的 method-profile 摘要（ac5a0e7d…），与本次 P1_6 落地源必然漂移（drift gate 正确拦截 silent-rebaseline）。重冻结属 P1_2 职责（DAG: P1_2 depends_on P1_6；foundation/ 非 P1_6 独占文件，本 worker 不改）",
+      "bash scripts/agent-skill-check.sh": "PASS"
+    }
+  },
+  "supplement_commits": [
+    "5efd7be merge: master refreeze into impl/p1-6-method-profile",
+    "9b0a046 feat(p1-6): pin Ponytail 5.3.2 assets and hook-registration contracts",
+    "3f4e313 fix(p1-6): root SKILL.md for ponytail snapshot per skill-layer convention"
+  ]
 }
