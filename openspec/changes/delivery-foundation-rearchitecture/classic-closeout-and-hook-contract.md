@@ -1,13 +1,13 @@
 # Classic 收尾关闭条件、架构方法与 Hook 协作
 
-日期：2026-10-19。状态：Grill 设计，未实施。
+日期：2026-10-19；2026-10-20 补充 Ponytail 应用设计。状态：原架构基线已评审；§6–8 本次补充待接纳、评审及计划重冻结，Hook 接线未实施。
 
 ## 0. 本轮确认与未决
 
 - R09 用户确认：首版需求/设计变化后全部下游证据失效；不作跨版本自动语义复用。
 - 架构环节必须使用 grill-me 与 multi-agent-consensus-review；架构和测试设计仍分别独立自动审查，不能合并。
 - TeamAI 只分发，Comet 是唯一交付主控候选；允许最小受控扩展。
-- R06 已确认：必需项目知识先卡规格归档，必需 Outline 发布卡整体完成，归档后同 Run 继续收尾；Ponytail 仅核对能否协作，未获指令安装/修改 Hook 或执行当前外部共识评审。
+- R06 已确认：必需项目知识先卡规格归档，必需 Outline 发布卡整体完成，归档后同 Run 继续收尾。本轮用户要求将 Ponytail 应用更新进架构；范围为方法职责、Hook 接入和验收设计，不包含插件安装、活配置修改或新一轮外部评审派发。
 
 ## 1. 四件事分别形成事实，不共用一个 done
 
@@ -68,26 +68,58 @@ OpenSpec tasks 只登记归档前必须完成的实施/验证义务。依赖归�
 
 架构 A 使用共识，不意味着测试 T 被其覆盖。T 仍独立审查测试充分性；当前并未决定 T 也要同样三方 quorum，不额外扩大用户要求。
 
-## 6. Ponytail Hook 的当前能力
+## 6. Ponytail 方法职责与原生能力
 
-本轮只读当前插件缓存 5.3.2：.codex-plugin/plugin.json 指向 hooks/claude-codex-hooks.json。该文件注册 SessionStart（startup/resume/clear/compact）、SubagentStart 和 UserPromptSubmit；激活/子代理脚本注入方法上下文并记录 mode。相关脚本有 silent-fail 与 process.exit(0) 的保会话路径。
+Ponytail 负责在满足全部交付要求的前提下选择最小完整方案。先查是否必要、能否复用仓库能力/标准库/既有依赖，再增加代码；改动覆盖调用者、测试、fixtures、配置与导出。删除或合并重复能力时保持原验证和错误处理。方案取舍进入现有设计/评审，真实命令与未验证项进入原报告，不新增一份 Ponytail 业务账本。
 
-这组注册没有提供 Comet phase/Gate 判定、OpenSpec 归档门、Outline 发布回执或独立共识调度。不能据此说 Ponytail 已能硬拦 gate；它的现有功能适合作方法/上下文辅助，不是本团队交付权威。
+| 层/角色 | Ponytail 的方法责任 | 保持的判定责任 |
+| --- | --- | --- |
+| 设计/架构 | 质疑无当前需求依据的组件、抽象、依赖和状态副本；列出现有复用方案与选择理由 | R/A 及独立架构共识核对需求、边界和风险 |
+| 流程/计划 | 消除重复派发、重复同范围验证和无效重跑，复用仍有效回执 | Comet 唯一派发/推进/恢复；P 保持一份 tasks/DAG |
+| 工具/实现 | Matt 方法驱动实现与排障，Ponytail 控制改动范围和维护成本 | 作者测试不签 V，工具成功不代表行为验收 |
+| 规范/测试/验收 | 复用测试框架和规则源，减少重复文本及无关观察，完整说明证据范围 | test-authoring 保留必验覆盖；Whitebox 独立读回；Gate 不降低必需义务 |
+| 基础设施 | 复用已登记平台与执行环境，按已确定需求引入服务，评估升级/恢复/权限成本 | I01–I08 的隔离、授权、版本与恢复准入保持 |
 
-当前 ponytail-runtime.js 仍注明同 repo 会话共享 mode、最后写者生效。架构/测试/实现并行时不能把该 mode 当角色授权或任务身份；跨宿主事件支持与压缩后恢复需逐 harness 实测。旧测试/作者 benchmark 不用于替代当前原生流程证明。
+本次静态核对 Ponytail 5.3.2 的插件声明和脚本，结果不代表已在团队分发或宿主实测：
 
-## 7. 建议的 Hook 协作
+| 事件 | 已读实现 | 接入目标与限制 |
+| --- | --- | --- |
+| SessionStart：startup/resume/clear/compact | activate 脚本注入级别规则、写方法 mode；compact 尝试保留当前模式 | 启动/恢复后的实际上下文应可观察；其他事件不假定保留用户模式 |
+| SubagentStart | subagent 脚本按活动模式注入规则，支持 agent_type 筛选 | Runner 派发的实际子角色逐宿主认证，不能从父会话激活推断子角色已获得规则 |
+| UserPromptSubmit | tracker 识别启停/级别切换，按宿主格式输出上下文 | 只改变方法模式，不改变角色、授权、phase 或任务完成状态 |
+| 启动时 codebase map | activate 在部分模式下尝试轻量地图，约 3 秒超时后放弃 | 辅助复用发现；不是权威 Code Graph，也不证明源码/测试覆盖完整 |
 
-- 不改 Ponytail 上游/插件缓存，不让它的 session hook 长时间启动共识、多方投票或执行知识发布；否则重开会话/子会话会重复触发。
-- Ponytail 可提供最小方案与复用准则，不能降低 R/A/T/验收/安全义务；架构阶段必须保留完整质询和共识 rubric。
-- 若需项目 session/resume hook，策略仍写 hooks.yaml，由 adapter 注册；它仅只读询问 Comet 当前允许动作并提供方法引用/恢复提示，缺 hook 也必须由 Runtime 硬门禁阻断。
-- Comet 的 continuation 才负责进入 grill-me、派发共识、调用测试作者/Whitebox、安排知识动作。方法接线、审查包与工具版本显式冻结；不根据 Ponytail 全局 mode 改变工作流。
-- PreToolUse 写保护以受管 Comet Router/Gate 为控制入口；现有团队 deny 策略与它按范围组合，不能由 Ponytail 追加一个竞争的阶段裁判。
-- 装配验收覆盖三者共存、matcher 正确、用户配置保留、重复启动/恢复/压缩、不重复加载/派发、不共享会话状态串扰和真实绕过尝试；本轮未修改或运行这些 hooks。
+原生脚本包含 best-effort、silent-fail 和正常退出路径；Hook exit 0、模式徽章和地图存在均不能证明实际规则已送达或被遵守。当前 runtime 代码注明同仓库会话可能共享 mode、最后写入生效；不能用该文件作并发角色身份、授权或完成判定。
 
-## 8. 下一项 Grill
+## 7. 与 Foundation、项目 Hook 和 Comet 的接入契约
 
-R06 已确认该关闭边界。归档后继续/恢复、去重与模块落点见 classic-post-archive-recovery.md；R10 工作区保留策略待确认。
+1. **固定方法资产。** P1_6/P1_2 固定 Ponytail 的实际分发版本、内容摘要、宿主入口及依赖，TeamAI 仅分发经认证资产；5.3.2 是本次阅读基线，不是新增已认证 pin。不修改上游正文/插件缓存，不把机器绝对路径或个人配置写入分发。
+2. **注册分别管理。** 插件生命周期 Hook 由 Ponytail 插件入口管理；项目规则与恢复提示来自 hooks.yaml，由项目 adapter 落地。接入时检查相同事件/命令的重复注册，保留用户条目；不把插件整套 Hook 复制进项目配置，也不依赖插件与项目 Hook 的执行先后获得正确性。
+3. **按真实 adapter 能力装配。** 当前 CC adapter 固定生成 PreToolUse、SessionStart（startup/resume）和 Stop，不是任意事件/脚本的通用编译器。新增项目事件时必须修改其受管生成逻辑并验证 settings matcher；不能只加 YAML 即宣称 SubagentStart/UserPromptSubmit/compact 已生效。其他宿主单独验证，缺接口显式记能力缺口。
+4. **明确方法默认与隔离。** 首期受管 profile 默认 full；用户启停/切换仅改变方法上下文，不改变 Gate/权限。Runner 的角色执行使用经验证的独立方法状态作用域；无法隔离时不能承诺并发角色级不同模式。每次派发记录实际资产摘要、有效级别及注入观察；不得仅从共享 mode 文件反推执行身份。停止 Ponytail 后所有必需门禁仍成立。
+5. **保持唯一业务入口。** Comet continuation 派发角色及专门方法，角色调用 Matt/test-authoring/Whitebox/OpenSpec/MCP；原始结果由原 Gate/Run 接纳。项目恢复 Hook 最多只读查询当前动作并给方法引用，查询不领取执行权、不启动评审/发布、不写 phase。项目写保护与 Comet Guard 按既定范围组合；Ponytail 不增加竞争的阶段裁判。
+6. **规则送达与行为分别取证。** 资产可发现、Hook 触发、实际上下文送达、执行行为和验收结论分开记录。若 profile 声明的方法不可用，报告对应能力缺口并按该 profile 准入处理；不能用静默成功声称已加载。最小实现、复用理由、调用路径完整性由正常设计/代码审查核对，不把提示词服从性伪装为机械证明。
+
+## 8. 原任务映射、验收与冻结边界
+
+| 原任务 | 接入/验收细化 | 真实失败与通过条件 |
+| --- | --- | --- |
+| P1_6 方法迁移 | 固定原样方法资产及实际角色读取；与 Matt、test-authoring、Whitebox 职责一致 | 只加载名称/父角色规则不通过方法送达检查；不重启旧 controller，不降低测试/安全义务 |
+| P1_2 分发组合 | 插件注册与项目受管块组合、重复 pull、升级/卸载和用户配置保留 | 不重复注册/重复注入；升级不静默改变旧 Run 方法基线 |
+| P4_5 生命周期装配 | SessionStart 启动/恢复/compact、子角色启动、用户启停/模式切换逐宿主测试 | 检查脚本和原生 settings 两层；跨会话/角色不得错误串扰，失败或超时不产生假方法回执 |
+| I02 受管角色隔离 | 方法状态作用域、控制文件权限和实际 execution 关联 | worker 无法借 mode 获得角色/发布权；隔离不足保持未认证，不声称不同会话天然隔离 |
+| P4_5 的 E05/E06/H02 | 重复事件、静默失败、地图关闭/超时、Ponytail off 和不同 Hook 顺序 | Comet 必需门禁仍实际阻断；不重复共识/知识发布，不改变原 operation 或 Run 身份 |
+
+方法效果由正常审查与试点记录：是否复用既有实现、减少无需求依据的新依赖/状态副本和重复操作，是否完整覆盖受影响调用路径；结合维护成本与有效交付成本观察。代码行数减少或徽章出现不是效果证明，本补充不引入收益百分比承诺或新分析服务。
+
+本次是用户授权的冻结后设计补充，不改变原92场景的 ID/通过状态、不勾选任何实施任务。上述细项沿用原任务归属，不新增 controller 或另一份任务清单；接收控制器应在原 tasks/DAG/检查合同中接纳必要细化并重新审查冻结，不能宣称旧105项检查已完整覆盖本补充。旧评审票、drift-lock 与历史 PASS 保留，本轮不静默刷新；architecture.md 的变化应使原 plan_guard 返回 HALT_AND_REPLAN。R10 A 已确认，未整体完成前保留唯一工作区与恢复状态。
+
+### 2026-10-20 本次文档补充的验证
+
+- `openspec validate delivery-foundation-rearchitecture --strict`：exit 0；92 个场景 ID 保持唯一，本次改动文档的本地链接可解析，`git diff --check` 通过。
+- 当前 planning-toolkit 的完整 `plan_guard.py` 检查：exit 1，返回 `DRIFT: architecture_sha256 mismatch` 和 `OPENSPEC_LIFECYCLE: SOURCE_DRIFT`。这是保留旧锁后的预期阻断，不是新交接 PASS；当前实施控制器须接纳修订后重冻结。
+- `bash scripts/check.sh` 在包含本次文档改动的独立可写副本执行通过：规则/技能、Whitebox GREEN 与负例、共识 gate 回归、Node 测试 50/50、YAML/JSON 检查通过。使用隔离副本避免测试更新活技能夹具/配置；结果仅证明该副本的仓库回归。
+- 未安装或配置 Ponytail/TeamAI，未修改项目 Hook、全局方法、Comet Runtime、执行状态、任务勾选或旧冻结锁；未验证真实 Hook 注入/跨宿主/角色隔离，未派发新的独立评审。
 
 ## 当前证据边界
 

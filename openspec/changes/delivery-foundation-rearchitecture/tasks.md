@@ -111,14 +111,14 @@
 **Parallel safe:** false
 **Acceptance IDs:** F01, F03
 
-- [ ] **Step 1 [5 min]: Test** 1.1.a 固定实际发行产物：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：复核既有 Comet 0.4.5 integrity，补 TeamAI/OpenSpec/Node/宿主/技能摘要；历史下载不等于运行通过。
-- [ ] **Step 2 [5 min]: Implement** 1.1.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 1.1.b 隔离运行版本与兼容探针：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：真实运行 version/status/最小调用；重放旧 OpenSpec 依赖字段失败并记录兼容矩阵，不全局升级。
-- [ ] **Step 4 [5 min]: Implement** 1.1.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Test** 1.1.c 明确 Comet 扩展交付位置：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：定位固定产物对应源码/测试目录、补丁构建与分发方式；不在插件缓存或 .agents 技能正文中修 Runtime。
-- [ ] **Step 6 [5 min]: Implement** 1.1.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 1.1.a 固定实际发行产物：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：复核既有 Comet 0.4.5 integrity，补 TeamAI/OpenSpec/Node/宿主/技能摘要；历史下载不等于运行通过。
+- [x] **Step 2 [5 min]: Implement** 1.1.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 1.1.b 隔离运行版本与兼容探针：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：真实运行 version/status/最小调用；重放旧 OpenSpec 依赖字段失败并记录兼容矩阵，不全局升级。
+- [x] **Step 4 [5 min]: Implement** 1.1.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Test** 1.1.c 明确 Comet 扩展交付位置：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：定位固定产物对应源码/测试目录、补丁构建与分发方式；不在插件缓存或 .agents 技能正文中修 Runtime。
+- [x] **Step 6 [5 min]: Implement** 1.1.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P1_6: 原任务 1.6 — 按 matt-method-profile-migration.md 显式解决本仓库旧 planner/Comet Classic 的 Superpowers 硬依赖和初始化安装路径；固定 Matt 基础方法与必要专门技能快照。按 M01/M02 验证全局停用不被重启、没有嵌套 planner/implement-spec controller；不修改上游正文或用本机软链接分发。
 
