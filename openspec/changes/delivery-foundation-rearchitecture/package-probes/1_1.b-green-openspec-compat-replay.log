@@ -1,0 +1,12 @@
+# 1.1.b GREEN probe B — replay old OpenSpec dependency-field failure against published Comet artifact
+# module: dist/domains/comet-classic/classic-artifact-requirements.js extracted from .sdd/cache/artifacts/comet-0.4.5.tgz (tarball sha256 d1713b5d80c1fffdb04586f53dfe227a418dd1b44a0c87b4f8c3b09ef06b84bb == registry integrity)
+# input: real 'openspec status --change delivery-foundation-rearchitecture --json' exit 0, saved as 1_1.b-green-openspec-status-131-input.json
+# harness: vm.SourceTextModule isolated evaluation, async linker, real host builtins, yaml@^2.9.0 scratch install; pure predicate only — no adapter dispatch, no global upgrade
+# started: 2026-10-20T11:29:20+0800
+--- output ---
+(node:73156) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"accepted":false,"error":"OpenSpec must expose dependency edges for every artifact; upgrade to a supported version"}
+--- exit=3 (3 = expected rejection: dependency edges missing in 1.3.1 status) ---
+# matrix row: openspec 1.3.1 local => dependency_edges INCOMPATIBLE (replayed rejection above)
+# finished: 2026-10-20T11:29:20+0800
