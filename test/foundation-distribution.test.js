@@ -234,13 +234,18 @@ function fixtureUserSettings() {
   };
 }
 
+// Project-managed entries only: commands referencing plugin infrastructure
+// (CLAUDE_PLUGIN_ROOT / .claude/plugins/) are plugin registrations even when
+// their script NAME collides with ours — they never count as project managed.
 function managedCommands(settings) {
   const managed = { PreToolUse: [], SessionStart: [], Stop: [] };
   for (const [group, entries] of Object.entries(settings.hooks ?? {})) {
     for (const entry of entries ?? []) {
       for (const hook of entry.hooks ?? []) {
-        if (/hooks\/(pre-tool-gate|session-context|stop-reminder)\.sh/.test(String(hook.command))) {
-          (managed[group] ??= []).push({ matcher: entry.matcher, command: hook.command });
+        const command = String(hook.command ?? '');
+        if (/CLAUDE_PLUGIN_ROOT|\.claude\/plugins\//.test(command)) continue;
+        if (/hooks\/(pre-tool-gate|session-context|stop-reminder)\.sh/.test(command)) {
+          (managed[group] ??= []).push({ matcher: entry.matcher, command });
         }
       }
     }
@@ -397,6 +402,165 @@ compositionTest('matcher registration and gate script behavior are tested togeth
     assert.equal(runAdapter(root).status, 0, 're-bootstrap must repair matcher drift');
     const repaired = managedCommands(JSON.parse(fs.readFileSync(settingsPath, 'utf8')));
     assert.ok(String(repaired.PreToolUse[0].matcher).split('|').includes('Task'), 'matcher drift repaired');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// V_P1_2_PLUGIN_REGISTRATION_DIVISION (§7.2/§7.3 supplement): plugin lifecycle
+// hooks are owned by the plugin entry — the project managed block never
+// absorbs them, plugin entries never participate in project managed dedup or
+// handover, same event/command duplicates are refused with a conflict list,
+// and hooks.yaml events outside the adapter fixed event set are refused
+// instead of silently doing nothing.
+// ---------------------------------------------------------------------------
+
+const PLUGIN_SESSION_COMMAND = '"$CLAUDE_PLUGIN_ROOT"/hooks/session-context.sh';
+const PLUGIN_PROMPT_COMMAND = '"$CLAUDE_PLUGIN_ROOT"/dist/ponytail-prompt.js';
+// JSON serialization escapes the quotes inside hook commands; compare on the
+// unescaped form so raw commands match what the file actually stores.
+const hooksText = (settings) => JSON.stringify(settings.hooks ?? {}).replaceAll(String.fromCharCode(92), '');
+
+function fixturePluginSettings() {
+  const settings = fixtureUserSettings();
+  // Ponytail-style plugin registrations: the SessionStart command collides
+  // with OUR managed script NAME but lives in the plugin root — source
+  // marking must classify it as plugin, not as a stale project entry.
+  settings.hooks.SessionStart.push({ matcher: 'startup|resume', hooks: [{ type: 'command', command: PLUGIN_SESSION_COMMAND }] });
+  settings.hooks.UserPromptSubmit = [{ hooks: [{ type: 'command', command: PLUGIN_PROMPT_COMMAND }] }];
+  return settings;
+}
+
+const FIXTURE_DENY_POLICY = ['policies:', '  - id: dangerous-command-blocklist', '    hook: PreToolUse', '    matcher: Bash', '    action: deny', '    patterns:', '      - "' + FORCE_PUSH + '"', '    message: "blocked"'];
+
+test('adapter declares the fixed event set and the plugin registration division', () => {
+  assert.match(adapterSrc, /FIXED_EVENT_SET|固定事件集/, 'adapter must document the fixed event set boundary (§7.3)');
+  assert.match(adapterSrc, /CLAUDE_PLUGIN_ROOT/, 'adapter must document plugin-source marking (§7.2)');
+  assert.match(adapterSrc, /PreToolUse[\s\S]*?SessionStart[\s\S]*?Stop/, 'generated events are exactly PreToolUse/SessionStart/Stop');
+});
+
+compositionTest('plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall', () => {
+  const root = makeFixture();
+  try {
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+    const settingsPath = path.join(root, '.claude/settings.json');
+    writeJson(settingsPath, fixturePluginSettings());
+    const pluginPresent = (s) => hooksText(s).includes(PLUGIN_SESSION_COMMAND) && hooksText(s).includes(PLUGIN_PROMPT_COMMAND);
+    const runInstall = runAdapter(root);
+    assert.equal(runInstall.status, 0, (runInstall.stderr || runInstall.stdout) + ' — install with plugin entries present');
+    let settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    assert.ok(pluginPresent(settings), 'plugin entries must survive install (never copied into or absorbed by the managed block)');
+    assert.equal(managedCommands(settings).SessionStart.length, 1, 'exactly one PROJECT managed SessionStart entry beside the plugin entry');
+    assert.equal(hooksText(settings).split(PLUGIN_SESSION_COMMAND).length - 1, 1, 'plugin entry itself must not be duplicated');
+
+    assert.equal(runAdapter(root).status, 0, 're-pull (upgrade path)');
+    settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    assert.ok(pluginPresent(settings), 'plugin entries survive upgrade — they do not participate in project managed dedup');
+    assert.equal(managedCommands(settings).SessionStart.length, 1, 'still exactly one project managed SessionStart entry');
+
+    assert.equal(runAdapter(root, ['--uninstall']).status, 0, 'uninstall');
+    settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    assert.ok(pluginPresent(settings), "uninstall removes project managed entries only — plugin registrations belong to the plugin entry");
+    assert.deepEqual(managedCommands(settings), { PreToolUse: [], SessionStart: [], Stop: [] }, 'all project managed entries removed');
+    assert.ok(userEntriesIntact(settings), 'user entries intact throughout');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+compositionTest('same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched', () => {
+  const root = makeFixture();
+  try {
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+    const before = fixtureUserSettings();
+    // A plugin entry that registers the SAME event/command as the project
+    // managed block (plugin wrapper around our gate) is a double registration.
+    // Byte-copies of the current managed command WITHOUT a plugin marker are
+    // handover upgrades (covered by the legacy-format test) — this is the
+    // distinct case the division contract refuses.
+    before.hooks.PreToolUse.push({ matcher: 'Bash', hooks: [{ type: 'command', command: '"$CLAUDE_PLUGIN_ROOT"/bin/wrap "$CLAUDE_PROJECT_DIR"/hooks/pre-tool-gate.sh' }] });
+    const settingsPath = path.join(root, '.claude/settings.json');
+    const original = JSON.stringify(before, null, 2) + '\n';
+    fs.writeFileSync(settingsPath, original);
+
+    const run = runAdapter(root);
+    assert.notEqual(run.status, 0, 'duplicate registration of the same event/command must be refused');
+    assert.match(run.stderr, /重复注册|duplicate/i, 'refusal must name the duplicate registration problem');
+    assert.match(run.stderr, /pre-tool-gate/, 'conflict list must name the conflicting command');
+    assert.match(run.stderr, /插件|plugin/i, 'conflict list must mark the plugin source');
+    assert.equal(fs.readFileSync(settingsPath, 'utf8'), original, 'refused composition must not touch settings.json (plugin entry preserved, never auto-edited)');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+compositionTest('duplicate user entries for the same event/command are refused, not composed twice', () => {
+  const root = makeFixture();
+  try {
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+    const before = fixtureUserSettings();
+    before.hooks.SessionStart.push({ matcher: 'startup', hooks: [{ type: 'command', command: 'echo user-own-session-hook' }] });
+    const settingsPath = path.join(root, '.claude/settings.json');
+    const original = JSON.stringify(before, null, 2) + '\n';
+    fs.writeFileSync(settingsPath, original);
+
+    const run = runAdapter(root);
+    assert.notEqual(run.status, 0, 'two identical user registrations in the composed view must be refused');
+    assert.match(run.stderr, /重复注册|duplicate/i);
+    assert.equal(fs.readFileSync(settingsPath, 'utf8'), original, 'refused composition must not touch settings.json');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+compositionTest('hooks.yaml events outside the adapter fixed event set are refused, never silently dropped', () => {
+  const root = makeFixture();
+  try {
+    fs.writeFileSync(
+      path.join(root, 'hooks.yaml'),
+      FIXTURE_DENY_POLICY.concat(['  - id: ponytail-method-context', '    hook: SubagentStart', '    action: run', '    script: hooks/ponytail-context.sh']).join('\n') + '\n',
+    );
+    const run = runAdapter(root);
+    assert.notEqual(run.status, 0, 'YAML append of an unsupported event must not be a silent no-op');
+    assert.match(run.stderr, /SubagentStart/, 'refusal must name the offending event');
+    assert.match(run.stderr, /固定事件集|fixed event set/, 'refusal must state the fixed event set boundary (§7.3)');
+    assert.ok(!fs.existsSync(path.join(root, '.claude/settings.json')), 'refused compile must not write settings');
+    assert.ok(!fs.existsSync(path.join(root, 'hooks/.compiled.env')), 'refused compile must not write compiled policy either');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+compositionTest('plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2)', () => {
+  const root = makeFixture();
+  try {
+    fs.writeFileSync(
+      path.join(root, 'hooks.yaml'),
+      FIXTURE_DENY_POLICY.concat(['  - id: ponytail-context', '    hook: SessionStart', '    action: run', '    script: "$CLAUDE_PLUGIN_ROOT"/hooks/ponytail-session.sh']).join('\n') + '\n',
+    );
+    const run = runAdapter(root);
+    assert.notEqual(run.status, 0, 'plugin lifecycle scripts must not be compiled into the project managed block');
+    assert.match(run.stderr, /插件|plugin/i, 'refusal must name the registration division');
+    assert.match(run.stderr, /CLAUDE_PLUGIN_ROOT|ponytail/, 'refusal must name the plugin-sourced script');
+    assert.ok(!fs.existsSync(path.join(root, '.claude/settings.json')), 'refused compile must not write settings');
+    assert.ok(!fs.existsSync(path.join(root, 'hooks/.compiled.env')), 'refused compile must not write compiled policy either');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts', async () => {
+  const root = makeFixture();
+  try {
+    fs.writeFileSync(
+      path.join(root, 'hooks.yaml'),
+      FIXTURE_DENY_POLICY.concat(['  - id: ponytail-context', '    hook: SessionStart', '    action: run', '    script: "$CLAUDE_PLUGIN_ROOT"/hooks/ponytail-session.sh']).join('\n') + '\n',
+    );
+    await assert.rejects(
+      () => exporter.exportRelease(root, path.join(root, 'foundation'), { releaseCommit: FIXED_COMMIT }),
+      (err) => /plugin|CLAUDE_PLUGIN_ROOT|注册分工/i.test(String(err && err.message)),
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

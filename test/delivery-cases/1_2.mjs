@@ -200,6 +200,76 @@ caseComposition('forward then reverse composition: init, user edit, re-pull, uni
   }
 });
 
+// V_P1_2_PLUGIN_REGISTRATION_DIVISION (§7.2/§7.3): plugin lifecycle hooks
+// belong to the plugin entry; bootstrap composes the project managed block
+// without absorbing, deduplicating or removing them, and refuses duplicate
+// same event/command registrations with an explicit conflict list.
+const PLUGIN_SESSION_COMMAND = '"$CLAUDE_PLUGIN_ROOT"/hooks/session-context.sh';
+const PLUGIN_PROMPT_COMMAND = '"$CLAUDE_PLUGIN_ROOT"/dist/ponytail-prompt.js';
+const hooksText = (settings) => JSON.stringify(settings.hooks ?? {}).replaceAll(String.fromCharCode(92), '');
+
+caseComposition('plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched', () => {
+  const root = makeFixture();
+  try {
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+    const settingsPath = path.join(root, '.claude/settings.json');
+    writeJson(settingsPath, {
+      permissions: { allow: ['Bash(echo user-keep)'] },
+      hooks: {
+        SessionStart: [
+          { matcher: 'startup|resume', hooks: [{ type: 'command', command: PLUGIN_SESSION_COMMAND }] },
+          { matcher: 'startup', hooks: [{ type: 'command', command: 'echo user-case-hook' }] },
+        ],
+        UserPromptSubmit: [{ hooks: [{ type: 'command', command: PLUGIN_PROMPT_COMMAND }] }],
+      },
+    });
+
+    assert.equal(bootstrapTarget(root).status, 0, 'forward init with plugin entries present');
+    let after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    const pluginPresent = (s) => hooksText(s).includes(PLUGIN_SESSION_COMMAND) && hooksText(s).includes(PLUGIN_PROMPT_COMMAND);
+    assert.ok(pluginPresent(after), 'plugin entries survive init');
+    assert.equal(hooksText(after).split(PLUGIN_SESSION_COMMAND).length - 1, 1, 'plugin session entry present exactly once');
+
+    assert.equal(bootstrapTarget(root).status, 0, 're-pull');
+    after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    assert.ok(pluginPresent(after), 'plugin entries survive re-pull (no managed dedup participation)');
+    assert.equal(hooksText(after).split(PLUGIN_SESSION_COMMAND).length - 1, 1, 'plugin session entry still exactly once');
+
+    assert.equal(bootstrapTargetUninstall(root).status, 0, 'uninstall');
+    after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    assert.ok(pluginPresent(after), 'uninstall removes project managed entries only');
+    assert.ok(!JSON.stringify(after.hooks ?? {}).includes('hooks/pre-tool-gate'), 'project gate removed');
+    assert.ok(JSON.stringify(after.hooks).includes('user-case-hook'), 'user hook kept');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+caseComposition('duplicate same event/command registration (plugin entry wrapping the managed command) is refused via bootstrap with a conflict list', () => {
+  const root = makeFixture();
+  try {
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+    const settingsPath = path.join(root, '.claude/settings.json');
+    const before = {
+      hooks: {
+        PreToolUse: [
+          { matcher: 'Bash', hooks: [{ type: 'command', command: '"$CLAUDE_PLUGIN_ROOT"/bin/wrap "$CLAUDE_PROJECT_DIR"/hooks/pre-tool-gate.sh' }] },
+        ],
+      },
+    };
+    const original = JSON.stringify(before, null, 2) + '\n';
+    fs.writeFileSync(settingsPath, original);
+
+    const run = bootstrapTarget(root);
+    assert.notEqual(run.status, 0, 'bootstrap must refuse the duplicate registration');
+    assert.match(run.stderr + run.stdout, /重复注册|duplicate/i, 'refusal must name the duplicate registration');
+    assert.match(run.stderr + run.stdout, /pre-tool-gate/, 'conflict list must name the command');
+    assert.equal(fs.readFileSync(settingsPath, 'utf8'), original, 'refused bootstrap must not touch settings.json');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 caseComposition('repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable', () => {
   const root = makeFixture();
   try {
