@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "interface": "KnowledgeAuthzModel.v1",
+  "project": "sdd-harness-pilot",
+  "note": "P4_7 授权模型：试点源域/目标/真实 owner 登记 + 四角色（author/reviewer/publisher/isolator）与 issuer 的隔离结构。本环境无活 Outline 实例、无平台写授权、gh TLS 失效——instance/authority/签发凭据一律如实 UNVERIFIED/UNREGISTERED，不得用占位值冒充事实（SOURCE_TARGET_OWNER_GRANT_REQUIRED 只阻断相关动作）。",
+  "ownerPrincipal": "human:ql-wade#262266039",
+  "ownerRegistration": {
+    "owner": "ql-wade",
+    "registry": "infra/delivery/registry.json#project",
+    "delegates": [],
+    "authorityStatus": "UNVERIFIED",
+    "readbackCommand": "gh api repos/rpamis/sdd-harness",
+    "readbackError": "tls: failed to verify certificate: x509: OSStatus -26276 (recorded by I01; readback must succeed at execution time before any authorized action)"
+  },
+  "roles": {
+    "author": {
+      "principal": "svc:sdd-harness-pilot/worker-author",
+      "credentialRef": "secret-ref:sdd-harness-pilot/worker-author-api",
+      "powers": ["read allowlisted source material", "write the knowledge candidate"],
+      "forbidden": ["issue or revoke grants", "resolve publisher/isolator/issuance credentials", "execute publication", "modify trusted policy or approval", "classify sensitivity"]
+    },
+    "reviewer": {
+      "principal": "svc:sdd-harness-pilot/worker-reviewer",
+      "credentialRef": "secret-ref:sdd-harness-pilot/worker-review-api",
+      "powers": ["read the candidate for independent review"],
+      "forbidden": ["author the candidate", "issue grants", "publish"]
+    },
+    "publisher": {
+      "principal": "svc:sdd-harness-pilot/outline-publisher",
+      "credentialRef": "secret-ref:sdd-harness-pilot/outline-publisher",
+      "powers": ["execute the single registered publish operation after an allow decision", "perform the independent readback"],
+      "forbidden": ["issue grants", "modify ACL/sharing/membership", "enlarge the audience"]
+    },
+    "isolator": {
+      "principal": "svc:sdd-harness-pilot/outline-isolator",
+      "credentialRef": "secret-ref:sdd-harness-pilot/outline-isolator",
+      "powers": ["execute registered isolation and revocation maintenance"],
+      "forbidden": ["read publisher material", "publish", "issue grants"]
+    }
+  },
+  "isolation": {
+    "enforcement": "principal-bound secret-refs in the I01 catalog (tools/infra/secret-refs.mjs allowedPrincipals/boundRole) plus the KnowledgeAuthz decision engine; prompt-only prohibitions are not enforcement (U07)",
+    "authorCannotIssue": true,
+    "reviewIsReadOnly": true,
+    "publisherExecutesRegisteredOperationsOnly": true,
+    "issuerIndependentOfAgents": true,
+    "isolatorCannotReadPublisherMaterial": true
+  },
+  "issuers": [
+    {
+      "id": "issuer-pilot-owner",
+      "kind": "registered-owner",
+      "principal": "human:ql-wade#262266039",
+      "owner": "ql-wade",
+      "delegates": [],
+      "authority": {
+        "sources": ["sdd-harness-repo", "comet-source"],
+        "targets": ["outline-managed-collection"]
+      },
+      "issuanceCredential": {
+        "ref": null,
+        "status": "UNREGISTERED",
+        "reason": "the I01 catalog (24 refs) has no grant-issuance credential; live issuance requires a protected workflow identity registered by an I01 amendment. Until then grants exist only as owner-registered ledger entries and the live auto-publish path stays blocked (U01)."
+      }
+    }
+  ],
+  "sources": [
+    {
+      "id": "sdd-harness-repo",
+      "kind": "git-repository",
+      "owner": "ql-wade",
+      "delegates": [],
+      "registration": "infra/delivery/registry.json#project",
+      "authorityStatus": "UNVERIFIED",
+      "readbackCommand": "gh api repos/rpamis/sdd-harness"
+    },
+    {
+      "id": "comet-source",
+      "kind": "source-archive",
+      "owner": "ql-wade",
+      "delegates": [],
+      "registration": "infra/delivery/registry.json#resources[comet-source]",
+      "lockRef": "integrations/comet/upstream.lock.json",
+      "authorityStatus": "UNVERIFIED",
+      "readbackCommand": "verify integrations/comet/upstream.lock.json source sha256 against the pinned archive"
+    }
+  ],
+  "targets": [
+    {
+      "id": "outline-managed-collection",
+      "kind": "outline-collection",
+      "registration": "infra/delivery/outline/collection-registration.example.json#collections[managed-source-collection]",
+      "instanceStatus": "UNVERIFIED",
+      "instanceReason": "dedicated loopback Outline instance not deployed; immutable instance/collection ids must be observed from a real deployment",
+      "ownerGrantRef": "secret-ref:sdd-harness-pilot/outline-publisher",
+      "allowedAudienceSource": ["collection-default"]
+    }
+  ]
+}

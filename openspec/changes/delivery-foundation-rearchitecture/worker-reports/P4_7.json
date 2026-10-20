@@ -1,0 +1,165 @@
+{
+  "task": "P4_7 (原任务 4.7): 按 knowledge-preauthorization-contract.md 验证 U01–U08 — 有效 owner/委托与可信签发、grant 撤销/过期、多源披露交集、完整 principal 映射、目标继承/单页/公开分享、写前版本重验、作者/审查/Publisher/issuer 隔离与正向自动发布",
+  "run": "impl-dfr-20261020-r1",
+  "worktree": "impl/p4-7-isolated-artifacts (base f422bd5)",
+  "worker": "P4_7 implementation worker",
+  "final_status": "GREEN",
+  "acceptance_ids": {
+    "targeted": ["U01", "U02", "U03", "U04", "U05", "U06", "U07", "U08"],
+    "id_reconciliation": "覆盖矩阵以 spec.md U01–U08 场景语义为准（brief 指定为语义唯一来源）。brief 的主题清单与 spec 编号有错位，对应关系：brief-U01 owner/委托结构+U02 可信签发+U03 撤销/过期时序 → spec U01（授权链拒绝：自批/无权 issuer/过期/撤销）；brief-U04 交集 → spec U02；brief-U07 写前版本重验 → spec U03（写前复核）+U04（版本绑定）；brief-U05 principal 映射+四角色 → spec U06（映射 fail-closed）+U07（角色隔离）；brief-U06 继承/单页/公开分享 → spec U05；brief-U08 隔离边界+正向自动发布 → spec U07+U08。八个 spec 场景全部有正负例。",
+    "local_subset_note": "环境事实（无真实 Outline 实例/无平台写授权/gh TLS 失效）下，本地可证子集 = 授权模型结构、签发/撤销/过期时序（真实时钟+真实状态迁移）、多源交集逻辑、principal 映射完整性、隔离边界（经 I01 secret-ref 目录真实解析门）、写前重验；全部经真实 CLI 正负例，零 mock。活源/目标权限读回、Outline 分享强制、受保护签发工作流如实 UNVERIFIED（承接者见 unverified）。"
+  },
+  "red_cases": [
+    {
+      "id": "U01–U08（全部）",
+      "classification": "缺口已复现",
+      "claim": "知识预授权决策面整体不存在：infra/delivery/knowledge/ 三工件与 tools/infra/knowledge-authz.mjs 均未实现，八个场景的全部正负例无真实入口可执行（node 启动 CLI 即 module-not-found 退出）",
+      "evidence": "worker-reports/P4_7/evidence/red-infra-knowledge-authz.txt（15 tests：14 fail / 1 pass，not ok 1–14）+ red-4_7-mjs.txt（9 tests：0 pass / 9 fail，U01–U08+setup 全 not ok）"
+    },
+    {
+      "id": "注记",
+      "classification": "RED 日志保存形态",
+      "claim": "原始日志按 .gitignore *.log 规避先例（P4_6 review fix）直接以 .txt 入库，git add 无需 -f",
+      "evidence": "worker-reports/P4_7/evidence/（6 个 .txt）"
+    }
+  ],
+  "coverage_matrix": {
+    "U01": {
+      "scenario": "作者自写批准/issuer 无源目标权力/过期/撤销 → 拒绝，不因签名、PR 合并或 approved 字段放行",
+      "positive": "owner 签发的试点 grant verify-grant exit 0；登记结构正例：owner=I01 registry owner(ql-wade)、delegates=[]、authorityStatus=UNVERIFIED 如实标注、ledger grant owner 全部等于登记 owner",
+      "negative": "内联 grant 对象→SELF_AUTHORED_GRANT；approved:true→SELF_AUTHORED_APPROVAL（字段存在即拒绝类，值无关）；mergedPr→UNKNOWN_REQUEST_FIELD；带签名 blob 的 agent-issuer grant→ISSUER_UNREGISTERED（签名从不进入判据）；注册 issuer 无目标域权力→ISSUER_AUTHORITY_INVALID；真实时钟过期→GRANT_EXPIRED；owner revoke 后→GRANT_REVOKED；OWNER_MISMATCH（伪造 grant owner）；作者身份提升为 issuer→ROLE_ISOLATION_VIOLATED；无 --now 入口（改时间=exit 1）",
+      "entrances": "knowledge-authz.mjs verify-grant / decide / revoke（真实 CLI 子进程）；fixture 均为 tmp 世界",
+      "status": "LOCAL_ONLY 结构可证"
+    },
+    "U02": {
+      "scenario": "多授权域提炼的候选，受众在来源并集但不在允许披露交集 → 审查通过仍拒绝",
+      "positive": "两源（sdd-harness-repo [G] + comet-source [G,C]）交集 [G]，目标 [G] ⊆ 交集 → allow，回执 audience.rule=intersection；交集随最小披露源收缩",
+      "negative": "同两源、目标 [G,C]（在并集、不在交集 [∅/G]）→ AUDIENCE_OUTSIDE_INTERSECTION，审查 verdict=pass 全程不变（审查通过不扩大资料授权）",
+      "entrances": "decide（同一请求对象只换台账/受众字段）",
+      "status": "LOCAL_ONLY 结构可证"
+    },
+    "U03": {
+      "scenario": "写前源权限/grant/目标受众收缩 → 写前复核阻断旧发布判定，同 operation 不能自动续期",
+      "positive": "decide allow →（写前）owner revoke → recheck exit 2 且 reasons 含 LEDGER_CHANGED + GRANT_NO_LONGER_VALID（旧回执按真实台账重验失效）；re-decide 同 operation → GRANT_REVOKED 拒绝（无续期通道；请求侧根本没有 previousDecision 输入字段）",
+      "negative": "篡改回执 decidedAt → TAMPERED_DECISION（decisionId 覆盖全部回执字段，改时间即失效）；旧快照无任何沿用路径",
+      "entrances": "decide → revoke（真实台账原子写）→ recheck",
+      "status": "LOCAL_ONLY 结构可证"
+    },
+    "U04": {
+      "scenario": "审查/批准绑定候选版本；改标题/正文/附件/目标/可见性 → 旧判定失效，语义类似或同 document ID 不能沿用",
+      "positive": "recheck --payload-digest 漂移 → PAYLOAD_DRIFTED（写前呈递的 payload 必须与回执绑定摘要一致）；回执 limits.scope 声明仅覆盖本操作/本对象版本，autoRenewal=false",
+      "negative": "新请求 payload=v2 而 review 仍绑 v1 → REVIEW_PAYLOAD_STALE（同一 documentId 不改变拒绝——判定绑定的是 payload 摘要而非文档身份）；旧审查时间超新鲜窗 → REVIEW_EXPIRED；reviewedAt 在未来 → REVIEW_TIMESTAMP_INVALID",
+      "entrances": "decide / recheck",
+      "status": "LOCAL_ONLY 结构可证"
+    },
+    "U05": {
+      "scenario": "目标集合名字/ID 在 allowlist，但继承/单页/子树分享/公开入口使实际读者越界 → 按有效受众拒绝，不先写大受众草稿，不自动改 ACL",
+      "positive": "collection-default 受众在交集内 → allow（唯一放行的受众来源）",
+      "negative": "page-share/subtree-share/public-share → TARGET_AUDIENCE_ENLARGED（集合 ID 在 allowlist 也拒）；effectiveAudience 越交集 → AUDIENCE_OUTSIDE_INTERSECTION；acl/share/membership 子命令不存在（exit 1——无 ACL 自助入口可调用）；documents.share/delete/acl.change → ACTION_NOT_PREAUTHORIZED",
+      "entrances": "decide + CLI 表面（不存在 ACL 变更命令）",
+      "status": "LOCAL_ONLY 结构面可证；真实 Outline 继承/分享强制行为 UNVERIFIED（承接者：Outline owner + 部署验证波次）"
+    },
+    "U06": {
+      "scenario": "权限分页不完整/principal 无法映射/权限 API 错误 → 保持 blocked，未知不当空集/公开，服务账号可读不放行",
+      "positive": "完整且全映射的证据 + 目标分页完整 → 进入交集判定（正向通路依赖它）",
+      "negative": "INCOMPLETE→PERMISSION_EVIDENCE_INCOMPLETE；ERROR(403)→PERMISSION_EVIDENCE_ERROR；exportedByServiceAccountOnly→SERVICE_ACCOUNT_READ_NOT_REPUBLICATION；evidence.unmappedPrincipals/目标 unmapped/未映射读者 → PRINCIPAL_UNMAPPED；incompletePagination→TARGET_EVIDENCE_INCOMPLETE；已提交工件未登记任何受众（UNVERIFIED）→ decide 对已提交状态 fail-closed（AUDIENCE_OUTSIDE_INTERSECTION，空交集拒绝）",
+      "entrances": "decide（已提交世界 + tmp 证据变体）",
+      "status": "LOCAL_ONLY 结构可证；活源/目标权限读回本体 UNVERIFIED（承接者：部署验证波次 + 源连接器波次）"
+    },
+    "U07": {
+      "scenario": "author/reviewer/publisher/issuer 按受管角色隔离；普通 Agent 改可信策略/批准、拿签发或超范围凭据、任意集合/分享修改 → 被实际受管入口拒绝并审计",
+      "positive": "四角色 principal/ref 两两独立（提交工件断言 + validate 结构检查）；publisher 主体过 I01 四重检查（UNRESOLVED 如实——I01 无运行时 store）；owner revoke 成功后台账留 revokedBy/revokedAt/reason 审计记录",
+      "negative": "author 解析 outline-publisher ref → PRINCIPAL_NOT_AUTHORIZED（真实 I01 resolveSecretRef，非 mock）；isolator 解析 publisher ref → PRINCIPAL_NOT_AUTHORIZED（isolator 不读 publisher 材料）；author revoke → REVOKE_NOT_AUTHORIZED 且台账逐字节不变；author 请求发布 → IDENTITY_NOT_PUBLISHER；作者自审 → SELF_REVIEW_FORBIDDEN；未注册 reviewer → REVIEWER_UNREGISTERED；跨项目 ref → CROSS_PROJECT_REF",
+      "entrances": "resolve（I01 目录真实解析门）/ revoke / decide / validate",
+      "status": "LOCAL_ONLY 结构可证（提示词级禁令不作为验收——全部经真实受管入口拒绝）"
+    },
+    "U08": {
+      "scenario": "合法 owner 预授权有效、输入来源完整、权限与 payload 匹配、独立审查通过 → 执行已登记允许操作并独立读回，自动接纳回执继续同一 Run，不重复人工确认，不扩大到其他对象/未来版本",
+      "positive": "全匹配请求 decide → allow：回执绑定 documentId/payloadDigest/grants/受众交集/三工件摘要，readback.required=true status=PENDING（无读回不接纳），limits 声明无扩展无续期；立即 recheck（含 --payload-digest 一致）→ ok；回执无 humanApproval/manualConfirmation 字段（无重复人工确认门）",
+      "negative": "payload 漂移 → PAYLOAD_DRIFTED（不扩展到未来版本）；其他对象需全新 decide（新 documentId 即新请求，旧回执不含它）",
+      "entrances": "decide / recheck",
+      "status": "LOCAL_ONLY 决策逻辑可证；真实 Outline 写入+独立读回+同一 Run 延续 UNVERIFIED（Comet 侧 closeout 机制已由 P4_6 建立；承接者：P4_4 薄适配 + 部署验证波次）"
+    }
+  },
+  "commands": [
+    {
+      "cmd": "node --test test/infra-knowledge-authz.test.js  # RED（实现不存在）",
+      "exit_code": 1,
+      "note": "14 fail / 1 pass（pass 的'输入契约'项是 node module-not-found 退出码=1 的巧合；GREEN 后以真实原因复验通过）；日志 worker-reports/P4_7/evidence/red-infra-knowledge-authz.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/4_7.mjs  # RED（实现不存在）",
+      "exit_code": 1,
+      "note": "0 pass / 9 fail（setup + U01–U08 全 not ok）；日志 worker-reports/P4_7/evidence/red-4_7-mjs.txt"
+    },
+    {
+      "cmd": "node --test test/infra-knowledge-authz.test.js  # GREEN",
+      "exit_code": 0,
+      "note": "15/15 pass / 0 fail；提交后复跑同结果；日志 green-infra-knowledge-authz.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/4_7.mjs  # GREEN",
+      "exit_code": 0,
+      "note": "9/9 pass / 0 fail（U01–U08 + setup，隔离 HOME/PATH stubs/$TMPDIR，零 mock）；提交后复跑同结果；日志 green-4_7-mjs.txt"
+    },
+    {
+      "cmd": "npm test  # 全量回归（host node 22.13.1）",
+      "exit_code": 0,
+      "note": "356 tests：355 pass / 0 fail / 1 skip = 基线 341（340 pass+1 skip，P4_6 review-fix 后记录一致）+ 本任务新增 15；日志 green-npm-test-full.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/*.mjs  # 全目录（默认 lock，含本任务文件）",
+      "exit_code": 0,
+      "note": "147 tests：145 pass / 0 fail / 2 skip（与基线行为一致，跨任务零回归）；日志 green-delivery-cases-all.txt"
+    }
+  ],
+  "unverified": [
+    {
+      "item": "活源/目标权限读回（GitHub collaborator 全量分页、飞书协作者、Outline 集合/继承/分享/成员真实读者闭包）",
+      "reason": "无平台写授权、gh TLS 失效、无 Outline 部署；decide 消费的 permissionEvidence 是本地结构化输入，回执 provenance 如实标注 LOCAL_ONLY/UNVERIFIED",
+      "owner": "Outline owner + 部署验证波次（源侧连接器波次）"
+    },
+    {
+      "item": "Outline 继承/单页/子树/公开分享的真实强制行为",
+      "reason": "本地只证结构策略面（audienceSource 门 + 无 ACL 入口）；真实行为须活实例逐通道实测（I03 probe oidc-principal-acl 已登记步骤）",
+      "owner": "Outline owner + 部署验证波次"
+    },
+    {
+      "item": "受保护签发工作流与 issuer 凭据",
+      "reason": "I01 目录 24 refs 无签发凭据（不谎用 ci-check-publisher 等相邻 ref 的 purpose）；model.issuers[0].issuanceCredential.status=UNREGISTERED；台账 grant 为 owner 登记样例，签名 produced=false",
+      "owner": "治理/受保护基线波次（I01 修正案增补 grant-issuer ref 后翻转该字段）"
+    },
+    {
+      "item": "端到端自动发布（真实 Outline 写入 + 独立读回 + 同一 Run 回执接纳）",
+      "reason": "决策/重验逻辑本地可证；写入与读回执行面属薄适配与 Runner（P4_6 已建 closeout 机制：固定 UUID/lastRevision/读回门）",
+      "owner": "P4_4（Outline 薄适配）+ 部署验证波次"
+    },
+    {
+      "item": "试点目标集合/实例不可变 ID 与真实受众登记",
+      "reason": "collection-registration.example.json instance/collection id 仍 null/UNVERIFIED；policy.target.allowedAudience.readers=[] UNVERIFIED，已提交状态 fail-closed",
+      "owner": "Outline owner + 部署验证波次"
+    },
+    {
+      "item": "内容敏感性真实分类（unknown sensitivity fail-closed 的语义面）",
+      "reason": "本地只证请求不得携带作者自标分类（AUTHOR_CLASSIFICATION_FORBIDDEN）与策略上限声明；语义分类需内容扫描能力",
+      "owner": "内容扫描/审查能力波次"
+    }
+  ],
+  "files_changed": [
+    "infra/delivery/knowledge/authorization-model.json (new：试点源域 sdd-harness-repo/comet-source、目标 outline-managed-collection、真实 owner=ql-wade（I01 registry）、delegates=[]、四角色+issuer 隔离结构、issuanceCredential UNREGISTERED)",
+    "infra/delivery/knowledge/preauthorization-policy.json (new：contract §3 八类边界 + 交集受众规则 + 无 ACL 自助)",
+    "infra/delivery/knowledge/grant-ledger.example.json (new：3 grants 含撤销结构样例；disclosureAudience 空=未登记)",
+    "tools/infra/knowledge-authz.mjs (new：KnowledgeAuthz.v1 validate/verify-grant/revoke/decide/recheck/resolve，退出码 0/1/2，复用未修改的 tools/infra/secret-refs.mjs，零新依赖)",
+    "test/infra-knowledge-authz.test.js (new：15 tests)",
+    "test/delivery-cases/4_7.mjs (new：setup + U01–U08，verification-case-plan 已注册 case_module)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json + worker-reports/P4_7/evidence/（本提交：red-infra-knowledge-authz.txt、red-4_7-mjs.txt、green-infra-knowledge-authz.txt、green-4_7-mjs.txt、green-npm-test-full.txt、green-delivery-cases-all.txt，均 .txt 入库规避 .gitignore *.log）"
+  ],
+  "commits": {
+    "implementation": "8d35b06 feat(p4_7): KnowledgeAuthz.v1 — pre-authorization decision surface for U01–U08 (GREEN 24/24)",
+    "tests": "00ced3e test(p4_7): U01–U08 knowledge pre-authz cases over the real KnowledgeAuthz.v1 CLI (RED 23 fail vs missing implementation)",
+    "report": "(本提交) chore(p4_7): worker report P4_7 — coverage matrix, RED/GREEN evidence, full regression green"
+  },
+  "blockers_or_questions": [
+    "无实现阻塞。三项记录：(1) 文件落位按隔离任务 brief 的独占清单（infra/delivery/knowledge/* + tools/infra/knowledge-authz.mjs + 两个测试文件），与 tasks.md 'Owns' 的 lib/adapters/knowledge-authorization.js 路径不同——brief 明确禁止改 tasks.md，登记/翻转归集成波次；(2) I01 目录无签发凭据 ref，模型如实 UNREGISTERED——若治理波次决定增补（如 secret-ref:sdd-harness-pilot/grant-issuer），属 I01 修正案，随后翻转 model.issuers[0].issuanceCredential 即可，决策面无需改动；(3) 环境基线：本 worktree .sdd 为空导致既有 classic-integration C08 缺构建失败，已从 impl-p4-6 worktree 复制 vendored Comet 构建（beab355d，与本 lock 指纹一致）到本 worktree 的 gitignored .sdd，零仓库文件改动，npm test 随即回到 341 基线。"
+  ]
+}

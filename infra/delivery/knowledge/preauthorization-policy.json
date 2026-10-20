@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "interface": "KnowledgePreauthPolicy.v1",
+  "project": "sdd-harness-pilot",
+  "policyId": "preauth-pilot-v1",
+  "note": "P4_7 预授权策略：knowledge-preauthorization-contract.md 第 3 节八类必填边界的结构化声明（拟议语义，非当前原生配置字段）。目标有效受众规则见 audienceRule；授权不自动续期；未知一律 fail-closed。",
+  "subject": {
+    "ledger": "infra/delivery/knowledge/grant-ledger.example.json",
+    "issuers": ["issuer-pilot-owner"],
+    "validity": {
+      "maxValidityDays": 90,
+      "renewal": "manual re-issue through the original issuance path only; no auto-renewal"
+    }
+  },
+  "sources": {
+    "allowlist": ["sdd-harness-repo", "comet-source"],
+    "externalUrlsForbidden": true,
+    "disclosureRule": "intersection",
+    "evidenceContract": "each source needs permission evidence COMPLETE with every principal mapped; INCOMPLETE/ERROR/service-account-only stays blocked (U06); a 403 is never an empty set"
+  },
+  "purpose": {
+    "knowledgeTypes": ["project-knowledge"],
+    "processingEnvironment": "managed runner workspace only",
+    "outboundMaterialProfile": "summary/derivative knowledge only; publication does not authorize exporting full source material to arbitrary tools"
+  },
+  "content": {
+    "sensitivityCeiling": "internal",
+    "forbiddenCategories": ["secrets", "credentials", "personal-data", "customer-data"],
+    "authorClassificationForbidden": true,
+    "unknownSensitivity": "fail-closed"
+  },
+  "target": {
+    "registration": "infra/delivery/outline/collection-registration.example.json#collections[managed-source-collection]",
+    "allowedAudience": {
+      "readers": [],
+      "status": "UNVERIFIED",
+      "reason": "the effective target reader set is not observable without a live instance; auto-publish stays blocked until a real deployment registers it"
+    },
+    "allowedAudienceSource": ["collection-default"],
+    "pageShareForbidden": true,
+    "subtreeShareForbidden": true,
+    "publicShareForbidden": true,
+    "aclMutationForbidden": true,
+    "draftRule": "drafts never enter a larger audience before review; publish=false is not a privacy guarantee"
+  },
+  "actions": {
+    "allowed": ["documents.create", "documents.update"],
+    "forbidden": ["acl.change", "membership.change", "share.create", "documents.share", "documents.delete", "collection.move"]
+  },
+  "quality": {
+    "independentReview": "required",
+    "reviewerPrincipal": "svc:sdd-harness-pilot/worker-reviewer",
+    "reviewerMustDifferFromAuthor": true,
+    "reviewFreshnessHours": 72,
+    "versionBinding": "review and decision bind the frozen payload digest; any change invalidates both (U04)"
+  },
+  "lifecycle": {
+    "preWriteRecheck": "the decision receipt must recheck against current ledger/model/policy digests and the real clock immediately before the write (U03)",
+    "revocationEffect": "a revocation in the ledger blocks the next decision and stales any prior receipt; agents cannot modify time or copy old receipts past it",
+    "postPublishReverification": "UNVERIFIED — successor: knowledge-revocation-and-restoration (L01–L11)"
+  },
+  "audienceRule": {
+    "formula": "effectiveAudience ⊆ preauthAllowedAudience ∩ ⋂ sources.allowedDisclosureAudience",
+    "unionForbidden": true,
+    "emptyIntersection": "fail-closed",
+    "unknownReader": "fail-closed"
+  }
+}

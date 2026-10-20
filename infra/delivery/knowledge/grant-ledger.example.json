@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "interface": "KnowledgeGrantLedger.v1",
+  "project": "sdd-harness-pilot",
+  "note": "P4_7 授权台账示例：结构与绑定在位。真实签发需受保护工作流身份（模型 issuanceCredential=UNREGISTERED，I01 目录 24 refs 无签发凭据）；撤销是带真实时间戳的权威操作（revoke 命令，authority-gated），Agent 不能改时间或复制旧凭据绕过；disclosureAudience 空 = 尚无任何可披露受众（fail-closed）。",
+  "grants": [
+    {
+      "id": "grant-pilot-001",
+      "version": 1,
+      "issuer": "issuer-pilot-owner",
+      "owner": "ql-wade",
+      "authority": {
+        "source": "sdd-harness-repo",
+        "target": "outline-managed-collection",
+        "delegated": false
+      },
+      "purpose": {
+        "knowledgeTypes": ["project-knowledge"],
+        "disclosureAudience": [],
+        "disclosureStatus": "UNVERIFIED",
+        "disclosureReason": "the allowed disclosure audience must come from a live source permission readback; empty discloses nothing"
+      },
+      "issuedAt": "2026-10-20T00:00:00Z",
+      "expiresAt": "2027-01-18T00:00:00Z",
+      "revocation": null,
+      "signature": {
+        "produced": false,
+        "reason": "signature production belongs to the protected issuance workflow (issuanceCredential UNREGISTERED); signature presence is never sufficient (U01)"
+      }
+    },
+    {
+      "id": "grant-pilot-002",
+      "version": 1,
+      "issuer": "issuer-pilot-owner",
+      "owner": "ql-wade",
+      "authority": {
+        "source": "comet-source",
+        "target": "outline-managed-collection",
+        "delegated": false
+      },
+      "purpose": {
+        "knowledgeTypes": ["project-knowledge"],
+        "disclosureAudience": [],
+        "disclosureStatus": "UNVERIFIED",
+        "disclosureReason": "the allowed disclosure audience must come from a live source permission readback; empty discloses nothing"
+      },
+      "issuedAt": "2026-10-20T00:00:00Z",
+      "expiresAt": "2027-01-18T00:00:00Z",
+      "revocation": null,
+      "signature": {
+        "produced": false,
+        "reason": "signature production belongs to the protected issuance workflow (issuanceCredential UNREGISTERED); signature presence is never sufficient (U01)"
+      }
+    },
+    {
+      "id": "grant-pilot-003",
+      "version": 1,
+      "issuer": "issuer-pilot-owner",
+      "owner": "ql-wade",
+      "authority": {
+        "source": "comet-source",
+        "target": "outline-managed-collection",
+        "delegated": false
+      },
+      "purpose": {
+        "knowledgeTypes": ["project-knowledge"],
+        "disclosureAudience": [],
+        "disclosureStatus": "UNVERIFIED",
+        "disclosureReason": "revoked before any live readback existed; kept as the revocation structure example"
+      },
+      "issuedAt": "2026-09-01T00:00:00Z",
+      "expiresAt": "2026-11-30T00:00:00Z",
+      "revocation": {
+        "revokedAt": "2026-10-20T12:00:00Z",
+        "revokedBy": "human:ql-wade#262266039",
+        "reason": "historical example: source audience shrunk after a group offboarding"
+      },
+      "signature": {
+        "produced": false,
+        "reason": "signature production belongs to the protected issuance workflow (issuanceCredential UNREGISTERED); signature presence is never sufficient (U01)"
+      }
+    }
+  ]
+}

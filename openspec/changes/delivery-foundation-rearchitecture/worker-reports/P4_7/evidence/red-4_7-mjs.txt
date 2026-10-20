@@ -1,0 +1,215 @@
+TAP version 13
+# Subtest: setup: the KnowledgeAuthz.v1 CLI and the committed authorization artifacts are present and validate clean
+not ok 1 - setup: the KnowledgeAuthz.v1 CLI and the committed authorization artifacts are present and validate clean
+  ---
+  duration_ms: 48.160083
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:142:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    committed artifacts must validate clean: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/tools/infra/knowledge-authz.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:148:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: U01: Comet rejects self-authored and unauthorized/expired/revoked grants — signature, PR merge and approved fields carry no weight
+not ok 2 - U01: Comet rejects self-authored and unauthorized/expired/revoked grants — signature, PR merge and approved fields carry no weight
+  ---
+  duration_ms: 0.331958
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:159:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/infra/delivery/knowledge/authorization-model.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readCommitted (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:80:24)
+    fixtureWorld (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:86:17)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:160:17)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: U02: a review-passed multi-source candidate is still denied when the audience is in the union but not in the disclosure intersection
+not ok 3 - U02: a review-passed multi-source candidate is still denied when the audience is in the union but not in the disclosure intersection
+  ---
+  duration_ms: 0.125166
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:224:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/infra/delivery/knowledge/authorization-model.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readCommitted (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:80:24)
+    fixtureWorld (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:86:17)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:225:17)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: U03: pre-write recheck blocks the old publish verdict after the grant shrinks; no auto-renewal of the same operation
+not ok 4 - U03: pre-write recheck blocks the old publish verdict after the grant shrinks; no auto-renewal of the same operation
+  ---
+  duration_ms: 0.116958
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:272:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/infra/delivery/knowledge/authorization-model.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readCommitted (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:80:24)
+    fixtureWorld (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:86:17)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:273:17)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: U04: a payload change invalidates the old review/publish verdict — no semantic-similarity or same-document-id reuse
+not ok 5 - U04: a payload change invalidates the old review/publish verdict — no semantic-similarity or same-document-id reuse
+  ---
+  duration_ms: 0.104042
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:293:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/infra/delivery/knowledge/authorization-model.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readCommitted (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:80:24)
+    fixtureWorld (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:86:17)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:294:17)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: U05: share/inheritance/public audience sources are refused on an allowlisted collection; no ACL mutation entrance exists
+not ok 6 - U05: share/inheritance/public audience sources are refused on an allowlisted collection; no ACL mutation entrance exists
+  ---
+  duration_ms: 0.102917
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:325:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/infra/delivery/knowledge/authorization-model.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readCommitted (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:80:24)
+    fixtureWorld (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:86:17)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:326:17)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: U06: incomplete/unmapped/error/service-only permission evidence stays blocked and never degrades to empty-or-public
+not ok 7 - U06: incomplete/unmapped/error/service-only permission evidence stays blocked and never degrades to empty-or-public
+  ---
+  duration_ms: 0.102791
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:353:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/infra/delivery/knowledge/authorization-model.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readCommitted (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:80:24)
+    fixtureWorld (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:86:17)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:354:17)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: U07: role isolation is enforced by real managed entrances and denials are auditable — author never issues, isolator never reads publisher material
+not ok 8 - U07: role isolation is enforced by real managed entrances and denials are auditable — author never issues, isolator never reads publisher material
+  ---
+  duration_ms: 0.106708
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:383:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/infra/delivery/knowledge/authorization-model.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readCommitted (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:80:24)
+    fixtureWorld (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:86:17)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:384:17)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: U08: a fully grounded publish auto-advances with a bound receipt and readback obligation, never extended to other objects or versions
+not ok 9 - U08: a fully grounded publish auto-advances with a bound receipt and readback obligation, never extended to other objects or versions
+  ---
+  duration_ms: 0.355125
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:420:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/infra/delivery/knowledge/authorization-model.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readCommitted (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:80:24)
+    fixtureWorld (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:86:17)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p4-7/test/delivery-cases/4_7.mjs:421:17)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 0
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 128.220208
