@@ -78,7 +78,7 @@
     "timezone": "Asia/Shanghai",
     "reason": "Receiving executor qualifies actual host, resources and throughput before estimating implementation"
   },
-  "updated_at": "2026-10-20T07:16:13.238870+00:00",
+  "updated_at": "2026-10-20T08:01:29.650746+00:00",
   "preparatory_checks": {
     "scaffold_scoped_tests": "41/41 PASS",
     "scaffold_npm_test": "41/41 PASS on Node22.13.1",
@@ -103,7 +103,7 @@
     "Resume existing monitor sdd; never create duplicate monitor",
     "Continue original full goal, do not mark 92 scenarios accepted from baseline tests"
   ],
-  "last_progress_at": "2026-10-20T07:16:13.238870+00:00",
+  "last_progress_at": "2026-10-20T08:01:29.650746+00:00",
   "authorization_blocker_audit": {
     "consecutive_goal_turns": 0,
     "decision_received": true,
@@ -148,7 +148,7 @@
     "status": "active"
   },
   "run_started_at": "2026-10-20T03:04:53.456337+00:00",
-  "status_revision": 16,
+  "status_revision": 19,
   "lifecycle_guard": {
     "skill": "openspec-lifecycle-guard",
     "path": "/Users/mac/.claude/skills/openspec-lifecycle-guard/SKILL.md",
@@ -186,6 +186,10 @@
       "amendment_2": {
         "commit": "05fb404",
         "detail": "3 runner refs registered (catalog 16); I02 catalogGap cleared on merge"
+      },
+      "amendment_3": {
+        "commit": "f8c982b",
+        "detail": "2 codewiki refs registered (catalog 18); I05 catalogGap cleared on merge"
       }
     },
     "P1_1": {
@@ -335,7 +339,7 @@
       ]
     },
     "I02": {
-      "status": "PARTIAL_ACCEPTED_INTEGRATION_PENDING",
+      "status": "PARTIAL_ACCEPTED",
       "steps_done": [
         "1",
         "2",
@@ -349,7 +353,14 @@
       },
       "merged_to_master": "98de901",
       "review": "worker-reports/I02.review.json (APPROVED, 0 blocking)",
-      "integration_fix": "in flight — 2 stale catalogGap assertions (I01 amendment made refs registered)",
+      "integration_fix": {
+        "commits": [
+          "3d65712",
+          "3069791",
+          "58080ae"
+        ],
+        "result": "13/13; npm test 185/185 on merged master 10b37bf; integration acceptance complete"
+      },
       "supplement_delta": "Ponytail 补充 §8 I02 细化（方法状态作用域）待 replan 决定后 delta-review"
     },
     "P2_3": {
@@ -371,6 +382,23 @@
       "merged_to_master": "9c5db5f",
       "review": "worker-reports/P2_3.review.json (APPROVED, 0 blocking)",
       "caveat": "check.sh heading clause: environment-bounded (whitebox corpus gap, pre-existing); B10/A20 semantics covered by npm test + exit-code contract tests + truth table"
+    },
+    "I05": {
+      "status": "PARTIAL_ACCEPTED_INTEGRATION_PENDING",
+      "steps_done": [
+        "1",
+        "2",
+        "4"
+      ],
+      "step_3": "NOT_DONE — 独立读回 oracle（实际容器/API-MCP 响应/repoID-commit manifest 一致）需真实部署；上游未选定+docker 拒绝，如实 UNVERIFIED；承接者资源准入 owner/运行时准入",
+      "commits": {
+        "tests": "0a60d93",
+        "implementation": "9458bfd",
+        "report": "cff3083"
+      },
+      "merged_to_master": "e4ad42d",
+      "review": "worker-reports/I05.review.json (APPROVED, 0 blocking)",
+      "integration_fix": "in flight — test 125 stale catalog assertion (I01 amendment 3 registered the refs)"
     }
   },
   "environment_notes": [
@@ -385,6 +413,10 @@
     {
       "note": "scripts/check.sh whitebox fixture gap in fresh worktrees (pre-existing at base); VERIFY must run in main checkout or fix fixtures",
       "recorded_at": "2026-10-20T04:57:08.672221+00:00"
+    },
+    {
+      "note": "external parallel session continues editing main-checkout files: ADR-0019 overlay, delivery-architecture.md planning table, test/delivery-cases/2_2.mjs (P2_2-owned) — uncommitted, not in this run branch; included in pending user adjudication",
+      "recorded_at": "2026-10-20T08:01:29.650746+00:00"
     }
   ],
   "open_decisions": [

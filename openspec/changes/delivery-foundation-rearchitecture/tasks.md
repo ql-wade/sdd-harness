@@ -1053,10 +1053,10 @@
 **Parallel safe:** false
 **Acceptance IDs:** F01, F03, A20, C06
 
-- [ ] **Step 1 [5 min]: Test** RED：未固定commit/镜像、未授权源码或错误项目源时拒绝启动/摄入；敏感代码不得用public服务作为替代；wiki生成失败/commit陈旧/语言覆盖不足不得提供新鲜度通过；graph缺失不能阻断正确性协议；删除/停用graph后正确性协议保持可执行，错误服务实例或其它PAV索引不可被当项目结果。
-- [ ] **Step 2 [5 min]: Implement** GREEN：固定自托管版本和专用存储/网络，生成精确commit的code wiki；graph部署成可选独立结构查询组件；分别输出wiki生成manifest与graph coverage，外层纯gate按事前policy判断，不建立自己的调度/阶段；optional关闭时报告未启用且不称已验证；若policy要求code wiki则必须真实API/MCP独立读回。
+- [x] **Step 1 [5 min]: Test** RED：未固定commit/镜像、未授权源码或错误项目源时拒绝启动/摄入；敏感代码不得用public服务作为替代；wiki生成失败/commit陈旧/语言覆盖不足不得提供新鲜度通过；graph缺失不能阻断正确性协议；删除/停用graph后正确性协议保持可执行，错误服务实例或其它PAV索引不可被当项目结果。
+- [x] **Step 2 [5 min]: Implement** GREEN：固定自托管版本和专用存储/网络，生成精确commit的code wiki；graph部署成可选独立结构查询组件；分别输出wiki生成manifest与graph coverage，外层纯gate按事前policy判断，不建立自己的调度/阶段；optional关闭时报告未启用且不称已验证；若policy要求code wiki则必须真实API/MCP独立读回。
 - [ ] **Step 3 [5 min]: Review** 独立读回：实际容器/进程、认证API/MCP响应、repoID/commit与生成manifest一致；抽查wiki引用准确性，结构查询有独立coverage；错误commit/私有源越权/语言缺口真实负例；停graph后相同候选正确性测试真实重跑，不靠配置开关文本。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
 
 ### Task I06: Git/CI、Registry、制品与隔离目标环境连通
 

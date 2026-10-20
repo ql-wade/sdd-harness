@@ -1,13 +1,17 @@
-# 本项目优先覆盖（交接时必须保留）
+# 项目 overlay-first 修订覆盖规则（交接时必须保留）
 
-用户当前仅要求计划，由用户另选Agent实施；收到实际实施交接前不得激活此提示。先读同目录HANDOFF.md与execution-contract.json。以下项目规则优先于后面的通用参考文本：
+本次用户请求为“先预研，再核对合理性，更新架构与任务拆解”。本包是显式重规划候选，不启动产品执行/Goal/监控，不接管现有 implementation executor 的状态或ledger。先读 HANDOFF.md、overlay-integration-design.md 与 execution-contract.json。
 
-- 迁移实施由接收方单一planner控制；目标系统业务阶段、状态、恢复仅由Comet Classic控制，TeamAI只分发，Ponytail无业务调度权。
-- 本项目contract.closeout_override覆盖后文helper finalize命令：planning-toolkit生命周期工具只作freeze/校验/预演，禁止其实际finalize归档；实际归档只能由同一Comet Spec Adapter写入，再独立读回。Kp阻断归档，Kt阻断整体完成，已归档未发布仍保留同一Run继续恢复。
-- 每20分钟检查进度和ETA并留回执；用户可见通知仅限实质变化、失败、完成或需用户动作，无变化保持安静。本聊天旧sdd监督已暂停，由接收方核验并绑定自己的唯一监督。
-- 原需求/设计变化使全部下游旧证据失效；R/A/T独立门禁，架构采用grill-me和精确全票共识，test-authoring与Whitebox分工保持独立。
-- 本包39节点/105检查/92场景，结构可交接不等于运行验收。TO_IMPLEMENT命令必须先由implementedBy任务编写/资格验证，不可直接宣称可运行；缺必需资源保持UNVERIFIED。
-- 若重新生成本文，必须重加并核对本覆盖块；上游toolkit保持原样。
+- 原39节点/105检查/92场景的包是历史基线；本候选41节点/114检查/100场景，保留原30父任务和69工作包。原勾选只支持原范围；新增补充步骤未完成，不因旧任务切片通过放行新组合。
+- OVR必须对当前修订独立全票、同摘要、满足原阈值、无blocker；旧P0_4票与结构guard PASS不能替代。先核对具体资料与目的地的有效披露授权。当前OVR仍PENDING，不得先实施其依赖的新范围。
+- 接收方由既有唯一实施控制器确认接纳修订并调和新节点/分母/进度投影，保留旧execution-state/ledger及未完成作业；本轮没有改写它们。新一轮运行绑定只能经已授权的接纳，不以新建session偷换归属。
+- 目标系统的phase/Run/返工/恢复只由原Comet Classic持有。overlay从原状态推导节点，只提供方法/schema与附加evidence；workflow-kernel、独立Engine Run、完整planner/implement-spec不套在Classic外层。
+- 优先复用官方overlay、来源解析、canonical authority/ref/task revision、handoff与平台编译。design/plan producer满足原schema且无第二checkbox；control只require/augment。Ponytail advisory，不借mode/标记签可信结果。
+- OVQ是组合/兼容调查与gap移交，不要求先实现P2_4才调查；原生标记/null摘要可过Guard的prestudy是缺口证据，不是产品通过。所有100场景的最终受管验证仍属VERIFY。
+- authoritative_document_hashes须在OVR审查包冻结、派发和结果接纳前重新逐项计算；stock plan_guard只核对其原定义输入，不能替此项检查。源文档漂移需保留旧包并审查重规划，不能静默刷新摘要。
+- 原要求的真实运行链路、OS/发布凭据隔离、共同谓词、事务恢复、Kp/Kt、精确SHA/digest和目标业务读回均保持。缺资源/未实现命令为UNVERIFIED且非零，不用fixture、空测试或旧回执替代。
+- closeout_override优先于后文通用helper：planning-toolkit仅做freeze/校验/预演，实际归档由同一Comet Spec Adapter执行；Kp卡归档、Kt卡整体completed，未知发布先读回，不重复部署。
+- 既有监控由接收方核对其当前授权与实际状态；此候选只保留20分钟监督配置，不创建、恢复或替换任何自动任务。用户可见通知仅实质变化、失败、完成或需动作。
 
 ---
 
@@ -24,10 +28,10 @@ paths relative to it, verifying the repository identity before any write:
 plan `tasks.md`, architecture `architecture.md`, DAG `task-dag.json`,
 lock `drift-lock.json`, execution contract `execution-contract.json`.
 
-Locked plan SHA-256: `aac0152e4ea360d3e03f2f5f7f14cc203f74b4525de48fde04e6fbe359cb6ad9` (checkbox-normalized-v1).
-Architecture SHA-256: `8bd5316106944a28b58ab2a0f1468537227ce7b78dd7009ece0bdbdf9ec97aed` (raw bytes).
-DAG SHA-256: `c402254ba67a80106fbf2484a38d55f5899fa59a426fe7cbdb252c4a8d4f5d0b` (raw bytes).
-Execution-contract SHA-256: `9f36b3d9a8c13865a19cdc3b5113c658fced5ca5b1fd71dc13e8a32907328824` (raw bytes).
+Locked plan SHA-256: `809c1fd19828fb05a99bf2265164502b697bbe27aeb2b5f24994ccc96a91cc45` (checkbox-normalized-v1).
+Architecture SHA-256: `91bc1a334005a9abc7c70754622c5e241ff7cd0839843f1ef492a9e6f6b49228` (raw bytes).
+DAG SHA-256: `524aaf2722f6b4da9b3640dba42e8bdcc96b08c0001d13c88b46c14e69dd84c4` (raw bytes).
+Execution-contract SHA-256: `5769031bada826621defbb60d4b5ef5e8e52eeaee1b516ab2627cac718c97ba0` (raw bytes).
 Normalize CRLF to LF and change only line-leading Markdown checked boxes to
 unchecked for the plan digest; preserve fenced code exactly. Verify all four
 hashes before dispatch and integration; mismatch means HALT_AND_REPLAN.
