@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sdd-harness:delivery-case-definition:v1",
+  "title": "Delivery journey case definition",
+  "description": "One delivery journey case. The case DECLARES the scenario identity, the module/actions that realize it and the evidence it must leave; tools/verify/delivery-journey.mjs only adapts and executes what is declared (spawn real commands, read real state, collect evidence) and emits a structured verdict. Division of labor (verification_runner_invariant): the runner is a test action/observer adapter, NOT a controller — it owns no phase, no DAG, no retries, no job lease and no auto-recovery; those semantics live in the case definition and the upstream contract (execution-contract.json). Verdict semantics: PASS = actions executed (execution count > 0) and every expected outcome met; FAIL = the scenario executed and the observed outcome contradicted the frozen THEN; NOT-EXERCISED = a prerequisite was missing (case definition, registered baseline, identity or environment) — structured refusal with nonzero exit, never converted into a pass; NOT-APPLICABLE = the scenario is explicitly out of scope for the registered profile with a recorded reason (still nonzero; the runner never self-assigns it).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "scenario",
+    "acceptanceIds",
+    "caseModule",
+    "actions",
+    "evidence",
+    "verdictSemantics"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "description": "Definition format version; mismatches are refused, never coerced."
+    },
+    "scenario": {
+      "type": "string",
+      "pattern": "^[A-Z]{1,2}[0-9]{1,2}$",
+      "description": "Stable scenario id (e.g. A01, B07, M02) matching the verification-case-plan key and the frozen spec scenario heading."
+    },
+    "acceptanceIds": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z]{1,2}[0-9]{1,2}$"
+      },
+      "description": "Acceptance ids this case provides execution evidence for."
+    },
+    "caseModule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Case module that realizes the scenario (absolute, or repo-relative like test/delivery-cases/2_1.mjs). The canonical plan-driven action is `node --test <caseModule>`."
+    },
+    "sourceBinding": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "scenario"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Frozen spec file holding the scenario definition."
+          },
+          "requirement": {
+            "type": "string",
+            "description": "Requirement heading the scenario belongs to."
+          },
+          "scenario": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "expected"],
+        "properties": {
+          "type": {
+            "enum": ["spawn", "readState", "inspect"],
+            "description": "spawn = run a real command; readState = read a real file (relative paths resolve against the evidence dir); inspect = record a read-only observation (a command like 'git rev-parse HEAD' or a filesystem path)."
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Required for spawn: the exact argv line to execute (whitespace-split; no shell)."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Required for readState/inspect: file path or observation spec."
+          },
+          "expected": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-auditable expected outcome; recorded in the verdict next to the actual outcome."
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "spawn"
+                }
+              }
+            },
+            "then": {
+              "required": ["command"]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "enum": ["readState", "inspect"]
+                }
+              }
+            },
+            "then": {
+              "required": ["path"]
+            }
+          }
+        ]
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifacts"],
+      "properties": {
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Evidence artifacts the journey must leave in --evidence-dir (e.g. case-definition.json, action-1-stdout.txt, verdict.json). A missing artifact is a journey failure: a claim without persisted bytes is not evidence."
+        }
+      }
+    },
+    "verdictSemantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["PASS", "FAIL", "NOT-EXERCISED", "NOT-APPLICABLE"],
+      "properties": {
+        "PASS": {
+          "type": "string",
+          "minLength": 1
+        },
+        "FAIL": {
+          "type": "string",
+          "minLength": 1
+        },
+        "NOT-EXERCISED": {
+          "type": "string",
+          "minLength": 1
+        },
+        "NOT-APPLICABLE": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
