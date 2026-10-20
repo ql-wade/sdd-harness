@@ -1,0 +1,92 @@
+{
+  "task": "P2_3",
+  "task_title": "原任务 2.3 — 保留旧 CLI 和报告 adapter；验证错误输入退出 1、验收失败退出 2、有效检查退出 0，旧 npm test 及 bash scripts/check.sh 通过（B10/A20）",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/p2-3-cli-exit-codes",
+  "status": "DONE",
+  "tests_commit": "79d0212",
+  "implementation_commit": "b9fafa4",
+  "red_cases": [
+    {
+      "case": "exit-code contract violations on invalid input (frozen cli_contract: 1=invalid input/prerequisite, 2=verification failure)",
+      "actually_failed": true,
+      "evidence": "measured against 8cb5567: evidence-audit with nonexistent --project exited 2; deliverable-audit with nonexistent --project exited 2; test-gate with nonexistent --project exited 2 ('no supported project test command found'). Full transcripts: worker-reports/P2_3/evidence/red-cli-exit-codes.txt (VIOLATIONS 1-3); test failures '2 !== 1' in red-node-test-full.txt"
+    },
+    {
+      "case": "no CLI subcommand exposes the delivery gate (SDD.Gate.v1 unreachable from the CLI; 0/1/2 untestable at CLI level for the new gate)",
+      "actually_failed": true,
+      "evidence": "'node bin/cli.js delivery-gate --help' printed top-level help (no such command): worker-reports/P2_3/evidence/red-gate-and-adapter-absent.txt GAP A"
+    },
+    {
+      "case": "old evidence channel cannot enter the new gate: lib/adapters/legacy-evidence.js absent and a REAL auditEvidence report is refused by admitEvidence",
+      "actually_failed": true,
+      "evidence": "ERR_MODULE_NOT_FOUND for lib/adapters/legacy-evidence.js (GAP B); a real passing auditEvidence report fed to admitEvidence with a valid launcher dispatch is refused INVALID_ENVELOPE (candidateDigest/caseId/origin missing) — GAP C in red-gate-and-adapter-absent.txt; RED run: node --test test/delivery-cli.test.js test/delivery-cases/2_3.mjs = 16 fail / 3 pass (red-node-test-full.txt)"
+    }
+  ],
+  "green_summary": {
+    "cli_exit_code_contract_0_1_2": "bin/cli.js (existing entry reworked, zero commands removed or renamed). requireProjectDir(): a missing/non-directory --project is invalid input, thrown into each command's existing catch -> JSON INVALID_* report + exit 1; wired into deliverable-audit, evidence-audit and test-gate (the three measured violations; probe/workflow-audit already exited 1 via their throw paths and were left untouched). New delivery-gate command exposes the P2_2 pure gate at the CLI: loads --contract (validated with parseContract SDD.Delivery.TestContract v1), --receipts (must be a JSON array of admission entries from the trusted-launcher path), --policy {ref,digest}, --input-digest (sha256 hex), --builder-execution; runs evaluate(inputs, receipts, policy) — no dispatch, no secret, no writes, receipts cannot be minted through it. Exit contract: 0 = verdict pass, 1 = invalid inputs (unreadable/schema-invalid/malformed), 2 = verdict blocked; --json prints { schemaVersion, verdict, receipt }. EVIDENCE_INPUT_MISSING deliberately keeps exit 2 (see blockers_or_questions).",
+    "legacy_evidence_adapter": "lib/adapters/legacy-evidence.js (new). adaptLegacyReport maps the old evidence-audit v1 report into an EvidenceEnvelope: candidateDigest <- evidenceSha256.sourceTree (the digest the old channel actually computed), caseId <- change, result <- pass/fail as-is, executions {total:1, valid:1} (the one real audit execution; no fabricated per-case counts — the old report has none), evidence[0] pins the report itself by stable-stringify sha256. B07: schemaVersion absent -> MISSING_FIELD (named), schemaVersion != 1 -> INCOMPATIBLE_VERSION, missing pass/issues/change/evidenceSha256 or identity fields -> explicit refusal; internal invariant re-validates the adapted envelope against the frozen schema (fail-closed). B10 layer honesty: origin.kind 'legacy-report', check 'report:evidence-audit:v1' — gate capability matching is exact, so the legacy layer can only close a required check named exactly that and can never substitute for a product capability. admitLegacyReport issues the dispatch through the caller's launch authority and calls admitEvidence UNCHANGED (import use, no modification): integrity, identity, currency, duplicate-issuance and class rules all remain admitEvidence's; with no authority the adapter refuses — it mints no trust.",
+    "compatibility": "Existing callers preserved (sweep: worker-reports/P2_3/evidence/caller-compat-sweep.txt): package.json bin path unchanged; VERSION const format untouched (version-consistency test green); all 7 pre-existing CLI command suites green (npm test 172/172); documented commands unchanged, delivery-gate is additive; old evidence-audit behavior on a real matching project verified exit 0 at task level (test 2.3 case 1)."
+  },
+  "commands": [
+    { "cmd": "node --test test/delivery-cli.test.js test/delivery-cases/2_3.mjs (RED, pre-implementation)", "exit_code": 1, "summary": "19 tests: 16 fail / 3 pass — '2 !== 1' on the four exit-code violations, unknown delivery-gate command, ERR_MODULE_NOT_FOUND for the adapter; the 3 passes are already-conforming paths the suite pins" },
+    { "cmd": "node --test test/delivery-cli.test.js test/delivery-cases/2_3.mjs (GREEN)", "exit_code": 0, "summary": "19 tests, 19 pass, 0 fail — 14 CLI/adapter tests + 5 task-level cases (case module spawns the real CLI and runs a real auditEvidence)" },
+    { "cmd": "npm test (full repo suite)", "exit_code": 0, "summary": "172 tests, 172 pass, 0 fail — baseline 158/158 + 14 new in test/delivery-cli.test.js (case module outside the test/*.test.js glob by repo pattern, runs via the explicit command above)" },
+    { "cmd": "bash scripts/check.sh — gate 1 agent-instructions-check.sh", "exit_code": 0, "summary": "PASS" },
+    { "cmd": "bash scripts/check.sh — gate 2 agent-skill-check.sh", "exit_code": 0, "summary": "PASS" },
+    { "cmd": "bash scripts/check.sh — gate 3 whitebox-verify green fixture (as-is in fresh worktree)", "exit_code": 1, "summary": "ENV-BLOCKED, not a P2_3 regression: ledger references 6 raw-log artifacts (producer/wire/consumer/risk/service/surface.log) that are gitignored (*.log, .gitignore:21), exist only as untracked copies in the main checkout, and are absent from any fresh worktree -> '6 closure error(s): evidence file does not exist'. Exactly the P1_6 environment note (worker-reports/P1_6.json findings; task instruction cites it as 已立案). Proof it is only the env gap: after byte-copying the 6 gitignored logs from the main checkout (P1_6 precedent, copies removed afterwards, no snapshot file touched) the fixture returns STRUCTURE_PASS, exit 0" },
+    { "cmd": "bash scripts/check.sh — gate 4 whitebox-verify negative corpus (as-is)", "exit_code": 1, "summary": "UNVERIFIED/ENV-BLOCKED: 'SUMMARY: 7 ok / 1 fail' vs required '8 ok / 0 fail' — the documented mtime run-window issue of the same P1_6 environment note (fresh checkout mtimes identical)" },
+    { "cmd": "bash scripts/check.sh — gate 5 multi-agent-consensus-review gate tests", "exit_code": 0, "summary": "PASS" },
+    { "cmd": "bash scripts/check.sh — gate 6 npm test", "exit_code": 0, "summary": "PASS (172/172)" },
+    { "cmd": "bash scripts/check.sh — gate 7 YAML/JSON static validation", "exit_code": 0, "summary": "PASS (3 YAML, 3 JSON)" },
+    { "cmd": "bash scripts/check.sh (overall, as-is)", "exit_code": 1, "summary": "Stops at gate 3 (whitebox-verify green fixture) — environment gap above; identical failure exists at base (P1_6 measured 7/1 at 21923be; the green-fixture step precedes the corpus step). whitebox-verify snapshot NOT modified per task boundary" }
+  ],
+  "test_fixes_between_red_and_green": [
+    {
+      "finding": "one RED-phase test correction before GREEN; the implementation was right, the test's replay oracle was wrong",
+      "details": "the DUPLICATE_ISSUANCE test expected the adapter to remember the first issuance; admitEvidence's documented contract (P2_2) gives duplicate detection to the caller-maintained issuedExecutions ledger — the test now passes the ledger to the replay admission. No oracle weakened; the assertion still requires the identical execution identity to be refused on replay."
+    },
+    {
+      "finding": "one RED-phase classification correction (VIOLATION 4 in red-cli-exit-codes.txt addendum)",
+      "details": "RED initially classified evidence-audit EVIDENCE_INPUT_MISSING (real project, required evidence inputs missing) as 'must exit 1'. The pre-existing suite (test/evidence-audit-command.test.js line 237, outside P2_3's owned files) pins exit 2 for exactly this case: the audit executed against a real project and returned a verification finding. Frozen contract hard requirements (nonzero, never skip-to-PASS) hold under both 1 and 2; only the nonexistent --project cases (nothing executable) were fixed to 1. Implementation reverted accordingly; my test now pins exit 2 with the classification note."
+    }
+  ],
+  "unverified": [
+    {
+      "item": "bash scripts/check.sh overall PASS",
+      "reason": "gates 3+4 (whitebox-verify green fixture + negative corpus) are ENV-BLOCKED in any fresh worktree by never-git-tracked fixture files and an mtime-dependent corpus case — pre-existing at base, filed in worker-reports/P1_6.json findings (recommended fix: track the 6 synthetic fixture files and make the corpus build its own mtimes; belongs to whitebox-verify snapshot maintenance, not P2_3's files). Gate 3 proven STRUCTURE_PASS with the gitignored files present; gates 1,2,5,6,7 all PASS. npm test (the P2_3 regression gate) is fully green."
+    },
+    {
+      "item": "A20 full scope (correctness protocol with CodeGraph/RTK tooling actually disabled at the harness level)",
+      "reason": "CodeGraph/RTK are agent-harness command-rewrite hooks, not runtime dependencies of this repo. The executable local half IS proven: the whole correctness chain (real auditEvidence -> adapter -> admitEvidence -> real bin/cli.js delivery-gate child) runs as plain node processes, and the 2.3 A20 case spawns the CLI child with a PATH-only scrubbed environment (verdict pass). What is not claimed: harness-level measurements of optimization benefit, which A20 explicitly scopes separately ('优化收益单独评估')."
+    },
+    {
+      "item": "delivery-gate CLI journeys under the managed Runner profile with persisted receipts (V_* 'actual execution count > 0' against managed-pilot)",
+      "reason": "the persisted-receipt runtime is P2_4 (Comet managed delivery runtime) and the verify CLI journeys are implementedBy P3_1; P2_3 owns the CLI entry, the adapter and their tests. The local equivalents executed: real CLI children driven by the case module with receipts produced by a real in-process launcher dispatch."
+    }
+  ],
+  "files_changed": [
+    "bin/cli.js",
+    "lib/adapters/legacy-evidence.js",
+    "test/delivery-cli.test.js",
+    "test/delivery-cases/2_3.mjs",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_3/evidence/red-cli-exit-codes.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_3/evidence/red-gate-and-adapter-absent.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_3/evidence/red-node-test-full.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_3/evidence/green-node-test-full.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_3/evidence/green-npm-test-full.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_3/evidence/check-sh-subgates.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_3/evidence/check-sh-raw-run.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_3/evidence/caller-compat-sweep.txt"
+  ],
+  "blockers_or_questions": [
+    {
+      "item": "EVIDENCE_INPUT_MISSING exit code: 1 (prerequisite) vs 2 (verification finding)?",
+      "detail": "The frozen cli_contract line ('1=invalid input/prerequisite') reads like 1 for 'Required evidence inputs must exist before the audit can pass', but the pre-existing oracle test/evidence-audit-command.test.js:237 pins 2 and lives outside P2_3's file ownership. P2_3 kept the pinned 2 and fixed only the unambiguous nonexistent-project cases. If the planner wants 1, the pinned test needs a one-line update in a file P2_3 may not touch."
+    },
+    {
+      "item": "whitebox-verify fixture hygiene (pre-existing, filed by P1_6)",
+      "detail": "6 gitignored synthetic evidence logs + mtime-dependent negative-corpus case make check.sh fail in every fresh worktree. Same recommended fix as P1_6: track the fixture files, self-build mtimes. Not fixable within P2_3's file ownership."
+    }
+  ]
+}

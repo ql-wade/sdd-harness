@@ -1,6 +1,6 @@
 # 实施证据与接口登记
 
-> 2026-10-20 冻结后架构补充：Ponytail 的五层职责、原生 Hook 和项目注册分工、full 方法默认、模式隔离及验收细项已更新至 classic-closeout-and-hook-contract.md §6–8 和主架构 §6.9。现有 drift-lock 保留原摘要；本文件变化应触发 HALT_AND_REPLAN。执行控制器接纳修订、审查并重新冻结后，才可继续依赖该设计的 P1_6/P1_2/P4_5/I02 工作；不以旧架构票或旧计划 PASS 为新制品放行。
+> 2026-10-20 官方 overlay 优先重规划候选：先完成隔离预研，再据源码兼容核对修订；详见 overlay-integration-design.md 与 overlay-prestudy/results.json。旧冻结包已保存，本次显式重冻结不启动执行。OVR 独立评审未完成前，不得用旧票/结构 PASS 为新方案放行；当前控制器状态和任务勾选保持原状。
 
 权威设计仍是 design.md、delivery-architecture.md 与 ADR-0019；本文件只是实现输入与接口登记，不另建工作流。原 tasks.md 父任务身份及依赖继续保留。用户已授权端到端实施与验证；R10 A 已确认。三方同摘要独立共识已通过，允许按既有任务分批实施；实际运行/角色隔离仍需后续验收。
 
@@ -21,6 +21,10 @@ Comet 0.4.5 精确提交 c90af44a4474662d7853aae76ce785404974fb0a；源码归档
 | 可信执行身份 | 启动器先登记 run/gate/input/policy/attempt/epoch；只接纳与真实派发绑定的独立结果，不信作者自填角色/摘要/pass | 2.2、2.4 |
 | Runner 隔离 | 控制文件/签发权限由受管主体持有，worker 不可写；hook 的 .comet 广泛白名单不能作为认证。相同无沙箱 OS 主体自签不能证明角色独立 | 1.3、3.1、4.7 |
 | 规格/知识收尾 | archive 事实与 completed 分离；Kp 卡归档，Kt 卡整体完成；R10 A 下未 completed 不清唯一工作区 | 3.4、4.4、4.6 |
+
+新增复用边界 `Comet.Overlay.v1`：原生 five-phase overlay 只绑定方法、schema 和附加证据，原 Classic phase/Run 唯一；不得从手工 required-skill 标记签发可信 pass。design/plan producer 满足原输出 schema，复用 validateClassicTaskPlan 的 authority/ref/无第二checkbox合同；按 task revision 绑定同一 tasks/DAG。完整 planner controller 不作为普通 required Skill 加载。
+
+隔离预研已观察 overlay 不另建 Run、control override 拒绝、canonical plan 生效；也确认手填标记/null 摘要可使生成 Guard 通过。新 OV01–OV08 验收因此覆盖来源、当前制品、共同推进、schema/包漂移、恢复、长文交接和实际装配，均不计为已通过。
 
 ## 测试边界与首个纵向切片
 

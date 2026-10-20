@@ -1,5 +1,7 @@
 # Classic 单主控接入设计与原生/扩展边界
 
+> 当前接入优先级（2026-10-20）：先完成官方 overlay 隔离预研，再按 overlay-integration-design.md 的复用/适配/gap 顺序执行。原 canonical plan/任务 revision/handoff 已有可复用实现；本文件早期“建议适配器”描述不代表需要自研相同协议。OVR 评审本修订，OVQ 资格和项目可信 Gate/恢复验收分开；不以旧评审票或原生标记 PASS 关闭新增义务。
+
 日期：2026-10-19。状态：Grill 设计，未实施，未通过运行验收。
 
 ## 1. 已确认约束

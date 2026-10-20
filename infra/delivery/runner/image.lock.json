@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "interface": "RunnerImageLock.v1",
+  "project": "sdd-harness-pilot",
+  "note": "Runner 镜像由固定 Comet 源 + 项目补丁构建：构建输入已按 P1_1/P1_6 固定（integrations/comet/upstream.lock.json + fingerprint），但本宿主无 container daemon（EPERM），容器化构建从未执行，无任何已认证 digest——reference/digest 保持 null，严禁虚构（images_policy.invented_tags_or_digests=false）。每个组件必须经认证 digest 后才允许 up。",
+  "sourceInputs": {
+    "lockRef": "integrations/comet/upstream.lock.json",
+    "sourceCommit": "c90af44a4474662d7853aae76ce785404974fb0a",
+    "archiveSha256": "28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f",
+    "archiveBytes": 40474019,
+    "patches": [
+      {
+        "path": "integrations/comet/patches/0001-matt-method-profile.patch",
+        "sha256": "56581963fa2222f79a31db61a569c4e289890c890003895fd5d973849ff008e9"
+      },
+      {
+        "path": "integrations/comet/patches/tests/1_6.patch",
+        "sha256": "de09de41adad8ea8f56e67a4a8d866e3cf2af86309acba98059e6a7ba9163f90"
+      }
+    ],
+    "toolchain": {
+      "node": "24.15.0",
+      "pnpm": "10.18.3",
+      "pythonMinimum": "3.12"
+    },
+    "prepareTool": "tools/comet/prepare-source.mjs",
+    "buildTool": "tools/comet/build.mjs",
+    "buildContract": "toolchain-baseline.json extension_delivery：受控源分布，fingerprint 固定 archive+patches+toolchain，每次重建按 manifest 校验",
+    "hostBuildFingerprint": "cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187",
+    "hostBuildEvidence": "P1_6 宿主侧构建（非容器）：--check-generated --runtime-smoke exit 0，243 pass / 2 skip；容器化构建与其无关",
+    "containerBuildStatus": "UNVERIFIED",
+    "containerBuildReason": "本宿主 docker daemon 不可达（EPERM）；容器内构建与 digest 认证只能在具备 daemon 的准入环境执行"
+  },
+  "resolution": {
+    "lockSource": "infra/delivery/runner/image.lock.json",
+    "composeMapping": {
+      "COMET_RUNNER_IMAGE": "comet-runner"
+    },
+    "dockerfileMapping": {
+      "RUNNER_BASE_IMAGE": "runner-base"
+    },
+    "rule": "compose 与 Dockerfile 的镜像引用一律经由本锁解析注入；本锁未 ready 时 tools/infra/runner.mjs up 必须拒绝"
+  },
+  "upGate": {
+    "enabled": false,
+    "requireAllComponentsAuthenticated": true,
+    "reason": "I02 仅声明 Runner 角色隔离与准入结构；镜像没有任何已认证 digest，up 在资源准入完成前必须拒绝"
+  },
+  "components": [
+    {
+      "component": "comet-runner",
+      "role": "runner-image",
+      "required": true,
+      "reference": null,
+      "digest": null,
+      "digestAuthenticated": false,
+      "selectionStatus": "UNBUILT",
+      "status": "UNVERIFIED",
+      "reason": "容器化构建从未执行（本宿主无 daemon）：镜像不存在，无 tag/digest 可记录；构建输入已按 sourceInputs 固定"
+    },
+    {
+      "component": "runner-base",
+      "role": "base-image",
+      "required": true,
+      "reference": null,
+      "digest": null,
+      "digestAuthenticated": false,
+      "selectionStatus": "UNSELECTED",
+      "status": "UNVERIFIED",
+      "reason": "基镜像版本未选定（须提供 node 24.15.0 / pnpm 10.18.3 工具链并经认证 digest）；不得编造 tag"
+    }
+  ]
+}

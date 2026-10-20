@@ -2,10 +2,10 @@
   "schema_version": 2,
   "feature": "delivery-foundation-rearchitecture",
   "hash_mode": "checkbox-normalized-v1",
-  "plan_sha256": "aac0152e4ea360d3e03f2f5f7f14cc203f74b4525de48fde04e6fbe359cb6ad9",
-  "architecture_sha256": "8bd5316106944a28b58ab2a0f1468537227ce7b78dd7009ece0bdbdf9ec97aed",
-  "dag_sha256": "c402254ba67a80106fbf2484a38d55f5899fa59a426fe7cbdb252c4a8d4f5d0b",
-  "execution_contract_sha256": "9f36b3d9a8c13865a19cdc3b5113c658fced5ca5b1fd71dc13e8a32907328824",
+  "plan_sha256": "809c1fd19828fb05a99bf2265164502b697bbe27aeb2b5f24994ccc96a91cc45",
+  "architecture_sha256": "91bc1a334005a9abc7c70754622c5e241ff7cd0839843f1ef492a9e6f6b49228",
+  "dag_sha256": "524aaf2722f6b4da9b3640dba42e8bdcc96b08c0001d13c88b46c14e69dd84c4",
+  "execution_contract_sha256": "6cc270cf3707a158c9dfb8da16bc635acd13ff99727e1d3c8bcd492a5a0a3fda",
   "acceptance_ids": [
     "A01",
     "A02",
@@ -98,7 +98,15 @@
     "U05",
     "U06",
     "U07",
-    "U08"
+    "U08",
+    "OV01",
+    "OV02",
+    "OV03",
+    "OV04",
+    "OV05",
+    "OV06",
+    "OV07",
+    "OV08"
   ],
   "frozen_interfaces": [
     "Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase",
@@ -138,7 +146,8 @@
     "Backup.v1 -> consistent manifest of Comet state/transaction/receipts/approved payload plus knowledge/database/objects/config refs",
     "Restore.v1 -> restore into quarantine, authenticate current permissions, fence old writer, verify same operation and readback before release",
     "Retention.v1 -> R10 A: unresolved Run/knowledge obligation retains sole workspace",
-    "cleanup requires verified completed or separately approved migration+restore proof"
+    "cleanup requires verified completed or separately approved migration+restore proof",
+    "Comet.Overlay.v1: original Classic phase authority, official method/schema/provenance bindings, no trusted pass from self-recorded markers"
   ],
   "global_constraints": [
     "Comet Classic is sole target runtime controller; TeamAI distributes only",
@@ -150,7 +159,11 @@
     "Batch5 is conditional pre-enable certification; never silently waive F10 or claim untested team API",
     "No production effects or remote branch protection mutation implied; honor registered grants before live writes",
     "Parent task completion requires all its required workpackages and current acceptance evidence",
-    "Any scope/interface/input hash drift halts and requires reviewed replan; no silent lock refresh"
+    "Any scope/interface/input hash drift halts and requires reviewed replan; no silent lock refresh",
+    "Official five-phase overlay only; no second phase/Run/controller",
+    "OVR approval must bind this revision; old review is historical",
+    "Reuse native canonical plan/task revision/handoff; expand only evidenced gaps",
+    "Required Skill marker/schema existence is untrusted input; no trusted pass without managed execution"
   ],
   "allowed_paths_by_task": {
     "P0_1": [
@@ -172,6 +185,9 @@
       "docs/architecture/adr/0019-delivery-foundation.md",
       "openspec/changes/delivery-foundation-rearchitecture/architecture-review"
     ],
+    "OVR": [
+      "openspec/changes/delivery-foundation-rearchitecture/overlay-review"
+    ],
     "P1_1": [
       "openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json",
       "openspec/changes/delivery-foundation-rearchitecture/package-probes",
@@ -182,6 +198,31 @@
       "tools/comet/build.mjs",
       "test/comet-source-preparation.test.js",
       "test/comet-build.test.js"
+    ],
+    "I01": [
+      "infra/delivery/registry.json",
+      "infra/delivery/registry.schema.json",
+      "infra/delivery/secrets.refs.example.json",
+      "infra/delivery/qualification-policy.json",
+      "tools/infra/registry.mjs",
+      "tools/infra/secret-refs.mjs",
+      "test/infra-registry.test.js"
+    ],
+    "I02": [
+      "infra/delivery/runner/compose.yaml",
+      "infra/delivery/runner/Dockerfile",
+      "infra/delivery/runner/image.lock.json",
+      "infra/delivery/runner/role-policy.json",
+      "infra/delivery/runner/workspace-mounts.json",
+      "infra/delivery/runner/authority-registration.example.json",
+      "tools/infra/runner.mjs",
+      "test/infra-runner-isolation.test.js"
+    ],
+    "OVQ": [
+      "integrations/comet/overlay",
+      "test/comet-overlay-qualification.test.js",
+      "test/delivery-cases/overlay.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/overlay-qualification"
     ],
     "P1_6": [
       ".agents/skills",
@@ -220,25 +261,6 @@
       "lib/adapters/legacy-evidence.js",
       "test/delivery-cli.test.js",
       "test/delivery-cases/2_3.mjs"
-    ],
-    "I01": [
-      "infra/delivery/registry.json",
-      "infra/delivery/registry.schema.json",
-      "infra/delivery/secrets.refs.example.json",
-      "infra/delivery/qualification-policy.json",
-      "tools/infra/registry.mjs",
-      "tools/infra/secret-refs.mjs",
-      "test/infra-registry.test.js"
-    ],
-    "I02": [
-      "infra/delivery/runner/compose.yaml",
-      "infra/delivery/runner/Dockerfile",
-      "infra/delivery/runner/image.lock.json",
-      "infra/delivery/runner/role-policy.json",
-      "infra/delivery/runner/workspace-mounts.json",
-      "infra/delivery/runner/authority-registration.example.json",
-      "tools/infra/runner.mjs",
-      "test/infra-runner-isolation.test.js"
     ],
     "P1_3": [
       "lib/adapters/comet.js",
@@ -423,6 +445,6 @@
     "Original task identities preserved through explicit bijective alias map"
   ],
   "change_policy": "halt-and-replan",
-  "scope": "CANDIDATE_STRUCTURAL_ONLY_NOT_RUNTIME_ACCEPTANCE",
+  "scope": "STRUCTURAL_REPLAN_CANDIDATE_OVR_PENDING_NOT_RUNTIME_ACCEPTANCE",
   "identity_map_sha256": "d617ea8db9c3af01160c8b34e3c928d82b2d04981d0d71f4537cef4d7c3b08e3"
 }

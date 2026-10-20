@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "IMPLEMENTATION_ACTIVE",
+  "status": "HALTED_PENDING_USER_REPLAN_DECISION",
   "objective": "按照我们架构，端到端完成验证，出具验证报告",
   "target_controller": "Comet Classic",
   "implementation_executor": {
@@ -78,7 +78,7 @@
     "timezone": "Asia/Shanghai",
     "reason": "Receiving executor qualifies actual host, resources and throughput before estimating implementation"
   },
-  "updated_at": "2026-10-20T06:24:35.344243+00:00",
+  "updated_at": "2026-10-20T07:17:24.518313+00:00",
   "preparatory_checks": {
     "scaffold_scoped_tests": "41/41 PASS",
     "scaffold_npm_test": "41/41 PASS on Node22.13.1",
@@ -103,7 +103,7 @@
     "Resume existing monitor sdd; never create duplicate monitor",
     "Continue original full goal, do not mark 92 scenarios accepted from baseline tests"
   ],
-  "last_progress_at": "2026-10-20T06:24:35.344243+00:00",
+  "last_progress_at": "2026-10-20T07:17:24.518313+00:00",
   "authorization_blocker_audit": {
     "consecutive_goal_turns": 0,
     "decision_received": true,
@@ -148,7 +148,7 @@
     "status": "active"
   },
   "run_started_at": "2026-10-20T03:04:53.456337+00:00",
-  "status_revision": 12,
+  "status_revision": 17,
   "lifecycle_guard": {
     "skill": "openspec-lifecycle-guard",
     "path": "/Users/mac/.claude/skills/openspec-lifecycle-guard/SKILL.md",
@@ -182,6 +182,10 @@
         "commit": "7a55664",
         "merged": "54c6964",
         "detail": "outline-app-session ref registered (13 total, plan-list completion); I03 catalogGap cleared on master"
+      },
+      "amendment_2": {
+        "commit": "05fb404",
+        "detail": "3 runner refs registered (catalog 16); I02 catalogGap cleared on merge"
       }
     },
     "P1_1": {
@@ -329,6 +333,51 @@
         "A19 real-Runner half -> P2_4/P3_1",
         "V_A05/A06/A18 journey CLI -> P3_1"
       ]
+    },
+    "I02": {
+      "status": "PARTIAL_ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "4"
+      ],
+      "step_3": "NOT_DONE — 独立读回 oracle（真实 container inspect/UID/mount/权限 + Edit/Shell/MCP 负向写）需 docker/真实 Runner；docker socket 被沙箱拒绝，如实 UNVERIFIED；承接者 I07/准入阶段",
+      "commits": {
+        "tests": "5854edf",
+        "implementation": "d9e628a",
+        "report": "571e848"
+      },
+      "merged_to_master": "98de901",
+      "review": "worker-reports/I02.review.json (APPROVED, 0 blocking)",
+      "integration_fix": {
+        "commits": [
+          "3d65712",
+          "3069791",
+          "58080ae"
+        ],
+        "result": "13/13; npm test 185/185 on merged master 10b37bf; integration acceptance complete"
+      },
+      "supplement_delta": "Ponytail 补充 §8 I02 细化（方法状态作用域）待 replan 决定后 delta-review"
+    },
+    "P2_3": {
+      "status": "ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "note": "true step structure is 6 steps (2 packages + Review + Commit), not the 8-step template; corrective commit follows b3f1316 whose message said 8/8",
+      "commits": {
+        "tests": "79d0212",
+        "implementation": "b9fafa4",
+        "report": "0974e8e"
+      },
+      "merged_to_master": "9c5db5f",
+      "review": "worker-reports/P2_3.review.json (APPROVED, 0 blocking)",
+      "caveat": "check.sh heading clause: environment-bounded (whitebox corpus gap, pre-existing); B10/A20 semantics covered by npm test + exit-code contract tests + truth table"
     }
   },
   "environment_notes": [
@@ -351,6 +400,42 @@
       "raised": "2026-10-20T04:26:09.546774+00:00",
       "by": "I03 worker",
       "question": "Outline UTILS_SECRET lacks a plan ref; add ref (plan amendment) or map to existing secret at deployment gate"
+    },
+    {
+      "id": "PUBLISHER_ISOLATOR_CREDS",
+      "raised": "2026-10-20T06:56:03.525611+00:00",
+      "by": "I02 worker",
+      "question": "publisher/isolator dedicated credentials not in frozen I02 ref set; UNASSIGNED marked; decide ref expansion at enablement gate"
+    },
+    {
+      "id": "EVIDENCE_INPUT_MISSING_EXIT_CODE",
+      "raised": "2026-10-20T06:57:00.054381+00:00",
+      "by": "P2_3 worker",
+      "question": "contract wording 1 vs pinned oracle 2 for EVIDENCE_INPUT_MISSING; pinned value kept; adjudicate at VERIFY"
     }
-  ]
+  ],
+  "halt": {
+    "raised_at": "2026-10-20T07:07:53.971911+00:00",
+    "cause": "frozen architecture.md drifted post-freeze (external Ponytail supplement swept into 21923be by controller add -A; classic-closeout-and-hook-contract.md §6-8 expanded likewise)",
+    "plan_guard": "DRIFT: architecture_sha256 mismatch + OPENSPEC_LIFECYCLE SOURCE_DRIFT (exit 1) — matches the supplement self-description",
+    "preserved": "old drift-lock + all evidence in history; completed-task commits intact",
+    "affected": {
+      "done_needs_delta_review": [
+        "P1_6",
+        "P1_2",
+        "I02"
+      ],
+      "pending_refinement": [
+        "P4_5"
+      ],
+      "unaffected_ongoing": [
+        "P2_3 integration"
+      ]
+    },
+    "new_dispatches": "suspended until user decision",
+    "options": [
+      "A: accept supplement -> controller runs documented mini-replan (refine P1_6/P1_2/I02/P4_5 boundaries in tasks/DAG/contract, re-freeze, delta-review 3 done tasks, resume)",
+      "B: reject -> restore frozen architecture.md 8bd5316, supplement stays as unaccepted docs, resume original plan"
+    ]
+  }
 }

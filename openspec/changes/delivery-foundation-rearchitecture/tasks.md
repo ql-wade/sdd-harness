@@ -1,10 +1,13 @@
 # Implementation Plan — 交付架构端到端实施
 
-**Goal:** 保留原30父任务、69工作包及92场景，完成 Comet 单主控受管交付、知识关闭与恢复的真实端到端实施、独立验证和报告。
+**Goal:** 保留原30父任务、69工作包及92场景，新增OV01–OV08；以官方overlay优先复用完成100场景的Comet单主控受管交付，独立验证后出具报告。
 **Architecture:** design.md、docs/architecture/delivery-architecture.md 与 ADR-0019 为权威；architecture.md 仅登记接口及证据。
 **Tech Stack:** Node ESM、Comet0.4.5 精确提交、OpenSpec隔离兼容工具链、Matt基础方法、test-authoring、Whitebox；详见 execution-contract.json。
 
 ## Global Constraints
+
+> 2026-10-20 官方 overlay 优先重规划：先完成隔离预研与兼容审查，保持原30父任务/69工作包/92场景及旧勾选；增加 OVR/OVQ 与 OV01–OV08，现为41节点、100场景、114项 required 检查。旧票不覆盖本修订，OVR 未通过不派发受影响新实现；prestudy 只证原生脚本行为。详见 overlay-integration-design.md，当前执行状态/监控不由本轮修改。
+
 
 - Comet Classic is sole target runtime controller; TeamAI distributes only
 - Matt reusable methods only; no Superpowers restart or nested planner/implement-spec controller
@@ -15,9 +18,11 @@
 - Batch5 is conditional pre-enable certification; never silently waive F10 or claim untested team API
 - No production effects or remote branch protection mutation implied; honor registered grants before live writes
 - Parent task completion requires all its required workpackages and current acceptance evidence
+- Official five-phase overlay is method/evidence reuse only; original Classic owns phase; canonical plan reuses native authority/ref protocol
+- OVR must approve current revision; OVQ records reuse compatibility and baseline gaps, not premature project security acceptance
 - Any scope/interface/input hash drift halts and requires reviewed replan; no silent lock refresh
 
-本计划为用户选择的 planning-only 交接包，由用户另选 Agent 实施；当前聊天不派发实施。迁移实施由接收方选定的唯一 planner 控制，目标系统的业务推进、状态与恢复仅由 Comet 持有。首轮 serial/max_workers=1/isolation=serial，证明宿主能力后才能经显式重规划并行。旧 sdd 实施监督已暂停；接收方按实际宿主能力绑定 Goal/20分钟监督，不复用旧聊天执行身份。结构校验不等于运行验收。原30父任务、69工作包、92场景全部保留，新增8项基础设施任务及最终VERIFY，共39节点。
+本计划为用户选择的 planning-only 交接包，由用户另选 Agent 实施；当前聊天不派发实施。迁移实施由接收方选定的唯一 planner 控制，目标系统的业务推进、状态与恢复仅由 Comet 持有。首轮 serial/max_workers=1/isolation=serial，证明宿主能力后才能经显式重规划并行。旧 sdd 实施监督已暂停；接收方按实际宿主能力绑定 Goal/20分钟监督，不复用旧聊天执行身份。结构校验不等于运行验收。原30父任务、69工作包、92场景全部保留，新增8项基础设施、OVR修订评审、OVQ官方组合资格及最终VERIFY，共41节点。
 
 计划中的2–5分钟指单次检查点/取证时间盒，不是完整功能交付工期；失败仍继续拆片，不能为时间盒降验收范围。实际 ETA 由实测剩余工作推导。每次提交仅包含该任务授权文件，不自动提交既有用户文档。
 
@@ -57,6 +62,37 @@
 - [ ] 5.3 核实 Comet 受管驱动的租约/fencing/后台运行能力；不满足则记录边界并复审，禁止共享本地目录假装分布式。完成版本回退与运维手册。
 
 ## Schema2 执行任务投影
+
+### Task OVR: 当前 overlay-first 修订的独立架构准入
+
+**Files:** openspec/changes/delivery-foundation-rearchitecture/overlay-review
+**Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state; Comet.SourcePreparation.v1: prepareCometSource({projectRoot,lock,archivePath}) returns canonical pristine source and verified provenance; Comet.DistributionBuild.v1: buildCometDistribution({projectRoot,lock,archivePath}) returns buildRoot, entrypoint, sourceCommit, fingerprint with exact toolchain precondition; Registry.v1 -> project/resource/owner/credentialRef/lockRef/authority/domain/retention, no secret values; SecretRef.v1 -> purpose-bound opaque reference resolved only by allowed service principal; Qualification.v1 -> exact source commit, image digest/platform/size, license, health API and backup compatibility evidence before up; RunnerInfra.v1 validate|qualify|up|probe|stop -> process/mount/principal observations only; RoleBoundary.v1 -> immutable tool image, distinct principal/mount/credential scopes for controller/author/test-author/reviewer/publisher/isolator; Authority.v1 -> one fixed Comet authority and workspace; startup refuses copied state or concurrent writer; OutlineInfra.v1 validate|qualify|up|probe|stop -> actual API/UI/storage/principal evidence; OutlineDomain.v1 -> instance/collection immutable IDs, actual effective reader set and registered owner; OutlineState.v1 -> durable database+attachment storage; cache is not rights authority; API contracts include fixed create UUID and lastRevision only if verified; ProjectWikiInfra.v1 validate|qualify|probe -> canonical project/wiki/index identity and MCP read/write observations; ProjectRoot.v1 -> projectID/repoID/wikiRoot/worktree mapping, contained paths only; KnowledgeWrite.v1 -> approved curated entry plus source/revision and independent readback; no task/phase/spec authority; CodeKnowledgeInfra.v1 validate|qualify|probe -> selfhost code-wiki and separate graph provenance/freshness evidence; CodeWiki.v1 -> repository immutableID/commit and wiki generation manifest, approved code access scope; CodeGraph.v1 -> structure-only index with exact input commit/coverage; removable optimization, no gate or knowledge authority; PlatformInfra.v1 validate|probe -> repository identity/permissions/check policy/registry/environment evidence, no implicit remote policy writes; IntegrationIdentity.v1 -> PR head/mergeSHA -> build artifact digest -> target deployment identity; Environment.v1 -> isolated endpoint/owner/rollback authorization and readback oracle; Health.v1 -> heartbeat_age, complete_scan_watermark, unresolved_isolation/deadlines and authority identity; read-only; Monitor.v1 -> external fault-domain registration and alert delivery/ack/escalation only, never business phase/retry/ACL; Supervisor.v1 -> restart same fixed Comet authority only after old writer gone; bounded attempts and escalation; Backup.v1 -> consistent manifest of Comet state/transaction/receipts/approved payload plus knowledge/database/objects/config refs; Restore.v1 -> restore into quarantine, authenticate current permissions, fence old writer, verify same operation and readback before release; Retention.v1 -> R10 A: unresolved Run/knowledge obligation retains sole workspace; cleanup requires verified completed or separately approved migration+restore proof; Comet.Overlay.v1: original Classic phase authority, official method/schema/provenance bindings, no trusted pass from self-recorded markers
+**Dependencies:** P0_4
+**Owns:** openspec/changes/delivery-foundation-rearchitecture/overlay-review
+**Parallel safe:** false
+**Acceptance IDs:** E03, E04
+
+- [ ] **Step 1 [5 min]: Record** 冻结本次architecture/design/overlay契约、100场景、tasks/DAG/contract与prestudy；原P0_4/旧票仅属旧版本。
+- [ ] **Step 2 [5 min]: Review** 按原exact quorum/阈值对当前修订独立冷启动评审；先核对具体资料和目的地的有效披露授权；不以缺票/旧票/平均分放行。
+- [ ] **Step 3 [5 min]: Review** 运行原review_gate机械tally/finalize，验证同digest、全票、无blocker；修改制品则重冻结新轮；未通过保持OVR未完成。
+- [ ] **Step 4 [3 min]: Commit** 仅接纳本次修订的真实机械回执与范围决定；不重写旧票，不因结构guard PASS勾选架构通过。
+
+### Task OVQ: 官方 overlay 方法与产物兼容资格，先调查再决定补丁
+
+**Files:** integrations/comet/overlay, test/comet-overlay-qualification.test.js, test/delivery-cases/overlay.mjs, openspec/changes/delivery-foundation-rearchitecture/overlay-qualification
+**Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state; Comet.SourcePreparation.v1: prepareCometSource({projectRoot,lock,archivePath}) returns canonical pristine source and verified provenance; Comet.DistributionBuild.v1: buildCometDistribution({projectRoot,lock,archivePath}) returns buildRoot, entrypoint, sourceCommit, fingerprint with exact toolchain precondition; Registry.v1 -> project/resource/owner/credentialRef/lockRef/authority/domain/retention, no secret values; SecretRef.v1 -> purpose-bound opaque reference resolved only by allowed service principal; Qualification.v1 -> exact source commit, image digest/platform/size, license, health API and backup compatibility evidence before up; RunnerInfra.v1 validate|qualify|up|probe|stop -> process/mount/principal observations only; RoleBoundary.v1 -> immutable tool image, distinct principal/mount/credential scopes for controller/author/test-author/reviewer/publisher/isolator; Authority.v1 -> one fixed Comet authority and workspace; startup refuses copied state or concurrent writer; OutlineInfra.v1 validate|qualify|up|probe|stop -> actual API/UI/storage/principal evidence; OutlineDomain.v1 -> instance/collection immutable IDs, actual effective reader set and registered owner; OutlineState.v1 -> durable database+attachment storage; cache is not rights authority; API contracts include fixed create UUID and lastRevision only if verified; ProjectWikiInfra.v1 validate|qualify|probe -> canonical project/wiki/index identity and MCP read/write observations; ProjectRoot.v1 -> projectID/repoID/wikiRoot/worktree mapping, contained paths only; KnowledgeWrite.v1 -> approved curated entry plus source/revision and independent readback; no task/phase/spec authority; CodeKnowledgeInfra.v1 validate|qualify|probe -> selfhost code-wiki and separate graph provenance/freshness evidence; CodeWiki.v1 -> repository immutableID/commit and wiki generation manifest, approved code access scope; CodeGraph.v1 -> structure-only index with exact input commit/coverage; removable optimization, no gate or knowledge authority; PlatformInfra.v1 validate|probe -> repository identity/permissions/check policy/registry/environment evidence, no implicit remote policy writes; IntegrationIdentity.v1 -> PR head/mergeSHA -> build artifact digest -> target deployment identity; Environment.v1 -> isolated endpoint/owner/rollback authorization and readback oracle; Health.v1 -> heartbeat_age, complete_scan_watermark, unresolved_isolation/deadlines and authority identity; read-only; Monitor.v1 -> external fault-domain registration and alert delivery/ack/escalation only, never business phase/retry/ACL; Supervisor.v1 -> restart same fixed Comet authority only after old writer gone; bounded attempts and escalation; Backup.v1 -> consistent manifest of Comet state/transaction/receipts/approved payload plus knowledge/database/objects/config refs; Restore.v1 -> restore into quarantine, authenticate current permissions, fence old writer, verify same operation and readback before release; Retention.v1 -> R10 A: unresolved Run/knowledge obligation retains sole workspace; cleanup requires verified completed or separately approved migration+restore proof; Comet.Overlay.v1: original Classic phase authority, official method/schema/provenance bindings, no trusted pass from self-recorded markers
+**Dependencies:** P1_1, OVR, I02
+**Owns:** integrations/comet/overlay, test/comet-overlay-qualification.test.js, test/delivery-cases/overlay.mjs, openspec/changes/delivery-foundation-rearchitecture/overlay-qualification
+**Parallel safe:** false
+**Acceptance IDs:** OV01, OV02, OV03, OV04, OV05, OV06, OV07, OV08
+
+- [ ] **Step 1 [5 min]: Test** 以固定发行产物生成官方overlay，复现独立init拒绝、原phase路由、control override拒绝和缺satisfies；prestudy是scaffold而非发布方法包。
+- [ ] **Step 2 [5 min]: Implement** 复用官方来源解析与definition/protocol生成，绑定实际方法入口，冻结原/最终schema与包摘要；产物输出纳入integrations/comet/overlay，不新造composer。
+- [ ] **Step 3 [5 min]: Test** 用真实方法producer输出检验原schema和当前Change state.plan/designDoc；调用原canonical plan校验器，第二checkbox/漏ID/其他Change/旧文件应被项目合同拒绝。
+- [ ] **Step 4 [5 min]: Test** 复现手填completedChecks/null evidence、同名schema弱化、旧sidecar/attempt、长文截断与直接原生推进；分别记录原生缺口与受管需要拒绝的目标，不把已知gap改成PASS。
+- [ ] **Step 5 [5 min]: Review** 交付逐入口复用/适配/扩展矩阵：方法/计划协议能复用，可信来源/共同推进/事务/收尾未证交P2_4等；明确宿主真实调用与资格限制，避免调查依赖修复造成环。
+- [ ] **Step 6 [3 min]: Commit** 仅接纳来源/协议/schema/包摘要、兼容证据和gap清单；OVQ调查完成不等于OV01–OV08最终业务验收，100场景仍由VERIFY闭合。
+
 
 ### Task P0_1: 原任务 0.1 — 收敛 v3.1 与 Foundation 后续修订，写唯一目标架构、ADR 提案、现有资产迁移表；证据：docs/architecture/delivery-architecture.md 与 ADR-0019。
 
@@ -124,10 +160,10 @@
 
 **Files:** .agents/skills, docs/agent/skill-architecture.md, openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json, integrations/comet/patches/0001-matt-method-profile.patch, test/delivery-cases/1_6.mjs, integrations/comet/patches/tests/1_6.patch
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
-**Dependencies:** P1_1
+**Dependencies:** P1_1, OVQ
 **Owns:** .agents/skills, docs/agent/skill-architecture.md, openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json, integrations/comet/patches/0001-matt-method-profile.patch, test/delivery-cases/1_6.mjs, integrations/comet/patches/tests/1_6.patch
 **Parallel safe:** false
-**Acceptance IDs:** M01, M02, B01, B09
+**Acceptance IDs:** M01, M02, B01, B09, OV01, OV02, OV03
 
 - [x] **Step 1 [5 min]: Test** 1.6.a 选择兼容的方法导出入口：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保留旧 plan_guard 负例，固定去 Superpowers 且无第二 controller 的方法/校验协议；若共享新版仍拥有 controller，不能直接全量引入。
 - [x] **Step 2 [5 min]: Implement** 1.6.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
@@ -138,6 +174,11 @@
 - [x] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
 - [x] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
+- [ ] **Step 9 [5 min]: Test** 官方 overlay 优先方法接入的真实负例：基于OVQ固定真实来源/最终schema/生成包；design/plan producer满足原schema，control只require/augment；承接任务协调/plan review/review-fix/progress reconciliation；不加载完整planner或旧Superpowers controller。原init修复与快照完成仅保留旧范围证据。
+- [ ] **Step 10 [5 min]: Implement** 在既有归属内复用官方接口作最小接入；缺口按原任务修复，不新增阶段/任务摘要/方法生成引擎；保存当前输入与原始RED/GREEN。
+- [ ] **Step 11 [5 min]: Review** 独立核对此补充与全部父任务义务，新增范围不得由旧完成勾选替代。
+- [ ] **Step 12 [3 min]: Commit** 串行接纳本任务补充范围及证据，保留旧切片与未完成项。
+
 ### Task P1_2: 原任务 1.2 — 在临时隔离配置先 RED 复现双写/漂移负例，再实现 exporter 与 FoundationLock；验证正反序 bootstrap/init、重复 pull、升级、卸载、用户条目与 matcher 注册（F02/F04/B09）。不得修改活配置。
 
 **Files:** foundation, tools/foundation-export.mjs, tools/bootstrap.sh, tools/adapters/claude-code.sh, test/foundation-distribution.test.js, hooks.yaml, test/delivery-cases/1_2.mjs
@@ -145,7 +186,7 @@
 **Dependencies:** P1_6
 **Owns:** foundation, tools/foundation-export.mjs, tools/bootstrap.sh, tools/adapters/claude-code.sh, test/foundation-distribution.test.js, hooks.yaml, test/delivery-cases/1_2.mjs
 **Parallel safe:** false
-**Acceptance IDs:** F02, F04, B09
+**Acceptance IDs:** F02, F04, B09, OV05, OV08
 
 - [x] **Step 1 [5 min]: Test** 1.2.a 实现资产 exporter 与 FoundationLock：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：RED：缺摘要/机器路径/浮动版本拒绝；GREEN：仅从技能、hooks、MCP 唯一源生成发布视图。
 - [x] **Step 2 [5 min]: Implement** 1.2.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
@@ -156,6 +197,11 @@
 - [x] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
 - [x] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
+- [ ] **Step 9 [5 min]: Test** 固定组合并复用官方分发的真实负例：FoundationLock绑定overlay definition/protocol、resolved来源、原始/最终schema与生成包摘要；官方平台编译、TeamAI、项目adapter、Ponytail按受管块单一writer；重复pull/升级/卸载不改变旧Run组合。
+- [ ] **Step 10 [5 min]: Implement** 在既有归属内复用官方接口作最小接入；缺口按原任务修复，不新增阶段/任务摘要/方法生成引擎；保存当前输入与原始RED/GREEN。
+- [ ] **Step 11 [5 min]: Review** 独立核对此补充与全部父任务义务，新增范围不得由旧完成勾选替代。
+- [ ] **Step 12 [3 min]: Commit** 串行接纳本任务补充范围及证据，保留旧切片与未完成项。
+
 ### Task P1_3: 原任务 1.3 — 验证 Comet 单主控模式、受管驱动、OpenSpec 接入、不可省略检查集合、独立验证回执和唯一 closeout owner（TeamAI 只验证分发）；真实渠道探针覆盖编辑/Shell/MCP（F05/F07/A09）。失败 NO-GO，不扩建第二调度器。
 
 **Files:** lib/adapters/comet.js, lib/adapters/harness.js, test/comet-driver.test.js, openspec/changes/delivery-foundation-rearchitecture/host-probes, test/delivery-cases/1_3.mjs
@@ -163,7 +209,7 @@
 **Dependencies:** P1_2, I02
 **Owns:** lib/adapters/comet.js, lib/adapters/harness.js, test/comet-driver.test.js, openspec/changes/delivery-foundation-rearchitecture/host-probes, test/delivery-cases/1_3.mjs
 **Parallel safe:** false
-**Acceptance IDs:** F05, F07, A09
+**Acceptance IDs:** F05, F07, A09, OV01, OV03, OV08
 
 - [ ] **Step 1 [5 min]: Test** 1.3.a 验证固定 Runner 与 Run 绑定：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：确定 authority/workspace/execution 真实接口，写 driver 能写、只读 driver 不能冒充实现；Runner 不另存 phase。
 - [ ] **Step 2 [5 min]: Implement** 1.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
@@ -173,6 +219,11 @@
 - [ ] **Step 6 [5 min]: Implement** 1.3.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
 - [ ] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
 - [ ] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+
+- [ ] **Step 9 [5 min]: Test** 本次overlay修订追加范围先RED：OV01/OV03/OV08：实际宿主消费overlay continuation并加载固定方法；登记派发与真实启动，禁止完整plannercontroller接管，sidecar或共享Ponytail mode不取得身份/写权。
+- [ ] **Step 10 [5 min]: Implement** 在原归属内最小GREEN并保存实际负控/通过证据；旧已勾选步骤只保留原范围，不代表此补充通过。
+- [ ] **Step 11 [5 min]: Review** 独立核对此新增范围与当前候选及所有必需项，缺证保持未完成。
+- [ ] **Step 12 [3 min]: Commit** 串行接纳本任务补充与真实证据，不覆盖旧切片。
 
 ### Task P1_4: 原任务 1.4 — 基于固定 Comet 发行包比较 Classic/Native；验证无关成功命令、漏必需检查、旧/手工回执、普通执行可达的跳过/运维逃生路径均不能放行受管交付；确认内置项目记忆与 LLMWiki/Outline 唯一知识源不冲突。所需扩展先评审，不以提示词充当不可绕过性。证据范围参见 comet-single-controller-review.md。
 
@@ -196,10 +247,10 @@
 
 **Files:** contracts/delivery, lib/delivery/baseline.js, lib/delivery/test-contract.js, test/delivery-baseline.test.js, test/delivery-test-contract.test.js, test/delivery-cases/2_1.mjs
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
-**Dependencies:** P1_1
+**Dependencies:** P1_1, OVQ
 **Owns:** contracts/delivery, lib/delivery/baseline.js, lib/delivery/test-contract.js, test/delivery-baseline.test.js, test/delivery-test-contract.test.js, test/delivery-cases/2_1.mjs
 **Parallel safe:** false
-**Acceptance IDs:** A01, A02, A03, A04, A07, A08
+**Acceptance IDs:** A01, A02, A03, A04, A07, A08, OV02, OV05
 
 - [x] **Step 1 [5 min]: Test** 2.1.a 定义共享契约及版本：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：FoundationLock/BaselineRef/TestContract/PlanBundle/CandidateRef/EvidenceEnvelope/GateReceipt/ReleaseReceipt 输入、错误与兼容边界。
 - [x] **Step 2 [5 min]: Implement** 2.1.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
@@ -210,6 +261,11 @@
 - [x] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
 - [x] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
+- [ ] **Step 9 [5 min]: Test** 本次overlay修订追加范围先RED：OV02/OV05：固定原/最终overlay schema内容与当前Change精确产物绑定，项目sdd.*补充不得同ID弱化comet.*；复用原task revision，测试其他Change/旧文件/空字段和schema内容漂移。
+- [ ] **Step 10 [5 min]: Implement** 在原归属内最小GREEN并保存实际负控/通过证据；旧已勾选步骤只保留原范围，不代表此补充通过。
+- [ ] **Step 11 [5 min]: Review** 独立核对此新增范围与当前候选及所有必需项，缺证保持未完成。
+- [ ] **Step 12 [3 min]: Commit** 串行接纳本任务补充与真实证据，不覆盖旧切片。
+
 ### Task P1_5: 原任务 1.5 — 按 classic-integration-design.md 验证 R/A/T 分离、P 计划单一权威、V 独立回执及 Kp/Kt 读回门禁；覆盖 C01–C08 的正常与旁路/恢复负例。先在隔离工具环境解决实际 OpenSpec 兼容失败，固定 test-authoring/Whitebox/planner 分发内容；不得改活配置或直接升全局工具。
 
 **Files:** test/classic-integration.test.js, openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes, test/delivery-cases/1_5.mjs
@@ -217,7 +273,7 @@
 **Dependencies:** P1_4, P2_1
 **Owns:** test/classic-integration.test.js, openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes, test/delivery-cases/1_5.mjs
 **Parallel safe:** false
-**Acceptance IDs:** C01, C02, C03, C04, C05, C06, C07, C08
+**Acceptance IDs:** C01, C02, C03, C04, C05, C06, C07, C08, OV02, OV04, OV07
 
 - [ ] **Step 1 [5 min]: Test** 1.5.a 验证 OpenSpec/TestPack/计划引用映射：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：固定兼容环境，tasks 唯一可写；Classic plan 为派生只读视图，不双写 checkbox。
 - [ ] **Step 2 [5 min]: Implement** 1.5.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
@@ -226,14 +282,19 @@
 - [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
 - [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
+- [ ] **Step 7 [5 min]: Test** 复用原生canonical plan与handoff的真实负例：直接调用/适配validateClassicTaskPlan、稳定comet-task ID和checkbox-normalized revision；只读计划无checkbox；拒绝其他Change/旧文件满足通配schema；第81行后及supporting文件的必需语义实际回读。
+- [ ] **Step 8 [5 min]: Implement** 在既有归属内复用官方接口作最小接入；缺口按原任务修复，不新增阶段/任务摘要/方法生成引擎；保存当前输入与原始RED/GREEN。
+- [ ] **Step 9 [5 min]: Review** 独立核对此补充与全部父任务义务，新增范围不得由旧完成勾选替代。
+- [ ] **Step 10 [3 min]: Commit** 串行接纳本任务补充范围及证据，保留旧切片与未完成项。
+
 ### Task P2_2: 原任务 2.2 — 实现 EvidenceEnvelope/来源准入和 GateReceipt；先 RED 拒绝自签 pass、同执行身份、旧 policy/环境/输入摘要、缺观察能力，再 GREEN（A05–A06/A18–A19/B03/B06–B07）。可信来源单独实测，schema 夹具不冒充认证。
 
 **Files:** lib/delivery/evidence.js, lib/delivery/gate.js, test/delivery-evidence.test.js, test/delivery-gate.test.js, test/delivery-cases/2_2.mjs
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
-**Dependencies:** P2_1
+**Dependencies:** P2_1, OVQ
 **Owns:** lib/delivery/evidence.js, lib/delivery/gate.js, test/delivery-evidence.test.js, test/delivery-gate.test.js, test/delivery-cases/2_2.mjs
 **Parallel safe:** false
-**Acceptance IDs:** A05, A06, A18, A19, B03, B06, B07
+**Acceptance IDs:** A05, A06, A18, A19, B03, B06, B07, OV03, OV05
 
 - [x] **Step 1 [5 min]: Test** 2.2.a 实现证据准入与身份绑定：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：RED 自签、同 execution、旧 policy/候选/环境；GREEN 固定派发来源，不信角色标签。
 - [x] **Step 2 [5 min]: Implement** 2.2.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
@@ -244,6 +305,11 @@
 - [x] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
 - [x] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
+- [ ] **Step 9 [5 min]: Test** 本次overlay修订追加范围先RED：OV03/OV05：把Required Skill标记/来源清单当不可信输入；只有当前受管派发/execution/候选/方法/包/schema/policy绑定一致才能接纳，作者自填completedChecks/null摘要/旧组合均拒绝。
+- [ ] **Step 10 [5 min]: Implement** 在原归属内最小GREEN并保存实际负控/通过证据；旧已勾选步骤只保留原范围，不代表此补充通过。
+- [ ] **Step 11 [5 min]: Review** 独立核对此新增范围与当前候选及所有必需项，缺证保持未完成。
+- [ ] **Step 12 [3 min]: Commit** 串行接纳本任务补充与真实证据，不覆盖旧切片。
+
 ### Task P2_3: 原任务 2.3 — 保留旧 CLI 和报告 adapter；验证错误输入退出 1、验收失败退出 2、有效检查退出 0，旧 npm test 及 bash scripts/check.sh 通过（B10/A20）。
 
 **Files:** bin/cli.js, lib/adapters/legacy-evidence.js, test/delivery-cli.test.js, test/delivery-cases/2_3.mjs
@@ -253,21 +319,21 @@
 **Parallel safe:** false
 **Acceptance IDs:** A20, B10
 
-- [ ] **Step 1 [5 min]: Test** 2.3.a 增量暴露检查 CLI 与旧报告适配：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保持既有命令；测试 0/1/2 和 JSON 结果；字段缺失或版本不兼容明确拒绝。
-- [ ] **Step 2 [5 min]: Implement** 2.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 2.3.b 运行兼容回归：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：node --test test/*.test.js、npm test、bash scripts/check.sh；关闭 CodeGraph/RTK 后正确性仍成立。
-- [ ] **Step 4 [5 min]: Implement** 2.3.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 2.3.a 增量暴露检查 CLI 与旧报告适配：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保持既有命令；测试 0/1/2 和 JSON 结果；字段缺失或版本不兼容明确拒绝。
+- [x] **Step 2 [5 min]: Implement** 2.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 2.3.b 运行兼容回归：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：node --test test/*.test.js、npm test、bash scripts/check.sh；关闭 CodeGraph/RTK 后正确性仍成立。
+- [x] **Step 4 [5 min]: Implement** 2.3.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P2_4: 原任务 2.4 — 按 classic-gate-runtime-contract.md 评审并最小扩展同一 Classic 的 policy/receipt/evaluate、共同转换条件、受管写入、resolver/continuation、状态事务和 archive/completed；先用 D01–D08 真实入口负例复现，再实现阻断/返工/失效与恢复。A/T 采用独立自动审查；不得新建第二阶段账本，也不得用手改 phase 模拟返工。运行时代码/装配改动需独立评审和完整回归，当前仅计划。
 
 **Files:** integrations/comet/patches/0002-managed-delivery-runtime.patch, test/delivery-cases/2_4.mjs, integrations/comet/patches/tests/2_4.patch
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
-**Dependencies:** P1_5, P2_3
+**Dependencies:** P1_5, P2_3, OVQ
 **Owns:** integrations/comet/patches/0002-managed-delivery-runtime.patch, test/delivery-cases/2_4.mjs, integrations/comet/patches/tests/2_4.patch
 **Parallel safe:** false
-**Acceptance IDs:** D01, D02, D03, D04, D05, D06, D07, D08, C07
+**Acceptance IDs:** D01, D02, D03, D04, D05, D06, D07, D08, C07, OV03, OV04, OV05, OV06
 
 - [ ] **Step 1 [5 min]: Test** 2.4.a 接入共同 policy/receipt/evaluate：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：只在 1.1.c 确定的同一 Runtime 扩展；Guard、直接转换、受管写入共用谓词。
 - [ ] **Step 2 [5 min]: Implement** 2.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
@@ -279,6 +345,11 @@
 - [ ] **Step 8 [5 min]: Implement** 2.4.d 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
 - [ ] **Step 9 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
 - [ ] **Step 10 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+
+- [ ] **Step 11 [5 min]: Test** 只补资格实验已证缺口的真实负例：消费OVQ gap清单并接入原Classic共同predicate；拒绝自填标记/null证据/弱化schema，覆盖直接Guard/transition/写入/next/resume/archive；新增可信回执进入原事务与恢复，overlay PASS不能直接签发GateReceipt。
+- [ ] **Step 12 [5 min]: Implement** 在既有归属内复用官方接口作最小接入；缺口按原任务修复，不新增阶段/任务摘要/方法生成引擎；保存当前输入与原始RED/GREEN。
+- [ ] **Step 13 [5 min]: Review** 独立核对此补充与全部父任务义务，新增范围不得由旧完成勾选替代。
+- [ ] **Step 14 [3 min]: Commit** 串行接纳本任务补充范围及证据，保留旧切片与未完成项。
 
 ### Task P2_5: 原任务 2.5 — 架构 A 接入 grill-me 加独立全票共识：冻结审查包、保持 exact quorum/阈值/同摘要、绑定真实机械 tally/finalize、拒绝旧票/缺票/多数票和未闭合承重问题；Comet 只持有一个评审作业。按 E03/E04 验证需求/设计改变后保守失效，不扩展测试 T 为未经要求的相同 quorum。
 
@@ -353,7 +424,7 @@
 **Dependencies:** P3_2
 **Owns:** openspec/changes/delivery-foundation-rearchitecture/pilot-recovery, test/delivery-cases/3_3.mjs
 **Parallel safe:** false
-**Acceptance IDs:** A10, A11, A12, F07
+**Acceptance IDs:** A10, A11, A12, F07, OV06
 
 - [ ] **Step 1 [5 min]: Test** 3.3.a 运行并发/重复/乱序/旧 epoch 负例：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：同 key 只派发一次，旧回调拒绝，父 Journey 失败不因子任务通过而放行。
 - [ ] **Step 2 [5 min]: Implement** 3.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
@@ -361,6 +432,11 @@
 - [ ] **Step 4 [5 min]: Implement** 3.3.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
 - [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
 - [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+
+- [ ] **Step 7 [5 min]: Test** 本次overlay修订追加范围先RED：OV06：真实重启与旧attempt/sidecar回调交错，当前Run/候选/回执按同一事务恢复；缺失或篡改sidecar不能留下无依据通过，不重复业务副作用。
+- [ ] **Step 8 [5 min]: Implement** 在原归属内最小GREEN并保存实际负控/通过证据；旧已勾选步骤只保留原范围，不代表此补充通过。
+- [ ] **Step 9 [5 min]: Review** 独立核对此新增范围与当前候选及所有必需项，缺证保持未完成。
+- [ ] **Step 10 [3 min]: Commit** 串行接纳本任务补充与真实证据，不覆盖旧切片。
 
 ### Task P4_1: 原任务 4.1 — 受保护 required checks 对精确集成 SHA 重算契约/来源；缺项、skip、超时、旧证据实际阻断平台合并（A13/F06/F09）。检查策略来自受保护基线。
 
@@ -465,7 +541,7 @@
 **Dependencies:** P4_4
 **Owns:** hooks.yaml, hooks, tools/adapters/claude-code.sh, test/delivery-hook-assembly.test.js, test/delivery-cases/4_5.mjs
 **Parallel safe:** false
-**Acceptance IDs:** E05, E06, H02
+**Acceptance IDs:** E05, E06, H02, OV08
 
 - [ ] **Step 1 [5 min]: Test** 4.5.a 按需生成只读恢复 hook：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：Ponytail 仅方法提示；项目策略只来自 hooks.yaml，不改插件缓存或借 mode 授权。
 - [ ] **Step 2 [5 min]: Implement** 4.5.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
@@ -473,6 +549,11 @@
 - [ ] **Step 4 [5 min]: Implement** 4.5.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
 - [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
 - [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+
+- [ ] **Step 7 [5 min]: Test** 验证官方编译与三类Hook共存的真实负例：官方publish/distribute编译块、项目hooks.yaml块、Ponytail插件块单一writer；检验生成脚本与实际原生注册/上下文送达，重复事件/off/静默失败不重复派发且必要Gate仍阻断。
+- [ ] **Step 8 [5 min]: Implement** 在既有归属内复用官方接口作最小接入；缺口按原任务修复，不新增阶段/任务摘要/方法生成引擎；保存当前输入与原始RED/GREEN。
+- [ ] **Step 9 [5 min]: Review** 独立核对此补充与全部父任务义务，新增范围不得由旧完成勾选替代。
+- [ ] **Step 10 [3 min]: Commit** 串行接纳本任务补充范围及证据，保留旧切片与未完成项。
 
 ### Task P4_8: 原任务 4.8 — G14 已选事件＋周期核验；G15 已确认 A（正常依赖下 5 分钟目标，故障允许超时并留痕）；细分预算准入及隔离授权确认后，按 knowledge-revocation-and-restoration.md 验证 L01–L11：来源变化影响闭包、两种期限、资源端真实隔离、完成后维护、重复乱序/失败恢复和新授权恢复。受控 MCP 与 Outline Web/分享/搜索/附件等 required 渠道分别证明；没有覆盖不能标隔离完成，监听器只交事件不成为主控；实测漏报、完整扫描超时、Runner 宕机、隔离失败告警/重试及恢复补偿，告警与资源端隔离时限分别报告。
 
@@ -572,13 +653,13 @@
 
 **Files:** openspec/changes/delivery-foundation-rearchitecture/verification-report.md, openspec/changes/delivery-foundation-rearchitecture/grill-report.md, openspec/changes/delivery-foundation-rearchitecture/verification-results.json, openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json, openspec/changes/delivery-foundation-rearchitecture/execution-state.json, openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
-**Dependencies:** P0_1, P0_2, P0_3, P0_4, P1_1, P1_6, P1_2, P1_3, P1_4, P2_1, P1_5, P2_2, P2_3, P2_4, P2_5, P3_1, P3_4, P3_2, P3_3, P4_1, P4_2, P4_6, P4_7, P4_4, P4_5, P4_8, P4_3, P5_1, P5_2, P5_3, I01, I02, I03, I04, I05, I06, I07, I08
+**Dependencies:** P0_1, P0_2, P0_3, P0_4, P1_1, P1_6, P1_2, P1_3, P1_4, P2_1, P1_5, P2_2, P2_3, P2_4, P2_5, P3_1, P3_4, P3_2, P3_3, P4_1, P4_2, P4_6, P4_7, P4_4, P4_5, P4_8, P4_3, P5_1, P5_2, P5_3, I01, I02, I03, I04, I05, I06, I07, I08, OVR, OVQ
 **Owns:** openspec/changes/delivery-foundation-rearchitecture/verification-report.md, openspec/changes/delivery-foundation-rearchitecture/grill-report.md, openspec/changes/delivery-foundation-rearchitecture/verification-results.json, openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json, openspec/changes/delivery-foundation-rearchitecture/execution-state.json, openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl
 **Parallel safe:** false
-**Acceptance IDs:** A01, A02, A03, A04, A05, A06, A07, A08, A09, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, B01, B02, B03, B04, B05, B06, B07, B08, B09, B10, C01, C02, C03, C04, C05, C06, C07, C08, D01, D02, D03, D04, D05, D06, D07, D08, E01, E02, E03, E04, E05, E06, F01, F02, F03, F04, F05, F06, F07, F08, F09, F10, H01, H02, H03, H04, H05, H06, H07, H08, H09, L01, L02, L03, L04, L05, L06, L07, L08, L09, L10, L11, M01, M02, U01, U02, U03, U04, U05, U06, U07, U08
+**Acceptance IDs:** A01, A02, A03, A04, A05, A06, A07, A08, A09, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, B01, B02, B03, B04, B05, B06, B07, B08, B09, B10, C01, C02, C03, C04, C05, C06, C07, C08, D01, D02, D03, D04, D05, D06, D07, D08, E01, E02, E03, E04, E05, E06, F01, F02, F03, F04, F05, F06, F07, F08, F09, F10, H01, H02, H03, H04, H05, H06, H07, H08, H09, L01, L02, L03, L04, L05, L06, L07, L08, L09, L10, L11, M01, M02, U01, U02, U03, U04, U05, U06, U07, U08, OV01, OV02, OV03, OV04, OV05, OV06, OV07, OV08
 
 - [ ] **Step 1 [5 min]: Test** 在精确集成版本执行 execution-contract.json 每项 required check，保留真实日志、数据及适用截图，缺授权/环境/行为证据保持 UNVERIFIED。
-- [ ] **Step 2 [5 min]: Review** 独立 Whitebox Journey 后逐项 Grill92场景及全部69工作包；平台/知识/宿主能力分层报告，关闭全部阻断发现并以新候选复验。
+- [ ] **Step 2 [5 min]: Review** 独立 Whitebox Journey 后逐项 Grill100场景（保留原92并增加OV01–OV08）及全部原69工作包及本次新增义务；平台/知识/宿主能力分层报告，关闭全部阻断发现并以新候选复验。
 - [ ] **Step 3 [3 min]: Commit** 仅接纳当前版本验证报告、原始证据索引和任务证据更新，不执行本 Change 归档；归档由唯一 Comet closeout owner 在验收后处理。
 
 
@@ -920,15 +1001,20 @@
 
 **Files:** infra/delivery/runner/compose.yaml, infra/delivery/runner/Dockerfile, infra/delivery/runner/image.lock.json, infra/delivery/runner/role-policy.json, infra/delivery/runner/workspace-mounts.json, infra/delivery/runner/authority-registration.example.json, tools/infra/runner.mjs, test/infra-runner-isolation.test.js
 **Interfaces:** RunnerInfra.v1 validate|qualify|up|probe|stop -> process/mount/principal observations only; RoleBoundary.v1 -> immutable tool image, distinct principal/mount/credential scopes for controller/author/test-author/reviewer/publisher/isolator; Authority.v1 -> one fixed Comet authority and workspace; startup refuses copied state or concurrent writer
-**Dependencies:** I01, P1_1
+**Dependencies:** I01, P1_1, OVR
 **Owns:** infra/delivery/runner/compose.yaml, infra/delivery/runner/Dockerfile, infra/delivery/runner/image.lock.json, infra/delivery/runner/role-policy.json, infra/delivery/runner/workspace-mounts.json, infra/delivery/runner/authority-registration.example.json, tools/infra/runner.mjs, test/infra-runner-isolation.test.js
 **Parallel safe:** false
-**Acceptance IDs:** A09, A10, A11, A19, C07, D01, D08, H03, H09, U07, F05, F07, M02
+**Acceptance IDs:** A09, A10, A11, A19, C07, D01, D08, H03, H09, U07, F05, F07, M02, OV03, OV06, OV08
 
-- [ ] **Step 1 [5 min]: Test** RED：以实际worker身份经Edit/Shell/MCP分别写.comet/run-state.json、策略、回执与签发目录；实际拒绝并保留errno/请求；挂载宿主凭据/访问Docker socket、使用只读driver写产品文件、复制state后第二实例启动分别拒绝；杀掉controller后不能由worker自行领取phase/重试；旧owner/attempt结果由Comet拒绝，基础设施不伪造新operation。
-- [ ] **Step 2 [5 min]: Implement** GREEN：镜像由精确已锁Comet源及项目补丁构建，启动前固定image digest；只读根文件系统、最小capabilities/权限和独立角色挂载；唯一Comet状态/锁/事务仍在其受管持久卷；infra仅启动/停止进程，不维护DAG/phase/job queue；工件/角色结果通过受控入口交原Comet；普通Agent不可构造可信dispatch身份，不能只靠env角色字符串或同主体签名。
+- [x] **Step 1 [5 min]: Test** RED：以实际worker身份经Edit/Shell/MCP分别写.comet/run-state.json、策略、回执与签发目录；实际拒绝并保留errno/请求；挂载宿主凭据/访问Docker socket、使用只读driver写产品文件、复制state后第二实例启动分别拒绝；杀掉controller后不能由worker自行领取phase/重试；旧owner/attempt结果由Comet拒绝，基础设施不伪造新operation。
+- [x] **Step 2 [5 min]: Implement** GREEN：镜像由精确已锁Comet源及项目补丁构建，启动前固定image digest；只读根文件系统、最小capabilities/权限和独立角色挂载；唯一Comet状态/锁/事务仍在其受管持久卷；infra仅启动/停止进程，不维护DAG/phase/job queue；工件/角色结果通过受控入口交原Comet；普通Agent不可构造可信dispatch身份，不能只靠env角色字符串或同主体签名。
 - [ ] **Step 3 [5 min]: Review** 独立读回：真实container inspect/UID/mount/权限和负向写结果，分别对应Edit/Shell/MCP，不以容器配置文本代替实测；原RunID和operation恢复读回；两个启动请求只有一个有效Comet写者，控制目录不存在worker可写路径。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+
+- [ ] **Step 5 [5 min]: Test** 绑定真实角色与方法状态的真实负例：角色隔离/控制卷先于受管组合认证；mode/required-skill标记不能获得执行/签发身份，真实worker不可篡改policy/Run/发布凭据；兼容同一authority的恢复。
+- [ ] **Step 6 [5 min]: Implement** 在既有归属内复用官方接口作最小接入；缺口按原任务修复，不新增阶段/任务摘要/方法生成引擎；保存当前输入与原始RED/GREEN。
+- [ ] **Step 7 [5 min]: Review** 独立核对此补充与全部父任务义务，新增范围不得由旧完成勾选替代。
+- [ ] **Step 8 [3 min]: Commit** 串行接纳本任务补充范围及证据，保留旧切片与未完成项。
 
 ### Task I03: Outline独立资料域、Postgres/Redis、OIDC与对象存储
 
