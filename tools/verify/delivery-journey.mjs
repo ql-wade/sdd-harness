@@ -456,7 +456,7 @@ function main() {
   } else {
     const planLoad = loadCasePlan(options['case-plan']);
     if (planLoad.error) return failInput(`cannot read --case-plan: ${planLoad.error} (${redactHostPaths(planLoad.planPath ?? '')})`);
-    const entry = planLoad.plan.cases[scenario];
+    entry = planLoad.plan.cases[scenario];
     if (!entry) {
       return notExercised('scenario-not-registered-in-case-plan', { missing: [`${scenario} (verification-case-plan.json)`] });
     }
@@ -523,7 +523,6 @@ function main() {
   writeJson('case-definition.json', definition);
 
   // 7. Execute the declared actions — each exactly once (no retries).
-  const evidenceFilesBefore = new Set(['case-definition.json', 'pilot-baseline.json']);
   const spawnStdouts = [];
   for (let index = 0; index < definition.actions.length; index += 1) {
     const action = definition.actions[index];
@@ -555,8 +554,6 @@ function main() {
       const stderrName = `action-${label}-stderr.txt`;
       fs.writeFileSync(path.join(evidenceDir, stdoutName), run.stdout ?? '');
       fs.writeFileSync(path.join(evidenceDir, stderrName), run.stderr ?? '');
-      evidenceFilesBefore.add(stdoutName);
-      evidenceFilesBefore.add(stderrName);
       spawnStdouts.push(run.stdout ?? '');
       result.exitCode = run.status;
       if (run.error) {
@@ -574,7 +571,6 @@ function main() {
         result.observed = { path: displayPath(target), bytes: stat.size };
         result.ok = stat.isFile() && stat.size > 0;
         if (!result.ok) result.note = 'state file is empty or not a regular file';
-        evidenceFilesBefore.add(path.basename(target));
       } catch {
         result.observed = { path: displayPath(target), bytes: null };
         result.note = 'state file does not exist';

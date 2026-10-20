@@ -203,6 +203,12 @@ test('3.1.b runner PASS on real case scenario A01: executes test/delivery-cases/
   }
   const tap = fs.readFileSync(path.join(evidenceDir, 'action-1-stdout.txt'), 'utf8');
   assert.match(tap, /V_A01/, 'TAP evidence must contain the executed scenario test point');
+  // The persisted case definition is an audit artifact: its sourceBinding must
+  // carry the registry entry, matching the verdict (review NB-1 regression guard).
+  const persistedDefinition = JSON.parse(fs.readFileSync(path.join(evidenceDir, 'case-definition.json'), 'utf8'));
+  assert.ok(persistedDefinition.sourceBinding.length > 0, 'persisted case-definition.json must keep the plan sourceBinding');
+  assert.deepEqual(persistedDefinition.sourceBinding, verdict.sourceBinding);
+  assert.match(persistedDefinition.sourceBinding[0].path, /delivery-foundation/);
 });
 
 test('3.1.b runner PASS on real scenario A02 (2_1.mjs) and A20 (2_3.mjs) from different modules', () => {

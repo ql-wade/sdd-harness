@@ -24,7 +24,7 @@ Comet 权威状态、策略、签发材料由受管主体保护；worker 无控�
 
 ## 冻结登记（P3_1，机读）
 
-Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10-20）将本登记结构化：试点仓库=本仓库（用户已授权，execution-state.pilot_environment_choice）、owner 登记引用 I01 registry（`infra/delivery/registry.json`，project `sdd-harness-pilot`）、目标验证环境=本地隔离（本 worktree + `$TMPDIR`）、身份=运行时观测。Product/Design/TestContract/PlanBundle 四件以文件指针+摘要方式冻结（引用已接纳工件，不复制内容）；PlanBundle 摘要与 `lib/delivery/baseline.js` 的 `taskDefinitionDigest` 同一归一化——checkbox 勾选状态不构成计划漂移，定义文本变更构成漂移。`tools/verify/delivery-journey.mjs` 以下方 ```pilot-contract 机读块为唯一冻结基线来源：任一工件缺失/漂移即结构化拒绝派发并列缺项（A01 语义），PlanBundle 摘要校验绑定计划冻结（A15 语义）。重冻结程序：任何被冻结工件变更后，必须显式更新本块 sha256 并留下可审计 diff，不存在自动续期。
+Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10-20）将本登记结构化：试点仓库=本仓库（用户已授权，execution-state.pilot_environment_choice）、owner 登记引用 I01 registry（`infra/delivery/registry.json`，project `sdd-harness-pilot`）、目标验证环境=本地隔离（本 worktree + `$TMPDIR`）、身份=运行时观测。Product/Design/TestContract/PlanBundle 四件以文件指针+摘要方式冻结（引用已接纳工件，不复制内容）；PlanBundle 摘要与 `lib/delivery/baseline.js` 的 `taskDefinitionDigest` 同一归一化——checkbox 勾选状态不构成计划漂移，定义文本变更构成漂移。`tools/verify/delivery-journey.mjs` 以下方 ```pilot-contract 机读块为唯一冻结基线来源：任一工件缺失/漂移即结构化拒绝派发并列缺项（A01 语义），PlanBundle 摘要校验绑定计划冻结（A15 语义）。重冻结程序：任何被冻结工件变更后，必须显式更新本块 sha256 并留下可审计 diff，不存在自动续期。 重冻结记录 1：2026-10-20 P3_1 评审修复合并 master（f57ead9）带入 P1_3 接纳后的 proposal/design/spec/tasks 变更，四件摘要按程序显式更新（本条即审计记录）。
 
 ### 试点负向 AC 面板（首个实际业务试点的四类负向边界）
 
@@ -46,19 +46,19 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
   "frozenArtifacts": {
     "product": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/proposal.md",
-      "sha256": "8d7a0caabaec8eb0f6abe27f093922947608aadfdbec5613575bb79be852d7a1"
+      "sha256": "7cf2cfc360501f08845ce50b883a5a8da23a4066b6cb4455d515728025f3e4ba"
     },
     "design": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/design.md",
-      "sha256": "25d0856d31e1484fa9a9ad2d1b25b3c53cccf10f2e1bb6bf52b2dbd48789bcdc"
+      "sha256": "b6fe886aac5f03311b8a8cb23bb12076949ee2364153155eafe8d64096d029f1"
     },
     "testContract": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md",
-      "sha256": "27ae2cb385448d9f8783807b53bd168c0044e7d9e60c4cbe5c103954aebbbf07"
+      "sha256": "a3a7763cb3f4131b9b4a33ab1934a268a0a429d1653ad280de9ca33a7b176c1e"
     },
     "planBundle": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
-      "sha256": "809c1fd19828fb05a99bf2265164502b697bbe27aeb2b5f24994ccc96a91cc45",
+      "sha256": "aac0152e4ea360d3e03f2f5f7f14cc203f74b4525de48fde04e6fbe359cb6ad9",
       "digestNormalization": "checkbox-state-agnostic（与 lib/delivery/baseline.js taskDefinitionDigest 同一归一化；勾选状态不构成计划漂移）"
     }
   },

@@ -58,25 +58,34 @@
    "cmd": "npm test (full repo suite)",
    "exit_code": 0,
    "summary": "205 tests / 205 pass / 0 fail / 0 skipped — baseline preserved, no regressions; evidence green-npm-test.txt"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/3_1.mjs (post-review, after merge f57ead9 + NB fixes + re-freeze)",
+   "exit_code": 0,
+   "summary": "13 tests / 13 pass / 0 fail — includes the NB-1 regression assertion (persisted case-definition.json sourceBinding equals verdict.sourceBinding and is non-empty)"
+  },
+  {
+   "cmd": "node tools/verify/delivery-journey.mjs --scenario A01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A01 --json (post-review)",
+   "exit_code": 0,
+   "summary": "PASS after explicit re-freeze; NB-1 fix makes the persisted case-definition.json carry the registry sourceBinding"
+  },
+  {
+   "cmd": "node tools/verify/delivery-journey.mjs --scenario A15 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A15 --json (post-review)",
+   "exit_code": 0,
+   "summary": "PASS after explicit re-freeze"
+  },
+  {
+   "cmd": "npm test (post-merge full repo suite)",
+   "exit_code": 0,
+   "summary": "218 tests / 218 pass / 0 fail — master baseline grew 205 -> 218 (P1_3 + comet-driver), no regressions"
   }
  ],
  "runner_capability_matrix": {
   "executable_today": [
-   "A01",
-   "A02",
-   "A03",
-   "A04",
-   "A07",
-   "A08 (2_1.mjs)",
-   "A05",
-   "A06",
-   "A18",
-   "A19",
-   "B03",
-   "B06",
-   "B07 (2_2.mjs)",
-   "A20",
-   "B10 (2_3.mjs)",
+   "A01, A02, A03, A04, A07, A08 (2_1.mjs)",
+   "A05, A06, A18, A19, B03, B06, B07 (2_2.mjs)",
+   "A20, B10 (2_3.mjs)",
+   "A09, F05, F07 (1_3.mjs, delivered on master and merged via f57ead9)",
    "B09, M01, M02 (1_6.mjs)",
    "F01, F02, F03, F04 (1_1.mjs)",
    "B01 (1_2.mjs)",
@@ -89,11 +98,11 @@
    "A20": "PASS exit 0",
    "B09": "PASS exit 0 (module-level, target token absent, env-conditional skip recorded)"
   },
-  "not_exercised_by_design": "The remaining scenarios' case modules (1_3, 1_4, 1_5, 2_4, 2_5, 3_2, 3_3, 3_4, 4_*, 5_2, overlay) do not exist yet; the runner returns structured NOT-EXERCISED exit 2 (scenario registered but case-module-missing) — never a fabricated PASS. Unknown scenario ids return NOT-EXERCISED scenario-not-registered-in-case-plan."
+  "not_exercised_by_design": "The remaining 65 of 92 scenarios (recomputed after the review merge f57ead9 brought 1_3.mjs: 92 - 27 executable = 65) have no case module yet (1_4, 1_5, 2_4, 2_5, 3_2, 3_3, 3_4, 4_*, 5_2, overlay); the runner returns structured NOT-EXERCISED exit 2 (scenario registered but case-module-missing) — never a fabricated PASS. Unknown scenario ids return NOT-EXERCISED scenario-not-registered-in-case-plan."
  },
  "unverified": [
   "execution-contract.json V_A01/V_A15 implementation_status/availability fields remain PLANNED_NOT_EXECUTED/TO_IMPLEMENT — updating them is the controller's (not this worker's file). Local proof of execution count > 0 is in worker-reports/P3_1/evidence/check-V_A01.json and check-V_A15.json.",
-  "69 scenarios whose case modules are not yet delivered: NOT-EXERCISED by the runner until their implementedBy tasks land.",
+  "65 scenarios whose case modules are not yet delivered (92 - 27 executable after the review merge): NOT-EXERCISED by the runner until their implementedBy tasks land.",
   "I01 registry authority.readbackStatus=UNVERIFIED (GitHub readback): the pilot contract carries this forward; journeys requiring authorized actions stay blocked until an execution-time readback succeeds."
  ],
  "files_changed": [
@@ -114,5 +123,16 @@
   "Exit-code nuance: the task directive requires exit 2 (structured UNVERIFIED) for missing case definition/prerequisites; execution-contract cli_contract phrases 1=invalid input/prerequisite. Implemented: 1 only for malformed arguments and unreadable explicit override paths; every missing case/prerequisite/baseline/environment path exits 2 as UNVERIFIED. All refusal paths are nonzero, satisfying the frozen V_* expected text ('依赖缺失退出非零/UNVERIFIED，不得跳过判PASS').",
   "Conservative invalidation is now load-bearing: any edit to the definition text of proposal.md/design.md/specs/delivery-foundation/spec.md/tasks.md (checkbox state excepted) makes every journey refuse with frozen-baseline-drift until pilot-contract.md digests are explicitly re-frozen. This is the designed A01/A15 behavior; future workers editing those artifacts must re-freeze in the same change.",
   "tasks.md/execution-state/ledger untouched; no production side effects; all fixtures in os.tmpdir(); zero new npm dependencies."
- ]
+ ],
+ "review_fixes": [
+  {
+   "review": "P3_1.review.json APPROVED, 0 blockers; three non-blocking repairs applied",
+   "NB-1": "tools/verify/delivery-journey.mjs: the else-branch `const entry` shadowed the outer `let entry` (:429), so buildCaseDefinition always received null and the persisted case-definition.json lost sourceBinding. Fixed by assigning the outer binding; regression assertion added to 3_1.mjs (persisted sourceBinding non-empty and deep-equal to verdict.sourceBinding).",
+   "NB-2": "removed the dead evidenceFilesBefore set (declared and written, never read).",
+   "NB-4": "NOT-EXERCISED count corrected. Applied as recomputed post-merge: the coordinator figure 68 (92-24) was pre-merge; the instructed `git merge --no-ff master` (f57ead9) brought 1_3.mjs (A09/F05/F07), so the honest post-merge figures are 27 executable / 65 NOT-EXERCISED-by-design. Report updated to 65.",
+   "consequential_refreeze": "The instructed merge changed all four frozen artifacts on master (P1_3 acceptance moved proposal/design/spec/tasks). Per the pilot contract re-freeze procedure the four digests were explicitly updated with an audit note (refreeze record 1, commit-level diff) — without it every journey refuses frozen-baseline-drift and the demanded V_A01/V_A15 exit 0 is unreachable. pilot-contract.md is this task's owned file.",
+   "recorded_not_changed": "NB-3 (exit-code asymmetry: both refusal lanes nonzero, satisfies the frozen expected text), NB-5 (evidence gate is an existence check; VERIFY consumers must treat persisted bytes as necessary-not-sufficient), NB-6 (B09 module-level green with target.found=false, already disclosed design). .whitebox gitignore handled by control plane (a92284b)."
+  }
+ ],
+ "commands_status_note": "Pre-review command entries describe the pre-merge state (205/205); post-review entries describe the merged state (218/218). Both are real runs with saved evidence where indicated."
 }
