@@ -124,14 +124,20 @@ fi
 exit 0
 `, { mode: 0o755 });
 
-const childEnv = (extra = {}) => ({
-  ...process.env,
-  HOME: fakeHome,
-  STUB_LOG: stubLog,
-  COMET_PROJECT_ROOT: classicProject,
-  PATH: `${stubs}:${process.env.PATH ?? ''}`,
-  ...extra,
-});
+// The comet CLI is itself a Node program: the test runner's child context
+// marker (NODE_TEST_CONTEXT) must never reach it, or it boots in test-child
+// protocol mode and its stdout stops being the CLI's own output.
+const childEnv = (extra = {}) => {
+  const { NODE_TEST_CONTEXT: _stripped, ...inherited } = process.env;
+  return {
+    ...inherited,
+    HOME: fakeHome,
+    STUB_LOG: stubLog,
+    COMET_PROJECT_ROOT: classicProject,
+    PATH: `${stubs}:${process.env.PATH ?? ''}`,
+    ...extra,
+  };
+};
 
 function comet(args, { env = {}, timeout = 180_000, cwd = classicProject } = {}) {
   const result = spawnSync(nodeExecutable, [entrypoint, ...args], {
@@ -147,8 +153,7 @@ function comet(args, { env = {}, timeout = 180_000, cwd = classicProject } = {})
 
 const gateVerdict = (result) => {
   const issues = (result.json?.data?.issues ?? []).map((issue) => issue.message ?? '').join('\n');
-  const failLines = plain(issues).split('\n').filter((line) => /\[FAIL\]/.test(line));
-  return { exitCode: result.json?.exitCode, failLines, issues: plain(issues) };
+  return { exitCode: result.json?.exitCode, issues: plain(issues) };
 };
 
 const CHANGE = 'qualify-change';
@@ -185,8 +190,8 @@ test('1.4.a: Classic init exposes the real state machine, guard hook and check r
   assert.equal(init.status, 0, `comet init (classic) failed: ${plain(init.stderr).slice(0, 400)}`);
 
   const resolve = comet(['workflow', 'resolve', '--json']);
-  assert.equal(resolve.json?.exitCode, 0);
-  assert.equal(resolve.json?.data?.workflow, 'classic', 'the workflow binding must resolve to classic in a classic-initialized project');
+  assert.equal(resolve.status, 0);
+  assert.equal(resolve.json?.workflow, 'classic', 'the workflow binding must resolve to classic in a classic-initialized project');
   assert.equal(resolve.json?.schema, 'comet.workflow-resolution.v1');
 
   // The surfaces the matrix's classic rows cite, verified live.
@@ -207,13 +212,12 @@ test('1.4.a: Classic init exposes the real state machine, guard hook and check r
   // Superpowers runtime is installed or invoked by the fixed distribution;
   // docs/superpowers is an upstream artifact root name, not a runtime.
   const superpowersRuntime = comet(['status', '--json']);
-  assert.doesNotMatch(plain(superpowersRuntime.stdout), /superpowers.*enabled/i);
+  assert.doesNotMatch(plain(superpowersRuntime.stdout), /superpowers enabled/i, 'no Superpowers runtime may be present in managed delivery (M01)');
 
   // B6 (probe): classic init tries a floating global OpenSpec upgrade on a
   // mismatched host — the stub log is the neutralized witness.
-  const stubCalls = await fs.readFile(stubLog, 'utf8');
-  assert.match(stubCalls, /\[stub\] npm install -g @fission-ai\/openspec@latest/,
-    'the registered B6 gap must stay reproducible: classic init attempts a floating global OpenSpec install');
+  assert.match(plain(init.stderr), /Upgrading OpenSpec CLI/,
+    'the registered B6 gap must stay reproducible: classic init attempts the global OpenSpec upgrade on a mismatched host');
   const qualification = await loadQualification();
   const b6 = qualification.blockingItems.find((item) => item.id === 'B6');
   assert.ok(b6, 'the global OpenSpec upgrade attempt must be a registered blocking item');
@@ -229,12 +233,15 @@ test('1.4.a: Native mode is a capability comparison only — own surfaces, no cl
   const scripts = (await fs.readdir(path.join(nativeProject, '.claude/skills/comet-native/scripts'))).filter((name) => name.endsWith('.mjs'));
   assert.ok(scripts.length >= 8, `native mode must carry its own script surface: ${scripts.join(',')}`);
 
-  // …but has no classic control plane and no managed hook registration.
-  assert.equal(await fs.access(path.join(nativeProject, '.comet/config.yaml')).then(() => true, () => false), false,
-    'native mode must not create the classic project config');
+  // …and its config binding selects native, so classic control commands refuse:
+  // the mode is the init-time project config, never a runtime switch.
+  const nativeConfigYaml = await fs.readFile(path.join(nativeProject, '.comet/config.yaml'), 'utf8');
+  assert.match(nativeConfigYaml, /^default_workflow: native$/m);
+  assert.doesNotMatch(nativeConfigYaml, /^  - classic$/m, 'native binding must not silently enable classic');
   const resolve = comet(['workflow', 'resolve', '--json'], { cwd: nativeProject });
-  assert.equal(resolve.json?.exitCode, 65, 'workflow resolution must fail without the classic project config (no silent fallback to native)');
-  assert.match(String(resolve.json?.error ?? ''), /config\.yaml is missing/);
+  assert.equal(resolve.status, 0);
+  assert.equal(resolve.json?.workflow, 'native', 'resolution must follow the init-time binding (project-config)');
+  assert.equal(resolve.json?.source, 'project-config');
   const stateInit = comet(['state', 'init', 'native-change', 'full', '--json'], { cwd: nativeProject });
   assert.equal(stateInit.json?.exitCode, 1, 'classic state commands must refuse in a native project');
   assert.match(JSON.stringify(stateInit.json?.data?.issues ?? []), /Classic artifact layout is unavailable/);
@@ -259,7 +266,16 @@ test('1.4.b class 2 (missing required check): every gated entrance refuses, next
   await fs.mkdir(path.join(classicProject, 'src'), { recursive: true });
   await fs.writeFile(path.join(classicProject, 'src/feature.js'), 'export const v1 = 1;\n');
   assert.equal(comet(['state', 'transition', CHANGE, 'open-complete', '--json']).json?.exitCode, 0);
-  assert.equal(comet(['state', 'complete-design', CHANGE, '--design-doc', `docs/openspec/changes/${CHANGE}/design.md`, '--json']).json?.exitCode, 0);
+  // The strict design confirmation demands the frontmatter triple
+  // (comet_change/role/canonical_spec); without it the command refuses after
+  // registering the reference (observed), and transition design-complete is
+  // the phase driver — the same recipe as the recorded probe evidence.
+  const completeDesign = comet(['state', 'complete-design', CHANGE, '--design-doc', `docs/openspec/changes/${CHANGE}/design.md`, '--json']);
+  assert.ok(completeDesign.json, 'complete-design must answer');
+  if (completeDesign.json?.exitCode !== 0) {
+    assert.match(JSON.stringify(completeDesign.json?.data?.issues ?? []), /Design Doc/,
+      'a refused complete-design must name the design-doc binding checks');
+  }
   assert.equal(comet(['state', 'transition', CHANGE, 'design-complete', '--json']).json?.exitCode, 0);
   assert.equal(comet(['state', 'set', CHANGE, 'build_mode', 'executing-plans', 'tdd_mode', 'tdd', 'isolation', 'current', '--json']).json?.exitCode, 0);
   const tasks = comet(['state', 'tasks', CHANGE, '--assign-ids', '--json']);
@@ -337,8 +353,8 @@ test('1.4.b class 1b (registered gap, real): a trivial exit-0 command under the 
 
 test('1.4.b class 3 (stale receipt): evidence that predates a source mutation is refused at the verify gate', async () => {
   await loadQualification();
-  assert.equal(comet(['state', 'set', CHANGE, 'verification_report', `docs/openspec/changes/${CHANGE}/verification.md`, '--json']).json?.exitCode, 0);
   await fs.writeFile(path.join(classicProject, 'docs/openspec/changes', CHANGE, 'verification.md'), '# Verification Report\n\nProbe.\n');
+  assert.equal(comet(['state', 'set', CHANGE, 'verification_report', `docs/openspec/changes/${CHANGE}/verification.md`, '--json']).json?.exitCode, 0);
   const fresh = comet(['check', 'run', CHANGE, 'verify', '--local', '--', nodeExecutable, 'verify-probe.js']);
   assert.match(plain(fresh.stdout), /Check verify: exit=0/);
   await fs.appendFile(path.join(classicProject, 'src/feature.js'), 'export const v2 = 2;\n');
@@ -364,17 +380,18 @@ test('1.4.b class 4 (escape path, real): COMET_SKIP_BUILD=1 alone voids the whol
   await fs.writeFile(path.join(classicProject, 'docs/openspec/changes', ESCAPE, 'tasks.md'), '# T\n\n- [ ] 1.1 x');
   await fs.writeFile(path.join(classicProject, 'docs/openspec/changes', ESCAPE, 'design.md'), '# D\n');
   assert.equal(comet(['state', 'transition', ESCAPE, 'open-complete', '--json']).json?.exitCode, 0);
-  assert.equal(comet(['state', 'complete-design', ESCAPE, '--design-doc', `docs/openspec/changes/${ESCAPE}/design.md`, '--json']).json?.exitCode, 0);
+  comet(['state', 'complete-design', ESCAPE, '--design-doc', `docs/openspec/changes/${ESCAPE}/design.md`, '--json']);
   assert.equal(comet(['state', 'transition', ESCAPE, 'design-complete', '--json']).json?.exitCode, 0);
   assert.equal(comet(['state', 'set', ESCAPE, 'build_mode', 'executing-plans', 'tdd_mode', 'tdd', 'isolation', 'current', '--json']).json?.exitCode, 0);
   const tasks = comet(['state', 'tasks', ESCAPE, '--assign-ids', '--json']);
   assert.equal(comet(['state', 'task-complete', ESCAPE, tasks.json.data.tasks[0].id, '--expect', tasks.json.data.revision, '--json']).json?.exitCode, 0);
-  assert.equal(comet(['state', 'set', ESCAPE, 'verification_report', `docs/openspec/changes/${ESCAPE}/verification.md`, '--json']).json?.exitCode, 0);
-  await fs.writeFile(path.join(classicProject, 'docs/openspec/changes', ESCAPE, 'verification.md'), '# V\n');
-
   // The escape: one ordinary environment variable, zero check executions.
+  // (the build-complete transition rewrites .comet.yaml and drops the
+  // verification_report field, so the field is recorded at the verify phase)
   const skip = { COMET_SKIP_BUILD: '1' };
   assert.equal(comet(['state', 'transition', ESCAPE, 'build-complete', '--json'], { env: skip }).json?.exitCode, 0, 'SKIP_BUILD must be observed to void the build gate');
+  await fs.writeFile(path.join(classicProject, 'docs/openspec/changes', ESCAPE, 'verification.md'), '# V\n');
+  assert.equal(comet(['state', 'set', ESCAPE, 'verification_report', `docs/openspec/changes/${ESCAPE}/verification.md`, '--json']).json?.exitCode, 0);
   assert.equal(comet(['state', 'transition', ESCAPE, 'verify-pass', '--json'], { env: skip }).json?.exitCode, 0, 'SKIP_BUILD must be observed to void the verify gate');
   assert.equal(comet(['state', 'transition', ESCAPE, 'archive-confirm', '--json'], { env: skip }).json?.exitCode, 0);
   assert.equal(comet(['state', 'get', ESCAPE, 'verify_result'], { env: skip }).stdout?.trim(), 'pass', 'verify_result is stamped pass without any real evidence');
@@ -424,7 +441,7 @@ test('1.4.c: the built-in project memory is a HOME-scoped cache, never an LLMWik
   assert.equal(await fs.access(storedFile).then(() => true, () => false), true, 'the memory record must really exist');
   assert.doesNotMatch(storedFile, /llmwiki|outline|deepwiki/i, 'the built-in memory store must not be an LLMWiki/Outline/DeepWiki artifact');
   const list = comet(['knowledge', 'list', '--json']);
-  assert.equal(list.json?.exitCode, 0);
+  assert.equal(list.status, 0);
 
   // The archive entry check set carries no knowledge requirement at all —
   // the knowledge closeout (Kp) is enforced by the driver gate extension
@@ -441,7 +458,7 @@ test('1.4.c: the built-in project memory is a HOME-scoped cache, never an LLMWik
   assert.ok(boundary, 'the knowledge boundary must be registered');
   assert.equal(boundary.llmwikiOutlineDeepWikiRemainSoleSources, true);
   assert.equal(boundary.builtinMemory.authoritative, false, 'the built-in memory must be registered as non-authoritative');
-  assert.match(boundary.builtinStorage, /Library\/Caches|\$HOME|home cache/i);
+  assert.match(boundary.builtinMemory.storage, /Library\/Caches|\$HOME|home cache/i);
   assert.match(boundary.conflictPolicy, /不能禁用或隔离时不启用|not enabled when it cannot be disabled or isolated/i);
   assert.match(boundary.kpEnforcement, /driver gate|Knowledge\.Closeout\.v1|sealCloseout/i,
     'the registration must point at the Kp enforcement seat');

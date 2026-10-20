@@ -1,0 +1,43 @@
+{
+  "probedAt": "2026-10-20T10:33:22.088Z",
+  "fingerprint": "cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187",
+  "project": "scratch native project (isolated HOME + PATH stubs, $TMPDIR)",
+  "records": [
+    {
+      "id": "native-init",
+      "command": "node comet.js init <scratch>/native --yes --scope project --workflow native --platform claude --codegraph skip --language en --json",
+      "exitCode": 0,
+      "detail": "native skill surface installed; artifact workflow is its own (comet-native scripts), no classic control plane"
+    },
+    {
+      "id": "native-script-inventory",
+      "command": "ls .claude/skills/comet-native/scripts",
+      "exitCode": 0,
+      "detail": "12 scripts: comet-native-archive.mjs, comet-native-doctor.mjs, comet-native-hook-guard.mjs, comet-native-init.mjs, comet-native-new.mjs, comet-native-next.mjs, comet-native-root.mjs, comet-native-runtime.mjs, comet-native-select.mjs, comet-native-show.mjs, comet-native-spec.mjs, comet-native-status.mjs"
+    },
+    {
+      "id": "native-config-binding",
+      "command": "read .comet/config.yaml (native project)",
+      "exitCode": 0,
+      "detail": "schema=comet.project.v1 default_workflow=native workflows=[native] — the mode binding is the project config written at init"
+    },
+    {
+      "id": "native-workflow-resolve-native",
+      "command": "comet workflow resolve --json (native project)",
+      "exitCode": 0,
+      "detail": "workflow=native skill=comet-native source=project-config — resolution derives from project-config, never a runtime switch"
+    },
+    {
+      "id": "native-state-refusal",
+      "command": "comet state init native-change full --json (native project)",
+      "exitCode": 1,
+      "detail": "ERROR: Classic artifact layout is unavailable because Classic is not enabled"
+    },
+    {
+      "id": "native-capability-comparison-only",
+      "command": "static inventory + live refusals above",
+      "exitCode": 0,
+      "detail": "Native is recorded as a capability comparison only: it is its own method (own SKILL, own scripts, own artifact root) and is never a fallback of Classic; the managed single master is Classic"
+    }
+  ]
+}

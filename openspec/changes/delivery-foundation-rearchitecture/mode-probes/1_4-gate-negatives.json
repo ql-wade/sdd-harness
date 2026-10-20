@@ -1,0 +1,62 @@
+{
+  "probedAt": "2026-10-20T10:33:31.820Z",
+  "fingerprint": "cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187",
+  "change": "qualify-change",
+  "changePhase": "build (driven through the real lifecycle: state init -> open-complete -> complete-design -> design-complete -> build fields -> task complete)",
+  "records": [
+    {
+      "id": "missing-check-transition-refused",
+      "command": "comet state transition qualify-change build-complete --json (zero check evidence)",
+      "exitCode": 1,
+      "detail": "  [FAIL] Build passes"
+    },
+    {
+      "id": "missing-check-guard-preview-refused",
+      "command": "comet guard qualify-change build --json (preview)",
+      "exitCode": 1,
+      "detail": "  [FAIL] Build passes"
+    },
+    {
+      "id": "missing-check-guard-apply-refused",
+      "command": "comet guard qualify-change build --apply --json",
+      "exitCode": 1,
+      "detail": "phase after refused apply=build (unchanged)"
+    },
+    {
+      "id": "next-stays-guidance",
+      "command": "comet state next qualify-change --json",
+      "exitCode": 0,
+      "detail": "nextAction.kind=plan — continuation is guidance, never a completion claim past the missing check"
+    },
+    {
+      "id": "archive-from-build-refused",
+      "command": "comet archive qualify-change --json",
+      "exitCode": 1,
+      "detail": "FATAL: phase is 'build', expected 'archive'"
+    },
+    {
+      "id": "cross-scope-success-refused-at-build-gate",
+      "command": "comet check run qualify-change verify --local -- node verify-probe.js  (real success under the WRONG scope), then transition build-complete",
+      "exitCode": 1,
+      "detail": "check probe itself: Check verify: exit=0; reused=false; tier=full; log=docs/openspec/changes/qualify-change/.comet/checks/f4a76d4e-6fb1-48ea-8662-b1a1f4b9ae18.log ; gate:   [FAIL] Build passes — natively covered facet of class 1"
+    },
+    {
+      "id": "manual-record-check-refused",
+      "command": "comet state record-check qualify-change build --command 'node -e 0' --exit-code 0 --json, then transition build-complete",
+      "exitCode": 1,
+      "detail": "record-check exitCode=0 (recordable); gate:     Manual declarations never satisfy the guard, and they shadow the earlier runtime evidence until a new runtime check runs."
+    },
+    {
+      "id": "trivial-command-satisfies-build-gate",
+      "command": "comet check run qualify-change build --local -- node build-probe.js (probe script is only 'process.exit(0)'), then transition build-complete",
+      "exitCode": 0,
+      "detail": "trivial check: Check build: exit=0; reused=false; tier=full; log=docs/openspec/changes/qualify-change/.comet/checks/ec42fca3-8ded-422b-b3bf-61807df31639.log ; gate PASSED with an unrelated trivial command, phase now=verify — REGISTERED GAP (review SC-01: no required-check identity registry; extension acceptance B1, no verdict change)"
+    },
+    {
+      "id": "stale-inputs-refused-at-verify-gate",
+      "command": "real verify check, then append to src/feature.js, then transition verify-pass",
+      "exitCode": 1,
+      "detail": "fresh check: Check verify: exit=0; reused=false; tier=full; log=docs/openspec/changes/qualify-change/.comet/checks/54cdd326-bdbc-495d-bd69-fc8c2c63ab3a.log ; gate:     Why: check inputs changed since execution. ;     Changed inputs: src/feature.js"
+    }
+  ]
+}
