@@ -1,0 +1,43 @@
+{
+  "interface": "IndexPolicy.v1",
+  "component": "llmwiki",
+  "recordedAt": "2026-10-20",
+  "tiers": {
+    "raw": { "meaning": "未经处理的原始摄入物；不是 wiki 事实", "isWikiFactAuthority": false },
+    "staging": { "meaning": "待整理的候选条目；不是 wiki 事实", "isWikiFactAuthority": false },
+    "curated": { "meaning": "经批准的精华条目；唯一的 wiki 事实层", "isWikiFactAuthority": true }
+  },
+  "index": {
+    "rebuildable": true,
+    "knowledgeAuthority": false,
+    "overridesSourceRecords": false,
+    "grantsKnowledgeAuthority": false,
+    "paths": { "from": "package.lock.json:workspaceLayout" },
+    "rebuildSemantics": "索引可随时从 wiki/ 源记录重建；重建不得删除或改写源记录，也不得改变任何条目的知识授权状态；备份以源工件为准，不能只备份索引/向量"
+  },
+  "knowledgeAuthority": {
+    "wikiFactAuthorities": ["approved-curated-entry"],
+    "forbiddenAuthorities": ["openspec-specs", "openspec-tasks", "task-checkmarks", "source-code", "comet-state"],
+    "separation": "项目知识与 OpenSpec specs/tasks 勾选及 Comet 运行状态严格分离；勾选完成不构成 wiki 事实，wiki 条目也不反过来充当 spec/任务权威"
+  },
+  "knowledgeWrite": {
+    "interface": "KnowledgeWrite.v1",
+    "requiresApproval": true,
+    "requiresSourceAndRevision": true,
+    "independentReadbackRequired": true,
+    "requiredEntryFields": ["tier", "title", "content", "approvedBy", "source", "revision"],
+    "indexConsistencyGate": "写入只有同时通过独立文件读回与独立索引读回才算成功；文件存在但索引读回不一致 = 失败信号（Kp 不通过），绝不因本地文件存在放行归档"
+  },
+  "intake": {
+    "fullGitIngestWithoutApproval": "forbidden",
+    "approvedCuratedSourceTypes": ["explicitly-approved documents", "explicitly-approved chat digests", "project wiki pages with source and revision"],
+    "redaction": "摄入前必须脱敏：宿主绝对路径与秘密值一律剔除；来源读取凭据只经 secret-ref 引用解析"
+  },
+  "secretRefs": {
+    "sourceRead": "secret-ref:sdd-harness-pilot/llmwiki-source-read"
+  },
+  "retention": {
+    "curatedSourcesBackedUp": "required — 精华源工件/来源与版本必须备份；索引可重建但恢复时须校验摘要与权限过滤",
+    "r10UnfinishedRuns": "未完成 Run 引用的 wiki staging 与唯一批准 payload 不得因索引重建或 worktree 回收丢失"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "interface": "CodeKnowledgeImageLock.v1",
+  "project": "sdd-harness-pilot",
+  "note": "deepwiki-open 上游仓库/发行物未选定，独立 CodeGraph 发行物同样未选定：reference/digest 保持 null，严禁虚构 tag/digest/版本（images_policy.invented_tags_or_digests=false）。每个组件必须经 registry 认证 digest 后才允许 up。",
+  "resolution": {
+    "lockSource": "infra/delivery/code-knowledge/images.lock.json",
+    "composeMapping": {
+      "CODEWIKI_IMAGE": "codewiki-app",
+      "CODEGRAPH_IMAGE": "codegraph"
+    },
+    "rule": "compose 的 image 一律经由本锁解析注入；本锁未 ready 时 tools/infra/code-knowledge.mjs up 必须拒绝"
+  },
+  "upGate": {
+    "enabled": false,
+    "requireAllComponentsAuthenticated": true,
+    "reason": "I05 仅声明代码知识域与准入结构；deepwiki-open/CodeGraph 发行物未选定，组件镜像没有任何已认证 digest，up 在资源准入完成前必须拒绝"
+  },
+  "components": [
+    {
+      "component": "codewiki-app",
+      "role": "code-wiki-application",
+      "upstream": "deepwiki-open (repository/release UNSELECTED)",
+      "required": true,
+      "reference": null,
+      "digest": null,
+      "digestAuthenticated": false,
+      "selectionStatus": "UNSELECTED",
+      "status": "UNVERIFIED",
+      "reason": "deepwiki-open 上游仓库/发行物未选定；精确镜像与启动/API 契约、许可证按选定版本核验前不得编造 tag"
+    },
+    {
+      "component": "codegraph",
+      "role": "structure-index",
+      "upstream": "independent CodeGraph (repository/release UNSELECTED)",
+      "required": false,
+      "reference": null,
+      "digest": null,
+      "digestAuthenticated": false,
+      "selectionStatus": "UNSELECTED",
+      "status": "UNVERIFIED",
+      "reason": "独立 CodeGraph 组件发行物未选定；它是可删除的可选优化件，启用与否不影响正确性协议"
+    }
+  ]
+}

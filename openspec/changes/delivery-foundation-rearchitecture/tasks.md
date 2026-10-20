@@ -253,12 +253,12 @@
 **Parallel safe:** false
 **Acceptance IDs:** A20, B10
 
-- [ ] **Step 1 [5 min]: Test** 2.3.a 增量暴露检查 CLI 与旧报告适配：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保持既有命令；测试 0/1/2 和 JSON 结果；字段缺失或版本不兼容明确拒绝。
-- [ ] **Step 2 [5 min]: Implement** 2.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 2.3.b 运行兼容回归：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：node --test test/*.test.js、npm test、bash scripts/check.sh；关闭 CodeGraph/RTK 后正确性仍成立。
-- [ ] **Step 4 [5 min]: Implement** 2.3.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 2.3.a 增量暴露检查 CLI 与旧报告适配：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保持既有命令；测试 0/1/2 和 JSON 结果；字段缺失或版本不兼容明确拒绝。
+- [x] **Step 2 [5 min]: Implement** 2.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 2.3.b 运行兼容回归：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：node --test test/*.test.js、npm test、bash scripts/check.sh；关闭 CodeGraph/RTK 后正确性仍成立。
+- [x] **Step 4 [5 min]: Implement** 2.3.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P2_4: 原任务 2.4 — 按 classic-gate-runtime-contract.md 评审并最小扩展同一 Classic 的 policy/receipt/evaluate、共同转换条件、受管写入、resolver/continuation、状态事务和 archive/completed；先用 D01–D08 真实入口负例复现，再实现阻断/返工/失效与恢复。A/T 采用独立自动审查；不得新建第二阶段账本，也不得用手改 phase 模拟返工。运行时代码/装配改动需独立评审和完整回归，当前仅计划。
 
@@ -953,10 +953,10 @@
 **Parallel safe:** false
 **Acceptance IDs:** C04, C06, E01, E06, H08, F01, B09
 
-- [ ] **Step 1 [5 min]: Test** RED：不同worktree/CLI/MCP指向另一wiki、目录穿越/符号链接越域、错误project ID分别拒绝；源码/正式spec或任务勾选被当wiki事实权威时拒绝；未经批准全Git代码摄入不允许；MCP写成功但独立索引/存储读回不一致时Kp失败，不因本地文件存在放行归档。
-- [ ] **Step 2 [5 min]: Implement** GREEN：固定真实目录与项目标识、可重建索引和最小MCP能力；保持项目知识与OpenSpec specs/tasks及Comet状态分离；用隔离配置验证CLI/MCP/worktree同一规范路径；新宿主真实发现工具后完成知识写入及独立查询；清楚区分raw/staging/curated及index缓存，索引不能覆盖源记录或改知识授权。
+- [x] **Step 1 [5 min]: Test** RED：不同worktree/CLI/MCP指向另一wiki、目录穿越/符号链接越域、错误project ID分别拒绝；源码/正式spec或任务勾选被当wiki事实权威时拒绝；未经批准全Git代码摄入不允许；MCP写成功但独立索引/存储读回不一致时Kp失败，不因本地文件存在放行归档。
+- [x] **Step 2 [5 min]: Implement** GREEN：固定真实目录与项目标识、可重建索引和最小MCP能力；保持项目知识与OpenSpec specs/tasks及Comet状态分离；用隔离配置验证CLI/MCP/worktree同一规范路径；新宿主真实发现工具后完成知识写入及独立查询；清楚区分raw/staging/curated及index缓存，索引不能覆盖源记录或改知识授权。
 - [ ] **Step 3 [5 min]: Review** 独立读回：同一批准条目通过真实MCP写入、独立CLI/文件/索引查询同一项目读回；两工作树canonical root一致；未通过门禁时同一Comet Run的归档保持阻断；基础设施只返回事实，不签Kp回执。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
 
 ### Task I05: 自托管deepwiki-open及独立CodeGraph
 
@@ -967,10 +967,10 @@
 **Parallel safe:** false
 **Acceptance IDs:** F01, F03, A20, C06
 
-- [ ] **Step 1 [5 min]: Test** RED：未固定commit/镜像、未授权源码或错误项目源时拒绝启动/摄入；敏感代码不得用public服务作为替代；wiki生成失败/commit陈旧/语言覆盖不足不得提供新鲜度通过；graph缺失不能阻断正确性协议；删除/停用graph后正确性协议保持可执行，错误服务实例或其它PAV索引不可被当项目结果。
-- [ ] **Step 2 [5 min]: Implement** GREEN：固定自托管版本和专用存储/网络，生成精确commit的code wiki；graph部署成可选独立结构查询组件；分别输出wiki生成manifest与graph coverage，外层纯gate按事前policy判断，不建立自己的调度/阶段；optional关闭时报告未启用且不称已验证；若policy要求code wiki则必须真实API/MCP独立读回。
+- [x] **Step 1 [5 min]: Test** RED：未固定commit/镜像、未授权源码或错误项目源时拒绝启动/摄入；敏感代码不得用public服务作为替代；wiki生成失败/commit陈旧/语言覆盖不足不得提供新鲜度通过；graph缺失不能阻断正确性协议；删除/停用graph后正确性协议保持可执行，错误服务实例或其它PAV索引不可被当项目结果。
+- [x] **Step 2 [5 min]: Implement** GREEN：固定自托管版本和专用存储/网络，生成精确commit的code wiki；graph部署成可选独立结构查询组件；分别输出wiki生成manifest与graph coverage，外层纯gate按事前policy判断，不建立自己的调度/阶段；optional关闭时报告未启用且不称已验证；若policy要求code wiki则必须真实API/MCP独立读回。
 - [ ] **Step 3 [5 min]: Review** 独立读回：实际容器/进程、认证API/MCP响应、repoID/commit与生成manifest一致；抽查wiki引用准确性，结构查询有独立coverage；错误commit/私有源越权/语言缺口真实负例；停graph后相同候选正确性测试真实重跑，不靠配置开关文本。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
 
 ### Task I06: Git/CI、Registry、制品与隔离目标环境连通
 

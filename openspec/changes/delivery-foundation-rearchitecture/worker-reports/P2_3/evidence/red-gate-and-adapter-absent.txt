@@ -1,0 +1,67 @@
+# RED evidence: new delivery gate unreachable + legacy evidence channel cannot enter it
+# date: 2026-10-20T06:36:37Z  worktree: impl-p2-3 @ 8cb5567
+
+## GAP A: no CLI subcommand exposes the delivery gate (SDD.Gate.v1, lib/delivery/gate.js)
+$ node bin/cli.js delivery-gate --help
+Usage: sdd [options] [command]
+
+团队 AI coding scaffold — 验证工具薄 CLI
+
+Options:
+  -V, --version                  output the version number
+  -h, --help                     display help for command
+
+Commands:
+  init [options]                 初始化 scaffold（hooks + skills + MCP；等价 bash
+                                 tools/bootstrap.sh）
+  doctor                         环境与骨架自检
+  probe [options]                Evaluate deterministic browser/runtime probe
+                                 evidence
+  deliverable-audit [options]    Audit run deliverables — each completed stage
+                                 produced its expected outputs
+  workflow-audit [options]       Re-evaluate an existing run against its
+                                 current stage prerequisites
+  evidence-audit [options]       Audit evidence claims against disk facts and
+                                 captured command output
+  test-gate [options]            Run the project test suite and persist
+                                 sha256-bound evidence
+  generation-capture [options]   Capture the current test-file inventory
+                                 (before TDD generation)
+  generation-evaluate [options]  Evaluate that newly generated tests match the
+                                 inventory delta and pass
+  wiki                           管理 LLMWiki（init / ingest）
+  help [command]                 display help for command
+exit=0
+
+## GAP B: the adapter module lib/adapters/legacy-evidence.js does not exist
+node:internal/modules/esm/resolve:275
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-3/lib/adapters/legacy-evidence.js' imported from /Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-3/[eval1]
+    at finalizeResolution (node:internal/modules/esm/resolve:275:11)
+    at moduleResolve (node:internal/modules/esm/resolve:932:10)
+    at defaultResolve (node:internal/modules/esm/resolve:1056:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:654:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:603:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:586:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:242:38)
+    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:546:36)
+    at TracingChannel.tracePromise (node:diagnostics_channel:344:14)
+    at ModuleLoader.import (node:internal/modules/esm/loader:545:21) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-p2-3/lib/adapters/legacy-evidence.js'
+}
+
+Node.js v22.13.1
+exit=1
+
+## GAP C (the concrete hole): a REAL old-channel report cannot enter the new gate today.
+## A real evidence-audit run (matching claims) produces its report; feeding that report
+## to admitEvidence (with a valid launcher dispatch) is refused INVALID_ENVELOPE —
+## the old report shape fails the frozen EvidenceEnvelope schema, and nothing adapts it.
+old-channel report: pass=true issues=0 schemaVersion=1
+report top-level keys: schemaVersion,projectDir,change,run,pass,actual,commandOutput,evidenceFiles,evidenceSha256,issues
+admitEvidence(raw old report) -> ok=false error=INVALID_ENVELOPE
+reason: evidence envelope fails SDD.Delivery.EvidenceEnvelope v1: candidateDigest: missing required sha256 field; caseId: missing required string field; origin: missing
+exit=0

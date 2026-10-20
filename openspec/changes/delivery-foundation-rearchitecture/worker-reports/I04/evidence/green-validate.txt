@@ -1,0 +1,61 @@
+$ node tools/infra/llmwiki.mjs validate --registry infra/delivery/registry.json --json
+{
+  "interface": "ProjectWikiInfra.v1",
+  "command": "validate",
+  "registry": "infra/delivery/registry.json",
+  "refs": "infra/delivery/secrets.refs.example.json",
+  "dir": "infra/delivery/llmwiki",
+  "ok": true,
+  "violations": [],
+  "catalogGaps": [
+    "secret-ref:sdd-harness-pilot/llmwiki-source-read"
+  ],
+  "packageLock": {
+    "interface": "PackageLock.v1",
+    "component": "llmwiki",
+    "upGate": {
+      "enabled": false,
+      "reason": "I04 registers and qualifies the llmwiki distribution only; MCP host registration is owned by a later P task through mcp-capabilities.yaml (single source of truth) and runtime up needs authorization that does not exist"
+    }
+  },
+  "projectRoot": {
+    "interface": "ProjectRoot.v1",
+    "projectId": "sdd-harness-pilot",
+    "repoId": "rpamis/sdd-harness",
+    "canonicalWiki": {
+      "root": "llmwiki",
+      "resolution": "git rev-parse --git-common-dir -> main working tree -> <main-tree>/llmwiki",
+      "rule": "exactly one wiki root per project; every CLI / MCP host / worktree must resolve to it"
+    }
+  },
+  "indexPolicy": {
+    "interface": "IndexPolicy.v1",
+    "tiers": [
+      "raw",
+      "staging",
+      "curated"
+    ],
+    "knowledgeWrite": {
+      "interface": "KnowledgeWrite.v1",
+      "requiresApproval": true,
+      "requiresSourceAndRevision": true,
+      "independentReadbackRequired": true,
+      "requiredEntryFields": [
+        "tier",
+        "title",
+        "content",
+        "approvedBy",
+        "source",
+        "revision"
+      ],
+      "indexConsistencyGate": "写入只有同时通过独立文件读回与独立索引读回才算成功；文件存在但索引读回不一致 = 失败信号（Kp 不通过），绝不因本地文件存在放行归档"
+    }
+  },
+  "mcpProfile": {
+    "interface": "McpComponentProfile.v1",
+    "registrationScope": "component-profile-only",
+    "hostDiscoveryStatus": "UNVERIFIED"
+  },
+  "checkedAt": "2026-10-20T08:05:21.832Z"
+}
+exit=0
