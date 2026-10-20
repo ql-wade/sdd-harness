@@ -187,6 +187,12 @@
       "source": "I05 implementer finding via coordinator",
       "finding": "catalog missed the frozen plan's I05 refs codewiki-source-read and codegraph-source-read (codewiki-provider was already registered)",
       "fix": "registered both in infra/delivery/secrets.refs.example.json with sibling semantics: purpose-bound, NOT_PROVISIONED, no value, bound to the service principals of the respective code knowledge components, inserted in the plan's I05 ordering (codewiki-source-read, codewiki-provider, codegraph-source-read); source read explicitly does not imply outbound publish rights. No unplanned refs added. Baseline refreshed via git merge --no-ff master before verification. Test expected ref list extended 16 -> 18 (I01+I02+I03+I05 freeze list)."
+    },
+    {
+      "date": "2026-10-20",
+      "source": "I06 implementer finding via coordinator",
+      "finding": "catalog missed 5 of the frozen plan's I06 6-ref set: ci-source-read, ci-check-publisher, artifact-reader, pilot-deployer, pilot-rollback (ci-registry was already registered)",
+      "fix": "registered all five in infra/delivery/secrets.refs.example.json with sibling semantics: purpose-bound, NOT_PROVISIONED, no value, inserted in the plan's I06 ordering. Role bindings follow the plan's minimal-scope and separation doctrine: ci-source-read/ci-check-publisher bound to distinct ci principals (a leaked check token can neither read sources nor deploy); artifact-reader bound to a read-only service principal for the deploy pipeline (development identities cannot read release/rollback material); pilot-deployer and pilot-rollback bound to distinct service principals so deploy and approval-gated rollback identities stay independent. No unplanned refs added. Baseline refreshed via git merge --no-ff master before verification. Test expected ref list extended 18 -> 23 (freeze list I01+I02+I03+I05+I06)."
     }
   ]
 }
