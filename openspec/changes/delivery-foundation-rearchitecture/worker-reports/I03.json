@@ -1,0 +1,221 @@
+{
+  "task": "I03",
+  "task_title": "Outline独立资料域、Postgres/Redis、OIDC与对象存储",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/i03-outline",
+  "base_commit": "16bdccd",
+  "status": "DONE",
+  "implementation_commit": "ff86061",
+  "red_cases": [
+    {
+      "case": "pre-implementation RED (V_INFRA_I03 suite against absent domain files and CLI)",
+      "actually_failed": true,
+      "evidence": "evidence/red-node-test.txt — node --test test/infra-outline.test.js exit=1, 13/13 failed, 0 skipped (domain files and tools/infra/outline.mjs did not exist)"
+    },
+    {
+      "case": "pre-implementation CLI probes (validate/qualify/up/probe/stop entry points absent)",
+      "actually_failed": true,
+      "evidence": "evidence/red-cli.txt — all six node tools/infra/outline.mjs invocations exit=1 with MODULE_NOT_FOUND"
+    },
+    {
+      "case": "up refuses while images.lock has no authenticated digest (committed state; nothing fabricated)",
+      "actually_failed": true,
+      "evidence": "post-GREEN test 'RED image gate: images.lock without any authenticated digest refuses up': up exit=2 refused=true error=UP_REFUSED_IMAGES_LOCK_NOT_READY: 4 component images lack an authenticated digest; committed lock has reference=null digest=null status=UNVERIFIED for all of outline-app/outline-postgres/outline-redis/outline-object-store — no tag or digest invented (evidence/green-cli.txt up exit=2)"
+    },
+    {
+      "case": "floating tag rejected",
+      "actually_failed": true,
+      "evidence": "test 'RED image gate: floating tag is rejected': validate on fixture with reference=ghcr.io/example/outline:latest exit=2 code=FLOATING_TAG_FORBIDDEN"
+    },
+    {
+      "case": "malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED",
+      "actually_failed": true,
+      "evidence": "test 'RED image gate: malformed digest...': digest=sha256:deadbeef exit=2 DIGEST_FORMAT_INVALID; fixture with format-valid digest but digestAuthenticated=false keeps qualify image-digest-authenticated UNVERIFIED and up still exit=2 IMAGES_LOCK_NOT_READY"
+    },
+    {
+      "case": "missing OIDC issuer/client registration rejected; public redirect rejected",
+      "actually_failed": true,
+      "evidence": "test 'RED oidc gate...': provider block deleted -> exit=2 OIDC_REGISTRATION_INCOMPLETE; client block deleted -> exit=2 OIDC_REGISTRATION_INCOMPLETE; non-loopback redirect URI -> exit=2 REDIRECT_URI_NOT_LOOPBACK"
+    },
+    {
+      "case": "missing/broken storage-policy rejected",
+      "actually_failed": true,
+      "evidence": "test 'RED storage-policy gate...': file missing from --dir -> exit=1 (input/prerequisite, house I01 precedent); state section deleted -> exit=2 STORAGE_POLICY_INCOMPLETE; cache.rightsAuthority=true -> exit=2 CACHE_AS_AUTHORITY_FORBIDDEN; revocation.immediateEffectAssumed=true -> exit=2 REVOCATION_ASSUMED_IMMEDIATE"
+    },
+    {
+      "case": "env example with secret plaintext / host absolute path / unbound raw value rejected",
+      "actually_failed": true,
+      "evidence": "test 'RED env gate...': SECRET_KEY=ghp_AAA... -> exit=2 SECRET_PLAINTEXT_FORBIDDEN; REDIS_URL=/Users/example/... -> exit=2 ABSOLUTE_PATH_FORBIDDEN; DATABASE_URL=postgres://...hunter2... -> exit=2 ENV_UNBOUND_VALUE_FORBIDDEN (sensitive vars must bind to secret-ref)"
+    },
+    {
+      "case": "credential refs crossing projects (pav-*) rejected",
+      "actually_failed": true,
+      "evidence": "test 'RED cross-project gate...': collection grantRef=secret-ref:pav-legacy/outline-publisher -> exit=2 CROSS_PROJECT_REF; oidc credentialRef=secret-ref:pav-legacy/outline-oidc-client -> exit=2 CROSS_PROJECT_REF"
+    },
+    {
+      "case": "collection registration without owner/audience/grant rejected",
+      "actually_failed": true,
+      "evidence": "test 'RED domain gate...': owner deleted -> exit=2 OWNER_REGISTRATION_MISSING; audience deleted -> exit=2 AUDIENCE_REGISTRATION_MISSING; grantRef deleted -> exit=2 GRANT_REF_MISSING"
+    },
+    {
+      "case": "non-loopback port binding / concrete compose image / host mount rejected",
+      "actually_failed": true,
+      "evidence": "test 'compose declaration gate...': ports 3000:3000 -> exit=2 PORT_BINDING_NOT_LOOPBACK; concrete image: ghcr.io/example/outline:latest -> exit=2 COMPOSE_IMAGE_NOT_LOCK_RESOLVED; appended bind mount - /Users/example/data:/data -> exit=2 HOST_MOUNT_FORBIDDEN"
+    },
+    {
+      "case": "probes/stop must not mock-green or skip without a live instance",
+      "actually_failed": true,
+      "evidence": "pre-implementation the probe/stop contract had no implementation at all (13/13 fail); post-GREEN the negative contract holds: all three probes and stop exit=2, executed=false, status=UNVERIFIED, structured reason + requiredInputs + plannedSteps, no \"skip\": true anywhere (evidence/green-probes-stop.txt)"
+    }
+  ],
+  "green_summary": {
+    "OutlineInfra.v1": "tools/infra/outline.mjs validate|qualify|up|probe|stop. Exit contract 0=PASS 1=input/prerequisite 2=verification failure, matching I01 (registry+refs loads fail-closed, displayPath/redactHostPaths on every structured field, host paths never echoed). validate checks all six domain files: lock component coverage/floating tag/digest format/auth-flag consistency/upGate closed, env binding rules, OIDC registration structure + loopback redirects, storage-policy invariants, owner/audience/grant registration, cross-project refs, JSON safety scan, compose declaration gate; committed files exit 0. qualify evaluates 10 evidence categories on the VERIFIED/RECORDED/UNVERIFIED ladder and exits 2 NOT_READY with per-category reasons; receipt binds sha256 of registry + all six domain files. up refuses with UP_REFUSED_IMAGES_LOCK_NOT_READY (4 unauthenticated components), would refuse UP_NOT_AUTHORIZED on a closed gate even when ready, and reports the observed docker daemon state; no path to a fake launch. stop is honestly UNVERIFIED: this tool never started a stack. Probe subcommands are real: without an instance they exit 2 structured UNVERIFIED; with --endpoint they genuinely attempt GET /api/config and report the raw failure (sandbox EPERM observed), never mock, never skip.",
+    "OutlineDomain.v1": "infra/delivery/outline/collection-registration.example.json: instance (id/url/immutableId null, UNVERIFIED) + two collections (managed-source-collection, isolation-collection), each with registered owner structure (principal null, grantRef -> secret-ref:sdd-harness-pilot/outline-publisher|outline-isolator, UNREGISTERED) and audience structure (readers [], effectiveReaderSet null, UNVERIFIED with closure requirements recorded). Publisher/isolator grants are declared as requiring separate issuance by authorized principals; this task does not self-sign. Validator rejects missing owner/audience/grant and cross-project grants.",
+    "OutlineState.v1": "infra/delivery/outline/storage-policy.json: state.database (postgres, durable=true, secret-ref outline-db), state.attachments (durable=true, secret-ref outline-object-store), state.cache (redis, durable=false, rightsAuthority=false, secret-ref outline-redis; validator forbids either flag flipping). revocation.immediateEffectAssumed=false with signed-URL residue risk recorded. apiContracts record the official-spec observations (fixedCreateUuid declaredBySpec=true; lastRevision declaredBySpec=true, conflictStatusDeclared=409) with status UNVERIFIED — they become VERIFIED only against a real deployment; update conflicts must 409 without blind overwrite."
+  },
+  "commands": [
+    {
+      "cmd": "node --test test/infra-outline.test.js",
+      "exit_code": 0,
+      "summary": "V_INFRA_I03 contract: 13 tests, 13 pass, 0 fail, 0 skipped"
+    },
+    {
+      "cmd": "node tools/infra/outline.mjs validate --registry infra/delivery/registry.json --json",
+      "exit_code": 0,
+      "summary": "ok=true, violations=[], catalogGaps=[secret-ref:sdd-harness-pilot/outline-app-session] (honest gap: ref missing from I01 catalog), domain + state summaries present, no host paths in output"
+    },
+    {
+      "cmd": "node tools/infra/outline.mjs qualify --registry infra/delivery/registry.json --json",
+      "exit_code": 2,
+      "summary": "ready=false, 10 UNVERIFIED categories with exact reasons (image-digest-authenticated, oidc-registration, oidc-login-proof, object-store-access, credentials-provisioned, secret-refs-registered, domain-registration, state-durability, health-api, backup-compatibility); receipt binds input sha256s; exit 2 is the designed NOT_READY contract"
+    },
+    {
+      "cmd": "node tools/infra/outline.mjs up --registry infra/delivery/registry.json --json",
+      "exit_code": 2,
+      "summary": "refused=true, UP_REFUSED_IMAGES_LOCK_NOT_READY: 4 component images lack an authenticated digest"
+    },
+    {
+      "cmd": "node tools/infra/outline.mjs probe --case oidc-principal-acl --registry infra/delivery/registry.json --json",
+      "exit_code": 2,
+      "summary": "executed=false, status=UNVERIFIED, exact reason (no live instance), 3 requiredInputs, 5 plannedSteps"
+    },
+    {
+      "cmd": "node tools/infra/outline.mjs probe --case restart-persistence --registry infra/delivery/registry.json --json",
+      "exit_code": 2,
+      "summary": "same structured UNVERIFIED contract, 5 plannedSteps incl. fixed-create-UUID observation and stale-lastRevision 409"
+    },
+    {
+      "cmd": "node tools/infra/outline.mjs probe --case attachment-denial --registry infra/delivery/registry.json --json",
+      "exit_code": 2,
+      "summary": "same structured UNVERIFIED contract, incl. signed-URL residual validity step (no immediate-effect assumption)"
+    },
+    {
+      "cmd": "node tools/infra/outline.mjs probe --case restart-persistence --endpoint http://127.0.0.1:59999 --json",
+      "exit_code": 2,
+      "summary": "real attempt performed: GET /api/config failed with EPERM (sandbox denies outbound connect); reported verbatim, stays UNVERIFIED — the same command runs unchanged against a future live instance"
+    },
+    {
+      "cmd": "node tools/infra/outline.mjs stop --registry infra/delivery/registry.json --json",
+      "exit_code": 2,
+      "summary": "executed=false, status=UNVERIFIED: nothing was ever started by this tool, nothing to stop"
+    },
+    {
+      "cmd": "npm test (full repo suite in worktree)",
+      "exit_code": 0,
+      "summary": "78 tests, 78 pass, 0 fail, 0 skipped — no regressions (65 pre-existing + 13 new)"
+    }
+  ],
+  "unverified": [
+    {
+      "item": "Image digests for outline-app/outline-postgres/outline-redis/outline-object-store",
+      "reason": "no version selected and no authenticated digest exists anywhere; per images_policy.invented_tags_or_digests=false nothing was fabricated — lock slots stay reference=null/digest=null/UNVERIFIED and up refuses"
+    },
+    {
+      "item": "OIDC provider/issuer/discovery/client registration and login proof",
+      "reason": "provider unselected, client unprovisioned; real issuance + login evidence requires a live issuer and instance; subject→principal mapping strategy UNSELECTED"
+    },
+    {
+      "item": "All 7 secret refs (outline-db/redis/app-session/oidc-client/object-store/publisher/isolator)",
+      "reason": "referenced only, never valued; all remain NOT_PROVISIONED and resolution is read-only UNRESOLVED (I01 has no runtime secret store by design)"
+    },
+    {
+      "item": "secret-ref:sdd-harness-pilot/outline-app-session catalog registration",
+      "reason": "the I03 plan requires 7 refs but the I01-owned secrets.refs.example.json registers only 6 of them; validate reports it as catalogGaps and qualify secret-refs-registered stays UNVERIFIED — needs a catalog update by the I01 owner (see blockers)"
+    },
+    {
+      "item": "UTILS_SECRET binding",
+      "reason": "Outline also requires a second app secret (utils secret) that has no ref in the I03 7-ref set; env example leaves it empty with a recorded gap comment rather than inventing a ref or value — needs an explicit ref/decision (see blockers)"
+    },
+    {
+      "item": "Immutable instance/collection IDs and effective reader sets",
+      "reason": "no live deployment; IDs null/UNVERIFIED; audience closure across collection/parents/page/groups/shares/public must be measured by the oidc-principal-acl probe before isolation may be claimed"
+    },
+    {
+      "item": "State durability (restart-persistence), attachment persistence and 409 conflict behavior",
+      "reason": "requires a live stack; the probe command exists and will run unchanged once an instance and admission exist"
+    },
+    {
+      "item": "Object storage type/endpoint/bucket/signed-URL TTL/key rotation",
+      "reason": "UNSELECTED; policy structure committed with signedUrl and keyRotation marked UNVERIFIED; no public attachment distribution before TTL selection"
+    },
+    {
+      "item": "health-api and backup-compatibility evidence",
+      "reason": "no running service and no restore drill; required before any up per policy"
+    },
+    {
+      "item": "OIDC egress policy on the internal compose network",
+      "reason": "network declared internal: true; outbound rules must be revised explicitly when the OIDC provider location is selected"
+    }
+  ],
+  "files_changed": [
+    "infra/delivery/outline/compose.yaml",
+    "infra/delivery/outline/images.lock.json",
+    "infra/delivery/outline/outline.env.example",
+    "infra/delivery/outline/oidc-registration.example.json",
+    "infra/delivery/outline/storage-policy.json",
+    "infra/delivery/outline/collection-registration.example.json",
+    "tools/infra/outline.mjs",
+    "test/infra-outline.test.js",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I03/evidence/red-node-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I03/evidence/red-cli.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I03/evidence/green-node-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I03/evidence/green-cli.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I03/evidence/green-probes-stop.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I03/evidence/npm-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I03.json"
+  ],
+  "blockers_or_questions": [
+    "CROSS-TASK: secret-ref:sdd-harness-pilot/outline-app-session is required by the I03 plan but absent from infra/delivery/secrets.refs.example.json (I01-owned file, outside my write scope). validate reports it under catalogGaps and qualify keeps secret-refs-registered UNVERIFIED. Coordinator decision: have the I01 owner add the registration, or amend the I03 ref set.",
+    "UTILS_SECRET (Outline's second app secret) has no corresponding ref in the I03 7-ref set. Left empty + gap comment in outline.env.example. Needs either a new dedicated ref (e.g. outline-utils-secret) or an explicit plan decision; I did not invent one.",
+    "Environment (observed, not assumed): docker socket denied by sandbox and outbound connects return EPERM — up/probes stay refused by design; the same commands run unchanged in a network/docker-allowed context with a qualified lock.",
+    "Evidence files are .txt because the repo-wide .gitignore rule (*.log) would silently exclude .log evidence; contents are the raw command output with timestamps and exit codes."
+  ],
+  "notes": [
+    "Commit separation per new policy: e400bfe = tests + RED evidence (suite actually failing 13/13, CLI MODULE_NOT_FOUND), ff86061 = implementation + GREEN evidence. One test-internal amendment rode with the implementation commit: the unreachable-endpoint fixture port changed 9 -> 59999 because undici hard-blocks port 9 as a bad port (a refused connection is the intended real attempt); the CLI's error-reason extraction was fixed in the same commit to report cause code/message verbatim.",
+    "No secrets, no fabricated tags/digests, no host absolute paths in any committed artifact; structured outputs are host-path-redacted and verified by tests.",
+    "Full regression ran inside the worktree only; the main checkout was not touched and nothing was pushed."
+  ],
+  "integration_fix": {
+    "trigger": "集成回归发现合并顺序交互（非实现缺陷）：I01 修正案 7a55664（经 54c6964 合入 master，合并提交 c53aa30）补登了 secret-ref:sdd-harness-pilot/outline-app-session，原 V_INFRA_I03 契约测试断言 \"validate 必显式上报该未登记 ref\" 在合并树上反转（master 上 77/78）。",
+    "changes": [
+      "test/infra-outline.test.js 契约测试断言改为正向现实：已提交域文件 validate → ok=true 且 catalogGaps 不含 outline-app-session（显式断言该 ref 已登记）。",
+      "缺口上报行为覆盖保留：新增合成负例 fixture（tmp 目录中删去 refs 目录副本里的 outline-publisher 条目），断言 validate 仍 exit 0 且 catalogGaps 显式列出缺失 ref —— 行为覆盖不再依赖已被修复的真实缺口。",
+      "仅改动 test/infra-outline.test.js；工具与域文件零改动。"
+    ],
+    "merge_note": "worktree 树已包含 master（7e6e4b2 为 c53aa30 之后的最新 master + openspec chore；git merge-base --is-ancestor master HEAD 为真），故无需再执行 merge --no-ff；全量回归即在该合并树上运行。",
+    "commands": [
+      {
+        "cmd": "node --test test/infra-outline.test.js",
+        "exit_code": 0,
+        "summary": "14 tests, 14 pass, 0 fail, 0 skipped（13 改 1 加 1）"
+      },
+      {
+        "cmd": "npm test（合并树全量，evidence/npm-test-merge.txt）",
+        "exit_code": 0,
+        "summary": "79 tests, 79 pass, 0 fail, 0 skipped —— 原 77/78 的失败断言已随本修正转绿"
+      }
+    ],
+    "commit": "a05a84a",
+    "evidence": "worker-reports/I03/evidence/green-node-test-integration-fix.txt（14/14）、worker-reports/I03/evidence/npm-test-merge.txt（79/79）"
+  }
+}

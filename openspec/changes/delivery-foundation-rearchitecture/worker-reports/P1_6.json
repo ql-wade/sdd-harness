@@ -1,0 +1,150 @@
+{
+  "task": "P1_6 (原 1.6): 解决本仓库旧 planner 与 Comet Classic 的 Superpowers 硬依赖和初始化安装路径；固定 Matt 基础方法与必要专门技能快照",
+  "run": "impl-dfr-20261020-r1",
+  "worktree": "impl/p1-6-method-profile (base 21923be)",
+  "worker": "P1_6 implementation worker",
+  "final_status": "GREEN",
+  "acceptance_ids": {
+    "targeted": [
+      "M01",
+      "M02",
+      "B01",
+      "B09"
+    ]
+  },
+  "red_cases": [
+    {
+      "id": "RED-1",
+      "claim": "vendored planner 硬调用 superpowers:writing-plans（SKILL.md 第 33 行）且 plan_guard.py REQUIRED_HEADER_PARTS 强制 'REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development'",
+      "evidence": "worker-reports/P1_6/evidence/red-1-vendored-planner-superpowers.txt"
+    },
+    {
+      "id": "RED-2",
+      "claim": "pristine Comet 0.4.5 `init --yes` 在干净宿主（隔离 HOME）会执行 `npx skills add obra/superpowers -y --skill brainstorming ... --skill writing-plans ...`（Superpowers 复活安装路径）；本宿主因 ~/.claude/plugins/cache/claude-plugins-official/superpowers 残留使 hasSkills=true 而显示 all skipped，洁净宿主则必装",
+      "evidence": "worker-reports/P1_6/evidence/red-2-comet-init-superpowers-install.txt",
+      "baseline_build": "fingerprint 72e5ce0eb3ce1ca7c6b898cf5d63bc466a717e4ea2eaf7de761b86d2867af1f6 在本工作树独立重建且与 P1_1 记录逐字一致（patches=[] 决定论复现）"
+    },
+    {
+      "id": "RED-3",
+      "claim": "当前仓库状态无法满足 M01/M02 检查：无 Matt 方法快照（tdd/diagnosing-bugs/code-review/test-authoring/openspec-lifecycle-guard 均缺失）、无 method-profile-manifest.json、无 patches 目录、vendored planner 是带 Superpowers 硬依赖的第二 controller 身份",
+      "evidence": "worker-reports/P1_6/evidence/red-3-method-profile-absent.txt"
+    }
+  ],
+  "green_summary": {
+    "1_6_a": {
+      "method_export_entry": "共享源新版 planner（宿主 claude-parallel-tdd-planner）已去 Superpowers 依赖但仍持有完整 controller 合同（自述 owns the single implementation DAG/progress source/supervision），按简报不整体引入。方法导出入口 = Matt primitives（tdd/diagnosing-bugs/code-review）+ 专门方法快照；planner 仅取数据契约/校验工具（plan 文件契约、plan_guard.py、openspec_lifecycle.py、DAG/ledger 格式）作 vendored 快照材料；交付主控唯一 = Comet Classic。记录于 method-profile-manifest.json 的 method_profile + method_export_entry 段。",
+      "old_plan_guard_negative": "保留：RED-1 证据固定旧 plan_guard 的 Superpowers 强制头；升级后快照的 plan_guard 无任何 Superpowers 要求；未宣称对冻结 planning bundle 的 formal plan-guard PASS（沿用 planning-readiness 的前置保留）"
+    },
+    "1_6_b": {
+      "snapshots": "10 个技能快照、152 文件全部逐字拷贝（无符号链接）：新增 Matt tdd/diagnosing-bugs/code-review、test-authoring、openspec-lifecycle-guard；显式升级 claude-parallel-tdd-planner 到共享源新版（superpowers:writing-plans 硬调用消失，仅存否定式声明与归属链接）；保留 whitebox-verify/grill-me/grilling/multi-agent-consensus-review（内容与摘要固定）。每个快照在 method-profile-manifest.json 记录 source_path + 逐文件 sha256 + 聚合 sha256 + 快照时间 + 用途；MISSING 数 = 0。",
+      "docs": "docs/agent/skill-architecture.md §3 表与 ADR-0016 注记按方法分工 surgical 更新（8 insertions/4 deletions）；.agents/skills/README.md 层表同步；agent-skill-check.sh PASS"
+    },
+    "1_6_c": {
+      "patch": "integrations/comet/patches/0001-matt-method-profile.patch（仅 app/commands/init.ts）：从 selectNpmDeps 的 states 移除 superpowers npm 依赖项 → --yes/--json 快速路径与交互清单都无法再选择/安装 obra/superpowers；init 显式打印 'Superpowers install skipped by user'。integrations/comet/patches/tests/1_6.patch（仅 test/app/init-e2e.test.ts 注释 4 行）在该测试位固定去 Superpowers 选择契约，不改上游测试行为与计数。",
+      "lock": "两 patch 以 sha256 钉入 integrations/comet/upstream.lock.json patches[]（PATCH_INTEGRITY_MISMATCH 纪律）；fingerprint 变为 cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187",
+      "build": "node(24.15.0) tools/comet/build.mjs 全链路（git apply 两 patch → pnpm install → build → generated checks → 版本一致性）成功；--check-generated --runtime-smoke --json exit 0，status PASS，4 步全 PASS，runtime smoke 243 pass / 2 skip 与基线一致",
+      "probes": "GREEN 探针（隔离 HOME + PATH stub，同 RED-2）：零 installer 调用（stub 日志不存在）、无 'Installing Superpowers'、走 skipped-by-user 分支；M02 探针：patched 构建 dist/assets/bin 无 claude-parallel-tdd-planner、无 implement-spec 身份；构建产物 dist init.js 含 patch 标记注释且不再含 superpowers 状态项。探针固化为 test/delivery-cases/1_6.mjs 5/5 PASS"
+    }
+  },
+  "commands": [
+    {
+      "cmd": "node(22) tools/comet/prepare-source.mjs --archive .sdd/cache/artifacts/comet-source-c90af44....tar.gz",
+      "exit_code": 0
+    },
+    {
+      "cmd": "node(24.15.0) tools/comet/build.mjs --archive <pinned archive>  # baseline patches=[]",
+      "exit_code": 0,
+      "fingerprint": "72e5ce0eb3ce1ca7c6b898cf5d63bc466a717e4ea2eaf7de761b86d2867af1f6 (reproduces P1_1 exactly)"
+    },
+    {
+      "cmd": "node(24.15.0) tools/comet/build.mjs --archive <pinned archive>  # with 0001+1_6 patches",
+      "exit_code": 0,
+      "fingerprint": "cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187"
+    },
+    {
+      "cmd": "node(24.15.0) tools/comet/build.mjs --check-generated --runtime-smoke --json",
+      "exit_code": 0,
+      "result": "PASS; 243 pass / 2 skip"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/1_6.mjs",
+      "exit_code": 0,
+      "result": "5 pass / 0 fail"
+    },
+    {
+      "cmd": "npm test",
+      "exit_code": 0,
+      "result": "65 pass / 0 fail (基线不变)"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/1_1.mjs",
+      "exit_code": 1,
+      "result": "7 pass / 1 fail — 失败为 P1_1 遗留环境缺口（见 findings），test 8 合同检查在本 patched 构建上 PASS"
+    },
+    {
+      "cmd": "bash scripts/check.sh",
+      "exit_code": 1,
+      "result": "在 agent-instructions ✅ / agent-skills ✅ 后被 whitebox-verify 负例语料阻断（SUMMARY 7 ok/1 fail）；stash 至 base 21923be 复跑同为 7/1 —— 纯新 worktree 环境缺口，与本任务无关（见 findings）。npm test 与本任务交付用例是本任务的回归门，均 PASS"
+    },
+    {
+      "cmd": "bash scripts/agent-skill-check.sh",
+      "exit_code": 0
+    }
+  ],
+  "snapshot_manifest_summary": {
+    "snapshots": 10,
+    "files": 152,
+    "missing": 0,
+    "symlinks": 0,
+    "upgraded": [
+      "claude-parallel-tdd-planner (shared-source, Superpowers hard call removed)"
+    ],
+    "added": [
+      "tdd",
+      "diagnosing-bugs",
+      "code-review",
+      "test-authoring",
+      "openspec-lifecycle-guard"
+    ],
+    "retained": [
+      "whitebox-verify",
+      "grill-me",
+      "grilling",
+      "multi-agent-consensus-review"
+    ]
+  },
+  "commits": {
+    "tests": "2dc32ad test(p1-6): RED probes and delivery case for Matt method profile",
+    "implementation": "acb0452 feat(p1-6): Matt method profile snapshots + Comet init Superpowers removal",
+    "report": "525b19e chore(p1-6): record worker report and green evidence (amended with hashes)"
+  },
+  "unverified": [
+    {
+      "item": "宿主真实新会话轨迹（简报：实际证明新会话不重启 Superpowers、无 planner/implement-spec 重复派发）",
+      "reason": "本 worker 无法重启/新建宿主会话；本环境能做的最强实证 = patched 构建行为探针（init 无法选择/安装 Superpowers）+ 构建产物清单探针（无嵌套 controller 身份）+ manifest 声明",
+      "owner": "后续真实 Runner/宿主新会话验证承接"
+    },
+    {
+      "item": "上游 comet 全量 vitest 套件在 patched 源上的运行",
+      "reason": "P1_1 即声明全量套件在范围外；本任务 gate = generated checks + 4 文件 smoke（243/2 不变）。init-e2e 中 superpowers 相关既有断言只覆盖 skipped 分支（test/app/init-e2e.test.ts:400），与 patch 行为一致；全量套件回归留给后续任务",
+      "risk": "低：patch 仅删除 init 选择项，未改任何被 smoke/集成测试断言的行为"
+    }
+  ],
+  "findings_for_parent": [
+    "P1_1 遗留：toolchain-baseline.json runtime_claims[].evidence 指向的 package-probes/1_1.b-green-*.log 等 8 个证据文件从未提交（仅存在于 impl-p1-1 工作树未跟踪文件），导致 test/delivery-cases/1_1.mjs 测试 5 在任何其它 checkout 必失败（base 21923be 已如此，与本任务无关）。建议 P1_1 收尾补交或在验收边界中明确。",
+    "宿主发现：~/.claude/plugins/cache/claude-plugins-official/superpowers/ 仍有 7.0.0 与 b36e0829c6d0 残留（只读发现，未触碰）；它使本宿主 Comet init 判定 superpowers 已存在而跳过。该目录属禁改位置（宿主插件缓存），残留清理由宿主所有者决定。",
+    "本任务对 integrations/comet/upstream.lock.json 做了最小增量编辑（patches[] 从 [] 到两项）——该文件在 task-dag 中列为 P1_1 所有，但 P1_1 定稿的 toolchain-baseline.json patches_dir_note 明文 'patch files and their SHA256 pins are owned by P1_6'，且 build.mjs 只认 lock.patches；不注册则 patch 为死代码（违背评审纪律'缺一即死代码'）。请在评审确认此归属解读。",
+    "check.sh 的 whitebox-verify 两步在全新 worktree 必失败（base 21923be 已然，与本任务无关）：①green fixture 需要 6 个从未 git 跟踪的合成证据文件（producer/wire/consumer/risk/service/surface.log，主 checkout 有未跟踪副本，impl-p1-1/impl-p1-6 均缺失；临时按字节复制后 STRUCTURE_PASS）；②negative-corpus 的 Journey 用例依赖 run-window 内的文件 mtime，fresh checkout mtime 相同导致 1 例失败（7 ok/1 fail）。建议把合成 fixture 文件纳入跟踪并让 corpus 自建 mtime（属 whitebox-verify 快照维护，非 P1_6 文件范围）"
+  ],
+  "files_changed": [
+    ".agents/skills/ (10 snapshots: +tdd +diagnosing-bugs +code-review +test-authoring +openspec-lifecycle-guard; claude-parallel-tdd-planner upgraded; README.md updated; whitebox-verify/grill-me/grilling/multi-agent-consensus-review retained unchanged)",
+    "docs/agent/skill-architecture.md",
+    "openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json (new)",
+    "integrations/comet/patches/0001-matt-method-profile.patch (new)",
+    "integrations/comet/patches/tests/1_6.patch (new)",
+    "integrations/comet/upstream.lock.json (patches[] pins; minimal additive edit — see findings)",
+    "test/delivery-cases/1_6.mjs (new)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_6/evidence/* (new)"
+  ],
+  "blockers_or_questions": []
+}

@@ -1,0 +1,23 @@
+diff --git a/app/commands/init.ts b/app/commands/init.ts
+index 2e08e96..1e90992 100644
+--- a/app/commands/init.ts
++++ b/app/commands/init.ts
+@@ -363,13 +363,16 @@ async function selectNpmDeps(
+   const openSpecRequired = includesClassic && !isOpenSpecCliCompatible();
+   const codegraphInstalled =
+     hasCodegraphProjectIndex(projectPath) || resolveCodegraphCommand() !== null;
+-  const superpowersInstalled = spPlatformIds.length === 0 ? true : undefined;
+ 
++  // Matt method profile (0001-matt-method-profile.patch): Superpowers is a
++  // disabled method dependency in this delivery. Comet must never select,
++  // install or re-enable obra/superpowers from init, so it is not offered as
++  // an npm dependency here (interactive or --yes/--json). Implementation
++  // methods come from the project's vendored method snapshots instead.
+   const states: NpmDepState[] = [
+     ...(includesClassic
+       ? [
+           { id: 'openspec' as const, installed: openSpecInstalled, required: openSpecRequired },
+-          { id: 'superpowers' as const, installed: Boolean(superpowersInstalled) },
+         ]
+       : []),
+     { id: 'codegraph', installed: codegraphInstalled },

@@ -1,0 +1,41 @@
+
+=== comet CLI version readback from the new worktree build ===
+# command: node .sdd/vendor/comet/<commit>/builds/72e5ce0e.../work/bin/comet.js --version
+# started: 2026-10-20T11:29:39+0800
+0.4.5
+--- exit=0 ---
+
+=== comet CLI minimal call: status on an empty scratch project (read-only probe, no init) ===
+# command: node <entrypoint> status <scratch> --json
+# started: 2026-10-20T11:30:01+0800
+{
+  "schema": "comet.status.v2",
+  "defaultEntry": {
+    "error": "Comet workflow entry is unavailable because .comet/config.yaml is missing"
+  },
+  "workflows": {
+    "native": {
+      "changes": [],
+      "error": "Comet workflow entry is unavailable because .comet/config.yaml is missing"
+    },
+    "classic": {
+      "changes": [],
+      "error": "Comet workflow entry is unavailable because .comet/config.yaml is missing"
+    }
+  },
+  "unmanagedOpenSpec": [],
+  "changes": []
+}
+--- exit=0 ---
+
+=== state read minimal call ===
+# command: node <entrypoint> state read <scratch>
+[31mUnknown subcommand: read[0m--- exit=1 ---
+# finished: 2026-10-20T11:30:02+0800
+
+=== comet CLI minimal call corrected: state current (read-only selection state) ===
+# note: 'state read' is not a valid subcommand (exit 1 recorded above); using 'state current'
+# started: 2026-10-20T11:30:21+0800
+[31mERROR: no current change selected[0m
+[31mUse: comet state select <change-name>[0m--- exit=1 ---
+# finished: 2026-10-20T11:30:23+0800

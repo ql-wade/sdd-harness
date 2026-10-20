@@ -1,0 +1,30 @@
+== RED probe 3: upgrade duplicate-Guard negative (1.2.b, F02 不重复 Guard) — behavioral, isolated fixture copy of the adapter ==
+== date: 2026-10-20T05:35:01Z | fixture: /tmp/claude-501/probe3.rOOruL ==
+-- fixture pre-seeded with a LEGACY-format managed entry (matcher 'Write|Edit', command 'hooks/pre-tool-gate.sh' without CLAUDE_PROJECT_DIR) plus a user entry --
+-- run the CURRENT adapter (unmodified copy) against the fixture --
+✅ hooks 策略已编译：hooks/.compiled.env + .claude/settings.json (7 deny 策略)
+✅ .claude/skills 注入 1 个技能软链（全部可解析）
+adapter_exit=0
+-- resulting PreToolUse entries referencing the managed gate script: --
+[
+ {
+  "matcher": "Write|Edit",
+  "hooks": [
+   {
+    "type": "command",
+    "command": "hooks/pre-tool-gate.sh"
+   }
+  ]
+ },
+ {
+  "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+  "hooks": [
+   {
+    "type": "command",
+    "command": "\"$CLAUDE_PROJECT_DIR\"/hooks/pre-tool-gate.sh"
+   }
+  ]
+ }
+]
+managed gate entry count = 2  -> DUPLICATE GUARD on upgrade (F02 negative confirmed)
+user entry preserved = true

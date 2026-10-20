@@ -1,0 +1,79 @@
+{
+  "task": "P1_2",
+  "task_title": "原任务 1.2 — 在临时隔离配置先 RED 复现双写/漂移负例，再实现 exporter 与 FoundationLock；验证正反序 bootstrap/init、重复 pull、升级、卸载、用户条目与 matcher 注册（F02/F04/B09）",
+  "run": "impl-dfr-20261020-r1",
+  "worktree": "/Users/mac/Code/sdd-harness/.claude/worktrees/impl-p1-2",
+  "branch": "impl/p1-2-foundation-export (base d9a4532)",
+  "final_status": "DONE",
+  "acceptance_ids": ["F02", "F04", "B09"],
+  "commits": {
+    "tests": "6529a75",
+    "implementation": "cf9aee3",
+    "report": "(this commit)"
+  },
+  "red_cases": [
+    {
+      "case": "1.2.a pre-implementation RED: all exporter/lock cases against absent module + absent foundation/",
+      "actually_failed": true,
+      "evidence": "node --test test/foundation-distribution.test.js test/delivery-cases/1_2.mjs exit=1, 6/6 fail 0 pass — every case fails with ERR_MODULE_NOT_FOUND for tools/foundation-export.mjs; committed foundation-lock.json absent. Evidence: worker-reports/P1_2/evidence/red-1-node-test.txt"
+    },
+    {
+      "case": "1.2.a gate gap: contracts/delivery FoundationLock v1 alone ACCEPTS machine absolute paths and floating versions (only digests/structure enforced)",
+      "actually_failed": true,
+      "evidence": "parseContract('SDD.Delivery.FoundationLock') returns ok=true for profile='/Users/mac/secret-project', runner.version='HEAD', cli.version='@latest' — no emission gate exists pre-P1_2. The exporter guardLock closes exactly this hole (test asserts both sides). Evidence: worker-reports/P1_2/evidence/red-2-contract-gap.txt"
+    },
+    {
+      "case": "1.2.b F02 negative: upgrade over a legacy-format managed entry leaves TWO Guard entries (不重复 Guard violated)",
+      "actually_failed": true,
+      "evidence": "Behavioral probe on an isolated fixture copy of the unmodified adapter (live config never touched): pre-seeded legacy entry {matcher 'Write|Edit', command 'hooks/pre-tool-gate.sh'} + adapter run → managed gate entry count = 2 (old exact-command dedup only removed byte-identical entries). Evidence: worker-reports/P1_2/evidence/red-3-upgrade-duplicate-guard.txt"
+    },
+    {
+      "case": "1.2.b F02 negative: uninstall is a no-op and no isolated target mode exists (配置可回退 / temp-config testing impossible without touching live settings)",
+      "actually_failed": true,
+      "evidence": "Adapter run with --uninstall performs an INSTALL instead (argv ignored; managed entries = 1 after); SDD_TARGET_ROOT occurrences in adapter = 0, in bootstrap.sh = 0; no argv handling in adapter. Evidence: worker-reports/P1_2/evidence/red-4-uninstall-target-mode-absent.txt"
+    }
+  ],
+  "green_summary": {
+    "1.2.a_exporter_foundation_lock": "tools/foundation-export.mjs builds the FoundationLock from the unique sources only: .agents/skills/ (TRACKED file set per skill — matches the P1_6 method-profile-manifest digest basis 10/10 and git-history resolution), hooks.yaml (policy digest), .mcp.json registrations (per-entry digests, pins enforced), integrations/comet/upstream.lock.json + package.json (toolchain), method-profile-manifest.json (profile). Emission gates refuse machine absolute paths, floating versions (@latest/HEAD/branch/unpinned), unpinned npx MCP registrations, and empty skills; output validates against contracts/delivery FoundationLock v1 (parseContract ok). Release view artifacts committed under foundation/ (lock + release/hooks/hooks.yaml + release/mcp/* + release/skills/MANIFEST.json; full skill bodies via --skills-copy on demand). verify detects dual-write drift in BOTH directions (source edit → lock drift; hand-edited release view → release drift); repeated export is byte-identical (deterministic canonical JSON, no timestamps, no machine state); repo-level drift gate test pins the committed artifacts to live sources."
+  , "1.2.b_composition_idempotency_managed_handover": "tools/adapters/claude-code.sh now does managed-block handover: any settings entry whose command references hooks/{pre-tool-gate,session-context,stop-reminder}.sh is treated as managed and REPLACED on re-init (legacy formats leave no residue, exactly one Guard), while user-owned entries are never touched; SDD_TARGET_ROOT isolates settings.json, .compiled.env and skill symlinks into a temp config (fixtures under $TMPDIR; repo live settings byte-compared untouched in tests); --uninstall removes managed entries + compiled env + generated skill symlinks only, is idempotent, and re-init restores; target mode compiles the target's own hooks.yaml so script behavior and settings matcher derive from the same policy source. tools/bootstrap.sh gains target mode (adapter + exporter pull composed; repeat pull byte-identical; skips repo-root actions), a production foundation-verify step, and --uninstall passthrough. Tests cover reverse order A (user config first), reverse order B (install → user edit → re-pulls), ×2/×3 repeat pulls (no duplicate Guard, user additions kept), upgrade over a stale-format managed entry, uninstall/re-init round trip, and matcher-vs-gate-script co-testing (new deny policy matcher 'Task' must appear in the registered matcher; gate script denies the fixture blocklist pattern via the fixture's compiled env; staged matcher drift is repaired by re-bootstrap)."
+  , "1.2.c_old_run_pinning_and_fallback": "foundation-export check-run resolves an old run's pinned baseline from the frozen release commit via git (byte-exact, binary-safe): all 10 skills + hooks.yaml resolve at the committed lock's release commit (F04 keep-old-baseline). Asset drift + active run → silent-rebaseline-blocked (non-zero) with an explicit migration path ('--migrate --owner <owner> after review, or close and start a new run'); drift + closed run → informational only. Unresolvable baseline (bogus commit) → baseline-unresolvable, explicit block, never silently swapped. B09: --acquire by a different owner on an active run → second-writer-refused with run state unchanged; owner re-claim allowed. --migrate requires the run owner AND a resolvable old baseline; on success the old commit+exportDigest are preserved in run-state.json migrations[] and the run re-pins explicitly. CLI transcript with all flows: worker-reports/P1_2/evidence/green-3-cli-flows.txt"
+  },
+  "commands": [
+    { "cmd": "node --test test/foundation-distribution.test.js test/delivery-cases/1_2.mjs", "exit_code": 1, "phase": "RED (pre-implementation)", "evidence": "worker-reports/P1_2/evidence/red-1-node-test.txt" },
+    { "cmd": "node --test test/foundation-distribution.test.js test/delivery-cases/1_2.mjs", "exit_code": 0, "phase": "GREEN (23/23)", "evidence": "worker-reports/P1_2/evidence/green-1-node-test.txt" },
+    { "cmd": "npm test", "exit_code": 0, "phase": "GREEN full suite 125/125 (baseline 107 + 18 new; 0 fail, 0 skip)", "evidence": "worker-reports/P1_2/evidence/green-2-npm-test.txt" },
+    { "cmd": "node tools/foundation-export.mjs export --root . --out foundation && node tools/foundation-export.mjs verify --root . --lock foundation/foundation-lock.json", "exit_code": 0, "phase": "committed artifacts generated + verified" },
+    { "cmd": "node --test ... && npm test (rerun at implementation commit cf9aee3)", "exit_code": 0, "phase": "post-commit rerun: targeted 23/23, npm 125/125", "evidence": "worker-reports/P1_2/evidence/green-4-postcommit-rerun.txt" }
+  ],
+  "files_changed": [
+    "tools/foundation-export.mjs (new)",
+    "tools/adapters/claude-code.sh",
+    "tools/bootstrap.sh",
+    "foundation/foundation-lock.json (new)",
+    "foundation/release/hooks/hooks.yaml (new)",
+    "foundation/release/mcp/mcp-capabilities.yaml (new)",
+    "foundation/release/mcp/mcp.json (new)",
+    "foundation/release/skills/MANIFEST.json (new)",
+    "test/foundation-distribution.test.js (new)",
+    "test/delivery-cases/1_2.mjs (new)"
+  ],
+  "not_touched": [
+    "hooks.yaml — control-plane source unchanged (0 diff lines vs base d9a4532); adapter remains its compiler",
+    ".claude/settings.json, .mcp.json — live/generated repo config never written by the new tests (fixtures only; byte-compare assertions prove it)",
+    "contracts/delivery, lib/delivery, tasks.md/execution-state/ledger — outside exclusive ownership"
+  ],
+  "unverified": [
+    "python3-gated adapter/bootstrap flows skip when python3 is unavailable (standard env-conditional pattern; python3 3.14.7 present here, all composition cases executed)",
+    "npm test glob (test/*.test.js) does not include test/delivery-cases/*.mjs — delivery cases run via the explicit node --test command (same convention as P1_1/P1_6/P2_1 cases)",
+    "--skills-copy full-body release view exercised in fixtures only; the committed view records digests (MANIFEST) and resolves full bodies from the frozen release commit via git — offline body distribution stays a TeamAI-phase capability",
+    "platforms: ['darwin','linux'] is declarative; only darwin (arm64) was executed",
+    "bootstrap --with-llmwiki production flow not exercised (network + venv; unchanged from baseline)"
+  ],
+  "findings_for_parent": [
+    "CROSS-TASK (schema gap, P2_1 owner): FoundationLock v1 has no fields for MCP registrations or the method profile. The lock includes 'mcps' and 'methodProfile' as extra fields — the schema kernel ignores unknown fields so contract validation passes — but a future contract revision should either add these fields or document the lock as skills+policy+toolchain only. Related: the kernel does not reject unknown fields (fail-open on extras), unlike its fail-closed version handling.",
+    "CROSS-TASK (hygiene, P1_6/upstream owner): 14 files under .agents/skills/whitebox-verify/tests/negative-corpus/*/__pycache__/*.pyc (cpython-314 bytecode) are TRACKED in git although .gitignore declares '__pycache__/' as digest pollution. The exporter deliberately freezes the tracked set (this is what the repo distributes and what git-history resolution can prove), so locks/manifest agree; but the committed bytecode is runtime pollution a task owning those files should remove.",
+    "Layer limitation (pre-existing, noted not fixed): hooks/pre-tool-gate.sh only evaluates Write|Edit|MultiEdit|NotebookEdit and Bash tool classes; hooks.yaml could declare deny policies for other matchers (e.g. Task) and the adapter would register them in settings, but the gate script would not evaluate those tool classes. The 1.2.b co-test asserts registration coverage plus script behavior within the script's supported classes.",
+    "F02 semantics note: '不重复 Guard' is enforced by script-reference-based managed-block replacement (survives command-format drift across versions), not by exact-command dedup — the RED probe showed exact-command dedup leaves duplicate Guards on upgrade."
+  ],
+  "blockers_or_questions": []
+}

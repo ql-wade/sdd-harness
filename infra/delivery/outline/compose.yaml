@@ -1,0 +1,54 @@
+# Outline 独立资料域声明（OutlineInfra.v1）— 仅声明，绝不自动启动。
+# 镜像一律从 infra/delivery/outline/images.lock.json 解析后注入（${VAR:?} 占位）；
+# lock 未 ready（无任何已认证 digest）时 tools/infra/outline.mjs up 必须拒绝，本文件绝不内嵌 tag/digest。
+# 端口仅绑定 loopback；专用 internal 网络；除具名卷外不挂载任何宿主路径（无宿主敏感挂载）。
+# restart 策略保持 "no"：重启监督与持久性证明分离，持久性由 restart-persistence probe 实测而非 restart 策略假设。
+# OIDC 提供方位置未选定：网络保持 internal，出网策略在 provider 选定后显式修订（当前 UNVERIFIED）。
+
+services:
+  outline:
+    image: ${OUTLINE_IMAGE:?must be resolved from infra/delivery/outline/images.lock.json before up}
+    restart: "no"
+    depends_on:
+      - outline-postgres
+      - outline-redis
+      - outline-object-store
+    networks:
+      - outline-internal
+    ports:
+      - "127.0.0.1:${OUTLINE_PORT:-3000}:3000"
+    volumes:
+      - outline-data:/var/lib/outline/data
+
+  outline-postgres:
+    image: ${OUTLINE_POSTGRES_IMAGE:?must be resolved from infra/delivery/outline/images.lock.json before up}
+    restart: "no"
+    networks:
+      - outline-internal
+    volumes:
+      - outline-db:/var/lib/postgresql/data
+
+  outline-redis:
+    image: ${OUTLINE_REDIS_IMAGE:?must be resolved from infra/delivery/outline/images.lock.json before up}
+    restart: "no"
+    networks:
+      - outline-internal
+
+  outline-object-store:
+    image: ${OUTLINE_OBJECT_STORE_IMAGE:?must be resolved from infra/delivery/outline/images.lock.json before up}
+    restart: "no"
+    networks:
+      - outline-internal
+    ports:
+      - "127.0.0.1:${OUTLINE_OBJECT_STORE_PORT:-9000}:9000"
+    volumes:
+      - outline-attachments:/data
+
+volumes:
+  outline-data:
+  outline-db:
+  outline-attachments:
+
+networks:
+  outline-internal:
+    internal: true

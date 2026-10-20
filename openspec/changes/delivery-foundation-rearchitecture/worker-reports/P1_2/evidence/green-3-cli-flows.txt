@@ -1,0 +1,53 @@
+== GREEN run 3: CLI flows — export/verify/check-run (F04 block + B09 second-writer refusal + explicit migrate) on isolated fixture /tmp/claude-501/green-cli.PpelPB ==
+== date: 2026-10-20T05:56:27Z ==
+
+fixture commit: 0d38657b681fb92a24616b2cd097b1f8290f3e74
+
+$ foundation-export export (fixture: 1 skill + hooks.yaml + pinned comet lock; explicit --profile)
+✅ foundation export: 3 files under /tmp/claude-501/green-cli.PpelPB/foundation (release commit 0d38657b, exportDigest 5ef40ae1945f)
+
+$ [drift the skill body] then check-run (active run) — must BLOCK with migration path
+❌ check-run check: silent-rebaseline-blocked
+  migration: explicit paths: (1) rerun with --migrate --owner <run-owner> after review, or (2) close this run and start a new run against commit 0d38657b — a run is never silently re-baselined
+exit=1
+
+$ check-run --acquire --owner bob on alice's active run — must REFUSE (B09)
+❌ check-run acquire: second-writer-refused
+  active run is owned by alice (B09: no second writer)
+exit=1
+
+$ check-run --migrate --owner bob — must REFUSE (not the owner)
+❌ check-run migrate: second-writer-refused
+  migration requires the run owner (alice), got bob
+exit=1
+
+$ check-run --migrate --owner alice — explicit re-pin, old baseline preserved in migrations record
+✅ check-run migrate: ok
+exit=0
+
+-- run-state.json after migration --
+{
+  "schemaVersion": 1,
+  "runId": "run-demo",
+  "status": "active",
+  "owner": "alice",
+  "migrations": [
+    {
+      "from": {
+        "commit": "0d38657b681fb92a24616b2cd097b1f8290f3e74",
+        "exportDigest": "5ef40ae1945ffbbdac7cb307cc4107829ed5f44751983afeffcd48e5f6dcbfb4"
+      },
+      "to": {
+        "commit": "0d38657b681fb92a24616b2cd097b1f8290f3e74",
+        "exportDigest": "b0dc9ecee69ed4eb91d9d01983b4ba7b6c37865231714959992b01c112a49b08"
+      }
+    }
+  ],
+  "pinnedCommit": "0d38657b681fb92a24616b2cd097b1f8290f3e74"
+}
+
+-- verify still detects drift on the (stale) foundation/ copy — the run dir was migrated explicitly, the release copy was not --
+❌ foundation verify failed: drift detected
+  - [lock] demo: skill digest drifted from the pinned lock (expected 0ff5c436f755, actual c9370a799832)
+  - [release] release/skills/MANIFEST.json: release skill manifest drifted from sources
+exit=1
