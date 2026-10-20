@@ -1,0 +1,248 @@
+{
+  "task": "P4_6 (原任务 4.6): 按 classic-post-archive-recovery.md 覆盖 H01–H09 — 归档后 pending Run 的发现/选择/恢复、同 key 原子领取、固定 Outline UUID、lastRevision 冲突、旧回调/会话重复、原生 clear-current/完成误判与工作区清理；复用既有 Comet Run/锁/事务，0003 叠加于 0001/0002 之上",
+  "run": "impl-dfr-20261020-r1",
+  "worktree": "impl/p4-6-post-archive-recovery (base d9b87f3)",
+  "worker": "P4_6 implementation worker",
+  "final_status": "GREEN",
+  "acceptance_ids": {
+    "targeted": [
+      "H01",
+      "H02",
+      "H03",
+      "H04",
+      "H05",
+      "H06",
+      "H07",
+      "H08",
+      "H09"
+    ],
+    "note": "全部经真实 0003 构建 CLI 正负例（隔离 HOME/PATH stubs/$TMPDIR，零 mock）；H02 为原生已满足探针（P2_4 hook-guard 面），其余八项为 0003 缺口闭合"
+  },
+  "final_fingerprint": "beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966",
+  "fingerprint_note": "六 patch 叠加（0001+tests/1_6+0002+tests/2_4+0003+tests/4_6）后的合法新 fingerprint；构建经由 build.mjs 的 --lock 参数指向临时 staged lock（$TMPDIR/p46-staged-lock.json，真实 lock 内容 + 两个新 patch 条目，未改动 integrations/comet/upstream.lock.json）。master 侧 7 处 pin 与 lock 登记由集成波次处理；staged lock 的 sha256 内容与已提交 patch 文件一致，集成后默认 lock 将解析到同一 fingerprint",
+  "red_cases": [
+    {
+      "id": "H01",
+      "classification": "缺口已复现",
+      "claim": "Git 交付 complete 而知识 pending 的归档 Run 被发现层排除：resume-probe 返回 action=none（'no active Comet changes'）",
+      "evidence": "worker-reports/P4_6/evidence/red-4_6-mjs-f2.log（not ok 6）"
+    },
+    {
+      "id": "H03",
+      "classification": "缺口已复现",
+      "claim": "并发同 job_key 派发产生两个 open dispatch/两个 execution（锁只保证注册表原子，不保证 create-or-return）",
+      "evidence": "red-4_6-mjs-f2.log（not ok 4，两个不同 execution id）"
+    },
+    {
+      "id": "H04",
+      "classification": "缺口已复现",
+      "claim": "归档后 closeout 窗口无法派发 K（'gate dispatching is closed'），外部知识发布的恢复入口死路；无固定文档 UUID 的操作登记面",
+      "evidence": "red-4_6-mjs-f2.log（not ok 7）"
+    },
+    {
+      "id": "H05",
+      "classification": "缺口已复现",
+      "claim": "同上根因：K 派发被拒，lastRevision 冲突面不存在",
+      "evidence": "red-4_6-mjs-f2.log（not ok 8）"
+    },
+    {
+      "id": "H06",
+      "classification": "缺口已复现",
+      "claim": "同一 open job_key 的二次派发铸造新 execution（attempt+1）而非恢复原作业",
+      "evidence": "red-4_6-mjs-f2.log（not ok 3）"
+    },
+    {
+      "id": "H07",
+      "classification": "缺口已复现",
+      "claim": "归档完成路径无条件写 run.status='completed'（closeout 仍 blocked），完成误判",
+      "evidence": "red-4_6-mjs-f2.log（not ok 5）"
+    },
+    {
+      "id": "H08",
+      "classification": "缺口已复现",
+      "claim": "run-state.json 丢失后 knowledge-closeout 以泛化错误失败（'Classic runtime validation requires synchronized...'，无 recovery-required 语义），且失败前已写入 .comet.yaml（reconcile 在 write 之后抛出）",
+      "evidence": "red-4_6-mjs-f2.log（not ok 9）"
+    },
+    {
+      "id": "H09",
+      "classification": "缺口已复现",
+      "claim": "无权威环境绑定：复制的 workspace 可被任意环境写入（run-authority.json ENOENT，绑定面不存在）",
+      "evidence": "red-4_6-mjs-f2.log（not ok 10）"
+    },
+    {
+      "id": "H02",
+      "classification": "原生已满足",
+      "claim": "SessionStart/SubagentStart/UserPromptSubmit hook 与 resume-probe 均为只读方法面：不领取执行权、不产生 dispatch/receipt，mode 变化不影响 gate 评估（引 P2_4 hook-guard 探针与 classic-hook-guard 源码：'Hook event is not a write' 即放行）",
+      "evidence": "red-4_6-mjs-f2.log（ok 2 — 对未打 0003 的 F2 构建即为绿）"
+    },
+    {
+      "id": "H01(部分)/H06(部分)",
+      "classification": "原生已满足",
+      "claim": "resolver/status 的 D07 面（archived+closeout-blocked → next=knowledge-closeout、gates completionBlocked=true）与旧 attempt 回调不能完成新任务（dispatch.state!=='open' 拒绝、inputDigest 派生失效）为 P2_4 已建面，本任务负例中同时复验",
+      "evidence": "red-4_6-mjs-f2.log + green 日志中相应正例断言"
+    }
+  ],
+  "coverage_matrix": {
+    "H01": {
+      "positive": "Git complete + knowledge pending：resume-probe 发现归档 Run（ask_user/changeName/archived 理由）、state select/state current 可选中原 Run、next 指向 knowledge-closeout、run_id 前后一致、comet archive 重入 exit 0 且不产生第二归档目录（不重执行规格归档）",
+      "negative": "RED：发现层排除（action=none）；（修后负例）重入不重归档由 archive 计数=1 断言",
+      "entrances": "comet resume-probe（真实发现入口）、state select/current、state next、comet archive 重入"
+    },
+    "H02": {
+      "positive": "SessionStart×2/SubagentStart/UserPromptSubmit(mode=plan)/SessionStart(mode=bypassPermissions) 全部 exit 0 放行且前后 Run state/yaml/dispatch registry digest 不变、gate 评估不变、resume-probe 只读",
+      "negative": "（结构性）hook 面无写通道可领取——digest deepEqual 前后相等即负例证据",
+      "entrances": "comet-hook-router.mjs（真实 hook 入口，init 装配）、comet resume-probe"
+    },
+    "H03": {
+      "positive": "两个并发 comet state dispatch-gate 进程（真实同时 spawn）收敛于同一 execution/attempt，registry 恰一个 open dispatch；accept 恰好消费一次",
+      "negative": "RED：两个不同 execution（重复派发）",
+      "entrances": "state dispatch-gate（并发进程）、state accept-gate"
+    },
+    "H04": {
+      "positive": "归档后 dispatch-gate K 放行（closeout 窗口）；knowledge-publish 以客户端 UUID 登记操作（首请求前固定）；丢失回执后的重试恢复同一 operation/UUID（recovered+attempts）；observe=unknown 后 directive=reconcile-info（永不 create）、unknown 后的 closeout 拒收；readback(exists, digest 匹配) 后 closeout 接纳且同一 Run 完成",
+      "negative": "RED：K 派发被拒；未知结果当成功被拒（H04 正例内含负例断言）",
+      "entrances": "state dispatch-gate K、state knowledge-publish、state knowledge-observe、state knowledge-closeout"
+    },
+    "H05": {
+      "positive": "更新操作必须复用固定 document UUID 且 baseRevision=链上已登记 revision；冲突后 state=conflict、directive=reconcile-readback；冲突未解时新修订登记被拒、closeout 被拒、run 保持未完成；readback 匹配后冲突解除并可收尾；baseRevision 漂移的重试被拒（revision refresh 不存在）；文档 UUID 归一个知识条目独占",
+      "negative": "RED：无冲突/修订面（K 拒）；修后负例：rev-9 刷新被拒、conflict 下 closeout 被拒、跨条目身份被拒",
+      "entrances": "state knowledge-publish/--observe/--closeout"
+    },
+    "H06": {
+      "positive": "同一 open job_key 重入恢复原 execution（recovered）；新修订→新 job key（attempt 按输入版本、digest 不同）；旧 execution 的迟到结果被拒；registry 保留全部历史不删除",
+      "negative": "RED：重入铸造新 execution；修后负例：旧 attempt 回调被拒断言",
+      "entrances": "state dispatch-gate/accept-gate + registry 文件直读"
+    },
+    "H07": {
+      "positive": "归档后 run.status=waiting（非 completed）、currentStep=full.closeout.knowledge、next=knowledge-closeout、gates completionBlocked=true、selection 恢复条目保留；记录 closeout 后同一 Run 才转 completed",
+      "negative": "RED：run.status='completed'（完成误判）；clear-current 面：Git-complete+pending 时选择条目保留（[KEPT] 分支，在 H01 世界由 selection 文件断言）",
+      "entrances": "comet archive（真实归档命令）、state next/gates/current、run-state.json 直读"
+    },
+    "H08": {
+      "positive": "删除 run-state.json 后 knowledge-closeout 以 recovery-required 拒绝且 .comet.yaml 逐字节不变；恢复原文件后同一 closeout 在同一 Run 上完成；ensureClassicRun 的 run_id-无文件防线杜绝空 Run 假冒恢复",
+      "negative": "RED：泛化错误 + 写在前失败在后；修后负例：拒绝 + 零变更断言",
+      "entrances": "state knowledge-closeout、文件级删除（唯一副本丢失的模拟）"
+    },
+    "H09": {
+      "positive": "managed init 绑定 COMET_RUN_AUTHORITY（运行环境配置）到 run 的 .comet/run-authority.json；复制 workspace + 异 authority 的写入被拒（消息指名回归权威环境）；异 authority 只读查询（state next）放行且零突变；authority-transfer 仅可由当前权威环境执行，迁移后新 authority 可写、旧 authority 被拒",
+      "negative": "RED：绑定面不存在（ENOENT）；修后负例：copy+foreign 拒、foreign 拒、foreign 发起的 transfer 拒",
+      "entrances": "state init（绑定）、dispatch-gate/accept-gate/knowledge-publish/observe/closeout/authority-transfer（写门）、state next（只读对照）"
+    }
+  },
+  "commands": [
+    {
+      "cmd": "node(24.15.0) tools/comet/prepare-source.mjs --archive .sdd/cache/artifacts/comet-source-c90af44….tar.gz --json",
+      "exit_code": 0,
+      "note": "本 worktree .sdd 为空，安装 pristine 源（archive sha256 28a7e2fa… 与 lock 一致，reused=false）"
+    },
+    {
+      "cmd": "node(24.15.0) tools/comet/build.mjs --archive <pinned> --json  # 默认 lock（4 patch 基线）",
+      "exit_code": 0,
+      "note": "RED 基线构建：fingerprint 9b95a0ff…（0001+1_6+0002+2_4，reused=false）"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/4_6.mjs  # RED（对 9b95a0ff 构建）",
+      "exit_code": 1,
+      "note": "9 fail / 1 pass（H02 原生绿）；日志 worker-reports/P4_6/evidence/red-4_6-mjs-f2.log"
+    },
+    {
+      "cmd": "node(24.15.0) tools/comet/build.mjs --archive <pinned> --lock $TMPDIR/p46-staged-lock.json --json",
+      "exit_code": 0,
+      "note": "六 patch 全新构建：fingerprint beab355d…（reused=false）；staged lock 为真实 lock+两个新条目，经 --lock 参数传入，未改 upstream.lock.json"
+    },
+    {
+      "cmd": "SDD_COMET_LOCK=<staged lock> node --test test/delivery-cases/4_6.mjs  # GREEN",
+      "exit_code": 0,
+      "note": "10/10 pass（真实 CLI 交互，零 mock）；日志 worker-reports/P4_6/evidence/green-4_6-mjs.log"
+    },
+    {
+      "cmd": "node(24.15.0) tools/comet/build.mjs --lock <staged> --check-generated --runtime-smoke --json",
+      "exit_code": 0,
+      "note": "PASS：check-generated classic/native/entry 全 PASS；runtime smoke 253 passed / 2 skipped（基线 248 + tests/4_6.patch 新增 5）；日志 green-v-comet-native.json/.log"
+    },
+    {
+      "cmd": "npm test  # 全量回归（host node 22.13.1）",
+      "exit_code": 0,
+      "note": "323 pass / 0 fail / 1 skip（324 tests，与 base 一致；delivery-cases/*.mjs 不在 npm test glob）；日志 green-npm-test-full.log"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/*.mjs  # 全目录（默认 lock）",
+      "exit_code": 1,
+      "note": "121 pass / 9 fail / 2 skip — 9 个失败全部是本任务文件对默认 lock 旧状态（未登记 0003 → 解析到 9b95a0ff 基线构建）的合法 RED，跨任务零回归（其余 17 个文件对 F2 全绿）；集成波次登记 0003 后默认解析即转绿；日志 green-delivery-cases-all-default-lock.log"
+    }
+  ],
+  "patch_summary": {
+    "file": "integrations/comet/patches/0003-post-archive-closeout.patch",
+    "upstream_files": [
+      "domains/comet-classic/classic-gate-runtime.ts (archivedDeliveryExcluded/closeoutPredicateFromDocument 共享谓词；knowledge-publish 操作台账 .comet/knowledge-publish-operations.json；run-authority 绑定 .comet/run-authority.json + requireRunAuthority/transfer)",
+      "domains/comet-classic/classic-state-command.ts (dispatch-gate：归档 K 窗口+authority+open-dispatch 恢复；accept/closeout authority 门；closeout 外部回执必须闭合已登记操作且匹配独立 readback；新子命令 knowledge-publish/knowledge-observe/authority-transfer；managed init 绑定 authority；run-less 状态 H08 恢复拒绝；ensureClassicRun 防线在 classic-migrate)",
+      "domains/comet-classic/classic-migrate.ts (H08：run_id 已记录而 Run 状态文件缺失 → 拒绝伪造 Run)",
+      "domains/comet-classic/classic-archive.ts (H07：closeout blocked → status=waiting + [PENDING] 输出 + 保留 current-change 恢复条目；仅归档自身 pending 被清)",
+      "domains/comet-classic/classic-runtime-run.ts (H07：full.closeout.knowledge 步 → status=waiting，transition/reconcile 一致)",
+      "domains/comet-classic/classic-resume-probe.ts (H01：发现排除改用聚合 closeout 谓词)",
+      "domains/comet-classic/classic-current-change.ts (H01：选择/解析的归档排除改用同一谓词)",
+      "domains/comet-classic/classic-workspace.ts (H01：workspace 候选同一谓词)"
+    ],
+    "design_lines": [
+      "零新 YAML wire 字段、零 schema 变更：操作台账/authority 与 gate-dispatches.json 同款 engine-run protected 原子写（.comet/ 内，随归档迁移）——同一锁/事务语义，无第二账本",
+      "documentId 由驱动侧在首次请求前分配、Comet 首登记即持久并强制稳定（同 key 重试、链上修订、跨条目三向拒绝）；baseRevision 不可经重试漂移（H05）",
+      "发现/选择/workspace 三处排除共用 archivedDeliveryExcluded 一个谓词（H01 单一完成条件）",
+      "归档完成只清自身 pending；完成谓词 = resolver 聚合（closeout blocked → waiting，不 completed、不清选择）",
+      "authority=运行环境配置（COMET_RUN_AUTHORITY ?? hostname），绑定 create-if-absent、迁移由权威环境执行；只写门校验、查询面开放——其他宿主只查询（R01 A）",
+      "全部行为 managed-gated：unmanaged 变更零行为变化（upstream smoke 基线 248 不变即证）"
+    ]
+  },
+  "smoke_count_change": "248 pass / 2 skip → 253 pass / 2 skip（+5 = tests/4_6.patch 的 post-archive closeout 块：H09 authority+transfer、H03 open-owner 恢复、H04 固定 UUID/恢复、H04/H05 观察分类与冲突、H08 防伪造，全部真实脚本交互测试）",
+  "cross_task_impact": {
+    "fact": "delivery-cases 全目录（默认 lock）9 个失败全部位于本任务文件（4_6.mjs），全部由'默认 lock 未登记 0003 → 指向 9b95a0ff 基线构建'驱动；其它任务文件对 F2 全绿（121 pass/2 skip），无任何 0003 运行时回归",
+    "owner": "parent/集成波次：upstream.lock.json 登记 0003+tests/4_6（sha256 见 staged lock/patch 文件）+ master 侧 7 处 pin 再 repin 到 beab355d…；登记后默认解析即绿",
+    "not_a_regression": "npm test 323/0 绿；smoke 253/2 PASS；本任务文件在 beab355d 构建 10/10 绿"
+  },
+  "api_mcp_exposure": {
+    "spec_level": "outline-public-api-observation.json：documents.create 客户端 UUID、documents.update lastRevision、revision 不匹配 409 均为官方 spec 声明（sourceSha256 4a8d6f01…）",
+    "this_task": "Comet 侧协议以这些参数为强制前提实现并经真实 CLI 证明（固定 UUID/lastRevision/409 冲突/403-超时非不存在）",
+    "unverified": "所选部署实例与原生 MCP 是否真实暴露这些参数未实测（本沙箱无 Outline 部署）——承接 P4_4（Outline 薄适配）与部署验证波次"
+  },
+  "unverified": [
+    {
+      "item": "upstream.lock.json 登记 + master 侧 7 处 pin 再 repin（含 mode-qualification、1_3/1_4/1_5/1_6/2_1/3_1 等对 9b95a0ff 的 pin）",
+      "reason": "brief 明确禁止本任务改 lock；fingerprint beab355d… 已交付",
+      "owner": "集成波次"
+    },
+    {
+      "item": "集成过渡期 delivery-cases 全目录中 4_6.mjs 的 9 个失败",
+      "reason": "默认 lock 尚未登记 0003（同 P2_4 先例的 lock-stage 现象，但本次归属集成波次）",
+      "owner": "集成波次（登记后即转绿）"
+    },
+    {
+      "item": "Outline 实际部署/MCP 参数暴露实测",
+      "reason": "沙箱无部署；spec 级声明已登记于 outline-public-api-observation.json",
+      "owner": "P4_4 / 部署验证波次"
+    },
+    {
+      "item": "真实跨机 H09（第二物理宿主）",
+      "reason": "以复制 workspace + 异 authority 环境模拟；固定受管 Runner 的真实隔离属 RunnerInfra",
+      "owner": "RunnerInfra/受保护 Runner 任务"
+    },
+    {
+      "item": "authority 的对抗性防伪造（同 OS 账户改写绑定文件/环境）",
+      "reason": "与 P2_2/P2_4 同一边界立场：协作级检查（protected-run-file + 环境配置校验），不宣称对抗不可绕过",
+      "owner": "RunnerInfra/受保护 Runner 任务"
+    }
+  ],
+  "files_changed": [
+    "integrations/comet/patches/0003-post-archive-closeout.patch (new, 8 upstream files, ~1014 行)",
+    "integrations/comet/patches/tests/4_6.patch (new: comet-scripts.test.ts post-archive closeout 块, 5 tests)",
+    "test/delivery-cases/4_6.mjs (new, 10 tests, H01–H09 正负例)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6.json (本提交) + worker-reports/P4_6/evidence/ (red-4_6-mjs-f2.log, green-4_6-mjs.log, green-npm-test-full.log, green-delivery-cases-all-default-lock.log, green-v-comet-native.json, green-v-comet-native.log)"
+  ],
+  "commits": {
+    "patch": "(本提交) feat(p4_6): post-archive closeout runtime — same-run discovery/selection, atomic job-key claim, fixed document UUID + lastRevision ledger, waiting completion, authority binding (0003)",
+    "tests": "(下一提交) test(p4_6): H01–H09 over the real 0003 CLI — RED 9/1 against 9b95a0ff, GREEN 10/10 against beab355d",
+    "report": "(最后提交) chore(p4_6): worker report P4_6 — coverage matrix, RED/GREEN evidence, full regression green"
+  },
+  "blockers_or_questions": [
+    "无实现阻塞。集成波次动作一项：upstream.lock.json 按 staged 顺序登记 0003-post-archive-closeout.patch 与 tests/4_6.patch（sha256 = 已提交文件内容摘要），随后按既有流程 repin master 侧 7 处 pin 至 beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966。",
+    "设计裁决记录：(1) 构建/验证经由 build.mjs --lock 传参完成，未触碰 upstream.lock.json（brief 边界覆盖 P1_6/P2_4 的'patch 提交随登记 lock'先例）；(2) H05 的'不盲覆盖'落为三条 Comet 侧不变量——链上冲突未解拒新修订、重试不可漂移 baseRevision、文档 UUID 单一属主——HTTP 层 409 语义仍由薄适配在部署侧证实；(3) waiting 作为 closeout-parked 状态（design doc §1 预案），reconcile 与 archive 两处一致；(4) knowledge-closeout 外部目标在 P2_4 的 K-dispatch 前提上追加'已登记操作 + readback 匹配'前提（保持 D06 的 /K dispatch/ 拒因顺序不变，2_4.mjs 全部断言不受影响）。"
+  ]
+}
