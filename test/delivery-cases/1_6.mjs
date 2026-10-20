@@ -154,7 +154,9 @@ test('Ponytail supplement: snapshot fixed from the plugin cache and registration
 });
 
 test('patches are sha256-pinned in the source lock and scoped to their declared files', async () => {
-  assert.ok(Array.isArray(lock.patches) && lock.patches.length === 2);
+  // lock revision: 4 patches @ 9b95a0ff (P2_4 0002 + tests/2_4); the two
+  // entries below still pin 0001/tests-1_6 scoping at their indexes
+  assert.ok(Array.isArray(lock.patches) && lock.patches.length === 4);
   const expected = [
     { path: 'integrations/comet/patches/0001-matt-method-profile.patch', file: 'app/commands/init.ts' },
     { path: 'integrations/comet/patches/tests/1_6.patch', file: 'test/app/init-e2e.test.ts' },

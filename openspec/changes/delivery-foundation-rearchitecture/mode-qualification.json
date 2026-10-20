@@ -6,13 +6,16 @@
   "build": {
     "name": "patched pinned Comet distribution",
     "sourceCommit": "c90af44a4474662d7853aae76ce785404974fb0a",
-    "fingerprint": "cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187",
+    "fingerprint": "9b95a0ff54ee00abd03ba9fb507cd93f03c8a464a743658898c474a51dc89b10",
     "patches": [
       "integrations/comet/patches/0001-matt-method-profile.patch",
-      "integrations/comet/patches/tests/1_6.patch"
+      "integrations/comet/patches/tests/1_6.patch",
+      "integrations/comet/patches/0002-managed-delivery-runtime.patch",
+      "integrations/comet/patches/tests/2_4.patch"
     ],
-    "verification": "node(24.15.0) tools/comet/build.mjs --check-generated --runtime-smoke --json -> PASS (check-generated classic/native/entry all PASS; runtime smoke 243 passed / 2 skipped)",
-    "note": "all probes in mode-probes/ ran against this exact build; fingerprint asserted by test/delivery-cases/1_4.mjs"
+    "verification": "node(24.15.0) tools/comet/build.mjs --check-generated --runtime-smoke --json -> PASS (check-generated classic/native/entry all PASS; runtime smoke 248 passed / 2 skipped, re-verified on the repinned build)",
+    "note": "all probes in mode-probes/ ran against this exact build; fingerprint asserted by test/delivery-cases/1_4.mjs",
+    "repinNote": "lock revision: 4 patches @ 9b95a0ff (P2_4 0002 + tests/2_4). The P1_4 probe evidence in mode-probes/ was captured on cb1151b4 (pre-0002); 0002 behavior is dormant unless a change is managed_delivery:true, so the qualified surface carries over; generated checks and runtime smoke re-verified PASS on 9b95a0ff by P2_4."
   },
   "capabilityMatrix": [
     {

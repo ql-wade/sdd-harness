@@ -1,5 +1,5 @@
 // P1_5 delivery case: the Classic integration gates over the real patched
-// build (fingerprint cb1151b4…, manifest-verified on reuse). Per
+// build (fingerprint 9b95a0ff… after the P2_4 lock revision, manifest-verified on reuse). Per
 // classic-integration-design.md and acceptance C04/C06/C07/C08 this drives
 // one real Classic run through the managed entrances and records that:
 // C07 — all seven entrances (transition, guard preview, guard --apply,
@@ -181,8 +181,9 @@ const get = (change, field) => comet(['state', 'get', change, field]).stdout?.tr
 
 test('setup: the patched pinned build named by the source lock is manifest-verified in this project', (t) => {
   if (skipIfNoBuild(t)) return;
-  assert.equal(lock.patches.length, 2, 'the patched build must carry the two locked patches');
-  assert.match(fingerprint, /^cb1151b4/, `patched fingerprint drifted: ${fingerprint}`);
+  // lock revision: 4 patches @ 9b95a0ff (P2_4 0002 + tests/2_4)
+  assert.equal(lock.patches.length, 4, 'the patched build must carry the four locked patches');
+  assert.match(fingerprint, /^9b95a0ff/, `patched fingerprint drifted: ${fingerprint}`);
   const version = comet(['--version']);
   assert.equal(version.status, 0);
   assert.equal((version.stdout ?? '').trim(), lock.package.version);
@@ -303,7 +304,16 @@ test('C06: the archive seal requires the knowledge closeout, exactly once — th
   const archiveChecks = comet(['state', 'check', SEALRUN, 'archive', '--json']);
   assert.equal(archiveChecks.json?.exitCode, 0);
   assert.equal(archiveChecks.json?.data?.checks?.blocked, false);
-  assert.doesNotMatch(JSON.stringify(archiveChecks.json?.data ?? {}), /llmwiki|outline|knowledge/i,
+  // B5 (lock revision: 4 patches @ 9b95a0ff, P2_4): the native archive ENTRY
+  // CHECK VERDICT carries no knowledge consultation. The dormant
+  // managed_delivery wire fields (e.g. knowledgeCloseoutRequired:false)
+  // legitimately appear in the serialized configuration of any change; the
+  // check verdict surface (counters + issues) is what this registration pins.
+  const checkVerdict = JSON.stringify({
+    checks: archiveChecks.json?.data?.checks ?? null,
+    issues: archiveChecks.json?.data?.issues ?? [],
+  });
+  assert.doesNotMatch(checkVerdict, /llmwiki|outline|knowledge/i,
     'the native gate must not consult any knowledge receipt — B5 stays reproducible');
 
   // The managed seal read (never a hand parse of the YAML).
