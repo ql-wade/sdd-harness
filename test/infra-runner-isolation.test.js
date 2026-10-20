@@ -462,6 +462,44 @@ test('RED secret tier gate: ordinary roles cannot reach publisher/isolator-tier 
   );
 });
 
+test('RED method-state gate: shared mode state never becomes identity/permission basis, never enters worker-writable surfaces', () => {
+  const noScope = makeFixtureDir(({ json, writeJson }) => {
+    const policy = json('role-policy.json');
+    delete policy.methodStateScope;
+    writeJson('role-policy.json', policy);
+  });
+  const noScopeRun = runCli(['validate', '--registry', registryPath, '--dir', noScope, '--json']);
+  assert.equal(noScopeRun.status, 2, 'role-policy without a method-state scope declaration must be rejected');
+  assert.ok(codes(parseJsonOut(noScopeRun, 'validate')).includes('METHOD_STATE_SCOPE_MISSING'), JSON.stringify(noScopeRun.stdout));
+
+  const asBasis = makeFixtureDir(({ json, writeJson }) => {
+    const policy = json('role-policy.json');
+    policy.methodStateScope.identityBasis = true;
+    writeJson('role-policy.json', policy);
+  });
+  const asBasisRun = runCli(['validate', '--registry', registryPath, '--dir', asBasis, '--json']);
+  assert.equal(asBasisRun.status, 2, 'using shared mode state as identity basis must be rejected');
+  assert.ok(codes(parseJsonOut(asBasisRun, 'validate')).includes('METHOD_STATE_AS_BASIS_FORBIDDEN'), JSON.stringify(asBasisRun.stdout));
+
+  const noDispatch = makeFixtureDir(({ json, writeJson }) => {
+    const policy = json('role-policy.json');
+    delete policy.methodStateScope.dispatchRecord.fields;
+    writeJson('role-policy.json', policy);
+  });
+  const noDispatchRun = runCli(['validate', '--registry', registryPath, '--dir', noDispatch, '--json']);
+  assert.equal(noDispatchRun.status, 2, 'dispatch record without the three separate fields must be rejected');
+  assert.ok(codes(parseJsonOut(noDispatchRun, 'validate')).includes('DISPATCH_RECORD_SCHEMA_INCOMPLETE'), JSON.stringify(noDispatchRun.stdout));
+
+  const modeWritable = makeFixtureDir(({ json, writeJson }) => {
+    const mounts = json('workspace-mounts.json');
+    mounts.methodState.workerWritable = true;
+    writeJson('workspace-mounts.json', mounts);
+  });
+  const modeRun = runCli(['validate', '--registry', registryPath, '--dir', modeWritable, '--json']);
+  assert.equal(modeRun.status, 2, 'mode files in a worker-writable surface must be rejected');
+  assert.ok(codes(parseJsonOut(modeRun, 'validate')).includes('MODE_FILE_WORKER_WRITABLE_FORBIDDEN'), JSON.stringify(modeRun.stdout));
+});
+
 test('probes and stop are real subcommands: without a runner runtime they exit 2 with structured UNVERIFIED, never mock-green, never skip', () => {
   for (const probeCase of ['role-denial', 'duplicate-authority']) {
     const result = runCli(['probe', '--case', probeCase, '--dir', runnerDir, '--json']);
@@ -541,6 +579,24 @@ test('RoleBoundary.v1 / Authority.v1 contract holds on committed files; refs are
   }
   assert.equal(mounts.rules.hostBindMounts, 'FORBIDDEN');
   assert.equal(mounts.rules.dockerSocket, 'FORBIDDEN');
+
+  // 方法状态作用域（V_I02_METHOD_STATE_SCOPE，§6/§7.4）：声明、边界与派发记录字段在 committed 文件中如实固定。
+  assert.equal(policy.methodStateScope.declaration, 'METHOD_STATE_SHARED_DECLARED');
+  assert.equal(policy.methodStateScope.model, 'cooperative-local');
+  assert.equal(policy.methodStateScope.identityBasis, false, 'shared mode state is never an identity basis');
+  assert.equal(policy.methodStateScope.permissionBasis, false, 'shared mode state is never a permission basis');
+  assert.equal(policy.methodStateScope.completionBasis, false, 'shared mode state is never a completion basis');
+  assert.equal(policy.methodStateScope.modeFilesInWorkerWritableSurface, 'FORBIDDEN');
+  for (const nonEvidence of ['hook exit 0', 'mode badge', 'codebase map']) {
+    assert.ok(policy.methodStateScope.nonEvidence.includes(nonEvidence), `non-evidence register must include ${nonEvidence}`);
+  }
+  assert.equal(policy.methodStateScope.dispatchRecord.status, 'UNVERIFIED', 'dispatch records stay UNVERIFIED until a real dispatch fills them');
+  for (const field of ['actualAssetDigest', 'effectiveLevel', 'injectionObservation']) {
+    assert.ok(policy.methodStateScope.dispatchRecord.fields[field], `dispatch record must declare ${field} as a separate field`);
+  }
+  assert.equal(mounts.methodState.workerWritable, false, 'shared mode files are never worker-writable');
+  assert.equal(mounts.methodState.mountedIntoRunner, false, 'shared mode files are never mounted into the runner');
+  assert.equal(mounts.methodState.identityOrPermissionBasis, false);
 
   // Authority.v1：唯一 authority+workspace、REFUSE 策略在位、登记为空（无真实 Runner）。
   const authority = readDomainJson('authority-registration.example.json');
