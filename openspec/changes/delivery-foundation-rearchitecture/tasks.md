@@ -165,14 +165,14 @@
 **Parallel safe:** false
 **Acceptance IDs:** F05, F07, A09
 
-- [ ] **Step 1 [5 min]: Test** 1.3.a 验证固定 Runner 与 Run 绑定：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：确定 authority/workspace/execution 真实接口，写 driver 能写、只读 driver 不能冒充实现；Runner 不另存 phase。
-- [ ] **Step 2 [5 min]: Implement** 1.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 1.3.b 逐渠道实证写入约束：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：编辑、Shell、MCP 分别尝试越阶段写入；记录已拒绝或能力缺口，不能仅测一条渠道。
-- [ ] **Step 4 [5 min]: Implement** 1.3.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Test** 1.3.c 确认 Spec 与验证的唯一 owner：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：一次验证执行和一次规格收尾；拒绝重复 controller/重复归档，不支持即 NO-GO。
-- [ ] **Step 6 [5 min]: Implement** 1.3.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 1.3.a 验证固定 Runner 与 Run 绑定：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：确定 authority/workspace/execution 真实接口，写 driver 能写、只读 driver 不能冒充实现；Runner 不另存 phase。
+- [x] **Step 2 [5 min]: Implement** 1.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 1.3.b 逐渠道实证写入约束：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：编辑、Shell、MCP 分别尝试越阶段写入；记录已拒绝或能力缺口，不能仅测一条渠道。
+- [x] **Step 4 [5 min]: Implement** 1.3.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Test** 1.3.c 确认 Spec 与验证的唯一 owner：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：一次验证执行和一次规格收尾；拒绝重复 controller/重复归档，不支持即 NO-GO。
+- [x] **Step 6 [5 min]: Implement** 1.3.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P1_4: 原任务 1.4 — 基于固定 Comet 发行包比较 Classic/Native；验证无关成功命令、漏必需检查、旧/手工回执、普通执行可达的跳过/运维逃生路径均不能放行受管交付；确认内置项目记忆与 LLMWiki/Outline 唯一知识源不冲突。所需扩展先评审，不以提示词充当不可绕过性。证据范围参见 comet-single-controller-review.md。
 
