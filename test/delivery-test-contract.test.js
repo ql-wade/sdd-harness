@@ -145,7 +145,7 @@ const FIXTURES = {
 };
 
 test('the eight frozen delivery contracts are registered at v1', () => {
-  assert.deepEqual(Object.keys(CONTRACTS).sort(), FROZEN_CONTRACTS);
+  assert.deepEqual(Object.keys(CONTRACTS).sort(), [...FROZEN_CONTRACTS].sort());
   for (const name of FROZEN_CONTRACTS) {
     assert.equal(CONTRACTS[name].contract.version, 1, `${name} must be frozen at v1`);
     assert.equal(typeof CONTRACTS[name].validate, 'function');

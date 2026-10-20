@@ -68,7 +68,12 @@ const TEST_CONTRACT = {
 };
 
 function runNodeTest(root, target) {
-  return spawnSync(process.execPath, ['--test', target], { cwd: root, encoding: 'utf8', timeout: 60000 });
+  // Inside a node --test child, NODE_TEST_CONTEXT=child-v8 makes a nested
+  // node --test skip running files entirely (exit 0, no TAP output). Strip it
+  // so the spawned run is a real top-level execution.
+  const env = { ...process.env };
+  delete env.NODE_TEST_CONTEXT;
+  return spawnSync(process.execPath, ['--test', target], { cwd: root, encoding: 'utf8', timeout: 60000, env });
 }
 
 test('V_A01: implementation dispatch without product/design/usecase baselines is refused with the missing list', () => {

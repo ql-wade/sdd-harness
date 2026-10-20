@@ -48,7 +48,7 @@ test('full-input baseline binds code, tests, lockfiles, migrations, deploy confi
   const baseline = computeFullInputBaseline({ root, manifest: DEMO_MANIFEST });
   assert.equal(baseline.ok, true);
   assert.match(baseline.digest, /^[a-f0-9]{64}$/);
-  assert.equal(baseline.files.length, 6);
+  assert.equal(baseline.files.length, 7);
   const paths = baseline.files.map((f) => f.path);
   for (const nonJs of ['src/Main.java', 'service.py', 'migrations/001_init.sql', 'deploy/app.yaml', 'package-lock.json']) {
     assert.ok(paths.includes(nonJs), `full-input baseline must include ${nonJs}`);
@@ -91,7 +91,7 @@ test('missing declared lockfile is an explicit scope error, never a silent pass 
   });
   assert.equal(baseline.ok, false);
   assert.equal(baseline.error, 'MISSING_INPUT');
-  assert.deepEqual(baseline.missing, ['deploy/app.yaml', 'migrations/001_init.sql', 'package-lock.json', 'src/Main.java', 'service.py', 'test/app.test.js']);
+  assert.deepEqual(baseline.missing, ['deploy/app.yaml', 'migrations/001_init.sql', 'package-lock.json', 'service.py', 'src/Main.java', 'test/app.test.js']);
   assert.match(baseline.reason, /package-lock\.json/);
 });
 
