@@ -67,6 +67,37 @@ with tarfile.open(archive, 'r:gz') as source:
     source.extractall(destination, members=members, filter='data')
 `;
 
+// Verifies an already-prepared pristine source against its recorded v2
+// provenance without needing the archive: provenance identity, manifest
+// equality and on-disk reality must all agree.
+export async function verifyPreparedSource({ projectRoot, lock }) {
+  if (!/^[a-f0-9]{40}$/.test(lock?.source?.commit ?? '')) {
+    reject('LOCK_INVALID', 'A fixed Comet source commit is required');
+  }
+  const root = await fs.realpath(projectRoot);
+  const target = await managedParent(root, lock.source.commit);
+  let provenance;
+  try {
+    provenance = JSON.parse(await fs.readFile(path.join(target, 'provenance.json'), 'utf8'));
+  } catch (error) {
+    if (error.code === 'ENOENT') reject('SOURCE_NOT_PREPARED', 'Comet pristine source has not been prepared in this project');
+    throw error;
+  }
+  if (provenance.schemaVersion !== 2 || provenance.commit !== lock.source.commit
+      || provenance.archiveSha256 !== lock.source.sha256
+      || provenance.package?.name !== lock.package.name
+      || provenance.package?.version !== lock.package.version) {
+    reject('SOURCE_BASELINE_DRIFT', 'Prepared Comet source provenance does not match the fixed source lock');
+  }
+  const actual = await sourceManifest(path.join(target, 'pristine'));
+  const sameFiles = (a, b) => a && b && Object.keys(a).length === Object.keys(b).length
+    && Object.keys(a).every((name) => JSON.stringify(a[name]) === JSON.stringify(b[name]));
+  if (!sameFiles(actual, provenance.files)) {
+    reject('SOURCE_BASELINE_DRIFT', 'Comet pristine source differs from its recorded provenance');
+  }
+  return { sourceDir: path.join(target, 'pristine'), provenancePath: path.join(target, 'provenance.json') };
+}
+
 export async function prepareCometSource({ projectRoot, lock, archivePath }) {
   if (lock?.schemaVersion !== 1
       || lock.package?.name !== '@rpamis/comet'
