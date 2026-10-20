@@ -181,6 +181,12 @@
       "source": "I02 implementer finding via coordinator",
       "finding": "catalog mirrored the I01+I03 lists but missed the frozen plan's I02 refs worker-author-api, worker-review-api and runner-source-read (runner-authority was already registered)",
       "fix": "registered the three refs in infra/delivery/secrets.refs.example.json with the same semantics as sibling runner-*/worker-* refs: purpose-bound, NOT_PROVISIONED, no value; author/reviewer API credentials bound per-worker (never shared with controller identities), runner-source-read bound to the controller runner; inserted in the plan's I02 ordering. No unplanned refs added (publisher/isolator dedicated credentials remain the I02 implementer's OPEN_DECISION). Baseline refreshed via git merge --no-ff master before verification. Test expected list extended 13 -> 16 (I01+I02+I03 freeze list)."
+    },
+    {
+      "date": "2026-10-20",
+      "source": "I05 implementer finding via coordinator",
+      "finding": "catalog missed the frozen plan's I05 refs codewiki-source-read and codegraph-source-read (codewiki-provider was already registered)",
+      "fix": "registered both in infra/delivery/secrets.refs.example.json with sibling semantics: purpose-bound, NOT_PROVISIONED, no value, bound to the service principals of the respective code knowledge components, inserted in the plan's I05 ordering (codewiki-source-read, codewiki-provider, codegraph-source-read); source read explicitly does not imply outbound publish rights. No unplanned refs added. Baseline refreshed via git merge --no-ff master before verification. Test expected ref list extended 16 -> 18 (I01+I02+I03+I05 freeze list)."
     }
   ]
 }
