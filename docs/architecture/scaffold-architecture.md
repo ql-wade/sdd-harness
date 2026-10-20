@@ -3,6 +3,8 @@
 > 状态：权威（v2 定位）。本文是仓库重构的实施依据。
 > 前身：SDD Harness 9-stage 工作流（2026-09-04 必要性审计移除其文档，历史见 git log 与 ADR-0015/0017）。
 
+> 2026-10-19 迁移入口：[交付架构设计](delivery-architecture.md) 与 [ADR-0019 提案](adr/0019-delivery-foundation.md)。本文描述当前 scaffold；目标 profile 尚未实现，ADR-0015 的现行约束仍适用。
+
 ## 0. 定位
 
 **本仓库 = 团队 AI coding 项目的 scaffold（脚手架）。** 团队新建或改造项目时，以本仓库为模板：获得统一的规则入口、协作方法（skills）、约束与触发（hooks）、MCP 能力、变更工件约定和最小验证体系。

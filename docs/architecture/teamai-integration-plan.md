@@ -4,6 +4,8 @@
 > 调研对象：[Tencent/teamai-cli](https://github.com/Tencent/teamai-cli) v0.22.0（MIT，npm 公发，纯 JS 无原生编译）。
 > 本文与 ADR-0018 草案配套；事实来源：上游 README/usage-guide/架构文档/源码结构（zread 交叉核对）。
 
+> 2026-10-19：本文保留原分发层提案与 P0 组合幂等准入；新的 workflow 候选、完整资产冻结和单一调度所有权统一见 [delivery-architecture.md](delivery-architecture.md)。旧文包名/version 与源码能力须在新 Batch 1 重新核对实际产物，不视为已安装或已认证。
+
 ## 1. 调研结论
 
 ### 1.1 它是什么

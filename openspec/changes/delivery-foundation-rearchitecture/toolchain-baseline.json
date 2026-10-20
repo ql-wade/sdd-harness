@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "status": "PROBED_NOT_QUALIFIED",
+  "comet": {
+    "version": "0.4.5",
+    "gitHead": "c90af44a4474662d7853aae76ce785404974fb0a",
+    "integrity": "sha512-zUs13Rq6Lk1mDgKGk/K3kbdiRLqv1j0DSw9oswwljIrVPiJ+NvfTYlKp2eLpIaIAzMA34RDx6KpenFC39qbR3A==",
+    "integrityVerified": true,
+    "source_url": "https://codeload.github.com/rpamis/comet/tar.gz/c90af44a4474662d7853aae76ce785404974fb0a",
+    "source_archive_sha256": "28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f",
+    "source_archive_bytes": 40474019,
+    "source_package_sha256": "34885620dcf7ff0536638f8fa80dcfa07b1603183d5b303d1bcdaf1a093ce7f0",
+    "source_lock_sha256": "9f7f32604f9370b8aa1fa94499a7567e2235b22b4dbe9a3f4107e3ddffd81cc3",
+    "required_node": "^22.16.0 || >=24.0.0",
+    "package_manager": "pnpm@10.18.3",
+    "scripts": {
+      "build": "node build.js",
+      "check:generated": "node scripts/build/build-classic-runtime.mjs --check && node scripts/build/build-native-runtime.mjs --check && node scripts/build/build-entry-runtime.mjs --check",
+      "test": "vitest run",
+      "test:openspec-upstream": "node test/helpers/openspec-upstream.mjs",
+      "test:runtime-smoke": "vitest run test/domains/comet-classic/comet-scripts.test.ts test/repository/native-runtime-assets.test.ts test/repository/comet-entry-runtime-assets.test.ts test/app/cli-smoke.test.ts",
+      "test:package-e2e": "node scripts/release/package-e2e.mjs"
+    },
+    "observed_build": {
+      "status": "PASS",
+      "node": "24.15.0",
+      "package_manager": "10.18.3",
+      "install_flags": [
+        "--frozen-lockfile",
+        "--ignore-scripts"
+      ],
+      "command": "node build.js",
+      "log": ".local/delivery-foundation-baseline/comet-build.log"
+    },
+    "generated_check": {
+      "status": "PASS",
+      "families": [
+        "classic",
+        "native",
+        "entry"
+      ],
+      "log": ".local/delivery-foundation-baseline/comet-generated-check.log"
+    },
+    "runtime_smoke": {
+      "status": "PASS_WITH_SKIPS",
+      "files_passed": 4,
+      "tests_passed": 243,
+      "tests_skipped": 2,
+      "log": ".local/delivery-foundation-baseline/comet-runtime-smoke.log",
+      "scope": "unmodified upstream only; not managed delivery qualification"
+    }
+  },
+  "openspec": {
+    "current": "1.3.1",
+    "current_dependency_edges": "INCOMPATIBLE",
+    "isolated_candidate": "1.11.0",
+    "candidate_basis": "exact upstream test/helpers/openspec-upstream.mjs",
+    "candidate_runtime_verified": true,
+    "candidate_runtime_scope": "upstream classic-openspec-upstream.test.ts 1/1 PASS with installed 1.11.0; not full target workflow",
+    "candidate_log": ".local/delivery-foundation-baseline/comet-openspec-111.log"
+  },
+  "build_runtime_candidate": "Node 24.15.0, available locally; not yet executed upstream suite",
+  "extension_delivery_proposal": {
+    "lock": "integrations/comet/upstream.lock.json",
+    "source_patches": "integrations/comet/patches",
+    "prepare_tool": "tools/comet/prepare-source.mjs",
+    "build_tool": "tools/comet/build.mjs",
+    "workspace": ".sdd/vendor/comet/<commit>",
+    "status": "source distribution contract selected after architecture approval; implementation and safety tests in progress"
+  },
+  "runtime_claims": []
+}

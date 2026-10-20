@@ -1,5 +1,7 @@
 # AI Coding Scaffold
 
+> 交付架构迁移设计已进入仓库：[新架构](docs/architecture/delivery-architecture.md) · [ADR-0019 提案](docs/architecture/adr/0019-delivery-foundation.md) · [分批实施与验收](openspec/changes/delivery-foundation-rearchitecture/tasks.md)。目标为 Foundation（TeamAI 仅分发）+ Comet 唯一主控候选 + 检查器 + CI/CD；当前运行仍为下述 scaffold，新增能力尚未实现。
+
 团队 AI coding 项目的脚手架：**统一规则入口 + 方法论技能 + hooks 控制平面 + MCP 能力清单 + 验证工具**。
 
 不规定工作流——阶段划分、任务编排、模型选择由执行 agent 和团队自定。scaffold 只提供设施和方法论（[ADR-0015](docs/architecture/adr/0015-scaffold-repositioning.md)）。

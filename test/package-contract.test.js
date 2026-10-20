@@ -12,6 +12,6 @@ test('published package includes probe runtime modules', () => {
   assert.ok(pkg.files.includes('lib'));
 });
 
-test('package exposes the regression suite through npm test', () => {
-  assert.equal(pkg.scripts?.test, 'node --test');
+test('package exposes executable regressions without running browser source fixtures', () => {
+  assert.equal(pkg.scripts?.test, 'node --test test/*.test.js');
 });

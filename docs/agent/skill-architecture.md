@@ -2,6 +2,8 @@
 
 > **状态**：权威（Coding Agent 协作层）。Agent 指开发执行器（Claude Code、Codex、Cursor 等），不是项目业务中的运行时 Agent。
 
+> 迁移目标见 [交付架构](../architecture/delivery-architecture.md)：Planner 只计划，test-authoring 编写测试，Whitebox 独立验收，运行机制由后端/适配器承担。本页及 vendored 快照仍描述现有版本；新边界须经显式升级与兼容验证后启用，不能将目标接口视作当前技能能力。
+
 ## 1. 目标与边界
 
 本仓库把可复用的开发方法 vendored 进仓库（`.agents/skills/`），帮助开发者和 Coding Agent 完成理解、计划、实现、审查和验证。技能是**方法论**，不规定工作流；阶段划分、任务编排、模型选择由执行 agent 和团队自定。

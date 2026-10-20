@@ -1,0 +1,3139 @@
+{
+  "schema_version": 2,
+  "final_verification_task": "VERIFY",
+  "verification": {
+    "skill": "whitebox-verify",
+    "mode": "Journey"
+  },
+  "runtime": {
+    "agent": "user-selected receiving Agent",
+    "parallel_backend": "serial",
+    "max_workers": 1,
+    "isolation": "serial",
+    "capability_evidence": [
+      "Planning-only: no implementation worker dispatched. Receiving host must discover capabilities and bind one migration controller.",
+      "Comet source/build observations in toolchain-baseline.json are historical scoped evidence, not managed runtime acceptance.",
+      "Parallel write isolation not qualified; conservative serial profile."
+    ],
+    "migration_executor": "UNBOUND until user handoff",
+    "target_runtime": "Comet Classic sole runtime controller"
+  },
+  "goal": {
+    "objective": "原30父任务和69工作包按原92场景实现、独立端到端验证并交付报告；未启用团队能力不冒充已认证，未满足required场景不关闭整体目标。",
+    "native_option": "auto",
+    "activation": "on-execution",
+    "completion_acceptance_ids": [
+      "A01",
+      "A02",
+      "A03",
+      "A04",
+      "A05",
+      "A06",
+      "A07",
+      "A08",
+      "A09",
+      "A10",
+      "A11",
+      "A12",
+      "A13",
+      "A14",
+      "A15",
+      "A16",
+      "A17",
+      "A18",
+      "A19",
+      "A20",
+      "B01",
+      "B02",
+      "B03",
+      "B04",
+      "B05",
+      "B06",
+      "B07",
+      "B08",
+      "B09",
+      "B10",
+      "C01",
+      "C02",
+      "C03",
+      "C04",
+      "C05",
+      "C06",
+      "C07",
+      "C08",
+      "D01",
+      "D02",
+      "D03",
+      "D04",
+      "D05",
+      "D06",
+      "D07",
+      "D08",
+      "E01",
+      "E02",
+      "E03",
+      "E04",
+      "E05",
+      "E06",
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "F05",
+      "F06",
+      "F07",
+      "F08",
+      "F09",
+      "F10",
+      "H01",
+      "H02",
+      "H03",
+      "H04",
+      "H05",
+      "H06",
+      "H07",
+      "H08",
+      "H09",
+      "L01",
+      "L02",
+      "L03",
+      "L04",
+      "L05",
+      "L06",
+      "L07",
+      "L08",
+      "L09",
+      "L10",
+      "L11",
+      "M01",
+      "M02",
+      "U01",
+      "U02",
+      "U03",
+      "U04",
+      "U05",
+      "U06",
+      "U07",
+      "U08"
+    ],
+    "reuse_existing": true,
+    "backend_observation": "Receiving executor must observe actual native goal; current chat goal is not portable",
+    "resume_api": "DISCOVER_ON_RECEIVING_HOST"
+  },
+  "monitor": {
+    "interval_minutes": 20,
+    "backend": "native",
+    "activation": "on-execution",
+    "timezone": "Asia/Shanghai",
+    "reuse_existing_name": "Only if receiving host verifies same authorized monitor; otherwise bind one host-native monitor at execution",
+    "notification_policy": "仅状态有实质变化、失败、完成、需用户动作时通知；保持既有用户授权监督，不新建重复监控",
+    "observed_state": "PAUSED_HANDOFF_PENDING"
+  },
+  "checks": [
+    {
+      "id": "V_A01",
+      "task_ids": [
+        "P0_1",
+        "P0_2",
+        "P2_1",
+        "P3_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A01"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A01 --json",
+      "expected": "- **GIVEN** 缺少产品、设计或用例基线\n- **WHEN** 请求实现派发\n- **THEN** 拒绝并列出缺项；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A02",
+      "task_ids": [
+        "P2_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A02"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A02 --json",
+      "expected": "- **GIVEN** 已有 AC 确认与下游回执\n- **WHEN** 修改 AC 或范围\n- **THEN** 失效相关下游适用性与旧批准；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A03",
+      "task_ids": [
+        "P2_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A03"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A03 --json",
+      "expected": "- **GIVEN** 测试文件新增但为空或全跳过\n- **WHEN** 申请验收\n- **THEN** 零有效执行不能通过；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A04",
+      "task_ids": [
+        "P2_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A04"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A04 --json",
+      "expected": "- **GIVEN** 测试失败原因是环境未启动\n- **WHEN** 申请行为 RED 记录\n- **THEN** 拒绝把环境故障作为有效行为 RED；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A05",
+      "task_ids": [
+        "P2_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A05"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A05 --json",
+      "expected": "- **GIVEN** Builder 自写 pass JSON\n- **WHEN** 申请可信证据准入\n- **THEN** 拒绝未登记来源并保留审计；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A06",
+      "task_ids": [
+        "P2_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A06"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A06 --json",
+      "expected": "- **GIVEN** Builder 和 Verifier execution 相同\n- **WHEN** 申请独立验收\n- **THEN** 身份检查拒绝；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A07",
+      "task_ids": [
+        "P2_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A07"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A07 --json",
+      "expected": "- **GIVEN** 旧报告已通过\n- **WHEN** 源码、测试、锁文件或迁移变化后复用\n- **THEN** 拒绝摘要不匹配的报告；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A08",
+      "task_ids": [
+        "P2_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A08"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A08 --json",
+      "expected": "- **GIVEN** 项目含 Java、Python 和部署配置\n- **WHEN** 相关文件变化\n- **THEN** 完整输入摘要变化或显式范围错误；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A09",
+      "task_ids": [
+        "P1_3",
+        "P5_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A09"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A09 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A09 --json",
+      "expected": "- **GIVEN** 宿主支持不同写入渠道\n- **WHEN** 通过编辑、Shell、MCP 尝试越阶段写入\n- **THEN** 逐渠道记录实际拒绝或能力缺口，不能把缺口记已拦截；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/1_3.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A10",
+      "task_ids": [
+        "P3_3",
+        "P5_1",
+        "P5_3",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A10"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A10 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A10 --json",
+      "expected": "- **GIVEN** 两个会话和旧租约执行者\n- **WHEN** 并发推进、重复派发及旧 epoch 回调\n- **THEN** 有效推进唯一、重复幂等、过期拒绝；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/3_3.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A11",
+      "task_ids": [
+        "P3_4",
+        "P3_3",
+        "P5_1",
+        "P5_3",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A11"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A11 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A11 --json",
+      "expected": "- **GIVEN** 派发、证据或归档进行中\n- **WHEN** 进程中断再恢复\n- **THEN** 从权威状态和外部读回续接，不重复副作用；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/3_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A12",
+      "task_ids": [
+        "P3_3",
+        "P5_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A12"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A12 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A12 --json",
+      "expected": "- **GIVEN** 子任务分别通过\n- **WHEN** 集成后父目标 Journey 失败\n- **THEN** 父任务阻断并对新候选重验；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/3_3.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A13",
+      "task_ids": [
+        "P4_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A13"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A13 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A13 --json",
+      "expected": "- **GIVEN** 旧 PR 检查已通过\n- **WHEN** PR head 或合并队列 SHA 变化\n- **THEN** 对精确新集成候选重验；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_1.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A14",
+      "task_ids": [
+        "P4_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A14"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A14 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A14 --json",
+      "expected": "- **GIVEN** 已验证一个构建 digest\n- **WHEN** 部署 tag 指向另一个 digest\n- **THEN** 拒绝提升并记录实际身份不符；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A15",
+      "task_ids": [
+        "P3_1",
+        "P3_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A15"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A15 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A15 --json",
+      "expected": "- **GIVEN** UI 显示保存成功\n- **WHEN** 独立检查持久化\n- **THEN** 未落盘则 Journey 失败；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/3_1.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A16",
+      "task_ids": [
+        "P4_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A16"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A16 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A16 --json",
+      "expected": "- **GIVEN** 部署请求超时但外部已成功\n- **WHEN** 恢复同一关联操作\n- **THEN** 查询后绑定原结果，不重复部署；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A17",
+      "task_ids": [
+        "P4_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A17"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A17 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A17 --json",
+      "expected": "- **GIVEN** 发布失败且有批准回滚方案\n- **WHEN** 执行回滚\n- **THEN** 读回回滚 digest、环境和关键业务终态；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A18",
+      "task_ids": [
+        "P2_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A18"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A18 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A18 --json",
+      "expected": "- **GIVEN** 工具未装、服务未启或必需观察能力缺失\n- **WHEN** 汇总验收\n- **THEN** 标记 blocked 或事前确认的不适用，不得伪造通过；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A19",
+      "task_ids": [
+        "P2_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A19"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A19 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A19 --json",
+      "expected": "- **GIVEN** 开发身份试图访问发布密钥或控制账本\n- **WHEN** 尝试绕过 Gate\n- **THEN** 受保护 Runner 或平台权限拒绝并审计；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_A20",
+      "task_ids": [
+        "P2_3",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A20"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario A20 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A20 --json",
+      "expected": "- **GIVEN** 正确性契约已冻结\n- **WHEN** 停用 CodeGraph/RTK 后执行\n- **THEN** 正确性协议仍可执行，优化收益单独评估；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_3.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_B01",
+      "task_ids": [
+        "P1_6",
+        "P3_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B01"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario B01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B01 --json",
+      "expected": "- **GIVEN** 用户只请求计划\n- **WHEN** 执行 planner\n- **THEN** 只输出 PlanBundle，不派发、监控或改运行状态；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/1_6.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_B02",
+      "task_ids": [
+        "P3_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B02"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario B02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B02 --json",
+      "expected": "- **GIVEN** 产品功能缺失\n- **WHEN** 测试作者发现行为 RED\n- **THEN** 保留 RED 并交 Builder，不擅改产品源码；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/3_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_B03",
+      "task_ids": [
+        "P2_2",
+        "P3_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B03"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario B03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B03 --json",
+      "expected": "- **GIVEN** 作者测试自检全绿\n- **WHEN** 导入结果\n- **THEN** 仅记 authoring 自检，不签独立验收；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_B04",
+      "task_ids": [
+        "P3_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B04"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario B04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B04 --json",
+      "expected": "- **GIVEN** Whitebox 发现弱 oracle 或缺 case\n- **WHEN** 记录缺口\n- **THEN** 返回测试作者，不偷偷改冻结测试；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/3_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_B05",
+      "task_ids": [
+        "P3_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B05"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario B05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B05 --json",
+      "expected": "- **GIVEN** Whitebox 发现产品缺陷\n- **WHEN** 修复并再次提交\n- **THEN** Builder 产生新候选后重新独立验收；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/3_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_B06",
+      "task_ids": [
+        "P2_2",
+        "P3_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B06"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario B06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B06 --json",
+      "expected": "- **GIVEN** 必验 console 缺失但 DOM/截图通过\n- **WHEN** 汇总结果\n- **THEN** 必验项未闭合，服务日志不能冒充 console；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_B07",
+      "task_ids": [
+        "P2_2",
+        "P3_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B07"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario B07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B07 --json",
+      "expected": "- **GIVEN** 旧 Journey/Slice 与新契约版本不兼容\n- **WHEN** 导入证据\n- **THEN** 明确拒绝或经审查迁移，不虚构字段；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_B08",
+      "task_ids": [
+        "P3_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B08"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario B08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B08 --json",
+      "expected": "- **GIVEN** 验收通过后主规格被另一 Change 修改\n- **WHEN** 执行 closeout\n- **THEN** 摘要冲突阻断并重新预演，保留旧场景；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/3_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_B09",
+      "task_ids": [
+        "P1_6",
+        "P1_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B09"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario B09 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B09 --json",
+      "expected": "- **GIVEN** 旧技能 controller 仍活跃\n- **WHEN** 新 runtime 尝试取得同一任务\n- **THEN** 拒绝第二写者，不重复派发、监控或归档；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_6.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_B10",
+      "task_ids": [
+        "P0_3",
+        "P2_3",
+        "P4_3",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B10"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario B10 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B10 --json",
+      "expected": "- **GIVEN** 只有 schema 和归档夹具通过\n- **WHEN** 生成交付报告\n- **THEN** 仅声明该层证据，不宣称真实产品闭环；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_3.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_C01",
+      "task_ids": [
+        "P1_5",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "C01"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario C01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C01 --json",
+      "expected": "- **GIVEN** 需求范围或 AC 尚未确认，或者存在影响业务结果的未决问题\n- **WHEN** 请求开始被当作正式决策的架构动作或推进需求阶段\n- **THEN** 缺少当前需求基线的 R 回执时被阻断，不以产物文件存在代替确认；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_C02",
+      "task_ids": [
+        "P1_5",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "C02"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario C02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C02 --json",
+      "expected": "- **GIVEN** 需求已确认，但架构、测试设计或计划任一前置门缺失或过期\n- **WHEN** 请求写产品源码或进入实施\n- **THEN** 同一 Runtime 拒绝推进，并指出应恢复的动作和失效输入；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_C03",
+      "task_ids": [
+        "P1_5",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "C03"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario C03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C03 --json",
+      "expected": "- **GIVEN** 测试作者提交结构合法的 design_only TestPack，但仍有未解决的预期结果或必验覆盖缺口\n- **WHEN** 请求测试设计门通过\n- **THEN** 不能将结构合法当作语义充分，保持阻断并返回测试作者；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_C04",
+      "task_ids": [
+        "P1_5",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "C04"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario C04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C04 --json",
+      "expected": "- **GIVEN** planner 产出 OpenSpec tasks/DAG，而 Classic 需要 plan 指针和任务映射\n- **WHEN** 导入计划并恢复执行\n- **THEN** tasks 保持唯一可写任务权威，Classic 视图引用同一任务与输入版本，不创建第二套任务勾选或启动第二 controller；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_C05",
+      "task_ids": [
+        "P1_5",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "C05"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario C05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C05 --json",
+      "expected": "- **GIVEN** Whitebox 报告来自测试作者或 Builder 的同一执行，或者候选/测试集已变化\n- **WHEN** 请求独立验收通过\n- **THEN** 身份或版本不符被拒绝，保留原报告但不得推进；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_C06",
+      "task_ids": [
+        "P1_5",
+        "P4_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "C06"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario C06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C06 --json",
+      "expected": "- **GIVEN** policy 要求更新项目或团队知识，但缺少有效授权、正确目标版本或独立读回\n- **WHEN** 请求对应收尾或最终完成\n- **THEN** 同一 Comet Run 保持未完成，恢复原知识动作，不用原生 remember 提示或本地成功声明代替外部知识证据；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_C07",
+      "task_ids": [
+        "P1_4",
+        "P1_5",
+        "P2_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "C07"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario C07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C07 --json",
+      "expected": "- **GIVEN** 某必需 gate 缺失、失败或失效\n- **WHEN** 分别从正常 Guard、直接 transition、源码写入、next/continuation 恢复或 archive 请求推进\n- **THEN** 所有受管入口执行同一前置规则，不能通过未覆盖的入口绕过门禁；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_C08",
+      "task_ids": [
+        "P1_5",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "C08"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario C08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C08 --json",
+      "expected": "- **GIVEN** 当前 OpenSpec CLI 响应缺少 Classic 要求的依赖字段或路径能力\n- **WHEN** 初始化或恢复 Classic 与 OpenSpec 的接入\n- **THEN** 明确拒绝兼容性，不猜测依赖、不全局自动升级；固定兼容版本后重新实证；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_D01",
+      "task_ids": [
+        "P2_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "D01"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario D01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D01 --json",
+      "expected": "- **GIVEN** 作者在工作区写入 passed 回执或伪填 reviewer execution，但没有匹配的 Runtime 独立派发记录\n- **WHEN** 请求架构或测试设计门通过\n- **THEN** Runtime 拒绝接纳，不能凭文件存在、角色标签或自报通过推进；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_D02",
+      "task_ids": [
+        "P2_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "D02"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario D02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D02 --json",
+      "expected": "- **GIVEN** 独立 A/T 审查已经开始\n- **WHEN** 输入设计或测试意图在结果返回前被修改\n- **THEN** 接纳时重新核对摘要，旧结果只能作为历史，不能覆盖或放行当前版本；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_D03",
+      "task_ids": [
+        "P2_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "D03"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario D03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D03 --json",
+      "expected": "- **GIVEN** 架构审查发现设计覆盖缺口，或测试设计审查发现弱 oracle\n- **WHEN** 接收结构化拒绝结果\n- **THEN** 同一 Run 分别返回架构作者或测试作者修复并独立重审，修复前不允许源码实施，不新建平行 controller；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_D04",
+      "task_ids": [
+        "P2_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "D04"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario D04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D04 --json",
+      "expected": "- **GIVEN** 当前 Change 的旧 A/T/P/V 回执有效且任务已勾选\n- **WHEN** 需求、AC 或正式设计发生修订，甚至未主动调用修订动作\n- **THEN** 下一次派发/受管写入/转换/恢复/完成前根据输入重算有效性，旧回执和旧勾选不能为新版本放行；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_D05",
+      "task_ids": [
+        "P2_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "D05"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario D05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D05 --json",
+      "expected": "- **GIVEN** R/A/T/P 的输入未变且仍适用于当前允许范围\n- **WHEN** Builder 修改实现或测试代码形成新候选\n- **THEN** 旧候选验收与相关知识结果不可复用；不会仅因正常实现写入循环撤销未变的需求与计划；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_D06",
+      "task_ids": [
+        "P2_4",
+        "P4_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "D06"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario D06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D06 --json",
+      "expected": "- **GIVEN** 知识发布请求超时，或者 Runtime 在远端成功后、本地回执接纳前中断\n- **WHEN** 恢复同一任务\n- **THEN** 先按原操作关联与目标版本独立读回，结果未知保持阻断，不盲目重复创建或发布；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_D07",
+      "task_ids": [
+        "P2_4",
+        "P4_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "D07"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario D07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D07 --json",
+      "expected": "- **GIVEN** OpenSpec 归档已成功，但本次 policy 要求的知识/平台回执仍缺失或过期\n- **WHEN** 调用 next、恢复入口或请求最终完成\n- **THEN** 不因 archived=true 返回 completed，指向同一 Run 中尚未满足的收尾义务；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_D08",
+      "task_ids": [
+        "P2_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "D08"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario D08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D08 --json",
+      "expected": "- **GIVEN** 对应 gate 的新结果已经产生\n- **WHEN** 在接纳回执、审计和阶段更新之间发生中断或并发修订\n- **THEN** 恢复后得到一致且可追溯的有效回执与允许动作，或明确 recovery-required 阻断，不展示无依据的通过；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_E01",
+      "task_ids": [
+        "P4_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "E01"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario E01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/E01 --json",
+      "expected": "- **GIVEN** 本次 policy 要求项目知识更新，产品验收已通过但 LLMWiki 的必要写入或独立读回失败\n- **WHEN** 请求规格归档\n- **THEN** 按所选关闭策略执行相应前置 gate，不得因产品测试通过就跳过必需知识义务；仍有效产品证据保留，不重复部署；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/4_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_E02",
+      "task_ids": [
+        "P4_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "E02"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario E02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/E02 --json",
+      "expected": "- **GIVEN** policy 允许先完成规格归档再发布团队知识，规格已归档而必需 Outline 授权/发布/读回尚未完成\n- **WHEN** 请求 next 或整体完成\n- **THEN** 不撤销成功归档，也不返回 completed；同一 Comet Run 指向原知识收尾动作并支持幂等恢复；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/4_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_E03",
+      "task_ids": [
+        "P0_4",
+        "P2_5",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "E03"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario E03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/E03 --json",
+      "expected": "- **GIVEN** 架构已形成，但 grill-me 的承重问题未闭合，或者共识出现拒绝、缺席、低分、blocker 或不完整票\n- **WHEN** 请求架构门通过\n- **THEN** 不因已加载技能或多数票同意而推进，按原任务质询/修改/重审或报告阻塞；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_5.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_E04",
+      "task_ids": [
+        "P0_4",
+        "P2_5",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "E04"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario E04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/E04 --json",
+      "expected": "- **GIVEN** 对设计旧摘要的共识票已产生\n- **WHEN** 设计或需求版本变化并请求接纳旧共识\n- **THEN** 旧票对新审查包无效且全部下游证据失效，必须冻结新 revision 重新评审，不修改旧票摘要；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/2_5.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_E05",
+      "task_ids": [
+        "P4_5",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "E05"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario E05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/E05 --json",
+      "expected": "- **GIVEN** Ponytail 方法 hook 缺失、静默失败或会话 mode 改变\n- **WHEN** Comet 的必需门禁仍缺失或失败\n- **THEN** Runtime 依然阻断，hook 不得自行通过、切阶段或后台派发业务流程；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/4_5.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_E06",
+      "task_ids": [
+        "P4_4",
+        "P4_5",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "E06"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario E06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/E06 --json",
+      "expected": "- **GIVEN** 恢复/压缩/子会话启动重复发生，或规格已归档而 Outline 发布曾超时\n- **WHEN** 读取下一动作并恢复处理\n- **THEN** hook 仅恢复方法上下文，Comet 绑定原审查/发布 operation；不重复派发评审、不重复创建知识页，不产生第二控制器；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/4_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_F01",
+      "task_ids": [
+        "P1_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "F01"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario F01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F01 --json",
+      "expected": "- **GIVEN** 干净成员工作区\n- **WHEN** 接入同一 Foundation release\n- **THEN** 实际工具版本、技能、契约、hooks/MCP 内容与清单一致；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_1.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_F02",
+      "task_ids": [
+        "P1_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "F02"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario F02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F02 --json",
+      "expected": "- **GIVEN** 已有用户配置\n- **WHEN** 正反序 bootstrap/init、重复 pull、升级和卸载\n- **THEN** 保留用户条目，不重复 Guard，配置可回退；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_F03",
+      "task_ids": [
+        "P1_1",
+        "P5_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "F03"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario F03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F03 --json",
+      "expected": "- **GIVEN** 安装资产完成\n- **WHEN** 新宿主会话开始真实任务\n- **THEN** 实际发现所需技能与工具，文件存在不足以通过；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_1.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_F04",
+      "task_ids": [
+        "P1_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "F04"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario F04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F04 --json",
+      "expected": "- **GIVEN** 已有冻结运行\n- **WHEN** pull 新资产后恢复旧 run\n- **THEN** 保持完整旧基线或显式迁移重验，不能静默换门禁；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_F05",
+      "task_ids": [
+        "P1_3",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "F05"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario F05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F05 --json",
+      "expected": "- **GIVEN** 需要写测试或产品文件\n- **WHEN** 选择只读 prompt driver\n- **THEN** 拒绝误用并使用经验证的受管写执行器；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/1_3.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_F06",
+      "task_ids": [
+        "P1_4",
+        "P4_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "F06"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario F06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F06 --json",
+      "expected": "- **GIVEN** workflow 步骤成功或被 skip\n- **WHEN** 必验项缺失、过期或失败\n- **THEN** Gate 和受保护 CI 实际阻断，workflow success 不代替交付；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/1_4.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_F07",
+      "task_ids": [
+        "P1_3",
+        "P3_3",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "F07"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario F07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F07 --json",
+      "expected": "- **GIVEN** Comet 子任务失联或回执重复乱序\n- **WHEN** 恢复单一主控及受管 Driver\n- **THEN** 核对 backend/attempt/关联 ID，不重复叶子派发；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/1_3.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_F08",
+      "task_ids": [
+        "P3_2",
+        "P5_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "F08"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario F08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F08 --json",
+      "expected": "- **GIVEN** 同次原生浏览器验收\n- **WHEN** 执行交互和收集证据\n- **THEN** 关联截图、请求和独立业务读回；缺能力保持未验证；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/3_2.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_F09",
+      "task_ids": [
+        "P4_1",
+        "P4_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "F09"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario F09 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F09 --json",
+      "expected": "- **GIVEN** 集成候选和制品已冻结\n- **WHEN** CI 验证并提升\n- **THEN** 精确 integration SHA 和同 digest 贯通验证/目标环境；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_1.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_F10",
+      "task_ids": [
+        "P5_2",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "F10"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario F10 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F10 --json",
+      "expected": "- **GIVEN** 启用团队 Control API\n- **WHEN** 测试跨项目访问、凭证撤销、恢复与 API 断联\n- **THEN** 隔离和恢复权限成立，断联不得用缓存绿灯发布；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/5_2.mjs",
+      "conditional_pre_enable": true,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_H01",
+      "task_ids": [
+        "P4_6",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "H01"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario H01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H01 --json",
+      "expected": "- **GIVEN** Change 已从 active 移到 archive，Git 交付完成但 Outline 必需义务 pending\n- **WHEN** 选择任务、执行 next 或恢复发现\n- **THEN** 找到原 run_id 并指向知识收尾，不因归档或 Git complete 排除任务，不重新执行规格归档；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_H02",
+      "task_ids": [
+        "P4_6",
+        "P4_5",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "H02"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario H02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H02 --json",
+      "expected": "- **GIVEN** SessionStart、compact、SubagentStart 等方法 hook 重复触发\n- **WHEN** 注入方法或读取当前允许动作\n- **THEN** hook 不领取执行权、不发起共识或知识写入，Comet 的必需 gate 与当前业务阶段不受 mode 变化影响；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_H03",
+      "task_ids": [
+        "P4_6",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "H03"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario H03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H03 --json",
+      "expected": "- **GIVEN** 两个会话共享同一权威 Run 并同时请求执行同一有效 job_key\n- **WHEN** 原子登记和领取执行\n- **THEN** 只有一个当前 owner/attempt 可启动，其余调用观察或恢复原 operation，不重复派发；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_H04",
+      "task_ids": [
+        "P4_6",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "H04"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario H04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H04 --json",
+      "expected": "- **GIVEN** 新 Outline 文档创建已成功，但响应或本地接纳回执丢失\n- **WHEN** 恢复原发布 operation\n- **THEN** 按首次请求前固定的目标 UUID 读回并核验，重试不生成新逻辑文档；403/超时不能当作不存在；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_H05",
+      "task_ids": [
+        "P4_6",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "H05"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario H05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H05 --json",
+      "expected": "- **GIVEN** Outline 目标 revision 在读取后被其他合法写者改变\n- **WHEN** 使用原 lastRevision 更新返回冲突\n- **THEN** 读回判断预期结果或保持冲突，不能刷新版本后盲目覆盖他人编辑；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_H06",
+      "task_ids": [
+        "P2_5",
+        "P4_6",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "H06"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario H06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H06 --json",
+      "expected": "- **GIVEN** 同一架构审查包的共识作业已派发，或其旧 attempt 结果晚到\n- **WHEN** 会话恢复、重复触发或设计已产生新 revision\n- **THEN** 相同 job_key 恢复原作业；过期输入/归属的结果不能完成新任务，改变制品的新评审保持独立 manifest；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/2_5.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_H07",
+      "task_ids": [
+        "P4_6",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "H07"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario H07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H07 --json",
+      "expected": "- **GIVEN** 规格归档成功而必需 Outline 发布或其他收尾仍未完成\n- **WHEN** 归档命令结束、恢复、输出状态或判断是否清除当前任务\n- **THEN** 状态、continuation、发现/选择和界面一致保留未完成，不因原生 completed/clear-current 路径丢失恢复入口；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_H08",
+      "task_ids": [
+        "P4_6",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "H08"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario H08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H08 --json",
+      "expected": "- **GIVEN** 运行记录、批准 payload 或原 operation 的唯一副本仍在待收尾工作区\n- **WHEN** 请求自动清理工作区\n- **THEN** 未证明完整状态迁移与恢复前阻断清理，不能删除原状态后创建空 Run 假装恢复；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_H09",
+      "task_ids": [
+        "P4_6",
+        "P5_3",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "H09"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario H09 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H09 --json",
+      "expected": "- **GIVEN** Run 已绑定原权威执行环境，另一机器持有复制的状态或不匹配 authority\n- **WHEN** 请求自动恢复/派发发布\n- **THEN** 不能独立开第二写者；回原权威环境或执行经确认且可验证的归属迁移，不以普通会话标签绕过；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_L01",
+      "task_ids": [
+        "P4_8",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "L01"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario L01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L01 --json",
+      "expected": "- **GIVEN** 已发布知识存在 source→派生条目的完整关联，可信事件表明源权限缩小或目标受众扩大\n- **WHEN** Comet 接纳并核对事件\n- **THEN** 受影响当前权限/消费回执与在途接纳失效，受管读取/发布暂停，按影响闭包安排维护；未核验资源端前不能显示已隔离；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_L02",
+      "task_ids": [
+        "P4_8",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "L02"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario L02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L02 --json",
+      "expected": "- **GIVEN** 某条目已标 stale 或移动到隔离位置，但原分享/继承/搜索/附件等 required 通道仍可被不再授权的身份访问\n- **WHEN** 请求隔离完成\n- **THEN** 保持 isolating/unknown，继续同一 operation 并告警，不因标签、unpublish、archive 或管理员能读到就宣称不可访问；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_L03",
+      "task_ids": [
+        "P4_8",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "L03"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario L03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L03 --json",
+      "expected": "- **GIVEN** publish_until 已到期，但持续披露许可和当前源/目标受众仍合法且有效\n- **WHEN** 判断已发布内容和新发布操作\n- **THEN** 阻断新发布/更新，不自动把过去合法内容当作必须撤回；持续使用语义不明确时不得走自动发布或默认永久授权；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_L04",
+      "task_ids": [
+        "P4_8",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "L04"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario L04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L04 --json",
+      "expected": "- **GIVEN** 已发布内容的持续披露许可到期或当前目标受众不再落在源许可交集\n- **WHEN** 到期/权限核验维护动作执行\n- **THEN** 不能以原发布成功或未到期的其他操作凭证继续消费，按已授予的隔离能力收窄访问并独立验证；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_L05",
+      "task_ids": [
+        "P4_8",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "L05"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario L05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L05 --json",
+      "expected": "- **GIVEN** 原产品 Change 已交付完成，此后出现知识权限事件\n- **WHEN** 处理权限维护\n- **THEN** 保留原交付历史，由同一 Comet 引擎建立关联原发布回执的维护作业，不重开产品需求或启动另一个监听器主控；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_L06",
+      "task_ids": [
+        "P4_8",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "L06"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario L06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L06 --json",
+      "expected": "- **GIVEN** 条目已隔离，当前源/目标许可后来重新满足，但旧受众或旧恢复 callback 已不适用\n- **WHEN** 恢复发布/消费\n- **THEN** 使用当前授权、新维护代际和独立审查/访问读回；不原样恢复旧 ACL，不让旧回调重加离组成员或覆盖新隔离；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_L07",
+      "task_ids": [
+        "P4_8",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "L07"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario L07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L07 --json",
+      "expected": "- **GIVEN** 重复/乱序权限事件、隔离执行中断或远端结果未知\n- **WHEN** 恢复维护\n- **THEN** 按可信当前权限及同一 operation 调和，失败保留暴露未消除状态与告警，不重复派发或伪报安全；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_L08",
+      "task_ids": [
+        "P4_8",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "L08"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario L08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L08 --json",
+      "expected": "- **GIVEN** 权限事件被漏报但登记资源仍可完整查询\n- **WHEN** 周期核验或故障恢复全量对账\n- **THEN** Comet 对实际权限差异登记同一幂等维护动作，按批准的检测/隔离时限计时；不能只重放事件游标或从通知到达才计算源变更检测时间；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_L09",
+      "task_ids": [
+        "P4_8",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "L09"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario L09 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L09 --json",
+      "expected": "- **GIVEN** Runner 进程宕机或仍有心跳但完整核验水位不再推进\n- **WHEN** 独立监控超过批准的阈值\n- **THEN** 在批准时限内告警；监督器仅重启原 Comet 服务，不产生第二业务 owner，不能把告警成功当作 Outline 已隔离；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_L10",
+      "task_ids": [
+        "P4_8",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "L10"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario L10 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L10 --json",
+      "expected": "- **GIVEN** 隔离 API 失败、限流或远端执行结果未知\n- **WHEN** 首次失败和快速隔离预算耗尽\n- **THEN** 首次失败即告警，Comet 持久保存调和/重试和升级；超时保留未消除暴露与违约，权限拒绝不盲重试，监听器/执行器不自行派生业务重试循环；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_L11",
+      "task_ids": [
+        "P4_8",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "L11"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario L11 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L11 --json",
+      "expected": "- **GIVEN** 宕机期间发生漏报、grant 到期、分享变化或迟到旧恢复写入\n- **WHEN** 原 Comet 恢复\n- **THEN** 暂停新发布，先调和未知写入，再完整对账并优先隔离；事件接收游标、完整核验水位、隔离证据分别维护，未覆盖对象或访问路径保持未知，事故关闭保留时限违约；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_M01",
+      "task_ids": [
+        "P1_6",
+        "P1_4",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "M01"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario M01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/M01 --json",
+      "expected": "- **GIVEN** 本机 Superpowers 已停用，项目选择 Matt 基础方法\n- **WHEN** 初始化/分发/恢复 Classic 或加载方法\n- **THEN** 不自动安装、启用或调用 Superpowers，实际使用预先固定的 Matt 方法；仅保留的来源引用或兼容目录名不作为运行依赖；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_6.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_M02",
+      "task_ids": [
+        "P1_6",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "M02"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario M02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/M02 --json",
+      "expected": "- **GIVEN** 本项目显式选择 Comet 单主控，而本机默认并行 planner 合同拥有自身执行/监督权\n- **WHEN** 需要规划或方法校验\n- **THEN** 只经明确兼容的方法/工具入口复用，不加载完整 controller 后无视其合同，也不隐式启动 Matt 用户专用控制器；交付仍只有一份 Comet 进度与任务权威；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该场景以CLI/文件/进程协议为验收对象，所需终态由原始命令和持久化读回证明；不借此豁免其他UI场景。"
+      },
+      "case_module": "test/delivery-cases/1_6.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_U01",
+      "task_ids": [
+        "P4_7",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "U01"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario U01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U01 --json",
+      "expected": "- **GIVEN** 作者自写批准记录，或者凭证的 issuer/approver 无对应源/目标权力、已过期或被撤销\n- **WHEN** 请求知识自动发布\n- **THEN** Comet 拒绝授权，不因有签名、PR 合并或 approved 字段就放行；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_U02",
+      "task_ids": [
+        "P4_7",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "U02"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario U02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U02 --json",
+      "expected": "- **GIVEN** 候选由多个不同授权域的实际资料提炼，目标受众落在来源受众并集但不在其允许披露交集\n- **WHEN** 独立内容审查通过后请求发布\n- **THEN** 权限 gate 仍拒绝，审查通过不扩大资料授权，交有权主体处理明确范围；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_U03",
+      "task_ids": [
+        "P4_7",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "U03"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario U03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U03 --json",
+      "expected": "- **GIVEN** 预授权与独立审查曾有效\n- **WHEN** 源权限、grant 或目标受众在实际写入前收缩/改变\n- **THEN** 写前复核阻断旧发布判定，不能靠旧快照继续或用同 operation 自动续期；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_U04",
+      "task_ids": [
+        "P4_7",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "U04"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario U04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U04 --json",
+      "expected": "- **GIVEN** 审查和批准绑定了候选版本\n- **WHEN** 作者修改标题、正文、附件/引用、目标集合或可见性\n- **THEN** 旧审查/发布判定失效，不能凭语义类似或同一文档 ID 沿用旧授权结论；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_U05",
+      "task_ids": [
+        "P4_7",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "U05"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario U05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U05 --json",
+      "expected": "- **GIVEN** 目标集合名字和 ID 符合 allowlist，但继承、单页/子树分享或公开入口使实际读者越界\n- **WHEN** 请求正式发布\n- **THEN** Comet 按有效受众拒绝，不向更大受众先写草稿再审核，也不自动改 ACL 使之通过；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_U06",
+      "task_ids": [
+        "P4_7",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "U06"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario U06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U06 --json",
+      "expected": "- **GIVEN** 源/目标权限分页不完整、principal 无法映射或权限 API 返回错误\n- **WHEN** 自动发布核验\n- **THEN** 保持 blocked，不能把未知当空集/公开，也不能只凭连接器服务账号能读就放行；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_U07",
+      "task_ids": [
+        "P4_7",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "U07"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario U07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U07 --json",
+      "expected": "- **GIVEN** author、reviewer、publisher 与授权签发主体按受管角色隔离\n- **WHEN** 普通 Agent 尝试修改可信策略/批准、获取签发或超范围写凭据、调用任意集合/分享修改\n- **THEN** 被实际受管权限/发布入口拒绝并审计，不能仅以提示词声明禁止作为验收；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_U08",
+      "task_ids": [
+        "P4_7",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "U08"
+      ],
+      "command": "node tools/verify/delivery-journey.mjs --scenario U08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U08 --json",
+      "expected": "- **GIVEN** 合法 owner 的预授权有效，真实输入来源完整，当前源/目标权限和 payload 均匹配，独立审查通过\n- **WHEN** Comet 执行已登记的允许发布操作并完成独立读回\n- **THEN** 自动接纳对应知识回执并继续同一 Run，不重复人工确认，也不把批准扩大到其他对象或未来版本；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
+      "evidence": {
+        "data": "required",
+        "screenshots": "required",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {},
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "conditional_pre_enable": false,
+      "no_conditional_waiver": true,
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P3_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_NPM_REGRESSION",
+      "task_ids": [
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B10"
+      ],
+      "command": "npm test",
+      "expected": "Current integrated revision succeeds with original assertions; retain and resolve baseline failures, never relax assertions or treat scoped pass as whole delivery. This regression is supporting evidence, not replacement for92 individual behavior checks.",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该补充检查仅运行CLI回归/生成一致性；对应真实UI场景仍单独强制截图。"
+      },
+      "availability": "RECHECK_ON_RECEIVING_HOST",
+      "implementedBy": "VERIFY",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_FULL_CHECK",
+      "task_ids": [
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B10",
+        "A20"
+      ],
+      "command": "bash scripts/check.sh",
+      "expected": "Current integrated revision succeeds with original assertions; retain and resolve baseline failures, never relax assertions or treat scoped pass as whole delivery. This regression is supporting evidence, not replacement for92 individual behavior checks.",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该补充检查仅运行CLI回归/生成一致性；对应真实UI场景仍单独强制截图。"
+      },
+      "availability": "RECHECK_ON_RECEIVING_HOST",
+      "implementedBy": "VERIFY",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_SCOPED_REGRESSION",
+      "task_ids": [
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B10"
+      ],
+      "command": "node --test test/*.test.js",
+      "expected": "Current integrated revision succeeds with original assertions; retain and resolve baseline failures, never relax assertions or treat scoped pass as whole delivery. This regression is supporting evidence, not replacement for92 individual behavior checks.",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该补充检查仅运行CLI回归/生成一致性；对应真实UI场景仍单独强制截图。"
+      },
+      "availability": "RECHECK_ON_RECEIVING_HOST",
+      "implementedBy": "VERIFY",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_OPENSPEC_STRICT",
+      "task_ids": [
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "B10"
+      ],
+      "command": "openspec validate delivery-foundation-rearchitecture --strict",
+      "expected": "Current integrated revision succeeds with original assertions; retain and resolve baseline failures, never relax assertions or treat scoped pass as whole delivery. This regression is supporting evidence, not replacement for92 individual behavior checks.",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_EXECUTED",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该补充检查仅运行CLI回归/生成一致性；对应真实UI场景仍单独强制截图。"
+      },
+      "availability": "RECHECK_ON_RECEIVING_HOST",
+      "implementedBy": "VERIFY",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_COMET_NATIVE",
+      "task_ids": [
+        "P1_1",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "C07",
+        "C08",
+        "M01"
+      ],
+      "command": "node tools/comet/build.mjs --check-generated --runtime-smoke --json",
+      "expected": "Current integrated revision succeeds with original assertions; retain and resolve baseline failures, never relax assertions or treat scoped pass as whole delivery. This regression is supporting evidence, not replacement for92 individual behavior checks.",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
+      "evidence": {
+        "data": "required",
+        "screenshots": "not-applicable",
+        "logs": "required"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该补充检查仅运行CLI回归/生成一致性；对应真实UI场景仍单独强制截图。"
+      },
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "P1_1",
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts.",
+      "note": "Existing build CLI does not support these planned flags; P1_1 must choose and implement a reviewed public native-regression entrypoint, update this command via explicit replan, then execute. Do not run as currently available."
+    },
+    {
+      "id": "V_INFRA_I01",
+      "task_ids": [
+        "I01",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "F01",
+        "A19",
+        "U01",
+        "U07"
+      ],
+      "command": "node --test test/infra-registry.test.js",
+      "expected": "实际正负探针及独立资源读回全部满足；依赖缺失返回UNVERIFIED，不可skip转PASS。具体oracle见infrastructure-tasks.json I01",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "I01",
+      "evidence": {
+        "data": "required",
+        "logs": "required",
+        "screenshots": "not-applicable"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该基础设施任务以真实CLI/进程/权限/存储读回为主；对应原UI/浏览器验收仍由92场景单独保留，不因工具缺失豁免。"
+      },
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_INFRA_I02",
+      "task_ids": [
+        "I02",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A09",
+        "A10",
+        "A11",
+        "A19",
+        "C07",
+        "D01",
+        "D08",
+        "H03",
+        "H09",
+        "U07",
+        "F05",
+        "F07",
+        "M02"
+      ],
+      "command": "node --test test/infra-runner-isolation.test.js",
+      "expected": "实际正负探针及独立资源读回全部满足；依赖缺失返回UNVERIFIED，不可skip转PASS。具体oracle见infrastructure-tasks.json I02",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "I02",
+      "evidence": {
+        "data": "required",
+        "logs": "required",
+        "screenshots": "not-applicable"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该基础设施任务以真实CLI/进程/权限/存储读回为主；对应原UI/浏览器验收仍由92场景单独保留，不因工具缺失豁免。"
+      },
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_INFRA_I03",
+      "task_ids": [
+        "I03",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08",
+        "H04",
+        "H05",
+        "L02",
+        "L04"
+      ],
+      "command": "node --test test/infra-outline.test.js",
+      "expected": "实际正负探针及独立资源读回全部满足；依赖缺失返回UNVERIFIED，不可skip转PASS。具体oracle见infrastructure-tasks.json I03",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "I03",
+      "evidence": {
+        "data": "required",
+        "logs": "required",
+        "screenshots": "required"
+      },
+      "not_applicable_reasons": {},
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_INFRA_I04",
+      "task_ids": [
+        "I04",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "C04",
+        "C06",
+        "E01",
+        "E06",
+        "H08",
+        "F01",
+        "B09"
+      ],
+      "command": "node --test test/infra-llmwiki-paths.test.js",
+      "expected": "实际正负探针及独立资源读回全部满足；依赖缺失返回UNVERIFIED，不可skip转PASS。具体oracle见infrastructure-tasks.json I04",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "I04",
+      "evidence": {
+        "data": "required",
+        "logs": "required",
+        "screenshots": "not-applicable"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该基础设施任务以真实CLI/进程/权限/存储读回为主；对应原UI/浏览器验收仍由92场景单独保留，不因工具缺失豁免。"
+      },
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_INFRA_I05",
+      "task_ids": [
+        "I05",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "F01",
+        "F03",
+        "A20",
+        "C06"
+      ],
+      "command": "node --test test/infra-code-knowledge.test.js",
+      "expected": "实际正负探针及独立资源读回全部满足；依赖缺失返回UNVERIFIED，不可skip转PASS。具体oracle见infrastructure-tasks.json I05",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "I05",
+      "evidence": {
+        "data": "required",
+        "logs": "required",
+        "screenshots": "not-applicable"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该基础设施任务以真实CLI/进程/权限/存储读回为主；对应原UI/浏览器验收仍由92场景单独保留，不因工具缺失豁免。"
+      },
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_INFRA_I06",
+      "task_ids": [
+        "I06",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A13",
+        "A14",
+        "A16",
+        "A17",
+        "A19",
+        "F06",
+        "F09",
+        "B08"
+      ],
+      "command": "node --test test/infra-platform.test.js",
+      "expected": "实际正负探针及独立资源读回全部满足；依赖缺失返回UNVERIFIED，不可skip转PASS。具体oracle见infrastructure-tasks.json I06",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "I06",
+      "evidence": {
+        "data": "required",
+        "logs": "required",
+        "screenshots": "not-applicable"
+      },
+      "not_applicable_reasons": {
+        "screenshots": "该基础设施任务以真实CLI/进程/权限/存储读回为主；对应原UI/浏览器验收仍由92场景单独保留，不因工具缺失豁免。"
+      },
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_INFRA_I07",
+      "task_ids": [
+        "I07",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "L08",
+        "L09",
+        "L10",
+        "L11",
+        "A11",
+        "H09"
+      ],
+      "command": "node --test test/infra-monitor.test.js",
+      "expected": "实际正负探针及独立资源读回全部满足；依赖缺失返回UNVERIFIED，不可skip转PASS。具体oracle见infrastructure-tasks.json I07",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "I07",
+      "evidence": {
+        "data": "required",
+        "logs": "required",
+        "screenshots": "required"
+      },
+      "not_applicable_reasons": {},
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    },
+    {
+      "id": "V_INFRA_I08",
+      "task_ids": [
+        "I08",
+        "VERIFY"
+      ],
+      "acceptance_ids": [
+        "A10",
+        "A11",
+        "H08",
+        "H09",
+        "L06",
+        "L11",
+        "B08",
+        "U07"
+      ],
+      "command": "node --test test/infra-recovery.test.js",
+      "expected": "实际正负探针及独立资源读回全部满足；依赖缺失返回UNVERIFIED，不可skip转PASS。具体oracle见infrastructure-tasks.json I08",
+      "required": true,
+      "implementation_status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
+      "availability": "TO_IMPLEMENT",
+      "implementedBy": "I08",
+      "evidence": {
+        "data": "required",
+        "logs": "required",
+        "screenshots": "required"
+      },
+      "not_applicable_reasons": {},
+      "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts."
+    }
+  ],
+  "commands_status": "All scenario runner commands are planned interfaces to implement, not evidence of completed tests.",
+  "progress_source": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
+  "controller_override": "Planner helpers are static methods only. Current host owns implementation task state; only target Comet owns product workflow dispatch/state/recovery. No nested controller.",
+  "closeout_override": "OpenSpec freeze/check helper allowed as method; actual archive only by Comet Spec Adapter after independent acceptance. No actual helper finalize dispatched.",
+  "conditional_batch5": {
+    "tasks": [
+      "P5_1",
+      "P5_2",
+      "P5_3"
+    ],
+    "status": "PRE_ENABLE_REQUIRED_NOT_CERTIFIED",
+    "scope_activation": "explicit cross-machine/host authorization and registered environment required",
+    "acceptance": "F10 positive/negative identity/isolation/recovery remains required before enabling Control API; not satisfied by static disabled configuration"
+  },
+  "openspec": {
+    "change_id": "delivery-foundation-rearchitecture",
+    "policy": "in-change",
+    "baseline_sha256": "a89cfcf9cde72459df180e7ca11ca9be5b1b402f894f05d82984f5ba8025d86a"
+  },
+  "verification_runner_invariant": "tools/verify/delivery-journey.mjs is a test action/observer adapter only, not a controller. It cannot own phase, DAG, retries, job lease or auto-recovery; scenario faults/requests enter same Comet, whose persisted state is read back. All92 case recipes retain original WHEN/THEN.",
+  "handoff": {
+    "mode": "planning-only",
+    "recipient": "user-selected other Agent",
+    "implementation_dispatched": false,
+    "toolkit": "planning-toolkit/manifest.json",
+    "method_migration_owner": "P1_6",
+    "infrastructure_tasks": 8,
+    "total_nodes": 39
+  }
+}

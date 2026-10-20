@@ -3,6 +3,8 @@
 > 状态：权威。本文完成两件事：① grill 对齐原始 SDD Harness 架构与当前 Scaffold 架构（每个原始构件的去向与理由）；② 汇总全景架构图（mermaid）。
 > 事实来源：[ADR-0008..0015](adr/)（原始决策链）、[scaffold-architecture.md](scaffold-architecture.md)（当前分层）、[ai-devops-architecture.md](ai-devops-architecture.md)（交付视图）、[knowledge-layer-plan.md](knowledge-layer-plan.md)（知识拓扑）。
 
+> 2026-10-19：本文是 v0.2.x 演化对齐视图；TeamAI“移交”仍受 ADR-0018 的 P0 准入限制，图中能力不等于已接通；sha256 只绑定内容，不能证明可信来源。最新目标见 [交付架构](delivery-architecture.md) 和 [ADR-0019](adr/0019-delivery-foundation.md)，不从本文推导新 runtime 已存在。
+
 ## 1. Grill 对齐：原始架构 → 当前架构
 
 原始架构（SDD Harness v0.1）= **9-stage 状态机 + Core/Adapter 分层 + 5 hooks 治理 + 9 gates 证据 + LLMWiki 知识闭环**。逐构件对齐：

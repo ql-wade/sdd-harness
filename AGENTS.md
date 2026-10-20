@@ -23,7 +23,7 @@
 - `openspec/`：变更工件
 - `bin/cli.js` + `lib/` + `contracts/`：验证工具薄 CLI 与 gate/audit 机械证据库
 - `tools/`：bootstrap、CC adapter、MCP 注册器
-- non-goals：不引入工作流编排/阶段状态机；不在技能正文里写项目约束；不提交本地产物（`.claude/`、`.sdd/` 等）
+- non-goals：基础层不引入工作流编排/阶段状态机；经 ADR-0019 评审的可选 delivery profile 仅接入 Comet 原控制器，禁止第二主控；不在技能正文里写项目约束；不提交本地产物（`.claude/`、`.sdd/` 等）
 
 ## 2. 开始任务前必须读取
 
@@ -33,6 +33,12 @@
 4. `docs/agent/skill-architecture.md`：触发矩阵与验证层分工
 
 文档与代码不一致时，先说明冲突并通过 ADR 固化决定，不默默选边。
+
+### 交付架构迁移
+
+- 目标设计：[delivery-architecture.md](docs/architecture/delivery-architecture.md)，决策：[ADR-0019](docs/architecture/adr/0019-delivery-foundation.md)（架构评审已通过；运行未验收）。
+- 变更：[delivery-foundation-rearchitecture](openspec/changes/delivery-foundation-rearchitecture/tasks.md)。现行 scaffold 约束继续适用；delivery profile、Comet 单一主控、Gate/API 均不得当作已实现；TeamAI 首期仅分发。
+- ADR-0019 三方架构评审已通过，仅在其明确替代范围内实施 Comet 单主控 profile；运行启用仍逐项实证，不改 vendored 技能正文。
 
 ### 局部 AGENTS.md 索引
 

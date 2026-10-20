@@ -4,6 +4,8 @@
 > 原则（继承 ADR-0015）：**映射而非编排**。scaffold 提供每个环节的能力、门禁与人机边界；不规定阶段顺序，不造状态机。团队按变更风险裁剪环节。
 > 文档矩阵：横向分层 [scaffold-architecture.md](scaffold-architecture.md) ｜ 知识环节深化 [knowledge-architecture.md](knowledge-architecture.md) ｜ 演进对齐+图集 [architecture-blueprint.md](architecture-blueprint.md) ｜ 知识规格 [knowledge-layer-plan.md](knowledge-layer-plan.md) ｜ 分发层方案 [teamai-integration-plan.md](teamai-integration-plan.md)
 
+> 2026-10-19：本文保留旧交付参考视图，目标运行架构统一见 [delivery-architecture.md](delivery-architecture.md)。下文 TeamAI 同步/知识/CI 箭头属于设计能力，未通过接入实证；不能据图认定已运行。新设计将测试编写、独立验收、调度和规格收尾分离，实施以 OpenSpec 清单为准。
+
 ## 0. 架构视图
 
 ### 0.0 泳道活动图（主视图）：七个环节 agent × 人闸 × 共享能力池
