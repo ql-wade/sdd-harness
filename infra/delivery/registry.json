@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "interface": "Registry.v1",
+  "project": {
+    "id": "sdd-harness-pilot",
+    "displayName": "sdd-harness delivery pilot",
+    "owner": "ql-wade",
+    "delegates": [],
+    "github": {
+      "repoId": 1285806550,
+      "repoFullname": "rpamis/sdd-harness",
+      "principalId": 262266039,
+      "owner": "ql-wade",
+      "url": "https://github.com/rpamis/sdd-harness"
+    },
+    "authority": {
+      "readbackStatus": "UNVERIFIED",
+      "readbackCommand": "gh api repos/rpamis/sdd-harness",
+      "readbackError": "Get \"https://api.github.com/repos/rpamis/sdd-harness\": tls: failed to verify certificate: x509: OSStatus -26276 (same failure for repos/1285806550 and user/262266039)",
+      "observedAt": "2026-10-20T03:20:00Z",
+      "note": "Repository and principal ids are plan-registered labels, not secrets. A previous session observed admin for this principal; that observation is NOT carried forward as fact and readback must succeed at execution time before any authorized action."
+    }
+  },
+  "resources": [
+    {
+      "id": "comet-source",
+      "kind": "source-archive",
+      "owner": "ql-wade",
+      "backupOwner": "UNVERIFIED",
+      "purpose": "Pinned Comet Classic controller source for the delivery pilot; single control plane, no business retries and no second DAG",
+      "audience": "controller runner and build tooling only; a public repository does not make external knowledge or attachments publishable",
+      "credentialRef": "secret-ref:sdd-harness-pilot/source-git-read",
+      "lockRef": "integrations/comet/upstream.lock.json",
+      "runtimeRequirement": {
+        "node": "^22.16.0 || >=24.0.0",
+        "source": "openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json (recorded; re-verify at execution time)"
+      },
+      "domain": {
+        "network": "loopback-only",
+        "failureDomain": "single-host",
+        "crossProjectIsolation": "must not reuse PAV or any other project's resources, credentials, networks, databases or volumes"
+      },
+      "retention": {
+        "rpo": "UNVERIFIED",
+        "rto": "UNVERIFIED",
+        "retentionPeriod": "UNVERIFIED",
+        "encryptionOwner": "UNVERIFIED",
+        "destructionPrecondition": "UNVERIFIED",
+        "autoCleanupEnabled": false
+      }
+    }
+  ]
+}

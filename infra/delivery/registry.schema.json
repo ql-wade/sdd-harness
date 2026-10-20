@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sdd-harness/infra/delivery/registry.schema.json",
+  "title": "Registry.v1",
+  "description": "独立资源登记表。project/resource/owner/credentialRef/lockRef/authority/domain/retention，无秘密值。工具端结构校验由 tools/infra/registry.mjs 实现（无 ajv 依赖），本 schema 是同一契约的声明式描述。UNVERIFIED 是合法字段值，表示证据未确认，不得用占位值冒充事实。",
+  "type": "object",
+  "required": ["schemaVersion", "interface", "project", "resources"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "interface": { "const": "Registry.v1" },
+    "project": {
+      "type": "object",
+      "required": ["id", "owner", "github", "authority"],
+      "properties": {
+        "id": { "$ref": "#/definitions/label" },
+        "displayName": { "type": "string" },
+        "owner": { "type": "string" },
+        "delegates": { "type": "array", "items": { "type": "string" } },
+        "github": {
+          "type": "object",
+          "required": ["repoId", "principalId"],
+          "properties": {
+            "repoId": { "type": "integer" },
+            "repoFullname": { "type": "string" },
+            "principalId": { "type": "integer" },
+            "owner": { "type": "string" },
+            "url": { "type": "string" }
+          }
+        },
+        "authority": {
+          "type": "object",
+          "required": ["readbackStatus"],
+          "properties": {
+            "readbackStatus": { "enum": ["VERIFIED", "UNVERIFIED"] },
+            "readbackCommand": { "type": "string" },
+            "readbackError": { "type": "string" },
+            "observedAt": { "type": "string" },
+            "note": { "type": "string" }
+          }
+        }
+      }
+    },
+    "resources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "owner", "purpose", "credentialRef", "lockRef", "domain", "retention"],
+        "properties": {
+          "id": { "$ref": "#/definitions/label" },
+          "kind": { "$ref": "#/definitions/label" },
+          "owner": { "type": "string" },
+          "backupOwner": { "type": "string" },
+          "purpose": { "type": "string", "minLength": 1 },
+          "audience": { "type": "string" },
+          "credentialRef": { "$ref": "#/definitions/secretRef" },
+          "lockRef": { "type": "string", "description": "repo-root-relative path to the component lock file" },
+          "runtimeRequirement": {
+            "type": "object",
+            "properties": {
+              "node": { "type": "string" },
+              "source": { "type": "string" }
+            }
+          },
+          "image": {
+            "type": "object",
+            "properties": {
+              "reference": { "type": "string" },
+              "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+            }
+          },
+          "domain": {
+            "type": "object",
+            "required": ["network"],
+            "properties": {
+              "network": { "type": "string" },
+              "failureDomain": { "type": "string" },
+              "crossProjectIsolation": { "type": "string" }
+            }
+          },
+          "retention": {
+            "type": "object",
+            "required": ["rpo", "rto", "retentionPeriod", "encryptionOwner", "destructionPrecondition", "autoCleanupEnabled"],
+            "properties": {
+              "rpo": { "type": ["string", "null"] },
+              "rto": { "type": ["string", "null"] },
+              "retentionPeriod": { "type": ["string", "null"] },
+              "encryptionOwner": { "type": ["string", "null"] },
+              "destructionPrecondition": { "type": ["string", "null"] },
+              "autoCleanupEnabled": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "label": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+    "secretRef": {
+      "type": "string",
+      "pattern": "^secret-ref:[a-z0-9][a-z0-9-]{0,62}/[a-z0-9][a-z0-9-]{0,62}$",
+      "description": "SecretRef.v1 不透明引用；只允许引用本项目命名空间，值永远不落地"
+    }
+  }
+}
