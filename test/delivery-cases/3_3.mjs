@@ -341,10 +341,12 @@ test('V_A11: a receipt from a superseded epoch is refused (STALE_EPOCH) and a la
     assert.equal(refusal.envelope.evidence[0].sha256, digestFile(obsFile), 'the refused envelope pins the real late-observation bytes');
   }
 
-  // The run completes only through current bindings.
-  for (const leaf of ledger.leaves) {
+  // The run completes only through current bindings (the leaves this
+  // choreography exercised; the remaining plan leaves stay untouched).
+  for (const leafId of ['L1', 'L2']) {
+    const leaf = ledger.leaves.find((entry) => entry.id === leafId);
     assert.equal(leaf.status, 'done');
-    assert.equal(leaf.dispatchEpoch, 2, `leaf ${leaf.id} was completed under the current epoch`);
+    assert.equal(leaf.dispatchEpoch, 2, `leaf ${leafId} was completed under the current epoch`);
   }
   assert.equal(evidence.gate.final.verdict, 'pass', 'the gate passes on the current-epoch receipts only');
 });
