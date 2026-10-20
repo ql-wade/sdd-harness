@@ -18,7 +18,7 @@
 // The committed protected baseline is UNSELECTED/LOCAL_ONLY, so the
 // platform-merge authorization stays honestly UNVERIFIED
 // (PLATFORM_REQUIRED_CHECK_AUTHORITY_REQUIRED) — plan fields never satisfy it.
-import assert from 'node:assert/strict';
+import assert, { AssertionError } from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
