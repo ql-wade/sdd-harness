@@ -1,0 +1,654 @@
+{
+  "schemaVersion": 1,
+  "tool": "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/run-recovery-chain.mjs",
+  "scenario": "duplicate",
+  "runId": "p33-2ee6d85999b9",
+  "controller": {
+    "runnerId": "comet-classic"
+  },
+  "environment": "pilot-recovery-local-tmpdir",
+  "toolchain": "node v22.13.1",
+  "policy": {
+    "ref": "policy/managed-pilot-recovery",
+    "digest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379"
+  },
+  "plan": {
+    "ok": true,
+    "errors": [],
+    "bundle": {
+      "schemaVersion": 1,
+      "change": "pilot-recovery-fixture",
+      "schedulerOwner": "comet-classic",
+      "tasks": [
+        {
+          "id": "L1",
+          "dependsOn": []
+        },
+        {
+          "id": "L2",
+          "dependsOn": []
+        },
+        {
+          "id": "L-INT",
+          "dependsOn": [
+            "L1",
+            "L2"
+          ]
+        }
+      ],
+      "allowedPaths": [
+        "src/",
+        "test/",
+        "workers/",
+        "artifacts/"
+      ],
+      "worktree": "worktree/impl-p3-3 (recorded run; recovery chain confined to assigned path prefixes)",
+      "acceptanceRefs": [
+        "A10",
+        "A11",
+        "A12",
+        "F07"
+      ]
+    }
+  },
+  "candidate": {
+    "files": [
+      "src/feature.js",
+      "src/pipeline.js"
+    ],
+    "digestBefore": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+    "digestAfter": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1"
+  },
+  "ledger": {
+    "file": "control/run-state.json",
+    "final": {
+      "label": "final",
+      "digest": "0184513c1845c874c7535796b99cdaea316a17bcf9877ed6c347d1a06440b9db",
+      "state": {
+        "schemaVersion": 1,
+        "runId": "p33-2ee6d85999b9",
+        "epoch": 1,
+        "planDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "candidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "leaves": [
+          {
+            "id": "L1",
+            "status": "done",
+            "attempt": 1,
+            "dispatchExecution": "exec-L1-a1-89ac48",
+            "dispatchEpoch": 1,
+            "receiptCandidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+            "receiptDigest": "5b0efd39af1493833a64493baf377d81d03408652f644b2f5d99cf93fa6d3bb8"
+          },
+          {
+            "id": "L2",
+            "status": "done",
+            "attempt": 1,
+            "dispatchExecution": "exec-L2-a1-f964bc",
+            "dispatchEpoch": 1,
+            "receiptCandidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+            "receiptDigest": "e0c4f2b69896e45793c499e95567e0597a63b9847ec72f896f92d7dc9cbd7ec8"
+          },
+          {
+            "id": "L-INT",
+            "status": "pending",
+            "attempt": 0,
+            "dispatchExecution": null,
+            "dispatchEpoch": null,
+            "receiptCandidateDigest": null,
+            "receiptDigest": null
+          }
+        ],
+        "dispatchLedger": [
+          {
+            "runnerId": "comet-classic",
+            "run": "p33-2ee6d85999b9",
+            "gate": "leaf:L1",
+            "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+            "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+            "attempt": 1,
+            "epoch": 1,
+            "role": "verifier",
+            "execution": "exec-L1-a1-89ac48",
+            "integrity": "a2397e70eb403daf19b8231740519717c7fc3ab2ccf6e6feb7a5e7a79d809625"
+          },
+          {
+            "runnerId": "comet-classic",
+            "run": "p33-2ee6d85999b9",
+            "gate": "leaf:L2",
+            "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+            "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+            "attempt": 1,
+            "epoch": 1,
+            "role": "verifier",
+            "execution": "exec-L2-a1-f964bc",
+            "integrity": "f86c5617e140664e5dc63532fb51c36ce8c0012aaba0ca841d754f2e7497483d"
+          }
+        ],
+        "receiptDigests": [
+          "5b0efd39af1493833a64493baf377d81d03408652f644b2f5d99cf93fa6d3bb8",
+          "e0c4f2b69896e45793c499e95567e0597a63b9847ec72f896f92d7dc9cbd7ec8"
+        ],
+        "issuedExecutions": [
+          "exec-L1-a1-89ac48",
+          "exec-L2-a1-f964bc"
+        ],
+        "evidenceExecutions": [
+          "exec-L1-a1-89ac48",
+          "exec-L2-a1-f964bc"
+        ],
+        "advance": null,
+        "advanceSeq": 0,
+        "history": [
+          {
+            "event": "run-open",
+            "epoch": 1,
+            "at": "2026-10-20T18:27:29.712Z"
+          },
+          {
+            "event": "dispatch",
+            "epoch": 1,
+            "leaf": "L1",
+            "attempt": 1,
+            "execution": "exec-L1-a1-89ac48",
+            "at": "2026-10-20T18:27:29.714Z"
+          },
+          {
+            "event": "receipt",
+            "epoch": 1,
+            "leaf": "L1",
+            "attempt": 1,
+            "execution": "exec-L1-a1-89ac48",
+            "result": "pass",
+            "at": "2026-10-20T18:27:29.885Z"
+          },
+          {
+            "event": "dispatch",
+            "epoch": 1,
+            "leaf": "L2",
+            "attempt": 1,
+            "execution": "exec-L2-a1-f964bc",
+            "at": "2026-10-20T18:27:29.885Z"
+          },
+          {
+            "event": "receipt",
+            "epoch": 1,
+            "leaf": "L2",
+            "attempt": 1,
+            "execution": "exec-L2-a1-f964bc",
+            "result": "pass",
+            "at": "2026-10-20T18:27:30.052Z"
+          }
+        ],
+        "updatedAt": "2026-10-20T18:27:30.052Z"
+      }
+    },
+    "snapshots": {
+      "initial": {
+        "label": "initial",
+        "digest": "db1b715c091455d00582172bf9cd672dcc6a8a25d2bfe3d48b5171d51164a677",
+        "state": {
+          "schemaVersion": 1,
+          "runId": "p33-2ee6d85999b9",
+          "epoch": 1,
+          "planDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+          "candidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+          "leaves": [
+            {
+              "id": "L1",
+              "status": "pending",
+              "attempt": 0,
+              "dispatchExecution": null,
+              "dispatchEpoch": null,
+              "receiptCandidateDigest": null,
+              "receiptDigest": null
+            },
+            {
+              "id": "L2",
+              "status": "pending",
+              "attempt": 0,
+              "dispatchExecution": null,
+              "dispatchEpoch": null,
+              "receiptCandidateDigest": null,
+              "receiptDigest": null
+            },
+            {
+              "id": "L-INT",
+              "status": "pending",
+              "attempt": 0,
+              "dispatchExecution": null,
+              "dispatchEpoch": null,
+              "receiptCandidateDigest": null,
+              "receiptDigest": null
+            }
+          ],
+          "dispatchLedger": [],
+          "receiptDigests": [],
+          "issuedExecutions": [],
+          "evidenceExecutions": [],
+          "advance": null,
+          "advanceSeq": 0,
+          "history": [
+            {
+              "event": "run-open",
+              "epoch": 1,
+              "at": "2026-10-20T18:27:29.712Z"
+            }
+          ],
+          "updatedAt": "2026-10-20T18:27:29.712Z"
+        }
+      },
+      "final": {
+        "label": "final",
+        "digest": "0184513c1845c874c7535796b99cdaea316a17bcf9877ed6c347d1a06440b9db",
+        "state": {
+          "schemaVersion": 1,
+          "runId": "p33-2ee6d85999b9",
+          "epoch": 1,
+          "planDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+          "candidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+          "leaves": [
+            {
+              "id": "L1",
+              "status": "done",
+              "attempt": 1,
+              "dispatchExecution": "exec-L1-a1-89ac48",
+              "dispatchEpoch": 1,
+              "receiptCandidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+              "receiptDigest": "5b0efd39af1493833a64493baf377d81d03408652f644b2f5d99cf93fa6d3bb8"
+            },
+            {
+              "id": "L2",
+              "status": "done",
+              "attempt": 1,
+              "dispatchExecution": "exec-L2-a1-f964bc",
+              "dispatchEpoch": 1,
+              "receiptCandidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+              "receiptDigest": "e0c4f2b69896e45793c499e95567e0597a63b9847ec72f896f92d7dc9cbd7ec8"
+            },
+            {
+              "id": "L-INT",
+              "status": "pending",
+              "attempt": 0,
+              "dispatchExecution": null,
+              "dispatchEpoch": null,
+              "receiptCandidateDigest": null,
+              "receiptDigest": null
+            }
+          ],
+          "dispatchLedger": [
+            {
+              "runnerId": "comet-classic",
+              "run": "p33-2ee6d85999b9",
+              "gate": "leaf:L1",
+              "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+              "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+              "attempt": 1,
+              "epoch": 1,
+              "role": "verifier",
+              "execution": "exec-L1-a1-89ac48",
+              "integrity": "a2397e70eb403daf19b8231740519717c7fc3ab2ccf6e6feb7a5e7a79d809625"
+            },
+            {
+              "runnerId": "comet-classic",
+              "run": "p33-2ee6d85999b9",
+              "gate": "leaf:L2",
+              "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+              "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+              "attempt": 1,
+              "epoch": 1,
+              "role": "verifier",
+              "execution": "exec-L2-a1-f964bc",
+              "integrity": "f86c5617e140664e5dc63532fb51c36ce8c0012aaba0ca841d754f2e7497483d"
+            }
+          ],
+          "receiptDigests": [
+            "5b0efd39af1493833a64493baf377d81d03408652f644b2f5d99cf93fa6d3bb8",
+            "e0c4f2b69896e45793c499e95567e0597a63b9847ec72f896f92d7dc9cbd7ec8"
+          ],
+          "issuedExecutions": [
+            "exec-L1-a1-89ac48",
+            "exec-L2-a1-f964bc"
+          ],
+          "evidenceExecutions": [
+            "exec-L1-a1-89ac48",
+            "exec-L2-a1-f964bc"
+          ],
+          "advance": null,
+          "advanceSeq": 0,
+          "history": [
+            {
+              "event": "run-open",
+              "epoch": 1,
+              "at": "2026-10-20T18:27:29.712Z"
+            },
+            {
+              "event": "dispatch",
+              "epoch": 1,
+              "leaf": "L1",
+              "attempt": 1,
+              "execution": "exec-L1-a1-89ac48",
+              "at": "2026-10-20T18:27:29.714Z"
+            },
+            {
+              "event": "receipt",
+              "epoch": 1,
+              "leaf": "L1",
+              "attempt": 1,
+              "execution": "exec-L1-a1-89ac48",
+              "result": "pass",
+              "at": "2026-10-20T18:27:29.885Z"
+            },
+            {
+              "event": "dispatch",
+              "epoch": 1,
+              "leaf": "L2",
+              "attempt": 1,
+              "execution": "exec-L2-a1-f964bc",
+              "at": "2026-10-20T18:27:29.885Z"
+            },
+            {
+              "event": "receipt",
+              "epoch": 1,
+              "leaf": "L2",
+              "attempt": 1,
+              "execution": "exec-L2-a1-f964bc",
+              "result": "pass",
+              "at": "2026-10-20T18:27:30.052Z"
+            }
+          ],
+          "updatedAt": "2026-10-20T18:27:30.052Z"
+        }
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seq": 1,
+      "role": "test-author",
+      "action": "stage-suites",
+      "inputSummary": "test/leaf-slugify.test.js, test/leaf-render.test.js, test/integration.test.js",
+      "verdict": "written",
+      "basis": {
+        "kind": "authoring",
+        "note": "leaf suites landed from staged sources through the managed writer"
+      }
+    },
+    {
+      "seq": 2,
+      "role": "whitebox",
+      "action": "dispatch",
+      "inputSummary": {
+        "opId": "L1",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "leaf:L1"
+      },
+      "verdict": "dispatched",
+      "basis": {
+        "kind": "dispatch",
+        "note": "leaf L1 verification (A10 duplicate baseline)"
+      },
+      "dispatch": {
+        "execution": "exec-L1-a1-89ac48",
+        "role": "verifier",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "leaf:L1",
+        "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "integrity": "a2397e70eb403daf19b8231740519717c7fc3ab2ccf6e6feb7a5e7a79d809625"
+      }
+    },
+    {
+      "seq": 5,
+      "role": "whitebox",
+      "action": "dispatch",
+      "inputSummary": {
+        "opId": "L2",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "leaf:L2"
+      },
+      "verdict": "dispatched",
+      "basis": {
+        "kind": "dispatch",
+        "note": "leaf L2 verification"
+      },
+      "dispatch": {
+        "execution": "exec-L2-a1-f964bc",
+        "role": "verifier",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "leaf:L2",
+        "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "integrity": "f86c5617e140664e5dc63532fb51c36ce8c0012aaba0ca841d754f2e7497483d"
+      }
+    }
+  ],
+  "dispatchLedger": [
+    {
+      "runnerId": "comet-classic",
+      "run": "p33-2ee6d85999b9",
+      "gate": "leaf:L1",
+      "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+      "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+      "attempt": 1,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-L1-a1-89ac48",
+      "integrity": "a2397e70eb403daf19b8231740519717c7fc3ab2ccf6e6feb7a5e7a79d809625"
+    },
+    {
+      "runnerId": "comet-classic",
+      "run": "p33-2ee6d85999b9",
+      "gate": "leaf:L2",
+      "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+      "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+      "attempt": 1,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-L2-a1-f964bc",
+      "integrity": "f86c5617e140664e5dc63532fb51c36ce8c0012aaba0ca841d754f2e7497483d"
+    }
+  ],
+  "refusals": [
+    {
+      "seq": 4,
+      "where": "dispatch",
+      "code": "DUPLICATE_DISPATCH",
+      "reason": "leaf L1 is already done for candidate 4445c7143b20… (attempt 1, receipt 5b0efd39af14…); a same-key second dispatch is refused (A10: duplicate idempotent)",
+      "ledgerDigestBefore": "ad0ae5c3e0f99accc00bee87aea571af3ea73c291683a72f15505556464b4bfb",
+      "ledgerDigestAfter": "ad0ae5c3e0f99accc00bee87aea571af3ea73c291683a72f15505556464b4bfb"
+    },
+    {
+      "seq": 7,
+      "where": "admit",
+      "code": "DUPLICATE_ISSUANCE",
+      "reason": "execution exec-L2-a1-f964bc already issued evidence; a repeated issuance from the same identity is refused",
+      "ledgerDigestBefore": "0184513c1845c874c7535796b99cdaea316a17bcf9877ed6c347d1a06440b9db",
+      "ledgerDigestAfter": "0184513c1845c874c7535796b99cdaea316a17bcf9877ed6c347d1a06440b9db",
+      "envelope": {
+        "schemaVersion": 1,
+        "candidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "caseId": "L2",
+        "check": "leaf:L2",
+        "origin": {
+          "kind": "registered-runner",
+          "id": "comet-classic"
+        },
+        "execution": {
+          "id": "exec-L2-a1-f964bc"
+        },
+        "environment": "pilot-recovery-local-tmpdir",
+        "toolchain": "node v22.13.1",
+        "executions": {
+          "total": 1,
+          "valid": 1
+        },
+        "result": "pass",
+        "evidence": [
+          {
+            "uri": "workers/L2/observation-exec-L2-a1-f964bc.json",
+            "sha256": "2fd10d1c2dbfa848c6d756473f583594465f1bba289d0e1fac109e3ca0057667"
+          }
+        ],
+        "expiry": "2026-10-20T19:27:30.051Z"
+      },
+      "dispatch": {
+        "runnerId": "comet-classic",
+        "run": "p33-2ee6d85999b9",
+        "gate": "leaf:L2",
+        "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "attempt": 1,
+        "epoch": 1,
+        "role": "verifier",
+        "execution": "exec-L2-a1-f964bc",
+        "integrity": "f86c5617e140664e5dc63532fb51c36ce8c0012aaba0ca841d754f2e7497483d"
+      },
+      "envelopeDigest": "e0c4f2b69896e45793c499e95567e0597a63b9847ec72f896f92d7dc9cbd7ec8"
+    }
+  ],
+  "admitted": [
+    {
+      "seq": 3,
+      "opId": "L1",
+      "attempt": 1,
+      "epoch": 1,
+      "execution": "exec-L1-a1-89ac48",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "leaf:L1",
+      "result": "pass",
+      "envelopeDigest": "5b0efd39af1493833a64493baf377d81d03408652f644b2f5d99cf93fa6d3bb8"
+    },
+    {
+      "seq": 6,
+      "opId": "L2",
+      "attempt": 1,
+      "epoch": 1,
+      "execution": "exec-L2-a1-f964bc",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "leaf:L2",
+      "result": "pass",
+      "envelopeDigest": "e0c4f2b69896e45793c499e95567e0597a63b9847ec72f896f92d7dc9cbd7ec8"
+    }
+  ],
+  "workers": [
+    {
+      "opId": "L1",
+      "execution": "exec-L1-a1-89ac48",
+      "mode": "complete",
+      "preHoldMs": 0,
+      "observationUri": "workers/L1/observation-exec-L1-a1-89ac48.json",
+      "observationSha256": "07a5b0bdc3bd6a48ade7bd7e088fa83e50ee07c7995396615842e6461a6f0a58",
+      "outcome": "completed",
+      "exitCode": 0,
+      "signal": null,
+      "pid": 73995,
+      "injection": null,
+      "reason": "runs the leaf suite for real and hands the observation over"
+    },
+    {
+      "opId": "L2",
+      "execution": "exec-L2-a1-f964bc",
+      "mode": "complete",
+      "preHoldMs": 0,
+      "observationUri": "workers/L2/observation-exec-L2-a1-f964bc.json",
+      "observationSha256": "2fd10d1c2dbfa848c6d756473f583594465f1bba289d0e1fac109e3ca0057667",
+      "outcome": "completed",
+      "exitCode": 0,
+      "signal": null,
+      "pid": 73998,
+      "injection": null,
+      "reason": "runs the leaf suite for real and hands the observation over"
+    }
+  ],
+  "advance": null,
+  "gate": {
+    "final": {
+      "verdict": "pass",
+      "receipt": {
+        "schemaVersion": 1,
+        "policy": {
+          "ref": "policy/managed-pilot-recovery",
+          "digest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379"
+        },
+        "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "evidence": [
+          "5b0efd39af1493833a64493baf377d81d03408652f644b2f5d99cf93fa6d3bb8",
+          "e0c4f2b69896e45793c499e95567e0597a63b9847ec72f896f92d7dc9cbd7ec8"
+        ],
+        "requiredDenominator": {
+          "required": 2,
+          "valid": 2
+        },
+        "blocked": [],
+        "sourceAttestation": {
+          "origin": "comet-classic",
+          "execution": "exec-L1-a1-89ac48,exec-L2-a1-f964bc"
+        },
+        "verdict": "pass"
+      }
+    }
+  },
+  "journeyPhases": null,
+  "checkpoints": [
+    {
+      "id": "plan-validated",
+      "ok": true,
+      "detail": "PlanBundle v1 validates"
+    },
+    {
+      "id": "worker-exec-L1-a1-89ac48",
+      "ok": true,
+      "detail": "worker outcome completed (exit 0, signal -)"
+    },
+    {
+      "id": "admitted-L1-1",
+      "ok": true,
+      "detail": "leaf L1 attempt 1 admitted (pass)"
+    },
+    {
+      "id": "l1-done",
+      "ok": true,
+      "detail": "L1 pass"
+    },
+    {
+      "id": "duplicate-dispatch-refused-L1",
+      "ok": true,
+      "detail": "the same-key re-dispatch was refused"
+    },
+    {
+      "id": "worker-exec-L2-a1-f964bc",
+      "ok": true,
+      "detail": "worker outcome completed (exit 0, signal -)"
+    },
+    {
+      "id": "admitted-L2-1",
+      "ok": true,
+      "detail": "leaf L2 attempt 1 admitted (pass)"
+    },
+    {
+      "id": "l2-done",
+      "ok": true,
+      "detail": "L2 pass"
+    },
+    {
+      "id": "replay-refused",
+      "ok": true,
+      "detail": "DUPLICATE_ISSUANCE: execution exec-L2-a1-f964bc already issued evidence; a repeated issuance from the same identity is refused"
+    },
+    {
+      "id": "gate-pass-non-duplicate-receipts",
+      "ok": true,
+      "detail": "gate pass, valid 2"
+    }
+  ],
+  "journey": "duplicate-refused-idempotent",
+  "verdict": "OBSERVED",
+  "finishedAt": "2026-10-20T18:27:30.053Z"
+}

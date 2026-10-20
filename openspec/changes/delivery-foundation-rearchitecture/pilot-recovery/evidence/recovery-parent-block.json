@@ -1,0 +1,1342 @@
+{
+  "schemaVersion": 1,
+  "tool": "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/run-recovery-chain.mjs",
+  "scenario": "parent-block",
+  "runId": "p33-f9bee05a359f",
+  "controller": {
+    "runnerId": "comet-classic"
+  },
+  "environment": "pilot-recovery-local-tmpdir",
+  "toolchain": "node v22.13.1",
+  "policy": {
+    "ref": "policy/managed-pilot-recovery",
+    "digest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379"
+  },
+  "plan": {
+    "ok": true,
+    "errors": [],
+    "bundle": {
+      "schemaVersion": 1,
+      "change": "pilot-recovery-fixture",
+      "schedulerOwner": "comet-classic",
+      "tasks": [
+        {
+          "id": "L1",
+          "dependsOn": []
+        },
+        {
+          "id": "L2",
+          "dependsOn": []
+        },
+        {
+          "id": "L-INT",
+          "dependsOn": [
+            "L1",
+            "L2"
+          ]
+        }
+      ],
+      "allowedPaths": [
+        "src/",
+        "test/",
+        "workers/",
+        "artifacts/"
+      ],
+      "worktree": "worktree/impl-p3-3 (recorded run; recovery chain confined to assigned path prefixes)",
+      "acceptanceRefs": [
+        "A10",
+        "A11",
+        "A12",
+        "F07"
+      ]
+    }
+  },
+  "candidate": {
+    "files": [
+      "src/feature.js",
+      "src/pipeline.js"
+    ],
+    "digestBefore": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+    "digestAfter": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb"
+  },
+  "ledger": {
+    "file": "control/run-state.json",
+    "final": {
+      "label": "final",
+      "digest": "10b66db3085570446fa43cb03e7cda67b7dadfa189b879baebbd60d967621337",
+      "state": {
+        "schemaVersion": 1,
+        "runId": "p33-f9bee05a359f",
+        "epoch": 1,
+        "planDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "candidateDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+        "leaves": [
+          {
+            "id": "L1",
+            "status": "done",
+            "attempt": 2,
+            "dispatchExecution": "exec-L1-a2-132567",
+            "dispatchEpoch": 1,
+            "receiptCandidateDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+            "receiptDigest": "3a559d7cf5006de7b131da524a8d13c1e844d5b57339440d1edeac48f1bc5a6e"
+          },
+          {
+            "id": "L2",
+            "status": "done",
+            "attempt": 2,
+            "dispatchExecution": "exec-L2-a2-2313ac",
+            "dispatchEpoch": 1,
+            "receiptCandidateDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+            "receiptDigest": "4a8de3351a76a719acf597adbe3c6a947c333c3dccea7f36edbb8841b103cb10"
+          },
+          {
+            "id": "L-INT",
+            "status": "done",
+            "attempt": 2,
+            "dispatchExecution": "exec-L-INT-a2-08b092",
+            "dispatchEpoch": 1,
+            "receiptCandidateDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+            "receiptDigest": "8c30f48f345fac44829b18eb9a9f5049d05cef873794a3f50074dd8a3b95f8d0"
+          }
+        ],
+        "dispatchLedger": [
+          {
+            "runnerId": "comet-classic",
+            "run": "p33-f9bee05a359f",
+            "gate": "leaf:L1",
+            "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+            "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+            "attempt": 1,
+            "epoch": 1,
+            "role": "verifier",
+            "execution": "exec-L1-a1-02458e",
+            "integrity": "b4bfc70d6dc12c07a048702e05217b4afacb002fc15519bfb8598a4f18a00752"
+          },
+          {
+            "runnerId": "comet-classic",
+            "run": "p33-f9bee05a359f",
+            "gate": "leaf:L2",
+            "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+            "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+            "attempt": 1,
+            "epoch": 1,
+            "role": "verifier",
+            "execution": "exec-L2-a1-fc20a0",
+            "integrity": "cfb332bf6300dbff596fcca8d6bbce3fc4b678e5dd946f18dd3dc171e1384fd8"
+          },
+          {
+            "runnerId": "comet-classic",
+            "run": "p33-f9bee05a359f",
+            "gate": "leaf:L-INT",
+            "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+            "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+            "attempt": 1,
+            "epoch": 1,
+            "role": "verifier",
+            "execution": "exec-L-INT-a1-efb66b",
+            "integrity": "865d8818f41763ee2285ca26d7748b0372480e8b497266d8555783160361cdeb"
+          },
+          {
+            "runnerId": "comet-classic",
+            "run": "p33-f9bee05a359f",
+            "gate": "leaf:L1",
+            "inputDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+            "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+            "attempt": 2,
+            "epoch": 1,
+            "role": "verifier",
+            "execution": "exec-L1-a2-132567",
+            "integrity": "e1da70fb1d371195becf8ae48e2a09dcdb368ed59e5540ef9ec4ce88667dd759"
+          },
+          {
+            "runnerId": "comet-classic",
+            "run": "p33-f9bee05a359f",
+            "gate": "leaf:L2",
+            "inputDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+            "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+            "attempt": 2,
+            "epoch": 1,
+            "role": "verifier",
+            "execution": "exec-L2-a2-2313ac",
+            "integrity": "3b466fb58adfa9944c4d73f99a4f1d2aef8aab9830af788c5afefca8f5341cac"
+          },
+          {
+            "runnerId": "comet-classic",
+            "run": "p33-f9bee05a359f",
+            "gate": "leaf:L-INT",
+            "inputDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+            "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+            "attempt": 2,
+            "epoch": 1,
+            "role": "verifier",
+            "execution": "exec-L-INT-a2-08b092",
+            "integrity": "3805973226242e71829d09b1ea814f3a1b287a4b04151e487a58b8e547592ea1"
+          }
+        ],
+        "receiptDigests": [
+          "f9c1b476b7e3a8594348f7a6a41adc8ed4cdaf5d9b03a585ee57c68d8c9f7bd9",
+          "8fa193c6222659b5473962192dfde6aa134fd669cc4925adb95b1f78d51941a3",
+          "a0ec52564c6bbb63405158853124d9817c7e69d8cd67134ad307be7410420845",
+          "3a559d7cf5006de7b131da524a8d13c1e844d5b57339440d1edeac48f1bc5a6e",
+          "4a8de3351a76a719acf597adbe3c6a947c333c3dccea7f36edbb8841b103cb10",
+          "8c30f48f345fac44829b18eb9a9f5049d05cef873794a3f50074dd8a3b95f8d0"
+        ],
+        "issuedExecutions": [
+          "exec-L1-a1-02458e",
+          "exec-L2-a1-fc20a0",
+          "exec-L-INT-a1-efb66b",
+          "exec-L1-a2-132567",
+          "exec-L2-a2-2313ac",
+          "exec-L-INT-a2-08b092"
+        ],
+        "evidenceExecutions": [
+          "exec-L1-a1-02458e",
+          "exec-L2-a1-fc20a0",
+          "exec-L-INT-a1-efb66b",
+          "exec-L1-a2-132567",
+          "exec-L2-a2-2313ac",
+          "exec-L-INT-a2-08b092"
+        ],
+        "advance": null,
+        "advanceSeq": 0,
+        "history": [
+          {
+            "event": "run-open",
+            "epoch": 1,
+            "at": "2026-10-20T18:27:54.496Z"
+          },
+          {
+            "event": "dispatch",
+            "epoch": 1,
+            "leaf": "L1",
+            "attempt": 1,
+            "execution": "exec-L1-a1-02458e",
+            "at": "2026-10-20T18:27:54.499Z"
+          },
+          {
+            "event": "receipt",
+            "epoch": 1,
+            "leaf": "L1",
+            "attempt": 1,
+            "execution": "exec-L1-a1-02458e",
+            "result": "pass",
+            "at": "2026-10-20T18:27:54.681Z"
+          },
+          {
+            "event": "dispatch",
+            "epoch": 1,
+            "leaf": "L2",
+            "attempt": 1,
+            "execution": "exec-L2-a1-fc20a0",
+            "at": "2026-10-20T18:27:54.682Z"
+          },
+          {
+            "event": "receipt",
+            "epoch": 1,
+            "leaf": "L2",
+            "attempt": 1,
+            "execution": "exec-L2-a1-fc20a0",
+            "result": "pass",
+            "at": "2026-10-20T18:27:54.844Z"
+          },
+          {
+            "event": "dispatch",
+            "epoch": 1,
+            "leaf": "L-INT",
+            "attempt": 1,
+            "execution": "exec-L-INT-a1-efb66b",
+            "at": "2026-10-20T18:27:54.844Z"
+          },
+          {
+            "event": "receipt",
+            "epoch": 1,
+            "leaf": "L-INT",
+            "attempt": 1,
+            "execution": "exec-L-INT-a1-efb66b",
+            "result": "red",
+            "at": "2026-10-20T18:27:55.007Z"
+          },
+          {
+            "event": "candidate-rotation",
+            "epoch": 1,
+            "digest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+            "at": "2026-10-20T18:27:55.008Z"
+          },
+          {
+            "event": "dispatch",
+            "epoch": 1,
+            "leaf": "L1",
+            "attempt": 2,
+            "execution": "exec-L1-a2-132567",
+            "at": "2026-10-20T18:27:55.009Z"
+          },
+          {
+            "event": "receipt",
+            "epoch": 1,
+            "leaf": "L1",
+            "attempt": 2,
+            "execution": "exec-L1-a2-132567",
+            "result": "pass",
+            "at": "2026-10-20T18:27:55.168Z"
+          },
+          {
+            "event": "dispatch",
+            "epoch": 1,
+            "leaf": "L2",
+            "attempt": 2,
+            "execution": "exec-L2-a2-2313ac",
+            "at": "2026-10-20T18:27:55.169Z"
+          },
+          {
+            "event": "receipt",
+            "epoch": 1,
+            "leaf": "L2",
+            "attempt": 2,
+            "execution": "exec-L2-a2-2313ac",
+            "result": "pass",
+            "at": "2026-10-20T18:27:55.331Z"
+          },
+          {
+            "event": "dispatch",
+            "epoch": 1,
+            "leaf": "L-INT",
+            "attempt": 2,
+            "execution": "exec-L-INT-a2-08b092",
+            "at": "2026-10-20T18:27:55.331Z"
+          },
+          {
+            "event": "receipt",
+            "epoch": 1,
+            "leaf": "L-INT",
+            "attempt": 2,
+            "execution": "exec-L-INT-a2-08b092",
+            "result": "pass",
+            "at": "2026-10-20T18:27:55.496Z"
+          }
+        ],
+        "updatedAt": "2026-10-20T18:27:55.496Z"
+      }
+    },
+    "snapshots": {
+      "initial": {
+        "label": "initial",
+        "digest": "516e3b16e563f3601edf221093fa83b12441051490ba68aaae63f4487932bd23",
+        "state": {
+          "schemaVersion": 1,
+          "runId": "p33-f9bee05a359f",
+          "epoch": 1,
+          "planDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+          "candidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+          "leaves": [
+            {
+              "id": "L1",
+              "status": "pending",
+              "attempt": 0,
+              "dispatchExecution": null,
+              "dispatchEpoch": null,
+              "receiptCandidateDigest": null,
+              "receiptDigest": null
+            },
+            {
+              "id": "L2",
+              "status": "pending",
+              "attempt": 0,
+              "dispatchExecution": null,
+              "dispatchEpoch": null,
+              "receiptCandidateDigest": null,
+              "receiptDigest": null
+            },
+            {
+              "id": "L-INT",
+              "status": "pending",
+              "attempt": 0,
+              "dispatchExecution": null,
+              "dispatchEpoch": null,
+              "receiptCandidateDigest": null,
+              "receiptDigest": null
+            }
+          ],
+          "dispatchLedger": [],
+          "receiptDigests": [],
+          "issuedExecutions": [],
+          "evidenceExecutions": [],
+          "advance": null,
+          "advanceSeq": 0,
+          "history": [
+            {
+              "event": "run-open",
+              "epoch": 1,
+              "at": "2026-10-20T18:27:54.496Z"
+            }
+          ],
+          "updatedAt": "2026-10-20T18:27:54.497Z"
+        }
+      },
+      "final": {
+        "label": "final",
+        "digest": "10b66db3085570446fa43cb03e7cda67b7dadfa189b879baebbd60d967621337",
+        "state": {
+          "schemaVersion": 1,
+          "runId": "p33-f9bee05a359f",
+          "epoch": 1,
+          "planDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+          "candidateDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+          "leaves": [
+            {
+              "id": "L1",
+              "status": "done",
+              "attempt": 2,
+              "dispatchExecution": "exec-L1-a2-132567",
+              "dispatchEpoch": 1,
+              "receiptCandidateDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+              "receiptDigest": "3a559d7cf5006de7b131da524a8d13c1e844d5b57339440d1edeac48f1bc5a6e"
+            },
+            {
+              "id": "L2",
+              "status": "done",
+              "attempt": 2,
+              "dispatchExecution": "exec-L2-a2-2313ac",
+              "dispatchEpoch": 1,
+              "receiptCandidateDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+              "receiptDigest": "4a8de3351a76a719acf597adbe3c6a947c333c3dccea7f36edbb8841b103cb10"
+            },
+            {
+              "id": "L-INT",
+              "status": "done",
+              "attempt": 2,
+              "dispatchExecution": "exec-L-INT-a2-08b092",
+              "dispatchEpoch": 1,
+              "receiptCandidateDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+              "receiptDigest": "8c30f48f345fac44829b18eb9a9f5049d05cef873794a3f50074dd8a3b95f8d0"
+            }
+          ],
+          "dispatchLedger": [
+            {
+              "runnerId": "comet-classic",
+              "run": "p33-f9bee05a359f",
+              "gate": "leaf:L1",
+              "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+              "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+              "attempt": 1,
+              "epoch": 1,
+              "role": "verifier",
+              "execution": "exec-L1-a1-02458e",
+              "integrity": "b4bfc70d6dc12c07a048702e05217b4afacb002fc15519bfb8598a4f18a00752"
+            },
+            {
+              "runnerId": "comet-classic",
+              "run": "p33-f9bee05a359f",
+              "gate": "leaf:L2",
+              "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+              "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+              "attempt": 1,
+              "epoch": 1,
+              "role": "verifier",
+              "execution": "exec-L2-a1-fc20a0",
+              "integrity": "cfb332bf6300dbff596fcca8d6bbce3fc4b678e5dd946f18dd3dc171e1384fd8"
+            },
+            {
+              "runnerId": "comet-classic",
+              "run": "p33-f9bee05a359f",
+              "gate": "leaf:L-INT",
+              "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+              "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+              "attempt": 1,
+              "epoch": 1,
+              "role": "verifier",
+              "execution": "exec-L-INT-a1-efb66b",
+              "integrity": "865d8818f41763ee2285ca26d7748b0372480e8b497266d8555783160361cdeb"
+            },
+            {
+              "runnerId": "comet-classic",
+              "run": "p33-f9bee05a359f",
+              "gate": "leaf:L1",
+              "inputDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+              "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+              "attempt": 2,
+              "epoch": 1,
+              "role": "verifier",
+              "execution": "exec-L1-a2-132567",
+              "integrity": "e1da70fb1d371195becf8ae48e2a09dcdb368ed59e5540ef9ec4ce88667dd759"
+            },
+            {
+              "runnerId": "comet-classic",
+              "run": "p33-f9bee05a359f",
+              "gate": "leaf:L2",
+              "inputDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+              "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+              "attempt": 2,
+              "epoch": 1,
+              "role": "verifier",
+              "execution": "exec-L2-a2-2313ac",
+              "integrity": "3b466fb58adfa9944c4d73f99a4f1d2aef8aab9830af788c5afefca8f5341cac"
+            },
+            {
+              "runnerId": "comet-classic",
+              "run": "p33-f9bee05a359f",
+              "gate": "leaf:L-INT",
+              "inputDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+              "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+              "attempt": 2,
+              "epoch": 1,
+              "role": "verifier",
+              "execution": "exec-L-INT-a2-08b092",
+              "integrity": "3805973226242e71829d09b1ea814f3a1b287a4b04151e487a58b8e547592ea1"
+            }
+          ],
+          "receiptDigests": [
+            "f9c1b476b7e3a8594348f7a6a41adc8ed4cdaf5d9b03a585ee57c68d8c9f7bd9",
+            "8fa193c6222659b5473962192dfde6aa134fd669cc4925adb95b1f78d51941a3",
+            "a0ec52564c6bbb63405158853124d9817c7e69d8cd67134ad307be7410420845",
+            "3a559d7cf5006de7b131da524a8d13c1e844d5b57339440d1edeac48f1bc5a6e",
+            "4a8de3351a76a719acf597adbe3c6a947c333c3dccea7f36edbb8841b103cb10",
+            "8c30f48f345fac44829b18eb9a9f5049d05cef873794a3f50074dd8a3b95f8d0"
+          ],
+          "issuedExecutions": [
+            "exec-L1-a1-02458e",
+            "exec-L2-a1-fc20a0",
+            "exec-L-INT-a1-efb66b",
+            "exec-L1-a2-132567",
+            "exec-L2-a2-2313ac",
+            "exec-L-INT-a2-08b092"
+          ],
+          "evidenceExecutions": [
+            "exec-L1-a1-02458e",
+            "exec-L2-a1-fc20a0",
+            "exec-L-INT-a1-efb66b",
+            "exec-L1-a2-132567",
+            "exec-L2-a2-2313ac",
+            "exec-L-INT-a2-08b092"
+          ],
+          "advance": null,
+          "advanceSeq": 0,
+          "history": [
+            {
+              "event": "run-open",
+              "epoch": 1,
+              "at": "2026-10-20T18:27:54.496Z"
+            },
+            {
+              "event": "dispatch",
+              "epoch": 1,
+              "leaf": "L1",
+              "attempt": 1,
+              "execution": "exec-L1-a1-02458e",
+              "at": "2026-10-20T18:27:54.499Z"
+            },
+            {
+              "event": "receipt",
+              "epoch": 1,
+              "leaf": "L1",
+              "attempt": 1,
+              "execution": "exec-L1-a1-02458e",
+              "result": "pass",
+              "at": "2026-10-20T18:27:54.681Z"
+            },
+            {
+              "event": "dispatch",
+              "epoch": 1,
+              "leaf": "L2",
+              "attempt": 1,
+              "execution": "exec-L2-a1-fc20a0",
+              "at": "2026-10-20T18:27:54.682Z"
+            },
+            {
+              "event": "receipt",
+              "epoch": 1,
+              "leaf": "L2",
+              "attempt": 1,
+              "execution": "exec-L2-a1-fc20a0",
+              "result": "pass",
+              "at": "2026-10-20T18:27:54.844Z"
+            },
+            {
+              "event": "dispatch",
+              "epoch": 1,
+              "leaf": "L-INT",
+              "attempt": 1,
+              "execution": "exec-L-INT-a1-efb66b",
+              "at": "2026-10-20T18:27:54.844Z"
+            },
+            {
+              "event": "receipt",
+              "epoch": 1,
+              "leaf": "L-INT",
+              "attempt": 1,
+              "execution": "exec-L-INT-a1-efb66b",
+              "result": "red",
+              "at": "2026-10-20T18:27:55.007Z"
+            },
+            {
+              "event": "candidate-rotation",
+              "epoch": 1,
+              "digest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+              "at": "2026-10-20T18:27:55.008Z"
+            },
+            {
+              "event": "dispatch",
+              "epoch": 1,
+              "leaf": "L1",
+              "attempt": 2,
+              "execution": "exec-L1-a2-132567",
+              "at": "2026-10-20T18:27:55.009Z"
+            },
+            {
+              "event": "receipt",
+              "epoch": 1,
+              "leaf": "L1",
+              "attempt": 2,
+              "execution": "exec-L1-a2-132567",
+              "result": "pass",
+              "at": "2026-10-20T18:27:55.168Z"
+            },
+            {
+              "event": "dispatch",
+              "epoch": 1,
+              "leaf": "L2",
+              "attempt": 2,
+              "execution": "exec-L2-a2-2313ac",
+              "at": "2026-10-20T18:27:55.169Z"
+            },
+            {
+              "event": "receipt",
+              "epoch": 1,
+              "leaf": "L2",
+              "attempt": 2,
+              "execution": "exec-L2-a2-2313ac",
+              "result": "pass",
+              "at": "2026-10-20T18:27:55.331Z"
+            },
+            {
+              "event": "dispatch",
+              "epoch": 1,
+              "leaf": "L-INT",
+              "attempt": 2,
+              "execution": "exec-L-INT-a2-08b092",
+              "at": "2026-10-20T18:27:55.331Z"
+            },
+            {
+              "event": "receipt",
+              "epoch": 1,
+              "leaf": "L-INT",
+              "attempt": 2,
+              "execution": "exec-L-INT-a2-08b092",
+              "result": "pass",
+              "at": "2026-10-20T18:27:55.496Z"
+            }
+          ],
+          "updatedAt": "2026-10-20T18:27:55.496Z"
+        }
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seq": 1,
+      "role": "test-author",
+      "action": "stage-suites",
+      "inputSummary": "test/leaf-slugify.test.js, test/leaf-render.test.js, test/integration.test.js",
+      "verdict": "written",
+      "basis": {
+        "kind": "authoring",
+        "note": "leaf suites landed from staged sources through the managed writer"
+      }
+    },
+    {
+      "seq": 2,
+      "role": "whitebox",
+      "action": "dispatch",
+      "inputSummary": {
+        "opId": "L1",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "leaf:L1"
+      },
+      "verdict": "dispatched",
+      "basis": {
+        "kind": "dispatch",
+        "note": "leaf L1 on candidate v1"
+      },
+      "dispatch": {
+        "execution": "exec-L1-a1-02458e",
+        "role": "verifier",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "leaf:L1",
+        "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "integrity": "b4bfc70d6dc12c07a048702e05217b4afacb002fc15519bfb8598a4f18a00752"
+      }
+    },
+    {
+      "seq": 4,
+      "role": "whitebox",
+      "action": "dispatch",
+      "inputSummary": {
+        "opId": "L2",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "leaf:L2"
+      },
+      "verdict": "dispatched",
+      "basis": {
+        "kind": "dispatch",
+        "note": "leaf L2 on candidate v1"
+      },
+      "dispatch": {
+        "execution": "exec-L2-a1-fc20a0",
+        "role": "verifier",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "leaf:L2",
+        "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "integrity": "cfb332bf6300dbff596fcca8d6bbce3fc4b678e5dd946f18dd3dc171e1384fd8"
+      }
+    },
+    {
+      "seq": 7,
+      "role": "whitebox",
+      "action": "dispatch",
+      "inputSummary": {
+        "opId": "L-INT",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "leaf:L-INT"
+      },
+      "verdict": "dispatched",
+      "basis": {
+        "kind": "dispatch",
+        "note": "parent journey verification on candidate v1"
+      },
+      "dispatch": {
+        "execution": "exec-L-INT-a1-efb66b",
+        "role": "verifier",
+        "attempt": 1,
+        "epoch": 1,
+        "gate": "leaf:L-INT",
+        "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "integrity": "865d8818f41763ee2285ca26d7748b0372480e8b497266d8555783160361cdeb"
+      }
+    },
+    {
+      "seq": 10,
+      "role": "builder",
+      "action": "write",
+      "inputSummary": "write src/pipeline.js from variants/pipeline-correct.js (sha256 cc5ce4518d42ef68e90a936428c4e9dceeb419f4924069fe762ca26f9d087317)",
+      "verdict": "written",
+      "basis": {
+        "kind": "candidate",
+        "note": "the builder produces a genuinely new candidate; the candidate digest rotates"
+      }
+    },
+    {
+      "seq": 12,
+      "role": "whitebox",
+      "action": "dispatch",
+      "inputSummary": {
+        "opId": "L1",
+        "attempt": 2,
+        "epoch": 1,
+        "gate": "leaf:L1"
+      },
+      "verdict": "dispatched",
+      "basis": {
+        "kind": "dispatch",
+        "note": "re-verify L1 on the new candidate"
+      },
+      "dispatch": {
+        "execution": "exec-L1-a2-132567",
+        "role": "verifier",
+        "attempt": 2,
+        "epoch": 1,
+        "gate": "leaf:L1",
+        "inputDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+        "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "integrity": "e1da70fb1d371195becf8ae48e2a09dcdb368ed59e5540ef9ec4ce88667dd759"
+      }
+    },
+    {
+      "seq": 14,
+      "role": "whitebox",
+      "action": "dispatch",
+      "inputSummary": {
+        "opId": "L2",
+        "attempt": 2,
+        "epoch": 1,
+        "gate": "leaf:L2"
+      },
+      "verdict": "dispatched",
+      "basis": {
+        "kind": "dispatch",
+        "note": "re-verify L2 on the new candidate"
+      },
+      "dispatch": {
+        "execution": "exec-L2-a2-2313ac",
+        "role": "verifier",
+        "attempt": 2,
+        "epoch": 1,
+        "gate": "leaf:L2",
+        "inputDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+        "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "integrity": "3b466fb58adfa9944c4d73f99a4f1d2aef8aab9830af788c5afefca8f5341cac"
+      }
+    },
+    {
+      "seq": 16,
+      "role": "whitebox",
+      "action": "dispatch",
+      "inputSummary": {
+        "opId": "L-INT",
+        "attempt": 2,
+        "epoch": 1,
+        "gate": "leaf:L-INT"
+      },
+      "verdict": "dispatched",
+      "basis": {
+        "kind": "dispatch",
+        "note": "re-verify L-INT on the new candidate"
+      },
+      "dispatch": {
+        "execution": "exec-L-INT-a2-08b092",
+        "role": "verifier",
+        "attempt": 2,
+        "epoch": 1,
+        "gate": "leaf:L-INT",
+        "inputDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+        "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "integrity": "3805973226242e71829d09b1ea814f3a1b287a4b04151e487a58b8e547592ea1"
+      }
+    }
+  ],
+  "dispatchLedger": [
+    {
+      "runnerId": "comet-classic",
+      "run": "p33-f9bee05a359f",
+      "gate": "leaf:L1",
+      "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+      "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+      "attempt": 1,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-L1-a1-02458e",
+      "integrity": "b4bfc70d6dc12c07a048702e05217b4afacb002fc15519bfb8598a4f18a00752"
+    },
+    {
+      "runnerId": "comet-classic",
+      "run": "p33-f9bee05a359f",
+      "gate": "leaf:L2",
+      "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+      "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+      "attempt": 1,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-L2-a1-fc20a0",
+      "integrity": "cfb332bf6300dbff596fcca8d6bbce3fc4b678e5dd946f18dd3dc171e1384fd8"
+    },
+    {
+      "runnerId": "comet-classic",
+      "run": "p33-f9bee05a359f",
+      "gate": "leaf:L-INT",
+      "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+      "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+      "attempt": 1,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-L-INT-a1-efb66b",
+      "integrity": "865d8818f41763ee2285ca26d7748b0372480e8b497266d8555783160361cdeb"
+    },
+    {
+      "runnerId": "comet-classic",
+      "run": "p33-f9bee05a359f",
+      "gate": "leaf:L1",
+      "inputDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+      "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+      "attempt": 2,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-L1-a2-132567",
+      "integrity": "e1da70fb1d371195becf8ae48e2a09dcdb368ed59e5540ef9ec4ce88667dd759"
+    },
+    {
+      "runnerId": "comet-classic",
+      "run": "p33-f9bee05a359f",
+      "gate": "leaf:L2",
+      "inputDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+      "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+      "attempt": 2,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-L2-a2-2313ac",
+      "integrity": "3b466fb58adfa9944c4d73f99a4f1d2aef8aab9830af788c5afefca8f5341cac"
+    },
+    {
+      "runnerId": "comet-classic",
+      "run": "p33-f9bee05a359f",
+      "gate": "leaf:L-INT",
+      "inputDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+      "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+      "attempt": 2,
+      "epoch": 1,
+      "role": "verifier",
+      "execution": "exec-L-INT-a2-08b092",
+      "integrity": "3805973226242e71829d09b1ea814f3a1b287a4b04151e487a58b8e547592ea1"
+    }
+  ],
+  "refusals": [
+    {
+      "seq": 6,
+      "where": "admit",
+      "code": "CORRELATION_MISMATCH",
+      "reason": "envelope caseId \"L1\" does not correlate to the dispatched operation \"L2\" (F07: 关联 ID 核对)",
+      "ledgerDigestBefore": "972ab86a4bed128faaedaadaffdd88fc11351c6e0d969a039f4dcedcacc70698",
+      "ledgerDigestAfter": "972ab86a4bed128faaedaadaffdd88fc11351c6e0d969a039f4dcedcacc70698",
+      "envelope": {
+        "schemaVersion": 1,
+        "candidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "caseId": "L1",
+        "check": "leaf:L2",
+        "origin": {
+          "kind": "registered-runner",
+          "id": "comet-classic"
+        },
+        "execution": {
+          "id": "exec-L2-a1-fc20a0"
+        },
+        "environment": "pilot-recovery-local-tmpdir",
+        "toolchain": "node v22.13.1",
+        "executions": {
+          "total": 1,
+          "valid": 1
+        },
+        "result": "pass",
+        "evidence": [
+          {
+            "uri": "workers/L2/observation-exec-L2-a1-fc20a0.json",
+            "sha256": "470e08d82948be374ddbe2bd8fbba9057a1fb2d3cde16e8e3ed2b3252cd7a628"
+          }
+        ],
+        "expiry": "2026-10-20T19:27:54.844Z"
+      },
+      "dispatch": {
+        "runnerId": "comet-classic",
+        "run": "p33-f9bee05a359f",
+        "gate": "leaf:L2",
+        "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "attempt": 1,
+        "epoch": 1,
+        "role": "verifier",
+        "execution": "exec-L2-a1-fc20a0",
+        "integrity": "cfb332bf6300dbff596fcca8d6bbce3fc4b678e5dd946f18dd3dc171e1384fd8"
+      },
+      "envelopeDigest": "4b982a578fa08aa4a2a6d0d5fa37960698843fb8277e49f5bec63b37c464df8b"
+    },
+    {
+      "seq": 9,
+      "where": "journey",
+      "code": "RELEASE_REFUSED",
+      "reason": "the parent journey failed on the integrated observation (red); individually passed leaf receipts do not release the parent (A12/F07 失联调和)",
+      "ledgerDigestBefore": "35db50136cb8ef92c82599a8981eaaefa31614ed83f3dd13ba5dc38991bd8b1b",
+      "ledgerDigestAfter": "35db50136cb8ef92c82599a8981eaaefa31614ed83f3dd13ba5dc38991bd8b1b"
+    },
+    {
+      "seq": 11,
+      "where": "admit-stale-probe",
+      "code": "STALE_CANDIDATE",
+      "reason": "dispatch bound to input digest 4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1 but current input digest is 797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+      "ledgerDigestBefore": "4f85b959e5262f9290cefeb125802812efea71a87d65b0660a6c23eaef28f240",
+      "ledgerDigestAfter": "4f85b959e5262f9290cefeb125802812efea71a87d65b0660a6c23eaef28f240",
+      "envelope": {
+        "schemaVersion": 1,
+        "candidateDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "caseId": "L1",
+        "check": "leaf:L1",
+        "origin": {
+          "kind": "registered-runner",
+          "id": "comet-classic"
+        },
+        "execution": {
+          "id": "exec-L1-a1-02458e"
+        },
+        "environment": "pilot-recovery-local-tmpdir",
+        "toolchain": "node v22.13.1",
+        "executions": {
+          "total": 1,
+          "valid": 1
+        },
+        "result": "pass",
+        "evidence": [
+          {
+            "uri": "workers/L1/observation-exec-L1-a1-02458e.json",
+            "sha256": "5e59dbcb87242aa644225663fc70a98d2e82d24d6910de4ca8604a6238216f18"
+          }
+        ],
+        "expiry": "2026-10-20T19:27:54.681Z"
+      },
+      "dispatch": {
+        "runnerId": "comet-classic",
+        "run": "p33-f9bee05a359f",
+        "gate": "leaf:L1",
+        "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "policyDigest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379",
+        "attempt": 1,
+        "epoch": 1,
+        "role": "verifier",
+        "execution": "exec-L1-a1-02458e",
+        "integrity": "b4bfc70d6dc12c07a048702e05217b4afacb002fc15519bfb8598a4f18a00752"
+      }
+    }
+  ],
+  "admitted": [
+    {
+      "seq": 3,
+      "opId": "L1",
+      "attempt": 1,
+      "epoch": 1,
+      "execution": "exec-L1-a1-02458e",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "leaf:L1",
+      "result": "pass",
+      "envelopeDigest": "f9c1b476b7e3a8594348f7a6a41adc8ed4cdaf5d9b03a585ee57c68d8c9f7bd9"
+    },
+    {
+      "seq": 5,
+      "opId": "L2",
+      "attempt": 1,
+      "epoch": 1,
+      "execution": "exec-L2-a1-fc20a0",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "leaf:L2",
+      "result": "pass",
+      "envelopeDigest": "8fa193c6222659b5473962192dfde6aa134fd669cc4925adb95b1f78d51941a3"
+    },
+    {
+      "seq": 8,
+      "opId": "L-INT",
+      "attempt": 1,
+      "epoch": 1,
+      "execution": "exec-L-INT-a1-efb66b",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "leaf:L-INT",
+      "result": "red",
+      "envelopeDigest": "a0ec52564c6bbb63405158853124d9817c7e69d8cd67134ad307be7410420845"
+    },
+    {
+      "seq": 13,
+      "opId": "L1",
+      "attempt": 2,
+      "epoch": 1,
+      "execution": "exec-L1-a2-132567",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "leaf:L1",
+      "result": "pass",
+      "envelopeDigest": "3a559d7cf5006de7b131da524a8d13c1e844d5b57339440d1edeac48f1bc5a6e"
+    },
+    {
+      "seq": 15,
+      "opId": "L2",
+      "attempt": 2,
+      "epoch": 1,
+      "execution": "exec-L2-a2-2313ac",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "leaf:L2",
+      "result": "pass",
+      "envelopeDigest": "4a8de3351a76a719acf597adbe3c6a947c333c3dccea7f36edbb8841b103cb10"
+    },
+    {
+      "seq": 17,
+      "opId": "L-INT",
+      "attempt": 2,
+      "epoch": 1,
+      "execution": "exec-L-INT-a2-08b092",
+      "role": "verifier",
+      "class": "independent-acceptance",
+      "check": "leaf:L-INT",
+      "result": "pass",
+      "envelopeDigest": "8c30f48f345fac44829b18eb9a9f5049d05cef873794a3f50074dd8a3b95f8d0"
+    }
+  ],
+  "workers": [
+    {
+      "opId": "L1",
+      "execution": "exec-L1-a1-02458e",
+      "mode": "complete",
+      "preHoldMs": 0,
+      "observationUri": "workers/L1/observation-exec-L1-a1-02458e.json",
+      "observationSha256": "5e59dbcb87242aa644225663fc70a98d2e82d24d6910de4ca8604a6238216f18",
+      "outcome": "completed",
+      "exitCode": 0,
+      "signal": null,
+      "pid": 74343,
+      "injection": null,
+      "reason": "runs the leaf suite for real and hands the observation over"
+    },
+    {
+      "opId": "L2",
+      "execution": "exec-L2-a1-fc20a0",
+      "mode": "complete",
+      "preHoldMs": 0,
+      "observationUri": "workers/L2/observation-exec-L2-a1-fc20a0.json",
+      "observationSha256": "470e08d82948be374ddbe2bd8fbba9057a1fb2d3cde16e8e3ed2b3252cd7a628",
+      "outcome": "completed",
+      "exitCode": 0,
+      "signal": null,
+      "pid": 74347,
+      "injection": null,
+      "reason": "runs the leaf suite for real and hands the observation over"
+    },
+    {
+      "opId": "L-INT",
+      "execution": "exec-L-INT-a1-efb66b",
+      "mode": "complete",
+      "preHoldMs": 0,
+      "observationUri": "workers/L-INT/observation-exec-L-INT-a1-efb66b.json",
+      "observationSha256": "f4624a523010ca006c0ae7dbddcc2f765b9f25d2d796022c4c66020554daa4d7",
+      "outcome": "leaf-failed",
+      "exitCode": 3,
+      "signal": null,
+      "pid": 74350,
+      "injection": null,
+      "reason": "runs the leaf suite for real and hands the observation over"
+    },
+    {
+      "opId": "L1",
+      "execution": "exec-L1-a2-132567",
+      "mode": "complete",
+      "preHoldMs": 0,
+      "observationUri": "workers/L1/observation-exec-L1-a2-132567.json",
+      "observationSha256": "fa222a452c2ca6b81cce415eed4f2c50bf47e2b2c413c2fe74b28d22a00fa87a",
+      "outcome": "completed",
+      "exitCode": 0,
+      "signal": null,
+      "pid": 74353,
+      "injection": null,
+      "reason": "runs the leaf suite for real and hands the observation over"
+    },
+    {
+      "opId": "L2",
+      "execution": "exec-L2-a2-2313ac",
+      "mode": "complete",
+      "preHoldMs": 0,
+      "observationUri": "workers/L2/observation-exec-L2-a2-2313ac.json",
+      "observationSha256": "4edda3da7ec7db1628d5d17e0fb3b44ff50256679c088b11545eaadbffdb7815",
+      "outcome": "completed",
+      "exitCode": 0,
+      "signal": null,
+      "pid": 74356,
+      "injection": null,
+      "reason": "runs the leaf suite for real and hands the observation over"
+    },
+    {
+      "opId": "L-INT",
+      "execution": "exec-L-INT-a2-08b092",
+      "mode": "complete",
+      "preHoldMs": 0,
+      "observationUri": "workers/L-INT/observation-exec-L-INT-a2-08b092.json",
+      "observationSha256": "1ae370c3c6c421285699698fae72c30e3d95f4ffe7bbedfcfe4a104957a5f38a",
+      "outcome": "completed",
+      "exitCode": 0,
+      "signal": null,
+      "pid": 74359,
+      "injection": null,
+      "reason": "runs the leaf suite for real and hands the observation over"
+    }
+  ],
+  "advance": null,
+  "gate": {
+    "blockedPhase": {
+      "verdict": "blocked",
+      "receipt": {
+        "schemaVersion": 1,
+        "policy": {
+          "ref": "policy/managed-pilot-recovery",
+          "digest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379"
+        },
+        "inputDigest": "4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1",
+        "evidence": [
+          "8fa193c6222659b5473962192dfde6aa134fd669cc4925adb95b1f78d51941a3",
+          "a0ec52564c6bbb63405158853124d9817c7e69d8cd67134ad307be7410420845",
+          "f9c1b476b7e3a8594348f7a6a41adc8ed4cdaf5d9b03a585ee57c68d8c9f7bd9"
+        ],
+        "requiredDenominator": {
+          "required": 3,
+          "valid": 2
+        },
+        "blocked": [
+          "UNVERIFIED_CAPABILITY: leaf:L-INT receipt result is red with 1 valid execution(s) (A18)"
+        ],
+        "sourceAttestation": {
+          "origin": "comet-classic",
+          "execution": "exec-L-INT-a1-efb66b,exec-L1-a1-02458e,exec-L2-a1-fc20a0"
+        },
+        "verdict": "blocked"
+      }
+    },
+    "staleProbe": {
+      "verdict": "blocked",
+      "blocked": [
+        "STALE_INPUT: receipt bound to input digest 4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1 but current input digest is 797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb (exec-L1-a1-02458e)",
+        "STALE_INPUT: receipt bound to input digest 4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1 but current input digest is 797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb (exec-L2-a1-fc20a0)",
+        "STALE_INPUT: receipt bound to input digest 4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1 but current input digest is 797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb (exec-L-INT-a1-efb66b)"
+      ]
+    },
+    "final": {
+      "verdict": "pass",
+      "receipt": {
+        "schemaVersion": 1,
+        "policy": {
+          "ref": "policy/managed-pilot-recovery",
+          "digest": "433b795ad3174b81e81e71fa6b4bc22fb13f8e0320c134ed2158cfb7ee918379"
+        },
+        "inputDigest": "797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb",
+        "evidence": [
+          "3a559d7cf5006de7b131da524a8d13c1e844d5b57339440d1edeac48f1bc5a6e",
+          "4a8de3351a76a719acf597adbe3c6a947c333c3dccea7f36edbb8841b103cb10",
+          "8c30f48f345fac44829b18eb9a9f5049d05cef873794a3f50074dd8a3b95f8d0"
+        ],
+        "requiredDenominator": {
+          "required": 3,
+          "valid": 3
+        },
+        "blocked": [],
+        "sourceAttestation": {
+          "origin": "comet-classic",
+          "execution": "exec-L-INT-a2-08b092,exec-L1-a2-132567,exec-L2-a2-2313ac"
+        },
+        "verdict": "pass"
+      }
+    }
+  },
+  "journeyPhases": {
+    "blocked": {
+      "parentResult": "red",
+      "leavesPassed": [
+        "L1",
+        "L2"
+      ],
+      "at": "2026-10-20T18:27:55.008Z"
+    }
+  },
+  "checkpoints": [
+    {
+      "id": "plan-validated",
+      "ok": true,
+      "detail": "PlanBundle v1 validates"
+    },
+    {
+      "id": "worker-exec-L1-a1-02458e",
+      "ok": true,
+      "detail": "worker outcome completed (exit 0, signal -)"
+    },
+    {
+      "id": "admitted-L1-1",
+      "ok": true,
+      "detail": "leaf L1 attempt 1 admitted (pass)"
+    },
+    {
+      "id": "worker-exec-L2-a1-fc20a0",
+      "ok": true,
+      "detail": "worker outcome completed (exit 0, signal -)"
+    },
+    {
+      "id": "admitted-L2-1",
+      "ok": true,
+      "detail": "leaf L2 attempt 1 admitted (pass)"
+    },
+    {
+      "id": "leaves-passed-individually",
+      "ok": true,
+      "detail": "both leaf receipts pass independently"
+    },
+    {
+      "id": "correlation-mismatch-refused",
+      "ok": true,
+      "detail": "CORRELATION_MISMATCH: envelope caseId \"L1\" does not correlate to the dispatched operation \"L2\" (F07: 关联 ID 核对)"
+    },
+    {
+      "id": "worker-exec-L-INT-a1-efb66b",
+      "ok": true,
+      "detail": "worker outcome leaf-failed (exit 3, signal -)"
+    },
+    {
+      "id": "parent-red-observed",
+      "ok": true,
+      "detail": "parent observation red (real integration RED)"
+    },
+    {
+      "id": "parent-gate-blocked",
+      "ok": true,
+      "detail": "blocked-phase gate blocked: UNVERIFIED_CAPABILITY: leaf:L-INT receipt result is red with 1 valid execution(s) (A18)"
+    },
+    {
+      "id": "candidate-rotated",
+      "ok": true,
+      "detail": "candidate 4445c7143b20… -> 797e6d12cfc5…"
+    },
+    {
+      "id": "v1-receipt-stale-on-new-candidate",
+      "ok": true,
+      "detail": "STALE_CANDIDATE: dispatch bound to input digest 4445c7143b20631f98983f759ba95d0411a6c001b3bb604709a8a9b3a1fd70d1 but current input digest is 797e6d12cfc5073e1991e0f4cebe897051a429ddd50f98fe17617ab7e52aafdb"
+    },
+    {
+      "id": "worker-exec-L1-a2-132567",
+      "ok": true,
+      "detail": "worker outcome completed (exit 0, signal -)"
+    },
+    {
+      "id": "admitted-L1-2",
+      "ok": true,
+      "detail": "leaf L1 attempt 2 admitted (pass)"
+    },
+    {
+      "id": "reverified-L1",
+      "ok": true,
+      "detail": "L1 attempt 2 pass"
+    },
+    {
+      "id": "worker-exec-L2-a2-2313ac",
+      "ok": true,
+      "detail": "worker outcome completed (exit 0, signal -)"
+    },
+    {
+      "id": "admitted-L2-2",
+      "ok": true,
+      "detail": "leaf L2 attempt 2 admitted (pass)"
+    },
+    {
+      "id": "reverified-L2",
+      "ok": true,
+      "detail": "L2 attempt 2 pass"
+    },
+    {
+      "id": "worker-exec-L-INT-a2-08b092",
+      "ok": true,
+      "detail": "worker outcome completed (exit 0, signal -)"
+    },
+    {
+      "id": "admitted-L-INT-2",
+      "ok": true,
+      "detail": "leaf L-INT attempt 2 admitted (pass)"
+    },
+    {
+      "id": "reverified-L-INT",
+      "ok": true,
+      "detail": "L-INT attempt 2 pass"
+    },
+    {
+      "id": "gate-pass-new-candidate",
+      "ok": true,
+      "detail": "gate pass, valid 3, bound 797e6d12cfc5…"
+    }
+  ],
+  "journey": "re-accepted-on-new-candidate",
+  "verdict": "OBSERVED",
+  "finishedAt": "2026-10-20T18:27:55.497Z"
+}

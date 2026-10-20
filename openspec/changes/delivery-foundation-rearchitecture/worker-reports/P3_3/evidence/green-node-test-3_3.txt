@@ -1,0 +1,35 @@
+TAP version 13
+# Subtest: V_A10: a same-key second dispatch is refused, a replayed receipt is refused by the admission layer, and refusals leave the ledger byte-identical
+ok 1 - V_A10: a same-key second dispatch is refused, a replayed receipt is refused by the admission layer, and refusals leave the ledger byte-identical
+  ---
+  duration_ms: 634.630542
+  ...
+# Subtest: V_A11: a receipt from a superseded epoch is refused (STALE_EPOCH) and a late attempt-1 receipt after attempt 2 was admitted is refused (STALE_ATTEMPT), both traced
+ok 2 - V_A11: a receipt from a superseded epoch is refused (STALE_EPOCH) and a late attempt-1 receipt after attempt 2 was admitted is refused (STALE_ATTEMPT), both traced
+  ---
+  duration_ms: 2998.366417
+  ...
+# Subtest: V_A12: two real runner processes race to advance the same run — exactly one wins, the loser and a stale-epoch claimant are refused, the control plane keeps one writer
+ok 3 - V_A12: two real runner processes race to advance the same run — exactly one wins, the loser and a stale-epoch claimant are refused, the control plane keeps one writer
+  ---
+  duration_ms: 202.821667
+  ...
+# Subtest: V_F07: a real SIGKILLed leaf worker is recovered from the authoritative disk state — completed leaves keep their identity, no leaf is reopened, the dead attempt is refused
+ok 4 - V_F07: a real SIGKILLed leaf worker is recovered from the authoritative disk state — completed leaves keep their identity, no leaf is reopened, the dead attempt is refused
+  ---
+  duration_ms: 603.362375
+  ...
+# Subtest: V_A12b: leaves pass individually but the parent journey fails for real — the parent stays blocked and only a new candidate with full re-verification passes
+ok 5 - V_A12b: leaves pass individually but the parent journey fails for real — the parent stays blocked and only a new candidate with full re-verification passes
+  ---
+  duration_ms: 1431.897375
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5944.091292
