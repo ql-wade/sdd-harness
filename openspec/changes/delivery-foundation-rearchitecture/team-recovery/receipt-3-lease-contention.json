@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "interface": "TeamRecovery.DrillReceipt.v1",
+  "drill": "lease-contention",
+  "operationKey": "comet-classic/lease:.comet-state.lock:beab355def4f",
+  "executedAt": "2026-10-21T06:46:15.418Z",
+  "realProcessesOnly": true,
+  "steps": [
+    {
+      "step": "comet-init-scratch-project",
+      "command": "comet init <scratch> --yes --scope project --workflow classic --platform claude --codegraph skip --language en",
+      "exitCode": 0,
+      "attempt": 1,
+      "timestamp": "2026-10-21T06:45:39.287Z",
+      "detail": "duration 2145ms (pinned node node)"
+    },
+    {
+      "step": "state-init-managed-change",
+      "command": "comet state init p53-lease-drill full --managed-delivery --knowledge-closeout-required true --json",
+      "exitCode": 0,
+      "attempt": 2,
+      "timestamp": "2026-10-21T06:45:39.630Z",
+      "detail": "duration 341ms"
+    },
+    {
+      "step": "baseline-dispatch-gate-A",
+      "command": "comet state dispatch-gate p53-lease-drill A --json",
+      "exitCode": 0,
+      "attempt": 3,
+      "timestamp": "2026-10-21T06:45:41.362Z",
+      "detail": "execution gate-a-mvhr0342-7b74d0ba, attempt 1",
+      "stateFileShape": {
+        "execution": "gate-a-mvhr0342-7b74d0ba",
+        "attempt": 1
+      }
+    },
+    {
+      "step": "second-exclusive-open-rejected-EEXIST",
+      "command": "node <drill-child> fs.open(.comet-state.lock, wx)  # real dist sibling of the CLI lock path",
+      "exitCode": 3,
+      "attempt": 4,
+      "timestamp": "2026-10-21T06:45:41.447Z",
+      "detail": "open code EEXIST; live holder pid 31315",
+      "stateFileShape": {
+        "lockOwner": {
+          "pid": 31315,
+          "nonce": "3fb3ad7e-9b5d-4b1e-8c4a-b6e524548b3a",
+          "createdAt": 1792565141399,
+          "hostname": "MacBook-Wade-7.local"
+        },
+        "holderPid": 31315,
+        "holderAliveWhenProbed": true
+      }
+    },
+    {
+      "step": "cli-double-open-rejected-while-lease-held",
+      "command": "comet state dispatch-gate p53-lease-drill A --json  # while a live holder owns .comet-state.lock",
+      "exitCode": 70,
+      "attempt": 5,
+      "timestamp": "2026-10-21T06:46:11.555Z",
+      "detail": "duration 30107ms; refusal Timed out waiting for file lock",
+      "stateFileShape": {
+        "lockOwnerAfterTimeout": {
+          "pid": 31315,
+          "nonce": "3fb3ad7e-9b5d-4b1e-8c4a-b6e524548b3a",
+          "createdAt": 1792565141399,
+          "hostname": "MacBook-Wade-7.local"
+        }
+      },
+      "verbatim": {
+        "exitCode": "70",
+        "stderr": "",
+        "stdout": "{\"command\":\"state\",\"exitCode\":70,\"agent\":{\"phase\":null,\"status\":null,\"stateVersion\":null,\"workspace\":{\"cwd\":null},\"continuation\":null},\"data\":{\"issues\":[{\"code\":\"CLASSIC_COMMAND_FAILED\",\"message\":\"Timed out waiting for file lock: <host-path-redacted> out waiting for file lock: /privat"
+      }
+    },
+    {
+      "step": "sigkill-holder-lease-recovered-idempotent-resume",
+      "command": "comet state dispatch-gate <change> A --json  # started under the live lease, holder SIGKILLed at ~1.5s",
+      "exitCode": 0,
+      "attempt": 6,
+      "timestamp": "2026-10-21T06:46:13.581Z",
+      "detail": "holder 31744 alive at kill: true, confirmed gone: true; execution gate-a-mvhr0342-7b74d0ba (baseline gate-a-mvhr0342-7b74d0ba), attempt 1 (baseline 1)",
+      "stateFileShape": {
+        "recoveredExecution": "gate-a-mvhr0342-7b74d0ba",
+        "baselineExecution": "gate-a-mvhr0342-7b74d0ba",
+        "attempts": {
+          "baseline": 1,
+          "recovered": 1
+        },
+        "lockRecovered": true
+      },
+      "verbatim": {
+        "exitCode": "0",
+        "stdout": "{\"command\":\"state\",\"exitCode\":0,\"agent\":{\"phase\":null,\"status\":null,\"stateVersion\":null,\"workspace\":{\"cwd\":null},\"continuation\":null},\"data\":{\"change\":\"p53-lease-drill\",\"gate\":\"A\",\"dispatch\":{\"attempt\":1,\"dependsOn\":{\"R\":\"af7ff168c3d351bb31120e9d597de13f755a81db86db044d224588f6b61ea425\"},\"epoch\":2,\"execution\":\"gate-a-mvhr0342-7b74d0ba\",\"gate\":\"A\",\"inputDigest\":\"eb9c628d1e7d0b519b1c52387bee3bd6ce29f76f89f657997de1038654a3d32f\",\"issuedAt\":\"2026-10-21T06:45:41.186Z\",\"role\":\"reviewer\",\"state\":\"open\"},\"recovered\":true},\"stdout\":\"{\\\"execution\\\":\\\"gate-a-mvhr0342-7b74d0ba\\\",\\\"attempt\\\":1,\\\"role\\\":\\\"r"
+      }
+    },
+    {
+      "step": "interrupted-transaction-journal-recovered-on-next-lock",
+      "command": "comet state gates <change> --json  # after planting a real-schema interrupted transaction journal",
+      "exitCode": 0,
+      "attempt": 7,
+      "timestamp": "2026-10-21T06:46:13.822Z",
+      "detail": "journal consumed: true; yaml unchanged: true; recovery ran inside the real state lock acquisition",
+      "stateFileShape": {
+        "transactionSchema": "comet.classic.state-transaction.v1",
+        "journalConsumed": true,
+        "yamlIntact": true,
+        "runStatePreserved": false
+      }
+    },
+    {
+      "step": "foreign-host-lock-owner-never-recovered",
+      "command": "node <drill-child> withRecoverableFileLock(<foreign-host lock>, { timeoutMs: 1500 })  # real dist lock module",
+      "exitCode": 4,
+      "attempt": 8,
+      "timestamp": "2026-10-21T06:46:15.417Z",
+      "detail": "owner hostname \"definitely-not-this-host\" with a live pid: the real module refuses recovery and times out — the cross-machine boundary stays closed locally (CROSS_MACHINE_SCOPE_NOT_ENABLED)",
+      "stateFileShape": {
+        "foreignOwnerHostname": "definitely-not-this-host",
+        "refused": true
+      }
+    }
+  ],
+  "status": "VERIFIED",
+  "reason": "the real Comet Classic state lock: second exclusive open rejected (EEXIST), real CLI double-open refused while the lease is held, real SIGKILL of the holder lets the next real CLI command recover the lease and resume the SAME operation idempotently, an interrupted transaction journal is recovered on the next lock acquisition, and a foreign-host lock owner is never recovered"
+}

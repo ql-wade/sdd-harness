@@ -1,0 +1,55 @@
+TAP version 13
+# Subtest: J1: the runbook carries ≥10 machine-verified commands whose entries exist and whose direct rows really run with the documented exit codes
+ok 1 - J1: the runbook carries ≥10 machine-verified commands whose entries exist and whose direct rows really run with the documented exit codes
+  ---
+  duration_ms: 855.566
+  ...
+# Subtest: J1 negative: a runbook copy with a removed command row fails the ≥10 inventory contract (deleting runbook commands is caught mechanically)
+ok 2 - J1 negative: a runbook copy with a removed command row fails the ≥10 inventory contract (deleting runbook commands is caught mechanically)
+  ---
+  duration_ms: 1.039958
+  ...
+# Subtest: J2: the three recovery drill receipts are structurally honest — monotonic real timestamps, monotonic attempts, one operationKey per drill, real exit codes
+ok 3 - J2: the three recovery drill receipts are structurally honest — monotonic real timestamps, monotonic attempts, one operationKey per drill, real exit codes
+  ---
+  duration_ms: 1.119083
+  ...
+# Subtest: J2: the drills re-run live through the real executor with the same VERIFIED outcome
+ok 4 - J2: the drills re-run live through the real executor with the same VERIFIED outcome
+  ---
+  duration_ms: 43737.039208
+  ...
+# Subtest: J2 negative: a forged receipt timestamp (non-monotonic, and in the future) is rejected by the validator
+ok 5 - J2 negative: a forged receipt timestamp (non-monotonic, and in the future) is rejected by the validator
+  ---
+  duration_ms: 2.4425
+  ...
+# Subtest: J3: version rollback over the real protocol — unapproved and wrong-digest rollbacks are refused (exit 2), the approved same-digest rollback verifies (exit 0) and I06 independently confirms
+ok 6 - J3: version rollback over the real protocol — unapproved and wrong-digest rollbacks are refused (exit 2), the approved same-digest rollback verifies (exit 0) and I06 independently confirms
+  ---
+  duration_ms: 338.070292
+  ...
+# Subtest: J4: the runbook declares every known environment gate verbatim and documents the paired-commit enablement flow; the live scope gate readback stays anchored NOT_ENABLED
+ok 7 - J4: the runbook declares every known environment gate verbatim and documents the paired-commit enablement flow; the live scope gate readback stays anchored NOT_ENABLED
+  ---
+  duration_ms: 56.362125
+  ...
+# Subtest: J4: start/publish are really denied while the cross-machine scope is not enabled (exit 2, not a crash)
+ok 8 - J4: start/publish are really denied while the cross-machine scope is not enabled (exit 2, not a crash)
+  ---
+  duration_ms: 159.305834
+  ...
+# Subtest: J4 negative: a runbook copy that hides one known environment gate is rejected
+ok 9 - J4 negative: a runbook copy that hides one known environment gate is rejected
+  ---
+  duration_ms: 0.816584
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 45228.310792
