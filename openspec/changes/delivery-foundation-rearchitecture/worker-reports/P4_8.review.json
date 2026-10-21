@@ -1,0 +1,35 @@
+{
+  "task": "P4_8",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-21T04:25:59.260949+00:00",
+  "head_reviewed": "475096b",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "6 份 RED 证据文件 TAP location/error 字段含原始宿主绝对路径; house pattern(P4_5 nb-4 同类), 未来捕获应过滤",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-2",
+      "summary": "infra-llmwiki-paths parseJsonOut 的 AssertionError 未导入 bug(掩盖 ENOENT 失败原因) — 控制器已在 master 修复 7373c79",
+      "disposition": "fixed in 7373c79"
+    },
+    {
+      "id": "nb-3",
+      "summary": "旅程故障注入工具手写 operationKey 'km-journey-fault' vs 适配器确定性键 — L07 幂等语义由键相等保证, 评审员已独立复验",
+      "disposition": "recorded"
+    }
+  ],
+  "independently_rerun": {
+    "unit": "17/17 (x2)",
+    "journey": "5/5 (x2)",
+    "negatives": "17 项全过(评审员自建 fixture): L04 真实 P4_7 CLI 链 decide0->revoke0->recheck exit2 LEDGER_CHANGED+GRANT_NO_LONGER_VALID; CONTENT_USE_EXPIRED/AUDIENCE_OUTSIDE_INTERSECTION/PUBLISH_GRANT_NOT_ISOLATION_AUTH/ISOLATOR_PRINCIPAL_REQUIRED; COLLECTOR_OVERSTEP_REFUSED+多源闭包; L02 真实 fs 收窄+评审员自建 MCP stdio server 读回+CHANNEL_STILL_READABLE+UNVERIFIED阻断isolated+ADMIN_READ_IS_NOT_ISOLATION; L11 RECOVERY_ORDER_INVALID/CURSOR_CONFLATION_REFUSED/正确顺序三游标; L09 SUPERVISOR_OVERSTEP+双独立告警; L07 评审员自有真实 SIGKILL+原实例重启 attempts 0->4 同 operationKey",
+    "npm_test": "415/411 pass/3 fail(known-env: C08 openspec drift/llmwiki venv ENOENT/B08) 零 knowledge-revocation 失败; 控制器在 merge 0d98796 复跑 415/411/4(含 adapter×2 沙箱项) 零新增",
+    "boundary_clean": true,
+    "host_path_leak": "RED 证据 TAP 字段有(nb-1); 代码/旅程回执/GREEN 干净"
+  },
+  "unverified_audit": "4 项如实未伪装 PASS, 承接者明确(Outline Web 渠道/5min 端到端/活 venv MCP/多分钟墙钟阈值); 旅程断言 outlineObject.isolated===false 逐条核验",
+  "cli_entry_disposition": "ACCEPT: 负例由旅程内真实 P4_7 CLI 承担且评审员独立复现 exit 2; 库入口形态符合 P4_4 adapter 先例; 部署波次如需运维独立探测入口再评估 tools/ 包装器"
+}
