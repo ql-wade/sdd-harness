@@ -78,7 +78,7 @@
     "timezone": "Asia/Shanghai",
     "reason": "Receiving executor qualifies actual host, resources and throughput before estimating implementation"
   },
-  "updated_at": "2026-10-21T03:46:04.873333+00:00",
+  "updated_at": "2026-10-21T04:06:27.066974+00:00",
   "preparatory_checks": {
     "scaffold_scoped_tests": "41/41 PASS",
     "scaffold_npm_test": "41/41 PASS on Node22.13.1",
@@ -103,7 +103,7 @@
     "Resume existing monitor sdd; never create duplicate monitor",
     "Continue original full goal, do not mark 92 scenarios accepted from baseline tests"
   ],
-  "last_progress_at": "2026-10-21T03:46:04.873333+00:00",
+  "last_progress_at": "2026-10-21T04:06:27.066974+00:00",
   "authorization_blocker_audit": {
     "consecutive_goal_turns": 0,
     "decision_received": true,
@@ -148,7 +148,7 @@
     "status": "active"
   },
   "run_started_at": "2026-10-20T03:04:53.456337+00:00",
-  "status_revision": 42,
+  "status_revision": 43,
   "lifecycle_guard": {
     "skill": "openspec-lifecycle-guard",
     "path": "/Users/mac/.claude/skills/openspec-lifecycle-guard/SKILL.md",
@@ -430,21 +430,20 @@
       }
     },
     "I04": {
-      "status": "PARTIAL_ACCEPTED",
-      "steps_done": [
-        "1",
-        "2",
-        "4"
-      ],
-      "step_3": "NOT_DONE — 独立读回 oracle 的真实 MCP 写读回 UNVERIFIED（stdio initialize/tools-list VERIFIED，create 20s 挂起如实记录）；文件级等价探针全 VERIFIED；承接者 mcp-capabilities 接纳 P 任务 + 环境 owner（venv 对齐）",
+      "status": "ACCEPTED",
+      "steps_done": 4,
       "commits": {
-        "tests": "fcc9a9e",
-        "implementation": "019fdc9",
-        "report": "b2ff32d",
-        "base_sync": "51d9da3"
+        "original": "019fdc9-era",
+        "integration_fix": "3b17a3b",
+        "test_hygiene": "5745729"
       },
-      "merged_to_master": "67191f1",
-      "review": "worker-reports/I04.review.json (APPROVED, 0 blocking)"
+      "step3_clearance": "probe 3/3 VERIFIED real MCP create write + independent file/index readback + 33 worktrees canonical root consistent; venv .sdd/venvs/llmwiki-311 (uv sync from pinned lock)",
+      "regression": "npm test @5745729 with LLMWIKI_PYTHON export: 398/394/4 (known-env down 5->4; llmwiki cross-worktree now green)",
+      "known_fail_set": [
+        "adapter hooks.yaml compile (sandbox write refusal x2)",
+        "C08 host-openspec 1.3.1->1.14.3 drift",
+        "B08 preservation"
+      ]
     },
     "P1_3": {
       "status": "ACCEPTED",

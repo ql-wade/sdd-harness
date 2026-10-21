@@ -955,7 +955,7 @@
 
 - [x] **Step 1 [5 min]: Test** RED：不同worktree/CLI/MCP指向另一wiki、目录穿越/符号链接越域、错误project ID分别拒绝；源码/正式spec或任务勾选被当wiki事实权威时拒绝；未经批准全Git代码摄入不允许；MCP写成功但独立索引/存储读回不一致时Kp失败，不因本地文件存在放行归档。
 - [x] **Step 2 [5 min]: Implement** GREEN：固定真实目录与项目标识、可重建索引和最小MCP能力；保持项目知识与OpenSpec specs/tasks及Comet状态分离；用隔离配置验证CLI/MCP/worktree同一规范路径；新宿主真实发现工具后完成知识写入及独立查询；清楚区分raw/staging/curated及index缓存，索引不能覆盖源记录或改知识授权。
-- [ ] **Step 3 [5 min]: Review** 独立读回：同一批准条目通过真实MCP写入、独立CLI/文件/索引查询同一项目读回；两工作树canonical root一致；未通过门禁时同一Comet Run的归档保持阻断；基础设施只返回事实，不签Kp回执。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
+- [x] **Step 3 [5 min]: Review** 独立读回：同一批准条目通过真实MCP写入、独立CLI/文件/索引查询同一项目读回；两工作树canonical root一致；未通过门禁时同一Comet Run的归档保持阻断；基础设施只返回事实，不签Kp回执。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
 - [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
 
 ### Task I05: 自托管deepwiki-open及独立CodeGraph

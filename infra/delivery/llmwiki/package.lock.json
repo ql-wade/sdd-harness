@@ -60,7 +60,8 @@
       "ping"
     ],
     "observedVia": "stdio JSON-RPC initialize + tools/list against a disposable sandbox workspace",
-    "writeToolObservation": "tools/call create did not return within 45s in the recording session; recorded honestly, write-channel verification belongs to probe --case worktree-mcp-readback"
+    "writeToolObservation": "VERIFIED 2026-10-21: tools/call create returns a full result against a disposable sandbox workspace (3/3 runs) once the probe driver keeps stdin open (fix 3b17a3b: spawnSync(input:) EOF triggered a local_server stdin-EOF deadlock; unrelated to the earlier 3.14-vs-3.11 hypothesis, falsified by a lock-aligned uv venv). Verified with python 3.11 venv uv-pip-synced from the pinned requirements.lock; independent file content-hash readback + sqlite index readback: CONSISTENT; negative control (file without index row): INCONSISTENT.",
+    "verifiedVia": "probe --case worktree-mcp-readback (interactive stdio session), receipts: worker-reports/I04/evidence/green-probe-worktree-mcp-readback-run{1,2,3}.txt"
   },
   "upGate": {
     "enabled": false,
