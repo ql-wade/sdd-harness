@@ -15,7 +15,7 @@
 // ProjectRoot.v1 硬不变量：包含性拒绝（目录穿越、符号链接越域、未包含路径）由解析器无条件执行；
 // policy 文件里的 denials.* 是声明记录，关掉声明既过不了 validate，也削弱不了解析器（probe 实证）。
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -468,29 +468,63 @@ function buildQualification({ registryFile, dir, docs }) {
 
 // ---- probe: worktree-mcp-readback ----
 
-function mcpJsonRpcStep(frames, timeoutMs, workspace, venvPython, mcpDir) {
-  const run = spawnSync(venvPython, ['-m', 'local_server', '--workspace', workspace], {
-    input: frames.join('\n') + '\n',
-    encoding: 'utf8',
-    timeout: timeoutMs,
-    maxBuffer: 16 * 1024 * 1024,
-    env: { ...process.env, PYTHONPATH: mcpDir, LLMWIKI_USER_ID: 'i04-probe-user' },
+async function mcpJsonRpcStep(frames, timeoutMs, workspace, venvPython, mcpDir) {
+  // llmwiki local_server 在 stdin EOF 后死锁（即使已无在途请求也永不退出）；而
+  // spawnSync(input:) 写完帧即 EOF——initialize 尚能返回、后续 tools/call 挂起。
+  // 修复：交互式 spawn 保持 stdin 开放直到全部期望响应到齐再主动结束子进程；
+  // 响应判定保持原语义（只看响应是否出现）。python 仍是直接子进程，stdout 捕获无竞态。
+  const expectedIds = frames.map((f) => JSON.parse(f).id).filter((id) => id !== undefined);
+  return await new Promise((resolve) => {
+    const child = spawn(venvPython, ['-m', 'local_server', '--workspace', workspace], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env, PYTHONPATH: mcpDir, LLMWIKI_USER_ID: 'i04-probe-user' },
+    });
+    const responses = new Map();
+    let stdoutBuf = '';
+    let stderrTail = '';
+    let settled = false;
+    const finish = (timedOut) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { child.kill('SIGKILL'); } catch { /* 已退出 */ }
+      resolve({
+        responses,
+        timedOut: Boolean(timedOut),
+        stderrTail: redactHostPaths(stderrTail.trim().split('\n').slice(-2).join(' | ')),
+        status: child.exitCode,
+        signal: child.signalCode ?? (timedOut ? 'SIGTERM' : null),
+      });
+    };
+    const timer = setTimeout(() => finish(true), timeoutMs);
+    child.stdout.on('data', (chunk) => {
+      stdoutBuf += chunk;
+      let idx;
+      while ((idx = stdoutBuf.indexOf('\n')) >= 0) {
+        const line = stdoutBuf.slice(0, idx).trim();
+        stdoutBuf = stdoutBuf.slice(idx + 1);
+        if (!line.startsWith('{')) continue;
+        try {
+          const message = JSON.parse(line);
+          if (message.id !== undefined) responses.set(message.id, message);
+        } catch {
+          // 非 JSON 行（日志混流）忽略；真实性由 stderr 记录补充。
+        }
+      }
+      if (expectedIds.length > 0 && expectedIds.every((id) => responses.has(id))) {
+        // 全部期望响应已到：server 不会在 EOF 后自行退出，主动结束（留 250ms 刷出窗口）。
+        setTimeout(() => finish(false), 250);
+      }
+    });
+    child.stderr.on('data', (chunk) => { stderrTail = (stderrTail + chunk.toString()).slice(-4000); });
+    child.on('error', (err) => { stderrTail += ` | spawn error: ${err.message}`; finish(false); });
+    child.on('close', () => finish(false));
+    child.stdin.on('error', () => { /* EPIPE：server 提前退出 */ });
+    child.stdin.write(frames.join('\n') + '\n');
   });
-  const responses = new Map();
-  for (const line of (run.stdout ?? '').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith('{')) continue;
-    try {
-      const message = JSON.parse(trimmed);
-      if (message.id !== undefined) responses.set(message.id, message);
-    } catch {
-      // 非 JSON 行（日志混流）忽略；真实性由 stderr 记录补充。
-    }
-  }
-  return { responses, timedOut: run.signal === 'SIGTERM', stderrTail: redactHostPaths((run.stderr ?? '').trim().split('\n').slice(-2).join(' | ')), status: run.status, signal: run.signal };
 }
 
-function probeWorktreeMcpReadback(domainDir, docs) {
+async function probeWorktreeMcpReadback(domainDir, docs) {
   const receipt = {
     interface: 'ProjectWikiInfra.v1',
     command: 'probe',
@@ -558,7 +592,7 @@ function probeWorktreeMcpReadback(domainDir, docs) {
       JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
       JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }),
     ];
-    const session = mcpJsonRpcStep(initFrames, MCP_INIT_TIMEOUT_MS + MCP_LIST_TIMEOUT_MS, sandbox, dist.venvPython, dist.mcpDir);
+    const session = await mcpJsonRpcStep(initFrames, MCP_INIT_TIMEOUT_MS + MCP_LIST_TIMEOUT_MS, sandbox, dist.venvPython, dist.mcpDir);
     const initResult = session.responses.get(1)?.result ?? null;
     receipt.mcpSession.initialize = initResult
       ? { status: 'VERIFIED', serverName: initResult.serverInfo?.name ?? null, serverVersion: initResult.serverInfo?.version ?? null, protocolVersion: initResult.protocolVersion ?? null }
@@ -573,7 +607,7 @@ function probeWorktreeMcpReadback(domainDir, docs) {
       JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
       JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'create', arguments: { knowledge_base: 'wiki', title: 'I04 Probe Entry', content: 'curated probe entry body (sandbox)', tags: ['probe'], path: '/wiki/probes/' } } }),
     ];
-    const writeRun = mcpJsonRpcStep(writeFrames, MCP_WRITE_TIMEOUT_MS, sandbox, dist.venvPython, dist.mcpDir);
+    const writeRun = await mcpJsonRpcStep(writeFrames, MCP_WRITE_TIMEOUT_MS, sandbox, dist.venvPython, dist.mcpDir);
     const writeResult = writeRun.responses.get(3) ?? null;
     if (writeResult) {
       const errorText = writeResult.result?.isError ? String(writeResult.result?.content?.[0]?.text ?? 'tool error') : null;
@@ -790,7 +824,7 @@ function probeEscapeDenial(domainDir, docs) {
 
 // ---- main ----
 
-function main(argv) {
+async function main(argv) {
   const { command, opts, error } = parseArgs(argv);
   if (error) return failInput(error);
   if (!command) return failInput('missing command');
@@ -801,7 +835,7 @@ function main(argv) {
     if (missing.length > 0) return failInput(`domain files missing (${displayPath(dir)}): ${missing.join(', ')}`);
     if (unparseable.length > 0) return failInput(`domain files unparseable: ${unparseable.join('; ')}`);
     const docs = new Map(DOMAIN_FILES.map((name) => [name, JSON.parse(files.get(name))]));
-    if (opts.case === 'worktree-mcp-readback') return probeWorktreeMcpReadback(dir, docs);
+    if (opts.case === 'worktree-mcp-readback') return await probeWorktreeMcpReadback(dir, docs);
     if (opts.case === 'escape-denial') return probeEscapeDenial(dir, docs);
     return failInput(`unknown probe case: ${opts.case ?? '(missing --case)'}`);
   }
@@ -856,4 +890,13 @@ function main(argv) {
   return failInput(`unknown command: ${command}`);
 }
 
-process.exit(main(process.argv.slice(2)));
+// 管道下 process.exit 不等 stdout flush 会截断回执（实测 8427B 收 8190B）；
+// exit 前显式 drain。stdout.write 空串回调即代表写队列已清空。
+async function exitAfterDrain(code) {
+  await new Promise((resolve) => process.stdout.write('', resolve));
+  process.exit(code);
+}
+main(process.argv.slice(2)).then(
+  (code) => exitAfterDrain(code),
+  (err) => { console.error(err?.stack ?? err); exitAfterDrain(1); },
+);
