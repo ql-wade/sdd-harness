@@ -13,13 +13,24 @@
     "command": "${CLAUDE_PROJECT_DIR}/tools/mcp/llmwiki.sh",
     "args": [],
     "transport": "stdio",
-    "workspaceBinding": "launcher binds the workspace to ${CLAUDE_PROJECT_DIR}/llmwiki",
+    "workspaceBinding": "canonical wiki root shared with the CLI (lib/sdd-paths.js getWikiHome): $SDD_WIKI_HOME when set, else $SDD_HOME/wiki/<project-slug>; the slug derives from the git common-dir main repository directory name (worktree-safe: every worktree of one repo shares one wiki root); a per-worktree llmwiki copy is never the wiki root (ProjectRoot.v1)",
     "env": {
       "SDD_HOME": "optional override for the llmwiki distribution root (default $HOME/.sdd)",
       "LLMWIKI_PYTHON": "optional explicit python override"
     }
   },
-  "capabilities": ["guide", "list_knowledge_bases", "search", "read", "create", "edit", "append", "delete", "lint", "ping"],
+  "capabilities": [
+    "guide",
+    "list_knowledge_bases",
+    "search",
+    "read",
+    "create",
+    "edit",
+    "append",
+    "delete",
+    "lint",
+    "ping"
+  ],
   "capabilitySource": "observed via stdio JSON-RPC tools/list against a disposable sandbox workspace; see package.lock.json:mcpSession",
   "observation": {
     "hostDiscovered": false,
