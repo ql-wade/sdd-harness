@@ -1009,7 +1009,7 @@
 **Parallel safe:** false
 **Acceptance IDs:** A10, A11, H08, H09, L06, L11, B08, U07
 
-- [ ] **Step 1 [5 min]: Test** RED：pending Outline发布/未知远端结果/唯一payload在工作区时cleanup实际拒绝；磁盘压力只告警不静默清理；不完整备份、校验不符、缺密钥、DB/附件时间点不一致、旧writer未隔离时恢复不启用；恢复旧ACL或重加离组成员、恢复旧grant/旧attempt结果、复制状态另开writer实际拒绝。
-- [ ] **Step 2 [5 min]: Implement** GREEN：备份包含原Run权威文件/事务/操作/回执/批准payload与版本；数据库和附件可一致恢复，索引可重建且校验；隔离恢复后先冻结新发布、调和未知写、完整权限对账和优先隔离，独立验证后由同Comet继续；原已完成产品历史保留；权限维护仍由同引擎关联作业处理；cleanup门禁使用Comet真实义务不只archived/git complete。
-- [ ] **Step 3 [5 min]: Review** 独立读回：真实备份manifest摘要、恢复资源ID/版本、同Run/operation与权限独立读回；记录停机起点/恢复/补偿结束和暴露违约；容量告警证据和cleanup失败状态可重现；恢复前后唯一owner证明，已下载数据不能声称可追回。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 1 [5 min]: Test** RED：pending Outline发布/未知远端结果/唯一payload在工作区时cleanup实际拒绝；磁盘压力只告警不静默清理；不完整备份、校验不符、缺密钥、DB/附件时间点不一致、旧writer未隔离时恢复不启用；恢复旧ACL或重加离组成员、恢复旧grant/旧attempt结果、复制状态另开writer实际拒绝。
+- [x] **Step 2 [5 min]: Implement** GREEN：备份包含原Run权威文件/事务/操作/回执/批准payload与版本；数据库和附件可一致恢复，索引可重建且校验；隔离恢复后先冻结新发布、调和未知写、完整权限对账和优先隔离，独立验证后由同Comet继续；原已完成产品历史保留；权限维护仍由同引擎关联作业处理；cleanup门禁使用Comet真实义务不只archived/git complete。
+- [x] **Step 3 [5 min]: Review** 独立读回：真实备份manifest摘要、恢复资源ID/版本、同Run/operation与权限独立读回；记录停机起点/恢复/补偿结束和暴露违约；容量告警证据和cleanup失败状态可重现；恢复前后唯一owner证明，已下载数据不能声称可追回。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。

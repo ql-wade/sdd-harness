@@ -1,0 +1,71 @@
+{
+  "task": "I08",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-21T03:46:04.873333+00:00",
+  "head_reviewed": "39466fd",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "worker RED 段把唯一 RED pass 用例散文标识为 'secret-refs import 钉子', 日志 ok 7 实为 'backup input errors exit 1'(模块缺席巧合吻合); 计数一致, 仅标识偏差",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-2",
+      "summary": "探针包装器 exit 0(VERIFIED) 而评审简报期望 exit 2; 内部真实 retention 调用 exit 2+RETENTION_CLEANUP_DENIED, 已脱离探针直接复现",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-3",
+      "summary": "canonical owns 含 operations-runbook.md 与 authority-transfer.schema.json, 产物无对应文件(schema 语义由 restore-policy.json 节+CLI 校验承载, runbook 缺位); 归入 I08_FILENAME_DEVIATION 集成波次决策",
+      "disposition": "routed to open decision"
+    }
+  ],
+  "independently_rerun": {
+    "unit": "13/13 pass (2x, exit 0)",
+    "delivery_cases": "4/4 pass (2x, exit 0)",
+    "probes": [
+      {
+        "case": "pending-cleanup-denial",
+        "exit": 0,
+        "code": "VERIFIED wrapper; internal retention exit 2 RETENTION_CLEANUP_DENIED (direct rerun exit 2)"
+      },
+      {
+        "case": "old-writer-denial",
+        "exit": 0,
+        "code": "RESTORE_REFUSED_OLD_WRITER_LIVE (real pid) then restore after real SIGKILL"
+      },
+      {
+        "case": "quarantine-restore",
+        "exit": 0,
+        "code": "RESTORE_BACKUP_INVALID on corrupted byte; release after same-op readback"
+      },
+      {
+        "case": "authority-transfer",
+        "exit": 0,
+        "code": "no-approval + masquerade refused; new authority epoch+1, singleAuthorityProof"
+      },
+      {
+        "case": "direct: open-transaction backup",
+        "exit": 2,
+        "code": "BACKUP_CONSISTENCY_REFUSED, zero files in target"
+      },
+      {
+        "case": "direct: tampered-byte restore",
+        "exit": 2,
+        "code": "RESTORE_BACKUP_INVALID, zero release"
+      },
+      {
+        "case": "direct: registry tamper autoCleanup=true under UNVERIFIED rpo/rto",
+        "exit": 2,
+        "code": "AUTO_CLEANUP_WITHOUT_CONFIRMED_RECOVERY"
+      }
+    ],
+    "npm_test": "398/393 pass/5 fail(all known-env)/0 skip at merge 2690286; 29 I08-named tests pass",
+    "validate_exit": 0
+  },
+  "red_evidence_authentic": true,
+  "boundary_clean": true,
+  "filename_deviation_recommendation": "接受现状(非阻断): 集成波次机械改名(backup/→recovery/、backup-restore.mjs→recovery.mjs、infra-backup-restore.test.js→infra-recovery.test.js + 路径引用) + plan owner 修 canonical 引用(infrastructure-plan.md I08、infrastructure-tasks.json I08.owns、execution-contract.json V_INFRA_I08.command) + runbook 补写或移出 owns; 牵动冻结契约, 需用户/plan owner 裁决后重冻结"
+}
