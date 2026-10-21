@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "interface": "RestorePolicy.v1",
+  "kind": "restore-policy",
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "quarantine": {
+    "required": true,
+    "publishFrozenDuringRestore": true,
+    "dedicatedProjectOnly": true,
+    "note": "restore lands in a quarantine, never over the live workspace; new publishing stays frozen until the independent verification closes"
+  },
+  "preconditions": {
+    "manifestDigestVerification": "REQUIRED",
+    "encryptionKeyAvailability": "REQUIRED",
+    "pointInTimeConsistency": "REQUIRED",
+    "oldWriterFence": "REQUIRED"
+  },
+  "oldWriterFence": {
+    "required": true,
+    "processLevelEvidenceRequired": true,
+    "acceptedMethods": ["SIGKILL", "SIGTERM", "process-exit-confirmed"],
+    "rejectedMethods": ["shared-directory-reregister"],
+    "liveWriterBlocksRestore": true,
+    "note": "an old writer is fenced only by process-level evidence (real termination method plus a gone confirmation checked against the live pid); re-registering a shared directory is a masquerade, not fencing"
+  },
+  "permissionReconciliation": {
+    "reAuthenticateFromCurrentAuthority": true,
+    "restoredAclIsDataOnly": true,
+    "offlineMembersNotReadmitted": true,
+    "supersededAttemptResultsExcluded": true,
+    "note": "restored ACL snapshots and membership are data; nothing is replayed and nobody is readmitted by the restore itself — permissions are re-authenticated against the current authority, and receipts from superseded epochs stay excluded from current state"
+  },
+  "forbidden": {
+    "replayOldAcl": true,
+    "readdOfflineMembers": true,
+    "restoreOldGrantsOrAttempts": true,
+    "secondWriterByStateCopy": true,
+    "reuseRevokedCodeSourceCache": true
+  },
+  "release": {
+    "sameOperationVerificationRequired": true,
+    "independentByteReadbackRequired": true,
+    "publishFrozen": true,
+    "singleWriterRequired": true,
+    "note": "release happens only after the restored quarantine is verified to carry the same run/operation identity with an independent byte-level readback"
+  },
+  "restoreReaderRef": "secret-ref:sdd-harness-pilot/restore-reader",
+  "realServiceRestore": "UNVERIFIED",
+  "authorityTransfer": {
+    "interface": "AuthorityTransfer.v1",
+    "approvalRequired": true,
+    "approvalReasonRequired": "runner-permanently-lost",
+    "fenceProcessLevelRequired": true,
+    "epochBumpRequired": true,
+    "singleAuthorityProofRequired": true,
+    "noSharedDirectoryMasquerade": true,
+    "note": "when the original Runner is permanently lost, a controlled transfer approval plus old-writer isolation evidence registers the new authority (epoch bump, same run); a shared directory must never masquerade as distributed fencing"
+  },
+  "localOnly": true
+}

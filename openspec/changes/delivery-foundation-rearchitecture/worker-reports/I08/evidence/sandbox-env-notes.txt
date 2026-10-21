@@ -1,0 +1,51 @@
+Full-suite environment notes for run impl-dfr-20261020-r1 / I08 (2026-10-21)
+=============================================================================
+
+Full `npm test` in this sandboxed session: 387 tests (374 pre-existing + 13 new
+I08), 381 pass, 5 fail, 1 legal skip. All 5 failures are environmental and
+pre-date this task; none touches I08 scope. Evidence per failure:
+
+1. C08 negative (classic-integration.test.js:476) — PRE-EXISTING on clean
+   master@1fc8d4f. Cause: host-global `openspec` CLI drifted from the pinned
+   1.3.1 to 1.14.3 (recorded HOST_OPENSPEC_DRIFT incident). Verified failing on
+   the main checkout /Users/mac/Code/sdd-harness BEFORE any I08 change
+   (34 pass / 4 fail incl. this one, see below).
+
+2. RED cross-worktree identity + index consistency: worktree-mcp-readback
+   (infra-llmwiki-paths.test.js:282) — PRE-EXISTING on clean master. Cause: the
+   llmwiki MCP channel is unavailable in this environment (server spawn ENOENT);
+   the test's own latent parseJsonOut bug (AssertionError used without import)
+   surfaces as ReferenceError when the channel is down.
+
+3. B08 preservation (spec-closeout.test.js:321) — PRE-EXISTING on clean master
+   (same pre-change main-checkout run shows it failing). Same host-openspec
+   drift family.
+
+4. claude-code adapter compiles hooks.yaml to safely-sourceable env
+   (adapter-quoting.test.js:20) and 5. adapter preserves user hook entries it
+   does not own (adapter-quoting.test.js:8th) — SANDBOX ARTIFACT, not a code
+   regression. These pre-existing tests (last touched by 9a341cb/de24bde, long
+   before I08) compile hooks.yaml via a python child that writes the repo's
+   LIVE `.claude/settings.json`. This session's OS sandbox (Seatbelt) denies
+   writes to that path once it is the session worktree's protected live config:
+   direct reproduction -> PermissionError: [Errno 1] Operation not permitted:
+   /Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/.claude/settings.json
+   Both tests PASSED in this very worktree in the pre-worktree-entry baseline
+   runs (374 tests / 3 fail — only items 1-3 above), so the delta is the
+   sandbox protection, not any code change. I08 files cannot influence them
+   (working tree touches only infra/delivery/backup/*, tools/infra/
+   backup-restore.mjs, test/infra-backup-restore.test.js,
+   test/delivery-cases/i08.mjs, worker-reports/I08*).
+   Reviewer re-check outside the sandbox: `node --test test/adapter-quoting.test.js`
+   in this worktree is expected to pass (exit 0).
+
+Pre-change clean-master control run (main checkout, before I08 files existed):
+  node --test test/classic-integration.test.js test/infra-llmwiki-paths.test.js
+  test/spec-closeout.test.js -> 39 tests / 34 pass / 4 fail / 1 skip
+  (C08 negative, P1_5 vendored snapshots [worktree-local .sdd difference],
+   worktree-mcp-readback, B08 preservation)
+
+I08 scope results (unaffected by the above):
+  node --test test/infra-backup-restore.test.js -> 13/13 pass, exit 0
+  node --test test/delivery-cases/i08.mjs       -> 4/4 pass, exit 0
+  validate + 4 probes                            -> exit 0, VERIFIED

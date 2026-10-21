@@ -1,0 +1,75 @@
+TAP version 13
+# Subtest: V_INFRA_I08 contract: committed backup domain validates clean with explicit catalog gaps and honest retention
+ok 1 - V_INFRA_I08 contract: committed backup domain validates clean with explicit catalog gaps and honest retention
+  ---
+  duration_ms: 65.466708
+  ...
+# Subtest: secret-ref discipline: the three backup refs are referenced only and resolve honestly (registered -> UNRESOLVED, unregistered -> REF_NOT_REGISTERED)
+ok 2 - secret-ref discipline: the three backup refs are referenced only and resolve honestly (registered -> UNRESOLVED, unregistered -> REF_NOT_REGISTERED)
+  ---
+  duration_ms: 4.894709
+  ...
+# Subtest: validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay rules, secret-shaped key, malformed/cross-project ref, project mismatch — all exit 2
+ok 3 - validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay rules, secret-shaped key, malformed/cross-project ref, project mismatch — all exit 2
+  ---
+  duration_ms: 535.222125
+  ...
+# Subtest: validate fail-closed: missing or unparseable domain file exits 1, never silently degrades to empty rules
+ok 4 - validate fail-closed: missing or unparseable domain file exits 1, never silently degrades to empty rules
+  ---
+  duration_ms: 181.102875
+  ...
+# Subtest: backup: real bytes are copied and the manifest digests match the target byte-for-byte; revoked cache is recorded, never copied
+ok 5 - backup: real bytes are copied and the manifest digests match the target byte-for-byte; revoked cache is recorded, never copied
+  ---
+  duration_ms: 81.612
+  ...
+# Subtest: backup refuses an inconsistent workspace: an open transaction means no consistent point-in-time backup (exit 2)
+ok 6 - backup refuses an inconsistent workspace: an open transaction means no consistent point-in-time backup (exit 2)
+  ---
+  duration_ms: 70.588
+  ...
+# Subtest: backup input errors: missing workspace or missing arguments — exit 1 with usage
+ok 7 - backup input errors: missing workspace or missing arguments — exit 1 with usage
+  ---
+  duration_ms: 127.239958
+  ...
+# Subtest: restore: quarantined restore verifies manifest digests, fences the old writer, reconciles permissions honestly, and releases only after the same-operation readback
+ok 8 - restore: quarantined restore verifies manifest digests, fences the old writer, reconciles permissions honestly, and releases only after the same-operation readback
+  ---
+  duration_ms: 130.947333
+  ...
+# Subtest: restore negatives: corrupt backup byte, incomplete backup, missing/unconfirmed/live-writer fence, missing key ref, point-in-time mismatch, second writer — all exit 2 and refuse release
+ok 9 - restore negatives: corrupt backup byte, incomplete backup, missing/unconfirmed/live-writer fence, missing key ref, point-in-time mismatch, second writer — all exit 2 and refuse release
+  ---
+  duration_ms: 874.703
+  ...
+# Subtest: retention: pending obligations deny cleanup with the explicit list; disk pressure only warns and the workspace stays byte-identical
+ok 10 - retention: pending obligations deny cleanup with the explicit list; disk pressure only warns and the workspace stays byte-identical
+  ---
+  duration_ms: 60.316875
+  ...
+# Subtest: retention: only verified completion — or a separately approved migration with proven restore — moves the R10 A boundary
+ok 11 - retention: only verified completion — or a separately approved migration with proven restore — moves the R10 A boundary
+  ---
+  duration_ms: 209.959084
+  ...
+# Subtest: authority transfer: requires a controlled approval and process-level fence evidence, then registers the new authority with an epoch bump
+ok 12 - authority transfer: requires a controlled approval and process-level fence evidence, then registers the new authority with an epoch bump
+  ---
+  duration_ms: 279.0265
+  ...
+# Subtest: probe cases run the real local mechanisms and verify them
+ok 13 - probe cases run the real local mechanisms and verify them
+  ---
+  duration_ms: 364.549833
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3057.8975
