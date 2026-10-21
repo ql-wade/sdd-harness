@@ -1,0 +1,16 @@
+=== VERIFY independent resample of acceptance-index VERIFIED entries — 2026-10-21, worktree 68f7963 (final baseline)
+Method: for each sampled entry, re-run the evidence-pointer case module (real node --test), locate the
+scenario's own test points, verify the worker report exists and cited commits resolve, and evidence files exist.
+Sample (10): A03 A09 B03 B10 C04 D03 E04 H02 M02 U04 — all index status VERIFIED.
+Results:
+  A03 MATCH — 2_1.mjs exit 0; point "V_A03: zero-test and all-skip runs are invalid executions" ok; P2_1.json ok; commits resolve.
+  A09 MATCH — 1_3.mjs exit 0; 2 points ok (V_A09 write-channel probes); P1_3.json ok; commits resolve.
+  B03 MATCH — 2_2.mjs exit 0; point "V_B03: authoring self-check evidence never signs independent acceptance" ok; P3_2.json ok.
+  B10 MATCH — 2_3.mjs exit 0; 2 points ok (V_B10); P2_3.json ok.
+  C04 MATCH — 1_5.mjs exit 0; point ok; P1_5.json ok.
+  D03 MATCH — 4_2.mjs exit 0; point ok; P4_2.json ok.
+  E04 MATCH — 4_4.mjs exit 0; point ok; P4_4.json ok.
+  H02 MATCH — 4_5.mjs exit 0; point ok; P4_5.json ok.
+  M02 MATCH (semantic binding) — 1_6.mjs exit 0, all 6 points ok; test point carries no literal "M02" id: M02 semantics are covered by "patched build proves the method profile: init cannot install Superpowers and ships no nested controller identities" + P1_6.json acceptance_ids.targeted includes M02 (GREEN) + green-2-comet-init-no-superpowers.txt exists + commit acb0452 resolves. NOTE: index pointer "test/delivery-cases/1_6.mjs :: M02" binds semantically, not by literal test id — recorded as finding F-7 (low, pointer precision).
+  U04 MATCH — 4_7.mjs exit 0; point ok; P4_7.json ok.
+Summary: 10/10 MATCH (9 literal + 1 semantic); 0 unexplained diffs. First-pass matcher regex missed V_-prefixed ids (word-boundary artifact) — corrected, not an evidence diff.

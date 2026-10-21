@@ -1,0 +1,76 @@
+{
+ "task": "VERIFY",
+ "task_title": "最终验证：合同全项真实执行 + 独立 Whitebox Journey + 逐场景 Grill + 三产物",
+ "run": "impl-dfr-20261020-r1 / VERIFY final node (40-node DAG)",
+ "branch": "impl/verify-final",
+ "base_commit": "68f79635d1fd5f6c0cddd40321692ee0b91ed4a9",
+ "status": "DONE_WITH_DOCUMENTED_EXCEPTIONS",
+ "summary": {
+  "contract_checks": {
+   "total": 108,
+   "pass": 87,
+   "environment_gated": 18,
+   "unverified": 1,
+   "failed": 2,
+   "failed_detail": [
+    {
+     "id": "V_FULL_CHECK",
+     "cause": "pre-existing-at-base whitebox green-fixture gap (6 artifact files never committed)",
+     "holder": "repo/skill owner"
+    },
+    {
+     "id": "V_INFRA_I08",
+     "cause": "contract filename test/infra-recovery.test.js absent (I08_FILENAME_DEVIATION); actual test 13/13+4/4 green",
+     "holder": "user/plan-owner"
+    }
+   ]
+  },
+  "scenarios": {
+   "total": 92,
+   "pass": 76,
+   "gated": 15,
+   "unverified": 1,
+   "unexplained_diff": 0
+  },
+  "whitebox": {
+   "modules": "27 run individually: 25 fully green, 3_4.mjs 2/4 (known B08 drift pair), 1_1/1_5 +1 env-conditional skip each",
+   "npm_test": "423/425 (exactly the 2 known HOST_OPENSPEC_DRIFT fail-closed pairs; zero new)",
+   "check_sh": "abort at pre-existing fixture gap; remaining substeps run manually (consensus-gate rc=0, yaml/json 168/169)",
+   "index_resample": "10/10 MATCH (9 literal + 1 semantic M02; matcher artifact corrected, no evidence diff)"
+  },
+  "completion_gates": {
+   "zero_required_remaining": true,
+   "no_open_p0_p1": "all 9 open_decisions are user-adjudication class, non-blocking for local evidence; 4 act as GATED/FAILED holders",
+   "three_way_consistent": true,
+   "three_way_gaps": [
+    "F-8 P3_4.review.json cited but never existed",
+    "F-9 I01.json lacks evidence field/dir"
+   ],
+   "baseline_bound": {
+    "commit": "68f79635d1fd5f6c0cddd40321692ee0b91ed4a9",
+    "spec-baseline_sha256": "a89cfcf9cde72459df180e7ca11ca9be5b1b402f894f05d82984f5ba8025d86a"
+   }
+  },
+  "findings": [
+   "F-1 A11/B08 shared-module cross-contamination",
+   "F-2 1_2.mjs uninstall assert lacks stderr capture (transient)",
+   "F-3 4_8.mjs:406 unguarded JSON read in kill-race test",
+   "F-4 fresh worktree needs real adapter compile before 4_5.mjs",
+   "F-5 green-fixture artifacts never committed (repo content gap)",
+   "F-6 P1_6/green-3-contract-check.json not strict JSON",
+   "F-7 M02 pointer is semantic not literal",
+   "F-8 P3_4.review.json dangling citation",
+   "F-9 I01 evidence field/dir absent",
+   "F-10 V_INFRA_I08 contract filename mismatch"
+  ],
+  "environment_binding": ".sdd provided as APFS byte-identical real copy (vendor c90af44 builds incl. beab355d, tools/openspec-1.11.0); gitignored; comet checks run under pinned Node 24.15.0; session node 22.13.1 per DELIVERY_CASES_NODE_PIN recommendation",
+  "not_done_by_design": "OpenSpec archive NOT executed (sole Comet closeout owner); live configs untouched"
+ },
+ "deliverables": [
+  "verification-report.md",
+  "grill-report.md",
+  "verification-results.json"
+ ],
+ "evidence_dir": "worker-reports/VERIFY/evidence/ (19 files: journey families A-L, npm-test, infra-tests, combined-cases, check-sh, comet-native, openspec-strict, delivery-cases-modules, acceptance-resample, consistency-audit)",
+ "generated_at": "2026-10-21T17:02:57+08:00"
+}

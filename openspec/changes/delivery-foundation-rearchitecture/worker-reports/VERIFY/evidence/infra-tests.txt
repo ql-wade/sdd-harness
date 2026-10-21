@@ -1,0 +1,631 @@
+=== [V_INFRA_I01] node --test test/infra-registry.test.js
+=== [V_INFRA_I01] executed 2026-10-21T16:30:19+0800 in worktree 68f7963 (node v22.13.1)
+command: node --test test/infra-registry.test.js
+exit_code: 0  duration: 3s
+--- stdout/stderr (head 120 lines) ---
+TAP version 13
+# Subtest: V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract
+ok 1 - V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract
+  ---
+  duration_ms: 984.7275
+  ...
+# Subtest: RED owner gate: resource owned by an unregistered owner is rejected
+ok 2 - RED owner gate: resource owned by an unregistered owner is rejected
+  ---
+  duration_ms: 65.988459
+  ...
+# Subtest: RED cross-project gate: credentialRef resolving into another project (pav-*) is rejected
+ok 3 - RED cross-project gate: credentialRef resolving into another project (pav-*) is rejected
+  ---
+  duration_ms: 60.381042
+  ...
+# Subtest: RED principal gate: ordinary agent identity is denied publisher/isolator material
+ok 4 - RED principal gate: ordinary agent identity is denied publisher/isolator material
+  ---
+  duration_ms: 4.701584
+  ...
+# Subtest: RED image gate: floating tag and fake digest do not pass
+ok 5 - RED image gate: floating tag and fake digest do not pass
+  ---
+  duration_ms: 121.072583
+  ...
+# Subtest: RED evidence gate: license/platform/backup compatibility missing means NOT_READY and up refuses
+ok 6 - RED evidence gate: license/platform/backup compatibility missing means NOT_READY and up refuses
+  ---
+  duration_ms: 642.323333
+  ...
+# Subtest: RED digest binding: qualify receipt recomputes the actual input archive and rejects mismatch
+ok 7 - RED digest binding: qualify receipt recomputes the actual input archive and rejects mismatch
+  ---
+  duration_ms: 320.377542
+  ...
+# Subtest: RED plaintext gate: secret-shaped values and secret-value keys are rejected
+ok 8 - RED plaintext gate: secret-shaped values and secret-value keys are rejected
+  ---
+  duration_ms: 113.755
+  ...
+# Subtest: RED host-path gate: host absolute paths are rejected in committed structure
+ok 9 - RED host-path gate: host absolute paths are rejected in committed structure
+  ---
+  duration_ms: 57.07075
+  ...
+# Subtest: RED role-reuse gate: one credential bound to two high-privilege roles is rejected
+ok 10 - RED role-reuse gate: one credential bound to two high-privilege roles is rejected
+  ---
+  duration_ms: 57.75225
+  ...
+# Subtest: retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED
+ok 11 - retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED
+  ---
+  duration_ms: 56.774625
+  ...
+# Subtest: committed registry and refs catalog contain no secret material
+ok 12 - committed registry and refs catalog contain no secret material
+  ---
+  duration_ms: 1.070125
+  ...
+# Subtest: SecretRef.v1 format: parse accepts only well-formed project-bound refs
+ok 13 - SecretRef.v1 format: parse accepts only well-formed project-bound refs
+  ---
+  duration_ms: 0.472917
+  ...
+# Subtest: authority readback is honestly recorded as UNVERIFIED with the exact failure
+ok 14 - authority readback is honestly recorded as UNVERIFIED with the exact failure
+  ---
+  duration_ms: 482.016375
+  ...
+# Subtest: every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is registered with distinct purposes and bound roles
+ok 15 - every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is registered with distinct purposes and bound roles
+  ---
+  duration_ms: 0.309083
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3039.816959
+[complete output: 85 lines]
+=== [V_INFRA_I01] end
+
+=== [V_INFRA_I02] node --test test/infra-runner-isolation.test.js
+=== [V_INFRA_I02] executed 2026-10-21T16:30:23+0800 in worktree 68f7963 (node v22.13.1)
+command: node --test test/infra-runner-isolation.test.js
+exit_code: 0  duration: 4s
+--- stdout/stderr (head 120 lines) ---
+TAP version 13
+# Subtest: V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract
+ok 1 - V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract
+  ---
+  duration_ms: 370.877083
+  ...
+# Subtest: RED role gate: role-policy without role definitions, missing principal bindings or reused principals is rejected
+ok 2 - RED role gate: role-policy without role definitions, missing principal bindings or reused principals is rejected
+  ---
+  duration_ms: 263.761708
+  ...
+# Subtest: RED image gate: image.lock without any authenticated digest refuses up (committed state, nothing fabricated)
+ok 3 - RED image gate: image.lock without any authenticated digest refuses up (committed state, nothing fabricated)
+  ---
+  duration_ms: 63.214208
+  ...
+# Subtest: RED image gate: floating tag rejected; malformed digest rejected; unauthenticated digest never reaches ready
+ok 4 - RED image gate: floating tag rejected; malformed digest rejected; unauthenticated digest never reaches ready
+  ---
+  duration_ms: 314.352542
+  ...
+# Subtest: RED compose gate: host sensitive mounts (/Users, host HOME, docker.sock) and non-loopback ports are rejected
+ok 5 - RED compose gate: host sensitive mounts (/Users, host HOME, docker.sock) and non-loopback ports are rejected
+  ---
+  duration_ms: 292.856334
+  ...
+# Subtest: RED compose gate: read-only rootfs, minimal capabilities, internal network and per-role services are enforced
+ok 6 - RED compose gate: read-only rootfs, minimal capabilities, internal network and per-role services are enforced
+  ---
+  duration_ms: 329.0565
+  ...
+# Subtest: RED workspace gate: worker-writable control paths and host bind mounts are rejected
+ok 7 - RED workspace gate: worker-writable control paths and host bind mounts are rejected
+  ---
+  duration_ms: 263.52275
+  ...
+# Subtest: RED authority gate: duplicate registrations, copied state and concurrent writers are rejected
+ok 8 - RED authority gate: duplicate registrations, copied state and concurrent writers are rejected
+  ---
+  duration_ms: 249.534209
+  ...
+# Subtest: RED secret tier gate: ordinary roles cannot reach publisher/isolator-tier refs (I01 resolution semantics reused)
+ok 9 - RED secret tier gate: ordinary roles cannot reach publisher/isolator-tier refs (I01 resolution semantics reused)
+  ---
+  duration_ms: 134.240458
+  ...
+# Subtest: RED method-state gate: shared mode state never becomes identity/permission basis, never enters worker-writable surfaces
+ok 10 - RED method-state gate: shared mode state never becomes identity/permission basis, never enters worker-writable surfaces
+  ---
+  duration_ms: 247.371416
+  ...
+# Subtest: probes and stop are real subcommands: without a runner runtime they exit 2 with structured UNVERIFIED, never mock-green, never skip
+ok 11 - probes and stop are real subcommands: without a runner runtime they exit 2 with structured UNVERIFIED, never mock-green, never skip
+  ---
+  duration_ms: 189.42025
+  ...
+# Subtest: stop without a runner started by this tool is honestly UNVERIFIED and refuses
+ok 12 - stop without a runner started by this tool is honestly UNVERIFIED and refuses
+  ---
+  duration_ms: 59.652417
+  ...
+# Subtest: RoleBoundary.v1 / Authority.v1 contract holds on committed files; refs are referenced, never valued
+ok 13 - RoleBoundary.v1 / Authority.v1 contract holds on committed files; refs are referenced, never valued
+  ---
+  duration_ms: 2.257541
+  ...
+# Subtest: catalog gap reporting: registered refs read RECORDED; a missing ref is still explicit readiness evidence, never silent
+ok 14 - catalog gap reporting: registered refs read RECORDED; a missing ref is still explicit readiness evidence, never silent
+  ---
+  duration_ms: 247.528083
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3097.811416
+[complete output: 80 lines]
+=== [V_INFRA_I02] end
+
+=== [V_INFRA_I03] node --test test/infra-outline.test.js
+=== [V_INFRA_I03] executed 2026-10-21T16:30:25+0800 in worktree 68f7963 (node v22.13.1)
+command: node --test test/infra-outline.test.js
+exit_code: 0  duration: 2s
+--- stdout/stderr (head 120 lines) ---
+TAP version 13
+# Subtest: V_INFRA_I03 contract: committed outline domain validates clean; qualify/up/probe/stop honor the exit contract
+ok 1 - V_INFRA_I03 contract: committed outline domain validates clean; qualify/up/probe/stop honor the exit contract
+  ---
+  duration_ms: 387.889416
+  ...
+# Subtest: gap-reporting behavior: a ref missing from a supplied catalog is explicitly reported as a catalogGap, never silent
+ok 2 - gap-reporting behavior: a ref missing from a supplied catalog is explicitly reported as a catalogGap, never silent
+  ---
+  duration_ms: 60.654209
+  ...
+# Subtest: RED image gate: images.lock without any authenticated digest refuses up (committed state, nothing fabricated)
+ok 3 - RED image gate: images.lock without any authenticated digest refuses up (committed state, nothing fabricated)
+  ---
+  duration_ms: 61.663542
+  ...
+# Subtest: RED image gate: floating tag is rejected
+ok 4 - RED image gate: floating tag is rejected
+  ---
+  duration_ms: 61.86325
+  ...
+# Subtest: RED image gate: malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED
+ok 5 - RED image gate: malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED
+  ---
+  duration_ms: 234.967666
+  ...
+# Subtest: RED oidc gate: missing issuer/client registration is rejected; non-loopback redirect is rejected
+ok 6 - RED oidc gate: missing issuer/client registration is rejected; non-loopback redirect is rejected
+  ---
+  duration_ms: 184.178291
+  ...
+# Subtest: RED storage-policy gate: missing file exits 1; incomplete or policy-violating content exits 2
+ok 7 - RED storage-policy gate: missing file exits 1; incomplete or policy-violating content exits 2
+  ---
+  duration_ms: 206.055083
+  ...
+# Subtest: RED env gate: secret plaintext, host absolute paths and unbound raw values are rejected
+ok 8 - RED env gate: secret plaintext, host absolute paths and unbound raw values are rejected
+  ---
+  duration_ms: 183.430834
+  ...
+# Subtest: RED cross-project gate: credential refs resolving into another project (pav-*) are rejected
+ok 9 - RED cross-project gate: credential refs resolving into another project (pav-*) are rejected
+  ---
+  duration_ms: 122.843834
+  ...
+# Subtest: RED domain gate: collection registration without owner or audience registration is rejected
+ok 10 - RED domain gate: collection registration without owner or audience registration is rejected
+  ---
+  duration_ms: 185.74775
+  ...
+# Subtest: probes are real subcommands: without a live instance they exit 2 with structured UNVERIFIED, never mock-green, never skip
+ok 11 - probes are real subcommands: without a live instance they exit 2 with structured UNVERIFIED, never mock-green, never skip
+  ---
+  duration_ms: 250.51575
+  ...
+# Subtest: stop without an instance started by this tool is honestly UNVERIFIED and refuses
+ok 12 - stop without an instance started by this tool is honestly UNVERIFIED and refuses
+  ---
+  duration_ms: 55.84025
+  ...
+# Subtest: OutlineState.v1 contract: durable db+attachments declared, cache not rights authority, API contracts stay UNVERIFIED until real API evidence
+ok 13 - OutlineState.v1 contract: durable db+attachments declared, cache not rights authority, API contracts stay UNVERIFIED until real API evidence
+  ---
+  duration_ms: 6.832708
+  ...
+# Subtest: compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders
+ok 14 - compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders
+  ---
+  duration_ms: 184.045042
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2267.410041
+[complete output: 80 lines]
+=== [V_INFRA_I03] end
+
+=== [V_INFRA_I04] node --test test/infra-llmwiki-paths.test.js
+=== [V_INFRA_I04] executed 2026-10-21T16:30:30+0800 in worktree 68f7963 (node v22.13.1)
+command: node --test test/infra-llmwiki-paths.test.js
+exit_code: 0  duration: 5s
+--- stdout/stderr (head 120 lines) ---
+TAP version 13
+# Subtest: V_INFRA_I04 contract: committed llmwiki domain validates clean; qualify honors the exit contract
+ok 1 - V_INFRA_I04 contract: committed llmwiki domain validates clean; qualify honors the exit contract
+  ---
+  duration_ms: 498.432708
+  ...
+# Subtest: RED worktree safety: escape-denial probe enforces traversal, symlink, foreign-root and project-ID denials for real
+ok 2 - RED worktree safety: escape-denial probe enforces traversal, symlink, foreign-root and project-ID denials for real
+  ---
+  duration_ms: 206.648333
+  ...
+# Subtest: RED knowledge authority: spec/task checkmarks and unapproved full-git intake are denied as wiki authorities
+ok 3 - RED knowledge authority: spec/task checkmarks and unapproved full-git intake are denied as wiki authorities
+  ---
+  duration_ms: 164.216833
+  ...
+# Subtest: RED policy fixtures: semantic violations are rejected at validate time (exit 2)
+ok 4 - RED policy fixtures: semantic violations are rejected at validate time (exit 2)
+  ---
+  duration_ms: 685.314416
+  ...
+# Subtest: RED cross-worktree identity + index consistency: worktree-mcp-readback runs the real MCP channel first and never pretends
+ok 5 - RED cross-worktree identity + index consistency: worktree-mcp-readback runs the real MCP channel first and never pretends
+  ---
+  duration_ms: 2965.103125
+  ...
+# Subtest: secret-ref discipline: the source-read ref is referenced only, catalog gap reported explicitly, no secret-shaped values
+ok 6 - secret-ref discipline: the source-read ref is referenced only, catalog gap reported explicitly, no secret-shaped values
+  ---
+  duration_ms: 63.565958
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4655.15775
+[complete output: 40 lines]
+=== [V_INFRA_I04] end
+
+=== [V_INFRA_I05] node --test test/infra-code-knowledge.test.js
+=== [V_INFRA_I05] executed 2026-10-21T16:30:32+0800 in worktree 68f7963 (node v22.13.1)
+command: node --test test/infra-code-knowledge.test.js
+exit_code: 0  duration: 2s
+--- stdout/stderr (head 120 lines) ---
+TAP version 13
+# Subtest: V_INFRA_I05 contract: committed code-knowledge domain validates clean; qualify/up honor the exit contract
+ok 1 - V_INFRA_I05 contract: committed code-knowledge domain validates clean; qualify/up honor the exit contract
+  ---
+  duration_ms: 364.44025
+  ...
+# Subtest: gap-reporting behavior: registered refs are never reported as gaps; a missing ref is always explicitly reported (synthetic fixture)
+ok 2 - gap-reporting behavior: registered refs are never reported as gaps; a missing ref is always explicitly reported (synthetic fixture)
+  ---
+  duration_ms: 120.05625
+  ...
+# Subtest: RED image gate: images.lock without any authenticated digest refuses up (committed state, nothing fabricated)
+ok 3 - RED image gate: images.lock without any authenticated digest refuses up (committed state, nothing fabricated)
+  ---
+  duration_ms: 60.641625
+  ...
+# Subtest: RED image gate: floating tag is rejected
+ok 4 - RED image gate: floating tag is rejected
+  ---
+  duration_ms: 62.526833
+  ...
+# Subtest: RED image gate: malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED
+ok 5 - RED image gate: malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED
+  ---
+  duration_ms: 285.527291
+  ...
+# Subtest: RED source scope gate: deny-by-default with zero authorized sources refuses startup/ingest; cross-project or unpinned sources rejected
+ok 6 - RED source scope gate: deny-by-default with zero authorized sources refuses startup/ingest; cross-project or unpinned sources rejected
+  ---
+  duration_ms: 249.00025
+  ...
+# Subtest: RED substitute gate: declaring a public hosted service as the sensitive-code alternative is rejected in both CodeWiki files
+ok 7 - RED substitute gate: declaring a public hosted service as the sensitive-code alternative is rejected in both CodeWiki files
+  ---
+  duration_ms: 124.838833
+  ...
+# Subtest: RED cross-project gate: credential refs resolving into another project (pav-*) are rejected
+ok 8 - RED cross-project gate: credential refs resolving into another project (pav-*) are rejected
+  ---
+  duration_ms: 120.157542
+  ...
+# Subtest: RED freshness gate: generation failure, stale commit, unauthorized source and undecided policy can never report freshness pass
+ok 9 - RED freshness gate: generation failure, stale commit, unauthorized source and undecided policy can never report freshness pass
+  ---
+  duration_ms: 368.54275
+  ...
+# Subtest: CodeGraph.v1: removable optimization, no gate/knowledge authority; graph-disabled correctness is a real local probe
+ok 10 - CodeGraph.v1: removable optimization, no gate/knowledge authority; graph-disabled correctness is a real local probe
+  ---
+  duration_ms: 301.521709
+  ...
+# Subtest: CodeWiki.v1 profile gates: selfhost pinned-upstream structure, manifest/freshness/readback policies must be declared
+ok 11 - CodeWiki.v1 profile gates: selfhost pinned-upstream structure, manifest/freshness/readback policies must be declared
+  ---
+  duration_ms: 182.592167
+  ...
+# Subtest: probes are real subcommands: graph-disabled-correctness runs locally; pinned-code-wiki attempts real endpoints only when given
+ok 12 - probes are real subcommands: graph-disabled-correctness runs locally; pinned-code-wiki attempts real endpoints only when given
+  ---
+  duration_ms: 77.888708
+  ...
+# Subtest: compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders
+ok 13 - compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders
+  ---
+  duration_ms: 192.100375
+  ...
+# Subtest: SecretRef.v1 safety: the three planned refs are referenced by domain files, referenced only, never valued
+ok 14 - SecretRef.v1 safety: the three planned refs are referenced by domain files, referenced only, never valued
+  ---
+  duration_ms: 7.222333
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2583.861958
+[complete output: 80 lines]
+=== [V_INFRA_I05] end
+
+=== [V_INFRA_I06] node --test test/infra-platform.test.js
+=== [V_INFRA_I06] executed 2026-10-21T16:30:36+0800 in worktree 68f7963 (node v22.13.1)
+command: node --test test/infra-platform.test.js
+exit_code: 0  duration: 4s
+--- stdout/stderr (head 120 lines) ---
+TAP version 13
+# Subtest: V_INFRA_I06 contract: five platform files exist and committed validate passes with LOCAL_ONLY and honest gaps
+ok 1 - V_INFRA_I06 contract: five platform files exist and committed validate passes with LOCAL_ONLY and honest gaps
+  ---
+  duration_ms: 62.035584
+  ...
+# Subtest: committed platform files carry the interface bindings and honest UNVERIFIED identity facts
+ok 2 - committed platform files carry the interface bindings and honest UNVERIFIED identity facts
+  ---
+  duration_ms: 0.535417
+  ...
+# Subtest: RED authorization gate: configuring required checks without remote write authorization is refused — admin identity is not this run approval
+ok 3 - RED authorization gate: configuring required checks without remote write authorization is refused — admin identity is not this run approval
+  ---
+  duration_ms: 179.9285
+  ...
+# Subtest: RED credential tier: development identity cannot read release/rollback secrets (SecretRef.v1 resolver semantics)
+ok 4 - RED credential tier: development identity cannot read release/rollback secrets (SecretRef.v1 resolver semantics)
+  ---
+  duration_ms: 60.08075
+  ...
+# Subtest: IntegrationIdentity.v1: a fully bound chain verifies locally (head -> mergeSHA -> digest -> deployment -> readback)
+ok 5 - IntegrationIdentity.v1: a fully bound chain verifies locally (head -> mergeSHA -> digest -> deployment -> readback)
+  ---
+  duration_ms: 59.28075
+  ...
+# Subtest: RED stale evidence: a new head/mergeSHA reusing an old check blocks candidate promotion
+ok 6 - RED stale evidence: a new head/mergeSHA reusing an old check blocks candidate promotion
+  ---
+  duration_ms: 61.3775
+  ...
+# Subtest: RED missing / skipped / timed-out checks each block promotion with distinct codes
+ok 7 - RED missing / skipped / timed-out checks each block promotion with distinct codes
+  ---
+  duration_ms: 192.263166
+  ...
+# Subtest: RED tag drift: a tag repointed to a different digest blocks promotion; digest must build from the integration merge SHA
+ok 8 - RED tag drift: a tag repointed to a different digest blocks promotion; digest must build from the integration merge SHA
+  ---
+  duration_ms: 132.785083
+  ...
+# Subtest: RED deployment identity: digest mismatch and missing receipt correlation block promotion
+ok 9 - RED deployment identity: digest mismatch and missing receipt correlation block promotion
+  ---
+  duration_ms: 118.205208
+  ...
+# Subtest: timeout query path: lost deployment response is confirmed by querying the original correlation ID
+ok 10 - timeout query path: lost deployment response is confirmed by querying the original correlation ID
+  ---
+  duration_ms: 166.895625
+  ...
+# Subtest: RED rollback gate: unapproved requests are refused; approved rollback needs the same digest and an independent business terminal state
+ok 11 - RED rollback gate: unapproved requests are refused; approved rollback needs the same digest and an independent business terminal state
+  ---
+  duration_ms: 222.854042
+  ...
+# Subtest: RED isolation: cross-project refs (pav-*) and foreign project bindings are rejected; missing registration is an input failure
+ok 12 - RED isolation: cross-project refs (pav-*) and foreign project bindings are rejected; missing registration is an input failure
+  ---
+  duration_ms: 169.568583
+  ...
+# Subtest: fail-closed structure: rollback approval, correlation oracle and retention rules cannot be flipped off without a violation
+ok 13 - fail-closed structure: rollback approval, correlation oracle and retention rules cannot be flipped off without a violation
+  ---
+  duration_ms: 575.428042
+  ...
+# Subtest: probes are real and honest: repository-identity performs one read-only gh attempt and stays UNVERIFIED; bare chain probe is structured UNVERIFIED
+ok 14 - probes are real and honest: repository-identity performs one read-only gh attempt and stays UNVERIFIED; bare chain probe is structured UNVERIFIED
+  ---
+  duration_ms: 739.994583
+  ...
+# Subtest: CLI input contract: malformed chain fixtures are input failures (exit 1), distinct from semantic blocks (exit 2)
+ok 15 - CLI input contract: malformed chain fixtures are input failures (exit 1), distinct from semantic blocks (exit 2)
+  ---
+  duration_ms: 219.862084
+  ...
+# Subtest: parseJsonOut raises a real AssertionError (not a ReferenceError) when the tool prints no JSON
+ok 16 - parseJsonOut raises a real AssertionError (not a ReferenceError) when the tool prints no JSON
+  ---
+  duration_ms: 54.737584
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3084.901667
+[complete output: 90 lines]
+=== [V_INFRA_I06] end
+
+=== [V_INFRA_I07] node --test test/infra-monitor.test.js
+=== [V_INFRA_I07] executed 2026-10-21T16:30:40+0800 in worktree 68f7963 (node v22.13.1)
+command: node --test test/infra-monitor.test.js
+exit_code: 0  duration: 4s
+--- stdout/stderr (head 120 lines) ---
+TAP version 13
+# Subtest: V_INFRA_I07 contract: committed monitor domain validates clean with honest gaps and spec-frozen deadlines
+ok 1 - V_INFRA_I07 contract: committed monitor domain validates clean with honest gaps and spec-frozen deadlines
+  ---
+  duration_ms: 60.665917
+  ...
+# Subtest: RED pre-enable gate: unattended release enabled without registered external monitor/on-call/backup channel is blocked
+ok 2 - RED pre-enable gate: unattended release enabled without registered external monitor/on-call/backup channel is blocked
+  ---
+  duration_ms: 122.403834
+  ...
+# Subtest: RED delivery authorization claim guard: no notification-send authorization exists in this task
+ok 3 - RED delivery authorization claim guard: no notification-send authorization exists in this task
+  ---
+  duration_ms: 58.227292
+  ...
+# Subtest: RED deadline freeze: tampering with the contract timings is rejected (30s/30s/90s/120s/120s/30s)
+ok 4 - RED deadline freeze: tampering with the contract timings is rejected (30s/30s/90s/120s/120s/30s)
+  ---
+  duration_ms: 178.845583
+  ...
+# Subtest: RED segment separation: a combined "total delivery" budget is rejected; three segments must stay separately timed
+ok 5 - RED segment separation: a combined "total delivery" budget is rejected; three segments must stay separately timed
+  ---
+  duration_ms: 294.825417
+  ...
+# Subtest: RED supervisor gate: forbidden actions, restart budget and start gate are structurally enforced in the policy
+ok 6 - RED supervisor gate: forbidden actions, restart budget and start gate are structurally enforced in the policy
+  ---
+  duration_ms: 534.272541
+  ...
+# Subtest: RED fault-domain gate: a co-hosted monitor can never be declared sufficient for host-failure detection
+ok 7 - RED fault-domain gate: a co-hosted monitor can never be declared sufficient for host-failure detection
+  ---
+  duration_ms: 62.846375
+  ...
+# Subtest: RED I01 isolation: cross-project refs are structural violations; unregistered ref stays an explicit gap and resolver refuses
+ok 8 - RED I01 isolation: cross-project refs are structural violations; unregistered ref stays an explicit gap and resolver refuses
+  ---
+  duration_ms: 121.485125
+  ...
+# Subtest: Health.v1: read-only evaluation of heartbeat age, scan watermark, isolation deadlines and authority identity
+ok 9 - Health.v1: read-only evaluation of heartbeat age, scan watermark, isolation deadlines and authority identity
+  ---
+  duration_ms: 463.951666
+  ...
+# Subtest: Monitor.v1: alerts are prepared only (never sent without authorization) and prepared from the exact breaches
+ok 10 - Monitor.v1: alerts are prepared only (never sent without authorization) and prepared from the exact breaches
+  ---
+  duration_ms: 125.272708
+  ...
+# Subtest: Monitor.v1 three-segment timing: detection/delivery/escalation are computed separately from real timestamps
+ok 11 - Monitor.v1 three-segment timing: detection/delivery/escalation are computed separately from real timestamps
+  ---
+  duration_ms: 446.656667
+  ...
+# Subtest: Supervisor.v1: out-of-scope actions are refused; the supervisor is process-level restart only
+ok 12 - Supervisor.v1: out-of-scope actions are refused; the supervisor is process-level restart only
+  ---
+  duration_ms: 335.362583
+  ...
+# Subtest: Supervisor.v1: dual start with a live old writer is refused; unknown storage ownership is refused
+ok 13 - Supervisor.v1: dual start with a live old writer is refused; unknown storage ownership is refused
+  ---
+  duration_ms: 186.127125
+  ...
+# Subtest: Supervisor.v1: exceeding 3 restarts within 5 minutes stops and escalates
+ok 14 - Supervisor.v1: exceeding 3 restarts within 5 minutes stops and escalates
+  ---
+  duration_ms: 113.274833
+  ...
+# Subtest: probes are real subcommands: runner-process-failure is provable at process level; external-host-down stays UNVERIFIED; scan-watermark-stall is locally provable
+ok 15 - probes are real subcommands: runner-process-failure is provable at process level; external-host-down stays UNVERIFIED; scan-watermark-stall is locally provable
+  ---
+  duration_ms: 781.260875
+  ...
+# Subtest: committed contract shape: interfaces, example declaration, read-only health and no secret values
+ok 16 - committed contract shape: interfaces, example declaration, read-only health and no secret values
+  ---
+  duration_ms: 2.17725
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3956.942875
+[complete output: 90 lines]
+=== [V_INFRA_I07] end
+
+=== [V_INFRA_I08] node --test test/infra-recovery.test.js
+=== [V_INFRA_I08] executed 2026-10-21T16:30:40+0800 in worktree 68f7963 (node v22.13.1)
+command: node --test test/infra-recovery.test.js
+exit_code: 1  duration: 0s
+--- stdout/stderr (head 120 lines) ---
+Could not find 'test/infra-recovery.test.js'
+[complete output: 1 lines]
+=== [V_INFRA_I08] end
+
+=== [V_INFRA_I08-actual-filename] executed 2026-10-21T16:32:23+0800 in worktree 68f7963
+contract command references test/infra-recovery.test.js which DOES NOT EXIST at final baseline; actual I08 test file (per I08_FILENAME_DEVIATION open decision, owner: user/plan-owner): test/infra-backup-restore.test.js
+command: node --test test/infra-backup-restore.test.js
+exit_code:
+rc=0
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3028.070416
+
+command: node --test test/delivery-cases/i08.mjs
+rc=0
+# tests 4
+# pass 4
+# fail 0
+# skipped 0
+=== end

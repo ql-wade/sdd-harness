@@ -1,0 +1,17 @@
+=== three-way consistency audit (tasks.md <-> execution-state.json <-> worker-reports) — 2026-10-21, worktree 68f7963
+method: mechanical script — parse 39 ### Task headers + step checkboxes; cross-check node_status coverage/status/step agreement; verify worker report + review report existence; resolve every commit ref cited in node_status via git cat-file -e.
+
+checkbox totals: 217 checked / 38 unchecked; unchecked decomposition:
+  26 = original alias rows 1.1-5.3 (mechanical-alias section, frozen by design)
+  1  = P1_6 Step 5 (PARTIAL_ACCEPTED, holder recorded)
+  4  = P5_2 Steps 1-4 (CROSS_MACHINE_SCOPE_NOT_ENABLED, holder recorded)
+  4  = I01/I02/I03/I05 Step 3 (env-gated independent readback, holders recorded)
+  3  = VERIFY Steps 1-3 (this node, delivered by this run)
+
+node_status: 34 nodes = 28 ACCEPTED + 5 PARTIAL_ACCEPTED + 1 PARTIAL_ACCEPTED_INTEGRATION_PENDING; step agreement with tasks.md: ZERO contradictions;
+commit refs cited in node_status: ALL resolve (git cat-file -e OK, none unresolvable)
+worker reports: 38/38 exist; review reports: 37/38 exist
+
+GAPS (reported as findings F-8/F-9, not silently fixed — outside VERIFY allowed file set):
+  F-8: execution-state.node_status.P3_4.review cites worker-reports/P3_4.review.json as APPROVED but that file never existed on any branch (git log --all empty)
+  F-9: worker-reports/I01.json has no evidence field and no I01/ evidence dir; I01 chain rests on I01.review.json + node_status commit refs

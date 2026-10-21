@@ -1,0 +1,46 @@
+VERIFY journey family F — real execution in worktree @ 68f79635d1fd5f6c0cddd40321692ee0b91ed4a9
+node v22.13.1 | started 2026-10-21T16:04:35+0800 | commands verbatim from execution-contract.json
+
+[V_F01] exit=0 verdict=PASS reason=None dur=0.4s
+  cmd: node tools/verify/delivery-journey.mjs --scenario F01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F01 --json
+  full stdout archived: .whitebox/verify-runs/V_F01.json (gitignored scratch; this file is the durable pointer)
+
+[V_F02] exit=2 verdict=FAIL reason=action-1-failed: exit 1 (expected: exit 0; TAP summary fail=0 with pass>0; test point matching F02 (V_F02 or bare id) is ok when present) dur=11.4s
+  cmd: node tools/verify/delivery-journey.mjs --scenario F02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F02 --json
+  full stdout archived: .whitebox/verify-runs/V_F02.json (gitignored scratch; this file is the durable pointer)
+
+[V_F03] exit=0 verdict=PASS reason=None dur=0.2s
+  cmd: node tools/verify/delivery-journey.mjs --scenario F03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F03 --json
+  full stdout archived: .whitebox/verify-runs/V_F03.json (gitignored scratch; this file is the durable pointer)
+
+[V_F04] exit=2 verdict=FAIL reason=action-1-failed: exit 1 (expected: exit 0; TAP summary fail=0 with pass>0; test point matching F04 (V_F04 or bare id) is ok when present) dur=11.9s
+  cmd: node tools/verify/delivery-journey.mjs --scenario F04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F04 --json
+  full stdout archived: .whitebox/verify-runs/V_F04.json (gitignored scratch; this file is the durable pointer)
+
+[V_F05] exit=0 verdict=PASS reason=None dur=14.1s
+  cmd: node tools/verify/delivery-journey.mjs --scenario F05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F05 --json
+  full stdout archived: .whitebox/verify-runs/V_F05.json (gitignored scratch; this file is the durable pointer)
+
+[V_F06] exit=0 verdict=PASS reason=None dur=22.7s
+  cmd: node tools/verify/delivery-journey.mjs --scenario F06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F06 --json
+  full stdout archived: .whitebox/verify-runs/V_F06.json (gitignored scratch; this file is the durable pointer)
+
+[V_F07] exit=0 verdict=PASS reason=None dur=12.8s
+  cmd: node tools/verify/delivery-journey.mjs --scenario F07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F07 --json
+  full stdout archived: .whitebox/verify-runs/V_F07.json (gitignored scratch; this file is the durable pointer)
+
+[V_F08] exit=0 verdict=PASS reason=None dur=2.7s
+  cmd: node tools/verify/delivery-journey.mjs --scenario F08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F08 --json
+  full stdout archived: .whitebox/verify-runs/V_F08.json (gitignored scratch; this file is the durable pointer)
+
+[V_F09] exit=0 verdict=PASS reason=None dur=0.9s
+  cmd: node tools/verify/delivery-journey.mjs --scenario F09 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F09 --json
+  full stdout archived: .whitebox/verify-runs/V_F09.json (gitignored scratch; this file is the durable pointer)
+
+[V_F10] exit=0 verdict=PASS reason=None dur=0.7s
+  cmd: node tools/verify/delivery-journey.mjs --scenario F10 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F10 --json
+  full stdout archived: .whitebox/verify-runs/V_F10.json (gitignored scratch; this file is the durable pointer)
+
+
+[V_F02-rerun1] exit=0 verdict=PASS — initial FAIL retained above. Root cause analysis: at initial run, test 4/5 of 1_2.mjs failed at `bootstrapTargetUninstall(root).status !== 0` (uninstall exit 1, empty stderr) while no fixture/config differed; exact command re-executed immediately after => PASS. Load-induced transient during concurrent background family batch; recorded as flake finding F-2 (residual risk: uninstall exit-1 path lacks stderr capture in the assertion).
+[V_F04-rerun1] exit=0 verdict=PASS — same module/point as V_F02, same transient, same disposition (finding F-2).
