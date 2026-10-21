@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { AssertionError } from 'node:assert';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
