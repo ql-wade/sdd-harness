@@ -55,7 +55,9 @@ const wikiDir = path.join(wikiHome, 'wiki');
 fs.mkdirSync(fakeHome, { recursive: true });
 fs.mkdirSync(wikiDir, { recursive: true });
 
-const { NODE_TEST_CONTEXT: _stripped, ...inheritedEnv } = process.env;
+// 环境卫生：NODE_TEST_CONTEXT 会让子进程误认测试上下文；ambient LLMWIKI_PYTHON 会让
+// launcher 绕过测试自备的 venv 拒绝路径（4.4.a 的根一致性断言依赖 launcher 的拒绝输出）。
+const { NODE_TEST_CONTEXT: _stripped, LLMWIKI_PYTHON: _strippedLauncherPy, ...inheritedEnv } = process.env;
 const childEnv = (extra = {}) => ({ ...inheritedEnv, ...extra });
 
 let tmpCounter = 0;
