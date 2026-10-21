@@ -1,0 +1,176 @@
+TAP version 13
+# Subtest: J1: the runbook carries ≥10 machine-verified commands whose entries exist and whose direct rows really run with the documented exit codes
+not ok 1 - J1: the runbook carries ≥10 machine-verified commands whose entries exist and whose direct rows really run with the documented exit codes
+  ---
+  duration_ms: 0.935792
+  location: '<worktree>/test/delivery-cases/5_3.mjs:183:1'
+  failureType: 'testCodeFailure'
+  error: 'operations-runbook.md is missing: <worktree>/openspec/changes/delivery-foundation-rearchitecture/operations-runbook.md (P5_3 RED until the runbook lands)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    runbookText (file://<worktree>/test/delivery-cases/5_3.mjs:179:10)
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/5_3.mjs:184:16)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: J1 negative: a runbook copy with a removed command row fails the ≥10 inventory contract (deleting runbook commands is caught mechanically)
+not ok 2 - J1 negative: a runbook copy with a removed command row fails the ≥10 inventory contract (deleting runbook commands is caught mechanically)
+  ---
+  duration_ms: 0.230458
+  location: '<worktree>/test/delivery-cases/5_3.mjs:206:1'
+  failureType: 'testCodeFailure'
+  error: 'operations-runbook.md is missing: <worktree>/openspec/changes/delivery-foundation-rearchitecture/operations-runbook.md (P5_3 RED until the runbook lands)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    runbookText (file://<worktree>/test/delivery-cases/5_3.mjs:179:10)
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/5_3.mjs:207:16)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: J2: the three recovery drill receipts are structurally honest — monotonic real timestamps, monotonic attempts, one operationKey per drill, real exit codes
+not ok 3 - J2: the three recovery drill receipts are structurally honest — monotonic real timestamps, monotonic attempts, one operationKey per drill, real exit codes
+  ---
+  duration_ms: 0.139334
+  location: '<worktree>/test/delivery-cases/5_3.mjs:236:1'
+  failureType: 'testCodeFailure'
+  error: 'team-recovery/run-drills.mjs is missing — the drill receipts must be reproducible'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    loadReceipts (file://<worktree>/test/delivery-cases/5_3.mjs:225:10)
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/5_3.mjs:237:31)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J2: the drills re-run live through the real executor with the same VERIFIED outcome
+not ok 4 - J2: the drills re-run live through the real executor with the same VERIFIED outcome
+  ---
+  duration_ms: 4.393792
+  location: '<worktree>/test/delivery-cases/5_3.mjs:244:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(fs.existsSync(RUN_DRILLS))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/5_3.mjs:245:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J2 negative: a forged receipt timestamp (non-monotonic, and in the future) is rejected by the validator
+not ok 5 - J2 negative: a forged receipt timestamp (non-monotonic, and in the future) is rejected by the validator
+  ---
+  duration_ms: 0.120959
+  location: '<worktree>/test/delivery-cases/5_3.mjs:279:1'
+  failureType: 'testCodeFailure'
+  error: 'team-recovery/run-drills.mjs is missing — the drill receipts must be reproducible'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    loadReceipts (file://<worktree>/test/delivery-cases/5_3.mjs:225:10)
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/5_3.mjs:280:24)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J3: version rollback over the real protocol — unapproved and wrong-digest rollbacks are refused (exit 2), the approved same-digest rollback verifies (exit 0) and I06 independently confirms
+ok 6 - J3: version rollback over the real protocol — unapproved and wrong-digest rollbacks are refused (exit 2), the approved same-digest rollback verifies (exit 0) and I06 independently confirms
+  ---
+  duration_ms: 342.696584
+  ...
+# Subtest: J4: the runbook declares every known environment gate verbatim and documents the paired-commit enablement flow; the live scope gate readback stays anchored NOT_ENABLED
+not ok 7 - J4: the runbook declares every known environment gate verbatim and documents the paired-commit enablement flow; the live scope gate readback stays anchored NOT_ENABLED
+  ---
+  duration_ms: 0.22575
+  location: '<worktree>/test/delivery-cases/5_3.mjs:407:1'
+  failureType: 'testCodeFailure'
+  error: 'operations-runbook.md is missing: <worktree>/openspec/changes/delivery-foundation-rearchitecture/operations-runbook.md (P5_3 RED until the runbook lands)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    runbookText (file://<worktree>/test/delivery-cases/5_3.mjs:179:10)
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/5_3.mjs:408:16)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J4: start/publish are really denied while the cross-machine scope is not enabled (exit 2, not a crash)
+ok 8 - J4: start/publish are really denied while the cross-machine scope is not enabled (exit 2, not a crash)
+  ---
+  duration_ms: 161.348833
+  ...
+# Subtest: J4 negative: a runbook copy that hides one known environment gate is rejected
+not ok 9 - J4 negative: a runbook copy that hides one known environment gate is rejected
+  ---
+  duration_ms: 0.415834
+  location: '<worktree>/test/delivery-cases/5_3.mjs:454:1'
+  failureType: 'testCodeFailure'
+  error: 'operations-runbook.md is missing: <worktree>/openspec/changes/delivery-foundation-rearchitecture/operations-runbook.md (P5_3 RED until the runbook lands)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    runbookText (file://<worktree>/test/delivery-cases/5_3.mjs:179:10)
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/5_3.mjs:455:16)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 2
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 587.872667
+RED_EXIT=1
