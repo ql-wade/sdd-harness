@@ -1,0 +1,42 @@
+{
+  "task": "P5_2",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-21T06:14:02.507091+00:00",
+  "head_reviewed": "3aa10b9",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "锚=去 contentDigest 后 canonical JSON payload 的 sha256(非原始字节); 自摘要无法覆盖自身, 方案自洽且更强",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-2",
+      "summary": "exit 1 输入错误回显调用方运行时路径(非提交内容); 拒绝回执仅 sha256 无路径",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-3",
+      "summary": "Step 1-6 未勾选与'未启用态语义'一致(正向建设未执行) — 控制器按精确语义处置: 翻 5/6, 1-4 登记跨机门门控",
+      "disposition": "dispositioned at acceptance"
+    },
+    {
+      "id": "nb-4",
+      "summary": "npm test exit 1 全部来自既有 C08/B08",
+      "disposition": "recorded"
+    }
+  ],
+  "independently_rerun": {
+    "green": "unit 10/10 x2 + journey 3/3 x2",
+    "red_crosscheck": "git archive 199882a 干净副本: unit 10 tests/0 pass/10 fail + journey 3/3 fail, 计数与消息与提交证据一致",
+    "negatives": "N1/N2 start/publish 真实 exit 2 CROSS_MACHINE_SCOPE_NOT_ENABLED; N3 伪造 scope 自洽重算仍拒 SCOPE_FILE_NOT_ANCHORED(锚=c3c0bad7… 常量); N4 六个常见 env 名全无效(源码零 process.env 读取); N5 运行时 enable 拒 ENABLEMENT_REQUIRES_PAIRED_COMMIT recordTrusted=false; N6 缺失请求 exit 1 与拒绝分离",
+    "anchor_chain": "file.contentDigest === 独立重算 canonical-sha256 === gate.mjs 常量, 三项全等; 启用唯一路径=配对提交(运行时不可达)",
+    "npm_test": "425/422/2(C08+B08) 零新增; 控制器 merge 0c6fa2d 复跑 425/421/4(含 adapter×2) 零新增",
+    "boundary_clean": true,
+    "positive_api_absent": true,
+    "index_f10_unchanged": true,
+    "host_path_leak": false
+  },
+  "plan_conformance": "三条语义逐条核对通过: 未启用态真实拒绝(exit1/exit2 分离); 不把计划字段当已满足(postEnableScope 明示为启用后计划, positiveAuthStatus=UNVERIFIED, 索引逐字节未动); 正向认证保持 UNVERIFIED(三处一致+holder)"
+}
