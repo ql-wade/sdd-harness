@@ -1,0 +1,14 @@
+# 证据指针抽样实跑（12 条, 2026-10-21T04:41:45Z, 本 worktree）
+# 格式: 指针 -> 命令 -> 退出码
+[D01-D08 journey (2_4.mjs :: D01)] $ node --test test/delivery-cases/2_4.mjs -> exit=0
+[L01-L11 journey (4_8.mjs :: L01)] $ node --test test/delivery-cases/4_8.mjs -> exit=0
+[P4_2 impl commit anchor (P4_2.json :: commit:e84decb)] $ git cat-file -e e84decb^{commit} -> exit=0
+[P4_7 impl commit anchor (P4_7.json :: commit:8d35b06)] $ git cat-file -e 8d35b06^{commit} -> exit=0
+[P4_8 impl commit anchor (P4_8.json :: commit:c041018)] $ git cat-file -e c041018^{commit} -> exit=0
+[U05 journey anchor] $ grep -c U05 test/delivery-cases/4_7.mjs -> exit=0 (count=2)
+[C08 unit anchor] $ grep -c C08 test/classic-integration.test.js -> exit=0 (count=8)
+[L09 report anchor] $ grep -c L09 worker-reports/P4_8.json -> exit=0 (count=2)
+[kernel suite knowledge-revocation] $ node --test test/knowledge-revocation.test.js -> exit=0
+[B10 self anchor] $ grep -c B10 test/delivery-cases/4_3.mjs -> exit=0 (count=10)
+[F10 gate anchor] $ grep -c CROSS_MACHINE_SCOPE_NOT_ENABLED tasks.md -> exit=0 (count=1)
+[H06 green evidence anchor] $ grep -c pass worker-reports/P4_6/evidence/green-4_6-mjs.txt -> exit=0 (count=1)

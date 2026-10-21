@@ -1,0 +1,73 @@
+{
+  "task": "P4_3",
+  "task_title": "原任务 4.3 — 四层证据分别归档索引，确认目标环境后才声明 delivered，代码验收/规格归档/部署状态分开（B10）",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/p4-3-acceptance-index",
+  "base_commit": "a834f93",
+  "final_status": "DONE",
+  "semantics_source_note": "语义唯一来源: specs/delivery-foundation/spec.md 92 场景（A01-A20/B01-B10/C01-C08/D01-D08/E01-E06/F01-F10/H01-H09/L01-L11/M01-M02）。状态判定: 有当前版本真实证据→VERIFIED; 环境门控+登记承接者→ENVIRONMENT_GATED; 其余→UNVERIFIED。未为凑绿降级任何标准：F10 保持 UNVERIFIED（CROSS_MACHINE_SCOPE_NOT_ENABLED，tasks.md 明示不能以未启用判通过）；B08/C08 因宿主 openspec 1.3.1→1.14.3 漂移记 ENVIRONMENT_GATED 而非 VERIFIED；A14/A16/A17 按 P4_2 回执 mode=LOCAL_ONLY 如实分离。",
+  "scenario_coverage": { "total_scenarios": 92, "verified": 76, "environment_gated": 15, "unverified": 1, "missing": 0 },
+  "layers": {
+    "kernel": "44 项（37 VERIFIED / 7 GATED）— contracts/lib 单测契约 + Knowledge 引擎；npm test 412 pass / 2 已知环境 fail（C08/B08）零新增",
+    "cli": "5 项（3 VERIFIED / 2 GATED）— 固定产物/Spec Adapter/退出码契约；B08/C08 被 HOST_OPENSPEC_DRIFT 阻断钉定复跑",
+    "host": "12 项全 VERIFIED — 渠道探针/exporter/FoundationLock/Matt 快照/hook 不越权；1_3/1_4 复跑需 .sdd 装备工作树",
+    "ci": "31 项（24 VERIFIED / 6 GATED / 1 UNVERIFIED）— 旅程回归 19/23 模块全绿；A14/A16/A17/F06/F09 生产平台侧为环境门；F10 未建设"
+  },
+  "red_cases": [
+    {
+      "case": "test/delivery-cases/4_3.mjs 全套 9 例",
+      "red_evidence": "acceptance-index.json 与 verification.md 缺席 → 四层归档无法加载，9/9 真实失败（含 4 个负例变体——负例在 RED 阶段因前置失败连带失败，GREEN 阶段独立证明各自拒绝）",
+      "log": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_3/evidence/red-4_3.txt (exit=1, tests 9 / pass 0 / fail 9)"
+    }
+  ],
+  "green_summary": "GREEN ×2 (9/9, exit=0)。覆盖: (a) 92 验收 ID 与 spec.md 场景集 1:1 对账零缺漏零多余; (b) 全部 460+ 证据指针实解析（文件存在 + 场景锚/测试名锚/commit 锚可解析）; (c) 15 个 ENVIRONMENT_GATED + 1 个 UNVERIFIED 全部有登记 holder; (d) 层/状态枚举与 summary 计数自洽。负例: 删除场景映射/伪造缺失 evidence 指针/GATED 无 holder/坏枚举各自 fail。抽样实跑 12 条指针全部 exit=0。",
+  "commands": {
+    "node --test test/delivery-cases/4_3.mjs (RED)": 1,
+    "node --test test/delivery-cases/4_3.mjs (GREEN run1)": 0,
+    "node --test test/delivery-cases/4_3.mjs (GREEN run2)": 0,
+    "npm test": 1,
+    "bash scripts/check.sh": 1
+  },
+  "commands_notes": "npm test: 412 pass / 2 fail / 1 skip — 2 失败均为已知环境项（test/classic-integration.test.js C08 宿主 openspec 漂移、test/spec-closeout.test.js B08 preservation 同因），与基线一致零新增。check.sh: exit=1 于 whitebox-verify GREEN 夹具（fresh-worktree 夹具缺口，base a834f93 起 pre-existing，execution-state.json environment_notes 已登记），失败点之前规则层/技能层两段通过；如实记录于 evidence/check-sh-run.txt。",
+  "spotchecks": [
+    { "evidence": "test/delivery-cases/2_4.mjs :: D01", "command": "node --test test/delivery-cases/2_4.mjs", "exit": 0 },
+    { "evidence": "test/delivery-cases/4_8.mjs :: L01", "command": "node --test test/delivery-cases/4_8.mjs", "exit": 0 },
+    { "evidence": "worker-reports/P4_2.json :: commit:e84decb", "command": "git cat-file -e e84decb^{commit}", "exit": 0 },
+    { "evidence": "worker-reports/P4_7.json :: commit:8d35b06", "command": "git cat-file -e 8d35b06^{commit}", "exit": 0 },
+    { "evidence": "worker-reports/P4_8.json :: commit:c041018", "command": "git cat-file -e c041018^{commit}", "exit": 0 },
+    { "evidence": "test/delivery-cases/4_7.mjs :: U05", "command": "grep -c U05 test/delivery-cases/4_7.mjs", "exit": 0 },
+    { "evidence": "test/classic-integration.test.js :: C08", "command": "grep -c C08 test/classic-integration.test.js", "exit": 0 },
+    { "evidence": "worker-reports/P4_8.json :: L09", "command": "grep -c L09 worker-reports/P4_8.json", "exit": 0 },
+    { "evidence": "kernel suite", "command": "node --test test/knowledge-revocation.test.js", "exit": 0 },
+    { "evidence": "test/delivery-cases/4_3.mjs :: B10", "command": "grep -c B10 test/delivery-cases/4_3.mjs", "exit": 0 },
+    { "evidence": "tasks.md :: CROSS_MACHINE_SCOPE_NOT_ENABLED (F10 gate)", "command": "grep -c CROSS_MACHINE_SCOPE_NOT_ENABLED tasks.md", "exit": 0 },
+    { "evidence": "worker-reports/P4_6/evidence/green-4_6-mjs.txt :: pass (H06)", "command": "grep -c pass worker-reports/P4_6/evidence/green-4_6-mjs.txt", "exit": 0 }
+  ],
+  "unverified": [
+    { "item": "F10 团队 Control API 跨项目隔离/撤权/恢复/API 断联（正向）", "reason": "CROSS_MACHINE_SCOPE_NOT_ENABLED；5_2.mjs 与 services/delivery-control 未建设", "holder": "P5_2 owner + 用户跨机器范围裁决" },
+    { "item": "B08/C08 钉定环境复跑", "reason": "宿主全局 openspec 1.3.1→1.14.3 漂移（HOST_OPENSPEC_DRIFT）", "holder": "user（重钉 toolchain-baseline 或显式重冻结）" },
+    { "item": "A14/A16/A17/F06/F09 真实生产/平台侧", "reason": "无生产/平台授权；本地隔离机制已验证且回执 LOCAL_ONLY 分离", "holder": "环境 owner / 平台准入 owner + 运行时准入" },
+    { "item": "H04/H05/H09/L02/L04/L09/U08 真实 Outline/第二宿主/真实墙钟", "reason": "I03 未部署、跨机范围未启用", "holder": "I03 部署 / P5_1 跨机裁决 / I07 监控部署" },
+    { "item": "F08 正相原生浏览器验收", "reason": "无具备原生浏览器能力的试点环境", "holder": "UI 试点任务" }
+  ],
+  "files_changed": [
+    "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json",
+    "openspec/changes/delivery-foundation-rearchitecture/verification.md",
+    "test/delivery-cases/4_3.mjs",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_3.json",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_3/evidence/red-4_3.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_3/evidence/green-4_3.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_3/evidence/journey-rerun.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_3/evidence/check-sh-run.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_3/evidence/evidence-pointer-spotchecks.txt"
+  ],
+  "commits": {
+    "tests_red": "8ca1e90",
+    "implementation": "7a83e42",
+    "report": "本提交（worker-reports/P4_3.json）"
+  },
+  "notes": "verification.md 为覆盖式重写（原 Batch 0 版本保存于 6510e3a，文档内已声明取代）。delivered 声明与目标环境确认分离写入两份交付物。旅程全矩阵复跑明细见 evidence/journey-rerun.txt（19/23 全绿；1_3/1_4 需 .sdd；3_4 B08 两例漂移阻断）。未触碰 tasks.md/execution-state/ledger/drift-lock/活配置；无新增依赖；证据后缀一律 .txt 且提交内容零宿主绝对路径。",
+  "blockers_or_questions": [
+    "无阻塞。移交注意: B08/C08 复跑与 15 项 ENVIRONMENT_GATED 的门解除回填由各 holder 承接；check.sh 全绿需在主检出运行（whitebox 夹具 fresh-worktree 缺口 pre-existing）。"
+  ]
+}
