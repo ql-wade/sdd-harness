@@ -164,7 +164,11 @@ async function driveToArchived(change) {
   assert.equal(comet(['state', 'set', change, 'build_mode', 'executing-plans', 'tdd_mode', 'tdd', 'isolation', 'current', '--json']).json?.exitCode, 0);
   await writeCheckPolicy();
   const tasks = comet(['state', 'tasks', change, '--assign-ids', '--json']).json;
+  // The task mutations rotate the input digest: P must be re-accepted after
+  // the assignment and again after the completion (the proven 4_6 drive).
+  acceptAll(change, ['P']);
   assert.equal(comet(['state', 'task-complete', change, tasks?.data?.tasks?.[0]?.id, '--expect', tasks?.data?.revision, '--json']).json?.exitCode, 0);
+  acceptAll(change, ['P']);
   assert.equal(comet(['check', 'run', change, 'build', '--local', '--', 'node', '-e', 'process.stdout.write("build-ok\\n")']).status, 0);
   assert.equal(comet(['state', 'transition', change, 'build-complete', '--json']).json?.exitCode, 0);
   await fs.writeFile(path.join(changeDir(change), 'verification.md'), '# Verification Report\n\nProbe.\n');
@@ -232,10 +236,14 @@ const KP_DIGEST = sha256(KP_PAYLOAD);
 const TEAM_DIGEST = sha256(TEAM_PAYLOAD);
 const CHANGE = 'p44-closeout';
 
-const requiredManifest = () => knowledgeSeed.defineRequiredKnowledge([
-  { capability: 'closeout-order', digest: KP_DIGEST, source: 'docs/architecture/delivery-architecture.md', channel: 'llmwiki' },
+// Before the K execution writes the entry, the manifest binds a digest that
+// cannot be read back (deliberately unmet); afterwards it binds the REAL
+// entry bytes — the same frozen candidate the K execution wrote.
+const requiredManifest = ({ kpDigest } = {}) => knowledgeSeed.defineRequiredKnowledge([
+  { capability: 'closeout-order', digest: kpDigest ?? KP_DIGEST, source: 'docs/architecture/delivery-architecture.md', channel: 'llmwiki' },
   { capability: 'team-publication', digest: TEAM_DIGEST, source: 'infra/delivery/knowledge/preauthorization-policy.json', channel: 'outline' },
 ]);
+const kpWikiEntryFile = () => path.join(wikiDir, 'concepts', 'closeout-order.md');
 
 function writeWikiEntry(capability, content) {
   const dir = path.join(wikiDir, 'concepts');
@@ -245,10 +253,13 @@ function writeWikiEntry(capability, content) {
   return file;
 }
 
+const kpManifestDigest = () => sha256(fsSync.readFileSync(kpWikiEntryFile()));
+
 function runCloseoutCli({ ledgerFile, deployFile, mandatory = false, requiredFile } = {}) {
   const manifest = requiredFile ?? (() => {
     const file = path.join(scratch, `required-${Math.random().toString(36).slice(2)}.json`);
-    fsSync.writeFileSync(file, JSON.stringify(requiredManifest(), null, 2));
+    const kpDigest = fsSync.existsSync(kpWikiEntryFile()) ? kpManifestDigest() : undefined;
+    fsSync.writeFileSync(file, JSON.stringify(requiredManifest({ kpDigest }), null, 2));
     return file;
   })();
   const args = [
@@ -486,7 +497,10 @@ test('D06/E02/E06: the timed-out Outline publication recovers by readback on the
 test('E01/E02: the final closeout judgment is green — Kp + Kt hold, deploy evidence retained, nothing re-run', async (t) => {
   if (skipIfNoBuild(t)) return;
   const dir = await archivedDir(CHANGE);
-  const report = runCloseoutCli({ ledgerFile: path.join(dir, '.comet', 'knowledge-publish-operations.json') });
+  const report = runCloseoutCli({
+    ledgerFile: path.join(dir, '.comet', 'knowledge-publish-operations.json'),
+    deployFile: path.join(scratch, 'deploy-chain.json'),
+  });
   assert.equal(report.status, 0, `expected pass, got ${report.status}: ${report.stdout?.slice(0, 400)}`);
   assert.equal(report.json.pass, true);
   assert.equal(report.json.kp.ok, true);

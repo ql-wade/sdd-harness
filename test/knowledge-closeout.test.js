@@ -137,9 +137,13 @@ test('E01 negative: a missing wiki entry blocks closeout and names the capabilit
 });
 
 test('E01 positive: a matching wiki entry with provenance satisfies Kp; a not-applicable entry needs its recorded basis', () => {
-  writeWikiEntry('closeout-order', PAYLOAD_V1, { source: 'docs/architecture/delivery-architecture.md' });
+  // The frozen candidate IS the exact entry bytes: the manifest digest binds
+  // what the K execution wrote, re-derived here from the real file.
+  const entryFile = writeWikiEntry('closeout-order', PAYLOAD_V1, { source: 'docs/architecture/delivery-architecture.md' });
   const ok = knowledgeSeed.evaluateRequiredKnowledge({
-    required: knowledgeSeed.defineRequiredKnowledge(requiredFixture().filter((entry) => entry.channel === 'llmwiki')),
+    required: knowledgeSeed.defineRequiredKnowledge([
+      { capability: 'closeout-order', digest: sha256(fs.readFileSync(entryFile)), source: 'docs/architecture/delivery-architecture.md', channel: 'llmwiki' },
+    ]),
     wikiDir,
   });
   assert.equal(ok.ok, true);
@@ -147,10 +151,10 @@ test('E01 positive: a matching wiki entry with provenance satisfies Kp; a not-ap
   assert.equal(ok.checked, 1);
 
   // A source declared in the manifest must not be contradicted by the entry.
-  writeWikiEntry('sourced-entry', PAYLOAD_V1, { source: 'somewhere/else.md' });
+  const sourcedFile = writeWikiEntry('sourced-entry', PAYLOAD_V1, { source: 'somewhere/else.md' });
   const sourceConflict = knowledgeSeed.evaluateRequiredKnowledge({
     required: knowledgeSeed.defineRequiredKnowledge([
-      { capability: 'sourced-entry', digest: sha256(PAYLOAD_V1), source: 'docs/architecture/delivery-architecture.md', channel: 'llmwiki' },
+      { capability: 'sourced-entry', digest: sha256(fs.readFileSync(sourcedFile)), source: 'docs/architecture/delivery-architecture.md', channel: 'llmwiki' },
     ]),
     wikiDir,
   });
@@ -196,17 +200,20 @@ test('D06: the MCP protocol layer reports a real launcher refusal structurally �
 test('D06: a publication timeout resolves by independent readback of the original target — unknown stays blocked, no re-create', async () => {
   const operation = llmwiki.buildKpOperation({ change: 'p44-change', entry: kpEntry });
 
-  // A real process that never responds (cat holds stdin forever): the invoke
-  // must time out and MUST NOT retry the create on its own.
+  // A real launcher-shaped process that keeps the session open but never
+  // answers the tools/call (fixture script, 30s sleep vs 400ms timeout): the
+  // invoke must time out and MUST NOT retry the create on its own.
+  const silentLauncher = path.join(scratch, 'silent-launcher.sh');
+  fs.writeFileSync(silentLauncher, '#!/bin/sh\nsleep 30\n', { mode: 0o755 });
   const result = await llmwiki.invokeMcpPublish({
     operation,
-    launcherPath: '/bin/cat',
+    launcherPath: silentLauncher,
     timeoutMs: 400,
     env: childEnv(),
   });
   assert.equal(result.status, 'TIMEOUT');
   assert.equal(result.operationId, operation.operationId);
-  assert.match(result.guidance, /read back/i);
+  assert.match(result.guidance, /readback/i);
   assert.match(result.guidance, /never re-create/i);
 
   // Readback confirms the payload landed (the K execution re-derived the
@@ -256,7 +263,7 @@ test('C06: the adapter Kp receipt seals the archive exactly once; a second seal 
     (error) => error.code === 'KNOWLEDGE_CLOSEOUT_REQUIRED');
   const sealed = comet.sealCloseout({ seal: sealableSeal, execution: 'exec-closeout-1', knowledgeCloseout: receipt });
   assert.equal(sealed.archived, true);
-  assert.throws(() => comet.sealCloseout({ seal: sealableSeal, execution: 'exec-closeout-2', knowledgeCloseout: receipt }),
+  assert.throws(() => comet.sealCloseout({ seal: { ...sealableSeal, archived: true }, execution: 'exec-closeout-2', knowledgeCloseout: receipt }),
     (error) => error.code === 'ARCHIVE_ALREADY_SEALED');
 });
 
@@ -309,7 +316,7 @@ test('E02: publication requires an authorization receipt bound to the payload di
     documentId: outline.deriveOutlineTargetId({ change: 'p44-change', capability: 'team-publication' }),
     collection: 'outline-managed-collection',
   };
-  assert.match(operation.documentId, /^[0-9a-f]{16}$/);
+  assert.match(operation.documentId, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
   assert.equal(outline.deriveOutlineTargetId({ change: 'p44-change', capability: 'team-publication' }), operation.documentId,
     'the target identity is fixed before the first request (retries reuse it)');
   assert.notEqual(outline.deriveOutlineTargetId({ change: 'p44-change', capability: 'other' }), operation.documentId);
@@ -359,7 +366,7 @@ test('E02/D06: the adapter executes runtime directives only — reconcile-info n
 
   // Timeout observation: unknown, never absence (H04/D06).
   assert.deepEqual(outline.buildTimeoutObservation({ operation, at: '2026-10-21T00:00:00.000Z' }), {
-    operationKey: operation.operationKey, documentId: operation.documentId, outcome: 'unknown',
+    operationKey: operation.operationKey, documentId: operation.documentId, outcome: 'unknown', at: '2026-10-21T00:00:00.000Z',
   });
 
   // The readback observation binds the registered payload digest.
@@ -522,6 +529,13 @@ function closeoutArgs({ requiredFile, ledgerFile, deployFile, codePolicy, codeRe
 
 const emptyLedger = { schema: 'comet.classic.knowledge-publish.v1', operations: [] };
 
+// The CLI manifest binds the frozen candidate exactly as the K execution
+// wrote it: the closeout-order digest is re-derived from the real entry file.
+const requiredManifestForCli = () => knowledgeSeed.defineRequiredKnowledge([
+  { capability: 'closeout-order', digest: sha256(fs.readFileSync(path.join(wikiDir, 'concepts', 'closeout-order.md'))), source: 'docs/architecture/delivery-architecture.md', channel: 'llmwiki' },
+  { capability: 'team-publication', digest: sha256('team publication payload v1'), source: 'infra/delivery/knowledge/preauthorization-policy.json', channel: 'outline' },
+]);
+
 test('CLI: a missing Kp entry blocks with exit 2 and names the capability; deploy evidence is retained read-only (no redeploy)', () => {
   const deployReceipt = { head: 'a'.repeat(40), merge: 'b'.repeat(40), project: 'managed-pilot', requiredChecks: ['delivery-gate'], checks: [] };
   const deployFile = writeTmp('deploy-chain.json', deployReceipt);
@@ -546,7 +560,7 @@ test('CLI: a missing Kp entry blocks with exit 2 and names the capability; deplo
 test('CLI: valid Kp but pending Kt blocks overall completion while the Kp pass stands (E02 separated verification)', () => {
   // 'closeout-order' already matches in wikiDir from the E01 positive test.
   const report = runCli(closeoutArgs({
-    requiredFile: writeTmp('required.json', requiredFixture()),
+    requiredFile: writeTmp('required.json', requiredManifestForCli()),
     ledgerFile: writeTmp('ledger.json', emptyLedger),
   }));
   assert.equal(report.status, 2);
@@ -559,7 +573,7 @@ test('CLI: valid Kp but pending Kt blocks overall completion while the Kp pass s
 
 test('CLI: an absent publish ledger blocks as NO_PUBLISH_OPERATION; a malformed one is invalid input', () => {
   const absent = runCli(closeoutArgs({
-    requiredFile: writeTmp('required.json', requiredFixture()),
+    requiredFile: writeTmp('required.json', requiredManifestForCli()),
     ledgerFile: path.join(scratch, 'does-not-exist', 'knowledge-publish-operations.json'),
   }));
   assert.equal(absent.status, 2, 'no ledger = no registered publication: the Kt judgment blocks, honestly');
@@ -567,7 +581,7 @@ test('CLI: an absent publish ledger blocks as NO_PUBLISH_OPERATION; a malformed 
   assert.equal(parsed.kt.blocked[0].code, 'NO_PUBLISH_OPERATION');
 
   const malformed = runCli(closeoutArgs({
-    requiredFile: writeTmp('required.json', requiredFixture()),
+    requiredFile: writeTmp('required.json', requiredManifestForCli()),
     ledgerFile: writeTmp('ledger-bad.json', '{not the runtime ledger'),
   }));
   assert.equal(malformed.status, 1, 'a present-but-unreadable ledger is an input failure, not a block');
@@ -587,7 +601,7 @@ test('CLI: exit 0 requires Kp + Kt + code sections all green; invalid input exit
     }],
   };
   const green = runCli(closeoutArgs({
-    requiredFile: writeTmp('required.json', requiredFixture()),
+    requiredFile: writeTmp('required.json', requiredManifestForCli()),
     ledgerFile: writeTmp('ledger.json', ledger),
   }));
   assert.equal(green.status, 0, `expected pass, got ${green.status}: ${green.stdout.slice(0, 400)}`);
