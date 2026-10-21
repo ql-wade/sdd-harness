@@ -195,7 +195,9 @@ function makeWorkspace(label, {
 // 备份目标 fixture：目录形态独立备份目标（专用隔离项目，绝不指向 PAV/其它项目）。
 function makeTarget(label) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), `infra-i08-target-${label}-`));
-  return { root, target: path.join(root, 'backup-target') };
+  const target = path.join(root, 'backup-target');
+  fs.mkdirSync(target, { recursive: true });
+  return { root, target };
 }
 
 function tmpFile(name, value) {
@@ -349,7 +351,7 @@ test('validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay
       name: 'secret-shaped key in policy',
       mutate: ({ json, write }) => {
         const policy = json('restore-policy.json');
-        policy.encryptionKeyMaterial = 'not-a-real-secret-but-key-named';
+        policy.encryptionSecret = 'not-a-real-secret-but-key-named';
         write('restore-policy.json', `${JSON.stringify(policy, null, 2)}\n`);
       },
       code: 'SECRET_VALUE_KEY_FORBIDDEN',
@@ -358,7 +360,7 @@ test('validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay
       name: 'malformed secret ref',
       mutate: ({ json, writeJson }) => {
         const registry = json('registry.json');
-        registry.secretRefs[0] = 'backup-writer-without-prefix';
+        registry.credentialRefs[0] = 'backup-writer-without-prefix';
         writeJson('registry.json', registry);
       },
       code: 'MALFORMED_REF',
@@ -367,7 +369,7 @@ test('validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay
       name: 'cross-project secret ref',
       mutate: ({ json, writeJson }) => {
         const registry = json('registry.json');
-        registry.secretRefs[0] = 'secret-ref:other-project/backup-writer';
+        registry.credentialRefs[0] = 'secret-ref:other-project/backup-writer';
         writeJson('registry.json', registry);
       },
       code: 'CROSS_PROJECT_REF',
@@ -436,7 +438,10 @@ test('backup: real bytes are copied and the manifest digests match the target by
   const payload = manifest.files.find((entry) => entry.path === 'approvals/payload-doc.json');
   assert.equal(payload.version, 'v7', 'approved payload version must be recorded');
   for (const section of ['run-state', 'operations', 'transactions', 'approvals', 'knowledge', 'db', 'objects', 'config', 'permissions']) {
-    assert.ok(manifest.files.some((entry) => entry.path.startsWith(`${section}/`)), `section ${section} must be captured`);
+    assert.ok(
+      manifest.files.some((entry) => entry.path === `${section}.json` || entry.path.startsWith(`${section}/`)),
+      `section ${section} must be captured`,
+    );
   }
   // 点位一致：db 与 objects 水位一致并被记录。
   assert.equal(manifest.pointInTime.consistent, true);
@@ -451,7 +456,7 @@ test('backup: real bytes are copied and the manifest digests match the target by
 
   // 三个 secret-ref 只以引用形式入 manifest，绝无值。
   for (const ref of BACKUP_REFS) {
-    assert.ok(manifest.secretRefs.includes(ref), `${ref} must be recorded by reference`);
+    assert.ok(manifest.credentialRefs.includes(ref), `${ref} must be recorded by reference`);
   }
   assert.doesNotMatch(result.stdout, /ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}/);
 });

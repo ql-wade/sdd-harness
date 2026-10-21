@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "interface": "BackupRegistry.v1",
+  "kind": "backup-registry",
+  "project": {
+    "id": "sdd-harness-pilot",
+    "owner": "ql-wade",
+    "delegates": []
+  },
+  "backupTarget": {
+    "id": "sdd-harness-pilot-backup-target",
+    "kind": "directory-target",
+    "form": "LOCAL_DIRECTORY",
+    "layout": "<target>/<backupId>/manifest.json + files/<workspace-relative-path>",
+    "purpose": "dedicated isolated backup target for the delivery pilot; the local directory form is the real thing under test in this task",
+    "isolation": {
+      "dedicatedProject": true,
+      "note": "all restore resources live in a dedicated quarantine project; this target never overwrites existing PAV or other-project data and never uses their credentials"
+    },
+    "crossMachineRestore": "UNVERIFIED",
+    "note": "cross-host/real-service restore evidence can only come from the backup owner plus the deployment wave; it is honestly UNVERIFIED here and must never be claimed from a local directory drill"
+  },
+  "credentialRefs": [
+    "secret-ref:sdd-harness-pilot/backup-writer",
+    "secret-ref:sdd-harness-pilot/backup-encryption",
+    "secret-ref:sdd-harness-pilot/restore-reader"
+  ],
+  "retention": {
+    "rpo": "UNVERIFIED",
+    "rto": "UNVERIFIED",
+    "retentionPeriod": "UNVERIFIED",
+    "encryptionOwner": "UNVERIFIED",
+    "autoCleanupEnabled": false,
+    "note": "RPO/RTO/frequency/retention period/capacity thresholds are owner-confirmed pilot measurements; they are not fabricated here. Auto cleanup stays disabled while any recovery term is unconfirmed (R10 A)."
+  },
+  "restore": {
+    "quarantineRequired": true,
+    "dedicatedProjectOnly": true
+  },
+  "registryAnchor": {
+    "ref": "infra/delivery/registry.json",
+    "note": "project identity and owner read back from the I01 Registry.v1; this domain registry adds no second authority"
+  },
+  "localOnly": true
+}

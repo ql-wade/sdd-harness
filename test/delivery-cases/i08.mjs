@@ -168,6 +168,7 @@ test('J1: backup captures a consistent byte-level manifest, restore releases a q
   const workdir = makeWorkdir('j1-consistency');
   const { workspace, files } = makeWorkspace(workdir, { supersededReceipt: true });
   const target = path.join(workdir, 'backup-target');
+  fs.mkdirSync(target, { recursive: true });
 
   // 1) 真实备份：目录形态工作区 → 独立备份目标，逐文件 sha256 manifest。
   const backup = runRealCli(workdir, ['backup', '--workspace', workspace, '--target', target, '--json']);
@@ -281,6 +282,10 @@ test('J2: R10 A — pending obligations deny cleanup under disk pressure (warn o
   fs.writeFileSync(path.join(workspace, 'transactions', 'txn-core.json'), `${JSON.stringify({ txnId: 'txn-core', state: 'committed', watermark: '2026-10-21T10:05:00.000Z' }, null, 2)}\n`);
   fs.writeFileSync(path.join(workspace, 'operations', 'op-outline-publish.receipt.json'), `${JSON.stringify({ opId: 'op-outline-publish', status: 'ok', attempt: 2, epoch: 5 }, null, 2)}\n`);
   fs.writeFileSync(path.join(workspace, 'knowledge', 'closeout-r06.json'), `${JSON.stringify({ itemId: 'closeout-r06', state: 'closed' }, null, 2)}\n`);
+  // 唯一副本义务：套件把第二副本落到独立目标后如实更新 payload 记录（不再是 sole）。
+  fs.mkdirSync(path.join(workdir, 'replica'), { recursive: true });
+  fs.writeFileSync(path.join(workdir, 'replica', 'payload-brief.json'), `${JSON.stringify({ payloadId: 'payload-brief', version: 'v12' }, null, 2)}\n`);
+  fs.writeFileSync(path.join(workspace, 'approvals', 'payload-brief.json'), `${JSON.stringify({ payloadId: 'payload-brief', version: 'v12', soleCopy: false, replicatedTo: 'replica/payload-brief.json' }, null, 2)}\n`);
   const eligible = runRealCli(workdir, ['retention', '--workspace', workspace, '--json']);
   assert.equal(eligible.run.status, 0);
   assert.equal(eligible.receipt.cleanup, 'ELIGIBLE');
@@ -315,6 +320,7 @@ test('J3: old-writer denial — live writer refuses the restore, real SIGKILL + 
   const workdir = makeWorkdir('j3-old-writer');
   const { workspace } = makeWorkspace(workdir, { supersededReceipt: true });
   const target = path.join(workdir, 'backup-target');
+  fs.mkdirSync(target, { recursive: true });
   const backup = runRealCli(workdir, ['backup', '--workspace', workspace, '--target', target, '--json']);
   assert.equal(backup.run.status, 0);
   const backupDir = path.join(target, backup.receipt.backupId);
