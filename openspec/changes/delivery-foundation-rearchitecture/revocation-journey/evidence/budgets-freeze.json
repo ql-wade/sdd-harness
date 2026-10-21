@@ -1,0 +1,33 @@
+{
+  "command": "node $TMPDIR/p48-j-budgets.mjs (imports lib/adapters/knowledge-revocation.js; judgeDeadlineBudgets over G15A_DEADLINES + two negative cases)",
+  "exitCode": 0,
+  "recordedAt": "2026-10-21T04:14:31Z",
+  "receipt": {
+    "frozen": {
+      "ok": true,
+      "target": {
+        "policy": "G15-A",
+        "endToEndTargetSeconds": 300,
+        "detectionLatestSeconds": 180,
+        "isolationBudgetSeconds": 120
+      },
+      "faultPolicy": "alert-and-record"
+    },
+    "negativeCases": [
+      {
+        "case": "endToEndTargetSeconds=360",
+        "ok": false,
+        "codes": [
+          "END_TO_END_BUDGET_EXCEEDED"
+        ]
+      },
+      {
+        "case": "faultPolicy=pause-clock-on-fault",
+        "ok": false,
+        "codes": [
+          "FAULT_POLICY_INVALID"
+        ]
+      }
+    ]
+  }
+}

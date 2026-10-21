@@ -1,0 +1,29 @@
+{
+  "command": "node $TMPDIR/p48-j-authz.mjs (real tools/infra/knowledge-authz.mjs decide -> revoke -> recheck over LOCAL_FIXTURE tmp copies)",
+  "exitCode": 0,
+  "recordedAt": "2026-10-21T04:14:31Z",
+  "receipt": {
+    "world": "LOCAL_FIXTURE copies of the committed P4_7 artifacts under $TMPDIR (live issuance stays UNREGISTERED)",
+    "steps": [
+      {
+        "step": "decide",
+        "exitCode": 0,
+        "verdict": "allow"
+      },
+      {
+        "step": "revoke (owner, real ledger write)",
+        "exitCode": 0,
+        "revoked": true
+      },
+      {
+        "step": "recheck (old publish receipt)",
+        "exitCode": 2,
+        "ok": false,
+        "reasons": [
+          "LEDGER_CHANGED",
+          "GRANT_NO_LONGER_VALID"
+        ]
+      }
+    ]
+  }
+}
