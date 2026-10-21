@@ -1,0 +1,120 @@
+{
+ "task": "P5_1",
+ "run": "impl-dfr-20261020-r1",
+ "branch": "impl/p5-1-team-host-matrix",
+ "base": "master@b392efc",
+ "generated_at": "2026-10-21",
+ "status": "DONE",
+ "acceptance_ids": [
+  "A09",
+  "A10",
+  "A11",
+  "A12",
+  "F03",
+  "F08"
+ ],
+ "deliverables": {
+  "matrix": "openspec/changes/delivery-foundation-rearchitecture/team-host-matrix/matrix.json",
+  "readme": "openspec/changes/delivery-foundation-rearchitecture/team-host-matrix/README.md",
+  "case": "test/delivery-cases/5_1.mjs",
+  "evidence_dir": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1/evidence/"
+ },
+ "coverage": {
+  "A09": "逐渠道写保护入矩阵：comet-classic edit 渠道真实 exit-2 拒绝、Shell/MCP 如实记能力缺口（绝不记已拦截，SUPPORTED 非 VERIFIED）；claude-code deny 策略（kb-write-protection/dangerous-command-blocklist）+ 两层装配审计；5_1.mjs 5.1.b-5 强制 comet write-protection 格引用渠道探针并点名缺口",
+  "A10": "5.1.a 事件序证据覆盖并发面：26 次单任务 dispatch + 1 次 2 任务 wave、85 对重叠在飞区间、串行集成且每次集成前置评审结论；WORKER_LOST_REDISPATCH 证丢失 worker 幂等原位重派。完整 A10 语义（旧 epoch 回调拒绝等）由 P3_3/3_3.mjs 拥有，本任务不重复主张",
+  "A11": "恢复轴逐宿主：outline VERIFIED（4_4.mjs D06 超时读回恢复 journey）、comet/llmwiki/claude-code SUPPORTED（真实接口+探针/单测/在跑事故记录，缺口如实登记）、code-wiki UNSUPPORTED（无状态可恢复，缺席记录）；5.1.a-3 含 amendment 续接链",
+  "A12": "5.1.a-3 机械验证真实 P1_1 链：WORKER_COMPLETED DONE → CHECKBOX_FLIP → 集成后 fresh-checkout INTEGRATION_DEFECT → AMENDMENT_INTEGRATED——子 green 不等于父目标通过；负例 N2 喂入『仅子 green』判定输入被拒",
+  "F03": "发现轴逐宿主：claude-code/comet-classic/llmwiki VERIFIED（1_1.mjs、workspace-discovery 探针、I04 真实 MCP initialize/tools-list）、outline/code-wiki UNSUPPORTED（无发现表面，缺席记录非未测）；与 acceptance-index F03 VERIFIED 一致无矛盾",
+  "F08": "五个 browser-evidence 格一律 UNVERIFIED + holder（与 acceptance-index F08 ENVIRONMENT_GATED 同源 holder）；契约层 3_2.mjs 引用；5_1.mjs 5.1.b-5 强制不得矛盾"
+ },
+ "matrix_summary": {
+  "hosts": 5,
+  "cells": 20,
+  "by_status": {
+   "VERIFIED": 5,
+   "SUPPORTED": 6,
+   "UNSUPPORTED": 4,
+   "UNVERIFIED": 5
+  }
+ },
+ "host_taxonomy_note": "hosts = claude-code, comet-classic, llmwiki, outline, code-wiki；harness/spec/architecture-review/knowledge-revocation/legacy-evidence 为非宿主模块（README 说明）",
+ "red_cases": [
+  "5.1.b-1 completeness — matrix.json 缺席，真实失败",
+  "5.1.b-2 evidence pointers — matrix.json 缺席",
+  "5.1.b-3 status obligations — matrix.json 缺席",
+  "5.1.b-4 cross-host evidence — matrix.json 缺席",
+  "5.1.b-5 acceptance-index consistency — matrix.json 缺席",
+  "5.1.b negatives — matrix.json 缺席",
+  "（开发中两次真实 RED 修复：live worktree 路径解析基准错误；cross-host 检查初版误拒 llmwiki/outline 共享证据根）"
+ ],
+ "negative_cases": [
+  "N1 伪造『并行任务直接改主检出』dispatch（worktree 指向 main checkout）→ 拒绝",
+  "N2 伪造『子 green 即父过』（剥离缺陷/修复链，仅剩 worker DONE）→ 父门拒绝",
+  "N3 伪造『先集成后评审』（TASK_INTEGRATED 早于 verdict）→ 拒绝",
+  "N4 伪造跨宿主格（comet 格引用 lib/adapters/llmwiki.js）→ 拒绝",
+  "N5 抽掉一格（outline/browser-evidence）→ 完整性拒绝",
+  "N6 UNVERIFIED 去 holder → 义务检查拒绝"
+ ],
+ "commands": {
+  "node --test test/delivery-cases/5_1.mjs (RED, matrix absent)": 1,
+  "node --test test/delivery-cases/5_1.mjs (GREEN run 1)": 0,
+  "node --test test/delivery-cases/5_1.mjs (GREEN run 2)": 0,
+  "npm test (full suite)": 1
+ },
+ "npm_test_note": "415 tests / 412 pass / 2 fail — 失败恰为已知环境项 C08+B08（HOST_OPENSPEC_DRIFT，owner: user，acceptance-index known_environment_gates 登记），零新增；adapter-quoting 2 例沙箱 EPERM 仅主检出出现，worktree 内不触发",
+ "spotchecks_file": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1/evidence/matrix-evidence-spotchecks.txt",
+ "spotchecks_count": 19,
+ "spotchecks_cover": [
+  "comet-classic/write-protection (channel probes: edit=2 shell=0 mcp=0)",
+  "comet-classic/discovery (workspace discovery fingerprint+lock)",
+  "comet-classic/recovery (cometLaunchAuthority + recoverable lock + transaction)",
+  "claude-code/write-protection (hooks.yaml deny x2 + lifecycle-hook 两层审计 + adapter-quoting)",
+  "claude-code/discovery (1_1.mjs F03 qualification)",
+  "llmwiki/discovery (mcp-capabilities ready + I04 initialize/tools-list VERIFIED)",
+  "llmwiki/write-protection (MCP-only 写路径 + llmwiki/wiki 策略目标)",
+  "llmwiki/recovery (invokeMcpPublish TIMEOUT + never re-create)",
+  "outline/write-protection (evaluatePublishAuthorization)",
+  "outline/recovery (4_4.mjs recovers-by-readback journey)",
+  "code-wiki (stale refused / precondition)",
+  "F08/F03 acceptance-index 一致性 (2 checks)",
+  "comet archive-exclusivity + state-tamper oracle 文件非空"
+ ],
+ "unverified": [
+  {
+   "item": "F08 正相原生浏览器验收（全部 5 宿主 browser-evidence 格）",
+   "holder": "具备原生浏览器能力的试点环境（UI 试点任务；acceptance-index F08 同源 holder）"
+  },
+  {
+   "item": "llmwiki live 服务写往返与恢复",
+   "holder": "部署验证 wave（I04 worktree-mcp-readback 探针承接；20s hang 已如实记录未 mock）"
+  },
+  {
+   "item": "comet-classic 完整 kill-mid-transaction 续跑 journey",
+   "holder": "后续契约任务（现有证据：recoverable lock + transaction + 独占/篡改 oracle 探针）"
+  },
+  {
+   "item": "claude-code 宿主脚本化中断恢复 journey（现仅真实事故记录）",
+   "holder": "后续任务（脚本化 A11 journey 现属 spec-adapter 模块 3_4.mjs，不跨模块推断）"
+  }
+ ],
+ "files_changed": [
+  "test/delivery-cases/5_1.mjs",
+  "openspec/changes/delivery-foundation-rearchitecture/team-host-matrix/matrix.json",
+  "openspec/changes/delivery-foundation-rearchitecture/team-host-matrix/README.md",
+  "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1.json",
+  "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1/evidence/red-5_1.txt",
+  "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1/evidence/green-5_1.txt",
+  "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1/evidence/matrix-evidence-spotchecks.txt",
+  "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1/evidence/npm-test.txt"
+ ],
+ "commits": {
+  "tests_red": "258ec79",
+  "implementation": "5a2d5d4",
+  "report": "(this commit)"
+ },
+ "blockers_or_questions": [],
+ "environment_notes": [
+  "live worktree 对账下限 ≥25 绑定本交付机（实测 34 非 main；2026-10-21）；ledger 事件为持久证据，清剪环境需重定基线（README 环境注意事项）",
+  "ledger P4_8 dispatch 的 worktree 为绝对路径（其余为相对）——5_1.mjs 两种形态均解析；该绝对路径是既有已提交数据，非本任务引入"
+ ]
+}

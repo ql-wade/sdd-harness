@@ -1,0 +1,108 @@
+# P5_1 matrix evidence spot-checks (run from worktree root; repo-relative paths only)
+# host paths sanitized: absolute repo root -> <repo>
+# 1 comet-classic/write-protection: channel probes — edit denied exit 2, shell/mcp unattributed (gap recorded, never 'blocked')
+
+$ python3 -c (parse 1_3-channel-probes.json)
+{'edit': 2, 'edit-control': 0, 'shell': 0, 'mcp': 0}
+[exit 0]
+# 2 comet-classic/discovery: workspace discovery probe — real pinned-build interface inventory
+
+$ python3 -c (parse 1_3-workspace-discovery.json)
+fingerprint cb1151b4f3a301c9 lock: docs/openspec/changes/<change>/.comet-state.lock (recoverable file lock)
+[exit 0]
+# 3 comet-classic/recovery: single-master launch authority + recoverable lock in adapter source
+
+$ grep -c cometLaunchAuthority lib/adapters/comet.js
+2
+[exit 0]
+
+$ grep -n 'stateLockFile\|stateTransactionFile' host-probes/1_3-workspace-discovery.json
+11:    "stateLockFile": "docs/openspec/changes/<change>/.comet-state.lock (recoverable file lock)",
+12:    "stateTransactionFile": "docs/openspec/changes/<change>/.comet-state-transaction.json (beforeYaml/afterYaml + Run, recovery under lock)",
+[exit 0]
+# 4 claude-code/write-protection: hooks.yaml deny policies
+
+$ grep -n 'kb-write-protection' hooks.yaml
+17:  - id: kb-write-protection
+[exit 0]
+
+$ grep -n 'action: deny' hooks.yaml
+20:    action: deny
+28:    action: deny
+[exit 0]
+# 5 claude-code assembly two-layer audit (declared vs generated)
+
+$ grep -c STRUCTURAL_HOOK_GAP test/lifecycle-hook.test.js
+4
+[exit 0]
+# 6 claude-code/discovery: F03 journey qualification
+
+$ grep -n 'F01/F03' test/delivery-cases/1_1.mjs
+5:// gap (F01/F03 compatibility matrix), and finalize the Comet extension
+[exit 0]
+# 7 llmwiki/discovery: capability fact source + real MCP initialize VERIFIED (I04 probe)
+
+$ grep -n -A3 'name: llmwiki' mcp-capabilities.yaml
+30:  - name: llmwiki
+31-    status: ready
+32-    provides: [知识库 create/edit/append/read/search/lint, SQLite+FTS+引用索引]
+33-    depends: [python3 venv + mcp 包（bootstrap --with-llmwiki 安装，commit/版本已 pin）]
+[exit 0]
+   1 
+   1 $ grep -o 'initialize VERIFIED\|tools/list VERIFIED' openspec/changes/delivery-foundation-rearchitecture/worker-reports/I04.json | sort | uniq -c
+   1 [exit 0]
+   1 initialize VERIFIED
+   1 tools/list VERIFIED
+# 8 llmwiki/write-protection: MCP-only write path (policy target llmwiki/wiki/)
+
+$ grep -n '写入必须走 MCP' mcp-capabilities.yaml
+34:    note: "写入必须走 MCP；直接 fs.write 绕过索引（hooks 策略 kb-write-protection 拦截）"
+[exit 0]
+
+$ grep -n 'llmwiki/wiki' hooks.yaml
+22:      - "llmwiki/wiki/"
+[exit 0]
+# 9 llmwiki/recovery: launcher refusal + timeout -> independent readback tested
+
+$ grep -n 'invokeMcpPublish' test/knowledge-closeout.test.js
+191:  const unavailable = await llmwiki.invokeMcpPublish({
+210:  const result = await llmwiki.invokeMcpPublish({
+[exit 0]
+
+$ grep -n 'never re-create' lib/adapters/llmwiki.js
+103:      guidance: 'result unknown: resolve by an independent readback of the original target first; never re-create the knowledge page (D06)',
+[exit 0]
+# 10 outline/write-protection: KnowledgeAuthz receipt required before publish
+
+$ grep -n 'export function evaluatePublishAuthorization' lib/adapters/outline.js
+55:export function evaluatePublishAuthorization({ operation, decision }) {
+[exit 0]
+# 11 outline/recovery: timed-out publication recovers by readback (4_4 journey)
+
+$ grep -n 'recovers by readback' test/delivery-cases/4_4.mjs
+364:test('D06/E02/E06: the timed-out Outline publication recovers by readback on the SAME fixed document; the Runtime re-verifies the adapter receipt and the same run completes', async (t) => {
+[exit 0]
+# 12 code-wiki: stale receipt on another commit refused (write/recovery absence recorded in source)
+
+$ grep -n 'stale and refused\|CODE_KNOWLEDGE_PRECONDITION' lib/adapters/code-wiki.js
+10:// commit is stale and refused.
+13:export const CODE_KNOWLEDGE_PRECONDITION = 'CODE_KNOWLEDGE_PROFILE_REQUIRED_IF_MANDATORY';
+26:      return { applicable: true, blocked: 'CODE_KNOWLEDGE_PROFILE_REQUIRED', reason: `${CODE_KNOWLEDGE_PRECONDITION}: the run marks code knowledge mandatory but no profile decision exists; final acceptance and later closeout are blocked` };
+[exit 0]
+# 13 F08 consistency: acceptance-index F08 ENVIRONMENT_GATED + holder
+
+$ python3 -c (acceptance-index F08)
+ENVIRONMENT_GATED | 具备原生浏览器能力的试点环境（UI 试点任务；正相原生浏览器验收与独立业务读回）
+[exit 0]
+# 14 F03 consistency: acceptance-index F03 VERIFIED (task P1_1)
+
+$ python3 -c (acceptance-index F03)
+VERIFIED P1_1
+[exit 0]
+# 15 comet archive-exclusivity + state-tamper oracle evidence files non-empty
+
+$ wc -c host-probes/1_3-archive-exclusivity.txt host-probes/1_3-state-tamper-oracle.txt
+    2130 openspec/changes/delivery-foundation-rearchitecture/host-probes/1_3-archive-exclusivity.txt
+     987 openspec/changes/delivery-foundation-rearchitecture/host-probes/1_3-state-tamper-oracle.txt
+    3117 total
+[exit 0]

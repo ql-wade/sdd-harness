@@ -1,0 +1,267 @@
+{
+ "schema_version": 1,
+ "matrix_id": "TEAM_HOST_CAPABILITY_MATRIX",
+ "task": "P5_1",
+ "generated_at": "2026-10-21",
+ "semantics_source": [
+  "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md :: A09-A12/F03/F08",
+  "lib/adapters/* (实际存在的 adapter 集)",
+  "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json (B10 索引，GATED/UNVERIFIED 语义不得矛盾)"
+ ],
+ "status_enum": [
+  "VERIFIED",
+  "SUPPORTED",
+  "UNSUPPORTED",
+  "UNVERIFIED"
+ ],
+ "status_rule": {
+  "VERIFIED": "当前版本存在该宿主自己的真实证据（可解析证据指针：探针/test journey/真实运行记录），完整验收已按 RED/GREEN 或探针 journey 复验",
+  "SUPPORTED": "机制在位且绑定该宿主真实接口，有真实观测（源码断言/配置/单测/在跑记录），但存在如实登记的覆盖缺口或未做完整 journey 复验（对应 acceptance-index 的 ENVIRONMENT_GATED 家族：机制证据在位、完整声明被登记的缺口阻断）",
+  "UNSUPPORTED": "该宿主不存在此能力表面，且其自身工件记录了缺席——缺席绝不记为已拦截（A09 缺口语义：gap is never blocked）",
+  "UNVERIFIED": "无当前真实证据；必须登记 holder/successor（与 acceptance-index UNVERIFIED 语义一致）"
+ },
+ "no_cross_host_inference": "矩阵中每格只绑定该宿主自身的真实证据（adapter 源码断言/测试/探针）。任何『宿主 A 支持 → 宿主 B 应该也支持』的推导都被禁止并由 test/delivery-cases/5_1.mjs 的 cross-host 检查机械拒绝：宿主专属证据根（lib/adapters/<host>.js、host-probes/、对应 delivery-case 与 worker report）不得出现在其他宿主的格里。",
+ "hosts": [
+  "claude-code",
+  "comet-classic",
+  "llmwiki",
+  "outline",
+  "code-wiki"
+ ],
+ "host_taxonomy": {
+  "claude-code": "hook 装配宿主：hooks.yaml（唯一策略源）经 tools/adapters/claude-code.sh 落地为原生配置",
+  "comet-classic": "Comet Classic 单 master 宿主（lib/adapters/comet.js, RUNNER_ID=comet-classic, pinned build cb1151b4…）",
+  "llmwiki": "知识宿主 Kp 面（lib/adapters/llmwiki.js；MCP-only 写路径）",
+  "outline": "知识宿主 Kt 面（lib/adapters/outline.js；Runtime 指令驱动的团队发布）",
+  "code-wiki": "代码知识新鲜度判定面（lib/adapters/code-wiki.js；pinned profile 只读判定）"
+ },
+ "non_host_modules": {
+  "lib/adapters/harness.js": "宿主 adapter 共享的 managed/read-only driver 分层库——非宿主",
+  "lib/adapters/spec.js": "唯一归档 writer（openspec CLI 包装，A11/B08）——模块，非执行宿主；其 A11 journey 见 3_4.mjs",
+  "lib/adapters/architecture-review.js": "共识评审门（E03/E04/H06）——模块",
+  "lib/adapters/knowledge-revocation.js": "撤销/恢复协议层（L01-L11）——模块",
+  "lib/adapters/legacy-evidence.js": "旧证据通道兼容 shim（B07/B10）——模块"
+ },
+ "capabilities": [
+  "discovery",
+  "write-protection",
+  "browser-evidence",
+  "recovery"
+ ],
+ "capability_definitions": {
+  "discovery": "F03：新宿主会话开始真实任务时实际发现所需技能与工具/真实接口面——文件存在不足以通过",
+  "write-protection": "A09：编辑/Shell/MCP 逐渠道写保护——缺口记缺口，不记已拦截",
+  "browser-evidence": "F08：同次原生浏览器验收——关联截图、请求与独立业务读回；缺能力保持未验证",
+  "recovery": "A11：中断后从权威状态与外部读回续接，不重复副作用"
+ },
+ "cells": [
+  {
+   "host": "claude-code",
+   "capability": "discovery",
+   "status": "VERIFIED",
+   "evidence": [
+    "test/delivery-cases/1_1.mjs :: F01/F03 qualification scope — new-session real discovery",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_1.json :: F03",
+    "hooks.yaml :: session-context-injection (SessionStart run policy)"
+   ],
+   "note": "acceptance-index F03 VERIFIED (task P1_1)：新宿主会话真实发现所需技能与工具，文件存在不足以通过。"
+  },
+  {
+   "host": "claude-code",
+   "capability": "write-protection",
+   "status": "VERIFIED",
+   "evidence": [
+    "hooks.yaml :: kb-write-protection (PreToolUse deny, matcher Write|Edit, target llmwiki/wiki/) + dangerous-command-blocklist (deny, Bash)",
+    "test/lifecycle-hook.test.js :: hook-doctor two-layer audit (declared-but-not-generated -> STRUCTURAL_HOOK_GAP; generated-but-not-declared -> UNAUTHORIZED_HOOK_GENERATION)",
+    "test/adapter-quoting.test.js :: compiled env safe-source (2026-09-03 quoting incident pinned)",
+    "test/delivery-cases/4_5.mjs :: E05/E06/H02 real adapter composition journey"
+   ],
+   "note": "deny 匹配是子串/前缀 best-effort（hooks.yaml 头部如实声明，非沙箱）——该局限是记录的一部分，不冒充硬边界。"
+  },
+  {
+   "host": "claude-code",
+   "capability": "browser-evidence",
+   "status": "UNVERIFIED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json :: F08 ENVIRONMENT_GATED + holder",
+    "test/delivery-cases/3_2.mjs :: F08 契约层（关联截图/请求/读回；缺能力保持未验证）"
+   ],
+   "note": "本环境无原生浏览器试点；契约语义已验，正相原生浏览器验收未执行。",
+   "holder": "具备原生浏览器能力的试点环境（UI 试点任务；与 acceptance-index.json F08 条目同一 holder 语义：正相原生浏览器验收 + 独立业务读回）"
+  },
+  {
+   "host": "claude-code",
+   "capability": "recovery",
+   "status": "SUPPORTED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl :: WORKER_LOST_REDISPATCH (P2_2: roster-verified redispatch, same worktree/branch/base, 不重复副作用)",
+    "openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl :: CHECKBOX_FLIP_REPLAY / CHECKBOX_FLIP_VERIFIED",
+    "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: 权威状态读回"
+   ],
+   "note": "真实在跑事故恢复已记录（丢失 worker 经 roster 核实后原位重派）；脚本化 A11 中断 journey 属 spec-adapter 模块（3_4.mjs），不跨模块推断为本宿主能力。"
+  },
+  {
+   "host": "comet-classic",
+   "capability": "discovery",
+   "status": "VERIFIED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/host-probes/1_3-workspace-discovery.json :: 真实 pinned build (fingerprint cb1151b4…) 接口清单",
+    "test/delivery-cases/1_3.mjs :: 1.3.a driver/workspace/authority 真实发现",
+    "lib/adapters/comet.js :: 单次 discovery run 记录于 adapter 头注"
+   ],
+   "note": "发现面 = 真实构建的 config/state/lock/transaction/checks/hook 接口清单，非文档推断。"
+  },
+  {
+   "host": "comet-classic",
+   "capability": "write-protection",
+   "status": "SUPPORTED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/host-probes/1_3-channel-probes.json :: edit=exit 2 (COMET PHASE GUARD), edit-control=0, shell=0, mcp=0",
+    "lib/adapters/comet.js :: probeWriteChannels — gap 记录为 gap",
+    "test/delivery-cases/1_3.mjs :: A09 逐渠道探针"
+   ],
+   "note": "归因 edit 渠道被真实拒绝（exit 2）；Shell/MCP 渠道 guard 不归因——按 A09 如实记为能力缺口，绝不记已拦截（故 SUPPORTED 而非 VERIFIED）。"
+  },
+  {
+   "host": "comet-classic",
+   "capability": "browser-evidence",
+   "status": "UNVERIFIED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json :: F08 ENVIRONMENT_GATED + holder"
+   ],
+   "note": "本环境无原生浏览器试点。",
+   "holder": "具备原生浏览器能力的试点环境（UI 试点任务；与 acceptance-index.json F08 条目同一 holder 语义：正相原生浏览器验收 + 独立业务读回）"
+  },
+  {
+   "host": "comet-classic",
+   "capability": "recovery",
+   "status": "SUPPORTED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/host-probes/1_3-workspace-discovery.json :: stateLockFile (recoverable file lock) + stateTransactionFile (beforeYaml/afterYaml + Run, recovery under lock)",
+    "lib/adapters/comet.js :: cometLaunchAuthority — 单 master run 绑定，他 run 回执拒绝 (F07)",
+    "openspec/changes/delivery-foundation-rearchitecture/host-probes/1_3-archive-exclusivity.txt :: 单一所有者独占归档",
+    "openspec/changes/delivery-foundation-rearchitecture/host-probes/1_3-state-tamper-oracle.txt :: 状态篡改 oracle"
+   ],
+   "note": "崩溃恢复接口来自真实构建发现 + 独占/篡改 oracle 探针；完整 kill-mid-transaction 续跑 journey 未针对本宿主执行（如实保留）。"
+  },
+  {
+   "host": "llmwiki",
+   "capability": "discovery",
+   "status": "VERIFIED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I04.json :: real stdio MCP initialize VERIFIED (LLM Wiki 1.27.0) + tools/list VERIFIED; 14/14 worktrees one canonical root",
+    "mcp-capabilities.yaml :: llmwiki 条目（ready；bootstrap --with-llmwiki 安装，commit/版本已 pin）",
+    "test/knowledge-closeout.test.js :: invokeMcpPublish 真实 launcher 子进程"
+   ],
+   "note": "MCP 事实源声明 ready 且 I04 探针真实 initialize/tools-list 验证过；写往返另见 recovery 格。"
+  },
+  {
+   "host": "llmwiki",
+   "capability": "write-protection",
+   "status": "SUPPORTED",
+   "evidence": [
+    "hooks.yaml :: kb-write-protection (deny Write|Edit, target llmwiki/wiki/) — llmwiki 的 MCP-only 索引写路径守卫",
+    "mcp-capabilities.yaml :: note: 写入必须走 MCP；直接 fs.write 绕过索引"
+   ],
+   "note": "守卫经宿主会话编译 hook 落地（装配审计属 claude-code 宿主格，不在此复用为 llmwiki 能力证明）；策略目标即 llmwiki 写面。"
+  },
+  {
+   "host": "llmwiki",
+   "capability": "browser-evidence",
+   "status": "UNVERIFIED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json :: F08 ENVIRONMENT_GATED + holder"
+   ],
+   "note": "本环境无原生浏览器试点。",
+   "holder": "具备原生浏览器能力的试点环境（UI 试点任务；与 acceptance-index.json F08 条目同一 holder 语义：正相原生浏览器验收 + 独立业务读回）"
+  },
+  {
+   "host": "llmwiki",
+   "capability": "recovery",
+   "status": "SUPPORTED",
+   "evidence": [
+    "test/knowledge-closeout.test.js :: launcher refusal + TIMEOUT 路径",
+    "lib/adapters/llmwiki.js :: TIMEOUT -> 独立读回解决，never re-create (D06)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I04.json :: create write UNVERIFIED (20s hang 如实记录未 mock)；INCONSISTENT 负对照被检出"
+   ],
+   "note": "超时→独立读回、不重复创建的语义有单测；live 服务恢复往返未验。",
+   "holder": "部署验证 wave（live LLMWiki 服务写回读回；I04 worktree-mcp-readback 探针承接）"
+  },
+  {
+   "host": "outline",
+   "capability": "discovery",
+   "status": "UNSUPPORTED",
+   "evidence": [
+    "lib/adapters/outline.js :: 导出面 = KT_INTERFACE/deriveOutlineTargetId/evaluatePublishAuthorization/…（无会话发现表面）"
+   ],
+   "note": "Knowledge.Closeout.v1 的 Kt 发布判定面；不存在会话/工具发现表面——按缺席如实记录（非已拦截，也非未测）。"
+  },
+  {
+   "host": "outline",
+   "capability": "write-protection",
+   "status": "SUPPORTED",
+   "evidence": [
+    "lib/adapters/outline.js :: evaluatePublishAuthorization (KnowledgeAuthz.v1 receipt 必需) + refuseCrossSourceEvidence",
+    "test/delivery-cases/4_4.mjs :: closeout 单独判定；缺失 Kp 条目被点名"
+   ],
+   "note": "发布写仅作为 Runtime 指令 0003 的执行；adapter 永不自行决定业务下一步；跨源证据被拒。"
+  },
+  {
+   "host": "outline",
+   "capability": "browser-evidence",
+   "status": "UNVERIFIED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json :: F08 ENVIRONMENT_GATED + holder"
+   ],
+   "note": "本环境无原生浏览器试点。",
+   "holder": "具备原生浏览器能力的试点环境（UI 试点任务；与 acceptance-index.json F08 条目同一 holder 语义：正相原生浏览器验收 + 独立业务读回）"
+  },
+  {
+   "host": "outline",
+   "capability": "recovery",
+   "status": "VERIFIED",
+   "evidence": [
+    "test/delivery-cases/4_4.mjs :: D06/E02/E06 — 超时的 Outline 发布经读回在同一固定文档上恢复，Runtime 重验 adapter 回执，同一 run 完成",
+    "lib/adapters/outline.js :: buildTimeoutObservation / buildReadbackObservation / evaluateKtFromLedger"
+   ],
+   "note": "权威发布台账读回重推导完成谓词（D07 archived != completed）。"
+  },
+  {
+   "host": "code-wiki",
+   "capability": "discovery",
+   "status": "UNSUPPORTED",
+   "evidence": [
+    "lib/adapters/code-wiki.js :: resolveCodeKnowledgeProfile — pinned profile 判定，无会话/工具发现表面"
+   ],
+   "note": "对 pinned deepwiki-open/CodeGraph profile 的纯判定模块；无发现表面——按缺席如实记录。"
+  },
+  {
+   "host": "code-wiki",
+   "capability": "write-protection",
+   "status": "UNSUPPORTED",
+   "evidence": [
+    "lib/adapters/code-wiki.js :: 只读判定面（无写表面）"
+   ],
+   "note": "只读判定模块，不存在写表面——记录的是表面缺席，不是『写不受保护』也不是一道守卫。"
+  },
+  {
+   "host": "code-wiki",
+   "capability": "browser-evidence",
+   "status": "UNVERIFIED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json :: F08 ENVIRONMENT_GATED + holder"
+   ],
+   "note": "本环境无原生浏览器试点。",
+   "holder": "具备原生浏览器能力的试点环境（UI 试点任务；与 acceptance-index.json F08 条目同一 holder 语义：正相原生浏览器验收 + 独立业务读回）"
+  },
+  {
+   "host": "code-wiki",
+   "capability": "recovery",
+   "status": "UNSUPPORTED",
+   "evidence": [
+    "lib/adapters/code-wiki.js :: evaluateCodeWikiReceipt — 每次求值绑定精确 pinned commit+digests，他 commit 回执即 stale 拒绝"
+   ],
+   "note": "无跨调用可恢复状态：每次求值重新绑定精确 digest，无状态可恢复——按缺席如实记录。"
+  }
+ ]
+}
