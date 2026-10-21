@@ -282,9 +282,14 @@ test('doctor: duplicate event+command registration is reported with §7.2 semant
   settings.hooks.PreToolUse.push({ hooks: [{ type: 'command', command: 'node "$CLAUDE_PROJECT_DIR"/tools/user-gate.js' }] });
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
 
-  const run = runDoctor(['--root', projectRoot, '--target-root', world, '--json']);
+  // The adapter refuses duplicates at COMPOSE time (its own §7.2 gate), so
+  // the doctor audits the installed view as-is (--audit-only): this is the
+  // native-assembly verification of a composed settings.json.
+  const run = runDoctor(['--root', projectRoot, '--target-root', world, '--audit-only', '--json']);
   const report = parseJsonOut(run, 'doctor duplicates');
   assert.equal(run.status, 2);
+  assert.equal(report.adapter.refused, false, 'audit-only never composes');
+  assert.match(report.adapter.command, /audit-only/);
   const dups = report.findings.filter((f) => f.code === 'DUPLICATE_REGISTRATION');
   assert.ok(dups.length >= 2, `both duplicate shapes must be found: ${JSON.stringify(report.findings)}`);
   const pluginDup = dups.find((f) => (f.subjects ?? []).includes('plugin') || /插件入口|plugin entry/.test(f.detail ?? ''));

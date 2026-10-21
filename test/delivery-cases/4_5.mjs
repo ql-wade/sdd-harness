@@ -63,7 +63,7 @@ const GATE_INPUT = {
 // the compiled env are distributed into the world like a release view.
 function composeWorld(t, { withHooks = true } = {}) {
   const world = fsSync.mkdtempSync(path.join(os.tmpdir(), 'p4-5-case-'));
-  t.after(() => fs.rmSync(world, { recursive: true, force: true }));
+  t.after(() => fsSync.rmSync(world, { recursive: true, force: true }));
   const adapter = spawnSync('bash', [ADAPTER], {
     encoding: 'utf8',
     env: { ...process.env, SDD_TARGET_ROOT: world },
@@ -151,7 +151,8 @@ test('E05: the method hook is missing at runtime — the failure surfaces, the d
   // capability — no method hook can self-pass it.
   const gate = evaluate(GATE_INPUT, [], POLICY_REF);
   assert.equal(gate.verdict, 'blocked');
-  assert.match(gate.receipt.blocked.join('\n'), /MISSING_OBSERVATION: required check unit\/node:test/);
+  assert.match(gate.receipt.blocked.join('\n'), /MISSING_OBSERVATION: required check unit\/unit:node:test/,
+    'the required capability has no receipt and stays blocked (level/capability form)');
 });
 
 test('E05: silent failure — exit 0 with mode badge and map present is still NOT_EVIDENCED and the gate verdict is byte-identical', (t) => {
