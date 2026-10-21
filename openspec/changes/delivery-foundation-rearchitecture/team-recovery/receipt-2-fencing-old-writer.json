@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "interface": "TeamRecovery.DrillReceipt.v1",
+  "drill": "fencing-old-writer-rejection",
+  "operationKey": "backup-restore/fence:old-writer+authority-transfer",
+  "executedAt": "2026-10-21T06:45:37.069Z",
+  "realProcessesOnly": true,
+  "steps": [
+    {
+      "step": "live-old-writer-refuses-restore",
+      "command": "node tools/infra/backup-restore.mjs probe --case old-writer-denial --json",
+      "exitCode": 0,
+      "attempt": 1,
+      "timestamp": "2026-10-21T06:45:36.937Z",
+      "detail": "duration 81ms; live pid refused with RESTORE_REFUSED_OLD_WRITER_LIVE, real SIGKILL then confirmed gone enables the restore",
+      "stateFileShape": {
+        "steps": [
+          {
+            "step": "spawn-live-old-writer",
+            "status": "VERIFIED",
+            "refusal": null,
+            "method": null
+          },
+          {
+            "step": "live-writer-refuses-restore",
+            "status": "VERIFIED",
+            "refusal": "RESTORE_REFUSED_OLD_WRITER_LIVE",
+            "method": null
+          },
+          {
+            "step": "sigkill-and-confirmed-gone",
+            "status": "VERIFIED",
+            "refusal": null,
+            "method": "SIGKILL"
+          },
+          {
+            "step": "restore-enabled-after-fence",
+            "status": "VERIFIED",
+            "refusal": null,
+            "method": null
+          }
+        ]
+      },
+      "verbatim": {
+        "exitCode": "0",
+        "stdout": "{\n  \"interface\": \"BackupInfra.v1\",\n  \"command\": \"probe\",\n  \"case\": \"old-writer-denial\",\n  \"executed\": true,\n  \"status\": \"VERIFIED\",\n  \"observedSteps\": [\n    {\n      \"step\": \"spawn-live-old-writer\",\n      \"status\": \"VERIFIED\",\n      \"pid\": 30474\n    },\n    {\n      \"step\": \"live-writer-refuses-restore\",\n      \"status\": \"VERIFIED\",\n      \"refusal\": \"RESTORE_REFUSED_OLD_WRITER_LIVE\",\n      \"released\": false\n    },\n    {\n      \"step\": \"sigkill-and-confirmed-gone\",\n      \"status\": \"VERIFIED\",\n      \"method\": \"SIGKILL\"\n    },\n    {\n      \"step\": \"restore-enabled-after-fence\",\n      \"status\": \"VERIFIED\",\n      \"sameOperation\": {\n        \"verified\": true,\n        \"runId\": \"run-i08-probe\",\n        \"authorityId\": \"comet-authority-i08-probe\",\n        \"epoch\": 2\n      }\n    }\n  ],\n  \"reason\": \"process-level fencing proven with a real pid: live old writer refuses the restore, real SIGKILL plus gone-confirmation enables it, release only after the same-operation readback\",\n  \"checkedAt\": \"2026-10-21T06:45:36.924Z\"\n}\n",
+        "stderr": ""
+      }
+    },
+    {
+      "step": "authority-transfer-epoch-monotonic",
+      "command": "node tools/infra/backup-restore.mjs probe --case authority-transfer --json",
+      "exitCode": 0,
+      "attempt": 2,
+      "timestamp": "2026-10-21T06:45:36.985Z",
+      "detail": "duration 47ms; missing approval and masquerade fences are refused; the real fence transfers authority with epoch+1",
+      "stateFileShape": {
+        "steps": [
+          {
+            "step": "runner-permanently-lost",
+            "status": "VERIFIED",
+            "refusal": null
+          },
+          {
+            "step": "transfer-without-approval-refused",
+            "status": "VERIFIED",
+            "refusal": null
+          },
+          {
+            "step": "shared-directory-masquerade-refused",
+            "status": "VERIFIED",
+            "refusal": null
+          },
+          {
+            "step": "controlled-transfer-registers-new-authority",
+            "status": "VERIFIED",
+            "refusal": null
+          }
+        ]
+      },
+      "verbatim": {
+        "exitCode": "0",
+        "stdout": "{\n  \"interface\": \"BackupInfra.v1\",\n  \"command\": \"probe\",\n  \"case\": \"authority-transfer\",\n  \"executed\": true,\n  \"status\": \"VERIFIED\",\n  \"observedSteps\": [\n    {\n      \"step\": \"runner-permanently-lost\",\n      \"status\": \"VERIFIED\",\n      \"method\": \"SIGKILL\",\n      \"supervisedRestart\": false\n    },\n    {\n      \"step\": \"transfer-without-approval-refused\",\n      \"status\": \"VERIFIED\"\n    },\n    {\n      \"step\": \"shared-directory-masquerade-refused\",\n      \"status\": \"VERIFIED\"\n    },\n    {\n      \"step\": \"controlled-transfer-registers-new-authority\",\n      \"status\": \"VERIFIED\",\n      \"newAuthority\": {\n        \"authorityId\": \"comet-authority-transfer-b666f807c3a3\",\n        \"epoch\": 3,\n        \"runId\": \"run-i08-probe\",\n        \"transferredFrom\": \"comet-authority-i08-probe\",\n        \"transferredAt\": \"2026-10-21T06:45:36.981Z\"\n      }\n    }\n  ],\n  \"singleAuthorityProof\": {\n    \"oldWriterConfirmedGone\": true,\n    \"singleLiveAuthority\": true,\n    \"method\": \"SIGKILL\",\n    \"note\": \"the old writer is confirmed terminated by process-level evidence; exactly one live authority is registered\"\n  },\n  \"reason\": \"single-authority migration proven locally: the runner is really SIGKILLed, transfer refuses without controlled approval, shared-directory masquerade fencing is refused, and the approved transfer registers a new authority with an epoch bump and a single-live-authority proof\",\n  \"checkedAt\": \"2026-10-21T06:45:36.983Z\"\n}\n",
+        "stderr": ""
+      }
+    },
+    {
+      "step": "controlled-transfer-1",
+      "command": "node tools/infra/backup-restore.mjs transfer --state <run-state> --approval <file> --fence-evidence <file> --out <file> --json",
+      "exitCode": 0,
+      "attempt": 3,
+      "timestamp": "2026-10-21T06:45:37.028Z",
+      "detail": "from epoch 7 to 8",
+      "stateFileShape": {
+        "from": {
+          "authorityId": "comet-authority-pilot-001",
+          "epoch": 7,
+          "runId": "run-p53-drill2"
+        },
+        "newAuthority": {
+          "authorityId": "comet-authority-transfer-ca33c712c0b2",
+          "epoch": 8,
+          "runId": "run-p53-drill2",
+          "transferredFrom": "comet-authority-pilot-001",
+          "transferredAt": "2026-10-21T06:45:37.025Z"
+        }
+      },
+      "verbatim": {
+        "exitCode": "0",
+        "stdout": "{\n  \"interface\": \"AuthorityTransfer.v1\",\n  \"command\": \"transfer\",\n  \"status\": \"TRANSFERRED\",\n  \"from\": {\n    \"authorityId\": \"comet-authority-pilot-001\",\n    \"epoch\": 7,\n    \"runId\": \"run-p53-drill2\"\n  },\n  \"newAuthority\": {\n    \"authorityId\": \"comet-authority-transfer-ca33c712c0b2\",\n    \"epoch\": 8,\n    \"runId\": \"run-p53-drill2\",\n    \"transferredFrom\": \"comet-authority-pilot-001\",\n    \"transferredAt\": \"2026-10-21T06:45:37.025Z\"\n  },\n  \"approval\": {\n    \"approvalId\": \"ap-1\",\n    \"approvedBy\": \"ops-lead\",\n    \"approvalRef\": \"ops-record-1\",\n    \"reason\": \"runner-permanently-lost\",\n    \"approvedAt\": \"2026-10-21T06:45:36.986Z\"\n  },\n  \"fence\": {\n    \"oldWriterId\": \"comet-authority-pilot-001\",\n    \"method\": \"SIGKILL\",\n    \"confirmedGone\": true,\n    \"pid\": null,\n    \"liveness\": \"NOT_CHECKED\",\n    \"observedAt\": \"2026-10-21T06:45:36.986Z\"\n  },\n  \"singleAuthorityProof\": {\n    \"oldWriterConfirmedGone\": true,\n    \"singleLiveAuthority\": true,\n    \"method\": \"SIGKILL\",\n    \"note\": \"the old writer is confirmed terminated by process-level evidence; exactly one live authority is registered\"\n  },\n  \"outFile\": \"<host-path-redacted>\",\n  \"refusals\": [],\n  \"checkedAt\": \"2026-10-21T06:45:37.026Z\"\n}\n",
+        "stderr": ""
+      }
+    },
+    {
+      "step": "controlled-transfer-2",
+      "command": "node tools/infra/backup-restore.mjs transfer --state <run-state> --approval <file> --fence-evidence <file> --out <file> --json",
+      "exitCode": 0,
+      "attempt": 4,
+      "timestamp": "2026-10-21T06:45:37.064Z",
+      "detail": "from epoch 8 to 9",
+      "stateFileShape": {
+        "from": {
+          "authorityId": "comet-authority-transfer-ca33c712c0b2",
+          "epoch": 8,
+          "runId": "run-p53-drill2"
+        },
+        "newAuthority": {
+          "authorityId": "comet-authority-transfer-5016572a010a",
+          "epoch": 9,
+          "runId": "run-p53-drill2",
+          "transferredFrom": "comet-authority-transfer-ca33c712c0b2",
+          "transferredAt": "2026-10-21T06:45:37.062Z"
+        }
+      },
+      "verbatim": {
+        "exitCode": "0",
+        "stdout": "{\n  \"interface\": \"AuthorityTransfer.v1\",\n  \"command\": \"transfer\",\n  \"status\": \"TRANSFERRED\",\n  \"from\": {\n    \"authorityId\": \"comet-authority-transfer-ca33c712c0b2\",\n    \"epoch\": 8,\n    \"runId\": \"run-p53-drill2\"\n  },\n  \"newAuthority\": {\n    \"authorityId\": \"comet-authority-transfer-5016572a010a\",\n    \"epoch\": 9,\n    \"runId\": \"run-p53-drill2\",\n    \"transferredFrom\": \"comet-authority-transfer-ca33c712c0b2\",\n    \"transferredAt\": \"2026-10-21T06:45:37.062Z\"\n  },\n  \"approval\": {\n    \"approvalId\": \"ap-2\",\n    \"approvedBy\": \"ops-lead\",\n    \"approvalRef\": \"ops-record-2\",\n    \"reason\": \"runner-permanently-lost\",\n    \"approvedAt\": \"2026-10-21T06:45:37.028Z\"\n  },\n  \"fence\": {\n    \"oldWriterId\": \"comet-authority-pilot-001\",\n    \"method\": \"SIGKILL\",\n    \"confirmedGone\": true,\n    \"pid\": null,\n    \"liveness\": \"NOT_CHECKED\",\n    \"observedAt\": \"2026-10-21T06:45:37.028Z\"\n  },\n  \"singleAuthorityProof\": {\n    \"oldWriterConfirmedGone\": true,\n    \"singleLiveAuthority\": true,\n    \"method\": \"SIGKILL\",\n    \"note\": \"the old writer is confirmed terminated by process-level evidence; exactly one live authority is registered\"\n  },\n  \"outFile\": \"<host-path-redacted>\",\n  \"refusals\": [],\n  \"checkedAt\": \"2026-10-21T06:45:37.062Z\"\n}\n",
+        "stderr": ""
+      }
+    },
+    {
+      "step": "epoch-monotonic-across-transfers",
+      "command": "(derived) epochs of consecutive controlled transfers",
+      "exitCode": 0,
+      "attempt": 5,
+      "timestamp": "2026-10-21T06:45:37.067Z",
+      "detail": "epochs [8, 9] from base 7 — strictly increasing",
+      "stateFileShape": {
+        "epochs": [
+          8,
+          9
+        ],
+        "baseEpoch": 7
+      }
+    }
+  ],
+  "status": "VERIFIED",
+  "reason": "process-level fencing proven with real pids: a live old writer is refused, real SIGKILL plus gone-confirmation enables restore/transfer, and the authority epoch increases strictly with every controlled transfer (I08 BackupInfra.v1 / AuthorityTransfer.v1)"
+}

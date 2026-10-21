@@ -1,0 +1,119 @@
+{
+  "task": "P5_3 (原任务 5.3): 核实 Comet 受管驱动的租约/fencing/后台运行能力（不满足则记录边界并复审）；完成版本回退与运维手册",
+  "task_title_zh": "Comet 受管驱动租约/fencing/后台运行核实 + 版本回退 + 运维手册（A10/A11/H09）",
+  "run": "impl-dfr-20261021-p53",
+  "branch": "impl/p5-3-ops-runbook",
+  "base_commit": "master@5a4d5a0",
+  "final_status": "DONE",
+  "acceptance_ids": {
+    "targeted": [
+      "A10",
+      "A11",
+      "H09"
+    ]
+  },
+  "environment_setup": {
+    "worktree": "impl-p5-3 从 master@5a4d5a0 新建（控制器预建）；.sdd 本地构建缓存缺失——按 I08 先例从 impl-p4-6 可审计复制同指纹缓存（fingerprint beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966，与当前 integrations/comet/upstream.lock.json 六 patch 锁完全一致；manifest 校验在任何字节漂移时仍会失败）；pinned node 24.15.0 经 nvm 在位",
+    "known_gates_respected": "本任务全部真实验证在本 .sdd 装备 worktree 内完成；已知环境项（C08/B08 host-openspec drift、adapter 沙箱 EPERM）如实保留，未以环境失败冒充通过"
+  },
+  "coverage": {
+    "A10": "并发/重复/过期拒绝在本地单权威内真实核实：drill 3 证 .comet-state.lock 双开拒绝（EEXIST + CLI 30s 锁超时非零退出）与同 job_key 幂等续作（SIGKILL 恢复后同 execution id、attempt 不变——有效推进唯一、重复幂等）；旧 epoch 回调拒绝引用 4_6 H06（stale attempt 不能完成新任务）并抽样复跑 EXIT=0。多会话并发收敛（两 racer 同 execution/attempt）为 4_6 H03 已有真实证据（引用，不重复建设）",
+    "A11": "中断恢复从权威状态续接不重复副作用：drill 3 证事务日志 .comet-state-transaction.json（comet.classic.state-transaction.v1，YAML rename=commit point）在下一次锁获取时被真实恢复代码消费且 YAML 原样；drill 1 证监督器 SIGKILL 后 restart-original 同 authority 幂等续作（单存活实例）；版本回退响应丢失场景引用 P4_2 reconcile（correlation-ID 绑定原结果，不再部署）",
+    "H09": "第二写者不能独立打开：drill 2 证存活旧 writer 拒绝（RESTORE_REFUSED_OLD_WRITER_LIVE）与权威迁移需受控批准+进程级围栏（epoch+1 单调、伪装围栏 AUTHORITY_FENCE_NOT_PROCESS_LEVEL 拒绝）；drill 3 证异机锁 owner 永不本地恢复（真实 withRecoverableFileLock 超时拒绝）；Comet 层 COMET_RUN_AUTHORITY 绑定 + state authority-transfer 引用 4_6 H09 并抽样复跑；跨机归属迁移本身属跨机门后（scope-gate NOT_ENABLED，如实 UNVERIFIED 不假装）"
+  },
+  "capability_findings": {
+    "lease": "VERIFIED（本地单机）。真实 wx 独占创建 + owner 身份（pid/nonce/hostname/processIdentity）；存活 holder 期间第二写者等待后 30s 超时拒绝；仅 owner 确认死亡才回收；异机 owner 永不回收；事务日志下一次锁获取时恢复（commit point=YAML rename，不覆盖无关手工编辑）。边界：多机 lease/共享存储语义未启用（CROSS_MACHINE_SCOPE_NOT_ENABLED）。证据 team-recovery/receipt-3-lease-contention.json 五步全真；源：钉定构建 domains/comet-classic/classic-store.ts + platform/fs/plugin-store.ts",
+    "fencing": "VERIFIED（本地单机）/ UNVERIFIED（跨机，门控）。epoch 严格单调 +1、旧 writer 活 pid 拒绝、SIGKILL+终止确认启用、缺批准/伪装围栏拒绝（drill 2 复用 I08 AuthorityTransfer 手法）；Comet 层权威绑定引用 4_6 H09 + 抽样复跑 EXIT=0（evidence/sample-rerun-4_6-mjs.txt）。多机 fencing 属跨机门后——引用 services/delivery-control/scope-gate.json，启用=用户裁决落配对提交，不假装",
+    "background_run": "VERIFIED（进程级）/ UNVERIFIED（宿主级容量）。supervisor restart-original 绑定同一固定 authority、单存活实例、预算 window 300s/max 3、超限 STOP_AND_ESCALATE（drill 1 真实进程注入，引用 I07 不重复建设）；P4_8 faultPolicy=alert-and-record 同套时限（G15A_DEADLINES）。真实外部宿主故障检测容量/时限证据保持 UNVERIFIED（probe capabilityScope=PROCESS_LEVEL）",
+    "version_rollback": "VERIFIED（LOCAL_ONLY）。回退四门真实探针：ROLLBACK_NOT_APPROVED exit 2（active binding 不动）、ROLLBACK_DIGEST_MISMATCH exit 2、批准同 digest 回退 exit 0 VERIFIED + 独立业务终态读回 + I06 registry-environment-identity 独立确认（J3 真实运行 commands 记录）。真实生产晋级/部署 UNVERIFIED（environment owner + runtime admission，ISOLATED_RELEASE_ENVIRONMENT_REQUIRED）"
+  },
+  "recovery_drills": [
+    {
+      "drill": "1 sigkill-restart-original",
+      "evidence": "team-recovery/receipt-1-sigkill-restart-original.json — monitor.mjs probe runner-process-failure：真实子进程 pid 记录、真实 SIGKILL、oldWriterConfirmedGone、sameAuthorityId、singleLiveInstance 全 VERIFIED（exit 0）"
+    },
+    {
+      "drill": "2 fencing-old-writer-rejection",
+      "evidence": "team-recovery/receipt-2-fencing-old-writer.json — old-writer-denial + authority-transfer 双 probe + 两次真实 transfer epoch 7→8→9 严格单调（5 步 exit 0）"
+    },
+    {
+      "drill": "3 lease-contention",
+      "evidence": "team-recovery/receipt-3-lease-contention.json — 真实 Comet Classic 锁：EEXIST 双开拒绝、CLI 双开 30s 超时非零退出（真实 duration 30.1s 记录）、SIGKILL 后同 execution 幂等续作、事务日志恢复、异机 owner 拒绝（8 步 exit 记录）"
+    }
+  ],
+  "red_cases": [
+    "test/delivery-cases/5_3.mjs RED（deliverables 缺席）：7/9 真实失败——runbook 缺席（J1/J2/J4 断言 not ok）、receipts 缺席（J2 not ok）、drill 执行器缺席（J2 live rerun not ok）；2 项通过为对既有已接纳代码（P4_2 回退门、P5_2 scope 拒绝）的重用目标验证。存证 worker-reports/P5_3/evidence/red-5_3-mjs.txt（退出码 1）",
+    "J1 负例：删除清单命令行（16→9 行）被 ≥10 契约拒绝——机械防删命令",
+    "J2 负例：伪造回执时间戳（倒序/未来时间）被校验器拒绝",
+    "J4 负例：隐瞒已知环境门控（半截替换 gate 行）被 verbatim 比对拒绝"
+  ],
+  "commands": {
+    "node --test test/delivery-cases/5_3.mjs (RED, deliverables absent)": 1,
+    "node --test test/delivery-cases/5_3.mjs (GREEN run 1)": 0,
+    "node --test test/delivery-cases/5_3.mjs (GREEN run 2)": 0,
+    "npm test (baseline, before changes)": 1,
+    "npm test (after changes)": 1,
+    "node --test test/delivery-cases/4_6.mjs (sample re-run)": 0,
+    "node tools/infra/monitor.mjs probe --case runner-process-failure --json": 0,
+    "node tools/infra/backup-restore.mjs probe --case old-writer-denial --json": 0,
+    "node tools/infra/backup-restore.mjs probe --case authority-transfer --json": 0,
+    "node tools/infra/backup-restore.mjs transfer --state <f> --approval <f> --fence-evidence <f> --out <f> --json (drill2 real runs)": 0,
+    "node openspec/changes/delivery-foundation-rearchitecture/team-recovery/run-drills.mjs --drill 1 --out <r.json>": 0,
+    "node openspec/changes/delivery-foundation-rearchitecture/team-recovery/run-drills.mjs --drill 2 --out <r.json>": 0,
+    "node openspec/changes/delivery-foundation-rearchitecture/team-recovery/run-drills.mjs --drill 3 --out <r.json>": 0,
+    "node tools/ci/release.mjs rollback (unapproved, J3)": 2,
+    "node tools/ci/release.mjs rollback (wrong digest, J3)": 2,
+    "node tools/ci/release.mjs rollback (approved same-digest, J3)": 0,
+    "node tools/infra/platform.mjs probe --case registry-environment-identity --chain <rollback chain> --json (J3)": 0,
+    "node services/delivery-control/gate.mjs status --json": 0,
+    "node services/delivery-control/gate.mjs start --request <f> --json": 2,
+    "node services/delivery-control/gate.mjs enable --record <f> --json": 2,
+    "node tools/infra/backup-restore.mjs validate --registry infra/delivery/registry.json --dir infra/delivery/backup --json": 0
+  },
+  "regression": {
+    "npm_test": "baseline 425 tests / 422 pass / 2 fail（C08、B08 已知环境项）/ 1 skip；after 与 baseline 完全一致，零新增（npm test 退出 1 由既有已知失败导致，非本任务引入）。4_6.mjs 抽样复跑 EXIT=0（9/9）"
+  },
+  "unverified": [
+    {
+      "item": "多机 fencing / 跨机归属迁移 / 正向隔离恢复认证",
+      "holder": "用户跨机器范围裁决 + P5_2 owner",
+      "reason": "CROSS_MACHINE_SCOPE_NOT_ENABLED；启用=用户显式裁决落配对提交（scope-gate.json status + gate.mjs EXPECTED_SCOPE_DIGEST 同提交）；本地 drill 3 异机 owner 拒绝证明边界真实关闭，未以共享目录假装分布式"
+    },
+    {
+      "item": "真实生产晋级/部署与环境读回",
+      "holder": "environment owner + runtime admission",
+      "reason": "ReleaseProtocol.v1 全部回执 LOCAL_ONLY（ISOLATED_RELEASE_ENVIRONMENT_REQUIRED，P4_2 冻结）"
+    },
+    {
+      "item": "宿主级故障检测容量/时限（外部宿主宕机真实容量证据）",
+      "holder": "I07 owner",
+      "reason": "monitor probe capabilityScope=PROCESS_LEVEL：缩放时间尺度机制已真实验证，生产时限容量证据保持 UNVERIFIED"
+    },
+    {
+      "item": "I01 secret-ref catalog 成员登记（backup-writer/restore-reader 缺席 → catalogGaps）",
+      "holder": "I01 owner",
+      "reason": "成员登记属 I01 所有权属就绪证据；validate 如实报 catalogGaps 不报失败（I08 先例一致）"
+    }
+  ],
+  "files_changed": [
+    "openspec/changes/delivery-foundation-rearchitecture/operations-runbook.md",
+    "openspec/changes/delivery-foundation-rearchitecture/team-recovery/run-drills.mjs",
+    "openspec/changes/delivery-foundation-rearchitecture/team-recovery/receipt-1-sigkill-restart-original.json",
+    "openspec/changes/delivery-foundation-rearchitecture/team-recovery/receipt-2-fencing-old-writer.json",
+    "openspec/changes/delivery-foundation-rearchitecture/team-recovery/receipt-3-lease-contention.json",
+    "test/delivery-cases/5_3.mjs",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_3/evidence/red-5_3-mjs.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_3/evidence/green-5_3-mjs-run1.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_3/evidence/green-5_3-mjs-run2.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_3/evidence/baseline-npm-test-before-changes.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_3/evidence/regression-npm-test-after-changes.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_3/evidence/sample-rerun-4_6-mjs.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_3.json (this report)"
+  ],
+  "commits": {
+    "tests_red": "d00462b",
+    "implementation": "f326b4f",
+    "report": "(this commit)"
+  },
+  "blockers_or_questions": []
+}

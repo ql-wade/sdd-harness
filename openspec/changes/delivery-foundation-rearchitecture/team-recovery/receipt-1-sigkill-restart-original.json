@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "interface": "TeamRecovery.DrillReceipt.v1",
+  "drill": "sigkill-restart-original",
+  "operationKey": "supervise/restart-original:comet-authority-pilot-001",
+  "executedAt": "2026-10-21T06:45:36.785Z",
+  "realProcessesOnly": true,
+  "steps": [
+    {
+      "step": "supervisor-probe-runner-process-failure",
+      "command": "node tools/infra/monitor.mjs probe --case runner-process-failure --json",
+      "exitCode": 0,
+      "attempt": 1,
+      "timestamp": "2026-10-21T06:45:36.784Z",
+      "detail": "duration 630ms; probe status VERIFIED; steps 5",
+      "stateFileShape": {
+        "interface": "MonitorInfra.v1",
+        "case": "runner-process-failure",
+        "capabilityScope": "PROCESS_LEVEL",
+        "oldWriterConfirmedGone": true,
+        "restartBindsSameAuthority": true,
+        "singleLiveInstance": true,
+        "injectedDeathPids": [
+          {
+            "step": "spawn-runner-instance",
+            "pid": 30454,
+            "newPid": null
+          },
+          {
+            "step": "inject-process-death",
+            "pid": 30454,
+            "newPid": null
+          }
+        ]
+      },
+      "verbatim": {
+        "exitCode": "0",
+        "stdout": "{\n  \"interface\": \"MonitorInfra.v1\",\n  \"command\": \"probe\",\n  \"case\": \"runner-process-failure\",\n  \"executed\": true,\n  \"status\": \"VERIFIED\",\n  \"capabilityScope\": \"PROCESS_LEVEL\",\n  \"hostFailureCapabilityClaimed\": false,\n  \"injectionParameters\": {\n    \"heartbeatIntervalMs\": 50,\n    \"staleAfterMs\": 400,\n    \"authorityId\": \"monitor-probe-comet-authority-local\",\n    \"note\": \"scaled local timescales prove the mechanism; the production contract deadlines below stay frozen and their capacity/failure evidence remains UNVERIFIED\"\n  },\n  \"contractDeadlines\": {\n    \"heartbeatIntervalSeconds\": 30,\n    \"heartbeatAlertAfterSeconds\": 90,\n    \"detectionLatestSeconds\": 120\n  },\n  \"observedSteps\": [\n    {\n      \"step\": \"spawn-runner-instance\",\n      \"status\": \"VERIFIED\",\n      \"pid\": 30454,\n      \"authorityId\": \"monitor-probe-comet-authority-local\"\n    },\n    {\n      \"step\": \"health-read-before-failure\",\n      \"status\": \"VERIFIED\",\n      \"heartbeatAgeMs\": 22\n    },\n    {\n      \"step\": \"inject-process-death\",\n      \"status\": \"VERIFIED\",\n      \"method\": \"SIGKILL\",\n      \"pid\": 30454,\n      \"oldWriterConfirmedGone\": true\n    },\n    {\n      \"step\": \"detect-heartbeat-stale\",\n      \"status\": \"VERIFIED\",\n      \"heartbeatAgeMs\": 422,\n      \"staleAfterMs\": 400,\n      \"code\": \"HEARTBEAT_AGE_ALERT\"\n    },\n    {\n      \"step\": \"supervised-restart\",\n      \"status\": \"VERIFIED\",\n      \"newPid\": 30470,\n      \"oldPid\": 30454,\n      \"sameAuthorityId\": true,\n      \"oldWriterConfirmedGone\": true,\n      \"singleLiveInstance\": true,\n      \"restartsUsed\": 1,\n      \"restartBudget\": {\n        \"windowSeconds\": 300,\n        \"maxRestarts\": 3\n      },\n      \"withinBudget\": true,\n      \"businessRetryBySupervisor\": false\n    }\n  ],\n  \"reason\": \"process-level fault injection verified: real child process, real SIGKILL, stale-heartbeat detection, old writer confirmed gone, same-authority restart, exactly one live instance\",\n  \"checkedAt\": \"2026-10-21T06:45:36.776Z\"\n}\n",
+        "stderr": ""
+      }
+    }
+  ],
+  "status": "VERIFIED",
+  "reason": "real child process, real SIGKILL, old writer confirmed gone, restart bound to the same fixed authority with exactly one live instance (I07 MonitorInfra.v1 restart-original)"
+}
