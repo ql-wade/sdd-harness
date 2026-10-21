@@ -272,9 +272,13 @@ function checkStatusObligations(matrix) {
 function checkNoCrossHostEvidence(matrix) {
   const v = [];
   for (const cell of matrix.cells) {
+    // roots also listed for this cell's own host are SHARED with that host
+    // (e.g. 4_4.mjs covers both llmwiki and outline) and are not a violation
+    const ownRoots = new Set(HOST_SPECIFIC_EVIDENCE[cell.host] ?? []);
     for (const other of Object.keys(HOST_SPECIFIC_EVIDENCE)) {
       if (other === cell.host) continue;
       for (const root of HOST_SPECIFIC_EVIDENCE[other]) {
+        if (ownRoots.has(root)) continue;
         for (const ptr of cell.evidence) {
           if (pointerPath(ptr) === root || pointerPath(ptr).startsWith(`${root}/`) || pointerPath(ptr).startsWith(root)) {
             v.push(`${cell.host}/${cell.capability}: cites ${other}-specific evidence ${ptr}`);
