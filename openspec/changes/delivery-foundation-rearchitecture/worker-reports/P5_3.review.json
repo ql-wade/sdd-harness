@@ -1,0 +1,46 @@
+{
+  "task": "P5_3",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-21T07:30:02.674832+00:00",
+  "head_reviewed": "0b4e56a",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "报告 4_6 抽样复跑写 9/9, 实际 10/10 (存证与评审复跑一致) — 控制器验收时勘正",
+      "disposition": "corrected at acceptance"
+    },
+    {
+      "id": "nb-2",
+      "summary": "test/architecture-review-adapter.test.js:512 在 Node>=24.13 失败(TAP->spec reporter); master 预存在, 归入 DELIVERY_CASES_NODE_PIN 决策族; npm test 以 node 22 运行 425/422/2 已知项",
+      "disposition": "recorded, routed to DELIVERY_CASES_NODE_PIN"
+    },
+    {
+      "id": "nb-3",
+      "summary": "receipt-3 锁 owner 含真实主机名 MacBook-Wade-7.local(非路径; 真实本地运行证据); 轻微信息暴露供 owner 知悉",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-4",
+      "summary": "主检出 10 条预存在脏项(OV overlay 语料)与本任务 13 文件零重叠",
+      "disposition": "recorded (host-existing state)"
+    }
+  ],
+  "independently_rerun": {
+    "green": "9/9 x2 (node 24.15.0)",
+    "red_authenticity": "干净 clone 检出 d00462b 复现 7 fail/2 pass exit 1 与存证逐条一致; d00462b->HEAD 测试零改动",
+    "drills": {
+      "receipt1": "字段一致 + 交叉验证(monitor probe 新 pid 86476->86477 同字段; run-drills --drill 1 exit 0)",
+      "receipt2": "epoch 7->8->9 复现(old-writer-denial/authority-transfer probe + R14 我方回执 epochs[8,9])",
+      "receipt3": "独立锁超时复现 30144ms exit 70; EEXIST exit 3; SIGKILL 幂等(attempt 1 不变); journalConsumed+yamlIntact; 异机 owner 拒 exit 4; operationKey 指纹 beab355d"
+    },
+    "runbook_commands_rerun": "6 条 journey 行(R02/R03/R13/R14/R15/R16)与 J1 不重叠全部复跑, 拒绝码逐字一致; 16 条入口 git cat-file 全存在",
+    "gate_disclosure_verbatim": "自写脚本逐条 includes() 比对 6/6 逐字节命中; 启用流程与 gate.mjs 实现精确一致",
+    "reuse_no_rebuild": "run-drills.mjs 纯编排(8 spawn 点); 机制全在 master 侧; 4_6 复跑 10/10",
+    "npm_test": "node22: 425/422/2(C08+B08) 零新增; node24: +1 预存在 reporter 不兼容(已定性 master 侧)",
+    "boundary_clean": true,
+    "host_path_leak": false,
+    "sdd_cache_fingerprint": "beab355d…e966 由 upstream.lock 独立重算 + worker 声明 + distribution.json 三方一致; 源树与副本 diff -rq 零差异"
+  }
+}
