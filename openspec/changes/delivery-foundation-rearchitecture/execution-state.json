@@ -78,7 +78,7 @@
     "timezone": "Asia/Shanghai",
     "reason": "Receiving executor qualifies actual host, resources and throughput before estimating implementation"
   },
-  "updated_at": "2026-10-20T23:01:06.244785+00:00",
+  "updated_at": "2026-10-21T03:35:52.260174+00:00",
   "preparatory_checks": {
     "scaffold_scoped_tests": "41/41 PASS",
     "scaffold_npm_test": "41/41 PASS on Node22.13.1",
@@ -103,7 +103,7 @@
     "Resume existing monitor sdd; never create duplicate monitor",
     "Continue original full goal, do not mark 92 scenarios accepted from baseline tests"
   ],
-  "last_progress_at": "2026-10-20T23:01:06.244785+00:00",
+  "last_progress_at": "2026-10-21T03:35:52.260174+00:00",
   "authorization_blocker_audit": {
     "consecutive_goal_turns": 0,
     "decision_received": true,
@@ -148,7 +148,7 @@
     "status": "active"
   },
   "run_started_at": "2026-10-20T03:04:53.456337+00:00",
-  "status_revision": 40,
+  "status_revision": 41,
   "lifecycle_guard": {
     "skill": "openspec-lifecycle-guard",
     "path": "/Users/mac/.claude/skills/openspec-lifecycle-guard/SKILL.md",
@@ -720,6 +720,37 @@
         "真实跨机 H09 -> RunnerInfra",
         "authority 对抗边界同 P2_2/P2_4"
       ]
+    },
+    "P4_5": {
+      "status": "ACCEPTED",
+      "steps_done": 6,
+      "commits": {
+        "tests_red": "ad0f1f7",
+        "tests_green": "09a040f",
+        "implementation": "b823bde",
+        "report": "63dd2cb"
+      },
+      "merged_to_master": "05e69fc",
+      "regression": "npm test @05e69fc: 385 tests/380 pass/5 fail(all pre-existing env)/0 new",
+      "review": "worker-reports/P4_5.review.json (APPROVED, 0 blocking, 4 nb)"
+    },
+    "I08": {
+      "status": "WORKER_DONE_PENDING_REVIEW",
+      "commits": {
+        "tests_red": "f9e5a0b",
+        "implementation": "0e6313e",
+        "report": "39466fd"
+      },
+      "branch": "impl/i08-backup-restore (base master@1fc8d4f)",
+      "worker_result": "13/13 unit + 4/4 delivery cases + 4 probes exit 0 + validate exit 0; npm test 381/387 pass, 5 pre-existing env fails",
+      "unverified_holders": [
+        "跨机恢复演练→备份owner+部署波次",
+        "静态加密执行→I01运行时授权",
+        "backup-writer/restore-reader目录登记→I01(catalogGap)",
+        "RPO/RTO/保留期/容量阈值→各数据owner",
+        "沙箱外复跑adapter-quoting→评审员"
+      ],
+      "review_dispatched": true
     }
   },
   "environment_notes": [
@@ -768,6 +799,13 @@
       "raised": "2026-10-20T12:06:25.182211+00:00",
       "by": "P1_5 worker",
       "question": "delivery-cases Node-24 sensitivity: pin acceptance commands to host node 22.13.1 (recommended) or fix TAP-format dependency"
+    },
+    {
+      "id": "I08_FILENAME_DEVIATION",
+      "summary": "I08 简报独占清单(backup/*+backup-restore.mjs)与 canonical(infrastructure-plan.md I08/tasks.json I08.owns: recovery/*、retention-policy.json、authority-transfer.schema.json、operations-runbook.md、recovery.mjs、infra-recovery.test.js)不一致; worker按简报执行,语义规格取自plan I08小节",
+      "owner": "user/plan-owner",
+      "status": "OPEN",
+      "candidate_resolution": "接受现状+集成波次机械改名+plan owner修canonical引用(待评审员建议)"
     }
   ],
   "halt": {
