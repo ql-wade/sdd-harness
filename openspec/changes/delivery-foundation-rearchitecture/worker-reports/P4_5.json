@@ -1,0 +1,126 @@
+{
+ "task": "P4_5",
+ "task_title": "原任务 4.5 — 若采用项目生命周期 hook 辅助，按 hooks.yaml 唯一策略源注册并做三者共存/原生装配验证；Ponytail 不改业务 phase、不派发共识、不签验收。覆盖 E05/E06 的 hook 缺失、静默失败、重开/压缩/子会话与 mode 串扰。原生支持和真实运行分别报告，不直接改插件缓存。",
+ "run": "impl-dfr-20261020-r1",
+ "branch": "impl/p4-5-lifecycle-hook",
+ "base_commit": "1fc8d4f",
+ "final_status": "DONE",
+ "implementation_commit": "b823bde",
+ "tests_commit": "ad0f1f7 (RED suite) + 09a040f (GREEN convergence onto real adapter behavior + evidence)",
+ "report_commit": "本 JSON 所在提交（HEAD of impl/p4-5-lifecycle-hook）",
+ "semantics_source_note": "语义唯一来源: specs/delivery-foundation/spec.md E05(Ponytail 方法 hook 缺失/静默失败/mode 改变 → Runtime 依然阻断，hook 不自行通过/切阶段/后台派发)/E06(恢复/压缩/子会话重复 → hook 仅恢复方法上下文，不产生第二控制器)/H02(SessionStart/compact/SubagentStart 重复触发 → hook 不领取执行权、gate 与业务阶段不受 mode 影响)。步骤结构取自 tasks.md '### Task P4_5:' 段(461-476 行, 段尾边界 477 行 '### Task P4_8:'): Step1 Test 4.5.a / Step2 Implement 4.5.a / Step3 Test 4.5.b / Step4 Implement 4.5.b / Step5 Review / Step6 Commit，work_packages 4.5.a(按需只读恢复 hook 注册验证)+4.5.b(脚本与 matcher 装配/共存/重复/静默失败)。已接纳基建 import 复用零修改: hooks.yaml+tools/adapters/claude-code.sh(P1_2 编译器/受管块移交/注册分工三门, SDD_TARGET_ROOT 隔离, 固定事件集 PreToolUse/SessionStart startup|resume/Stop)+tools/foundation-export.mjs(P1_2 plugin-script 拒绝)+lib/delivery/gate.js(SDD.Gate.v1 纯评估, E05 Runtime 阻断证据)+infra/delivery/runner/role-policy.json methodStateScope(I02: knownFacts/nonEvidence 原文复用)+classic-closeout-and-hook-contract.md §6/§7(Ponytail 5.3.2 能力边界与注册分工)。任务授权文件集覆盖 tasks.md Files 声明中本任务可改子集(hooks.yaml/hooks/tools/adapters 归 P1_2 所有, 本任务是其上的策略校验层), 偏差已由控制器授权。",
+ "red_cases": [
+  {
+   "case": "test/lifecycle-hook.test.js 全套 11 例",
+   "red_evidence": "infra/delivery/lifecycle/hook-policy.json 与 registration-matrix.json 不存在(ENOENT), tools/lifecycle/hook-doctor.mjs 不存在(每个 doctor 用例 spawn 失败)",
+   "log": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_5/evidence/red-lifecycle-hook.txt (exit=1, tests 11 / pass 0 / fail 11)"
+  },
+  {
+   "case": "test/delivery-cases/4_5.mjs 全套 5 例",
+   "red_evidence": "同一真实缺失: 模块加载期 import hook-policy.json ENOENT → 文件级失败",
+   "log": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_5/evidence/red-delivery-case-4_5.txt (exit=1, tests 1 / pass 0 / fail 1)"
+  }
+ ],
+ "green_summary": "node --test test/lifecycle-hook.test.js → 11/11 pass, 0 fail (green-lifecycle-hook.txt)。node --test test/delivery-cases/4_5.mjs → 5/5 pass, 0 fail (green-delivery-case-4_5.txt)。npm test 全量 → tests 385 = 基线 374 + 本任务 11, pass 381 / fail 3 / skipped 1; 3 个 fail 与基线@1fc8d4f 逐一相同(C08+P1_5 钉定 1.3.1 vs 宿主 1.14.3 fail-closed、B08 同因、i04 llmwiki worktree-mcp-readback 的 AssertionError 未 import 潜在缺陷), 零新增失败 (green-npm-test-full.txt; 基线存档 baseline-npm-test-at-1fc8d4f.txt)。node --test test/delivery-cases/*.mjs → tests 158 / pass 103 / fail 21 / skipped 34; 21 个 fail 全部为兄弟任务用例在本全新工作树的环境 prep 缺失(comet pristine source 未 prepare/未 build、comet init 的 settings.local.json 注册缺失等), 无一 import 本任务文件, 本任务 4_5 五例 ok 135-139 (green-all-delivery-cases.txt)。收敛要点: P1_2 adapter 自身对相同事件/命令重复注册在组合期即拒绝(§7.2 门), 因此 doctor 增加 --audit-only 对已安装原生视图只读审计(即'原生装配验证'), 重复注册负例改走该真实入口。",
+ "coverage_matrix": [
+  {
+   "ac": "E05",
+   "positive": [
+    "真实 adapter 组合(SDD_TARGET_ROOT 隔离)后按 settings.json 受管命令原文驱动真实 hooks/pre-tool-gate.sh: git push --force 变体 deny exit 2, llmwiki wiki 写保护同面",
+    "真实 session-context.sh exit 0 且非空 stdout → probeReceipt executed=true/DELIVERED(声明效果独立观察成立)"
+   ],
+   "negative": [
+    "hook 缺失(注册命令指向已被删除的脚本): 失败显形 exit!=0, 判 SILENT_FAILURE/BROKEN, 绝不当已执行; 同world下 deny gate 仍 exit 2",
+    "Runtime 独立阻断: 真实 lib/delivery/gate.js evaluate(必需 capability, 空回执) → blocked + MISSING_OBSERVATION: required check unit/unit:node:test — hook 缺失不改变阻断",
+    "静默失败: hook exit 0 + mode badge + codebase map 齐备但 stdout 为空 → NOT_EVIDENCED(nonEvidence 全集), gate 回执对 badge 变更字节级不变(纯函数)",
+    "mode 串扰: 共享 mode 文件两会话写入 last-write-wins 实测; plan/bypassPermissions 两种 mode 下 deny 仍 exit 2、gate verdict 不变; 矩阵/策略结构化 modeIsPermissionBasis=false"
+   ],
+   "real_entrances": "bash tools/adapters/claude-code.sh(真实编译器)、settings.json 受管命令经 bash -c 原文执行、hooks/{pre-tool-gate,session-context,stop-reminder}.sh 真实脚本、lib/delivery/gate.js 真实 evaluate",
+   "evidence": "green-delivery-case-4_5.txt (ok 1-3)"
+  },
+  {
+   "ac": "E06",
+   "positive": [
+    "hook 面: startup/resume/repeat/stop 重复触发均 exit 0 + 非空上下文输出, world 快照字节级不变(零状态写入/零派发/零第二控制器), 输出无 dispatch/phase/approve/consensus 字样",
+    "Comet 业务面(绑定原 operation/不重复发布)由已接纳 4_4.mjs 承接(verification-case-plan E06→test/delivery-cases/4_4.mjs), 本任务不重复实现"
+   ],
+   "negative": [
+    "clear/compact/SubagentStart/UserPromptSubmit 无任何受管注册(settings 断言无该组), 矩阵逐面 CAPABILITY_GAP+honestNote(YAML 追加不生效, §7.3) — 能力缺口显式不伪报",
+    "活体运行(真实宿主内送达/遵守)UNVERIFIED, 与结构面 PROVEN 分开报告"
+   ],
+   "real_entrances": "同上 + registration-matrix.json 结构断言",
+   "evidence": "green-delivery-case-4_5.txt (ok 4); ok 135-139 于 green-all-delivery-cases.txt"
+  },
+  {
+   "ac": "H02",
+   "positive": [
+    "hook 面: SessionStart x3+Stop 风暴后 world 与前置快照 deepEqual(advisory only, 不领取执行权), 输出仅方法上下文",
+    "Comet 面(必需 gate 与业务阶段不受 mode 影响)由已接纳 4_6.mjs 承接(H02→test/delivery-cases/4_6.mjs)"
+   ],
+   "negative": [
+    "声明了但未生成的 hook: adapter 组合 exit 0(静默)而 doctor STRUCTURAL_HOOK_GAP exit 2(负对照配对: 缺口必须显形)",
+    "生成了但未声明: PostToolUse 受管形态注入 → UNAUTHORIZED_HOOK_GENERATION",
+    "重复注册: plugin 包装受管脚本 + user x2 相同命令 → DUPLICATE_REGISTRATION, plugin 处置权标注在插件入口; doctor 对组合视图只读(注入条目原样存活)",
+    "固定事件集外事件: adapter 自身拒绝(§7.3)且 doctor 保留拒绝原文 ADAPTER_COMPOSITION_FAILED + HOOK_EVENT_BEYOND_FIXED_SET"
+   ],
+   "real_entrances": "真实 adapter 组合/拒绝、真实 settings.json 审计、真实 hooks.yaml 解析",
+   "evidence": "green-lifecycle-hook.txt (11/11)"
+  },
+  {
+   "ac": "三者共存/原生装配(任务级, 非 92 场景 ID)",
+   "positive": [
+    "真实仓库组合 → CONSISTENT: 4 声明策略、每固定事件恰 1 受管条目、SessionStart matcher=startup|resume、无 plugin/user 条目冲突; 默认组合目标=$TMPDIR, 活配置(.claude/settings.json+hooks/.compiled.env)运行前后字节一致, 插件缓存零读写",
+    "矩阵三主体(plugin/managed/user)来源标记与 adapter 的 PLUGIN_SOURCE_RE/MANAGED_SCRIPT_RE 锁步, fixedEventSet 与 adapter FIXED_EVENT_SET 锁步(结构性互证)"
+   ],
+   "negative": ["--audit-only 对注入重复的已安装视图报告全部冲突; liveRun 恒 UNVERIFIED"],
+   "real_entrances": "node tools/lifecycle/hook-doctor.mjs(--root/--target-root/--audit-only/--json)",
+   "evidence": "green-lifecycle-hook.txt (ok 5-9), green-delivery-case-4_5.txt (ok 5)"
+  }
+ ],
+ "commands": [
+  { "cmd": "node --test test/lifecycle-hook.test.js (RED)", "exit_code": 1, "note": "11 tests / 0 pass / 11 fail — ENOENT 目标不存在", "log": "evidence/red-lifecycle-hook.txt" },
+  { "cmd": "node --test test/delivery-cases/4_5.mjs (RED)", "exit_code": 1, "note": "文件级失败 — 模块加载 ENOENT", "log": "evidence/red-delivery-case-4_5.txt" },
+  { "cmd": "npm test (基线 @1fc8d4f, 变更前)", "exit_code": 1, "note": "374 tests / 370 pass / 3 fail / 1 skipped — 3 fail 为基线既有环境条件, 存档对照用", "log": "evidence/baseline-npm-test-at-1fc8d4f.txt" },
+  { "cmd": "node --test test/lifecycle-hook.test.js (GREEN)", "exit_code": 0, "note": "11/11 pass", "log": "evidence/green-lifecycle-hook.txt" },
+  { "cmd": "node --test test/delivery-cases/4_5.mjs (GREEN)", "exit_code": 0, "note": "5/5 pass", "log": "evidence/green-delivery-case-4_5.txt" },
+  { "cmd": "npm test (GREEN 全量)", "exit_code": 1, "note": "385 tests / 381 pass / 3 fail(与基线逐一同名同因) / 1 skipped — 零新增失败; exit 1 由既有环境失败决定", "log": "evidence/green-npm-test-full.txt" },
+  { "cmd": "node --test test/delivery-cases/*.mjs (合并)", "exit_code": 1, "note": "158 tests / 103 pass / 21 fail / 34 skipped; 21 fail 均为兄弟用例环境 prep(comet prepare-source/build、comet init 注册), 本任务 5 例全绿", "log": "evidence/green-all-delivery-cases.txt" },
+  { "cmd": "node tools/lifecycle/hook-doctor.mjs --json (真实仓库)", "exit_code": 0, "note": "CONSISTENT, 组合目标 $TMPDIR, 活配置字节不变" }
+ ],
+ "unverified": [
+  {
+   "item": "活体运行: 真实 Claude Code 宿主会话中 hook 触发、上下文实际送达与行为遵守",
+   "status": "UNVERIFIED",
+   "successor": "宿主验证 wave / P1_6 派发记录(actualAssetDigest/effectiveLevel/injectionObservation 运行时填充); 每份 doctor/report 已内置 liveRun=UNVERIFIED 分离字段"
+  },
+  {
+   "item": "真实已安装 Ponytail 插件与项目受管块的活体共存(本任务以注入 plugin 来源条目的组合视图验证冲突检测语义; 未安装真实插件)",
+   "status": "UNVERIFIED",
+   "successor": "宿主验证 wave(装真实插件后重跑 doctor --audit-only)"
+  },
+  {
+   "item": "SessionStart clear/compact、SubagentStart、UserPromptSubmit、PostToolUse、PreCompact、SubagentStop 的受管装配",
+   "status": "CAPABILITY_GAP(结构性如实登记, 非本次可验证项)",
+   "successor": "需要改 tools/adapters/claude-code.sh 受管生成逻辑并验证 settings matcher(P1_2 所有); 各宿主逐宿主认证(§7.3/§6)"
+  },
+  {
+   "item": "兄弟任务 delivery-cases 在本全新工作树的全绿(需 comet prepare-source+build 与 comet init)",
+   "status": "环境 prep 未执行(超出本任务授权文件与范围)",
+   "successor": "integrate wave 合并后一次性准备并跑全矩阵"
+  }
+ ],
+ "files_changed": [
+  "infra/delivery/lifecycle/hook-policy.json (新建)",
+  "infra/delivery/lifecycle/registration-matrix.json (新建)",
+  "tools/lifecycle/hook-doctor.mjs (新建)",
+  "test/lifecycle-hook.test.js (新建)",
+  "test/delivery-cases/4_5.mjs (新建)",
+  "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_5/evidence/* (RED/GREEN/基线日志)",
+  "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_5.json (本报告)"
+ ],
+ "review_note": "Step5 自审: (1) 边界 — git status 证实只触授权文件; hooks.yaml/.claude//contracts//lib//tasks.md 零改动; doctor 仅 node stdlib, 零新 npm 依赖, 无机器绝对路径落盘(报告内 root/target 为运行时字段)。(2) 与 P1_2 语义对齐 — 来源分类正则与固定事件集在 doctor 中镜像声明并注明 lockstep 义务; plugin 条目永不改写, 处置权标注在插件入口; hooks.yaml 声明源与 adapter 同一 fallback(TARGET_ROOT 优先)。(3) 跨边界故障 — 发现并适配真实行为: adapter 在组合期即拒绝重复注册(其 §7.2 门), 故 doctor 的重复审计走 --audit-only 已安装视图(兼作原生装配验证); 拒绝原文以 ADAPTER_COMPOSITION_FAILED 保留不代生成。(4) 语义对齐 — silentExitZero/modeCrosstalk/nonEvidence 与 I02 role-policy 原文复用互证; gate 阻断证据用真实 SDD.Gate.v1 纯评估而非自建断言。(5) 任务纪律 — Ponytail 面: 本层零业务 phase 写入/零共识派发/零验收签署(用例以 world 字节级不变证明)。",
+ "blockers_or_questions": [
+  "HOST_OPENSPEC_DRIFT(既有, 非本任务引入): 宿主 openspec 1.3.1→1.14.3 使 C08/B08 fail-closed, 已有 ENVIRONMENT_DRIFT 台账记录, 等待用户裁决(回钉/迁移/保持阻断); 本任务 npm test 门按'与基线零新增失败'判定通过",
+  "test/infra-llmwiki-paths.test.js:59 裸引用 AssertionError(未 import)为基线既有缺陷, 在本环境 MCP 通道缺失路径下显形; 非本任务文件, 不越界修复, 提请 I04 owner 或控制器处置"
+ ]
+}

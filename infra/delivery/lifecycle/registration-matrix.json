@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "interface": "HookRegistrationMatrix.v1",
+  "task": "P4_5",
+  "note": "三者共存注册矩阵（Ponytail 插件 Hook / 项目 hooks.yaml 受管生成 / 用户自有条目）× 事件面。来源标记与去重语义对齐 P1_2 已接纳注册分工门（classic-closeout-and-hook-contract.md §7.2/§7.3）；事件面能力按当前 CC adapter 固定事件集如实标注，能力缺口显式，不伪报。",
+  "subjects": {
+    "plugin": {
+      "owner": "Ponytail 插件入口（§7.2：插件生命周期 Hook 由插件入口注册）",
+      "sourceMarkers": ["CLAUDE_PLUGIN_ROOT", ".claude/plugins/"],
+      "rules": "来源标记优先：即使引用与项目受管同名脚本，指向插件基础设施即归插件入口；不参与项目受管块的移交/去重，安装/升级/卸载都不移除；与项目受管命令相同事件+命令重复时显式冲突并列出，处置权在插件入口，项目侧绝不改写"
+    },
+    "managed": {
+      "owner": "本项目 adapter（tools/adapters/claude-code.sh，受 hooks.yaml 唯一策略源驱动）",
+      "sourceMarkers": ["hooks/pre-tool-gate.sh", "hooks/session-context.sh", "hooks/stop-reminder.sh"],
+      "rules": "固定事件集整体替换（旧格式不残留、不产生第二个 Guard）；重复运行幂等；卸载只移除受管条目，用户与插件条目保留"
+    },
+    "user": {
+      "owner": "用户自有配置",
+      "sourceMarkers": [],
+      "rules": "永不被 adapter 改写或移除；与受管条目或其他用户条目相同事件+命令重复即为冲突（§7.2 拒绝语义）"
+    }
+  },
+  "eventSurfaces": [
+    { "event": "PreToolUse", "adapterCapability": "generated", "declaredBy": "hooks.yaml PreToolUse deny 策略（matcher 为各 deny 策略并集）", "ponytailNative": null, "honestNote": "" },
+    { "event": "SessionStart/startup", "adapterCapability": "generated", "declaredBy": "hooks.yaml SessionStart run 策略", "ponytailNative": "activate 脚本注入级别规则、写方法 mode（§6）", "honestNote": "" },
+    { "event": "SessionStart/resume", "adapterCapability": "generated", "declaredBy": "hooks.yaml SessionStart run 策略（同一受管条目 matcher=startup|resume）", "ponytailNative": "resume 同 activate 注入路径（§6）", "honestNote": "" },
+    { "event": "SessionStart/clear", "adapterCapability": "CAPABILITY_GAP", "declaredBy": null, "ponytailNative": "clear 后不假定保留用户模式（§6）", "honestNote": "受管生成 matcher 仅 startup|resume；clear 未装配，hooks.yaml 追加不生效（§7.3：新增事件必须修改受管生成逻辑并验证 settings matcher）" },
+    { "event": "SessionStart/compact", "adapterCapability": "CAPABILITY_GAP", "declaredBy": null, "ponytailNative": "compact 尝试保留当前模式（§6）", "honestNote": "受管生成 matcher 仅 startup|resume；compact 未装配，YAML 追加不生效——不得宣称 compact 已生效（§7.3）" },
+    { "event": "Stop", "adapterCapability": "generated", "declaredBy": "hooks.yaml Stop run 策略", "ponytailNative": null, "honestNote": "" },
+    { "event": "SubagentStart", "adapterCapability": "CAPABILITY_GAP", "declaredBy": null, "ponytailNative": "subagent 脚本按活动模式注入规则，支持 agent_type 筛选；Runner 派发的实际子角色须逐宿主认证，不能从父会话激活推断子角色已获得规则（§6）", "honestNote": "adapter 固定事件集不含 SubagentStart，YAML 声明会被 adapter 显式拒绝；项目受管面无子会话注入——能力缺口如实，不得伪报" },
+    { "event": "UserPromptSubmit", "adapterCapability": "CAPABILITY_GAP", "declaredBy": null, "ponytailNative": "tracker 识别启停/级别切换，按宿主格式输出上下文；只改变方法模式，不改变角色、授权、phase 或任务完成状态（§6）", "honestNote": "固定事件集外——项目受管面不装配（§7.3）" },
+    { "event": "PostToolUse", "adapterCapability": "CAPABILITY_GAP", "declaredBy": null, "ponytailNative": null, "honestNote": "固定事件集外——项目受管面不装配（§7.3）" },
+    { "event": "PreCompact", "adapterCapability": "CAPABILITY_GAP", "declaredBy": null, "ponytailNative": null, "honestNote": "固定事件集外——项目受管面不装配（§7.3）" },
+    { "event": "SubagentStop", "adapterCapability": "CAPABILITY_GAP", "declaredBy": null, "ponytailNative": null, "honestNote": "固定事件集外——项目受管面不装配（§7.3）" }
+  ],
+  "duplicateRegistration": {
+    "detection": "同一事件组内相同规范化命令（去引号去空白）出现于多个条目",
+    "policy": "REFUSE",
+    "ref": "§7.2：接入时检查相同事件/命令的重复注册，保留用户条目；不把插件整套 Hook 复制进项目配置",
+    "pluginDisposition": "标记并列出冲突，处置权在插件入口；项目受管块绝不吸收或改写插件条目"
+  },
+  "crosstalk": {
+    "knownFacts": [
+      "同仓库并发会话可能共享 mode 文件，最后写入生效",
+      "hook exit 0、模式徽章和地图存在均不能证明实际规则已送达或被遵守"
+    ],
+    "knownFactsRef": "infra/delivery/runner/role-policy.json methodStateScope.knownFacts（原文复用，不修改）",
+    "modeIsIdentityBasis": false,
+    "modeIsPermissionBasis": false,
+    "modeIsCompletionBasis": false,
+    "scopeRule": "本环境 method-state 为共享 cooperative-local；跨会话/角色不得借 mode 串扰获得身份、授权或完成判定（§7.4 / I02）"
+  },
+  "evidenceSeparation": {
+    "structural": "settings.json + hooks/.compiled.env 组合面可证（hook-doctor 每次实测 PROVEN/NOT_PROVEN）",
+    "liveRun": "hook 触发、上下文实际送达、行为遵守 UNVERIFIED——由真实宿主验证承接",
+    "nonEvidence": ["hook exit 0", "mode badge", "codebase map"]
+  }
+}

@@ -1,0 +1,65 @@
+TAP version 13
+# Subtest: policy layer pins the read-only layering over the P1_2 single source and mirrors the live declaration
+ok 1 - policy layer pins the read-only layering over the P1_2 single source and mirrors the live declaration
+  ---
+  duration_ms: 2.352
+  ...
+# Subtest: fixed event set matches the adapter compiler; every declared policy stays inside it
+ok 2 - fixed event set matches the adapter compiler; every declared policy stays inside it
+  ---
+  duration_ms: 0.496834
+  ...
+# Subtest: validation rules encode gap / unauthorized / duplicate / silent-failure / mode-crosstalk semantics
+ok 3 - validation rules encode gap / unauthorized / duplicate / silent-failure / mode-crosstalk semantics
+  ---
+  duration_ms: 0.6675
+  ...
+# Subtest: registration matrix models three subjects x event surfaces with the P1_2 source markers
+ok 4 - registration matrix models three subjects x event surfaces with the P1_2 source markers
+  ---
+  duration_ms: 1.38125
+  ...
+# Subtest: doctor: the real composition of this repo is CONSISTENT and the live config is never touched
+ok 5 - doctor: the real composition of this repo is CONSISTENT and the live config is never touched
+  ---
+  duration_ms: 132.872542
+  ...
+# Subtest: doctor: declared but not generated is a structured gap — the adapter compiles silently, the doctor refuses
+ok 6 - doctor: declared but not generated is a structured gap — the adapter compiles silently, the doctor refuses
+  ---
+  duration_ms: 150.892083
+  ...
+# Subtest: doctor: generated but not declared is flagged as unauthorized generation
+ok 7 - doctor: generated but not declared is flagged as unauthorized generation
+  ---
+  duration_ms: 166.644292
+  ...
+# Subtest: doctor: duplicate event+command registration is reported with §7.2 semantics; plugin disposition stays at the plugin entry
+ok 8 - doctor: duplicate event+command registration is reported with §7.2 semantics; plugin disposition stays at the plugin entry
+  ---
+  duration_ms: 107.757166
+  ...
+# Subtest: doctor: an event beyond the fixed set keeps the adapter refusal and reports the capability gap without crashing
+ok 9 - doctor: an event beyond the fixed set keeps the adapter refusal and reports the capability gap without crashing
+  ---
+  duration_ms: 147.09925
+  ...
+# Subtest: silent failure: exit 0 without the declared effect is NOT execution — only the observed effect separates the two exit-0 runs
+ok 10 - silent failure: exit 0 without the declared effect is NOT execution — only the observed effect separates the two exit-0 runs
+  ---
+  duration_ms: 34.153833
+  ...
+# Subtest: mode crosstalk: last write wins on a shared mode file and never weakens the deny gate
+ok 11 - mode crosstalk: last write wins on a shared mode file and never weakens the deny gate
+  ---
+  duration_ms: 267.109041
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1132.85825
