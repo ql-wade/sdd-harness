@@ -390,6 +390,13 @@ test('E02: the closeout receipt is only built from a confirmed independent readb
   assert.throws(() => outline.buildCloseoutReceipt({
     operation, observation: { outcome: 'exists', readbackDigest: sha256('drifted'), revision: 'rev-1' }, execution: 'exec-k-1', recordedAt: '2026-10-21T00:00:00.000Z',
   }), (e) => e.code === 'READBACK_MISMATCH');
+  // D06 补注（P4_4 评审 nb-1）：absent 与 conflict 两个 fail-closed 分支此前已实现未测。
+  assert.throws(() => outline.buildCloseoutReceipt({
+    operation, observation: { outcome: 'absent', readbackDigest: null, revision: null }, execution: 'exec-k-1', recordedAt: '2026-10-21T00:00:00.000Z',
+  }), (e) => e.code === 'PUBLICATION_ABSENT', 'a confirmed-absent readback is a failure, never a quiet pass (D06)');
+  assert.throws(() => outline.buildCloseoutReceipt({
+    operation, observation: { outcome: 'conflict', readbackDigest: sha256('drifted'), revision: 'rev-1' }, execution: 'exec-k-1', recordedAt: '2026-10-21T00:00:00.000Z',
+  }), (e) => e.code === 'READBACK_CONFLICT', 'drifted remote content requires reconciliation before recording (H05)');
   const receipt = outline.buildCloseoutReceipt({
     operation, observation: { outcome: 'exists', readbackDigest: operation.payloadDigest, revision: 'rev-1' }, execution: 'exec-k-1', recordedAt: '2026-10-21T00:00:00.000Z',
   });
