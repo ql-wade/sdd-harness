@@ -1,0 +1,165 @@
+{
+ "task": "P4_4 (原任务 4.4): 按已确认 R06 关闭策略验证 E01/E02/E06 — 必需项目知识、OpenSpec 归档、Outline 发布与整体完成分别核验；已归档而未发布时同一 Run 继续收尾，超时先读回，不能用知识失败重复部署或产生 archive/publish 循环",
+ "run": "impl-dfr-20261020-r1",
+ "worktree": "impl/p4-4-knowledge-publish (base 1f05d4c)",
+ "worker": "P4_4 implementation worker",
+ "final_status": "GREEN",
+ "acceptance_ids": {
+  "targeted": [
+   "C06",
+   "D06",
+   "D07",
+   "E01",
+   "E02",
+   "E06"
+  ],
+  "id_reconciliation": "brief 六个 ID 与 spec.md 场景一一对应，无错位。判定/协议层主体在 test/knowledge-closeout.test.js（18 tests），任务级 case 在 test/delivery-cases/4_4.mjs（6 tests，真实 Comet 0002+0003 构建 + 真实 KnowledgeAuthz.v1 decide 回执 + 真实 bin/cli.js knowledge-closeout）。",
+  "structure": "P4_4 交付的是 R06 收尾的判定+协议层：lib/knowledge-seed.js（E01 必需知识清单+Kp wiki 读回判定）、lib/adapters/llmwiki.js（Kp MCP 协议层+D06 超时读回+C06 边界）、lib/adapters/outline.js（Kt 授权绑定+固定目标身份+Runtime 账本完成谓词）、lib/adapters/code-wiki.js（4.4.c 新鲜度+CODE_KNOWLEDGE_PROFILE_REQUIRED_IF_MANDATORY 前置）、bin/cli.js knowledge-closeout（串联判定，exit 0/1/2）、tools/mcp/llmwiki.sh（4.4.a CLI/MCP/worktree 路径分叉修复）。Kp-before-archive seal 与 Kt 座位分别复用已接纳的 P1_3 sealCloseout 与 P2_4/P4_6 Runtime（零修改，经真实入口断言）。"
+ },
+ "red_cases": [
+  {
+   "id": "E01/E02/E06/C06/D06/D07（全部）",
+   "classification": "缺口已复现",
+   "claim": "知识收尾判定与协议层整体不存在：lib/adapters/llmwiki.js、lib/adapters/outline.js、lib/adapters/code-wiki.js 未实现（ERR_MODULE_NOT_FOUND，测试文件无法加载，全部正负例无真实入口可执行）；bin/cli.js 无 knowledge-closeout 子命令",
+   "evidence": "worker-reports/P4_4/evidence/red-knowledge-closeout.txt（1 file-level fail：Cannot find module '.../lib/adapters/llmwiki.js'，exit 1）+ red-4_4-mjs.txt（同因 file-level fail，exit 1）"
+  }
+ ],
+ "coverage_matrix": {
+  "E01": {
+   "scenario": "必需项目知识未闭合阻断（含 archive 前）；产品/部署证据保留，不重复部署；缺失条目被点名",
+   "positive": "清单结构校验通过（capability/digest/source/channel）；真实 wiki 条目字节读回一致 → Kp ok；not-applicable 带登记 basis → 不阻断；CLI 全绿 exit 0（kp+kt+deploy）",
+   "negative": "缺条目 → 阻断且点名 NO_WIKI_ENTRY；读回字节漂移 → KNOWLEDGE_DIGEST_MISMATCH（expected/observed）；provenance 冲突 → KNOWLEDGE_SOURCE_MISMATCH；无 basis 的 not-applicable → APPLICABILITY_BASIS_REQUIRED（不能自填无更新）；CLI exit 2 点名 capability；deploy 回执字节不变 + RECEIPT_RETAINED（知识失败绝不重部署）；缺清单/坏 JSON → exit 1",
+   "entrances": "lib/knowledge-seed.js + bin/cli.js knowledge-closeout（真实子进程，$TMPDIR 夹具）+ 4_4.mjs 归档后 CLI 判定",
+   "status": "LOCAL_ONLY 结构可证"
+  },
+  "E02": {
+   "scenario": "规格已归档而 Outline 发布未完成：不撤销归档、不返回 completed、同 Run 指向原收尾动作并幂等恢复；发布判定=正确条目/受众/审核授权/写后独立读回",
+   "positive": "Kp 通过与 Kt 阻断同报告分层保留（kp.ok true + exit 2）；KnowledgePublishDecision.v1 真实 decide 回执（4_4.mjs 经 tools/infra/knowledge-authz.mjs）绑定 payload + effective audience → buildPublishRequest 产出 documents.create；evaluateKtFromLedger 对 published+读回一致 → satisfied；最终 CLI 全绿",
+   "negative": "无授权回执 → OUTLINE_AUTHZ_REQUIRED；decisionId 篡改 → TAMPERED_DECISION（12 字段规范 JSON 重推导）；verdict deny → OUTLINE_AUTHZ_NOT_GRANTED；payload 漂移 → AUTHZ_PAYLOAD_MISMATCH（U04 版本绑定）；空受众 → OUTLINE_AUDIENCE_REQUIRED（fail-closed）；账本无操作 → NO_PUBLISH_OPERATION；published 但内容漂移 → KT_DIGEST_MISMATCH；坏账本 → exit 1",
+   "entrances": "lib/adapters/outline.js + bin/cli.js + 真实 knowledge-authz decide + 真实 Comet 发布账本（comet.classic.knowledge-publish.v1 只读）",
+   "status": "LOCAL_ONLY 结构可证（活 Outline 读写 UNVERIFIED，见 unverified）"
+  },
+  "E06": {
+   "scenario": "恢复/压缩/子会话重复与发布超时：绑定原 operation，不重复派发、不重复建页、不产生 archive/publish 循环、不产生第二控制器",
+   "positive": "4_4.mjs 归档后重入 comet archive → exit 0 且 archive 目录恰 1 个、run_id 不变、next 仍 knowledge-closeout（无循环）；deriveOutlineTargetId 确定性（客户端 UUID，先于首次请求固定）；超时观察 → Runtime directive reconcile-info（非 create）→ 读回 → record-closeout → 同一 run completed；refuseDuplicateCreate 拒二次 create",
+   "negative": "已签发 operationId 的二次 create → DUPLICATE_CREATE_REFUSED；reconcile-info 指令 → DIRECTIVE_NOT_EXECUTABLE；他文档指令 → TARGET_ID_MISMATCH；Runtime 拒无 K dispatch/无注册发布操作/读回不匹配的外部回执（真实 CLI 拒绝文本）",
+   "entrances": "真实 Comet 构建（0002+0003）驱动 + 适配器 + 真实 CLI 拒绝断言",
+   "status": "LOCAL_ONLY 结构可证"
+  },
+  "C06": {
+   "scenario": "知识边界：四源唯一不覆盖不替代；Kp 未闭合 seal 拒绝（Knowledge.Closeout.v1）",
+   "positive": "buildKpCloseoutReceipt 回执喂 P1_3 sealCloseout → 恰好 seal 一次并冻结 Kp；同源证据放行",
+   "negative": "无回执/无摘要回执 seal → KNOWLEDGE_CLOSEOUT_REQUIRED；二次 seal（archived:true）→ ARCHIVE_ALREADY_SEALED；llmwiki↔outline 互替 → KNOWLEDGE_SOURCE_SUBSTITUTION（双向）；本地成功声明（无独立读回）从不满足（判定只认 wiki 字节/账本读回）",
+   "entrances": "lib/adapters/comet.js sealCloseout（P1_4/P1_5 已接纳语义，未修改）+ 两个适配器",
+   "status": "LOCAL_ONLY 结构可证（承接 P1_4 登记 + P1_5 classic-integration C06 手法）"
+  },
+  "D06": {
+   "scenario": "发布超时或回执接纳前中断：先按原操作关联独立读回；结果未知保持阻断；不盲目重复创建；file 类目标独立读回 + external K dispatch 门",
+   "positive": "真实 launcher 子进程拒绝（SDD_HOME 指向空 venv → exit 1 → LAUNCHER_UNAVAILABLE 结构化）；真实不应答进程 → TIMEOUT + 指引'先读回、绝不重建'；resolveTimedOutPublish 读回一致 → CONFIRMED_BY_READBACK（摘要由真实文件字节重推导）；4_4.mjs unknown → reconcile-info → exists → record-closeout 全链；file 类目标 Runtime 自推导摘要（Kt file seat，2_4/H07 已证，本 case 经外部链路复证 Runtime 门）",
+   "negative": "读回未命中 → PUBLICATION_UNKNOWN 阻断；字节不一致 → READBACK_MISMATCH；conflict → READBACK_CONFLICT；absent → PUBLICATION_ABSENT；外部回执无 Runtime K dispatch → 真实 CLI 拒绝（/K dispatch/）；无匹配读回 → 真实 CLI 拒绝；账本缺失 → NO_PUBLISH_OPERATION（如实阻断非伪造）、坏账本 → exit 1",
+   "entrances": "tools/mcp/llmwiki.sh 真实 spawn + 适配器 + 真实 comet state knowledge-observe/knowledge-closeout 拒绝断言",
+   "status": "LOCAL_ONLY 结构可证（真实 MCP create 写通道 UNVERIFIED，见 unverified）"
+  },
+  "D07": {
+   "scenario": "archived=true 不返回 completed；Kt 座位与完成谓词（经 comet driver 断言）",
+   "positive": "4_4.mjs 真实构建驱动：归档后 next.kind === 'knowledge-closeout'、run 未 completed、currentStep === 'full.closeout.knowledge'；座位移入（外部回执经 Runtime 三重核验）后同一 runId status === 'completed'、next 不再指向 closeout",
+   "negative": "座位空时 archive 重入不改变 next；回执不满足读回/调度门时座位移入被真实拒绝，run 保持未完成",
+   "entrances": "真实 Comet 构建（2_4/4_6 同一 driver 断言手法）",
+   "status": "LOCAL_ONLY 结构可证（承接 P2_4 runtime 语义）"
+  },
+  "4.4.a_路径分叉": {
+   "scenario": "修复 CLI/MCP/worktree 路径分叉；MCP 写入/独立读回/no-update 依据可核验",
+   "positive": "tools/mcp/llmwiki.sh 改为解析 SDD_WIKI_HOME > $SDD_HOME/wiki/<slug>（slug 从 git common-dir 主仓库目录名推导，worktree-safe），与本 worktree 实测同根；SDD_WIKI_HOME 覆盖两侧同生效；no-update 依据 = 清单 applicabilityBasis 必填判定（无 basis 即阻断）",
+   "negative": "CLI（getWikiHome）与 launcher 解析不同根 → parity 测试失败（当前同根）；launcher venv 缺失 → 结构化拒绝并回显解析出的 canonical root（可核验）",
+   "entrances": "bash tools/mcp/llmwiki.sh 真实 spawn + lib/sdd-paths.js getWikiHome",
+   "status": "LOCAL_ONLY 结构可证"
+  },
+  "4.4.c_代码知识": {
+   "scenario": "被选为必需的代码知识新鲜度：固定 deepwiki-open/CodeGraph 产物与精确 commit，按事前 policy 验回执；未定分支保持待准入",
+   "positive": "pinned commit + artifact digest 全一致 + 真实读回记录 → fresh；CLI --code-knowledge-mandatory + --code-policy/--code-receipt 判定链",
+   "negative": "mandatory 无 profile → CODE_KNOWLEDGE_PROFILE_REQUIRED（前置阻断，case 级复证）；undecided 分支 → PENDING_ADMISSION（待准入 ≠ 满足，永不转绿）；commit 不符 → STALE_CODE_KNOWLEDGE；artifact 漂移 → ARTIFACT_DIGEST_MISMATCH；无读回 → CODE_WIKI_READBACK_REQUIRED",
+   "entrances": "lib/adapters/code-wiki.js + bin/cli.js",
+   "status": "LOCAL_ONLY 结构可证（真实生成物属 I05 部署波次）"
+  }
+ },
+ "commands": [
+  {
+   "cmd": "node --test test/knowledge-closeout.test.js  # RED（实现不存在）",
+   "exit_code": 1,
+   "note": "file-level ERR_MODULE_NOT_FOUND；日志 worker-reports/P4_4/evidence/red-knowledge-closeout.txt"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/4_4.mjs  # RED（实现不存在）",
+   "exit_code": 1,
+   "note": "同因；日志 red-4_4-mjs.txt"
+  },
+  {
+   "cmd": "node --test test/knowledge-closeout.test.js  # GREEN（提交后复跑）",
+   "exit_code": 0,
+   "note": "18/18；日志 green-knowledge-closeout.txt"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/4_4.mjs  # GREEN（提交后复跑）",
+   "exit_code": 0,
+   "note": "6/6（真实 Comet 0002+0003 + 真实 knowledge-authz decide + 真实 CLI）；日志 green-4_4-mjs.txt"
+  },
+  {
+   "cmd": "npm test  # 全量回归（host node v22.x）",
+   "exit_code": 0,
+   "note": "374 tests：373 pass / 0 fail / 1 skip（基线 356 = 355 pass + 1 既有 C08 isolated-openspec skip，+ 本任务 18）；日志 green-npm-test-full.txt"
+  },
+  {
+   "cmd": "node --test test/delivery-cases/*.mjs  # 全目录",
+   "exit_code": 0,
+   "note": "153 tests：151 pass / 0 fail / 2 skip（基线 147 + 本任务 6，skip 数不变，跨任务零回归）；日志 green-delivery-cases-all.txt"
+  },
+  {
+   "cmd": "node bin/cli.js knowledge-closeout --project . --change c --required /nonexistent.json --json  # 输入契约 smoke",
+   "exit_code": 1,
+   "note": "结构化 INVALID 输入回执，0/1/2 契约现场核验"
+  }
+ ],
+ "bin_cli_compatibility": "bin/cli.js 为共享入口：本次仅追加 knowledge-closeout 子命令与 3 行 import，未删改任何既有命令。零回归证据：npm test 373 pass / 0 fail（其中既有 CLI 套件全绿：deliverable-audit-command（5）、delivery-cli（含 delivery-gate/probe/test-gate/generation/evidence-audit/workflow-audit 输入契约）、comet-driver、classic-integration 等）；`node bin/cli.js --version` → 0.2.4 正常。",
+ "unverified": [
+  {
+   "item": "真实 LLMWiki MCP 写入 + 独立索引读回（create 工具实参与活服务器）",
+   "reason": "本环境无已验证活服务；I04 记录 create 调用 >45s 无返回。适配器证明 launcher 真实拒绝/超时读回机器；JSON-RPC create 实参形状如实标注未验证",
+   "owner": "部署验证波次（I04 probe worktree-mcp-readback 通道）"
+  },
+  {
+   "item": "真实 Outline API 写入与读回（documents.create/documents.info）",
+   "reason": "无活 Outline 实例；适配器只执行 Runtime directive 判定并产出观察/回执，真实写读回属执行面",
+   "owner": "Outline owner + 部署验证波次（P4_7 提交的 target allowedAudience 为 fail-closed 空，须真实部署登记后自动发布才解锁）"
+  },
+  {
+   "item": "代码知识新鲜度的真实生成物（deepwiki-open/CodeGraph 产物摘要）",
+   "reason": "I05 登记 deepwiki-open 上游 UNSELECTED、freshness 阈值 UNSET fail-closed；本地只证 pinned-commit/结构化回执判定",
+   "owner": "I05 部署验证波次"
+  },
+  {
+   "item": "4_4.mjs 在 verification-case-plan.json 的 case_module 登记",
+   "reason": "该文件不在本任务授权清单（与 P4_7 同样情形）；node --test 直跑已全绿",
+   "owner": "集成波次串行接纳"
+  }
+ ],
+ "files_changed": [
+  "lib/adapters/llmwiki.js (new：Kp 操作身份/MCP 协议层 LAUNCHER_UNAVAILABLE|TIMEOUT|RESPONDED/超时读回/重复 create 拒绝/Kp 回执/C06 互替拒绝)",
+  "lib/adapters/outline.js (new：授权回执完整性+payload 绑定/固定客户端 UUID/directive-only 执行/unknown 观察读回/closeout 回执/单一 Runtime 账本 Kt 完成谓词)",
+  "lib/adapters/code-wiki.js (new：CODE_KNOWLEDGE_PROFILE_REQUIRED_IF_MANDATORY 前置/待准入分支/pinned commit 新鲜度回执)",
+  "lib/knowledge-seed.js (增量：必需知识清单结构 + Kp wiki 独立读回判定，逐条点名缺失/漂移；applicabilityBasis 必填)",
+  "tools/mcp/llmwiki.sh (增量：4.4.a 修复 CLI/MCP/worktree 路径分叉 —— canonical wiki root 解析与 lib/sdd-paths.js getWikiHome 同源同根，per-worktree 绑定移除；venv 缺失时回显解析根供核验)",
+  "bin/cli.js (增量：knowledge-closeout 子命令串联 Kp/Kt/code/deploy 判定，exit 0/1/2；deploy 回执只读保留，无既有命令改动)",
+  "test/knowledge-closeout.test.js (new：18 tests)",
+  "test/delivery-cases/4_4.mjs (new：6 tests，真实构建+真实 decide+真实 CLI)",
+  "lib/sdd-paths.js (Owned 但零改动：分叉修复完全落在 llmwiki.sh 的同根解析，parity 测试钉死两侧一致)",
+  "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_4.json + worker-reports/P4_4/evidence/（本提交：red-knowledge-closeout.txt、red-4_4-mjs.txt、green-knowledge-closeout.txt、green-4_4-mjs.txt、green-npm-test-full.txt、green-delivery-cases-all.txt，均 .txt 入库规避 .gitignore *.log）"
+ ],
+ "commits": {
+  "tests": "5f105cd test(p4_4): knowledge closeout cases over the R06 separation (RED vs missing implementation) + 1c96f2a test(p4_4): converge fixtures to the real candidate binding (GREEN convergence fixes)",
+  "implementation": "4a059fb feat(p4_4): Knowledge.Closeout.v1 judgment + protocol layer for the R06 closeout separation (GREEN 24/24)",
+  "report": "(本提交) chore(p4_4): worker report P4_4 — coverage matrix, RED/GREEN evidence, full regression green"
+ },
+ "blockers_or_questions": [
+  "无实现阻塞。四项记录：(1) llmwiki.sh 摘要相对 I04 package.lock.json 登记值漂移（9789a888… → bd18bfea…）——I04 工件为已接纳基建不可改，validate 不校验 launcher 摘要、qualify 将如实报 launcher-entry MISMATCH，I04 重登记归集成波次；(2) 4.4.a 的分叉修复选择统一到已接纳的 getWikiHome（$SDD_WIKI_HOME > $SDD_HOME/wiki/<slug>，worktree-safe），而非 I04 ProjectRoot.v1 登记的 <main-tree>/llmwiki——两份已接纳工件本就分叉，brief 指定修复分叉且 lib/sdd-paths.js 为 Owned 文件，故以 CLI 侧语义为单一事实源并在报告显式登记该取舍；若集成波次判定 I04 canonical 登记为准，改 launcher 一处即可（parity 测试两向都钉住）；(3) worktree .sdd 为空导致既有 comet 驱动测试缺构建，已从 impl-p4-7 worktree 复制同指纹 beab355d vendored 构建到本 worktree gitignored .sdd（零仓库文件改动，P4_7 先例同）；(4) 环境事实：报告生成时会话级 502 中断一次，恢复后按原计划继续，无状态丢失。"
+ ]
+}
