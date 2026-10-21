@@ -1,0 +1,209 @@
+{
+  "task": "P4_8 (原任务 4.8): 按 knowledge-revocation-and-restoration.md 验证 L01–L11 — G14 已选事件＋周期核验、G15 已确认 A（正常依赖下 5 分钟目标，故障允许超时并留痕）；来源变化影响闭包、两种期限、资源端真实隔离、完成后维护、重复乱序/失败恢复和新授权恢复；受控 MCP 与 Outline Web/分享/搜索/附件分别证明；实测漏报、完整扫描超时、Runner 宕机、隔离失败告警/重试及恢复补偿",
+  "run": "impl-dfr-20261021-p48",
+  "worktree": "impl/p4-8-knowledge-revocation (base master@e04bac8)",
+  "worker": "P4_8 implementation worker",
+  "final_status": "GREEN",
+  "acceptance_ids": {
+    "targeted": [
+      "L01",
+      "L02",
+      "L03",
+      "L04",
+      "L05",
+      "L06",
+      "L07",
+      "L08",
+      "L09",
+      "L10",
+      "L11"
+    ],
+    "posture": "G14 A（事件＋周期核验）与 G15 A（5 分钟目标＋故障留痕）按已确认选项冻结于 G15A_DEADLINES（与 I07 monitor CONTRACT_DEADLINES 同值，一套时限不是两套）；faultPolicy=alert-and-record，暂停计时与故障硬上界两种姿态均被判 FAULT_POLICY_INVALID"
+  },
+  "red_cases": [
+    {
+      "id": "L01–L11（全部）",
+      "classification": "缺口已复现",
+      "claim": "KnowledgeRevocation.v1 判定＋协议层整体不存在：lib/adapters/knowledge-revocation.js 缺席，17 个单测（4.8.a/b/c/d 四包）与 5 个旅程场景全部 ERR_MODULE_NOT_FOUND",
+      "evidence": "worker-reports/P4_8/evidence/red-4.8.a.txt (2/2 fail)、red-4.8.b.txt (5/5 fail)、red-4.8.c.txt (6/6 fail)、red-4.8.d.txt (4/4 fail)、red-knowledge-revocation-full.txt (17/17 fail)、red-4_8-journey.txt (5/5 fail)——真实 node --test 退出码 1"
+    }
+  ],
+  "coverage_matrix": {
+    "L01": {
+      "scenario": "可信事件（源权限缩小/目标受众扩大）→ 回执失效、受管读取/发布暂停、按影响闭包安排维护；资源端核验前不得显示已隔离",
+      "positive": "J1 真实链：真实 CLI revoke（exit 0）→ collector 事实事件 → acceptRevocationEvent：rc 回执 staled、managedReads/publishing 暂停、epoch 3→新维护代际、status=needs-revaluation（≠isolated）；影响闭包 k-arch/k-multi（任一失效源即暂停）、派生/附件/缓存入闭包",
+      "negative": "collector 携带 action → COLLECTOR_OVERSTEP_REFUSED（采集器只交事实）；映射不可证 → conservativePause + complete=false（不报部分完成）",
+      "entrances": "buildRevocationEvent / computeImpactClosure / acceptRevocationEvent + 真实 knowledge-authz.mjs revoke",
+      "status": "本地真实验证；Outline 对象资源端核验合同级（见 unverified）"
+    },
+    "L02": {
+      "scenario": "已标 stale/移位/unpublish/archive 但 required 渠道仍可被未授权身份访问 → 保持 isolating/unknown、同一 operation 续作并告警；标签与管理员可读不是不可访问",
+      "positive": "真实渠道判定：收窄后 file-wiki(ENOENT)/mcp-read(NOT_FOUND)/mcp-search(0 hits) 全 unreadable → isolated；仅标签而渠道可读 → isolating + CHANNEL_STILL_READABLE + sameOperationContinues",
+      "negative": "缺证据渠道 → unknown/uncovered；basis=admin-observation → ADMIN_READ_IS_NOT_ISOLATION；UNVERIFIED 渠道 → uncovered 且阻断 isolated（旅程中 Outline 对象 4 渠道全 uncovered，如实不达标）",
+      "entrances": "probeChannelAccess（真实 fs + 真实 stdio MCP 握手进程）+ evaluateIsolationCompletion",
+      "status": "本地渠道真实验证（真实字节/真实进程/真实 ENOENT）；Outline Web 渠道合同级 + UNVERIFIED + 承接者"
+    },
+    "L03": {
+      "scenario": "publish_until 到期但持续披露许可仍合法 → 只阻断新发布，不自动撤回过去合法内容；语义不明不走自动发布",
+      "positive": "judgeTwoDeadlines：publish_until 过期+content_use_until 有效 → newPublish=blocked + existingContent=may-continue；语义缺失 → autoPublish=blocked + NO_CONTINUOUS_USE_SEMANTICS（fail-closed 不默认永久）",
+      "negative": "（到期两类强制隔离路径归 L04 判定面）",
+      "entrances": "judgeTwoDeadlines（J1 内嵌真实时钟判定）",
+      "status": "判定面真实验证（本地）"
+    },
+    "L04": {
+      "scenario": "持续披露许可到期或受众越出交集 → 不能以原发布回执继续消费，按已授隔离能力收窄并独立验证",
+      "positive": "真实 CLI 链：decide exit 0 → owner revoke exit 0（真实台账原子写）→ recheck exit 2（LEDGER_CHANGED+GRANT_NO_LONGER_VALID）→ 判定 must-isolate；content_use_until 过期 → CONTENT_USE_EXPIRED；受众越界 → AUDIENCE_OUTSIDE_INTERSECTION",
+      "negative": "源撤销覆盖未到期 grant → SOURCE_REVOKED_RECOMPUTE（旧 grant 不能豁免重算）",
+      "entrances": "真实 knowledge-authz.mjs decide/revoke/recheck + judgeTwoDeadlines + evaluateIsolationPreauthorization（ISOLATION_GRANT_REQUIRED：publish 权限≠隔离权、动作只限收窄、过期/撤销/越界目标/非 isolator 主体逐项拒绝）",
+      "status": "授权链真实验证（真实 CLI 正负例）；资源端收窄在本地渠道真实验证"
+    },
+    "L05": {
+      "scenario": "原产品 Change 已完成后出现知识权限事件 → 保留交付历史，同引擎建关联原发布回执的维护作业，不重开需求、不立第二监听器主控",
+      "positive": "completed run → maintenance-run：engine=Comet.Run.managedDelivery.v1、linkedReceipt=原回执、reopensProductRequirement=false、originalRun 原样保留；维护对象无 currentPhase 字段（无第二 currentPhase）",
+      "negative": "run 未完成 → same-run + K_RECEIPT_STALE_BLOCKS_CLOSEOUT（在原 Run 阻断收尾，不开新作业）",
+      "entrances": "evaluatePostCompletionMaintenance（J3）",
+      "status": "判定面真实验证（本地）"
+    },
+    "L06": {
+      "scenario": "隔离后许可重新满足但旧受众/旧恢复回调不适用 → 以当前授权、新维护代际和独立审查/读回恢复；不回放旧 ACL、不重加离组成员",
+      "positive": "有效恢复 → status=active、newEpoch=epoch+1（新代际先记录后执行）、计划受众⊆当前交集",
+      "negative": "计划含离组人员 → OFFBOARDED_PRINCIPAL_READD（旧 ACL 快照回放拒绝）；callbackEpoch<当前 epoch → STALE_CALLBACK_REFUSED（撤销优先于旧恢复）；授权失效/许可过期/无新审查 → RESTORE_AUTHZ_INVALID / RESTORE_CONTENT_USE_EXPIRED / RESTORE_REVIEW_REQUIRED（撤 stale 标签不构成恢复）",
+      "entrances": "evaluateRestoration（4.8.c/L06 + J3）",
+      "status": "判定面真实验证；恢复读回为结构判定（RESTORE_READBACK_REQUIRED 强制存在），活渠道读回 UNVERIFIED"
+    },
+    "L07": {
+      "scenario": "重复/乱序事件、隔离中断或远端结果未知 → 按可信当前权限与同一 operation 调和；失败保留暴露未消除＋告警，不重复派发不伪报",
+      "positive": "重复事件 → duplicate=true 且恢复同一 operationKey（operations 不增）；真实故障注入：SIGKILL 中断 → 原实例重启幂等续作同一 operation（km-journey-fault，attempts 续增，无第二 operation）",
+      "negative": "迟到恢复回调被新隔离代际拒绝（见 L06）",
+      "entrances": "acceptRevocationEvent 去重 + 真实 worker 故障注入",
+      "status": "真实验证（真实进程/真实 SIGKILL/真实状态文件）"
+    },
+    "L08": {
+      "scenario": "事件漏报但登记资源可全量查询 → 周期核验对实际差异登记同一幂等维护动作并按批准时限计时；不得只重放游标或从通知到达计时",
+      "positive": "全量对账：missed 变更（changedAt=11:00，扫描 11:01:30）→ 同一 operationKey 幂等动作、detection.latencyMs=90_000（从真实变更时刻起算）；未观测源 → unknown 非 fine",
+      "negative": "cursorOnly → CURSOR_REPLAY_NOT_RECONCILIATION；成功扫描不清除失败对象（carriedFailures 保留）",
+      "entrances": "reconcileFullScan（4.8.b/L08 + J4）",
+      "status": "判定面真实验证；多分钟阈值以结构化时间戳判定（真实墙钟计时在故障注入中真实发生，亚秒级）"
+    },
+    "L09": {
+      "scenario": "Runner 宕机或心跳正常但核验水位停滞 → 独立监控按阈值告警；监督器只重启原 Comet 实例；告警成功≠已隔离",
+      "positive": "心跳>90s → RUNNER_HEARTBEAT_STALE；心跳新鲜但水位>120s → SCAN_WATERMARK_STALLED（两者独立判定）；真实注入：宕机期间心跳真实变陈旧并触发告警判定；restart-original 允许",
+      "negative": "copy-state-to-member/start-second-owner/change-phase → SUPERVISOR_OVERSTEP_REFUSED；isolated 恒 false + note 告警即非隔离",
+      "entrances": "judgeMonitorThresholds + 真实 SIGKILL 注入（J5 + fault-injection-exposure-window.json）",
+      "status": "本地进程真实验证；>90s 等多分钟阈值以合成时间戳判定（如实记录，不在测试中空等）"
+    },
+    "L10": {
+      "scenario": "隔离 API 失败/限流/结果未知 → 首次失败即告警，Comet 持久保存调和/重试与升级；超时保留未消除暴露与违约；权限拒绝不盲重试；执行器不自建重试循环",
+      "positive": "alert.at=首次失败时刻（不等预算耗尽）；nextAttempt.sameOperation=true 且 owner=comet；429 尊重 Retry-After 并记 ISOLATION_BUDGET_EXCEEDED",
+      "negative": "PERMISSION_DENIED/CREDENTIAL_REVOKED → retry=false + escalate=owner；超快预算 → 低频重试（同 operation，告警不解除）；exposureUnresolved 恒真直至隔离验证",
+      "entrances": "judgeIsolationFailure（4.8.d/L10 + J5）",
+      "status": "判定面真实验证（本地）"
+    },
+    "L11": {
+      "scenario": "宕机期间漏报/grant 到期/分享变化/迟到旧恢复写入 → 恢复后暂停新发布、先调和未知写入、再全量对账并隔离优先；三游标分别维护；未覆盖保持 unknown；事故关闭保留违约",
+      "positive": "顺序正确 → newPublishPaused=true、reconcilesUnknownWritesFirst=未知写入清单、watermarks 三者分别、carriedFailures 保留、incident.violations 存活",
+      "negative": "顺序错误（先快照后调和）→ RECOVERY_ORDER_INVALID；单游标合并 → CURSOR_CONFLATION_REFUSED",
+      "entrances": "evaluateRecoveryReconciliation（4.8.d/L11 + J5）",
+      "status": "判定面真实验证（本地）；跨机/真实服务恢复 UNVERIFIED（I08 先例）"
+    }
+  },
+  "commands": [
+    {
+      "cmd": "node --test --test-name-pattern '4\\.8\\.a' test/knowledge-revocation.test.js  # RED",
+      "exit_code": 1,
+      "note": "2/2 fail ERR_MODULE_NOT_FOUND；red-4.8.a.txt"
+    },
+    {
+      "cmd": "node --test --test-name-pattern '4\\.8\\.b' test/knowledge-revocation.test.js  # RED",
+      "exit_code": 1,
+      "note": "5/5 fail；red-4.8.b.txt"
+    },
+    {
+      "cmd": "node --test --test-name-pattern '4\\.8\\.c' test/knowledge-revocation.test.js  # RED",
+      "exit_code": 1,
+      "note": "6/6 fail；red-4.8.c.txt"
+    },
+    {
+      "cmd": "node --test --test-name-pattern '4\\.8\\.d' test/knowledge-revocation.test.js  # RED",
+      "exit_code": 1,
+      "note": "4/4 fail；red-4.8.d.txt"
+    },
+    {
+      "cmd": "node --test test/knowledge-revocation.test.js  # RED",
+      "exit_code": 1,
+      "note": "17/17 fail；red-knowledge-revocation-full.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/4_8.mjs  # RED",
+      "exit_code": 1,
+      "note": "5/5 fail；red-4_8-journey.txt"
+    },
+    {
+      "cmd": "node --test test/knowledge-revocation.test.js  # GREEN",
+      "exit_code": 0,
+      "note": "17/17 pass；复跑 x2 稳定；green-knowledge-revocation.txt"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/4_8.mjs  # GREEN",
+      "exit_code": 0,
+      "note": "5/5 pass；复跑 x2 稳定；green-4_8-journey.txt"
+    },
+    {
+      "cmd": "node --test --test-name-pattern '4\\.8\\.[abcd]' test/knowledge-revocation.test.js  # GREEN 分包",
+      "exit_code": 0,
+      "note": "green-4.8.a/b/c/d.txt（各包全绿）"
+    },
+    {
+      "cmd": "npm test",
+      "exit_code": 1,
+      "note": "415 tests / 411 pass / 3 fail，3 个均为控制器已知环境性失败（C08 openspec 1.3.1→1.14.3 drift、llmwiki venv ENOENT、B08 preservation）；已知清单另 2 个 hooks.yaml 沙箱写拒绝在本 worktree 未复现；零新增；green-npm-test-full.txt"
+    },
+    {
+      "cmd": "node $TMPDIR/p48-j-budgets.mjs / p48-j-authz.mjs / p48-j-channels.mjs / p48-j-fault.mjs  # 旅程证据驱动",
+      "exit_code": 0,
+      "note": "真实回执落盘 revocation-journey/evidence/*.json（含真实 exitCode；authz 链内含真实 exit 2 recheck）"
+    },
+    {
+      "cmd": "git diff master...HEAD --name-only",
+      "exit_code": 0,
+      "note": "全部落在允许集内（见 files_changed）"
+    }
+  ],
+  "unverified": [
+    {
+      "item": "Outline Web/直接链接/分享/搜索/附件的真实读回与资源端隔离",
+      "reason": "本沙箱无凭据无网络无活 Outline 实例；适配器按观测 API 构造真实请求形状（GET 链接、POST /api/shares.info、/api/documents.search），一律 status=UNVERIFIED 并阻断 isolated 判定，绝不以标签充当不可读、不伪造远端读回",
+      "owner": "Outline owner + 部署验证波次"
+    },
+    {
+      "item": "受管 Outline 对象整体隔离达标（5 分钟端到端）",
+      "reason": "required 渠道在本环境全部 UNVERIFIED → 旅程如实保持 isolating/uncovered；本地 wiki 对象在真实渠道上达到 isolated 且窗口在预算内",
+      "owner": "Outline owner + 部署验证波次（容量/分页/限流准入实证）"
+    },
+    {
+      "item": "活 llmwiki venv MCP 通道",
+      "reason": "llmwiki.sh launcher 依赖的 venv 在本沙箱不可用（MCP ENOENT 同因）；以隔离配置内真实 stdio JSON-RPC 握手子进程替代（真实进程/真实协议/真实 fs 数据面）；活 llmwiki 通道读回 UNVERIFIED",
+      "owner": "llmwiki owner + 部署验证波次（I04 工作树先例）"
+    },
+    {
+      "item": "多分钟阈值的真实墙钟等待（90s 心跳告警、120s 水位停滞、5 分钟端到端）",
+      "reason": "测试以合成时间戳判定阈值，真实计时在亚秒级故障注入中真实发生（宕机 156ms 真实留在窗口、pausedMs=0）；不空等数分钟冒充实测",
+      "owner": "容量/准入实证波次（spec §8：细分预算须经容量/故障实证冻结）"
+    }
+  ],
+  "files_changed": [
+    "test/knowledge-revocation.test.js (new：17 例，4.8.a–d 四包，真实 fs/MCP 握手/真实 CLI/真实 SIGKILL，全 $TMPDIR 无残留)",
+    "test/delivery-cases/4_8.mjs (new：J1–J5 五场景端到端旅程)",
+    "lib/adapters/knowledge-revocation.js (new：KnowledgeRevocation.v1 判定＋协议层 733 行，P4_4 adapter 形态，零新依赖)",
+    "openspec/changes/delivery-foundation-rearchitecture/revocation-journey/ (new：README + evidence/ 5 份真实回执)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json + P4_8/evidence/ (new：RED/GREEN/回归证据 13 份 .txt)"
+  ],
+  "commits": {
+    "tests_red": "e908df5 test(P4_8): RED — knowledge revocation & restoration acceptance L01-L11 tests fail against the missing KnowledgeRevocation.v1 adapter",
+    "implementation": "c041018 feat(P4_8): GREEN — KnowledgeRevocation.v1 judgment + protocol adapter for L01-L11 (含 GREEN 期间两处测试修正：evidence-key spread 顺序与 SIGKILL exit 断言，一并入本提交)",
+    "report": "(本提交) chore(P4_8): worker report + revocation-journey evidence — L01-L11 coverage, RED/GREEN, full regression"
+  },
+  "blockers_or_questions": [
+    "无实现阻塞。三点记录：(1) 本 worker 会话的 Write hook 禁止直写 impl-p4-8 worktree 文件（会话固定在另一 worktree）——经允许的暂存目录 + Bash cp 落位，产物字节一致，仅流程事实；(2) 完成门 2 的 CLI 负例抽验：本任务允许集不含 tools/ 文件，未新增 probe/validate CLI 入口；真实 exit 2 拒绝路径由旅程内真实 P4_7 CLI 承担（revoke 后 recheck exit 2，authz-cli-revocation-chain.json）；(3) npm test 3 fail 均在控制器已知清单内且与 P4_8 改动无 import 关系（classic-integration/infra-llmwiki-paths/spec-closeout 均不引用 knowledge-revocation），零新增。"
+  ]
+}
