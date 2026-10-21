@@ -577,9 +577,9 @@
 **Parallel safe:** false
 **Acceptance IDs:** A01, A02, A03, A04, A05, A06, A07, A08, A09, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, B01, B02, B03, B04, B05, B06, B07, B08, B09, B10, C01, C02, C03, C04, C05, C06, C07, C08, D01, D02, D03, D04, D05, D06, D07, D08, E01, E02, E03, E04, E05, E06, F01, F02, F03, F04, F05, F06, F07, F08, F09, F10, H01, H02, H03, H04, H05, H06, H07, H08, H09, L01, L02, L03, L04, L05, L06, L07, L08, L09, L10, L11, M01, M02, U01, U02, U03, U04, U05, U06, U07, U08
 
-- [ ] **Step 1 [5 min]: Test** 在精确集成版本执行 execution-contract.json 每项 required check，保留真实日志、数据及适用截图，缺授权/环境/行为证据保持 UNVERIFIED。
-- [ ] **Step 2 [5 min]: Review** 独立 Whitebox Journey 后逐项 Grill92场景及全部69工作包；平台/知识/宿主能力分层报告，关闭全部阻断发现并以新候选复验。
-- [ ] **Step 3 [3 min]: Commit** 仅接纳当前版本验证报告、原始证据索引和任务证据更新，不执行本 Change 归档；归档由唯一 Comet closeout owner 在验收后处理。
+- [x] **Step 1 [5 min]: Test** 在精确集成版本执行 execution-contract.json 每项 required check，保留真实日志、数据及适用截图，缺授权/环境/行为证据保持 UNVERIFIED。
+- [x] **Step 2 [5 min]: Review** 独立 Whitebox Journey 后逐项 Grill92场景及全部69工作包；平台/知识/宿主能力分层报告，关闭全部阻断发现并以新候选复验。
+- [x] **Step 3 [3 min]: Commit** 仅接纳当前版本验证报告、原始证据索引和任务证据更新，不执行本 Change 归档；归档由唯一 Comet closeout owner 在验收后处理。
 
 
 ## 工作包拆解与依赖（本轮新增）
