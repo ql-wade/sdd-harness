@@ -198,9 +198,9 @@ test('J1 (L01+L03+L04): real shrink → event → acceptance → closure → two
   const isolatedAtStart = rev.evaluateIsolationCompletion({
     requiredChannels: ['file-wiki', 'mcp-read', 'mcp-search'],
     channelEvidence: [
-      { channel: 'file-wiki', ...pre.file },
-      { channel: 'mcp-read', ...pre.read },
-      { channel: 'mcp-search', ...pre.search },
+      { ...pre.file, channel: 'file-wiki' },
+      { ...pre.read, channel: 'mcp-read' },
+      { ...pre.search, channel: 'mcp-search' },
     ],
   });
   assert.equal(isolatedAtStart.isolated, false, 'readable channels keep the object non-isolated');
@@ -218,9 +218,9 @@ test('J1 (L01+L03+L04): real shrink → event → acceptance → closure → two
   const completion = rev.evaluateIsolationCompletion({
     requiredChannels: ['file-wiki', 'mcp-read', 'mcp-search'],
     channelEvidence: [
-      { channel: 'file-wiki', ...post.file },
-      { channel: 'mcp-read', ...post.read },
-      { channel: 'mcp-search', ...post.search },
+      { ...post.file, channel: 'file-wiki' },
+      { ...post.read, channel: 'mcp-read' },
+      { ...post.search, channel: 'mcp-search' },
     ],
   });
   assert.equal(completion.isolated, true, 'every required local channel is really unreadable');

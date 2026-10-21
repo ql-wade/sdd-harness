@@ -407,9 +407,9 @@ test('4.8.c: real local channel readback — file-wiki narrowing and a real stdi
   const judged = rev.evaluateIsolationCompletion({
     requiredChannels: ['file-wiki', 'mcp-read', 'mcp-search'],
     channelEvidence: [
-      { channel: 'file-wiki', ...fileAfter },
-      { channel: 'mcp-read', ...readAfter },
-      { channel: 'mcp-search', ...searchAfter },
+      { ...fileAfter, channel: 'file-wiki' },
+      { ...readAfter, channel: 'mcp-read' },
+      { ...searchAfter, channel: 'mcp-search' },
     ],
   });
   assert.equal(judged.isolated, true);
@@ -420,7 +420,7 @@ test('4.8.c: real local channel readback — file-wiki narrowing and a real stdi
   assert.equal(timedOut.code, 'MCP_TIMEOUT');
   const judgedUnknown = rev.evaluateIsolationCompletion({
     requiredChannels: ['mcp-read'],
-    channelEvidence: [{ channel: 'mcp-read', ...timedOut }],
+    channelEvidence: [{ ...timedOut, channel: 'mcp-read' }],
   });
   assert.equal(judgedUnknown.status, 'isolating');
   // External web channels: real request shape, honest UNVERIFIED + successor.
@@ -691,10 +691,10 @@ test('4.8.d: real fault injection — a real maintenance worker is SIGKILLed mid
   };
   assert.equal(await waitUntil(() => readState().progress >= 1, 5_000), true, 'worker must make progress');
   // Real SIGKILL; confirm termination before any restart (old-writer fencing).
-  const exited = new Promise((resolve) => child.on('exit', resolve));
+  const exited = new Promise((resolve) => child.on('exit', (code, signal) => resolve({ code, signal })));
   child.kill('SIGKILL');
-  const killExit = await exited;
-  assert.equal(typeof killExit, 'number');
+  const killResult = await exited;
+  assert.ok(killResult.signal === 'SIGKILL' || killResult.code !== null, 'the old writer is confirmed terminated before any restart');
   const killedAt = Date.now();
   // Real downtime: the heartbeat goes genuinely stale on the wall clock.
   await new Promise((r) => setTimeout(r, 150));
