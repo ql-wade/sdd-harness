@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "service": "delivery-control",
+  "interface": "DeliveryControl.ScopeGate.v1",
+  "scope": "CROSS_MACHINE_SCOPE",
+  "status": "NOT_ENABLED",
+  "gateCode": "CROSS_MACHINE_SCOPE_NOT_ENABLED",
+  "enablementCondition": {
+    "who": "user (跨机器范围裁决 holder)",
+    "what": "explicitly enable the cross-machine scope",
+    "how": "paired commit: flip this file's status AND update EXPECTED_SCOPE_DIGEST inside gate.mjs in the same commit, carrying the recorded user decision",
+    "never": "no runtime record, environment variable or out-of-band file edit can flip this gate (configVersion consistency lesson: paired mutation, no silent flip)"
+  },
+  "postEnableScope": {
+    "source": "openspec/changes/delivery-foundation-rearchitecture/tasks.md :: Task P5_2 (5.2.a)",
+    "reuse": [
+      "existing PostgreSQL",
+      "existing evidence storage",
+      "existing identity service"
+    ],
+    "apiBoundary": "API manages evidence, approvals and receipts only; it never takes over step scheduling",
+    "redFirst": "project isolation / revocation / backup restore / API-disconnect blocking are built test-first (RED) before GREEN",
+    "staysUnverifiedUntilRun": [
+      "project isolation positive auth",
+      "credential revocation positive auth",
+      "restore-time permission re-auth",
+      "API-disconnect refusal of cached green"
+    ]
+  },
+  "notEnabledBehavior": {
+    "start": "deny, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED",
+    "publish": "deny, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED",
+    "enable": "deny, exit 2, ENABLEMENT_REQUIRES_PAIRED_COMMIT",
+    "status": "readback only, exit 0 while the registered scope stays anchored"
+  },
+  "contentDigest": "c3c0bad73588967347cf7dbea2dcd1b47cc617ae9b6501a07f64e404a92dc12c"
+}

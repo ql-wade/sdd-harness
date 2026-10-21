@@ -1,0 +1,35 @@
+# P5_2 negative-path spot checks — real spawned processes (node services/delivery-control/gate.mjs ...)
+# exit contract: 0 PASS / 1 input / 2 denial
+
+== N1 start denial ==
+$ node services/delivery-control/gate.mjs start --request <tmp>/...
+  stderr: delivery-control-gate: DENIED CROSS_MACHINE_SCOPE_NOT_ENABLED — cross-machine scope is not enabled: team Control API start/publish is gated until the user explicitly enables the cross-machine scope (tasks.md P5_2)
+  exit=2
+
+== N2 publish denial ==
+$ node services/delivery-control/gate.mjs publish --request <tmp>/...
+  stderr: delivery-control-gate: DENIED CROSS_MACHINE_SCOPE_NOT_ENABLED — cross-machine scope is not enabled: team Control API start/publish is gated until the user explicitly enables the cross-machine scope (tasks.md P5_2)
+  exit=2
+
+== N3 forged scope (ENABLED, recomputed self-digest) refused by anchor ==
+$ node services/delivery-control/gate.mjs start --request <tmp>/... --scope-file <tmp>/...
+  stderr: delivery-control-gate: DENIED SCOPE_FILE_NOT_ANCHORED — self-consistent but not the digest shipped in gate.mjs; scope flips are paired commits only
+  exit=2
+
+== N4 env-var silent flip ignored ==
+$ node services/delivery-control/gate.mjs start --request <tmp>/...  (env: CROSS_MACHINE_SCOPE=ENABLED SDD_CROSS_MACHINE_SCOPE=ENABLED DELIVERY_CONTROL_SCOPE=enabled)
+  stderr: delivery-control-gate: DENIED CROSS_MACHINE_SCOPE_NOT_ENABLED — cross-machine scope is not enabled: team Control API start/publish is gated until the user explicitly enables the cross-machine scope (tasks.md P5_2)
+  exit=2
+
+== N5 runtime enable record refused ==
+$ node services/delivery-control/gate.mjs enable --record <tmp>/...
+  stderr: delivery-control-gate: DENIED ENABLEMENT_REQUIRES_PAIRED_COMMIT — opening the cross-machine scope requires the explicitly registered user decision as a paired commit (scope-gate.json + EXPECTED_SCOPE_DIGEST in gate.mjs updated together); a runtime record cannot flip the gate
+  exit=2
+
+== N6 missing request file is input error (exit 1) ==
+$ node services/delivery-control/gate.mjs start --request <tmp>/...
+  stderr: delivery-control-gate: ERROR request file cannot be read: <tmp>/...
+  exit=1
+
+# summary: {"n1":2,"n2":2,"n3":2,"n4":2,"n5":2,"n6":1}
+# stderr codes: CROSS_MACHINE_SCOPE_NOT_ENABLED, CROSS_MACHINE_SCOPE_NOT_ENABLED, SCOPE_FILE_NOT_ANCHORED, CROSS_MACHINE_SCOPE_NOT_ENABLED, ENABLEMENT_REQUIRES_PAIRED_COMMIT

@@ -1,0 +1,79 @@
+{
+  "task": "P5_2",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/p5-2-delivery-control-gate",
+  "base": "master@bd87414",
+  "generated_at": "2026-10-21",
+  "status": "DONE",
+  "gate_state": "CROSS_MACHINE_SCOPE_NOT_ENABLED — 本 run 用户未启用跨机器范围；交付的是未启用态真实验证（拒绝启动/拒绝发布真实执行），不是正向 API 建设",
+  "acceptance_ids": [
+    "F10"
+  ],
+  "deliverables": {
+    "scope_registry": "services/delivery-control/scope-gate.json",
+    "gate_entry": "services/delivery-control/gate.mjs",
+    "unit_tests": "test/delivery-control.test.js",
+    "journey_case": "test/delivery-cases/5_2.mjs",
+    "evidence_dir": "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_2/evidence/"
+  },
+  "coverage": {
+    "F10": "未启用态真实验证：启动/发布请求真实 exit 2 + stderr CROSS_MACHINE_SCOPE_NOT_ENABLED（真实 spawn 进程断言，非声明）；伪造 scope 文件（ENABLED+重算自摘要）被 gate 内置锚定摘要拒绝（SCOPE_FILE_NOT_ANCHORED）；环境变量不可静默翻转（决策只读 scope 文件，不看 env）；门开启需显式登记记录——运行时 enable 记录被拒（ENABLEMENT_REQUIRES_PAIRED_COMMIT，记录只作摘要存证不被信任）；锚定链=scope 内容摘要自洽+与 gate.mjs EXPECTED_SCOPE_DIGEST 配对（configVersion 教训：配对变更，无 boolean flag TOCTOU）。正向隔离/撤权/备份恢复/API 断联认证 = UNVERIFIED（未建设，holder: P5_2 owner + 用户跨机器范围裁决）；5_2.mjs J3 强制 acceptance-index F10 条目保持 UNVERIFIED + 原 holder 不被静默改写"
+  },
+  "red_cases": [
+    "test/delivery-control.test.js — services/delivery-control 缺席时 10/10 真实失败（RED 存证 red-delivery-control-test.txt）",
+    "test/delivery-cases/5_2.mjs — services/delivery-control 缺席时 3/3 真实失败（RED 存证 red-5_2-mjs.txt）"
+  ],
+  "negative_cases": [
+    "N1 start 拒绝：真实进程 exit 2，stderr CROSS_MACHINE_SCOPE_NOT_ENABLED",
+    "N2 publish 拒绝：真实进程 exit 2，stderr CROSS_MACHINE_SCOPE_NOT_ENABLED",
+    "N3 伪造 scope 文件（status ENABLED + 重算 contentDigest）被锚定校验拒绝：exit 2 SCOPE_FILE_NOT_ANCHORED",
+    "N4 环境变量静默翻转（CROSS_MACHINE_SCOPE/SDD_CROSS_MACHINE_SCOPE/DELIVERY_CONTROL_SCOPE=ENABLED）无效：仍 exit 2 拒绝",
+    "N5 运行时 enable 记录（伪造 decidedBy=user）被拒：exit 2 ENABLEMENT_REQUIRES_PAIRED_COMMIT，recordTrusted=false，记录仅作 sha256 摘要存证",
+    "N6 请求文件缺失为输入错误 exit 1（区别于 scope 拒绝 exit 2——拒绝不是靠崩溃伪造）"
+  ],
+  "commands": {
+    "node --test test/delivery-control.test.js (RED, guard absent)": 1,
+    "node --test test/delivery-cases/5_2.mjs (RED, guard absent)": 1,
+    "node --test test/delivery-control.test.js (GREEN run 1)": 0,
+    "node --test test/delivery-control.test.js (GREEN run 2)": 0,
+    "node --test test/delivery-cases/5_2.mjs (GREEN run 1)": 0,
+    "node --test test/delivery-cases/5_2.mjs (GREEN run 2)": 0,
+    "node services/delivery-control/gate.mjs start --request <fixture>": 2,
+    "node services/delivery-control/gate.mjs publish --request <fixture>": 2,
+    "node services/delivery-control/gate.mjs start --request <fixture> --scope-file <forged ENABLED>": 2,
+    "node services/delivery-control/gate.mjs start --request <fixture> (env flip attempt)": 2,
+    "node services/delivery-control/gate.mjs enable --record <runtime record>": 2,
+    "node services/delivery-control/gate.mjs start --request <absent>": 1,
+    "node services/delivery-control/gate.mjs status --json": 0,
+    "npm test": 1
+  },
+  "regression": {
+    "npm_test": "425 tests: 422 pass / 2 fail / 1 skipped；失败项与 master 基线完全相同（C08 pinned host OpenSpec dependency-edges、B08 preservation adapter），均为已知环境项，零新增；npm test 退出 1 由既有失败导致"
+  },
+  "unverified": [
+    {
+      "item": "F10 正向隔离/撤权/备份恢复/API 断联认证",
+      "holder": "P5_2 owner + 用户跨机器范围裁决",
+      "reason": "跨机器范围未启用，正向团队能力未建设；启用路径=用户显式裁决落为配对提交（scope-gate.json 状态 + gate.mjs EXPECTED_SCOPE_DIGEST 同提交更新），启用后按 tasks.md 5.2.a 复用 PostgreSQL/证据存储/身份服务建设，API 只管证据/审批/回执不接管步骤调度"
+    }
+  ],
+  "files_changed": [
+    "services/delivery-control/scope-gate.json",
+    "services/delivery-control/gate.mjs",
+    "test/delivery-control.test.js",
+    "test/delivery-cases/5_2.mjs",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_2.json",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_2/evidence/red-delivery-control-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_2/evidence/red-5_2-mjs.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_2/evidence/green-delivery-control-test.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_2/evidence/green-5_2-mjs.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_2/evidence/negatives-spot-checks.txt",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_2/evidence/npm-test.txt"
+  ],
+  "commits": {
+    "tests_red": "199882a",
+    "implementation": "bcc1afa",
+    "report": "(this commit)"
+  },
+  "blockers_or_questions": []
+}
