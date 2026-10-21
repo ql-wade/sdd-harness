@@ -1,0 +1,391 @@
+# P5_2 RED — node --test test/delivery-control.test.js before services/delivery-control exists
+# (host paths sanitized: absolute repo root -> <repo>, sandbox temp dirs -> <tmp>/...)
+
+TAP version 13
+# Subtest: committed scope-gate.json is anchored: contentDigest is self-consistent and equals the digest shipped in gate.mjs
+not ok 1 - committed scope-gate.json is anchored: contentDigest is self-consistent and equals the digest shipped in gate.mjs
+  ---
+  duration_ms: 1.386458
+  location: '<repo>/test/delivery-control.test.js:95:1'
+  failureType: 'testCodeFailure'
+  error: 'gate entry missing: services/delivery-control/gate.mjs (RED until implemented)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    loadGate (file://<repo>/test/delivery-control.test.js:77:10)
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:96:22)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: canonical stringify is key-order independent (digest stability)
+not ok 2 - canonical stringify is key-order independent (digest stability)
+  ---
+  duration_ms: 0.221208
+  location: '<repo>/test/delivery-control.test.js:113:1'
+  failureType: 'testCodeFailure'
+  error: 'gate entry missing: services/delivery-control/gate.mjs (RED until implemented)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    loadGate (file://<repo>/test/delivery-control.test.js:77:10)
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:114:22)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: verifyScopeAnchoring refuses tampered content with a stale digest (SCOPE_DIGEST_MISMATCH)
+not ok 3 - verifyScopeAnchoring refuses tampered content with a stale digest (SCOPE_DIGEST_MISMATCH)
+  ---
+  duration_ms: 0.1
+  location: '<repo>/test/delivery-control.test.js:121:1'
+  failureType: 'testCodeFailure'
+  error: 'gate entry missing: services/delivery-control/gate.mjs (RED until implemented)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    loadGate (file://<repo>/test/delivery-control.test.js:77:10)
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:122:22)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: start request is REALLY denied: real process, exit 2, code CROSS_MACHINE_SCOPE_NOT_ENABLED
+not ok 4 - start request is REALLY denied: real process, exit 2, code CROSS_MACHINE_SCOPE_NOT_ENABLED
+  ---
+  duration_ms: 49.815
+  location: '<repo>/test/delivery-control.test.js:131:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    expected exit 2, stderr: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '<repo>/services/delivery-control/gate.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:135:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: publish request is REALLY denied: real process, exit 2, code CROSS_MACHINE_SCOPE_NOT_ENABLED
+not ok 5 - publish request is REALLY denied: real process, exit 2, code CROSS_MACHINE_SCOPE_NOT_ENABLED
+  ---
+  duration_ms: 46.400209
+  location: '<repo>/test/delivery-control.test.js:142:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    expected exit 2, stderr: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '<repo>/services/delivery-control/gate.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:146:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: forged scope file (status ENABLED with a recomputed self-digest) is rejected by the anchor check
+not ok 6 - forged scope file (status ENABLED with a recomputed self-digest) is rejected by the anchor check
+  ---
+  duration_ms: 0.638542
+  location: '<repo>/test/delivery-control.test.js:150:1'
+  failureType: 'testCodeFailure'
+  error: 'gate entry missing: services/delivery-control/gate.mjs (RED until implemented)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    loadGate (file://<repo>/test/delivery-control.test.js:77:10)
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:151:22)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: environment variables can never silently flip the gate (still denied under scope-ENABLED env)
+not ok 7 - environment variables can never silently flip the gate (still denied under scope-ENABLED env)
+  ---
+  duration_ms: 46.94975
+  location: '<repo>/test/delivery-control.test.js:170:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    env vars must not flip the gate; stderr: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '<repo>/services/delivery-control/gate.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:181:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: opening the gate requires an explicitly registered record: runtime enable record is refused (ENABLEMENT_REQUIRES_PAIRED_COMMIT)
+not ok 8 - opening the gate requires an explicitly registered record: runtime enable record is refused (ENABLEMENT_REQUIRES_PAIRED_COMMIT)
+  ---
+  duration_ms: 47.00025
+  location: '<repo>/test/delivery-control.test.js:185:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    expected exit 2, stderr: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '<repo>/services/delivery-control/gate.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:196:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: missing request file is invalid input (exit 1), not a scope denial
+not ok 9 - missing request file is invalid input (exit 1), not a scope denial
+  ---
+  duration_ms: 47.384291
+  location: '<repo>/test/delivery-control.test.js:204:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /request file/. Input:
+    
+    'node:internal/modules/cjs/loader:1247\n' +
+      '  throw err;\n' +
+      '  ^\n' +
+      '\n' +
+      "Error: Cannot find module '<repo>/services/delivery-control/gate.mjs'\n" +
+      '    at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)\n' +
+      '    at Function._load (node:internal/modules/cjs/loader:1070:27)\n' +
+      '    at TracingChannel.traceSync (node:diagnostics_channel:322:14)\n' +
+      '    at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)\n' +
+      '    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)\n' +
+      '    at node:internal/main/run_main_module:36:49 {\n' +
+      "  code: 'MODULE_NOT_FOUND',\n" +
+      '  requireStack: []\n' +
+      '}\n' +
+      '\n' +
+      'Node.js v22.13.1\n'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '<repo>/services/delivery-control/gate.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:207:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: status readback reports the anchored NOT_ENABLED scope and keeps positive auth UNVERIFIED
+not ok 10 - status readback reports the anchored NOT_ENABLED scope and keeps positive auth UNVERIFIED
+  ---
+  duration_ms: 46.319333
+  location: '<repo>/test/delivery-control.test.js:211:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    expected exit 0, stderr: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '<repo>/services/delivery-control/gate.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:213:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 0
+# fail 10
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 359.217

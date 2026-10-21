@@ -1,0 +1,71 @@
+# P5_2 RED — node --test test/delivery-cases/5_2.mjs before services/delivery-control exists
+# (host paths sanitized)
+
+TAP version 13
+# Subtest: F10 J1 not-enabled gate: start/publish really denied, forged scope refused, env flip impossible, runtime enable refused
+not ok 1 - F10 J1 not-enabled gate: start/publish really denied, forged scope refused, env flip impossible, runtime enable refused
+  ---
+  duration_ms: 0.621292
+  location: '<repo>/test/delivery-cases/5_2.mjs:103:1'
+  failureType: 'testCodeFailure'
+  error: 'scope registry missing: services/delivery-control/scope-gate.json (RED until implemented)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_2.mjs:104:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: F10 J2 anchor integrity: committed scope bytes re-digested independently match contentDigest and the shipped gate digest
+not ok 2 - F10 J2 anchor integrity: committed scope bytes re-digested independently match contentDigest and the shipped gate digest
+  ---
+  duration_ms: 0.217375
+  location: '<repo>/test/delivery-cases/5_2.mjs:178:1'
+  failureType: 'testCodeFailure'
+  error: 'scope registry missing (RED until implemented)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_2.mjs:179:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: F10 J3 boundary: F10 stays UNVERIFIED with the existing holder; gate text intact; no positive cross-machine surface built
+not ok 3 - F10 J3 boundary: F10 stays UNVERIFIED with the existing holder; gate text intact; no positive cross-machine surface built
+  ---
+  duration_ms: 2.973209
+  location: '<repo>/test/delivery-cases/5_2.mjs:213:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, scandir '<repo>/services/delivery-control'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readdirSync (node:fs:1584:26)
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_2.mjs:231:22)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 0
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 71.888208
