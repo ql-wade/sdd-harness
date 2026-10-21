@@ -78,7 +78,7 @@
     "timezone": "Asia/Shanghai",
     "reason": "Receiving executor qualifies actual host, resources and throughput before estimating implementation"
   },
-  "updated_at": "2026-10-21T04:06:27.066974+00:00",
+  "updated_at": "2026-10-21T04:09:35.451801+00:00",
   "preparatory_checks": {
     "scaffold_scoped_tests": "41/41 PASS",
     "scaffold_npm_test": "41/41 PASS on Node22.13.1",
@@ -103,7 +103,7 @@
     "Resume existing monitor sdd; never create duplicate monitor",
     "Continue original full goal, do not mark 92 scenarios accepted from baseline tests"
   ],
-  "last_progress_at": "2026-10-21T04:06:27.066974+00:00",
+  "last_progress_at": "2026-10-21T04:09:35.451801+00:00",
   "authorization_blocker_audit": {
     "consecutive_goal_turns": 0,
     "decision_received": true,
@@ -148,7 +148,7 @@
     "status": "active"
   },
   "run_started_at": "2026-10-20T03:04:53.456337+00:00",
-  "status_revision": 43,
+  "status_revision": 44,
   "lifecycle_guard": {
     "skill": "openspec-lifecycle-guard",
     "path": "/Users/mac/.claude/skills/openspec-lifecycle-guard/SKILL.md",
@@ -511,32 +511,30 @@
         "registry/env endpoints UNSELECTED"
       ]
     },
-    "P1_4": [
-      {
-        "status": "ACCEPTED",
-        "steps_done": [
-          "1",
-          "2",
-          "3",
-          "4",
-          "5",
-          "6",
-          "7",
-          "8"
-        ],
-        "commits": {
-          "tests": "d3e7531",
-          "implementation": "a526c7b",
-          "report": "fddc24d"
-        },
-        "merged_to_master": "c8d876d",
-        "regression": "npm test 218/218 + delivery-cases 75 pass/1 env-skip/0 fail",
-        "review": "worker-reports/P1_4.review.json (APPROVED, 0 blocking)",
-        "extension_seams": "B1/B4 -> P2_4 scope; B6 -> P1_6 patch domain (controller routing recorded)"
-      }
-    ],
+    "P1_4": {
+      "status": "ACCEPTED",
+      "steps_done": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ],
+      "commits": {
+        "tests": "d3e7531",
+        "implementation": "a526c7b",
+        "report": "fddc24d"
+      },
+      "merged_to_master": "c8d876d",
+      "regression": "npm test 218/218 + delivery-cases 75 pass/1 env-skip/0 fail",
+      "review": "worker-reports/P1_4.review.json (APPROVED, 0 blocking)",
+      "extension_seams": "B1/B4 -> P2_4 scope; B6 -> P1_6 patch domain (controller routing recorded)"
+    },
     "P2_4": {
-      "status": "ACCEPTED_PENDING_REPIN",
+      "status": "ACCEPTED",
       "steps_done": [
         "1",
         "2",
@@ -557,7 +555,8 @@
       "merged_to_master": "e868d48",
       "regression": "npm test 263/263 + delivery-cases 91 pass/1 env-skip/0 fail (in 9b95a0ff-equipped worktree); 7-pin repin verified c0c1f40",
       "review": "worker-reports/P2_4.review.json (APPROVED, 0 blocking)",
-      "new_fingerprint": "9b95a0ff54ee00abd03ba9fb507cd93f03c8a464a743658898c474a51dc89b10"
+      "new_fingerprint": "9b95a0ff54ee00abd03ba9fb507cd93f03c8a464a743658898c474a51dc89b10",
+      "repin": "146c399 6-patch repin merged; upstream.lock.json carries 6 patches (fingerprint beab355d era)"
     },
     "P2_5": {
       "status": "ACCEPTED",
@@ -749,6 +748,44 @@
         "静态加密执行→I01",
         "RPO/RTO/保留期/容量阈值→各数据owner"
       ]
+    },
+    "P4_1": {
+      "status": "ACCEPTED",
+      "steps_done": 6,
+      "merged_to_master": "7bf5548",
+      "acceptance": "d9b87f3",
+      "review": "worker-reports/P4_1.review.json (APPROVED)",
+      "deliverable": "tools/ci/verify-delivery.mjs CI delivery gate (A13/F06/F09 SHA revalidation)"
+    },
+    "P4_2": {
+      "status": "ACCEPTED",
+      "steps_done": 6,
+      "merged_to_master": "de99afb",
+      "acceptance": "9ce481e",
+      "review": "worker-reports/P4_2.review.json (APPROVED)",
+      "deliverable": "tools/ci/release.mjs promotion/rollback four gates"
+    },
+    "P4_4": {
+      "status": "ACCEPTED",
+      "steps_done": 10,
+      "merged_to_master": "5ef6be2",
+      "acceptance": "1fc8d4f",
+      "review": "worker-reports/P4_4.review.json (APPROVED; nb-1 closed by be6b067 D06 assertions, nb-2 ledgered, nb-4 closed by 99f17f3)",
+      "deliverable": "lib/adapters/llmwiki/outline/code-wiki + knowledge-seed (Knowledge.Closeout.v1)"
+    },
+    "P4_7": {
+      "status": "ACCEPTED",
+      "steps_done": 8,
+      "merged_to_master": "9d6c67b",
+      "acceptance": "1f05d4c",
+      "review": "worker-reports/P4_7.review.json (APPROVED U01-U08)",
+      "deliverable": "infra/delivery/knowledge/authorization-model + knowledge-authz.mjs (G04 preauthorization)"
+    },
+    "P4_8": {
+      "status": "DISPATCHED",
+      "worktree": ".claude/worktrees/impl-p4-8",
+      "branch": "impl/p4-8-knowledge-revocation",
+      "base": "e04bac8"
     }
   },
   "environment_notes": [
@@ -811,6 +848,30 @@
       "status": "OPEN",
       "candidate_resolution": "接受现状+集成波次机械改名+plan owner修canonical引用(待评审员建议)",
       "reviewer_recommendation": "接受现状+机械改名+canonical 修正+runbook 补写或移出 owns; 见 worker-reports/I08.review.json"
+    },
+    {
+      "id": "OV_OVERLAY_CANDIDATE",
+      "owner": "user",
+      "status": "OPEN",
+      "summary": "官方 comet-five-phase overlay 重规划候选语料已归档(41节点/100场景/114检查); A 裁决明确排除在本次接纳外, 单独裁决后另行处理; 相关文档改动仍以未提交工作区形式保留在主检出(docs/architecture/adr/0019 + delivery-architecture.md + openspec/config.yaml + draft 目录)"
+    },
+    {
+      "id": "HOST_OPENSPEC_DRIFT",
+      "owner": "user",
+      "status": "OPEN",
+      "summary": "宿主全局 openspec 已从 pin 1.3.1 漂移到 1.14.3(homebrew 路径); fail-closed 正确阻塞 C08/B08 套件(known-env fail 之二); 选项: 重钉 1.3.1 / 迁移基线到 1.14.3 / 保持阻塞; 用户裁决前 known-env 集合不变"
+    },
+    {
+      "id": "REMOTE_URL_DISCREPANCY",
+      "owner": "user",
+      "status": "OPEN",
+      "summary": "worktree remote 显示 ql-wade/sdd-harness 与 registry rpamis/sdd-harness 不一致; 影响 push/PR 目标, 不影响本地验收"
+    },
+    {
+      "id": "GH_AUTH_TOKEN",
+      "owner": "user",
+      "status": "OPEN",
+      "summary": "gh CLI TLS 拦截(x509 OSStatus -26276); I01 authority readback 保持 UNVERIFIED 直到网络/证书修复或用户提供 token; 不阻塞本地实施"
     }
   ],
   "halt": {
