@@ -1,0 +1,211 @@
+{
+  "task": "I08",
+  "task_title": "备份恢复、单权威迁移与 R10 未完成保留（Backup.v1 / Restore.v1 / Retention.v1 / AuthorityTransfer.v1）",
+  "run": "impl-dfr-20261020-r1",
+  "branch": "impl/i08-backup-restore",
+  "base_commit": "1fc8d4f",
+  "final_status": "DONE",
+  "implementation_commit": "0e6313e",
+  "tests_commit": "f9e5a0b (RED suite)",
+  "report_commit": "HEAD of impl/i08-backup-restore at handoff（I08.json 与全部 RED/GREEN 日志在 report 提交落盘）",
+  "environment_setup": {
+    "worktree_bootstrap": "worktree impl-i08 不存在，按任务指派从 master@1fc8d4f 新建（git worktree add -b impl/i08-backup-restore master）。.sdd 本地构建缓存缺失导致 3 个基线失败（缺 patched Comet build）；因本锁（6-patch stack，fingerprint beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966，由 integrations/comet/upstream.lock.json 现算）在 impl-p4-4 worktree 已有同 fingerprint 完成 build，直接复制其 .sdd（1.2G，gitignored 本地缓存）后 C08/B08 之外的 Comet 相关用例全部恢复——copy 后 manifest 校验（BUILD_BASELINE_DRIFT 门）仍会在任何字节漂移时失败，故此复制是可审计的。基线（复制后、我改动前）：374 tests / 370 pass / 3 fail（全部环境性：C08 host-openspec 1.3.1→1.14.3 drift、worktree-mcp-readback 的 llmwiki MCP ENOENT、B08 preservation）/ 1 legal skip；3 项失败在主 checkout 干净 master 上预先复现（evidence/sandbox-env-notes.txt）。",
+    "ref_catalog_finding": "任务简报称 3 个 secret-ref（backup-writer/backup-encryption/restore-reader）已在 24 refs 目录中。实际目录状态：只有 secret-ref:sdd-harness-pilot/backup-encryption 已登记（boundRole backup）；backup-writer 与 restore-reader 缺席。按 I07 先例处理：validate 记显式 catalogGap（exit 0——成员登记属 I01 所有权属的就绪证据，非结构违规），解析器对缺席引用如实 REF_NOT_REGISTERED（测试已断言）。我未编辑 secrets.refs.example.json（I01 所有，越界）。",
+    "sandbox_env": "会话沙箱（Seatbelt）在 EnterWorktree 后拒绝向本 worktree 的活配置 .claude/settings.json 写入，导致 2 个预先存在的 adapter 测试（其 python 子进程按设计写活配置）在会话内失败：PermissionError 已直接复现（evidence/sandbox-env-notes.txt）。同一 worktree 在进入会话保护前的基线跑中这两项通过（当时仅 3 fail），证明差异是沙箱保护而非代码。沙箱内不可关（dangerouslyDisableSandbox 禁用）；审查者在沙箱外重跑 node --test test/adapter-quoting.test.js 应 exit 0。docker EPERM、gh TLS 失效、无真实 Outline 按简报作为环境事实采纳：本地目录形态 Registry/备份目标即真实被测物，跨机/真实服务恢复在全部回执中如实 UNVERIFIED。"
+  },
+  "coverage_matrix": [
+    {
+      "interface": "Backup.v1",
+      "positive": [
+        "真实一致性备份：目录形态工作区（run-state/operations/transactions/approvals 含版本/knowledge/db 页+水位/objects/config/permissions）逐文件真实复制，manifest 逐文件 sha256+bytes；套件独立重算 digest 对真实字节，不信 CLI 自述（unit 'backup: real bytes…'、J1、probe quarantine-restore step consistent-backup）",
+        "批准 payload 版本入 manifest（approvals payload version=v7/v12 被记录）；写后对目标字节重算 sha256 复验（digestsVerified）",
+        "db/objects 点位一致记录（pointInTime.consistent=true）；撤销代码源缓存只记 ref（restored=false）绝不复制其字节"
+      ],
+      "negative": [
+        "open 事务 → exit 2 BACKUP_CONSISTENCY_REFUSED，且不留任何看似完整的 manifest（unit 'backup refuses…'）",
+        "workspace/缺参 → exit 1（unit 'backup input errors'）"
+      ],
+      "real_entry": "node tools/infra/backup-restore.mjs backup --workspace <dir> --target <dir> --json"
+    },
+    {
+      "interface": "Restore.v1",
+      "positive": [
+        "隔离区恢复全链：manifest digest 全量复验 → 密钥 ref 登记（解析仍如实 UNRESOLVED）→ db/objects 点位一致 → 二 writer 门 → 进程级旧 writer fence → 真实复制 → 独立字节读回 → 同 operation 验证 → 释放记录（publishFrozen/singleWriter）；恢复区与源工作区逐文件 Buffer.compare 字节相等（unit 'restore: quarantined…'、J1、J3、probe quarantine-restore）",
+        "权限对账 data-only：恢复 ACL applied=false 绝不回放；离组成员 readmitted=false 绝不回填；旧 epoch 迟到回执 excludedSuperseded 排除出当前状态（同上用例 + restore-reconciliation.json 字节读回）",
+        "撤销缓存绝不恢复（quarantine 无 cache/ 路径）"
+      ],
+      "negative": [
+        "篡改备份区一个真实字节 → exit 2 RESTORE_BACKUP_INVALID 且零释放（unit restore negatives、J1 corrupt 分支、probe corrupted-byte-refuses-restore）",
+        "manifest 列出文件缺失（不完整备份）→ RESTORE_BACKUP_INVALID",
+        "加密密钥 ref 未登记 → exit 2 RESTORE_KEY_UNAVAILABLE（恢复停止，不是 skip）",
+        "db/objects 点位不一致 → RESTORE_POINT_IN_TIME_INCONSISTENT",
+        "无 fence 证据 / confirmedGone=false → RESTORE_REFUSED_OLD_WRITER_NOT_FENCED",
+        "真实存活旧 writer（真实 pid，liveness 检查戳穿谎言）→ RESTORE_REFUSED_OLD_WRITER_LIVE（unit、J1、J3、probe old-writer-denial）",
+        "恢复目标已有真实存活 writer（writer-lock pid）→ RESTORE_REFUSED_SECOND_WRITER（复制状态另开 writer 实际拒绝）"
+      ],
+      "real_entry": "node tools/infra/backup-restore.mjs restore --backup <dir> --quarantine <dir> --fence-evidence <file> --json"
+    },
+    {
+      "interface": "Retention.v1",
+      "positive": [
+        "已验证完成（义务真实闭合：事务提交+回执落盘+knowledge closed+第二副本落地后 soleCopy=false）→ exit 0 ELIGIBLE basis=verified-completed；toolPerformsDeletion=false（门只评估，删除留给授权人）",
+        "pending 存续 + 另行批准迁移 + 已证明恢复 → ELIGIBLE basis=approved-migration-with-proven-restore，pending 清单仍显式（unit retention 第二段、J2）"
+      ],
+      "negative": [
+        "5 类 pending 义务（pending-outline-publish / unknown-remote-result / sole-payload-in-workspace / open-transaction / pending-knowledge-closeout）→ exit 2 RETENTION_CLEANUP_DENIED，清单逐项点名（unit retention、J2、probe pending-cleanup-denial）",
+        "磁盘压力只告警：diskPressure.warned=true 且 cleanup=false，工作区逐文件 digest 前后不变（绝不静默清理）",
+        "只有批准、无恢复证明 → 仍 DENIED（'有备份'永不是提前清理唯一工作区的理由）；恢复证明 verified/sameOperationReadback 不真 → 同样拒绝"
+      ],
+      "real_entry": "node tools/infra/backup-restore.mjs retention --workspace <dir> [--disk-pressure <file>] [--migration-approval <file>] [--restore-proof <file>] --json"
+    },
+    {
+      "interface": "AuthorityTransfer.v1",
+      "positive": [
+        "原 Runner 永久丢失（真实子进程持有权威 → 真实 SIGKILL → 终止确认，无监督重启）+ 受控迁移批准（reason=runner-permanently-lost）+ 进程级 fence 证据 → 新 authority 登记：epoch+1、同 runId、transferredFrom 落盘；singleAuthorityProof={oldWriterConfirmedGone, singleLiveAuthority}（unit 'authority transfer…'、J4、probe authority-transfer；P3_3 SIGKILL 手法）"
+      ],
+      "negative": [
+        "无批准 → REFUSAL_CONTROLLED_APPROVAL_REQUIRED；批准 reason 不符 → 同拒",
+        "共享目录重新登记冒充 fencing → AUTHORITY_FENCE_NOT_PROCESS_LEVEL（不能冒充分布式 fencing）",
+        "存活 pid + 谎报 confirmedGone → OLD_WRITER_STILL_LIVE（真实 liveness 优先于一切声称）"
+      ],
+      "real_entry": "node tools/infra/backup-restore.mjs transfer --state <run-state.json> --approval <file> --fence-evidence <file> --out <file> --json"
+    },
+    {
+      "interface": "BackupInfra.v1 validate/probe",
+      "positive": [
+        "已提交域 validate 干净（exit 0），catalogGaps 显式列出两个缺席 ref；retentionFreeze（rpo/rto=UNVERIFIED、autoCleanup=false、diskPressureWarnOnly=true）随回执输出",
+        "4 个 probe 全部本地真实执行（executed=true）VERIFIED（exit 0）：pending-cleanup-denial / quarantine-restore / old-writer-denial / authority-transfer"
+      ],
+      "negative": [
+        "9 个防篡改负例：R10 冻结翻转（DISK_PRESSURE_WARN_ONLY_REQUIRED）、义务清单缺项（SPEC_PENDING_OBLIGATION_MISSING）、UNVERIFIED 期限下开自动清理（AUTO_CLEANUP_WITHOUT_CONFIRMED_RECOVERY）、恢复规则缺失（RESTORE_RULE_MISSING）、fence 进程级要求删除（FENCE_PROCESS_LEVEL_REQUIRED）、密钥形键（SECRET_VALUE_KEY_FORBIDDEN）、malformed/cross-project ref、项目错配 → 全部 exit 2 带指定 code",
+        "fail-closed：域文件缺失/不可解析 → exit 1（绝不静默降级为空规则）；未知 probe case → exit 1",
+        "秘密纪律：三个 ref 只引用；域文件 scanForForbiddenValues 零违规；回执零宿主路径（HOST_PATH_OUTPUT_RE 断言）"
+      ],
+      "real_entry": "node tools/infra/backup-restore.mjs validate --registry infra/delivery/registry.json --json；node tools/infra/backup-restore.mjs probe --case <case> --json"
+    }
+  ],
+  "red_cases": [
+    {
+      "case": "pre-implementation RED: whole V_INFRA_I08 suite against absent tools/infra/backup-restore.mjs and infra/delivery/backup/*",
+      "actually_failed": true,
+      "evidence": "evidence/red-node-test.txt — node --test test/infra-backup-restore.test.js exit=1，13 tests / 1 pass / 12 fail / 0 skipped（1 pass 是只 import 既有 secret-refs.mjs 的 I01 行为钉子，属正当已绿）；evidence/red-node-test-i08-case.txt — node --test test/delivery-cases/i08.mjs exit=1，4 tests / 0 pass / 4 fail（全部真实 spawn ENOENT 路径）；evidence/red-cli.txt — validate 与全部 4 个 probe 形态 exit=1 MODULE_NOT_FOUND。诚实注记：这是模块缺席阶段（同 I06/I07 形态）；逐用例行为 RED 即 GREEN 后负例套件本身——每条负例都是经出货 CLI 的真实 exit-2 拒绝路径，非 mock。"
+    },
+    {
+      "case": "R10 A 边界防篡改 RED（ GREEN 后经出货 CLI 复验的拒绝路径全真）",
+      "actually_failed": true,
+      "evidence": "九项域防篡改（R10 冻结翻转/义务清单缺项/自动清理翻转/恢复规则缺失/fence 要求删除/密钥形键/malformed ref/cross-project ref/项目错配）各以 tmp fixture 改动已提交域副本，全部 exit 2 带指定 code；义务拒绝（5 类 pending + 磁盘压力 warn-only + 字节不变）、恢复七拒（损坏/不完整/缺密钥/点位不一致/无 fence/假 gone/活 writer/二 writer）、迁移四拒（无批准/共享目录冒充/活 pid 谎言）全部为真实 CLI exit 2。"
+    }
+  ],
+  "green_summary": {
+    "Backup.v1": "真实 sha256 manifest 对真实字节（含批准 payload 版本、db/objects 点位、事务清单、权限快照、撤销缓存 ref-only）；写后重算复验；open 事务一致性门拒绝",
+    "Restore.v1": "隔离区恢复，六道前置门（完整性/密钥/点位/二 writer/fence/方法级）全 fail-closed；恢复后独立字节读回 + 同 operation 验证才释放；权限对账 data-only（ACL 不回放、离组不回填、旧 attempt 排除）；撤销缓存不恢复；发布冻结 + 单 writer 释放记录",
+    "Retention.v1": "R10 A：5 类 Comet 真实义务（不只 archived/git complete）驱动 cleanup 门；pending 即 DENIED；磁盘压力只告警；verified-completed 或 另行批准迁移+已证明恢复 才移动边界；工具自身永不删除",
+    "AuthorityTransfer.v1": "永久丢失（真实 SIGKILL+确认）→ 受控批准 → 进程级 fence → 新 authority（epoch+1 同 run）登记 + 单一存活权威证明；共享目录冒充与活 pid 谎言真实拒绝",
+    "secret_refs": "backup-writer / backup-encryption / restore-reader 三 ref 只引用不存值；backup-encryption 已登记（解析如实 UNRESOLVED，无运行时 secret store）；另两个缺席按 I07 先例记显式 catalogGap（I01 所有权属），解析 REF_NOT_REGISTERED 已断言"
+  },
+  "commands": [
+    {
+      "cmd": "node --test test/infra-backup-restore.test.js (pre-implementation, f9e5a0b)",
+      "exit_code": 1,
+      "summary": "RED: 13 tests / 1 pass / 12 fail / 0 skipped（evidence/red-node-test.txt）"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/i08.mjs (pre-implementation, f9e5a0b)",
+      "exit_code": 1,
+      "summary": "RED: 4 tests / 0 pass / 4 fail（evidence/red-node-test-i08-case.txt）"
+    },
+    {
+      "cmd": "node tools/infra/backup-restore.mjs validate|probe … (pre-implementation)",
+      "exit_code": 1,
+      "summary": "全部 6 形态 MODULE_NOT_FOUND（evidence/red-cli.txt）"
+    },
+    {
+      "cmd": "node --test test/infra-backup-restore.test.js (post-implementation, 0e6313e)",
+      "exit_code": 0,
+      "summary": "GREEN: 13 tests / 13 pass / 0 fail / 0 skipped；3 次重复运行全部 13/13（evidence/green-node-test.txt）"
+    },
+    {
+      "cmd": "node --test test/delivery-cases/i08.mjs (post-implementation)",
+      "exit_code": 0,
+      "summary": "GREEN: 4 journeys（J1 一致性 / J2 R10 保留 / J3 旧 writer / J4 单权威迁移）4/4 pass；3 次重复运行全部 4/4（evidence/green-node-test-i08-case.txt）"
+    },
+    {
+      "cmd": "node tools/infra/backup-restore.mjs validate --registry infra/delivery/registry.json --json",
+      "exit_code": 0,
+      "summary": "committed 域干净；catalogGaps=[backup-writer, restore-reader] 显式；retentionFreeze rpo/rto=UNVERIFIED、autoCleanup=false、diskPressureWarnOnly=true（evidence/green-validate.json）"
+    },
+    {
+      "cmd": "node tools/infra/backup-restore.mjs probe --case pending-cleanup-denial --json",
+      "exit_code": 0,
+      "summary": "VERIFIED：5 类 pending 拒绝 + 磁盘压力 warn-only + 工作区字节不动 + verified-completed 移门（evidence/green-probe-pending-cleanup-denial.json）"
+    },
+    {
+      "cmd": "node tools/infra/backup-restore.mjs probe --case quarantine-restore --json",
+      "exit_code": 0,
+      "summary": "VERIFIED：一致备份 → 单字节损坏拒绝（RESTORE_BACKUP_INVALID）→ 隔离恢复释放 + 权限 data-only 对账（evidence/green-probe-quarantine-restore.json）"
+    },
+    {
+      "cmd": "node tools/infra/backup-restore.mjs probe --case old-writer-denial --json",
+      "exit_code": 0,
+      "summary": "VERIFIED：真实 pid 活 writer 拒绝 → 真实 SIGKILL + gone 确认 → 恢复释放；重复运行稳定（evidence/green-probe-old-writer-denial.json）"
+    },
+    {
+      "cmd": "node tools/infra/backup-restore.mjs probe --case authority-transfer --json",
+      "exit_code": 0,
+      "summary": "VERIFIED：永久丢失 → 无批准拒/冒充拒 → 受控迁移登记新 authority（epoch+1）+ 单一权威证明（evidence/green-probe-authority-transfer.json）"
+    },
+    {
+      "cmd": "npm test（全量, post-implementation）",
+      "exit_code": 1,
+      "summary": "387 tests（374 基线 + 13 新增）/ 381 pass / 5 fail / 1 legal skip。5 个失败全部环境性且先于本任务：3 个在干净 master 预先复现（C08 host-openspec 1.3.1→1.14.3 drift、worktree-mcp-readback llmwiki MCP ENOENT、B08 preservation），2 个是会话沙箱拒绝写活配置 .claude/settings.json 的预先存在 adapter 测试（PermissionError 直接复现；同一 worktree 进入会话保护前通过）。零 I08 用例失败。逐项证据与沙箱外复核命令：evidence/green-npm-test-full.txt + evidence/sandbox-env-notes.txt"
+    }
+  ],
+  "unverified": [
+    {
+      "item": "跨机/真实服务恢复（DB+附件+Run 真实隔离恢复演练）",
+      "reason": "docker EPERM、无真实 Outline/远端服务；本地目录形态 Registry/备份目标是本任务真实被测物，真实服务演练只能由真实实例承担",
+      "successor": "备份 owner + 部署波次（infrastructure-plan.md 交接前置输入 #6：备份目标、恢复密钥 owner、RPO/RTO/保留期/容量阈值与一次真实隔离恢复证据）；每张恢复回执的 realServiceRestore 字段已如实 UNVERIFIED"
+    },
+    {
+      "item": "备份静态加密的实际执行",
+      "reason": "加密只是 REF_ONLY（backup-encryption ref）；无运行时 secret store 授权，解析永远 UNRESOLVED（I01 设计如此）",
+      "successor": "I01 运行时授权机制挂载后，restore 的密钥可用性门（RESTORE_KEY_UNAVAILABLE 已实现）以真实解析结果驱动"
+    },
+    {
+      "item": "backup-writer 与 restore-reader 的目录登记",
+      "reason": "24-ref I01 目录中缺席（简报与实际不符）；成员登记是 I01 所有权属，本任务文件范围不可改",
+      "successor": "I01 owner 补登记；validate 的 catalogGaps 在登记后自动消失，代码零改动"
+    },
+    {
+      "item": "RPO/RTO/频率/保留期/容量阈值与自动清理期限",
+      "reason": "owner 未确认——registry.json/backup-policy.json 如实 UNVERIFIED 且 autoCleanupEnabled=false，绝不编造恢复时限（I08 规格原文要求）",
+      "successor": "各数据 owner 试点实测冻结后更新 registry.json；AUTO_CLEANUP_WITHOUT_CONFIRMED_RECOVERY 防篡改门在冻结前拒绝任何自动清理开启"
+    },
+    {
+      "item": "全量 npm test 0 fail",
+      "reason": "5 个失败全部环境性且先于本任务（3 个干净 master 复现 + 2 个沙箱写保护假阳性）；简报的'基线 341/341'与当前干净 master（374 tests）已不符",
+      "successor": "审查者在沙箱外重跑 adapter-quoting；host-openspec re-pin/migrate 与 llmwiki MCP 环境修复属平台项（HOST_OPENSPEC_DRIFT 事件已记录）"
+    }
+  ],
+  "files_changed": [
+    "infra/delivery/backup/registry.json (new)",
+    "infra/delivery/backup/backup-policy.json (new)",
+    "infra/delivery/backup/restore-policy.json (new)",
+    "tools/infra/backup-restore.mjs (new)",
+    "test/infra-backup-restore.test.js (new)",
+    "test/delivery-cases/i08.mjs (new)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I08.json (this report)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I08/evidence/* (RED/GREEN logs, probe receipts, full-suite log, sandbox env notes)"
+  ],
+  "commits": {
+    "tests": "f9e5a0b",
+    "implementation": "0e6313e",
+    "report": "HEAD of impl/i08-backup-restore at handoff"
+  },
+  "blockers_or_questions": [
+    "文件名偏差需计划 owner 和解：本任务简报的独占文件清单（infra/delivery/backup/{registry,backup-policy,restore-policy}.json、tools/infra/backup-restore.mjs、test/infra-backup-restore.test.js、test/delivery-cases/i08.mjs）与 canonical 三件套（infrastructure-plan.md I08 小节、infrastructure-tasks.json I08.owns、execution-contract.json V_INFRA_I08.command 写的 infra/delivery/recovery/*、retention-policy.json、authority-transfer.schema.json、operations-runbook.md、tools/infra/recovery.mjs、test/infra-recovery.test.js）不一致。我按简报执行（硬约束'越界=blocker'），语义规格（接口、RED 清单、探针、oracle）完全取自 plan I08 小节；retention 语义并入 backup-policy.json（Retention.v1 节），authority-transfer 形状由 restore-policy.json 的 AuthorityTransfer.v1 节 + CLI 输入校验承载。canonical 三件套的命令/归属需 owner 改名对齐（机械改名即可；本轮不可改这三件——越界）。另：plan 的 3 个探针之外按简报要求补了第 4 个 authority-transfer 探针。",
+    "ref 目录缺口（同 I07 先例）：backup-writer / restore-reader 未登记，validate 已显式 catalogGap、解析 REF_NOT_REGISTERED；登记属 I01，越界未动。",
+    "简报称 3 个 secret-ref '已在目录 24 refs'，实际只有 backup-encryption 在；与 I07 简报同样偏差，已按先例处理并记录。",
+    "全量回归 0 fail 本会话不可达（见 unverified 第 5 项）；我自己的 13+4 用例与 4 探针全绿且 3 次重复稳定。基线 341/341 数字与今天干净 master 的 374 tests 不符——报告以实测数字为准。"
+  ]
+}

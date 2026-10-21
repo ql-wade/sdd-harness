@@ -1,0 +1,43 @@
+{
+  "interface": "BackupInfra.v1",
+  "command": "probe",
+  "case": "quarantine-restore",
+  "executed": true,
+  "status": "VERIFIED",
+  "observedSteps": [
+    {
+      "step": "consistent-backup",
+      "status": "VERIFIED",
+      "filesCount": 14
+    },
+    {
+      "step": "corrupted-byte-refuses-restore",
+      "status": "VERIFIED",
+      "refusal": "RESTORE_BACKUP_INVALID"
+    },
+    {
+      "step": "quarantined-restore-released",
+      "status": "VERIFIED",
+      "sameOperation": {
+        "verified": true,
+        "runId": "run-i08-probe",
+        "authorityId": "comet-authority-i08-probe",
+        "epoch": 2
+      }
+    },
+    {
+      "step": "permissions-reconciled-as-data",
+      "status": "VERIFIED",
+      "excludedSuperseded": [
+        "operations/op-publish.receipt.stale.json"
+      ]
+    }
+  ],
+  "realServiceRestore": {
+    "status": "UNVERIFIED",
+    "reason": "cross-machine and real-service restore can only be proven by the backup owner together with the deployment wave; this receipt covers the local directory-form mechanism only",
+    "successor": "backup owner + deployment wave (infrastructure-plan.md 交接前置输入 #6)"
+  },
+  "reason": "real bytes end-to-end: consistent backup, single corrupted byte refuses the restore, quarantined restore released after the same-operation readback, permissions reconciled as data only",
+  "checkedAt": "2026-10-21T03:11:32.372Z"
+}

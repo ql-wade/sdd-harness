@@ -1,0 +1,410 @@
+TAP version 13
+# Subtest: V_INFRA_I08 contract: committed backup domain validates clean with explicit catalog gaps and honest retention
+not ok 1 - V_INFRA_I08 contract: committed backup domain validates clean with explicit catalog gaps and honest retention
+  ---
+  duration_ms: 142.893375
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:217:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    validate must exit 0
+    cwd=/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08
+    stdout=
+    stderr=node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/tools/infra/backup-restore.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:219:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: secret-ref discipline: the three backup refs are referenced only and resolve honestly (registered -> UNRESOLVED, unregistered -> REF_NOT_REGISTERED)
+not ok 2 - secret-ref discipline: the three backup refs are referenced only and resolve honestly (registered -> UNRESOLVED, unregistered -> REF_NOT_REGISTERED)
+  ---
+  duration_ms: 18.931542
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:262:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/infra/delivery/backup/registry.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    readDomainJson (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:78:24)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:294:47)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay rules, secret-shaped key, malformed/cross-project ref, project mismatch — all exit 2
+not ok 3 - validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay rules, secret-shaped key, malformed/cross-project ref, project mismatch — all exit 2
+  ---
+  duration_ms: 0.608417
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:301:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/infra/delivery/backup/registry.json' -> '/tmp/claude-501/infra-i08-domain-MtBt0C/registry.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeDomainFixture (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:85:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:386:17)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: validate fail-closed: missing or unparseable domain file exits 1, never silently degrades to empty rules
+not ok 4 - validate fail-closed: missing or unparseable domain file exits 1, never silently degrades to empty rules
+  ---
+  duration_ms: 4.238042
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:395:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, copyfile '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/infra/delivery/backup/registry.json' -> '/tmp/claude-501/infra-i08-domain-gwaeJO/registry.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.copyFileSync (node:fs:3086:11)
+    makeDomainFixture (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:85:8)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:396:19)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: backup: real bytes are copied and the manifest digests match the target byte-for-byte; revoked cache is recorded, never copied
+not ok 5 - backup: real bytes are copied and the manifest digests match the target byte-for-byte; revoked cache is recorded, never copied
+  ---
+  duration_ms: 87.668167
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:411:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    backup must exit 0
+    stdout=
+    stderr=node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/tools/infra/backup-restore.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:415:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: backup refuses an inconsistent workspace: an open transaction means no consistent point-in-time backup (exit 2)
+not ok 6 - backup refuses an inconsistent workspace: an open transaction means no consistent point-in-time backup (exit 2)
+  ---
+  duration_ms: 81.171
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:459:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    open transaction must refuse the backup
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:463:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: backup input errors: missing workspace or missing arguments — exit 1 with usage
+ok 7 - backup input errors: missing workspace or missing arguments — exit 1 with usage
+  ---
+  duration_ms: 150.006
+  ...
+# Subtest: restore: quarantined restore verifies manifest digests, fences the old writer, reconciles permissions honestly, and releases only after the same-operation readback
+not ok 8 - restore: quarantined restore verifies manifest digests, fences the old writer, reconciles permissions honestly, and releases only after the same-operation readback
+  ---
+  duration_ms: 58.403625
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:487:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    fixture backup must pass: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/tools/infra/backup-restore.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    backupOnce (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:482:10)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:488:29)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: restore negatives: corrupt backup byte, incomplete backup, missing/unconfirmed/live-writer fence, missing key ref, point-in-time mismatch, second writer — all exit 2 and refuse release
+not ok 9 - restore negatives: corrupt backup byte, incomplete backup, missing/unconfirmed/live-writer fence, missing key ref, point-in-time mismatch, second writer — all exit 2 and refuse release
+  ---
+  duration_ms: 118.831208
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:530:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    fixture backup must pass: node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/tools/infra/backup-restore.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    backupOnce (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:482:10)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:533:27)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: retention: pending obligations deny cleanup with the explicit list; disk pressure only warns and the workspace stays byte-identical
+not ok 10 - retention: pending obligations deny cleanup with the explicit list; disk pressure only warns and the workspace stays byte-identical
+  ---
+  duration_ms: 63.822458
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:630:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    pending obligations must deny cleanup (exit 2, never a silent clean)
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:642:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: retention: only verified completion — or a separately approved migration with proven restore — moves the R10 A boundary
+not ok 11 - retention: only verified completion — or a separately approved migration with proven restore — moves the R10 A boundary
+  ---
+  duration_ms: 135.372834
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:661:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:666:12)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: authority transfer: requires a controlled approval and process-level fence evidence, then registers the new authority with an epoch bump
+not ok 12 - authority transfer: requires a controlled approval and process-level fence evidence, then registers the new authority with an epoch bump
+  ---
+  duration_ms: 64.101625
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:712:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    transfer without controlled approval must refuse
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:718:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: probe cases run the real local mechanisms and verify them
+not ok 13 - probe cases run the real local mechanisms and verify them
+  ---
+  duration_ms: 76.160333
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:769:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    probe pending-cleanup-denial must exit 0
+    stdout=
+    stderr=node:internal/modules/cjs/loader:1247
+      throw err;
+      ^
+    
+    Error: Cannot find module '/Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/tools/infra/backup-restore.mjs'
+        at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+        at Function._load (node:internal/modules/cjs/loader:1070:27)
+        at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+        at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+        at node:internal/main/run_main_module:36:49 {
+      code: 'MODULE_NOT_FOUND',
+      requireStack: []
+    }
+    
+    Node.js v22.13.1
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    Function._load (node:internal/modules/cjs/loader:1070:27)
+    TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    node:internal/main/run_main_module:36:49 {
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/impl-i08/test/infra-backup-restore.test.js:772:12)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 1
+# fail 12
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1363.214541
