@@ -1,0 +1,54 @@
+{
+  "task": "P5_1",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-21T05:18:51.115648+00:00",
+  "head_reviewed": "a2ae530",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "'85 对重叠'为无序对计数; 测试内部计有序对(170)对 >=10 阈值 — 计数惯例说明",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-2",
+      "summary": "red/green 证据路径净化(<repo>/<tmp>)在 README 记录; 评审副本复现证保真无隐藏",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-3",
+      "summary": "npm test 不含 delivery-cases(设计如此, 两类都各自验证)",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-4",
+      "summary": "live worktree 下限 >=25 绑定本机(实际 34); README 已登记 ledger 重基线程序",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-5",
+      "summary": "RED-commit 交叉宿主检查曾误拒共享根; GREEN 的 shared-root 豁免是承重修复 — worker 披露属实",
+      "disposition": "recorded"
+    }
+  ],
+  "independently_rerun": {
+    "green": "10/10 (x2, exit 0)",
+    "red_fidelity": "评审员在 $TMPDIR 重建仓库副本(完整 .git+34 worktree 注册)精确复现 RED-commit: 4 pass/6 fail exit 1, 失败集与证据一致",
+    "matrix_cells_audited": 20,
+    "cells_all_real": true,
+    "cross_host_violation_negative": "自有副本上伪造 comet格引用 llmwiki.js 被拒(exit 1); 非共享 comet 根(1_3.mjs)在 llmwiki 格亦被拒; 共享根(4_4.mjs)正确放行",
+    "a10_recompute": {
+      "dispatches": 26,
+      "waves": 1,
+      "overlap_pairs": 85,
+      "integrations": 24,
+      "matches_worker": true
+    },
+    "a12_chain": "ledger 核实: P1_1 WORKER_COMPLETED(DONE) 03:59:32 -> CHECKBOX_FLIP 04:16:03 -> INTEGRATION_DEFECT P1_1_EVIDENCE_LOGS_UNTRACKED 04:57:08 -> AMENDMENT_INTEGRATED 05:04:42; N2 位于 5_1.mjs:358-364",
+    "npm_test": "415/412/2(恰为 C08+B08) 零新增; 控制器在 merge 7f20d41 复跑 415/411/4(含 adapter×2) 零新增",
+    "boundary_clean": true,
+    "host_path_leak": false
+  },
+  "index_consistency": "F03/F08/A09 与 acceptance-index 无矛盾; P4_8 ledger 绝对路径先于该任务存在且双格式解析对真实 worktree 列表验证"
+}
