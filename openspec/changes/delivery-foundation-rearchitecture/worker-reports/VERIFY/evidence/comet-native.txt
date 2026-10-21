@@ -1,0 +1,36 @@
+=== [V_COMET_NATIVE] executed 2026-10-21T16:34:54+0800 in worktree 68f7963
+command: node tools/comet/build.mjs --check-generated --runtime-smoke --json
+.sdd binding: real pinned build beab355d… (P4_6-revised lock fingerprint) via symlink to impl-p2-4 worktree .sdd (same host, same real artifacts; .sdd is gitignored)
+exit_code: 2
+--- stdout (head 60) ---
+{"code":"TOOLCHAIN_MISMATCH","message":"Verification requires Node 24.15.0; observed 22.13.1"}
+[total 1 lines]
+--- tail 40 ---
+{"code":"TOOLCHAIN_MISMATCH","message":"Verification requires Node 24.15.0; observed 22.13.1"}
+=== [V_COMET_NATIVE] end
+
+=== [V_COMET_NATIVE-rerun-pinned-node] 2026-10-21T16:35:10+0800
+command: $HOME/.nvm/versions/node/v24.15.0/bin/node tools/comet/build.mjs --check-generated --runtime-smoke --json (pinned toolchain per upstream.lock.json; session default node 22.13.1 hit TOOLCHAIN_MISMATCH recorded above — fail-closed, correct behavior)
+exit_code: 2
+--- stdout (head 80) ---
+{"code":"SOURCE_PATH_UNSAFE","message":"Comet source parents must be real project directories"}
+[total 1 lines]
+=== end
+
+=== [V_COMET_NATIVE-rerun2-real-dir] 2026-10-21T16:37:04+0800
+note: run2 failed SOURCE_PATH_UNSAFE because .sdd was a symlink (tool requires real dirs — fail-closed correct); .sdd is now an APFS clone (byte-identical real copy) of the p2-4 .sdd vendor+tools trees
+command: $HOME/.nvm/versions/node/v24.15.0/bin/node tools/comet/build.mjs --check-generated --runtime-smoke --json
+exit_code: 0
+--- stdout (head 80) ---
+
+ RUN  v4.1.11 <host-path-redacted>
+
+
+ Test Files  4 passed (4)
+      Tests  253 passed | 2 skipped (255)
+   Start at  16:37:24
+   Duration  111.01s (transform 1.68s, setup 0ms, import 2.02s, tests 152.32s, environment 2ms)
+
+{"schemaVersion":1,"status":"PASS","version":"0.4.5","sourceCommit":"c90af44a4474662d7853aae76ce785404974fb0a","fingerprint":"beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966","verifiedPreparedSource":"<host-path-redacted> scripts/build/build-classic-runtime.mjs --check","exitCode":0,"status":"PASS"},{"name":"check-generated:native","command":"<host-path-redacted> scripts/build/build-native-runtime.mjs --check","exitCode":0,"status":"PASS"},{"name":"check-generated:entry","command":"<host-path-redacted> scripts/build/build-entry-runtime.mjs --check","exitCode":0,"status":"PASS"},{"name":"runtime-smoke","command":"<host-path-redacted> node_modules/vitest/vitest.mjs run test/domains/comet-classic/comet-scripts.test.ts test/repository/native-runtime-assets.test.ts test/repository/comet-entry-runtime-assets.test.ts test/app/cli-smoke.test.ts","exitCode":0,"status":"PASS"}]}
+[total 10 lines]
+=== end

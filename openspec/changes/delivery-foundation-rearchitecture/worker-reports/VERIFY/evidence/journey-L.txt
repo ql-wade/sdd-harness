@@ -1,0 +1,49 @@
+VERIFY journey family L — real execution in worktree @ 68f79635d1fd5f6c0cddd40321692ee0b91ed4a9
+node v22.13.1 | started 2026-10-21T16:20:22+0800 | commands verbatim from execution-contract.json
+
+[V_L01] exit=0 verdict=PASS reason=None dur=1.1s
+  cmd: node tools/verify/delivery-journey.mjs --scenario L01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L01 --json
+  full stdout archived: .whitebox/verify-runs/V_L01.json (gitignored scratch; this file is the durable pointer)
+
+[V_L02] exit=0 verdict=PASS reason=None dur=1.1s
+  cmd: node tools/verify/delivery-journey.mjs --scenario L02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L02 --json
+  full stdout archived: .whitebox/verify-runs/V_L02.json (gitignored scratch; this file is the durable pointer)
+
+[V_L03] exit=0 verdict=PASS reason=None dur=1.1s
+  cmd: node tools/verify/delivery-journey.mjs --scenario L03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L03 --json
+  full stdout archived: .whitebox/verify-runs/V_L03.json (gitignored scratch; this file is the durable pointer)
+
+[V_L04] exit=0 verdict=PASS reason=None dur=1.1s
+  cmd: node tools/verify/delivery-journey.mjs --scenario L04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L04 --json
+  full stdout archived: .whitebox/verify-runs/V_L04.json (gitignored scratch; this file is the durable pointer)
+
+[V_L05] exit=0 verdict=PASS reason=None dur=1.1s
+  cmd: node tools/verify/delivery-journey.mjs --scenario L05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L05 --json
+  full stdout archived: .whitebox/verify-runs/V_L05.json (gitignored scratch; this file is the durable pointer)
+
+[V_L06] exit=0 verdict=PASS reason=None dur=1.1s
+  cmd: node tools/verify/delivery-journey.mjs --scenario L06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L06 --json
+  full stdout archived: .whitebox/verify-runs/V_L06.json (gitignored scratch; this file is the durable pointer)
+
+[V_L07] exit=0 verdict=PASS reason=None dur=1.1s
+  cmd: node tools/verify/delivery-journey.mjs --scenario L07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L07 --json
+  full stdout archived: .whitebox/verify-runs/V_L07.json (gitignored scratch; this file is the durable pointer)
+
+[V_L08] exit=0 verdict=PASS reason=None dur=1.2s
+  cmd: node tools/verify/delivery-journey.mjs --scenario L08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L08 --json
+  full stdout archived: .whitebox/verify-runs/V_L08.json (gitignored scratch; this file is the durable pointer)
+
+[V_L09] exit=0 verdict=PASS reason=None dur=1.1s
+  cmd: node tools/verify/delivery-journey.mjs --scenario L09 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L09 --json
+  full stdout archived: .whitebox/verify-runs/V_L09.json (gitignored scratch; this file is the durable pointer)
+
+[V_L10] exit=2 verdict=FAIL reason=action-1-failed: exit 1 (expected: exit 0; TAP summary fail=0 with pass>0; test point matching L10 (V_L10 or bare id) is ok when present) dur=0.9s
+  cmd: node tools/verify/delivery-journey.mjs --scenario L10 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L10 --json
+  full stdout archived: .whitebox/verify-runs/V_L10.json (gitignored scratch; this file is the durable pointer)
+
+[V_L11] exit=0 verdict=PASS reason=None dur=1.2s
+  cmd: node tools/verify/delivery-journey.mjs --scenario L11 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L11 --json
+  full stdout archived: .whitebox/verify-runs/V_L11.json (gitignored scratch; this file is the durable pointer)
+
+
+[V_L10-rerun1] exit=0 verdict=PASS — initial FAIL retained above. Root cause: 4_8.mjs:406 JSON.parse read an empty/truncated monitor output while its real SIGKILL exposure-window test was mid-write under system load (J5 test kills a real child; the read has no empty-guard). Exact command re-executed => PASS. Recorded as flake finding F-3 (residual risk: unguarded JSON read in kill-race test; not a product regression).

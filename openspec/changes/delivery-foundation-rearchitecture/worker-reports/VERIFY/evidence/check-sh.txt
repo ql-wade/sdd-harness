@@ -1,0 +1,23 @@
+=== [V_FULL_CHECK] executed 2026-10-21T16:33:04+0800 in worktree 68f7963 (node v22.13.1)
+command: bash scripts/check.sh
+exit_code: 1
+--- output (head 100) ---
+✅ agent-instructions: 规则层完整（AGENTS.md / CLAUDE.md 软链 / docs/agent / hooks / capabilities）
+✅ agent-skills: 5 个基础层技能齐全，触发矩阵一致
+❌ whitebox-verify green fixture failed
+[total 3 lines]
+--- tail 30 ---
+✅ agent-instructions: 规则层完整（AGENTS.md / CLAUDE.md 软链 / docs/agent / hooks / capabilities）
+✅ agent-skills: 5 个基础层技能齐全，触发矩阵一致
+❌ whitebox-verify green fixture failed
+=== [V_FULL_CHECK] end
+
+=== [V_FULL_CHECK-remaining-substeps] manual execution of check.sh steps after the pre-existing whitebox fixture abort (2026-10-21T16:34:36+0800)
+reason: check.sh exits at the known fixture gap; these substeps would not run otherwise
+command: python3 .agents/skills/multi-agent-consensus-review/scripts/test_review_gate.py
+rc=0 (0 = consensus gate tests pass)
+command: npm test (already recorded as V_NPM_REGRESSION: exit 1, 423/425, 2 known HOST_OPENSPEC_DRIFT fails)
+command: yaml/json static validation (check.sh tail block)
+yaml files: 3 (parser: True); json files: 169; parse failures: 1
+  BAD: openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_6/evidence/green-3-contract-check.json Extra data: line 2 column 1 (char 1186)
+=== end
