@@ -25,6 +25,9 @@ import { auditWorkflowRun } from '../lib/workflow-audit.js';
 import { auditDeliverables } from '../lib/deliverable-audit.js';
 import { parseContract } from '../contracts/delivery/index.js';
 import { evaluate } from '../lib/delivery/gate.js';
+import { defineRequiredKnowledge, evaluateRequiredKnowledge } from '../lib/knowledge-seed.js';
+import { evaluateKtFromLedger } from '../lib/adapters/outline.js';
+import { resolveCodeKnowledgeProfile, evaluateCodeWikiReceipt } from '../lib/adapters/code-wiki.js';
 import { discoverKnowledgeSources, copySourcesToRaw } from '../lib/knowledge-seed.js';
 import { getWikiHome } from '../lib/sdd-paths.js';
 
@@ -395,6 +398,127 @@ program
     } catch (error) {
       if (options.json) console.log(JSON.stringify({ schemaVersion: 1, pass: false, error: error.message }));
       else console.error(chalk.red(`❌ Invalid delivery-gate input: ${error.message}`));
+      process.exitCode = 1;
+    }
+  });
+
+// ---- knowledge-closeout（Knowledge.Closeout.v1 判定入口，P4_4）----
+// R06 关闭策略：必需项目知识(Kp)卡归档、必需 Outline 发布(Kt)卡整体完成，
+// 各项收尾义务分别核验。本命令只判定：读取 required 清单与各通道证据
+// （wiki 独立读回 / Runtime 发布账本 / code-wiki 新鲜度回执），不写运行状态、
+// 不派发、不重复部署（deploy 回执只读保留，知识失败绝不触发重部署）。
+// 退出码契约：0 = 收尾义务全部满足（含如实登记的 not-applicable）；1 = 输入无效；
+// 2 = 阻断（报告点名缺失条目/未知结果/待准入分支）。
+program
+  .command('knowledge-closeout')
+  .description('Judge the R06 knowledge closeout obligations (Kp wiki readback + Kt publish ledger + code wiki freshness); read-only, no dispatch, no redeploy')
+  .requiredOption('--project <dir>', 'Project directory')
+  .requiredOption('--change <id>', 'Change id')
+  .requiredOption('--required <file>', 'Required-knowledge manifest JSON (knowledge-seed defineRequiredKnowledge shape)')
+  .option('--wiki-dir <dir>', 'Canonical wiki directory (default: getWikiHome(project)/wiki)')
+  .option('--knowledge-ledger <file>', "Runtime knowledge publish ledger (comet.classic.knowledge-publish.v1); an absent ledger means nothing was registered")
+  .option('--code-policy <file>', 'Code knowledge profile policy JSON (lib/adapters/code-wiki.js shape)')
+  .option('--code-receipt <file>', 'Code wiki generation receipt JSON')
+  .option('--deploy-receipt <file>', 'Release chain JSON — recorded read-only; knowledge closeout never re-deploys')
+  .option('--code-knowledge-mandatory', 'The run policy marks code knowledge mandatory (CODE_KNOWLEDGE_PROFILE_REQUIRED_IF_MANDATORY)', false)
+  .option('--json', 'Print a machine-readable report', false)
+  .action(async (options) => {
+    const readJson = async (file, label) => {
+      let value;
+      try {
+        value = JSON.parse(await fs.readFile(path.resolve(file), 'utf8'));
+      } catch (error) {
+        throw new Error(`cannot read ${label} ${file}: ${error.message}`);
+      }
+      return value;
+    };
+    try {
+      const projectDir = await requireProjectDir(options.project);
+      validateId(options.change, 'change');
+      const required = defineRequiredKnowledge(await readJson(options.required, 'required-knowledge manifest'));
+      const wikiDir = options.wikiDir ? path.resolve(options.wikiDir) : path.join(getWikiHome(projectDir), 'wiki');
+      const blocked = [];
+
+      // Kp — required project knowledge over the canonical wiki readback (E01).
+      const kp = evaluateRequiredKnowledge({
+        required: required.filter((entry) => entry.channel === 'llmwiki'),
+        wikiDir,
+      });
+      for (const entry of kp.missing) blocked.push(`KP_${entry.reason}:${entry.capability}`);
+
+      // Kt — required team publication over the single runtime ledger (E02/D07).
+      let ledger = { schema: 'comet.classic.knowledge-publish.v1', operations: [] };
+      if (options.knowledgeLedger) {
+        const ledgerFile = path.resolve(options.knowledgeLedger);
+        if (await fs.pathExists(ledgerFile)) {
+          const parsed = await readJson(ledgerFile, 'knowledge publish ledger');
+          if (!parsed || parsed.schema !== 'comet.classic.knowledge-publish.v1' || !Array.isArray(parsed.operations)) {
+            throw new Error(`knowledge publish ledger ${options.knowledgeLedger} is not a comet.classic.knowledge-publish.v1 document`);
+          }
+          ledger = parsed;
+        }
+      }
+      const kt = evaluateKtFromLedger({
+        required: required.filter((entry) => entry.channel === 'outline'),
+        ledger,
+      });
+      for (const entry of kt.blocked) blocked.push(`KT_${entry.code}:${entry.capability}`);
+
+      // Code knowledge freshness (4.4.c precondition + pinned-commit receipt).
+      const codePolicy = options.codePolicy ? await readJson(options.codePolicy, 'code knowledge policy') : null;
+      const profile = resolveCodeKnowledgeProfile({ policy: codePolicy, mandatory: options.codeKnowledgeMandatory === true });
+      let code;
+      if (profile.blocked) {
+        code = { ok: false, status: 'PROFILE_REQUIRED', reason: profile.reason };
+        blocked.push('CODE_KNOWLEDGE_PROFILE_REQUIRED');
+      } else {
+        const receipt = options.codeReceipt ? await readJson(options.codeReceipt, 'code wiki receipt') : null;
+        const judged = evaluateCodeWikiReceipt({ profile, receipt });
+        code = profile.pending
+          ? { ok: false, status: 'PENDING_ADMISSION', reason: judged.reason, undecided: profile.undecided }
+          : { ok: judged.ok, status: judged.fresh ? 'FRESH' : 'NOT_APPLICABLE', ...(judged.reason ? { reason: judged.reason } : {}), ...(judged.commit ? { commit: judged.commit } : {}) };
+        if (!judged.ok && !profile.pending) blocked.push(`CODE_${judged.code}`);
+        if (profile.pending) blocked.push('CODE_KNOWLEDGE_PENDING_ADMISSION');
+      }
+
+      // Deploy receipt: recorded READ-ONLY — knowledge closeout never re-deploys
+      // (E01/E06: valid deployment evidence is retained across knowledge rework).
+      let deploy = null;
+      if (options.deployReceipt) {
+        const chain = await readJson(options.deployReceipt, 'deploy receipt');
+        if (!chain || typeof chain !== 'object' || Array.isArray(chain)
+          || !/^[0-9a-f]{40}$/.test(chain.head ?? '') || !/^[0-9a-f]{40}$/.test(chain.merge ?? '')
+          || typeof chain.project !== 'string' || chain.project.length === 0) {
+          throw new Error('deploy receipt must be a release chain object with 40-hex head/merge and a project');
+        }
+        deploy = { status: 'RECEIPT_RETAINED', action: 'read-only — knowledge closeout never re-deploys', head: chain.head, merge: chain.merge, project: chain.project };
+      }
+
+      const report = {
+        schemaVersion: 1,
+        interface: 'Knowledge.Closeout.v1',
+        command: 'knowledge-closeout',
+        project: projectDir,
+        change: options.change,
+        pass: blocked.length === 0,
+        kp,
+        kt,
+        code,
+        ...(deploy ? { deploy } : {}),
+        blocked,
+      };
+      if (options.json) {
+        console.log(JSON.stringify(report));
+      } else {
+        console.log(chalk.blue('\n🧠 Knowledge Closeout\n'));
+        for (const line of blocked) console.log(chalk.red(`❌ ${line}`));
+        if (report.pass) console.log(chalk.green('✅ knowledge closeout obligations are satisfied'));
+        if (deploy) console.log(chalk.gray(`  deploy: ${deploy.status} (${deploy.action})`));
+      }
+      process.exitCode = report.pass ? 0 : 2;
+    } catch (error) {
+      if (options.json) console.log(JSON.stringify({ schemaVersion: 1, interface: 'Knowledge.Closeout.v1', command: 'knowledge-closeout', pass: false, error: error.message }));
+      else console.error(chalk.red(`❌ Invalid knowledge-closeout input: ${error.message}`));
       process.exitCode = 1;
     }
   });
