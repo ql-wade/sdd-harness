@@ -1,0 +1,40 @@
+{
+  "task": "P4_4",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-21T02:16:31.192632+00:00",
+  "head_reviewed": "0ab33bc",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "F1: D06 READBACK_CONFLICT/PUBLICATION_ABSENT 两分支已实现未测（纯加性 fail-closed）；覆盖矩阵两格未获证据支撑",
+      "disposition": "集成波次：补两条断言或报告补注"
+    },
+    {
+      "id": "nb-2",
+      "summary": "F2: 提交序 brief 记载有误（git 实序 5f105cd→4a059fb→1c96f2a→0ab33bc）；测试先行证据链不受影响",
+      "disposition": "run 台账更正"
+    },
+    {
+      "id": "nb-3",
+      "summary": "F3: Kp-pass 用例依赖同文件更早 E01 用例写入的条目（文件内序依赖）",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-4",
+      "summary": "F4: I04 mcp-profile.json workspaceBinding 仍写旧行为（同根因 I04 重登记）",
+      "disposition": "并入 I04 重登记集成波次"
+    }
+  ],
+  "reviewer_independently_reverified": [
+    "净室 5f105cd RED 复现（ERR_MODULE_NOT_FOUND ×2）",
+    "E01 清单结构强制 + RECEIPT_RETAINED 字节不变双处断言",
+    "E02 真实 P4_7 knowledge-authz decide 绑定 + LOCAL_FIXTURE 替换如实标注",
+    "E06 归档重入/确定性 UUID/三负例全断言",
+    "C06 sealCloseout 零改动复用 + 双向 SUBSTITUTION",
+    "D06 真实 launcher spawn + TIMEOUT→readback-first；D07 真实 comet 驱动",
+    "getWikiHome parity 双向锁定；launcher sha 漂移 shasum 实测"
+  ],
+  "tests_run_by_reviewer": "18/18 + 6/6; npm test 374: 373/1 skip/0 fail; delivery-cases 153: 151/2 skip; 净室 RED ×2; --version 0.2.4"
+}
