@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "interface": "LifecycleHookPolicy.v1",
+  "task": "P4_5",
+  "note": "P4_5 是 hooks.yaml 之上的策略校验层（hook-doctor 执行）：hooks.yaml 是唯一策略源（P1_2 所有，本层只读），本文件固定校验语义、声明快照与证据边界；不改 hooks.yaml、不派发共识、不签验收、不写插件缓存。",
+  "policySource": {
+    "path": "hooks.yaml",
+    "readOnly": true,
+    "owner": "P1_2",
+    "compiler": "tools/adapters/claude-code.sh",
+    "fallback": "TARGET_ROOT/hooks.yaml 优先，缺省回退仓库源（与 adapter 的 HOOKS_YAML 回退一致）",
+    "snapshotSemantics": "declaredPolicies 是 P4_5 冻结期快照；活体真相始终是 hooks.yaml，hook-doctor 每次运行重新解析"
+  },
+  "fixedEventSet": [
+    { "hook": "PreToolUse", "matcher": "deny 策略 matcher 并集（当前 Write|Edit|MultiEdit|NotebookEdit|Bash）" },
+    { "hook": "SessionStart", "matcher": "startup|resume" },
+    { "hook": "Stop", "matcher": null }
+  ],
+  "declaredPolicies": [
+    { "id": "kb-write-protection", "hook": "PreToolUse", "action": "deny", "matcher": "Write|Edit|MultiEdit|NotebookEdit" },
+    { "id": "dangerous-command-blocklist", "hook": "PreToolUse", "action": "deny", "matcher": "Bash" },
+    { "id": "session-context-injection", "hook": "SessionStart", "action": "run", "script": "hooks/session-context.sh" },
+    { "id": "stop-sediment-reminder", "hook": "Stop", "action": "run", "script": "hooks/stop-reminder.sh" }
+  ],
+  "validationRules": {
+    "declared_not_generated": {
+      "code": "STRUCTURAL_HOOK_GAP",
+      "meaning": "hooks.yaml 声明但 adapter 受管生成未产出对应注册 → 结构化缺口，必须报告，不静默（E05 hook 缺失面）"
+    },
+    "generated_not_declared": {
+      "code": "UNAUTHORIZED_HOOK_GENERATION",
+      "meaning": "受管来源条目出现在组合视图但无可追溯声明 → 越权生成，必须报告"
+    },
+    "duplicate_registration": {
+      "code": "DUPLICATE_REGISTRATION",
+      "meaning": "相同事件+规范化命令出现于多个条目 → 按拒绝语义报告（§7.2：接入时检查相同事件/命令的重复注册，保留用户条目）；plugin 条目处置权在插件入口，项目侧绝不改写"
+    },
+    "event_beyond_fixed_set": {
+      "code": "HOOK_EVENT_BEYOND_FIXED_SET",
+      "meaning": "声明了固定事件集之外的事件（SubagentStart/UserPromptSubmit/compact 等）→ 当前 adapter 能力缺口，如实报告；新增事件必须修改受管生成逻辑并验证 settings matcher，YAML 追加不生效（§7.3）"
+    },
+    "adapter_composition_failed": {
+      "code": "ADAPTER_COMPOSITION_FAILED",
+      "meaning": "adapter 非零退出拒绝组合 → 原样保留其 stderr，绝不代为生成或修补"
+    },
+    "silentExitZero": {
+      "effect": "NOT_EVIDENCED",
+      "meaning": "hook exit 0 但未产生声明的工作（如上下文注入输出为空）不能当已执行；exit 0 ∈ nonEvidence（P4_6 knownFacts 承接，infra/delivery/runner/role-policy.json methodStateScope）",
+      "executedPredicate": "exit 0 且声明效果有独立观察（非空 stdout / 送达读回）两者同时成立才算 executed"
+    },
+    "modeCrosstalk": {
+      "meaning": "同仓库共享 mode 文件最后写入生效（§6 已知事实）→ mode 不得作为身份/权限/完成判定依据（I02 METHOD_STATE 语义对齐）",
+      "identityBasis": false,
+      "permissionBasis": false,
+      "completionBasis": false
+    }
+  },
+  "nonEvidence": ["hook exit 0", "mode badge", "codebase map"],
+  "knownFactsRef": "infra/delivery/runner/role-policy.json",
+  "registrationDivisionRef": "openspec/changes/delivery-foundation-rearchitecture/classic-closeout-and-hook-contract.md §7.2/§7.3（P1_2 已接纳注册分工门：plugin 来源标记优先；项目受管块移交/去重不含 plugin 条目）",
+  "nativeSupport": {
+    "meaning": "结构面：settings.json + hooks/.compiled.env 的真实 adapter 组合产物可证",
+    "statusDetermination": "由 hook-doctor 每次组合后实测填写（PROVEN / NOT_PROVEN），不预写"
+  },
+  "liveRun": {
+    "meaning": "活体运行：真实 Claude Code 宿主会话中的 hook 触发、上下文实际送达与行为遵守",
+    "status": "UNVERIFIED",
+    "note": "本任务不驱动真实宿主会话、不读改插件缓存；活体送达与遵守由后续宿主验证承接"
+  },
+  "pluginCache": {
+    "modified": false,
+    "rule": "组合只发生在 SDD_TARGET_ROOT 隔离目标（hook-doctor 默认 $TMPDIR）；插件缓存路径零读写"
+  }
+}
