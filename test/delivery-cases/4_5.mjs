@@ -59,8 +59,12 @@ const GATE_INPUT = {
 
 // Compose a fresh member workspace: the real adapter runs against the real
 // repo hooks.yaml (no world-local override) with SDD_TARGET_ROOT=world; the
-// generated settings commands are project-relative, so the hook scripts and
-// the compiled env are distributed into the world like a release view.
+// generated settings commands are project-relative, so the tracked hook
+// scripts are distributed into the world like a release view. The world's
+// compiled env is NOT copied from the repo: the same adapter composition just
+// compiled it into the world from the real hooks.yaml (the repo copy is a
+// gitignored generated artifact — copying it would make this case depend on
+// untracked order-sensitive state).
 function composeWorld(t, { withHooks = true } = {}) {
   const world = fsSync.mkdtempSync(path.join(os.tmpdir(), 'p4-5-case-'));
   t.after(() => fsSync.rmSync(world, { recursive: true, force: true }));
@@ -72,7 +76,7 @@ function composeWorld(t, { withHooks = true } = {}) {
   const settings = JSON.parse(fsSync.readFileSync(path.join(world, '.claude', 'settings.json'), 'utf8'));
   if (withHooks) {
     fsSync.mkdirSync(path.join(world, 'hooks'), { recursive: true });
-    for (const name of ['_resolve-project-dir.sh', 'pre-tool-gate.sh', 'session-context.sh', 'stop-reminder.sh', '.compiled.env']) {
+    for (const name of ['_resolve-project-dir.sh', 'pre-tool-gate.sh', 'session-context.sh', 'stop-reminder.sh']) {
       fsSync.copyFileSync(path.join(projectRoot, 'hooks', name), path.join(world, 'hooks', name));
     }
   }
