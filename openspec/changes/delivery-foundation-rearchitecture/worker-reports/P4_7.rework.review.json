@@ -1,0 +1,48 @@
+{
+  "task": "P4_7",
+  "phase": "rework-r1",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-22T21:30:24.337273+00:00",
+  "head_reviewed": "effcb1a",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "栈实为 5 容器非叙述 6(计数偏差, 登记不依赖)",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-2",
+      "summary": "attachments 500 真实机制=region env 在但未接入 presigned-post 客户端(SDK 'Region is missing'); 修复归部署波次判断不变",
+      "disposition": "recorded; 根因更精确化"
+    },
+    {
+      "id": "nb-3",
+      "summary": "DB apiKeys secret 为无前缀 38 字符 body, findByToken 匹配 bare 或 sha256; 未来登记宜注明可用凭据形态",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-4",
+      "summary": "knowledge-authz.mjs:54 注释可误读为运行时门(实际映射强制仅在登记面); 语义安全",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-5",
+      "summary": "worker anchors 命令串省略必填 --evidence-dir(照抄会 INVALID_INPUT); 实际 8/8 exit 0 可复现",
+      "disposition": "recorded"
+    }
+  ],
+  "independently_rerun": {
+    "boundary_clean": true,
+    "zero_secrets": true,
+    "suites": "34/34 x2",
+    "npm_test": "454/451/2/1 恰已知零新增",
+    "u_matrix_substance": "knowledge-authz.mjs 全 712 行+适配器 123 行通读; 7 测试全文抽读均行为级(具体拒绝码+退出码+回执字段)",
+    "live_probes": "六项全独立复现(owner create 200+读回 200/member 403 x2/stale 409/memberships=1 owner-admin/shares=0/attachments 500)",
+    "stale_409": true,
+    "attachments_500_honest": true,
+    "mutations_redone": "M2(channel-gate removed 2 杀)/M4(directory RE removed 6 杀) 副本重做 cmp HEAD 字节一致",
+    "p25_p46_consistency": "逐点对照同向无冲突(12 字段回执表逐字同序; UUID H04 链; Kp 前置 fail-closed 同向)"
+  }
+}
