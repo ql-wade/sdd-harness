@@ -65,3 +65,53 @@ test-author → builder → whitebox 角色及其开发任务路径界。角色�
 - F08 的"原生浏览器"能力在本试点不存在，按 spec 记 unverified 并阻断 gate——
   这是场景的指定落脚点，不是覆盖缺口；真实浏览器验收留待具备该能力的环境。
 - 夹具项目全部位于 os.tmpdir，运行后即为临时目录；本目录只保留证据 JSON。
+
+## 返工增量（rework-seven-p1-r1，P3_2，分支 rework/p3-2-same-run-recipe，基 73186e5）
+
+返工边界（tasks.md Step 7/8 + execution-contract `journey_execution.construction_task_scopes.P3_2`）：
+slugify 替身编舞只证明角色链判定机制，不再充当 Comet 派发；本任务以真实受管
+Comet CLI（仓库锁指纹 d4370930，六补丁链）实跑 R 确认→V 的角色执行切片。
+
+### 新增产物
+
+- `same-run-delivery.journey.json` — V_SAME_RUN_DELIVERY 的完整旅程步骤计划（11 步：
+  R 确认→A grill+全票共识→T 独立审查→P→TDD→Whitebox→Kp→真实归档→Outline 未知
+  结果/重启恢复→Kt→completed），每步含角色身份、dispatch 绑定（真实 CLI 命令面）、
+  gate/前置、epoch/代际语义、记录字段清单；步骤 1–6 归 P3_2 建设切片，步骤 7–11
+  execution_owner=VERIFY（不以整条最终旅程 PASS 作为建设前置）。
+- `same-run-delivery.case.json` — journey_definitions 注册面绑定的配方
+  （scenario E06，caseModule 本套件，requiredAssertions 钉住 E06 及三个 V_E06 复合
+  断言；verdictSemantics 明确 PASS 只证建设切片，从不签完整旅程）。
+- `test/delivery-cases/3_2.mjs` 三个新测试（`V_E06:*`）：
+  - `V_E06:rv-slice-real-cli` — 真实 CLI 上：无 R receipt 时 open-complete 拒绝
+    （enter-design 强制，P1-01）、R/A/T/P/V 逐 gate 真实 dispatch→accept、A 消费本
+    run r3 真实全票回执（只读正控；2:1 多数与缺票拒绝）、T 弱 oracle 拒绝、
+    complete-design→TDD build（注册 check 身份）→V→verify-pass；切片止步归档边界，
+    phase=archive、completionBlocked=true（Kt 席位未闭合）、change 未进 archive。
+  - `V_E06:p25-consensus-consumption` — P2_5 消费契约：r3 真实回执经真实机械门
+    重放（initConsensusRun/admitBallot/tally/finalize），consumeArchitectureGate 只
+    经受信 launcher dispatch 消费；伪造来源 FORGED_DISPATCH、跨材料
+    ARTIFACT_DIGEST_MISMATCH 拒绝。
+  - `V_E06:recipe-tracking` — 注册面绑定（owner/required_check/path）、配方结构、
+    旅程步骤计划顺序与所有权边界，以及真实 runner 负例：未注册 journey 名、注册但
+    配方未落盘（override plan 指向不存在路径）、注册不完整 —— 全部结构化非零拒绝。
+
+### 验证回执（详见 worker-reports/P3_2-rework/evidence/）
+
+`--journey same-run-delivery --profile managed-pilot` exit 0 PASS（target E06
+found+ok，13/13 测试点，四断言全 satisfied）；V_B02/V_B04/V_B05/V_F08 四条合同
+场景通道回归全 PASS；全量 `npm test` 442 tests / 439 pass / 2 fail / 1 skip ——
+两个失败为基线已知环境项（C08 host-openspec 漂移、B08 preservation），零新增；
+三次变异注入（配方 scenario 篡改 / 归档步骤所有权篡改 / 不可执行 required 断言）
+均被捕获，实现逐字节还原。
+
+### 边界
+
+- 上表"记录的执行"（chain-*.json）是上一轮的判定机制证据，仍然有效；本轮增量是
+  真实 CLI 派发面，两者互补：前者证角色判定独立性，后者证 Comet 受管运行时真实
+  绑定。完整旅程（Kp→真实归档→Outline 未知恢复→Kt→completed）仍由 VERIFY 执行。
+- Outline 栈在本轮返工时点 loopback 3000/5556 ECONNREFUSED（栈未运行），Kp/归档/
+  Outline/Kt 段如实 UNVERIFIED，holder=VERIFY。
+- 固定合同命令 `--scenario E06 --journey same-run-delivery` 被当前 runner 判
+  INVALID_INPUT（--journey 与 --scenario 互斥，runner 归 P3_1；配方自带 scenario），
+  已如实记录；`--journey same-run-delivery`（runner 支持形）为本次验证通道。
