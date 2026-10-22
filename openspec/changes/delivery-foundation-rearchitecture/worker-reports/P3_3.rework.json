@@ -1,0 +1,73 @@
+{
+  "task": "P3_3 (rework-seven-p1-r1): V_RW_REAL_COMET_RECOVERY 恢复配方 + 有限核心事务恢复",
+  "run": "rework-seven-p1-r1",
+  "worktree": ".claude/worktrees/rw-p3-3 (branch rework/p3-3-recovery, base a1a7b31 = master HEAD at dispatch; opening receipt in evidence/00)",
+  "final_status": "DONE",
+  "steps_done": "9/9 (tasks.md P3_3 Steps 1-6: 既有 3_3.a/3_3.b 机制套件保持绿并在本轮套件回归内复验；Steps 7/8 = real-comet-recovery 配方 + 真实 CLI 核心事务提交前/后恢复有限切片 RED→GREEN；Step 9 提交序列)",
+  "deliverables": {
+    "a_journey_recipe": {
+      "recipe": "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.case.json (journey_definitions 绑定路径, schema-valid: schemaVersion/scenario L11/acceptanceIds=D08,H01,H03,H07,L10,L11/requiredAssertions 4 pins/caseModule=test/delivery-cases/3_3.mjs/actions/evidence/verdictSemantics)",
+      "stepPlan": "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.journey.json — 9 步恢复旅程步骤计划 (1-run-in-progress → 2-kill-pre-commit → 3-kill-post-commit → 4-old-writer-fencing → 5-stale-refusal → 6-recovery-readback → 7-outline-unknown-result → 8-monitoring-backup-qualification → 9-resumed-run-completed)，含 sameRunCoordination 与 dispatchContract invariants (H03/H06 job-key 唯一 open owner、一派发一结果、P1-03 代际)；步骤 1/7-9 executionOwner=VERIFY",
+      "p3_2_coordination": "pilot-journey/same-run-delivery.journey.json 步骤 9-outline-unknown-recovery 是同产品 Run 内的故障窗口，其 gate 明示 'run-level recovery (bounded actual Comet transaction recovery, P3_3 recipe)'——本配方承接该指示的有限切片；host journey 步骤 9 的 executionOwner=VERIFY 不动，live Outline 未知结果调和仍由 VERIFY 执行 (order_semantics: completed 之前注入并恢复)",
+      "registration": "verification-case-plan.json journey_definitions.real-comet-recovery (owner P3_3, required_check V_RW_REAL_COMET_RECOVERY, path=pilot-recovery/real-comet-recovery.case.json) — 配方落盘前 --journey real-comet-recovery → exit 2 journey-recipe-not-implemented (RED-1, owner P3_3, registeredStatus TO_IMPLEMENT)；落盘后同命令 → exit 0 PASS (target L11 found+ok, 8/8, 4/4 assertions)。负例持续钉住: 未注册名→journey-not-registered exit 2 (recipe-tracking 套件内真实 runner 复验)"
+    },
+    "b_bounded_recovery_slice": {
+      "mechanism": "test/delivery-cases/3_3.mjs V_RW_REAL_COMET_RECOVERY:L11-core-transaction — 真实受管 Comet CLI (repo lock → 指纹 d4370930) 于 $TMPDIR 隔离 scratch 项目。恢复引擎=CLI 自己的 classic-state 面: journal .comet-state-transaction.json (schema comet.classic.state-transaction.v1) + 锁 .comet-state.lock，.comet.yaml rename=提交点，下一个真实 CLI 操作执行 recoverStateTransaction (提交前 roll-back/提交后 roll-forward)。三个真实窗口逐落盘证据 (killedPid/signal/确认死亡/journal schema/事务前后 sha256/恢复读回, evidence/14): (1) dispatch 窗口: 杀 dispatch-gate → 再派发 recovered:true 且 execution 不变 (gate-a-…-a493de31), open dispatch 恰 1 (无双派发, H03/H06); (2) 提交前: journal 在+yaml=事务前字节 (sha256 相等) → 恢复后 journal 消费、零回执、phase=design 不变、run 状态字节不变、被杀 attempt 重放被拒 ('already consumed; a dispatch accepts exactly one result')、新派发重试恰一次发布且被杀 execution 永零回执; (3) 提交后: journal 在+yaml=提交字节 → 恢复后 journal 消费、yaml sha256 恢复前后相等 (不重写已提交字节)、T 回执对被杀 execution 恰一次 (attempt/epoch/generation 齐全, P1-03)、重放被拒且字节不动。读回面: state get/gates/next — Run 身份、journal 缺席、批准依据 (gate receipts 含被杀/重试 execution)、continuation (nextAction.kind + continuation.skill=comet-*)",
+      "fencing": "V_RW_REAL_COMET_RECOVERY:L11-fencing — 锁层旧写者栅栏: 真实存活子进程 pid 持 .comet-state.lock (i08 fence-evidence 同形) → 真实 CLI state set 被 'Timed out waiting for file lock' 拒绝且状态字节不动; 真实 SIGKILL + 死亡确认后同操作 exit 0、无残留锁文件 (I08 fencing 语义 CLI 层同机半边)",
+      "injection_honesty": "真实 SIGKILL 全程 (node spawn + process.kill, monitor.mjs/I07 手法); fs.watch 在会话沙箱被拒 (EMFILE, watch syscall denied, 在案) → 毫秒级 stat 轮询触发; 逐尝试磁盘字节分类 (pre-commit/post-commit/missed-committed/missed-early), 预算 (40/60/60) 内未命中即测试失败——绝不伪造落点; 临时计数 worker/假 MCP/假 archive 零使用; 禁止手写控制状态 (唯一写入=锁 owner 记录的真实 pid, i08 同形)"
+    },
+    "c_dependency_honesty": {
+      "outline_live_window": "步骤 7 (live Outline 未知结果调和)/8 (独立监控+备份资格)/9 (续跑至 completed) 未执行、未签 PASS: 依赖 I07/I08/P4 机制与 V_SAME_RUN_DELIVERY 同产品 Run; holder=VERIFY (journey 步骤 1/7-9 + execution-contract journey_execution)",
+      "docker": "会话沙箱 docker EPERM (在案); construction scope 零 docker 类操作 (全部证据=真实 CLI 子进程+磁盘字节); docker 类操作清单 (VERIFY 尾的 S1/S2 段) 写入 worker-reports/P3_3-rework/terminal-channel-commands.sh, 不代跑",
+      "contract_command": "固定合同命令 --scenario L11 --journey real-comet-recovery 被 runner 判 INVALID_INPUT exit 1 (--journey 与 --scenario 互斥, delivery-journey.mjs 归 P3_1; 配方自带 scenario L11) — 与 P3_2 对 V_SAME_RUN_DELIVERY.command 的发现相同; 命令串调和归 P3_1/控制器 (evidence/03); 支持形 --journey real-comet-recovery 为验证通道且 PASS"
+    }
+  },
+  "mutations_caught": [
+    "M1 配方 scenario L11→L10 → V_RW_REAL_COMET_RECOVERY:recipe-tracking 失败 exit 1 (not ok, # fail 1) — evidence/08; 逐字节还原 (sha256 -c OK)",
+    "M2 旅程步骤 7-outline-unknown-result executionOwner VERIFY→P3_3 (live 窗口所有权窃取) → recipe-tracking 失败 exit 1 — evidence/09; 逐字节还原 (sha256 -c OK)",
+    "M3 配方 requiredAssertions+tapRequiredAssertions 钉 V_RW_REAL_COMET_RECOVERY:L11-core-transaction→pin-never-executed → journey FAIL ('required assertion …pin-never-executed not satisfied …(missing)') — evidence/10; 逐字节还原, 还原后 journey 复验 PASS (evidence/04a)"
+  ],
+  "red_cases": [
+    "RED-1: 配方未落盘时 --journey real-comet-recovery → exit 2 NOT-EXERCISED journey-recipe-not-implemented (真实 runner 拒绝, owner P3_3, registeredStatus TO_IMPLEMENT) — evidence/01",
+    "RED-2: 配方+旅程计划落盘、目标测试未实现时同命令 → exit 2 FAIL action-1-failed: required assertion L11/三复合钉全部 missing (配方执行但分母无执行测试点, 行为 RED) — evidence/02",
+    "机制级 RED 持续钉住: 无 R receipt 的 open-complete 拒绝、A/T 负例拒绝 (既有套件); 栅栏 live-writer 拒绝、重放拒绝为套件内永久负例"
+  ],
+  "green_summary": {
+    "owned_suite": "test/delivery-cases/3_3.mjs 8/8 pass (5 既有 + 3 新), exit 0 ×2 (evidence/05 记录 x2) + journey 内含 ×1 + 还原后 spot check ×1",
+    "journey": "--journey real-comet-recovery --profile managed-pilot → exit 0 PASS, target L11 found+ok, requiredAssertions 4/4 satisfied, tests 8 pass/fail 0/skipped 0 (evidence/04, 还原后 04a 复验 PASS)",
+    "scenario_lanes": "A10/A12 (case plan 绑定 3_3.mjs 的两条合同命令) 全 exit 0 PASS (evidence/06); 锚点核对见 evidence/12",
+    "full_regression": "npm test: 442 tests / 439 pass / 2 fail / 1 skip — 两失败=基线已知环境项 (C08 host-openspec 漂移, B08 preservation), 零新增 (evidence/07)"
+  },
+  "scenario_anchor_check": "A10/A12 (3_3.mjs 绑定场景) 经真实 runner PASS; L11 为 journey target found+ok; D08/H01/H03/H07/L10 以 acceptanceIds 记于配方而不代表其完整旅程; 未知 journey 负例 exit 2 (evidence/12)",
+  "commands": {
+    "node tools/verify/delivery-journey.mjs --journey real-comet-recovery --profile managed-pilot --evidence-dir <tmp> --json (RED-1, 配方未落盘)": "exit 2",
+    "同命令 (RED-2, 配方已落盘测试未实现)": "exit 2",
+    "同命令 (GREEN)": "exit 0 ×2 (含变异还原后 spot check)",
+    "node --test test/delivery-cases/3_3.mjs": "exit 0 ×4 (8/8)",
+    "node --test --test-name-pattern=recipe-tracking test/delivery-cases/3_3.mjs (M1/M2)": "exit 1 ×2 (caught)",
+    "node tools/verify/delivery-journey.mjs --journey ... (M3)": "exit 2 FAIL (caught)",
+    "node tools/verify/delivery-journey.mjs --scenario A10|A12 --profile managed-pilot --evidence-dir <tmp> --json": "exit 0 ×2",
+    "npm test (full)": "442/439/2/1 — 两失败=基线已知项, 零新增",
+    "node tools/verify/delivery-journey.mjs --scenario L11 --journey real-comet-recovery ... (固定合同命令串)": "exit 1 INVALID_INPUT (runner 界面互斥, 见 unverified/协调项)"
+  },
+  "unverified": [
+    "V_RW_REAL_COMET_RECOVERY 完整旅程 (同产品 Run 内 live Outline 未知结果窗口、独立外部监控、备份资格、续跑 completed): execution_owner=VERIFY, 依赖 I07/I08/P4 机制 (journey 步骤 1/7-9); 本任务不以配方校验关闭 D08/H01/H03/H07/L10/L11 的完整语义",
+    "跨机分布式互斥与跨机恢复: 单环境语义 (既有边界) + I08 跨机半边, holder 不变",
+    "固定合同命令串含 --scenario L11 与 --journey 互斥 → INVALID_INPUT: 命令串调和归 runner owner P3_1/控制器 (与 P3_2 同一发现; 支持形已 PASS)"
+  ],
+  "files_changed": [
+    "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.case.json (新增, 注册面绑定路径)",
+    "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.journey.json (新增, 9 步旅程计划 + sameRunCoordination)",
+    "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/README.md (追加本轮返工增量段)",
+    "test/delivery-cases/3_3.mjs (追加 V_RW_REAL_COMET_RECOVERY 三测试 + 真实 CLI 切片 harness)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_3.rework.json (新增)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_3-rework/terminal-channel-commands.sh (新增, docker 类操作清单)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_3-rework/evidence/ (00-14 .txt)"
+  ],
+  "commits": {
+    "sequence": "test(P3_3 rework): RED receipts … / feat(P3_3 rework): real-comet-recovery recipe + journey step plan + bounded real-CLI core-transaction recovery … / test(P3_3 rework): GREEN/mutation/regression evidence + report — 全部带 'P3_3 rework' 标记, 零宿主绝对路径"
+  },
+  "blockers_or_questions": [
+    "合同命令串调和 (同 P3_2): V_RW_REAL_COMET_RECOVERY.command 的 '--scenario L11 --journey real-comet-recovery' 与 runner --journey/--scenario 互斥校验冲突; 建议控制器集成时将该检查命令改为 '--journey real-comet-recovery ...' (配方自带 scenario) 或由 P3_1 放行组合 — 不阻塞本任务交付 (支持形已全绿)"
+  ]
+}

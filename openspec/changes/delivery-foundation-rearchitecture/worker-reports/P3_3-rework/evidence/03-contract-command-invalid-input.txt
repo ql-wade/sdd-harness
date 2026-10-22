@@ -1,0 +1,13 @@
+contract command string probe (execution-contract check V_RW_REAL_COMET_RECOVERY.command, verbatim):
+  node tools/verify/delivery-journey.mjs --scenario L11 --journey real-comet-recovery --profile managed-pilot --evidence-dir $TMPDIR/p33-cmd --json
+date: 18:20:25Z
+{
+  "error": "INVALID_INPUT",
+  "message": "--journey and --scenario are mutually exclusive; a journey recipe declares its own scenario"
+}
+Usage: node tools/verify/delivery-journey.mjs --scenario <ID> --profile <profile> --evidence-dir <dir> [--json]
+       [--case-plan <path>] [--pilot-contract <path>] [--case-definition <path>]
+exit=1 (INVALID_INPUT; the head pipeline masked the runner exit in this capture — re-verified standalone: same command without piping exits 1)
+
+finding: the pinned contract command is INVALID_INPUT exit 1 (--journey and --scenario are mutually exclusive; the recipe declares scenario L11 itself).
+Same runner-surface finding P3_2 recorded for V_SAME_RUN_DELIVERY.command; the supported form --journey real-comet-recovery is the verification channel and PASSES (evidence 04). Command-string reconciliation belongs to the runner owner (P3_1) / controller integration, not this task.

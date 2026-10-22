@@ -1,0 +1,74 @@
+kill-window evidence (mirrored from fixture workdir via P33_KILL_EVIDENCE_DIR; real pids, real SIGKILL, disk-byte classification; each window landed on attempt 1 in the recorded green run)
+
+--- dispatch-recovery.json
+{
+  "window": "dispatch-recovery",
+  "change": "p33-core-txn",
+  "killedPid": 26019,
+  "signal": "SIGKILL",
+  "confirmedGone": true,
+  "recoveredExecution": "gate-a-mvjuvji8-a493de31",
+  "recoveredAttempt": 1,
+  "recoveredEpoch": 2,
+  "recoveredGeneration": 0,
+  "changeStateSha256": "17a3af680e82960da0bd2500bca0b0e8f43f9e1af69ed18febeaeeed6e6e82a2",
+  "openDispatchesAfter": 1,
+  "attempts": 1
+}
+
+--- pre-commit-kill.json
+{
+  "window": "pre-commit-kill",
+  "change": "p33-core-txn",
+  "killedPid": 26193,
+  "signal": "SIGKILL",
+  "confirmedGone": true,
+  "journalSchema": "comet.classic.state-transaction.v1",
+  "killedExecution": "gate-a-mvjuvji8-a493de31",
+  "killedAttempt": 1,
+  "yamlSha256AtKill": "17a3af680e82960da0bd2500bca0b0e8f43f9e1af69ed18febeaeeed6e6e82a2",
+  "yamlSha256Before": "17a3af680e82960da0bd2500bca0b0e8f43f9e1af69ed18febeaeeed6e6e82a2",
+  "runStateAtKill": null,
+  "recovery": {
+    "op": "comet state get phase",
+    "exitCode": 0,
+    "journalPresentAfter": false
+  },
+  "receiptCountForKilledExecution": 0,
+  "replayRefusal": "ERROR: dispatch gate-a-mvjuvji8-a493de31 is already consumed; a dispatch accepts exactly one result (idempotent refusal)",
+  "attempts": 1
+}
+
+--- post-commit-kill.json
+{
+  "window": "post-commit-kill",
+  "change": "p33-core-txn",
+  "killedPid": 26699,
+  "signal": "SIGKILL",
+  "confirmedGone": true,
+  "journalSchema": "comet.classic.state-transaction.v1",
+  "committedExecution": "gate-t-mvjuvkto-efbac88e",
+  "committedAttempt": 1,
+  "yamlSha256AtKill": "3d2a7bda4b3300cb72eec443f9e7c262797deebbce3e003f7319f6c3e9a77068",
+  "yamlSha256AfterRecovery": "3d2a7bda4b3300cb72eec443f9e7c262797deebbce3e003f7319f6c3e9a77068",
+  "runStateAfterRecovery": null,
+  "receiptCountForCommittedExecution": 1,
+  "replayRefusal": "ERROR: dispatch gate-t-mvjuvkto-efbac88e is already consumed; a dispatch accepts exactly one result (idempotent refusal)",
+  "continuation": {
+    "kind": "complete-design",
+    "skill": "comet-design"
+  },
+  "attempts": 1
+}
+
+--- old-writer-fencing.json
+{
+  "window": "old-writer-fencing",
+  "change": "p33-fencing",
+  "liveWriterPid": 27151,
+  "fencedRefusalExit": "nonzero (lock timeout)",
+  "killedSignal": "SIGKILL",
+  "recoveredOperationExit": 0,
+  "staleLockLeftBehind": false
+}
+
