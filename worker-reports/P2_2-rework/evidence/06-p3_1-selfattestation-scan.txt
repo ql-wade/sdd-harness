@@ -1,0 +1,21 @@
+rework-seven-p1-r1 / P2_2 — P3_1 connected check: registered-value self-attestation (登记值自证) scan over owns tests
+pattern searched: expected values anchored to registered/baseline repo files (echoing a registered value) instead of independently constructed inputs
+
+[1] all filesystem reads inside owns tests:
+test/delivery-gate.test.js:224:  const before = fs.readdirSync(dir).sort();
+test/delivery-gate.test.js:227:  const after = fs.readdirSync(dir).sort();
+test/delivery-gate.test.js:232:  const gateSource = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../lib/delivery/gate.js'), 'utf8');
+test/delivery-cases/2_2.mjs:91:    artifactDigest: shaBytes(fs.readFileSync(artifactPath)),
+test/delivery-cases/2_2.mjs:308:    'const binding = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));',
+test/delivery-cases/2_2.mjs:326:  const forged = JSON.parse(fs.readFileSync(productPath, 'utf8'));
+test/delivery-evidence.test.js:316:    'const binding = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));',
+test/delivery-evidence.test.js:317:    'const envelope = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));',
+test/delivery-evidence.test.js:351:  const product = JSON.parse(fs.readFileSync(productPath, 'utf8'));
+
+assessment:
+- test/delivery-gate.test.js:224/227 — readdirSync on a private mkdtemp dir (fs side-effect probe), not a registered file
+- test/delivery-gate.test.js:232 — reads lib/delivery/gate.js SOURCE for a structural import-absence scan (module under test, an absence property; never echoes a registered value; behavior independently proven by the determinism assertions in the same test)
+- test/delivery-evidence.test.js:316-317/351 + test/delivery-cases/2_2.mjs:308/326 — worker scripts/artifacts in mkdtemp dirs
+- test/delivery-cases/2_2.mjs:91 — digests the TAP artifact a REAL spawned node --test run just produced (independent observation)
+- all expected values in owns tests come from inline literal fixtures, freshly issued dispatches, and real spawned runs; NO test reads .sdd/, openspec/ or any registered baseline to source an expected value
+VERDICT: no registered-value self-attestation pattern found in P2_2 owns — no RED->GREEN repair required

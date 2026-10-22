@@ -1,0 +1,11 @@
+rework-seven-p1-r1 / P2_2 — mutation injection: rejection logic neutralized per family -> test suite MUST exit 1; restored -> MUST exit 0
+each mutation: exact-string patch applied to lib source, node --test on all three owns test files, restore via git checkout --
+
+M1-evidence-STALE_CANDIDATE: red_exit=1 caught_by=['not ok 16 - receipts bound to an old candidate input digest are refused (STALE_CANDIDATE)'] green_exit=0 -> OK
+M2-evidence-DUPLICATE_ISSUANCE: red_exit=1 caught_by=['not ok 14 - A06: the same execution identity cannot issue evidence twice (duplicate issuance refused)'] green_exit=0 -> OK
+M3-evidence-EXPIRED_ENVELOPE: red_exit=1 caught_by=['not ok 18 - expired envelopes are refused'] green_exit=0 -> OK
+M4-evidence-NO_OBSERVATION: red_exit=1 caught_by=['not ok 19 - A18: a pass claim without real observation data is refused at admission'] green_exit=0 -> OK
+M5-evidence-FORGED_DISPATCH: red_exit=1 caught_by=['not ok 8 - V_A19 (local half): a child process with a scrubbed environment cannot mint a trusted dispatch', 'not ok 11 - 2.2.c: a forged dispatch record (fixture or worker-built) fails the launcher integrity check', 'not ok 24 - 2.2.c: a worker process that does not inherit the launcher secret cannot mint a dispatch (real spawnSync)'] green_exit=0 -> OK
+M6-gate-MISSING_OBSERVATION: red_exit=1 caught_by=['not ok 2 - V_A18: an environment crash is recorded truthfully as unverified and stays blocked, and a missing capability is never fabricated', 'not ok 6 - V_B06: a service log and a DOM check cannot close a required console check', 'not ok 27 - A18: a required capability with no receipt stays blocked (never fabricated as pass)'] green_exit=0 -> OK
+M7-gate-UNVERIFIED_CAPABILITY: red_exit=1 caught_by=['not ok 2 - V_A18: an environment crash is recorded truthfully as unverified and stays blocked, and a missing capability is never fabricated'] green_exit=0 -> OK
+M8-gate-IDENTITY_CONFLICT: red_exit=1 caught_by=['not ok 4 - V_A06: one execution identity cannot be both builder and verifier', 'not ok 31 - A06: a receipt whose execution equals the builder execution is blocked at the gate'] green_exit=0 -> OK

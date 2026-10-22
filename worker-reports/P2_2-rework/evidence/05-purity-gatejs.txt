@@ -1,0 +1,13 @@
+rework-seven-p1-r1 / P2_2 — gate.js purity (SDD.Gate.v1: evaluate has no dispatch, no global state, no time source)
+
+[1] forbidden constructs in lib/delivery/gate.js (exit 1 = zero matches = clean):
+grep-exit:1 (1 = zero matches)
+
+[2] complete import list of lib/delivery/gate.js:
+19:import { createHash } from 'node:crypto';
+20:import { parseContract } from '../../contracts/delivery/index.js';
+21:import { envelopeDigest } from './evidence.js';
+
+[3] behavioral determinism (from family re-verification): 'PURITY: evaluate deterministic' PASS in evidence 01/02 — two calls with identical inputs produce deep-equal receipts, evidence digests sorted
+
+[4] owns-suite purity test name: 'evaluate is pure: deterministic output, no filesystem side effects, no stage writes' — green in evidence 07 (36/36 x2)

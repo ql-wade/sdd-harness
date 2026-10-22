@@ -1,0 +1,73 @@
+{
+  "run": "rework-seven-p1-r1",
+  "task": "P2_2",
+  "task_title": "原任务 2.2 — EvidenceEnvelope/来源准入 + GateReceipt；SDD.Gate.v1 纯 evaluate 重验（A05–A06/A18–A19/B03/B06–B07）",
+  "final_status": "DONE",
+  "worktree": "rw-p2-2 @ master@88c49f9, branch rework/p2-2-gate",
+  "opening_receipt": "git log --oneline -1 -> 88c49f9 chore(openspec): accept P3_1 rework (11/11; review APPROVED; merge e278b81)",
+  "steps_done": "8/8",
+  "old_pass_inherited": false,
+  "steps": {
+    "step1_2.2.a_test": "All admission negatives re-executed against CURRENT source with independently constructed inputs (fresh launcher secrets, fresh digests, fresh fixtures — nothing imported from the test files): UNREGISTERED_SOURCE, MALFORMED_DISPATCH, FORGED_DISPATCH (post-sign tamper + worker-minted sha integrity), IDENTITY_CONFLICT (builder role), ROLE_NOT_DISPATCHED (genuinely signed unknown role), EXECUTION/ORIGIN/CANDIDATE_BINDING_MISMATCH, STALE_CANDIDATE, STALE_POLICY, STALE_ENVIRONMENT, EXPIRED_ENVELOPE, DUPLICATE_ISSUANCE, NO_OBSERVATION (valid<1 and valid>total), INVALID_ENVELOPE (schemaVersion 0/2/torn) + 2 positive controls. 19/19 evidence-side checks PASS x2 runs. evidence 01/02.",
+    "step2_2.2.a_implement": "No implementation change required: current lib/delivery/evidence.js passed every real negative with the correct refusal code and reason; re-verified, not inherited.",
+    "step3_2.2.b_test": "All gate negatives re-executed the same way: 4 INVALID_* throws, TAMPERED_RECEIPT x2 (digest mismatch + identity rewrite), STALE_POLICY/STALE_INPUT at gate, IDENTITY_CONFLICT at gate (builder==verifier), MISSING_OBSERVATION (zero receipts + half coverage), AUTHORING_SELF_CHECK_ONLY, UNVERIFIED_CAPABILITY, B06 substitution (dom+service-log cannot close console), and 3 quorum-leak probes (stray capability counts nothing; duplicated receipt cannot satisfy a different capability; pass verdict requires every required check independently satisfied) + determinism. 19/19 gate-side checks PASS x2 runs. evidence 01/02.",
+    "step4_2.2.b_implement": "No implementation change required: evaluate(inputs,receipts,policy) is pure — no dispatch, no current-stage write, no global state, no time source; re-verified, not inherited.",
+    "step5_2.2.c_test": "Protected-source boundary re-verified: worker-minted dispatch (sha256 self-signature over the exact binding) refused as FORGED_DISPATCH in the independent re-run; real spawnSync negatives (scrubbed-env child cannot mint a trusted dispatch) re-executed green inside the owns suites (2_2.mjs V_A19, delivery-evidence.test.js 2.2.c) — 36/36 owns green x2. evidence 01/07.",
+    "step6_2.2.c_implement": "No implementation change required; re-verified, not inherited.",
+    "step7_review": "Mutation injection 8 families x (RED exit 1 -> restore -> GREEN exit 0), all caught with named failing tests; zero residue (git status/diff on lib/ and test/ empty). P3_1 connected scan over owns tests: zero registered-value self-attestation (only repo-path read is gate.js own-source import-absence scan, an absence property of the module under test; behavior independently proven by determinism + fs-probe assertions). git diff 88c49f9...HEAD name-only -> report paths only; full-diff host-path scan -> zero matches.",
+    "step8_commit": "Serial commit with P2_2 rework identifier; only report+evidence files (owns sources unchanged: 0 implementation diff lines)."
+  },
+  "rejection_families_reverified": [
+    { "family": "STALE_CANDIDATE", "negative": "dispatch+envelope agree with each other but both lag current inputDigest (independently constructed digests)", "mutation_caught": "M1: check neutralized -> node --test owns trio exit 1, caught by 'receipts bound to an old candidate input digest are refused (STALE_CANDIDATE)'" },
+    { "family": "FORGED_DISPATCH", "negative": "genuine dispatch with inputDigest tampered after signing; separately a worker-minted sha256 integrity over the exact binding", "mutation_caught": "M5: verifyDispatch result bypassed -> exit 1, caught by 3 tests incl. real spawnSync worker-mint cases (V_A19 + 2.2.c x2)" },
+    { "family": "DUPLICATE_ISSUANCE", "negative": "issuedExecutions already contains the dispatch execution", "mutation_caught": "M2: check neutralized -> exit 1, caught by 'the same execution identity cannot issue evidence twice'" },
+    { "family": "EXPIRED_ENVELOPE", "negative": "envelope expiry before the pinned now", "mutation_caught": "M3: check neutralized -> exit 1, caught by 'expired envelopes are refused'" },
+    { "family": "NO_OBSERVATION", "negative": "result pass with 0 valid executions; separately valid>total contradiction", "mutation_caught": "M4: valid<1 guard neutralized -> exit 1, caught by 'A18: a pass claim without real observation data is refused at admission'" },
+    { "family": "MISSING_OBSERVATION (gate)", "negative": "required capability with zero receipts; half coverage (console missing while unit present)", "mutation_caught": "M6: missing check fabricated as satisfied (valid+=1, quorum leak) -> exit 1, caught by 3 tests incl. V_A18 environment-crash and V_B06" },
+    { "family": "UNVERIFIED_CAPABILITY (gate)", "negative": "admitted truthful unverified envelope blocks its capability", "mutation_caught": "M7: observed filter accepts any result string -> exit 1, caught by V_A18 (real spawned crash run)" },
+    { "family": "IDENTITY_CONFLICT (gate)", "negative": "receipt execution == inputs.builderExecution (admission cannot see it, gate can)", "mutation_caught": "M8: check neutralized -> exit 1, caught by V_A06 + 'A06: a receipt whose execution equals the builder execution'" },
+    { "family": "UNREGISTERED_SOURCE / MALFORMED_DISPATCH / ROLE_NOT_DISPATCHED / binding mismatches / STALE_POLICY / STALE_ENVIRONMENT / INVALID_ENVELOPE / TAMPERED_RECEIPT / STALE_INPUT / AUTHORING_SELF_CHECK_ONLY / B06 substitution", "negative": "all re-fired with correct codes+reasons on independently constructed inputs (38/38 checks PASS x2)", "mutation_caught": "covered structurally by the same ordered-check machinery mutated above (each is a distinct early-return in the same function); not separately mutated — see unverified" }
+  ],
+  "purity_check": "PASS. lib/delivery/gate.js evaluate: grep for Date/Math.random/process./node:fs/child_process/readFile/writeFile/globalThis/require( -> zero matches; imports are exactly {node:crypto createHash, contracts/delivery parseContract, ./evidence envelopeDigest}; returns verdict+GateReceipt only (parseContract-validated, fails closed). Behaviorally: two calls with identical inputs deep-equal, evidence digests sorted, empty set digested as EMPTY_EVIDENCE_SET_DIGEST; owns purity test (fs side-effect probe + source import scan) green x2. Note: admitEvidence in evidence.js takes caller-pinned now (all owns call sites pass an explicit constant); its new Date() default is admission-side, outside the SDD.Gate.v1 evaluate purity rule.",
+  "red_cases": [
+    "RED-M1: STALE_CANDIDATE guard neutralized -> owns trio exit 1 (named failure recorded)",
+    "RED-M2: DUPLICATE_ISSUANCE guard neutralized -> exit 1",
+    "RED-M3: EXPIRED_ENVELOPE guard neutralized -> exit 1",
+    "RED-M4: NO_OBSERVATION (valid<1) guard neutralized -> exit 1",
+    "RED-M5: FORGED_DISPATCH verification bypassed -> exit 1 (3 tests, incl. both real spawnSync worker-mint negatives)",
+    "RED-M6: MISSING_OBSERVATION fabricated as satisfied (quorum leak) -> exit 1 (3 tests incl. V_A18/V_B06)",
+    "RED-M7: UNVERIFIED result accepted as observed -> exit 1 (V_A18 real spawned crash)",
+    "RED-M8: gate IDENTITY_CONFLICT guard neutralized -> exit 1 (V_A06 + A06 gate)"
+  ],
+  "commands": {
+    "node --test test/delivery-evidence.test.js": "exit 0 (17/17)",
+    "node --test test/delivery-gate.test.js": "exit 0 (11/11)",
+    "node --test test/delivery-cases/2_2.mjs": "exit 0 (8/8)",
+    "node --test <owns trio> run #1": "exit 0 (36/36)",
+    "node --test <owns trio> run #2": "exit 0 (36/36)",
+    "independent family re-verification script run 1": "exit 0 (38/38)",
+    "independent family re-verification script run 2": "exit 0 (38/38)",
+    "mutation driver (8x RED->GREEN)": "exit 0 (all 8 caught, all restores green)",
+    "npm test (pre-change baseline)": "exit 1: 423/426 pass, 2 pre-existing failures (classic-integration #59 host-OpenSpec version drift; spec-closeout #415 B08), 1 skip — both outside owns",
+    "npm test (after)": "exit 1: identical 423/426, IDENTICAL failure set — zero new failures"
+  },
+  "p3_1_connected_check": "No registered-value self-attestation found in P2_2 owns: expected values come from inline literal fixtures, freshly issued dispatches and real spawned node --test runs; the only repo-path read is the gate.js own-source import-absence scan (absence property of the module under test, not an echoed registered value). No RED->GREEN repair required. evidence 06.",
+  "files_changed": [
+    "worker-reports/P2_2.rework.json",
+    "worker-reports/P2_2-rework/evidence/01-reverify-families-run1.txt",
+    "worker-reports/P2_2-rework/evidence/02-reverify-families-run2.txt",
+    "worker-reports/P2_2-rework/evidence/03-mutation-injection.txt",
+    "worker-reports/P2_2-rework/evidence/04-mutation-residue-check.txt",
+    "worker-reports/P2_2-rework/evidence/05-purity-gatejs.txt",
+    "worker-reports/P2_2-rework/evidence/06-p3_1-selfattestation-scan.txt",
+    "worker-reports/P2_2-rework/evidence/07-owns-tests-green-x2.txt",
+    "worker-reports/P2_2-rework/evidence/08-full-npm-test-baseline-before.txt",
+    "worker-reports/P2_2-rework/evidence/09-full-npm-test-after.txt"
+  ],
+  "owns_sources_changed": [],
+  "unverified": [
+    "Real protected-Runner registration / release-key isolation (Runner.Dispatch.v1 server half) remains out of scope for local files by design — proven on the managed Runner, as the tasks.md boundary states; the local half (worker cannot mint a dispatch without the launcher secret) is re-proven here with real spawnSync children.",
+    "Binding-mismatch/STALE_POLICY/STALE_ENVIRONMENT/INVALID_ENVELOPE/TAMPERED/STALE_INPUT/AUTHORING_SELF_CHECK_ONLY/B06 families were re-fired independently but not each separately mutation-injected (8 of ~17 distinct refusal sites were mutated; the requirement was >=3)."
+  ],
+  "blockers_or_questions": []
+}
