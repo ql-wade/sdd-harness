@@ -1,0 +1,52 @@
+{
+  "task": "P2_1",
+  "phase": "rework-r1",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-22T04:19:11.829346+00:00",
+  "head_reviewed": "bc0f041",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "A02 real-drift 锚定两摘要同源 computeFullInputBaseline(不重实现 sha256 所固有); assert.notEqual 前提+2_1 live 锚点+A08 多组漂移缓解",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-2",
+      "summary": "单元层 A03/A04 用 fixture TAP 串(V_ 层有真实 spawn 对应); 纵深防御, worker 已如实披露",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-3",
+      "summary": "证据 01 'EXIT: 0 (pipeline grep; raw exit follows)' 排版行; RAW_EXIT 原值已如实记录",
+      "disposition": "recorded"
+    }
+  ],
+  "independently_rerun": {
+    "suites": "baseline 12/12 x2 + contract 22/22 + 2_1 7/7",
+    "mutations_redone": [
+      {
+        "id": "M1",
+        "caught_by": "baseline fail5 + 2_1 fail7(live tasks.md)",
+        "exit": 1
+      },
+      {
+        "id": "M2",
+        "caught_by": "baseline fail8+fail9(新real-drift锚点) + 2_1 fail2 = 三处捕获",
+        "exit": 1
+      },
+      {
+        "id": "M4",
+        "caught_by": "contract fail18 + 2_1 fail4(真实 ERR_MODULE_NOT_FOUND spawn)",
+        "exit": 1
+      }
+    ],
+    "real_drift_anchor": "独立: 观测摘要(真实磁盘字节)+真实迁移变异+M2 注入下真红; 零捏造摘要",
+    "negatives_real_spawn": true,
+    "npm_test": "426/423/2(恰 C08+B08) 零新增; 控制器 merge 501be7f 两轮: 421/5(首轮 #366 时敏抖动) 复跑 422/4 恰已知集, 4.8.d 隔离 3/3 过",
+    "boundary_clean": true,
+    "worktree_clean_at_end": true,
+    "lib_diff_zero": true
+  }
+}
