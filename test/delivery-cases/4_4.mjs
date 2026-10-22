@@ -460,7 +460,16 @@ test('D06/E02/E06: the timed-out Outline publication recovers by readback on the
 
   // The independent readback lands on the SAME fixed document: the adapter
   // binds it into the observation and the runtime confirms the operation.
-  const readbackObservation = outlineAdapter.buildReadbackObservation({ operation, revision: 'rev-1', readbackDigest: TEAM_DIGEST });
+  // Step 11: the observation is declared from >= 2 distinct independent
+  // channel records (api + attachment/export). This case world drives the
+  // JUDGMENT with case-world channel records; the live multi-channel proof
+  // against the real Outline stack is the Step 11 evidence
+  // (worker-reports/P4_4-rework/evidence/outline-real-stack-*.txt) and the
+  // full E01/E02/E06 journey belongs to the VERIFY node.
+  const readbackObservation = outlineAdapter.buildReadbackObservation({
+    operation, revision: 'rev-1', readbackDigest: TEAM_DIGEST,
+    readbacks: [{ channel: 'api', digest: TEAM_DIGEST }, { channel: 'attachment', digest: TEAM_DIGEST }],
+  });
   assert.equal(readbackObservation.outcome, 'exists');
   const readbackFile = path.join(scratch, 'observe-exists.json');
   await fs.writeFile(readbackFile, JSON.stringify(readbackObservation));

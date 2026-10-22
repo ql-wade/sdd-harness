@@ -255,7 +255,11 @@ test('D06: a publication timeout resolves by independent readback of the origina
 
 test('C06: the adapter Kp receipt seals the archive exactly once; a second seal is refused (no archive loop)', () => {
   const operation = llmwiki.buildKpOperation({ change: 'p44-change', entry: kpEntry });
-  const receipt = llmwiki.buildKpCloseoutReceipt({ operation, execution: 'exec-kp-1', recordedAt: '2026-10-21T00:00:00.000Z' });
+  // Step 11: the seal input is only minted from the confirmed independent readback.
+  const receipt = llmwiki.buildKpCloseoutReceipt({
+    operation, readback: { found: true, digest: sha256(PAYLOAD_V1), source: 'wiki', at: '2026-10-21T00:00:00.000Z' },
+    execution: 'exec-kp-1', recordedAt: '2026-10-21T00:00:00.000Z',
+  });
   assert.deepEqual(receipt, { id: 'llmwiki:closeout-order', digest: sha256(PAYLOAD_V1) });
 
   const sealableSeal = {
@@ -399,9 +403,16 @@ test('E02/D06: the adapter executes runtime directives only — reconcile-info n
     operationKey: operation.operationKey, documentId: operation.documentId, outcome: 'unknown', at: '2026-10-21T00:00:00.000Z',
   });
 
-  // The readback observation binds the registered payload digest.
-  assert.equal(outline.buildReadbackObservation({ operation, revision: 'rev-1', readbackDigest: operation.payloadDigest }).outcome, 'exists');
-  assert.equal(outline.buildReadbackObservation({ operation, revision: 'rev-1', readbackDigest: sha256('drifted') }).outcome, 'conflict');
+  // The readback observation binds the registered payload digest — declared
+  // only from >= 2 distinct independent channel records (Step 11).
+  assert.equal(outline.buildReadbackObservation({
+    operation, revision: 'rev-1', readbackDigest: operation.payloadDigest,
+    readbacks: [{ channel: 'api', digest: operation.payloadDigest }, { channel: 'attachment', digest: operation.payloadDigest }],
+  }).outcome, 'exists');
+  assert.equal(outline.buildReadbackObservation({
+    operation, revision: 'rev-1', readbackDigest: sha256('drifted'),
+    readbacks: [{ channel: 'api', digest: sha256('drifted') }, { channel: 'export', digest: sha256('drifted') }],
+  }).outcome, 'conflict');
 });
 
 // --- Step 11 rework: 局部 adapter 返回 exists 不是发布证据 ------------------------
