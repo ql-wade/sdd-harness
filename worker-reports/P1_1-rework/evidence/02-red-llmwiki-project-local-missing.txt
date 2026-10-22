@@ -1,0 +1,18 @@
+# RED-2: llmwiki project-local resolution before clone/venv (amendment 3 contrast)
+date: 2026-10-22T03:23:21Z
+## wiki-root contrast (lib/sdd-paths.js getWikiHome, cwd <repo>)
+default (SDD_HOME unset): <home>/.sdd/wiki/sdd-harness   <- external cross-project root (amendment 3 motivation)
+SDD_HOME=<repo>/.sdd    : <repo>/.sdd/wiki/sdd-harness   <- project-local root
+
+## probe with project-local SDD_HOME before clone/venv exist
+command: SDD_HOME=<repo>/.sdd LLMWIKI_PYTHON=<repo>/.sdd/venvs/llmwiki-311/bin/python node tools/infra/llmwiki.mjs probe --case worktree-mcp-readback
+exit: 2 (UNVERIFIED)
+status: UNVERIFIED
+reason: real MCP write channel not verified; file-level gate steps failed: index-mismatch-detection — infrastructure returns facts only and signs no Kp receipt; archiving stays blocked
+worktreesCanonicalRootsConsistent: True ( 39 worktrees )
+mcpSession.initialize: {"status": "UNVERIFIED", "reason": "no initialize response (signal=-2); stderr: | spawn error: spawn <host-path-redacted> ENOENT"}
+mcpSession.write: {"status": "UNVERIFIED", "reason": "no response to the create write within 20000ms (tool call hangs in this environment; recorded, not mocked); nothing was written via MCP"}
+file-level step: curated-entry-write -> VERIFIED
+file-level step: independent-file-readback -> VERIFIED
+file-level step: index-mismatch-detection -> UNVERIFIED
+=> failure chain: venv python ENOENT -> MCP session cannot start -> no .llmwiki/index.db in sandbox -> index gate cannot read. No mock, no skip: fail-closed.

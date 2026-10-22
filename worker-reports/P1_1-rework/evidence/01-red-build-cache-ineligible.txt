@@ -1,0 +1,12 @@
+# RED-1: current 6-patch lock has NO qualified build in this environment
+date: 2026-10-22T03:23:21Z
+command: <nvm>/versions/node/v24.15.0/bin/node tools/comet/build.mjs --check-generated --runtime-smoke --json   (cwd <repo>, freshly created worktree at master@ebe5fff, branch rework/p1-1-toolchain)
+exit: 1
+{"code":"SOURCE_NOT_PREPARED","message":"Comet pristine source has not been prepared in this project"}
+
+# context: host main-tree .sdd build cache era (old fingerprint; not the current lock era)
+ls <main-tree>/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/ ->
+  72e5ce0eb3ce1ca7c6b898cf5d63bc466a717e4ea2eaf7de761b86d2867af1f6   (2026-10-20 era, 0-patch build)
+lock-derived fingerprint of integrations/comet/upstream.lock.json (6 patches) computed independently:
+  beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966
+=> beab355d-era build absent everywhere reachable from this worktree; the old-era directory's existence is NOT distribution qualification (HANDOFF rule).
