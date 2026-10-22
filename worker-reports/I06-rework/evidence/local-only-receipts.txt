@@ -1,0 +1,65 @@
+# I06 rework — CLI contract probes re-verified (all real subprocesses, exit per command)
+# worktree rw-i06 @ post-rework edits; captured: 2026-10-22T05:41:56Z
+
+== node tools/infra/platform.mjs validate --registry infra/delivery/registry.json --json ==
+exit=0  ok=true violations=[] mode=LOCAL_ONLY catalogGaps=[] (no host paths in output)
+
+== node tools/infra/platform.mjs probe --case repository-identity --read-only --json ==
+exit=2  executed=true mode=LOCAL_ONLY localConsistency=PASS readback.status=UNVERIFIED
+       real gh attempt re-reproduced this run: tls: failed to verify certificate: x509: OSStatus -26276
+       (honest UNVERIFIED, nonzero, never skip-to-pass; raw error preserved verbatim)
+
+== node tools/infra/platform.mjs probe --case required-checks-authorization --json ==
+exit=2  refused=true code=REMOTE_POLICY_WRITE_NOT_AUTHORIZED credentialTiers=6 all resolution=false
+
+== node tools/infra/platform.mjs probe --case registry-environment-identity --json (bare) ==
+exit=2  executed=false status=UNVERIFIED scope=LOCAL_ONLY mode=LOCAL_ONLY
+       productionPromotion={status:UNVERIFIED, holder:'P4_2 isolated-environment owner + runtime admission; the real merge gate stays with P4_1'}
+       rework fix: bare probe previously omitted mode and any production-promotion holder record
+
+== node tools/infra/platform.mjs probe --case registry-environment-identity --chain <green tmp fixture> --json ==
+exit=0  (LOCAL_ONLY mechanism proof; full receipt below)
+{
+  "interface": "IntegrationIdentity.v1",
+  "case": "registry-environment-identity",
+  "executed": true,
+  "scope": "LOCAL_ONLY",
+  "mode": "LOCAL_ONLY",
+  "productionPromotion": {
+    "status": "UNVERIFIED",
+    "holder": "P4_2 isolated-environment owner + runtime admission; the real merge gate stays with P4_1"
+  },
+  "project": "sdd-harness-pilot",
+  "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "merge": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "blocked": false,
+  "status": "VERIFIED",
+  "codes": [],
+  "steps": [
+    {
+      "step": "checks",
+      "binding": "EXACT_SHA",
+      "verdict": "PASS"
+    },
+    {
+      "step": "artifact",
+      "binding": "TAG_TO_DIGEST",
+      "verdict": "PASS"
+    },
+    {
+      "step": "deployment",
+      "binding": "DIGEST_AND_CORRELATION_ID",
+      "verdict": "PASS"
+    },
+    {
+      "step": "readback",
+      "via": "RECEIPT_DIRECT",
+      "verdict": "PASS"
+    }
+  ],
+  "note": "local mechanism proof only; the real platform merge gate and environment readback stay with P4_1/P4_2",
+  "checkedAt": "2026-10-22T05:41:56.124Z"
+}
+
+with-chain receipt carries mode=LOCAL_ONLY + scope=LOCAL_ONLY + productionPromotion.status=UNVERIFIED with holder
+on record — the P4_2-mode receipt separation: a VERIFIED chain never claims production promotion.

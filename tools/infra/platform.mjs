@@ -523,6 +523,12 @@ function platformCredentialTiers({ docs, refsDoc, principal }) {
 
 function probeRegistryEnvironmentIdentity({ docs, chainFile }) {
   const repo = docs['repository-registration.json'];
+  // 生产晋级与本地机制如实分离（P4_2 回执语义）：链路 VERIFIED 只是 LOCAL_ONLY 机制证明，
+  // 真实生产交付始终 UNVERIFIED 且 holder 在案（P4_2 隔离环境属主 + 运行时准入；真实合并门归 P4_1）。
+  const productionPromotion = {
+    status: 'UNVERIFIED',
+    holder: 'P4_2 isolated-environment owner + runtime admission; the real merge gate stays with P4_1',
+  };
   if (!chainFile) {
     // 无真实 Registry/环境证据：结构化 UNVERIFIED（列出所需输入与计划步骤），绝不 skip、绝不 mock。
     print({
@@ -531,6 +537,8 @@ function probeRegistryEnvironmentIdentity({ docs, chainFile }) {
       executed: false,
       status: 'UNVERIFIED',
       scope: 'LOCAL_ONLY',
+      mode: 'LOCAL_ONLY',
+      productionPromotion,
       reason: 'no dedicated registry/artifact store and no isolated target environment are registered; the chain can only be evaluated from a local --chain fixture',
       requiredInputs: [
         'registry endpoint + signing/provenance readback (registry-registration is an example; endpoint UNSELECTED)',
@@ -565,6 +573,7 @@ function probeRegistryEnvironmentIdentity({ docs, chainFile }) {
     executed: true,
     scope: 'LOCAL_ONLY',
     mode: 'LOCAL_ONLY',
+    productionPromotion,
     project: chain.project,
     head: chain.head,
     merge: chain.merge,

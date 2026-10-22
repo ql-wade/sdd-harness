@@ -1,0 +1,26 @@
+# I06 rework — IntegrationIdentity.v1 negative codes rerun, one real CLI subprocess per code
+# command shape per code: node tools/infra/platform.mjs probe --case registry-environment-identity --chain <tmp fixture> --json
+# fixtures generated fresh under the OS tmpdir per code; 12 blocking codes + 2 UNVERIFIED-path codes + 2 codes newly
+# covered this rework (CHECK_NOT_SUCCESS, ROLLBACK_RETENTION_MISSING) = 16 total codes of evaluateIntegrationIdentity().
+# captured: 2026-10-22T05:41:18Z
+
+CHECK_MISSING	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+CHECK_SKIPPED	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+CHECK_TIMED_OUT	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+CHECK_STALE_EVIDENCE	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+CHECK_NOT_SUCCESS	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+ARTIFACT_NOT_FROM_MERGE	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+TAG_DIGEST_DRIFT	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+ENVIRONMENT_PROJECT_MISMATCH	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+DEPLOYMENT_DIGEST_MISMATCH	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+RECEIPT_CORRELATION_MISSING	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+READBACK_CORRELATION_MISMATCH	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+ROLLBACK_NOT_APPROVED	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+ROLLBACK_RETENTION_MISSING	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+ROLLBACK_DIGEST_MISMATCH	exit=2	status=BLOCKED	blocked=true	codePresent=true	OK
+READBACK_UNCONFIRMED	exit=2	status=UNVERIFIED	blocked=false	codePresent=true	OK
+ROLLBACK_TERMINAL_STATE_UNCONFIRMED	exit=2	status=UNVERIFIED	blocked=false	codePresent=true	OK
+ALL 16 CODES RERUN VIA REAL SUBPROCESS: OK
+
+harness exit=0; every code: exit=2, code present in receipt.codes[], blocking codes report blocked=true,
+UNVERIFIED-path codes report status=UNVERIFIED with blocked=false (evidence absent is never skip-to-pass).
