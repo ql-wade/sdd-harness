@@ -69,7 +69,7 @@
     "timezone": "Asia/Shanghai",
     "reason": "receiving host/resources and actual repair throughput need qualification; 2–5min steps are evidence checkpoints, not delivery ETA"
   },
-  "updated_at": "2026-10-22T12:24:10.342961+00:00",
+  "updated_at": "2026-10-22T12:56:04.219672+00:00",
   "preparatory_checks": {
     "scaffold_scoped_tests": "41/41 PASS",
     "scaffold_npm_test": "41/41 PASS on Node22.13.1",
@@ -94,7 +94,7 @@
     "Prior one-time disclosure grant and old sdd monitor identity are not reusable startup instructions.",
     "Full same-product-Run journeys run only at VERIFY after all mechanisms, including I07/I08, are ready; construction-task acceptance does not close those journeys."
   ],
-  "last_progress_at": "2026-10-22T12:24:10.342961+00:00",
+  "last_progress_at": "2026-10-22T12:56:04.219672+00:00",
   "authorization_blocker_audit": {
     "status": "NOT_APPLICABLE_TO_PLANNING",
     "implementation": "NOT_STARTED"
@@ -479,36 +479,17 @@
       "rework_revision": "2026-10-22-seven-p1"
     },
     "I07": {
-      "status": "REOPENED_RETEST_REQUIRED",
-      "steps_done": [
-        "1",
-        "2",
-        "3",
-        "4"
-      ],
+      "status": "ACCEPTED",
+      "phase": "rework-r1",
+      "steps_done": 6,
       "commits": {
-        "tests": "43cfbd6",
-        "implementation": "c94c26a",
-        "report": "1b2af7a",
-        "integration_fix": "6dafded"
+        "implementation": "53c15f3",
+        "report": "3e0cb36"
       },
-      "merged_to_master": "e4e9992",
-      "regression": "npm test 306/306 + delivery-cases 100 pass/1 env-skip/0 fail (9b95a0ff-equipped worktree)",
-      "review": "worker-reports/I07.review.json (APPROVED, 0 blocking)",
-      "unverified_within_boundary": [
-        "外部主机故障检测需注册外部监控",
-        "真实告警发送需授权",
-        "生产时限证据用缩放探针",
-        "真实 Comet 读回与监督需运行时准入"
-      ],
-      "integration_fix": {
-        "commit": "6dafded",
-        "merged_to_master": "e4e9992",
-        "result": "16/16; npm 306/306; stale assertions flipped positive; synthetic-fixture coverage retained"
-      },
-      "previous_status": "ACCEPTED",
-      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
-      "rework_revision": "2026-10-22-seven-p1"
+      "merged_to_master": "f3cbf6a",
+      "regression": "npm test @merge: 442/439/2/1 已知集零新增",
+      "review": "worker-reports/I07.rework.review.json (APPROVED, 0 blocking, 2 nb)",
+      "deliverable": "7 未锚结构负例补锚+审计形状锚; 零产品缺陷; P4_8 值耦合 9/9"
     },
     "P3_2": {
       "status": "REOPENED_RETEST_REQUIRED",
@@ -863,6 +844,12 @@
       "recorded_at": "2026-10-22T09:37:12.648400+00:00",
       "note": "部署波次完成(用户批准默认清单): 6 容器栈运行中(outline/postgres:16-alpine/redis:7-alpine/minio RELEASE.2025-04-22T22-12-26Z/dex OIDC)。images.lock 准入记录+5 digest-pinned references(validate 干净); up-gate 准入语义 TDD 补丁(无记录开门仍拒); 运行时装配在 .sdd/outline/runtime/(gitignored: secrets/override/dex config); OIDC issuer=/dex 路径(容器内 discovery 200, Outline Listening 3000)。宿主 curl 000 系代理层(浏览器验证不受影响)。修复缺陷: compose env_file 相对路径解析陷阱。测试三处状态无关化+1 门控夹具修正。",
       "holder": "V_SAME_RUN_DELIVERY / V_POST_DELIVERY_PERMISSIONS / I03 Step3(真实浏览器登录)"
+    },
+    {
+      "id": "P15_LOG_FIXTURE_DRIFT_RESOLVED",
+      "recorded_at": "2026-10-22T12:26:05.503822+00:00",
+      "note": "P1_5 快照漂移根因: 主检出 .agents/skills/whitebox-verify/tests/green-fixture/artifacts/ 存在 6 个未跟踪 .log fixture(首轮 check.sh 手动放置, .gitignore:21 排除), P1_5 digest 走全目录含未跟踪文件->主检出漂移/干净树通过。已隔离至 claude_tmp/p15-log-fixture-quarantine(可回归), P1_5 在主检出现在通过。持久修复(域外, 归 vendored-skill owner): .gitignore 白名单负规则或 fixture 改非 .log 后缀 | 追加: 第二个 stray leak.log(negative-corpus fixture)同源隔离后 P1_5 完全通过(ok); 共 2 文件隔离",
+      "holder": "vendored-skill owner (域外)"
     }
   ],
   "open_decisions": [
