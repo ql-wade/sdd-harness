@@ -187,16 +187,25 @@ test('V_INFRA_P4_7: committed authorization artifacts validate clean against the
   assert.equal(report.interface, 'KnowledgeAuthz.v1');
   assert.deepEqual(report.violations, []);
   assert.doesNotMatch(run.stdout, HOST_PATH_OUTPUT_RE, 'structured receipts must not carry host absolute paths');
-  // The committed world is honest about what this environment cannot observe.
+  // The committed world is honest about what is and is not observable:
+  // issuance stays UNREGISTERED, while the rework's live target registration
+  // carries the observed pilot instance, immutable collection id, principal
+  // map and the PARTIAL audience (attachment channel unobserved).
   const model = readCommitted('authorization-model.json');
   assert.equal(model.issuers[0].issuanceCredential.status, 'UNREGISTERED',
     'no issuance credential exists in the I01 catalog; the model must say so instead of inventing one');
   for (const target of model.targets) {
-    assert.equal(target.instanceStatus, 'UNVERIFIED', 'target instance truth is unobservable locally');
+    assert.equal(target.instanceStatus, 'REGISTERED_PILOT_LIVE',
+      'the rework registered the pilot target from a live deployment readback');
+    assert.match(target.collectionId, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    assert.ok(target.principalMap.length >= 1, 'the principal map binds directory principals to real Outline user ids');
+    assert.equal(target.audienceReadback.channels.attachment, 'UNVERIFIED',
+      'the attachment channel could not be observed (upload infrastructure error) and must stay honest');
   }
   const policy = readCommitted('preauthorization-policy.json');
-  assert.equal(policy.target.allowedAudience.status, 'UNVERIFIED',
-    'the committed target audience must stay UNVERIFIED (no live instance to observe)');
+  assert.equal(policy.target.allowedAudience.status, 'REGISTERED_FROM_LIVE_READBACK_PARTIAL',
+    'the committed target audience is registered from the live readback and names its missing channel');
+  assert.deepEqual(policy.target.allowedAudience.readers, ['directory:sdd-harness-pilot/owner']);
 });
 
 test('committed state fails closed: decide on the committed artifacts refuses because no audience is registered', () => {

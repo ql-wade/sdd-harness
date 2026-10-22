@@ -1,0 +1,272 @@
+TAP version 13
+# Subtest: setup: the KnowledgeAuthz.v1 CLI and the committed authorization artifacts are present and validate clean
+ok 1 - setup: the KnowledgeAuthz.v1 CLI and the committed authorization artifacts are present and validate clean
+  ---
+  duration_ms: 56.723208
+  ...
+# Subtest: U01: Comet rejects self-authored and unauthorized/expired/revoked grants — signature, PR merge and approved fields carry no weight
+ok 2 - U01: Comet rejects self-authored and unauthorized/expired/revoked grants — signature, PR merge and approved fields carry no weight
+  ---
+  duration_ms: 626.992709
+  ...
+# Subtest: U02: a review-passed multi-source candidate is still denied when the audience is in the union but not in the disclosure intersection
+ok 3 - U02: a review-passed multi-source candidate is still denied when the audience is in the union but not in the disclosure intersection
+  ---
+  duration_ms: 102.127167
+  ...
+# Subtest: U03: pre-write recheck blocks the old publish verdict after the grant shrinks; no auto-renewal of the same operation
+ok 4 - U03: pre-write recheck blocks the old publish verdict after the grant shrinks; no auto-renewal of the same operation
+  ---
+  duration_ms: 201.255
+  ...
+# Subtest: U04: a payload change invalidates the old review/publish verdict — no semantic-similarity or same-document-id reuse
+ok 5 - U04: a payload change invalidates the old review/publish verdict — no semantic-similarity or same-document-id reuse
+  ---
+  duration_ms: 152.039709
+  ...
+# Subtest: U05: share/inheritance/public audience sources are refused on an allowlisted collection; no ACL mutation entrance exists
+not ok 6 - U05: share/inheritance/public audience sources are refused on an allowlisted collection; no ACL mutation entrance exists
+  ---
+  duration_ms: 453.2095
+  location: '<worktree>
+  failureType: 'testCodeFailure'
+  error: |-
+    a complete LIVE claim passes the audience gate
+    
+    2 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: U06: incomplete/unmapped/error/service-only permission evidence stays blocked and never degrades to empty-or-public
+not ok 7 - U06: incomplete/unmapped/error/service-only permission evidence stays blocked and never degrades to empty-or-public
+  ---
+  duration_ms: 358.669834
+  location: '<worktree>
+  failureType: 'testCodeFailure'
+  error: 'registered directory principal must map: PRINCIPAL_UNMAPPED,AUDIENCE_OUTSIDE_INTERSECTION'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: U07: role isolation is enforced by real managed entrances and denials are auditable — author never issues, isolator never reads publisher material
+ok 8 - U07: role isolation is enforced by real managed entrances and denials are auditable — author never issues, isolator never reads publisher material
+  ---
+  duration_ms: 300.428834
+  ...
+# Subtest: U08: a fully grounded publish auto-advances with a bound receipt and readback obligation, never extended to other objects or versions
+not ok 9 - U08: a fully grounded publish auto-advances with a bound receipt and readback obligation, never extended to other objects or versions
+  ---
+  duration_ms: 203.25125
+  location: '<worktree>
+  failureType: 'testCodeFailure'
+  error: |-
+    the live-grounded request must auto-publish: {
+      "interface": "KnowledgeAuthz.v1",
+      "command": "decide",
+      "verdict": "deny",
+      "reasons": [
+        {
+          "code": "PRINCIPAL_UNMAPPED",
+          "at": "operation.target.effectiveAudience.readers",
+          "unmapped": [
+            "directory:sdd-harness-pilot/owner"
+          ]
+        }
+      ],
+      "checkedAt": "2026-10-22T21:08:50.125Z"
+    }
+    
+    
+    2 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: adapter: committed authorization artifacts validate clean through the facade
+ok 10 - adapter: committed authorization artifacts validate clean through the facade
+  ---
+  duration_ms: 56.956375
+  ...
+# Subtest: adapter: verifyGrant surfaces the committed ledger through the exit contract
+ok 11 - adapter: verifyGrant surfaces the committed ledger through the exit contract
+  ---
+  duration_ms: 105.438542
+  ...
+# Subtest: adapter: decide maps allow onto PASS with a bound receipt
+ok 12 - adapter: decide maps allow onto PASS with a bound receipt
+  ---
+  duration_ms: 54.123084
+  ...
+# Subtest: adapter: self-authored grant input maps onto DENIED with the refusal codes
+ok 13 - adapter: self-authored grant input maps onto DENIED with the refusal codes
+  ---
+  duration_ms: 53.665292
+  ...
+# Subtest: adapter: recheck after a real revocation goes stale — no renewal of the same operation
+not ok 14 - adapter: recheck after a real revocation goes stale — no renewal of the same operation
+  ---
+  duration_ms: 57.023209
+  location: '<worktree>
+  failureType: 'testCodeFailure'
+  error: |-
+    {
+      "interface": "KnowledgeAuthz.v1",
+      "command": "decide",
+      "verdict": "deny",
+      "reasons": [
+        {
+          "code": "PRINCIPAL_UNMAPPED",
+          "at": "operation.target.effectiveAudience.readers",
+          "unmapped": [
+            "directory:sdd-harness-pilot/owner"
+          ]
+        }
+      ],
+      "checkedAt": "2026-10-22T21:08:47.997Z"
+    }
+    
+    
+    2 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: adapter: the author cannot resolve the publisher credential through the facade
+ok 15 - adapter: the author cannot resolve the publisher credential through the facade
+  ---
+  duration_ms: 51.214792
+  ...
+# Subtest: adapter: invalid input maps onto INPUT (never a silent pass)
+ok 16 - adapter: invalid input maps onto INPUT (never a silent pass)
+  ---
+  duration_ms: 51.811833
+  ...
+# Subtest: adapter: a LIVE audience claim missing any required channel is fail-closed (TARGET_CHANNEL_NOT_READ)
+ok 17 - adapter: a LIVE audience claim missing any required channel is fail-closed (TARGET_CHANNEL_NOT_READ)
+  ---
+  duration_ms: 105.809708
+  ...
+# Subtest: adapter: a LIVE claim with every required channel READ allows with LIVE_READBACK provenance
+not ok 18 - adapter: a LIVE claim with every required channel READ allows with LIVE_READBACK provenance
+  ---
+  duration_ms: 53.130084
+  location: '<worktree>
+  failureType: 'testCodeFailure'
+  error: |-
+    {
+      "interface": "KnowledgeAuthz.v1",
+      "command": "decide",
+      "verdict": "deny",
+      "reasons": [
+        {
+          "code": "PRINCIPAL_UNMAPPED",
+          "at": "operation.target.effectiveAudience.readers",
+          "unmapped": [
+            "directory:sdd-harness-pilot/owner"
+          ]
+        }
+      ],
+      "checkedAt": "2026-10-22T21:08:48.259Z"
+    }
+    
+    
+    2 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: adapter: declared-only audience keeps the component-result provenance
+not ok 19 - adapter: declared-only audience keeps the component-result provenance
+  ---
+  duration_ms: 56.9105
+  location: '<worktree>
+  failureType: 'testCodeFailure'
+  error: |-
+    {
+      "interface": "KnowledgeAuthz.v1",
+      "command": "decide",
+      "verdict": "deny",
+      "reasons": [
+        {
+          "code": "PRINCIPAL_UNMAPPED",
+          "at": "operation.target.effectiveAudience.readers",
+          "unmapped": [
+            "directory:sdd-harness-pilot/owner"
+          ]
+        }
+      ],
+      "checkedAt": "2026-10-22T21:08:48.316Z"
+    }
+    
+    
+    2 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 13
+# fail 6
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2522.551041

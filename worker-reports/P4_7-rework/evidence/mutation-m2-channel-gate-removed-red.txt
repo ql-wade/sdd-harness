@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: setup: the KnowledgeAuthz.v1 CLI and the committed authorization artifacts are present and validate clean
+ok 1 - setup: the KnowledgeAuthz.v1 CLI and the committed authorization artifacts are present and validate clean
+  ---
+  duration_ms: 57.144084
+  ...
+# Subtest: U01: Comet rejects self-authored and unauthorized/expired/revoked grants — signature, PR merge and approved fields carry no weight
+ok 2 - U01: Comet rejects self-authored and unauthorized/expired/revoked grants — signature, PR merge and approved fields carry no weight
+  ---
+  duration_ms: 640.856792
+  ...
+# Subtest: U02: a review-passed multi-source candidate is still denied when the audience is in the union but not in the disclosure intersection
+ok 3 - U02: a review-passed multi-source candidate is still denied when the audience is in the union but not in the disclosure intersection
+  ---
+  duration_ms: 105.363417
+  ...
+# Subtest: U03: pre-write recheck blocks the old publish verdict after the grant shrinks; no auto-renewal of the same operation
+ok 4 - U03: pre-write recheck blocks the old publish verdict after the grant shrinks; no auto-renewal of the same operation
+  ---
+  duration_ms: 198.585833
+  ...
+# Subtest: U04: a payload change invalidates the old review/publish verdict — no semantic-similarity or same-document-id reuse
+ok 5 - U04: a payload change invalidates the old review/publish verdict — no semantic-similarity or same-document-id reuse
+  ---
+  duration_ms: 151.013625
+  ...
+# Subtest: U05: share/inheritance/public audience sources are refused on an allowlisted collection; no ACL mutation entrance exists
+not ok 6 - U05: share/inheritance/public audience sources are refused on an allowlisted collection; no ACL mutation entrance exists
+  ---
+  duration_ms: 397.070833
+  location: '<worktree>
+  failureType: 'testCodeFailure'
+  error: |-
+    a LIVE claim without the attachment channel must not publish
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: U06: incomplete/unmapped/error/service-only permission evidence stays blocked and never degrades to empty-or-public
+ok 7 - U06: incomplete/unmapped/error/service-only permission evidence stays blocked and never degrades to empty-or-public
+  ---
+  duration_ms: 355.157416
+  ...
+# Subtest: U07: role isolation is enforced by real managed entrances and denials are auditable — author never issues, isolator never reads publisher material
+ok 8 - U07: role isolation is enforced by real managed entrances and denials are auditable — author never issues, isolator never reads publisher material
+  ---
+  duration_ms: 299.859666
+  ...
+# Subtest: U08: a fully grounded publish auto-advances with a bound receipt and readback obligation, never extended to other objects or versions
+ok 9 - U08: a fully grounded publish auto-advances with a bound receipt and readback obligation, never extended to other objects or versions
+  ---
+  duration_ms: 252.335625
+  ...
+# Subtest: adapter: committed authorization artifacts validate clean through the facade
+ok 10 - adapter: committed authorization artifacts validate clean through the facade
+  ---
+  duration_ms: 57.572416
+  ...
+# Subtest: adapter: verifyGrant surfaces the committed ledger through the exit contract
+ok 11 - adapter: verifyGrant surfaces the committed ledger through the exit contract
+  ---
+  duration_ms: 104.752542
+  ...
+# Subtest: adapter: decide maps allow onto PASS with a bound receipt
+ok 12 - adapter: decide maps allow onto PASS with a bound receipt
+  ---
+  duration_ms: 57.048083
+  ...
+# Subtest: adapter: self-authored grant input maps onto DENIED with the refusal codes
+ok 13 - adapter: self-authored grant input maps onto DENIED with the refusal codes
+  ---
+  duration_ms: 53.723083
+  ...
+# Subtest: adapter: recheck after a real revocation goes stale — no renewal of the same operation
+ok 14 - adapter: recheck after a real revocation goes stale — no renewal of the same operation
+  ---
+  duration_ms: 161.117583
+  ...
+# Subtest: adapter: the author cannot resolve the publisher credential through the facade
+ok 15 - adapter: the author cannot resolve the publisher credential through the facade
+  ---
+  duration_ms: 52.731667
+  ...
+# Subtest: adapter: invalid input maps onto INPUT (never a silent pass)
+ok 16 - adapter: invalid input maps onto INPUT (never a silent pass)
+  ---
+  duration_ms: 55.427084
+  ...
+# Subtest: adapter: a LIVE audience claim missing any required channel is fail-closed (TARGET_CHANNEL_NOT_READ)
+not ok 17 - adapter: a LIVE audience claim missing any required channel is fail-closed (TARGET_CHANNEL_NOT_READ)
+  ---
+  duration_ms: 64.282333
+  location: '<worktree>
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: adapter: a LIVE claim with every required channel READ allows with LIVE_READBACK provenance
+ok 18 - adapter: a LIVE claim with every required channel READ allows with LIVE_READBACK provenance
+  ---
+  duration_ms: 108.358292
+  ...
+# Subtest: adapter: declared-only audience keeps the component-result provenance
+ok 19 - adapter: declared-only audience keeps the component-result provenance
+  ---
+  duration_ms: 55.892667
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 17
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2525.60725

@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "journey": "knowledge-preauthorization",
+  "title": "U01–U08: knowledge publication pre-authorization over real managed source/target facts",
+  "requiredCheck": "V_U01..V_U08",
+  "recipeOwner": "P4_7",
+  "executionOwner": "VERIFY",
+  "registeredRecipe": "openspec/changes/delivery-foundation-rearchitecture/authorization-journey/pilot-registration.case.json",
+  "acceptanceIds": ["U01", "U02", "U03", "U04", "U05", "U06", "U07", "U08"],
+  "profile": "managed-pilot",
+  "runner": {
+    "tool": "tools/verify/delivery-journey.mjs",
+    "binding": "verification-case-plan.json cases.U01..U08 (case_module test/delivery-cases/4_7.mjs; scenario token must map to an executed ok test point)",
+    "note": "decision-plane scenarios run the real KnowledgeAuthz.v1 CLI over committed artifacts plus tmp fixture worlds; target-side facts were observed live on the pilot Outline stack (terminal channel) and are registered in pilot-registration.case.json"
+  },
+  "steps": [
+    {
+      "id": "U01-grant-chain",
+      "title": "authorization chain rejects self-authored/unauthorized/expired/revoked grants regardless of signatures",
+      "entrance": "knowledge-authz.mjs decide/verify-grant/revoke (real CLI, real clock)",
+      "liveFace": "pilot instance exists and is reachable; the issuance credential stays UNREGISTERED, so the live auto-publish path stays blocked at the issuance link",
+      "expected": "deny (SELF_AUTHORED_GRANT / SELF_AUTHORED_APPROVAL / ISSUER_UNREGISTERED / ISSUER_AUTHORITY_INVALID / GRANT_EXPIRED / GRANT_REVOKED / OWNER_MISMATCH / ROLE_ISOLATION_VIOLATED)"
+    },
+    {
+      "id": "U02-disclosure-intersection",
+      "title": "multi-source disclosure intersection, never the union; review pass does not widen authorization",
+      "entrance": "knowledge-authz.mjs decide with two source domains",
+      "expected": "target audience inside the intersection -> allow; in the union but outside the intersection -> AUDIENCE_OUTSIDE_INTERSECTION with the review verdict unchanged"
+    },
+    {
+      "id": "U03-prewrite-recheck",
+      "title": "pre-write re-verification blocks stale verdicts; no auto-renewal of the same operation",
+      "entrance": "decide -> revoke (real ledger write) -> recheck",
+      "expected": "recheck denied with LEDGER_CHANGED/GRANT_NO_LONGER_VALID; tampered receipt -> TAMPERED_DECISION; live face: stale lastRevision write conflicts 409 on the real instance"
+    },
+    {
+      "id": "U04-version-binding",
+      "title": "review/approval bind the frozen payload digest; any payload drift invalidates both",
+      "entrance": "recheck --payload-digest",
+      "expected": "PAYLOAD_DRIFTED; no semantic-similarity or same-document-id reuse path exists in the surface"
+    },
+    {
+      "id": "U05-effective-audience",
+      "title": "allowlisted collection id is not enough: audience source, share channels and LIVE readback channel completeness gate the publish",
+      "entrance": "decide with audienceSource page-share/subtree-share/public-share, widened readers, and LIVE readback claims",
+      "liveFace": "managed collection memberships=owner only; shares registry empty (pageShare/publicShare READ); attachment channel UNVERIFIED (upload infrastructure error) — the registered audience stays PARTIAL and a LIVE claim missing attachment is fail-closed",
+      "expected": "TARGET_AUDIENCE_ENLARGED / AUDIENCE_OUTSIDE_INTERSECTION / TARGET_CHANNEL_NOT_READ; no ACL mutation entrance exists on the CLI"
+    },
+    {
+      "id": "U06-principal-mapping",
+      "title": "incomplete pagination, unmapped principals and permission errors stay blocked; mapped directory principals are accepted without widening",
+      "entrance": "decide with INCOMPLETE/ERROR/service-only evidence and unmapped principals; users.list live readback for the directory map",
+      "liveFace": "pilot directory: 3 subjects mapped (owner via OIDC first sign-in; member/offboarded via disclosed directory seed), bound to immutable Outline user ids in the authorization model",
+      "expected": "PERMISSION_EVIDENCE_INCOMPLETE / PERMISSION_EVIDENCE_ERROR / SERVICE_ACCOUNT_READ_NOT_REPUBLICATION / PRINCIPAL_UNMAPPED / TARGET_EVIDENCE_INCOMPLETE"
+    },
+    {
+      "id": "U07-role-isolation",
+      "title": "author/reviewer/publisher/isolator and issuer separation enforced by managed entrances; denials auditable",
+      "entrance": "resolve as author over publisher ref; revoke as author; decide requestedBy author; self-review",
+      "liveFace": "member key: documents.info / collections.add_user / users.update / collections.info all 403 on the real instance; offboarded key: 403 (suspension enforced); successful actions audited in the Outline events log with actorId",
+      "expected": "PRINCIPAL_NOT_AUTHORIZED / REVOKE_NOT_AUTHORIZED / IDENTITY_NOT_PUBLISHER / SELF_REVIEW_FORBIDDEN; denied management attempts never mutate the ledger"
+    },
+    {
+      "id": "U08-positive-auto-publish",
+      "title": "the grounded path auto-advances with a bound receipt and readback obligation, scoped to this object/version",
+      "entrance": "decide (full grant chain, complete sources, matching digest, independent review) then recheck",
+      "liveFace": "owner documents.create 200 + documents.info independent readback 200 on the managed collection; the registered publish action set is documents.create/documents.update only",
+      "expected": "allow receipt (KnowledgePublishDecision.v1) with readback.required=true, autoRenewal=false, LIVE_READBACK vs DECLARED_ONLY provenance recorded honestly; PAYLOAD_DRIFTED on any other version"
+    }
+  ],
+  "verdictSemantics": {
+    "PASS": "every scenario executed with nonzero real entrance count and the observed outcomes matched the frozen THEN; target-side facts bound to the live registration record",
+    "UNVERIFIED": "a required live channel could not be observed (attachment channel: object-store region unset) — recorded honestly, never converted to PASS"
+  }
+}
