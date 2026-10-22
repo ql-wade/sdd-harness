@@ -1,0 +1,134 @@
+{
+ "task": "I07",
+ "run": "rework-seven-p1-r1",
+ "worker_branch": "rework/i07-monitor",
+ "base": "master@daccc07",
+ "opening_receipt": "git log --oneline -1 -> 46df6df chore(openspec): accept P2_5 rework (9/9; review APPROVED; P1-02 closed); branch fast-forwarded to base daccc07 before any change (ff-only; ledger-only commits daccc07/9c3be7d are not part of my diff)",
+ "final_status": "DONE",
+ "final_status_reason": "All 6 steps re-verified for real on the local half: owns suite green x2 (17/17 after +1 anchor test), 4 probes per oracle, full npm test 439/442 with only the 2 known env items (C08 host-openspec drift, B08 preservation), 4/4 mutations caught, 10/10 deadline-freeze tampers caught, 7 previously un-anchored structural negatives now anchored and directly evidenced, P4_8 consumption consistency verified (9/9 value parity + 8/8 semantic parity + 4_8.mjs 5/5 green on this base). The real external monitoring instance / real wall-clock delivery receipts stay UNVERIFIED by design: that is the spec-mandated honest state (pre-enable gate closed, tasks.md Step 5 缺外部实例保持UNVERIFIED), not an unfinished step.",
+ "steps_done": "6/6",
+ "steps_detail": [
+  {
+   "step": 1,
+   "state": "re-verified + hardened",
+   "note": "RED matrix re-anchored: process-death/host-down/scan-stall probes, pre-enable block, delivery-auth claim guard, deadline freeze, segment separation, supervisor gates, dual-start refusals, budget stop-and-escalate, unauthorized send all present; 7 validate codes that had NO test anchor (MONITOR_INTERFACE_INVALID, PROJECT_MISMATCH, EXAMPLE_DECLARATION_REQUIRED, HEALTH_READ_ONLY_REQUIRED, SUPERVISOR_AUTHORITY_BINDING_INVALID, SUPERVISOR_BUSINESS_RETRY_FORBIDDEN, NO_BUSINESS_WRITES_INCOMPLETE) now anchored by one new structural-negatives test + supervisor audit shape anchor (oldWriterStopSeparatelyAudited/restartAuditRequired, red spec line 重启原实例与停止旧写者分别审计)"
+  },
+  {
+   "step": 2,
+   "state": "re-verified",
+   "note": "no product change needed: all 7 codes were already enforced in monitor.mjs (only anchors were missing) — zero changes to tools/infra/monitor.mjs and the 5 policy JSONs in this rework; validate exit 0 clean, catalogGaps=[] (I01 amendment 5), runner-process-failure probe VERIFIED (real spawn+SIGKILL+stale detection+same-authority restart+single live instance), scan-watermark-stall VERIFIED with realCometReadback UNVERIFIED, external-host-down exit 2 UNVERIFIED faultDomainSatisfied=false"
+  },
+  {
+   "step": 3,
+   "state": "re-verified",
+   "note": "independent readback: alert timeline three-segment timing from real timestamps (detection 60s / failover delivery 25s / escalation after 310s unacked); alert!=isolation (undelivered-never-acked, decision receipt executed=false); P4_8 cross-check evidence 09"
+  },
+  {
+   "step": 4,
+   "state": "done",
+   "note": "commits carry I07 rework marker; zero host paths (evidence sanitized to <repo-worktree>/<host-home> placeholders per I05 precedent)"
+  },
+  {
+   "step": 5,
+   "state": "re-verified",
+   "note": "monitor reads heartbeat/scan watermark outside the runner fault domain only as far as locally provable: process-level injection real, host-failure capability honestly not claimed (hostFailureCapabilityClaimed=false); no external instance exists so real wall-clock/delivery steps remain UNVERIFIED and unticked"
+  },
+  {
+   "step": 6,
+   "state": "done",
+   "note": "cross-task shared policy untouched (P4_8 G15A_DEADLINES and I07 policies unified only by the unique controller); historical pass not inherited — everything re-run this round"
+  }
+ ],
+ "reverified": [
+  {
+   "behavior": "Health.v1 dual independent alert signals (heartbeat age >90s fires even with fresh scan watermark; scan watermark stalled >120s fires even with fresh heartbeat)",
+   "negative": "stale-heartbeat fixture exits 2; fresh-heartbeat+stalled-scan exits 2 with SCAN_WATERMARK_STALL.heartbeatIndependent=true and NO heartbeat alert",
+   "mutation_caught": "M1 alertAfterAgeSeconds 90->300 caught by deadline-freeze test (5 failures); full matrix evidence 08: 10/10 fields DEADLINE_CONTRACT_INVALID"
+  },
+  {
+   "behavior": "Supervisor.v1 restart-original only, budget 3-per-300s then STOP_AND_ESCALATE, dual-start refusals",
+   "negative": "6 forbidden actions refused; oldWriterAlive/storageOwnershipUnknown refused; 4th restart in window refused with prepared-only escalation",
+   "mutation_caught": "M2 maxRestarts 3->10 caught (4 failures incl. RESTART_BUDGET_INVALID); matrix tamper restartWindowSeconds/restartMax -> DEADLINE_CONTRACT_INVALID+RESTART_BUDGET_INVALID"
+  },
+  {
+   "behavior": "Monitor.v1 three separate segments (detection/delivery/escalation) from real timestamps; combined total-delivery budget forbidden",
+   "negative": "late detection exits 2 (DETECTION_DEADLINE_BREACH); late delivery exits 2 with detection still within budget (proving separate judgment); undelivered+acked exits 2; unacked+unescalated exits 2; send-claim-without-authorization exits 2",
+   "mutation_caught": "M3 totalDeliverySeconds=150 added -> caught (SEGMENTS_NOT_SEPARATE)"
+  },
+  {
+   "behavior": "Supervisor never becomes a second control plane (Comet recovers transactions/compensation/retries itself)",
+   "negative": "NEW anchor: cometSelfRecovery.supervisorBusinessRetry=true -> SUPERVISOR_BUSINESS_RETRY_FORBIDDEN exit 2",
+   "mutation_caught": "M4 flip -> caught by committed-clean contract test (suite-level); direct per-code evidence 07 caught=True"
+  },
+  {
+   "behavior": "pre-enable gate fail-closed: unattended release needs all 7 registrations; delivery authorization claim needs a recorded approval",
+   "negative": "enabled-without-registrations exits 2 listing missing prerequisites; claim-without-record exits 2",
+   "mutation_caught": "existing RED tests re-run green; no drift"
+  },
+  {
+   "behavior": "fault domain honesty: co-hosted monitor cannot pass host-failure; external-host-down stays UNVERIFIED with faultDomainSatisfied=false",
+   "negative": "probe external-host-down exit 2, mustNotPass=true, no skip flag; policy flip coHostedMonitorMustNotPassHostFailure=false exits 2",
+   "mutation_caught": "existing RED test re-run green"
+  },
+  {
+   "behavior": "NEW: interface tag, project binding, example declaration, health read-only, authority binding, business-retry split, noBusinessWrites each structurally enforced",
+   "negative": "7 tampers each -> exit 2 with the exact code (evidence 07)",
+   "mutation_caught": "each tamper caught=True by direct validate run and by the new test"
+  }
+ ],
+ "deadline_freeze": "30/30/90/120/120 (+30 delivery/300 escalation/300 window/3 max/600 recovery) tamper gate re-verified: all 10 committed values asserted equal to contract then individually tampered -> 10/10 DEADLINE_CONTRACT_INVALID exit 2 (evidence 08); suite-level freeze test re-run green x2",
+ "p48_consistency": "CONSISTENT, by-value coupling, honestly noted: P4_8 consumes I07's mechanism semantics through its own frozen adapter (lib/adapters/knowledge-revocation.js G15A_DEADLINES, Object.freeze) — not by importing I07 files; 9/9 shared values MATCH (30/30/90/120/120/30/300x/3/600; escalationAckTimeout 300s is I07-alert-segment specific, P4_8 has no ack field by design); 8/8 semantic anchors MATCH (alert!=isolation isolated:false, restart-original only, first-isolation-failure immediate alert, dual independent signals); test/delivery-cases/4_8.mjs J5 consumes thresholds 95s>90s, 125s>120s, isolationBudget 120s, alertDelivery 30s — all inside I07's frozen contract; 4_8.mjs runs 5/5 green on this base (evidence 04). No unification attempted: shared-policy integration belongs to the unique controller (Step 6 discipline).",
+ "red_cases": [
+  "stale heartbeat -> HEARTBEAT_AGE_ALERT exit 2",
+  "fresh heartbeat + stalled scan -> SCAN_WATERMARK_STALL exit 2 (independent)",
+  "overdue isolation deadline -> ISOLATION_DEADLINE_BREACH",
+  "missing authority identity -> AUTHORITY_IDENTITY_MISSING",
+  "pre-enable enabled w/o registrations -> PRE_ENABLE_REGISTRATION_INCOMPLETE",
+  "delivery claim w/o record -> DELIVERY_AUTHORIZATION_CLAIM_FORBIDDEN",
+  "deadline tamper x3 in-suite + x10 matrix -> DEADLINE_CONTRACT_INVALID",
+  "combined total-delivery budget -> SEGMENTS_NOT_SEPARATE",
+  "undelivered-marked-acked -> UNDELIVERED_MARKED_ACKED",
+  "missing escalation -> ESCALATION_MISSING",
+  "unauthorized send -> SEND_WITHOUT_AUTHORIZATION",
+  "6 forbidden supervisor actions -> FORBIDDEN_ACTION_REFUSED",
+  "old writer alive -> OLD_WRITER_ALIVE_REFUSED; storage unknown -> STORAGE_OWNERSHIP_UNKNOWN_REFUSED",
+  "budget exceeded -> STOP_AND_ESCALATE (prepare-only escalation)",
+  "cross-project ref -> CROSS_PROJECT_REF",
+  "NEW x7: MONITOR_INTERFACE_INVALID / PROJECT_MISMATCH / EXAMPLE_DECLARATION_REQUIRED / HEALTH_READ_ONLY_REQUIRED / SUPERVISOR_AUTHORITY_BINDING_INVALID / SUPERVISOR_BUSINESS_RETRY_FORBIDDEN / NO_BUSINESS_WRITES_INCOMPLETE"
+ ],
+ "commands": {
+  "git log --oneline -1 (opening receipt)": "exit 0",
+  "git merge --ff-only daccc07 (align to base)": "exit 0",
+  "node --test test/infra-monitor.test.js (run1 pre-fix)": "exit 0, 16/16",
+  "node --test test/infra-monitor.test.js (run2 pre-fix)": "exit 0, 16/16",
+  "node tools/infra/monitor.mjs validate --registry infra/delivery/registry.json --json": "exit 0, ok=true",
+  "node tools/infra/monitor.mjs probe --case runner-process-failure --json": "exit 0, VERIFIED",
+  "node tools/infra/monitor.mjs probe --case external-host-down --json": "exit 2, UNVERIFIED faultDomainSatisfied=false",
+  "node tools/infra/monitor.mjs probe --case scan-watermark-stall --json": "exit 0, VERIFIED realCometReadback UNVERIFIED",
+  "node --test test/delivery-cases/4_8.mjs (P4_8 consumption side, read-only cross-check run)": "exit 0, 5/5",
+  "node --test test/infra-monitor.test.js (run1 post-anchor-fix)": "exit 0, 17/17",
+  "node --test test/infra-monitor.test.js (run2 post-anchor-fix)": "exit 0, 17/17",
+  "mutation M1 heartbeat threshold tamper": "suite red (5 fail), restored clean",
+  "mutation M2 restart budget loosen": "suite red (4 fail), restored clean",
+  "mutation M3 detection+delivery merge": "suite red (3 fail), restored clean",
+  "mutation M4 supervisor business-retry flip": "suite red (3 fail), restored clean",
+  "npm test (full)": "exit 1, 439 pass / 2 fail (known C08+B08 only) / 1 skip, zero new",
+  "git status --short after mutations": "clean, no live-config residue"
+ },
+ "unverified": [
+  "real external monitoring instance outside the runner fault domain (host-down 2-minute discovery wall-clock evidence) — no instance/owner/network/persistence provided; monitor-registration stays example+UNREGISTERED and the pre-enable gate stays closed",
+  "real alert delivery/ack/escalation receipts through registered channels (monitor-alert ref resolved) — no notification-send authorization exists in this task; PREPARE_ONLY is the honest terminal state",
+  "capacity/failure evidence that operationally freezes the deadline values — health-contract evidence.capacityAndFailureFreeze stays UNVERIFIED",
+  "real Comet facts readback (monitor-health-read ref live) — probes declare fixture scope honestly, realCometReadback UNVERIFIED"
+ ],
+ "files_changed": [
+  "test/infra-monitor.test.js (+76 lines: 1 new structural-negatives test anchoring 7 validate codes + supervisor audit shape anchor; no existing test modified)",
+  "worker-reports/I07.rework.json",
+  "worker-reports/I07-rework/evidence/ (12 evidence .txt files, 01-12)"
+ ],
+ "commits": {
+  "53c15f3": "test(I07 rework): anchor 7 unanchored structural negatives + supervisor audit shape",
+  "HEAD (this commit)": "chore(I07 rework): worker report + evidence (rework-seven-p1-r1) — owns 17/17 x2, 4/4 mutations caught, 10/10 deadline-freeze matrix, P4_8 parity 9/9+8/8; final diff gate in evidence/12 (Owns test file + report/evidence only, zero host paths)"
+ },
+ "blockers_or_questions": []
+}

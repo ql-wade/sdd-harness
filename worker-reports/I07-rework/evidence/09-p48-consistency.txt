@@ -1,0 +1,23 @@
+== I07 committed policy vs P4_8 G15A_DEADLINES (value parity) ==
+heartbeatIntervalSeconds         I07=   30  P4_8.heartbeatIntervalSeconds=   30  MATCH
+monitorCheckIntervalSeconds      I07=   30  P4_8.monitorCheckIntervalSeconds=   30  MATCH
+heartbeatAlertAfterSeconds       I07=   90  P4_8.heartbeatAlertAfterSeconds=   90  MATCH
+scanStallAlertAfterSeconds       I07=  120  P4_8.scanStallAlertAfterSeconds=  120  MATCH
+detectionLatestSeconds           I07=  120  P4_8.runnerFaultDetectionLatestSeconds=  120  MATCH
+deliveryTargetSeconds            I07=   30  P4_8.alertDeliverySeconds=   30  MATCH
+restartWindowSeconds             I07=  300  P4_8.restartWindowSeconds=  300  MATCH
+restartMax                       I07=    3  P4_8.restartMax=    3  MATCH
+recoveryTargetSeconds            I07=  600  P4_8.recoveryTargetSeconds=  600  MATCH
+escalationAckTimeoutSeconds is I07-alert-segment specific; P4_8 has no ack-timeout field (different concern) -> n/a
+VALUE_PARITY: True
+
+== semantic parity (grep-anchored, read-only) ==
+[OK ] alert != isolation (P4_8 judgeMonitorThresholds isolated:false)
+[OK ] alert != isolation (I07 oracle: 不把告警当已隔离)
+[OK ] restart-original only (P4_8)
+[OK ] restart-original only (I07 Supervisor.v1)
+[OK ] first isolation failure immediate alert (P4_8 judgeIsolationFailure alert.at==failure)
+[OK ] first isolation failure immediate event (I07 alert-policy)
+[OK ] dual independent signals (P4_8 note)
+[OK ] dual independent signals (I07 health-contract)
+P48_CONSISTENCY: True
