@@ -268,12 +268,12 @@
 **Parallel safe:** false
 **Acceptance IDs:** A20, B10
 
-- [ ] **Step 1 [5 min]: Test** 2.3.a 增量暴露检查 CLI 与旧报告适配：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保持既有命令；测试 0/1/2 和 JSON 结果；字段缺失或版本不兼容明确拒绝。
-- [ ] **Step 2 [5 min]: Implement** 2.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 2.3.b 运行兼容回归：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：node --test test/*.test.js、npm test、bash scripts/check.sh；关闭 CodeGraph/RTK 后正确性仍成立。
-- [ ] **Step 4 [5 min]: Implement** 2.3.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 2.3.a 增量暴露检查 CLI 与旧报告适配：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保持既有命令；测试 0/1/2 和 JSON 结果；字段缺失或版本不兼容明确拒绝。
+- [x] **Step 2 [5 min]: Implement** 2.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 2.3.b 运行兼容回归：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：node --test test/*.test.js、npm test、bash scripts/check.sh；关闭 CodeGraph/RTK 后正确性仍成立。
+- [x] **Step 4 [5 min]: Implement** 2.3.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P2_4: 原任务 2.4 — 按 classic-gate-runtime-contract.md 评审并最小扩展同一 Classic 的 policy/receipt/evaluate、共同转换条件、受管写入、resolver/continuation、状态事务和 archive/completed；先用 D01–D08 真实入口负例复现，再实现阻断/返工/失效与恢复。A/T 采用独立自动审查；不得新建第二阶段账本，也不得用手改 phase 模拟返工。运行时代码/装配改动需独立评审和完整回归，当前仅计划。
 
