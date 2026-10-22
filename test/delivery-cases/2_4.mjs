@@ -29,7 +29,15 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const lock = JSON.parse(await fs.readFile(path.join(projectRoot, 'integrations/comet/upstream.lock.json'), 'utf8'));
+// COMET_UPSTREAM_LOCK: pre-integration verification seam only. The contract
+// commands run without it and resolve the repository lock, which stays the
+// single source of truth; while a patch change awaits controller lock
+// integration, a worker may point this at an integrity-identical lock copy
+// (same archive/toolchain, only patch sha256 entries updated to the candidate).
+const lockPath = process.env.COMET_UPSTREAM_LOCK
+  ? path.resolve(process.env.COMET_UPSTREAM_LOCK)
+  : path.join(projectRoot, 'integrations/comet/upstream.lock.json');
+const lock = JSON.parse(await fs.readFile(lockPath, 'utf8'));
 
 const fingerprint = crypto.createHash('sha256').update(JSON.stringify({
   archive: lock.source.sha256,
@@ -138,18 +146,90 @@ const writeArtifacts = async (change, { design = 'Managed probe design v1.' } = 
   return dir;
 };
 
-// Dispatch one gate and accept a pass result; returns the receipt.
-const acceptGate = (change, gate, { verdict = 'pass', findings, execution, attempt } = {}) => {
+const sha256Text = (text) => crypto.createHash('sha256').update(text).digest('hex');
+const GATE_ROLE_OF = { R: 'requirements-owner', A: 'reviewer', T: 'reviewer', P: 'planner', V: 'verifier', K: 'knowledge-publisher' };
+
+// This run's real multi-agent consensus receipt (read-only positive control):
+// the architecture-gate evidence shape is taken verbatim from a genuinely
+// executed unanimous review; the artifactDigest is re-bound to the dispatch
+// inputDigest because the artifact under review here is the scratch change,
+// not the plan bundle. Reviewer-independence itself is the I02 boundary and
+// is NOT claimed here — this pins the Runtime's consumption of the result.
+const consensusDir = path.join(projectRoot, 'openspec/changes/delivery-foundation-rearchitecture/consensus/2026-10-22-plan-r3');
+const realTally = await fs.readFile(path.join(consensusDir, 'tally.json'), 'utf8').then((t) => JSON.parse(t), () => null);
+const realConsensusManifest = await fs.readFile(path.join(consensusDir, 'manifest.json'), 'utf8').then((t) => JSON.parse(t), () => null);
+
+const consensusForDispatch = (binding, overrides = {}) => ({
+  reviewId: realConsensusManifest?.review_id ?? 'seven-p1-plan-20261022-r3',
+  rule: 'unanimous',
+  status: 'CLOSED',
+  participants: (realConsensusManifest?.participants ?? ['claude-code', 'zcode', 'codex-agent']).slice(),
+  ballots: (realTally?.ballots ?? []).map((ballot) => ({
+    agent: ballot.agent,
+    verdict: ballot.verdict,
+    blockingFindings: ballot.blocking_findings,
+    summaryDigest: sha256Text(String(ballot.summary ?? '')),
+  })),
+  artifactDigest: binding.inputDigest,
+  ...overrides,
+});
+
+const testDesignForDispatch = (binding, overrides = {}) => ({
+  verdict: 'sufficient',
+  oracle: 'strong',
+  inputDigest: binding.inputDigest,
+  reviewer: 'test-authoring',
+  findings: [],
+  ...overrides,
+});
+
+// A compliant pass result: the dispatched binding echoed back, a real report
+// and its digest, plus the gate-specific independent review evidence (A:
+// unanimous consensus tally; T: test-design sufficiency with an adequate
+// oracle; R/P/V: report binding).
+const passEvidence = (gate, binding, extra = {}) => ({
+  execution: binding.execution,
+  attempt: binding.attempt,
+  verdict: 'pass',
+  role: GATE_ROLE_OF[gate],
+  inputDigest: binding.inputDigest,
+  report: `# Gate ${gate} independent review\n\nReviewed by ${GATE_ROLE_OF[gate]} over the dispatched inputs (${binding.inputDigest.slice(0, 12)}…).\n`,
+  reportDigest: null, // filled below
+  ...extra,
+});
+const withReportDigest = (result) => ({ ...result, reportDigest: sha256Text(result.report) });
+
+const dispatchOf = (change, gate) => {
   const dispatched = comet(['state', 'dispatch-gate', change, gate, '--json']);
   assert.equal(dispatched.json?.exitCode, 0, `dispatch-gate ${gate} failed: ${plain(dispatched.stderr).slice(0, 200)}`);
-  const binding = dispatched.json?.data?.dispatch
+  return dispatched.json?.data?.dispatch
     ?? JSON.parse((dispatched.stdout ?? '').trim().split('\n').pop());
-  const result = {
-    execution: execution ?? binding.execution,
-    attempt: attempt ?? binding.attempt,
-    verdict,
-    ...(findings ? { findings } : {}),
-  };
+};
+
+const rawAccept = (change, gate, result) => {
+  const resultFile = path.join(scratch, `raw-${change}-${gate}-${Math.random().toString(36).slice(2)}.json`);
+  fsSync.writeFileSync(resultFile, JSON.stringify(result));
+  return comet(['state', 'accept-gate', change, gate, '--file', resultFile, '--json']);
+};
+
+// Dispatch one gate and accept a fully evidenced pass result.
+const acceptGate = (change, gate, { verdict = 'pass', findings, execution, attempt, evidence = {} } = {}) => {
+  const binding = dispatchOf(change, gate);
+  let result;
+  if (verdict === 'pass') {
+    result = withReportDigest(passEvidence(gate, binding, evidence));
+    if (gate === 'A' && !('consensus' in evidence)) result.consensus = consensusForDispatch(binding);
+    if (gate === 'T' && !('testDesignReview' in evidence)) result.testDesignReview = testDesignForDispatch(binding);
+  } else {
+    result = {
+      execution: binding.execution,
+      attempt: binding.attempt,
+      verdict,
+      ...(findings ? { findings } : {}),
+    };
+  }
+  if (execution) result.execution = execution;
+  if (attempt) result.attempt = attempt;
   const resultFile = path.join(scratch, `result-${change}-${gate}-${Math.random().toString(36).slice(2)}.json`);
   fsSync.writeFileSync(resultFile, JSON.stringify(result));
   const accepted = comet(['state', 'accept-gate', change, gate, '--file', resultFile, '--json']);
@@ -167,13 +247,32 @@ const acceptAll = (change, gates) => {
 // Managed drive: init → artifacts → R/A/T accepted → design confirmed (the
 // guard apply moves design→build; entering build re-checks R/A/T premises) →
 // P accepted (the plan gate is required to dispatch build steps).
+let projectInitPromise = null;
+// --test-name-pattern runs skip the setup test, so every managed case lazily
+// performs the project init itself (idempotent).
+const ensureProjectInit = () => {
+  if (!projectInitPromise) {
+    projectInitPromise = (async () => {
+      if (await fs.access(path.join(project, '.comet')).then(() => true, () => false)) return;
+      const init = comet(['init', project, '--yes', '--scope', 'project', '--workflow', 'classic', '--platform', 'claude', '--codegraph', 'skip', '--language', 'en'], { timeout: 300_000 });
+      assert.equal(init.status, 0, `comet init (classic) failed: ${plain(init.stderr).slice(0, 400)}`);
+    })();
+  }
+  return projectInitPromise;
+};
+
 async function initManaged(change) {
+  await ensureProjectInit();
   await writeArtifacts(change);
   assert.equal(comet(['state', 'init', change, 'full', '--managed-delivery', '--knowledge-closeout-required', 'true', '--json']).json?.exitCode, 0);
   assert.equal(comet(['state', 'select', change, '--json']).json?.exitCode, 0);
   const rel = `docs/openspec/changes/${change}`;
   assert.equal(comet(['state', 'set', change, 'design_doc', `${rel}/design.md`, 'test_intent', `${rel}/test-intent.md`, 'plan', `docs/superpowers/plans/${change}-plan.md`, '--json']).json?.exitCode, 0);
-  assert.equal(comet(['state', 'transition', change, 'open-complete', '--json']).json?.exitCode, 0, plain(comet(['state', 'transition', change, 'open-complete', '--json']).stderr ?? ''));
+  // C01/RW_R_ENTRY: entering design is gated on a current R receipt, so the
+  // trusted R is accepted before open-complete moves the run forward.
+  acceptGate(change, 'R');
+  const openComplete = comet(['state', 'transition', change, 'open-complete', '--json']);
+  assert.equal(openComplete.json?.exitCode, 0, plain(openComplete.stderr ?? ''));
 }
 
 async function driveToBuild(change) {
@@ -256,9 +355,11 @@ test('D01: acceptance without a Runtime dispatch is refused; the dispatched path
   assert.equal(binding.role, 'requirements-owner');
   assert.match(binding.inputDigest, /^[a-f0-9]{64}$/);
   const receipts = JSON.parse(comet(['state', 'get', change, 'gate_receipts']).stdout?.trim() ?? '[]');
-  assert.equal(receipts.length, 1);
+  // initManaged's trusted R plus this dispatch's accepted R — append-only.
+  assert.equal(receipts.length, 2);
   assert.equal(receipts[0].gate, 'R');
-  assert.equal(receipts[0].execution, binding.execution);
+  assert.equal(receipts[1].gate, 'R');
+  assert.equal(receipts[1].execution, binding.execution);
 });
 
 test('D02: inputs modified while the review is in flight make the result stale — it cannot be accepted', async (t) => {
@@ -286,7 +387,9 @@ test('D02: inputs modified while the review is in flight make the result stale �
   assert.equal(rebinding.attempt, 1, 'the attempt counter is per input version (rework budget semantics)');
   assert.notEqual(rebinding.inputDigest, binding.inputDigest, 'the re-dispatch binds the revised inputs');
   const good = path.join(scratch, 'good-a.json');
-  await fs.writeFile(good, JSON.stringify({ execution: rebinding.execution, attempt: rebinding.attempt, verdict: 'pass' }));
+  const goodResult = withReportDigest(passEvidence('A', rebinding));
+  goodResult.consensus = consensusForDispatch(rebinding);
+  await fs.writeFile(good, JSON.stringify(goodResult));
   const accepted = comet(['state', 'accept-gate', change, 'A', '--file', good, '--json']);
   assert.equal(accepted.json?.exitCode, 0, plain(accepted.stderr).slice(0, 300));
 });
@@ -556,4 +659,203 @@ test('C07/D08: full managed lifecycle reaches archive; knowledge unknown reads b
   assert.equal(runState.status, 'completed', 'the run completes only after the knowledge seat is filled');
   const nextFinal = comet(['state', 'next', change, '--json']);
   assert.notEqual(nextFinal.json?.data?.nextAction?.kind, 'knowledge-closeout');
+});
+
+// ---- seven-P1 rework: RW_R_ENTRY / RW_TRUSTED_REVIEW / RW_REVISION_NO_REVIVE
+// (V_RW_R_ENTRY / V_RW_TRUSTED_REVIEW / V_RW_REVISION_NO_REVIVE). Each block is
+// self-contained: it performs its own project init, because the contract
+// commands run this file with --test-name-pattern and skip the setup test.
+
+test('RW_R_ENTRY: without a valid R every entrance into design refuses; a trusted R opens it', async (t) => {
+  if (skipIfNoBuild(t)) return;
+  await ensureProjectInit();
+  const change = 'p24-rw-r-entry';
+  await writeArtifacts(change);
+  assert.equal(comet(['state', 'init', change, 'full', '--managed-delivery', '--knowledge-closeout-required', 'true', '--json']).json?.exitCode, 0);
+  assert.equal(comet(['state', 'select', change, '--json']).json?.exitCode, 0);
+  const rel = `docs/openspec/changes/${change}`;
+  assert.equal(comet(['state', 'set', change, 'design_doc', `${rel}/design.md`, 'test_intent', `${rel}/test-intent.md`, 'plan', `docs/superpowers/plans/${change}-plan.md`, '--json']).json?.exitCode, 0);
+  // No R receipt exists. Every managed entrance into design must refuse.
+  const direct = comet(['state', 'transition', change, 'open-complete', '--json']);
+  assert.equal(direct.json?.exitCode, 1, 'open-complete without an R receipt must be refused');
+  assert.match(refusalText(direct), /enter-design/, 'the refusal must name the enter-design premise');
+  assert.match(refusalText(direct), /gate R/);
+  const preview = comet(['guard', change, 'open']);
+  assert.equal(preview.status, 1, 'the guard preview must refuse to enter design without R');
+  assert.match(`${plain(preview.stdout)}\n${plain(preview.stderr)}`, /enter-design/, 'the guard preview must carry the enter-design gate premise');
+  const applied = comet(['guard', change, 'open', '--apply']);
+  assert.equal(applied.status, 1, 'guard --apply must refuse to enter design without R');
+  assert.equal(comet(['state', 'get', change, 'phase']).stdout?.trim(), 'open', 'the phase must stay open');
+  const next = comet(['state', 'next', change, '--json']);
+  assert.equal(next.json?.data?.gates?.allowed, false, 'next must carry the refused enter-design evaluation');
+  assert.match(`${String(next.stdout ?? '')}\n${String(next.stderr ?? '')}`, /gate R|requirements-owner/, 'next must route to the R gate');
+  const entryCheck = comet(['state', 'check', change, 'open']);
+  assert.equal(entryCheck.status, 1, 'the open entry-check set must fail on the missing R');
+  assert.match(plain(entryCheck.stdout), /managed gate R/, 'the entry check must name the managed R gate');
+  const status = comet(['state', 'gates', change, '--json']);
+  assert.equal(status.json?.data?.action, 'enter-design', 'the gate status must evaluate the enter-design action for the open phase');
+  assert.deepEqual(status.json?.data?.evaluation?.missing, ['R']);
+  // The managed write entrance: a design-doc write in open is formal
+  // architecture work and is refused before R.
+  const router = path.join(project, '.claude/skills/comet/scripts/comet-hook-router.mjs');
+  const hookProbe = spawnSync(nodeExecutable, [router, '--platform', 'claude', '--project-root', project], {
+    cwd: project,
+    encoding: 'utf8',
+    timeout: 60_000,
+    input: JSON.stringify({
+      session_id: 'p24-rw-r-entry-hook',
+      hook_event_name: 'PreToolUse',
+      cwd: project,
+      tool_name: 'Write',
+      tool_input: { file_path: path.join(changeDir(change), 'design.md'), content: 'premature architecture' },
+    }),
+    env: childEnv({ COMET_PROJECT_ROOT: project }),
+  });
+  assert.equal(hookProbe.status, 2, 'the open-phase design write must be refused without R');
+  assert.match(hookProbe.stderr ?? '', /enter-design|gate R/, 'the write refusal must name the enter-design premise');
+  // Hand phase edits stay dead with and without the escape hatch.
+  assert.notEqual(comet(['state', 'set', change, 'phase', 'design', '--json'], { env: { COMET_FORCE_PHASE: '1' } }).json?.exitCode, 0, 'COMET_FORCE_PHASE must not hand-edit the phase');
+  // A trusted R opens design on the same run.
+  const { accepted } = acceptGate(change, 'R');
+  assert.equal(accepted.json?.exitCode, 0, plain(accepted.stderr).slice(0, 300));
+  const openComplete = comet(['state', 'transition', change, 'open-complete', '--json']);
+  assert.equal(openComplete.json?.exitCode, 0, `open-complete after a trusted R must succeed: ${refusalText(openComplete).slice(0, 300)}`);
+  assert.equal(comet(['state', 'get', change, 'phase']).stdout?.trim(), 'design');
+  // Unmanaged changes keep the historical behavior: the R gate is scoped to managed delivery.
+  const unmanaged = 'p24-rw-r-unmanaged';
+  await writeArtifacts(unmanaged);
+  assert.equal(comet(['state', 'init', unmanaged, 'full', '--json']).json?.exitCode, 0);
+  const unmanagedOpen = comet(['state', 'transition', unmanaged, 'open-complete', '--json']);
+  assert.equal(unmanagedOpen.json?.exitCode, 0, 'the unmanaged flow must not gain the R gate');
+});
+
+test('RW_TRUSTED_REVIEW: a dispatch is not review evidence — same-caller empty/fake/weak passes are refused; real independent results are accepted and advance', async (t) => {
+  if (skipIfNoBuild(t)) return;
+  const change = 'p24-rw-review';
+  await initManaged(change); // R accepted with a real report; phase = design
+  // Same caller dispatches R again and submits an empty-report pass: refused.
+  const bare = dispatchOf(change, 'R');
+  const emptyPass = rawAccept(change, 'R', { execution: bare.execution, attempt: bare.attempt, verdict: 'pass' });
+  assert.notEqual(emptyPass.json?.exitCode, 0, 'a same-caller dispatch + empty report pass must be refused');
+  assert.match(refusalText(emptyPass), /report/, 'the refusal must name the missing review report');
+  // A report whose digest does not match its bytes: refused.
+  const wrongDigestResult = withReportDigest(passEvidence('R', bare));
+  wrongDigestResult.reportDigest = 'f'.repeat(64);
+  const wrongDigest = rawAccept(change, 'R', wrongDigestResult);
+  assert.notEqual(wrongDigest.json?.exitCode, 0, 'a report digest that does not bind the report bytes must be refused');
+  // A report echoing an older input version's digest: refused.
+  const oldDigest = rawAccept(change, 'R', withReportDigest(passEvidence('R', bare, { inputDigest: '0'.repeat(64) })));
+  assert.notEqual(oldDigest.json?.exitCode, 0, 'a result bound to an old input digest must be refused');
+  // A role the Runtime never assigned at dispatch: refused.
+  const fakeRole = rawAccept(change, 'R', withReportDigest(passEvidence('R', bare, { role: 'reviewer' })));
+  assert.notEqual(fakeRole.json?.exitCode, 0, 'a result claiming a role the dispatch never assigned must be refused');
+  // A fabricated execution (no dispatch at all): refused (D01 restated).
+  const noDispatch = rawAccept(change, 'A', { execution: 'phantom-exec', attempt: 1, verdict: 'pass' });
+  assert.notEqual(noDispatch.json?.exitCode, 0);
+  assert.match(refusalText(noDispatch), /no Runtime dispatch/);
+  // Architecture gate: a same-caller pass without any consensus tally: refused.
+  const aBare = dispatchOf(change, 'A');
+  const aNoConsensus = rawAccept(change, 'A', withReportDigest(passEvidence('A', aBare)));
+  assert.notEqual(aNoConsensus.json?.exitCode, 0, 'an A pass without a consensus tally must be refused');
+  assert.match(refusalText(aNoConsensus), /consensus/, 'the refusal must name the consensus evidence');
+  // Consensus mechanical failures, each on a fresh dispatch.
+  const aMissing = dispatchOf(change, 'A');
+  const missingBallot = { ...consensusForDispatch(aMissing), ballots: consensusForDispatch(aMissing).ballots.slice(0, -1) };
+  const refusedMissing = rawAccept(change, 'A', withReportDigest(passEvidence('A', aMissing, { consensus: missingBallot })));
+  assert.notEqual(refusedMissing.json?.exitCode, 0, 'a consensus with a missing ballot (缺票) must be refused');
+  const aReject = dispatchOf(change, 'A');
+  const rejectBallot = { ...consensusForDispatch(aReject), ballots: consensusForDispatch(aReject).ballots.map((b, i) => (i === 0 ? { ...b, verdict: 'REJECT' } : b)) };
+  const refusedReject = rawAccept(change, 'A', withReportDigest(passEvidence('A', aReject, { consensus: rejectBallot })));
+  assert.notEqual(refusedReject.json?.exitCode, 0, 'a consensus containing a rejecting vote must not count as a pass');
+  const aOld = dispatchOf(change, 'A');
+  const oldArtifact = { ...consensusForDispatch(aOld), artifactDigest: '0'.repeat(64) };
+  const refusedOld = rawAccept(change, 'A', withReportDigest(passEvidence('A', aOld, { consensus: oldArtifact })));
+  assert.notEqual(refusedOld.json?.exitCode, 0, 'a consensus bound to an old input digest must be refused');
+  const aPhantom = dispatchOf(change, 'A');
+  const phantomBallot = { ...consensusForDispatch(aPhantom), ballots: consensusForDispatch(aPhantom).ballots.map((b, i) => (i === 0 ? { ...b, agent: 'phantom-agent' } : b)) };
+  const refusedPhantom = rawAccept(change, 'A', withReportDigest(passEvidence('A', aPhantom, { consensus: phantomBallot })));
+  assert.notEqual(refusedPhantom.json?.exitCode, 0, 'a ballot from an agent outside the participant set (假身份) must be refused');
+  const aOpen = dispatchOf(change, 'A');
+  const openTally = { ...consensusForDispatch(aOpen), status: 'COLLECTING' };
+  const refusedOpen = rawAccept(change, 'A', withReportDigest(passEvidence('A', aOpen, { consensus: openTally })));
+  assert.notEqual(refusedOpen.json?.exitCode, 0, 'an unclosed (COLLECTING) tally must be refused');
+  // Test-design gate: weak oracle designs must not pass.
+  const tBare = dispatchOf(change, 'T');
+  const tNoReview = rawAccept(change, 'T', withReportDigest(passEvidence('T', tBare)));
+  assert.notEqual(tNoReview.json?.exitCode, 0, 'a T pass without a test-design review conclusion must be refused');
+  const tWeak = dispatchOf(change, 'T');
+  const refusedWeak = rawAccept(change, 'T', withReportDigest(passEvidence('T', tWeak, { testDesignReview: { verdict: 'sufficient', oracle: 'weak', inputDigest: tWeak.inputDigest, reviewer: 'test-authoring', findings: [] } })));
+  assert.notEqual(refusedWeak.json?.exitCode, 0, 'a T review attesting a weak oracle must be refused');
+  const tInsufficient = dispatchOf(change, 'T');
+  const refusedInsufficient = rawAccept(change, 'T', withReportDigest(passEvidence('T', tInsufficient, { testDesignReview: { verdict: 'insufficient', oracle: 'strong', inputDigest: tInsufficient.inputDigest, reviewer: 'test-authoring', findings: ['missing failure-mode coverage'] } })));
+  assert.notEqual(refusedInsufficient.json?.exitCode, 0, 'an insufficient T verdict must not pass the gate');
+  // Positive: real independent results (consensus shaped from this run's
+  // genuine unanimous receipt, re-bound to the reviewed inputs) are accepted
+  // and the run advances automatically.
+  const { accepted: aAccepted, binding: aBinding } = acceptGate(change, 'A');
+  assert.equal(aAccepted.json?.exitCode, 0, plain(aAccepted.stderr).slice(0, 300));
+  const receiptsAfterA = JSON.parse(comet(['state', 'get', change, 'gate_receipts']).stdout?.trim() ?? '[]');
+  const aReceipt = [...receiptsAfterA].reverse().find((r) => r.gate === 'A');
+  assert.equal(aReceipt.reportDigest, sha256Text(aReceipt.report), 'the recorded receipt keeps the original report digest');
+  assert.match(String(aReceipt.report ?? ''), /independent review/, 'the recorded receipt carries the original report text');
+  void aBinding;
+  acceptAll(change, ['T', 'P']);
+  assert.equal(comet(['state', 'complete-design', change, '--design-doc', `docs/openspec/changes/${change}/design.md`, '--json']).json?.exitCode, 0, 'a fully evidenced A/T/P chain must advance into build');
+  assert.equal(comet(['state', 'get', change, 'phase']).stdout?.trim(), 'build');
+});
+
+test('RW_REVISION_NO_REVIVE: restoring the original bytes cannot revive invalidated approvals; only a new-generation re-review passes; late old attempts stay dead', async (t) => {
+  if (skipIfNoBuild(t)) return;
+  const change = 'p24-rw-revision';
+  await driveToBuild(change); // R -> design; A/T/P accepted with evidence; build entered
+  const designPath = path.join(changeDir(change), 'design.md');
+  const originalDesign = await fs.readFile(designPath, 'utf8');
+  // An in-flight dispatch issued against the ORIGINAL inputs, never consumed.
+  const spare = dispatchOf(change, 'A');
+  // The design changes; the premise evaluation blocks (D04 semantics).
+  await fs.writeFile(designPath, `${originalDesign}\n<!-- silently revised v2 -->\n`);
+  const blockedNow = comet(['state', 'gates', change, '--json']);
+  assert.equal(blockedNow.json?.data?.evaluation?.allowed, false);
+  assert.ok((blockedNow.json?.data?.evaluation?.stale ?? []).includes('A'), 'A must be stale after the design revision');
+  // Restore the exact original bytes: the observed invalidation is persisted
+  // as a monotonic generation — the old approvals must NOT revive.
+  await fs.writeFile(designPath, originalDesign);
+  const afterRestore = comet(['state', 'gates', change, '--json']);
+  assert.equal(afterRestore.json?.data?.evaluation?.allowed, false, 'byte-restoring the design must not revive the stale approval chain');
+  assert.ok((afterRestore.json?.data?.evaluation?.stale ?? []).includes('A'), 'A must stay stale across the byte restore');
+  const blockedTransition = comet(['state', 'transition', change, 'build-complete', '--json']);
+  assert.notEqual(blockedTransition.json?.exitCode, 0, 'a transition over restored-but-invalidated premises must refuse');
+  // A late result from the pre-invalidation dispatch: its inputDigest matches
+  // the restored bytes, but it belongs to the old generation — refused.
+  const lateResult = withReportDigest(passEvidence('A', spare));
+  lateResult.consensus = consensusForDispatch(spare);
+  const late = rawAccept(change, 'A', lateResult);
+  assert.notEqual(late.json?.exitCode, 0, 'a late old-attempt result must not revive the invalidated gate');
+  assert.match(refusalText(late), /generation|stale|invalidat/i, 'the refusal must name the stale generation');
+  // Recovery/continuation surfaces keep refusing: history reconciliation
+  // authorizes nothing new while the premises are invalid.
+  const nextBlocked = comet(['state', 'next', change, '--json']);
+  assert.equal(nextBlocked.json?.data?.gates?.allowed, false);
+  // Receipts stay append-only history — nothing was deleted or rewritten.
+  const receiptsMid = JSON.parse(comet(['state', 'get', change, 'gate_receipts']).stdout?.trim() ?? '[]');
+  assert.ok(receiptsMid.filter((r) => r.gate === 'A').length >= 1, 'the historical A receipt remains recorded');
+  // New generation, independent re-review: repair route -> design, re-dispatch
+  // and re-accept A/T/P, re-enter build.
+  assert.equal(comet(['state', 'transition', change, 'architecture-repair', '--json']).json?.exitCode, 0);
+  assert.equal(comet(['state', 'get', change, 'phase']).stdout?.trim(), 'design');
+  const { binding: rebindA } = acceptGate(change, 'A');
+  const reReceipts = JSON.parse(comet(['state', 'get', change, 'gate_receipts']).stdout?.trim() ?? '[]');
+  const reA = [...reReceipts].reverse().find((r) => r.gate === 'A');
+  assert.ok(reA && reA.digest, 'the re-reviewed receipt is recorded');
+  void rebindA;
+  acceptAll(change, ['T', 'P']);
+  const gatesAfter = comet(['state', 'gates', change, '--json']);
+  assert.equal(gatesAfter.json?.data?.evaluation?.allowed, true, 'the new-generation re-review clears the premises');
+  assert.equal(comet(['state', 'complete-design', change, '--design-doc', `docs/openspec/changes/${change}/design.md`, '--json']).json?.exitCode, 0);
+  assert.equal(comet(['state', 'get', change, 'phase']).stdout?.trim(), 'build');
+  // Replaying an already-consumed acceptance is idempotently refused: legal
+  // history recovery grants no new authorization.
+  const replay = rawAccept(change, 'A', withReportDigest(passEvidence('A', rebindA)));
+  assert.notEqual(replay.json?.exitCode, 0, 'a consumed dispatch accepts exactly one result');
+  assert.match(refusalText(replay), /already consumed/);
 });

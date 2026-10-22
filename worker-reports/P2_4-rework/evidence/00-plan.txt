@@ -1,0 +1,32 @@
+P2_4 rework (seven-p1-r1) — implementation plan (checkpoint)
+Base: c6081c2. RED build: beab355d (official reuse path validated, exit 0).
+Archive: .sdd/cache/artifacts/comet-source-c90af44a....tar.gz sha256=28a7e2fa... (lock match).
+Node: ~/.nvm/versions/node/v24.15.0/bin/node. Caches symlinked to main repo .sdd/cache.
+
+P1-01 (no-R hard block, enter-design):
+- GateAction += 'enter-design'; requiredGates('enter-design') = ['R'].
+- Surfaces: transition open-complete; guard open preview/apply (guardOpenChecks); state next (open); state check (open); state gates (open); hook-guard design-artifact write in open|design phase; resolver design-phase dispatch block (managedPremisesBlocked design -> enter-design).
+- Unmanaged unchanged.
+
+P1-02 (review qualification at accept-gate):
+- Pass verdicts require bound evidence (mechanical, local; I02 boundary honest):
+  R/P/V: role (if present) == dispatch role; inputDigest echo == dispatch.inputDigest; non-empty report; reportDigest == sha256(report).
+  A: consensus {reviewId, rule:'unanimous', status:'CLOSED', participants>=2 unique, ballots: every participant exactly once, all APPROVE, blockingFindings==0, agent in participants, artifactDigest == dispatch.inputDigest}.
+  T: testDesignReview {verdict:'sufficient', oracle in strong|adequate, inputDigest == dispatch.inputDigest, reviewer non-empty}.
+- Reject verdict: findings (unchanged). Empty-report pass / old digest / fake role / missing-reject vote / open (COLLECTING) tally / weak oracle all refused.
+- Positive control: consensus shape taken from real run receipt openspec/.../consensus/2026-10-22-plan-r3/ (read-only), artifactDigest rebound to dispatch inputDigest.
+
+P1-03 (monotonic invalidation generation):
+- .comet.yaml machine-owned gate_invalidations (JSON): per gate {count, lastObservedDigest}.
+- syncGateInvalidations(dir): under withClassicStateLock, for each gate R/A/T/P/V with latest pass receipt, recompute current digest; on mismatch not yet recorded -> count++, lastObservedDigest=digest. Called from: dispatch-gate, accept-gate, transition, next, check, gates, guard gate check, hook-guard managed checks.
+- GateDispatch + GateReceipt gain generation (dispatch binds current count; accept requires dispatch.generation == current count; receipt.generation = dispatch.generation).
+- evaluateGatePremises/collectGateEvidence: gate current iff digest match AND receipt.generation == current count.
+- Effects: restore original bytes stays blocked (gen mismatch); late old-attempt accept refused (generation); re-dispatch+re-review on new generation passes; consumed-dispatch replay refused (idempotent history, no new authorization).
+
+Test surface (test/delivery-cases/2_4.mjs, node --test name patterns):
+RW_R_ENTRY / RW_TRUSTED_REVIEW / RW_REVISION_NO_REVIVE — each self-contained (lazy project init) because --test-name-pattern skips the setup test.
+Existing helpers updated: acceptGate produces compliant evidence; initManaged accepts R before open-complete; D02 tail uses helper.
+COMET_UPSTREAM_LOCK env override (documented pre-integration seam; bare contract command authoritative post-integration).
+
+Patch regeneration: throwaway git repo in $TMPDIR (pristine + 0001 + tests/1_6 = parent), edit 0002 files, git diff -> new 0002; same for tests/2_4. Lock untouched (controller); new sha256 recorded in report.
+Verification: 3 contract commands vs RED build (expect fail=RED) -> rebuild with temp lock -> GREEN x2 -> >=3 mutations (compiled dist edits, byte-restored) -> npm test full.
