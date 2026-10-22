@@ -1,0 +1,24 @@
+I03 rework r1 — full npm test, baseline (clean 115b6bd) vs after changes
+command: npm test (= node --test test/*.test.js)
+
+== baseline (before any I03 rework edit) ==
+tests=427 pass=424 fail=2 skipped=1
+known failures:
+not ok 59 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+not ok 416 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+# tests 427
+# pass 424
+# fail 2
+# skipped 1
+exit=0
+
+== after I03 rework edits (3 new owned tests; 427 -> 430) ==
+not ok 59 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+not ok 419 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+# tests 430
+# pass 427
+# fail 2
+# skipped 1
+exit=0
+
+diff: fail set identical (C08 host-OpenSpec dependency-edge negative; B08 preservation negative — number shifted 416->419 only because 3 tests were inserted before it). zero new failures.

@@ -348,7 +348,7 @@ test('RED domain gate: collection registration without owner or audience registr
 });
 
 test('probes are real subcommands: without a live instance they exit 2 with structured UNVERIFIED, never mock-green, never skip', () => {
-  for (const probeCase of ['oidc-principal-acl', 'restart-persistence', 'attachment-denial']) {
+  for (const probeCase of ['oidc-principal-acl', 'restart-persistence', 'attachment-denial', 'managed-publish']) {
     const result = runCli(['probe', '--case', probeCase, '--registry', registryPath, '--dir', outlineDir, '--json']);
     assert.equal(result.status, 2, `probe ${probeCase} must exit 2 without a live instance`);
     const observation = parseJsonOut(result, `probe ${probeCase}`);
@@ -466,4 +466,215 @@ test('compose declaration gate: loopback binds, dedicated internal network, no h
   const mountRun = runCli(['validate', '--registry', registryPath, '--dir', hostMount, '--json']);
   assert.equal(mountRun.status, 2, 'host path bind mounts must be rejected');
   assert.ok(codes(parseJsonOut(mountRun, 'validate')).includes('HOST_MOUNT_FORBIDDEN'));
+});
+
+// ---- 2026-10-22 rework (rework-seven-p1-r1)：本地半边负例矩阵补锚 ----
+// 之前无锚点的 RED 场景：受管发布阻断（来源交集/分页/principal映射/过期grant/admin替代/超时≠不存在）、
+// loopback 暴露自动开公网（第二个 external 网络）、compose 命名卷门、lock/up 门。
+// publish-request 一律 os.tmpdir() fixture（输入证据，不是期望值副本——期望值独立断言于真实子进程输出）。
+
+function writePublishRequest(value, raw) {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i03-pub-')), 'publish-request.json');
+  fs.writeFileSync(file, raw ?? JSON.stringify(value, null, 2) + '\n');
+  return file;
+}
+
+function runPublishGate(requestFile) {
+  return runCli([
+    'probe', '--case', 'managed-publish', '--publish-request', requestFile,
+    '--registry', registryPath, '--dir', outlineDir, '--json',
+  ]);
+}
+
+const NOMINAL_PUBLISH_REQUEST = {
+  interface: 'OutlinePublishRequest.example.v1',
+  collection: 'managed-source-collection',
+  targetReader: 'principal:reader-a@example.test',
+  audienceIntersection: ['principal:owner@example.test', 'principal:reader-a@example.test'],
+  pagination: { complete: true },
+  principalMapping: { status: 'MAPPED', subject: 'sub-reader-a' },
+  grant: { ref: 'secret-ref:sdd-harness-pilot/outline-publisher', expired: false },
+};
+
+test('managed-publish gate: each blocking precondition refuses the publish with its exact cause; admin read never substitutes; timeout/403 is never absence', () => {
+  const cases = [
+    {
+      label: 'source intersection excludes the target reader',
+      mutate: (req) => { req.audienceIntersection = ['principal:owner@example.test']; },
+      code: 'BLOCKED_SOURCE_INTERSECTION_EXCLUDES_READER',
+    },
+    {
+      label: 'empty audience dressed up with admin readability',
+      mutate: (req) => { req.audienceIntersection = []; req.adminReadable = true; },
+      code: 'BLOCKED_ADMIN_READ_NOT_AUDIENCE',
+    },
+    {
+      label: 'pagination failed mid-enumeration',
+      mutate: (req) => { req.pagination = { complete: false, reason: 'cursor timeout on page 3' }; },
+      code: 'BLOCKED_PAGINATION_INCOMPLETE',
+    },
+    {
+      label: 'subject cannot be mapped to a principal',
+      mutate: (req) => { req.principalMapping = { status: 'UNMAPPABLE', subject: 'sub-xyz' }; },
+      code: 'BLOCKED_PRINCIPAL_UNMAPPABLE',
+    },
+    {
+      label: 'publisher grant expired',
+      mutate: (req) => { req.grant = { ...req.grant, expired: true }; },
+      code: 'BLOCKED_GRANT_EXPIRED',
+    },
+    {
+      label: 'timeout recorded as target absence',
+      mutate: (req) => { req.observationError = { kind: 'timeout', targetRecordedAbsent: true }; },
+      code: 'BLOCKED_ABSENCE_INFERRED_FROM_ERROR',
+    },
+  ];
+  for (const { label, mutate, code } of cases) {
+    const request = structuredClone(NOMINAL_PUBLISH_REQUEST);
+    mutate(request);
+    const result = runPublishGate(writePublishRequest(request));
+    assert.equal(result.status, 2, `${label}: a blocking precondition must refuse the publish (exit 2)`);
+    const observation = parseJsonOut(result, `managed-publish ${label}`);
+    assert.equal(observation.executed, true, `${label}: the local gate evaluation really ran`);
+    assert.equal(observation.status, 'BLOCKED');
+    const blockCodes = (observation.blocks ?? []).map((b) => b.code);
+    assert.ok(blockCodes.includes(code), `${label}: expected ${code}, got ${JSON.stringify(blockCodes)}`);
+    assert.ok(observation.reason.length > 0);
+    assert.doesNotMatch(result.stdout, HOST_PATH_OUTPUT_RE);
+  }
+
+  // 全部前置同时不满足：受控拒绝必须一次性列出全部原因（不止第一条）。
+  const allBad = structuredClone(NOMINAL_PUBLISH_REQUEST);
+  allBad.audienceIntersection = [];
+  allBad.adminReadable = true;
+  allBad.pagination = { complete: false, reason: 'enumeration failed' };
+  allBad.principalMapping = { status: 'UNMAPPABLE', subject: 'sub-xyz' };
+  allBad.grant = { ...allBad.grant, expired: true };
+  allBad.observationError = { kind: 'http-403', targetRecordedAbsent: true };
+  const allBadRun = runPublishGate(writePublishRequest(allBad));
+  assert.equal(allBadRun.status, 2);
+  const allBadCodes = parseJsonOut(allBadRun, 'managed-publish all-bad').blocks.map((b) => b.code);
+  for (const code of [
+    'BLOCKED_SOURCE_INTERSECTION_EXCLUDES_READER',
+    'BLOCKED_ADMIN_READ_NOT_AUDIENCE',
+    'BLOCKED_PAGINATION_INCOMPLETE',
+    'BLOCKED_PRINCIPAL_UNMAPPABLE',
+    'BLOCKED_GRANT_EXPIRED',
+    'BLOCKED_ABSENCE_INFERRED_FROM_ERROR',
+  ]) {
+    assert.ok(allBadCodes.includes(code), `all-bad request must report ${code} (got ${JSON.stringify(allBadCodes)})`);
+  }
+
+  // 声明证据全部满足也不得转绿：有效受众闭包须活实例读回，本地评估永远停在 UNVERIFIED。
+  const nominal = runPublishGate(writePublishRequest(structuredClone(NOMINAL_PUBLISH_REQUEST)));
+  assert.equal(nominal.status, 2, 'a declared-only evaluation must never exit 0');
+  const nominalObservation = parseJsonOut(nominal, 'managed-publish nominal');
+  assert.equal(nominalObservation.status, 'UNVERIFIED');
+  assert.deepEqual((nominalObservation.blocks ?? []).length, 0);
+  assert.equal(nominalObservation.liveReadback, false);
+  assert.doesNotMatch(nominal.stdout, HOST_PATH_OUTPUT_RE);
+
+  // 无效输入：缺 targetReader / 文件不可解析 = 退出 1。
+  const noTarget = structuredClone(NOMINAL_PUBLISH_REQUEST);
+  delete noTarget.targetReader;
+  assert.equal(runPublishGate(writePublishRequest(noTarget)).status, 1);
+  assert.equal(runPublishGate(writePublishRequest(null, '{ not json')).status, 1);
+});
+
+test('compose gate: loopback exposure must not auto-open a public network and durable state must ride named volumes', () => {
+  const internalFalse = makeFixtureDir(({ read, write }) => {
+    write('compose.yaml', read('compose.yaml').replace('    internal: true', '    internal: false'));
+  });
+  const internalFalseRun = runCli(['validate', '--registry', registryPath, '--dir', internalFalse, '--json']);
+  assert.equal(internalFalseRun.status, 2);
+  const internalFalseCodes = codes(parseJsonOut(internalFalseRun, 'validate internal:false'));
+  assert.ok(internalFalseCodes.includes('NON_INTERNAL_NETWORK_DECLARED'), JSON.stringify(internalFalseCodes));
+  assert.ok(internalFalseCodes.includes('NETWORK_NOT_INTERNAL'));
+
+  // 既有门漏掉的情形：单一 internal 网络旁 smuggle 第二个 external 网络——loopback 端口不得因此自动开公网。
+  const externalNet = makeFixtureDir(({ read, write }) => {
+    write('compose.yaml', `${read('compose.yaml')}  public-edge:\n    external: true\n`);
+  });
+  const externalNetRun = runCli(['validate', '--registry', registryPath, '--dir', externalNet, '--json']);
+  assert.equal(externalNetRun.status, 2);
+  const externalNetCodes = codes(parseJsonOut(externalNetRun, 'validate external network'));
+  assert.ok(externalNetCodes.includes('NON_INTERNAL_NETWORK_DECLARED'), JSON.stringify(externalNetCodes));
+  assert.ok(!externalNetCodes.includes('NETWORK_NOT_INTERNAL'), 'the smuggled network is caught even though one internal network remains');
+
+  const hostMode = makeFixtureDir(({ read, write }) => {
+    write('compose.yaml', read('compose.yaml').replace(
+      '    restart: "no"\n    depends_on:',
+      '    restart: "no"\n    network_mode: host\n    depends_on:',
+    ));
+  });
+  const hostModeRun = runCli(['validate', '--registry', registryPath, '--dir', hostMode, '--json']);
+  assert.equal(hostModeRun.status, 2);
+  assert.ok(codes(parseJsonOut(hostModeRun, 'validate host network')).includes('HOST_NETWORK_FORBIDDEN'));
+
+  const noVolumes = makeFixtureDir(({ read, write }) => {
+    write('compose.yaml', read('compose.yaml').replace('volumes:\n  outline-data:\n  outline-db:\n  outline-attachments:\n', ''));
+  });
+  const noVolumesRun = runCli(['validate', '--registry', registryPath, '--dir', noVolumes, '--json']);
+  assert.equal(noVolumesRun.status, 2);
+  assert.ok(codes(parseJsonOut(noVolumesRun, 'validate no named volumes')).includes('NAMED_VOLUMES_MISSING'));
+
+  const noDbVolume = makeFixtureDir(({ read, write }) => {
+    write('compose.yaml', read('compose.yaml').replace('      - outline-db:/var/lib/postgresql/data\n', ''));
+  });
+  const noDbVolumeRun = runCli(['validate', '--registry', registryPath, '--dir', noDbVolume, '--json']);
+  assert.equal(noDbVolumeRun.status, 2);
+  assert.ok(codes(parseJsonOut(noDbVolumeRun, 'validate db without named volume')).includes('DURABLE_STORE_NOT_ON_NAMED_VOLUME'));
+
+  for (const run of [internalFalseRun, externalNetRun, hostModeRun, noVolumesRun, noDbVolumeRun]) {
+    assert.doesNotMatch(run.stdout, HOST_PATH_OUTPUT_RE);
+  }
+});
+
+test('lock and up gates: opened upGate, unpinned reference, unparseable lock, unreadable registry and up without authorization are all anchored', () => {
+  const gateOpen = makeFixtureDir(({ json, writeJson }) => {
+    const lock = json('images.lock.json');
+    lock.upGate.enabled = true;
+    writeJson('images.lock.json', lock);
+  });
+  const gateOpenRun = runCli(['validate', '--registry', registryPath, '--dir', gateOpen, '--json']);
+  assert.equal(gateOpenRun.status, 2, 'an opened upGate in the committed-style lock must fail validate');
+  assert.ok(codes(parseJsonOut(gateOpenRun, 'validate upGate open')).includes('UP_GATE_NOT_CLOSED'));
+
+  const unpinned = makeFixtureDir(({ json, writeJson }) => {
+    const lock = json('images.lock.json');
+    const app = lock.components.find((c) => c.component === 'outline-app');
+    app.reference = 'ghcr.io/example/unselected:vX.Y.Z-not-selected';
+    app.digest = null;
+    writeJson('images.lock.json', lock);
+  });
+  const unpinnedRun = runCli(['validate', '--registry', registryPath, '--dir', unpinned, '--json']);
+  assert.equal(unpinnedRun.status, 2);
+  assert.ok(codes(parseJsonOut(unpinnedRun, 'validate unpinned reference')).includes('IMAGE_NOT_DIGEST_PINNED'));
+
+  // 结构上合格（fixture 探针值，绝不入库）但 upGate 关闭：up 必须走 UP_NOT_AUTHORIZED 拒绝（不碰 docker）。
+  const qualifiedClosed = makeFixtureDir(({ json, writeJson }) => {
+    const lock = json('images.lock.json');
+    for (const component of lock.components) {
+      component.reference = `ghcr.io/example/${component.component}:vX.Y.Z-fixture`;
+      component.digest = `sha256:${'b'.repeat(64)}`;
+      component.digestAuthenticated = true;
+    }
+    writeJson('images.lock.json', lock);
+  });
+  assert.equal(runCli(['validate', '--registry', registryPath, '--dir', qualifiedClosed, '--json']).status, 0);
+  const upRun = runCli(['up', '--registry', registryPath, '--dir', qualifiedClosed, '--json']);
+  assert.equal(upRun.status, 2);
+  assert.match(parseJsonOut(upRun, 'up not authorized').error, /UP_NOT_AUTHORIZED/);
+  assert.doesNotMatch(upRun.stdout, HOST_PATH_OUTPUT_RE);
+
+  const unparseable = makeFixtureDir(({ write }) => {
+    write('images.lock.json', '{ not json');
+  });
+  const unparseableRun = runCli(['validate', '--registry', registryPath, '--dir', unparseable, '--json']);
+  assert.equal(unparseableRun.status, 1, 'an unparseable domain file is an input failure');
+  assert.doesNotMatch(unparseableRun.stdout + unparseableRun.stderr, HOST_PATH_OUTPUT_RE);
+
+  const badRegistryRun = runCli(['validate', '--registry', path.join(os.tmpdir(), 'no-such-registry-i03.json'), '--dir', outlineDir, '--json']);
+  assert.equal(badRegistryRun.status, 1, 'an unreadable registry is an input failure');
+  assert.doesNotMatch(badRegistryRun.stdout + badRegistryRun.stderr, HOST_PATH_OUTPUT_RE);
 });
