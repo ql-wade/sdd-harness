@@ -68,7 +68,7 @@ function usage() {
     '  outline.mjs validate --registry <file> [--refs <file>] [--dir <outline dir>] [--json]',
     '  outline.mjs qualify  --registry <file> [--dir <outline dir>] [--json]',
     '  outline.mjs up       --registry <file> [--dir <outline dir>] [--json]',
-    '  outline.mjs probe    --case <oidc-principal-acl|restart-persistence|attachment-denial> [--endpoint <url>] [--registry <file>] [--dir <outline dir>] [--json]',
+    '  outline.mjs probe    --case <oidc-principal-acl|restart-persistence|attachment-denial|managed-publish> [--endpoint <url>] [--publish-request <file>] [--registry <file>] [--dir <outline dir>] [--json]',
     '  outline.mjs stop     [--registry <file>] [--dir <outline dir>] [--json]',
   ].join('\n');
 }
@@ -201,6 +201,86 @@ function validateCompose(text) {
   if (!sawServices) add('SERVICES_MISSING', 'compose.yaml');
   if (!sawNetworks) add('NETWORK_MISSING', 'compose.yaml');
   if (!/internal:\s*true/.test(text)) add('NETWORK_NOT_INTERNAL', 'compose.yaml');
+
+  // 第二遍（缩进感知）：loopback 暴露不得自动开公网——networks: 下每个声明网络都必须 internal 且不得 external；
+  // 持久状态（OutlineState.v1：数据库+附件）必须落在具名卷上，宿主 bind 已由第一遍拒绝。
+  let topCtx = null;
+  let netName = null;
+  let netInternal = false;
+  let netExternal = false;
+  const declaredNetworks = [];
+  let sawNamedVolumeDecl = false;
+  let svcName = null;
+  let svcSubKey = null;
+  const svcNamedVolumeMounts = new Map();
+  const closeNetwork = () => {
+    if (netName !== null) declaredNetworks.push({ name: netName, internal: netInternal, external: netExternal });
+    netName = null;
+    netInternal = false;
+    netExternal = false;
+  };
+  for (const [index, raw] of text.split('\n').entries()) {
+    const lineNo = index + 1;
+    const trimmedLine = raw.trim();
+    if (!trimmedLine || trimmedLine.startsWith('#')) continue;
+    const indent = raw.length - raw.trimStart().length;
+    if (indent === 0) {
+      closeNetwork();
+      svcName = null;
+      svcSubKey = null;
+      const topKey = trimmedLine.match(/^([A-Za-z0-9_-]+):\s*$/);
+      topCtx = topKey ? topKey[1] : null;
+      continue;
+    }
+    if (topCtx === 'networks') {
+      if (/^internal:\s*true/.test(trimmedLine)) netInternal = true;
+      if (/^external:\s*true/.test(trimmedLine)) netExternal = true;
+      const netKey = trimmedLine.match(/^([A-Za-z0-9_-]+):\s*$/);
+      if (netKey && indent === 2) {
+        closeNetwork();
+        netName = netKey[1];
+      }
+    } else if (topCtx === 'volumes') {
+      if (indent === 2 && /^[A-Za-z0-9][A-Za-z0-9_.-]*:\s*$/.test(trimmedLine)) sawNamedVolumeDecl = true;
+    } else if (topCtx === 'services') {
+      if (indent === 2) {
+        const svcKey = trimmedLine.match(/^([A-Za-z0-9_-]+):\s*$/);
+        if (svcKey) {
+          svcName = svcKey[1];
+          svcSubKey = null;
+        }
+      } else if (indent === 4) {
+        const subKeyMatch = trimmedLine.match(/^([A-Za-z0-9_-]+):\s*$/);
+        if (subKeyMatch) svcSubKey = subKeyMatch[1];
+      }
+      if (svcName && svcSubKey === 'volumes' && indent > 4 && /^-\s*[A-Za-z][A-Za-z0-9_.-]*:\S/.test(trimmedLine)) {
+        const mounts = svcNamedVolumeMounts.get(svcName) ?? [];
+        mounts.push(trimmedLine.slice(1).trim());
+        svcNamedVolumeMounts.set(svcName, mounts);
+      }
+    }
+  }
+  closeNetwork();
+  for (const net of declaredNetworks) {
+    if (!net.internal || net.external) {
+      add('NON_INTERNAL_NETWORK_DECLARED', `compose.yaml:networks:${net.name}`, {
+        network: net.name,
+        internal: net.internal,
+        external: net.external,
+        reason: 'loopback exposure must not auto-open a public network; every declared network stays internal',
+      });
+    }
+  }
+  if (!sawNamedVolumeDecl) {
+    add('NAMED_VOLUMES_MISSING', 'compose.yaml:volumes', { reason: 'durable database+attachment state must ride named volumes' });
+  }
+  for (const durableService of ['outline-postgres', 'outline-object-store']) {
+    if ((svcNamedVolumeMounts.get(durableService) ?? []).length === 0) {
+      add('DURABLE_STORE_NOT_ON_NAMED_VOLUME', `compose.yaml:services:${durableService}`, {
+        reason: `${durableService} carries durable state (OutlineState.v1) and must mount a named volume`,
+      });
+    }
+  }
   return violations;
 }
 
@@ -421,8 +501,11 @@ const PROBE_CASES = {
     plannedSteps: [
       'GET /api/config — instance reachable and identity observed',
       'authenticated owner session reads managed collection (expect success)',
-      'unauthenticated read of collection/page/subtree (expect denial)',
-      'off-group principal across collection/page/subtree/public-share/search/attachment channels (expect per-channel denial)',
+      'unauthenticated principal across collection/page/subtree/public-share/search/attachment channels (expect per-channel denial)',
+      'ordinary reader (member) across the same six channels — reads limited to granted scope (expect per-channel denial outside scope)',
+      'off-boarded principal across collection/page/subtree/public-share/search/attachment channels (expect per-channel denial)',
+      'record actual denials and residual paths separately per channel (deniedByChannel vs residualPath, e.g. signed attachment URLs still valid after revocation)',
+      'member principal attempts to change issuer/client secret/isolator role (expect denial — general users cannot alter issuer/secret/isolator roles)',
       'record effective reader set closure across all entry points (admin-readable never substitutes for audience)',
     ],
   },
@@ -450,6 +533,20 @@ const PROBE_CASES = {
       'unauthenticated attachment fetch (expect denial)',
       'off-group principal attachment fetch (expect denial)',
       'revoke attachment then re-fetch — record signed-URL residual validity (no immediate-effect assumption)',
+    ],
+  },
+  'managed-publish': {
+    requiredInputs: [
+      'publish-request evidence file (--publish-request <file>): target reader, source audience intersection, pagination completeness, principal mapping, grant validity',
+      'live Outline instance endpoint for effective audience closure readback (--endpoint <url> or a registered instance.url)',
+    ],
+    plannedSteps: [
+      'evaluate declared evidence: source audience intersection must include the target reader (admin-readable never substitutes for audience)',
+      'pagination must be complete — a failed or partial source enumeration blocks the publish',
+      'every subject must map to a principal — an unmappable principal blocks the publish',
+      'publisher/isolator grant must be unexpired — an expired grant blocks the publish',
+      'timeout/403 observation errors must never be recorded as target absence',
+      'all declared preconditions satisfied is still not authorization: effective audience closure requires live readback, so the gate stays closed (UNVERIFIED) without it',
     ],
   },
 };
@@ -480,6 +577,77 @@ async function main(argv) {
       plannedSteps: spec.plannedSteps,
       observedSteps: [],
     };
+    if (opts.case === 'managed-publish' && opts['publish-request'] !== undefined) {
+      // 受管发布门（本地半边，纯声明证据、fail-closed）：来源交集/分页/principal映射/grant 期限任一不满足即受控阻断；
+      // admin 读得到不算受众证据；超时/403 绝不记为目标不存在；全部满足仍不转绿——有效受众闭包须活实例读回。
+      let request;
+      try {
+        request = JSON.parse(fs.readFileSync(opts['publish-request'], 'utf8'));
+      } catch (err) {
+        return failInput(`publish request unreadable: ${redactHostPaths(err.message)}`);
+      }
+      if (typeof request.targetReader !== 'string' || request.targetReader.length === 0) {
+        return failInput('publish request invalid: targetReader (non-empty string) is required');
+      }
+      const intersection = Array.isArray(request.audienceIntersection) ? request.audienceIntersection : [];
+      const blocks = [];
+      if (!intersection.includes(request.targetReader)) {
+        blocks.push({
+          code: 'BLOCKED_SOURCE_INTERSECTION_EXCLUDES_READER',
+          detail: `target reader not present in the source audience intersection (${intersection.length} declared readers)`,
+        });
+      }
+      if (request.adminReadable === true && intersection.length === 0) {
+        blocks.push({ code: 'BLOCKED_ADMIN_READ_NOT_AUDIENCE', detail: 'admin readability of the source is never audience evidence' });
+      }
+      if (request.pagination?.complete !== true) {
+        blocks.push({
+          code: 'BLOCKED_PAGINATION_INCOMPLETE',
+          detail: `source enumeration incomplete (${request.pagination?.reason ?? 'no completion proof'})`,
+        });
+      }
+      if (request.principalMapping?.status !== 'MAPPED') {
+        blocks.push({
+          code: 'BLOCKED_PRINCIPAL_UNMAPPABLE',
+          detail: `subject-to-principal mapping is ${request.principalMapping?.status ?? 'ABSENT'}; an unmappable principal blocks the publish`,
+        });
+      }
+      if (request.grant?.expired === true) {
+        blocks.push({ code: 'BLOCKED_GRANT_EXPIRED', detail: `grant ${request.grant.ref ?? '(unspecified)'} is expired` });
+      }
+      if (
+        request.observationError?.targetRecordedAbsent === true
+        && ['timeout', 'http-403'].includes(request.observationError.kind)
+      ) {
+        blocks.push({
+          code: 'BLOCKED_ABSENCE_INFERRED_FROM_ERROR',
+          detail: `${request.observationError.kind} must never be recorded as target absence`,
+        });
+      }
+      observation.executed = true;
+      observation.evaluationBasis = 'declared-request-only';
+      observation.liveReadback = false;
+      observation.blocks = blocks;
+      observation.observedSteps.push({
+        step: 'evaluate declared publish-request evidence',
+        status: 'VERIFIED',
+        note: 'pure fail-closed gate evaluation over declared values; no live instance consulted',
+      });
+      observation.observedSteps.push({
+        step: 'live effective-audience closure readback',
+        status: 'UNVERIFIED',
+        reason: 'requires a live instance and authenticated principals (endpoint + sessions)',
+      });
+      if (blocks.length > 0) {
+        observation.status = 'BLOCKED';
+        observation.reason = `managed publish blocked (${blocks.length} cause(s)): ${blocks.map((b) => b.code).join(', ')}`;
+      } else {
+        observation.reason =
+          'declared preconditions hold, but effective audience closure requires live readback; the gate stays closed (UNVERIFIED) — a declared-only evaluation never produces a PASS';
+      }
+      print(observation);
+      return EXIT_VERIFY;
+    }
     if (!endpoint) {
       observation.reason =
         'no live Outline instance endpoint configured; probes require a real authenticated instance (up refuses until the images lock qualifies and admission is granted). Pass --endpoint <url> once the stack exists — this command never mocks and never skips.';
