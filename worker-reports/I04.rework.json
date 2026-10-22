@@ -1,0 +1,62 @@
+{
+  "task": "I04",
+  "run": "rework-seven-p1-r1",
+  "final_status": "DONE",
+  "base": "8c8e4a3",
+  "worktree": "<repo> (branch rework/i04-llmwiki)",
+  "scope": {
+    "owns_files": [
+      "infra/delivery/llmwiki/package.lock.json",
+      "infra/delivery/llmwiki/project-root-policy.json",
+      "infra/delivery/llmwiki/mcp-profile.json"
+    ],
+    "untouched_owned": [
+      "infra/delivery/llmwiki/index-policy.json",
+      "tools/infra/llmwiki.mjs",
+      "tools/mcp/llmwiki.sh",
+      "test/infra-llmwiki-paths.test.js"
+    ],
+    "evidence": "worker-reports/I04-rework/evidence/"
+  },
+  "steps": {
+    "1_red": "01-red-lock-vs-project-local-resolution.txt — committed lock registered the external-default SDD_HOME semantics (cloneResolution '(default $HOME/.sdd)', python resolution/observedVersion 3.14.7 + drift note, requirementsLock.logicalPath) while P1_1 landed and registered the project-local root (SDD_HOME=<repo>/.sdd, venv 3.11.13, drift eliminated — toolchain-baseline.json llmwiki_project_local explicitly routes the lock update to I04). Mechanical contrast: qualify under the lock-declared default observed Python 3.14.7 + stale drift note; under the project-local root it observed Python 3.11.13 while the same receipt still asserted a 3.14.7 venv.",
+    "2_green_fix": "package.lock.json: cloneResolution/commitStatusReason/python(resolution+observedVersion+note)/requirementsLock.logicalPath re-registered as project-local ($SDD_HOME=<repo>/.sdd, P1_1 landing fact recorded; 3.14.7 kept as historical external observation); reworkRecord added. mcp-profile.json: hostEntry.env.SDD_HOME annotation + workspaceBinding calibrated to project-local. project-root-policy.json: canonicalWiki.workspaceBinding records the launcher==CLI project-local binding and that the containment-authority root (<main-working-tree>/llmwiki) is unchanged.",
+    "3_probes": "trio exit 0 under the project-local root (see evidence 02).",
+    "4_regression": "stdin-hold-open semantics intact (mcpJsonRpcStep interactive spawn, unchanged; real MCP create round-trip VERIFIED x2) + acceptance llmwiki tests 6/6 green x2.",
+    "5_full_suite": "npm test: 427 tests, 424 pass, fail 2 = documented known set only (C08 #59 host env drift; B08 #416 spec-closeout preservation), 1 skipped; zero new failures."
+  },
+  "digest_invariant": {
+    "requirements_lock_sha256": "678bd7301d80a602336e8fd3a81f98adcd4c5beaec4e2f1f2bfb8d2e04a9e732",
+    "requirements_lock_bytes": 154140,
+    "unchanged": true,
+    "note": "lock file bytes untouched; digest recomputed against the project-local clone and matches the registered values; only logical-path semantics changed"
+  },
+  "commands": {
+    "node --test test/infra-llmwiki-paths.test.js (run1)": 0,
+    "node --test test/infra-llmwiki-paths.test.js (run2)": 0,
+    "llmwiki.mjs validate": 0,
+    "llmwiki.mjs probe --case escape-denial": 0,
+    "llmwiki.mjs probe --case worktree-mcp-readback (run1)": 0,
+    "llmwiki.mjs probe --case worktree-mcp-readback (run2)": 0,
+    "llmwiki.mjs qualify (project-local root, honest NOT_READY)": 2,
+    "npm test (full; 2 known failures, zero new)": 1
+  },
+  "launcher_cli_parity": "both resolve <repo>/.sdd/wiki/sdd-harness under SDD_HOME=<repo>/.sdd (observed via bash -x trace + lib/sdd-paths.js getWikiHome)",
+  "unverified": [
+    "MCP host discovery: still UNVERIFIED by design (host registration owned by the later P task via mcp-capabilities.yaml; the llmwiki MCP server connection failure in this session's host config is outside I04 scope)",
+    "upstream remote confirmation of commit 075c5b4 (network evidence not performed; RECORDED via local clone only)",
+    "qualify stays NOT_READY (exit 2) by design: mcp-host-discovery / mcp-write-channel registration / index-consistency registration / secret-provisioned remain UNVERIFIED categories"
+  ],
+  "files_changed": [
+    "infra/delivery/llmwiki/package.lock.json",
+    "infra/delivery/llmwiki/mcp-profile.json",
+    "infra/delivery/llmwiki/project-root-policy.json",
+    "worker-reports/I04.rework.json",
+    "worker-reports/I04-rework/evidence/01-red-lock-vs-project-local-resolution.txt",
+    "worker-reports/I04-rework/evidence/02-green-probes-and-parity.txt",
+    "worker-reports/I04-rework/evidence/03-green-tests.txt",
+    "worker-reports/I04-rework/evidence/green-probe-worktree-mcp-readback-run1.txt",
+    "worker-reports/I04-rework/evidence/green-probe-worktree-mcp-readback-run2.txt"
+  ],
+  "blockers_or_questions": []
+}

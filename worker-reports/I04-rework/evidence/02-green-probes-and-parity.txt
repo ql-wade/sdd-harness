@@ -1,0 +1,39 @@
+# GREEN: probe trio + stdin-hold-open regression + launcher/CLI parity under the project-local root
+run: rework-seven-p1-r1 / I04 rework | date: 2026-10-22 | worktree: <repo> (branch rework/i04-llmwiki)
+project-local root: SDD_HOME=<repo>/.sdd (P1_1 landing replicated into this worktree, identity re-verified
+                    in 01-red; clone 075c5b4 clean, lock sha256 678bd730.../154140B unchanged, py 3.11.13, mcp 1.27.0)
+
+## 1. probe trio (all exit 0)
+validate   : exit 0, ok=true, violations=[], catalogGaps=["secret-ref:sdd-harness-pilot/llmwiki-source-read"]
+             (gap reported explicitly, as designed — ref referenced only, catalog owned by I01)
+escape-denial: exit 0, status=VERIFIED, hardInvariantsHeld=true,
+             denialCodes=[PATH_TRAVERSAL_DENIED, SYMLINK_ESCAPE_DENIED, FOREIGN_WIKI_ROOT_DENIED, PROJECT_ID_MISMATCH_DENIED]
+worktree-mcp-readback: exit 0 x2 runs, status=VERIFIED both:
+             47/47 worktrees -> one canonical root (worktreesCanonicalRootsConsistent=true)
+             MCP initialize VERIFIED (stdio JSON-RPC, server "LLM Wiki" 1.27.0, protocol 2024-11-05)
+             MCP tools/list VERIFIED (10 tools)
+             MCP create write REAL ROUND-TRIP VERIFIED (x2)
+             file-level gates 4/4 VERIFIED x2: curated-entry-write / independent-file-readback /
+               index-mismatch-detection (negative control reads INCONSISTENT) / index-consistent-readback
+             receipts: green-probe-worktree-mcp-readback-run{1,2}.txt
+
+## 2. stdin-hold-open regression (fix 3b17a3b, previous round)
+tools/infra/llmwiki.mjs mcpJsonRpcStep still spawns local_server interactively (node:child_process spawn,
+stdio pipes) and holds stdin OPEN until every expected JSON-RPC response arrives, then kills the child —
+the spawnSync(input:) EOF-deadlock path is not used. End-to-end proof: the create tools/call round-trip
+returns VERIFIED within the bounded write timeout in both runs above (it hung before the fix).
+Committed code refs: tools/infra/llmwiki.mjs mcpJsonRpcStep (comment block citing fix 3b17a3b) — unchanged this round.
+
+## 3. wiki-root binding parity under the project-local root (claim registered in project-root-policy.json /
+##    mcp-profile.json this rework)
+launcher (bash -x trace of tools/mcp/llmwiki.sh, SDD_HOME=<repo>/.sdd, CLAUDE_PROJECT_DIR=<repo>,
+          LLMWIKI_PYTHON=/usr/bin/false so only resolution is observed, no server started):
+  WIKI_HOME=<repo>/.sdd/wiki/sdd-harness ; exec ... --workspace <repo>/.sdd/wiki/sdd-harness
+CLI (lib/sdd-paths.js getWikiHome(cwd=<repo>) with SDD_HOME=<repo>/.sdd):
+  <repo>/.sdd/wiki/sdd-harness
+=> launcher == CLI at the project-local root; the external default ($HOME/.sdd/wiki/...) is not in effect.
+
+## 4. qualify honesty under the project-local root (exit 2 = honest NOT_READY, as designed)
+after the semantic fix, qualify under SDD_HOME=<repo>/.sdd + LLMWIKI_PYTHON=<repo>/.sdd/venvs/llmwiki-311/bin/python:
+  venv-runtime VERIFIED observed "Python 3.11.13" — and the driftNote carried in the receipt now reflects the
+  project-local fact (lock python.note rewritten this rework), closing the RED contrast of 01-red section 3.

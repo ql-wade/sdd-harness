@@ -8,8 +8,8 @@
     "upstream": "https://github.com/lucasastorian/llmwiki",
     "commit": "075c5b4996ff4e07f9d3c57c1f14fd2b54a955db",
     "commitStatus": "RECORDED",
-    "commitStatusReason": "observed via git rev-parse HEAD in the local clone resolved through SDD_HOME at runtime; independent confirmation against the upstream remote requires network evidence and has not been performed",
-    "cloneResolution": "runtime env SDD_HOME (default $HOME/.sdd) -> repos/llmwiki; no host path is committed"
+    "commitStatusReason": "observed via git rev-parse HEAD in the local clone resolved through the project-local SDD_HOME (P1_1 landing: $SDD_HOME=<repo>/.sdd) at runtime; independent confirmation against the upstream remote requires network evidence and has not been performed",
+    "cloneResolution": "runtime env SDD_HOME -> $SDD_HOME/repos/llmwiki; landed project-local by P1_1 (SDD_HOME=<repo>/.sdd, clone pinned 075c5b4 at $SDD_HOME/repos/llmwiki); the pre-P1_1 external default $HOME/.sdd is superseded and is not the registered landing; no host path is committed"
   },
   "distribution": {
     "launcher": {
@@ -18,9 +18,9 @@
       "role": "stdio MCP launcher; resolves SDD_HOME / LLMWIKI_PYTHON at runtime, binds the workspace to ${CLAUDE_PROJECT_DIR}/llmwiki"
     },
     "python": {
-      "observedVersion": "3.14.7",
-      "resolution": "LLMWIKI_PYTHON override > SDD_HOME/repos/llmwiki/.venv/bin/python",
-      "note": "requirements.lock was compiled for python 3.11 (uv header inside the lock); the venv actually runs 3.14.7 — version drift recorded as an observed fact, not reconciled here"
+      "observedVersion": "3.11.13",
+      "resolution": "LLMWIKI_PYTHON override > $SDD_HOME/repos/llmwiki/.venv/bin/python (launcher fallback); operative landed venv (P1_1): $SDD_HOME/venvs/llmwiki-311 — uv venv 3.11 + hash-verified pip sync from requirements.lock",
+      "note": "requirements.lock is compiled for python 3.11 (uv header inside the lock); the project-local landed venv ($SDD_HOME/venvs/llmwiki-311) runs 3.11.13 — lock-aligned, the drift is eliminated by the P1_1 landing (toolchain-baseline.json llmwiki_project_local). The earlier 3.14.7 observation belonged to the external venv resolved by the superseded external default (SDD_HOME=$HOME/.sdd -> repos/llmwiki/.venv) and is kept here only as a historical fact"
     },
     "packages": [
       {
@@ -31,10 +31,10 @@
       }
     ],
     "requirementsLock": {
-      "logicalPath": "SDD_HOME/repos/llmwiki/mcp/requirements.lock",
+      "logicalPath": "$SDD_HOME/repos/llmwiki/mcp/requirements.lock",
       "sha256": "678bd7301d80a602336e8fd3a81f98adcd4c5beaec4e2f1f2bfb8d2e04a9e732",
       "bytes": 154140,
-      "note": "uv-compiled lock with hashes; digest recomputed against the local clone at record time"
+      "note": "uv-compiled lock with hashes; logical path is $SDD_HOME-relative and SDD_HOME is project-local post-P1_1 ($SDD_HOME=<repo>/.sdd); digest recomputed against the project-local clone on 2026-10-22 (I04 rework) — bytes unchanged, the registered sha256/bytes still hold"
     }
   },
   "workspaceLayout": {
@@ -60,11 +60,17 @@
       "ping"
     ],
     "observedVia": "stdio JSON-RPC initialize + tools/list against a disposable sandbox workspace",
-    "writeToolObservation": "VERIFIED 2026-10-21: tools/call create returns a full result against a disposable sandbox workspace (3/3 runs) once the probe driver keeps stdin open (fix 3b17a3b: spawnSync(input:) EOF triggered a local_server stdin-EOF deadlock; unrelated to the earlier 3.14-vs-3.11 hypothesis, falsified by a lock-aligned uv venv). Verified with python 3.11 venv uv-pip-synced from the pinned requirements.lock; independent file content-hash readback + sqlite index readback: CONSISTENT; negative control (file without index row): INCONSISTENT.",
-    "verifiedVia": "probe --case worktree-mcp-readback (interactive stdio session), receipts: worker-reports/I04/evidence/green-probe-worktree-mcp-readback-run{1,2,3}.txt"
+    "writeToolObservation": "VERIFIED 2026-10-21: tools/call create returns a full result against a disposable sandbox workspace (3/3 runs) once the probe driver keeps stdin open (fix 3b17a3b: spawnSync(input:) EOF triggered a local_server stdin-EOF deadlock; unrelated to the earlier 3.14-vs-3.11 hypothesis, falsified by a lock-aligned uv venv). Verified with python 3.11 venv uv-pip-synced from the pinned requirements.lock; independent file content-hash readback + sqlite index readback: CONSISTENT; negative control (file without index row): INCONSISTENT. Re-verified 2026-10-22 (I04 rework rework-seven-p1-r1) under the project-local SDD_HOME root (<repo>/.sdd, python 3.11.13 venv llmwiki-311) in a fresh worktree: probe exit 0 x2 runs, real MCP create round-trip VERIFIED both; receipts worker-reports/I04-rework/evidence/green-probe-worktree-mcp-readback-run{1,2}.txt",
+    "verifiedVia": "probe --case worktree-mcp-readback (interactive stdio session), receipts: worker-reports/I04/evidence/green-probe-worktree-mcp-readback-run{1,2,3}.txt; I04 rework 2026-10-22: same probe under the project-local SDD_HOME root, receipts worker-reports/I04-rework/evidence/green-probe-worktree-mcp-readback-run{1,2}.txt"
   },
   "upGate": {
     "enabled": false,
     "reason": "I04 registers and qualifies the llmwiki distribution only; MCP host registration is owned by a later P task through mcp-capabilities.yaml (single source of truth) and runtime up needs authorization that does not exist"
+  },
+  "reworkRecord": {
+    "run": "rework-seven-p1-r1",
+    "updatedAt": "2026-10-22",
+    "updatedBy": "I04 (run rework-seven-p1-r1)",
+    "change": "resolution semantics re-registered as project-local per the P1_1 landing (SDD_HOME=<repo>/.sdd): cloneResolution, commitStatusReason, python resolution/observedVersion/note, requirementsLock.logicalPath; requirements.lock bytes untouched so the registered digest is unchanged; evidence worker-reports/I04-rework/evidence/"
   }
 }

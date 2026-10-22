@@ -13,9 +13,9 @@
     "command": "${CLAUDE_PROJECT_DIR}/tools/mcp/llmwiki.sh",
     "args": [],
     "transport": "stdio",
-    "workspaceBinding": "canonical wiki root shared with the CLI (lib/sdd-paths.js getWikiHome): $SDD_WIKI_HOME when set, else $SDD_HOME/wiki/<project-slug>; the slug derives from the git common-dir main repository directory name (worktree-safe: every worktree of one repo shares one wiki root); a per-worktree llmwiki copy is never the wiki root (ProjectRoot.v1)",
+    "workspaceBinding": "canonical wiki root shared with the CLI (lib/sdd-paths.js getWikiHome): $SDD_WIKI_HOME when set, else $SDD_HOME/wiki/<project-slug>; the slug derives from the git common-dir main repository directory name (worktree-safe: every worktree of one repo shares one wiki root); a per-worktree llmwiki copy is never the wiki root (ProjectRoot.v1); post-P1_1 the registered SDD_HOME is project-local (<repo>/.sdd), so the bound root is <repo>/.sdd/wiki/<project-slug> and the external-root cross-project collision is eliminated",
     "env": {
-      "SDD_HOME": "optional override for the llmwiki distribution root (default $HOME/.sdd)",
+      "SDD_HOME": "project-local llmwiki distribution root; landed by P1_1 as SDD_HOME=<repo>/.sdd (clone $SDD_HOME/repos/llmwiki pinned 075c5b4, venv $SDD_HOME/venvs/llmwiki-311); an unset SDD_HOME still falls back to the external $HOME/.sdd inside the launcher, but that external default is superseded and is not the registered landing (I04 rework calibration 2026-10-22)",
       "LLMWIKI_PYTHON": "optional explicit python override"
     }
   },

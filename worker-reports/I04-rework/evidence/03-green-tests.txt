@@ -1,0 +1,20 @@
+# GREEN: acceptance tests + full suite — rework rework-seven-p1-r1 / I04, 2026-10-22, worktree <repo>
+env: SDD_HOME=<repo>/.sdd LLMWIKI_PYTHON=<repo>/.sdd/venvs/llmwiki-311/bin/python
+
+## 1. targeted suite x2
+node --test test/infra-llmwiki-paths.test.js
+  run1: exit 0 — tests 6, pass 6, fail 0
+  run2: exit 0 — tests 6, pass 6, fail 0
+(includes the real MCP worktree-mcp-readback probe run inside the suite; both runs VERIFIED/exit 0)
+
+## 2. full suite
+npm test (node --test test/*.test.js): exit 1 — tests 427, pass 424, fail 2, skipped 1
+failures (both are the documented known set; identical names to the sibling rework baselines):
+  #59  C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges ... (host env drift)
+  #416 B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario ... (test/spec-closeout.test.js)
+known-set references: worker-reports/P1_6.rework.json (C08+B08), P2_1.rework.json (#59+#414), P3_1.rework.json
+this task's diff touches only infra/delivery/llmwiki/{package.lock,mcp-profile,project-root-policy}.json
++ worker-reports/I04* — neither failing test reads those paths => zero new failures.
+
+## 3. final validate after the mcpSession receipt append
+node tools/infra/llmwiki.mjs validate --registry infra/delivery/registry.json -> exit 0, ok=true, violations=[]
