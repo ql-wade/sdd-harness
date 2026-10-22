@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "journey": "real-comet-recovery",
+  "title": "V_RW_REAL_COMET_RECOVERY: real Comet fault recovery inside the same product Run launched by V_SAME_RUN_DELIVERY",
+  "requiredCheck": "V_RW_REAL_COMET_RECOVERY",
+  "recipeOwner": "P3_3",
+  "executionOwner": "VERIFY",
+  "registeredRecipe": "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.case.json",
+  "acceptanceIds": ["D08", "H01", "H03", "H07", "L10", "L11"],
+  "profile": "managed-pilot",
+  "runner": {
+    "tool": "tools/verify/delivery-journey.mjs",
+    "mode": "journey",
+    "binding": "verification-case-plan.json journey_definitions.real-comet-recovery (the registration is the binding; unknown journeys never fall into a default-success path)",
+    "note": "The runner is an action/observer adapter (verification_runner_invariant): it owns no phase, no recovery, no retries. The Comet engine owns the state machine — recovery is the CLI's own journal/lock face (classic-store recoverStateTransaction + recoverable file lock), never a second controller."
+  },
+  "sameRunCoordination": {
+    "hostJourney": "pilot-journey/same-run-delivery.journey.json step 9-outline-unknown-recovery",
+    "orderSemantics": "execution-contract journey_execution.order_semantics: this window is injected inside the product Run BEFORE its completed step and recovered there; a fresh trial reruns the whole delivery/recovery trial, never splices fragments from different Runs",
+    "boundaries": "P3_3 lands the recovery recipe and the bounded core-transaction slice only; the live Outline unknown-result resolution, independent external monitoring and backup qualification stay execution_owner=VERIFY (I07/I08/P4 mechanisms)"
+  },
+  "dispatchContract": {
+    "interface": "Runner.Dispatch.v1",
+    "trustedLauncher": "Comet Classic Runtime (patch 0002, fingerprint d4370930); dispatch records are issued only by the Runtime",
+    "fields": [
+      "runnerId",
+      "run",
+      "gate",
+      "role",
+      "execution",
+      "inputDigest",
+      "policyDigest",
+      "attempt",
+      "epoch",
+      "generation",
+      "integrity"
+    ],
+    "invariants": [
+      "one open owner per job key: a second claim of the SAME (gate, input version) recovers the original open dispatch instead of minting a duplicate attempt (H03/H06)",
+      "a dispatch accepts exactly one result: a replayed execution is refused as already consumed (idempotent refusal)",
+      "a late old-attempt result cannot revive a gate: receipts and dispatches carry attempt/epoch/invalidation generation (P1-03); restoring old bytes never revives an old approval"
+    ]
+  },
+  "steps": [
+    {
+      "id": "1-run-in-progress",
+      "title": "premise: the same product Run is in progress (completed not yet emitted)",
+      "roleIdentity": "Comet single controller (one RunState, no second currentPhase)",
+      "executionOwner": "VERIFY",
+      "constructionScope": "premise recorded; the product Run itself is V_SAME_RUN_DELIVERY's subject (P3_2 recipe)",
+      "gate": "the Run's own phase progression (completed step not reached)",
+      "premises": ["the product Run from V_SAME_RUN_DELIVERY is mid-flight", "no spliced fragments from other Runs"],
+      "dispatchBinding": {
+        "dispatch": "the product Run's own authority",
+        "accept": "fault windows attach to this Run only"
+      },
+      "epoch": "the Run's current epoch",
+      "recordFields": ["authorityId", "runId", "phaseBefore"],
+      "evidence": "RunState readback naming the same authority/run as V_SAME_RUN_DELIVERY"
+    },
+    {
+      "id": "2-kill-pre-commit",
+      "title": "fault window: real SIGKILL before the classic state transaction commit point",
+      "roleIdentity": "Comet Runtime worker process + real SIGKILL injection (no fake counters)",
+      "executionOwner": "P3_3 (bounded core-transaction slice, landed) / VERIFY (same-Run live window)",
+      "constructionScope": "executed by P3_3 rework on the real managed CLI (fingerprint d4370930): kill while .comet-state-transaction.json exists and .comet.yaml is still the pre-transaction bytes",
+      "gate": "recovery must roll BACK: journal consumed, transaction absent, run identity and approvals unchanged",
+      "premises": ["patched Comet build present", "watch-driven real SIGKILL (node spawn + process.kill SIGKILL)"],
+      "dispatchBinding": {
+        "dispatch": "the operation under kill is a real CLI acceptance (dispatch-gate → accept-gate) with a Runtime-issued binding",
+        "accept": "recovery re-evaluates as no-receipt (safe retry through a fresh dispatch); the consumed dispatch can never accept twice"
+      },
+      "epoch": "unchanged across a rolled-back transaction",
+      "recordFields": ["killedPid", "signal", "journalBytesAfterKill", "yamlDigestBefore", "yamlDigestAfterRecovery", "recoveryExitCode"],
+      "evidence": "kill-window evidence JSON (pid/authority/transaction readback) + TAP assertions in test/delivery-cases/3_3.mjs"
+    },
+    {
+      "id": "3-kill-post-commit",
+      "title": "fault window: real SIGKILL after the transaction commit point, before journal cleanup",
+      "roleIdentity": "Comet Runtime worker process + real SIGKILL injection",
+      "executionOwner": "P3_3 (bounded core-transaction slice, landed) / VERIFY (same-Run live window)",
+      "constructionScope": "executed by P3_3 rework on the real managed CLI: kill while .comet-state-transaction.json exists and .comet.yaml already holds the committed bytes",
+      "gate": "recovery must roll FORWARD: journal consumed, committed receipt present exactly once, committed bytes untouched by recovery",
+      "premises": ["patched Comet build present", "watch-driven real SIGKILL"],
+      "dispatchBinding": {
+        "dispatch": "the committed acceptance keeps its Runtime binding (execution/attempt/epoch/generation)",
+        "accept": "replay of the same execution is refused as already consumed — no duplicate publish"
+      },
+      "epoch": "the committed transaction's epoch survives recovery",
+      "recordFields": ["killedPid", "signal", "committedExecution", "receiptCountForExecution", "yamlDigestBeforeRecovery", "yamlDigestAfterRecovery"],
+      "evidence": "kill-window evidence JSON + TAP assertions"
+    },
+    {
+      "id": "4-old-writer-fencing",
+      "title": "old-writer fencing at the CLI lock layer: live writer refused, dead writer recovered",
+      "roleIdentity": "Comet Runtime lock authority (.comet-state.lock owner records + liveness inspection)",
+      "executionOwner": "P3_3 (bounded slice, landed) / VERIFY (cross-host fencing)",
+      "constructionScope": "executed by P3_3 rework: a real live pid holding the lock fences a real CLI operation until timeout; after a real SIGKILL and gone-confirmation the lock is auto-recovered and the operation proceeds (I08 fencing semantics at the CLI layer)",
+      "gate": "single live writer; stale authority never silently takes over",
+      "premises": ["same-host liveness semantics; cross-machine transfer stays with I08/VERIFY"],
+      "dispatchBinding": {
+        "dispatch": "lock acquisition is the Runtime's own primitive (withRecoverableFileLock)",
+        "accept": "timeout refusal names the lock; no state bytes change while fenced"
+      },
+      "epoch": "fencing precedes any epoch transfer",
+      "recordFields": ["liveWriterPid", "fenceRefusalExit", "deadWriterConfirmedAt", "recoveredOperationExit"],
+      "evidence": "TAP assertions (refusal output + recovered operation)"
+    },
+    {
+      "id": "5-stale-refusal",
+      "title": "old attempt / interrupted attempt refusals after recovery",
+      "roleIdentity": "Comet gate runtime (dispatch registry + receipt admission)",
+      "executionOwner": "P3_3 (bounded slice, landed)",
+      "constructionScope": "executed by P3_3 rework: replay of the killed/committed execution is refused ('a dispatch accepts exactly one result'); recovery of the ORIGINAL open dispatch after a mid-dispatch kill returns the same execution (no duplicate dispatch)",
+      "gate": "no duplicate leaf dispatch, no duplicate acceptance, old attempts stay historical",
+      "premises": ["dispatch registry on disk is the authority"],
+      "dispatchBinding": {
+        "dispatch": "job-key recovery: same (gate, input version) → recovered:true, same execution",
+        "accept": "already-consumed and stale-generation refusals (P1-03/D08)"
+      },
+      "epoch": "late receipts under superseded epochs/generations are refused",
+      "recordFields": ["refusedExecution", "refusalText", "recoveredDispatchExecution"],
+      "evidence": "TAP assertions (refusal texts from the real CLI)"
+    },
+    {
+      "id": "6-recovery-readback",
+      "title": "recovery readback: Run, journal, approval basis and continuation",
+      "roleIdentity": "Comet recovery face (classicRecoveryContext / state next / state gates)",
+      "executionOwner": "P3_3 (bounded slice, landed) / VERIFY (same-Run full readback incl. remote)",
+      "constructionScope": "executed by P3_3 rework: after each recovery the fresh CLI process reads back a consistent Run (.comet/run-state.json), a consumed journal (no .comet-state-transaction.json), the approval basis (gate receipts bound to executions/attempts/epochs) and the continuation (state next nextAction/continuation)",
+      "gate": "recovered state is consistent and traceable; no unjustified pass is displayed (D08)",
+      "premises": ["single-environment semantics (local directory form); cross-machine readback stays with VERIFY"],
+      "dispatchBinding": {
+        "dispatch": "readback is observation only — it never mutates control state",
+        "accept": "byte-level comparisons against recorded pre-kill digests"
+      },
+      "epoch": "readback shows the recovered epoch",
+      "recordFields": ["runStateReadback", "journalAbsent", "receiptsReadback", "continuationAction"],
+      "evidence": "TAP assertions + kill-window evidence JSON"
+    },
+    {
+      "id": "7-outline-unknown-result",
+      "title": "live window: remote write succeeded but local result unknown — reconcile against the real Outline (same-run step 9)",
+      "roleIdentity": "Comet Runtime + live Outline stack (127.0.0.1:3000, dex OIDC, I01 refs admission)",
+      "executionOwner": "VERIFY",
+      "constructionScope": "not executed at construction: requires the live Outline stack and the V_SAME_RUN_DELIVERY product Run; at the P3_3 rework the stack's loopback endpoints were not exercised from this sandbox (docker unavailable in-session; terminal-channel manifest recorded) — recorded UNVERIFIED, holder VERIFY",
+      "gate": "unknown result resolved by independent readback before any re-publish; no duplicate page/deployment",
+      "premises": ["the product Run holds a pending Outline publish", "I01 refs admission and Outline owner credentials available"],
+      "dispatchBinding": {
+        "dispatch": "same product Run/authority; reconcile-then-resume through the CLI recovery face",
+        "accept": "the exact published object read back; H04/H05 fixed-UUID/lastRevision semantics"
+      },
+      "epoch": "recovery reconciles to the last consistent transaction before resuming",
+      "recordFields": ["publishedObjectId", "independentReadback", "reconcileDigest"],
+      "evidence": "recovery transcript + real Outline API readback (VERIFY-owned)"
+    },
+    {
+      "id": "8-monitoring-backup-qualification",
+      "title": "independent external monitoring and backup qualification during the outage window",
+      "roleIdentity": "I07 monitoring + I08 backup/restore mechanisms + P4 permission plane",
+      "executionOwner": "VERIFY",
+      "constructionScope": "not executed at construction: requires I07/I08/P4 mechanisms and the live environment; honestly UNVERIFIED until then",
+      "gate": "fault evidence exists from an independent monitor; backup restores only after fencing + same-operation readback",
+      "premises": ["I07 monitor deployed", "I08 backup target registered"],
+      "dispatchBinding": {
+        "dispatch": "monitoring observes; the supervisor only restarts the ORIGINAL authority (never a second controller)",
+        "accept": "recovery without duplicate publication; old writers fenced"
+      },
+      "epoch": "monitor records the outage window against the Run's epochs",
+      "recordFields": ["monitoringRefs", "backupRefs", "outageWindow"],
+      "evidence": "monitor + backup receipts (VERIFY-owned)"
+    },
+    {
+      "id": "9-resumed-run-completed",
+      "title": "the same Run resumes and only then reaches completed",
+      "roleIdentity": "Comet single controller",
+      "executionOwner": "VERIFY",
+      "constructionScope": "not executed at construction: the product Run's terminal state is V_SAME_RUN_DELIVERY's completed step (step 11), reached only after the recovery window resolved",
+      "gate": "completed emitted once, by the Run's own completion evaluation",
+      "premises": ["recovery window resolved with readback", "Kp/Kt obligations met"],
+      "dispatchBinding": {
+        "dispatch": "the Run's own completion evaluation",
+        "accept": "run state completed; journey evidence refs bound"
+      },
+      "epoch": "terminal: no further dispatch mutates the run",
+      "recordFields": ["completedAt", "journeyEvidenceRefs"],
+      "evidence": "final RunState + journey verdict (VERIFY-owned)"
+    }
+  ],
+  "constructionScopeSummary": {
+    "executedByP3_3Rework": "steps 2-6 (pre-commit kill rollback, post-commit kill roll-forward, old-writer fencing, stale/interrupted-attempt refusals, recovery readback) on the real managed Comet CLI, fingerprint d4370930, with real SIGKILL injection (node spawn + SIGKILL, I07/P4_8 technique) and lock-layer I08 fencing semantics",
+    "reservedForVerify": "steps 1, 7-9 (same-Run premise, live Outline unknown-result reconciliation, independent monitoring/backup qualification, resumed completion) — execution_owner=VERIFY after I07/I08/P4 mechanisms; a construction-scope pass never asserts the full journey (execution-contract journey_execution.acceptance)",
+    "redLine": "不以配方校验关闭 V_RW_REAL_COMET_RECOVERY；完整同 Run 故障恢复仍由 VERIFY 执行；临时计数 worker、假 MCP、假 archive 不作此层证据"
+  }
+}

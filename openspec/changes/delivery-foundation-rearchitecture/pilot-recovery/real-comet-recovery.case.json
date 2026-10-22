@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "scenario": "L11",
+  "acceptanceIds": ["D08", "H01", "H03", "H07", "L10", "L11"],
+  "requiredAssertions": [
+    "L11",
+    "V_RW_REAL_COMET_RECOVERY:L11-core-transaction",
+    "V_RW_REAL_COMET_RECOVERY:L11-fencing",
+    "V_RW_REAL_COMET_RECOVERY:recipe-tracking"
+  ],
+  "caseModule": "test/delivery-cases/3_3.mjs",
+  "sourceBinding": [
+    {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md",
+      "requirement": "Published knowledge revocation and restoration",
+      "scenario": "L11"
+    },
+    {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md",
+      "requirement": "Classic gate runtime enforcement",
+      "scenario": "D08"
+    },
+    {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.journey.json",
+      "requirement": "V_SAME_RUN_DELIVERY step 9-outline-unknown-recovery: the V_RW_REAL_COMET_RECOVERY fault window embedded inside the same product Run (P3_3 owns the bounded core-transaction recovery recipe; the live Outline unknown-result window stays execution_owner=VERIFY)",
+      "scenario": "L11"
+    },
+    {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/execution-contract.json",
+      "requirement": "journey_execution.construction_task_scopes.P3_3",
+      "scenario": "L11"
+    }
+  ],
+  "actions": [
+    {
+      "type": "spawn",
+      "command": "node --test test/delivery-cases/3_3.mjs",
+      "expected": "exit 0; the case module executes the recovery recipe's declared construction scope: (1) V_RW_REAL_COMET_RECOVERY:L11-core-transaction drives the real managed Comet CLI (repo lock fingerprint d4370930) through real SIGKILL fault windows inside its classic state transaction — a kill in the pre-commit window rolls the recovery back to the pre-transaction bytes (journal consumed, no receipt, no phase change, replay of the killed attempt refused as already consumed, re-dispatch accepts cleanly exactly once), a kill in the post-commit window rolls the recovery forward (journal consumed, the committed receipt present exactly once for the killed execution, replay refused, recovery rewrites no committed bytes), and a kill during dispatch recovers the SAME open execution on re-dispatch (no duplicate dispatch for the same job key); (2) V_RW_REAL_COMET_RECOVERY:L11-fencing proves the lock-layer old-writer refusal live — a real live pid holding .comet-state.lock fences a real CLI operation until timeout while a dead old writer's lock is auto-recovered and the operation proceeds; (3) V_RW_REAL_COMET_RECOVERY:recipe-tracking binds this recipe to its journey_definitions registration and asserts the coordination with pilot-journey/same-run-delivery.journey.json step 9 (the fault window inside the same Run stays execution_owner=VERIFY); TAP summary fail=0 with pass>0 and every required assertion mapped to executed ok points",
+      "expect": {
+        "kind": "tapRequiredAssertions",
+        "assertions": [
+          "L11",
+          "V_RW_REAL_COMET_RECOVERY:L11-core-transaction",
+          "V_RW_REAL_COMET_RECOVERY:L11-fencing",
+          "V_RW_REAL_COMET_RECOVERY:recipe-tracking"
+        ]
+      }
+    },
+    {
+      "type": "readState",
+      "path": "action-1-stdout.txt",
+      "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0 (zero effective execution never passes)",
+      "expect": { "kind": "nonEmptyFile" }
+    },
+    {
+      "type": "inspect",
+      "path": "git rev-parse HEAD",
+      "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+      "required": false
+    }
+  ],
+  "evidence": {
+    "artifacts": [
+      "case-definition.json",
+      "pilot-baseline.json",
+      "action-1-stdout.txt",
+      "action-1-stderr.txt",
+      "verdict.json"
+    ]
+  },
+  "verdictSemantics": {
+    "PASS": "the recipe's actions executed (execution count > 0) and every expected outcome was met against live observation. This attests the DECLARED CONSTRUCTION SCOPE only: the bounded actual-Comet core-transaction recovery slice on the real managed CLI (pre-commit kill → rollback recovery, post-commit kill → roll-forward recovery, same-operation dispatch recovery without duplicate dispatch, old-attempt replay refusal, lock-layer old-writer fencing, and Run/journal/approval/continuation readback) plus the recipe/registration coordination. It NEVER asserts the full V_RW_REAL_COMET_RECOVERY journey: the live Outline unknown-result window, independent external monitoring and backup qualification run at execution_owner=VERIFY after I07/I08/P4 mechanisms exist (execution-contract journey_execution; same-run-delivery.journey.json step 9). Recipe validation alone never closes D08/H01/H03/H07/L10/L11.",
+    "FAIL": "the declared construction scope executed and the observed outcome contradicted the frozen THEN (a killed transaction did not recover to a consistent state, a replayed or old attempt was accepted, a duplicate receipt or duplicate dispatch appeared, the live old writer was not fenced, the dead writer's lock was not recovered, the recipe/registration binding drifted, or the case module reported failures)",
+    "NOT-EXERCISED": "a prerequisite was missing (registered recipe, schema-valid definition, frozen pilot baseline, identity or environment — e.g. the patched Comet build d4370930 is absent, or a kill window could not be landed within the bounded attempt budget); structured refusal with nonzero exit, never converted into a pass",
+    "NOT-APPLICABLE": "explicitly out of scope for the registered profile with a recorded reason; still nonzero; the runner never self-assigns it"
+  }
+}
