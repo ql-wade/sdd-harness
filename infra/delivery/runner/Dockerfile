@@ -54,7 +54,10 @@ RUN npm install --global /build/openspec.tgz
 
 # build.mjs 的 Comet 源解包经 python3 子进程执行 bounded path/member 检查（tools/comet/source.js）；
 # slim 基镜像不含 python3——真实构建第一跑即 UNSAFE_ARCHIVE（终端通道证据 i02-build-full.log），此处补齐。
-RUN apt-get update && apt-get install -y --no-install-recommends python3
+RUN apt-get update && apt-get install -y --no-install-recommends python3 git
+
+# 工具链补齐：锁要求 pnpm 10.18.3（toolchain pin）；slim 基镜像只带 corepack。
+RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
 
 # 受控构建（声明）：补丁按 lock 校验应用，fingerprint 由工具按 archive+patches+toolchain 现算；
 # --project /build/repo 使输出落在 /build/repo/.sdd/vendor/comet/<commit>/builds/<fingerprint>/work。
@@ -70,6 +73,8 @@ RUN node /build/repo/tools/comet/build.mjs \
 RUN useradd --uid 10001 --user-group --create-home comet \
   && mkdir -p /comet/state /comet/receipts /comet/issuance /workspace \
   && test -f "/build/repo/.sdd/vendor/comet/${SOURCE_COMMIT}/builds/${EXPECTED_FINGERPRINT}/work/bin/comet.js" \
+  && chmod a+rx "/build/repo/.sdd/vendor/comet/${SOURCE_COMMIT}" \
+  && chmod -R a+rX "/build/repo/.sdd/vendor/comet/${SOURCE_COMMIT}/builds/${EXPECTED_FINGERPRINT}" \
   && ln -s "/build/repo/.sdd/vendor/comet/${SOURCE_COMMIT}/builds/${EXPECTED_FINGERPRINT}/work/bin/comet.js" /usr/local/bin/comet-runner \
   && chown -R comet:comet /comet /workspace
 

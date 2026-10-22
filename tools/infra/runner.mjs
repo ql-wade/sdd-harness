@@ -169,8 +169,11 @@ function validateImageLock(lock) {
       add('DIGEST_AUTH_FLAG_INCONSISTENT', at, { reason: 'digestAuthenticated=true requires a digest' });
     }
   }
-  if (lock.upGate?.enabled !== false) {
-    add('UP_GATE_NOT_CLOSED', 'image.lock.json:upGate', { reason: 'committed lock must declare upGate.enabled=false until resource admission' });
+  // 准入语义与 outline.mjs 同款（amendment 3 资源准入波次）：开门必须携带完整准入记录。
+  const gate = lock.upGate ?? {};
+  const admissionRecordComplete = Boolean(gate.admittedBy && gate.admittedAt && gate.reason);
+  if (gate.enabled !== false && !admissionRecordComplete) {
+    add('UP_GATE_NOT_CLOSED', 'image.lock.json:upGate', { reason: 'up gate may open only with a complete admission record (admittedBy/admittedAt/reason); otherwise it must stay enabled=false' });
   }
   const source = lock.sourceInputs ?? {};
   if (!/^[0-9a-f]{40}$/.test(source.sourceCommit ?? '')) add('SOURCE_COMMIT_NOT_PINNED', 'image.lock.json:sourceInputs', { reason: 'a 40-hex pinned Comet source commit is required' });
