@@ -7,7 +7,8 @@
   "canonicalWiki": {
     "root": "llmwiki",
     "resolution": "git rev-parse --git-common-dir -> main working tree -> <main-tree>/llmwiki",
-    "rule": "exactly one wiki root per project; every CLI / MCP host / worktree must resolve to it"
+    "rule": "exactly one wiki root per project; every CLI / MCP host / worktree must resolve to it",
+    "workspaceBinding": "launcher + CLI (lib/sdd-paths.js getWikiHome) bind the MCP wiki workspace at $SDD_WIKI_HOME > $SDD_HOME/wiki/<project-slug>; SDD_HOME is project-local post-P1_1 (<repo>/.sdd), so the bound workspace root is <repo>/.sdd/wiki/<project-slug> (launcher==CLI parity re-observed 2026-10-22, I04 rework). This canonical-root resolution (<main-working-tree>/llmwiki) is the containment authority and is independent of where the llmwiki distribution lives"
   },
   "worktreeMapping": {
     "strategy": "git-worktree-list",
