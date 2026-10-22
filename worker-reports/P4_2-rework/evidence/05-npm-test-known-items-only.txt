@@ -1,0 +1,21 @@
+Full regression: npm test at the rework candidate (only change: 3 test-point names in test/delivery-cases/4_2.mjs)
+
+npm test => exit=1
+  # tests 444
+  # pass 441
+  # fail 2
+  # cancelled 0
+  # skipped 1
+
+Failing (both are the registered known environment items, zero new):
+  not ok 62 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+  not ok 432 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+
+Known-item status (unchanged from the run's handoff and I06 rework record):
+  - C08 host OpenSpec drift -> open user adjudication HOST_OPENSPEC_DRIFT (re-pin 1.3.1 / migrate / keep blocked)
+  - B08 preservation -> impl-p2-4 sandbox known variant
+  Pre-existence proof: I06 rework stash-rerun at base 8c8e4a3 recorded the same two failures
+  (worker-reports/I06.rework.json npm test field); this rework changes 3 name lines in
+  test/delivery-cases/4_2.mjs only, and neither test/classic-integration.test.js (C08) nor
+  test/spec-closeout.test.js (B08) references delivery-cases/4_2 or release-protocol (grep: zero matches).
+  4.8.d load-timing flake did not trigger this run; skip=1.

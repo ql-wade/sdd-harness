@@ -1,0 +1,61 @@
+Mutation injection x4 on the P4_2 deliverable tools/ci/release.mjs — each mutation makes the
+owned suites RED at exactly the guarded behavior, then the file is restored (sha256 before==after: c594a41334c5b3ba8de94e1ca90f25fd3f1b2837d159b767eb10a91c169738a9).
+Suites: S1=test/release-protocol.test.js (17 tests), S2=test/delivery-cases/4_2.mjs (6 tests).
+
+--- M1: TAG_DIGEST_DRIFT gate gutted: 'if (active && tagResolved !== active.artifactDigest) {' -> 'if (false && active && ...)'
+S1 (release-protocol):
+  not ok 3 - V_A14 negative: tag drift is refused with the actual identity mismatch recorded and nothing changes
+  # tests 17
+  # pass 16
+  # fail 1
+S2 (delivery-cases/4_2):
+  not ok 3 - V_A14 negative: a deployment tag pointing at another digest is refused and recorded by the protocol and by I06
+  # tests 6
+  # pass 5
+  # fail 1
+restore: git checkout -- tools/ci/release.mjs; sha256sum -c => OK (== c594a41334c5b3ba8de94e1ca90f25fd3f1b2837d159b767eb10a91c169738a9)
+
+--- M2: rollback approval gate gutted: 'if (policy.approvalRequired !== false && !approved) {' -> 'if (false)' (unapproved rollback would proceed)
+S1 (release-protocol):
+  not ok 8 - V_A17 negative: an unapproved rollback is refused, changes nothing, and I06 independently blocks it
+  not ok 9 - V_A17 negative: an approval for another digest is ROLLBACK_DIGEST_MISMATCH; an approval for another environment is ROLLBACK_NOT_APPROVED
+  # tests 17
+  # pass 15
+  # fail 2
+S2 (delivery-cases/4_2):
+  not ok 5 - V_A17: the unapproved rollback is refused by protocol and I06; the approved same-digest rollback reads back digest, environment and business terminal state
+  # tests 6
+  # pass 5
+  # fail 1
+restore: git checkout -- tools/ci/release.mjs; sha256sum -c => OK (== c594a41334c5b3ba8de94e1ca90f25fd3f1b2837d159b767eb10a91c169738a9)
+
+--- M3: retention write gutted: 'if (active && loaded.registration.rollback?.retainLastApprovedArtifact !== false) {' -> 'if (false && ...)' (previous-approved artifact never retained)
+S1 (release-protocol):
+  not ok 9 - V_A17 negative: an approval for another digest is ROLLBACK_DIGEST_MISMATCH; an approval for another environment is ROLLBACK_NOT_APPROVED
+  not ok 10 - V_A17 positive: the approved same-digest rollback reads back digest, environment and business terminal state; I06 verifies the chain
+  not ok 11 - V_A17 negative: a rollback whose business terminal state cannot be observed stays UNCONFIRMED
+  # tests 17
+  # pass 14
+  # fail 3
+S2 (delivery-cases/4_2):
+  not ok 5 - V_A17: the unapproved rollback is refused by protocol and I06; the approved same-digest rollback reads back digest, environment and business terminal state
+  # tests 6
+  # pass 5
+  # fail 1
+restore: git checkout -- tools/ci/release.mjs; sha256sum -c => OK (== c594a41334c5b3ba8de94e1ca90f25fd3f1b2837d159b767eb10a91c169738a9)
+
+--- M4: same-digest lock gutted: 'if (active && active.artifactDigest === artifact.digest) {' -> 'if (false && ...)' (duplicate deployments possible)
+S1 (release-protocol):
+  not ok 4 - same-digest lock: re-promoting the deployed digest returns the existing receipt and never deploys again
+  # tests 17
+  # pass 16
+  # fail 1
+S2 (delivery-cases/4_2):
+  not ok 4 - V_A16: the lost deployment response is reconciled by the original correlation ID — original result bound, no duplicate deployment, idempotent re-promotion
+  # tests 6
+  # pass 5
+  # fail 1
+restore: git checkout -- tools/ci/release.mjs; sha256sum -c => OK (== c594a41334c5b3ba8de94e1ca90f25fd3f1b2837d159b767eb10a91c169738a9)
+
+Every mutation was caught by both suites at the test point that owns the guarded behavior;
+no other test point went red, i.e. the matrix is surgical, and the restored source is byte-identical.

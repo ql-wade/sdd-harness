@@ -1,0 +1,27 @@
+RED (scenario anchor check, P3_1 discipline): journey runner against the registered case module
+for P4_2 scenarios finds no test point carrying the scenario token (P1-04: a green suite without
+the registered target is not a scenario pass).
+
+command: node tools/verify/delivery-journey.mjs --scenario A14 --profile managed-pilot --evidence-dir <tmp>/A14 --json
+exit: 2  verdict: NOT-EXERCISED
+caseModule: test/delivery-cases/4_2.mjs
+execution.target: {"token": "A14", "found": false, "status": null}
+reason: assertion-mapping-not-verifiable: no executed test point maps to required assertion(s) A14 — a green suite without the registered target is not a scenario pass (P1-04)
+
+command: node tools/verify/delivery-journey.mjs --scenario A16 --profile managed-pilot --evidence-dir <tmp>/A16 --json
+exit: 2  verdict: NOT-EXERCISED
+caseModule: test/delivery-cases/4_2.mjs
+execution.target: {"token": "A16", "found": false, "status": null}
+reason: assertion-mapping-not-verifiable: no executed test point maps to required assertion(s) A16 — a green suite without the registered target is not a scenario pass (P1-04)
+
+command: node tools/verify/delivery-journey.mjs --scenario A17 --profile managed-pilot --evidence-dir <tmp>/A17 --json
+exit: 2  verdict: NOT-EXERCISED
+caseModule: test/delivery-cases/4_2.mjs
+execution.target: {"token": "A17", "found": false, "status": null}
+reason: assertion-mapping-not-verifiable: no executed test point maps to required assertion(s) A17 — a green suite without the registered target is not a scenario pass (P1-04)
+
+Root cause: test point names in test/delivery-cases/4_2.mjs carry 4.2.a/4.2.b step prefixes but no
+A14/A16/A17 scenario token; the word-boundary matcher (assertionIdMatches, tools/verify/delivery-journey.mjs)
+maps required assertion ids onto executed ok test points and found none.
+Fix (GREEN): rename the three scenario-executing test points to the accepted 4_1.mjs convention
+(V_<ID>: prefix, word-boundary legal because underscore is outside the matcher class [A-Za-z0-9]).

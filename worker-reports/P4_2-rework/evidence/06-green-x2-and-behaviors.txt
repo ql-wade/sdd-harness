@@ -1,0 +1,34 @@
+Completion gate 1 — Owns suites green x2 at the rework candidate, and scenario journeys PASS
+
+node --test test/release-protocol.test.js + node --test test/delivery-cases/4_2.mjs, two consecutive runs:
+
+run 1:
+# tests 17 # pass 17 # fail 0 # skipped 0 
+# tests 6 # pass 6 # fail 0 # skipped 0 
+run 2:
+# tests 17 # pass 17 # fail 0 # skipped 0 
+# tests 6 # pass 6 # fail 0 # skipped 0 
+
+Scenario journeys (registered case module test/delivery-cases/4_2.mjs):
+  node tools/verify/delivery-journey.mjs --scenario A14 --profile managed-pilot --evidence-dir <tmp>/A14 --json
+    => exit 0 PASS, target {token: A14, found: true, status: ok}, tests 6 pass 6 fail 0
+  node tools/verify/delivery-journey.mjs --scenario A16 ... => exit 0 PASS, found true, status ok
+  node tools/verify/delivery-journey.mjs --scenario A17 ... => exit 0 PASS, found true, status ok
+
+Live re-verified core behaviors (real CLI, real files, zero mock; receipts LOCAL_ONLY):
+  - A14/F09: isolated build content-addresses the artifact from the exact merge SHA; tag/active/
+    business-terminal-state all carry the same digest; deterministic rebuild reproduces the digest;
+    out-of-band tag repoint is refused TAG_DIGEST_DRIFT exit 2 with tagResolvedDigest/expectedDigest
+    recorded and zero state change (release-protocol.test.js + 4_2.mjs, green x2)
+  - A16: lost response reconciled by original correlation ID binds the original requestedAt receipt,
+    deployed=false, ledger stays 1; unknown correlation ID => READBACK_UNCONFIRMED exit 2, no deployment;
+    record/tag divergence => DEPLOYMENT_DIGEST_MISMATCH exit 2
+  - A17: unapproved rollback refused ROLLBACK_NOT_APPROVED exit 2 (also foreign-environment approval),
+    zero state change; approved same-digest rollback reads back digest + environment + business terminal
+    state exit 0; rollback without retained previous approved artifact => ROLLBACK_RETENTION_MISSING exit 2;
+    unobservable business effect => ROLLBACK_TERMINAL_STATE_UNCONFIRMED exit 2; wrong-digest approval =>
+    ROLLBACK_DIGEST_MISMATCH exit 2
+  - ISOLATED_RELEASE_ENVIRONMENT_REQUIRED: unregistered environment blocks promote and rollback (exit 2),
+    nothing written; ENVIRONMENT_PROJECT_MISMATCH refused; ARTIFACT_NOT_FROM_MERGE refused before any
+    write; contradictory claimed digest => exit 1 input error; receipts stay LOCAL_ONLY with the
+    production-successor note and leak no host paths
