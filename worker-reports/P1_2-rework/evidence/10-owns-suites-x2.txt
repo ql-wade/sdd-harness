@@ -1,0 +1,92 @@
+P1_2 rework — owns suites green x2 (two consecutive full runs, post all fixes).
+
+== round 1
+$ node --test test/foundation-distribution.test.js  (exit recorded during round 1)
+  ok 1 - exporter builds a contract-valid lock from the unique sources (real repo)
+  ok 2 - lock emission gates: full digests, no machine paths, no floating versions
+  ok 3 - exporter refuses to emit when an MCP registration floats (@latest)
+  ok 4 - release view + lock are byte-stable across repeated exports (repeat-pull idempotency)
+  ok 5 - dual-write drift is detected in both directions (source edit and hand-edited view)
+  ok 6 - committed foundation artifacts match live sources (repo-level drift gate)
+  ok 7 - composition requires adapter fixture isolation and uninstall capability
+  ok 8 - reverse order A: existing user config survives bootstrap, guard installed once
+  ok 9 - reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept
+  ok 10 - upgrade: stale managed entry in an older command format is replaced, not duplicated
+  ok 11 - uninstall removes managed entries only, is idempotent, and re-init restores
+  ok 12 - uninstall is locale-safe: UTF-8 locale must not crash bootstrap (regression: unbraced $var before a multibyte char)
+  ok 13 - owned control-plane scripts never place an unbraced variable expansion adjacent to multibyte text
+  ok 14 - matcher registration and gate script behavior are tested together
+  ok 15 - adapter declares the fixed event set and the plugin registration division
+  ok 16 - plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall
+  ok 17 - same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched
+  ok 18 - duplicate user entries for the same event/command are refused, not composed twice
+  ok 19 - hooks.yaml events outside the adapter fixed event set are refused, never silently dropped
+  ok 20 - plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2)
+  ok 21 - exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts
+  ok 22 - bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo
+  ok 23 - old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+  ok 24 - active run blocks silent re-baseline after asset drift; closed run only notes it
+  ok 25 - unresolvable pinned baseline is blocked explicitly, never silently swapped
+  ok 26 - B09: a second writer cannot take over an active run
+  ok 27 - explicit migration re-pins only with ownership and a resolvable old baseline
+  # tests 27
+  # pass 27
+  # fail 0
+  # skipped 0
+$ node --test test/delivery-cases/1_2.mjs  (exit recorded during round 1)
+  ok 1 - CLI export produces a contract-valid lock and verify accepts it (real repo)
+  ok 2 - V_F04: CLI verify fails on drifted assets and check-run blocks an active run (explicit migration path)
+  ok 3 - CLI check-run refuses a second writer on an active run (B09) and allows the owner
+  ok 4 - V_F02: forward then reverse composition: init, user edit, re-pull, uninstall, re-init
+  ok 5 - plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched
+  ok 6 - duplicate same event/command registration (plugin entry wrapping the managed command) is refused via bootstrap with a conflict list
+  ok 7 - V_F02: repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable
+  # tests 7
+  # pass 7
+  # fail 0
+  # skipped 0
+== round 2
+$ node --test test/foundation-distribution.test.js  (exit recorded during round 2)
+  ok 1 - exporter builds a contract-valid lock from the unique sources (real repo)
+  ok 2 - lock emission gates: full digests, no machine paths, no floating versions
+  ok 3 - exporter refuses to emit when an MCP registration floats (@latest)
+  ok 4 - release view + lock are byte-stable across repeated exports (repeat-pull idempotency)
+  ok 5 - dual-write drift is detected in both directions (source edit and hand-edited view)
+  ok 6 - committed foundation artifacts match live sources (repo-level drift gate)
+  ok 7 - composition requires adapter fixture isolation and uninstall capability
+  ok 8 - reverse order A: existing user config survives bootstrap, guard installed once
+  ok 9 - reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept
+  ok 10 - upgrade: stale managed entry in an older command format is replaced, not duplicated
+  ok 11 - uninstall removes managed entries only, is idempotent, and re-init restores
+  ok 12 - uninstall is locale-safe: UTF-8 locale must not crash bootstrap (regression: unbraced $var before a multibyte char)
+  ok 13 - owned control-plane scripts never place an unbraced variable expansion adjacent to multibyte text
+  ok 14 - matcher registration and gate script behavior are tested together
+  ok 15 - adapter declares the fixed event set and the plugin registration division
+  ok 16 - plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall
+  ok 17 - same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched
+  ok 18 - duplicate user entries for the same event/command are refused, not composed twice
+  ok 19 - hooks.yaml events outside the adapter fixed event set are refused, never silently dropped
+  ok 20 - plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2)
+  ok 21 - exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts
+  ok 22 - bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo
+  ok 23 - old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+  ok 24 - active run blocks silent re-baseline after asset drift; closed run only notes it
+  ok 25 - unresolvable pinned baseline is blocked explicitly, never silently swapped
+  ok 26 - B09: a second writer cannot take over an active run
+  ok 27 - explicit migration re-pins only with ownership and a resolvable old baseline
+  # tests 27
+  # pass 27
+  # fail 0
+  # skipped 0
+$ node --test test/delivery-cases/1_2.mjs  (exit recorded during round 2)
+  ok 1 - CLI export produces a contract-valid lock and verify accepts it (real repo)
+  ok 2 - V_F04: CLI verify fails on drifted assets and check-run blocks an active run (explicit migration path)
+  ok 3 - CLI check-run refuses a second writer on an active run (B09) and allows the owner
+  ok 4 - V_F02: forward then reverse composition: init, user edit, re-pull, uninstall, re-init
+  ok 5 - plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched
+  ok 6 - duplicate same event/command registration (plugin entry wrapping the managed command) is refused via bootstrap with a conflict list
+  ok 7 - V_F02: repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable
+  # tests 7
+  # pass 7
+  # fail 0
+  # skipped 0

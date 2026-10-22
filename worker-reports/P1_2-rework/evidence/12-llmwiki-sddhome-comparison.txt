@@ -1,0 +1,25 @@
+P1_2 rework — llmwiki project-ization linkage: read-only SDD_HOME comparison (task item 4; P1_6/amendment 3 context)
+Compared surfaces: P1_2 owns (bootstrap.sh --with-llmwiki section; exporter freezing .mcp.json as the
+registration view) vs the project-local SDD_HOME semantics established by I04/P1_6 (launcher, sdd-paths, register-mcps).
+
+=== Resolution rules observed (read-only):
+tools/mcp/llmwiki.sh (I04 domain): SDD_HOME=${SDD_HOME:-$HOME/.sdd}; LLMWIKI_DIR=$SDD_HOME/repos/llmwiki;
+  wiki root $SDD_WIKI_HOME || $SDD_HOME/wiki/<slug> (git-common-dir, worktree-safe); python LLMWIKI_PYTHON || $LLMWIKI_DIR/.venv/bin/python
+lib/sdd-paths.js (I04 domain): getSddHome = $SDD_HOME || ~/.sdd; getWikiHome = $SDD_WIKI_HOME || $SDD_HOME/wiki/<slug>
+tools/register-mcps.mjs (not P1_2 owns): $SDD_HOME || ~/.sdd; registers command ${CLAUDE_PROJECT_DIR}/tools/mcp/llmwiki.sh
+tools/bootstrap.sh (P1_2 owns): SDD_HOME=${SDD_HOME:-$HOME/.sdd}; clone -> $SDD_HOME/repos/llmwiki; venv $LLMWIKI_DIR/.venv; pinned commit 075c5b4996ff4e07f9d3c57c1f14fd2b54a955db
+.mcp.json (registration artifact the exporter freezes): llmwiki = ${CLAUDE_PROJECT_DIR}/tools/mcp/llmwiki.sh, zero host paths
+mcp-capabilities.yaml: llmwiki depends note points at bootstrap --with-llmwiki with pinned commit/version
+
+=== Verdict: CONSISTENT (no routing conflict found inside P1_2 owns)
+1. Every surface resolves SDD_HOME env-first with the identical $HOME/.sdd default; no surface hardcodes
+   an absolute path. Project-local (<repo>/.sdd) is achieved by exporting SDD_HOME — one mechanism, no forks.
+2. bootstrap.sh installs to the exact path the launcher probes ($SDD_HOME/repos/llmwiki/.venv/bin/python).
+3. The exporter's registration view (release/mcp/mcp.json) is byte-derived from .mcp.json, which carries the
+   env-driven launcher form — consistent with the project-ized, path-free registration surface.
+
+=== Recorded nuance (routing note, not changed — I04 domain):
+The --with-llmwiki bootstrap route creates repos/llmwiki/.venv via 'python3 -m venv' + 'pip install mcp[cli]==1.27.0',
+while the I04 project-local deployment (per the P1_1 rework report) uses .sdd/venvs/llmwiki-311 via uv + requirements.lock.
+Both are supported by the launcher (LLMWIKI_PYTHON override); the divergence is owned by I04/P1_6, not P1_2.
+No I04-domain file was modified.

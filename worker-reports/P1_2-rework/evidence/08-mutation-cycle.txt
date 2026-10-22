@@ -1,0 +1,50 @@
+P1_2 rework — mutation injections (each mutation applied to an owned file, caught by owns suites, reverted, tree verified clean).
+M5 (regression-guard sanity) at the end: reverting the locale fix fails BOTH new regression tests; restoring passes 27/27.
+
+==============================================================================
+MUTATION M1-adapter-handover-keeps-stale-entries
+  file: tools/adapters/claude-code.sh
+  change: upsert_hook_array no longer filters is_ours entries -> stale/legacy managed entries survive upgrade+repeat pull (duplicate Guard)
+  node --test test/foundation-distribution.test.js -> exit 1
+    not ok 9 - reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept
+    not ok 10 - upgrade: stale managed entry in an older command format is replaced, not duplicated
+    not ok 12 - matcher registration and gate script behavior are tested together
+    not ok 14 - plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall
+  node --test test/delivery-cases/1_2.mjs -> exit 1
+    not ok 4 - forward then reverse composition: init, user edit, re-pull, uninstall, re-init
+    not ok 5 - plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched
+    not ok 7 - repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable
+  CAUGHT: True (suite failed: True; expected failing behavior observed: True)
+  reverted; git status clean: True
+==============================================================================
+MUTATION M2-adapter-uninstall-eats-plugin-entries
+  file: tools/adapters/claude-code.sh
+  change: uninstall hook_source reclassifies plugin entries as managed -> plugin registrations removed on uninstall (violates registration division 7.2)
+  node --test test/foundation-distribution.test.js -> exit 1
+    not ok 14 - plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall
+  CAUGHT: True (suite failed: True; expected failing behavior observed: True)
+  reverted; git status clean: True
+==============================================================================
+MUTATION M3-exporter-silent-rebaseline-active-run
+  file: tools/foundation-export.mjs
+  change: checkRun treats active-run drift as informational (ok) instead of blocking -> old Run method baseline silently swapped (violates F04)
+  node --test test/foundation-distribution.test.js -> exit 1
+    not ok 22 - active run blocks silent re-baseline after asset drift; closed run only notes it
+  node --test test/delivery-cases/1_2.mjs -> exit 1
+    not ok 2 - CLI verify fails on drifted assets and check-run blocks an active run (explicit migration path)
+    not ok 4 - forward then reverse composition: init, user edit, re-pull, uninstall, re-init
+    not ok 5 - plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched
+  CAUGHT: True (suite failed: True; expected failing behavior observed: True)
+  reverted; git status clean: True
+==============================================================================
+MUTATION M4-exporter-emission-gate-drops-machine-path
+  file: tools/foundation-export.mjs
+  change: guardLock no longer refuses machine absolute paths -> leaked host paths can be frozen into the lock
+  node --test test/foundation-distribution.test.js -> exit 1
+    not ok 2 - lock emission gates: full digests, no machine paths, no floating versions
+  CAUGHT: True (suite failed: True; expected failing behavior observed: True)
+  reverted; git status clean: True
+==============================================================================
+POST-MUTATION RE-GREEN
+  foundation-distribution: exit=0 # tests 25 # pass 25 # fail 0
+  1_2.mjs: exit=1 # tests 7 # pass 5 # fail 2
