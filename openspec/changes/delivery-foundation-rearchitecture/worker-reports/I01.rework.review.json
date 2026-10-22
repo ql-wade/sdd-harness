@@ -1,0 +1,36 @@
+{
+  "task": "I01",
+  "phase": "rework-r1",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-22T05:26:26.417186+00:00",
+  "head_reviewed": "33556cc",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "evidence/10 标题计数与逐文件统计差 1(33 vs 32)记录误差; 结论不受影响(基线独立复现)",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-2",
+      "summary": "authority.observedAt 保留原注册时间; 现场重试+readback 复跑均再确认同失败; 精准修改不更新",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-3",
+      "summary": "diff 纯增量(+22/+33)精准; PARTIAL 3/4 Step3 环境门控属实",
+      "disposition": "recorded"
+    }
+  ],
+  "independently_rerun": {
+    "owns_boundary": "registry.mjs+test 逐字在 Owns; 13 文件恰允许集",
+    "red_reproduced": "git archive 88c49f9 旧工具: 4/5 负例 exit 0 假绿(逐字复现); 9019c1c RED commit 套件 15/1 与证据一致",
+    "new_gates": "5 负例全 exit 2 正确码; committed registry validate exit 0",
+    "mutations_redone": "M1/M2 副本重做 exit 1 -> 恢复 16/16",
+    "secret_discipline": "扫描仅命中检测正则+合成 fixture; cross-project/catalogGap 全 fail-closed 拒绝",
+    "env_gate_detail": "评审员亲自复现字节一致 x509 -26276; readback 现场重试 exit 2 UNVERIFIED(非缓存)",
+    "npm_test": "427/424/2 恰已知; 两失败基线预存独立证明; 控制器 merge a7fdc1e 复跑 427/423/4 零新增",
+    "adjacent_untouched": true
+  }
+}
