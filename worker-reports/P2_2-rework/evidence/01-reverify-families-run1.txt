@@ -1,0 +1,44 @@
+rework-seven-p1-r1 / P2_2 (SDD.Gate.v1 pure evaluate re-verification) — negative-family re-verification, run 1
+source: independently constructed inputs (fresh launcher/digests/fixtures, NOT the test files' fixtures or assertions)
+command: node $TMPDIR/p22-reverify.mjs against current lib/delivery/evidence.js + lib/delivery/gate.js
+
+PASS  UNREGISTERED_SOURCE (no dispatch)
+PASS  MALFORMED_DISPATCH (shape: attempt=0)
+PASS  FORGED_DISPATCH (genuine dispatch, inputDigest tampered after signing)
+PASS  FORGED_DISPATCH (worker-minted sha256 integrity)
+PASS  IDENTITY_CONFLICT (builder role signs evidence)
+PASS  ROLE_NOT_DISPATCHED (genuinely signed unknown role)
+PASS  EXECUTION_BINDING_MISMATCH (envelope re-declares execution)
+PASS  ORIGIN_BINDING_MISMATCH (envelope re-declares origin)
+PASS  CANDIDATE_BINDING_MISMATCH (envelope observes different candidate)
+PASS  STALE_CANDIDATE (dispatch+envelope agree, both lag current input)
+PASS  STALE_POLICY (dispatch bound to rotated policy digest)
+PASS  STALE_ENVIRONMENT (envelope observed in a different environment)
+PASS  EXPIRED_ENVELOPE (expiry in the past)
+PASS  DUPLICATE_ISSUANCE (execution already issued)
+PASS  NO_OBSERVATION (pass claim, 0 valid executions)
+PASS  NO_OBSERVATION (valid > total contradiction)
+PASS  INVALID_ENVELOPE (schemaVersion 0 / 2 / missing executions)
+PASS  POSITIVE CONTROL (genuine verifier dispatch admitted, class independent-acceptance)
+PASS  POSITIVE CONTROL (test-author admitted as authoring-self-check only)
+PASS  INVALID_TEST_CONTRACT throw (missing requiredChecks)
+PASS  INVALID_INPUTS throw (digest not sha256)
+PASS  INVALID_POLICY throw (digest not sha256)
+PASS  INVALID_RECEIPTS throw (not an array)
+PASS  TAMPERED_RECEIPT (entry digest no longer matches envelope)
+PASS  TAMPERED_RECEIPT (identity fields re-written off the dispatch binding)
+PASS  STALE_POLICY at gate (policy rotated after admission)
+PASS  STALE_INPUT at gate (input rotated after admission)
+PASS  IDENTITY_CONFLICT at gate (receipt execution == builderExecution)
+PASS  MISSING_OBSERVATION (required capability with zero receipts)
+PASS  MISSING_OBSERVATION (half coverage: console missing while unit present)
+PASS  AUTHORING_SELF_CHECK_ONLY (test-author cannot sign acceptance)
+PASS  UNVERIFIED_CAPABILITY (admitted truthful unverified blocks its capability)
+PASS  B06 substitution (dom + service-log receipts cannot close required console)
+PASS  QUORUM LEAK: valid never exceeds required count (extra unreferenced receipt)
+PASS  QUORUM LEAK: duplicated receipt cannot satisfy a different capability
+PASS  QUORUM LEAK: pass verdict requires every required check independently satisfied
+PASS  PURITY: evaluate deterministic (identical receipts across calls, sorted evidence)
+PASS  PURITY: positive gate path issues schema-shaped receipt with pass verdict
+
+38/38 families re-verified on current source
