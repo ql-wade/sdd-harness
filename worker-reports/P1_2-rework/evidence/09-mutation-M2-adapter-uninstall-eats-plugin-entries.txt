@@ -1,0 +1,37 @@
+P1_2 rework — mutation M2-adapter-uninstall-eats-plugin-entries (summary in 08-mutation-cycle.txt; per-suite TAP below).
+
+MUTATION M2-adapter-uninstall-eats-plugin-entries
+file: tools/adapters/claude-code.sh
+change: uninstall hook_source reclassifies plugin entries as managed -> plugin registrations removed on uninstall (violates registration division 7.2)
+
+$ node --test test/foundation-distribution.test.js  (exit=1)
+  ok 1 - exporter builds a contract-valid lock from the unique sources (real repo)
+  ok 2 - lock emission gates: full digests, no machine paths, no floating versions
+  ok 3 - exporter refuses to emit when an MCP registration floats (@latest)
+  ok 4 - release view + lock are byte-stable across repeated exports (repeat-pull idempotency)
+  ok 5 - dual-write drift is detected in both directions (source edit and hand-edited view)
+  ok 6 - committed foundation artifacts match live sources (repo-level drift gate)
+  ok 7 - composition requires adapter fixture isolation and uninstall capability
+  ok 8 - reverse order A: existing user config survives bootstrap, guard installed once
+  ok 9 - reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept
+  ok 10 - upgrade: stale managed entry in an older command format is replaced, not duplicated
+  ok 11 - uninstall removes managed entries only, is idempotent, and re-init restores
+  ok 12 - matcher registration and gate script behavior are tested together
+  ok 13 - adapter declares the fixed event set and the plugin registration division
+  not ok 14 - plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall
+  ok 15 - same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched
+  ok 16 - duplicate user entries for the same event/command are refused, not composed twice
+  ok 17 - hooks.yaml events outside the adapter fixed event set are refused, never silently dropped
+  ok 18 - plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2)
+  ok 19 - exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts
+  ok 20 - bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo
+  ok 21 - old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+  ok 22 - active run blocks silent re-baseline after asset drift; closed run only notes it
+  ok 23 - unresolvable pinned baseline is blocked explicitly, never silently swapped
+  ok 24 - B09: a second writer cannot take over an active run
+  ok 25 - explicit migration re-pins only with ownership and a resolvable old baseline
+  # tests 25
+  # pass 24
+  # fail 1
+  # skipped 0
+

@@ -1,0 +1,41 @@
+P1_2 rework — direct negative re-verification against CURRENT source (independent fixtures, no test-file helpers).
+Script: <tmp>/negatives.mjs; every fixture under <tmp>; adapter/bootstrap/exporter are the real worktree tools.
+Post-fix authoritative run (pre-fix run had identical verdicts for N1-N8 apart from the N3 script bug fixed in the harness).
+
+PASS N1 duplicate plugin-wrapped registration refused (exit!=0) — exit=1
+PASS N1 stderr names 重复注册 + pre-tool-gate + plugin
+PASS N1 settings.json byte-identical after refusal
+PASS N2 duplicate user entry refused (exit!=0) — exit=1
+PASS N2 stderr names 重复注册|duplicate
+PASS N2 settings.json byte-identical after refusal
+PASS N3 install exit 0
+PASS N3 re-pull #1 exit 0
+PASS N3 re-pull #2 exit 0
+PASS N3 exactly one managed Guard after 3 pulls — count=1
+PASS N3 user later addition kept
+PASS N3 original user entries intact
+PASS N3 bootstrap first pull exit 0
+PASS N3 bootstrap repeat pull exit 0
+PASS N3 lock bytes stable across bootstrap re-pull
+PASS N4 upgrade exit 0
+PASS N4 no duplicate Guard after upgrade — count=1
+PASS N4 surviving entry is current format (CLAUDE_PROJECT_DIR)
+PASS N4 matcher is policy union (Bash), legacy Write|Edit not leaked — Bash
+PASS N4 user entries intact through upgrade
+PASS N5 uninstall exit 0
+PASS N5 managed gone after uninstall
+PASS N5 user stop hook kept
+PASS N5 user permissions kept
+PASS N5 uninstall idempotent
+PASS N5 re-init exit 0 restores guard
+PASS N6 active-run resume on drifted assets blocked (exit!=0) — exit=1
+PASS N6 block reason silent-rebaseline-blocked
+PASS N6 explicit migration path given
+PASS N6 verdict.reason == silent-rebaseline-blocked
+PASS N6 migration by non-owner refused (second-writer-refused)
+PASS N7 unresolvable baseline blocked (exit!=0) — exit=1
+PASS N7 reason baseline-unresolvable + explicit migration
+PASS N8 committed foundation lock verifies clean (real repo) — ✅ foundation verify: lock, sources and release view are consistent
+
+
+SUMMARY: ALL NEGATIVES RE-VERIFIED

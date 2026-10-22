@@ -1,0 +1,73 @@
+{
+  "final_status": "DONE",
+  "steps_done": "8/8",
+  "run": "rework-seven-p1-r1",
+  "task": "P1_2 (原任务 1.2) — exporter + FoundationLock, composition idempotency/managed-block handover, old-run baseline pinning (F02/F04/B09)",
+  "worktree": "rw-p1-2 @ master@d7ff690, branch rework/p1-2-distribution",
+  "report_generated_at": "2026-10-22T15:05:00+08:00",
+  "reopen_discipline": "Task REOPENED; old PASS not inherited. All task negatives re-executed against current source this run (direct independent-fixture runs + owns suites x2), plus 4 mutation injections + 1 regression-guard mutation sanity, all caught and reverted.",
+  "reverified": [
+    {
+      "behavior": "1.2.a exporter + FoundationLock emission (unique sources only; digests match P1_6 manifest; guardLock refuses machine paths / @latest / HEAD / unpinned / missing digest; @latest MCP registration refused; byte-stable repeat export; dual-write drift detected in both directions; committed foundation/foundation-lock.json verifies clean against live sources)",
+      "negative": "Re-run live this run: floating MCP pin -> export refuses; hand-edited release view -> verify drifts (kind=release); source edit -> verify drifts (kind=lock); machine path in lock -> gate refuses (documented: contract alone accepts, exporter gate is the barrier)",
+      "mutation_caught": "M4 exporter-emission-gate-drops-machine-path: guardLock machine-path check disabled -> 'lock emission gates' test fails (suite exit 1)"
+    },
+    {
+      "behavior": "1.2.b composition idempotency + managed-block handover (SDD_TARGET_ROOT isolated fixtures; forward/reverse order; repeat pull x3; upgrade replaces stale legacy-format entry, no second Guard; matcher = deny-policy union and matcher drift repaired by re-bootstrap; script behavior + settings matcher tested together; repo live config byte-compared untouched)",
+      "negative": "Re-run live this run: duplicate plugin-wrapped registration refused (exit 1, conflict list names 重复注册/pre-tool-gate/plugin, settings byte-identical); duplicate user entry refused (settings byte-identical); uninstall removes managed only, idempotent, user entries survive, re-init restores",
+      "mutation_caught": "M1 adapter-handover-keeps-stale-entries: upsert stops filtering is_ours -> 7 test failures across both owns files (duplicate Guard); M2 adapter-uninstall-eats-plugin-entries: plugin entries reclassified as managed -> plugin division test fails"
+    },
+    {
+      "behavior": "1.2.c old Run fixed assets + fallback (pinned baseline resolves from git history; active run on drifted assets blocked silent-rebaseline-blocked with explicit migration; closed run informational; unresolvable baseline blocked; B09 second writer refused, owner re-claim allowed; migration requires owner + resolvable old baseline, records from/to exportDigests)",
+      "negative": "Re-run live this run: active run + post-pin skill drift -> check-run exit 1 silent-rebaseline-blocked + --migrate/new-run hint; migration as non-owner -> second-writer-refused, run-state owner unchanged; bogus release commit 0*40 -> baseline-unresolvable with explicit migration referral",
+      "mutation_caught": "M3 exporter-silent-rebaseline-active-run: active-run drift treated as informational -> 'active run blocks silent re-baseline' + case-1_2 check-run block fail (3 failures across both files)"
+    },
+    {
+      "behavior": "NEW (found this rework): bootstrap --uninstall / adapter refusal paths are locale-safe",
+      "negative": "RED: under any UTF-8 locale (C.UTF-8/en_US.UTF-8/UTF-8), bash parsed the byte after $TARGET_ROOT / $arg (full-width paren, 0xEF..) as part of the variable name -> 'unbound variable' -> bootstrap --uninstall exit 1 -> F02 配置可回退 broken on standard dev locales; deterministic 6/6 under a python-spawned runner while 3/3 green under a C-locale shell (locale-dependent, not flaky). Both owned instances fixed with ${VAR} bracing; verified exit 0 under C and en_US.UTF-8; refusal messages preserved",
+      "mutation_caught": "M5 regression-guard sanity: reverting the bootstrap.sh brace fix -> both new regression tests fail (behavioral UTF-8 uninstall + static unbraced-var-adjacent-to-multibyte scan); restored -> 27/27"
+    }
+  ],
+  "journey_anchors": "P3_1 connected check found a scenario anchor gap: case plan binds F02 and F04 to test/delivery-cases/1_2.mjs (both status RETEST_REQUIRED_AFTER_SEVEN_P1, historical_pass_inherits=false) but no test point carried the scenario token, so delivery-journey refused: F02/F04 -> exit 2 NOT-EXERCISED 'assertion-mapping-not-verifiable ... a green suite without the registered target is not a scenario pass' (self-certification pattern). Fixed RED->GREEN by anchoring test names to V_F02:/V_F04: (composition + repeat-pull = F02; check-run drift block = F04). Re-verified: node tools/verify/delivery-journey.mjs --scenario F02 ... -> exit 0 PASS (token found, 7/7); --scenario F04 -> exit 0 PASS. B09 is bound to 1_6.mjs (not P1_2 owns) and was left untouched.",
+  "red_cases": [
+    "RED-1 F02 journey anchor gap: delivery-journey --scenario F02 -> exit 2 NOT-EXERCISED, target token F02 found=false while suite 7/7 green (evidence 01)",
+    "RED-2 F04 journey anchor gap: --scenario F04 -> exit 2 NOT-EXERCISED, token F04 found=false (evidence 02)",
+    "RED-3 UTF-8 locale uninstall crash: git-show d7ff690 line 39 'say \"🧹 scaffold uninstall（目标: $TARGET_ROOT）\"' -> under LC_ALL=en_US.UTF-8 bash: 'TARGET_ROOT<0xEF>: unbound variable' exit 1; same class at claude-code.sh line 47 ($arg); bootstrap --uninstall e2e crash reproduced 6/6 (evidence 03)"
+  ],
+  "commands": {
+    "node --test test/foundation-distribution.test.js (round 1, post-fix)": 0,
+    "node --test test/foundation-distribution.test.js (round 2, post-fix)": 0,
+    "node --test test/delivery-cases/1_2.mjs (round 1, post-fix)": 0,
+    "node --test test/delivery-cases/1_2.mjs (round 2, post-fix)": 0,
+    "node tools/verify/delivery-journey.mjs --scenario F02 (before anchor fix)": 2,
+    "node tools/verify/delivery-journey.mjs --scenario F04 (before anchor fix)": 2,
+    "node tools/verify/delivery-journey.mjs --scenario F02 (after anchor fix)": 0,
+    "node tools/verify/delivery-journey.mjs --scenario F04 (after anchor fix)": 0,
+    "node <tmp>/negatives.mjs (direct negatives, post-fix)": 0,
+    "mutation M1..M4 node --test owns (mutated)": 1,
+    "mutation M1..M4 reverted re-green": 0,
+    "npm test (full, baseline d7ff690 clean tree)": "1 (known: C08 negative fail + C08 positive SKIP + B08 fail)",
+    "npm test (full, post-change)": "1 (identical known set; 429 tests, 426 pass, 2 fail, 1 skip; +2 new regression tests pass)",
+    "LC_ALL=en_US.UTF-8 bash tools/bootstrap.sh --uninstall (pre-fix)": 1,
+    "LC_ALL=en_US.UTF-8 bash tools/bootstrap.sh --uninstall (post-fix)": 0,
+    "node tools/foundation-export.mjs verify --root <repo> --lock foundation/foundation-lock.json": 0
+  },
+  "unverified": [],
+  "files_changed": [
+    "tools/bootstrap.sh",
+    "tools/adapters/claude-code.sh",
+    "test/delivery-cases/1_2.mjs",
+    "test/foundation-distribution.test.js",
+    "worker-reports/P1_2.rework.json",
+    "worker-reports/P1_2-rework/evidence/ (15 .txt files)"
+  ],
+  "commits": {
+    "e7c2233": "test(P1_2 rework): RED evidence — F02/F04 journey anchor gap + UTF-8 locale uninstall crash",
+    "a3de114": "fix(P1_2 rework): locale-safe bracing, F02/F04 journey anchors, regression guards",
+    "this-commit": "docs(P1_2 rework): P1_2.rework.json + GREEN/mutation/negative evidence"
+  },
+  "blockers_or_questions": [
+    "Pre-existing full-suite known items unchanged by this work (verified identical on clean base d7ff690 vs post-change): 'C08 negative: pinned host OpenSpec 1.3.1 status lacks dependency edges' (host openspec is 1.14.3 now — environment drift already recorded by P1_1 rework), 'C08 positive' SKIP (isolated 1.11.0 not installed under .sdd/tools), 'B08 preservation' fail (host CLI archive behavior; owner P1_6/spec-closeout domain). No new failures.",
+    "llmwiki linkage (task item 4, read-only): P1_2 owns MCP-distribution wording is CONSISTENT with project-ized SDD_HOME semantics — every surface (bootstrap.sh, launcher llmwiki.sh, sdd-paths.js, register-mcps.mjs, .mcp.json registration view) resolves SDD_HOME env-first with the same ~/.sdd default and no hardcoded paths; project-local is one mechanism (export SDD_HOME=<repo>/.sdd). Recorded nuance routed to I04 (not modified): --with-llmwiki builds repos/llmwiki/.venv via pip mcp[cli]==1.27.0 while the proven project-local deployment uses .sdd/venvs/llmwiki-311 via uv+requirements.lock; launcher supports both via LLMWIKI_PYTHON. Evidence 12."
+  ]
+}

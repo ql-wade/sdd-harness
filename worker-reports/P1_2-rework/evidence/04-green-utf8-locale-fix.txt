@@ -1,0 +1,16 @@
+P1_2 rework — GREEN: brace-expansion fix applied to both owned scripts.
+
+== bootstrap --uninstall under both locales (fixture target root):
+LC_ALL=C            exit=0
+LC_ALL=en_US.UTF-8  exit=0
+
+== adapter unknown-arg refusal message preserved under UTF-8 (no crash):
+exit=1
+
+== suites under the previously-failing python-spawned runner (LANG unset):
+test/delivery-cases/1_2.mjs exit 0 # pass 7 # fail 0
+test/foundation-distribution.test.js exit 0 # pass 27 # fail 0
+
+== adapter refusal output (stderr captured, UTF-8 locale):
+❌ 未知参数: --bogus（支持: --uninstall）
+exit=1
