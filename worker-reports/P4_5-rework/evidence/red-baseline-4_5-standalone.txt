@@ -1,0 +1,15 @@
+=== RED baseline reproduction (order-dependence on gitignored hooks/.compiled.env) ===
+date: 2026-10-22T22:20:46Z
+worktree: .claude/worktrees/rw-p4-5 branch rework/p4-5-lifecycle base 5951d14
+precondition: hooks/.compiled.env (gitignored .gitignore:30, adapter-generated) moved aside -> fresh-checkout state
+command: node --test test/delivery-cases/4_5.mjs
+
+not ok 1 - E05: the method hook is missing at runtime — the failure surfaces, the deny gate still blocks and the real SDD.Gate still blocks
+not ok 2 - E05: silent failure — exit 0 with mode badge and map present is still NOT_EVIDENCED and the gate verdict is byte-identical
+not ok 3 - E05 mode crosstalk: a shared mode file resolves last-write-wins and never changes the deny gate or the Runtime verdict
+not ok 4 - E06/H02: repeated startup/resume/stop hook triggers restore context only — the world is byte-identical and stays outside the fixed event set
+ok 5 - native assembly: the doctor verifies the real three-subject composition of this repo; live run stays UNVERIFIED; plugin cache untouched
+# tests 5
+# pass 1
+# fail 4
+exit=0
