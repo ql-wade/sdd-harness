@@ -555,3 +555,120 @@ test('boundary: test T stays a single automatic review — the delivery gate is 
   assert.equal(empty.status, 'REFUSED');
   assert.deepEqual(refusalCodes(empty), ['MECHANICAL_RUN_MISSING'], 'a single automatic review cannot be substituted for the unanimous mechanical consensus');
 });
+
+// --- rework P1-02/P1-03: the consumption surfaces -----------------------------
+//
+// The intake entry (lib/delivery/evidence.js — the Runner.Dispatch.v1 local
+// equivalent) stays untouched; the adapter consumes its dispatches. A consumes
+// the closed unanimous consensus only through a launcher-issued dispatch bound
+// to the frozen artifactDigest; T consumes the sufficiency conclusion and the
+// attested oracle strength of ONE independent review (never a quorum).
+
+const { consumeArchitectureGate, consumeTestDesignReview, ADEQUATE_ORACLE_STRENGTHS } = await import(path.join(projectRoot, 'lib/adapters/architecture-review.js'));
+
+test('consumeArchitectureGate admits a closed consensus only through a launcher-issued dispatch bound to the frozen artifactDigest', () => {
+  const authority = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+  const { pkg, runRoot, judged } = runConsensus({ dir: makeTmp('sdd-p25-consume-'), reviewId: 'arch-consume-r1', requirementsDigest: sha('req'), designDigest: sha('design') });
+  assert.equal(judged.status, 'PASSED', 'precondition: the real consensus is closed and unanimous');
+  const dispatchFor = (inputDigest, overrides = {}) => authority.issueDispatch({
+    runnerId: 'review-runner-1', run: 'run-arch', gate: 'A', role: 'verifier',
+    execution: 'exec-arch-review-1', inputDigest, policyDigest: sha('policy/arch'),
+    attempt: 1, epoch: 1, ...overrides,
+  });
+
+  const consumed = consumeArchitectureGate({ package: pkg, runRoot, questions: [], dispatch: dispatchFor(pkg.artifactSha256), authority });
+  assert.equal(consumed.ok, true);
+  assert.equal(consumed.consumed, true);
+  assert.equal(consumed.execution, 'exec-arch-review-1', 'the trusted execution identity binds the consumption');
+  assert.equal(consumed.judged.status, 'PASSED');
+  assert.deepEqual(consumed.judged, judged, 'consumption carries the real judgment, never a re-write');
+
+  // fake origins
+  const rogue = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+  const forged = consumeArchitectureGate({ package: pkg, runRoot, questions: [], dispatch: rogue.issueDispatch({
+    runnerId: 'review-runner-1', run: 'run-arch', gate: 'A', role: 'verifier',
+    execution: 'exec-arch-review-1', inputDigest: pkg.artifactSha256, policyDigest: sha('policy/arch'),
+    attempt: 1, epoch: 1,
+  }), authority });
+  assert.deepEqual({ ok: forged.ok, error: forged.error }, { ok: false, error: 'FORGED_DISPATCH' });
+  const malformed = consumeArchitectureGate({ package: pkg, runRoot, questions: [], dispatch: { execution: 'x' }, authority });
+  assert.equal(malformed.ok, false);
+  assert.equal(malformed.error, 'MALFORMED_DISPATCH');
+  const none = consumeArchitectureGate({ package: pkg, runRoot, questions: [] });
+  assert.equal(none.error, 'UNREGISTERED_SOURCE');
+
+  // binding and identity
+  const unbound = consumeArchitectureGate({ package: pkg, runRoot, questions: [], dispatch: dispatchFor(sha('other-material')), authority });
+  assert.equal(unbound.error, 'ARTIFACT_DIGEST_MISMATCH');
+  const builder = consumeArchitectureGate({ package: pkg, runRoot, questions: [], dispatch: dispatchFor(pkg.artifactSha256, { role: 'builder', execution: 'exec-builder-1' }), authority });
+  assert.equal(builder.error, 'IDENTITY_CONFLICT');
+
+  // consumption never overrides the judgment: every judged refusal surfaces
+  const questions = openLoadBearingQuestions([{ id: 'q-1', question: 'is the boundary real?' }]);
+  const openConsumed = consumeArchitectureGate({ package: pkg, runRoot, questions, dispatch: dispatchFor(pkg.artifactSha256), authority });
+  assert.deepEqual({ ok: openConsumed.ok, error: openConsumed.error }, { ok: false, error: 'CONSENSUS_NOT_ADMITTED' });
+  const rejudgedOpen = judgeArchitectureGate({ package: pkg, runRoot, questions });
+  assert.deepEqual(openConsumed.refusals, rejudgedOpen.refusals, 'the underlying refusals pass through unchanged');
+});
+
+test('consumeTestDesignReview admits ONE independent review on sufficiency plus strong|adequate oracle strength; weak or stale never', () => {
+  const authority = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+  assert.deepEqual([...ADEQUATE_ORACLE_STRENGTHS], ['strong', 'adequate'], 'the admitted strengths are exactly strong and adequate');
+  const current = { inputDigest: sha('candidate-r1') };
+  const dispatch = authority.issueDispatch({
+    runnerId: 'review-runner-2', run: 'run-t', gate: 'T', role: 'verifier',
+    execution: 'exec-test-review-1', inputDigest: current.inputDigest, policyDigest: sha('policy/t'),
+    attempt: 1, epoch: 1,
+  });
+  const review = { candidateDigest: current.inputDigest, sufficient: true, oracleStrength: 'strong', summary: 'oracle observes the contract boundary; RED is behavior-grounded' };
+  const consumed = consumeTestDesignReview({ dispatch, authority, current, review, authorExecution: 'exec-test-author-1' });
+  assert.deepEqual({ ok: consumed.ok, consumed: consumed.consumed, oracleStrength: consumed.oracleStrength }, { ok: true, consumed: true, oracleStrength: 'strong' });
+
+  for (const strength of ['weak', 'strict', undefined]) {
+    const refused = consumeTestDesignReview({ dispatch, authority, current, review: { ...review, oracleStrength: strength }, authorExecution: 'exec-test-author-1' });
+    assert.deepEqual({ ok: refused.ok, error: refused.error }, { ok: false, error: 'ORACLE_STRENGTH_REFUSED' }, `oracleStrength ${String(strength)} is refused`);
+  }
+  const insufficient = consumeTestDesignReview({ dispatch, authority, current, review: { ...review, sufficient: false }, authorExecution: 'exec-test-author-1' });
+  assert.equal(insufficient.error, 'SUFFICIENCY_CONCLUSION_REQUIRED');
+  const unwritten = consumeTestDesignReview({ dispatch, authority, current, review: { ...review, summary: '' }, authorExecution: 'exec-test-author-1' });
+  assert.equal(unwritten.error, 'REVIEW_SUMMARY_REQUIRED');
+
+  // staleness: the old authorization never covers new material, in either direction
+  const staleCurrent = consumeTestDesignReview({ dispatch, authority, current: { inputDigest: sha('candidate-r2') }, review, authorExecution: 'exec-test-author-1' });
+  assert.equal(staleCurrent.error, 'STALE_AUTHORIZATION');
+  const foreign = consumeTestDesignReview({ dispatch, authority, current, review: { ...review, candidateDigest: sha('candidate-r0') }, authorExecution: 'exec-test-author-1' });
+  assert.equal(foreign.error, 'REVIEW_MATERIAL_MISMATCH');
+
+  // identity: the author cannot self-attest; the builder cannot sign. Both
+  // mis-dispatches are issued by the launcher itself (a worker cannot rebind
+  // an execution without breaking the signature).
+  const selfDispatch = authority.issueDispatch({
+    runnerId: 'review-runner-2', run: 'run-t', gate: 'T', role: 'verifier',
+    execution: 'exec-test-author-1', inputDigest: current.inputDigest, policyDigest: sha('policy/t'),
+    attempt: 1, epoch: 1,
+  });
+  const self = consumeTestDesignReview({ dispatch: selfDispatch, authority, current, review, authorExecution: 'exec-test-author-1' });
+  assert.equal(self.error, 'SELF_REVIEW');
+  const builderDispatch = authority.issueDispatch({
+    runnerId: 'review-runner-2', run: 'run-t', gate: 'T', role: 'builder',
+    execution: 'exec-builder-2', inputDigest: current.inputDigest, policyDigest: sha('policy/t'),
+    attempt: 1, epoch: 1,
+  });
+  const builder = consumeTestDesignReview({ dispatch: builderDispatch, authority, current, review, authorExecution: 'exec-test-author-1' });
+  assert.equal(builder.error, 'IDENTITY_CONFLICT');
+
+  // fake origins
+  const rogue = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+  const forged = consumeTestDesignReview({ dispatch: rogue.issueDispatch({
+    runnerId: 'review-runner-2', run: 'run-t', gate: 'T', role: 'verifier',
+    execution: 'exec-test-review-1', inputDigest: current.inputDigest, policyDigest: sha('policy/t'),
+    attempt: 1, epoch: 1,
+  }), authority, current, review, authorExecution: 'exec-test-author-1' });
+  assert.equal(forged.error, 'FORGED_DISPATCH');
+  const none = consumeTestDesignReview({ current, review });
+  assert.equal(none.error, 'UNREGISTERED_SOURCE');
+
+  // no quorum: exactly one review object is the whole input — the surface has
+  // no participant list to fill, so T is never extended to the consensus quorum
+  assert.equal(typeof review, 'object', 'the T consumption takes a single review');
+});
