@@ -1,0 +1,48 @@
+P1_6 rework evidence 02 — GREEN: journey assertion mapping after scenario anchors
+date: 2026-10-22 | candidate: rework/p1-6-method with anchors in test/delivery-cases/1_6.mjs
+command family: node tools/verify/delivery-journey.mjs --scenario <ID> --profile managed-pilot --evidence-dir <tmp> --json
+
+== scenario M01 ==
+exit: 0 | verdict: PASS
+target.found: True | target.status: ok
+requiredAssertions: [('M01', 'satisfied', 'matched', 1, 'ok', 1)]
+tests: 10 pass: 9 fail: 0 skipped: 1
+caseModule: test/delivery-cases/1_6.mjs
+
+== scenario M02 ==
+exit: 0 | verdict: PASS
+target.found: True | target.status: ok
+requiredAssertions: [('M02', 'satisfied', 'matched', 1, 'ok', 1)]
+tests: 10 pass: 9 fail: 0 skipped: 1
+caseModule: test/delivery-cases/1_6.mjs
+
+== scenario B01 ==
+exit: 0 | verdict: PASS
+target.found: True | target.status: ok
+requiredAssertions: [('B01', 'satisfied', 'matched', 1, 'ok', 1)]
+tests: 10 pass: 9 fail: 0 skipped: 1
+caseModule: test/delivery-cases/1_6.mjs
+
+== scenario B09 ==
+exit: 0 | verdict: PASS
+target.found: True | target.status: ok
+requiredAssertions: [('B09', 'satisfied', 'matched', 1, 'ok', 1)]
+tests: 10 pass: 9 fail: 0 skipped: 1
+caseModule: test/delivery-cases/1_6.mjs
+
+Anchor points (word-boundary tokens in executed test names, runner
+assertionIdMatches):
+  V_M01: Superpowers stays disabled through Classic init and method load; the pre-pinned Matt method is what actually ships
+  V_M02: one Comet authority; planner reuse only through its compatible tool entry, controller contract never activated
+  V_B01: a planner-only request yields plan-artifact validation only — no dispatch, monitoring or run-state mutation
+  V_B09: the method layer cannot field a second controller writer against the single Comet run authority
+
+Layer note (honest scope): the anchors verify the scenario WHEN/THEN at the
+layer this task owns — frozen method assets (method-profile-manifest.json,
+byte-pinned snapshots), the 0001 init patch, the skill architecture page,
+hooks.yaml absence of second-controller wiring, and executable reuse of the
+planner data-contract tool entry (vendored plan_guard.py, pure validator).
+They do not claim host-session or runtime-journey closure; the module's
+patched-build behavioral init probe keeps its honest skip when the pinned
+build is absent (present run: absent), and the manifest unverified block
+still registers the host new-session item.
