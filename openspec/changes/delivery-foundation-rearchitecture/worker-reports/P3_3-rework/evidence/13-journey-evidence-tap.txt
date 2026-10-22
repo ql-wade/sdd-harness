@@ -1,0 +1,50 @@
+TAP version 13
+# Subtest: V_A10: a same-key second dispatch is refused, a replayed receipt is refused by the admission layer, and refusals leave the ledger byte-identical
+ok 1 - V_A10: a same-key second dispatch is refused, a replayed receipt is refused by the admission layer, and refusals leave the ledger byte-identical
+  ---
+  duration_ms: 614.104542
+  ...
+# Subtest: V_A11: a receipt from a superseded epoch is refused (STALE_EPOCH) and a late attempt-1 receipt after attempt 2 was admitted is refused (STALE_ATTEMPT), both traced
+ok 2 - V_A11: a receipt from a superseded epoch is refused (STALE_EPOCH) and a late attempt-1 receipt after attempt 2 was admitted is refused (STALE_ATTEMPT), both traced
+  ---
+  duration_ms: 2964.706208
+  ...
+# Subtest: V_A12: two real runner processes race to advance the same run — exactly one wins, the loser and a stale-epoch claimant are refused, the control plane keeps one writer
+ok 3 - V_A12: two real runner processes race to advance the same run — exactly one wins, the loser and a stale-epoch claimant are refused, the control plane keeps one writer
+  ---
+  duration_ms: 198.288916
+  ...
+# Subtest: V_F07: a real SIGKILLed leaf worker is recovered from the authoritative disk state — completed leaves keep their identity, no leaf is reopened, the dead attempt is refused
+ok 4 - V_F07: a real SIGKILLed leaf worker is recovered from the authoritative disk state — completed leaves keep their identity, no leaf is reopened, the dead attempt is refused
+  ---
+  duration_ms: 541.875875
+  ...
+# Subtest: V_A12b: leaves pass individually but the parent journey fails for real — the parent stays blocked and only a new candidate with full re-verification passes
+ok 5 - V_A12b: leaves pass individually but the parent journey fails for real — the parent stays blocked and only a new candidate with full re-verification passes
+  ---
+  duration_ms: 1346.624084
+  ...
+# Subtest: V_RW_REAL_COMET_RECOVERY:L11-core-transaction — real SIGKILL inside the real managed Comet CLI state transaction: a pre-commit kill rolls back (no receipt, no phase change, replay of the killed attempt refused), a post-commit kill rolls forward (committed receipt exactly once, replay refused, recovery rewrites no committed bytes), and a kill during dispatch recovers the SAME open execution on re-dispatch (no duplicate dispatch)
+ok 6 - V_RW_REAL_COMET_RECOVERY:L11-core-transaction — real SIGKILL inside the real managed Comet CLI state transaction: a pre-commit kill rolls back (no receipt, no phase change, replay of the killed attempt refused), a post-commit kill rolls forward (committed receipt exactly once, replay refused, recovery rewrites no committed bytes), and a kill during dispatch recovers the SAME open execution on re-dispatch (no duplicate dispatch)
+  ---
+  duration_ms: 8172.033459
+  ...
+# Subtest: V_RW_REAL_COMET_RECOVERY:L11-fencing — lock-layer old-writer fencing on the real CLI: a live old writer (real spawned pid in the lock owner record) fences a real CLI operation until timeout refusal, and after a real SIGKILL with gone-confirmation the dead writer's lock is auto-recovered and the same operation proceeds
+ok 7 - V_RW_REAL_COMET_RECOVERY:L11-fencing — lock-layer old-writer fencing on the real CLI: a live old writer (real spawned pid in the lock owner record) fences a real CLI operation until timeout refusal, and after a real SIGKILL with gone-confirmation the dead writer's lock is auto-recovered and the same operation proceeds
+  ---
+  duration_ms: 30840.2905
+  ...
+# Subtest: V_RW_REAL_COMET_RECOVERY:recipe-tracking — the real-comet-recovery recipe is registered and bound (owner P3_3, required check V_RW_REAL_COMET_RECOVERY), coordinates with the same-run journey step 9 fault window (VERIFY-owned tail untouched), and the runner still refuses unknown journeys
+ok 8 - V_RW_REAL_COMET_RECOVERY:recipe-tracking — the real-comet-recovery recipe is registered and bound (owner P3_3, required check V_RW_REAL_COMET_RECOVERY), coordinates with the same-run journey step 9 fault window (VERIFY-owned tail untouched), and the runner still refuses unknown journeys
+  ---
+  duration_ms: 67.97175
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 44831.893583
