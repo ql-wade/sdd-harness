@@ -1,0 +1,14 @@
+Strengthened-semantics probes on the real plan (post re-freeze):
+
+$ ... --scenario A02 ... --json
+exit: 0
+PASS | PASS
+
+$ ... --scenario M02 ... --json
+exit: 2
+NOT-EXERCISED | assertion-mapping-not-verifiable: no executed test point maps to required assertion(s) M02 — a green
+
+$ node tools/verify/delivery-journey.mjs --journey same-run-delivery --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/journey-probe --json
+exit: 2
+NOT-EXERCISED | journey-recipe-not-implemented (UNVERIFIED): the registered recipe does not exist on disk — real-journey resources are not present; recipe o
+journey: {'name': 'same-run-delivery', 'owner': 'P3_2', 'requiredCheck': 'V_SAME_RUN_DELIVERY', 'recipePath': 'openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.case.json', 'registeredStatus': 'TO_IMPLEMENT'}
