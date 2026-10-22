@@ -410,18 +410,18 @@
 **Parallel safe:** false
 **Acceptance IDs:** A10, A11, A12, F07
 
-- [ ] **Step 1 [5 min]: Test** 3.3.a 运行并发/重复/乱序/旧 epoch 负例：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：同 key 只派发一次，旧回调拒绝，父 Journey 失败不因子任务通过而放行。
-- [ ] **Step 2 [5 min]: Implement** 3.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 3.3.b 杀进程后恢复并读回：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保存真实进程、Run/候选身份与持久状态；恢复原 operation，不重开叶子任务。
-- [ ] **Step 4 [5 min]: Implement** 3.3.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 3.3.a 运行并发/重复/乱序/旧 epoch 负例：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：同 key 只派发一次，旧回调拒绝，父 Journey 失败不因子任务通过而放行。
+- [x] **Step 2 [5 min]: Implement** 3.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 3.3.b 杀进程后恢复并读回：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保存真实进程、Run/候选身份与持久状态；恢复原 operation，不重开叶子任务。
+- [x] **Step 4 [5 min]: Implement** 3.3.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 本轮返工（P1映射见replan-record.json，详细oracle见execution-contract.json）：
 
-- [ ] **Step 7 [5 min]: Test** 本任务编写real-comet-recovery配方并验证实际Comet核心事务提交前/后恢复的有限切片，留PID/Run/authority与事务读回；远端Outline未知结果/外部监控/备份的完整故障旅程待I07/I08/P4机制齐备后由VERIFY执行，不把其通过设成本任务建设前置。
-- [ ] **Step 8 [5 min]: Implement** 配方只触发/观察原Comet journal/锁的真实恢复，禁止临时计数worker；在已具备的核心事务切片验证重复恢复/旧attempt拒绝。完整监督器、同Run远端补偿和UUID验证依赖I07/I08/P4机制，由VERIFY最终消费，不提前签旅程PASS。
-- [ ] **Step 9 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
+- [x] **Step 7 [5 min]: Test** 本任务编写real-comet-recovery配方并验证实际Comet核心事务提交前/后恢复的有限切片，留PID/Run/authority与事务读回；远端Outline未知结果/外部监控/备份的完整故障旅程待I07/I08/P4机制齐备后由VERIFY执行，不把其通过设成本任务建设前置。
+- [x] **Step 8 [5 min]: Implement** 配方只触发/观察原Comet journal/锁的真实恢复，禁止临时计数worker；在已具备的核心事务切片验证重复恢复/旧attempt拒绝。完整监督器、同Run远端补偿和UUID验证依赖I07/I08/P4机制，由VERIFY最终消费，不提前签旅程PASS。
+- [x] **Step 9 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
 
 
 ### Task P4_1: 原任务 4.1 — 受保护 required checks 对精确集成 SHA 重算契约/来源；缺项、skip、超时、旧证据实际阻断平台合并（A13/F06/F09）。检查策略来自受保护基线。
