@@ -1,0 +1,43 @@
+{
+  "task": "P3_1",
+  "phase": "rework-r1",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-22T05:06:36.577752+00:00",
+  "head_reviewed": "b41a305",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "assertionIdMatches 裸 id 尾边界含':'(X89 可命中 V_X89:persist 点); 当前 92 场景无暴露(46 PASS 均裸锚点/11 拒绝均零锚点); 建议后续收紧或修注释",
+      "disposition": "recorded; 路由 P3_2/P3_3 落地时顺手评估"
+    },
+    {
+      "id": "nb-2",
+      "summary": "拒绝配方张力: expect.kind=exitCode 非零 vs step9 case-tests-failed 整体 FAIL; 三配方 TO_IMPLEMENT 未触发",
+      "disposition": "recorded; 路由 P3_2/P3_3/P4_8 简报必读"
+    },
+    {
+      "id": "nb-3",
+      "summary": "报告 report-commit 记 51d5afc 实际 b41a305(amend 后哈希过期)",
+      "disposition": "corrected at acceptance"
+    },
+    {
+      "id": "nb-4",
+      "summary": "no-effective-execution 先于 target-scenario-skipped 判定, 全 skip 场景 reason 变通用零执行(per-id skipped 状态保留)",
+      "disposition": "recorded"
+    }
+  ],
+  "independently_rerun": {
+    "red_on_old_runner": "git archive ef97bd1 旧树自建同款夹具: 旧 runner exit 0/PASS/target.found=false(P1-04 反例独立复现); 当前树 exit 2 assertion-mapping-not-verifiable",
+    "negatives": "六路全 exit 2 正确拒绝码(含复合子断言点名 V_C93:readback 与观测 sha 为真实字节)",
+    "rw_commands": "RW_TARGET_REQUIRED 5/5 + RW_OBSERVATION_REQUIRED 5/5 exit 0; 用例真测分母映射非字符串; 全套 25/25",
+    "typed_readback": "independent: runner 自 spawn 探针 stdout 与冻结值比对; equals 实测 observed=v22.13.1(活探针, 非回显)",
+    "journey_semantics": "三旅程 exit 2 journey-recipe-not-implemented UNVERIFIED+owner; 未知名 journey-not-registered; 诚实未实现",
+    "side_effect_verdict": "强化确认: 92 场景新旧对照矩阵全吻合(11 旧假PASS全零锚点/4 漂移红转真绿/19+4 全skip等价拒绝/L07 已知抖动复跑3/3); 分母不变; acceptance-index 0/92 VERIFIED 无降级; 无误伤",
+    "npm_test": "426/423/2(恰 C08+B08, ef97bd1 基线独立复现) 零新增; 控制器 merge e278b81 复跑 426/422/4(含 adapter×2) 零新增",
+    "boundary_clean": true,
+    "host_path_leak": false,
+    "lock_undrifted": true
+  }
+}

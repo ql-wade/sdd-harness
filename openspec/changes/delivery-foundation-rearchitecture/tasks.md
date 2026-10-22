@@ -339,20 +339,20 @@
 
 前置：PILOT_SCOPE_OWNER_ENVIRONMENT_REQUIRED。登记/权限缺失只阻断相关动作；不得把计划字段当已满足。
 
-- [ ] **Step 1 [5 min]: Test** 3.1.a 登记试点与身份：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：业务仓库、owner、固定 Runner、隔离环境、UI/API/持久化和权限负向 AC；未登记不派发真实副作用。
-- [ ] **Step 2 [5 min]: Implement** 3.1.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 3.1.b 冻结产品/设计/测试/计划输入：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：复用已有确认，给每个 case 独立 oracle/数据/环境/清理；原生浏览器能力先发现。
-- [ ] **Step 4 [5 min]: Implement** 3.1.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 3.1.a 登记试点与身份：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：业务仓库、owner、固定 Runner、隔离环境、UI/API/持久化和权限负向 AC；未登记不派发真实副作用。
+- [x] **Step 2 [5 min]: Implement** 3.1.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 3.1.b 冻结产品/设计/测试/计划输入：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：复用已有确认，给每个 case 独立 oracle/数据/环境/清理；原生浏览器能力先发现。
+- [x] **Step 4 [5 min]: Implement** 3.1.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 本轮返工（P1映射见replan-record.json，详细oracle见execution-contract.json）：
 
-- [ ] **Step 7 [5 min]: Test** RW_TARGET_REQUIRED：把本轮无关1+1=2套件复现成行为RED；缺目标、错映射、复合case漏子断言、全skip/零执行都应非零。先写可执行负例，不能以缺测试模块/未匹配test name当RED。
-- [ ] **Step 8 [5 min]: Test** RW_OBSERVATION_REQUIRED：必需inspect失败、假/空/陈旧读回、错误Run/候选与仅非空文件均不能PASS；局部套件通过不能关闭跨边界验收。
-- [ ] **Step 9 [5 min]: Implement** 修现有observer/schema的目标分母与typed oracle校验，增加execution-contract.observer_contract声明的--journey测试入口；它只触发/观察实际Comet，不拥有phase、恢复、重试或第二DAG。真实旅程缺资源时返回非零UNVERIFIED。
-- [ ] **Step 10 [5 min]: Review** 由独立验收员用不同fixture证伪错误全绿、错误Run和缺读回；明确映射全部92场景的必需断言/证明层级，新10检查只强化旧场景，不改变分母。
-- [ ] **Step 11 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
+- [x] **Step 7 [5 min]: Test** RW_TARGET_REQUIRED：把本轮无关1+1=2套件复现成行为RED；缺目标、错映射、复合case漏子断言、全skip/零执行都应非零。先写可执行负例，不能以缺测试模块/未匹配test name当RED。
+- [x] **Step 8 [5 min]: Test** RW_OBSERVATION_REQUIRED：必需inspect失败、假/空/陈旧读回、错误Run/候选与仅非空文件均不能PASS；局部套件通过不能关闭跨边界验收。
+- [x] **Step 9 [5 min]: Implement** 修现有observer/schema的目标分母与typed oracle校验，增加execution-contract.observer_contract声明的--journey测试入口；它只触发/观察实际Comet，不拥有phase、恢复、重试或第二DAG。真实旅程缺资源时返回非零UNVERIFIED。
+- [x] **Step 10 [5 min]: Review** 由独立验收员用不同fixture证伪错误全绿、错误Run和缺读回；明确映射全部92场景的必需断言/证明层级，新10检查只强化旧场景，不改变分母。
+- [x] **Step 11 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
 
 
 ### Task P3_4: 原任务 3.4 — Spec Adapter 在临时真实 OpenSpec 项目演练预演、全场景保留、并发漂移阻断、archive 中断恢复和主 specs 读回（A11/B08）。唯一归档写者，不重复 sync。
