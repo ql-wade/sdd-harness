@@ -88,10 +88,29 @@ function validateRegistry(registry, refsDoc, policy) {
     violations.push({ code: 'REGISTRY_INTERFACE_INVALID', reason: 'interface must be Registry.v1' });
   }
   if (!projectId) violations.push({ code: 'PROJECT_ID_MISSING' });
+  if (registry?.schemaVersion !== 1) {
+    violations.push({ code: 'REGISTRY_TYPE_INVALID', at: 'schemaVersion', expected: 'const 1', observed: registry?.schemaVersion });
+  }
+  const github = registry?.project?.github;
+  if (github) {
+    for (const field of ['repoId', 'principalId']) {
+      if (github[field] !== undefined && !Number.isInteger(github[field])) {
+        violations.push({ code: 'REGISTRY_TYPE_INVALID', at: `project.github.${field}`, expected: 'integer' });
+      }
+    }
+  }
 
   const knownOwners = new Set([registry?.project?.owner, ...(registry?.project?.delegates ?? [])].filter(Boolean));
+  const seenResourceIds = new Set();
   for (const [index, resource] of (registry?.resources ?? []).entries()) {
     const at = `resources[${index}]:${resource?.id ?? '?'}`;
+    if (resource?.id !== undefined) {
+      if (seenResourceIds.has(resource.id)) {
+        violations.push({ code: 'DUPLICATE_RESOURCE_ID', at, id: resource.id });
+      } else {
+        seenResourceIds.add(resource.id);
+      }
+    }
     for (const field of ['id', 'kind', 'owner', 'purpose', 'credentialRef', 'lockRef', 'domain', 'retention']) {
       if (resource?.[field] === undefined) violations.push({ code: 'REGISTRY_FIELD_MISSING', at, field });
     }
@@ -125,6 +144,9 @@ function validateRegistry(registry, refsDoc, policy) {
     }
 
     const retention = resource?.retention ?? {};
+    if (resource?.retention?.autoCleanupEnabled !== undefined && typeof resource.retention.autoCleanupEnabled !== 'boolean') {
+      violations.push({ code: 'REGISTRY_TYPE_INVALID', at, field: 'retention.autoCleanupEnabled', expected: 'boolean' });
+    }
     const unconfirmed = ['rpo', 'rto', 'retentionPeriod', 'encryptionOwner'].filter(
       (key) => !retention[key] || retention[key] === 'UNVERIFIED',
     );

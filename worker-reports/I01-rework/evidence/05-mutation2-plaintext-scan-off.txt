@@ -1,0 +1,107 @@
+TAP version 13
+# Subtest: V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract
+ok 1 - V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract
+  ---
+  duration_ms: 809.371583
+  ...
+# Subtest: RED owner gate: resource owned by an unregistered owner is rejected
+ok 2 - RED owner gate: resource owned by an unregistered owner is rejected
+  ---
+  duration_ms: 53.934125
+  ...
+# Subtest: RED cross-project gate: credentialRef resolving into another project (pav-*) is rejected
+ok 3 - RED cross-project gate: credentialRef resolving into another project (pav-*) is rejected
+  ---
+  duration_ms: 110.473333
+  ...
+# Subtest: RED principal gate: ordinary agent identity is denied publisher/isolator material
+ok 4 - RED principal gate: ordinary agent identity is denied publisher/isolator material
+  ---
+  duration_ms: 4.2115
+  ...
+# Subtest: RED image gate: floating tag and fake digest do not pass
+ok 5 - RED image gate: floating tag and fake digest do not pass
+  ---
+  duration_ms: 108.848625
+  ...
+# Subtest: RED evidence gate: license/platform/backup compatibility missing means NOT_READY and up refuses
+ok 6 - RED evidence gate: license/platform/backup compatibility missing means NOT_READY and up refuses
+  ---
+  duration_ms: 582.267459
+  ...
+# Subtest: RED digest binding: qualify receipt recomputes the actual input archive and rejects mismatch
+ok 7 - RED digest binding: qualify receipt recomputes the actual input archive and rejects mismatch
+  ---
+  duration_ms: 314.294458
+  ...
+# Subtest: RED plaintext gate: secret-shaped values and secret-value keys are rejected
+not ok 8 - RED plaintext gate: secret-shaped values and secret-value keys are rejected
+  ---
+  duration_ms: 53.638375
+  location: 'test/infra-registry.test.js:227:1'
+  failureType: 'testCodeFailure'
+  error: '[{"code":"ROLE_REUSE","ref":"secret-ref:sdd-harness-pilot/source-git-read","roles":["controller","controller"],"reason":"one credential reference must have exactly one binding; reuse across bindings is forbidden"},{"code":"SECRET_VALUE_KEY_FORBIDDEN","key":"value","reason":"registry structures carry references only, never secret values"}]'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://test/infra-registry.test.js:241:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED host-path gate: host absolute paths are rejected in committed structure
+ok 9 - RED host-path gate: host absolute paths are rejected in committed structure
+  ---
+  duration_ms: 54.254459
+  ...
+# Subtest: RED role-reuse gate: one credential bound to two high-privilege roles is rejected
+ok 10 - RED role-reuse gate: one credential bound to two high-privilege roles is rejected
+  ---
+  duration_ms: 55.59125
+  ...
+# Subtest: RED schema shape gate: type-invalid fields and duplicate resource ids are rejected
+ok 11 - RED schema shape gate: type-invalid fields and duplicate resource ids are rejected
+  ---
+  duration_ms: 213.787375
+  ...
+# Subtest: retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED
+ok 12 - retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED
+  ---
+  duration_ms: 52.764291
+  ...
+# Subtest: committed registry and refs catalog contain no secret material
+ok 13 - committed registry and refs catalog contain no secret material
+  ---
+  duration_ms: 1.023042
+  ...
+# Subtest: SecretRef.v1 format: parse accepts only well-formed project-bound refs
+ok 14 - SecretRef.v1 format: parse accepts only well-formed project-bound refs
+  ---
+  duration_ms: 0.117792
+  ...
+# Subtest: authority readback is honestly recorded as UNVERIFIED with the exact failure
+ok 15 - authority readback is honestly recorded as UNVERIFIED with the exact failure
+  ---
+  duration_ms: 324.311667
+  ...
+# Subtest: every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is registered with distinct purposes and bound roles
+ok 16 - every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is registered with distinct purposes and bound roles
+  ---
+  duration_ms: 0.518
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 15
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2811.386709
+mutation2 suite exit=1 (plaintext scan neutralized -> RED plaintext gate fails)

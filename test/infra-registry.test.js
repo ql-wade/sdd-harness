@@ -279,6 +279,39 @@ test('RED role-reuse gate: one credential bound to two high-privilege roles is r
   assert.ok(violationCodes(report).includes('ROLE_REUSE'), JSON.stringify(report.violations));
 });
 
+test('RED schema shape gate: type-invalid fields and duplicate resource ids are rejected', () => {
+  // registry.schema.json 声明 schemaVersion const 1、github.repoId/principalId integer、
+  // retention.autoCleanupEnabled boolean；工具端必须同等拒绝坏类型，声明式 schema 不许漂移。
+  const badSchemaVersion = patchRegistry((r) => {
+    r.schemaVersion = '1';
+  });
+  const badRepoId = patchRegistry((r) => {
+    r.project.github.repoId = '1285806550';
+  });
+  const badAutoCleanup = patchRegistry((r) => {
+    r.resources[0].retention.autoCleanupEnabled = 'true';
+  });
+  for (const [label, fixture] of [
+    ['schemaVersion', badSchemaVersion],
+    ['repoId', badRepoId],
+    ['autoCleanupEnabled', badAutoCleanup],
+  ]) {
+    const run = runRegistry(['validate', '--registry', fixture, '--json']);
+    assert.equal(run.status, 2, `type-invalid ${label} must be a verification failure`);
+    const report = parseJsonOut(run, `validate-${label}`);
+    assert.ok(violationCodes(report).includes('REGISTRY_TYPE_INVALID'), JSON.stringify(report.violations));
+  }
+
+  // 重复 id：两个同名资源会让 qualify/status 的准入语义歧义（find 只命中第一个），必须拒绝。
+  const duplicate = patchRegistry((r) => {
+    r.resources.push(JSON.parse(JSON.stringify(r.resources[0])));
+  });
+  const dupRun = runRegistry(['validate', '--registry', duplicate, '--json']);
+  assert.equal(dupRun.status, 2, 'duplicate resource id must be a verification failure');
+  const dupReport = parseJsonOut(dupRun, 'validate-duplicate');
+  assert.ok(violationCodes(dupReport).includes('DUPLICATE_RESOURCE_ID'), JSON.stringify(dupReport.violations));
+});
+
 test('retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED', () => {
   const fixture = patchRegistry((r) => {
     r.resources[0].retention.autoCleanupEnabled = true;

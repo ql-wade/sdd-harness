@@ -1,0 +1,110 @@
+TAP version 13
+# Subtest: V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract
+ok 1 - V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract
+  ---
+  duration_ms: 820.793667
+  ...
+# Subtest: RED owner gate: resource owned by an unregistered owner is rejected
+ok 2 - RED owner gate: resource owned by an unregistered owner is rejected
+  ---
+  duration_ms: 55.324209
+  ...
+# Subtest: RED cross-project gate: credentialRef resolving into another project (pav-*) is rejected
+ok 3 - RED cross-project gate: credentialRef resolving into another project (pav-*) is rejected
+  ---
+  duration_ms: 53.453291
+  ...
+# Subtest: RED principal gate: ordinary agent identity is denied publisher/isolator material
+ok 4 - RED principal gate: ordinary agent identity is denied publisher/isolator material
+  ---
+  duration_ms: 4.046208
+  ...
+# Subtest: RED image gate: floating tag and fake digest do not pass
+ok 5 - RED image gate: floating tag and fake digest do not pass
+  ---
+  duration_ms: 104.903375
+  ...
+# Subtest: RED evidence gate: license/platform/backup compatibility missing means NOT_READY and up refuses
+ok 6 - RED evidence gate: license/platform/backup compatibility missing means NOT_READY and up refuses
+  ---
+  duration_ms: 572.602917
+  ...
+# Subtest: RED digest binding: qualify receipt recomputes the actual input archive and rejects mismatch
+ok 7 - RED digest binding: qualify receipt recomputes the actual input archive and rejects mismatch
+  ---
+  duration_ms: 290.349208
+  ...
+# Subtest: RED plaintext gate: secret-shaped values and secret-value keys are rejected
+ok 8 - RED plaintext gate: secret-shaped values and secret-value keys are rejected
+  ---
+  duration_ms: 106.833083
+  ...
+# Subtest: RED host-path gate: host absolute paths are rejected in committed structure
+ok 9 - RED host-path gate: host absolute paths are rejected in committed structure
+  ---
+  duration_ms: 52.720125
+  ...
+# Subtest: RED role-reuse gate: one credential bound to two high-privilege roles is rejected
+ok 10 - RED role-reuse gate: one credential bound to two high-privilege roles is rejected
+  ---
+  duration_ms: 52.994042
+  ...
+# Subtest: RED schema shape gate: type-invalid fields and duplicate resource ids are rejected
+not ok 11 - RED schema shape gate: type-invalid fields and duplicate resource ids are rejected
+  ---
+  duration_ms: 55.490334
+  location: 'test/infra-registry.test.js:282:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    type-invalid schemaVersion must be a verification failure
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://test/infra-registry.test.js:300:12)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED
+ok 12 - retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED
+  ---
+  duration_ms: 52.948833
+  ...
+# Subtest: committed registry and refs catalog contain no secret material
+ok 13 - committed registry and refs catalog contain no secret material
+  ---
+  duration_ms: 1.025334
+  ...
+# Subtest: SecretRef.v1 format: parse accepts only well-formed project-bound refs
+ok 14 - SecretRef.v1 format: parse accepts only well-formed project-bound refs
+  ---
+  duration_ms: 0.138541
+  ...
+# Subtest: authority readback is honestly recorded as UNVERIFIED with the exact failure
+ok 15 - authority readback is honestly recorded as UNVERIFIED with the exact failure
+  ---
+  duration_ms: 301.100833
+  ...
+# Subtest: every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is registered with distinct purposes and bound roles
+ok 16 - every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is registered with distinct purposes and bound roles
+  ---
+  duration_ms: 0.31775
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 15
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2592.175167
