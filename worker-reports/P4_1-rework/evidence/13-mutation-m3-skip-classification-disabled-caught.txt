@@ -1,0 +1,23 @@
+M3 (CHECK_SKIPPED never-passed pin bites) — CAUGHT
+mutation: verify-delivery.mjs evaluateRequiredChecks — the bound.conclusion === 'skipped' branch disabled (else if (false)),
+          so a skipped required check is no longer classified by its own contract code
+expectation: skip tests must fail — a skipped required check is never passed and must surface CHECK_SKIPPED (F06/F09)
+
+$ node --test test/ci-delivery-gate.test.js   (with mutation applied)
+suite exit=1 (RED — mutation caught)
+not ok 10 - F09 skipped and timed-out checks are never passed (CHECK_SKIPPED / CHECK_TIMED_OUT, exit 2)
+# tests 19
+# pass 18
+# fail 1
+$ node --test test/delivery-cases/4_1.mjs   (with mutation applied)
+suite exit=1 (RED — mutation caught)
+not ok 3 - V_F09: skip and timeout are never passed — the gate blocks with CHECK_SKIPPED / CHECK_TIMED_OUT
+# tests 6
+# pass 5
+# fail 1
+note: first M3 application attempt failed on a source anchor mismatch (indentation) — no mutation was applied for that run
+      (both suites ran green on the unmutated verifier, exit 0); the mutation above is the corrected application.
+restore: verify-delivery.mjs restored byte-exact
+sha256 committed (== pre-mutation) : ee4109c8c29683100fdcccf18f5edbae3a31faab2700fad6fe296a5a212f3789
+sha256 after restore               : ee4109c8c29683100fdcccf18f5edbae3a31faab2700fad6fe296a5a212f3789
+post-restore spot check: both suites green (see 20-23 evidence)

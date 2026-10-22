@@ -1,0 +1,20 @@
+M1 (A13 exact-integration-SHA pin bites) — CAUGHT
+mutation: checkout ref degraded to ${{ github.sha }} (drops merge_commit_sha / merge_group head_sha pinning)
+expectation: the exact-SHA structural pins must fail — a new head/mergeSHA candidate must be checked out and re-verified exactly (A13), never a generic push SHA
+
+$ node --test test/ci-delivery-gate.test.js   (with mutation applied)
+suite exit=1 (RED — mutation caught)
+not ok 3 - delivery-gate.yml pins collection and checkout to the exact integration SHA (A13)
+# tests 19
+# pass 18
+# fail 1
+$ node --test test/delivery-cases/4_1.mjs   (with mutation applied)
+suite exit=1 (RED — mutation caught)
+not ok 6 - P4_1: the workflow takes the check policy from the protected baseline and pins the exact merge SHA — no fabricated names
+# tests 6
+# pass 5
+# fail 1
+restore: workflow restored byte-exact
+sha256 committed (== pre-mutation) : be3a02920f22c3acde7d6a5d191c41528ee7f38abf36707d893b13c03e92b13c
+sha256 after restore               : be3a02920f22c3acde7d6a5d191c41528ee7f38abf36707d893b13c03e92b13c
+post-restore spot check: both suites green (see 20-23 evidence)

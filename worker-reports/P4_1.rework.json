@@ -1,0 +1,100 @@
+{
+ "task": "P4_1 (rework-seven-p1-r1): 受保护 required checks 对精确集成 SHA 重算契约/来源；缺项、skip、超时、旧证据实际阻断平台合并（A13/F06/F09）。检查策略来自受保护基线。",
+ "run": "rework-seven-p1-r1",
+ "worktree": ".claude/worktrees/rw-p4-1 (branch rework/p4-1-required-checks, base master@837a0be)",
+ "opening_receipt": "git log --oneline -1 => 837a0be chore(openspec): accept P3_3 rework (9/9; review APPROVED; recovery recipe landed)",
+ "final_status": "DONE",
+ "steps_done": "6/6 (tasks.md P4_1 Steps 1-6, 重规划后实际步数; 以重验循环执行: 实现=既有已接纳候选, RED=变异注入真实失败, GREEN=修复/还原后)",
+ "reverified": [
+  {
+   "behavior": "无授权申请配置拒绝: required-check 集合未登记(UNSELECTED)时平台合并授权被拒 — verify-delivery.mjs evaluateProtectedBaseline 产 PLATFORM_REQUIRED_CHECK_AUTHORITY_REQUIRED, status=UNVERIFIED, mergeBlocked=true, exit 2; 计划字段不充当已满足 (ci-policy.authorization.remotePolicyWriteAuthorized=false, repository-registration.remotePolicyWrites.allowed=false 只读核验为真)",
+   "negative": "全绿链 + 已提交 UNSELECTED 基线 => exit 2/UNVERIFIED (双套件各 1 断言); M4 变异(registered=true 无条件)下两套件同时转红",
+   "mutation_caught": "M4: 证据 14 (ci: not ok 14 'Platform precondition…'; case: not ok 5 'P4_1: the committed UNSELECTED baseline…')"
+  },
+  {
+   "behavior": "开发身份不能读 release secret: CI gate job 仅接 launch-authority secret, registry/deploy/rollback 材料 (ci-registry/pilot-deployer/pilot-rollback/artifact-reader) 零接线; permissions 最小 {contents:read, checks:read}; 基线目录 artifact-reader 规则只读核验为真('development identities must not read release or rollback material')",
+   "negative": "M5: 向 gate job env 接线 SDD_CI_REGISTRY => 新 pin 失败 (secretRefs deepEqual 拒绝)",
+   "mutation_caught": "M5: 证据 10 (not ok 6 'delivery-gate.yml wires only the launch authority secret…')"
+  },
+  {
+   "behavior": "新 head/mergeSHA 复用旧 check 拒: 精确 merge-SHA 绑定 — evidence.boundSha==chain.merge 才有效, 旧 SHA 证据 => CHECK_STALE_EVIDENCE, exit 2 (A13 精确 SHA 重验)",
+   "negative": "head=c…40/merge=d…40 携带 boundSha=b…40 证据 => CHECK_STALE_EVIDENCE; 同候选换绑 d…40 => exit 0 VERIFIED (正例对照)",
+   "mutation_caught": "M2 (exact-SHA 绑定 gutted, evidences[0]): 证据 12 (ci: not ok 9 'A13 stale evidence…'; case: not ok 2 'V_A13…')"
+  },
+  {
+   "behavior": "缺项/skip/超时必需 check 拒: checks=[] => CHECK_MISSING; conclusion=skipped => CHECK_SKIPPED; timedOut=true 或 conclusion=timed_out => CHECK_TIMED_OUT; failure => CHECK_NOT_SUCCESS; 全部 BLOCKED/mergeBlocked/exit 2, skip 永不转 PASS",
+   "negative": "四类负例逐项断言 (ci 套件 1 例覆盖 4 变体, case 套件 3 变体); M3 变异(skip 分支禁用)下两套件转红",
+   "mutation_caught": "M3: 证据 13 (ci: not ok 10 'F09 skipped and timed-out…'; case: not ok 3 'V_F09: skip and timeout…')"
+  },
+  {
+   "behavior": "精确 integration SHA、build digest、部署身份登记: verdict 登记 head/merge(40-hex) + receipt.inputDigest(候选 digest) + receipt.policy.digest + sourceAttestation(origin/execution); environment 为 admitEvidence 准入绑定输入(GateReceipt v1 schema 登记 digest/policy/attestation); 实测值见证据 27",
+   "negative": "receipt 绑定另一 digest => 真实 admitEvidence 拒绝 ADMISSION_REFUSED (STALE_CANDIDATE); 伪造 dispatch(attempt 篡改) => FORGED_DISPATCH => ADMISSION_REFUSED (F06)",
+   "mutation_caught": "M1 (A13 checkout/ref 精确集成 SHA pin gutted): 证据 11 (ci: not ok 3 'pins collection and checkout to the exact integration SHA (A13)'; case: not ok 6 'P4_1: the workflow…pins the exact merge SHA')"
+  },
+  {
+   "behavior": "workflow YAML/管理员可读/模拟 Status grep 不算只读回执: workflow 自身不声明 required-check 名单(结构断言), 集合唯一来源=受保护基线 ci-policy.json + platform.mjs validate 前置; repository-registration.branchProtection.evidenceRule 只读核验为真('workflow YAML, admin readability, simulated green status or local push success must never be claimed as platform protection'); 一次真实平台只读读回失败原样保留(TLS x509 OSStatus -26276) => 平台侧保持 UNVERIFIED, 绝不 skip-to-pass",
+   "negative": "workflow 内出现 requiredChecks 名单 => 结构断言失败; 读回失败 => job 失败(set -euo pipefail)非跳过",
+   "mutation_caught": "M5 同面: workflow env 为唯一 secret 注入点, 无 status 伪造通道(permissions checks:read 只读)"
+  }
+ ],
+ "platform_gates_honest": true,
+ "scenario_anchor_check": "检查通过无需修复 — case-plan 绑定 4_1.mjs 的场景 = A13、F09; journey runner 词边界匹配实测 found=true/status=ok (下划线在 matcher 字符类 [A-Za-z0-9] 之外故 V_A13/V_F09 前缀即合法锚); 终态双 journey PASS exit 0 (证据 25/26); 修复前基线同结果(证据 03/04)",
+ "check116_routing_readonly": "delivery-journey.mjs 不在 P4_1 Owns — 只读记录: per_check[116](0基)=V_SAME_RUN_DELIVERY 与 per_check[117]=V_POST_DELIVERY_PERMISSIONS 命令串同时携带 --scenario 与 --journey, 实测该组合被拒(INVALID_INPUT exit 1, 互斥语义=journey recipe 自带 scenario); 调和归 check 登记所有者(P3_2/P4_8)/控制器, VERIFY 前必须处理 (证据 05)",
+ "mutations_caught": [
+  "M1 delivery-gate.yml checkout ref 降级为 ${{ github.sha }} → 双套件 RED (not ok 3 / not ok 6) — 证据 11; 还原 sha256 be3a0292… 前==后",
+  "M2 verify-delivery.mjs 精确 merge-SHA 绑定 gutted (evidences[0]) → 双套件 RED (not ok 9 / not ok 2) — 证据 12; 还原 sha256 ee4109c8… 前==后",
+  "M3 skip 分类分支禁用 → 双套件 RED (not ok 10 / not ok 3) — 证据 13; 还原 sha256 ee4109c8… 前==后 (首次应用因源码锚缩进不匹配未生效, 已在证据中如实记录, 未产生假红)",
+  "M4 登记前置 gutted (registered=true 无条件) → 双套件 RED (not ok 14 / not ok 5) — 证据 14; 还原 sha256 ee4109c8… 前==后",
+  "M5 gate job env 接线 SDD_CI_REGISTRY → 新 pin RED (not ok 6) — 证据 10; 还原 sha256 be3a0292… 前==后"
+ ],
+ "red_cases": [
+  "变异注入 5 例即本轮 RED: 每例在被测面真实注入语义破坏, 归属断言真实失败(suite exit 1), 日志落盘, 逐字节还原后抽测复绿",
+  "上一轮真 RED(工作流/verifier 文件缺失 ENOENT, 18+6 全失败)见 git 历史 f1741ec 系列 evidence — 历史通过不继承, 本轮语义重验以上述变异 RED 为准"
+ ],
+ "commands": {
+  "node --test test/ci-delivery-gate.test.js (基线) → exit 0, 18/18": "证据 01",
+  "node --test test/delivery-cases/4_1.mjs (基线) → exit 0, 6/6": "证据 01",
+  "node tools/verify/delivery-journey.mjs --scenario A13|F09 --profile managed-pilot --evidence-dir <tmp> --json → exit 0, found=true, PASS": "证据 03/04 (基线), 25/26 (终态)",
+  "gh api repos/rpamis/sdd-harness/branches/master/protection → exit 1, TLS x509 OSStatus -26276 原样保留": "证据 02 (UNVERIFIED 登记, 平台侧不判 PASS)",
+  "node tools/verify/delivery-journey.mjs --scenario A13 --journey same-run-delivery … → exit 1 INVALID_INPUT 互斥": "证据 05 (check 116 只读路由)",
+  "5×变异下 node --test 双套件 → 各 exit 1 (RED caught)": "证据 10-14",
+  "node --test test/ci-delivery-gate.test.js (终态 run1) → exit 0, 19/19": "证据 20",
+  "node --test test/delivery-cases/4_1.mjs (终态 run1) → exit 0, 6/6": "证据 20",
+  "node --test test/ci-delivery-gate.test.js (终态 run2) → exit 0, 19/19": "证据 21",
+  "node --test test/delivery-cases/4_1.mjs (终态 run2) → exit 0, 6/6": "证据 21",
+  "npm test (全量) → exit 1: 443 tests, 440 pass / 2 fail / 1 skip; 2 fail=C08 host-openspec 漂移 + B08 preservation(已知项, 与 P2_4 rework 证据 24 同源), 零新增": "证据 24",
+  "exact-SHA/digest 登记实测 (真实子进程, exit 0 VERIFIED)": "证据 27"
+ },
+ "unverified": [
+  {
+   "item": "真实平台侧 required-check 注册/分支保护与合并拒绝",
+   "reason": "无平台写授权(REMOTE_POLICY_WRITE_NOT_AUTHORIZED); 唯一一次真实只读读回失败原样保留: tls: failed to verify certificate: x509: OSStatus -26276 (与 I01/I06 实测一致, 类目无关的诚实 UNVERIFIED)",
+   "successor": "平台准入 owner(真实注册 delivery-gate required check + secrets.SDD_DELIVERY_LAUNCH_AUTHORITY) + P4_2"
+  },
+  {
+   "item": "delivery-gate workflow 在真实 GitHub runner 的端到端执行",
+   "reason": "结构断言真实文件解析覆盖(触发器/权限/并发/超时/精确 SHA 采集/verifier 步), 真实执行需平台准入后的事件与凭据",
+   "successor": "平台准入 owner + VERIFY"
+  },
+  {
+   "item": "check 116/117 命令串调和(双 flag 互斥冲突)",
+   "reason": "登记文件与 journey 工具均不在 P4_1 Owns; 本轮只读记录(证据 05)",
+   "successor": "P3_2(V_SAME_RUN_DELIVERY)/P4_8(V_POST_DELIVERY_PERMISSIONS) 所有者或控制器, VERIFY 前"
+  }
+ ],
+ "files_changed": [
+  "test/ci-delivery-gate.test.js (+10 行: launch-authority-only secret 面 pin, Owns 内)",
+  "worker-reports/P4_1.rework.json (本报告)",
+  "worker-reports/P4_1-rework/evidence/ (00-05, 10-14, 20-27 .txt)"
+ ],
+ "commits": {
+  "tests": "b7c0d07 test(P4_1 rework): pin the gate CI identity to launch-authority-only secrets",
+  "report_and_evidence": "test(P4_1 rework): re-verification report + evidence (A13/F06/F09) — 序列中 tests 之后的提交, 精确 SHA 以 git log 为准(报告内容含提交 SHA 时自引用不收敛, 故不写死)",
+  "note": "both commits carry the P4_1 rework marker; base 837a0be; diff scope = 1 owned test file (+10) + report + evidence"
+ },
+ "blockers_or_questions": [
+  "观察(不属本轮义务, 提请评审): evaluateRequiredChecks 对同名 check 取 evidences.find(boundSha===merge) 首条 — 同一 merge SHA 上同一 check 多次重跑时未解析 GitHub '最新结论为准' 次序; 简报六语义未覆盖此面, 未擅自改行为",
+  "无阻塞。一次内部失败: M3 首次应用源码锚缩进不匹配(assert 失败, 零改动), 修正后成功; 低于同因 3 次停阈值"
+ ],
+ "self_certification_audit": "期望值均来自独立真实观察: 真实 CLI 子进程(exit code)、真实 admission 模块 HMAC 签发/校验、真实 workflow 文件解析、journey runner 实测 target.found; 变异逐字节还原(shasum 前==后)并抽测复绿; 无登记值自回声; 新增断言仅 +10 行且由 M5 证明可红; 零 mock、零宿主绝对路径入证据/提交、零新依赖、活配置零写入"
+}

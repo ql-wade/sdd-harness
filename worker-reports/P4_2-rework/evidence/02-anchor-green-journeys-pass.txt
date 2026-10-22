@@ -1,0 +1,22 @@
+GREEN (scenario anchor fix): the three scenario-executing test points in test/delivery-cases/4_2.mjs
+renamed to the accepted 4_1.mjs convention (V_<ID>: prefix; underscore outside matcher class
+[A-Za-z0-9] makes V_A14 a legal word-boundary anchor for A14):
+  '4.2.a negative: a deployment tag pointing at another digest is refused...'  -> 'V_A14 negative: ...'
+  '4.2.b journey: the lost deployment response is reconciled...'               -> 'V_A16: ...'
+  '4.2.b journey: the unapproved rollback is refused...; the approved same-digest rollback...' -> 'V_A17: ...'
+
+node tools/verify/delivery-journey.mjs --scenario A14 --profile managed-pilot --evidence-dir <tmp>/A14 --json
+exit: 0  verdict: PASS  execution.target: {"token": "A14", "found": true, "status": "ok"}
+execution: tests=6 pass=6 fail=0 skipped=0
+
+node tools/verify/delivery-journey.mjs --scenario A16 --profile managed-pilot --evidence-dir <tmp>/A16 --json
+exit: 0  verdict: PASS  execution.target: {"token": "A16", "found": true, "status": "ok"}
+execution: tests=6 pass=6 fail=0 skipped=0
+
+node tools/verify/delivery-journey.mjs --scenario A17 --profile managed-pilot --evidence-dir <tmp>/A17 --json
+exit: 0  verdict: PASS  execution.target: {"token": "A17", "found": true, "status": "ok"}
+execution: tests=6 pass=6 fail=0 skipped=0
+
+Suites after the rename (test point bodies untouched — names only):
+  node --test test/release-protocol.test.js -> tests 17 / pass 17 / fail 0
+  node --test test/delivery-cases/4_2.mjs   -> tests 6 / pass 6 / fail 0

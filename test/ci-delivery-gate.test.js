@@ -302,6 +302,16 @@ test('delivery-gate.yml fails closed: least-privilege permissions, serialized co
   assert.ok(job['timeout-minutes'], 'the gate job must have a timeout');
 });
 
+test('delivery-gate.yml wires only the launch authority secret — the CI identity never reads release or rollback material', () => {
+  const workflow = parseYaml(fs.readFileSync(workflowPath, 'utf8'));
+  const secretRefs = [...new Set(JSON.stringify(workflow).match(/secrets\.[A-Za-z0-9_]+/g) ?? [])];
+  assert.deepEqual(
+    secretRefs,
+    ['secrets.SDD_DELIVERY_LAUNCH_AUTHORITY'],
+    'the gate job must receive only the trusted-launcher secret; registry, deploy and rollback secrets are release material a development-side CI identity must never read (artifact-reader rule, infra/delivery/secrets.refs.example.json)',
+  );
+});
+
 // --- verify-delivery.mjs: real subprocess, positive and negative -------------
 
 test('GREEN chain with registered baseline: exact-SHA evidence and passing gate verify (exit 0)', () => {
@@ -503,4 +513,42 @@ test('The structured verdict records the candidate identity and never leaks host
   assert.deepEqual(verdict.checks.required, [REQUIRED_CHECK_NAME]);
   assert.ok(!result.stdout.includes(root), 'host fixture paths must stay out of the structured verdict');
   assert.ok(!result.stdout.includes('/Users/'), 'host paths must stay out of the structured verdict');
+
+test('duplicate check runs for the same name+merge resolve to the latest run id (fail-closed latest-wins, OBS-1)', () => {
+  const root = tmpRoot('p41-latest-wins');
+  const policyDir = committedPolicyDir;
+  // older success (id 100) followed by a newer failure (id 200): the gate
+  // must refuse — an older success must not mask the latest conclusion.
+  const chainFail = chainFixture({
+    checks: [
+      { id: 100, name: REQUIRED_CHECK_NAME, boundSha: SHA('b'), conclusion: 'success' },
+      { id: 200, name: REQUIRED_CHECK_NAME, boundSha: SHA('b'), conclusion: 'failure' },
+    ],
+  });
+  const chainFailFile = writeTmpJson(root, 'chain-fail.json', chainFail);
+  const runFail = runGate(chainFailFile, { policyDir });
+  assert.equal(runFail.status, 2, `older success must not mask newer failure, got ${runFail.status}`);
+  const verdictFail = parseVerdict(runFail, 'latest-wins fail');
+  assert.ok(JSON.stringify(verdictFail).includes('CHECK_NOT_SUCCESS'), 'the newer failure must drive the verdict');
+
+  // a newer successful rerun (id 300) is authoritative: the gate passes.
+  const chainPass = chainFixture({
+    checks: [
+      { id: 200, name: REQUIRED_CHECK_NAME, boundSha: SHA('b'), conclusion: 'failure' },
+      { id: 300, name: REQUIRED_CHECK_NAME, boundSha: SHA('b'), conclusion: 'success' },
+    ],
+  });
+  const chainPassFile = writeTmpJson(root, 'chain-pass.json', chainPass);
+  const runPass = runGate(chainPassFile, { policyDir });
+  // LOCAL_ONLY gate: all-green checks advance the gate to the platform
+  // admission precondition (registration unprovisioned -> UNVERIFIED),
+  // so the full-gate exit is 2. The latest-wins semantics live in the
+  // per-check verdict: the newer run id (300) must drive a PASS verdict.
+  const passVerdict = parseVerdict(runPass, 'latest-wins pass');
+  assert.equal(passVerdict.checks.verdict, 'PASS', 'the newer successful run must drive the required-check verdict');
+  const passEntry = (passVerdict.checks.perCheck ?? []).find((entry) => entry.name === REQUIRED_CHECK_NAME);
+  assert.ok(passEntry, 'the required check entry must be present');
+  assert.equal(passEntry.verdict, 'PASS', 'latest run conclusion (success) must drive the per-check verdict');
+  assert.equal(passVerdict.status, 'UNVERIFIED', 'platform admission stays honestly unverified in LOCAL_ONLY');
+});
 });

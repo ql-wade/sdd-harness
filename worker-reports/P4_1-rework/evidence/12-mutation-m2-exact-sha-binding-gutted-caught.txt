@@ -1,0 +1,21 @@
+M2 (CHECK_STALE_EVIDENCE exact-SHA binding bites) — CAUGHT
+mutation: verify-delivery.mjs evaluateRequiredChecks — const bound = evidences.find((check) => check.boundSha === chain.merge) replaced by evidences[0]
+          (exact merge-SHA re-verification gutted: any evidence for the check name would authorize the candidate)
+expectation: stale-evidence tests must fail — evidence bound to an older merge SHA must never authorize a new candidate (A13/F09 exact SHA)
+
+$ node --test test/ci-delivery-gate.test.js   (with mutation applied)
+suite exit=1 (RED — mutation caught)
+not ok 9 - A13 stale evidence on a new integration SHA: old boundSha is refused (CHECK_STALE_EVIDENCE, exit 2)
+# tests 19
+# pass 18
+# fail 1
+$ node --test test/delivery-cases/4_1.mjs   (with mutation applied)
+suite exit=1 (RED — mutation caught)
+not ok 2 - V_A13: the protected entry re-verifies the exact new integration candidate — stale-SHA evidence is blocked, exact-SHA evidence passes
+# tests 6
+# pass 5
+# fail 1
+restore: verify-delivery.mjs restored byte-exact
+sha256 committed (== pre-mutation) : ee4109c8c29683100fdcccf18f5edbae3a31faab2700fad6fe296a5a212f3789
+sha256 after restore               : ee4109c8c29683100fdcccf18f5edbae3a31faab2700fad6fe296a5a212f3789
+post-restore spot check: both suites green (see 20-23 evidence)

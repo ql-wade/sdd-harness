@@ -264,7 +264,7 @@ test('4.2.a journey: the gate-verified candidate builds and promotes the same di
   assert.equal(i06.steps.find((step) => step.step === 'deployment').binding, 'DIGEST_AND_CORRELATION_ID');
 });
 
-test('4.2.a negative: a deployment tag pointing at another digest is refused and recorded by the protocol and by I06', (t) => {
+test('V_A14 negative: a deployment tag pointing at another digest is refused and recorded by the protocol and by I06', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'p4-2-journey-drift-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const first = runRelease(['promote', '--chain', writeJson(root, 'chain-v1.json', candidateChain({ merge: SHA('m1'), head: SHA('h1') })),
@@ -295,7 +295,7 @@ test('4.2.a negative: a deployment tag pointing at another digest is refused and
   assert.ok(i06.codes.includes('TAG_DIGEST_DRIFT'), `I06 codes: ${JSON.stringify(i06.codes)}`);
 });
 
-test('4.2.b journey: the lost deployment response is reconciled by the original correlation ID — original result bound, no duplicate deployment, idempotent re-promotion', (t) => {
+test('V_A16: the lost deployment response is reconciled by the original correlation ID — original result bound, no duplicate deployment, idempotent re-promotion', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'p4-2-journey-b-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const source = writeSource(root, 'src-v1', 'v1');
@@ -329,7 +329,7 @@ test('4.2.b journey: the lost deployment response is reconciled by the original 
   assert.equal(parseJson(probe, 'I06 probe (reconcile)').status, 'VERIFIED');
 });
 
-test('4.2.b journey: the unapproved rollback is refused by protocol and I06; the approved same-digest rollback reads back digest, environment and business terminal state', (t) => {
+test('V_A17: the unapproved rollback is refused by protocol and I06; the approved same-digest rollback reads back digest, environment and business terminal state', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'p4-2-journey-rb-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const sourceV1 = writeSource(root, 'src-v1', 'v1');

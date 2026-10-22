@@ -1,0 +1,68 @@
+{
+ "task": "P4_2 (rework-seven-p1-r1): 隔离环境构建并提升同 digest，验证 tag 漂移拒绝、部署超时查询、不重复部署、批准回滚及业务读回（A14–A17/F09）。生产授权不包含在本任务中。",
+ "run": "rework-seven-p1-r1",
+ "worktree": ".claude/worktrees/rw-p4-2 (branch rework/p4-2-promotion, base dbb6e73 — dispatch commit f57aea5 声明 base dbb6e73)",
+ "opening_receipt": "git log --oneline -1 => dbb6e73 chore(openspec): accept P4_1 rework (6/6; review APPROVED; OBS-1 HIGH fixed)",
+ "final_status": "DONE",
+ "steps_done": "6/6 (tasks.md P4_2 Steps 1-6, 重规划后实际步数; 以重验循环执行: 实现=既有已接纳候选, RED=锚点检查真实失败 + 变异注入真实失败, GREEN=修复/还原后)",
+ "reverified": [
+  {
+   "behavior": "A14/F09 晋级: 隔离构建按精确 merge SHA 内容寻址; tag/active/业务终态贯穿同 digest; 确定性重建同 digest; 带外改指 tag 拒绝 TAG_DIGEST_DRIFT exit 2, 回执记录 tagResolvedDigest/expectedDigest/实际构建 digest 三方不符, 零状态变更",
+   "negative": "带外 repoint 后晋级 exit 2 (双套件各 1 断言点); M1 变异(漂移门禁用)下双套件同时转红",
+   "mutation_caught": "M1: 证据 03 (S1 not ok 3 'V_A14 negative: tag drift is refused…'; S2 not ok 3 'V_A14 negative: a deployment tag…')"
+  },
+  {
+   "behavior": "A16 超时调和: 响应丢失按原关联 ID 查询优先, 绑定原 requestedAt 原回执, deployed=false, 账本仍 1 条; 未知关联 ID => READBACK_UNCONFIRMED exit 2 零部署; 账本 digest 与 tag 解析分歧 => DEPLOYMENT_DIGEST_MISMATCH exit 2 不静默重部署",
+   "negative": "未知 ID exit 2; 记录改指 digest exit 2; M4 变异(同 digest 锁禁用)下 S1 not ok 4 + S2 not ok 4 (V_A16 幂等重晋级点)",
+   "mutation_caught": "M4: 证据 03 (S1 not ok 4 'same-digest lock…'; S2 not ok 4 'V_A16: the lost deployment response…')"
+  },
+  {
+   "behavior": "A17 回滚四门: 未批准/异环境批准 => ROLLBACK_NOT_APPROVED exit 2 零状态变更; 无保留上一已批准制品 => ROLLBACK_RETENTION_MISSING exit 2; 异 digest => ROLLBACK_DIGEST_MISMATCH exit 2; 业务效果不可观察 => ROLLBACK_TERMINAL_STATE_UNCONFIRMED exit 2; 批准同 digest 回滚读回 digest+环境+独立业务终态 exit 0",
+   "negative": "四门各 exit 2 逐项断言; M2 变异(批准门禁用) S1 2 红 + S2 1 红; M3 变异(保留写入禁用) S1 3 红 + S2 1 红",
+   "mutation_caught": "M2: 证据 03 (S1 not ok 8/9; S2 not ok 5 'V_A17…'); M3: 证据 03 (S1 not ok 9/10/11; S2 not ok 5)"
+  },
+  {
+   "behavior": "登记前置与输入契约: 未登记环境阻断 promote+rollback (ISOLATED_RELEASE_ENVIRONMENT_REQUIRED exit 2, 零写入); 异项目环境 ENVIRONMENT_PROJECT_MISMATCH; chain.artifact.builtFromMerge≠merge => ARTIFACT_NOT_FROM_MERGE 先于任何写; 声称 digest 与实际构建矛盾 => exit 1 输入错误; 回执恒 LOCAL_ONLY 带生产后继说明, 零宿主私有路径",
+   "negative": "双套件负例矩阵全绿 x2 (证据 06); 输入错误由工具自身点名字段 (merge must be a 40-hex SHA / requiredChecks must be a non-empty array / --chain is required / unknown command)",
+   "mutation_caught": "同门在 M1-M4 下均未被绕过 (每变异仅其守卫点转红, 其余 15/16 与 5/6 点保持绿 — 矩阵外科级)"
+  }
+ ],
+ "i06_consistency": "只读对照 tools/infra/platform.mjs @670c52a (证据 04): evaluateIntegrationIdentity 16 码与 release.mjs 发出/观察 12 码逐码对齐; 5 个 CHECK_* 码为 P4_1 受保护检查门面 (verify-delivery.mjs 语义; release.mjs 只验链形状, 4_2 journey 先跑真 P4_1 门) — 分层一致无漂移; I06 新覆盖两码在 P4_2 面已对齐 (ROLLBACK_RETENTION_MISSING 双侧断言; CHECK_NOT_SUCCESS 归 P4_1 门); 生产晋级 holder 不变且双侧一致: probe.productionPromotion={status:UNVERIFIED, holder:'P4_2 isolated-environment owner + runtime admission; the real merge gate stays with P4_1'} 与 release.mjs note 语义相同; LOCAL_ONLY 方阵语义保持, 本任务未改 release.mjs/platform.mjs 任何源码; 执行器事实×已接纳评估器交叉评估 9 处 (S1 5 + S2 4) 全绿",
+ "red_cases": [
+  "锚点 RED: journey --scenario A14/A16/A17 全部 NOT-EXERCISED exit 2, reason=assertion-mapping-not-verifiable, target.found=false (证据 01) — case_module=test/delivery-cases/4_2.mjs 的测试点名无场景 token, P3_1 纪律 (P1-04) 要求场景 token 映射到已执行 ok 测试点",
+  "锚点 GREEN: 三个场景执行点改名 V_A14/V_A16/V_A17 前缀 (4_1.mjs 已接纳约定; 下划线在 matcher 字符类 [A-Za-z0-9] 外故为合法词边界锚), journey 三场景 exit 0 PASS found=true status=ok, 测试体零改动 (证据 02); 套件 17/17+6/6 保持绿",
+  "变异 RED x4: M1 漂移门/M2 批准门/M3 保留写入/M4 同 digest 锁 (证据 03), 各自还原后 sha256 前==后 (c594a41334c5b3ba8de94e1ca90f25fd3f1b2837d159b767eb10a91c169738a9)"
+ ],
+ "scenario_anchor_check": "检查失败并已修复 (P3_1 纪律): case-plan 绑定 4_2.mjs 的场景 = A14/A16/A17 (F09 绑 4_1.mjs 归 P4_1); 修复前 journey 三场景 NOT-EXERCISED, 修复后三场景 PASS exit 0 — 这是本轮唯一落盘行为变更 (test/delivery-cases/4_2.mjs 3 行测试点名)",
+ "commands": {
+  "git log --oneline -1 => dbb6e73": 0,
+  "node --test test/release-protocol.test.js (x2 post-fix)": 0,
+  "node --test test/delivery-cases/4_2.mjs (x2 post-fix)": 0,
+  "node tools/verify/delivery-journey.mjs --scenario A14|A16|A17 --profile managed-pilot (post-fix)": 0,
+  "node tools/verify/delivery-journey.mjs --scenario A14|A16|A17 (pre-fix RED)": 2,
+  "node --test (mutations M1-M4, both suites)": 1,
+  "npm test (full)": 1,
+  "sha256sum -c after each restore": 0
+ },
+ "unverified": [
+  "真实生产晋级/部署与环境读回 (ISOLATED_RELEASE_ENVIRONMENT_REQUIRED): LOCAL_ONLY 方阵语义保持 — holder=P4_2 隔离环境 owner + 运行时准入不变, 真实合并门归 P4_1; 与上轮一致, 不因本轮改变"
+ ],
+ "files_changed": [
+  "test/delivery-cases/4_2.mjs (3 行: 三个场景执行测试点名加 V_A14/V_A16/V_A17 锚)",
+  "worker-reports/P4_2.rework.json",
+  "worker-reports/P4_2-rework/evidence/01-anchor-red-not-exercised.txt",
+  "worker-reports/P4_2-rework/evidence/02-anchor-green-journeys-pass.txt",
+  "worker-reports/P4_2-rework/evidence/03-mutation-injection-caught.txt",
+  "worker-reports/P4_2-rework/evidence/04-i06-consistency-readonly.txt",
+  "worker-reports/P4_2-rework/evidence/05-npm-test-known-items-only.txt",
+  "worker-reports/P4_2-rework/evidence/06-green-x2-and-behaviors.txt"
+ ],
+ "mutations_caught": [
+  "M1 TAG_DIGEST_DRIFT 门禁用 -> 双套件 RED (证据 03); 还原 sha256 前==后",
+  "M2 回滚批准门禁用 -> S1 not ok 8/9 + S2 not ok 5 (证据 03); 还原 sha256 前==后",
+  "M3 保留写入禁用 -> S1 not ok 9/10/11 + S2 not ok 5 (证据 03); 还原 sha256 前==后",
+  "M4 同 digest 锁禁用 -> S1 not ok 4 + S2 not ok 4 (证据 03); 还原 sha256 前==后"
+ ],
+ "regression": "npm test 444 tests / 441 pass / 2 fail / 1 skip: 失败恰为已知项 C08 (HOST_OPENSPEC_DRIFT 用户裁决) + B08 (impl-p2-4 沙箱变体), I06 rework 已在基线 8c8e4a3 stash 实证同败; 本轮改动仅 4_2.mjs 3 行测试点名, C08/B08 所在套件与 4_2.mjs 零引用 (grep 实证); 4.8.d 时敏抖动本轮未触发; 零新增 (证据 05)",
+ "blockers_or_questions": []
+}

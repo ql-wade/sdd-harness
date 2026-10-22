@@ -1,0 +1,36 @@
+I06 rework consistency check (read-only) — P4_2 owns surface vs tools/infra/platform.mjs @ 670c52a
+(LOCAL_ONLY mirror, full 16 negative codes, new coverage CHECK_NOT_SUCCESS + ROLLBACK_RETENTION_MISSING).
+
+1) Code-by-code alignment
+   evaluateIntegrationIdentity (platform.mjs) evaluates 16 unique codes:
+   CHECK_MISSING, CHECK_STALE_EVIDENCE, CHECK_TIMED_OUT, CHECK_SKIPPED, CHECK_NOT_SUCCESS, ARTIFACT_NOT_FROM_MERGE, TAG_DIGEST_DRIFT, ENVIRONMENT_PROJECT_MISMATCH, DEPLOYMENT_DIGEST_MISMATCH, RECEIPT_CORRELATION_MISSING, READBACK_CORRELATION_MISMATCH, READBACK_UNCONFIRMED, ROLLBACK_NOT_APPROVED, ROLLBACK_RETENTION_MISSING, ROLLBACK_DIGEST_MISMATCH, ROLLBACK_TERMINAL_STATE_UNCONFIRMED
+   tools/ci/release.mjs emits/observes 12 codes:
+   ARTIFACT_NOT_FROM_MERGE, DEPLOYMENT_DIGEST_MISMATCH, ENVIRONMENT_PROJECT_MISMATCH, ISOLATED_RELEASE_ENVIRONMENT_REQUIRED, READBACK_CORRELATION_MISMATCH, READBACK_UNCONFIRMED, RECEIPT_CORRELATION_MISSING, ROLLBACK_DIGEST_MISMATCH, ROLLBACK_NOT_APPROVED, ROLLBACK_RETENTION_MISSING, ROLLBACK_TERMINAL_STATE_UNCONFIRMED, TAG_DIGEST_DRIFT
+   -> 11/16 evaluator codes are emitted/observed on the release side;
+   -> the 5 CHECK_* codes (CHECK_MISSING, CHECK_STALE_EVIDENCE, CHECK_TIMED_OUT, CHECK_SKIPPED, CHECK_NOT_SUCCESS) are the protected-check gate surface (P4_1
+      verify-delivery.mjs semantics; release.mjs validates chain shape only and its journey runs the real
+      P4_1 gate before promotion — layering consistent, no drift.
+
+2) The two I06-rework-new codes on the P4_2 side
+   ROLLBACK_RETENTION_MISSING: emitted by release.mjs rollback() when no retained previous approved
+      artifact exists (tools/ci/release.mjs); asserted in test/release-protocol.test.js
+      ('rollback without a retained previous approved artifact is ROLLBACK_RETENTION_MISSING', exit 2)
+      and in test/infra-platform.test.js (I06 probe, exit 2). Both sides aligned.
+   CHECK_NOT_SUCCESS: evaluator-side classification of a non-success bound conclusion; the P4_2 case
+      journey (test/delivery-cases/4_2.mjs) first runs the real verify-delivery.mjs gate, which owns
+      that classification. Release fixtures carry success conclusions. Consistent layering.
+
+3) Production-promotion holder (must stay unchanged): live run at this base
+   release.mjs promote : exit 0, status=VERIFIED, mode=LOCAL_ONLY
+   platform.mjs probe  : exit 0, status=VERIFIED, mode=LOCAL_ONLY
+   probe.productionPromotion = {"status": "UNVERIFIED", "holder": "P4_2 isolated-environment owner + runtime admission; the real merge gate stays with P4_1"}
+   release.mjs receipt note = LOCAL_ONLY: isolated local Registry/environment mechanism proof only; the real production promotion/deployment and its environment readback stay UNVERIFIED — environment owner + runtime admission after P4_2 (ISOLATED_RELEASE_ENVIRONMENT_REQUIRED).
+   -> holder identical on both sides: P4_2 isolated-environment owner + runtime admission;
+      LOCAL_ONLY matrix semantics preserved; real production promotion stays UNVERIFIED. No change made.
+
+4) Cross-evaluation teeth (executor facts vs accepted evaluator, post-I06-rework)
+   release-protocol.test.js probes the emitted chain with the real platform.mjs subprocess at 5 points
+   (promote VERIFIED / drift TAG_DIGEST_DRIFT exit 2 / reconcile VERIFIED via QUERY_BY_CORRELATION_ID /
+   unapproved rollback ROLLBACK_NOT_APPROVED exit 2 / approved rollback VERIFIED) — all green this run.
+   test/delivery-cases/4_2.mjs does the same at 4 journey points (incl. deployment binding
+   DIGEST_AND_CORRELATION_ID) — all green this run.
