@@ -1,0 +1,20 @@
+P1_2 rework — RED: UTF-8 locale uninstall crash (found during rework re-verification)
+Date: 2026-10-22. Base d7ff690.
+
+== The pre-fix line at base (git show d7ff690:tools/bootstrap.sh, line 39):
+  say "🧹 scaffold uninstall（目标: $TARGET_ROOT）"
+
+== The same construct executed live under each locale (exact pre-fix text in bash):
+LC_ALL=C            -> 🧹 scaffold uninstall（目标: /example/target）
+LC_ALL=C.UTF-8      -> bash: TARGET_ROOT�: unbound variable
+LC_ALL=en_US.UTF-8  -> bash: TARGET_ROOT�: unbound variable
+
+== Real end-to-end reproduction against the pre-fix script (worktree at d7ff690 state):
+$ LC_ALL=en_US.UTF-8 bash tools/bootstrap.sh --uninstall  (fixture target root)
+tools/bootstrap.sh: line 39: TARGET_ROOT<0xEF>: unbound variable   -> exit 1
+(observed 2026-10-22 before the fix; 6/6 deterministic under a python-spawned runner,
+ while the same suite passed 3/3 under a C-locale shell — locale-dependent, not flaky)
+
+== Same defect class, second instance (git show d7ff690:tools/adapters/claude-code.sh, line 47):
+    *) { echo "❌ 未知参数: $arg（支持: --uninstall）" >&2; exit 1; } ;;
+LC_ALL=en_US.UTF-8  -> bash: arg�: unbound variable

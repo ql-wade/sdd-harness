@@ -1,0 +1,120 @@
+P1_2 rework — RED: scenario anchor gap (P3_1 connected check), captured BEFORE the anchor fix.
+Command: node tools/verify/delivery-journey.mjs --scenario F04 --profile managed-pilot --evidence-dir <tmp>/F04 --json
+
+{
+  "schemaVersion": 1,
+  "tool": "tools/verify/delivery-journey.mjs",
+  "runnerInvariant": "test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery",
+  "scenario": "F04",
+  "acceptanceIds": [
+    "F04"
+  ],
+  "journey": null,
+  "profile": "managed-pilot",
+  "caseModule": "test/delivery-cases/1_2.mjs",
+  "sourceBinding": [
+    {
+      "path": "specs/delivery-foundation/spec.md",
+      "requirement": "Foundation distribution and deployment",
+      "scenario": "F04"
+    }
+  ],
+  "verdict": "NOT-EXERCISED",
+  "reason": "assertion-mapping-not-verifiable: no executed test point maps to required assertion(s) F04 — a green suite without the registered target is not a scenario pass (P1-04)",
+  "missing": [
+    "F04"
+  ],
+  "drift": [],
+  "schemaErrors": [],
+  "execution": {
+    "command": "node --test test/delivery-cases/1_2.mjs",
+    "actions": [
+      {
+        "index": 1,
+        "type": "spawn",
+        "expected": "exit 0; TAP summary fail=0 with pass>0; test point matching F04 (V_F04 or bare id) is ok",
+        "required": true,
+        "expectation": {
+          "kind": "exitCode",
+          "value": 0
+        },
+        "ok": true,
+        "exitCode": 0,
+        "durationMs": 10130,
+        "note": null,
+        "observed": null,
+        "command": "node --test test/delivery-cases/1_2.mjs"
+      },
+      {
+        "index": 2,
+        "type": "readState",
+        "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0",
+        "required": true,
+        "expectation": {
+          "kind": "nonEmptyFile"
+        },
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": {
+          "path": "<host-path-redacted>",
+          "bytes": 1832
+        },
+        "command": null
+      },
+      {
+        "index": 3,
+        "type": "inspect",
+        "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+        "required": false,
+        "expectation": null,
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": "d7ff690b023447c695311699d9fe80949462d576",
+        "command": null
+      }
+    ],
+    "tests": 7,
+    "pass": 7,
+    "fail": 0,
+    "skipped": 0,
+    "effectiveExecutions": 7,
+    "target": {
+      "token": "F04",
+      "found": false,
+      "status": null
+    },
+    "requiredAssertions": [
+      {
+        "id": "F04",
+        "status": "missing",
+        "matchedPoints": 0,
+        "ok": 0,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "candidate": {
+    "gitHead": "d7ff690b023447c695311699d9fe80949462d576",
+    "node": "v22.13.1",
+    "platform": "darwin"
+  },
+  "timing": {
+    "startedAt": "2026-10-22T06:22:55.172Z",
+    "finishedAt": "2026-10-22T06:23:05.336Z",
+    "durationMs": 10164
+  },
+  "evidence": {
+    "dir": "<host-path-redacted>",
+    "files": [
+      "pilot-baseline.json",
+      "case-definition.json",
+      "verdict.json"
+    ]
+  },
+  "exitCode": 2
+}
