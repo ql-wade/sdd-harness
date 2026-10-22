@@ -302,6 +302,16 @@ test('delivery-gate.yml fails closed: least-privilege permissions, serialized co
   assert.ok(job['timeout-minutes'], 'the gate job must have a timeout');
 });
 
+test('delivery-gate.yml wires only the launch authority secret — the CI identity never reads release or rollback material', () => {
+  const workflow = parseYaml(fs.readFileSync(workflowPath, 'utf8'));
+  const secretRefs = [...new Set(JSON.stringify(workflow).match(/secrets\.[A-Za-z0-9_]+/g) ?? [])];
+  assert.deepEqual(
+    secretRefs,
+    ['secrets.SDD_DELIVERY_LAUNCH_AUTHORITY'],
+    'the gate job must receive only the trusted-launcher secret; registry, deploy and rollback secrets are release material a development-side CI identity must never read (artifact-reader rule, infra/delivery/secrets.refs.example.json)',
+  );
+});
+
 // --- verify-delivery.mjs: real subprocess, positive and negative -------------
 
 test('GREEN chain with registered baseline: exact-SHA evidence and passing gate verify (exit 0)', () => {
