@@ -1,0 +1,38 @@
+{
+  "task": "P1_1",
+  "phase": "rework-r1",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-22T04:01:11.896211+00:00",
+  "head_reviewed": "0b79631",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "报告 B08 复现引用用了短路径(实际文件在 change 目录 worker-reports/); 证据存在仅路径简写歧义",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-2",
+      "summary": "RED-2 的 worktree 一致组落地前本就 green; RED 限于 venv-ENOENT 链(如实, 精度注记)",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-3",
+      "summary": "1_1.mjs 以 baseline 自身 observed_version 查矩阵行(自引用); 建议未来断言 observed==live probe — 路由到 P3_1 验收器修复域",
+      "disposition": "routed to P3_1"
+    }
+  ],
+  "independently_rerun": {
+    "green": "1_1 8/8 x2(各~100s) + prep/build 9/9",
+    "clone_pin": "075c5b4 detached+clean, 与 package.lock source.commit 独立核对",
+    "requirements_lock": "sha256 678bd730…/154140B 与登记完全一致",
+    "probe": "exit 0; write VERIFIED(真实创建往返, server 1.27.0, 10 tools); 39/39 worktree 同根; 4/4 文件级门含 INCONSISTENT 负对照; SDD_HOME 项目内 CLI/launcher 同根",
+    "fingerprint_recomputed": "独立 node 单行重算(算法自 build.mjs:31 读取, 零信任复算): beab355d…e966 == distribution.json; 6 patch sha 逐一重核; 源归档 40474019B/sha 28a7e2fa… == lock.source; RED-1 语义隔离复现 exit 1 SOURCE_NOT_PREPARED",
+    "build_check": "exit 0 PASS(指纹/check-generated 3 面/runtime-smoke 253/2; BUILD_BASELINE_DRIFT fail-closed 在跑)",
+    "npm_test": "425/423/2(恰 C08+B08) 零新增; 控制器在 merge 65598f7 复跑 425/421/4(impl-p2-4 的 adapter×2 沙箱已知变体) 零新增",
+    "boundary_clean": true,
+    "host_fs_path_leak": false
+  },
+  "env_fact_dispositions": "(1) host openspec 1.14.3 漂移独立确认; 隔离安装策略保留, 未触全局; C08 在此机按原文不可过 -> 归 HOST_OPENSPEC_DRIFT 用户裁决(重钉隔离 1.3.1 或接受漂移); (2) .mcp.json ENOENT 复现, 正确留给 P 任务宿主注册(按 8a7520d env-driven 启动器设计)"
+}
