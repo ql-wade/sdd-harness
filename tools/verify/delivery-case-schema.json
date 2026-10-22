@@ -9,6 +9,7 @@
     "schemaVersion",
     "scenario",
     "acceptanceIds",
+    "requiredAssertions",
     "caseModule",
     "actions",
     "evidence",
@@ -33,6 +34,18 @@
       },
       "description": "Acceptance ids this case provides execution evidence for."
     },
+    "requiredAssertions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[A-Za-z][A-Za-z0-9_]*(?::[A-Za-z0-9_-]+)?$",
+        "description": "Assertion id (scenario token like A01/V_A01, or a composite sub-assertion id like V_X89:readback) that MUST each map to at least one executed, non-skipped, passing test point in this journey's TAP output. This is the nonzero target denominator (P1-04): suite-level green never substitutes for the named assertions."
+      },
+      "description": "Target denominator: every listed assertion id must be verifiably mapped to an executed ok test point; missing, skipped, failed or unmatched ids are structured nonzero refusals, never PASS."
+    },
     "caseModule": {
       "type": "string",
       "minLength": 1,
@@ -43,7 +56,10 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "scenario"],
+        "required": [
+          "path",
+          "scenario"
+        ],
         "properties": {
           "path": {
             "type": "string",
@@ -67,10 +83,17 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["type", "expected"],
+        "required": [
+          "type",
+          "expected"
+        ],
         "properties": {
           "type": {
-            "enum": ["spawn", "readState", "inspect"],
+            "enum": [
+              "spawn",
+              "readState",
+              "inspect"
+            ],
             "description": "spawn = run a real command; readState = read a real file (relative paths resolve against the evidence dir); inspect = record a read-only observation (a command like 'git rev-parse HEAD' or a filesystem path)."
           },
           "command": {
@@ -87,6 +110,107 @@
             "type": "string",
             "minLength": 1,
             "description": "Human-auditable expected outcome; recorded in the verdict next to the actual outcome."
+          },
+          "expect": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind"
+            ],
+            "description": "Typed expected outcome evaluated against the LIVE observation of this action (P1-04/RW_OBSERVATION_REQUIRED): the runner derives the observed side itself (real exit code, real bytes, real probe stdout) and compares it to this frozen value — a registered value never attests to itself.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "exitCode",
+                  "commandSucceeds",
+                  "equals",
+                  "nonEmptyFile",
+                  "tapRequiredAssertions"
+                ],
+                "description": "exitCode = spawn exits exactly N; commandSucceeds = inspect/spawn probe exits 0; equals = observed value (trimmed probe stdout for inspect commands, file bytes for readState) equals the frozen string; nonEmptyFile = readState file exists with >0 bytes; tapRequiredAssertions = this spawn's own TAP output satisfies every listed assertion id."
+              },
+              "value": {
+                "description": "exitCode: integer exit status; equals: the frozen string the live observation must equal."
+              },
+              "assertions": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "tapRequiredAssertions only: action-scoped assertion ids."
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": [
+                    "kind"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "exitCode"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "value"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "required": [
+                    "kind"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "equals"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "value"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "required": [
+                    "kind"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "tapRequiredAssertions"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "assertions"
+                  ]
+                }
+              }
+            ]
+          },
+          "required": {
+            "type": "boolean",
+            "description": "Default true. A required action gates PASS: its typed expectation must be met by the live observation or the journey FAILs (RW_OBSERVATION_REQUIRED). required:false is a read-only observation that records without gating (e.g. candidate digest capture)."
           }
         },
         "allOf": [
@@ -99,19 +223,44 @@
               }
             },
             "then": {
-              "required": ["command"]
+              "required": [
+                "command"
+              ]
             }
           },
           {
             "if": {
               "properties": {
                 "type": {
-                  "enum": ["readState", "inspect"]
+                  "enum": [
+                    "readState",
+                    "inspect"
+                  ]
                 }
               }
             },
             "then": {
-              "required": ["path"]
+              "required": [
+                "path"
+              ]
+            }
+          },
+          {
+            "if": {
+              "required": [
+                "required"
+              ],
+              "properties": {
+                "required": {
+                  "const": false
+                }
+              }
+            },
+            "then": {},
+            "else": {
+              "required": [
+                "expect"
+              ]
             }
           }
         ]
@@ -120,7 +269,9 @@
     "evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["artifacts"],
+      "required": [
+        "artifacts"
+      ],
       "properties": {
         "artifacts": {
           "type": "array",
@@ -136,7 +287,12 @@
     "verdictSemantics": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["PASS", "FAIL", "NOT-EXERCISED", "NOT-APPLICABLE"],
+      "required": [
+        "PASS",
+        "FAIL",
+        "NOT-EXERCISED",
+        "NOT-APPLICABLE"
+      ],
       "properties": {
         "PASS": {
           "type": "string",

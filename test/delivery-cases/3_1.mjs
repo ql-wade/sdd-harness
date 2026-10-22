@@ -229,26 +229,28 @@ test('3.1.b runner PASS on real scenario A02 (2_1.mjs) and A20 (2_3.mjs) from di
   }
 });
 
-test('3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario token in its test names — the module-level green stands whether the environment-conditional build probe skips or really runs, with zero FAIL and the coverage mode truthfully recorded', () => {
+test('3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario token in its test names — module-level green alone is now a structured refusal, never a scenario PASS (P1-04)', () => {
   const evidenceDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-b09-')), 'evidence');
   const run = runJourney(['--scenario', 'B09', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir, '--json']);
-  assert.equal(run.status, 0, `module-level green with real executions must pass, got ${run.status}: ${run.stderr}`);
+  // 1_6.mjs executes real tests but none is anchored to B09: the frozen plan
+  // entry (assertion_binding_required) demands a verifiable case→assertion
+  // mapping, so the runner refuses instead of counting other tests' success
+  // as this scenario's success. This is the strengthened denominator: the
+  // fix path is a scenario-anchored test point in the 1_6 case module or an
+  // explicit recipe definition — not a waiver.
+  assert.equal(run.status, 2, `unmapped module green must refuse, got ${run.status}: ${run.stderr}`);
   const verdict = readVerdict(run, evidenceDir);
-  assert.equal(verdict.verdict, 'PASS');
+  assert.equal(verdict.verdict, 'NOT-EXERCISED');
+  assert.match(verdict.reason, /assertion-mapping-not-verifiable/);
   assert.equal(verdict.caseModule, 'test/delivery-cases/1_6.mjs');
-  assert.ok(verdict.execution.pass > 0, 'actual execution count must be greater than 0');
   assert.equal(verdict.execution.fail, 0, 'a real defect in the submodule must still refuse the pass — no green-washing');
   assert.equal(verdict.execution.target.found, false, 'no V_-convention point exists in this module');
-  assert.equal(verdict.execution.target.status, null);
-  // 1_6.mjs's patched-build probe is environment-conditional: in a worktree
-  // without the prepared build it skips; with .sdd prepared and the patched
-  // build present it really runs. Both are legal outcomes and both must
-  // PASS. No literal counts of another file's tests are asserted here —
-  // they age as soon as that file legally grows. The coverage mode that
-  // actually happened is pinned by the reconciliation invariant alone: the
-  // verdict counts must equal the executed TAP summary, so they cannot lie.
+  assert.ok((verdict.execution.requiredAssertions ?? []).some((entry) => entry.id === 'B09' && entry.status === 'missing'),
+    'the B09 denominator entry must be recorded as missing');
+  // Reconciliation invariant: the verdict counts still equal the executed
+  // points, so the refusal is evidence-based, not a blanket rejection.
   assert.equal(verdict.execution.tests, verdict.execution.pass + verdict.execution.fail + verdict.execution.skipped,
-    'verdict counts must reconcile with the executed TAP summary');
+    'verdict counts must reconcile with the executed test points');
 });
 
 test('3.1.b runner FAIL verdict without green-washing: a genuinely failing action fails once and is never retried', () => {
@@ -265,9 +267,10 @@ test('3.1.b runner FAIL verdict without green-washing: a genuinely failing actio
     schemaVersion: 1,
     scenario: 'X98',
     acceptanceIds: ['X98'],
+    requiredAssertions: ['V_X98'],
     caseModule: modulePath,
     sourceBinding: [{ path: 'specs/delivery-foundation/spec.md', scenario: 'X98' }],
-    actions: [{ type: 'spawn', command: `node ${failScript} ${counterPath}`, expected: 'exit 0 — oracle satisfied' }],
+    actions: [{ type: 'spawn', command: `node ${failScript} ${counterPath}`, expected: 'exit 0 — oracle satisfied', expect: { kind: 'exitCode', value: 0 } }],
     evidence: { artifacts: ['case-definition.json', 'verdict.json'] },
     verdictSemantics: {
       PASS: 'actions executed and expectations met',
@@ -481,6 +484,442 @@ function independentReadback(file, expectedBytes) {
     ? { verdict: 'PASS', reason: 'persisted-bytes-match', observed: sha256(observed) }
     : { verdict: 'FAIL', reason: 'persisted-bytes-mismatch', observed: sha256(observed) };
 }
+
+
+// --- RW_TARGET_REQUIRED: the P1-04 target denominator (V_RW_TARGET_REQUIRED) --
+//
+// P1-04 (docs/research/2026-10-22-delivery-implementation-grill.md): the
+// acceptance runner could judge a nonexistent target scenario as PASS — a
+// registered A01 executing only `assert.equal(1+1,2)` returned
+// exitCode=0/verdict=PASS/target.found=false. Every shape below must be a
+// structured nonzero refusal: missing target, zero target, wrong mapping,
+// composite case missing a required sub-assertion, all-skip, unrelated
+// all-green suite. Suite-level green is never scenario-level pass.
+
+function fixtureCaseDefinition(root, name, overrides = {}) {
+  const defaults = {
+    schemaVersion: 1,
+    scenario: 'X90',
+    acceptanceIds: ['X90'],
+    caseModule: '',
+    requiredAssertions: ['V_X90'],
+    sourceBinding: [{ path: 'specs/delivery-foundation/spec.md', scenario: 'X90' }],
+    actions: [],
+    evidence: { artifacts: ['case-definition.json', 'verdict.json'] },
+    verdictSemantics: {
+      PASS: 'actions executed and expectations met',
+      FAIL: 'executed outcome contradicts the expected outcome',
+      'NOT-EXERCISED': 'prerequisite missing',
+      'NOT-APPLICABLE': 'explicitly out of scope with reason',
+    },
+  };
+  return writeFixture(root, name, JSON.stringify({ ...defaults, ...overrides }));
+}
+
+test('RW_TARGET_REQUIRED: P1-04 counterexample — scenario A01 registered to an unrelated all-green arithmetic suite must exit nonzero, never PASS', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-unrelated-'));
+  // The exact grill counterexample body: an unrelated suite that is fully green.
+  const modulePath = fixtureModule(root, 'unrelated.test.mjs',
+    "test('arithmetic', () => { assert.equal(1 + 1, 2); });");
+  const planPath = fixtureCasePlan(root, [{ scenario: 'A01', caseModule: modulePath }]);
+  const contractPath = fixturePilotContract(root);
+  const evidenceDir = path.join(root, 'evidence');
+  const run = runJourney(['--scenario', 'A01', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+    '--case-plan', planPath, '--pilot-contract', contractPath, '--json']);
+  assert.notEqual(run.status, 0,
+    `an unrelated green suite must never sign the registered scenario; got exit ${run.status}`);
+  const verdict = readVerdict(run, evidenceDir);
+  assert.notEqual(verdict.verdict, 'PASS');
+  assert.match(verdict.reason, /assertion-mapping-not-verifiable/,
+    'the refusal must name the unresolvable assertion mapping, not silently pass');
+  const unresolved = (verdict.execution.requiredAssertions ?? []).filter((entry) => entry.status !== 'satisfied');
+  assert.ok(unresolved.length > 0 && unresolved.some((entry) => /A01/.test(entry.id)),
+    'the registered scenario assertion must be reported as unresolved');
+});
+
+test('RW_TARGET_REQUIRED: a declared required assertion with no matching test point (missing target / wrong mapping) is refused nonzero', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-missing-'));
+  const modulePath = fixtureModule(root, 'x90.test.mjs',
+    "test('V_OTHER: a different scenario entirely', () => { assert.ok(true); });");
+  const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
+    caseModule: modulePath,
+    actions: [{ type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } }],
+  });
+  const evidenceDir = path.join(root, 'evidence');
+  const run = runJourney(['--scenario', 'X90', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+    '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
+  assert.notEqual(run.status, 0, 'a suite green on OTHER assertions must not pass this scenario');
+  const verdict = readVerdict(run, evidenceDir);
+  assert.notEqual(verdict.verdict, 'PASS');
+  assert.match(verdict.reason, /assertion-mapping-not-verifiable/);
+});
+
+test('RW_TARGET_REQUIRED: zero-target denominator (empty requiredAssertions) is refused at the schema layer', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-zero-'));
+  const modulePath = fixtureModule(root, 'x91.test.mjs', "test('V_X91: point', () => { assert.ok(true); });");
+  const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
+    scenario: 'X91',
+    acceptanceIds: ['X91'],
+    requiredAssertions: [],
+    caseModule: modulePath,
+    actions: [{ type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } }],
+  });
+  const evidenceDir = path.join(root, 'evidence');
+  const run = runJourney(['--scenario', 'X91', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+    '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
+  assert.notEqual(run.status, 0, 'an empty target denominator can never be a valid case');
+  const verdict = readVerdict(run, evidenceDir);
+  assert.equal(verdict.verdict, 'NOT-EXERCISED');
+  const rendered = JSON.stringify(verdict.schemaErrors ?? []);
+  assert.match(rendered, /requiredAssertions/, 'the schema must name the empty denominator');
+});
+
+test('RW_TARGET_REQUIRED: composite scenario missing any required sub-assertion is refused nonzero', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-composite-'));
+  // Composite fixture: only the persist sub-assertion exists; the readback
+  // sub-assertion is absent from the executed module.
+  const modulePath = fixtureModule(root, 'x89.test.mjs', [
+    "test('V_X89:persist writes durable bytes', () => { assert.ok(true); });",
+  ].join('\n'));
+  const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
+    scenario: 'X89',
+    acceptanceIds: ['X89'],
+    requiredAssertions: ['V_X89:persist', 'V_X89:readback'],
+    caseModule: modulePath,
+    actions: [{ type: 'spawn', command: `node --test ${modulePath}`, expected: 'both sub-assertions execute green', expect: { kind: 'exitCode', value: 0 } }],
+  });
+  const evidenceDir = path.join(root, 'evidence');
+  const run = runJourney(['--scenario', 'X89', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+    '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
+  assert.notEqual(run.status, 0, 'a composite scenario missing any required sub-assertion must not pass');
+  const verdict = readVerdict(run, evidenceDir);
+  assert.notEqual(verdict.verdict, 'PASS');
+  assert.match(verdict.reason, /assertion-mapping-not-verifiable/);
+  const unresolved = (verdict.execution.requiredAssertions ?? []).filter((entry) => entry.status !== 'satisfied');
+  assert.ok(unresolved.some((entry) => entry.id.includes('readback')),
+    'the missing sub-assertion id must be named individually');
+});
+
+test('RW_TARGET_REQUIRED: all-skip module stays nonzero; a complete verifiable mapping passes', () => {
+  // All-skip entire module: zero effective execution.
+  const rootSkip = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-allskip-'));
+  const skipModule = fixtureModule(rootSkip, 'x88.test.mjs', [
+    "test('V_X88: point', { skip: 'environment not provisioned' }, () => {});",
+  ].join('\n'));
+  const skipPlan = fixtureCasePlan(rootSkip, [{ scenario: 'X88', caseModule: skipModule }]);
+  const skipRun = runJourney(['--scenario', 'X88', '--profile', 'managed-pilot',
+    '--evidence-dir', path.join(rootSkip, 'evidence'), '--case-plan', skipPlan,
+    '--pilot-contract', fixturePilotContract(rootSkip), '--json']);
+  assert.equal(skipRun.status, 2, 'all-skip must exit 2');
+  const skipVerdict = readVerdict(skipRun, path.join(rootSkip, 'evidence'));
+  assert.match(skipVerdict.reason, /no-effective-execution|target-scenario-skipped/);
+
+  // Positive control: the same scenario with a genuinely matching, ok test
+  // point passes — the strengthened denominator still admits real evidence.
+  const rootOk = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-ok-'));
+  const okModule = fixtureModule(rootOk, 'x88b.test.mjs',
+    "test('V_X88: real point', () => { assert.ok(true); });");
+  const okPlan = fixtureCasePlan(rootOk, [{ scenario: 'X88', caseModule: okModule }]);
+  const okRun = runJourney(['--scenario', 'X88', '--profile', 'managed-pilot',
+    '--evidence-dir', path.join(rootOk, 'evidence'), '--case-plan', okPlan,
+    '--pilot-contract', fixturePilotContract(rootOk), '--json']);
+  assert.equal(okRun.status, 0, `a verifiable mapping must still pass: ${okRun.stderr}`);
+  const okVerdict = readVerdict(okRun, path.join(rootOk, 'evidence'));
+  assert.equal(okVerdict.verdict, 'PASS');
+  assert.ok((okVerdict.execution.requiredAssertions ?? []).every((entry) => entry.status === 'satisfied'));
+});
+
+// --- RW_OBSERVATION_REQUIRED: typed final-state readback (V_RW_OBSERVATION_REQUIRED)
+
+test('RW_OBSERVATION_REQUIRED: a required inspect whose live probe contradicts the typed expectation fails the journey — inspections are not free', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-inspect-'));
+  const modulePath = fixtureModule(root, 'x87.test.mjs', "test('V_X87: point', () => { assert.ok(true); });");
+  const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
+    scenario: 'X87',
+    acceptanceIds: ['X87'],
+    requiredAssertions: ['V_X87'],
+    caseModule: modulePath,
+    actions: [
+      { type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } },
+      {
+        type: 'inspect',
+        path: 'node --version',
+        expected: 'observed toolchain version equals the frozen expectation',
+        expect: { kind: 'equals', value: 'v0.0.0-fake-stale-readback' },
+      },
+    ],
+  });
+  const evidenceDir = path.join(root, 'evidence');
+  const run = runJourney(['--scenario', 'X87', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+    '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
+  assert.notEqual(run.status, 0, 'a live observation contradicting the frozen expectation must fail');
+  const verdict = readVerdict(run, evidenceDir);
+  assert.equal(verdict.verdict, 'FAIL');
+  assert.match(verdict.reason, /inspect/);
+  const inspectAction = verdict.execution.actions.find((action) => action.type === 'inspect');
+  assert.equal(inspectAction.ok, false);
+  assert.notEqual(inspectAction.observed, 'v0.0.0-fake-stale-readback',
+    'the observed side must be the real live probe output, not the expected echo');
+});
+
+test('RW_OBSERVATION_REQUIRED: a required inspect whose probe command itself fails (commandSucceeds) fails the journey', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-inspectfail-'));
+  const modulePath = fixtureModule(root, 'x86.test.mjs', "test('V_X86: point', () => { assert.ok(true); });");
+  const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
+    scenario: 'X86',
+    acceptanceIds: ['X86'],
+    requiredAssertions: ['V_X86'],
+    caseModule: modulePath,
+    actions: [
+      { type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } },
+      {
+        type: 'inspect',
+        path: 'node -e process.exit(3)',
+        expected: 'the required environment probe succeeds',
+        expect: { kind: 'commandSucceeds' },
+      },
+    ],
+  });
+  const evidenceDir = path.join(root, 'evidence');
+  const run = runJourney(['--scenario', 'X86', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+    '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
+  assert.notEqual(run.status, 0, 'a failing required probe must fail the journey');
+  const verdict = readVerdict(run, evidenceDir);
+  assert.equal(verdict.verdict, 'FAIL');
+});
+
+test('RW_OBSERVATION_REQUIRED: a non-empty state file whose bytes contradict the typed readback cannot sign PASS (fake/stale readback refused)', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-stale-'));
+  const modulePath = fixtureModule(root, 'x85.test.mjs', "test('V_X85: point', () => { assert.ok(true); });");
+  // Pre-existing stale bytes in the evidence dir — non-empty, wrong content.
+  const evidenceDir = path.join(root, 'evidence');
+  fs.mkdirSync(evidenceDir, { recursive: true });
+  fs.writeFileSync(path.join(evidenceDir, 'journey-state.txt'), 'stale-bytes-from-an-older-run');
+  const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
+    scenario: 'X85',
+    acceptanceIds: ['X85'],
+    requiredAssertions: ['V_X85'],
+    caseModule: modulePath,
+    actions: [
+      { type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } },
+      {
+        type: 'readState',
+        path: 'journey-state.txt',
+        expected: 'independently read persisted terminal state equals the frozen bytes',
+        expect: { kind: 'equals', value: 'journey-state-v1' },
+      },
+    ],
+  });
+  const run = runJourney(['--scenario', 'X85', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+    '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
+  assert.notEqual(run.status, 0, 'file existence alone must not satisfy a typed readback');
+  const verdict = readVerdict(run, evidenceDir);
+  assert.equal(verdict.verdict, 'FAIL');
+  assert.match(verdict.reason, /readState/);
+});
+
+test('RW_OBSERVATION_REQUIRED: observed-version assertions anchor to an independent live probe (nb-3: registered value never self-attests)', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-live-'));
+  const modulePath = fixtureModule(root, 'x84.test.mjs', "test('V_X84: point', () => { assert.ok(true); });");
+  // The expectation value is derived by an INDEPENDENT probe in this test —
+  // not copied from any baseline file. The runner must itself run the live
+  // probe and record its own observation for the journey to pass.
+  const independent = spawnSync('node', ['--version'], { encoding: 'utf8' });
+  assert.equal(independent.status, 0);
+  const expectedVersion = independent.stdout.trim();
+  const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
+    scenario: 'X84',
+    acceptanceIds: ['X84'],
+    requiredAssertions: ['V_X84'],
+    caseModule: modulePath,
+    actions: [
+      { type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } },
+      {
+        type: 'inspect',
+        path: 'node --version',
+        expected: 'live toolchain version equals the independently probed value',
+        expect: { kind: 'equals', value: expectedVersion },
+      },
+    ],
+  });
+  const evidenceDir = path.join(root, 'evidence');
+  const run = runJourney(['--scenario', 'X84', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+    '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
+  assert.equal(run.status, 0, `a true live observation must pass: ${run.stderr}`);
+  const verdict = readVerdict(run, evidenceDir);
+  assert.equal(verdict.verdict, 'PASS');
+  const inspectAction = verdict.execution.actions.find((action) => action.type === 'inspect');
+  assert.equal(inspectAction.observed, expectedVersion,
+    'the verdict observation must come from the runner actually running the probe');
+  assert.equal(inspectAction.ok, true);
+});
+
+test('RW_OBSERVATION_REQUIRED: wrong candidate is refused — a typed equals expectation on the live git HEAD mismatch fails nonzero', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-candidate-'));
+  const modulePath = fixtureModule(root, 'x83.test.mjs', "test('V_X83: point', () => { assert.ok(true); });");
+  const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
+    scenario: 'X83',
+    acceptanceIds: ['X83'],
+    requiredAssertions: ['V_X83'],
+    caseModule: modulePath,
+    actions: [
+      { type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } },
+      {
+        type: 'inspect',
+        path: 'git rev-parse HEAD',
+        expected: 'the observed candidate matches the frozen candidate binding',
+        expect: { kind: 'equals', value: '0000000000000000000000000000000000000000' },
+      },
+    ],
+  });
+  const evidenceDir = path.join(root, 'evidence');
+  const run = runJourney(['--scenario', 'X83', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+    '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
+  const headRun = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: projectRoot, encoding: 'utf8' });
+  if (headRun.status === 0) {
+    assert.notEqual(run.status, 0, 'an executed journey against the wrong candidate must refuse');
+    const verdict = readVerdict(run, evidenceDir);
+    assert.equal(verdict.verdict, 'FAIL');
+  } else {
+    // No git repository: the probe itself fails, which is also a required
+    // inspect failure — still nonzero, never a pass.
+    assert.notEqual(run.status, 0);
+  }
+});
+
+// --- --journey observation interface (execution-contract.observer_contract) ----
+
+function fixtureJourneyPlan(root, journey) {
+  const cases = {
+    [journey.scenario]: {
+      source_binding: [{ path: 'specs/delivery-foundation/spec.md', scenario: journey.scenario }],
+      intended_command: `node tools/verify/delivery-journey.mjs --journey ${journey.name} --profile managed-pilot --evidence-dir <dir> --json`,
+      case_module: journey.caseModule,
+      steps: ['fixture step'],
+      oracle: 'fixture oracle',
+      status: 'FIXTURE',
+    },
+  };
+  return writeFixture(root, 'journey-plan.json', JSON.stringify({
+    schema_version: 1,
+    status: 'FIXTURE',
+    cases,
+    journey_definitions: {
+      [journey.name]: {
+        owner: journey.owner,
+        path: journey.recipePath,
+        status: journey.status ?? 'IMPLEMENTED_FIXTURE',
+        required_check: journey.requiredCheck,
+      },
+    },
+  }, null, 2));
+}
+
+test('--journey interface: an unknown journey name is a structured nonzero refusal, and the registered real journeys without implemented recipes exit nonzero UNVERIFIED with their owner recorded', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-journey-'));
+  // Unknown name: never a default-success path.
+  const unknownRun = runJourney(['--journey', 'no-such-journey', '--profile', 'managed-pilot',
+    '--evidence-dir', path.join(root, 'e-unknown'), '--json']);
+  assert.notEqual(unknownRun.status, 0, 'unknown journey must be refused');
+  const unknownVerdict = JSON.parse(unknownRun.stdout);
+  assert.notEqual(unknownVerdict.verdict, 'PASS');
+  assert.match(unknownVerdict.reason, /journey-not-registered/);
+
+  // The three REAL registered journeys are still TO_IMPLEMENT (recipes owned
+  // by P3_2/P3_3/P4_8): missing real resources are UNVERIFIED and nonzero,
+  // never silently passed and never reported as a completed journey.
+  for (const [name, owner] of [
+    ['same-run-delivery', 'P3_2'],
+    ['real-comet-recovery', 'P3_3'],
+    ['post-delivery-permissions', 'P4_8'],
+  ]) {
+    const run = runJourney(['--journey', name, '--profile', 'managed-pilot',
+      '--evidence-dir', path.join(root, `e-${name}`), '--json']);
+    assert.equal(run.status, 2, `${name} without an implemented recipe must exit 2`);
+    const verdict = JSON.parse(run.stdout);
+    assert.equal(verdict.verdict, 'NOT-EXERCISED');
+    assert.match(verdict.reason, /journey-recipe-not-implemented/);
+    assert.match(verdict.reason, /UNVERIFIED/, 'missing resources are explicitly UNVERIFIED');
+    assert.equal(verdict.journey.owner, owner, 'the holder of the missing recipe must be recorded');
+  }
+});
+
+test('--journey interface: a fixture journey executes the bound scenario set → required check → assertion ids with the full target denominator', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-jfix-'));
+  const modulePath = fixtureModule(root, 'j01.test.mjs', [
+    "test('V_J01:observe real transition', () => { assert.ok(true); });",
+    "test('V_J01:readback terminal state', () => { assert.ok(true); });",
+  ].join('\n'));
+  const verdictSemantics = {
+    PASS: 'actions executed and expectations met',
+    FAIL: 'executed outcome contradicts the expected outcome',
+    'NOT-EXERCISED': 'prerequisite missing',
+    'NOT-APPLICABLE': 'explicitly out of scope with reason',
+  };
+  const recipePath = writeFixture(root, 'journey-recipe.json', JSON.stringify({
+    schemaVersion: 1,
+    scenario: 'J01',
+    acceptanceIds: ['J01'],
+    requiredAssertions: ['V_J01:observe', 'V_J01:readback'],
+    caseModule: modulePath,
+    sourceBinding: [{ path: 'specs/delivery-foundation/spec.md', scenario: 'J01' }],
+    actions: [{ type: 'spawn', command: `node --test ${modulePath}`, expected: 'journey slice green', expect: { kind: 'exitCode', value: 0 } }],
+    evidence: { artifacts: ['case-definition.json', 'action-1-stdout.txt', 'verdict.json'] },
+    verdictSemantics,
+  }));
+  const planPath = fixtureJourneyPlan(root, {
+    name: 'fixture-journey',
+    scenario: 'J01',
+    caseModule: modulePath,
+    owner: 'FIXTURE',
+    recipePath,
+    requiredCheck: 'V_FIXTURE_JOURNEY',
+  });
+  const evidenceDir = path.join(root, 'evidence');
+  const run = runJourney(['--journey', 'fixture-journey', '--profile', 'managed-pilot',
+    '--evidence-dir', evidenceDir, '--case-plan', planPath,
+    '--pilot-contract', fixturePilotContract(root), '--json']);
+  assert.equal(run.status, 0, `fixture journey with complete mapping must pass: ${run.stderr}`);
+  const verdict = readVerdict(run, evidenceDir);
+  assert.equal(verdict.verdict, 'PASS');
+  assert.equal(verdict.journey.name, 'fixture-journey');
+  assert.equal(verdict.journey.requiredCheck, 'V_FIXTURE_JOURNEY');
+  assert.ok((verdict.execution.requiredAssertions ?? []).length === 2
+    && verdict.execution.requiredAssertions.every((entry) => entry.status === 'satisfied'));
+
+  // Negative: the same journey whose executed module realizes only one of the
+  // two required sub-assertions is refused — the denominator binds the recipe,
+  // not the module's own green.
+  const partialModule = fixtureModule(root, 'j01-partial.test.mjs', [
+    "test('V_J01:observe real transition', () => { assert.ok(true); });",
+  ].join('\n'));
+  const partialRecipe = writeFixture(root, 'journey-recipe-partial.json', JSON.stringify({
+    schemaVersion: 1,
+    scenario: 'J01',
+    acceptanceIds: ['J01'],
+    requiredAssertions: ['V_J01:observe', 'V_J01:readback'],
+    caseModule: partialModule,
+    sourceBinding: [{ path: 'specs/delivery-foundation/spec.md', scenario: 'J01' }],
+    actions: [{ type: 'spawn', command: `node --test ${partialModule}`, expected: 'journey slice green', expect: { kind: 'exitCode', value: 0 } }],
+    evidence: { artifacts: ['case-definition.json', 'action-1-stdout.txt', 'verdict.json'] },
+    verdictSemantics,
+  }));
+  const planPartialPath = fixtureJourneyPlan(root, {
+    name: 'partial-journey',
+    scenario: 'J01',
+    caseModule: partialModule,
+    owner: 'FIXTURE',
+    recipePath: partialRecipe,
+    requiredCheck: 'V_PARTIAL_JOURNEY',
+  });
+  const partialRun = runJourney(['--journey', 'partial-journey', '--profile', 'managed-pilot',
+    '--evidence-dir', path.join(root, 'evidence-partial'), '--case-plan', planPartialPath,
+    '--pilot-contract', fixturePilotContract(root), '--json']);
+  assert.notEqual(partialRun.status, 0, 'a journey recipe whose module misses a required sub-assertion must refuse');
+  const partialVerdict = JSON.parse(partialRun.stdout);
+  assert.match(partialVerdict.reason, /assertion-mapping-not-verifiable/);
+  assert.ok((partialVerdict.execution.requiredAssertions ?? []).some((entry) => entry.id === 'V_J01:readback' && entry.status === 'missing'));
+});
 
 test('V_A15: an independent persistence readback fails the journey when a success claim never reached disk', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-a15-'));

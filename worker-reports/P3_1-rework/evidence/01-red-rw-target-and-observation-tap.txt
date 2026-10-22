@@ -1,0 +1,282 @@
+TAP version 13
+# Subtest: RW_TARGET_REQUIRED: P1-04 counterexample — scenario A01 registered to an unrelated all-green arithmetic suite must exit nonzero, never PASS
+not ok 1 - RW_TARGET_REQUIRED: P1-04 counterexample — scenario A01 registered to an unrelated all-green arithmetic suite must exit nonzero, never PASS
+  ---
+  duration_ms: 198.586125
+  location: '<worktree>/test/delivery-cases/3_1.mjs:516:1'
+  failureType: 'testCodeFailure'
+  error: 'an unrelated green suite must never sign the registered scenario; got exit 0'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 0
+  operator: 'notStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/3_1.mjs:526:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: RW_TARGET_REQUIRED: a declared required assertion with no matching test point (missing target / wrong mapping) is refused nonzero
+not ok 2 - RW_TARGET_REQUIRED: a declared required assertion with no matching test point (missing target / wrong mapping) is refused nonzero
+  ---
+  duration_ms: 72.157625
+  location: '<worktree>/test/delivery-cases/3_1.mjs:537:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /assertion-mapping-not-verifiable/. Input:
+    
+    'case-definition-schema-invalid'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'case-definition-schema-invalid'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/3_1.mjs:551:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: RW_TARGET_REQUIRED: zero-target denominator (empty requiredAssertions) is refused at the schema layer
+ok 3 - RW_TARGET_REQUIRED: zero-target denominator (empty requiredAssertions) is refused at the schema layer
+  ---
+  duration_ms: 69.750541
+  ...
+# Subtest: RW_TARGET_REQUIRED: composite scenario missing any required sub-assertion is refused nonzero
+not ok 4 - RW_TARGET_REQUIRED: composite scenario missing any required sub-assertion is refused nonzero
+  ---
+  duration_ms: 68.333083
+  location: '<worktree>/test/delivery-cases/3_1.mjs:574:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /assertion-mapping-not-verifiable/. Input:
+    
+    'case-definition-schema-invalid'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'case-definition-schema-invalid'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/3_1.mjs:594:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RW_TARGET_REQUIRED: all-skip module stays nonzero; a complete verifiable mapping passes
+ok 5 - RW_TARGET_REQUIRED: all-skip module stays nonzero; a complete verifiable mapping passes
+  ---
+  duration_ms: 372.452708
+  ...
+# Subtest: RW_OBSERVATION_REQUIRED: a required inspect whose live probe contradicts the typed expectation fails the journey — inspections are not free
+not ok 6 - RW_OBSERVATION_REQUIRED: a required inspect whose live probe contradicts the typed expectation fails the journey — inspections are not free
+  ---
+  duration_ms: 68.890833
+  location: '<worktree>/test/delivery-cases/3_1.mjs:631:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'NOT-EXERCISED'
+    - 'FAIL'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'FAIL'
+  actual: 'NOT-EXERCISED'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/3_1.mjs:654:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RW_OBSERVATION_REQUIRED: a required inspect whose probe command itself fails (commandSucceeds) fails the journey
+not ok 7 - RW_OBSERVATION_REQUIRED: a required inspect whose probe command itself fails (commandSucceeds) fails the journey
+  ---
+  duration_ms: 67.170083
+  location: '<worktree>/test/delivery-cases/3_1.mjs:662:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'NOT-EXERCISED'
+    - 'FAIL'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'FAIL'
+  actual: 'NOT-EXERCISED'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/3_1.mjs:685:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RW_OBSERVATION_REQUIRED: a non-empty state file whose bytes contradict the typed readback cannot sign PASS (fake/stale readback refused)
+not ok 8 - RW_OBSERVATION_REQUIRED: a non-empty state file whose bytes contradict the typed readback cannot sign PASS (fake/stale readback refused)
+  ---
+  duration_ms: 71.803542
+  location: '<worktree>/test/delivery-cases/3_1.mjs:688:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'NOT-EXERCISED'
+    - 'FAIL'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'FAIL'
+  actual: 'NOT-EXERCISED'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/3_1.mjs:714:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RW_OBSERVATION_REQUIRED: observed-version assertions anchor to an independent live probe (nb-3: registered value never self-attests)
+not ok 9 - RW_OBSERVATION_REQUIRED: observed-version assertions anchor to an independent live probe (nb-3: registered value never self-attests)
+  ---
+  duration_ms: 103.914291
+  location: '<worktree>/test/delivery-cases/3_1.mjs:718:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    a true live observation must pass: 
+    
+    2 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/3_1.mjs:745:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RW_OBSERVATION_REQUIRED: wrong candidate is refused — a typed equals expectation on the live git HEAD mismatch fails nonzero
+not ok 10 - RW_OBSERVATION_REQUIRED: wrong candidate is refused — a typed equals expectation on the live git HEAD mismatch fails nonzero
+  ---
+  duration_ms: 77.709375
+  location: '<worktree>/test/delivery-cases/3_1.mjs:754:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'NOT-EXERCISED'
+    - 'FAIL'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'FAIL'
+  actual: 'NOT-EXERCISED'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/3_1.mjs:779:12)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: --journey interface: an unknown journey name is a structured nonzero refusal, and the registered real journeys without implemented recipes exit nonzero UNVERIFIED with their owner recorded
+not ok 11 - --journey interface: an unknown journey name is a structured nonzero refusal, and the registered real journeys without implemented recipes exit nonzero UNVERIFIED with their owner recorded
+  ---
+  duration_ms: 50.317792
+  location: '<worktree>/test/delivery-cases/3_1.mjs:815:1'
+  failureType: 'testCodeFailure'
+  error: 'Unexpected end of JSON input'
+  code: 'ERR_TEST_FAILURE'
+  name: 'SyntaxError'
+  stack: |-
+    JSON.parse (<anonymous>)
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/3_1.mjs:821:31)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: --journey interface: a fixture journey executes the bound scenario set → required check → assertion ids with the full target denominator
+not ok 12 - --journey interface: a fixture journey executes the bound scenario set → required check → assertion ids with the full target denominator
+  ---
+  duration_ms: 54.229958
+  location: '<worktree>/test/delivery-cases/3_1.mjs:844:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    fixture journey with complete mapping must pass: {
+      "error": "INVALID_INPUT",
+      "message": "argument error: Unknown option '--journey'"
+    }
+    Usage: node tools/verify/delivery-journey.mjs --scenario <ID> --profile <profile> --evidence-dir <dir> [--json]
+           [--case-plan <path>] [--pilot-contract <path>] [--case-definition <path>]
+    
+      --scenario <ID>       scenario id from verification-case-plan.json (e.g. A01)
+      --profile <profile>   registered journey profile (managed-pilot)
+      --evidence-dir <dir>  directory for verdict.json + action evidence (created)
+      --json                print the verdict JSON to stdout
+      --case-plan <path>    override the scenario registry (default: change verification-case-plan.json)
+      --pilot-contract <path>  override the pilot contract (default: change pilot-contract.md)
+      --case-definition <path>  execute an explicit schema-validated case definition
+    
+    Exit codes: 0=PASS, 1=invalid input/prerequisite, 2=verification failure/UNVERIFIED.
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/3_1.mjs:879:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 2
+# fail 10
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1352.05225

@@ -74,6 +74,7 @@ function usage() {
     '       [--case-plan <path>] [--pilot-contract <path>] [--case-definition <path>]',
     '',
     '  --scenario <ID>       scenario id from verification-case-plan.json (e.g. A01)',
+    '  --journey <name>      registered journey (same-run-delivery | real-comet-recovery | post-delivery-permissions)',
     '  --profile <profile>   registered journey profile (managed-pilot)',
     '  --evidence-dir <dir>  directory for verdict.json + action evidence (created)',
     '  --json                print the verdict JSON to stdout',
@@ -108,7 +109,9 @@ function validateAgainstSchema(instance, schema, ptr = '') {
     if (sch.type) {
       const expected = Array.isArray(sch.type) ? sch.type : [sch.type];
       const actual = Array.isArray(value) ? 'array' : value === null ? 'null' : typeof value;
-      if (!expected.includes(actual)) {
+      const typeOk = expected.includes(actual)
+        || (expected.includes('integer') && actual === 'number' && Number.isInteger(value));
+      if (!typeOk) {
         errors.push({ path: at, message: `must be of type ${sch.type}` });
         return;
       }
@@ -124,6 +127,12 @@ function validateAgainstSchema(instance, schema, ptr = '') {
     if (Array.isArray(value)) {
       if (sch.minItems !== undefined && value.length < sch.minItems) {
         errors.push({ path: at, message: `fewer than minItems ${sch.minItems}` });
+      }
+      if (sch.uniqueItems === true) {
+        const seen = new Set(value.map((item) => JSON.stringify(item)));
+        if (seen.size !== value.length) {
+          errors.push({ path: at, message: 'must have unique items' });
+        }
       }
       if (sch.maxItems !== undefined && value.length > sch.maxItems) {
         errors.push({ path: at, message: `more than maxItems ${sch.maxItems}` });
@@ -147,8 +156,10 @@ function validateAgainstSchema(instance, schema, ptr = '') {
         if (key in value) walk(value[key], sub, `${at}/${key}`);
       }
       for (const sub of sch.allOf ?? []) walk(value, sub, at);
-      if (sch.if && validateAgainstSchema(value, sch.if).length === 0 && sch.then) {
-        walk(value, sch.then, at);
+      if (sch.if) {
+        const ifSatisfied = validateAgainstSchema(value, sch.if).length === 0;
+        if (ifSatisfied && sch.then) walk(value, sch.then, at);
+        if (!ifSatisfied && sch.else) walk(value, sch.else, at);
       }
     }
   };
@@ -252,23 +263,30 @@ function buildCaseDefinition(scenario, entry, caseModule) {
     schemaVersion: 1,
     scenario,
     acceptanceIds: [scenario],
+    // P1-04 target denominator: the plan entry (assertion_binding_required)
+    // demands the scenario token maps to executed ok test points — module
+    // green alone is never scenario pass.
+    requiredAssertions: [scenario],
     caseModule,
     sourceBinding: Array.isArray(entry?.source_binding) ? entry.source_binding : [],
     actions: [
       {
         type: 'spawn',
         command: `node --test ${caseModule}`,
-        expected: `exit 0; TAP summary fail=0 with pass>0; test point matching ${scenario} (V_${scenario} or bare id) is ok when present`,
+        expected: `exit 0; TAP summary fail=0 with pass>0; test point matching ${scenario} (V_${scenario} or bare id) is ok`,
+        expect: { kind: 'exitCode', value: 0 },
       },
       {
         type: 'readState',
         path: 'action-1-stdout.txt',
         expected: 'TAP evidence is persisted to disk and parseable with effective executions > 0',
+        expect: { kind: 'nonEmptyFile' },
       },
       {
         type: 'inspect',
         path: 'git rev-parse HEAD',
-        expected: 'candidate digest is recorded in the verdict',
+        expected: 'candidate digest is recorded in the verdict (observation only; does not gate)',
+        required: false,
       },
     ],
     evidence: {
@@ -290,33 +308,43 @@ function buildCaseDefinition(scenario, entry, caseModule) {
 }
 
 // --- TAP ----------------------------------------------------------------------
+//
+// Typed final-state readback (P1-04): the verdict is derived from the
+// structured TAP points of THIS invocation's spawns, attributed per
+// assertion id — never from suite-level green, caller-supplied pass JSON or
+// pre-existing evidence bytes.
 
-function parseTap(stdoutText, scenario) {
-  const text = String(stdoutText ?? '');
-  const last = (re) => {
-    const matches = [...text.matchAll(re)];
-    return matches.length > 0 ? Number(matches[matches.length - 1][1]) : 0;
-  };
-  const tests = last(/^# tests (\d+)\s*$/gm);
-  const pass = last(/^# pass (\d+)\s*$/gm);
-  const fail = last(/^# fail (\d+)\s*$/gm);
-  const skipped = last(/^# skipped (\d+)\s*$/gm);
+function parseTapPoints(stdoutText) {
   const points = [];
-  for (const match of text.matchAll(/^(ok|not ok)\s+\d+\s+-\s+(.+)$/gm)) {
+  for (const match of String(stdoutText ?? '').matchAll(/^(ok|not ok)\s+\d+\s+-\s+(.+)$/gm)) {
     const name = match[2];
     const isSkip = /# SKIP/.test(name);
     points.push({ ok: match[1] === 'ok', skipped: isSkip, name: name.replace(/\s*# SKIP.*$/, '') });
   }
-  const boundary = new RegExp(`(^|[^A-Za-z0-9])${scenario}([^A-Za-z0-9]|$)`);
-  const targetPoint = points.find((point) => boundary.test(point.name));
-  const target = targetPoint
-    ? {
-        token: scenario,
-        found: true,
-        status: targetPoint.skipped ? 'skipped' : targetPoint.ok ? 'ok' : 'failed',
-      }
-    : { token: scenario, found: false, status: null };
-  return { tests, pass, fail, skipped, points: points.length, target };
+  return points;
+}
+
+// Word-boundary match of one assertion id against test point names. Ids that
+// carry a composite sub-assertion suffix (V_X89:readback) use ':' as part of
+// the token so a bare id never matches a composite point and vice versa.
+function assertionIdMatches(pointName, id) {
+  const inner = id.includes(':') ? 'A-Za-z0-9_:' : 'A-Za-z0-9';
+  const boundary = new RegExp(`(^|[^${inner}])${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^${inner}]|$)`);
+  return boundary.test(pointName);
+}
+
+// Typed evaluation of one required assertion id against executed points.
+function evaluateAssertionId(id, points) {
+  const matched = points.filter((point) => assertionIdMatches(point.name, id));
+  const okCount = matched.filter((point) => point.ok && !point.skipped).length;
+  const failedCount = matched.filter((point) => !point.ok && !point.skipped).length;
+  const skippedCount = matched.filter((point) => point.skipped).length;
+  const status = matched.length === 0
+    ? 'missing'
+    : failedCount > 0 ? 'failed'
+      : okCount > 0 ? 'satisfied'
+        : skippedCount > 0 ? 'skipped' : 'missing';
+  return { id, status, matchedPoints: matched.length, ok: okCount, failed: failedCount, skipped: skippedCount };
 }
 
 // --- verdict ------------------------------------------------------------------
@@ -328,6 +356,7 @@ function main() {
       strict: true,
       options: {
         scenario: { type: 'string' },
+        journey: { type: 'string' },
         profile: { type: 'string' },
         'evidence-dir': { type: 'string' },
         json: { type: 'boolean', default: false },
@@ -341,12 +370,19 @@ function main() {
   }
 
   const scenario = options.scenario;
+  const journeyName = options.journey;
   const profile = options.profile;
   const evidenceDirOption = options['evidence-dir'];
-  if (!scenario || !profile || !evidenceDirOption) {
-    return failInput('--scenario, --profile and --evidence-dir are required');
+  if (journeyName && scenario) {
+    return failInput('--journey and --scenario are mutually exclusive; a journey recipe declares its own scenario');
   }
-  if (!SCENARIO_ID_RE.test(scenario)) {
+  if (journeyName && options['case-definition']) {
+    return failInput('--journey and --case-definition are mutually exclusive; the journey recipe is the case definition');
+  }
+  if ((!scenario && !journeyName) || !profile || !evidenceDirOption) {
+    return failInput('--scenario (or --journey), --profile and --evidence-dir are required');
+  }
+  if (scenario && !SCENARIO_ID_RE.test(scenario)) {
     return failInput(`--scenario must match ${SCENARIO_ID_RE}`);
   }
 
@@ -363,7 +399,8 @@ function main() {
     tool: 'tools/verify/delivery-journey.mjs',
     runnerInvariant: RUNNER_INVARIANT,
     scenario,
-    acceptanceIds: [scenario],
+    acceptanceIds: journeyName ? [] : [scenario],
+    journey: journeyName ? { name: journeyName, owner: null, requiredCheck: null, recipePath: null, registeredStatus: null } : null,
     profile,
     caseModule: null,
     sourceBinding: [],
@@ -381,6 +418,7 @@ function main() {
       skipped: 0,
       effectiveExecutions: 0,
       target: { token: scenario, found: false, status: null },
+      requiredAssertions: [],
     },
     candidate: { gitHead: null, node: process.version, platform: process.platform },
     timing: { startedAt, finishedAt: null, durationMs: null },
@@ -422,12 +460,76 @@ function main() {
   const gitHead = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8', maxBuffer: MAX_BUFFER, env: childEnv() });
   verdict.candidate.gitHead = gitHead.status === 0 ? String(gitHead.stdout).trim() : null;
 
-  // 1. Case source: an explicit schema-validated definition (the plan is not
-  // consulted) or the scenario registry entry.
+  // 0. Journey mode (execution-contract.observer_contract): resolve the
+  // registered journey -> owner/required_check -> recipe path. The recipe IS
+  // the case definition; this adapter only triggers and observes the actions
+  // the recipe declares — it never owns phase, recovery, retries or a second
+  // DAG. A registered real journey whose recipe has not landed (resources
+  // missing) is a nonzero UNVERIFIED refusal, never a pass and never a
+  // completed-journey claim.
   let explicitDefinition = null;
   let declaredModule = null;
   let entry = null;
-  if (options['case-definition']) {
+  let journeyRecipeDefinition = null;
+  if (journeyName) {
+    const planLoad = loadCasePlan(options['case-plan']);
+    if (planLoad.error) return failInput(`cannot read --case-plan: ${planLoad.error} (${redactHostPaths(planLoad.planPath ?? '')})`);
+    const registrations = planLoad.plan.journey_definitions;
+    if (!registrations || typeof registrations !== 'object' || !registrations[journeyName]) {
+      verdict.acceptanceIds = [];
+      return notExercised(`journey-not-registered: '${journeyName}' is not in verification-case-plan journey_definitions; unknown journeys never fall into a default-success path`);
+    }
+    const registration = registrations[journeyName];
+    verdict.journey = {
+      name: journeyName,
+      owner: typeof registration.owner === 'string' ? registration.owner : null,
+      requiredCheck: typeof registration.required_check === 'string' ? registration.required_check : null,
+      recipePath: typeof registration.path === 'string' ? displayPath(path.isAbsolute(registration.path) ? registration.path : path.join(repoRoot, registration.path)) : null,
+      registeredStatus: typeof registration.status === 'string' ? registration.status : null,
+    };
+    if (!verdict.journey.owner || !verdict.journey.requiredCheck || !registration.path) {
+      return notExercised('journey-registration-incomplete: owner/required_check/path must all be registered explicitly');
+    }
+    const recipeAbs = path.isAbsolute(registration.path) ? registration.path : path.join(repoRoot, registration.path);
+    if (!fs.existsSync(recipeAbs)) {
+      return notExercised(`journey-recipe-not-implemented (UNVERIFIED): the registered recipe does not exist on disk — real-journey resources are not present; recipe owner ${verdict.journey.owner} has not landed it (registered status: ${verdict.journey.registeredStatus ?? 'unknown'})`);
+    }
+    let recipeRaw;
+    try {
+      recipeRaw = fs.readFileSync(recipeAbs, 'utf8');
+    } catch (err) {
+      return notExercised(`journey-recipe-unreadable: ${String(err?.message ?? err)}`);
+    }
+    try {
+      journeyRecipeDefinition = JSON.parse(recipeRaw);
+    } catch (err) {
+      return notExercised(`journey-recipe-malformed: ${String(err?.message ?? err)}`);
+    }
+    if (typeof journeyRecipeDefinition.scenario !== 'string' || !SCENARIO_ID_RE.test(journeyRecipeDefinition.scenario)) {
+      return notExercised('journey-recipe-scenario-invalid: the recipe must declare a valid scenario id');
+    }
+    declaredModule = typeof journeyRecipeDefinition.caseModule === 'string' ? journeyRecipeDefinition.caseModule : '';
+    if (!declaredModule) {
+      return notExercised('case-module-not-registered');
+    }
+    const recipeModule = path.isAbsolute(declaredModule) ? declaredModule : path.join(repoRoot, declaredModule);
+    if (!fs.existsSync(recipeModule)) {
+      return notExercised('case-module-missing', { caseModule: declaredModule });
+    }
+    verdict.caseModule = declaredModule;
+    verdict.scenario = journeyRecipeDefinition.scenario;
+    verdict.acceptanceIds = Array.isArray(journeyRecipeDefinition.acceptanceIds) ? journeyRecipeDefinition.acceptanceIds : [];
+    verdict.sourceBinding = Array.isArray(journeyRecipeDefinition.sourceBinding) ? journeyRecipeDefinition.sourceBinding : [];
+    verdict.execution.target = { token: journeyRecipeDefinition.scenario, found: false, status: null };
+    explicitDefinition = journeyRecipeDefinition;
+  }
+
+  // 1. Case source: a journey recipe, an explicit schema-validated definition
+  // (the plan is not consulted) or the scenario registry entry.
+  if (journeyRecipeDefinition) {
+    // Journey recipes are already fully bound above; the scenario registry is
+    // not consulted (the journey_definitions registration is the binding).
+  } else if (options['case-definition']) {
     const definitionPath = options['case-definition'];
     let raw;
     try {
@@ -522,15 +624,24 @@ function main() {
   }
   writeJson('case-definition.json', definition);
 
-  // 7. Execute the declared actions — each exactly once (no retries).
+  // 7. Execute the declared actions — each exactly once (no retries). Every
+  // required action's typed expectation is evaluated against the LIVE
+  // observation this invocation produced (real exit code / bytes / probe
+  // stdout); a registered expectation value never attests to itself and a
+  // required inspection is never free (RW_OBSERVATION_REQUIRED).
   const spawnStdouts = [];
+  const spawnPoints = [];
   for (let index = 0; index < definition.actions.length; index += 1) {
     const action = definition.actions[index];
     const label = index + 1;
+    const isRequired = action.required !== false;
+    const expect = action.expect ?? null;
     const result = {
       index: label,
       type: action.type,
       expected: action.expected,
+      required: isRequired,
+      expectation: expect,
       ok: false,
       exitCode: null,
       durationMs: null,
@@ -538,6 +649,12 @@ function main() {
       observed: null,
     };
     const actionStart = Date.now();
+    let expectationFailed = false;
+    const expectationNote = (message) => {
+      expectationFailed = true;
+      if (result.note === null) result.note = message;
+      else result.note = `${result.note}; ${message}`;
+    };
     if (action.type === 'spawn') {
       const argv = action.command.split(/\s+/);
       result.command = action.command;
@@ -555,26 +672,65 @@ function main() {
       fs.writeFileSync(path.join(evidenceDir, stdoutName), run.stdout ?? '');
       fs.writeFileSync(path.join(evidenceDir, stderrName), run.stderr ?? '');
       spawnStdouts.push(run.stdout ?? '');
+      for (const point of parseTapPoints(run.stdout ?? '')) {
+        spawnPoints.push({ actionIndex: label, ...point });
+      }
       result.exitCode = run.status;
       if (run.error) {
         result.note = String(run.error?.message ?? run.error);
       } else if (run.status === null) {
         result.note = `terminated by signal ${run.signal}`;
-      } else {
-        result.ok = run.status === 0;
       }
+      const completed = !run.error && run.status !== null;
+      if (expect?.kind === 'exitCode') {
+        if (!completed) expectationNote(`expected exit ${expect.value}, spawn did not complete`);
+        else if (run.status !== expect.value) expectationNote(`expected exit ${expect.value}, observed exit ${run.status}`);
+      } else if (expect?.kind === 'commandSucceeds') {
+        if (!completed || run.status !== 0) expectationNote('expected the spawn to succeed');
+      }
+      if (expect?.kind === 'tapRequiredAssertions') {
+        const ownPoints = parseTapPoints(run.stdout ?? '');
+        const evaluations = (expect.assertions ?? []).map((id) => evaluateAssertionId(id, ownPoints));
+        result.assertions = evaluations;
+        for (const evaluation of evaluations) {
+          if (evaluation.status !== 'satisfied') {
+            expectationNote(`required assertion ${evaluation.id} not satisfied in this action's TAP (${evaluation.status})`);
+          }
+        }
+      }
+      // exitCode expectations govern nonzero exits (a refusal recipe may pin
+      // exit 2); without one, a completed nonzero exit is a plain action
+      // failure (pre-schema default kept).
+      const exitOk = expect?.kind === 'exitCode' ? completed && run.status === expect.value : completed && run.status === 0;
+      result.ok = exitOk && !expectationFailed;
     } else if (action.type === 'readState') {
       const target = path.isAbsolute(action.path) ? action.path : path.join(evidenceDir, action.path);
       result.command = null;
+      let stat = null;
       try {
-        const stat = fs.statSync(target);
-        result.observed = { path: displayPath(target), bytes: stat.size };
-        result.ok = stat.isFile() && stat.size > 0;
-        if (!result.ok) result.note = 'state file is empty or not a regular file';
+        stat = fs.statSync(target);
       } catch {
-        result.observed = { path: displayPath(target), bytes: null };
-        result.note = 'state file does not exist';
+        stat = null;
       }
+      const exists = stat !== null && stat.isFile();
+      const bytes = exists ? fs.readFileSync(target, 'utf8') : null;
+      result.observed = { path: displayPath(target), bytes: stat === null ? null : stat.size };
+      if (!exists) {
+        result.note = 'state file does not exist';
+      } else if (stat.size === 0) {
+        result.note = 'state file is empty';
+      }
+      if (expect?.kind === 'nonEmptyFile') {
+        if (!exists || stat.size === 0) expectationNote('expected a non-empty state file');
+      } else if (expect?.kind === 'equals') {
+        result.observed.value = bytes;
+        if (bytes === null) {
+          expectationNote('expected bytes, file missing');
+        } else if (bytes !== expect.value) {
+          expectationNote(`expected bytes do not match the observed file content (observed sha256 ${sha256(bytes)})`);
+        }
+      }
+      result.ok = exists && !expectationFailed;
     } else if (action.type === 'inspect') {
       result.command = null;
       if (/\s/.test(action.path)) {
@@ -586,18 +742,50 @@ function main() {
           env: childEnv(),
         });
         result.observed = observation.status === 0 ? String(observation.stdout).trim() : null;
-        result.note = observation.status === 0 ? null : `inspection command exited ${observation.status}`;
-        result.ok = true; // inspections record; they never fail the journey
-      } else {
-        try {
-          const stat = fs.statSync(action.path);
-          result.observed = { path: displayPath(action.path), exists: true, bytes: stat.size };
-        } catch {
-          result.observed = { path: displayPath(action.path), exists: false };
+        if (observation.error) {
+          result.note = String(observation.error?.message ?? observation.error);
+        } else if (observation.status !== 0) {
+          result.note = `inspection command exited ${observation.status}`;
         }
-        result.ok = true;
+        if (expect?.kind === 'commandSucceeds') {
+          if (observation.error || observation.status !== 0) expectationNote('expected the inspection command to succeed');
+        } else if (expect?.kind === 'equals') {
+          if (observation.error || observation.status !== 0) {
+            expectationNote('expected a value, the live probe failed');
+          } else if (String(observation.stdout).trim() !== expect.value) {
+            expectationNote(`expected value does not match the live probe output (observed sha256 ${sha256(String(observation.stdout).trim())})`);
+          }
+        }
+        result.ok = !expectationFailed;
+      } else {
+        let stat = null;
+        try {
+          stat = fs.statSync(action.path);
+        } catch {
+          stat = null;
+        }
+        result.observed = stat === null
+          ? { path: displayPath(action.path), exists: false }
+          : { path: displayPath(action.path), exists: true, bytes: stat.size };
+        if (expect?.kind === 'commandSucceeds') {
+          if (stat === null) expectationNote('expected the inspected path to exist');
+        } else if (expect?.kind === 'nonEmptyFile') {
+          if (stat === null || stat.size === 0) expectationNote('expected a non-empty inspected file');
+        } else if (expect?.kind === 'equals') {
+          const content = stat === null || !stat.isFile() ? null : fs.readFileSync(action.path, 'utf8');
+          result.observed.value = content;
+          if (content === null) {
+            expectationNote('expected bytes, inspected file missing');
+          } else if (content !== expect.value) {
+            expectationNote('expected bytes do not match the inspected file content');
+          }
+        }
+        result.ok = !expectationFailed;
       }
     }
+    // Optional observations (required:false) never gate the verdict; they
+    // record their live observation regardless of outcome.
+    if (!isRequired) result.ok = true;
     verdict.execution.actions.push(result);
   }
 
@@ -609,27 +797,54 @@ function main() {
     return fail(`evidence-artifact-missing: ${missingEvidence.join(', ')} — a claim without persisted bytes is not evidence`);
   }
 
-  // 9. Verdict from the executed outcomes.
-  const failedAction = verdict.execution.actions.find((action) => !action.ok && (action.type === 'spawn' || action.type === 'readState'));
-  const tap = parseTap(spawnStdouts.join('\n'), scenario);
-  verdict.execution.tests = tap.tests;
-  verdict.execution.pass = tap.pass;
-  verdict.execution.fail = tap.fail;
-  verdict.execution.skipped = tap.skipped;
-  verdict.execution.effectiveExecutions = tap.pass + tap.fail;
-  verdict.execution.target = tap.target;
+  // 9. Verdict from the executed outcomes, typed by assertion id (P1-04):
+  // every required assertion must map to executed ok test points — missing,
+  // skipped, failed or unmatched ids are structured nonzero refusals.
+  const failedAction = verdict.execution.actions.find((action) => action.required && !action.ok);
+  // Counts come from the structured test points this invocation produced —
+  // the same typed source used for assertion attribution, so counts, points
+  // and denominator can never disagree.
+  const pointFailures = spawnPoints.filter((point) => !point.ok && !point.skipped).length;
+  const pointSkips = spawnPoints.filter((point) => point.skipped).length;
+  verdict.execution.tests = spawnPoints.length;
+  verdict.execution.pass = spawnPoints.length - pointFailures - pointSkips;
+  verdict.execution.fail = pointFailures;
+  verdict.execution.skipped = pointSkips;
+  verdict.execution.effectiveExecutions = verdict.execution.pass + verdict.execution.fail;
+
+  const requiredIds = Array.isArray(definition.requiredAssertions) ? definition.requiredAssertions : [];
+  const evaluations = requiredIds.map((id) => evaluateAssertionId(id, spawnPoints));
+  verdict.execution.requiredAssertions = evaluations;
+  const scenarioToken = verdict.scenario;
+  const scenarioEvaluation = evaluateAssertionId(scenarioToken, spawnPoints);
+  verdict.execution.target = {
+    token: scenarioToken,
+    found: scenarioEvaluation.matchedPoints > 0,
+    status: scenarioEvaluation.matchedPoints === 0 ? null : scenarioEvaluation.status === 'satisfied' ? 'ok' : scenarioEvaluation.status,
+  };
 
   if (failedAction) {
-    return fail(`action-${failedAction.index}-failed: ${failedAction.note ?? `exit ${failedAction.exitCode}`} (expected: ${failedAction.expected})`);
+    return fail(`action-${failedAction.index}-failed (${failedAction.type}): ${failedAction.note ?? `exit ${failedAction.exitCode}`} (expected: ${failedAction.expected})`);
   }
-  if (tap.fail > 0) {
+  if (verdict.execution.fail > 0) {
     return fail('case-tests-failed: the executed case module reported failures against the frozen THEN');
   }
-  if (tap.target.found && tap.target.status === 'skipped') {
-    return notExercised('target-scenario-skipped: the test point for this scenario was skipped; skips are not execution');
+  if (verdict.execution.effectiveExecutions === 0) {
+    return notExercised(`no-effective-execution: ${verdict.execution.tests} test point(s) observed, 0 passed, ${verdict.execution.skipped} skipped — zero effective execution never passes`);
   }
-  if (tap.pass === 0) {
-    return notExercised(`no-effective-execution: ${tap.tests} test point(s) observed, 0 passed, ${tap.skipped} skipped — zero effective execution never passes`);
+  const failedAssertion = evaluations.find((evaluation) => evaluation.status === 'failed');
+  if (failedAssertion) {
+    return fail(`required-assertion-failed: ${failedAssertion.id} executed and failed — the scenario WHEN/THEN was exercised and contradicted`);
+  }
+  const skippedAssertion = evaluations.find((evaluation) => evaluation.status === 'skipped');
+  if (skippedAssertion) {
+    return notExercised(`target-scenario-skipped: every executed test point for ${skippedAssertion.id} was skipped; skips are not execution`);
+  }
+  const unresolved = evaluations.filter((evaluation) => evaluation.status !== 'satisfied');
+  if (unresolved.length > 0) {
+    return notExercised(`assertion-mapping-not-verifiable: no executed test point maps to required assertion(s) ${unresolved.map((evaluation) => evaluation.id).join(', ')} — a green suite without the registered target is not a scenario pass (P1-04)`, {
+      missing: unresolved.map((evaluation) => evaluation.id),
+    });
   }
   verdict.verdict = 'PASS';
   verdict.reason = null;

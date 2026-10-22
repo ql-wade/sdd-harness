@@ -1,0 +1,85 @@
+$ node tools/verify/delivery-journey.mjs --scenario A01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A01 --json
+exit: 0
+{
+ "verdict": "PASS",
+ "scenario": "A01",
+ "caseModule": "test/delivery-cases/2_1.mjs",
+ "execution": {
+  "command": "node --test test/delivery-cases/2_1.mjs",
+  "actions": [
+   {
+    "index": 1,
+    "type": "spawn",
+    "expected": "exit 0; TAP summary fail=0 with pass>0; test point matching A01 (V_A01 or bare id) is ok",
+    "required": true,
+    "expectation": {
+     "kind": "exitCode",
+     "value": 0
+    },
+    "ok": true,
+    "exitCode": 0,
+    "durationMs": 597,
+    "note": null,
+    "observed": null,
+    "command": "node --test test/delivery-cases/2_1.mjs",
+    "exitObserved": 0
+   },
+   {
+    "index": 2,
+    "type": "readState",
+    "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0",
+    "required": true,
+    "expectation": {
+     "kind": "nonEmptyFile"
+    },
+    "ok": true,
+    "exitCode": null,
+    "durationMs": null,
+    "note": null,
+    "observed": {
+     "path": ".whitebox/delivery-foundation/A01/action-1-stdout.txt",
+     "bytes": 1837
+    },
+    "command": null
+   },
+   {
+    "index": 3,
+    "type": "inspect",
+    "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+    "required": false,
+    "expectation": null,
+    "ok": true,
+    "exitCode": null,
+    "durationMs": null,
+    "note": null,
+    "observed": "ef97bd12cb4e74a03fe60e152fdab4196e8ac358",
+    "command": null
+   }
+  ],
+  "tests": 7,
+  "pass": 7,
+  "fail": 0,
+  "skipped": 0,
+  "effectiveExecutions": 7,
+  "target": {
+   "token": "A01",
+   "found": true,
+   "status": "ok"
+  },
+  "requiredAssertions": [
+   {
+    "id": "A01",
+    "status": "satisfied",
+    "matchedPoints": 1,
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   }
+  ]
+ },
+ "candidate": {
+  "gitHead": "ef97bd12cb4e74a03fe60e152fdab4196e8ac358",
+  "node": "v22.13.1",
+  "platform": "darwin"
+ }
+}
