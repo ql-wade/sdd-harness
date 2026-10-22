@@ -1,0 +1,60 @@
+TAP version 13
+# Subtest: H01: Git-delivery-complete but knowledge-pending — discovery, selection and re-entry still find the original run
+not ok 1 - H01: Git-delivery-complete but knowledge-pending — discovery, selection and re-entry still find the original run
+  ---
+  duration_ms: 13339.652667
+  location: '<worktree>/test/delivery-cases/4_6.mjs:584:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the pending archived run must be discovered, got none (no active Comet changes); raw {
+      "schema_version": "comet.resume_probe.v2",
+      "workflow": "classic",
+      "skill": "comet-classic",
+      "entrySource": "project-config",
+      "action": "none",
+      "changeName": null,
+      "phase": null,
+      "nex
+    
+    'none' !== 'ask_user'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'ask_user'
+  actual: 'none'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/4_6.mjs:619:10)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: Step 9 rework: after a REAL OpenSpec archive the same Run stays pending Kt; an interrupted Outline write recovers the original operation — fixed UUID, no second publish, no second archive, workspace kept
+not ok 2 - Step 9 rework: after a REAL OpenSpec archive the same Run stays pending Kt; an interrupted Outline write recovers the original operation — fixed UUID, no second publish, no second archive, workspace kept
+  ---
+  duration_ms: 16411.763625
+  location: '<worktree>/test/delivery-cases/4_6.mjs:698:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the real-archived pending run must be discovered, got none
+    
+    'none' !== 'ask_user'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'ask_user'
+  actual: 'none'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/delivery-cases/4_6.mjs:740:10)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 31038.821958
