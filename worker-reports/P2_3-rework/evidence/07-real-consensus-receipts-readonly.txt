@@ -1,0 +1,9 @@
+== P2_3 rework evidence 07: real consensus receipts (read-only observation; controller-reported r3 unanimous pass / r2 codex-REJECT block) ==
+path: openspec/changes/delivery-foundation-rearchitecture/consensus/2026-10-22-plan-r3/ (read-only)
+manifest: participants ['claude-code', 'zcode', 'codex-agent'] thresholds {'criterion': 7.0, 'overall': 8.0}
+tally: status PASSED votes {'ABSTAIN': 0, 'APPROVE': 3, 'REJECT': 0} missing [] dissenters []
+claude-code verdict APPROVE overall 8.8 min_criterion 8
+zcode verdict APPROVE overall 9.0 min_criterion 9
+codex-agent verdict APPROVE overall 8.3 min_criterion 8.0
+corroboration: the adapter's frozen REVIEW_PARTICIPANTS/REVIEW_THRESHOLDS (['claude-code','zcode','codex-agent'] / {overall:8,criterion:7}) match the real r3 manifest field-for-field, and the r3 tally (3 APPROVE / 0 missing / 0 dissenters, 8.8/9.0/8.3) is exactly the shape judgeArchitectureGate requires for PASSED.
+owns-surface note: P2_3's Owns set (bin/cli.js, lib/adapters/legacy-evidence.js, test/delivery-cli.test.js, test/delivery-cases/2_3.mjs) contains NO architecture-review receipt consumption surface (that is P2_5's adapter), so this is an observational cross-check only — no code in owns was changed to consume these receipts.

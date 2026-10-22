@@ -1,0 +1,17 @@
+== P2_3 rework evidence 06: scripts/check.sh stage inventory (pre-existing failures are OUTSIDE P2_3 owns; nothing this task can fix within its allowed set) ==
+-- pristine worktree run: bash scripts/check.sh --
+✅ agent-instructions: 规则层完整（AGENTS.md / CLAUDE.md 软链 / docs/agent / hooks / capabilities）
+✅ agent-skills: 5 个基础层技能齐全，触发矩阵一致
+❌ whitebox-verify green fixture failed
+
+-- whitebox green fixture direct: FAIL 'evidence file does not exist' for EV_PRODUCER/EV_WIRE/EV_CONSUMER/EV_RISK/EV_SURFACE (6 closure errors) --
+root cause: ledger.json references artifacts/*.log (producer/wire/consumer/risk/surface/service .log) that are UNTRACKED in git — present only in <REPO> main checkout, absent in every fresh worktree. Outside owns (.agents/skills/whitebox-verify).
+
+-- with the fixture completed by copying the untracked .log files from the main checkout (temporary, removed after) --
+✅ agent-instructions: 规则层完整（AGENTS.md / CLAUDE.md 软链 / docs/agent / hooks / capabilities）
+✅ agent-skills: 5 个基础层技能齐全，触发矩阵一致
+❌ whitebox-verify negative corpus mismatch
+
+-- negative corpus direct: 7 ok / 1 fail (f7-secret-scan target string 'possible AWS access key found' no longer emitted by EITHER validator entry; outputs still identical new==old -> pre-existing vendored-skill drift, not a P2_3 regression) --
+-- remaining stages verified individually: multi-agent-consensus-review gate selftest python3 test_review_gate.py -> exit 0; YAML/JSON static set (4 YAML + 3 JSON per check.sh globs) -> 0 errors; npm test -> 2 known-env failures only (see report commands). --
+-- temporary .log copies removed: git status --porcelain -> empty. --

@@ -1,0 +1,22 @@
+== P2_3 rework evidence 03: mutation cycle (inject -> RED -> restore -> GREEN), 5/5 caught, zero residue ==
+injected: 'if (approveVotes !== REVIEW_PARTICIPANTS.length || dissenters.length >' -> 'if (false) { // MUTATION-M1'
+=== M1-unanimity-disabled: RED exit=1 failing_tests=2 | GREEN exit=0 | residue_files=0
+not ok 6 - E03: absent ballot, majority-only approval, low score, blocking finding and stale-digest ballot each refuse the gate (real gate exits)
+not ok 18 - 2.5.b E03: missing ballots, dissents and old digests never pass the gate (real gate exits)
+injected: "if (typeof ballot.score?.overall !== 'number' || ballot.score.overall " -> "if (typeof ballot.score?.overall !== 'number' || ballot.score.overall "
+=== M2-threshold-relaxed: RED exit=1 failing_tests=1 | GREEN exit=0 | residue_files=0
+not ok 6 - E03: absent ballot, majority-only approval, low score, blocking finding and stale-digest ballot each refuse the gate (real gate exits)
+injected: '    if (ballot.artifact_sha256 !== manifest.artifact_sha256) {\n      r' -> '    if (false && ballot.artifact_sha256 !== manifest.artifact_sha256) '
+=== M3-stale-digest-tolerated: RED exit=1 failing_tests=2 | GREEN exit=0 | residue_files=0
+not ok 6 - E03: absent ballot, majority-only approval, low score, blocking finding and stale-digest ballot each refuse the gate (real gate exits)
+not ok 18 - 2.5.b E03: missing ballots, dissents and old digests never pass the gate (real gate exits)
+injected: "process.exitCode = result.verdict === 'pass' ? 0 : 2;" -> 'process.exitCode = 0; // MUTATION-M5'
+=== M5-cli-exit2-contract-broken: RED exit=1 failing_tests=2 | GREEN exit=0 | residue_files=0
+not ok 2 - 2.3: the same legacy evidence cannot close a product capability — executed but blocked exits 2 (B10: no product-closure claim)
+not ok 13 - delivery-gate: the legacy report layer cannot close a product capability — verdict blocked, exit 2 (B10)
+injected: '  if (report.schemaVersion !== SUPPORTED_LEGACY_VERSION) {\n    return ' -> '  if (false && report.schemaVersion !== SUPPORTED_LEGACY_VERSION) { //'
+=== M6-legacy-silent-migration: RED exit=1 failing_tests=2 | GREEN exit=0 | residue_files=0
+not ok 4 - 2.3 B07: an incompatible legacy report version is refused explicitly by the adapter — no field fabrication, no silent migration
+not ok 18 - adapter B07: incompatible versions are refused explicitly (older and newer)
+FINAL_RESIDUE: 0 files
+-- post-cycle residue check: git status --porcelain -> 0 files (see FINAL_RESIDUE above) --
