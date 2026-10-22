@@ -1,0 +1,98 @@
+{
+  "task": "P4_6 (原任务 4.6) rework — 归档后收尾机制重验：R06 四事实分离 / Kp 先于 seal / Kt 卡整体完成 / 归档后同 Run 续作 / SECOND archive 零使用",
+  "run": "rework-seven-p1-r1",
+  "worktree": ".claude/worktrees/rw-p4-6 (branch rework/p4-6-post-archive, base master@837a0be)",
+  "final_status": "GREEN",
+  "build": {
+    "fingerprint": "d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6",
+    "note": "default lock (6 patches, sha-verified per-file) rebuilt from the pinned upstream tarball (28a7e2fa…, digest matched); lock-registered 0003+tests/4_6 present; mutation builds live under separate fingerprints and are not registered anywhere"
+  },
+  "red_cases": [
+    {
+      "id": "REWORK-BASELINE",
+      "classification": "消费面漂移已复现",
+      "claim": "base 837a0be 的 4_6.mjs 在当前 runtime 上 1/10：P1_2 rework 落地的 P1-02 门证据契约（pass 结果须绑定 role/inputDigest/report/reportDigest）与 P1-01 的 open-complete=enter-design R 前提，均晚于上轮 P4_6 验收；共享 acceptGate 助手与 driveToArchiveReady 顺序过期",
+      "evidence": "worker-reports/P4_6-rework/evidence/red-baseline-p1-02.txt（9 fail：3 处 'gate R pass result lacks bound review evidence (P1-02)'，其余经 driveToArchiveReady 的 open-complete R 前提）"
+    }
+  ],
+  "fixes": [
+    "acceptGate 采用 2_4.mjs 规范证据形（role/inputDigest/report/reportDigest；A=真实共识 tally CLOSED/unanimous/artifactDigest 重绑定；T=testDesignReview sufficient/strong/oracle 绑定）",
+    "driveToArchiveReady：R 派发+接纳先于 open-complete（P1-01 enter-design 前提），A/T/P 随后",
+    "H07 增补 R06 四事实显式断言（V 回执 / 规格归档 / 知识席位空 / 整体未完成 同时成立且互不蕴含）",
+    "新增 Kp-before-seal 测试：guard archive 在义务未封时拒绝（'run-level knowledge closeout obligation is unmet; archived does not complete this run'）；external 关闭无 Runtime K 派发被拒（P3_2 journey 步 7 声明的执行面）；Kp 先封 → guard 清、archive 直接 completed",
+    "新增 Step 9 测试：真实 OpenSpec CLI（钉定 1.11.0 隔离安装，经 COMET_OPENSPEC 接缝）执行归档移动；真归档后同 Run 仍 pending Kt（waiting/knowledge-closeout/completionBlocked）；resume-probe 发现、select 可选；中断窗口（注册后回执丢失+unknown 观察）重试恢复原 operation（固定 UUID、operationKey 不变、directive 非 create）；重入归档零第二归档、run_id 不变、工作区与恢复条目保留；独立读回落地后关闭席位 → 同 Run completed"
+  ],
+  "reverified": [
+    {
+      "behavior": "R06 四事实分离（H07）：V 回执 pass ∧ 已归档 ∧ knowledgeCloseoutRecorded=false ∧ status=waiting 同时成立；席位封存后同一 Run 才 completed",
+      "negative": "M1 变异（status 恒 'completed'）→ H07 notStrictEqual(run.status,'completed') 即刻失败 + Step 9 'waiting' 断言失败",
+      "mutation_caught": "M1：2/2 fail（evidence/mutation-m1.txt）"
+    },
+    {
+      "behavior": "归档后同 Run 续作（H01/Step 9）：resume-probe 发现归档 pending Run（ask_user/archived 理由）、select/current 可选、next 指向 knowledge-closeout、run_id 前后一致",
+      "negative": "M2 变异（archivedDeliveryExcluded 恒 true）→ resume-probe 返回 action=none（发现层排除复现）",
+      "mutation_caught": "M2：2/2 fail（evidence/mutation-m2.txt）"
+    },
+    {
+      "behavior": "固定 Outline UUID 与原 operation 恢复（H04/Step 9）：注册后回执丢失重试恢复同一 operation（operationKey/documentId 不变），unknown 永不缺席（directive≠create）",
+      "negative": "M4b 变异（operationKey 按次拼接 ledger 长度）→ H04/Step 9 均断言 '-0' ≠ '-1' 失败；M4 初版（existing 恒 undefined）未被捕获——operationKey 由输入确定性派生，重注册仍同 key，该次变异不构成契约破坏（如实记录）",
+      "mutation_caught": "M4b：2/2 fail（evidence/mutation-m4.txt）"
+    },
+    {
+      "behavior": "Kp 先于 seal：义务未封时 guard archive 拒绝；external 目标无 Runtime K 派发拒绝；Kp 先封 → archive 即 completed（journey 步 7→8 序）",
+      "negative": "结构面：同 Run 内嵌拒绝文本断言（obligation is unmet / no Runtime K dispatch）；测试内先断言拒绝、封存后断言清除",
+      "mutation_caught": "（见 M3 备注）"
+    },
+    {
+      "behavior": "SECOND 假 archive 零使用（H01/Step 9）：重入归档 exit 0、archive 目录计数恒 1、规格归档不重执行",
+      "negative": "重入断言内嵌（entries==1 两处）",
+      "mutation_caught": "（重入幂等由 findClassicArchiveChangeDirectory 复用已归档目录；未单独变异）"
+    }
+  ],
+  "mutation_note_M3": "M3（KEPT/clear 分支：closeoutBlocked 时不清 current-change 条目）未被判捕获：归档命令的 delivery-complete 清除臂只在'首次归档且 delivery 已 complete'时可达，而自然流程中 delivery complete 需要归档提交先行；重入归档在到达清除块前经幂等恢复路径提前返回。该分支的 delivery-complete 臂经现有可达流程不可观测——0003 内容被 6-patch 锁与跨任务指纹 d4370930 钉定，改动须由控制器集成波次重登记，路由给控制器（发现：KEPT 分支当前零可观测覆盖，非缺陷非阻塞）。",
+  "p32_p33_consistency": {
+    "method": "只读对照 pilot-journey/same-run-delivery.journey.json 步 7-10 与 pilot-recovery/real-comet-recovery.journey.json 步 7-9 的 gate/recordFields/dispatchBinding 对本任务 owns 机制（0003 runtime 面 + 4_6.mjs 断言）",
+    "verdict": "一致，无语义冲突",
+    "details": [
+      "步 7 Kp：'an external target without a Runtime K dispatch is refused' 与 recordKnowledgeCloseout 的 classic-state-command 实现逐字一致（'no Runtime K dispatch; driver-registered publication is required'），并在新 Kp 测试中以真实 CLI 负例固定；recordFields targetKind/target/revision/readbackDigest/execution/recordedAt 与 KnowledgeCloseout 接口逐字段相等；accept 命令 face 'comet state knowledge-closeout <change> --file' 一致",
+      "步 7 D06：'the Runtime reads the published target back itself' — file 目标 Runtime 自读回（knowledgeTargetDigest）在 H07/Kp 测试中实证（缺目标/摘要不符即拒）",
+      "步 8 archive：preCondition 'Kp receipt present' 对应 guard archive 义务检查（Kp 测试实证拒绝与清除）；'comet archive <change> (real openspec archive move)' 由 Step 9 经真实 CLI 实证；R06 复合语义（Outline 未发布允许规格归档成功但整体未完成）由 H07/Step 9 的 waiting 状态固定",
+      "步 9 recovery：'same product Run/authority' + 'reconcile-then-resume through the CLI recovery face' + H04/H05 fixed-UUID/lastRevision 消费面 — 与 0003 operation 注册/恢复/冲突面一致并经 Step 9 组合实证；真实 Outline 栈本轮不可达（127.0.0.1:3000/5556 连接拒绝，与 journey 记录一致）→ 实时窗口保持 VERIFY 持有 UNVERIFIED，本任务仅机制面",
+      "P3_3 步 7（unknown 先读回再补发、无重复页）= H04 unknown→reconcile-info 面；步 9（恢复解析后仅一次 completed）= Kt 席位 completionBlocked→seal→completed 面",
+      "journey 步 7 constructionScope 与 步 8 前提（R,A,T,P,V+Kp sealed）与本任务无所有权交叠，无配方声明与本机制相抵"
+    ]
+  },
+  "registration_status_disposition": "verification-case-plan.json 不在本任务 Owns（Owns=0003.patch/4_6.mjs/tests-4_6.patch）→ 路由不改。实证前提不成立：当前文件（base 837a0be）92 个 case 全部 status=RETEST_REQUIRED_AFTER_SEVEN_P1，顶层 PLANNED_NOT_EXECUTED，不存在 TO_IMPLEMENT；journey_definitions 已注册 same-run-delivery/real-comet-recovery/post-delivery-permissions（P3_2/P3_3 配方面已在册）。无需要翻转的 registration.status。",
+  "anchors": {
+    "command": "node tools/verify/delivery-journey.mjs --scenario H01..H09 --profile managed-pilot --evidence-dir <dir> --json（node 22 默认 shell）",
+    "result": "H01–H09 全部 PASS（每例 tests=12 pass=12，H06 记录 tests=9 pass=9 亦 PASS）；修复前基线在同锚点下因 9 fail 而 NOT-EXERCISED/FAIL",
+    "env_note": "node 24.15.0 下 node --test 管道默认 reporter 已改为 spec（非 TAP），锚点解析得 0 测试点 → NOT-EXERCISED；runner（delivery-journey.mjs，非本任务 Owns）在 node 24 环境需显式 --test-reporter tap 才可解析。如实路由给控制器/VERIFY（环境事实，非本任务代码缺陷）；本轮锚点检查全部在 node 22 下执行并 PASS",
+    "evidence": "worker-reports/P4_6-rework/evidence/anchor-H01..H09.json"
+  },
+  "regression": {
+    "owns": "test/delivery-cases/4_6.mjs 12/12 绿 ×2（evidence/green-4_6-mjs-run1.txt, run2.txt）",
+    "full_suite": "npm test 440/442，2 个失败均为交接文档列名的已知环境项：C08 host-openspec 漂移（宿主 CLI 1.14.3 ≠ 基线钉定 1.3.1，classic-integration.test.js:476）与 B08 preservation（spec-closeout.test.js:321，宿主 CLI 行为）；两文件本任务零改动，失败与 4_6.mjs 无依赖（evidence/npm-test-full.txt）"
+  },
+  "files_changed": [
+    "test/delivery-cases/4_6.mjs",
+    "worker-reports/P4_6.rework.json",
+    "worker-reports/P4_6-rework/evidence/*"
+  ],
+  "commands": {
+    "node tools/comet/prepare-source.mjs --archive <pinned tarball> --json → exit 0": "pristine source（复用主检出的 digest 校验 tarball）",
+    "node tools/comet/build.mjs --archive <pinned tarball> --json → exit 0": "fingerprint d4370930…（未复用漂移副本，本工作树独立重建）",
+    "node --test test/delivery-cases/4_6.mjs (base file) → exit 1 (1 pass/9 fail)": "RED",
+    "node --test test/delivery-cases/4_6.mjs ×2 → exit 0 (12/12)": "GREEN ×2",
+    "for S in H01..H09: node tools/verify/delivery-journey.mjs --scenario $S … → exit 0 PASS": "锚点 ×9",
+    "node tools/comet/build.mjs --lock .sdd/mutations/m{1,2,4}.lock.json … + SDD_COMET_LOCK=… node --test → exit 1 (目标测试全失败)": "变异 ×3 捕获",
+    "npm test → exit 1 (440/442, 2 已知项)": "回归"
+  },
+  "unverified": [
+    "真实 Outline 实例的发布/超时实时窗口（栈未运行，连接拒绝；journey 步 9 记录一致，holder VERIFY）",
+    "M3 KEPT/clear 分支的 delivery-complete 臂在现有可达流程不可观测（见 mutation_note_M3，路由控制器）",
+    "node 24 下锚点 runner 的 TAP 解析（需 --test-reporter tap；runner 非 Owns，路由）"
+  ],
+  "blockers_or_questions": [
+    "无阻塞。三项路由如实记录：(1) M3 分支可观测性改进须动 0003 → 控制器集成波次；(2) 锚点 runner 在 node 24 的 reporter 兼容 → runner owner；(3) 宿主 openspec 1.14.3 与基线钉定 1.3.1 漂移 → 既有 C08 已知项，未处理"
+  ]
+}

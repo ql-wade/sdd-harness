@@ -13,6 +13,16 @@
 // lost run state is never fabricated and cleanup cannot remove the only
 // recovery copy (H08); a copied workspace is never a second writer — the
 // run's authority binding decides, and transfer is explicit (H09).
+//
+// Rework additions (rework-seven-p1-r1): R06's four closeout facts (candidate
+// acceptance, spec archive, team knowledge seat, overall completion) are
+// asserted as distinct facts (H07); Kp keeps the seal ahead of the archive —
+// the archive phase gate refuses the unmet obligation and an external
+// closeout needs the Runtime K dispatch; and a REAL OpenSpec archive (pinned
+// isolated 1.11.0 CLI over the COMET_OPENSPEC seam) leaves the same Run
+// pending Kt while an interrupted Outline write recovers the original
+// operation — fixed UUID, no second publish, no second archive, workspace
+// kept.
 // Every interaction runs the real built CLI in scratch projects under $TMPDIR
 // with an isolated HOME and PATH stubs; live host configuration is untouched.
 //
@@ -48,6 +58,11 @@ const entrypoint = path.join(buildDir, 'work/bin/comet.js');
 
 const built = await fs.access(path.join(buildDir, 'distribution.json')).then(() => true, () => false);
 const prepared = await fs.access(path.join(projectRoot, '.sdd/vendor/comet', lock.source.commit, 'provenance.json')).then(() => true, () => false);
+
+// The REAL OpenSpec CLI archive face: the pinned isolated 1.11.0 candidate
+// (same install as 1_5/classic-integration — never a global upgrade).
+const isolatedOpenspecBin = path.join(projectRoot, '.sdd/tools/openspec-1.11.0/node_modules/@fission-ai/openspec/bin/openspec.js');
+const isolatedOpenspecReady = await fs.access(isolatedOpenspecBin).then(() => true, () => false);
 
 const pinnedNode = lock.toolchain.node;
 let nodeExecutable = process.execPath;
@@ -146,17 +161,72 @@ const writeArtifacts = async (change, root = project) => {
   return dir;
 };
 
+const sha256Text = (text) => crypto.createHash('sha256').update(text).digest('hex');
+const GATE_ROLE_OF = { R: 'requirements-owner', A: 'reviewer', T: 'reviewer', P: 'planner', V: 'verifier', K: 'knowledge-publisher' };
+
+// P1-02 pass evidence (same canonical shape as 2_4.mjs): a Runtime dispatch
+// registration is not review evidence — a pass result must bind the dispatched
+// inputs, carry the original report with its digest, and the gate-specific
+// independent-review artifact (A: closed unanimous consensus tally; T:
+// test-design sufficiency with an attested oracle). This run's real unanimous
+// consensus receipt is the read-only positive control; the artifactDigest
+// re-binds to the scratch dispatch inputDigest because the reviewed artifact
+// is the scratch change. Reviewer independence itself stays the I02 boundary
+// and is not claimed here.
+const consensusDir = path.join(projectRoot, 'openspec/changes/delivery-foundation-rearchitecture/consensus/2026-10-22-plan-r3');
+const realTally = await fs.readFile(path.join(consensusDir, 'tally.json'), 'utf8').then((t) => JSON.parse(t), () => null);
+const realConsensusManifest = await fs.readFile(path.join(consensusDir, 'manifest.json'), 'utf8').then((t) => JSON.parse(t), () => null);
+
+const consensusForDispatch = (binding, overrides = {}) => ({
+  reviewId: realConsensusManifest?.review_id ?? 'seven-p1-plan-20261022-r3',
+  rule: 'unanimous',
+  status: 'CLOSED',
+  participants: (realConsensusManifest?.participants ?? ['claude-code', 'zcode', 'codex-agent']).slice(),
+  ballots: (realTally?.ballots ?? []).map((ballot) => ({
+    agent: ballot.agent,
+    verdict: ballot.verdict,
+    blockingFindings: ballot.blocking_findings,
+    summaryDigest: sha256Text(String(ballot.summary ?? '')),
+  })),
+  artifactDigest: binding.inputDigest,
+  ...overrides,
+});
+
+const testDesignForDispatch = (binding, overrides = {}) => ({
+  verdict: 'sufficient',
+  oracle: 'strong',
+  inputDigest: binding.inputDigest,
+  reviewer: 'test-authoring',
+  findings: [],
+  ...overrides,
+});
+
+const passEvidence = (gate, binding, extra = {}) => ({
+  execution: binding.execution,
+  attempt: binding.attempt,
+  verdict: 'pass',
+  role: GATE_ROLE_OF[gate],
+  inputDigest: binding.inputDigest,
+  report: `# Gate ${gate} independent review\n\nReviewed by ${GATE_ROLE_OF[gate]} over the dispatched inputs (${binding.inputDigest.slice(0, 12)}…).\n`,
+  reportDigest: null, // filled by withReportDigest
+  ...(gate === 'A' ? { consensus: consensusForDispatch(binding) } : {}),
+  ...(gate === 'T' ? { testDesignReview: testDesignForDispatch(binding) } : {}),
+  ...extra,
+});
+const withReportDigest = (result) => ({ ...result, reportDigest: sha256Text(result.report) });
+
 const acceptGate = (change, gate, { verdict = 'pass', findings, execution, attempt, root: over, env = {} } = {}) => {
   const dispatched = comet(['state', 'dispatch-gate', change, gate, '--json'], { root: over, env });
   assert.equal(dispatched.json?.exitCode, 0, `dispatch-gate ${gate} failed: ${refusalText(dispatched).slice(0, 400)}`);
   const binding = dispatched.json?.data?.dispatch
     ?? JSON.parse((dispatched.stdout ?? '').trim().split('\n').pop());
-  const result = {
+  const result = withReportDigest({
+    ...passEvidence(gate, binding),
     execution: execution ?? binding.execution,
     attempt: attempt ?? binding.attempt,
-    verdict,
+    ...(verdict !== 'pass' ? { verdict } : {}),
     ...(findings ? { findings } : {}),
-  };
+  });
   const resultFile = path.join(scratch, `result-${change}-${gate}-${Math.random().toString(36).slice(2)}.json`);
   fsSync.writeFileSync(resultFile, JSON.stringify(result));
   const accepted = comet(['state', 'accept-gate', change, gate, '--file', resultFile, '--json'], { root: over, env });
@@ -194,8 +264,12 @@ async function driveToArchiveReady(change, { root = project, authority } = {}) {
   }
   const rel = `docs/openspec/changes/${change}`;
   assert.equal(run(['state', 'set', change, 'design_doc', `${rel}/design.md`, 'test_intent', `${rel}/test-intent.md`, 'plan', `docs/superpowers/plans/${change}-plan.md`, '--json']).json?.exitCode, 0);
+  // P1-01/P1-02 (post-rework runtime): open-complete evaluates the
+  // enter-design premises, so the R receipt must be dispatched and accepted
+  // with bound review evidence before the transition.
+  acceptAll(change, ['R'], root, authorityEnv);
   assert.equal(run(['state', 'transition', change, 'open-complete', '--json']).json?.exitCode, 0);
-  acceptAll(change, ['R', 'A', 'T', 'P'], root, authorityEnv);
+  acceptAll(change, ['A', 'T', 'P'], root, authorityEnv);
   assert.equal(run(['state', 'complete-design', change, '--design-doc', `${rel}/design.md`, '--json']).json?.exitCode, 0);
   assert.equal(run(['state', 'set', change, 'build_mode', 'executing-plans', 'tdd_mode', 'tdd', 'isolation', 'current', '--json']).json?.exitCode, 0);
   await writeCheckPolicy(root);
@@ -213,6 +287,25 @@ async function driveToArchiveReady(change, { root = project, authority } = {}) {
   assert.equal(run(['state', 'transition', change, 'archive-confirm', '--json']).json?.exitCode, 0);
   return changeDir(change, root);
 }
+
+// A real Git coordination world: delivery authorization + an archive commit
+// make the native delivery verification report complete (H01/step 9).
+const makeGitWorld = async (name) => {
+  const gitRoot = path.join(scratch, name);
+  await fs.mkdir(gitRoot, { recursive: true });
+  const git = (args, cwd = gitRoot) => {
+    const result = spawnSync('git', ['-c', 'commit.gpgsign=false', ...args], { cwd, encoding: 'utf8', env: childEnv({}, gitRoot) });
+    assert.equal(result.status, 0, `git ${args.join(' ')} failed: ${plain(result.stderr).slice(0, 200)}`);
+    return result.stdout.trim();
+  };
+  git(['init', '-b', 'main']);
+  git(['config', 'user.email', 'p46@example.test']);
+  git(['config', 'user.name', 'p46']);
+  git(['commit', '--allow-empty', '-m', 'world init']);
+  const gitInit = comet(['init', gitRoot, '--yes', '--scope', 'project', '--workflow', 'classic', '--platform', 'claude', '--codegraph', 'skip', '--language', 'en'], { root: gitRoot, timeout: 300_000 });
+  assert.equal(gitInit.status, 0, `comet init (git world) failed: ${plain(gitInit.stderr).slice(0, 300)}`);
+  return { gitRoot, git };
+};
 
 // Drive through the real archive move: archived=true with the knowledge
 // closeout obligation unmet (the post-archive continuation state).
@@ -405,6 +498,17 @@ test('H07: the native archive path keeps the run open — status, continuation a
   assert.equal(next.json?.data?.nextAction?.kind, 'knowledge-closeout');
   const gates = comet(['state', 'gates', change, '--json']);
   assert.equal(gates.json?.data?.completionBlocked, true);
+  // R06 four-fact separation: at this instant all four closeout facts coexist
+  // and stay distinct — (1) the product candidate acceptance is a recorded V
+  // receipt, (2) the spec archive happened, (3) the team knowledge seat is
+  // still empty, (4) the overall delivery is not completed. No fact implies
+  // another.
+  const vReceipt = gates.json?.data?.receipts?.find((entry) => entry.gate === 'V');
+  assert.equal(vReceipt?.verdict, 'pass', 'fact 1: the product candidate acceptance is its own recorded V receipt');
+  assert.equal(vReceipt?.execution?.length > 0, true, 'fact 1 binds its own dispatch execution');
+  assert.notEqual(run.status, 'completed', 'fact 2+3 do not imply fact 4: archived with an empty seat is not completed');
+  assert.equal(gates.json?.data?.knowledgeCloseoutRecorded, false, 'fact 3: the team knowledge seat is its own empty fact');
+  assert.equal(gates.json?.data?.knowledgeCloseoutRequired, true);
   // Selection: the archive command must not have cleared the current-change
   // recovery entry while the closeout is pending (needsAuthorization here).
   const selection = JSON.parse(await fs.readFile(path.join(project, '.comet', 'current-change.json'), 'utf8'));
@@ -429,23 +533,59 @@ test('H07: the native archive path keeps the run open — status, continuation a
   void dir;
 });
 
+test('Kp before seal: the archive phase gate refuses the unmet obligation and an external closeout needs the Runtime K dispatch', async (t) => {
+  if (skipIfNoBuild(t)) return;
+  const change = 'p46-kp';
+  await driveToArchiveReady(change);
+  // Driver gate (Kp before seal, Knowledge.Closeout.v1): the archive phase
+  // refuses while the run-level knowledge obligation is unmet…
+  const premature = comet(['guard', change, 'archive']);
+  assert.equal(premature.status !== 0, true, 'the archive phase gate must refuse before the knowledge obligation is sealed');
+  assert.match(refusalText(premature), /run-level knowledge closeout obligation/);
+  assert.match(refusalText(premature), /archived does not complete this run/);
+  // …and an external closeout without a Runtime K dispatch is refused —
+  // driver-registered publication is required (the P3_2 same-run journey
+  // step 7 enforcement face).
+  const externalNoDispatch = path.join(scratch, `kp-external-nodispatch-${change}.json`);
+  await fs.writeFile(externalNoDispatch, JSON.stringify({
+    targetKind: 'external',
+    target: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+    revision: 'rev-1',
+    readbackDigest: sha256('approved payload'),
+    execution: 'kp-no-such-execution',
+    recordedAt: new Date().toISOString(),
+  }));
+  const refusedExternal = comet(['state', 'knowledge-closeout', change, '--file', externalNoDispatch, '--json']);
+  assert.equal(refusedExternal.json?.exitCode !== 0, true, 'an external closeout without a Runtime K dispatch is refused');
+  assert.match(refusalText(refusedExternal), /no Runtime K dispatch/);
+  // Kp-first order: once the seat is sealed BEFORE the archive (the same-run
+  // seal route the refusal names), the obligation check clears and the same
+  // archive completes the run.
+  const knowledgeFile = path.join(project, 'knowledge', `llmwiki-${change}.md`);
+  await fs.mkdir(path.dirname(knowledgeFile), { recursive: true });
+  await fs.writeFile(knowledgeFile, '# Project Knowledge\n\nKp sealed before the archive.\n');
+  const receipt = path.join(scratch, `kc-${change}.json`);
+  await fs.writeFile(receipt, JSON.stringify({
+    targetKind: 'file',
+    target: path.relative(project, knowledgeFile),
+    revision: 'r1',
+    readbackDigest: sha256(await fs.readFile(knowledgeFile, 'utf8')),
+    execution: 'driver-exec-kp',
+    recordedAt: new Date().toISOString(),
+  }));
+  const sealed = comet(['state', 'knowledge-closeout', change, '--file', receipt, '--json']);
+  assert.equal(sealed.json?.exitCode, 0, `the Kp seal must record before the archive: ${plain(sealed.stderr).slice(0, 300)}`);
+  const cleared = comet(['guard', change, 'archive']);
+  assert.doesNotMatch(refusalText(cleared), /obligation is unmet/, 'after the seal the archive phase obligation check clears');
+  assert.equal(comet(['archive', change, '--json']).status, 0, 'the sealed run archives cleanly');
+  assert.equal((await runStateOf(await archivedDir(change))).status, 'completed', 'Kp sealed before the archive: the archive itself completes the same run');
+});
+
 test('H01: Git-delivery-complete but knowledge-pending — discovery, selection and re-entry still find the original run', async (t) => {
   if (skipIfNoBuild(t)) return;
   // A real Git coordination root: delivery authorization + an archive commit
   // make the native delivery verification report complete.
-  const gitRoot = path.join(scratch, 'git-world');
-  await fs.mkdir(gitRoot, { recursive: true });
-  const git = (args, cwd = gitRoot) => {
-    const result = spawnSync('git', ['-c', 'commit.gpgsign=false', ...args], { cwd, encoding: 'utf8', env: childEnv({}, gitRoot) });
-    assert.equal(result.status, 0, `git ${args.join(' ')} failed: ${plain(result.stderr).slice(0, 200)}`);
-    return result.stdout.trim();
-  };
-  git(['init', '-b', 'main']);
-  git(['config', 'user.email', 'p46@example.test']);
-  git(['config', 'user.name', 'p46']);
-  git(['commit', '--allow-empty', '-m', 'world init']);
-  const gitInit = comet(['init', gitRoot, '--yes', '--scope', 'project', '--workflow', 'classic', '--platform', 'claude', '--codegraph', 'skip', '--language', 'en'], { root: gitRoot, timeout: 300_000 });
-  assert.equal(gitInit.status, 0, `comet init (git world) failed: ${plain(gitInit.stderr).slice(0, 300)}`);
+  const { gitRoot, git } = await makeGitWorld('git-world');
   const change = 'p46-h01';
   await driveToArchiveReady(change, { root: gitRoot });
   // Authorization is recorded pre-archive (archive phase, verify pass, not
@@ -553,6 +693,110 @@ test('H04: the Outline document UUID is fixed before the first request; a lost r
   const recorded = comet(['state', 'knowledge-closeout', change, '--file', premature, '--json']);
   assert.equal(recorded.json?.exitCode, 0, plain(recorded.stderr).slice(0, 300));
   assert.equal((await runStateOf(dir)).status, 'completed', 'the recovered publication completes the same run');
+});
+
+test('Step 9 rework: after a REAL OpenSpec archive the same Run stays pending Kt; an interrupted Outline write recovers the original operation — fixed UUID, no second publish, no second archive, workspace kept', async (t) => {
+  if (skipIfNoBuild(t)) return;
+  if (!isolatedOpenspecReady) {
+    return t.skip('isolated openspec 1.11.0 is not installed under .sdd/tools; run the isolated install (never a global upgrade)');
+  }
+  const { gitRoot, git } = await makeGitWorld('git-world-step9');
+  const change = 'p46-s9';
+  await driveToArchiveReady(change, { root: gitRoot });
+  // REAL OpenSpec archive: the pinned isolated 1.11.0 CLI performs the move
+  // through the documented COMET_OPENSPEC seam (spec-driven schema, doc-only
+  // change), not the world's openspec stub.
+  await fs.writeFile(path.join(gitRoot, 'docs/openspec/config.yaml'), 'schema: spec-driven\n');
+  await fs.writeFile(path.join(changeDir(change, gitRoot), '.openspec.yaml'), 'schema: spec-driven\nskip_specs: true\n');
+  const authFile = path.join(gitRoot, 's9-delivery-auth.json');
+  await fs.writeFile(authFile, JSON.stringify({ action: 'local', targetBranch: 'main' }));
+  assert.equal(comet(['state', 'delivery', change, '--file', 's9-delivery-auth.json', '--json'], { root: gitRoot }).json?.exitCode, 0, refusalText(comet(['state', 'delivery', change, '--file', 's9-delivery-auth.json'], { root: gitRoot })).slice(0, 300));
+  const realArchive = comet(['archive', change, '--json'], { root: gitRoot, env: { COMET_OPENSPEC: isolatedOpenspecBin } });
+  assert.equal(realArchive.status, 0, `real openspec archive failed: ${refusalText(realArchive).slice(0, 400)}`);
+  assert.match(refusalText(realArchive), /OpenSpec archive completed/, 'the archive ran through the real OpenSpec CLI');
+  const dir = await archivedDir(change, gitRoot);
+  const entriesAfterRealArchive = (await fs.readdir(path.join(gitRoot, 'docs/openspec/changes/archive'))).filter((name) => name.endsWith(change));
+  assert.equal(entriesAfterRealArchive.length, 1, 'the real CLI performs exactly one archive move');
+  // R06 after the REAL archive: the same run is still pending Kt — archived
+  // is a spec fact, not the delivery completion, and discovery agrees.
+  const run = await runStateOf(dir);
+  const runIdBefore = run.runId;
+  assert.equal(run.status, 'waiting', 'a real-archived closeout-pending run stays open (waiting)');
+  assert.equal(run.currentStep, 'full.closeout.knowledge');
+  const next = comet(['state', 'next', change, '--json'], { root: gitRoot });
+  assert.equal(next.json?.data?.nextAction?.kind, 'knowledge-closeout');
+  const gates = comet(['state', 'gates', change, '--json'], { root: gitRoot });
+  assert.equal(gates.json?.data?.completionBlocked, true, 'Kt still blocks overall completion after the real archive');
+  git(['add', '-A']);
+  git(['commit', '-m', 'archive p46-s9']);
+  const commit = git(['rev-parse', 'HEAD']);
+  const commitFile = path.join(gitRoot, 's9-delivery-commit.json');
+  await fs.writeFile(commitFile, JSON.stringify({ action: 'local', targetBranch: 'main', commit }));
+  const deliveryWrite = comet(['state', 'delivery', change, '--file', 's9-delivery-commit.json', '--json'], { root: gitRoot });
+  await fs.rm(commitFile);
+  assert.equal(deliveryWrite.json?.exitCode, 0, refusalText(deliveryWrite).slice(0, 400));
+  const probe = comet(['resume-probe', JSON.stringify({ utterance: 'continue', agent_context: { non_trivial_work: true, already_in_comet_flow: false } }), '--json'], { root: gitRoot });
+  const resolution = probe.json?.action ? probe.json : JSON.parse(probe.json?.stdout ?? probe.stdout ?? '{}');
+  assert.equal(resolution.action, 'ask_user', `the real-archived pending run must be discovered, got ${resolution.action}`);
+  assert.equal(resolution.changeName, change, 'discovery must name the real-archived change');
+  assert.equal(comet(['state', 'select', change, '--json'], { root: gitRoot }).json?.exitCode, 0, 'the real-archived closeout-pending run stays selectable');
+  // Interruption window: the Outline write timed out / the Comet process died
+  // after registration — the operation is registered, the receipt never lands.
+  const dispatch = comet(['state', 'dispatch-gate', change, 'K', '--json'], { root: gitRoot });
+  assert.equal(dispatch.json?.exitCode, 0, `the archived closeout window must dispatch K: ${plain(dispatch.stderr).slice(0, 300)}`);
+  const binding = dispatch.json?.data?.dispatch;
+  const documentId = 'c41f2e9a-6d2c-4a7b-9b1e-5c0d4e6f7a8b';
+  const opFile = path.join(scratch, 's9-op.json');
+  await fs.writeFile(opFile, JSON.stringify({
+    knowledgeId: 'k-outline-closeout-s9',
+    documentId,
+    collection: 'engineering',
+    payloadDigest: sha256('approved closeout payload s9'),
+  }));
+  const registered = comet(['state', 'knowledge-publish', change, '--file', opFile, '--json'], { root: gitRoot });
+  assert.equal(registered.json?.exitCode, 0, `knowledge-publish refused: ${refusalText(registered).slice(0, 300)}`);
+  const operation = registered.json?.data?.operation;
+  assert.equal(operation.documentId, documentId, 'the client UUID is the fixed target identity');
+  const retry = comet(['state', 'knowledge-publish', change, '--file', opFile, '--json'], { root: gitRoot });
+  assert.equal(retry.json?.exitCode, 0);
+  assert.equal(retry.json?.data?.operation?.operationKey, operation.operationKey, 'the retry recovers the SAME operation');
+  assert.equal(retry.json?.data?.operation?.documentId, documentId, 'no second logical document after the interruption');
+  const unknownFile = path.join(scratch, 's9-unknown.json');
+  await fs.writeFile(unknownFile, JSON.stringify({ operationKey: operation.operationKey, documentId, outcome: 'unknown' }));
+  const observed = comet(['state', 'knowledge-observe', change, '--file', unknownFile, '--json'], { root: gitRoot });
+  assert.equal(observed.json?.exitCode, 0, plain(observed.stderr).slice(0, 300));
+  assert.equal(observed.json?.data?.operation?.state, 'pending', 'an unknown outcome keeps the operation open');
+  assert.notEqual(observed.json?.data?.directive?.action, 'create', 'unknown is never absence: no duplicate publish directive');
+  // Same-Run re-entry after the interruption: no second archive, the
+  // workspace and its recovery copies survive untouched.
+  assert.equal(comet(['archive', change, '--json'], { root: gitRoot, env: { COMET_OPENSPEC: isolatedOpenspecBin } }).status, 0, 'archive re-entry must succeed without re-archiving');
+  const entriesAfterReentry = (await fs.readdir(path.join(gitRoot, 'docs/openspec/changes/archive'))).filter((name) => name.endsWith(change));
+  assert.equal(entriesAfterReentry.length, 1, 're-entry must not create a second archive');
+  assert.equal((await runStateOf(dir)).runId, runIdBefore, 'the original run_id survives the re-entry');
+  assert.equal((await runStateOf(dir)).status, 'waiting', 'the recovered run stays pending Kt');
+  const selection = JSON.parse(await fs.readFile(path.join(gitRoot, '.comet', 'current-change.json'), 'utf8'));
+  assert.equal(selection.selection?.change ?? selection.change, change, 'the recovery entry is retained through the interruption window');
+  // The independent readback lands over the SAME fixed UUID: only now does
+  // the recovered publication close the seat and complete the SAME run.
+  const existsFile = path.join(scratch, 's9-exists.json');
+  await fs.writeFile(existsFile, JSON.stringify({
+    operationKey: operation.operationKey, documentId, outcome: 'exists',
+    revision: 'rev-1', readbackDigest: sha256('approved closeout payload s9'),
+  }));
+  const readback = comet(['state', 'knowledge-observe', change, '--file', existsFile, '--json'], { root: gitRoot });
+  assert.equal(readback.json?.exitCode, 0, plain(readback.stderr).slice(0, 300));
+  const receiptFile = path.join(scratch, `s9-closeout-${change}.json`);
+  await fs.writeFile(receiptFile, JSON.stringify({
+    targetKind: 'external',
+    target: documentId,
+    revision: 'rev-1',
+    readbackDigest: sha256('approved closeout payload s9'),
+    execution: binding.execution,
+    recordedAt: new Date().toISOString(),
+  }));
+  const recorded = comet(['state', 'knowledge-closeout', change, '--file', receiptFile, '--json'], { root: gitRoot });
+  assert.equal(recorded.json?.exitCode, 0, plain(recorded.stderr).slice(0, 300));
+  assert.equal((await runStateOf(dir)).status, 'completed', 'the recovered publication completes the SAME run');
 });
 
 test('H05: a lastRevision conflict stays open — no revision refresh, no blind overwrite, identity is owned', async (t) => {
