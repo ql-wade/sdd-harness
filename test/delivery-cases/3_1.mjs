@@ -229,20 +229,40 @@ test('3.1.b runner PASS on real scenario A02 (2_1.mjs) and A20 (2_3.mjs) from di
   }
 });
 
-test('3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario token in its test names — module-level green alone is now a structured refusal, never a scenario PASS (P1-04)', () => {
-  const evidenceDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-b09-')), 'evidence');
-  const run = runJourney(['--scenario', 'B09', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir, '--json']);
-  // 1_6.mjs executes real tests but none is anchored to B09: the frozen plan
-  // entry (assertion_binding_required) demands a verifiable case→assertion
-  // mapping, so the runner refuses instead of counting other tests' success
-  // as this scenario's success. This is the strengthened denominator: the
-  // fix path is a scenario-anchored test point in the 1_6 case module or an
-  // explicit recipe definition — not a waiver.
+test('3.1.b runner on a convention-less real case: a green module with no scenario token in its test names — module-level green alone is now a structured refusal, never a scenario PASS (P1-04)', () => {
+  // Internal anchor-less fixture (not the live 1_6.mjs, which gained B09
+  // anchors in the P1_6 rework): preserves the original regression intent —
+  // the runner refuses to count an unmapped green module as a scenario pass.
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-b09-'));
+  const evidenceDir = path.join(root, 'evidence');
+  const modulePath = fixtureModule(root, 'b09-unmapped.test.mjs', "test('plain passing point without any scenario token', () => { assert.ok(true); });");
+  const caseDefinition = writeFixture(root, 'case-definition.json', JSON.stringify({
+    schemaVersion: 1,
+    scenario: 'B09',
+    acceptanceIds: ['B09'],
+    requiredAssertions: ['B09'],
+    caseModule: modulePath,
+    sourceBinding: [{ path: 'specs/delivery-foundation/spec.md', scenario: 'B09' }],
+    actions: [{ type: 'spawn', command: `node --test ${modulePath}`, expected: 'exit 0 — module green', expect: { kind: 'exitCode', value: 0 } }],
+    evidence: { artifacts: ['case-definition.json', 'verdict.json'] },
+    verdictSemantics: {
+      PASS: 'actions executed and expectations met',
+      FAIL: 'executed outcome contradicts the expected outcome',
+      'NOT-EXERCISED': 'prerequisite missing',
+      'NOT-APPLICABLE': 'explicitly out of scope with reason',
+    },
+  }));
+  const run = runJourney(['--scenario', 'B09', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+    '--case-definition', caseDefinition, '--json']);
+  // The fixture module executes a real passing test but none is anchored to
+  // B09: the frozen plan entry (assertion_binding_required) demands a
+  // verifiable case→assertion mapping, so the runner refuses instead of
+  // counting other tests' success as this scenario's success.
   assert.equal(run.status, 2, `unmapped module green must refuse, got ${run.status}: ${run.stderr}`);
   const verdict = readVerdict(run, evidenceDir);
   assert.equal(verdict.verdict, 'NOT-EXERCISED');
   assert.match(verdict.reason, /assertion-mapping-not-verifiable/);
-  assert.equal(verdict.caseModule, 'test/delivery-cases/1_6.mjs');
+  assert.equal(verdict.caseModule, modulePath);
   assert.equal(verdict.execution.fail, 0, 'a real defect in the submodule must still refuse the pass — no green-washing');
   assert.equal(verdict.execution.target.found, false, 'no V_-convention point exists in this module');
   assert.ok((verdict.execution.requiredAssertions ?? []).some((entry) => entry.id === 'B09' && entry.status === 'missing'),
