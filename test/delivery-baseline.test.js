@@ -172,6 +172,30 @@ test('A02: scope change invalidates related downstream receipts and old approval
   assert.deepEqual(current.valid.map((r) => r.id), ['evidence-current']);
 });
 
+test('A02 real-drift anchor: invalidation is driven by a digest recomputed from real file bytes, not a self-declared value (nb-3)', () => {
+  const root = makeProject(DEMO_FILES);
+  const first = computeFullInputBaseline({ root, manifest: DEMO_MANIFEST });
+  assert.equal(first.ok, true);
+  const receipt = { id: 'evidence-product', boundDigests: { product: first.digest } };
+  const unchanged = invalidateOnScopeChange({
+    changed: { kind: 'product', digest: first.digest, revision: 'r1' },
+    receipts: [receipt],
+  });
+  assert.deepEqual(unchanged.invalidated, []);
+  assert.deepEqual(unchanged.valid.map((r) => r.id), ['evidence-product']);
+
+  fs.writeFileSync(path.join(root, 'migrations/001_init.sql'), 'CREATE TABLE t(id int, name text);\n');
+  const second = computeFullInputBaseline({ root, manifest: DEMO_MANIFEST });
+  assert.notEqual(second.digest, first.digest, 'precondition: the real migration drift moved the recomputed digest');
+  const drifted = invalidateOnScopeChange({
+    changed: { kind: 'product', digest: second.digest, revision: 'r2' },
+    receipts: [receipt],
+  });
+  assert.deepEqual(drifted.valid, [], 'a receipt bound to the pre-drift recomputed digest must not survive the real scope change');
+  assert.deepEqual(drifted.invalidated.map((r) => r.id), ['evidence-product']);
+  assert.match(drifted.invalidated[0].reason, /does not match current digest/);
+});
+
 test('A07: a passed report is refused after inputs change and accepted while current', () => {
   const root = makeProject(DEMO_FILES);
   const first = computeFullInputBaseline({ root, manifest: DEMO_MANIFEST });
