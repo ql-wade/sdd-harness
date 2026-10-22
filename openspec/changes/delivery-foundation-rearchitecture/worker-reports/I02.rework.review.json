@@ -1,0 +1,50 @@
+{
+  "task": "I02",
+  "phase": "rework-r1",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-22T12:20:29.761403+00:00",
+  "head_reviewed": "aad193b",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "evidence/04-full-npm-test.log 被 .gitignore 静默排除未随分支 — 控制器已 git add -f",
+      "disposition": "fixed (d692aa7)"
+    },
+    {
+      "id": "nb-2",
+      "summary": "S2.2 sh -c 的 -t 被 $0/$1 吞掉致镜像未打 tag(fail-loud) — 控制器已修(tag 移入命令串)",
+      "disposition": "fixed (d692aa7)"
+    },
+    {
+      "id": "nb-3",
+      "summary": "/tmp/claude 固定临时目录未 mkdir(fail-closed) — 控制器已修(TMPDIR_NATIVE+mkdir)",
+      "disposition": "fixed (d692aa7)"
+    },
+    {
+      "id": "nb-4",
+      "summary": "build-plan 新动词需登记 execution-contract cli_contract(控制器侧) — 本轮登记",
+      "disposition": "registered"
+    },
+    {
+      "id": "nb-5",
+      "summary": "master@c1c9130 出现第三失败 P1_5 method dispatch content pinned(在 rw-i02@aad193b 通过) — master 侧漂移待查, 非 I02 diff 引入",
+      "disposition": "routed: controller 下一波核查"
+    }
+  ],
+  "independently_rerun": {
+    "boundary_clean": true,
+    "mirror_deepEqual": "sourceInputs.patches 与 upstream 逐字节相等(47d2eebd/3b8aab43); toolchain 相等; archiveSha/bytes 一致; 6 磁盘补丁重哈希全对",
+    "fingerprint_recomputed": "d4370930… 按 build.mjs:31 算法独立重算 == image.lock == 主树供应商构建",
+    "dockerfile_hunks": "3 hunk 抽样与测试断言一一对应(补丁链/确定性入口/openspec tarball)",
+    "new_negatives": "8 码全在自建副本复现 exit 2; N1-N2 负例执行",
+    "build_plan": "双态 exit 0(drift=[])/exit 2(PATCH_LOCK_MISMATCH) 确认",
+    "mutations_redone": "M1-M9 全重做 exit 2 正确码; fixture 逐次快照恢复; 活仓库零触碰",
+    "role_policy_alignment": "runtimeBinding 三字段与 P2_4 0002 补丁运行时强制逐点对齐(941/1009/1027/1997/2008/828 行)",
+    "terminal_channel": "S0-S9 命令+判据全; sh -n 过; 两处可执行性缺陷已由控制器修复",
+    "npm_test": "439/436/2/1 恰已知(C08/B08; B08 #416->#428 套件重命名); master 交叉证实非本 diff 引入",
+    "owns_suite": "20/20",
+    "honest_gating": true
+  }
+}

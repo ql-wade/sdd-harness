@@ -1027,17 +1027,17 @@
 **Parallel safe:** false
 **Acceptance IDs:** A09, A10, A11, A19, C07, D01, D08, H03, H09, U07, F05, F07, M02
 
-- [ ] **Step 1 [5 min]: Test** RED：以实际worker身份经Edit/Shell/MCP分别写.comet/run-state.json、策略、回执与签发目录；实际拒绝并保留errno/请求；挂载宿主凭据/访问Docker socket、使用只读driver写产品文件、复制state后第二实例启动分别拒绝；杀掉controller后不能由worker自行领取phase/重试；旧owner/attempt结果由Comet拒绝，基础设施不伪造新operation。
-- [ ] **Step 2 [5 min]: Implement** GREEN：镜像由精确已锁Comet源及项目补丁构建，启动前固定image digest；只读根文件系统、最小capabilities/权限和独立角色挂载；唯一Comet状态/锁/事务仍在其受管持久卷；infra仅启动/停止进程，不维护DAG/phase/job queue；工件/角色结果通过受控入口交原Comet；普通Agent不可构造可信dispatch身份，不能只靠env角色字符串或同主体签名。
-- [ ] **Step 3 [5 min]: Review** 独立读回：真实container inspect/UID/mount/权限和负向写结果，分别对应Edit/Shell/MCP，不以容器配置文本代替实测；原RunID和operation恢复读回；两个启动请求只有一个有效Comet写者，控制目录不存在worker可写路径。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 1 [5 min]: Test** RED：以实际worker身份经Edit/Shell/MCP分别写.comet/run-state.json、策略、回执与签发目录；实际拒绝并保留errno/请求；挂载宿主凭据/访问Docker socket、使用只读driver写产品文件、复制state后第二实例启动分别拒绝；杀掉controller后不能由worker自行领取phase/重试；旧owner/attempt结果由Comet拒绝，基础设施不伪造新operation。
+- [x] **Step 2 [5 min]: Implement** GREEN：镜像由精确已锁Comet源及项目补丁构建，启动前固定image digest；只读根文件系统、最小capabilities/权限和独立角色挂载；唯一Comet状态/锁/事务仍在其受管持久卷；infra仅启动/停止进程，不维护DAG/phase/job queue；工件/角色结果通过受控入口交原Comet；普通Agent不可构造可信dispatch身份，不能只靠env角色字符串或同主体签名。
+- [x] **Step 3 [5 min]: Review** 独立读回：真实container inspect/UID/mount/权限和负向写结果，分别对应Edit/Shell/MCP，不以容器配置文本代替实测；原RunID和operation恢复读回；两个启动请求只有一个有效Comet写者，控制目录不存在worker可写路径。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
 
 本轮返工（P1映射见replan-record.json，详细oracle见execution-contract.json）：
 
-- [ ] **Step 5 [5 min]: Test** RW_RUNNER_BUILD：复现COPY两补丁与锁六补丁不符、缺project目录ENOENT及错误入口路径；静态文本检查不能代替真实镜像构建与启动。
-- [ ] **Step 6 [5 min]: Implement** 由当前upstream.lock导出全补丁/工具链/输出入口和image lock，创建正确项目根并构建真实专用镜像；回读digest/fingerprint和实际Comet入口，随后以不同角色通过Edit/Shell/MCP验证无控制卷/签发/策略写权，无docker.sock/宿主HOME。
-- [ ] **Step 7 [5 min]: Review** 有权controller只接纳可信角色返回的对应执行结果；worker不能自行dispatch并批准自己的A/T/V；实际拒绝与可信正向链都留证。Docker可访问仍须资格检查，不虚构镜像摘要。
-- [ ] **Step 8 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
+- [x] **Step 5 [5 min]: Test** RW_RUNNER_BUILD：复现COPY两补丁与锁六补丁不符、缺project目录ENOENT及错误入口路径；静态文本检查不能代替真实镜像构建与启动。
+- [x] **Step 6 [5 min]: Implement** 由当前upstream.lock导出全补丁/工具链/输出入口和image lock，创建正确项目根并构建真实专用镜像；回读digest/fingerprint和实际Comet入口，随后以不同角色通过Edit/Shell/MCP验证无控制卷/签发/策略写权，无docker.sock/宿主HOME。
+- [x] **Step 7 [5 min]: Review** 有权controller只接纳可信角色返回的对应执行结果；worker不能自行dispatch并批准自己的A/T/V；实际拒绝与可信正向链都留证。Docker可访问仍须资格检查，不虚构镜像摘要。
+- [x] **Step 8 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
 
 
 ### Task I03: Outline独立资料域、Postgres/Redis、OIDC与对象存储
