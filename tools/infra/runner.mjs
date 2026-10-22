@@ -73,6 +73,7 @@ function usage() {
   return [
     'usage:',
     '  runner.mjs validate --registry <file> [--refs <file>] [--dir <runner dir>] [--json]',
+    '  runner.mjs build-plan [--dir <runner dir>] [--json]',
     '  runner.mjs qualify  --registry <file> [--dir <runner dir>] [--json]',
     '  runner.mjs up       --registry <file> [--dir <runner dir>] [--json]',
     '  runner.mjs probe    --case <role-denial|duplicate-authority> [--endpoint <url>] [--dir <runner dir>] [--json]',
@@ -368,6 +369,11 @@ function validateWorkspaceMounts({ mounts, policy }) {
   if (mounts.rules?.hostBindMounts !== 'FORBIDDEN' || mounts.rules?.dockerSocket !== 'FORBIDDEN') {
     add('WORKSPACE_INTERFACE_INVALID', 'workspace-mounts.json:rules', { reason: 'hostBindMounts and dockerSocket must be FORBIDDEN' });
   }
+  if (mounts.rules?.projectRootMount !== 'READ_ONLY_BOUNDARY') {
+    add('PROJECT_ROOT_MOUNT_NOT_READONLY', 'workspace-mounts.json:rules.projectRootMount', {
+      reason: 'the delivery project root, if mounted at admission, is a read-only boundary (READ_ONLY_BOUNDARY); writable or undeclared rules are rejected',
+    });
+  }
   // mode 文件不进 worker 可写面（V_I02_METHOD_STATE_SCOPE）：共享 mode 状态不挂载、不可写、不作依据。
   const methodState = mounts.methodState;
   if (!methodState || methodState.workerWritable !== false || methodState.mountedIntoRunner !== false) {
@@ -556,6 +562,96 @@ function validateDockerfile(text) {
   return violations;
 }
 
+// 上游锁（integrations/comet/upstream.lock.json）是补丁链/工具链/指纹的唯一事实源。
+// fingerprint 算法与 tools/comet/build.mjs 的 fingerprintOf 完全一致：sha256(JSON({archive, patches, toolchain}))。
+function computeBuildFingerprint(upstream) {
+  return crypto.createHash('sha256').update(JSON.stringify({
+    archive: upstream.source.sha256,
+    patches: (upstream.patches ?? []).map(({ path: patchPath, sha256 }) => ({ path: patchPath, sha256 })),
+    toolchain: upstream.toolchain,
+  })).digest('hex');
+}
+
+function loadUpstreamLock() {
+  try {
+    return { upstream: JSON.parse(fs.readFileSync(path.join(repoRoot, 'integrations', 'comet', 'upstream.lock.json'), 'utf8')), error: null };
+  } catch (error) {
+    return { upstream: null, error: redactHostPaths(error.message) };
+  }
+}
+
+// RW_RUNNER_BUILD 一致性发现：runner 域（image.lock.json）与当前上游锁/磁盘补丁的漂移。
+// validate 报违规、build-plan 报 drift，同源同码（validate/qualify/up/build-plan 共享同一结果）。
+function buildChainFindings({ lock, upstream, upstreamError }) {
+  const findings = [];
+  const add = (code, at, extra) => findings.push({ code, at, ...(extra ?? {}) });
+  if (!upstream) {
+    add('UPSTREAM_LOCK_UNREADABLE', 'integrations/comet/upstream.lock.json', { reason: upstreamError });
+    return { findings, fingerprint: null, patchVerification: [], upstreamPatches: [] };
+  }
+  const source = lock.sourceInputs ?? {};
+  const upstreamPatches = Array.isArray(upstream.patches) ? upstream.patches : [];
+  if (JSON.stringify(source.patches ?? null) !== JSON.stringify(upstreamPatches)) {
+    add('PATCH_LOCK_MISMATCH', 'image.lock.json:sourceInputs.patches', {
+      reason: 'the runner lock must mirror the upstream patch list exactly (order + sha256)',
+      lockedCount: Array.isArray(source.patches) ? source.patches.length : 0,
+      upstreamCount: upstreamPatches.length,
+    });
+  }
+  if (JSON.stringify(source.toolchain ?? null) !== JSON.stringify(upstream.toolchain ?? null)) {
+    add('TOOLCHAIN_PIN_MISMATCH', 'image.lock.json:sourceInputs.toolchain', { reason: 'toolchain pins must equal the upstream lock' });
+  }
+  const openspec = source.openspec;
+  if (!openspec || openspec.package !== '@fission-ai/openspec' || typeof openspec.version !== 'string' || openspec.version.length === 0 || !/^[0-9a-f]{64}$/.test(openspec.tarballSha256 ?? '')) {
+    add('OPENSPEC_PIN_INVALID', 'image.lock.json:sourceInputs.openspec', { reason: 'the openspec pin (package/version/tarballSha256) must be recorded from the verified isolated candidate' });
+  }
+  const fingerprint = computeBuildFingerprint(upstream);
+  if (source.hostBuildFingerprint !== fingerprint) {
+    add('FINGERPRINT_STALE', 'image.lock.json:sourceInputs.hostBuildFingerprint', {
+      reason: 'the recorded fingerprint must equal the freshly recomputed lock-derived fingerprint (archive+patches+toolchain)',
+      expected: fingerprint,
+    });
+  }
+  const patchVerification = upstreamPatches.map((patch) => {
+    let actual = null;
+    try {
+      actual = crypto.createHash('sha256').update(fs.readFileSync(path.join(repoRoot, patch.path))).digest('hex');
+    } catch { /* absent or unreadable: fail closed below */ }
+    const sha256Verified = actual === patch.sha256;
+    if (!sha256Verified) {
+      add('PATCH_SHA256_MISMATCH', `integrations/comet/patches:${patch.path}`, { reason: 'a locked patch differs from its pinned sha256 on disk' });
+    }
+    return { path: patch.path, sha256: patch.sha256, sha256Verified };
+  });
+  return { findings, fingerprint, patchVerification, upstreamPatches };
+}
+
+// Dockerfile 必须消费锁定的完整有序补丁链（ARG 注入 + /build/repo 镜像路径 COPY + sha256 门），
+// 入口必须是 fingerprint 确定性路径；find 式漂移入口（历史缺陷：head -n 1 静默吞掉指纹漂移）拒绝。
+function validateDockerfileChain(text, upstreamPatches) {
+  const violations = [];
+  const add = (code, at, extra) => violations.push({ code, at, ...(extra ?? {}) });
+  const joined = text.replace(/\\\n/g, ' ');
+  const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  for (const [index, patch] of upstreamPatches.entries()) {
+    const n = index + 1;
+    const escaped = escapeRegExp(patch.path);
+    if (!new RegExp(`^ARG PATCH_${n}_SHA256$`, 'm').test(text)) {
+      add('PATCH_CHAIN_INCOMPLETE', `Dockerfile:PATCH_${n}_SHA256`, { patch: patch.path, reason: `ARG PATCH_${n}_SHA256 missing` });
+    }
+    if (!new RegExp(`^COPY ${escaped} /build/repo/${escaped}$`, 'm').test(text)) {
+      add('PATCH_CHAIN_INCOMPLETE', `Dockerfile:PATCH_${n}_COPY`, { patch: patch.path, reason: 'the patch must be mirrored under /build/repo at its lock-relative path' });
+    }
+    if (!joined.includes(`echo "\${PATCH_${n}_SHA256}  /build/repo/${patch.path}" | sha256sum -c -`)) {
+      add('PATCH_CHAIN_INCOMPLETE', `Dockerfile:PATCH_${n}_GATE`, { patch: patch.path, reason: 'the sha256sum gate for the mirrored patch is missing' });
+    }
+  }
+  if (/find\s+\/build/.test(text)) {
+    add('ENTRYPOINT_NONDETERMINISTIC', 'Dockerfile', { reason: 'entrypoint resolution must be the fingerprint-deterministic managed path; find-based drift entry is forbidden' });
+  }
+  return violations;
+}
+
 function validateDomain({ registry, refsDoc, files }) {
   const violations = [];
   const projectId = registry?.project?.id;
@@ -574,6 +670,13 @@ function validateDomain({ registry, refsDoc, files }) {
   violations.push(...validateAuthority({ authority: jsonDocs.get('authority-registration.example.json'), projectId }));
 
   const controlVolumeNames = new Set((mounts.controlVolumes ?? []).map((control) => control.volume));
+  // RW_RUNNER_BUILD：镜像构建链与当前上游锁/磁盘补丁的一致性（validate/qualify/up/build-plan 同源）。
+  const imageLock = jsonDocs.get('image.lock.json');
+  const { upstream, error: upstreamError } = loadUpstreamLock();
+  const chain = buildChainFindings({ lock: imageLock, upstream, upstreamError });
+  violations.push(...chain.findings);
+  violations.push(...validateDockerfileChain(files.get('Dockerfile'), chain.upstreamPatches));
+
   violations.push(...validateCompose(files.get('compose.yaml'), { controlVolumeNames, roleNames: RUNNER_ROLES }));
   violations.push(...validateDockerfile(files.get('Dockerfile')));
 
@@ -735,6 +838,83 @@ async function main(argv) {
         'no runner stack was ever started by this tool (up refuses until the image lock qualifies and admission is granted); there is nothing this tool can stop. A stack started outside this tool must be stopped by its own supervisor.',
     });
     return EXIT_VERIFY;
+  }
+
+  // build-plan：由当前上游锁导出 Runner 镜像构建计划（六补丁链/工具链/现算指纹/确定性入口/构建参数/输入获取）。
+  // 只导出声明：绝不执行构建、绝不打开 up 门（digest 回填是资源准入决策）；与上游锁漂移即拒绝（退出 2）。
+  if (command === 'build-plan') {
+    const dir = opts.dir ?? DEFAULT_DIR;
+    const { files, missing, unparseable } = loadDomainFiles(dir);
+    if (missing.length > 0) return failInput(`domain files missing (${displayPath(dir)}): ${missing.join(', ')}`);
+    if (unparseable.length > 0) return failInput(`domain files unparseable: ${unparseable.join('; ')}`);
+    const lock = JSON.parse(files.get('image.lock.json'));
+    const { upstream, error: upstreamError } = loadUpstreamLock();
+    const chain = buildChainFindings({ lock, upstream, upstreamError });
+    const drift = chain.findings.map((finding) => finding.code);
+    const sourceCommit = upstream?.source?.commit ?? null;
+    const openspec = lock.sourceInputs?.openspec ?? {};
+    const runnerCache = '.sdd/cache/runner-build';
+    // 镜像构建输入只认 .sdd/cache/runner-build 下的锁定副本：在场且 sha256 与锁一致才 PRESENT，
+    // 否则如实 ACQUISITION_REQUIRED 并声明期望 sha 与获取方式（绝不虚构“已就绪”）。
+    const buildInput = (relPath, expectedSha256, acquisition) => {
+      let sha256Verified = false;
+      try {
+        sha256Verified = crypto.createHash('sha256').update(fs.readFileSync(path.join(repoRoot, relPath))).digest('hex') === expectedSha256;
+      } catch { /* absent on this host */ }
+      return {
+        path: relPath,
+        status: sha256Verified ? 'PRESENT' : 'ACQUISITION_REQUIRED',
+        expectedSha256,
+        ...(sha256Verified ? { sha256Verified } : { acquisition }),
+      };
+    };
+    const buildArgs = {
+      RUNNER_BASE_IMAGE: '<resolved-at-admission:image.lock.json:components.runner-base>',
+      SOURCE_COMMIT: sourceCommit,
+      SOURCE_SHA256: upstream?.source?.sha256 ?? null,
+      EXPECTED_FINGERPRINT: chain.fingerprint,
+      OPENSPEC_VERSION: openspec.version ?? null,
+      OPENSPEC_TARBALL_SHA256: openspec.tarballSha256 ?? null,
+      ...Object.fromEntries(chain.patchVerification.map((patch, index) => [`PATCH_${index + 1}_SHA256`, patch.sha256])),
+    };
+    print({
+      interface: 'RunnerInfra.v1',
+      command: 'build-plan',
+      dir: displayPath(dir),
+      drift,
+      sourceCommit,
+      fingerprint: chain.fingerprint,
+      patches: chain.patchVerification,
+      entrypoint: sourceCommit && chain.fingerprint
+        ? `/build/repo/.sdd/vendor/comet/${sourceCommit}/builds/${chain.fingerprint}/work/bin/comet.js`
+        : null,
+      inputs: {
+        cometSourceArchive: buildInput(`${runnerCache}/comet-source.tar.gz`, upstream?.source?.sha256 ?? null, {
+          url: upstream?.source?.url ?? null,
+          bytes: upstream?.source?.bytes ?? null,
+          command: `mkdir -p ${runnerCache} && curl -fsSL ${upstream?.source?.url ?? ''} -o ${runnerCache}/comet-source.tar.gz`,
+        }),
+        openspecTarball: buildInput(`${runnerCache}/openspec-${openspec.version ?? 'PIN_MISSING'}.tgz`, openspec.tarballSha256 ?? null, {
+          url: openspec.registryTarball ?? null,
+          bytes: openspec.tarballBytes ?? null,
+          command: `mkdir -p ${runnerCache} && curl -fsSL ${openspec.registryTarball ?? ''} -o ${runnerCache}/openspec-${openspec.version ?? ''}.tgz`,
+        }),
+      },
+      dockerBuild: {
+        dockerfile: 'infra/delivery/runner/Dockerfile',
+        context: '.',
+        buildArgs,
+        command: [
+          'docker build',
+          '-f infra/delivery/runner/Dockerfile',
+          ...Object.entries(buildArgs).map(([key, value]) => `--build-arg ${key}=${value}`),
+          '.',
+        ].join(' '),
+      },
+      upGate: lock.upGate?.enabled === true ? 'OPEN' : 'CLOSED',
+      containerBuildStatus: lock.sourceInputs?.containerBuildStatus ?? null,
+    });
+    return drift.length === 0 ? EXIT_PASS : EXIT_VERIFY;
   }
 
   // validate/qualify/up：registry 与 refs 目录必须先可读（fail-closed，绝不静默降级为空规则）。

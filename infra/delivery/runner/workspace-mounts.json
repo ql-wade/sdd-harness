@@ -82,7 +82,8 @@
       "reviewer",
       "publisher",
       "isolator"
-    ]
+    ],
+    "projectRootMount": "READ_ONLY_BOUNDARY"
   },
   "methodState": {
     "modeFileLocations": "同仓库共享 Ponytail/mode 状态文件（并发会话最后写入生效）",
@@ -90,5 +91,10 @@
     "mountedIntoRunner": false,
     "identityOrPermissionBasis": false,
     "rule": "mode 文件不进任何 worker 角色可写面：不挂载进 Runner、不写入任何 ws-* 角色工作区卷；无法隔离的共享状态按 cooperative-local 限制如实声明，不作角色/权限/身份依据"
+  },
+  "projectRoot": {
+    "note": "交付项目根（仓库根）若在资源准入时挂载进 Runner，一律是只读边界（READ_ONLY_BOUNDARY）：任何角色容器对其无写权，源码/spec/任务清单不被运行时改写；是否挂载由准入显式决定，默认不挂载",
+    "mountDecision": "ADMISSION_DECIDED",
+    "mountPolicy": "READ_ONLY_BOUNDARY"
   }
 }
