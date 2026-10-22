@@ -1,0 +1,94 @@
+{
+  "run": "rework-seven-p1-r1",
+  "task": "P2_1",
+  "task_title": "原任务 2.1 — contracts/delivery 共享 schema + lib/delivery 全输入基线与 AC→case 追踪（交付基线 invalidateOnScopeChange 重验）",
+  "final_status": "DONE",
+  "worktree": "rw-p2-1 @ master@fb7e6d5, branch rework/p2-1-baseline",
+  "opening_receipt": "git log --oneline -1 -> fb7e6d5 chore(openspec): accept P1_1 rework (11/11 steps; review APPROVED; merge 65598f7)",
+  "steps_done": "8/8",
+  "old_pass_inherited": false,
+  "steps": {
+    "step1_2.1.a_test": "Contract registry/version boundaries re-run on current source: node --test test/delivery-test-contract.test.js -> exit 0 (22/22). Fault-injection RED M5 (future/legacy schemaVersion silently accepted) -> exit 1, caught by 'unknown future, legacy and non-integer versions are explicitly refused'; restored -> exit 0. evidence 09/10.",
+    "step2_2.1.a_implement": "No implementation change required: current contracts/delivery (8 frozen v1 schemas, closed field set, ABSOLUTE_PATH_FORBIDDEN, floating-version refusal) passed all real checks; re-verified, not inherited.",
+    "step3_2.1.b_test": "Re-verified on current source with fault injection: M1 (taskDefinitionDigest checkbox normalization removed) -> delivery-baseline exit 1 ('task definition digest separates...') AND 2_1.mjs exit 1 ('frozen plan boundary' live-tasks.md anchor); M2 (invalidateOnScopeChange digest comparison disabled) -> baseline exit 1 (A02) AND 2_1.mjs exit 1 (V_A02). AUDIT FINDING (nb-3 adjacent): invalidateOnScopeChange was only ever exercised with self-fabricated digests ('a'.repeat(64), sha('product-r1')) — no test anchored the invalidating digest to a real recomputation from real file bytes. evidence 01/03.",
+    "step4_2.1.b_implement": "Minimal GREEN fix: added 'A02 real-drift anchor' test to test/delivery-baseline.test.js — real project on disk, receipt bound to the observed computeFullInputBaseline digest, real migration file mutated, digest recomputed, invalidation asserted against the recomputed value (independent observation, not self-declared). RED teeth proven under M2 (test failed while fault injected), GREEN after restore. evidence 01/02.",
+    "step5_2.1.c_test": "Re-verified negatives on current source: M3 (zero-test TAP classified as pass) -> test-contract exit 1, caught by A03 unit guard; V_A03 real spawned node --test zero-test run still rejected via the execution-denominator layer (defense in depth, noted honestly). M4 (requireValidRed accepts environment failures) -> test-contract exit 1 (A04) AND 2_1.mjs exit 1 (V_A04 real spawned crash). evidence 05-08.",
+    "step6_2.1.c_implement": "No implementation change required: classifyRunOutcome/evaluateExecutionDenominator/requireValidRed/evaluateExecution passed all real checks; negatives re-executed, not inherited.",
+    "step7_review": "git diff fb7e6d5 --name-only -> only test/delivery-baseline.test.js (in tasks.md Owns set) + worker-reports paths; implementation diff lines = 0; host absolute-path scan over full diff -> no matches; no MUTATION residue (grep exit 1); AC coverage A01/A02/A03/A04/A07/A08 all re-executed this round.",
+    "step8_commit": "Serial commits with P2_1 rework identifier; only task-authorized files (see commits)."
+  },
+  "behavior_reverified": {
+    "digest_checkbox_agnostic": "PASS. lib/delivery/baseline.js taskDefinitionDigest = sha256(text.replace(/\\[[ xX]\\]/g,'[ ]')) — checkbox-state flip (both directions, live-read from openspec tasks.md in 2_1.mjs) leaves the digest unchanged; a definition-text edit changes it. Fault-injection M1 (normalization removed) is caught by 2 independent tests (unit + live-tasks.md anchor): both suites exit 1. Note: brief sketched the replacement literal as '[ ' while source uses '[ ' vs '[ ]' — both normalize all checkbox states to identical text, so the required property (勾选翻转不得改变摘要) holds either way; source form '[ ]' is the sensible canonical form.",
+    "invalidate_on_scope_change": "PASS, with anchoring gap closed this round. Scope change (digest drift, or revision drift with identical digest) invalidates bound receipts; unrelated-kind and current-bound receipts stay valid. Previously proven only with self-fabricated digests; now anchored end-to-end: real migration file mutation -> computeFullInputBaseline recomputation -> invalidateOnScopeChange rejects the receipt bound to the pre-drift digest. Fault-injection M2 caught by 3 tests including the new anchor.",
+    "negatives": [
+      {
+        "case": "zero-test run (real spawned node --test, no matching test files)",
+        "exit": "run exit 0 (naive gate would pass); evaluateExecution verdict=reject 'zero tests executed' — asserted green in V_A03; M3 fault (classify as pass) -> suite exit 1"
+      },
+      {
+        "case": "all-skip run (real spawned node --test, 2 skipped)",
+        "exit": "run exit 0; verdict=reject 'zero effective executions: 2 skipped' — asserted green in V_A03"
+      },
+      {
+        "case": "environment crash accepted as behavior RED (real spawned ERR_MODULE_NOT_FOUND run)",
+        "exit": "requireValidRed ok=false under current source; M4 fault (accept env failures) -> test-contract exit 1 AND 2_1.mjs exit 1"
+      },
+      {
+        "case": "missing declared inputs (lockfile/migration/deploy/non-JS sources absent on disk)",
+        "exit": "computeFullInputBaseline ok=false MISSING_INPUT with exact missing list (fail-closed) — asserted green; part of suite exit 0"
+      },
+      {
+        "case": "unknown future/legacy schemaVersion on all 8 contracts",
+        "exit": "parseContract rejects explicitly; M5 fault (silent accept) -> suite exit 1"
+      },
+      {
+        "case": "report reuse after input change",
+        "exit": "verifyReportCurrency DIGEST_MISMATCH on real lockfile mutation — asserted green (A07/V_A07)"
+      }
+    ]
+  },
+  "red_cases": [
+    "RED-M2 (fault injection, 2.1.b): disable invalidateOnScopeChange digest-drift comparison -> node --test test/delivery-baseline.test.js exit 1 (A02 + new real-drift anchor fail), node --test test/delivery-cases/2_1.mjs exit 1 (V_A02 fails). evidence/01-red-m2-invalidate-faultinjection.txt",
+    "RED-M1 (fault injection, 2.1.b): remove taskDefinitionDigest checkbox normalization -> delivery-baseline exit 1, 2_1.mjs exit 1 (live tasks.md anchor fails). evidence/03-red-m1-checkbox-faultinjection.txt",
+    "RED-M3 (fault injection, 2.1.c): classify zero-test TAP as pass -> delivery-test-contract exit 1 (A03). evidence/05-red-m3-zerotest-faultinjection.txt",
+    "RED-M4 (fault injection, 2.1.c): requireValidRed accepts environment failures -> delivery-test-contract exit 1 (A04), 2_1.mjs exit 1 (V_A04 real spawned crash). evidence/07-red-m4-envcrash-faultinjection.txt",
+    "RED-M5 (fault injection, 2.1.a): drop future/legacy schemaVersion refusal in schema-kernel -> delivery-test-contract exit 1. evidence/09-red-m5-version-faultinjection.txt"
+  ],
+  "commands": {
+    "node --test test/delivery-baseline.test.js (pre-change baseline)": "exit 0 (11/11)",
+    "node --test test/delivery-test-contract.test.js (pre-change baseline)": "exit 0 (22/22)",
+    "node --test test/delivery-cases/2_1.mjs (pre-change baseline)": "exit 0 (7/7)",
+    "npm test (pre-change baseline)": "exit 1 — only known env failures C08 (#59) + B08 (#414), 1 skipped",
+    "node --test test/delivery-baseline.test.js under M2/M1 fault": "exit 1",
+    "node --test test/delivery-cases/2_1.mjs under M2/M1/M4 fault": "exit 1",
+    "node --test test/delivery-test-contract.test.js under M3/M4/M5 fault": "exit 1",
+    "node --test test/delivery-baseline.test.js (final, run 1)": "exit 0 (12/12)",
+    "node --test test/delivery-baseline.test.js (final, run 2)": "exit 0 (12/12)",
+    "node --test test/delivery-test-contract.test.js (final)": "exit 0",
+    "node --test test/delivery-cases/2_1.mjs (final)": "exit 0",
+    "npm test (final)": "exit 1 — same 2 known env failures C08 (#59) + B08 (#415), 426 tests, 423 pass, 1 skipped; zero new failures",
+    "git diff fb7e6d5...HEAD --name-only (final)": "all paths within tasks.md Owns set + worker-reports (see review evidence)",
+    "host absolute-path scan on full diff (final)": "exit 1 (no matches; zero host absolute paths in committed content)"
+  },
+  "unverified": [],
+  "files_changed": [
+    "test/delivery-baseline.test.js",
+    "worker-reports/P2_1.rework.json",
+    "worker-reports/P2_1-rework/evidence/01-red-m2-invalidate-faultinjection.txt",
+    "worker-reports/P2_1-rework/evidence/02-green-m2-restored.txt",
+    "worker-reports/P2_1-rework/evidence/03-red-m1-checkbox-faultinjection.txt",
+    "worker-reports/P2_1-rework/evidence/04-green-m1-restored.txt",
+    "worker-reports/P2_1-rework/evidence/05-red-m3-zerotest-faultinjection.txt",
+    "worker-reports/P2_1-rework/evidence/06-green-m3-restored.txt",
+    "worker-reports/P2_1-rework/evidence/07-red-m4-envcrash-faultinjection.txt",
+    "worker-reports/P2_1-rework/evidence/08-green-m4-restored.txt",
+    "worker-reports/P2_1-rework/evidence/09-red-m5-version-faultinjection.txt",
+    "worker-reports/P2_1-rework/evidence/10-green-m5-restored.txt",
+    "worker-reports/P2_1-rework/evidence/11-regression-full.txt"
+  ],
+  "commits": {
+    "45597c3": "test(P2_1 rework rw-p2-1): anchor invalidateOnScopeChange to recomputed real-drift digests — test/delivery-baseline.test.js + worker-reports/P2_1-rework/evidence/*",
+    "report_commit": "docs(P2_1 rework rw-p2-1): worker rework report (worker-reports/P2_1.rework.json) — this commit"
+  },
+  "blockers_or_questions": []
+}
