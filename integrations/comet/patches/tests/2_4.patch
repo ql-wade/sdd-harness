@@ -1,8 +1,16 @@
 diff --git a/test/domains/comet-classic/comet-scripts.test.ts b/test/domains/comet-classic/comet-scripts.test.ts
-index 3344526..f9d97a7 100644
+index 3344526..043bbdb 100644
 --- a/test/domains/comet-classic/comet-scripts.test.ts
 +++ b/test/domains/comet-classic/comet-scripts.test.ts
-@@ -7082,3 +7082,120 @@ describe('comet scripts', () => {
+@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
+ import os from 'os';
+ import path from 'path';
+ import { parseDocument } from 'yaml';
++import crypto from 'node:crypto';
+ 
+ const scriptsDir = path.resolve('assets', 'skills', 'comet', 'scripts');
+ const classicRuntimeRoot = path.resolve('assets', 'skills', 'comet', 'runtime', 'classic');
+@@ -7082,3 +7083,195 @@ describe('comet scripts', () => {
      );
    });
  });
@@ -88,8 +96,17 @@ index 3344526..f9d97a7 100644
 +    const binding = JSON.parse(dispatched.stdout.trim().split('\n').pop() ?? '{}');
 +    expect(binding.role).toBe('requirements-owner');
 +    expect(binding.inputDigest).toMatch(/^[a-f0-9]{64}$/);
++    const report = '# Gate R independent review\n\nReviewed by requirements-owner over the dispatched inputs.\n';
 +    const resultFile = path.join(tmpDir, 'r-result.json');
-+    await fs.writeFile(resultFile, JSON.stringify({ execution: binding.execution, attempt: binding.attempt, verdict: 'pass' }));
++    await fs.writeFile(resultFile, JSON.stringify({
++      execution: binding.execution,
++      attempt: binding.attempt,
++      verdict: 'pass',
++      role: 'requirements-owner',
++      inputDigest: binding.inputDigest,
++      report,
++      reportDigest: crypto.createHash('sha256').update(report).digest('hex'),
++    }));
 +    const accepted = runNode(tmpDir, stateScript, ['accept-gate', 'happy', 'R', '--file', resultFile]);
 +    expect(accepted.status).toBe(0);
 +    const replay = runNode(tmpDir, stateScript, ['accept-gate', 'happy', 'R', '--file', resultFile]);
@@ -109,6 +126,72 @@ index 3344526..f9d97a7 100644
 +    const refused = runNode(tmpDir, stateScript, ['accept-gate', 'd02', 'R', '--file', resultFile]);
 +    expect(refused.status).not.toBe(0);
 +    expect(refused.stderr).toContain('changed after dispatch');
++  }, 20_000);
++
++  it('refuses to enter design without a current R receipt (P1-01, enter-design)', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'p101', 'full', '--managed-delivery']).status).toBe(0);
++    const dir = await writeManagedArtifacts('p101');
++    // open-complete first requires its own artifacts (tasks.md, design.md);
++    // only then does the managed enter-design premise fire.
++    await fs.writeFile(path.join(dir, 'tasks.md'), '# Tasks\n\n- [ ] 1.1 Implement\n');
++    await fs.writeFile(path.join(dir, 'design.md'), '# Design\n\nProbe.\n');
++    const refused = runNode(tmpDir, stateScript, ['transition', 'p101', 'open-complete']);
++    expect(refused.status).not.toBe(0);
++    expect(refused.stderr).toContain('enter-design');
++    expect(refused.stderr).toContain('gate R');
++    // A trusted R (dispatch + evidenced acceptance) opens design.
++    const dispatched = runNode(tmpDir, stateScript, ['dispatch-gate', 'p101', 'R']);
++    expect(dispatched.status).toBe(0);
++    const binding = JSON.parse(dispatched.stdout.trim().split('\n').pop() ?? '{}');
++    const report = '# Gate R independent review\n\nRequirements confirmed.\n';
++    const resultFile = path.join(tmpDir, 'p101-r.json');
++    await fs.writeFile(resultFile, JSON.stringify({
++      execution: binding.execution,
++      attempt: binding.attempt,
++      verdict: 'pass',
++      role: 'requirements-owner',
++      inputDigest: binding.inputDigest,
++      report,
++      reportDigest: crypto.createHash('sha256').update(report).digest('hex'),
++    }));
++    expect(runNode(tmpDir, stateScript, ['accept-gate', 'p101', 'R', '--file', resultFile]).status).toBe(0);
++    const opened = runNode(tmpDir, stateScript, ['transition', 'p101', 'open-complete']);
++    expect(opened.status).toBe(0);
++  }, 20_000);
++
++  it('refuses same-caller dispatch + empty-report passes, and consensus-less A passes (P1-02)', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'p102', 'full', '--managed-delivery']).status).toBe(0);
++    const dir = await writeManagedArtifacts('p102');
++    await fs.writeFile(path.join(dir, 'design.md'), '# Design\n\nProbe.\n');
++    expect(runNode(tmpDir, stateScript, [
++      'set', 'p102', 'design_doc', 'openspec/changes/p102/design.md',
++    ]).status).toBe(0);
++    const dispatched = runNode(tmpDir, stateScript, ['dispatch-gate', 'p102', 'R']);
++    expect(dispatched.status).toBe(0);
++    const binding = JSON.parse(dispatched.stdout.trim().split('\n').pop() ?? '{}');
++    const bare = path.join(tmpDir, 'p102-bare.json');
++    await fs.writeFile(bare, JSON.stringify({ execution: binding.execution, attempt: binding.attempt, verdict: 'pass' }));
++    const refused = runNode(tmpDir, stateScript, ['accept-gate', 'p102', 'R', '--file', bare]);
++    expect(refused.status).not.toBe(0);
++    expect(refused.stderr).toContain('lacks bound review evidence');
++    // A gate-A pass with a report but no consensus tally is refused too.
++    const aDispatched = runNode(tmpDir, stateScript, ['dispatch-gate', 'p102', 'A']);
++    expect(aDispatched.status).toBe(0);
++    const aBinding = JSON.parse(aDispatched.stdout.trim().split('\n').pop() ?? '{}');
++    const aReport = '# Gate A independent review\n\nSingle-reviewer summary.\n';
++    const aBare = path.join(tmpDir, 'p102-a-bare.json');
++    await fs.writeFile(aBare, JSON.stringify({
++      execution: aBinding.execution,
++      attempt: aBinding.attempt,
++      verdict: 'pass',
++      role: 'reviewer',
++      inputDigest: aBinding.inputDigest,
++      report: aReport,
++      reportDigest: crypto.createHash('sha256').update(aReport).digest('hex'),
++    }));
++    const refusedA = runNode(tmpDir, stateScript, ['accept-gate', 'p102', 'A', '--file', aBare]);
++    expect(refusedA.status).not.toBe(0);
++    expect(refusedA.stderr).toContain('consensus');
 +  }, 20_000);
 +
 +  it('refuses the phase escape hatch and Runtime-stamped fields in managed delivery (B4)', async () => {
