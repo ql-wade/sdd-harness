@@ -30,4 +30,8 @@ Batch 0 文档；Batch 1 固定产物与装配实证；Batch 2 契约/Gate；Bat
 
 ## Validation
 
-40 个 Given/When/Then 场景见 specs/delivery-foundation/spec.md。分四层报告：内核/夹具、CLI/装配、真实宿主、业务/CI。结构校验不等于产品 PASS。具体业务试点和环境在 Batch 3 前选择。
+92 个 Given/When/Then 场景见 specs/delivery-foundation/spec.md。分四层报告：内核/夹具、CLI/装配、真实宿主、业务/CI。结构校验不等于产品 PASS。具体业务试点和环境在 Batch 3 前选择。
+
+## 2026-10-22 修复验收补充
+
+用户授权修订同一计划以关闭7个P1，不扩张控制器/平台/知识源选型。按既有C01、D01–D04、E03–E04和L10–L11落实正式设计前R门、真实独立A/T接纳、单调失效代际以及实际Comet故障恢复；observer必须验证每个required目标/终态读回。原92场景及原任务不增删。新增10个检查强化这些既有要求，并以同产品Run完整交付、归档后恢复、关联维护的真实资源终态为最终oracle。原有纯函数/CLI/fixture保留为支持证据，不能替代跨边界验收。

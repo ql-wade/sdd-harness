@@ -1,34 +1,63 @@
 {
-  "at": "2026-10-20T02:30:02.044674+00:00",
-  "scope": "planning-only handoff; no product acceptance",
+  "schema_version": 2,
+  "at": "2026-10-22T01:39:25.669674+00:00",
+  "scope": "Seven-P1 planning-only rework handoff, not implementation or business acceptance",
+  "status": "STRUCTURAL_HANDOFF_READY_RUNTIME_NOT_STARTED",
   "counts": {
     "nodes": 39,
-    "checks": 105,
-    "original_scenarios": 92,
     "original_parent_tasks": 30,
-    "original_work_packages": 69
+    "original_workpackages": 69,
+    "original_scenarios": 92,
+    "original_checks_retained": 108,
+    "repair_checks": 10,
+    "required_checks": 118
   },
   "checks": {
-    "portable_plan_guard": "PASS",
-    "acyclic_dependency_order": "PASS",
-    "toolkit_sha256": "PASS",
-    "openspec_strict": "PASS",
+    "portable_guard": "PASS",
+    "openspec_strict": "PASS on installed1.14.3; structural only, runtime qualification separate",
+    "unique_dag_and_acyclic_order": "PASS",
+    "original_identity_and_binding_byte_preservation": "PASS",
+    "seven_P1_task_mapping": "PASS",
+    "no_semantic_construction_acceptance_cycle": "PASS after independent static review fixes",
+    "unrelated_input_bytes_preserved": "PASS",
+    "toolkit_original_hashes": "PASS",
     "git_diff_check": "PASS",
-    "independent_static_review": "PASS after 3 findings fixed and read back"
+    "repository_full_check": {
+      "status": "FAIL_ENV_READONLY_FIXTURE",
+      "exit_code": 1,
+      "reason": "Whitebox green fixture os.utime PermissionError on readonly vendored skill files; no full regression PASS claimed",
+      "log": "planning-evidence/seven-p1-replan/check-sh.log",
+      "sha256": "211d29917bf35223533aad4e75f5cb79e0175169aed6917205eb89b1d71a8c53"
+    }
   },
-  "runtime_accepted_scenarios": 0,
+  "independent_static_review": {
+    "reviewer": "test_boundary_intake",
+    "result": "No new major blockers after readback",
+    "fixed": [
+      "Construction task/full journey acceptance cycle removed; final execution belongs only to VERIFY",
+      "Obsolete disclosure/resume/monitor instructions moved out of current startup path"
+    ],
+    "scope": "static plan only; no product execution or external model call"
+  },
+  "goal": "PLANNED_NOT_ACTIVATED",
+  "monitor": "PLANNED_NOT_ACTIVATED",
   "implementation_dispatched": false,
-  "prior_monitor": "PAUSED_READBACK",
-  "files_sha256": {
-    "HANDOFF.md": "5d7ff667e9442ab9b655d7013e1ba066ea04d4609b7e7fd4d3cf377469bf2ab3",
-    "tasks.md": "9a5d0a87597f528701ab5d76dff8c8487874e45f17f14383753c1c2fd9e58369",
-    "architecture.md": "8bd5316106944a28b58ab2a0f1468537227ce7b78dd7009ece0bdbdf9ec97aed",
-    "task-dag.json": "c402254ba67a80106fbf2484a38d55f5899fa59a426fe7cbdb252c4a8d4f5d0b",
-    "execution-contract.json": "9f36b3d9a8c13865a19cdc3b5113c658fced5ca5b1fd71dc13e8a32907328824",
-    "drift-lock.json": "0c5a3ae011a194c54dbdead0c3f85973542fb21f3ac2c4a54782d92410856bdb",
-    "execution-prompt.md": "bfaac18b2d71bf0d8bce1526614a3b918dc0f723975b6a0e779c697931699f5f",
-    "infrastructure-plan.md": "a55f672d2923804a4e8c7451edbc522ad947257f8db0b38eaec85383b2ba3bd4",
-    "infrastructure-tasks.json": "46c187fbb39c143677789a79573eb1302d082423aa68e732056a1b8583459c01",
-    "spec-baseline.json": "a89cfcf9cde72459df180e7ca11ca9be5b1b402f894f05d82984f5ba8025d86a"
+  "repair_P1_closed": 0,
+  "runtime_accepted_scenarios": 0,
+  "plan_commit": "NOT_CREATED; controlled planning commit/snapshot required before creating receiving worktree",
+  "sha256": {
+    "tasks.md": "0f850cd72b7f3af99a3afe0ad10232bf1d2fe6546f2f2490446e0b39c1a9c9f6",
+    "architecture.md": "66ac6e36ad90a9e509c377e1257964755a72f0f52f4257f7b512a4529a39348f",
+    "design.md": "bf43383f68b81e2af5515ec284df4b412c8fc74316a30d4aa98f3a74823c155e",
+    "task-dag.json": "aa410a1a703700c3e7e426657f311e838679266afd60b4ef7519eb5671bff8e3",
+    "execution-contract.json": "85a2dbfbf404f8083ec051d35fbeee8dc9972a9001882baf0bb10c7ebb6b3c94",
+    "drift-lock.json": "a2e90ac31633daa0eb6cf7b37ee7896c1f3bf2aafc11d3ae9f6362e984b6e8c5",
+    "spec-baseline.json": "82c833b53e0319d193c786ee5b5436e43c9210e889512a58e13ba790d88e3788",
+    "bindings.json": "54083358db90310961b1d58d5ccddd56c662f5a056ee6da7f09a40c3dcd11ac1",
+    "task-identity-map.json": "d617ea8db9c3af01160c8b34e3c928d82b2d04981d0d71f4537cef4d7c3b08e3",
+    "HANDOFF.md": "6694c85ea3170ca2df7dd10895510a2cebd2b23e734ae817f20bc1613448db10",
+    "execution-prompt.md": "16f789f09f317ce051036f8cf0153311fc2463cd7404d20d0e0053b634e44a6e",
+    "replan-record.json": "11683ead91d150bed198553faba8199319818d972761f3997a645943635a14bd",
+    "verification-case-plan.json": "7884ba25198251c99487d042dca7b9e74d8e08fa2cb2afa383114da8701d221f"
   }
 }

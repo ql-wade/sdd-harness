@@ -50,7 +50,7 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
     },
     "design": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/design.md",
-      "sha256": "b6fe886aac5f03311b8a8cb23bb12076949ee2364153155eafe8d64096d029f1"
+      "sha256": "bf43383f68b81e2af5515ec284df4b412c8fc74316a30d4aa98f3a74823c155e"
     },
     "testContract": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md",
@@ -58,7 +58,7 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
     },
     "planBundle": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
-      "sha256": "aac0152e4ea360d3e03f2f5f7f14cc203f74b4525de48fde04e6fbe359cb6ad9",
+      "sha256": "eb7ed2cb2823e62344ad1152efdce2845d2fb3568b867e0ea9c70dad558a8508",
       "digestNormalization": "checkbox-state-agnostic（与 lib/delivery/baseline.js taskDefinitionDigest 同一归一化；勾选状态不构成计划漂移）"
     }
   },
@@ -83,6 +83,11 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
       "登记/权限缺失只阻断对应动作；不得把计划字段当作已满足，不得以提权重试替代登记",
       "认证账号管理员可读不替代目标受众核验；readback 成功前不执行需要授权的动作（I01 registry authority.readbackStatus=UNVERIFIED）"
     ]
+  },
+  "qualification": {
+    "status": "NOT_QUALIFIED_FOR_REAL_JOURNEY",
+    "owner_task": "P3_1/P3_2/I01-I08",
+    "requires": "actual identities, environment, real Change, sources and managed Outline collection read back; no LOCAL_FIXTURE substitution"
   }
 }
 ```

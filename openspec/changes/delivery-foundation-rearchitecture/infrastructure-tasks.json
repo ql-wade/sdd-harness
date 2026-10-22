@@ -121,7 +121,14 @@
       "depends_on": [
         "P0_4"
       ],
-      "before": [],
+      "before": [
+        "I02",
+        "I03",
+        "I04",
+        "I05",
+        "I06",
+        "VERIFY"
+      ],
       "original_task_ids": [
         "1.1",
         "3.1",
@@ -208,10 +215,17 @@
       "title": "固定Comet Runner及真实OS/container角色隔离",
       "depends_on": [
         "I01",
-        "P1_1"
+        "P1_1",
+        "P2_4",
+        "P2_5",
+        "P3_1"
       ],
       "before": [
-        "P1_3"
+        "P1_3",
+        "P3_2",
+        "I07",
+        "I08",
+        "VERIFY"
       ],
       "original_task_ids": [
         "1.3",
@@ -305,7 +319,9 @@
         "I01"
       ],
       "before": [
-        "P4_7"
+        "P4_7",
+        "I08",
+        "VERIFY"
       ],
       "original_task_ids": [
         "4.4",
@@ -401,8 +417,9 @@
         "P1_1"
       ],
       "before": [
-        "P3_1",
-        "P4_4"
+        "P4_4",
+        "I08",
+        "VERIFY"
       ],
       "original_task_ids": [
         "1.2",
@@ -485,7 +502,8 @@
         "P1_1"
       ],
       "before": [
-        "P4_4"
+        "P4_4",
+        "VERIFY"
       ],
       "original_task_ids": [
         "1.1",
@@ -566,7 +584,8 @@
         "I01"
       ],
       "before": [
-        "P4_1"
+        "P4_1",
+        "VERIFY"
       ],
       "original_task_ids": [
         "4.1",
@@ -656,7 +675,8 @@
         "P2_4"
       ],
       "before": [
-        "P4_8"
+        "P4_8",
+        "VERIFY"
       ],
       "original_task_ids": [
         "3.3",
@@ -742,7 +762,8 @@
       ],
       "before": [
         "P4_8",
-        "P5_3"
+        "P5_3",
+        "VERIFY"
       ],
       "original_task_ids": [
         "3.3",
@@ -767,7 +788,11 @@
         "infra/delivery/recovery/authority-transfer.schema.json",
         "infra/delivery/recovery/operations-runbook.md",
         "tools/infra/recovery.mjs",
-        "test/infra-recovery.test.js"
+        "test/infra-recovery.test.js",
+        "infra/delivery/backup",
+        "tools/infra/backup-restore.mjs",
+        "test/infra-backup-restore.test.js",
+        "test/delivery-cases/i08.mjs"
       ],
       "interfaces": [
         "Backup.v1 -> consistent manifest of Comet state/transaction/receipts/approved payload plus knowledge/database/objects/config refs",
@@ -821,118 +846,7 @@
       "not_applicable_reasons": {}
     }
   ],
-  "dependency_additions": [
-    {
-      "task_id": "P1_3",
-      "add_depends_on": "I02"
-    },
-    {
-      "task_id": "P4_7",
-      "add_depends_on": "I03"
-    },
-    {
-      "task_id": "P3_1",
-      "add_depends_on": "I04"
-    },
-    {
-      "task_id": "P4_4",
-      "add_depends_on": "I04"
-    },
-    {
-      "task_id": "P4_4",
-      "add_depends_on": "I05"
-    },
-    {
-      "task_id": "P4_1",
-      "add_depends_on": "I06"
-    },
-    {
-      "task_id": "P4_8",
-      "add_depends_on": "I07"
-    },
-    {
-      "task_id": "P4_8",
-      "add_depends_on": "I08"
-    },
-    {
-      "task_id": "P5_3",
-      "add_depends_on": "I08"
-    },
-    {
-      "task_id": "VERIFY",
-      "add_depends_on": "I01"
-    },
-    {
-      "task_id": "VERIFY",
-      "add_depends_on": "I02"
-    },
-    {
-      "task_id": "VERIFY",
-      "add_depends_on": "I03"
-    },
-    {
-      "task_id": "VERIFY",
-      "add_depends_on": "I04"
-    },
-    {
-      "task_id": "VERIFY",
-      "add_depends_on": "I05"
-    },
-    {
-      "task_id": "VERIFY",
-      "add_depends_on": "I06"
-    },
-    {
-      "task_id": "VERIFY",
-      "add_depends_on": "I07"
-    },
-    {
-      "task_id": "VERIFY",
-      "add_depends_on": "I08"
-    }
-  ],
-  "candidate_serial_topological_order": [
-    "P0_1",
-    "P0_2",
-    "P0_3",
-    "P0_4",
-    "P1_1",
-    "P1_6",
-    "P1_2",
-    "P2_1",
-    "P2_2",
-    "P2_3",
-    "I01",
-    "I02",
-    "P1_3",
-    "P1_4",
-    "P1_5",
-    "P2_4",
-    "P2_5",
-    "P3_4",
-    "I03",
-    "I04",
-    "P3_1",
-    "P3_2",
-    "P3_3",
-    "P4_6",
-    "P4_7",
-    "I05",
-    "I06",
-    "P4_1",
-    "P4_2",
-    "P4_4",
-    "P4_5",
-    "I07",
-    "I08",
-    "P4_8",
-    "P4_3",
-    "P5_1",
-    "P5_2",
-    "P5_3",
-    "VERIFY"
-  ],
-  "existing_node_count": 31,
+  "existing_node_count": 39,
   "total_candidate_node_count": 39,
   "ownership_check": "PASS exact infrastructure paths disjoint from each other and current canonical DAG",
   "dependency_check": "ACYCLIC",
@@ -943,5 +857,7 @@
     "no_implicit_resources": "No reuse of PAV or any existing project credentials/resources"
   },
   "permissions": "Local-only planning; no production deployment, branch-protection mutation, live notifications or external publication implied",
-  "acceptance_policy": "All92 original scenarios preserved. Infra probes supplement, never replace, required runtime/UI/platform/knowledge behavior checks. Conditional Batch5 remains pre-enable certification, unexecuted positives remain UNVERIFIED."
+  "acceptance_policy": "All92 original scenarios preserved. Infra probes supplement, never replace, required runtime/UI/platform/knowledge behavior checks. Conditional Batch5 remains pre-enable certification, unexecuted positives remain UNVERIFIED.",
+  "canonical_dependency_source": "task-dag.json (this file is a read-only detailed infrastructure projection, not a second plan or scheduler)",
+  "rework_revision": "2026-10-22-seven-p1"
 }

@@ -2,10 +2,10 @@
   "schema_version": 2,
   "feature": "delivery-foundation-rearchitecture",
   "hash_mode": "checkbox-normalized-v1",
-  "plan_sha256": "aac0152e4ea360d3e03f2f5f7f14cc203f74b4525de48fde04e6fbe359cb6ad9",
-  "architecture_sha256": "91bc1a334005a9abc7c70754622c5e241ff7cd0839843f1ef492a9e6f6b49228",
-  "dag_sha256": "c402254ba67a80106fbf2484a38d55f5899fa59a426fe7cbdb252c4a8d4f5d0b",
-  "execution_contract_sha256": "0250b905377c681b7d3cb93833adefe1365566696283f4017dc9a2d2b31e2a8a",
+  "plan_sha256": "56aa574bdd530b2df435f837aaeab0ee90aa72a58ecdb3f4329ef40e7b3b7aa3",
+  "architecture_sha256": "648ec4e7508f68268cdc2c60dcd47f35b9d3856ba51e37f87b4046046e0b6d0f",
+  "dag_sha256": "aa410a1a703700c3e7e426657f311e838679266afd60b4ef7519eb5671bff8e3",
+  "execution_contract_sha256": "73c64d27630bed00a7bcb60fd7346ead4ac4981cf43780b9d4fc79f5aeb2358e",
   "acceptance_ids": [
     "A01",
     "A02",
@@ -138,7 +138,9 @@
     "Backup.v1 -> consistent manifest of Comet state/transaction/receipts/approved payload plus knowledge/database/objects/config refs",
     "Restore.v1 -> restore into quarantine, authenticate current permissions, fence old writer, verify same operation and readback before release",
     "Retention.v1 -> R10 A: unresolved Run/knowledge obligation retains sole workspace",
-    "cleanup requires verified completed or separately approved migration+restore proof"
+    "cleanup requires verified completed or separately approved migration+restore proof",
+    "SDD.Verification.Journey.v2: observer requires exact targets and typed terminal readback and observes real Comet Run without controlling phase or recovery",
+    "Comet.GateRevision.v2: same Run persists monotonic requirement and design revisions and trusted reviewer result binding and never revives invalidated receipts by restoring bytes"
   ],
   "global_constraints": [
     "Comet Classic is sole target runtime controller; TeamAI distributes only",
@@ -183,6 +185,20 @@
       "test/comet-source-preparation.test.js",
       "test/comet-build.test.js"
     ],
+    "P2_1": [
+      "contracts/delivery",
+      "lib/delivery/baseline.js",
+      "lib/delivery/test-contract.js",
+      "test/delivery-baseline.test.js",
+      "test/delivery-test-contract.test.js",
+      "test/delivery-cases/2_1.mjs"
+    ],
+    "P3_1": [
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-contract.md",
+      "tools/verify/delivery-journey.mjs",
+      "tools/verify/delivery-case-schema.json",
+      "test/delivery-cases/3_1.mjs"
+    ],
     "P1_6": [
       ".agents/skills",
       "docs/agent/skill-architecture.md",
@@ -200,14 +216,6 @@
       "hooks.yaml",
       "test/delivery-cases/1_2.mjs"
     ],
-    "P2_1": [
-      "contracts/delivery",
-      "lib/delivery/baseline.js",
-      "lib/delivery/test-contract.js",
-      "test/delivery-baseline.test.js",
-      "test/delivery-test-contract.test.js",
-      "test/delivery-cases/2_1.mjs"
-    ],
     "P2_2": [
       "lib/delivery/evidence.js",
       "lib/delivery/gate.js",
@@ -220,6 +228,16 @@
       "lib/adapters/legacy-evidence.js",
       "test/delivery-cli.test.js",
       "test/delivery-cases/2_3.mjs"
+    ],
+    "P2_4": [
+      "integrations/comet/patches/0002-managed-delivery-runtime.patch",
+      "test/delivery-cases/2_4.mjs",
+      "integrations/comet/patches/tests/2_4.patch"
+    ],
+    "P2_5": [
+      "lib/adapters/architecture-review.js",
+      "test/architecture-review-adapter.test.js",
+      "test/delivery-cases/2_5.mjs"
     ],
     "I01": [
       "infra/delivery/registry.json",
@@ -257,16 +275,6 @@
       "openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes",
       "test/delivery-cases/1_5.mjs"
     ],
-    "P2_4": [
-      "integrations/comet/patches/0002-managed-delivery-runtime.patch",
-      "test/delivery-cases/2_4.mjs",
-      "integrations/comet/patches/tests/2_4.patch"
-    ],
-    "P2_5": [
-      "lib/adapters/architecture-review.js",
-      "test/architecture-review-adapter.test.js",
-      "test/delivery-cases/2_5.mjs"
-    ],
     "P3_4": [
       "lib/adapters/spec.js",
       "test/spec-closeout.test.js",
@@ -290,19 +298,15 @@
       "tools/infra/llmwiki.mjs",
       "test/infra-llmwiki-paths.test.js"
     ],
-    "P3_1": [
-      "openspec/changes/delivery-foundation-rearchitecture/pilot-contract.md",
-      "tools/verify/delivery-journey.mjs",
-      "tools/verify/delivery-case-schema.json",
-      "test/delivery-cases/3_1.mjs"
-    ],
     "P3_2": [
       "openspec/changes/delivery-foundation-rearchitecture/pilot-journey",
-      "test/delivery-cases/3_2.mjs"
+      "test/delivery-cases/3_2.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.case.json"
     ],
     "P3_3": [
       "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery",
-      "test/delivery-cases/3_3.mjs"
+      "test/delivery-cases/3_3.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.case.json"
     ],
     "P4_6": [
       "integrations/comet/patches/0003-post-archive-closeout.patch",
@@ -313,7 +317,9 @@
       "lib/adapters/knowledge-authorization.js",
       "test/knowledge-authorization.test.js",
       "openspec/changes/delivery-foundation-rearchitecture/authorization-journey",
-      "test/delivery-cases/4_7.mjs"
+      "test/delivery-cases/4_7.mjs",
+      "tools/infra/knowledge-authz.mjs",
+      "infra/delivery/knowledge"
     ],
     "I05": [
       "infra/delivery/code-knowledge/compose.yaml",
@@ -379,13 +385,18 @@
       "infra/delivery/recovery/authority-transfer.schema.json",
       "infra/delivery/recovery/operations-runbook.md",
       "tools/infra/recovery.mjs",
-      "test/infra-recovery.test.js"
+      "test/infra-recovery.test.js",
+      "infra/delivery/backup",
+      "tools/infra/backup-restore.mjs",
+      "test/infra-backup-restore.test.js",
+      "test/delivery-cases/i08.mjs"
     ],
     "P4_8": [
       "lib/adapters/knowledge-revocation.js",
       "test/knowledge-revocation.test.js",
       "openspec/changes/delivery-foundation-rearchitecture/revocation-journey",
-      "test/delivery-cases/4_8.mjs"
+      "test/delivery-cases/4_8.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/revocation-journey/post-delivery-permissions.case.json"
     ],
     "P4_3": [
       "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json",
@@ -416,14 +427,13 @@
     ]
   },
   "assumptions": [
-    "Static candidate only; current root goal/sdd monitor is not recreated",
-    "Team Control API remains pre-enable required certification, not silently accepted",
-    "Scenario runner and several commands are planned, unimplemented, and MUST fail closed until real evidence exists",
-    "Source/target/CI authorization prerequisites remain required before corresponding side effects",
-    "Original task identities preserved through explicit bijective alias map"
+    "Current plan and all118 required checks are unexecuted for this rework revision.",
+    "Existing partial components remain reusable only at their proved scope; no inherited business PASS.",
+    "Current dirty OpenSpec config bytes are observed/frozen inputs, not acceptance of unrelated overlay candidate.",
+    "Receiver must receive full plan and exact frozen inputs before creating execution worktree."
   ],
   "change_policy": "halt-and-replan",
-  "scope": "CANDIDATE_STRUCTURAL_ONLY_NOT_RUNTIME_ACCEPTANCE",
+  "scope": "AUTHORIZED_SEVEN_P1_REWORK_PLAN_NOT_RUNTIME_ACCEPTANCE",
   "identity_map_sha256": "d617ea8db9c3af01160c8b34e3c928d82b2d04981d0d71f4537cef4d7c3b08e3",
   "amendments": [
     {
@@ -445,6 +455,32 @@
       "external_overlay_candidate": "V_OV01-08 + V_OVERLAY_REVIEW + OVR/OVQ 任务 + 锁/契约/计划的外部 overlay 编辑已全部移除，存档 .local/plan-history/ponytail-supplement-20261020/；OPEN_DECISION: OV_OVERLAY_CANDIDATE 待用户另行裁决",
       "recorded_at": "2026-10-20T09:01:56.803571+00:00",
       "new_spec_baseline_sha256": "cc8fd58ad200c0402c26a848525d76b07e6c25909f652dfe84801adb8a294a4b"
+    },
+    {
+      "id": "2026-10-22-seven-p1",
+      "approved_by": "current user request: 按7个P1修订Claude TDD plan，沿用原任务和唯一DAG",
+      "record": "replan-record.json",
+      "old_hashes": {
+        "plan_sha256": "aac0152e4ea360d3e03f2f5f7f14cc203f74b4525de48fde04e6fbe359cb6ad9",
+        "architecture_sha256": "91bc1a334005a9abc7c70754622c5e241ff7cd0839843f1ef492a9e6f6b49228",
+        "dag_sha256": "c402254ba67a80106fbf2484a38d55f5899fa59a426fe7cbdb252c4a8d4f5d0b",
+        "execution_contract_sha256": "0250b905377c681b7d3cb93833adefe1365566696283f4017dc9a2d2b31e2a8a"
+      },
+      "old_check_count": 108,
+      "new_check_count": 118,
+      "task_count_unchanged": 39,
+      "scenario_count_unchanged": 92
+    },
+    {
+      "id": "env-capability-20261022",
+      "approved_by": "user directives 2026-10-22 会话裁决: \"llmwiki项目化\" + \"确认docker的权限\"(实测终端通道可用)",
+      "content": "SDD 分发项目化(SDD_HOME=<repo>/.sdd, 克隆 pin 075c5b4, venv llmwiki-311, wiki 根项目内) + Docker 终端面板通道执行能力(daemon UP server 29.6.2, 沙箱拒 socket 属实) + 环境门控纪律重申; tasks.md P1_1 描述句 + architecture.md 环境能力裁决节 + infrastructure-plan.md 注记; dag/contract 零改动; 共识决议修复(r2 codex findings): journey_execution.order_semantics + V_RW 同Run窗口先行 + replan-record 哈希刷新; contract hash 相应更新",
+      "recorded_at": "2026-10-22T02:00:03.395531+00:00",
+      "supersedes_hashes": {
+        "plan": "eb7ed2cb",
+        "architecture": "66ac6e36"
+      },
+      "prior_amendment": "seven-p1 replan (amendment 2) 哈希保持在其记录中"
     }
   ]
 }

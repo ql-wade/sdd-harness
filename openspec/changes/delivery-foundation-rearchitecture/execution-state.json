@@ -1,47 +1,48 @@
 {
   "schema_version": 1,
-  "status": "IMPLEMENTATION_COMPLETE_PENDING_USER_DECISIONS",
+  "status": "REWORK_PLAN_READY_PENDING_CLAUDE_EXECUTION",
   "objective": "按照我们架构，端到端完成验证，出具验证报告",
   "target_controller": "Comet Classic",
-  "implementation_executor": {
-    "kind": "claude-code-desktop-session (receiving controller)",
-    "run_id": "impl-dfr-20261020-r1",
-    "bound_at": "2026-10-20T03:04:53.456337+00:00",
-    "workspace": "/Users/mac/Code/sdd-harness",
-    "branch": "master",
-    "baseline_commit": "6510e3a8215cc670c60699a82bc675a120b1098f",
-    "controller_role": "sole implementation controller; sole writer of this state file and tasks.md acceptance"
-  },
+  "implementation_executor": "Claude selected; not dispatched by planning turn",
   "progress_source": "tasks.md evidence-backed parent checkboxes",
   "total_tasks": 30,
   "accepted_tasks": 4,
   "remaining_tasks": [
-    "1.1",
-    "1.2",
-    "1.3",
-    "1.4",
-    "1.5",
-    "1.6",
-    "2.1",
-    "2.2",
-    "2.3",
-    "2.4",
-    "2.5",
-    "3.1",
-    "3.2",
-    "3.3",
-    "3.4",
-    "4.1",
-    "4.2",
-    "4.3",
-    "4.4",
-    "4.5",
-    "4.6",
-    "4.7",
-    "4.8",
-    "5.1",
-    "5.2",
-    "5.3"
+    "P1_1",
+    "P2_1",
+    "P3_1",
+    "P1_6",
+    "P1_2",
+    "P2_2",
+    "P2_3",
+    "P2_4",
+    "P2_5",
+    "I01",
+    "I02",
+    "P1_3",
+    "P1_4",
+    "P1_5",
+    "P3_4",
+    "I03",
+    "I04",
+    "P3_2",
+    "P3_3",
+    "P4_6",
+    "P4_7",
+    "I05",
+    "I06",
+    "P4_1",
+    "P4_2",
+    "P4_4",
+    "P4_5",
+    "I07",
+    "I08",
+    "P4_8",
+    "P4_3",
+    "P5_1",
+    "P5_2",
+    "P5_3",
+    "VERIFY"
   ],
   "required_scenarios": 92,
   "runtime_verified_scenarios": 0,
@@ -52,20 +53,10 @@
     "decision": "staged implementation only"
   },
   "monitor": {
-    "id": "impl-dfr-r1",
-    "status": "ACTIVE",
-    "interval_minutes": 30,
-    "backend": "native session cron",
-    "job_id": "7c609f82",
+    "status": "PLANNED_NOT_ACTIVATED",
+    "interval_minutes": 20,
     "timezone": "Asia/Shanghai",
-    "notification_policy": "仅实质变化/失败/完成/需用户动作时通知",
-    "prior_monitor": {
-      "id": "sdd",
-      "status": "PAUSED",
-      "reason": "not inherited; fresh controller binding"
-    },
-    "user_override": "user requested 30-minute supervision on 2026-10-20 (overrides plan default 20min per execution-prompt override rule)",
-    "quality_directive": "高质量实施：RED→GREEN→独立审查→串行接纳门禁保持不变"
+    "reason": "planning-only; Claude discovers and binds actual host scheduler at execution, no former-chat monitor identity inherited"
   },
   "load_bearing_prerequisites": [
     "architecture unanimous approval",
@@ -74,11 +65,11 @@
     "real pilot resource registration"
   ],
   "eta": {
-    "status": "UNBOUND",
+    "status": "UNKNOWN",
     "timezone": "Asia/Shanghai",
-    "reason": "Receiving executor qualifies actual host, resources and throughput before estimating implementation"
+    "reason": "receiving host/resources and actual repair throughput need qualification; 2–5min steps are evidence checkpoints, not delivery ETA"
   },
-  "updated_at": "2026-10-21T09:08:23.726639+00:00",
+  "updated_at": "2026-10-22T02:03:15.767273+00:00",
   "preparatory_checks": {
     "scaffold_scoped_tests": "41/41 PASS",
     "scaffold_npm_test": "41/41 PASS on Node22.13.1",
@@ -95,66 +86,51 @@
     "source_preparation": "8 tests PASS; original P1/P2 defects closed by independent reviewers; real pinned archive prepared/reused with v2 provenance",
     "source_project_build": "real pinned source built in project .sdd using locked pnpm/Node; CLI0.4.5 readback"
   },
-  "last_report": "verification-report.md",
+  "last_report": "HANDOFF.md (current planning handoff); prior implementation reports in replan-history/2026-10-22-seven-p1/previous/",
   "resume_instructions": [
-    "Read pending user disclosure decision before any external review retry",
-    "If authorized, initialize fresh review run using one readable immutable bundle, preserve exact three-party quorum and fix launch paths",
-    "Freeze source/identity interfaces and complete formal executable plan before managed Runtime edits",
-    "Resume existing monitor sdd; never create duplicate monitor",
-    "Continue original full goal, do not mark 92 scenarios accepted from baseline tests"
+    "Read HANDOFF.md and project overrides before execution.",
+    "User currently requested plan repair only; do not dispatch product work or activate monitoring in this planning turn.",
+    "On explicit execution handoff Claude binds the actual host and current plan lock, uses same DAG, first P3_1 then P2_4/P2_5, then actual I02 qualification.",
+    "Prior one-time disclosure grant and old sdd monitor identity are not reusable startup instructions.",
+    "Full same-product-Run journeys run only at VERIFY after all mechanisms, including I07/I08, are ready; construction-task acceptance does not close those journeys."
   ],
-  "last_progress_at": "2026-10-21T09:08:23.726639+00:00",
+  "last_progress_at": "2026-10-22T02:03:15.767273+00:00",
   "authorization_blocker_audit": {
-    "consecutive_goal_turns": 0,
-    "decision_received": true,
-    "resumed_at": "2026-10-19T23:57:11.352115+00:00"
+    "status": "NOT_APPLICABLE_TO_PLANNING",
+    "implementation": "NOT_STARTED"
   },
-  "goal_status": "active",
+  "goal_status": "NOT_COMPLETE_REWORK_REQUIRED",
   "disclosure_authorization": {
-    "received": true,
-    "scope": "original 14 frozen design/spec/task documents only; no credentials or private business originals",
-    "source_bundle_digest": "881a7336e7d0c71fd62c24c3258112616872395d51534e3f80d0645e14f82458",
-    "readable_bundle_sha256": "6ac52e1a1a7e397b296446e6ac582bc504298c0c8c5111660fb099ce992e3ecc",
-    "review_count": 1,
-    "max_rounds": 3,
-    "received_at": "2026-10-19T23:57:11.352115+00:00"
+    "status": "PRIOR_ONE_TIME_REVIEW_COMPLETED_NOT_REUSABLE",
+    "current_scope": "Existing authorizations preserved; new external review contents/destinations must be specifically within current authorization. Prepare exact read-only packages first if approval is missing."
   },
   "pilot_environment_choice": "User authorized configuring the managed pilot in this repository",
-  "native_goal_status": "active after user objective edit",
-  "current_focus": "real Comet/OpenSpec entrypoints, required hard gates and post-archive/knowledge recovery; preparation checks are not completion",
+  "native_goal_status": null,
+  "current_focus": "P3_1 observer then P2_4/P2_5 gates, actual I02 and full same-Run verification",
   "verification_progress": {
-    "native_r_gate_probe": "FAIL_NATIVE_GAP_CONFIRMED",
-    "evidence": ".local/pilot/native-gate-evidence-02/verdict.json",
-    "requirement_receipt_provided": false,
-    "actual_phase": "design",
-    "scope": "unmodified native baseline; managed extension not installed"
+    "revision": "2026-10-22-seven-p1",
+    "required_checks": 118,
+    "current_pass": 0,
+    "not_executed": 118,
+    "full_journey_status": "NOT_EXECUTED"
   },
   "total_plan_nodes": 39,
   "infrastructure_tasks": 8,
-  "required_checks": 105,
-  "approved_replan_parallel": {
-    "authorized_by": "user goal 2026-10-20: 按照计划，并行实施。最终出具验证报告",
-    "recorded_at": "2026-10-20T03:04:53.456337+00:00",
-    "effective_max_workers": 2,
-    "isolation": "per-worker git worktree under .claude/worktrees/impl-* + dedicated branch; no shared-checkout writes",
-    "ownership_proof": "allowed_paths_by_task (drift-lock.json) disjoint across concurrently dispatched tasks; verified per wave before dispatch",
-    "frozen_files_untouched": true,
-    "conservative_fallback": "contract runtime.parallel_backend=serial/max_workers=1 remains valid if isolation proof fails; revert recorded in ledger"
-  },
+  "required_checks": 118,
+  "approved_replan_parallel": null,
   "goal_binding": {
+    "status": "PLANNED_NOT_ACTIVATED",
     "native_option": "auto",
-    "mechanism": "session goal hook (native)",
-    "objective_ref": "execution-contract.json goal.objective",
-    "status": "active"
+    "objective": "沿用原39节点、30父任务、69工作包、92场景；关闭2026-10-22审查7个P1，先修验收器和Comet硬门，再在同一真实Comet Run完成全链路及知识权限维护；全部required检查和独立Whitebox通过才整体完成。"
   },
-  "run_started_at": "2026-10-20T03:04:53.456337+00:00",
+  "run_started_at": null,
   "status_revision": 50,
   "lifecycle_guard": {
     "skill": "openspec-lifecycle-guard",
-    "path": "/Users/mac/.claude/skills/openspec-lifecycle-guard/SKILL.md",
+    "path": ".agents/skills/openspec-lifecycle-guard/SKILL.md",
     "sha256": "e04ba2a8894eaa5d5f9bc521fea3d5f3fc468672ecd39749788e424a1d9a7850",
-    "loaded_at": "2026-10-20T03:40:19.299726+00:00",
-    "application": "evidence-backed checkbox flips only; flip box without editing task text; strict validation before phase moves; record evidence pointer per flip"
+    "loaded_at": "2026-10-22T01:32:08.722562+00:00",
+    "application": "Actual skill read; prior source baselines and reports saved, affected evidence-backed checkboxes reopened, explicit source freeze and strict/guard checks required; no archive"
   },
   "controller_policy": {
     "worker_commit_discipline": "tests commit separate from implementation commit; raw RED output logs preserved under worker-reports/<TASK>/evidence/",
@@ -198,10 +174,12 @@
       "amendment_5": {
         "commit": "964df4e",
         "detail": "monitor-health-read registered (catalog 24); I07 catalogGap cleared on merge"
-      }
+      },
+      "previous_status": "PARTIAL_ACCEPTED",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P1_1": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -231,7 +209,10 @@
         "commit": "7243244",
         "merged": "957de2e",
         "detail": "21 evidence logs committed; 1_1.mjs 8/8 on merged master; fresh-checkout symptom eliminated"
-      }
+      },
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "I03": {
       "status": "PARTIAL_ACCEPTED",
@@ -252,10 +233,12 @@
       },
       "merged_to_master": "a4c076f",
       "regression": "npm test 79/79 on merged master (worktree-verified)",
-      "review": "worker-reports/I03.review.json (APPROVED, 0 blocking; clean-room RED reproduction at tests-first commit)"
+      "review": "worker-reports/I03.review.json (APPROVED, 0 blocking; clean-room RED reproduction at tests-first commit)",
+      "previous_status": "PARTIAL_ACCEPTED",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P2_1": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -278,10 +261,13 @@
       "schema_hardening": {
         "commit": "853907b",
         "detail": "FoundationLock closed set + pinnedVersion/path types; per-contract unknownFields opt-in; dual-layer defense with P1_2 emission gate intact"
-      }
+      },
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P1_6": {
-      "status": "PARTIAL_ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -303,10 +289,13 @@
         "check": "Ponytail 5.3.2 资产快照 + 注册分工声明 (V_P1_6_PONYTAIL_ASSETS)",
         "status": "REPAIR_DISPATCHED",
         "delta_review": "APPROVED (worker-reports/P1_6.delta-review.json)"
-      }
+      },
+      "previous_status": "PARTIAL_ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P1_2": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -329,10 +318,13 @@
         "check": "插件/项目注册分工去重门 (V_P1_2_PLUGIN_REGISTRATION_DIVISION)",
         "status": "REPAIR_DISPATCHED",
         "delta_review": "APPROVED (worker-reports/P1_2-I02.delta-review.json); integrated 45ed944"
-      }
+      },
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P2_2": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -354,10 +346,13 @@
       "unverified_within_boundary": [
         "A19 real-Runner half -> P2_4/P3_1",
         "V_A05/A06/A18 journey CLI -> P3_1"
-      ]
+      ],
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "I02": {
-      "status": "PARTIAL_ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -383,10 +378,13 @@
         "check": "方法状态作用域声明 (V_I02_METHOD_STATE_SCOPE)",
         "status": "REPAIR_DISPATCHED",
         "delta_review": "APPROVED (worker-reports/P1_2-I02.delta-review.json); integrated 45ed944"
-      }
+      },
+      "previous_status": "PARTIAL_ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P2_3": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -403,10 +401,13 @@
       },
       "merged_to_master": "9c5db5f",
       "review": "worker-reports/P2_3.review.json (APPROVED, 0 blocking)",
-      "caveat": "check.sh heading clause: environment-bounded (whitebox corpus gap, pre-existing); B10/A20 semantics covered by npm test + exit-code contract tests + truth table"
+      "caveat": "check.sh heading clause: environment-bounded (whitebox corpus gap, pre-existing); B10/A20 semantics covered by npm test + exit-code contract tests + truth table",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "I05": {
-      "status": "PARTIAL_ACCEPTED_INTEGRATION_PENDING",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -427,10 +428,13 @@
           "012aedf"
         ],
         "result": "14/14; npm test 199/199 on merged master; integration acceptance complete"
-      }
+      },
+      "previous_status": "PARTIAL_ACCEPTED_INTEGRATION_PENDING",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "I04": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": 4,
       "commits": {
         "original": "019fdc9-era",
@@ -443,10 +447,13 @@
         "adapter hooks.yaml compile (sandbox write refusal x2)",
         "C08 host-openspec 1.3.1->1.14.3 drift",
         "B08 preservation"
-      ]
+      ],
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P1_3": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -465,10 +472,13 @@
       },
       "merged_to_master": "c7c9d84",
       "regression": "npm test 218/218 + delivery-cases 46/1 env-skip (in .sdd-equipped worktree)",
-      "review": "worker-reports/P1_3.review.json (1 blocking -> fixed 1987d71)"
+      "review": "worker-reports/P1_3.review.json (1 blocking -> fixed 1987d71)",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P3_1": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -486,10 +496,13 @@
       },
       "merged_to_master": "045e5a5",
       "regression": "npm test 226/226 + delivery-cases 62 pass/1 env-skip/0 fail (.sdd-equipped worktree)",
-      "review": "worker-reports/P3_1.review.json (APPROVED, 0 blocking; nb-1/nb-2/nb-4 fixed)"
+      "review": "worker-reports/P3_1.review.json (APPROVED, 0 blocking; nb-1/nb-2/nb-4 fixed)",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "I06": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -509,10 +522,13 @@
         "GitHub readback (gh TLS) -> platform admission owner",
         "platform-side configs -> P4_1/P4_2",
         "registry/env endpoints UNSELECTED"
-      ]
+      ],
+      "previous_status": "ACCEPTED",
+      "rework_revision": "2026-10-22-seven-p1",
+      "reason": "P1-07 platform/resource qualification must use actual endpoint, SHA/digest and authorized readback; previous component evidence retained"
     },
     "P1_4": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -531,10 +547,13 @@
       "merged_to_master": "c8d876d",
       "regression": "npm test 218/218 + delivery-cases 75 pass/1 env-skip/0 fail",
       "review": "worker-reports/P1_4.review.json (APPROVED, 0 blocking)",
-      "extension_seams": "B1/B4 -> P2_4 scope; B6 -> P1_6 patch domain (controller routing recorded)"
+      "extension_seams": "B1/B4 -> P2_4 scope; B6 -> P1_6 patch domain (controller routing recorded)",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P2_4": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -556,10 +575,13 @@
       "regression": "npm test 263/263 + delivery-cases 91 pass/1 env-skip/0 fail (in 9b95a0ff-equipped worktree); 7-pin repin verified c0c1f40",
       "review": "worker-reports/P2_4.review.json (APPROVED, 0 blocking)",
       "new_fingerprint": "9b95a0ff54ee00abd03ba9fb507cd93f03c8a464a743658898c474a51dc89b10",
-      "repin": "146c399 6-patch repin merged; upstream.lock.json carries 6 patches (fingerprint beab355d era)"
+      "repin": "146c399 6-patch repin merged; upstream.lock.json carries 6 patches (fingerprint beab355d era)",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P2_5": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -576,10 +598,13 @@
       },
       "merged_to_master": "b17140b",
       "regression": "npm test on merged master: 278 runs/276 pass/1 fail = C08 .sdd fingerprint env condition (documented); green in 9b95a0ff-equipped worktree",
-      "review": "worker-reports/P2_5.review.json (CHANGES_REQUESTED -> blk-1 fixed 91fe39d: FINAL_REPORT_REQUIRED real journey test; NB-2 revision-2 end-to-end; NB-4 named assertion)"
+      "review": "worker-reports/P2_5.review.json (CHANGES_REQUESTED -> blk-1 fixed 91fe39d: FINAL_REPORT_REQUIRED real journey test; NB-2 revision-2 end-to-end; NB-4 named assertion)",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P3_4": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -595,10 +620,13 @@
       },
       "merged_to_master": "c5b77e5",
       "regression": "delivery-cases regression in current-fingerprint worktree (background, result appended)",
-      "review": "INDEPENDENT_REVIEW_VERDICT events in execution-ledger.jsonl (APPROVED, 0 blocking; killer-proof PASS) — 原指针 worker-reports/P3_4.review.json 从未存在(评审发生在台账事件层, 文件未落盘); VERIFY F-8 修正"
+      "review": "INDEPENDENT_REVIEW_VERDICT events in execution-ledger.jsonl (APPROVED, 0 blocking; killer-proof PASS) — 原指针 worker-reports/P3_4.review.json 从未存在(评审发生在台账事件层, 文件未落盘); VERIFY F-8 修正",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P1_5": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -615,10 +643,13 @@
       "merged_to_master": "54a2fc3",
       "regression": "npm test 263/263 + delivery-cases 81 pass/1 env-skip (controller); 82: 81+1skip (reviewer)",
       "review": "worker-reports/P1_5.review.json (APPROVED, 0 blocking)",
-      "c04_discovery": "CLI revision natively checkbox-agnostic — independently reproduced by reviewer"
+      "c04_discovery": "CLI revision natively checkbox-agnostic — independently reproduced by reviewer",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "I07": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -644,10 +675,13 @@
         "commit": "6dafded",
         "merged_to_master": "e4e9992",
         "result": "16/16; npm 306/306; stale assertions flipped positive; synthetic-fixture coverage retained"
-      }
+      },
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P3_2": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -669,10 +703,13 @@
         "F08 native-browser 正相需试点环境",
         "1_1 指纹 skip 既有漂移"
       ],
-      "regression": "npm test 290/290; delivery-cases 110 pass/0 fail/1 skip (prepared env)"
+      "regression": "npm test 290/290; delivery-cases 110 pass/0 fail/1 skip (prepared env)",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P3_3": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -689,10 +726,13 @@
       },
       "merged_to_master": "pre-98b9484 (already up to date — merged in earlier recovery window)",
       "regression": "npm test 341/341 (at 98b9484 merge verification) + delivery-cases 115 pass/1 env-skip/0 fail (P3_3 worker verification at e745c4a)",
-      "review": "worker-reports/P3_3.review.json (APPROVED, 0 blocking)"
+      "review": "worker-reports/P3_3.review.json (APPROVED, 0 blocking)",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P4_6": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "1",
         "2",
@@ -717,10 +757,13 @@
         "Outline 部署/MCP 参数实测 -> P4_4 波次",
         "真实跨机 H09 -> RunnerInfra",
         "authority 对抗边界同 P2_2/P2_4"
-      ]
+      ],
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P4_5": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": 6,
       "commits": {
         "tests_red": "ad0f1f7",
@@ -730,10 +773,13 @@
       },
       "merged_to_master": "05e69fc",
       "regression": "npm test @05e69fc: 385 tests/380 pass/5 fail(all pre-existing env)/0 new",
-      "review": "worker-reports/P4_5.review.json (APPROVED, 0 blocking, 4 nb)"
+      "review": "worker-reports/P4_5.review.json (APPROVED, 0 blocking, 4 nb)",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "I08": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": 4,
       "commits": {
         "tests_red": "f9e5a0b",
@@ -747,42 +793,57 @@
         "跨机恢复演练→备份owner+部署波次",
         "静态加密执行→I01",
         "RPO/RTO/保留期/容量阈值→各数据owner"
-      ]
+      ],
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P4_1": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": 6,
       "merged_to_master": "7bf5548",
       "acceptance": "d9b87f3",
       "review": "worker-reports/P4_1.review.json (APPROVED)",
-      "deliverable": "tools/ci/verify-delivery.mjs CI delivery gate (A13/F06/F09 SHA revalidation)"
+      "deliverable": "tools/ci/verify-delivery.mjs CI delivery gate (A13/F06/F09 SHA revalidation)",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P4_2": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": 6,
       "merged_to_master": "de99afb",
       "acceptance": "9ce481e",
       "review": "worker-reports/P4_2.review.json (APPROVED)",
-      "deliverable": "tools/ci/release.mjs promotion/rollback four gates"
+      "deliverable": "tools/ci/release.mjs promotion/rollback four gates",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P4_4": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": 10,
       "merged_to_master": "5ef6be2",
       "acceptance": "1fc8d4f",
       "review": "worker-reports/P4_4.review.json (APPROVED; nb-1 closed by be6b067 D06 assertions, nb-2 ledgered, nb-4 closed by 99f17f3)",
-      "deliverable": "lib/adapters/llmwiki/outline/code-wiki + knowledge-seed (Knowledge.Closeout.v1)"
+      "deliverable": "lib/adapters/llmwiki/outline/code-wiki + knowledge-seed (Knowledge.Closeout.v1)",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P4_7": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": 8,
       "merged_to_master": "9d6c67b",
       "acceptance": "1f05d4c",
       "review": "worker-reports/P4_7.review.json (APPROVED U01-U08)",
-      "deliverable": "infra/delivery/knowledge/authorization-model + knowledge-authz.mjs (G04 preauthorization)"
+      "deliverable": "infra/delivery/knowledge/authorization-model + knowledge-authz.mjs (G04 preauthorization)",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P4_8": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": 10,
       "commits": {
         "tests_red": "e908df5",
@@ -797,10 +858,13 @@
         "5min 端到端→同上",
         "活 venv MCP 通道→llmwiki owner(本沙箱真实 stdio JSON-RPC 握手替代)",
         "多分钟阈值墙钟→容量/准入实证波次"
-      ]
+      ],
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P4_3": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": 6,
       "commits": {
         "tests_red": "8ca1e90",
@@ -810,10 +874,13 @@
       "merged_to_master": "bb269e0",
       "regression": "npm test @bb269e0: 415/411/4 (all known-env)/zero new",
       "review": "worker-reports/P4_3.review.json (APPROVED, 0 blocking, 2 nb corrected at acceptance)",
-      "deliverable": "acceptance-index.json (92 IDs: 76 VERIFIED/15 GATED+holder/1 UNVERIFIED=F10) + verification.md + 4_3.mjs"
+      "deliverable": "acceptance-index.json (92 IDs: 76 VERIFIED/15 GATED+holder/1 UNVERIFIED=F10) + verification.md + 4_3.mjs",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P5_1": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": 6,
       "commits": {
         "tests_red": "258ec79",
@@ -823,10 +890,13 @@
       "merged_to_master": "7f20d41",
       "regression": "npm test @7f20d41: 415/411/4 (all known-env)/zero new",
       "review": "worker-reports/P5_1.review.json (APPROVED, 0 blocking, 5 nb recorded)",
-      "deliverable": "team-host-matrix (5x4=20 cells) + 5_1.mjs (A10 ordered-integration + A12 child-green-is-not-parent + 6 negatives)"
+      "deliverable": "team-host-matrix (5x4=20 cells) + 5_1.mjs (A10 ordered-integration + A12 child-green-is-not-parent + 6 negatives)",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P5_2": {
-      "status": "PARTIAL_ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": [
         "Step 5",
         "Step 6"
@@ -843,10 +913,13 @@
       "regression": "npm test @0c6fa2d: 425/421/4 (all known-env)/zero new",
       "review": "worker-reports/P5_2.review.json (APPROVED, 0 blocking, 4 nb)",
       "deliverable": "scope-gate.json + gate.mjs: 未启用态六路真实拒绝 + 锚定链(env/运行时/带外改文件均不可翻转)",
-      "dag_note": "未启用态交付完整; DAG 边 P5_2->P5_3 按显式处置满足; VERIFY 完成判定按条件项显式处置规则处理"
+      "dag_note": "未启用态交付完整; DAG 边 P5_2->P5_3 按显式处置满足; VERIFY 完成判定按条件项显式处置规则处理",
+      "previous_status": "PARTIAL_ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "P5_3": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": 6,
       "commits": {
         "tests_red": "d00462b",
@@ -862,10 +935,13 @@
         "真实生产晋级→environment owner",
         "宿主级容量→I07 owner",
         "backup-writer/restore-reader 目录登记→I01 owner"
-      ]
+      ],
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
     },
     "VERIFY": {
-      "status": "ACCEPTED",
+      "status": "REOPENED_RETEST_REQUIRED",
       "steps_done": 3,
       "commits": {
         "evidence_results": "032f617",
@@ -875,7 +951,30 @@
       "merged_to_master": "f222030",
       "regression": "npm test @f222030: 425/421/4 (all known-env)/zero new",
       "result": "108 checks real-executed (87 PASS/18 GATED/1 UNVERIFIED/2 FAILED documented); 92 scenarios 76/15/1 zero unexplained diff; whitebox 27 modules + 423/425 known-only; 10 findings recorded; archive NOT executed",
-      "deliverable": "verification-report.md + grill-report.md + verification-results.json @ 68f7963"
+      "deliverable": "verification-report.md + grill-report.md + verification-results.json @ 68f7963",
+      "previous_status": "ACCEPTED",
+      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
+      "rework_revision": "2026-10-22-seven-p1"
+    },
+    "P0_1": {
+      "previous_status": "DOCUMENTED_COMPLETE",
+      "status": "ACCEPTED_DOCUMENT_ONLY",
+      "rework_revision": "2026-10-22-seven-p1"
+    },
+    "P0_2": {
+      "previous_status": "DOCUMENTED_COMPLETE",
+      "status": "ACCEPTED_DOCUMENT_ONLY",
+      "rework_revision": "2026-10-22-seven-p1"
+    },
+    "P0_3": {
+      "previous_status": "DOCUMENTED_COMPLETE",
+      "status": "ACCEPTED_DOCUMENT_ONLY",
+      "rework_revision": "2026-10-22-seven-p1"
+    },
+    "P0_4": {
+      "previous_status": "DOCUMENTED_COMPLETE",
+      "status": "ACCEPTED_DOCUMENT_ONLY",
+      "rework_revision": "2026-10-22-seven-p1"
     }
   },
   "environment_notes": [
@@ -910,6 +1009,18 @@
       "recorded_at": "2026-10-21T09:05:57.390866+00:00",
       "note": "VERIFY F-9: worker-reports/I01.json 无 evidence 字段(有 red_cases/green_summary/commands); I01 证据指针经 execution-ledger.jsonl 事件与 git 历史解析; 报告如实记录不改写历史 worker 产物",
       "holder": "I01 owner(后续补指针或维持台账解析)"
+    },
+    {
+      "id": "DOCKER_TERMINAL_CHANNEL",
+      "recorded_at": "2026-10-22T02:03:15.767273+00:00",
+      "note": "更正: docker daemon 运行中(server 29.6.2, ~/.docker/run/docker.sock 存在, 29 容器健康); 此前\"宿主也没起\"为误判。会话 Bash 沙箱拒 socket(EPERM 实测); docker 类操作经终端面板 tab 通道(run_in_terminal)执行, 用户逐条可见, I02/Outline 栈由此通道承担",
+      "holder": "controller"
+    },
+    {
+      "id": "SDD_PROJECT_LOCAL",
+      "recorded_at": "2026-10-22T02:03:15.767273+00:00",
+      "note": "amendment 3: llmwiki 项目化(用户裁决) — SDD_HOME=<repo>/.sdd; 克隆 pin 075c5b4 -> .sdd/repos/llmwiki; venv .sdd/venvs/llmwiki-311; wiki 根项目内; 跨项目目录名撞根消除",
+      "holder": "P1_1"
     }
   ],
   "open_decisions": [
@@ -929,13 +1040,15 @@
       "id": "EVIDENCE_INPUT_MISSING_EXIT_CODE",
       "raised": "2026-10-20T06:57:00.054381+00:00",
       "by": "P2_3 worker",
-      "question": "contract wording 1 vs pinned oracle 2 for EVIDENCE_INPUT_MISSING; pinned value kept; adjudicate at VERIFY"
+      "question": "contract wording 1 vs pinned oracle 2 for EVIDENCE_INPUT_MISSING; pinned value kept; adjudicate at VERIFY",
+      "rework_disposition": "Engineering diagnosis/reconciliation by original owner; preserve authorization boundary; not a waiver or mandatory user approval for routine fix"
     },
     {
       "id": "DELIVERY_CASES_NODE_PIN",
       "raised": "2026-10-20T12:06:25.182211+00:00",
       "by": "P1_5 worker",
-      "question": "delivery-cases Node-24 sensitivity: pin acceptance commands to host node 22.13.1 (recommended) or fix TAP-format dependency"
+      "question": "delivery-cases Node-24 sensitivity: pin acceptance commands to host node 22.13.1 (recommended) or fix TAP-format dependency",
+      "rework_disposition": "Engineering diagnosis/reconciliation by original owner; preserve authorization boundary; not a waiver or mandatory user approval for routine fix"
     },
     {
       "id": "I08_FILENAME_DEVIATION",
@@ -943,7 +1056,8 @@
       "owner": "user/plan-owner",
       "status": "OPEN",
       "candidate_resolution": "接受现状+集成波次机械改名+plan owner修canonical引用(待评审员建议)",
-      "reviewer_recommendation": "接受现状+机械改名+canonical 修正+runbook 补写或移出 owns; 见 worker-reports/I08.review.json"
+      "reviewer_recommendation": "接受现状+机械改名+canonical 修正+runbook 补写或移出 owns; 见 worker-reports/I08.review.json",
+      "rework_disposition": "Engineering diagnosis/reconciliation by original owner; preserve authorization boundary; not a waiver or mandatory user approval for routine fix"
     },
     {
       "id": "OV_OVERLAY_CANDIDATE",
@@ -961,13 +1075,15 @@
       "id": "REMOTE_URL_DISCREPANCY",
       "owner": "user",
       "status": "OPEN",
-      "summary": "worktree remote 显示 ql-wade/sdd-harness 与 registry rpamis/sdd-harness 不一致; 影响 push/PR 目标, 不影响本地验收"
+      "summary": "worktree remote 显示 ql-wade/sdd-harness 与 registry rpamis/sdd-harness 不一致; 影响 push/PR 目标, 不影响本地验收",
+      "rework_disposition": "Engineering diagnosis/reconciliation by original owner; preserve authorization boundary; not a waiver or mandatory user approval for routine fix"
     },
     {
       "id": "GH_AUTH_TOKEN",
       "owner": "user",
       "status": "OPEN",
-      "summary": "gh CLI TLS 拦截(x509 OSStatus -26276); I01 authority readback 保持 UNVERIFIED 直到网络/证书修复或用户提供 token; 不阻塞本地实施"
+      "summary": "gh CLI TLS 拦截(x509 OSStatus -26276); I01 authority readback 保持 UNVERIFIED 直到网络/证书修复或用户提供 token; 不阻塞本地实施",
+      "rework_disposition": "Engineering diagnosis/reconciliation by original owner; preserve authorization boundary; not a waiver or mandatory user approval for routine fix"
     }
   ],
   "halt": {
@@ -975,5 +1091,248 @@
     "resolved_at": "2026-10-20T09:53:44.389658+00:00",
     "resolution": "A (accept Ponytail supplement)",
     "refreeze": "complete on master — plan_guard exit 0; contract 108 checks; spec-baseline digest a89cfcf9 (pristine)"
-  }
+  },
+  "remaining_waves": [
+    [
+      "P1_1"
+    ],
+    [
+      "P2_1"
+    ],
+    [
+      "P3_1"
+    ],
+    [
+      "P1_6"
+    ],
+    [
+      "P1_2"
+    ],
+    [
+      "P2_2"
+    ],
+    [
+      "P2_3"
+    ],
+    [
+      "P2_4"
+    ],
+    [
+      "P2_5"
+    ],
+    [
+      "I01"
+    ],
+    [
+      "I02"
+    ],
+    [
+      "P1_3"
+    ],
+    [
+      "P1_4"
+    ],
+    [
+      "P1_5"
+    ],
+    [
+      "P3_4"
+    ],
+    [
+      "I03"
+    ],
+    [
+      "I04"
+    ],
+    [
+      "P3_2"
+    ],
+    [
+      "P3_3"
+    ],
+    [
+      "P4_6"
+    ],
+    [
+      "P4_7"
+    ],
+    [
+      "I05"
+    ],
+    [
+      "I06"
+    ],
+    [
+      "P4_1"
+    ],
+    [
+      "P4_2"
+    ],
+    [
+      "P4_4"
+    ],
+    [
+      "P4_5"
+    ],
+    [
+      "I07"
+    ],
+    [
+      "I08"
+    ],
+    [
+      "P4_8"
+    ],
+    [
+      "P4_3"
+    ],
+    [
+      "P5_1"
+    ],
+    [
+      "P5_2"
+    ],
+    [
+      "P5_3"
+    ],
+    [
+      "VERIFY"
+    ]
+  ],
+  "accepted_plan_nodes": 4,
+  "pending_plan_nodes": 35,
+  "open_p1": [
+    {
+      "id": "P1-01",
+      "status": "OPEN",
+      "source": "docs/research/2026-10-22-delivery-implementation-grill.md"
+    },
+    {
+      "id": "P1-02",
+      "status": "OPEN",
+      "source": "docs/research/2026-10-22-delivery-implementation-grill.md"
+    },
+    {
+      "id": "P1-03",
+      "status": "OPEN",
+      "source": "docs/research/2026-10-22-delivery-implementation-grill.md"
+    },
+    {
+      "id": "P1-04",
+      "status": "OPEN",
+      "source": "docs/research/2026-10-22-delivery-implementation-grill.md"
+    },
+    {
+      "id": "P1-05",
+      "status": "OPEN",
+      "source": "docs/research/2026-10-22-delivery-implementation-grill.md"
+    },
+    {
+      "id": "P1-06",
+      "status": "OPEN",
+      "source": "docs/research/2026-10-22-delivery-implementation-grill.md"
+    },
+    {
+      "id": "P1-07",
+      "status": "OPEN",
+      "source": "docs/research/2026-10-22-delivery-implementation-grill.md"
+    }
+  ],
+  "rework_task_seeds": [
+    "I02",
+    "I06",
+    "P1_1",
+    "P2_4",
+    "P2_5",
+    "P3_1",
+    "P3_3",
+    "P4_3",
+    "P4_8",
+    "VERIFY"
+  ],
+  "reopened_nodes": [
+    "I02",
+    "I04",
+    "I05",
+    "I06",
+    "I07",
+    "I08",
+    "P1_1",
+    "P1_2",
+    "P1_3",
+    "P1_4",
+    "P1_5",
+    "P1_6",
+    "P2_1",
+    "P2_2",
+    "P2_3",
+    "P2_4",
+    "P2_5",
+    "P3_1",
+    "P3_2",
+    "P3_3",
+    "P3_4",
+    "P4_1",
+    "P4_2",
+    "P4_3",
+    "P4_4",
+    "P4_5",
+    "P4_6",
+    "P4_7",
+    "P4_8",
+    "P5_1",
+    "P5_2",
+    "P5_3",
+    "VERIFY"
+  ],
+  "accepted_parent_tasks": 4,
+  "previous_execution_bindings": {
+    "run_started_at": "2026-10-20T03:04:53.456337+00:00",
+    "native_goal_status": "active after user objective edit",
+    "approved_replan_parallel": {
+      "authorized_by": "user goal 2026-10-20: 按照计划，并行实施。最终出具验证报告",
+      "recorded_at": "2026-10-20T03:04:53.456337+00:00",
+      "effective_max_workers": 2,
+      "isolation": "per-worker git worktree under .claude/worktrees/impl-* + dedicated branch; no shared-checkout writes",
+      "ownership_proof": "allowed_paths_by_task (drift-lock.json) disjoint across concurrently dispatched tasks; verified per wave before dispatch",
+      "frozen_files_untouched": true,
+      "conservative_fallback": "contract runtime.parallel_backend=serial/max_workers=1 remains valid if isolation proof fails; revert recorded in ledger"
+    },
+    "prior_resume_instructions": [
+      "Read pending user disclosure decision before any external review retry",
+      "If authorized, initialize fresh review run using one readable immutable bundle, preserve exact three-party quorum and fix launch paths",
+      "Freeze source/identity interfaces and complete formal executable plan before managed Runtime edits",
+      "Resume existing monitor sdd; never create duplicate monitor",
+      "Continue original full goal, do not mark 92 scenarios accepted from baseline tests"
+    ],
+    "prior_verification_progress": {
+      "native_r_gate_probe": "FAIL_NATIVE_GAP_CONFIRMED",
+      "evidence": ".local/pilot/native-gate-evidence-02/verdict.json",
+      "requirement_receipt_provided": false,
+      "actual_phase": "design",
+      "scope": "unmodified native baseline; managed extension not installed"
+    },
+    "prior_last_report": "verification-report.md",
+    "prior_authorization_blocker_audit": {
+      "consecutive_goal_turns": 0,
+      "decision_received": true,
+      "resumed_at": "2026-10-19T23:57:11.352115+00:00"
+    },
+    "prior_disclosure_authorization": {
+      "received": true,
+      "scope": "original 14 frozen design/spec/task documents only; no credentials or private business originals",
+      "source_bundle_digest": "881a7336e7d0c71fd62c24c3258112616872395d51534e3f80d0645e14f82458",
+      "readable_bundle_sha256": "6ac52e1a1a7e397b296446e6ac582bc504298c0c8c5111660fb099ce992e3ecc",
+      "review_count": 1,
+      "max_rounds": 3,
+      "received_at": "2026-10-19T23:57:11.352115+00:00"
+    }
+  },
+  "plan_completed_nodes": [
+    "P0_1",
+    "P0_2",
+    "P0_3",
+    "P0_4"
+  ],
+  "plan_validation": "handoff-validation.json"
 }

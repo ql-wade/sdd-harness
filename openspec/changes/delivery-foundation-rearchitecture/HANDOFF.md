@@ -1,47 +1,95 @@
-# 架构迁移实施交接
+# 给 Claude 的七P1返工交接
 
-本包只做计划，由用户另选 Agent 实施；没有启动实施、服务、发布或远端策略修改。接收方先读此文，再读 execution-prompt.md。
+本次请求是**计划修订和交接**，没有启动实施、Goal、定时任务、部署或发布。用户把本包交给Claude并要求执行后，由Claude按下述流程自动推进；技术修复不反复询问，只有真实授权/业务范围/不可恢复阻塞交人。
 
-## 权威与当前事实
+## 先读与唯一权威
 
-目标架构是 docs/architecture/delivery-architecture.md、ADR-0019 和本 Change design/spec。架构共识已通过，仅授权分批实施。tasks.md 是唯一任务进度，task-dag.json 是依赖/归属投影；原30父任务、69工作包和92场景保留，新增I01–I08和最终VERIFY，共39节点、105项required检查。原0.1–0.4文档完成状态保留，产品受管运行验收为0/92。
+1. 仓库AGENTS、README、主架构、ADR-0015/0019及技能分工。
+2. `docs/research/2026-10-22-delivery-implementation-grill.md`：7项P1与真实反例。
+3. 本Change的proposal/design/spec、tasks.md、task-dag.json、execution-contract.json、drift-lock.json、replan-record.json。
+4. 运行plan guard，核对冻结输入及身份；然后读execution-prompt.md的**项目优先覆盖**。guard通过只证明计划有效。
 
-迁移期间接收 Agent 以 planner 作为唯一实施控制器；被建设系统运行后仅由 Comet 控制业务阶段、状态、重试和恢复。TeamAI只分发，Ponytail只辅助。不得同时启动第二个planner/implement-spec或让worker改控制状态。
+唯一任务/进度源仍为本Change的tasks.md；唯一依赖图仍为task-dag.json。**39节点、原30父任务、69工作包、92场景，原108检查全部保留，新增10项返工检查，共118项required。** 历史总结的“40节点”不作为增删节点依据。P1-01等只是审查finding，不是新任务或第二套DAG。
 
-## 接收后按顺序执行
+Claude是迁移实施的唯一planner控制器；目标产品的业务派发、phase/currentStep、重试、恢复与关闭仅由Comet持有。TeamAI只分发；Ponytail只提供方法上下文。不得嵌套implement-spec或另造主控。
 
-1. 读取AGENTS/README/权威架构/技能分工，检查工作区和已有改动；只接纳本任务文件，不整体覆盖或提交当前脏工作区。此包未提交，先建立可回滚的本地变更基线。
-2. 先运行下方可用的静态校验，核对 planning-toolkit/manifest.json 的所有摘要。工具是选定planner的原样静态快照，不是新调度器；不要调用仓库旧版planner guard，它还依赖Superpowers且不支持本包schema2。
-3. 绑定一个实际可用的接收方控制器/进度源。当前串行波次是能力保守值；若选择并行，先证明隔离工作区、原生派发/等待/恢复和归属无冲突，记录批准的重规划并重新冻结，不能直接改max_workers。
-4. 从P1_1和P1_6前置开始：复核精确工具链、源码及现有部分实现；显式备份并替换原样方法快照，固定Matt tdd/diagnosing-bugs/code-review、planner、test-authoring、whitebox-verify、openspec-lifecycle-guard，保留grill及共识。不得依赖本机共享技能路径、软链接分发或重启Superpowers。方法不可用是阻塞，不可改成提示词跳过。
-5. 按DAG接入I01–I08；详见infrastructure-plan.md与infrastructure-tasks.json。I01登记实际owner、镜像/源码摘要、secretRefs和授权，值不入Git。缺项的组件不启动；不得复用PAV等其它项目资源。
-6. 各任务执行独立测试设计→实际行为RED→最小GREEN→回归→独立审查→串行接纳。环境错误不是行为RED。测试不足回test-authoring，产品缺陷回Builder；Whitebox不替作者修测试。部分已有源码准备/构建工具不等于P1_1完成，构建工具仍须独立审查和完整资格验证。
-7. runner及case尚未实现的检查见execution-contract.json的availability/implementedBy；先由归属任务编写，再执行。0=通过、1=无效输入/前置缺失、2=验证失败；缺真实环境标UNVERIFIED并非零退出。第三方工具保留自己的退出码约定。不得以不存在的命令、静态清单、fixture或skip声称运行通过。
-8. 绑定实际宿主Goal与20分钟监督再实施，含未知ETA/证据/阻塞汇报；本聊天旧sdd监督已暂停，不继承它的执行身份。监督只观察，不能派发或写业务phase。
-9. VERIFY依赖全部前置，执行105检查及92场景的独立Whitebox Journey和证据Grill；缺必需项保留未验收。OpenSpec归档需Kp，Outline Kt未完成时同一Comet Run仍须恢复并阻断整体完成。归档后审计与实际权限读回不可省略。
+## 版本与移交前置
 
-## 基础设施准入与授权
+本次源代码HEAD是`f4afe05`，原VERIFY测试基线`68f7963`；旧计划/状态/报告的完整字节及摘要见`replan-history/2026-10-22-seven-p1/previous/`与`replan-record.json`。原报告与测试日志作为历史保留，不继承为返工候选PASS。
 
-I01登记/密钥；I02固定Runner和真实角色隔离；I03 Outline数据库/缓存/认证/对象存储；I04单项目LLMWiki；I05自托管deepwiki-open及独立Code Graph；I06 Git/CI/Registry/隔离环境；I07跨Runner故障域监控及原实例进程监督；I08一致备份、隔离恢复和R10未完成保留。
+本轮继续已冻结的Classic同Runtime受控补丁方案。未接纳的官方overlay候选、主工作区现有架构/config改动不得混入实现；它们的观察摘要与字节保存在同一history的observed-inputs。当前`openspec/config.yaml`字节是本次校验的观察输入，不表示批准覆盖原项目规则或采纳overlay方案。
 
-尚需真实owner/身份/文集/源域、不可变组件摘要、专用秘密引用、受众与grant、外部监控和授权告警渠道、RPO/RTO等。远端分支保护修改、生产部署和消息发送均未由本次计划授权；先完成可审查配置，再按动作取得授权。源可读不代表可再发布。正常依赖下3分钟发现+2分钟隔离目标必须实测；宿主故障告警需外部故障域，同机容器不能替代。
+**本包未创建计划提交。** 在新worktree实施前，由唯一控制器把本包和全部冻结输入做可回滚的独立计划提交或受控快照，并记录准确基线；不能只从`f4afe05`创建工作树却漏掉本次返工计划。不得整体提交主工作区的无关改动。移交时核对spec-baseline.sources，尤其现有未提交config：在隔离快照中保留其冻结字节，不恢复/覆盖用户主工作区。缺冻结输入即HALT_AND_REPLAN，不静默重锁。
 
-## 可直接运行的计划校验
+当前可用工具与构建必须重验。完整保留构建缓存曾报manifest漂移，不能以目录存在或fingerprint文本正确当发行资格。OpenSpec优先用隔离、实测兼容的工具链；禁止为了过旧测试降全局版本。每次补丁集成由P1_1归属的唯一集成人更新有序锁、重新构建及回读，worker不能随意改共享锁。
 
-从仓库根执行（Python3，标准库；生命周期工具要求Python3.12+）：
+## 固定返工顺序
 
-```sh
-python3 openspec/changes/delivery-foundation-rearchitecture/planning-toolkit/scripts/plan_guard.py \
-  --repo-root . \
-  --plan openspec/changes/delivery-foundation-rearchitecture/tasks.md \
-  --architecture openspec/changes/delivery-foundation-rearchitecture/architecture.md \
-  --dag openspec/changes/delivery-foundation-rearchitecture/task-dag.json \
-  --lock openspec/changes/delivery-foundation-rearchitecture/drift-lock.json \
-  --contract openspec/changes/delivery-foundation-rearchitecture/execution-contract.json
-```
+| 顺序 | 沿用任务 | 交付与放行条件 |
+| --- | --- | --- |
+| 资格前置 | P1_1、P2_1 | 当前源码/补丁/工具链与测试边界可复验；不沿用漂移缓存或旧报告。 |
+| 第一修复 | **P3_1** | 修验收器的目标分母/断言映射/typed终态读回；无关全绿、零目标、skip、必需观察失败都非零；独立反例通过后才信后续绿色。 |
+| 第二修复 | **P2_4、P2_5** | R在正式架构前硬阻断；A/T消费真实独立结果；A真正消费grill闭合与精确全票共识；单调revision使旧字节还原也不复活批准。 |
+| 真实运行资格 | **I02，继而P1_3/P1_4/P1_5** | 修Dockerfile完整补丁/项目根/入口与image lock，真实镜像启动及角色隔离，重新走生成脚本与全部正常/旁路/恢复入口。 |
+| 跨边界接线 | P3_2/P3_3/P3_4、P4_4/P4_6/P4_7/P4_8、I01–I08 | 建设观察配方并在声明范围验证真实机制；完整三旅程统一留到VERIFY，等全部知识/监控/备份机制齐备后执行。组件任务不提前签完整旅程，缺资源保持未验。 |
+| 终局验收 | **P4_3、VERIFY** | 重建按层索引；同一最终候选重跑118检查、92场景及三条真实旅程，独立Whitebox与Grill，逐一关闭7P1。 |
 
-guard 0仅证明计划结构/摘要/追踪关系，1不通过、2输入不可读。不要将其与产品CLI的退出码含义混淆。变更接口/需求/计划先停止、保留旧锁与证据、审查重规划，再freeze；本次历史保存在.local/plan-history/infra-handoff-20261020（本地辅助历史不作为跨机必需输入）。
+原DAG已重排，依赖改动与原因逐条见replan-record.json。为解决“Runtime修复需要Runner验真、Runner又要打包修复后Runtime”的集成依赖，**仅三条边**允许消费已独立审查、准确绑定并串行集成的实现工件：P2_5←P2_4、I02←P2_4/P2_5。不是验收豁免：上游未验证的任务仍不勾选，状态为INTEGRATED_AWAITING_REAL_QUALIFICATION；I02/P1_5实际资格验证后才能关闭对应义务。若P2_5接线要求补Runtime，恢复原P2_4 worker/任务版本，不新建替代节点。VERIFY对所有任务和required结果保持严格通过条件。
 
-## 报告边界
+## 七项P1怎么修、怎么验
 
-现有真实Comet原生探针证明：缺R回执仍能推进design，需由计划中的受控扩展修复；不是已实现门禁。新Runner、Outline、DeepWiki、平台合并阻断、权限撤销和故障SLO均未验收。保留原92场景和条件能力准入；不以首版本地通过偷换团队API认证。完整交付后才更新verification-report/grill-report/results并关闭目标。
+| Finding | 原任务 | 必须观察到的RED→GREEN |
+| --- | --- | --- |
+| P1-01 | P2_4、P1_5 | 无R仍进入Design的反例先真实失败；修复后正式架构/转换/Guard/next/resume/恢复统一拒绝，可信R后正向推进。 |
+| P1-02 | P2_4、P2_5、I02 | 同调用者dispatch+空报告pass不得获准；缺票/旧摘要/假身份及弱oracle的T审查必须拒绝；实际独立角色产出的正确结果能自动放行。 |
+| P1-03 | P2_4、P3_3 | 修改→阻断→恢复原字节仍阻断；新revision独立重审后放行。旧回调、旧attempt不得复活；历史事务恢复不授权新动作。 |
+| P1-04 | P3_1、VERIFY | A01登记执行无关算术套件必须非零；复合场景缺子断言、required inspect失败、伪/旧读回同样拒绝。按schema绑定具体case/check/assertion和非零分母。 |
+| P1-05 | P1_1、I02 | 缺补丁/错入口/缺目录先复现；真实镜像消费当前完整锁，启动命令、工具链、fingerprint/digest与实际进程一致，并通过真实角色拒绝与正向链。 |
+| P1-06 | P3_2/P3_3、P4_6/P4_8、I07/I08 | 对实际Comet进程与真实资源注入故障，原authority/同Run/operation恢复；临时计数worker、假MCP、假archive不作为此层证据。 |
+| P1-07 | P4_3、VERIFY | 任一required未通过或P1未关闭，整体必须未完成；holder、显式处置、组件PASS或报告计数一致均不能解除。 |
+
+每项先由test-authoring设计正反例、独立oracle、数据/环境与清理，再由Builder按Matt TDD做行为RED→最小GREEN→回归。测试必须已经存在并真实执行；MODULE_NOT_FOUND、没有匹配测试、缺服务、缺依赖不是行为RED。`node --test`采集显式使用`--test-reporter=tap`。独立审查者重现负例，Whitebox不替作者修测试。
+
+新10检查的命令/归属/oracle在execution-contract；`--journey`与`current-build-role-isolation`是**待实现接口**，必须先由P3_1/I02实现并验证，不能照抄运行失败后当作完成。现有108检查也要复核实际命令与执行环境；I08按原canonical命名迁移，覆盖旧调用和合同，不再用另一文件的绿色代替合同命令。
+
+## 最终必须跑的三条真实旅程
+
+**1. 产品同Run交付（V_SAME_RUN_DELIVERY）。** 首先在批准的本仓库试点冻结一个实际受管Change及其可观察交付目标、环境、来源和专用Outline文集。由真实Comet执行：
+
+`R确认 → A grill与独立全票共识 → T独立测试设计审查 → P → 实际TDD → 独立Whitebox → Kp项目知识读回 → 真实OpenSpec归档 → Outline发布未知结果/重启恢复 → Kt真实读回 → completed`。
+
+每个角色使用实际登记的独立执行身份；记录Comet authority_id、同一product run_id、revision/candidate、gate/execution/attempt/epoch、报告摘要、knowledge/operation/document UUID、原始请求、响应及持久化读回。拒绝作者自填pass/伪造共识票、手改phase、手写completed、测试直接复制正确产物充当Builder或自建状态机绕过Comet。
+
+在本产品Run内，Kp缺失必须拦archive，Kt缺失必须拦整体completed；归档后仍恢复同一Run、同operation、稳定UUID，未知结果先独立读回，不能重复归档/部署/建页。产品试点归档不是本迁移Change的归档，避免用自身VERIFY作为已归档前提的循环。
+
+**2. 真实Comet故障恢复（V_RW_REAL_COMET_RECOVERY）。** 在原Run实际事务提交前/后、远端写已成功但本地结果未知等窗口，杀实际Comet进程；独立监控留下故障证据，监督器仅恢复原实例。Comet恢复原Run/operation，旧writer/attempt拒绝，无重复发布；同时回读Run、journal、批准依据、资源版本和continuation。不能通过测试手构成功journal或杀计数脚本签通过。
+
+**3. 发布后的权限维护（V_POST_DELIVERY_PERMISSIONS）。** 消费第一条旅程实际发布的知识对象；真实源撤权、受众变化、两种期限、漏事件/周期对账、隔离失败和恢复都要测试。已完成产品历史保留，维护由同一Comet引擎关联maintenance Run承接，记录origin_run、knowledge/operation关联，禁止另起业务主控。Outline Web/分享/搜索/附件及受控MCP等required渠道需真实不可访问读回；恢复必须新授权。正常3分钟发现+2分钟隔离目标与故障暴露/检测/投递分别计时。无外部监控故障域或缺真实权限，不签通过。
+
+**防验收循环：**P3_2只交付配方及实际R至V角色切片，P3_3交付配方与有限核心事务恢复，P4_8交付维护配方与已具备的权限机制；它们不以整条最终旅程PASS作为建设前置。三条完整旅程的execution_owner都是VERIFY，后者已依赖I03/I04/I07/I08及全部P4机制。V_RW_REAL_COMET_RECOVERY是V_SAME_RUN_DELIVERY启动的同产品Run内故障窗口，不是另开Run拼接日志；第三条消费其准确发布对象。任何局部任务接纳不关闭完整旅程。
+
+完整同Run与撤权旅程所需Outline UI截图、网络、日志及独立资源读回不能互相替代；缺浏览器/服务属于未满足前置，不是not-applicable。
+
+## 权限、资源与技术裁决
+
+沿用本仓库专用试点，禁止复用其它项目凭据/卷/网络。现有Docker和gh只读可达只是观察，不代表Runner/Outline/平台写权限已准入。各动作先核验owner、当前源权限、目标受众、grant及秘密引用，值不进Git。对外发布、真实告警消息、远端保护修改和生产部署须有明确动作授权；缺授权先完成配置与待审内容，不绕路外发。
+
+新架构审查若涉及外发材料，不能复用此前已使用的一次性冻结包授权。先准备精确审查包，按当前授权边界执行；缺独立审查能力保持门未通过。
+
+文件命名、TAP、构建路径、悬空证据指针和可诊断网络故障属于原owner修复，不一律转成用户裁决。跨机器F10仍按原范围处理：未授权不扩建API，也不得将其正向UNVERIFIED写PASS；原required仍在，整体目标不完成，除非用户另行明确批准范围重规划。
+
+## Goal、监督与完成
+
+接收实际实施请求后，Claude发现宿主真实dispatch/resume/wait/隔离及Goal/调度能力，绑定唯一控制器。当前合同保守serial/max_workers=1；若要并行，先验证独立worktree和写入归属，经显式重规划再改锁，不能直接改max_workers。独立评审必须另有真实身份；缺失则报告阻塞，不能自评冒充。
+
+目标使用contract.goal.objective，native_option=auto；宿主没有原生Goal就明确UNAVAILABLE，保留显式验收目标，不编造flags。20分钟监督收到实施请求再启用：
+
+> 只读取本Change tasks、唯一DAG、execution-state及ledger和实际worker/进程句柄。核对修订/基线、7P1修复与复验、未完成波次、资源资格和证据时间；报告有依据的进展、阻塞、下一步及上海时区ETA，未知就说未知。每次检查落回执，无实质变化不通知。不得签业务Gate、改phase、发布知识、另派worker或接管重试；仅原唯一控制器推进已授权工作。VERIFY期间继续监督，所有required和Whitebox/Grill/适用closeout闭合后才停止并读回。无调度能力标manual，不安装新daemon。
+
+只认当前候选、实际来源和相应证明层级。组件通过、环境已准备、产品旅程通过、知识关闭、规格归档分别记录。118项required全部PASS、92场景适用性/终态齐备、7P1及新P0/P1均有修复和独立复验、完整Whitebox Journey与Grill通过后，才接受VERIFY。FAIL/GATED/UNVERIFIED/不稳定证据一律保持整体未完成。
+
+VERIFY之后，本迁移Change的规格一致性、真实归档和后审由唯一Comet Spec Adapter继续，不调用planner helper finalize，不重复sync。只读freeze/check/prepare不等于实际归档。交付verification-results、verification-report、grill-report、原始Whitebox ledger/报告/validator输出、P1逐项closure与最终候选证据；未完成则报告具体阻塞并保留Run/恢复状态，不写“所有硬门满足”。
+
+## 本次计划检查及既有总检查缺口
+
+plan guard、OpenSpec strict、身份/分母/依赖与未提交输入保留检查是本轮规划验证。`bash scripts/check.sh`已真实执行，但本宿主在Whitebox green fixture的os.utime触发只读保护，未跑到完整回归；详见本地rework-plan-check-sh.log及handoff-validation.json。此限制不能签总检查通过。若新检出还缺原fixture工件，归原P1_6按显式完整快照升级纪律处理；不修改上游正文或放宽断言，不以pre-existing/零新增失败豁免V_FULL_CHECK。

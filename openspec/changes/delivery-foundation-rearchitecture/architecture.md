@@ -1,6 +1,5 @@
 # 实施证据与接口登记
 
-> 2026-10-20 官方 overlay 优先重规划候选：先完成隔离预研，再据源码兼容核对修订；详见 overlay-integration-design.md 与 overlay-prestudy/results.json。旧冻结包已保存，本次显式重冻结不启动执行。OVR 独立评审未完成前，不得用旧票/结构 PASS 为新方案放行；当前控制器状态和任务勾选保持原状。
 
 权威设计仍是 design.md、delivery-architecture.md 与 ADR-0019；本文件只是实现输入与接口登记，不另建工作流。原 tasks.md 父任务身份及依赖继续保留。用户已授权端到端实施与验证；R10 A 已确认。三方同摘要独立共识已通过，允许按既有任务分批实施；实际运行/角色隔离仍需后续验收。
 
@@ -22,9 +21,7 @@ Comet 0.4.5 精确提交 c90af44a4474662d7853aae76ce785404974fb0a；源码归档
 | Runner 隔离 | 控制文件/签发权限由受管主体持有，worker 不可写；hook 的 .comet 广泛白名单不能作为认证。相同无沙箱 OS 主体自签不能证明角色独立 | 1.3、3.1、4.7 |
 | 规格/知识收尾 | archive 事实与 completed 分离；Kp 卡归档，Kt 卡整体完成；R10 A 下未 completed 不清唯一工作区 | 3.4、4.4、4.6 |
 
-新增复用边界 `Comet.Overlay.v1`：原生 five-phase overlay 只绑定方法、schema 和附加证据，原 Classic phase/Run 唯一；不得从手工 required-skill 标记签发可信 pass。design/plan producer 满足原输出 schema，复用 validateClassicTaskPlan 的 authority/ref/无第二checkbox合同；按 task revision 绑定同一 tasks/DAG。完整 planner controller 不作为普通 required Skill 加载。
 
-隔离预研已观察 overlay 不另建 Run、control override 拒绝、canonical plan 生效；也确认手填标记/null 摘要可使生成 Guard 通过。新 OV01–OV08 验收因此覆盖来源、当前制品、共同推进、schema/包漂移、恢复、长文交接和实际装配，均不计为已通过。
 
 ## 测试边界与首个纵向切片
 
@@ -74,3 +71,21 @@ RunState扩展必须同时经过 engine/types、state、storage-run，以及clas
 ## 基础设施交接增量
 
 I01–I08 的文件归属、接口、RED/GREEN、秘密引用、恢复和资源资格详见 infrastructure-plan.md 与 infrastructure-tasks.json；它们已合入同一 task-dag.json，不是第二套调度/进度。无镜像摘要、真实owner或授权的组件不得启动。静态校验工具快照在 planning-toolkit，方法完整分发由原 P1_6 完成，禁止调用旧 Superpowers planner。
+
+## 2026-10-22 环境能力裁决（amendment 3）
+
+- SDD 分发项目化（用户裁决）：SDD_HOME=<repo>/.sdd；llmwiki 克隆（pin 075c5b4）/venv（.sdd/venvs/llmwiki-311）/wiki 数据根全部项目内解析；启动器按 $SDD_HOME 解析，语义不变；消除跨项目目录名撞根。
+- Docker 经终端面板通道（能力实测）：daemon 运行中（server 29.6.2），会话 Bash 沙箱拒 socket（EPERM）；I02/镜像/Outline 栈的 docker 操作走用户可见的终端 tab 通道执行并留回执，沙箱内不伪装可达。
+- 环境门控纪律不变：缺资源=未满足前置，UNVERIFIED 不转 PASS，holder 登记。
+
+## 2026-10-22 七P1返工准则（本轮优先）
+
+仅沿用已冻结的Classic同Runtime受控扩展路线；官方overlay仍为未接纳候选，不混用缺失的overlay设计/预研路径。架构选择不在本轮重新投票。审查依据docs/research/2026-10-22-delivery-implementation-grill.md；当前f4afe05与旧测试基线68f7963的实现目录已提交内容相同，工作区既有架构/config改动保留不覆盖。
+
+R前置必须覆盖进入正式设计；A消费实际grill闭合与精确全票共识，T消费独立测试设计审查。dispatch号与role文本不构成可信结果；原Run事务内保存单调revision和失效代际，旧字节还原不复活旧批准。observer不写phase/不恢复业务，以必需目标断言和typed终态读回判断，组件绿不关闭跨边界旅程。
+
+Runner镜像必须消费当前完整有序补丁和正确构建根/入口，真实角色隔离后才称受管。实际Comet进程故障、归档后同Run Kt恢复、真实Outline写入/资源隔离及外部告警分别实证。产品Run归档是旅程内阶段，本迁移Change归档是VERIFY之后的控制器closeout，避免自依赖。完整118required检查与92原场景保持，holder不豁免。
+
+冻结接口增量：
+- SDD.Verification.Journey.v2: observer requires exact targets and typed terminal readback and observes real Comet Run without controlling phase or recovery
+- Comet.GateRevision.v2: same Run persists monotonic requirement and design revisions and trusted reviewer result binding and never revives invalidated receipts by restoring bytes

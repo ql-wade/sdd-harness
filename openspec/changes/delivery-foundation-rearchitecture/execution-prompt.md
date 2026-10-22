@@ -1,13 +1,22 @@
-# 本项目优先覆盖（交接时必须保留）
+# Claude返工：本项目优先覆盖
 
-用户当前仅要求计划，由用户另选Agent实施；收到实际实施交接前不得激活此提示。先读同目录HANDOFF.md与execution-contract.json。以下项目规则优先于后面的通用参考文本：
+先读本目录HANDOFF.md。当前只是计划交接，未收到实施请求前不派发、不激活Goal/监督。以下规则覆盖后面的通用模板：
 
-- 迁移实施由接收方单一planner控制；目标系统业务阶段、状态、恢复仅由Comet Classic控制，TeamAI只分发，Ponytail无业务调度权。
-- 本项目contract.closeout_override覆盖后文helper finalize命令：planning-toolkit生命周期工具只作freeze/校验/预演，禁止其实际finalize归档；实际归档只能由同一Comet Spec Adapter写入，再独立读回。Kp阻断归档，Kt阻断整体完成，已归档未发布仍保留同一Run继续恢复。
-- 每20分钟检查进度和ETA并留回执；用户可见通知仅限实质变化、失败、完成或需用户动作，无变化保持安静。本聊天旧sdd监督已暂停，由接收方核验并绑定自己的唯一监督。
-- 原需求/设计变化使全部下游旧证据失效；R/A/T独立门禁，架构采用grill-me和精确全票共识，test-authoring与Whitebox分工保持独立。
-- 本包39节点/105检查/92场景，结构可交接不等于运行验收。TO_IMPLEMENT命令必须先由implementedBy任务编写/资格验证，不可直接宣称可运行；缺必需资源保持UNVERIFIED。
-- 若重新生成本文，必须重加并核对本覆盖块；上游toolkit保持原样。
+1. 同一tasks.md/task-dag.json，原39节点/30父任务/69工作包/92场景不变，原108+10=118required检查；不新增替代DAG，不继承旧PASS。P1映射与批准的重规划见replan-record.json。
+2. 迁移控制器为Claude唯一planner，目标产品业务控制器只允许Comet。先P3_1验收器，再P2_4/P2_5门禁，再I02真实Runner与接入复验。三条受限工件交接边只许可验证工件，不能签业务通过。
+3. P3_2/P3_3/P4_8建设观察配方及声明范围的真实机制；完整三旅程仅在VERIFY、全部知识/监控/备份机制就绪后执行。真实Comet故障窗口必须嵌入同一产品Run，撤权旅程消费它的实际知识对象，不拼接不同Run片段。
+4. 任何required FAIL/GATED/UNVERIFIED、局部测试、holder或显式处置都不能关闭整体目标；7P1需修复提交、独立复验及当前最终候选真实终态，先Whitebox再证据Grill。
+5. 本项目closeout_override优先：helper只freeze/check/prepare，禁止调用后文通用finalize；真实归档只由Comet Spec Adapter写。产品试点Run的archive→Kt恢复属于VERIFY旅程，本迁移Change的归档/后审在VERIFY之后，由控制器另行收尾，不造成任务自依赖。
+6. 20分钟监督在实施交接后才绑定真实宿主；无变化只留回执不通知，不继承旧sdd实例或已用的一次性外发授权，不安装新daemon。现有未提交用户改动不得覆盖，本包尚未提交，先作独立计划提交或受控快照再创建实施worktree。
+7. --journey及新probe/check名是待实现接口；先由原owner实现并写真实行为RED/GREEN，缺模块/零目标不算RED。新旧测试必须显式记录scope/来源/当前候选，不能以fixture替代真实Comet或知识资源。
+
+---
+
+# Agent Execution Controller
+
+0. 2026-10-22 环境能力（amendment 3）：(a) llmwiki 项目化——试点 SDD_HOME 固定 <repo>/.sdd（克隆 pin 075c5b4 落 .sdd/repos/llmwiki、venv .sdd/venvs/llmwiki-311、wiki 根项目内）；(b) Docker 操作经用户可见的终端面板 tab 通道执行（daemon server 29.6.2 实测可达；会话 Bash 沙箱拒 socket，不得伪装沙箱内可达），docker 类命令逐条走 run_in_terminal 并保留回执；(c) 环境门控纪律：缺资源=未满足前置，UNVERIFIED 不转 PASS。
+
+---
 
 ---
 
@@ -24,10 +33,10 @@ paths relative to it, verifying the repository identity before any write:
 plan `tasks.md`, architecture `architecture.md`, DAG `task-dag.json`,
 lock `drift-lock.json`, execution contract `execution-contract.json`.
 
-Locked plan SHA-256: `aac0152e4ea360d3e03f2f5f7f14cc203f74b4525de48fde04e6fbe359cb6ad9` (checkbox-normalized-v1).
-Architecture SHA-256: `8bd5316106944a28b58ab2a0f1468537227ce7b78dd7009ece0bdbdf9ec97aed` (raw bytes).
-DAG SHA-256: `c402254ba67a80106fbf2484a38d55f5899fa59a426fe7cbdb252c4a8d4f5d0b` (raw bytes).
-Execution-contract SHA-256: `9f36b3d9a8c13865a19cdc3b5113c658fced5ca5b1fd71dc13e8a32907328824` (raw bytes).
+Locked plan SHA-256: `56aa574bdd530b2df435f837aaeab0ee90aa72a58ecdb3f4329ef40e7b3b7aa3` (checkbox-normalized-v1).
+Architecture SHA-256: `648ec4e7508f68268cdc2c60dcd47f35b9d3856ba51e37f87b4046046e0b6d0f` (raw bytes).
+DAG SHA-256: `aa410a1a703700c3e7e426657f311e838679266afd60b4ef7519eb5671bff8e3` (raw bytes).
+Execution-contract SHA-256: `73c64d27630bed00a7bcb60fd7346ead4ac4981cf43780b9d4fc79f5aeb2358e` (raw bytes).
 Normalize CRLF to LF and change only line-leading Markdown checked boxes to
 unchecked for the plan digest; preserve fenced code exactly. Verify all four
 hashes before dispatch and integration; mismatch means HALT_AND_REPLAN.

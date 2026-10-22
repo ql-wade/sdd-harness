@@ -1,3 +1,5 @@
+> 当前修订：2026-10-22 七P1返工。依赖/归属以task-dag.json为唯一事实源；infra任务详单是其只读投影。所有原资格/恢复要求仍需真实证据，不以局部组件通过替代。
+
 # 基础设施实施计划与交接候选
 
 本文件只制定计划，交给后续执行者实施。当前没有启动服务、安装工具、派发worker、发送通知或修改生产/远端策略。claude-parallel-tdd-planner仅负责本次计划与交接；目标产品运行时仍只有Comet Classic主控，TeamAI仅分发。基础设施脚本只管理资源/进程并返回事实，不能拥有阶段、业务重试或第二DAG。
@@ -19,9 +21,9 @@
 ## 依赖增量
 
 - I01 after P0_4。
-- I02 after I01, P1_1；before P1_3。
+- I02 after I01, P1_1, P2_4, P2_5, P3_1；before P1_3（受限工件交接规则见execution-contract）。
 - I03 after I01；before P4_7。
-- I04 after I01, P1_1；before P3_1, P4_4。
+- I04 after I01, P1_1；before P4_4；真实完整旅程最终由VERIFY消费。
 - I05 after I01, P1_1；before P4_4。
 - I06 after I01；before P4_1。
 - I07 after I02, P2_4；before P4_8。
@@ -583,3 +585,7 @@ G15 A沿已确认边界：正常依赖下实际权限变化起3分钟内检测�
 7. deepwiki-open与graph的实际分发、语言/规模、源码外发范围；生成服务provider和各源token独立引用，不借用其它应用凭据。
 
 这些是交接前置输入/后续启用门，本轮计划不把缺失改成不适用，也不意味着用户必须现在提供秘密。执行者应先完成可逆本地配置、用独立资源实证，只有确实需要有权人输入的动作才停在对应门。
+
+### 2026-10-22 amendment 3 注记（llmwiki 项目化）
+
+I04 的 llmwiki 发行版解析改为项目内：SDD_HOME=<repo>/.sdd，克隆 pin 075c5b4 落 .sdd/repos/llmwiki，venv .sdd/venvs/llmwiki-311，wiki 根项目内（slug 目录名撞根随之消除）。package.lock.json 的 launcher sha 与 requirementsLock digest 语义不变（内容不变则哈希不变）。
