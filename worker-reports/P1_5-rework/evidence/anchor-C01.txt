@@ -1,0 +1,121 @@
+delivery-journey --scenario C01 --profile managed-pilot (registered case_module = test/delivery-cases/1_5.mjs; evidence dir in TMPDIR): exit n/a
+target: {"token":"C01","found":false,"status":null}
+reason: assertion-mapping-not-verifiable: no executed test point maps to required assertion(s) C01 — a green suite without the registered target is not a scenario pass (P1-04)
+
+{
+  "schemaVersion": 1,
+  "tool": "tools/verify/delivery-journey.mjs",
+  "runnerInvariant": "test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery",
+  "scenario": "C01",
+  "acceptanceIds": [
+    "C01"
+  ],
+  "journey": null,
+  "profile": "managed-pilot",
+  "caseModule": "test/delivery-cases/1_5.mjs",
+  "sourceBinding": [
+    {
+      "path": "specs/delivery-foundation/spec.md",
+      "requirement": "Classic single-controller integration",
+      "scenario": "C01"
+    }
+  ],
+  "verdict": "NOT-EXERCISED",
+  "reason": "assertion-mapping-not-verifiable: no executed test point maps to required assertion(s) C01 — a green suite without the registered target is not a scenario pass (P1-04)",
+  "missing": [
+    "C01"
+  ],
+  "drift": [],
+  "schemaErrors": [],
+  "execution": {
+    "command": "node --test test/delivery-cases/1_5.mjs",
+    "actions": [
+      {
+        "index": 1,
+        "type": "spawn",
+        "expected": "exit 0; TAP summary fail=0 with pass>0; test point matching C01 (V_C01 or bare id) is ok",
+        "required": true,
+        "expectation": {
+          "kind": "exitCode",
+          "value": 0
+        },
+        "ok": true,
+        "exitCode": 0,
+        "durationMs": 18249,
+        "note": null,
+        "observed": null,
+        "command": "node --test test/delivery-cases/1_5.mjs"
+      },
+      {
+        "index": 2,
+        "type": "readState",
+        "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0",
+        "required": true,
+        "expectation": {
+          "kind": "nonEmptyFile"
+        },
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": {
+          "path": "<host-path-redacted>",
+          "bytes": 1752
+        },
+        "command": null
+      },
+      {
+        "index": 3,
+        "type": "inspect",
+        "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+        "required": false,
+        "expectation": null,
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": "4818c4aa82c5efdedafbe4ccfe96f71361e730bd",
+        "command": null
+      }
+    ],
+    "tests": 6,
+    "pass": 6,
+    "fail": 0,
+    "skipped": 0,
+    "effectiveExecutions": 6,
+    "target": {
+      "token": "C01",
+      "found": false,
+      "status": null
+    },
+    "requiredAssertions": [
+      {
+        "id": "C01",
+        "status": "missing",
+        "matchedPoints": 0,
+        "ok": 0,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "candidate": {
+    "gitHead": "4818c4aa82c5efdedafbe4ccfe96f71361e730bd",
+    "node": "v22.13.1",
+    "platform": "darwin"
+  },
+  "timing": {
+    "startedAt": "2026-10-22T16:06:28.963Z",
+    "finishedAt": "2026-10-22T16:06:47.247Z",
+    "durationMs": 18284
+  },
+  "evidence": {
+    "dir": "<host-path-redacted>",
+    "files": [
+      "pilot-baseline.json",
+      "case-definition.json",
+      "verdict.json"
+    ]
+  },
+  "exitCode": 2
+}

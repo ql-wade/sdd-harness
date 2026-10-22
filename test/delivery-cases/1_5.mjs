@@ -1,5 +1,5 @@
 // P1_5 delivery case: the Classic integration gates over the real patched
-// build (fingerprint beab355d… after the P4_6 lock revision, manifest-verified on reuse). Per
+// build (patched six-patch build qualified by stack identity, manifest-verified on reuse). Per
 // classic-integration-design.md and acceptance C04/C06/C07/C08 this drives
 // one real Classic run through the managed entrances and records that:
 // C07 — all seven entrances (transition, guard preview, guard --apply,
@@ -180,10 +180,24 @@ const driveToBuild = async (change) => {
 const get = (change, field) => comet(['state', 'get', change, field]).stdout?.trim();
 
 test('setup: the patched pinned build named by the source lock is manifest-verified in this project', (t) => {
-  if (skipIfNoBuild(t)) return;
-  // lock revision: 6 patches @ beab355d (P2_4 0002 + P4_6 0003 + tests)
+  // The case qualifies the six-patch stack by IDENTITY, not by byte
+  // fingerprint: patch bytes revise without changing the stack's shape (the
+  // P2_4 rework integrated the 0002 revision @ d4370930), while the original
+  // discovery session's pre-0002 build (cb1151b4) must never satisfy it.
+  // The identity asserts run BEFORE the build-presence skip: a drifted lock
+  // must fail this qualification, not silently skip it (same bite as the
+  // accepted 1_3/1_4 precedent).
   assert.equal(lock.patches.length, 6, 'the patched build must carry the six locked patches');
-  assert.match(fingerprint, /^beab355d/, `patched fingerprint drifted: ${fingerprint}`);
+  assert.deepEqual(lock.patches.map((patch) => patch.path), [
+    'integrations/comet/patches/0001-matt-method-profile.patch',
+    'integrations/comet/patches/tests/1_6.patch',
+    'integrations/comet/patches/0002-managed-delivery-runtime.patch',
+    'integrations/comet/patches/tests/2_4.patch',
+    'integrations/comet/patches/0003-post-archive-closeout.patch',
+    'integrations/comet/patches/tests/4_6.patch',
+  ], 'the locked stack must be exactly 0001 + tests/1_6 + 0002 (managed delivery runtime) + tests/2_4 + 0003 (post-archive closeout) + tests/4_6');
+  assert.notEqual(fingerprint, 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187', 'the pre-0002 discovery build must not satisfy this case');
+  if (skipIfNoBuild(t)) return;
   const version = comet(['--version']);
   assert.equal(version.status, 0);
   assert.equal((version.stdout ?? '').trim(), lock.package.version);

@@ -1,0 +1,120 @@
+delivery-journey --scenario C05 --profile managed-pilot --case-definition (explicit carrier definition, case_module = test/classic-integration.test.js; evidence dir in TMPDIR): exit n/a
+target: {"token":"C05","found":true,"status":"ok"}
+verdict: FAIL | action-1-failed (spawn): expected exit 0, observed exit 1 (expected: exit 0; TAP summary fail=0 with pass>0; test point matching C05 (V_C05 or bare id) is ok)
+note: module exit 1 = the pre-existing known item (C08 pinned host OpenSpec 1.3.1 vs host 1.14.3, 21 tests / 20 pass / 1 fail); the C05 token-carrying test points are ok — the anchor resolves in the carrier, unlike the registered 1_5.mjs binding (found=false)
+
+{
+  "schemaVersion": 1,
+  "tool": "tools/verify/delivery-journey.mjs",
+  "runnerInvariant": "test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery",
+  "scenario": "C05",
+  "acceptanceIds": [
+    "C05"
+  ],
+  "journey": null,
+  "profile": "managed-pilot",
+  "caseModule": "test/classic-integration.test.js",
+  "sourceBinding": [
+    {
+      "path": "specs/delivery-foundation/spec.md",
+      "requirement": "Classic single-controller integration",
+      "scenario": "C05"
+    }
+  ],
+  "verdict": "FAIL",
+  "reason": "action-1-failed (spawn): expected exit 0, observed exit 1 (expected: exit 0; TAP summary fail=0 with pass>0; test point matching C05 (V_C05 or bare id) is ok)",
+  "missing": [],
+  "drift": [],
+  "schemaErrors": [],
+  "execution": {
+    "command": "node --test test/classic-integration.test.js",
+    "actions": [
+      {
+        "index": 1,
+        "type": "spawn",
+        "expected": "exit 0; TAP summary fail=0 with pass>0; test point matching C05 (V_C05 or bare id) is ok",
+        "required": true,
+        "expectation": {
+          "kind": "exitCode",
+          "value": 0
+        },
+        "ok": false,
+        "exitCode": 1,
+        "durationMs": 454,
+        "note": "expected exit 0, observed exit 1",
+        "observed": null,
+        "command": "node --test test/classic-integration.test.js"
+      },
+      {
+        "index": 2,
+        "type": "readState",
+        "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0",
+        "required": true,
+        "expectation": {
+          "kind": "nonEmptyFile"
+        },
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": {
+          "path": "<host-path-redacted>",
+          "bytes": 5652
+        },
+        "command": null
+      },
+      {
+        "index": 3,
+        "type": "inspect",
+        "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+        "required": false,
+        "expectation": null,
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": "4818c4aa82c5efdedafbe4ccfe96f71361e730bd",
+        "command": null
+      }
+    ],
+    "tests": 21,
+    "pass": 20,
+    "fail": 1,
+    "skipped": 0,
+    "effectiveExecutions": 21,
+    "target": {
+      "token": "C05",
+      "found": true,
+      "status": "ok"
+    },
+    "requiredAssertions": [
+      {
+        "id": "C05",
+        "status": "satisfied",
+        "matchedPoints": 4,
+        "ok": 4,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "candidate": {
+    "gitHead": "4818c4aa82c5efdedafbe4ccfe96f71361e730bd",
+    "node": "v22.13.1",
+    "platform": "darwin"
+  },
+  "timing": {
+    "startedAt": "2026-10-22T16:10:13.189Z",
+    "finishedAt": "2026-10-22T16:10:13.672Z",
+    "durationMs": 483
+  },
+  "evidence": {
+    "dir": "<host-path-redacted>",
+    "files": [
+      "pilot-baseline.json",
+      "case-definition.json",
+      "verdict.json"
+    ]
+  },
+  "exitCode": 2
+}

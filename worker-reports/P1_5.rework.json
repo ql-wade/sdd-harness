@@ -1,0 +1,47 @@
+{
+  "task": "P1_5 (rework-seven-p1-r1): Classic R/A/T 分离、P 单一权威、V 独立回执、Kp/Kt 读回门禁 + C01–C08 真实入口验证 — REOPEN 重验 + P1_3/P1_4 路由义务（1_5.mjs:186 beab355d 字面钉漂移 → 栈身份钉）+ 变异注入 + 场景锚点检查",
+  "run": "rework-seven-p1-r1",
+  "worktree": ".claude/worktrees/rw-p1-5 (branch rework/p1-5-deepwiki-lane, base master@4818c4a)",
+  "opening_receipt": "git log --oneline -1 -> 4818c4a chore(openspec): accept P1_4 rework (8/8; review APPROVED); status clean",
+  "final_status": "DONE",
+  "steps_done": "8/8 (tasks.md ### Task P1_5 共 8 步：Step1-4 RED→GREEN 全量重执行 + Step5 自审 + Step6 提交 + Step7 修复后六补丁构建重跑 C01–C08 + Step8 提交；tasks.md 勾选归控制器，本 worker 未碰)",
+  "owns_boundary_check": "Owns 逐字核对 = test/classic-integration.test.js, openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes, test/delivery-cases/1_5.mjs + 本轮授权新增 worker-reports/P1_5.rework.json 与 worker-reports/P1_5-rework/evidence/。本轮唯一代码改动 = test/delivery-cases/1_5.mjs（+18/-4：栈身份钉 + skip 卫序 + 头注释）；classic-integration.test.js 与 classic-integration-probes/ 六个证据文件真实重验、零改动（probe 文件是发现会话真实观察记录，重验走 worker-reports 证据，沿 P1_4 先例）；tasks.md/execution-state/ledger/drift-lock/活配置只读未碰；upstream.lock.json 与 lib/adapters/comet.js 仅作变异靶，逐字节还原（sha256 前==后）",
+  "repair_coverage": {
+    "routed_pin_fix": "DONE — RED 实证：test/delivery-cases/1_5.mjs:186 assert.match(fingerprint, /^beab355d/) 钉死在旧锁字面指纹；P2_4 rework 将 0002 修订整合进同一六补丁栈（锁指纹 d4370930…），setup 实际失败 'patched fingerprint drifted: d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6'（evidence/red-1_5-pin-drift.txt，exit 1 / 5 pass / 1 fail，仅钉漂移，其余行为测试全绿）。修复照抄 P1_3/P1_4 已验收先例（1_3.mjs:120-131、1_4.mjs:162-175 逐字语义）：assert.equal(patches.length,6) + 六补丁路径集合 deepEqual（0001+tests/1_6+0002+tests/2_4+0003+tests/4_6）+ assert.notEqual(cb1151b4f3a301c9…，发现会话预 0002 构建永不满足）。GREEN 后 1_5.mjs 6/6 pass exit 0 连续两次（evidence/green-run1/2-6of6.txt）",
+    "pin_bite_guard_order": "DONE — 本文件特有差异：1_5.mjs setup 原把 skipIfNoBuild 卫语句放在钉断言之前；锁漂移会改写 fingerprint→buildDir 指向不存在构建→整套 skip→钉永不咬合（M1 试跑实证：6 skip/0 fail）。修复将三条身份断言移到 skip 卫之前（与 1_3/1_4 先例的 prepared/built 硬断言序同构），注释写明理由；合法缺构建场景仍诚实 skip（锁完好→钉过→skip）。M1/M2 变异实证钉咬合（见 mutation_injection）",
+    "core_reverify_r1_semantics": "DONE×2 — 1_5.mjs 6/6 GREEN 两次 + classic-integration.test.js 20/21（唯一失败为既有已知项：C08 pinned host OpenSpec 1.3.1，宿主实际 1.14.3，测试自述 're-pin or migrate before running this suite'——宿主级动作，越权不做）。d4370930 修复后六补丁构建上重验：C07 七入口零检查证据一致拒绝（含 write-hook edit 渠道 exit 2）、C04 写票证语义（tick 不动票/定义漂移动票/stale 票 exit 70）、C06 封存恰一次（Kp 前置/ARCHIVE_ALREADY_SEALED/原生入口零知识回执 B5 如实登记）、C08 旁路与恢复负例（篡改 phase 文件/手写 record-check/伪造 seal/COMET_FORCE_PHASE 具名拒绝 + 隔离 1.11.0 应答其钉版本）",
+    "scenario_anchors": "CHECK DONE（含一项控制器上报）— verification-case-plan.json 将 C01–C06、C08（7 项）绑到 case_module=test/delivery-cases/1_5.mjs。实跑 delivery-journey --profile managed-pilot 七项：C04/C06/C08 PASS（target found=true/ok，evidence/anchor-C04|C06|C08.txt）；C01/C02/C03/C05 NOT-EXERCISED 'no executed test point maps to required assertion(s)'（evidence/anchor-C01|C02|C03|C05.txt）——这四个场景的真实断言面与锚词都在 classic-integration.test.js 测试名（'C01 positive:…' 等，亦在本任务 Owns），而 case-plan 单模块绑定指到 1_5.mjs，造成绑定/实现 split。已用工具自身的 --case-definition（显式 schema 校验定义，不动冻结 case-plan）对承载模块实跑四项：token 全部 found=true/status=ok（evidence/anchor-C01|C02|C03|C05-carrier-classic-integration.txt），FAIL 仅因该模块既有的 C08 1.3.1 宿主已知项（21 tests/20 pass/1 fail）。修复选项归控制器：case-plan 的 C01/C02/C03/C05 case_module 改绑 test/classic-integration.test.js（一行），或控制器裁定维持现状（acceptance-index 注记本就写 '1_5.mjs + classic-integration.test.js' 双文件）。本 worker 不 name-drop 锚词到不含其断言面的测试（弱锚反模式）",
+    "self_certification_audit": "DONE — 自证模式审查通过：钉断言期望值来自锁文件（独立物，与测试回显无关）；cb1151b4 拒绝常量沿已验收先例；无 mock（全程真实 CLI 子进程 + 真实 probe 回读）；RED→GREEN 差异可完全归因于漂移钉本身（行为断言零改动）；变异还原 sha256 逐字节核对"
+  },
+  "mutation_injection": [
+    {"id": "M1", "mutation": "upstream.lock.json 六补丁摘除 tests/4_6.patch（6->5）", "caught_by": ["1_5.mjs setup 栈身份钉 'the patched build must carry the six locked patches'（exit 1，1 fail/5 skip——skip 卫序修复后钉先咬合）"], "evidence": "worker-reports/P1_5-rework/evidence/mutations-m1-m4.txt", "restore": "sha256 89d3c51a… 前==后"},
+    {"id": "M2", "mutation": "upstream.lock.json 补丁次序对调（0002 <-> tests/2_4，长度仍 6）", "caught_by": ["1_5.mjs setup deepEqual 'the locked stack must be exactly 0001 + tests/1_6 + 0002 … + tests/4_6'（exit 1）"], "evidence": "worker-reports/P1_5-rework/evidence/mutations-m1-m4.txt", "restore": "sha256 89d3c51a… 前==后"},
+    {"id": "M3", "mutation": "lib/adapters/comet.js sealCloseout 关闭 ARCHIVE_ALREADY_SEALED 卫（if false &&）", "caught_by": ["1_5.mjs C06 'Missing expected exception'（第二次 closeout 不再被拒）exit 1"], "evidence": "worker-reports/P1_5-rework/evidence/mutations-m1-m4.txt", "restore": "sha256 0e4fee2f… 前==后"},
+    {"id": "M4", "mutation": "lib/adapters/comet.js probeWriteChannels asRecord outcome 强制 'gap'（edit 渠道拒绝被抹掉）", "caught_by": ["1_5.mjs C07 'the write-hook entrance must really refuse a cross-phase product write (C07)' exit 1"], "evidence": "worker-reports/P1_5-rework/evidence/mutations-m1-m4.txt", "restore": "sha256 0e4fee2f… 前==后"}
+  ],
+  "verification": {
+    "owns_green_x2": "node --test test/delivery-cases/1_5.mjs -> 6/6 pass，exit 0，两次（evidence/green-run1/2-6of6.txt，最终代码序）",
+    "owns_second_file": "node --test test/classic-integration.test.js -> 20/21，exit 1，唯一失败 = 既有已知项 C08 pinned host OpenSpec 1.3.1（宿主 1.14.3；与 P1_3/P1_4 rework 基线一致，非本轮引入；evidence/green-classic-integration-20of21-known-c08.txt）",
+    "full_suite": "npm test -> exit 1：442 tests / 440 pass / 2 fail / 0 skip；两失败均为既有已知项（C08 pinned host OpenSpec 1.3.1 依赖边缺失；B08 spec MODIFIED delta），与 P1_3/P1_4 基线失败集合完全一致，零新增（evidence/npm-test-full.txt）",
+    "mutation_restore": "四个变异逐一应用→捕获→还原；upstream.lock.json sha256 89d3c51a6b321d741a883b0141727c04675986262217f56312d67ba59769535a、lib/adapters/comet.js sha256 0e4fee2f4ada52900b20fd5a2219d4b2a02a0c10f32fa280bd10e92cbb906af1 前==后",
+    "isolated_tool_env": ".sdd/tools/openspec-1.11.0 隔离候选应答 --version=1.11.0（C08(e) 正臂实跑通过）；C08(d) B6 臂诚实 skip（宿主 openspec 1.14.3 ≠ toolchain-baseline 1.3.1，前提不成立时跳过是测试自身设计）"
+  },
+  "environment_notes": [
+    "构建前置：本 worktree 无 .sdd 构建缓存；从主检出以 APFS clone 复制 .sdd/vendor/comet（d4370930 构建 + provenance），并从 impl-p1-5 worktree 复制 .sdd/tools/openspec-1.11.0。遵守 P1_4 报告的 runbook 修正：cp -cRp 保留目录 mtime（实测 builds 目录 mtime 克隆前后一致），ensureCliBuilt 未触发并发重建，manifest 干净",
+    "P1_4 跨 lane 观察记录为 'pass 4 / fail 1'，本 lane 自跑 RED 实测 '5 pass / 1 fail'（6 测试全名单：setup fail + C07/C04/C06/C08/cleanup pass）。差异可能是其环境计数口径；两处观察一致指向唯一失败=setup 钉。以本 lane 自跑为准，如实记录",
+    "classic-integration-probes/ 六个证据文件为本轮 Owns 但保持原样：它们是 2026-10-20 发现/实现会话的真实观察记录；重验证据全部走 worker-reports/P1_5-rework/evidence/（沿 P1_4 对 mode-probes 的同款处置）。原评审 nb-1（gate-matrix c01 observed.verdict='blocked' 矛盾）处置即 'recorded; 建议重录（不动裁决）'，维持不重录"
+  ],
+  "unverified": [
+    "case-plan 的 C01/C02/C03/C05 → 1_5.mjs 绑定与实现 split（真实承载在 classic-integration.test.js）：锚检查已实证 + 载体演示已跑，改绑属 case-plan（冻结，非本任务授权文件），留控制器一行决策",
+    "classic-integration.test.js C08 1.3.1 负例需宿主全局 openspec 重钉 1.3.1 才能转绿——宿主级动作，越权不做（与 P1_3/P1_4 基线同状态）",
+    "Step 7 'R旁路/假独立审查/旧批准复活' 三类反例的扩展 RW_* 实现归 P2_4 owns（其 rework Step 11-13 已验收）；P1_5 侧三类拒绝面（C07 入口旁路、C05 伪造/自签回执、C06 二次封存复活拒绝）已在修复后构建上重验并由 M3/M4 实证承重，未新增重复测试体"
+  ],
+  "files_changed": [
+    "test/delivery-cases/1_5.mjs",
+    "worker-reports/P1_5.rework.json",
+    "worker-reports/P1_5-rework/evidence/ (17 个 .txt：RED/GREEN×2/classic-integration/7 锚+4 载体锚/4 变异+还原/npm test 全量)"
+  ],
+  "blockers_or_questions": [
+    "无阻断。一条上报：case-plan C01/C02/C03/C05 的 case_module 绑定（1_5.mjs）与真实承载文件（classic-integration.test.js，锚词齐备、token found=true/ok 已演示）不一致，journey 对这四场景永远 NOT-EXERCISED；建议控制器一行改绑或裁定维持（acceptance-index 双文件注记可作裁定依据）"
+  ]
+}
