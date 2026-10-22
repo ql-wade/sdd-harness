@@ -1,0 +1,64 @@
+I03 rework r1 — CLI exit-contract re-verification (real subprocess runs against committed domain)
+worktree: rw-i03 @ base 115b6bd, branch rework/i03-outline; tool: tools/infra/outline.mjs
+
+== validate ==
+cmd: node tools/infra/outline.mjs validate --registry infra/delivery/registry.json --dir infra/delivery/outline --json
+exit=0
+{"ok": true, "violations": [], "catalogGaps": []}
+
+== qualify (config-valid is NOT ready) ==
+cmd: node tools/infra/outline.mjs qualify --registry infra/delivery/registry.json --dir infra/delivery/outline --json
+exit=2
+{"catalogGaps": [], "ready": false, "unverifiedCount": 9, "categories": {"image-digest-authenticated": "UNVERIFIED", "oidc-registration": "UNVERIFIED", "oidc-login-proof": "UNVERIFIED", "object-store-access": "UNVERIFIED", "credentials-provisioned": "UNVERIFIED", "secret-refs-registered": "RECORDED", "domain-registration": "UNVERIFIED", "state-durability": "UNVERIFIED", "health-api": "UNVERIFIED", "backup-compatibility": "UNVERIFIED"}}
+
+== up (lock has no authenticated digest) ==
+cmd: node tools/infra/outline.mjs up --registry infra/delivery/registry.json --dir infra/delivery/outline --json
+exit=2
+{"ready": false, "refused": true, "error": "UP_REFUSED_IMAGES_LOCK_NOT_READY: 4 component images lack an authenticated digest", "unverifiedComponents": ["outline-app", "outline-postgres", "outline-redis", "outline-object-store"]}
+
+== stop (nothing started by this tool) ==
+cmd: node tools/infra/outline.mjs stop --registry infra/delivery/registry.json --dir infra/delivery/outline --json
+exit=2
+{"executed": false, "status": "UNVERIFIED", "reason": "no Outline stack was ever started by this tool (up refuses until the images lock qualifies and admission is gr"}
+
+== probe oidc-principal-acl (no endpoint, no request) ==
+cmd: node tools/infra/outline.mjs probe --case oidc-principal-acl --registry infra/delivery/registry.json --dir infra/delivery/outline --json
+exit=2
+{"executed": false, "status": "UNVERIFIED", "reason": "no live Outline instance endpoint configured; probes require a real authenticated instance (up refuses until t"}
+
+== probe restart-persistence (no endpoint, no request) ==
+cmd: node tools/infra/outline.mjs probe --case restart-persistence --registry infra/delivery/registry.json --dir infra/delivery/outline --json
+exit=2
+{"executed": false, "status": "UNVERIFIED", "reason": "no live Outline instance endpoint configured; probes require a real authenticated instance (up refuses until t"}
+
+== probe attachment-denial (no endpoint, no request) ==
+cmd: node tools/infra/outline.mjs probe --case attachment-denial --registry infra/delivery/registry.json --dir infra/delivery/outline --json
+exit=2
+{"executed": false, "status": "UNVERIFIED", "reason": "no live Outline instance endpoint configured; probes require a real authenticated instance (up refuses until t"}
+
+== probe managed-publish (no endpoint, no request) ==
+cmd: node tools/infra/outline.mjs probe --case managed-publish --registry infra/delivery/registry.json --dir infra/delivery/outline --json
+exit=2
+{"executed": false, "status": "UNVERIFIED", "reason": "no live Outline instance endpoint configured; probes require a real authenticated instance (up refuses until t"}
+
+== probe managed-publish (nominal request: all declared preconditions hold) ==
+cmd: node tools/infra/outline.mjs probe --case managed-publish --publish-request <tmpdir>/i03-pub-req-nominal.json --registry infra/delivery/registry.json --dir infra/delivery/outline --json
+exit=2
+{"executed": true, "status": "UNVERIFIED", "blocks": [], "evaluationBasis": "declared-request-only", "liveReadback": false, "reason": "declared preconditions hold, but effective audience closure requires live readback; the gate stays closed (UNV"}
+
+== probe restart-persistence (real attempt, unreachable endpoint) ==
+cmd: node tools/infra/outline.mjs probe --case restart-persistence --endpoint http://127.0.0.1:59999 --registry infra/delivery/registry.json --dir infra/delivery/outline --json
+exit=2
+{"executed": false, "status": "UNVERIFIED", "reason": "endpoint unreachable (GET /api/config): EPERM"}
+
+== probe unknown case ==
+cmd: node tools/infra/outline.mjs probe --case not-a-case --json
+exit=1
+(stdout not shown)
+
+== unknown command ==
+cmd: node tools/infra/outline.mjs frobnicate --json
+exit=1
+(stdout not shown)
+
+note: exit=1 rows (unknown case / unknown command) print the error+usage to stderr only; stdout is empty by design (input-error contract).

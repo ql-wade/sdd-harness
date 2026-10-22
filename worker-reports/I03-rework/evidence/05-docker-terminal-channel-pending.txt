@@ -1,0 +1,13 @@
+I03 rework r1 — docker/compose execution boundary (as-reported, no fabrication)
+
+== sandbox attempt ==
+cmd: docker version --format {{.Server.Version}}
+result: permission denied while trying to connect to the docker API at unix://<host-home>/.docker/run/docker.sock
+=> docker daemon socket is denied inside this agent sandbox; the I03 up path therefore cannot and does not exercise docker here.
+
+== terminal-channel pending (controller-executed via the terminal panel, which CAN reach docker — controller verified daemon 29.6.2) ==
+1) cd <repo> && docker version --format '{{.Server.Version}}'   # daemon reachability for the future up path
+2) cd <repo> && OUTLINE_IMAGE=x OUTLINE_POSTGRES_IMAGE=x OUTLINE_REDIS_IMAGE=x OUTLINE_OBJECT_STORE_IMAGE=x docker compose -f infra/delivery/outline/compose.yaml config --quiet   # compose file is structurally valid for the real compose engine (placeholders satisfied by lock-resolution stand-ins); expect exit 0
+3) cd <repo> && node tools/infra/outline.mjs up --registry infra/delivery/registry.json --dir infra/delivery/outline --json   # expect exit 2 UP_REFUSED_IMAGES_LOCK_NOT_READY regardless of daemon — the lock gate precedes docker
+
+no result of 1-3 is claimed in this report; they are declared pending.

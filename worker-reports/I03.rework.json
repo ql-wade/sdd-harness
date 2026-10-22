@@ -1,0 +1,191 @@
+{
+ "task": "I03",
+ "task_title": "Outline独立资料域、Postgres/Redis、OIDC与对象存储 (rework re-verification, local half)",
+ "run": "rework-seven-p1-r1",
+ "final_status": "PARTIAL",
+ "final_status_reason": "tasks.md Steps 1/2/4 re-verified and hardened on the local half against current source; Step 3 (native-browser login/share behavior + independent API/DB/object-store readback on a live instance) and every live-instance half remain honestly UNVERIFIED — no real Outline deployment, credentials, corpus, OIDC issuer or object store exists in this environment",
+ "opening_receipt": "git log --oneline -1 -> 115b6bd chore(openspec): accept I05 rework (3/4, Step 3 env-gated; review APPROVED; merge 7e35aac; flips corrected)",
+ "worktree": "rw-i03 @ master@115b6bd, branch rework/i03-outline",
+ "steps_done": "3/4 (Step 1 Test, Step 2 Implement re-verified + hardened; Step 4 Commit; Step 3 env-gated UNVERIFIED)",
+ "local_half_reverified": [
+  {
+   "behavior": "per-channel access negatives (unauthenticated / ordinary reader / off-boarded x collection/page/subtree/public-share/search/attachment)",
+   "negative": "oidc-principal-acl plannedSteps now enumerate all six channels for all three principal classes, demand per-channel denials recorded SEPARATELY from residual paths (deniedByChannel vs residualPath, e.g. post-revocation signed-URL residue), and add a member-attempts-issuer/secret/isolator-role-change denial step (general users cannot alter issuer/secret/isolator roles); live execution stays UNVERIFIED (exit 2, executed=false, exact reason) — probe output evidence 02"
+  },
+  {
+   "behavior": "managed publish blocked when source intersection excludes the target reader",
+   "negative": "NEW probe --case managed-publish --publish-request: exit 2, status BLOCKED, blocks[] carries BLOCKED_SOURCE_INTERSECTION_EXCLUDES_READER (all causes listed at once, not just the first)"
+  },
+  {
+   "behavior": "managed publish blocked on pagination failure",
+   "negative": "pagination.complete !== true -> BLOCKED_PAGINATION_INCOMPLETE, exit 2"
+  },
+  {
+   "behavior": "managed publish blocked when principal cannot be mapped",
+   "negative": "principalMapping.status !== MAPPED -> BLOCKED_PRINCIPAL_UNMAPPABLE, exit 2"
+  },
+  {
+   "behavior": "managed publish blocked on expired grant",
+   "negative": "grant.expired === true -> BLOCKED_GRANT_EXPIRED, exit 2"
+  },
+  {
+   "behavior": "admin readability is never audience evidence",
+   "negative": "empty audienceIntersection + adminReadable=true -> BLOCKED_ADMIN_READ_NOT_AUDIENCE alongside the intersection block"
+  },
+  {
+   "behavior": "timeout/403 must never be recorded as target absence",
+   "negative": "observationError{kind:timeout|http-403, targetRecordedAbsent:true} -> BLOCKED_ABSENCE_INFERRED_FROM_ERROR, exit 2"
+  },
+  {
+   "behavior": "declared-only evidence never turns the publish gate green",
+   "negative": "nominal request with every precondition satisfied -> still exit 2, status UNVERIFIED, blocks=[], liveReadback=false, evaluationBasis=declared-request-only (effective audience closure requires live readback)"
+  },
+  {
+   "behavior": "loopback exposure must not auto-open a public network",
+   "negative": "validateCompose second pass: every network declared under networks: must be internal:true and not external -> NON_INTERNAL_NETWORK_DECLARED. This closes a real hole found in re-verification: the old single-regex check passed a compose that smuggled a second external network (public-edge: external:true) next to the loopback bind. Anchored by a dedicated fixture (old check provably does NOT fire on it)"
+  },
+  {
+   "behavior": "compose gate: image lock / loopback / internal network / named volumes",
+   "negative": "re-run green on committed domain (validate exit 0); NEW anchors: NETWORK_NOT_INTERNAL + NON_INTERNAL_NETWORK_DECLARED (internal:false), HOST_NETWORK_FORBIDDEN (network_mode:host), NAMED_VOLUMES_MISSING (volumes: section removed), DURABLE_STORE_NOT_ON_NAMED_VOLUME (outline-postgres mount removed); existing anchors re-verified: PORT_BINDING_NOT_LOOPBACK, COMPOSE_IMAGE_NOT_LOCK_RESOLVED, HOST_MOUNT_FORBIDDEN, FLOATING_TAG_FORBIDDEN, DIGEST_FORMAT_INVALID, unauthenticated-digest up refusal"
+  },
+  {
+   "behavior": "lock/up gates",
+   "negative": "NEW anchors for previously unanchored branches: UP_GATE_NOT_CLOSED (upGate.enabled=true), IMAGE_NOT_DIGEST_PINNED (reference without digest), UP_NOT_AUTHORIZED (structurally qualified fixture lock with gate closed — deterministic, no docker), unparseable lock -> exit 1, unreadable registry -> exit 1"
+  },
+  {
+   "behavior": "restart/409/timeout semantics (live half)",
+   "negative": "restart-persistence probe keeps 409-not-blind-overwrite and durable-readback steps; storage-policy keeps conflictStatusDeclared=409 + status UNVERIFIED; live execution env-gated (exit 2)"
+  }
+ ],
+ "mutations_caught": [
+  {
+   "id": "M1",
+   "mutation": "infra/delivery/outline/compose.yaml: loopback bind \"127.0.0.1:${OUTLINE_PORT:-3000}:3000\" -> public \"3000:3000\"",
+   "caught_by": "5 tests fail (incl. committed-domain validate-clean test and compose declaration gate); restore -> 17/17 green",
+   "evidence": "evidence/03"
+  },
+  {
+   "id": "M2",
+   "mutation": "tools/infra/outline.mjs: removed the PORT_BINDING_NOT_LOOPBACK enforcement line",
+   "caught_by": "1 test fails (compose declaration gate expects the violation code on the mutated fixture); restore -> 17/17 green",
+   "evidence": "evidence/03"
+  },
+  {
+   "id": "M3",
+   "mutation": "infra/delivery/outline/storage-policy.json: cache.rightsAuthority false -> true",
+   "caught_by": "5 tests fail (committed-domain validate-clean + OutlineState.v1 contract + 3 fixture-based validators); restore -> 17/17 green",
+   "evidence": "evidence/03"
+  }
+ ],
+ "p3_1_connected_check": {
+  "scenario_anchor_gaps_fixed": [
+   "managed publish blocking (source intersection / pagination / unmappable principal / expired grant / admin substitute / timeout-403-as-absence) had ZERO local anchors — the whole RED clause existed only as note strings in registration files; now a real fail-closed gate with a 10-scenario test matrix (evidence 01 test 15)",
+   "NON_INTERNAL_NETWORK_DECLARED did not exist: a second external network passed validate while one internal network remained (the regex gate is existence-based) — the 'loopback不得自动开公网' negative was unenforceable; now enforced + anchored",
+   "NAMED_VOLUMES_MISSING / DURABLE_STORE_NOT_ON_NAMED_VOLUME: the 命名卷 half of the compose gate allowed a compose with no named volumes at all; now enforced + anchored",
+   "UP_GATE_NOT_CLOSED, IMAGE_NOT_DIGEST_PINNED, UP_NOT_AUTHORIZED, unparseable-domain-file exit 1, unreadable-registry exit 1: tool branches with zero test anchors, now anchored",
+   "oidc-principal-acl plannedSteps upgraded from 3-channel unauthenticated + off-boarded-only to six channels x three principal classes with separate denial/residual-path reporting + member role-modification denial"
+  ],
+  "self_certification_mode": "none found after audit: every gate assertion drives the real CLI as a subprocess (spawnSync of tools/infra/outline.mjs) against tmp fixtures; publish-request fixtures are INPUTS (declared evidence), expected exit codes / violation codes / blocks are asserted from the real stdout, never echoed from the fixture; committed-file assertions (OutlineState contract, lock RED gate) assert the deliverable state itself, not test-side baseline copies",
+  "remaining_unanchored_minor_branches": "defense-in-depth branches not named by the RED spec and still without dedicated anchors: LOCK_INTERFACE_INVALID, DOMAIN_INTERFACE_INVALID, MALFORMED_REF, CACHE_DURABILITY_FORBIDDEN, ENV_LINE_MALFORMED, DIGEST_AUTH_FLAG_INCONSISTENT, SERVICES_MISSING, PRIVILEGED_FORBIDDEN, up docker-daemon-reachability branch (terminal-channel dependent)"
+ },
+ "terminal_channel_pending": [
+  {
+   "cmd": "cd <repo> && docker version --format '{{.Server.Version}}'",
+   "why": "docker socket denied in this agent sandbox (evidence 05); terminal panel CAN reach docker (controller verified daemon 29.6.2) — confirms the daemon precondition the future up path needs"
+  },
+  {
+   "cmd": "cd <repo> && OUTLINE_IMAGE=x OUTLINE_POSTGRES_IMAGE=x OUTLINE_REDIS_IMAGE=x OUTLINE_OBJECT_STORE_IMAGE=x docker compose -f infra/delivery/outline/compose.yaml config --quiet",
+   "why": "proves the committed compose is structurally valid for the real compose engine (placeholders stand-ins for lock resolution); sandbox cannot run docker, result not claimed here"
+  }
+ ],
+ "env_gated": [
+  {
+   "step": "tasks.md I03 Step 3 — native-browser login/page/share behavior screenshots + associated requests; independent user permission/API/DB/object-store readback on a live Outline instance; no shared sessions with other apps",
+   "holder": "user / Outline 部署波次 (dedicated loopback instance + OIDC issuer + corpus + real credentials do not exist in this environment)"
+  },
+  {
+   "step": "V_SAME_RUN_DELIVERY (execution-contract.json, implementedBy P3_2, VERIFY-owned) — real Comet product Run reaching Outline 未知结果/重启恢复 then completed",
+   "holder": "user / Outline 部署波次 — the journey's Outline phase needs the same dedicated instance/corpus/credentials as I03 Step 3; not claimable from this run"
+  },
+  {
+   "step": "V_POST_DELIVERY_PERMISSIONS (execution-contract.json, VERIFY-owned) — consume the SAME published knowledge of that Run for real revocation/missed-report/audience-change/expiry multi-channel isolation",
+   "holder": "user / Outline 部署波次 + P3_2 same-run delivery — depends on a completed V_SAME_RUN_DELIVERY publish against the real instance"
+  },
+  {
+   "step": "up path beyond refusal (image selection + digest authentication, resource admission, docker launch) — all 4 lock components remain reference=null/digest=null UNVERIFIED by policy; tags must not be invented",
+   "holder": "user / resource admission wave (版本选定与 registry 认证)"
+  },
+  {
+   "step": "probes oidc-principal-acl / restart-persistence / attachment-denial live halves (per-channel denials, durable readback after app+db restart, 409 conflict, signed-URL residue after revocation)",
+   "holder": "user / Outline 部署波次"
+  }
+ ],
+ "red_cases": [
+  "fixture: source intersection excludes target reader -> exit 2 BLOCKED_SOURCE_INTERSECTION_EXCLUDES_READER",
+  "fixture: empty audience + adminReadable=true -> exit 2 BLOCKED_ADMIN_READ_NOT_AUDIENCE (+ intersection block)",
+  "fixture: pagination incomplete -> exit 2 BLOCKED_PAGINATION_INCOMPLETE",
+  "fixture: unmappable principal -> exit 2 BLOCKED_PRINCIPAL_UNMAPPABLE",
+  "fixture: expired grant -> exit 2 BLOCKED_GRANT_EXPIRED",
+  "fixture: timeout/http-403 recorded as target absence -> exit 2 BLOCKED_ABSENCE_INFERRED_FROM_ERROR",
+  "fixture: all six causes at once -> exit 2 with ALL six codes listed",
+  "fixture: nominal request (all preconditions hold) -> exit 2 UNVERIFIED, blocks=[] (declared-only never green)",
+  "fixture: compose internal:false -> NON_INTERNAL_NETWORK_DECLARED + NETWORK_NOT_INTERNAL",
+  "fixture: second external network smuggled beside the loopback bind -> NON_INTERNAL_NETWORK_DECLARED (old gate provably blind to this)",
+  "fixture: network_mode: host -> HOST_NETWORK_FORBIDDEN",
+  "fixture: top-level volumes: removed -> NAMED_VOLUMES_MISSING",
+  "fixture: outline-postgres named-volume mount removed -> DURABLE_STORE_NOT_ON_NAMED_VOLUME",
+  "fixture: upGate.enabled=true -> UP_GATE_NOT_CLOSED",
+  "fixture: reference without digest -> IMAGE_NOT_DIGEST_PINNED",
+  "fixture: structurally qualified lock + gate closed -> up exit 2 UP_NOT_AUTHORIZED (docker-independent)",
+  "fixture: unparseable images.lock.json -> exit 1; unreadable registry -> exit 1",
+  "probe managed-publish without request/endpoint -> exit 2 executed=false UNVERIFIED",
+  "probe restart-persistence with unreachable endpoint -> exit 2, real connection attempt reported (EPERM under this sandbox)"
+ ],
+ "commands": {
+  "node --test test/infra-outline.test.js (run1)": "0 (17/17)",
+  "node --test test/infra-outline.test.js (run2)": "0 (17/17)",
+  "outline.mjs validate": "0",
+  "outline.mjs qualify": "2 (ready=false, unverifiedCount=9, secret-refs-registered=RECORDED)",
+  "outline.mjs up": "2 (UP_REFUSED_IMAGES_LOCK_NOT_READY, 4 unverified components)",
+  "outline.mjs stop": "2 (UNVERIFIED, nothing started)",
+  "outline.mjs probe --case {oidc-principal-acl,restart-persistence,attachment-denial,managed-publish} (no endpoint/request)": "2 (executed=false, UNVERIFIED)",
+  "outline.mjs probe --case managed-publish --publish-request <nominal>": "2 (executed=true, status=UNVERIFIED, blocks=[])",
+  "outline.mjs probe --case restart-persistence --endpoint http://127.0.0.1:59999": "2 (real attempt, endpoint unreachable)",
+  "outline.mjs probe --case not-a-case / unknown command": "1",
+  "npm test (baseline @115b6bd)": "427 tests, 424 pass, fail 2 (known: C08 host-OpenSpec dependency-edge negative #59; B08 preservation negative #416), 1 skipped",
+  "npm test (after rework)": "430 tests, 427 pass, fail 2 (identical known set; B08 shifted to #419 only by test insertion), 1 skipped — zero new failures",
+  "docker version --format ... (sandbox attempt)": "permission denied (docker.sock) — evidence 05, terminal-channel pending"
+ },
+ "unverified": [
+  "Step 3 native-browser login/page/share screenshots + associated requests — no live instance (holder: user / Outline 部署波次)",
+  "independent user permission/API/Postgres/object-store readback — no live instance",
+  "effective audience closure incl. parents/groups/shares/public entries — requires live readback; registration stays UNVERIFIED by design",
+  "V_SAME_RUN_DELIVERY and V_POST_DELIVERY_PERMISSIONS journeys — depend on Outline 专用文集/凭据 (holders registered in env_gated)",
+  "attachment signed-URL residual validity after revocation (declared risk, must be measured live)",
+  "restart persistence (app+db restart readback) and 409 conflict behavior against a real deployment",
+  "up docker-daemon branch and real compose-engine validation of compose.yaml (terminal-channel pending, evidence 05)",
+  "all four component images remain UNSELECTED/UNVERIFIED — no tag/digest invented (policy)"
+ ],
+ "files_changed": [
+  "tools/infra/outline.mjs",
+  "test/infra-outline.test.js",
+  "worker-reports/I03.rework.json",
+  "worker-reports/I03-rework/evidence/01-owns-suite-green-x2.txt",
+  "worker-reports/I03-rework/evidence/02-cli-exit-contract.txt",
+  "worker-reports/I03-rework/evidence/03-mutations-caught.txt",
+  "worker-reports/I03-rework/evidence/04-full-suite-baseline-vs-after.txt",
+  "worker-reports/I03-rework/evidence/05-docker-terminal-channel-pending.txt"
+ ],
+ "untouched_owned": [
+  "infra/delivery/outline/compose.yaml",
+  "infra/delivery/outline/images.lock.json",
+  "infra/delivery/outline/outline.env.example",
+  "infra/delivery/outline/oidc-registration.example.json",
+  "infra/delivery/outline/storage-policy.json",
+  "infra/delivery/outline/collection-registration.example.json"
+ ],
+ "blockers_or_questions": [
+  "none blocking the local half; the live half needs the Outline 部署波次 (dedicated loopback instance, OIDC issuer + test principals owner/member/offboarded, managed+isolation collections corpus, object store) — registered under env_gated, not fabricated",
+  "note for controller: infrastructure-tasks.json I03.probes lists 3 probe cases; a 4th (managed-publish) was added within owns to give the 受管发布阻断 RED clause an executable local gate — flagging in case the probe list needs a matching registration elsewhere (I did not touch non-owned files)"
+ ]
+}

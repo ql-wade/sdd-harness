@@ -1,0 +1,42 @@
+I03 rework r1 — mutation injections (real source mutated, suite must go RED, restore, suite green)
+suite under attack: node --test test/infra-outline.test.js
+
+== M1: infra/delivery/outline/compose.yaml — loopback bind 127.0.0.1:...:3000 -> public 3000:3000 ==
+mutation: "127.0.0.1:${OUTLINE_PORT:-3000}:3000" -> "3000:3000"
+result: 5 tests fail (12/17 pass)
+not ok 1 - V_INFRA_I03 contract: committed outline domain validates clean; qualify/up/probe/stop honor the exit contract
+not ok 2 - gap-reporting behavior: a ref missing from a supplied catalog is explicitly reported as a catalogGap, never silent
+not ok 5 - RED image gate: malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED
+not ok 14 - compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders
+not ok 17 - lock and up gates: opened upGate, unpinned reference, unparseable lock, unreadable registry and up without authorization are all anchored
+# tests 17
+# pass 12
+# fail 5
+
+restore: git checkout -- infra/delivery/outline/compose.yaml; re-run: 17/17 pass, 0 fail
+
+== M2: tools/infra/outline.mjs — drop the PORT_BINDING_NOT_LOOPBACK enforcement line ==
+mutation: removed 'if (item.split(':')[0] !== 127.0.0.1) add(PORT_BINDING_NOT_LOOPBACK, ...)'
+result: 1 test fails (16/17 pass)
+not ok 14 - compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders
+# tests 17
+# pass 16
+# fail 1
+
+restore: re-applied the full implementation (the git checkout had also reverted uncommitted work); re-run: 17/17 pass, 0 fail
+
+== M3: infra/delivery/outline/storage-policy.json — cache.rightsAuthority false -> true ==
+mutation: rightsAuthority flipped to true (cache as rights authority)
+result: 5 tests fail (12/17 pass)
+not ok 1 - V_INFRA_I03 contract: committed outline domain validates clean; qualify/up/probe/stop honor the exit contract
+not ok 2 - gap-reporting behavior: a ref missing from a supplied catalog is explicitly reported as a catalogGap, never silent
+not ok 5 - RED image gate: malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED
+not ok 13 - OutlineState.v1 contract: durable db+attachments declared, cache not rights authority, API contracts stay UNVERIFIED until real API evidence
+not ok 17 - lock and up gates: opened upGate, unpinned reference, unparseable lock, unreadable registry and up without authorization are all anchored
+# tests 17
+# pass 12
+# fail 5
+
+restore: backup copy reapplied; re-run: 17/17 pass, 0 fail
+
+conclusion: every injected mutation was caught by the owned suite (loopback gate, enforcement branch, OutlineState contract); restores verified green each time.
