@@ -284,25 +284,25 @@
 **Parallel safe:** false
 **Acceptance IDs:** D01, D02, D03, D04, D05, D06, D07, D08, C07
 
-- [ ] **Step 1 [5 min]: Test** 2.4.a 接入共同 policy/receipt/evaluate：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：只在 1.1.c 确定的同一 Runtime 扩展；Guard、直接转换、受管写入共用谓词。
-- [ ] **Step 2 [5 min]: Implement** 2.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 2.4.b 扩展同 Run 的 R/A/T/P/V 接纳与返工：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：来源/attempt/摘要接纳、固定修复路由、短锁登记→长执行→短锁接纳，不持锁等网络。
-- [ ] **Step 4 [5 min]: Implement** 2.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Test** 2.4.c 实现保守失效：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：需求/设计改动全部下游失效；正常代码写入只失效候选相关证据；进度勾选不循环失效 P。
-- [ ] **Step 6 [5 min]: Implement** 2.4.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 7 [5 min]: Test** 2.4.d 接入 resolver/恢复/完成事务：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：中断、并发接纳、archived 但缺必需义务不能 completed；复用原 Run/锁/事务，不造第二账本。
-- [ ] **Step 8 [5 min]: Implement** 2.4.d 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 9 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 10 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 2.4.a 接入共同 policy/receipt/evaluate：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：只在 1.1.c 确定的同一 Runtime 扩展；Guard、直接转换、受管写入共用谓词。
+- [x] **Step 2 [5 min]: Implement** 2.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 2.4.b 扩展同 Run 的 R/A/T/P/V 接纳与返工：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：来源/attempt/摘要接纳、固定修复路由、短锁登记→长执行→短锁接纳，不持锁等网络。
+- [x] **Step 4 [5 min]: Implement** 2.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Test** 2.4.c 实现保守失效：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：需求/设计改动全部下游失效；正常代码写入只失效候选相关证据；进度勾选不循环失效 P。
+- [x] **Step 6 [5 min]: Implement** 2.4.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 7 [5 min]: Test** 2.4.d 接入 resolver/恢复/完成事务：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：中断、并发接纳、archived 但缺必需义务不能 completed；复用原 Run/锁/事务，不造第二账本。
+- [x] **Step 8 [5 min]: Implement** 2.4.d 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 9 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 10 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 本轮返工（P1映射见replan-record.json，详细oracle见execution-contract.json）：
 
-- [ ] **Step 11 [5 min]: Test** RW_R_ENTRY：在当前补丁版真实CLI复现无R仍open-complete进入design的RED；覆盖正式架构入口、Guard/apply、transition、next/resume、恢复及受管写，可信R后正向推进。
-- [ ] **Step 12 [5 min]: Test** RW_TRUSTED_REVIEW：同调用者dispatch后提交空报告pass、虚假execution/角色、缺共识票、弱oracle测试设计都必须拒绝；不能只测无dispatch的伪造。
-- [ ] **Step 13 [5 min]: Test** RW_REVISION_NO_REVIVE：真实设计/需求改动→读回stale→还原原字节仍阻断；新revision独立重审才放行，旧attempt迟到不能复活。
-- [ ] **Step 14 [5 min]: Implement** 共同谓词补齐enter-design，并在原Run/锁/事务持久化单调revision和失效代际；接纳受信执行身份/原报告摘要和当前版本的真实独立R/A/T/P/V结果；合法历史事务恢复不等于授权新动作。
-- [ ] **Step 15 [5 min]: Review** Runtime入口必须实际消费P2_5的grill闭合/精确quorum机械结果、T独立设计充分性结论；受管调用者不能靠dispatch号制造通过。I02隔离资格前只能报本机机制验证，不能称安全独立身份已验收。
-- [ ] **Step 16 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
+- [x] **Step 11 [5 min]: Test** RW_R_ENTRY：在当前补丁版真实CLI复现无R仍open-complete进入design的RED；覆盖正式架构入口、Guard/apply、transition、next/resume、恢复及受管写，可信R后正向推进。
+- [x] **Step 12 [5 min]: Test** RW_TRUSTED_REVIEW：同调用者dispatch后提交空报告pass、虚假execution/角色、缺共识票、弱oracle测试设计都必须拒绝；不能只测无dispatch的伪造。
+- [x] **Step 13 [5 min]: Test** RW_REVISION_NO_REVIVE：真实设计/需求改动→读回stale→还原原字节仍阻断；新revision独立重审才放行，旧attempt迟到不能复活。
+- [x] **Step 14 [5 min]: Implement** 共同谓词补齐enter-design，并在原Run/锁/事务持久化单调revision和失效代际；接纳受信执行身份/原报告摘要和当前版本的真实独立R/A/T/P/V结果；合法历史事务恢复不等于授权新动作。
+- [x] **Step 15 [5 min]: Review** Runtime入口必须实际消费P2_5的grill闭合/精确quorum机械结果、T独立设计充分性结论；受管调用者不能靠dispatch号制造通过。I02隔离资格前只能报本机机制验证，不能称安全独立身份已验收。
+- [x] **Step 16 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
 
 
 ### Task P2_5: 原任务 2.5 — 架构 A 接入 grill-me 加独立全票共识：冻结审查包、保持 exact quorum/阈值/同摘要、绑定真实机械 tally/finalize、拒绝旧票/缺票/多数票和未闭合承重问题；Comet 只持有一个评审作业。按 E03/E04 验证需求/设计改变后保守失效，不扩展测试 T 为未经要求的相同 quorum。
