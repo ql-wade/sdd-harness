@@ -1,0 +1,57 @@
+# I06 rework (rework-seven-p1-r1) — own suite green x2 + final re-run
+# branch rework/i06-platform @ base 8c8e4a3; commands run from repo root of rw-i06 worktree
+# captured: 2026-10-22T05:41:07Z
+
+== RUN 1: node --test test/infra-platform.test.js (after rework edits) ==
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2678.262709
+exit=0
+
+== RUN 2: node --test test/infra-platform.test.js (after rework edits) ==
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2719.682042
+exit=0
+
+== FINAL RE-RUN (after all mutation cycles restored platform.mjs byte-identical) ==
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3102.10025
+exit=0
+
+== test names ==
+ok 1 - V_INFRA_I06 contract: five platform files exist and committed validate passes with LOCAL_ONLY and honest gaps
+ok 2 - committed platform files carry the interface bindings and honest UNVERIFIED identity facts
+ok 3 - RED authorization gate: configuring required checks without remote write authorization is refused — admin identity is not this run approval
+ok 4 - RED credential tier: development identity cannot read release/rollback secrets (SecretRef.v1 resolver semantics)
+ok 5 - IntegrationIdentity.v1: a fully bound chain verifies locally (head -> mergeSHA -> digest -> deployment -> readback)
+ok 6 - RED stale evidence: a new head/mergeSHA reusing an old check blocks candidate promotion
+ok 7 - RED missing / skipped / timed-out checks each block promotion with distinct codes
+ok 8 - RED tag drift: a tag repointed to a different digest blocks promotion; digest must build from the integration merge SHA
+ok 9 - RED deployment identity: digest mismatch and missing receipt correlation block promotion
+ok 10 - timeout query path: lost deployment response is confirmed by querying the original correlation ID
+ok 11 - RED rollback gate: unapproved requests are refused; approved rollback needs the same digest and an independent business terminal state
+ok 12 - RED isolation: cross-project refs (pav-*) and foreign project bindings are rejected; missing registration is an input failure
+ok 13 - fail-closed structure: rollback approval, correlation oracle and retention rules cannot be flipped off without a violation
+ok 14 - probes are real and honest: repository-identity performs one read-only gh attempt and stays UNVERIFIED; bare chain probe is structured UNVERIFIED
+ok 15 - CLI input contract: malformed chain fixtures are input failures (exit 1), distinct from semantic blocks (exit 2)
+ok 16 - parseJsonOut raises a real AssertionError (not a ReferenceError) when the tool prints no JSON

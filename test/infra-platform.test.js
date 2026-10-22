@@ -291,6 +291,14 @@ test('IntegrationIdentity.v1: a fully bound chain verifies locally (head -> merg
   const report = parseJsonOut(probe, 'green chain');
   assert.equal(report.executed, true);
   assert.equal(report.scope, 'LOCAL_ONLY', 'local mechanism proof never claims the real platform');
+  assert.equal(report.mode, 'LOCAL_ONLY', 'a verified chain still declares LOCAL_ONLY mode');
+  // 生产晋级如实分离：VERIFIED 只证明本地机制；真实生产交付保持 UNVERIFIED 且 holder 在案。
+  assert.equal(report.productionPromotion.status, 'UNVERIFIED', 'a verified local chain never claims production promotion');
+  assert.match(
+    String(report.productionPromotion.holder),
+    /P4_2|environment owner|runtime admission/i,
+    'the holder of the unverified production promotion stays on record',
+  );
   assert.equal(report.blocked, false);
   assert.equal(report.status, 'VERIFIED');
   assert.doesNotMatch(probe.stdout, HOST_PATH_OUTPUT_RE);
@@ -313,6 +321,7 @@ test('RED missing / skipped / timed-out checks each block promotion with distinc
     { checks: [], expected: 'CHECK_MISSING' },
     { checks: [{ name: 'ci-test', boundSha: SHA('b'), conclusion: 'skipped' }], expected: 'CHECK_SKIPPED' },
     { checks: [{ name: 'ci-test', boundSha: SHA('b'), conclusion: 'failure', timedOut: true }], expected: 'CHECK_TIMED_OUT' },
+    { checks: [{ name: 'ci-test', boundSha: SHA('b'), conclusion: 'failure' }], expected: 'CHECK_NOT_SUCCESS' },
   ];
   for (const [index, fixture] of cases.entries()) {
     const chainFile = tmpFile(`chain-check-${index}`, greenChain(fixture));
@@ -411,6 +420,14 @@ test('RED rollback gate: unapproved requests are refused; approved rollback need
   const unapprovedProbe = runCli(['probe', '--case', 'registry-environment-identity', '--chain', unapproved, '--json']);
   assert.equal(unapprovedProbe.status, 2);
   assert.ok(parseJsonOut(unapprovedProbe, 'unapproved rollback').codes.includes('ROLLBACK_NOT_APPROVED'));
+
+  const noRetention = tmpFile('chain-rollback-no-retention', {
+    ...base,
+    rollback: { requested: true, approved: true, digest: DIGEST('c') },
+  });
+  const noRetentionProbe = runCli(['probe', '--case', 'registry-environment-identity', '--chain', noRetention, '--json']);
+  assert.equal(noRetentionProbe.status, 2, 'an approved rollback without the retained previous approved digest must block');
+  assert.ok(parseJsonOut(noRetentionProbe, 'rollback retention').codes.includes('ROLLBACK_RETENTION_MISSING'));
 
   const drifted = tmpFile('chain-rollback-drift', {
     ...base,
@@ -592,6 +609,13 @@ test('probes are real and honest: repository-identity performs one read-only gh 
   assert.ok((bareReport.requiredInputs ?? []).length > 0, 'requiredInputs must be listed');
   assert.ok((bareReport.plannedSteps ?? []).length > 0, 'plannedSteps must be listed');
   assert.equal(bareReport.scope, 'LOCAL_ONLY');
+  assert.equal(bareReport.mode, 'LOCAL_ONLY', 'the bare UNVERIFIED probe carries the LOCAL_ONLY mode like every other receipt');
+  assert.equal(bareReport.productionPromotion.status, 'UNVERIFIED', 'production promotion is never claimed locally');
+  assert.match(
+    String(bareReport.productionPromotion.holder),
+    /P4_2|environment owner|runtime admission/i,
+    'the holder of the unverified production promotion stays on record',
+  );
   assert.doesNotMatch(bare.stdout, /"skip"\s*:\s*true/);
 
   assert.equal(runCli(['probe', '--json']).status, 1, 'missing --case is an input error');

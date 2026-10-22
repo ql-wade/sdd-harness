@@ -1,0 +1,146 @@
+{
+ "task": "I06",
+ "task_title": "Git/CI、Registry、制品与隔离目标环境连通（LOCAL_ONLY 平台验证语义与 IntegrationIdentity 重验）",
+ "run": "rework-seven-p1-r1",
+ "worker_branch": "rework/i06-platform",
+ "base": "master@8c8e4a3",
+ "opening_receipt": "git log --oneline -1 -> 8c8e4a3 chore(openspec): accept P1_6 rework (7/8, Step 5 env-gated; review APPROVED; merge 4f53742)",
+ "final_status": "DONE",
+ "final_status_reason": "I06 Owns 范围内全部重验完成：16/16 测试绿 x2、16 个 IntegrationIdentity 负码全部真实子进程复跑（逐码 exit=2）、变异注入 3 次全部被镜像咬住、npm test 除已知项零新增（基线实证）、LOCAL_ONLY 生产晋级 holder 语义缺口已修并有牙",
+ "steps_done": "4/4 (tasks.md Task I06 Steps 1-4 在 rework 语义下重验)",
+ "steps_detail": {
+  "step1_test_RED_reverified": "全部负码真实子进程复跑（见 negative_codes_rerun）；本轮补齐 evaluateIntegrationIdentity 16 码中缺测试覆盖的 2 码（CHECK_NOT_SUCCESS、ROLLBACK_RETENTION_MISSING），镜像补至全码覆盖",
+  "step2_implement_GREEN": "LOCAL_ONLY 平台验证语义修复：裸 UNVERIFIED 探针此前缺 mode=LOCAL_ONLY 且无生产晋级 holder 记录（与 P4_2 回执语义不符）；现在裸探针与带链回执均携带 productionPromotion={status:UNVERIFIED, holder:'P4_2 isolated-environment owner + runtime admission; the real merge gate stays with P4_1'}",
+  "step3_review_readback": "实际只读回执复跑：validate exit 0（ok/violations=[]/mode=LOCAL_ONLY）；repository-identity 真实 gh 尝试 exit 2 UNVERIFIED（本轮复现同一 x509 OSStatus -26276）；required-checks-authorization exit 2 refused（6 tier 全 resolution=false）；裸链探针 exit 2 结构化 UNVERIFIED。绝不以 workflow YAML/管理员可读/模拟 green 宣称平台已保护（PLATFORM_PROTECTION_CLAIM_FORBIDDEN 翻转用例在套件内持续有效）",
+  "step4_commit": "仅归属路径 + 报告 + 证据；提交零宿主路径（evidence 全文 grep 验证）"
+ },
+ "owns_check": "tasks.md ### Task I06 Owns = infra/delivery/platform/{repository-registration.json,ci-policy.json,registry-registration.example.json,environment-registration.example.json,artifact-retention.json} + tools/infra/platform.mjs + test/infra-platform.test.js；本轮改动仅 tools/infra/platform.mjs（+9 行）与 test/infra-platform.test.js（+24 行），五个 platform JSON 逐字核对无需变更（LOCAL_ONLY/UNVERIFIED/UNSELECTED 登记如实），未触碰 tasks.md/execution-state/ledger/drift-lock/活配置，未越 P1_3（4_7/验收器）或 P4_2（release.mjs/release-journey）域",
+ "mirror_mode": "contract-level mirror（沿用上轮确立）：模块以 process.exit(main()) 为入口不可导入；每条断言经 spawnSync 真实子进程执行 CLI（node --test 内 runCli + 独立负码复跑 harness），期望值一律来自活事实源独立重算（I01 registry 身份同源比对、refs 目录 catalogGaps 镜像）或字面量，绝不以登记值自证",
+ "negative_codes_rerun": [
+  {
+   "code": "CHECK_MISSING",
+   "exit": 2
+  },
+  {
+   "code": "CHECK_SKIPPED",
+   "exit": 2
+  },
+  {
+   "code": "CHECK_TIMED_OUT",
+   "exit": 2
+  },
+  {
+   "code": "CHECK_STALE_EVIDENCE",
+   "exit": 2
+  },
+  {
+   "code": "CHECK_NOT_SUCCESS",
+   "exit": 2
+  },
+  {
+   "code": "ARTIFACT_NOT_FROM_MERGE",
+   "exit": 2
+  },
+  {
+   "code": "TAG_DIGEST_DRIFT",
+   "exit": 2
+  },
+  {
+   "code": "ENVIRONMENT_PROJECT_MISMATCH",
+   "exit": 2
+  },
+  {
+   "code": "DEPLOYMENT_DIGEST_MISMATCH",
+   "exit": 2
+  },
+  {
+   "code": "RECEIPT_CORRELATION_MISSING",
+   "exit": 2
+  },
+  {
+   "code": "READBACK_CORRELATION_MISMATCH",
+   "exit": 2
+  },
+  {
+   "code": "ROLLBACK_NOT_APPROVED",
+   "exit": 2
+  },
+  {
+   "code": "ROLLBACK_RETENTION_MISSING",
+   "exit": 2
+  },
+  {
+   "code": "ROLLBACK_DIGEST_MISMATCH",
+   "exit": 2
+  },
+  {
+   "code": "READBACK_UNCONFIRMED",
+   "exit": 2,
+   "note": "unverified-path: status=UNVERIFIED blocked=false, 非 skip 转 PASS"
+  },
+  {
+   "code": "ROLLBACK_TERMINAL_STATE_UNCONFIRMED",
+   "exit": 2,
+   "note": "unverified-path: status=UNVERIFIED blocked=false"
+  }
+ ],
+ "negative_codes_note": "12 阻断负码（评审口径的 '12 条链路 code'）全 exit=2 blocked=true 且 code 在回执 codes[] 中；另 2 个 UNVERIFIED-path 码 exit=2 status=UNVERIFIED blocked=false；新补 2 码（CHECK_NOT_SUCCESS/ROLLBACK_RETENTION_MISSING）此前无套件覆盖，本轮加入测试并复跑；负码复跑 harness exit=0（16/16 OK）",
+ "mutations_caught": [
+  {
+   "mutation": "exact-SHA 绑定放宽（evidences[0] 对任意 mergeSHA 放行，旧 check 复用不可检）",
+   "suite": "exit=1, fail=1",
+   "caught_by": "RED stale evidence 测试"
+  },
+  {
+   "mutation": "productionPromotion.status UNVERIFIED->VERIFIED（LOCAL_ONLY 回执谎报生产晋级）",
+   "suite": "exit=1, fail=2",
+   "caught_by": "green chain receipt 测试 + probes are real and honest 测试（新镜像断言）"
+  },
+  {
+   "mutation": "validate 移除 ci-policy REMOTE_POLICY_WRITE_FORBIDDEN 结构门",
+   "suite": "exit=1, fail=1",
+   "caught_by": "RED authorization gate 翻转 fixture 测试"
+  }
+ ],
+ "mutations_note": "3 次变异注入（>=2 要求）均被咬住；每次变异后从 pristine 副本恢复（node --check OK），套件最终复跑绿（见 green-suite-x2.txt）",
+ "nb3_discipline_scan": "P1_1 nb-3 纪律执行：逐条扫描 I06 测试断言，未发现'登记值自证'断言。两个近似模式均判定合法：(1) catalogGaps 断言的期望值从活 refs 目录文件独立重算（活事实源镜像，非从 CLI 输出或登记副本回读）；(2) repository 身份断言跨文件比对 I01 registry.json（声明的唯一事实源，非同值自证）。其余期望均为字面量（UNVERIFIED/UNSELECTED/false 等）诚实值守卫",
+ "red_cases": [
+  "新增：CHECK_NOT_SUCCESS —— check conclusion=failure（非 skip/timeout）阻断候选提升（exit 2）",
+  "新增：ROLLBACK_RETENTION_MISSING —— 已批准回滚但无保留的上一已批准制品 digest 即阻断（exit 2）",
+  "新增镜像断言：裸 UNVERIFIED 探针与带链 VERIFIED 回执均须 mode=LOCAL_ONLY + productionPromotion.status=UNVERIFIED + holder 在案（P4_2 回执语义在 I06 侧如一）",
+  "复跑：既有 12 阻断负码 + 2 UNVERIFIED-path 码 + 10 个 fail-closed 结构翻转（rollback approval/correlation oracle/example 声明/retention 三规则/blocking semantics/未登记 check 名/保护声称/auto-cleanup）全部经真实子进程再确认"
+ ],
+ "commands": {
+  "node --test test/infra-platform.test.js (run1)": "exit=0 16/16",
+  "node --test test/infra-platform.test.js (run2)": "exit=0 16/16",
+  "node --test test/infra-platform.test.js (final re-run post-mutations)": "exit=0 16/16",
+  "node tools/infra/platform.mjs validate --registry infra/delivery/registry.json --json": "exit=0 ok=true violations=[] mode=LOCAL_ONLY",
+  "node tools/infra/platform.mjs probe --case repository-identity --read-only --json": "exit=2 真实 gh 尝试, readback UNVERIFIED, x509 -26276 本轮复现",
+  "node tools/infra/platform.mjs probe --case required-checks-authorization --json": "exit=2 refused REMOTE_POLICY_WRITE_NOT_AUTHORIZED, 6 tiers resolution=false",
+  "node tools/infra/platform.mjs probe --case registry-environment-identity --json": "exit=2 结构化 UNVERIFIED + mode=LOCAL_ONLY + holder 在案",
+  "node tools/infra/platform.mjs probe --case registry-environment-identity --chain <green tmp fixture> --json": "exit=0 VERIFIED (LOCAL_ONLY 机制证明, 生产晋级仍 UNVERIFIED)",
+  "negative-code rerun harness (16 codes, real subprocess per code)": "exit=0 16/16 OK",
+  "mutation-1/2/3 suite runs": "exit=1 (fail 1/2/1) — 镜像有牙",
+  "npm test": "exit=1: 427 tests, 424 pass, 2 fail, 1 skip — 失败恰为已知项 C08(host openspec 漂移)+B08(adapter 沙箱变体)，基线 8c8e4a3 stash 实证同样失败，零新增"
+ },
+ "unverified": [
+  "GitHub 仓库/主体身份真实读回：gh 令牌失效 + TLS 拦截（本轮再次复现 x509 OSStatus -26276），readback 保持 UNVERIFIED——如实在案，非 skip",
+  "生产晋级/部署与目标环境读回：无真实平台写授权与隔离环境，productionPromotion.status=UNVERIFIED 且 holder 在案（P4_2 环境属主 + 运行时准入；真实合并门归 P4_1）；LOCAL_ONLY 机制证明绝不冒充生产交付",
+  "required-check 名称/CI provider/Registry endpoint/环境 endpoint：未提供输入，保持 UNSELECTED/UNVERIFIED，不虚构；管理员身份不等于本次批准修改分支保护",
+  "基线已知失败项（非 I06 域）：C08 host openspec 1.14.3 漂移归 HOST_OPENSPEC_DRIFT 用户裁决；B08 adapter 为 impl-p2-4 沙箱已知变体——均已在 8c8e4a3 基线实证预存"
+ ],
+ "files_changed": [
+  "tools/infra/platform.mjs",
+  "test/infra-platform.test.js",
+  "worker-reports/I06.rework.json",
+  "worker-reports/I06-rework/evidence/green-suite-x2.txt",
+  "worker-reports/I06-rework/evidence/negative-codes-rerun.txt",
+  "worker-reports/I06-rework/evidence/mutation-mirror-teeth.txt",
+  "worker-reports/I06-rework/evidence/local-only-receipts.txt",
+  "worker-reports/I06-rework/evidence/npm-test.txt"
+ ],
+ "commits": {
+  "rework": "HEAD of rework/i06-platform (this commit; hash visible in git log)"
+ },
+ "blockers_or_questions": []
+}
