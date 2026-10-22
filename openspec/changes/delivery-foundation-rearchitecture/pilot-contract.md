@@ -24,7 +24,7 @@ Comet 权威状态、策略、签发材料由受管主体保护；worker 无控�
 
 ## 冻结登记（P3_1，机读）
 
-Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10-20）将本登记结构化：试点仓库=本仓库（用户已授权，execution-state.pilot_environment_choice）、owner 登记引用 I01 registry（`infra/delivery/registry.json`，project `sdd-harness-pilot`）、目标验证环境=本地隔离（本 worktree + `$TMPDIR`）、身份=运行时观测。Product/Design/TestContract/PlanBundle 四件以文件指针+摘要方式冻结（引用已接纳工件，不复制内容）；PlanBundle 摘要与 `lib/delivery/baseline.js` 的 `taskDefinitionDigest` 同一归一化——checkbox 勾选状态不构成计划漂移，定义文本变更构成漂移。`tools/verify/delivery-journey.mjs` 以下方 ```pilot-contract 机读块为唯一冻结基线来源：任一工件缺失/漂移即结构化拒绝派发并列缺项（A01 语义），PlanBundle 摘要校验绑定计划冻结（A15 语义）。重冻结程序：任何被冻结工件变更后，必须显式更新本块 sha256 并留下可审计 diff，不存在自动续期。 重冻结记录 1：2026-10-20 P3_1 评审修复合并 master（f57ead9）带入 P1_3 接纳后的 proposal/design/spec/tasks 变更，四件摘要按程序显式更新（本条即审计记录）。
+Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10-20）将本登记结构化：试点仓库=本仓库（用户已授权，execution-state.pilot_environment_choice）、owner 登记引用 I01 registry（`infra/delivery/registry.json`，project `sdd-harness-pilot`）、目标验证环境=本地隔离（本 worktree + `$TMPDIR`）、身份=运行时观测。Product/Design/TestContract/PlanBundle 四件以文件指针+摘要方式冻结（引用已接纳工件，不复制内容）；PlanBundle 摘要与 `lib/delivery/baseline.js` 的 `taskDefinitionDigest` 同一归一化——checkbox 勾选状态不构成计划漂移，定义文本变更构成漂移。`tools/verify/delivery-journey.mjs` 以下方 ```pilot-contract 机读块为唯一冻结基线来源：任一工件缺失/漂移即结构化拒绝派发并列缺项（A01 语义），PlanBundle 摘要校验绑定计划冻结（A15 语义）。重冻结程序：任何被冻结工件变更后，必须显式更新本块 sha256 并留下可审计 diff，不存在自动续期。 重冻结记录 1：2026-10-20 P3_1 评审修复合并 master（f57ead9）带入 P1_3 接纳后的 proposal/design/spec/tasks 变更，四件摘要按程序显式更新（本条即审计记录）。 重冻结记录 2：2026-10-22 七 P1 返工（rework-seven-p1-r1，replan 2026-10-22-seven-p1，基线 ef97bd1）重排 tasks.md 工作包（normalized digest 56aa574b…），仅 planBundle 摘要按程序显式更新，product/design/testContract 三件实测未漂移；由 P3_1 在 rw-p3-1 worktree 执行（本条即审计记录）。
 
 ### 试点负向 AC 面板（首个实际业务试点的四类负向边界）
 
@@ -58,7 +58,7 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
     },
     "planBundle": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
-      "sha256": "eb7ed2cb2823e62344ad1152efdce2845d2fb3568b867e0ea9c70dad558a8508",
+      "sha256": "56aa574bdd530b2df435f837aaeab0ee90aa72a58ecdb3f4329ef40e7b3b7aa3",
       "digestNormalization": "checkbox-state-agnostic（与 lib/delivery/baseline.js taskDefinitionDigest 同一归一化；勾选状态不构成计划漂移）"
     }
   },
