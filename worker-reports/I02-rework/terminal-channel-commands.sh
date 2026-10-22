@@ -1,3 +1,5 @@
+TMPDIR_NATIVE="${TMPDIR_NATIVE:-/tmp/claude-i02}"
+mkdir -p "$TMPDIR_NATIVE"
 #!/bin/sh
 # =============================================================================
 # I02 rework r1 — 终端通道清单（真实 docker 操作；本代理沙箱无 daemon（EPERM），本清单不代跑）。
@@ -22,13 +24,13 @@ EXPECT_COMMIT="c90af44a4474662d7853aae76ce785404974fb0a"
 docker version --format '{{.Server.Version}}'
 # 判据 S0.1：输出版本号（非 EPERM/连接错误）；失败即整清单 UNVERIFIED 终止。
 # S0.2 构建计划与锁一致（本清单不硬编码 sha——以下列期望指纹为准绳对照）
-node "$RUN" build-plan --dir "$RDIR" --json | tee /tmp/claude/i02-plan.json
+node "$RUN" build-plan --dir "$RDIR" --json | tee "$TMPDIR_NATIVE/i02-plan.json"
 # 判据 S0.2：exit 0；.drift==[]；.fingerprint==d4370930…cba6（即 $EXPECTED_FINGERPRINT）；
 #            .sourceCommit==c90af44a…fb0a；.patches 长度 6 且逐项 sha256Verified==true；
 #            .upGate=="CLOSED"（build-plan 永不开门）。
 python3 - <<'PY'
 import json,sys
-plan=json.load(open('/tmp/claude/i02-plan.json'))
+plan=json.load(open('$TMPDIR_NATIVE/i02-plan.json'))
 assert plan['drift']==[], plan['drift']
 assert plan['fingerprint']=='d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6', plan['fingerprint']
 assert plan['sourceCommit']=='c90af44a4474662d7853aae76ce785404974fb0a'
@@ -63,16 +65,17 @@ node "$RUN" build-plan --dir "$RDIR" --json | python3 -c 'import json,sys; d=jso
 : "${RUNNER_BASE_IMAGE:?S2.1 需要 resource-admission digest 钉定的基镜像（先 export RUNNER_BASE_IMAGE 再重跑本段）}"
 python3 - "$RUNNER_BASE_IMAGE" <<'PY'
 import json,subprocess,sys
-plan=json.load(open('/tmp/claude/i02-plan.json'))
+plan=json.load(open('$TMPDIR_NATIVE/i02-plan.json'))
 cmd=plan['dockerBuild']['command']
 base=sys.argv[1] if len(sys.argv)>1 else ''
 assert base and '@sha256:' in base, 'RUNNER_BASE_IMAGE must be digest-pinned by admission'
 cmd=cmd.replace('<resolved-at-admission:image.lock.json:components.runner-base>', base)
 print(cmd)
-open('/tmp/claude/i02-build-command.txt','w').write(cmd)
+open('$TMPDIR_NATIVE/i02-build-command.txt','w').write(cmd)
 PY
-# S2.2 执行构建（命令来自 build-plan 原样输出，仅替换基镜像占位）
-sh -c "$(cat /tmp/claude/i02-build-command.txt)" -t "$RUNNER_TAG" 2>&1 | tee "$EV.part-build"
+# S2.2 执行构建（命令来自 build-plan 原样输出，仅替换基镜像占位；tag 必须在命令串内，sh -c 的 -t 会被当作 $0 丢弃——评审 nb-2 修正）
+BUILDCMD="$(cat /tmp/claude/i02-build-command.txt) -t $RUNNER_TAG"
+sh -c "$BUILDCMD" 2>&1 | tee "$EV.part-build"
 # 判据 S2.2：构建 exit 0；日志中 build.mjs 输出的 fingerprint == $EXPECTED_FINGERPRINT
 #            （若不一致，Dockerfile 的 test -f 确定性入口门已先失败、构建不可能成功——这正是 RW_RUNNER_BUILD 的门）。
 # S2.3 构建内确定性入口回读
