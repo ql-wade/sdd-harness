@@ -1,0 +1,98 @@
+{
+  "final_status": "DONE",
+  "run": "rework-seven-p1-r1",
+  "worktree": "rw-p1-1 @ master@ebe5fff, branch rework/p1-1-toolchain",
+  "report_generated_at": "2026-10-22T11:45:00+08:00",
+  "steps": {
+    "step1_1.1.a_test": "Fresh downloads of all three npm artifacts + comet source archive with live registry metadata comparison (sha512/sha1/bytes all match); six patch digests independently recomputed == lock pins; lock-derived fingerprint recomputed == beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966. Old 2026-10-20 baseline values treated as stale, not inherited. evidence: package-probes/rework-r1-a-artifact-integrity.log, evidence/04-green-artifact-integrity.txt",
+    "step2_1.1.a_implement": "toolchain-baseline.json re-qualified: comet/teamai/openspec npm_artifact blocks re-verified this run (verified_at updated); source_archive re-downloaded and digest-locked; registered with redacted paths only.",
+    "step3_1.1.b_test": "Isolated probes re-executed for real: teamai 0.22.0 (--version exit 0; status exit 1 init-gated), openspec 1.11.0 isolated (--version exit 0; upstream classic-openspec-upstream.test.ts 1/1 PASS against fresh beab355d build), local host-global openspec. ENVIRONMENT DRIFT FOUND: host-global openspec is now 1.14.3 (baseline recorded 1.3.1); live replay of published requiredArtifactClosure against real 1.14.3 status JSON returns accepted:true artifacts:4 — the historical 1.3.1 REJECTED gap is not reproducible on this host (binary replaced). Recorded honestly; no global upgrade performed; matrix keeps 1.3.1 as pinned history. evidence: package-probes/rework-r1-b-*.log, evidence/05-green-probes.txt",
+    "step4_1.1.b_implement": "compatibility_matrix now 3 rows (1.3.1 historical REJECTED not-reproducible, 1.14.3 current local ACCEPTED with drift note, 1.11.0 candidate ACCEPTED); openspec.local_cli + current fields updated to observed facts; delivery-case test 1_1.mjs matrix assertion updated to pin all three rows (test file is P1_1-owned).",
+    "step5_1.1.c_test": "RED: fresh worktree has no prepared source and no build; main-tree cache holds only the 0-patch-era 72e5ce0e build (not the current lock era). verifyCometDistribution -> exit 1 SOURCE_NOT_PREPARED. evidence: evidence/01-red-build-cache-ineligible.txt",
+    "step6_1.1.c_implement": "Real chain re-executed end to end: prepare-source (fresh pristine + provenance v2, reused:false) -> build.mjs under pinned Node 24.15.0 with all 6 patches in lock order (pnpm 10.18.3 via corepack, frozen-lockfile ignore-scripts, node build.js, 3x generated checks, version==0.4.5) -> V_COMET_NATIVE --check-generated --runtime-smoke exit 0 PASS (manifest tree byte-exact re-hash + 253/2 smoke). evidence: package-probes/rework-r1-c-comet-build.log, evidence/06-green-comet-build.txt",
+    "step7_review": "Self-review: git diff ebe5fff...HEAD confined to allowed set; zero host absolute paths in committed content (baseline rewritten with <repo>/relative paths; evidence redacted); no mock/skip anywhere (delivery case 0 skipped both runs); runtime_claims all point at existing evidence files; forbidden surfaces (tasks.md, execution-state, ledger, drift-lock, live config, plugin caches, skill bodies) untouched.",
+    "step8_commit": "Serial commits in required order: RED evidence -> implementation/registration -> report+evidence. See commits map.",
+    "step9_rework_test": "Independent lock-vs-cache verification retained as the drift gate: BUILD_BASELINE_DRIFT / BUILD_NOT_PRESENT / PATCH_INTEGRITY_MISMATCH all fail-closed; RED-1 recorded BEFORE any rebuild (no beab355d-era build existed in this environment; old-fingerprint directory existence explicitly rejected as qualification).",
+    "step10_rework_implement": "Full distribution rebuilt in isolation in this worktree (.sdd/vendor/comet/<commit>/builds/<fingerprint>), pinned Node 24.15.0 + pnpm 10.18.3 exact, relative entrypoint bin/comet.js, fresh manifest written by the build and re-read by verify; no manifest reuse.",
+    "step11_rework_commit": "Serial acceptance of only P1_1-authorized paths with current RED/GREEN evidence; shared lock untouched (already 6-patch at ebe5fff, controller-owned)."
+  },
+  "llmwiki_project_local": {
+    "clone": "REAL network git clone of https://github.com/lucasastorian/llmwiki into <repo>/.sdd/repos/llmwiki (git global http.proxy 127.0.0.1:7897 unreachable in sandbox; overridden per-invocation with the session filtering proxy). checkout 075c5b4996ff4e07f9d3c57c1f14fd2b54a955db detached; HEAD == pin, status clean; upstream HEAD was f102a812 (pin is older, correctly pinned). Host-copy fallback authorized but NOT needed. matches infra/delivery/llmwiki/package.lock.json source.commit.",
+    "venv": "UV_CACHE_DIR=<repo>/.sdd/cache/uv uv venv --python 3.11 .sdd/venvs/llmwiki-311 (CPython 3.11.13) ; uv pip sync --python .sdd/venvs/llmwiki-311/bin/python .sdd/repos/llmwiki/mcp/requirements.lock -> exit 0 hash-verified install; requirements.lock sha256 678bd7301d80a602336e8fd3a81f98adcd4c5beaec4e2f1f2bfb8d2e04a9e732 / 154140 bytes == package.lock.json registration; mcp package 1.27.0 == recorded. venv python 3.11.13 matches the lock compile target (old external-venv 3.14.7 drift eliminated).",
+    "probe": "SDD_HOME=<repo>/.sdd LLMWIKI_PYTHON=<repo>/.sdd/venvs/llmwiki-311/bin/python node tools/infra/llmwiki.mjs probe --case worktree-mcp-readback -> exit 0. Three groups all VERIFIED: (1) worktrees 39/39 resolve to <main-working-tree>/llmwiki; (2) MCP session initialize (LLM Wiki 1.27.0) + tools/list (10 tools) + real create write round-trip; (3) file-level gate 4/4 (write, readback hash, INCONSISTENT negative control, CONSISTENT positive control). RED before landing: exit 2 (venv ENOENT -> no MCP -> no index.db). evidence/03-green-llmwiki-project-local.txt",
+    "wiki_root": "Project-local root in effect: launcher (tools/mcp/llmwiki.sh) and CLI (lib/sdd-paths.js getWikiHome) both resolve <repo>/.sdd/wiki/sdd-harness under SDD_HOME=<repo>/.sdd — identical, parity holds; external <home>/.sdd/wiki/sdd-harness default (cross-project collision) eliminated by setting project SDD_HOME. Contrast captured in evidence/02."
+  },
+  "build_cache_requalification": {
+    "manifest_check": "Fresh worktree: SOURCE_NOT_PREPARED (exit 1) before work — no inherited cache at all. Main-tree host cache: only 72e5ce0e (2026-10-20 0-patch era) present — NOT the current lock era; its directory existence explicitly rejected as qualification per HANDOFF. After real rebuild: distribution.json fingerprint beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966 == lock-derived fingerprint; manifest tree re-hashed byte-exact by verifyCometDistribution (BUILD_BASELINE_DRIFT gate green), then generated checks + runtime smoke re-executed in place (PASS, 253/2).",
+    "rebuilt": true,
+    "fingerprint": "beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966"
+  },
+  "red_cases": [
+    "RED-1 build-cache ineligible: node tools/comet/build.mjs --check-generated --runtime-smoke --json (pinned Node 24.15.0, fresh worktree) -> exit 1 {code:SOURCE_NOT_PREPARED}; main-tree cache holds only 0-patch-era 72e5ce0e. evidence/01-red-build-cache-ineligible.txt",
+    "RED-2 llmwiki project-local missing: probe with SDD_HOME=<repo>/.sdd before clone/venv -> exit 2 UNVERIFIED (venv python ENOENT -> MCP session cannot start -> sandbox has no .llmwiki/index.db -> index gate unreadable); contrast: default SDD_HOME resolves external <home>/.sdd/wiki/sdd-harness. evidence/02-red-llmwiki-project-local-missing.txt"
+  ],
+  "commands": {
+    "~/.nvm/.../v24.15.0/bin/node tools/comet/build.mjs --check-generated --runtime-smoke --json (before build, RED)": 1,
+    "git clone github.com/lucasastorian/llmwiki -> .sdd/repos/llmwiki (+ checkout pin)": 0,
+    "uv venv --python 3.11 .sdd/venvs/llmwiki-311": 0,
+    "uv pip sync requirements.lock (hash-verified)": 0,
+    "node tools/infra/llmwiki.mjs probe --case worktree-mcp-readback (SDD_HOME project-local)": 0,
+    "node tools/comet/prepare-source.mjs --archive <locked tarball> --json": 0,
+    "~/.nvm/.../v24.15.0/bin/node tools/comet/build.mjs --archive <locked tarball> --json": 0,
+    "~/.nvm/.../v24.15.0/bin/node tools/comet/build.mjs --check-generated --runtime-smoke --json (after build, GREEN)": 0,
+    "openspec-upstream.mjs (candidate 1.11.0 against fresh build)": 0,
+    "node --test test/delivery-cases/1_1.mjs (run 1)": 0,
+    "node --test test/delivery-cases/1_1.mjs (run 2)": 0,
+    "node --test test/comet-source-preparation.test.js test/comet-build.test.js": 0,
+    "npm test (full: 425 tests, 423 pass, 2 known-env fail)": 1
+  },
+  "unverified": [
+    {
+      "item": "Journey-level F01/F03 execution (tools/verify/delivery-journey.mjs) remains a later task; P1_1 scope is baseline/probes/build-chain as before",
+      "holder": "P3_1 / VERIFY task"
+    },
+    {
+      "item": "npm test C08 negative fails because the host-global OpenSpec is now 1.14.3 (pinned 1.3.1 binary no longer on host); recorded as environment drift, not fixable inside P1_1-owned files without reintroducing a stale global",
+      "holder": "environment / controller decision (accept drift or pin isolated 1.3.1 in a later change)"
+    },
+    {
+      "item": "npm test B08 preservation negative fails (pre-existing; reproduced on clean master per worker-reports/I08.json)",
+      "holder": "adapter owner task (I08 domain)"
+    },
+    {
+      "item": "MCP host admission (mcp-capabilities.yaml registration + session llmwiki MCP server connect) still UNVERIFIED by design — the session's llmwiki MCP entry fails ENOENT; host registration is the P task's surface",
+      "holder": "P task (mcp-capabilities.yaml)"
+    },
+    {
+      "item": "infra/delivery/llmwiki/package.lock.json still records the external-SDD_HOME logical path and the old 3.14.7 venv drift note; project-local resolution facts are registered in toolchain-baseline.json llmwiki_project_local (I04 artifact re-registration belongs to the integration wave)",
+      "holder": "integration wave / I04 owner"
+    }
+  ],
+  "files_changed": [
+    "openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json",
+    "test/delivery-cases/1_1.mjs",
+    "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-a-artifact-integrity.log",
+    "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-teamai-cli.log",
+    "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-openspec-local.log",
+    "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-openspec-candidate.log",
+    "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-comet-cli.log",
+    "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-c-comet-build.log",
+    "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-llmwiki-project-local.log",
+    "worker-reports/P1_1.rework.json",
+    "worker-reports/P1_1-rework/evidence/01-red-build-cache-ineligible.txt",
+    "worker-reports/P1_1-rework/evidence/02-red-llmwiki-project-local-missing.txt",
+    "worker-reports/P1_1-rework/evidence/03-green-llmwiki-project-local.txt",
+    "worker-reports/P1_1-rework/evidence/04-green-artifact-integrity.txt",
+    "worker-reports/P1_1-rework/evidence/05-green-probes.txt",
+    "worker-reports/P1_1-rework/evidence/06-green-comet-build.txt",
+    "worker-reports/P1_1-rework/evidence/07-green-completion-gates.txt"
+  ],
+  "commits": {
+    "ea7be5a": "test(P1_1 rework): RED — no qualified beab355d-era build in env; llmwiki project-local resolution missing (evidence 01+02)",
+    "0ff66e3": "feat(P1_1 rework): requalify toolchain baseline, real 6-patch Comet rebuild, llmwiki project-local landing (baseline + 1_1.mjs + 7 probe logs + evidence 03-06)",
+    "(this commit)": "test(P1_1 rework): report + completion-gate evidence (P1_1.rework.json + evidence 07)"
+  },
+  "blockers_or_questions": [
+    "None blocking. Two environment facts for the controller: (1) host-global OpenSpec drifted 1.3.1 -> 1.14.3 between runs — C08 negative can no longer pass on this host as written; recorded honestly in the baseline, no global version touched. (2) The llmwiki MCP session entry (live .mcp.json) still points at a launcher outside this worktree and fails ENOENT in-session; project-local landing is verified via the probe mechanism, host registration stays with the P task."
+  ]
+}
