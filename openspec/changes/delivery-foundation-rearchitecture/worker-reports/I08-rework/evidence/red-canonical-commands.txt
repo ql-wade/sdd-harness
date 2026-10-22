@@ -1,0 +1,94 @@
+# RED evidence: I08 rework Step 5 - canonical contract commands on unmodified tree @ f41aab9 (branch rework/i08)
+# All five infrastructure-tasks.json I08 probes reference the canonical I08 naming (recovery.mjs / infra-recovery.test.js) which does not exist at this base; the accepted I08 implementation used backup-restore.mjs naming (open decision I08_FILENAME_DEVIATION).
+# Command-missing = RED per quality gate 1.
+
+$ node --test test/infra-recovery.test.js
+exit=1
+--- stdout:
+--- stderr:
+Could not find 'test/infra-recovery.test.js'
+===
+$ node tools/infra/recovery.mjs validate --registry infra/delivery/registry.json --json
+exit=1
+--- stdout:
+--- stderr:
+node:internal/modules/cjs/loader:1247
+  throw err;
+  ^
+
+Error: Cannot find module '<repo-root>/tools/infra/recovery.mjs'
+    at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    at Function._load (node:internal/modules/cjs/loader:1070:27)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v22.13.1
+===
+$ node tools/infra/recovery.mjs probe --case pending-cleanup-denial --json
+exit=1
+--- stdout:
+--- stderr:
+node:internal/modules/cjs/loader:1247
+  throw err;
+  ^
+
+Error: Cannot find module '<repo-root>/tools/infra/recovery.mjs'
+    at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    at Function._load (node:internal/modules/cjs/loader:1070:27)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v22.13.1
+===
+$ node tools/infra/recovery.mjs probe --case quarantine-restore --json
+exit=1
+--- stdout:
+--- stderr:
+node:internal/modules/cjs/loader:1247
+  throw err;
+  ^
+
+Error: Cannot find module '<repo-root>/tools/infra/recovery.mjs'
+    at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    at Function._load (node:internal/modules/cjs/loader:1070:27)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v22.13.1
+===
+$ node tools/infra/recovery.mjs probe --case old-writer-denial --json
+exit=1
+--- stdout:
+--- stderr:
+node:internal/modules/cjs/loader:1247
+  throw err;
+  ^
+
+Error: Cannot find module '<repo-root>/tools/infra/recovery.mjs'
+    at Function._resolveFilename (node:internal/modules/cjs/loader:1244:15)
+    at Function._load (node:internal/modules/cjs/loader:1070:27)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:217:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v22.13.1
+===
