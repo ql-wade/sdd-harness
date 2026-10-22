@@ -1,0 +1,131 @@
+=== m1 ===
+TAP version 13
+# Subtest: setup: the patched pinned build named by the source lock is manifest-verified in this project
+not ok 1 - setup: the patched pinned build named by the source lock is manifest-verified in this project
+  ---
+  duration_ms: 0.833625
+  location: 'file://<repo-worktree-rw-p1-5>/test/delivery-cases/1_5.mjs:182:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the patched build must carry the six locked patches
+    
+    5 !== 6
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 6
+  actual: 5
+  operator: 'strictEqual'
+    TestContext.<anonymous> (file://file://<repo-worktree-rw-p1-5>/test/delivery-cases/1_5.mjs:190:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+# Subtest: C07: with zero check evidence all seven managed entrances refuse or stay short of completion
+ok 2 - C07: with zero check evidence all seven managed entrances refuse or stay short of completion # SKIP patched Comet build is not present in this project; run tools/comet/prepare-source.mjs && tools/comet/build.mjs --archive first
+  ---
+  duration_ms: 0.17675
+# Subtest: C04: tasks is the single writable authority — ticks never move the ticket, definition drift does, stale tickets are refused
+ok 3 - C04: tasks is the single writable authority — ticks never move the ticket, definition drift does, stale tickets are refused # SKIP patched Comet build is not present in this project; run tools/comet/prepare-source.mjs && tools/comet/build.mjs --archive first
+  ---
+  duration_ms: 0.10525
+
+=== m2 ===
+TAP version 13
+# Subtest: setup: the patched pinned build named by the source lock is manifest-verified in this project
+not ok 1 - setup: the patched pinned build named by the source lock is manifest-verified in this project
+  ---
+  duration_ms: 1.380583
+  location: 'file://<repo-worktree-rw-p1-5>/test/delivery-cases/1_5.mjs:182:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the locked stack must be exactly 0001 + tests/1_6 + 0002 (managed delivery runtime) + tests/2_4 + 0003 (post-archive closeout) + tests/4_6
+    + actual - expected
+    
+      [
+        'integrations/comet/patches/0001-matt-method-profile.patch',
+        'integrations/comet/patches/tests/1_6.patch',
+    +   'integrations/comet/patches/tests/2_4.patch',
+        'integrations/comet/patches/0002-managed-delivery-runtime.patch',
+    -   'integrations/comet/patches/tests/2_4.patch',
+        'integrations/comet/patches/0003-post-archive-closeout.patch',
+        'integrations/comet/patches/tests/4_6.patch'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'integrations/comet/patches/0001-matt-method-profile.patch'
+    1: 'integrations/comet/patches/tests/1_6.patch'
+    2: 'integrations/comet/patches/0002-managed-delivery-runtime.patch'
+    3: 'integrations/comet/patches/tests/2_4.patch'
+    4: 'integrations/comet/patches/0003-post-archive-closeout.patch'
+    5: 'integrations/comet/patches/tests/4_6.patch'
+
+=== m3 ===
+TAP version 13
+# Subtest: setup: the patched pinned build named by the source lock is manifest-verified in this project
+ok 1 - setup: the patched pinned build named by the source lock is manifest-verified in this project
+  ---
+  duration_ms: 59.913833
+# Subtest: C07: with zero check evidence all seven managed entrances refuse or stay short of completion
+ok 2 - C07: with zero check evidence all seven managed entrances refuse or stay short of completion
+  ---
+  duration_ms: 8906.258291
+# Subtest: C04: tasks is the single writable authority — ticks never move the ticket, definition drift does, stale tickets are refused
+ok 3 - C04: tasks is the single writable authority — ticks never move the ticket, definition drift does, stale tickets are refused
+  ---
+  duration_ms: 1569.789708
+# Subtest: C06: the archive seal requires the knowledge closeout, exactly once — the native gate itself carries no knowledge receipt
+not ok 4 - C06: the archive seal requires the knowledge closeout, exactly once — the native gate itself carries no knowledge receipt
+  ---
+  duration_ms: 6476.38125
+  location: 'file://<repo-worktree-rw-p1-5>/test/delivery-cases/1_5.mjs:303:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected exception.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+    TestContext.<anonymous> (file://file://<repo-worktree-rw-p1-5>/test/delivery-cases/1_5.mjs:364:10)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+# Subtest: C08: bypass and recovery negatives — tampered phase file, manual record-check, forged seal and force-phase all refuse; the floating global upgrade attempt stays neutralized
+ok 5 - C08: bypass and recovery negatives — tampered phase file, manual record-check, forged seal and force-phase all refuse; the floating global upgrade attempt stays neutralized
+  ---
+  duration_ms: 1191.062208
+# Subtest: cleanup removes the scratch world
+
+=== m4 ===
+TAP version 13
+# Subtest: setup: the patched pinned build named by the source lock is manifest-verified in this project
+ok 1 - setup: the patched pinned build named by the source lock is manifest-verified in this project
+  ---
+  duration_ms: 52.295541
+# Subtest: C07: with zero check evidence all seven managed entrances refuse or stay short of completion
+not ok 2 - C07: with zero check evidence all seven managed entrances refuse or stay short of completion
+  ---
+  duration_ms: 9266.011458
+  location: 'file://<repo-worktree-rw-p1-5>/test/delivery-cases/1_5.mjs:206:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the write-hook entrance must really refuse a cross-phase product write (C07)
+    
+    'gap' !== 'rejected'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'rejected'
+  actual: 'gap'
+  operator: 'strictEqual'
+    TestContext.<anonymous> (file://file://<repo-worktree-rw-p1-5>/test/delivery-cases/1_5.mjs:249:10)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+# Subtest: C04: tasks is the single writable authority — ticks never move the ticket, definition drift does, stale tickets are refused
+ok 3 - C04: tasks is the single writable authority — ticks never move the ticket, definition drift does, stale tickets are refused
+  ---
+  duration_ms: 1587.344083
+# Subtest: C06: the archive seal requires the knowledge closeout, exactly once — the native gate itself carries no knowledge receipt
+ok 4 - C06: the archive seal requires the knowledge closeout, exactly once — the native gate itself carries no knowledge receipt
+
+=== restores ===
+upstream.lock.json sha256 after restore: 89d3c51a6b321d741a883b0141727c04675986262217f56312d67ba59769535a (pre-mutation 89d3c51a6b321d741a883b0141727c04675986262217f56312d67ba59769535a)
+lib/adapters/comet.js sha256 after restore: 0e4fee2f4ada52900b20fd5a2219d4b2a02a0c10f32fa280bd10e92cbb906af1 (pre-mutation 0e4fee2f4ada52900b20fd5a2219d4b2a02a0c10f32fa280bd10e92cbb906af1)
