@@ -1,0 +1,112 @@
+{
+ "task": "P4_5 (原任务 4.5) rework — 生命周期 hook 装配重验：SessionStart 启动/恢复/compact、子角色启动、用户启停/模式切换逐宿主面；脚本与原生 settings 两层；跨会话/角色零串扰；失败/超时不产生假方法回执",
+ "run": "rework-seven-p1-r1",
+ "worktree": ".claude/worktrees/rw-p4-5 (branch rework/p4-5-lifecycle, base master@5951d14)",
+ "final_status": "GREEN",
+ "rework_revision": "2026-10-22-seven-p1 (REOPENED_RETEST_REQUIRED; 历史组件证据保留: round-1 ACCEPTED@05e69fc, review APPROVED 0 blocking)",
+ "red_cases": [
+  {
+   "id": "REWORK-BASELINE",
+   "classification": "消费面顺序依赖缺陷已复现",
+   "claim": "base 5951d14 上 test/delivery-cases/4_5.mjs 单独运行 1/5：composeWorld 复制仓库的 gitignored 生成物 hooks/.compiled.env（.gitignore:30, adapter 产物）——全新 checkout 该文件不存在 → 4 例 ENOENT；而全量 npm test 中它由其他套件（foundation-distribution 的行为测试对活仓跑 adapter）先生成，套件顺序决定 4_5 成败（隐藏顺序依赖）。实测：fresh 状态 standalone 4 fail / 全量运行后 hooks/.compiled.env mtime 由 npm test 生成；adapter 对 world 新编译的 .compiled.env 与仓内生成物 diff 为空（同一 hooks.yaml 源，等价性已录）",
+   "evidence": "worker-reports/P4_5-rework/evidence/red-baseline-4_5-standalone.txt (tests 5 / pass 1 / fail 4, ENOENT copyfile)"
+  }
+ ],
+ "fixes": [
+  "test/delivery-cases/4_5.mjs composeWorld 不再复制仓库 gitignored 生成物：world 的 hooks/.compiled.env 由同一次真实 adapter 组合编译产出（同一 hooks.yaml 源，实测 byte-identical），钩子脚本只分发 git 内tracked 的 4 个 .sh——用例对未跟踪顺序敏感状态的依赖消除，单独运行与全量运行同绿"
+ ],
+ "new_suite": {
+  "path": "test/delivery-hook-assembly.test.js (Owns 逐字路径，本轮新增，6 例)",
+  "green": "node --test test/delivery-hook-assembly.test.js → 6/6 pass ×2（evidence/green-owns-suites-x2.txt）"
+ },
+ "reverified": [
+  {
+   "behavior": "SessionStart startup/resume + Stop 逐宿主两层一致（H02/E06 面）：原生 settings 层恰一受管条目/固定事件集、matcher=startup|resume 逐字；脚本层直跑与注册命令原文驱动行为一致；四个宿主解析面（CLAUDE/CODEX/OPENCODE_PROJECT_DIR、GIT_PREFIX）同一项目上下文；startup→resume→stop→startup 乱序重复均 advisory、零状态写、无 dispatch/phase/approve/consensus 字样",
+   "negative": "M1（session-context.sh 吞 stdout 静默化）→ 上下文注入观察断言失败；M3（输出伪造 'consensus dispatched, phase approved' 回执）→ doesNotMatch 断言失败；M4（stop-reminder.sh 写状态文件）→ world 字节快照 deepEqual 失败",
+   "mutation_caught": "M1: 1 fail (T1)；M3: 1 fail (T1)；M4: 1 fail (T1) — evidence/mutation-m{1,3,4}-*.txt"
+  },
+  {
+   "behavior": "compact/子会话（SubagentStart）项目侧不装配且缺口显式（E06 面）：向 hooks.yaml 追加 PreCompact/SubagentStart 策略 → adapter 拒绝（exit!=0，逐字点名越界事件，§7.3 'YAML 追加不生效'）；拒绝发生在任何产物写入前（settings+compiled.env 字节不变）；组合视图无 compact matcher、无 SubagentStart/UserPromptSubmit/PreCompact 组；矩阵 6 面逐条 CAPABILITY_GAP",
+   "negative": "负对照：若 adapter 静默接受 YAML 追加或 settings 出现任一越界组 → 断言即失败（M2 变异族覆盖同面：M2 使 deny 失效被 T4/T5 捕获，同族拒绝语义由 adapter 源码常量 FIXED_EVENT_SET 拒绝路径的真实 exit!=0 驱动）",
+   "mutation_caught": "（M2 evidence/mutation-m2-deny-defused.txt: 2 fail）"
+  },
+  {
+   "behavior": "三者共存以真实插件字节验证（E05 面）：把分发快照 .agents/skills/ponytail/hooks/claude-codex-hooks.json 的真实 SessionStart/SubagentStart/UserPromptSubmit 条目（CLAUDE_PLUGIN_ROOT 来源标记）+ 用户条目预置进 world settings → adapter 组合成功；插件条目逐字节保留、用户条目保留、每固定事件恰一受管条目且不吸收插件命令；重复组合字节稳定（repeat-pull 幂等）；uninstall 只移除受管块（插件/用户条目幸存、compiled.env 随之移除），re-init 语义等价恢复且 compiled.env 字节一致",
+   "negative": "受管块复制插件命令或移改插件/用户条目 → deepEqual/verbatim 断言失败；卸载残留受管条目 → 逐组扫描断言失败",
+   "mutation_caught": "（由结构断言内嵌覆盖；M2 族同面）"
+  },
+  {
+   "behavior": "跨会话/角色零串扰（E05/E06 面）：session-context.sh 输出对 4 种角色/会话身份 env 逐字节相同（纯项目函数、无角色授予）；共享 mode 文件 plan→bypassPermissions→删除切换下 deny gate 恒 exit 2、SDD.Gate 恒 blocked；SDD_ROLE=builder 的 worker 身份不能借 mode/env 获得权限；矩阵 modeIs{Identity,Permission,Completion}Basis 全 false 且 knownFacts 与 role-policy methodStateScope.knownFacts.facts 逐字相等（I02 rework 后复验，runtimeBinding 扩展未触碰复用文本）",
+   "negative": "M2（pre-tool-gate.sh exit 2→0 拆除 deny）→ T4/T5 双点失败：mode 切换下 deny 断言、超时后 gate 仍阻断断言",
+   "mutation_caught": "M2: 2 fail — evidence/mutation-m2-deny-defused.txt"
+  },
+  {
+   "behavior": "失败/静默/超时不产生假方法回执（E05 面）：缺脚本（Ponytail off）→ 注册命令 exit!=0 显形、executed=false；exit 0 空 stdout → NOT 执行（nonEvidence 登记）；挂起 hook 被宿主超时预算击杀（spawnSync timeout）→ signal!=null、无输出、executed=false、verdict=TIMEOUT_NOT_EXECUTED，三形态全程 world 字节不变（无伪造 badge/map/回执工件）；之后真实 deny gate 仍 exit 2、真实 SDD.Gate 仍 blocked+MISSING_OBSERVATION",
+   "negative": "超时若被判 DELIVERED、或三形态留下任何磁盘工件、或 gate 随之放行 → 断言即失败",
+   "mutation_caught": "（M2 族同面：deny 失效在'超时后 gate 仍阻断'断言被捕获）"
+  },
+  {
+   "behavior": "场景锚点（P3_1 纪律）：E05 旅程 node tools/verify/delivery-journey.mjs --scenario E05 --profile managed-pilot → exit 0 PASS，target token E05 found=true status=ok（5/5 ok）；E06/H02 旅程的 6/12 个 SKIP 为兄弟任务 Comet 构建环境门（'patched Comet build is not present'），在干净 base 上 skip 数逐一相同（4_4=6、4_6=12），非本轮回归",
+   "negative": "锚点若失配（token missing/not-ok）journey 结构化非零拒绝——E05 实测 PASS 排除",
+   "mutation_caught": "（journey 自身 typed 拒绝语义，round-1 P3_1 已验）"
+  }
+ ],
+ "mutations": [
+  {
+   "id": "M1",
+   "target": "hooks/session-context.sh 吞 stdout",
+   "caught_by": "T1 上下文观察断言",
+   "evidence": "evidence/mutation-m1-silent-hook.txt"
+  },
+  {
+   "id": "M2",
+   "target": "hooks/pre-tool-gate.sh deny exit 2→0",
+   "caught_by": "T4 mode 切换 deny 断言 + T5 超时后 gate 阻断断言",
+   "evidence": "evidence/mutation-m2-deny-defused.txt"
+  },
+  {
+   "id": "M3",
+   "target": "hooks/session-context.sh 伪造 consensus/phase/approve 回执行",
+   "caught_by": "T1 doesNotMatch(/dispatch|phase|approve|consensus/)",
+   "evidence": "evidence/mutation-m3-fake-receipt.txt"
+  },
+  {
+   "id": "M4",
+   "target": "hooks/stop-reminder.sh 写状态文件",
+   "caught_by": "T1 world 字节快照 deepEqual",
+   "evidence": "evidence/mutation-m4-mutating-stop.txt"
+  }
+ ],
+ "ponytail_consistency": {
+  "method": "只读对照（amendment 3：SessionStart/Ponytail 方法资产分发已在 P1_2/P1_6 采纳）：(a) P1_6 分发快照真实插件 hooks JSON 的 SessionStart matcher=startup|resume|clear|compact + SubagentStart + UserPromptSubmit + CLAUDE_PLUGIN_ROOT 来源标记 + timeout 15，与本任务矩阵 ponytailNative 列/CAPABILITY_GAP 行逐面对照；(b) P1_6 method-profile-manifest hook_registration_division（plugin_lifecycle_hooks=Ponytail 插件入口 / project=hooks.yaml / no_cross_copying=不互相复制）与实测组合行为对照；(c) P1_2 adapter 固定事件集/注册分工/隔离目标/卸载语义经共存+幂等+卸载实测对照（P1_2 Owns 套件 foundation-distribution 27/27、1_2.mjs 7/7、1_6.mjs 9/10+1 已知环境 skip 零回归）；(d) I02 role-policy methodStateScope knownFacts 逐字复用复验（I02 rework 后 runtimeBinding 为纯增量）",
+  "verdict": "一致，无语义冲突",
+  "details": [
+   "compact/clear/子会话/提示提交面 = Ponytail 插件入口职责（真实快照字节为证），项目受管面诚实 CAPABILITY_GAP、不复制不伪报（§7.2/§7.3）",
+   "用户启停/模式切换只改变方法上下文、永不 Gate/权限/完成判定（manifest user_toggle_scope 与矩阵 modeIs*Basis=false 同向，T4 实测 deny/gate 不随 mode 变）",
+   "P4_5 hook 语义（advisory 注入、mode 非权限基础、失败显形）与 P1_2 分发组合面（受管块整体替换、来源标记优先、隔离组合）无冲突",
+   "真实宿主会话内的送达/遵守（Ponytail activate/tracker/ponytail-activate.js 行为）本任务不驱动、保持 UNVERIFIED——与 round-1 一致，由宿主验证波次/VERIFY 承接"
+  ]
+ },
+ "regression": {
+  "owns_suites_x2": "delivery-hook-assembly 6/6 ×2 + delivery-cases/4_5.mjs 5/5 ×2 + lifecycle-hook.test.js 11/11 ×2（evidence/green-owns-suites-x2.txt）",
+  "npm_test_full": "tests 460 = baseline 454 + 本轮 6；pass 457 / fail 2 / skip 1；fail=C08 host-openspec 漂移 + B08 preservation，与 base@5951d14 基线逐一相同，零新增（evidence/green-npm-test-full.txt vs baseline-npm-test-at-5951d14.txt）",
+  "sibling_surfaces": "P1_2/P1_6 分发面套件零回归（27/27、7/7、9/10+1 环境门 skip）"
+ },
+ "evidence_separation": "结构面（脚本层+原生 settings 层、共存/幂等/卸载、拒绝语义、超时/失败回执语义）= 本轮 PROVEN；活体宿主运行（真实 CC 会话内触发/送达/遵守、插件运行时）= UNVERIFIED 如实分报（套件头注 + hook-policy liveRun.status 不变）",
+ "allowed_set_check": "改动集 = Owns 逐字子集（test/delivery-cases/4_5.mjs、test/delivery-hook-assembly.test.js[Owns 新增]）+ 授权报告路径（worker-reports/P4_5.rework.json、worker-reports/P4_5-rework/evidence/*.txt|json）；tasks.md/execution-state/ledger/drift-lock/活配置/插件缓存零改动；变异 M1-M4 均即时回滚（git diff 空）",
+ "host_path_check": "提交内容零宿主绝对路径（npm 日志证据的 worktree/TMPDIR 前缀已脱敏为相对形式，结构未动）",
+ "commands": {
+  "node --test test/delivery-hook-assembly.test.js → exit 0 (6/6, ×2)": "GREEN",
+  "node --test test/delivery-cases/4_5.mjs → exit 0 (5/5, ×2)": "GREEN",
+  "node --test test/lifecycle-hook.test.js → exit 0 (11/11, ×2)": "GREEN",
+  "node tools/verify/delivery-journey.mjs --scenario E05 --profile managed-pilot --evidence-dir $TMPDIR/... --json → exit 0 PASS": "GREEN",
+  "npm test → exit 1 (2 fail = 已知 C08/B08，零新增)": "GREEN-DELTA",
+  "mutation M1-M4 → 各 1-2 fail 后回滚 git diff 空": "SELF-PROOF"
+ },
+ "unverified": [
+  "真实 Claude Code 宿主会话中的 hook 触发、上下文实际送达与行为遵守（活体运行）——由宿主验证波次/VERIFY 承接，本轮只证结构面",
+  "Ponytail 插件运行时（activate/subagent/tracker 脚本）在本机宿主内的行为——插件入口职责，未驱动",
+  "E06/H02 旅程的 PASS 需兄弟任务 Comet 构建环境（本轮工作树未 prepare/build Comet；skip 与干净 base 逐一相同）"
+ ],
+ "blockers_or_questions": []
+}
