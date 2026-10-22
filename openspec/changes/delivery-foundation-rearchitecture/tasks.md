@@ -156,14 +156,14 @@
 **Parallel safe:** false
 **Acceptance IDs:** F02, F04, B09
 
-- [ ] **Step 1 [5 min]: Test** 1.2.a 实现资产 exporter 与 FoundationLock：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：RED：缺摘要/机器路径/浮动版本拒绝；GREEN：仅从技能、hooks、MCP 唯一源生成发布视图。
-- [ ] **Step 2 [5 min]: Implement** 1.2.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 1.2.b 验证组合幂等与受管块移交：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：隔离配置验证正反序初始化、重复 pull、升级/卸载；脚本行为和 settings matcher 同测，用户条目不丢。
-- [ ] **Step 4 [5 min]: Implement** 1.2.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Test** 1.2.c 验证旧 Run 固定资产及回退：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：升级后旧 Run 保留原方法/策略/工具摘要；不能保持则阻断并显式迁移，不静默换基线。
-- [ ] **Step 6 [5 min]: Implement** 1.2.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 1.2.a 实现资产 exporter 与 FoundationLock：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：RED：缺摘要/机器路径/浮动版本拒绝；GREEN：仅从技能、hooks、MCP 唯一源生成发布视图。
+- [x] **Step 2 [5 min]: Implement** 1.2.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 1.2.b 验证组合幂等与受管块移交：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：隔离配置验证正反序初始化、重复 pull、升级/卸载；脚本行为和 settings matcher 同测，用户条目不丢。
+- [x] **Step 4 [5 min]: Implement** 1.2.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Test** 1.2.c 验证旧 Run 固定资产及回退：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：升级后旧 Run 保留原方法/策略/工具摘要；不能保持则阻断并显式迁移，不静默换基线。
+- [x] **Step 6 [5 min]: Implement** 1.2.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P1_3: 原任务 1.3 — 验证 Comet 单主控模式、受管驱动、OpenSpec 接入、不可省略检查集合、独立验证回执和唯一 closeout owner（TeamAI 只验证分发）；真实渠道探针覆盖编辑/Shell/MCP（F05/F07/A09）。失败 NO-GO，不扩建第二调度器。
 

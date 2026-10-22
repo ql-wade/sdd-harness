@@ -1,0 +1,36 @@
+{
+  "task": "P1_2",
+  "phase": "rework-r1",
+  "reviewer": "distinct reviewer agent (read-only)",
+  "verdict": "APPROVED",
+  "reviewed_at": "2026-10-22T07:05:45.008496+00:00",
+  "head_reviewed": "38fe43f",
+  "blocking_findings": [],
+  "non_blocking_findings": [
+    {
+      "id": "nb-1",
+      "summary": "evidence 08 'POST-MUTATION RE-GREEN' 段含中途快照 exit1 与头部纪律表述不一致; 终态由 10 号证据+评审复跑覆盖",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-2",
+      "summary": "M1 重做捕获集差异(实现细节); 双套件均 exit 1 捕获",
+      "disposition": "recorded"
+    },
+    {
+      "id": "nb-3",
+      "summary": "locale 回归用 C.UTF-8 评审用 en_US.UTF-8(等价均触发 bash 3.2 误 lex)",
+      "disposition": "recorded"
+    }
+  ],
+  "independently_rerun": {
+    "boundary_clean": true,
+    "suites": "27/27+7/7",
+    "locale_defect": "双态独立复现(pre-fix exit1 unbound/post-fix exit0)+M5-lite 回退复验(12/13 恰双失败)",
+    "journey_anchors": "F02/F04 exit 0 per-id satisfied; V_F02 实质断言实读",
+    "mutations_redone": "M1/M3 独立 clone 重做捕获, 恢复字节等同零残留",
+    "live_config_untouched": true,
+    "negatives": "4/4 自建 fixture 直跑",
+    "npm_test": "429/426/2 恰已知零新增"
+  }
+}
