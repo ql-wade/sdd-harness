@@ -1,0 +1,71 @@
+{
+  "task": "P3_2 (rework-seven-p1-r1): V_SAME_RUN_DELIVERY 旅程配方 + 真实 R→V 角色切片",
+  "run": "rework-seven-p1-r1",
+  "worktree": ".claude/worktrees/rw-p3-2 (branch rework/p3-2-same-run-recipe, base 73186e5 = master HEAD at dispatch; opening receipt in evidence/00)",
+  "final_status": "DONE",
+  "steps_done": "10/10 (tasks.md P3_2 Steps 1-10: 既有 3_2.a/3_2.b 机制套件保持绿并在本轮套件回归内复验；Step 7/8 = 配方+真实 CLI R→V 切片 RED→GREEN；Step 9 独立审查边界如实记录；Step 10 提交序列)",
+  "deliverables": {
+    "a_journey_recipe": {
+      "recipe": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.case.json (journey_definitions 绑定路径, schema-valid: schemaVersion/scenario E06/acceptanceIds=C01,C02,C03,E01,E02,E03,E06,D06,D07,H01,H03/requiredAssertions 4 pins/caseModule=test/delivery-cases/3_2.mjs/actions/evidence/verdictSemantics)",
+      "stepPlan": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.journey.json — 11 步完整旅程步骤计划 (1-r-confirm → 2-a-grill-consensus → 3-t-independent-review → 4-p-plan → 5-tdd-build → 6-whitebox-verify → 7-kp-prearchive → 8-openspec-archive → 9-outline-unknown-recovery → 10-kt-run-closeout → 11-completed)，每步含角色身份/dispatch 绑定(真实 CLI 命令面)/gate 与前置/epoch-代际语义/recordFields 清单；步骤 7-11 executionOwner=VERIFY",
+      "registration": "verification-case-plan.json journey_definitions.same-run-delivery (owner P3_2, required_check V_SAME_RUN_DELIVERY) — 配方落盘前 --journey same-run-delivery → exit 2 journey-recipe-not-implemented (RED-1)；落盘后 exit 0 PASS。负例全部经真实 runner 复验: 未注册名→journey-not-registered exit 2; 注册但配方缺失(override plan)→journey-recipe-not-implemented exit 2; 注册不完整→journey-registration-incomplete exit 2 (evidence 01/03 + 套件 V_E06:recipe-tracking)"
+    },
+    "b_rv_slice": {
+      "mechanism": "test/delivery-cases/3_2.mjs V_E06:rv-slice-real-cli — 真实受管 Comet CLI (repo lock → 指纹 d4370930 八…) 于 $TMPDIR 隔离 scratch 项目: state init --managed-delivery --knowledge-closeout-required true → 无 R 时 open-complete 拒绝(enter-design 强制, P1-01, exit 1 且 phase 不变) → R dispatch/accept(真实绑定 execution/attempt/inputDigest/epoch, role=requirements-owner) → open-complete 通过 phase=design → A: 2:1 多数拒绝、缺票拒绝、本 run r3 真实回执(只读正控, artifactDigest 重绑 dispatch.inputDigest)接受 → T: weak oracle 拒绝 / strong 接受 → P → complete-design → build_mode=executing-plans tdd_mode=tdd + 注册 check 身份(build-ok) → build-complete → verify: verification_report + verify-ok 身份 + V accept → verify-pass。边界读回: phase=archive, completionBlocked=true(Kt 席位), knowledgeCloseoutRecorded=false, change 未进 archive, knowledge_closeout_required 仍 true, 全部五 gate 回执含 attempt/epoch/generation (P1-03), 跨进程 resume 读回一致。V_E06:p25-consensus-consumption — r3 真实回执经真实机械门重放(initConsensusRun/admitBallot/tally/finalize) + consumeArchitectureGate 仅经受信 launcher dispatch 消费; FORGED_DISPATCH 与 ARTIFACT_DIGEST_MISMATCH 拒绝(P2_5 契约配对)",
+      "evidence": "evidence/04 (journey PASS exit 0, target E06 found+ok, 13/13, 四断言 satisfied), evidence/05 (owned suite green x2), evidence/13 (journey TAP)"
+    },
+    "c_dependency_honesty": {
+      "outline": "Kp→真实归档→Outline 未知结果/重启恢复→Kt 段未执行、未签 PASS: 本轮执行时点宿主 loopback 3000/5556 ECONNREFUSED(栈未运行; 会话沙箱 docker EPERM, 文档在案; 启动栈属部署动作, 超出本任务建设范围) → UNVERIFIED, holder=VERIFY (evidence/11)",
+      "i01_refs": "同段前置, 记录于 journey.json 步骤 7/9 的 prerequisites; holder=VERIFY",
+      "contract_command": "固定合同命令 --scenario E06 --journey same-run-delivery 被 runner 判 INVALID_INPUT exit 1 (--journey 与 --scenario 互斥, delivery-journey.mjs 归 P3_1; 配方自带 scenario E06) — runner 支持形 --journey same-run-delivery 为验证通道且 PASS; 命令串调和归 P3_1/控制器 (evidence/02)"
+    }
+  },
+  "mutations_caught": [
+    "M1 配方 scenario E06→E07 → recipe-tracking 测试失败 exit 1 ('E07' !== 'E06') — evidence/08; 逐字节还原",
+    "M2 旅程步骤计划 8-openspec-archive executionOwner VERIFY→P3_2 → recipe-tracking 测试失败 exit 1 (VERIFY-owned tail deepEqual) — evidence/09; 逐字节还原",
+    "M3 配方 requiredAssertions 钉 V_E06:rv-slice-real-cli→V_E06:pin-never-executed → journey exit 2 (双层: 套内配方绑定断言失败使 spawn exit 1 → action-1-failed; runner requiredAssertions 拒绝) — evidence/10; 逐字节还原, 还原后抽测绿"
+  ],
+  "red_cases": [
+    "RED-1: 配方未落盘时 --journey same-run-delivery → exit 2 NOT-EXERCISED journey-recipe-not-implemented (真实 runner 拒绝, owner P3_2, registeredStatus TO_IMPLEMENT) — evidence/01",
+    "RED-2: 配方落盘后、切片未实现时同命令 → exit 2 assertion-mapping-not-verifiable (E06 与三个 V_E06 复合断言 missing) — evidence/03 — 行为 RED: 配方可执行但目标分母无执行测试点",
+    "切片 RED(机制级): 无 R receipt 的 open-complete 在真实 CLI 上被拒(P1-01)由套件持续钉住; A 多数/缺票与 T 弱 oracle 负例全部真实拒绝"
+  ],
+  "green_summary": {
+    "owned_suite": "test/delivery-cases/3_2.mjs 13/13 pass (10 既有 + 3 新), exit 0 x3 (evidence/05 记录 x2 + journey 内含 x1)",
+    "journey": "--journey same-run-delivery --profile managed-pilot → exit 0 PASS, target E06 found+ok, requiredAssertions 4/4 satisfied (evidence/04)",
+    "scenario_lanes": "V_B02/V_B04/V_B05/V_F08 (case plan 绑定 3_2.mjs 的四条合同命令) 全 exit 0 PASS found+ok (evidence/06)",
+    "full_regression": "npm test: 442 tests / 439 pass / 2 fail / 1 skip — 两失败为基线已知环境项 (C08 host-openspec 漂移, B08 preservation), 零新增 (evidence/07)"
+  },
+  "scenario_anchor_check": "B01-B07/F08/A15 全部以 V_* 测试点锚定于 3_2.mjs; B02/B04/B05/F08 经真实 runner found+ok 复核; journey 钉 E06+三复合断言 (evidence/12)",
+  "commands": {
+    "node tools/verify/delivery-journey.mjs --journey same-run-delivery --profile managed-pilot --evidence-dir <tmp> --json (RED-1, 配方未落盘)": "exit 2",
+    "同命令 (RED-2, 配方已落盘切片未实现)": "exit 2",
+    "同命令 (GREEN)": "exit 0",
+    "node --test test/delivery-cases/3_2.mjs": "exit 0 x3 (13/13)",
+    "node tools/verify/delivery-journey.mjs --scenario B02|B04|B05|F08 --profile managed-pilot --evidence-dir <tmp> --json": "exit 0 x4",
+    "npm test (full)": "exit 1 — 442/439/2/1, 两失败=基线已知项, 零新增",
+    "node --test --test-name-pattern=recipe-tracking test/delivery-cases/3_2.mjs (M1/M2)": "exit 1 x2 (caught)",
+    "node tools/verify/delivery-journey.mjs --journey ... (M3)": "exit 2 (caught)",
+    "node tools/verify/delivery-journey.mjs --scenario E06 --journey same-run-delivery ... (固定合同命令串)": "exit 1 INVALID_INPUT (runner 界面互斥, 见 unverified/协调项)"
+  },
+  "unverified": [
+    "Kp→真实 OpenSpec 归档→Outline 未知结果/重启恢复→Kt→completed: 本轮未执行 (execution_owner=VERIFY); Outline 栈 loopback 3000/5556 ECONNREFUSED → UNVERIFIED, holder=VERIFY (evidence/11)",
+    "固定合同命令串含 --scenario E06 与 --journey 互斥 → INVALID_INPUT: 命令串调和归 runner owner P3_1/控制器 (配方侧交付完整, 支持形已 PASS) (evidence/02)",
+    "A 共识消费的正控是 r3 真实回执的只读重放与 CLI 形状重塑 (2_4 消费形态); 最终旅程须以被审工件自身的新鲜全票共识重跑 — 已钉在 journey.json 步骤 2 constructionScope",
+    "Whitebox 独立身份的跨机隔离 (I02 边界) 未由本任务声称; 切片内 verifier 独立性由 Runtime dispatch 角色绑定机制承载"
+  ],
+  "files_changed": [
+    "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.case.json (新增)",
+    "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.journey.json (新增)",
+    "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/README.md (追加返工增量段)",
+    "test/delivery-cases/3_2.mjs (追加 V_E06 三测试 + 真实 CLI 切片 harness)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.rework.json (新增)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2-rework/evidence/ (00-13 .txt)"
+  ],
+  "commits": {
+    "sequence": "test(P3_2 rework): RED receipts … / feat(P3_2 rework): same-run-delivery recipe + journey step plan + real-CLI R→V slice … / test(P3_2 rework): mutation/regression evidence + report — 全部带 'P3_2 rework' 标记, 零宿主绝对路径"
+  },
+  "blockers_or_questions": [
+    "合同命令串调和: V_SAME_RUN_DELIVERY.command 的 '--scenario E06 --journey same-run-delivery' 与 runner 的 --journey/--scenario 互斥校验冲突; 建议控制器在集成时把该检查命令改为 '--journey same-run-delivery ...' (recipe 自带 scenario) 或由 P3_1 放行 scenario+journey 组合并以配方 scenario 为准 — 不阻塞本任务交付 (支持形已全绿)"
+  ]
+}

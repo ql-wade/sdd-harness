@@ -1,0 +1,7 @@
+mutation M3: recipe requiredAssertions pin V_E06:rv-slice-real-cli -> V_E06:pin-never-executed
+catcher: node tools/verify/delivery-journey.mjs --journey same-run-delivery --profile managed-pilot --evidence-dir <tmp>/p32-mut3/evidence --json
+exit: 2 (caught — two independent layers: the suite's recipe-binding assertion fails inside the spawn (12/13 pass, 1 fail -> action-1 exit 1) and the runner refuses)
+verdict: FAIL
+reason: action-1-failed (spawn): expected exit 0, observed exit 1 (expected: exit 0; the case module executes the same-run journ...
+requiredAssertions: [('E06', 'failed'), ('V_E06:pin-never-executed', 'missing'), ('V_E06:p25-consensus-consumption', 'satisfied'), ('V_E06:recipe-tracking', 'failed')]
+restore: cmp recipe.bak recipe -> identical; post-restore spot check (V_E06 pattern suite): exit 0
