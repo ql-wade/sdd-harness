@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 1,
+  "journey": "same-run-delivery",
+  "title": "V_SAME_RUN_DELIVERY: one real Comet product Run through the full same-run delivery chain",
+  "requiredCheck": "V_SAME_RUN_DELIVERY",
+  "recipeOwner": "P3_2",
+  "executionOwner": "VERIFY",
+  "registeredRecipe": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.case.json",
+  "acceptanceIds": ["C01", "C02", "C03", "E01", "E02", "E03", "E06", "D06", "D07", "H01", "H03"],
+  "profile": "managed-pilot",
+  "runner": {
+    "tool": "tools/verify/delivery-journey.mjs",
+    "mode": "journey",
+    "binding": "verification-case-plan.json journey_definitions.same-run-delivery (the registration is the binding; unknown journeys never fall into a default-success path)",
+    "note": "The runner is an action/observer adapter (verification_runner_invariant): it owns no phase, no DAG, no retries. The Comet CLI owns the state machine; each step below names the real command face that mutates it."
+  },
+  "dispatchContract": {
+    "interface": "Runner.Dispatch.v1",
+    "trustedLauncher": "Comet Classic Runtime (patch 0002, fingerprint d4370930); dispatch records are issued only by the Runtime",
+    "fields": ["runnerId", "run", "gate", "role", "execution", "inputDigest", "policyDigest", "attempt", "epoch", "generation", "integrity"],
+    "roles": { "R": "requirements-owner", "A": "reviewer", "T": "reviewer", "P": "planner", "V": "verifier", "K": "knowledge-publisher" },
+    "invariants": [
+      "a worker cannot write control state: gate_receipts/phase are machine-owned (hand writes refused)",
+      "a receipt counts only with a live Runtime dispatch: same execution, inputDigest equal to the dispatched input, non-empty report whose digest matches (P1-02)",
+      "gate A additionally requires the closed unanimous consensus; gate T additionally requires an independent sufficient test-design review with an adequate oracle",
+      "epoch/generation: receipts are accepted only under the current input generation; restoring old bytes never revives an old approval (P1-03); old attempts and late receipts stay historical"
+    ]
+  },
+  "steps": [
+    {
+      "id": "1-r-confirm",
+      "title": "R confirm: the requirements gate precedes design (C01)",
+      "roleIdentity": "requirements-owner (Runtime-assigned at dispatch; never read from worker files)",
+      "executionOwner": "P3_2",
+      "constructionScope": "executed for real by the rework slice on the managed CLI (test/delivery-cases/3_2.mjs V_E06:rv-slice-real-cli)",
+      "gate": "R",
+      "premises": [],
+      "dispatchBinding": {
+        "dispatch": "comet state dispatch-gate <change> R --json",
+        "accept": "comet state accept-gate <change> R --file <result.json>",
+        "enforcement": "comet state transition <change> open-complete refuses while no current R receipt exists (enter-design premises = [R], P1-01)"
+      },
+      "epoch": "per-input-version: the dispatch binds the requirements input digest; a requirements revision creates a new input version (new dispatch lineage), late old-attempt receipts are refused",
+      "recordFields": ["gate", "role", "execution", "attempt", "inputDigest", "reportDigest", "verdict", "generation", "recordedAt"],
+      "evidence": "gate_receipts append-only entry bound to the dispatch execution; run-state single ledger"
+    },
+    {
+      "id": "2-a-grill-consensus",
+      "title": "A: architecture grill closed + real unanimous consensus (E01/E02/E03)",
+      "roleIdentity": "reviewer quorum exactly [claude-code, zcode, codex-agent]; each ballot a cold independent review; builder identity conflict refused",
+      "executionOwner": "P3_2",
+      "constructionScope": "slice: the CLI A gate consumed this run's real r3 receipts (consensus/2026-10-22-plan-r3, read-only positive control) plus the P2_5 consumeArchitectureGate contract; the final journey re-runs the real consensus on the journey's own artifact",
+      "gate": "A",
+      "premises": ["R"],
+      "dispatchBinding": {
+        "dispatch": "comet state dispatch-gate <change> A --json",
+        "accept": "comet state accept-gate <change> A --file <result.json> (result.consensus)",
+        "consumption": "P2_5 consumeArchitectureGate: launcher integrity (forged/malformed refused), identity conflict, artifactDigest bound to the dispatch, then the mechanical judgment (participants fully covered, zero rejections, zero blocking findings, finalize report present, grill load-bearing questions closed) — CONSENSUS_NOT_ADMITTED otherwise"
+      },
+      "epoch": "consensus binds one artifactDigest (dispatch.inputDigest); a revision re-reviews cold with fresh ballots and a new dispatch — nothing inherited",
+      "recordFields": ["reviewId", "rule=unanimous", "status=CLOSED", "participants", "ballots[agent,verdict,blockingFindings,summaryDigest]", "artifactDigest", "finalizeReportDigest", "execution", "attempt", "inputDigest"],
+      "evidence": "gate_receipts A entry + consensus run dir (manifest/tally/finalize digests); refusal codes on any gap"
+    },
+    {
+      "id": "3-t-independent-review",
+      "title": "T: independent test-design review with an adequate oracle (B04 upstream)",
+      "roleIdentity": "reviewer execution independent of the authoring execution and of the builder (self-review refused)",
+      "executionOwner": "P3_2",
+      "constructionScope": "slice: CLI T gate with a strong-oracle testDesignReview; weak-oracle acceptance refused (routes test-design-repair)",
+      "gate": "T",
+      "premises": ["R", "A"],
+      "dispatchBinding": {
+        "dispatch": "comet state dispatch-gate <change> T --json",
+        "accept": "comet state accept-gate <change> T --file <result.json> (result.testDesignReview)",
+        "consumption": "P2_5 consumeTestDesignReview: affirmative written sufficiency, oracle strength in [strong, adequate], current-candidate binding (STALE_AUTHORIZATION/REVIEW_MATERIAL_MISMATCH refused)"
+      },
+      "epoch": "the review binds the current test-intent input digest; an input edit mid-review makes the result stale (D02)",
+      "recordFields": ["verdict=sufficient", "oracle", "inputDigest", "reviewer", "findings", "execution", "attempt", "generation"],
+      "evidence": "gate_receipts T entry; refusal route test-design-repair recorded on the run"
+    },
+    {
+      "id": "4-p-plan",
+      "title": "P: plan gate over the frozen task definitions",
+      "roleIdentity": "planner",
+      "executionOwner": "P3_2",
+      "constructionScope": "slice: CLI P gate accepted; re-accepted after every plan-definition change (task id assignment) before build dispatch",
+      "gate": "P",
+      "premises": ["R", "A", "T"],
+      "dispatchBinding": {
+        "dispatch": "comet state dispatch-gate <change> P --json",
+        "accept": "comet state accept-gate <change> P --file <result.json>"
+      },
+      "epoch": "definition-sensitive: a plan definition change (sync-plan/assign-ids) recomputes the gate against the current definition and invalidates the old receipt",
+      "recordFields": ["planDefinitionDigest", "execution", "attempt", "inputDigest", "reportDigest", "generation"],
+      "evidence": "gate_receipts P entry bound to the current plan revision"
+    },
+    {
+      "id": "5-tdd-build",
+      "title": "TDD build: builder executes under tdd_mode with registered check identities",
+      "roleIdentity": "builder (managed write driver: PlanBundle-derived allowed paths, ROLE_PATH_REFUSED on overreach)",
+      "executionOwner": "P3_2",
+      "constructionScope": "slice: build_mode=executing-plans, tdd_mode=tdd, isolation=current; build check recorded through the registered build-ok identity; COMET_SKIP_BUILD/COMET_FORCE_PHASE refuse",
+      "gate": "product-write + build-complete (premises R,A,T,P)",
+      "premises": ["R", "A", "T", "P"],
+      "dispatchBinding": {
+        "dispatch": "comet check run <change> build --local -- <registered command>",
+        "accept": "comet state transition <change> build-complete (the entrance re-checks premises and check identity)",
+        "enforcement": "the write hook re-evaluates enter-build premises on managed design/test-intent/plan writes; a trivial exit-0 command is recorded but never accepted"
+      },
+      "epoch": "candidate-scoped: an implementation change stales the recorded check evidence (Check evidence changed before transition)",
+      "recordFields": ["checkIdentity", "argv", "exitCode", "observedOutput", "inputTreeDigest", "recordedAt"],
+      "evidence": ".comet/checks log + transition entrance refusal codes on stale evidence"
+    },
+    {
+      "id": "6-whitebox-verify",
+      "title": "Whitebox V: independent verification with real check evidence",
+      "roleIdentity": "verifier (independent execution; evidence-layer identity verifier, DISPATCH_ROLES)",
+      "executionOwner": "P3_2",
+      "constructionScope": "slice: verification report registered, verify-ok check recorded, V gate accepted, verify-pass transition; the slice stops at the archive boundary",
+      "gate": "V",
+      "premises": ["R", "A", "T", "P"],
+      "dispatchBinding": {
+        "dispatch": "comet state dispatch-gate <change> V --json",
+        "accept": "comet state accept-gate <change> V --file <result.json>",
+        "transition": "comet state transition <change> verify-pass; a failed verify routes verify-fail (same run, no second controller)"
+      },
+      "epoch": "V binds the verification inputs; candidate changes re-verify on the new candidate (STALE_CANDIDATE/B05)",
+      "recordFields": ["verdict", "findings", "inputDigest", "reportDigest", "execution", "attempt", "generation"],
+      "evidence": "gate_receipts V entry + verification report artifact"
+    },
+    {
+      "id": "7-kp-prearchive",
+      "title": "Kp: knowledge closeout sealed BEFORE archive (Knowledge.Closeout.v1)",
+      "roleIdentity": "knowledge-publisher (driver Kp seat)",
+      "executionOwner": "VERIFY",
+      "constructionScope": "not executed at construction: depends on the Outline stack and I01 refs admission; the slice leaves knowledge_closeout_required=true and archives nothing",
+      "gate": "K (driver Kp)",
+      "premises": ["R", "A", "T", "P", "V"],
+      "dispatchBinding": {
+        "dispatch": "Runtime K dispatch (an external target without a Runtime K dispatch is refused)",
+        "accept": "comet state knowledge-closeout <change> --file <receipt.json>",
+        "enforcement": "the Runtime reads the published target back itself; an unknown/wrong readback digest is never accepted (D06)"
+      },
+      "epoch": "receipt binds target revision + readbackDigest recordedAt; superseded publications re-seal",
+      "recordFields": ["targetKind", "target", "revision", "readbackDigest", "execution", "recordedAt"],
+      "evidence": "knowledge closeout receipt bound to the real Outline target"
+    },
+    {
+      "id": "8-openspec-archive",
+      "title": "Real OpenSpec archive of the delivered change",
+      "roleIdentity": "Comet closeout owner (controller)",
+      "executionOwner": "VERIFY",
+      "constructionScope": "not executed at construction: enter-archive premises require the V receipt (satisfied at the slice boundary) but the archive act itself belongs to the final journey",
+      "gate": "enter-archive (premises R,A,T,P,V current)",
+      "premises": ["R", "A", "T", "P", "V", "Kp sealed"],
+      "dispatchBinding": {
+        "dispatch": "comet state transition <change> archive-confirm",
+        "accept": "comet state transition <change> archived; comet archive <change> (real openspec archive move)"
+      },
+      "epoch": "archive-confirm records the archived state; archive-reopen exists but never silently rewinds acceptance",
+      "recordFields": ["archivedAt", "archiveTarget", "change", "preCondition: Kp receipt present"],
+      "evidence": "docs/openspec/changes/archive/<date>-<change> + archived state field"
+    },
+    {
+      "id": "9-outline-unknown-recovery",
+      "title": "Outline unknown-result / restart recovery window (V_RW_REAL_COMET_RECOVERY fault window inside this Run)",
+      "roleIdentity": "Comet Runtime + independent external monitoring/backup qualification (I07/I08/P4 mechanisms)",
+      "executionOwner": "VERIFY",
+      "constructionScope": "not executed at construction: requires the live Outline stack (127.0.0.1:3000, dex OIDC, I01 refs admission). At the rework pause point the stack was down (loopback 3000/5556 ECONNREFUSED) — recorded UNVERIFIED, holder VERIFY",
+      "gate": "run-level recovery (bounded actual Comet transaction recovery, P3_3 recipe)",
+      "premises": ["Run in progress (completed not yet emitted)", "real Outline target with an unknown publish result"],
+      "dispatchBinding": {
+        "dispatch": "same product Run/authority; the fault window is injected before the completed step (journey_execution.order_semantics)",
+        "accept": "reconcile + resume through the CLI recovery face; no spliced fragments from other Runs"
+      },
+      "epoch": "recovery reconciles to the last consistent transaction; late/old dispatches stay refused by generation",
+      "recordFields": ["faultWindow", "recoveredFrom", "reconcileDigest", "resumedAt", "monitoring/backup qualification refs"],
+      "evidence": "recovery transcript + real Outline API readback (unknown result honestly resolved)"
+    },
+    {
+      "id": "10-kt-run-closeout",
+      "title": "Kt: run-level knowledge seat read back before overall completion",
+      "roleIdentity": "knowledge-publisher (run-level Kt seat)",
+      "executionOwner": "VERIFY",
+      "constructionScope": "not executed at construction: completionBlocked stays true until the real closeout readback",
+      "gate": "Kt (run-level; knowledgeCloseoutBlocked)",
+      "premises": ["Kp sealed", "archive done", "Outline publication resolved"],
+      "dispatchBinding": {
+        "dispatch": "run-level closeout seat on the Run (not a per-gate dispatch)",
+        "accept": "overall completion blocked while knowledgeCloseoutBlocked=true; next must point at the closeout, not completed (D07)"
+      },
+      "epoch": "the seat is run-scoped; it never inherits from another Run",
+      "recordFields": ["knowledgeCloseoutBlocked", "closeoutTarget", "readbackDigest", "resolvedAt"],
+      "evidence": "state next readback + completion gate state"
+    },
+    {
+      "id": "11-completed",
+      "title": "completed: the same Run reaches its terminal state",
+      "roleIdentity": "Comet single controller (one RunState, no second currentPhase)",
+      "executionOwner": "VERIFY",
+      "constructionScope": "not executed at construction: reached only after steps 7-10; any local pass never substitutes",
+      "gate": "overall completion (all required checks + journeys)",
+      "premises": ["1-6 accepted", "Kp sealed", "archived", "recovery window resolved", "Kt read back"],
+      "dispatchBinding": {
+        "dispatch": "the Run's own completion evaluation (same-run rule: V_RW_REAL_COMET_RECOVERY ran inside this Run before completed; V_POST_DELIVERY_PERMISSIONS consumes this Run's published knowledge after completed)",
+        "accept": "run state completed; knowledge obligation met"
+      },
+      "epoch": "terminal: no further dispatch mutates the run",
+      "recordFields": ["completedAt", "boundBaseline", "journeyEvidenceRefs"],
+      "evidence": "final RunState + journey verdict + published knowledge readback"
+    }
+  ],
+  "constructionScopeSummary": {
+    "executedByP3_2Rework": "steps 1-6 (R confirm → A grill+unanimous consensus → T independent review → P → TDD build → Whitebox V) on the real managed Comet CLI, fingerprint d4370930, plus the P2_5 consumption contract for A/T and the recipe/registration tracking of the full step plan",
+    "reservedForVerify": "steps 7-11 (Kp → real OpenSpec archive → Outline unknown/restart recovery → Kt → completed); a construction-scope pass never asserts the full journey (journey_execution.acceptance)",
+    "redLine": "不以配方校验关闭 E01/E02/E06；完整同 Run 终态仍由 VERIFY 执行"
+  }
+}

@@ -1,0 +1,12 @@
+pinned contract command form (V_SAME_RUN_DELIVERY.command in execution-contract.json):
+  node tools/verify/delivery-journey.mjs --scenario E06 --journey same-run-delivery --profile managed-pilot --evidence-dir . --json
+observed exit: 1
+{
+  "error": "INVALID_INPUT",
+  "message": "--journey and --scenario are mutually exclusive; a journey recipe declares its own scenario"
+}
+Usage: node tools/verify/delivery-journey.mjs --scenario <ID> --profile <profile> --evidence-dir <dir> [--json]
+
+note: --journey and --scenario are mutually exclusive in tools/verify/delivery-journey.mjs (P3_1 interface);
+the recipe declares its own scenario (E06). Runner-supported form (--journey without --scenario) is the verification channel;
+command-string reconciliation belongs to the runner owner (P3_1) / controller.

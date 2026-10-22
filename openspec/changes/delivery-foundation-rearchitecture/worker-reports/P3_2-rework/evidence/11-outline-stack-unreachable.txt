@@ -1,0 +1,12 @@
+Outline stack dependency probe (deliverable-c honesty record)
+date: 2026-10-22T17:12:59Z
+probe 1: curl --noproxy '*' http://127.0.0.1:3000/ -> curl: (7) Failed to connect to 127.0.0.1 port 3000: Couldn't connect to server (ECONNREFUSED)
+probe 2: curl --noproxy '*' http://127.0.0.1:3000/api/health -> same ECONNREFUSED
+probe 3: curl --noproxy '*' http://127.0.0.1:5556/dex/.well-known/openid-configuration -> same ECONNREFUSED (dex issuer down)
+
+reading: at the rework pause point the HANDOFF recorded the Outline stack running (6 containers); at this worker's execution time
+nothing listens on loopback 3000/5556 on this host. The Kp -> real OpenSpec archive -> Outline unknown-result/restart recovery -> Kt
+segment therefore stays UNVERIFIED here (never a pass): it is execution_owner=VERIFY by journey_execution; holder=VERIFY,
+prerequisites: Outline stack up (secrets.env / compose.override.yaml in .sdd/outline/runtime/, dex OIDC owner|member|offboarded test principals),
+I01 refs admission, real K dispatch (0003). No docker daemon is reachable from the session sandbox (EPERM, documented); starting the
+stack is a deployment action outside this task's construction scope.
