@@ -1,0 +1,16 @@
+# I02 rework r1 — 全量 npm test 基线对照（2026-10-22T11:55:21Z）
+
+after  (rw-i02 + I02 rework changes): 439 tests, 436 pass, 2 fail, 1 skip
+  evidence/04-full-npm-test.log
+  not ok 59 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+  not ok 428 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+
+baseline (same worktree at HEAD abd2366, I02 rework changes git-stash removed):
+  node --test test/classic-integration.test.js test/spec-closeout.test.js
+  -> 33 tests, 30 pass, 2 fail
+  not ok 18 - C08 negative: ... (same item)
+  not ok 25 - B08 preservation: ... (same item)
+
+conclusion: identical known fail set; zero new failures attributable to the I02 rework diff.
+known-cause note: C08 is host-global OpenSpec CLI drift 1.3.1 -> 1.14.3 (recorded in toolchain-baseline.json
+openspec.current_dependency_edges: live replay ACCEPTED; the 1.3.1 INCOMPATIBLE verdict is historical).
