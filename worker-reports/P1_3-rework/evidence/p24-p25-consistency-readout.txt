@@ -1,0 +1,93 @@
+P1_3 rework — read-only consistency comparison (generation / role / inputDigest)
+Scope: P1_3 owned adapter face vs P2_4 runtime 0002 patch vs P2_5 consumption face.
+No patch, runtime, lock or P2_5 file was modified. All citations read at base daccc07.
+
+[1] 0002 managed-delivery runtime (integrations/comet/patches/0002-managed-delivery-runtime.patch)
+  GateDispatch  = { gate, role: GATE_ROLES[gate], execution, attempt, inputDigest,
+                    dependsOn, issuedAt, epoch, generation, state: open|consumed|stale }
+  GateReceipt   = { gate, verdict, digest, dependsOn, execution, attempt, epoch,
+                    generation (>=0 int, default 0), policyVersion, acceptedAt, ... }
+  gate_invalidations = per-gate { count, digest } persisted in .comet.yaml; monotonic;
+                    byte-restore never rolls the generation back.
+  Issue   (dispatchGate): binds generation = gateGenerationOf(invalidations, gate).
+  Accept  (acceptGate):   D02  inputs.digest must equal dispatch.inputDigest
+                                (stale dispatch marked 'stale');
+                          P1-03 dispatch.generation must equal currentGeneration;
+                          P1-02 pass requires bound review evidence: result role ==
+                          dispatch role, result inputDigest == dispatch.inputDigest,
+                          non-empty report + reportDigest == sha256(report),
+                          A: closed unanimous consensus tally, T: testDesignReview
+                          with oracle strong|adequate.
+  syncGateInvalidationsLocked: open dispatches below current generation -> stale.
+
+[2] P2_5 consumption face (lib/adapters/architecture-review.js, not modified here)
+  consumeArchitectureGate: authority.verifyDispatch (HMAC integrity) ->
+    builder role -> IDENTITY_CONFLICT; dispatch.inputDigest != pkg.artifactSha256 ->
+    ARTIFACT_DIGEST_MISMATCH (one-shot authorization); mechanical judgment passes
+    through unchanged (CONSENSUS_NOT_ADMITTED); anti-revival via
+    REVIEW_REVISION_MISMATCH + seat REVISION_REGRESSION (revision strictly increases;
+    restored bytes never re-consume the old consensus).
+  consumeTestDesignReview: integrity -> builder IDENTITY_CONFLICT -> SELF_REVIEW
+    (author execution) -> dispatch.inputDigest != current.inputDigest ->
+    STALE_AUTHORIZATION -> review.candidateDigest binding -> sufficiency + written
+    summary + oracleStrength in {strong, adequate} (weak routes back to author).
+  Its own report records the coordination as "consistent with the P2_4
+  gate_invalidations algebra (monotonic revision identity, no revival on byte
+  restoration)" — re-verified here by reading both faces; confirmed.
+
+[3] P1_3 owned adapter face (lib/adapters/harness.js, lib/adapters/comet.js)
+  Authority binding (wraps P2_2 createLaunchAuthority, HMAC-SHA256 over canonical
+  JSON of { runnerId, run, gate, inputDigest, policyDigest, attempt, epoch, role,
+  execution }): cometLaunchAuthority adds run-binding (RUN_ID_REQUIRED /
+  RUN_MISMATCH on issue and verify / RUNNER_MISMATCH).
+  createRunner: managed-write driver only (DRIVER_WRITE_REFUSED), no phase fields
+  in bindings (RUNNER_PHASE_FIELD_REFUSED; phase/currentPhase/current_phase),
+  surface = dispatch/verify/admit only; defineDriver kinds exclusive
+  (DRIVER_SURFACE_REFUSED / DRIVER_SURFACE_REQUIRED).
+  Admission (admitEvidence via runner.admit): builder never signs acceptance
+  (IDENTITY_CONFLICT), unknown roles refused (ROLE_NOT_DISPATCHED), envelope pinned
+  to dispatch (execution/origin/candidate), currency = inputDigest + policyDigest +
+  environment (STALE_*), duplicate issuance refused (DUPLICATE_ISSUANCE), pass/fail
+  claims need real observations (NO_OBSERVATION).
+  Closeout (sealCloseout): Kp before seal (KNOWLEDGE_CLOSEOUT_REQUIRED), sealable
+  entry facts (ARCHIVE_ENTRY_INVALID), second closeout refused on managed readback
+  of the monotonic runtime state (ARCHIVE_ALREADY_SEALED; the runtime also moves the
+  change directory on archive, so a pre-archive byte restore cannot resurrect the
+  active change).
+
+[4] Isomorphism verdict per semantic
+  role:      isomorphic. Both sides make role a launcher/runtime-ATTESTED property
+             the worker cannot mint, and both refuse builder as acceptance signer
+             (0002: role == GATE_ROLES[gate] at pass evidence; local: builder ->
+             IDENTITY_CONFLICT, unknown -> ROLE_NOT_DISPATCHED). Nuance (not a
+             conflict): 0002 derives role from the gate id at issue; the local
+             launcher fixes role at issue from {verifier, test-author, builder} and
+             constrains at admission. Direction identical.
+  inputDigest: isomorphic. One-shot binding on both sides; changed inputs refuse
+             acceptance (0002 D02 <-> STALE_CANDIDATE / STALE_AUTHORIZATION /
+             ARTIFACT_DIGEST_MISMATCH).
+  generation: consistent with division of labor; no contradiction found.
+             0002 is the generation ENFORCER (persisted monotonic registry). The
+             local face carries the same currency binding minus the generation
+             field: its binding carries epoch, and currency is judged on
+             inputDigest/policyDigest/environment against caller-held current state.
+             A same-digest byte-restore can therefore revive an OLD dispatch only in
+             the local admit path — the exact case 0002 closes in the runtime — and
+             the local face has no persisted invalidation registry to judge against.
+             This is the documented local-equivalent limitation of
+             lib/delivery/evidence.js ("collaboration-grade checks locally, not
+             tamper resistance"); the adapter never dispatches gates itself (the
+             single runtime dispatches, Comet.Run.managedDelivery.v1), so no P1_3
+             behavior depends on local generation attestation. ROUTE (recorded, not
+             actioned here): if local generation attestation is ever required, it
+             belongs in lib/delivery/evidence.js (P2_2 owns), not in the P1_3 face.
+  Related seam checked: 0003 keeps a managed run open while the knowledge closeout
+  is pending (H07); P1_3's sealCloseout ordering (Kp before seal) and its refusal to
+  re-seal agree with that runtime behavior (observed in the unmanaged probe lane).
+
+[5] Evidence of the seam staying green after P2_4/P2_5 integration
+  test/comet-driver.test.js + test/delivery-cases/1_3.mjs: 22/22 GREEN x2 at base
+  daccc07 with the integrated 0002/0003 stack (fingerprint d4370930...) — including
+  dispatch binding without phase trace, per-channel probes, forged-state managed
+  gate refusal, manual-declaration guard refusal, premature archive refusal, and
+  single-closeout exclusivity.
