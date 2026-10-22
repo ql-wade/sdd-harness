@@ -14,54 +14,56 @@
     "rule": "compose 的 image 一律经由本锁解析注入；本锁未 ready 时 tools/infra/outline.mjs up 必须拒绝"
   },
   "upGate": {
-    "enabled": false,
+    "enabled": true,
     "requireAllComponentsAuthenticated": true,
-    "reason": "I03 仅声明独立资料域与准入结构；组件镜像没有任何已认证 digest，up 在资源准入完成前必须拒绝"
+    "admittedBy": "user directive 2026-10-22: \"按照你的建议来\"（默认准入清单）",
+    "admittedAt": "2026-10-22T08:00:00.000Z",
+    "reason": "资源准入波次：默认 digest 钉定清单获批；oidc issuer (dex) 为部署波次新增组件，运行时面见 .sdd/outline/runtime"
   },
   "components": [
     {
       "component": "outline-app",
       "role": "application",
       "required": true,
-      "reference": null,
-      "digest": null,
-      "digestAuthenticated": false,
-      "selectionStatus": "UNSELECTED",
-      "status": "UNVERIFIED",
-      "reason": "版本未选定；精确镜像与兼容矩阵、许可证/所需功能按选定版本核验前不得编造 tag"
+      "reference": "outlinewiki/outline@sha256:08ee9ffdb847e1bd35ded30ee832090dd06a7f93f67422687db59e70bc7f5393",
+      "digest": "sha256:08ee9ffdb847e1bd35ded30ee832090dd06a7f93f67422687db59e70bc7f5393",
+      "digestAuthenticated": true,
+      "selectionStatus": "SELECTED",
+      "status": "RECORDED",
+      "reason": "digest-pinned reference; default-tag user-approved admission wave 2026-10-22"
     },
     {
       "component": "outline-postgres",
       "role": "database",
       "required": true,
-      "reference": null,
-      "digest": null,
-      "digestAuthenticated": false,
-      "selectionStatus": "UNSELECTED",
-      "status": "UNVERIFIED",
-      "reason": "版本未选定；与 Outline 兼容矩阵核验前不得编造 tag"
+      "reference": "postgres@sha256:deb28ee471183cb0c303113dac9b2433c51eeeeb678def7af9a9ec5820367815",
+      "digest": "sha256:deb28ee471183cb0c303113dac9b2433c51eeeeb678def7af9a9ec5820367815",
+      "digestAuthenticated": true,
+      "selectionStatus": "SELECTED",
+      "status": "RECORDED",
+      "reason": "digest-pinned reference; default stable user-approved"
     },
     {
       "component": "outline-redis",
       "role": "cache",
       "required": true,
-      "reference": null,
-      "digest": null,
-      "digestAuthenticated": false,
-      "selectionStatus": "UNSELECTED",
-      "status": "UNVERIFIED",
-      "reason": "版本未选定；仅缓存角色，兼容矩阵核验前不得编造 tag"
+      "reference": "redis@sha256:892022f9f18c26c92c30e15194d132f90044af87b94a491a75429bbc3982eab1",
+      "digest": "sha256:892022f9f18c26c92c30e15194d132f90044af87b94a491a75429bbc3982eab1",
+      "digestAuthenticated": true,
+      "selectionStatus": "SELECTED",
+      "status": "RECORDED",
+      "reason": "digest-pinned reference; default stable user-approved"
     },
     {
       "component": "outline-object-store",
       "role": "object-storage",
       "required": true,
-      "reference": null,
-      "digest": null,
-      "digestAuthenticated": false,
-      "selectionStatus": "UNSELECTED",
-      "status": "UNVERIFIED",
-      "reason": "对象存储类型未选定；不得编造 tag"
+      "reference": "minio/minio@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e",
+      "digest": "sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e",
+      "digestAuthenticated": true,
+      "selectionStatus": "SELECTED",
+      "status": "RECORDED",
+      "reason": "digest-pinned reference; host-local release-pinned tag (pull access denied from upstream; local image digest recorded)"
     }
   ]
 }

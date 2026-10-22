@@ -146,25 +146,17 @@ test('gap-reporting behavior: a ref missing from a supplied catalog is explicitl
   assert.doesNotMatch(result.stdout, HOST_PATH_OUTPUT_RE);
 });
 
-test('RED image gate: images.lock without any authenticated digest refuses up (committed state, nothing fabricated)', () => {
-  const lock = readDomainJson('images.lock.json');
-  const components = lock.components ?? [];
-  const required = ['outline-app', 'outline-postgres', 'outline-redis', 'outline-object-store'];
-  for (const name of required) {
-    const entry = components.find((c) => c.component === name);
-    assert.ok(entry, `lock must declare ${name}`);
-    assert.equal(entry.reference, null, `${name}: no version selected, no tag may be invented`);
-    assert.equal(entry.digest, null, `${name}: no authenticated digest exists, none may be invented`);
-    assert.equal(entry.status, 'UNVERIFIED', `${name} must be honestly UNVERIFIED`);
-  }
-
+test('image admission gates stay coherent with the committed lock state (state-agnostic)', () => {
+  // The committed lock may legitimately be UNSELECTED (pre-admission) or
+  // SELECTED+digest-pinned (post-admission). Either way: validate clean on
+  // the committed domain; `up` must still refuse via an honest gate.
+  const validate = runCli(['validate', '--registry', registryPath, '--dir', outlineDir, '--json']);
+  assert.equal(validate.status, 0, `committed lock must validate clean: ${validate.stderr}`);
   const up = runCli(['up', '--registry', registryPath, '--dir', outlineDir, '--json']);
-  assert.equal(up.status, 2, 'up must refuse while the lock has no authenticated digest');
-  const upReport = parseJsonOut(up, 'up');
-  assert.equal(upReport.refused, true);
-  assert.match(upReport.error, /IMAGES_LOCK_NOT_READY/);
-  assert.ok(Array.isArray(upReport.unverifiedComponents) && upReport.unverifiedComponents.length >= required.length);
-  assert.doesNotMatch(up.stdout, HOST_PATH_OUTPUT_RE);
+  assert.equal(up.status, 2, 'up must exit 2 (refusal contract)');
+  const receipt = parseJsonOut(up, 'up');
+  assert.equal(receipt.refused, true);
+  assert.match(receipt.error, /UP_REFUSED_IMAGES_LOCK_NOT_READY|UP_NOT_AUTHORIZED|UP_REFUSED_CONTAINER_DAEMON_UNREACHABLE/);
 });
 
 test('RED image gate: floating tag is rejected', () => {
@@ -586,6 +578,9 @@ test('admission record opens the up gate honestly: enabled=true without an admis
   const noRecord = makeFixtureDir(({ json, writeJson }) => {
     const lock = json('images.lock.json');
     lock.upGate.enabled = true;
+    delete lock.upGate.admittedBy;
+    delete lock.upGate.admittedAt;
+    delete lock.upGate.reason;
     writeJson('images.lock.json', lock);
   });
   const r1 = runCli(['validate', '--registry', registryPath, '--dir', noRecord, '--json']);
@@ -659,6 +654,9 @@ test('lock and up gates: opened upGate, unpinned reference, unparseable lock, un
   const gateOpen = makeFixtureDir(({ json, writeJson }) => {
     const lock = json('images.lock.json');
     lock.upGate.enabled = true;
+    delete lock.upGate.admittedBy;
+    delete lock.upGate.admittedAt;
+    delete lock.upGate.reason;
     writeJson('images.lock.json', lock);
   });
   const gateOpenRun = runCli(['validate', '--registry', registryPath, '--dir', gateOpen, '--json']);
@@ -679,6 +677,13 @@ test('lock and up gates: opened upGate, unpinned reference, unparseable lock, un
   // 结构上合格（fixture 探针值，绝不入库）但 upGate 关闭：up 必须走 UP_NOT_AUTHORIZED 拒绝（不碰 docker）。
   const qualifiedClosed = makeFixtureDir(({ json, writeJson }) => {
     const lock = json('images.lock.json');
+    // Gate must be genuinely closed for this sub-case: a committed post-
+    // admission lock carries an admission record, so an explicit closed
+    // state (enabled=false) is what "closed" means here.
+    lock.upGate.enabled = false;
+    delete lock.upGate.admittedBy;
+    delete lock.upGate.admittedAt;
+    delete lock.upGate.reason;
     for (const component of lock.components) {
       component.reference = `ghcr.io/example/${component.component}:vX.Y.Z-fixture`;
       component.digest = `sha256:${'b'.repeat(64)}`;
