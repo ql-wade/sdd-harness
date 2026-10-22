@@ -57,7 +57,7 @@ jobs:
           # Read-only readback of the check runs bound to the exact integration SHA;
           # a failed read is a failed gate, never a skip to pass.
           gh api "repos/${GITHUB_REPOSITORY}/commits/${MERGE_SHA}/check-runs" \
-            --jq '[.check_runs[] | {name: .name, boundSha: .head_sha, conclusion: .conclusion}]' \
+            --jq '[.check_runs[] | {id: .id, name: .name, boundSha: .head_sha, conclusion: .conclusion}]' \
             > "$RUNNER_TEMP/check-runs.json"
           # The required-check set comes from the protected baseline, never from this file.
           node --input-type=module -e "

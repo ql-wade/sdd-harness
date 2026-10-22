@@ -160,7 +160,15 @@ function evaluateRequiredChecks(chain) {
     if (evidences.length === 0) {
       checkCodes.push('CHECK_MISSING');
     } else {
-      const bound = evidences.find((check) => check.boundSha === chain.merge);
+      // fail-closed latest-wins：同名同 merge 的多次 check run 取最大 id（=最新结论），
+      // 防止 API 次序使旧 success 行先于新 failure 行造成 fail-open（评审 OBS-1）。
+      const boundCandidates = evidences.filter((check) => check.boundSha === chain.merge);
+      const bound = boundCandidates.reduce((latest, check) => {
+        if (!latest) return check;
+        const a = Number(latest.id ?? 0);
+        const b = Number(check.id ?? 0);
+        return b >= a ? check : latest;
+      }, undefined);
       if (!bound) {
         checkCodes.push('CHECK_STALE_EVIDENCE');
       } else if (bound.timedOut === true || bound.conclusion === 'timed_out') {
