@@ -1,0 +1,28 @@
+=== I01 CLI probes (real re-run, 2026-10-22T05:15:22Z) ===
+validate  => EXIT=0
+qualify   => EXIT=2
+status    => EXIT=0
+up        => EXIT=2
+readback  => EXIT=2
+
+qualify summary:
+  "resource": "comet-source",
+  "ready": false,
+  "unverifiedCount": 5,
+up refusal:
+  "refused": true,
+  "error": "UP_REFUSED_QUALIFICATION_NOT_READY: 5 evidence categories are not VERIFIED",
+
+=== readback payload (env gate: gh TLS interception, kept UNVERIFIED) ===
+{
+  "interface": "Registry.v1",
+  "kind": "github",
+  "status": "UNVERIFIED",
+  "command": "gh api repos/rpamis/sdd-harness",
+  "error": "Get \"https://api.github.com/repos/rpamis/sdd-harness\": tls: failed to verify certificate: x509: OSStatus -26276",
+  "checkedAt": "2026-10-22T05:15:23.819Z"
+}
+
+=== direct gh attempt (raw) ===
+direct gh exit=1
+Get "https://api.github.com/repos/rpamis/sdd-harness": tls: failed to verify certificate: x509: OSStatus -26276

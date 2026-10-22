@@ -1,0 +1,216 @@
+{
+  "task": "I01",
+  "run": "rework-seven-p1-r1",
+  "worker_branch": "rework/i01-registry",
+  "base": "master@88c49f9",
+  "final_status": "PARTIAL",
+  "final_status_reason": "Steps 1/2/4 re-verified and hardened (schema type + duplicate-id gates added TDD); Step 3 independent owner/permission readback remains env-gated (gh TLS x509) and is honestly registered UNVERIFIED",
+  "steps_done": "3/4",
+  "steps_detail": [
+    {
+      "step": 1,
+      "state": "re-verified",
+      "note": "all RED negatives re-run for real; NEW negatives (bad type / duplicate id) found passing -> fixed via TDD (RED evidence/01, GREEN evidence/02-03)"
+    },
+    {
+      "step": 2,
+      "state": "re-verified",
+      "note": "validate/qualify/status/up/readback re-run with house CLI; qualify honestly NOT_READY (5 UNVERIFIED categories); up refuses"
+    },
+    {
+      "step": 3,
+      "state": "env-gated UNVERIFIED",
+      "note": "gh api repos/rpamis/sdd-harness fails: tls x509 OSStatus -26276 (direct gh exit 1, same error); readback kept UNVERIFIED in registry.json authority"
+    },
+    {
+      "step": 4,
+      "state": "done",
+      "note": "commits below; only Owned paths + report/evidence touched"
+    }
+  ],
+  "rework_changes": [
+    "test/infra-registry.test.js: +1 test 'RED schema shape gate' (type-invalid x3 + duplicate resource id)",
+    "tools/infra/registry.mjs: enforce declared registry.schema.json constraints in tool validation: schemaVersion const 1, github.repoId/principalId integer, retention.autoCleanupEnabled boolean (REGISTRY_TYPE_INVALID); duplicate resource ids rejected (DUPLICATE_RESOURCE_ID)"
+  ],
+  "rework_finding": "before this rework, 4 of 5 schema negatives PASSED validation (bad type x3 and duplicate id all exited 0 with zero violations); the declarative schema drifted from tool enforcement; fixed within Owns, TDD RED->GREEN",
+  "catalog_gaps_current": [
+    {
+      "ref": "secret-ref:sdd-harness-pilot/backup-writer",
+      "status": "仍缺",
+      "owner": "I08 (infra/delivery/backup)",
+      "evidence": "backup-restore.mjs validate reports catalogGap; resolution refuses REF_NOT_REGISTERED; NOT silently registered (multi-owner)"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/restore-reader",
+      "status": "仍缺",
+      "owner": "I08 (infra/delivery/backup)",
+      "evidence": "same live readback as backup-writer"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/llmwiki-source-read",
+      "status": "仍缺",
+      "owner": "I04 (infra/delivery/llmwiki/index-policy.json)",
+      "evidence": "llmwiki.mjs validate reports catalogGap [llmwiki-source-read]; NOT silently registered"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/outline-app-session",
+      "status": "已登记",
+      "owner": "I01 catalog (amendment 7a55664, pre-base)",
+      "evidence": "outline.mjs validate catalogGaps=[]"
+    }
+  ],
+  "mutations_caught": [
+    {
+      "id": "M1",
+      "mutation": "registry.mjs duplicate-id gate disabled (condition -> false && ...)",
+      "expected": "suite exit 1",
+      "observed": "suite exit 1, 'RED schema shape gate' fails",
+      "evidence": "evidence/04-mutation1-dup-id-gate-disabled.txt",
+      "restored": true
+    },
+    {
+      "id": "M2",
+      "mutation": "secret-refs.mjs plaintext scan neutralized (condition -> false && ...)",
+      "expected": "suite exit 1",
+      "observed": "suite exit 1, 'RED plaintext gate' fails",
+      "evidence": "evidence/05-mutation2-plaintext-scan-off.txt",
+      "restored": true
+    }
+  ],
+  "red_cases": [
+    {
+      "case": "missing required resource field (purpose)",
+      "result": "REGISTRY_FIELD_MISSING, exit 2 (pre-existing gate, re-verified this run)"
+    },
+    {
+      "case": "schemaVersion='1' (string) / repoId='1285806550' (string) / autoCleanupEnabled='true' (string)",
+      "result": "REGISTRY_TYPE_INVALID, exit 2 (NEW gate this rework; passed as clean before)"
+    },
+    {
+      "case": "duplicate resource id (two resources id=comet-source)",
+      "result": "DUPLICATE_RESOURCE_ID, exit 2 (NEW gate this rework; passed as clean before)"
+    },
+    {
+      "case": "unknown owner mallory-unregistered",
+      "result": "UNKNOWN_OWNER, exit 2 (suite)"
+    },
+    {
+      "case": "cross-project credentialRef secret-ref:pav-legacy/outline-db",
+      "result": "CROSS_PROJECT_REF, exit 2 (suite)"
+    },
+    {
+      "case": "ordinary agent principal on publisher/isolator refs",
+      "result": "PRINCIPAL_NOT_AUTHORIZED throw (suite)"
+    },
+    {
+      "case": "authorized principal + matching role",
+      "result": "resolve returns UNRESOLVED, no value key (suite)"
+    },
+    {
+      "case": "floating tag :latest",
+      "result": "FLOATING_TAG_FORBIDDEN + IMAGE_NOT_DIGEST_PINNED, exit 2 (suite)"
+    },
+    {
+      "case": "fake digest sha256:deadbeef",
+      "result": "DIGEST_FORMAT_INVALID, exit 2 (suite)"
+    },
+    {
+      "case": "wrong archive passed to qualify",
+      "result": "source-digest MISMATCH, receipt binds actual recomputed input digest (suite)"
+    },
+    {
+      "case": "secret plaintext ghp_* in refs catalog / clientSecret key in registry",
+      "result": "SECRET_PLAINTEXT_FORBIDDEN + SECRET_VALUE_KEY_FORBIDDEN, exit 2 (suite)"
+    },
+    {
+      "case": "host absolute path in registry structure",
+      "result": "ABSOLUTE_PATH_FORBIDDEN, exit 2 (suite)"
+    },
+    {
+      "case": "one credential ref bound to two high-privilege roles",
+      "result": "ROLE_REUSE, exit 2 (suite)"
+    },
+    {
+      "case": "autoCleanupEnabled=true while retention UNVERIFIED",
+      "result": "AUTO_CLEANUP_WITHOUT_CONFIRMED_RECOVERY, exit 2 (suite)"
+    },
+    {
+      "case": "unregistered catalogGap refs (backup-writer/restore-reader/llmwiki-source-read)",
+      "result": "resolveSecretRef denies REF_NOT_REGISTERED (direct probe this run)"
+    },
+    {
+      "case": "qualify comet-source without ready evidence",
+      "result": "exit 2, ready=false, unverifiedCount=5"
+    },
+    {
+      "case": "up comet-source",
+      "result": "exit 2, refused=true, UP_REFUSED_QUALIFICATION_NOT_READY"
+    }
+  ],
+  "commands": {
+    "node --test test/infra-registry.test.js (run 1, GREEN)": 0,
+    "node --test test/infra-registry.test.js (run 2, GREEN)": 0,
+    "node --test test/infra-registry.test.js (RED state, pre-fix)": 1,
+    "registry.mjs validate --registry infra/delivery/registry.json": 0,
+    "registry.mjs qualify --resource comet-source": 2,
+    "registry.mjs status --registry infra/delivery/registry.json": 0,
+    "registry.mjs up --resource comet-source": 2,
+    "registry.mjs readback --kind github": 2,
+    "gh api repos/rpamis/sdd-harness (direct, env gate)": 1,
+    "npm test (full, 427 tests)": "1 — 424 pass / 2 fail / 1 skip; both failures (C08, B08) proven pre-existing at clean base 88c49f9 via stash re-run (evidence/10); zero new failures",
+    "schema negative fixtures x5 (missing field / bad type x3 / duplicate id)": "2 — all 5 rejected (was 1-of-5 rejected before this rework)",
+    "backup-restore.mjs validate": 0,
+    "llmwiki.mjs validate": 0,
+    "outline.mjs validate --dir infra/delivery/outline": 0
+  },
+  "env_gated": [
+    {
+      "step": "Step 3 owner/permission independent readback (gh api repos/rpamis/sdd-harness, repos/1285806550, user/262266039)",
+      "holder": "user (gh TLS interception x509 OSStatus -26276; needs un-intercepted network or gh re-auth)",
+      "kept_as": "UNVERIFIED in registry.json project.authority with exact error; no fabricated readback"
+    }
+  ],
+  "unverified": [
+    "GitHub repo 1285806550 / principal 262266039 live readback (env gate above)",
+    "image digest: no container registry readback; docker daemon unobservable in this env",
+    "container platform evidence: same docker gate",
+    "health-api: no running service yet (owned by later up tasks)",
+    "backup-compatibility: no restore drill evidence yet (I08 domain)",
+    "rpo/rto/retentionPeriod/encryptionOwner/destructionPrecondition: UNVERIFIED until backup owner confirms; autoCleanupEnabled stays false",
+    "24 catalog refs remain NOT_PROVISIONED (membership + binding only; runtime secret store deliberately not implemented in I01)",
+    "catalogGap refs backup-writer/restore-reader/llmwiki-source-read: resolution refuses REF_NOT_REGISTERED (fail-closed by design)"
+  ],
+  "adjacent_findings_routed": [
+    {
+      "finding": "infra/delivery/llmwiki/package.lock.json still carries SDD_HOME external logical paths (cloneResolution 'SDD_HOME (default $HOME/.sdd) -> repos/llmwiki', python resolution 'SDD_HOME/repos/llmwiki/.venv/bin/python', requirementsLock logicalPath 'SDD_HOME/repos/llmwiki/mcp/requirements.lock')",
+      "why_it_matters": "after P1_1 rework landed llmwiki project-local, the SDD_HOME-external semantics recorded by I04 drifted from the current project-local resolution",
+      "not_in_i01_owns": "infra/delivery/llmwiki/* is I04-owned (infrastructure-tasks.json); I01 did not touch it",
+      "route": "controller -> I04 owner",
+      "evidence": "evidence/09-adjacent-finding-llmwiki-package-lock.txt"
+    }
+  ],
+  "files_changed": [
+    "test/infra-registry.test.js",
+    "tools/infra/registry.mjs",
+    "worker-reports/I01.rework.json",
+    "worker-reports/I01-rework/evidence/01-red-schema-gates.txt",
+    "worker-reports/I01-rework/evidence/02-schema-negatives.txt",
+    "worker-reports/I01-rework/evidence/03-green-suite-run2.txt",
+    "worker-reports/I01-rework/evidence/04-mutation1-dup-id-gate-disabled.txt",
+    "worker-reports/I01-rework/evidence/05-mutation2-plaintext-scan-off.txt",
+    "worker-reports/I01-rework/evidence/06-full-npm-test.txt",
+    "worker-reports/I01-rework/evidence/07-catalog-gaps-inventory.txt",
+    "worker-reports/I01-rework/evidence/08-cli-probes-and-env-gate.txt",
+    "worker-reports/I01-rework/evidence/09-adjacent-finding-llmwiki-package-lock.txt",
+    "worker-reports/I01-rework/evidence/10-preexisting-failures-at-base.txt"
+  ],
+  "commits": {
+    "RED test": "9019c1c test(I01 rework): RED — schema shape negatives (bad type / duplicate id) currently pass validate",
+    "GREEN impl": "4e0dabc fix(I01 rework): enforce declared schema types and reject duplicate resource ids",
+    "report+evidence": "HEAD of rework/i01-registry (this report commit; hash visible in git log)"
+  },
+  "blockers_or_questions": [
+    "No I01 blockers. Adjacent finding (llmwiki package.lock SDD_HOME drift) routed to controller -> I04; not touched here.",
+    "Controller note: catalogGap registration for backup-writer/restore-reader (I08) and llmwiki-source-read (I04) requires those owners' principal/purpose/binding decisions; I01 deliberately did not silently register them."
+  ]
+}
