@@ -1,0 +1,118 @@
+post-rework final-state scenario anchor reconciliation (pre-VERIFY obligation; actual journey execution stays with VERIFY)
+$ node tools/verify/delivery-journey.mjs --scenario F09 --profile managed-pilot --evidence-dir <tmp> --json
+exit=0
+{
+ "schemaVersion": 1,
+ "tool": "tools/verify/delivery-journey.mjs",
+ "runnerInvariant": "test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery",
+ "scenario": "F09",
+ "acceptanceIds": [
+  "F09"
+ ],
+ "journey": null,
+ "profile": "managed-pilot",
+ "caseModule": "test/delivery-cases/4_1.mjs",
+ "sourceBinding": [
+  {
+   "path": "specs/delivery-foundation/spec.md",
+   "requirement": "Foundation distribution and deployment",
+   "scenario": "F09"
+  }
+ ],
+ "verdict": "PASS",
+ "reason": null,
+ "missing": [],
+ "drift": [],
+ "schemaErrors": [],
+ "execution": {
+  "command": "node --test test/delivery-cases/4_1.mjs",
+  "actions": [
+   {
+    "index": 1,
+    "type": "spawn",
+    "expected": "exit 0; TAP summary fail=0 with pass>0; test point matching F09 (V_F09 or bare id) is ok",
+    "required": true,
+    "expectation": {
+     "kind": "exitCode",
+     "value": 0
+    },
+    "ok": true,
+    "exitCode": 0,
+    "durationMs": 595,
+    "note": null,
+    "observed": null,
+    "command": "node --test test/delivery-cases/4_1.mjs"
+   },
+   {
+    "index": 2,
+    "type": "readState",
+    "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0",
+    "required": true,
+    "expectation": {
+     "kind": "nonEmptyFile"
+    },
+    "ok": true,
+    "exitCode": null,
+    "durationMs": null,
+    "note": null,
+    "observed": {
+     "path": "<host-path-redacted>",
+     "bytes": 1904
+    },
+    "command": null
+   },
+   {
+    "index": 3,
+    "type": "inspect",
+    "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+    "required": false,
+    "expectation": null,
+    "ok": true,
+    "exitCode": null,
+    "durationMs": null,
+    "note": null,
+    "observed": "837a0be4502d50957b9f4b71100c0517481f012f",
+    "command": null
+   }
+  ],
+  "tests": 6,
+  "pass": 6,
+  "fail": 0,
+  "skipped": 0,
+  "effectiveExecutions": 6,
+  "target": {
+   "token": "F09",
+   "found": true,
+   "status": "ok"
+  },
+  "requiredAssertions": [
+   {
+    "id": "F09",
+    "status": "satisfied",
+    "matchedPoints": 2,
+    "ok": 2,
+    "failed": 0,
+    "skipped": 0
+   }
+  ]
+ },
+ "candidate": {
+  "gitHead": "837a0be4502d50957b9f4b71100c0517481f012f",
+  "node": "v22.13.1",
+  "platform": "darwin"
+ },
+ "timing": {
+  "startedAt": "2026-10-22T18:53:43.285Z",
+  "finishedAt": "2026-10-22T18:53:43.909Z",
+  "durationMs": 624
+ },
+ "evidence": {
+  "dir": "<host-path-redacted>",
+  "files": [
+   "pilot-baseline.json",
+   "case-definition.json",
+   "verdict.json"
+  ]
+ },
+ "exitCode": 0
+}

@@ -1,0 +1,20 @@
+check 116 (0-based per_check[116] = V_SAME_RUN_DELIVERY) command-string reconciliation — READ-ONLY routing record
+P4_1 Owns = .github/workflows/delivery-gate.yml, tools/ci/verify-delivery.mjs, test/ci-delivery-gate.test.js, test/delivery-cases/4_1.mjs
+tools/verify/delivery-journey.mjs is NOT in P4_1 Owns -> per briefing this is a read-only routing record, no repair by this worker.
+
+[1] mutual exclusion behavior probe (real CLI):
+$ node tools/verify/delivery-journey.mjs --scenario A13 --journey same-run-delivery --profile managed-pilot --evidence-dir <tmp> --json
+exit=1
+{
+  "error": "INVALID_INPUT",
+  "message": "--journey and --scenario are mutually exclusive; a journey recipe declares its own scenario"
+}
+Usage: node tools/verify/delivery-journey.mjs --scenario <ID> --profile <profile> --evidence-dir <dir> [--json]
+
+[2] registry observation (openspec/.../verification-results.json per_check, controller-owned file, not modified):
+per_check[116] (0-based): "V_SAME_RUN_DELIVERY" node tools/verify/delivery-journey.mjs --scenario E06 --journey same-run-delivery --profile managed-pilot --evidence-dir .whitebox/rework/same-run-delivery --json
+per_check[117] (0-based): "V_POST_DELIVERY_PERMISSIONS" node tools/verify/delivery-journey.mjs --scenario L11 --journey post-delivery-permissions --profile managed-pilot --evidence-dir .whitebox/rework/post-delivery-permissions --json
+
+ROUTING: per_check[116] V_SAME_RUN_DELIVERY (P3_2) and per_check[117] V_POST_DELIVERY_PERMISSIONS (P4_8) carry command strings with BOTH
+--scenario and --journey; the journey tool now rejects that combination (INVALID_INPUT, exit 1). Reconciliation belongs to the check
+registry owners/controller before VERIFY; P4_1 records it read-only and takes no action.

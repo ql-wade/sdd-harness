@@ -1,0 +1,22 @@
+M4 (PLATFORM_REQUIRED_CHECK_AUTHORITY_REQUIRED precondition bites) — CAUGHT
+mutation: verify-delivery.mjs evaluateProtectedBaseline — registered = true unconditionally (UNSELECTED/unregistered
+          required-check set treated as registered; config application without remote authorization would pass)
+expectation: authority tests must fail — a missing admin registration blocks the platform-merge authorization
+             (UNVERIFIED + PLATFORM_REQUIRED_CHECK_AUTHORITY_REQUIRED); plan fields never satisfy it
+
+$ node --test test/ci-delivery-gate.test.js   (with mutation applied)
+suite exit=1 (RED — mutation caught)
+not ok 14 - Platform precondition: committed UNSELECTED baseline blocks the platform-merge authorization (UNVERIFIED, exit 2)
+# tests 19
+# pass 18
+# fail 1
+$ node --test test/delivery-cases/4_1.mjs   (with mutation applied)
+suite exit=1 (RED — mutation caught)
+not ok 5 - P4_1: the committed UNSELECTED baseline keeps the platform-merge authorization UNVERIFIED — plan fields never satisfy it
+# tests 6
+# pass 5
+# fail 1
+restore: verify-delivery.mjs restored byte-exact
+sha256 committed (== pre-mutation) : ee4109c8c29683100fdcccf18f5edbae3a31faab2700fad6fe296a5a212f3789
+sha256 after restore               : ee4109c8c29683100fdcccf18f5edbae3a31faab2700fad6fe296a5a212f3789
+post-restore spot check: both suites green (see 20-23 evidence)
