@@ -1,0 +1,52 @@
+# P1_1 rework run — real Comet distribution build + V_COMET_NATIVE readback (2026-10-22T03:36:19Z)
+
+## prepare (fresh worktree, no inherited cache)
+$ node tools/comet/prepare-source.mjs --archive .sdd/cache/artifacts/comet-source-c90af44a4474662d7853aae76ce785404974fb0a.tar.gz --json
+{"sourceDir":"<repo>/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/pristine","provenancePath":"<repo>/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/provenance.json","reused":false}
+exit=0
+
+## build (6 patches, pinned Node 24.15.0, pnpm 10.18.3 via corepack)
+$ <nvm>/versions/node/v24.15.0/bin/node tools/comet/build.mjs --archive .sdd/cache/artifacts/comet-source-...tar.gz --json
+{"buildRoot": "<repo>/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966", "entrypoint": "<repo>/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966/work/bin/comet.js", "sourceCommit": "c90af44a4474662d7853aae76ce785404974fb0a", "fingerprint": "beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966", "reused": false}
+exit=0  (git apply 0001+tests/1_6+0002+tests/2_4+0003+tests/4_6 -> pnpm install --frozen-lockfile --ignore-scripts -> node build.js -> 3x build-*-runtime.mjs --check -> bin/comet.js --version == 0.4.5)
+fingerprint == lock-derived beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966: YES; reused:false (real rebuild, not inherited cache)
+
+## V_COMET_NATIVE contract command (manifest tree verified byte-exact, then checks re-executed)
+$ <nvm>/versions/node/v24.15.0/bin/node tools/comet/build.mjs --check-generated --runtime-smoke --json
+{
+ "schemaVersion": 1,
+ "status": "PASS",
+ "version": "0.4.5",
+ "sourceCommit": "c90af44a4474662d7853aae76ce785404974fb0a",
+ "fingerprint": "beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966",
+ "verifiedPreparedSource": "<repo>/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/pristine",
+ "steps": [
+  {
+   "name": "check-generated:classic",
+   "command": "<nvm>/versions/node/v24.15.0/bin/node scripts/build/build-classic-runtime.mjs --check",
+   "exitCode": 0,
+   "status": "PASS"
+  },
+  {
+   "name": "check-generated:native",
+   "command": "<nvm>/versions/node/v24.15.0/bin/node scripts/build/build-native-runtime.mjs --check",
+   "exitCode": 0,
+   "status": "PASS"
+  },
+  {
+   "name": "check-generated:entry",
+   "command": "<nvm>/versions/node/v24.15.0/bin/node scripts/build/build-entry-runtime.mjs --check",
+   "exitCode": 0,
+   "status": "PASS"
+  },
+  {
+   "name": "runtime-smoke",
+   "command": "<nvm>/versions/node/v24.15.0/bin/node node_modules/vitest/vitest.mjs run test/domains/comet-classic/comet-scripts.test.ts test/repository/native-runtime-assets.test.ts test/repository/comet-entry-runtime-assets.test.ts test/app/cli-smoke.test.ts",
+   "exitCode": 0,
+   "status": "PASS"
+  }
+ ]
+}
+exit=0
+ Test Files  4 passed (4)
+      Tests  253 passed | 2 skipped (255)

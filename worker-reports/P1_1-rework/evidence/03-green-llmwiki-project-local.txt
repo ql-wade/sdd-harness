@@ -1,0 +1,36 @@
+# GREEN: llmwiki project-local mechanical landing (amendment 3)
+date: 2026-10-22T03:25:49Z
+
+## 1. clone (real network clone, no host-copy fallback needed)
+command: git -c http.proxy=<session-filtering-proxy> -c https.proxy=<session-filtering-proxy> clone https://github.com/lucasastorian/llmwiki.git <repo>/.sdd/repos/llmwiki
+         (git global http.proxy 127.0.0.1:7897 unreachable in this sandbox; overridden per-invocation)
+source: github.com/lucasastorian/llmwiki (network), upstream HEAD f102a812f3e2bd35a02dbae03b9f88ba33f658db
+pin checkout: git checkout 075c5b4996ff4e07f9d3c57c1f14fd2b54a955db (detached) -> exit 0
+observed HEAD: 075c5b4996ff4e07f9d3c57c1f14fd2b54a955db (2026-06-15 'Merge pull request #60 from lucasastorian/dev'), status clean
+matches infra/delivery/llmwiki/package.lock.json source.commit: yes
+
+## 2. requirements.lock digest vs package.lock.json registration
+observed sha256 678bd7301d80a602336e8fd3a81f98adcd4c5beaec4e2f1f2bfb8d2e04a9e732, 154140 bytes == registered -> MATCH
+
+## 3. venv (project-local, python 3.11 per lock compile target)
+command: UV_CACHE_DIR=<repo>/.sdd/cache/uv uv venv --python 3.11 <repo>/.sdd/venvs/llmwiki-311   (uv 0.11.14)
+observed python: 3.11.13 (lock header: uv pip compile --python-version 3.11 -> drift of the old external venv (3.14.7) eliminated)
+command: UV_CACHE_DIR=<repo>/.sdd/cache/uv uv pip sync --python <repo>/.sdd/venvs/llmwiki-311/bin/python <repo>/.sdd/repos/llmwiki/mcp/requirements.lock -> exit 0 (hash-verified install)
+observed mcp package: 1.27.0 == package.lock.json recorded version
+
+## 4. probe (mechanism re-verified against project-local root; was 3/3 VERIFIED on external root last round)
+command: SDD_HOME=<repo>/.sdd LLMWIKI_PYTHON=<repo>/.sdd/venvs/llmwiki-311/bin/python node tools/infra/llmwiki.mjs probe --case worktree-mcp-readback
+exit: 0  status: VERIFIED
+worktreesCanonicalRootsConsistent: True ( 39 worktrees -> all resolve to <main-working-tree>/llmwiki )
+MCP initialize: VERIFIED server LLM Wiki 1.27.0 protocol 2024-11-05
+MCP tools/list: VERIFIED 10 tools
+MCP create write (real round-trip): VERIFIED
+file-level gate: curated-entry-write -> VERIFIED
+file-level gate: independent-file-readback -> VERIFIED
+file-level gate: index-mismatch-detection -> VERIFIED
+file-level gate: index-consistent-readback -> VERIFIED
+
+## 5. wiki-root resolution: project-local root in effect, launcher == CLI
+launcher (SDD_HOME=<repo>/.sdd, CLAUDE_PROJECT_DIR=<repo>): wiki workspace <repo>/.sdd/wiki/sdd-harness
+CLI lib/sdd-paths.js getWikiHome(cwd=<repo>) with SDD_HOME=<repo>/.sdd: <repo>/.sdd/wiki/sdd-harness
+default (SDD_HOME unset) would resolve <home>/.sdd/wiki/sdd-harness (external) — eliminated by amendment 3 landing

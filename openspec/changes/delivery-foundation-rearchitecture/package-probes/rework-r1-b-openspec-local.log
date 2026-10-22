@@ -1,0 +1,18 @@
+# P1_1 rework run — local openspec + compatibility replay (2026-10-22T03:35:52Z)
+
+## host-global local CLI (drift observed this run)
+$ openspec --version
+1.14.3
+exit=0
+DRIFT: toolchain-baseline (2026-10-20) recorded local 1.3.1; host-global binary is now 1.14.3 (environment changed outside this change; recorded honestly, no global upgrade performed by this task)
+
+## real status JSON
+$ openspec status --change delivery-foundation-rearchitecture --json -> exit 0, 3403 bytes
+artifacts[].requires present in JSON: yes (dependency edges exposed by 1.14.3)
+
+## compat replay: published @rpamis/comet@0.4.5 requiredArtifactClosure vs the real 1.14.3 status JSON
+harness: package-probes/1_1.b-green-openspec-compat-replay-harness.mjs; distRoot = extracted npm tarball dist; YAML_ENTRY = yaml@2.9.1 scratch install (upstream range ^2.9.0)
+$ node --experimental-vm-modules <harness> <distRoot> <statusJson>
+{"accepted":true,"artifacts":4}
+exit=0
+=> 1.14.3 ACCEPTED (edges exposed). The 1.3.1 REJECTED replay of the original qualification is no longer reproducible on this host (binary replaced); matrix keeps it as historical row.

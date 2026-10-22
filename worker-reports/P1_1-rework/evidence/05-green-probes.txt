@@ -1,0 +1,8 @@
+# GREEN: isolated CLI probes re-executed this run (2026-10-22T03:42:26Z)
+full logs: package-probes/rework-r1-b-teamai-cli.log, rework-r1-b-openspec-local.log, rework-r1-b-openspec-candidate.log, rework-r1-b-comet-cli.log
+
+teamai-cli 0.22.0 (isolated .sdd/tools/teamai-0.22.0): --version -> 0.22.0 exit 0 ; status on uninitialized scratch -> exit 1 'teamai is not initialized. Run `teamai init` first.' (init-gated by design)
+openspec 1.11.0 (isolated .sdd/tools/openspec-1.11.0): --version -> 1.11.0 exit 0 ; upstream classic-openspec-upstream.test.ts re-run in fresh beab355d work tree: 1/1 PASS exit 0 (COMET_TEST_OPENSPEC_PACKAGE=<isolated install>)
+openspec local host-global: --version -> 1.14.3 exit 0 (DRIFT: recorded 1.3.1 at 2026-10-20 qualification; environment changed outside this change; recorded honestly, no global upgrade performed)
+compat replay (published comet@0.4.5 requiredArtifactClosure, vm-isolated, yaml 2.9.1 per upstream range ^2.9.0) vs real 1.14.3 status JSON: accepted:true artifacts:4 exit 0 — historical 1.3.1 REJECTED gap not reproducible on this host; matrix keeps both rows
+built comet CLI (beab355d, pinned Node 24.15.0): --version -> 0.4.5 exit 0 ; status --json on unmanaged scratch -> comet.status.v2 exit 0 ; state current -> exit 1 'Use: comet state select <change-name>'

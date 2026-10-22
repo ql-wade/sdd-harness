@@ -1,0 +1,12 @@
+# GREEN: real 6-patch distribution build + V_COMET_NATIVE readback (2026-10-22T03:42:26Z)
+full log: package-probes/rework-r1-c-comet-build.log
+
+prepare: node tools/comet/prepare-source.mjs --archive .sdd/cache/artifacts/comet-source-c90af44a...tar.gz --json -> exit 0, reused:false (fresh pristine + provenance v2)
+build:   <nvm>/versions/node/v24.15.0/bin/node tools/comet/build.mjs --archive ... --json -> exit 0, reused:false
+         fingerprint beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966 == lock-derived (6 patches applied in lock order; pnpm 10.18.3 frozen-lockfile ignore-scripts; node build.js; 3x generated checks; bin/comet.js --version == 0.4.5)
+verify:  <nvm>/.../node tools/comet/build.mjs --check-generated --runtime-smoke --json -> exit 0
+         manifest distribution.json tree re-hashed and compared byte-exact (BUILD_BASELINE_DRIFT gate would fail on any drift), then:
+         check-generated:classic PASS / native PASS / entry PASS ; runtime-smoke PASS (4 files, 253 tests passed, 2 skipped)
+distribution.json readback (head):
+  schemaVersion: 1  fingerprint: beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966  sourceCommit: c90af44a4474  node: 24.15.0  pnpm: 10.18.3  files: 47224
+rebuild was REQUIRED, not optional: RED-1 proved no beab355d-era build existed in this environment (only the 0-patch-era 72e5ce0e in the main-tree cache).
