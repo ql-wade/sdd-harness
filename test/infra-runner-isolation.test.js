@@ -662,3 +662,231 @@ test('catalog gap reporting: registered refs read RECORDED; a missing ref is sti
   assert.match(JSON.stringify(degradedReceipt.categories['secret-refs-registered']), /runner-authority/);
   assert.doesNotMatch(degraded.stdout, HOST_PATH_OUTPUT_RE);
 });
+
+// ---------------------------------------------------------------------------
+// RW_RUNNER_BUILD（本轮返工，tasks.md I02 Step 5）：完整补丁链 + 确定性入口 + 指纹现算。
+// RED 复现三种历史缺陷：Dockerfile COPY 两补丁 vs 锁六补丁不符；find 漂移入口（错误入口路径）；
+// image.lock 补丁/指纹落后于 upstream.lock。缺 project 目录的 ENOENT 拒绝用真实 build 工具复现。
+// ---------------------------------------------------------------------------
+
+import crypto from 'node:crypto';
+
+const upstreamLockPath = path.join(repoRoot, 'integrations', 'comet', 'upstream.lock.json');
+const P2_4_PATCH_0002_SHA = '47d2eebd57d4b8735a54333b0bf79a93c8812ae9037be9b9d0e141a9d5b38b16';
+const P2_4_PATCH_2_4_SHA = '3b8aab434d0af664e6aca656bcdaaae1da1f80145d17ba99e0a2f01c0219545e';
+const EXPECTED_FINGERPRINT_RW = 'd437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6';
+
+const sha256File = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+// build.mjs:31 同算法：fingerprint = sha256(JSON({archive, patches, toolchain}))
+const lockFingerprint = (lock, patches) => crypto.createHash('sha256').update(JSON.stringify({
+  archive: lock.source.sha256,
+  patches: patches.map(({ path: patchPath, sha256 }) => ({ path: patchPath, sha256 })),
+  toolchain: lock.toolchain,
+})).digest('hex');
+// RUN 续行拼成单逻辑行，便于断言 echo…| sha256sum -c - 门
+const joinContinuations = (text) => text.replace(/\\\n/g, ' ');
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+test('RW_RUNNER_BUILD: committed image lock mirrors the six-patch upstream lock (patches, toolchain, openspec pin, freshly recomputed fingerprint)', () => {
+  const upstream = JSON.parse(fs.readFileSync(upstreamLockPath, 'utf8'));
+  const inputs = readDomainJson('image.lock.json').sourceInputs;
+  assert.equal(upstream.patches.length, 6, 'upstream lock pins six patches');
+  assert.deepEqual(inputs.patches, upstream.patches, 'runner lock must mirror the upstream patch list exactly (order + shas)');
+  const shas = inputs.patches.map((patch) => patch.sha256);
+  assert.ok(shas.includes(P2_4_PATCH_0002_SHA), 'P2_4 updated 0002-managed-delivery-runtime sha must be in the chain');
+  assert.ok(shas.includes(P2_4_PATCH_2_4_SHA), 'P2_4 updated tests/2_4 sha must be in the chain');
+  assert.deepEqual(inputs.toolchain, upstream.toolchain, 'toolchain pins must equal the upstream lock');
+  assert.equal(inputs.toolchain.node, '24.15.0', 'node pin matches P1_1 toolchain-baseline');
+  assert.equal(inputs.toolchain.pnpm, '10.18.3', 'pnpm pin matches P1_1 toolchain-baseline');
+  assert.equal(inputs.openspec.version, '1.11.0', 'openspec pin is the P1_1 isolated compatibility candidate');
+  assert.equal(inputs.openspec.package, '@fission-ai/openspec');
+  assert.equal(inputs.openspec.tarballSha256, '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f', 'openspec tarball sha256 recorded from the P1_1 verified artifact');
+  for (const patch of upstream.patches) {
+    const file = path.join(repoRoot, patch.path);
+    assert.ok(fs.existsSync(file), `patch file must exist in the repo: ${patch.path}`);
+    assert.equal(sha256File(file), patch.sha256, `patch sha must match the lock on disk: ${patch.path}`);
+  }
+  assert.equal(inputs.hostBuildFingerprint, lockFingerprint(upstream, upstream.patches), 'recorded fingerprint must equal the freshly recomputed lock-derived fingerprint');
+  assert.equal(inputs.hostBuildFingerprint, EXPECTED_FINGERPRINT_RW, 'six-patch (incl. P2_4 updated shas) lock fingerprint');
+});
+
+test('RW_RUNNER_BUILD: committed Dockerfile consumes the full ordered patch chain and pins a deterministic managed entrypoint', () => {
+  const upstream = JSON.parse(fs.readFileSync(upstreamLockPath, 'utf8'));
+  const dockerfile = readDomainFile('Dockerfile');
+  const joined = joinContinuations(dockerfile);
+  for (const [index, patch] of upstream.patches.entries()) {
+    const n = index + 1;
+    const escaped = escapeRegExp(patch.path);
+    assert.ok(new RegExp(`^ARG PATCH_${n}_SHA256$`, 'm').test(dockerfile), `ARG PATCH_${n}_SHA256 missing for ${patch.path}`);
+    assert.ok(
+      new RegExp(`^COPY ${escaped} /build/repo/${escaped}$`, 'm').test(dockerfile),
+      `COPY of ${patch.path} must mirror it under /build/repo at the same relative path`,
+    );
+    assert.ok(
+      joined.includes(`echo "\${PATCH_${n}_SHA256}  /build/repo/${patch.path}" | sha256sum -c -`),
+      `sha256 gate for ${patch.path} missing`,
+    );
+  }
+  assert.ok(/^ARG SOURCE_COMMIT$/m.test(dockerfile), 'ARG SOURCE_COMMIT missing');
+  assert.ok(/^ARG SOURCE_SHA256$/m.test(dockerfile), 'ARG SOURCE_SHA256 missing');
+  assert.ok(/^ARG EXPECTED_FINGERPRINT$/m.test(dockerfile), 'ARG EXPECTED_FINGERPRINT missing');
+  assert.ok(/^ARG OPENSPEC_TARBALL_SHA256$/m.test(dockerfile), 'ARG OPENSPEC_TARBALL_SHA256 missing');
+  assert.ok(/^ARG OPENSPEC_VERSION$/m.test(dockerfile), 'ARG OPENSPEC_VERSION missing');
+  assert.ok(/^COPY \.sdd\/cache\/runner-build\/comet-source\.tar\.gz \/build\/comet-source\.tar\.gz$/m.test(dockerfile), 'comet source archive COPY missing');
+  assert.ok(joined.includes('echo "${SOURCE_SHA256}  /build/comet-source.tar.gz" | sha256sum -c -'), 'archive sha256 gate missing');
+  assert.ok(/^COPY \.sdd\/cache\/runner-build\/openspec-\$\{OPENSPEC_VERSION\}\.tgz \/build\/openspec\.tgz$/m.test(dockerfile), 'openspec tarball COPY missing');
+  assert.ok(joined.includes('echo "${OPENSPEC_TARBALL_SHA256}  /build/openspec.tgz" | sha256sum -c -'), 'openspec tarball sha256 gate missing');
+  assert.ok(/npm install --global \/build\/openspec\.tgz/.test(joined), 'openspec must install from the verified pinned tarball');
+  assert.ok(joined.includes('--project /build/repo'), 'build.mjs must run with --project /build/repo (patch paths are project-root relative)');
+  const entryPath = '/build/repo/.sdd/vendor/comet/${SOURCE_COMMIT}/builds/${EXPECTED_FINGERPRINT}/work/bin/comet.js';
+  assert.ok(dockerfile.includes(`test -f "${entryPath}"`), 'entrypoint must be gated by test -f on the fingerprint-deterministic path');
+  assert.ok(dockerfile.includes(`ln -s "${entryPath}" /usr/local/bin/comet-runner`), 'entrypoint must symlink the deterministic path');
+  assert.doesNotMatch(dockerfile, /find\s+\/build/, 'entrypoint resolution must be deterministic, not find-based');
+});
+
+test('RW_RUNNER_BUILD: validate enforces chain completeness, deterministic entrypoint, fingerprint freshness and upstream mirroring', () => {
+  const missingCopy = makeFixtureDir(({ read, write }) => {
+    write(
+      'Dockerfile',
+      read('Dockerfile').split('\n').filter((line) => !line.includes('integrations/comet/patches/tests/2_4.patch')).join('\n'),
+    );
+  });
+  const missingCopyRun = runCli(['validate', '--registry', registryPath, '--dir', missingCopy, '--json']);
+  assert.equal(missingCopyRun.status, 2, 'a Dockerfile that drops one of the six locked patches must be rejected');
+  assert.ok(
+    codes(parseJsonOut(missingCopyRun, 'validate')).includes('PATCH_CHAIN_INCOMPLETE'),
+    JSON.stringify(missingCopyRun.stdout),
+  );
+
+  const findEntry = makeFixtureDir(({ read, write }) => {
+    write('Dockerfile', `${read('Dockerfile')}RUN cometEntry=$(find /build -path "*/work/bin/comet.js" -type f | head -n 1)\n`);
+  });
+  const findEntryRun = runCli(['validate', '--registry', registryPath, '--dir', findEntry, '--json']);
+  assert.equal(findEntryRun.status, 2, 'find-based entrypoint resolution must be rejected');
+  assert.ok(codes(parseJsonOut(findEntryRun, 'validate')).includes('ENTRYPOINT_NONDETERMINISTIC'));
+
+  const stale = makeFixtureDir(({ json, writeJson }) => {
+    const lock = json('image.lock.json');
+    lock.sourceInputs.hostBuildFingerprint = '0'.repeat(64);
+    writeJson('image.lock.json', lock);
+  });
+  const staleRun = runCli(['validate', '--registry', registryPath, '--dir', stale, '--json']);
+  assert.equal(staleRun.status, 2, 'a fingerprint that no longer derives from the current lock must be rejected');
+  const staleReport = parseJsonOut(staleRun, 'validate');
+  assert.ok(codes(staleReport).includes('FINGERPRINT_STALE'), JSON.stringify(staleReport.violations));
+
+  const droppedPatch = makeFixtureDir(({ json, writeJson }) => {
+    const lock = json('image.lock.json');
+    lock.sourceInputs.patches = lock.sourceInputs.patches.slice(0, 5);
+    writeJson('image.lock.json', lock);
+  });
+  const droppedRun = runCli(['validate', '--registry', registryPath, '--dir', droppedPatch, '--json']);
+  assert.equal(droppedRun.status, 2, 'a runner lock that drops an upstream patch must be rejected');
+  assert.ok(codes(parseJsonOut(droppedRun, 'validate')).includes('PATCH_LOCK_MISMATCH'), JSON.stringify(droppedRun.stdout));
+
+  const mutatedToolchain = makeFixtureDir(({ json, writeJson }) => {
+    const lock = json('image.lock.json');
+    lock.sourceInputs.toolchain = { ...lock.sourceInputs.toolchain, node: '20.0.0' };
+    writeJson('image.lock.json', lock);
+  });
+  const toolchainRun = runCli(['validate', '--registry', registryPath, '--dir', mutatedToolchain, '--json']);
+  assert.equal(toolchainRun.status, 2, 'a toolchain pin that drifts from the upstream lock must be rejected');
+  assert.ok(codes(parseJsonOut(toolchainRun, 'validate')).includes('TOOLCHAIN_PIN_MISMATCH'));
+
+  const noOpenspec = makeFixtureDir(({ json, writeJson }) => {
+    const lock = json('image.lock.json');
+    delete lock.sourceInputs.openspec;
+    writeJson('image.lock.json', lock);
+  });
+  const openspecRun = runCli(['validate', '--registry', registryPath, '--dir', noOpenspec, '--json']);
+  assert.equal(openspecRun.status, 2, 'a lock without the openspec pin must be rejected');
+  assert.ok(codes(parseJsonOut(openspecRun, 'validate')).includes('OPENSPEC_PIN_INVALID'));
+
+  const writableRoot = makeFixtureDir(({ json, writeJson }) => {
+    const doc = json('workspace-mounts.json');
+    doc.rules.projectRootMount = 'WRITABLE';
+    writeJson('workspace-mounts.json', doc);
+  });
+  const writableRootRun = runCli(['validate', '--registry', registryPath, '--dir', writableRoot, '--json']);
+  assert.equal(writableRootRun.status, 2, 'a writable project-root mount rule must be rejected');
+  assert.ok(codes(parseJsonOut(writableRootRun, 'validate')).includes('PROJECT_ROOT_MOUNT_NOT_READONLY'), JSON.stringify(writableRootRun.stdout));
+});
+
+test('RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that drifts from upstream refuses', () => {
+  const plan = runCli(['build-plan', '--dir', runnerDir, '--json']);
+  assert.equal(plan.status, 0, `build-plan must PASS on the committed repo: ${plan.stderr || plan.stdout}`);
+  const report = parseJsonOut(plan, 'build-plan');
+  assert.equal(report.interface, 'RunnerInfra.v1');
+  assert.equal(report.command, 'build-plan');
+  assert.equal(report.sourceCommit, 'c90af44a4474662d7853aae76ce785404974fb0a');
+  assert.equal(report.fingerprint, EXPECTED_FINGERPRINT_RW);
+  assert.equal(report.patches.length, 6);
+  for (const patch of report.patches) {
+    assert.equal(patch.sha256Verified, true, `patch verified on disk: ${patch.path}`);
+  }
+  assert.equal(
+    report.entrypoint,
+    `/build/repo/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/${EXPECTED_FINGERPRINT_RW}/work/bin/comet.js`,
+    'entrypoint is the fingerprint-deterministic managed comet path inside the image',
+  );
+  assert.equal(report.dockerBuild.buildArgs.PATCH_3_SHA256, P2_4_PATCH_0002_SHA, 'build args carry the six patch shas in lock order');
+  assert.equal(report.dockerBuild.buildArgs.EXPECTED_FINGERPRINT, EXPECTED_FINGERPRINT_RW);
+  assert.equal(report.dockerBuild.buildArgs.OPENSPEC_TARBALL_SHA256, '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f');
+  assert.ok(report.dockerBuild.command.includes('--build-arg SOURCE_SHA256=28a7e2fa'), 'the emitted build command pins the archive sha');
+  assert.ok(report.dockerBuild.command.includes('-f infra/delivery/runner/Dockerfile'), 'the emitted build command uses the committed Dockerfile');
+  for (const input of [report.inputs.cometSourceArchive, report.inputs.openspecTarball]) {
+    assert.ok(['PRESENT', 'ACQUISITION_REQUIRED'].includes(input.status), `input status is honest: ${input.path}`);
+    if (input.status === 'ACQUISITION_REQUIRED') {
+      assert.ok(input.expectedSha256 && input.acquisition, 'an acquisition-required input declares its expected sha and how to acquire it');
+    }
+  }
+  assert.equal(report.upGate, 'CLOSED', 'build-plan never opens the up gate; digest backfill is an admission decision');
+  assert.doesNotMatch(plan.stdout, HOST_PATH_OUTPUT_RE, 'build-plan output must not carry host absolute paths');
+
+  const drifted = makeFixtureDir(({ json, writeJson }) => {
+    const lock = json('image.lock.json');
+    lock.sourceInputs.patches = lock.sourceInputs.patches.slice(0, 5);
+    writeJson('image.lock.json', lock);
+  });
+  const driftedRun = runCli(['build-plan', '--dir', drifted, '--json']);
+  assert.equal(driftedRun.status, 2, 'build-plan must refuse when the runner lock drifts from the upstream lock');
+  const driftedReport = parseJsonOut(driftedRun, 'build-plan');
+  assert.ok(driftedReport.drift.includes('PATCH_LOCK_MISMATCH'), JSON.stringify(driftedReport.drift));
+});
+
+test('RW_RUNNER_BUILD: a missing project directory is a real ENOENT refusal by the build tool (no fabricated pass)', () => {
+  // 与 test/delivery-cases/2_4.mjs 同源：宿主 node 与锁钉工具链不同时，解析 nvm 中的钉定 node，
+  // 使拒绝发生在真实 project-root 检查（ENOENT）而非工具链前置门（TOOLCHAIN_MISMATCH）。
+  const upstreamLock = JSON.parse(fs.readFileSync(upstreamLockPath, 'utf8'));
+  let pinnedNodeExecutable = process.execPath;
+  if (process.versions.node !== upstreamLock.toolchain.node) {
+    const candidate = path.join(os.homedir(), '.nvm', 'versions', 'node', `v${upstreamLock.toolchain.node}`, 'bin', 'node');
+    const probe = spawnSync(candidate, ['--version'], { encoding: 'utf8' });
+    if (probe.status === 0 && probe.stdout.trim() === `v${upstreamLock.toolchain.node}`) pinnedNodeExecutable = candidate;
+  }
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i02-enoent-'));
+  const absentProject = path.join(scratch, 'project-absent');
+  const result = spawnSync(
+    pinnedNodeExecutable,
+    [path.join(repoRoot, 'tools', 'comet', 'build.mjs'), '--project', absentProject, '--lock', upstreamLockPath, '--archive', path.join(scratch, 'archive.tar.gz')],
+    { encoding: 'utf8', timeout: RUN_TIMEOUT_MS },
+  );
+  assert.notEqual(result.status, 0, 'building into a nonexistent project directory must fail');
+  assert.match(result.stderr, /ENOENT/, `the refusal must name ENOENT, got: ${result.stderr}`);
+});
+
+test('RW_RUNNER_BUILD: control-plane declarations align with the P2_4 runtime bindings; project root is a read-only boundary', () => {
+  const policy = readDomainJson('role-policy.json');
+  const binding = policy.methodStateScope.dispatchRecord.runtimeBinding;
+  assert.ok(binding, 'dispatchRecord must cross-reference the P2_4 runtime bindings');
+  const serialized = JSON.stringify(binding);
+  assert.match(serialized, /generation/, 'the generation binding (dispatch.generation == current, receipt-recorded) must be referenced');
+  assert.match(serialized, /inputDigest/, 'the inputDigest binding must be referenced');
+  assert.match(serialized, /role/, 'the role==dispatch-role binding must be referenced');
+  assert.equal(binding.status, 'UNVERIFIED', 'runtime binding observations stay UNVERIFIED until a real dispatch');
+  assert.deepEqual(binding.fields, ['generation', 'role', 'inputDigest']);
+
+  const mounts = readDomainJson('workspace-mounts.json');
+  assert.equal(mounts.rules.projectRootMount, 'READ_ONLY_BOUNDARY', 'the delivery project root, if mounted at admission, is a read-only boundary');
+  assert.match(mounts.projectRoot.note, /只读/, 'the project-root boundary carries an explicit read-only note');
+});

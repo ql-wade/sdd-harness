@@ -1,0 +1,163 @@
+{
+ "task": "I02",
+ "task_title": "固定Comet Runner及真实OS/container角色隔离 (rework re-verification, local half)",
+ "run": "rework-seven-p1-r1",
+ "final_status": "PARTIAL",
+ "final_status_reason": "返工循环 Step 5(Test)/Step 6(Implement 本地半)/Step 8(Commit) DONE；真实容器半（S2 真实镜像构建、S3 digest 回填、S5 真实启动、S6 容器内角色探针、S7 正向链、S8 恢复入口与 duplicate-authority）诚实 env-gated——本宿主无 docker daemon（EPERM），全部收口在 worker-reports/I02-rework/terminal-channel-commands.sh（每段带判据），未执行段落一律 UNVERIFIED，绝不 mock",
+ "opening_receipt": "git log --oneline -1 -> abd2366 infra(i03): outline stack admission + deployment-wave enablement; 未提交残留 = test/infra-runner-isolation.test.js +219 行 RW_RUNNER_BUILD 族（控制器确认质量）+ worker-reports/I02-rework/evidence/01-owns-suite-red.txt",
+ "worktree": "rw-i02 @ master@b5805cb, branch rework/i02-runner",
+ "steps_done": "4/4 (Step 5 Test RED->GREEN; Step 6 Implement local half DONE; Step 7 Review 待控制器派发（独立评审）；Step 8 Commit)",
+ "local_half_reverified": [
+  {
+   "behavior": "image lock 镜像当前 upstream.lock（P2_4 集成后六补丁链）",
+   "result": "sourceInputs.patches 与 upstream.patches deepEqual（含 0002=47d2eebd…、tests/2_4=3b8aab43…）、toolchain 相等、hostBuildFingerprint=d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6 与现算（archive+patches+toolchain sha256，build.mjs fingerprintOf 同算法）逐字节一致；openspec 钉定 @fission-ai/openspec@1.11.0 tarballSha256 84820b17…（P1_1 验证工件）；六个补丁磁盘 sha 全部命中（evidence/02 test 15）"
+  },
+  {
+   "behavior": "Dockerfile 消费完整有序补丁链 + 确定性入口",
+   "result": "ARG PATCH_1..6_SHA256 + /build/repo 同相对路径 COPY + 逐补丁 sha256sum 门；openspec 只经验证 tarball 安装；build.mjs --project /build/repo；入口 test -f/ln -s 固定在 /build/repo/.sdd/vendor/comet/<commit>/builds/<fingerprint>/work/bin/comet.js——指纹漂移时 test -f 失败、构建即拒；find 式漂移入口已删除（历史缺陷：head -n 1 静默吞掉指纹漂移），且确定性检测连注释文字一并禁止（evidence/02 test 16；实现期发现自注释触发检测，已改写注释——负例检测对 committed 文件全文生效）"
+  },
+  {
+   "behavior": "validate 强制链完整性/确定性入口/指纹新鲜度/上游镜像/项目根只读",
+   "result": "新增违规码 PATCH_CHAIN_INCOMPLETE、ENTRYPOINT_NONDETERMINISTIC、FINGERPRINT_STALE、PATCH_LOCK_MISMATCH、TOOLCHAIN_PIN_MISMATCH、OPENSPEC_PIN_INVALID、PATCH_SHA256_MISMATCH、PROJECT_ROOT_MOUNT_NOT_READONLY；validate/qualify/up/build-plan 四命令共享同一 buildChainFindings 结果（evidence/02 test 17；CLI 契约复验 evidence/06）"
+  },
+  {
+   "behavior": "build-plan 导出真实构建输入（只导出，永不开 up 门）",
+   "result": "committed 域 exit 0、drift=[]：sourceCommit c90af44a…fb0a、fingerprint d4370930…、六补丁逐项 sha256Verified、entrypoint=/build/repo/.sdd/vendor/comet/c90af44a…/builds/d4370930…/work/bin/comet.js、buildArgs 含 PATCH_3_SHA256=47d2eebd…（P2_4 的 0002）与 SOURCE_SHA256=28a7e2fa…；inputs cometSourceArchive/openspecTarball 如实 ACQUISITION_REQUIRED（本工作树无 .sdd/cache/runner-build 副本）并声明期望 sha + 获取 URL/命令；upGate=CLOSED；漂移锁 exit 2 + drift 含 PATCH_LOCK_MISMATCH（evidence/02 test 18）"
+  },
+  {
+   "behavior": "缺 project 目录是真实构建工具的 ENOENT 拒绝",
+   "result": "spawn tools/comet/build.mjs --project <absent>：exit 1、stderr JSON code=ENOENT（realpath 在写任何状态前失败）；按 test/delivery-cases/2_4.mjs 既有模式解析钉定 node v24.15.0（nvm），使拒绝发生在真实 project-root 检查而非工具链前置门（evidence/02 test 19）"
+  },
+  {
+   "behavior": "控制面声明与 P2_4 运行时绑定对齐；项目根只读边界",
+   "result": "role-policy.json methodStateScope.dispatchRecord.runtimeBinding = {fields:[generation,role,inputDigest], status:UNVERIFIED}（真实派发观察前不宣称已绑定，env 角色字符串/同主体签名不构成身份）；workspace-mounts.json rules.projectRootMount=READ_ONLY_BOUNDARY + projectRoot.note 只读声明（evidence/02 test 20）"
+  }
+ ],
+ "mutations_caught": [
+  {
+   "id": "M1",
+   "mutation": "Dockerfile 删除 tests/2_4.patch 的 COPY+门行",
+   "caught": "validate exit 2 + PATCH_CHAIN_INCOMPLETE",
+   "evidence": "evidence/05"
+  },
+  {
+   "id": "M2",
+   "mutation": "Dockerfile 追加 find /build 漂移入口",
+   "caught": "validate exit 2 + ENTRYPOINT_NONDETERMINISTIC",
+   "evidence": "evidence/05"
+  },
+  {
+   "id": "M3",
+   "mutation": "image.lock hostBuildFingerprint 清零",
+   "caught": "validate exit 2 + FINGERPRINT_STALE",
+   "evidence": "evidence/05"
+  },
+  {
+   "id": "M4",
+   "mutation": "image.lock patches 切到 5 个",
+   "caught": "validate exit 2 + PATCH_LOCK_MISMATCH",
+   "evidence": "evidence/05"
+  },
+  {
+   "id": "M5",
+   "mutation": "toolchain.node 漂移到 20.0.0",
+   "caught": "validate exit 2 + TOOLCHAIN_PIN_MISMATCH",
+   "evidence": "evidence/05"
+  },
+  {
+   "id": "M6",
+   "mutation": "openspec 钉定删除",
+   "caught": "validate exit 2 + OPENSPEC_PIN_INVALID",
+   "evidence": "evidence/05"
+  },
+  {
+   "id": "M7",
+   "mutation": "projectRootMount 置 WRITABLE",
+   "caught": "validate exit 2 + PROJECT_ROOT_MOUNT_NOT_READONLY",
+   "evidence": "evidence/05"
+  },
+  {
+   "id": "M8",
+   "mutation": "漂移锁喂 build-plan",
+   "caught": "exit 2 + drift=PATCH_LOCK_MISMATCH",
+   "evidence": "evidence/05"
+  },
+  {
+   "id": "M9",
+   "mutation": "scratch repo 镜像内篡改磁盘补丁 tests/4_6.patch",
+   "caught": "validate exit 2 + PATCH_SHA256_MISMATCH（活仓库全程未触碰）",
+   "evidence": "evidence/05"
+  },
+  {
+   "id": "M10",
+   "mutation": "对照：committed 域 build-plan",
+   "caught": "exit 0（基线不受负例影响）",
+   "evidence": "evidence/05"
+  }
+ ],
+ "gates": {
+  "owns_suite": "20/20 green x2（evidence/02、03；RED 基线 evidence/01：15-20 not ok）",
+  "full_npm_test": "439 tests / 436 pass / 2 fail / 1 skip；失败集 = 已知项（#59 C08 host-OpenSpec 1.3.1->1.14.3 漂移、#428 B08 preservation），stash 后在 HEAD abd2366 复跑两文件同样失败——零新增（evidence/04、07）",
+  "diff_scope": "全部在 I02 Owns：infra/delivery/runner/{Dockerfile,image.lock.json,role-policy.json,workspace-mounts.json}、tools/infra/runner.mjs、test/infra-runner-isolation.test.js + worker-reports；tasks.md/execution-state/ledger/drift-lock/活配置未触碰"
+ },
+ "terminal_channel_pending": [
+  {
+   "manifest": "worker-reports/I02-rework/terminal-channel-commands.sh",
+   "stages": "S0 前置门(daemon+build-plan) -> S1 构建输入获取(sha 门) -> S2 真实镜像构建(六门+构建内确定性入口回读+version 0.4.5) -> S3 digest 回填(comet-runner ImageId + 准入登记 runner-base；validate 复验) -> S4 准入 ACK 门(I02_ADMIT_ACK=yes 才开 upGate，无 ACK 停在 UNVERIFIED) -> S5 真实启动(六角色 compose + probe --endpoint 127.0.0.1:7300) -> S6 容器内角色探针(worker 对 /comet/* 与只读根负向写 errno + inspect readonly/caps/uid) -> S7 正向链(真实派发+回执读回+generation/role/inputDigest 三绑定) -> S8 恢复入口(杀 controller 后 worker 不可领取；仅原入口恢复；clone 卷第二实例拒) -> S9 证据归档",
+   "why": "本代理沙箱 docker EPERM；每段带判据，未执行段落 UNVERIFIED，不 mock 不 skip"
+  }
+ ],
+ "env_gated": [
+  {
+   "step": "tasks.md I02 rework Step 6 真实半——由当前 upstream.lock 构建真实专用镜像并回读 digest/fingerprint/实际 Comet 入口",
+   "holder": "具备 docker daemon 的终端通道（manifest S1-S3）"
+  },
+  {
+   "step": "tasks.md I02 rework Step 6/7 真实半——不同角色经 Edit/Shell/MCP 无控制卷/签发/策略写权、无 docker.sock/宿主 HOME；可信正向链与实际拒绝留证",
+   "holder": "终端通道（manifest S5-S7；MCP 通道需部署面，缺则如实 UNVERIFIED）+ I01 四 ref 真实 provisioning"
+  },
+  {
+   "step": "tasks.md I02 rework Step 7 Review——有权 controller 接纳可信角色返回结果；worker 不能自行 dispatch 并批准自己的 A/T/V",
+   "holder": "控制器独立评审（本 worker 提交序列已就绪待审）"
+  },
+  {
+   "step": "S8 duplicate-authority 实测（复制状态第二实例拒、原 RunID/operation 恢复读回）",
+   "holder": "终端通道（manifest S8，需 authoritative state 卷）"
+  }
+ ],
+ "unverified": [
+  "containerBuildStatus 保持 UNVERIFIED 于 committed lock（S2 从未在本宿主执行；digest/入口回读全部 env-gated）",
+  "upGate.enabled 保持 false 于 committed lock（资源准入是显式决策，manifest S4 以 I02_ADMIT_ACK 门控）",
+  "probe role-denial / duplicate-authority 无 live runtime 时 exit 2 UNVERIFIED（committed 行为，evidence/06）",
+  "Edit/MCP 通道负向写需真实 runner 部署面；本清单只把 shell 通道定为必测，其余如实标注"
+ ],
+ "files_changed": [
+  "infra/delivery/runner/Dockerfile",
+  "infra/delivery/runner/image.lock.json",
+  "infra/delivery/runner/role-policy.json",
+  "infra/delivery/runner/workspace-mounts.json",
+  "tools/infra/runner.mjs",
+  "test/infra-runner-isolation.test.js（残留 +219 行保留，仅 test 19 spawn 改用钉定 node 解析——2_4.mjs 既有模式）"
+ ],
+ "untouched_owned": [
+  "infra/delivery/runner/compose.yaml（六角色/只读根fs/cap_drop ALL/no-new-privileges/internal 网络声明已达标，本轮无需改）",
+  "infra/delivery/runner/authority-registration.example.json（Authority.v1 登记为空即真实状态）"
+ ],
+ "commits": [
+  {
+   "sha": "334a572",
+   "message": "fix(infra): I02 rework r1 — six-patch runner build chain + deterministic fingerprint entrypoint + build-plan gate",
+   "files": "infra/delivery/runner/{Dockerfile,image.lock.json,role-policy.json,workspace-mounts.json} + tools/infra/runner.mjs + test/infra-runner-isolation.test.js（6 files, +494/-21）"
+  },
+  {
+   "sha": null,
+   "message": "docs(openspec): I02 rework r1 report — local half DONE (10/10 mutations caught), live half env-gated",
+   "note": "本报告文件内嵌于该提交，sha 自引用不收敛；以 git log 中 334a572 的后继 docs(openspec) 提交为准（含本文件与 7 个 evidence/manifest 文件）"
+  }
+ ],
+ "blockers_or_questions": [
+  "none blocking the local half；真实容器半收口在 terminal-channel-commands.sh（holder：具备 daemon 的终端通道 + 资源准入 ACK）",
+  "note for controller: build-plan 是新增子命令（RunnerInfra.v1 interface 扩展 validate|qualify|up|probe|stop -> +build-plan），若 execution-contract.json 的 cli_contract 需要登记该动词，请在控制器侧同步（本 worker 未触碰非 Owns 文件）",
+  "note: 证据文件中的宿主绝对路径已脱敏为 <repo>（node --test 的 location 行）"
+ ]
+}
