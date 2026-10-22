@@ -314,18 +314,18 @@
 **Parallel safe:** false
 **Acceptance IDs:** E03, E04, H06
 
-- [ ] **Step 1 [5 min]: Test** 2.5.a 接入架构质询和冻结审查包：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：grill-me 承重问题闭合后才提交；真实 quorum/阈值/policy 绑定审查包 digest。
-- [ ] **Step 2 [5 min]: Implement** 2.5.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 2.5.b 消费机械共识结果与恢复原作业：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：缺票/拒绝/旧摘要不放行；同 job_key 不重复评审，T 保持单独自动审查。
-- [ ] **Step 4 [5 min]: Implement** 2.5.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 2.5.a 接入架构质询和冻结审查包：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：grill-me 承重问题闭合后才提交；真实 quorum/阈值/policy 绑定审查包 digest。
+- [x] **Step 2 [5 min]: Implement** 2.5.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 2.5.b 消费机械共识结果与恢复原作业：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：缺票/拒绝/旧摘要不放行；同 job_key 不重复评审，T 保持单独自动审查。
+- [x] **Step 4 [5 min]: Implement** 2.5.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 本轮返工（P1映射见replan-record.json，详细oracle见execution-contract.json）：
 
-- [ ] **Step 7 [5 min]: Test** 以真实Comet接纳入口补缺票/旧票/拒绝票/报告缺失/假来源/未闭合grill负例；单独调用纯adapter的成功不能关闭E03/E04。
-- [ ] **Step 8 [5 min]: Implement** 绑定Comet实际review job、独立执行身份和冻结包revision；A调用grill-me及原精确三方全票共识，T保持独立测试设计审查而不强加三方quorum；原一次性外发授权不自动覆盖新材料。
-- [ ] **Step 9 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
+- [x] **Step 7 [5 min]: Test** 以真实Comet接纳入口补缺票/旧票/拒绝票/报告缺失/假来源/未闭合grill负例；单独调用纯adapter的成功不能关闭E03/E04。
+- [x] **Step 8 [5 min]: Implement** 绑定Comet实际review job、独立执行身份和冻结包revision；A调用grill-me及原精确三方全票共识，T保持独立测试设计审查而不强加三方quorum；原一次性外发授权不自动覆盖新材料。
+- [x] **Step 9 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
 
 
 ### Task P3_1: 原任务 3.1 — 指定业务试点仓库、owner、目标验证环境、所需身份和 UI/API/持久化/权限负向 AC；冻结 Product/Design/TestContract/PlanBundle（A01/A15）。无生产副作用。
