@@ -228,17 +228,17 @@
 **Parallel safe:** false
 **Acceptance IDs:** C01, C02, C03, C04, C05, C06, C07, C08
 
-- [ ] **Step 1 [5 min]: Test** 1.5.a 验证 OpenSpec/TestPack/计划引用映射：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：固定兼容环境，tasks 唯一可写；Classic plan 为派生只读视图，不双写 checkbox。
-- [ ] **Step 2 [5 min]: Implement** 1.5.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 1.5.b 按真实入口建立扩展 RED 基线：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：C01–C08 覆盖 R/A/T/P/V/K 以及恢复/旁路；保留原生不能阻断的证据，交 2.4 实现。
-- [ ] **Step 4 [5 min]: Implement** 1.5.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 1.5.a 验证 OpenSpec/TestPack/计划引用映射：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：固定兼容环境，tasks 唯一可写；Classic plan 为派生只读视图，不双写 checkbox。
+- [x] **Step 2 [5 min]: Implement** 1.5.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 1.5.b 按真实入口建立扩展 RED 基线：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：C01–C08 覆盖 R/A/T/P/V/K 以及恢复/旁路；保留原生不能阻断的证据，交 2.4 实现。
+- [x] **Step 4 [5 min]: Implement** 1.5.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 本轮返工（P1映射见replan-record.json，详细oracle见execution-contract.json）：
 
-- [ ] **Step 7 [5 min]: Test** 在修复后的六补丁发行与真实Runner上重跑C01–C08，新增审查的R旁路、假独立审查和旧批准复活三类反例；原无补丁/旧补丁RED只作历史定位。
-- [ ] **Step 8 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
+- [x] **Step 7 [5 min]: Test** 在修复后的六补丁发行与真实Runner上重跑C01–C08，新增审查的R旁路、假独立审查和旧批准复活三类反例；原无补丁/旧补丁RED只作历史定位。
+- [x] **Step 8 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
 
 
 ### Task P2_2: 原任务 2.2 — 实现 EvidenceEnvelope/来源准入和 GateReceipt；先 RED 拒绝自签 pass、同执行身份、旧 policy/环境/输入摘要、缺观察能力，再 GREEN（A05–A06/A18–A19/B03/B06–B07）。可信来源单独实测，schema 夹具不冒充认证。
