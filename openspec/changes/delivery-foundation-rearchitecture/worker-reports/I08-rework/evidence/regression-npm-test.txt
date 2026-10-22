@@ -1,0 +1,72 @@
+# Regression evidence: I08 rework Step 5/6 - full npm test on the migrated tree (node v22.13.1)
+# Command: npm test  (exit 1 due to the two known pre-existing failures below)
+
+# summary lines:
+# tests 475
+# suites 0
+# pass 472
+# fail 2
+# cancelled 0
+# skipped 1
+
+# known failure set (expected exactly these two + 1 skip):
+318:not ok 62 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+2339:not ok 463 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+
+# failure 1 detail (C08 negative - classic-integration.test.js:476, pinned host OpenSpec version assertion, unrelated to I08):
+not ok 62 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+  ---
+  duration_ms: 2.467542
+  location: '<repo-root>/test/classic-integration.test.js:476:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the registered refusal must cite the pinned host CLI version
+    
+    '1.3.1' !== '1.14.3'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '1.14.3'
+  actual: '1.3.1'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<repo-root>/test/classic-integration.test.js:478:10)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+
+# failure 2 detail (B08 preservation - spec-closeout.test.js:321, unrelated to I08):
+not ok 463 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+  ---
+  duration_ms: 181.798833
+  location: '<repo-root>/test/spec-closeout.test.js:321:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<repo-root>/test/spec-closeout.test.js:330:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+
+# skip detail:
+339:ok 63 - C08 positive: the isolated 1.11.0 candidate exposes the edges and the same closure accepts it — no global upgrade # SKIP isolated openspec 1.11.0 is not installed under .sdd/tools; run the isolated install (never a global upgrade)
+340-  ---
+341-  duration_ms: 3.016042
+342-  ...
+--
+2424:# skipped 1
+2425-# todo 0
+2426-# duration_ms 15648.934208
+
+# No PermissionError / EPERM .claude/settings.json failures in this run.
