@@ -1,6 +1,7 @@
 // P1_3 delivery case: the Comet Classic single-master contract over the
-// patched pinned build (fingerprint beab355d… after the P4_6 lock revision, distribution.json
-// manifest-verified on reuse) — the driver/workspace/authority interface is
+// patched pinned build (six-patch stack with P2_4's managed-delivery runtime
+// 0002 and P4_6's post-archive closeout 0003; distribution.json
+// manifest-verified on reuse by tools/comet/build.mjs) — the driver/workspace/authority interface is
 // the real one discovered from the built CLI (1.3.a), write channels are
 // probed separately as edit / Shell / MCP with refusals and capability gaps
 // recorded per channel (A09, never "one channel stands in for all"), and
@@ -114,9 +115,20 @@ const allOutput = (result) => plain(result.stdout) + plain(result.stderr);
 const CHANGE = 'probe-change';
 
 test('setup: the patched pinned build named by the source lock is manifest-verified in this project', () => {
-  // lock revision: 6 patches @ beab355d (P2_4 0002 + P4_6 0003 + tests)
+  // The case qualifies the six-patch stack by IDENTITY, not by byte
+  // fingerprint: patch bytes revise without changing the stack's shape (the
+  // P2_4 rework integrated the 0002 revision @ d4370930), while the original
+  // discovery session's pre-0002 build (cb1151b4) must never satisfy it.
   assert.equal(lock.patches.length, 6, 'the patched build must carry the six locked patches');
-  assert.match(fingerprint, /^beab355d/, `patched fingerprint drifted: ${fingerprint}`);
+  assert.deepEqual(lock.patches.map((patch) => patch.path), [
+    'integrations/comet/patches/0001-matt-method-profile.patch',
+    'integrations/comet/patches/tests/1_6.patch',
+    'integrations/comet/patches/0002-managed-delivery-runtime.patch',
+    'integrations/comet/patches/tests/2_4.patch',
+    'integrations/comet/patches/0003-post-archive-closeout.patch',
+    'integrations/comet/patches/tests/4_6.patch',
+  ], 'the locked stack must be exactly 0001 + tests/1_6 + 0002 (managed delivery runtime) + tests/2_4 + 0003 (post-archive closeout) + tests/4_6');
+  assert.notEqual(fingerprint, 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187', 'the pre-0002 discovery build must not satisfy this case');
   assert.ok(prepared, 'pristine Comet source has not been prepared; run tools/comet/prepare-source.mjs first');
   assert.ok(built, 'patched Comet build is not present; run tools/comet/build.mjs --archive first');
   const version = comet(['--version']);
@@ -142,7 +154,7 @@ test('1.3.a: init installs the real guard hook and the workspace layout is the d
   assert.equal(layout.selectionFile, path.join(project, '.comet/current-change.json'));
 });
 
-test('1.3.a: Runner dispatch binds the real run id and leaves no phase trace on the run state', async () => {
+test('1.3.a/F07: Runner dispatch binds the real run id and leaves no phase trace on the run state', async () => {
   const changeInit = comet(['state', 'init', CHANGE, 'full', '--json']);
   assert.equal(changeInit.json?.exitCode, 0, `state init failed: ${plain(changeInit.json?.stderr).slice(0, 300)}`);
   const selected = comet(['state', 'select', CHANGE, '--json']);
@@ -223,7 +235,18 @@ test('1.3.c: a premature archive is refused outside the archive phase', () => {
   assert.match(plain(premature.json?.stderr), /FATAL: phase is 'open', expected 'archive'/);
 });
 
-test('1.3.b/OV01: the verified managed write executor completes the lifecycle the read-only observer cannot', async () => {
+test('1.3.b/F05/OV01: the verified managed write executor completes the lifecycle the read-only observer cannot', async () => {
+  // The refusal half of F05 at this case's layer: a read-only observer can
+  // carry no execute surface and is refused for managed writes, so the only
+  // executor that can complete the lifecycle below is the managed one.
+  assert.throws(
+    () => defineDriver({ id: 'prompt-observer', kind: 'read-only', execute: () => ({ exitCode: 0 }) }),
+    (error) => error.code === 'DRIVER_SURFACE_REFUSED',
+  );
+  assert.throws(
+    () => requireWriteDriver(defineDriver({ id: 'prompt-observer', kind: 'read-only' }), 'write the change artifacts'),
+    (error) => error.code === 'DRIVER_WRITE_REFUSED',
+  );
   await fs.writeFile(path.join(project, 'docs/openspec/changes', CHANGE, 'proposal.md'), '# Proposal\n\nManaged delivery probe.\n');
   await fs.writeFile(path.join(project, 'docs/openspec/changes', CHANGE, 'tasks.md'), '# Tasks\n\n- [ ] 1.1 Implement probe product code\n');
   await fs.writeFile(path.join(project, 'docs/openspec/changes', CHANGE, 'design.md'), '# Design\n\nSingle controller, managed driver.\n');
