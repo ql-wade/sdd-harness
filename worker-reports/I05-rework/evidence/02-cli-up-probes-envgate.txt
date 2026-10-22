@@ -1,0 +1,78 @@
+--- [3] up (committed domain: lock not ready) ---
+{"refused": true, "error": "UP_REFUSED_IMAGES_LOCK_NOT_READY: 2 component images lack an authenticated digest (upstream releases are UNSELECTED; inventing tags/digests/versions is forbidden)", "unverifiedComponents": ["codewiki-app", "codegraph"]}
+EXIT=2
+
+--- [4] probe pinned-code-wiki (bare, no runtime input) ---
+{
+  "interface": "CodeKnowledgeInfra.v1",
+  "command": "probe",
+  "case": "pinned-code-wiki",
+  "endpoint": null,
+  "manifest": null,
+  "executed": false,
+  "status": "UNVERIFIED",
+  "reason": "no live self-hosted code-wiki endpoint configured; freshness requires a real authenticated API/MCP readback for the approved pinned commit (up refuses until the images lock qualifies, the source scope is authorized and admission is granted). Pass --endpoint <url> once the stack exists — this command never mocks and never skips.",
+  "freshness": null,
+  "requiredInputs": [
+    "live self-hosted code-wiki instance endpoint (--endpoint <url>; public hosted services are not an allowed substitute)",
+    "provider credential resolved via secret-ref:sdd-harness-pilot/codewiki-provider (runtime authorization; no token borrowing)",
+    "an authorized repository-scope entry with immutableID + pinned commit and grant secret-ref:sdd-harness-pilot/codewiki-source-read",
+    "a wiki generation manifest for the exact approved commit (--manifest <file> enables the local manifest-level freshness evaluation)"
+  ],
+  "plannedSteps": [
+    "GET endpoint — instance reachable and identity observed",
+    "authenticated provider API/MCP readback of the wiki for repoID/immutableID/commit (pagination/version exposure verified)",
+    "compare repoID/immutableID/commit against the repository-scope approved entry and the generation manifest",
+    "sample wiki references for accuracy; verify language coverage meets the decided policy",
+    "record the freshness verdict as fact — the outer gate decides per the pre-committed policy"
+  ],
+  "observedSteps": [],
+  "checkedAt": "2026-10-22T06:25:54.380Z"
+}
+EXIT=2
+
+--- [5] probe graph-disabled-correctness (real local chain re-run) ---
+{
+  "interface": "CodeKnowledgeInfra.v1",
+  "command": "probe",
+  "case": "graph-disabled-correctness",
+  "dir": "infra/delivery/code-knowledge",
+  "executed": true,
+  "status": "VERIFIED",
+  "reason": "main validation chain is green with the graph component disabled: CodeGraph is a removable optimization with no gate/knowledge authority, and the correctness protocol does not depend on it",
+  "requiredInputs": [
+    "committed code-knowledge domain files (--dir; no live runtime required)"
+  ],
+  "plannedSteps": [
+    "read the committed graph-profile and record the enabled flag and authority declarations",
+    "re-run the full main validation chain (validateDomain) against the domain for real — not a flag-text read",
+    "assert the main chain is green with graph disabled and that graph holds no gate/knowledge authority"
+  ],
+  "observedSteps": [
+    {
+      "step": "read committed graph-profile enabled flag",
+      "status": "VERIFIED",
+      "enabled": false
+    },
+    {
+      "step": "main validation chain re-run (graph-disabled correctness)",
+      "status": "VERIFIED",
+      "violations": 0,
+      "codes": []
+    }
+  ],
+  "graph": {
+    "enabled": false,
+    "gateAuthority": false,
+    "knowledgeAuthority": false
+  },
+  "checkedAt": "2026-10-22T06:25:54.437Z"
+}
+EXIT=0
+
+--- [6] env gate: docker daemon reachability (sandbox denies socket) ---
+(first capture showed EXIT=0 because $? read the exit of `head` in the pipeline; direct re-run below records docker's own exit)
+$ docker version --format '{{.Server.Version}}'
+permission denied while trying to connect to the docker API at unix://<host-home>/.docker/run/docker.sock
+docker_version_exit=1
+=> container daemon unreachable in this sandbox (socket denied). Real containers / authenticated API / MCP responses stay UNVERIFIED (Step 3 env-gated).
