@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "tool": "tools/verify/delivery-journey.mjs",
+  "runnerInvariant": "test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery",
+  "scenario": "F07",
+  "acceptanceIds": [
+    "F07"
+  ],
+  "journey": null,
+  "profile": "managed-pilot",
+  "caseModule": "test/delivery-cases/1_3.mjs",
+  "sourceBinding": [
+    {
+      "path": "specs/delivery-foundation/spec.md",
+      "requirement": "Foundation distribution and deployment",
+      "scenario": "F07"
+    }
+  ],
+  "verdict": "FAIL",
+  "reason": "action-1-failed (spawn): expected exit 0, observed exit 1 (expected: exit 0; TAP summary fail=0 with pass>0; test point matching F07 (V_F07 or bare id) is ok)",
+  "missing": [],
+  "drift": [],
+  "schemaErrors": [],
+  "execution": {
+    "command": "node --test test/delivery-cases/1_3.mjs",
+    "actions": [
+      {
+        "index": 1,
+        "type": "spawn",
+        "expected": "exit 0; TAP summary fail=0 with pass>0; test point matching F07 (V_F07 or bare id) is ok",
+        "required": true,
+        "expectation": {
+          "kind": "exitCode",
+          "value": 0
+        },
+        "ok": false,
+        "exitCode": 1,
+        "durationMs": 13231,
+        "note": "expected exit 0, observed exit 1",
+        "observed": null,
+        "command": "node --test test/delivery-cases/1_3.mjs"
+      },
+      {
+        "index": 2,
+        "type": "readState",
+        "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0",
+        "required": true,
+        "expectation": {
+          "kind": "nonEmptyFile"
+        },
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": {
+          "path": "<host-path-redacted>",
+          "bytes": 2947
+        },
+        "command": null
+      },
+      {
+        "index": 3,
+        "type": "inspect",
+        "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+        "required": false,
+        "expectation": null,
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": "daccc0788f0a73fa4193d542950ad8e8cfb37a2a",
+        "command": null
+      }
+    ],
+    "tests": 9,
+    "pass": 8,
+    "fail": 1,
+    "skipped": 0,
+    "effectiveExecutions": 9,
+    "target": {
+      "token": "F07",
+      "found": false,
+      "status": null
+    },
+    "requiredAssertions": [
+      {
+        "id": "F07",
+        "status": "missing",
+        "matchedPoints": 0,
+        "ok": 0,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "candidate": {
+    "gitHead": "daccc0788f0a73fa4193d542950ad8e8cfb37a2a",
+    "node": "v22.13.1",
+    "platform": "darwin"
+  },
+  "timing": {
+    "startedAt": "2026-10-22T12:43:46.672Z",
+    "finishedAt": "2026-10-22T12:43:59.949Z",
+    "durationMs": 13277
+  },
+  "evidence": {
+    "dir": "<host-path-redacted>",
+    "files": [
+      "pilot-baseline.json",
+      "case-definition.json",
+      "verdict.json"
+    ]
+  },
+  "exitCode": 2
+}

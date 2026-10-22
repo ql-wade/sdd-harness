@@ -1,0 +1,59 @@
+{
+  "task": "P1_3 (rework-seven-p1-r1): Comet 单主控/受管驱动/唯一 closeout owner — REOPEN 重验 + P2_4/P2_5 协调一致性 + 场景锚点（P3_1 连带纪律）",
+  "run": "rework-seven-p1-r1",
+  "worktree": ".claude/worktrees/rw-p1-3 (branch rework/p1-3-connect)",
+  "opening_receipt": "git log --oneline -1 -> 46df6df chore(openspec): accept P2_5 rework (9/9; review APPROVED; P1-02 closed); fast-forward --ff-only 到声明基 master@daccc07（其唯一增量是 execution-ledger.jsonl 两行 ENVIRONMENT_DRIFT，未改动）",
+  "final_status": "DONE",
+  "steps_done": "8/8 (tasks.md ### Task P1_3 共 8 步；1-6 全量重执行含两处 RED→GREEN，7 自审+跨面只读对照，8 串行提交)",
+  "owns_boundary_check": "Owns 逐字核对 = lib/adapters/comet.js, lib/adapters/harness.js, test/comet-driver.test.js, openspec/changes/delivery-foundation-rearchitecture/host-probes, test/delivery-cases/1_3.mjs。本轮改动仅 test/delivery-cases/1_3.mjs（+29/-6）与 lib/adapters/comet.js（注释 2 行，同一漂移修正）；harness.js 与 comet-driver.test.js 重验后逐字未动；host-probes 四个 2026-10-20 发现会话证据保持原样（历史观察记录，不改写日期/指纹，本轮重验走 worker-reports 证据）；tasks.md/execution-state/ledger/drift-lock/活配置只读未碰",
+  "repair_coverage": {
+    "scenario_anchors_P3_1_discipline": "DONE — RED 实证：delivery-journey --scenario F05/F07 的 requiredAssertions=[场景id] 要求 1_3.mjs 存在词边界 ok 点；原 9 个测试名只有 A09 词边界锚点，F05/F07 found:false（journey exit 2，target.found=false）。修复：'1.3.a/F07: Runner dispatch binds the real run id...'（F07 oracle 的关联 ID 绑定半边）与 '1.3.b/F05/OV01: the verified managed write executor...'（并在该测试内补 DRIVER_SURFACE_REFUSED/DRIVER_WRITE_REFUSED 两断言，使 F05 拒绝半边在 case 层真实成立）。修复后 F05/F07/A09 三 journey 全 PASS（requiredAssertions satisfied, F05 ok=1, F07 ok=1, A09 ok=2）",
+    "lock_pin_drift": "DONE — RED 实证：1_3.mjs setup 钉死 /^beab355d/，但 P2_4 rework 已将 0002 补丁修订整合进锁（同 6 补丁栈，指纹 d4370930…，2f2236a），setup 实际失败（'patched fingerprint drifted: d4370930…'），且 1_4/1_5 存在同款字面钉（非本任务 Owns，如实上报不动）。修复：按 2_4.mjs 先例改为栈身份钉——patches.length===6 + 六补丁路径集合 deepEqual（0001+tests/1_6+0002+tests/2_4+0003+tests/4_6）+ notEqual cb1151b4（原发现会话预 0002 构建永不满足本 case）；补丁字节再修订不再破坏本 case，错误栈仍被拒",
+    "core_reverify_r1_semantics": "DONE×2 — 22/22 GREEN 两次（comet-driver 13 + 1_3.mjs 9）：driver 排他（DRIVER_SURFACE_REFUSED/DRIVER_WRITE_REFUSED）、runner 无 phase 写面（RUNNER_PHASE_FIELD_REFUSED，接口仅 dispatch/verify/admit）、launch authority HMAC + run 绑定（RUN_ID_REQUIRED/RUN_MISMATCH/RUNNER_MISMATCH）、admission 拒签（IDENTITY_CONFLICT builder / ROLE_NOT_DISPATCHED / DUPLICATE_ISSUANCE / STALE_CANDIDATE）、真实 CLI 全生命周期（init 布局、dispatch 零控制态写入、edit 拒绝 exit 2 WRITE BLOCKED、Shell/MCP 如实记 gap、Shell 伪状态过不了受管门 verify_result、手动 record-check 永不满足 guard、premature archive 拒绝、唯一 archive + 驱动层拒绝二次 closeout）、closeout 排他（KNOWLEDGE_CLOSEOUT_REQUIRED/ARCHIVE_ENTRY_INVALID/ARCHIVE_ALREADY_SEALED）",
+    "self_certification_audit": "DONE — 自证模式审查通过：测试期望值均来自独立真实观察（真实 CLI 子进程、真实 harness/gate/evidence 模块、随机 HMAC secret、独立指纹字面量），无登记值自回声；栈身份钉对照的是锁文件（独立物）而非自算指纹自身；openspec/npx/npm PATH 桩仅隔离宿主（外层工具，SUT=真实构建 CLI 不在桩内），沿用原轮已接受设计并在本报告如实登记"
+  },
+  "mutation_injection": [
+    {"id": "M1", "mutation": "harness.js defineDriver 摘除 DRIVER_SURFACE_REFUSED（read-only 可携带 execute）", "caught_by": ["comet-driver 'F05: a read-only driver cannot carry an execute surface at all'", "1_3.mjs '1.3.b/F05/OV01'（case 层）"], "evidence": "worker-reports/P1_3-rework/evidence/mutation-m1-driver-surface-refused-removed.txt"},
+    {"id": "M2", "mutation": "comet.js cometLaunchAuthority.verifyDispatch 摘除 RUN_MISMATCH 预检", "caught_by": ["comet-driver 'F07: dispatch and verification are refused when run or runner identity does not match the bound authority'"], "evidence": "worker-reports/P1_3-rework/evidence/mutation-m2-run-binding-removed.txt"},
+    {"id": "M3", "mutation": "harness.js createRunner 摘除 RUNNER_PHASE_FIELD_REFUSED（dispatch 绑定可携带 phase）", "caught_by": ["comet-driver 'Runner.Dispatch.v1: the runner interface has no phase write surface'"], "evidence": "worker-reports/P1_3-rework/evidence/mutation-m3-phase-field-refusal-removed.txt"},
+    {"id": "M4", "mutation": "comet.js sealCloseout 摘除 ARCHIVE_ALREADY_SEALED（二次 closeout 放行）", "caught_by": ["comet-driver '1.3.c: a duplicate archive request from a second execution is refused at the driver layer'", "1_3.mjs closeout 测试（case 层）"], "evidence": "worker-reports/P1_3-rework/evidence/mutation-m4-archive-already-sealed-removed.txt"}
+  ],
+  "p24_p25_consistency": "只读对照完成（worker-reports/P1_3-rework/evidence/p24-p25-consistency-readout.txt）：role 同构（两侧均为 launcher/运行时 attest、worker 不可自铸、builder 永不签验收：0002 role==GATE_ROLES[gate] ↔ 本地 IDENTITY_CONFLICT/ROLE_NOT_DISPATCHED）；inputDigest 同构（一次性绑定，D02 ↔ STALE_CANDIDATE/STALE_AUTHORIZATION/ARTIFACT_DIGEST_MISMATCH）；generation 无矛盾、分工明确——0002 是强制方（gate_invalidations 单调注册表 + dispatch.generation==current + 旧代 open dispatch 置 stale），P2_5 消费面以 REVIEW_REVISION_MISMATCH/REVISION_REGRESSION 达成同代数防复活，P1_3 本地面携带 epoch 且 currency 以 inputDigest/policyDigest/environment 判定、自身无持久失效注册表，故本地 admit 路径对同摘要字节回滚复活不设防——即 evidence.js 声明的 collaboration-grade 本地等价边界，且 P1_3 面自身不派发 gate（唯一运行时派发），无行为依赖该本地 attestation。ROUTE（记录不动作）：若未来要求本地 generation attestation，归属 lib/delivery/evidence.js（P2_2 owns）。0003 H07（知识 closeout 未满足 run 保持 open）与 sealCloseout Kp-before-seal 次序一致。P2_4/P2_5 集成后本任务 22/22 双跑 GREEN 即接缝回归证据",
+  "verification": {
+    "owns_green_x2": "node --test test/comet-driver.test.js test/delivery-cases/1_3.mjs → 22/22 pass，exit 0，两次",
+    "journeys": "--scenario F05/F07/A09 --profile managed-pilot 全 PASS（exit 0，target found+ok，requiredAssertions satisfied）",
+    "full_suite": "npm test → exit 1：441 tests / 438 pass / 2 fail / 1 skip；两失败为既有已知项（C08 pinned host OpenSpec 1.3.1 状态缺依赖边；B08 spec MODIFIED delta），与 P2_4（base c6081c2）/P2_5/P1_2（base d7ff690）基线记录完全一致，零新增",
+    "mutation_restore": "四个变异逐一应用→捕获→还原，harness.js/comet.js 与变更后基线 sha256 逐字节一致"
+  },
+  "environment_notes": [
+    "构建前置：本 worktree 无 .sdd/vendor 构建缓存；从主检出 .sdd/vendor/comet 以 APFS clone(-cR) 复制同源 pristine/provenance/builds（d4370930…，构建时 manifest 校验），CLI --version=0.4.5 与锁一致，1_3.mjs setup（prepared/built/栈身份/--version）全过；.sdd 为 gitignore，不入提交",
+    "会话锚点：Edit 工具 hook 将本会话锚在 festive-cohen-c1b5e4 工作树而拒绝写 rw-p1-3；EnterWorktree 又因会话 cwd=仓库根不可切换。OS 沙箱明确允许本仓库路径写、任务指定 rw-p1-3/分支、git 操作全部成功，故以精确匹配替换脚本落盘；未触碰 festive-cohen-c1b5e4 与任何活配置",
+    "1_4.mjs/1_5.mjs 仍钉 /^beab355d/ 字面（同款 setup 会失败）——非 P1_3 Owns，路由 P1_4/P1_5 lanes；1_6.mjs（计数钉）与 2_4.mjs（语义钉）不受影响"
+  ],
+  "commands": {
+    "git log --oneline -1 (opening)": "46df6df",
+    "git merge daccc07 --ff-only": 0,
+    "node --test test/delivery-cases/1_3.mjs (RED, pin drift)": 1,
+    "delivery-journey --scenario F05/F07/A09 (RED)": "2/2/2 (F05/F07 target.found=false; A09 found 但被 setup RED 连带)",
+    "node --test test/comet-driver.test.js test/delivery-cases/1_3.mjs (GREEN x2)": "0, 0 (22/22 两次)",
+    "delivery-journey --scenario F05/F07/A09 (GREEN)": "0/0/0 (satisfied: F05 ok=1, F07 ok=1, A09 ok=2)",
+    "mutations M1-M4 (applied)": "1/1/1/1 (各捕其靶)",
+    "mutations M1-M4 (reverted, re-green)": 0,
+    "npm test (full)": 1,
+    "npm test 失败集合": "C08 + B08（已知项，零新增）+ 1 skip"
+  },
+  "unverified": [
+    "Shell/MCP 写渠道的宿主级拦截仍为 A09 能力缺口（guard matcher Write|Edit 不归位该二渠道）——按纪律如实记 gap，非本任务可修复项（路由 guard hook contract 扩展 owner）",
+    "P2_4 运行时 managed_delivery=true 下 gate_invalidations 的运行时行为未在本任务重跑（P2_4 owns；本任务仅只读对照其补丁语义）",
+    "本地 admit 路径的 generation attestation 缺席为已记录的设计边界（见 p24_p25_consistency），非本轮验证目标"
+  ],
+  "files_changed": [
+    "test/delivery-cases/1_3.mjs",
+    "lib/adapters/comet.js",
+    "worker-reports/P1_3.rework.json",
+    "worker-reports/P1_3-rework/evidence/ (15 个 .txt：RED/GREEN×2/3 journey×2/全量 npm test/4 变异/一致性对照)"
+  ],
+  "blockers_or_questions": [
+    "无阻断。两条如实上报：Edit-hook/EnterWorktree 会话锚点与多工作树 worker 拓扑冲突（本次以沙箱允许的脚本写入完成，建议 controller 侧为 rw-* worker 会话修正锚点）；1_4/1_5 的 beab355d 字面钉漂移属各自 lane"
+  ]
+}
