@@ -1,0 +1,93 @@
+== P2_3 rework evidence 02: arch-review quorum negatives re-fired on current source (zero mocks, real python review_gate.py subprocess in every path) ==
+driver: quorum-negatives.mjs (standalone, imports the adapter from <WORKTREE>/lib/adapters/architecture-review.js)
+note: tasks.md assigns lib/adapters/architecture-review.js to Task P2_5 (E03/E04/H06); this re-fire is the rework brief's quorum re-verification requirement, executed read-only against current source.
+{
+  "driver": "quorum-negatives.mjs (P2_3 rework, current source, zero mocks)",
+  "thresholds": {
+    "overall": 8,
+    "criterion": 7
+  },
+  "participants": [
+    "claude-code",
+    "zcode",
+    "codex-agent"
+  ],
+  "results": [
+    {
+      "case": "P0 positive control: 3/3 unanimous APPROVE >= thresholds, finalized -> PASSED",
+      "tally_exit": 0,
+      "tally_status": "PASSED",
+      "finalize_ok": true,
+      "judge_status": "PASSED",
+      "refusal_codes": [],
+      "verdict": "HELD (correctly passed)"
+    },
+    {
+      "case": "N1 missing ballot (absent votes): only 2 of 3 ballots present",
+      "tally_exit": 1,
+      "tally_status": "INCOMPLETE",
+      "judge_status": "REFUSED",
+      "refusal_codes": [
+        "MISSING_BALLOT",
+        "QUORUM_NOT_UNANIMOUS"
+      ],
+      "verdict": "HELD (blocked)"
+    },
+    {
+      "case": "N2 below threshold: one ballot overall 7.9 (< 8), criterion 6 (< 7)",
+      "tally_exit": 1,
+      "tally_status": "DEBATE_REQUIRED",
+      "judge_status": "REFUSED",
+      "refusal_codes": [
+        "QUORUM_NOT_UNANIMOUS",
+        "THRESHOLD_SHORT"
+      ],
+      "verdict": "HELD (blocked)"
+    },
+    {
+      "case": "N3a digest mismatch: manifest artifact digest tampered after init",
+      "judge_status": "REFUSED",
+      "refusal_codes": [
+        "PACKAGE_DIGEST_MISMATCH"
+      ],
+      "verdict": "HELD (blocked)"
+    },
+    {
+      "case": "N3b package edited after init: real tally catches artifact_changed",
+      "tally_exit": 1,
+      "tally_status": "BLOCKED",
+      "judge_status": "REFUSED",
+      "refusal_codes": [
+        "ARTIFACT_CHANGED"
+      ],
+      "verdict": "HELD (blocked)"
+    },
+    {
+      "case": "N4 stale ballot: rev-2 package judged with rev-1 ballots (old digest, old review_id)",
+      "tally_exit": 1,
+      "judge_status": "REFUSED",
+      "refusal_codes": [
+        "MISSING_BALLOT",
+        "INVALID_BALLOT",
+        "QUORUM_NOT_UNANIMOUS",
+        "BALLOT_REVIEW_MISMATCH",
+        "STALE_DIGEST",
+        "BALLOT_REVIEW_MISMATCH",
+        "STALE_DIGEST",
+        "BALLOT_REVIEW_MISMATCH",
+        "STALE_DIGEST"
+      ],
+      "verdict": "HELD (blocked)"
+    },
+    {
+      "case": "N5 non-unanimous: 2 APPROVE + 1 REJECT (majority must not pass)",
+      "tally_exit": 1,
+      "tally_status": "DEBATE_REQUIRED",
+      "judge_status": "REFUSED",
+      "refusal_codes": [
+        "QUORUM_NOT_UNANIMOUS"
+      ],
+      "verdict": "HELD (blocked)"
+    }
+  ]
+}
