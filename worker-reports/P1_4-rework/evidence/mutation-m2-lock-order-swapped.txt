@@ -1,0 +1,256 @@
+M2 mutation: upstream.lock.json patch order swapped (0002 <-> tests/2_4), length still 6
+expected catch: setup deepEqual 'the locked stack must be exactly 0001 + tests/1_6 + 0002 ... + tests/4_6'
+observed: case exit=1; setup failed with exactly that deepEqual message
+restored: sha256 89d3c51a6b321d741a883b0141727c04675986262217f56312d67ba59769535a before == after
+
+--- case output (mutation applied) ---
+✖ setup: the patched pinned build named by the source lock is manifest-verified in this project (1.624333ms)
+✖ 1.4.a: the structured mode registration exists and pins this exact patched build (5.27725ms)
+✖ 1.4.a/M01: Classic init exposes the real state machine, guard hook and check runtime — the surfaces the registration pins (36.504708ms)
+✖ 1.4.a: Native mode is a capability comparison only — own surfaces, no classic control plane, not a fallback (33.754917ms)
+✖ 1.4.b/F06 class 2 (missing required check): every gated entrance refuses, next stays guidance (34.441125ms)
+✖ 1.4.b class 1 (irrelevant successful command): a cross-scope success is refused natively; the registered gap is the missing required-check identity (33.757333ms)
+✖ 1.4.b class 3 (hand written receipt): the guard refuses a manual record-check declaration (37.123708ms)
+✖ 1.4.b class 1b (registered gap, real): a trivial exit-0 command under the build scope satisfies the gate (35.048625ms)
+✖ 1.4.b class 3 (stale receipt): evidence that predates a source mutation is refused at the verify gate (0.831583ms)
+✖ 1.4.b class 4 (escape path, real): COMET_SKIP_BUILD=1 alone voids the whole evidence chain — registered gap with extension acceptance (36.822208ms)
+✖ 1.4.c: the built-in project memory is a HOME-scoped cache, never an LLMWiki/Outline receipt — boundary registered (38.101083ms)
+✖ 1.4.b/C07: the registered entrance matrix covers the write channel and every record cites real probe files (7.536416ms)
+✔ cleanup removes the scratch world (1.81425ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 1
+ℹ fail 12
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 376.494291
+
+✖ failing tests:
+
+test at test/delivery-cases/1_4.mjs:161:1
+✖ setup: the patched pinned build named by the source lock is manifest-verified in this project (1.624333ms)
+  AssertionError [ERR_ASSERTION]: the locked stack must be exactly 0001 + tests/1_6 + 0002 (managed delivery runtime) + tests/2_4 + 0003 (post-archive closeout) + tests/4_6
+  + actual - expected
+  
+    [
+      'integrations/comet/patches/0001-matt-method-profile.patch',
+      'integrations/comet/patches/tests/1_6.patch',
+  +   'integrations/comet/patches/tests/2_4.patch',
+      'integrations/comet/patches/0002-managed-delivery-runtime.patch',
+  -   'integrations/comet/patches/tests/2_4.patch',
+      'integrations/comet/patches/0003-post-archive-closeout.patch',
+      'integrations/comet/patches/tests/4_6.patch'
+    ]
+  
+      at TestContext.<anonymous> (file://<repo-worktree-rw-p1-4>/test/delivery-cases/1_4.mjs:167:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.start (node:internal/test_runner/test:1096:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 'integrations/comet/patches/0001-matt-method-profile.patch', 'integrations/comet/patches/tests/1_6.patch', 'integrations/comet/patches/tests/2_4.patch', 'integrations/comet/patches/0002-managed-delivery-runtime.patch', 'integrations/comet/patches/0003-post-archive-closeout.patch', 'integrations/comet/patches/tests/4_6.patch' ],
+    expected: [ 'integrations/comet/patches/0001-matt-method-profile.patch', 'integrations/comet/patches/tests/1_6.patch', 'integrations/comet/patches/0002-managed-delivery-runtime.patch', 'integrations/comet/patches/tests/2_4.patch', 'integrations/comet/patches/0003-post-archive-closeout.patch', 'integrations/comet/patches/tests/4_6.patch' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/delivery-cases/1_4.mjs:183:1
+✖ 1.4.a: the structured mode registration exists and pins this exact patched build (5.27725ms)
+  AssertionError [ERR_ASSERTION]: the qualification must be bound to the patched build fingerprint
+  + actual - expected
+  
+  + 'd437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6'
+  - '2792c180a556a4dd8ff9c3b3ccf46f6b2131d226e33cb4f6aacc4c6ad7f36187'
+  
+      at TestContext.<anonymous> (file://<repo-worktree-rw-p1-4>/test/delivery-cases/1_4.mjs:186:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'd437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6',
+    expected: '2792c180a556a4dd8ff9c3b3ccf46f6b2131d226e33cb4f6aacc4c6ad7f36187',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/delivery-cases/1_4.mjs:200:1
+✖ 1.4.a/M01: Classic init exposes the real state machine, guard hook and check runtime — the surfaces the registration pins (36.504708ms)
+  AssertionError [ERR_ASSERTION]: comet init (classic) failed: node:internal/modules/cjs/loader:1479
+    throw err;
+    ^
+  
+  Error: Cannot find module '<repo-worktree-rw-p1-4>/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/2792c180a556a4dd8ff9c3b3ccf46f6b2131d226e33cb4f6aacc4c6ad7f36187/work/bin/comet.js'
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1476:15)
+      at wrapResolveFilename (node:intern
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file://<repo-worktree-rw-p1-4>/test/delivery-cases/1_4.mjs:202:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/delivery-cases/1_4.mjs:239:1
+✖ 1.4.a: Native mode is a capability comparison only — own surfaces, no classic control plane, not a fallback (33.754917ms)
+  AssertionError [ERR_ASSERTION]: comet init (native) failed: node:internal/modules/cjs/loader:1479
+    throw err;
+    ^
+  
+  Error: Cannot find module '<repo-worktree-rw-p1-4>/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/2792c180a556a4dd8ff9c3b3ccf46f6b2131d226e33cb4f6aacc4c6ad7f36187/work/bin/comet.js'
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1476:15)
+      at wrapResolveFilename (node:intern
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file://<repo-worktree-rw-p1-4>/test/delivery-cases/1_4.mjs:241:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/delivery-cases/1_4.mjs:270:1
+✖ 1.4.b/F06 class 2 (missing required check): every gated entrance refuses, next stays guidance (34.441125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  undefined !== 0
+  
+      at TestContext.<anonymous> (file://<repo-worktree-rw-p1-4>/test/delivery-cases/1_4.mjs:273:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/delivery-cases/1_4.mjs:320:1
+✖ 1.4.b class 1 (irrelevant successful command): a cross-scope success is refused natively; the registered gap is the missing required-check identity (33.757333ms)
+  AssertionError [ERR_ASSERTION]: the cross-scope probe must itself really run and succeed
+      at TestContext.<anonymous> (file://<repo-worktree-rw-p1-4>/test/delivery-cases/1_4.mjs:325:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: /Check verify: exit=0/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at test/delivery-cases/1_4.mjs:347:1
+✖ 1.4.b class 3 (hand written receipt): the guard refuses a manual record-check declaration (37.123708ms)
+  AssertionError [ERR_ASSERTION]: recording the manual declaration itself is allowed
+  
+  undefined !== 0
+  
+      at TestContext.<anonymous> (file://<repo-worktree-rw-p1-4>/test/delivery-cases/1_4.mjs:350:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/delivery-cases/1_4.mjs:356:1
+✖ 1.4.b class 1b (registered gap, real): a trivial exit-0 command under the build scope satisfies the gate (35.048625ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /Check build: exit=0/. Input:
+  
+  ''
+  
+      at TestContext.<anonymous> (file://<repo-worktree-rw-p1-4>/test/delivery-cases/1_4.mjs:360:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: /Check build: exit=0/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at test/delivery-cases/1_4.mjs:366:1
+✖ 1.4.b class 3 (stale receipt): evidence that predates a source mutation is refused at the verify gate (0.831583ms)
+  Error: ENOENT: no such file or directory, open '<TMPDIR-scratch>/classic/docs/openspec/changes/qualify-change/verification.md'
+      at async open (node:internal/fs/promises:640:25)
+      at async Object.writeFile (node:internal/fs/promises:1257:14)
+      at async TestContext.<anonymous> (file://<repo-worktree-rw-p1-4>/test/delivery-cases/1_4.mjs:368:3)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '<TMPDIR-scratch>/classic/docs/openspec/changes/qualify-change/verification.md'
+  }
+
+test at test/delivery-cases/1_4.mjs:386:1
+✖ 1.4.b class 4 (escape path, real): COMET_SKIP_BUILD=1 alone voids the whole evidence chain — registered gap with extension acceptance (36.822208ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  undefined !== 0
+  
+      at TestContext.<anonymous> (file://<repo-worktree-rw-p1-4>/test/delivery-cases/1_4.mjs:389:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/delivery-cases/1_4.mjs:446:1
+✖ 1.4.c: the built-in project memory is a HOME-scoped cache, never an LLMWiki/Outline receipt — boundary registered (38.101083ms)
+  AssertionError [ERR_ASSERTION]: comet knowledge remember must answer
+      at TestContext.<anonymous> (file://<repo-worktree-rw-p1-4>/test/delivery-cases/1_4.mjs:449:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/delivery-cases/1_4.mjs:482:1
+✖ 1.4.b/C07: the registered entrance matrix covers the write channel and every record cites real probe files (7.536416ms)
+  Error: the project has no .claude/settings.local.json hook registration; run comet init first
+      at async open (node:internal/fs/promises:640:25)
+      at async Object.readFile (node:internal/fs/promises:1287:14)
+      at async describeWorkspace (file://<repo-worktree-rw-p1-4>/lib/adapters/comet.js:100:27)
+      at async probeWriteChannels (file://<repo-worktree-rw-p1-4>/lib/adapters/comet.js:160:21)
+      at async TestContext.<anonymous> (file://<repo-worktree-rw-p1-4>/test/delivery-cases/1_4.mjs:484:19)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    errno: -2,
+    code: 'WORKSPACE_HOOK_MISSING',
+    syscall: 'open',
+    path: '<TMPDIR-scratch>/classic/.claude/settings.local.json'
+  }

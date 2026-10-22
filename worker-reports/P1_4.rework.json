@@ -1,0 +1,61 @@
+{
+  "task": "P1_4 (rework-seven-p1-r1): 模式资格 Classic/Native + 四类放行漏洞负例 + 知识主库边界 — REOPEN 重验 + P1_3 路由义务（栈身份钉）+ 场景锚点（C07/F06/M01）",
+  "run": "rework-seven-p1-r1",
+  "worktree": ".claude/worktrees/rw-p1-4 (branch rework/p1-4-isolation)",
+  "opening_receipt": "git log --oneline -1 -> d0317d4 chore(openspec): accept P1_3 rework (8/8; review APPROVED; stack-identity pin); status clean",
+  "final_status": "DONE",
+  "steps_done": "8/8 (tasks.md ### Task P1_4 共 8 步；Step1-6 以 RED→GREEN 全量重执行（1.4.a/1.4.b 四类/1.4.c 全部在 d4370930 六补丁构建上真跑），Step7 自审+跨面只读对照，Step8 串行提交；tasks.md 勾选归控制器，本 worker 未碰",
+  "owns_boundary_check": "Owns 逐字核对 = openspec/changes/delivery-foundation-rearchitecture/mode-qualification.json, openspec/changes/delivery-foundation-rearchitecture/mode-probes, test/delivery-cases/1_4.mjs + 本轮授权新增 worker-reports/P1_4.rework.json 与 worker-reports/P1_4-rework/evidence/。本轮改动仅 1_4.mjs（+16/-5：栈身份钉+两处 journey 锚+头注释）与 mode-qualification.json（4 行：fingerprint/verification/note/repinNote 第三次 repin）；mode-probes 六个证据文件保持原样（2026-10-20 发现会话观察记录，不改写日期/指纹，重验走 worker-reports 证据）；tasks.md/execution-state/ledger/drift-lock/活配置只读未碰；upstream.lock.json 未动（M1/M2 变异后逐字节还原）",
+  "repair_coverage": {
+    "p13_routed_pin_fix": "DONE — RED 实证：1_4.mjs:164 钉 /^beab355d/ 字面，P2_4 rework 将 0002 补丁修订整合进锁（同六补丁栈，指纹 d4370930…），setup 实际失败 'patched fingerprint drifted: d4370930…'（evidence/red-1_4-pin-drift.txt），同跑第二断言 qualification.build.fingerprint=beab355d ≠ 活指纹失败；其余 11/13 行为测试全绿（真实漂移仅在钉）。修复：照抄 P1_3 已验收先例（1_3.mjs）改栈身份钉——patches.length===6 + 六补丁路径集合 deepEqual（0001+tests/1_6+0002+tests/2_4+0003+tests/4_6）+ notEqual cb1151b4（发现会话预 0002 构建永不满足）；qualification.build.fingerprint 重绑 d4370930 并附第三次 repin 记录。GREEN 后补丁字节再修订不再破坏本 case（M1/M2 变异实证钉仍咬合），错误栈仍被拒",
+    "repin_reverification_real": "DONE — 第三次 repin 的重验是真跑非转录：node(24.15.0) tools/comet/build.mjs --check-generated --runtime-smoke --json -> PASS 4/4（check-generated classic/native/entry + runtime-smoke 85.5s），且 smoke 后只读 distribution manifest 复核 PASS（evidence/build-verify-d4370930.txt）；构建从主检出以 APFS clone(-cRp) 复制同源 pristine/provenance/builds@d4370930，工具自身 provenance+manifest 校验兜底内容完整性",
+    "core_reverify_r1_semantics": "DONE×2 — 13/13 GREEN 两次（evidence/green-run1/2-13of13.txt）+ 变异还原后 sanity 第三跑 GREEN：受管写（C07 写通道 edit 拒绝 exit 2 + 六入口 c07Entrances 注册齐全）、权限（guard matcher Write|Edit 装配、guard preview/--apply 零检查证据拒、拒后 phase 不前移、record-check 手写回执永不满足 guard、stale receipt 'check inputs changed' 拒）、身份/模式隔离（native 项目 classic state 命令拒绝 exit 1 'Classic artifact layout is unavailable'、workflow resolve 只随 init 期配置绑定、autoSwitch.allowed=false、COMET_FORCE_PHASE 伪造 phase 仍被 archive 入口拒 'verify_result is pending'）、知识边界（builtin memory HOME 缓存非权威、不覆写 LLMWiki/Outline/DeepWiki、Kp 由 driver gate 执行）——全部在 d4370930 当前源码上复验为真",
+    "scenario_anchors": "DONE — 场景锚点检查：case-plan 绑定 1_4.mjs 的场景 = C07、F06（M01 注册 case_module 为 1_6.mjs，归 P1_6）。RED 实证：原测试名只有 C07 词边界锚，F06 仅存在于注释 → F06 journey target.found=false 风险；修复：'1.4.b/F06 class 2 (missing required check)'（F06 oracle 的 gate 阻断半边，该测试真实复现 workflow 步骤全成功+零必需检查证据→全入口拒绝）与 '1.4.a/M01: Classic init...'（本 case 携带的 M01 断言面：受管路径无 Superpowers 运行时）。修复后三 journey 全 PASS exit 0：C07 found ok（13 pass）、F06 found ok（13 pass）、M01 found ok（经 1_6.mjs 10 pass）——evidence/journey-C07/F06/M01.txt",
+    "self_certification_audit": "DONE — 自证模式审查通过：期望值均来自独立真实观察（真实构建 CLI 子进程、锁文件、注册 JSON、probe 证据文件回读），无登记值自回声；栈身份钉对照锁文件（独立物）；修改仅钉与锚，行为断言零改动，RED→GREEN 差异可完全归因于漂移本身"
+  },
+  "mutation_injection": [
+    {"id": "M1", "mutation": "upstream.lock.json 六补丁摘除 tests/4_6.patch（6->5）", "caught_by": ["1_4.mjs setup 栈身份钉 'must carry the six locked patches'"], "evidence": "worker-reports/P1_4-rework/evidence/mutation-m1-lock-patch-removed.txt", "restore": "sha256 89d3c51a… 前==后"},
+    {"id": "M2", "mutation": "upstream.lock.json 补丁次序对调（0002 <-> tests/2_4，长度仍 6）", "caught_by": ["1_4.mjs setup deepEqual 'the locked stack must be exactly 0001 + tests/1_6 + 0002 … + tests/4_6'"], "evidence": "worker-reports/P1_4-rework/evidence/mutation-m2-lock-order-swapped.txt", "restore": "sha256 89d3c51a… 前==后"},
+    {"id": "M3", "mutation": "mode-qualification.json knowledgeBoundary.builtinMemory.authoritative false->true", "caught_by": ["1_4.mjs 1.4.c 'the built-in memory must be registered as non-authoritative'"], "evidence": "worker-reports/P1_4-rework/evidence/mutation-m3-knowledge-authority-flipped.txt", "restore": "sha256 f9f4d988… 前==后（首次 git checkout 误回 HEAD=pre-repin，重放 repin 后逐字节核对一致——过程在 evidence 内如实记录）"},
+    {"id": "M4", "mutation": "mode-qualification.json blockingItems 摘除 B1（irrelevant-successful-command，6->5）", "caught_by": ["1_4.mjs class 1 'must be a registered blocking item'"], "evidence": "worker-reports/P1_4-rework/evidence/mutation-m4-b1-removed.txt", "restore": "sha256 f9f4d988… 前==后"},
+    {"id": "M5", "mutation": "跨文件：lib/adapters/comet.js probeWriteChannels asRecord outcome 强制 'gap'（edit 通道 guard 拒绝被抹掉）", "caught_by": ["1_4.mjs 1.4.b/C07 'the write-channel entrance must really refuse a cross-phase write (C07)'"], "evidence": "worker-reports/P1_4-rework/evidence/mutation-m5-write-channel-refusal-erased.txt", "restore": "sha256 0e4fee2f… 前==后"}
+  ],
+  "verification": {
+    "owns_green_x2": "node --test test/delivery-cases/1_4.mjs -> 13/13 pass，exit 0，两次（evidence/green-run1/2-13of13.txt）；变异还原后 sanity 第三跑 13/13",
+    "journeys": "C07/F06/M01 --profile managed-pilot 全 PASS exit 0（target found+ok；C07/F06 执行 1_4.mjs，M01 执行其注册模块 1_6.mjs）",
+    "build_reverification": "d4370930 构建 check-generated+runtime-smoke PASS 4/4，smoke 后 manifest 只读复核 PASS（evidence/build-verify-d4370930.txt）",
+    "full_suite": "npm test -> exit 1：442 tests / 439 pass / 2 fail / 1 skip；两失败为既有已知项（C08 pinned host OpenSpec 1.3.1 依赖边缺失；B08 spec MODIFIED delta），与 P1_3 rework 基线（worker-reports/P1_3.rework.json：C08+B08）完全一致，零新增（evidence/npm-test-full-and-sanity.txt）",
+    "mutation_restore": "五个变异逐一应用→捕获→还原，lock/qualification/comet.js sha256 逐字节一致"
+  },
+  "environment_notes": [
+    "构建前置：本 worktree 无 .sdd/vendor 构建缓存；从主检出 .sdd/vendor/comet 以 APFS clone 复制同源 pristine/provenance/builds（d4370930…）。第一次 cp -cR（无 -p）克隆后目录 mtime 被刷新，cli-smoke 的 ensureCliBuilt 依目录 mtime 误判 dist 过期并在 smoke 内并发重跑 build.js，导致（a）与 native staleness 测试竞态使其假失败（expected exit 1 got 0）、（b）dist/dashboard 资产以本 worktree 绝对路径重建 → manifest BUILD_BASELINE_DRIFT。诊断后以 cp -cRp 重克隆（目录 mtime 与源一致），verifyCometDistribution 全链 PASS 且 smoke 后 manifest 干净。非产品缺陷，为克隆环境伪影；复用克隆路径的后续 lane 必须用 -p（或等价保留目录 mtime）",
+    "1_5.mjs:186 同款 /^beab355d/ 字面钉在本 worktree 实测失败（pass 4 / fail 1，evidence/cross-lane-1_5-pin-drift-routed.txt）——非 P1_4 Owns，路由 P1_5 lane；1_6.mjs（计数钉）与 2_4.mjs（计数钉）不受影响",
+    "mode-probes/ 证据文件为本轮 Owns 但保持原样：它们是 2026-10-20 发现会话的真实观察记录（cb1151b4 会话），repin 语义（原 evidence 会话+当前构建重验）沿用文件内既有 repinNote 先例，不改写历史"
+  ],
+  "commands": {
+    "git log --oneline -1 (opening)": "d0317d4",
+    "node --test test/delivery-cases/1_4.mjs (RED, pin drift)": "exit 1, 11 pass / 2 fail（漂移钉+qualification 绑定）",
+    "build.mjs --check-generated --runtime-smoke (d4370930, 重验)": "exit 0 PASS 4/4; smoke 后只读 manifest 复核 PASS",
+    "node --test test/delivery-cases/1_4.mjs (GREEN x2)": "0, 0（13/13 两次）+ 变异后 sanity 0",
+    "delivery-journey --scenario C07/F06/M01 (GREEN)": "0/0/0（target found+ok 全部）",
+    "mutations M1-M5 (applied)": "1/1/1/1/1（case exit 1，各捕其靶）",
+    "mutations M1-M5 (reverted)": "sha256 前==后 ×5",
+    "node --test test/delivery-cases/1_5.mjs (observe only)": "exit 1（4 pass/1 fail，路由 P1_5）",
+    "npm test (full)": 1,
+    "npm test 失败集合": "C08 + B08（已知项，零新增）+ 1 skip"
+  },
+  "unverified": [
+    "M01 的注册 journey 面在 1_6.mjs（P1_6 owns）；1_4.mjs 内的 /M01 锚为该 case 自带 M01 断言面（无 Superpowers 运行时）的可寻址化，当前无 journey 消费——如控制器认为超范围可摘除（4 词重命名，不影响行为）",
+    "P1_5 lane 的 beab355d 字面钉漂移（1_5.mjs:186）实测复现但未修复——非本任务授权文件",
+    "0002 修订在 managed_delivery:true 变更下的运行时行为深验归 P2_4 owns（本任务四类负例全部在默认非 managed 变更上复验，与原资格语义一致）"
+  ],
+  "files_changed": [
+    "test/delivery-cases/1_4.mjs",
+    "openspec/changes/delivery-foundation-rearchitecture/mode-qualification.json",
+    "worker-reports/P1_4.rework.json",
+    "worker-reports/P1_4-rework/evidence/ (13 个 .txt：RED/GREEN×2/build 重验/3 journey/5 变异/全量 npm test+sanity/跨 lane 路由)"
+  ],
+  "blockers_or_questions": [
+    "无阻断。两条上报：(1) APFS 克隆必须保留目录 mtime（cp -cRp），否则 ensureCliBuilt 会并发重建 dist 使 manifest 漂移并污染并行 smoke——建议 controller 在多 lane runbook 里固化；(2) 1_5.mjs 同款字面钉漂移已实证，等 P1_5 lane 处理"
+  ]
+}

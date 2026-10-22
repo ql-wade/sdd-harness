@@ -6,7 +6,7 @@
   "build": {
     "name": "patched pinned Comet distribution",
     "sourceCommit": "c90af44a4474662d7853aae76ce785404974fb0a",
-    "fingerprint": "beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966",
+    "fingerprint": "d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6",
     "patches": [
       "integrations/comet/patches/0001-matt-method-profile.patch",
       "integrations/comet/patches/tests/1_6.patch",
@@ -15,9 +15,9 @@
       "integrations/comet/patches/0003-post-archive-closeout.patch",
       "integrations/comet/patches/tests/4_6.patch"
     ],
-    "verification": "node(24.15.0) tools/comet/build.mjs --check-generated --runtime-smoke --json -> PASS (check-generated classic/native/entry all PASS; runtime smoke green, re-verified on the repinned 6-patch build)",
-    "note": "all probes in mode-probes/ ran against this exact build; fingerprint asserted by test/delivery-cases/1_4.mjs",
-    "repinNote": "lock revision: 4 patches @ 9b95a0ff (P2_4 0002 + tests/2_4). The P1_4 probe evidence in mode-probes/ was captured on cb1151b4 (pre-0002); 0002 behavior is dormant unless a change is managed_delivery:true, so the qualified surface carries over; generated checks and runtime smoke re-verified PASS on 9b95a0ff by P2_4. Second repin (P4_6 integration): lock revision 6 patches @ beab355d (0003 post-archive closeout + tests/4_6 added); generated checks and runtime smoke re-verified PASS on beab355d."
+    "verification": "node(24.15.0) tools/comet/build.mjs --check-generated --runtime-smoke --json -> PASS (check-generated classic/native/entry all PASS; runtime smoke green 4/4; distribution manifest verified clean after the smoke; re-verified on the d4370930 six-patch build, rework-seven-p1-r1)",
+    "note": "all probes in mode-probes/ ran against this exact six-patch stack; the case qualifies the stack by identity (patch-path set) and the registration is bound to the current lock fingerprint, asserted by test/delivery-cases/1_4.mjs",
+    "repinNote": "lock revision: 4 patches @ 9b95a0ff (P2_4 0002 + tests/2_4). The P1_4 probe evidence in mode-probes/ was captured on cb1151b4 (pre-0002); 0002 behavior is dormant unless a change is managed_delivery:true, so the qualified surface carries over; generated checks and runtime smoke re-verified PASS on 9b95a0ff by P2_4. Second repin (P4_6 integration): lock revision 6 patches @ beab355d (0003 post-archive closeout + tests/4_6 added); generated checks and runtime smoke re-verified PASS on beab355d. Third repin (P2_4 rework integration, rework-seven-p1-r1): the 0002 patch was revised in place — same six-patch stack, lock fingerprint d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6; generated checks and runtime smoke re-verified PASS on d4370930 (node 24.15.0 tools/comet/build.mjs --check-generated --runtime-smoke --json -> PASS 4/4, distribution manifest verified clean after the smoke) by the P1_4 rework worker in worktree rw-p1-4."
   },
   "capabilityMatrix": [
     {

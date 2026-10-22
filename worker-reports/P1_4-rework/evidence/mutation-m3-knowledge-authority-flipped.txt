@@ -1,0 +1,47 @@
+M3 mutation: mode-qualification.json knowledgeBoundary.builtinMemory.authoritative false->true
+expected catch: 1.4.c 'the built-in memory must be registered as non-authoritative'
+observed: case exit=1; 1.4.c failed with exactly that assertion
+restored: re-applied repin bytes; sha256 f9f4d988b5e77c18a5b183fd06e924be0e8766bc134885e3337ee2f8bfc10ecd before == after
+note: first restore attempt used git checkout -- (HEAD=pre-repin) and was corrected by re-applying the repin; final bytes verified identical to the repinned working tree
+
+--- case output (mutation applied) ---
+✔ setup: the patched pinned build named by the source lock is manifest-verified in this project (84.424292ms)
+✔ 1.4.a: the structured mode registration exists and pins this exact patched build (2.607834ms)
+✔ 1.4.a/M01: Classic init exposes the real state machine, guard hook and check runtime — the surfaces the registration pins (2896.143958ms)
+✔ 1.4.a: Native mode is a capability comparison only — own surfaces, no classic control plane, not a fallback (931.254ms)
+✔ 1.4.b/F06 class 2 (missing required check): every gated entrance refuses, next stays guidance (7184.93275ms)
+✔ 1.4.b class 1 (irrelevant successful command): a cross-scope success is refused natively; the registered gap is the missing required-check identity (760.515959ms)
+✔ 1.4.b class 3 (hand written receipt): the guard refuses a manual record-check declaration (537.38875ms)
+✔ 1.4.b class 1b (registered gap, real): a trivial exit-0 command under the build scope satisfies the gate (1579.2365ms)
+✔ 1.4.b class 3 (stale receipt): evidence that predates a source mutation is refused at the verify gate (1533.670541ms)
+✔ 1.4.b class 4 (escape path, real): COMET_SKIP_BUILD=1 alone voids the whole evidence chain — registered gap with extension acceptance (7628.065625ms)
+✖ 1.4.c: the built-in project memory is a HOME-scoped cache, never an LLMWiki/Outline receipt — boundary registered (791.067708ms)
+✔ 1.4.b/C07: the registered entrance matrix covers the write channel and every record cites real probe files (457.917875ms)
+✔ cleanup removes the scratch world (17.341833ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 12
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 24491.506459
+
+✖ failing tests:
+
+test at test/delivery-cases/1_4.mjs:446:1
+✖ 1.4.c: the built-in project memory is a HOME-scoped cache, never an LLMWiki/Outline receipt — boundary registered (791.067708ms)
+  AssertionError [ERR_ASSERTION]: the built-in memory must be registered as non-authoritative
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file://<repo-worktree-rw-p1-4>/test/delivery-cases/1_4.mjs:472:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,5 +1,5 @@
 // P1_4 delivery case: mode qualification of the fixed Comet distribution
-// (patched build, fingerprint beab355d… after the P4_6 lock revision, manifest-verified on reuse) —
+// (patched six-patch build qualified by stack identity, manifest-verified on reuse) —
 // 1.4.a pins the Classic/Native capability matrix and the Classic admission
 // decision over the real built CLI (no automatic mode switch exists), 1.4.b
 // reproduces the four release loopholes for real against the patched build —
@@ -159,9 +159,20 @@ const gateVerdict = (result) => {
 const CHANGE = 'qualify-change';
 
 test('setup: the patched pinned build named by the source lock is manifest-verified in this project', () => {
-  // lock revision: 6 patches @ beab355d (P2_4 0002 + P4_6 0003 + tests)
+  // The case qualifies the six-patch stack by IDENTITY, not by byte
+  // fingerprint: patch bytes revise without changing the stack's shape (the
+  // P2_4 rework integrated the 0002 revision @ d4370930), while the original
+  // discovery session's pre-0002 build (cb1151b4) must never satisfy it.
   assert.equal(lock.patches.length, 6, 'the patched build must carry the six locked patches');
-  assert.match(fingerprint, /^beab355d/, `patched fingerprint drifted: ${fingerprint}`);
+  assert.deepEqual(lock.patches.map((patch) => patch.path), [
+    'integrations/comet/patches/0001-matt-method-profile.patch',
+    'integrations/comet/patches/tests/1_6.patch',
+    'integrations/comet/patches/0002-managed-delivery-runtime.patch',
+    'integrations/comet/patches/tests/2_4.patch',
+    'integrations/comet/patches/0003-post-archive-closeout.patch',
+    'integrations/comet/patches/tests/4_6.patch',
+  ], 'the locked stack must be exactly 0001 + tests/1_6 + 0002 (managed delivery runtime) + tests/2_4 + 0003 (post-archive closeout) + tests/4_6');
+  assert.notEqual(fingerprint, 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187', 'the pre-0002 discovery build must not satisfy this case');
   assert.ok(prepared, 'pristine Comet source has not been prepared; run tools/comet/prepare-source.mjs first');
   assert.ok(built, 'patched Comet build is not present; run tools/comet/build.mjs --archive first');
   const version = comet(['--version']);
@@ -186,7 +197,7 @@ test('1.4.a: the structured mode registration exists and pins this exact patched
   }
 });
 
-test('1.4.a: Classic init exposes the real state machine, guard hook and check runtime — the surfaces the registration pins', async () => {
+test('1.4.a/M01: Classic init exposes the real state machine, guard hook and check runtime — the surfaces the registration pins', async () => {
   const init = comet(['init', classicProject, '--yes', '--scope', 'project', '--workflow', 'classic', '--platform', 'claude', '--codegraph', 'skip', '--language', 'en'], { timeout: 300_000 });
   assert.equal(init.status, 0, `comet init (classic) failed: ${plain(init.stderr).slice(0, 400)}`);
 
@@ -256,7 +267,7 @@ test('1.4.a: Native mode is a capability comparison only — own surfaces, no cl
   assert.match(nativeRow.native.verdict ?? '', /comparison-only/);
 });
 
-test('1.4.b class 2 (missing required check): every gated entrance refuses, next stays guidance', async () => {
+test('1.4.b/F06 class 2 (missing required check): every gated entrance refuses, next stays guidance', async () => {
   await loadQualification(); // RED boundary first
   const setup = comet(['state', 'init', CHANGE, 'full', '--json']);
   assert.equal(setup.json?.exitCode, 0);

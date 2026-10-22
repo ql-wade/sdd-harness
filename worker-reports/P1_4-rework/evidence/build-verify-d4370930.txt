@@ -1,0 +1,6 @@
+build re-verification for the third repin (d4370930), rework-seven-p1-r1, worktree rw-p1-4
+command: node-24.15.0 tools/comet/build.mjs --check-generated --runtime-smoke --json
+exit=0 status=PASS 4/4 (check-generated classic/native/entry + runtime-smoke 85.5s)
+post-smoke read-only manifest verify: PASS (distribution.json tree recomputed == manifest)
+
+{"schemaVersion":1,"status":"PASS","version":"0.4.5","sourceCommit":"c90af44a4474662d7853aae76ce785404974fb0a","fingerprint":"d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6","verifiedPreparedSource":"<repo-worktree-rw-p1-4>/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/pristine","steps":[{"name":"check-generated:classic","command":"node-24.15.0 scripts/build/build-classic-runtime.mjs --check","exitCode":0,"status":"PASS"},{"name":"check-generated:native","command":"node-24.15.0 scripts/build/build-native-runtime.mjs --check","exitCode":0,"status":"PASS"},{"name":"check-generated:entry","command":"node-24.15.0 scripts/build/build-entry-runtime.mjs --check","exitCode":0,"status":"PASS"},{"name":"runtime-smoke","command":"node-24.15.0 node_modules/vitest/vitest.mjs run test/domains/comet-classic/comet-scripts.test.ts test/repository/native-runtime-assets.test.ts test/repository/comet-entry-runtime-assets.test.ts test/app/cli-smoke.test.ts","exitCode":0,"status":"PASS"}]}
