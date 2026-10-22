@@ -36,7 +36,7 @@ fail() { printf '❌ %s\n' "$*" >&2; exit 1; }
 
 # ---- 卸载：只移除受管条目，用户配置保留（F02 配置可回退）----
 if [ "$UNINSTALL" = true ]; then
-  say "🧹 scaffold uninstall（目标: $TARGET_ROOT）"
+  say "🧹 scaffold uninstall（目标: ${TARGET_ROOT}）"
   bash "$SCRIPT_DIR/adapters/claude-code.sh" --uninstall
   say "✅ 卸载完成。重新接入: SDD_TARGET_ROOT 不设或指向目标目录后 bash tools/bootstrap.sh"
   exit 0

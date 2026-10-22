@@ -85,7 +85,7 @@ test('CLI export produces a contract-valid lock and verify accepts it (real repo
   }
 });
 
-test('CLI verify fails on drifted assets and check-run blocks an active run (explicit migration path)', () => {
+test('V_F04: CLI verify fails on drifted assets and check-run blocks an active run (explicit migration path)', () => {
   const root = makeFixture();
   const out = path.join(root, 'foundation');
   try {
@@ -157,7 +157,7 @@ function caseComposition(name, fn) {
   });
 }
 
-caseComposition('forward then reverse composition: init, user edit, re-pull, uninstall, re-init', () => {
+caseComposition('V_F02: forward then reverse composition: init, user edit, re-pull, uninstall, re-init', () => {
   const root = makeFixture();
   try {
     const repoSettingsBefore = fs.existsSync(repoSettingsPath) ? fs.readFileSync(repoSettingsPath, 'utf8') : null;
@@ -270,7 +270,7 @@ caseComposition('duplicate same event/command registration (plugin entry wrappin
   }
 });
 
-caseComposition('repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable', () => {
+caseComposition('V_F02: repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable', () => {
   const root = makeFixture();
   try {
     assert.equal(bootstrapTarget(root).status, 0);

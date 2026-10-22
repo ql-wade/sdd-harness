@@ -359,6 +359,35 @@ compositionTest('uninstall removes managed entries only, is idempotent, and re-i
   }
 });
 
+compositionTest('uninstall is locale-safe: UTF-8 locale must not crash bootstrap (regression: unbraced $var before a multibyte char)', () => {
+  const root = makeFixture();
+  try {
+    assert.equal(runAdapter(root).status, 0);
+    const run = spawnSync('bash', [bootstrapPath, '--uninstall'], {
+      cwd: projectRoot,
+      encoding: 'utf8',
+      env: { ...process.env, SDD_TARGET_ROOT: root, LC_ALL: 'C.UTF-8', LANG: 'C.UTF-8' },
+    });
+    assert.equal(run.status, 0, run.stderr || run.stdout);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// Defect class pin (RED for the 2026-10-22 rework): under any UTF-8 locale,
+// bash parses a non-ASCII first byte as part of an unbraced variable name, so
+// `$VAR（…）` becomes `$VAR<0xEF>…` → "unbound variable" crash. Both owned
+// scripts must brace every expansion that sits next to multibyte text.
+test('owned control-plane scripts never place an unbraced variable expansion adjacent to multibyte text', () => {
+  const unbracedAdjacentToMultibyte = /\$\{?[A-Za-z_][A-Za-z0-9_]*\}?[^\x00-\x7f]/g;
+  for (const source of [adapterSrc, bootstrapSrc]) {
+    for (const m of source.matchAll(unbracedAdjacentToMultibyte)) {
+      if (m[0].startsWith('${')) continue;
+      assert.fail('unbraced variable adjacent to multibyte text (locale-dependent crash): ' + JSON.stringify(m[0]));
+    }
+  }
+});
+
 compositionTest('matcher registration and gate script behavior are tested together', () => {
   const root = makeFixture();
   try {
