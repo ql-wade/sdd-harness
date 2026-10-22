@@ -1,0 +1,52 @@
+# RED: package.lock.json resolution semantics contradict the operative project-local resolution
+run: rework-seven-p1-r1 / I04 rework | date: 2026-10-22 | worktree: <repo> (branch rework/i04-llmwiki, base 8c8e4a3)
+
+## 1. What the committed lock registers (pre-edit)
+source.cloneResolution        = "runtime env SDD_HOME (default $HOME/.sdd) -> repos/llmwiki; no host path is committed"
+source.commitStatusReason     = "... resolved through SDD_HOME at runtime ..." (no project-local registration)
+distribution.python.resolution = "LLMWIKI_PYTHON override > SDD_HOME/repos/llmwiki/.venv/bin/python"
+distribution.python.observedVersion = "3.14.7"
+distribution.python.note      = "requirements.lock was compiled for python 3.11 (uv header inside the lock); the venv actually runs 3.14.7 — version drift recorded as an observed fact, not reconciled here"
+distribution.requirementsLock.logicalPath = "SDD_HOME/repos/llmwiki/mcp/requirements.lock" (external-default SDD_HOME semantics, no project-local registration)
+
+## 2. What P1_1 actually landed (registered fact this lock contradicts)
+openspec/.../toolchain-baseline.json llmwiki_project_local:
+  sdd_home = "<project>/.sdd (project-local; overrides external ~/.sdd default)"
+  clone    = .sdd/repos/llmwiki, pinned 075c5b4996ff4e07f9d3c57c1f14fd2b54a955db (status clean)
+  venv     = .sdd/venvs/llmwiki-311, python "3.11.13 (matches requirements.lock compile target --python-version 3.11; eliminates the old external-venv 3.14.7 drift recorded in infra/delivery/llmwiki/package.lock.json)"
+  requirements_lock.note = "package.lock.json requirementsLock.logicalPath still reads 'SDD_HOME/repos/llmwiki/mcp/requirements.lock' with the external SDD_HOME default — ... I04 artifact itself is owned by a later integration wave"  <-- routed to I04
+  probe    = SDD_HOME=<repo>/.sdd LLMWIKI_PYTHON=<repo>/.sdd/venvs/llmwiki-311/bin/python ... exit 0 VERIFIED
+
+## 3. Mechanical contrast (this run, same committed lock, two SDD_HOME roots)
+qualify categories under the lock-declared default (SDD_HOME unset -> external $HOME/.sdd):
+  upstream-source   VERIFIED 075c5b4996ff4e07f9d3c57c1f14fd2b54a955db
+  requirements-lock VERIFIED 678bd730... 154140 bytes
+  venv-runtime      VERIFIED observed "Python 3.14.7" + driftNote "the venv actually runs 3.14.7"
+  mcp-package       VERIFIED 1.27.0
+  (exit 2 — honest NOT_READY by design; unrelated UNVERIFIED categories)
+
+qualify categories under the P1_1 project-local root (SDD_HOME=<repo>/.sdd, LLMWIKI_PYTHON=<repo>/.sdd/venvs/llmwiki-311/bin/python):
+  upstream-source   VERIFIED 075c5b4996ff4e07f9d3c57c1f14fd2b54a955db
+  requirements-lock VERIFIED 678bd730... 154140 bytes  (identical digest — bytes unchanged)
+  venv-runtime      VERIFIED observed "Python 3.11.13" but driftNote STILL says "the venv actually runs 3.14.7"
+  mcp-package       VERIFIED 1.27.0
+
+=> The receipt itself exposes the inconsistency: the operative python under the registered landing is
+   3.11.13 (lock-aligned), while the lock's python note keeps asserting a 3.14.7 venv that only the
+   superseded external default resolves. cloneResolution likewise registers the external default as
+   the resolution path. RED.
+
+## 4. Project-local root identity re-verification (fresh worktree copy of the P1_1-verified landing)
+  git -C <repo>/.sdd/repos/llmwiki rev-parse HEAD -> 075c5b4996ff4e07f9d3c57c1f14fd2b54a955db (== lock pin), status clean
+  sha256(<repo>/.sdd/repos/llmwiki/mcp/requirements.lock) -> 678bd7301d80a602336e8fd3a81f98adcd4c5beaec4e2f1f2bfb8d2e04a9e732, 154140 bytes (== registered; bytes unchanged => registered digest stays valid)
+  <repo>/.sdd/venvs/llmwiki-311/bin/python --version -> Python 3.11.13; mcp pkg -> 1.27.0
+  sha256(tools/mcp/llmwiki.sh) -> bd18bfea155ec0fc8c1ce9fb23414dafbeb94416f4096eb92624eb59932ae863 (== registered)
+
+## 5. Fix scope (this rework)
+  package.lock.json: cloneResolution / commitStatusReason / python.resolution+observedVersion+note /
+    requirementsLock.logicalPath re-registered as project-local ($SDD_HOME = <repo>/.sdd, P1_1 landing fact);
+    mcpSession receipts extended with the project-local rework re-verification.
+  mcp-profile.json: hostEntry.env.SDD_HOME annotation calibrated to project-local semantics.
+  project-root-policy.json: canonical-root wording calibrated (workspace binding is project-local post-P1_1;
+    containment authority root <main-working-tree>/llmwiki unchanged).
+  requirements.lock bytes untouched => sha256 678bd730... and 154140 stay exactly as registered.
