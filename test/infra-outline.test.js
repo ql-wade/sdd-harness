@@ -581,6 +581,31 @@ test('managed-publish gate: each blocking precondition refuses the publish with 
   assert.equal(runPublishGate(writePublishRequest(null, '{ not json')).status, 1);
 });
 
+test('admission record opens the up gate honestly: enabled=true without an admission record still refuses; with admittedBy/admittedAt/reason it validates clean', () => {
+  // Case 1: gate flipped without an admission record -> must keep refusing.
+  const noRecord = makeFixtureDir(({ json, writeJson }) => {
+    const lock = json('images.lock.json');
+    lock.upGate.enabled = true;
+    writeJson('images.lock.json', lock);
+  });
+  const r1 = runCli(['validate', '--registry', registryPath, '--dir', noRecord, '--json']);
+  assert.equal(r1.status, 2, 'gate-open without admission record must fail validate');
+  assert.ok(codes(parseJsonOut(r1, 'validate no admission record')).includes('UP_GATE_NOT_CLOSED'));
+
+  // Case 2: gate flipped WITH a complete admission record -> validate clean.
+  const admitted = makeFixtureDir(({ json, writeJson }) => {
+    const lock = json('images.lock.json');
+    lock.upGate.enabled = true;
+    lock.upGate.admittedBy = 'user directive 2026-10-22';
+    lock.upGate.admittedAt = '2026-10-22T08:00:00.000Z';
+    lock.upGate.reason = 'resource admission wave: default digest-pinned list approved by the user';
+    writeJson('images.lock.json', lock);
+  });
+  const r2 = runCli(['validate', '--registry', registryPath, '--dir', admitted, '--json']);
+  assert.equal(r2.status, 0, `admitted lock must validate clean, got ${r2.status}: ${r2.stdout}\n${r2.stderr}`);
+  assert.ok(!codes(parseJsonOut(r2, 'validate admitted')).includes('UP_GATE_NOT_CLOSED'));
+});
+
 test('compose gate: loopback exposure must not auto-open a public network and durable state must ride named volumes', () => {
   const internalFalse = makeFixtureDir(({ read, write }) => {
     write('compose.yaml', read('compose.yaml').replace('    internal: true', '    internal: false'));

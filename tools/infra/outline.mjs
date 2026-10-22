@@ -335,8 +335,12 @@ function validateDomain({ registry, refsDoc, files }) {
       add('DIGEST_AUTH_FLAG_INCONSISTENT', at, { reason: 'digestAuthenticated=true requires a digest' });
     }
   }
-  if (lock.upGate?.enabled !== false) {
-    add('UP_GATE_NOT_CLOSED', 'images.lock.json:upGate', { reason: 'committed lock must declare upGate.enabled=false until resource admission' });
+  // 准入语义：enabled=false 为默认；资源准入波次可显式开门，但必须携带完整准入记录
+  // （admittedBy/admittedAt/reason 三者齐备），否则仍视为越权开门。
+  const gate = lock.upGate ?? {};
+  const admissionRecordComplete = Boolean(gate.admittedBy && gate.admittedAt && gate.reason);
+  if (gate.enabled !== false && !admissionRecordComplete) {
+    add('UP_GATE_NOT_CLOSED', 'images.lock.json:upGate', { reason: 'up gate may open only with a complete admission record (admittedBy/admittedAt/reason); otherwise it must stay enabled=false' });
   }
 
   // env：明文秘密 / 宿主绝对路径 / 未绑定具体值（敏感变量只允许 secret-ref 或空）。
