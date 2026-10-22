@@ -1,0 +1,67 @@
+{
+  "task": "P2_4 (rework-seven-p1-r1): Comet 受管交付运行时 — P1-01 无 R 硬阻断 / P1-02 同调用者 dispatch 弱 oracle 拒绝 / P1-03 单调 revision 防复活",
+  "run": "rework-seven-p1-r1",
+  "worktree": ".claude/worktrees/rw-p2-4 (base c6081c2, clean at start; opening receipt: git log --oneline -1 => c6081c2 chore(openspec): accept P2_3 rework)",
+  "final_status": "DONE",
+  "steps_done": "6/6 (tasks.md Steps 11-16: RW_R_ENTRY / RW_TRUSTED_REVIEW / RW_REVISION_NO_REVIVE RED→GREEN, 实现, review 边界如实, commit)",
+  "repair_coverage": {
+    "P1_01_no_R_hard_block": "DONE — GateAction 增 enter-design（requiredGates=['R']），统一权威谓词接入全部入口：直接转换 open-complete（transitionLocked）、guard open preview/--apply（guardOpenChecks+guardGateCheck）、next（open 相位附 evaluation+route）、state check（open 相位 FAIL 行）、state gates（action=enter-design）、受管写（hook-guard 对 open|design 相位的 design_doc/test-intent 写入先评估 enter-design，缺/失效 R exit 2）、恢复/派发面（resolver managedPremisesBlocked design→enter-design，reconcile/set 不授权）、COMET_FORCE_PHASE 手改 phase 维持拒绝。可信 R 后 open-complete 正常进 design；非受管变更不受影响（回归对照断言）。RED=补丁版真实 CLI 上无 R open-complete 成功（01 文件，0!==1）。",
+    "P1_02_review_qualification": "DONE（本机机制验证，I02 边界如实）— accept-gate 对 pass 判定强证据：所有 gate 需 role==dispatch role（假身份拒）、inputDigest==dispatch.inputDigest（旧摘要拒）、非空 report + reportDigest==sha256(report)（空报告拒）；A 额外需 consensus{rule:unanimous,status:CLOSED,participants>=2 唯一,ballots 全覆盖且全 APPROVE 且 blockingFindings==0,agent∈participants（假身份/缺票/拒绝票/重复票拒）,artifactDigest==dispatch.inputDigest}；T 额外需 testDesignReview{verdict:sufficient,oracle∈strong|adequate（弱 oracle 拒）,inputDigest 绑定,reviewer}。正例：共识证据形状取自本 run 真实回执 openspec/.../consensus/2026-10-22-plan-r3/（只读），artifactDigest 重绑到被审输入，全链自动放行进 build。RED=同调用者 dispatch+空报告 pass 被接纳（02 文件）。",
+    "P1_03_monotonic_revision": "DONE — .comet.yaml 机器自有 gate_invalidations（JSON：每 gate {count,digest}），syncGateInvalidations(Locked) 在 dispatch/accept/transition/next/check/gates/guard/hook 各观测面于同一 Classic 状态锁内持久化已观测失效；GateDispatch/GateReceipt 增 generation（dispatch 绑当前代，accept 要求 dispatch.generation==当前代并记入 receipt）；evaluateGatePremises/collectGateEvidence 判据=内容 digest 匹配 AND receipt.generation==当前代。恢复原字节不回滚代际；旧 attempt 迟到按代际拒；sync 同时将旧代 open dispatch 置 stale（防 0003 job-key recovery 复活前代作业）；receipts 追加式保留。RED=改 design→阻断→还原原字节后 allowed=true 复活（03 文件，true!==false）。"
+  },
+  "rw_checks_implemented": [
+    {
+      "id": "V_RW_R_ENTRY",
+      "exit": "0 (GREEN x2, 证据 11/12；修复前同命令 exit 1=RED，证据 01；裸命令见 unverified 说明)"
+    },
+    {
+      "id": "V_RW_TRUSTED_REVIEW",
+      "exit": "0 (GREEN x2, 证据 11/12；修复前 exit 1=RED，证据 02)"
+    },
+    {
+      "id": "V_RW_REVISION_NO_REVIVE",
+      "exit": "0 (GREEN x2, 证据 11/12；修复前 exit 1=RED，证据 03)"
+    }
+  ],
+  "mutations_caught": [
+    "M1 enter-design 谓词置空（comet-state/guard/hook-guard 三 bundle）→ RW_R_ENTRY exit 1（'open-complete without an R receipt must be refused' 0!==1）— 证据 20",
+    "M2 consensus 拒绝票检查移除 → RW_TRUSTED_REVIEW exit 1 — 证据 21",
+    "M3 evaluateGatePremises 代际比较禁用 → RW_REVISION_NO_REVIVE exit 1（'byte-restoring the design must not revive' true!==false）— 证据 22；三次变异均逐字节还原（cmp 相等），还原后抽测绿，build.mjs reuse 复验 manifest 一致（reused:true）"
+  ],
+  "red_cases": [
+    "P1-01：真实 CLI（beab355d 六补丁构建，官方 build.mjs reuse 校验通过）无 R open-complete 成功、phase=design — 与 grill 反例一致",
+    "P1-02：同调用者依次 dispatch + 仅 {execution,attempt,verdict:pass} 的结果被接纳",
+    "P1-03：design 修改→gates 阻断→还原原字节→gates allowed=true 旧批准复活"
+  ],
+  "commands": {
+    "node --test --test-reporter=tap --test-name-pattern=RW_R_ENTRY|RW_TRUSTED_REVIEW|RW_REVISION_NO_REVIVE test/delivery-cases/2_4.mjs (RED, repo lock=beab355d 未修复构建)": "exit 1 x3（真实反例复现，证据 01-03）",
+    "node --test ... (GREEN run1+run2, COMET_UPSTREAM_LOCK=<tmp lock> → 构建 d4370930)": "exit 0 x6（证据 11/12）",
+    "node --test --test-reporter=tap test/delivery-cases/2_4.mjs (全文件 13 用例, d4370930)": "exit 0, 13/13 pass（证据 11-green-full-2_4-final）",
+    "comet-side vitest comet-scripts.test.ts -t 'managed delivery gate runtime' (d4370930 work tree)": "exit 0, 7/7（证据 14）",
+    "<pinned-node> tools/comet/build.mjs --lock <tmp> --archive <locked tarball sha28a7e2fa> --json": "exit 0（fingerprint d4370930…, reused:false）",
+    "<pinned-node> tools/comet/build.mjs --lock <tmp> --check-generated --runtime-smoke --json": "exit 0 PASS 4/4（证据 15）",
+    "npm test (full)": "exit 1 — 427 tests: 424 pass / 2 fail / 1 skip；两失败在 base c6081c2 干净 worktree 复现一致（C08 host openspec 1.3.1→1.14.3 环境漂移；B08 spec-closeout）= 已知项，零新增（证据 23/24）",
+    "6-patch 栈干净应用验证（pristine+0001+1_6+新0002+新2_4+0003+4_6 git apply）": "clean（lab roundtrip 树一致）"
+  },
+  "lock_implication": "补丁 sha 期望（控制器集成时更新 upstream.lock.json，本 worker 未动锁文件）：patches[2] integrations/comet/patches/0002-managed-delivery-runtime.patch sha256=47d2eebd57d4b8735a54333b0bf79a93c8812ae9037be9b9d0e141a9d5b38b16；patches[3] integrations/comet/patches/tests/2_4.patch sha256=3b8aab434d0af664e6aca656bcdaaae1da1f80145d17ba99e0a2f01c0219545e；集成后 fingerprint=d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6（该构建已在本 worktree .sdd 内，可直接 reuse）。0002 的修改保持了 0003/4_6 的全部 patch 上下文（新增 import 用独立语句置于 0003 冻结区之上；dispatchGate 内 sync 移至 budget 检查之后），全栈应用验证通过。",
+  "unverified": [
+    "裸合同命令（不设 COMET_UPSTREAM_LOCK）当前 exit 1：仓库锁仍指向修复前 sha（beab355d 构建）——按锁纪律锁更新归控制器；控制器更新 patches[2]/[3] sha 后裸命令即指向 d4370930 构建转绿。证据 13 如实记录当前裸跑结果。",
+    "审查者独立身份（Runner.Dispatch.v1 受信执行通道/I02 隔离）未验收：本 round 只做本机机械验证（证据绑定/quorum 闭合/digest 绑定可机械证伪），不称安全独立身份已验收（Step 15 边界）。",
+    "P2_5 的 grill 闭合/精确 quorum 机械结果的跨任务实链消费：接口已按本 run 真实回执形状定义并由正例消费，但 P2_5 rework 尚未合入，端到端对接待其集成后复验。",
+    "0003 post-archive 面的完整行为（P4_6 owns）未重验：本任务只保证栈应用干净 + 全文件 2_4 回归 + runtime-smoke PASS。"
+  ],
+  "files_changed": [
+    "integrations/comet/patches/0002-managed-delivery-runtime.patch",
+    "integrations/comet/patches/tests/2_4.patch",
+    "test/delivery-cases/2_4.mjs",
+    "worker-reports/P2_4.rework.json",
+    "worker-reports/P2_4-rework/evidence/ (00-24 .txt x19)"
+  ],
+  "commits": {
+    "sequence": "test(P2_4 rework): RED … / feat(P2_4 rework): enter-design+evidence+generation … / test(P2_4 rework): report+evidence — 见提交序列，全部带 'P2_4 rework' 标记"
+  },
+  "blockers_or_questions": [
+    "无阻断。需控制器动作：更新 upstream.lock.json patches[2]/[3] sha256 至上述期望值（可 reuse 本 worktree 已建 d4370930 构建或按官方 --archive 路径重建），之后三条 V_RW_* 裸命令转绿。",
+    "npm test 已知 2 失败（C08/B08）与 base 一致，非本任务引入。"
+  ]
+}

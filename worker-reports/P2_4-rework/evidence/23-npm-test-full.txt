@@ -1,0 +1,27 @@
+# npm test (full) on worktree rw-p2-4 @ final patches
+exit=1 (2 failures)
+summary:
+# tests 427
+# pass 424
+# fail 2
+# cancelled 0
+# skipped 1
+
+failures (both reproduce at base c6081c2 — pre-existing, see 24-base-failures.txt):
+# Subtest: C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+not ok 59 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+  ---
+  duration_ms: 2.603209
+  location: '<worktree>/test/classic-integration.test.js:476:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the registered refusal must cite the pinned host CLI version
+--
+# Subtest: B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+not ok 416 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+  ---
+  duration_ms: 213.021292
+  location: '<worktree>/test/spec-closeout.test.js:321:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
