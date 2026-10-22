@@ -11,9 +11,15 @@
 //
 // 本地可证子集：授权模型结构、可信签发/撤销/过期时序、多源披露交集、principal
 // 映射完整性、写前重验与角色隔离边界（经 I01 secret-ref 目录的真实解析门）。
-// 活源/目标权限读回、Outline 继承/单页/公开分享强制、受保护签发工作流在本环境
-// 不可观测：一律 UNVERIFIED/UNREGISTERED 如实标注（承接：Outline owner + 部署
-// 验证波次），绝不 mock 转绿。
+// 返工 r1：试点 Outline 栈已部署，目标侧登记来自真实读回（collection 成员、
+// 分享登记表、principal 映射）；registered pilot-directory principal
+// （directory:<tenant>/<name>，绑定真实不可变 Outline user id）算已映射主体。
+// 宣称 LIVE 读回的目标受众必须五个 required 渠道（membership/inheritance/
+// pageShare/publicShare/attachment）全部 READ，缺任一渠道即
+// TARGET_CHANNEL_NOT_READ fail-closed——回执 provenance 如实区分
+// LIVE_READBACK 与 DECLARED_ONLY（LOCAL_FIXTURE 只可签组件结果）。
+// 活源权限读回（gh TLS）与受保护签发工作流仍 UNVERIFIED/UNREGISTERED 如实
+// 标注，绝不 mock 转绿。
 //
 // 退出码契约：
 //   0 = PASS（validate 干净 / grant 有效 / decide=allow / recheck 新鲜 / resolve 主体通过四重检查）
@@ -45,7 +51,13 @@ const MAPPED_PRINCIPAL = [
   /^svc:[a-z0-9][a-z0-9-]{0,62}\/[a-z0-9][a-z0-9-]{0,62}$/,
   /^group:[a-z0-9][a-z0-9-]{0,62}\/[a-z0-9][a-z0-9-]{0,62}$/,
   /^human:[a-z0-9][a-z0-9-]{0,62}#\d+$/,
+  // 返工 r1：试点目录主体——授权必须在 model.targets[].principalMap 中绑定
+  // 真实不可变 Outline user id；目录形式本身不产生权力，只产生可映射性。
+  /^directory:[a-z0-9][a-z0-9-]{0,62}\/[a-z0-9][a-z0-9-]{0,62}$/,
 ];
+// LIVE 目标受众读回必须覆盖的渠道（返工 Step 9：缺分页/继承/公开分享/附件
+// 任一 required 渠道则不发布）。
+const REQUIRED_TARGET_CHANNELS = ['membership', 'inheritance', 'pageShare', 'publicShare', 'attachment'];
 const ROLES = ['author', 'reviewer', 'publisher', 'isolator'];
 // U01：自批输入类——这三个字段无论值是什么都是拒绝（作者不能自带授权/批准/敏感级）。
 const FORBIDDEN_REQUEST_FIELDS = {
@@ -319,6 +331,19 @@ function validateRequestShape(request) {
   if (!Array.isArray(audience.readers)) return bad('effectiveAudience.readers must be an array');
   if (typeof audience.incompletePagination !== 'boolean') return bad('effectiveAudience.incompletePagination must be a boolean');
   if (!Array.isArray(audience.unmappedPrincipals)) return bad('effectiveAudience.unmappedPrincipals must be an array');
+  if (audience.readback !== undefined) {
+    const readback = audience.readback;
+    if (!readback || typeof readback !== 'object' || Array.isArray(readback)) return bad('effectiveAudience.readback must be an object when present');
+    if (!['LIVE', 'DECLARED'].includes(readback.status)) return bad('effectiveAudience.readback.status must be LIVE|DECLARED');
+    if (typeof readback.endpoint !== 'string' || readback.endpoint.length === 0) return bad('effectiveAudience.readback.endpoint is required');
+    if (!Number.isFinite(Date.parse(readback.observedAt ?? ''))) return bad('effectiveAudience.readback.observedAt must be an ISO timestamp');
+  }
+  if (target.channels !== undefined) {
+    if (!target.channels || typeof target.channels !== 'object' || Array.isArray(target.channels)) return bad('operation.target.channels must be an object when present');
+    for (const [channel, value] of Object.entries(target.channels)) {
+      if (value !== 'READ') return bad(`operation.target.channels.${channel} must be 'READ' — an observed channel; any other value is a declaration, not an observation`);
+    }
+  }
   if (!Array.isArray(request.sources) || request.sources.length === 0) return bad('sources must be a non-empty array');
   for (const [index, source] of request.sources.entries()) {
     const evidence = source?.permissionEvidence;
@@ -412,6 +437,15 @@ function decidePublication({ request, model, policy, ledger, ledgerDigest, model
   if (targetAudience.unmappedPrincipals.length > 0) push('PRINCIPAL_UNMAPPED', 'operation.target.effectiveAudience.unmappedPrincipals', { unmapped: targetAudience.unmappedPrincipals });
   const unmappedReaders = targetAudience.readers.filter((reader) => !isMappedPrincipal(reader));
   if (unmappedReaders.length > 0) push('PRINCIPAL_UNMAPPED', 'operation.target.effectiveAudience.readers', { unmapped: unmappedReaders });
+  // 8.5) LIVE 读回渠道完整性：宣称 LIVE 读回的目标受众，五个 required 渠道必须
+  // 全部 READ；缺分页/继承/单页/公开分享/附件任一渠道则不发布（U05，返工 Step 9）。
+  if (targetAudience.readback?.status === 'LIVE') {
+    for (const channel of REQUIRED_TARGET_CHANNELS) {
+      if (op.target.channels?.[channel] !== 'READ') {
+        push('TARGET_CHANNEL_NOT_READ', 'operation.target.channels', { channel, reason: 'a LIVE audience claim requires every required readback channel observed; missing channels are fail-closed' });
+      }
+    }
+  }
   const policyAudience = Array.isArray(policy.target?.allowedAudience?.readers) ? policy.target.allowedAudience.readers : [];
   let allowed = [...policyAudience];
   for (const audience of grantAudiences) allowed = allowed.filter((reader) => audience.includes(reader));
@@ -470,7 +504,10 @@ function decidePublication({ request, model, policy, ledger, ledgerDigest, model
       autoRenewal: false,
     },
     provenance: {
-      permissionEvidence: 'LOCAL_ONLY: operator-declared permission evidence for the structural decision proof; live source/target permission readback is UNVERIFIED in this environment (successor: Outline owner + deployment verification wave)',
+      permissionEvidence: 'LOCAL_ONLY: operator-declared permission evidence for the structural decision proof; live source permission readback is UNVERIFIED in this environment (gh TLS x509; successor: source connector wave)',
+      targetAudience: targetAudience.readback?.status === 'LIVE'
+        ? `LIVE_READBACK: effective audience observed from ${targetAudience.readback.endpoint} at ${targetAudience.readback.observedAt}; required channels READ (${REQUIRED_TARGET_CHANNELS.join('/')})`
+        : 'DECLARED_ONLY: operator-declared target audience for a component decision result; live readback absent — this receipt never closes the live effective-audience closure',
       issuance: 'ledger entries only; live issuance requires the protected workflow (issuanceCredential UNREGISTERED in the I01 catalog)',
     },
   };

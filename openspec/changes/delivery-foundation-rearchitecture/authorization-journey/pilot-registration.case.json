@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "interface": "KnowledgePreauthRegistration.v1",
+  "project": "sdd-harness-pilot",
+  "registeredAt": "2026-10-22T20:53:03Z",
+  "run": "rework-seven-p1-r1 (P4_7 rework)",
+  "note": "P4_7 返工的真实试点登记：源域/目标/owner/grant 状态登记在案。目标侧事实来自试点 Outline 栈（loopback）的真实 API 读回（终端通道执行；会话沙箱不可达 loopback）；源侧读回（gh TLS x509）与受保护签发工作流如实 UNVERIFIED——不得把登记字段当已满足。秘密值（API key 等）不入库：证据文件均已脱敏。",
+  "owner": {
+    "principal": "human:ql-wade#262266039",
+    "owner": "ql-wade",
+    "registry": "infra/delivery/registry.json#project",
+    "delegates": [],
+    "authorityStatus": "UNVERIFIED",
+    "readbackCommand": "gh api repos/rpamis/sdd-harness",
+    "readbackError": "tls: failed to verify certificate: x509: OSStatus -26276 (I01 记录；授权动作前必须在执行时读回成功)"
+  },
+  "sources": [
+    {
+      "id": "sdd-harness-repo",
+      "kind": "git-repository",
+      "registration": "infra/delivery/registry.json#project",
+      "authorityStatus": "UNVERIFIED",
+      "disclosureAudience": [],
+      "reason": "collaborator/permission 读回不可用（gh TLS x509）；台账 grant 的 purpose.disclosureAudience 保持空=未登记，committed decide 仍 fail-closed"
+    },
+    {
+      "id": "comet-source",
+      "kind": "source-archive",
+      "registration": "infra/delivery/registry.json#resources[comet-source]",
+      "authorityStatus": "UNVERIFIED",
+      "disclosureAudience": []
+    }
+  ],
+  "target": {
+    "id": "outline-managed-collection",
+    "kind": "outline-collection",
+    "instance": {
+      "url": "http://127.0.0.1:3000",
+      "pilot": true,
+      "observedAt": "2026-10-22T20:53:03Z",
+      "identity": "loopback 试点实例（outline:digest-pinned，dex OIDC issuer 127.0.0.1:5556，三测试主体 owner|member|offboarded@sdd-harness-pilot.test）"
+    },
+    "collectionId": "a3c6b4d8-1f1e-473d-9f49-ea5c48b7a818",
+    "collectionName": "managed-source-collection",
+    "principalMap": [
+      { "principal": "directory:sdd-harness-pilot/owner", "outlineUserId": "17fcd2c1-2d60-4c2e-bd8c-327db9d6fb4c", "email": "owner@sdd-harness-pilot.test", "provenance": "OIDC first sign-in（部署波次）+ users.list live readback" },
+      { "principal": "directory:sdd-harness-pilot/member", "outlineUserId": "a9aa604d-0e37-4bab-a050-89cfff7988d2", "email": "member@sdd-harness-pilot.test", "provenance": "pilot directory seed（行结构镜像 OIDC 首登形态；OIDC 首登路径本身属 I03 Step 3 活体验证范围）" },
+      { "principal": "directory:sdd-harness-pilot/offboarded", "outlineUserId": "4cad32ae-70b2-4d74-b7cf-dcf5508dc163", "email": "offboarded@sdd-harness-pilot.test", "provenance": "pilot directory seed + suspendedAt 置位" }
+    ],
+    "audienceReadback": {
+      "observedAt": "2026-10-22T20:53:03Z",
+      "effectiveAudience": ["directory:sdd-harness-pilot/owner"],
+      "channels": {
+        "membership": "READ",
+        "inheritance": "READ",
+        "pageShare": "READ",
+        "publicShare": "READ",
+        "attachment": "UNVERIFIED"
+      },
+      "channelEvidence": {
+        "membership": "collections.memberships total=1（仅 owner admin）；member 对文集/文档调用 403",
+        "inheritance": "Outline 文集为顶层（无父链继承）；collection-default 作用域实测生效——member 越集访问 403",
+        "pageShare": "shares 表 total=0 且 shares.list total=0",
+        "publicShare": "published 分享=0；无公网入口",
+        "attachment": "attachments.create 500（服务端错误：S3 客户端 region 未配置——部署波次基础设施缺口）；attachments 表 total=0；通道无法观测，注册保持 PARTIAL"
+      },
+      "status": "REGISTERED_FROM_LIVE_READBACK_PARTIAL"
+    },
+    "smokeObjects": {
+      "documentId": "fcbf2df1-f85e-4576-b8bb-90f37704a03f",
+      "note": "documents.create（owner API key）+ documents.info 独立读回 200；stale lastRevision 更新 409（P4_6 固定 UUID/lastRevision 契约的活体旁证）"
+    }
+  },
+  "grants": {
+    "ledger": "infra/delivery/knowledge/grant-ledger.example.json",
+    "issuanceCredential": "UNREGISTERED（I01 目录无 grant-issuance ref；活体签发须 I01 修正案注册受保护工作流身份）",
+    "disclosureAudienceRegistration": "UNVERIFIED——源侧读回缺失，disclosureAudience 保持空（fail-closed），目标侧受众登记不扩大源授权"
+  },
+  "commands": [
+    "node tools/infra/knowledge-authz.mjs validate --json",
+    "node tools/infra/knowledge-authz.mjs verify-grant --grant grant-pilot-001 --json",
+    "node tools/infra/knowledge-authz.mjs decide --request <file> --json",
+    "node tools/infra/knowledge-authz.mjs recheck --decision <file> --json",
+    "curl -X POST http://127.0.0.1:3000/api/users.list（owner key，终端通道）",
+    "curl -X POST http://127.0.0.1:3000/api/collections.create / collections.info / collections.memberships / shares.list / documents.create / documents.info / documents.update",
+    "member/offboarded key：documents.info / collections.add_user / users.update / documents.list（全部 403）"
+  ],
+  "evidence": [
+    "worker-reports/P4_7-rework/evidence/live-outline-smoke-users-list.txt",
+    "worker-reports/P4_7-rework/evidence/live-outline-smoke-target-and-denials.txt",
+    "worker-reports/P4_7-rework/evidence/live-outline-smoke-db-readback.txt"
+  ]
+}

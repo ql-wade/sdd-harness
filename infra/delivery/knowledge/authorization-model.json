@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "interface": "KnowledgeAuthzModel.v1",
   "project": "sdd-harness-pilot",
-  "note": "P4_7 授权模型：试点源域/目标/真实 owner 登记 + 四角色（author/reviewer/publisher/isolator）与 issuer 的隔离结构。本环境无活 Outline 实例、无平台写授权、gh TLS 失效——instance/authority/签发凭据一律如实 UNVERIFIED/UNREGISTERED，不得用占位值冒充事实（SOURCE_TARGET_OWNER_GRANT_REQUIRED 只阻断相关动作）。",
+  "note": "P4_7 授权模型：试点源域/目标/真实 owner 登记 + 四角色（author/reviewer/publisher/isolator）与 issuer 的隔离结构。返工 r1：试点 Outline 栈已部署，目标 instance/文集 id/principal 映射/受众读回已从真实部署观测登记（4/5 渠道 READ，attachment UNVERIFIED——注册 PARTIAL，缺渠道 fail-closed）；源 authority（gh TLS x509）与签发凭据仍如实 UNVERIFIED/UNREGISTERED，不得用占位值冒充事实。",
   "ownerPrincipal": "human:ql-wade#262266039",
   "ownerRegistration": {
     "owner": "ql-wade",
@@ -16,26 +16,54 @@
     "author": {
       "principal": "svc:sdd-harness-pilot/worker-author",
       "credentialRef": "secret-ref:sdd-harness-pilot/worker-author-api",
-      "powers": ["read allowlisted source material", "write the knowledge candidate"],
-      "forbidden": ["issue or revoke grants", "resolve publisher/isolator/issuance credentials", "execute publication", "modify trusted policy or approval", "classify sensitivity"]
+      "powers": [
+        "read allowlisted source material",
+        "write the knowledge candidate"
+      ],
+      "forbidden": [
+        "issue or revoke grants",
+        "resolve publisher/isolator/issuance credentials",
+        "execute publication",
+        "modify trusted policy or approval",
+        "classify sensitivity"
+      ]
     },
     "reviewer": {
       "principal": "svc:sdd-harness-pilot/worker-reviewer",
       "credentialRef": "secret-ref:sdd-harness-pilot/worker-review-api",
-      "powers": ["read the candidate for independent review"],
-      "forbidden": ["author the candidate", "issue grants", "publish"]
+      "powers": [
+        "read the candidate for independent review"
+      ],
+      "forbidden": [
+        "author the candidate",
+        "issue grants",
+        "publish"
+      ]
     },
     "publisher": {
       "principal": "svc:sdd-harness-pilot/outline-publisher",
       "credentialRef": "secret-ref:sdd-harness-pilot/outline-publisher",
-      "powers": ["execute the single registered publish operation after an allow decision", "perform the independent readback"],
-      "forbidden": ["issue grants", "modify ACL/sharing/membership", "enlarge the audience"]
+      "powers": [
+        "execute the single registered publish operation after an allow decision",
+        "perform the independent readback"
+      ],
+      "forbidden": [
+        "issue grants",
+        "modify ACL/sharing/membership",
+        "enlarge the audience"
+      ]
     },
     "isolator": {
       "principal": "svc:sdd-harness-pilot/outline-isolator",
       "credentialRef": "secret-ref:sdd-harness-pilot/outline-isolator",
-      "powers": ["execute registered isolation and revocation maintenance"],
-      "forbidden": ["read publisher material", "publish", "issue grants"]
+      "powers": [
+        "execute registered isolation and revocation maintenance"
+      ],
+      "forbidden": [
+        "read publisher material",
+        "publish",
+        "issue grants"
+      ]
     }
   },
   "isolation": {
@@ -54,8 +82,13 @@
       "owner": "ql-wade",
       "delegates": [],
       "authority": {
-        "sources": ["sdd-harness-repo", "comet-source"],
-        "targets": ["outline-managed-collection"]
+        "sources": [
+          "sdd-harness-repo",
+          "comet-source"
+        ],
+        "targets": [
+          "outline-managed-collection"
+        ]
       },
       "issuanceCredential": {
         "ref": null,
@@ -90,10 +123,61 @@
       "id": "outline-managed-collection",
       "kind": "outline-collection",
       "registration": "infra/delivery/outline/collection-registration.example.json#collections[managed-source-collection]",
-      "instanceStatus": "UNVERIFIED",
-      "instanceReason": "dedicated loopback Outline instance not deployed; immutable instance/collection ids must be observed from a real deployment",
+      "instanceStatus": "REGISTERED_PILOT_LIVE",
       "ownerGrantRef": "secret-ref:sdd-harness-pilot/outline-publisher",
-      "allowedAudienceSource": ["collection-default"]
+      "allowedAudienceSource": [
+        "collection-default"
+      ],
+      "instance": {
+        "url": "http://127.0.0.1:3000",
+        "pilot": true,
+        "observedAt": "2026-10-22T20:53:03Z",
+        "observedVia": "live API readback over the terminal channel (loopback only; the session sandbox cannot reach the loopback port)"
+      },
+      "collectionId": "a3c6b4d8-1f1e-473d-9f49-ea5c48b7a818",
+      "principalMap": [
+        {
+          "principal": "directory:sdd-harness-pilot/owner",
+          "outlineUserId": "17fcd2c1-2d60-4c2e-bd8c-327db9d6fb4c",
+          "email": "owner@sdd-harness-pilot.test",
+          "role": "admin",
+          "observedVia": "outline users.list + collections.memberships live readback; first sign-in provisioned through dex OIDC"
+        },
+        {
+          "principal": "directory:sdd-harness-pilot/member",
+          "outlineUserId": "a9aa604d-0e37-4bab-a050-89cfff7988d2",
+          "email": "member@sdd-harness-pilot.test",
+          "role": "member",
+          "observedVia": "pilot directory seed (row mirrors the OIDC-provisioned shape; the OIDC first-login path itself stays I03 Step 3 scope); membership denials observed live"
+        },
+        {
+          "principal": "directory:sdd-harness-pilot/offboarded",
+          "outlineUserId": "4cad32ae-70b2-4d74-b7cf-dcf5508dc163",
+          "email": "offboarded@sdd-harness-pilot.test",
+          "role": "member",
+          "suspended": true,
+          "observedVia": "pilot directory seed with suspendedAt set; suspension denial observed live (403)"
+        }
+      ],
+      "audienceReadback": {
+        "observedAt": "2026-10-22T20:53:03Z",
+        "channels": {
+          "membership": "READ",
+          "inheritance": "READ",
+          "pageShare": "READ",
+          "publicShare": "READ",
+          "attachment": "UNVERIFIED"
+        },
+        "channelEvidence": {
+          "membership": "collections.memberships total=1 (owner admin only); member calls denied 403",
+          "inheritance": "Outline collections are top-level; collection-default scope enforced — member 403 on collections.info/documents.info of the managed collection",
+          "pageShare": "shares table total=0 and shares.list total=0 for the instance",
+          "publicShare": "shares published=0; no public entry exists",
+          "attachment": "attachments.create failed 500 (server error: S3 client region unset — deployment-wave infrastructure gap); zero attachment rows; the channel could not be observed"
+        },
+        "evidence": "worker-reports/P4_7-rework/evidence/ + authorization-journey/pilot-registration.case.json"
+      },
+      "note": "返工 r1 真实登记：实例/文集/principal 映射来自试点栈实测；受众读回 4/5 渠道 READ，attachment UNVERIFIED（上传基础设施错误）——注册保持 PARTIAL，LIVE 宣称缺渠道即 fail-closed（TARGET_CHANNEL_NOT_READ）。"
     }
   ]
 }

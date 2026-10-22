@@ -6,37 +6,65 @@
   "note": "P4_7 预授权策略：knowledge-preauthorization-contract.md 第 3 节八类必填边界的结构化声明（拟议语义，非当前原生配置字段）。目标有效受众规则见 audienceRule；授权不自动续期；未知一律 fail-closed。",
   "subject": {
     "ledger": "infra/delivery/knowledge/grant-ledger.example.json",
-    "issuers": ["issuer-pilot-owner"],
+    "issuers": [
+      "issuer-pilot-owner"
+    ],
     "validity": {
       "maxValidityDays": 90,
       "renewal": "manual re-issue through the original issuance path only; no auto-renewal"
     }
   },
   "sources": {
-    "allowlist": ["sdd-harness-repo", "comet-source"],
+    "allowlist": [
+      "sdd-harness-repo",
+      "comet-source"
+    ],
     "externalUrlsForbidden": true,
     "disclosureRule": "intersection",
     "evidenceContract": "each source needs permission evidence COMPLETE with every principal mapped; INCOMPLETE/ERROR/service-account-only stays blocked (U06); a 403 is never an empty set"
   },
   "purpose": {
-    "knowledgeTypes": ["project-knowledge"],
+    "knowledgeTypes": [
+      "project-knowledge"
+    ],
     "processingEnvironment": "managed runner workspace only",
     "outboundMaterialProfile": "summary/derivative knowledge only; publication does not authorize exporting full source material to arbitrary tools"
   },
   "content": {
     "sensitivityCeiling": "internal",
-    "forbiddenCategories": ["secrets", "credentials", "personal-data", "customer-data"],
+    "forbiddenCategories": [
+      "secrets",
+      "credentials",
+      "personal-data",
+      "customer-data"
+    ],
     "authorClassificationForbidden": true,
     "unknownSensitivity": "fail-closed"
   },
   "target": {
     "registration": "infra/delivery/outline/collection-registration.example.json#collections[managed-source-collection]",
     "allowedAudience": {
-      "readers": [],
-      "status": "UNVERIFIED",
-      "reason": "the effective target reader set is not observable without a live instance; auto-publish stays blocked until a real deployment registers it"
+      "readers": [
+        "directory:sdd-harness-pilot/owner"
+      ],
+      "status": "REGISTERED_FROM_LIVE_READBACK_PARTIAL",
+      "reason": "registered from the live pilot readback: the managed collection has exactly one member (the instance owner), the page/public share registry is empty, and member/offboarded calls are denied 403 — but the attachment channel is UNVERIFIED (upload infrastructure error: object-store region unset), so the registration stays PARTIAL and a LIVE audience claim missing any required channel is fail-closed (TARGET_CHANNEL_NOT_READ); auto-publish on the committed state stays blocked while the source-side grants carry no disclosure audience",
+      "readback": {
+        "endpoint": "http://127.0.0.1:3000",
+        "observedAt": "2026-10-22T20:53:03Z",
+        "collectionId": "a3c6b4d8-1f1e-473d-9f49-ea5c48b7a818",
+        "channels": {
+          "membership": "READ",
+          "inheritance": "READ",
+          "pageShare": "READ",
+          "publicShare": "READ",
+          "attachment": "UNVERIFIED"
+        }
+      }
     },
-    "allowedAudienceSource": ["collection-default"],
+    "allowedAudienceSource": [
+      "collection-default"
+    ],
     "pageShareForbidden": true,
     "subtreeShareForbidden": true,
     "publicShareForbidden": true,
@@ -44,8 +72,18 @@
     "draftRule": "drafts never enter a larger audience before review; publish=false is not a privacy guarantee"
   },
   "actions": {
-    "allowed": ["documents.create", "documents.update"],
-    "forbidden": ["acl.change", "membership.change", "share.create", "documents.share", "documents.delete", "collection.move"]
+    "allowed": [
+      "documents.create",
+      "documents.update"
+    ],
+    "forbidden": [
+      "acl.change",
+      "membership.change",
+      "share.create",
+      "documents.share",
+      "documents.delete",
+      "collection.move"
+    ]
   },
   "quality": {
     "independentReview": "required",
