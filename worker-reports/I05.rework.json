@@ -1,0 +1,191 @@
+{
+  "task": "I05",
+  "run": "rework-seven-p1-r1",
+  "worker_branch": "rework/i05-deepwiki",
+  "base": "master@d7ff690",
+  "opening_receipt": "git log --oneline -1 -> d7ff690 chore(openspec): accept I06 rework (4/4; review APPROVED; merge 7f199cf)",
+  "final_status": "PARTIAL",
+  "final_status_reason": "Steps 1/2/4 re-verified for real on the local half (CLI validate/qualify/up/probe + full negative matrix) and one genuine anchor gap in Owns closed (coverage-insufficiency / commit-age / manifest-pass-never-VERIFIED negatives); Step 3 independent container/authenticated-API/MCP readback remains env-gated (docker socket denied by sandbox) and stays honestly UNVERIFIED",
+  "steps_done": "3/4",
+  "steps_detail": [
+    {
+      "step": 1,
+      "state": "re-verified + hardened",
+      "note": "all RED negatives re-run for real via the suite (14/14 x2) and direct CLI; NEW negatives (e) COVERAGE_INSUFFICIENT / (f) manifest-pass-stays-UNVERIFIED / (g) COMMIT_AGE_EXCEEDED added — the red spec's 语言覆盖不足 negative was previously implemented in the tool but never anchored by any test"
+    },
+    {
+      "step": 2,
+      "state": "re-verified",
+      "note": "validate exit 0 clean; qualify honest ready=false unverifiedCount=8; up refuses UP_REFUSED_IMAGES_LOCK_NOT_READY (exit 2); probe graph-disabled-correctness VERIFIED via real main-chain re-run; probe pinned-code-wiki UNVERIFIED executed=false without runtime inputs"
+    },
+    {
+      "step": 3,
+      "state": "env-gated UNVERIFIED",
+      "note": "docker version -> permission denied connecting unix docker.sock (exit 1, evidence 02 §6); real containers/authenticated API/MCP responses/repoID-commit-manifest live comparison cannot be produced in this sandbox; no fabricated readback"
+    },
+    {
+      "step": 4,
+      "state": "done",
+      "note": "only Owns test file + report/evidence touched; zero host paths in committed content; evidence sanitized to <repo>/<host-home> placeholders"
+    }
+  ],
+  "catalog_gaps_current": {
+    "inventory": "no gap for I05 owns",
+    "detail": [
+      {
+        "ref": "secret-ref:sdd-harness-pilot/codewiki-source-read",
+        "status": "已登记 (NOT_PROVISIONED)",
+        "evidence": "evidence/03; registered by I01 amendment f8c982b (catalog was 18 refs then, 24 now)"
+      },
+      {
+        "ref": "secret-ref:sdd-harness-pilot/codewiki-provider",
+        "status": "已登记 (NOT_PROVISIONED)",
+        "evidence": "evidence/03"
+      },
+      {
+        "ref": "secret-ref:sdd-harness-pilot/codegraph-source-read",
+        "status": "已登记 (NOT_PROVISIONED)",
+        "evidence": "evidence/03"
+      }
+    ],
+    "committed_validate": "ok=true, catalogGaps=[]",
+    "qualify_category": "secret-refs-registered = RECORDED (all 3 present, all NOT_PROVISIONED)",
+    "vs_i01_registration": "I01.rework.json catalog_gaps_current lists only backup-writer/restore-reader (I08) and llmwiki-source-read (I04) as still missing — none are I05 refs; the previous stale-assertion lesson (live-catalog gap assertion) stays fixed: positive registered assertion + synthetic-fixture negative both green",
+    "lesson_check": "the gap-reporting test asserts current registration positively and proves gap-reporting behavior via a synthetic refs fixture (remove a registered ref -> validate must report it as catalogGap) — no dependence on live catalog drift"
+  },
+  "p3_1_connected_check": {
+    "scenario_anchor_gap": "one found and fixed: the tool's COVERAGE_INSUFFICIENT branch (red spec 语言覆盖不足) and COMMIT_AGE_EXCEEDED branch had zero test anchors; also the manifest-level-pass path was unexercised, so nothing proved a manifest PASS cannot self-certify — fixed with negatives (e)/(f)/(g) in the freshness test (RED-vs-existing-tool was GREEN immediately since the tool already implemented fail-closed semantics; teeth proven by mutation M1)",
+    "acceptance_id_mapping": "I05 acceptance ids F01/F03/A20/C06 are anchored to delivery-case modules owned by other tasks (P1_1 -> test/delivery-cases/1_1.mjs for F01/F03, P2_3 -> 2_3.mjs for A20, P1_5 -> 1_5.mjs for C06, per acceptance-index.json); verification-case-plan.json contains zero references to infra-code-knowledge — I05's owned test is not in the 92-scenario denominator, so no denominator anchor gap exists in Owns",
+    "self_certification_mode": "none found: every gate assertion drives the real CLI as a subprocess (spawnSync of tools/infra/code-knowledge.mjs) against tmp fixtures; probes assert executed/status from real command output, and (f) now explicitly asserts a manifest-level PASS still reports overall UNVERIFIED without live readback"
+  },
+  "rework_changes": [
+    "test/infra-code-knowledge.test.js: +3 negatives in the RED freshness gate test — (e) decided policy + coverage below minimum -> COVERAGE_INSUFFICIENT exit 2; (f) decided policy + perfect manifest -> freshness passed=true FRESHNESS_MANIFEST_LEVEL_PASS but overall probe status stays UNVERIFIED exit 2 with reason naming the missing live readback; (g) generatedAt older than maxCommitAgeDays=0 -> COMMIT_AGE_EXCEEDED exit 2"
+  ],
+  "local_half_reverified": [
+    {
+      "behavior": "fixed commit/image admission: committed lock keeps reference/digest null, upGate.enabled=false; up refuses UP_REFUSED_IMAGES_LOCK_NOT_READY (exit 2, both components unverified)",
+      "negative": "floating :latest -> FLOATING_TAG_FORBIDDEN; malformed digest -> DIGEST_FORMAT_INVALID; well-formed but digestAuthenticated=false still refuses up; fake-selected upstream without commit -> UPSTREAM_COMMIT_NOT_PINNED"
+    },
+    {
+      "behavior": "unauthorized / wrong-project source refused: deny-by-default scope with 0 authorized sources refuses startup even with images ready -> UP_REFUSED_SOURCE_SCOPE_NOT_AUTHORIZED",
+      "negative": "pav-legacy approved source -> CROSS_PROJECT_SOURCE; unpinned commit -> SOURCE_COMMIT_NOT_PINNED; missing immutableId -> SOURCE_IMMUTABLE_ID_MISSING; foreign manifest immutableId -> SOURCE_NOT_AUTHORIZED"
+    },
+    {
+      "behavior": "public service substitute forbidden in both CodeWiki files",
+      "negative": "publicHostedServiceSubstitute=true in deepwiki-profile.json or allowed=true in repository-scope.json -> PUBLIC_SERVICE_SUBSTITUTE_FORBIDDEN exit 2"
+    },
+    {
+      "behavior": "wiki generation manifest precision negatives: generation failed -> GENERATION_NOT_CONFIRMED; manifest commit != approved pinned commit -> COMMIT_MISMATCH_STALE; policy undecided -> FRESHNESS_POLICY_UNSET (fail-closed); [NEW] coverage below minimum -> COVERAGE_INSUFFICIENT; [NEW] aged manifest -> COMMIT_AGE_EXCEEDED; [NEW] manifest-level pass without live readback stays UNVERIFIED exit 2",
+      "negative": "unparseable manifest -> exit 1 (input invalid)"
+    },
+    {
+      "behavior": "graph is a removable optimization with no authority: graph-disabled-correctness probe really re-runs the main validation chain (executed=true, VERIFIED, violations=0); graph enabled/disabled does not change the chain result",
+      "negative": "gateAuthority=true -> GRAPH_GATE_AUTHORITY_FORBIDDEN; knowledgeAuthority=true -> GRAPH_KNOWLEDGE_AUTHORITY_FORBIDDEN; removable=false -> GRAPH_REMOVABILITY_REQUIRED"
+    },
+    {
+      "behavior": "compose declaration gate: images only via ${VAR:?} lock placeholders, loopback-only ports, internal network, named volumes only",
+      "negative": "non-loopback bind -> PORT_BINDING_NOT_LOOPBACK; concrete image in compose -> COMPOSE_IMAGE_NOT_LOCK_RESOLVED; host bind mount -> HOST_MOUNT_FORBIDDEN"
+    },
+    {
+      "behavior": "credential hygiene: 3 refs referenced-only, never valued; cross-project refs rejected",
+      "negative": "secret-ref:pav-legacy/* -> CROSS_PROJECT_REF (provider + graph); scanForForbiddenValues on all 4 JSON docs returns zero violations"
+    }
+  ],
+  "env_gated": [
+    {
+      "step": "Step 3 independent readback: real containers/processes, authenticated API/MCP responses, repoID/commit vs generation manifest live comparison, wiki reference sampling, graph live coverage",
+      "holder": "user / runtime admission owner (sandbox denies docker socket: permission denied unix://<host-home>/.docker/run/docker.sock, exit 1; evidence 02 §6)",
+      "kept_as": "UNVERIFIED — qualify categories image-digest-authenticated / upstream-release-selected / api-mcp-readback / wiki-generation-manifest all UNVERIFIED; up refuses before any docker interaction on committed state"
+    }
+  ],
+  "mutations_caught": [
+    {
+      "id": "M1",
+      "mutation": "code-knowledge.mjs evaluateFreshness coverage gate neutralized (coverage.length < languageCoverageMin -> false && ...)",
+      "expected": "suite exit 1",
+      "observed": "suite exit 1: RED freshness gate test fails at the NEW (e) assertion (freshness.passed true !== false)",
+      "evidence": "evidence/04-mutation1-coverage-gate-disabled.txt",
+      "restored": true
+    },
+    {
+      "id": "M2",
+      "mutation": "code-knowledge.mjs up source-scope refusal gate neutralized (requiresScope && authorizedSources===0 -> false && ...)",
+      "expected": "suite exit 1",
+      "observed": "suite exit 1: RED source scope gate test fails (UP_REFUSED_SOURCE_SCOPE_NOT_AUTHORIZED never emitted)",
+      "evidence": "evidence/05-mutation2-up-scope-gate-disabled.txt",
+      "restored": true
+    }
+  ],
+  "red_cases": [
+    "floating :latest tag -> FLOATING_TAG_FORBIDDEN, exit 2",
+    "malformed digest sha256:deadbeef -> DIGEST_FORMAT_INVALID, exit 2",
+    "well-formed digest but digestAuthenticated=false -> up still refuses, exit 2",
+    "up on committed lock -> UP_REFUSED_IMAGES_LOCK_NOT_READY, exit 2",
+    "images ready but 0 authorized sources -> UP_REFUSED_SOURCE_SCOPE_NOT_AUTHORIZED, exit 2",
+    "approved pav-legacy source -> CROSS_PROJECT_SOURCE, exit 2",
+    "approved source without pinned commit -> SOURCE_COMMIT_NOT_PINNED, exit 2",
+    "approved source without immutableId -> SOURCE_IMMUTABLE_ID_MISSING, exit 2",
+    "publicHostedServiceSubstitute=true (profile) / allowed=true (scope) -> PUBLIC_SERVICE_SUBSTITUTE_FORBIDDEN, exit 2",
+    "secret-ref:pav-legacy/* in provider/graph -> CROSS_PROJECT_REF, exit 2",
+    "probe pinned-code-wiki bare -> exit 2, executed=false, status UNVERIFIED with requiredInputs+plannedSteps",
+    "manifest generation failed -> GENERATION_NOT_CONFIRMED, exit 2",
+    "manifest commit != approved commit -> COMMIT_MISMATCH_STALE, exit 2",
+    "foreign/other-project manifest immutableId -> SOURCE_NOT_AUTHORIZED, exit 2",
+    "freshness policy undecided -> FRESHNESS_POLICY_UNSET, exit 2",
+    "[NEW] coverage below decided minimum -> COVERAGE_INSUFFICIENT, exit 2",
+    "[NEW] aged manifest (generatedAt > maxCommitAgeDays) -> COMMIT_AGE_EXCEEDED, exit 2",
+    "[NEW] manifest-level full pass without endpoint -> overall UNVERIFIED, exit 2 (never claims VERIFIED)",
+    "unreachable endpoint -> real GET attempt recorded, UNVERIFIED, exit 2",
+    "unparseable manifest -> exit 1",
+    "graph gateAuthority/knowledgeAuthority=true -> forbidden codes, exit 2",
+    "graph removable=false -> GRAPH_REMOVABILITY_REQUIRED, exit 2",
+    "compose non-loopback port / concrete image / host mount -> PORT_BINDING_NOT_LOOPBACK / COMPOSE_IMAGE_NOT_LOCK_RESOLVED / HOST_MOUNT_FORBIDDEN, exit 2",
+    "upstream SELECTED without commit -> UPSTREAM_COMMIT_NOT_PINNED, exit 2",
+    "manifestRequired=false -> WIKI_MANIFEST_POLICY_MISSING, exit 2",
+    "mcpReadbackRequired=false -> WIKI_READBACK_POLICY_MISSING, exit 2",
+    "synthetic refs fixture missing one registered ref -> validate reports explicit catalogGap (exit 0, readiness evidence not structural violation)",
+    "unknown command / missing --case / unknown case / missing domain file -> exit 1"
+  ],
+  "commands": {
+    "git log --oneline -1 (opening receipt)": "0 -> d7ff690",
+    "node --test test/infra-code-knowledge.test.js (post-change run 1)": 0,
+    "node --test test/infra-code-knowledge.test.js (post-change run 2)": 0,
+    "code-knowledge.mjs validate --registry infra/delivery/registry.json --json": 0,
+    "code-knowledge.mjs qualify --registry infra/delivery/registry.json --json": 2,
+    "code-knowledge.mjs up --registry infra/delivery/registry.json --json": 2,
+    "code-knowledge.mjs probe --case pinned-code-wiki --json": 2,
+    "code-knowledge.mjs probe --case graph-disabled-correctness --json": 0,
+    "docker version (env gate)": "1 — permission denied unix docker.sock",
+    "npm test (pre-change baseline @ d7ff690)": "1 — 427 tests / 424 pass / 2 fail (C08, B08 known pre-existing) / 1 skip",
+    "npm test (post-change)": "1 — identical 427/424/2/1, same C08+B08 only; zero new failures",
+    "mutation M1 suite run": 1,
+    "mutation M2 suite run": 1,
+    "git diff d7ff690...HEAD --name-only (final gate)": "see evidence/07 — all within allowed set"
+  },
+  "unverified": [
+    "real container/process evidence for codewiki-app/codegraph (docker socket denied; both images UNSELECTED anyway)",
+    "authenticated API/MCP readback incl. private auth/pagination/version-exposure (needs live self-hosted instance)",
+    "repoID/immutableID/commit vs live generation manifest comparison (needs runtime)",
+    "wiki reference accuracy sampling (needs runtime)",
+    "graph live coverage evidence (inputCommit/filesIndexed/languages/symbols) — graph deliberately disabled; coverage stays UNVERIFIED",
+    "image digests: no container registry readback in this env",
+    "credentials: all 3 refs NOT_PROVISIONED (runtime secret store not implemented)",
+    "backup-compatibility: no restore drill for wiki artifacts (later lifecycle owner)"
+  ],
+  "files_changed": [
+    "test/infra-code-knowledge.test.js",
+    "worker-reports/I05.rework.json",
+    "worker-reports/I05-rework/evidence/01-cli-validate-qualify.txt",
+    "worker-reports/I05-rework/evidence/02-cli-up-probes-envgate.txt",
+    "worker-reports/I05-rework/evidence/03-catalog-gaps-inventory.txt",
+    "worker-reports/I05-rework/evidence/04-mutation1-coverage-gate-disabled.txt",
+    "worker-reports/I05-rework/evidence/05-mutation2-up-scope-gate-disabled.txt",
+    "worker-reports/I05-rework/evidence/06-owns-suite-and-full-npm-test.txt",
+    "worker-reports/I05-rework/evidence/07-final-diff-gate.txt"
+  ],
+  "blockers_or_questions": [],
+  "commits": {
+    "b2b7f1d": "test(I05 rework): close freshness anchor gaps — coverage-insufficiency/commit-age negatives + manifest-level pass never claims VERIFIED",
+    "HEAD (this commit)": "chore(rework): I05 rework report and evidence (rework-seven-p1-r1) — report + evidence 01-07; final diff gate in evidence/07 (test file + report/evidence only, all within Owns+report allowed set)"
+  }
+}

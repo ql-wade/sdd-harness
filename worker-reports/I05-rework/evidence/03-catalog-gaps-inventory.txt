@@ -1,0 +1,28 @@
+== I05 catalogGaps inventory vs I01 registration — 2026-10-22T06:26:41Z ==
+
+--- I01 refs catalog: the 3 I05 secret refs ---
+secret-ref:sdd-harness-pilot/codewiki-source-read: REGISTERED | status=NOT_PROVISIONED
+secret-ref:sdd-harness-pilot/codewiki-provider: REGISTERED | status=NOT_PROVISIONED
+secret-ref:sdd-harness-pilot/codegraph-source-read: REGISTERED | status=NOT_PROVISIONED
+catalog total refs: 24
+
+--- validate catalogGaps on committed domain (real) ---
+ok= True catalogGaps= []
+validate_exit=0
+
+--- qualify exit code + secret-refs-registered category ---
+qualify_exit=2
+
+--- history: refs at amendment f8c982b (the previous lesson's fix commit) ---
+refs at f8c982b: 18 | codewiki refs present: 3
+
+--- cross-check I01.rework.json catalog_gaps_current (other domains, not I05) ---
+secret-ref:sdd-harness-pilot/backup-writer -> 仍缺 (owner I08 (infra/delivery/backup))
+secret-ref:sdd-harness-pilot/restore-reader -> 仍缺 (owner I08 (infra/delivery/backup))
+secret-ref:sdd-harness-pilot/llmwiki-source-read -> 仍缺 (owner I04 (infra/delivery/llmwiki/index-policy.json))
+secret-ref:sdd-harness-pilot/outline-app-session -> 已登记 (owner I01 catalog (amendment 7a55664, pre-base))
+none of these are I05 refs -> I05 catalogGaps inventory: no gap for I05 owns
+
+--- qualify secret-refs-registered category detail ---
+ready= False unverifiedCount= 8
+secret-refs-registered: {"status": "RECORDED", "reason": "all 3 code-knowledge refs present in the I01 catalog; all remain NOT_PROVISIONED"}

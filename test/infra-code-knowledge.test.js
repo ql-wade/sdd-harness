@@ -409,6 +409,79 @@ test('RED freshness gate: generation failure, stale commit, unauthorized source 
   assert.equal(undecidedReport.freshness.passed, false);
   assert.match(undecidedReport.freshness.code, /FRESHNESS_POLICY_UNSET/);
 
+  // 策略已定的 fixture 变体：maxCommitAgeDays/languageCoverageMin 只存在于 tmp fixture，
+  // 用于驱动 (e)/(f)/(g) —— committed 配置的阈值仍未定（fail-closed）。
+  const writeDecidedManifest = (policy, manifest) => {
+    const dir = makeFixtureDir(({ json, writeJson }) => {
+      addApprovedSource(json, writeJson);
+      const profile = json('deepwiki-profile.json');
+      profile.generation.freshness.maxCommitAgeDays = policy.maxCommitAgeDays;
+      profile.generation.freshness.languageCoverageMin = policy.languageCoverageMin;
+      writeJson('deepwiki-profile.json', profile);
+    });
+    const manifestPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i05-manifest-')), 'manifest.json');
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    return { dir, manifestPath };
+  };
+
+  // (e) 语言覆盖不足（策略已定，manifest 覆盖 < 最小值）→ 不得报新鲜度通过。
+  const insufficient = writeDecidedManifest(
+    { maxCommitAgeDays: 30, languageCoverageMin: 2 },
+    {
+      immutableId: 'rid-sdd-harness-pilot-fixture',
+      commit: PINNED_COMMIT,
+      generation: { status: 'succeeded' },
+      generatedAt: new Date().toISOString(),
+      languageCoverage: [{ language: 'javascript', filesIndexed: 999 }],
+    },
+  );
+  const insufficientRun = probeWith(insufficient.dir, insufficient.manifestPath);
+  assert.equal(insufficientRun.status, 2, 'insufficient language coverage must never report freshness pass');
+  const insufficientReport = parseJsonOut(insufficientRun, 'freshness insufficient coverage');
+  assert.equal(insufficientReport.freshness.passed, false);
+  assert.match(insufficientReport.freshness.code, /COVERAGE_INSUFFICIENT/);
+  assert.doesNotMatch(insufficientRun.stdout, HOST_PATH_OUTPUT_RE);
+
+  // (f) manifest 级全绿也绝不自称已验证：无真实 API/MCP 读回时 probe 整体保持 UNVERIFIED 且退出 2。
+  const manifestPass = writeDecidedManifest(
+    { maxCommitAgeDays: 30, languageCoverageMin: 1 },
+    {
+      immutableId: 'rid-sdd-harness-pilot-fixture',
+      commit: PINNED_COMMIT,
+      generation: { status: 'succeeded' },
+      generatedAt: new Date().toISOString(),
+      languageCoverage: [
+        { language: 'javascript', filesIndexed: 999 },
+        { language: 'shell', filesIndexed: 42 },
+      ],
+    },
+  );
+  const manifestPassRun = probeWith(manifestPass.dir, manifestPass.manifestPath);
+  assert.equal(manifestPassRun.status, 2, 'manifest-level pass without a live readback must still exit 2');
+  const manifestPassReport = parseJsonOut(manifestPassRun, 'freshness manifest-level pass');
+  assert.equal(manifestPassReport.freshness.passed, true);
+  assert.match(manifestPassReport.freshness.code, /FRESHNESS_MANIFEST_LEVEL_PASS/);
+  assert.equal(manifestPassReport.status, 'UNVERIFIED', 'a manifest-level pass never claims VERIFIED by itself');
+  assert.ok(/readback|endpoint/i.test(manifestPassReport.reason), `reason must name the missing live readback: ${manifestPassReport.reason}`);
+  assert.doesNotMatch(manifestPassRun.stdout, /"skip"\s*:\s*true/, 'probes must not skip');
+
+  // (g) commit 陈旧按时间维度（generatedAt 超过 maxCommitAgeDays）→ 不得报通过。
+  const aged = writeDecidedManifest(
+    { maxCommitAgeDays: 0, languageCoverageMin: 1 },
+    {
+      immutableId: 'rid-sdd-harness-pilot-fixture',
+      commit: PINNED_COMMIT,
+      generation: { status: 'succeeded' },
+      generatedAt: '2020-01-01T00:00:00.000Z',
+      languageCoverage: [{ language: 'javascript', filesIndexed: 999 }],
+    },
+  );
+  const agedRun = probeWith(aged.dir, aged.manifestPath);
+  assert.equal(agedRun.status, 2, 'an aged manifest must never report freshness pass');
+  const agedReport = parseJsonOut(agedRun, 'freshness aged');
+  assert.equal(agedReport.freshness.passed, false);
+  assert.match(agedReport.freshness.code, /COMMIT_AGE_EXCEEDED/);
+
   // manifest 文件不可解析 = 输入无效 → 退出 1。
   const badManifest = writeManifest();
   fs.writeFileSync(badManifest.manifestPath, '{not json');
