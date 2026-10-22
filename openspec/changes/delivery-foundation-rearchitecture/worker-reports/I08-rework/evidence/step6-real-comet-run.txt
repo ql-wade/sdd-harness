@@ -1,0 +1,231 @@
+# Step 6 channels A/B/C: REAL Comet Run backup / restore / old-writer fence / R10 retention
+# Real run produced by the fingerprint-pinned Comet build (integrations/comet/upstream.lock.json,
+# .sdd/vendor/comet/<commit>/builds/<fingerprint>, pinned node) via the driveToArchived sequence
+# of test/delivery-cases/4_4.mjs including managed-delivery gates R/A/T/P/V.
+# REAL run identity: runId 51da6bdc-582c-4e62-b1b6-83cbb2802afe, authorityId MacBook-Wade-7.local,
+# archived with the knowledge closeout PENDING (status=waiting, currentStep=full.closeout.knowledge)
+# - a genuinely unfinished sole workspace.
+
+===============================================================
+# CHANNEL A - canonical recovery.mjs directly against the REAL .comet workspace
+===============================================================
+
+## A1) retention on the real .comet workspace: the accepted scanner reads the I08
+#      directory-form obligations (knowledge/*.json, operations/*.dispatch.json,
+#      transactions/, approvals/); the live Comet closeout record (run-state.json
+#      currentStep=full.closeout.knowledge, status=waiting) is NOT in that shape.
+#      RESULT: pending=[] cleanup=ELIGIBLE - honest R10-vs-live-Comet shape gap, reported, not hidden.
+$ node tools/infra/recovery.mjs retention --workspace <real .comet> --json   (exit 0)
+{
+  "interface": "Retention.v1",
+  "command": "retention",
+  "workspace": "<host-path-redacted>",
+  "r10": {
+    "ruleA": "RETAIN_SOLE_WORKSPACE",
+    "ruleAText": "R10 A: an unresolved Run or knowledge obligation retains the sole workspace; the existence of a backup never justifies early cleanup"
+  },
+  "toolPerformsDeletion": false,
+  "pending": [],
+  "pendingReasons": [],
+  "diskPressure": {
+    "warned": false,
+    "cleanup": false
+  },
+  "cleanup": "ELIGIBLE",
+  "basis": "verified-completed",
+  "refusals": [],
+  "checkedAt": "2026-10-22T23:57:58.434Z"
+}
+
+## A2) backup of the real .comet workspace: REFUSED - the real build's run-state.json
+#      carries runId only (authorityId lives in run-authority.json; no epoch anywhere).
+#      Backup.v1 precondition (authorityId+epoch+runId) does not match the real shape.
+$ node tools/infra/recovery.mjs backup --workspace <real .comet> --target <scratch> --json   (exit 2)
+{
+  "interface": "Backup.v1",
+  "command": "backup",
+  "capabilityScope": "LOCAL_DIRECTORY_FORM",
+  "realRemoteBackup": {
+    "status": "UNVERIFIED",
+    "reason": "cross-machine and real-service restore can only be proven by the backup owner together with the deployment wave; this receipt covers the local directory-form mechanism only",
+    "successor": "backup owner + deployment wave (infrastructure-plan.md 交接前置输入 #6)"
+  },
+  "status": "REFUSED",
+  "refusals": [
+    {
+      "code": "WORKSPACE_INVALID",
+      "reason": "run-state.json must carry authorityId, epoch and runId"
+    }
+  ],
+  "checkedAt": "2026-10-22T23:57:58.485Z"
+}
+
+===============================================================
+# CHANNEL B/C - real artifacts bridged into the I08 directory-form contract shape
+# (every file real verbatim; documented deltas only: run-state +authorityId(from real
+#  run-authority.json)/+epoch=1(contract field), knowledge obligation mirror of the real
+#  currentStep, db+objects watermarks stamped from the real authority boundAt, honest UNVERIFIED config refs)
+===============================================================
+
+bridged workspace: <tmpdir>/i08-step6-ws-R9UZtO
+workspace files: approvals, artifacts.json, checkpoint.json, config, context.md, db, gate-dispatches.json, knowledge, objects, operations, permissions, run-authority.json, run-state.json, state-events.jsonl, trajectory.jsonl, transactions
+$ node tools/infra/recovery.mjs retention --workspace <scratch> --json
+exit=2
+{
+  "interface": "Retention.v1",
+  "command": "retention",
+  "workspace": "<host-path-redacted>",
+  "r10": {
+    "ruleA": "RETAIN_SOLE_WORKSPACE",
+    "ruleAText": "R10 A: an unresolved Run or knowledge obligation retains the sole workspace; the existence of a backup never justifies early cleanup"
+  },
+  "toolPerformsDeletion": false,
+  "pending": [
+    {
+      "kind": "pending-knowledge-closeout",
+      "id": "closeout-51da6bdc-582c-4e62-b1b6-83cbb2802afe",
+      "detail": "a pending knowledge closeout obligation retains the sole workspace"
+    }
+  ],
+  "pendingReasons": [
+    "cleanup requires verified completion or a separately approved migration whose restore has been proven (R10 A; spec-frozen obligations: pending-outline-publish, unknown-remote-result, sole-payload-in-workspace)",
+    "migration-approval missing or incomplete: an unapproved boundary change never moves R10 A",
+    "restore-proof missing or unverified: a proven restore (verified=true, sameOperationReadback=true) is required before the boundary may move"
+  ],
+  "diskPressure": {
+    "warned": false,
+    "cleanup": false
+  },
+  "cleanup": "DENIED",
+  "basis": null,
+  "refusals": [
+    {
+      "code": "RETENTION_CLEANUP_DENIED",
+      "reason": "pending obligations retain the sole workspace: pending-knowledge-closeout"
+    }
+  ],
+  "checkedAt": "2026-10-22T23:57:10.141Z"
+}
+
+>>> retention cleanup=DENIED pendingKinds=pending-knowledge-closeout
+$ node tools/infra/recovery.mjs backup --workspace <scratch> --target <scratch> --json
+exit=0
+{
+  "interface": "Backup.v1",
+  "command": "backup",
+  "capabilityScope": "LOCAL_DIRECTORY_FORM",
+  "realRemoteBackup": {
+    "status": "UNVERIFIED",
+    "reason": "cross-machine and real-service restore can only be proven by the backup owner together with the deployment wave; this receipt covers the local directory-form mechanism only",
+    "successor": "backup owner + deployment wave (infrastructure-plan.md 交接前置输入 #6)"
+  },
+  "status": "VERIFIED",
+  "backupId": "backup-20261022T235710195Z-66342",
+  "manifestPath": "<host-path-redacted>",
+  "filesCount": 12,
+  "bytesTotal": 120188,
+  "digestsVerified": true,
+  "pointInTime": {
+    "db": "2026-10-22T23:51:56.553Z",
+    "objects": "2026-10-22T23:51:56.553Z",
+    "consistent": true
+  },
+  "credentialRefsRecorded": [
+    "secret-ref:sdd-harness-pilot/backup-writer",
+    "secret-ref:sdd-harness-pilot/backup-encryption",
+    "secret-ref:sdd-harness-pilot/restore-reader"
+  ],
+  "checkedAt": "2026-10-22T23:57:10.199Z"
+}
+
+>>> backup status=VERIFIED backupId=backup-20261022T235710195Z-66342 files=12 bytes=120188
+$ node tools/infra/recovery.mjs restore --backup <scratch> --quarantine <scratch> --fence-evidence <scratch> --json
+exit=2
+{
+  "interface": "Restore.v1",
+  "command": "restore",
+  "capabilityScope": "LOCAL_DIRECTORY_FORM",
+  "realServiceRestore": {
+    "status": "UNVERIFIED",
+    "reason": "cross-machine and real-service restore can only be proven by the backup owner together with the deployment wave; this receipt covers the local directory-form mechanism only",
+    "successor": "backup owner + deployment wave (infrastructure-plan.md 交接前置输入 #6)"
+  },
+  "refusals": [
+    {
+      "code": "RESTORE_REFUSED_OLD_WRITER_LIVE",
+      "reason": "old writer pid 66343 is still alive; the gone-claim is refuted by a real liveness check"
+    }
+  ],
+  "status": "REFUSED",
+  "keyAvailability": {
+    "encryptionRefs": [
+      {
+        "ref": "secret-ref:sdd-harness-pilot/backup-encryption",
+        "registered": true
+      }
+    ],
+    "restoreReaderRef": {
+      "ref": "secret-ref:sdd-harness-pilot/restore-reader",
+      "registered": false
+    },
+    "runtimeResolution": "UNRESOLVED_NO_RUNTIME_SECRET_STORE"
+  },
+  "checkedAt": "2026-10-22T23:57:10.254Z"
+}
+
+>>> restore(live old writer pid 66343) status=REFUSED refusals=RESTORE_REFUSED_OLD_WRITER_LIVE releaseRecordExists=false
+old writer SIGKILLed, exit reaped, isAlive=false
+$ node tools/infra/recovery.mjs restore --backup <scratch> --quarantine <scratch> --fence-evidence <scratch> --json
+exit=0
+{
+  "interface": "Restore.v1",
+  "command": "restore",
+  "capabilityScope": "LOCAL_DIRECTORY_FORM",
+  "realServiceRestore": {
+    "status": "UNVERIFIED",
+    "reason": "cross-machine and real-service restore can only be proven by the backup owner together with the deployment wave; this receipt covers the local directory-form mechanism only",
+    "successor": "backup owner + deployment wave (infrastructure-plan.md 交接前置输入 #6)"
+  },
+  "refusals": [],
+  "status": "RELEASED",
+  "backup": "<host-path-redacted>",
+  "quarantine": "<host-path-redacted>",
+  "keyAvailability": {
+    "encryptionRefs": [
+      {
+        "ref": "secret-ref:sdd-harness-pilot/backup-encryption",
+        "registered": true
+      }
+    ],
+    "restoreReaderRef": {
+      "ref": "secret-ref:sdd-harness-pilot/restore-reader",
+      "registered": false
+    },
+    "runtimeResolution": "UNRESOLVED_NO_RUNTIME_SECRET_STORE"
+  },
+  "fence": {
+    "oldWriterId": "MacBook-Wade-7.local",
+    "method": "SIGKILL",
+    "confirmedGone": true,
+    "pid": 66343,
+    "liveness": "CONFIRMED_GONE",
+    "observedAt": "2026-10-22T23:57:10.257Z"
+  },
+  "sameOperation": {
+    "verified": true,
+    "runId": "51da6bdc-582c-4e62-b1b6-83cbb2802afe",
+    "authorityId": "MacBook-Wade-7.local",
+    "epoch": 1
+  },
+  "filesRestored": 12,
+  "reconciliationFile": "restore-reconciliation.json",
+  "releaseFile": "release-record.json",
+  "checkedAt": "2026-10-22T23:57:10.311Z"
+}
+
+>>> restore(after real fence) status=RELEASED sameOperation={"verified":true,"runId":"51da6bdc-582c-4e62-b1b6-83cbb2802afe","authorityId":"MacBook-Wade-7.local","epoch":1} filesRestored=12
+>>> independent byte readback of real artifacts: IDENTICAL
+>>> quarantined run-state: runId=51da6bdc-582c-4e62-b1b6-83cbb2802afe authorityId=MacBook-Wade-7.local epoch=1 currentStep=full.closeout.knowledge
+>>> release-record: publishFrozen=true singleWriter=true
+>>> reconciliation: reAuthenticateFromCurrentAuthority=true aclEntries=0 membersReadmitted=0 revokedCacheRestored=false
+WS_DIR=<tmpdir>/i08-step6-ws-R9UZtO
