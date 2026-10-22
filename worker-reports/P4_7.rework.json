@@ -1,0 +1,150 @@
+{
+  "task": "P4_7 (原任务 4.7) rework: 在真实受管源/目标中验证 U01–U08 — 有效 owner/委托与可信签发、grant 撤销/过期、多源披露交集、完整 principal 映射、目标继承/单页/公开分享、写前版本重验、作者/审查/Publisher/issuer 隔离与正向自动发布",
+  "run": "rework-seven-p1-r1",
+  "worktree": "rw-p4-7 @ master@6112291, branch rework/p4-7-registry",
+  "worker": "P4_7 implementation worker (rework r1)",
+  "opening_receipt": "git log --oneline -1 -> 6112291 chore(openspec): accept P4_6 rework (10/10; review APPROVED)",
+  "final_status": "DONE",
+  "steps_done": "10/10 (tasks.md Step 1–8 的本轮对应重验 + 返工 Step 9/10: 真实登记与提交)",
+  "headline": "上一轮 LOCAL_ONLY 的『目标继承/单页/公开分享』UNVERIFIED holder 本轮翻转：试点 Outline 栈（127.0.0.1:3000 + dex OIDC）已部署，目标侧经终端通道真实读回并登记（4/5 required 渠道 READ；attachment 渠道因部署侧 S3 region 缺口如实 UNVERIFIED，注册保持 PARTIAL）；新增 LIVE 渠道完整性门（缺任一渠道 TARGET_CHANNEL_NOT_READ fail-closed）；Owns 分歧（review nb-3）以新增 lib/adapters/knowledge-authorization.js + test/knowledge-authorization.test.js + authorization-journey/ 补齐",
+  "u01_u08_matrix": [
+    {
+      "id": "U01",
+      "behavior": "授权链核验：注册 issuer + 域权力 + 真实时钟有效期 + 未撤销；签名/PR 合并/approved 字段从不进入判据",
+      "negative": "SELF_AUTHORED_GRANT/SELF_AUTHORED_APPROVAL（字段存在即拒）、UNKNOWN_REQUEST_FIELD、ISSUER_UNREGISTERED、ISSUER_AUTHORITY_INVALID、GRANT_EXPIRED（真实时钟）、GRANT_REVOKED、OWNER_MISMATCH、ROLE_ISOLATION_VIOLATED；无 --now 入口",
+      "mutation_caught": "M4 (directory RE removed) 连带击穿映射面；签发凭据 UNREGISTERED 使活体自动发布在签发链路保持阻断（诚实）"
+    },
+    {
+      "id": "U02",
+      "behavior": "多源披露取交集：effectiveAudience ⊆ policy.allowedAudience ∩ ⋂ grants.disclosureAudience",
+      "negative": "AUDIENCE_OUTSIDE_INTERSECTION（受众在并集不在交集；review verdict=pass 全程不变）",
+      "mutation_caught": "M1 (intersection→union) — U02 精确击杀 (1 fail)"
+    },
+    {
+      "id": "U03",
+      "behavior": "写前复核按当前台账/模型/策略摘要 + 真实时钟重验回执；同 operation 无续期通道（请求侧无 previousDecision 输入）",
+      "negative": "LEDGER_CHANGED + GRANT_NO_LONGER_VALID（decide→revoke→recheck）、TAMPERED_DECISION（decisionId 覆盖全字段）；活体旁证：真实实例 stale lastRevision 写入 409 document_conflict",
+      "mutation_caught": "M4 (映射退化) 击穿 recheck 链路 6 处；M1/M3 不影响 U03（隔离良好）"
+    },
+    {
+      "id": "U04",
+      "behavior": "审查与判定绑定冻结 payload 摘要；limits.scope 仅本操作/本对象版本，autoRenewal=false",
+      "negative": "REVIEW_PAYLOAD_STALE（审查摘要不匹配）、PAYLOAD_DRIFTED（写前呈递不同版本）",
+      "mutation_caught": "M2 (channel gate removed) 后 U04 仍 12/12 断言存活——版本绑定与受众门正交，无掩护耦合"
+    },
+    {
+      "id": "U05",
+      "behavior": "目标名/ID 在 allowlist 不够：audienceSource 白名单 + LIVE 读回五渠道完整性（membership/inheritance/pageShare/publicShare/attachment）",
+      "negative": "TARGET_AUDIENCE_ENLARGED（page-share/subtree-share/public-share）、AUDIENCE_OUTSIDE_INTERSECTION、TARGET_CHANNEL_NOT_READ（缺任一渠道逐渠道具名；仅缺 attachment 即拒——试点实测态）、无 acl/share/membership 子命令（exit 1）",
+      "mutation_caught": "M2 (channel gate removed) — U05 + adapter 渠道测试精确击杀; M4 — U05 LIVE 臂击杀"
+    },
+    {
+      "id": "U06",
+      "behavior": "分页不全/权限错误/服务账号可读/未映射主体一律阻断；注册的 pilot-directory principal（绑定真实不可变 Outline user id）可映射但不扩大交集",
+      "negative": "PERMISSION_EVIDENCE_INCOMPLETE、PERMISSION_EVIDENCE_ERROR、SERVICE_ACCOUNT_READ_NOT_REPUBLICATION、PRINCIPAL_UNMAPPED（源/目标两侧）、TARGET_EVIDENCE_INCOMPLETE",
+      "mutation_caught": "M3 (INCOMPLETE 当空集) — U06 + infra fail-closed 测试精确击杀 (2 fail); M4 — 目录主体映射退化击杀"
+    },
+    {
+      "id": "U07",
+      "behavior": "author/reviewer/publisher/isolator/issuer 五方隔离经真实受管入口强制：I01 解析门（allowedPrincipals+boundRole）、authority-gated revoke、publisher-only decide、自审拒绝",
+      "negative": "PRINCIPAL_NOT_AUTHORIZED（author/isolator 解析 publisher ref）、REVOKE_NOT_AUTHORIZED（拒绝时台账 sha256 零字节变化）、IDENTITY_NOT_PUBLISHER、SELF_REVIEW_FORBIDDEN；活体面：member key 对 documents.info/collections.add_user/users.update/collections.info 全 403，offboarded（suspended）403，成功动作在 Outline events 留 actorId 审计",
+      "mutation_caught": "M4 — author→publisher ref 解析面击穿（适配器测试）；提示词禁令从不作为验收"
+    },
+    {
+      "id": "U08",
+      "behavior": "正路径自动发布：完整授权链+完整源证据+摘要匹配+独立审查 → allow 回执（KnowledgePublishDecision.v1，readback.required=true）；LIVE 读回 provenance 与 DECLARED_ONLY 组件结果如实区分",
+      "negative": "同 operation 不能续期；其他版本 PAYLOAD_DRIFTED；无 humanApproval/manualConfirmation 字段（无重复人工确认面）；活体面：owner documents.create 200 + documents.info 独立读回 200 于受管文集",
+      "mutation_caught": "M2 — LIVE provenance 臂击杀；M4 — LIVE allow 臂击杀"
+    }
+  ],
+  "red_cases": [
+    {
+      "id": "新门与适配器（全部）",
+      "classification": "行为级缺口已复现",
+      "claim": "返工语义在实现前不可达：LIVE 读回渠道完整性门不存在（LIVE 宣称被忽略）、directory principal 不被映射（PRINCIPAL_UNMAPPED 误拒注册主体）、回执无 targetAudience provenance、登记断言（REGISTERED_PILOT_LIVE/REGISTERED_FROM_LIVE_READBACK_PARTIAL）无事实支撑、适配器模块缺席",
+      "evidence": "worker-reports/P4_7-rework/evidence/red-4_7-live-arms.txt（9 tests: 5 pass/4 fail，行为级 not ok 1/6/7/9——setup 登记、U05 渠道门、U06 映射、U08 LIVE provenance）+ red-adapter.txt（模块缺席 RED，1 file fail）"
+    },
+    {
+      "id": "注记",
+      "classification": "证据卫生",
+      "claim": "全部证据 .txt 入库、宿主绝对路径零出现（上轮 nb-4 教训落实：redact 后入 evidence/）、API token 只存在于终端通道与部署侧，永不入库",
+      "evidence": "worker-reports/P4_7-rework/evidence/（red ×2、green ×3、anchors、mutations ×4、live-outline-smoke ×3）"
+    }
+  ],
+  "live_target_smoke": {
+    "channel": "桌面终端通道（会话沙箱拒 loopback；宿主 curl 200/403/409 实测）",
+    "instance": "loopback 试点栈 6 容器（outline healthy + postgres + redis + minio + dex）",
+    "provisioning_disclosure": "owner@ 为部署波次 OIDC 首登真实用户；member@/offboarded@ 以 pilot directory seed 置入（行结构镜像 OIDC 首登形态，jwtSecret 由 psql 端随机生成）；三个测试主体各签发真实 Outline API key（ol_api_ + 38 word chars，DB 直插；token 永不入库）——OIDC 首登路径本身属 I03 Step 3 活体范围，如实披露",
+    "facts": [
+      "users.list 200（默认列表排除 suspended 主体——映射完整性以 DB 独立读回 3/3 补证）",
+      "collections.create 200 → managed-source-collection 不可变 id a3c6b4d8-1f1e-473d-9f49-ea5c48b7a818（残留重复文集 7ca605c5 已 API 软删并复核）",
+      "collections.memberships total=1（仅 owner admin）→ 有效受众= [directory:sdd-harness-pilot/owner]",
+      "shares.list total=0、DB shares=0、published=0 → pageShare/publicShare 渠道 READ",
+      "member key：documents.info/collections.add_user/users.update/collections.info 全 403；offboarded key：documents.list 403 → 隔离/继承边界实测",
+      "owner documents.create 200 + documents.info 独立读回 200 + stale lastRevision 更新 409 document_conflict（P4_6 固定 UUID/lastRevision 契约活体旁证）",
+      "attachments.create 500（服务端错误：S3 客户端 region 未配置——部署波次基础设施缺口）→ attachment 渠道 UNVERIFIED，注册保持 PARTIAL，LIVE 宣称缺渠道 fail-closed"
+    ]
+  },
+  "p25_p46_consistency": {
+    "p2_5": "consumeArchitectureGate/consumeTestDesignReview（lib/adapters/architecture-review.js:499/533）与 P4_7 消费面逐点对照：trusted-launcher dispatch 验证 ↔ P4_7 publisher-only decide + 回执 bindings.reviewExecution（Runtime 登记的审查 execution）；builder/authorExecution 自签拒绝 ↔ SELF_REVIEW_FORBIDDEN/REVIEWER_UNREGISTERED；one-shot digest 绑定（inputDigest/artifactSha256/candidateDigest）↔ review.boundPayloadDigest===payloadDigest + 回执三工件摘要 + PAYLOAD_DRIFTED；review.sufficient===true 肯定结论语义 ↔ review.verdict==='pass'+REVIEW_NOT_PASSED。语义同向、无冲突；P4_7 多出受众交集/渠道完整性臂（P2_5 无需）",
+    "p4_6": "Knowledge.Closeout.v1（0002 patch KnowledgeCloseout: targetKind/target/revision/readbackDigest sha256/execution/recordedAt）与 P4_7 回执对照：closeout.target 必须命中 REGISTERED publication operation 的固定 document UUID（0003 recordKnowledgeCloseout H04/H05 门）——P4_7 decide 回执的 operation.documentId 即该注册上游，无第二注册权威；knowledgeCloseoutBlocked（Kt 缺位不整体完成）↔ P4_7 回执 readback PENDING + 写前 recheck（U03/U04）保证过期/撤销授权产不出能关座的回执；requireRunAuthority ↔ IDENTITY_NOT_PUBLISHER 同向拒绝自提控制面写。活体 409 冲突与该契约一致"
+  },
+  "commands": {
+    "node --test test/infra-knowledge-authz.test.js test/knowledge-authorization.test.js test/delivery-cases/4_7.mjs (×2)": "exit 0; 34/34 ×2（green-p47-r1/r2.txt）",
+    "node tools/verify/delivery-journey.mjs --scenario U01..U08 --profile managed-pilot --json": "exit 0 ×8, verdict PASS ×8（anchors-u01-u08.txt）",
+    "npm test (×2)": "exit 1; 454 tests/451 pass/2 fail/1 skip——仅已知环境项 C08 host-openspec 漂移 + B08 preservation，两轮完全一致，零新增（green-npm-test-full.txt）",
+    "mutation M1 intersection→union": "exit 1 — U02 击杀（mutation-m1-union-audience-red.txt）；恢复后 byte-identical",
+    "mutation M2 LIVE channel gate removed": "exit 1 — U05 + adapter 渠道测试击杀（mutation-m2-channel-gate-removed-red.txt）",
+    "mutation M3 INCOMPLETE→empty": "exit 1 — U06 + infra fail-closed 击杀（mutation-m3-incomplete-empty-red.txt）",
+    "mutation M4 directory RE removed": "exit 1 — 6 tests 击杀含 U05/U06/U08（mutation-m4-directory-unmapped-red.txt）",
+    "live smoke（终端通道）": "users.list/collections.create/info/memberships/documents 200；documents.create 200 + info 200 + stale 409；member 403×4；offboarded 403；attachments.create 500（部署缺口）；duplicate delete 200 软删复核（live-outline-smoke-*.txt）"
+  },
+  "unverified": [
+    {
+      "item": "attachment 渠道活体读回",
+      "reason": "attachments.create 500——Outline 服务端 S3 客户端 region 未配置（部署波次 compose/secrets 域，不在 P4_7 Owns 内，禁改）；attachments 表=0 无从观测；注册因此保持 PARTIAL，LIVE 宣称缺 attachment 即 TARGET_CHANNEL_NOT_READ fail-closed",
+      "owner": "部署波次/I03 owner（修 AWS_S3_UPLOAD_BUCKET region 配置后 P4_7 门自动放行该渠道的补测）"
+    },
+    {
+      "item": "源侧权限读回（GitHub collaborator 全量分页、comet-source archive authority）",
+      "reason": "gh TLS x509 拦截（I01 记录）；台账 grants disclosureAudience 保持空=未登记，committed decide 对源侧 fail-closed",
+      "owner": "源连接器波次"
+    },
+    {
+      "item": "受保护签发工作流与 issuer 凭据",
+      "reason": "I01 目录无 grant-issuance ref（issuanceCredential UNREGISTERED）；活体签发链路保持阻断（U01 活体面如实）",
+      "owner": "治理/受保护基线波次（I01 修正案）"
+    },
+    {
+      "item": "OIDC 首登活体供给路径（member/offboarded）",
+      "reason": "directory seed 披露式供给；首登路径属 I03 Step 3 活体半边",
+      "owner": "I03/I04 部署验证波次"
+    },
+    {
+      "item": "端到端自动发布全链（Kt 座位关闭于产品 Run）",
+      "reason": "决策/回执面与活体目标侧已证；组合执行面属 P4_4 薄适配 + Comet Runtime（消费面一致性已对照，无冲突）",
+      "owner": "P4_4 + VERIFY"
+    },
+    {
+      "item": "postPublishReverification（L01–L11）",
+      "reason": "策略字段如实 UNVERIFIED；撤销/恢复属 P4_8 波次",
+      "owner": "P4_8"
+    }
+  ],
+  "files_changed": [
+    "lib/adapters/knowledge-authorization.js (new：Owns 补齐——真实 CLI 的程序化组合面，零授权逻辑，退出码契约映射)",
+    "test/knowledge-authorization.test.js (new：10 tests——适配器契约 + LIVE 渠道门 + directory 映射 + provenance 双臂)",
+    "openspec/changes/delivery-foundation-rearchitecture/authorization-journey/ (new：README + pilot-registration.case.json 真实登记 + preauthorization.journey.json U01–U08 旅程)",
+    "test/delivery-cases/4_7.mjs (setup 登记断言翻转 + U05/U06/U08 LIVE 臂 + 作用域注记更新；8 场景锚点保持)",
+    "test/infra-knowledge-authz.test.js (committed-state 断言随真实登记翻转：instanceStatus/allowedAudience——该文件为上一轮 P4_7 实际落位测试（review nb-3 分歧），字面 Owns 之外，特此披露)",
+    "tools/infra/knowledge-authz.mjs (directory principal RE + readback/channels 形状校验 + TARGET_CHANNEL_NOT_READ 门 + 回执 provenance.targetAudience 双臂)",
+    "infra/delivery/knowledge/authorization-model.json (目标真实登记：instance/collectionId/principalMap ×3/audienceReadback 4+1 渠道)",
+    "infra/delivery/knowledge/preauthorization-policy.json (allowedAudience REGISTERED_FROM_LIVE_READBACK_PARTIAL + readback 渠道证据)"
+  ],
+  "commits": "(见提交序列：test RED → feat GREEN → chore 报告)",
+  "blockers_or_questions": [
+    "test/infra-knowledge-authz.test.js 在字面 Owns 之外但其 committed-state 断言被真实登记强制翻转（该文件是上一轮 P4_7 的实际落位，review nb-3 记录了分歧）；集成波次二选一常态化（改 Owns 或文件改名），本轮未动 Owns",
+    "attachments.create 500 需部署波次修 S3 region（AWS_S3_UPLOAD_BUCKET 配置域）——修复后 attachment 渠道可补测并把注册翻成 5/5",
+    "users.list 默认排除 suspended 主体（total=2）：principal 映射完整性必须含目录/DB 读回通道，不得只信默认 API 列表——已写入登记记录"
+  ]
+}

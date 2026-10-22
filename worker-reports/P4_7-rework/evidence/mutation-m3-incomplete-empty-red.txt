@@ -1,0 +1,172 @@
+TAP version 13
+# Subtest: setup: the KnowledgeAuthz.v1 CLI and the committed authorization artifacts are present and validate clean
+ok 1 - setup: the KnowledgeAuthz.v1 CLI and the committed authorization artifacts are present and validate clean
+  ---
+  duration_ms: 57.611041
+  ...
+# Subtest: U01: Comet rejects self-authored and unauthorized/expired/revoked grants — signature, PR merge and approved fields carry no weight
+ok 2 - U01: Comet rejects self-authored and unauthorized/expired/revoked grants — signature, PR merge and approved fields carry no weight
+  ---
+  duration_ms: 644.597959
+  ...
+# Subtest: U02: a review-passed multi-source candidate is still denied when the audience is in the union but not in the disclosure intersection
+ok 3 - U02: a review-passed multi-source candidate is still denied when the audience is in the union but not in the disclosure intersection
+  ---
+  duration_ms: 108.054458
+  ...
+# Subtest: U03: pre-write recheck blocks the old publish verdict after the grant shrinks; no auto-renewal of the same operation
+ok 4 - U03: pre-write recheck blocks the old publish verdict after the grant shrinks; no auto-renewal of the same operation
+  ---
+  duration_ms: 215.886625
+  ...
+# Subtest: U04: a payload change invalidates the old review/publish verdict — no semantic-similarity or same-document-id reuse
+ok 5 - U04: a payload change invalidates the old review/publish verdict — no semantic-similarity or same-document-id reuse
+  ---
+  duration_ms: 164.410292
+  ...
+# Subtest: U05: share/inheritance/public audience sources are refused on an allowlisted collection; no ACL mutation entrance exists
+ok 6 - U05: share/inheritance/public audience sources are refused on an allowlisted collection; no ACL mutation entrance exists
+  ---
+  duration_ms: 482.583292
+  ...
+# Subtest: U06: incomplete/unmapped/error/service-only permission evidence stays blocked and never degrades to empty-or-public
+not ok 7 - U06: incomplete/unmapped/error/service-only permission evidence stays blocked and never degrades to empty-or-public
+  ---
+  duration_ms: 55.593208
+  location: '<worktree>
+  failureType: 'testCodeFailure'
+  error: |-
+    pagination must stay blocked
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    expectDenial (file://<worktree>
+    TestContext.<anonymous> (file://<worktree>
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: U07: role isolation is enforced by real managed entrances and denials are auditable — author never issues, isolator never reads publisher material
+ok 8 - U07: role isolation is enforced by real managed entrances and denials are auditable — author never issues, isolator never reads publisher material
+  ---
+  duration_ms: 351.016875
+  ...
+# Subtest: U08: a fully grounded publish auto-advances with a bound receipt and readback obligation, never extended to other objects or versions
+ok 9 - U08: a fully grounded publish auto-advances with a bound receipt and readback obligation, never extended to other objects or versions
+  ---
+  duration_ms: 268.128167
+  ...
+# Subtest: V_INFRA_P4_7: committed authorization artifacts validate clean against the real CLI and the I01 catalog
+ok 10 - V_INFRA_P4_7: committed authorization artifacts validate clean against the real CLI and the I01 catalog
+  ---
+  duration_ms: 56.565709
+  ...
+# Subtest: committed state fails closed: decide on the committed artifacts refuses because no audience is registered
+ok 11 - committed state fails closed: decide on the committed artifacts refuses because no audience is registered
+  ---
+  duration_ms: 54.607208
+  ...
+# Subtest: role isolation structure: pairwise-distinct principals and refs; tampering is a named violation
+ok 12 - role isolation structure: pairwise-distinct principals and refs; tampering is a named violation
+  ---
+  duration_ms: 55.644875
+  ...
+# Subtest: owner registration ties to the I01 registry; mismatch is a named violation
+ok 13 - owner registration ties to the I01 registry; mismatch is a named violation
+  ---
+  duration_ms: 55.289
+  ...
+# Subtest: credential alignment: role refs resolve in the I01 catalog with matching boundRole; policy/author refs are denied
+ok 14 - credential alignment: role refs resolve in the I01 catalog with matching boundRole; policy/author refs are denied
+  ---
+  duration_ms: 212.009458
+  ...
+# Subtest: grant lifecycle over the real clock: verify, authority-gated revoke, expiry, and the time-bending refusal
+ok 15 - grant lifecycle over the real clock: verify, authority-gated revoke, expiry, and the time-bending refusal
+  ---
+  duration_ms: 428.369042
+  ...
+# Subtest: trusted issuance (U01): signature presence, PR merges and approved fields never substitute for a registered issuer with domain authority
+ok 16 - trusted issuance (U01): signature presence, PR merges and approved fields never substitute for a registered issuer with domain authority
+  ---
+  duration_ms: 108.886167
+  ...
+# Subtest: decide positive path: a fully grounded request yields an allow receipt bound to digests, grants and audience
+ok 17 - decide positive path: a fully grounded request yields an allow receipt bound to digests, grants and audience
+  ---
+  duration_ms: 108.910709
+  ...
+# Subtest: auto-publish identity and review gates: not-publisher, self-review, unregistered reviewer, stale review
+ok 18 - auto-publish identity and review gates: not-publisher, self-review, unregistered reviewer, stale review
+  ---
+  duration_ms: 219.351959
+  ...
+# Subtest: multi-source disclosure intersection: union membership is not enough (U02 semantics)
+ok 19 - multi-source disclosure intersection: union membership is not enough (U02 semantics)
+  ---
+  duration_ms: 108.552333
+  ...
+# Subtest: pre-write recheck blocks drifted ground truth: ledger change, payload drift, receipt tamper, same-operation renewal
+ok 20 - pre-write recheck blocks drifted ground truth: ledger change, payload drift, receipt tamper, same-operation renewal
+  ---
+  duration_ms: 406.25925
+  ...
+# Subtest: fail-closed evidence gates: incomplete/error/service-only/unmapped permission evidence is never an empty set or public
+not ok 21 - fail-closed evidence gates: incomplete/error/service-only/unmapped permission evidence is never an empty set or public
+  ---
+  duration_ms: 54.5625
+  location: '<worktree>
+  failureType: 'testCodeFailure'
+  error: |-
+    incomplete must be denied
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    expectDenial (file://<worktree>
+    TestContext.<anonymous> (file://<worktree>
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: audience enlargement surface (U05 semantics): allowlisted collection, but share/inheritance/public paths are refused; no ACL mutation entrance exists
+ok 22 - audience enlargement surface (U05 semantics): allowlisted collection, but share/inheritance/public paths are refused; no ACL mutation entrance exists
+  ---
+  duration_ms: 531.914416
+  ...
+# Subtest: self-authored inputs are refused as a class: inline grant, approved flag, author sensitivity label, PR merge field
+ok 23 - self-authored inputs are refused as a class: inline grant, approved flag, author sensitivity label, PR merge field
+  ---
+  duration_ms: 215.072542
+  ...
+# Subtest: input contract: unreadable files and unknown commands exit 1; structured output never leaks host paths
+ok 24 - input contract: unreadable files and unknown commands exit 1; structured output never leaks host paths
+  ---
+  duration_ms: 160.268625
+  ...
+1..24
+# tests 24
+# suites 0
+# pass 22
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2846.451458
