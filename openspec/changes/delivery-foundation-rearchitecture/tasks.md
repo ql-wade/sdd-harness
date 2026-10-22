@@ -386,19 +386,19 @@
 **Parallel safe:** false
 **Acceptance IDs:** B01, B02, B03, B04, B05, B06, B07, F08, A15
 
-- [ ] **Step 1 [5 min]: Test** 3.2.a 跑一次同 Run 的真实角色链：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：测试作者只改授权测试；Builder 实现；Reviewer/Whitebox 独立，关联动作/请求/持久读回。
-- [ ] **Step 2 [5 min]: Implement** 3.2.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 3.2.b 验证实际返工：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：弱 oracle 回作者、产品缺陷回 Builder、环境缺口回适配；新候选重验，不修改冻结候选后自评。
-- [ ] **Step 4 [5 min]: Implement** 3.2.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 3.2.a 跑一次同 Run 的真实角色链：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：测试作者只改授权测试；Builder 实现；Reviewer/Whitebox 独立，关联动作/请求/持久读回。
+- [x] **Step 2 [5 min]: Implement** 3.2.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 3.2.b 验证实际返工：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：弱 oracle 回作者、产品缺陷回 Builder、环境缺口回适配；新候选重验，不修改冻结候选后自评。
+- [x] **Step 4 [5 min]: Implement** 3.2.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 本轮返工（P1映射见replan-record.json，详细oracle见execution-contract.json）：
 
-- [ ] **Step 7 [5 min]: Test** 真实产品试点选择本仓库实际受管Change及其正式交付目标；冻结具体可观察终态、环境/身份与UI/API/持久化/权限负例，不能继续以slugify替身编舞充当Comet派发。
-- [ ] **Step 8 [5 min]: Implement** 实现same-run-delivery.case.json观察配方及schema/追踪资格；本任务实跑实际Comet R至V角色执行切片，Kp/真实archive/Outline未知恢复/Kt完整流程仅由最终VERIFY在下游机制齐备后执行，此处不得提前签完整旅程通过。
-- [ ] **Step 9 [5 min]: Review** 独立验收本任务的实际R至V切片及配方追踪能力；禁止手改phase/自写pass/伪票/自写completed。下游知识与归档机制不是本任务接受前置，完整同Run终态仍在VERIFY执行，不能凭配方校验关闭E01/E02/E06。
-- [ ] **Step 10 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
+- [x] **Step 7 [5 min]: Test** 真实产品试点选择本仓库实际受管Change及其正式交付目标；冻结具体可观察终态、环境/身份与UI/API/持久化/权限负例，不能继续以slugify替身编舞充当Comet派发。
+- [x] **Step 8 [5 min]: Implement** 实现same-run-delivery.case.json观察配方及schema/追踪资格；本任务实跑实际Comet R至V角色执行切片，Kp/真实archive/Outline未知恢复/Kt完整流程仅由最终VERIFY在下游机制齐备后执行，此处不得提前签完整旅程通过。
+- [x] **Step 9 [5 min]: Review** 独立验收本任务的实际R至V切片及配方追踪能力；禁止手改phase/自写pass/伪票/自写completed。下游知识与归档机制不是本任务接受前置，完整同Run终态仍在VERIFY执行，不能凭配方校验关闭E01/E02/E06。
+- [x] **Step 10 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
 
 
 ### Task P3_3: 原任务 3.3 — 重复/乱序回执、旧 attempt/epoch、并发推进、断点恢复与失联调和；保留真实日志和持久化读回（A10–A12/F07）。只承诺已验证单环境语义。
