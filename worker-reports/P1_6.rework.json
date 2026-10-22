@@ -1,0 +1,72 @@
+{
+  "run": "rework-seven-p1-r1",
+  "task": "P1_6",
+  "task_title": "方法资产迁移重验 + 1_6.mjs 场景锚点补齐（原任务 1.6 Matt 方法档案）",
+  "worktree": "rw-p1-6 @ master@88c49f9, branch rework/p1-6-method",
+  "opening_receipt": "git log --oneline -1 -> 88c49f9 chore(openspec): accept P3_1 rework (11/11; review APPROVED; merge e278b81)",
+  "final_status": "DONE",
+  "steps_done": "8/8 (P1_6 has 8 steps in tasks.md, no rework-appended steps; Steps 1-4/6 re-verified GREEN against unchanged Owns assets, Step 5 host-session proof honestly env-gated, Step 7 self-review done, Step 8 commits below)",
+  "owns_boundary_check": "1_6.mjs IS in Owns (verbatim: '.agents/skills, docs/agent/skill-architecture.md, openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json, integrations/comet/patches/0001-matt-method-profile.patch, test/delivery-cases/1_6.mjs, integrations/comet/patches/tests/1_6.patch') -> 1_6.mjs modified (anchor completion); all other Owns paths re-verified byte-stable and left unchanged (manifest digest pinning green, snapshots green, patch sha256 pins green); tasks.md/hooks.yaml/3_1.mjs/execution-state read-only, untouched",
+  "scenario_anchors": {
+    "added": 4,
+    "ids": [
+      "V_M01",
+      "V_M02",
+      "V_B01",
+      "V_B09"
+    ],
+    "anchor_semantics": "word-boundary id token in executed test names (runner assertionIdMatches), each anchored test carries real assertions at the layer this case owns: M01 = manifest superpowers disablement + 0001 patch removed-lines (selection state AND npm-dep entry) + byte-pinned Matt trio digests; M02 = single Comet authority fields + planner demotion declared in manifest AND docs/agent/skill-architecture.md + executable reuse through the vendored plan_guard.py tool entry; B01 = planner-only request executed through the tool entry emits exactly one JSON verdict, handoff_ready false, zero files created (no dispatch/monitor/state); B09 = second_controller none + single progress authority + hooks.yaml carries no planner/implement-spec/Superpowers registration + 0001 patch role removes the resurrection path + hook division no-cross-copying",
+    "journey_mapping": "RED pre-anchor: all four --scenario runs exit 2 NOT-EXERCISED assertion-mapping-not-verifiable with requiredAssertions status 'missing' (evidence 01); GREEN post-anchor: M01/M02/B01/B09 all exit 0 PASS, target.found=true, target.status ok, requiredAssertions [id satisfied matched 1 ok 1] (evidence 02)",
+    "python3_probe": "plan_guard.py execution is skip-guarded on python3 (precedent: 1_2.mjs); python3 3.14.7 present in this run so both probe-bearing anchors executed"
+  },
+  "env_gated": [
+    {
+      "step": "tasks.md P1_6 Step 5 (1.6.c): real new host session proving Superpowers is not restarted and no planner/implement-spec duplicate dispatch",
+      "holder": "real Runner/host verification before overall completion (already registered in method-profile-manifest.json unverified[0]); kept UNVERIFIED, not faked"
+    },
+    {
+      "step": "module test 'patched build proves the method profile' (behavioral init probe on the pinned six-patch build)",
+      "holder": "build env: .sdd/vendor/comet pinned build absent in this worktree; test skips with its reason (honest), anchors do not depend on it"
+    }
+  ],
+  "red_cases": [
+    "RED-A (pre-anchor, reproduced this run): journey --scenario M01/M02/B01/B09 on 1_6.mjs all exit 2, verdict NOT-EXERCISED, reason assertion-mapping-not-verifiable, requiredAssertions [id] status missing — the honest rejection this task was reopened to fix (evidence 01)",
+    "RED-B (anchor dev): first V_M01 draft failed assert.match on the patch comment regex (/never select,\\s*install.../ did not account for the diff prefix '+  //' between the wrapped comment lines); fixed to the diff-aware literal; re-run green",
+    "preserved historical REDs: red-1-vendored-planner-superpowers.txt / red-2-comet-init-superpowers-install.txt / red-3-method-profile-absent.txt still asserted present and RED-2 still records the pristine 'skills add obra/superpowers' invocation (module test 3 green)"
+  ],
+  "commands": {
+    "node --test --test-reporter=tap test/delivery-cases/1_6.mjs (run 1)": "exit 0 — 10 tests, 9 pass, 0 fail, 1 honest skip (patched build absent)",
+    "node --test --test-reporter=tap test/delivery-cases/1_6.mjs (run 2)": "exit 0 — same",
+    "node --test --test-name-pattern=V_M01 test/delivery-cases/1_6.mjs": "exit 0 — 1/1 pass",
+    "node --test --test-name-pattern=V_M02 test/delivery-cases/1_6.mjs": "exit 0 — 1/1 pass",
+    "node --test --test-name-pattern=V_B01 test/delivery-cases/1_6.mjs": "exit 0 — 1/1 pass",
+    "node --test --test-name-pattern=V_B09 test/delivery-cases/1_6.mjs": "exit 0 — 1/1 pass",
+    "node tools/verify/delivery-journey.mjs --scenario M01|M02|B01|B09 --profile managed-pilot --evidence-dir <tmp> --json (pre-anchor)": "exit 2 x4 — NOT-EXERCISED assertion-mapping-not-verifiable",
+    "node tools/verify/delivery-journey.mjs --scenario M01|M02|B01|B09 --profile managed-pilot --evidence-dir <tmp> --json (post-anchor)": "exit 0 x4 — PASS, per-id requiredAssertions satisfied",
+    "node --test --test-reporter=tap test/delivery-cases/3_1.mjs": "exit 1 — 24/25 (pre-anchor baseline 25/25); sole failure is the routed cross-boundary finding, see blockers",
+    "npm test": "exit 1 — 426 tests, 423 pass, 2 fail; both failures are the documented known set (C08 negative host OpenSpec env drift; B08 preservation in test/spec-closeout.test.js), C08 reproduced failing at base 88c49f9 with this task's diff stashed; zero new failures (npm test does not load delivery-cases)"
+  },
+  "unverified": [
+    "host real new-session trajectory (Step 5) — env-gated, holder per manifest unverified[0]",
+    "patched-build behavioral init probe skipped (build absent in worktree) — holder: build/VERIFY env",
+    "B01/B09 anchors verify the method-asset layer this case owns (planner tool entry + control-plane absence of a second writer); runtime task-level write contention (B09 full WHEN) and plan-execution boundaries remain covered by 1_2.mjs FoundationLock check-run and the runtime gates (P2_4 family) — journey PASS here claims the anchored denominator at this layer only, per case-plan required_readback ('scope-limited fixture cannot close host/resource/runtime requirement')"
+  ],
+  "files_changed": [
+    "test/delivery-cases/1_6.mjs",
+    "worker-reports/P1_6.rework.json",
+    "worker-reports/P1_6-rework/evidence/01-red-journey-assertion-mapping.txt",
+    "worker-reports/P1_6-rework/evidence/02-green-journey-assertion-mapping.txt",
+    "worker-reports/P1_6-rework/evidence/03-anchor-pattern-runs.txt",
+    "worker-reports/P1_6-rework/evidence/04-module-runs.txt",
+    "worker-reports/P1_6-rework/evidence/05-npmtest-baseline-compare.txt",
+    "worker-reports/P1_6-rework/evidence/06-routed-3_1-conventionless-b09.txt"
+  ],
+  "commits": {
+    "ac0128b": "fix(delivery): P1_6 scenario anchors in 1_6.mjs — per-id assertion mapping for M01/M02/B01/B09 (P1-04)",
+    "(this commit)": "chore(rework): P1_6 rework report and evidence (rework-seven-p1-r1) — resolves via git log --oneline -2"
+  },
+  "blockers_or_questions": [
+    "ROUTED FINDING (cross-boundary, controller decision): test/delivery-cases/3_1.mjs (P3_1 Owns, merged at base) test '3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario token...' used the live 1_6.mjs as its anchor-less fixture and asserted the journey refuses B09 (exit 2 / target.found false / B09 missing). The controller-directed anchor flip makes that precondition false BY DESIGN: it now returns exit 0 PASS. 3_1.mjs is outside P1_6 Owns so it was not modified; it fails 24/25 when run directly (not part of npm test). Minimal fix for the P3_1 owner/controller: re-point that negative regression at an internal anchor-less fixture module (or a frozen copy of the old 1_6) so the runner-refusal property stays tested without depending on another task's live module state; the test's own comment already names the fix path. Evidence 06.",
+    "No blockers to P1_6's own gates."
+  ]
+}

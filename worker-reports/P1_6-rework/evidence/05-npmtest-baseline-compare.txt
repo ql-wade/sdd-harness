@@ -1,0 +1,23 @@
+P1_6 rework evidence 05 — full npm test vs known baseline
+date: 2026-10-22
+
+command: npm test
+exit: 1 (pre-existing known failures only)
+# tests 426
+# pass 423
+# fail 2
+# cancelled 0
+# skipped 1
+
+failing (both pre-existing known items, documented in P3_1.rework.json
+at the same run family):
+not ok 59 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+not ok 415 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+
+base pre-existence check (stash of this task's diff, run at 88c49f9):
+  node --test test/classic-integration.test.js -> C08 negative fails at base (pass 19 / fail 1)
+  B08 preservation lives in test/spec-closeout.test.js; neither file imports
+  or executes test/delivery-cases/1_6.mjs (grep refs: none)
+
+zero new failures vs the known set; the only file changed by this task is
+test/delivery-cases/1_6.mjs, which npm test does not load.

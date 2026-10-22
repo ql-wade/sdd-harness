@@ -1,0 +1,27 @@
+P1_6 rework evidence 06 — routed finding: 3_1.mjs convention-less B09 regression test
+date: 2026-10-22
+
+command: node --test --test-reporter=tap test/delivery-cases/3_1.mjs
+exit: 1 | tests 25 | pass 24 | fail 1
+
+failing test:
+not ok 4 - 3.1.b runner on a convention-less real case: B09 (1_6.mjs) has no scenario token in its test names — module-level green alone is now a structured refusal, never a scenario PASS (P1-04)
+
+cause: this P3_1-owned regression test encoded the anchor-less state of
+test/delivery-cases/1_6.mjs as its live fixture and asserted the journey
+runner refuses B09 on it (exit 2, NOT-EXERCISED, assertion-mapping-not-
+verifiable). The controller-directed P1_6 anchor flip makes that negative
+precondition false by design: 1_6.mjs now carries V_B09, so the journey
+returns PASS exit 0 and the test's assertions (run.status 2, target.found
+false, B09 'missing') no longer hold.
+
+boundary: test/delivery-cases/3_1.mjs is NOT in P1_6's Owns; not modified.
+routing: to controller / P3_1 owner — minimal fix is to re-point that
+negative case at an internal anchor-less fixture module (or a copied
+1_6 snapshot), preserving the regression's purpose (runner refuses unmapped
+modules) without depending on another task's live module state. The test's
+own comment already names the fix path: 'a scenario-anchored test point in
+the 1_6 case module or an explicit recipe definition'.
+
+scope note: npm test does not load delivery-cases; this failure appears
+only in the delivery-case family / VERIFY sweeps.
