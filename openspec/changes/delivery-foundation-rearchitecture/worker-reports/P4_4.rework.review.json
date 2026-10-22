@@ -1,0 +1,33 @@
+{
+  "task": "P4_4",
+  "phase": "rework-r1",
+  "verdict": "APPROVED",
+  "blocking_findings": [],
+  "reviewed_at": "2026-10-22T23:35:11.456514+00:00",
+  "head_reviewed": "54bf167",
+  "non_blocking_findings": [
+    {
+      "id": "NB1-consumer-forged-records",
+      "disposition": "LEDGER",
+      "summary": "spec.js requireKnowledgeCloseout / comet.js sealCloseout 接受伪造记录(P3_4/P1_3 属地);全仓零运行时调用方,真实 archive/completed 流经 runtime 门强制(case 测试2/5/6 实测)"
+    },
+    {
+      "id": "NB2-patch0003-ledger-drops-channels",
+      "disposition": "INFO",
+      "summary": "readbackDigest 三重校验在,丢 channels 仅损溯源丰富度;建议台账跟进持久化+校验"
+    },
+    {
+      "id": "NB3-revision-drift-note",
+      "disposition": "INFO",
+      "summary": "写入 revision 2 vs 读回 3,证据绑定字节 digest,非承载字段"
+    }
+  ],
+  "independently_rerun": {
+    "boundary_clean": true,
+    "red_reproduction": "冷启 clone 基点 2 败,败因=工人文档(buildKpCloseoutReceipt 无 readback 铸造/exists 零通道)",
+    "green_and_mutations": "20/20;突变B(llmwiki readback 短路)→Kp 靶红;突变A(outline 通道数检查短路)→恰 Outline 靶红;恢复字节一致",
+    "npm_test": "462/459/2/1 恰已知集{C08 neg,B08}",
+    "case_rerun": "worktree 预核验后 6/6 exit 0,重跑后仍干净",
+    "outline_evidence_audit": "NOT_REDONE(审计通过):payload sha256 105B 精确复算一致;export 126B 一致;三通道独立;CSRF 403 负路径记录;清理链完整零净增"
+  }
+}
