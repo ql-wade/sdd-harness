@@ -8,6 +8,10 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 // V_INFRA_I08 — I08 备份恢复、单权威迁移与 R10 未完成保留 的契约检查。
+// 兼容入口套件：驱动 tools/infra/backup-restore.mjs（I08 命名迁移后的 compat shim，
+// 委托 canonical tools/infra/recovery.mjs 并默认 legacy 域目录 infra/delivery/backup/）。
+// canonical 契约套件在 test/infra-recovery.test.js；本套件证明兼容入口与 legacy
+// 域目录（registry.json 单源 + 恢复策略兼容副本）行为不变。
 // 规格：infrastructure-tasks.json 的 I08 条目 + infrastructure-plan.md I08 小节
 // + R10 恢复关闭门（存在备份 ≠ 允许提前清理唯一未完成工作区）。
 //
@@ -43,7 +47,7 @@ const cliPath = path.join(repoRoot, 'tools', 'infra', 'backup-restore.mjs');
 const secretRefsModuleUrl = new URL('../tools/infra/secret-refs.mjs', import.meta.url);
 
 const RUN_TIMEOUT_MS = 120_000;
-const DOMAIN_FILES = ['registry.json', 'backup-policy.json', 'restore-policy.json'];
+const DOMAIN_FILES = ['registry.json', 'backup-policy.json', 'restore-policy.json', 'retention-policy.json', 'authority-transfer.schema.json'];
 const BACKUP_REFS = [
   'secret-ref:sdd-harness-pilot/backup-writer',
   'secret-ref:sdd-harness-pilot/backup-encryption',

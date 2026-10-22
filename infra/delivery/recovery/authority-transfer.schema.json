@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "interface": "AuthorityTransferSchema.v1",
+  "kind": "authority-transfer-schema",
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "state": {
+    "requiredFields": ["authorityId", "epoch", "runId"],
+    "epochBumpRequired": true,
+    "transferredFromRequired": true,
+    "singleRunContinuityRequired": true,
+    "note": "the transferred run-state keeps the same runId under a new authorityId; the epoch always bumps and records transferredFrom"
+  },
+  "approval": {
+    "required": true,
+    "requiredFields": ["approvalId", "approvedBy", "approvalRef", "approvedAt"],
+    "reasonRequired": "runner-permanently-lost",
+    "note": "a controlled transfer approval is mandatory before the authority may move; any other reason is refused"
+  },
+  "oldWriterFence": {
+    "required": true,
+    "processLevelEvidenceRequired": true,
+    "acceptedMethods": ["SIGKILL", "SIGTERM", "process-exit-confirmed"],
+    "rejectedMethods": ["shared-directory-reregister"],
+    "liveWriterRefutesGoneClaim": true,
+    "confirmedGoneRequired": true,
+    "note": "the old writer is fenced only by process-level evidence; a real liveness check refutes any gone-claim about a live pid, and re-registering a shared directory is a masquerade, not fencing"
+  },
+  "singleAuthorityProof": {
+    "required": true,
+    "oldWriterConfirmedGone": true,
+    "singleLiveAuthority": true,
+    "note": "the transfer receipt must prove exactly one live authority: the old writer confirmed terminated and the new authority registered"
+  },
+  "localOnly": true
+}

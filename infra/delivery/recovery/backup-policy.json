@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "interface": "BackupPolicy.v1",
+  "kind": "backup-policy",
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "scope": {
+    "sections": [
+      "run-state",
+      "operations",
+      "transactions",
+      "approvals",
+      "knowledge",
+      "db",
+      "objects",
+      "config",
+      "permissions"
+    ],
+    "manifestInterface": "Backup.v1",
+    "note": "a backup carries the original Run authority files, transactions, operations, receipts, approved payloads with versions, knowledge closeout records, and database/object/config/permission refs; the directory-form workspace is the real backed-up artifact"
+  },
+  "manifest": {
+    "digestAlgorithm": "sha256",
+    "perFile": ["sha256", "bytes"],
+    "sourceAuthorityReadback": true,
+    "approvedPayloadVersions": true,
+    "pointInTimeWatermarks": ["db", "objects"],
+    "postWriteVerification": true,
+    "note": "every manifest entry is a real sha256 over the real copied bytes; the backup re-reads and re-hashes the target after writing and refuses on any mismatch"
+  },
+  "consistency": {
+    "openTransactionBlocksBackup": true,
+    "pointInTimeConsistencyRequired": ["db", "objects"],
+    "note": "a transaction left open means there is no consistent point in time to back up; db and objects watermarks must agree for the restore to later enable"
+  },
+  "encryption": {
+    "mode": "REF_ONLY",
+    "refs": ["secret-ref:sdd-harness-pilot/backup-encryption"],
+    "note": "backup encryption is referenced, never valued; actual encryption stays UNVERIFIED until a runtime-authorized secret store exists, and restoration stops if the key is unavailable"
+  },
+  "cacheRefs": {
+    "codeSourceCache": {
+      "directory": "cache/",
+      "policyStatus": "REVOKED_NOT_RESTORED",
+      "note": "revoked code-source caches are recorded by reference with restored=false and their bytes are never copied; a restore must not reuse them"
+    }
+  },
+  "backupWriterRef": "secret-ref:sdd-harness-pilot/backup-writer",
+  "neverIncluded": [
+    "secret values (only secret-ref entries, never resolved)",
+    "host absolute paths (repo-relative or redacted receipts only)"
+  ],
+  "retention": {
+    "interface": "Retention.v1",
+    "ruleA": "R10 A: an unresolved Run or knowledge obligation retains the sole workspace; the existence of a backup never justifies early cleanup",
+    "cleanupDenyWhenPending": [
+      "pending-outline-publish",
+      "unknown-remote-result",
+      "sole-payload-in-workspace",
+      "open-transaction",
+      "pending-knowledge-closeout"
+    ],
+    "diskPressureWarnOnly": true,
+    "cleanupAllowedOnlyWhen": [
+      "verified-completed",
+      "approved-migration-with-proven-restore"
+    ],
+    "autoCleanupEnabled": false,
+    "toolPerformsDeletion": false,
+    "obligationSource": "Comet real obligations (open transactions, dispatched-but-unreceipted remote operations, pending knowledge closeouts, sole-copy approved payloads) — never just archived/git-complete state",
+    "note": "capacity shortfalls raise warnings only; a silent or timed cleanup of the sole unfinished workspace is forbidden. The boundary moves only after verified completion, or after a separately approved controlled migration whose restore has been proven."
+  },
+  "localOnly": true
+}

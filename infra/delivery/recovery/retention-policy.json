@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "interface": "RetentionPolicy.v1",
+  "kind": "retention-policy",
+  "project": {
+    "id": "sdd-harness-pilot"
+  },
+  "retention": {
+    "interface": "Retention.v1",
+    "ruleA": "R10 A: an unresolved Run or knowledge obligation retains the sole workspace; the existence of a backup never justifies early cleanup",
+    "cleanupDenyWhenPending": [
+      "pending-outline-publish",
+      "unknown-remote-result",
+      "sole-payload-in-workspace",
+      "open-transaction",
+      "pending-knowledge-closeout"
+    ],
+    "diskPressureWarnOnly": true,
+    "cleanupAllowedOnlyWhen": [
+      "verified-completed",
+      "approved-migration-with-proven-restore"
+    ],
+    "autoCleanupEnabled": false,
+    "toolPerformsDeletion": false,
+    "obligationSource": "Comet real obligations (open transactions, dispatched-but-unreceipted remote operations, pending knowledge closeouts, sole-copy approved payloads) — never just archived/git-complete state",
+    "note": "canonical home of the R10 A boundary (the I08 naming rework extracted it from backup-policy.json.retention, whose copy remains in the legacy domain). Capacity shortfalls raise warnings only; a silent or timed cleanup of the sole unfinished workspace is forbidden. The boundary moves only after verified completion, or after a separately approved controlled migration whose restore has been proven."
+  },
+  "recoveryTerms": {
+    "rpo": "UNVERIFIED",
+    "rto": "UNVERIFIED",
+    "retentionPeriod": "UNVERIFIED",
+    "encryptionOwner": "UNVERIFIED",
+    "note": "RPO/RTO/retention period/encryption owner stay honestly UNVERIFIED until owner-confirmed pilot measurements exist; auto cleanup stays disabled while any recovery term is unconfirmed."
+  },
+  "localOnly": true
+}
