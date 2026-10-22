@@ -74,13 +74,22 @@ test('runtime claims record executed probes with existing evidence logs', async 
   assert.match(teamaiClaim.observed, /0\.22\.0/);
 });
 
-test('compatibility matrix replays the local OpenSpec dependency-edge gap and verifies the candidate', () => {
+test('compatibility matrix keeps the historical dependency-edge gap, records the observed local drift, and verifies the candidate', () => {
   const matrix = baseline.openspec.compatibility_matrix;
   assert.ok(Array.isArray(matrix) && matrix.length >= 2);
-  const localRow = matrix.find((row) => row.version === baseline.openspec.current);
-  assert.equal(localRow.dependency_edges.exposed, false);
+  // The 1.3.1 REJECTED replay stays pinned as recorded history even though the
+  // host-global binary drifted; environments change, the historical gap does not.
+  const historicalRow = matrix.find((row) => row.version === '1.3.1');
+  assert.ok(historicalRow, 'historical 1.3.1 row missing');
+  assert.equal(historicalRow.dependency_edges.exposed, false);
+  assert.equal(historicalRow.dependency_edges.replayed, true);
+  assert.equal(historicalRow.dependency_edges.result, 'REJECTED');
+  // The currently observed local CLI must have its own honest row.
+  const localRow = matrix.find((row) => row.version === baseline.openspec.local_cli.observed_version);
+  assert.ok(localRow, `no matrix row for the observed local CLI ${baseline.openspec.local_cli.observed_version}`);
+  assert.equal(localRow.dependency_edges.exposed, true);
   assert.equal(localRow.dependency_edges.replayed, true);
-  assert.equal(localRow.dependency_edges.result, 'REJECTED');
+  assert.equal(localRow.dependency_edges.result, 'ACCEPTED');
   const candidateRow = matrix.find((row) => row.version === baseline.openspec.isolated_candidate);
   assert.equal(candidateRow.dependency_edges.exposed, true);
   assert.equal(candidateRow.dependency_edges.runtime_verified, true);
