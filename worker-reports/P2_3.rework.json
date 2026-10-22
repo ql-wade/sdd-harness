@@ -1,0 +1,121 @@
+{
+  "run": "rework-seven-p1-r1",
+  "task": "P2_3",
+  "task_title": "原任务 2.3 — 保留旧 CLI 和报告 adapter；错误输入退出 1、验收失败退出 2、有效检查退出 0；旧 npm test 及 bash scripts/check.sh 通过（B10/A20/B07）",
+  "final_status": "DONE",
+  "worktree": "rw-p2-3 @ master@8c8e4a3, branch rework/p2-3-arch-review",
+  "opening_receipt": "git log --oneline -1 -> 8c8e4a3 chore(openspec): accept P1_6 rework (7/8, Step 5 env-gated; review APPROVED; merge 4f53742)",
+  "old_pass_inherited": false,
+  "steps_done": "6/6 (re-verified this round; zero implementation changes required — every owns behavior re-executed against current source, all fault injections caught)",
+  "scope_mapping_note": "HONEST MAPPING DISCREPANCY, resolved without violating the hard constraint: tasks.md '### Task P2_3' Owns (verbatim, authoritative per the brief) = bin/cli.js, lib/adapters/legacy-evidence.js, test/delivery-cli.test.js, test/delivery-cases/2_3.mjs. The brief's semantic paragraph describes the arch-review quorum (lib/adapters/architecture-review.js, 3 agents, thresholds 8/7, all-APPROVE) — tasks.md assigns those files to Task P2_5 (E03/E04/H06). Resolution: owns work executed per tasks.md verbatim; the quorum re-verification requirement was executed IN FULL as read-only verification (real re-fires + temporary mutation injection, zero committed changes to P2_5 files); git diff 8c8e4a3...HEAD stays inside the allowed set.",
+  "quorum_negatives_reverified": [
+    {
+      "case": "P0 positive control: 3/3 unanimous APPROVE (9/9/9), scores >= thresholds, finalize -> judge PASSED, zero refusals",
+      "exit": "driver HELD (correctly passed); real gate tally exit 0, finalize ok"
+    },
+    {
+      "case": "N1 missing ballot (缺席票): only 2 of 3 ballots present",
+      "exit": "real gate tally exit 1 (INCOMPLETE); judge REFUSED [MISSING_BALLOT, QUORUM_NOT_UNANIMOUS] — HELD"
+    },
+    {
+      "case": "N2 below threshold (低于阈值): one ballot overall 7.9 < 8 and criterion 6 < 7",
+      "exit": "real gate tally exit 1 (DEBATE_REQUIRED); judge REFUSED [QUORUM_NOT_UNANIMOUS, THRESHOLD_SHORT] — HELD"
+    },
+    {
+      "case": "N3a digest mismatch (digest 不匹配): manifest artifact_sha256 tampered after init",
+      "exit": "judge REFUSED [PACKAGE_DIGEST_MISMATCH] before any tally honored — HELD"
+    },
+    {
+      "case": "N3b package edited after init: frozen artifact mutated post-init",
+      "exit": "real gate tally exit 1 (BLOCKED, artifact_changed=true); judge REFUSED [ARTIFACT_CHANGED] — HELD"
+    },
+    {
+      "case": "N4 stale ballots (陈旧票): rev-2 package judged with rev-1 ballots (old digest + old review_id)",
+      "exit": "real gate tally exit 1; judge REFUSED [MISSING_BALLOT, INVALID_BALLOT, QUORUM_NOT_UNANIMOUS, BALLOT_REVIEW_MISMATCH x3, STALE_DIGEST x3] — HELD"
+    },
+    {
+      "case": "N5 non-unanimous (非全票): 2 APPROVE + 1 REJECT majority",
+      "exit": "real gate tally exit 1 (DEBATE_REQUIRED); judge REFUSED [QUORUM_NOT_UNANIMOUS] — majority never advances — HELD"
+    }
+  ],
+  "mutations_caught": [
+    {
+      "mutation": "M1: adapter judge unanimity check disabled (if(approveVotes!==3||dissenters) -> if(false)) in lib/adapters/architecture-review.js",
+      "red": "node --test arch-review suite pair exit 1, 2 tests fail: 'E03: absent ballot, majority-only...' + '2.5.b E03: missing ballots, dissents and old digests...'",
+      "green_after_restore": "exit 0"
+    },
+    {
+      "mutation": "M2: judge-side threshold relaxed (overall < 8 -> < 7) in lib/adapters/architecture-review.js",
+      "red": "exit 1, 1 test fails: low-score (7.9) no longer named THRESHOLD_SHORT",
+      "green_after_restore": "exit 0"
+    },
+    {
+      "mutation": "M3: stale-digest check neutered (STALE_DIGEST refusal disabled) in lib/adapters/architecture-review.js",
+      "red": "exit 1, 2 tests fail: adapter E03 five-negative + 2_5.mjs old-digests case",
+      "green_after_restore": "exit 0"
+    },
+    {
+      "mutation": "M5: CLI exit-code contract broken (delivery-gate blocked exit 2 -> 0) in bin/cli.js",
+      "red": "node --test owns pair exit 1, 2 tests fail: 2_3.mjs '...executed but blocked exits 2 (B10)' + delivery-cli '...verdict blocked, exit 2 (B10)'",
+      "green_after_restore": "exit 0"
+    },
+    {
+      "mutation": "M6: silent legacy version migration (INCOMPATIBLE_VERSION check disabled) in lib/adapters/legacy-evidence.js",
+      "red": "exit 1, 2 tests fail: 2_3 B07 + delivery-cli B07 incompatible-versions",
+      "green_after_restore": "exit 0"
+    },
+    "all 5 mutations RED with named failing tests, all restores GREEN, final residue: 0 modified files (git status --porcelain empty)"
+  ],
+  "sandbox_limitations": "Per the brief: external review CLIs (consensus/claude/codex/zcode agents) are NOT callable from this sandbox, so no live three-agent consensus round was re-executed. This did not weaken the verification: the quorum re-fire drives the REAL mechanical gate (.agents/skills/multi-agent-consensus-review/scripts/review_gate.py via python3 subprocess, which IS runnable) through the real adapter for every negative; live-agent ballot production is the only thing a real round would add, and the brief's contract-level substitute (negative re-fire + mutation injection + real-receipt cross-check) was executed in full. No docker usage required.",
+  "real_consensus_reference": "openspec/changes/delivery-foundation-rearchitecture/consensus/2026-10-22-plan-r3/ read-only: manifest participants [claude-code, zcode, codex-agent], thresholds {overall 8.0, criterion 7.0}; tally PASSED, 3 APPROVE / 0 REJECT / 0 missing / 0 dissenters; ballots 8.8 (min criterion 8) / 9.0 (9) / 8.3 (8.0). This matches the adapter's frozen constants field-for-field and is exactly the shape judgeArchitectureGate requires; corroborates the controller-reported r3 unanimous pass (r2 codex-REJECT block: consistent with the N5/QUORUM_NOT_UNANIMOUS semantics re-fired above — no r2 artifacts exist on disk to cite directly). P2_3's Owns set contains NO arch-review receipt consumption surface (that is P2_5's adapter), so this is an observational cross-check only; no owns code was changed to consume receipts (evidence 07).",
+  "red_cases": [
+    "2.3.a original RED reenacted live: a REAL old-channel report (lib/evidence-audit.js auditEvidence over a real on-disk project, pass=true) fed directly to admitEvidence is refused INVALID_ENVELOPE with the exact missing-field list (candidateDigest/caseId/origin/execution/environment/toolchain/executions/result/evidence/expiry) — the failure that motivated lib/adapters/legacy-evidence.js (evidence 04)",
+    "Fault-injection REDs M5 (exit-2 contract) and M6 (silent migration) on owns code: each flipped 2 named tests to failing, restored to GREEN (evidence 03)",
+    "Quorum fault-injection REDs M1/M2/M3 on the P2_5 adapter (temporary, restored): each flipped 1-2 named tests to failing (evidence 03)"
+  ],
+  "scenario_anchor_and_selfcert_check": "P3_1-connected check, result: NO gaps in owns. (a) Scenario anchors: tools/verify/delivery-journey.mjs --scenario B10 and --scenario A20 (the two case-plan scenarios bound to test/delivery-cases/2_3.mjs) both verdict PASS, empty missing/drift, anchors EXERCISED — no NOT-EXERCISED/assertion-mapping pattern (evidence 05). (b) Registry-value self-certification: owns tests assert exit codes from real child process status and parse real stdout; the candidate digest binding in 2_3.mjs comes from report.evidenceSha256.sourceTree of a REAL auditEvidence run over a real project on disk, not a self-registered value; delivery-cli.test.js fixture-level digests are pure mapping-contract inputs paired with the real chain in 2_3.mjs — no self-certification pattern found, nothing to fix.",
+  "commands": {
+    "git log --oneline -1 (opening receipt)": "8c8e4a3 chore(openspec): accept P1_6 rework (7/8, Step 5 env-gated; review APPROVED; merge 4f53742)",
+    "node --test test/delivery-cli.test.js (run 1)": "exit 0 — 14/14 pass",
+    "node --test test/delivery-cases/2_3.mjs (run 1)": "exit 0 — 5/5 pass",
+    "node --test test/delivery-cli.test.js test/delivery-cases/2_3.mjs (runs A+B, saved)": "exit 0 both — 19/19 pass each (x2 green satisfied)",
+    "node --test test/architecture-review-adapter.test.js (run 1)": "exit 0 — 15/15 pass",
+    "node --test test/delivery-cases/2_5.mjs (run 1)": "exit 0 — 5/5 pass",
+    "node --test test/architecture-review-adapter.test.js test/delivery-cases/2_5.mjs (saved)": "exit 0 — 20/20 pass",
+    "quorum negatives driver (standalone, zero mocks)": "exit 0 — 5/5 negatives HELD + positive control correctly PASSED (evidence 02)",
+    "mutation cycle (5x inject->RED->restore->GREEN)": "all 5 caught RED exit 1; all restores GREEN exit 0; residue 0 (evidence 03)",
+    "RED reenactment driver (raw report -> admitEvidence)": "INVALID_ENVELOPE reproduced (evidence 04)",
+    "node tools/verify/delivery-journey.mjs --scenario B10": "exit 0 — verdict PASS, anchors exercised (evidence 05)",
+    "node tools/verify/delivery-journey.mjs --scenario A20": "exit 0 — verdict PASS, anchors exercised (evidence 05)",
+    "npm test (full, run 1)": "exit 1 — 427 tests, 424 pass, 2 fail, 1 skip; failures = the documented known set (classic-integration #59 C08 host-OpenSpec 1.14.3-vs-1.3.1 env drift; spec-closeout #416 B08) — identical to P2_2/P3_1/P1_6 rework baselines",
+    "npm test (full, run 2)": "exit 1 — identical failure set; zero new failures",
+    "python3 .agents/skills/multi-agent-consensus-review/scripts/test_review_gate.py": "exit 0 (real gate selftest)",
+    "bash scripts/check.sh (pristine worktree)": "exit 1 at whitebox-verify green fixture — PRE-EXISTING, outside owns: 6 ledger-referenced artifacts/*.log (producer/wire/consumer/risk/surface/service) are untracked in git, present only in the main checkout, absent in every fresh worktree",
+    "bash scripts/check.sh (fixture completed temporarily from main checkout)": "exit 1 at whitebox-verify negative corpus — PRE-EXISTING: 7 ok / 1 fail, f7-secret-scan target string 'possible AWS access key found' no longer emitted by either validator entry (new==old outputs identical); temporary .log copies removed afterwards, worktree restored clean",
+    "check.sh YAML/JSON static stage (exact glob set)": "4 YAML + 3 JSON, 0 errors"
+  },
+  "unverified": [
+    "bash scripts/check.sh end-to-end PASS: impossible at base 8c8e4a3 on this machine for three pre-existing reasons OUTSIDE P2_3 owns — (1) 6 untracked .log green-fixture artifacts missing from git in fresh worktrees; (2) negative-corpus f7 secret-scan target no longer emitted (vendored-skill drift, 7/8 vs expected 8/8); (3) npm test's 2 known-env failures abort under set -euo pipefail. Every stage was verified individually instead (evidence 06). Fixing any of these requires touching .agents/skills/whitebox-verify/** or test files outside this task's allowed set — flagged to controller, not silently patched.",
+    "No live three-agent consensus round was executed (sandbox blocks external review CLIs per the brief); replaced by the contract-level substitute the brief authorizes: real-gate negative re-fire + mutation injection + real r3 receipt cross-check."
+  ],
+  "files_changed": [
+    "worker-reports/P2_3.rework.json",
+    "worker-reports/P2_3-rework/evidence/01-owns-tests-green-x2.txt",
+    "worker-reports/P2_3-rework/evidence/02-quorum-negatives-refired.txt",
+    "worker-reports/P2_3-rework/evidence/03-mutation-cycle.txt",
+    "worker-reports/P2_3-rework/evidence/04-red-reenactment.txt",
+    "worker-reports/P2_3-rework/evidence/05-journey-scenario-anchors.txt",
+    "worker-reports/P2_3-rework/evidence/06-checksh-stage-inventory.txt",
+    "worker-reports/P2_3-rework/evidence/07-real-consensus-receipts-readonly.txt",
+    "worker-reports/P2_3-rework/evidence/08-quorum-suites-current-source.txt"
+  ],
+  "commits": {
+    "161174c": "test(P2_3 rework rw-p2-3): owns x2 green + arch-review quorum negatives re-fired + 5/5 mutations caught — evidence (worker-reports/P2_3-rework/evidence/*)",
+    "report_commit": "docs(P2_3 rework rw-p2-3): worker rework report (worker-reports/P2_3.rework.json) — this commit"
+  },
+  "blockers_or_questions": [
+    "Task-ID mapping: the rework brief's semantic paragraph labels the arch-review quorum as 'P2_3 的核心', but tasks.md assigns lib/adapters/architecture-review.js (+ its tests) to Task P2_5; brief's Owns-verbatim constraint matches tasks.md P2_3 (CLI/legacy-evidence). I executed BOTH: owns per tasks.md verbatim, quorum re-verification read-only per the brief's semantics, zero committed changes outside the allowed set. If the controller intended a P2_5 code rework under the P2_3 label, that needs an explicit Owns amendment — none was made here.",
+    "scripts/check.sh cannot pass on any fresh worktree until the 6 whitebox-verify .log fixtures are committed (or regenerated deterministically) and the f7 corpus expectation is updated; both outside this task's authorization — recommend routing to the vendored-skill owner task.",
+    "npm test known set remains: classic-integration #59 (host OpenSpec CLI version 1.14.3 vs pinned 1.3.1 — environment drift) and spec-closeout #416 (B08, pre-existing at base). Zero new failures introduced by this task (implementation diff = 0 lines)."
+  ]
+}
