@@ -1,0 +1,77 @@
+P4_4 Step 11 — Outline real-stack publication verification (live managed objects)
+================================================================================
+
+Stack fact: Outline IS live and reachable (host-side listener on loopback:3000,
+docker compose, dex OIDC in front). The Bash loopback HTTP channel is filtered
+by this session's sandbox (curl exit 7, http_code 000) — NOT a service outage;
+the listener was confirmed independently. Per the coordinator's guidance the
+verification therefore ran through the Playwright BROWSER channel: same-origin
+fetch() inside the live Outline page (session-authenticated), which is a real
+client of the real stack. No mock, no fixture, no code bypass.
+
+Session identity: the operator browser profile already carried a live OIDC
+session for the workspace owner principal (pre-existing login; this worker did
+not re-drive the login flow and did not need any secret material).
+
+Payload (exact bytes written):
+  P4_4 step11 live publish probe: managed-object verification paragraph, single plain paragraph, no markup.
+  sha256(payload) = 74b32545d2fc1980b3392bd76076a4671553f90e683f82914ef9d82a0eb9878b
+
+WRITE CHANNEL (request #1)
+  browser same-origin POST /api/collections.create -> 200
+    collection id c8ac1220-6d42-47cf-84ac-92ac997d6811
+    name          p44-step11-verify-1792710666262
+  browser same-origin POST /api/documents.create {collectionId, title "P4_4 step11 probe", text: payload, publish:true} -> 200
+    document id   ec034d05-7378-491c-9c7c-9ecac86b160e
+    urlId         jZqdw3Nkwy  (web route: /doc/p4_4-step11-probe-jZqdw3Nkwy)
+    revision      2
+  (the first POST attempt without the X-CSRF-Token header was refused by the
+   stack itself with 403 csrf_error — the refusal path of the real API.)
+
+INDEPENDENT READBACKS (separate requests, never the write call's return value)
+
+  Channel 1 — API read, request #2: POST /api/documents.info {id}
+    status 200, revision 3
+    data.text === payload          -> true (byte-identical)
+    sha256(readback)               = 74b32545d2fc1980b3392bd76076a4671553f90e683f82914ef9d82a0eb9878b
+    matches write digest           -> TRUE
+
+  Channel 2 — export/storage path, request #3: POST /api/documents.export {id}
+    status 200; export shape is exactly "# P4_4 step11 probe\n\n" + payload
+    (126 bytes); payload contained verbatim -> TRUE
+    (digest over the export differs from the write digest by construction:
+     the export format prepends the title heading; the payload bytes inside
+     the exported object are the written bytes.)
+
+  Channel 3 — web render: SPA navigation to the document page
+    route  /doc/p4_4-step11-probe-jZqdw3Nkwy, page title "P4_4 step11 probe"
+    document.body.innerText contains payload verbatim -> TRUE
+    (a bare /doc/<urlId> route without the slug prefix renders the workspace
+     404 — the web route requires the slug prefix; recorded as observed.)
+
+Conclusion: the written payload exists as an ACTUAL MANAGED Outline object,
+confirmed through three independent channels (API read / export-storage path /
+web render). A local adapter returning exists — with no such object and no
+such channel readbacks — is demonstrably NOT publication evidence; the GREEN
+contract (>= 2 distinct channel records binding the declared digest) is the
+mechanism that encodes exactly this.
+
+CLEANUP (all test objects removed, verified by absence)
+  POST /api/documents.delete {id}            -> 200 (document to trash)
+  POST /api/collections.delete {id}          -> 200 (collection deleted; its
+                                              document cascade-marked deletedAt)
+  POST /api/documents.delete {id, permanent} -> 200 (permanent delete)
+  POST /api/documents.info afterwards        -> 404 not_found
+  POST /api/collections.info afterwards      -> 404 not_found
+  Net new objects in the workspace: ZERO.
+
+HONEST LIMITS
+  - The browser channel used the pre-existing owner OIDC session; the login
+    flow itself was not exercised in this probe.
+  - The Kp/LLMWiki live channel stays UNVERIFIED in this task (no live
+    LLMWiki service claim; that channel is owned by the I04 probe worktree).
+  - The full E01/E02/E06 journey execution belongs to the VERIFY node
+    (executionOwner=VERIFY); this file is the mechanism proof + observation
+    recipe evidence, not the journey acceptance.
+  - Secrets: none of the runtime secret material was read into evidence;
+    only key NAMES were listed during scoping.

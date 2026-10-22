@@ -255,7 +255,11 @@ test('D06: a publication timeout resolves by independent readback of the origina
 
 test('C06: the adapter Kp receipt seals the archive exactly once; a second seal is refused (no archive loop)', () => {
   const operation = llmwiki.buildKpOperation({ change: 'p44-change', entry: kpEntry });
-  const receipt = llmwiki.buildKpCloseoutReceipt({ operation, execution: 'exec-kp-1', recordedAt: '2026-10-21T00:00:00.000Z' });
+  // Step 11: the seal input is only minted from the confirmed independent readback.
+  const receipt = llmwiki.buildKpCloseoutReceipt({
+    operation, readback: { found: true, digest: sha256(PAYLOAD_V1), source: 'wiki', at: '2026-10-21T00:00:00.000Z' },
+    execution: 'exec-kp-1', recordedAt: '2026-10-21T00:00:00.000Z',
+  });
   assert.deepEqual(receipt, { id: 'llmwiki:closeout-order', digest: sha256(PAYLOAD_V1) });
 
   const sealableSeal = {
@@ -267,6 +271,34 @@ test('C06: the adapter Kp receipt seals the archive exactly once; a second seal 
   assert.equal(sealed.archived, true);
   assert.throws(() => comet.sealCloseout({ seal: { ...sealableSeal, archived: true }, execution: 'exec-closeout-2', knowledgeCloseout: receipt }),
     (error) => error.code === 'ARCHIVE_ALREADY_SEALED');
+});
+
+// --- Step 11 rework: Kp 缺失必须真实阻断 archive ---------------------------------
+// RED（基点 1b4e74d 实测，worker-reports/P4_4-rework/evidence/red-closeout-gaps.txt）：
+// 无任何读回时 buildKpCloseoutReceipt 照样铸造 {id, digest}，真实 openspec CLI
+// 归档在 Kp 缺失下完成。修复后：archive 回执只能来自对原始目标的确认独立读回。
+
+test('Step 11: the Kp archive receipt can only be minted from a confirmed independent readback — no readback, no door', () => {
+  const operation = llmwiki.buildKpOperation({ change: 'p44-change', entry: kpEntry });
+  // No readback at all: the receipt is refused — a shape-correct record alone is not evidence.
+  assert.throws(() => llmwiki.buildKpCloseoutReceipt({ operation, execution: 'exec-kp-1', recordedAt: '2026-10-21T00:00:00.000Z' }),
+    (e) => e.code === 'KP_READBACK_REQUIRED');
+  // An unconfirmed readback (found !== true) is the unknown state: blocked.
+  assert.throws(() => llmwiki.buildKpCloseoutReceipt({
+    operation, readback: { found: false, digest: null, source: 'wiki', at: '2026-10-21T00:00:00.000Z' },
+    execution: 'exec-kp-1', recordedAt: '2026-10-21T00:00:00.000Z',
+  }), (e) => e.code === 'KP_PUBLICATION_UNKNOWN');
+  // A readback over different bytes is a mismatch, never a pass.
+  assert.throws(() => llmwiki.buildKpCloseoutReceipt({
+    operation, readback: { found: true, digest: sha256('other bytes entirely'), source: 'wiki', at: '2026-10-21T00:00:00.000Z' },
+    execution: 'exec-kp-1', recordedAt: '2026-10-21T00:00:00.000Z',
+  }), (e) => e.code === 'KP_READBACK_MISMATCH');
+  // A confirmed readback over the operation digest mints the receipt.
+  const receipt = llmwiki.buildKpCloseoutReceipt({
+    operation, readback: { found: true, digest: sha256(PAYLOAD_V1), source: 'wiki', at: '2026-10-21T00:00:00.000Z' },
+    execution: 'exec-kp-1', recordedAt: '2026-10-21T00:00:00.000Z',
+  });
+  assert.deepEqual(receipt, { id: 'llmwiki:closeout-order', digest: sha256(PAYLOAD_V1) });
 });
 
 test('C06: knowledge evidence is source-bound — an Outline publication cannot satisfy an llmwiki capability', () => {
@@ -371,9 +403,69 @@ test('E02/D06: the adapter executes runtime directives only — reconcile-info n
     operationKey: operation.operationKey, documentId: operation.documentId, outcome: 'unknown', at: '2026-10-21T00:00:00.000Z',
   });
 
-  // The readback observation binds the registered payload digest.
-  assert.equal(outline.buildReadbackObservation({ operation, revision: 'rev-1', readbackDigest: operation.payloadDigest }).outcome, 'exists');
-  assert.equal(outline.buildReadbackObservation({ operation, revision: 'rev-1', readbackDigest: sha256('drifted') }).outcome, 'conflict');
+  // The readback observation binds the registered payload digest — declared
+  // only from >= 2 distinct independent channel records (Step 11).
+  assert.equal(outline.buildReadbackObservation({
+    operation, revision: 'rev-1', readbackDigest: operation.payloadDigest,
+    readbacks: [{ channel: 'api', digest: operation.payloadDigest }, { channel: 'attachment', digest: operation.payloadDigest }],
+  }).outcome, 'exists');
+  assert.equal(outline.buildReadbackObservation({
+    operation, revision: 'rev-1', readbackDigest: sha256('drifted'),
+    readbacks: [{ channel: 'api', digest: sha256('drifted') }, { channel: 'export', digest: sha256('drifted') }],
+  }).outcome, 'conflict');
+});
+
+// --- Step 11 rework: 局部 adapter 返回 exists 不是发布证据 ------------------------
+// RED（基点 1b4e74d 实测）：零通道证据时 buildReadbackObservation 直接返回 exists，
+// CLI knowledge-closeout 对仅含该声明 observation 的 ledger 判 pass（exit 0）。
+// 修复后：exists 只能由 >=2 个不同独立通道的读回记录（API + 附件/导出/Web）
+// 绑定声明，记录摘要必须与声明摘要一致。
+
+test('Step 11: an exists observation requires independent multi-channel readback records — a bare adapter exists is not publication evidence', () => {
+  const operation = {
+    operationKey: sha256('op-key'),
+    knowledgeId: 'team-publication',
+    documentId: outline.deriveOutlineTargetId({ change: 'p44-change', capability: 'team-publication' }),
+    collection: 'outline-managed-collection',
+    payloadDigest: sha256('team publication payload v1'),
+  };
+  // No channel records at all: the observation is refused outright.
+  assert.throws(() => outline.buildReadbackObservation({ operation, revision: 'rev-1', readbackDigest: operation.payloadDigest }),
+    (e) => e.code === 'READBACK_CHANNELS_REQUIRED');
+  // Unknown channels are refused: the observation names its independent channels.
+  assert.throws(() => outline.buildReadbackObservation({
+    operation, revision: 'rev-1', readbackDigest: operation.payloadDigest,
+    readbacks: [{ channel: 'api', digest: operation.payloadDigest }, { channel: 'gossip', digest: operation.payloadDigest }],
+  }), (e) => e.code === 'READBACK_CHANNEL_INVALID');
+  // One channel (or the same channel twice) is not enough: at least two DISTINCT
+  // independent channels must confirm the same bytes.
+  assert.throws(() => outline.buildReadbackObservation({
+    operation, revision: 'rev-1', readbackDigest: operation.payloadDigest,
+    readbacks: [{ channel: 'api', digest: operation.payloadDigest }],
+  }), (e) => e.code === 'READBACK_INSUFFICIENT_CHANNELS');
+  assert.throws(() => outline.buildReadbackObservation({
+    operation, revision: 'rev-1', readbackDigest: operation.payloadDigest,
+    readbacks: [{ channel: 'api', digest: operation.payloadDigest }, { channel: 'api', digest: operation.payloadDigest }],
+  }), (e) => e.code === 'READBACK_INSUFFICIENT_CHANNELS');
+  // A channel that read different bytes than declared is a mismatch, never silently ignored.
+  assert.throws(() => outline.buildReadbackObservation({
+    operation, revision: 'rev-1', readbackDigest: operation.payloadDigest,
+    readbacks: [{ channel: 'api', digest: operation.payloadDigest }, { channel: 'attachment', digest: sha256('drifted bytes') }],
+  }), (e) => e.code === 'READBACK_CHANNEL_MISMATCH');
+  // Two distinct channels (API + attachment/export) that read the SAME bytes bind exists.
+  const observation = outline.buildReadbackObservation({
+    operation, revision: 'rev-1', readbackDigest: operation.payloadDigest,
+    readbacks: [{ channel: 'attachment', digest: operation.payloadDigest }, { channel: 'api', digest: operation.payloadDigest }],
+  });
+  assert.equal(observation.outcome, 'exists');
+  assert.deepEqual(observation.channels, ['api', 'attachment']);
+  // Channels that agree on DIFFERENT bytes declare the conflict (H05), not exists.
+  const drifted = outline.buildReadbackObservation({
+    operation, revision: 'rev-2', readbackDigest: sha256('drifted bytes'),
+    readbacks: [{ channel: 'api', digest: sha256('drifted bytes') }, { channel: 'export', digest: sha256('drifted bytes') }],
+  });
+  assert.equal(drifted.outcome, 'conflict');
+  assert.deepEqual(drifted.channels, ['api', 'export']);
 });
 
 test('E02: the closeout receipt is only built from a confirmed independent readback', () => {

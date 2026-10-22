@@ -129,12 +129,61 @@ const writeArtifacts = async (change) => {
   await fs.writeFile(path.join(project, 'src/feature.js'), 'export const v1 = 1;\n');
 };
 
+// P1-02 pass evidence — the same canonical shape as 2_4.mjs / 4_6.mjs: a
+// Runtime dispatch registration is not review evidence, so a pass result must
+// bind the dispatched inputs (inputDigest), carry the original report with its
+// digest, and the gate-specific independent-review artifact (A: closed
+// unanimous consensus tally; T: test-design sufficiency with an attested
+// oracle). The real committed consensus receipt is the read-only positive
+// control; artifactDigest re-binds to the scratch dispatch inputDigest because
+// the reviewed artifact is the scratch change.
+const GATE_ROLE_OF = { R: 'requirements-owner', A: 'reviewer', T: 'reviewer', P: 'planner', V: 'verifier', K: 'knowledge-publisher' };
+const consensusDir = path.join(projectRoot, 'openspec/changes/delivery-foundation-rearchitecture/consensus/2026-10-22-plan-r3');
+const realTally = await fs.readFile(path.join(consensusDir, 'tally.json'), 'utf8').then((t) => JSON.parse(t), () => null);
+const realConsensusManifest = await fs.readFile(path.join(consensusDir, 'manifest.json'), 'utf8').then((t) => JSON.parse(t), () => null);
+
+const consensusForDispatch = (binding, overrides = {}) => ({
+  reviewId: realConsensusManifest?.review_id ?? 'seven-p1-plan-20261022-r3',
+  rule: 'unanimous',
+  status: 'CLOSED',
+  participants: (realConsensusManifest?.participants ?? ['claude-code', 'zcode', 'codex-agent']).slice(),
+  ballots: (realTally?.ballots ?? []).map((ballot) => ({
+    agent: ballot.agent,
+    verdict: ballot.verdict,
+    blockingFindings: ballot.blocking_findings,
+    summaryDigest: sha256(String(ballot.summary ?? '')),
+  })),
+  artifactDigest: binding.inputDigest,
+  ...overrides,
+});
+
+const testDesignForDispatch = (binding, overrides = {}) => ({
+  verdict: 'sufficient',
+  oracle: 'strong',
+  inputDigest: binding.inputDigest,
+  reviewer: 'test-authoring',
+  findings: [],
+  ...overrides,
+});
+
+const passEvidence = (gate, binding) => ({
+  execution: binding.execution,
+  attempt: binding.attempt,
+  verdict: 'pass',
+  role: GATE_ROLE_OF[gate],
+  inputDigest: binding.inputDigest,
+  report: `# Gate ${gate} independent review — reviewed by ${GATE_ROLE_OF[gate]} over the dispatched inputs (${binding.inputDigest.slice(0, 12)}…).`,
+  ...(gate === 'A' ? { consensus: consensusForDispatch(binding) } : {}),
+  ...(gate === 'T' ? { testDesignReview: testDesignForDispatch(binding) } : {}),
+});
+const withReportDigest = (result) => ({ ...result, reportDigest: sha256(result.report) });
+
 const acceptGate = (change, gate, { verdict = 'pass' } = {}) => {
   const dispatched = comet(['state', 'dispatch-gate', change, gate, '--json']);
   assert.equal(dispatched.json?.exitCode, 0, `dispatch-gate ${gate} failed: ${refusalText(dispatched).slice(0, 400)}`);
   const binding = dispatched.json?.data?.dispatch ?? JSON.parse((dispatched.stdout ?? '').trim().split('\n').pop());
   const resultFile = path.join(scratch, `result-${change}-${gate}-${Math.random().toString(36).slice(2)}.json`);
-  fsSync.writeFileSync(resultFile, JSON.stringify({ execution: binding.execution, attempt: binding.attempt, verdict }));
+  fsSync.writeFileSync(resultFile, JSON.stringify(withReportDigest({ ...passEvidence(gate, binding), verdict })));
   const accepted = comet(['state', 'accept-gate', change, gate, '--file', resultFile, '--json']);
   assert.equal(accepted.json?.exitCode, 0, `accept-gate ${gate} failed: ${refusalText(accepted).slice(0, 300)}`);
   return binding;
@@ -158,8 +207,14 @@ async function driveToArchived(change) {
   assert.equal(comet(['state', 'select', change, '--json']).json?.exitCode, 0);
   const rel = `docs/openspec/changes/${change}`;
   assert.equal(comet(['state', 'set', change, 'design_doc', `${rel}/design.md`, 'test_intent', `${rel}/test-intent.md`, 'plan', `docs/superpowers/plans/${change}-plan.md`, '--json']).json?.exitCode, 0);
+  // Step 11 fix: the runtime requires an accepted gate R receipt BEFORE the
+  // open-complete transition (enter-design premise after the P4_5-era runtime
+  // acceptance; attributed in evidence/case-44-preexisting-breakage.txt). Gate
+  // R is dispatched and accepted immediately before the transition; A/T/P keep
+  // their original position and every assertion is unchanged.
+  acceptAll(change, ['R']);
   assert.equal(comet(['state', 'transition', change, 'open-complete', '--json']).json?.exitCode, 0);
-  acceptAll(change, ['R', 'A', 'T', 'P']);
+  acceptAll(change, ['A', 'T', 'P']);
   assert.equal(comet(['state', 'complete-design', change, '--design-doc', `${rel}/design.md`, '--json']).json?.exitCode, 0);
   assert.equal(comet(['state', 'set', change, 'build_mode', 'executing-plans', 'tdd_mode', 'tdd', 'isolation', 'current', '--json']).json?.exitCode, 0);
   await writeCheckPolicy();
@@ -460,7 +515,16 @@ test('D06/E02/E06: the timed-out Outline publication recovers by readback on the
 
   // The independent readback lands on the SAME fixed document: the adapter
   // binds it into the observation and the runtime confirms the operation.
-  const readbackObservation = outlineAdapter.buildReadbackObservation({ operation, revision: 'rev-1', readbackDigest: TEAM_DIGEST });
+  // Step 11: the observation is declared from >= 2 distinct independent
+  // channel records (api + attachment/export). This case world drives the
+  // JUDGMENT with case-world channel records; the live multi-channel proof
+  // against the real Outline stack is the Step 11 evidence
+  // (worker-reports/P4_4-rework/evidence/outline-real-stack-*.txt) and the
+  // full E01/E02/E06 journey belongs to the VERIFY node.
+  const readbackObservation = outlineAdapter.buildReadbackObservation({
+    operation, revision: 'rev-1', readbackDigest: TEAM_DIGEST,
+    readbacks: [{ channel: 'api', digest: TEAM_DIGEST }, { channel: 'attachment', digest: TEAM_DIGEST }],
+  });
   assert.equal(readbackObservation.outcome, 'exists');
   const readbackFile = path.join(scratch, 'observe-exists.json');
   await fs.writeFile(readbackFile, JSON.stringify(readbackObservation));

@@ -1,0 +1,25 @@
+P4_4 Step 11 attribution note — test/delivery-cases/4_4.mjs is BROKEN AT BASE (1b4e74d) in this worktree.
+
+Verified by: git stash (base adapters+case) -> node --test test/delivery-cases/4_4.mjs
+  base: 6 tests / 1 pass / 5 fail / 0 skipped — identical cascade as with the Step 11 GREEN.
+Note: test/delivery-cases/*.mjs are NOT part of `npm test` (glob: test/*.test.js), so this
+pre-existing breakage is outside the regression known-set contract (C08 negative + B08).
+
+First failure (driveToArchived, the open-complete transition — captured with a temporary
+instrument, removed afterwards):
+
+# OPEN_COMPLETE_PROBE status= 1 jsonExit= 1 stderr=  stdout= {"command":"state","exitCode":1,"agent":{"phase":null,"status":null,"stateVersion":null,"workspace":{"cwd":null},"continuation":null},"data":{"issues":[{"code":"CLASSIC_COMMAND_FAILED","message":"ERROR: Cannot transition 'p44-closeout': managed delivery gate premises are not current for enter-design\\n  gate R: no accepted receipt (dispatch and accept through the Runtime before this action)\\n  requirements-repair: revise the requirement baseline (proposal/specs), then re-dispatch and re-accept R"}]},"stderr":"\\u001b[31mERROR: Cannot transition 'p44-closeout': managed delivery gate premises are not current for enter-design\\u001b[0m\\n\\u001b[31m  gate R: no accepted receipt (dispatch and accept
+
+Refusal decoded: the runtime requires an ACCEPTED gate R receipt before enter-design
+("managed delivery gate premises are not current for enter-design / gate R: no accepted
+receipt / requirements-repair: revise the requirement baseline, then re-dispatch and
+re-accept R"), while the case drives open-complete BEFORE acceptAll(['R','A','T','P']).
+The three later tests then crash on the missing archive directory (path.join undefined).
+
+Attribution: cross-task integration drift — the P4_5 rework was serially accepted at the
+base commit (1b4e74d) and the classic runtime gate premises changed under this case.
+Per commit discipline (跨任务锁/共享策略只由唯一控制器集成), repairing the case's drive
+sequence or the runtime premise belongs to the controller, not this Step 11 worker.
+The Step 11 GREEN keeps its 4_4.mjs change minimal (channel readbacks on the exists
+observation at the D06 readback step) and its unit contract is fully proven by
+test/knowledge-closeout.test.js (20/20).
