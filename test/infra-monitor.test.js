@@ -352,6 +352,78 @@ test('RED fault-domain gate: a co-hosted monitor can never be declared sufficien
   assert.ok(codes(parseJsonOut(flippedRun, 'validate fault domain')).includes('COHOSTED_CLAIM_FORBIDDEN'));
 });
 
+test('RED structural negatives: interface tag, project binding, example declaration, read-only health, authority binding, business-retry split and noBusinessWrites are each enforced', () => {
+  // 接口标签被替换 → MONITOR_INTERFACE_INVALID。
+  const iface = makeFixtureDir(({ json, writeJson }) => {
+    const doc = json('alert-policy.json');
+    doc.interface = 'AlertPolicy.v2';
+    writeJson('alert-policy.json', doc);
+  });
+  const ifaceRun = runCli(['validate', '--registry', registryPath, '--dir', iface, '--json']);
+  assert.equal(ifaceRun.status, 2, 'replacing a frozen interface tag must be rejected');
+  assert.ok(codes(parseJsonOut(ifaceRun, 'validate interface')).includes('MONITOR_INTERFACE_INVALID'));
+
+  // 项目绑定被篡改 → PROJECT_MISMATCH。
+  const project = makeFixtureDir(({ json, writeJson }) => {
+    const doc = json('health-contract.json');
+    doc.project.id = 'another-project';
+    writeJson('health-contract.json', doc);
+  });
+  const projectRun = runCli(['validate', '--registry', registryPath, '--dir', project, '--json']);
+  assert.equal(projectRun.status, 2, 'rebinding a monitor doc to another project must be rejected');
+  assert.ok(codes(parseJsonOut(projectRun, 'validate project')).includes('PROJECT_MISMATCH'));
+
+  // example 声明被摘除 → EXAMPLE_DECLARATION_REQUIRED。
+  const example = makeFixtureDir(({ json, writeJson }) => {
+    const doc = json('monitor-registration.example.json');
+    delete doc.example;
+    writeJson('monitor-registration.example.json', doc);
+  });
+  const exampleRun = runCli(['validate', '--registry', registryPath, '--dir', example, '--json']);
+  assert.equal(exampleRun.status, 2, 'the example declaration must stay present');
+  assert.ok(codes(parseJsonOut(exampleRun, 'validate example')).includes('EXAMPLE_DECLARATION_REQUIRED'));
+
+  // Health.v1 只读声明被翻转 → HEALTH_READ_ONLY_REQUIRED。
+  const readOnly = makeFixtureDir(({ json, writeJson }) => {
+    const doc = json('health-contract.json');
+    doc.readOnly = false;
+    writeJson('health-contract.json', doc);
+  });
+  const readOnlyRun = runCli(['validate', '--registry', registryPath, '--dir', readOnly, '--json']);
+  assert.equal(readOnlyRun.status, 2, 'Health.v1 must stay a read-only probe over existing Comet facts');
+  assert.ok(codes(parseJsonOut(readOnlyRun, 'validate read-only')).includes('HEALTH_READ_ONLY_REQUIRED'));
+
+  // authority 绑定被放松（允许状态复制/第二业务 owner） → SUPERVISOR_AUTHORITY_BINDING_INVALID。
+  const authority = makeFixtureDir(({ json, writeJson }) => {
+    const doc = json('supervisor-policy.json');
+    doc.authorityBinding.stateCopy = 'ALLOWED';
+    writeJson('supervisor-policy.json', doc);
+  });
+  const authorityRun = runCli(['validate', '--registry', registryPath, '--dir', authority, '--json']);
+  assert.equal(authorityRun.status, 2, 'state copy must stay forbidden for the supervisor');
+  assert.ok(codes(parseJsonOut(authorityRun, 'validate authority')).includes('SUPERVISOR_AUTHORITY_BINDING_INVALID'));
+
+  // Comet 自恢复被改写成 supervisor 业务重试 → SUPERVISOR_BUSINESS_RETRY_FORBIDDEN。
+  const businessRetry = makeFixtureDir(({ json, writeJson }) => {
+    const doc = json('supervisor-policy.json');
+    doc.cometSelfRecovery.supervisorBusinessRetry = true;
+    writeJson('supervisor-policy.json', doc);
+  });
+  const businessRetryRun = runCli(['validate', '--registry', registryPath, '--dir', businessRetry, '--json']);
+  assert.equal(businessRetryRun.status, 2, 'the supervisor must never keep a second business retry loop');
+  assert.ok(codes(parseJsonOut(businessRetryRun, 'validate business retry')).includes('SUPERVISOR_BUSINESS_RETRY_FORBIDDEN'));
+
+  // noBusinessWrites 缺项（告警重投与业务重试分离的守卫） → NO_BUSINESS_WRITES_INCOMPLETE。
+  const noBusiness = makeFixtureDir(({ json, writeJson }) => {
+    const doc = json('alert-policy.json');
+    doc.noBusinessWrites = doc.noBusinessWrites.filter((item) => item !== 'business-retry');
+    writeJson('alert-policy.json', doc);
+  });
+  const noBusinessRun = runCli(['validate', '--registry', registryPath, '--dir', noBusiness, '--json']);
+  assert.equal(noBusinessRun.status, 2, 'dropping business-retry from noBusinessWrites must be rejected');
+  assert.ok(codes(parseJsonOut(noBusinessRun, 'validate noBusinessWrites')).includes('NO_BUSINESS_WRITES_INCOMPLETE'));
+});
+
 test('RED I01 isolation: cross-project refs are structural violations; unregistered ref stays an explicit gap and resolver refuses', async () => {
   const crossProject = makeFixtureDir(({ json, writeJson }) => {
     const doc = json('monitor-registration.example.json');
@@ -759,4 +831,8 @@ test('committed contract shape: interfaces, example declaration, read-only healt
   const supervisor = readMonitorJson('supervisor-policy.json');
   assert.equal(supervisor.authorityBinding.stateCopy, 'FORBIDDEN');
   assert.equal(supervisor.authorityBinding.secondBusinessOwner, 'FORBIDDEN');
+  // 重启原实例与停止旧写者分别审计（行为锚点：probe observedSteps 的 inject-process-death
+  // 与 supervised-restart 是两个独立步骤；此处钉住策略声明不被摘除）。
+  assert.equal(supervisor.audit.restartAuditRequired, true);
+  assert.equal(supervisor.audit.oldWriterStopSeparatelyAudited, true);
 });
