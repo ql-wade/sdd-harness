@@ -1,0 +1,118 @@
+delivery-journey --scenario C07 --profile managed-pilot (evidence dir in TMPDIR): exit 0
+target: {"token":"C07","found":true,"status":"ok"} | tests 13 pass 13 fail 0
+
+{
+  "schemaVersion": 1,
+  "tool": "tools/verify/delivery-journey.mjs",
+  "runnerInvariant": "test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery",
+  "scenario": "C07",
+  "acceptanceIds": [
+    "C07"
+  ],
+  "journey": null,
+  "profile": "managed-pilot",
+  "caseModule": "test/delivery-cases/1_4.mjs",
+  "sourceBinding": [
+    {
+      "path": "specs/delivery-foundation/spec.md",
+      "requirement": "Classic single-controller integration",
+      "scenario": "C07"
+    }
+  ],
+  "verdict": "PASS",
+  "reason": null,
+  "missing": [],
+  "drift": [],
+  "schemaErrors": [],
+  "execution": {
+    "command": "node --test test/delivery-cases/1_4.mjs",
+    "actions": [
+      {
+        "index": 1,
+        "type": "spawn",
+        "expected": "exit 0; TAP summary fail=0 with pass>0; test point matching C07 (V_C07 or bare id) is ok",
+        "required": true,
+        "expectation": {
+          "kind": "exitCode",
+          "value": 0
+        },
+        "ok": true,
+        "exitCode": 0,
+        "durationMs": 27069,
+        "note": null,
+        "observed": null,
+        "command": "node --test test/delivery-cases/1_4.mjs"
+      },
+      {
+        "index": 2,
+        "type": "readState",
+        "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0",
+        "required": true,
+        "expectation": {
+          "kind": "nonEmptyFile"
+        },
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": {
+          "path": "<host-path-redacted>",
+          "bytes": 3541
+        },
+        "command": null
+      },
+      {
+        "index": 3,
+        "type": "inspect",
+        "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+        "required": false,
+        "expectation": null,
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": "d0317d42b365f60370ca584b5cd052ef477c13f8",
+        "command": null
+      }
+    ],
+    "tests": 13,
+    "pass": 13,
+    "fail": 0,
+    "skipped": 0,
+    "effectiveExecutions": 13,
+    "target": {
+      "token": "C07",
+      "found": true,
+      "status": "ok"
+    },
+    "requiredAssertions": [
+      {
+        "id": "C07",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "candidate": {
+    "gitHead": "d0317d42b365f60370ca584b5cd052ef477c13f8",
+    "node": "v24.15.0",
+    "platform": "darwin"
+  },
+  "timing": {
+    "startedAt": "2026-10-22T14:22:38.275Z",
+    "finishedAt": "2026-10-22T14:23:05.406Z",
+    "durationMs": 27131
+  },
+  "evidence": {
+    "dir": "<host-path-redacted>",
+    "files": [
+      "pilot-baseline.json",
+      "case-definition.json",
+      "verdict.json"
+    ]
+  },
+  "exitCode": 0
+}
