@@ -192,14 +192,14 @@
 **Parallel safe:** false
 **Acceptance IDs:** C07, F06, M01
 
-- [ ] **Step 1 [5 min]: Test** 1.4.a 固定两模式能力差异与 Classic 准入：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保留 Classic 既定接入设计，Native 仅兼容/能力对照，不自动切换路径。
-- [ ] **Step 2 [5 min]: Implement** 1.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 1.4.b 复现漏检查/伪回执/逃生路径：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：把无关成功命令、旧/手工回执、跳过入口做真实负例；原生缺口写扩展验收，不改判定转绿。
-- [ ] **Step 4 [5 min]: Implement** 1.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Test** 1.4.c 确认知识主库边界：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：Comet 自有记忆不覆盖 LLMWiki/Outline/DeepWiki；不能禁用或隔离时不启用冲突功能。
-- [ ] **Step 6 [5 min]: Implement** 1.4.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 1.4.a 固定两模式能力差异与 Classic 准入：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：保留 Classic 既定接入设计，Native 仅兼容/能力对照，不自动切换路径。
+- [x] **Step 2 [5 min]: Implement** 1.4.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 1.4.b 复现漏检查/伪回执/逃生路径：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：把无关成功命令、旧/手工回执、跳过入口做真实负例；原生缺口写扩展验收，不改判定转绿。
+- [x] **Step 4 [5 min]: Implement** 1.4.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Test** 1.4.c 确认知识主库边界：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：Comet 自有记忆不覆盖 LLMWiki/Outline/DeepWiki；不能禁用或隔离时不启用冲突功能。
+- [x] **Step 6 [5 min]: Implement** 1.4.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 ### Task P2_1: 原任务 2.1 — contracts/delivery/ 定义共享 schema；lib/delivery/ 实现全输入基线与 AC→case 追踪。先 RED 验证缺基线、零测试、错误 RED、非 JS 文件漂移，再 GREEN 实现（A01–A04/A07–A08）。node --test 目标测试和 npm test。
 
