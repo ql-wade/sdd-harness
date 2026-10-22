@@ -7,16 +7,23 @@
 // isolated HOME, PATH stubs and scratch TMPDIR; no live configuration is
 // touched and no mock substitutes a real entrance.
 //
-// LOCAL_ONLY scope (environment facts: no live Outline instance, no platform
-// write authorization, gh TLS broken): what is proven here is the
-// authorization-model structure, trusted-issuance / revocation / expiry
-// ordering, the multi-source disclosure intersection, principal-mapping
-// completeness, pre-write version re-verification and the role isolation
-// boundary. Live source/target permission readback, Outline inheritance /
-// single-page / public-share enforcement and the real protected issuance
-// workflow are honestly UNVERIFIED (successor: Outline owner + deployment
-// verification wave); the committed artifacts carry no audience and fail
-// closed, so positive paths use explicitly marked LOCAL_FIXTURE audiences.
+// Rework r1 scope (rework-seven-p1-r1): the pilot Outline stack IS deployed
+// (loopback 127.0.0.1:3000 + dex OIDC, subjects owner|member|offboarded@
+// sdd-harness-pilot.test) and the target side was smoke-tested live through
+// the terminal channel — target/collection registration, principal mapping,
+// collection membership, the page/public share registry and the
+// member/offboarded denial entrances are observed facts (evidence:
+// worker-reports/P4_7-rework/evidence/, registration record:
+// openspec/changes/delivery-foundation-rearchitecture/authorization-journey/
+// pilot-registration.case.json). The committed target audience is registered
+// from that live readback as PARTIAL: the attachment channel is UNVERIFIED
+// (upload infrastructure error: object-store region unset), so auto-publish
+// stays blocked — a LIVE audience claim now requires every required readback
+// channel (membership/inheritance/pageShare/publicShare/attachment) and
+// missing channels are fail-closed (TARGET_CHANNEL_NOT_READ). Source-side
+// permission readback (gh TLS x509) and the protected issuance workflow stay
+// honestly UNVERIFIED; positive paths still use explicitly marked fixture
+// audiences.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
@@ -37,6 +44,9 @@ const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 
 const FIXTURE_GROUP = 'group:sdd-harness-pilot/engineering';
 const FIXTURE_OUT_GROUP = 'group:sdd-harness-pilot/community';
+const DIR_OWNER = 'directory:sdd-harness-pilot/owner';
+const LIVE_ENDPOINT = 'http://127.0.0.1:3000';
+const ALL_CHANNELS = { membership: 'READ', inheritance: 'READ', pageShare: 'READ', publicShare: 'READ', attachment: 'READ' };
 const REVIEWER = 'svc:sdd-harness-pilot/worker-reviewer';
 const AUTHOR = 'svc:sdd-harness-pilot/worker-author';
 const PUBLISHER = 'svc:sdd-harness-pilot/outline-publisher';
@@ -102,6 +112,26 @@ function fixtureWorld() {
   };
 }
 
+// Fixture world whose registered audience is the pilot-directory owner
+// principal — the shape the live registration produces (policy ∩ grant
+// disclosure) — used by the LIVE readback arms.
+function liveFixtureWorld() {
+  const world = fixtureWorld();
+  const policy = JSON.parse(fs.readFileSync(world.policy, 'utf8'));
+  policy.target.allowedAudience = {
+    readers: [DIR_OWNER],
+    status: 'LIVE_FIXTURE',
+    reason: 'registered pilot audience for the live-readback decision proof only',
+  };
+  fs.writeFileSync(world.policy, `${JSON.stringify(policy, null, 2)}\n`);
+  const ledger = JSON.parse(fs.readFileSync(world.ledger, 'utf8'));
+  for (const grant of ledger.grants) {
+    if (grant.revocation === null) grant.purpose.disclosureAudience = [DIR_OWNER];
+  }
+  fs.writeFileSync(world.ledger, `${JSON.stringify(ledger, null, 2)}\n`);
+  return world;
+}
+
 function validRequest(overrides = {}) {
   const payloadDigest = sha256('p47 journey candidate payload v1');
   return {
@@ -148,10 +178,26 @@ test('setup: the KnowledgeAuthz.v1 CLI and the committed authorization artifacts
   assert.equal(run.status, 0, `committed artifacts must validate clean: ${run.stderr || run.stdout}`);
   const report = JSON.parse(run.stdout);
   assert.equal(report.ok, true);
-  // The committed world stays honest about the unobservable parts.
+  // The committed world stays honest about what is and is not observable:
+  // issuance stays UNREGISTERED, while the rework's live target registration
+  // records the observed pilot instance, immutable collection id, principal
+  // map and the PARTIAL audience (attachment channel unobserved).
   const model = readCommitted('authorization-model.json');
   assert.equal(model.issuers[0].issuanceCredential.status, 'UNREGISTERED');
-  assert.equal(readCommitted('preauthorization-policy.json').target.allowedAudience.status, 'UNVERIFIED');
+  const target = model.targets[0];
+  assert.equal(target.instanceStatus, 'REGISTERED_PILOT_LIVE');
+  assert.match(target.collectionId, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+  assert.equal(target.instance.url, LIVE_ENDPOINT);
+  assert.equal(target.principalMap.length, 3);
+  for (const entry of target.principalMap) {
+    assert.match(entry.principal, /^directory:sdd-harness-pilot\/[a-z0-9-]+$/);
+    assert.match(entry.outlineUserId, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    assert.match(entry.email, /^(owner|member|offboarded)@sdd-harness-pilot\.test$/);
+  }
+  const audience = readCommitted('preauthorization-policy.json').target.allowedAudience;
+  assert.equal(audience.status, 'REGISTERED_FROM_LIVE_READBACK_PARTIAL');
+  assert.deepEqual(audience.readers, [DIR_OWNER]);
+  assert.match(audience.reason, /attachment/i, 'the partial registration must name the unobserved channel');
 });
 
 // U01: self-written approvals, unauthorized/expired/revoked issuers are
@@ -349,6 +395,32 @@ test('U05: share/inheritance/public audience sources are refused on an allowlist
   for (const cmd of ['acl', 'share', 'membership']) {
     assert.equal(runCli([cmd, '--collection', 'outline-managed-collection', '--json']).status, 1);
   }
+  // Rework: a LIVE audience-readback claim must carry every required channel;
+  // the missing attachment channel (the observed pilot gap: upload
+  // infrastructure error) is fail-closed even though the other four read READ.
+  const liveWorld = liveFixtureWorld();
+  const liveGap = writeTmp('u05-live-attachment-gap.json', validRequest());
+  const gapParsed = JSON.parse(fs.readFileSync(liveGap, 'utf8'));
+  gapParsed.operation.target.effectiveAudience = {
+    readers: [DIR_OWNER], incompletePagination: false, unmappedPrincipals: [],
+    readback: { status: 'LIVE', endpoint: LIVE_ENDPOINT, observedAt: new Date().toISOString() },
+  };
+  gapParsed.operation.target.channels = { membership: 'READ', inheritance: 'READ', pageShare: 'READ', publicShare: 'READ' };
+  fs.writeFileSync(liveGap, JSON.stringify(gapParsed, null, 2));
+  const gapRun = runCli(decideArgs(liveWorld, liveGap));
+  assert.equal(gapRun.status, 2, 'a LIVE claim without the attachment channel must not publish');
+  const gapCodes = reasonCodes(gapRun);
+  assert.ok(gapCodes.includes('TARGET_CHANNEL_NOT_READ'), `expected TARGET_CHANNEL_NOT_READ, got ${gapCodes}`);
+  // With every required channel READ the same claim passes the audience gate.
+  const liveFull = writeTmp('u05-live-full.json', validRequest());
+  const fullParsed = JSON.parse(fs.readFileSync(liveFull, 'utf8'));
+  fullParsed.operation.target.effectiveAudience = {
+    readers: [DIR_OWNER], incompletePagination: false, unmappedPrincipals: [],
+    readback: { status: 'LIVE', endpoint: LIVE_ENDPOINT, observedAt: new Date().toISOString() },
+  };
+  fullParsed.operation.target.channels = { ...ALL_CHANNELS };
+  fs.writeFileSync(liveFull, JSON.stringify(fullParsed, null, 2));
+  assert.equal(runCli(decideArgs(liveWorld, liveFull)).status, 0, 'a complete LIVE claim passes the audience gate');
 });
 
 // U06: incomplete pagination, unmapped principals, permission API errors and
@@ -379,6 +451,16 @@ test('U06: incomplete/unmapped/error/service-only permission evidence stays bloc
   parsedUnmapped.operation.target.effectiveAudience.unmappedPrincipals = ['unmappable-principal'];
   fs.writeFileSync(targetUnmapped, JSON.stringify(parsedUnmapped, null, 2));
   assert.ok(reasonCodes(runCli(decideArgs(world, targetUnmapped))).includes('PRINCIPAL_UNMAPPED'));
+  // Rework: a principal registered in the pilot directory map (bound to a real
+  // immutable Outline user id in the authorization model) maps; mapping never
+  // widens the audience intersection.
+  const dirMapped = writeTmp('u06-dir-mapped.json', validRequest());
+  const dirParsed = JSON.parse(fs.readFileSync(dirMapped, 'utf8'));
+  dirParsed.operation.target.effectiveAudience.readers = [DIR_OWNER];
+  fs.writeFileSync(dirMapped, JSON.stringify(dirParsed, null, 2));
+  const dirCodes = reasonCodes(runCli(decideArgs(world, dirMapped)));
+  assert.ok(!dirCodes.includes('PRINCIPAL_UNMAPPED'), `registered directory principal must map: ${dirCodes}`);
+  assert.ok(dirCodes.includes('AUDIENCE_OUTSIDE_INTERSECTION'), 'mapping must not widen the audience');
 });
 
 // U07: author/reviewer/publisher/issuer isolation is enforced by real managed
@@ -446,4 +528,24 @@ test('U08: a fully grounded publish auto-advances with a bound receipt and readb
   const drifted = runCli(['recheck', '--decision', decisionFile, '--ledger', world.ledger, '--model', world.model, '--policy', world.policy, '--payload-digest', sha256('u08 next version'), '--json']);
   assert.equal(drifted.status, 2);
   assert.equal(reasonCodes(drifted)[0], 'PAYLOAD_DRIFTED');
+  // Rework: the live arm — a LIVE audience readback with every required
+  // channel READ auto-advances the same way and the receipt records the live
+  // provenance (never a declared-only receipt dressed up as a live closure).
+  const liveWorld = liveFixtureWorld();
+  const liveFile = writeTmp('u08-live.json', validRequest());
+  const liveParsed = JSON.parse(fs.readFileSync(liveFile, 'utf8'));
+  liveParsed.operation.target.effectiveAudience = {
+    readers: [DIR_OWNER], incompletePagination: false, unmappedPrincipals: [],
+    readback: { status: 'LIVE', endpoint: LIVE_ENDPOINT, observedAt: new Date().toISOString() },
+  };
+  liveParsed.operation.target.channels = { ...ALL_CHANNELS };
+  fs.writeFileSync(liveFile, JSON.stringify(liveParsed, null, 2));
+  const liveDecided = runCli(decideArgs(liveWorld, liveFile));
+  assert.equal(liveDecided.status, 0, `the live-grounded request must auto-publish: ${liveDecided.stderr || liveDecided.stdout}`);
+  const liveReceipt = JSON.parse(liveDecided.stdout);
+  assert.match(String(liveReceipt.provenance.targetAudience), /LIVE_READBACK/);
+  assert.deepEqual(liveReceipt.audience.effective, [DIR_OWNER]);
+  const liveDecisionFile = writeTmp('u08-live-decision.json', liveReceipt);
+  const liveRecheck = runCli(['recheck', '--decision', liveDecisionFile, '--ledger', liveWorld.ledger, '--model', liveWorld.model, '--policy', liveWorld.policy, '--payload-digest', liveReceipt.payloadDigest, '--json']);
+  assert.equal(liveRecheck.status, 0, `the live receipt must recheck fresh: ${liveRecheck.stderr || liveRecheck.stdout}`);
 });
