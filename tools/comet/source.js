@@ -64,7 +64,15 @@ with tarfile.open(archive, 'r:gz') as source:
             raise ValueError('unsafe archive path')
         if not (member.isfile() or member.isdir()):
             raise ValueError('archive links and special files are not allowed')
-    source.extractall(destination, members=members, filter='data')
+    try:
+        source.extractall(destination, members=members, filter='data')
+    except TypeError:
+        # python < 3.11.4 (e.g. debian bookworm 3.11.2, the runner base) has no
+        # filter kwarg. Members are already fully validated above (prefix,
+        # traversal, links/specials all refused), so sanitize modes and extract.
+        for member in members:
+            member.mode = 0o755 if member.isdir() else 0o644
+        source.extractall(destination, members=members)
 `;
 
 // Verifies an already-prepared pristine source against its recorded v2

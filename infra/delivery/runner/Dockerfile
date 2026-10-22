@@ -52,6 +52,10 @@ RUN echo "${SOURCE_SHA256}  /build/comet-source.tar.gz" | sha256sum -c - \
 # openspec 只经已验证 tarball 隔离安装（P1_1/P1_5 钉定候选 1.11.0；绝不浮动升级、绝不全局宿主安装）。
 RUN npm install --global /build/openspec.tgz
 
+# build.mjs 的 Comet 源解包经 python3 子进程执行 bounded path/member 检查（tools/comet/source.js）；
+# slim 基镜像不含 python3——真实构建第一跑即 UNSAFE_ARCHIVE（终端通道证据 i02-build-full.log），此处补齐。
+RUN apt-get update && apt-get install -y --no-install-recommends python3
+
 # 受控构建（声明）：补丁按 lock 校验应用，fingerprint 由工具按 archive+patches+toolchain 现算；
 # --project /build/repo 使输出落在 /build/repo/.sdd/vendor/comet/<commit>/builds/<fingerprint>/work。
 # 本步骤从未执行（UNVERIFIED）：准入时先在受控环境重建并核对 fingerprint 与 digest，再认证镜像。
