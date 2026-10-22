@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "scenario": "E03",
+  "acceptanceIds": [
+    "E03"
+  ],
+  "requiredAssertions": [
+    "E03"
+  ],
+  "caseModule": "test/delivery-cases/2_5.mjs",
+  "sourceBinding": [
+    {
+      "path": "specs/delivery-foundation/spec.md",
+      "requirement": "Architecture methods and advisory hooks",
+      "scenario": "E03"
+    }
+  ],
+  "actions": [
+    {
+      "type": "spawn",
+      "command": "node --test test/delivery-cases/2_5.mjs",
+      "expected": "exit 0; TAP summary fail=0 with pass>0; test point matching E03 (V_E03 or bare id) is ok",
+      "expect": {
+        "kind": "exitCode",
+        "value": 0
+      }
+    },
+    {
+      "type": "readState",
+      "path": "action-1-stdout.txt",
+      "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0",
+      "expect": {
+        "kind": "nonEmptyFile"
+      }
+    },
+    {
+      "type": "inspect",
+      "path": "git rev-parse HEAD",
+      "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+      "required": false
+    }
+  ],
+  "evidence": {
+    "artifacts": [
+      "case-definition.json",
+      "pilot-baseline.json",
+      "action-1-stdout.txt",
+      "action-1-stderr.txt",
+      "verdict.json"
+    ]
+  },
+  "verdictSemantics": {
+    "PASS": "actions executed with execution count > 0 and every expected outcome met",
+    "FAIL": "the scenario executed and the observed outcome contradicted the frozen THEN",
+    "NOT-EXERCISED": "a prerequisite was missing (case definition, registered baseline, identity or environment); structured refusal, nonzero exit, never a pass",
+    "NOT-APPLICABLE": "explicitly out of scope for the registered profile with a recorded reason; still nonzero"
+  }
+}
