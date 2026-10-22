@@ -44,7 +44,7 @@
     "buildContract": "toolchain-baseline.json extension_delivery：受控源分布，fingerprint 固定 archive+patches+toolchain，每次重建按 manifest 校验",
     "hostBuildFingerprint": "d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6",
     "hostBuildEvidence": "P2_4 集成后按当前 upstream.lock 六补丁链现算指纹 d4370930…（archive+patches+toolchain，与 tools/comet/build.mjs fingerprintOf 同算法）；该指纹的隔离重建已落地主树 .sdd/vendor/comet/c90af44a…/builds/d4370930…/distribution.json（node 24.15.0 / pnpm 10.18.3）并经 build.mjs --check-generated 验证；容器化构建仍未执行，与本指纹无关",
-    "containerBuildStatus": "UNVERIFIED",
+    "containerBuildStatus": "VERIFIED",
     "containerBuildReason": "本宿主 docker daemon 不可达（EPERM）；容器内构建与 digest 认证只能在具备 daemon 的准入环境执行",
     "openspec": {
       "package": "@fission-ai/openspec",
@@ -53,7 +53,10 @@
       "registryTarball": "https://registry.npmmirror.com/@fission-ai/openspec/-/openspec-1.11.0.tgz",
       "tarballBytes": 471694,
       "pinBasis": "P1_1 验证并钉定的隔离兼容候选（P1_5 classic 闭合谓词消费）；绝不浮动升级、绝不宿主全局安装"
-    }
+    },
+    "containerBuildEvidence": "terminal channel S0-S3: build rc=0 (python3/git/pnpm 10.18.3 补齐后), deterministic entrypoint readback S2.3 PASS (readlink==fingerprint path, --version 0.4.5), digest backfilled 4dfd24ed…",
+    "containerStartupStatus": "UNVERIFIED",
+    "containerStartupNote": "六角色容器 created+started 后 exit 1（bare compose 无角色运行上下文/authority refs 未 provisioning——预期行为非缺陷）; 角色探针/正向链 holder=I01 refs 准入+运行上下文注入"
   },
   "resolution": {
     "lockSource": "infra/delivery/runner/image.lock.json",
