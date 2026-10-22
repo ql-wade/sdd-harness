@@ -1,0 +1,81 @@
+P4_4 Step 11 — test/delivery-cases/4_4.mjs drive-order fix, REAL run result
+=============================================================================
+
+Fix (single file, test/delivery-cases/4_4.mjs, committed separately):
+  1. Drive order: gate R is now dispatched and accepted immediately BEFORE the
+     open-complete transition (the runtime's enter-design premise since the
+     P4_5-era acceptance; the pre-fix refusal is preserved verbatim in
+     evidence/case-44-preexisting-breakage.txt). A/T/P keep their original
+     position after open-complete.
+  2. Gate result payloads now carry the P1-02 pass-evidence contract — the
+     same canonical shape as the accepted 2_4.mjs / 4_6.mjs cases: inputDigest
+     bound to the dispatched inputs, role, non-empty report + reportDigest,
+     and the gate-specific artifacts (A: closed unanimous consensus tally from
+     the real committed consensus receipt, read-only, artifactDigest re-bound
+     to the scratch dispatch; T: test-design sufficiency with attested oracle).
+     No assertion was weakened, no runtime file touched, no P4_5 behavior
+     changed; the case previously posted bare {execution, attempt, verdict},
+     which the current runtime rightly refuses (P1-02).
+
+REAL RUN (node --test test/delivery-cases/4_4.mjs, default shell node
+v22.13.1, patched Comet build fingerprint-pinned by integrations/comet/
+upstream.lock.json — real execution, not skipped, not mocked):
+
+  exit code: 0
+  tests 6 / pass 6 / fail 0 / skipped 0
+
+  ok 1 - setup: the managed delivery build carries the post-archive closeout extension and the scratch world is comet-init
+  ok 2 - E01/E02/E06: archived is not completed — the closeout is judged separately, the missing Kp entry is named, no archive/publish loop
+  ok 3 - E01/E06: a valid deploy receipt is retained read-only — knowledge failure never re-deploys
+  ok 4 - E01/E02: the Kp pass is granted on the real wiki entry and RETAINED while Kt stays blocked
+  ok 5 - D06/E02/E06: the timed-out Outline publication recovers by readback on the SAME fixed document; the Runtime re-verifies the adapter receipt and the same run completes
+  ok 6 - E01/E02: the final closeout judgment is green — Kp + Kt hold, deploy evidence retained, nothing re-run
+
+Test 5 exercises the Step 11 GREEN call site through the REAL runtime path
+(buildReadbackObservation with >= 2 distinct channel readback records -> the
+runtime re-verifies the adapter receipt against its K dispatch -> the SAME run
+completes). Note: test/delivery-cases/*.mjs are outside `npm test`
+(test/*.test.js), so the full-suite known-set contract (C08 negative + B08)
+is unaffected by this fix.
+
+TAP output:
+TAP version 13
+# Subtest: setup: the managed delivery build carries the post-archive closeout extension and the scratch world is comet-init
+ok 1 - setup: the managed delivery build carries the post-archive closeout extension and the scratch world is comet-init
+  ---
+  duration_ms: 0.490417
+  ...
+# Subtest: E01/E02/E06: archived is not completed — the closeout is judged separately, the missing Kp entry is named, no archive/publish loop
+ok 2 - E01/E02/E06: archived is not completed — the closeout is judged separately, the missing Kp entry is named, no archive/publish loop
+  ---
+  duration_ms: 15249.409416
+  ...
+# Subtest: E01/E06: a valid deploy receipt is retained read-only — knowledge failure never re-deploys
+ok 3 - E01/E06: a valid deploy receipt is retained read-only — knowledge failure never re-deploys
+  ---
+  duration_ms: 77.781167
+  ...
+# Subtest: E01/E02: the Kp pass is granted on the real wiki entry and RETAINED while Kt stays blocked
+ok 4 - E01/E02: the Kp pass is granted on the real wiki entry and RETAINED while Kt stays blocked
+  ---
+  duration_ms: 77.967625
+  ...
+# Subtest: D06/E02/E06: the timed-out Outline publication recovers by readback on the SAME fixed document; the Runtime re-verifies the adapter receipt and the same run completes
+ok 5 - D06/E02/E06: the timed-out Outline publication recovers by readback on the SAME fixed document; the Runtime re-verifies the adapter receipt and the same run completes
+  ---
+  duration_ms: 3855.933833
+  ...
+# Subtest: E01/E02: the final closeout judgment is green — Kp + Kt hold, deploy evidence retained, nothing re-run
+ok 6 - E01/E02: the final closeout judgment is green — Kp + Kt hold, deploy evidence retained, nothing re-run
+  ---
+  duration_ms: 80.293042
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 20940.594291
