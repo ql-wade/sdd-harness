@@ -1,0 +1,205 @@
+=== node tools/infra/monitor.mjs validate --registry infra/delivery/registry.json --json ===
+{
+  "interface": "MonitorInfra.v1",
+  "command": "validate",
+  "registry": "infra/delivery/registry.json",
+  "refs": "infra/delivery/secrets.refs.example.json",
+  "dir": "infra/delivery/monitor",
+  "ok": true,
+  "violations": [],
+  "catalogGaps": [],
+  "files": {
+    "monitor-registration.example.json": {
+      "interface": "MonitorRegistration.v1"
+    },
+    "health-contract.json": {
+      "interface": "Health.v1"
+    },
+    "alert-policy.json": {
+      "interface": "AlertPolicy.v1"
+    },
+    "supervisor-policy.json": {
+      "interface": "Supervisor.v1"
+    },
+    "fault-domain-policy.json": {
+      "interface": "FaultDomain.v1"
+    }
+  },
+  "deadlines": {
+    "heartbeatIntervalSeconds": 30,
+    "monitorCheckIntervalSeconds": 30,
+    "heartbeatAlertAfterSeconds": 90,
+    "scanStallAlertAfterSeconds": 120,
+    "detectionLatestSeconds": 120,
+    "deliveryTargetSeconds": 30,
+    "escalationAckTimeoutSeconds": 300,
+    "restartWindowSeconds": 300,
+    "restartMax": 3,
+    "recoveryTargetSeconds": 600
+  },
+  "preEnableGate": {
+    "enabled": false,
+    "allowed": false,
+    "missing": [
+      "external-monitor-registered",
+      "oncall-platform-primary",
+      "oncall-platform-backup",
+      "channel-primary",
+      "channel-backup",
+      "delivery-authorized",
+      "isolation-operation-authorized"
+    ],
+    "state": {
+      "external-monitor-registered": false,
+      "oncall-platform-primary": false,
+      "oncall-platform-backup": false,
+      "channel-primary": false,
+      "channel-backup": false,
+      "delivery-authorized": false,
+      "isolation-operation-authorized": false
+    }
+  },
+  "deliveryAuthorization": {
+    "authorized": false,
+    "record": null
+  },
+  "faultDomain": {
+    "coHostedMonitorCannotClaimHostFailure": true,
+    "hostFailureRequiresExternalMonitor": true
+  },
+  "checkedAt": "2026-10-22T12:35:28.323Z"
+}
+exit=0
+=== node tools/infra/monitor.mjs probe --case runner-process-failure --json ===
+{
+  "interface": "MonitorInfra.v1",
+  "command": "probe",
+  "case": "runner-process-failure",
+  "executed": true,
+  "status": "VERIFIED",
+  "capabilityScope": "PROCESS_LEVEL",
+  "hostFailureCapabilityClaimed": false,
+  "injectionParameters": {
+    "heartbeatIntervalMs": 50,
+    "staleAfterMs": 400,
+    "authorityId": "monitor-probe-comet-authority-local",
+    "note": "scaled local timescales prove the mechanism; the production contract deadlines below stay frozen and their capacity/failure evidence remains UNVERIFIED"
+  },
+  "contractDeadlines": {
+    "heartbeatIntervalSeconds": 30,
+    "heartbeatAlertAfterSeconds": 90,
+    "detectionLatestSeconds": 120
+  },
+  "observedSteps": [
+    {
+      "step": "spawn-runner-instance",
+      "status": "VERIFIED",
+      "pid": 36967,
+      "authorityId": "monitor-probe-comet-authority-local"
+    },
+    {
+      "step": "health-read-before-failure",
+      "status": "VERIFIED",
+      "heartbeatAgeMs": 7
+    },
+    {
+      "step": "inject-process-death",
+      "status": "VERIFIED",
+      "method": "SIGKILL",
+      "pid": 36967,
+      "oldWriterConfirmedGone": true
+    },
+    {
+      "step": "detect-heartbeat-stale",
+      "status": "VERIFIED",
+      "heartbeatAgeMs": 403,
+      "staleAfterMs": 400,
+      "code": "HEARTBEAT_AGE_ALERT"
+    },
+    {
+      "step": "supervised-restart",
+      "status": "VERIFIED",
+      "newPid": 36970,
+      "oldPid": 36967,
+      "sameAuthorityId": true,
+      "oldWriterConfirmedGone": true,
+      "singleLiveInstance": true,
+      "restartsUsed": 1,
+      "restartBudget": {
+        "windowSeconds": 300,
+        "maxRestarts": 3
+      },
+      "withinBudget": true,
+      "businessRetryBySupervisor": false
+    }
+  ],
+  "reason": "process-level fault injection verified: real child process, real SIGKILL, stale-heartbeat detection, old writer confirmed gone, same-authority restart, exactly one live instance",
+  "checkedAt": "2026-10-22T12:35:28.894Z"
+}
+exit=0
+=== node tools/infra/monitor.mjs probe --case external-host-down --json ===
+{
+  "interface": "MonitorInfra.v1",
+  "command": "probe",
+  "case": "external-host-down",
+  "executed": false,
+  "status": "UNVERIFIED",
+  "faultDomainSatisfied": false,
+  "mustNotPass": true,
+  "externalMonitorRegistered": false,
+  "coHostedMonitorCannotClaimHostFailure": true,
+  "reason": "no monitoring instance outside the Runner fault domain is registered (monitor-registration is an example with status UNREGISTERED); a co-hosted monitor dies with the host and must be marked fault-domain-NOT-satisfied — never PASS",
+  "requiredInputs": [
+    "a monitoring instance outside the Runner fault domain, registered with instance/owner/network/persistence (monitor-registration)",
+    "delivery authorization for the alert channels (monitor-alert ref; current task holds none)",
+    "real external timestamps + loss onset + monitor verdict + delivery/escalation receipts, timed as separate segments"
+  ],
+  "plannedSteps": [
+    "stop the Runner host (not just the process) under change control",
+    "the external monitor detects host loss within 2 minutes and alerts through the registered channels",
+    "record detection and delivery as separate segments with external timestamps",
+    "a co-hosted monitor result must be recorded as faultDomainSatisfied=false, never PASS"
+  ],
+  "registry": "infra/delivery/registry.json",
+  "checkedAt": "2026-10-22T12:35:28.967Z"
+}
+exit=2
+=== node tools/infra/monitor.mjs probe --case scan-watermark-stall --json ===
+{
+  "interface": "MonitorInfra.v1",
+  "command": "probe",
+  "case": "scan-watermark-stall",
+  "executed": true,
+  "status": "VERIFIED",
+  "scope": "FACTS_FIXTURE_LOCAL",
+  "injection": "facts fixture with a fresh heartbeat and a 150s-stale complete-scan watermark evaluated against the real clock",
+  "detection": {
+    "code": "SCAN_WATERMARK_STALL",
+    "scanWatermarkAgeSeconds": 150,
+    "stallAlertAfterSeconds": 120,
+    "heartbeatIndependent": true
+  },
+  "heartbeatSignal": {
+    "code": "OK",
+    "note": "the fresh heartbeat correctly fired no heartbeat alert — the two signals are evaluated independently"
+  },
+  "delivery": {
+    "mode": "PREPARE_ONLY",
+    "sentByThisTool": false,
+    "authorized": false,
+    "reason": "no notification-send authorization exists in this task; the alert is prepared only and the independent alert system delivers it once authorized"
+  },
+  "realCometReadback": {
+    "status": "UNVERIFIED",
+    "reason": "this probe evaluates a declared facts fixture; reading real Comet facts requires the registered external monitor and the monitor-health-read ref, which is not in the I01 catalog yet"
+  },
+  "observed": {
+    "authorityId": "monitor-probe-comet-authority-scan",
+    "heartbeatAgeSeconds": 10,
+    "receiveCursorAgeSeconds": 10,
+    "scanWatermarkAgeSeconds": 150,
+    "unresolvedIsolations": 0
+  },
+  "checkedAt": "2026-10-22T12:35:29.043Z"
+}
+exit=0

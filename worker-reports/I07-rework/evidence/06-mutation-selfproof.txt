@@ -1,0 +1,37 @@
+########## M1: heartbeat threshold tamper (health-contract.json alertAfterAgeSeconds 90->300) ##########
+not ok 1 - V_INFRA_I07 contract: committed monitor domain validates clean with honest gaps and spec-frozen deadlines
+not ok 2 - RED pre-enable gate: unattended release enabled without registered external monitor/on-call/backup channel is blocked
+not ok 9 - RED I01 isolation: cross-project refs are structural violations; unregistered ref stays an explicit gap and resolver refuses
+not ok 10 - Health.v1: read-only evaluation of heartbeat age, scan watermark, isolation deadlines and authority identity
+not ok 11 - Monitor.v1: alerts are prepared only (never sent without authorization) and prepared from the exact breaches
+# pass 12
+--- mutation caught summary M1 ---
+5
+--- restored M1 ---
+########## M2: restart budget loosen (supervisor-policy.json maxRestarts 3->10) ##########
+not ok 1 - V_INFRA_I07 contract: committed monitor domain validates clean with honest gaps and spec-frozen deadlines
+not ok 2 - RED pre-enable gate: unattended release enabled without registered external monitor/on-call/backup channel is blocked
+not ok 9 - RED I01 isolation: cross-project refs are structural violations; unregistered ref stays an explicit gap and resolver refuses
+not ok 15 - Supervisor.v1: exceeding 3 restarts within 5 minutes stops and escalates
+# pass 13
+# fail 4
+--- restored M2 ---
+########## M3: detection+delivery merged into one total budget (alert-policy.json +totalDeliverySeconds=150) ##########
+not ok 1 - V_INFRA_I07 contract: committed monitor domain validates clean with honest gaps and spec-frozen deadlines
+not ok 2 - RED pre-enable gate: unattended release enabled without registered external monitor/on-call/backup channel is blocked
+not ok 9 - RED I01 isolation: cross-project refs are structural violations; unregistered ref stays an explicit gap and resolver refuses
+# pass 14
+# fail 3
+--- restored M3 ---
+########## M4: supervisor business-retry flip (supervisor-policy.json cometSelfRecovery.supervisorBusinessRetry=true) ##########
+not ok 1 - V_INFRA_I07 contract: committed monitor domain validates clean with honest gaps and spec-frozen deadlines
+not ok 2 - RED pre-enable gate: unattended release enabled without registered external monitor/on-call/backup channel is blocked
+not ok 9 - RED I01 isolation: cross-project refs are structural violations; unregistered ref stays an explicit gap and resolver refuses
+# pass 14
+# fail 3
+--- restored M4 ---
+########## post-restore green check ##########
+# tests 17
+# pass 17
+# fail 0
+########## git status after mutations ##########
