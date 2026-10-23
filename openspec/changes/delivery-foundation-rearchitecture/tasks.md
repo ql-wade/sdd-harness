@@ -1125,13 +1125,13 @@
 **Parallel safe:** false
 **Acceptance IDs:** A10, A11, H08, H09, L06, L11, B08, U07
 
-- [ ] **Step 1 [5 min]: Test** RED：pending Outline发布/未知远端结果/唯一payload在工作区时cleanup实际拒绝；磁盘压力只告警不静默清理；不完整备份、校验不符、缺密钥、DB/附件时间点不一致、旧writer未隔离时恢复不启用；恢复旧ACL或重加离组成员、恢复旧grant/旧attempt结果、复制状态另开writer实际拒绝。
-- [ ] **Step 2 [5 min]: Implement** GREEN：备份包含原Run权威文件/事务/操作/回执/批准payload与版本；数据库和附件可一致恢复，索引可重建且校验；隔离恢复后先冻结新发布、调和未知写、完整权限对账和优先隔离，独立验证后由同Comet继续；原已完成产品历史保留；权限维护仍由同引擎关联作业处理；cleanup门禁使用Comet真实义务不只archived/git complete。
-- [ ] **Step 3 [5 min]: Review** 独立读回：真实备份manifest摘要、恢复资源ID/版本、同Run/operation与权限独立读回；记录停机起点/恢复/补偿结束和暴露违约；容量告警证据和cleanup失败状态可重现；恢复前后唯一owner证明，已下载数据不能声称可追回。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
-- [ ] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
+- [x] **Step 1 [5 min]: Test** RED：pending Outline发布/未知远端结果/唯一payload在工作区时cleanup实际拒绝；磁盘压力只告警不静默清理；不完整备份、校验不符、缺密钥、DB/附件时间点不一致、旧writer未隔离时恢复不启用；恢复旧ACL或重加离组成员、恢复旧grant/旧attempt结果、复制状态另开writer实际拒绝。
+- [x] **Step 2 [5 min]: Implement** GREEN：备份包含原Run权威文件/事务/操作/回执/批准payload与版本；数据库和附件可一致恢复，索引可重建且校验；隔离恢复后先冻结新发布、调和未知写、完整权限对账和优先隔离，独立验证后由同Comet继续；原已完成产品历史保留；权限维护仍由同引擎关联作业处理；cleanup门禁使用Comet真实义务不只archived/git complete。
+- [x] **Step 3 [5 min]: Review** 独立读回：真实备份manifest摘要、恢复资源ID/版本、同Run/operation与权限独立读回；记录停机起点/恢复/补偿结束和暴露违约；容量告警证据和cleanup失败状态可重现；恢复前后唯一owner证明，已下载数据不能声称可追回。命令、输入、备份与资格前置详见 infrastructure-tasks.json。
+- [x] **Step 4 [3 min]: Commit** 串行接纳仅归属路径，记录原始证据；基础设施未真实安装/验证保持未完成。
 
 本轮返工（P1映射见replan-record.json，详细oracle见execution-contract.json）：
 
-- [ ] **Step 5 [5 min]: Implement** 按原canonical recovery/*、tools/infra/recovery.mjs与test/infra-recovery.test.js机械修订I08命名并覆盖所有调用/合同引用，保留必要兼容入口；不要以旧13/13+4/4替代当前合同命令成功。
-- [ ] **Step 6 [5 min]: Test** 用实际Comet Run/知识数据库与附件备份恢复，旧writer未隔离拒绝启用；R10未完成唯一工作区不可清，恢复先冻结发布、调和未知写、完整权限对账及隔离优先。
-- [ ] **Step 7 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
+- [x] **Step 5 [5 min]: Implement** 按原canonical recovery/*、tools/infra/recovery.mjs与test/infra-recovery.test.js机械修订I08命名并覆盖所有调用/合同引用，保留必要兼容入口；不要以旧13/13+4/4替代当前合同命令成功。
+- [x] **Step 6 [5 min]: Test** 用实际Comet Run/知识数据库与附件备份恢复，旧writer未隔离拒绝启用；R10未完成唯一工作区不可清，恢复先冻结发布、调和未知写、完整权限对账及隔离优先。
+- [x] **Step 7 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。

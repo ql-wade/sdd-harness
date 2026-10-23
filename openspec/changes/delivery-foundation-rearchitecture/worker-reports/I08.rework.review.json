@@ -1,0 +1,47 @@
+{
+  "task": "I08",
+  "phase": "rework-r1",
+  "verdict": "APPROVED",
+  "blocking_findings": [],
+  "reviewed_at": "2026-10-23T00:20:03.865111+00:00",
+  "head_reviewed": "8f8fd8f",
+  "non_blocking_findings": [
+    {
+      "id": "NB1-bridge-scope-omission",
+      "disposition": "LEDGER 补一行范围说明",
+      "summary": "桥接未含 checks//handoff//skill-snapshots/ 三目录,已含文件逐字节真实(cmp 全 IDENTICAL),范围排除未写入增量清单"
+    },
+    {
+      "id": "NB2-bare-clone-env-failures",
+      "disposition": "记录",
+      "summary": "冷启 clone 未装依赖 36 个既有环境性失败,两基点逐名恒等;npm install 后 475/472/2/1"
+    },
+    {
+      "id": "NB3-live-shape-gap-not-in-runbook",
+      "disposition": "随 Q1/Q2 落账",
+      "summary": "runbook UNVERIFIED 小节未列字段映射 owner 裁决承接条目"
+    }
+  ],
+  "independently_rerun": {
+    "boundary_clean": true,
+    "red_reproduction": "基点五条 canonical 命令全 exit=1(文件缺失),命令缺失即 RED 成立",
+    "green_and_mutations": "HEAD 五条合同命令全过;突变A(retention DENY 短路)→probe UNVERIFIED+3 测试红;突变B(old-writer liveness 短路)→拒绝码降级+3 测试红;恢复后 porcelain 0",
+    "npm_test": "worktree+冷启 clone(npm install 后)双复现 475/472/2/1 恰已知集",
+    "case_and_step6_rerun": "case 4/4;Step6 全链重跑:桥接(7 文件 cmp IDENTICAL+4 增量书面化)→backup 12 文件/120188B→真实进程 fence→SIGKILL 后 RELEASED→12/12 IDENTICAL 读回→release-record publishFrozen/singleWriter/reconciliation 全吻合",
+    "honesty_audit": "knowledge_db UNVERIFIED 独立复现同一拒绝形态,无 PASS 包装;runbook 明文禁止本地 drill 升格 PASS"
+  },
+  "adjudications": {
+    "q1_backup_shape": {
+      "ruling": "LEDGER",
+      "evidence": "recovery.mjs:197-198 对缺字段 fail-closed REFUSED(重跑复现);真实链在真实字节闭合;仅契约字段映射语义留 owner"
+    },
+    "q2_retention_live_shape": {
+      "ruling": "LEDGER",
+      "evidence": "工具无删除路径(toolPerformsDeletion=false;4 处 rmSync 均 probe 自建 mkdtemp finally);修复需改 build 义务落盘形状(非 I08 owns)"
+    },
+    "q3_registry_single_source": {
+      "ruling": "ACCEPT",
+      "evidence": "registry 移走→validate/probe exit=1 拒绝非静默;测试含 fail-closed 用例;合同引用无破坏"
+    }
+  }
+}

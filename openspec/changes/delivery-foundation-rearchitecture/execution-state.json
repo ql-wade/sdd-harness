@@ -69,7 +69,7 @@
     "timezone": "Asia/Shanghai",
     "reason": "receiving host/resources and actual repair throughput need qualification; 2–5min steps are evidence checkpoints, not delivery ETA"
   },
-  "updated_at": "2026-10-22T23:35:11.456514+00:00",
+  "updated_at": "2026-10-23T00:20:03.865111+00:00",
   "preparatory_checks": {
     "scaffold_scoped_tests": "41/41 PASS",
     "scaffold_npm_test": "41/41 PASS on Node22.13.1",
@@ -94,7 +94,7 @@
     "Prior one-time disclosure grant and old sdd monitor identity are not reusable startup instructions.",
     "Full same-product-Run journeys run only at VERIFY after all mechanisms, including I07/I08, are ready; construction-task acceptance does not close those journeys."
   ],
-  "last_progress_at": "2026-10-23T00:00:45.412365+00:00",
+  "last_progress_at": "2026-10-23T00:20:03.865111+00:00",
   "authorization_blocker_audit": {
     "status": "NOT_APPLICABLE_TO_PLANNING",
     "implementation": "NOT_STARTED"
@@ -525,29 +525,20 @@
       "deliverable": "composeWorld 自包含修复+6 例重验套件; 真实缺陷 fresh clone 双态复现"
     },
     "I08": {
-      "status": "REOPENED_RETEST_REQUIRED",
-      "steps_done": 4,
+      "status": "ACCEPTED",
+      "phase": "rework-r1",
+      "steps_done": 7,
       "commits": {
-        "tests_red": "f9e5a0b",
-        "implementation": "0e6313e",
-        "report": "39466fd"
+        "red": "7e2ac99",
+        "green": "ba218ad",
+        "regression": "24e4ebc",
+        "step6": "8f8fd8f"
       },
-      "merged_to_master": "2690286",
-      "regression": "npm test @2690286: 398 tests/393 pass/5 fail(all known-env)/0 new",
-      "review": "worker-reports/I08.review.json (APPROVED, 0 blocking, 3 nb)",
-      "unverified_holders": [
-        "跨机恢复演练→备份owner+部署波次",
-        "静态加密执行→I01",
-        "RPO/RTO/保留期/容量阈值→各数据owner"
-      ],
-      "previous_status": "ACCEPTED",
-      "reason": "seven-P1 rework invalidates affected baseline/observer/runtime acceptance; preserve historical component evidence",
-      "rework_revision": "2026-10-22-seven-p1",
-      "rework_dispatched_at": "2026-10-22T23:35:53.689764+00:00",
-      "rework_worker": "impl worker (worktree rw-p4-4 复用, branch rework/i08 @ f41aab9)",
-      "rework_scope": "Steps 5-7: canonical 命名迁移覆盖全部调用/合同 + 真实备份恢复/R10 保留语义 + 评审后接纳",
-      "rework_worker_completed_at": "2026-10-23T00:00:45.412365+00:00",
-      "rework_review": "dispatching"
+      "merged_to_master": "e5fe671",
+      "regression": "npm test @merge 475/472/2/1 恰已知集(rw-p4-4 .sdd 预备态)",
+      "review": "worker-reports/I08.rework.review.json (APPROVED 0 blocking; Q1/Q2→LEDGER, Q3 ACCEPT)",
+      "deliverable": "canonical recovery 迁移(5/5 合同命令绿) + 真实备份恢复链(12 文件字节一致/真实进程 fence/R10 DENY) + knowledge_db 诚实 UNVERIFIED",
+      "historical": "pre-rework ACCEPTED, 证据保留"
     },
     "P4_1": {
       "status": "ACCEPTED",
@@ -892,6 +883,18 @@
       "raised": "2026-10-22T23:35:11.456514+00:00",
       "by": "P4_4 reviewer NB2",
       "question": "patch0003 knowledge-observe 账本级持久化 channels 并校验(向后兼容小跟进)——是否纳入后续 change 由用户裁决"
+    },
+    {
+      "id": "BACKUP_V1_SHAPE_MAPPING",
+      "raised": "2026-10-23T00:20:03.865111+00:00",
+      "by": "I08 reviewer Q1",
+      "question": "Backup.v1 前置字段(authorityId+epoch)与真实 Comet build run-state 形状(仅 runId)的映射语义——扩展 recovery.mjs 读真实形状 vs 让 Comet 写契约字段;recovery.mjs 已 fail-closed,风险方向安全"
+    },
+    {
+      "id": "RETENTION_LIVE_SHAPE_INTAKE",
+      "raised": "2026-10-23T00:20:03.865111+00:00",
+      "by": "I08 reviewer Q2",
+      "question": "R10 'cleanup 门禁使用 Comet 真实义务'对 live closeout 记录形状的摄入缺口(扫描器只识别 I08 目录形态;工具无删除路径,风险仅在消费方自动化)——与 BACKUP_V1_SHAPE_MAPPING 同根,owner 裁决"
     }
   ],
   "halt": {
