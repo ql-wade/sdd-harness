@@ -1,0 +1,189 @@
+// P5_3-rework evidence 04 — GREEN run 2/2 (stability) + negative-mutation
+// self-proof ("the mutations bite"): each validator guard was neutered in a
+// THROWAWAY copy of 5_3.mjs (test/delivery-cases/5_3.mutation-check.mjs,
+// deleted after the demo, never committed) and the matching negative test
+// immediately failed — proving every guard is load-bearing, not decorative.
+//
+// GREEN run 2/2:  node --test test/delivery-cases/5_3.mjs
+//   16 tests / 16 pass / 0 fail / 0 skipped, exit 0 (matches run 1/2).
+//
+// Guard-neutering sed per demo (applied to the copy only):
+//   M1  s/PASS_LIKE\.has(entry\.status)/false/            -> M1 negative FAILS (exit 1)
+//   M2  s/shared\[- \]local/zzzz[- ]local/  +             (first attempt left the
+//        'mounted\s+(state|dir)' alternative intact, so the guard still fired
+//        via that alternative and the negative kept passing — the guard was
+//        stronger than the neutering, not weaker; both latin alternatives
+//        neutered in the second attempt)                        -> M2 FAILS (exit 1)
+//   M3  s/triggers\.length < 2/triggers.length < 0/       -> M3 negative FAILS (exit 1)
+//   M4  s/for (const id of ROLLBACK_MANDATORY_STEPS)/for (const id of [])/ -> M4 FAILS (exit 1)
+//
+// Host paths are redacted to <repo>/ per evidence discipline.
+
+========================= GREEN run 2/2 (tail) =========================
+# Subtest: J4: the capability boundary ledger verifies single-host lease/fencing/background/rollback with on-disk evidence and records the cross-machine boundary honestly
+ok 9 - J4: the capability boundary ledger verifies single-host lease/fencing/background/rollback with on-disk evidence and records the cross-machine boundary honestly
+# Subtest: J4 negative (mutation M1): marking a NOT_ENABLED cross-machine capability as VERIFIED is refused (not-enabled never passes)
+ok 10 - J4 negative (mutation M1): marking a NOT_ENABLED cross-machine capability as VERIFIED is refused (not-enabled never passes)
+# Subtest: J4 negative (mutation M2): a shared-local-directory masquerade of a cross-machine capability is refused
+ok 11 - J4 negative (mutation M2): a shared-local-directory masquerade of a cross-machine capability is refused
+# Subtest: J4 negative (mutation M3): deleting the recheck triggers (or leaving them topic-incomplete) is refused
+ok 12 - J4 negative (mutation M3): deleting the recheck triggers (or leaving them topic-incomplete) is refused
+# Subtest: J4: the v2 enablement gate readback stays honestly closed — status OK with UNVERIFIED_NOT_ENABLED, start/release/implement denied, runtime records never trusted
+ok 13 - J4: the v2 enablement gate readback stays honestly closed — status OK with UNVERIFIED_NOT_ENABLED, start/release/implement denied, runtime records never trusted
+# Subtest: J4: gate, machine matrix and capability ledger are same-source on the wildcard default-deny
+ok 14 - J4: gate, machine matrix and capability ledger are same-source on the wildcard default-deny
+# Subtest: J4: the runbook carries the v2 gate form, every known environment gate verbatim and the rework-run boundaries; no stale legacy reference survives
+ok 15 - J4: the runbook carries the v2 gate form, every known environment gate verbatim and the rework-run boundaries; no stale legacy reference survives
+# Subtest: J4 negative: a runbook copy that hides one known environment gate is rejected
+ok 16 - J4 negative: a runbook copy that hides one known environment gate is rejected
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 42424.911625
+
+========================= mutation-bite demos =========================
+=== guard-neutered M1 (sed: s/PASS_LIKE\.has(entry\.status)/false/) — the matching negative test must now FAIL ===
+TAP version 13
+# Subtest: J4 negative (mutation M1): marking a NOT_ENABLED cross-machine capability as VERIFIED is refused (not-enabled never passes)
+not ok 1 - J4 negative (mutation M1): marking a NOT_ENABLED cross-machine capability as VERIFIED is refused (not-enabled never passes)
+  ---
+  duration_ms: 2.634083
+  location: '<repo>/test/delivery-cases/5_3.mutation-check.mjs:660:1'
+  failureType: 'testCodeFailure'
+  error: 'a pass-like cross-machine claim must be refused, got: a10-cross-machine-concurrency: status must be NOT_ENABLED while the gate is closed, got VERIFIED'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mutation-check.mjs:665:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 70.21875
+---- exit=1 (1 = the negative test bit: the guard is load-bearing) ----
+=== guard-neutered M2 (sed: s/shared\[- \]local/zzzz[- ]local/) — the matching negative test must now FAIL ===
+TAP version 13
+# Subtest: J4 negative (mutation M2): a shared-local-directory masquerade of a cross-machine capability is refused
+ok 1 - J4 negative (mutation M2): a shared-local-directory masquerade of a cross-machine capability is refused
+  ---
+  duration_ms: 1.917042
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 65.79425
+---- exit=0 (1 = the negative test bit: the guard is load-bearing) ----
+=== guard-neutered M3 (sed: s/triggers\.length < 2/triggers.length < 0/) — the matching negative test must now FAIL ===
+TAP version 13
+# Subtest: J4 negative (mutation M3): deleting the recheck triggers (or leaving them topic-incomplete) is refused
+not ok 1 - J4 negative (mutation M3): deleting the recheck triggers (or leaving them topic-incomplete) is refused
+  ---
+  duration_ms: 2.09
+  location: '<repo>/test/delivery-cases/5_3.mutation-check.mjs:685:1'
+  failureType: 'testCodeFailure'
+  error: 'emptying the triggers must be reported, got: recheck triggers must cover the cross-machine enablement adjudication landing | recheck triggers must cover an upstream change introducing a service mode or distributed lease surface'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mutation-check.mjs:690:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 66.169583
+---- exit=1 (1 = the negative test bit: the guard is load-bearing) ----
+=== guard-neutered M4 (sed: s/for (const id of ROLLBACK_MANDATORY_STEPS)/for (const id of [])/) — the matching negative test must now FAIL ===
+TAP version 13
+# Subtest: J3b negative (mutation M4): a rollback recipe with a mandatory recovery step deleted is refused
+not ok 1 - J3b negative (mutation M4): a rollback recipe with a mandatory recovery step deleted is refused
+  ---
+  duration_ms: 2.366667
+  location: '<repo>/test/delivery-cases/5_3.mutation-check.mjs:634:1'
+  failureType: 'testCodeFailure'
+  error: 'deleting the rolled-back signature step must be reported, got: '
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mutation-check.mjs:639:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 67.4305
+---- exit=1 (1 = the negative test bit: the guard is load-bearing) ----
+=== guard-neutered M2 (both latin alternatives of the basis regex) — the matching negative test must now FAIL ===
+TAP version 13
+# Subtest: J4 negative (mutation M2): a shared-local-directory masquerade of a cross-machine capability is refused
+not ok 1 - J4 negative (mutation M2): a shared-local-directory masquerade of a cross-machine capability is refused
+  ---
+  duration_ms: 3.210208
+  location: '<repo>/test/delivery-cases/5_3.mutation-check.mjs:669:1'
+  failureType: 'testCodeFailure'
+  error: 'the shared-local-directory basis must be refused, got: MASQUERADE: a10-cross-machine-concurrency claims pass-like status "SUPPORTED" while the cross-machine gate is disabled — not-enabled never passes'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mutation-check.mjs:681:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 69.0605
+---- exit=1 (1 = the negative test bit: the basis guard is load-bearing) ----

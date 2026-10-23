@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "interface": "TeamRecovery.CapabilityBoundary.v1",
+  "scope": "CROSS_MACHINE",
+  "task": "P5_3 (rework rework-seven-p1-r1, branch rework/p5-3)",
+  "precondition": "CROSS_MACHINE_SCOPE_NOT_ENABLED",
+  "gate": {
+    "source": "services/delivery-control/enablement.json",
+    "enabled": false,
+    "refuse": ["start", "release", "implement"],
+    "f10_state": "UNVERIFIED_NOT_ENABLED"
+  },
+  "verified_local": [
+    {
+      "capability": "lease-contention-single-host",
+      "status": "VERIFIED",
+      "scope_note": "单机租约：真实 Comet Classic .comet-state.lock（wx 独占创建 + owner 身份 pid/nonce/hostname）；存活 holder 期间第二写者等待超时拒绝（30s 锁超时/EEXIST）；owner 真实死亡确认后才回收；异机 owner 永不被本地恢复",
+      "evidence": [
+        "openspec/changes/delivery-foundation-rearchitecture/team-recovery/receipt-3-lease-contention.json",
+        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I08-rework/evidence/step6-real-comet-run.txt"
+      ]
+    },
+    {
+      "capability": "fencing-old-writer-rejection-single-host",
+      "status": "VERIFIED",
+      "scope_note": "单机 fencing：epoch 严格单调（transfer 每次 +1）；存活 pid 持 lease 时恢复被拒（RESTORE_REFUSED_OLD_WRITER_LIVE）；真实 SIGKILL + 终止确认后启用；缺批准（REFUSAL_CONTROLLED_APPROVAL_REQUIRED）与伪装围栏（AUTHORITY_FENCE_NOT_PROCESS_LEVEL）被拒",
+      "evidence": [
+        "openspec/changes/delivery-foundation-rearchitecture/team-recovery/receipt-2-fencing-old-writer.json",
+        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/I08.rework.review.json"
+      ]
+    },
+    {
+      "capability": "background-supervision-process-level",
+      "status": "VERIFIED",
+      "scope_note": "后台运行（进程级）：真实子进程 + 真实 SIGKILL，监督器按原 authority 重启原实例（restart-original），预算 window 300s / max 3，超限 STOP_AND_ESCALATE；宿主级故障检测容量保持 UNVERIFIED（probe capabilityScope: PROCESS_LEVEL）",
+      "evidence": [
+        "openspec/changes/delivery-foundation-rearchitecture/team-recovery/receipt-1-sigkill-restart-original.json",
+        "test/delivery-cases/4_8.mjs"
+      ]
+    },
+    {
+      "capability": "version-rollback-local-only",
+      "status": "VERIFIED",
+      "scope_note": "版本回退（LOCAL_ONLY）：回退四门全 exit 2 fail-closed（ROLLBACK_NOT_APPROVED / ROLLBACK_RETENTION_MISSING / ROLLBACK_DIGEST_MISMATCH / ROLLBACK_TERMINAL_STATE_UNCONFIRMED）+ 批准同 digest 正例 VERIFIED + I06 独立评估器确认链；真实生产晋级/部署 UNVERIFIED（environment owner + runtime admission）",
+      "evidence": [
+        "tools/ci/release.mjs",
+        "test/delivery-cases/5_3.mjs"
+      ]
+    }
+  ],
+  "not_enabled": [
+    {
+      "capability": "a10-cross-machine-concurrency",
+      "status": "NOT_ENABLED",
+      "note": "跨机器并发（多会话/旧租约 epoch 的跨机器推进语义）：无启用裁决，不实施不主张"
+    },
+    {
+      "capability": "a11-cross-machine-recovery",
+      "status": "NOT_ENABLED",
+      "note": "跨机器恢复续接：无启用裁决，不实施不主张；单机恢复语义见 verified_local"
+    },
+    {
+      "capability": "a12-cross-machine-parent-revalidation",
+      "status": "NOT_ENABLED",
+      "note": "跨机器父目标重验：无启用裁决，不实施不主张"
+    },
+    {
+      "capability": "team-release",
+      "status": "NOT_ENABLED",
+      "note": "面向团队/其他宿主的发布（H09 团队半）：无启用裁决，拒绝发布；同 Run 归档排他与恢复属单机面，已单列核实"
+    }
+  ],
+  "masquerade_forbidden": "共享本地目录/单机状态不得被标记为分布式或团队级能力（tasks.md P5_3 禁令）：跨机租约/fencing/后台驱动的任何主张都必须先有 gate.enabled=true 的用户裁决（enablement.json decision_record 可解析），否则一律 NOT_ENABLED；负向突变（NOT_ENABLED 标 PASS 位 / 本地目录标分布式 / 删复审触发器或恢复步骤）由 test/delivery-cases/5_3.mjs 机械拒绝。",
+  "boundary": {
+    "daemon_mode": {
+      "present": false,
+      "evidence": "worker-reports/I02-rework/evidence/s5-runner-help.txt",
+      "note": "本构建 comet CLI 全命令清单无 daemon/serve/service 模式（I02 S5 架构发现）；后台运行只有进程级监督（verified_local background-supervision-process-level），无宿主级常驻服务"
+    },
+    "distributed_lease_surface": {
+      "present": false,
+      "evidence": "integrations/comet/upstream.lock.json",
+      "note": "上游事实源（source+patches 钉定）只有单机状态锁/事务面（lock/patch 面）；不存在分布式租约/协调表面"
+    }
+  },
+  "recheck_triggers": [
+    {
+      "id": "T1-enablement-adjudication",
+      "condition": "跨机器启用裁决落地：enablement.json enabled=true（或 matrix.json 通配符宿主 enabled=true），execution-state.json open_decisions 出现 ENABLE_CROSS_MACHINE_SCOPE 的 user 裁决",
+      "action": "重审本台账：A10/A11 跨机半 + H09 团队发布转为建设任务（RED 先行），F10 正向建设按 5.2.a/5.2.b 排期；完成前维持 NOT_ENABLED"
+    },
+    {
+      "id": "T2-upstream-service-mode",
+      "condition": "上游 Comet 补丁/版本引入服务模式或分布式租约面（integrations/comet/upstream.lock.json 的 source/patches 变更且新增 daemon/serve 类命令或分布式协调表面）",
+      "action": "重审 daemon_mode/distributed_lease_surface 缺席登记与 verified/not_enabled 划分；能力面按新上游真实接口重新核实（禁止按旧清单推断）"
+    },
+    {
+      "id": "T3-second-host-enabled",
+      "condition": "matrix.json 出现第二台 enabled=true 的具体宿主（逐宿主启用裁决）",
+      "action": "重审跨机并发/恢复面与 no_cross_machine_inference 约束；两机间任何能力主张需各自宿主的真实证据根"
+    },
+    {
+      "id": "T4-i02-s7-s8-credentials",
+      "condition": "I02 S7（正向链）/S8（恢复入口）的终端通道凭据/authoritative state 卷到位",
+      "action": "重审 S7/S8 的 UNVERIFIED 项；以真实执行记录替代 env-gated 登记"
+    },
+    {
+      "id": "T5-f10-positive-auth",
+      "condition": "F10 正向认证（项目隔离/凭据撤权/备份恢复重认证/API 断联拒绝缓存绿）任一真实执行",
+      "action": "由 VERIFY 按真实执行记录重新登记 F10 状态（本门不自证）"
+    }
+  ],
+  "same_source": {
+    "matrix": "openspec/changes/delivery-foundation-rearchitecture/team-host-matrix/matrix.json :: machine_dimension.hosts[*]（default-deny 通配符；a10/a11/a12/team-release 全 NOT_ENABLED）",
+    "gate_cli": "services/delivery-control/gate.mjs（DeliveryControl.EnablementGate.v2）",
+    "not_enabled_never_pass": "未启用宿主的一切能力状态只能是 NOT_ENABLED/UNVERIFIED，绝不 VERIFIED/SUPPORTED/PASS"
+  }
+}

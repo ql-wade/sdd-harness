@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "interface": "TeamRecovery.RollbackRecipe.v1",
+  "drill": "version-rollback-git-level (tasks.md P5_3 5.3.b)",
+  "operationKey": "rollback/candidate:current->previous-acceptance",
+  "precondition": "worktree on rework/p5-3 with clean git status; .sdd pinned Comet build present（指纹钉定：integrations/comet/upstream.lock.json 重算 fingerprint 与 .sdd/vendor/comet/<commit>/builds/<fingerprint>/distribution.json 一致）；node v22.13.1；零 mock，全部真实执行",
+  "steps": [
+    {
+      "id": "record-before-signature",
+      "command": "npm test",
+      "verify": "全量回归签名等于已知集基线：475 tests / 472 pass / 2 fail（C08 negative + B08 preservation）/ 1 skipped，exit 1——记为回退前时点签名"
+    },
+    {
+      "id": "checkout-previous-candidate",
+      "command": "git checkout --detach <previous-acceptance-commit>",
+      "verify": "detached HEAD 停在前一验收候选（本次演练用 f13af35 = accept P5_1）；除 gitignored 本地缓存（.sdd 等）外工作区干净"
+    },
+    {
+      "id": "record-rolled-back-signature",
+      "command": "npm test",
+      "verify": "回退点候选呈现同一已知集签名（475/472/2/1，同两条已知失败）——回退后质量门仍 fail-closed；此为回退后时点签名"
+    },
+    {
+      "id": "generate-index-idempotent",
+      "command": "node test/delivery-cases/4_3.mjs --generate",
+      "verify": "判定器在回退点重生成 acceptance-index.json，diff 仅 generated_at（幂等）；随后 git checkout -- 还原该文件，不把漂移留在工作区"
+    },
+    {
+      "id": "return-to-head",
+      "command": "git checkout rework/p5-3",
+      "verify": "回到分支原 HEAD；git status 干净；分支头回归签名与回退前一致"
+    }
+  ],
+  "expected_signature": {
+    "rule": "KNOWN_SET_FAIL_CLOSED",
+    "baseline": "475 tests / 472 pass / 2 fail / 1 skipped",
+    "known_failures": [
+      "C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it",
+      "B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently"
+    ],
+    "note": "回退前后两个时点都必须保持同一已知集失败（fail-closed）：既不允许零失败的幻想，也不允许任何新增失败"
+  },
+  "boundaries": [
+    "本演练只在单机声明范围内做（.sdd 装备工作树 + git 层）；跨机器回退属 A10/A11 NOT_ENABLED 边界（见 capability-boundary.json），不做不假装",
+    "acceptance-index.json 重生成后必须 git checkout -- 还原；generated_at 漂移不得留在工作区",
+    "回退不删除历史：旧产物与历史证据保持原位（回退只移动候选指针，不改写台账）"
+  ],
+  "evidence": "worker-reports/P5_3-rework/evidence/05-rollback-drill.txt"
+}
