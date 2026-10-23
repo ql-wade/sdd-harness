@@ -138,7 +138,6 @@ node openspec/changes/delivery-foundation-rearchitecture/team-recovery/run-drill
 | I03 | Step 3 | 原生浏览器/独立读回: 无真实 Outline 实例/凭据/文集/OIDC/对象存储 — holder: user/Outline 部署波次 |
 | P1_6 | Step 5 | 宿主会话证明(真实 Runner/host) — holder: 真实 Runner 验证(manifest unverified[0]) |
 | I05 | Step 3 | 真实容器/认证API/MCP读回: docker 沙箱拒+上游未选定 — holder: user/runtime admission |
-| P5_2 | Step 1-4 | 跨机门门控: CROSS_MACHINE_SCOPE_NOT_ENABLED(冻结计划原文); 启用态建设(5.2.a API/5.2.b 正向隔离撤权恢复断联)未执行; F10 正向认证 UNVERIFIED + holder |
 
 open decisions 登记（源 execution-state.json，清单见 acceptance-index.json
 `environment_gates.open_decisions`）含 `HOST_OPENSPEC_DRIFT`（宿主全局 openspec 漂移，owner: user，
