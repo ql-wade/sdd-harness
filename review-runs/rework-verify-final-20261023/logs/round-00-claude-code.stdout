@@ -1,0 +1,76 @@
+{
+  "agent": "claude-code",
+  "artifact_sha256": "088ad8b5560c8e97a9280c39710d2d8183f8d003b2644483c534522bd4c29de9",
+  "assumptions": [
+    "Only verification-results.json was readable under the single-artifact read-only constraint; the sibling artifacts (verification-report.md, grill-report.md) referenced in the review scope are assumed delivered as described and consistent with this JSON summary.",
+    "All evidence paths cited per check (worker-reports/VERIFY-rework/evidence/*, .whitebox/rework/full-journey/*) are assumed to exist as committed artifacts; they were not independently opened in this review.",
+    "Per-check status labels FAIL_STALE_PREMISE (V_A15) and FAILED_PREEXISTING (V_FULL_CHECK) map onto tally.failed=2; KNOWN_ENVIRONMENT_DRIFT maps onto tally.known_environment_drift=9.",
+    "The verification baseline recorded in the artifact (source_head 6918798, branch rework/verify) precedes the final artifact commit 0dcfec1 cited in the review scope; the delta is a documentation gap, not evidence of inconsistency.",
+    "The exact-match known-set signature (475/472/2/1 with the named C08-negative and B08-preservation fail points plus the registered isolated-openspec-1.11.0 SKIP) is accepted as the registration reference for the drift cohort."
+  ],
+  "confidence": 0.82,
+  "findings": [
+    {
+      "blocking": false,
+      "claim": "The top-level tally is exactly consistent with the per-check records: recounting the 92 scenario checks (A01-U08) plus the 26 infrastructure/journey checks yields 104 PASS, 9 KNOWN_ENVIRONMENT_DRIFT (V_A11, V_B08, V_C01, V_C02, V_C03, V_C05, V_C08, V_NPM_REGRESSION, V_SCOPED_REGRESSION), 3 UNVERIFIED (V_F01, V_F03, V_RW_RUNNER_BUILD), and 2 FAILED (V_A15 FAIL_STALE_PREMISE, V_FULL_CHECK FAILED_PREEXISTING), summing to 118 = checks_total.",
+      "evidence": "Lines 16-24 (checks_total 118, tally 104/9/3/2/0) reconcile exactly with the 118 per_check entries in lines 34-1693; scenario families count A:20, B:10, C:8, D:8, E:6, F:10, H:9, L:11, M:2, U:8 = 92 = original_scenario_count.",
+      "id": "RVF-1",
+      "recommendation": "None — internal arithmetic consistency is a strong correctness signal for a machine-read verification ledger.",
+      "severity": "NOTE"
+    },
+    {
+      "blocking": false,
+      "claim": "Several rows have recorded exit codes that do not match their recorded PASS status: V_COMET_NATIVE is PASS with exit 2 (initial TOOLCHAIN_MISMATCH, re-run green under pinned node 24.15.0 in a second evidence file), V_RW_COMPLETION_REQUIRED is PASS with exit 1 (initial red on the stale committed index, 12/12 green after in-run index regeneration), and V_RW_REAL_COMET_RECOVERY / V_POST_DELIVERY_PERMISSIONS are PASS with exit null and seconds null.",
+      "evidence": "Lines 1380-1393 (V_COMET_NATIVE exit 2, note explains pin24 re-run), lines 1648-1661 (V_RW_COMPLETION_REQUIRED exit 1, note explains stale-index then 12/12), lines 1632-1647 and 1678-1693 (exit: null, seconds: null with note pointing to VERIFY-owned orchestration evidence).",
+      "id": "RVF-2",
+      "recommendation": "In a future schema revision, record both the initial and remediated exit codes as structured fields (e.g. exit_initial/exit_final) rather than carrying the mismatch in free-text notes, so downstream consumers parsing exit codes cannot misread a PASS row as failing.",
+      "severity": "MINOR"
+    },
+    {
+      "blocking": false,
+      "claim": "The V_FULL_CHECK FAILED_PREEXISTING row (whitebox-verify green fixture gap: ledger-referenced fixture artifacts never committed to any branch) is not carried into the findings array or the unverified_ledger with a named holder, unlike every other non-PASS disposition.",
+      "evidence": "Lines 1338-1350 (V_FULL_CHECK FAILED_PREEXISTING, note references 'original VERIFY run finding F-5'); the findings array (lines 1850-1893, VF-1..VF-7) and unverified_ledger (lines 1731-1772, 8 entries) contain no entry for the fixture gap or a holder for committing the missing fixtures.",
+      "id": "RVF-3",
+      "recommendation": "Add a ledger or findings entry for the whitebox-verify green-fixture gap with an explicit owner (e.g. VERIFY/base-repo owner) so the second FAIL has the same holder discipline as the other disqualifying items.",
+      "severity": "MINOR"
+    },
+    {
+      "blocking": false,
+      "claim": "The 9-check drift cohort is dispositioned as known environment drift attributed to host openspec 1.14.3 vs pinned 1.3.1, resting on an exact-match signature (475/472/2/1 with named failing points and a registered isolated-1.11.0 SKIP control) rather than on a green execution in the pinned environment; the cohort is therefore never executed green anywhere in this run.",
+      "evidence": "Lines 25-33 (known_set with npm_signature 475/472/2/1, fail_points C08 negative + B08 preservation, skip registered, exact_match true); V_NPM_REGRESSION note lines 1324-1336 confirms the same signature; V_C08 note lines 554-566 confirms the positive-control SKIP.",
+      "id": "RVF-4",
+      "recommendation": "Acceptable as an honest carry for this run, but schedule a pinned-environment (isolated openspec 1.11.0 or 1.3.1-pinned host) re-execution of the drift cohort so the 9 checks eventually turn green on record rather than remaining permanently dispositioned.",
+      "severity": "MINOR"
+    },
+    {
+      "blocking": false,
+      "claim": "The artifact records its verification baseline as source_head 6918798 on branch rework/verify, while the review scope pins the delivered artifacts at git 0dcfec1; the JSON itself does not assert the relationship between the verification baseline and the final artifact commit.",
+      "evidence": "Lines 8-15 (baseline.source_head 6918798, branch rework/verify); no field anywhere in the JSON records 0dcfec1 or the artifact commit time, and the seven_p1_bindings final_readback fields all reference 6918798 (lines 1773-1848).",
+      "id": "RVF-5",
+      "recommendation": "Record the final artifact commit (and, if material, the diff between 6918798 and 0dcfec1) inside the results JSON or the companion verification-report.md so the evidence chain from verified baseline to delivered artifact is self-contained.",
+      "severity": "NOTE"
+    },
+    {
+      "blocking": false,
+      "claim": "The honesty posture is verifiable in-band: goal_complete=false with a specific reason naming F10 cross-machine capability and the four credential/authorization holders; the three journeys carry concrete real-world identifiers (documentId 2c7c2076-..., revocation 06:36:38Z, detection 06:37:02Z = 24s, member 403 authorization_error, shares.list total 0, owner-search positive control) rather than bare assertions; and negative outcomes (ALERT_UNDELIVERED, api-keys.create not_found) are recorded rather than suppressed.",
+      "evidence": "Line 6-7 (goal_complete false with reason); lines 1715-1729 (V_POST_DELIVERY_PERMISSIONS real_resource_journey with timestamps, IDs, 403 readbacks, 24s detection, honest ALERT_UNDELIVERED/ESCALATION_MISSING and not_found records); unverified_ledger entries each carry a holder (lines 1731-1772).",
+      "id": "RVF-6",
+      "recommendation": "None — this is the standard the gated decision expects; the seven P1 bindings each contain fix commits, counterexample-green references, and a final readback at the recorded baseline.",
+      "severity": "NOTE"
+    }
+  ],
+  "review_id": "rework-verify-final-20261023",
+  "round": 0,
+  "score": {
+    "criteria": {
+      "actionability": 9,
+      "completeness": 8,
+      "correctness": 9,
+      "evidence": 8,
+      "risk": 8
+    },
+    "overall": 8.4
+  },
+  "summary": "The verification-results.json is an internally consistent, honest terminal-state verification ledger. The headline tally (118 required checks = 92 scenarios + 26 infra/journey checks; 104 PASS / 9 known environment drift / 3 UNVERIFIED / 2 FAIL) reconciles exactly with a per-row recount, and every non-PASS disposition carries a note, evidence path, and (except one gap) a named holder. The three real journeys are documented with concrete real-world identifiers (real SIGKILL windows pre/post-commit with rollback/roll-forward verification, real Outline revocation->isolation->restore on the Run's own published documentId with 24s detection), the seven P1 bindings each provide fix commits, counterexample-green evidence, and a final readback at the recorded baseline, and goal_complete=false is stated with a specific, non-inflated reason. Residual weaknesses are minor and non-blocking: recorded exit codes disagree with PASS status in four rows (explained only in notes), V_FULL_CHECK's fixture gap lacks a findings/ledger entry with a holder, the 9-check drift cohort rests on an exact-match signature rather than a green pinned-environment run, and the artifact does not itself tie baseline 6918798 to the delivered-artifact commit 0dcfec1. None of these undermine the gated decision, which is to accept the VERIFY node and the run's completion as honestly reported evidence — not to claim the overall goal complete — so APPROVE is warranted.",
+  "verdict": "APPROVE"
+}

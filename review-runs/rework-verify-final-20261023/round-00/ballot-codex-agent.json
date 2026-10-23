@@ -1,0 +1,58 @@
+{
+  "agent": "codex-agent",
+  "artifact_sha256": "088ad8b5560c8e97a9280c39710d2d8183f8d003b2644483c534522bd4c29de9",
+  "assumptions": [
+    "The gated decision concerns acceptance of the VERIFY run and its evidence, not a claim that the overall delivery goal is complete; the artifact explicitly records goal_complete=false.",
+    "The per-check status, exit, and duration fields are intended to represent the final-baseline execution named by the artifact.",
+    "Referenced evidence files were not independently inspected because the review instructions permit reading only the supplied artifact."
+  ],
+  "confidence": 0.91,
+  "findings": [
+    {
+      "blocking": true,
+      "claim": "A required check is classified as PASS even though its sole structured execution result is a failure, making the PASS tally and P1-07 final readback internally inconsistent.",
+      "evidence": "The V_RW_COMPLETION_REQUIRED entry has required=true, status=\"PASS\", exit=1, and seconds=8. Its note says the initial run failed and a later run reached 12/12 after index regeneration, but no separate final attempt, exit=0 result, or final-baseline execution record is represented. The P1-07 final_readback nevertheless cites it as green.",
+      "id": "FINAL-RESULT-001",
+      "recommendation": "Record initial and final attempts separately, including baseline identity, command, exit code, duration, and evidence for the asserted 12/12 rerun; then regenerate the tally and all final reports.",
+      "severity": "BLOCKER"
+    },
+    {
+      "blocking": true,
+      "claim": "Two required journey checks are marked PASS without structured execution outcomes, contradicting the assertion that all 118 required checks were executed at the final baseline.",
+      "evidence": "V_RW_REAL_COMET_RECOVERY and V_POST_DELIVERY_PERMISSIONS each have required=true and status=\"PASS\" but both exit and seconds are null. The artifact simultaneously reports checks_total=118 and tally.not_executed=0. Narrative recipe_check and journey descriptions do not reconcile the missing command outcomes.",
+      "id": "FINAL-RESULT-002",
+      "recommendation": "Attach immutable final-baseline attempt records with non-null outcomes and timing for both commands, or classify them as unverified/not executed and recompute the tally.",
+      "severity": "BLOCKER"
+    },
+    {
+      "blocking": false,
+      "claim": "The P1-05 binding labels real Runner isolation as qualified while its real-container portion remains explicitly unverified.",
+      "evidence": "P1-05 states claim=\"real Runner isolation qualification\", but its fix_commits describe only the \"I02 local half\" and its final_readback says \"real-container S6/S7/S8 remain staged-UNVERIFIED\". The unverified ledger assigns I02_REAL_CONTAINER_S6_S7_S8 to I01 refs admission/runtime admission.",
+      "id": "CLOSURE-SCOPE-003",
+      "recommendation": "Rename the binding as local build/admission qualification and keep P1-05 open, or execute and record the S6/S7/S8 real-container probes before claiming full qualification.",
+      "severity": "MAJOR"
+    },
+    {
+      "blocking": false,
+      "claim": "The report usefully preserves unresolved scope instead of declaring the overall goal complete.",
+      "evidence": "The top-level goal_complete is false; the tally separately reports 104 PASS, 9 known environment drift, 3 UNVERIFIED, and 2 failed; the unverified_ledger names holders for outstanding capabilities.",
+      "id": "HONESTY-004",
+      "recommendation": "Preserve this explicit goal state and holder ledger when regenerating the corrected final evidence.",
+      "severity": "NOTE"
+    }
+  ],
+  "review_id": "rework-verify-final-20261023",
+  "round": 0,
+  "score": {
+    "criteria": {
+      "actionability": 8.4,
+      "completeness": 6.3,
+      "correctness": 6.0,
+      "evidence": 5.8,
+      "risk": 5.9
+    },
+    "overall": 6.2
+  },
+  "summary": "REJECT the current final evidence package. The honest incomplete-goal disposition is valuable, but the machine-readable final-baseline record contradicts itself: one PASS retains exit 1 without a recorded successful rerun, and two required PASS journeys have null execution outcomes. These defects must be reconciled before the VERIFY node and run completion can be authorized.",
+  "verdict": "REJECT"
+}

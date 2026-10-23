@@ -133,3 +133,24 @@ This adapter design follows the public Ralph patterns of fresh sessions,
 file-backed state, explicit completion checks, finite iteration limits, stop
 signals, and logs. It combines those controls with this skill’s stricter
 unanimous ballot gate.
+
+## Known breakage: ZCode.app >= 2026-10-23 auto-update (3.16.2 layout)
+
+The embedded `glm/zcode.cjs` resolves its builtin provider config from
+app-relative candidates (`Resources/glm/provider/`, then a `../../../../../config/provider/`
+walk that lands at filesystem root). After the 2026-10-23 auto-update both
+candidates fail ("无法定位 CLI ZCode Built-in Provider Config") even when the
+file is materialized at the first candidate — the lookup anchors elsewhere in
+the new build. `~/.zcode/v2/runtime/provider/darwin-aarch64/<version>/` still
+holds known-good provisions per version.
+
+Handling:
+1. Attempt one dispatch with the embedded cjs after materializing
+   `Resources/config/provider/zcode-builtin.json` at `Resources/glm/provider/`
+   (additive, reversible). If it still fails, do NOT keep spelunking.
+2. With explicit user authorization, re-init the run with a degraded quorum
+   (drop the zcode participant), record the authorization + the upstream
+   breakage in the run ledger and final report — an explicit, recorded
+   downgrade; never a silent one.
+3. Re-check after each ZCode.app update: the breakage may disappear in a
+   later build.

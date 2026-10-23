@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "agent": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "artifact_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "assumptions": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "confidence": {
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+    },
+    "findings": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "blocking": {
+            "type": "boolean"
+          },
+          "claim": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "evidence": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "recommendation": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "BLOCKER",
+              "MAJOR",
+              "MINOR",
+              "NOTE"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "severity",
+          "claim",
+          "evidence",
+          "recommendation",
+          "blocking"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "review_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "round": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "score": {
+      "additionalProperties": false,
+      "properties": {
+        "criteria": {
+          "additionalProperties": false,
+          "properties": {
+            "actionability": {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            "completeness": {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            "correctness": {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            "evidence": {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            "risk": {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          "required": [
+            "correctness",
+            "completeness",
+            "risk",
+            "evidence",
+            "actionability"
+          ],
+          "type": "object"
+        },
+        "overall": {
+          "maximum": 10,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "overall",
+        "criteria"
+      ],
+      "type": "object"
+    },
+    "summary": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "verdict": {
+      "enum": [
+        "APPROVE",
+        "REJECT",
+        "ABSTAIN"
+      ]
+    }
+  },
+  "required": [
+    "review_id",
+    "round",
+    "agent",
+    "artifact_sha256",
+    "verdict",
+    "score",
+    "findings",
+    "assumptions",
+    "confidence",
+    "summary"
+  ],
+  "title": "Multi-Agent Consensus Review ballot",
+  "type": "object"
+}

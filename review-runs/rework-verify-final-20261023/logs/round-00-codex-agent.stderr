@@ -1,0 +1,2113 @@
+OpenAI Codex v0.163.0
+--------
+workdir: /Users/mac/Code/sdd-harness/openspec/changes/delivery-foundation-rearchitecture
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: max
+reasoning summaries: none
+session id: 01a167bf-2d39-7fe1-8781-6031a16c92b9
+--------
+user
+You are one independent reviewer in a unanimous multi-Agent review.
+
+Review ID: rework-verify-final-20261023
+Round: 0
+Your Agent ID: codex-agent. Use that exact value in the ballot's agent field.
+Review type: general
+Initiator: claude-code
+Required participants: claude-code, zcode, codex-agent
+Artifact: /Users/mac/Code/sdd-harness/openspec/changes/delivery-foundation-rearchitecture/verification-results.json
+Artifact SHA-256: 088ad8b5560c8e97a9280c39710d2d8183f8d003b2644483c534522bd4c29de9
+Scope: Three-artifact final verification report (verification-report.md + grill-report.md + verification-results.json at git 0dcfec1): 118 required checks executed at the final baseline (104 PASS / 2 FAIL with holders / 3 UNVERIFIED / 9 known HOST_OPENSPEC_DRIFT), three real journeys PASS (same-run delivery to completed, two real SIGKILL recovery windows, real revocation->isolation->restore with 24s detection), seven-P1 closure bindings (fix commit + counterexample green + final readback), honest UNVERIFIED/FAIL disposition with holders and goal_complete=false
+Decision being gated: APPROVE = accept the VERIFY node and the completion of run rework-seven-p1-r1; the three artifacts are delivered as the final verification evidence
+Required criteria: correctness, completeness, risk, evidence, actionability
+
+Read the artifact in read-only mode. You may use the CLI's built-in file reader
+or a single read-only filesystem operation against exactly the supplied
+artifact path. Do not inspect other files, environment variables, home
+directories, credentials, or repository history. Do not edit files, run
+destructive commands, access the network/browser, or assume another reviewer
+will cover a risk. Cite concrete evidence for every material finding. Score
+every criterion from 0 to 10 and provide an overall score. APPROVE is allowed
+only when you would authorize the gated decision now, overall score is at least
+8.0, every criterion is at least
+7.0, and there are no blocking findings. Use
+REJECT for a material problem and ABSTAIN only for genuinely missing evidence
+or an authority boundary.
+
+Return exactly one JSON object matching this schema. The schema is embedded so
+that every CLI receives the same contract even when its workspace sandbox does
+not allow reading files outside the artifact:
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "agent": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "artifact_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "assumptions": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "confidence": {
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+    },
+    "findings": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "blocking": {
+            "type": "boolean"
+          },
+          "claim": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "evidence": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "recommendation": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "BLOCKER",
+              "MAJOR",
+              "MINOR",
+              "NOTE"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "severity",
+          "claim",
+          "evidence",
+          "recommendation",
+          "blocking"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "review_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "round": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "score": {
+      "additionalProperties": false,
+      "properties": {
+        "criteria": {
+          "additionalProperties": false,
+          "properties": {
+            "actionability": {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            "completeness": {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            "correctness": {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            "evidence": {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            "risk": {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          "required": [
+            "correctness",
+            "completeness",
+            "risk",
+            "evidence",
+            "actionability"
+          ],
+          "type": "object"
+        },
+        "overall": {
+          "maximum": 10,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "overall",
+        "criteria"
+      ],
+      "type": "object"
+    },
+    "summary": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "verdict": {
+      "enum": [
+        "APPROVE",
+        "REJECT",
+        "ABSTAIN"
+      ]
+    }
+  },
+  "required": [
+    "review_id",
+    "round",
+    "agent",
+    "artifact_sha256",
+    "verdict",
+    "score",
+    "findings",
+    "assumptions",
+    "confidence",
+    "summary"
+  ],
+  "title": "Multi-Agent Consensus Review ballot",
+  "type": "object"
+}
+
+
+Do not wrap it in Markdown and do not add prose before or after it. The JSON
+object must contain only the schema fields, use the exact review ID, round,
+artifact digest, and Agent ID above, and include a complete score for every
+required criterion. This is a bounded single pass: read only the supplied
+artifact using the permitted read-only mechanism, do not use network/browser,
+write/edit/destructive tools, package managers, or launch subagents, and emit
+the JSON ballot immediately after the review. Before emitting it, validate the
+ballot internally: every finding with severity BLOCKER must set blocking=true,
+no BLOCKER finding may set blocking=false, and an APPROVE ballot must contain
+no blocking finding.
+
+
+exec
+/bin/zsh -c 'cat /Users/mac/Code/sdd-harness/openspec/changes/delivery-foundation-rearchitecture/verification-results.json' in /Users/mac/Code/sdd-harness/openspec/changes/delivery-foundation-rearchitecture
+ succeeded in 0ms:
+{
+  "schema_version": 2,
+  "rework_revision": "2026-10-22-seven-p1",
+  "run": "rework-seven-p1-r1 (VERIFY terminal worker)",
+  "status": "VERIFY_EXECUTED_HONEST_STATE",
+  "goal_complete": false,
+  "goal_complete_reason": "F10 cross-machine capability is UNVERIFIED_NOT_ENABLED (check passes on the not-enabled semantics; the capability itself is out of enabled scope by frozen plan), plus named UNVERIFIED holders (S7/S8 credentials, knowledge-DB backup channel, live alert delivery, unauthenticated per-identity web-channel ACL). Per completion_predicate.conditional_scope these keep the whole goal from completion; recorded honestly, not inflated.",
+  "baseline": {
+    "source_head": "6918798",
+    "source_head_full": "6918798 (merge rework/p5-3: capability boundary, real rollback drill, runbook v2, review APPROVED)",
+    "branch": "rework/verify",
+    "comet_build_fingerprint": "d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6",
+    "comet_version": "0.4.5",
+    "node_runtime": "22.13.1 session default; comet pinned 24.15.0 per lock toolchain"
+  },
+  "checks_total": 118,
+  "original_scenario_count": 92,
+  "tally": {
+    "pass": 104,
+    "known_environment_drift": 9,
+    "unverified": 3,
+    "failed": 2,
+    "not_executed": 0
+  },
+  "known_set": {
+    "npm_signature": "475/472/2/1",
+    "fail_points": [
+      "C08 negative (host openspec 1.3.1 pin vs drifted 1.14.3 host)",
+      "B08 preservation (adapter refuses lossy MODIFIED delta; fail-closed under same drift)"
+    ],
+    "skip": "isolated openspec 1.11.0 not installed (registered control)",
+    "exact_match": true
+  },
+  "per_check": [
+    {
+      "check_id": "V_A01",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A01 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A01.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A02",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A02 --json",
+      "exit": 0,
+      "seconds": 0,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A02.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A03",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A03 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A03.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A04",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A04 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A04.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A05",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A05 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A05.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A06",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A06 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A06.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A07",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A07 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A07.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A08",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A08 --json",
+      "exit": 0,
+      "seconds": 0,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A08.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A09",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A09 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A09 --json",
+      "exit": 0,
+      "seconds": 12,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A09.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A10",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A10 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A10 --json",
+      "exit": 0,
+      "seconds": 44,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A10.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A11",
+      "status": "KNOWN_ENVIRONMENT_DRIFT",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A11 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A11 --json",
+      "exit": 2,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A11.txt"
+      ],
+      "note": "module 3_4.mjs carries the two V_B08 preservation points which fail closed under the drifted host openspec (1.14.3 vs pinned 1.3.1); the A11 point itself passed (module failure is the B08 drag, same as original-run finding F-1 shape)",
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A12",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A12 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A12 --json",
+      "exit": 0,
+      "seconds": 45,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A12.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A13",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A13 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A13 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A13.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A14",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A14 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A14 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A14.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A15",
+      "status": "FAIL_STALE_PREMISE",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A15 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A15 --json",
+      "exit": 2,
+      "seconds": 24,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A15.txt"
+      ],
+      "note": "module 3_1.mjs point 23 asserts the three real journeys are still TO_IMPLEMENT (journey-recipe-not-implemented UNVERIFIED) — stale since P3_2/P3_3/P4_8 landed the recipes; the A15 point itself is ok (ok 25). Not environment drift: a test-premise staleness the fixed acceptance algebra now surfaces honestly",
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A16",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A16 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A16 --json",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A16.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A17",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A17 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A17 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A17.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A18",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A18 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A18 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A18.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A19",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A19 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A19 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A19.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_A20",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario A20 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/A20 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_A20.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_B01",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario B01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B01 --json",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_B01.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_B02",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario B02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B02 --json",
+      "exit": 0,
+      "seconds": 18,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_B02.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_B03",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario B03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B03 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_B03.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_B04",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario B04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B04 --json",
+      "exit": 0,
+      "seconds": 18,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_B04.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_B05",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario B05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B05 --json",
+      "exit": 0,
+      "seconds": 18,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_B05.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_B06",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario B06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B06 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_B06.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_B07",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario B07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B07 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_B07.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_B08",
+      "status": "KNOWN_ENVIRONMENT_DRIFT",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario B08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B08 --json",
+      "exit": 2,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_B08.txt"
+      ],
+      "note": "the two V_B08 preservation points fail closed under the drifted host openspec — the exact registered known pair",
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_B09",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario B09 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B09 --json",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_B09.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_B10",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario B10 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/B10 --json",
+      "exit": 0,
+      "seconds": 0,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_B10.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_C01",
+      "status": "KNOWN_ENVIRONMENT_DRIFT",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario C01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C01 --json",
+      "exit": 2,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_C01.txt"
+      ],
+      "note": "module classic-integration.test.js exits 1 solely on the registered \"C08 negative\" point (pinned 1.3.1 closure refuses drifted host status); C01 point ok",
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_C02",
+      "status": "KNOWN_ENVIRONMENT_DRIFT",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario C02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C02 --json",
+      "exit": 2,
+      "seconds": 0,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_C02.txt"
+      ],
+      "note": "same module-level C08 negative drag; C02 point ok",
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_C03",
+      "status": "KNOWN_ENVIRONMENT_DRIFT",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario C03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C03 --json",
+      "exit": 2,
+      "seconds": 0,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_C03.txt"
+      ],
+      "note": "same module-level C08 negative drag; C03 point ok",
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_C04",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario C04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C04 --json",
+      "exit": 0,
+      "seconds": 18,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_C04.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_C05",
+      "status": "KNOWN_ENVIRONMENT_DRIFT",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario C05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C05 --json",
+      "exit": 2,
+      "seconds": 0,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_C05.txt"
+      ],
+      "note": "module 1_5.mjs exits 1 solely on the registered C08 negative point; C05 point ok",
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_C06",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario C06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C06 --json",
+      "exit": 0,
+      "seconds": 17,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_C06.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_C07",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario C07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C07 --json",
+      "exit": 0,
+      "seconds": 17,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_C07.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_C08",
+      "status": "KNOWN_ENVIRONMENT_DRIFT",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario C08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/C08 --json",
+      "exit": 2,
+      "seconds": 18,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_C08.txt"
+      ],
+      "note": "the C08 negative point itself: pinned 1.3.1 status lacks dependency edges and the Classic closure refuses it — fail-closed under host drift (positive control: isolated 1.11.0 candidate SKIP registered)",
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_D01",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario D01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D01 --json",
+      "exit": 0,
+      "seconds": 103,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_D01.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_D02",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario D02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D02 --json",
+      "exit": 0,
+      "seconds": 101,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_D02.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_D03",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario D03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D03 --json",
+      "exit": 0,
+      "seconds": 100,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_D03.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_D04",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario D04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D04 --json",
+      "exit": 0,
+      "seconds": 100,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_D04.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_D05",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario D05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D05 --json",
+      "exit": 0,
+      "seconds": 100,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_D05.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_D06",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario D06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D06 --json",
+      "exit": 0,
+      "seconds": 99,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_D06.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_D07",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario D07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D07 --json",
+      "exit": 0,
+      "seconds": 100,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_D07.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_D08",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario D08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/D08 --json",
+      "exit": 0,
+      "seconds": 106,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_D08.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_E01",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario E01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/E01 --json",
+      "exit": 0,
+      "seconds": 23,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_E01.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_E02",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario E02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/E02 --json",
+      "exit": 0,
+      "seconds": 22,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_E02.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_E03",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario E03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/E03 --json",
+      "exit": 0,
+      "seconds": 5,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_E03.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_E04",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario E04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/E04 --json",
+      "exit": 0,
+      "seconds": 5,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_E04.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_E05",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario E05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/E05 --json",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_E05.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_E06",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario E06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/E06 --json",
+      "exit": 0,
+      "seconds": 22,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_E06.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_F01",
+      "status": "UNVERIFIED",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario F01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F01 --json",
+      "exit": 2,
+      "seconds": 0,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_F01.txt"
+      ],
+      "note": "assertion-mapping-not-verifiable: 1_1.mjs runs green but no executed test point maps to required assertion F01 — a green suite without the registered target is not a scenario pass (P1-04); the P3_1 rework predicted this honest-refusal class for plan-driven scenarios without scenario-anchored points",
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_F02",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario F02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F02 --json",
+      "exit": 0,
+      "seconds": 11,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_F02.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_F03",
+      "status": "UNVERIFIED",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario F03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F03 --json",
+      "exit": 2,
+      "seconds": 0,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_F03.txt"
+      ],
+      "note": "assertion-mapping-not-verifiable: same class as V_F01 for assertion F03",
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_F04",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario F04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F04 --json",
+      "exit": 0,
+      "seconds": 12,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_F04.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_F05",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario F05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F05 --json",
+      "exit": 0,
+      "seconds": 12,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_F05.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_F06",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario F06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F06 --json",
+      "exit": 0,
+      "seconds": 21,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_F06.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_F07",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario F07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F07 --json",
+      "exit": 0,
+      "seconds": 13,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_F07.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_F08",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario F08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F08 --json",
+      "exit": 0,
+      "seconds": 23,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_F08.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_F09",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario F09 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F09 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_F09.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_F10",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario F10 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/F10 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_F10.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_H01",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario H01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H01 --json",
+      "exit": 0,
+      "seconds": 113,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_H01.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_H02",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario H02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H02 --json",
+      "exit": 0,
+      "seconds": 109,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_H02.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_H03",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario H03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H03 --json",
+      "exit": 0,
+      "seconds": 106,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_H03.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_H04",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario H04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H04 --json",
+      "exit": 0,
+      "seconds": 119,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_H04.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_H05",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario H05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H05 --json",
+      "exit": 0,
+      "seconds": 116,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_H05.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_H06",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario H06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H06 --json",
+      "exit": 0,
+      "seconds": 5,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_H06.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_H07",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario H07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H07 --json",
+      "exit": 0,
+      "seconds": 108,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_H07.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_H08",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario H08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H08 --json",
+      "exit": 0,
+      "seconds": 108,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_H08.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_H09",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario H09 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/H09 --json",
+      "exit": 0,
+      "seconds": 108,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_H09.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_L01",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario L01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L01 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_L01.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_L02",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario L02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L02 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_L02.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_L03",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario L03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L03 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_L03.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_L04",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario L04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L04 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_L04.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_L05",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario L05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L05 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_L05.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_L06",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario L06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L06 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_L06.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_L07",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario L07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L07 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_L07.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_L08",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario L08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L08 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_L08.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_L09",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario L09 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L09 --json",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_L09.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_L10",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario L10 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L10 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_L10.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_L11",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario L11 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/L11 --json",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_L11.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_M01",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario M01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/M01 --json",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_M01.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_M02",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario M02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/M02 --json",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_M02.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_U01",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario U01 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U01 --json",
+      "exit": 0,
+      "seconds": 3,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_U01.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_U02",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario U02 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U02 --json",
+      "exit": 0,
+      "seconds": 3,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_U02.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_U03",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario U03 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U03 --json",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_U03.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_U04",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario U04 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U04 --json",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_U04.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_U05",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario U05 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U05 --json",
+      "exit": 0,
+      "seconds": 3,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_U05.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_U06",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario U06 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U06 --json",
+      "exit": 0,
+      "seconds": 3,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_U06.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_U07",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario U07 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U07 --json",
+      "exit": 0,
+      "seconds": 3,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_U07.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_U08",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --scenario U08 --profile managed-pilot --evidence-dir .whitebox/delivery-foundation/U08 --json",
+      "exit": 0,
+      "seconds": 3,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_U08.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_NPM_REGRESSION",
+      "status": "KNOWN_ENVIRONMENT_DRIFT",
+      "required": true,
+      "command": "npm test",
+      "exit": 1,
+      "seconds": 18,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_NPM_REGRESSION.txt"
+      ],
+      "note": "full suite completed: 475 tests / 472 pass / 2 fail / 1 skip — the failures are exactly the registered known pair (not ok 62 C08 negative, not ok 463 B08 preservation) and the skip is the registered isolated-openspec-1.11.0 control; zero new failures",
+      "implementation_owner": "VERIFY",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_FULL_CHECK",
+      "status": "FAILED_PREEXISTING",
+      "required": true,
+      "command": "bash scripts/check.sh",
+      "exit": 1,
+      "seconds": 0,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_FULL_CHECK.txt"
+      ],
+      "note": "check.sh stops at the whitebox-verify green fixture gap (repo content gap: ledger-referenced fixture artifacts never committed to any branch) — same pre-existing base-level gap as the original VERIFY run finding F-5",
+      "implementation_owner": "VERIFY",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_SCOPED_REGRESSION",
+      "status": "KNOWN_ENVIRONMENT_DRIFT",
+      "required": true,
+      "command": "node --test test/*.test.js",
+      "exit": 1,
+      "seconds": 17,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_SCOPED_REGRESSION.txt"
+      ],
+      "note": "same suite and same exact known pair (npm test runs node --test test/*.test.js); zero new failures",
+      "implementation_owner": "VERIFY",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_OPENSPEC_STRICT",
+      "status": "PASS",
+      "required": true,
+      "command": "openspec validate delivery-foundation-rearchitecture --strict",
+      "exit": 0,
+      "seconds": 0,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_OPENSPEC_STRICT.txt"
+      ],
+      "note": null,
+      "implementation_owner": "VERIFY",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_COMET_NATIVE",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/comet/build.mjs --check-generated --runtime-smoke --json",
+      "exit": 2,
+      "seconds": 0,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_COMET_NATIVE.txt",
+        "worker-reports/VERIFY-rework/evidence/V_COMET_NATIVE.pin24.txt"
+      ],
+      "note": "initial run under session-default node 22.13.1 refused with TOOLCHAIN_MISMATCH (honest toolchain pin); re-run under the lock-pinned node 24.15.0 (evidence V_COMET_NATIVE.pin24.txt): PASS, version 0.4.5, fingerprint d4370930 == current lock, check-generated classic/native/entry PASS + runtime-smoke 255 passed / 2 skipped",
+      "implementation_owner": "P1_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_INFRA_I01",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test test/infra-registry.test.js",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_INFRA_I01.txt"
+      ],
+      "note": null,
+      "implementation_owner": "I01",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_INFRA_I02",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test test/infra-runner-isolation.test.js",
+      "exit": 0,
+      "seconds": 4,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_INFRA_I02.txt"
+      ],
+      "note": null,
+      "implementation_owner": "I02",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_INFRA_I03",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test test/infra-outline.test.js",
+      "exit": 0,
+      "seconds": 3,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_INFRA_I03.txt"
+      ],
+      "note": null,
+      "implementation_owner": "I03",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_INFRA_I04",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test test/infra-llmwiki-paths.test.js",
+      "exit": 0,
+      "seconds": 5,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_INFRA_I04.txt"
+      ],
+      "note": null,
+      "implementation_owner": "I04",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_INFRA_I05",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test test/infra-code-knowledge.test.js",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_INFRA_I05.txt"
+      ],
+      "note": null,
+      "implementation_owner": "I05",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_INFRA_I06",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test test/infra-platform.test.js",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_INFRA_I06.txt"
+      ],
+      "note": null,
+      "implementation_owner": "I06",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_INFRA_I07",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test test/infra-monitor.test.js",
+      "exit": 0,
+      "seconds": 5,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_INFRA_I07.txt"
+      ],
+      "note": null,
+      "implementation_owner": "I07",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_INFRA_I08",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test --test-reporter=tap test/infra-recovery.test.js",
+      "exit": 0,
+      "seconds": 3,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_INFRA_I08.txt"
+      ],
+      "note": null,
+      "implementation_owner": "I08",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_P1_6_PONYTAIL_ASSETS",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test test/delivery-cases/1_6.mjs --scenario ponytail-assets --json",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_P1_6_PONYTAIL_ASSETS.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P1_6",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_P1_2_PLUGIN_REGISTRATION_DIVISION",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test test/foundation-distribution.test.js test/delivery-cases/1_2.mjs --scenario plugin-registration-division --json",
+      "exit": 0,
+      "seconds": 13,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_P1_2_PLUGIN_REGISTRATION_DIVISION.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P1_2",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_I02_METHOD_STATE_SCOPE",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test test/infra-runner-isolation.test.js test/delivery-cases/1_3.mjs --scenario method-state-scope --json",
+      "exit": 0,
+      "seconds": 11,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_I02_METHOD_STATE_SCOPE.txt"
+      ],
+      "note": null,
+      "implementation_owner": "I02",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_RW_TARGET_REQUIRED",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test --test-reporter=tap --test-name-pattern=RW_TARGET_REQUIRED test/delivery-cases/3_1.mjs",
+      "exit": 0,
+      "seconds": 2,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_RW_TARGET_REQUIRED.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_RW_OBSERVATION_REQUIRED",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test --test-reporter=tap --test-name-pattern=RW_OBSERVATION_REQUIRED test/delivery-cases/3_1.mjs",
+      "exit": 0,
+      "seconds": 1,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_RW_OBSERVATION_REQUIRED.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P3_1",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_RW_R_ENTRY",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test --test-reporter=tap --test-name-pattern=RW_R_ENTRY test/delivery-cases/2_4.mjs",
+      "exit": 0,
+      "seconds": 8,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_RW_R_ENTRY.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P2_4",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_RW_TRUSTED_REVIEW",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test --test-reporter=tap --test-name-pattern=RW_TRUSTED_REVIEW test/delivery-cases/2_4.mjs",
+      "exit": 0,
+      "seconds": 10,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_RW_TRUSTED_REVIEW.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P2_4",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_RW_REVISION_NO_REVIVE",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test --test-reporter=tap --test-name-pattern=RW_REVISION_NO_REVIVE test/delivery-cases/2_4.mjs",
+      "exit": 0,
+      "seconds": 14,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_RW_REVISION_NO_REVIVE.txt"
+      ],
+      "note": null,
+      "implementation_owner": "P2_4",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_RW_RUNNER_BUILD",
+      "status": "UNVERIFIED",
+      "required": true,
+      "command": "node tools/infra/runner.mjs probe --case current-build-role-isolation --json",
+      "exit": 1,
+      "seconds": 0,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_RW_RUNNER_BUILD.txt"
+      ],
+      "note": "the contract command references probe case current-build-role-isolation which no longer exists in tools/infra/runner.mjs (current cases: role-denial, duplicate-authority) — a contract-vs-tool naming deviation (same class as the resolved I08_FILENAME_DEVIATION); the underlying capabilities are covered by V_INFRA_I02 (exit 0) and the I02 real-container half stays staged-UNVERIFIED",
+      "implementation_owner": "I02",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_RW_REAL_COMET_RECOVERY",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --journey real-comet-recovery --profile managed-pilot --evidence-dir .whitebox/rework/real-comet-recovery --json",
+      "exit": null,
+      "seconds": null,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_RW_REAL_COMET_RECOVERY.txt",
+        ".whitebox/rework/real-comet-recovery/verdict.json",
+        ".whitebox/rework/full-journey/ (full-journey orchestration: stage-gates/kp/archive/kt.json — the recipe PASS attests the declared construction scope; the full same-run terminal claims are carried by the VERIFY-owned orchestration evidence)"
+      ],
+      "note": "recipe check PASS (construction scope). Full same-run product journey executed by VERIFY on top: R→A(r3 unanimous)→T→P→TDD→V→Kp(REAL Outline publish+readback, real pre-commit SIGKILL window + rollback + re-seal)→real archive move (post-commit SIGKILL window + roll-forward, archived exactly-once)→Kt unblocked→RunState completed. See journeys[].",
+      "implementation_owner": "P3_3",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_RW_COMPLETION_REQUIRED",
+      "status": "PASS",
+      "required": true,
+      "command": "node --test --test-reporter=tap --test-name-pattern=RW_COMPLETION_REQUIRED test/delivery-cases/4_3.mjs",
+      "exit": 1,
+      "seconds": 8,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_RW_COMPLETION_REQUIRED.txt"
+      ],
+      "note": "initial run exit 1 was the stale committed index (P5_1/P4_3 recorded REOPENED at the old index generation while execution-state says ACCEPTED); after the final-baseline index regeneration (this VERIFY) the detector is green: 12/12 points pass",
+      "implementation_owner": "P4_3",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_SAME_RUN_DELIVERY",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --journey same-run-delivery --profile managed-pilot --evidence-dir .whitebox/rework/same-run-delivery --json",
+      "exit": 0,
+      "seconds": 29,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_SAME_RUN_DELIVERY.txt",
+        ".whitebox/rework/same-run-delivery/verdict.json",
+        ".whitebox/rework/full-journey/ (full-journey orchestration: stage-gates/kp/archive/kt.json — the recipe PASS attests the declared construction scope; the full same-run terminal claims are carried by the VERIFY-owned orchestration evidence)"
+      ],
+      "note": "recipe check PASS (construction scope). Full same-run product journey executed by VERIFY on top: R→A(r3 unanimous)→T→P→TDD→V→Kp(REAL Outline publish+readback, real pre-commit SIGKILL window + rollback + re-seal)→real archive move (post-commit SIGKILL window + roll-forward, archived exactly-once)→Kt unblocked→RunState completed. See journeys[].",
+      "implementation_owner": "P3_2",
+      "execution_owner": "VERIFY"
+    },
+    {
+      "check_id": "V_POST_DELIVERY_PERMISSIONS",
+      "status": "PASS",
+      "required": true,
+      "command": "node tools/verify/delivery-journey.mjs --journey post-delivery-permissions --profile managed-pilot --evidence-dir .whitebox/rework/post-delivery-permissions --json",
+      "exit": null,
+      "seconds": null,
+      "evidence": [
+        "worker-reports/VERIFY-rework/evidence/V_POST_DELIVERY_PERMISSIONS.txt",
+        ".whitebox/rework/post-delivery-permissions/verdict.json",
+        ".whitebox/rework/full-journey/ (full-journey orchestration: stage-gates/kp/archive/kt.json — the recipe PASS attests the declared construction scope; the full same-run terminal claims are carried by the VERIFY-owned orchestration evidence)"
+      ],
+      "note": "recipe check PASS (construction scope). Full same-run product journey executed by VERIFY on top: R→A(r3 unanimous)→T→P→TDD→V→Kp(REAL Outline publish+readback, real pre-commit SIGKILL window + rollback + re-seal)→real archive move (post-commit SIGKILL window + roll-forward, archived exactly-once)→Kt unblocked→RunState completed. See journeys[].",
+      "implementation_owner": "P4_8",
+      "execution_owner": "VERIFY"
+    }
+  ],
+  "journeys": {
+    "V_SAME_RUN_DELIVERY": {
+      "status": "PASS",
+      "recipe_check": "PASS (29s; test point V_E06:rv-slice-real-cli ok; 13/13 in module 3_2.mjs)",
+      "full_journey": {
+        "run_identity": "verify-e2e-journey (same Run through archive, closeout, recovery windows, completed)",
+        "steps": "R confirm (enter-design refused without R) → A (2:1 majority refused, short quorum refused, real r3 unanimous consensus consumed) → T (weak oracle refused, strong accepted) → P (accepted; re-accepted after task-id assignment changed the plan definition, generation bumped) → TDD build (registered check identities, build+verify checks ran) → V (verifier receipt) → verify-pass → phase archive",
+        "stage_evidence": ".whitebox/rework/full-journey/stage-gates.json (39 ok checks)"
+      }
+    },
+    "V_RW_REAL_COMET_RECOVERY": {
+      "status": "PASS",
+      "recipe_check": "PASS (test point L11-core-transaction ok; 8/8 in module 3_3.mjs: pre-commit kill rollback, post-commit kill roll-forward, same-operation dispatch recovery, old-attempt replay refusal, lock-layer fencing)",
+      "in_run_windows": {
+        "window_A": "real SIGKILL (signal=SIGKILL killedByWatch=true, process confirmed gone) in the PRE-COMMIT window of the knowledge-closeout recording transaction AFTER the remote Outline publication existed; rollback verified (knowledge_closeout not recorded, phase unchanged); fresh-process re-run recorded the closeout exactly once",
+        "window_B": "real SIGKILL in the POST-COMMIT window of the archived state transition (triggered on committed state-file write); roll-forward verified (archived stays true exactly once, re-archived is an idempotent no-op guidance, transaction journal consumed, no duplicate publication — Outline collection held exactly one journey document)",
+        "supervisor": "monitor.mjs supervise: ALLOW with SAME_FIXED_AUTHORITY_ONLY (stateCopy FORBIDDEN, secondBusinessOwner FORBIDDEN); probe runner-process-failure VERIFIED at process level",
+        "evidence": ".whitebox/rework/full-journey/stage-kp.json + stage-archive.json + worker-reports/VERIFY-rework/evidence/journey-supervise-restart.txt + journey-monitor-probe.txt"
+      }
+    },
+    "V_POST_DELIVERY_PERMISSIONS": {
+      "status": "PASS",
+      "recipe_check": "PASS (7/7 in module 4_8.mjs: maintenance-run linkage origin_run/knowledge ids/operation key, RUN_ID_REQUIRED/CLOSURE_INVALID refusals, RESTORE_AUTHZ_NOT_NEW, recorded SLA segments)",
+      "real_resource_journey": {
+        "same_published_knowledge": "documentId 2c7c2076-92a5-459c-8112-71456afbed3b (the Run's own Kp publication, readback-bound by Knowledge.Closeout.v1)",
+        "audience_change": "member added to the managed collection → member documents.info 200 (real audience expansion) at 06:36:18Z",
+        "revocation": "member removed + document archived at 06:36:38Z (archivedAt=2026-10-23T06:36:38.884Z recorded by the platform)",
+        "isolation_readbacks": "member documents.info 403 authorization_error; offboarded 403 user_suspended; member search 0 results (owner search 1 = positive control that search works); shares.list total 0",
+        "detection_isolation_timing": "real wall clock: revocation 06:36:38Z → independent readback detection 06:37:02Z = 24s (monitor.mjs alert evaluated over this timeline)",
+        "restore": "documents.restore ok (revision 5, archivedAt null) — knowledge current again; member NOT re-added (removed audience is never restored); new-credential issuance attempted via api-keys.create and honestly recorded NOT available in the deployed Outline version (not_found) — restore performed by the owner credential with the post-isolation authorization act; RESTORE_AUTHZ_NOT_NEW refusal semantics proven at adapter scope by the recipe",
+        "alert_delivery": "ALERT_UNDELIVERED + ESCALATION_MISSING violations recorded honestly: this task never held alert-send authorization, so the tool prepared and evaluated, never sent",
+        "cleanup": "journey document deleted permanently; managed collection back to its two pre-existing P4_4/P4_7 probe documents",
+        "evidence": "worker-reports/VERIFY-rework/evidence/journey-maint-*.txt + .whitebox/rework/full-journey/maint-*.json"
+      }
+    }
+  },
+  "unverified_ledger": [
+    {
+      "id": "F10_CAPABILITY",
+      "item": "cross-machine enablement construction (5.2.a API / 5.2.b positive-isolation revocation-restore) not executed; F10 positive authentication UNVERIFIED",
+      "holder": "user (cross-machine scope enablement decision); check V_F10 itself PASSES on the honest not-enabled semantics"
+    },
+    {
+      "id": "I02_REAL_CONTAINER_S6_S7_S8",
+      "item": "real Runner container role probes / positive chain / recovery entry stay staged-UNVERIFIED (build+admission verified; startup probes pending I01 refs admission)",
+      "holder": "I01 refs admission (4 refs) / runtime admission"
+    },
+    {
+      "id": "KNOWLEDGE_DB_BACKUP_CHANNEL",
+      "item": "recovery.mjs backup requires the canonical run-state envelope (authorityId+epoch); the pilot scratch Run carries the comet classic run-state shape — the real knowledge-DB backup/restore channel stays UNVERIFIED (mechanism probes pending-cleanup-denial / quarantine-restore / old-writer-denial / authority-transfer all VERIFIED)",
+      "holder": "I08 backup owner + deployment wave"
+    },
+    {
+      "id": "LIVE_ALERT_DELIVERY",
+      "item": "no alert-send authorization exists; monitor prepares and evaluates only (ALERT_UNDELIVERED recorded honestly over the real timeline)",
+      "holder": "user / platform admission (secret-ref monitor-alert)"
+    },
+    {
+      "id": "UNAUTH_WEB_CHANNEL_ACL",
+      "item": "HTML-UI web channel and unauthenticated per-identity ACL readback not exercised: dex stores only bcrypt hashes, test-principal plaintext passwords are not available to this worker, and the shared stack must not be restarted; all isolation readbacks used real authenticated API-key principals (member/offboarded 403 proven at API level, P4_7-registered channel standard)",
+      "holder": "user (test-principal password disclosure) or a UI-enabled pilot environment"
+    },
+    {
+      "id": "V_F01_F03_ASSERTION_MAPPING",
+      "item": "F01/F03 scenario assertions have no scenario-anchored test points in their case module (honest NOT-EXERCISED under the P1-04 acceptance algebra; previously maskable as false PASS)",
+      "holder": "F01/F03 case-module owner"
+    },
+    {
+      "id": "V_RW_RUNNER_BUILD_NAMING",
+      "item": "contract probe case name retired from runner.mjs",
+      "holder": "contract owner / I02 follow-up (I08_FILENAME_DEVIATION precedent)"
+    },
+    {
+      "id": "I01_STEP3_GH_READBACK",
+      "item": "original GitHub owner/permission readback UNVERIFIED (gh TLS x509 -26276, environment-level)",
+      "holder": "user (environment)"
+    }
+  ],
+  "seven_p1_bindings": [
+    {
+      "p1": "P1-01",
+      "claim": "gate entry refusal (no acceptance without a current trusted receipt)",
+      "fix_commits": [
+        "P2_4 implementation 838e5b1 (merged 27aeea2)",
+        "P1_5 implementation bf7770f (merged bdac92f)"
+      ],
+      "counterexample_green": "worker-reports/P2_4-rework/ + P1_5-rework/ red→green evidence; real-CLI refusal negatives in the same-run slice",
+      "final_readback": "V_RW_R_ENTRY exit 0 on 6918798; enter-design-without-R refusal re-proven live in the full journey (stage-gates.json)"
+    },
+    {
+      "p1": "P1-02",
+      "claim": "receipt acceptance requires live dispatch binding + real report/digest (no bare verdicts)",
+      "fix_commits": [
+        "P2_4 implementation 838e5b1",
+        "P2_5 implementation 0a56a35 (merged ea996c7)",
+        "I02 local half (real-container half staged)"
+      ],
+      "counterexample_green": "P2_5-rework/ consumer-side drift green; P2_4-rework/ dispatch binding negatives",
+      "final_readback": "V_RW_TRUSTED_REVIEW + V_RW_TARGET_REQUIRED + V_RW_OBSERVATION_REQUIRED all exit 0 on 6918798; I02 method-state-scope composite exit 0"
+    },
+    {
+      "p1": "P1-03",
+      "claim": "epoch/generation fencing — old bytes never revive old approvals",
+      "fix_commits": [
+        "P2_4 implementation 838e5b1",
+        "P3_3 implementation 53e8b6f (merged e42c348)"
+      ],
+      "counterexample_green": "P3_3-rework/ three-window real-kill fencing green; P rebind generation bump exercised in the full journey",
+      "final_readback": "V_RW_REVISION_NO_REVIVE exit 0 on 6918798; receipts carry epoch/generation (stage-gates.json receipts[])"
+    },
+    {
+      "p1": "P1-04",
+      "claim": "acceptance-verifier denominator/assertion mapping/typed readback/--journey interface",
+      "fix_commits": [
+        "P3_1 implementation 315b1a0 (merged e278b81)",
+        "VERIFY (this run: 118 checks + 92 scenarios executed under the fixed algebra)"
+      ],
+      "counterexample_green": "P3_1-rework/ RED-1..RED-4 (fake-pass/silent-inspection/stale-readback/journey-refusal) all flipped green in the rework",
+      "final_readback": "the entire 118-check run in this report is the P1-04 readback: two false-PASS classes surfaced honestly (V_F01/V_F03 NOT-EXERCISED, V_A15 stale premise) instead of masking; V_RW_COMPLETION_REQUIRED 12/12 after final index regen"
+    },
+    {
+      "p1": "P1-05",
+      "claim": "real Runner isolation qualification",
+      "fix_commits": [
+        "P1_1 implementation 0ff66e3 (merged 65598f7)",
+        "I02 local half (S0-S5 build/admission chain done)"
+      ],
+      "counterexample_green": "P1_1-rework/ toolchain+llmwiki project-local green; I02 digest backfill + admission ACK",
+      "final_readback": "V_INFRA_I02 exit 0 + V_I02_METHOD_STATE_SCOPE exit 0 on 6918798; real-container S6/S7/S8 remain staged-UNVERIFIED (holder I01 refs admission) — carried, not claimed"
+    },
+    {
+      "p1": "P1-06",
+      "claim": "observation recipes + linked mechanisms at declared scope (same-run/recovery/post-delivery + I07/I08)",
+      "fix_commits": [
+        "P3_2 cc5622c (merged 302dc9b)",
+        "P3_3 53e8b6f (merged e42c348)",
+        "P4_6 fc54ccf (merged cbe4dc5)",
+        "P4_8 5b4e14c (merged cb9eb0c)",
+        "I07 53c15f3 (merged f3cbf6a)",
+        "I08 ba218ad (merged e5fe671)"
+      ],
+      "counterexample_green": "worker-reports/{P3_2,P3_3,P4_6,P4_8,I07,I08}-rework/ red→green + mutation kills",
+      "final_readback": "three journey recipe checks exit 0 on 6918798 AND the full real journeys executed by VERIFY (same-run completed; two real SIGKILL windows recovered; real Outline revocation→isolation→restore on the Run's own published knowledge)"
+    },
+    {
+      "p1": "P1-07",
+      "claim": "four-layer index regeneration + RW_COMPLETION_REQUIRED gate honesty",
+      "fix_commits": [
+        "P4_3 green 2b34cc3 (merged 72b3a9e)",
+        "VERIFY (final-baseline regeneration, this run)"
+      ],
+      "counterexample_green": "P4_3-rework/ detector red→green",
+      "final_readback": "acceptance-index.json regenerated at 6918798 (P5_2 gate row intentionally dropped per rework plan; operations-runbook.md section 8 synced); V_RW_COMPLETION_REQUIRED initial red on the stale committed index → 12/12 green after regen (both recorded)"
+    }
+  ],
+  "findings": [
+    {
+      "id": "VF-1",
+      "severity": "medium",
+      "item": "test/delivery-cases/3_1.mjs point 23 asserts the three real journeys are still unimplemented (TO_IMPLEMENT) — stale since the recipes landed; drags module-level V_A15 (A15's own point passes). Premise refresh needed (case-module owner).",
+      "evidence": "worker-reports/VERIFY-rework/evidence/V_A15.txt (not ok 23 + ok 25)"
+    },
+    {
+      "id": "VF-2",
+      "severity": "medium",
+      "item": "F01/F03 lack scenario-anchored test points — honest NOT-EXERCISED (P1-04 predicted class); previously maskable as false PASS under the old runner.",
+      "evidence": "worker-reports/VERIFY-rework/evidence/V_F01.txt, V_F03.txt"
+    },
+    {
+      "id": "VF-3",
+      "severity": "low",
+      "item": "V_RW_RUNNER_BUILD contract command references retired probe case current-build-role-isolation (runner now: role-denial, duplicate-authority) — contract naming deviation; underlying coverage green via V_INFRA_I02.",
+      "evidence": "worker-reports/VERIFY-rework/evidence/V_RW_RUNNER_BUILD.txt"
+    },
+    {
+      "id": "VF-4",
+      "severity": "low",
+      "item": "comet archive closeout on the externally-recovered path reports the recorded design_doc path under its pre-move location (annotation pointer not remapped when the move happened via the classic passthrough before the closeout). Archived copy complete (design.md present), archived:true set, main specs clean. Single-invocation comet archive additionally failed pre-flight with a raw ENOENT in this scratch environment. Upstream wrapper behavior — recorded, not silently worked around.",
+      "evidence": ".whitebox/rework/full-journey/stage-archive.json + stage notes"
+    },
+    {
+      "id": "VF-5",
+      "severity": "low",
+      "item": "Outline api-keys.create returns not_found in the deployed Outline version — new-credential issuance channel unavailable via API token; restore used the owner credential (post-isolation authorization act) with RESTORE_AUTHZ_NOT_NEW proven at adapter scope.",
+      "evidence": ".whitebox/rework/full-journey/maint-m6-newkey-notfound.json"
+    },
+    {
+      "id": "VF-6",
+      "severity": "info",
+      "item": "Outline normalizes prose whitespace on documents.create: the published object differs from the intent payload by whitespace only; the registered Knowledge.Closeout payload is the PUBLISHED text (what the readback verifies) with the normalization recorded.",
+      "evidence": ".whitebox/rework/full-journey/stage-kp.json notes"
+    },
+    {
+      "id": "VF-7",
+      "severity": "info",
+      "item": "J4 (5_3.mjs) requires >=4 environment gates; the intended P5_2 row drop leaves 3 — the count assertion needs recalibration, which belongs to P5_3's already-REOPENED retest (controller Step 7 serial acceptance); no contract check binds 5_3.mjs so the 92-scenario results are unaffected.",
+      "evidence": "git diff acceptance-index.json + J4 output (not ok 15)"
+    }
+  ]
+}
+
+codex
+{"agent":"codex-agent","artifact_sha256":"088ad8b5560c8e97a9280c39710d2d8183f8d003b2644483c534522bd4c29de9","assumptions":["The gated decision concerns acceptance of the VERIFY run and its evidence, not a claim that the overall delivery goal is complete; the artifact explicitly records goal_complete=false.","The per-check status, exit, and duration fields are intended to represent the final-baseline execution named by the artifact.","Referenced evidence files were not independently inspected because the review instructions permit reading only the supplied artifact."],"confidence":0.91,"findings":[{"blocking":true,"claim":"A required check is classified as PASS even though its sole structured execution result is a failure, making the PASS tally and P1-07 final readback internally inconsistent.","evidence":"The V_RW_COMPLETION_REQUIRED entry has required=true, status=\"PASS\", exit=1, and seconds=8. Its note says the initial run failed and a later run reached 12/12 after index regeneration, but no separate final attempt, exit=0 result, or final-baseline execution record is represented. The P1-07 final_readback nevertheless cites it as green.","id":"FINAL-RESULT-001","recommendation":"Record initial and final attempts separately, including baseline identity, command, exit code, duration, and evidence for the asserted 12/12 rerun; then regenerate the tally and all final reports.","severity":"BLOCKER"},{"blocking":true,"claim":"Two required journey checks are marked PASS without structured execution outcomes, contradicting the assertion that all 118 required checks were executed at the final baseline.","evidence":"V_RW_REAL_COMET_RECOVERY and V_POST_DELIVERY_PERMISSIONS each have required=true and status=\"PASS\" but both exit and seconds are null. The artifact simultaneously reports checks_total=118 and tally.not_executed=0. Narrative recipe_check and journey descriptions do not reconcile the missing command outcomes.","id":"FINAL-RESULT-002","recommendation":"Attach immutable final-baseline attempt records with non-null outcomes and timing for both commands, or classify them as unverified/not executed and recompute the tally.","severity":"BLOCKER"},{"blocking":false,"claim":"The P1-05 binding labels real Runner isolation as qualified while its real-container portion remains explicitly unverified.","evidence":"P1-05 states claim=\"real Runner isolation qualification\", but its fix_commits describe only the \"I02 local half\" and its final_readback says \"real-container S6/S7/S8 remain staged-UNVERIFIED\". The unverified ledger assigns I02_REAL_CONTAINER_S6_S7_S8 to I01 refs admission/runtime admission.","id":"CLOSURE-SCOPE-003","recommendation":"Rename the binding as local build/admission qualification and keep P1-05 open, or execute and record the S6/S7/S8 real-container probes before claiming full qualification.","severity":"MAJOR"},{"blocking":false,"claim":"The report usefully preserves unresolved scope instead of declaring the overall goal complete.","evidence":"The top-level goal_complete is false; the tally separately reports 104 PASS, 9 known environment drift, 3 UNVERIFIED, and 2 failed; the unverified_ledger names holders for outstanding capabilities.","id":"HONESTY-004","recommendation":"Preserve this explicit goal state and holder ledger when regenerating the corrected final evidence.","severity":"NOTE"}],"review_id":"rework-verify-final-20261023","round":0,"score":{"criteria":{"actionability":8.4,"completeness":6.3,"correctness":6.0,"evidence":5.8,"risk":5.9},"overall":6.2},"summary":"REJECT the current final evidence package. The honest incomplete-goal disposition is valuable, but the machine-readable final-baseline record contradicts itself: one PASS retains exit 1 without a recorded successful rerun, and two required PASS journeys have null execution outcomes. These defects must be reconciled before the VERIFY node and run completion can be authorized.","verdict":"REJECT"}
+tokens used
+39,305

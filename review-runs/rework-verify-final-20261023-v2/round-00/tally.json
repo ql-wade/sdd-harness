@@ -1,0 +1,106 @@
+{
+  "artifact_changed": false,
+  "artifact_error": null,
+  "artifact_sha256": "088ad8b5560c8e97a9280c39710d2d8183f8d003b2644483c534522bd4c29de9",
+  "ballots": [
+    {
+      "agent": "claude-code",
+      "blocking_findings": 0,
+      "min_criterion": 8.5,
+      "overall": 8.8,
+      "summary": "All four mandated hand-checks pass: (1) tally closes exactly 118=104+9+3+2 with 118 unique check_ids, and execution-contract.json itself contains exactly 118 V_* ids with an empty contract-minus-results diff, all required=true; (2) all 24 seven-P1 fix/merge short SHAs plus baseline 6918798 exist and are master ancestors with correct implementation-to-merge direction; (3) the three artifacts are byte-identical across 0dcfec1, HEAD, and the working tree and contain zero host absolute paths and zero secret values; (4) goal_complete=false is argued from the real completion_predicate.conditional_scope contract term, backed by an 8-entry UNVERIFIED ledger matching report U1-U8, and is consistent with the V_RW_COMPLETION_REQUIRED gate semantics (any single UNVERIFIED keeps the verdict NOT complete). npm known-set signature verified verbatim (475/472/2/1, not ok 62/463, skip=1, 17435ms). Honest failure/UNVERIFIED disposition with named holders and re-verification triggers T1-T5. No blocking findings; every sampled evidence pointer resolves once the two-root layout (RV-1) is accounted for.",
+      "verdict": "APPROVE"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking_findings": 0,
+      "min_criterion": 7.4,
+      "overall": 8.2,
+      "summary": "APPROVE the scoped VERIFY-node and run-completion decision. The artifact classifies all 118 required checks (104 PASS, 9 known environment drift, 3 UNVERIFIED, 2 FAIL), supplies detailed evidence for three real journeys, binds all seven P1 workstreams to fixes and readbacks, and honestly preserves failures, unverified capabilities, holders, and goal_complete=false. Minor metadata and provenance weaknesses should be corrected in the reporting format but do not negate the explicitly limited decision.",
+      "verdict": "APPROVE"
+    }
+  ],
+  "blocking_findings": [],
+  "created_at": "2026-10-23T09:06:38Z",
+  "current_artifact_sha256": "088ad8b5560c8e97a9280c39710d2d8183f8d003b2644483c534522bd4c29de9",
+  "dissenters": [],
+  "finding_fingerprint": "c101a83336347a41cb429f2b0596107ce706a5b8bd961a9753f690e4aedbb6c8",
+  "findings": [
+    {
+      "agent": "codex-agent",
+      "blocking": false,
+      "claim": "Some machine-readable execution metadata does not directly encode the final stated outcome, although the accompanying notes disclose the discrepancy.",
+      "evidence": "V_RW_COMPLETION_REQUIRED is status PASS with exit 1; its note says the initial run failed and a post-regeneration run passed 12/12. V_RW_REAL_COMET_RECOVERY and V_POST_DELIVERY_PERMISSIONS are PASS with null exit and seconds, while their journey records provide passing recipe counts and detailed evidence paths.",
+      "id": "R0-META-001",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": false,
+      "claim": "The relationship between the tested source baseline and the report-packaging revision should be made explicit.",
+      "evidence": "The artifact records baseline.source_head as 6918798, while the review scope identifies the three-artifact report at git 0dcfec1; the JSON does not provide a field binding those two revisions or hashes for the companion Markdown artifacts.",
+      "id": "R0-PROVENANCE-003",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": false,
+      "claim": "Approval is valid only for completion of the VERIFY run and delivery of its evidence, not for overall goal completion or full production enablement.",
+      "evidence": "The artifact sets goal_complete=false and lists unresolved holders for F10 cross-machine enablement, real-container S6/S7/S8, the knowledge-DB backup channel, live alert delivery, unauthenticated web-channel ACL, F01/F03 assertion mapping, runner probe naming, and GitHub readback. P1-05 also explicitly carries its real-container half as staged-UNVERIFIED.",
+      "id": "R0-SCOPE-002",
+      "severity": "NOTE"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "Evidence pointer roots are split across two bases: per-check raw outputs cited as worker-reports/VERIFY-rework/evidence/<check_id>.txt resolve only at the repo root, while several bindings-cited rework evidence dirs (P2_5-rework, P3_3-rework, P4_3-rework) exist only under openspec/changes/delivery-foundation-rearchitecture/worker-reports/; repo-root worker-reports/ holds P1_1-rework, P1_5-rework, P2_4-rework, P3_1-rework, P4_6-rework, P4_8-rework.",
+      "evidence": "git ls-tree -r 0dcfec1 shows 134 tracked paths under worker-reports/VERIFY-rework at the repo root; repo-root worker-reports/VERIFY-rework/evidence/ holds 132 files including V_NPM_REGRESSION.txt and V_COMET_NATIVE.pin24.txt; ls of both worker-reports directories shows the split placement of -rework dirs.",
+      "id": "RV-1",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "Report tally 'FAILED 2' aggregates two distinct per_check status labels: FAIL_STALE_PREMISE (V_A15) and FAILED_PREEXISTING (V_FULL_CHECK).",
+      "evidence": "verification-results.json tally {pass:104, known_environment_drift:9, unverified:3, failed:2} vs per_check status counts {PASS:104, KNOWN_ENVIRONMENT_DRIFT:9, UNVERIFIED:3, FAIL_STALE_PREMISE:1, FAILED_PREEXISTING:1}; both non-PASS entries carry reason notes and verification-report.md sections 2/6 disclose each.",
+      "id": "RV-2",
+      "severity": "NOTE"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "npm suite TAP plan line reads 1..474 while '# tests 475' — a one-line discrepancy inherent to node test runner output, not a report error.",
+      "evidence": "worker-reports/VERIFY-rework/evidence/V_NPM_REGRESSION.txt tail: 1..474 / # tests 475 / # pass 472 / # fail 2 / # cancelled 0 / # skipped 1 / # duration_ms 17435.477667; claimed signature 475/472/2/1 matches the # counters; fail identities verbatim: not ok 62 C08 negative, not ok 463 B08 preservation.",
+      "id": "RV-3",
+      "severity": "NOTE"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "Completion claim 'knowledge currently available' is time-bounded: it held at the restore readback (revision 5, archivedAt null) and the test knowledge object was then permanently deleted per cleanup discipline; live-document checks will not reproduce it.",
+      "evidence": "grill-report.md G10 declares this boundary explicitly; verification-report.md section 3.3 documents restore and cleanup; the durable chain is the journey-world snapshots (stage-kt.json, maint-m3-*/m6-*/m7-post-cleanup.json).",
+      "id": "RV-4",
+      "severity": "NOTE"
+    }
+  ],
+  "invalid_ballots": [],
+  "missing_agents": [],
+  "next_action": "write the conclusion and next-step plan",
+  "participants": [
+    "claude-code",
+    "codex-agent"
+  ],
+  "present_agents": [
+    "claude-code",
+    "codex-agent"
+  ],
+  "review_id": "rework-verify-final-20261023-v2",
+  "round": 0,
+  "status": "PASSED",
+  "version": 1,
+  "votes": {
+    "ABSTAIN": 0,
+    "APPROVE": 2,
+    "REJECT": 0
+  }
+}

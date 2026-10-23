@@ -1,0 +1,58 @@
+{
+  "review_id": "rework-verify-final-20261023-v2",
+  "round": 0,
+  "agent": "claude-code",
+  "artifact_sha256": "088ad8b5560c8e97a9280c39710d2d8183f8d003b2644483c534522bd4c29de9",
+  "verdict": "APPROVE",
+  "score": {
+    "overall": 8.8,
+    "criteria": {
+      "correctness": 9.0,
+      "completeness": 9.0,
+      "risk": 8.5,
+      "evidence": 8.5,
+      "actionability": 9.0
+    }
+  },
+  "findings": [
+    {
+      "id": "RV-1",
+      "severity": "MINOR",
+      "claim": "Evidence pointer roots are split across two bases: per-check raw outputs cited as worker-reports/VERIFY-rework/evidence/<check_id>.txt resolve only at the repo root, while several bindings-cited rework evidence dirs (P2_5-rework, P3_3-rework, P4_3-rework) exist only under openspec/changes/delivery-foundation-rearchitecture/worker-reports/; repo-root worker-reports/ holds P1_1-rework, P1_5-rework, P2_4-rework, P3_1-rework, P4_6-rework, P4_8-rework.",
+      "evidence": "git ls-tree -r 0dcfec1 shows 134 tracked paths under worker-reports/VERIFY-rework at the repo root; repo-root worker-reports/VERIFY-rework/evidence/ holds 132 files including V_NPM_REGRESSION.txt and V_COMET_NATIVE.pin24.txt; ls of both worker-reports directories shows the split placement of -rework dirs.",
+      "recommendation": "Declare both evidence base roots in verification-report.md section 1 so every cited pointer resolves against a single table.",
+      "blocking": false
+    },
+    {
+      "id": "RV-2",
+      "severity": "NOTE",
+      "claim": "Report tally 'FAILED 2' aggregates two distinct per_check status labels: FAIL_STALE_PREMISE (V_A15) and FAILED_PREEXISTING (V_FULL_CHECK).",
+      "evidence": "verification-results.json tally {pass:104, known_environment_drift:9, unverified:3, failed:2} vs per_check status counts {PASS:104, KNOWN_ENVIRONMENT_DRIFT:9, UNVERIFIED:3, FAIL_STALE_PREMISE:1, FAILED_PREEXISTING:1}; both non-PASS entries carry reason notes and verification-report.md sections 2/6 disclose each.",
+      "recommendation": "None required; optionally note the label aggregation in section 2.",
+      "blocking": false
+    },
+    {
+      "id": "RV-3",
+      "severity": "NOTE",
+      "claim": "npm suite TAP plan line reads 1..474 while '# tests 475' — a one-line discrepancy inherent to node test runner output, not a report error.",
+      "evidence": "worker-reports/VERIFY-rework/evidence/V_NPM_REGRESSION.txt tail: 1..474 / # tests 475 / # pass 472 / # fail 2 / # cancelled 0 / # skipped 1 / # duration_ms 17435.477667; claimed signature 475/472/2/1 matches the # counters; fail identities verbatim: not ok 62 C08 negative, not ok 463 B08 preservation.",
+      "recommendation": "None; keep quoting the # counters as the report already does.",
+      "blocking": false
+    },
+    {
+      "id": "RV-4",
+      "severity": "NOTE",
+      "claim": "Completion claim 'knowledge currently available' is time-bounded: it held at the restore readback (revision 5, archivedAt null) and the test knowledge object was then permanently deleted per cleanup discipline; live-document checks will not reproduce it.",
+      "evidence": "grill-report.md G10 declares this boundary explicitly; verification-report.md section 3.3 documents restore and cleanup; the durable chain is the journey-world snapshots (stage-kt.json, maint-m3-*/m6-*/m7-post-cleanup.json).",
+      "recommendation": "Controllers should verify knowledge-obligation evidence from the journey-world snapshots, not the live Outline instance, as G10 already instructs.",
+      "blocking": false
+    }
+  ],
+  "assumptions": [
+    "Read-only single-pass review: no check or journey was re-executed; verification rests on artifact-internal consistency, verbatim evidence files, and git object checks.",
+    "Commit verification used master (33a8d7e) as delivery target; HEAD==master at review time; all 25 cited short SHAs (24 fix/merge plus baseline 6918798) exist and are master ancestors, and all 12 implementation-to-merge pairs have the claimed direction.",
+    "Journey attestations (Outline HTTP responses, SIGKILL window classification) rely on the cited terminal-channel snapshots and stage JSON files that a read-only reviewer cannot byte-verify; grill-report G1-G3 enumerate the same residual trust points."
+  ],
+  "confidence": 0.85,
+  "summary": "All four mandated hand-checks pass: (1) tally closes exactly 118=104+9+3+2 with 118 unique check_ids, and execution-contract.json itself contains exactly 118 V_* ids with an empty contract-minus-results diff, all required=true; (2) all 24 seven-P1 fix/merge short SHAs plus baseline 6918798 exist and are master ancestors with correct implementation-to-merge direction; (3) the three artifacts are byte-identical across 0dcfec1, HEAD, and the working tree and contain zero host absolute paths and zero secret values; (4) goal_complete=false is argued from the real completion_predicate.conditional_scope contract term, backed by an 8-entry UNVERIFIED ledger matching report U1-U8, and is consistent with the V_RW_COMPLETION_REQUIRED gate semantics (any single UNVERIFIED keeps the verdict NOT complete). npm known-set signature verified verbatim (475/472/2/1, not ok 62/463, skip=1, 17435ms). Honest failure/UNVERIFIED disposition with named holders and re-verification triggers T1-T5. No blocking findings; every sampled evidence pointer resolves once the two-root layout (RV-1) is accounted for."
+}

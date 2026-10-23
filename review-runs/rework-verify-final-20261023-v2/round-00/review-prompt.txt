@@ -1,0 +1,100 @@
+You are one independent reviewer in a unanimous multi-Agent review.
+
+Review ID: rework-verify-final-20261023-v2
+Round: 0
+Your Agent ID: <AGENT_ID>. Use that exact value in the ballot's agent field.
+Review type: general
+Initiator: claude-code
+Required participants: claude-code, codex-agent
+Artifact: /Users/mac/Code/sdd-harness/openspec/changes/delivery-foundation-rearchitecture/verification-results.json
+Artifact SHA-256: 088ad8b5560c8e97a9280c39710d2d8183f8d003b2644483c534522bd4c29de9
+Scope: Three-artifact final verification report (verification-report.md + grill-report.md + verification-results.json at git 0dcfec1): 118 required checks executed at the final baseline (104 PASS / 2 FAIL with holders / 3 UNVERIFIED / 9 known HOST_OPENSPEC_DRIFT), three real journeys PASS (same-run delivery to completed, two real SIGKILL recovery windows, real revocation->isolation->restore with 24s detection), seven-P1 closure bindings (fix commit + counterexample green + final readback), honest UNVERIFIED/FAIL disposition with holders and goal_complete=false
+Decision being gated: APPROVE = accept the VERIFY node and the completion of run rework-seven-p1-r1; the three artifacts are delivered as the final verification evidence
+Required criteria: correctness, completeness, risk, evidence, actionability
+
+Read the artifact in read-only mode. You may use the CLI's built-in file reader
+or a single read-only filesystem operation against exactly the supplied
+artifact path. Do not inspect other files, environment variables, home
+directories, credentials, or repository history. Do not edit files, run
+destructive commands, access the network/browser, or assume another reviewer
+will cover a risk. Cite concrete evidence for every material finding. Score
+every criterion from 0 to 10 and provide an overall score. APPROVE is allowed
+only when you would authorize the gated decision now, overall score is at least
+8.0, every criterion is at least
+7.0, and there are no blocking findings. Use
+REJECT for a material problem and ABSTAIN only for genuinely missing evidence
+or an authority boundary.
+
+Return exactly one JSON object matching this schema. The schema is embedded so
+that every CLI receives the same contract even when its workspace sandbox does
+not allow reading files outside the artifact:
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Multi-Agent Consensus Review ballot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "review_id",
+    "round",
+    "agent",
+    "artifact_sha256",
+    "verdict",
+    "score",
+    "findings",
+    "assumptions",
+    "confidence",
+    "summary"
+  ],
+  "properties": {
+    "review_id": {"type": "string", "minLength": 1},
+    "round": {"type": "integer", "minimum": 0},
+    "agent": {"type": "string", "minLength": 1},
+    "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "verdict": {"enum": ["APPROVE", "REJECT", "ABSTAIN"]},
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["overall", "criteria"],
+      "properties": {
+        "overall": {"type": "number", "minimum": 0, "maximum": 10},
+        "criteria": {
+          "type": "object",
+          "additionalProperties": {"type": "number", "minimum": 0, "maximum": 10}
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "severity", "claim", "evidence", "recommendation", "blocking"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "severity": {"enum": ["BLOCKER", "MAJOR", "MINOR", "NOTE"]},
+          "claim": {"type": "string", "minLength": 1},
+          "evidence": {"type": "string", "minLength": 1},
+          "recommendation": {"type": "string"},
+          "blocking": {"type": "boolean"}
+        }
+      }
+    },
+    "assumptions": {"type": "array", "items": {"type": "string"}},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "summary": {"type": "string", "minLength": 1}
+  }
+}
+
+
+Do not wrap it in Markdown and do not add prose before or after it. The JSON
+object must contain only the schema fields, use the exact review ID, round,
+artifact digest, and Agent ID above, and include a complete score for every
+required criterion. This is a bounded single pass: read only the supplied
+artifact using the permitted read-only mechanism, do not use network/browser,
+write/edit/destructive tools, package managers, or launch subagents, and emit
+the JSON ballot immediately after the review. Before emitting it, validate the
+ballot internally: every finding with severity BLOCKER must set blocking=true,
+no BLOCKER finding may set blocking=false, and an APPROVE ballot must contain
+no blocking finding.
+
