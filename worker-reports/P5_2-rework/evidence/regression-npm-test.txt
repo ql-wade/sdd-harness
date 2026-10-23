@@ -1,0 +1,22 @@
+P5_2 rework REGRESSION evidence — full npm test on the post-GREEN tree (commit 0eb9959)
+command: npm test   (node v22.13.1, branch rework/p5-2, GREEN 0eb9959)
+oracle: baseline 475/472/2/1; known set exactly {C08 negative, B08 preservation} + 1 skip; zero new
+result: MATCH — tests 475, pass 472, fail 2 (not ok 62 C08 negative, not ok 463 B08 preservation), skipped 1 (ok 63 isolated openspec not installed)
+--- sanitized tail ---
+  ---
+  duration_ms: 91.563625
+  ...
+1..474
+# tests 475
+# suites 0
+# pass 472
+# fail 2
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 16169.508917
+--- known failures and skip (grep of the same run) ---
+ok 35 - F09 skipped and timed-out checks are never passed (CHECK_SKIPPED / CHECK_TIMED_OUT, exit 2)
+not ok 62 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+ok 63 - C08 positive: the isolated 1.11.0 candidate exposes the edges and the same closure accepts it — no global upgrade # SKIP isolated openspec 1.11.0 is not installed under .sdd/tools; run the isolated install (never a global upgrade)
+not ok 463 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
