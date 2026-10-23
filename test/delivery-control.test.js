@@ -284,7 +284,7 @@ test('environment variables can never flip the gate; a runtime enable record is 
 
 test('status readback reports the NOT_ENABLED state honestly (exit 0, UNVERIFIED_NOT_ENABLED, positive auth UNVERIFIED); the gate builds no positive cross-machine surface; the service dir ships exactly the gate artifacts + README', async () => {
   const gateModule = await import(`file://${GATE_CLI}`);
-  assert.deepEqual([...gateModule.GATE_ACTIONS].sort(), REFUSE_TRIO, 'the gate action set is exactly start/release/implement');
+  assert.deepEqual([...gateModule.GATE_ACTIONS].sort(), [...REFUSE_TRIO].sort(), 'the gate action set is exactly start/release/implement');
 
   const statusRun = runGate(['status', '--json']);
   assert.equal(statusRun.status, 0, `status must exit 0 for the committed NOT_ENABLED gate, stderr: ${statusRun.stderr}`);
