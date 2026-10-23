@@ -1,0 +1,88 @@
+P4_8 Step 11 — Outline real-stack revocation verification (real inaccessible readback)
+======================================================================================
+
+Stack fact: Outline IS live and reachable (com.docke LISTEN on 127.0.0.1:3000,
+confirmed via lsof before the run). The Bash loopback HTTP channel is filtered
+by this session's sandbox (curl would exit 000) — per the coordinator's
+guidance the verification ran through the Playwright BROWSER channel:
+same-origin fetch() inside the live Outline page (session-authenticated), a
+real client of the real stack. No mock, no fixture, no code bypass.
+
+Session identity: the operator browser profile carried the pre-existing owner
+OIDC session (auth.info -> 200, user "owner"); no login flow was re-driven and
+no secret material was read.
+
+Published object (the stand-in for the same-run journey's actually-published
+knowledge; VERIFY will re-drive consumption over the journey's own objects):
+  collection  fbdd55be-b4cb-460e-b7c0-a8fbdd45a068
+              name p48-step11-verify-1792717593361
+  document    75d89c60-e053-4ca3-9db5-908e4f74bd85
+              urlId gisgxg7Uoy, title "P4_8 step11 probe", revision 2
+  payload     "p4_8 step11 live publish probe: post-delivery permission
+               verification paragraph, single plain paragraph, no markup."
+  sha256(payload) = 91d67c51dd97d8c3cacc2f2441696b5e577de25a9f0f132e6751bbb346c702ad
+
+INDEPENDENT READBACKS BEFORE ANY PERMISSION CHANGE (separate requests)
+  Channel 1 — POST /api/documents.info {id}   -> 200, data.text === payload
+              (byte-identical), revision 3
+  Channel 2 — POST /api/documents.export {id} -> 200, export body contains the
+              payload verbatim (136 bytes)
+  => the object was ACTUALLY published and readable before revocation.
+
+REAL PERMISSION CHANGE 1 — source/audience revocation of the share channel
+  before:    POST /api/shares.info  {documentId} -> 200, revokedAt null
+             (share active; this build resolves shares.info by documentId —
+             by share id it answers 404 not_found, recorded as observed shape)
+  action:    POST /api/shares.revoke {id: shareId} -> 200
+             shareId edd35ba0-4b48-4730-8734-ef26610e4849
+  readback:  POST /api/shares.info  {documentId} -> 204 (no share exists for
+             the document) at +24 ms, second readback also 204
+  => the audience channel is REALLY closed: 200-active -> 204-gone, measured
+     on the real wall clock, 24 ms far inside the 120 s isolation budget.
+
+REAL PERMISSION CHANGE 2 — object removal with real inaccessible readback
+  POST /api/documents.search {query} -> 200, hits [] BEFORE the change:
+     NO positive control on this stack's search index for this document —
+     its post-change emptiness is therefore NOT counted as isolation
+     evidence (an unknown channel never counts, L02 discipline).
+  POST /api/documents.delete {id} -> 200 (moved to trash)
+    documents.info afterwards -> 200 WITH deletedAt set: the owner session
+    could STILL read the trashed object — recorded as observed: a
+    deleted-at LABEL is not inaccessibility (labels never count, L02).
+  POST /api/documents.delete {id, permanent} -> 200
+    documents.info  {id} -> 404 not_found  at +13 ms  (API read channel)
+    documents.export {id} -> 404 not_found            (export/storage channel)
+  => the published object is REALLY inaccessible afterwards — even the
+     privileged owner session cannot read it; nothing was faked by a label.
+
+TIMING SEMANTICS (Step 12 discipline, measured on the live stack)
+  - isolation latency: share channel 24 ms, object channels 13 ms after the
+    real revocation call returned — both inside isolate_target_seconds=120.
+  - the fault-exposure window and the alert-delivery clock remain two
+    SEPARATE scales by mechanism (computeExposureWindow pausedMs=0;
+    judgeIsolationFailure alert dueBy = first failure + alert_delivery 30 s,
+    asserted in test/delivery-cases/4_8.mjs J6). No monitor/alarm is wired
+    to this live Outline stack in this sandbox, so a LIVE alert-delivery
+    measurement stays honestly UNVERIFIED (successor: Outline owner +
+    deployment verification wave).
+
+CLEANUP (all test objects removed, verified by absence)
+  POST /api/collections.delete {id}          -> 200
+  POST /api/collections.info  {id} afterwards -> 404 not_found
+  POST /api/documents.info    {id} afterwards -> 404 not_found
+  POST /api/shares.info {documentId} afterwards -> 204
+  Net new objects in the workspace: ZERO.
+
+HONEST LIMITS
+  - The browser channel used the pre-existing owner OIDC session; an
+    UNAUTHENTICATED reader identity was not drivable from the same
+    authenticated browser, so the "no longer authorized identity" reading is
+    proven at the stronger existence level (even the owner cannot read the
+    revoked share / deleted object) — never claimed as a per-identity ACL
+    readback.
+  - The search channel produced no positive control before the change and is
+    excluded from the isolation evidence (unknown, not proof).
+  - The full L01-L11 journey execution belongs to the VERIFY node
+    (executionOwner=VERIFY, recipe actions only); this file is mechanism
+    evidence, not journey acceptance.
+  - Secrets: none; only object ids and public API shapes recorded.
