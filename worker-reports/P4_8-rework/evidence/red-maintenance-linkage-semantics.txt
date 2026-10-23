@@ -1,0 +1,51 @@
+RED proof 2 — Step 12 linkage semantics are NOT enforced by the current mechanism
+worktree base: e5fe671db5a142d8a3ea6508d0e2c8e07389f241 branch: rework/p4-8
+date: 2026-10-23T00:58:03Z
+
+COMMAND: node --input-type=module -e '<script below>'
+
+mode                       = maintenance-run
+maintenance.originRunId    = undefined
+maintenance.knowledgeIds   = undefined
+maintenance.operationKey   = km-007a0bd9b27a8bfd
+maintenance.linkedReceipt  = rc-77
+GAP a: origin_run / knowledge IDs are absent from the maintenance record: true
+GAP b: an original run WITHOUT an id still opens a maintenance run: true {"engine":"Comet.Run.managedDelivery.v1","kind":"knowledge-permission-maintenance","linkedReceipt":"rc-x","operationKey":"km-007a0bd9b27a8bfd","reopensProductRequirement":false}
+GAP c: a PRE-ISOLATION authorization (issuedAt 2026-10-01 < isolatedAt 2026-10-21) restores: true
+script exit: 0
+import { evaluatePostCompletionMaintenance, evaluateRestoration, buildRevocationEvent } from './lib/adapters/knowledge-revocation.js';
+
+// (a) origin_run binding missing: the maintenance record carries no originRunId
+//     and no knowledgeIds, even though both are known to the caller.
+const event = buildRevocationEvent({ kind: 'grant-expired', source: 'sdd-harness-repo', observedAt: '2026-10-21T10:00:00Z', reporter: 'collector:expiry-tick', evidence: {} });
+const closure = { affected: ['k-post'], derivedArtifacts: [], unmapped: [], conservativePause: false, complete: true, reason: null };
+const completed = evaluatePostCompletionMaintenance({
+  originalRun: { id: 'run-delivery-77', state: 'completed', publishReceiptId: 'rc-77' },
+  event, closure,
+});
+console.log('mode                       =', completed.mode);
+console.log('maintenance.originRunId    =', completed.maintenance.originRunId);
+console.log('maintenance.knowledgeIds   =', completed.maintenance.knowledgeIds);
+console.log('maintenance.operationKey   =', completed.maintenance.operationKey);
+console.log('maintenance.linkedReceipt  =', completed.maintenance.linkedReceipt);
+console.log('GAP a: origin_run / knowledge IDs are absent from the maintenance record:',
+  !('originRunId' in completed.maintenance) && !('knowledgeIds' in completed.maintenance));
+
+// (b) no run-id enforcement: a run record without any id is accepted.
+const idless = evaluatePostCompletionMaintenance({
+  originalRun: { state: 'completed', publishReceiptId: 'rc-x' }, event, closure,
+});
+console.log('GAP b: an original run WITHOUT an id still opens a maintenance run:', idless.mode === 'maintenance-run', JSON.stringify(idless.maintenance));
+
+// (c) new-authorization restore not enforced: an authorization issued BEFORE
+//     the isolation (the old disclosure license) is accepted as restore basis.
+const restore = evaluateRestoration({
+  knowledge: { id: 'k-post', epoch: 7, status: 'isolated', isolatedAt: '2026-10-21T12:00:00Z' },
+  authorization: { grantsValid: true, issuedAt: '2026-10-01T00:00:00Z', contentUseUntil: '2027-01-01T00:00:00Z', audienceWithinIntersection: true, offboardedSinceIsolation: [] },
+  review: { verdict: 'pass', boundDigest: 'x', reviewedAt: '2026-10-22T00:00:00Z', reviewerPrincipal: 'svc:reviewer' },
+  plan: { audience: ['group:engineering'] },
+  allowedAudience: ['group:engineering'],
+  channelEvidence: [{ channel: 'file-wiki', status: 'readable', basis: 'independent-readback' }],
+});
+console.log('GAP c: a PRE-ISOLATION authorization (issuedAt 2026-10-01 < isolatedAt 2026-10-21) restores:', restore.ok);
+--- full script text appended above; oracle: GAP a/b/c lines must flip to false after GREEN ---
