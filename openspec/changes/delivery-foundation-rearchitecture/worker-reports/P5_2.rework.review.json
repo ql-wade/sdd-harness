@@ -1,0 +1,29 @@
+{
+  "task": "P5_2",
+  "phase": "rework-r1",
+  "verdict": "APPROVED",
+  "blocking_findings": [],
+  "reviewed_at": "2026-10-23T04:08:27.405510+00:00",
+  "head_reviewed": "c1df29b",
+  "non_blocking_findings": [
+    {
+      "id": "N1-runbook-wording",
+      "disposition": "转告 P5_3: 重写 5_3.mjs 边界断言即可, runbook 无需改(属 I08)",
+      "summary": "README 末句称 runbook 有 legacy 措辞不精确——stale 的是旧 5_3.mjs 的断言"
+    },
+    {
+      "id": "N2-5_3-dangling-ref",
+      "disposition": "时序可接受(P5_3 自有重写对象, npm test glob 外)",
+      "summary": "5_3.mjs 功能性引用已删 scope-gate.json, 直跑 5/3 败"
+    }
+  ],
+  "independently_rerun": {
+    "boundary_clean": true,
+    "red_reproduction": "HEAD 测试应用到基点: 单测 10/10 fail+journey 4/4 fail, legacy 门七类 rework token 零命中",
+    "green_and_mutations": "10/10+4/4; 九组突变全拒(M1 无裁决/M2 七变体+M2h 完整裁决仍拒 CONSTRUCTION_PENDING/M3 投毒含 status/M4 default-deny/env 中立/运行时记录不信任)",
+    "npm_test": "475/472/2/1 复跑两遍精确一致",
+    "gate_audit": "gate.mjs 369 行逐段读毕; 八类投毒全 fail-closed; J2 与 P5_1 matrix 同源实文; J3 F10 四层不在 PASS 位且索引零改动",
+    "dangling_ref_audit": "功能引用仅 5_3.mjs; bin/lib/tools/scripts/hooks/contracts 零引用",
+    "honesty_audit": "四条声明与实况一致"
+  }
+}
