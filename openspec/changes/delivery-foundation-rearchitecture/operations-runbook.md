@@ -120,8 +120,10 @@ node openspec/changes/delivery-foundation-rearchitecture/team-recovery/run-drill
 2. `git checkout --detach <前一验收提交>`（本 run 实例：f13af35 = accept P5_1）。
 3. 回退点时点：`npm test` 全量再记签名——已知集失败保持原样（KNOWN_SET_FAIL_CLOSED：既不允许零失败
    幻想，也不允许新增失败），证明回退后质量门仍 fail-closed。
-4. 判定器幂等：`node test/delivery-cases/4_3.mjs --generate` 重生成 acceptance-index.json，diff 仅
-   `generated_at`；随后 `git checkout --` 还原，不把漂移留在工作区。
+4. 判定器幂等（按代核对）：`node test/delivery-cases/4_3.mjs --generate` 重生成 acceptance-index.json——
+   评审时点提交 diff 仅 `generated_at`；验收提交（验收只更新 execution-state、索引由下一次判定器运行
+   重生成）的 diff 会如实呈现该验收翻转（如 P5_1 REOPENED_RETEST_REQUIRED→ACCEPTED），不是门失效
+   （判定器自身 suite 全过、complete 保持 false）。两种情形都随后 `git checkout --` 还原并留证。
 5. `git checkout rework/p5-3` 回到分支头，工作区净，签名与回退前一致。
 
 本 run 的真实演练记录（两时点回归签名 + 幂等证据）：`worker-reports/P5_3-rework/evidence/05-rollback-drill.txt`。
@@ -192,7 +194,9 @@ open decisions 登记（源 execution-state.json，清单见 acceptance-index.js
 - **判定器/索引重生成**：`node test/delivery-cases/4_3.mjs --generate`（幂等：重生成 diff 仅
   `generated_at`）。`RW_COMPLETION_REQUIRED`：任何 required check FAIL/GATED/UNVERIFIED、缺失 journey/
   真实读回、open P1 都保持整个 change NOT complete——重生成后如出现非 generated_at 漂移，先
-  `git checkout --` 还原并按 RED 流程上报，不要手改索引。
+  `git checkout --` 还原并按 RED 流程上报，不要手改索引。注意：验收提交只更新 execution-state，索引由
+  下一次判定器运行重生成——在验收提交上重生成会如实呈现该验收翻转（非门失效，判定器 suite 保持全过、
+  complete=false），同样还原并留证（P5_3 演练实例见 worker-reports/P5_3-rework/evidence/05-rollback-drill.txt）。
 
 ## 11. 已知边界与复审触发器汇总
 

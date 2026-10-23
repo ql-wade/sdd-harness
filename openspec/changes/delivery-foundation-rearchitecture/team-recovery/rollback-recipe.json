@@ -23,7 +23,7 @@
     {
       "id": "generate-index-idempotent",
       "command": "node test/delivery-cases/4_3.mjs --generate",
-      "verify": "判定器在回退点重生成 acceptance-index.json，diff 仅 generated_at（幂等）；随后 git checkout -- 还原该文件，不把漂移留在工作区"
+      "verify": "判定器在回退点重生成 acceptance-index.json（幂等性按代核对：评审时点提交 diff 仅 generated_at；验收提交因验收只更新 execution-state、索引由下一次判定器运行重生成，diff 会如实呈现该验收翻转——如 P5_1 REOPENED_RETEST_REQUIRED→ACCEPTED——这不是门失效：判定器自身 suite 全过且 complete 保持 false）；随后 git checkout -- 还原该文件，把实际 diff 记入演练证据，不把漂移留在工作区"
     },
     {
       "id": "return-to-head",
