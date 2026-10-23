@@ -766,7 +766,7 @@ test('J4: the runbook carries the v2 gate form, every known environment gate ver
   const gatedStrings = (index.environment_gates?.from_partial_nodes ?? [])
     .flatMap((entry) => Object.values(entry.gated ?? {}))
     .map((value) => String(value));
-  assert.ok(gatedStrings.length >= 4, `expected the acceptance index to carry its known environment gates, found ${gatedStrings.length}`);
+  assert.ok(gatedStrings.length >= 3, `expected the acceptance index to carry its known environment gates (P5_2 gate row intentionally dropped at acceptance, VF-7), found ${gatedStrings.length}`);
   const issues = validateRunbookBoundary({ runbookText: text, gatedStrings });
   assert.deepEqual(issues, [], `runbook boundary declaration problems: ${issues.join(' | ')}`);
 });

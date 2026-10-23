@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "tool": "tools/verify/delivery-journey.mjs",
+  "runnerInvariant": "test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery",
+  "scenario": "E06",
+  "acceptanceIds": [
+    "C01",
+    "C02",
+    "C03",
+    "E01",
+    "E02",
+    "E03",
+    "E06",
+    "D06",
+    "D07",
+    "H01",
+    "H03"
+  ],
+  "journey": {
+    "name": "same-run-delivery",
+    "owner": "P3_2",
+    "requiredCheck": "V_SAME_RUN_DELIVERY",
+    "recipePath": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.case.json",
+    "registeredStatus": "TO_IMPLEMENT"
+  },
+  "profile": "managed-pilot",
+  "caseModule": "test/delivery-cases/3_2.mjs",
+  "sourceBinding": [
+    {
+      "path": "specs/delivery-foundation/spec.md",
+      "requirement": "Architecture methods and advisory hooks",
+      "scenario": "E06"
+    },
+    {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.journey.json",
+      "requirement": "V_SAME_RUN_DELIVERY full journey step plan (roles, dispatch bindings, gates, epochs, record fields)",
+      "scenario": "E06"
+    },
+    {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/execution-contract.json",
+      "requirement": "journey_execution.construction_task_scopes.P3_2",
+      "scenario": "E06"
+    }
+  ],
+  "verdict": "PASS",
+  "reason": null,
+  "missing": [],
+  "drift": [],
+  "schemaErrors": [],
+  "execution": {
+    "command": "node --test test/delivery-cases/3_2.mjs",
+    "actions": [
+      {
+        "index": 1,
+        "type": "spawn",
+        "expected": "exit 0; the case module executes the same-run journey's declared construction scope: (1) V_E06:rv-slice-real-cli drives the real managed Comet CLI (repo lock fingerprint d4370930) through R confirm -> A grill+unanimous consensus -> T independent review -> P -> TDD build -> Whitebox V over the CLI's real gate/transition/resume surfaces, with the enter-design (no R refused), unanimous-quorum and oracle-strength negatives exercised live; (2) V_E06:p25-consensus-consumption admits this run's real r3 unanimous consensus only through a trusted-launcher dispatch; (3) V_E06:recipe-tracking binds this recipe to its journey_definitions registration and asserts the full step plan (steps 7-11: Kp -> real archive -> Outline unknown/restart recovery -> Kt -> completed) stays execution_owner=VERIFY; TAP summary fail=0 with pass>0 and every required assertion mapped to executed ok points",
+        "required": true,
+        "expectation": {
+          "kind": "exitCode",
+          "value": 0
+        },
+        "ok": true,
+        "exitCode": 0,
+        "durationMs": 28391,
+        "note": null,
+        "observed": null,
+        "command": "node --test test/delivery-cases/3_2.mjs"
+      },
+      {
+        "index": 2,
+        "type": "readState",
+        "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0 (zero effective execution never passes)",
+        "required": true,
+        "expectation": {
+          "kind": "nonEmptyFile"
+        },
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": {
+          "path": ".whitebox/rework/same-run-delivery/action-1-stdout.txt",
+          "bytes": 5448
+        },
+        "command": null
+      },
+      {
+        "index": 3,
+        "type": "inspect",
+        "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+        "required": false,
+        "expectation": null,
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": "6918798204d07c6ae5b416a3c80f9f8432be749c",
+        "command": null
+      }
+    ],
+    "tests": 13,
+    "pass": 13,
+    "fail": 0,
+    "skipped": 0,
+    "effectiveExecutions": 13,
+    "target": {
+      "token": "E06",
+      "found": true,
+      "status": "ok"
+    },
+    "requiredAssertions": [
+      {
+        "id": "E06",
+        "status": "satisfied",
+        "matchedPoints": 3,
+        "ok": 3,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "id": "V_E06:rv-slice-real-cli",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "id": "V_E06:p25-consensus-consumption",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "id": "V_E06:recipe-tracking",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "candidate": {
+    "gitHead": "6918798204d07c6ae5b416a3c80f9f8432be749c",
+    "node": "v22.13.1",
+    "platform": "darwin"
+  },
+  "timing": {
+    "startedAt": "2026-10-23T06:04:11.586Z",
+    "finishedAt": "2026-10-23T06:04:40.021Z",
+    "durationMs": 28435
+  },
+  "evidence": {
+    "dir": ".whitebox/rework/same-run-delivery",
+    "files": [
+      "pilot-baseline.json",
+      "case-definition.json",
+      "verdict.json"
+    ]
+  },
+  "exitCode": 0
+}

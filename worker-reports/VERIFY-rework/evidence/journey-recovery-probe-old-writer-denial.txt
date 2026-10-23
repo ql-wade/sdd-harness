@@ -1,0 +1,37 @@
+{
+  "interface": "BackupInfra.v1",
+  "command": "probe",
+  "case": "old-writer-denial",
+  "executed": true,
+  "status": "VERIFIED",
+  "observedSteps": [
+    {
+      "step": "spawn-live-old-writer",
+      "status": "VERIFIED",
+      "pid": 71922
+    },
+    {
+      "step": "live-writer-refuses-restore",
+      "status": "VERIFIED",
+      "refusal": "RESTORE_REFUSED_OLD_WRITER_LIVE",
+      "released": false
+    },
+    {
+      "step": "sigkill-and-confirmed-gone",
+      "status": "VERIFIED",
+      "method": "SIGKILL"
+    },
+    {
+      "step": "restore-enabled-after-fence",
+      "status": "VERIFIED",
+      "sameOperation": {
+        "verified": true,
+        "runId": "run-i08-probe",
+        "authorityId": "comet-authority-i08-probe",
+        "epoch": 2
+      }
+    }
+  ],
+  "reason": "process-level fencing proven with a real pid: live old writer refuses the restore, real SIGKILL plus gone-confirmation enables it, release only after the same-operation readback",
+  "checkedAt": "2026-10-23T06:35:32.500Z"
+}

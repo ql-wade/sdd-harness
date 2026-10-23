@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "tool": "tools/verify/delivery-journey.mjs",
+  "runnerInvariant": "test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery",
+  "scenario": "A15",
+  "acceptanceIds": [
+    "A15"
+  ],
+  "journey": null,
+  "profile": "managed-pilot",
+  "caseModule": "test/delivery-cases/3_1.mjs",
+  "sourceBinding": [
+    {
+      "path": "specs/delivery-foundation/spec.md",
+      "requirement": "Runtime ownership and recovery",
+      "scenario": "A15"
+    }
+  ],
+  "verdict": "FAIL",
+  "reason": "action-1-failed (spawn): expected exit 0, observed exit 1 (expected: exit 0; TAP summary fail=0 with pass>0; test point matching A15 (V_A15 or bare id) is ok)",
+  "missing": [],
+  "drift": [],
+  "schemaErrors": [],
+  "execution": {
+    "command": "node --test test/delivery-cases/3_1.mjs",
+    "actions": [
+      {
+        "index": 1,
+        "type": "spawn",
+        "expected": "exit 0; TAP summary fail=0 with pass>0; test point matching A15 (V_A15 or bare id) is ok",
+        "required": true,
+        "expectation": {
+          "kind": "exitCode",
+          "value": 0
+        },
+        "ok": false,
+        "exitCode": 1,
+        "durationMs": 24387,
+        "note": "expected exit 0, observed exit 1",
+        "observed": null,
+        "command": "node --test test/delivery-cases/3_1.mjs"
+      },
+      {
+        "index": 2,
+        "type": "readState",
+        "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0",
+        "required": true,
+        "expectation": {
+          "kind": "nonEmptyFile"
+        },
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": {
+          "path": ".whitebox/delivery-foundation/A15/action-1-stdout.txt",
+          "bytes": 8365
+        },
+        "command": null
+      },
+      {
+        "index": 3,
+        "type": "inspect",
+        "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+        "required": false,
+        "expectation": null,
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": "6918798204d07c6ae5b416a3c80f9f8432be749c",
+        "command": null
+      }
+    ],
+    "tests": 25,
+    "pass": 24,
+    "fail": 1,
+    "skipped": 0,
+    "effectiveExecutions": 25,
+    "target": {
+      "token": "A15",
+      "found": true,
+      "status": "ok"
+    },
+    "requiredAssertions": [
+      {
+        "id": "A15",
+        "status": "satisfied",
+        "matchedPoints": 3,
+        "ok": 3,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "candidate": {
+    "gitHead": "6918798204d07c6ae5b416a3c80f9f8432be749c",
+    "node": "v22.13.1",
+    "platform": "darwin"
+  },
+  "timing": {
+    "startedAt": "2026-10-23T05:20:40.452Z",
+    "finishedAt": "2026-10-23T05:21:04.868Z",
+    "durationMs": 24416
+  },
+  "evidence": {
+    "dir": ".whitebox/delivery-foundation/A15",
+    "files": [
+      "pilot-baseline.json",
+      "case-definition.json",
+      "verdict.json"
+    ]
+  },
+  "exitCode": 2
+}

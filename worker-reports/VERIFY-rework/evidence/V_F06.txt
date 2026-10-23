@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "tool": "tools/verify/delivery-journey.mjs",
+  "runnerInvariant": "test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery",
+  "scenario": "F06",
+  "acceptanceIds": [
+    "F06"
+  ],
+  "journey": null,
+  "profile": "managed-pilot",
+  "caseModule": "test/delivery-cases/1_4.mjs",
+  "sourceBinding": [
+    {
+      "path": "specs/delivery-foundation/spec.md",
+      "requirement": "Foundation distribution and deployment",
+      "scenario": "F06"
+    }
+  ],
+  "verdict": "PASS",
+  "reason": null,
+  "missing": [],
+  "drift": [],
+  "schemaErrors": [],
+  "execution": {
+    "command": "node --test test/delivery-cases/1_4.mjs",
+    "actions": [
+      {
+        "index": 1,
+        "type": "spawn",
+        "expected": "exit 0; TAP summary fail=0 with pass>0; test point matching F06 (V_F06 or bare id) is ok",
+        "required": true,
+        "expectation": {
+          "kind": "exitCode",
+          "value": 0
+        },
+        "ok": true,
+        "exitCode": 0,
+        "durationMs": 21649,
+        "note": null,
+        "observed": null,
+        "command": "node --test test/delivery-cases/1_4.mjs"
+      },
+      {
+        "index": 2,
+        "type": "readState",
+        "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0",
+        "required": true,
+        "expectation": {
+          "kind": "nonEmptyFile"
+        },
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": {
+          "path": ".whitebox/delivery-foundation/F06/action-1-stdout.txt",
+          "bytes": 3533
+        },
+        "command": null
+      },
+      {
+        "index": 3,
+        "type": "inspect",
+        "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+        "required": false,
+        "expectation": null,
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": "6918798204d07c6ae5b416a3c80f9f8432be749c",
+        "command": null
+      }
+    ],
+    "tests": 13,
+    "pass": 13,
+    "fail": 0,
+    "skipped": 0,
+    "effectiveExecutions": 13,
+    "target": {
+      "token": "F06",
+      "found": true,
+      "status": "ok"
+    },
+    "requiredAssertions": [
+      {
+        "id": "F06",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "candidate": {
+    "gitHead": "6918798204d07c6ae5b416a3c80f9f8432be749c",
+    "node": "v22.13.1",
+    "platform": "darwin"
+  },
+  "timing": {
+    "startedAt": "2026-10-23T05:38:50.066Z",
+    "finishedAt": "2026-10-23T05:39:11.756Z",
+    "durationMs": 21690
+  },
+  "evidence": {
+    "dir": ".whitebox/delivery-foundation/F06",
+    "files": [
+      "pilot-baseline.json",
+      "case-definition.json",
+      "verdict.json"
+    ]
+  },
+  "exitCode": 0
+}
