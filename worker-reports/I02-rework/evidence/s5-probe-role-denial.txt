@@ -1,0 +1,45 @@
+{
+  "interface": "RunnerInfra.v1",
+  "command": "probe",
+  "case": "role-denial",
+  "endpoint": "http://127.0.0.1:7300",
+  "executed": false,
+  "status": "UNVERIFIED",
+  "reason": "runner endpoint unreachable (GET http://127.0.0.1:7300/): ECONNREFUSED",
+  "requiredInputs": [
+    "a live runner stack started by an authorized operator (up refuses until the image lock authenticates and admission is granted)",
+    "real worker principals for controller/author/test-author/reviewer/publisher/isolator with runtime-resolved credentials (all refs are NOT_PROVISIONED/UNASSIGNED today)",
+    "a controlled write-channel matrix (Edit/Shell/MCP) executed inside each role container, retaining errno/request evidence per channel"
+  ],
+  "plannedSteps": [
+    "docker inspect each role service: record UID/GID, read-only rootfs, cap_drop, mounts and network scope",
+    "as each worker role, attempt writes to control state, policy, receipts and issuance paths via Edit/Shell/MCP channels (expect per-channel denial; keep errno/request evidence)",
+    "attempt docker.sock access and host HOME reads from a worker container (expect denial)",
+    "kill the controller, then attempt phase pickup/retry as a worker role (expect Comet to reject the old owner/attempt; infrastructure must not fabricate a new operation)",
+    "record the effective denial per channel; capability gaps stay UNVERIFIED and are never recorded as enforced"
+  ],
+  "observedSteps": [
+    {
+      "step": "GET http://127.0.0.1:7300/",
+      "status": "UNVERIFIED",
+      "error": "ECONNREFUSED"
+    }
+  ],
+  "domain": {
+    "roles": [
+      "controller",
+      "author",
+      "test-author",
+      "reviewer",
+      "publisher",
+      "isolator"
+    ],
+    "authority": {
+      "interface": "Authority.v1",
+      "registrations": 0,
+      "concurrentWriterPolicy": "REFUSE",
+      "copiedStatePolicy": "REFUSE"
+    }
+  },
+  "checkedAt": "2026-10-23T02:01:54.234Z"
+}

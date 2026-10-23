@@ -56,7 +56,16 @@
     },
     "containerBuildEvidence": "terminal channel S0-S3: build rc=0 (python3/git/pnpm 10.18.3 补齐后), deterministic entrypoint readback S2.3 PASS (readlink==fingerprint path, --version 0.4.5), digest backfilled 4dfd24ed…",
     "containerStartupStatus": "UNVERIFIED",
-    "containerStartupNote": "六角色容器 created+started 后 exit 1（bare compose 无角色运行上下文/authority refs 未 provisioning——预期行为非缺陷）; 角色探针/正向链 holder=I01 refs 准入+运行上下文注入"
+    "containerStartupNote": "六角色容器 created+started 后 exit 1（bare compose 无角色运行上下文/authority refs 未 provisioning——预期行为非缺陷）; 角色探针/正向链 holder=I01 refs 准入+运行上下文注入",
+    "containerStartupDetail": {
+      "executed_at": "2026-10-23",
+      "finding": "S5 已执行: 六容器创建+Started 后即退出——镜像 runner CLI 无 daemon/serve 模式, :7300 控制面 HTTP 服务在当前构建中不存在(全仓无该 API 定义, 架构发现); S6 角色边界矩阵以 compose 等旗标 one-shot 实测全过(六容器 inspect: controller 独占控制卷/worker 仅各自 workspace/全员 comet+只读根+caps ALL drop+no-new-privs; 负向写: worker 控制路径 EROFS/docker.sock 不存在//usr EROFS/各自 workspace OK; controller 控制卷写 OK)",
+      "evidence": "worker-reports/I02-rework/evidence/s5-*.txt s6-*.txt",
+      "remaining_holders": {
+        "S7_positive_chain": "I01 四 runner ref 真实 provisioning(用户裁决 PUBLISHER_ISOLATOR_CREDS)",
+        "S8_duplicate_authority": "经 S7 产生权威状态卷后执行"
+      }
+    }
   },
   "resolution": {
     "lockSource": "infra/delivery/runner/image.lock.json",
