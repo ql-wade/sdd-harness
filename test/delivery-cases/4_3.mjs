@@ -175,8 +175,12 @@ function deriveIndexFromSources({ contract, plan, state, scenarioIds }) {
     }
     const evidence = [];
     for (const [t, st] of Object.entries(taskStatuses)) {
-      const merged = nodeStatus[t]?.merged_to_master;
-      if (st === 'ACCEPTED' && merged) evidence.push(`${CHANGE}/execution-state.json :: commit:${merged}`);
+      // merged_to_master is sometimes annotated ("37ba350+", "cbe4dc5 (second
+      // merge ...)") — the commit anchor is the leading SHA token, and the
+      // validator re-resolves it against the git object store.
+      const raw = nodeStatus[t]?.merged_to_master;
+      const sha = typeof raw === 'string' ? (raw.match(/^[0-9a-f]{7,40}/) ?? [null])[0] : null;
+      if (st === 'ACCEPTED' && sha) evidence.push(`${CHANGE}/execution-state.json :: commit:${sha}`);
     }
     const envChecks = aggregated.filter((id) => classifyCheck(id) === 'env_qualification');
     const journeyChecks = aggregated.filter((id) => classifyCheck(id) === 'same_run_finality');
@@ -193,7 +197,14 @@ function deriveIndexFromSources({ contract, plan, state, scenarioIds }) {
         checks: envChecks,
       },
       same_run_finality: {
-        status: journeyChecks.every((id) => required_checks[id]?.status === 'PASS') ? 'VERIFIED' : 'UNVERIFIED',
+        // Every original scenario consumes the global same-Run terminal
+        // evidence (mandatory terminal layer), so finality requires ALL THREE
+        // journeys PASS plus the scenario's own journey checks if any. An
+        // empty journey_checks list must NOT read as VERIFIED (vacuous truth).
+        status:
+          journeyChecks.every((id) => required_checks[id]?.status === 'PASS') && Object.values(journeys).every((j) => j.status === 'PASS')
+            ? 'VERIFIED'
+            : 'UNVERIFIED',
         journey_checks: journeyChecks,
         owner: contract.journey_execution.owner,
       },

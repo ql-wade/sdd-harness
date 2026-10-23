@@ -1,1684 +1,4407 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "change": "delivery-foundation-rearchitecture",
   "acceptance_id": "B10",
   "semantics_source": "specs/delivery-foundation/spec.md (92 scenarios, sole semantic source)",
-  "generated_at": "2026-10-21",
-  "generated_by": "P4_3 (impl/p4-3-acceptance-index, base master@a834f93)",
+  "generated_from": {
+    "execution_contract": "openspec/changes/delivery-foundation-rearchitecture/execution-contract.json (118 required checks)",
+    "verification_case_plan": "openspec/changes/delivery-foundation-rearchitecture/verification-case-plan.json (92 cases, 3 journeys)",
+    "execution_state": "openspec/changes/delivery-foundation-rearchitecture/execution-state.json (node_status/open_p1 snapshot)",
+    "regenerate_command": "node test/delivery-cases/4_3.mjs --generate"
+  },
+  "generated_at": "2026-10-23T02:00:12.588Z",
+  "generated_by": "P4_3 rework r1 (rework/p4-3)",
   "layer_definitions": {
-    "kernel": "内核层 — 单测/契约（node --test 各套件）",
-    "cli": "CLI/装配层 — tools/ 各 CLI validate/probe 入口 + 装配产物",
-    "host": "宿主层 — hook/adapter 装配（hook-doctor、settings 生成、宿主渠道探针）",
-    "ci": "业务/CI 层 — delivery-cases 回归 + scripts/check.sh + 真实平台记录"
+    "component_pass": "组件通过 — 构建任务在其声明范围内交付的机制证据（当前候选提交指针）；组件通过永不覆盖缺失/未执行的真实路径检查",
+    "env_qualification": "环境资格 — 真实 Outline 活栈、.sdd 预备构建、钉定工具链、真实 Registry/Runner 等环境资格；与组件通过分开登记",
+    "same_run_finality": "同 Run 终局 — 三旅程（same-run-delivery / real-comet-recovery / post-delivery-permissions）在同一产品 Run 内的终局 oracle，executionOwner=VERIFY；构建方交付配方不等于旅程已跑",
+    "deployment_status": "部署状态 — delivered 判定；目标环境确认前不得 delivered（B10）"
   },
   "status_rule": {
-    "VERIFIED": "当前版本存在真实证据（RED/GREEN 提交、可解析证据指针）",
-    "ENVIRONMENT_GATED": "机制证据在位，完整声明被已登记环境门阻断，且已登记承接者（holder）；不得转 PASS",
-    "UNVERIFIED": "无当前真实证据（未建设/未执行）；保留 holder/successor",
-    "RETEST_REQUIRED": "New repair revision requires exact assertion/real-scope proof; original status and raw evidence retained in history"
+    "PASS": "当前修订真实执行且独立读回在案（readback_evidence=RECORDED）",
+    "MECHANISM_AT_DECLARED_SCOPE": "构建任务 ACCEPTED：机制已在声明范围交付（指针=当前候选合并提交）；不是旅程/场景 PASS",
+    "PARTIAL_AT_DECLARED_SCOPE": "存在 PARTIAL_ACCEPTED 任务（steps_gated 在案）；不是场景 PASS",
+    "DOCUMENT_ONLY": "仅有文档型验收（ACCEPTED_DOCUMENT_ONLY），无可执行机制",
+    "UNVERIFIED": "本修订未执行/无当前证据；UNVERIFIED 保持 UNVERIFIED",
+    "QUALIFIED": "该场景全部环境资格检查 PASS",
+    "VERIFIED": "该场景消费的同 Run 旅程检查 PASS",
+    "NOT_DELIVERED": "目标环境未确认，不得声明 delivered"
   },
-  "delivered_vs_environment": "delivered 声明与目标环境确认分离：本索引只登记证据状态；目标环境确认（真实平台/生产/第二宿主）由各 holder 在门解除后回填。",
-  "known_environment_gates": [
-    "I01/I02/I03/I05 Step 3、P1_6 Step 5 — 环境门与承接者见 execution-state.json",
-    "宿主全局 openspec 1.3.1→1.14.3 漂移（HOST_OPENSPEC_DRIFT，owner: user）— 阻断 B08/C08 钉定复跑",
-    "主检出 adapter-quoting 2 例沙箱 EPERM（denyWithinAllow）— 集成回归须在 worktree 运行（65/65 已验证）",
-    "llmwiki 会话 worktree venv ENOENT 分支 — 会话工件指向缺失副本，非宿主缺陷（LLMWIKI_RUNTIME_VERIFIED 更正）",
-    "comet 依赖回归（1_3/1_4/1_5/1_6 setup）须在 .sdd 装备工作树运行（impl-p1-3 在位）",
-    "scripts/check.sh whitebox 夹具缺口在全新 worktree 为 base 起 pre-existing"
-  ],
-  "summary": {
-    "total": 92,
-    "VERIFIED": 0,
-    "RETEST_REQUIRED": 92
-  },
-  "entries": {
-    "A01": {
-      "layer": "kernel",
-      "scenario_ids": [
+  "required_checks": {
+    "V_A01": {
+      "acceptance_ids": [
         "A01"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_1",
-      "evidence": [
-        "test/delivery-cases/2_1.mjs :: A01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1.json :: A01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1/evidence/green-node-test.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1.json :: commit:a08dae6"
-      ],
-      "notes": "contracts/delivery schema + AC→case 追踪；node --test 与 2_1.mjs 全绿",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A02": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_A02": {
+      "acceptance_ids": [
         "A02"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_1",
-      "evidence": [
-        "test/delivery-cases/2_1.mjs :: A02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1.json :: A02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1/evidence/green-node-test.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1.json :: commit:a08dae6"
-      ],
-      "notes": "contracts/delivery schema + AC→case 追踪；node --test 与 2_1.mjs 全绿",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A03": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_A03": {
+      "acceptance_ids": [
         "A03"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_1",
-      "evidence": [
-        "test/delivery-cases/2_1.mjs :: A03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1.json :: A03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1/evidence/green-node-test.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1.json :: commit:a08dae6"
-      ],
-      "notes": "contracts/delivery schema + AC→case 追踪；node --test 与 2_1.mjs 全绿",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A04": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_A04": {
+      "acceptance_ids": [
         "A04"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_1",
-      "evidence": [
-        "test/delivery-cases/2_1.mjs :: A04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1.json :: A04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1/evidence/green-node-test.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1.json :: commit:a08dae6"
-      ],
-      "notes": "contracts/delivery schema + AC→case 追踪；node --test 与 2_1.mjs 全绿",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A05": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_A05": {
+      "acceptance_ids": [
         "A05"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_2",
-      "evidence": [
-        "test/delivery-cases/2_2.mjs :: A05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2.json :: A05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2/evidence/green-node-test.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2.json :: commit:336d17b"
-      ],
-      "notes": "EvidenceEnvelope/GateReceipt 来源准入与身份/摘要校验",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A06": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_A06": {
+      "acceptance_ids": [
         "A06"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_2",
-      "evidence": [
-        "test/delivery-cases/2_2.mjs :: A06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2.json :: A06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2/evidence/green-node-test.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2.json :: commit:336d17b"
-      ],
-      "notes": "EvidenceEnvelope/GateReceipt 来源准入与身份/摘要校验",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A07": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_A07": {
+      "acceptance_ids": [
         "A07"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_1",
-      "evidence": [
-        "test/delivery-cases/2_1.mjs :: A07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1.json :: A07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1/evidence/green-node-test.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1.json :: commit:a08dae6"
-      ],
-      "notes": "contracts/delivery schema + AC→case 追踪；node --test 与 2_1.mjs 全绿",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A08": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_A08": {
+      "acceptance_ids": [
         "A08"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_1",
-      "evidence": [
-        "test/delivery-cases/2_1.mjs :: A08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1.json :: A08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1/evidence/green-node-test.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_1.json :: commit:a08dae6"
-      ],
-      "notes": "contracts/delivery schema + AC→case 追踪；node --test 与 2_1.mjs 全绿",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A09": {
-      "layer": "host",
-      "scenario_ids": [
+    "V_A09": {
+      "acceptance_ids": [
         "A09"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_3",
-      "evidence": [
-        "test/delivery-cases/1_3.mjs :: A09",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_3.json :: A09",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_3/evidence/green-combined.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_3.json :: commit:d19c633"
-      ],
-      "notes": "编辑/Shell/MCP 真实渠道探针（1_3.mjs 需 .sdd 装备工作树复跑，如 impl-p1-3；主检出证据在位）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_3.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A10": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_A10": {
+      "acceptance_ids": [
         "A10"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P3_3",
-      "evidence": [
-        "test/delivery-cases/3_3.mjs :: A10",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_3.json :: A10",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_3/evidence/green-node-test-3_3.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_3.json :: commit:812182f"
-      ],
-      "notes": "并发推进/旧 epoch/断点恢复语义（单环境已验证；跨机分布式互斥为已登记后续契约任务）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/3_3.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A11": {
-      "layer": "cli",
-      "scenario_ids": [
+    "V_A11": {
+      "acceptance_ids": [
         "A11"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P3_4",
-      "evidence": [
-        "test/delivery-cases/3_4.mjs :: A11",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_4.json :: A11",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_4/evidence/green-3_4-case.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_4.json :: commit:d7438e4"
-      ],
-      "notes": "Spec Adapter 中断恢复/主 specs 读回；另见 I08 权威迁移探针",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/3_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A12": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_A12": {
+      "acceptance_ids": [
         "A12"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P3_3",
-      "evidence": [
-        "test/delivery-cases/3_3.mjs :: A12",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_3.json :: A12",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_3/evidence/green-node-test-3_3.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_3.json :: commit:812182f"
-      ],
-      "notes": "并发推进/旧 epoch/断点恢复语义（单环境已验证；跨机分布式互斥为已登记后续契约任务）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/3_3.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A13": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_A13": {
+      "acceptance_ids": [
         "A13"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_1",
-      "evidence": [
-        "test/delivery-cases/4_1.mjs :: A13",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1.json :: A13",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1/evidence/green-delivery-case-4_1.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1.json :: commit:d44c7b1"
-      ],
-      "notes": "精确集成 SHA 重算契约（本地真实 git SHA 链）；真实平台注册为 F06/F09 门控项",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_1.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A14": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_A14": {
+      "acceptance_ids": [
         "A14"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_2",
-      "evidence": [
-        "test/delivery-cases/4_2.mjs :: A14",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2.json :: A14",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2/evidence/green-delivery-case-4_2.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2.json :: commit:e84decb"
-      ],
-      "notes": "同 digest 锁定/漂移拒绝/关联查询/批准回滚机制在隔离 Registry/环境全验证（LOCAL_ONLY）；真实生产提升为环境门",
-      "holder": "环境 owner + 运行时准入（真实 Registry endpoint / 隔离环境登记后，release.mjs --registry/--environment 指向真实形态；P4_2 全部回执 mode=LOCAL_ONLY 如实分离）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A15": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_A15": {
+      "acceptance_ids": [
         "A15"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P3_1",
-      "evidence": [
-        "test/delivery-cases/3_1.mjs :: A15",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_1.json :: A15",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_1/evidence/check-V_A15.json :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_1.json :: commit:b3d05d6"
-      ],
-      "notes": "试点冻结 Product/Design/TestContract/PlanBundle + 独立持久化读回（3_2 旅程）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/3_1.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A16": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_A16": {
+      "acceptance_ids": [
         "A16"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_2",
-      "evidence": [
-        "test/delivery-cases/4_2.mjs :: A16",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2.json :: A16",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2/evidence/green-delivery-case-4_2.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2.json :: commit:e84decb"
-      ],
-      "notes": "同 digest 锁定/漂移拒绝/关联查询/批准回滚机制在隔离 Registry/环境全验证（LOCAL_ONLY）；真实生产提升为环境门",
-      "holder": "环境 owner + 运行时准入（同 A14：真实部署关联读回与账本权威性）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A17": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_A17": {
+      "acceptance_ids": [
         "A17"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_2",
-      "evidence": [
-        "test/delivery-cases/4_2.mjs :: A17",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2.json :: A17",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2/evidence/green-delivery-case-4_2.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_2.json :: commit:e84decb"
-      ],
-      "notes": "同 digest 锁定/漂移拒绝/关联查询/批准回滚机制在隔离 Registry/环境全验证（LOCAL_ONLY）；真实生产提升为环境门",
-      "holder": "环境 owner + 运行时准入（同 A14：真实回滚 digest/环境/业务终态读回）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A18": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_A18": {
+      "acceptance_ids": [
         "A18"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_2",
-      "evidence": [
-        "test/delivery-cases/2_2.mjs :: A18",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2.json :: A18",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2/evidence/green-node-test.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2.json :: commit:336d17b"
-      ],
-      "notes": "EvidenceEnvelope/GateReceipt 来源准入与身份/摘要校验",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A19": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_A19": {
+      "acceptance_ids": [
         "A19"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_2",
-      "evidence": [
-        "test/delivery-cases/2_2.mjs :: A19",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2.json :: A19",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2/evidence/green-node-test.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_2.json :: commit:336d17b"
-      ],
-      "notes": "EvidenceEnvelope/GateReceipt 来源准入与身份/摘要校验",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "A20": {
-      "layer": "cli",
-      "scenario_ids": [
+    "V_A20": {
+      "acceptance_ids": [
         "A20"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_3",
-      "evidence": [
-        "test/delivery-cases/2_3.mjs :: A20",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_3.json :: A20",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_3/evidence/green-node-test-full.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_3.json :: commit:b9fafa4"
-      ],
-      "notes": "adapter 退出码契约（1/2/0）与 CodeGraph 停用正确性（I05 graph-disabled-correctness）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_3.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "B01": {
-      "layer": "host",
-      "scenario_ids": [
+    "V_B01": {
+      "acceptance_ids": [
         "B01"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_6",
-      "evidence": [
-        "test/delivery-cases/1_6.mjs :: method profile",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_6.json :: B01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_6/evidence/green-2-comet-init-no-superpowers.txt :: tests",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_6.json :: commit:acb0452"
-      ],
-      "notes": "planner 只出 PlanBundle/Superpowers 不重启/Matt 快照无嵌套 controller",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_6.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "B02": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_B02": {
+      "acceptance_ids": [
         "B02"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P3_2",
-      "evidence": [
-        "test/delivery-cases/3_2.mjs :: B02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: B02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2/evidence/green-node-test-3_2.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: commit:b528ba4"
-      ],
-      "notes": "R/A/T 分离返工回路与证据边界",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/3_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "B03": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_B03": {
+      "acceptance_ids": [
         "B03"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P3_2",
-      "evidence": [
-        "test/delivery-cases/2_2.mjs :: B03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: B03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2/evidence/green-node-test-3_2.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: commit:b528ba4"
-      ],
-      "notes": "R/A/T 分离返工回路与证据边界",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "B04": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_B04": {
+      "acceptance_ids": [
         "B04"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P3_2",
-      "evidence": [
-        "test/delivery-cases/3_2.mjs :: B04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: B04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2/evidence/green-node-test-3_2.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: commit:b528ba4"
-      ],
-      "notes": "R/A/T 分离返工回路与证据边界",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/3_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "B05": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_B05": {
+      "acceptance_ids": [
         "B05"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P3_2",
-      "evidence": [
-        "test/delivery-cases/3_2.mjs :: B05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: B05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2/evidence/green-node-test-3_2.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: commit:b528ba4"
-      ],
-      "notes": "R/A/T 分离返工回路与证据边界",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/3_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "B06": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_B06": {
+      "acceptance_ids": [
         "B06"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P3_2",
-      "evidence": [
-        "test/delivery-cases/2_2.mjs :: B06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: B06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2/evidence/green-node-test-3_2.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: commit:b528ba4"
-      ],
-      "notes": "R/A/T 分离返工回路与证据边界",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "B07": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_B07": {
+      "acceptance_ids": [
         "B07"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P3_2",
-      "evidence": [
-        "test/delivery-cases/2_2.mjs :: B07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: B07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2/evidence/green-node-test-3_2.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: commit:b528ba4"
-      ],
-      "notes": "R/A/T 分离返工回路与证据边界",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "B08": {
-      "layer": "cli",
-      "scenario_ids": [
+    "V_B08": {
+      "acceptance_ids": [
         "B08"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P3_4",
-      "evidence": [
-        "test/delivery-cases/3_4.mjs :: B08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_4.json :: B08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_4/evidence/green-3_4-case.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_4.json :: commit:d7438e4"
-      ],
-      "notes": "适配器拒绝丢失场景的 MODIFIED delta 已在 P3_4 提交验证；当前钉定宿主 openspec 漂移阻断复跑",
-      "holder": "宿主全局 openspec 漂移 1.3.1→1.14.3（open decision HOST_OPENSPEC_DRIFT，owner: user）；重钉 toolchain-baseline 或显式重冻结后在钉定环境复跑 test/spec-closeout.test.js 与 3_4.mjs",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/3_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "B09": {
-      "layer": "host",
-      "scenario_ids": [
+    "V_B09": {
+      "acceptance_ids": [
         "B09"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_2",
-      "evidence": [
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_2.json :: B09",
-        "test/foundation-distribution.test.js :: B09",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_2.json :: commit:cf9aee3"
-      ],
-      "notes": "第二写者拒绝（旧技能 controller 活跃时）；宿主插件缓存 superpowers 残留为宿主 owner 清理决定",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_6.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "B10": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_B10": {
+      "acceptance_ids": [
         "B10"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_3",
-      "evidence": [
-        "test/delivery-cases/2_3.mjs :: B10",
-        "openspec/changes/delivery-foundation-rearchitecture/verification.md :: B10",
-        "test/delivery-cases/4_3.mjs :: B10",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_3/evidence/red-4_3.txt :: B10",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_3.json :: B10"
-      ],
-      "notes": "四层分开归档索引 + delivered 声明与目标环境确认分离（本任务 4_3.mjs + verification.md + check.sh 记录）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_3.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "C01": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_C01": {
+      "acceptance_ids": [
         "C01"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_5",
-      "evidence": [
-        "test/delivery-cases/1_5.mjs :: C01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: C01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5/evidence/green-combined.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: commit:35195a7"
-      ],
-      "notes": "R/A/T/P/V 前置门与旁路负例（1_5.mjs + classic-integration.test.js）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "C02": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_C02": {
+      "acceptance_ids": [
         "C02"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_5",
-      "evidence": [
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: C02",
-        "test/classic-integration.test.js :: C02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5/evidence/green-combined.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: commit:35195a7"
-      ],
-      "notes": "R/A/T/P/V 前置门与旁路负例（1_5.mjs + classic-integration.test.js）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "C03": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_C03": {
+      "acceptance_ids": [
         "C03"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_5",
-      "evidence": [
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: C03",
-        "test/classic-integration.test.js :: C03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5/evidence/green-combined.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: commit:35195a7"
-      ],
-      "notes": "R/A/T/P/V 前置门与旁路负例（1_5.mjs + classic-integration.test.js）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "C04": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_C04": {
+      "acceptance_ids": [
         "C04"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_5",
-      "evidence": [
-        "test/delivery-cases/1_5.mjs :: C04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: C04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5/evidence/green-combined.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: commit:35195a7"
-      ],
-      "notes": "R/A/T/P/V 前置门与旁路负例（1_5.mjs + classic-integration.test.js）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "C05": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_C05": {
+      "acceptance_ids": [
         "C05"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_5",
-      "evidence": [
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: C05",
-        "test/classic-integration.test.js :: C05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5/evidence/green-combined.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: commit:35195a7"
-      ],
-      "notes": "R/A/T/P/V 前置门与旁路负例（1_5.mjs + classic-integration.test.js）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "C06": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_C06": {
+      "acceptance_ids": [
         "C06"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_5",
-      "evidence": [
-        "test/delivery-cases/1_5.mjs :: C06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: C06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5/evidence/green-combined.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: commit:35195a7"
-      ],
-      "notes": "R/A/T/P/V 前置门与旁路负例（1_5.mjs + classic-integration.test.js）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "C07": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_C07": {
+      "acceptance_ids": [
         "C07"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_4",
-      "evidence": [
-        "test/delivery-cases/1_4.mjs :: C07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4.json :: C07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4/evidence/green-2_4-mjs.txt :: pass"
-      ],
-      "notes": "七受管入口同规则阻断（2_4.mjs；1_4.mjs 为 comet 装备工作树复跑路径）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "C08": {
-      "layer": "cli",
-      "scenario_ids": [
+    "V_C08": {
+      "acceptance_ids": [
         "C08"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_5",
-      "evidence": [
-        "test/delivery-cases/1_5.mjs :: C08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: C08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5/evidence/green-combined.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_5.json :: commit:35195a7"
-      ],
-      "notes": "兼容性拒绝机制已在隔离工具环境验证（1_5.mjs 全绿）；宿主全局 openspec 漂移阻断 classic-integration 负例复跑",
-      "holder": "同 B08：HOST_OPENSPEC_DRIFT；test/classic-integration.test.js C08 负例在钉定宿主版本后复跑（机制证据见 P1_5 隔离工具环境与 1_5.mjs 全绿）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "D01": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_D01": {
+      "acceptance_ids": [
         "D01"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_4",
-      "evidence": [
-        "test/delivery-cases/2_4.mjs :: D01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4.json :: D01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4/evidence/green-2_4-mjs.txt :: pass"
-      ],
-      "notes": "回执接纳/失效重算/恢复一致性全负例（2_4.mjs 10/10）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "D02": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_D02": {
+      "acceptance_ids": [
         "D02"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_4",
-      "evidence": [
-        "test/delivery-cases/2_4.mjs :: D02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4.json :: D02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4/evidence/green-2_4-mjs.txt :: pass"
-      ],
-      "notes": "回执接纳/失效重算/恢复一致性全负例（2_4.mjs 10/10）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "D03": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_D03": {
+      "acceptance_ids": [
         "D03"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_4",
-      "evidence": [
-        "test/delivery-cases/2_4.mjs :: D03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4.json :: D03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4/evidence/green-2_4-mjs.txt :: pass"
-      ],
-      "notes": "回执接纳/失效重算/恢复一致性全负例（2_4.mjs 10/10）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "D04": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_D04": {
+      "acceptance_ids": [
         "D04"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_4",
-      "evidence": [
-        "test/delivery-cases/2_4.mjs :: D04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4.json :: D04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4/evidence/green-2_4-mjs.txt :: pass"
-      ],
-      "notes": "回执接纳/失效重算/恢复一致性全负例（2_4.mjs 10/10）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "D05": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_D05": {
+      "acceptance_ids": [
         "D05"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_4",
-      "evidence": [
-        "test/delivery-cases/2_4.mjs :: D05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4.json :: D05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4/evidence/green-2_4-mjs.txt :: pass"
-      ],
-      "notes": "回执接纳/失效重算/恢复一致性全负例（2_4.mjs 10/10）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "D06": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_D06": {
+      "acceptance_ids": [
         "D06"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_4",
-      "evidence": [
-        "test/delivery-cases/2_4.mjs :: D06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4.json :: D06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4/evidence/green-2_4-mjs.txt :: pass"
-      ],
-      "notes": "回执接纳/失效重算/恢复一致性全负例（2_4.mjs 10/10）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "D07": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_D07": {
+      "acceptance_ids": [
         "D07"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_4",
-      "evidence": [
-        "test/delivery-cases/2_4.mjs :: D07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4.json :: D07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4/evidence/green-2_4-mjs.txt :: pass"
-      ],
-      "notes": "回执接纳/失效重算/恢复一致性全负例（2_4.mjs 10/10）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "D08": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_D08": {
+      "acceptance_ids": [
         "D08"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_4",
-      "evidence": [
-        "test/delivery-cases/2_4.mjs :: D08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4.json :: D08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_4/evidence/green-2_4-mjs.txt :: pass"
-      ],
-      "notes": "回执接纳/失效重算/恢复一致性全负例（2_4.mjs 10/10）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "E01": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_E01": {
+      "acceptance_ids": [
         "E01"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_4",
-      "evidence": [
-        "test/delivery-cases/4_4.mjs :: E01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_4.json :: E01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_4/evidence/green-4_4-mjs.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_4.json :: commit:4a059fb"
-      ],
-      "notes": "Knowledge.Closeout.v1 分层收尾门禁与幂等恢复；真实 LLMWiki/Outline 写入读回为已登记残留（I04/I03）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "E02": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_E02": {
+      "acceptance_ids": [
         "E02"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_4",
-      "evidence": [
-        "test/delivery-cases/4_4.mjs :: E02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_4.json :: E02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_4/evidence/green-4_4-mjs.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_4.json :: commit:4a059fb"
-      ],
-      "notes": "Knowledge.Closeout.v1 分层收尾门禁与幂等恢复；真实 LLMWiki/Outline 写入读回为已登记残留（I04/I03）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "E03": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_E03": {
+      "acceptance_ids": [
         "E03"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_5",
-      "evidence": [
-        "test/delivery-cases/2_5.mjs :: E03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_5.json :: E03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_5/evidence/green-case-2_5.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_5.json :: commit:6770a1b"
-      ],
-      "notes": "grill-me 冻结审查包 + 全票共识机械 tally/finalize 与保守失效",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_5.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "E04": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_E04": {
+      "acceptance_ids": [
         "E04"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P2_5",
-      "evidence": [
-        "test/delivery-cases/2_5.mjs :: E04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_5.json :: E04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_5/evidence/green-case-2_5.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P2_5.json :: commit:6770a1b"
-      ],
-      "notes": "grill-me 冻结审查包 + 全票共识机械 tally/finalize 与保守失效",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_5.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "E05": {
-      "layer": "host",
-      "scenario_ids": [
+    "V_E05": {
+      "acceptance_ids": [
         "E05"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_5",
-      "evidence": [
-        "test/delivery-cases/4_5.mjs :: E05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_5.json :: E05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_5/evidence/green-delivery-case-4_5.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_5.json :: commit:b823bde"
-      ],
-      "notes": "hook 缺失/静默失败/mode 串扰不越权（liveRun=UNVERIFIED 字段分离；活体宿主运行为已登记残留）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_5.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "E06": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_E06": {
+      "acceptance_ids": [
         "E06"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_4",
-      "evidence": [
-        "test/delivery-cases/4_4.mjs :: E06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_4.json :: E06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_4/evidence/green-4_4-mjs.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_4.json :: commit:4a059fb"
-      ],
-      "notes": "Knowledge.Closeout.v1 分层收尾门禁与幂等恢复；真实 LLMWiki/Outline 写入读回为已登记残留（I04/I03）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "F01": {
-      "layer": "cli",
-      "scenario_ids": [
+    "V_F01": {
+      "acceptance_ids": [
         "F01"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_1",
-      "evidence": [
-        "test/delivery-cases/1_1.mjs :: F01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_1.json :: F01"
-      ],
-      "notes": "固定产物完整性 + 干净工作区接入一致（1_1.mjs 全绿；V_COMET_NATIVE prepared-build skip 为已登记既有项）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_1.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "F02": {
-      "layer": "host",
-      "scenario_ids": [
+    "V_F02": {
+      "acceptance_ids": [
         "F02"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_2",
-      "evidence": [
-        "test/delivery-cases/1_2.mjs :: F02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_2.json :: F02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_2.json :: commit:cf9aee3"
-      ],
-      "notes": "exporter/FoundationLock 正反序 bootstrap/重复 pull/升级/卸载/旧 run 恢复",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "F03": {
-      "layer": "host",
-      "scenario_ids": [
+    "V_F03": {
+      "acceptance_ids": [
         "F03"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_1",
-      "evidence": [
-        "test/delivery-cases/1_1.mjs :: F03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_1.json :: F03"
-      ],
-      "notes": "新宿主会话真实发现技能与工具（跨宿主矩阵属 P5_1 条件启用范围，未推断）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_1.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "F04": {
-      "layer": "host",
-      "scenario_ids": [
+    "V_F04": {
+      "acceptance_ids": [
         "F04"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_2",
-      "evidence": [
-        "test/delivery-cases/1_2.mjs :: F04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_2.json :: F04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_2.json :: commit:cf9aee3"
-      ],
-      "notes": "exporter/FoundationLock 正反序 bootstrap/重复 pull/升级/卸载/旧 run 恢复",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "F05": {
-      "layer": "host",
-      "scenario_ids": [
+    "V_F05": {
+      "acceptance_ids": [
         "F05"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_3",
-      "evidence": [
-        "test/delivery-cases/1_3.mjs :: F05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_3.json :: F05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_3/evidence/green-combined.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_3.json :: commit:d19c633"
-      ],
-      "notes": "编辑/Shell/MCP 真实渠道探针（1_3.mjs 需 .sdd 装备工作树复跑，如 impl-p1-3；主检出证据在位）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_3.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "F06": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_F06": {
+      "acceptance_ids": [
         "F06"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_1",
-      "evidence": [
-        "test/delivery-cases/1_4.mjs :: F06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1.json :: F06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1/evidence/green-delivery-case-4_1.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1.json :: commit:d44c7b1"
-      ],
-      "notes": "Gate 阻断机制与 workflow 装配已验证；真实平台 required-check 注册与合并阻断待平台准入",
-      "holder": "平台准入 owner（真实注册 delivery-gate required check + secrets.SDD_DELIVERY_LAUNCHER_AUTHORITY + GitHub runner 端到端执行；P4_1 审查移交项含 delivery-gate.yml node24/node22 对齐）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_4.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "F07": {
-      "layer": "host",
-      "scenario_ids": [
+    "V_F07": {
+      "acceptance_ids": [
         "F07"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_3",
-      "evidence": [
-        "test/delivery-cases/1_3.mjs :: F07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_3.json :: F07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_3/evidence/green-combined.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_3.json :: commit:d19c633"
-      ],
-      "notes": "编辑/Shell/MCP 真实渠道探针（1_3.mjs 需 .sdd 装备工作树复跑，如 impl-p1-3；主检出证据在位）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_3.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "F08": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_F08": {
+      "acceptance_ids": [
         "F08"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P3_2",
-      "evidence": [
-        "test/delivery-cases/3_2.mjs :: F08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: F08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2/evidence/green-node-test-3_2.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2.json :: commit:b528ba4"
-      ],
-      "notes": "关联截图/请求/读回契约与缺能力保持未验证已验证；正相原生浏览器验收待试点环境",
-      "holder": "具备原生浏览器能力的试点环境（UI 试点任务；正相原生浏览器验收与独立业务读回）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/3_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "F09": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_F09": {
+      "acceptance_ids": [
         "F09"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_1",
-      "evidence": [
-        "test/delivery-cases/4_1.mjs :: F09",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1.json :: F09",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1/evidence/green-delivery-case-4_1.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_1.json :: commit:d44c7b1"
-      ],
-      "notes": "integration SHA 贯通机制已验证；真实 CI→目标环境贯通待平台/环境准入",
-      "holder": "平台准入 owner + 环境 owner（真实 CI 验证与提升贯通到目标环境；A14/A16/A17 的生产侧同批闭合）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_1.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "F10": {
-      "layer": "ci",
-      "scenario_ids": [
+    "V_F10": {
+      "acceptance_ids": [
         "F10"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P5_2",
-      "evidence": [
-        "openspec/changes/delivery-foundation-rearchitecture/tasks.md :: CROSS_MACHINE_SCOPE_NOT_ENABLED",
-        "openspec/changes/delivery-foundation-rearchitecture/verification-case-plan.json :: F10",
-        "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: 5.2"
-      ],
-      "notes": "CROSS_MACHINE_SCOPE_NOT_ENABLED：5_2.mjs/services/delivery-control 未建设，正向隔离恢复认证未执行",
-      "holder": "P5_2 owner + 用户跨机器范围裁决（CROSS_MACHINE_SCOPE_NOT_ENABLED；tasks.md P5_2 明示未执行的正向隔离恢复认证保留 UNVERIFIED，不能以未启用判通过）",
-      "historical_status": "UNVERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/5_2.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "H01": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_H01": {
+      "acceptance_ids": [
         "H01"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_6",
-      "evidence": [
-        "test/delivery-cases/4_6.mjs :: H01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6.json :: H01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6/evidence/green-4_6-mjs.txt :: pass"
-      ],
-      "notes": "归档后续接/原子领取/作业恢复/completed 误判防线/清理阻断，真实 Comet Run/锁/事务",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "H02": {
-      "layer": "host",
-      "scenario_ids": [
+    "V_H02": {
+      "acceptance_ids": [
         "H02"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_6",
-      "evidence": [
-        "test/delivery-cases/4_6.mjs :: H02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6.json :: H02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6/evidence/green-4_6-mjs.txt :: pass"
-      ],
-      "notes": "方法 hook 重复触发零突变（结构性：hook 面无写通道）",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "H03": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_H03": {
+      "acceptance_ids": [
         "H03"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_6",
-      "evidence": [
-        "test/delivery-cases/4_6.mjs :: H03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6.json :: H03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6/evidence/green-4_6-mjs.txt :: pass"
-      ],
-      "notes": "归档后续接/原子领取/作业恢复/completed 误判防线/清理阻断，真实 Comet Run/锁/事务",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "H04": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_H04": {
+      "acceptance_ids": [
         "H04"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_6",
-      "evidence": [
-        "test/delivery-cases/4_6.mjs :: H04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6.json :: H04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6/evidence/green-4_6-mjs.txt :: pass"
-      ],
-      "notes": "固定 UUID 读回/lastRevision 冲突语义已验证；真实 Outline API 实测待 I03 部署",
-      "holder": "I03 Outline 独立资料域实际部署后实测 documents.create/info 读回与 MCP 参数暴露（P4_6 残留项）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "H05": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_H05": {
+      "acceptance_ids": [
         "H05"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_6",
-      "evidence": [
-        "test/delivery-cases/4_6.mjs :: H05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6.json :: H05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6/evidence/green-4_6-mjs.txt :: pass"
-      ],
-      "notes": "固定 UUID 读回/lastRevision 冲突语义已验证；真实 Outline API 实测待 I03 部署",
-      "holder": "I03 Outline 独立资料域实际部署后实测 lastRevision 冲突语义（P4_6 残留项）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "H06": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_H06": {
+      "acceptance_ids": [
         "H06"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_6",
-      "evidence": [
-        "test/delivery-cases/2_5.mjs :: H06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6.json :: H06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6/evidence/green-4_6-mjs.txt :: pass"
-      ],
-      "notes": "归档后续接/原子领取/作业恢复/completed 误判防线/清理阻断，真实 Comet Run/锁/事务",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/2_5.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "H07": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_H07": {
+      "acceptance_ids": [
         "H07"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_6",
-      "evidence": [
-        "test/delivery-cases/4_6.mjs :: H07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6.json :: H07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6/evidence/green-4_6-mjs.txt :: pass"
-      ],
-      "notes": "归档后续接/原子领取/作业恢复/completed 误判防线/清理阻断，真实 Comet Run/锁/事务",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "H08": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_H08": {
+      "acceptance_ids": [
         "H08"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_6",
-      "evidence": [
-        "test/delivery-cases/4_6.mjs :: H08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6.json :: H08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6/evidence/green-4_6-mjs.txt :: pass"
-      ],
-      "notes": "归档后续接/原子领取/作业恢复/completed 误判防线/清理阻断，真实 Comet Run/锁/事务",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "H09": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_H09": {
+      "acceptance_ids": [
         "H09"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_6",
-      "evidence": [
-        "test/delivery-cases/4_6.mjs :: H09",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6.json :: H09",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_6/evidence/green-4_6-mjs.txt :: pass"
-      ],
-      "notes": "authority 绑定/异权拒绝/受控迁移已验证；真实第二物理宿主与对抗性防伪造待跨机裁决",
-      "holder": "第二物理宿主认证（P5_1/跨机范围显式启用裁决）+ authority 对抗性防伪造（同 OS 账户改写绑定文件）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "L01": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_L01": {
+      "acceptance_ids": [
         "L01"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_8",
-      "evidence": [
-        "test/delivery-cases/4_8.mjs :: L01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: L01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8/evidence/green-4_8-journey.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: commit:c041018"
-      ],
-      "notes": "撤销失效闭包/双期限/维护作业代际/幂等调和/漏报对账计时/失败告警/宕机恢复，真实 CLI 台账与故障注入",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "L02": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_L02": {
+      "acceptance_ids": [
         "L02"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_8",
-      "evidence": [
-        "test/delivery-cases/4_8.mjs :: L02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: L02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8/evidence/green-4_8-journey.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: commit:c041018"
-      ],
-      "notes": "隔离 unknown/isolating 语义已验证；资源端真实渠道隔离实测待 I03 部署",
-      "holder": "I03 Outline 部署后资源端隔离实测（Web/直接链接/分享/搜索/附件渠道真实读回；P4_8 残留项）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "L03": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_L03": {
+      "acceptance_ids": [
         "L03"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_8",
-      "evidence": [
-        "test/delivery-cases/4_8.mjs :: L03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: L03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8/evidence/green-4_8-journey.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: commit:c041018"
-      ],
-      "notes": "撤销失效闭包/双期限/维护作业代际/幂等调和/漏报对账计时/失败告警/宕机恢复，真实 CLI 台账与故障注入",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "L04": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_L04": {
+      "acceptance_ids": [
         "L04"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_8",
-      "evidence": [
-        "test/delivery-cases/4_8.mjs :: L04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: L04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8/evidence/green-4_8-journey.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: commit:c041018"
-      ],
-      "notes": "隔离 unknown/isolating 语义已验证；资源端真实渠道隔离实测待 I03 部署",
-      "holder": "I03 Outline 部署后按已授隔离能力收窄访问并独立验证（同 L02）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "L05": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_L05": {
+      "acceptance_ids": [
         "L05"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_8",
-      "evidence": [
-        "test/delivery-cases/4_8.mjs :: L05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: L05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8/evidence/green-4_8-journey.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: commit:c041018"
-      ],
-      "notes": "撤销失效闭包/双期限/维护作业代际/幂等调和/漏报对账计时/失败告警/宕机恢复，真实 CLI 台账与故障注入",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "L06": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_L06": {
+      "acceptance_ids": [
         "L06"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_8",
-      "evidence": [
-        "test/delivery-cases/4_8.mjs :: L06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: L06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8/evidence/green-4_8-journey.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: commit:c041018"
-      ],
-      "notes": "撤销失效闭包/双期限/维护作业代际/幂等调和/漏报对账计时/失败告警/宕机恢复，真实 CLI 台账与故障注入",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "L07": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_L07": {
+      "acceptance_ids": [
         "L07"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_8",
-      "evidence": [
-        "test/delivery-cases/4_8.mjs :: L07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: L07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8/evidence/green-4_8-journey.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: commit:c041018"
-      ],
-      "notes": "撤销失效闭包/双期限/维护作业代际/幂等调和/漏报对账计时/失败告警/宕机恢复，真实 CLI 台账与故障注入",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "L08": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_L08": {
+      "acceptance_ids": [
         "L08"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_8",
-      "evidence": [
-        "test/delivery-cases/4_8.mjs :: L08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: L08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8/evidence/green-4_8-journey.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: commit:c041018"
-      ],
-      "notes": "撤销失效闭包/双期限/维护作业代际/幂等调和/漏报对账计时/失败告警/宕机恢复，真实 CLI 台账与故障注入",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "L09": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_L09": {
+      "acceptance_ids": [
         "L09"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_8",
-      "evidence": [
-        "test/delivery-cases/4_8.mjs :: L09",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: L09",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8/evidence/green-4_8-journey.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: commit:c041018"
-      ],
-      "notes": "阈值判定与监督器边界已验证（I07 真实监控探针）；真实墙钟时限实测待部署",
-      "holder": "I07 监控真实部署 + 批准时限的真实墙钟实测（90s 心跳/120s 水位/5 分钟端到端；P4_8 残留项）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "L10": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_L10": {
+      "acceptance_ids": [
         "L10"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_8",
-      "evidence": [
-        "test/delivery-cases/4_8.mjs :: L10",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: L10",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8/evidence/green-4_8-journey.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: commit:c041018"
-      ],
-      "notes": "撤销失效闭包/双期限/维护作业代际/幂等调和/漏报对账计时/失败告警/宕机恢复，真实 CLI 台账与故障注入",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "L11": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_L11": {
+      "acceptance_ids": [
         "L11"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_8",
-      "evidence": [
-        "test/delivery-cases/4_8.mjs :: L11",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: L11",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8/evidence/green-4_8-journey.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8.json :: commit:c041018"
-      ],
-      "notes": "撤销失效闭包/双期限/维护作业代际/幂等调和/漏报对账计时/失败告警/宕机恢复，真实 CLI 台账与故障注入",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "M01": {
-      "layer": "host",
-      "scenario_ids": [
+    "V_M01": {
+      "acceptance_ids": [
         "M01"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_6",
-      "evidence": [
-        "test/delivery-cases/1_6.mjs :: M01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_6.json :: M01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_6/evidence/green-2-comet-init-no-superpowers.txt :: tests",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_6.json :: commit:acb0452"
-      ],
-      "notes": "planner 只出 PlanBundle/Superpowers 不重启/Matt 快照无嵌套 controller",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_6.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "M02": {
-      "layer": "host",
-      "scenario_ids": [
+    "V_M02": {
+      "acceptance_ids": [
         "M02"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P1_6",
-      "evidence": [
-        "test/delivery-cases/1_6.mjs :: M02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_6.json :: M02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_6/evidence/green-2-comet-init-no-superpowers.txt :: tests",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_6.json :: commit:acb0452"
-      ],
-      "notes": "planner 只出 PlanBundle/Superpowers 不重启/Matt 快照无嵌套 controller",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/1_6.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "U01": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_U01": {
+      "acceptance_ids": [
         "U01"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_7",
-      "evidence": [
-        "test/delivery-cases/4_7.mjs :: U01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: U01",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7/evidence/green-4_7-mjs.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: commit:8d35b06"
-      ],
-      "notes": "预授权/交集受众/写前复核/版本绑定/有效受众/未知即阻断/角色隔离的拒绝语义全负例闭合",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "U02": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_U02": {
+      "acceptance_ids": [
         "U02"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_7",
-      "evidence": [
-        "test/delivery-cases/4_7.mjs :: U02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: U02",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7/evidence/green-4_7-mjs.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: commit:8d35b06"
-      ],
-      "notes": "预授权/交集受众/写前复核/版本绑定/有效受众/未知即阻断/角色隔离的拒绝语义全负例闭合",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "U03": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_U03": {
+      "acceptance_ids": [
         "U03"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_7",
-      "evidence": [
-        "test/delivery-cases/4_7.mjs :: U03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: U03",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7/evidence/green-4_7-mjs.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: commit:8d35b06"
-      ],
-      "notes": "预授权/交集受众/写前复核/版本绑定/有效受众/未知即阻断/角色隔离的拒绝语义全负例闭合",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "U04": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_U04": {
+      "acceptance_ids": [
         "U04"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_7",
-      "evidence": [
-        "test/delivery-cases/4_7.mjs :: U04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: U04",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7/evidence/green-4_7-mjs.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: commit:8d35b06"
-      ],
-      "notes": "预授权/交集受众/写前复核/版本绑定/有效受众/未知即阻断/角色隔离的拒绝语义全负例闭合",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "U05": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_U05": {
+      "acceptance_ids": [
         "U05"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_7",
-      "evidence": [
-        "test/delivery-cases/4_7.mjs :: U05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: U05",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7/evidence/green-4_7-mjs.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: commit:8d35b06"
-      ],
-      "notes": "预授权/交集受众/写前复核/版本绑定/有效受众/未知即阻断/角色隔离的拒绝语义全负例闭合",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "U06": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_U06": {
+      "acceptance_ids": [
         "U06"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_7",
-      "evidence": [
-        "test/delivery-cases/4_7.mjs :: U06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: U06",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7/evidence/green-4_7-mjs.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: commit:8d35b06"
-      ],
-      "notes": "预授权/交集受众/写前复核/版本绑定/有效受众/未知即阻断/角色隔离的拒绝语义全负例闭合",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "U07": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_U07": {
+      "acceptance_ids": [
         "U07"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_7",
-      "evidence": [
-        "test/delivery-cases/4_7.mjs :: U07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: U07",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7/evidence/green-4_7-mjs.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: commit:8d35b06"
-      ],
-      "notes": "预授权/交集受众/写前复核/版本绑定/有效受众/未知即阻断/角色隔离的拒绝语义全负例闭合",
-      "historical_status": "VERIFIED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     },
-    "U08": {
-      "layer": "kernel",
-      "scenario_ids": [
+    "V_U08": {
+      "acceptance_ids": [
         "U08"
       ],
-      "status": "RETEST_REQUIRED",
-      "task": "P4_7",
-      "evidence": [
-        "test/delivery-cases/4_7.mjs :: U08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: U08",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7/evidence/green-4_7-mjs.txt :: pass",
-        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7.json :: commit:8d35b06"
+      "implementedBy": "P3_1",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "component_pass",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_NPM_REGRESSION": {
+      "acceptance_ids": [
+        "B10"
       ],
-      "notes": "decide→allow 机制与回执绑定已验证；真实 Outline 写入+独立读回+同 Run 接纳待真实试点登记",
-      "holder": "真实 Outline 试点集合/实例不可变 ID 与受众登记 + 受保护签发工作流与 issuer 凭据（I03 + 运行时准入；P4_7 残留项）",
-      "historical_status": "ENVIRONMENT_GATED",
-      "current_verdict": "UNVERIFIED",
-      "rework_revision": "2026-10-22-seven-p1"
+      "implementedBy": "VERIFY",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "gate_support",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_FULL_CHECK": {
+      "acceptance_ids": [
+        "B10",
+        "A20"
+      ],
+      "implementedBy": "VERIFY",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "gate_support",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_SCOPED_REGRESSION": {
+      "acceptance_ids": [
+        "B10"
+      ],
+      "implementedBy": "VERIFY",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "gate_support",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_OPENSPEC_STRICT": {
+      "acceptance_ids": [
+        "B10"
+      ],
+      "implementedBy": "VERIFY",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "gate_support",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_COMET_NATIVE": {
+      "acceptance_ids": [
+        "C07",
+        "C08",
+        "M01"
+      ],
+      "implementedBy": "P1_1",
+      "availability": "EXISTS_REQUIRES_CURRENT_VERIFIED_BUILD_AND_PINNED_NODE",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "env_qualification",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_INFRA_I01": {
+      "acceptance_ids": [
+        "F01",
+        "A19",
+        "U01",
+        "U07"
+      ],
+      "implementedBy": "I01",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "env_qualification",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_INFRA_I02": {
+      "acceptance_ids": [
+        "A09",
+        "A10",
+        "A11",
+        "A19",
+        "C07",
+        "D01",
+        "D08",
+        "H03",
+        "H09",
+        "U07",
+        "F05",
+        "F07",
+        "M02"
+      ],
+      "implementedBy": "I02",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "env_qualification",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_INFRA_I03": {
+      "acceptance_ids": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05",
+        "U06",
+        "U07",
+        "U08",
+        "H04",
+        "H05",
+        "L02",
+        "L04"
+      ],
+      "implementedBy": "I03",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "env_qualification",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_INFRA_I04": {
+      "acceptance_ids": [
+        "C04",
+        "C06",
+        "E01",
+        "E06",
+        "H08",
+        "F01",
+        "B09"
+      ],
+      "implementedBy": "I04",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "env_qualification",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_INFRA_I05": {
+      "acceptance_ids": [
+        "F01",
+        "F03",
+        "A20",
+        "C06"
+      ],
+      "implementedBy": "I05",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "env_qualification",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_INFRA_I06": {
+      "acceptance_ids": [
+        "A13",
+        "A14",
+        "A16",
+        "A17",
+        "A19",
+        "F06",
+        "F09",
+        "B08"
+      ],
+      "implementedBy": "I06",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "env_qualification",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_INFRA_I07": {
+      "acceptance_ids": [
+        "L08",
+        "L09",
+        "L10",
+        "L11",
+        "A11",
+        "H09"
+      ],
+      "implementedBy": "I07",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "env_qualification",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_INFRA_I08": {
+      "acceptance_ids": [
+        "A10",
+        "A11",
+        "H08",
+        "H09",
+        "L06",
+        "L11",
+        "B08",
+        "U07"
+      ],
+      "implementedBy": "I08",
+      "availability": "TO_IMPLEMENT_CANONICAL_RENAME",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "env_qualification",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_P1_6_PONYTAIL_ASSETS": {
+      "acceptance_ids": [
+        "M01",
+        "M02",
+        "B01"
+      ],
+      "implementedBy": "P1_6",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "gate_support",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_P1_2_PLUGIN_REGISTRATION_DIVISION": {
+      "acceptance_ids": [
+        "F02",
+        "F04",
+        "B09"
+      ],
+      "implementedBy": "P1_2",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "gate_support",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_I02_METHOD_STATE_SCOPE": {
+      "acceptance_ids": [
+        "A09",
+        "A10",
+        "A11"
+      ],
+      "implementedBy": "I02",
+      "availability": "RECHECK_OR_REPAIR_BY_OWNER",
+      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "layer": "env_qualification",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_RW_TARGET_REQUIRED": {
+      "acceptance_ids": [
+        "A01",
+        "A03",
+        "A15"
+      ],
+      "implementedBy": "P3_1",
+      "availability": "TO_IMPLEMENT",
+      "contract_status": null,
+      "layer": "gate_support",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_RW_OBSERVATION_REQUIRED": {
+      "acceptance_ids": [
+        "A04",
+        "A15",
+        "B06",
+        "B07"
+      ],
+      "implementedBy": "P3_1",
+      "availability": "TO_IMPLEMENT",
+      "contract_status": null,
+      "layer": "gate_support",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_RW_R_ENTRY": {
+      "acceptance_ids": [
+        "C01",
+        "C02",
+        "C07"
+      ],
+      "implementedBy": "P2_4",
+      "availability": "TO_IMPLEMENT",
+      "contract_status": null,
+      "layer": "gate_support",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_RW_TRUSTED_REVIEW": {
+      "acceptance_ids": [
+        "D01",
+        "D02",
+        "C03",
+        "E03",
+        "E04"
+      ],
+      "implementedBy": "P2_4",
+      "availability": "TO_IMPLEMENT",
+      "contract_status": null,
+      "layer": "gate_support",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_RW_REVISION_NO_REVIVE": {
+      "acceptance_ids": [
+        "A02",
+        "D04",
+        "E04"
+      ],
+      "implementedBy": "P2_4",
+      "availability": "TO_IMPLEMENT",
+      "contract_status": null,
+      "layer": "gate_support",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_RW_RUNNER_BUILD": {
+      "acceptance_ids": [
+        "F01",
+        "F02",
+        "F05",
+        "A09",
+        "A19"
+      ],
+      "implementedBy": "I02",
+      "availability": "TO_IMPLEMENT",
+      "contract_status": null,
+      "layer": "env_qualification",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_RW_REAL_COMET_RECOVERY": {
+      "acceptance_ids": [
+        "D08",
+        "H01",
+        "H03",
+        "H07",
+        "L10",
+        "L11"
+      ],
+      "implementedBy": "P3_3",
+      "availability": "TO_IMPLEMENT",
+      "contract_status": null,
+      "layer": "same_run_finality",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_RW_COMPLETION_REQUIRED": {
+      "acceptance_ids": [
+        "A20",
+        "B10"
+      ],
+      "implementedBy": "P4_3",
+      "availability": "TO_IMPLEMENT",
+      "contract_status": null,
+      "layer": "gate_support",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_SAME_RUN_DELIVERY": {
+      "acceptance_ids": [
+        "C01",
+        "C02",
+        "C03",
+        "E01",
+        "E02",
+        "E03",
+        "E06",
+        "D06",
+        "D07",
+        "H01",
+        "H03"
+      ],
+      "implementedBy": "P3_2",
+      "availability": "TO_IMPLEMENT",
+      "contract_status": null,
+      "layer": "same_run_finality",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
+    },
+    "V_POST_DELIVERY_PERMISSIONS": {
+      "acceptance_ids": [
+        "U01",
+        "U03",
+        "U05",
+        "U08",
+        "L01",
+        "L02",
+        "L03",
+        "L04",
+        "L05",
+        "L06",
+        "L07",
+        "L08",
+        "L09",
+        "L10",
+        "L11"
+      ],
+      "implementedBy": "P4_8",
+      "availability": "TO_IMPLEMENT",
+      "contract_status": null,
+      "layer": "same_run_finality",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT"
     }
   },
-  "rework_revision": "2026-10-22-seven-p1"
+  "journeys": {
+    "same-run-delivery": {
+      "required_check": "V_SAME_RUN_DELIVERY",
+      "construction_owner": "P3_2",
+      "execution_owner": "VERIFY",
+      "case_path": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.case.json",
+      "status": "UNVERIFIED"
+    },
+    "real-comet-recovery": {
+      "required_check": "V_RW_REAL_COMET_RECOVERY",
+      "construction_owner": "P3_3",
+      "execution_owner": "VERIFY",
+      "case_path": "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.case.json",
+      "status": "UNVERIFIED"
+    },
+    "post-delivery-permissions": {
+      "required_check": "V_POST_DELIVERY_PERMISSIONS",
+      "construction_owner": "P4_8",
+      "execution_owner": "VERIFY",
+      "case_path": "openspec/changes/delivery-foundation-rearchitecture/revocation-journey/post-delivery-permissions.case.json",
+      "status": "UNVERIFIED"
+    }
+  },
+  "environment_gates": {
+    "from_partial_nodes": [
+      {
+        "task": "I03",
+        "gated": {
+          "Step 3": "原生浏览器/独立读回: 无真实 Outline 实例/凭据/文集/OIDC/对象存储 — holder: user/Outline 部署波次"
+        }
+      },
+      {
+        "task": "P1_6",
+        "gated": {
+          "Step 5": "宿主会话证明(真实 Runner/host) — holder: 真实 Runner 验证(manifest unverified[0])"
+        }
+      },
+      {
+        "task": "I05",
+        "gated": {
+          "Step 3": "真实容器/认证API/MCP读回: docker 沙箱拒+上游未选定 — holder: user/runtime admission"
+        }
+      },
+      {
+        "task": "P5_2",
+        "gated": {
+          "Step 1-4": "跨机门门控: CROSS_MACHINE_SCOPE_NOT_ENABLED(冻结计划原文); 启用态建设(5.2.a API/5.2.b 正向隔离撤权恢复断联)未执行; F10 正向认证 UNVERIFIED + holder"
+        }
+      }
+    ],
+    "open_decisions": [
+      "UTILS_SECRET_REF",
+      "PUBLISHER_ISOLATOR_CREDS",
+      "EVIDENCE_INPUT_MISSING_EXIT_CODE",
+      "DELIVERY_CASES_NODE_PIN",
+      "I08_FILENAME_DEVIATION",
+      "OV_OVERLAY_CANDIDATE",
+      "HOST_OPENSPEC_DRIFT",
+      "REMOTE_URL_DISCREPANCY",
+      "GH_AUTH_TOKEN",
+      "CONSUMER_CLOSEOUT_FORGED_RECORDS",
+      "LEDGER_CHANNELS_PERSISTENCE",
+      "BACKUP_V1_SHAPE_MAPPING",
+      "RETENTION_LIVE_SHAPE_INTAKE"
+    ],
+    "source": "execution-state.json"
+  },
+  "open_p1": [
+    "P1-01",
+    "P1-02",
+    "P1-03",
+    "P1-04",
+    "P1-05",
+    "P1-06",
+    "P1-07"
+  ],
+  "historical": {
+    "verify_result": "108 checks real-executed (87 PASS/18 GATED/1 UNVERIFIED/2 FAILED documented); 92 scenarios 76/15/1 zero unexplained diff; whitebox 27 modules + 423/425 known-only; 10 findings recorded; archive NOT executed",
+    "inherited": false,
+    "rule": "历史 VERIFY 结果（108 检查 87 PASS、92 场景 76/15/1 分割）只作历史记录；本修订状态只由当前来源推导，不自动继承"
+  },
+  "deployment": {
+    "status": "NOT_DELIVERED",
+    "rule": "B10: delivered 只能在目标环境确认后声明；与代码验收/规格归档分开",
+    "confirmation_evidence": null
+  },
+  "scenarios": {
+    "A01": {
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "required_checks": [
+        "V_A01",
+        "V_RW_TARGET_REQUIRED"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P0_1": "ACCEPTED_DOCUMENT_ONLY",
+          "P0_2": "ACCEPTED_DOCUMENT_ONLY",
+          "P2_1": "ACCEPTED",
+          "P3_1": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:501be7f",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:e278b81"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A02": {
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "required_checks": [
+        "V_A02",
+        "V_RW_REVISION_NO_REVIVE"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_1": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:501be7f"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A03": {
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "required_checks": [
+        "V_A03",
+        "V_RW_TARGET_REQUIRED"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_1": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:501be7f"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A04": {
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "required_checks": [
+        "V_A04",
+        "V_RW_OBSERVATION_REQUIRED"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_1": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:501be7f"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A05": {
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "required_checks": [
+        "V_A05"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A06": {
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "required_checks": [
+        "V_A06"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A07": {
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "required_checks": [
+        "V_A07"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_1": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:501be7f"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A08": {
+      "case_module": "test/delivery-cases/2_1.mjs",
+      "required_checks": [
+        "V_A08"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_1": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:501be7f"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A09": {
+      "case_module": "test/delivery-cases/1_3.mjs",
+      "required_checks": [
+        "V_A09",
+        "V_INFRA_I02",
+        "V_I02_METHOD_STATE_SCOPE",
+        "V_RW_RUNNER_BUILD"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {
+          "P1_3": "ACCEPTED",
+          "P5_1": "REOPENED_RETEST_REQUIRED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:023f664"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I02",
+          "V_I02_METHOD_STATE_SCOPE",
+          "V_RW_RUNNER_BUILD"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A10": {
+      "case_module": "test/delivery-cases/3_3.mjs",
+      "required_checks": [
+        "V_A10",
+        "V_INFRA_I02",
+        "V_INFRA_I08",
+        "V_I02_METHOD_STATE_SCOPE"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {
+          "P3_3": "ACCEPTED",
+          "P5_1": "REOPENED_RETEST_REQUIRED",
+          "P5_3": "REOPENED_RETEST_REQUIRED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:e42c348"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I02",
+          "V_INFRA_I08",
+          "V_I02_METHOD_STATE_SCOPE"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A11": {
+      "case_module": "test/delivery-cases/3_4.mjs",
+      "required_checks": [
+        "V_A11",
+        "V_INFRA_I02",
+        "V_INFRA_I07",
+        "V_INFRA_I08",
+        "V_I02_METHOD_STATE_SCOPE"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {
+          "P3_4": "ACCEPTED",
+          "P3_3": "ACCEPTED",
+          "P5_1": "REOPENED_RETEST_REQUIRED",
+          "P5_3": "REOPENED_RETEST_REQUIRED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:e42c348"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I02",
+          "V_INFRA_I07",
+          "V_INFRA_I08",
+          "V_I02_METHOD_STATE_SCOPE"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A12": {
+      "case_module": "test/delivery-cases/3_3.mjs",
+      "required_checks": [
+        "V_A12"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {
+          "P3_3": "ACCEPTED",
+          "P5_1": "REOPENED_RETEST_REQUIRED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:e42c348"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A13": {
+      "case_module": "test/delivery-cases/4_1.mjs",
+      "required_checks": [
+        "V_A13",
+        "V_INFRA_I06"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_1": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:37ba350"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I06"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A14": {
+      "case_module": "test/delivery-cases/4_2.mjs",
+      "required_checks": [
+        "V_A14",
+        "V_INFRA_I06"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_2": "ACCEPTED"
+        },
+        "evidence": []
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I06"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A15": {
+      "case_module": "test/delivery-cases/3_1.mjs",
+      "required_checks": [
+        "V_A15",
+        "V_RW_TARGET_REQUIRED",
+        "V_RW_OBSERVATION_REQUIRED"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P3_1": "ACCEPTED",
+          "P3_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:e278b81",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A16": {
+      "case_module": "test/delivery-cases/4_2.mjs",
+      "required_checks": [
+        "V_A16",
+        "V_INFRA_I06"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_2": "ACCEPTED"
+        },
+        "evidence": []
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I06"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A17": {
+      "case_module": "test/delivery-cases/4_2.mjs",
+      "required_checks": [
+        "V_A17",
+        "V_INFRA_I06"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_2": "ACCEPTED"
+        },
+        "evidence": []
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I06"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A18": {
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "required_checks": [
+        "V_A18"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A19": {
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "required_checks": [
+        "V_A19",
+        "V_INFRA_I01",
+        "V_INFRA_I02",
+        "V_INFRA_I06",
+        "V_RW_RUNNER_BUILD"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I01",
+          "V_INFRA_I02",
+          "V_INFRA_I06",
+          "V_RW_RUNNER_BUILD"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "A20": {
+      "case_module": "test/delivery-cases/2_3.mjs",
+      "required_checks": [
+        "V_A20",
+        "V_FULL_CHECK",
+        "V_INFRA_I05",
+        "V_RW_COMPLETION_REQUIRED"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_3": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:253c897"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I05"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "B01": {
+      "case_module": "test/delivery-cases/1_6.mjs",
+      "required_checks": [
+        "V_B01",
+        "V_P1_6_PONYTAIL_ASSETS"
+      ],
+      "component_pass": {
+        "status": "PARTIAL_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_6": "PARTIAL_ACCEPTED",
+          "P3_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "B02": {
+      "case_module": "test/delivery-cases/3_2.mjs",
+      "required_checks": [
+        "V_B02"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P3_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "B03": {
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "required_checks": [
+        "V_B03"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_2": "ACCEPTED",
+          "P3_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "B04": {
+      "case_module": "test/delivery-cases/3_2.mjs",
+      "required_checks": [
+        "V_B04"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P3_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "B05": {
+      "case_module": "test/delivery-cases/3_2.mjs",
+      "required_checks": [
+        "V_B05"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P3_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "B06": {
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "required_checks": [
+        "V_B06",
+        "V_RW_OBSERVATION_REQUIRED"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_2": "ACCEPTED",
+          "P3_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "B07": {
+      "case_module": "test/delivery-cases/2_2.mjs",
+      "required_checks": [
+        "V_B07",
+        "V_RW_OBSERVATION_REQUIRED"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_2": "ACCEPTED",
+          "P3_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "B08": {
+      "case_module": "test/delivery-cases/3_4.mjs",
+      "required_checks": [
+        "V_B08",
+        "V_INFRA_I06",
+        "V_INFRA_I08"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P3_4": "ACCEPTED"
+        },
+        "evidence": []
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I06",
+          "V_INFRA_I08"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "B09": {
+      "case_module": "test/delivery-cases/1_6.mjs",
+      "required_checks": [
+        "V_B09",
+        "V_INFRA_I04",
+        "V_P1_2_PLUGIN_REGISTRATION_DIVISION"
+      ],
+      "component_pass": {
+        "status": "PARTIAL_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_6": "PARTIAL_ACCEPTED",
+          "P1_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f14c58e"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I04"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "B10": {
+      "case_module": "test/delivery-cases/2_3.mjs",
+      "required_checks": [
+        "V_B10",
+        "V_NPM_REGRESSION",
+        "V_FULL_CHECK",
+        "V_SCOPED_REGRESSION",
+        "V_OPENSPEC_STRICT",
+        "V_RW_COMPLETION_REQUIRED"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {
+          "P0_3": "ACCEPTED_DOCUMENT_ONLY",
+          "P2_3": "ACCEPTED",
+          "P4_3": "REOPENED_RETEST_REQUIRED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:253c897"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "F01": {
+      "case_module": "test/delivery-cases/1_1.mjs",
+      "required_checks": [
+        "V_F01",
+        "V_INFRA_I01",
+        "V_INFRA_I04",
+        "V_INFRA_I05",
+        "V_RW_RUNNER_BUILD"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_1": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:65598f7"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I01",
+          "V_INFRA_I04",
+          "V_INFRA_I05",
+          "V_RW_RUNNER_BUILD"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "F02": {
+      "case_module": "test/delivery-cases/1_2.mjs",
+      "required_checks": [
+        "V_F02",
+        "V_P1_2_PLUGIN_REGISTRATION_DIVISION",
+        "V_RW_RUNNER_BUILD"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f14c58e"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_RW_RUNNER_BUILD"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "F03": {
+      "case_module": "test/delivery-cases/1_1.mjs",
+      "required_checks": [
+        "V_F03",
+        "V_INFRA_I05"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {
+          "P1_1": "ACCEPTED",
+          "P5_1": "REOPENED_RETEST_REQUIRED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:65598f7"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I05"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "F04": {
+      "case_module": "test/delivery-cases/1_2.mjs",
+      "required_checks": [
+        "V_F04",
+        "V_P1_2_PLUGIN_REGISTRATION_DIVISION"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f14c58e"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "F05": {
+      "case_module": "test/delivery-cases/1_3.mjs",
+      "required_checks": [
+        "V_F05",
+        "V_INFRA_I02",
+        "V_RW_RUNNER_BUILD"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_3": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:023f664"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I02",
+          "V_RW_RUNNER_BUILD"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "F06": {
+      "case_module": "test/delivery-cases/1_4.mjs",
+      "required_checks": [
+        "V_F06",
+        "V_INFRA_I06"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_4": "ACCEPTED",
+          "P4_1": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:92964bd",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:37ba350"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I06"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "F07": {
+      "case_module": "test/delivery-cases/1_3.mjs",
+      "required_checks": [
+        "V_F07",
+        "V_INFRA_I02"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_3": "ACCEPTED",
+          "P3_3": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:023f664",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:e42c348"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I02"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "F08": {
+      "case_module": "test/delivery-cases/3_2.mjs",
+      "required_checks": [
+        "V_F08"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {
+          "P3_2": "ACCEPTED",
+          "P5_1": "REOPENED_RETEST_REQUIRED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "F09": {
+      "case_module": "test/delivery-cases/4_1.mjs",
+      "required_checks": [
+        "V_F09",
+        "V_INFRA_I06"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_1": "ACCEPTED",
+          "P4_2": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:37ba350"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I06"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "F10": {
+      "case_module": "test/delivery-cases/5_2.mjs",
+      "required_checks": [
+        "V_F10"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {
+          "P5_2": "REOPENED_RETEST_REQUIRED"
+        },
+        "evidence": []
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "C01": {
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "required_checks": [
+        "V_C01",
+        "V_RW_R_ENTRY",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_5": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_SAME_RUN_DELIVERY"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "C02": {
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "required_checks": [
+        "V_C02",
+        "V_RW_R_ENTRY",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_5": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_SAME_RUN_DELIVERY"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "C03": {
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "required_checks": [
+        "V_C03",
+        "V_RW_TRUSTED_REVIEW",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_5": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_SAME_RUN_DELIVERY"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "C04": {
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "required_checks": [
+        "V_C04",
+        "V_INFRA_I04"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_5": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I04"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "C05": {
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "required_checks": [
+        "V_C05"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_5": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "C06": {
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "required_checks": [
+        "V_C06",
+        "V_INFRA_I04",
+        "V_INFRA_I05"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_5": "ACCEPTED",
+          "P4_4": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f41aab9"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I04",
+          "V_INFRA_I05"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "C07": {
+      "case_module": "test/delivery-cases/1_4.mjs",
+      "required_checks": [
+        "V_C07",
+        "V_COMET_NATIVE",
+        "V_INFRA_I02",
+        "V_RW_R_ENTRY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_4": "ACCEPTED",
+          "P1_5": "ACCEPTED",
+          "P2_4": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:92964bd",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_COMET_NATIVE",
+          "V_INFRA_I02"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "C08": {
+      "case_module": "test/delivery-cases/1_5.mjs",
+      "required_checks": [
+        "V_C08",
+        "V_COMET_NATIVE"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_5": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_COMET_NATIVE"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "D01": {
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "required_checks": [
+        "V_D01",
+        "V_INFRA_I02",
+        "V_RW_TRUSTED_REVIEW"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_4": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I02"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "D02": {
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "required_checks": [
+        "V_D02",
+        "V_RW_TRUSTED_REVIEW"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_4": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "D03": {
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "required_checks": [
+        "V_D03"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_4": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "D04": {
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "required_checks": [
+        "V_D04",
+        "V_RW_REVISION_NO_REVIVE"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_4": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "D05": {
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "required_checks": [
+        "V_D05"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_4": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "D06": {
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "required_checks": [
+        "V_D06",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_4": "ACCEPTED",
+          "P4_4": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f41aab9"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_SAME_RUN_DELIVERY"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "D07": {
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "required_checks": [
+        "V_D07",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_4": "ACCEPTED",
+          "P4_4": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f41aab9"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_SAME_RUN_DELIVERY"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "D08": {
+      "case_module": "test/delivery-cases/2_4.mjs",
+      "required_checks": [
+        "V_D08",
+        "V_INFRA_I02",
+        "V_RW_REAL_COMET_RECOVERY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_4": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I02"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_RW_REAL_COMET_RECOVERY"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "E01": {
+      "case_module": "test/delivery-cases/4_4.mjs",
+      "required_checks": [
+        "V_E01",
+        "V_INFRA_I04",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_4": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f41aab9"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I04"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_SAME_RUN_DELIVERY"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "E02": {
+      "case_module": "test/delivery-cases/4_4.mjs",
+      "required_checks": [
+        "V_E02",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_4": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f41aab9"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_SAME_RUN_DELIVERY"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "E03": {
+      "case_module": "test/delivery-cases/2_5.mjs",
+      "required_checks": [
+        "V_E03",
+        "V_RW_TRUSTED_REVIEW",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P0_4": "ACCEPTED_DOCUMENT_ONLY",
+          "P2_5": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:ea996c7"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_SAME_RUN_DELIVERY"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "E04": {
+      "case_module": "test/delivery-cases/2_5.mjs",
+      "required_checks": [
+        "V_E04",
+        "V_RW_TRUSTED_REVIEW",
+        "V_RW_REVISION_NO_REVIVE"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P0_4": "ACCEPTED_DOCUMENT_ONLY",
+          "P2_5": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:ea996c7"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "E05": {
+      "case_module": "test/delivery-cases/4_5.mjs",
+      "required_checks": [
+        "V_E05"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_5": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df47630"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "E06": {
+      "case_module": "test/delivery-cases/4_4.mjs",
+      "required_checks": [
+        "V_E06",
+        "V_INFRA_I04",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_4": "ACCEPTED",
+          "P4_5": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f41aab9",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df47630"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I04"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_SAME_RUN_DELIVERY"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "H01": {
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "required_checks": [
+        "V_H01",
+        "V_RW_REAL_COMET_RECOVERY",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_6": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_RW_REAL_COMET_RECOVERY",
+          "V_SAME_RUN_DELIVERY"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "H02": {
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "required_checks": [
+        "V_H02"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_6": "ACCEPTED",
+          "P4_5": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df47630"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "H03": {
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "required_checks": [
+        "V_H03",
+        "V_INFRA_I02",
+        "V_RW_REAL_COMET_RECOVERY",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_6": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I02"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_RW_REAL_COMET_RECOVERY",
+          "V_SAME_RUN_DELIVERY"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "H04": {
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "required_checks": [
+        "V_H04",
+        "V_INFRA_I03"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_6": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I03"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "H05": {
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "required_checks": [
+        "V_H05",
+        "V_INFRA_I03"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_6": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I03"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "H06": {
+      "case_module": "test/delivery-cases/2_5.mjs",
+      "required_checks": [
+        "V_H06"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P2_5": "ACCEPTED",
+          "P4_6": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:ea996c7",
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "H07": {
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "required_checks": [
+        "V_H07",
+        "V_RW_REAL_COMET_RECOVERY"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_6": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_RW_REAL_COMET_RECOVERY"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "H08": {
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "required_checks": [
+        "V_H08",
+        "V_INFRA_I04",
+        "V_INFRA_I08"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_6": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I04",
+          "V_INFRA_I08"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "H09": {
+      "case_module": "test/delivery-cases/4_6.mjs",
+      "required_checks": [
+        "V_H09",
+        "V_INFRA_I02",
+        "V_INFRA_I07",
+        "V_INFRA_I08"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {
+          "P4_6": "ACCEPTED",
+          "P5_3": "REOPENED_RETEST_REQUIRED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I02",
+          "V_INFRA_I07",
+          "V_INFRA_I08"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "U01": {
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "required_checks": [
+        "V_U01",
+        "V_INFRA_I01",
+        "V_INFRA_I03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_7": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I01",
+          "V_INFRA_I03"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "U02": {
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "required_checks": [
+        "V_U02",
+        "V_INFRA_I03"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_7": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I03"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "U03": {
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "required_checks": [
+        "V_U03",
+        "V_INFRA_I03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_7": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I03"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "U04": {
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "required_checks": [
+        "V_U04",
+        "V_INFRA_I03"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_7": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I03"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "U05": {
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "required_checks": [
+        "V_U05",
+        "V_INFRA_I03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_7": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I03"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "U06": {
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "required_checks": [
+        "V_U06",
+        "V_INFRA_I03"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_7": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I03"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "U07": {
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "required_checks": [
+        "V_U07",
+        "V_INFRA_I01",
+        "V_INFRA_I02",
+        "V_INFRA_I03",
+        "V_INFRA_I08"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_7": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I01",
+          "V_INFRA_I02",
+          "V_INFRA_I03",
+          "V_INFRA_I08"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "U08": {
+      "case_module": "test/delivery-cases/4_7.mjs",
+      "required_checks": [
+        "V_U08",
+        "V_INFRA_I03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_7": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I03"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "L01": {
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "required_checks": [
+        "V_L01",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_8": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "L02": {
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "required_checks": [
+        "V_L02",
+        "V_INFRA_I03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_8": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I03"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "L03": {
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "required_checks": [
+        "V_L03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_8": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "L04": {
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "required_checks": [
+        "V_L04",
+        "V_INFRA_I03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_8": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I03"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "L05": {
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "required_checks": [
+        "V_L05",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_8": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "L06": {
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "required_checks": [
+        "V_L06",
+        "V_INFRA_I08",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_8": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I08"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "L07": {
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "required_checks": [
+        "V_L07",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_8": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "L08": {
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "required_checks": [
+        "V_L08",
+        "V_INFRA_I07",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_8": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I07"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "L09": {
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "required_checks": [
+        "V_L09",
+        "V_INFRA_I07",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_8": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I07"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "L10": {
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "required_checks": [
+        "V_L10",
+        "V_INFRA_I07",
+        "V_RW_REAL_COMET_RECOVERY",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_8": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I07"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_RW_REAL_COMET_RECOVERY",
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "L11": {
+      "case_module": "test/delivery-cases/4_8.mjs",
+      "required_checks": [
+        "V_L11",
+        "V_INFRA_I07",
+        "V_INFRA_I08",
+        "V_RW_REAL_COMET_RECOVERY",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ],
+      "component_pass": {
+        "status": "MECHANISM_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P4_8": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I07",
+          "V_INFRA_I08"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [
+          "V_RW_REAL_COMET_RECOVERY",
+          "V_POST_DELIVERY_PERMISSIONS"
+        ],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "M01": {
+      "case_module": "test/delivery-cases/1_6.mjs",
+      "required_checks": [
+        "V_M01",
+        "V_COMET_NATIVE",
+        "V_P1_6_PONYTAIL_ASSETS"
+      ],
+      "component_pass": {
+        "status": "PARTIAL_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_6": "PARTIAL_ACCEPTED",
+          "P1_4": "ACCEPTED"
+        },
+        "evidence": [
+          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:92964bd"
+        ]
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_COMET_NATIVE"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "M02": {
+      "case_module": "test/delivery-cases/1_6.mjs",
+      "required_checks": [
+        "V_M02",
+        "V_INFRA_I02",
+        "V_P1_6_PONYTAIL_ASSETS"
+      ],
+      "component_pass": {
+        "status": "PARTIAL_AT_DECLARED_SCOPE",
+        "tasks": {
+          "P1_6": "PARTIAL_ACCEPTED"
+        },
+        "evidence": []
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": [
+          "V_INFRA_I02"
+        ]
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    }
+  },
+  "rw_completion": {
+    "rule": "RW_COMPLETION_REQUIRED",
+    "complete": false,
+    "blocking": {
+      "required_checks_not_pass": 118,
+      "missing_readback": 118,
+      "scenarios_not_closed": 92,
+      "journeys_not_run": 3,
+      "open_p1": 7
+    }
+  },
+  "summary": {
+    "scenarios": 92,
+    "required_checks": 118,
+    "layer_statuses": {
+      "component_pass": {
+        "MECHANISM_AT_DECLARED_SCOPE": 79,
+        "UNVERIFIED": 9,
+        "PARTIAL_AT_DECLARED_SCOPE": 4
+      },
+      "env_qualification": {
+        "UNVERIFIED": 92
+      },
+      "same_run_finality": {
+        "UNVERIFIED": 92
+      },
+      "deployment_status": {
+        "NOT_DELIVERED": 92
+      }
+    },
+    "required_check_statuses": {
+      "UNVERIFIED": 118
+    },
+    "required_checks_by_layer": {
+      "component_pass": 92,
+      "gate_support": 12,
+      "env_qualification": 11,
+      "same_run_finality": 3
+    }
+  }
 }
