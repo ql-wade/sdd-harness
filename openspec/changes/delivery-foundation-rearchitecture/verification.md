@@ -1,4 +1,21 @@
-> 当前修订（2026-10-22）：七P1返工计划。唯一DAG39节点、原92场景、118required检查；规划校验与运行验收分开。旧报告只作历史，当前实现未启动、7P1未关闭，入口HANDOFF.md；本段之后为历史记录，不能作为当前恢复指令。
+> 当前修订（2026-10-23，P4_3 rework r1）：`acceptance-index.json` 已重生成（schema 2，`node test/delivery-cases/4_3.mjs --generate`），由 92 场景 + 118 required 检查机械推导，并内置 `RW_COMPLETION_REQUIRED` 完成判定器。第 1–11 行为当前节；`## delivered 判定与目标环境确认分离` 以下全部为历史记录（2026-10-21 版报告），不再作为当前状态。
+
+## 当前证据状态层与完成判定（RW_COMPLETION_REQUIRED）
+
+索引按四个**证据状态层**分别登记（与下方历史的 kernel/cli/host/ci 执行层是两个维度）：
+
+1. **component_pass（组件通过）** — 构建任务在声明范围内的机制证据，指针=当前候选合并提交（34/38 节点 ACCEPTED 的 merged_to_master）；组件通过永不覆盖缺失/未执行的真实路径检查。
+2. **env_qualification（环境资格）** — 真实 Outline 活栈、.sdd 预备构建、钉定工具链、真实 Registry/Runner；`V_INFRA_*`/`V_COMET_NATIVE`/`V_I02_METHOD_STATE_SCOPE`/`V_RW_RUNNER_BUILD` 共 11 项检查归属此层，当前全部 UNVERIFIED。
+3. **same_run_finality（同 Run 终局）** — 三旅程（same-run-delivery / real-comet-recovery / post-delivery-permissions），executionOwner=VERIFY；构建方（P3_2/P3_3/P4_8）已交付配方不等于旅程已跑，当前 3/3 UNVERIFIED。
+4. **deployment_status（部署状态）** — delivered 判定独立成层；无目标环境确认记录，当前 92/92 NOT_DELIVERED。
+
+**当前判定：NOT_COMPLETE。** 判定器只读 `required_checks[].status/readback`、场景→检查接线、`journeys[].status`、`open_p1`：118/118 required 检查未在本修订执行（UNVERIFIED，读回 ABSENT）、92/92 场景未关闭、3/3 旅程未跑、7 条 P1（P1-01…P1-07）OPEN → 五类阻断全部在案。holder 字段、显式处置与 `historical` 节（历史 76/15/1 场景分割、108 检查 87 PASS，取自 execution-state VERIFY.result）对判定器**不可见**——注入这些字段不改变判定（测试 f/g 实证）；反向地，合成全 PASS+读回在案的索引会把判定翻为 complete（测试 h 实证，判定器不是硬编码 false）。
+
+**负向判定语义**（Step 7 验收边界）：任一 required FAIL/GATED/UNVERIFIED/SKIPPED、任一读回缺失、任一旅程缺失或未跑、任一 P1 未关闭 → 整体保持 NOT_COMPLETE（测试 i/j 逐一实证）。delivered 声明需要 `deployment.confirmation_evidence` 存在且可解析，否则校验失败（测试 k）。
+
+历史 76/87（92 场景 76 VERIFIED 分割、108 检查 87 PASS）**不自动继承**：索引仅将其隔离在 `historical` 节（`inherited: false`）；本修订状态只由当前来源重新推导。
+
+入口仍为 HANDOFF.md；本段之后为历史记录，不能作为当前恢复指令。
 
 # 四层验证与验收索引（B10）
 

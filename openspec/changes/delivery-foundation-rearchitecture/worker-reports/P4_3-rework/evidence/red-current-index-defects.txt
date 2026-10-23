@@ -1,0 +1,37 @@
+RED probe: acceptance-index.json (committed snapshot @ rework/p4-3) vs rework Step 7/8 requirements
+====================================================================================================
+schema_version: 1
+generated_by: P4_3 (impl/p4-3-acceptance-index, base master@a834f93)
+
+[1] RW_COMPLETION_REQUIRED completion gate is ABSENT from the index
+    index.rw_completion = None
+    contract V_RW_COMPLETION_REQUIRED.expected:
+      required中任何FAIL/GATED/UNVERIFIED/skip/未关闭P1/缺Whitebox都保持整体未完成；holder和显式处置不能代替通过；历史证据不自动继承。
+      implementation_status: PLANNED_REPAIR_NOT_EXECUTED | availability: TO_IMPLEMENT | implementedBy: P4_3
+
+[2] index is NOT generated from the 118 required checks - no linkage
+    index keys: ['acceptance_id', 'change', 'delivered_vs_environment', 'entries', 'generated_at', 'generated_by', 'known_environment_gates', 'layer_definitions', 'rework_revision', 'schema_version', 'semantics_source', 'status_rule', 'summary']
+    contract required checks: 118 | index entries: 92
+
+[3] layers are execution-type (kernel/cli/host/ci), NOT the four evidence-status layers
+    entry layers: {'kernel': 44, 'host': 12, 'cli': 5, 'ci': 31}
+    required: component_pass / env_qualification / same_run_finality / deployment_status -> all absent: True
+
+[4] all 92 entries carry status RETEST_REQUIRED - outside the snapshot's declared enum (VERIFIED/ENVIRONMENT_GATED/UNVERIFIED/RETEST_REQUIRED rule text but old validator enum lacks it)
+    entry statuses: {'RETEST_REQUIRED': 92}
+
+[5] historical 76/87 present as per-entry fields with no non-inheritance enforcement
+    historical_status values: {'VERIFIED': 76, 'ENVIRONMENT_GATED': 15, 'UNVERIFIED': 1}
+    current_verdict values: {'UNVERIFIED': 92}
+    execution-state VERIFY.result (the historical 76/87 record):
+      108 checks real-executed (87 PASS/18 GATED/1 UNVERIFIED/2 FAILED documented); 92 scenarios 76/15/1 zero unexplained diff; whitebox 27 modules + 423/425 known-only; 10 findings recorded; archive NOT executed
+
+[6] pre-existing failures of the OLD validator (git HEAD 4_3.mjs) against this snapshot: 2/9 RED, exit 1
+    not ok 5 - B10 (d): layer and status enums plus summary counts are self-consistent
+    not ok 8 - B10 negative: ENVIRONMENT_GATED without a holder fails validation
+    # tests 9
+    # fail 2
+
+[7] journey/deployment/gate data absent from index
+    index.journeys: None | index.deployment: None | index.open_p1: None
+    state open P1: ['P1-01', 'P1-02', 'P1-03', 'P1-04', 'P1-05', 'P1-06', 'P1-07']
