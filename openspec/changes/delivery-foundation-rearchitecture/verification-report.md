@@ -56,7 +56,7 @@
 | 检测读回 | 06:37:02Z 独立读回 | member info **403** authorization_error；offboarded **403** user_suspended；member search **0** 命中（owner search 1 = 阳性对照，搜索功能本身正常）；shares.list **0** |
 | 独立计时 | monitor.mjs alert 评估真实时间线 | **detectionSeconds=24**（撤权→独立检测）；ALERT_UNDELIVERED + ESCALATION_MISSING 如实记录（本任务从未持有告警发送授权，工具只备不发） |
 | 恢复 | documents.restore | ok，revision 5，archivedAt=null（知识当前可用）；**member 不回加**（被撤受众永不静默恢复）；新凭据签发通道在部署版本 not_found（findings VF-5 如实记录；RESTORE_AUTHZ_NOT_NEW 拒绝语义由配方在适配器面证明） |
-| 清理 | 旅程文档永久删除 | 受管文集回到既有 2 篇 smoke 文档，共享栈零残留 |
+| 清理 | 旅程文档删除（平台为软删语义，Trash 可恢复；时点边界见 grill G10） | 受管文集回到既有 2 篇 smoke 文档，共享栈零残留 |
 
 配方检查本体 PASS（4_8.mjs 7/7：origin_run/知识 id/operation key 关联、RUN_ID_REQUIRED/CLOSURE_INVALID 拒绝、RESTORE_AUTHZ_NOT_NEW、SLA 段登记）。
 
@@ -110,3 +110,5 @@
 4. **F10 未启用**：如实记录（U1），**整体目标不宣布完成**（goal_complete=false）。
 
 本轮仅接纳验证三产物 + acceptance-index.json 终基线 + runbook 第 8 节同步 + worker-reports/VERIFY-rework 证据；本 Change 的 Comet 唯一归档/后审由控制器在验收后执行（tasks.md VERIFY Step 6/7）。
+
+> 读者注记（终审 N-4）：acceptance-index.json 的状态词汇（UNVERIFIED/MECHANISM_AT_DECLARED_SCOPE…，基线台账语义=下一波验收起点）与 verification-results.json 的词汇（PASS/FAIL/UNVERIFIED/KNOWN_ENV_DRIFT，本次执行语义）**不可互换比对**——同一 check id 在两文件中的状态分属不同分类体系，比较以 verification-results.json 为准。

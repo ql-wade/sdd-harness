@@ -246,9 +246,13 @@ test('F10 J3 boundary journey: F10 mechanically pinned to UNVERIFIED_NOT_ENABLED
   const f10 = index.scenarios?.F10;
   assert.ok(f10, 'acceptance-index.json must carry scenarios.F10');
   assert.equal(f10.scenario_status, 'UNVERIFIED', 'F10 must stay UNVERIFIED in the not-enabled run');
-  assert.equal(f10.component_pass?.status, 'UNVERIFIED');
+  // reconciled at acceptance (review B-2): P5_2 accepted at fd5c8a2 with the
+  // honest NOT_ENABLED gate — component layer now carries the mechanism
+  // evidence while the capability itself stays UNVERIFIED (env/same-run
+  // layers + gate read-back below keep the not-enabled pinning).
+  assert.equal(f10.component_pass?.status, 'MECHANISM_AT_DECLARED_SCOPE');
   assert.equal(f10.deployment_status, 'NOT_DELIVERED');
-  assert.equal(f10.component_pass?.tasks?.P5_2, 'REOPENED_RETEST_REQUIRED', 'the old-run P5_2 stays reopened for retest');
+  assert.equal(f10.component_pass?.tasks?.P5_2, 'ACCEPTED', 'P5_2 accepted with the gate; F10 capability stays UNVERIFIED_NOT_ENABLED');
   assert.equal(f10.case_module, 'test/delivery-cases/5_2.mjs');
   for (const field of [f10.scenario_status, f10.component_pass?.status, f10.env_qualification?.status, f10.same_run_finality?.status]) {
     assert.ok(!['PASS', 'SUPPORTED', 'VERIFIED'].includes(field), 'no F10 layer may claim a pass position under NOT_ENABLED');
