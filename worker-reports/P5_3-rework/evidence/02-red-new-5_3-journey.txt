@@ -1,0 +1,324 @@
+// P5_3-rework evidence 02 — RED of the REWRITTEN 5_3.mjs (rework oracles)
+// against the unchanged base tree (129cfdf), before the GREEN artifacts land.
+//
+// Command:  node --test test/delivery-cases/5_3.mjs   (node v22.13.1).
+//
+// Measured: 16 tests / 7 pass / 9 fail, exit 1.
+//
+// The 9 failures are exactly the rework deliverables that do not exist yet:
+//   - J3b x2: team-recovery/rollback-recipe.json missing (5.3.b 回退配方缺失);
+//   - J4 ledger x5: team-recovery/capability-boundary.json missing — the
+//     capability boundary ledger (5.3.a 边界记录缺失), its three mutation
+//     negatives (which cannot bite without the real record to mutate), and
+//     the ledger/matrix same-source check;
+//   - J4 runbook x2: the manual still carries the superseded v1 gate form
+//     (scope-gate.json path, ENABLEMENT_REQUIRES_PAIRED_COMMIT,
+//     EXPECTED_SCOPE_DIGEST) and does not declare the v2 facts
+//     (enablement.json / UNVERIFIED_NOT_ENABLED /
+//     ENABLEMENT_REQUIRES_REGISTERED_DECISION / rework-run boundaries), nor
+//     the current acceptance-index environment_gates verbatim.
+//
+// The 7 passes include the v2 gate live readback (status OK, enabled=false,
+// refuse trio, f10State=UNVERIFIED_NOT_ENABLED, construction=NOT_BUILT,
+// positiveAuthStatus=UNVERIFIED; start/release/implement exit 2 with
+// CROSS_MACHINE_SCOPE_NOT_ENABLED; enable exit 2 with
+// ENABLEMENT_REQUIRES_REGISTERED_DECISION and recordTrusted=false) — the gate
+// itself is already the accepted P5_2 v2 form; what is missing is the P5_3
+// boundary/recipe/runbook work. Masquerade-guard RED evidence: mutations
+// M1/M2 fail here only because their fixture (the real ledger) is absent;
+// after GREEN the same mutations are mechanically refused by the validator
+// (see evidence 04).
+//
+// Host paths are redacted to <repo>/ per evidence discipline. Raw TAP follows.
+
+TAP version 13
+# Subtest: J1: the runbook carries ≥10 machine-verified commands whose entries exist and whose direct rows really run with the documented exit codes
+ok 1 - J1: the runbook carries ≥10 machine-verified commands whose entries exist and whose direct rows really run with the documented exit codes
+  ---
+  duration_ms: 855.093084
+  ...
+# Subtest: J1 negative: a runbook copy with a removed command row fails the ≥10 inventory contract (deleting runbook commands is caught mechanically)
+ok 2 - J1 negative: a runbook copy with a removed command row fails the ≥10 inventory contract (deleting runbook commands is caught mechanically)
+  ---
+  duration_ms: 0.507125
+  ...
+# Subtest: J2: the three recovery drill receipts are structurally honest — monotonic real timestamps, monotonic attempts, one operationKey per drill, real exit codes
+ok 3 - J2: the three recovery drill receipts are structurally honest — monotonic real timestamps, monotonic attempts, one operationKey per drill, real exit codes
+  ---
+  duration_ms: 1.174333
+  ...
+# Subtest: J2: the drills re-run live through the real executor with the same VERIFIED outcome
+ok 4 - J2: the drills re-run live through the real executor with the same VERIFIED outcome
+  ---
+  duration_ms: 42484.245667
+  ...
+# Subtest: J2 negative: a forged receipt timestamp (non-monotonic, and in the future) is rejected by the validator
+ok 5 - J2 negative: a forged receipt timestamp (non-monotonic, and in the future) is rejected by the validator
+  ---
+  duration_ms: 2.087167
+  ...
+# Subtest: J3: version rollback over the real protocol — unapproved and wrong-digest rollbacks are refused (exit 2), the approved same-digest rollback verifies (exit 0) and I06 independently confirms
+ok 6 - J3: version rollback over the real protocol — unapproved and wrong-digest rollbacks are refused (exit 2), the approved same-digest rollback verifies (exit 0) and I06 independently confirms
+  ---
+  duration_ms: 327.000875
+  ...
+# Subtest: J3b: the git-level rollback recipe (5.3.b) is machine-checkable — mandatory steps, real entries, known-set fail-closed expectation
+not ok 7 - J3b: the git-level rollback recipe (5.3.b) is machine-checkable — mandatory steps, real entries, known-set fail-closed expectation
+  ---
+  duration_ms: 0.575708
+  location: '<repo>/test/delivery-cases/5_3.mjs:629:1'
+  failureType: 'testCodeFailure'
+  error: 'team-recovery/rollback-recipe.json is missing (P5_3 RED until the rollback drill recipe lands)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    loadRollbackRecipe (file://<repo>/test/delivery-cases/5_3.mjs:625:10)
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mjs:630:41)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J3b negative (mutation M4): a rollback recipe with a mandatory recovery step deleted is refused
+not ok 8 - J3b negative (mutation M4): a rollback recipe with a mandatory recovery step deleted is refused
+  ---
+  duration_ms: 0.21725
+  location: '<repo>/test/delivery-cases/5_3.mjs:634:1'
+  failureType: 'testCodeFailure'
+  error: 'team-recovery/rollback-recipe.json is missing (P5_3 RED until the rollback drill recipe lands)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    loadRollbackRecipe (file://<repo>/test/delivery-cases/5_3.mjs:625:10)
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mjs:635:18)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J4: the capability boundary ledger verifies single-host lease/fencing/background/rollback with on-disk evidence and records the cross-machine boundary honestly
+not ok 9 - J4: the capability boundary ledger verifies single-host lease/fencing/background/rollback with on-disk evidence and records the cross-machine boundary honestly
+  ---
+  duration_ms: 0.291291
+  location: '<repo>/test/delivery-cases/5_3.mjs:654:1'
+  failureType: 'testCodeFailure'
+  error: 'team-recovery/capability-boundary.json is missing (P5_3 RED until the capability boundary ledger lands)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    loadBoundaryRecord (file://<repo>/test/delivery-cases/5_3.mjs:650:10)
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mjs:655:18)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J4 negative (mutation M1): marking a NOT_ENABLED cross-machine capability as VERIFIED is refused (not-enabled never passes)
+not ok 10 - J4 negative (mutation M1): marking a NOT_ENABLED cross-machine capability as VERIFIED is refused (not-enabled never passes)
+  ---
+  duration_ms: 0.248959
+  location: '<repo>/test/delivery-cases/5_3.mjs:660:1'
+  failureType: 'testCodeFailure'
+  error: 'team-recovery/capability-boundary.json is missing (P5_3 RED until the capability boundary ledger lands)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    loadBoundaryRecord (file://<repo>/test/delivery-cases/5_3.mjs:650:10)
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mjs:661:18)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J4 negative (mutation M2): a shared-local-directory masquerade of a cross-machine capability is refused
+not ok 11 - J4 negative (mutation M2): a shared-local-directory masquerade of a cross-machine capability is refused
+  ---
+  duration_ms: 0.095417
+  location: '<repo>/test/delivery-cases/5_3.mjs:669:1'
+  failureType: 'testCodeFailure'
+  error: 'team-recovery/capability-boundary.json is missing (P5_3 RED until the capability boundary ledger lands)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    loadBoundaryRecord (file://<repo>/test/delivery-cases/5_3.mjs:650:10)
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mjs:670:18)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J4 negative (mutation M3): deleting the recheck triggers (or leaving them topic-incomplete) is refused
+not ok 12 - J4 negative (mutation M3): deleting the recheck triggers (or leaving them topic-incomplete) is refused
+  ---
+  duration_ms: 0.087709
+  location: '<repo>/test/delivery-cases/5_3.mjs:685:1'
+  failureType: 'testCodeFailure'
+  error: 'team-recovery/capability-boundary.json is missing (P5_3 RED until the capability boundary ledger lands)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    loadBoundaryRecord (file://<repo>/test/delivery-cases/5_3.mjs:650:10)
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mjs:686:18)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J4: the v2 enablement gate readback stays honestly closed — status OK with UNVERIFIED_NOT_ENABLED, start/release/implement denied, runtime records never trusted
+ok 13 - J4: the v2 enablement gate readback stays honestly closed — status OK with UNVERIFIED_NOT_ENABLED, start/release/implement denied, runtime records never trusted
+  ---
+  duration_ms: 252.347584
+  ...
+# Subtest: J4: gate, machine matrix and capability ledger are same-source on the wildcard default-deny
+not ok 14 - J4: gate, machine matrix and capability ledger are same-source on the wildcard default-deny
+  ---
+  duration_ms: 1.00675
+  location: '<repo>/test/delivery-cases/5_3.mjs:737:1'
+  failureType: 'testCodeFailure'
+  error: 'team-recovery/capability-boundary.json is missing (P5_3 RED until the capability boundary ledger lands)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    loadBoundaryRecord (file://<repo>/test/delivery-cases/5_3.mjs:650:10)
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mjs:755:18)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J4: the runbook carries the v2 gate form, every known environment gate verbatim and the rework-run boundaries; no stale legacy reference survives
+not ok 15 - J4: the runbook carries the v2 gate form, every known environment gate verbatim and the rework-run boundaries; no stale legacy reference survives
+  ---
+  duration_ms: 3.6785
+  location: '<repo>/test/delivery-cases/5_3.mjs:763:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    runbook boundary declaration problems: runbook must declare the v2 gate fact: services/delivery-control/enablement.json | runbook must declare the v2 gate fact: DeliveryControl.EnablementGate.v2 | runbook must declare the v2 gate fact: UNVERIFIED_NOT_ENABLED | runbook must declare the v2 gate fact: UNVERIFIED_ENABLED_CONSTRUCTION_PENDING | runbook must declare the v2 gate fact: ENABLEMENT_REQUIRES_REGISTERED_DECISION | runbook must declare the v2 gate fact: ENABLE_CROSS_MACHINE_SCOPE | runbook must declare the refusal trio (refuse start/release/implement, same source as enablement.json) | runbook still functionally references the deleted legacy scope-gate.json path — the v2 gate is enablement.json | runbook still references the superseded EXPECTED_SCOPE_DIGEST code anchor (v2 binds enablement to a user adjudication record) | runbook still cites the superseded v1 refusal code ENABLEMENT_REQUIRES_PAIRED_COMMIT (v2: ENABLEMENT_REQUIRES_REGISTERED_DECISION) | runbook must carry the masquerade prohibition (shared local directories must never be marked distributed/team-level) | runbook must declare the S5 boundary: the comet CLI has no daemon/service mode | runbook must cite the S5 runner-help evidence (worker-reports/I02-rework/evidence/s5-runner-help.txt) | runbook must declare the I02 S7/S8 pending-credential boundary | runbook must document the rework-run ops surface entry: compose | runbook must document the rework-run ops surface entry: Outline | runbook must document the rework-run ops surface entry: --generate | runbook hides a known environment gate (verbatim string missing): 原生浏览器/独立读回: 无真实 Outline 实例/凭据/文集/OIDC/对象存储 — holder: user/Ou… | runbook hides a known environment gate (verbatim string missing): 宿主会话证明(真实 Runner/host) — holder: 真实 Runner 验证(manifest unver… | runbook hides a known environment gate (verbatim string missing): 真实容器/认证API/MCP读回: docker 沙箱拒+上游未选定 — holder: user/runtime ad… | runbook hides a known environment gate (verbatim string missing): 跨机门门控: CROSS_MACHINE_SCOPE_NOT_ENABLED(冻结计划原文); 启用态建设(5.2.a …
+    + actual - expected
+    
+    + [
+    +   'runbook must declare the v2 gate fact: services/delivery-control/enablement.json',
+    +   'runbook must declare the v2 gate fact: DeliveryControl.EnablementGate.v2',
+    +   'runbook must declare the v2 gate fact: UNVERIFIED_NOT_ENABLED',
+    +   'runbook must declare the v2 gate fact: UNVERIFIED_ENABLED_CONSTRUCTION_PENDING',
+    +   'runbook must declare the v2 gate fact: ENABLEMENT_REQUIRES_REGISTERED_DECISION',
+    +   'runbook must declare the v2 gate fact: ENABLE_CROSS_MACHINE_SCOPE',
+    +   'runbook must declare the refusal trio (refuse start/release/implement, same source as enablement.json)',
+    +   'runbook still functionally references the deleted legacy scope-gate.json path — the v2 gate is enablement.json',
+    +   'runbook still references the superseded EXPECTED_SCOPE_DIGEST code anchor (v2 binds enablement to a user adjudication record)',
+    +   'runbook still cites the superseded v1 refusal code ENABLEMENT_REQUIRES_PAIRED_COMMIT (v2: ENABLEMENT_REQUIRES_REGISTERED_DECISION)',
+    +   'runbook must carry the masquerade prohibition (shared local directories must never be marked distributed/team-level)',
+    +   'runbook must declare the S5 boundary: the comet CLI has no daemon/service mode',
+    +   'runbook must cite the S5 runner-help evidence (worker-reports/I02-rework/evidence/s5-runner-help.txt)',
+    +   'runbook must declare the I02 S7/S8 pending-credential boundary',
+    +   'runbook must document the rework-run ops surface entry: compose',
+    +   'runbook must document the rework-run ops surface entry: Outline',
+    +   'runbook must document the rework-run ops surface entry: --generate',
+    +   'runbook hides a known environment gate (verbatim string missing): 原生浏览器/独立读回: 无真实 Outline 实例/凭据/文集/OIDC/对象存储 — holder: user/Ou…',
+    +   'runbook hides a known environment gate (verbatim string missing): 宿主会话证明(真实 Runner/host) — holder: 真实 Runner 验证(manifest unver…',
+    +   'runbook hides a known environment gate (verbatim string missing): 真实容器/认证API/MCP读回: docker 沙箱拒+上游未选定 — holder: user/runtime ad…',
+    +   'runbook hides a known environment gate (verbatim string missing): 跨机门门控: CROSS_MACHINE_SCOPE_NOT_ENABLED(冻结计划原文); 启用态建设(5.2.a …'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'runbook must declare the v2 gate fact: services/delivery-control/enablement.json'
+    1: 'runbook must declare the v2 gate fact: DeliveryControl.EnablementGate.v2'
+    2: 'runbook must declare the v2 gate fact: UNVERIFIED_NOT_ENABLED'
+    3: 'runbook must declare the v2 gate fact: UNVERIFIED_ENABLED_CONSTRUCTION_PENDING'
+    4: 'runbook must declare the v2 gate fact: ENABLEMENT_REQUIRES_REGISTERED_DECISION'
+    5: 'runbook must declare the v2 gate fact: ENABLE_CROSS_MACHINE_SCOPE'
+    6: 'runbook must declare the refusal trio (refuse start/release/implement, same source as enablement.json)'
+    7: 'runbook still functionally references the deleted legacy scope-gate.json path — the v2 gate is enablement.json'
+    8: 'runbook still references the superseded EXPECTED_SCOPE_DIGEST code anchor (v2 binds enablement to a user adjudication record)'
+    9: 'runbook still cites the superseded v1 refusal code ENABLEMENT_REQUIRES_PAIRED_COMMIT (v2: ENABLEMENT_REQUIRES_REGISTERED_DECISION)'
+    10: 'runbook must carry the masquerade prohibition (shared local directories must never be marked distributed/team-level)'
+    11: 'runbook must declare the S5 boundary: the comet CLI has no daemon/service mode'
+    12: 'runbook must cite the S5 runner-help evidence (worker-reports/I02-rework/evidence/s5-runner-help.txt)'
+    13: 'runbook must declare the I02 S7/S8 pending-credential boundary'
+    14: 'runbook must document the rework-run ops surface entry: compose'
+    15: 'runbook must document the rework-run ops surface entry: Outline'
+    16: 'runbook must document the rework-run ops surface entry: --generate'
+    17: 'runbook hides a known environment gate (verbatim string missing): 原生浏览器/独立读回: 无真实 Outline 实例/凭据/文集/OIDC/对象存储 — holder: user/Ou…'
+    18: 'runbook hides a known environment gate (verbatim string missing): 宿主会话证明(真实 Runner/host) — holder: 真实 Runner 验证(manifest unver…'
+    19: 'runbook hides a known environment gate (verbatim string missing): 真实容器/认证API/MCP读回: docker 沙箱拒+上游未选定 — holder: user/runtime ad…'
+    20: 'runbook hides a known environment gate (verbatim string missing): 跨机门门控: CROSS_MACHINE_SCOPE_NOT_ENABLED(冻结计划原文); 启用态建设(5.2.a …'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mjs:771:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J4 negative: a runbook copy that hides one known environment gate is rejected
+not ok 16 - J4 negative: a runbook copy that hides one known environment gate is rejected
+  ---
+  duration_ms: 0.755125
+  location: '<repo>/test/delivery-cases/5_3.mjs:774:1'
+  failureType: 'testCodeFailure'
+  error: 'the real runbook must carry the gate verbatim'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mjs:781:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 7
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 43999.956541
+exit=1
