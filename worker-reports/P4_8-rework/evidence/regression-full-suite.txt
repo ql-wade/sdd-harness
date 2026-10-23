@@ -1,0 +1,58 @@
+P4_8 Step 11/12 full regression after GREEN (commit 5b4e14c)
+worktree branch: rework/p4-8 date: 2026-10-23T01:05:33Z node: v22.13.1
+
+COMMAND: npm test
+exit: 1 (known-failure baseline)
+
+signature: tests 475 / pass 472 / fail 2 / skipped 1 — matches the declared baseline 475/472/2/1 exactly, zero new failures
+
+known failure set (exactly the 2 expected):
+not ok 62 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+not ok 463 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+
+skip (environmental, pre-existing):
+ok 63 - C08 positive: the isolated 1.11.0 candidate exposes the edges and the same closure accepts it — no global upgrade # SKIP isolated openspec 1.11.0 is not installed under .sdd/tools; run the isolated install (never a global upgrade)
+
+P4_8-owned suites inside the run:
+
+--- full suite log tail ---
+  ...
+# Subtest: A11 post-archive drift: recovery readback detects real main-spec corruption and refuses to mark complete
+ok 469 - A11 post-archive drift: recovery readback detects real main-spec corruption and refuses to mark complete
+  ---
+  duration_ms: 235.883292
+  ...
+# Subtest: A11 ambiguous recovery: multiple archives of the same change name block recovery instead of guessing the newest
+ok 470 - A11 ambiguous recovery: multiple archives of the same change name block recovery instead of guessing the newest
+  ---
+  duration_ms: 2.792166
+  ...
+# Subtest: A11 silent CLI abort: exit-0-with-abort (unwritable rebuild) is detected as not-applied, real project untouched
+ok 471 - A11 silent CLI abort: exit-0-with-abort (unwritable rebuild) is detected as not-applied, real project untouched
+  ---
+  duration_ms: 449.168
+  ...
+# Subtest: release version metadata is consistent across all sources
+ok 472 - release version metadata is consistent across all sources
+  ---
+  duration_ms: 2.411625
+  ...
+# Subtest: version gate fails on drift (negative path)
+ok 473 - version gate fails on drift (negative path)
+  ---
+  duration_ms: 123.469959
+  ...
+# Subtest: workflow-audit rejects an archived run whose latest review is not ready
+ok 474 - workflow-audit rejects an archived run whose latest review is not ready
+  ---
+  duration_ms: 131.170625
+  ...
+1..474
+# tests 475
+# suites 0
+# pass 472
+# fail 2
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 19999.638708
