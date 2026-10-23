@@ -1,0 +1,25 @@
+# Regression: full npm test (node v22.13.1) on rework/p4-3 after GREEN 2b34cc3
+# command: npm test
+# date: 2026-10-23T02:02:27Z
+# baseline: 475 tests / 472 pass / 2 fail / 1 skip — known set: C08 negative (openspec drift fail-closed), B08 preservation (same drift), skip=C08 isolated 1.11.0 not installed
+
+  ---
+  duration_ms: 104.441333
+  ...
+1..474
+# tests 475
+# suites 0
+# pass 472
+# fail 2
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 18300.549708
+
+not-ok lines:
+not ok 62 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+not ok 463 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+skip lines:
+ok 63 - C08 positive: the isolated 1.11.0 candidate exposes the edges and the same closure accepts it — no global upgrade # SKIP isolated openspec 1.11.0 is not installed under .sdd/tools; run the isolated install (never a global upgrade)
+
+npm_exit_code=1 (2 known-env failures, matches baseline known set exactly; zero new)
