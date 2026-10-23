@@ -592,18 +592,18 @@
 **Parallel safe:** false
 **Acceptance IDs:** B10
 
-- [ ] **Step 1 [5 min]: Test** 4.3.a 汇总四层证据和逐场景结论：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：内核、CLI/装配、宿主、业务/CI 分开；每个必验场景有当前版本证据或明确阻塞。
-- [ ] **Step 2 [5 min]: Implement** 4.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 4.3.b 回归、独立验收与交接：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：全仓检查和平台读回；目标环境确认前不得 delivered，条件性 Batch 5 未做不得声称团队认证。
-- [ ] **Step 4 [5 min]: Implement** 4.3.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 4.3.a 汇总四层证据和逐场景结论：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：内核、CLI/装配、宿主、业务/CI 分开；每个必验场景有当前版本证据或明确阻塞。
+- [x] **Step 2 [5 min]: Implement** 4.3.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 4.3.b 回归、独立验收与交接：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：全仓检查和平台读回；目标环境确认前不得 delivered，条件性 Batch 5 未做不得声称团队认证。
+- [x] **Step 4 [5 min]: Implement** 4.3.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 6 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 本轮返工（P1映射见replan-record.json，详细oracle见execution-contract.json）：
 
-- [ ] **Step 7 [5 min]: Test** RW_COMPLETION_REQUIRED：任一required FAIL/GATED/UNVERIFIED、缺旅程、缺真实读回、未关闭P1、证据层级不足均保持未完成；holder/显式处置不算通过。
-- [ ] **Step 8 [5 min]: Implement** 由原92场景和118required检查重新生成按层证据索引及状态；清楚区分组件通过、环境资格、同Run终局和部署状态，历史76/87不自动继承。
-- [ ] **Step 9 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
+- [x] **Step 7 [5 min]: Test** RW_COMPLETION_REQUIRED：任一required FAIL/GATED/UNVERIFIED、缺旅程、缺真实读回、未关闭P1、证据层级不足均保持未完成；holder/显式处置不算通过。
+- [x] **Step 8 [5 min]: Implement** 由原92场景和118required检查重新生成按层证据索引及状态；清楚区分组件通过、环境资格、同Run终局和部署状态，历史76/87不自动继承。
+- [x] **Step 9 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
 
 
 ### Task P5_1: 原任务 5.1 — 并行 worktree/DAG 集成与父目标重验，逐宿主认证能力矩阵；不同平台不得相互推断支持（A09–A12/F03/F08）。
