@@ -1,0 +1,27 @@
+# P5_1 rework RED (5.1.b) — baseline matrix lacks machine dimension / enablement gate / refusal semantics
+# run: rework-seven-p1-r1 / task P5_1 / branch rework/p5-1 / base 2b1e145
+# captured: 2026-10-23T02:51:43Z
+
+$ node -e (probe of baseline team-host-matrix/matrix.json)
+schema_version                             => 1
+hosts (platform)                           => ["claude-code","comet-classic","llmwiki","outline","code-wiki"]
+machine_dimension present                  => false
+any machine host entries                   => 0
+any enabled field anywhere                 => false
+any refuse_start/refuse_release semantics  => false
+any NOT_ENABLED status                     => false
+status_enum                                => ["VERIFIED","SUPPORTED","UNSUPPORTED","UNVERIFIED"]
+
+## reading: baseline matrix is platform-dimension only (hosts = delivery platforms).
+## No machine/hostname dimension, no per-host enablement gate field, no refuse-start/refuse-release
+## semantics, no NOT_ENABLED vocabulary: a second machine could only be described by inferring from
+## this machine — exactly the cross-platform inference the rework boundary forbids.
+
+## enablement decisions on record (ledger + state):
+$ grep -c "env-capability-20261022" openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl
+1
+$ python3 -c (open_decisions per-host enablement records)
+open_decisions mentioning enablement/per-host: ['PUBLISHER_ISOLATOR_CREDS']
+
+## reading: only amendment 3 (env-capability-20261022, this host: docker terminal channel + llmwiki
+## projectization) exists. No per-host enablement for any other machine => default-deny applies there.

@@ -1,0 +1,60 @@
+# P5_1 rework — live host capability probes (this machine)
+# run: rework-seven-p1-r1 / task P5_1 / branch rework/p5-1 / base 2b1e145
+# captured: 2026-10-23T02:50:20Z
+# path policy: host absolute paths sanitized to ~/ form; no secrets
+
+## $ date -u
+Fri Oct 23 02:50:20 UTC 2026
+
+## $ hostname
+MacBook-Wade-7.local
+
+## $ scutil --get LocalHostName
+Unknown
+
+## $ scutil --get ComputerName
+Unknown
+
+## $ sysctl -n kern.hostname
+sysctl: sysctl fmt -1 1024 1: Operation not permitted
+
+## $ node --version
+v22.13.1
+
+## $ ls ~/.nvm/versions/node/
+v16.20.2
+v20.0.0
+v22.13.1
+v23.6.1
+v24.13.0
+v24.15.0
+
+## $ ~/.nvm/versions/node/v24.15.0/bin/node --version
+v24.15.0
+
+## $ docker version (session sandbox)
+Client:
+ Version:           29.6.2
+ API version:       1.55
+ Go version:        go1.26.5
+ Git commit:        dfc4efb
+ Built:             Thu Jul 16 16:11:17 2026
+ OS/Arch:           darwin/arm64
+ Context:           desktop-linux
+
+## $ docker info --format {{.ServerVersion}} (session sandbox)
+
+permission denied while trying to connect to the docker API at unix://~/.docker/run/docker.sock
+
+## $ curl --noproxy "*" -o /dev/null -w "%{http_code}" --max-time 5 http://127.0.0.1:3000/
+curl: (7) Failed to connect to 127.0.0.1 port 3000 after 0 ms: Couldn't connect to server
+000 Failed to connect to 127.0.0.1 port 3000 after 0 ms: Couldn't connect to server (curl exit=7)
+
+## $ curl --noproxy "*" -o /dev/null -w "%{http_code}" --max-time 5 http://127.0.0.1:5556/dex/.well-known/openid-configuration
+curl: (7) Failed to connect to 127.0.0.1 port 5556 after 0 ms: Couldn't connect to server
+000 Failed to connect to 127.0.0.1 port 5556 after 0 ms: Couldn't connect to server (curl exit=7)
+
+## reading
+- identity anchor: hostname -> MacBook-Wade-7.local; scutil LocalHostName/ComputerName both "Unknown"; sysctl blocked by session sandbox (EPERM).
+- docker: client 29.6.2 executes in session; daemon socket connect denied (permission denied, unix socket ~/.docker/run/docker.sock) — in-session EPERM, real docker ops go through the user-visible terminal panel channel (amendment 3: env-capability-20261022).
+- loopback 3000 (outline) and 5556 (dex): TCP ECONNREFUSED at capture time — stack NOT running now; matches rework probes of 2026-10-22 (P3_2-rework 11-outline-stack-unreachable.txt, P3_3-rework 11-outline-live-window-unverified.txt). Earlier HANDOFF pause-point recorded 6 containers up; stack lifecycle is a deployment action via terminal channel, so live-stack status stays dated and holder=VERIFY.
