@@ -1,0 +1,30 @@
+# P5_1 rework RED — new 5_1.mjs against baseline matrix v1 (machine dimension absent)
+# run: rework-seven-p1-r1 / task P5_1 / branch rework/p5-1 / base 2b1e145
+# command: node --test test/delivery-cases/5_1.mjs
+# date: 2026-10-23T02:59:14Z / node v22.13.1
+
+ok 1 - 5.1.a-1 parallel isolation: real ledger dispatches + live worktree set
+ok 2 - 5.1.a-2 serial integration: review-before-integrate, ordered merges, acceptance-integration rule
+ok 3 - 5.1.a-3 parent re-validation: child green never closes the parent goal (task and run granularity)
+ok 4 - 5.1.a-4 parent re-validation instrument: four-layer index consistent, denominators held, pointers resolve
+ok 5 - 5.1.a negatives: forged isolation / child-green-as-parent-pass / integrate-before-review / unclosable run are rejected
+ok 6 - 5.1.b-1 matrix completeness: hosts x capabilities, no empty cells, fixed enum
+ok 7 - 5.1.b-2 every matrix evidence pointer resolves on disk
+ok 8 - 5.1.b-3 status obligations: UNSUPPORTED note, UNVERIFIED holder
+ok 9 - 5.1.b-4 no cross-host evidence inference
+ok 10 - 5.1.b-5 acceptance-index consistency (F03/F08/A09 semantics)
+not ok 11 - 5.1.b-6 machine dimension: discovery anchors, enablement gate, refusal semantics, measured evidence
+    machine-dimension violations: matrix.machine_dimension missing — per-machine hosts, enablement gate and refusal semantics are required
+not ok 12 - 5.1.b-7 no cross-machine inference: disabled hosts never cite enabled-host measured evidence
+    cross-machine violations: machine_dimension missing
+ok 13 - 5.1.b platform negatives: cross-host cell / missing cell / holderless UNVERIFIED are rejected
+not ok 14 - 5.1.b machine negatives: unrecorded enable / stripped refusals / claimed capability / cited evidence are rejected
+# tests 14
+# pass 11
+# fail 3
+# skipped 0
+
+## reading:
+- 5.1.a (rewritten two-run semantics, acceptance-integration rule, four-layer instrument, 5 negative mutations): all green on real data — the reopen chain SEVEN_P1_REPLAN_AUTHORIZED 2026-10-22T01:32Z > old RUN_COMPLETED 2026-10-21T09:08Z exists in the ledger and the instrument holds.
+- 5.1.b-6/b-7 + machine negatives: real RED — baseline matrix.json v1 has no machine_dimension, so per-machine discovery, enablement gate and refusal semantics cannot even be expressed (violations above). GREEN = matrix v2 machine_dimension block.
+- 5.1.a RED itself is documented in red-baseline-5_1-a.txt: the baseline gate blind-failed on the old-run VERIFY integration and had no run-granularity reopen vocabulary.

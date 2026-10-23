@@ -1,0 +1,28 @@
+# P5_1 rework RED (5.1.a) — child-green treated as parent-goal pass, unencoded at baseline
+# run: rework-seven-p1-r1 / task P5_1 / branch rework/p5-1 / base 2b1e145
+# captured: 2026-10-23T02:51:22Z
+
+## 1) baseline 5_1.mjs blind failure on real ledger (no run-granularity reopen semantics anywhere)
+$ node --test test/delivery-cases/5_1.mjs   # at base 2b1e145, prior-round file
+not ok 2 - 5.1.a-2 serial integration: review-before-integrate, ordered merges
+not ok 9 - 5.1.b-5 acceptance-index consistency (F03/F08/A09 semantics)
+# tests 10
+# pass 8
+# fail 2
+
+## 2) the real chain the baseline gate cannot express: old run closed on unreviewed VERIFY integration,
+##    then the parent goal was reopened by the authorized rework (proof that green children never closed it)
+$ grep -n "TASK_INTEGRATED.*VERIFY\|RUN_COMPLETED\|SEVEN_P1_REPLAN_AUTHORIZED\|CONSENSUS_PASSED" openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl | cut -c1-160
+292:{"ts": "2026-10-21T09:08:23.726639+00:00", "run_id": "impl-dfr-20261020-r1", "type": "TASK_INTEGRATED", "task": "VERIFY", "merge": "f222030 (--no-ff, 23 files)"}
+294:{"ts": "2026-10-21T09:08:23.726639+00:00", "run_id": "impl-dfr-20261020-r1", "type": "RUN_COMPLETED", "task": "controller", "note": "40 节点 DAG 全部 ACCEPTED/显
+295:{"event": "SEVEN_P1_REPLAN_AUTHORIZED", "at": "2026-10-22T01:32:08.722562+00:00", "source_head": "f4afe05d2cb93f5866be0b42c540e0141169f4a6", "replan_revision": "2026-
+299:{"ts": "2026-10-22T02:54:48.277631+00:00", "run_id": "rework-seven-p1-r1", "type": "CONSENSUS_PASSED", "task": "controller", "review_id": "seven-p1-plan-20261022-r3",
+
+## 3) review verdicts for VERIFY in whole ledger:
+count=0
+
+## reading: baseline checkSerialIntegration flags the old-run VERIFY integration as a bare violation
+## (blind failure). It has no vocabulary for the two-run reality: an unreviewed acceptance integration
+## followed by RUN_COMPLETED is exactly child-green-as-parent-pass unless an authorized reopen chain
+## follows (SEVEN_P1_REPLAN_AUTHORIZED 2026-10-22T01:32Z > RUN_COMPLETED 2026-10-21T09:08Z). The reworked
+## 5.1.a encodes that invariant + its negative mutations; baseline had neither.
