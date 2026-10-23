@@ -1,5 +1,5 @@
 {
- "schema_version": 1,
+ "schema_version": 2,
  "matrix_id": "TEAM_HOST_CAPABILITY_MATRIX",
  "task": "P5_1",
  "generated_at": "2026-10-21",
@@ -64,7 +64,7 @@
     "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P1_1.json :: F03",
     "hooks.yaml :: session-context-injection (SessionStart run policy)"
    ],
-   "note": "acceptance-index F03 VERIFIED (task P1_1)：新宿主会话真实发现所需技能与工具，文件存在不足以通过。"
+   "note": "机制证据=P1_1 交付（1_1.mjs 新会话真实发现，文件存在不足以通过）。两层语义不同：本格记该宿主机制证据；当前修订的场景 F03 在 acceptance-index.json 中保持 UNVERIFIED（RETEST_REQUIRED_NEW_REPLAN，不自动继承历史）。"
   },
   {
    "host": "claude-code",
@@ -263,5 +263,149 @@
    ],
    "note": "无跨调用可恢复状态：每次求值重新绑定精确 digest，无状态可恢复——按缺席如实记录。"
   }
- ]
+ ],
+ "machine_dimension": {
+  "purpose": "5.1.b 逐宿主认证的机器轴（返工新增）：宿主身份用真实命令锚定；能力逐机实测并指向本 repo 内证据/台账行；启用门=只有逐宿主/跨机器范围被明确启用后才实施对应团队能力；未启用宿主拒绝启动/拒绝发布；机器之间不相互推断支持（A09–A12/F03/F08 的机器面）",
+  "status_enum": [
+   "VERIFIED",
+   "SUPPORTED",
+   "UNSUPPORTED",
+   "UNVERIFIED",
+   "NOT_ENABLED"
+  ],
+  "enablement_gate": {
+   "rule": "enabled=true 当且仅当存在可解析的明确启用裁决（本机：architecture.md 2026-10-22 环境能力裁决 amendment 3 + 台账 AMENDMENT_INTEGRATED env-capability-20261022）；无裁决=默认拒绝（通配符 * 条目）",
+   "before_enablement": [
+    "refuse_start — 对未启用宿主派发实施/启动团队交付被拒（NOT_ENABLED）",
+    "refuse_release — 对未启用宿主发布/交付被拒（NOT_ENABLED）"
+   ],
+   "not_enabled_never_pass": "未启用宿主的一切能力状态只能是 NOT_ENABLED/UNVERIFIED，绝不 VERIFIED/SUPPORTED/PASS"
+  },
+  "no_cross_machine_inference": "未启用宿主不得引用任何已启用宿主的机器实测证据根（worker-reports/P5_1-rework/evidence/、worker-reports/I02-rework/），不得以 via_host 从他机推导能力；由 test/delivery-cases/5_1.mjs 5.1.b-7 与机器负向突变机械拒绝",
+  "hosts": [
+   {
+    "host": "MacBook-Wade-7.local",
+    "kind": "concrete",
+    "enabled": true,
+    "discovered_at": "2026-10-23T02:50:20Z",
+    "discovery": {
+     "anchor": "hostname -> MacBook-Wade-7.local",
+     "cross_checks": "scutil --get LocalHostName -> Unknown; scutil --get ComputerName -> Unknown; sysctl -n kern.hostname -> session-sandbox EPERM",
+     "evidence": [
+      "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: hostname / scutil / sysctl sections"
+     ]
+    },
+    "enablement": {
+     "scope": "本机实施范围：docker 经用户可见终端面板通道；llmwiki 项目化（SDD_HOME=<repo>/.sdd）；不含任何跨机器/团队范围",
+     "decision_record": "openspec/changes/delivery-foundation-rearchitecture/architecture.md :: 2026-10-22 环境能力裁决（amendment 3）",
+     "ledger": "openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl :: AMENDMENT_INTEGRATED env-capability-20261022 (2026-10-22T02:03:15Z)"
+    },
+    "capabilities": {
+     "docker": {
+      "status": "SUPPORTED",
+      "measured": "in-session: client 29.6.2 可执行；daemon socket permission denied（EPERM）——真实 daemon 操作走终端面板通道（I02-rework s5：daemon=29.6.2，六个 comet-runner 容器启动）",
+      "evidence": [
+       "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: docker version / docker info sections",
+       "worker-reports/I02-rework/evidence/s5-precheck.txt :: daemon=29.6.2",
+       "worker-reports/I02-rework/evidence/s5-compose-up.txt :: six comet-runner containers started"
+      ],
+      "note": "缺口如实登记：会话沙箱内 socket EPERM、通道受限=终端面板；不冒充沙箱内可达。"
+     },
+     "knowledge-stack-outline": {
+      "status": "UNVERIFIED",
+      "measured": "loopback 127.0.0.1:3000（outline）与 :5556（dex）于 2026-10-23T02:50Z 实测 ECONNREFUSED——栈当下未运行；与 2026-10-22 返工探针一致；重启栈属部署动作（终端面板通道），live 使用归 VERIFY 旅程",
+      "evidence": [
+       "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: curl loopback sections",
+       "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2-rework/evidence/11-outline-stack-unreachable.txt :: ECONNREFUSED probes 2026-10-22T17:12Z"
+      ],
+      "holder": "VERIFY（same-run-delivery / real-comet-recovery 旅程执行 owner；前置=栈经终端通道重启，runtime secrets/compose 在 .sdd/outline/runtime/）"
+     },
+     "web-evidence-channel": {
+      "status": "UNVERIFIED",
+      "measured": "会话内直连回环不可用（与 knowledge-stack-outline 同一实测记录）；原生浏览器正相验收（F08）本环境未执行",
+      "evidence": [
+       "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json :: F08 scenario_status=UNVERIFIED"
+      ],
+      "holder": "具备原生浏览器能力的试点环境（与 acceptance-index F08 holder 同义：正相原生浏览器验收 + 独立业务读回）"
+     }
+    },
+    "write_protection": {
+     "channels": {
+      "session-sandbox-docker-socket": {
+       "outcome": "DENIED_MEASURED",
+       "measured": "docker info -> permission denied（unix socket ~/.docker/run/docker.sock），2026-10-23 实测",
+       "evidence": [
+        "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: docker info section"
+       ]
+      },
+      "session-sandbox-sysctl": {
+       "outcome": "DENIED_MEASURED",
+       "measured": "sysctl -n kern.hostname -> Operation not permitted，2026-10-23 实测",
+       "evidence": [
+        "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: sysctl section"
+       ]
+      },
+      "loopback-http-3000-5556": {
+       "outcome": "REFUSED_MEASURED",
+       "measured": "curl --noproxy '*' 127.0.0.1:3000/5556 -> ECONNREFUSED（exit 7）——记录为实际连接结果；这是栈缺席的事实，不是一道写保护",
+       "evidence": [
+        "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: curl loopback sections"
+       ]
+      }
+     },
+     "note": "A09 机器面：逐渠道记录实际拒绝或缺口；缺口（loopback 无监听）记为实测连接结果，绝不记为已拦截。"
+    },
+    "recovery": {
+     "status": "SUPPORTED",
+     "evidence": [
+      "openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl :: WORKER_LOST_REDISPATCH（本机在跑事故：roster 核实后同 worktree/branch/base 原位重派，不重复副作用）",
+      "openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl :: CHECKBOX_FLIP_REPLAY / CHECKBOX_FLIP_VERIFIED"
+     ],
+     "note": "本机发生过真实丢失 worker 恢复（台账在案）；正向隔离恢复认证未执行，保持 UNVERIFIED（holder=VERIFY）——F10 归 P5_2，本任务不判。"
+    }
+   },
+   {
+    "host": "*",
+    "kind": "default-deny-wildcard",
+    "enabled": false,
+    "discovery": {
+     "anchor": null,
+     "note": "默认拒绝：未经明确逐宿主启用裁决的任何机器都落在本条目；不做发现推断、不预填能力",
+     "evidence": []
+    },
+    "refusals": {
+     "refuse_start": {
+      "status": "NOT_ENABLED",
+      "semantics": "对未启用宿主派发实施/启动团队交付 = 拒绝；只有出现该宿主自己的明确启用裁决（含可解析记录）后才解除"
+     },
+     "refuse_release": {
+      "status": "NOT_ENABLED",
+      "semantics": "对未启用宿主发布/交付 = 拒绝发布；NOT_ENABLED/UNVERIFIED 保持原态，不以未启用判 PASS"
+     }
+    },
+    "capabilities": {
+     "a10-cross-machine-concurrency": {
+      "status": "NOT_ENABLED",
+      "note": "多会话/旧租约 epoch 的跨机器推进语义：无启用裁决，不实施不主张"
+     },
+     "a11-cross-machine-recovery": {
+      "status": "NOT_ENABLED",
+      "note": "跨机器恢复续接：无启用裁决，不实施不主张"
+     },
+     "a12-cross-machine-parent-revalidation": {
+      "status": "NOT_ENABLED",
+      "note": "跨机器父目标重验：无启用裁决，不实施不主张"
+     },
+     "team-release": {
+      "status": "NOT_ENABLED",
+      "note": "面向团队/其他宿主的发布：无启用裁决，拒绝发布"
+     }
+    },
+    "write_protection": {
+     "note": "未启用宿主无实测渠道；不从本机推断任何渠道行为"
+    },
+    "no_inference_note": "本条目不引用任何已启用宿主的机器实测证据（worker-reports/P5_1-rework/evidence/、worker-reports/I02-rework/ 由 test/delivery-cases/5_1.mjs 5.1.b-7 机械强制）"
+   }
+  ]
+ }
 }

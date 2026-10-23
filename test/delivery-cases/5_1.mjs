@@ -505,6 +505,9 @@ function checkMachineDimension(matrix, root) {
     // capability cells: status vocabulary + measured evidence pointers
     for (const [cap, cell] of Object.entries(h.capabilities ?? {})) {
       if (!MACHINE_STATUS_ENUM.includes(cell.status)) v.push(`${id}/${cap}: machine status "${cell.status}" outside enum`);
+      if (h.enabled === false && !['NOT_ENABLED', 'UNVERIFIED'].includes(cell.status)) {
+        v.push(`${id}/${cap}: disabled host capability must stay NOT_ENABLED/UNVERIFIED, got "${cell.status}" (not-enabled is never support, never PASS)`);
+      }
       const evs = cell.evidence ?? [];
       if (h.kind !== 'default-deny-wildcard' && evs.length === 0) v.push(`${id}/${cap}: no measured evidence pointers`);
       for (const ptr of evs) {
@@ -735,7 +738,7 @@ test('5.1.b machine negatives: unrecorded enable / stripped refusals / claimed c
   const r3 = checkMachineDimension(m3, projectRoot);
   assert.equal(r3.ok, false, 'disabled host claiming a capability must be rejected');
   assert.ok(
-    r3.violations.some((x) => x.includes('machine status "SUPPORTED" outside enum')),
+    r3.violations.some((x) => x.includes('disabled host capability must stay NOT_ENABLED/UNVERIFIED')),
     r3.violations.join('; '),
   );
 

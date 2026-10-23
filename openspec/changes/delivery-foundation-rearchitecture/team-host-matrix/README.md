@@ -2,7 +2,7 @@
 
 `matrix.json` 是唯一事实源：每个 `host × capability` 格记录 `{status, evidence[], note?, holder?}`，
 状态只取固定四枚举，每格证据只绑定该宿主自身的真实工件。本 README 说明读法、证据指针约定与
-"不跨平台推断"原则。机械校验在 `test/delivery-cases/5_1.mjs`（5.1.b-1..5 与 3 个矩阵负例）。
+"不跨平台推断"原则。机械校验在 `test/delivery-cases/5_1.mjs`（5.1.b-1..7：平台格 5 项 + 机器维度 2 项；负例 3 平台 + 5 机器）。
 
 ## 宿主集（survey 自 lib/adapters/* 与装配面）
 
@@ -59,6 +59,33 @@ F03 索引 VERIFIED，故 claude-code/discovery 不得低于 SUPPORTED。
 父目标重验（P1_1 真实链条：worker DONE → flip → 集成后 fresh-checkout 缺陷 → amendment——
 **子 green 不等于父目标通过**）。3 个负例喂入伪造判定输入（直改主检出 / 子 green 即父过 /
 先集成后评审）并断言拒绝。
+
+返工（rework-seven-p1-r1）新增两段，语义来自真实双 run 台账：旧 run（impl-dfr-20261020-r1）
+在无评审轨迹的 VERIFY 集成后宣告 RUN_COMPLETED，随后被授权返工接替（SEVEN_P1_REPLAN_AUTHORIZED
+2026-10-22T01:32Z > RUN_COMPLETED 2026-10-21T09:08Z）——这正是 **run 粒度的"子 green 不等于父目标
+通过"**。故 5.1.a-2 增加 acceptance-integration 规则（VERIFY 集成无评审轨迹则必须有后续授权重开，
+否则拒绝）；5.1.a-3 增加 run 完结闭锁不变量；5.1.a-4 校验父目标重验仪表（重建的四层
+acceptance-index：92 场景/118 required 分母、层状态词表、summary 与场景一致、证据指针
+fs/git cat-file 可解析、RW_COMPLETION_REQUIRED 判官在位）；负例增至 5 个（新增：去掉重开链的
+完结 run 拒绝 / 现行 run 无轨迹无重开的 VERIFY 集成拒绝）。
+
+## 机器维度（返工新增：逐机器启用门 + 拒绝语义）
+
+`machine_dimension.hosts` 承载机器轴，与平台轴正交：
+
+- **发现字段**：每台具体机器以真实命令锚定身份（`hostname` 输出为主锚；`scutil`/`sysctl`
+  交叉结果如实记录，含沙箱 EPERM），指向 `worker-reports/P5_1-rework/evidence/` 实测文件。
+- **启用门**：`enabled=true` 当且仅当存在可解析的明确裁决（本机 = architecture.md
+  "2026-10-22 环境能力裁决（amendment 3）" + 台账 `env-capability-20261022`，校验器直接读
+  文件内容与台账 token，不看 flag 脸色）。
+- **拒绝语义**：无裁决机器一律落默认拒绝通配符 `*`（`enabled=false`）：`refuse_start` /
+  `refuse_release` 均 NOT_ENABLED；其能力格只能 NOT_ENABLED/UNVERIFIED，绝不
+  VERIFIED/SUPPORTED/PASS（5.1.b-6 强制，负例 M2/M3 突变拒绝）。
+- **不跨机器推断**：未启用宿主不得引用已启用宿主的机器实测证据根
+  （`worker-reports/P5_1-rework/evidence/`、`worker-reports/I02-rework/`），不得 `via_host`
+  推导（5.1.b-7 强制，负例 M4 突变拒绝）。本机实测与时点事实（如 Outline 栈 2026-10-23
+  ECONNREFUSED）只属于本机条目。
+- F10 归 P5_2，本矩阵不判；正向隔离恢复认证未执行，保持 UNVERIFIED+holder。
 
 ## 环境注意事项
 
