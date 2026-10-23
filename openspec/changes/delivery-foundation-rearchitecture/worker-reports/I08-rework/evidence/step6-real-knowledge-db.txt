@@ -1,0 +1,24 @@
+# Step 6 channel D: knowledge database + attachment backup channel (Outline stack)
+
+## stack liveness (judgment method from the task brief)
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN
+COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+com.docke 80842  mac  307u  IPv4 0x1879e75cf5656cc6      0t0  TCP 127.0.0.1:3000 (LISTEN)
+
+## docker channel attempt (postgres dump / object-store volume copy would need it)
+$ docker ps
+permission denied while trying to connect to the docker API at unix://<host-docker-sock>
+
+## loopback HTTP attempt (Outline API)
+$ curl -sS -m 3 -o /dev/null -w '%{http_code}' http://127.0.0.1:3000
+curl: (7) Failed to connect to 127.0.0.1 port 3000 after 0 ms: Couldn't connect to server
+000
+
+## VERDICT: UNVERIFIED
+- The Outline stack is alive (com.docke LISTEN on 127.0.0.1:3000).
+- A real knowledge-DB + attachment backup needs either docker exec (pg_dump / volume copy)
+  or the Outline HTTP API. This session's sandbox denies docker.sock (permission denied while
+  connecting to unix://...docker.sock) and filters loopback HTTP (curl exit 7, http_code 000).
+- No file-level partial backup is claimed as full coverage; nothing is mocked.
+- Exact gap: docker.sock EPERM + loopback HTTP egress filter; the channel belongs to the
+  backup owner together with the deployment wave (same successor as realRemoteBackup UNVERIFIED).

@@ -1,0 +1,264 @@
+# GREEN evidence: I08 rework Step 5 - canonical contract commands on the migrated tree
+# Same five infrastructure-tasks.json I08 probes as red-canonical-commands.txt, now against the canonical naming (tools/infra/recovery.mjs, test/infra-recovery.test.js).
+
+$ node --test test/infra-recovery.test.js
+exit=0
+--- stdout:
+TAP version 13
+# Subtest: V_INFRA_I08 contract: committed backup domain validates clean with explicit catalog gaps and honest retention
+ok 1 - V_INFRA_I08 contract: committed backup domain validates clean with explicit catalog gaps and honest retention
+  ---
+  duration_ms: 56.168208
+  ...
+# Subtest: secret-ref discipline: the three backup refs are referenced only and resolve honestly (registered -> UNRESOLVED, unregistered -> REF_NOT_REGISTERED)
+ok 2 - secret-ref discipline: the three backup refs are referenced only and resolve honestly (registered -> UNRESOLVED, unregistered -> REF_NOT_REGISTERED)
+  ---
+  duration_ms: 4.525083
+  ...
+# Subtest: validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay rules, secret-shaped key, malformed/cross-project ref, project mismatch — all exit 2
+ok 3 - validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay rules, secret-shaped key, malformed/cross-project ref, project mismatch — all exit 2
+  ---
+  duration_ms: 737.868708
+  ...
+# Subtest: validate fail-closed: missing or unparseable domain file exits 1, never silently degrades to empty rules
+ok 4 - validate fail-closed: missing or unparseable domain file exits 1, never silently degrades to empty rules
+  ---
+  duration_ms: 211.150542
+  ...
+# Subtest: backup: real bytes are copied and the manifest digests match the target byte-for-byte; revoked cache is recorded, never copied
+ok 5 - backup: real bytes are copied and the manifest digests match the target byte-for-byte; revoked cache is recorded, never copied
+  ---
+  duration_ms: 64.109708
+  ...
+# Subtest: backup refuses an inconsistent workspace: an open transaction means no consistent point-in-time backup (exit 2)
+ok 6 - backup refuses an inconsistent workspace: an open transaction means no consistent point-in-time backup (exit 2)
+  ---
+  duration_ms: 57.5365
+  ...
+# Subtest: backup input errors: missing workspace or missing arguments — exit 1 with usage
+ok 7 - backup input errors: missing workspace or missing arguments — exit 1 with usage
+  ---
+  duration_ms: 106.364084
+  ...
+# Subtest: restore: quarantined restore verifies manifest digests, fences the old writer, reconciles permissions honestly, and releases only after the same-operation readback
+ok 8 - restore: quarantined restore verifies manifest digests, fences the old writer, reconciles permissions honestly, and releases only after the same-operation readback
+  ---
+  duration_ms: 124.507125
+  ...
+# Subtest: restore negatives: corrupt backup byte, incomplete backup, missing/unconfirmed/live-writer fence, missing key ref, point-in-time mismatch, second writer — all exit 2 and refuse release
+ok 9 - restore negatives: corrupt backup byte, incomplete backup, missing/unconfirmed/live-writer fence, missing key ref, point-in-time mismatch, second writer — all exit 2 and refuse release
+  ---
+  duration_ms: 861.5055
+  ...
+# Subtest: retention: pending obligations deny cleanup with the explicit list; disk pressure only warns and the workspace stays byte-identical
+ok 10 - retention: pending obligations deny cleanup with the explicit list; disk pressure only warns and the workspace stays byte-identical
+  ---
+  duration_ms: 58.154334
+  ...
+# Subtest: retention: only verified completion — or a separately approved migration with proven restore — moves the R10 A boundary
+ok 11 - retention: only verified completion — or a separately approved migration with proven restore — moves the R10 A boundary
+  ---
+  duration_ms: 171.034834
+  ...
+# Subtest: authority transfer: requires a controlled approval and process-level fence evidence, then registers the new authority with an epoch bump
+ok 12 - authority transfer: requires a controlled approval and process-level fence evidence, then registers the new authority with an epoch bump
+  ---
+  duration_ms: 247.063625
+  ...
+# Subtest: probe cases run the real local mechanisms and verify them
+ok 13 - probe cases run the real local mechanisms and verify them
+  ---
+  duration_ms: 341.199417
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3107.678167
+--- stderr:
+===
+$ node tools/infra/recovery.mjs validate --registry infra/delivery/registry.json --json
+exit=0
+--- stdout:
+{
+  "interface": "BackupInfra.v1",
+  "command": "validate",
+  "registry": "infra/delivery/registry.json",
+  "dir": "infra/delivery/recovery",
+  "ok": true,
+  "violations": [],
+  "catalogGaps": [
+    {
+      "ref": "secret-ref:sdd-harness-pilot/backup-writer",
+      "reason": "not registered in the I01 catalog; membership is I01-owned readiness evidence, resolution refuses REF_NOT_REGISTERED"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/restore-reader",
+      "reason": "not registered in the I01 catalog; membership is I01-owned readiness evidence, resolution refuses REF_NOT_REGISTERED"
+    }
+  ],
+  "refsChecked": [
+    "secret-ref:sdd-harness-pilot/backup-writer",
+    "secret-ref:sdd-harness-pilot/backup-encryption",
+    "secret-ref:sdd-harness-pilot/restore-reader"
+  ],
+  "retentionFreeze": {
+    "rpo": "UNVERIFIED",
+    "rto": "UNVERIFIED",
+    "autoCleanupEnabled": false,
+    "diskPressureWarnOnly": true
+  },
+  "checkedAt": "2026-10-22T23:49:38.660Z"
+}
+--- stderr:
+===
+$ node tools/infra/recovery.mjs probe --case pending-cleanup-denial --json
+exit=0
+--- stdout:
+{
+  "interface": "BackupInfra.v1",
+  "command": "probe",
+  "case": "pending-cleanup-denial",
+  "executed": true,
+  "status": "VERIFIED",
+  "observedSteps": [
+    {
+      "step": "pending-obligations-deny-cleanup",
+      "status": "VERIFIED",
+      "pending": [
+        "open-transaction",
+        "unknown-remote-result",
+        "pending-outline-publish",
+        "pending-knowledge-closeout",
+        "sole-payload-in-workspace"
+      ]
+    },
+    {
+      "step": "disk-pressure-warns-but-never-cleans",
+      "status": "VERIFIED",
+      "warned": true
+    },
+    {
+      "step": "workspace-bytes-untouched",
+      "status": "VERIFIED"
+    },
+    {
+      "step": "verified-completion-moves-the-gate",
+      "status": "VERIFIED",
+      "basis": "verified-completed"
+    }
+  ],
+  "reason": "real workspace with pending obligations: cleanup actually denied (exit 2), disk pressure recorded as warning only, workspace bytes untouched, verified completion moves the gate",
+  "checkedAt": "2026-10-22T23:49:38.730Z"
+}
+--- stderr:
+===
+$ node tools/infra/recovery.mjs probe --case quarantine-restore --json
+exit=0
+--- stdout:
+{
+  "interface": "BackupInfra.v1",
+  "command": "probe",
+  "case": "quarantine-restore",
+  "executed": true,
+  "status": "VERIFIED",
+  "observedSteps": [
+    {
+      "step": "consistent-backup",
+      "status": "VERIFIED",
+      "filesCount": 14
+    },
+    {
+      "step": "corrupted-byte-refuses-restore",
+      "status": "VERIFIED",
+      "refusal": "RESTORE_BACKUP_INVALID"
+    },
+    {
+      "step": "quarantined-restore-released",
+      "status": "VERIFIED",
+      "sameOperation": {
+        "verified": true,
+        "runId": "run-i08-probe",
+        "authorityId": "comet-authority-i08-probe",
+        "epoch": 2
+      }
+    },
+    {
+      "step": "permissions-reconciled-as-data",
+      "status": "VERIFIED",
+      "excludedSuperseded": [
+        "operations/op-publish.receipt.stale.json"
+      ]
+    }
+  ],
+  "realServiceRestore": {
+    "status": "UNVERIFIED",
+    "reason": "cross-machine and real-service restore can only be proven by the backup owner together with the deployment wave; this receipt covers the local directory-form mechanism only",
+    "successor": "backup owner + deployment wave (infrastructure-plan.md 交接前置输入 #6)"
+  },
+  "reason": "real bytes end-to-end: consistent backup, single corrupted byte refuses the restore, quarantined restore released after the same-operation readback, permissions reconciled as data only",
+  "checkedAt": "2026-10-22T23:49:38.817Z"
+}
+--- stderr:
+===
+$ node tools/infra/recovery.mjs probe --case old-writer-denial --json
+exit=0
+--- stdout:
+{
+  "interface": "BackupInfra.v1",
+  "command": "probe",
+  "case": "old-writer-denial",
+  "executed": true,
+  "status": "VERIFIED",
+  "observedSteps": [
+    {
+      "step": "spawn-live-old-writer",
+      "status": "VERIFIED",
+      "pid": 29465
+    },
+    {
+      "step": "live-writer-refuses-restore",
+      "status": "VERIFIED",
+      "refusal": "RESTORE_REFUSED_OLD_WRITER_LIVE",
+      "released": false
+    },
+    {
+      "step": "sigkill-and-confirmed-gone",
+      "status": "VERIFIED",
+      "method": "SIGKILL"
+    },
+    {
+      "step": "restore-enabled-after-fence",
+      "status": "VERIFIED",
+      "sameOperation": {
+        "verified": true,
+        "runId": "run-i08-probe",
+        "authorityId": "comet-authority-i08-probe",
+        "epoch": 2
+      }
+    }
+  ],
+  "reason": "process-level fencing proven with a real pid: live old writer refuses the restore, real SIGKILL plus gone-confirmation enables it, release only after the same-operation readback",
+  "checkedAt": "2026-10-22T23:49:38.897Z"
+}
+--- stderr:
+===
+# Compatibility entry (same implementation, legacy default domain dir):
+$ node --test test/infra-backup-restore.test.js
+exit=0
+# tests 13
+# pass 13
+# fail 0
+# skipped 0
+===
+$ node --test test/delivery-cases/i08.mjs
+exit=0
+# tests 4
+# pass 4
+# fail 0
+# skipped 0
+===

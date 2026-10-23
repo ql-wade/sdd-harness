@@ -1,8 +1,9 @@
 // I08 delivery case: backup/restore consistency, R10 A pending-cleanup retention,
-// old-writer fencing and single-authority transfer — driving the REAL
-// tools/infra/backup-restore.mjs entry as a subprocess (house convention, cf.
+// old-writer fencing and single-authority transfer — driving the REAL canonical
+// tools/infra/recovery.mjs entry as a subprocess (house convention, cf.
 // test/delivery-cases/3_3.mjs), with isolated HOME/PATH/TMPDIR and fixtures the
-// suite authors itself.
+// suite authors itself. (I08 naming rework: the entry moved from the
+// backup-restore.mjs compat shim to the canonical recovery.mjs.)
 //
 // Coverage (infrastructure-plan.md I08 + R10 恢复关闭门; every journey runs the
 // real CLI and verifies byte-level oracles from disk — 真实 sha256 对真实字节,
@@ -44,7 +45,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const cli = path.join(projectRoot, 'tools', 'infra', 'backup-restore.mjs');
+const cli = path.join(projectRoot, 'tools', 'infra', 'recovery.mjs');
 const RUN_TIMEOUT_MS = 180_000;
 const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 const digestFile = (file) => sha256(fs.readFileSync(file));
