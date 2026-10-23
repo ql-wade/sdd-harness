@@ -1,0 +1,34 @@
+{
+  "task": "P5_1",
+  "phase": "rework-r1",
+  "verdict": "APPROVED",
+  "blocking_findings": [],
+  "reviewed_at": "2026-10-23T03:28:22.289598+00:00",
+  "head_reviewed": "5514efe",
+  "non_blocking_findings": [
+    {
+      "id": "NB1-p4_8-abs-path-worktree",
+      "disposition": "接受(README 已声明交付机绑定; 修复属 P5_2/控制面)",
+      "summary": "P4_8 dispatch 指向主检出绝对路径, 冷启 clone 无法 live 对账(13/14, 唯一败项主检出只读核实为真)"
+    },
+    {
+      "id": "NB2-red-count-env-delta",
+      "disposition": "接受(环境差异非虚报)",
+      "summary": "基点 RED 计数 8/2 vs 7/3, 差集=NB1 环境项"
+    },
+    {
+      "id": "NB3-detached-skip-branch-check",
+      "disposition": "接受(风险低)",
+      "summary": "checkIsolation 对 detached worktree 跳过分支核对"
+    }
+  ],
+  "independently_rerun": {
+    "boundary_clean": true,
+    "red_reproduction": "clone 内重建 29 个台账 worktree 后对旧矩阵 10/4, 三 RED 与证据精确一致; 盲失败 oracle 台账复核成立",
+    "green_and_mutations": "clone 13/14(唯一败=NB1 环境项); 五突变全咬合并恢复(通配符跨引/无裁决启用/NOT_ENABLED→SUPPORTED/删 refuse/阉割 acceptanceIntegration)",
+    "npm_test": "475/472/2/1 精确一致",
+    "matrix_audit": "schema 完整; Outline=LISTENING 证据链完整(内核 lsof+P4_4 写入史+原始记录未覆写); 启用裁决 clone+主检出双验证; 通配符零预填",
+    "integration_dag_audit": "31 dispatch(30 单任务全带 worktree+branch)+1 波次; 57 集成单调; 56 条交付集成全有前置评审; 旧 run VERIFY verdict=0; 重开链序对账成立",
+    "honesty_audit": "四条 honest_unverified 一致; F10 未判; NOT_ENABLED 永不在 PASS 位(突变 C 机械强制)"
+  }
+}
