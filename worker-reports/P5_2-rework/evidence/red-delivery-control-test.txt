@@ -1,0 +1,237 @@
+P5_2 rework RED evidence — unit oracle: test/delivery-control.test.js (rewritten to the rework gate spec)
+command: node --test test/delivery-control.test.js   (node v22.13.1)
+cwd: <repo> (worktree rw-p4-4, branch rework/p5-2, base f13af35)
+expected oracle: 10/10 FAIL against the shipped tree — the legacy old-run guard (ScopeGate.v1: gate.mjs+scope-gate.json) has no enablement.json, no decision_record adjudication linkage, no release/implement actions, no F10 UNVERIFIED_NOT_ENABLED pinning, no README
+result: 10 tests, 0 pass, 10 fail (every failure is the rework gap, see inline errors)
+--- sanitized TAP ---
+TAP version 13
+# Subtest: committed enablement.json is the rework gate declaration: CROSS_MACHINE, enabled=false, decision_record=null, refuse=[start,release,implement], f10_state=UNVERIFIED_NOT_ENABLED
+not ok 1 - committed enablement.json is the rework gate declaration: CROSS_MACHINE, enabled=false, decision_record=null, refuse=[start,release,implement], f10_state=UNVERIFIED_NOT_ENABLED
+  ---
+  duration_ms: 1.1955
+  location: '<repo>/test/delivery-control.test.js:113:1'
+  failureType: 'testCodeFailure'
+  error: 'enablement gate declaration missing: services/delivery-control/enablement.json (RED until implemented)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:114:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: start request is REALLY denied: real process, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED, receipt carries the request digest as the trace
+not ok 2 - start request is REALLY denied: real process, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED, receipt carries the request digest as the trace
+  ---
+  duration_ms: 56.828208
+  location: '<repo>/test/delivery-control.test.js:136:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + undefined
+    - 'UNVERIFIED_NOT_ENABLED'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'UNVERIFIED_NOT_ENABLED'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:142:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: release request is REALLY denied: real process, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED (refuse_release, P5_1 wildcard semantics)
+not ok 3 - release request is REALLY denied: real process, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED (refuse_release, P5_1 wildcard semantics)
+  ---
+  duration_ms: 50.426583
+  location: '<repo>/test/delivery-control.test.js:146:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    release must be DENIED with exit 2, stderr: delivery-control-gate: ERROR unknown command: release
+    usage:
+      gate.mjs status  [--scope-file <file>] [--json]
+      gate.mjs start   --request <file> [--scope-file <file>] [--json]
+      gate.mjs publish --request <file> [--scope-file <file>] [--json]
+      gate.mjs enable  --record <file> [--scope-file <file>] [--json]
+    
+    exit codes: 0 = PASS (anchored status readback), 1 = invalid input, 2 = denial
+    
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    assertDenied (file://<repo>/test/delivery-control.test.js:103:10)
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:150:3)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: implement request is REALLY denied: real process, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED (no team capability may be implemented cross-machine before enablement)
+not ok 4 - implement request is REALLY denied: real process, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED (no team capability may be implemented cross-machine before enablement)
+  ---
+  duration_ms: 51.337916
+  location: '<repo>/test/delivery-control.test.js:153:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    implement must be DENIED with exit 2, stderr: delivery-control-gate: ERROR unknown command: implement
+    usage:
+      gate.mjs status  [--scope-file <file>] [--json]
+      gate.mjs start   --request <file> [--scope-file <file>] [--json]
+      gate.mjs publish --request <file> [--scope-file <file>] [--json]
+      gate.mjs enable  --record <file> [--scope-file <file>] [--json]
+    
+    exit codes: 0 = PASS (anchored status readback), 1 = invalid input, 2 = denial
+    
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    assertDenied (file://<repo>/test/delivery-control.test.js:103:10)
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:157:3)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: M1 tamper — enabled flipped true with no decision record is still denied (ENABLEMENT_DECISION_RECORD_REQUIRED); an incoherent bare flip fails closed
+not ok 5 - M1 tamper — enabled flipped true with no decision record is still denied (ENABLEMENT_DECISION_RECORD_REQUIRED); an incoherent bare flip fails closed
+  ---
+  duration_ms: 3.800958
+  location: '<repo>/test/delivery-control.test.js:160:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '<repo>/services/delivery-control/enablement.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    enabledShape (file://<repo>/test/delivery-control.test.js:93:35)
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:163:20)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: M2 tamper — a decision_record that does not resolve to an open_decisions adjudication is still denied (ENABLEMENT_DECISION_RECORD_UNRESOLVED); path escape refused
+not ok 6 - M2 tamper — a decision_record that does not resolve to an open_decisions adjudication is still denied (ENABLEMENT_DECISION_RECORD_UNRESOLVED); path escape refused
+  ---
+  duration_ms: 0.436542
+  location: '<repo>/test/delivery-control.test.js:177:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '<repo>/services/delivery-control/enablement.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    enabledShape (file://<repo>/test/delivery-control.test.js:93:35)
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:182:21)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: M3 tamper — NOT_ENABLED marked PASS fails closed: every action including the status readback is denied (GATE_FILE_FAIL_CLOSED)
+not ok 7 - M3 tamper — NOT_ENABLED marked PASS fails closed: every action including the status readback is denied (GATE_FILE_FAIL_CLOSED)
+  ---
+  duration_ms: 1.531208
+  location: '<repo>/test/delivery-control.test.js:210:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '<repo>/services/delivery-control/enablement.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:213:22)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: M4 tamper — refuse semantics stripped fails closed: default-deny still refuses all three actions
+not ok 8 - M4 tamper — refuse semantics stripped fails closed: default-deny still refuses all three actions
+  ---
+  duration_ms: 0.388417
+  location: '<repo>/test/delivery-control.test.js:234:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '<repo>/services/delivery-control/enablement.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:236:35)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: environment variables can never flip the gate; a runtime enable record is digested, never trusted (ENABLEMENT_REQUIRES_REGISTERED_DECISION); a missing request file is invalid input (exit 1), not a denial
+not ok 9 - environment variables can never flip the gate; a runtime enable record is digested, never trusted (ENABLEMENT_REQUIRES_REGISTERED_DECISION); a missing request file is invalid input (exit 1), not a denial
+  ---
+  duration_ms: 50.634792
+  location: '<repo>/test/delivery-control.test.js:249:1'
+  failureType: 'testCodeFailure'
+  error: 'Unexpected end of JSON input'
+  code: 'ERR_TEST_FAILURE'
+  name: 'SyntaxError'
+  stack: |-
+    JSON.parse (<anonymous>)
+    assertDenied (file://<repo>/test/delivery-control.test.js:105:24)
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:262:3)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: status readback reports the NOT_ENABLED state honestly (exit 0, UNVERIFIED_NOT_ENABLED, positive auth UNVERIFIED); the gate builds no positive cross-machine surface; the service dir ships exactly the gate artifacts + README
+not ok 10 - status readback reports the NOT_ENABLED state honestly (exit 0, UNVERIFIED_NOT_ENABLED, positive auth UNVERIFIED); the gate builds no positive cross-machine surface; the service dir ships exactly the gate artifacts + README
+  ---
+  duration_ms: 7.755208
+  location: '<repo>/test/delivery-control.test.js:285:1'
+  failureType: 'testCodeFailure'
+  error: 'gateModule.GATE_ACTIONS is not iterable'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-control.test.js:287:35)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 0
+# fail 10
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 291.567666

@@ -1,0 +1,40 @@
+P5_2 rework RED evidence — mechanical gap audit of the shipped tree (base f13af35)
+oracle: the rework P5_2 gate spec (enablement.json decision-record model, refuse=[start,release,implement], F10 UNVERIFIED_NOT_ENABLED pinning, README) is absent; only the old-run legacy guard exists
+
+== ls services/delivery-control ==
+gate.mjs
+scope-gate.json
+
+== legacy gate actions (usage block) ==
+function usage() {
+  return [
+    'usage:',
+    '  gate.mjs status  [--scope-file <file>] [--json]',
+    '  gate.mjs start   --request <file> [--scope-file <file>] [--json]',
+    '  gate.mjs publish --request <file> [--scope-file <file>] [--json]',
+    '  gate.mjs enable  --record <file> [--scope-file <file>] [--json]',
+    '',
+    'exit codes: 0 = PASS (anchored status readback), 1 = invalid input, 2 = denial',
+
+== legacy interface ==
+2:// DeliveryControl.ScopeGate.v1 — F10 guard for the NOT_ENABLED cross-machine
+145:    interface: 'DeliveryControl.ScopeGate.v1',
+
+== rework-spec tokens absent from legacy gate source (expect no matches) ==
+decision_record:                0
+enablement.json:                0
+UNVERIFIED_NOT_ENABLED:         0
+ENABLEMENT_DECISION_RECORD:     0
+
+== release/implement commands in legacy gate (expect unknown-command error) ==
+node services/delivery-control/gate.mjs release --request <tmp>/r.json
+delivery-control-gate: ERROR unknown command: release
+exit=1 (invalid input — the legacy gate has no release action at all, so a release request never even reaches a scope decision)
+
+== execution-state.json open_decisions: cross-machine enablement adjudication count (expect 0) ==
+0
+
+== acceptance-index tasks.P5_2 disposition (old run reopened for retest) ==
+{'P5_2': 'REOPENED_RETEST_REQUIRED'}
+
+conclusion: the task premise '不存在任何机制' holds only for the REWORK spec; a legacy old-run guard (ScopeGate.v1, commit bcc1afa, superseded) does exist. The rework RED above is real: the rework-spec oracles fail 10/10 and 4/4 against the shipped tree. The legacy guard is replaced by the rework gate in GREEN (single source, no double-gate contradiction).
