@@ -1,0 +1,205 @@
+GREEN proof — post-delivery-permissions recipe executes through the real runner (the contract command)
+worktree branch: rework/p4-8 date: 2026-10-23T01:04:46Z
+
+COMMAND: node tools/verify/delivery-journey.mjs --journey post-delivery-permissions --profile managed-pilot --evidence-dir <tmp> --json
+runner exit code: 0 (was 2 NOT-EXERCISED in RED)
+
+verdict (verdict.json from the evidence dir):
+{
+  "schemaVersion": 1,
+  "tool": "tools/verify/delivery-journey.mjs",
+  "runnerInvariant": "test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery",
+  "scenario": "L05",
+  "acceptanceIds": [
+    "L01",
+    "L02",
+    "L03",
+    "L04",
+    "L05",
+    "L06",
+    "L07",
+    "L08",
+    "L09",
+    "L10",
+    "L11"
+  ],
+  "journey": {
+    "name": "post-delivery-permissions",
+    "owner": "P4_8",
+    "requiredCheck": "V_POST_DELIVERY_PERMISSIONS",
+    "recipePath": "openspec/changes/delivery-foundation-rearchitecture/revocation-journey/post-delivery-permissions.case.json",
+    "registeredStatus": "TO_IMPLEMENT"
+  },
+  "profile": "managed-pilot",
+  "caseModule": "test/delivery-cases/4_8.mjs",
+  "sourceBinding": [
+    {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md",
+      "requirement": "Published knowledge revocation and restoration",
+      "scenario": "L05"
+    },
+    {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.journey.json",
+      "requirement": "V_SAME_RUN_DELIVERY VERIFY-owned tail (step 7 Kp closeout receipt, step 10 Kt, step 11 completed published-knowledge readback): at VERIFY this recipe consumes THAT actually-published knowledge of the same Run and drives source revocation, the two deadlines, target-audience widening, the missed-event full scan, isolation failure and real inaccessible readback over it; the full previous journey is never a construction prerequisite of this recipe",
+      "scenario": "L05"
+    },
+    {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/execution-contract.json",
+      "requirement": "journey_execution.construction_task_scopes.P4_8",
+      "scenario": "L05"
+    }
+  ],
+  "verdict": "PASS",
+  "reason": null,
+  "missing": [],
+  "drift": [],
+  "schemaErrors": [],
+  "execution": {
+    "command": "node --test test/delivery-cases/4_8.mjs",
+    "actions": [
+      {
+        "index": 1,
+        "type": "spawn",
+        "expected": "exit 0; the case module executes the declared construction scope of the post-delivery-permissions journey: (1) V_POST_DELIVERY_PERMISSIONS:L05-maintenance-run proves the same-engine maintenance Run carries the explicit linkage — origin_run id, affected knowledge ids and the km- operation key bound to the original publish receipt — refuses an origin run without an id (RUN_ID_REQUIRED) and a maintenance without the impact closure (CLOSURE_INVALID), keeps originalRunPreserved with no second currentPhase (the delivered history is never rewritten), refuses a pre-isolation authorization as restore basis (RESTORE_AUTHZ_NOT_NEW — restoration requires a NEW authorization), and records the SLA with separately timed clocks: detect_target_seconds=180, isolate_target_seconds=120, end_to_end_target_seconds=300 under the confirmed G15 A set, the fault-exposure window as the real wall clock from the source change to the verified isolation (pausedMs=0, budget overflow kept as a violation) and the alert-delivery clock measured from the first failure (alert_delivery_seconds=30) as an independent scale; (2) V_POST_DELIVERY_PERMISSIONS:recipe-tracking binds this recipe to its journey_definitions registration, asserts the self-sufficient contract command and the VERIFY consumption plan over the same-run journey's actually-published knowledge with the host journey's VERIFY tail untouched; the full J1-J5 mechanism suite (real CLI revocation chain, real local channel narrowing with real inaccessible readback, real SIGKILL fault windows on the real wall clock) runs in the same TAP; TAP summary fail=0 with pass>0 and every required assertion mapped to executed ok points",
+        "required": true,
+        "expectation": {
+          "kind": "tapRequiredAssertions",
+          "assertions": [
+            "L05",
+            "V_POST_DELIVERY_PERMISSIONS:L05-maintenance-run",
+            "V_POST_DELIVERY_PERMISSIONS:recipe-tracking"
+          ]
+        },
+        "ok": true,
+        "exitCode": 0,
+        "durationMs": 1038,
+        "note": null,
+        "observed": null,
+        "command": "node --test test/delivery-cases/4_8.mjs",
+        "assertions": [
+          {
+            "id": "L05",
+            "status": "satisfied",
+            "matchedPoints": 2,
+            "ok": 2,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "id": "V_POST_DELIVERY_PERMISSIONS:L05-maintenance-run",
+            "status": "satisfied",
+            "matchedPoints": 1,
+            "ok": 1,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "id": "V_POST_DELIVERY_PERMISSIONS:recipe-tracking",
+            "status": "satisfied",
+            "matchedPoints": 1,
+            "ok": 1,
+            "failed": 0,
+            "skipped": 0
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "type": "readState",
+        "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0 (zero effective execution never passes)",
+        "required": true,
+        "expectation": {
+          "kind": "nonEmptyFile"
+        },
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": {
+          "path": "<host-path-redacted>",
+          "bytes": 3746
+        },
+        "command": null
+      },
+      {
+        "index": 3,
+        "type": "inspect",
+        "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+        "required": false,
+        "expectation": null,
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": "b84509bed23356c5288f2208899c6c7781506c66",
+        "command": null
+      }
+    ],
+    "tests": 7,
+    "pass": 7,
+    "fail": 0,
+    "skipped": 0,
+    "effectiveExecutions": 7,
+    "target": {
+      "token": "L05",
+      "found": true,
+      "status": "ok"
+    },
+    "requiredAssertions": [
+      {
+        "id": "L05",
+        "status": "satisfied",
+        "matchedPoints": 2,
+        "ok": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "id": "V_POST_DELIVERY_PERMISSIONS:L05-maintenance-run",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "id": "V_POST_DELIVERY_PERMISSIONS:recipe-tracking",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "candidate": {
+    "gitHead": "b84509bed23356c5288f2208899c6c7781506c66",
+    "node": "v22.13.1",
+    "platform": "darwin"
+  },
+  "timing": {
+    "startedAt": "2026-10-23T01:04:24.294Z",
+    "finishedAt": "2026-10-23T01:04:25.369Z",
+    "durationMs": 1075
+  },
+  "evidence": {
+    "dir": "<host-path-redacted>",
+    "files": [
+      "pilot-baseline.json",
+      "case-definition.json",
+      "verdict.json"
+    ]
+  },
+  "exitCode": 0
+}
+
+evidence dir contents:
+action-1-stderr.txt
+action-1-stdout.txt
+case-definition.json
+pilot-baseline.json
+verdict.json
+
+pre-GREEN mechanism state (from RED): maintenance.originRunId=undefined knowledgeIds=undefined, id-less run accepted, pre-isolation authorization restored — all three GAP lines now flip: RUN_ID_REQUIRED / CLOSURE_INVALID thrown, RESTORE_AUTHZ_NOT_NEW returned (asserted in test/knowledge-revocation.test.js L05/L06 and test/delivery-cases/4_8.mjs J6).
+
+suite state at GREEN: node --test test/delivery-cases/4_8.mjs -> tests 7 pass 7 fail 0; node --test test/knowledge-revocation.test.js -> tests 17 pass 17 fail 0.

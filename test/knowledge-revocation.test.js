@@ -469,11 +469,11 @@ test('4.8.c/L03+L04: the two deadlines — publish_until expiry blocks only new 
   assert.equal(revoked.code, 'SOURCE_REVOKED_RECOMPUTE');
 });
 
-test('4.8.c/L06: restoration re-proves everything — new epoch first, a current-audience plan, offboarded principals never re-added and stale callbacks refused', async () => {
+test('4.8.c/L06: restoration re-proves everything — a NEW authorization postdating the isolation, new epoch first, a current-audience plan, offboarded principals never re-added and stale callbacks refused', async () => {
   const rev = await import('../lib/adapters/knowledge-revocation.js');
   const base = {
-    knowledge: { id: 'k-arch', epoch: 4, status: 'isolated' },
-    authorization: { grantsValid: true, contentUseUntil: '2027-01-01T00:00:00Z', audienceWithinIntersection: true, offboardedSinceIsolation: [OFFBOARDED_GROUP] },
+    knowledge: { id: 'k-arch', epoch: 4, status: 'isolated', isolatedAt: '2026-10-21T08:00:00Z' },
+    authorization: { grantsValid: true, issuedAt: '2026-10-21T09:30:00Z', contentUseUntil: '2027-01-01T00:00:00Z', audienceWithinIntersection: true, offboardedSinceIsolation: [OFFBOARDED_GROUP] },
     review: { verdict: 'pass', boundDigest: sha256('candidate-v2'), reviewedAt: '2026-10-21T09:00:00Z', reviewerPrincipal: REVIEWER },
     allowedAudience: [FIXTURE_GROUP],
     channelEvidence: [{ channel: 'file-wiki', status: 'readable', basis: 'independent-readback' }],
@@ -487,6 +487,13 @@ test('4.8.c/L06: restoration re-proves everything — new epoch first, a current
   assert.equal(wide.code, 'RESTORE_AUDIENCE_OUTSIDE_INTERSECTION');
   // Grants no longer valid / content use expired / review missing.
   assert.equal(rev.evaluateRestoration({ ...base, plan: { audience: [FIXTURE_GROUP] }, authorization: { ...base.authorization, grantsValid: false } }).code, 'RESTORE_AUTHZ_INVALID');
+  // A NEW authorization is required: one issued before the isolation — or one
+  // whose newness cannot be checked at all — is the old disclosure license,
+  // never the restore basis.
+  const oldAuth = rev.evaluateRestoration({ ...base, plan: { audience: [FIXTURE_GROUP] }, authorization: { ...base.authorization, issuedAt: '2026-10-01T00:00:00Z' } });
+  assert.equal(oldAuth.code, 'RESTORE_AUTHZ_NOT_NEW');
+  const uncheckable = rev.evaluateRestoration({ ...base, plan: { audience: [FIXTURE_GROUP] }, knowledge: { ...base.knowledge, isolatedAt: undefined }, authorization: { ...base.authorization, issuedAt: undefined } });
+  assert.equal(uncheckable.code, 'RESTORE_AUTHZ_NOT_NEW');
   assert.equal(rev.evaluateRestoration({ ...base, plan: { audience: [FIXTURE_GROUP] }, authorization: { ...base.authorization, contentUseUntil: '2026-10-01T00:00:00Z' } }).code, 'RESTORE_CONTENT_USE_EXPIRED');
   assert.equal(rev.evaluateRestoration({ ...base, plan: { audience: [FIXTURE_GROUP] }, review: null }).code, 'RESTORE_REVIEW_REQUIRED');
   // A successful restoration: fresh review, current audience, readback done.
@@ -497,23 +504,29 @@ test('4.8.c/L06: restoration re-proves everything — new epoch first, a current
   assert.equal(ok.newEpoch > base.knowledge.epoch, true);
 });
 
-test('4.8.c/L05: post-completion maintenance preserves the delivered history through the same single engine; an open run blocks closeout instead', async () => {
+test('4.8.c/L05: post-completion maintenance preserves the delivered history through the same single engine under a maintenance run naming origin_run, knowledge and operation IDs; an open run blocks closeout instead', async () => {
   const rev = await import('../lib/adapters/knowledge-revocation.js');
   const event = rev.buildRevocationEvent({
     kind: 'grant-expired', source: 'sdd-harness-repo',
     observedAt: '2026-10-21T10:00:00Z', reporter: 'collector:expiry-tick', evidence: {},
   });
+  const closure = { affected: ['k-arch-9'], derivedArtifacts: [], unmapped: [], conservativePause: false, complete: true, reason: null };
   const completed = rev.evaluatePostCompletionMaintenance({
     originalRun: { id: 'run-delivery-1', state: 'completed', publishReceiptId: 'rc-arch-9' },
-    event,
+    event, closure,
   });
   assert.equal(completed.mode, 'maintenance-run');
   assert.equal(completed.maintenance.engine, 'Comet.Run.managedDelivery.v1');
+  assert.equal(completed.maintenance.originRunId, 'run-delivery-1', 'the maintenance run names its origin_run');
+  assert.deepEqual(completed.maintenance.knowledgeIds, ['k-arch-9'], 'the maintenance run names the affected knowledge ids');
   assert.equal(completed.maintenance.linkedReceipt, 'rc-arch-9');
   assert.equal(completed.originalRunPreserved, true);
   assert.equal(completed.originalRun.state, 'completed', 'the delivered history is never rewritten');
   assert.ok(!('currentPhase' in completed.maintenance), 'no second currentPhase exists anywhere');
   assert.equal(completed.maintenance.reopensProductRequirement, false);
+  // The linkage is enforced, not decorative.
+  assert.throws(() => rev.evaluatePostCompletionMaintenance({ originalRun: { state: 'completed', publishReceiptId: 'rc-x' }, event, closure }), (e) => e.code === 'RUN_ID_REQUIRED', 'a maintenance run without an origin_run id is refused');
+  assert.throws(() => rev.evaluatePostCompletionMaintenance({ originalRun: { id: 'run-delivery-1', state: 'completed', publishReceiptId: 'rc-arch-9' }, event }), (e) => e.code === 'CLOSURE_INVALID', 'a maintenance run without the knowledge ids (closure) is refused');
   const open = rev.evaluatePostCompletionMaintenance({
     originalRun: { id: 'run-delivery-2', state: 'build', publishReceiptId: 'rc-2' },
     event,
