@@ -1,0 +1,19 @@
+P5_2 rework GREEN evidence — unit suite on the v2 gate (post-GREEN tree, commit 0eb9959)
+command: node --test test/delivery-control.test.js   (node v22.13.1)
+oracle: 10/10 pass — committed declaration, start/release/implement real denials with receipt trace, M1 enabled-without-record, M2 unresolvable decision_record + path escape, M3 PASS-claim fail-closed, M4 refuse-stripped default-deny, env/enable-record/input hygiene, honest status readback
+result: 10 tests, 10 pass, 0 fail
+--- sanitized TAP tail ---
+ok 1 - committed enablement.json is the rework gate declaration: CROSS_MACHINE, enabled=false, decision_record=null, refuse=[start,release,implement], f10_state=UNVERIFIED_NOT_ENABLED
+ok 2 - start request is REALLY denied: real process, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED, receipt carries the request digest as the trace
+ok 3 - release request is REALLY denied: real process, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED (refuse_release, P5_1 wildcard semantics)
+ok 4 - implement request is REALLY denied: real process, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED (no team capability may be implemented cross-machine before enablement)
+ok 5 - M1 tamper — enabled flipped true with no decision record is still denied (ENABLEMENT_DECISION_RECORD_REQUIRED); an incoherent bare flip fails closed
+ok 6 - M2 tamper — a decision_record that does not resolve to an open_decisions adjudication is still denied (ENABLEMENT_DECISION_RECORD_UNRESOLVED); path escape refused
+ok 7 - M3 tamper — NOT_ENABLED marked PASS fails closed: every action including the status readback is denied (GATE_FILE_FAIL_CLOSED)
+ok 8 - M4 tamper — refuse semantics stripped fails closed: default-deny still refuses all three actions
+ok 9 - environment variables can never flip the gate; a runtime enable record is digested, never trusted (ENABLEMENT_REQUIRES_REGISTERED_DECISION); a missing request file is invalid input (exit 1), not a denial
+ok 10 - status readback reports the NOT_ENABLED state honestly (exit 0, UNVERIFIED_NOT_ENABLED, positive auth UNVERIFIED); the gate builds no positive cross-machine surface; the service dir ships exactly the gate artifacts + README
+# tests 10
+# pass 10
+# fail 0
+# skipped 0
