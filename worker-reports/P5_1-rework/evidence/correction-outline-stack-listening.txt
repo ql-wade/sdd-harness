@@ -1,0 +1,36 @@
+# CORRECTION — knowledge-stack-outline listening state (matrix machine_dimension)
+# run: rework-seven-p1-r1 / task P5_1 / branch rework/p5-1
+# date: 2026-10-23T03:09:58Z
+# trigger: coordinator review correction — the 'stack not running' reading recorded at GREEN is a session-sandbox artifact, not a service fact
+
+## 1) kernel-level re-check run by this worker now (supersedes any curl-based inference)
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN
+COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+com.docke 80842  mac  307u  IPv4 0x1879e75cf5656cc6      0t0  TCP 127.0.0.1:3000 (LISTEN)
+$ lsof -nP -iTCP:5556 -sTCP:LISTEN
+COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+com.docke 80842  mac 3520u  IPv4 0x96621b6e8b5deb12      0t0  TCP 127.0.0.1:5556 (LISTEN)
+=> com.docker LISTENs on both 127.0.0.1:3000 (outline) and 127.0.0.1:5556 (dex): the stack IS running.
+
+## 2) sandbox-artifact reference chain (why curl ECONNREFUSED was an invalid probe channel)
+- REWORK-HANDOFF-2026-10-22.md (known environment facts): "宿主 curl 对 127.0.0.1 受系统代理干扰，容器内验证为准" and "Bash 回环 HTTP 被会话沙箱过滤（curl 000，浏览器通道可用）"
+- worker-reports/P4_4-rework/evidence/outline-real-stack-verify.txt: "The Bash loopback HTTP channel is filtered by this session sandbox (curl exit 7, http_code 000) — NOT a service outage"; real write (POST collections.create/documents.create -> 200) + 3-channel independent readback through the Playwright browser channel on THIS stack (2026-10-23, objects cleaned; see also P4_8 revocation evidence fdea33c)
+- worker-reports/P5_1-rework/evidence/host-probes-20261023.txt: my curl probes (exit 7) were the same artifact; their "reading" bullet inferred stack-down — that inference is hereby corrected (raw outputs kept unmodified; committed evidence is not rewritten)
+
+## 3) artifacts fixed by this correction
+- team-host-matrix/matrix.json machine_dimension: knowledge-stack-outline cell now records listening=LISTENING (lsof kernel evidence + browser-channel real-write history), keeps live-use verification UNVERIFIED holder=VERIFY, and names the sandbox curl artifact as an invalid probe channel; write_protection.channels.loopback-http-3000-5556 reframed as a sandbox-channel refusal record (neither write protection nor service state). The P3_2-rework "unreachable" pointer was removed from the cell (same artifact, misleading as evidence here).
+- test/delivery-cases/5_1.mjs: no assertion depended on the old wording (checks are pointer-resolution/enum/holder based) — no test change needed; full re-run attached below.
+
+## 4) full re-runs after the matrix correction (no test change was needed)
+$ node --test test/delivery-cases/5_1.mjs
+# tests 14
+# pass 14
+# fail 0
+# skipped 0
+$ npm test (full suite, node v22.13.1)
+not ok 62 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+not ok 463 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+# tests 475
+# pass 472
+# fail 2
+# skipped 1

@@ -313,12 +313,13 @@
      },
      "knowledge-stack-outline": {
       "status": "UNVERIFIED",
-      "measured": "loopback 127.0.0.1:3000（outline）与 :5556（dex）于 2026-10-23T02:50Z 实测 ECONNREFUSED——栈当下未运行；与 2026-10-22 返工探针一致；重启栈属部署动作（终端面板通道），live 使用归 VERIFY 旅程",
+      "measured": "监听状态=LISTENING：内核级 lsof -nP -iTCP:3000/5556 -sTCP:LISTEN → com.docker 双 LISTEN（2026-10-23 控制器复核+本 worker 复现）；同 run P4_4 step11/P4_8 已经 Playwright 浏览器同源通道在本栈完成真实写入+三通道独立读回（对象已清理）。会话沙箱 Bash curl 的 ECONNREFUSED（exit 7/000）是沙箱过滤回环 HTTP 的已知伪影——无效探针通道，不作服务状态证据",
       "evidence": [
-       "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: curl loopback sections",
-       "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P3_2-rework/evidence/11-outline-stack-unreachable.txt :: ECONNREFUSED probes 2026-10-22T17:12Z"
+       "worker-reports/P5_1-rework/evidence/correction-outline-stack-listening.txt :: lsof kernel LISTEN re-check + sandbox-artifact reference chain",
+       "worker-reports/P4_4-rework/evidence/outline-real-stack-verify.txt :: browser-channel real write 200 + 3-channel independent readback on this stack",
+       "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: raw curl artifact record (invalid probe channel)"
       ],
-      "holder": "VERIFY（same-run-delivery / real-comet-recovery 旅程执行 owner；前置=栈经终端通道重启，runtime secrets/compose 在 .sdd/outline/runtime/）"
+      "holder": "VERIFY（same-run-delivery / real-comet-recovery 旅程执行 owner；栈已 LISTEN，live-use 验证语义不变）"
      },
      "web-evidence-channel": {
       "status": "UNVERIFIED",
@@ -347,9 +348,10 @@
       },
       "loopback-http-3000-5556": {
        "outcome": "REFUSED_MEASURED",
-       "measured": "curl --noproxy '*' 127.0.0.1:3000/5556 -> ECONNREFUSED（exit 7）——记录为实际连接结果；这是栈缺席的事实，不是一道写保护",
+       "measured": "会话沙箱拒绝回环 HTTP connect（curl exit 7/000）——该拒绝是沙箱过滤行为（伪影通道），既非写保护也非服务状态；内核复核同端口 com.docker LISTEN（见 correction-outline-stack-listening.txt）",
        "evidence": [
-        "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: curl loopback sections"
+        "worker-reports/P5_1-rework/evidence/correction-outline-stack-listening.txt :: channel refusal reframe + kernel LISTEN",
+        "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: raw curl artifact record"
        ]
       }
      },
