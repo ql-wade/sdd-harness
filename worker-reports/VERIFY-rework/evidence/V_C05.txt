@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "tool": "tools/verify/delivery-journey.mjs",
+  "runnerInvariant": "test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery",
+  "scenario": "C05",
+  "acceptanceIds": [
+    "C05"
+  ],
+  "journey": null,
+  "profile": "managed-pilot",
+  "caseModule": "test/classic-integration.test.js",
+  "sourceBinding": [
+    {
+      "path": "specs/delivery-foundation/spec.md",
+      "requirement": "Classic single-controller integration",
+      "scenario": "C05"
+    }
+  ],
+  "verdict": "FAIL",
+  "reason": "action-1-failed (spawn): expected exit 0, observed exit 1 (expected: exit 0; TAP summary fail=0 with pass>0; test point matching C05 (V_C05 or bare id) is ok)",
+  "missing": [],
+  "drift": [],
+  "schemaErrors": [],
+  "execution": {
+    "command": "node --test test/classic-integration.test.js",
+    "actions": [
+      {
+        "index": 1,
+        "type": "spawn",
+        "expected": "exit 0; TAP summary fail=0 with pass>0; test point matching C05 (V_C05 or bare id) is ok",
+        "required": true,
+        "expectation": {
+          "kind": "exitCode",
+          "value": 0
+        },
+        "ok": false,
+        "exitCode": 1,
+        "durationMs": 164,
+        "note": "expected exit 0, observed exit 1",
+        "observed": null,
+        "command": "node --test test/classic-integration.test.js"
+      },
+      {
+        "index": 2,
+        "type": "readState",
+        "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0",
+        "required": true,
+        "expectation": {
+          "kind": "nonEmptyFile"
+        },
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": {
+          "path": ".whitebox/delivery-foundation/C05/action-1-stdout.txt",
+          "bytes": 5767
+        },
+        "command": null
+      },
+      {
+        "index": 3,
+        "type": "inspect",
+        "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+        "required": false,
+        "expectation": null,
+        "ok": true,
+        "exitCode": null,
+        "durationMs": null,
+        "note": null,
+        "observed": "6918798204d07c6ae5b416a3c80f9f8432be749c",
+        "command": null
+      }
+    ],
+    "tests": 21,
+    "pass": 19,
+    "fail": 1,
+    "skipped": 1,
+    "effectiveExecutions": 20,
+    "target": {
+      "token": "C05",
+      "found": true,
+      "status": "ok"
+    },
+    "requiredAssertions": [
+      {
+        "id": "C05",
+        "status": "satisfied",
+        "matchedPoints": 4,
+        "ok": 4,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "candidate": {
+    "gitHead": "6918798204d07c6ae5b416a3c80f9f8432be749c",
+    "node": "v22.13.1",
+    "platform": "darwin"
+  },
+  "timing": {
+    "startedAt": "2026-10-23T05:22:33.277Z",
+    "finishedAt": "2026-10-23T05:22:33.472Z",
+    "durationMs": 195
+  },
+  "evidence": {
+    "dir": ".whitebox/delivery-foundation/C05",
+    "files": [
+      "pilot-baseline.json",
+      "case-definition.json",
+      "verdict.json"
+    ]
+  },
+  "exitCode": 2
+}

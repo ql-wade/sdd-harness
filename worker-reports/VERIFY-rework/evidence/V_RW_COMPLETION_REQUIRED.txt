@@ -1,0 +1,109 @@
+TAP version 13
+# Subtest: RW_COMPLETION_REQUIRED setup: schema-2 index and verification.md exist, four evidence-status layers declared, deployment separated
+ok 1 - RW_COMPLETION_REQUIRED setup: schema-2 index and verification.md exist, four evidence-status layers declared, deployment separated
+  ---
+  duration_ms: 3.159667
+  ...
+# Subtest: RW_COMPLETION_REQUIRED (a): 92 scenarios map 1:1 to spec.md and all 118 required checks are indexed with faithful contract fields
+ok 2 - RW_COMPLETION_REQUIRED (a): 92 scenarios map 1:1 to spec.md and all 118 required checks are indexed with faithful contract fields
+  ---
+  duration_ms: 1342.243166
+  ...
+# Subtest: RW_COMPLETION_REQUIRED (b): every scenario wires exactly the contract aggregation of required checks
+ok 3 - RW_COMPLETION_REQUIRED (b): every scenario wires exactly the contract aggregation of required checks
+  ---
+  duration_ms: 1343.757542
+  ...
+# Subtest: RW_COMPLETION_REQUIRED (c): component evidence resolves to real commits and never overclaims the controller ledger
+not ok 4 - RW_COMPLETION_REQUIRED (c): component evidence resolves to real commits and never overclaims the controller ledger
+  ---
+  duration_ms: 1247.587875
+  location: '<repo>/test/delivery-cases/4_3.mjs:548:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   'scenario A09: component overclaim — task P5_1 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED',
+    +   'scenario A10: component overclaim — task P5_1 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED',
+    +   'scenario A11: component overclaim — task P5_1 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED',
+    +   'scenario A12: component overclaim — task P5_1 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED',
+    +   'scenario B10: component overclaim — task P4_3 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED',
+    +   'scenario F03: component overclaim — task P5_1 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED',
+    +   'scenario F08: component overclaim — task P5_1 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED',
+    +   'scenario F10: component overclaim — task P5_2 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'scenario A09: component overclaim — task P5_1 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED'
+    1: 'scenario A10: component overclaim — task P5_1 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED'
+    2: 'scenario A11: component overclaim — task P5_1 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED'
+    3: 'scenario A12: component overclaim — task P5_1 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED'
+    4: 'scenario B10: component overclaim — task P4_3 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED'
+    5: 'scenario F03: component overclaim — task P5_1 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED'
+    6: 'scenario F08: component overclaim — task P5_1 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED'
+    7: 'scenario F10: component overclaim — task P5_2 recorded REOPENED_RETEST_REQUIRED but execution-state says ACCEPTED'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/4_3.mjs:551:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RW_COMPLETION_REQUIRED (d): statuses and the gate verdict are computed from current sources, not asserted
+ok 5 - RW_COMPLETION_REQUIRED (d): statuses and the gate verdict are computed from current sources, not asserted
+  ---
+  duration_ms: 1210.179459
+  ...
+# Subtest: RW_COMPLETION_REQUIRED (e): the current index is honestly incomplete — every required check, scenario and journey still blocks, P1s open
+ok 6 - RW_COMPLETION_REQUIRED (e): the current index is honestly incomplete — every required check, scenario and journey still blocks, P1s open
+  ---
+  duration_ms: 0.88475
+  ...
+# Subtest: RW_COMPLETION_REQUIRED (f): holder and explicit disposition never upgrade — injecting them changes no status and no verdict
+ok 7 - RW_COMPLETION_REQUIRED (f): holder and explicit disposition never upgrade — injecting them changes no status and no verdict
+  ---
+  duration_ms: 1.171291
+  ...
+# Subtest: RW_COMPLETION_REQUIRED (g): historical 76/87 never inherits — replaying historical VERIFIED/PASS labels changes nothing
+ok 8 - RW_COMPLETION_REQUIRED (g): historical 76/87 never inherits — replaying historical VERIFIED/PASS labels changes nothing
+  ---
+  duration_ms: 1.132083
+  ...
+# Subtest: RW_COMPLETION_REQUIRED (h): an all-PASS index with recorded readbacks, closed journeys and zero open P1 flips the verdict — the gate judges
+ok 9 - RW_COMPLETION_REQUIRED (h): an all-PASS index with recorded readbacks, closed journeys and zero open P1 flips the verdict — the gate judges
+  ---
+  duration_ms: 1.268542
+  ...
+# Subtest: RW_COMPLETION_REQUIRED (i): any single FAIL/GATED/UNVERIFIED/skipped check or missing readback keeps the verdict NOT complete
+ok 10 - RW_COMPLETION_REQUIRED (i): any single FAIL/GATED/UNVERIFIED/skipped check or missing readback keeps the verdict NOT complete
+  ---
+  duration_ms: 4.380875
+  ...
+# Subtest: RW_COMPLETION_REQUIRED (j): a missing journey definition keeps the verdict incomplete and fails validation
+ok 11 - RW_COMPLETION_REQUIRED (j): a missing journey definition keeps the verdict incomplete and fails validation
+  ---
+  duration_ms: 1209.358042
+  ...
+# Subtest: RW_COMPLETION_REQUIRED (k): deployment stays NOT_DELIVERED and cannot claim delivered without confirmation evidence
+ok 12 - RW_COMPLETION_REQUIRED (k): deployment stays NOT_DELIVERED and cannot claim delivered without confirmation evidence
+  ---
+  duration_ms: 1207.726667
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 11
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7645.975
