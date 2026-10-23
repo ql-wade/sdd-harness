@@ -671,16 +671,16 @@
 **Parallel safe:** false
 **Acceptance IDs:** A01, A02, A03, A04, A05, A06, A07, A08, A09, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, B01, B02, B03, B04, B05, B06, B07, B08, B09, B10, C01, C02, C03, C04, C05, C06, C07, C08, D01, D02, D03, D04, D05, D06, D07, D08, E01, E02, E03, E04, E05, E06, F01, F02, F03, F04, F05, F06, F07, F08, F09, F10, H01, H02, H03, H04, H05, H06, H07, H08, H09, L01, L02, L03, L04, L05, L06, L07, L08, L09, L10, L11, M01, M02, U01, U02, U03, U04, U05, U06, U07, U08
 
-- [ ] **Step 1 [5 min]: Test** 在精确集成版本执行 execution-contract.json 每项 required check，保留真实日志、数据及适用截图，缺授权/环境/行为证据保持 UNVERIFIED。
-- [ ] **Step 2 [5 min]: Review** 独立 Whitebox Journey 后逐项 Grill92场景及全部69工作包；平台/知识/宿主能力分层报告，关闭全部阻断发现并以新候选复验。
-- [ ] **Step 3 [3 min]: Commit** 仅接纳当前版本验证报告、原始证据索引和任务证据更新，不执行本 Change 归档；归档由唯一 Comet closeout owner 在验收后处理。
+- [x] **Step 1 [5 min]: Test** 在精确集成版本执行 execution-contract.json 每项 required check，保留真实日志、数据及适用截图，缺授权/环境/行为证据保持 UNVERIFIED。
+- [x] **Step 2 [5 min]: Review** 独立 Whitebox Journey 后逐项 Grill92场景及全部69工作包；平台/知识/宿主能力分层报告，关闭全部阻断发现并以新候选复验。
+- [x] **Step 3 [3 min]: Commit** 仅接纳当前版本验证报告、原始证据索引和任务证据更新，不执行本 Change 归档；归档由唯一 Comet closeout owner 在验收后处理。
 
 本轮返工（P1映射见replan-record.json，详细oracle见execution-contract.json）：
 
-- [ ] **Step 4 [5 min]: Test** 对最终集成候选重新执行原108+10返工检查及全部92场景；先检查observer资格、真实Comet构建/身份，再运行同Run完整产品旅程、实际Comet故障恢复及关联知识撤权恢复。原始日志/图像/数据必须保留。
-- [ ] **Step 5 [5 min]: Review** 独立Whitebox Journey→原始ledger校验→证据Grill，7个P1逐一绑定fix提交、实际反例变绿及最终候选读回；只跑目录套件或对齐报告计数不能签整体PASS。
-- [ ] **Step 6 [5 min]: Record** 所有required=PASS、零未关闭P0/P1、同Run产品completed且知识当前可用才接受VERIFY；F10未启用/资源缺失仍记录未验且不完成整体目标，不能为凑数扩建API或删除检查；本迁移Change的Comet唯一归档/后审另由控制器在VERIFY后执行。
-- [ ] **Step 7 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
+- [x] **Step 4 [5 min]: Test** 对最终集成候选重新执行原108+10返工检查及全部92场景；先检查observer资格、真实Comet构建/身份，再运行同Run完整产品旅程、实际Comet故障恢复及关联知识撤权恢复。原始日志/图像/数据必须保留。
+- [x] **Step 5 [5 min]: Review** 独立Whitebox Journey→原始ledger校验→证据Grill，7个P1逐一绑定fix提交、实际反例变绿及最终候选读回；只跑目录套件或对齐报告计数不能签整体PASS。
+- [x] **Step 6 [5 min]: Record** 所有required=PASS、零未关闭P0/P1、同Run产品completed且知识当前可用才接受VERIFY；F10未启用/资源缺失仍记录未验且不完成整体目标，不能为凑数扩建API或删除检查；本迁移Change的Comet唯一归档/后审另由控制器在VERIFY后执行。
+- [x] **Step 7 [3 min]: Commit** 独立审查通过后串行接纳本任务授权路径与当前RED/GREEN证据，跨任务锁/共享策略只由唯一控制器集成；历史通过不替代本轮验收。
 
 
 
