@@ -1,0 +1,38 @@
+{
+  "task": "P5_3",
+  "phase": "rework-r1",
+  "verdict": "APPROVED",
+  "blocking_findings": [],
+  "reviewed_at": "2026-10-23T05:08:28.366698+00:00",
+  "head_reviewed": "1721260",
+  "non_blocking_findings": [
+    {
+      "id": "NB1-evidence-path-basis-mix",
+      "disposition": "记录备查",
+      "summary": "台账 evidence 数组混用仓库根/change 目录两种相对基准, 文件均在场"
+    },
+    {
+      "id": "NB2-unverified-no-single-list",
+      "disposition": "信息性",
+      "summary": "六条未验证声明分散于台账/runbook/门读回, 逐条核实相符"
+    },
+    {
+      "id": "NB3-clone-drill3-skip",
+      "disposition": "既有环境门; 评审以 symlink 钉定构建复验无 skip 路径",
+      "summary": "冷 clone J2 drill3 按 .sdd 缺失自 skip, 失败集两边一致"
+    }
+  ],
+  "independently_rerun": {
+    "boundary_clean": true,
+    "red_reproduction": "旧 5_3 直跑 3 败(TypeError scope-gate); 新 5_3 在基点 9 败恰=配方x2+台账x5+runbook x2",
+    "green_and_mutations": "16/16 零跳过(symlink 钉定构建); 四组突变真实工件重做全咬合; M2 双 MASQUERADE",
+    "npm_test": "475/472/2/1 逐字一致",
+    "capability_boundary_audit": "4 条单机 VERIFIED 证据指针全部在场真实; 三方同源(matrix 通配符=enablement.json=台账); T1-T5 各指真实工件; R04/R07/门读回/J3 实跑核实",
+    "rollback_drill_own_rerun": "评审者亲手最小演练: HEAD→detach 129cfdf→回 HEAD, 三时点签名一致, 质量门 fail-closed",
+    "runbook_audit": "14 节对账; I08 区分声明在文件头; J4 钉定串与索引 from_partial_nodes 逐字一致"
+  },
+  "adjudications": {
+    "index_regen_ownership": "VERIFY 承担(活对照自强制: J4 每次运行读当前索引, 过期钉定当次即红); P5_2 门控行脱落须与 runbook 第 8 节同步删除",
+    "j4_pinned_strings": "保留逐字活对照+登记 VERIFY 义务(绊线是设计)"
+  }
+}
