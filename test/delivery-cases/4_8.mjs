@@ -278,20 +278,25 @@ test('J3 (L05+L06): the delivered history is preserved by a same-engine maintena
     observedAt: new Date().toISOString(), reporter: 'collector:webhook', evidence: { shareCreated: 'shr_j3' },
   });
   // L05: the original delivery run is completed; maintenance rides the same
-  // engine and links the original publish receipt.
+  // engine and links the original publish receipt, explicitly naming
+  // origin_run and the affected knowledge ids.
+  const j3Registry = { mappings: [{ knowledgeId: 'k-j3', sources: ['sdd-harness-repo'], documentId: 'doc-j3', derived: [], attachments: [], caches: [] }] };
+  const j3Closure = rev.computeImpactClosure({ registry: j3Registry, event });
   const completed = rev.evaluatePostCompletionMaintenance({
     originalRun: { id: 'run-j3-delivery', state: 'completed', publishReceiptId: 'rc-j3' },
-    event,
+    event, closure: j3Closure,
   });
   assert.equal(completed.mode, 'maintenance-run');
   assert.equal(completed.maintenance.engine, 'Comet.Run.managedDelivery.v1');
+  assert.equal(completed.maintenance.originRunId, 'run-j3-delivery');
+  assert.deepEqual(completed.maintenance.knowledgeIds, ['k-j3']);
   assert.equal(completed.maintenance.linkedReceipt, 'rc-j3');
   assert.equal(completed.originalRun.state, 'completed');
   assert.ok(!('currentPhase' in completed.maintenance));
   // L06: the offboarded group must not come back through an old snapshot.
   const base = {
-    knowledge: { id: 'k-j3', epoch: 7, status: 'isolated' },
-    authorization: { grantsValid: true, contentUseUntil: new Date(Date.now() + 86_400_000).toISOString(), audienceWithinIntersection: true, offboardedSinceIsolation: [OFFBOARDED_GROUP] },
+    knowledge: { id: 'k-j3', epoch: 7, status: 'isolated', isolatedAt: new Date(Date.now() - 3_600_000).toISOString() },
+    authorization: { grantsValid: true, issuedAt: new Date(Date.now() - 1_800_000).toISOString(), contentUseUntil: new Date(Date.now() + 86_400_000).toISOString(), audienceWithinIntersection: true, offboardedSinceIsolation: [OFFBOARDED_GROUP] },
     review: { verdict: 'pass', boundDigest: sha256('j3 candidate v2'), reviewedAt: new Date().toISOString(), reviewerPrincipal: REVIEWER },
     allowedAudience: [FIXTURE_GROUP],
     channelEvidence: [{ channel: 'file-wiki', status: 'readable', basis: 'independent-readback' }],
@@ -421,4 +426,135 @@ test('J5 (L09+L10+L11): independent alerts, first-failure economics, separated w
   } finally {
     replacement.kill('SIGKILL');
   }
+});
+
+// --- J6 (rework Step 12): the maintenance-run linkage and the separate clocks --
+
+test('V_POST_DELIVERY_PERMISSIONS:L05-maintenance-run — post-completion maintenance opens a same-engine maintenance Run naming origin_run, knowledge and operation IDs; restore requires a NEW authorization; the delivered history is never rewritten; the 3-minute detection and 2-minute isolation targets are recorded with the fault-exposure window and alert delivery on two separate clocks', async () => {
+  const rev = await import('../../lib/adapters/knowledge-revocation.js');
+  const event = rev.buildRevocationEvent({
+    kind: 'source-permission-shrunk', source: 'sdd-harness-repo',
+    observedAt: new Date().toISOString(), reporter: 'collector:post-delivery', evidence: { origin: 'same-run delivery knowledge' },
+  });
+  const registry = { mappings: [{ knowledgeId: 'k-published-j6', sources: ['sdd-harness-repo'], documentId: 'doc-j6', derived: [], attachments: [], caches: [] }] };
+  const closure = rev.computeImpactClosure({ registry, event });
+
+  // The maintenance run binding: the SAME engine, origin_run, the affected
+  // knowledge ids and the km- operation key, bound to the original receipt.
+  const completed = rev.evaluatePostCompletionMaintenance({
+    originalRun: { id: 'run-same-run-delivery', state: 'completed', publishReceiptId: 'rc-j6' },
+    event, closure,
+  });
+  assert.equal(completed.mode, 'maintenance-run');
+  assert.equal(completed.maintenance.engine, 'Comet.Run.managedDelivery.v1');
+  assert.equal(completed.maintenance.originRunId, 'run-same-run-delivery');
+  assert.deepEqual(completed.maintenance.knowledgeIds, ['k-published-j6']);
+  assert.ok(completed.maintenance.operationKey.startsWith('km-'));
+  assert.equal(completed.maintenance.linkedReceipt, 'rc-j6');
+  assert.equal(completed.maintenance.reopensProductRequirement, false);
+  // The original delivery history is not rewritten and no second phase exists.
+  assert.equal(completed.originalRunPreserved, true);
+  assert.equal(completed.originalRun.state, 'completed');
+  assert.ok(!('currentPhase' in completed.maintenance));
+  // The linkage is enforced: no origin_run id, no knowledge ids — no run.
+  assert.throws(() => rev.evaluatePostCompletionMaintenance({ originalRun: { state: 'completed', publishReceiptId: 'rc-x' }, event, closure }), (e) => e.code === 'RUN_ID_REQUIRED');
+  assert.throws(() => rev.evaluatePostCompletionMaintenance({ originalRun: { id: 'run-same-run-delivery', state: 'completed', publishReceiptId: 'rc-j6' }, event }), (e) => e.code === 'CLOSURE_INVALID');
+
+  // Restoration runs on a NEW authorization: a pre-isolation license — or
+  // one whose newness cannot be checked — is never the restore basis.
+  const restoreBase = {
+    knowledge: { id: 'k-published-j6', epoch: 5, status: 'isolated', isolatedAt: '2026-10-22T08:00:00Z' },
+    authorization: { grantsValid: true, issuedAt: '2026-10-22T09:00:00Z', contentUseUntil: '2027-01-01T00:00:00Z', audienceWithinIntersection: true, offboardedSinceIsolation: [] },
+    review: { verdict: 'pass', boundDigest: sha256('j6 candidate'), reviewedAt: new Date().toISOString(), reviewerPrincipal: REVIEWER },
+    allowedAudience: [FIXTURE_GROUP],
+    channelEvidence: [{ channel: 'file-wiki', status: 'readable', basis: 'independent-readback' }],
+    plan: { audience: [FIXTURE_GROUP] },
+  };
+  const oldAuth = rev.evaluateRestoration({ ...restoreBase, authorization: { ...restoreBase.authorization, issuedAt: '2026-10-01T00:00:00Z' } });
+  assert.equal(oldAuth.ok, false);
+  assert.equal(oldAuth.code, 'RESTORE_AUTHZ_NOT_NEW');
+  const uncheckable = rev.evaluateRestoration({ ...restoreBase, knowledge: { ...restoreBase.knowledge, isolatedAt: undefined }, authorization: { ...restoreBase.authorization, issuedAt: undefined } });
+  assert.equal(uncheckable.code, 'RESTORE_AUTHZ_NOT_NEW');
+  const restored = rev.evaluateRestoration(restoreBase);
+  assert.equal(restored.ok, true);
+  assert.equal(restored.newEpoch, 6);
+
+  // The recorded SLA under the confirmed G15 A set: 3-minute detection +
+  // 2-minute isolation inside the 5-minute end-to-end target.
+  assert.equal(rev.G15A_DEADLINES.detectionLatestSeconds, 180);
+  assert.equal(rev.G15A_DEADLINES.isolationBudgetSeconds, 120);
+  const frozen = rev.judgeDeadlineBudgets({ budgets: { eventFastPathSeconds: 30, periodicScanIntervalSeconds: 60, detectionLatestSeconds: 180, isolationBudgetSeconds: 120, endToEndTargetSeconds: 300, heartbeatAlertAfterSeconds: 90, scanStallAlertAfterSeconds: 120, alertDeliverySeconds: 30, recoveryTargetSeconds: 600, faultPolicy: 'alert-and-record' } });
+  assert.equal(frozen.ok, true, JSON.stringify(frozen.violations));
+  // Clock 1 — the fault-exposure window: real wall clock from the source
+  // change to the verified isolation; the runner-down span stays inside it,
+  // pausedMs stays 0, and the 2-minute isolation overflow is KEPT.
+  const sourceChangedAt = Date.parse('2026-10-22T08:00:00Z');
+  const isolatedAt = Date.parse('2026-10-22T08:04:30Z');
+  const window = rev.computeExposureWindow({
+    sourceChangedAt, isolatedAt,
+    faults: [{ from: Date.parse('2026-10-22T08:02:00Z'), to: Date.parse('2026-10-22T08:03:00Z'), kind: 'runner-down' }],
+    budgets: { endToEndTargetMs: 300_000, isolationBudgetMs: 120_000 },
+  });
+  assert.equal(window.exposureMs, 270_000);
+  assert.equal(window.pausedMs, 0);
+  assert.ok(window.violations.some((v) => v.code === 'ISOLATION_DEADLINE_VIOLATED'));
+  // Clock 2 — alert delivery: measured from the FIRST failure on its own
+  // scale (dueBy = first failure + alert_delivery 30s), independent of the
+  // exposure window above.
+  const firstFailureAt = Date.parse('2026-10-22T08:01:30Z');
+  const judged = rev.judgeIsolationFailure({ failures: [{ at: firstFailureAt, code: 'API_TIMEOUT' }], now: firstFailureAt + 1_000, budgets: { isolationBudgetMs: 120_000, alertDeliveryMs: 30_000 } });
+  assert.equal(judged.alert.at, firstFailureAt);
+  assert.equal(judged.alert.dueBy, firstFailureAt + 30_000);
+  assert.notEqual(judged.alert.dueBy - firstFailureAt, window.exposureMs, 'the alert clock is not the exposure clock');
+  assert.equal(judged.exposureUnresolved, true);
+});
+
+// --- J7 (rework Step 11): the post-delivery-permissions recipe tracking --------
+
+test('V_POST_DELIVERY_PERMISSIONS:recipe-tracking — the post-delivery-permissions recipe is registered and bound (owner P4_8, required check V_POST_DELIVERY_PERMISSIONS), is self-sufficient for VERIFY, declares the consumption of the same-run journey actually-published knowledge across source revocation / deadlines / audience / missed events / isolation failure / real inaccessible readback, and the full previous journey is never a construction prerequisite', () => {
+  const base = 'openspec/changes/delivery-foundation-rearchitecture';
+  const plan = JSON.parse(fs.readFileSync(path.join(projectRoot, base, 'verification-case-plan.json'), 'utf8'));
+  const registration = plan.journey_definitions?.['post-delivery-permissions'];
+  assert.ok(registration, 'post-delivery-permissions is registered in verification-case-plan journey_definitions');
+  assert.equal(registration.owner, 'P4_8');
+  assert.equal(registration.required_check, 'V_POST_DELIVERY_PERMISSIONS');
+  assert.equal(registration.path, `${base}/revocation-journey/post-delivery-permissions.case.json`);
+
+  const recipe = JSON.parse(fs.readFileSync(path.join(projectRoot, registration.path), 'utf8'));
+  assert.equal(recipe.schemaVersion, 1);
+  assert.equal(recipe.scenario, 'L05', 'the registered contract command names scenario L05 and the recipe declares it');
+  assert.equal(recipe.caseModule, 'test/delivery-cases/4_8.mjs');
+  for (const id of ['L01', 'L02', 'L03', 'L04', 'L05', 'L06', 'L07', 'L08', 'L09', 'L10', 'L11']) {
+    assert.ok(recipe.acceptanceIds.includes(id), `the recipe carries acceptance id ${id}`);
+  }
+  for (const pin of ['L05', 'V_POST_DELIVERY_PERMISSIONS:L05-maintenance-run', 'V_POST_DELIVERY_PERMISSIONS:recipe-tracking']) {
+    assert.ok(recipe.requiredAssertions.includes(pin), `the recipe pins ${pin} to an executed test point`);
+  }
+  // Self-sufficiency: VERIFY gets one command whose TAP must satisfy every
+  // pinned assertion — no extra context needed.
+  const spawnAction = recipe.actions[0];
+  assert.equal(spawnAction.type, 'spawn');
+  assert.equal(spawnAction.command, 'node --test test/delivery-cases/4_8.mjs');
+  assert.equal(spawnAction.expect?.kind, 'tapRequiredAssertions');
+  for (const pin of recipe.requiredAssertions) {
+    assert.ok(spawnAction.expect.assertions.includes(pin), `the contract command pins ${pin}`);
+  }
+  // The recipe consumes the same-run journey's actually-published knowledge
+  // at VERIFY and names the SLA fields with the separate alert clock.
+  assert.ok(recipe.sourceBinding.some((b) => b.path.endsWith('pilot-journey/same-run-delivery.journey.json')), 'the recipe binds its VERIFY consumption to the same-run journey');
+  const declaredText = `${spawnAction.expected}\n${recipe.verdictSemantics.PASS}`;
+  assert.ok(declaredText.includes('detect_target_seconds=180'), 'the 3-minute detection target is recorded');
+  assert.ok(declaredText.includes('isolate_target_seconds=120'), 'the 2-minute isolation target is recorded');
+  assert.ok(declaredText.includes('alert_delivery_seconds=30'), 'the separate alert-delivery clock is recorded');
+  assert.ok(declaredText.includes('actually-published knowledge'), 'the consumption names the real published knowledge');
+  // The full previous journey is NOT a construction prerequisite, and no
+  // script may sign a full pass: the VERIFY tail of the host journey stays
+  // VERIFY-owned.
+  const hostJourney = JSON.parse(fs.readFileSync(path.join(projectRoot, base, 'pilot-journey/same-run-delivery.journey.json'), 'utf8'));
+  for (const stepId of ['7-kp-prearchive', '10-kt-run-closeout', '11-completed']) {
+    const step = hostJourney.steps.find((entry) => entry.id === stepId);
+    assert.ok(step, `the VERIFY tail step ${stepId} exists`);
+    assert.equal(step.executionOwner, 'VERIFY', `${stepId} stays VERIFY-owned in the host journey`);
+  }
+  assert.ok(recipe.verdictSemantics.PASS.includes('never a construction prerequisite'), 'the PASS semantics keep the previous journey out of construction scope');
 });
