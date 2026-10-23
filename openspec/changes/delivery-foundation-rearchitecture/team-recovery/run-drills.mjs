@@ -534,7 +534,7 @@ catch (error) { console.log(error.code); process.exit(3); }
     // (e) Cross-host boundary: a foreign-host lock owner is NEVER recovered —
     //     the real lock module refuses and times out (recorded as the honest
     //     single-host scope of this drill; multi-host recovery is gated by
-    //     CROSS_MACHINE_SCOPE, see services/delivery-control/scope-gate.json).
+    //     CROSS_MACHINE_SCOPE, see services/delivery-control/enablement.json, DeliveryControl.EnablementGate.v2).
     const foreignRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'p53-drill3-foreign-'));
     try {
       const foreignLock = path.join(foreignRoot, '.comet-state.lock');

@@ -1,0 +1,119 @@
+// P5_3-rework evidence 03 — GREEN run 1/2 of the rewritten 5_3.mjs on the
+// GREEN tree (runbook v2 rewrite + team-recovery/capability-boundary.json +
+// team-recovery/rollback-recipe.json).
+//
+// Command:  node --test test/delivery-cases/5_3.mjs   (node v22.13.1).
+// Measured: 16 tests / 16 pass / 0 fail / 0 skipped, exit 0 (run 2/2 equally
+// green — see evidence 04 for the second run summary and the mutation set).
+//
+// What turned green vs evidence 02:
+//   J3b x2  — rollback-recipe.json validates; deleting the
+//             record-rolled-back-signature step is refused (mutation M4);
+//   J4 x5   — capability-boundary.json validates against live enablement.json
+//             (enabled=false / refuse trio / UNVERIFIED_NOT_ENABLED), the
+//             single-host VERIFIED entries carry existing on-disk evidence,
+//             the cross-machine set is exactly the matrix wildcard
+//             capabilities (a10/a11/a12/team-release) all NOT_ENABLED, the
+//             daemon-mode and distributed-lease-surface absences cite real
+//             files, and the recheck triggers cover enablement + upstream
+//             service-mode topics;
+//   J4 x2   — the runbook now declares the v2 gate form, the four
+//             acceptance-index environment_gates verbatim, the rework-run
+//             ops surface (compose / Outline stack / 4_3.mjs --generate
+//             judge), the S5 no-daemon / S7-S8 credentials / F10 boundaries,
+//             and carries zero stale scope-gate references; hiding a gate
+//             verbatim string is still mechanically reported (negative).
+//
+// Host paths are redacted to <repo>/ per evidence discipline. Raw TAP follows.
+
+TAP version 13
+# Subtest: J1: the runbook carries ≥10 machine-verified commands whose entries exist and whose direct rows really run with the documented exit codes
+ok 1 - J1: the runbook carries ≥10 machine-verified commands whose entries exist and whose direct rows really run with the documented exit codes
+  ---
+  duration_ms: 829.116292
+  ...
+# Subtest: J1 negative: a runbook copy with a removed command row fails the ≥10 inventory contract (deleting runbook commands is caught mechanically)
+ok 2 - J1 negative: a runbook copy with a removed command row fails the ≥10 inventory contract (deleting runbook commands is caught mechanically)
+  ---
+  duration_ms: 0.477625
+  ...
+# Subtest: J2: the three recovery drill receipts are structurally honest — monotonic real timestamps, monotonic attempts, one operationKey per drill, real exit codes
+ok 3 - J2: the three recovery drill receipts are structurally honest — monotonic real timestamps, monotonic attempts, one operationKey per drill, real exit codes
+  ---
+  duration_ms: 1.108583
+  ...
+# Subtest: J2: the drills re-run live through the real executor with the same VERIFIED outcome
+ok 4 - J2: the drills re-run live through the real executor with the same VERIFIED outcome
+  ---
+  duration_ms: 41965.712375
+  ...
+# Subtest: J2 negative: a forged receipt timestamp (non-monotonic, and in the future) is rejected by the validator
+ok 5 - J2 negative: a forged receipt timestamp (non-monotonic, and in the future) is rejected by the validator
+  ---
+  duration_ms: 2.400916
+  ...
+# Subtest: J3: version rollback over the real protocol — unapproved and wrong-digest rollbacks are refused (exit 2), the approved same-digest rollback verifies (exit 0) and I06 independently confirms
+ok 6 - J3: version rollback over the real protocol — unapproved and wrong-digest rollbacks are refused (exit 2), the approved same-digest rollback verifies (exit 0) and I06 independently confirms
+  ---
+  duration_ms: 328.666958
+  ...
+# Subtest: J3b: the git-level rollback recipe (5.3.b) is machine-checkable — mandatory steps, real entries, known-set fail-closed expectation
+ok 7 - J3b: the git-level rollback recipe (5.3.b) is machine-checkable — mandatory steps, real entries, known-set fail-closed expectation
+  ---
+  duration_ms: 1.036833
+  ...
+# Subtest: J3b negative (mutation M4): a rollback recipe with a mandatory recovery step deleted is refused
+ok 8 - J3b negative (mutation M4): a rollback recipe with a mandatory recovery step deleted is refused
+  ---
+  duration_ms: 0.434541
+  ...
+# Subtest: J4: the capability boundary ledger verifies single-host lease/fencing/background/rollback with on-disk evidence and records the cross-machine boundary honestly
+ok 9 - J4: the capability boundary ledger verifies single-host lease/fencing/background/rollback with on-disk evidence and records the cross-machine boundary honestly
+  ---
+  duration_ms: 1.412792
+  ...
+# Subtest: J4 negative (mutation M1): marking a NOT_ENABLED cross-machine capability as VERIFIED is refused (not-enabled never passes)
+ok 10 - J4 negative (mutation M1): marking a NOT_ENABLED cross-machine capability as VERIFIED is refused (not-enabled never passes)
+  ---
+  duration_ms: 0.45125
+  ...
+# Subtest: J4 negative (mutation M2): a shared-local-directory masquerade of a cross-machine capability is refused
+ok 11 - J4 negative (mutation M2): a shared-local-directory masquerade of a cross-machine capability is refused
+  ---
+  duration_ms: 0.406959
+  ...
+# Subtest: J4 negative (mutation M3): deleting the recheck triggers (or leaving them topic-incomplete) is refused
+ok 12 - J4 negative (mutation M3): deleting the recheck triggers (or leaving them topic-incomplete) is refused
+  ---
+  duration_ms: 0.32225
+  ...
+# Subtest: J4: the v2 enablement gate readback stays honestly closed — status OK with UNVERIFIED_NOT_ENABLED, start/release/implement denied, runtime records never trusted
+ok 13 - J4: the v2 enablement gate readback stays honestly closed — status OK with UNVERIFIED_NOT_ENABLED, start/release/implement denied, runtime records never trusted
+  ---
+  duration_ms: 256.734084
+  ...
+# Subtest: J4: gate, machine matrix and capability ledger are same-source on the wildcard default-deny
+ok 14 - J4: gate, machine matrix and capability ledger are same-source on the wildcard default-deny
+  ---
+  duration_ms: 0.940458
+  ...
+# Subtest: J4: the runbook carries the v2 gate form, every known environment gate verbatim and the rework-run boundaries; no stale legacy reference survives
+ok 15 - J4: the runbook carries the v2 gate form, every known environment gate verbatim and the rework-run boundaries; no stale legacy reference survives
+  ---
+  duration_ms: 2.594375
+  ...
+# Subtest: J4 negative: a runbook copy that hides one known environment gate is rejected
+ok 16 - J4 negative: a runbook copy that hides one known environment gate is rejected
+  ---
+  duration_ms: 0.933917
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 43463.712666
+exit=0

@@ -1,0 +1,125 @@
+// P5_3-rework evidence 01 — RED authenticity of the OLD-run 5_3.mjs (P5_2
+// review N2 handoff reproduction).
+//
+// Command:  node --test test/delivery-cases/5_3.mjs   (node v22.13.1, worktree
+// of branch rework/p5-3 at base 129cfdf; test file unchanged from the old-run
+// delivery, i.e. still referencing the legacy scope-gate.json that the P5_2
+// rework GREEN 0eb9959 deleted).
+//
+// Measured here: 9 tests / 6 pass / 3 fail, exit 1. The three failures are
+// the J4 family — the runbook/gate boundary assertions whose functional
+// substrate (services/delivery-control/scope-gate.json + ScopeGate.v1
+// semantics: anchored=true, gateCode, ENABLEMENT_REQUIRES_PAIRED_COMMIT) no
+// longer exists. P5_2 rework review N2 measured "5 pass / 3 fail" in the
+// reviewer's checkout; the same 3 J4 failures reproduce here (the pass-count
+// difference is the J2 live drill-3 skip condition, which depends on the
+// local .sdd patched-build presence and does not affect the failure set).
+//
+// Host paths are redacted to <repo>/ per evidence discipline.
+// Raw TAP follows.
+
+TAP version 13
+# Subtest: J1: the runbook carries ≥10 machine-verified commands whose entries exist and whose direct rows really run with the documented exit codes
+ok 1 - J1: the runbook carries ≥10 machine-verified commands whose entries exist and whose direct rows really run with the documented exit codes
+  ---
+  duration_ms: 927.525667
+  ...
+# Subtest: J1 negative: a runbook copy with a removed command row fails the ≥10 inventory contract (deleting runbook commands is caught mechanically)
+ok 2 - J1 negative: a runbook copy with a removed command row fails the ≥10 inventory contract (deleting runbook commands is caught mechanically)
+  ---
+  duration_ms: 0.711125
+  ...
+# Subtest: J2: the three recovery drill receipts are structurally honest — monotonic real timestamps, monotonic attempts, one operationKey per drill, real exit codes
+ok 3 - J2: the three recovery drill receipts are structurally honest — monotonic real timestamps, monotonic attempts, one operationKey per drill, real exit codes
+  ---
+  duration_ms: 1.891917
+  ...
+# Subtest: J2: the drills re-run live through the real executor with the same VERIFIED outcome
+ok 4 - J2: the drills re-run live through the real executor with the same VERIFIED outcome
+  ---
+  duration_ms: 43318.247583
+  ...
+# Subtest: J2 negative: a forged receipt timestamp (non-monotonic, and in the future) is rejected by the validator
+ok 5 - J2 negative: a forged receipt timestamp (non-monotonic, and in the future) is rejected by the validator
+  ---
+  duration_ms: 2.083333
+  ...
+# Subtest: J3: version rollback over the real protocol — unapproved and wrong-digest rollbacks are refused (exit 2), the approved same-digest rollback verifies (exit 0) and I06 independently confirms
+ok 6 - J3: version rollback over the real protocol — unapproved and wrong-digest rollbacks are refused (exit 2), the approved same-digest rollback verifies (exit 0) and I06 independently confirms
+  ---
+  duration_ms: 317.310458
+  ...
+# Subtest: J4: the runbook declares every known environment gate verbatim and documents the paired-commit enablement flow; the live scope gate readback stays anchored NOT_ENABLED
+not ok 7 - J4: the runbook declares every known environment gate verbatim and documents the paired-commit enablement flow; the live scope gate readback stays anchored NOT_ENABLED
+  ---
+  duration_ms: 2.276875
+  location: '<repo>/test/delivery-cases/5_3.mjs:407:1'
+  failureType: 'testCodeFailure'
+  error: 'expected the acceptance index to carry its known gates, found 0'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mjs:411:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J4: start/publish are really denied while the cross-machine scope is not enabled (exit 2, not a crash)
+not ok 8 - J4: start/publish are really denied while the cross-machine scope is not enabled (exit 2, not a crash)
+  ---
+  duration_ms: 100.171334
+  location: '<repo>/test/delivery-cases/5_3.mjs:433:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    publish must be denied with exit 2 while CROSS_MACHINE_SCOPE is NOT_ENABLED
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mjs:440:14)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: J4 negative: a runbook copy that hides one known environment gate is rejected
+not ok 9 - J4 negative: a runbook copy that hides one known environment gate is rejected
+  ---
+  duration_ms: 0.92225
+  location: '<repo>/test/delivery-cases/5_3.mjs:454:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'trim')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/delivery-cases/5_3.mjs:458:27)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 6
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 44746.669958
+exit=1
