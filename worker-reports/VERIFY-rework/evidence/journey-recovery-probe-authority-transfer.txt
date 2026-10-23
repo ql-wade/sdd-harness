@@ -1,0 +1,42 @@
+{
+  "interface": "BackupInfra.v1",
+  "command": "probe",
+  "case": "authority-transfer",
+  "executed": true,
+  "status": "VERIFIED",
+  "observedSteps": [
+    {
+      "step": "runner-permanently-lost",
+      "status": "VERIFIED",
+      "method": "SIGKILL",
+      "supervisedRestart": false
+    },
+    {
+      "step": "transfer-without-approval-refused",
+      "status": "VERIFIED"
+    },
+    {
+      "step": "shared-directory-masquerade-refused",
+      "status": "VERIFIED"
+    },
+    {
+      "step": "controlled-transfer-registers-new-authority",
+      "status": "VERIFIED",
+      "newAuthority": {
+        "authorityId": "comet-authority-transfer-6dce41ec7249",
+        "epoch": 3,
+        "runId": "run-i08-probe",
+        "transferredFrom": "comet-authority-i08-probe",
+        "transferredAt": "2026-10-23T06:35:32.567Z"
+      }
+    }
+  ],
+  "singleAuthorityProof": {
+    "oldWriterConfirmedGone": true,
+    "singleLiveAuthority": true,
+    "method": "SIGKILL",
+    "note": "the old writer is confirmed terminated by process-level evidence; exactly one live authority is registered"
+  },
+  "reason": "single-authority migration proven locally: the runner is really SIGKILLed, transfer refuses without controlled approval, shared-directory masquerade fencing is refused, and the approved transfer registers a new authority with an epoch bump and a single-live-authority proof",
+  "checkedAt": "2026-10-23T06:35:32.570Z"
+}

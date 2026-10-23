@@ -1,0 +1,31 @@
+{
+  "interface": "AlertPolicy.v1",
+  "command": "alert",
+  "mode": "TIMELINE_EVALUATION",
+  "kind": null,
+  "segments": {
+    "detectionSeconds": 24,
+    "deliverySeconds": null,
+    "escalationSeconds": null
+  },
+  "failover": {
+    "used": false
+  },
+  "violations": [
+    {
+      "code": "ALERT_UNDELIVERED",
+      "reason": "no attempt records outcome=delivered; an undelivered alert must not be recorded as acknowledged"
+    },
+    {
+      "code": "ESCALATION_MISSING",
+      "reason": "an unacknowledged alert must escalate to the backup on-call"
+    }
+  ],
+  "delivery": {
+    "mode": "PREPARE_ONLY",
+    "authorized": false,
+    "sentByThisTool": false
+  },
+  "escalationFreezeStatus": "UNVERIFIED_RECOMMENDED",
+  "checkedAt": "2026-10-23T06:38:22.638Z"
+}
