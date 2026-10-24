@@ -119,6 +119,26 @@ function checkRefs(refs, refsDoc, violations, catalogGaps, at) {
   }
 }
 
+// I01 caller convergence（ROUND2）：validate 与 repository-identity probe 消费同一个身份核。
+// 五个字段先验形状（repoId/principalId 必须是正安全整数；repoFullname/url/owner 必须是非空字符串），
+// 再做精确相等——两侧同缺/同空白/同类型漂移不算同源：两个 undefined 相等不是身份，等值绝不放行缺席。
+const isPositiveSafeInteger = (value) => Number.isSafeInteger(value) && value > 0;
+const isNonBlankString = (value) => typeof value === 'string' && value.trim().length > 0;
+const IDENTITY_FIELDS = [
+  { field: 'repoId', valid: isPositiveSafeInteger },
+  { field: 'principalId', valid: isPositiveSafeInteger },
+  { field: 'repoFullname', valid: isNonBlankString },
+  { field: 'url', valid: isNonBlankString },
+  { field: 'owner', valid: isNonBlankString },
+];
+
+function checkRepositoryIdentity({ registration, registryGithub }) {
+  const mismatches = IDENTITY_FIELDS
+    .filter(({ field, valid }) => !valid(registration?.[field]) || !valid(registryGithub?.[field]) || registration[field] !== registryGithub[field])
+    .map(({ field }) => field);
+  return { sameOrigin: mismatches.length === 0, mismatches };
+}
+
 function validatePlatform({ docs, registry, refsDoc }) {
   const violations = [];
   const catalogGaps = new Set();
@@ -141,9 +161,18 @@ function validatePlatform({ docs, registry, refsDoc }) {
   }
 
   // repository-registration：身份与 I01 registry 同源；读回诚实；保护声称必须有平台证据。
+  // 同源 = 五个身份字段逐一相等（repoId/repoFullname/url/principalId/owner），且两侧都必须在场有效——
+  // 缺值/空白/类型漂移也算失配；ID 相同但 fullname/url 漂移到另一仓库同样是身份劫持面（I01 caller convergence）。
+  // 与 repository-identity probe 共用 checkRepositoryIdentity：validate 拒绝的身份漂移，probe 也绝不放行。
   const github = registry?.project?.github ?? {};
-  if (repo.repository?.repoId !== github.repoId || repo.repository?.principalId !== github.principalId || repo.repository?.owner !== github.owner) {
-    violations.push({ code: 'IDENTITY_NOT_SAME_ORIGIN', at: 'repository-registration.json', reason: 'repository identity must match infra/delivery/registry.json#project.github' });
+  const identity = checkRepositoryIdentity({ registration: repo.repository, registryGithub: github });
+  if (!identity.sameOrigin) {
+    violations.push({
+      code: 'IDENTITY_NOT_SAME_ORIGIN',
+      at: 'repository-registration.json',
+      fields: identity.mismatches,
+      reason: 'repository identity (repoId/repoFullname/url/principalId/owner) must match infra/delivery/registry.json#project.github exactly; every field must be present and valid on both sides — equal-but-missing/blank/invalid-typed values are not same-origin',
+    });
   }
   if (!repo.repository?.sameOriginRef) {
     violations.push({ code: 'SAME_ORIGIN_REF_MISSING', at: 'repository-registration.json' });
@@ -379,70 +408,89 @@ function validateChainInput(chain) {
   return null;
 }
 
-function probeRepositoryIdentity({ docs, registryFile, json }) {
-  void json;
+function probeRepositoryIdentity({ docs, registryFile }) {
   const repo = docs['repository-registration.json'];
   const registry = readJson(registryFile);
   const github = registry?.project?.github ?? {};
-  const sameOrigin =
-    repo.repository?.repoId === github.repoId && repo.repository?.principalId === github.principalId && repo.repository?.owner === github.owner;
-  if (!sameOrigin) {
+  // 与 validate 同一个身份核（checkRepositoryIdentity）：登记侧五字段与 registry 源全部在场且相等，
+  // 否则预检拒绝——绝不带着本地漂移去打真实平台，也绝不把未发生的网络尝试标成 executed:true。
+  const identity = checkRepositoryIdentity({ registration: repo.repository, registryGithub: github });
+  if (!identity.sameOrigin) {
     print({
       interface: 'PlatformInfra.v1',
       case: 'repository-identity',
       readOnly: true,
-      executed: true,
+      executed: false,
       mode: 'LOCAL_ONLY',
       localConsistency: 'FAIL',
       code: 'IDENTITY_NOT_SAME_ORIGIN',
-      reason: 'repository registration diverges from infra/delivery/registry.json#project.github',
+      fields: identity.mismatches,
+      reason: 'repository registration diverges from infra/delivery/registry.json#project.github (all five identity fields must be present, valid and equal); no platform call is made while local bindings disagree',
     });
     return EXIT_VERIFY;
   }
 
-  // 真实只读尝试：gh api（一次；失败原样保留错误文本，宿主路径脱敏）。
-  const command = `gh api repos/${repo.repository.repoFullname}`;
-  const run = spawnSync('gh', ['api', `repos/${repo.repository.repoFullname}`], { encoding: 'utf8', timeout: 15_000 });
+  // 真实只读尝试（一次；目标是 registry 登记源的 repoFullname；失败原样保留错误文本，宿主路径脱敏）。
+  const command = `gh api repos/${github.repoFullname}`;
+  const run = spawnSync('gh', ['api', `repos/${github.repoFullname}`], { encoding: 'utf8', timeout: 15_000 });
+  // 诚实执行报告：spawn 失败（error 且 pid===0，例如 gh 缺失/不可执行）从未启动子进程，绝不能声称 executed；
+  // 超时被杀（error ETIMEDOUT 但 pid>0）子进程确实启动过，仍算已尝试执行。
+  const childLaunched = !run.error || run.pid > 0;
+  const base = {
+    interface: 'PlatformInfra.v1',
+    case: 'repository-identity',
+    readOnly: true,
+    executed: childLaunched,
+    mode: 'LOCAL_ONLY',
+    localConsistency: 'PASS',
+  };
   if (run.status === 0) {
     try {
       const observed = JSON.parse(run.stdout);
-      const matches = observed.id === repo.repository.repoId;
+      // 形状 fail-closed：必须是仓库对象（非 null/非数组），id 为正整数且 full_name 非空；
+      // 不可解读的形状 = UNVERIFIED，绝不当成 MISMATCH、更绝不当成 VERIFIED。
+      const shapeOk = observed !== null
+        && typeof observed === 'object'
+        && !Array.isArray(observed)
+        && isPositiveSafeInteger(observed.id)
+        && isNonBlankString(observed.full_name);
+      if (!shapeOk) {
+        print({
+          ...base,
+          readback: { status: 'UNVERIFIED', command, error: 'gh output was not a repository object with an integer id and a non-empty full_name' },
+        });
+        return EXIT_VERIFY;
+      }
+      // id 与 full_name 都必须等于登记源（registry#project.github）；只有 id 相同不足以 VERIFIED
+      // （同 id 换名 / 同名换库都是身份劫持面）。
+      const matches = observed.id === github.repoId && observed.full_name === github.repoFullname;
       print({
-        interface: 'PlatformInfra.v1',
-        case: 'repository-identity',
-        readOnly: true,
-        executed: true,
-        mode: 'LOCAL_ONLY',
-        localConsistency: 'PASS',
+        ...base,
         readback: {
           status: matches ? 'VERIFIED' : 'MISMATCH',
           command,
           observed: { repoId: observed.id, fullName: observed.full_name },
-          expected: { repoId: repo.repository.repoId, repoFullname: repo.repository.repoFullname },
+          expected: { repoId: github.repoId, repoFullname: github.repoFullname },
         },
       });
       return matches ? EXIT_PASS : EXIT_VERIFY;
     } catch {
       print({
-        interface: 'PlatformInfra.v1',
-        case: 'repository-identity',
-        readOnly: true,
-        executed: true,
-        mode: 'LOCAL_ONLY',
-        localConsistency: 'PASS',
+        ...base,
         readback: { status: 'UNVERIFIED', command, error: redactHostPaths('gh output was not JSON') },
       });
       return EXIT_VERIFY;
     }
   }
-  const rawError = (run.stderr.trim() || run.stdout.trim() || `gh exited ${run.status}`).split('\n')[0];
+  // 失败路径 fail-closed：spawnSync 失败时 stderr/stdout 可为 null/undefined，先兜底再 trim——
+  // 崩溃（exit 1 无 JSON）绝不冒充结构化 UNVERIFIED。有传输输出时仍原样保留首行（宿主路径脱敏）；
+  // 无输出则诊断点名 spawn 失败原因（run.error.code），起不来的 gh 永远是 UNVERIFIED，绝不 VERIFIED。
+  const stderrText = typeof run.stderr === 'string' ? run.stderr.trim() : '';
+  const stdoutText = typeof run.stdout === 'string' ? run.stdout.trim() : '';
+  const fallback = run.error ? `gh did not complete (${run.error.code ?? 'SPAWN_ERROR'})` : `gh exited ${run.status}`;
+  const rawError = (stderrText || stdoutText || fallback).split('\n')[0];
   print({
-    interface: 'PlatformInfra.v1',
-    case: 'repository-identity',
-    readOnly: true,
-    executed: true,
-    mode: 'LOCAL_ONLY',
-    localConsistency: 'PASS',
+    ...base,
     readback: { status: 'UNVERIFIED', command, error: redactHostPaths(rawError) },
   });
   return EXIT_VERIFY;

@@ -57,12 +57,47 @@ const PLATFORM_REFS = [
   'secret-ref:sdd-harness-pilot/pilot-rollback',
 ];
 
-function runCli(args) {
+function runCli(args, { env } = {}) {
   return spawnSync(process.execPath, [cliPath, ...args], {
     cwd: repoRoot,
     encoding: 'utf8',
     timeout: RUN_TIMEOUT_MS,
+    // env 提供时才覆盖（gh stub 用）；默认完全继承，保持既有行为。
+    ...(env ? { env: { ...process.env, ...env } } : {}),
   });
+}
+
+// I01 caller convergence：hermetic gh stub——单测绝不真实触网。
+// stub 把收到的参数原样追加到 argv 日志（供“恰好一次只读调用 + 目标仓库”断言）；
+// GH_STUB_MODE=ok 时输出 GH_STUB_BODY 并退出 0，否则输出固定传输错误退出 1。
+function makeGhStub() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i06-ghstub-'));
+  const stub = path.join(dir, 'gh');
+  fs.writeFileSync(stub, [
+    '#!/bin/sh',
+    'printf \'%s\\n\' "$*" >> "$GH_STUB_ARGV"',
+    'if [ "$GH_STUB_MODE" = "ok" ]; then printf \'%s\' "$GH_STUB_BODY"; exit 0; fi',
+    'printf \'%s\\n\' \'gh: stub transport failure: tls failed to verify certificate: x509: OSStatus -26276\' >&2',
+    'exit 1',
+    '',
+  ].join('\n'));
+  fs.chmodSync(stub, 0o755);
+  const argvFile = path.join(dir, 'argv.log');
+  return {
+    dir,
+    argvFile,
+    envFor({ mode, body } = {}) {
+      return {
+        GH_STUB_MODE: mode ?? 'fail',
+        ...(body === undefined ? {} : { GH_STUB_BODY: body }),
+        GH_STUB_ARGV: argvFile,
+        PATH: `${dir}${path.delimiter}${process.env.PATH}`,
+      };
+    },
+    calls() {
+      return fs.existsSync(argvFile) ? fs.readFileSync(argvFile, 'utf8').split('\n').filter(Boolean) : [];
+    },
+  };
 }
 
 function parseJsonOut(result, label) {
@@ -198,6 +233,136 @@ test('committed platform files carry the interface bindings and honest UNVERIFIE
   assert.equal(retention.rollbackRetention.oldEvidenceNeverAuthorizesNewSha, true);
   assert.equal(retention.rollbackRetention.revocationCheckOnRestore, true);
   assert.equal(retention.rollbackRetention.retainLastApprovedArtifact, true);
+});
+
+// ---------- RED I01 caller convergence: repoFullname/url 必须与 registry 同源 ----------
+
+test('RED same-origin labels: stale or missing repoFullname/url fails validate with IDENTITY_NOT_SAME_ORIGIN while IDs and owner stay stable', () => {
+  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+  const cases = [
+    { name: 'stale-repoFullname', mutate: (repo) => { repo.repository.repoFullname = 'rpamis/sdd-harness'; } },
+    { name: 'stale-url', mutate: (repo) => { repo.repository.url = 'https://github.com/rpamis/sdd-harness'; } },
+    { name: 'missing-repoFullname', mutate: (repo) => { delete repo.repository.repoFullname; } },
+    { name: 'missing-url', mutate: (repo) => { delete repo.repository.url; } },
+  ];
+  for (const fixture of cases) {
+    const dir = makeFixtureDir(({ readJson, writeJson }) => {
+      const repo = readJson('repository-registration.json');
+      fixture.mutate(repo);
+      // 稳定同 ID：repoId/principalId/owner 保持与 registry 一致——失败必须只由标签漂移引起。
+      assert.equal(repo.repository.repoId, registry.project.github.repoId);
+      assert.equal(repo.repository.principalId, registry.project.github.principalId);
+      assert.equal(repo.repository.owner, registry.project.github.owner);
+      writeJson('repository-registration.json', repo);
+    });
+    const result = runCli(['validate', '--registry', registryPath, '--platform-dir', dir, '--json']);
+    const report = parseJsonOut(result, `fixture ${fixture.name}`);
+    assert.equal(result.status, 2, `fixture ${fixture.name} must be a verification failure (exit 2), got ${result.status}`);
+    assert.ok(
+      violationCodes(report).includes('IDENTITY_NOT_SAME_ORIGIN'),
+      `fixture ${fixture.name}: expected IDENTITY_NOT_SAME_ORIGIN, got ${JSON.stringify(violationCodes(report))}`,
+    );
+  }
+});
+
+// ---------- RED I01 caller convergence（ROUND2）：probe 与 validate 共用同一身份核 ----------
+
+// P1-1 修复回归：直接 probe 不得绕过 validate 的同源核——登记 fullname/url 漂移时，
+// 必须在预检就 IDENTITY_NOT_SAME_ORIGIN / exit 2 / executed:false，且一次 gh 都不发。
+test('RED direct-probe preflight: drifted repoFullname/url is rejected before any gh call, even with stable IDs and owner', () => {
+  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+  const stub = makeGhStub();
+  const dirs = [];
+  try {
+    const cases = [
+      { name: 'stale-repoFullname', mutate: (repo) => { repo.repository.repoFullname = 'rpamis/sdd-harness'; } },
+      { name: 'stale-url', mutate: (repo) => { repo.repository.url = 'https://github.com/rpamis/sdd-harness'; } },
+    ];
+    for (const fixture of cases) {
+      const dir = makeFixtureDir(({ readJson, writeJson }) => {
+        const repo = readJson('repository-registration.json');
+        fixture.mutate(repo);
+        // 稳定同 ID：repoId/principalId/owner 保持与 registry 一致——拒绝必须只由标签漂移引起。
+        assert.equal(repo.repository.repoId, registry.project.github.repoId);
+        assert.equal(repo.repository.principalId, registry.project.github.principalId);
+        assert.equal(repo.repository.owner, registry.project.github.owner);
+        writeJson('repository-registration.json', repo);
+      });
+      dirs.push(dir);
+      const callsBefore = stub.calls().length;
+      const probe = runCli(
+        ['probe', '--case', 'repository-identity', '--read-only', '--registry', registryPath, '--platform-dir', dir, '--json'],
+        { env: stub.envFor({ mode: 'ok', body: JSON.stringify({ id: registry.project.github.repoId, full_name: registry.project.github.repoFullname }) }) },
+      );
+      const report = parseJsonOut(probe, `probe fixture ${fixture.name}`);
+      assert.equal(probe.status, 2, `probe fixture ${fixture.name} must fail verification (exit 2), got ${probe.status}`);
+      assert.equal(report.code, 'IDENTITY_NOT_SAME_ORIGIN', `probe fixture ${fixture.name}: expected IDENTITY_NOT_SAME_ORIGIN, got ${JSON.stringify(report.code)}`);
+      assert.equal(report.executed, false, `probe fixture ${fixture.name}: a preflight rejection must never claim an executed network attempt`);
+      assert.equal(report.localConsistency, 'FAIL');
+      assert.equal(
+        stub.calls().length - callsBefore,
+        0,
+        `probe fixture ${fixture.name}: no gh call may happen while local identity bindings disagree (argv: ${JSON.stringify(stub.calls())})`,
+      );
+    }
+  } finally {
+    fs.rmSync(stub.dir, { recursive: true, force: true });
+    for (const dir of dirs) fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// P1-2 修复回归：等值放行漏洞——两侧同缺/同空/同类型漂移不是同源。
+// undefined===undefined、''===''、'1285806550'==='1285806550' 都必须被拒，validate 与 probe 一致。
+test('RED equal-but-absent labels: both sides missing/blank/invalid-typed identity fields fail same-origin in validate and probe', () => {
+  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+  const stub = makeGhStub();
+  const dirs = [];
+  try {
+    const cases = [
+      { name: 'both-missing-repoFullname', field: 'repoFullname', mutate: (a, b) => { delete a.repository.repoFullname; delete b.project.github.repoFullname; } },
+      { name: 'both-blank-url', field: 'url', mutate: (a, b) => { a.repository.url = ''; b.project.github.url = ''; } },
+      { name: 'both-whitespace-owner', field: 'owner', mutate: (a, b) => { a.repository.owner = '   '; b.project.github.owner = '   '; } },
+      { name: 'both-missing-repoId', field: 'repoId', mutate: (a, b) => { delete a.repository.repoId; delete b.project.github.repoId; } },
+      { name: 'both-string-repoId', field: 'repoId', mutate: (a, b) => { a.repository.repoId = String(registry.project.github.repoId); b.project.github.repoId = String(registry.project.github.repoId); } },
+      { name: 'both-null-principalId', field: 'principalId', mutate: (a, b) => { a.repository.principalId = null; b.project.github.principalId = null; } },
+    ];
+    for (const fixture of cases) {
+      const registryDoc = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+      const dir = makeFixtureDir(({ readJson, writeJson }) => {
+        const repo = readJson('repository-registration.json');
+        fixture.mutate(repo, registryDoc);
+        writeJson('repository-registration.json', repo);
+      });
+      dirs.push(dir);
+      const registryFile = tmpFile(`reg-${fixture.name}`, registryDoc);
+
+      const validate = runCli(['validate', '--registry', registryFile, '--platform-dir', dir, '--json']);
+      const validateReport = parseJsonOut(validate, `validate fixture ${fixture.name}`);
+      assert.equal(validate.status, 2, `validate fixture ${fixture.name}: equal-but-absent ${fixture.field} must fail, got ${validate.status}`);
+      const violation = violationCodes(validateReport).includes('IDENTITY_NOT_SAME_ORIGIN');
+      assert.ok(violation, `validate fixture ${fixture.name}: expected IDENTITY_NOT_SAME_ORIGIN, got ${JSON.stringify(violationCodes(validateReport))}`);
+      const fields = (validateReport.violations ?? []).find((v) => v.code === 'IDENTITY_NOT_SAME_ORIGIN')?.fields ?? [];
+      assert.ok(fields.includes(fixture.field), `validate fixture ${fixture.name}: ${fixture.field} must be named in the violation fields, got ${JSON.stringify(fields)}`);
+
+      const callsBefore = stub.calls().length;
+      const probe = runCli(
+        ['probe', '--case', 'repository-identity', '--read-only', '--registry', registryFile, '--platform-dir', dir, '--json'],
+        { env: stub.envFor({ mode: 'ok', body: JSON.stringify({ id: registry.project.github.repoId, full_name: registry.project.github.repoFullname }) }) },
+      );
+      const probeReport = parseJsonOut(probe, `probe fixture ${fixture.name}`);
+      assert.equal(probe.status, 2, `probe fixture ${fixture.name}: must fail verification (no repos/undefined or repos/ probing), got ${probe.status}`);
+      assert.equal(probeReport.code, 'IDENTITY_NOT_SAME_ORIGIN');
+      assert.equal(probeReport.executed, false, `probe fixture ${fixture.name}: no network attempt may be claimed`);
+      assert.equal(
+        stub.calls().length - callsBefore,
+        0,
+        `probe fixture ${fixture.name}: no gh call may be made against a blank/missing identity (argv: ${JSON.stringify(stub.calls())})`,
+      );
+    }
+  } finally {
+    fs.rmSync(stub.dir, { recursive: true, force: true });
+    for (const dir of dirs) fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 // ---------- RED 授权门：无远端写授权 / 凭据 tier ----------
@@ -586,20 +751,85 @@ test('fail-closed structure: rollback approval, correlation oracle and retention
 
 // ---------- probe 真实性：只读、诚实 UNVERIFIED、无 skip ----------
 
-test('probes are real and honest: repository-identity performs one read-only gh attempt and stays UNVERIFIED; bare chain probe is structured UNVERIFIED', () => {
+test('probes are real and honest: repository-identity performs exactly one read-only gh attempt whose outcome is reported verbatim; bare chain probe is structured UNVERIFIED', () => {
   const noReadOnly = runCli(['probe', '--case', 'repository-identity', '--json']);
   assert.equal(noReadOnly.status, 1, 'repository-identity is read-only by contract; omitting --read-only is an input error');
 
-  const probe = runCli(['probe', '--case', 'repository-identity', '--read-only', '--json']);
-  assert.equal(probe.status, 2, 'gh TLS/token failure must surface as structured UNVERIFIED (nonzero)');
-  const report = parseJsonOut(probe, 'repository-identity');
-  assert.equal(report.executed, true, 'a real gh api attempt must have been made');
-  assert.equal(report.readback.status, 'UNVERIFIED');
-  assert.ok(String(report.readback.error ?? '').length > 0, 'the raw readback error is preserved verbatim');
-  assert.ok(report.readback.command, 'the attempted command is recorded');
-  assert.equal(report.localConsistency, 'PASS', 'local same-origin binding is checkable locally and must pass');
-  assert.doesNotMatch(probe.stdout, /"skip"\s*:\s*true/, 'probes must not skip');
-  assert.doesNotMatch(probe.stdout, HOST_PATH_OUTPUT_RE);
+  // 诚实契约（deterministic，非环境快照）：旧断言把 2026-10-20 的 gh TLS/令牌失效当作必然结局，
+  // 是环境绑定。这里改用 hermetic gh stub 固定三种结局——成功 / 传输失败 / 失配——单测绝不真实触网。
+  // expected 一律独立取自 infra/delivery/registry.json#project.github（登记源），不做回执自洽比较。
+  const gh = JSON.parse(fs.readFileSync(registryPath, 'utf8')).project.github;
+  const stub = makeGhStub();
+  const probeArgs = ['probe', '--case', 'repository-identity', '--read-only', '--json'];
+  try {
+    // (a) 正例：观测 id 与 full_name 都等于登记源 -> VERIFIED / exit 0；恰好一次 gh api repos/<registered>。
+    const positive = runCli(probeArgs, {
+      env: stub.envFor({ mode: 'ok', body: JSON.stringify({ id: gh.repoId, full_name: gh.repoFullname }) }),
+    });
+    const positiveReport = parseJsonOut(positive, 'positive stub');
+    assert.equal(positive.status, 0, `a fully matching readback must PASS: ${positive.stdout || positive.stderr}`);
+    assert.equal(positiveReport.executed, true, 'a real gh api attempt must have been made');
+    assert.equal(positiveReport.readback.status, 'VERIFIED', 'an exit-0 probe must carry a live VERIFIED readback, never a bare PASS');
+    assert.equal(positiveReport.readback.expected.repoId, gh.repoId, 'expected repoId comes from the registry source');
+    assert.equal(positiveReport.readback.expected.repoFullname, gh.repoFullname, 'expected repoFullname comes from the registry source');
+    assert.equal(positiveReport.readback.observed.repoId, gh.repoId);
+    assert.equal(positiveReport.readback.observed.fullName, gh.repoFullname);
+    assert.equal(positiveReport.readback.error, undefined, 'a successful readback carries no error');
+    assert.equal(positiveReport.localConsistency, 'PASS', 'local same-origin binding is checkable locally and must pass');
+    assert.deepEqual(
+      stub.calls(),
+      [`api repos/${gh.repoFullname}`],
+      'exactly one readonly gh call, against the registered repository',
+    );
+    assert.doesNotMatch(positive.stdout, /"skip"\s*:\s*true/, 'probes must not skip');
+    assert.doesNotMatch(positive.stdout, HOST_PATH_OUTPUT_RE);
+
+    // (b) 传输失败：gh 非零退出 -> 结构化 UNVERIFIED / exit 2，原始错误原样保留。
+    const failed = runCli(probeArgs, { env: stub.envFor({ mode: 'fail' }) });
+    const failedReport = parseJsonOut(failed, 'transport-failure stub');
+    assert.equal(failed.status, 2, 'a failed live readback must surface as structured UNVERIFIED (nonzero)');
+    assert.equal(failedReport.executed, true);
+    assert.equal(failedReport.readback.status, 'UNVERIFIED');
+    assert.ok(String(failedReport.readback.error ?? '').includes('x509'), 'the raw readback error is preserved verbatim');
+    assert.equal(failedReport.readback.command, `gh api repos/${gh.repoFullname}`);
+    assert.equal(stub.calls().length, 2, 'each probe performs exactly one gh attempt');
+
+    // (c) P1-3 修复回归：API 返回正确 id 但 full_name 是另一仓库 -> MISMATCH / exit 2。
+    //     只有 id 相同绝不足以 VERIFIED（同 id 换名/同名换库都是身份劫持面）。
+    const mallory = runCli(probeArgs, {
+      env: stub.envFor({ mode: 'ok', body: JSON.stringify({ id: gh.repoId, full_name: 'mallory/other' }) }),
+    });
+    const malloryReport = parseJsonOut(mallory, 'correct-id-wrong-fullname stub');
+    assert.equal(mallory.status, 2, 'a correct id with a foreign full_name must fail verification');
+    assert.equal(malloryReport.readback.status, 'MISMATCH');
+    assert.equal(malloryReport.readback.observed.repoId, gh.repoId);
+    assert.equal(malloryReport.readback.observed.fullName, 'mallory/other');
+    assert.equal(malloryReport.readback.expected.repoFullname, gh.repoFullname, 'expected stays pinned to the registry source');
+    assert.equal(stub.calls().length, 3);
+    assert.equal(stub.calls().at(-1), `api repos/${gh.repoFullname}`, 'the probe always targets the registered repository');
+
+    // (d) 形状 fail-closed：null / 数组 / 缺 full_name / 字符串 id / 空白 full_name / 非 JSON
+    //     一律 UNVERIFIED / exit 2 —— 不可解读的形状绝不当成 MISMATCH 更不当成 VERIFIED。
+    const malformedBodies = {
+      'null-body': 'null',
+      'array-body': '[{"id":1,"full_name":"x/y"}]',
+      'missing-fullname': JSON.stringify({ id: gh.repoId }),
+      'missing-id': JSON.stringify({ full_name: gh.repoFullname }),
+      'string-id': JSON.stringify({ id: String(gh.repoId), full_name: gh.repoFullname }),
+      'blank-fullname': JSON.stringify({ id: gh.repoId, full_name: '   ' }),
+      'not-json': 'not json at all',
+    };
+    for (const [name, body] of Object.entries(malformedBodies)) {
+      const bad = runCli(probeArgs, { env: stub.envFor({ mode: 'ok', body }) });
+      const badReport = parseJsonOut(bad, `malformed ${name}`);
+      assert.equal(bad.status, 2, `malformed ${name}: must fail closed (exit 2), got ${bad.status}`);
+      assert.equal(badReport.readback.status, 'UNVERIFIED', `malformed ${name}: shape-invalid output stays UNVERIFIED, got ${badReport.readback.status}`);
+      assert.equal(badReport.readback.error !== undefined, true, `malformed ${name}: an explicit error must be recorded`);
+    }
+    assert.equal(stub.calls().length, 3 + Object.keys(malformedBodies).length, 'one readonly gh attempt per probe, no more');
+  } finally {
+    fs.rmSync(stub.dir, { recursive: true, force: true });
+  }
 
   const bare = runCli(['probe', '--case', 'registry-environment-identity', '--json']);
   assert.equal(bare.status, 2);
@@ -620,6 +850,48 @@ test('probes are real and honest: repository-identity performs one read-only gh 
 
   assert.equal(runCli(['probe', '--json']).status, 1, 'missing --case is an input error');
   assert.equal(runCli(['probe', '--case', 'not-a-case', '--json']).status, 1, 'unknown case is an input error');
+});
+
+// ---------- RED spawn-failure fail-closed：gh 缺失/不可执行是 UNVERIFIED，不是崩溃 ----------
+
+// 子进程起不来（spawnSync 带 error 且 stderr/stdout 为 null）时，失败路径绝不能 TypeError 崩溃成 exit 1；
+// 必须是结构化 UNVERIFIED / exit 2，诊断点名 spawn 失败原因，且未启动过 pid 就不得声称 executed。
+// runCli 用绝对 process.execPath 起本 CLI，私有空 PATH 只影响子进程 gh 的解析——单测绝不真实触网。
+test('RED spawn-failure path: missing or non-executable gh yields structured UNVERIFIED (exit 2) with a spawn diagnostic, never a crash', () => {
+  const gh = JSON.parse(fs.readFileSync(registryPath, 'utf8')).project.github;
+  const emptyPathDir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i06-empty-path-'));
+  const noexecDir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i06-noexec-'));
+  try {
+    // PATH 上唯一可找到的 gh 无执行位 -> spawn EACCES，同样从未启动任何 pid。
+    fs.writeFileSync(path.join(noexecDir, 'gh'), '#!/bin/sh\nexit 0\n');
+    fs.chmodSync(path.join(noexecDir, 'gh'), 0o644);
+    const cases = [
+      { name: 'missing-gh', env: { PATH: emptyPathDir }, diagnostic: 'ENOENT' },
+      { name: 'non-executable-gh', env: { PATH: noexecDir }, diagnostic: 'EACCES' },
+    ];
+    for (const fixture of cases) {
+      const probe = runCli(['probe', '--case', 'repository-identity', '--read-only', '--json'], { env: fixture.env });
+      assert.equal(
+        probe.status,
+        2,
+        `fixture ${fixture.name}: an unspawnable gh must surface as structured UNVERIFIED (exit 2); got exit ${probe.status}\nstdout: ${probe.stdout}\nstderr: ${probe.stderr}`,
+      );
+      const report = parseJsonOut(probe, `spawn-failure fixture ${fixture.name}`);
+      assert.equal(report.readback.status, 'UNVERIFIED', `fixture ${fixture.name}: a failed spawn is never VERIFIED`);
+      assert.equal(report.localConsistency, 'PASS');
+      assert.equal(report.readback.command, `gh api repos/${gh.repoFullname}`);
+      assert.match(
+        String(report.readback.error ?? ''),
+        new RegExp(fixture.diagnostic),
+        `fixture ${fixture.name}: the diagnostic must name the spawn failure (${fixture.diagnostic})`,
+      );
+      assert.equal(report.executed, false, `fixture ${fixture.name}: no child pid was ever launched; executed must stay false`);
+      assert.doesNotMatch(probe.stdout, HOST_PATH_OUTPUT_RE);
+    }
+  } finally {
+    fs.rmSync(emptyPathDir, { recursive: true, force: true });
+    fs.rmSync(noexecDir, { recursive: true, force: true });
+  }
 });
 
 test('CLI input contract: malformed chain fixtures are input failures (exit 1), distinct from semantic blocks (exit 2)', () => {
