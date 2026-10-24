@@ -6,8 +6,9 @@
 //
 // 退出码契约（execution-contract.json V_INFRA_I01.cli_contract）：
 //   0 = PASS（validate 通过 / qualify ready / readback 读回成功）
-//   1 = 输入或前置无效（未知资源、文件缺失/不可解析、参数错误）
-//   2 = 验证失败（语义违规、qualification NOT_READY/UNVERIFIED/MISMATCH、up 被门禁拒绝、读回失败）
+//   1 = 输入或前置无效（未知资源、文件缺失/不可解析、参数错误、登记的 github 身份缺失/畸形）
+//   2 = 验证失败（语义违规、qualification NOT_READY/UNVERIFIED/MISMATCH、up 被门禁拒绝、
+//        读回失败或身份/repo/caller 不匹配）
 //   环境缺失必须显式 UNVERIFIED 并以非零退出，不允许 skip 转 PASS。
 
 import { spawnSync } from 'node:child_process';
@@ -43,7 +44,7 @@ function usage() {
     '  registry.mjs qualify  --resource <id> --registry <file> [--archive <file>] [--npm-metadata <file>]',
     '  registry.mjs status   --registry <file>',
     '  registry.mjs up       --resource <id> --registry <file>',
-    '  registry.mjs readback --kind github',
+    '  registry.mjs readback --kind github [--registry <file>]',
   ].join('\n');
 }
 
@@ -318,6 +319,196 @@ function qualifyResource(registry, resource, policy, options) {
   };
 }
 
+// ---- readback --kind github（V_INFRA_I01 身份收敛）--------------------------------
+// 目标必须来自 registry 输入（默认 committed registry 或 --registry），不允许硬编码项目；
+// 登记身份必须自洽（repoId/principalId 为正安全整数、repoFullname 的 owner 段 === github.owner），
+// 否则按输入无效（exit 1）在任何 gh 调用之前拒绝。VERIFIED 只在 (a) repo 读回形如 repo
+// 且 repoId/fullname/owner 与登记一致、(b) gh api user 的实际认证主体 id/login 与登记
+// principalId/owner 一致时给出。gh 响应体不是非数组 JSON 对象（null/数组/标量）时一律
+// 结构化 UNVERIFIED（exit 2），绝不在响应体上崩溃。公开仓库可读 ≠ caller/owner 认证；
+// readback 只确认身份事实，绝不授予发布/CI 变更等业务授权。
+
+const REPO_FULLNAME_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]+$/;
+const isPlainObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
+const isGithubErrorEnvelope = (body) => isPlainObject(body) && typeof body.message === 'string' && typeof body.documentation_url === 'string';
+const isPositiveSafeInteger = (value) => Number.isSafeInteger(value) && value > 0;
+const describeJsonPayload = (value) => (value === null ? 'null' : Array.isArray(value) ? 'array' : `${typeof value} ${JSON.stringify(value)}`);
+
+function registeredGithubIdentity(registry) {
+  const github = registry?.project?.github;
+  const problems = [];
+  if (!isPlainObject(github)) {
+    problems.push('project.github object is missing');
+  } else {
+    if (!isPositiveSafeInteger(github.repoId)) problems.push('project.github.repoId must be a positive safe integer');
+    if (typeof github.repoFullname !== 'string' || !REPO_FULLNAME_RE.test(github.repoFullname)) {
+      problems.push('project.github.repoFullname must be an owner/repo string');
+    }
+    if (!isPositiveSafeInteger(github.principalId)) problems.push('project.github.principalId must be a positive safe integer');
+    if (typeof github.owner !== 'string' || github.owner.length === 0) problems.push('project.github.owner must be a non-empty string');
+    // 身份内部必须自洽：repoFullname 的 owner 段必须就是登记的 github.owner（精确匹配）。
+    if (
+      typeof github.repoFullname === 'string' &&
+      REPO_FULLNAME_RE.test(github.repoFullname) &&
+      typeof github.owner === 'string' &&
+      github.owner.length > 0 &&
+      github.repoFullname.split('/')[0] !== github.owner
+    ) {
+      problems.push(
+        `project.github.repoFullname owner segment must equal project.github.owner (observed ${github.repoFullname.split('/')[0]}, registered owner ${github.owner})`,
+      );
+    }
+  }
+  return { github, problems };
+}
+
+// 一次 gh api JSON 读回：非零退出/错误信封/非 JSON 一律显式 UNVERIFIED，绝不降级为 VERIFIED。
+function observeGhJson(argv) {
+  const via = `gh ${argv.join(' ')}`;
+  const run = spawnSync('gh', argv, { encoding: 'utf8', timeout: 15_000 });
+  if (run.error) {
+    return { status: 'UNVERIFIED', via, reason: `gh unavailable: ${redactHostPaths(run.error.message)}` };
+  }
+  if (run.status !== 0) {
+    const detail = (run.stderr.trim() || run.stdout.trim() || `gh exited ${run.status}`).split('\n')[0];
+    return { status: 'UNVERIFIED', via, reason: redactHostPaths(detail) };
+  }
+  let body;
+  try {
+    body = JSON.parse(run.stdout);
+  } catch {
+    return { status: 'UNVERIFIED', via, reason: 'gh output was not JSON' };
+  }
+  if (isGithubErrorEnvelope(body)) {
+    return { status: 'UNVERIFIED', via, reason: `gh returned an error envelope: ${body.message}` };
+  }
+  return { status: 'OK', via, body };
+}
+
+function describeMismatches(mismatches) {
+  return mismatches.map((m) => `${m.field} expected ${JSON.stringify(m.expected)}, observed ${JSON.stringify(m.observed)}`).join('; ');
+}
+
+function observeRepoReadback(identity) {
+  const target = `repos/${identity.repoFullname}`;
+  const observed = observeGhJson(['api', target]);
+  if (observed.status !== 'OK') return observed;
+  const body = observed.body;
+  if (!isPlainObject(body)) {
+    return {
+      status: 'UNVERIFIED',
+      via: observed.via,
+      reason: `gh api response is not a repository object (not a JSON object: ${describeJsonPayload(body)})`,
+    };
+  }
+  const missing = [];
+  if (!Number.isInteger(body.id)) missing.push('id');
+  if (typeof body.full_name !== 'string') missing.push('full_name');
+  if (!isPlainObject(body.owner) || typeof body.owner.login !== 'string') missing.push('owner.login');
+  if (missing.length > 0) {
+    return { status: 'UNVERIFIED', via: observed.via, reason: `gh api response is not a repository object (missing ${missing.join(', ')})` };
+  }
+  const mismatches = [];
+  if (body.id !== identity.repoId) mismatches.push({ field: 'repoId', expected: identity.repoId, observed: body.id });
+  if (body.full_name !== identity.repoFullname) mismatches.push({ field: 'repoFullname', expected: identity.repoFullname, observed: body.full_name });
+  if (body.owner.login !== identity.owner) mismatches.push({ field: 'owner', expected: identity.owner, observed: body.owner.login });
+  if (mismatches.length > 0) {
+    return {
+      status: 'MISMATCH',
+      via: observed.via,
+      mismatches,
+      reason: `gh api ${target} answered for a different repository than the registered identity (${describeMismatches(mismatches)})`,
+    };
+  }
+  return {
+    status: 'VERIFIED',
+    via: observed.via,
+    repoId: body.id,
+    repoFullname: body.full_name,
+    owner: body.owner.login,
+    ...(typeof body.default_branch === 'string' ? { defaultBranch: body.default_branch } : {}),
+  };
+}
+
+function observeCallerReadback(identity) {
+  const observed = observeGhJson(['api', 'user']);
+  if (observed.status !== 'OK') return observed;
+  const body = observed.body;
+  if (!isPlainObject(body)) {
+    return {
+      status: 'UNVERIFIED',
+      via: observed.via,
+      reason: `gh api user response is not an authenticated user object (not a JSON object: ${describeJsonPayload(body)})`,
+    };
+  }
+  const missing = [];
+  if (!Number.isInteger(body.id)) missing.push('id');
+  if (typeof body.login !== 'string' || body.login.length === 0) missing.push('login');
+  if (missing.length > 0) {
+    return { status: 'UNVERIFIED', via: observed.via, reason: `gh api user response is not an authenticated user object (missing ${missing.join(', ')})` };
+  }
+  const mismatches = [];
+  if (body.id !== identity.principalId) mismatches.push({ field: 'principalId', expected: identity.principalId, observed: body.id });
+  if (body.login !== identity.owner) mismatches.push({ field: 'ownerLogin', expected: identity.owner, observed: body.login });
+  if (mismatches.length > 0) {
+    return {
+      status: 'MISMATCH',
+      via: observed.via,
+      mismatches,
+      reason: `authenticated caller is not the registered principal (${describeMismatches(mismatches)}); a publicly readable repository is not caller/owner authentication`,
+    };
+  }
+  return { status: 'VERIFIED', via: observed.via, principalId: body.id, login: body.login };
+}
+
+function runGithubReadback(registryFile) {
+  let registry;
+  try {
+    registry = readJson(registryFile);
+  } catch (err) {
+    return failInput(`registry unreadable: ${redactHostPaths(err.message)}`);
+  }
+  const { github: identity, problems } = registeredGithubIdentity(registry);
+  if (problems.length > 0) {
+    return failInput(`github readback: registered identity invalid (${problems.join('; ')}) — refusing before any gh call`);
+  }
+  const repoReadback = observeRepoReadback(identity);
+  const callerReadback = observeCallerReadback(identity);
+  const status =
+    repoReadback.status === 'VERIFIED' && callerReadback.status === 'VERIFIED'
+      ? 'VERIFIED'
+      : repoReadback.status === 'MISMATCH' || callerReadback.status === 'MISMATCH'
+        ? 'MISMATCH'
+        : 'UNVERIFIED';
+  const failureDetail = [repoReadback, callerReadback]
+    .filter((part) => part.status !== 'VERIFIED')
+    .map((part) => `${part.status}: ${part.reason}`)
+    .join(' | ');
+  print({
+    interface: 'Registry.v1',
+    command: 'readback',
+    kind: 'github',
+    registry: displayPath(registryFile),
+    registeredIdentity: {
+      repoFullname: identity.repoFullname,
+      repoId: identity.repoId,
+      owner: identity.owner,
+      principalId: identity.principalId,
+    },
+    repoReadback,
+    callerReadback,
+    status,
+    ...(failureDetail ? { error: failureDetail } : {}),
+    grants: {
+      publication: 'NOT_CLAIMED',
+      ciMutation: 'NOT_CLAIMED',
+      qualification: 'SEPARATE_GATE',
+      note: 'identity readback verifies repository identity and the authenticated caller only; it grants no publication, CI mutation, push or other business authorization',
+    },
+  });
+  return status === 'VERIFIED' ? EXIT_PASS : EXIT_VERIFY;
+}
+
 function main(argv) {
   const { command, opts, error } = parseArgs(argv);
   if (error) return failInput(error);
@@ -325,25 +516,7 @@ function main(argv) {
 
   if (command === 'readback') {
     if (opts.kind !== 'github') return failInput('readback supports --kind github only');
-    const run = spawnSync('gh', ['api', 'repos/rpamis/sdd-harness'], { encoding: 'utf8', timeout: 15_000 });
-    if (run.status === 0) {
-      try {
-        const repo = JSON.parse(run.stdout);
-        print({ interface: 'Registry.v1', kind: 'github', status: 'VERIFIED', repoId: repo.id, fullName: repo.full_name, command: 'gh api repos/rpamis/sdd-harness' });
-        return EXIT_PASS;
-      } catch {
-        print({ interface: 'Registry.v1', kind: 'github', status: 'UNVERIFIED', error: 'gh output was not JSON', command: 'gh api repos/rpamis/sdd-harness' });
-        return EXIT_VERIFY;
-      }
-    }
-    print({
-      interface: 'Registry.v1',
-      kind: 'github',
-      status: 'UNVERIFIED',
-      command: 'gh api repos/rpamis/sdd-harness',
-      error: (run.stderr.trim() || run.stdout.trim() || `gh exited ${run.status}`).split('\n')[0],
-    });
-    return EXIT_VERIFY;
+    return runGithubReadback(opts.registry ?? DEFAULT_REGISTRY);
   }
 
   const registryFile = opts.registry ?? DEFAULT_REGISTRY;
