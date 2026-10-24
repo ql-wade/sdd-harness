@@ -630,6 +630,228 @@ compositionTest('bootstrap target mode composes adapter + exporter against $TMPD
 });
 
 // ---------------------------------------------------------------------------
+// Legacy workflow retirement (2026-10-24 entry cleanup, round-2 contract):
+// the retired 9-stage workflow (sdd-*, ADR-0015), the trinity-* engine, the
+// superpowers layer (ADR-0016) and the automatically migrated
+// source-command-sdd-* copies of the deleted .claude/commands/sdd-*.md must
+// never return through installation — and installation must FAIL CLOSED on
+// any retired-workflow residue instead of skipping it: some hosts enumerate
+// .agents/skills directly, so skip-and-exit-0 is not readiness.
+//
+// Ownership (round-2 review): the adapter may only remove a skill symlink
+// whose readlink is EXACTLY its own managed target for that name
+// (../../.agents/skills/<name>, resolving under THIS TARGET_ROOT). A target
+// merely containing ".agents/skills/" proves nothing. Unowned retired-name
+// content (real directories with user files, normal files, external links)
+// is preserved byte-for-byte and blocks activation with an actionable
+// diagnostic — user data is never deleted or moved by name prefix. Refusals
+// are readonly: no settings.json, no compiled policy, no links.
+// ---------------------------------------------------------------------------
+
+function injectRetiredSkillSource(root, name, body) {
+  fs.mkdirSync(path.join(root, '.agents/skills', name), { recursive: true });
+  const content = ['---', 'name: ' + name, 'description: auto-migrated copy of a retired /sdd stage command', '---', '', body ?? '# retired workflow skill\n'].join('\n') + '\n';
+  fs.writeFileSync(path.join(root, '.agents/skills', name, 'SKILL.md'), content);
+  return content;
+}
+
+function installedSkillNames(root) {
+  const dir = path.join(root, '.claude/skills');
+  return fs.existsSync(dir) ? fs.readdirSync(dir) : [];
+}
+
+const fixtureSettingsPath = (root) => path.join(root, '.claude/settings.json');
+const fixtureCompiledPath = (root) => path.join(root, 'hooks/.compiled.env');
+
+compositionTest('legacy workflow: retired source-command-sdd-code source under .agents/skills refuses activation with zero mutations (direct-discovery refusal)', () => {
+  const root = makeFixture();
+  try {
+    const sourceBody = injectRetiredSkillSource(root, 'source-command-sdd-code', 'Run the retired /sdd:code stage command.\n');
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+    const before = JSON.stringify(fixtureUserSettings(), null, 2) + '\n';
+    fs.writeFileSync(fixtureSettingsPath(root), before);
+
+    const run = runAdapter(root);
+    assert.notEqual(run.status, 0, 'a retired source must block activation (fail closed), not skip-and-exit-0: ' + run.stdout);
+    assert.match(run.stderr, /source-command-sdd-code/, 'refusal must name the retired source');
+    assert.match(run.stderr, /退役|retired/i, 'refusal must state the retired-workflow reason');
+
+    // Readonly refusal: nothing written or mutated.
+    assert.equal(fs.readFileSync(fixtureSettingsPath(root), 'utf8'), before, 'refusal must not touch pre-existing settings.json');
+    assert.ok(!fs.existsSync(fixtureCompiledPath(root)), 'refusal must not write hooks/.compiled.env');
+    const installed = installedSkillNames(root);
+    assert.ok(!installed.includes('alpha') && !installed.includes('beta'), 'refusal must not create managed skill links either (found: ' + JSON.stringify(installed) + ')');
+    assert.ok(!installed.includes('source-command-sdd-code'), 'no managed link for the retired source');
+    // Upstream body untouched byte-for-byte (reversible: human decides).
+    assert.equal(fs.readFileSync(path.join(root, '.agents/skills/source-command-sdd-code/SKILL.md'), 'utf8'), sourceBody, 'retired source body must never be modified');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+compositionTest('legacy workflow: every retired naming family refuses with per-name diagnostics, bodies untouched, no artifacts', () => {
+  const root = makeFixture();
+  try {
+    const retired = ['sdd-code', 'sdd-grill', 'trinity-build', 'superpowers', 'source-command-sdd-release'];
+    const bodies = new Map(retired.map((name) => [name, injectRetiredSkillSource(root, name)]));
+    const run = runAdapter(root);
+    assert.notEqual(run.status, 0, 'any retired source must block activation');
+    for (const name of retired) {
+      assert.match(run.stderr, new RegExp(name), 'refusal must name ' + name);
+      assert.equal(fs.readFileSync(path.join(root, '.agents/skills', name, 'SKILL.md'), 'utf8'), bodies.get(name), name + ' source body must remain untouched');
+    }
+    assert.ok(!fs.existsSync(fixtureSettingsPath(root)), 'refused install must not write settings.json');
+    assert.ok(!fs.existsSync(fixtureCompiledPath(root)), 'refused install must not write the compiled policy');
+    assert.deepEqual(installedSkillNames(root), [], 'refused install must not create any skill link');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+compositionTest('legacy workflow: unowned retired-name directory with user files is preserved and blocks install (no prefix deletion)', () => {
+  const root = makeFixture();
+  try {
+    // The review probe: a directory whose name merely matches the retired
+    // prefix, holding user data the adapter has no ownership proof for.
+    fs.mkdirSync(path.join(root, '.claude/skills/source-command-sdd-personal'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.claude/skills/source-command-sdd-personal/user-notes.txt'), 'personal notes\n');
+
+    const run = runAdapter(root);
+    assert.notEqual(run.status, 0, 'an unowned retired-name directory must fail closed with an actionable diagnostic, never be silently deleted (exit 0)');
+    assert.match(run.stderr, /source-command-sdd-personal/, 'diagnostic must name the unowned directory');
+    assert.match(run.stderr, /保留|preserv/i, 'diagnostic must state the entry is preserved for human disposition');
+    const notes = path.join(root, '.claude/skills/source-command-sdd-personal/user-notes.txt');
+    assert.ok(fs.existsSync(notes), 'user data inside the retired-name directory must survive the install attempt');
+    assert.equal(fs.readFileSync(notes, 'utf8'), 'personal notes\n', 'user file content must be byte-identical');
+    assert.ok(!fs.existsSync(fixtureSettingsPath(root)), 'refusal must not write settings');
+    assert.ok(!fs.existsSync(fixtureCompiledPath(root)), 'refusal must not write compiled policy');
+    assert.ok(!installedSkillNames(root).includes('alpha'), 'refusal must not link skills either');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+compositionTest('legacy workflow: retired-name symlink pointing at an external .agents/skills path is preserved (exact-ownership proof required)', () => {
+  const root = makeFixture();
+  try {
+    // External tree that merely CONTAINS ".agents/skills/" in its path and
+    // resolves to a real SKILL.md: the round-1 substring test treated that as
+    // ownership proof and deleted the link. Only readlink equality with this
+    // adapter's own target for that name counts as adapter-owned.
+    fs.mkdirSync(path.join(root, 'external/.agents/skills/custom'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'external/.agents/skills/custom/SKILL.md'), '# external custom\n');
+    fs.mkdirSync(path.join(root, '.claude/skills'), { recursive: true });
+    const link = path.join(root, '.claude/skills/source-command-sdd-code');
+    fs.symlinkSync('../../external/.agents/skills/custom', link);
+
+    const run = runAdapter(root);
+    assert.notEqual(run.status, 0, 'a retired-name link this adapter did not create must block activation instead of claiming retired discovery is clear');
+    assert.match(run.stderr, /source-command-sdd-code/, 'diagnostic must name the link');
+    assert.match(run.stderr, /external\/\.agents\/skills\/custom/, 'diagnostic must show where the link points');
+    assert.ok(fs.lstatSync(link).isSymbolicLink(), 'the external retired-name symlink must be preserved');
+    assert.equal(fs.readlinkSync(link), '../../external/.agents/skills/custom', 'link target must be unchanged');
+    assert.ok(!fs.existsSync(fixtureSettingsPath(root)), 'refusal must not write settings');
+    assert.ok(!fs.existsSync(fixtureCompiledPath(root)), 'refusal must not write compiled policy');
+    assert.ok(!installedSkillNames(root).includes('alpha'), 'refusal must not link skills either');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+compositionTest('legacy workflow: exact adapter-owned stale link to a retired name is removed on install; valid sources assemble settings and stay idempotent', () => {
+  const root = makeFixture();
+  try {
+    fs.mkdirSync(path.join(root, '.claude/skills'), { recursive: true });
+    // Residue of a previous blind install by THIS adapter: readlink is exactly
+    // the managed target form for that name, so ownership IS provable —
+    // cleanup (not refusal) applies and the retired name never re-appears.
+    fs.symlinkSync('../../.agents/skills/source-command-sdd-code', path.join(root, '.claude/skills/source-command-sdd-code'));
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+    writeJson(fixtureSettingsPath(root), fixtureUserSettings());
+
+    const run = runAdapter(root);
+    assert.equal(run.status, 0, run.stderr || run.stdout);
+    const installed = installedSkillNames(root);
+    assert.ok(!installed.includes('source-command-sdd-code'), 'adapter-owned stale link must be cleaned up (found: ' + JSON.stringify(installed) + ')');
+    assert.match(run.stdout, /source-command-sdd-code/, 'managed-link cleanup must be diagnosed');
+    for (const skill of ['alpha', 'beta']) {
+      assert.ok(fs.lstatSync(path.join(root, '.claude/skills', skill)).isSymbolicLink(), skill + ' must still be linked');
+      assert.ok(fs.existsSync(path.join(root, '.claude/skills', skill, 'SKILL.md')), skill + ' link must resolve to a SKILL.md');
+    }
+    // Settings assembly in the same run: deny hook installed once, matcher
+    // union preserved, unrelated user config intact.
+    const settings = JSON.parse(fs.readFileSync(fixtureSettingsPath(root), 'utf8'));
+    const managed = managedCommands(settings);
+    assert.equal(managed.PreToolUse.length, 1, 'exactly one managed PreToolUse entry');
+    assert.equal(managed.PreToolUse[0].matcher, 'Bash', 'deny matcher union must survive the retirement guard');
+    assert.ok(userEntriesIntact(settings), 'user entries must survive the retirement-aware install');
+    assert.equal(runAdapter(root).status, 0, 'repeat install stays idempotent');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+compositionTest('legacy workflow: uninstall removes only adapter-owned links — unowned dirs, external retired-name links and user config survive', () => {
+  const root = makeFixture();
+  try {
+    assert.equal(runAdapter(root).status, 0, 'clean install first');
+    fs.mkdirSync(path.join(root, 'external/.agents/skills/custom'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'external/.agents/skills/custom/SKILL.md'), '# external custom\n');
+    fs.symlinkSync('../../external/.agents/skills/custom', path.join(root, '.claude/skills/source-command-sdd-code'));
+    fs.mkdirSync(path.join(root, '.claude/skills/user-custom'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.claude/skills/user-custom/SKILL.md'), '# user custom skill\n');
+    const settingsPath = fixtureSettingsPath(root);
+    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    settings.permissions = { allow: ['Bash(echo user-keep)'] };
+    settings.hooks.Stop.push({ hooks: [{ type: 'command', command: 'echo user-stop-hook' }] });
+    writeJson(settingsPath, settings);
+
+    assert.equal(runAdapter(root, ['--uninstall']).status, 0, 'uninstall must remain the recovery path (never retirement-audited)');
+    const installed = installedSkillNames(root);
+    assert.ok(!installed.includes('alpha') && !installed.includes('beta'), 'managed links removed by uninstall');
+    const externalLink = path.join(root, '.claude/skills/source-command-sdd-code');
+    assert.ok(fs.lstatSync(externalLink).isSymbolicLink(), 'external retired-name link must survive uninstall (it was never adapter-owned)');
+    assert.equal(fs.readlinkSync(externalLink), '../../external/.agents/skills/custom');
+    assert.ok(installed.includes('user-custom'), 'unrelated user skill directory must survive uninstall');
+    const after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    assert.deepEqual(managedCommands(after), { PreToolUse: [], SessionStart: [], Stop: [] }, 'all managed entries removed');
+    assert.ok(JSON.stringify(after.hooks).includes('user-stop-hook'), 'user Stop hook survives uninstall');
+    assert.deepEqual(after.permissions.allow, ['Bash(echo user-keep)'], 'user permissions survive uninstall');
+    assert.ok(!fs.existsSync(fixtureCompiledPath(root)), 'compiled policy removed on uninstall');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+compositionTest('legacy workflow: refusal is readonly and reversible — human disposal of the residue unblocks activation', () => {
+  const root = makeFixture();
+  try {
+    injectRetiredSkillSource(root, 'source-command-sdd-code');
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+    const before = JSON.stringify(fixtureUserSettings(), null, 2) + '\n';
+    fs.writeFileSync(fixtureSettingsPath(root), before);
+
+    assert.notEqual(runAdapter(root).status, 0, 'residue blocks activation');
+    assert.equal(fs.readFileSync(fixtureSettingsPath(root), 'utf8'), before, 'blocked install must leave settings byte-identical');
+
+    // The human (not the adapter) disposes of the retired source — ownership
+    // over arbitrary content sits outside the installer.
+    fs.rmSync(path.join(root, '.agents/skills/source-command-sdd-code'), { recursive: true, force: true });
+    const run = runAdapter(root);
+    assert.equal(run.status, 0, run.stderr || run.stdout);
+    const installed = installedSkillNames(root);
+    assert.ok(!installed.includes('source-command-sdd-code'), 'retired name stays unexposed after activation');
+    assert.ok(installed.includes('alpha') && installed.includes('beta'), 'valid foundation methods installed');
+    const settings = JSON.parse(fs.readFileSync(fixtureSettingsPath(root), 'utf8'));
+    assert.equal(managedCommands(settings).PreToolUse.length, 1, 'settings assemble once the block clears');
+    assert.ok(userEntriesIntact(settings), 'user entries intact across blocked and successful installs');
+    assert.equal(runAdapter(root).status, 0, 'idempotent repeat after activation');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // 1.2.c old-run pinning + explicit fallback (F04/B09)
 // ---------------------------------------------------------------------------
 

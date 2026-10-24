@@ -4,7 +4,15 @@
 # 职责：
 #   1. 编译 deny 策略为 hooks/.compiled.env（pre-tool-gate.sh 运行时读取，避免 bash 解析 YAML）
 #   2. 生成 .claude/settings.json 的 hooks 段（合并已有配置，不覆盖用户其他设置）
-#   3. 建立 .claude/skills/<name> → .agents/skills/<name> 软链（CC 原生技能注入）
+#   3. 建立 .claude/skills/<name> → .agents/skills/<name> 软链（CC 原生技能注入）。
+#      退役工作流命名（sdd-* / trinity-* / superpowers / source-command-sdd-*，
+#      ADR-0015/0016）绝不建链，且任何退役残留都让安装失败关闭（只读预检，
+#      拒绝时零改动）——已删除的旧业务命令不得经安装回流，也不得靠
+#      "跳过 + exit 0" 冒充就绪（部分 host 无需 CC 软链即可直接枚举 .agents/skills）。
+#      归属判定：只有 readlink 逐字等于本 adapter 的受管目标
+#      （../../.agents/skills/<name>，相对本 TARGET_ROOT 解析）的软链才是本
+#      adapter 自有；目标串“包含 .agents/skills/”不构成归属证明。按前缀删除
+#      真实目录/外部链接 = 毁用户数据，绝无此路径。
 #
 # 幂等：重复运行安全。受管块边界：凡 command 引用 hooks/{pre-tool-gate,
 # session-context,stop-reminder}.sh 且不指向插件基础设施的条目都是本 adapter
@@ -49,27 +57,113 @@ for arg in "$@"; do
 done
 
 # ---- skills 注入（安装）/ 清除（卸载）——共享工具函数 ----
+
+# 退役工作流入口命名（ADR-0015/0016；2026-10-24 指令清理）：9-stage 工作流的
+# sdd-*、旧引擎 trinity-*、已移除的 superpowers 层，以及 .claude/commands/sdd-*
+# 自动迁移出的 source-command-sdd-* 副本。命中即视为退役工作流资产：安装绝不
+# 为其建立受管软链（防止已删除的旧业务命令经安装回流）。分类只认这份固定命名
+# 清单——不引入新配置框架，也不波及未命中命名的用户自有技能。
+retired_workflow_name() {
+  case "$1" in
+    sdd-*|trinity-*|source-command-sdd-*|superpowers) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# 本 adapter 为名字 <name> 生成的受管软链目标（相对 .claude/skills/ 解析到本
+# TARGET_ROOT 的 .agents/skills/<name>；自 ADR-0015 重定位以来的唯一生成形态）。
+managed_skill_dest() {
+  printf '../../.agents/skills/%s' "$1"
+}
+
+# 受管软链归属判定：只有 readlink 结果与 managed_skill_dest(name) 逐字相等才算
+# 本 adapter 自有。目标串里“包含 .agents/skills/”不是归属证明——外部路径
+# （../../external/.agents/skills/custom）同样包含该子串（评审 R2 修复）。
+is_managed_skill_link() {
+  local link="$1"
+  [ -L "$link" ] || return 1
+  [ "$(readlink "$link")" = "$(managed_skill_dest "$(basename "$link")")" ]
+}
+
+# 只读退役预检（评审 R2：拒绝时零改动——settings.json/.compiled.env/软链一律
+# 未写，先于任何产物生成执行）。任何退役工作流残留都让安装失败关闭：
+#   R1 .agents/skills 下的退役命名技能源：部分 host 无需 CC 软链即可直接枚举
+#      .agents/skills，“跳过 + exit 0”不构成就绪；源本体不删不改（上游正文
+#      不可变，处置权在人工）。
+#   R2 .claude/skills 下退役命名的真实目录/普通文件：归属无法证明（控制器只
+#      隔离过它自己的已知资产清单，本 installer 对任意新内容没有所有权证明），
+#      按前缀删除/移动会毁掉用户数据——保留原样并要求人工处置。
+#   R3 .claude/skills 下退役命名、但不逐字指向本 TARGET_ROOT 对应受管目标的
+#      软链：归属不明（外部/用户链接），保留原样并要求人工处置。
+# 唯一例外：readlink 逐字等于 managed_skill_dest(name) 的软链是本 adapter 自己
+# 的残留，安装阶段移除（见 link_skills），不构成拒绝。
+audit_retired_workflow_entries() {
+  local refusals=0 entry name dest
+  shopt -s nullglob
+  for entry in "$TARGET_ROOT"/.agents/skills/*/; do
+    name="$(basename "$entry")"
+    if retired_workflow_name "$name"; then
+      echo "❌ 退役工作流技能源仍存在于 .agents/skills: ${name} —— 部分 agent 无需软链即可直接发现该目录，安装失败关闭（ADR-0015/0016）。源本体未改动；请改名或移出后再重试安装" >&2
+      refusals=$((refusals+1))
+    fi
+  done
+  for entry in "$TARGET_ROOT"/.claude/skills/*; do
+    name="$(basename "$entry")"
+    retired_workflow_name "$name" || continue
+    if is_managed_skill_link "$entry"; then
+      continue
+    fi
+    if [ -L "$entry" ]; then
+      dest="$(readlink "$entry")"
+      echo "❌ .claude/skills/${name} 命中退役工作流命名，但不是本 adapter 的受管软链（指向 ${dest}；目标串包含 .agents/skills/ 不构成归属证明）——保留原样，请人工确认/改名后重试" >&2
+    elif [ -d "$entry" ]; then
+      echo "❌ .claude/skills/${name} 是退役命名的真实目录：本 adapter 无法证明归属，绝不按前缀删除/移动用户数据——保留原样，请人工处置（备份/改名/删除）后重试" >&2
+    else
+      echo "❌ .claude/skills/${name} 是退役命名的普通文件：归属无法证明——保留原样，请人工确认后重试" >&2
+    fi
+    refusals=$((refusals+1))
+  done
+  shopt -u nullglob
+  if [ "$refusals" -gt 0 ]; then
+    echo "❌ 发现 ${refusals} 处退役工作流残留，安装失败关闭；未写入任何产物（settings.json/.compiled.env/软链）。处置上述条目后重跑安装。" >&2
+    return 1
+  fi
+  return 0
+}
+
 link_skills() {
   # 在 TARGET_ROOT 注入软链：只对真实目录源 .agents/skills 里的技能建链。
+  # 前置条件：audit_retired_workflow_entries 已通过（否则安装早已失败关闭）。
   local skills_src="$TARGET_ROOT/.agents/skills"
   [ -d "$skills_src" ] || { echo "  ⚠️  无 $TARGET_ROOT/.agents/skills —— 跳过 skills 注入"; return 0; }
   mkdir -p "$TARGET_ROOT/.claude/skills"
-  # 清除 stage 时代遗留的真实技能目录（sdd-* / trinity-* 等）：
-  # 它们不在 .agents/skills 基础层清单内，留着会与新控制平面矛盾（共识评审 F2）。
+  # 清理仅限“本 adapter 自有”的退役命名残留软链（readlink 逐字等于受管目标）。
+  # 其余退役命名条目已被只读预检拒绝——本函数绝无按前缀删除真实目录/外部
+  # 链接的路径。
   shopt -s nullglob
-  for dir in "$TARGET_ROOT"/.claude/skills/*/; do
-    name="$(basename "$dir")"
-    case "$name" in
-      sdd-*|trinity-*)
-        rm -rf "${dir%/}"
-        echo "  🧹 移除遗留技能目录: $name"
-        ;;
-    esac
+  local entry name
+  for entry in "$TARGET_ROOT"/.claude/skills/*; do
+    name="$(basename "$entry")"
+    retired_workflow_name "$name" || continue
+    if is_managed_skill_link "$entry"; then
+      rm -f "$entry"
+      echo "  🧹 移除本 adapter 的受管软链残留: ${name} -> $(managed_skill_dest "$name")"
+    else
+      # 预检通过后仍出现非受管退役条目 = 预检与清理之间状态被并发改动：
+      # fail closed，绝不删除归属不明的内容。
+      echo "❌ ${name} 命中退役工作流命名且非本 adapter 受管软链（预检后状态变化）——保留不动，安装中止" >&2
+      exit 1
+    fi
   done
   local linked=0
   for dir in "$skills_src"/*/; do
     name="$(basename "$dir")"
-    ln -sfn "../../.agents/skills/$name" "$TARGET_ROOT/.claude/skills/$name"
+    if retired_workflow_name "$name"; then
+      # 预检应已拒绝该源；到达这里说明审计后被并发加入。绝不建链，fail closed。
+      echo "❌ 退役工作流技能源仍存在: ${name} —— 拒绝建链，安装中止（ADR-0015/0016）" >&2
+      exit 1
+    fi
+    ln -sfn "$(managed_skill_dest "$name")" "$TARGET_ROOT/.claude/skills/$name"
     linked=$((linked+1))
   done
   # 链接解析断言：每个注入的软链必须能解析到存在的 SKILL.md（共识评审 F-003）
@@ -84,19 +178,15 @@ link_skills() {
 }
 
 unlink_skills() {
-  # 卸载只删本 adapter 生成的软链（指向 .agents/skills 的 symlink），真实目录不动。
+  # 卸载只删本 adapter 生成的软链（readlink 逐字等于受管目标
+  # ../../.agents/skills/<name>），真实目录与任何用户/外部软链一律不动。
+  # 卸载是回退路径，永不做退役预检（评审 R2：uninstall 只碰 adapter 自有条目）。
   shopt -s nullglob
-  local removed=0
+  local removed=0 link
   for link in "$TARGET_ROOT"/.claude/skills/*; do
-    [ -L "$link" ] || continue
-    local dest
-    dest="$(readlink "$link")"
-    case "$dest" in
-      *".agents/skills/"*)
-        rm -f "$link"
-        removed=$((removed+1))
-        ;;
-    esac
+    is_managed_skill_link "$link" || continue
+    rm -f "$link"
+    removed=$((removed+1))
   done
   shopt -u nullglob
   echo "  🧹 移除受管技能软链 ${removed} 个（用户自有条目不动）"
@@ -160,6 +250,12 @@ fi
 
 command -v python3 >/dev/null 2>&1 || { echo "❌ python3 required by claude-code adapter" >&2; exit 1; }
 [ -f "$HOOKS_YAML" ] || { echo "❌ hooks.yaml not found at $HOOKS_YAML" >&2; exit 1; }
+
+# 只读退役预检：先于任何产物写入（settings.json / .compiled.env / 软链）执行，
+# 拒绝 = 零改动退出（评审 R2：readonly preflight before refusal mutations）。
+if ! audit_retired_workflow_entries; then
+  exit 1
+fi
 
 python3 - "$HOOKS_YAML" "$COMPILED" "$SETTINGS" "$ROOT" "$TARGET_ROOT" <<'PYEOF'
 import json, re, sys, os
