@@ -94,7 +94,7 @@ fs.writeFileSync(workerPath, `import fs from 'node:fs';
 const [stateFile, heartbeatFile] = process.argv.slice(2);
 const read = () => JSON.parse(fs.readFileSync(stateFile, 'utf8'));
 const write = (next) => { const tmp = stateFile + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(next)); fs.renameSync(tmp, stateFile); };
-const beat = () => fs.writeFileSync(heartbeatFile, JSON.stringify({ at: Date.now(), pid: process.pid, op: read().operationKey }));
+const beat = () => { const tmp = heartbeatFile + '.tmp'; fs.writeFileSync(tmp, JSON.stringify({ at: Date.now(), pid: process.pid, op: read().operationKey })); fs.renameSync(tmp, heartbeatFile); };
 const tick = async () => {
   const s = read();
   if (s.status === 'completed') return;

@@ -7,9 +7,9 @@
 // trusted launcher + admission (lib/delivery/evidence.js), the P1_3 driver
 // exclusivity (lib/adapters/harness.js) and the single closeout owner
 // (lib/adapters/comet.js sealCloseout) — never through mocks. The OpenSpec
-// compatibility pair (C08) runs the real host 1.3.1 CLI and the real
-// isolated 1.11.0 candidate against the real requiredArtifactClosure of the
-// patched pinned build. Probe records live in
+// compatibility checks (C08) replay the captured historical 1.3.1 response
+// and run the current host plus isolated 1.11.0 CLIs against the real
+// requiredArtifactClosure of the patched pinned build. Probe records live in
 // openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/
 // and are the RED boundary: without them the behaviors have no registered
 // evidence. The real-CLI lifecycle entrances (C07) and the bypass/recovery
@@ -473,50 +473,91 @@ const openspecStatus = (bin, root, useNode) => {
   return result;
 };
 
-test('C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it', async (t) => {
+test('C08 negative: the captured historical OpenSpec 1.3.1 response is replayed, not impersonated by the current host', async () => {
   const record = await loadProbe('openspec-compat.json');
-  assert.equal(record.negative?.cliVersion, toolchain.openspec.current, 'the registered refusal must cite the pinned host CLI version');
-  const hostVersion = spawnSync('openspec', ['--version'], { encoding: 'utf8', timeout: 30_000 });
-  if (hostVersion.status !== 0 || !hostVersion.stdout) {
-    return t.skip(`host-global openspec CLI is not available (toolchain-baseline pins ${toolchain.openspec.current}); the negative cannot run here`);
-  }
-  const observed = hostVersion.stdout.trim();
-  assert.equal(observed, toolchain.openspec.current,
-    `host-global openspec drifted from the toolchain-baseline pin ${toolchain.openspec.current} to ${observed}; re-pin or migrate before running this suite`);
-  const root = await openspecScratch(t);
-  const status = openspecStatus('openspec', root, false);
-  assert.equal(status.status, 0, `host openspec status failed: ${status.stderr}`);
-  const statusJson = JSON.parse(status.stdout);
+  assert.equal(record.negative?.cliVersion, '1.3.1');
+  assert.equal(record.negative?.observation, 'HISTORICAL_RESPONSE_REPLAY');
+  const capture = record.negative.replayInput;
+  assert.equal(capture.path, 'openspec/changes/delivery-foundation-rearchitecture/package-probes/1_1.b-green-openspec-status-131-input.json');
+  const bytes = await fs.readFile(path.join(projectRoot, capture.path));
+  assert.equal(bytes.length, capture.bytes);
+  assert.equal(sha(bytes), capture.sha256, 'the original real CLI response must remain byte-identical');
+  const statusJson = JSON.parse(bytes);
+  assert.equal(statusJson.artifacts.length, 4);
   for (const artifact of statusJson.artifacts) {
-    assert.equal(artifact.requires, undefined, 'the pinned host CLI must expose no requires edges (that is the incompatibility)');
+    assert.equal(artifact.requires, undefined, 'the captured legacy response exposes no dependency edges');
   }
-  assert.ok(built, 'patched Comet build is not present; run tools/comet/build.mjs --archive first');
+  assert.ok(built, 'fixed patched Comet build is required for historical compatibility replay');
+  assert.equal(record.fixedEnvironment.predicateBuildFingerprint, fingerprint);
+  assert.equal(sha(await fs.readFile(distRequirements)), record.fixedEnvironment.predicateSha256);
   const { requiredArtifactClosure } = await import(distRequirements);
   assert.throws(
     () => requiredArtifactClosure(statusJson),
-    (error) => /OpenSpec must expose dependency edges for every artifact; upgrade to a supported version/.test(error.message),
+    (error) => error.message === record.negative.closureError,
+    'the current real predicate must still refuse the historical response',
   );
+});
+
+test('C08 current host: the observed CLI version and dependency edges are separate from the historical refusal', async (t) => {
+  const record = await loadProbe('openspec-compat.json');
+  assert.equal(record.currentHost?.cliVersion, toolchain.openspec.current);
+  assert.equal(record.currentHost?.observation, 'CURRENT_HOST_CLI');
+  const root = await openspecScratch(t);
+  const env = { ...process.env, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: path.join(root, 'config'), CI: 'true', DO_NOT_TRACK: '1', OPENSPEC_TELEMETRY: '0' };
+  const version = spawnSync('openspec', ['--version'], { cwd: root, encoding: 'utf8', timeout: 30_000, env });
+  assert.equal(version.status, 0, 'current host OpenSpec must be available; a missing CLI is not compatibility evidence');
+  assert.equal(version.stdout.trim(), record.currentHost.cliVersion, 'observe current toolchain drift without relabelling legacy history');
+  const status = openspecStatus('openspec', root, false);
+  assert.equal(status.status, 0, `current host openspec status failed: ${status.stderr}`);
+  const statusJson = JSON.parse(status.stdout);
+  assert.ok(statusJson.artifacts.every((artifact) => Array.isArray(artifact.requires)));
+  assert.ok(built, 'fixed patched Comet build is required');
+  const { requiredArtifactClosure } = await import(distRequirements);
+  const closure = requiredArtifactClosure(statusJson);
+  assert.deepEqual(Object.fromEntries(closure.map(({ id, status }) => [id, status])), record.currentHost.closure);
 });
 
 test('C08 positive: the isolated 1.11.0 candidate exposes the edges and the same closure accepts it — no global upgrade', async (t) => {
   const record = await loadProbe('openspec-compat.json');
-  assert.equal(record.positive?.isolatedInstall, '.sdd/tools/openspec-1.11.0', 'the fixed compatible environment must be the isolated install');
-  if (!isolatedOpenspecReady) {
-    return t.skip('isolated openspec 1.11.0 is not installed under .sdd/tools; run the isolated install (never a global upgrade)');
-  }
-  assert.ok(built, 'patched Comet build is not present; run tools/comet/build.mjs --archive first');
+  assert.equal(record.positive?.isolatedInstall, '.sdd/tools/openspec-1.11.0');
+  assert.equal(record.positive?.cliVersion, toolchain.openspec.isolated_candidate);
+  assert.ok(isolatedOpenspecReady, 'fixed isolated OpenSpec1.11.0 must be installed; no skip or global replacement');
+  assert.ok(built, 'fixed patched Comet build is required');
   const root = await openspecScratch(t);
+  const version = spawnSync(process.execPath, [isolatedOpenspecBin, '--version'], {
+    cwd: root, encoding: 'utf8', timeout: 30_000,
+    env: { ...process.env, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: path.join(root, 'config'), OPENSPEC_TELEMETRY: '0', DO_NOT_TRACK: '1' },
+  });
+  assert.equal(version.status, 0);
+  assert.equal(version.stdout.trim(), record.positive.cliVersion);
   const status = openspecStatus(isolatedOpenspecBin, root, true);
   assert.equal(status.status, 0, `isolated openspec status failed: ${status.stderr}`);
   const statusJson = JSON.parse(status.stdout);
-  for (const artifact of statusJson.artifacts) {
-    assert.ok(Array.isArray(artifact.requires), 'the candidate exposes the dependency edges the closure needs');
-  }
+  assert.ok(statusJson.artifacts.every((artifact) => Array.isArray(artifact.requires)));
   const { requiredArtifactClosure } = await import(distRequirements);
   const closure = requiredArtifactClosure(statusJson);
-  assert.equal(closure.find((item) => item.id === 'specs')?.status, 'skipped');
-  assert.equal(closure.find((item) => item.id === 'design')?.status, 'ready');
-  assert.equal(closure.find((item) => item.id === 'tasks')?.status, 'done');
+  assert.deepEqual(Object.fromEntries(closure.map(({ id, status }) => [id, status])), record.positive.closure);
+});
+
+test('C08 negative: missing or invalid dependency edges are refused without guessing a closure', async (t) => {
+  assert.ok(isolatedOpenspecReady && built, 'fixed real CLI and predicate are required');
+  const root = await openspecScratch(t);
+  const response = openspecStatus(isolatedOpenspecBin, root, true);
+  assert.equal(response.status, 0);
+  const status = JSON.parse(response.stdout);
+  const { requiredArtifactClosure } = await import(distRequirements);
+  assert.ok(requiredArtifactClosure(status).some(({ id }) => id === 'tasks'), 'start with an accepted real response');
+  const invalid = (change) => { const value = structuredClone(status); change(value); return value; };
+  const task = (value) => value.artifacts.find(({ id }) => id === 'tasks');
+  for (const value of [
+    invalid((value) => { delete task(value).requires; }),
+    invalid((value) => { task(value).requires = null; }),
+    invalid((value) => { task(value).requires = 'proposal'; }),
+    invalid((value) => { task(value).requires = [42]; }),
+  ]) assert.throws(() => requiredArtifactClosure(value), /OpenSpec must expose dependency edges for every artifact/);
+  assert.throws(() => requiredArtifactClosure(invalid((value) => { task(value).requires = ['missing-artifact']; })), /Missing OpenSpec dependency: missing-artifact/);
+  assert.throws(() => requiredArtifactClosure(invalid((value) => { task(value).requires = ['tasks']; })), /Cyclic OpenSpec dependency: tasks/);
+  assert.throws(() => requiredArtifactClosure(invalid((value) => { delete value.applyRequires; })), /OpenSpec must expose artifacts and applyRequires/);
 });
 
 // ---------------------------------------------------------------------------
@@ -556,26 +597,109 @@ test('P1_5 probe registration is complete and cites real-entry evidence', async 
     'P1_4 registered at least six entrances; this registration must extend, not contradict it');
 });
 
-test('P1_5 method dispatch content is pinned and matches the vendored snapshots', async () => {
-  const record = await loadProbe('method-dispatch-content.json');
-  // The digest formula is fixed with the record: sha256 over the sorted
-  // `sha256<TWO SPACES><relative path>` lines of every file in the skill dir.
-  const digestOf = async (relative) => {
-    const root = path.join(projectRoot, relative);
-    const files = (await fs.readdir(root, { recursive: true, withFileTypes: true }))
-      .filter((item) => item.isFile())
-      .map((item) => path.relative(root, path.join(item.parentPath ?? item.path, item.name)).split(path.sep).join('/'))
-      .sort();
+// Source pins are preparation evidence. The manifest and immutable cache are
+// independently reviewed inputs; recomputing a digest cannot approve new bytes.
+async function assertApprovedMethodPins(record, sourceRoot = projectRoot) {
+  assert.equal(record.qualification, 'SOURCE_PIN_ONLY');
+  assert.equal(record.methodExecution, 'NOT_EXECUTED');
+  assert.equal(record.profile, 'comet-managed-v2');
+  const approval = record.sourceApproval;
+  assert.equal(approval.methodCount, 11);
+  assert.equal(approval.fileCount, 245);
+  assert.match(approval.sealedBaseline.exportDigest, /^[a-f0-9]{64}$/);
+  assert.equal(approval.sourceUpgrades.path, 'worker-reports/P1_6-convergence/source-upgrades.json');
+  assert.equal(approval.task, 'P1_6');
+  const manifestRelative = 'openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json';
+  assert.equal(approval.manifest.path, manifestRelative);
+  const manifestBytes = await fs.readFile(path.join(projectRoot, manifestRelative));
+  assert.equal(sha(manifestBytes), approval.manifest.sha256, 'approved P1_6 manifest drift');
+  const manifest = JSON.parse(manifestBytes);
+  assert.equal(manifest.current_profile_id, record.profile);
+  const upgradeBytes = await fs.readFile(path.join(projectRoot, approval.sourceUpgrades.path));
+  assert.equal(sha(upgradeBytes), approval.sourceUpgrades.sha256, 'P1_6 whole-source upgrade evidence drift');
+  const sealedRoot = path.join(projectRoot, 'foundation/baselines', approval.sealedBaseline.exportDigest);
+  const sealedBytes = await fs.readFile(path.join(sealedRoot, 'manifest.json'));
+  assert.equal(sha(sealedBytes), approval.sealedBaseline.manifestSha256, 'sealed source manifest drift');
+  const sealed = JSON.parse(sealedBytes);
+  assert.equal(sealed.exportDigest, approval.sealedBaseline.exportDigest);
+  assert.equal(sha(await fs.readFile(path.join(sealedRoot, 'source', manifestRelative))), approval.manifest.sha256,
+    'the approved P1_6 manifest must itself be present unchanged in the sealed baseline');
+  const snapshots = new Map(manifest.snapshots.map((item) => [item.name, item]));
+  assert.equal(snapshots.size, 11);
+  let checked = 0;
+  for (const snapshot of snapshots.values()) {
+    assert.equal(snapshot.snapshot_path, `.agents/skills/${snapshot.name}`);
+    const skillRoot = path.join(sourceRoot, snapshot.snapshot_path);
+    assert.ok((await fs.lstat(skillRoot)).isDirectory(), 'method source must be a real directory');
+    const entries = await fs.readdir(skillRoot, { recursive: true, withFileTypes: true });
+    assert.ok(entries.every((item) => item.isDirectory() || item.isFile()), 'method source contains a link or unsafe type');
+    const files = entries.filter((item) => item.isFile()).map((item) =>
+      `${snapshot.name}/${path.relative(skillRoot, path.join(item.parentPath ?? item.path, item.name)).split(path.sep).join('/')}`,
+    ).sort();
+    assert.deepEqual(files, Object.keys(snapshot.files).sort(), `approved file set drift: ${snapshot.name}`);
+    assert.equal(files.length, snapshot.file_count);
     const lines = [];
     for (const file of files) {
-      lines.push(`${crypto.createHash('sha256').update(await fs.readFile(path.join(root, file))).digest('hex')}  ${file}`);
+      const relative = file.slice(snapshot.name.length + 1);
+      const digest = sha(await fs.readFile(path.join(skillRoot, relative)));
+      assert.equal(digest, snapshot.files[file], `approved source byte drift: ${file}`);
+      const sourcePath = `source/.agents/skills/${file}`;
+      assert.equal(sealed.files[sourcePath], digest, `sealed source pin mismatch: ${file}`);
+      assert.equal(sha(await fs.readFile(path.join(sealedRoot, sourcePath))), digest, `sealed source byte drift: ${file}`);
+      lines.push(`${digest}  ${file}`);
+      checked++;
     }
-    return crypto.createHash('sha256').update(lines.join('\n')).digest('hex');
-  };
-  for (const skill of record.skills) {
-    assert.ok(/^\.agents\/skills\/[a-z0-9-]+$/.test(skill.path), `skill path must be a vendored snapshot: ${skill.path}`);
-    const fresh = await digestOf(skill.path);
-    assert.equal(fresh, skill.digest, `vendored ${skill.name} drifted from the pinned dispatch content; re-record classic-integration-probes/method-dispatch-content.json`);
-    assert.ok(skill.role && skill.disposition, `skill ${skill.name} must record its R/A/T/P/V role and disposition`);
+    // Exact P1_6/Foundation formula: sort the complete hash-prefixed lines,
+    // including the method name in each path, join LF without a final LF.
+    const digest = sha(lines.sort().join('\n'));
+    assert.equal(digest, snapshot.content_sha256);
+    const skill = record.skills.find((item) => item.name === snapshot.name);
+    if (skill) {
+      assert.equal(skill.path, snapshot.snapshot_path);
+      assert.equal(skill.digest, digest, `dispatch pin differs from the approved P1_6 source: ${skill.name}`);
+      assert.equal(skill.files, files.length);
+      assert.equal(skill.digestFormula, record.digestFormula);
+      assert.ok(skill.role && skill.disposition);
+    }
   }
+  assert.equal(checked, 245, 'all approved methods, including dotfiles and fixture logs, must be checked');
+  assert.deepEqual(record.skills.map(({ name }) => name).sort(), ['claude-parallel-tdd-planner', 'test-authoring', 'whitebox-verify']);
+}
+
+test('P1_5 method dispatch content is pinned to the approved P1_6 and sealed 245-file source, without claiming execution', async () => {
+  await assertApprovedMethodPins(await loadProbe('method-dispatch-content.json'));
+});
+
+test('P1_5 source drift is refused even when a caller re-hashes its modified dispatch content', async (t) => {
+  const record = await loadProbe('method-dispatch-content.json');
+  await assertApprovedMethodPins(record);
+  const scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'p15-method-pin-'));
+  t.after(async () => { await fs.rm(scratch, { recursive: true, force: true }); });
+  const manifest = JSON.parse(await fs.readFile(path.join(projectRoot, record.sourceApproval.manifest.path), 'utf8'));
+  for (const snapshot of manifest.snapshots) {
+    const root = path.join(scratch, snapshot.snapshot_path);
+    await fs.mkdir(path.dirname(root), { recursive: true });
+    await fs.cp(path.join(projectRoot, snapshot.snapshot_path), root, { recursive: true });
+  }
+  await assertApprovedMethodPins(record, scratch);
+  const copied = path.join(scratch, '.agents/skills/whitebox-verify');
+  const dotfile = path.join(copied, '.gitignore');
+  const original = await fs.readFile(dotfile);
+  await fs.appendFile(dotfile, '\n# private source drift fixture\n');
+  const changed = structuredClone(record);
+  const files = (await fs.readdir(copied, { recursive: true, withFileTypes: true }))
+    .filter((item) => item.isFile())
+    .map((item) => path.relative(copied, path.join(item.parentPath ?? item.path, item.name)).split(path.sep).join('/'));
+  const changedLines = await Promise.all(files.map(async (file) => `${sha(await fs.readFile(path.join(copied, file)))}  whitebox-verify/${file}`));
+  changed.skills.find(({ name }) => name === 'whitebox-verify').digest = sha(changedLines.sort().join('\n'));
+  await assert.rejects(assertApprovedMethodPins(changed, scratch), /approved source byte drift: whitebox-verify\/\.gitignore/);
+  await fs.writeFile(dotfile, original);
+  await fs.rm(dotfile);
+  await assert.rejects(assertApprovedMethodPins(record, scratch), /approved file set drift: whitebox-verify/);
+  await fs.writeFile(dotfile, original);
+  const extra = path.join(copied, 'unapproved-extra.txt');
+  await fs.writeFile(extra, 'private unapproved source\n');
+  await assert.rejects(assertApprovedMethodPins(record, scratch), /approved file set drift: whitebox-verify/);
+  await fs.rm(extra);
+  await assertApprovedMethodPins(record, scratch);
 });
