@@ -31,7 +31,7 @@ I04已去掉自写文件/自建表冒充原生索引的旧等价证明；真实�
 
 I05共同安全YAML解析/模板结构边界已在原挂载绕过RED后经独立两轴、主83/83通过并提交91b08be；现有PyYaml6.0.3依赖的实际Runner发行仍需资格化。未部署、摄入、调用模型或授予真实身份。所有当前实际模型/平台/知识运行权仍须已登记且核验的角色/来源/用途授权。
 
-只有合同13条具名建设边可以消费准确双审/主复验工件，whole义务不勾选，VERIFY无建设例外。最终仍需同一最终Comet Run跑完R/A/T/P/TDD/V、平台SHA/digest/目标终态、LLMWiki Kp、唯一OpenSpec归档、同Run Outline Kt，以及关联权限事件/周期核验、多渠道隔离、告警和原生备份恢复；129当前required、独立Whitebox/Grill及唯一Comet closeout均待完成。Goal及原监督继续，上海时区整体ETA未知。
+只有合同18条具名建设边可以消费准确双审/主复验工件，whole义务不勾选，VERIFY无建设例外。最终仍需同一最终Comet Run跑完R/A/T/P/TDD/V、平台SHA/digest/目标终态、LLMWiki Kp、唯一OpenSpec归档、同Run Outline Kt，以及关联权限事件/周期核验、多渠道隔离、告警和原生备份恢复；129当前required、独立Whitebox/Grill及唯一Comet closeout均待完成。Goal及原监督继续，上海时区整体ETA未知。
 
 最新I05建设证据：91b08be（source4458c17），主83/83，六离线守卫+隔离PyYaml6.0.3校准；最新总检查828/818/10fail0skip，七输入/五配置不变，未新增失败身份。该建设接受不含部署、生成、真实认证/API-MCP或恢复，wholeI05仍未验。I04原703类型缺陷已由独立公开反例退回，原owner最后43项已报通过、候选待交；I06原任务已启动只读接线，不因GitHub可读授予写权。
 
@@ -40,3 +40,5 @@ I05共同安全YAML解析/模板结构边界已在原挂载绕过RED后经独立
 最新诊断闭合：I05 f985800已独立两轴、主99/99后集成05e36d0，安全YAML原段未变；最新全仓828/818/10fail0skip，二输入/五配置不变，旧失败身份保留。I06 04e5655因run/workflow/artifact关联P2退回原owner，未真实写平台；Core P2_4最新fresh/完整用例仍待限定候选和独立双审。五个登记Outline容器当前running、应用healthy仅是liveness（.local/comet-reset/i03-current-liveness/observation.json），不证明权限或知识交付。最终129检查/103场景和whole角色/平台/Kp/归档/Kt/权限恢复未验收。
 
 最新平台建设：8acfecb两轴审查后在主96/96+rollback6/6通过，集成9324d7b；七输入/五配置不变。Root最初网络守卫把标准URL对象当Request导致95/96，原记录保留，修复并实测string/URL/Request与外部拒绝后原96通过，未改产品断言。全仓828/818/10fail0skip，旧十失败身份未新增；真实CI生产者/保护、OCI签名、目标部署及wholeI06不因metadata关联而通过。Core终局completed与当前完整性分开：合法完成历史不被后续fault抹掉，currentIntegrity未知必须RECOVERY_REQUIRED且不重新宣传done，未完成时缺delivery仍阻断首次完成。原Core候选继续最终fresh/精确回归；后继不提前放行。
+
+建设资格修订：0c228bd仅冻结五条已有依赖的具名工件消费规则，13→18，contract680f5be...；39/69/步骤/勾选/原依赖/接口/130总记录104场景及129/103不变，VERIFY与所有真实角色/授权/资源义务不减。尚未ready的工件不可因规则先行消费。P1_2自身已完成67及真实冷资产验证，但Step9缺真实TeamAI分发，原bootstrap不是TeamAI pull；现固定0.22原生能力已定位，Root限定隔离容器/私有bareGit补证，未授真实远端推送/全局hooks/内置Wiki接纳或模型权限。无需给P1_2另加trustedHook条款，完整Journey仍归VERIFY。
