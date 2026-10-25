@@ -189,12 +189,14 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     const lock = JSON.parse(await fs.readFile(path.resolve(projectRoot, options.lock ?? 'integrations/comet/upstream.lock.json'), 'utf8'));
     if (options['check-generated'] || options['runtime-smoke']) {
       if (options.archive) fail('INPUT_INVALID', 'Verification mode runs against the integrated build; --archive belongs to build mode');
-      console.log(JSON.stringify(await verifyCometDistribution({
+      const verification = await verifyCometDistribution({
         projectRoot,
         lock,
         checkGenerated: options['check-generated'] === true,
         runtimeSmoke: options['runtime-smoke'] === true,
-      })));
+      });
+      console.log(JSON.stringify(verification));
+      process.exitCode = verification.status === 'PASS' ? 0 : 2;
     } else {
       if (!options.archive) fail('INPUT_INVALID', 'A local integrity-locked --archive is required');
       console.log(JSON.stringify(await buildCometDistribution({ projectRoot, lock, archivePath: path.resolve(options.archive) })));

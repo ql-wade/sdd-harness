@@ -565,10 +565,10 @@ index ad04e00..a3395f3 100644
  }
 diff --git a/domains/comet-classic/classic-gate-runtime.ts b/domains/comet-classic/classic-gate-runtime.ts
 new file mode 100644
-index 0000000..a49d567
+index 0000000..c04c0a9
 --- /dev/null
 +++ b/domains/comet-classic/classic-gate-runtime.ts
-@@ -0,0 +1,913 @@
+@@ -0,0 +1,923 @@
 +import { archivedGateInputs } from './classic-archive-input-bridge.js';
 +// Managed delivery gate runtime (patch 0002-managed-delivery-runtime).
 +//
@@ -679,7 +679,17 @@ index 0000000..a49d567
 +
 +// Fixed rework routes (contract section 5). Every route names a Runtime
 +// action on the SAME run; none of them creates a parallel controller.
-+export function repairRoute(gate: GateId): string {
++export function repairRoute(gate: GateId, phase?: unknown): string {
++  if (gate === 'A' || gate === 'T') {
++    if (phase === 'design') {
++      return gate === 'A'
++        ? 'architecture-repair: remain in Design; the existing Runtime-authorized design author revises the registered design, then the original Runtime dispatches and accepts a new independent A review'
++        : 'test-design-repair: remain in Design; the existing Runtime-authorized test author revises the registered test intent, then the original Runtime dispatches and accepts a new independent T review';
++    }
++    if (phase !== 'build' && phase !== 'verify') {
++      return 'read the current Native state before selecting an architecture/test repair action; this hint authorizes no transition';
++    }
++  }
 +  switch (gate) {
 +    case 'R':
 +      return 'requirements-repair: comet state transition <change> requirements-repair, revise proposal/specs and re-confirm R';
@@ -1363,7 +1373,7 @@ index 0000000..a49d567
 +    const latest = [...receipts].reverse().find((receipt) => receipt.gate === gate);
 +    if (!latest) {
 +      evaluation.missing.push(gate);
-+      evaluation.routes.push(repairRoute(gate));
++      evaluation.routes.push(repairRoute(gate, options.classic.phase));
 +      evaluation.details.push(`gate ${gate}: no accepted receipt (dispatch and accept through the Runtime before this action)`);
 +      continue;
 +    }
@@ -1373,13 +1383,13 @@ index 0000000..a49d567
 +    }
 +    if (!authenticated) {
 +      evaluation.stale.push(gate);
-+      evaluation.routes.push(repairRoute(gate));
++      evaluation.routes.push(repairRoute(gate, options.classic.phase));
 +      evaluation.details.push(`UNVERIFIED: gate ${gate} has no current protected source and independent review`);
 +      continue;
 +    }
 +    if (latest.verdict === 'reject') {
 +      evaluation.rejected.push(gate);
-+      evaluation.routes.push(repairRoute(gate));
++      evaluation.routes.push(repairRoute(gate, options.classic.phase));
 +      evaluation.details.push(`gate ${gate}: rejected at epoch ${latest.epoch} — ${latest.findings[0] ?? 'structured rejection recorded'}`);
 +      continue;
 +    }
@@ -1387,11 +1397,11 @@ index 0000000..a49d567
 +    const generation = gateGenerationOf(invalidations, gate);
 +    if (current !== latest.digest) {
 +      evaluation.stale.push(gate);
-+      evaluation.routes.push(repairRoute(gate));
++      evaluation.routes.push(repairRoute(gate, options.classic.phase));
 +      evaluation.details.push(`gate ${gate}: receipt from epoch ${latest.epoch} is stale against the current input binding (inputs changed after acceptance)`);
 +    } else if ((latest.generation ?? 0) !== generation) {
 +      evaluation.stale.push(gate);
-+      evaluation.routes.push(repairRoute(gate));
++      evaluation.routes.push(repairRoute(gate, options.classic.phase));
 +      evaluation.details.push(`gate ${gate}: receipt from epoch ${latest.epoch} predates the current invalidation generation ${generation} (inputs changed and were observed after acceptance; restoring old bytes does not revive a receipt)`);
 +    }
 +  }
@@ -1471,8 +1481,8 @@ index 0000000..a49d567
 +  if (!action) return { blocked: false, route: null };
 +  for (const gate of requiredGates(action)) {
 +    const item = evidence.find((entry) => entry.code === `gate.${gate}.current`);
-+    if (item && !item.satisfied) return { blocked: true, route: repairRoute(gate) };
-+    if (!item) return { blocked: true, route: repairRoute(gate) };
++    if (item && !item.satisfied) return { blocked: true, route: repairRoute(gate, phase) };
++    if (!item) return { blocked: true, route: repairRoute(gate, phase) };
 +  }
 +  return { blocked: false, route: null };
 +}
@@ -1732,7 +1742,7 @@ index 6926f3a..c7f6258 100644
        const reason =
          record?.tier === 'incremental'
 diff --git a/domains/comet-classic/classic-hook-guard.ts b/domains/comet-classic/classic-hook-guard.ts
-index 25f3f53..49f5bea 100644
+index 3931b80..96e113c 100644
 --- a/domains/comet-classic/classic-hook-guard.ts
 +++ b/domains/comet-classic/classic-hook-guard.ts
 @@ -1,4 +1,7 @@
@@ -1828,7 +1838,17 @@ index 25f3f53..49f5bea 100644
    const autonomous = governing.classic?.buildMode === 'autonomous';
    const createCommand = missing
      ? `comet state set ${name} plan <repository-relative-plan-path>`
-@@ -955,6 +996,7 @@ async function inspectClassicHookTarget(
+@@ -950,15 +991,37 @@ function blockedArchivedChangeTarget(
+   );
+ }
+ 
++function isManagedControlPath(relativePath: string): boolean {
++  return /(?:^|\/)\.comet(?:\/|\.yaml$|-state(?:[-.]|$))/iu.test(relativePath)
++    || /(?:^|\/)\.openspec\.yaml$/iu.test(relativePath);
++}
++
+ async function inspectClassicHookTarget(
+   projectRoot: string,
    target: string,
    selectedChangeName?: string,
    scopeTargets: typeof scopeCometHookTargets = scopeCometHookTargets,
@@ -1836,14 +1856,35 @@ index 25f3f53..49f5bea 100644
  ): Promise<ClassicCommandResult> {
    try {
      const scoped = await scopeTargets(projectRoot, [target]);
-@@ -993,6 +1035,41 @@ async function inspectClassicHookTarget(
+     if (scoped.projectTargets.length === 0) {
++      const lexical = await projectRelative(target, projectRoot);
++      if (lexical !== '..' && !lexical.startsWith('../') && !path.isAbsolute(lexical)) {
++        const layout = await assertClassicLayoutWritable(projectRoot);
++        const ownership = classicChangeTargetOwnershipBlock(lexical,
++          classicChangeTarget(lexical, projectRoot, layout), selectedChangeName);
++        if (ownership) return ownership;
++        if (isManagedControlPath(lexical) && await hasManagedRuntimeState(projectRoot, layout)) {
++          return result(2, '[COMET-HOOK] blocked: controller-owned managed Runtime target escapes the project');
++        }
++        const candidates = selectedChangeName
++          ? [await activeGoverningChange(projectRoot, selectedChangeName)].filter((change): change is GoverningChange => Boolean(change))
++          : await activeChanges(projectRoot);
++        if (candidates.some((change) => change.classic?.managedDelivery)) {
++          return result(2, '[COMET-HOOK] blocked: a lexical managed project target resolves outside the project');
++        }
++      }
+       return allowed(`${target} (outside guarded project)`);
+     }
+   } catch (error) {
+@@ -992,6 +1055,42 @@ async function inspectClassicHookTarget(
+     selectedChangeName,
    );
    if (ownershipBlock) return ownershipBlock;
- 
++  let authenticatedWritePaths: string[] | null = null;
++
 +  // Agent file tools may propose artifacts, never edit the controller's
 +  // Run/transaction/dispatch/policy namespace through generic whitelists.
-+  const controlPath = /(?:^|\/)\.comet(?:\/|\.yaml$|-state(?:[-.]|$))/iu.test(relativePath)
-+    || /(?:^|\/)\.openspec\.yaml$/iu.test(relativePath);
++  const controlPath = isManagedControlPath(relativePath);
 +  if (controlPath) {
 +    try {
 +      if (await hasManagedRuntimeState(projectRoot, layout)) return result(2, `[COMET-HOOK] blocked: controller-owned managed Runtime file: ${relativePath}`);
@@ -1870,15 +1911,15 @@ index 25f3f53..49f5bea 100644
 +      return prefix === '.' || key === prefix || key.startsWith(`${prefix}/`);
 +    });
 +    if (!permitted) return result(2, 'UNVERIFIED: target is outside the protected ActionBinding write scope');
++    authenticatedWritePaths = [...dispatch.actionBinding.allowedPaths];
 +    // Observe drift before every subsequent permitted write, including a
 +    // restoring write to requirement/design files. No old bytes revive it.
 +    await syncGateInvalidations(managed.changeDir, projectRoot);
 +  }
-+
+ 
    if (isCometConfig(relativePath)) {
      return allowed(`${relativePath} (whitelist: comet config)`);
-   }
-@@ -1074,6 +1151,47 @@ async function inspectClassicHookTarget(
+@@ -1074,6 +1173,63 @@ async function inspectClassicHookTarget(
      if (problems.length) return result(2, problems.join('\n'));
    }
  
@@ -1921,12 +1962,28 @@ index 25f3f53..49f5bea 100644
 +          ].join('\n'),
 +        );
 +      }
++      const registered = governing.classic.testIntent;
++      if (phase === 'design' && registered && registered !== 'null') {
++        let registeredRelative: string;
++        try {
++          registeredRelative = (await inspectClassicProjectTarget(projectRoot, registered, {
++            label: 'Registered test intent', expected: 'file',
++          })).relative;
++        } catch {
++          return result(2, 'UNVERIFIED: registered test intent path cannot be inspected safely');
++        }
++        const key = comparisonKey(relativePath);
++        if (key === comparisonKey(registeredRelative)
++          && authenticatedWritePaths?.some((grant) => comparisonKey(grant) === key)) {
++          return allowed(`${relativePath} (phase: design, authenticated registered test intent)`);
++        }
++      }
 +    }
 +  }
    const openSpec = openSpecAllowed(
      relativePath,
      phase,
-@@ -1104,12 +1222,36 @@ async function inspectClassicHookTarget(
+@@ -1104,12 +1260,36 @@ async function inspectClassicHookTarget(
    if (phase === 'build' && governing.classic?.workflow === 'full') {
      const planReadiness = await hookPlanReadiness(projectRoot, governing.classic.plan, {
        requireNonempty: governing.classic.buildMode === 'autonomous',
@@ -1963,7 +2020,7 @@ index 25f3f53..49f5bea 100644
      if (governing.classic?.buildMode === 'autonomous') {
        const problems = await inspectClassicAutonomousBuildProblems(
          projectRoot,
-@@ -1180,6 +1322,7 @@ export async function inspectClassicHookGuard(
+@@ -1180,6 +1360,7 @@ export async function inspectClassicHookGuard(
        target,
        changeName,
        dependencies.scopeTargets,
@@ -2992,7 +3049,7 @@ index 96d7550..c657ab6 100644
      projection.run.runId !== run.runId ||
      projection.run.iteration !== run.iteration ||
 diff --git a/domains/comet-classic/classic-state-command.ts b/domains/comet-classic/classic-state-command.ts
-index 00699b4..1a43a54 100644
+index 00699b4..6d05b95 100644
 --- a/domains/comet-classic/classic-state-command.ts
 +++ b/domains/comet-classic/classic-state-command.ts
 @@ -1,8 +1,22 @@
@@ -3079,11 +3136,16 @@ index 00699b4..1a43a54 100644
    };
  }
  
-@@ -557,7 +599,22 @@ async function setFieldsLocked(
+@@ -557,7 +599,29 @@ async function setFieldsLocked(
    const { file, directory } = await stateFile(name);
    const document = await readDocument(file);
    const previousRecord = (document.toJS() ?? {}) as Record<string, unknown>;
 +  const managedDelivery = previousRecord.managed_delivery === true;
++  if (managedDelivery && updates.some(([field]) => field === 'test_intent')) {
++    requireManagedDeliveryHost();
++    await requireRunAuthority(directory);
++    if (previousRecord.archived === true) fail('ERROR: archived test intent registration is immutable');
++  }
    for (const [field, value] of updates) {
 +    if (managedDelivery && (field === 'verify_result' || (field === 'archived' && !options.internal))) {
 +      fail(
@@ -3096,13 +3158,15 @@ index 00699b4..1a43a54 100644
 +      // transitions (architecture-repair / test-design-repair / verify-fail).
 +      fail(
 +        "ERROR: Setting 'phase' directly is not allowed in managed delivery; the COMET_FORCE_PHASE escape hatch does not lower managed gates.\n" +
-+          '  Use the Runtime rework transitions: architecture-repair / test-design-repair / verify-fail.',
++          (previousRecord.phase === 'design'
++            ? '  Retain Design; the existing authorized author revises the artifact before a new independent A/T review.'
++            : '  Read the native phase and use its controlled Runtime rework transition.'),
 +      );
 +    }
      document.set(field, parsedValue(field, value));
      if (field === 'phase' && previousRecord.phase !== value) {
        const epoch = nonNegativeRecordInteger(previousRecord, 'check_epoch');
-@@ -602,7 +659,15 @@ async function setFieldsLocked(
+@@ -602,7 +666,15 @@ async function setFieldsLocked(
    if (projection.run) {
      if (!projection.classic) fail('ERROR: migrated Run is missing its Classic projection');
      const evidence = await collectClassicEvidence(directory, projection);
@@ -3119,7 +3183,7 @@ index 00699b4..1a43a54 100644
      const stepChanged = currentStep !== projection.run.currentStep;
      const run = {
        ...projection.run,
-@@ -653,10 +718,15 @@ async function init(
+@@ -653,10 +725,15 @@ async function init(
    name: string,
    workflow: string,
    isolation: string | null = null,
@@ -3135,7 +3199,7 @@ index 00699b4..1a43a54 100644
    const boundBranch = isolation !== null ? liveGitBranch(classicCommandProjectRoot()) : null;
    if (isolation !== null && isolation !== 'current' && boundBranch === null) {
      fail(
-@@ -694,6 +764,20 @@ async function init(
+@@ -694,6 +771,20 @@ async function init(
      verified_at: null,
      archive_confirmation: null,
      archived: false,
@@ -3156,7 +3220,7 @@ index 00699b4..1a43a54 100644
    });
    if (isolation !== null) document.set('bound_branch', boundBranch);
    await atomicWrite(file, document.toString());
-@@ -707,6 +791,78 @@ async function requirePhase(name: string, expected: string): Promise<void> {
+@@ -707,6 +798,78 @@ async function requirePhase(name: string, expected: string): Promise<void> {
    }
  }
  
@@ -3235,7 +3299,7 @@ index 00699b4..1a43a54 100644
  async function requireBuildDecisions(name: string): Promise<void> {
    const { file } = await stateFile(name);
    const record = (await readDocument(file)).toJS() as Record<string, unknown>;
-@@ -769,6 +925,7 @@ async function requireOpenArtifacts(name: string): Promise<void> {
+@@ -769,6 +932,7 @@ async function requireOpenArtifacts(name: string): Promise<void> {
    }
    if (
      workflow === 'full' &&
@@ -3243,7 +3307,7 @@ index 00699b4..1a43a54 100644
      requirements.designRequired &&
      !(await nonempty(path.join(directory, 'design.md')))
    ) {
-@@ -874,9 +1031,14 @@ async function transitionLocked(output: CommandOutput, name: string, event: stri
+@@ -874,9 +1038,14 @@ async function transitionLocked(output: CommandOutput, name: string, event: stri
    if (event === 'open-complete') {
      await requirePhase(name, 'open');
      await requireOpenArtifacts(name);
@@ -3258,7 +3322,7 @@ index 00699b4..1a43a54 100644
    } else if (event === 'build-complete') {
      await requirePhase(name, 'build');
      await requireBuildDecisions(name);
-@@ -916,6 +1078,19 @@ async function transitionLocked(output: CommandOutput, name: string, event: stri
+@@ -916,6 +1085,19 @@ async function transitionLocked(output: CommandOutput, name: string, event: stri
      if ((await readField(name, 'archived')) === 'true') {
        fail(`ERROR: Cannot transition '${name}': already archived`);
      }
@@ -3278,7 +3342,7 @@ index 00699b4..1a43a54 100644
    } else if (event === 'preset-escalate') {
      // preset (hotfix/tweak) → full: rewind phase to design so the agent can
      // supplement a Design Doc before continuing. Unlike verify-fail /
-@@ -960,7 +1135,17 @@ async function next(output: CommandOutput, name: string): Promise<void> {
+@@ -960,7 +1142,17 @@ async function next(output: CommandOutput, name: string): Promise<void> {
    validateChangeName(name);
    const { file, label, directory } = await stateFile(name);
    if (!(await exists(file))) fail(`ERROR: .comet.yaml not found at ${label}/.comet.yaml`);
@@ -3297,7 +3361,7 @@ index 00699b4..1a43a54 100644
    const phase = scalar(record.phase);
    const workflow = scalar(record.workflow);
    const automatic = await readRecordField(record, 'auto_transition');
-@@ -976,6 +1161,28 @@ async function next(output: CommandOutput, name: string): Promise<void> {
+@@ -976,6 +1168,28 @@ async function next(output: CommandOutput, name: string): Promise<void> {
      configuration: sparseClassicState(record),
    };
    if (scalar(record.archived) === 'true') {
@@ -3326,7 +3390,7 @@ index 00699b4..1a43a54 100644
      const delivery = await readClassicDelivery(classicCommandProjectRoot(), directory);
      const complete = ['complete', 'local-verified'].includes(delivery.verification.status);
      output.data = {
-@@ -1020,6 +1227,29 @@ async function next(output: CommandOutput, name: string): Promise<void> {
+@@ -1020,6 +1234,29 @@ async function next(output: CommandOutput, name: string): Promise<void> {
    if (!skill) {
      fail(`ERROR: Cannot resolve next step for '${name}': unknown phase '${phase || 'null'}'`);
    }
@@ -3356,7 +3420,7 @@ index 00699b4..1a43a54 100644
    output.envelope = classicNextEnvelope({
      name,
      phase,
-@@ -1299,6 +1529,7 @@ async function check(
+@@ -1299,6 +1536,7 @@ async function check(
      );
      for (const problem of requirements.problems) reject(problem);
      for (const artifact of requirements.files) {
@@ -3364,7 +3428,7 @@ index 00699b4..1a43a54 100644
        const present = await nonempty(artifact);
        (present ? pass : reject)(`${artifact} ${present ? 'non-empty' : 'missing or empty'}`);
      }
-@@ -1330,6 +1561,26 @@ async function check(
+@@ -1330,6 +1568,26 @@ async function check(
          : `archived=${archived} (ready for archive confirmation)`,
      );
    }
@@ -3391,7 +3455,7 @@ index 00699b4..1a43a54 100644
    const binding = await resolveBranchBinding(directory, {
      heal: true,
      cwd: classicCommandInvocationCwd(),
-@@ -1795,6 +2046,344 @@ async function recordCheck(
+@@ -1795,6 +2053,344 @@ async function recordCheck(
    }
  }
  
@@ -3645,7 +3709,7 @@ index 00699b4..1a43a54 100644
 +    if (gate === 'Kt' && classic.archived) await reconcileClassicRuntimeRun(directory);
 +    output.data = { change: name, gate, verdict, receipt };
 +    output.stderr.push(green(`[ACCEPTED] gate ${gate} ${verdict}; source-bound single-gate judgment, not overall completion`));
-+    if (verdict === 'reject') output.stderr.push(yellow(`ROUTE: ${repairRoute(gate)}`));
++    if (verdict === 'reject') output.stderr.push(yellow(`ROUTE: ${repairRoute(gate, projection.classic.phase)}`));
 +  });
 +}
 +
@@ -3736,7 +3800,7 @@ index 00699b4..1a43a54 100644
  function required(args: string[], count: number, usage: string): void {
    if (args.length < count) fail(usage);
  }
-@@ -1816,6 +2405,9 @@ const MUTATING_STATE_COMMANDS = new Set([
+@@ -1816,6 +2412,9 @@ const MUTATING_STATE_COMMANDS = new Set([
    'select',
    'clear-selection',
    'complete-design',
@@ -3746,7 +3810,7 @@ index 00699b4..1a43a54 100644
  ]);
  
  async function assertStateCommandWritable(subcommand: string | undefined): Promise<void> {
-@@ -1949,13 +2541,26 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
+@@ -1949,13 +2548,26 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
          required(rest, 2, 'Usage: comet state init <change-name> <workflow>');
          const initOptions = rest.slice(2);
          let isolation: string | null = null;
@@ -3778,7 +3842,7 @@ index 00699b4..1a43a54 100644
        } else if (subcommand === 'get') {
          required(rest, 2, 'Usage: comet state get <change-name> <field>');
          validateChangeName(rest[0]);
-@@ -2051,6 +2656,22 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
+@@ -2051,6 +2663,22 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
        } else if (subcommand === 'next') {
          required(rest, 1, 'Usage: comet state next <change-name>');
          await next(output, rest[0]);
@@ -3801,7 +3865,7 @@ index 00699b4..1a43a54 100644
        } else {
          fail(`Unknown subcommand: ${subcommand ?? ''}`);
        }
-@@ -2076,6 +2697,13 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
+@@ -2076,6 +2704,13 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
        if (options.json && ['check', 'complete-design'].includes(subcommand)) output.stdout = [];
        return output.result();
      } catch (error) {
@@ -3815,7 +3879,7 @@ index 00699b4..1a43a54 100644
        const issue = error instanceof CommandFailure ? error.issue : undefined;
        const previous =
          output.data && typeof output.data === 'object'
-@@ -2091,7 +2719,7 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
+@@ -2091,7 +2726,7 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
        if (message) {
          for (const line of message.split('\n')) output.stderr.push(red(line));
        }

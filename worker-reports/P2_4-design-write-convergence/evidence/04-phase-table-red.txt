@@ -1,0 +1,78 @@
+
+ RUN  v4.1.11 <worker-tree>/.local/P2_4-design-write/sdk
+
+ × test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > keeps A authoring in Design 5ms
+   → expected 'architecture-repair: comet state tran…' to contain 'Design'
+ × test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > keeps T authoring in Design 1ms
+   → expected 'test-design-repair: comet state trans…' to contain 'Design'
+ ✓ test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > retains controlled rework from build 0ms
+ ✓ test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > retains controlled rework from verify 0ms
+ × test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > does not guess a transition for undefined 1ms
+   → expected 'architecture-repair: comet state tran…' to contain 'Native state'
+ × test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > does not guess a transition for unknown 0ms
+   → expected 'architecture-repair: comet state tran…' to contain 'Native state'
+ × test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > does not guess a transition for open 0ms
+   → expected 'architecture-repair: comet state tran…' to contain 'Native state'
+ × test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > does not guess a transition for archive 0ms
+   → expected 'architecture-repair: comet state tran…' to contain 'Native state'
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 2 passed (8)
+   Start at  21:48:36
+   Duration  555ms (transform 297ms, setup 0ms, import 414ms, tests 8ms, environment 0ms)
+
+
+# STDERR
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > keeps A authoring in Design
+AssertionError: expected 'architecture-repair: comet state tran…' to contain 'Design'
+
+Expected: "Design"
+Received: "architecture-repair: comet state transition <change> architecture-repair, revise the design, re-dispatch and re-accept A"
+
+ ❯ test/domains/comet-classic/classic-managed-repair-route.test.ts:7:19
+      5|   it.each(['A', 'T'] as const)('keeps %s authoring in Design', (gate) …
+      6|     const route = repairRoute(gate, 'design');
+      7|     expect(route).toContain('Design');
+       |                   ^
+      8|     expect(route).toContain('author');
+      9|     expect(route).toContain('independent');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > keeps T authoring in Design
+AssertionError: expected 'test-design-repair: comet state trans…' to contain 'Design'
+
+Expected: "Design"
+Received: "test-design-repair: comet state transition <change> test-design-repair, revise the test intent, re-dispatch and re-accept T"
+
+ ❯ test/domains/comet-classic/classic-managed-repair-route.test.ts:7:19
+      5|   it.each(['A', 'T'] as const)('keeps %s authoring in Design', (gate) …
+      6|     const route = repairRoute(gate, 'design');
+      7|     expect(route).toContain('Design');
+       |                   ^
+      8|     expect(route).toContain('author');
+      9|     expect(route).toContain('independent');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > does not guess a transition for undefined
+ FAIL  test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > does not guess a transition for unknown
+ FAIL  test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > does not guess a transition for open
+ FAIL  test/domains/comet-classic/classic-managed-repair-route.test.ts > managed repair route respects the native phase > does not guess a transition for archive
+AssertionError: expected 'architecture-repair: comet state tran…' to contain 'Native state'
+
+Expected: "Native state"
+Received: "architecture-repair: comet state transition <change> architecture-repair, revise the design, re-dispatch and re-accept A"
+
+ ❯ test/domains/comet-classic/classic-managed-repair-route.test.ts:17:37
+     15|   });
+     16|   it.each([undefined, 'unknown', 'open', 'archive'])('does not guess a…
+     17|     expect(repairRoute('A', phase)).toContain('Native state');
+       |                                     ^
+     18|     expect(repairRoute('T', phase)).not.toContain('state transition');
+     19|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯

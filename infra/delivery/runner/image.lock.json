@@ -19,11 +19,11 @@
       },
       {
         "path": "integrations/comet/patches/0002-managed-delivery-runtime.patch",
-        "sha256": "214d65ccabbcb2e2e460ffa5e6958677c80c4d6495447cc4c82e5f2947e756cb"
+        "sha256": "861543fbf699bc6f8451333c9f459dfe129422a9d6390365776221ba1e93de63"
       },
       {
         "path": "integrations/comet/patches/tests/2_4.patch",
-        "sha256": "09d645fdec9ebdc8c71fcaf13be91c450abce489e5b22121bb87d37b7f442ac7"
+        "sha256": "00786c45d0e9acfb6e6fc0c3243777f28247e1b6f4275d64ba690857a894eb77"
       },
       {
         "path": "integrations/comet/patches/0003-post-archive-closeout.patch",
@@ -32,6 +32,10 @@
       {
         "path": "integrations/comet/patches/tests/4_6.patch",
         "sha256": "34b3f1efd748296fae4da953f9032ad1f061c3423a49fc6c454958f86d50c0f5"
+      },
+      {
+        "path": "integrations/comet/patches/0004-upstream-security-backports.patch",
+        "sha256": "1cec1ca2cdde459c97f230e0fd5ac2b218b85dd479523307fb713ed4a982359f"
       }
     ],
     "toolchain": {
@@ -42,10 +46,10 @@
     "prepareTool": "tools/comet/prepare-source.mjs",
     "buildTool": "tools/comet/build.mjs",
     "buildContract": "toolchain-baseline.json extension_delivery：受控源分布，fingerprint 固定 archive+patches+toolchain，每次重建按 manifest 校验",
-    "hostBuildFingerprint": "6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a",
-    "hostBuildEvidence": "Controller-accepted P2_4 ddb7849 official6da construction artifact; actual current image/runtime qualification remains pending. Source/patch/toolchain equality is verified mechanically, not a role or credential grant.",
+    "hostBuildFingerprint": "3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69",
+    "hostBuildEvidence": "Root joint candidate305629 fresh offlinebuild/19related/257native+2platformskip/generated0/24compat;Core44 pending. Not actual image/OS/role qualification.",
     "containerBuildStatus": "UNVERIFIED",
-    "containerBuildReason": "This current source/patch candidate has not been built or independently read back in the current Runner image. Historical Docker observations do not qualify it.",
+    "containerBuildReason": "Current sevenpatch Docker image has not been built/qualified;Python>=3.12 base/runtime still requires exact resource plan and evidence.",
     "openspec": {
       "package": "@fission-ai/openspec",
       "version": "1.11.0",
@@ -71,7 +75,7 @@
   "upGate": {
     "enabled": false,
     "requireAllComponentsAuthenticated": true,
-    "reason": "Current candidate requires exact image/source readback, protected authority registration and purpose-bound execution eligibility. Pending newer SDK must be formally bound by the controller before enablement."
+    "reason": "Exact current source/image/Python/toolchain/OS/role/native action qualification required before runtime activation;no authority from pin synchronization."
   },
   "components": [
     {
@@ -189,6 +193,66 @@
             "reason": "node:24.15.0-bookworm-slim digest-pinned（P1_1 toolchain-baseline node 24.15.0 一致）"
           }
         ]
+      }
+    }
+  ],
+  "historicalSourceInputs": [
+    {
+      "reason": "Root controlled source revision to reviewed security+5ec joint candidate;not actual image upgrade",
+      "sourceInputs": {
+        "lockRef": "integrations/comet/upstream.lock.json",
+        "sourceCommit": "c90af44a4474662d7853aae76ce785404974fb0a",
+        "archiveSha256": "28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f",
+        "archiveBytes": 40474019,
+        "patches": [
+          {
+            "path": "integrations/comet/patches/0001-matt-method-profile.patch",
+            "sha256": "14a93e69f98b4f35080cd5c0b7666cea2a7e95ce73e66c4aebefd400ee66d15b"
+          },
+          {
+            "path": "integrations/comet/patches/tests/1_6.patch",
+            "sha256": "8edd518897a035617b20e9fba9a4179a618efe45c0b2a92e72d48dab242e1ec9"
+          },
+          {
+            "path": "integrations/comet/patches/0002-managed-delivery-runtime.patch",
+            "sha256": "214d65ccabbcb2e2e460ffa5e6958677c80c4d6495447cc4c82e5f2947e756cb"
+          },
+          {
+            "path": "integrations/comet/patches/tests/2_4.patch",
+            "sha256": "09d645fdec9ebdc8c71fcaf13be91c450abce489e5b22121bb87d37b7f442ac7"
+          },
+          {
+            "path": "integrations/comet/patches/0003-post-archive-closeout.patch",
+            "sha256": "b266706c207ae09db17e4a2e005dd42e785d99d84800af244da020a835c0bd2e"
+          },
+          {
+            "path": "integrations/comet/patches/tests/4_6.patch",
+            "sha256": "34b3f1efd748296fae4da953f9032ad1f061c3423a49fc6c454958f86d50c0f5"
+          }
+        ],
+        "toolchain": {
+          "node": "24.15.0",
+          "pnpm": "10.18.3",
+          "pythonMinimum": "3.12"
+        },
+        "prepareTool": "tools/comet/prepare-source.mjs",
+        "buildTool": "tools/comet/build.mjs",
+        "buildContract": "toolchain-baseline.json extension_delivery：受控源分布，fingerprint 固定 archive+patches+toolchain，每次重建按 manifest 校验",
+        "hostBuildFingerprint": "6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a",
+        "hostBuildEvidence": "Controller-accepted P2_4 ddb7849 official6da construction artifact; actual current image/runtime qualification remains pending. Source/patch/toolchain equality is verified mechanically, not a role or credential grant.",
+        "containerBuildStatus": "UNVERIFIED",
+        "containerBuildReason": "This current source/patch candidate has not been built or independently read back in the current Runner image. Historical Docker observations do not qualify it.",
+        "openspec": {
+          "package": "@fission-ai/openspec",
+          "version": "1.11.0",
+          "tarballSha256": "84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f",
+          "registryTarball": "https://registry.npmmirror.com/@fission-ai/openspec/-/openspec-1.11.0.tgz",
+          "tarballBytes": 471694,
+          "pinBasis": "P1_1 验证并钉定的隔离兼容候选（P1_5 classic 闭合谓词消费）；绝不浮动升级、绝不宿主全局安装"
+        },
+        "containerBuildEvidence": null,
+        "containerStartupStatus": "UNVERIFIED",
+        "containerStartupNote": "CLI jobs require an original registered authority/current work package and qualified execution source. No daemon/HTTP7300 is assumed."
       }
     }
   ]

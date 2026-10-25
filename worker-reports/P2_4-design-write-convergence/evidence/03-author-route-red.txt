@@ -1,0 +1,119 @@
+TAP version 13
+# Subtest: Design registered test intent uses exact authenticated writer scope
+not ok 1 - Design registered test intent uses exact authenticated writer scope
+  ---
+  duration_ms: 1737.771
+  type: 'test'
+  location: '<worker-tree>/test/delivery-cases/2_4.mjs:1595:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    node:internal/modules/run_main:107
+        triggerUncaughtException(
+        ^
+
+    AssertionError [ERR_ASSERTION]: registered authenticated Design writer must reach the actual hook: ╔══════════════════════════════════════════╗
+    ║     COMET PHASE GUARD — WRITE BLOCKED    ║
+    ╚══════════════════════════════════════════╝
+
+      Current phase: design
+      Target file: openspec/changes/demo/test-intent.md
+
+      This write was blocked on purpose, not by an error.
+      RELAY TO USER: Source code edits are paused until the design is agreed and recorded.
+
+      BLOCKED: source writes are not allowed during design
+      This phase does not allow source writes
+      ALLOWED: run brainstorming, create the Design Doc, and run guard
+      NEXT: finish the Design Doc, then run comet guard demo design --apply to enter build
+
+    false !== true
+
+        at runScenario (file://<worker-tree>/test/delivery-cases/2_4.mjs:986:14)
+        at async file://<worker-tree>/test/delivery-cases/2_4.mjs:1584:3 {
+      generatedMessage: false,
+      code: 'ERR_ASSERTION',
+      actual: false,
+      expected: true,
+      operator: 'strictEqual',
+      diff: 'simple'
+    }
+
+    Node.js v24.15.0
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    runScenario (file://<worker-tree>/test/delivery-cases/2_4.mjs:986:14)
+    async file://<worker-tree>/test/delivery-cases/2_4.mjs:1584:3 {
+    TestContext.<anonymous> (file://<worker-tree>/test/delivery-cases/2_4.mjs:1603:14)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: Design A/T rejection points to author revision without a forbidden phase transition
+not ok 2 - Design A/T rejection points to author revision without a forbidden phase transition
+  ---
+  duration_ms: 1636.586875
+  type: 'test'
+  location: '<worker-tree>/test/delivery-cases/2_4.mjs:1595:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    node:internal/modules/run_main:107
+        triggerUncaughtException(
+        ^
+
+    AssertionError [ERR_ASSERTION]: The input did not match the regular expression /Design/. Input:
+
+    '\x1B[32m[ACCEPTED] gate A reject; source-bound single-gate judgment, not overall completion\x1B[0m\n' +
+      '\x1B[33mROUTE: architecture-repair: comet state transition <change> architecture-repair, revise the design, re-dispatch and re-accept A\x1B[0m'
+
+        at runScenario (file://<worker-tree>/test/delivery-cases/2_4.mjs:1013:16)
+        at async file://<worker-tree>/test/delivery-cases/2_4.mjs:1584:3 {
+      generatedMessage: true,
+      code: 'ERR_ASSERTION',
+      actual: '\x1B[32m[ACCEPTED] gate A reject; source-bound single-gate judgment, not overall completion\x1B[0m\n' +
+        '\x1B[33mROUTE: architecture-repair: comet state transition <change> architecture-repair, revise the design, re-dispatch and re-accept A\x1B[0m',
+      expected: /Design/,
+      operator: 'match',
+      diff: 'simple'
+    }
+
+    Node.js v24.15.0
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    runScenario (file://<worker-tree>/test/delivery-cases/2_4.mjs:1013:16)
+    async file://<worker-tree>/test/delivery-cases/2_4.mjs:1584:3 {
+    TestContext.<anonymous> (file://<worker-tree>/test/delivery-cases/2_4.mjs:1603:14)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3477.119375
+
+# STDERR

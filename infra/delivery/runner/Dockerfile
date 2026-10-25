@@ -1,8 +1,8 @@
-# Comet Runner 镜像构建声明（RunnerInfra.v1 / RoleBoundary.v1）—— 仅声明：本宿主无 container daemon（EPERM），
-# 该构建从未执行，buildStatus=UNVERIFIED（见 infra/delivery/runner/image.lock.json sourceInputs.containerBuildStatus）。
+# Comet Runner 镜像构建声明（RunnerInfra.v1 / RoleBoundary.v1）：当前候选未取得镜像/OS资格。
+# 历史daemon观察不能替代当前构建；状态见 image.lock.json sourceInputs.containerBuildStatus。
 # 基镜像与全部固定哈希经 --build-arg 从 infra/delivery/runner/image.lock.json 解析注入；本文件不内嵌任何 tag/digest/哈希值。
 # 补丁链/工具链/确定性入口完全由 integrations/comet/upstream.lock.json 当前内容导出（RW_RUNNER_BUILD：
-# 六补丁全链消费 + fingerprint 确定性入口，见 tools/infra/runner.mjs build-plan）；构建契约复用
+# 有序补丁全链消费 + fingerprint 确定性入口，见 tools/infra/runner.mjs build-plan）；构建契约复用
 # toolchain-baseline.json extension_delivery 的限定 build 工具（P1_1/P1_6，hostBuildFingerprint 见 lock）。
 # 基镜像须提供 node 24.15.0 / pnpm 10.18.3 工具链（integrations/comet/upstream.lock.json toolchain）；其选定与认证属资源准入（up 前）。
 
@@ -25,8 +25,9 @@ ARG PATCH_3_SHA256
 ARG PATCH_4_SHA256
 ARG PATCH_5_SHA256
 ARG PATCH_6_SHA256
+ARG PATCH_7_SHA256
 
-# 构建上下文 = 仓库根。限定工具、lock 与完整六补丁链以仓库布局镜像进容器（相对路径与 lock 逐字一致），
+# 构建上下文 = 独立白名单快照。限定工具、lock 与当前完整补丁链以仓库布局镜像进容器（相对路径与 lock 逐字一致），
 # 使 build.mjs 的补丁完整性检查（PATCH_INTEGRITY_MISMATCH 纪律）按原相对路径生效。
 COPY tools/comet/ /build/repo/tools/comet/
 COPY integrations/comet/upstream.lock.json /build/repo/integrations/comet/upstream.lock.json
@@ -36,10 +37,11 @@ COPY integrations/comet/patches/0002-managed-delivery-runtime.patch /build/repo/
 COPY integrations/comet/patches/tests/2_4.patch /build/repo/integrations/comet/patches/tests/2_4.patch
 COPY integrations/comet/patches/0003-post-archive-closeout.patch /build/repo/integrations/comet/patches/0003-post-archive-closeout.patch
 COPY integrations/comet/patches/tests/4_6.patch /build/repo/integrations/comet/patches/tests/4_6.patch
+COPY integrations/comet/patches/0004-upstream-security-backports.patch /build/repo/integrations/comet/patches/0004-upstream-security-backports.patch
 COPY .sdd/cache/runner-build/comet-source.tar.gz /build/comet-source.tar.gz
 COPY .sdd/cache/runner-build/openspec-${OPENSPEC_VERSION}.tgz /build/openspec.tgz
 
-# 输入完整性：archive、openspec tarball 与六个补丁的 sha256 必须与 lock 一致，任何不一致立即终止构建。
+# 输入完整性：archive、openspec tarball 与全部补丁的 sha256 必须与 lock 一致，任何不一致立即终止构建。
 RUN echo "${SOURCE_SHA256}  /build/comet-source.tar.gz" | sha256sum -c - \
   && echo "${OPENSPEC_TARBALL_SHA256}  /build/openspec.tgz" | sha256sum -c - \
   && echo "${PATCH_1_SHA256}  /build/repo/integrations/comet/patches/0001-matt-method-profile.patch" | sha256sum -c - \
@@ -47,7 +49,8 @@ RUN echo "${SOURCE_SHA256}  /build/comet-source.tar.gz" | sha256sum -c - \
   && echo "${PATCH_3_SHA256}  /build/repo/integrations/comet/patches/0002-managed-delivery-runtime.patch" | sha256sum -c - \
   && echo "${PATCH_4_SHA256}  /build/repo/integrations/comet/patches/tests/2_4.patch" | sha256sum -c - \
   && echo "${PATCH_5_SHA256}  /build/repo/integrations/comet/patches/0003-post-archive-closeout.patch" | sha256sum -c - \
-  && echo "${PATCH_6_SHA256}  /build/repo/integrations/comet/patches/tests/4_6.patch" | sha256sum -c -
+  && echo "${PATCH_6_SHA256}  /build/repo/integrations/comet/patches/tests/4_6.patch" | sha256sum -c - \
+  && echo "${PATCH_7_SHA256}  /build/repo/integrations/comet/patches/0004-upstream-security-backports.patch" | sha256sum -c -
 
 # openspec 只经已验证 tarball 隔离安装（P1_1/P1_5 钉定候选 1.11.0；绝不浮动升级、绝不全局宿主安装）。
 RUN npm install --global /build/openspec.tgz

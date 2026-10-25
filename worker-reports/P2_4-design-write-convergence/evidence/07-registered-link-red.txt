@@ -1,0 +1,57 @@
+TAP version 13
+# Subtest: Design registered intent does not escape through post-registration links
+not ok 1 - Design registered intent does not escape through post-registration links
+  ---
+  duration_ms: 1710.66225
+  type: 'test'
+  location: '<worker-tree>/test/delivery-cases/2_4.mjs:1625:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    node:internal/modules/run_main:107
+        triggerUncaughtException(
+        ^
+
+    AssertionError [ERR_ASSERTION]: a registered target cannot become an outside-guard exemption: Classic write allowed in design
+
+    true !== false
+
+        at runScenario (file://<worker-tree>/test/delivery-cases/2_4.mjs:1033:16)
+        at async file://<worker-tree>/test/delivery-cases/2_4.mjs:1614:3 {
+      generatedMessage: false,
+      code: 'ERR_ASSERTION',
+      actual: true,
+      expected: false,
+      operator: 'strictEqual',
+      diff: 'simple'
+    }
+
+    Node.js v24.15.0
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    runScenario (file://<worker-tree>/test/delivery-cases/2_4.mjs:1033:16)
+    async file://<worker-tree>/test/delivery-cases/2_4.mjs:1614:3 {
+    TestContext.<anonymous> (file://<worker-tree>/test/delivery-cases/2_4.mjs:1633:14)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1835.600916
+
+# STDERR

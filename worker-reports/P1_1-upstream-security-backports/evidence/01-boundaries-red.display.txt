@@ -1,0 +1,83 @@
+TAP version 13
+# Subtest: Hook shell form preserves the literal project path and argv
+not ok 1 - Hook shell form preserves the literal project path and argv
+  ---
+  duration_ms: 116.718708
+  type: 'test'
+  location: '<WORKTREE>/test/comet-security-backports.test.js:33:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+      [
+        '--platform',
+        'codex',
+        '--project-root',
+    +   '<TEMP>'
+    -   '<TEMP>'
+      ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: '--platform'
+    1: 'codex'
+    2: '--project-root'
+    3: '<TEMP>'
+  actual:
+    0: '--platform'
+    1: 'codex'
+    2: '--project-root'
+    3: '<TEMP>'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<WORKTREE>/test/comet-security-backports.test.js:49:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: Eval collector excludes an external ordinary file link
+not ok 2 - Eval collector excludes an external ordinary file link
+  ---
+  duration_ms: 323.555166
+  type: 'test'
+  location: '<WORKTREE>/test/comet-security-backports.test.js:53:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Traceback (most recent call last):
+      File "<string>", line 8, in <module>
+        unittest.TestCase().assertNotIn(marker,collected)
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+      File "<PYTHON_RUNTIME>", line 1199, in assertNotIn
+        self.fail(self._formatMessage(msg, standardMsg))
+        ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "<PYTHON_RUNTIME>", line 750, in fail
+        raise self.failureException(msg)
+    AssertionError: 'outside ordinary fixture marker' unexpectedly found in '\n=== linked.txt ===\noutside ordinary fixture marker\n\n=== normal.txt ===\nnormal fixture\n'
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<WORKTREE>/test/comet-security-backports.test.js:56:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 515.591375

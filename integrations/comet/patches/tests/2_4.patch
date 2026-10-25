@@ -1,8 +1,8 @@
 diff --git a/test/domains/comet-classic/classic-hook-guard.test.ts b/test/domains/comet-classic/classic-hook-guard.test.ts
-index a97d7d0..a603fb5 100644
+index 7586923..7a6e427 100644
 --- a/test/domains/comet-classic/classic-hook-guard.test.ts
 +++ b/test/domains/comet-classic/classic-hook-guard.test.ts
-@@ -938,6 +938,21 @@ describe('Classic hook guard command', () => {
+@@ -942,6 +942,21 @@ describe('Classic hook guard command', () => {
      expect(decision.reason).toContain('Target file: src/feature.ts');
    });
  
@@ -24,7 +24,7 @@ index a97d7d0..a603fb5 100644
    it('fails closed for source writes when a build state has unknown fields', async () => {
      const dir = await makeProject();
      const changeDir = await seedChange(dir, 'invalid-build', 'build');
-@@ -1180,3 +1195,13 @@ describe('Classic hook guard command', () => {
+@@ -1184,3 +1199,13 @@ describe('Classic hook guard command', () => {
      expect((await inspect('README.md')).allowed).toBe(true);
    });
  });
@@ -37,6 +37,32 @@ index a97d7d0..a603fb5 100644
 +    expect(result.status, relative + ': ' + result.stderr).toBe(2);
 +    expect(result.stderr).toContain('controller-owned');
 +  }
++});
+diff --git a/test/domains/comet-classic/classic-managed-repair-route.test.ts b/test/domains/comet-classic/classic-managed-repair-route.test.ts
+new file mode 100644
+index 0000000..f2af44f
+--- /dev/null
++++ b/test/domains/comet-classic/classic-managed-repair-route.test.ts
+@@ -0,0 +1,20 @@
++import { describe, expect, it } from 'vitest';
++import { repairRoute } from '../../../domains/comet-classic/classic-gate-runtime.js';
++
++describe('managed repair route respects the native phase', () => {
++  it.each(['A', 'T'] as const)('keeps %s authoring in Design', (gate) => {
++    const route = repairRoute(gate, 'design');
++    expect(route).toContain('Design');
++    expect(route).toContain('author');
++    expect(route).toContain('independent');
++    expect(route).not.toContain('state transition');
++  });
++  it.each(['build', 'verify'])('retains controlled rework from %s', (phase) => {
++    expect(repairRoute('A', phase)).toContain('state transition <change> architecture-repair');
++    expect(repairRoute('T', phase)).toContain('state transition <change> test-design-repair');
++  });
++  it.each([undefined, 'unknown', 'open', 'archive'])('does not guess a transition for %s', (phase) => {
++    expect(repairRoute('A', phase)).toContain('Native state');
++    expect(repairRoute('T', phase)).not.toContain('state transition');
++  });
 +});
 diff --git a/test/domains/comet-classic/classic-state.test.ts b/test/domains/comet-classic/classic-state.test.ts
 index a51da16..cfc5c5d 100644

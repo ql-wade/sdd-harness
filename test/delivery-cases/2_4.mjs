@@ -56,6 +56,10 @@ const scenarios = {
   forwarding:
     'C07: managed raw/agent/implicit/store/unknown OpenSpec mutations cannot bypass archive',
   control: 'managed malformed state never falls back to a wider legacy write scope',
+  registration: 'Design registration cannot be repointed by a standalone unprotected caller',
+  authorwrite: 'Design registered test intent uses exact authenticated writer scope',
+  intentlinks: 'managed lexical write targets cannot escape through the external exemption',
+  designroutes: 'Design A/T rejection points to author revision without a forbidden phase transition',
   origin: 'D01: actual collected source, exact Run readback and replay refusal',
   pending:
     'D02/RW_REVISION_NO_REVIVE: first pending revision and restored bytes never revive the old attempt',
@@ -67,6 +71,8 @@ const scenarios = {
   design: 'D04: design drift invalidates downstream and survives byte restoration',
   repairA: 'D03: controlled architecture repair keeps the same original Run',
   repairT: 'D03: controlled test-design repair keeps the same original Run',
+  repairAverify: 'D03: Verify architecture repair retains its original event and Run',
+  repairTverify: 'D03: Verify test repair retains its original event and Run',
   repair: 'D03: controlled requirements/architecture/test repair keeps the same Run',
   versions: 'current source/method/policy versions cannot resurrect an observed old approval',
   concurrent: 'same native intent has one owner and only one atomic acceptance',
@@ -410,12 +416,26 @@ async function fixture({
       return actualAuthority.issueDispatch(binding);
     },
   };
+  // This map is a fixture-owned source record, not caller-supplied identity.
+  // Real author launch/OS qualification remains UNVERIFIED.
+  const writeDrivers = new Map();
+  let activeWriteDriver = null;
+  const authorizeFixtureWrite = ({ nativeRunId, request }) => {
+    const known = writeDrivers.get(activeWriteDriver);
+    if (!known || request?.intent !== 'write' || request.toolName !== 'Write'
+      || !known.tools.includes(request.toolName) || !actualAuthority.verifyDispatch(known.dispatch).ok
+      || known.dispatch.actionBinding.run !== nativeRunId) return { allowed: false };
+    const requested = request.targets.map((file) => path.relative(project, file).replaceAll('\\', '/'));
+    const paths = known.dispatch.actionBinding.allowedPaths;
+    if (requested.some((target) => !paths.some((allow) => target === allow || target.startsWith(allow + '/')))) return { allowed: false };
+    return { allowed: true, dispatch: known.dispatch };
+  };
   const host = {
     authority,
     policy: () => policy,
     context,
     definitionDigest: taskDefinitionDigest,
-    authorizeWrite: () => ({ allowed: false }),
+    authorizeWrite: authorizeFixtureWrite,
     admitEvidence,
     evaluate,
     readResult: async (intent) => {
@@ -702,6 +722,20 @@ async function fixture({
     artifacts,
     records,
     qualification,
+    registerWriteDriver: async (id, paths, { readonly = false, foreignRun = false, corruptSignature = false } = {}) => {
+      const run = JSON.parse(fs.readFileSync(path.join(change, '.comet/run-state.json'), 'utf8'));
+      const tools = readonly ? ['read_file'] : ['Write'];
+      const binding = { ...actionFor({ gate: 'T', runId: foreignRun ? 'foreign-run' : run.runId,
+        execution: `component-only:${id}`, role: readonly ? 'reviewer' : 'test-author',
+        generation: 0, attempt: 1, epoch: Number(await get('check_epoch')), inputDigest: sha('component-author-grant') }),
+        action: 'component-test-intent-author', allowedPaths: paths, allowedTools: tools,
+        outputs: [{ name: 'test-intent', ref: path.extname(paths[0]) ? paths[0] : 'openspec/changes/demo/test-intent.md' }] };
+      const dispatch = actualAuthority.issueDispatch({ ...binding, actionBinding: binding });
+      if (corruptSignature) dispatch.integrity = '0'.repeat(64);
+      writeDrivers.set(id, Object.freeze({ tools, dispatch }));
+      return dispatch;
+    },
+    useWriteDriver: (id) => { activeWriteDriver = id; },
     setEnvironment: (value) => {
       environment = value;
     },
@@ -932,6 +966,148 @@ async function runScenario(id) {
         });
         f.proof(`MALFORMED_STATE_DENIES_${target}`, false, decision.allowed);
       }
+    } else if (id === 'registration') {
+      await f.prepareDesign();
+      const registered = await f.get('test_intent');
+      const neighbor = 'openspec/changes/demo/neighbor-test-intent.md';
+      fs.writeFileSync(path.join(f.project, neighbor), '# Neighbor artifact\n');
+      const attempt = spawnSync(process.execPath, [path.join(work, 'assets/skills/comet/scripts/comet-state.mjs'),
+        'set', 'demo', 'test_intent', neighbor, '--json'], { cwd: f.project, encoding: 'utf8', timeout: 15000 });
+      assert.notEqual(attempt.status, 0, 'standalone caller must not repoint the managed registered write target: ' + attempt.stdout + attempt.stderr);
+      f.proof('UNPROTECTED_REGISTRATION_UNCHANGED', registered, await f.get('test_intent'));
+      const previousAuthority = process.env.COMET_RUN_AUTHORITY;
+      try {
+        process.env.COMET_RUN_AUTHORITY = 'component-foreign-environment';
+        const foreign = await f.state(['set', 'demo', 'test_intent', neighbor]);
+        assert.notEqual(foreign.exitCode, 0);
+        f.proof('FOREIGN_REGISTRATION_UNCHANGED', registered, await f.get('test_intent'));
+      } finally {
+        if (previousAuthority === undefined) delete process.env.COMET_RUN_AUTHORITY;
+        else process.env.COMET_RUN_AUTHORITY = previousAuthority;
+      }
+      await f.ok(['set', 'demo', 'test_intent', neighbor]);
+      f.proof('ORIGINAL_RUNTIME_REGISTRATION_ALLOWED', neighbor, await f.get('test_intent'));
+      await f.ok(['set', 'demo', 'test_intent', registered]);
+
+    } else if (id === 'authorwrite') {
+      await f.prepareDesign();
+      const target = 'openspec/changes/demo/test-intent.md';
+      const inspect = (relative = target) => f.native.inspectClassicHookGuard(f.project, 'demo', {
+        intent: 'write', targets: [path.join(f.project, relative)], toolName: 'Write',
+      });
+      f.proof('DEFAULT_FIXED_HOST_DENIES', false, (await inspect()).allowed);
+      const unbound = spawnSync(process.execPath, [path.join(work, 'assets/skills/comet/scripts/comet-hook-guard.mjs'),
+        '--project-root', f.project], { cwd: f.project, encoding: 'utf8', env: { ...process.env, FILE_PATH: path.join(f.project, target) } });
+      assert.notEqual(unbound.status, 0, 'a separate public guard process has no installed protected host');
+      assert.match(unbound.stdout + unbound.stderr, /UNVERIFIED/);
+
+      const author = await f.registerWriteDriver('writer', [target]);
+      f.useWriteDriver('writer');
+      const before = fs.readFileSync(path.join(f.project, target));
+      const decision = await inspect();
+      assert.equal(decision.allowed, true, 'registered authenticated Design writer must reach the actual hook: ' + decision.reason);
+      fs.appendFileSync(path.join(f.project, target), '\nApproved fixture author revision.\n');
+      f.proof('REAL_FIXTURE_WRITE_CHANGED', false, before.equals(fs.readFileSync(path.join(f.project, target))));
+      f.proof('HMAC_FIXTURE_NOT_ROLE_QUALIFICATION', true, Boolean(author.integrity));
+      await f.registerWriteDriver('readonly', [target], { readonly: true }); f.useWriteDriver('readonly');
+      f.proof('READ_ONLY_DRIVER_DENIES', false, (await inspect()).allowed);
+      f.proof('READ_ONLY_NON_WRITE_STAYS_ALLOWED', true, (await f.native.inspectClassicHookGuard(f.project, 'demo', {
+        intent: 'non-write', targets: [], toolName: 'read_file',
+      })).allowed);
+
+      await f.registerWriteDriver('foreign', [target], { foreignRun: true }); f.useWriteDriver('foreign');
+      f.proof('FOREIGN_RUN_DENIES', false, (await inspect()).allowed);
+      await f.registerWriteDriver('unsigned', [target], { corruptSignature: true }); f.useWriteDriver('unsigned');
+      f.proof('UNSIGNED_DRIVER_DENIES', false, (await inspect()).allowed);
+      await f.registerWriteDriver('broad', ['openspec/changes/demo']); f.useWriteDriver('broad');
+      f.proof('DIRECTORY_SCOPE_IS_NOT_EXACT_GRANT', false, (await inspect()).allowed);
+      f.useWriteDriver('writer');
+      f.proof('NEIGHBOR_DENIES', false, (await inspect('openspec/changes/demo/test-intent.md.other')).allowed);
+      f.proof('CONTROL_NAMESPACE_DENIES', false, (await inspect('openspec/changes/demo/.comet.yaml')).allowed);
+      const neighbor = 'openspec/changes/demo/neighbor-test-intent.md';
+      fs.writeFileSync(path.join(f.project, neighbor), '# Neighbor intent fixture\n');
+      await f.registerWriteDriver('neighbor', [neighbor]); f.useWriteDriver('neighbor');
+      f.proof('SIGNED_NEIGHBOR_IS_NOT_REGISTERED', false, (await inspect(neighbor)).allowed);
+      f.useWriteDriver('writer');
+      await f.ok(['set', 'demo', 'test_intent', neighbor]);
+      f.proof('REGISTRATION_CANNOT_WIDEN_ANOTHER_EXACT_GRANT', false, (await inspect()).allowed);
+      await f.ok(['set', 'demo', 'test_intent', target]);
+      const stored = fs.readFileSync(path.join(f.project, target));
+      for (const kind of ['inside-link', 'dangling-link', 'directory']) {
+        const file = path.join(f.project, target);
+        try {
+          fs.unlinkSync(file);
+          if (kind === 'directory') fs.mkdirSync(file);
+          else fs.symlinkSync(path.join(f.project, kind === 'inside-link' ? neighbor : 'missing-owned.md'), file);
+          const decision = await inspect();
+          f.proof(`REGISTERED_UNSAFE_${kind}_STRUCTURED_DENY`, false, decision.allowed);
+        } finally {
+          fs.rmSync(file, { recursive: true, force: true }); fs.writeFileSync(file, stored);
+        }
+      }
+
+      await f.ok(['set', 'demo', 'test_intent', 'null']);
+      f.proof('CONVENTIONAL_FILENAME_IS_NOT_REGISTRATION', false, (await inspect()).allowed);
+      await f.ok(['set', 'demo', 'test_intent', target]);
+      f.setMethod(sha('requirements source is no longer current'));
+      f.proof('NO_CURRENT_R_DENIES', false, (await inspect()).allowed);
+    } else if (id === 'intentlinks') {
+      await f.prepareDesign();
+      const outside = path.join(f.artifacts, 'outside-test-intent.md');
+      fs.writeFileSync(outside, '# Outside owned fixture data\n');
+      const targets = ['openspec/changes/demo/test-intent.md', 'docs/design.md',
+        'src/linked-source.ts', 'docs/linked-note.md', 'openspec/changes/demo/.comet/linked-control.md',
+        'openspec/changes/archive/2026-01-01-history/linked-history.md'];
+      await f.registerWriteDriver('link-writer', [targets[0]]); f.useWriteDriver('link-writer');
+      const failures = [];
+      for (const relative of targets) {
+        const target = path.join(f.project, relative);
+        const original = fs.existsSync(target) ? fs.readFileSync(target) : null;
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        try {
+          if (original !== null) fs.unlinkSync(target);
+          fs.symlinkSync(outside, target);
+          const decision = await f.native.inspectClassicHookGuard(f.project, 'demo', {
+            intent: 'write', targets: [target], toolName: 'Write',
+          });
+          if (decision.allowed !== false) failures.push({ relative, decision });
+        } finally {
+          fs.unlinkSync(target); if (original !== null) fs.writeFileSync(target, original);
+        }
+      }
+      const external = await f.native.inspectClassicHookGuard(f.project, 'demo', {
+        intent: 'write', targets: [outside], toolName: 'Write',
+      });
+      f.proof('TRUE_EXTERNAL_SCOPE_UNCHANGED_NOT_A_MANAGED_GRANT', true, external.allowed);
+      const legacy = path.join(f.artifacts, 'legacy-project');
+      fs.mkdirSync(path.join(legacy, '.comet'), { recursive: true });
+      fs.mkdirSync(path.join(legacy, 'openspec'), { recursive: true });
+      fs.writeFileSync(path.join(legacy, '.comet/config.yaml'), 'schema: comet.project.v1\ndefault_workflow: classic\nworkflows: [classic]\nclassic:\n  artifact_layout: legacy\n');
+      fs.writeFileSync(path.join(legacy, 'openspec/config.yaml'), 'schema: spec-driven\n');
+      assert.equal((await f.native.runClassicCli(['--json', 'state', 'init', 'legacy', 'full'], undefined,
+        { projectRoot: legacy, invocationCwd: legacy })).exitCode, 0);
+      const legacyTarget = path.join(legacy, 'legacy-link.md'); fs.symlinkSync(outside, legacyTarget);
+      const legacyScope = await f.native.inspectClassicHookGuard(legacy, 'legacy', {
+        intent: 'write', targets: [legacyTarget], toolName: 'Write',
+      });
+      f.proof('NON_MANAGED_EXTERNAL_SCOPE_UNCHANGED', true, legacyScope.allowed);
+      assert.deepEqual(failures, [], 'lexical ownership must precede the physical external exemption: ' + JSON.stringify(failures));
+      f.proof('OUTSIDE_LINK_SOURCE_UNCHANGED', '# Outside owned fixture data\n', fs.readFileSync(outside, 'utf8'));
+    } else if (id === 'designroutes') {
+      await f.prepareDesign();
+      for (const gate of ['A', 'T']) {
+        const intent = await f.issue(gate); await f.observe(intent); f.setReview('insufficient');
+        const rejected = await f.accept(intent);
+        assert.equal(rejected.exitCode, 0); assert.equal(rejected.json.data.verdict, 'reject');
+        const route = rejected.json.stderr;
+        assert.match(route, /Design/);
+        assert.match(route, /author/);
+        assert.doesNotMatch(route, /state transition <change> (architecture-repair|test-design-repair)/);
+        const invalid = await f.state(['transition', 'demo', gate === 'A' ? 'architecture-repair' : 'test-design-repair']);
+        assert.notEqual(invalid.exitCode, 0);
+        f.proof(`${gate}_STAYS_IN_DESIGN`, 'design', await f.get('phase'));
+        f.setReview('sufficient'); await f.submit(gate);
+      }
     } else if (id === 'origin') {
       const { intent, result } = await f.submit('R');
       f.proof('R_SOURCE_ADMITTED', 'pass', result.json.data.verdict);
@@ -1042,15 +1218,23 @@ async function runScenario(id) {
         ['A', 'T', 'P'],
         (await f.readback()).evaluation.stale,
       );
-    } else if (['repair', 'repairA', 'repairT'].includes(id)) {
+    } else if (['repair', 'repairA', 'repairT', 'repairAverify', 'repairTverify'].includes(id)) {
       await f.prepareP();
+      if (id.endsWith('verify')) {
+        const tasks = path.join(f.change, 'tasks.md');
+        fs.writeFileSync(tasks, fs.readFileSync(tasks, 'utf8').replace('[ ]', '[x]'));
+        assert.equal((await f.invoke(['check', 'run', 'demo', 'build', '--', ...f.commandArgv])).exitCode, 0);
+        await f.ok(['transition', 'demo', 'build-complete']);
+        f.proof('ORIGINAL_VERIFY_PHASE', 'verify', await f.get('phase'));
+      }
+
       const before = JSON.parse(
         fs.readFileSync(path.join(f.change, '.comet/run-state.json'), 'utf8'),
       ).runId;
       const event =
-        id === 'repairA'
+        id.startsWith('repairA')
           ? 'architecture-repair'
-          : id === 'repairT'
+          : id.startsWith('repairT')
             ? 'test-design-repair'
             : 'requirements-repair';
       await f.ok(['transition', 'demo', event]);

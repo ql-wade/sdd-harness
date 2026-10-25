@@ -669,9 +669,9 @@ test('catalog gap reporting: registered refs read RECORDED; a missing ref is sti
 import crypto from 'node:crypto';
 
 const upstreamLockPath = path.join(repoRoot, 'integrations', 'comet', 'upstream.lock.json');
-const P2_4_PATCH_0002_SHA = '214d65ccabbcb2e2e460ffa5e6958677c80c4d6495447cc4c82e5f2947e756cb';
-const P2_4_PATCH_2_4_SHA = '09d645fdec9ebdc8c71fcaf13be91c450abce489e5b22121bb87d37b7f442ac7';
-const EXPECTED_FINGERPRINT_RW = '6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a';
+const P2_4_PATCH_0002_SHA = '861543fbf699bc6f8451333c9f459dfe129422a9d6390365776221ba1e93de63';
+const P2_4_PATCH_2_4_SHA = '00786c45d0e9acfb6e6fc0c3243777f28247e1b6f4275d64ba690857a894eb77';
+const EXPECTED_FINGERPRINT_RW = '3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69';
 
 const sha256File = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 // build.mjs:31 同算法：fingerprint = sha256(JSON({archive, patches, toolchain}))
@@ -684,14 +684,15 @@ const lockFingerprint = (lock, patches) => crypto.createHash('sha256').update(JS
 const joinContinuations = (text) => text.replace(/\\\n/g, ' ');
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-test('RW_RUNNER_BUILD: committed image lock mirrors the six-patch upstream lock (patches, toolchain, openspec pin, freshly recomputed fingerprint)', () => {
+test('RW_RUNNER_BUILD: committed image lock mirrors the seven-patch upstream lock (patches, toolchain, openspec pin, freshly recomputed fingerprint)', () => {
   const upstream = JSON.parse(fs.readFileSync(upstreamLockPath, 'utf8'));
   const inputs = readDomainJson('image.lock.json').sourceInputs;
-  assert.equal(upstream.patches.length, 6, 'upstream lock pins six patches');
+  assert.equal(upstream.patches.length, 7, 'upstream lock pins the full current seven patches');
   assert.deepEqual(inputs.patches, upstream.patches, 'runner lock must mirror the upstream patch list exactly (order + shas)');
   const shas = inputs.patches.map((patch) => patch.sha256);
   assert.ok(shas.includes(P2_4_PATCH_0002_SHA), 'P2_4 updated 0002-managed-delivery-runtime sha must be in the chain');
   assert.ok(shas.includes(P2_4_PATCH_2_4_SHA), 'P2_4 updated tests/2_4 sha must be in the chain');
+  assert.ok(shas.includes('1cec1ca2cdde459c97f230e0fd5ac2b218b85dd479523307fb713ed4a982359f'), 'the reviewed upstream security patch must be present');
   assert.deepEqual(inputs.toolchain, upstream.toolchain, 'toolchain pins must equal the upstream lock');
   assert.equal(inputs.toolchain.node, '24.15.0', 'node pin matches P1_1 toolchain-baseline');
   assert.equal(inputs.toolchain.pnpm, '10.18.3', 'pnpm pin matches P1_1 toolchain-baseline');
@@ -704,7 +705,7 @@ test('RW_RUNNER_BUILD: committed image lock mirrors the six-patch upstream lock 
     assert.equal(sha256File(file), patch.sha256, `patch sha must match the lock on disk: ${patch.path}`);
   }
   assert.equal(inputs.hostBuildFingerprint, lockFingerprint(upstream, upstream.patches), 'recorded fingerprint must equal the freshly recomputed lock-derived fingerprint');
-  assert.equal(inputs.hostBuildFingerprint, EXPECTED_FINGERPRINT_RW, 'six-patch (incl. P2_4 updated shas) lock fingerprint');
+  assert.equal(inputs.hostBuildFingerprint, EXPECTED_FINGERPRINT_RW, 'current seven-patch joint source lock fingerprint');
 });
 
 test('RW_RUNNER_BUILD: committed Dockerfile consumes the full ordered patch chain and pins a deterministic managed entrypoint', () => {
@@ -817,7 +818,7 @@ test('RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that dri
   assert.equal(report.command, 'build-plan');
   assert.equal(report.sourceCommit, 'c90af44a4474662d7853aae76ce785404974fb0a');
   assert.equal(report.fingerprint, EXPECTED_FINGERPRINT_RW);
-  assert.equal(report.patches.length, 6);
+  assert.equal(report.patches.length, 7);
   for (const patch of report.patches) {
     assert.equal(patch.sha256Verified, true, `patch verified on disk: ${patch.path}`);
   }
@@ -826,7 +827,7 @@ test('RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that dri
     `/build/repo/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/${EXPECTED_FINGERPRINT_RW}/work/bin/comet.js`,
     'entrypoint is the fingerprint-deterministic managed comet path inside the image',
   );
-  assert.equal(report.dockerBuild.buildArgs.PATCH_3_SHA256, P2_4_PATCH_0002_SHA, 'build args carry the six patch shas in lock order');
+  assert.equal(report.dockerBuild.buildArgs.PATCH_3_SHA256, P2_4_PATCH_0002_SHA, 'build args carry the ordered patch shas in lock order');
   assert.equal(report.dockerBuild.buildArgs.EXPECTED_FINGERPRINT, EXPECTED_FINGERPRINT_RW);
   assert.equal(report.dockerBuild.buildArgs.OPENSPEC_TARBALL_SHA256, '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f');
   assert.ok(report.dockerBuild.command.includes('--build-arg SOURCE_SHA256=28a7e2fa'), 'the emitted build command pins the archive sha');

@@ -1,0 +1,1314 @@
+diff --git a/domains/skill/platform-install.ts b/domains/skill/platform-install.ts
+index a4fb167..1c5e95c 100644
+--- a/domains/skill/platform-install.ts
++++ b/domains/skill/platform-install.ts
+@@ -1,4 +1,5 @@
+ import path from 'path';
++import { buildNodeHookCommand, readNodeHookArguments } from '../../platform/process/hook-command.js';
+ import { existsSync } from 'fs';
+ import { readFile, writeFile, lstat, unlink, symlink, rm, readdir, realpath } from 'fs/promises';
+ import { fileURLToPath } from 'url';
+@@ -1574,10 +1575,6 @@ async function installCometHooksForPlatform(
+   }
+ }
+ 
+-function quoteCommandArg(value: string): string {
+-  return `"${value.replaceAll('\\', '/').replaceAll('"', '\\"')}"`;
+-}
+-
+ /** Build a hook command that is stable even when the hook runner executes from a subdirectory. */
+ function buildHookInvocation(
+   baseDir: string,
+@@ -1606,17 +1603,7 @@ function buildHookCommand(
+   scriptRelPath: string,
+   context?: HookCommandContext,
+ ): string {
+-  const projectRoot = path.resolve(baseDir);
+-  const scriptPath = path.join(projectRoot, skillsDir, 'skills', ...scriptRelPath.split('/'));
+-  let command = `node ${quoteCommandArg(scriptPath)}`;
+-  if (scriptRelPath === HOOK_ROUTER_SCRIPT && context) {
+-    command += ` --platform ${quoteCommandArg(context.platformId)}`;
+-    if (context.scope === 'project') {
+-      command += ` --project-root ${quoteCommandArg(projectRoot)}`;
+-    }
+-    return command;
+-  }
+-  return `${command} --project-root ${quoteCommandArg(projectRoot)}`;
++  return buildNodeHookCommand(buildHookInvocation(baseDir, skillsDir, scriptRelPath, context).args);
+ }
+ 
+ function parseCommandTokens(command: string): string[] | undefined {
+@@ -1689,6 +1676,9 @@ function isManagedHookCommand(command: unknown, scriptRelPaths: string[], args?:
+     );
+   }
+ 
++  const encodedArgs = readNodeHookArguments(command);
++  if (encodedArgs) return typeof encodedArgs[0] === 'string' && matchesManagedScript(encodedArgs[0]);
++
+   // Match both the current `node .../comet-hook-guard.mjs` form and the legacy
+   // `bash .../comet-hook-guard.sh` form so uninstall also cleans up hooks
+   // written by older Comet releases. Compare basenames without extension.
+diff --git a/eval/local/tests/conftest.py b/eval/local/tests/conftest.py
+index df58c9d..c95416e 100644
+--- a/eval/local/tests/conftest.py
++++ b/eval/local/tests/conftest.py
+@@ -67,6 +67,12 @@ from scaffold.python.langfuse_adapter import (
+     install_transcript_hook,
+     provision_trajectory_plugin,
+ )
++from scaffold.python.workspace_artifacts import (
++    WorkspaceArtifactError,
++    iter_workspace_paths,
++    read_workspace_text,
++    require_workspace_artifact_support,
++)
+ from scaffold.python.sample_quality import infer_sample_quality
+ from scaffold.python.skill_parser import SCRIPT_EXTENSIONS
+ from scaffold.python.utils import (
+@@ -372,6 +378,10 @@ def _normal_run_preflight(config) -> None:
+ 
+     if _is_unit_tests_only(config) or getattr(config.option, "collectonly", False):
+         return
++    try:
++        require_workspace_artifact_support()
++    except WorkspaceArtifactError as exc:
++        raise pytest.UsageError(f"Eval harness 环境错误: {exc}") from exc
+     from scaffold.python.utils import load_eval_environment
+ 
+     load_eval_environment()
+@@ -2287,6 +2297,7 @@ def _save_artifacts(
+     agent: str = "claude-code",
+ ):
+     """Save the selected Agent's generated files as artifacts."""
++    require_workspace_artifact_support()
+     artifacts_dir = base_dir / "artifacts" / f"{treatment_name.lower()}_rep{rep}"
+     agent_dir_name = {
+         "claude-code": "claude",
+@@ -2326,9 +2337,7 @@ def _save_artifacts(
+     }
+ 
+     claude_files = []
+-    for item in test_dir.rglob("*"):
+-        if not item.is_file():
+-            continue
++    for item in iter_workspace_paths(test_dir):
+         if item.name.startswith("."):
+             continue
+         if item.name in exclude_files:
+@@ -2338,9 +2347,10 @@ def _save_artifacts(
+         try:
+             rel_path = item.relative_to(test_dir)
+             dest = agent_dir / rel_path
+-            dest.parent.mkdir(parents=True, exist_ok=True)
+             try:
+-                content = item.read_text(encoding="utf-8")
++                content = read_workspace_text(test_dir, item)
++                if content is None:
++                    continue
+             except UnicodeDecodeError:
+                 import sys
+ 
+@@ -2350,8 +2360,11 @@ def _save_artifacts(
+                 )
+                 continue
+             else:
++                dest.parent.mkdir(parents=True, exist_ok=True)
+                 dest.write_text(redact_sensitive(content), encoding="utf-8")
+             claude_files.append(item)
++        except WorkspaceArtifactError:
++            raise
+         except Exception as e:
+             import sys
+ 
+diff --git a/eval/local/tests/scaffold/test_workspace_artifacts.py b/eval/local/tests/scaffold/test_workspace_artifacts.py
+new file mode 100644
+index 0000000..f28af4b
+--- /dev/null
++++ b/eval/local/tests/scaffold/test_workspace_artifacts.py
+@@ -0,0 +1,315 @@
++"""工件读取边界的纯单元测试；所有输入均为测试自建临时文件。"""
++
++import os
++from pathlib import Path
++from types import SimpleNamespace
++
++import pytest
++
++from scaffold.python.generic_llm_judge import _collect_workspace_artifacts
++from scaffold.python.workspace_artifacts import WorkspaceArtifactError, read_workspace_text
++
++
++def _symlink(path, target, *, target_is_directory=False):
++    try:
++        path.symlink_to(target, target_is_directory=target_is_directory)
++    except OSError as exc:
++        if os.name == "nt" and getattr(exc, "winerror", None) == 1314:
++            pytest.skip("此 Windows 主机不允许创建符号链接；junction 由专属测试覆盖")
++        raise
++
++
++def _disable_support(monkeypatch, missing_capability="dir_fd"):
++    if os.name == "nt":
++        from scaffold.python import workspace_artifacts_windows
++
++        def unavailable():
++            raise WorkspaceArtifactError("不支持无符号链接工件读取: Windows API unavailable")
++
++        monkeypatch.setattr(workspace_artifacts_windows, "get_windows_file_api", unavailable)
++    elif missing_capability == "dir_fd":
++        monkeypatch.setattr(os, "supports_dir_fd", set())
++    else:
++        monkeypatch.delattr(os, "O_NOFOLLOW")
++
++
++@pytest.fixture
++def workspace(tmp_path: Path) -> Path:
++    root = tmp_path / "workspace"
++    (root / "nested").mkdir(parents=True)
++    (root / "result.txt").write_text("normal result", encoding="utf-8")
++    (root / "nested/detail.txt").write_text("nested result", encoding="utf-8")
++    return root
++
++
++@pytest.fixture(params=["judge", "report"])
++def collect(request, tmp_path, monkeypatch):
++    import conftest
++
++    def forbid_execution(*args, **kwargs):
++        pytest.fail("单元测试不得执行外部命令")
++
++    monkeypatch.setattr(conftest, "run_python_in_docker", forbid_execution)
++    if request.param == "judge":
++        return _collect_workspace_artifacts
++
++    def collect_report(root):
++        conftest._save_artifacts(tmp_path, "TEXT_ONLY", 1, root)
++        saved = tmp_path / "artifacts/text_only_rep1/claude"
++        return "\n".join(
++            f"{path.relative_to(saved)}: {path.read_text(encoding='utf-8')}"
++            for path in sorted(saved.rglob("*"))
++            if path.is_file()
++        )
++
++    return collect_report
++
++
++def test_collects_normal_text(workspace, collect):
++    result = collect(workspace)
++    assert "normal result" in result
++    assert "nested result" in result
++
++
++@pytest.mark.parametrize("target_kind", ["internal", "external", "missing"])
++def test_skips_file_symlinks(workspace, tmp_path, collect, target_kind):
++    external = tmp_path / "workspace-other.txt"
++    external.write_text("outside fixture text", encoding="utf-8")
++    target = {
++        "internal": workspace / "result.txt",
++        "external": external,
++        "missing": tmp_path / "absent.txt",
++    }[target_kind]
++    _symlink(workspace / "linked.txt", target)
++
++    result = collect(workspace)
++    assert "linked.txt" not in result
++    assert "outside fixture text" not in result
++    assert "normal result" in result
++
++
++@pytest.mark.parametrize("external", [False, True])
++def test_skips_directory_symlinks(workspace, tmp_path, collect, external):
++    outside = tmp_path / "workspace-other"
++    outside.mkdir()
++    (outside / "outside.txt").write_text("outside directory fixture", encoding="utf-8")
++    target = outside if external else workspace / "nested"
++    _symlink(workspace / "linked-dir", target, target_is_directory=True)
++
++    result = collect(workspace)
++    assert "linked-dir" not in result
++    assert "outside directory fixture" not in result
++    assert "nested result" in result
++    assert read_workspace_text(workspace, workspace / "linked-dir" / "detail.txt") is None
++
++
++def test_skips_disappearing_file(workspace, collect, monkeypatch):
++    original_walk = os.walk
++    vanished = workspace / "vanished.txt"
++    vanished.write_text("temporary fixture", encoding="utf-8")
++
++    def walk(path, **kwargs):
++        entries = list(original_walk(path, **kwargs))
++        if path == workspace:
++            vanished.unlink(missing_ok=True)
++        return iter(entries)
++
++    monkeypatch.setattr(os, "walk", walk)
++    result = collect(workspace)
++    assert "vanished.txt" not in result
++    assert "normal result" in result
++
++
++def test_rejects_paths_outside_workspace(workspace, tmp_path):
++    sibling = tmp_path / "workspace-other"
++    sibling.mkdir()
++    (sibling / "result.txt").write_text("sibling fixture", encoding="utf-8")
++    assert read_workspace_text(workspace, sibling / "result.txt") is None
++    assert read_workspace_text(workspace, workspace / "../workspace-other/result.txt") is None
++    assert read_workspace_text(workspace, workspace) is None
++
++
++def test_rejects_symlink_workspace_root(workspace, tmp_path, collect):
++    alias = tmp_path / "workspace-alias"
++    _symlink(alias, workspace, target_is_directory=True)
++    assert "normal result" not in collect(alias)
++
++
++def test_regular_file_limits(workspace):
++    path = workspace / "result.txt"
++    assert read_workspace_text(workspace, path, limit=6) == "normal"
++    assert read_workspace_text(workspace, path, max_bytes=3) is None
++
++
++@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="平台无 FIFO")
++def test_skips_non_regular_file(workspace, collect):
++    os.mkfifo(workspace / "pipe.txt")
++    result = collect(workspace)
++    assert "pipe.txt" not in result
++    assert "normal result" in result
++
++
++@pytest.mark.parametrize("missing_capability", ["dir_fd", "O_NOFOLLOW"])
++@pytest.mark.parametrize("empty", [False, True])
++def test_unsupported_platform_fails_collection(
++    workspace, collect, monkeypatch, missing_capability, empty, tmp_path
++):
++    if empty:
++        workspace = tmp_path / "empty"
++        workspace.mkdir()
++    _disable_support(monkeypatch, missing_capability)
++    with pytest.raises(WorkspaceArtifactError, match="不支持无符号链接工件读取"):
++        collect(workspace)
++
++
++def test_unsupported_platform_never_invokes_judge(workspace, monkeypatch):
++    from scaffold.python import generic_llm_judge
++
++    def forbid_judge(*args, **kwargs):
++        pytest.fail("缺少安全工件读取能力时不得评分")
++
++    _disable_support(monkeypatch)
++    monkeypatch.setattr(generic_llm_judge, "_run_judge", forbid_judge)
++    with pytest.raises(WorkspaceArtifactError, match="不支持无符号链接工件读取"):
++        generic_llm_judge.judge_generic_artifacts(workspace, {})
++
++
++def test_unsupported_platform_fails_before_workloads(monkeypatch):
++    import conftest
++
++    _disable_support(monkeypatch)
++    config = SimpleNamespace(args=["local/tests/tasks/test_tasks.py"], option=SimpleNamespace())
++    with pytest.raises(pytest.UsageError, match="Eval harness 环境错误"):
++        conftest._normal_run_preflight(config)
++
++
++def test_unsupported_platform_does_not_overwrite_report(workspace, tmp_path, monkeypatch):
++    import conftest
++
++    saved = tmp_path / "artifacts/text_only_rep1/claude"
++    saved.mkdir(parents=True)
++    (saved / "result.txt").write_text("previous result", encoding="utf-8")
++    _disable_support(monkeypatch)
++    with pytest.raises(WorkspaceArtifactError):
++        conftest._save_artifacts(tmp_path, "TEXT_ONLY", 1, workspace)
++    assert (saved / "result.txt").read_text(encoding="utf-8") == "previous result"
++    assert not (saved / "nested").exists()
++
++
++def test_generic_rubric_does_not_swallow_artifact_environment_error(workspace, monkeypatch):
++    from scaffold.python import generic_llm_judge
++    from scaffold.python.profiles import run_profile_rubric
++
++    def fail_collection(*args, **kwargs):
++        raise WorkspaceArtifactError("fixture environment unsupported")
++
++    monkeypatch.setenv("BENCH_LLM_JUDGE", "1")
++    monkeypatch.setattr(generic_llm_judge, "judge_generic_messages", fail_collection)
++    with pytest.raises(WorkspaceArtifactError, match="fixture environment unsupported"):
++        run_profile_rubric("generic", workspace, {"completion": {"passed": [], "failed": []}})
++
++
++def test_report_does_not_swallow_runtime_backend_error(workspace, tmp_path, monkeypatch):
++    import conftest
++
++    def unavailable(*args, **kwargs):
++        raise WorkspaceArtifactError("fixture runtime API failure")
++
++    monkeypatch.setattr(conftest, "read_workspace_text", unavailable)
++    with pytest.raises(WorkspaceArtifactError, match="fixture runtime API failure"):
++        conftest._save_artifacts(tmp_path, "TEXT_ONLY", 1, workspace)
++
++
++@pytest.mark.skipif(os.name == "nt", reason="POSIX runtime backend failure")
++@pytest.mark.parametrize("error_name", ["ENOTSUP", "ENOSYS", "EINVAL", "EIO"])
++@pytest.mark.parametrize("consumer", ["collector", "judge", "report"])
++def test_runtime_backend_failure_stops_consumers(workspace, tmp_path, monkeypatch, error_name, consumer):
++    import errno
++    import conftest
++    from scaffold.python import generic_llm_judge
++    from scaffold.python.workspace_artifacts import require_workspace_artifact_support
++
++    original_open = os.open
++    error_number = getattr(errno, error_name)
++    failures = []
++    judge_calls = []
++
++    def backend_open(path, flags, *args, **kwargs):
++        if path == workspace:
++            failures.append(error_number)
++            raise OSError(error_number, "fixture safe-open backend unavailable")
++        return original_open(path, flags, *args, **kwargs)
++
++    monkeypatch.setattr(os, "open", backend_open)
++    # API flags and dir_fd are genuinely advertised; it is the filesystem
++    # operation that fails. A missing-API setup error cannot satisfy this case.
++    monkeypatch.setattr(os, "supports_dir_fd", os.supports_dir_fd | {backend_open})
++    require_workspace_artifact_support()
++
++    def observe_judge(*args, **kwargs):
++        judge_calls.append(True)
++        return "[RUBRIC-JUDGE] task_completion: 1.0 - local observation"
++
++    def forbid_external(*args, **kwargs):
++        pytest.fail("runtime backend regression must not execute external commands")
++
++    monkeypatch.setattr(generic_llm_judge, "_run_judge", observe_judge)
++    monkeypatch.setattr(conftest, "run_python_in_docker", forbid_external)
++    report_root = tmp_path / "report"
++    saved = report_root / "artifacts/text_only_rep1/claude"
++    saved.mkdir(parents=True)
++    (saved / "result.txt").write_text("previous result", encoding="utf-8")
++    with pytest.raises(WorkspaceArtifactError, match="工件读取后端.*errno"):
++        if consumer == "collector":
++            _collect_workspace_artifacts(workspace)
++        elif consumer == "judge":
++            generic_llm_judge.judge_generic_artifacts(workspace, {})
++        else:
++            conftest._save_artifacts(report_root, "TEXT_ONLY", 1, workspace)
++    assert failures == [error_number]
++    assert judge_calls == []
++    assert (saved / "result.txt").read_text(encoding="utf-8") == "previous result"
++    assert not (saved / "nested").exists()
++
++
++@pytest.mark.skipif(os.name == "nt", reason="POSIX per-file skip policy")
++@pytest.mark.parametrize("error_name", ["ENOENT", "ENOTDIR", "ELOOP", "EACCES", "EPERM"])
++def test_expected_unreadable_file_still_skips(workspace, monkeypatch, error_name):
++    import errno
++    original_open = os.open
++
++    def skip_one_file(path, flags, *args, **kwargs):
++        if path == "result.txt":
++            raise OSError(getattr(errno, error_name), "ordinary per-file skip fixture")
++        return original_open(path, flags, *args, **kwargs)
++
++    monkeypatch.setattr(os, "open", skip_one_file)
++    monkeypatch.setattr(os, "supports_dir_fd", os.supports_dir_fd | {skip_one_file})
++    result = _collect_workspace_artifacts(workspace)
++    assert "normal result" not in result
++    assert "nested result" in result
++
++
++@pytest.mark.skipif(os.name == "nt", reason="POSIX enumeration backend failure")
++@pytest.mark.parametrize("stage", ["lstat", "walk"])
++def test_enumeration_backend_failure_is_not_empty_collection(workspace, monkeypatch, stage):
++    import errno
++    if stage == "lstat":
++        original_lstat = Path.lstat
++
++        def fail_lstat(path, *args, **kwargs):
++            if path == workspace:
++                raise OSError(errno.ENOSYS, "fixture lstat backend unavailable")
++            return original_lstat(path, *args, **kwargs)
++
++        monkeypatch.setattr(Path, "lstat", fail_lstat)
++    else:
++        def fail_walk(path, **kwargs):
++            error = OSError(errno.ENOTSUP, "fixture enumeration unavailable")
++            if kwargs.get("onerror"):
++                kwargs["onerror"](error)
++            return iter(())
++
++        monkeypatch.setattr(os, "walk", fail_walk)
++    with pytest.raises(WorkspaceArtifactError, match="工件读取后端.*errno"):
++        _collect_workspace_artifacts(workspace)
+diff --git a/eval/local/tests/scaffold/test_workspace_artifacts_windows.py b/eval/local/tests/scaffold/test_workspace_artifacts_windows.py
+new file mode 100644
+index 0000000..552edff
+--- /dev/null
++++ b/eval/local/tests/scaffold/test_workspace_artifacts_windows.py
+@@ -0,0 +1,151 @@
++"""原生 Windows 句柄读取测试；输入仅为本测试创建的临时普通文件。"""
++
++import os
++import subprocess
++from pathlib import Path
++
++import pytest
++
++from scaffold.python.generic_llm_judge import _collect_workspace_artifacts
++from scaffold.python.workspace_artifacts import (
++    WorkspaceArtifactError,
++    iter_workspace_paths,
++    read_workspace_text,
++)
++
++pytestmark = pytest.mark.skipif(os.name != "nt", reason="需要原生 Windows 文件句柄 API")
++
++
++def _junction(link: Path, target: Path) -> None:
++    subprocess.run(
++        ["cmd", "/d", "/c", "mklink", "/J", str(link), str(target)],
++        check=True, capture_output=True,
++    )
++
++
++def test_windows_reads_unicode_nested_text(tmp_path):
++    root = tmp_path / "工作区 space 😀"
++    path = root / "嵌套 📁" / "结果 📝.txt"
++    path.parent.mkdir(parents=True)
++    path.write_text("正常文本\nsecond line", encoding="utf-8")
++    assert read_workspace_text(root, path) == "正常文本\nsecond line"
++    assert "正常文本" in _collect_workspace_artifacts(root)
++
++    from conftest import _save_artifacts
++
++    _save_artifacts(tmp_path / "report", "WINDOWS_TEXT", 1, root)
++    saved = tmp_path / "report/artifacts/windows_text_rep1/claude" / path.relative_to(root)
++    assert saved.read_text(encoding="utf-8") == "正常文本\nsecond line"
++
++
++@pytest.mark.parametrize("extended_prefix", [False, True])
++def test_windows_reads_long_path(tmp_path, extended_prefix):
++    # 扩展长度路径同时覆盖 workspace 根和它下面的相对路径。
++    root = Path("\\\\?\\" + str(tmp_path.absolute()))
++    root = root / ("a" * 90) / ("b" * 90) / ("c" * 90)
++    path = root / "更多目录 😀" / "result.txt"
++    path.parent.mkdir(parents=True)
++    path.write_text("long path fixture", encoding="utf-8")
++    try:
++        assert len(str(root)) > 260
++        read_root = root if extended_prefix else Path(str(root)[4:])
++        read_path = path if extended_prefix else Path(str(path)[4:])
++        assert read_workspace_text(read_root, read_path) == "long path fixture"
++    finally:
++        path.unlink()
++        path.parent.rmdir()
++        root.rmdir()
++        root.parent.rmdir()
++        root.parent.parent.rmdir()
++
++
++@pytest.mark.parametrize("internal", [False, True])
++def test_windows_skips_junctions(tmp_path, internal):
++    root = tmp_path / "workspace"
++    root.mkdir()
++    (root / "normal.txt").write_text("normal fixture", encoding="utf-8")
++    target = root / "inside" if internal else tmp_path / "outside"
++    target.mkdir()
++    (target / "detail.txt").write_text("junction target fixture", encoding="utf-8")
++    link = root / "linked"
++    _junction(link, target)
++    try:
++        assert read_workspace_text(root, link / "detail.txt") is None
++        assert all(
++            "linked" not in path.relative_to(root).parts for path in iter_workspace_paths(root)
++        )
++        result = _collect_workspace_artifacts(root)
++        assert "linked" not in result
++        assert "normal fixture" in result
++        if not internal:
++            assert "junction target fixture" not in result
++    finally:
++        link.rmdir()
++
++
++def test_windows_rejects_junction_root(tmp_path):
++    target = tmp_path / "target"
++    target.mkdir()
++    (target / "text.txt").write_text("root fixture", encoding="utf-8")
++    link = tmp_path / "alias"
++    _junction(link, target)
++    try:
++        assert read_workspace_text(link, link / "text.txt") is None
++        assert list(iter_workspace_paths(link)) == []
++    finally:
++        link.rmdir()
++
++
++@pytest.mark.parametrize("outcome", ["success", "missing", "directory", "oversize", "decode"])
++def test_windows_releases_handles(tmp_path, outcome):
++    root = tmp_path / "workspace"
++    nested = root / "nested"
++    nested.mkdir(parents=True)
++    path = nested / "result.txt"
++    path.write_bytes(b"text" if outcome != "decode" else b"\xff")
++    if outcome == "missing":
++        path.unlink()
++        assert read_workspace_text(root, path) is None
++    elif outcome == "directory":
++        assert read_workspace_text(root, nested) is None
++    elif outcome == "oversize":
++        assert read_workspace_text(root, path, max_bytes=1) is None
++    elif outcome == "decode":
++        with pytest.raises(UnicodeDecodeError):
++            read_workspace_text(root, path)
++    else:
++        assert read_workspace_text(root, path) == "text"
++    # 打开的句柄未共享 DELETE；仍持有任何一级句柄时重命名会失败。
++    renamed = tmp_path / "renamed"
++    root.rename(renamed)
++    path = renamed / "nested/result.txt"
++    path.unlink(missing_ok=True)
++    (renamed / "nested").rmdir()
++    renamed.rmdir()
++
++
++def test_windows_skips_sharing_conflict(tmp_path):
++    from scaffold.python.workspace_artifacts_windows import get_windows_file_api
++
++    root = tmp_path / "workspace"
++    root.mkdir()
++    path = root / "result.txt"
++    path.write_text("fixture", encoding="utf-8")
++    api = get_windows_file_api()
++    handle = api.create_file(str(path), 0x40000000, 0, None, 3, 0, None)
++    import ctypes
++
++    assert handle != ctypes.c_void_p(-1).value
++    try:
++        assert read_workspace_text(root, path) is None
++    finally:
++        api.close_handle(handle)
++    assert read_workspace_text(root, path) == "fixture"
++
++
++@pytest.mark.parametrize("code", [1, 50, 87, 120])
++def test_windows_api_errors_are_environment_failures(code):
++    from scaffold.python.workspace_artifacts_windows import _raise_windows_error
++
++    with pytest.raises(WorkspaceArtifactError, match="后端失败"):
++        _raise_windows_error(code)
+diff --git a/eval/scaffold/python/generic_llm_judge.py b/eval/scaffold/python/generic_llm_judge.py
+index a3baebb..c6f0792 100644
+--- a/eval/scaffold/python/generic_llm_judge.py
++++ b/eval/scaffold/python/generic_llm_judge.py
+@@ -23,6 +23,11 @@ from pathlib import Path
+ from typing import Any
+ 
+ from scaffold.python.judge_config import build_judge_invocation, run_judge_prompt
++from scaffold.python.workspace_artifacts import (
++    iter_workspace_paths,
++    read_workspace_text,
++    require_workspace_artifact_support,
++)
+ 
+ try:
+     from dotenv import load_dotenv
+@@ -53,27 +58,17 @@ _PER_FILE_LIMIT = 3000
+ _TOTAL_BUDGET = 20_000
+ 
+ 
+-def _read_file(path: Path, limit: int = _PER_FILE_LIMIT) -> str:
+-    """Read up to *limit* chars of a file, gracefully handling missing files."""
+-    try:
+-        text = path.read_text(errors="ignore")
+-        return text[:limit] if len(text) > limit else text
+-    except Exception:
+-        return f"(missing: {path.name})"
+-
+-
+ def _collect_workspace_artifacts(test_dir: Path) -> str:
+     """Walk *test_dir* and return a concatenated dump of workspace files.
+ 
+-    Skips hidden directories, common vendor dirs, and binary-looking files.
++    Skips hidden directories, common vendor dirs, and all symbolic links.
+     Total output is capped at ``_TOTAL_BUDGET`` chars.
+     """
++    require_workspace_artifact_support()
+     parts: list[str] = []
+     total = 0
+ 
+-    for path in sorted(test_dir.rglob("*")):
+-        if not path.is_file():
+-            continue
++    for path in sorted(iter_workspace_paths(test_dir)):
+         if path.name in _SKIP_FILES:
+             continue
+         # Skip hidden paths.
+@@ -82,15 +77,13 @@ def _collect_workspace_artifacts(test_dir: Path) -> str:
+         # Skip known vendor / cache dirs.
+         if any(part in _SKIP_DIRS for part in path.relative_to(test_dir).parts):
+             continue
+-        # Skip large or binary-looking files.
+-        try:
+-            if path.stat().st_size > 50_000:
+-                continue
+-        except OSError:
++        text = read_workspace_text(
++            test_dir, path, limit=_PER_FILE_LIMIT, max_bytes=50_000, errors="ignore"
++        )
++        if text is None:
+             continue
+ 
+         rel = path.relative_to(test_dir)
+-        text = _read_file(path, _PER_FILE_LIMIT)
+         chunk = f"\n=== {rel} ===\n{text}\n"
+ 
+         if total + len(chunk) > _TOTAL_BUDGET:
+diff --git a/eval/scaffold/python/validation/generic_rubric.py b/eval/scaffold/python/validation/generic_rubric.py
+index 1467406..c8a29a6 100644
+--- a/eval/scaffold/python/validation/generic_rubric.py
++++ b/eval/scaffold/python/validation/generic_rubric.py
+@@ -8,6 +8,7 @@ from pathlib import Path
+ from typing import Any
+ 
+ from scaffold.python.agents import normalize_skill_invocations
++from scaffold.python.workspace_artifacts import WorkspaceArtifactError
+ 
+ GENERIC_RUBRIC_DIMENSIONS = (
+     "completion",
+@@ -201,6 +202,8 @@ def generic_rubric_validator(test_dir: Path, outputs: dict[str, Any]) -> tuple[l
+                 for result in judge_results
+             ):
+                 passed.append("[RUBRIC-JUDGE] status: enabled_and_successful")
++        except WorkspaceArtifactError:
++            raise
+         except Exception as e:
+             passed.append(f"[RUBRIC-JUDGE] status: failed - {e}")
+ 
+diff --git a/eval/scaffold/python/workspace_artifacts.py b/eval/scaffold/python/workspace_artifacts.py
+new file mode 100644
+index 0000000..dec9260
+--- /dev/null
++++ b/eval/scaffold/python/workspace_artifacts.py
+@@ -0,0 +1,117 @@
++"""只读取工作区中的普通工件；文件和目录符号链接均跳过。"""
++
++from __future__ import annotations
++
++import errno
++import os
++import stat
++from collections.abc import Iterator
++from contextlib import ExitStack
++from pathlib import Path
++
++
++class WorkspaceArtifactError(RuntimeError):
++    """宿主环境无法保证工件读取边界，必须停止相关评估。"""
++
++
++def _handle_workspace_os_error(error: OSError) -> None:
++    # These are the existing per-artifact skip policy: vanished paths, links,
++    # non-directories and unreadable files. Backend/IO failures must not turn
++    # an incomplete workspace into a successful empty collection or score.
++    if error.errno in {errno.ENOENT, errno.ENOTDIR, errno.ELOOP, errno.EACCES, errno.EPERM}:
++        return
++    raise WorkspaceArtifactError(
++        f"工件读取后端失败 (errno={error.errno})；工件收集及评分已停止。"
++    ) from error
++
++
++def require_workspace_artifact_support() -> None:
++    """缺少安全读取能力时报告环境错误，不能把缺失工件当作空工作区评分。"""
++    if os.name == "nt":
++        from scaffold.python.workspace_artifacts_windows import get_windows_file_api
++
++        get_windows_file_api()
++        return
++    if (
++        not all(hasattr(os, flag) for flag in ("O_NOFOLLOW", "O_DIRECTORY", "O_NONBLOCK"))
++        or os.open not in os.supports_dir_fd
++    ):
++        raise WorkspaceArtifactError(
++            "当前平台不支持无符号链接工件读取；工件收集已停止，请在支持 dir_fd 和 "
++            "O_NOFOLLOW 的平台运行 Eval。"
++        )
++
++
++def iter_workspace_paths(workspace: Path) -> Iterator[Path]:
++    """剪掉链接目录，避免递归枚举 junction；读取边界仍由文件句柄保证。"""
++    def is_plain_directory(path: Path) -> bool:
++        try:
++            info = path.lstat()
++            return stat.S_ISDIR(info.st_mode) and not (
++                getattr(info, "st_file_attributes", 0) & 0x400
++            )
++        except OSError as error:
++            _handle_workspace_os_error(error)
++            return False
++
++    if not is_plain_directory(workspace):
++        return
++    for root, directories, files in os.walk(workspace, topdown=True, followlinks=False, onerror=_handle_workspace_os_error):
++        directories[:] = [
++            name for name in directories if is_plain_directory(Path(root) / name)
++        ]
++        for name in files:
++            yield Path(root) / name
++
++
++def read_workspace_text(
++    workspace: Path,
++    path: Path,
++    *,
++    limit: int | None = None,
++    max_bytes: int | None = None,
++    errors: str = "strict",
++) -> str | None:
++    """安全读取普通文本，越界、链接、消失或不可读的工件返回 None。
++
++    从工作区目录描述符逐级打开路径，不跟随任何符号链接；大小检查和
++    读取使用同一个文件描述符。平台缺少这些能力时报错，不降级为跟随链接。
++    UnicodeDecodeError 交由调用方处理，以保留报告复制的非文本提示。
++    """
++    require_workspace_artifact_support()
++    try:
++        relative = path.relative_to(workspace)
++    except ValueError:
++        return None
++    if not relative.parts or ".." in relative.parts:
++        return None
++    if os.name == "nt":
++        from scaffold.python.workspace_artifacts_windows import read_windows_workspace_text
++
++        return read_windows_workspace_text(
++            workspace, relative, limit=limit, max_bytes=max_bytes, errors=errors
++        )
++    try:
++        with ExitStack() as stack:
++            directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
++            directory_fd = os.open(workspace, directory_flags)
++            stack.callback(os.close, directory_fd)
++            for component in relative.parts[:-1]:
++                directory_fd = os.open(component, directory_flags, dir_fd=directory_fd)
++                stack.callback(os.close, directory_fd)
++            file_fd = os.open(
++                relative.name,
++                os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
++                dir_fd=directory_fd,
++            )
++            stack.callback(os.close, file_fd)
++            info = os.fstat(file_fd)
++            if not stat.S_ISREG(info.st_mode):
++                return None
++            if max_bytes is not None and info.st_size > max_bytes:
++                return None
++            with os.fdopen(file_fd, encoding="utf-8", errors=errors, closefd=False) as stream:
++                return stream.read(limit) if limit is not None else stream.read()
++    except OSError as error:
++        _handle_workspace_os_error(error)
++        return None
+diff --git a/eval/scaffold/python/workspace_artifacts_windows.py b/eval/scaffold/python/workspace_artifacts_windows.py
+new file mode 100644
+index 0000000..b6b9b25
+--- /dev/null
++++ b/eval/scaffold/python/workspace_artifacts_windows.py
+@@ -0,0 +1,221 @@
++"""Windows 工件读取：相对目录句柄打开，不跟随 reparse point。
++
++接口依据：Microsoft Learn 的 NtCreateFile、GetFileInformationByHandle、
++CreateFileW 和 CRT _open_osfhandle 文档。工作区根及其上级由 harness 指定；
++根本身和根以下的任一 reparse point 均拒绝。
++"""
++
++from __future__ import annotations
++
++import ctypes
++import os
++from contextlib import ExitStack
++from functools import lru_cache
++from pathlib import Path
++
++from scaffold.python.workspace_artifacts import WorkspaceArtifactError
++
++_DWORD = ctypes.c_uint32
++_HANDLE = ctypes.c_void_p
++_FILE_ATTRIBUTE_DIRECTORY = 0x10
++_FILE_ATTRIBUTE_REPARSE_POINT = 0x400
++_FILE_READ_DATA = 0x1
++_FILE_TRAVERSE = 0x20
++_FILE_READ_ATTRIBUTES = 0x80
++_SYNCHRONIZE = 0x100000
++_FILE_OPEN_REPARSE_POINT = 0x200000
++_FILE_SYNCHRONOUS_IO_NONALERT = 0x20
++_FILE_SHARE_READ = 0x1
++
++
++class _UnicodeString(ctypes.Structure):
++    _fields_ = [
++        ("Length", ctypes.c_uint16),
++        ("MaximumLength", ctypes.c_uint16),
++        ("Buffer", ctypes.c_void_p),
++    ]
++
++
++class _ObjectAttributes(ctypes.Structure):
++    _fields_ = [
++        ("Length", _DWORD),
++        ("RootDirectory", _HANDLE),
++        ("ObjectName", ctypes.POINTER(_UnicodeString)),
++        ("Attributes", _DWORD),
++        ("SecurityDescriptor", ctypes.c_void_p),
++        ("SecurityQualityOfService", ctypes.c_void_p),
++    ]
++
++
++class _IoStatusBlock(ctypes.Structure):
++    # 首字段是 NTSTATUS/指针 union，按指针宽度保留空间与对齐。
++    _fields_ = [("Status", ctypes.c_void_p), ("Information", ctypes.c_size_t)]
++
++
++class _FileTime(ctypes.Structure):
++    _fields_ = [("Low", _DWORD), ("High", _DWORD)]
++
++
++class _FileInformation(ctypes.Structure):
++    _fields_ = [
++        ("Attributes", _DWORD),
++        ("CreationTime", _FileTime),
++        ("LastAccessTime", _FileTime),
++        ("LastWriteTime", _FileTime),
++        ("VolumeSerialNumber", _DWORD),
++        ("SizeHigh", _DWORD),
++        ("SizeLow", _DWORD),
++        ("NumberOfLinks", _DWORD),
++        ("FileIndexHigh", _DWORD),
++        ("FileIndexLow", _DWORD),
++    ]
++
++
++def _raise_windows_error(code: int) -> None:
++    # 缺失、权限/共享冲突和无效文件名可以逐工件跳过。API/ABI/文件系统能力
++    # 等其他错误必须停止评估，不能把失效的后端当作空工作区。
++    if code in {2, 3, 5, 32, 33, 123, 206, 267}:
++        raise ctypes.WinError(code)
++    raise WorkspaceArtifactError(f"Windows 工件读取后端失败 (Win32 error {code})")
++
++
++class _WindowsFileAPI:
++    def __init__(self):
++        import msvcrt
++
++        self.open_osfhandle = msvcrt.open_osfhandle
++        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
++        ntdll = ctypes.WinDLL("ntdll", use_last_error=True)
++        self.create_file = kernel.CreateFileW
++        self.create_file.argtypes = [
++            ctypes.c_wchar_p, _DWORD, _DWORD, ctypes.c_void_p, _DWORD, _DWORD, _HANDLE
++        ]
++        self.create_file.restype = _HANDLE
++        self.close_handle = kernel.CloseHandle
++        self.close_handle.argtypes = [_HANDLE]
++        self.close_handle.restype = ctypes.c_int32
++        self.file_information = kernel.GetFileInformationByHandle
++        self.file_information.argtypes = [_HANDLE, ctypes.POINTER(_FileInformation)]
++        self.file_information.restype = ctypes.c_int32
++        self.file_type = kernel.GetFileType
++        self.file_type.argtypes = [_HANDLE]
++        self.file_type.restype = _DWORD
++        self.nt_create_file = ntdll.NtCreateFile
++        self.nt_create_file.argtypes = [
++            ctypes.POINTER(_HANDLE), _DWORD, ctypes.POINTER(_ObjectAttributes),
++            ctypes.POINTER(_IoStatusBlock), ctypes.c_void_p, _DWORD, _DWORD, _DWORD,
++            _DWORD, ctypes.c_void_p, _DWORD,
++        ]
++        self.nt_create_file.restype = ctypes.c_int32
++        self.status_to_error = ntdll.RtlNtStatusToDosError
++        self.status_to_error.argtypes = [ctypes.c_int32]
++        self.status_to_error.restype = _DWORD
++
++    def open_root(self, workspace: Path) -> int:
++        absolute = str(workspace.absolute())
++        if not absolute.startswith("\\\\?\\"):
++            absolute = (
++                "\\\\?\\UNC\\" + absolute[2:]
++                if absolute.startswith("\\\\")
++                else "\\\\?\\" + absolute
++            )
++        handle = self.create_file(
++            absolute,
++            _FILE_READ_ATTRIBUTES | _FILE_TRAVERSE | _SYNCHRONIZE,
++            _FILE_SHARE_READ,
++            None,
++            3,  # OPEN_EXISTING
++            0x00200000 | 0x02000000,  # OPEN_REPARSE_POINT | BACKUP_SEMANTICS
++            None,
++        )
++        if handle == ctypes.c_void_p(-1).value:
++            _raise_windows_error(ctypes.get_last_error())
++        return handle
++
++    def open_relative(self, parent: int, component: str, *, directory: bool) -> int:
++        encoded = component.encode("utf-16-le")
++        if (
++            not component or component in {".", ".."}
++            or any(char in component for char in "\\/:\x00")
++            or len(encoded) + 2 > 0xFFFF
++        ):
++            raise OSError("无效的工件路径组件")
++        buffer = ctypes.create_string_buffer(encoded + b"\x00\x00")
++        name = _UnicodeString(len(encoded), len(encoded) + 2, ctypes.addressof(buffer))
++        attributes = _ObjectAttributes(
++            ctypes.sizeof(_ObjectAttributes), parent, ctypes.pointer(name), 0x40, None, None
++        )
++        io_status = _IoStatusBlock()
++        handle = _HANDLE()
++        access = _FILE_READ_ATTRIBUTES | _SYNCHRONIZE
++        access |= _FILE_TRAVERSE if directory else _FILE_READ_DATA
++        status = self.nt_create_file(
++            ctypes.byref(handle), access, ctypes.byref(attributes), ctypes.byref(io_status),
++            None, 0, _FILE_SHARE_READ, 1,  # FILE_OPEN，只打开现有文件
++            _FILE_OPEN_REPARSE_POINT | _FILE_SYNCHRONOUS_IO_NONALERT, None, 0,
++        )
++        if status < 0:
++            _raise_windows_error(self.status_to_error(status))
++        return handle.value
++
++    def inspect(self, handle: int, *, directory: bool) -> _FileInformation | None:
++        ctypes.set_last_error(0)
++        file_type = self.file_type(handle)
++        if file_type == 0 and ctypes.get_last_error():
++            _raise_windows_error(ctypes.get_last_error())
++        if file_type != 1:  # FILE_TYPE_DISK
++            return None
++        info = _FileInformation()
++        if not self.file_information(handle, ctypes.byref(info)):
++            _raise_windows_error(ctypes.get_last_error())
++        if info.Attributes & _FILE_ATTRIBUTE_REPARSE_POINT:
++            return None
++        if bool(info.Attributes & _FILE_ATTRIBUTE_DIRECTORY) != directory:
++            return None
++        return info
++
++
++@lru_cache(maxsize=1)
++def get_windows_file_api() -> _WindowsFileAPI:
++    try:
++        return _WindowsFileAPI()
++    except (ImportError, AttributeError, OSError) as exc:
++        raise WorkspaceArtifactError("Windows 工件读取 API 不可用，评估已停止") from exc
++
++
++def read_windows_workspace_text(
++    workspace: Path, relative: Path, *, limit: int | None, max_bytes: int | None, errors: str
++) -> str | None:
++    api = get_windows_file_api()
++    try:
++        with ExitStack() as directories:
++            parent = api.open_root(workspace)
++            directories.callback(api.close_handle, parent)
++            if api.inspect(parent, directory=True) is None:
++                return None
++            for component in relative.parts[:-1]:
++                parent = api.open_relative(parent, component, directory=True)
++                directories.callback(api.close_handle, parent)
++                if api.inspect(parent, directory=True) is None:
++                    return None
++            with ExitStack() as final_handle:
++                handle = api.open_relative(parent, relative.name, directory=False)
++                final_handle.callback(api.close_handle, handle)
++                info = api.inspect(handle, directory=False)
++                if info is None:
++                    return None
++                size = (info.SizeHigh << 32) | info.SizeLow
++                if max_bytes is not None and size > max_bytes:
++                    return None
++                try:
++                    fd = api.open_osfhandle(handle, os.O_RDONLY | os.O_BINARY)
++                except OSError as exc:
++                    raise WorkspaceArtifactError("Windows 工件句柄转换失败") from exc
++                # CRT 成功接管句柄后只由 os.close 关闭，避免重复关闭同一个句柄。
++                final_handle.pop_all()
++                with ExitStack() as descriptor:
++                    descriptor.callback(os.close, fd)
++                    with os.fdopen(fd, encoding="utf-8", errors=errors, closefd=False) as stream:
++                        return stream.read(limit) if limit is not None else stream.read()
++    except OSError:
++        return None
+diff --git a/package.json b/package.json
+index 89b78a4..e52ffed 100644
+--- a/package.json
++++ b/package.json
+@@ -137,7 +137,7 @@
+     "tailwindcss": "^4.3.1",
+     "typescript": "^5.9.3",
+     "typescript-eslint": "^8.59.3",
+-    "vite": "8.2.2",
++    "vite": "8.2.4",
+     "vitest": "^4.1.11"
+   },
+   "dependencies": {
+diff --git a/platform/process/hook-command.ts b/platform/process/hook-command.ts
+new file mode 100644
+index 0000000..01a3b5b
+--- /dev/null
++++ b/platform/process/hook-command.ts
+@@ -0,0 +1,20 @@
++/** 将路径作为编码后的 argv 传递；宿主 shell 不解释参数中的字符。 */
++export function buildNodeHookCommand(args: readonly string[]): string {
++  const encoded = Buffer.from(JSON.stringify(args)).toString('base64');
++  if (!/^[A-Za-z0-9+/]*={0,2}$/u.test(encoded)) throw new TypeError('Hook 参数编码包含无效字符');
++  return `node -e "const r=require('node:child_process').spawnSync(process.execPath,JSON.parse(Buffer.from('${encoded}','base64').toString()),{stdio:'inherit'});process.exit(r.status??1)"`;
++}
++
++/** 只识别完整的托管命令，不能把附带其他命令的用户配置误认为 Comet 所有。 */
++export function readNodeHookArguments(command: unknown): string[] | null {
++  if (typeof command !== 'string') return null;
++  const encoded = /Buffer\.from\('([A-Za-z0-9+/=]+)','base64'\)/u.exec(command)?.[1];
++  if (!encoded) return null;
++  try {
++    const args: unknown = JSON.parse(Buffer.from(encoded, 'base64').toString());
++    if (!Array.isArray(args) || !args.every((arg) => typeof arg === 'string')) return null;
++    return buildNodeHookCommand(args) === command ? args : null;
++  } catch {
++    return null;
++  }
++}
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 5d40a9a..25d7309 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -77,7 +77,7 @@ importers:
+         version: 1.62.1
+       '@tailwindcss/vite':
+         specifier: ^4.3.1
+-        version: 4.3.3(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
++        version: 4.3.3(vite@8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+       '@types/node':
+         specifier: ^26.4.0
+         version: 26.4.0
+@@ -89,7 +89,7 @@ importers:
+         version: 19.2.5(@types/react@19.2.18)
+       '@vitejs/plugin-react':
+         specifier: ^6.1.1
+-        version: 6.1.1(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
++        version: 6.1.1(vite@8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+       '@vitest/coverage-v8':
+         specifier: ^4.1.11
+         version: 4.1.11(vitest@4.1.11)
+@@ -130,11 +130,11 @@ importers:
+         specifier: ^8.59.3
+         version: 8.68.0(eslint@10.4.0(jiti@2.7.0))(typescript@5.9.3)
+       vite:
+-        specifier: 8.2.2
+-        version: 8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
++        specifier: 8.2.4
++        version: 8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
+       vitest:
+         specifier: ^4.1.11
+-        version: 4.1.11(@types/node@26.4.0)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
++        version: 4.1.11(@types/node@26.4.0)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1)(vite@8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+ 
+ packages:
+ 
+@@ -2444,8 +2444,8 @@ packages:
+     resolution: {integrity: sha512-xZe/16rV4aa+HGSOCiY2YeLT1OybRLrrkL/Rqaq7p7GMVXjFh+6wN4oMYgjFmnSnhY8t6Xpdl2l9qmnHYuMHwQ==}
+     hasBin: true
+ 
+-  vite@8.2.2:
+-    resolution: {integrity: sha512-cFKLV/PRgAUlIRm5WjMjJ86jrftzpqcgH+Us+DS8mI3CDNiH30Whrz8uHL3+MOLPAgqbMBAqWdAHAphOAM+z/Q==}
++  vite@8.2.4:
++    resolution: {integrity: sha512-lfauXnrf2x0p+UoA+wXh0dgFWnUjCyG6Js95KBkgaCwUU9k0DAHI4W6Q0WCx+h+5g+Alce1y4Zi2QjjK0UvGBw==}
+     engines: {node: ^20.19.0 || >=22.12.0}
+     hasBin: true
+     peerDependencies:
+@@ -3450,12 +3450,12 @@ snapshots:
+       '@tailwindcss/oxide-win32-arm64-msvc': 4.3.3
+       '@tailwindcss/oxide-win32-x64-msvc': 4.3.3
+ 
+-  '@tailwindcss/vite@4.3.3(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))':
++  '@tailwindcss/vite@4.3.3(vite@8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))':
+     dependencies:
+       '@tailwindcss/node': 4.3.3
+       '@tailwindcss/oxide': 4.3.3
+       tailwindcss: 4.3.3
+-      vite: 8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
++      vite: 8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
+ 
+   '@types/chai@5.2.3':
+     dependencies:
+@@ -3700,10 +3700,10 @@ snapshots:
+       d3-selection: 3.0.0
+       d3-transition: 3.0.1(d3-selection@3.0.0)
+ 
+-  '@vitejs/plugin-react@6.1.1(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))':
++  '@vitejs/plugin-react@6.1.1(vite@8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))':
+     dependencies:
+       '@rolldown/pluginutils': 1.0.1
+-      vite: 8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
++      vite: 8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
+ 
+   '@vitest/coverage-v8@4.1.11(vitest@4.1.11)':
+     dependencies:
+@@ -3717,7 +3717,7 @@ snapshots:
+       obug: 2.1.4
+       std-env: 4.2.0
+       tinyrainbow: 3.1.1
+-      vitest: 4.1.11(@types/node@26.4.0)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
++      vitest: 4.1.11(@types/node@26.4.0)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1)(vite@8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+ 
+   '@vitest/expect@4.1.11':
+     dependencies:
+@@ -3728,13 +3728,13 @@ snapshots:
+       chai: 6.2.2
+       tinyrainbow: 3.1.1
+ 
+-  '@vitest/mocker@4.1.11(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))':
++  '@vitest/mocker@4.1.11(vite@8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))':
+     dependencies:
+       '@vitest/spy': 4.1.11
+       estree-walker: 3.0.3
+       magic-string: 0.30.21
+     optionalDependencies:
+-      vite: 8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
++      vite: 8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
+ 
+   '@vitest/pretty-format@4.1.11':
+     dependencies:
+@@ -4840,7 +4840,7 @@ snapshots:
+ 
+   uuid@14.0.2: {}
+ 
+-  vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0):
++  vite@8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0):
+     dependencies:
+       lightningcss: 1.33.0
+       picomatch: 4.0.7
+@@ -4854,10 +4854,10 @@ snapshots:
+       jiti: 2.7.0
+       yaml: 2.9.0
+ 
+-  vitest@4.1.11(@types/node@26.4.0)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)):
++  vitest@4.1.11(@types/node@26.4.0)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1)(vite@8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)):
+     dependencies:
+       '@vitest/expect': 4.1.11
+-      '@vitest/mocker': 4.1.11(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
++      '@vitest/mocker': 4.1.11(vite@8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0))
+       '@vitest/pretty-format': 4.1.11
+       '@vitest/runner': 4.1.11
+       '@vitest/snapshot': 4.1.11
+@@ -4874,7 +4874,7 @@ snapshots:
+       tinyexec: 1.3.0
+       tinyglobby: 0.2.17
+       tinyrainbow: 3.1.1
+-      vite: 8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
++      vite: 8.2.4(@types/node@26.4.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.0)
+       why-is-node-running: 2.3.0
+     optionalDependencies:
+       '@types/node': 26.4.0
+diff --git a/test/domains/skill/platform-inspect.test.ts b/test/domains/skill/platform-inspect.test.ts
+index 8b60e70..9ad198f 100644
+--- a/test/domains/skill/platform-inspect.test.ts
++++ b/test/domains/skill/platform-inspect.test.ts
+@@ -1,3 +1,4 @@
++import { buildNodeHookCommand, readNodeHookArguments } from '../../../platform/process/hook-command.js';
+ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+ import { promises as fs } from 'fs';
+ import os from 'os';
+@@ -18,6 +19,36 @@ import {
+ } from '../../../domains/skill/uninstall.js';
+ import { PLATFORMS, type Platform } from '../../../platform/install/platforms.js';
+ 
++function mapHookConfigStrings(value: unknown, map: (value: string) => string): unknown {
++  if (typeof value === 'string') return map(value);
++  if (Array.isArray(value)) return value.map((entry) => mapHookConfigStrings(entry, map));
++  if (value && typeof value === 'object')
++    return Object.fromEntries(
++      Object.entries(value).map(([key, entry]) => [key, mapHookConfigStrings(entry, map)]),
++    );
++  return value;
++}
++
++function replaceHookArgument(config: string, from: string, to: string): string {
++  const replace = (value: string) =>
++    value.replaceAll(from, to).replaceAll(from.replaceAll('/', '\\'), to.replaceAll('/', '\\'));
++  return JSON.stringify(
++    mapHookConfigStrings(JSON.parse(config), (value) => {
++      const args = readNodeHookArguments(value);
++      return args ? buildNodeHookCommand(args.map(replace)) : replace(value);
++    }),
++  );
++}
++
++function readableHookConfig(config: string): string {
++  return JSON.stringify(
++    mapHookConfigStrings(JSON.parse(config), (value) => {
++      const args = readNodeHookArguments(value);
++      return args ? args.join(' ') : value;
++    }),
++  );
++}
++
+ function platform(id: string): Platform {
+   const found = PLATFORMS.find((candidate) => candidate.id === id);
+   if (!found) throw new Error(`missing platform fixture: ${id}`);
+@@ -586,7 +617,7 @@ describe('platform component inspection', () => {
+     await installManagedHookScripts(tmpDir, target);
+     await installCometHooksForPlatform(tmpDir, target, 'project');
+     const configPath = hookConfigPath(tmpDir, id);
+-    const unmanaged = (await fs.readFile(configPath, 'utf8')).replaceAll(
++    const unmanaged = replaceHookArgument(await fs.readFile(configPath, 'utf8'),
+       'comet-hook-router',
+       'user-hook',
+     );
+@@ -616,7 +647,7 @@ describe('platform component inspection', () => {
+     await installManagedHookScripts(tmpDir, target);
+     await installCometHooksForPlatform(tmpDir, target, 'project');
+     const configPath = hookConfigPath(tmpDir, id);
+-    const legacy = (await fs.readFile(configPath, 'utf8')).replaceAll(
++    const legacy = replaceHookArgument(await fs.readFile(configPath, 'utf8'),
+       'comet/scripts/comet-hook-router.mjs',
+       'comet-native/scripts/comet-native-hook-guard.mjs',
+     );
+@@ -625,7 +656,7 @@ describe('platform component inspection', () => {
+     await expect(installCometHooksForPlatform(tmpDir, target, 'project')).resolves.toMatchObject({
+       status: 'installed',
+     });
+-    const migrated = await fs.readFile(configPath, 'utf8');
++    const migrated = readableHookConfig(await fs.readFile(configPath, 'utf8'));
+     expect(migrated).toContain('comet-hook-router.mjs');
+     expect(migrated).not.toContain('comet-native-hook-guard.mjs');
+     await expect(inspectCometHooksForPlatform(tmpDir, target, 'project')).resolves.toEqual({
+@@ -679,7 +710,7 @@ describe('platform component inspection', () => {
+     await installManagedHookScripts(tmpDir, target);
+     await installCometHooksForPlatform(tmpDir, target, 'project');
+     const configPath = hookConfigPath(tmpDir, 'claude');
+-    const legacy = (await fs.readFile(configPath, 'utf8')).replaceAll(
++    const legacy = replaceHookArgument(await fs.readFile(configPath, 'utf8'),
+       'comet-hook-router.mjs',
+       'comet-hook-router.sh',
+     );
+diff --git a/test/domains/skill/project-hook-projection.test.ts b/test/domains/skill/project-hook-projection.test.ts
+index 154e619..15acc35 100644
+--- a/test/domains/skill/project-hook-projection.test.ts
++++ b/test/domains/skill/project-hook-projection.test.ts
+@@ -1,3 +1,4 @@
++import { readNodeHookArguments } from '../../../platform/process/hook-command.js';
+ import { promises as fs } from 'fs';
+ import os from 'os';
+ import path from 'path';
+@@ -45,9 +46,10 @@ describe('project Hook projection', () => {
+     ).resolves.toEqual({ installedPlatforms: ['codex'], failures: [] });
+ 
+     const projectHooks = await fs.readFile(path.join(projectRoot, '.codex', 'hooks.json'), 'utf8');
+-    expect(projectHooks.replaceAll('\\', '/')).toContain(
+-      `${projectRoot.replaceAll('\\', '/')}/.agents/skills/comet/scripts/comet-hook-router.mjs`,
+-    );
++    expect(readNodeHookArguments(JSON.parse(projectHooks).hooks.PreToolUse[0].hooks[0].command)).toEqual([
++      path.join(projectRoot,'.agents/skills/comet/scripts/comet-hook-router.mjs'),
++      '--platform','codex','--project-root',projectRoot,
++    ]);
+     await expect(
+       fs.access(
+         path.join(projectRoot, '.agents', 'skills', 'comet', 'scripts', 'comet-hook-router.mjs'),

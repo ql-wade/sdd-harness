@@ -1,0 +1,56 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______ test_runtime_backend_failure_stops_consumers[collector-ENOTSUP] ________
+
+workspace = PosixPath('<temp>/pytest-of-mac/pytest-5/test_runtime_backend_failure_s0/workspace')
+tmp_path = PosixPath('<temp>/pytest-of-mac/pytest-5/test_runtime_backend_failure_s0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a9c7360>
+error_name = 'ENOTSUP', consumer = 'collector'
+
+    @pytest.mark.skipif(os.name == "nt", reason="POSIX runtime backend failure")
+    @pytest.mark.parametrize("error_name", ["ENOTSUP", "ENOSYS", "EINVAL", "EIO"])
+    @pytest.mark.parametrize("consumer", ["collector", "judge", "report"])
+    def test_runtime_backend_failure_stops_consumers(workspace, tmp_path, monkeypatch, error_name, consumer):
+        import errno
+        import conftest
+        from scaffold.python import generic_llm_judge
+        from scaffold.python.workspace_artifacts import require_workspace_artifact_support
+
+        original_open = os.open
+        error_number = getattr(errno, error_name)
+        failures = []
+        judge_calls = []
+
+        def backend_open(path, flags, *args, **kwargs):
+            if path == workspace:
+                failures.append(error_number)
+                raise OSError(error_number, "fixture safe-open backend unavailable")
+            return original_open(path, flags, *args, **kwargs)
+
+        monkeypatch.setattr(os, "open", backend_open)
+        # API flags and dir_fd are genuinely advertised; it is the filesystem
+        # operation that fails. A missing-API setup error cannot satisfy this case.
+        monkeypatch.setattr(os, "supports_dir_fd", os.supports_dir_fd | {backend_open})
+        require_workspace_artifact_support()
+
+        def observe_judge(*args, **kwargs):
+            judge_calls.append(True)
+            return "[RUBRIC-JUDGE] task_completion: 1.0 - local observation"
+
+        def forbid_external(*args, **kwargs):
+            pytest.fail("runtime backend regression must not execute external commands")
+
+        monkeypatch.setattr(generic_llm_judge, "_run_judge", observe_judge)
+        monkeypatch.setattr(conftest, "run_python_in_docker", forbid_external)
+        report_root = tmp_path / "report"
+        saved = report_root / "artifacts/text_only_rep1/claude"
+        saved.mkdir(parents=True)
+        (saved / "result.txt").write_text("previous result", encoding="utf-8")
+>       with pytest.raises(WorkspaceArtifactError, match="工件读取后端.*errno"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE WorkspaceArtifactError
+
+local/tests/scaffold/test_workspace_artifacts.py:262: Failed
+=========================== short test summary info ============================
+FAILED local/tests/scaffold/test_workspace_artifacts.py::test_runtime_backend_failure_stops_consumers[collector-ENOTSUP] - Failed: DID NOT RAISE WorkspaceArtifactError
+1 failed, 44 deselected in 0.08s

@@ -1,0 +1,396 @@
+
+ RUN  v4.1.11 <WORKTREE>/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/62859be026bda18f3ea059c77f671192276bb731e210246f50b7e6cbc8089ec7/work
+
+ ✓ test/repository/native-runtime-assets.test.ts (5 tests) 1725ms
+     ✓ ships one fresh self-contained Node runtime  643ms
+     ✓ ships one self-contained bundle per command launcher  547ms
+     ✓ detects a stale generated runtime  530ms
+ ✓ test/repository/comet-entry-runtime-assets.test.ts (11 tests | 1 skipped) 1876ms
+     ✓ blocks a selected Classic change from writing another Classic change artifact  362ms
+     ✓ blocks a selected Classic change from writing an archived Classic artifact  475ms
+ ✓ test/app/cli-smoke.test.ts (7 tests) 2879ms
+     ✓ returns an unhealthy Doctor result and nonzero exit through the built CLI  1447ms
+     ✓ runs the Native facade without changing root status and doctor commands  720ms
+ ❯ test/domains/comet-classic/comet-scripts.test.ts (236 tests | 6 failed | 1 skipped) 60915ms
+     ✓ keeps all Classic command scripts as self-contained bundles 10ms
+     ✓ keeps comet-hook-guard blocked messages in English 1ms
+     ✓ initializes a new change directory with workflow defaults 198ms
+     ✓ validates the optional machine-owned check epoch in generated commands  531ms
+     ✓ initializes hotfix with isolation pending until the user chooses a workspace mode  380ms
+     ✓ initializes tweak with isolation pending until the user chooses a workspace mode 282ms
+     ✓ prints successful initialization to stdout so PowerShell does not surface NativeCommandError 275ms
+     ✓ keeps hook guard read-only when COMET_RUNTIME_CLASSIC_ROOT is configured 212ms
+     ✓ keeps COMET_CLASSIC_SKILL_ROOT as a compatibility fallback 200ms
+     ✓ blocks repo source writes when an isolation: current change drifts off its bound branch  365ms
+     ✓ falls back to the embedded Classic runtime package when installed script assets omit internal runtime files  304ms
+     ✓ rejects change names that OpenSpec cannot archive later  306ms
+     ✓ snapshots language from .comet/config.yaml when initializing a change 177ms
+     ✓ ignores legacy top-level Classic settings until init or update migrates them 107ms
+     ✓ falls back to the global Comet language when project config omits language 113ms
+     ✓ lets project language override the global Comet language 117ms
+     ✓ rejects an invalid global Comet language when project config omits language 96ms
+     ✓ fails closed when .comet/config.yaml contains malformed unrelated YAML 82ms
+     ✓ rejects an explicit empty review_mode instead of silently defaulting 77ms
+     ✓ rejects zh as an invalid project language when initializing a change 78ms
+     ✓ lets COMET_LANGUAGE override the project language default 106ms
+     ✓ rejects invalid language from .comet/config.yaml when initializing a change 78ms
+     ✓ initializes build_pause as null for new changes 109ms
+     ✓ initializes subagent_dispatch as null for new changes 105ms
+     ✓ initializes tdd_mode as null for full workflow 103ms
+     ✓ initializes review_mode as standard for full workflow 107ms
+     ✓ initializes review_mode as off for hotfix workflow 105ms
+     ✓ initializes tdd_mode as direct for hotfix workflow 104ms
+     ✓ initializes context_compression as off by default 101ms
+     ✓ snapshots beta context compression from .comet/config.yaml when initializing a change 112ms
+     ✓ snapshots review_mode from .comet/config.yaml when initializing a full change 104ms
+     ✓ rejects invalid review_mode from .comet/config.yaml when initializing a change 80ms
+     ✓ lets COMET_CONTEXT_COMPRESSION override the project context compression default 113ms
+     ✓ initializes auto_transition as true when openspec comet config is absent 195ms
+     ✓ initializes auto_transition from .comet/config.yaml when set to false 180ms
+     ✓ sets auto_transition to false and rejects invalid auto_transition values 243ms
+     ✓ validates the language field in .comet.yaml 164ms
+     ✓ allows changing the language field between valid values 253ms
+     ✓ accepts bound_branch field in .comet.yaml without unknown field errors 80ms
+     ✓ rejects a numeric bound_branch value in comet validate 75ms
+     ✓ rejects array and mapping bound_branch values in comet validate 143ms
+     ✓ accepts a quoted numeric bound_branch string in comet validate 84ms
+     ✓ next resolves auto for full workflow when auto_transition is true 96ms
+     ✓ next resolves manual with hint when auto_transition is false 93ms
+     ✓ next maps hotfix and tweak workflows to their preset skills in build phase 168ms
+     ✓ next requires delivery reconciliation for an archived change without authorization 171ms
+     ✓ next maps each non-build phase to the owning skill 168ms
+     ✓ next exits non-zero when .comet.yaml is missing 80ms
+     ✓ task-checkoff verifies one uniquely checked task 80ms
+     ✓ task-checkoff rejects an unchecked task 79ms
+     ✓ task-checkoff rejects duplicate task text across checkbox states 77ms
+     ✓ task-checkoff rejects paths outside the repository 78ms
+     ✓ task-checkoff rejects missing task file 77ms
+     ✓ task-checkoff rejects empty task text 81ms
+     ✓ task-checkoff rejects file with no checkbox lines 92ms
+     ✓ comet-env.mjs prints the scripts directory it lives in 51ms
+     ✓ blocks build phase when the project build command fails  540ms
+     ✓ blocks open guard when Chinese workflow artifacts are clearly English 221ms
+     ✓ uses the global Comet language in guards when change and project values are absent 232ms
+     ✓ fails closed before language checks when .comet/config.yaml is malformed 80ms
+     ✓ allows Chinese workflow artifacts with English technical terms 233ms
+     ✓ blocks open guard when English workflow artifacts are clearly Chinese 220ms
+     ✓ excludes fenced code blocks from the language dominance check 217ms
+     ✓ fails closed in guard when project config has an invalid language value 76ms
+     ✓ generates a design handoff and requires minimal design doc linkage before leaving design  769ms
+     ✓ accepts handoff source paths containing regular expression metacharacters  639ms
+     ✓ generates a beta spec projection handoff with verbatim spec content  700ms
+     ✓ blocks beta design exit when spec-context.json is structurally invalid  673ms
+     ✓ blocks beta design exit when spec-context.json is malformed JSON  675ms
+     ✓ reads comet yaml fields without including trailing comments  473ms
+     ✓ accepts design doc frontmatter after a BOM and leading blank lines  621ms
+     ✓ generates a full-mode design handoff when --full is passed  331ms
+     ✓ warns when --full is passed in beta mode  391ms
+     ✓ rejects handoff generation when required OpenSpec artifacts are missing 89ms
+     ✓ detects OpenSpec artifacts changed after handoff was generated  486ms
+     ✓ --hash-only outputs context hash without generating handoff files  504ms
+     ✓ --hash-only fails for non-existent change 76ms
+     ✓ --hash-only fails when required files are missing 91ms
+     ✓ blocks design exit when design doc frontmatter is missing required fields  607ms
+     ✓ blocks build completion until isolation and build mode are selected  323ms
+     × allows full workflow build completion with current-branch isolation 830ms
+     ✓ blocks build completion until tdd_mode is selected for full workflow  335ms
+     × allows hotfix to bypass tdd_mode check 451ms
+     ✓ blocks build completion until review_mode is selected for full workflow  323ms
+     ✓ allows setting review_mode to off, standard, and thorough  565ms
+     ✓ allows setting build_pause to plan-ready and back to null  323ms
+     ✓ rejects invalid build_pause values during schema validation 88ms
+     ✓ rejects invalid subagent_dispatch values during schema validation 85ms
+     ✓ rejects invalid tdd_mode values during schema validation 87ms
+     ✓ rejects invalid review_mode values during schema validation 88ms
+     ✓ rejects direct build mode for full workflow without explicit override 239ms
+     ✓ prints actionable remediation for unfinished tasks 253ms
+     ✓ rejects unmapped legacy plan tasks until their implementation and scope are reconciled 278ms
+     ✓ rejects direct build mode for full workflow during state transition 94ms
+     × allows direct build mode for full workflow with explicit override 452ms
+     ✓ rejects subagent build mode without confirmed background dispatch  319ms
+     × allows subagent build mode when background dispatch is confirmed 467ms
+     ✓ rejects removed build and verify command fields 155ms
+     × removes legacy command fields from existing change state before guard checks 470ms
+     × treats repo-root comet.yaml as absent when running inferred build checks 489ms
+     ✓ rejects removed project verify_command instead of silently skipping it 226ms
+     ✓ does not silently pass when a malformed project config still references a removed command field 78ms
+     ✓ validates archive completeness after the change has moved into archive  676ms
+     ✓ resolves OpenSpec date-prefixed archive directories from the original change name  443ms
+     ✓ reports accurate archive step counts when syncing and annotating  1628ms
+     ✓ merges delta specs without copying delta-only requirement headings into main specs  665ms
+     ✓ annotates archive metadata with the actual OpenSpec archive directory name  690ms
+     ✓ uses plan base-ref to scale verification after changes have been committed  357ms
+     ✓ scale defaults to light when no tasks.md, no specs, and no git diff 176ms
+     ✓ scale returns full when tasks exceed threshold 172ms
+     ✓ scale uses base_ref from .comet.yaml when plan has no base-ref header  351ms
+     ✓ blocks build-complete when review_mode is null for full workflow 101ms
+     ✓ allows build-complete when review_mode is off for full workflow  620ms
+     ✓ allows build-complete when review_mode is standard for full workflow  610ms
+     ✓ allows build-complete without review_mode for hotfix workflow  635ms
+     ✓ transitions full workflow from open to design 240ms
+     ✓ transitions preset workflows from open directly to build 221ms
+     ✓ blocks full workflow build completion when review_mode is missing  310ms
+     ✓ blocks open-complete when an open artifact is missing 106ms
+     ✓ blocks design-complete when design_doc evidence is missing 95ms
+     ✓ allows design-complete once design_doc points to an existing file 293ms
+     ✓ blocks direct phase writes but allows the COMET_FORCE_PHASE escape hatch 241ms
+     ✓ blocks archived transition until verify_result is pass  571ms
+     ✓ transitions verify-pass and verify-fail through script-owned fields  1920ms
+     ✓ confirms archive only after the final archive confirmation decision  341ms
+     ✓ reopens archive phase for adjustment or re-verification before archiving  569ms
+     ✓ rejects archive-reopen after the change is already archived  315ms
+     ✓ blocks verify guard when verification evidence is missing 291ms
+     ✓ lets verify guard apply transition after verification and branch evidence are recorded  883ms
+     ✓ rejects invalid transition from the wrong phase 167ms
+     ✓ escalates preset workflows from build to design via preset-escalate  1379ms
+     ✓ rejects preset-escalate for full workflow and non-build phases 205ms
+     ✓ clears bound_branch when preset-escalate clears isolation  301ms
+     ✓ reports error for malformed .comet.yaml on get 98ms
+     ✓ marks archived changes through transition resolved by original change name 229ms
+       ✓ outputs recovery context for open phase 107ms
+       ✓ outputs recovery context for build phase with partial progress 118ms
+       ✓ outputs plan-ready pause recovery context for build phase 235ms
+       ✓ outputs review mode selection guidance when recovering build phase 98ms
+       ✓ outputs subagent dispatch guidance when recovering build phase with pending tasks 179ms
+       ✓ reconciles unmapped legacy plan additions without reimplementing completed tasks 178ms
+       ✓ requires subagent dispatch confirmation when recovering subagent build mode 177ms
+       ✓ keeps explicit plan-ready pause until the user resumes pending subagent work 176ms
+       ✓ keeps explicit plan-ready pause even when all authoritative tasks are done 178ms
+       ✓ outputs recovery context for verify phase with completed verification 120ms
+       ✓ outputs recovery context for design phase with handoff but no design doc 139ms
+       ✓ outputs recovery context for build phase when tasks.md is missing 169ms
+       ✓ outputs recovery context for build phase with all tasks done 177ms
+       ✓ outputs recovery context for archive phase 107ms
+       ✓ falls back to normal check when --recover is not passed 105ms
+       ✓ preserves verification_report on re-verify cycle (H1)  621ms
+       ✓ resets branch_status so archive owns final branch handling 138ms
+       ✓ rejects design_doc with path traversal (H5) 88ms
+       ✓ rejects remaining unknown fields after removing legacy command fields 105ms
+       ✓ passes open guard for hotfix workflow without design.md 226ms
+       ✓ fails open guard for full workflow without design.md 217ms
+       ✓ fails design guard for full workflow without design_doc (C2) 253ms
+       ✓ allows all writes when no active comet change exists 82ms
+       ✓ does not mutate valid pre-Run state or create distributed Run files 102ms
+       ✓ does not mutate legacy command fields or create distributed Run files 105ms
+       ✓ allows writes to openspec/ in design phase 95ms
+       ✓ allows matching docs/superpowers/ writes in design phase 96ms
+       ✓ allows the first standard Superpowers plan write without a private suffix 112ms
+       ✓ blocks a second write after the standard Superpowers plan slot is occupied 115ms
+       ✓ blocks a named standard plan after the distributed plan slot is occupied 97ms
+       ↓ blocks a Windows case-variant named plan after the distributed slot is occupied
+       ✓ blocks source code writes in design phase 102ms
+       ✓ does not treat root .comet.yaml as a supported Comet config file 103ms
+       ✓ blocks source code writes in open phase 105ms
+       ✓ allows source code writes in build phase 109ms
+       ✓ blocks source code writes in verify phase 106ms
+       ✓ blocks source code writes in archive phase 108ms
+       ✓ does not bypass phase protection for Claude workspace source 101ms
+       ✓ does not bypass phase protection for Codex config 102ms
+       ✓ ignores archived changes and allows writes 86ms
+       ✓ skips changes with archived: true still in changes/ directory 91ms
+       ✓ allows new change artifact writes while another change is in archive phase (no state file yet) 93ms
+       ✓ governs change-dir writes by the change own phase, not an unrelated active change 96ms
+       ✓ allows docs/superpowers writes for the matching design change when another active change is open 109ms
+       ✓ matches docs/superpowers writes to the longest change name boundary 130ms
+       ✓ requires selection before a standard specs write with multiple active changes 116ms
+       ✓ requires selection before an unmatched standard specs write with multiple eligible changes 118ms
+       ✓ requires a current change for repo source writes with multiple active changes 106ms
+       ✓ allows selected build source writes while another active change is in design 241ms
+       ✓ blocks full-workflow build source writes when design_doc is null (illegal jump) 100ms
+       ✓ allows preset-workflow build source writes when design_doc is null 102ms
+       ✓ allows full-workflow build source writes once design_doc points to a file 105ms
+       ✓ blocks source edits (Edit tool) during open phase same as Write 101ms
+       ✓ allows source edits (Edit tool) during build phase 101ms
+       ✓ first-time set isolation current writes bound_branch to current branch 239ms
+       ✓ first-time set isolation branch writes bound_branch to current branch 236ms
+       ✓ first-time set isolation worktree writes bound_branch to current branch 227ms
+       ✓ already-bound change: repeat set isolation current does not overwrite existing bound_branch 237ms
+       ✓ already-bound change: repeat set isolation branch does not overwrite existing bound_branch 228ms
+       ✓ already-bound change: repeat set isolation worktree does not overwrite existing bound_branch 228ms
+       ✓ re-points bound_branch when switching between workspace modes 222ms
+       ✓ omits the branch suffix when selecting a change without a binding  332ms
+       ✓ rejects select while the bound branch has drifted  340ms
+       ✓ detached HEAD rejects set isolation current with "HEAD is detached" error 237ms
+       ✓ detached HEAD rejects set isolation branch with "HEAD is detached" error 237ms
+       ✓ detached HEAD rejects set isolation worktree with "HEAD is detached" error 242ms
+       ✓ non-git project can set isolation current without binding a branch 119ms
+       ✓ non-git project can set isolation branch without binding a branch 114ms
+       ✓ non-git project can set isolation worktree without binding a branch 115ms
+       ✓ selecting a legacy isolation current change with no bound_branch writes the current git branch  347ms
+       ✓ selecting a legacy isolation branch change with no bound_branch writes the current git branch  356ms
+       ✓ selecting a legacy isolation worktree change with no bound_branch writes the current git branch  344ms
+       ✓ rejects direct set bound_branch with "machine-owned" error 196ms
+       ✓ drifted current-bound change: state check returns non-zero with BLOCKED and drift message 226ms
+       ✓ drifted branch-bound change: state check returns non-zero with BLOCKED and drift message 242ms
+       ✓ drifted worktree-bound change: state check returns non-zero with BLOCKED and drift message 274ms
+       ✓ drift is still detected after the .comet/ sidecar is deleted (reads .comet.yaml, not the sidecar)  361ms
+       ✓ detached HEAD on an already-bound change: state check returns non-zero with detached HEAD in output 262ms
+       ✓ gap B: isolation=current with no bound_branch self-heals on a real branch and passes  316ms
+       ✓ gap B: isolation=branch with no bound_branch self-heals on a real branch and passes  354ms
+       ✓ gap B: isolation=worktree with no bound_branch self-heals on a real branch and passes  326ms
+       ✓ rebind updates bound_branch, passes state check, and appends a rebind audit event  405ms
+       ✓ rejects rebind when the change is not yet bound 194ms
+       ✓ rejects rebind while HEAD is detached 225ms
+       ✓ drifted current-bound change: comet-guard archive returns non-zero with BLOCKED and drift message  347ms
+       ✓ drifted branch-bound change: comet-guard archive returns non-zero with BLOCKED and drift message  411ms
+       ✓ drifted worktree-bound change: comet-guard archive returns non-zero with BLOCKED and drift message  381ms
+     ✓ writes the managed delivery wire fields only for --managed-delivery (full workflow only) 263ms
+     ✓ keeps gate receipts machine-owned: hand-written receipts are refused (D01)  324ms
+     ✓ refuses a same-caller report even when dispatch role digest and nonempty report match 183ms
+     ✓ standalone cannot turn a Runtime role or report into protected source qualification 194ms
+     ✓ standalone D02 cannot mutate a Run with an unregistered restored-input result 183ms
+     ✓ standalone refuses formal Design without R even with all legacy artifact files 210ms
+     ✓ standalone refuses empty strong-role and fake-consensus claims without protected source records  339ms
+     ✓ refuses a direct archived marker even before required Kp or a spec transaction exists 179ms
+     ✓ refuses the phase escape hatch and Runtime-stamped fields in managed delivery (B4)  330ms
+     ✓ binds the run authority at managed init and refuses foreign writers; transfer is explicit (H09)  572ms
+     ✓ refuses an unregistered standalone managed source; actual single-owner recovery uses the fixed aggregate (H03/H06) 260ms
+     ✓ registers knowledge publish operations with a fixed document UUID and idempotent recovery (H04)  625ms
+     ✓ classifies remote observations: unknown is never absence and conflicts stay open (H04/H05)  721ms
+     ✓ never fabricates a lost Run state: the closeout entrance is recovery-required (H08)  462ms
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  6 failed | 251 passed | 2 skipped (259)
+   Start at  18:14:58
+   Duration  61.15s (transform 963ms, setup 0ms, import 1.15s, tests 67.39s, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/domains/comet-classic/comet-scripts.test.ts > comet scripts > allows full workflow build completion with current-branch isolation
+AssertionError: === Guard: build → verify ===
+  [PASS] bound branch matches workspace mode
+  [PASS] isolation selected
+  [PASS] build_mode selected
+  [PASS] build_mode allowed for workflow
+  [PASS] autonomous full build prerequisites
+  [PASS] subagent dispatch confirmed
+  [PASS] tdd_mode selected
+  [PASS] review_mode selected
+  [PASS] tasks.md all tasks checked
+  [PASS] plan task mapping is valid
+  [PASS] proposal.md exists
+  [PASS] proposal.md matches configured language
+  [PASS] Superpowers plan matches configured language
+  [FAIL] Build passes
+    Build failed (guard auto-ran the detected command 'npm run build' in '.'; disable with COMET_SKIP_BUILD=1). Log: openspec/changes/full-current-isolation/.comet/checks/fba4994d-0218-47fd-b147-024da6b1b801.log
+  [PASS] managed delivery gate premises (enter-verify)
+    managed delivery is not enabled for this change
+
+Change full-current-isolation is not ready to leave the build stage yet: 1 of 15 checks failed. The failing items below are the Agent's checklist, not user actions.
+RELAY TO USER: A few preparation items are still missing before this change can move to the next stage; the Agent is filling them in and will continue afterwards.
+
+BLOCKED — fix failing checks before proceeding to next phase
+: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ test/domains/comet-classic/comet-scripts.test.ts:2490:40
+    2488|     ]);
+    2489|
+    2490|     expect(guard.status, guard.stderr).toBe(0);
+       |                                        ^
+    2491|     expect(transition.status, transition.stderr).toBe(0);
+    2492|     expect(transition.stderr).toContain('[SET] phase=verify');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  test/domains/comet-classic/comet-scripts.test.ts > comet scripts > allows hotfix to bypass tdd_mode check
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ test/domains/comet-classic/comet-scripts.test.ts:2566:27
+    2564|     const result = runNode(tmpDir, guardScript, ['hotfix-no-tdd', 'bui…
+    2565|
+    2566|     expect(result.status).toBe(0);
+       |                           ^
+    2567|     expect(result.stderr).toContain('[PASS] tdd_mode selected');
+    2568|   }, 20_000);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  test/domains/comet-classic/comet-scripts.test.ts > comet scripts > allows direct build mode for full workflow with explicit override
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ test/domains/comet-classic/comet-scripts.test.ts:2955:27
+    2953|     const result = runNode(tmpDir, guardScript, ['direct-full-override…
+    2954|
+    2955|     expect(result.status).toBe(0);
+       |                           ^
+    2956|     expect(result.stderr).toContain('[PASS] build_mode allowed for wor…
+    2957|   }, 20_000);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  test/domains/comet-classic/comet-scripts.test.ts > comet scripts > allows subagent build mode when background dispatch is confirmed
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ test/domains/comet-classic/comet-scripts.test.ts:3034:27
+    3032|     const result = runNode(tmpDir, guardScript, ['subagent-confirmed',…
+    3033|
+    3034|     expect(result.status).toBe(0);
+       |                           ^
+    3035|     expect(result.stderr).toContain('[PASS] subagent dispatch confirme…
+    3036|   }, 20_000);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  test/domains/comet-classic/comet-scripts.test.ts > comet scripts > removes legacy command fields from existing change state before guard checks
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ test/domains/comet-classic/comet-scripts.test.ts:3116:27
+    3114|     const migrated = await fs.readFile(path.join(changeDir, '.comet.ya…
+    3115|
+    3116|     expect(result.status).toBe(0);
+       |                           ^
+    3117|     expect(result.stderr).not.toContain('unknown field');
+    3118|     expect(result.stderr).toContain('[PASS] Build passes');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  test/domains/comet-classic/comet-scripts.test.ts > comet scripts > treats repo-root comet.yaml as absent when running inferred build checks
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ test/domains/comet-classic/comet-scripts.test.ts:3167:27
+    3165|     const result = runNode(tmpDir, guardScript, ['root-configured-buil…
+    3166|
+    3167|     expect(result.status).toBe(0);
+       |                           ^
+    3168|     expect(result.stderr).not.toContain('root configured failure');
+    3169|     expect(result.stderr).toContain('[PASS] Build passes');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
