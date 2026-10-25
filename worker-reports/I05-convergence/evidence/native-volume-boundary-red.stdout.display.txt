@@ -1,0 +1,90 @@
+TAP version 13
+# Subtest: I05 the native named-volume target preserves every host bind-mount refusal
+not ok 1 - I05 the native named-volume target preserves every host bind-mount refusal
+  ---
+  duration_ms: 50.542
+  type: 'test'
+  location: '<repo>/test/infra-code-knowledge.test.js:227:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {
+      "interface": "CodeKnowledgeInfra.v1",
+      "command": "validate",
+      "registry": "infra/delivery/registry.json",
+      "refs": "infra/delivery/secrets.refs.example.json",
+      "dir": "infra/delivery/code-knowledge",
+      "ok": false,
+      "violations": [
+        {
+          "code": "HOST_MOUNT_FORBIDDEN",
+          "at": "compose.yaml:21",
+          "reason": "host user paths never belong in compose"
+        }
+      ],
+      "catalogGaps": [],
+      "wiki": {
+        "interface": "CodeWiki.v1",
+        "kind": "code-wiki-service",
+        "serviceKind": "selfhost-deepwiki-open",
+        "upstream": {
+          "status": "SELECTED",
+          "repository": "https://github.com/AsyncFuncAI/deepwiki-open",
+          "commit": "3e0f503b0cc815c1525a063911524d233bda2400"
+        },
+        "generation": {
+          "manifestRequired": true,
+          "commitPinRequired": true,
+          "maxCommitAgeDays": null,
+          "languageCoverageMin": null
+        },
+        "access": {
+          "apiAuthRequired": true,
+          "mcpReadbackRequired": true
+        }
+      },
+      "graph": {
+        "interface": "CodeGraph.v1",
+        "enabled": false,
+        "declarationPresent": true,
+        "runtimeVerified": false,
+        "status": "DISABLED",
+        "removable": true,
+        "gateAuthority": false,
+        "knowledgeAuthority": false
+      },
+      "scope": {
+        "interface": "CodeWiki.v1",
+        "kind": "repository-scope",
+        "denyByDefault": true,
+        "ingestRequiresAuthorizedScope": true,
+        "publicHostedServiceSubstituteAllowed": false,
+        "approvedSources": 0,
+        "authorizationStatus": "UNAUTHORIZED"
+      },
+      "checkedAt": "2026-10-25T06:31:15.482Z"
+    }
+
+
+    2 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/infra-code-knowledge.test.js:229:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 105.081833

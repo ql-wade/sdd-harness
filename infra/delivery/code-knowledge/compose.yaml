@@ -1,35 +1,36 @@
-# 代码知识自托管栈声明（CodeKnowledgeInfra.v1 / CodeWiki.v1 / CodeGraph.v1）—— 仅声明，绝不自动启动。
-# 镜像一律从 infra/delivery/code-knowledge/images.lock.json 解析后注入（${VAR:?} 占位）；
-# lock 未 ready（无任何已认证 digest）时 tools/infra/code-knowledge.mjs up 必须拒绝，本文件绝不内嵌 tag/digest。
-# deepwiki-open 上游仓库/发行物未选定：组件名 codewiki-app 只表达角色，不预支任何上游实现细节。
-# 端口仅绑定 loopback；专用 internal 网络；除具名卷外不挂载任何宿主路径（无宿主敏感挂载——同 I02/I03 门）。
-# restart 策略保持 "no"：重启监督与新鲜度/持久性证明分离，由 probe 实测而非 restart 策略假设。
-# codegraph 是可选独立优化件（graph-profile.json enabled=false）：声明存在不代表启用，更不代表任何 gate 权威。
-
+# Pinned deepwiki-open native frontend/API layout; declaration only, no automatic launch.
+# Source/provider/auth credentials and ingestion are not configured by this empty-instance template.
+# CODEWIKI_IMAGE must resolve from the fixed I05 image lock. Graph is optional and has no service here
+# until a separate implementation and lifecycle have actually been selected and qualified.
 services:
   codewiki-app:
     image: ${CODEWIKI_IMAGE:?must be resolved from infra/delivery/code-knowledge/images.lock.json before up}
     restart: "no"
+    environment:
+      PORT: "8001"
+      NODE_ENV: production
+      SERVER_BASE_URL: http://127.0.0.1:8001
+      LOG_FILE_PATH: api/logs/application.log
+      NEXT_TELEMETRY_DISABLED: "1"
     networks:
       - code-knowledge-internal
     ports:
-      - "127.0.0.1:${CODEWIKI_PORT:-7400}:7400"
+      - "127.0.0.1:${CODEWIKI_PORT:-17400}:3000"
+      - "127.0.0.1:${CODEWIKI_API_PORT:-17402}:8001"
     volumes:
-      - codewiki-data:/data
-
-  codegraph:
-    image: ${CODEGRAPH_IMAGE:?must be resolved from infra/delivery/code-knowledge/images.lock.json before up}
-    restart: "no"
-    networks:
-      - code-knowledge-internal
-    ports:
-      - "127.0.0.1:${CODEGRAPH_PORT:-7401}:7401"
-    volumes:
-      - codegraph-index:/index
+      - codewiki-data:/root/.adalflow
+      - codewiki-logs:/app/api/logs
+    mem_limit: 6g
+    mem_reservation: 2g
+    cpus: 2
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   codewiki-data:
-  codegraph-index:
+  codewiki-logs:
 
 networks:
   code-knowledge-internal:

@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import test, { afterEach } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 // V_INFRA_I05 — I05 自托管deepwiki-open及独立CodeGraph 的契约检查。
@@ -42,12 +42,16 @@ const DOMAIN_FILES = [
 const JSON_FILES = DOMAIN_FILES.filter((name) => name.endsWith('.json'));
 const HOST_PATH_OUTPUT_RE = /\/(Users|home|root|private|var|usr|etc|opt|tmp)\//;
 const PINNED_COMMIT = 'b'.repeat(40);
+const fixtureDirs = new Set();
+function fixtureDir(prefix) { const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix)); fixtureDirs.add(dir); return dir; }
+afterEach(() => { for (const dir of fixtureDirs) fs.rmSync(dir, { recursive: true, force: true }); fixtureDirs.clear(); });
 
-function runCli(args) {
+function runCli(args, env = process.env) {
   return spawnSync(process.execPath, [cliPath, ...args], {
     cwd: repoRoot,
     encoding: 'utf8',
     timeout: RUN_TIMEOUT_MS,
+    env,
   });
 }
 
@@ -55,7 +59,7 @@ function parseJsonOut(result, label) {
   try {
     return JSON.parse(result.stdout);
   } catch {
-    throw new AssertionError(`${label}: stdout is not JSON: ${result.stdout}\nstderr: ${result.stderr}`);
+    throw new Error(`${label}: stdout is not JSON: ${result.stdout}\nstderr: ${result.stderr}`);
   }
 }
 
@@ -69,7 +73,7 @@ function readDomainJson(name) {
 
 // 把已提交的 code-knowledge 域整体拷到 tmp fixture，应用 mutate({dir, read, write, json, writeJson}) 后返回 fixture 目录。
 function makeFixtureDir(mutate) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i05-'));
+  const dir = fixtureDir('infra-i05-');
   for (const name of DOMAIN_FILES) {
     fs.copyFileSync(path.join(domainDir, name), path.join(dir, name));
   }
@@ -90,8 +94,8 @@ function addApprovedSource(json, writeJson, overrides = {}) {
   const scope = json('repository-scope.json');
   scope.approvedSources.push({
     project: 'sdd-harness-pilot',
-    immutableId: 'rid-sdd-harness-pilot-fixture',
-    repository: 'rpamis/sdd-harness',
+    immutableId: '1285806550',
+    repository: 'ql-wade/sdd-harness',
     commit: PINNED_COMMIT,
     grantRef: 'secret-ref:sdd-harness-pilot/codewiki-source-read',
     status: 'AUTHORIZED',
@@ -99,6 +103,317 @@ function addApprovedSource(json, writeJson, overrides = {}) {
   });
   writeJson('repository-scope.json', scope);
 }
+
+test('I05 all public commands reject malformed shared inputs before consuming them', () => {
+  const commands = [['validate'], ['qualify'], ['up'], ['probe', '--case', 'pinned-code-wiki'], ['probe', '--case', 'graph-disabled-correctness']];
+  const values = [
+    ...JSON_FILES.flatMap((file) => [[file, null], [file, []], [file, { ...readDomainJson(file), schemaVersion: 999 }]]),
+    ['images.lock.json', { ...readDomainJson('images.lock.json'), components: [null] }],
+    ['images.lock.json', { ...readDomainJson('images.lock.json'), components: {} }],
+    ['deepwiki-profile.json', { ...readDomainJson('deepwiki-profile.json'), generation: [] }],
+    ['deepwiki-profile.json', { ...readDomainJson('deepwiki-profile.json'), provider: null }],
+    ['graph-profile.json', { ...readDomainJson('graph-profile.json'), source: null }],
+    ['repository-scope.json', { ...readDomainJson('repository-scope.json'), approvedSources: [null] }],
+    ['repository-scope.json', { ...readDomainJson('repository-scope.json'), approvedSources: {} }],
+  ];
+  const failures = [];
+  for (const [file, value] of values) {
+    const dir = makeFixtureDir(({ writeJson }) => writeJson(file, value));
+    for (const command of commands) {
+      const result = runCli([...command, '--dir', dir, '--json']);
+      let output; try { output = JSON.parse(result.stdout); } catch { output = null; }
+      if (result.status !== 2 || !output?.violations?.length || result.stderr) failures.push({ file, command, exit: result.status, json: Boolean(output) });
+    }
+  }
+  for (const [option, values] of [
+    ['--refs', [null, { schemaVersion: 1, interface: 'SecretRef.v1', refs: {} }, { schemaVersion: 1, interface: 'SecretRef.v1', refs: [null] }]],
+    ['--registry', [null, [], { schemaVersion: 1, project: null }]],
+  ]) {
+    for (const value of values) {
+      const file = path.join(fixtureDir('infra-i05-input-'), 'input.json'); fs.writeFileSync(file, JSON.stringify(value));
+      for (const command of commands) {
+        const result = runCli([...command, option, file, '--json']);
+        let output; try { output = JSON.parse(result.stdout); } catch { output = null; }
+        if (result.status !== 2 || !output?.violations?.length || result.stderr) failures.push({ option, command, exit: result.status, json: Boolean(output) });
+      }
+    }
+  }
+  assert.equal(failures.length, 0, JSON.stringify({ count: failures.length, sample: failures.slice(0, 12) }));
+});
+
+test('I05 an absent optional graph never blocks wiki declarations or claims graph execution', () => {
+  const dir = makeFixtureDir(({ dir, json, writeJson }) => {
+    const lock = json('images.lock.json');
+    lock.components = lock.components.filter((entry) => entry.component !== 'codegraph');
+    writeJson('images.lock.json', lock);
+    fs.rmSync(path.join(dir, 'graph-profile.json'));
+  });
+  const validation = runCli(['validate', '--dir', dir, '--json']);
+  assert.equal(validation.status, 0, validation.stdout || validation.stderr);
+  const qualification = parseJsonOut(runCli(['qualify', '--dir', dir, '--json']), 'optional graph qualification');
+  assert.equal(qualification.unreadyComponents.some((entry) => entry.component === 'codegraph'), false);
+  const probe = runCli(['probe', '--case', 'graph-disabled-correctness', '--dir', dir, '--json']);
+  assert.equal(probe.status, 0);
+  const report = parseJsonOut(probe, 'absent graph');
+  assert.equal(report.graph.enabled, false);
+  assert.equal(report.graph.runtimeVerified, false);
+  assert.equal(report.proofLayer, 'component-configuration');
+});
+
+test('I05 current repository identity cannot be replaced by a same-project label', () => {
+  for (const overrides of [{ repository: 'rpamis/sdd-harness' }, { immutableId: '975318071' }]) {
+    const dir = makeFixtureDir(({ json, writeJson }) => addApprovedSource(json, writeJson, overrides));
+    for (const command of [['validate'], ['qualify'], ['up'], ['probe', '--case', 'pinned-code-wiki']]) {
+      const result = runCli([...command, '--dir', dir, '--json']);
+      assert.equal(result.status, 2);
+      assert.ok(codes(parseJsonOut(result, 'wrong repository')).includes('SOURCE_IDENTITY_MISMATCH'));
+    }
+  }
+});
+
+test('I05 image booleans never produce verified resource or startup authority', () => {
+  const dir = makeFixtureDir(({ json, writeJson }) => {
+    const lock = json('images.lock.json');
+    for (const entry of lock.components) {
+      entry.reference = `ghcr.io/example/${entry.component}:fixture-only`;
+      entry.digest = `sha256:${'d'.repeat(64)}`;
+      entry.digestAuthenticated = true;
+    }
+    writeJson('images.lock.json', lock);
+  });
+  const qualification = parseJsonOut(runCli(['qualify', '--dir', dir, '--json']), 'declared image');
+  assert.notEqual(qualification.categories['image-digest-authenticated'].status, 'VERIFIED');
+  assert.equal(parseJsonOut(runCli(['up', '--dir', dir, '--json']), 'unqualified up').ready, false);
+});
+
+test('I05 invalid options and endpoints are controlled input failures with no implicit API', () => {
+  for (const args of [
+    ['validate', '--unknown', 'value'], ['validate', '--dir', '--json'], ['validate', '--json', '--json'],
+    ['probe', '--case', 'toString'],
+    ...['https://deepwiki.com', 'http://127.0.0.1:17402/other', 'http://user:private@127.0.0.1:17402', 'http://127.0.0.1:17402?token=private'].map((url) => ['probe', '--case', 'pinned-code-wiki', '--endpoint', url]),
+  ]) {
+    const result = runCli([...args, '--json']);
+    assert.equal(result.status, 1);
+    assert.equal(parseJsonOut(result, 'invalid option/endpoint').status, 'INPUT_INVALID');
+    assert.equal(result.stderr, '');
+    assert.equal(result.stdout.includes('token=private'), false);
+  }
+  const result = runCli(['probe', '--case', 'pinned-code-wiki', '--endpoint', 'http://127.0.0.1:17402', '--json']);
+  const report = parseJsonOut(result, 'registered endpoint is not authority');
+  assert.equal(result.status, 2);
+  assert.equal(report.liveReadback, false);
+  assert.equal(report.observedSteps.some((entry) => entry.step === 'GET endpoint'), false);
+});
+
+test('I05 selected upstream and compose bind the observed self-hosted release layout', () => {
+  const profile = readDomainJson('deepwiki-profile.json');
+  assert.equal(profile.service.upstream.repository, 'https://github.com/AsyncFuncAI/deepwiki-open');
+  assert.equal(profile.service.upstream.commit, '3e0f503b0cc815c1525a063911524d233bda2400');
+  assert.equal(profile.service.upstream.license, 'MIT');
+  const lock = readDomainJson('images.lock.json').components.find((entry) => entry.component === 'codewiki-app');
+  assert.equal(lock.reference, 'ghcr.io/asyncfuncai/deepwiki-open@sha256:90a0cfaf03f61fe903b72cb58b44832c63b49749bf8f5348803fd0aafa2a822b');
+  assert.equal(lock.digestAuthenticated, false, 'public metadata does not complete runtime/provenance qualification');
+  const compose = readDomainFile('compose.yaml');
+  assert.match(compose, /127\.0\.0\.1:\$\{CODEWIKI_PORT:-17400\}:3000/);
+  assert.match(compose, /127\.0\.0\.1:\$\{CODEWIKI_API_PORT:-17402\}:8001/);
+  assert.match(compose, /codewiki-data:\/root\/\.adalflow/);
+  assert.doesNotMatch(compose, /^  codegraph:/m, 'unselected optional graph must not require an image at compose interpolation');
+  const scope = readDomainJson('repository-scope.json');
+  assert.equal(scope.repositoryIdentity.repoId, 1285806550);
+  assert.equal(scope.repositoryIdentity.repoFullname, 'ql-wade/sdd-harness');
+  assert.equal(scope.repositoryIdentity.principalId, 262266039);
+  assert.deepEqual(scope.approvedSources, [], 'observed project identity grants no ingestion');
+});
+
+test('I05 the native named-volume target preserves every host bind-mount refusal', () => {
+  const valid = runCli(['validate', '--json']);
+  assert.equal(valid.status, 0, valid.stdout || valid.stderr);
+  for (const source of ['/Users/private-example', '/Volumes/private-example', '/root/private-example', '/var/run/docker.sock', '../escape', './private', 'codewiki-data-forged']) {
+    const dir = makeFixtureDir(({ read, write }) => {
+      const compose = read('compose.yaml');
+      const replacement = compose.replace('codewiki-data:/root/.adalflow', `${source}:/root/.adalflow`);
+      assert.notEqual(replacement, compose, 'fixture mutation must actually replace the named source');
+      write('compose.yaml', replacement);
+    });
+    const result = runCli(['validate', '--dir', dir, '--json']);
+    assert.equal(result.status, 2, source);
+    assert.ok(codes(parseJsonOut(result, 'host mount')).includes('HOST_MOUNT_FORBIDDEN'));
+  }
+  for (const mount of ['type: bind\n        source: /var/run/docker.sock\n        target: /data', 'type: bind\n        source: ../escape\n        target: /data', '{type: bind, source: /var/run/docker.sock, target: /data}']) {
+    const dir = makeFixtureDir(({ read, write }) => write('compose.yaml', read('compose.yaml').replace('codewiki-data:/root/.adalflow', mount)));
+    const result = runCli(['validate', '--dir', dir, '--json']);
+    assert.equal(result.status, 2, mount);
+    assert.ok(codes(parseJsonOut(result, 'long bind')).includes('HOST_MOUNT_FORBIDDEN'));
+  }
+  const flow = makeFixtureDir(({ read, write }) => write('compose.yaml', read('compose.yaml').replace('    volumes:\n      - codewiki-data:/root/.adalflow\n      - codewiki-logs:/app/api/logs', '    volumes: [{type: bind, source: /var/run/docker.sock, target: /data}]')));
+  const flowRun = runCli(['validate', '--dir', flow, '--json']);
+  assert.equal(flowRun.status, 2);
+  assert.ok(codes(parseJsonOut(flowRun, 'flow bind')).includes('HOST_MOUNT_FORBIDDEN'));
+});
+
+test('I05 named-volume definitions cannot redirect fixed sources to host or existing storage', async (t) => {
+  const commands = [['validate'], ['qualify'], ['up'], ['probe', '--case', 'pinned-code-wiki'], ['probe', '--case', 'graph-disabled-correctness']];
+  for (const name of ['codewiki-data', 'codewiki-logs']) {
+    for (const [label, definition] of [
+      ['local bind driver', `${name}:\n    driver: local\n    driver_opts:\n      type: none\n      o: bind\n      device: /etc`],
+      ['driver options', `${name}:\n    driver_opts: {type: none, o: bind, device: /etc}`],
+      ['device', `${name}:\n    device: ../private`],
+      ['external volume', `${name}:\n    external: true`],
+      ['existing volume name', `${name}:\n    name: another-project-data`],
+      ['driver declaration', `${name}:\n    driver: local`],
+      ['flow redirect', `${name}: {driver: local, driver_opts: {type: none, o: bind, device: /etc}}`],
+      ['alias redirect', `${name}: *existing-volume`],
+    ]) {
+      await t.test(`${name}: ${label}`, () => {
+        const dir = makeFixtureDir(({ read, write }) => {
+          const before = read('compose.yaml');
+          const after = before.replace(`\n  ${name}:\n`, `\n  ${definition}\n`);
+          assert.notEqual(after, before, 'the top-level volume definition mutation must land');
+          write('compose.yaml', after);
+        });
+        for (const command of commands) {
+          const result = runCli([...command, '--dir', dir, '--json']);
+          assert.equal(result.status, 2, command.join(' '));
+          assert.ok(codes(parseJsonOut(result, 'redirected volume')).includes('HOST_MOUNT_FORBIDDEN'));
+          assert.equal(result.stderr, '');
+        }
+      });
+    }
+  }
+  for (const [label, replacement] of [
+    ['missing definition', 'volumes:\n  codewiki-data:'],
+    ['extra definition', 'volumes:\n  codewiki-data:\n  codewiki-logs:\n  other-project-data:'],
+    ['duplicate definition', 'volumes:\n  codewiki-data:\n  codewiki-data:\n  codewiki-logs:'],
+    ['duplicate root', 'volumes:\n  codewiki-data:\n  codewiki-logs:\nvolumes:\n  codewiki-data:\n  codewiki-logs:'],
+    ['quoted duplicate redirect', 'volumes:\n  codewiki-data:\n  codewiki-logs:\n"volumes":\n  codewiki-data:\n    driver_opts: {type: none, o: bind, device: /etc}\n  codewiki-logs:'],
+    ['explicit duplicate redirect', 'volumes:\n  codewiki-data:\n  codewiki-logs:\n? volumes\n:\n  codewiki-data:\n    driver_opts: {type: none, o: bind, device: /etc}\n  codewiki-logs:'],
+    ['include redirect', 'volumes:\n  codewiki-data:\n  codewiki-logs:\ninclude: /etc/other-compose.yaml'],
+  ]) {
+    await t.test(label, () => {
+      const dir = makeFixtureDir(({ read, write }) => {
+        const before = read('compose.yaml');
+        const after = before.replace('volumes:\n  codewiki-data:\n  codewiki-logs:', replacement);
+        assert.notEqual(after, before);
+        write('compose.yaml', after);
+      });
+      const result = runCli(['validate', '--dir', dir, '--json']);
+      assert.equal(result.status, 2);
+      assert.ok(codes(parseJsonOut(result, label)).includes('HOST_MOUNT_FORBIDDEN'));
+    });
+  }
+  await t.test('the fixed empty named definitions remain valid', () => {
+    const result = runCli(['validate', '--json']);
+    assert.equal(result.status, 0);
+    assert.deepEqual(parseJsonOut(result, 'empty named definitions').violations, []);
+  });
+});
+
+test('I05 parsed YAML rejects quoted and flow permission fields through every public command', async (t) => {
+  const commands = [['validate'], ['qualify'], ['up'], ['probe', '--case', 'pinned-code-wiki'], ['probe', '--case', 'graph-disabled-correctness']];
+  const mutations = [
+    ['quoted host bind', (text) => text.replace('    volumes:\n      - codewiki-data:/root/.adalflow\n      - codewiki-logs:/app/api/logs', '    "volumes": ["/etc:/input"]')],
+    ['quoted external ports', (text) => text.replace('    ports:\n      - "127.0.0.1:${CODEWIKI_PORT:-17400}:3000"\n      - "127.0.0.1:${CODEWIKI_API_PORT:-17402}:8001"', '    "ports": ["0.0.0.0:17400:3000"]')],
+    ['quoted unpinned image', (text) => text.replace('    image: ${CODEWIKI_IMAGE:?must be resolved from infra/delivery/code-knowledge/images.lock.json before up}', '    "image": "example.invalid/unpinned:latest"')],
+    ...['privileged: true', 'network_mode: "host"', 'pid: "host"', 'ipc: "host"', 'userns_mode: "host"', 'env_file: ["/etc/private.env"]', 'cap_add: ["SYS_ADMIN"]', 'devices: ["/dev/example:/dev/example"]', 'volumes_from: ["another-project"]', 'entrypoint: ["unsafe"]'].map((field) => {
+      const split = field.indexOf(':');
+      return [`quoted ${field.slice(0, split)}`, (text) => text.replace('    restart: "no"', `    restart: "no"\n    "${field.slice(0, split)}"${field.slice(split)}`)];
+    }),
+    ['external network option', (text) => text.replace('    internal: true', '    internal: true\n    "external": true')],
+    ['extra environment', (text) => text.replace('      PORT: "8001"', '      PORT: "8001"\n      "UNREGISTERED_PROVIDER_KEY": "PRIVATE_COMPOSE_SENTINEL"')],
+  ];
+  for (const [label, mutate] of mutations) await t.test(label, () => {
+    const dir = makeFixtureDir(({ read, write }) => { const before = read('compose.yaml'); const after = mutate(before); assert.notEqual(after, before); write('compose.yaml', after); });
+    for (const command of commands) {
+      const result = runCli([...command, '--dir', dir, '--json']);
+      assert.equal(result.status, 2, command.join(' '));
+      const report = parseJsonOut(result, label);
+      assert.ok(report.violations.length > 0);
+      assert.equal(result.stdout.includes('PRIVATE_COMPOSE_SENTINEL'), false);
+      assert.equal(result.stderr, '');
+    }
+  });
+});
+
+test('I05 equivalent safe quoted and flow YAML is validated structurally', () => {
+  const compose = {
+    services: { 'codewiki-app': {
+      image: '${CODEWIKI_IMAGE:?must be resolved from infra/delivery/code-knowledge/images.lock.json before up}', restart: 'no',
+      environment: { PORT: '8001', NODE_ENV: 'production', SERVER_BASE_URL: 'http://127.0.0.1:8001', LOG_FILE_PATH: 'api/logs/application.log', NEXT_TELEMETRY_DISABLED: '1' },
+      networks: ['code-knowledge-internal'], ports: ['127.0.0.1:${CODEWIKI_PORT:-17400}:3000', '127.0.0.1:${CODEWIKI_API_PORT:-17402}:8001'],
+      volumes: ['codewiki-data:/root/.adalflow', 'codewiki-logs:/app/api/logs'], mem_limit: '6g', mem_reservation: '2g', cpus: 2, cap_drop: ['ALL'], security_opt: ['no-new-privileges:true'],
+    } }, volumes: { 'codewiki-data': null, 'codewiki-logs': {} }, networks: { 'code-knowledge-internal': { internal: true } },
+  };
+  const dir = makeFixtureDir(({ write }) => write('compose.yaml', JSON.stringify(compose)));
+  const result = runCli(['validate', '--dir', dir, '--json']);
+  assert.equal(result.status, 0, result.stdout);
+  const report = parseJsonOut(result, 'safe flow document');
+  assert.equal(report.composeParser.executed, true);
+  assert.equal(report.composeParser.version, '6.0.3');
+});
+
+test('I05 YAML parser rejects unsupported syntax and bounded inputs without reflecting source', async (t) => {
+  const cases = [
+    ['duplicate key', (text) => text.replace('    restart: "no"', '    restart: "no"\n    "restart": "always"'), 'COMPOSE_YAML_DUPLICATE_KEY'],
+    ['anchor', (text) => text.replace('\n  codewiki-data:\n', '\n  codewiki-data: &empty {}\n'), 'COMPOSE_YAML_ALIAS_UNSUPPORTED'],
+    ['merge', (text) => text.replace('\n  codewiki-data:\n', '\n  codewiki-data: {<<: {}}\n'), 'COMPOSE_YAML_MERGE_UNSUPPORTED'],
+    ['custom tag', (text) => text.replace('    restart: "no"', '    restart: !unsupported "PRIVATE_YAML_SENTINEL"'), 'COMPOSE_YAML_TAG_UNSUPPORTED'],
+    ['syntax failure', () => 'services: [PRIVATE_YAML_SENTINEL', 'COMPOSE_YAML_INVALID'],
+    ['input limit', (text) => `${'# padding\n'.repeat(8000)}${text}`, 'COMPOSE_INPUT_LIMIT_EXCEEDED'],
+    ['depth limit', () => `services: ${'['.repeat(30)}{}${']'.repeat(30)}`, 'COMPOSE_YAML_DEPTH_LIMIT_EXCEEDED'],
+    ['node limit', () => `services: [${'0,'.repeat(5000)}0]`, 'COMPOSE_YAML_NODE_LIMIT_EXCEEDED'],
+  ];
+  for (const [label, mutate, code] of cases) await t.test(label, () => {
+    const dir = makeFixtureDir(({ read, write }) => { const before = read('compose.yaml'); const after = mutate(before); assert.notEqual(after, before); write('compose.yaml', after); });
+    const result = runCli(['validate', '--dir', dir, '--json']);
+    assert.equal(result.status, 2);
+    assert.ok(codes(parseJsonOut(result, label)).includes(code));
+    assert.equal(result.stdout.includes('PRIVATE_YAML_SENTINEL'), false);
+    assert.equal(result.stderr, '');
+  });
+});
+
+test('I05 YAML parser dependency and process failures are never accepted as execution', async (t) => {
+  const commands = [['validate'], ['qualify'], ['up'], ['probe', '--case', 'pinned-code-wiki'], ['probe', '--case', 'graph-disabled-correctness']];
+  const scripts = [
+    ['missing interpreter', null, 'COMPOSE_PARSER_UNAVAILABLE'],
+    ['process exception', "process.stderr.write('PRIVATE_PARSER_SENTINEL');process.exit(1);", 'COMPOSE_PARSER_FAILED'],
+    ['unknown output', "process.stdout.write('PRIVATE_PARSER_SENTINEL');", 'COMPOSE_PARSER_INVALID_OUTPUT'],
+    ['incomplete output', "process.stdout.write(JSON.stringify({ok:true}));", 'COMPOSE_PARSER_INVALID_OUTPUT'],
+    ['inconsistent availability', "process.stdout.write(JSON.stringify({ok:false,parser:'PyYAML',version:'6.0.3',available:true,violations:[{code:'COMPOSE_PARSER_UNAVAILABLE',at:'compose.yaml'},{code:'HOST_MOUNT_FORBIDDEN',at:'compose.yaml'}]}));process.exit(2);", 'COMPOSE_PARSER_INVALID_OUTPUT'],
+    ['missing YAML dependency', "process.stdout.write(JSON.stringify({ok:false,parser:'PyYAML',version:null,available:false,violations:[{code:'COMPOSE_PARSER_UNAVAILABLE',at:'compose.yaml'},{code:'HOST_MOUNT_FORBIDDEN',at:'compose.yaml'}]}));process.exit(2);", 'COMPOSE_PARSER_UNAVAILABLE'],
+    ['unsupported YAML version', "process.stdout.write(JSON.stringify({ok:false,parser:'PyYAML',version:null,available:false,violations:[{code:'COMPOSE_PARSER_VERSION_MISMATCH',at:'compose.yaml'},{code:'HOST_MOUNT_FORBIDDEN',at:'compose.yaml'}]}));process.exit(2);", 'COMPOSE_PARSER_VERSION_MISMATCH'],
+    ['output bound', "process.stdout.write('x'.repeat(100000));", 'COMPOSE_PARSER_OUTPUT_LIMIT'],
+    ['timeout', "setTimeout(()=>{},15000);", 'COMPOSE_PARSER_TIMEOUT'],
+  ];
+  for (const [label, body, code] of scripts) await t.test(label, () => {
+    const dir = fixtureDir('infra-i05-parser-');
+    if (body !== null) { const file = path.join(dir, 'python3'); fs.writeFileSync(file, `#!${process.execPath}\n${body}\n`); fs.chmodSync(file, 0o755); }
+    const env = { ...process.env, PATH: body === null ? dir : `${dir}${path.delimiter}${process.env.PATH}` };
+    for (const command of label === 'timeout' ? commands.slice(0, 1) : commands) {
+      const result = runCli([...command, '--json'], env);
+      assert.equal(result.status, 2, label);
+      const report = parseJsonOut(result, label);
+      assert.ok(codes(report).includes(code), `${label}: ${JSON.stringify(codes(report))}`);
+      assert.equal(report.composeParser.executed, false);
+      assert.equal(report.composeParser.status, 'UNVERIFIED');
+      assert.equal(report.status, 'UNVERIFIED');
+      assert.equal(result.stdout.includes('PRIVATE_PARSER_SENTINEL'), false);
+      assert.equal(result.stderr, '');
+    }
+  });
+});
+
+test('I05 YAML parser isolated import ignores untrusted Python module environment', () => {
+  const dir = fixtureDir('infra-i05-python-import-');
+  fs.writeFileSync(path.join(dir, 'yaml.py'), "raise RuntimeError('PRIVATE_IMPORT_SENTINEL')\n");
+  const result = runCli(['validate', '--json'], { ...process.env, PYTHONPATH: dir, PYTHONHOME: dir });
+  assert.equal(result.status, 0, result.stdout);
+  const report = parseJsonOut(result, 'isolated parser import');
+  assert.equal(report.composeParser.executed, true);
+  assert.equal(report.composeParser.version, '6.0.3');
+  assert.equal(result.stdout.includes('PRIVATE_IMPORT_SENTINEL'), false);
+  assert.equal(result.stderr, '');
+});
 
 test('V_INFRA_I05 contract: committed code-knowledge domain validates clean; qualify/up honor the exit contract', () => {
   const validate = runCli(['validate', '--registry', registryPath, '--dir', domainDir, '--json']);
@@ -134,7 +449,7 @@ test('V_INFRA_I05 contract: committed code-knowledge domain validates clean; qua
   assert.equal(runCli(['probe', '--case', 'not-a-case', '--json']).status, 1);
 
   // 域文件缺失 = 前置无效 → 退出 1（不是静默跳过）。
-  const partial = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i05-partial-'));
+  const partial = fixtureDir('infra-i05-partial-');
   for (const name of DOMAIN_FILES.filter((n) => n !== 'repository-scope.json')) {
     fs.copyFileSync(path.join(domainDir, name), path.join(partial, name));
   }
@@ -162,7 +477,7 @@ test('gap-reporting behavior: registered refs are never reported as gaps; a miss
   // 合成负例（临时 fixture）：从 refs 目录副本中移除一个已登记 ref，validate 仍显式上报缺口。
   const refsDoc = JSON.parse(fs.readFileSync(path.join(repoRoot, 'infra', 'delivery', 'secrets.refs.example.json'), 'utf8'));
   refsDoc.refs = refsDoc.refs.filter((entry) => entry.ref !== 'secret-ref:sdd-harness-pilot/codewiki-provider');
-  const refsFixture = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i05-refs-')), 'refs.json');
+  const refsFixture = path.join(fixtureDir('infra-i05-refs-'), 'refs.json');
   fs.writeFileSync(refsFixture, JSON.stringify(refsDoc, null, 2) + '\n');
   const result = runCli(['validate', '--registry', registryPath, '--dir', domainDir, '--refs', refsFixture, '--json']);
   assert.equal(result.status, 0, 'a catalog gap is readiness evidence (qualify), not a structural violation');
@@ -176,12 +491,13 @@ test('gap-reporting behavior: registered refs are never reported as gaps; a miss
 test('RED image gate: images.lock without any authenticated digest refuses up (committed state, nothing fabricated)', () => {
   const lock = readDomainJson('images.lock.json');
   const components = lock.components ?? [];
-  const required = ['codewiki-app', 'codegraph'];
+  const required = ['codewiki-app'];
   for (const name of required) {
     const entry = components.find((c) => c.component === name);
     assert.ok(entry, `lock must declare ${name}`);
-    assert.equal(entry.reference, null, `${name}: upstream/release unselected, no tag may be invented`);
-    assert.equal(entry.digest, null, `${name}: no authenticated digest exists, none may be invented`);
+    assert.match(entry.reference, /^ghcr\.io\/asyncfuncai\/deepwiki-open@sha256:[0-9a-f]{64}$/, `${name}: reference must be the observed immutable image`);
+    assert.equal(entry.reference.endsWith(entry.digest), true);
+    assert.equal(entry.digestAuthenticated, false, 'recorded metadata is not full qualification');
     assert.equal(entry.status, 'UNVERIFIED', `${name} must be honestly UNVERIFIED`);
   }
   assert.equal(lock.upGate.enabled, false, 'committed lock must keep the up gate closed');
@@ -346,7 +662,7 @@ test('RED freshness gate: generation failure, stale commit, unauthorized source 
       addApprovedSource(json, writeJson);
       if (mutate) mutate({ json, writeJson });
     });
-    const manifestPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i05-manifest-')), 'manifest.json');
+    const manifestPath = path.join(fixtureDir('infra-i05-manifest-'), 'manifest.json');
     return { dir, manifestPath };
   };
   const probeWith = (dir, manifestPath) =>
@@ -355,7 +671,7 @@ test('RED freshness gate: generation failure, stale commit, unauthorized source 
   // (a) wiki 生成失败 → 新鲜度不得报通过。
   const failed = writeManifest();
   fs.writeFileSync(failed.manifestPath, JSON.stringify({
-    immutableId: 'rid-sdd-harness-pilot-fixture',
+    immutableId: '1285806550',
     commit: PINNED_COMMIT,
     generation: { status: 'failed' },
     languageCoverage: [],
@@ -370,7 +686,7 @@ test('RED freshness gate: generation failure, stale commit, unauthorized source 
   // (b) commit 陈旧（manifest commit ≠ 批准 scope 固定 commit）→ 不得报通过。
   const stale = writeManifest();
   fs.writeFileSync(stale.manifestPath, JSON.stringify({
-    immutableId: 'rid-sdd-harness-pilot-fixture',
+    immutableId: '1285806550',
     commit: 'a'.repeat(40),
     generation: { status: 'succeeded' },
     languageCoverage: [],
@@ -398,7 +714,7 @@ test('RED freshness gate: generation failure, stale commit, unauthorized source 
   // (d) 语言覆盖阈值未定（策略 UNSET）→ fail-closed：即使 manifest 其它字段完美也不得报通过。
   const undecided = writeManifest();
   fs.writeFileSync(undecided.manifestPath, JSON.stringify({
-    immutableId: 'rid-sdd-harness-pilot-fixture',
+    immutableId: '1285806550',
     commit: PINNED_COMMIT,
     generation: { status: 'succeeded' },
     languageCoverage: [{ language: 'javascript', filesIndexed: 999 }],
@@ -419,7 +735,7 @@ test('RED freshness gate: generation failure, stale commit, unauthorized source 
       profile.generation.freshness.languageCoverageMin = policy.languageCoverageMin;
       writeJson('deepwiki-profile.json', profile);
     });
-    const manifestPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i05-manifest-')), 'manifest.json');
+    const manifestPath = path.join(fixtureDir('infra-i05-manifest-'), 'manifest.json');
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
     return { dir, manifestPath };
   };
@@ -428,7 +744,7 @@ test('RED freshness gate: generation failure, stale commit, unauthorized source 
   const insufficient = writeDecidedManifest(
     { maxCommitAgeDays: 30, languageCoverageMin: 2 },
     {
-      immutableId: 'rid-sdd-harness-pilot-fixture',
+      immutableId: '1285806550',
       commit: PINNED_COMMIT,
       generation: { status: 'succeeded' },
       generatedAt: new Date().toISOString(),
@@ -446,7 +762,7 @@ test('RED freshness gate: generation failure, stale commit, unauthorized source 
   const manifestPass = writeDecidedManifest(
     { maxCommitAgeDays: 30, languageCoverageMin: 1 },
     {
-      immutableId: 'rid-sdd-harness-pilot-fixture',
+      immutableId: '1285806550',
       commit: PINNED_COMMIT,
       generation: { status: 'succeeded' },
       generatedAt: new Date().toISOString(),
@@ -469,7 +785,7 @@ test('RED freshness gate: generation failure, stale commit, unauthorized source 
   const aged = writeDecidedManifest(
     { maxCommitAgeDays: 0, languageCoverageMin: 1 },
     {
-      immutableId: 'rid-sdd-harness-pilot-fixture',
+      immutableId: '1285806550',
       commit: PINNED_COMMIT,
       generation: { status: 'succeeded' },
       generatedAt: '2020-01-01T00:00:00.000Z',
@@ -554,9 +870,9 @@ test('CodeWiki.v1 profile gates: selfhost pinned-upstream structure, manifest/fr
   const profile = readDomainJson('deepwiki-profile.json');
   assert.equal(profile.interface, 'CodeWiki.v1');
   assert.equal(profile.service.kind, 'selfhost-deepwiki-open');
-  assert.equal(profile.service.upstream.status, 'UNSELECTED', 'upstream is unselected: nothing may be invented');
-  assert.equal(profile.service.upstream.repository, null);
-  assert.equal(profile.service.upstream.commit, null);
+  assert.equal(profile.service.upstream.status, 'SELECTED', 'public upstream selection is now backed by exact readback');
+  assert.equal(profile.service.upstream.repository, 'https://github.com/AsyncFuncAI/deepwiki-open');
+  assert.equal(profile.service.upstream.commit, '3e0f503b0cc815c1525a063911524d233bda2400');
   assert.equal(profile.generation.manifestRequired, true, 'a wiki generation manifest is required by policy');
   assert.equal(profile.generation.freshness.commitPinRequired, true);
   assert.equal(profile.access.apiAuthRequired, true, 'API/MCP access must be authenticated per policy');
@@ -566,6 +882,7 @@ test('CodeWiki.v1 profile gates: selfhost pinned-upstream structure, manifest/fr
   const fakeSelected = makeFixtureDir(({ json, writeJson }) => {
     const fixtureProfile = json('deepwiki-profile.json');
     fixtureProfile.service.upstream.status = 'SELECTED';
+    fixtureProfile.service.upstream.commit = null;
     writeJson('deepwiki-profile.json', fixtureProfile);
   });
   const fakeRun = runCli(['validate', '--registry', registryPath, '--dir', fakeSelected, '--json']);
@@ -604,8 +921,8 @@ test('probes are real subcommands: graph-disabled-correctness runs locally; pinn
   assert.equal(unreachableReport.status, 'UNVERIFIED');
   assert.ok(unreachableReport.reason.length > 0);
   const attempt = (unreachableReport.observedSteps ?? []).find((step) => /GET endpoint/.test(step.step));
-  assert.ok(attempt, 'the probe must record the real reachability attempt');
-  assert.equal(attempt.status, 'UNVERIFIED');
+  assert.equal(attempt, undefined, 'an endpoint is not an authenticated source/provider readback grant');
+  assert.equal(unreachableReport.liveReadback, false);
   assert.doesNotMatch(unreachable.stdout, HOST_PATH_OUTPUT_RE);
   assert.doesNotMatch(unreachable.stdout, /"skip"\s*:\s*true/, 'probes must not skip');
 });
@@ -623,7 +940,10 @@ test('compose declaration gate: loopback binds, dedicated internal network, no h
   }
 
   const notLoopback = makeFixtureDir(({ read, write }) => {
-    write('compose.yaml', read('compose.yaml').replace('"127.0.0.1:${CODEWIKI_PORT:-7400}:7400"', '"7400:7400"'));
+    const before = read('compose.yaml');
+    const after = before.replace('"127.0.0.1:${CODEWIKI_PORT:-17400}:3000"', '"17400:3000"');
+    assert.notEqual(after, before, 'loopback negative fixture must actually replace the native port');
+    write('compose.yaml', after);
   });
   const loopbackRun = runCli(['validate', '--registry', registryPath, '--dir', notLoopback, '--json']);
   assert.equal(loopbackRun.status, 2, 'non-loopback port binding must be rejected');

@@ -8,15 +8,52 @@
     "publicHostedServiceSubstitute": false,
     "substitutePolicy": "敏感代码不得用公共托管服务作为自托管 code wiki 的替代；本字段翻转为 true 即结构性违规",
     "upstream": {
-      "repository": null,
-      "commit": null,
+      "repository": "https://github.com/AsyncFuncAI/deepwiki-open",
+      "repositoryId": 975318071,
+      "commit": "3e0f503b0cc815c1525a063911524d233bda2400",
       "release": null,
-      "license": null,
-      "status": "UNSELECTED",
-      "reason": "deepwiki-open 上游仓库/精确 commit/发行物、镜像 digest、许可证与启动/API 契约在实施时核验；选定而未固定 commit 属结构性违规（UPSTREAM_COMMIT_NOT_PINNED）"
+      "license": "MIT",
+      "status": "SELECTED",
+      "reason": "Exact public source and matching OCI revision metadata observed; no official releases returned, no local runtime or code generation accepted.",
+      "evidenceRef": "worker-reports/I05-convergence/evidence/public-source-metadata.json",
+      "evidenceSha256": "d6d7528c66c3e342e861118dda5e7264d3785a0c38716fea07bb2abe75a80508"
     },
     "imageLockRef": "infra/delivery/code-knowledge/images.lock.json",
-    "composeRef": "infra/delivery/code-knowledge/compose.yaml"
+    "composeRef": "infra/delivery/code-knowledge/compose.yaml",
+    "runtime": {
+      "backendPort": 8001,
+      "frontendPort": 3000,
+      "containerDataRelativeToRoot": "root/.adalflow",
+      "containerLogsRelativeToRoot": "app/api/logs",
+      "healthPath": "/health",
+      "healthService": "deepwiki-api",
+      "status": "NOT_DEPLOYED"
+    },
+    "nativeContracts": {
+      "taskSubmit": {
+        "method": "POST",
+        "path": "/wiki/tasks"
+      },
+      "taskReadback": {
+        "method": "GET",
+        "path": "/wiki/tasks/{task_id}"
+      },
+      "wikiCache": {
+        "method": "GET",
+        "path": "/api/wiki_cache",
+        "keyFields": [
+          "owner",
+          "repo",
+          "repo_type",
+          "language"
+        ]
+      },
+      "immutableRepoIdExposed": false,
+      "commitExposed": false,
+      "readApiProjectAuthorization": "UNVERIFIED",
+      "nativeMcp": "NOT_FOUND_IN_PINNED_TREE",
+      "reason": "Static routes/cache schemas are not authenticated commit-bound API/MCP proof; exact source snapshot and independent manifests remain required."
+    }
   },
   "provider": {
     "credentialRef": "secret-ref:sdd-harness-pilot/codewiki-provider",
@@ -46,6 +83,25 @@
     "apiAuthRequired": true,
     "mcpReadbackRequired": true,
     "readbackPolicy": "policy 要求 code wiki 时必须真实 API/MCP 独立读回；私有认证/分页/版本暴露能力必须实证后才能 VERIFIED",
-    "status": "UNVERIFIED"
+    "status": "UNVERIFIED",
+    "reason": "No native authenticated immutable-ID/commit readback has been qualified; auth-code UI settings do not establish per-project reader ACL."
+  },
+  "project": "sdd-harness-pilot",
+  "validationRuntime": {
+    "command": "python3",
+    "flags": [
+      "-I"
+    ],
+    "dependency": "PyYAML",
+    "requiredVersion": "6.0.3",
+    "loader": "SafeLoader with duplicate/key/alias/merge/tag restrictions",
+    "maxInputBytes": 65536,
+    "maxOutputBytes": 65536,
+    "timeoutMs": 5000,
+    "maxDepth": 24,
+    "maxEvents": 4096,
+    "regexSecurityFallback": false,
+    "status": "EXISTING_RUNTIME_REQUIRED",
+    "reason": "Uses the existing isolated parser dependency; missing/version drift/process or protocol failure is UNVERIFIED/nonzero. No global installation or runtime service qualification is implied."
   }
 }

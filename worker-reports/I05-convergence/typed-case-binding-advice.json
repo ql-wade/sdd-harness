@@ -1,0 +1,937 @@
+{
+  "scope": "advice for root only, not canonical caseplan or an accepted business case",
+  "sourceCasePlanSha256": "56e3967c0cfd1212831d1fe24d1e55e2ad7e2cc71c52e318948309f756eb18a2",
+  "sourceContractSha256": "dff53cec6b7a2ebc048d76e380e46cd1839ac6a667cfdfa759be3ea87b5fc5a8",
+  "baseCommit": "afae696eb0fc8a93ef5c1e0fe5deb5472d4589f0",
+  "ownedCandidateInputs": {
+    "infra/delivery/code-knowledge/compose.yaml": "2710605af107df9d0f47dd1846a73786ec6a7835b97a03c7dc20a268ad6418a8",
+    "infra/delivery/code-knowledge/images.lock.json": "ae8ac70ed94272c1c04e8cae0e915d80b12467c3e9c0b2c7724d7f610d764529",
+    "infra/delivery/code-knowledge/deepwiki-profile.json": "6d5a9a93fcf652da29bb886f84331bfb67b49111ab3f1982ebf8f9dd0eda8ec5",
+    "infra/delivery/code-knowledge/graph-profile.json": "c938f0309fd39937c24a45bc1f7b8cad70a6f44680190c4dcba375ccf7c18bcf",
+    "infra/delivery/code-knowledge/repository-scope.json": "35bf9d1ea67af544ec226f65f82fe91b74be4c91c248881eb83d2b8ebea81008",
+    "tools/infra/code-knowledge.mjs": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466",
+    "test/infra-code-knowledge.test.js": "54f6fec87d83dbab24d6cc1ad78a9123f134d783a88641065385d5bb3e0dd691"
+  },
+  "nativeSourceBinding": {
+    "upstreamCommit": "3e0f503b0cc815c1525a063911524d233bda2400",
+    "imageIndexDigest": "sha256:90a0cfaf03f61fe903b72cb58b44832c63b49749bf8f5348803fd0aafa2a822b",
+    "sourceRouteFiles": [
+      "api/routers/wiki.py",
+      "api/routers/auth.py",
+      "api/routers/repo.py",
+      "api/schemas/wiki.py",
+      "api/schemas/repo.py"
+    ],
+    "facts": "task submission/readback and cache routes exist statically; native schemas do not expose immutable-ID/commit, per-project read authentication and MCP are not qualified",
+    "nativeApiExecuted": false
+  },
+  "caseCount": 5,
+  "requiredAssertionCount": 15,
+  "cases": [
+    {
+      "caseId": "F01",
+      "canonical": {
+        "source_binding": [
+          {
+            "path": "specs/delivery-foundation/spec.md",
+            "requirement": "Foundation distribution and deployment",
+            "scenario": "F01"
+          }
+        ],
+        "intended_command": "node tools/verify/delivery-journey.mjs --scenario F01 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/F01 --json",
+        "case_module": "test/delivery-cases/1_1.mjs",
+        "steps": [
+          "Validate exact toolchain/candidate/environment and registered action grant; missing prerequisites exit nonzero UNVERIFIED",
+          "Use independently authored fixtures and genuine worker/Runner/service identities to establish GIVEN",
+          "Execute scenario WHEN through actual Comet CLI/generated host hook or actual platform/Outline/source endpoint; do not edit authoritative state as substitute",
+          "Independently read actual persisted state, access decisions, requests and required UI evidence against frozen THEN",
+          "Assert nonzero observed actions; attach execution count, candidate digest, timestamps, process/request correlation, before/after readback and cleanup evidence"
+        ],
+        "oracle": "- **GIVEN** 干净成员工作区\n- **WHEN** 接入同一 Foundation release\n- **THEN** 实际工具版本、技能、契约、hooks/MCP 内容与清单一致；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+        "forbidden": [
+          "echo/static inventory as behavior proof",
+          "mock ACL response as real resource isolation",
+          "caller supplied pass/identity as trusted review",
+          "skips/zero matching tests as pass"
+        ],
+        "conditional_pre_enable": false,
+        "status": "CURRENT_PROFILE_RETEST_REQUIRED",
+        "historical_pass_inherits": false,
+        "assertion_binding_required": true,
+        "required_readback": "Scenario WHEN/THEN oracle at its actual required layer; named target and nonzero mandatory assertion denominator; scope-limited fixture cannot close host/resource/runtime requirement"
+      },
+      "caseModuleSha256": "768426bd77cba92bd93eb1bf724cabe14f5ec3570977ec3df82f9d3ffe46d92d",
+      "bindings": [
+        {
+          "key": "actual-release-identity",
+          "oracle": "The same Foundation release installs the exact selected upstream/source/image; process image/config/version independently match the release manifest.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/delivery-foundation/F01/runtime-inventory.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        },
+        {
+          "key": "actual-tools-and-mcp",
+          "oracle": "Actual new member host discovers and invokes qualified code-wiki tools; installed files or selected upstream metadata are insufficient.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/delivery-foundation/F01/host-discovery-and-toolcall.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        },
+        {
+          "key": "scoped-source-provider-identity",
+          "oracle": "Immutable repo1285806550/fullname and current actual source/provider principals are bound to approved grants.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/delivery-foundation/F01/source-provider-readback.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        }
+      ]
+    },
+    {
+      "caseId": "F03",
+      "canonical": {
+        "source_binding": [
+          {
+            "path": "specs/delivery-foundation/spec.md",
+            "requirement": "Foundation distribution and deployment",
+            "scenario": "F03"
+          }
+        ],
+        "intended_command": "node tools/verify/delivery-journey.mjs --scenario F03 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/F03 --json",
+        "case_module": "test/delivery-cases/1_1.mjs",
+        "steps": [
+          "Validate exact toolchain/candidate/environment and registered action grant; missing prerequisites exit nonzero UNVERIFIED",
+          "Use independently authored fixtures and genuine worker/Runner/service identities to establish GIVEN",
+          "Execute scenario WHEN through actual Comet CLI/generated host hook or actual platform/Outline/source endpoint; do not edit authoritative state as substitute",
+          "Independently read actual persisted state, access decisions, requests and required UI evidence against frozen THEN",
+          "Assert nonzero observed actions; attach execution count, candidate digest, timestamps, process/request correlation, before/after readback and cleanup evidence"
+        ],
+        "oracle": "- **GIVEN** 安装资产完成\n- **WHEN** 新宿主会话开始真实任务\n- **THEN** 实际发现所需技能与工具，文件存在不足以通过；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+        "forbidden": [
+          "echo/static inventory as behavior proof",
+          "mock ACL response as real resource isolation",
+          "caller supplied pass/identity as trusted review",
+          "skips/zero matching tests as pass"
+        ],
+        "conditional_pre_enable": false,
+        "status": "CURRENT_PROFILE_RETEST_REQUIRED",
+        "historical_pass_inherits": false,
+        "assertion_binding_required": true,
+        "required_readback": "Scenario WHEN/THEN oracle at its actual required layer; named target and nonzero mandatory assertion denominator; scope-limited fixture cannot close host/resource/runtime requirement"
+      },
+      "caseModuleSha256": "768426bd77cba92bd93eb1bf724cabe14f5ec3570977ec3df82f9d3ffe46d92d",
+      "bindings": [
+        {
+          "key": "cold-host-real-task",
+          "oracle": "A new supported host session performs a real task with actual discoverable tool/skill identities, candidate and request IDs.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/delivery-foundation/F03/cold-host-task.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        },
+        {
+          "key": "independent-code-wiki-context",
+          "oracle": "The tool returns independently readable repo/commit/content/provenance and permission, through the registered authenticated API/MCP route.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/delivery-foundation/F03/context-readback.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        }
+      ]
+    },
+    {
+      "caseId": "A20",
+      "canonical": {
+        "source_binding": [
+          {
+            "path": "specs/delivery-foundation/spec.md",
+            "requirement": "Runtime ownership and recovery",
+            "scenario": "A20"
+          }
+        ],
+        "intended_command": "node tools/verify/delivery-journey.mjs --scenario A20 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/A20 --json",
+        "case_module": "test/delivery-cases/2_3.mjs",
+        "steps": [
+          "Validate exact toolchain/candidate/environment and registered action grant; missing prerequisites exit nonzero UNVERIFIED",
+          "Use independently authored fixtures and genuine worker/Runner/service identities to establish GIVEN",
+          "Execute scenario WHEN through actual Comet CLI/generated host hook or actual platform/Outline/source endpoint; do not edit authoritative state as substitute",
+          "Independently read actual persisted state, access decisions, requests and required UI evidence against frozen THEN",
+          "Assert nonzero observed actions; attach execution count, candidate digest, timestamps, process/request correlation, before/after readback and cleanup evidence"
+        ],
+        "oracle": "- **GIVEN** 正确性契约已冻结\n- **WHEN** 停用 CodeGraph/RTK 后执行\n- **THEN** 正确性协议仍可执行，优化收益单独评估；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+        "forbidden": [
+          "echo/static inventory as behavior proof",
+          "mock ACL response as real resource isolation",
+          "caller supplied pass/identity as trusted review",
+          "skips/zero matching tests as pass"
+        ],
+        "conditional_pre_enable": false,
+        "status": "CURRENT_PROFILE_RETEST_REQUIRED",
+        "historical_pass_inherits": false,
+        "assertion_binding_required": true,
+        "required_readback": "Scenario WHEN/THEN oracle at its actual required layer; named target and nonzero mandatory assertion denominator; scope-limited fixture cannot close host/resource/runtime requirement"
+      },
+      "caseModuleSha256": "6b3b1d80c3750a8859f283e69bd1c8a49a259788bd554d7b6aa33e5473da2da9",
+      "bindings": [
+        {
+          "key": "optimization-absent",
+          "oracle": "Actual Graph/RTK runtime is absent or disabled, rather than merely a declaration string.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/delivery-foundation/A20/optimization-disabled-runtime.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        },
+        {
+          "key": "correctness-executed",
+          "oracle": "Execute the same frozen correctness protocol on the same candidate with execution count>0 and actual denominator; component validate is insufficient.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/delivery-foundation/A20/correctness-execution.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        },
+        {
+          "key": "core-result-and-evidence",
+          "oracle": "Frozen required assertions still pass without optimization; record gains separately and retain exact inputs/time/exit/original evidence.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/delivery-foundation/A20/correctness-readback.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        }
+      ],
+      "localConfigurationProducer": {
+        "command": [
+          "<node24.15>",
+          "tools/infra/code-knowledge.mjs",
+          "probe",
+          "--case",
+          "graph-disabled-correctness",
+          "--json"
+        ],
+        "expectedFields": [
+          "proofLayer=component-configuration",
+          "graph.runtimeVerified=false"
+        ],
+        "limitation": "Only component declarations re-execute; current actual correctness and native Comet chain remain unverified."
+      }
+    },
+    {
+      "caseId": "C06",
+      "canonical": {
+        "source_binding": [
+          {
+            "path": "specs/delivery-foundation/spec.md",
+            "requirement": "Classic single-controller integration",
+            "scenario": "C06"
+          }
+        ],
+        "intended_command": "node tools/verify/delivery-journey.mjs --scenario C06 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/C06 --json",
+        "case_module": "test/delivery-cases/1_5.mjs",
+        "steps": [
+          "Validate exact toolchain/candidate/environment and registered action grant; missing prerequisites exit nonzero UNVERIFIED",
+          "Use independently authored fixtures and genuine worker/Runner/service identities to establish GIVEN",
+          "Execute scenario WHEN through actual Comet CLI/generated host hook or actual platform/Outline/source endpoint; do not edit authoritative state as substitute",
+          "Independently read actual persisted state, access decisions, requests and required UI evidence against frozen THEN",
+          "Assert nonzero observed actions; attach execution count, candidate digest, timestamps, process/request correlation, before/after readback and cleanup evidence"
+        ],
+        "oracle": "- **GIVEN** policy 要求更新项目或团队知识，但缺少有效授权、正确目标版本或独立读回\n- **WHEN** 请求对应收尾或最终完成\n- **THEN** 同一 Comet Run 保持未完成，恢复原知识动作，不用原生 remember 提示或本地成功声明代替外部知识证据；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+        "forbidden": [
+          "echo/static inventory as behavior proof",
+          "mock ACL response as real resource isolation",
+          "caller supplied pass/identity as trusted review",
+          "skips/zero matching tests as pass"
+        ],
+        "conditional_pre_enable": false,
+        "status": "CURRENT_PROFILE_RETEST_REQUIRED",
+        "historical_pass_inherits": false,
+        "assertion_binding_required": true,
+        "required_readback": "Scenario WHEN/THEN oracle at its actual required layer; named target and nonzero mandatory assertion denominator; scope-limited fixture cannot close host/resource/runtime requirement"
+      },
+      "caseModuleSha256": "1dd00402fb0c6e1e485b91967a4c7529532ad2c7eefa1c9a5301156d63f7e208",
+      "bindings": [
+        {
+          "key": "mandatory-code-knowledge-fails-closed",
+          "oracle": "When knowledge is required, missing valid grant, correct version or independent readback must block closing/final completion.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/delivery-foundation/C06/knowledge-gate-denial.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        },
+        {
+          "key": "same-native-run-remains-open",
+          "oracle": "Read actual persisted same Comet Run/action/operation obligations; a local CLI success or remember hint cannot close them.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/delivery-foundation/C06/same-run-state-readback.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        },
+        {
+          "key": "original-action-recovery",
+          "oracle": "Resume the original pending knowledge action after actual qualification, reconcile unknown results, and independently read the required target before completion.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/delivery-foundation/C06/same-operation-recovery.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        }
+      ]
+    },
+    {
+      "caseId": "N05",
+      "canonical": {
+        "source_binding": [
+          {
+            "path": "specs/delivery-foundation/spec.md",
+            "requirement": "Command knowledge infrastructure convergence",
+            "scenario": "N05"
+          }
+        ],
+        "case_module": "test/delivery-cases/3_2.mjs",
+        "steps": [
+          "Qualify exact current profile, real actor/resource identities and action grants",
+          "Execute the actual Comet action chain; no manually composed success substitute",
+          "Independently read frozen WHEN/THEN terminal state and required original evidence"
+        ],
+        "oracle": "实际工具返回有来源/版本/权限的上下文；不把知识页变成已批准spec，不批量摄入源码；Graph关闭不破坏正确性",
+        "status": "CURRENT_PROFILE_RETEST_REQUIRED",
+        "assertion_binding_required": true,
+        "historical_pass_inherits": false,
+        "intended_command": "node tools/verify/delivery-journey.mjs --scenario N05 --profile comet-managed-v2 --evidence-dir .whitebox/comet-managed-v2/N05 --json"
+      },
+      "caseModuleSha256": "63699f53ef658fd27223d32bf8b1ee54b277e4348a80c77408dd114a2f846292",
+      "bindings": [
+        {
+          "key": "source-version-permission-context",
+          "oracle": "Actual tools return context with source, version and actual permission; the generated wiki and source snapshot match exact approved immutable ID/commit.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/comet-managed-v2/N05/context-provenance-readback.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        },
+        {
+          "key": "wiki-is-not-spec-approval",
+          "oracle": "Knowledge output does not become an approved requirement/design/spec or issue a gate/grant.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/comet-managed-v2/N05/authority-boundary-readback.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        },
+        {
+          "key": "no-bulk-team-knowledge-ingest",
+          "oracle": "Only approved code-wiki source scope is processed; no automatic whole-code feed to LLMWiki/Outline or cross-project cache reuse occurs.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/comet-managed-v2/N05/source-and-knowledge-boundary.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        },
+        {
+          "key": "graph-independent-correctness",
+          "oracle": "Actual retrieval and correctness still execute with Graph disabled; configuration-only probe cannot sign the full case.",
+          "required": true,
+          "status": "UNVERIFIED",
+          "execution": "NOT_EXECUTED",
+          "proofLayer": "actual-runtime-and-Comet-journey",
+          "freeze": {
+            "runId": null,
+            "operationId": null,
+            "sourceCommit": null,
+            "sourceArchiveSha256": null,
+            "sourceReadGrantId": null,
+            "providerGrantId": null,
+            "providerEndpoint": null,
+            "embeddingEndpoint": null,
+            "actualReaderPrincipal": null,
+            "generatedWikiSha256": null,
+            "generationManifestSha256": null
+          },
+          "localProducer": {
+            "command": [
+              "<node24.15>",
+              "tools/infra/code-knowledge.mjs",
+              "probe",
+              "--case",
+              "pinned-code-wiki",
+              "--manifest",
+              "<approved-generated-manifest>",
+              "--json"
+            ],
+            "implementation": "declared-artifact evaluator only; native source/grant/readback producer unqualified",
+            "sourceSha256": "2c1a3b7c5010a330bd764703a762d39b5f765f700dbf807cf29a59ced259c466"
+          },
+          "partialSupport": [
+            "evidence/public-source-metadata.json",
+            "evidence/public-image-metadata.json",
+            "evidence/compose-assembly.json"
+          ],
+          "missing": [
+            "actual source/provider/embedding purpose-bound identities and disclosure scope",
+            "controlled exact-commit source snapshot and actual model generation",
+            "authenticated immutable-ID/commit API plus MCP adapter readback",
+            "actual runtime, recovery and independent role evidence"
+          ],
+          "expectedArtifact": ".whitebox/comet-managed-v2/N05/graph-disabled-context-and-correctness.json",
+          "artifactStatus": "EXPECTED_NOT_PRODUCED"
+        }
+      ]
+    }
+  ]
+}

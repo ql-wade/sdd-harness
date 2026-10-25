@@ -2,32 +2,34 @@
   "schemaVersion": 1,
   "interface": "CodeKnowledgeImageLock.v1",
   "project": "sdd-harness-pilot",
-  "note": "deepwiki-open 上游仓库/发行物未选定，独立 CodeGraph 发行物同样未选定：reference/digest 保持 null，严禁虚构 tag/digest/版本（images_policy.invented_tags_or_digests=false）。每个组件必须经 registry 认证 digest 后才允许 up。",
+  "note": "Selected public deepwiki-open source/OCI metadata is pinned; runtime/provenance/source/provider/auth/MCP generation remain unverified. Optional unselected Graph is not a wiki dependency.",
   "resolution": {
     "lockSource": "infra/delivery/code-knowledge/images.lock.json",
     "composeMapping": {
-      "CODEWIKI_IMAGE": "codewiki-app",
-      "CODEGRAPH_IMAGE": "codegraph"
+      "CODEWIKI_IMAGE": "codewiki-app"
     },
     "rule": "compose 的 image 一律经由本锁解析注入；本锁未 ready 时 tools/infra/code-knowledge.mjs up 必须拒绝"
   },
   "upGate": {
     "enabled": false,
-    "requireAllComponentsAuthenticated": true,
-    "reason": "I05 仅声明代码知识域与准入结构；deepwiki-open/CodeGraph 发行物未选定，组件镜像没有任何已认证 digest，up 在资源准入完成前必须拒绝"
+    "requireRequiredComponentsAuthenticated": true,
+    "reason": "Exact metadata is recorded, not standing runtime/action authority; see I05 qualification plan and current purpose-bound grants."
   },
   "components": [
     {
       "component": "codewiki-app",
       "role": "code-wiki-application",
-      "upstream": "deepwiki-open (repository/release UNSELECTED)",
+      "upstream": "AsyncFuncAI/deepwiki-open",
       "required": true,
-      "reference": null,
-      "digest": null,
+      "reference": "ghcr.io/asyncfuncai/deepwiki-open@sha256:90a0cfaf03f61fe903b72cb58b44832c63b49749bf8f5348803fd0aafa2a822b",
+      "digest": "sha256:90a0cfaf03f61fe903b72cb58b44832c63b49749bf8f5348803fd0aafa2a822b",
       "digestAuthenticated": false,
-      "selectionStatus": "UNSELECTED",
+      "selectionStatus": "SELECTED",
       "status": "UNVERIFIED",
-      "reason": "deepwiki-open 上游仓库/发行物未选定；精确镜像与启动/API 契约、许可证按选定版本核验前不得编造 tag"
+      "reason": "Public OCI index and linux/arm64 revision label match the selected source; image signature/platform execution/backup compatibility not qualified.",
+      "sourceCommit": "3e0f503b0cc815c1525a063911524d233bda2400",
+      "metadataEvidenceRef": "worker-reports/I05-convergence/evidence/public-image-metadata.json",
+      "metadataEvidenceSha256": "4255813be9c32b36c08bb55491970ba2d18d1781df530f5ace25ab8e586e7dda"
     },
     {
       "component": "codegraph",

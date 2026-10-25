@@ -1,0 +1,92 @@
+TAP version 13
+# Subtest: I05 YAML parser dependency and process failures are never accepted as execution
+    # Subtest: missing interpreter
+    ok 1 - missing interpreter
+      ---
+      duration_ms: 906.412958
+      type: 'test'
+      ...
+    # Subtest: process exception
+    ok 2 - process exception
+      ---
+      duration_ms: 766.621459
+      type: 'test'
+      ...
+    # Subtest: unknown output
+    ok 3 - unknown output
+      ---
+      duration_ms: 895.88825
+      type: 'test'
+      ...
+    # Subtest: incomplete output
+    ok 4 - incomplete output
+      ---
+      duration_ms: 888.599291
+      type: 'test'
+      ...
+    # Subtest: inconsistent availability
+    not ok 5 - inconsistent availability
+      ---
+      duration_ms: 338.59875
+      type: 'test'
+      location: '<repo>/test/infra-code-knowledge.test.js:388:54'
+      failureType: 'testCodeFailure'
+      error: 'inconsistent availability: ["COMPOSE_PARSER_UNAVAILABLE","HOST_MOUNT_FORBIDDEN"]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file://<repo>/test/infra-code-knowledge.test.js:396:14)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-code-knowledge.test.js:388:54)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      ...
+    # Subtest: missing YAML dependency
+    ok 6 - missing YAML dependency
+      ---
+      duration_ms: 996.873209
+      type: 'test'
+      ...
+    # Subtest: unsupported YAML version
+    ok 7 - unsupported YAML version
+      ---
+      duration_ms: 780.757458
+      type: 'test'
+      ...
+    # Subtest: output bound
+    ok 8 - output bound
+      ---
+      duration_ms: 686.847459
+      type: 'test'
+      ...
+    # Subtest: timeout
+    ok 9 - timeout
+      ---
+      duration_ms: 2078.595833
+      type: 'test'
+      ...
+    1..9
+not ok 1 - I05 YAML parser dependency and process failures are never accepted as execution
+  ---
+  duration_ms: 8343.006416
+  type: 'test'
+  location: '<repo>/test/infra-code-knowledge.test.js:375:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 10
+# suites 0
+# pass 8
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8485.69925

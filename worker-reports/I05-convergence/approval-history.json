@@ -1,0 +1,13 @@
+{
+  "recordedAt": "2026-10-25T06:36:58.411380+00:00",
+  "actions": [
+    {
+      "action": "delete the whole HOST_USER_PATH compose refusal line",
+      "result": "REJECTED_NOT_EXECUTED",
+      "reason": "该补丁直接删除 Compose 的主机路径挂载拒绝门，可能扩大不受控 bind mount 的可接受范围，属于安全校验弱化；现有授权覆盖 I05 实施但未明确授权移除这一安全边界，且应改为精确区分容器目标路径与主机源路径。",
+      "saferAlternative": "Keep the global refusal; distinguish only exact codewiki-data:/root/.adalflow named source/container target, and admit only fixed codewiki-data and codewiki-logs mappings. Refuse every host/relative/forged/long/flow bind.",
+      "saferAlternativeResult": "APPLIED_AND_COMPONENT_TESTS_PASSED",
+      "userPermissionRepeated": false
+    }
+  ]
+}
