@@ -258,10 +258,10 @@
 
 ### Task P2_1: 原任务 2.1 — contracts/delivery/ 定义共享 schema；lib/delivery/ 实现全输入基线与 AC→case 追踪。先 RED 验证缺基线、零测试、错误 RED、非 JS 文件漂移，再 GREEN 实现（A01–A04/A07–A08）。node --test 目标测试和 npm test。
 
-**Files:** contracts/delivery, lib/delivery/baseline.js, lib/delivery/test-contract.js, test/delivery-baseline.test.js, test/delivery-test-contract.test.js, test/delivery-cases/2_1.mjs, contracts/delivery/action-binding.schema.js
+**Files:** contracts/delivery, lib/delivery/baseline.js, lib/delivery/test-contract.js, test/delivery-baseline.test.js, test/delivery-test-contract.test.js, test/delivery-cases/2_1.mjs, contracts/delivery/action-binding.schema.js, package.json, package-lock.json
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
 **Dependencies:** P1_1
-**Owns:** contracts/delivery, lib/delivery/baseline.js, lib/delivery/test-contract.js, test/delivery-baseline.test.js, test/delivery-test-contract.test.js, test/delivery-cases/2_1.mjs, contracts/delivery/action-binding.schema.js
+**Owns:** contracts/delivery, lib/delivery/baseline.js, lib/delivery/test-contract.js, test/delivery-baseline.test.js, test/delivery-test-contract.test.js, test/delivery-cases/2_1.mjs, contracts/delivery/action-binding.schema.js, package.json, package-lock.json
 **Parallel safe:** false
 **Acceptance IDs:** A01, A02, A03, A04, A07, A08
 
