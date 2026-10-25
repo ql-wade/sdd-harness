@@ -1,0 +1,66 @@
+TAP version 13
+# Subtest: P31 root relative inspect rejects same-name bytes from another process cwd
+not ok 1 - P31 root relative inspect rejects same-name bytes from another process cwd
+  ---
+  duration_ms: 303.667042
+  type: 'test'
+  location: '<worker-tree>/test/comet-flow-acceptance.test.js:437:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    cwd file must not supply the repository proof: {"schemaVersion":1,"tool":"tools/verify/delivery-journey.mjs","runnerInvariant":"test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery","scenario":"A01","acceptanceIds":["A01"],"journey":null,"profile":"comet-managed-v2","scope":"component/observer-qualification","managedClosureEligible":false,"sourceObservation":null,"caseModule":"<temp-path>","sourceBinding":[],"verdict":"PASS","reason":null,"missing":[],"drift":[],"schemaErrors":[],"execution":{"command":"/opt/homebrew/Cellar/node/25.2.1/bin/node --test --test-reporter=tap <temp-path>","actions":[{"index":1,"id":null,"type":"spawn","expected":"component test executes","required":true,"expectation":{"kind":"exitCode","value":0},"ok":true,"exitCode":0,"durationMs":181,"note":null,"observed":null,"argv":["/opt/homebrew/Cellar/node/25.2.1/bin/node","--test","--test-reporter=tap","<temp-path>"],"command":"/opt/homebrew/Cellar/node/25.2.1/bin/node --test --test-reporter=tap <temp-path>","testOutcome":{"kind":"pass","signatures":[],"summary":{"tests":1,"suites":0,"pass":1,"fail":0,"cancelled":0,"skipped":0,"todo":0}},"observedAt":"2026-10-25T04:21:23.080Z"},{"index":2,"id":null,"type":"inspect","expected":"relative inspection observes the repository file, never a cwd collision","required":true,"expectation":{"kind":"jsonFields","value":{"cwdOnlyProof":"private-cwd-shadow"}},"ok":true,"exitCode":null,"durationMs":1,"note":null,"observed":{"path":"package.json","exists":true,"bytes":43,"fields":{"cwdOnlyProof":"private-cwd-shadow"}},"command":null,"rawEvidence":["action-2-inspection-readback.txt"],"observedAt":"2026-10-25T04:21:23.081Z"}],"tests":1,"pass":1,"fail":0,"skipped":0,"todo":0,"effectiveExecutions":1,"target":{"token":"A01","mapping":"scenario-token","found":true,"status":"ok"},"requiredAssertions":[{"id":"V_A01","status":"satisfied","matchedPoints":1,"ok":1,"failed":0,"skipped":0}],"cancelled":0},"candidate":{"gitHead":"d72fd3eed19665dba43aa0bed636c47659f7639f","node":"v25.2.1","platform":"darwin"},"timing":{"startedAt":"2026-10-25T04:21:22.887Z","finishedAt":"2026-10-25T04:21:23.082Z","durationMs":195},"evidence":{"dir":"<host-path-redacted>","files":["pilot-baseline.json","case-definition.json","action-1-stdout.txt","action-1-stderr.txt","action-2-inspection-readback.txt","verdict.json"],"sha256":{"pilot-baseline.json":"8e1d656ba220a3dbbe10ffb078a3ea4876db9e4d4d6f1de7f060e9cd69909e92","case-definition.json":"0dcf72e2b87a01f9124a20cc06ff2b763ea7f760a7fa2976eec28d637d1a5a7f","action-1-stdout.txt":"180a394ef1143c168cbc1c480d78b443774718b68903fec57807cadbc22dd5ca","action-1-stderr.txt":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","action-2-inspection-readback.txt":"facb269aec3d77aa1f4e7c862638ab09a4d3e9a87d0ad2553a275e71ecd0ca0d"}},"exitCode":0}
+
+    0 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    file://<worker-tree>/test/comet-flow-acceptance.test.js:440:10
+    fixture (file://<worker-tree>/test/comet-flow-acceptance.test.js:68:16)
+    TestContext.<anonymous> (file://<worker-tree>/test/comet-flow-acceptance.test.js:437:90)
+    Test.runInAsyncScope (node:async_hooks:213:14)
+    Test.run (node:internal/test_runner/test:1106:25)
+    Test.start (node:internal/test_runner/test:1003:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:358:17)
+  ...
+# Subtest: P31 root relative inspect reads and displays the same repository target across cwd
+not ok 2 - P31 root relative inspect reads and displays the same repository target across cwd
+  ---
+  duration_ms: 270.596791
+  type: 'test'
+  location: '<worker-tree>/test/comet-flow-acceptance.test.js:447:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    repository content must remain independent of cwd: {"schemaVersion":1,"tool":"tools/verify/delivery-journey.mjs","runnerInvariant":"test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery","scenario":"A01","acceptanceIds":["A01"],"journey":null,"profile":"comet-managed-v2","scope":"component/observer-qualification","managedClosureEligible":false,"sourceObservation":null,"caseModule":"<temp-path>","sourceBinding":[],"verdict":"FAIL","reason":"action-2-failed (inspect): expected bytes do not match the inspected file content (expected: stat, bytes and display refer to the specified repository target)","missing":[],"drift":[],"schemaErrors":[],"execution":{"command":"/opt/homebrew/Cellar/node/25.2.1/bin/node --test --test-reporter=tap <temp-path>","actions":[{"index":1,"id":null,"type":"spawn","expected":"component test executes","required":true,"expectation":{"kind":"exitCode","value":0},"ok":true,"exitCode":0,"durationMs":158,"note":null,"observed":null,"argv":["/opt/homebrew/Cellar/node/25.2.1/bin/node","--test","--test-reporter=tap","<temp-path>"],"command":"/opt/homebrew/Cellar/node/25.2.1/bin/node --test --test-reporter=tap <temp-path>","testOutcome":{"kind":"pass","signatures":[],"summary":{"tests":1,"suites":0,"pass":1,"fail":0,"cancelled":0,"skipped":0,"todo":0}},"observedAt":"2026-10-25T04:21:23.355Z"},{"index":2,"id":null,"type":"inspect","expected":"stat, bytes and display refer to the specified repository target","required":true,"expectation":{"kind":"equals","value":"{\n  \"name\": \"ai-coding-scaffold\",\n  \"version\": \"0.2.4\",\n  \"description\": \"Team AI coding scaffold \\u2014 AGENTS.md conventions, vendored skills, hooks control plane, MCP capability manifest, and gate/audit verification tooling\",\n  \"type\": \"module\",\n  \"bin\": {\n    \"sdd\": \"bin/cli.js\"\n  },\n  \"files\": [\n    \"bin\",\n    \"lib\",\n    \"contracts\",\n    \"hooks\",\n    \"hooks.yaml\",\n    \"mcp-capabilities.yaml\",\n    \"scripts\",\n    \"tools\",\n    \"AGENTS.md\",\n    \"docs/agent\"\n  ],\n  \"scripts\": {\n    \"test\": \"node --test test/*.test.js\",\n    \"bootstrap\": \"bash tools/bootstrap.sh\",\n    \"check\": \"bash scripts/check.sh\"\n  },\n  \"keywords\": [\n    \"scaffold\",\n    \"ai-coding\",\n    \"agents-md\",\n    \"claude-code\",\n    \"hooks\",\n    \"mcp\",\n    \"tdd\",\n    \"whitebox-verify\",\n    \"openspec\"\n  ],\n  \"author\": \"ql\",\n  \"license\": \"MIT\",\n  \"engines\": {\n    \"node\": \">=18.0.0\"\n  },\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"https://github.com/ql-wade/sdd-harness\"\n  },\n  \"dependencies\": {\n    \"chalk\": \"^5.3.0\",\n    \"commander\": \"^12.0.0\",\n    \"commonmark\": \"0.31.2\",\n    \"fs-extra\": \"^11.2.0\"\n  }\n}\n"},"ok":false,"exitCode":null,"durationMs":0,"note":"expected bytes do not match the inspected file content","observed":{"path":"package.json","exists":true,"bytes":48,"value":"{\n  \"cwdOnlyProof\": \"different-short-content\"\n}\n"},"command":null,"rawEvidence":["action-2-inspection-readback.txt"],"observedAt":"2026-10-25T04:21:23.355Z"}],"tests":1,"pass":1,"fail":0,"skipped":0,"todo":0,"effectiveExecutions":1,"target":{"token":"A01","mapping":"scenario-token","found":true,"status":"ok"},"requiredAssertions":[{"id":"V_A01","status":"satisfied","matchedPoints":1,"ok":1,"failed":0,"skipped":0}],"cancelled":0},"candidate":{"gitHead":"d72fd3eed19665dba43aa0bed636c47659f7639f","node":"v25.2.1","platform":"darwin"},"timing":{"startedAt":"2026-10-25T04:21:23.184Z","finishedAt":"2026-10-25T04:21:23.356Z","durationMs":172},"evidence":{"dir":"<host-path-redacted>","files":["pilot-baseline.json","case-definition.json","action-1-stdout.txt","action-1-stderr.txt","action-2-inspection-readback.txt","verdict.json"],"sha256":{"pilot-baseline.json":"8e1d656ba220a3dbbe10ffb078a3ea4876db9e4d4d6f1de7f060e9cd69909e92","case-definition.json":"afa5c64f8543695fbf6b7bb8687bbfe029b1b9cc19084d8870cef2944711befd","action-1-stdout.txt":"982a324fb5974a72a5d7d4c7be8cb31318a5262218b928fc470a404941043dc2","action-1-stderr.txt":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","action-2-inspection-readback.txt":"30b4f58565acc624a9c44a59cfc776024599134bbf9e3c6ab244631c885f6767"}},"exitCode":2}
+
+    2 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    file://<worker-tree>/test/comet-flow-acceptance.test.js:451:10
+    fixture (file://<worker-tree>/test/comet-flow-acceptance.test.js:68:16)
+    TestContext.<anonymous> (file://<worker-tree>/test/comet-flow-acceptance.test.js:447:98)
+    Test.runInAsyncScope (node:async_hooks:213:14)
+    Test.run (node:internal/test_runner/test:1106:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+    Test.postRun (node:internal/test_runner/test:1235:19)
+    Test.run (node:internal/test_runner/test:1163:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 701.977417
+
+# STDERR

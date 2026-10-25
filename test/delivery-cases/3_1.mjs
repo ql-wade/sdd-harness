@@ -1,4 +1,4 @@
-// P3_1 delivery case: the managed-pilot registration is machine-checkable and
+// P3_1 delivery case: the comet-managed-v2 registration is machine-checkable and
 // the delivery journey runner is a real test action/observer adapter.
 //
 // Coverage:
@@ -32,7 +32,8 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import test, { after } from 'node:test';
+import { taskDefinitionDigest } from '../../lib/delivery/baseline.js';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -41,11 +42,19 @@ const schemaPath = path.join(projectRoot, 'tools', 'verify', 'delivery-case-sche
 const changeDir = path.join(projectRoot, 'openspec/changes/delivery-foundation-rearchitecture');
 const pilotContractPath = path.join(changeDir, 'pilot-contract.md');
 
+const tempRoots = new Set();
+function makeTemp(prefix) {
+  const root = fs.mkdtempSync(prefix);
+  tempRoots.add(root);
+  return root;
+}
+after(() => { for (const root of tempRoots) fs.rmSync(root, { recursive: true, force: true }); });
+
 const RUN_TIMEOUT_MS = 120_000;
 const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 // Same normalization as lib/delivery/baseline.js taskDefinitionDigest: checkbox
 // state must never change the frozen plan definition digest.
-const planContentDigest = (text) => sha256(String(text).replace(/\[[ xX]\]/g, '[ ]'));
+const planContentDigest = taskDefinitionDigest;
 
 function runJourney(args) {
   return spawnSync('node', [runnerCli, ...args], {
@@ -79,7 +88,7 @@ function fixtureCasePlan(root, entries) {
   for (const entry of entries) {
     cases[entry.scenario] = {
       source_binding: [{ path: 'specs/delivery-foundation/spec.md', scenario: entry.scenario }],
-      intended_command: `node tools/verify/delivery-journey.mjs --scenario ${entry.scenario} --profile managed-pilot --evidence-dir <dir> --json`,
+      intended_command: `node tools/verify/delivery-journey.mjs --scenario ${entry.scenario} --profile comet-managed-v2 --evidence-dir <dir> --json`,
       case_module: entry.caseModule,
       steps: ['fixture step'],
       oracle: entry.oracle ?? 'fixture oracle',
@@ -128,7 +137,7 @@ function fixturePilotContract(root, opts = {}) {
   for (const name of opts.emptyNegativeAc ?? []) negativeAc[name] = [];
   const contract = {
     schemaVersion: 1,
-    profile: 'managed-pilot',
+    profile: 'comet-managed-v2',
     pilot: {
       repository: 'fixture repository',
       ownerRegistry: 'infra/delivery/registry.json#sdd-harness-pilot (owner ql-wade)',
@@ -158,7 +167,7 @@ test('3.1.a pilot contract freeze: the machine block pins pilot/owner/environmen
   const contract = JSON.parse(match[1]);
 
   assert.equal(contract.schemaVersion, 1);
-  assert.equal(contract.profile, 'managed-pilot');
+  assert.equal(contract.profile, 'comet-managed-v2');
   assert.match(contract.pilot.ownerRegistry, /sdd-harness-pilot/, 'owner must reference the I01 registry project');
   assert.match(contract.pilot.ownerRegistry, /ql-wade/, 'owner must be the registered owner');
   assert.match(contract.pilot.environment, /worktree|TMPDIR|local-isolated/, 'target environment must be local isolation');
@@ -184,14 +193,17 @@ test('3.1.a pilot contract freeze: the machine block pins pilot/owner/environmen
 
 // --- 3.1.b schema + journey runner -------------------------------------------
 
-test('3.1.b runner PASS on real case scenario A01: executes test/delivery-cases/2_1.mjs with execution count > 0 and persists evidence', () => {
-  const evidenceDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-a01-')), 'evidence');
-  const run = runJourney(['--scenario', 'A01', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir, '--json']);
+test('3.1.b component runner on real case scenario A01: executes test/delivery-cases/2_1.mjs with execution count > 0 and persists evidence', () => {
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-a01-'));
+  const evidenceDir = path.join(root, 'evidence');
+  const run = runJourney(['--scenario', 'A01', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir, '--case-plan', fixtureCasePlan(root, [{ scenario: 'A01', caseModule: 'test/delivery-cases/2_1.mjs' }]), '--pilot-contract', fixturePilotContract(root), '--json']);
   assert.equal(run.status, 0, `runner must exit 0 for PASS, got ${run.status}: ${run.stderr}`);
   const verdict = readVerdict(run, evidenceDir);
   assert.equal(verdict.verdict, 'PASS');
+  assert.equal(verdict.scope, 'component/observer-qualification');
+  assert.equal(verdict.managedClosureEligible, false);
   assert.equal(verdict.scenario, 'A01');
-  assert.equal(verdict.profile, 'managed-pilot');
+  assert.equal(verdict.profile, 'comet-managed-v2');
   assert.equal(verdict.caseModule, 'test/delivery-cases/2_1.mjs');
   assert.ok(verdict.execution.pass > 0, 'actual execution count must be greater than 0');
   assert.equal(verdict.execution.fail, 0);
@@ -214,11 +226,12 @@ test('3.1.b runner PASS on real case scenario A01: executes test/delivery-cases/
   assert.match(persistedDefinition.sourceBinding[0].path, /delivery-foundation/);
 });
 
-test('3.1.b runner PASS on real scenario A02 (2_1.mjs) and A20 (2_3.mjs) from different modules', () => {
+test('3.1.b component runner on real scenarios A02 (2_1.mjs) and A20 (2_3.mjs) from different modules', () => {
   const expectedModule = { A02: 'test/delivery-cases/2_1.mjs', A20: 'test/delivery-cases/2_3.mjs' };
   for (const scenario of ['A02', 'A20']) {
-    const evidenceDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), `sdd-p31-${scenario.toLowerCase()}-`)), 'evidence');
-    const run = runJourney(['--scenario', scenario, '--profile', 'managed-pilot', '--evidence-dir', evidenceDir, '--json']);
+    const root = makeTemp(path.join(os.tmpdir(), `sdd-p31-${scenario.toLowerCase()}-`));
+    const evidenceDir = path.join(root, 'evidence');
+    const run = runJourney(['--scenario', scenario, '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir, '--case-plan', fixtureCasePlan(root, [{ scenario, caseModule: expectedModule[scenario] }]), '--pilot-contract', fixturePilotContract(root), '--json']);
     assert.equal(run.status, 0, `runner must exit 0 for ${scenario} PASS, got ${run.status}: ${run.stderr}`);
     const verdict = readVerdict(run, evidenceDir);
     assert.equal(verdict.verdict, 'PASS', `${scenario} must genuinely pass`);
@@ -233,7 +246,7 @@ test('3.1.b runner on a convention-less real case: a green module with no scenar
   // Internal anchor-less fixture (not the live 1_6.mjs, which gained B09
   // anchors in the P1_6 rework): preserves the original regression intent —
   // the runner refuses to count an unmapped green module as a scenario pass.
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-b09-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-b09-'));
   const evidenceDir = path.join(root, 'evidence');
   const modulePath = fixtureModule(root, 'b09-unmapped.test.mjs', "test('plain passing point without any scenario token', () => { assert.ok(true); });");
   const caseDefinition = writeFixture(root, 'case-definition.json', JSON.stringify({
@@ -252,8 +265,8 @@ test('3.1.b runner on a convention-less real case: a green module with no scenar
       'NOT-APPLICABLE': 'explicitly out of scope with reason',
     },
   }));
-  const run = runJourney(['--scenario', 'B09', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
-    '--case-definition', caseDefinition, '--json']);
+  const run = runJourney(['--scenario', 'B09', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
+    '--case-definition', caseDefinition, '--pilot-contract', fixturePilotContract(root), '--json']);
   // The fixture module executes a real passing test but none is anchored to
   // B09: the frozen plan entry (assertion_binding_required) demands a
   // verifiable case→assertion mapping, so the runner refuses instead of
@@ -274,7 +287,7 @@ test('3.1.b runner on a convention-less real case: a green module with no scenar
 });
 
 test('3.1.b runner FAIL verdict without green-washing: a genuinely failing action fails once and is never retried', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-fail-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-fail-'));
   const counterPath = path.join(root, 'invocations.log');
   const failScript = writeFixture(root, 'fail-and-count.cjs', [
     'const fs = require("node:fs");',
@@ -300,8 +313,8 @@ test('3.1.b runner FAIL verdict without green-washing: a genuinely failing actio
     },
   }));
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--scenario', 'X98', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
-    '--case-definition', caseDefinition, '--json']);
+  const run = runJourney(['--scenario', 'X98', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
+    '--case-definition', caseDefinition, '--pilot-contract', fixturePilotContract(root), '--json']);
   assert.equal(run.status, 2, `verification failure must exit 2, got ${run.status}`);
   const verdict = readVerdict(run, evidenceDir);
   assert.equal(verdict.verdict, 'FAIL');
@@ -311,21 +324,21 @@ test('3.1.b runner FAIL verdict without green-washing: a genuinely failing actio
 });
 
 test('3.1.b runner NOT-EXERCISED: unregistered scenario and all-skip module are structured non-zero, never a pass', () => {
-  const unregisteredDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-unreg-')), 'evidence');
-  const unregistered = runJourney(['--scenario', 'Z99', '--profile', 'managed-pilot', '--evidence-dir', unregisteredDir, '--json']);
+  const unregisteredDir = path.join(makeTemp(path.join(os.tmpdir(), 'sdd-p31-unreg-')), 'evidence');
+  const unregistered = runJourney(['--scenario', 'Z99', '--profile', 'comet-managed-v2', '--evidence-dir', unregisteredDir, '--json']);
   assert.equal(unregistered.status, 2, 'unknown scenario must exit 2');
   const unregisteredVerdict = readVerdict(unregistered, unregisteredDir);
   assert.equal(unregisteredVerdict.verdict, 'NOT-EXERCISED');
   assert.match(unregisteredVerdict.reason, /scenario-not-registered-in-case-plan/);
 
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-skip-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-skip-'));
   const modulePath = fixtureModule(root, 'x97.test.mjs', [
     "test('skip A', { skip: 'environment not provisioned' }, () => {});",
     "test('skip B', { skip: true }, () => {});",
   ].join('\n'));
   const planPath = fixtureCasePlan(root, [{ scenario: 'X97', caseModule: modulePath }]);
   const evidenceDir = path.join(root, 'evidence');
-  const allSkipped = runJourney(['--scenario', 'X97', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+  const allSkipped = runJourney(['--scenario', 'X97', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
     '--case-plan', planPath, '--json']);
   assert.equal(allSkipped.status, 2, 'all-skip execution must exit 2');
   const verdict = readVerdict(allSkipped, evidenceDir);
@@ -336,14 +349,14 @@ test('3.1.b runner NOT-EXERCISED: unregistered scenario and all-skip module are 
 
   // A tagged target point that is skipped while other tests pass is still not
   // an exercise of the scenario: skips are never converted into a pass.
-  const rootTagged = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-targetskip-'));
+  const rootTagged = makeTemp(path.join(os.tmpdir(), 'sdd-p31-targetskip-'));
   const taggedModule = fixtureModule(rootTagged, 'x97b.test.mjs', [
     "test('V_X97B: genuine point', () => { assert.ok(true); });",
     "test('V_X97: the scenario point', { skip: 'capability not provisioned in this environment' }, () => {});",
   ].join('\n'));
   const taggedPlanPath = fixtureCasePlan(rootTagged, [{ scenario: 'X97', caseModule: taggedModule }]);
   const taggedDir = path.join(rootTagged, 'evidence');
-  const targetSkipped = runJourney(['--scenario', 'X97', '--profile', 'managed-pilot', '--evidence-dir', taggedDir,
+  const targetSkipped = runJourney(['--scenario', 'X97', '--profile', 'comet-managed-v2', '--evidence-dir', taggedDir,
     '--case-plan', taggedPlanPath, '--json']);
   assert.equal(targetSkipped.status, 2, 'a skipped target point must exit 2 even when the module is green');
   const taggedVerdict = readVerdict(targetSkipped, taggedDir);
@@ -355,7 +368,7 @@ test('3.1.b runner NOT-EXERCISED: unregistered scenario and all-skip module are 
 });
 
 test('3.1.b schema enforcement: a case definition violating delivery-case-schema.json is refused with named paths', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-schema-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-schema-'));
   const modulePath = fixtureModule(root, 'x96.test.mjs', "test('V_X96: fixture point', () => { assert.ok(true); });");
   const caseDefinition = writeFixture(root, 'case-definition.json', JSON.stringify({
     schemaVersion: 1,
@@ -370,8 +383,8 @@ test('3.1.b schema enforcement: a case definition violating delivery-case-schema
     },
   }));
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--scenario', 'X96', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
-    '--case-definition', caseDefinition, '--json']);
+  const run = runJourney(['--scenario', 'X96', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
+    '--case-definition', caseDefinition, '--pilot-contract', fixturePilotContract(root), '--json']);
   assert.equal(run.status, 2, 'schema-invalid definition must exit 2');
   const verdict = readVerdict(run, evidenceDir);
   assert.equal(verdict.verdict, 'NOT-EXERCISED');
@@ -383,23 +396,23 @@ test('3.1.b schema enforcement: a case definition violating delivery-case-schema
 });
 
 test('3.1.b invalid input exits 1: missing required option and malformed scenario id', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-input-'));
-  const missingOption = runJourney(['--profile', 'managed-pilot', '--evidence-dir', path.join(root, 'e1'), '--json']);
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-input-'));
+  const missingOption = runJourney(['--profile', 'comet-managed-v2', '--evidence-dir', path.join(root, 'e1'), '--json']);
   assert.equal(missingOption.status, 1, 'missing --scenario is invalid input');
 
-  const malformed = runJourney(['--scenario', 'bad-id', '--profile', 'managed-pilot', '--evidence-dir', path.join(root, 'e2'), '--json']);
+  const malformed = runJourney(['--scenario', 'bad-id', '--profile', 'comet-managed-v2', '--evidence-dir', path.join(root, 'e2'), '--json']);
   assert.equal(malformed.status, 1, 'malformed scenario id is invalid input');
 });
 
 // --- 3.1.c A01 / A15 landings -------------------------------------------------
 
 test('3.1.c A01 landing: dispatch without TestContract/PlanBundle in the pilot baseline is refused with the missing list', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-a01ref-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-a01ref-'));
   const modulePath = fixtureModule(root, 'x95.test.mjs', "test('V_X95: fixture point', () => { assert.ok(true); });");
   const planPath = fixtureCasePlan(root, [{ scenario: 'X95', caseModule: modulePath }]);
   const contractPath = fixturePilotContract(root, { omitArtifacts: ['testContract', 'planBundle'] });
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--scenario', 'X95', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+  const run = runJourney(['--scenario', 'X95', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
     '--case-plan', planPath, '--pilot-contract', contractPath, '--json']);
   assert.equal(run.status, 2, 'refusal must be nonzero');
   const verdict = readVerdict(run, evidenceDir);
@@ -410,12 +423,12 @@ test('3.1.c A01 landing: dispatch without TestContract/PlanBundle in the pilot b
 });
 
 test('3.1.c A01 landing: a gap in the negative AC panel is named in the missing list', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-acgap-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-acgap-'));
   const modulePath = fixtureModule(root, 'x95.test.mjs', "test('V_X95: fixture point', () => { assert.ok(true); });");
   const planPath = fixtureCasePlan(root, [{ scenario: 'X95', caseModule: modulePath }]);
   const contractPath = fixturePilotContract(root, { emptyNegativeAc: ['permissions'] });
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--scenario', 'X95', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+  const run = runJourney(['--scenario', 'X95', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
     '--case-plan', planPath, '--pilot-contract', contractPath, '--json']);
   assert.equal(run.status, 2);
   const verdict = readVerdict(run, evidenceDir);
@@ -425,7 +438,7 @@ test('3.1.c A01 landing: a gap in the negative AC panel is named in the missing 
 });
 
 test('3.1.c A15 landing: PlanBundle freeze binding is checkbox-state-agnostic but definition-sensitive', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-plan-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-plan-'));
   const modulePath = fixtureModule(root, 'x94.test.mjs', "test('V_X94: fixture point', () => { assert.ok(true); });");
   const planPath = fixtureCasePlan(root, [{ scenario: 'X94', caseModule: modulePath }]);
   const planFile = writeFixture(root, 'plan-bundle.md', [
@@ -442,7 +455,7 @@ test('3.1.c A15 landing: PlanBundle freeze binding is checkbox-state-agnostic bu
   });
   const run = (label) => {
     const evidenceDir = path.join(root, `evidence-${label}`);
-    const result = runJourney(['--scenario', 'X94', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+    const result = runJourney(['--scenario', 'X94', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
       '--case-plan', planPath, '--pilot-contract', contractPath, '--json']);
     return { result, evidenceDir };
   };
@@ -470,7 +483,7 @@ test('3.1.c A15 landing: PlanBundle freeze binding is checkbox-state-agnostic bu
 });
 
 test('3.1.c A15 landing: frozen Product drift refuses dispatch with expected/observed digests', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-drift-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-drift-'));
   const modulePath = fixtureModule(root, 'x93.test.mjs', "test('V_X93: fixture point', () => { assert.ok(true); });");
   const planPath = fixtureCasePlan(root, [{ scenario: 'X93', caseModule: modulePath }]);
   const contractPath = fixturePilotContract(root, {
@@ -479,7 +492,7 @@ test('3.1.c A15 landing: frozen Product drift refuses dispatch with expected/obs
     },
   });
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--scenario', 'X93', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+  const run = runJourney(['--scenario', 'X93', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
     '--case-plan', planPath, '--pilot-contract', contractPath, '--json']);
   assert.equal(run.status, 2);
   const verdict = readVerdict(run, evidenceDir);
@@ -537,14 +550,14 @@ function fixtureCaseDefinition(root, name, overrides = {}) {
 }
 
 test('RW_TARGET_REQUIRED: P1-04 counterexample — scenario A01 registered to an unrelated all-green arithmetic suite must exit nonzero, never PASS', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-unrelated-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-rw-unrelated-'));
   // The exact grill counterexample body: an unrelated suite that is fully green.
   const modulePath = fixtureModule(root, 'unrelated.test.mjs',
     "test('arithmetic', () => { assert.equal(1 + 1, 2); });");
   const planPath = fixtureCasePlan(root, [{ scenario: 'A01', caseModule: modulePath }]);
   const contractPath = fixturePilotContract(root);
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--scenario', 'A01', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+  const run = runJourney(['--scenario', 'A01', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
     '--case-plan', planPath, '--pilot-contract', contractPath, '--json']);
   assert.notEqual(run.status, 0,
     `an unrelated green suite must never sign the registered scenario; got exit ${run.status}`);
@@ -558,7 +571,7 @@ test('RW_TARGET_REQUIRED: P1-04 counterexample — scenario A01 registered to an
 });
 
 test('RW_TARGET_REQUIRED: a declared required assertion with no matching test point (missing target / wrong mapping) is refused nonzero', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-missing-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-rw-missing-'));
   const modulePath = fixtureModule(root, 'x90.test.mjs',
     "test('V_OTHER: a different scenario entirely', () => { assert.ok(true); });");
   const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
@@ -566,7 +579,7 @@ test('RW_TARGET_REQUIRED: a declared required assertion with no matching test po
     actions: [{ type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } }],
   });
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--scenario', 'X90', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+  const run = runJourney(['--scenario', 'X90', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
     '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
   assert.notEqual(run.status, 0, 'a suite green on OTHER assertions must not pass this scenario');
   const verdict = readVerdict(run, evidenceDir);
@@ -575,7 +588,7 @@ test('RW_TARGET_REQUIRED: a declared required assertion with no matching test po
 });
 
 test('RW_TARGET_REQUIRED: zero-target denominator (empty requiredAssertions) is refused at the schema layer', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-zero-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-rw-zero-'));
   const modulePath = fixtureModule(root, 'x91.test.mjs', "test('V_X91: point', () => { assert.ok(true); });");
   const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
     scenario: 'X91',
@@ -585,7 +598,7 @@ test('RW_TARGET_REQUIRED: zero-target denominator (empty requiredAssertions) is 
     actions: [{ type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } }],
   });
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--scenario', 'X91', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+  const run = runJourney(['--scenario', 'X91', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
     '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
   assert.notEqual(run.status, 0, 'an empty target denominator can never be a valid case');
   const verdict = readVerdict(run, evidenceDir);
@@ -595,7 +608,7 @@ test('RW_TARGET_REQUIRED: zero-target denominator (empty requiredAssertions) is 
 });
 
 test('RW_TARGET_REQUIRED: composite scenario missing any required sub-assertion is refused nonzero', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-composite-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-rw-composite-'));
   // Composite fixture: only the persist sub-assertion exists; the readback
   // sub-assertion is absent from the executed module.
   const modulePath = fixtureModule(root, 'x89.test.mjs', [
@@ -609,7 +622,7 @@ test('RW_TARGET_REQUIRED: composite scenario missing any required sub-assertion 
     actions: [{ type: 'spawn', command: `node --test ${modulePath}`, expected: 'both sub-assertions execute green', expect: { kind: 'exitCode', value: 0 } }],
   });
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--scenario', 'X89', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+  const run = runJourney(['--scenario', 'X89', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
     '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
   assert.notEqual(run.status, 0, 'a composite scenario missing any required sub-assertion must not pass');
   const verdict = readVerdict(run, evidenceDir);
@@ -622,12 +635,12 @@ test('RW_TARGET_REQUIRED: composite scenario missing any required sub-assertion 
 
 test('RW_TARGET_REQUIRED: all-skip module stays nonzero; a complete verifiable mapping passes', () => {
   // All-skip entire module: zero effective execution.
-  const rootSkip = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-allskip-'));
+  const rootSkip = makeTemp(path.join(os.tmpdir(), 'sdd-p31-rw-allskip-'));
   const skipModule = fixtureModule(rootSkip, 'x88.test.mjs', [
     "test('V_X88: point', { skip: 'environment not provisioned' }, () => {});",
   ].join('\n'));
   const skipPlan = fixtureCasePlan(rootSkip, [{ scenario: 'X88', caseModule: skipModule }]);
-  const skipRun = runJourney(['--scenario', 'X88', '--profile', 'managed-pilot',
+  const skipRun = runJourney(['--scenario', 'X88', '--profile', 'comet-managed-v2',
     '--evidence-dir', path.join(rootSkip, 'evidence'), '--case-plan', skipPlan,
     '--pilot-contract', fixturePilotContract(rootSkip), '--json']);
   assert.equal(skipRun.status, 2, 'all-skip must exit 2');
@@ -636,11 +649,11 @@ test('RW_TARGET_REQUIRED: all-skip module stays nonzero; a complete verifiable m
 
   // Positive control: the same scenario with a genuinely matching, ok test
   // point passes — the strengthened denominator still admits real evidence.
-  const rootOk = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-ok-'));
+  const rootOk = makeTemp(path.join(os.tmpdir(), 'sdd-p31-rw-ok-'));
   const okModule = fixtureModule(rootOk, 'x88b.test.mjs',
     "test('V_X88: real point', () => { assert.ok(true); });");
   const okPlan = fixtureCasePlan(rootOk, [{ scenario: 'X88', caseModule: okModule }]);
-  const okRun = runJourney(['--scenario', 'X88', '--profile', 'managed-pilot',
+  const okRun = runJourney(['--scenario', 'X88', '--profile', 'comet-managed-v2',
     '--evidence-dir', path.join(rootOk, 'evidence'), '--case-plan', okPlan,
     '--pilot-contract', fixturePilotContract(rootOk), '--json']);
   assert.equal(okRun.status, 0, `a verifiable mapping must still pass: ${okRun.stderr}`);
@@ -652,7 +665,7 @@ test('RW_TARGET_REQUIRED: all-skip module stays nonzero; a complete verifiable m
 // --- RW_OBSERVATION_REQUIRED: typed final-state readback (V_RW_OBSERVATION_REQUIRED)
 
 test('RW_OBSERVATION_REQUIRED: a required inspect whose live probe contradicts the typed expectation fails the journey — inspections are not free', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-inspect-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-rw-inspect-'));
   const modulePath = fixtureModule(root, 'x87.test.mjs', "test('V_X87: point', () => { assert.ok(true); });");
   const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
     scenario: 'X87',
@@ -663,14 +676,14 @@ test('RW_OBSERVATION_REQUIRED: a required inspect whose live probe contradicts t
       { type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } },
       {
         type: 'inspect',
-        path: 'node --version',
+        command: 'node --version',
         expected: 'observed toolchain version equals the frozen expectation',
         expect: { kind: 'equals', value: 'v0.0.0-fake-stale-readback' },
       },
     ],
   });
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--scenario', 'X87', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+  const run = runJourney(['--scenario', 'X87', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
     '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
   assert.notEqual(run.status, 0, 'a live observation contradicting the frozen expectation must fail');
   const verdict = readVerdict(run, evidenceDir);
@@ -683,7 +696,7 @@ test('RW_OBSERVATION_REQUIRED: a required inspect whose live probe contradicts t
 });
 
 test('RW_OBSERVATION_REQUIRED: a required inspect whose probe command itself fails (commandSucceeds) fails the journey', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-inspectfail-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-rw-inspectfail-'));
   const modulePath = fixtureModule(root, 'x86.test.mjs', "test('V_X86: point', () => { assert.ok(true); });");
   const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
     scenario: 'X86',
@@ -694,14 +707,14 @@ test('RW_OBSERVATION_REQUIRED: a required inspect whose probe command itself fai
       { type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } },
       {
         type: 'inspect',
-        path: 'node -e process.exit(3)',
+        command: 'node -e process.exit(3)',
         expected: 'the required environment probe succeeds',
         expect: { kind: 'commandSucceeds' },
       },
     ],
   });
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--scenario', 'X86', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+  const run = runJourney(['--scenario', 'X86', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
     '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
   assert.notEqual(run.status, 0, 'a failing required probe must fail the journey');
   const verdict = readVerdict(run, evidenceDir);
@@ -709,12 +722,12 @@ test('RW_OBSERVATION_REQUIRED: a required inspect whose probe command itself fai
 });
 
 test('RW_OBSERVATION_REQUIRED: a non-empty state file whose bytes contradict the typed readback cannot sign PASS (fake/stale readback refused)', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-stale-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-rw-stale-'));
   const modulePath = fixtureModule(root, 'x85.test.mjs', "test('V_X85: point', () => { assert.ok(true); });");
-  // Pre-existing stale bytes in the evidence dir — non-empty, wrong content.
+  // Stale domain bytes are independently read; this invocation gets fresh evidence.
   const evidenceDir = path.join(root, 'evidence');
-  fs.mkdirSync(evidenceDir, { recursive: true });
-  fs.writeFileSync(path.join(evidenceDir, 'journey-state.txt'), 'stale-bytes-from-an-older-run');
+  const staleFile = path.join(root, 'journey-state.txt');
+  fs.writeFileSync(staleFile, 'stale-bytes-from-an-older-run');
   const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
     scenario: 'X85',
     acceptanceIds: ['X85'],
@@ -724,13 +737,13 @@ test('RW_OBSERVATION_REQUIRED: a non-empty state file whose bytes contradict the
       { type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } },
       {
         type: 'readState',
-        path: 'journey-state.txt',
+        path: staleFile,
         expected: 'independently read persisted terminal state equals the frozen bytes',
         expect: { kind: 'equals', value: 'journey-state-v1' },
       },
     ],
   });
-  const run = runJourney(['--scenario', 'X85', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+  const run = runJourney(['--scenario', 'X85', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
     '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
   assert.notEqual(run.status, 0, 'file existence alone must not satisfy a typed readback');
   const verdict = readVerdict(run, evidenceDir);
@@ -739,7 +752,7 @@ test('RW_OBSERVATION_REQUIRED: a non-empty state file whose bytes contradict the
 });
 
 test('RW_OBSERVATION_REQUIRED: observed-version assertions anchor to an independent live probe (nb-3: registered value never self-attests)', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-live-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-rw-live-'));
   const modulePath = fixtureModule(root, 'x84.test.mjs', "test('V_X84: point', () => { assert.ok(true); });");
   // The expectation value is derived by an INDEPENDENT probe in this test —
   // not copied from any baseline file. The runner must itself run the live
@@ -756,14 +769,14 @@ test('RW_OBSERVATION_REQUIRED: observed-version assertions anchor to an independ
       { type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } },
       {
         type: 'inspect',
-        path: 'node --version',
+        command: 'node --version',
         expected: 'live toolchain version equals the independently probed value',
         expect: { kind: 'equals', value: expectedVersion },
       },
     ],
   });
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--scenario', 'X84', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+  const run = runJourney(['--scenario', 'X84', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
     '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
   assert.equal(run.status, 0, `a true live observation must pass: ${run.stderr}`);
   const verdict = readVerdict(run, evidenceDir);
@@ -775,7 +788,7 @@ test('RW_OBSERVATION_REQUIRED: observed-version assertions anchor to an independ
 });
 
 test('RW_OBSERVATION_REQUIRED: wrong candidate is refused — a typed equals expectation on the live git HEAD mismatch fails nonzero', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-candidate-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-rw-candidate-'));
   const modulePath = fixtureModule(root, 'x83.test.mjs', "test('V_X83: point', () => { assert.ok(true); });");
   const definitionPath = fixtureCaseDefinition(root, 'case-definition.json', {
     scenario: 'X83',
@@ -786,14 +799,14 @@ test('RW_OBSERVATION_REQUIRED: wrong candidate is refused — a typed equals exp
       { type: 'spawn', command: `node --test ${modulePath}`, expected: 'module green', expect: { kind: 'exitCode', value: 0 } },
       {
         type: 'inspect',
-        path: 'git rev-parse HEAD',
+        command: 'git rev-parse HEAD',
         expected: 'the observed candidate matches the frozen candidate binding',
         expect: { kind: 'equals', value: '0000000000000000000000000000000000000000' },
       },
     ],
   });
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--scenario', 'X83', '--profile', 'managed-pilot', '--evidence-dir', evidenceDir,
+  const run = runJourney(['--scenario', 'X83', '--profile', 'comet-managed-v2', '--evidence-dir', evidenceDir,
     '--case-definition', definitionPath, '--pilot-contract', fixturePilotContract(root), '--json']);
   const headRun = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: projectRoot, encoding: 'utf8' });
   if (headRun.status === 0) {
@@ -813,7 +826,7 @@ function fixtureJourneyPlan(root, journey) {
   const cases = {
     [journey.scenario]: {
       source_binding: [{ path: 'specs/delivery-foundation/spec.md', scenario: journey.scenario }],
-      intended_command: `node tools/verify/delivery-journey.mjs --journey ${journey.name} --profile managed-pilot --evidence-dir <dir> --json`,
+      intended_command: `node tools/verify/delivery-journey.mjs --journey ${journey.name} --profile comet-managed-v2 --evidence-dir <dir> --json`,
       case_module: journey.caseModule,
       steps: ['fixture step'],
       oracle: 'fixture oracle',
@@ -836,25 +849,25 @@ function fixtureJourneyPlan(root, journey) {
 }
 
 test('--journey interface: an unknown journey name is a structured nonzero refusal, and the registered real journeys without implemented recipes exit nonzero UNVERIFIED with their owner recorded', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-journey-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-rw-journey-'));
   // Unknown name: never a default-success path.
-  const unknownRun = runJourney(['--journey', 'no-such-journey', '--profile', 'managed-pilot',
+  const unknownRun = runJourney(['--journey', 'no-such-journey', '--profile', 'comet-managed-v2',
     '--evidence-dir', path.join(root, 'e-unknown'), '--json']);
   assert.notEqual(unknownRun.status, 0, 'unknown journey must be refused');
   const unknownVerdict = JSON.parse(unknownRun.stdout);
   assert.notEqual(unknownVerdict.verdict, 'PASS');
   assert.match(unknownVerdict.reason, /journey-not-registered/);
 
-  // The three REAL registered journeys are still TO_IMPLEMENT (recipes owned
-  // by P3_2/P3_3/P4_8): missing real resources are UNVERIFIED and nonzero,
-  // never silently passed and never reported as a completed journey.
+  // Isolate missing-recipe behavior from existing historical recipe files.
+  // The fixtures preserve the registered owners and exercise actual absence.
   for (const [name, owner] of [
     ['same-run-delivery', 'P3_2'],
     ['real-comet-recovery', 'P3_3'],
     ['post-delivery-permissions', 'P4_8'],
   ]) {
-    const run = runJourney(['--journey', name, '--profile', 'managed-pilot',
-      '--evidence-dir', path.join(root, `e-${name}`), '--json']);
+    const planPath = fixtureJourneyPlan(root, { name, owner, scenario: 'A01', caseModule: 'test/delivery-cases/2_1.mjs', recipePath: path.join(root, `${name}-absent.case.json`), requiredCheck: `V_${name.toUpperCase().replaceAll('-', '_')}` });
+    const run = runJourney(['--journey', name, '--profile', 'comet-managed-v2',
+      '--evidence-dir', path.join(root, `e-${name}`), '--case-plan', planPath, '--json']);
     assert.equal(run.status, 2, `${name} without an implemented recipe must exit 2`);
     const verdict = JSON.parse(run.stdout);
     assert.equal(verdict.verdict, 'NOT-EXERCISED');
@@ -865,7 +878,7 @@ test('--journey interface: an unknown journey name is a structured nonzero refus
 });
 
 test('--journey interface: a fixture journey executes the bound scenario set → required check → assertion ids with the full target denominator', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-rw-jfix-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-rw-jfix-'));
   const modulePath = fixtureModule(root, 'j01.test.mjs', [
     "test('V_J01:observe real transition', () => { assert.ok(true); });",
     "test('V_J01:readback terminal state', () => { assert.ok(true); });",
@@ -896,7 +909,7 @@ test('--journey interface: a fixture journey executes the bound scenario set →
     requiredCheck: 'V_FIXTURE_JOURNEY',
   });
   const evidenceDir = path.join(root, 'evidence');
-  const run = runJourney(['--journey', 'fixture-journey', '--profile', 'managed-pilot',
+  const run = runJourney(['--journey', 'fixture-journey', '--profile', 'comet-managed-v2',
     '--evidence-dir', evidenceDir, '--case-plan', planPath,
     '--pilot-contract', fixturePilotContract(root), '--json']);
   assert.equal(run.status, 0, `fixture journey with complete mapping must pass: ${run.stderr}`);
@@ -932,7 +945,7 @@ test('--journey interface: a fixture journey executes the bound scenario set →
     recipePath: partialRecipe,
     requiredCheck: 'V_PARTIAL_JOURNEY',
   });
-  const partialRun = runJourney(['--journey', 'partial-journey', '--profile', 'managed-pilot',
+  const partialRun = runJourney(['--journey', 'partial-journey', '--profile', 'comet-managed-v2',
     '--evidence-dir', path.join(root, 'evidence-partial'), '--case-plan', planPartialPath,
     '--pilot-contract', fixturePilotContract(root), '--json']);
   assert.notEqual(partialRun.status, 0, 'a journey recipe whose module misses a required sub-assertion must refuse');
@@ -942,7 +955,7 @@ test('--journey interface: a fixture journey executes the bound scenario set →
 });
 
 test('V_A15: an independent persistence readback fails the journey when a success claim never reached disk', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p31-a15-'));
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-a15-'));
   const stateFile = path.join(root, 'journey-state.txt');
   const writer = writeFixture(root, 'claimant.cjs', [
     'const fs = require("node:fs");',

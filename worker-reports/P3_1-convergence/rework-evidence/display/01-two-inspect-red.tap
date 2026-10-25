@@ -1,0 +1,66 @@
+TAP version 13
+# Subtest: P31 rework nonEmptyFile inspection refuses an empty directory
+not ok 1 - P31 rework nonEmptyFile inspection refuses an empty directory
+  ---
+  duration_ms: 298.572209
+  type: 'test'
+  location: '<worker-tree>/test/comet-flow-acceptance.test.js:304:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    directory stat is not file content: {"schemaVersion":1,"tool":"tools/verify/delivery-journey.mjs","runnerInvariant":"test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery","scenario":"A01","acceptanceIds":["A01"],"journey":null,"profile":"comet-managed-v2","scope":"component/observer-qualification","managedClosureEligible":false,"sourceObservation":null,"caseModule":"<temp-path>","sourceBinding":[],"verdict":"PASS","reason":null,"missing":[],"drift":[],"schemaErrors":[],"execution":{"command":"/opt/homebrew/Cellar/node/25.2.1/bin/node --test --test-reporter=tap <temp-path>","actions":[{"index":1,"id":null,"type":"spawn","expected":"component test executes","required":true,"expectation":{"kind":"exitCode","value":0},"ok":true,"exitCode":0,"durationMs":172,"note":null,"observed":null,"argv":["/opt/homebrew/Cellar/node/25.2.1/bin/node","--test","--test-reporter=tap","<temp-path>"],"command":"/opt/homebrew/Cellar/node/25.2.1/bin/node --test --test-reporter=tap <temp-path>","testOutcome":{"kind":"pass","signatures":[],"summary":{"tests":1,"suites":0,"pass":1,"fail":0,"cancelled":0,"skipped":0,"todo":0}},"observedAt":"2026-10-25T04:01:16.827Z"},{"index":2,"id":null,"type":"inspect","expected":"only a non-empty regular file satisfies nonEmptyFile","required":true,"expectation":{"kind":"nonEmptyFile"},"ok":true,"exitCode":null,"durationMs":0,"note":null,"observed":{"path":"<host-path-redacted>","exists":true,"bytes":64},"command":null,"observedAt":"2026-10-25T04:01:16.827Z"}],"tests":1,"pass":1,"fail":0,"skipped":0,"todo":0,"effectiveExecutions":1,"target":{"token":"A01","mapping":"scenario-token","found":true,"status":"ok"},"requiredAssertions":[{"id":"V_A01","status":"satisfied","matchedPoints":1,"ok":1,"failed":0,"skipped":0}],"cancelled":0},"candidate":{"gitHead":"22641f327483ad91bece092accc9c0b1685742e0","node":"v25.2.1","platform":"darwin"},"timing":{"startedAt":"2026-10-25T04:01:16.641Z","finishedAt":"2026-10-25T04:01:16.828Z","durationMs":187},"evidence":{"dir":"<host-path-redacted>","files":["pilot-baseline.json","case-definition.json","action-1-stdout.txt","action-1-stderr.txt","verdict.json"],"sha256":{"pilot-baseline.json":"8e1d656ba220a3dbbe10ffb078a3ea4876db9e4d4d6f1de7f060e9cd69909e92","case-definition.json":"d5a01f78c87ec7d3c87f2c400c9d22f1da88cad47f962a7fa433914798eab24f","action-1-stdout.txt":"1bd40b14a58a25e17358e94dd849dc4eee2e69314b9cedb77592bc6b5745dba0","action-1-stderr.txt":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}},"exitCode":0}
+
+    0 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    file://<worker-tree>/test/comet-flow-acceptance.test.js:308:10
+    fixture (file://<worker-tree>/test/comet-flow-acceptance.test.js:68:16)
+    TestContext.<anonymous> (file://<worker-tree>/test/comet-flow-acceptance.test.js:304:77)
+    Test.runInAsyncScope (node:async_hooks:213:14)
+    Test.run (node:internal/test_runner/test:1106:25)
+    Test.start (node:internal/test_runner/test:1003:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:358:17)
+  ...
+# Subtest: P31 rework commandSucceeds inspection refuses a filesystem executable path
+not ok 2 - P31 rework commandSucceeds inspection refuses a filesystem executable path
+  ---
+  duration_ms: 278.968208
+  type: 'test'
+  location: '<worker-tree>/test/comet-flow-acceptance.test.js:312:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    unexecuted executable must not pass: {"schemaVersion":1,"tool":"tools/verify/delivery-journey.mjs","runnerInvariant":"test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery","scenario":"A01","acceptanceIds":["A01"],"journey":null,"profile":"comet-managed-v2","scope":"component/observer-qualification","managedClosureEligible":false,"sourceObservation":null,"caseModule":"<temp-path>","sourceBinding":[],"verdict":"PASS","reason":null,"missing":[],"drift":[],"schemaErrors":[],"execution":{"command":"/opt/homebrew/Cellar/node/25.2.1/bin/node --test --test-reporter=tap <temp-path>","actions":[{"index":1,"id":null,"type":"spawn","expected":"component test executes","required":true,"expectation":{"kind":"exitCode","value":0},"ok":true,"exitCode":0,"durationMs":164,"note":null,"observed":null,"argv":["/opt/homebrew/Cellar/node/25.2.1/bin/node","--test","--test-reporter=tap","<temp-path>"],"command":"/opt/homebrew/Cellar/node/25.2.1/bin/node --test --test-reporter=tap <temp-path>","testOutcome":{"kind":"pass","signatures":[],"summary":{"tests":1,"suites":0,"pass":1,"fail":0,"cancelled":0,"skipped":0,"todo":0}},"observedAt":"2026-10-25T04:01:17.108Z"},{"index":2,"id":null,"type":"inspect","expected":"file existence never proves a command succeeded","required":true,"expectation":{"kind":"commandSucceeds"},"ok":true,"exitCode":null,"durationMs":1,"note":null,"observed":{"path":"<host-path-redacted>","exists":true,"bytes":119},"command":null,"rawEvidence":["action-2-inspection-readback.txt"],"observedAt":"2026-10-25T04:01:17.109Z"}],"tests":1,"pass":1,"fail":0,"skipped":0,"todo":0,"effectiveExecutions":1,"target":{"token":"A01","mapping":"scenario-token","found":true,"status":"ok"},"requiredAssertions":[{"id":"V_A01","status":"satisfied","matchedPoints":1,"ok":1,"failed":0,"skipped":0}],"cancelled":0},"candidate":{"gitHead":"22641f327483ad91bece092accc9c0b1685742e0","node":"v25.2.1","platform":"darwin"},"timing":{"startedAt":"2026-10-25T04:01:16.933Z","finishedAt":"2026-10-25T04:01:17.109Z","durationMs":176},"evidence":{"dir":"<host-path-redacted>","files":["pilot-baseline.json","case-definition.json","action-1-stdout.txt","action-1-stderr.txt","action-2-inspection-readback.txt","verdict.json"],"sha256":{"pilot-baseline.json":"8e1d656ba220a3dbbe10ffb078a3ea4876db9e4d4d6f1de7f060e9cd69909e92","case-definition.json":"ecb78d0c4ffa0af66dbd08b632e131507e46562cdd2ccf84c110c1aafffb6435","action-1-stdout.txt":"a5cdc7664550e218a41ed8aa49dfd93364051031638015b2d267297de5b87527","action-1-stderr.txt":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","action-2-inspection-readback.txt":"6b76b4062501c83690283719030e30c17739c6d703ef10ddcb5d956fe5f3455f"}},"exitCode":0}
+
+    0 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    file://<worker-tree>/test/comet-flow-acceptance.test.js:318:10
+    fixture (file://<worker-tree>/test/comet-flow-acceptance.test.js:68:16)
+    TestContext.<anonymous> (file://<worker-tree>/test/comet-flow-acceptance.test.js:312:90)
+    Test.runInAsyncScope (node:async_hooks:213:14)
+    Test.run (node:internal/test_runner/test:1106:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+    Test.postRun (node:internal/test_runner/test:1235:19)
+    Test.run (node:internal/test_runner/test:1163:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 707.186166
+
+# STDERR

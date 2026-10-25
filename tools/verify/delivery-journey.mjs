@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Delivery journey runner — test action/observer adapter for the managed-pilot
+// Delivery journey runner — test action/observer adapter for the comet-managed-v2
 // verification journeys (delivery-foundation-rearchitecture, P3_1).
 //
 // verification_runner_invariant (execution-contract.json): this tool is a test
@@ -31,8 +31,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { parseArgs } from 'node:util';
-import { taskDefinitionDigest } from '../../lib/delivery/baseline.js';
+import { isDeepStrictEqual, parseArgs } from 'node:util';
+import { computeFullInputBaseline, taskDefinitionDigest } from '../../lib/delivery/baseline.js';
+import * as cometAdapter from '../../lib/adapters/comet.js';
+import { parseContract } from '../../contracts/delivery/index.js';
+import { classifyRunOutcome, parseTapSummary } from '../../lib/delivery/test-contract.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const EXIT_PASS = 0;
@@ -49,6 +52,7 @@ const SCENARIO_ID_RE = /^[A-Z]{1,2}[0-9]{1,2}$/;
 const RUNNER_INVARIANT = 'test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery';
 
 const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
+const resolveActionFileTarget = (file, base) => path.isAbsolute(file) ? file : path.resolve(base, file);
 
 // 宿主私有路径绝不进入结构化回执；对外输出统一脱敏（与 tools/infra/registry.mjs 同源规则）。
 const HOST_PATH_REDACTION = /(^|[\s"'=(:/])\/(Users|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
@@ -75,8 +79,8 @@ function usage() {
     '',
     '  --scenario <ID>       scenario id from verification-case-plan.json (e.g. A01)',
     '  --journey <name>      registered journey (same-run-delivery | real-comet-recovery | post-delivery-permissions)',
-    '  --profile <profile>   registered journey profile (managed-pilot)',
-    '  --evidence-dir <dir>  directory for verdict.json + action evidence (created)',
+    '  --profile <profile>   registered journey profile (comet-managed-v2)',
+    '  --evidence-dir <dir>  fresh empty directory for verdict.json + action evidence',
     '  --json                print the verdict JSON to stdout',
     '  --case-plan <path>    override the scenario registry (default: change verification-case-plan.json)',
     '  --pilot-contract <path>  override the pilot contract (default: change pilot-contract.md)',
@@ -99,6 +103,10 @@ const jsonEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 function validateAgainstSchema(instance, schema, ptr = '') {
   const errors = [];
   const walk = (value, sch, at) => {
+    if (sch === false) {
+      errors.push({ path: at, message: 'property is not allowed for this action' });
+      return;
+    }
     if (!sch || typeof sch !== 'object') return;
     if (sch.const !== undefined && !jsonEqual(value, sch.const)) {
       errors.push({ path: at, message: `must equal ${JSON.stringify(sch.const)}` });
@@ -140,6 +148,7 @@ function validateAgainstSchema(instance, schema, ptr = '') {
       if (sch.items) value.forEach((item, i) => walk(item, sch.items, `${at}/${i}`));
     }
     if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      if (sch.minProperties !== undefined && Object.keys(value).length < sch.minProperties) errors.push({ path: at, message: `fewer than minProperties ${sch.minProperties}` });
       for (const required of sch.required ?? []) {
         // Report at the offending field path, so if/then conditional
         // requirements name the missing property directly.
@@ -266,13 +275,14 @@ function buildCaseDefinition(scenario, entry, caseModule) {
     // P1-04 target denominator: the plan entry (assertion_binding_required)
     // demands the scenario token maps to executed ok test points — module
     // green alone is never scenario pass.
-    requiredAssertions: [scenario],
+    requiredAssertions: entry?.required_assertions ?? [scenario],
     caseModule,
+    ...(entry?.required_proof_level ? { proofLevel: entry.required_proof_level } : {}),
     sourceBinding: Array.isArray(entry?.source_binding) ? entry.source_binding : [],
     actions: [
       {
         type: 'spawn',
-        command: `node --test ${caseModule}`,
+        command: `node --test --test-reporter=tap ${caseModule}`,
         expected: `exit 0; TAP summary fail=0 with pass>0; test point matching ${scenario} (V_${scenario} or bare id) is ok`,
         expect: { kind: 'exitCode', value: 0 },
       },
@@ -284,7 +294,7 @@ function buildCaseDefinition(scenario, entry, caseModule) {
       },
       {
         type: 'inspect',
-        path: 'git rev-parse HEAD',
+        command: 'git rev-parse HEAD',
         expected: 'candidate digest is recorded in the verdict (observation only; does not gate)',
         required: false,
       },
@@ -316,10 +326,11 @@ function buildCaseDefinition(scenario, entry, caseModule) {
 
 function parseTapPoints(stdoutText) {
   const points = [];
-  for (const match of String(stdoutText ?? '').matchAll(/^(ok|not ok)\s+\d+\s+-\s+(.+)$/gm)) {
+  for (const match of String(stdoutText ?? '').matchAll(/^[ \t]*(ok|not ok)\s+\d+\s+-\s+(.+)$/gm)) {
     const name = match[2];
-    const isSkip = /# SKIP/.test(name);
-    points.push({ ok: match[1] === 'ok', skipped: isSkip, name: name.replace(/\s*# SKIP.*$/, '') });
+    const todo = /#\s*TODO\b/i.test(name);
+    const isSkip = /#\s*SKIP\b/i.test(name) || todo;
+    points.push({ ok: match[1] === 'ok', skipped: isSkip, todo, name: name.replace(/\s*#\s*(?:SKIP|TODO)\b.*$/i, '') });
   }
   return points;
 }
@@ -328,6 +339,7 @@ function parseTapPoints(stdoutText) {
 // carry a composite sub-assertion suffix (V_X89:readback) use ':' as part of
 // the token so a bare id never matches a composite point and vice versa.
 function assertionIdMatches(pointName, id) {
+  if (/\s/.test(id)) return pointName === id;
   const inner = id.includes(':') ? 'A-Za-z0-9_:' : 'A-Za-z0-9';
   const boundary = new RegExp(`(^|[^${inner}])${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^${inner}]|$)`);
   return boundary.test(pointName);
@@ -347,12 +359,125 @@ function evaluateAssertionId(id, points) {
   return { id, status, matchedPoints: matched.length, ok: okCount, failed: failedCount, skipped: skippedCount };
 }
 
+function evaluateJsonFields(bytes, expected) {
+  let value;
+  try { value = JSON.parse(bytes); } catch { return { ok: false, fields: null }; }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)
+      || expected === null || typeof expected !== 'object' || Array.isArray(expected) || Object.keys(expected).length === 0) {
+    return { ok: false, fields: null };
+  }
+  const fields = Object.fromEntries(Object.keys(expected).map((key) => [key, value[key]]));
+  return { ok: Object.keys(expected).every((key) => Object.hasOwn(value, key) && isDeepStrictEqual(value[key], expected[key])), fields };
+}
+
+// Reference readback is not authorization. The fixed adapter must already
+// qualify invocation of the original Comet entry; Comet keeps all business gates.
+async function observeEntryPreflight(observer, request) {
+  try {
+    const source = await observer({ ...request, stage: 'preflight' });
+    const root = fs.realpathSync(source.workspace.projectRoot);
+    const readRef = (entry) => {
+      if (!entry || typeof entry.ref !== 'string' || !/^[a-f0-9]{64}$/.test(entry.digest ?? '')) throw new Error('invalid reference');
+      const file = entry.ref.startsWith('file:') ? fileURLToPath(entry.ref) : path.resolve(root, entry.ref);
+      const bytes = fs.readFileSync(file);
+      if (!fs.statSync(file).isFile() || sha256(bytes) !== entry.digest) throw new Error('reference mismatch');
+      return { ref: displayPath(file), digest: entry.digest, bytes };
+    };
+    const authorityRef = readRef(source.authorityRegistration);
+    const registration = JSON.parse(authorityRef.bytes);
+    const authority = registration.authority;
+    const rows = registration.registrations?.filter((row) => row.authorityId === authority?.id && row.workspaceId === authority?.workspaceId) ?? [];
+    if (registration.interface !== 'Authority.v1' || registration.schemaVersion !== 1 || authority?.status !== 'VERIFIED'
+        || !authority.id || !authority.workspaceId || !authority.controllerPrincipal || rows.length !== 1
+        || !rows[0].registrationId || !rows[0].instanceId || rows[0].stateOrigin !== 'authoritative' || rows[0].writerExclusivity !== 'single') {
+      return { error: 'entry-authority-unregistered' };
+    }
+    const policy = readRef(source.policy);
+    if (!Array.isArray(source.evidenceRefs) || !['capability', 'permission'].every((kind) => source.evidenceRefs.some((entry) => entry?.kind === kind))) {
+      return { error: 'entry-capability-or-permission-observation-missing' };
+    }
+    const evidenceRefs = source.evidenceRefs.map((entry) => { const actual = readRef(entry); return { kind: entry.kind, ref: actual.ref, digest: actual.digest }; });
+    return { root, observation: { authorityId: authority.id, workspaceId: authority.workspaceId,
+      authorityRegistration: { ref: authorityRef.ref, digest: authorityRef.digest }, policy: { ref: policy.ref, digest: policy.digest },
+      evidenceRefs, scope: 'original-Comet-entry-only; references are not business authorization' } };
+  } catch { return { error: 'entry-preflight-unavailable-or-unverified' }; }
+}
+
+// The callback belongs to fixed trusted host code. Callback fixtures remain
+// component-only; an ActionBinding/hash/role JSON never authenticates a source.
+async function observeRuntime({ definition, observer, candidate, actions, evidenceDir, checkId, requiredProofLevel, requiredReadbacks, evidenceHashes, authorityRoot, componentOnly }) {
+  const expected = definition.runtimeBinding ? parseContract('SDD.Delivery.ActionBinding', definition.runtimeBinding) : null;
+  if ((expected && !expected.ok) || typeof observer !== 'function') return { error: 'protected-source-or-runtime-binding-unavailable' };
+  let source;
+  try { source = await observer({ stage: 'readback', binding: expected?.value ?? null, candidate, actions, evidenceDir, caseId: definition.scenario, checkId, requiredProofLevel, requiredReadbacks, evidenceFiles: Object.keys(evidenceHashes) }); }
+  catch { return { error: 'protected-source-observation-failed' }; }
+  const observed = parseContract('SDD.Delivery.ActionBinding', source?.binding);
+  const admitted = source?.admission?.entry;
+  const envelope = parseContract('SDD.Delivery.EvidenceEnvelope', admitted?.envelope);
+  if (!observed.ok || observed.value.profile !== 'comet-managed-v2' || (expected && !isDeepStrictEqual(expected.value, observed.value))
+      || source?.admission?.ok !== true || admitted?.class !== 'independent-acceptance' || !envelope.ok) {
+    return { error: 'protected-source-not-admitted-or-binding-mismatch' };
+  }
+  if (!componentOnly) {
+    const qualification = admitted.sourcePacket?.collection?.source?.qualification;
+    if (!/^[a-f0-9]{64}$/.test(admitted.collectionId ?? '') || admitted.sourcePacket?.collection?.collectionId !== admitted.collectionId
+        || qualification?.scope !== 'protected-source' || qualification.status !== 'qualified'
+        || !qualification.id || !qualification.sourceId || !qualification.revision
+        || !Number.isFinite(Date.parse(qualification.expiresAt)) || Date.parse(qualification.expiresAt) <= Date.now()
+        || !Array.isArray(qualification.evidenceRefs) || qualification.evidenceRefs.length === 0) {
+      return { error: 'managed-source-collection-or-current-qualification-missing' };
+    }
+  }
+  const binding = observed.value;
+  const common = ['runnerId', 'run', 'gate', 'execution', 'role', 'attempt', 'epoch', 'inputDigest', 'policyDigest'];
+  if (common.some((key) => admitted.dispatch?.[key] !== binding[key])
+      || envelope.value.caseId !== definition.scenario || envelope.value.check !== checkId
+      || envelope.value.execution.id !== binding.execution || envelope.value.candidateDigest !== binding.inputDigest
+      || envelope.value.origin.id !== binding.runnerId || envelope.value.result !== 'pass'
+      || envelope.value.executions.valid < 1 || Date.parse(envelope.value.expiry) <= Date.now()) {
+    return { error: 'protected-source-execution-or-candidate-mismatch' };
+  }
+  try {
+    const authority = fs.realpathSync(source.workspace.projectRoot);
+    if (authorityRoot && authorityRoot !== authority) return { error: 'entry-authority-changed-during-observation' };
+    if (fs.lstatSync(source.workspace.runStateFile).isSymbolicLink()) return { error: 'native-comet-workspace-mismatch' };
+    const runFile = fs.realpathSync(source.workspace.runStateFile);
+    if (!runFile.startsWith(`${authority}${path.sep}`) || !runFile.endsWith(`${path.sep}.comet${path.sep}run-state.json`)) {
+      return { error: 'native-comet-workspace-mismatch' };
+    }
+    const dispatchFile = path.join(path.dirname(runFile), 'gate-dispatches.json');
+    if (fs.lstatSync(dispatchFile).isSymbolicLink() || fs.realpathSync(dispatchFile) !== dispatchFile) return { error: 'native-comet-dispatch-path-mismatch' };
+    const runBytes = fs.readFileSync(runFile, 'utf8');
+    const dispatchBytes = fs.readFileSync(dispatchFile, 'utf8');
+    const nativeRun = JSON.parse(runBytes);
+    const nativeDispatches = JSON.parse(dispatchBytes);
+    const matches = nativeDispatches.dispatches?.filter((entry) => entry.execution === binding.execution) ?? [];
+    const fields = ['gate', 'execution', 'role', 'attempt', 'epoch', 'inputDigest'];
+    if (nativeRun.runId !== binding.run || nativeDispatches.schema !== 'comet.classic.gate-dispatches.v1'
+        || matches.length !== 1 || fields.some((key) => matches[0][key] !== binding[key])
+        || !['open', 'consumed'].includes(matches[0].state)
+        || (matches[0].state === 'consumed' && matches[0].verdict !== 'pass')
+        || fs.readFileSync(runFile, 'utf8') !== runBytes || fs.readFileSync(dispatchFile, 'utf8') !== dispatchBytes) {
+      return { error: 'native-comet-run-or-dispatch-mismatch' };
+    }
+    const bound = new Map(envelope.value.evidence.map((item) => [
+      item.uri.startsWith('file:') ? fileURLToPath(item.uri) : path.resolve(evidenceDir, item.uri), item.sha256,
+    ]));
+    for (const [name, capturedHash] of Object.entries(evidenceHashes)) {
+      const file = path.join(evidenceDir, name);
+      if (bound.get(file) !== capturedHash || sha256(fs.readFileSync(file)) !== capturedHash) return { error: 'current-raw-evidence-not-bound' };
+    }
+    return { binding, authority: displayPath(authority), nativeRunSha256: sha256(runBytes), nativeDispatchSha256: sha256(dispatchBytes), envelopeDigest: admitted.digest ?? null };
+  } catch { return { error: 'native-comet-or-raw-readback-unavailable' }; }
+}
+
 // --- verdict ------------------------------------------------------------------
 
-function main() {
+export async function runDeliveryJourney({ args = process.argv.slice(2), observeProtectedSource = cometAdapter.observeProtectedSource } = {}) {
   let options;
   try {
     options = parseArgs({
+      args,
       strict: true,
       options: {
         scenario: { type: 'string' },
@@ -386,10 +511,14 @@ function main() {
     return failInput(`--scenario must match ${SCENARIO_ID_RE}`);
   }
 
+  const componentOnly = Boolean(options['case-plan'] || options['pilot-contract'] || options['case-definition']
+    || observeProtectedSource !== cometAdapter.observeProtectedSource);
   const startedAt = new Date().toISOString();
   const evidenceDir = path.resolve(evidenceDirOption);
   try {
+    if (fs.existsSync(evidenceDir) && fs.lstatSync(evidenceDir).isSymbolicLink()) return failInput('evidence dir cannot be a symbolic link');
     fs.mkdirSync(evidenceDir, { recursive: true });
+    if (fs.readdirSync(evidenceDir).length !== 0) return failInput('evidence dir must be fresh and empty; prior trial bytes are never overwritten');
   } catch (err) {
     return failInput(`cannot create evidence dir ${evidenceDirOption}: ${String(err?.message ?? err)}`);
   }
@@ -402,6 +531,9 @@ function main() {
     acceptanceIds: journeyName ? [] : [scenario],
     journey: journeyName ? { name: journeyName, owner: null, requiredCheck: null, recipePath: null, registeredStatus: null } : null,
     profile,
+    scope: componentOnly ? 'component/observer-qualification' : 'managed/unqualified',
+    managedClosureEligible: false,
+    sourceObservation: null,
     caseModule: null,
     sourceBinding: [],
     verdict: 'NOT-EXERCISED',
@@ -416,21 +548,23 @@ function main() {
       pass: 0,
       fail: 0,
       skipped: 0,
+      todo: 0,
       effectiveExecutions: 0,
       target: { token: scenario, found: false, status: null },
       requiredAssertions: [],
     },
     candidate: { gitHead: null, node: process.version, platform: process.platform },
     timing: { startedAt, finishedAt: null, durationMs: null },
-    evidence: { dir: displayPath(evidenceDir), files: [] },
+    evidence: { dir: displayPath(evidenceDir), files: [], sha256: {} },
     exitCode: EXIT_VERIFY,
   };
 
-  const writeJson = (name, value) => {
-    const file = path.join(evidenceDir, name);
-    fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+  const writeEvidence = (name, bytes) => {
+    fs.writeFileSync(path.join(evidenceDir, name), bytes, { flag: 'wx' });
     if (!verdict.evidence.files.includes(name)) verdict.evidence.files.push(name);
+    if (name !== 'verdict.json') verdict.evidence.sha256[name] = sha256(bytes);
   };
+  const writeJson = (name, value) => writeEvidence(name, `${JSON.stringify(value, null, 2)}\n`);
 
   const emit = (exitCode) => {
     verdict.exitCode = exitCode;
@@ -456,6 +590,10 @@ function main() {
     return emit(EXIT_VERIFY);
   };
 
+  if (profile !== 'comet-managed-v2') {
+    return notExercised('profile-retired-or-unknown: only comet-managed-v2 is a current verification profile');
+  }
+
   // Candidate observation is read-only and non-fatal.
   const gitHead = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8', maxBuffer: MAX_BUFFER, env: childEnv() });
   verdict.candidate.gitHead = gitHead.status === 0 ? String(gitHead.stdout).trim() : null;
@@ -480,6 +618,7 @@ function main() {
       return notExercised(`journey-not-registered: '${journeyName}' is not in verification-case-plan journey_definitions; unknown journeys never fall into a default-success path`);
     }
     const registration = registrations[journeyName];
+    entry = registration;
     verdict.journey = {
       name: journeyName,
       owner: typeof registration.owner === 'string' ? registration.owner : null,
@@ -491,6 +630,11 @@ function main() {
       return notExercised('journey-registration-incomplete: owner/required_check/path must all be registered explicitly');
     }
     const recipeAbs = path.isAbsolute(registration.path) ? registration.path : path.join(repoRoot, registration.path);
+    if (!componentOnly) {
+      const recipeInput = computeFullInputBaseline({ root: repoRoot, manifest: { artifacts: [registration.path] } });
+      if (!recipeInput.ok || !/^[a-f0-9]{64}$/.test(registration.case_definition_sha256 ?? '')) return notExercised('journey-recipe-freeze-or-safe-path-missing');
+      if (recipeInput.files[0].sha256 !== registration.case_definition_sha256) return notExercised('registered-journey-recipe-drift');
+    }
     if (!fs.existsSync(recipeAbs)) {
       return notExercised(`journey-recipe-not-implemented (UNVERIFIED): the registered recipe does not exist on disk — real-journey resources are not present; recipe owner ${verdict.journey.owner} has not landed it (registered status: ${verdict.journey.registeredStatus ?? 'unknown'})`);
     }
@@ -572,6 +716,32 @@ function main() {
     }
     verdict.caseModule = declaredModule;
     verdict.sourceBinding = Array.isArray(entry.source_binding) ? entry.source_binding : [];
+    if (!componentOnly) {
+      const moduleInput = computeFullInputBaseline({ root: repoRoot, manifest: { tests: [declaredModule] } });
+      if (!moduleInput.ok) return notExercised('registered-case-module-path-unsafe-or-missing');
+    }
+    if (entry.case_definition) {
+      try {
+        if (!/^[a-f0-9]{64}$/.test(entry.case_definition_sha256 ?? '')) return notExercised('registered-case-definition-hash-missing');
+        if (!componentOnly) {
+          const recipeInput = computeFullInputBaseline({ root: repoRoot, manifest: { artifacts: [entry.case_definition] } });
+          if (!recipeInput.ok) return notExercised('registered-case-definition-path-unsafe-or-missing');
+        }
+        const recipe = fs.readFileSync(path.resolve(repoRoot, entry.case_definition), 'utf8');
+        if (sha256(recipe) !== entry.case_definition_sha256) return notExercised('registered-case-definition-drift');
+        explicitDefinition = JSON.parse(recipe);
+        if (explicitDefinition.scenario !== scenario || path.resolve(repoRoot, explicitDefinition.caseModule ?? '') !== path.resolve(repoRoot, declaredModule)) {
+          return notExercised('registered-case-definition-target-mismatch');
+        }
+      } catch { return notExercised('registered-case-definition-unreadable-or-malformed'); }
+    }
+  }
+
+  if (!entry && explicitDefinition && options['case-plan']) {
+    const registeredPlan = loadCasePlan(options['case-plan']);
+    if (registeredPlan.error) return notExercised(registeredPlan.error);
+    entry = registeredPlan.plan.cases[explicitDefinition.scenario];
+    if (!entry) return notExercised('scenario-not-registered-in-case-plan');
   }
 
   // 3. Pilot contract machine block + profile registration (A01/A15 gate).
@@ -607,9 +777,41 @@ function main() {
     return notExercised('frozen-baseline-drift: the accepted artifact changed after freeze; re-freezing is an explicit registration change (A15: conservative invalidation)', { drift: baseline.drift });
   }
 
+  if (componentOnly && entry?.required_proof_level && entry.required_proof_level !== 'component') {
+    return notExercised('component-proof-cannot-satisfy-registered-layer (UNVERIFIED)');
+  }
+
+  if (!componentOnly) {
+    if (!['comet-runtime', 'host', 'platform', 'resource'].includes(entry?.required_proof_level)
+        || !Array.isArray(entry.required_assertions) || entry.required_assertions.length === 0
+        || !Array.isArray(entry.required_readbacks) || entry.required_readbacks.length === 0) {
+      return notExercised('proof-registration-missing (UNVERIFIED): formal scenarios require a frozen assertion denominator, real proof level and typed readbacks');
+    }
+    if (typeof observeProtectedSource !== 'function') {
+      return notExercised('protected-source-unavailable (UNVERIFIED): no qualified Comet launcher observation interface is installed');
+    }
+  }
+
   // 5. Case definition: the explicit one loaded in step 1 or the canonical
   // actions synthesized from the registry entry.
-  const definition = explicitDefinition ?? buildCaseDefinition(scenario, entry, declaredModule);
+  let definition = explicitDefinition ?? buildCaseDefinition(scenario, entry, declaredModule);
+  // Historical whitespace-split path probes are fixture compatibility only.
+  // Existing paths (including names with spaces) always remain file observations.
+  // Formal recipes must name commands explicitly; no managed path is executed.
+  if (componentOnly && Array.isArray(definition.actions)) {
+    const legacy = [];
+    const actions = definition.actions.map((action, index) => {
+      if (action?.type !== 'inspect' || Object.hasOwn(action, 'command') || typeof action.path !== 'string'
+          || !/\s/.test(action.path) || fs.existsSync(resolveActionFileTarget(action.path, repoRoot))) return action;
+      legacy.push(index + 1);
+      const { path: command, ...rest } = action;
+      return { ...rest, command };
+    });
+    if (legacy.length > 0) {
+      definition = { ...definition, actions };
+      verdict.legacyInspectionActions = { scope: 'component/legacy-compatibility', indexes: legacy };
+    }
+  }
 
   // 6. Schema enforcement.
   let schema;
@@ -622,7 +824,72 @@ function main() {
   if (schemaErrors.length > 0) {
     return notExercised('case-definition-schema-invalid', { schemaErrors });
   }
+  if (definition.evidence.artifacts.some((name) => path.isAbsolute(name) || path.resolve(evidenceDir, name) === evidenceDir
+      || !path.resolve(evidenceDir, name).startsWith(`${evidenceDir}${path.sep}`))) {
+    return notExercised('evidence-artifact-outside-invocation: artifacts must be files inside this fresh evidence directory');
+  }
+
+  const frozenTargetMapping = Array.isArray(entry?.required_assertions) && entry.required_assertions.length > 0;
+  if (!definition.acceptanceIds.includes(definition.scenario)
+      || (!frozenTargetMapping && !definition.requiredAssertions.some((id) => assertionIdMatches(id, definition.scenario)))) {
+    return notExercised('required-scenario-target-missing: an explicit denominator cannot replace the requested scenario');
+  }
+  if (explicitDefinition && (options['case-plan'] || !options['pilot-contract'])) {
+    const frozenPlan = loadCasePlan(options['case-plan']);
+    if (frozenPlan.error) return notExercised(frozenPlan.error);
+    const registered = frozenPlan.plan.cases[definition.scenario];
+    if (!registered) return notExercised('scenario-not-registered-in-case-plan');
+    const required = registered.required_assertions ?? [definition.scenario];
+    if (!Array.isArray(required) || required.length === 0
+        || required.some((id) => !definition.requiredAssertions.some((declared) => declared === id || (id === definition.scenario && assertionIdMatches(declared, id))))) {
+      return notExercised('frozen-assertion-denominator-weakened: explicit definition omitted a registered required assertion');
+    }
+    if (path.resolve(repoRoot, registered.case_module ?? '') !== path.resolve(repoRoot, definition.caseModule)) {
+      return notExercised('registered-case-module-mismatch: explicit definition cannot replace the registered module');
+    }
+  }
+  if (options['case-plan'] && !entry) {
+    const frozenPlan = loadCasePlan(options['case-plan']);
+    if (frozenPlan.error) return notExercised(frozenPlan.error);
+    entry = frozenPlan.plan.cases[definition.scenario];
+  }
+  if (entry?.required_proof_level && definition.proofLevel && entry.required_proof_level !== definition.proofLevel) {
+    return notExercised('frozen-proof-level-mismatch: proof labels cannot downgrade the registered real layer');
+  }
+  if (entry?.required_readbacks) {
+    if (!Array.isArray(entry.required_readbacks) || entry.required_readbacks.length === 0) return notExercised('frozen-readback-registration-invalid');
+    for (const readback of entry.required_readbacks) {
+      if (readback === null || typeof readback !== 'object' || Array.isArray(readback)) return notExercised('frozen-readback-registration-invalid');
+      const matches = definition.actions.filter((action) => action.id === readback.id);
+      const action = matches[0];
+      if (typeof readback.id !== 'string' || !readback.id || matches.length !== 1 || action.required === false
+          || action.type !== readback.type || action.expect?.kind !== readback.expect
+          || !['jsonFields', 'equals'].includes(readback.expect)) {
+        return notExercised('frozen-typed-readback-missing-or-weakened');
+      }
+      if (readback.expect === 'jsonFields') {
+        if (!Array.isArray(readback.fields) || readback.fields.length === 0
+            || readback.fields.some((field) => typeof field !== 'string' || !field) || new Set(readback.fields).size !== readback.fields.length
+            || readback.fields.some((field) => !Object.hasOwn(action.expect.value, field))
+            || Object.entries(readback.value ?? {}).some(([field, value]) => !isDeepStrictEqual(action.expect.value[field], value))) {
+          return notExercised('frozen-typed-readback-fields-or-values-weakened');
+        }
+      } else if (typeof readback.value !== 'string' || action.expect.value !== readback.value) {
+        return notExercised('frozen-typed-readback-value-weakened');
+      }
+    }
+  }
   writeJson('case-definition.json', definition);
+
+  let entryPreflight = null;
+  if (typeof observeProtectedSource === 'function') {
+    entryPreflight = await observeEntryPreflight(observeProtectedSource, { profile, definition, candidate: verdict.candidate, evidenceDir,
+      caseId: definition.scenario, checkId: verdict.journey?.requiredCheck ?? `V_${definition.scenario}`,
+      requiredProofLevel: entry?.required_proof_level ?? 'component', requiredReadbacks: entry?.required_readbacks ?? [] });
+    if (entryPreflight.error) return notExercised(`${entryPreflight.error} (UNVERIFIED): original Comet entry qualification was not observed`);
+    verdict.preflightObservation = entryPreflight.observation;
+    writeJson('entry-preflight.json', entryPreflight.observation);
+  }
 
   // 7. Execute the declared actions — each exactly once (no retries). Every
   // required action's typed expectation is evaluated against the LIVE
@@ -638,6 +905,7 @@ function main() {
     const expect = action.expect ?? null;
     const result = {
       index: label,
+      id: action.id ?? null,
       type: action.type,
       expected: action.expected,
       required: isRequired,
@@ -657,6 +925,11 @@ function main() {
     };
     if (action.type === 'spawn') {
       const argv = action.command.split(/\s+/);
+      if (/^node(?:\.exe)?$/.test(path.basename(argv[0])) && argv.includes('--test')
+          && !argv.some((arg) => arg === '--test-reporter' || arg.startsWith('--test-reporter='))) {
+        argv.splice(argv.indexOf('--test') + 1, 0, '--test-reporter=tap');
+      }
+      result.argv = argv;
       result.command = action.command;
       verdict.execution.command = verdict.execution.command ?? action.command;
       const run = spawnSync(argv[0], argv.slice(1), {
@@ -669,8 +942,8 @@ function main() {
       result.durationMs = Date.now() - actionStart;
       const stdoutName = `action-${label}-stdout.txt`;
       const stderrName = `action-${label}-stderr.txt`;
-      fs.writeFileSync(path.join(evidenceDir, stdoutName), run.stdout ?? '');
-      fs.writeFileSync(path.join(evidenceDir, stderrName), run.stderr ?? '');
+      writeEvidence(stdoutName, run.stdout ?? '');
+      writeEvidence(stderrName, run.stderr ?? '');
       spawnStdouts.push(run.stdout ?? '');
       for (const point of parseTapPoints(run.stdout ?? '')) {
         spawnPoints.push({ actionIndex: label, ...point });
@@ -682,6 +955,14 @@ function main() {
         result.note = `terminated by signal ${run.signal}`;
       }
       const completed = !run.error && run.status !== null;
+      if (parseTapPoints(run.stdout).length > 0 || argv.includes('--test') || expect?.kind === 'tapRequiredAssertions') {
+        const outcome = classifyRunOutcome({ exitCode: run.status, output: `${run.stdout ?? ''}\n${run.stderr ?? ''}`, spawnError: run.error });
+        result.testOutcome = outcome;
+        if (outcome.kind !== 'pass') {
+          result.unverified = outcome.kind === 'environment-failure' ? 'invalid-test-execution' : outcome.kind === 'empty' ? 'no-effective-execution' : null;
+          expectationNote(`test execution is ${outcome.kind}; complete passing TAP is required`);
+        }
+      }
       if (expect?.kind === 'exitCode') {
         if (!completed) expectationNote(`expected exit ${expect.value}, spawn did not complete`);
         else if (run.status !== expect.value) expectationNote(`expected exit ${expect.value}, observed exit ${run.status}`);
@@ -704,7 +985,7 @@ function main() {
       const exitOk = expect?.kind === 'exitCode' ? completed && run.status === expect.value : completed && run.status === 0;
       result.ok = exitOk && !expectationFailed;
     } else if (action.type === 'readState') {
-      const target = path.isAbsolute(action.path) ? action.path : path.join(evidenceDir, action.path);
+      const target = resolveActionFileTarget(action.path, evidenceDir);
       result.command = null;
       let stat = null;
       try {
@@ -714,6 +995,10 @@ function main() {
       }
       const exists = stat !== null && stat.isFile();
       const bytes = exists ? fs.readFileSync(target, 'utf8') : null;
+      if (bytes !== null) {
+        result.rawEvidence = [`action-${label}-readback.txt`];
+        writeEvidence(result.rawEvidence[0], bytes);
+      }
       result.observed = { path: displayPath(target), bytes: stat === null ? null : stat.size };
       if (!exists) {
         result.note = 'state file does not exist';
@@ -722,6 +1007,10 @@ function main() {
       }
       if (expect?.kind === 'nonEmptyFile') {
         if (!exists || stat.size === 0) expectationNote('expected a non-empty state file');
+      } else if (expect?.kind === 'jsonFields') {
+        const match = evaluateJsonFields(bytes, expect.value);
+        result.observed.fields = match.fields;
+        if (!match.ok) expectationNote('typed JSON readback did not match the frozen fields');
       } else if (expect?.kind === 'equals') {
         result.observed.value = bytes;
         if (bytes === null) {
@@ -733,14 +1022,27 @@ function main() {
       result.ok = exists && !expectationFailed;
     } else if (action.type === 'inspect') {
       result.command = null;
-      if (/\s/.test(action.path)) {
-        const observation = spawnSync(action.path.split(/\s+/)[0], action.path.split(/\s+/).slice(1), {
+      const commandInspection = Object.hasOwn(action, 'command');
+      const supportedKinds = commandInspection
+        ? ['commandSucceeds', 'equals', 'jsonFields']
+        : ['equals', 'nonEmptyFile', 'jsonFields'];
+      if (expect && !supportedKinds.includes(expect.kind)) {
+        expectationNote(`unsupported ${expect.kind} expectation for ${commandInspection ? 'command' : 'file'} inspection`);
+      } else if (commandInspection) {
+        const argv = action.command.split(/\s+/);
+        result.argv = argv;
+        result.command = action.command;
+        const observation = spawnSync(argv[0], argv.slice(1), {
           cwd: repoRoot,
           encoding: 'utf8',
           maxBuffer: MAX_BUFFER,
           timeout: SPAWN_TIMEOUT_MS,
           env: childEnv(),
         });
+        result.exitCode = observation.status;
+        result.rawEvidence = [`action-${label}-inspection-stdout.txt`, `action-${label}-inspection-stderr.txt`];
+        writeEvidence(result.rawEvidence[0], observation.stdout ?? '');
+        writeEvidence(result.rawEvidence[1], observation.stderr ?? '');
         result.observed = observation.status === 0 ? String(observation.stdout).trim() : null;
         if (observation.error) {
           result.note = String(observation.error?.message ?? observation.error);
@@ -749,6 +1051,10 @@ function main() {
         }
         if (expect?.kind === 'commandSucceeds') {
           if (observation.error || observation.status !== 0) expectationNote('expected the inspection command to succeed');
+        } else if (expect?.kind === 'jsonFields') {
+          const match = evaluateJsonFields(observation.stdout, expect.value);
+          result.observed = { fields: match.fields };
+          if (observation.error || observation.status !== 0 || !match.ok) expectationNote('typed JSON inspection failed or did not match the frozen fields');
         } else if (expect?.kind === 'equals') {
           if (observation.error || observation.status !== 0) {
             expectationNote('expected a value, the live probe failed');
@@ -756,23 +1062,30 @@ function main() {
             expectationNote(`expected value does not match the live probe output (observed sha256 ${sha256(String(observation.stdout).trim())})`);
           }
         }
-        result.ok = !expectationFailed;
+        result.ok = !observation.error && observation.status === 0 && !expectationFailed;
       } else {
+        const target = resolveActionFileTarget(action.path, repoRoot);
         let stat = null;
         try {
-          stat = fs.statSync(action.path);
+          stat = fs.statSync(target);
         } catch {
           stat = null;
         }
         result.observed = stat === null
-          ? { path: displayPath(action.path), exists: false }
-          : { path: displayPath(action.path), exists: true, bytes: stat.size };
-        if (expect?.kind === 'commandSucceeds') {
-          if (stat === null) expectationNote('expected the inspected path to exist');
-        } else if (expect?.kind === 'nonEmptyFile') {
-          if (stat === null || stat.size === 0) expectationNote('expected a non-empty inspected file');
+          ? { path: displayPath(target), exists: false }
+          : { path: displayPath(target), exists: true, bytes: stat.size };
+        const content = stat === null || !stat.isFile() ? null : fs.readFileSync(target, 'utf8');
+        if (content !== null) {
+          result.rawEvidence = [`action-${label}-inspection-readback.txt`];
+          writeEvidence(result.rawEvidence[0], content);
+        }
+        if (expect?.kind === 'nonEmptyFile') {
+          if (stat === null || !stat.isFile() || stat.size === 0) expectationNote('expected a non-empty regular inspected file');
+        } else if (expect?.kind === 'jsonFields') {
+          const match = evaluateJsonFields(content, expect.value);
+          result.observed.fields = match.fields;
+          if (!match.ok) expectationNote('typed JSON inspected file did not match the frozen fields');
         } else if (expect?.kind === 'equals') {
-          const content = stat === null || !stat.isFile() ? null : fs.readFileSync(action.path, 'utf8');
           result.observed.value = content;
           if (content === null) {
             expectationNote('expected bytes, inspected file missing');
@@ -780,19 +1093,30 @@ function main() {
             expectationNote('expected bytes do not match the inspected file content');
           }
         }
-        result.ok = !expectationFailed;
+        result.ok = stat !== null && stat.isFile() && !expectationFailed;
       }
     }
-    // Optional observations (required:false) never gate the verdict; they
-    // record their live observation regardless of outcome.
-    if (!isRequired) result.ok = true;
+    // Optional observations retain their actual result; only required actions gate.
+    result.durationMs = Date.now() - actionStart;
+    result.observedAt = new Date().toISOString();
     verdict.execution.actions.push(result);
   }
 
   // 8. Evidence contract: every declared artifact must have landed on disk.
-  const missingEvidence = definition.evidence.artifacts
-    .filter((name) => name !== 'verdict.json')
-    .filter((name) => !fs.existsSync(path.join(evidenceDir, name)));
+  const missingEvidence = [];
+  for (const name of definition.evidence.artifacts.filter((item) => item !== 'verdict.json')) {
+    const file = path.join(evidenceDir, name);
+    try {
+      if (!fs.statSync(file).isFile() || !fs.realpathSync(file).startsWith(`${fs.realpathSync(evidenceDir)}${path.sep}`)) {
+        missingEvidence.push(name);
+        continue;
+      }
+      const observed = sha256(fs.readFileSync(file));
+      if (verdict.evidence.sha256[name] && verdict.evidence.sha256[name] !== observed) return fail('evidence-changed-after-capture');
+      if (!verdict.evidence.files.includes(name)) verdict.evidence.files.push(name);
+      verdict.evidence.sha256[name] = observed;
+    } catch { missingEvidence.push(name); }
+  }
   if (missingEvidence.length > 0) {
     return fail(`evidence-artifact-missing: ${missingEvidence.join(', ')} — a claim without persisted bytes is not evidence`);
   }
@@ -801,15 +1125,12 @@ function main() {
   // every required assertion must map to executed ok test points — missing,
   // skipped, failed or unmatched ids are structured nonzero refusals.
   const failedAction = verdict.execution.actions.find((action) => action.required && !action.ok);
-  // Counts come from the structured test points this invocation produced —
-  // the same typed source used for assertion attribution, so counts, points
-  // and denominator can never disagree.
-  const pointFailures = spawnPoints.filter((point) => !point.ok && !point.skipped).length;
-  const pointSkips = spawnPoints.filter((point) => point.skipped).length;
-  verdict.execution.tests = spawnPoints.length;
-  verdict.execution.pass = spawnPoints.length - pointFailures - pointSkips;
-  verdict.execution.fail = pointFailures;
-  verdict.execution.skipped = pointSkips;
+  // Counts come from complete summaries of this invocation; named targets
+  // independently map to its actual TAP points, including nested tests.
+  const summaries = spawnStdouts.map(parseTapSummary).filter(Boolean);
+  for (const key of ['tests', 'pass', 'fail', 'skipped', 'todo', 'cancelled']) {
+    verdict.execution[key] = summaries.reduce((sum, summary) => sum + summary[key], 0);
+  }
   verdict.execution.effectiveExecutions = verdict.execution.pass + verdict.execution.fail;
 
   const requiredIds = Array.isArray(definition.requiredAssertions) ? definition.requiredAssertions : [];
@@ -817,13 +1138,21 @@ function main() {
   verdict.execution.requiredAssertions = evaluations;
   const scenarioToken = verdict.scenario;
   const scenarioEvaluation = evaluateAssertionId(scenarioToken, spawnPoints);
+  const target = frozenTargetMapping
+    ? { matchedPoints: evaluations.reduce((sum, item) => sum + item.matchedPoints, 0),
+      status: evaluations.every((item) => item.status === 'satisfied') ? 'satisfied'
+        : evaluations.some((item) => item.status === 'failed') ? 'failed'
+          : evaluations.some((item) => item.status === 'skipped') ? 'skipped' : 'missing' }
+    : scenarioEvaluation;
   verdict.execution.target = {
     token: scenarioToken,
-    found: scenarioEvaluation.matchedPoints > 0,
-    status: scenarioEvaluation.matchedPoints === 0 ? null : scenarioEvaluation.status === 'satisfied' ? 'ok' : scenarioEvaluation.status,
+    mapping: frozenTargetMapping ? 'frozen-assertions' : 'scenario-token',
+    found: target.matchedPoints > 0,
+    status: target.matchedPoints === 0 ? null : target.status === 'satisfied' ? 'ok' : target.status,
   };
 
   if (failedAction) {
+    if (failedAction.unverified) return notExercised(`${failedAction.unverified}: action-${failedAction.index} did not produce valid execution evidence`);
     return fail(`action-${failedAction.index}-failed (${failedAction.type}): ${failedAction.note ?? `exit ${failedAction.exitCode}`} (expected: ${failedAction.expected})`);
   }
   if (verdict.execution.fail > 0) {
@@ -846,9 +1175,22 @@ function main() {
       missing: unresolved.map((evaluation) => evaluation.id),
     });
   }
+  if (!componentOnly || definition.runtimeBinding || typeof observeProtectedSource === 'function') {
+    const source = await observeRuntime({ definition, observer: observeProtectedSource, candidate: verdict.candidate,
+      actions: verdict.execution.actions, evidenceDir, checkId: verdict.journey?.requiredCheck ?? `V_${definition.scenario}`,
+      requiredProofLevel: entry?.required_proof_level ?? 'component', requiredReadbacks: entry?.required_readbacks ?? [], evidenceHashes: { ...verdict.evidence.sha256 }, authorityRoot: entryPreflight?.root, componentOnly });
+    if (source.error) return notExercised(`${source.error} (UNVERIFIED): actual protected Run/dispatch/current evidence was not established`);
+    verdict.sourceObservation = source;
+    if (!componentOnly) {
+      verdict.scope = `managed/${entry.required_proof_level}`;
+      // A qualified single check still cannot sign overall delivery/Journey closure.
+    }
+  }
   verdict.verdict = 'PASS';
   verdict.reason = null;
   return emit(EXIT_PASS);
 }
 
-process.exit(main());
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  process.exitCode = await runDeliveryJourney();
+}

@@ -41,7 +41,6 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "pattern": "^[A-Za-z][A-Za-z0-9_]*(?::[A-Za-z0-9_-]+)?$",
         "description": "Assertion id (scenario token like A01/V_A01, or a composite sub-assertion id like V_X89:readback) that MUST each map to at least one executed, non-skipped, passing test point in this journey's TAP output. This is the nonzero target denominator (P1-04): suite-level green never substitutes for the named assertions."
       },
       "description": "Target denominator: every listed assertion id must be verifiably mapped to an executed ok test point; missing, skipped, failed or unmatched ids are structured nonzero refusals, never PASS."
@@ -94,17 +93,19 @@
               "readState",
               "inspect"
             ],
-            "description": "spawn = run a real command; readState = read a real file (relative paths resolve against the evidence dir); inspect = record a read-only observation (a command like 'git rev-parse HEAD' or a filesystem path)."
+            "description": "spawn = run a real command; readState = read a regular file relative to the evidence directory; inspect = run an explicit command probe or observe a filesystem file (exactly one of command/path)."
           },
           "command": {
             "type": "string",
             "minLength": 1,
-            "description": "Required for spawn: the exact argv line to execute (whitespace-split; no shell)."
+            "description": "Required for spawn or command-style inspect: the exact argv line (whitespace-split; no shell). Filesystem paths are never implicitly executed.",
+            "pattern": "\\S"
           },
           "path": {
             "type": "string",
             "minLength": 1,
-            "description": "Required for readState/inspect: file path or observation spec."
+            "description": "Required for readState or file-style inspect. readState resolves relative to the evidence directory; inspect resolves relative to the repository. A file name may contain whitespace. Commands belong in command, never inferred from path in managed execution.",
+            "pattern": "\\S"
           },
           "expected": {
             "type": "string",
@@ -125,9 +126,10 @@
                   "commandSucceeds",
                   "equals",
                   "nonEmptyFile",
-                  "tapRequiredAssertions"
+                  "tapRequiredAssertions",
+                  "jsonFields"
                 ],
-                "description": "exitCode = spawn exits exactly N; commandSucceeds = inspect/spawn probe exits 0; equals = observed value (trimmed probe stdout for inspect commands, file bytes for readState) equals the frozen string; nonEmptyFile = readState file exists with >0 bytes; tapRequiredAssertions = this spawn's own TAP output satisfies every listed assertion id."
+                "description": "exitCode = spawn exits exactly N; commandSucceeds = a real spawn or command-style inspect exits 0; equals = observed file bytes or trimmed inspection command stdout equals the frozen string; nonEmptyFile = a regular file exists with >0 bytes (readState or file-style inspect only); jsonFields = actual JSON object fields equal the frozen values; tapRequiredAssertions = this spawn TAP output satisfies every listed assertion id. Cross-kind file/command expectations are invalid."
               },
               "value": {
                 "description": "exitCode: integer exit status; equals: the frozen string the live observation must equal."
@@ -205,12 +207,40 @@
                     "assertions"
                   ]
                 }
+              },
+              {
+                "if": {
+                  "required": [
+                    "kind"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "jsonFields"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "value"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "object",
+                      "minProperties": 1
+                    }
+                  }
+                }
               }
             ]
           },
           "required": {
             "type": "boolean",
             "description": "Default true. A required action gates PASS: its typed expectation must be met by the live observation or the journey FAILs (RW_OBSERVATION_REQUIRED). required:false is a read-only observation that records without gating (e.g. candidate digest capture)."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable readback identity referenced by the frozen case registry."
           }
         },
         "allOf": [
@@ -225,24 +255,27 @@
             "then": {
               "required": [
                 "command"
-              ]
+              ],
+              "properties": {
+                "path": false
+              }
             }
           },
           {
             "if": {
               "properties": {
                 "type": {
-                  "enum": [
-                    "readState",
-                    "inspect"
-                  ]
+                  "const": "readState"
                 }
               }
             },
             "then": {
               "required": [
                 "path"
-              ]
+              ],
+              "properties": {
+                "command": false
+              }
             }
           },
           {
@@ -261,6 +294,108 @@
               "required": [
                 "expect"
               ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "spawn"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "expect": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "exitCode",
+                        "commandSucceeds",
+                        "tapRequiredAssertions"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "readState"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "expect": {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "equals",
+                        "nonEmptyFile",
+                        "jsonFields"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "inspect"
+                }
+              }
+            },
+            "then": {
+              "if": {
+                "required": [
+                  "command"
+                ]
+              },
+              "then": {
+                "required": [
+                  "command"
+                ],
+                "properties": {
+                  "path": false,
+                  "expect": {
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "commandSucceeds",
+                          "equals",
+                          "jsonFields"
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "else": {
+                "required": [
+                  "path"
+                ],
+                "properties": {
+                  "command": false,
+                  "expect": {
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "equals",
+                          "nonEmptyFile",
+                          "jsonFields"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         ]
@@ -311,6 +446,21 @@
           "minLength": 1
         }
       }
+    },
+    "runtimeBinding": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Expected SDD.Delivery.ActionBinding v1 data, never issuer trust. Managed proof additionally requires the fixed protected Comet observation adapter and native Run/dispatch/raw-evidence readback."
+    },
+    "proofLevel": {
+      "enum": [
+        "component",
+        "comet-runtime",
+        "host",
+        "platform",
+        "resource"
+      ],
+      "description": "Declared observation layer only; runtime/source authentication comes from the protected adapter, never this label."
     }
   }
 }
