@@ -131,17 +131,7 @@ def manifest_errors(manifest: Mapping[str, Any]) -> List[str]:
         if manifest.get("initiator") not in participants:
             errors.append("manifest initiator must be a participant")
         if sorted(participants) != sorted(REQUIRED_PARTICIPANTS):
-            dq = manifest.get("degraded_quorum")
-            degraded_ok = (
-                isinstance(dq, dict)
-                and dq.get("authorized_by") == "user"
-                and isinstance(dq.get("reason"), str)
-                and len(dq.get("reason").strip()) >= 20
-                and set(participants).issubset(set(REQUIRED_PARTICIPANTS))
-                and len(participants) >= 2
-            )
-            if not degraded_ok:
-                errors.append("manifest participants must be exactly claude-code,zcode,codex-agent, or a degraded quorum (>=2 known agents) with degraded_quorum{authorized_by:'user', reason>=20 chars}")
+            errors.append("manifest participants must be exactly claude-code,zcode,codex-agent")
     if manifest.get("review_type") not in CRITERIA:
         errors.append("manifest review_type must be architecture, code, or general")
     if not isinstance(manifest.get("criteria"), list) or not manifest.get("criteria"):
@@ -287,8 +277,6 @@ def cmd_init(args: argparse.Namespace) -> None:
         "review_type": args.review_type,
         "initiator": args.initiator,
         "participants": participants,
-        **({"degraded_quorum": {"authorized_by": "user", "reason": args.degraded_quorum_reason}}
-           if getattr(args, "degraded_quorum_reason", None) else {}),
         "artifact": str(artifact),
         "artifact_sha256": digest_path(artifact),
         "scope": args.scope,
@@ -539,8 +527,6 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--min-score", type=float, default=8.0)
     init.add_argument("--min-criterion-score", type=float, default=7.0)
     init.add_argument("--max-rounds", type=int, default=3)
-    init.add_argument("--degraded-quorum-reason", type=str, default=None,
-                      help="record a user-authorized degraded quorum (>=2 known agents); reason must be >=20 chars")
     init.set_defaults(func=cmd_init)
 
     validate = sub.add_parser("validate")

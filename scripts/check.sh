@@ -3,22 +3,18 @@
 # 只改一个范围时，可先跑对应窄检查，最后跑本总入口。
 
 set -euo pipefail
+# 技能源目录只分发源码，不在离线自测中写入 Python 字节码。
+export PYTHONDONTWRITEBYTECODE=1
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 bash scripts/agent-instructions-check.sh
 bash scripts/agent-skill-check.sh
 
-# whitebox-verify 技能自测：GREEN 夹具（run.py 自带 mtime 重建，免疫 vendoring 拷贝）
-# + negative corpus（8 个伪造/残缺证据必须全被拒）
+# 使用源快照自己的完整自测入口；缺入口或任一子检查失败都阻断。
 WBV="$(pwd)/.agents/skills/whitebox-verify"
-if [ -f "$WBV/tests/green-fixture/run.py" ]; then
-  python3 "$WBV/tests/green-fixture/run.py" >/dev/null || { echo "❌ whitebox-verify green fixture failed" >&2; exit 1; }
-  if [ -f "$WBV/tests/negative-corpus/cmp.sh" ]; then
-    bash "$WBV/tests/negative-corpus/cmp.sh" 2>&1 | grep -q "SUMMARY: 8 ok / 0 fail" || { echo "❌ whitebox-verify negative corpus mismatch" >&2; exit 1; }
-  fi
-  echo "✅ whitebox-verify: GREEN fixture + negative corpus (8/8) 通过"
-fi
+[ -f "$WBV/tests/run_all.sh" ] || { echo "❌ whitebox-verify required selftest entry missing" >&2; exit 1; }
+bash "$WBV/tests/run_all.sh" || { echo "❌ whitebox-verify source selftests failed" >&2; exit 1; }
 
 # multi-agent-consensus-review 技能自测：gate 机械验证（review init/validate/tally）
 MCR="$(pwd)/.agents/skills/multi-agent-consensus-review"

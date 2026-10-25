@@ -11,10 +11,20 @@ import shutil
 from pathlib import Path
 from typing import Dict, List, Sequence
 
+from dispatch_round import zcode_command
+from cli_process import check_silent_command
+
+
+try:
+    ZCODE_COMMAND = shlex.join(zcode_command())
+    ZCODE_ERROR = None
+except OSError as exc:
+    ZCODE_COMMAND, ZCODE_ERROR = "zcode", str(exc)
+
 
 DEFAULTS = {
     "claude-code": os.environ.get("CAR_CLAUDE_COMMAND", "claude"),
-    "zcode": os.environ.get("CAR_ZCODE_COMMAND", "zcode"),
+    "zcode": ZCODE_COMMAND,
     "codex-agent": os.environ.get("CAR_CODEX_COMMAND", "codex"),
 }
 REQUIRED_PARTICIPANTS = {"claude-code", "zcode", "codex-agent"}
@@ -23,6 +33,10 @@ REQUIRED_PARTICIPANTS = {"claude-code", "zcode", "codex-agent"}
 def resolve_command(command: str) -> str | None:
     parts = shlex.split(command)
     if not parts:
+        return None
+    try:
+        check_silent_command(parts)
+    except (OSError, ValueError):
         return None
     executable = parts[0]
     if "/" in executable:
@@ -57,11 +71,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     for agent in participants:
         command = overrides.get(agent, DEFAULTS.get(agent, agent))
         resolved = resolve_command(command)
+        error = ZCODE_ERROR if agent == "zcode" and agent not in overrides else None
+        if error:
+            resolved = None
         results.append({
             "agent": agent,
             "command": command,
             "resolved": resolved,
             "available": resolved is not None,
+            "error": error,
         })
     payload = {
         "required": participants,

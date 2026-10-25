@@ -1,15 +1,174 @@
+diff --git a/test/app/doctor.test.ts b/test/app/doctor.test.ts
+--- a/test/app/doctor.test.ts
++++ b/test/app/doctor.test.ts
+@@ -1374,13 +1374,14 @@
+     }
+
+     expect(output).not.toContain('skills: Claude Code (project): missing');
+-    expect(output).toContain('Superpowers: detected');
++    expect(output).toContain('Project methods: UNQUALIFIED');
++    expect(output).not.toContain('npx skills add obra/superpowers');
+     expect(output).toContain(
+       'Comet skills: not installed in project or global scope — run: comet init',
+     );
+   });
+
+-  it('detects Claude plugin-managed Superpowers installs', async () => {
++  it('does not mistake plugin-managed retired methods for managed qualification', async () => {
+     const fakeHome = path.join(tmpDir, 'plugin-home');
+     const pluginVersion = '999.0.0-test';
+     const pluginSkillsDir = path.join(
+@@ -1412,10 +1413,9 @@
+         log.mockRestore();
+       }
+
+-      expect(output).toContain('Superpowers: detected');
+-      expect(output).toContain('Claude Code global');
+-      expect(output).not.toContain('Claude Code project');
+-      expect(output).not.toContain('Superpowers: not detected');
++      expect(output).toContain('Project methods: UNQUALIFIED');
++    expect(output).not.toContain('npx skills add obra/superpowers');
++      expect(await fs.readFile(path.join(pluginSkillsDir, 'using-superpowers/SKILL.md'), 'utf8')).toBe('# using-superpowers\n');
+     } finally {
+       if (previousClaudeConfigDir === undefined) {
+         delete process.env.CLAUDE_CONFIG_DIR;
+@@ -1461,7 +1461,7 @@
+       }),
+     );
+     expect(results.map((result) => result.check)).not.toEqual(
+-      expect.arrayContaining(['openspec CLI', 'Superpowers', 'working directories']),
++      expect.arrayContaining(['openspec CLI', 'Project methods', 'working directories']),
+     );
+     expect(results.some((result) => result.check.startsWith('CodeGraph'))).toBe(true);
+     expect(payload.codegraph?.status).toMatch(/^(cli_missing|project_not_initialized)$/u);
 diff --git a/test/app/init-e2e.test.ts b/test/app/init-e2e.test.ts
-index 3774dc2..b6f67a2 100644
 --- a/test/app/init-e2e.test.ts
 +++ b/test/app/init-e2e.test.ts
-@@ -397,6 +397,10 @@ describe('comet init E2E', () => {
-       ).find((r) => r.platform === 'claude');
-       expect(claudeResult?.comet).toBe('installed');
-       expect(claudeResult?.openspec).toBe('skipped');
-+      // Delivery contract (patches/tests/1_6.patch): Superpowers is a disabled
-+      // method dependency. Project delivery keeps it non-installable from init
-+      // selection; behavioral probes live in the receiving project's
-+      // test/delivery-cases/1_6.mjs.
-       expect(claudeResult?.superpowers).toBe('skipped');
- 
-       const manifest = await readManifest();
+@@ -195,7 +195,7 @@
+         name: 'Classic',
+         short: 'Classic',
+         details: [
+-          expect.stringContaining('经典高约束Spec流程，使用 OpenSpec 与 Superpowers编排工作流'),
++          expect.stringContaining('经典高约束Spec流程，使用 OpenSpec 与项目方法编排工作流'),
+           expect.stringMatching(/适合：.*私有化部署/u),
+           expect.stringMatching(/特点：.*文档更丰富/u),
+         ],
+@@ -1943,7 +1943,7 @@
+
+   it.each([
+     { workflow: 'native' as const, expected: ['codegraph'] },
+-    { workflow: 'both' as const, expected: ['openspec', 'superpowers', 'codegraph'] },
++    { workflow: 'both' as const, expected: ['openspec', 'codegraph'] },
+   ])(
+     'offers the CodeGraph dependency for $workflow initialization',
+     async ({ workflow, expected }) => {
+@@ -3074,7 +3074,7 @@
+       ).resolves.toBeUndefined();
+       await expect(
+         fs.access(path.join(tmpDir, '.dsh', 'skills', 'brainstorming', 'SKILL.md')),
+-      ).resolves.toBeUndefined();
++      ).rejects.toMatchObject({ code: 'ENOENT' });
+       await expect(fs.access(path.join(tmpDir, 'AGENTS.local.md'))).resolves.toBeUndefined();
+       await expect(fs.access(path.join(tmpDir, '.dsh', 'hooks.json'))).resolves.toBeUndefined();
+       await expect(
+diff --git a/test/app/matt-method-profile.test.ts b/test/app/matt-method-profile.test.ts
+new file mode 100644
+--- /dev/null
++++ b/test/app/matt-method-profile.test.ts
+@@ -0,0 +1,30 @@
++import { expect, it } from 'vitest';
++import { promises as fs } from 'fs';
++import os from 'os';
++import path from 'path';
++import { copyCometSkillsForPlatform } from '../../domains/skill/platform-install.js';
++import { PLATFORMS } from '../../platform/install/platforms.js';
++
++it.each(['skills', 'skills-zh'])('Classic platform installation ships actual Matt bindings: %s', async (language) => {
++  const project = await fs.mkdtemp(path.join(os.tmpdir(), 'comet-method-install-'));
++  try {
++    const platform = PLATFORMS.find((item) => item.id === 'claude')!;
++    const result = await copyCometSkillsForPlatform(project, platform, true, language, 'project', 'copy', 'classic');
++    expect(result.failed).toBe(0);
++    const installed = path.join(project, '.claude/skills');
++    const design = await fs.readFile(path.join(installed, 'comet-design/SKILL.md'), 'utf8');
++    expect(design).toContain('grill-me');
++    expect(design).not.toMatch(/load the Superpowers `brainstorming`|加载 Superpowers `brainstorming`/);
++    const profile = await fs.readFile(path.join(installed, 'comet-classic/reference/method-profile.md'), 'utf8');
++    for (const method of ['comet-managed-v2', 'multi-agent-consensus-review', 'test-authoring', 'whitebox-verify', 'UNQUALIFIED']) {
++      expect(profile).toContain(method);
++    }
++    for (const phase of ['comet-open', 'comet-design', 'comet-build', 'comet-verify', 'comet-archive']) {
++      expect(await fs.readFile(path.join(installed, phase, 'SKILL.md'), 'utf8')).toBe(
++        await fs.readFile(path.join('assets', language, phase, 'SKILL.md'), 'utf8'),
++      );
++    }
++  } finally {
++    await fs.rm(project, { recursive: true, force: true });
++  }
++});
+diff --git a/test/app/update.test.ts b/test/app/update.test.ts
+--- a/test/app/update.test.ts
++++ b/test/app/update.test.ts
+@@ -2349,7 +2349,7 @@
+     });
+   });
+
+-  it('updates installed Classic dependencies with explicit self-update', async () => {
++  it('updates OpenSpec with explicit self-update without resurrecting disabled methods', async () => {
+     const fakeHome = path.join(tmpDir, 'classic-dependencies-self-update-home');
+     await arrangeClassicDocsOpenSpecUpdate(tmpDir);
+     await fs.mkdir(path.join(tmpDir, '.claude', 'skills', 'brainstorming'), { recursive: true });
+@@ -2385,10 +2385,11 @@
+         selectedPlatformIds: ['claude'],
+       }),
+     );
+-    expect(mockedInstallSuperpowers).toHaveBeenCalledWith(tmpDir, 'project', ['claude'], true);
+-  });
+-
+-  it('updates dsh Classic dependencies through the Claude-shaped OpenSpec contract', async () => {
++    expect(mockedInstallSuperpowers).not.toHaveBeenCalled();
++    expect(await fs.readFile(path.join(tmpDir, '.claude/skills/brainstorming/SKILL.md'), 'utf8')).toBe('# Brainstorming\n');
++  });
++
++  it('updates dsh OpenSpec without resurrecting disabled methods', async () => {
+     const fakeHome = path.join(tmpDir, 'dsh-classic-dependencies-self-update-home');
+     await arrangeClassicDocsOpenSpecUpdate(tmpDir);
+     await fs.mkdir(path.join(tmpDir, '.dsh', 'skills', 'comet-classic'), { recursive: true });
+@@ -2436,7 +2437,8 @@
+         selectedPlatformIds: ['dsh'],
+       }),
+     );
+-    expect(mockedInstallSuperpowers).toHaveBeenCalledWith(tmpDir, 'project', ['dsh'], true);
++    expect(mockedInstallSuperpowers).not.toHaveBeenCalled();
++    expect(await fs.readFile(path.join(tmpDir, '.dsh/skills/brainstorming/SKILL.md'), 'utf8')).toBe('# Brainstorming\n');
+   });
+
+   it.each(['missing', 'corrupt'] as const)(
+diff --git a/test/domains/comet-classic/classic-hook-guard.test.ts b/test/domains/comet-classic/classic-hook-guard.test.ts
+--- a/test/domains/comet-classic/classic-hook-guard.test.ts
++++ b/test/domains/comet-classic/classic-hook-guard.test.ts
+@@ -857,6 +857,8 @@
+
+       expect(decision.allowed).toBe(false);
+       expect(decision.reason).toContain('ERROR_CODE: classic-build-plan-missing');
++      expect(decision.reason).toContain('comet-classic/reference/method-profile.md');
++      expect(decision.reason).not.toContain('Superpowers writing-plans');
+       expect(decision.reason).toContain('CHANGE: missing-plan');
+       expect(decision.reason).toContain('TARGET: src/feature.ts');
+       expect(decision.reason).toContain(
+@@ -886,6 +888,7 @@
+
+     expect(decision.allowed).toBe(false);
+     expect(decision.reason).toContain('ERROR_CODE: classic-build-plan-broken');
++    expect(decision.reason).not.toContain('Superpowers writing-plans');
+     expect(decision.reason).toContain(`RECORDED_PLAN: ${recordedPlan}`);
+     expect(decision.reason).toContain(
+       'comet state set broken-plan plan <new-repository-relative-plan-path>',
+@@ -906,6 +909,7 @@
+
+     expect(decision.allowed).toBe(false);
+     expect(decision.reason).toContain('ERROR_CODE: classic-build-plan-broken');
++    expect(decision.reason).not.toContain('Superpowers writing-plans');
+   });
+
+   it('allows a replacement plan file when the recorded plan is broken', async () => {

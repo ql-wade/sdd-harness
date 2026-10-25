@@ -4,7 +4,9 @@
 
 ---
 
-## Mode Selection (5s 决策)
+## Mode Selection
+
+含 UI 先读 `browser-execution.md`：发现当前 harness 原生浏览器并读其文档，再决定实际 API；截图需真实捕获并展示，不能用 DOM 快照替代。Journey/Slice 路由以 SKILL.md 为准，下面仅是 Debug 速查。
 
 ```
 前端功能问题?     → Mode A (Phase 0→1→2→3)
@@ -26,66 +28,32 @@ Agent/后端问题?   → Mode B (Phase 1→6)
 
 ---
 
-## Mode A: 前端验证 (核心 3 步)
+## Mode A: 前端验证 (Phase 0-3)
 
 ```
 Phase 0: 静态契约审计 (读代码，不开浏览器)
-  → 前端 API vs 后端 Controller: method / URL / 参数位置 / 字段名
-  → 产出: 契约匹配表
-
-Phase 1: 结构验证 (浏览器)
-  → navigate → snapshot → hasError() → screenshot
-  → 通过: 无 error overlay + DOM 完整
-
-Phase 2: 链路验证 (交互)
-  → clear → click → wbvGet(url) → 对比 expect_api
-  → 通过: API method/url/body 正确
-
-Phase 3: 数据验证 (响应)
-  → wbvAudit(fields) → missingFields=[] → 追踪到 DOM
-  → 通过: 响应字段 ⊇ 前端 interface 字段
+  → 前端 API vs 后端 Controller: method / URL / 参数位置 / 字段名 → 产出: 契约匹配表
+Phase 1: 结构验证 (浏览器) → 原生导航 → DOM/AX → 实际错误态观察 → 原生截图与展示
+Phase 2: 链路验证 (交互) → 保留日志 → 原生交互 → 实际请求观察/关联服务日志 → 对比 expect_api
+Phase 3: 数据验证 (响应) → 实际响应字段断言 → DOM 终态 → 独立效应系统回读
 ```
 
-**铁律**: 三维度不一致 = P0 (method / URL / 参数位置)
+**铁律**: 三维度不一致 = P0 (method / URL / 参数位置)；READ 通过 ≠ 功能正确，CRUD 全链路必须闭环 → 详情 `iron-laws.md`（C1/C2）。各 Phase 通过条件详见 `debug-workflow.md`（同目录）。
 
 ---
 
 ## Mode B: Agent Debug (6 阶段)
 
 ```
-Phase 1: Config Audit (配置审计)
-  → 读 tools.json / application.yml / docker-compose.yml
-  → 对比期望 vs 实际
-  → P0 优先修配置，不动源码
-
-Phase 2: Startup Evidence (启动态)
-  → docker logs --tail 100 | grep ToolFilter
-  → 确认工具注册列表
-
-Phase 3: Trigger & Capture (触发+抓取)
-  方式A: curl 直调 (推荐首次验证)
-  方式B: Preview MCP UI 操作 (需要截图时)
-  → 抓日志: docker logs --tail 200 > /tmp/debug.log
-
-Phase 4: Log Chain Trace (6 Phase 日志链)
-  4a: Converted tool to OpenAI format    → 工具可见性
-  4b: Streaming tool call chunk         → LLM 发起调用
-  4c: POST_REASONING→TOOL_CALL→PRE_ACTING → 中间件调度
-  4d: HarnessAgent 'xxx' built          → 实例化成功
-  4e: [name] PRE→POST_REASONING        → 子组件推理
-  4f: final reply / SSE done            → 结果返回
-
-Phase 5: Dual Evidence Closure (双重证据)
-  ✅ 时间戳一致 (误差 <60s)
-  ✅ Session Key 一致
-  ✅ Call ID 一致
-  ✅ 内容匹配
-  ❌ 不一致 → 重新触发，同时抓取
-
-Phase 6: Report (报告)
-  → 用 agent-debug-template.md 填写
-  → 含 Mermaid 时序图 + Naming Traceability
+Phase 1: Config Audit        — 读 tools.json / application.yml / docker-compose.yml，对比期望 vs 实际，优先核对配置并向实现者报告缺口
+Phase 2: Startup Evidence    — docker logs | grep ToolFilter，确认工具注册列表
+Phase 3: Trigger & Capture   — 方式A curl 直调(推荐首次) / 方式B 当前 harness UI(需实际截图与展示)；触发后立即抓日志
+Phase 4: Log Chain Trace     — 4a Schema 注册 → 4b LLM tool_call → 4c 中间件调度 → 4d 实例化 → 4e 子组件推理 → 4f 结果汇总
+Phase 5: Dual Evidence       — 日志+截图同一次调用：时间戳(<60s) / Session Key / Call ID / 内容一致
+Phase 6: Report              — agent-debug-template.md + Mermaid 时序图 + Naming Traceability
 ```
+
+> Phase 4 关键词链与 Phase 5 校验清单的完整版见 debug-methodology.md 与 agent-debug-workflow.md（同目录）。
 
 ---
 
@@ -93,73 +61,44 @@ Phase 6: Report (报告)
 
 ### Mode B Debug Commands
 
+> `<占位符>` 从项目实际环境/配置取值（env、本地 config、密管）。**真实口令与端点不得写入本文件或任何报告**——journey-contract.md §7：Never place secrets in correlations, logs, traces, screenshots, or ledgers。
+
 ```bash
-# 登录拿 token
-TOKEN=$(curl -s -X POST http://localhost:8082/agentscope/admin/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123456"}' | jq -r '.token')
+# 登录拿 token（<base_url>/<login_path>/<username>/<password> 按项目实际替换）
+TOKEN=$(curl -s -X POST <base_url>/<login_path> -H "Content-Type: application/json" \
+  -d '{"username":"<username>","password":"<password>"}' | jq -r '.token')
 
-# 触发 chat/send
-curl -s -X POST http://localhost:8082/agentscope/admin/api/agents/default/chat/send \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"message":"你的测试消息"}' | jq .
+# 触发目标操作（示例：chat/send）
+curl -s -X POST <base_url>/<target_path> -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"message":"<message>"}' | jq .
 
-# 抓取日志 (立即执行!)
+# 抓取日志 (触发后立即执行!); Phase 4 关键词链 grep 表见 agent-debug-workflow.md Phase 4
 docker logs <container> --tail 300 > /tmp/debug_$(date +%H%M).log 2>&1
-
-# 过滤关键阶段
-grep -E "Converted tool|tool_call chunk|POST_REASONING|Tool_CALL|PRE_ACTING|HarnessAgent.*built|PRE_REASONING|POST_REASONING|SSE content|final reply" /tmp/debug_*.log
 
 # 配置审计: 检查 tools.json allowlist 数量
 cat tools.json | jq '.allow | length'
 
-# 命名溯源: 搜索硬编码后缀
+# 命名溯源: 搜索硬编码后缀 / 追踪 agent_id 来源
 grep -rn '"-subagent"\|\.name(".*-subagent")' /path/to/source/
-
-# 命名溯源: 追踪 agent_id 来源
 grep -rn "createAgent\|agentId" /path/to/source/
 ```
 
-### Mode A Chrome MCP Commands
+### Mode A 可选注入 helper（仅运行时支持注入时）
+
+`__wbv*` helper 完整 API 定义见 `network-interceptor.js`（同目录，含 helpers）。
 
 ```javascript
-// 清空日志
-__wbvClear()
-
-// 获取匹配的 API 调用
-__wbvGet('/api/agents')
-
-// 审计响应字段
-__wbvAudit('/api/agents', ['id','name','type','description'])
-
-// 检查错误
-__wbvHasError()
+__wbvClear()                              // 清空日志
+__wbvGet('/api/agents')                   // 获取匹配的 API 调用
+__wbvAudit('/api/agents', ['id','name'])  // 审计响应字段
+__wbvHasError()                           // 检查错误
 ```
 
 ---
 
 ## Mermaid 安全子集
 
-### ✅ 可以用
-- `participant X as Name` 或 `participant X as Name<br/>Sub`
-- `->>`, `-->>`, `->` 箭头
-- `Note over/of/right/left X: text`
-- `loop/alt/opt/par` 块
-- `rect rgb(r,g,b)` (谨慎使用)
-
-### ❌ 不能用 (解析失败)
-- `{}` `""` `<>` 在消息体中
-- `\n` `|` `┌─┐` `└─┘` 在消息体中
-- 多层嵌套 `<br/>` (>1层)
-
-### 最佳实践
-```
-消息体: 只用纯 ASCII 文本
-复杂内容: 放 Note 注释框
-细节补充: 用 Note right of X:
-渲染前: 先本地预览验证
-```
+→ 完整可用/禁用清单、最佳实践与推荐模板见同目录 mermaid-guide.md。核心：消息体只用纯 ASCII，复杂内容放 Note 注释框。
 
 ---
 
@@ -168,54 +107,19 @@ __wbvHasError()
 | # | 反模式 | 后果 | 正确做法 |
 |---|--------|------|---------|
 | 1 | 只看页面加载就声称 PASS | 功能链路断裂不可发现 | 必须点击→检查API→检查响应 |
-| 2 | 凭想象写 API 调用 | 6个P0 bug的根源 | 先读后端Controller再写前端 |
+| 2 | 凭想象写 API 调用 | 6个P0 bug的根源 | 读后端 Controller 对比前端并报告差异 |
 | 3 | 日志截图时间线不一致 | 证据无效 | 同一次触发同时抓取 |
 | 4 | 不做配置审计直接改代码 | 违反约束/过度修复 | Config Audit first (P0>P1>P2>P3) |
 | 5 | Mermaid用特殊字符 | 渲染空白 | 纯ASCII消息体+Note替代 |
 
 ---
 
-## 修复优先级 (Mode B)
+## 修复优先级 / 时限参考
 
-```
-P0: 改配置文件 (tools.json / env / flags)     ← 最小变更, 零风险
-P1: 改启动参数 (JVM opts / docker-compose)    ← 不改代码
-P2: 改业务数据 (DB记录 / workspace文件)       ← 改数据不改逻辑
-P3: 改源码 (Java/TS/Python)                   ← 仅当允许时
-```
-
-**Karpathy #2**: 能用配置解决就不用改代码。
-
----
-
-## 时限参考
-
-| 任务 | Mode A | Mode B |
-|------|--------|--------|
-| 单页面验证 | 5min | — |
-| 全路由扫描 | N×1min | — |
-| Config Audit | — | 3min |
-| Log Chain Trace | — | 5min |
-| Dual Evidence | — | 3min |
-| 完整报告生成 | — | 10min |
-| **全流程** | **15-30min** | **20-30min** |
-| LLM 推理等待 | — | 10-30s/轮 |
-
----
+→ 向实现者提出的修复建议优先级（验收者不实施）(Mode B)：P0 配置文件 > P1 启动参数 > P2 业务数据 > P3 源码，完整判定条件见 `iron-laws.md#iron-law-config`。
+→ 时限：工具级与全流程超时表见同目录 debug-io-contract.md#时效指导（含 Mode B 任务时长参考）。
 
 ## 输出物清单
 
-### Mode A 必交
-- [ ] 契约匹配表 (Phase 0)
-- [ ] 每页截图 (Phase 1)
-- [ ] API 审计表 (Phase 2+3)
-- [ ] 缺陷清单 (P0/P1/P2)
-
-### Mode B 必交
-- [ ] Config Audit 表 (Phase 1)
-- [ ] Startup Evidence (Phase 2)
-- [ ] 6 Phase 日志链 (Phase 4)
-- [ ] UI 截图 + 一致性校验 (Phase 5)
-- [ ] Mermaid 时序图 (Phase 6)
-- [ ] Verification Conclusion 表
-- [ ] Raw Data 路径索引
+→ **Mode A**：契约匹配表（Phase 0）/ 每页截图 / API 审计表 / 缺陷清单（P0/P1/P2）——逐项要求见 `report-template.md`。
+→ **Mode B**：Config Audit 表、Startup Evidence、6 Phase 日志链、UI 截图 + 一致性校验、Mermaid 时序图、Verification Conclusion 表、Raw Data 路径索引——逐项要求见 `agent-debug-workflow.md` Phase 6。

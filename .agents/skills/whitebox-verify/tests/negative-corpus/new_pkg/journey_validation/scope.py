@@ -58,7 +58,9 @@ def validate_frozen_plan(
             errors.append("plan.digest: must equal the frozen scope artifact SHA-256")
         if artifact.captured_at and earliest_command and artifact.captured_at > earliest_command:
             errors.append("plan.evidence: scope artifact must predate command execution")
-        if artifact.path and earliest_command:
+        if artifact.path and not artifact.path.is_file():
+            errors.append("plan.evidence: scope artifact file does not exist")
+        elif artifact.path and earliest_command:
             modified = datetime.fromtimestamp(artifact.path.stat().st_mtime, tz=timezone.utc)
             if modified > earliest_command:
                 errors.append("plan.evidence: scope file mtime must predate command execution")

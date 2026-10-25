@@ -6,10 +6,10 @@ Schema 3.0 is a closure ledger for evidence that was actually produced. It is no
 
 Use this order:
 
-1. Inspect repositories and derive Journeys, mandatory paths, Cases, hops, risks, terminal authorities, A-J requirements, browser applicability, and CI applicability.
+1. Establish the trusted project root, consume the author delivery (a hash-linked TestPack when provided, or existing approved cases/tests and their original basis/identities) per `acceptance-handoff.md`, and inspect its requirement/source basis. Independently review author-delivered Journeys, mandatory paths, Cases, hops, risks, terminal oracles and A-J coverage; derive acceptance topology, evidence authorities, browser/CI applicability and discrepancy probes from that basis. Missing cases, executable coverage or business oracles go back to test-authoring; do not design or write them here.
 2. Serialize that scope into one `scope-plan` artifact, freeze it, hash its actual bytes, and do this before the earliest command starts.
 3. Begin one bounded run, capture exact source identities, and establish lifecycle evidence for every first-party component.
-4. Execute an honest RED, then GREEN, contract, Journey, browser, route-scan, lifecycle, security, and CI commands as applicable.
+4. Independently verify the delivered honest RED/GREEN progression and run approved contract, Journey, browser, route-scan, lifecycle, security, regression and CI commands as applicable. Use author-prepared isolated revision/control setups for RED replay; never edit tests, product or configuration to manufacture RED/GREEN.
 5. Link each command to its typed output files and each runner report back to the command that produced it.
 6. Bind runtime evidence to one passing Case, its unique correlation value, its Journey, its hops, and the exact source revisions.
 7. Complete independent subagent review, provenance, CI applicability, and redaction gates.
@@ -255,6 +255,8 @@ An HTTP status, producer return value, queue publication, toast, or intermediate
 
 ### Browser and route scan
 
+For all UI tasks, first read `browser-execution.md` and prefer the actual harness-native browser. Native actions/screenshots are partial runtime evidence, not a substitute for any browser-report, console/network observations, or route scan required below. Unsupported capabilities remain explicit blockers; this adapter does not relax schema or closure gates.
+
 A browser entry forces `browser.required: true`. A non-browser Journey still declares `browser.required: false`, a repository-derived reason, and applicability evidence typed `scope-plan`, `source-identity`, or `provenance-report`.
 
 Required browser closure binds to a passing Case and has two independent outputs:
@@ -287,8 +289,10 @@ Strict file verification also scans the readable text of every non-screenshot ar
 Every Journey independently requires completed reports for:
 
 1. `Journey Mapper`;
-2. `Test/Contract Designer`, `Test Designer`, `Contract Designer`, or `Journey Runner`;
+2. acceptance review of the author-delivered test/contract design, recorded using a validator-supported role alias: `Test/Contract Designer`, `Test Designer`, `Contract Designer`, or `Journey Runner`;
 3. `Grill Reviewer` or `Griller`.
+
+These legacy Designer aliases are serialization compatibility names, not permission to author missing tests. This role inspects requirement-derived oracles, delivered test bytes and coverage, independently executes approved tests and returns gaps to the author. It must not accept the author's self-check as the final verdict. No role rename or validator relaxation is implied.
 
 Within each Journey these roles must resolve to at least three distinct agent IDs. Each subagent item has a globally unique agent ID, exact source revisions, explicit Journey scope, and a typed `subagent-report` whose role/status/agent/Journey/source fields match. Subagent evidence IDs and bytes must be independent. A role scoped only to another Journey proves nothing for the current one.
 
@@ -412,13 +416,17 @@ This is planned, abridged shape notation. Uppercase tokens are relationships to 
 
 The complete ledger also needs every field described above, exact A-J objects, paths, semantic terminal readback, browser declaration, services, all commands and reports, three Journey-scoped subagents, an explicit `ci_required` boolean plus frozen CI expectations, complete envelopes, and existing files. Never convert this notation into an `executed` ledger by filling it with plausible values.
 
+外部测试模式（Playwright/OTel 等专业化测试手段）与本契约的适配指引，见同目录 professional-testing-patterns.md。
+
 ## 9. Strict Gate
 
-Run from any project directory:
+Run from any project directory (path is relative to the skill root; when installed inside a repository it is `.agents/skills/whitebox-verify/scripts/...`):
 
 ```bash
-python3 ".agents/skills/whitebox-verify/scripts/validate_journey_evidence.py" path/to/ledger.json
+python3 scripts/validate_journey_evidence.py path/to/ledger.json
 ```
+
+运行要求：python3 ≥ 3.8；浏览器 route-scan（`kind: route-interception-scan`，依赖捆绑 Acorn AST helper）需 node ≥ 22.13。
 
 The CLI reads real files. Exit `0` prints `STRUCTURE_PASS`: declared files, hashes, schemas, scopes, and semantic report fields are internally consistent. It does not independently prove that commands ran or that self-authored artifacts are authentic. Exit `1` means structural closure failure. Input/read/JSON failure exits `2`. Use `--all-errors` only when the default first 50 errors are insufficient.
 
@@ -429,7 +437,7 @@ Slice 模式适用于**本地规则/组件级**变更（无跨进程/服务/仓�
 
 | 义务 | Journey | Slice |
 |---|---|---|
-| Trinity frame / 冻结计划 / plan_digest | 必须 | 必须 |
+| 冻结计划 / plan_digest | 必须 | 必须 |
 | A-J 适用性会计（逐维 required 或 N/A+理由） | 必须 | 必须 |
 | Service topology（多服务拓扑） | 必须 | 单进程内组件拓扑（组件/入口/状态存储） |
 | Journey map（跨域 hop 链） | 必须 | 替换为本地因果链（entry→规则→状态→终局断言），hop 至少 2 |
@@ -440,4 +448,32 @@ Slice 模式适用于**本地规则/组件级**变更（无跨进程/服务/仓�
 
 判定不确定时（拿不准是否跨边界）：选 Journey，直到仓库证据证明路径是本地的。
 
-**校验器与 Slice 的关系（v2.2 澄清）**：`validate_journey_evidence.py` 是 **mode-agnostic** 的——它不读取也不冻结 `mode` 字段；Slice 的"hop≥2 本地因果链"与"无跨边界自证"由作者在冻结计划中声明、由 Grill Reviewer 评审把关，校验器对 Slice 不放宽也不加严（同一 schema 同一 RED/GREEN）。校验器侧的 Slice 语义（hop≥2 硬断言、跨边界 N/A 禁止）列于技能路线图，非当前契约承诺。
+**校验器与 Slice 的关系（v2.2 澄清）**：`validate_journey_evidence.py` 是 **mode-agnostic** 的——它不读取也不冻结 `mode` 字段；Slice 的"hop≥2 本地因果链"与"无跨边界自证"由验收者核对作者设计后在冻结计划中声明、由 Grill Reviewer 评审把关，校验器对 Slice 不放宽也不加严（同一 schema 同一 RED/GREEN）。校验器侧的 Slice 语义（hop≥2 硬断言、跨边界 N/A 禁止）列于技能路线图，非当前契约承诺。
+
+### Slice 最小闭环（七步）
+
+| 步 | 内容 | 判定 |
+|---|---|---|
+| 1 | 声明本地因果链：entry → 规则 → 状态 → 终局断言，hop ≥ 2 | 冻结在 scope-plan |
+| 2 | RED：检查作者交付的终局断言与可信需求一致，独立核验/重放作者预备的失败运行 | 失败非报错 / 失败信息符合预期 / 源于功能缺失非笔误 / 失败可复现 |
+| 3 | 核对作者交付实现与版本差异 | 不编写产品代码；缺失实现或测试交回作者 |
+| 4 | 独立执行交付测试的 GREEN 与既有回归 | 零 fail / skip / retry / flaky（与 Journey GREEN 同语义） |
+| 5 | 本地状态读回 | 从状态存储读回终局值比对（terminal readback 的本地版） |
+| 6 | validator STRUCTURE_PASS | `python3 scripts/validate_journey_evidence.py <ledger.json>` exit 0 |
+| 7 | 残留登记 | 铁律 8：未完成/未验证项先登记带 owner 的跟踪 issue，后关闭 |
+
+作者交付物的验收微示例（不是编写指令；期望必须有需求依据）：
+
+```text
+slice:  formatDuration(minutes) → "1h 30m"
+RED:    审查并重放作者的 assert formatDuration(90) === "1h 30m" // 独立确认 FAIL
+GREEN:  独立运行作者实现与测试，核对 90 → "1h 30m"                    // 零 fail/skip/retry/flaky
+读回:   store.lastFormatted === "1h 30m"          // 本地状态读回
+残留:   负数/NaN 输入行为未覆盖 → 登记跟踪 issue 后再关闭
+```
+
+本节为操作补充，不改变上表契约语义与校验器承诺。
+
+### Pure-function Slice applicability
+
+A stateless pure function has no durable store to read. Use its actual return value or exception against an independently specified expected result as the local terminal oracle; do not invent a database, lifecycle service, or browser to manufacture evidence. Keep the existing Slice scope/digest, real RED-to-GREEN regression and validator requirements. If the current ledger schema cannot represent the task honestly, report the local tests and the contract gap separately rather than claim full ledger closure or synthesize persisted state.

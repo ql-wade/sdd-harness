@@ -1,6 +1,7 @@
 ---
 name: multi-agent-consensus-review
 description: Run a read-only architecture, code, or general review across Claude Code, zcode, and Codex Agent with independent scoring, a hard unanimous-consensus gate, and evidence-based debate when any participant disagrees. Use when a review must not pass by majority vote, average score, or initiator override, and must end with a defensible conclusion plus an executable next-step plan.
+disable-model-invocation: true
 ---
 
 # Multi-Agent Consensus Review
@@ -27,6 +28,26 @@ The default quorum is `claude-code`, `zcode`, and `codex-agent`. A missing execu
 - reviews that must preserve independent scores, evidence, dissent, and decision history.
 
 Do not use this skill to make edits while reviewing. Keep all Agents read-only; let the final plan describe changes for a separate implementation task unless the user explicitly requests implementation.
+
+## Silent CLI execution
+
+Every participant and its child processes must run as non-interactive background
+CLIs: use piped or closed stdin and per-participant stdout/stderr logs. Keep
+progress in the initiating conversation. Fresh processes preserve independent
+reviews; they do not require terminal windows, Dock entries, or focus changes.
+Use the bundled dispatch adapter. On macOS it runs bundled ZCode through the
+hidden Electron Helper so plugin subprocesses inherit the same hidden runtime.
+An unavailable silent runtime blocks the review; never fall back to a GUI or
+interactive terminal. Command overrides must obey this contract too.
+
+The controller owns its dispatch processes and each adapter owns its reviewer
+process groups. Clean up only those owned groups on success, failure, timeout,
+SIGINT/SIGTERM, or a stop file. Keep logs and ballots after cleanup. Read
+`ralph-state.json` and per-agent logs to report progress and the terminal state.
+Permission-denied cleanup is recorded in process cleanup receipts; when cleanup
+cannot be verified, preserve the ballot and block the run rather than claiming
+success. Existing ballots are immutable, including when another writer creates
+one while a reviewer is running.
 
 ## Required inputs
 
@@ -150,19 +171,27 @@ python3 "$SKILL_ROOT/scripts/ralph_loop.py" \
 ```
 
 The bundled adapter detects the macOS ZCode app-bundle CLI at
-`/Applications/ZCode.app/Contents/Resources/glm/zcode.cjs`; set
-`CAR_ZCODE_COMMAND` when the installation is elsewhere. It keeps the required
-three-party quorum exact and refuses to convert a missing, malformed, or
-non-zero provider response into a ballot. Consensus ZCode dispatch is pinned
-to the high-tier policy `bigmodel/GLM-5.3` for both the main and lite slots.
-Before dispatch, `scripts/model_policy.py` verifies that ZCode exposes that
-model with max reasoning in its local provider catalog, that Claude exposes
-`glm-5.3` in its configured model mapping, and that Codex exposes
-`gpt-5.6-sol` with max reasoning in its model cache. Missing or stale catalogs,
-unsupported models, and lower-tier `CAR_*` overrides fail the round instead
-of silently downgrading a reviewer. The resolved, non-secret selection is
-written to `model-selection.json` and must remain unchanged across Ralph
-rounds.
+`/Applications/ZCode.app/Contents/Resources/glm/zcode.cjs`; on ZCode 0.16.x and
+0.17.x it uses the read-only `app-server` protocol with an ephemeral personal
+provider registry and never writes user state or credentials into the run. On
+ZCode 0.17.x the bundle CLI is built for Electron's node: the adapter launches
+it through the app's hidden `ZCode Helper` with `ELECTRON_RUN_AS_NODE=1`, because a
+standalone `node` crashes in its sqlite migration layer even on a fresh
+database. This works from any initiator (Claude Code, Codex, or ZCode) and does
+not require the ZCode desktop app to be running. Set
+`CAR_ZCODE_COMMAND` when the installation is elsewhere, or
+`CAR_ZCODE_PROTOCOL=0` for an older CLI that still supports the legacy prompt
+adapter. It keeps the required three-party quorum exact and refuses to convert
+a missing, malformed, or non-zero provider response into a ballot. Before
+dispatch, `scripts/model_policy.py` auto-selects each provider's flagship from
+its local catalog: candidates must advertise max reasoning, light variants
+(flash/mini/…) are excluded, and the highest version wins; Claude follows the
+Opus-tier mapping in its settings. When one version ties across distinct
+codenames the resolver fails closed and asks for a `CAR_*_MODEL` pin, and a
+pin is accepted only if the named model itself passes the same high-tier
+checks — a reviewer can never be silently downgraded. The resolved, non-secret
+selection (model, candidates, rule, catalog digests) is written to
+`model-selection.json` and must remain unchanged across Ralph rounds.
 
 The wrapper receives `REVIEW_RUN_DIR`, `REVIEW_ROUND`, `REVIEW_ROUND_DIR`, `REVIEW_MANIFEST`, and `REVIEW_STOP_FILE` in its environment. It must create exactly one ballot per required Agent plus `dispatch-meta.json` in `REVIEW_ROUND_DIR`, return non-zero on dispatch failure, and never edit the reviewed artifact. The controller rejects missing or inconsistent metadata. See `references/agent-adapters.md` for safe command patterns.
 
@@ -227,7 +256,7 @@ Read `references/review-protocol.md` and `references/ballot.schema.json`. Requir
 
 - `scripts/review_gate.py`: initialize runs, validate ballots, tally the hard gate, and render a final report.
 - `scripts/probe_agents.py`: detect the configured Claude Code, zcode, and Codex Agent executables without invoking them.
-- `scripts/model_policy.py`: discover provider-local model catalogs, verify the high-tier policy, and fail closed on unavailable or downgraded models.
+- `scripts/model_policy.py`: auto-select each provider's flagship from provider-local catalogs and fail closed on unavailable, downgraded, or ambiguous models.
 - `references/review-protocol.md`: prompt templates, criterion anchors, debate log, and report requirements.
 - `references/agent-adapters.md`: safe non-interactive command patterns and zcode configuration contract.
 - `references/ballot.schema.json`: machine-readable ballot shape for external Agent CLIs.

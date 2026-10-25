@@ -13,7 +13,7 @@
 | 验证人 | Claude Code (automated) |
 | 目标服务 | `{container_name}:{port}` |
 | 模型 | `{model_name}` |
-| 约束 | `[x] 不修改源码` 或 `[ ] 允许修改源码` |
+| 约束 | 独立验收不修改源码、测试或配置；修复交回作者 |
 
 ---
 

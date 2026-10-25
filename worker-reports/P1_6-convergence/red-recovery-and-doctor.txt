@@ -1,0 +1,146 @@
+
+ RUN  v4.1.11 <worktree>/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6/work
+
+ ❯ test/domains/comet-classic/classic-hook-guard.test.ts (71 tests | 2 failed | 69 skipped) 674ms
+     × blocks Write source operations until a full build plan is recorded 467ms
+     × blocks Edit source operations until a full build plan is recorded 205ms
+ ❯ test/app/doctor.test.ts (68 tests | 2 failed | 66 skipped) 6618ms
+     × does not report non-Comet skill directories as missing Comet installs in auto scope 6118ms
+     × does not mistake plugin-managed retired methods for managed qualification 499ms
+
+ Test Files  2 failed (2)
+      Tests  4 failed | 135 skipped (139)
+   Start at  09:58:34
+   Duration  9.59s (transform 2.98s, setup 0ms, import 4.01s, tests 7.29s, environment 0ms)
+
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/app/doctor.test.ts > doctor command > does not report non-Comet skill directories as missing Comet installs in auto scope
+AssertionError: expected 'Comet Doctor (scope: auto)\n\n  ✓ Pro…' to contain 'Project methods: UNQUALIFIED'
+
+- Expected
++ Received
+
+- Project methods: UNQUALIFIED
++ Comet Doctor (scope: auto)
++
++   ✓ Project registry: <temp>/comet-doctor-1792893517213-ps9qg6rjrmq/isolated-home/.comet/installations.json (0 project(s))
++   ✓ Scope: auto checks project scope first, then global scope when it is different
++   ✓ Environment: node v24.15.0; platform darwin/arm64; project <temp>/comet-doctor-1792893517213-ps9qg6rjrmq; global <temp>/comet-doctor-1792893517213-ps9qg6rjrmq/isolated-home
++   ✓ Comet CLI: installed (0.4.5)
++   ✓ openspec CLI: installed (1.14.3)
++   ✓ Superpowers: detected (Claude Code project, Claude Code global, Codex global; version not recorded by skills installer)
++   ✗ Classic artifact layout: Classic artifact layout is unavailable from .comet/config.yaml
++   ✗ Classic OpenSpec root: Classic artifact layout is unavailable from .comet/config.yaml
++   ✗ working directories: Classic artifact layout is unavailable from .comet/config.yaml
++   ⚠ Comet skills: not installed in project or global scope — run: comet init
++   ✓ scripts present: OK (13 scripts)
++   ⚠ CodeGraph CLI: CodeGraph CLI is not installed — run: npm install -g @colbymchenry/codegraph
++   ⚠ CodeGraph project index: CodeGraph CLI is not installed — run: npm install -g @colbymchenry/codegraph
++   ⚠ CodeGraph MCP registration: Claude Code: not registered
++   ⚠ CodeGraph effective for Claude Code: not ready — requires an installed CLI, current project index, and valid MCP registration
++   ✓ current selection: no active Comet change
++
+
+ ❯ test/app/doctor.test.ts:1377:20
+    1375|
+    1376|     expect(output).not.toContain('skills: Claude Code (project): missi…
+    1377|     expect(output).toContain('Project methods: UNQUALIFIED');
+       |                    ^
+    1378|     expect(output).not.toContain('npx skills add obra/superpowers');
+    1379|     expect(output).toContain(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  test/app/doctor.test.ts > doctor command > does not mistake plugin-managed retired methods for managed qualification
+AssertionError: expected 'Comet Doctor (scope: auto)\n\n  ✓ Pro…' to contain 'Project methods: UNQUALIFIED'
+
+- Expected
++ Received
+
+- Project methods: UNQUALIFIED
++ Comet Doctor (scope: auto)
++
++   ✓ Project registry: <temp>/comet-doctor-1792893523330-n96eut6drm/plugin-home/.comet/installations.json (0 project(s))
++   ✓ Scope: auto checks project scope first, then global scope when it is different
++   ✓ Environment: node v24.15.0; platform darwin/arm64; project <temp>/comet-doctor-1792893523330-n96eut6drm; global <temp>/comet-doctor-1792893523330-n96eut6drm/plugin-home
++   ✓ Comet CLI: installed (0.4.5)
++   ✓ openspec CLI: installed (1.14.3)
++   ✓ Superpowers: detected (Claude Code global, Codex global; version not recorded by skills installer)
++   ✗ Classic artifact layout: Classic artifact layout is unavailable from .comet/config.yaml
++   ✗ Classic OpenSpec root: Classic artifact layout is unavailable from .comet/config.yaml
++   ✗ working directories: Classic artifact layout is unavailable from .comet/config.yaml
++   ⚠ Comet skills: not installed in project or global scope — run: comet init
++   ✓ scripts present: OK (13 scripts)
++   ⚠ CodeGraph CLI: CodeGraph CLI is not installed — run: npm install -g @colbymchenry/codegraph
++   ⚠ CodeGraph project index: CodeGraph CLI is not installed — run: npm install -g @colbymchenry/codegraph
++   ⚠ CodeGraph MCP registration: Claude Code: not registered
++   ⚠ CodeGraph effective for Claude Code: not ready — requires an installed CLI, current project index, and valid MCP registration
++   ✓ current selection: no active Comet change
++
+
+ ❯ test/app/doctor.test.ts:1416:22
+    1414|       }
+    1415|
+    1416|       expect(output).toContain('Project methods: UNQUALIFIED');
+       |                      ^
+    1417|     expect(output).not.toContain('npx skills add obra/superpowers');
+    1418|       expect(await fs.readFile(path.join(pluginSkillsDir, 'using-super…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  test/domains/comet-classic/classic-hook-guard.test.ts > Classic hook guard command > blocks Write source operations until a full build plan is recorded
+ FAIL  test/domains/comet-classic/classic-hook-guard.test.ts > Classic hook guard command > blocks Edit source operations until a full build plan is recorded
+AssertionError: expected '╔════════════════════════════════════…' to contain 'comet-classic/reference/method-profil…'
+
+- Expected
++ Received
+
+- comet-classic/reference/method-profile.md
++ ╔══════════════════════════════════════════╗
++ ║     COMET PHASE GUARD — WRITE BLOCKED    ║
++ ╚══════════════════════════════════════════╝
++
++ ERROR_CODE: classic-build-plan-missing
++ CHANGE: missing-plan
++ WORKFLOW: full
++ PHASE: build
++ TARGET: src/feature.ts
++ STATE: plan is not recorded
++
++ BLOCKED: project source writes require a ready Superpowers implementation plan.
++
++ ALLOWED_RECOVERY_WRITES:
++ - docs/superpowers/plans/<plan-file>.md
++ - Comet state updates performed by the comet CLI
++ - openspec/changes/missing-plan artifacts allowed by the build phase
++
++ RECOVERY:
++ 1. Invoke /comet-build for missing-plan and resume Step 1.
++ 2. Load the Superpowers writing-plans Skill.
++ 3. Read the Design Doc path from "comet state get missing-plan design_doc" and read openspec/changes/missing-plan/tasks.md.
++ 4. Create the implementation plan under docs/superpowers/plans/.
++ 5. Record the plan path:
++    comet state set missing-plan plan <repository-relative-plan-path>
++ 6. Verify recovery:
++    comet state check missing-plan build --recover
++
++ SUCCESS: plan is reported as DONE and recovery advances beyond plan creation.
++ RETRY: retry the original Write/Edit for src/feature.ts only after SUCCESS.
++ PROHIBITED: do not treat tasks.md as the implementation plan or write project source before SUCCESS.
++ If writing-plans is unavailable, stop and report the missing Skill instead of bypassing this check.
+
+ ❯ test/domains/comet-classic/classic-hook-guard.test.ts:860:31
+    858|       expect(decision.allowed).toBe(false);
+    859|       expect(decision.reason).toContain('ERROR_CODE: classic-build-pla…
+    860|       expect(decision.reason).toContain('comet-classic/reference/metho…
+       |                               ^
+    861|       expect(decision.reason).not.toContain('Superpowers writing-plans…
+    862|       expect(decision.reason).toContain('CHANGE: missing-plan');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+
+EXIT=1

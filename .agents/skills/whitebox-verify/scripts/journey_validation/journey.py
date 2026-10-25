@@ -110,6 +110,129 @@ class JourneyResult:
     projection: dict[str, Any]
 
 
+def _clean_dimension_refs(
+    refs: list[str],
+    dimension: str,
+    test_obligations: list[str],
+    case_state: CaseState,
+    hop_state: HopState,
+    run: RunContext,
+    catalog: dict[str, Artifact],
+) -> tuple[list[str], bool]:
+    clean_refs: list[str] = []
+    obligation_mismatch = False
+    for ref in refs:
+        artifact = catalog.get(ref)
+        if artifact is None or artifact.artifact_type not in DIMENSION_RESULT_TYPES[dimension]:
+            continue
+        report = artifact.payload
+        results = report.get("dimension_results") if isinstance(report, dict) else None
+        result = results.get(dimension) if isinstance(results, dict) else None
+        if not isinstance(result, dict) or result.get("status") != "pass":
+            continue
+        observed_obligations = result.get("test_obligations")
+        if (
+            not isinstance(observed_obligations, list)
+            or any(not is_text(obligation) for obligation in observed_obligations)
+            or sorted(observed_obligations) != sorted(test_obligations)
+        ):
+            obligation_mismatch = True
+            continue
+        commands = [
+            command for command in run.commands.values()
+            if (ref in command.outputs or ref in command.evidence)
+            and command.phase != "red"
+            and command.expected == "pass"
+            and command.exit_code == 0
+        ]
+        if not commands:
+            continue
+        if not (artifact.case_ids & case_state.passing_cases):
+            continue
+        if dimension not in {"I", "J"} and not (artifact.hop_ids & hop_state.expected_ids):
+            continue
+        clean_refs.append(ref)
+    return clean_refs, obligation_mismatch
+
+
+def _validate_dimension_pass(
+    item: dict[str, Any],
+    dimension: str,
+    item_path: str,
+    refs: list[str],
+    case_state: CaseState,
+    hop_state: HopState,
+    run: RunContext,
+    catalog: dict[str, Artifact],
+    errors: list[str],
+) -> None:
+    required_cases_list = require_text_list(item, "required_case_ids", item_path, errors)
+    required_hops_list = require_text_list(item, "required_hop_ids", item_path, errors)
+    required_cases = set(required_cases_list)
+    required_hops = set(required_hops_list)
+    required_authority = require_text(item, "required_authority", item_path, errors)
+    test_obligations = require_text_list(item, "test_obligations", item_path, errors)
+    if any(not is_test_assertion(obligation, dimension) for obligation in test_obligations):
+        errors.append(
+            f"{item_path}.test_obligations must be a canonical machine-readable test assertion"
+        )
+    if len(required_cases) != len(required_cases_list):
+        errors.append(f"{item_path}.required_case_ids: duplicate Case IDs are forbidden")
+    if len(required_hops) != len(required_hops_list):
+        errors.append(f"{item_path}.required_hop_ids: duplicate Hop IDs are forbidden")
+    unknown_cases = required_cases - set(case_state.definitions)
+    unknown_hops = required_hops - hop_state.expected_ids
+    if unknown_cases:
+        errors.append(f"{item_path}: unknown required Cases {', '.join(sorted(unknown_cases))}")
+    if unknown_hops:
+        errors.append(f"{item_path}: unknown required Hops {', '.join(sorted(unknown_hops))}")
+    missing_passing_cases = required_cases - case_state.passing_cases
+    if missing_passing_cases:
+        errors.append(
+            f"{item_path}: required Cases are not passing "
+            f"{', '.join(sorted(missing_passing_cases))}"
+        )
+    if required_authority not in VALID_AUTHORITIES:
+        errors.append(f"{item_path}.required_authority: unsupported authority")
+    actual_types = {catalog[ref].artifact_type for ref in refs if ref in catalog}
+    if not (actual_types & DIMENSION_RESULT_TYPES[dimension]):
+        errors.append(
+            f"{item_path}: dimension {dimension} pass evidence has no executable result authority"
+        )
+    clean_refs, obligation_mismatch = _clean_dimension_refs(
+        refs, dimension, test_obligations, case_state, hop_state, run, catalog
+    )
+    if obligation_mismatch:
+        errors.append(
+            f"{item_path}: dimension {dimension} result does not match frozen test obligations"
+        )
+    if not clean_refs:
+        errors.append(
+            f"{item_path}: dimension {dimension} pass evidence lacks a clean non-RED result "
+            "with an explicit dimension result and matching Case/Hop scope"
+        )
+    clean_artifacts = [catalog[ref] for ref in clean_refs if ref in catalog]
+    covered_cases = set().union(*(artifact.case_ids for artifact in clean_artifacts)) if clean_artifacts else set()
+    covered_hops = set().union(*(artifact.hop_ids for artifact in clean_artifacts)) if clean_artifacts else set()
+    if required_cases - covered_cases:
+        errors.append(f"{item_path}: clean dimension evidence misses required Case scope")
+    if required_hops - covered_hops:
+        errors.append(f"{item_path}: clean dimension evidence misses required Hop scope")
+    authorities = {
+        report.authority for report in run.runners.values()
+        if report.evidence & set(clean_refs)
+    }
+    if any(artifact.artifact_type == "browser-report" for artifact in clean_artifacts):
+        authorities.add("browser/ux")
+    if any(artifact.artifact_type == "contract-report" for artifact in clean_artifacts):
+        authorities.add("contract")
+    if required_authority and not authority_satisfied(required_authority, authorities):
+        errors.append(
+            f"{item_path}: clean dimension evidence does not satisfy required authority "
+            f"'{required_authority}'"
+        )
+
+
 def _validate_dimensions(
     journey: dict[str, Any], path: str, journey_id: str | None,
     case_state: CaseState, hop_state: HopState, run: RunContext,
@@ -135,101 +258,9 @@ def _validate_dimensions(
         require_types(set(refs), set(type_.artifact_type for type_ in catalog.values()), catalog, item_path, errors)
         require_journey_scope(set(refs), journey_id, catalog, item_path, errors)
         if status == "pass":
-            required_cases_list = require_text_list(item, "required_case_ids", item_path, errors)
-            required_hops_list = require_text_list(item, "required_hop_ids", item_path, errors)
-            required_cases = set(required_cases_list)
-            required_hops = set(required_hops_list)
-            required_authority = require_text(item, "required_authority", item_path, errors)
-            test_obligations = require_text_list(item, "test_obligations", item_path, errors)
-            if any(not is_test_assertion(obligation, dimension) for obligation in test_obligations):
-                errors.append(
-                    f"{item_path}.test_obligations must be a canonical machine-readable test assertion"
-                )
-            if len(required_cases) != len(required_cases_list):
-                errors.append(f"{item_path}.required_case_ids: duplicate Case IDs are forbidden")
-            if len(required_hops) != len(required_hops_list):
-                errors.append(f"{item_path}.required_hop_ids: duplicate Hop IDs are forbidden")
-            unknown_cases = required_cases - set(case_state.definitions)
-            unknown_hops = required_hops - hop_state.expected_ids
-            if unknown_cases:
-                errors.append(f"{item_path}: unknown required Cases {', '.join(sorted(unknown_cases))}")
-            if unknown_hops:
-                errors.append(f"{item_path}: unknown required Hops {', '.join(sorted(unknown_hops))}")
-            missing_passing_cases = required_cases - case_state.passing_cases
-            if missing_passing_cases:
-                errors.append(
-                    f"{item_path}: required Cases are not passing "
-                    f"{', '.join(sorted(missing_passing_cases))}"
-                )
-            if required_authority not in VALID_AUTHORITIES:
-                errors.append(f"{item_path}.required_authority: unsupported authority")
-            actual_types = {catalog[ref].artifact_type for ref in refs if ref in catalog}
-            if not (actual_types & DIMENSION_RESULT_TYPES[dimension]):
-                errors.append(
-                    f"{item_path}: dimension {dimension} pass evidence has no executable result authority"
-                )
-            clean_refs: list[str] = []
-            obligation_mismatch = False
-            for ref in refs:
-                artifact = catalog.get(ref)
-                if artifact is None or artifact.artifact_type not in DIMENSION_RESULT_TYPES[dimension]:
-                    continue
-                report = artifact.payload
-                results = report.get("dimension_results") if isinstance(report, dict) else None
-                result = results.get(dimension) if isinstance(results, dict) else None
-                if not isinstance(result, dict) or result.get("status") != "pass":
-                    continue
-                observed_obligations = result.get("test_obligations")
-                if (
-                    not isinstance(observed_obligations, list)
-                    or any(not is_text(obligation) for obligation in observed_obligations)
-                    or sorted(observed_obligations) != sorted(test_obligations)
-                ):
-                    obligation_mismatch = True
-                    continue
-                commands = [
-                    command for command in run.commands.values()
-                    if (ref in command.outputs or ref in command.evidence)
-                    and command.phase != "red"
-                    and command.expected == "pass"
-                    and command.exit_code == 0
-                ]
-                if not commands:
-                    continue
-                if not (artifact.case_ids & case_state.passing_cases):
-                    continue
-                if dimension not in {"I", "J"} and not (artifact.hop_ids & hop_state.expected_ids):
-                    continue
-                clean_refs.append(ref)
-            if obligation_mismatch:
-                errors.append(
-                    f"{item_path}: dimension {dimension} result does not match frozen test obligations"
-                )
-            if not clean_refs:
-                errors.append(
-                    f"{item_path}: dimension {dimension} pass evidence lacks a clean non-RED result "
-                    "with an explicit dimension result and matching Case/Hop scope"
-                )
-            clean_artifacts = [catalog[ref] for ref in clean_refs if ref in catalog]
-            covered_cases = set().union(*(artifact.case_ids for artifact in clean_artifacts)) if clean_artifacts else set()
-            covered_hops = set().union(*(artifact.hop_ids for artifact in clean_artifacts)) if clean_artifacts else set()
-            if required_cases - covered_cases:
-                errors.append(f"{item_path}: clean dimension evidence misses required Case scope")
-            if required_hops - covered_hops:
-                errors.append(f"{item_path}: clean dimension evidence misses required Hop scope")
-            authorities = {
-                report.authority for report in run.runners.values()
-                if report.evidence & set(clean_refs)
-            }
-            if any(artifact.artifact_type == "browser-report" for artifact in clean_artifacts):
-                authorities.add("browser/ux")
-            if any(artifact.artifact_type == "contract-report" for artifact in clean_artifacts):
-                authorities.add("contract")
-            if required_authority and not authority_satisfied(required_authority, authorities):
-                errors.append(
-                    f"{item_path}: clean dimension evidence does not satisfy required authority "
-                    f"'{required_authority}'"
-                )
+            _validate_dimension_pass(
+                item, dimension, item_path, refs, case_state, hop_state, run, catalog, errors
+            )
         if status == "n_a":
             reason = require_text(item, "reason", item_path, errors)
             if reason and any(phrase in reason.lower() for phrase in PROHIBITED_NA):
@@ -1082,26 +1113,9 @@ def _validate_tdd(
     return red_refs | green_refs
 
 
-def _validate_terminal(
-    journey: dict[str, Any],
-    path: str,
-    journey_id: str | None,
-    first_party: set[str],
-    case_state: CaseState,
-    run: RunContext,
-    catalog: dict[str, Artifact],
-    errors: list[str],
-) -> tuple[set[str], list[str], str | None, list[dict[str, Any]]]:
-    terminal = journey.get("terminal_oracle")
-    item_path = f"{path}.terminal_oracle"
-    if not isinstance(terminal, dict):
-        errors.append(f"{item_path}: required object")
-        return set(), [], None, []
-    if terminal.get("status") != "pass":
-        errors.append(f"{item_path}.status: must be 'pass'")
-    claim = require_text(terminal, "claim", item_path, errors)
-    case_id = require_text(terminal, "case_id", item_path, errors)
-    authorities = require_text_list(terminal, "authority_components", item_path, errors)
+def _parse_readback_expectations(
+    terminal: dict[str, Any], item_path: str, errors: list[str]
+) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
     expectation_by_component: dict[str, dict[str, Any]] = {}
     expectation_projection: list[dict[str, Any]] = []
     for index, item in enumerate(require_list(terminal, "readback_expectations", item_path, errors)):
@@ -1135,6 +1149,140 @@ def _validate_terminal(
             }
             expectation_by_component[component] = normalized
             expectation_projection.append(normalized)
+    return expectation_by_component, expectation_projection
+
+
+def _validate_readback_commands(
+    readback_refs: set[str], run: RunContext, item_path: str, errors: list[str]
+) -> None:
+    for ref in readback_refs:
+        direct_commands = [
+            command for command in run.commands.values()
+            if ref in command.outputs
+            and command.phase in {"journey", "browser"}
+            and command.expected == "pass"
+            and command.exit_code == 0
+        ]
+        if not direct_commands:
+            errors.append(
+                f"{item_path}: readback-report must be a direct output of a passing Journey command"
+            )
+
+
+def _matching_readback_reports(
+    readback_refs: set[str], component: str, catalog: dict[str, Artifact]
+) -> list[tuple[str, dict[str, Any]]]:
+    matching: list[tuple[str, dict[str, Any]]] = []
+    for ref in readback_refs:
+        report = payload(ref, "readback-report", catalog)
+        if report is not None and report.get("authority_component") == component:
+            matching.append((ref, report))
+    return matching
+
+
+def _validate_readback_report(
+    ref: str,
+    report: dict[str, Any],
+    frozen: dict[str, Any] | None,
+    component: str,
+    claim: str | None,
+    journey_id: str | None,
+    case_id: str | None,
+    correlation: str | None,
+    run: RunContext,
+    catalog: dict[str, Artifact],
+    item_path: str,
+    errors: list[str],
+) -> None:
+    artifact = catalog.get(ref)
+    if artifact is not None and component not in artifact.source_revisions:
+        errors.append(
+            f"{item_path}: readback-report is not source-bound to authority "
+            f"component '{component}'"
+        )
+    if report.get("status") != "pass":
+        errors.append(f"{item_path}: readback-report status must be pass")
+    if report.get("claim") != claim:
+        errors.append(f"{item_path}: readback-report claim must match terminal oracle")
+    if not is_text(report.get("query")):
+        errors.append(f"{item_path}: readback-report requires authoritative query")
+    if frozen is not None:
+        for key in ("query_type", "query", "expected", "timeout_ms"):
+            if report.get(key) != frozen.get(key):
+                errors.append(
+                    f"{item_path}: readback-report {key} does not match frozen readback expectation"
+                )
+        frozen_command_id = frozen.get("command_id")
+        command = run.commands.get(frozen_command_id or "")
+        if command is None or ref not in command.outputs:
+            errors.append(
+                f"{item_path}: readback-report must be output by frozen command "
+                f"'{frozen_command_id}'"
+            )
+        else:
+            if command.command != frozen.get("command"):
+                errors.append(
+                    f"{item_path}: readback command does not match frozen command semantics"
+                )
+            if (
+                command.phase not in {"journey", "browser"}
+                or command.expected != "pass"
+                or command.exit_code != 0
+            ):
+                errors.append(
+                    f"{item_path}: frozen readback command must be a passing Journey command"
+                )
+            require_journey_scope(
+                command.evidence, journey_id, catalog,
+                f"{item_path}.readback_command", errors,
+            )
+            require_case_scope(
+                command.evidence, case_id, catalog,
+                f"{item_path}.readback_command", errors, exact=True,
+            )
+            require_correlation(
+                command.evidence, correlation, catalog,
+                f"{item_path}.readback_command", errors, exact=True,
+            )
+    if "expected" not in report or "observed" not in report:
+        errors.append(f"{item_path}: readback-report requires expected and observed values")
+    elif frozen is not None and report.get("observed") != frozen.get("expected"):
+        errors.append(f"{item_path}: readback-report observed value does not match frozen expectation")
+    elif report.get("expected") != report.get("observed"):
+        errors.append(f"{item_path}: readback-report expected and observed values differ")
+    convergence = report.get("convergence_ms")
+    timeout = report.get("timeout_ms")
+    if type(convergence) is not int or convergence < 0:
+        errors.append(f"{item_path}: readback-report convergence_ms must be non-negative")
+    if type(timeout) is not int or timeout <= 0:
+        errors.append(f"{item_path}: readback-report timeout_ms must be positive")
+    if type(convergence) is int and type(timeout) is int and convergence > timeout:
+        errors.append(f"{item_path}: readback-report exceeded its convergence timeout")
+
+
+def _validate_terminal(
+    journey: dict[str, Any],
+    path: str,
+    journey_id: str | None,
+    first_party: set[str],
+    case_state: CaseState,
+    run: RunContext,
+    catalog: dict[str, Artifact],
+    errors: list[str],
+) -> tuple[set[str], list[str], str | None, list[dict[str, Any]]]:
+    terminal = journey.get("terminal_oracle")
+    item_path = f"{path}.terminal_oracle"
+    if not isinstance(terminal, dict):
+        errors.append(f"{item_path}: required object")
+        return set(), [], None, []
+    if terminal.get("status") != "pass":
+        errors.append(f"{item_path}.status: must be 'pass'")
+    claim = require_text(terminal, "claim", item_path, errors)
+    case_id = require_text(terminal, "case_id", item_path, errors)
+    authorities = require_text_list(terminal, "authority_components", item_path, errors)
+    expectation_by_component, expectation_projection = _parse_readback_expectations(
+        terminal, item_path, errors
+    )
     if set(authorities) != set(expectation_by_component):
         errors.append(
             f"{item_path}.readback_expectations: must define exactly one frozen expectation "
@@ -1158,99 +1306,24 @@ def _validate_terminal(
     }
     if not readback_refs:
         errors.append(f"{item_path}: terminal authority requires a readback-report")
-    for ref in readback_refs:
-        direct_commands = [
-            command for command in run.commands.values()
-            if ref in command.outputs
-            and command.phase in {"journey", "browser"}
-            and command.expected == "pass"
-            and command.exit_code == 0
-        ]
-        if not direct_commands:
-            errors.append(
-                f"{item_path}: readback-report must be a direct output of a passing Journey command"
-            )
+    _validate_readback_commands(readback_refs, run, item_path, errors)
     bound = set().union(*(catalog[ref].source_revisions.keys() for ref in authority if ref in catalog))
     for component in authorities:
         if component not in first_party:
             errors.append(f"{item_path}.authority_components: '{component}' is not first-party")
         if component not in bound:
             errors.append(f"{item_path}: authority evidence is not source-bound to '{component}'")
-        matching = []
-        for ref in readback_refs:
-            report = payload(ref, "readback-report", catalog)
-            if report is not None and report.get("authority_component") == component:
-                matching.append((ref, report))
+        matching = _matching_readback_reports(readback_refs, component, catalog)
         if not matching:
             errors.append(f"{item_path}: no readback-report names authority component '{component}'")
         if len(matching) > 1:
             errors.append(f"{item_path}: authority component '{component}' has duplicate readback reports")
         frozen = expectation_by_component.get(component)
         for ref, report in matching:
-            artifact = catalog.get(ref)
-            if artifact is not None and component not in artifact.source_revisions:
-                errors.append(
-                    f"{item_path}: readback-report is not source-bound to authority "
-                    f"component '{component}'"
-                )
-            if report.get("status") != "pass":
-                errors.append(f"{item_path}: readback-report status must be pass")
-            if report.get("claim") != claim:
-                errors.append(f"{item_path}: readback-report claim must match terminal oracle")
-            if not is_text(report.get("query")):
-                errors.append(f"{item_path}: readback-report requires authoritative query")
-            if frozen is not None:
-                for key in ("query_type", "query", "expected", "timeout_ms"):
-                    if report.get(key) != frozen.get(key):
-                        errors.append(
-                            f"{item_path}: readback-report {key} does not match frozen readback expectation"
-                        )
-                frozen_command_id = frozen.get("command_id")
-                command = run.commands.get(frozen_command_id or "")
-                if command is None or ref not in command.outputs:
-                    errors.append(
-                        f"{item_path}: readback-report must be output by frozen command "
-                        f"'{frozen_command_id}'"
-                    )
-                else:
-                    if command.command != frozen.get("command"):
-                        errors.append(
-                            f"{item_path}: readback command does not match frozen command semantics"
-                        )
-                    if (
-                        command.phase not in {"journey", "browser"}
-                        or command.expected != "pass"
-                        or command.exit_code != 0
-                    ):
-                        errors.append(
-                            f"{item_path}: frozen readback command must be a passing Journey command"
-                        )
-                    require_journey_scope(
-                        command.evidence, journey_id, catalog,
-                        f"{item_path}.readback_command", errors,
-                    )
-                    require_case_scope(
-                        command.evidence, case_id, catalog,
-                        f"{item_path}.readback_command", errors, exact=True,
-                    )
-                    require_correlation(
-                        command.evidence, correlation, catalog,
-                        f"{item_path}.readback_command", errors, exact=True,
-                    )
-            if "expected" not in report or "observed" not in report:
-                errors.append(f"{item_path}: readback-report requires expected and observed values")
-            elif frozen is not None and report.get("observed") != frozen.get("expected"):
-                errors.append(f"{item_path}: readback-report observed value does not match frozen expectation")
-            elif report.get("expected") != report.get("observed"):
-                errors.append(f"{item_path}: readback-report expected and observed values differ")
-            convergence = report.get("convergence_ms")
-            timeout = report.get("timeout_ms")
-            if type(convergence) is not int or convergence < 0:
-                errors.append(f"{item_path}: readback-report convergence_ms must be non-negative")
-            if type(timeout) is not int or timeout <= 0:
-                errors.append(f"{item_path}: readback-report timeout_ms must be positive")
-            if type(convergence) is int and type(timeout) is int and convergence > timeout:
-                errors.append(f"{item_path}: readback-report exceeded its convergence timeout")
+            _validate_readback_report(
+                ref, report, frozen, component, claim, journey_id, case_id,
+                correlation, run, catalog, item_path, errors
+            )
     expectation_projection.sort(key=lambda item: item["authority_component"] or "")
     return surface | authority, sorted(authorities), claim, expectation_projection
 
@@ -1393,13 +1466,9 @@ def _parse_module_specifiers(
     return result
 
 
-def _derive_source_edges(
+def _scan_package_manifests(
     paths: list[str], run: RunContext, path: str, errors: list[str]
-) -> set[tuple[str, str]]:
-    if run.base_dir is None:
-        return set()
-    scanned = set(paths)
-    edges: set[tuple[str, str]] = set()
+) -> tuple[set[str], set[str]]:
     external_packages: set[str] = set()
     local_packages: set[str] = set()
     for manifest_path in sorted(value for value in paths if PurePosixPath(value).name == "package.json"):
@@ -1461,6 +1530,12 @@ def _derive_source_edges(
                     )
                     if isinstance(workspace_name, str) and workspace_name:
                         local_packages.add(workspace_name)
+    return local_packages, external_packages
+
+
+def _read_scan_sources(
+    paths: list[str], run: RunContext, path: str, errors: list[str]
+) -> dict[str, str]:
     interception_patterns = (
         re.compile(r"\b(?:page|context)\s*\.\s*route\s*\("),
         re.compile(r"\broute\s*\.\s*fulfill\s*\("),
@@ -1487,6 +1562,18 @@ def _derive_source_edges(
                 f"{path}: scanned source contains browser interception/replay behavior "
                 f"in '{relative}'"
             )
+    return sources
+
+
+def _derive_source_edges(
+    paths: list[str], run: RunContext, path: str, errors: list[str]
+) -> set[tuple[str, str]]:
+    if run.base_dir is None:
+        return set()
+    scanned = set(paths)
+    edges: set[tuple[str, str]] = set()
+    local_packages, external_packages = _scan_package_manifests(paths, run, path, errors)
+    sources = _read_scan_sources(paths, run, path, errors)
     parsed_specifiers = _parse_module_specifiers(sources, path, errors)
     for relative, specifiers in sorted(parsed_specifiers.items()):
         for specifier in sorted(specifiers):
@@ -1508,10 +1595,9 @@ def _derive_source_edges(
     return edges
 
 
-def _validate_route_scan_files(
-    report: dict[str, Any], scan_roots: list[str], expected_entrypoints: list[str], run: RunContext,
-    path: str, errors: list[str]
-) -> list[str]:
+def _parse_scanned_files(
+    report: dict[str, Any], run: RunContext, path: str, errors: list[str]
+) -> tuple[list[dict[str, str]], list[str]]:
     declared_paths = require_text_list(report, "scanned_paths", path, errors)
     items = require_list(report, "scanned_files", path, errors)
     normalized_files: list[dict[str, str]] = []
@@ -1547,8 +1633,13 @@ def _validate_route_scan_files(
     paths = [item["path"] for item in normalized_files]
     if declared_paths != paths:
         errors.append(f"{path}: scanned_paths must exactly match sorted scanned_files paths")
+    return normalized_files, paths
 
-    path_set = set(paths)
+
+def _parse_scan_entrypoints(
+    report: dict[str, Any], expected_entrypoints: list[str], path_set: set[str],
+    path: str, errors: list[str]
+) -> tuple[list[str], list[str]]:
     entrypoints: list[str] = []
     for index, value in enumerate(require_text_list(report, "entrypoints", path, errors)):
         normalized = _normalized_scan_path(value, f"{path}.entrypoints[{index}]", errors)
@@ -1575,7 +1666,13 @@ def _validate_route_scan_files(
         for value in executed_specs
     ):
         errors.append(f"{path}: route scan must include a real executed spec path")
+    return entrypoints, executed_specs
 
+
+def _parse_dependency_edges(
+    report: dict[str, Any], paths: list[str], path_set: set[str], run: RunContext,
+    path: str, errors: list[str]
+) -> list[dict[str, str]]:
     dependency_edges: list[dict[str, str]] = []
     seen_edges: set[tuple[str, str]] = set()
     for index, item in enumerate(require_list(report, "dependency_edges", path, errors, allow_empty=True)):
@@ -1600,7 +1697,13 @@ def _validate_route_scan_files(
     derived_edges = _derive_source_edges(paths, run, path, errors)
     if seen_edges != derived_edges:
         errors.append(f"{path}: dependency_edges do not match resolved source imports")
+    return dependency_edges
 
+
+def _check_unreachable_helpers(
+    dependency_edges: list[dict[str, str]], entrypoints: list[str], paths: list[str],
+    path: str, errors: list[str]
+) -> None:
     adjacency: dict[str, set[str]] = {}
     for edge in dependency_edges:
         adjacency.setdefault(edge["from"], set()).add(edge["to"])
@@ -1619,15 +1722,10 @@ def _validate_route_scan_files(
     for helper in sorted(helper_paths - reachable):
         errors.append(f"{path}: transitive fixture/helper '{helper}' is unreachable from an entrypoint")
 
-    graph = {
-        "scanned_files": normalized_files,
-        "dependency_edges": dependency_edges,
-        "entrypoints": sorted(entrypoints),
-        "executed_spec_paths": sorted(executed_specs),
-    }
-    expected_graph_digest = "sha256:" + canonical_digest(graph)
-    if report.get("resolved_dependency_graph_digest") != expected_graph_digest:
-        errors.append(f"{path}: route scan dependency graph digest does not match the resolved graph")
+
+def _validate_scan_root_coverage(
+    scan_roots: list[str], paths: list[str], run: RunContext, path: str, errors: list[str]
+) -> None:
     normalized_roots = [
         normalized for root in scan_roots
         if (normalized := _normalized_scan_path(root, f"{path}.route_scan_roots", errors))
@@ -1665,6 +1763,29 @@ def _validate_route_scan_files(
             continue
         for omitted in sorted(expected_files - set(paths)):
             errors.append(f"{path}: route scan root '{root}' omits file '{omitted}'")
+
+
+def _validate_route_scan_files(
+    report: dict[str, Any], scan_roots: list[str], expected_entrypoints: list[str], run: RunContext,
+    path: str, errors: list[str]
+) -> list[str]:
+    normalized_files, paths = _parse_scanned_files(report, run, path, errors)
+    path_set = set(paths)
+    entrypoints, executed_specs = _parse_scan_entrypoints(
+        report, expected_entrypoints, path_set, path, errors
+    )
+    dependency_edges = _parse_dependency_edges(report, paths, path_set, run, path, errors)
+    _check_unreachable_helpers(dependency_edges, entrypoints, paths, path, errors)
+    graph = {
+        "scanned_files": normalized_files,
+        "dependency_edges": dependency_edges,
+        "entrypoints": sorted(entrypoints),
+        "executed_spec_paths": sorted(executed_specs),
+    }
+    expected_graph_digest = "sha256:" + canonical_digest(graph)
+    if report.get("resolved_dependency_graph_digest") != expected_graph_digest:
+        errors.append(f"{path}: route scan dependency graph digest does not match the resolved graph")
+    _validate_scan_root_coverage(scan_roots, paths, run, path, errors)
     return paths
 
 

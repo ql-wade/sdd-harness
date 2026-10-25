@@ -2,13 +2,53 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { stripTypeScriptTypes } = require("node:module");
+const nodeModule = require("node:module");
 
-let acorn;
-try {
-  acorn = require("internal/deps/acorn/acorn/dist/acorn");
-} catch (error) {
-  process.stderr.write(`Node Acorn parser unavailable: ${error.message}\n`);
+// stripTypeScriptTypes 需要Node >= 22.13；旧版本上该导出为 undefined，
+// 调用前由 parseAst 里的 typeof 守卫 + 版本检测兜底。
+const stripTypeScriptTypes = nodeModule.stripTypeScriptTypes;
+
+function nodeVersionParts(raw) {
+  const match = /^v?(\d+)\.(\d+)\.(\d+)/.exec(String(raw));
+  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
+}
+
+function nodeAtLeast(major, minor) {
+  const parts = nodeVersionParts(process.version);
+  if (!parts) return false;
+  const [nodeMajor, nodeMinor] = parts;
+  if (nodeMajor !== major) return nodeMajor > major;
+  return nodeMinor >= minor;
+}
+
+function loadAcorn() {
+  // 优先级 1：从 cwd 解析项目本地安装的 acorn（稳定公开 API）
+  try {
+    const requireFromCwd = nodeModule.createRequire(
+      path.join(process.cwd(), "package.json")
+    );
+    return requireFromCwd("acorn");
+  } catch (error) {
+    // 回退下一级
+  }
+  // 优先级 2：Node 内置 acorn（需 --expose-internals，非稳定内部路径）
+  try {
+    return require("internal/deps/acorn/acorn/dist/acorn");
+  } catch (error) {
+    // 回退下一级
+  }
+  return null;
+}
+
+const acorn = loadAcorn();
+if (!acorn) {
+  process.stderr.write(
+    [
+      "Acorn parser unavailable: no project-local acorn resolvable from cwd, " +
+        "and Node internal fallback (needs --expose-internals) failed.",
+      "Fix: pin node>=22.13 (并以 --expose-internals 运行以使用内置解析器) 或在项目 npm i -D acorn",
+    ].join("\n") + "\n"
+  );
   process.exit(2);
 }
 
@@ -80,7 +120,9 @@ function parseAst(file) {
     return acorn.parse(file.source, options);
   } catch (firstError) {
     const suffix = path.extname(file.path).toLowerCase();
-    if (![".ts", ".tsx"].includes(suffix) || typeof stripTypeScriptTypes !== "function") {
+    const canStripTypes =
+      typeof stripTypeScriptTypes === "function" && nodeAtLeast(22, 13);
+    if (![".ts", ".tsx"].includes(suffix) || !canStripTypes) {
       throw firstError;
     }
     const stripped = stripTypeScriptTypes(file.source, { mode: "strip", sourceMap: false });

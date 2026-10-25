@@ -1,10 +1,10 @@
 # Journey And UX Few-Shot Examples
 
-These are pre-run derivation examples, not executed evidence. Semantic Journey, Path, Hop, and Case labels are planning aids. Correlation entries describe a propagation strategy, not a captured value. Derive actual states, contracts, timeouts, routes, revisions, commands, and oracles from the repository.
+These are historical author-side design examples used only to review a delivered TestPack, not operative instructions for whitebox to design missing cases or business oracles. Test design and automation belong to `test-authoring`; gaps go back to its author. These are pre-run derivation examples, not executed evidence. Semantic Journey, Path, Hop, and Case labels are planning aids. Correlation entries describe a propagation strategy, not a captured value. Derive actual states, contracts, timeouts, routes, revisions, commands, and oracles from the repository.
 
 Do not add `run.status: executed`, timestamps, hashes, traces, reports, screenshots, or subagent completions until tools actually produce them. When a Journey runs, translate the selected frame into the schema 3.0 relationships in `journey-contract.md`.
 
-For every planned Case, also derive the repository-native runner project. For CI-required work, freeze each expected repository/SHA/workflow/job/matrix/environment/runner leg and its exact Case set before execution.
+For every author-delivered Case, review the repository-native runner project. For CI-required work, freeze each expected repository/SHA/workflow/job/matrix/environment/runner leg and its exact Case set before execution.
 
 Schema-critical planned relationships:
 

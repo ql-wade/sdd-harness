@@ -1,6 +1,6 @@
 # Professional Testing Pattern Adapters
 
-Use repository-native tools first. These patterns are capability adapters, not mandatory dependencies. A tool can strengthen one authority but cannot replace a missing authority.
+Role boundary: these are acceptance review criteria for author-delivered infrastructure, contracts and tests. Test design, generators, fixture implementation and test repair belong to `test-authoring`; see `acceptance-handoff.md`. Inspect and independently execute existing approved mechanisms; missing mechanisms become handoff gaps. Use repository-native tools first. These patterns are capability adapters, not mandatory dependencies. A tool can strengthen one authority but cannot replace a missing authority.
 
 ## Selection Table
 
@@ -15,12 +15,14 @@ Use repository-native tools first. These patterns are capability adapters, not m
 
 ## Playwright / Browser
 
+先按 `browser-execution.md` 发现并使用当前 harness 原生浏览器；本节约束不赋予 SDK 未公开的能力。trace/console/network 逐项检测，无法采集保持缺口，不能伪造或豁免 Journey 的强制门槛。
+
 Follow the current [Playwright best practices](https://playwright.dev/docs/best-practices), [web-first assertions](https://playwright.dev/docs/test-assertions), and [Trace Viewer](https://playwright.dev/docs/trace-viewer). When an OpenAI/Codex browser or Playwright skill is installed, use it as the execution adapter rather than treating its presence as evidence:
 
 - inspect the current DOM/snapshot before acting;
 - re-snapshot after navigation or material DOM changes;
 - prefer user-facing locators and web-first assertions;
-- start tracing before the first Journey action and stop only after the terminal oracle;
+- when tracing is supported, start it before the first Journey action and stop only after the terminal oracle; otherwise record the gap rather than inventing a trace;
 - freeze ordered actions, DOM assertions, network observations, and `route_scan_entrypoints` before execution, then require the browser report to match them exactly;
 - retain DOM snapshots, console, network, source, browser, and viewport metadata;
 - use isolated browser contexts but real first-party APIs for acceptance;
@@ -33,7 +35,7 @@ Use [Playwright Trace Viewer](https://playwright.dev/docs/trace-viewer) to diagn
 
 ## Multi-Service Lifecycle
 
-Adopt the multi-server lifecycle pattern demonstrated by [Anthropic webapp-testing](https://github.com/anthropics/skills/blob/main/skills/webapp-testing/SKILL.md):
+Execute an author-delivered multi-server lifecycle matching the pattern demonstrated by [Anthropic webapp-testing](https://github.com/anthropics/skills/blob/main/skills/webapp-testing/SKILL.md):
 
 1. Start every required service with captured command, environment, and log path.
 2. Wait on service-specific readiness, not a fixed sleep.
@@ -43,13 +45,13 @@ Adopt the multi-server lifecycle pattern demonstrated by [Anthropic webapp-testi
 
 For shared environments, replace process commands with deployment/artifact identity and health evidence. Never infer staging contents from local HEAD.
 
-## Consumer-Driven Contracts
+## Review Delivered Consumer-Driven Contracts
 
-Use [PactFlow Agent Skills](https://github.com/pactflow/pactflow-agent-skills) or native equivalents when consumer/provider relationships exist:
+Review contracts delivered using [PactFlow Agent Skills](https://github.com/pactflow/pactflow-agent-skills) or native equivalents when consumer/provider relationships exist:
 
 - consumer test generates the expected interaction/message contract;
 - provider verification runs against the exact provider version;
-- publish results with consumer/provider versions tied to source artifacts, freeze the verified contract digest, interactions, and provider-state IDs, and require that both the contract artifact and its single producing command are source-bound to every first-party endpoint;
+- inspect published results with consumer/provider versions tied to source artifacts, freeze the verified contract digest, interactions, and provider-state IDs, and require that both the contract artifact and its single producing command are source-bound to every first-party endpoint;
 - inspect the integration graph and blast radius;
 - use deployment compatibility gates such as `can-i-deploy` when the project supports them.
 
@@ -59,7 +61,7 @@ Contracts cover each edge. They do not replace provider functional tests, persis
 
 Follow [OpenTelemetry context propagation](https://opentelemetry.io/docs/concepts/context-propagation/) where available:
 
-- propagate trace/span context across process and network boundaries;
+- verify existing trace/span context propagation across process and network boundaries;
 - correlate logs and durable records with the same business/run identity;
 - compare the expected mandatory hop set to spans/log observations;
 - record missing instrumentation as an observability gap;
@@ -67,19 +69,13 @@ Follow [OpenTelemetry context propagation](https://opentelemetry.io/docs/concept
 
 OpenTelemetry baggage travels in request headers, has no built-in integrity check, and may propagate to unintended downstreams. Treat it as correlation material, not identity or authenticity proof; use opaque test IDs and redact it from retained evidence.
 
-When tracing is absent, use a unique test-only correlation header/field that flows through requests, jobs, events, logs, and readback. If a boundary strips it and no independent linkage exists, that hop remains unproved.
+When tracing is absent, inspect and use an author-delivered unique test-only correlation header/field that flows through requests, jobs, events, logs, and readback. If a boundary strips it and no independent linkage exists, that hop remains unproved.
 
-## TDD And Skill Pressure Testing
+## Review Delivered TDD And Pressure Evidence
 
-Apply the [Superpowers TDD skill](https://github.com/obra/superpowers/blob/main/skills/test-driven-development/SKILL.md) to implementation and [testing skills with subagents](https://github.com/obra/superpowers/blob/main/skills/writing-skills/testing-skills-with-subagents.md) to this workflow itself:
+Design, coding, self-checks and pressure-test authoring belong to `test-authoring`. Whitebox reviews the delivered requirement/test mapping and exact test bytes, verifies a genuine RED before GREEN with the same identity and distinct source fingerprints, independently executes approved tests, and checks clean regression evidence. Missing RED, control setup, cases or structured reports are gaps for the author, not permission to add tests or modify workflow rules during acceptance.
 
-- observe a real RED before implementation or skill wording changes;
-- capture the exact shortcut/rationalization;
-- add the smallest rule or structural field that prevents it;
-- rerun the same scenario with a fresh agent;
-- add pressure from time, sunk cost, authority, unavailable services, and existing green suites;
-- test output shape with binary criteria, not only whether the verdict sounds cautious.
-- make each passing A-J result return `{status: "pass", test_obligations: [exact frozen canonical assertion strings]}`; canonical JSON fields bind repository test ID, a dimension-specific positive authority root, a fixed operator, and one scalar/schema-qualified enum leaf so prose or object-key wrappers cannot satisfy a stronger obligation.
+Each passing A-J result still requires `{status: "pass", test_obligations: [exact frozen canonical assertion strings]}`. Check that canonical JSON fields bind the delivered repository test ID, dimension-specific positive authority root, fixed operator and scalar/schema-qualified enum leaf. Do not rewrite a business expectation to fit an observed result.
 
 ## GitHub / CI Evidence
 

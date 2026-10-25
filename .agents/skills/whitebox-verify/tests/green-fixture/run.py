@@ -7,7 +7,8 @@ Exit 0 + STRUCTURE_PASS == GREEN path reproducible from any fresh checkout/copy.
 import os, sys, json, subprocess, datetime
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT = os.path.join(HERE, "..", "..", "scripts", "validate_journey_evidence.py")
-candidates = [DEFAULT]
+candidates = [DEFAULT,
+    os.path.expanduser("~/.cc-switch/skills/whitebox-verify/scripts/validate_journey_evidence.py")]
 explicit = "--entry" in sys.argv
 entry = sys.argv[sys.argv.index("--entry") + 1] if explicit else next(
     (c for c in candidates if os.path.isfile(c)), DEFAULT)

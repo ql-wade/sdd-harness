@@ -26,6 +26,10 @@ POLICY_ENV = (
 )
 
 
+def _max_reasoning() -> dict:
+    return {"enabled": True, "variants": ["low", "high", "max"]}
+
+
 class ModelPolicyTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -35,47 +39,41 @@ class ModelPolicyTests(unittest.TestCase):
             os.environ.pop(name, None)
 
         self.claude = self.root / "claude-settings.json"
-        self.claude.write_text(
-            json.dumps({"env": {"ANTHROPIC_DEFAULT_OPUS_MODEL_NAME": "glm-5.3"}}),
-            encoding="utf-8",
-        )
+        self._write_claude({"ANTHROPIC_DEFAULT_OPUS_MODEL_NAME": "glm-5.3"})
         self.codex = self.root / "codex-models.json"
-        self.codex.write_text(
-            json.dumps({
-                "models": [{
-                    "slug": "gpt-5.6-sol",
-                    "supported_in_api": True,
-                    "supported_reasoning_levels": [{"effort": "max"}],
-                    "context_window": 272000,
-                    "max_context_window": 272000,
-                }]
-            }),
-            encoding="utf-8",
-        )
+        self._write_codex([
+            {"slug": "gpt-5.6-sol", "supported_in_api": True,
+             "supported_reasoning_levels": [{"effort": "max"}]},
+            {"slug": "gpt-5.2-sol", "supported_in_api": True,
+             "supported_reasoning_levels": [{"effort": "max"}]},
+            {"slug": "gpt-5.2-mini", "supported_in_api": True,
+             "supported_reasoning_levels": [{"effort": "max"}]},
+        ])
         self.zcode = self.root / "zcode-config.json"
-        self.zcode.write_text(
-            json.dumps({
-                "provider": {
-                    "builtin:bigmodel-coding-plan": {
-                        "enabled": True,
-                        "models": {
-                            "GLM-5.3": {
-                                "reasoning": {
-                                    "enabled": True,
-                                    "variants": ["low", "max"],
-                                }
-                            }
-                        },
-                    }
-                }
-            }),
-            encoding="utf-8",
-        )
+        self._write_zcode({
+            "GLM-5.3": _max_reasoning(),
+            "GLM-5.3-Flash": _max_reasoning(),
+        })
         os.environ.update({
             "CAR_CLAUDE_MODEL_CATALOG": str(self.claude),
             "CAR_CODEX_MODEL_CATALOG": str(self.codex),
             "CAR_ZCODE_MODEL_CATALOG": str(self.zcode),
         })
+
+    def _write_claude(self, env: dict) -> None:
+        self.claude.write_text(json.dumps({"env": env}), encoding="utf-8")
+
+    def _write_codex(self, models: list) -> None:
+        self.codex.write_text(json.dumps({"models": models}), encoding="utf-8")
+
+    def _write_zcode(self, models: dict) -> None:
+        wrapped = {model_id: {"reasoning": reasoning} for model_id, reasoning in models.items()}
+        self.zcode.write_text(
+            json.dumps({"provider": {"builtin:bigmodel-coding-plan": {
+                "enabled": True, "models": wrapped,
+            }}}),
+            encoding="utf-8",
+        )
 
     def tearDown(self) -> None:
         for name, value in self._saved_env.items():
@@ -92,17 +90,63 @@ class ModelPolicyTests(unittest.TestCase):
         self.assertEqual(selection["codex-agent"]["model"], "gpt-5.6-sol")
         self.assertTrue(all(item["verified"] for item in selection.values()))
 
+    def test_light_models_are_excluded(self) -> None:
+        selection = resolve_model_selection()
+        self.assertNotIn("bigmodel/GLM-5.3-Flash", selection["zcode"]["model"])
+        self.assertNotEqual(selection["codex-agent"]["model"], "gpt-5.2-mini")
+
+    def test_prefers_highest_version(self) -> None:
+        self._write_zcode({
+            "GLM-5.3": _max_reasoning(),
+            "GLM-5.4": _max_reasoning(),
+        })
+        selection = resolve_model_selection()
+        self.assertEqual(selection["zcode"]["model"], "bigmodel/GLM-5.4")
+
+    def test_codename_tie_fails_closed(self) -> None:
+        self._write_codex([
+            {"slug": "gpt-6-sol", "supported_in_api": True,
+             "supported_reasoning_levels": [{"effort": "max"}]},
+            {"slug": "gpt-6-astra", "supported_in_api": True,
+             "supported_reasoning_levels": [{"effort": "max"}]},
+        ])
+        with self.assertRaises(ModelPolicyError):
+            resolve_model_selection()
+
+    def test_claude_follows_opus_mapping(self) -> None:
+        self._write_claude({
+            "ANTHROPIC_DEFAULT_OPUS_MODEL_NAME": "glm-6",
+            "ANTHROPIC_DEFAULT_SONNET_MODEL_NAME": "glm-6-flash",
+        })
+        selection = resolve_model_selection()
+        self.assertEqual(selection["claude-code"]["model"], "glm-6")
+
+    def test_pin_to_verified_model_is_allowed(self) -> None:
+        os.environ["CAR_CODEX_MODEL"] = "gpt-5.2-sol"
+        selection = resolve_model_selection()
+        self.assertEqual(selection["codex-agent"]["model"], "gpt-5.2-sol")
+        self.assertTrue(selection["codex-agent"]["verified"])
+
+    def test_pin_to_light_model_is_rejected(self) -> None:
+        os.environ["CAR_ZCODE_MODEL"] = "bigmodel/GLM-5.3-Flash"
+        with self.assertRaises(ModelPolicyError):
+            resolve_model_selection()
+
     def test_zcode_requires_max_reasoning(self) -> None:
-        config = json.loads(self.zcode.read_text(encoding="utf-8"))
-        config["provider"]["builtin:bigmodel-coding-plan"]["models"]["GLM-5.3"]["reasoning"]["variants"] = ["low"]
-        self.zcode.write_text(json.dumps(config), encoding="utf-8")
+        self._write_zcode({
+            "GLM-5.3": {"enabled": True, "variants": ["low"]},
+            "GLM-5.3-Flash": _max_reasoning(),
+        })
         with self.assertRaises(ModelPolicyError):
             resolve_model_selection()
 
     def test_codex_requires_max_reasoning(self) -> None:
-        config = json.loads(self.codex.read_text(encoding="utf-8"))
-        config["models"][0]["supported_reasoning_levels"] = [{"effort": "high"}]
-        self.codex.write_text(json.dumps(config), encoding="utf-8")
+        self._write_codex([
+            {"slug": "gpt-5.6-sol", "supported_in_api": True,
+             "supported_reasoning_levels": [{"effort": "high"}]},
+            {"slug": "gpt-5.2-sol", "supported_in_api": True,
+             "supported_reasoning_levels": [{"effort": "high"}]},
+        ])
         with self.assertRaises(ModelPolicyError):
             resolve_model_selection()
 
@@ -115,6 +159,11 @@ class ModelPolicyTests(unittest.TestCase):
         os.environ["CAR_CODEX_MODEL_CATALOG"] = str(self.root / "missing.json")
         with self.assertRaises(ModelPolicyError):
             resolve_model_selection()
+
+    def test_candidates_are_recorded_for_audit(self) -> None:
+        selection = resolve_model_selection()
+        self.assertIn("GLM-5.3-Flash", selection["zcode"]["candidates"])
+        self.assertIn("gpt-5.2-sol", selection["codex-agent"]["candidates"])
 
     def test_model_selection_is_frozen_across_rounds(self) -> None:
         selection = resolve_model_selection()

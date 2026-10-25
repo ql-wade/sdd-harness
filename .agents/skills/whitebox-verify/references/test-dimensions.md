@@ -1,15 +1,15 @@
-# A-J Full-Dimension Test Strategy
+# A-J Acceptance Coverage Review
 
 ## Contents
 
 1. Fixed dimension meanings
 2. Applicability rules
-3. Coverage construction
-4. Cross-product and pruning
+3. Delivered coverage review
+4. Author cross-product and pruning review
 
 ## 1. Fixed Dimension Meanings
 
-Never redefine A-J per task. Record each dimension as `required` or `N/A — repository-derived reason`.
+Never redefine A-J per task. Journey-G is concurrency/delivery, H recovery, and J CI/regression; performance may be a separately scoped obligation/tag or Debug-G, never a silent Journey letter rename. Record each dimension as `required` or `N/A — repository-derived reason`.
 
 | ID | Dimension | Minimum questions | Typical tests | Closing evidence |
 |---|---|---|---|---|
@@ -19,10 +19,10 @@ Never redefine A-J per task. Record each dimension as `required` or `N/A — rep
 | D | Data/state integrity | Are writes, transactions, migrations, caches, indexes, and readbacks correct and consistent? | Persistence/readback, migration/rollback, stale-cache, transaction/partial write, existing data | DB/store/index evidence plus independent read path |
 | E | Security/privacy/permissions | Are identity, authorization, tenant boundaries, secrets, and abuse controls correct? | Allow/deny matrix, horizontal/vertical privilege, injection/input limits, secret/PII redaction | Auth decisions, denied side effects, logs/network/screenshots without secrets |
 | F | Cross-domain contracts/Journey | Do all producer-consumer edges compose and reach the terminal business oracle? | Consumer/provider, message schema, component integration, real-stack Journey | Per-edge closure plus expected/observed hop equality |
-| G | Performance/concurrency/capacity | Do latency, throughput, resource, contention, race, and duplicate behavior meet bounds? | Load/soak, race, duplicate submit/delivery, resource limits, backpressure | Measured thresholds, profiles/metrics, repeatable concurrency reports |
+| G | Concurrency/delivery/idempotency | Do races, ordering, duplicate delivery, retry and replay preserve the required outcome? | Race, duplicate submit/delivery, ordering, idempotency, replay | Correlated concurrency/delivery/idempotency reports |
 | H | Resilience/recovery/observability | Do timeout, retry, replay, DLQ, degradation, repair, and diagnostics work? | Fault injection, restart windows, retry exhaustion, replay, compensation, alert/log/trace checks | Recovery outcome, bounded convergence, actionable correlated telemetry |
 | I | Compatibility/config/deployment | Do versions, schemas, feature flags, dependencies, environments, and rollout/rollback compose? | Mixed version, forward/backward schema, config matrix, artifact provenance, rollback/smoke | Resolved versions, deployed identity, compatibility reports, rollback proof |
-| J | Regression/maintainability/testability | Is the change statically healthy, isolated, and protected against future regression? | Full relevant suite, lint/type/static checks, mutation where useful, flake/order isolation | Clean commands, stable tests, no unjustified skips/flakes, scoped diff |
+| J | CI/regression | Is the change statically healthy, isolated, and protected against future regression? | Full relevant suite, lint/type/static checks, mutation where useful, flake/order isolation | Clean commands, stable tests, no unjustified skips/flakes, scoped diff |
 
 ## 2. Applicability Rules
 
@@ -31,7 +31,7 @@ Always assess A, E, and J.
 - B and C are required for user-visible UI/browser behavior. They can be N/A for a backend-only task with no affected UI or human interaction.
 - D is required for persistence, mutation, migration, cache/index, artifact, reload, or distinct writer/reader behavior.
 - F is required when Journey mode is active. It cannot be N/A merely because services have local tests.
-- G is required when behavior includes concurrency, duplicate requests/delivery, ordering, performance SLOs, resource limits, queues, locks, or backpressure.
+- G is required when behavior includes concurrency, duplicate requests/delivery, ordering, replay, retry, queues, locks or backpressure. Performance/capacity is an explicit scoped obligation or tag (Debug-G when using Debug), not a redefinition of Journey-G; measured performance alone does not close its concurrency/delivery authority.
 - H is required for asynchronous/distributed work, external dependencies, retries, recovery, compensation, degradation, or operability changes.
 - I is required for schema/version/dependency/config/deployment/feature-flag changes or when the verified runtime is not built from the local source tree.
 
@@ -54,9 +54,9 @@ A `pass` decision freezes unique `required_case_ids`, unique `required_hop_ids`,
 
 Enum schema names end in `Code|Kind|Level|Mode|Outcome|Phase|Reason|Revision|State|Status|Type|Version`. This positive vocabulary makes a machine-shaped phrase such as `system.behaviorstate = worksasexpected` non-closing without pretending a blacklist proves business meaning.
 
-## 3. Coverage Construction
+## 3. Delivered Coverage Review
 
-Build tests from four structures, then map every test to A-J:
+Review author-delivered tests against these four structures and their A-J mappings. Do not design missing cases here: cite the requirement, missing coverage category and consequence in a gap handed to test-authoring. The state/input examples below are review lenses, not permission to invent business expectations:
 
 1. **State model:** initial, loading/in-progress, success, empty, validation error, authorization failure, dependency failure, long-running, terminal, reload/re-entry.
 2. **Journey graph:** nodes, critical edges, branches, merges, async boundaries, terminal oracle, compensation and repair paths; every mandatory path names one closure Case with the full ordered Hop sequence.
@@ -74,7 +74,7 @@ Minimum path families when applicable:
 | Replay/concurrency | Duplicate/out-of-order/concurrent input produces one valid logical outcome |
 | Compatibility | Old/new versions and data interoperate or fail with an explicit safe boundary |
 
-## 4. Cross-Product And Pruning
+## 4. Author Cross-Product And Pruning Review
 
 Useful dimensions for a cross-product include:
 
@@ -83,7 +83,7 @@ persona x ingress x lifecycle state x permission x dependency/version
 x failure window x delivery count/order x read path x viewport/input mode
 ```
 
-Apply these rules:
+Check the author's design against these rules; request missing combinations from test-authoring instead of writing them:
 
 1. Include the known-defect combination and every critical/changed edge first.
 2. Include terminal happy, highest-risk failure/compensation, permission, duplicate/idempotency, and changed compatibility paths.

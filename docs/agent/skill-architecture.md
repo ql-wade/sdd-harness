@@ -44,10 +44,30 @@
 | `multi-agent-consensus-review` | 内部 | 三方全票共识评审：多 agent 独立冷启动投票、unanimous gate（全票 APPROVE + 分数门槛 + 同 digest）、分歧走 evidence-based debate；默认 quorum claude-code/zcode/codex-agent |
 | `ponytail` | 上游插件（5.3.2 快照，supplement_delta） | 最小完整方案方法：先查必要与复用再增代码；插件生命周期 Hook 由插件入口管理（§7.2 分工），不复制进项目配置 |
 
-> superpowers 核心子集已于 v0.2.2 移除（ADR-0016）：其 TDD/verification 职责由 whitebox-verify（Slice 模式）承接，brainstorming/writing-plans 职责由 grill-me 质询与 claude-parallel-tdd-planner 承接。
-> P1_6 方法档案（method-profile-manifest.json）：交付主控是 Comet Classic（单一 controller，禁止嵌套 planner/implement-spec），实现方法默认 Matt tdd/diagnosing-bugs/code-review，专门方法（test-authoring、Whitebox、grill-me/共识等）保留各自职责；Superpowers 不是安装或执行依赖，`docs/superpowers` 等旧名仅是受控兼容产物路径。Ponytail 补充（用户裁决 A）：受管 profile 默认 full，用户启停只改方法上下文不改 Gate/权限；插件 Hook / 项目 hooks.yaml / CC adapter 受管生成三线注册互不复制，同仓库 mode 文件最后写入生效（cooperative-local），不承诺并发角色级不同模式。
+> superpowers 核心子集已于 v0.2.2 移除（ADR-0016）：实现 TDD 由 Matt `tdd` 承接，独立验收由 `whitebox-verify` 承接，架构质询由 `grill-me` 承接；受管产品 P 仅复用原始计划协议与只读校验器。
+> P1_6 方法档案（method-profile-manifest.json）：唯一可选 profile ID 为 `comet-managed-v2`，数据在 `foundation/profiles/comet-managed.json`，状态为 `UNQUALIFIED`（未启用、未签运行验收）；交付主控是 Comet Classic（单一 controller，禁止嵌套 planner/implement-spec），实现方法默认 Matt tdd/diagnosing-bugs/code-review，专门方法（test-authoring、Whitebox、grill-me/共识等）保留各自职责；Superpowers 不是安装或执行依赖，`docs/superpowers` 等旧名仅是受控兼容产物路径。Ponytail 补充（用户裁决 A）：受管 profile 默认 full，用户启停只改方法上下文不改 Gate/权限；插件 Hook / 项目 hooks.yaml / CC adapter 受管生成三线注册互不复制，同仓库 mode 文件最后写入生效（cooperative-local），不承诺并发角色级不同模式。
 
 **约束**：项目约束只写在 `AGENTS.md` 和 `docs/agent/`，不改技能正文、不加项目品牌前缀。技能以真实目录快照分发（禁止符号链接——可移植性红线），升级 = 显式替换 `.agents/skills/` 下的快照 + 更新 `openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json` 的来源与摘要 + 跑 `bash scripts/agent-skill-check.sh`（校验存在性与 frontmatter 完整性；内容级 hash 清单自 P1_6 起由 method-profile-manifest 固定）。
+
+## 3.1 可选受管方法绑定
+
+`foundation/profiles/comet-managed.json` 只声明原生 Comet 动作、角色、方法、输入输出及门的绑定；文件名不是第二个 profile 别名。保留原 Open/Design/Build/Verify/Archive 五 phase、同一 Run、锁、事务及 continuation。TeamAI 只分发；方法不维护第二 phase、DAG、派发或恢复循环。
+
+| 动作 | 原样方法与职责 | 接纳边界 |
+| --- | --- | --- |
+| R | grill-me 澄清需求，正式范围及 AC 写 OpenSpec | 需求确认独立于架构 |
+| A | grill-me 架构质询，独立 multi-agent-consensus-review | 受保护参与者/阈值、当前原摘要、原票和 tally，不复用迁移计划票 |
+| T | test-authoring 设计 case、oracle、覆盖、环境和清理 | 独立语义审查，不用结构有效或作者自检放行 |
+| P | 原 planner 的计划协议段及纯校验器 | 同一 Change 的任务身份/tasks/DAG，不激活完整 controller |
+| Build | test-authoring 编写测试；Builder 使用 Matt tdd/diagnosing-bugs；独立 code-review | 作者测试、实现与独立审查分开，真实行为 RED→GREEN |
+| V | 独立 whitebox-verify | 当前候选、typed ledger、validator、真实业务终态读回 |
+| Kp/规格/Kt | 知识作者/独立审查、唯一 Spec Adapter、受管 Publisher | Kp 阻断所有归档入口，Kt 阻断整体完成；同 Run 继续与恢复 |
+
+P 的允许列表是原样 `claude-parallel-tdd-planner/references/plan-contract.md` 的 `One root and acceptance source`、`DAG` 两节，以及只读 `scripts/plan_guard.py`。在 `Execution contract` 前停止；不得加载完整 SKILL、automation/parallel-execution/execution-prompt/completion/openspec-closeout 引用或 lifecycle/render/install 脚本。保留完整来源快照不表示激活其 Goal/监督/派发/归档合同；运行适配器仍须落实该允许列表。
+
+P1_6 已显式整份升级共识方法登记源码 19 文件与 Whitebox 139 文件，来源及逐文件清单见仓库根目录的 `worker-reports/P1_6-convergence/source-upgrades.json`。其余九份方法保留既有快照。Whitebox 的 `tests/run_all.sh` 自测完整供应内容，包含原八负例、增至十五负例及三不变量；这些是方法源自测，不签产品 Journey。仓库 `scripts/check.sh` 必须调用该入口，入口缺失或失败均阻断。
+
+Comet 的双语分发资产、init/update 安装调用、doctor 诊断及原生 Hook 计划恢复指引通过项目自有 `0001-matt-method-profile.patch` 修订，未修改这些原样方法正文。真实执行器、受信角色、结果来源、硬门及新宿主完整旅程分别归原下游任务与 VERIFY；缺能力返回 UNQUALIFIED，不回退退役方法，不因文件/hash/安装通过启用 profile。Ponytail full 只影响方法上下文，不改变权限或门禁；运行隔离限制仍须独立验证。
 
 ## 4. 触发矩阵
 

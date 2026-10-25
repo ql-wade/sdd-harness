@@ -20,6 +20,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Sequence
 
+from cli_process import run as run_cli, install_signal_handlers
+
 
 def now_utc() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -120,6 +122,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         "rounds": [],
     }
     write_json(state_path, state)
+
+    def cancelled(signum):
+        state.update(status="STOPPED", finished_at=now_utc(), stop_reason=f"received signal {signum}")
+        write_json(state_path, state)
+
+    # Dispatch must finish its 3-second reviewer cleanup before we kill it.
+    install_signal_handlers(cancelled, grace=5)
     logs_dir = run_dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -153,13 +162,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         with log_path.open("w", encoding="utf-8") as log:
             log.write(f"started_at={now_utc()}\nround={round_number}\ncommand={command!r}\n")
             try:
-                dispatch = subprocess.run(command, cwd=run_dir, env=env, stdout=log, stderr=subprocess.STDOUT, text=True, timeout=args.dispatch_timeout)
+                dispatch = run_cli(command, cwd=run_dir, env=env, stdout=log, stderr=subprocess.STDOUT, text=True, timeout=args.dispatch_timeout, stop_file=stop_file)
             except subprocess.TimeoutExpired:
                 log.write(f"dispatch_timeout={args.dispatch_timeout}\n")
                 return fail(state, state_path, f"dispatch timed out in round {round_number} after {args.dispatch_timeout}s; see {log_path}")
+            except InterruptedError:
+                state.update(status="STOPPED", finished_at=now_utc(), stop_reason=f"stop file present: {stop_file}")
+                write_json(state_path, state)
+                return 1
             except OSError as exc:
                 return fail(state, state_path, f"could not start dispatch command: {exc}")
             log.write(f"dispatch_exit={dispatch.returncode}\n")
+        if dispatch.cleanup.get("status") != "complete":
+            return fail(state, state_path, f"dispatch cleanup {dispatch.cleanup.get('status')}; see process cleanup receipt in {logs_dir}")
         if dispatch.returncode != 0:
             return fail(state, state_path, f"dispatch command failed in round {round_number}: exit {dispatch.returncode}; see {log_path}")
 
