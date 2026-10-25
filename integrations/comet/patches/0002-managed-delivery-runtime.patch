@@ -1,3 +1,412 @@
+diff --git a/domains/comet-classic/classic-archive-input-bridge.ts b/domains/comet-classic/classic-archive-input-bridge.ts
+new file mode 100644
+index 0000000..e908389
+--- /dev/null
++++ b/domains/comet-classic/classic-archive-input-bridge.ts
+@@ -0,0 +1,300 @@
++import { type OpenSpecInvocation } from './classic-openspec-binding.js';
++import { readClassicDelivery } from './classic-progress.js';
++// A signed native archive transformation, never an approval or dispatch queue.
++import { createHash } from 'node:crypto';
++import { promises as fs } from 'node:fs';
++import os from 'node:os';
++import path from 'node:path';
++import { collectCheckSnapshot } from './classic-check-snapshot.js';
++import { readArtifacts, writeArtifacts } from '../engine/run-store.js';
++import type { RunState } from '../engine/types.js';
++import { readClassicProjectBytes, inspectClassicProjectTarget } from './classic-protected-path.js';
++import { managedDeliveryHost, requireManagedDeliveryHost } from './classic-managed-host.js';
++import { stableStringify, type GateInputs, type GateId } from './classic-gate-runtime.js';
++import { executeClassicOpenSpec } from './classic-openspec-command.js';
++
++const KEY = 'managed_archive_input_bridge';
++const digest = (value: unknown) =>
++  createHash('sha256').update(stableStringify(value)).digest('hex');
++type RawInputs = Record<string, string>;
++interface Bridge {
++  schema: 'comet.classic.archive-input-bridge.v1';
++  purpose: 'archive-transformation-only';
++  toolBindingDigest: string;
++  runId: string;
++  actionId: string;
++  epoch: number;
++  active: string;
++  archived: string;
++  policy: unknown;
++  controlOutput: string | null;
++  deliveryIdentity: string | null;
++  authorizationId: string | null;
++  before: RawInputs;
++  after: RawInputs;
++  gates: Partial<Record<GateId, GateInputs>>;
++}
++
++// Use the existing native input inventory, but bind ORIGINAL bytes (not task
++// progress normalization or mtimes). Runtime state/logs remain in its own store.
++async function rawInputs(
++  root: string,
++  changeDir: string,
++  controlOutput: string | null = null,
++): Promise<RawInputs> {
++  const snapshot = await collectCheckSnapshot(root, changeDir);
++  const inputs: RawInputs = Object.create(null);
++  for (const entry of snapshot.entries) {
++    // Existing native delivery receipts are controller outputs. Their own
++    // delivery verifier remains authoritative; they are not source inputs.
++    if (controlOutput !== null && entry.p === controlOutput) continue;
++    if (entry.p.startsWith('\0git:')) {
++      inputs[entry.p] = entry.h;
++      continue;
++    }
++    if (entry.h === 'missing') {
++      inputs[entry.p] = 'missing';
++      continue;
++    }
++    const result = await readClassicProjectBytes(root, path.resolve(root, entry.p), {
++      label: 'Archive original input',
++    });
++    inputs[entry.p] = createHash('sha256').update(result).digest('hex');
++  }
++  return inputs;
++}
++
++async function walkFiles(root: string, directory: string): Promise<string[]> {
++  const inspected = await inspectClassicProjectTarget(root, directory, {
++    label: 'Archive preview input',
++    expected: 'directory',
++  });
++  if (!inspected.exists) return [];
++  const files: string[] = [];
++  for (const item of await fs.readdir(directory, { withFileTypes: true })) {
++    if (
++      item.name === '.comet' ||
++      item.name === '.comet.yaml' ||
++      item.name.startsWith('.comet-state')
++    )
++      continue;
++    const target = path.join(directory, item.name);
++    if (item.isSymbolicLink())
++      throw new Error('UNVERIFIED: archive preview refuses symbolic links');
++    if (item.isDirectory()) files.push(...(await walkFiles(root, target)));
++    else if (item.isFile()) files.push(target);
++    else throw new Error('UNVERIFIED: archive preview input is not an ordinary file');
++  }
++  return files;
++}
++
++export async function prepareArchiveInputBridge(options: {
++  toolInvocation: OpenSpecInvocation;
++  projectRoot: string;
++  changeDir: string;
++  archiveDir: string;
++  run: RunState;
++  policy: unknown;
++  epoch: number;
++  gates: Bridge['gates'];
++  annotations: Array<{ file: string; transform: (source: string) => string }>;
++}): Promise<Bridge> {
++  const { projectRoot: root, changeDir } = options;
++  const delivery = (await readClassicDelivery(root, changeDir)).delivery;
++  const controlOutput =
++    delivery?.action === 'archive-only'
++      ? `.comet/classic-deliveries/${createHash('sha256').update(delivery.changeIdentity).digest('hex')}.json`
++      : null;
++  const before = await rawInputs(root, changeDir, controlOutput);
++  const active = path.relative(root, changeDir).replaceAll('\\', '/');
++  const archived = path.relative(root, options.archiveDir).replaceAll('\\', '/');
++  if (
++    !/^openspec\/changes\/[^/]+$/u.test(active) ||
++    !/^openspec\/changes\/archive\/[^/]+$/u.test(archived)
++  )
++    throw new Error('UNVERIFIED: archive input bridge requires the fixed native OpenSpec layout');
++  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'comet-archive-preview-'));
++  try {
++    // Only authorized OpenSpec source bytes enter this disposable project.
++    const files = [
++      path.join(root, 'openspec/config.yaml'),
++      ...(await walkFiles(root, changeDir)),
++      ...(await walkFiles(root, path.join(root, 'openspec/specs'))),
++    ];
++    const originalSpecs: RawInputs = Object.create(null);
++    for (const file of files) {
++      const relative = path.relative(root, file).replaceAll('\\', '/');
++      const bytes = await readClassicProjectBytes(root, file, { label: 'Archive preview source' });
++      if (before[relative] !== createHash('sha256').update(bytes).digest('hex'))
++        throw new Error(
++          'UNVERIFIED: archive source is outside or changed from the frozen input inventory',
++        );
++      const target = path.join(temporary, relative);
++      await fs.mkdir(path.dirname(target), { recursive: true });
++      await fs.writeFile(target, bytes);
++      originalSpecs[relative] = before[relative];
++    }
++    await fs.mkdir(path.join(temporary, '.comet'), { recursive: true });
++    await fs.writeFile(
++      path.join(temporary, '.comet/config.yaml'),
++      'schema: comet.project.v1\ndefault_workflow: classic\nworkflows: [classic]\nclassic:\n  artifact_layout: legacy\n',
++    );
++    const version = await executeClassicOpenSpec(['--version'], temporary, options.toolInvocation);
++    if (version.exitCode !== 0 || version.stdout?.trim() !== '1.11.0')
++      throw new Error('UNVERIFIED: archive preview requires the qualified OpenSpec 1.11.0 CLI');
++    const preview = await executeClassicOpenSpec(
++      ['archive', path.basename(changeDir), '--yes'],
++      temporary,
++      options.toolInvocation,
++    );
++    if ((preview.data as {toolIdentity?:{bindingDigest?:string}} | undefined)?.toolIdentity?.bindingDigest !== options.toolInvocation.digest) throw new Error('UNVERIFIED: preview did not use the captured tool binding');
++    if (preview.exitCode !== 0)
++      throw new Error(
++        `UNVERIFIED: deterministic OpenSpec archive preview failed (${preview.exitCode})`,
++      );
++    const moved = path.join(temporary, archived);
++    if (!(await fs.stat(moved).catch(() => null))?.isDirectory())
++      throw new Error('UNVERIFIED: archive preview produced a different archive target');
++    const after = { ...before };
++    for (const relative of Object.keys(originalSpecs)) {
++      if (relative.startsWith(active + '/') || relative.startsWith('openspec/specs/'))
++        delete after[relative];
++    }
++    for (const file of [
++      ...(await walkFiles(temporary, moved)),
++      ...(await walkFiles(temporary, path.join(temporary, 'openspec/specs'))),
++    ]) {
++      const relative = path.relative(temporary, file).replaceAll('\\', '/');
++      const bytes = await readClassicProjectBytes(temporary, file, {
++        label: 'Archive preview output',
++      });
++      after[relative] = createHash('sha256').update(bytes).digest('hex');
++    }
++    for (const { file, transform } of options.annotations) {
++      const relative = path.relative(root, file).replaceAll('\\', '/');
++      const bytes = await readClassicProjectBytes(root, file, {
++        label: 'Archive annotation input',
++      });
++      if (before[relative] !== createHash('sha256').update(bytes).digest('hex'))
++        throw new Error('UNVERIFIED: archive annotation input changed');
++      const target = relative.startsWith(active + '/')
++        ? archived + relative.slice(active.length)
++        : relative;
++      after[target] = createHash('sha256')
++        .update(transform(bytes.toString('utf8')))
++        .digest('hex');
++    }
++    return {
++      schema: 'comet.classic.archive-input-bridge.v1',
++      purpose: 'archive-transformation-only',
++      toolBindingDigest: options.toolInvocation.digest,
++      runId: options.run.runId,
++      actionId: `classic-archive:${path.basename(changeDir)}`,
++      epoch: options.epoch,
++      active,
++      archived,
++      policy: options.policy,
++      controlOutput,
++      deliveryIdentity: delivery?.changeIdentity ?? null,
++      authorizationId: delivery?.authorizationId ?? null,
++      before,
++      after,
++      gates: options.gates,
++    };
++  } finally {
++    await fs.rm(temporary, { recursive: true, force: true });
++  }
++}
++
++export async function registerArchiveInputBridge(
++  root: string,
++  changeDir: string,
++  run: RunState,
++  bridge: Bridge,
++  action: Record<string, any>,
++): Promise<void> {
++  if (
++    run.runId !== bridge.runId ||
++    digest(await rawInputs(root, changeDir, bridge.controlOutput)) !== digest(bridge.before)
++  )
++    throw new Error('UNVERIFIED: archive inputs changed during preview');
++  const host = requireManagedDeliveryHost();
++  const actionBinding = {
++    ...action,
++    action: 'archive-transformation-only',
++    execution: `${bridge.actionId}:${bridge.epoch}`,
++    inputDigest: digest(bridge),
++  };
++  // Purpose-bound artifact MAC only: never placed in gate_dispatches, collected,
++  // consumed or counted as a gate receipt / actual method execution.
++  const signature = host.authority.issueDispatch({ ...actionBinding, actionBinding });
++  const artifacts = await readArtifacts(changeDir, run.artifactsRef);
++  await writeArtifacts(changeDir, run.artifactsRef, {
++    ...artifacts,
++    [KEY]: JSON.stringify({ bridge, signature }),
++  });
++}
++
++export async function archivedGateInputs(
++  root: string,
++  changeDir: string,
++  run: RunState | null,
++  policy: unknown,
++  gate: GateId,
++): Promise<GateInputs | null> {
++  if (!run || !managedDeliveryHost()) return null;
++  const artifacts = await readArtifacts(changeDir, run.artifactsRef);
++  if (!artifacts[KEY]) return null;
++  const { bridge, signature } = JSON.parse(artifacts[KEY]);
++  const relative = path.relative(root, changeDir).replaceAll('\\', '/');
++  let delivery;
++  try {
++    delivery = (await readClassicDelivery(root, changeDir)).delivery;
++  } catch {
++    // Unverifiable delivery can never preserve a previous approval. Let the
++    // original resolver consume blocked evidence and persist the same Run.
++    return null;
++  }
++  const expectedControl =
++    delivery?.action === 'archive-only'
++      ? `.comet/classic-deliveries/${createHash('sha256').update(delivery.changeIdentity).digest('hex')}.json`
++      : null;
++  if (
++    bridge.controlOutput !== expectedControl ||
++    bridge.deliveryIdentity !== (delivery?.changeIdentity ?? null) ||
++    bridge.authorizationId !== (delivery?.authorizationId ?? null)
++  )
++    return null;
++  const current = await rawInputs(root, changeDir, bridge.controlOutput);
++  // Git keeps deleted tracked paths in its inventory until the archive commit.
++  // Fold only absent tombstones of this signed move, never a present old file.
++  for (const [file, value] of Object.entries(current)) {
++    if (value !== 'missing' || !file.startsWith(`${bridge.active}/`)) continue;
++    const suffix = file.slice(bridge.active.length + 1);
++    const movedSource =
++      bridge.before[file] &&
++      bridge.before[file] !== 'missing' &&
++      bridge.after[`${bridge.archived}/${suffix}`];
++    const movedControl =
++      suffix === '.comet.yaml' ||
++      suffix === '.comet-state.lock' ||
++      suffix === '.comet-state-transaction.json' ||
++      suffix.startsWith('.comet/');
++    if (movedSource || movedControl) delete current[file];
++  }
++  if (
++    bridge.schema !== 'comet.classic.archive-input-bridge.v1' ||
++    bridge.purpose !== 'archive-transformation-only' ||
++    bridge.runId !== run.runId ||
++    relative !== bridge.archived ||
++    artifacts.archive_directory !== relative ||
++    digest(policy) !== digest(bridge.policy) ||
++    signature.actionBinding?.action !== 'archive-transformation-only' ||
++    signature.actionBinding?.inputDigest !== digest(bridge) ||
++    signature.run !== run.runId ||
++    !managedDeliveryHost()!.authority.verifyDispatch(signature).ok ||
++    digest(current) !== digest(bridge.after)
++  )
++    return null;
++  return bridge.gates[gate] ?? null;
++}
+diff --git a/domains/comet-classic/classic-archive.ts b/domains/comet-classic/classic-archive.ts
+index da4e095..355bec1 100644
+--- a/domains/comet-classic/classic-archive.ts
++++ b/domains/comet-classic/classic-archive.ts
+@@ -1,3 +1,6 @@
++import { managedOpenSpecInvocation } from './classic-openspec-binding.js';
++import { prepareArchiveInputBridge, registerArchiveInputBridge, archivedGateInputs } from './classic-archive-input-bridge.js';
++import { evaluateGatePremises, computeGateInputs, parseGateReceipts, type GateId, type GateInputs } from './classic-gate-runtime.js';
+ import { createHash } from 'crypto';
+ import {
+   classicArchivedRequirementsProblems,
+@@ -322,7 +325,7 @@ async function verifyMainSpecsClean(projectRoot: string, specsRoot: string): Pro
+   if (found) throw new ArchiveFailure('');
+ }
+ 
+-export const classicArchiveCommand: ClassicCommandHandler = async (args) => {
++export const classicArchiveCommand: ClassicCommandHandler = async (args, options) => {
+   if (args.length < 1 || args.length > 2 || (args[1] !== undefined && args[1] !== '--dry-run')) {
+     return { exitCode: 64, stderr: 'Usage: comet archive <change-name> [--dry-run]' };
+   }
+@@ -331,7 +334,7 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args) => {
+   const dryRun = args[1] === '--dry-run';
+   try {
+     validateChangeName(change);
+-    const projectRoot = await discoverClassicProject(process.cwd());
++    const projectRoot = await discoverClassicProject(options.projectRoot ?? options.invocationCwd ?? process.cwd());
+     const layout = await assertClassicLayoutWritable(projectRoot);
+     const active = await inspectClassicActiveChangeDirectory(change, layout.projectRoot);
+     const activeDir = active.directory;
+@@ -378,6 +381,11 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args) => {
+         ),
+       );
+     }
++    if (classic.managedDelivery) {
++      const gates = await evaluateGatePremises({ projectRoot: layout.projectRoot, changeDir,
++        classic: classic as unknown as Record<string, unknown>, run: projection.run, action: 'archive-spec' });
++      if (!gates.allowed) throw new ArchiveFailure(red(`UNVERIFIED: archive prerequisites are not current: ${gates.details.join('; ')}`));
++    }
+     output.stderr.push(green('  [OK] Entry state verified'));
+     output.stepsOk += 1;
+     output.stepsTotal += 1;
+@@ -393,6 +401,23 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args) => {
+     output.stepsOk += 1;
+     output.stepsTotal += 1;
+ 
++    const toolInvocation = classic.managedDelivery
++      ? await managedOpenSpecInvocation(layout.projectRoot,changeDir,projection.run?.runId) : undefined;
++    let preparedBridge: Awaited<ReturnType<typeof prepareArchiveInputBridge>> | null = null;
++    if (classic.managedDelivery && !dryRun && !recoveredArchive) {
++      if (!projection.run) throw new ArchiveFailure('UNVERIFIED: archive input bridge requires the original Run');
++      const gates: Partial<Record<GateId, GateInputs>> = {};
++      for (const gate of ['R', 'A', 'T', 'P', 'V', 'Kp'] as GateId[]) {
++        gates[gate] = await computeGateInputs({ projectRoot: layout.projectRoot, changeDir, gate, state: classic, run: projection.run });
++      }
++      preparedBridge = await prepareArchiveInputBridge({ toolInvocation: toolInvocation!, projectRoot: layout.projectRoot, changeDir, archiveDir,
++        run: projection.run, policy: classic.deliveryPolicy, epoch: classic.checkEpoch ?? 0, gates,
++        annotations: [
++          ...(designDoc ? [{ file: path.resolve(layout.projectRoot, designDoc), transform: (source: string) => annotatedMarkdown(source, archiveName, 'status: final') }] : []),
++          ...(planPath ? [{ file: path.resolve(layout.projectRoot, planPath), transform: (source: string) => annotatedMarkdown(source, archiveName, '') }] : []),
++        ] });
++    }
++
+     if (dryRun) {
+       output.stderr.push(yellow(`  [DRY-RUN] Would run OpenSpec archive: ${change}`));
+       output.stepsOk += 1;
+@@ -432,6 +457,15 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args) => {
+           );
+         }
+ 
++        if (runtime.classic.managedDelivery && preparedBridge) {
++          const current = await evaluateGatePremises({ projectRoot: layout.projectRoot, changeDir,
++            classic: runtime.classic as unknown as Record<string, unknown>, run: runtime.run, action: 'archive-spec' });
++          if (!current.allowed || (runtime.classic.checkEpoch ?? 0) !== preparedBridge.epoch)
++            throw new ArchiveFailure('UNVERIFIED: archive premises changed during preview');
++          const prior = [...parseGateReceipts(runtime.classic.gateReceipts)].reverse().find((receipt) => receipt.gate === 'Kp');
++          if (!prior?.intent?.actionBinding) throw new ArchiveFailure('UNVERIFIED: no original Kp binding for archive artifact integrity');
++          await registerArchiveInputBridge(layout.projectRoot, changeDir, runtime.run, preparedBridge, prior.intent.actionBinding);
++        }
+         if (!recovering) {
+           await recordClassicArchiveRequirements(layout.projectRoot, changeDir);
+           const action: EngineAction = {
+@@ -471,7 +505,10 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args) => {
+         const archiveRun = await executeClassicOpenSpec(
+           ['archive', change, '--yes'],
+           layout.projectRoot,
++          toolInvocation,
+         );
++        if (toolInvocation && (archiveRun.data as {toolIdentity?:{bindingDigest?:string}} | undefined)?.toolIdentity?.bindingDigest !== toolInvocation.digest)
++          throw new ArchiveFailure('UNVERIFIED: formal archive did not use the same captured OpenSpec identity');
+         output.captureOpenSpec(archiveRun);
+         if (archiveRun.exitCode !== 0) {
+           throw new ArchiveFailure('', archiveRun.exitCode);
+@@ -544,6 +581,10 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args) => {
+         };
+         await writeArtifacts(archiveDir, archivedProjection.run.artifactsRef, artifacts);
+ 
++        if (archivedProjection.classic.managedDelivery && !await archivedGateInputs(layout.projectRoot, archiveDir,
++          archivedProjection.run, archivedProjection.classic.deliveryPolicy, 'Kp'))
++          throw new ArchiveFailure('UNVERIFIED: actual archive output does not match the pre-authorized transformation; recovery required');
++
+         const archiveTransition = applyClassicTransition(
+           recovering && archivedProjection.classic.archiveConfirmation !== 'confirmed'
+             ? { ...archivedProjection.classic, archiveConfirmation: 'confirmed' }
 diff --git a/domains/comet-classic/classic-check-policy.ts b/domains/comet-classic/classic-check-policy.ts
 index a5f5035..84dd985 100644
 --- a/domains/comet-classic/classic-check-policy.ts
@@ -91,11 +500,27 @@ index a5f5035..84dd985 100644
 +export function checkIdentityMatches(identity: CheckIdentity, command: CheckPolicyCommand): boolean {
 +  return matchesIdentity(command, identity);
 +}
+diff --git a/domains/comet-classic/classic-cli.ts b/domains/comet-classic/classic-cli.ts
+index f0a05d3..d343d5c 100644
+--- a/domains/comet-classic/classic-cli.ts
++++ b/domains/comet-classic/classic-cli.ts
+@@ -1,3 +1,6 @@
++export { inspectClassicHookGuard } from './classic-hook-guard.js';
++export { ensureClassicRuntimeRun } from './classic-runtime-run.js';
++export { installManagedDeliveryHost } from './classic-managed-host.js';
+ import { pathToFileURL } from 'url';
+ import { classicCommandHelp } from './classic-cli-help.js';
+ import type { CliOutputEnvelope } from '../workflow-contract/output-envelope.js';
 diff --git a/domains/comet-classic/classic-evidence.ts b/domains/comet-classic/classic-evidence.ts
-index ad04e00..5098bc8 100644
+index ad04e00..a3395f3 100644
 --- a/domains/comet-classic/classic-evidence.ts
 +++ b/domains/comet-classic/classic-evidence.ts
-@@ -11,6 +11,7 @@ import {
+@@ -1,3 +1,4 @@
++import { readClassicDelivery } from './classic-progress.js';
+ import path from 'path';
+ import { inspectClassicPlanReadiness } from './classic-plan-readiness.js';
+ import { parseClassicTasks } from './classic-tasks.js';
+@@ -11,6 +12,7 @@ import {
    type ClassicLayoutPaths,
  } from './classic-layout.js';
  import { readLegacyArchivedHandoffFallback } from './classic-archive-pointer.js';
@@ -103,7 +528,15 @@ index ad04e00..5098bc8 100644
  import {
    inspectProtectedProjectPath,
    protectedProjectFileExists,
-@@ -297,5 +298,18 @@ export async function collectClassicEvidence(
+@@ -257,6 +259,7 @@ export async function collectClassicEvidence(
+       try {
+         const readiness = await inspectClassicPlanReadiness(projectRoot, classic?.plan ?? null, {
+           requireNonempty: classic?.buildMode === 'autonomous',
++          managedDelivery: classic?.managedDelivery,
+         });
+         if (readiness.status === 'ready') return item;
+         return {
+@@ -297,5 +300,26 @@ export async function collectClassicEvidence(
      satisfied: classic?.archiveConfirmation === 'confirmed',
    });
  
@@ -120,14 +553,23 @@ index ad04e00..5098bc8 100644
 +    evidence.push(...gateItems);
 +  }
 +
++  if (classic?.managedDelivery && classic.archived) {
++    try {
++      const delivery = await readClassicDelivery(projectRoot, changeDir);
++      evidence.push({ code: 'delivery.current', satisfied: ['complete', 'local-verified'].includes(delivery.verification.status), detail: delivery.verification.status });
++    } catch (error) {
++      evidence.push({ code: 'delivery.current', satisfied: false, detail: `UNVERIFIED: ${error instanceof Error ? error.message : String(error)}` });
++    }
++  }
    return evidence;
  }
 diff --git a/domains/comet-classic/classic-gate-runtime.ts b/domains/comet-classic/classic-gate-runtime.ts
 new file mode 100644
-index 0000000..343a7e2
+index 0000000..a49d567
 --- /dev/null
 +++ b/domains/comet-classic/classic-gate-runtime.ts
-@@ -0,0 +1,912 @@
+@@ -0,0 +1,913 @@
++import { archivedGateInputs } from './classic-archive-input-bridge.js';
 +// Managed delivery gate runtime (patch 0002-managed-delivery-runtime).
 +//
 +// The single Classic Run gains one shared gate surface per
@@ -154,11 +596,12 @@ index 0000000..343a7e2
 +import type { RunState } from '../../domains/engine/types.js';
 +import { readProtectedProjectFile } from '../workflow-contract/protected-project-path.js';
 +import { latestCommandCheck } from './classic-command-checks.js';
-+import { parseClassicTasks } from './classic-tasks.js';
++import { checkInputFingerprint } from './classic-check-snapshot.js';
 +import { readClassicState, writeClassicState, withClassicStateLock } from './classic-store.js';
 +import { readRunState } from '../../domains/engine/state.js';
++import { managedDeliveryHost, requireManagedDeliveryHost, evaluateManagedSource, ManagedSourceUnverifiedError, type ManagedRecord } from './classic-managed-host.js';
 +
-+export const GATE_POLICY_VERSION = 'managed-delivery.v1';
++export const GATE_POLICY_VERSION = 'comet-managed-v2';
 +// Fixed per gate and input version: rejection budget is counted on the
 +// accepting Runtime surface, never reset by starting a new session.
 +export const GATE_REWORK_BUDGET = 3;
@@ -176,8 +619,8 @@ index 0000000..343a7e2
 +  }
 +}
 +
-+export type GateId = 'R' | 'A' | 'T' | 'P' | 'V' | 'K';
-+export const GATE_IDS = ['R', 'A', 'T', 'P', 'V', 'K'] as const;
++export type GateId = 'R' | 'A' | 'T' | 'P' | 'V' | 'Kp' | 'Kt' | 'K';
++export const GATE_IDS = ['R', 'A', 'T', 'P', 'V', 'Kp', 'Kt', 'K'] as const;
 +
 +export function isGateId(value: string): value is GateId {
 +  return (GATE_IDS as readonly string[]).includes(value);
@@ -192,14 +635,16 @@ index 0000000..343a7e2
 +  T: 'reviewer',
 +  P: 'planner',
 +  V: 'verifier',
-+  K: 'knowledge-publisher',
++  Kp: 'knowledge-author',
++  Kt: 'knowledge-publisher',
++  K: 'legacy-unqualified',
 +};
 +
 +// Fixed policy: the required gate set per managed action. K is deliberately
 +// not part of phase premises — Knowledge.Closeout.v1 keeps Kp before archive
 +// at the driver gate, while Kt is the run-level seat that blocks overall
 +// completion (knowledgeCloseoutBlocked) and is recorded on the Run itself.
-+export type GateAction = 'enter-design' | 'enter-build' | 'enter-verify' | 'enter-archive' | 'product-write';
++export type GateAction = 'enter-design' | 'enter-build' | 'enter-verify' | 'enter-archive' | 'archive-spec' | 'complete' | 'product-write';
 +
 +export function requiredGates(action: GateAction): readonly GateId[] {
 +  switch (action) {
@@ -213,9 +658,23 @@ index 0000000..343a7e2
 +      return ['R', 'A', 'T', 'P'];
 +    case 'enter-archive':
 +      return ['R', 'A', 'T', 'P', 'V'];
++    case 'archive-spec':
++      return ['R', 'A', 'T', 'P', 'V', 'Kp'];
++    case 'complete':
++      return ['R', 'A', 'T', 'P', 'V', 'Kp', 'Kt'];
 +    case 'product-write':
 +      return ['R', 'A', 'T', 'P'];
 +  }
++}
++
++// Entering authoring work cannot require the gate that work must produce.
++// Completion guards continue to use enter-build/verify/archive separately.
++export function entryGateAction(phase: string): GateAction | null {
++  if (phase === 'design') return 'enter-design';
++  if (phase === 'build') return 'enter-build';
++  if (phase === 'verify') return 'enter-verify';
++  if (phase === 'archive') return 'enter-archive';
++  return null;
 +}
 +
 +// Fixed rework routes (contract section 5). Every route names a Runtime
@@ -223,7 +682,7 @@ index 0000000..343a7e2
 +export function repairRoute(gate: GateId): string {
 +  switch (gate) {
 +    case 'R':
-+      return 'requirements-repair: revise the requirement baseline (proposal/specs), then re-dispatch and re-accept R';
++      return 'requirements-repair: comet state transition <change> requirements-repair, revise proposal/specs and re-confirm R';
 +    case 'A':
 +      return 'architecture-repair: comet state transition <change> architecture-repair, revise the design, re-dispatch and re-accept A';
 +    case 'T':
@@ -232,8 +691,12 @@ index 0000000..343a7e2
 +      return 'plan-repair: revise the plan/tasks definitions, then re-dispatch and re-accept P';
 +    case 'V':
 +      return 'verify rework: comet state transition <change> verify-fail, produce a new candidate, then re-verify';
++    case 'Kp':
++      return 'project-knowledge: execute and independently read back required LLMWiki knowledge before archive';
++    case 'Kt':
++      return 'team-knowledge: reconcile original Outline operation and independently read back before completion';
 +    case 'K':
-+      return 'knowledge-closeout: comet state knowledge-closeout <change> --file <receipt.json>';
++      return 'legacy generic knowledge closeout is historical only; use separate Kp/Kt obligations';
 +  }
 +}
 +
@@ -272,6 +735,9 @@ index 0000000..343a7e2
 +  report: string | null;
 +  reportDigest: string | null;
 +  findings: string[];
++  sourceEntry?: ManagedRecord;
++  intent?: GateDispatch;
++  evaluated?: ManagedRecord;
 +}
 +
 +function receiptFrom(value: unknown, label: string): GateReceipt {
@@ -304,7 +770,7 @@ index 0000000..343a7e2
 +  if (record.generation !== undefined && (!Number.isInteger(record.generation) || (record.generation as number) < 0)) {
 +    fail('generation must be an integer >= 0');
 +  }
-+  if (record.policyVersion !== GATE_POLICY_VERSION) fail(`policyVersion must be ${GATE_POLICY_VERSION}`);
++  if (![GATE_POLICY_VERSION, 'managed-delivery.v1'].includes(record.policyVersion as string)) fail('unsupported policyVersion');
 +  if (!nonEmpty(record.acceptedAt)) fail('acceptedAt must be a timestamp string');
 +  for (const key of ['report', 'reportDigest'] as const) {
 +    const value = record[key];
@@ -327,7 +793,8 @@ index 0000000..343a7e2
 +    attempt: record.attempt as number,
 +    epoch: record.epoch as number,
 +    generation: (record.generation as number | undefined) ?? 0,
-+    policyVersion: GATE_POLICY_VERSION,
++    policyVersion: record.policyVersion as string,
++    ...(record.sourceEntry ? { sourceEntry: record.sourceEntry as ManagedRecord, intent: record.intent as GateDispatch, evaluated: record.evaluated as ManagedRecord } : {}),
 +    acceptedAt: record.acceptedAt as string,
 +    report: (record.report as string | null | undefined) ?? null,
 +    reportDigest: (record.reportDigest as string | null | undefined) ?? null,
@@ -412,9 +879,25 @@ index 0000000..343a7e2
 +  managedDelivery?: boolean;
 +  knowledgeCloseoutRequired?: boolean;
 +  knowledgeCloseout?: unknown;
++  gateReceipts?: unknown;
++  deliveryPolicy?: unknown;
++  gateRunId?: string | null;
 +}): boolean {
-+  if (!classic.managedDelivery || !classic.knowledgeCloseoutRequired) return false;
-+  return parseKnowledgeCloseout(classic.knowledgeCloseout) === null;
++  if (!classic.managedDelivery) return false;
++  const value = classic as typeof classic & { gateReceipts?: unknown; deliveryPolicy?: unknown; gateRunId?: string | null };
++  if (!value.deliveryPolicy || !value.gateReceipts) return true;
++  try {
++    const policy = typeof value.deliveryPolicy === 'string' ? JSON.parse(value.deliveryPolicy) : value.deliveryPolicy;
++    if (policy.projectKnowledgeRequired !== true || policy.teamKnowledgeRequired !== true || !managedDeliveryHost()) return true;
++    const receipts = parseGateReceipts(value.gateReceipts);
++    for (const gate of ['Kp', 'Kt'] as const) {
++      const receipt = [...receipts].reverse().find((entry) => entry.gate === gate);
++      if (!receipt || receipt.verdict !== 'pass' || receipt.policyVersion !== GATE_POLICY_VERSION || !receipt.intent || !receipt.sourceEntry) return true;
++      if (evaluateManagedSource({ ...receipt.intent, nativeRunId: value.gateRunId }, receipt.sourceEntry, receipts, true).evaluated.verdict !== 'pass') return true;
++    }
++    return false;
++  } catch { return true; }
++
 +}
 +
 +// ---- invalidation generation registry (P1-03) --------------------------------
@@ -465,6 +948,18 @@ index 0000000..343a7e2
 +  return result;
 +}
 +
++export function controlledGateRevision(classic: { gateInvalidations: unknown; gateDispatches?: string | null }, from: GateId): { gateInvalidations: string; gateDispatches: string } {
++  const invalidations = parseGateInvalidations(classic.gateInvalidations);
++  const affected = new Set<GateId>(GATE_IDS.slice(GATE_IDS.indexOf(from)).filter((gate) => gate !== 'K'));
++  for (const gate of affected) {
++    const count = (invalidations[gate]?.count ?? 0) + 1;
++    invalidations[gate] = { count, digest: sha256Text(`controlled-revision:${gate}:${count}`) };
++  }
++  const registry = dispatchFileFrom(classic.gateDispatches ?? null);
++  for (const dispatch of registry.dispatches) if (dispatch.state === 'open' && affected.has(dispatch.gate)) dispatch.state = 'stale';
++  return { gateInvalidations: stableStringify(invalidations), gateDispatches: stableStringify(registry) };
++}
++
 +export const gateGenerationOf = (invalidations: Partial<Record<GateId, GateInvalidation>>, gate: GateId): number =>
 +  invalidations[gate]?.count ?? 0;
 +
@@ -480,10 +975,27 @@ index 0000000..343a7e2
 +  projectRoot: string,
 +): Promise<void> {
 +  const projection = await readClassicState(directory, { migrate: false });
-+  const classic = projection.classic;
++  let classic = projection.classic;
 +  if (!classic || classic.managedDelivery !== true) return;
++  const host = managedDeliveryHost();
++  if (!host) return; // an unqualified standalone hook cannot mutate gate generations
++  let policyChanged = false;
++  if (host) {
++    const snapshot = host.policy({ projectRoot, changeDir: directory, runId: projection.run?.runId });
++    if (!snapshot || snapshot.projectKnowledgeRequired !== true || snapshot.teamKnowledgeRequired !== true
++      || !nonEmpty(snapshot.ref) || typeof snapshot.digest !== 'string' || !SHA256_RE.test(snapshot.digest) || !nonEmpty(snapshot.revision)) {
++      throw new ManagedSourceUnverifiedError('UNVERIFIED: fixed comet-managed-v2 policy requires both Kp/Kt and ref/digest/revision');
++    }
++    const serialized = stableStringify(snapshot);
++    if (serialized !== classic.deliveryPolicy) {
++      classic = { ...classic, deliveryPolicy: serialized, checkEpoch: (classic.checkEpoch ?? 0) + 1 };
++      policyChanged = true;
++      // Existing pass history is retained. The ordinary digest/generation
++      // invalidation below makes policy rollback unable to revive it.
++    }
++  }
 +  const receipts = parseGateReceipts(classic.gateReceipts);
-+  if (receipts.length === 0) return;
++  const registry = await readGateDispatches(directory);
 +  const invalidations = parseGateInvalidations(classic.gateInvalidations);
 +  let changed = false;
 +  const state: GateStateInput = {
@@ -491,16 +1003,43 @@ index 0000000..343a7e2
 +    plan: classic.plan,
 +    testIntent: classic.testIntent,
 +    gateReceipts: classic.gateReceipts,
++    gateInvalidations: invalidations,
++    deliveryPolicy: classic.deliveryPolicy,
 +  };
 +  const run = await readRunState(directory);
++  // A pass is topological: dependencies are settled before their consumers.
++  // Cache input digests only within this pass; generation reads stay live.
++  const inputCache = new Map<GateId, Promise<GateInputs>>();
++  const inputsFor = (gate: GateId): Promise<GateInputs> => {
++    const cached = inputCache.get(gate);
++    if (cached) return cached;
++    const pending = computeGateInputs({ projectRoot, changeDir: directory, gate, state, run,
++      currentDigestOf: (dependency) => inputsFor(dependency).then((inputs) => inputs.digest) });
++    inputCache.set(gate, pending);
++    return pending;
++  };
 +  for (const gate of GATE_IDS) {
 +    if (gate === 'K') continue;
-+    const latest = [...receipts].reverse().find((receipt) => receipt.gate === gate && receipt.verdict === 'pass');
++    const accepted = [...receipts].reverse().find((receipt) => receipt.gate === gate && receipt.verdict === 'pass');
++    const pending = [...registry.dispatches].reverse().find((dispatch) => dispatch.gate === gate && dispatch.state === 'open');
++    const usePending = pending && (!accepted || pending.generation >= accepted.generation && pending.epoch >= accepted.epoch);
++    const latest = usePending ? { digest: pending.inputDigest, intent: pending, sourceEntry: undefined } : accepted;
 +    if (!latest) continue;
-+    const inputs = await computeGateInputs({ projectRoot, changeDir: directory, gate, state, run });
++    const inputs = await inputsFor(gate);
 +    const entry = invalidations[gate];
-+    if (inputs.digest !== latest.digest && entry?.digest !== inputs.digest) {
-+      invalidations[gate] = { count: (entry?.count ?? 0) + 1, digest: inputs.digest };
++    let sourceChanged = false;
++    let currentSource: unknown = null;
++    if (latest.intent) {
++      try {
++        const context = host.context({ ...latest.intent, inputDigest: inputs.digest, nativeRunId: projection.run?.runId });
++        currentSource = { action: context.actionBinding, qualification: context.admissionOptions?.sourceQualification };
++        const previousSource = { action: latest.intent.actionBinding, qualification: latest.sourceEntry?.sourcePacket?.collection?.source?.qualification ?? latest.intent.sourceQualification };
++        sourceChanged = stableStringify(currentSource) !== stableStringify(previousSource);
++      } catch { /* unavailable source is blocked by admission, not rewritten as a new approval */ }
++    }
++    const observed = sha256Text(stableStringify({ inputs: inputs.digest, source: currentSource }));
++    if ((inputs.digest !== latest.digest || sourceChanged) && entry?.digest !== observed) {
++      invalidations[gate] = { count: (entry?.count ?? 0) + 1, digest: observed };
 +      changed = true;
 +    }
 +  }
@@ -509,7 +1048,6 @@ index 0000000..343a7e2
 +  // pre-invalidation, a late result must not revive the gate, and the job-key
 +  // recovery of the 0003 stack must not resurface them. Idempotent and
 +  // self-healing: it runs on every sync, writing only on change.
-+  const registry = await readGateDispatches(directory);
 +  let registryChanged = false;
 +  for (const dispatch of registry.dispatches) {
 +    if (
@@ -520,15 +1058,11 @@ index 0000000..343a7e2
 +      registryChanged = true;
 +    }
 +  }
-+  if (!changed && !registryChanged) return;
-+  if (registryChanged) await writeGateDispatches(directory, registry);
-+  if (changed) {
-+    await writeClassicState(directory, {
-+      classic: { ...classic, gateInvalidations: stableStringify(invalidations) },
-+      run: projection.run,
-+      unknownKeys: projection.unknownKeys,
-+    });
-+  }
++  if (!changed && !registryChanged && !policyChanged) return;
++  await writeClassicState(directory, {
++    classic: { ...classic, gateInvalidations: stableStringify(invalidations), gateDispatches: stableStringify(registry) },
++    run: projection.run, unknownKeys: projection.unknownKeys,
++  });
 +}
 +
 +// ---- dispatch registry --------------------------------------------------------
@@ -548,6 +1082,11 @@ index 0000000..343a7e2
 +  // bytes.
 +  generation: number;
 +  state: 'open' | 'consumed' | 'stale';
++  runId?: string;
++  sourceQualification?: ManagedRecord;
++  jobKey?: string;
++  actionBinding?: ManagedRecord;
++  protectedDispatch?: ManagedRecord;
 +  verdict?: 'pass' | 'reject';
 +}
 +
@@ -568,23 +1107,17 @@ index 0000000..343a7e2
 +}
 +
 +export async function readGateDispatches(changeDir: string): Promise<GateDispatchFile> {
-+  const raw = await readOptionalEngineRunText(changeDir, DISPATCHES_FILE, Number.MAX_SAFE_INTEGER, 'Gate dispatch registry');
-+  return dispatchFileFrom(raw);
++  const projection = await readClassicState(changeDir, { migrate: false });
++  // Old independent dispatch files remain historical, never imported as
++  // qualified intents into the current authority transaction.
++  return dispatchFileFrom(projection.classic?.gateDispatches ?? null);
 +}
 +
 +export async function writeGateDispatches(changeDir: string, file: GateDispatchFile): Promise<void> {
-+  if (file.dispatches.length > MAX_GATE_DISPATCHES) {
-+    throw new Error(
-+      `Gate dispatch registry exceeds ${MAX_GATE_DISPATCHES} entries; reconcile ${DISPATCHES_FILE} before dispatching again`,
-+    );
-+  }
-+  await writeEngineRunText(
-+    changeDir,
-+    DISPATCHES_FILE,
-+    `${stableStringify(file)}\n`,
-+    Number.MAX_SAFE_INTEGER,
-+    'Gate dispatch registry',
-+  );
++  if (file.dispatches.length > MAX_GATE_DISPATCHES) throw new Error('Gate dispatch history limit reached; reconcile the same Run');
++  const projection = await readClassicState(changeDir, { migrate: false });
++  if (!projection.classic) throw new Error('Classic state is missing');
++  await writeClassicState(changeDir, { ...projection, classic: { ...projection.classic, gateDispatches: stableStringify(file) } });
 +}
 +
 +// ---- input bindings -----------------------------------------------------------
@@ -594,6 +1127,8 @@ index 0000000..343a7e2
 +  plan: string | null;
 +  testIntent: string | null;
 +  gateReceipts: unknown;
++  deliveryPolicy?: unknown;
++  gateInvalidations?: unknown;
 +}
 +
 +const readChangeArtifact = async (root: string, absolute: string, label: string): Promise<string | null> => {
@@ -642,12 +1177,11 @@ index 0000000..343a7e2
 +async function gateTasksDefinition(changeDir: string): Promise<string> {
 +  const source = await readChangeArtifact(changeDir, path.join(changeDir, 'tasks.md'), 'Gate tasks artifact');
 +  if (source === null) return sha256Text('missing:tasks.md');
-+  try {
-+    const tasks = parseClassicTasks(source);
-+    return sha256Text(stableStringify(tasks.map((task) => ({ id: task.id, text: task.text }))));
-+  } catch {
-+    return sha256Text(`malformed:tasks.md:${source.length}`);
-+  }
++  const host = managedDeliveryHost();
++  // P2_1 supplies its production AST-based definition digest. No second
++  // incomplete Markdown scanner is introduced inside Comet.
++  return host ? host.definitionDigest(source) : sha256Text(source);
++
 +}
 +
 +export interface GateInputs {
@@ -661,6 +1195,8 @@ index 0000000..343a7e2
 +  T: ['R', 'A'],
 +  P: ['R', 'A', 'T'],
 +  V: ['R', 'A', 'T', 'P'],
++  Kp: ['R', 'A', 'T', 'P', 'V'],
++  Kt: ['R', 'A', 'T', 'P', 'V', 'Kp'],
 +};
 +
 +// The declared, conservative input binding of one gate: full content digests
@@ -678,10 +1214,12 @@ index 0000000..343a7e2
 +}): Promise<GateInputs> {
 +  const { projectRoot, changeDir, gate, state } = options;
 +  const run = options.run ?? null;
++  const archived = await archivedGateInputs(projectRoot, changeDir, run, state.deliveryPolicy ?? null, gate);
++  if (archived) return archived;
 +  const resolveDependency = options.currentDigestOf ?? ((dependency) => computeGateInputs({ ...options, gate: dependency }).then((inputs) => inputs.digest));
 +  const missing: string[] = [];
 +  const files: Record<string, string> = {};
-+  const extra: Record<string, unknown> = {};
++  const extra: Record<string, unknown> = { deliveryPolicy: state.deliveryPolicy ?? null };
 +
 +  const addFile = async (label: string, relative: string | null): Promise<void> => {
 +    if (!relative || relative === 'null') {
@@ -707,10 +1245,15 @@ index 0000000..343a7e2
 +    await addFile('test_intent', state.testIntent);
 +  }
 +  if (gate === 'P') {
-+    await addFile('plan', state.plan);
++    if (state.plan?.endsWith('.md')) {
++      const plan = await readChangeArtifact(projectRoot, path.resolve(projectRoot, state.plan), 'Plan definition');
++      if (plan === null) missing.push('plan: missing');
++      else files.plan = managedDeliveryHost()?.definitionDigest(plan) ?? sha256Text(plan);
++    } else await addFile('plan', state.plan);
 +    extra.tasksDefinition = await gateTasksDefinition(changeDir);
 +  }
-+  if (gate === 'V') {
++  if (gate === 'V' || gate === 'Kp' || gate === 'Kt') {
++    extra.candidate = await checkInputFingerprint(projectRoot, changeDir);
 +    // The receipt binds the IDENTITY of the latest runtime verification
 +    // record — deliberately not evaluateCommandCheck, whose phase-boundary
 +    // epoch rule must not make the V receipt self-stale after verify-pass
@@ -735,7 +1278,13 @@ index 0000000..343a7e2
 +
 +  const dependsOn: Partial<Record<GateId, string>> = {};
 +  for (const dependency of dependencyGates[gate] ?? []) {
-+    dependsOn[dependency] = await resolveDependency(dependency);
++    const currentInput = await resolveDependency(dependency);
++    const receipt = [...parseGateReceipts(state.gateReceipts)].reverse().find((entry) => entry.gate === dependency);
++    dependsOn[dependency] = sha256Text(stableStringify({ currentInput, generation: gateGenerationOf(parseGateInvalidations(state.gateInvalidations), dependency), receipt: receipt ? {
++      digest: receipt.digest, verdict: receipt.verdict, execution: receipt.execution, attempt: receipt.attempt,
++      generation: receipt.generation, policyVersion: receipt.policyVersion,
++      collection: receipt.sourceEntry?.collectionId ?? null,
++    } : null }));
 +  }
 +
 +  const digest = sha256Text(stableStringify({ gate, files, extra, dependsOn }));
@@ -760,6 +1309,8 @@ index 0000000..343a7e2
 +  plan: (classic.plan as string | null) ?? null,
 +  testIntent: (classic.testIntent as string | null) ?? null,
 +  gateReceipts: classic.gateReceipts,
++  gateInvalidations: classic.gateInvalidations,
++  deliveryPolicy: classic.deliveryPolicy,
 +});
 +
 +// The premise evaluation every managed entrance consumes. Receipts are never
@@ -772,7 +1323,13 @@ index 0000000..343a7e2
 +  classic: Record<string, unknown>;
 +  run?: RunState | null;
 +  action: GateAction;
++  dependencyOf?: GateId;
 +}): Promise<GateEvaluation> {
++  if (options.classic.managedDelivery === true) {
++    await syncGateInvalidations(options.changeDir, options.projectRoot);
++    const projection = await readClassicState(options.changeDir, { migrate: false });
++    if (projection.classic) options = { ...options, classic: projection.classic as unknown as Record<string, unknown>, run: projection.run };
++  }
 +  const managed = options.classic.managedDelivery === true;
 +  const evaluation: GateEvaluation = {
 +    managed,
@@ -791,7 +1348,7 @@ index 0000000..343a7e2
 +  const currentDigestOf = (gate: GateId): Promise<string> => {
 +    const cached = cache.get(gate);
 +    if (cached) return cached;
-+    const pending = computeGateInputs({ ...options, state: gateStateInput(options.classic), gate }).then(
++    const pending = computeGateInputs({ ...options, state: gateStateInput(options.classic), gate, currentDigestOf }).then(
 +      (inputs) => inputs.digest,
 +    );
 +    cache.set(gate, pending);
@@ -802,12 +1359,22 @@ index 0000000..343a7e2
 +  // binding AND the persisted invalidation generation; an observed
 +  // invalidation survives byte restoration.
 +  const invalidations = parseGateInvalidations(options.classic.gateInvalidations);
-+  for (const gate of requiredGates(options.action)) {
++  for (const gate of options.dependencyOf ? (dependencyGates[options.dependencyOf] ?? []) : requiredGates(options.action)) {
 +    const latest = [...receipts].reverse().find((receipt) => receipt.gate === gate);
 +    if (!latest) {
 +      evaluation.missing.push(gate);
 +      evaluation.routes.push(repairRoute(gate));
 +      evaluation.details.push(`gate ${gate}: no accepted receipt (dispatch and accept through the Runtime before this action)`);
++      continue;
++    }
++    let authenticated = false;
++    if (latest.policyVersion === GATE_POLICY_VERSION && latest.sourceEntry && latest.intent && managedDeliveryHost()) {
++      try { const judged = evaluateManagedSource({ ...latest.intent, nativeRunId: options.run?.runId }, latest.sourceEntry, receipts, true); authenticated = latest.verdict === 'reject' || judged.evaluated.verdict === 'pass'; } catch { /* unverified remains blocked */ }
++    }
++    if (!authenticated) {
++      evaluation.stale.push(gate);
++      evaluation.routes.push(repairRoute(gate));
++      evaluation.details.push(`UNVERIFIED: gate ${gate} has no current protected source and independent review`);
 +      continue;
 +    }
 +    if (latest.verdict === 'reject') {
@@ -847,15 +1414,17 @@ index 0000000..343a7e2
 +  classic: Record<string, unknown>;
 +  run?: RunState | null;
 +}): Promise<GateEvidenceItem[]> {
-+  const classic = options.classic;
-+  if (classic.managedDelivery !== true) return [];
++  if (options.classic.managedDelivery !== true) return [];
++  const projection = await readClassicState(options.changeDir, { migrate: false });
++  const classic = projection.classic as unknown as Record<string, unknown> ?? options.classic;
++  options = { ...options, run: projection.run };
 +  const items: GateEvidenceItem[] = [];
 +  const receipts = parseGateReceipts(classic.gateReceipts);
 +  const cache = new Map<GateId, Promise<string>>();
 +  const currentDigestOf = (gate: GateId): Promise<string> => {
 +    const cached = cache.get(gate);
 +    if (cached) return cached;
-+    const pending = computeGateInputs({ ...options, state: gateStateInput(classic), gate }).then((inputs) => inputs.digest);
++    const pending = computeGateInputs({ ...options, state: gateStateInput(classic), gate, currentDigestOf }).then((inputs) => inputs.digest);
 +    cache.set(gate, pending);
 +    return pending;
 +  };
@@ -869,7 +1438,11 @@ index 0000000..343a7e2
 +    }
 +    const current = await currentDigestOf(gate);
 +    const generation = gateGenerationOf(invalidations, gate);
-+    const currentNow = current === latest.digest && (latest.generation ?? 0) === generation;
++    let authenticated = false;
++    if (latest.policyVersion === GATE_POLICY_VERSION && latest.sourceEntry && latest.intent && managedDeliveryHost()) {
++      try { authenticated = evaluateManagedSource({ ...latest.intent, nativeRunId: options.run?.runId }, latest.sourceEntry, receipts, true).evaluated.verdict === 'pass'; } catch { /* fail closed */ }
++    }
++    const currentNow = authenticated && current === latest.digest && (latest.generation ?? 0) === generation;
 +    items.push({
 +      code: `gate.${gate}.current`,
 +      satisfied: currentNow,
@@ -884,7 +1457,7 @@ index 0000000..343a7e2
 +// section 1, resolver row: never dispatch old implementation steps while
 +// stale). Design phase is exempt — it IS the repair route.
 +export function managedPremisesBlocked(
-+  classic: { managedDelivery?: boolean },
++  classic: { managedDelivery?: boolean; archived?: boolean },
 +  evidence: ReadonlyArray<{ code: string; satisfied: boolean }>,
 +  phase: string,
 +): { blocked: boolean; route: string | null } {
@@ -894,14 +1467,7 @@ index 0000000..343a7e2
 +  // dispatches architecture work: its premise is the requirements gate (P1-01
 +  // recovery surface — reconciling history never authorizes design work
 +  // without a current R).
-+  const action: GateAction | null =
-+    phase === 'design'
-+      ? 'enter-design'
-+      : phase === 'build'
-+        ? 'product-write'
-+        : phase === 'verify'
-+          ? 'enter-verify'
-+          : null;
++  const action: GateAction | null = phase === 'archive' && classic.archived ? 'complete' : entryGateAction(phase);
 +  if (!action) return { blocked: false, route: null };
 +  for (const gate of requiredGates(action)) {
 +    const item = evidence.find((entry) => entry.code === `gate.${gate}.current`);
@@ -911,137 +1477,13 @@ index 0000000..343a7e2
 +  return { blocked: false, route: null };
 +}
 +
-+// ---- pass-evidence qualification (P1-02) --------------------------------------
-+//
-+// A Runtime dispatch registration is NOT review evidence: a pass acceptance
-+// must carry the dispatched binding echoed back, the original report with its
-+// digest, and the gate-specific independent-review artifact (A: the closed
-+// unanimous consensus tally; T: the test-design sufficiency conclusion with an
-+// attested oracle). The Runtime verifies the MECHANICAL invariants of these
-+// artifacts (binding, quorum, closure, digests); reviewer independence itself
-+// is the Runner.Dispatch.v1/I02 boundary and is not claimed here.
-+
-+export interface GateConsensusBallot {
-+  agent?: unknown;
-+  verdict?: unknown;
-+  blockingFindings?: unknown;
-+}
-+
-+export function gatePassEvidenceProblems(
-+  gate: GateId,
-+  result: Record<string, unknown>,
-+  dispatch: { role: string; inputDigest: string },
-+): string[] {
-+  const problems: string[] = [];
-+  if (result.role !== undefined && result.role !== dispatch.role) {
-+    problems.push(
-+      `result role '${String(result.role)}' does not match the Runtime-assigned dispatch role '${dispatch.role}' (role labels grant nothing)`,
-+    );
-+  }
-+  if (result.inputDigest !== dispatch.inputDigest) {
-+    problems.push(
-+      `result inputDigest '${String(result.inputDigest)}' does not bind the dispatched inputs (stale/old-summary digests are refused)`,
-+    );
-+  }
-+  const report = result.report;
-+  if (typeof report !== 'string' || report.trim() === '') {
-+    problems.push(
-+      'a pass verdict requires the original review report (non-empty report string); a dispatch registration is not review evidence',
-+    );
-+  } else if (
-+    typeof result.reportDigest !== 'string' ||
-+    !SHA256_RE.test(result.reportDigest) ||
-+    result.reportDigest !== sha256Text(report)
-+  ) {
-+    problems.push('reportDigest must be the sha256 of the report text (original report digest binding)');
-+  }
-+  if (gate === 'A') {
-+    const consensus = result.consensus;
-+    if (!consensus || typeof consensus !== 'object' || Array.isArray(consensus)) {
-+      problems.push('architecture gate A requires the consensus tally evidence (consensus: { reviewId, rule, status, participants, ballots, artifactDigest })');
-+    } else {
-+      const tally = consensus as Record<string, unknown>;
-+      if (tally.status !== 'CLOSED') {
-+        problems.push(`consensus status '${String(tally.status)}' is not CLOSED; an unclosed tally (open grill questions) cannot authorize a pass`);
-+      }
-+      if (tally.rule !== 'unanimous') {
-+        problems.push('consensus rule must be unanimous (exact quorum — majority or average verdicts are refused)');
-+      }
-+      const participants = tally.participants;
-+      if (
-+        !Array.isArray(participants) ||
-+        participants.length < 2 ||
-+        !participants.every((agent) => typeof agent === 'string' && agent.length > 0) ||
-+        new Set(participants).size !== participants.length
-+      ) {
-+        problems.push('consensus participants must be at least 2 unique reviewer identities');
-+      }
-+      const ballots = tally.ballots;
-+      if (!Array.isArray(ballots)) {
-+        problems.push('consensus ballots must be an array covering every participant');
-+      } else {
-+        if (Array.isArray(participants) && ballots.length !== participants.length) {
-+          problems.push(
-+            `consensus has ${participants.length} declared participants but ${ballots.length} ballots; every required reviewer must vote (missing votes are refused)`,
-+          );
-+        }
-+        const agents = ballots.map((ballot) =>
-+          ballot && typeof ballot === 'object' ? (ballot as Record<string, unknown>).agent : undefined,
-+        );
-+        if (new Set(agents).size !== agents.length) {
-+          problems.push('consensus ballots contain duplicate agent identities');
-+        }
-+        for (const ballot of ballots as GateConsensusBallot[]) {
-+          if (!ballot || typeof ballot !== 'object') {
-+            problems.push('consensus ballots must be objects');
-+            continue;
-+          }
-+          if (!Array.isArray(participants) || !participants.includes(ballot.agent)) {
-+            problems.push(`ballot agent '${String(ballot.agent)}' is not in the declared participant set (fabricated identities are refused)`);
-+          }
-+          if (ballot.verdict !== 'APPROVE') {
-+            problems.push(`ballot '${String(ballot.agent)}' verdict '${String(ballot.verdict)}' is not APPROVE; a unanimous quorum cannot contain a rejecting vote`);
-+          }
-+          if (ballot.blockingFindings !== 0) {
-+            problems.push(`ballot '${String(ballot.agent)}' reports ${String(ballot.blockingFindings)} blocking findings; unresolved blocking findings refuse the pass`);
-+          }
-+        }
-+        if (tally.artifactDigest !== dispatch.inputDigest) {
-+          problems.push('consensus artifactDigest must equal the dispatched input digest (a tally of older inputs is stale evidence)');
-+        }
-+      }
-+    }
-+  }
-+  if (gate === 'T') {
-+    const review = result.testDesignReview;
-+    if (!review || typeof review !== 'object' || Array.isArray(review)) {
-+      problems.push('test-design gate T requires the independent test-design review conclusion (testDesignReview: { verdict, oracle, inputDigest, reviewer })');
-+    } else {
-+      const design = review as Record<string, unknown>;
-+      if (design.verdict !== 'sufficient') {
-+        problems.push(`test-design review verdict '${String(design.verdict)}' is not sufficient`);
-+      }
-+      if (design.oracle !== 'strong' && design.oracle !== 'adequate') {
-+        problems.push(`test-design review oracle '${String(design.oracle)}' is not attested strong/adequate; a weak-oracle test design is refused`);
-+      }
-+      if (design.inputDigest !== dispatch.inputDigest) {
-+        problems.push('test-design review inputDigest must equal the dispatched input digest');
-+      }
-+      if (typeof design.reviewer !== 'string' || !design.reviewer) {
-+        problems.push('test-design review requires the reviewing identity');
-+      }
-+    }
-+  }
-+  return problems;
-+}
-+
 +// Independent readback helper for file-kind knowledge closeout targets (D06):
 +// the Runtime re-derives the digest itself before recording the seat.
 +export async function knowledgeTargetDigest(projectRoot: string, target: string): Promise<string | null> {
 +  return hashProjectFile(projectRoot, path.resolve(projectRoot, target));
 +}
 diff --git a/domains/comet-classic/classic-guard.ts b/domains/comet-classic/classic-guard.ts
-index 6926f3a..2be829d 100644
+index 6926f3a..c7f6258 100644
 --- a/domains/comet-classic/classic-guard.ts
 +++ b/domains/comet-classic/classic-guard.ts
 @@ -27,7 +27,20 @@ import {
@@ -1126,7 +1568,15 @@ index 6926f3a..2be829d 100644
        ? await inferredBuildCommand()
        : null;
    if (inferred !== null && typeof inferred !== 'object') {
-@@ -1101,7 +1141,12 @@ async function guardOpenChecks(output: GuardOutput, changeDir: string): Promise<
+@@ -1088,6 +1128,7 @@ async function guardOpenChecks(output: GuardOutput, changeDir: string): Promise<
+   ];
+   if (
+     workflow === 'full' &&
++    (await readField(changeDir, 'managed_delivery')) !== 'true' &&
+     (requirements.designRequired || (await exists(path.join(changeDir, 'design.md'))))
+   ) {
+     checks.splice(
+@@ -1101,7 +1142,12 @@ async function guardOpenChecks(output: GuardOutput, changeDir: string): Promise<
        ),
      );
    }
@@ -1140,7 +1590,7 @@ index 6926f3a..2be829d 100644
  }
  
  async function guardDesignChecks(
-@@ -1190,6 +1235,13 @@ async function guardDesignChecks(
+@@ -1190,6 +1236,13 @@ async function guardDesignChecks(
        yellow('  [WARN] No design_doc recorded in .comet.yaml (optional for hotfix/tweak)'),
      );
    }
@@ -1154,7 +1604,7 @@ index 6926f3a..2be829d 100644
    return blocked;
  }
  
-@@ -1232,12 +1284,47 @@ async function guardBuildChecks(
+@@ -1232,12 +1285,47 @@ async function guardBuildChecks(
      }),
    ]);
    if (blocked) return true;
@@ -1203,7 +1653,7 @@ index 6926f3a..2be829d 100644
  }
  
  async function guardVerifyChecks(
-@@ -1259,12 +1346,17 @@ async function guardVerifyChecks(
+@@ -1259,12 +1347,17 @@ async function guardVerifyChecks(
      }),
    ]);
    if (blocked) return true;
@@ -1222,7 +1672,7 @@ index 6926f3a..2be829d 100644
  }
  
  async function guardArchiveChecks(
-@@ -1289,6 +1381,16 @@ async function guardArchiveChecks(
+@@ -1289,6 +1382,16 @@ async function guardArchiveChecks(
      check('branch_status=handled', async () =>
        (await branchStatusHandled(changeDir)) ? pass() : fail(''),
      ),
@@ -1239,7 +1689,7 @@ index 6926f3a..2be829d 100644
    ]);
  }
  
-@@ -1316,7 +1418,11 @@ async function applyStateUpdateLocked(
+@@ -1316,7 +1419,11 @@ async function applyStateUpdateLocked(
    // boundBranchMatches may have lazily healed bound_branch on disk, and a
    // stale projection would write the pre-heal null back over it.
    const context = await ensureClassicRuntimeRun(changeDir);
@@ -1252,7 +1702,7 @@ index 6926f3a..2be829d 100644
      const evaluation = await evaluateCommandCheck(
        classicCommandProjectRoot(),
        changeDir,
-@@ -1329,6 +1435,28 @@ async function applyStateUpdateLocked(
+@@ -1329,6 +1436,28 @@ async function applyStateUpdateLocked(
        path.resolve(classicCommandProjectRoot(), record.cwd) !==
          path.resolve(await guardEvidenceCwd(classicCommandProjectRoot(), record)),
      );
@@ -1282,10 +1732,18 @@ index 6926f3a..2be829d 100644
        const reason =
          record?.tier === 'incremental'
 diff --git a/domains/comet-classic/classic-hook-guard.ts b/domains/comet-classic/classic-hook-guard.ts
-index 25f3f53..82ce3b1 100644
+index 25f3f53..49f5bea 100644
 --- a/domains/comet-classic/classic-hook-guard.ts
 +++ b/domains/comet-classic/classic-hook-guard.ts
-@@ -24,6 +24,7 @@ import {
+@@ -1,4 +1,7 @@
++import { managedDeliveryHost } from './classic-managed-host.js';
++import { readRunState } from '../../domains/engine/state.js';
+ import { promises as fs } from 'fs';
++import { parseDocument } from 'yaml';
+ import path from 'path';
+ import { stripUtf8Bom } from '../../platform/fs/strip-bom.js';
+ import { memoizedHookRead } from '../../platform/process/hook-read-cache.js';
+@@ -24,9 +27,11 @@ import {
  import { resolveCurrentChange } from './classic-current-change.js';
  import { classicGuardUserMessage, classicLocale } from './classic-output-language.js';
  import { readClassicState, readLegacyState } from './classic-store.js';
@@ -1293,7 +1751,134 @@ index 25f3f53..82ce3b1 100644
  import type { ClassicPhase, ClassicState } from './classic-state.js';
  import {
    inspectClassicPlanReadiness,
-@@ -1074,6 +1075,47 @@ async function inspectClassicHookTarget(
++  MANAGED_PLANS_ROOT,
+   inspectClassicAutonomousBuildProblems,
+   type ClassicPlanReadiness,
+ } from './classic-plan-readiness.js';
+@@ -117,6 +122,18 @@ async function projectRelative(target: string, projectRoot: string): Promise<str
+   try {
+     const physicalCandidate = await physicalPathForPossiblyMissingTarget(rawCandidate);
+     const physicalRoot = await fs.realpath(projectRoot);
++    // Resolve only root aliases (e.g. /var vs /private/var), preserving the
++    // requested suffix. realpath(target) folds case on macOS and must not
++    // turn Docs/... into the separately authorized docs/... artifact.
++    let ancestor = path.dirname(rawCandidate);
++    while (ancestor !== path.dirname(ancestor)) {
++      try {
++        if (await fs.realpath(ancestor) === physicalRoot) return normalized(path.relative(ancestor, rawCandidate));
++      } catch (error) {
++        if (!['ENOENT', 'ENOTDIR'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error;
++      }
++      ancestor = path.dirname(ancestor);
++    }
+     if (physicalCandidate) {
+       const physicalRootRelative = relativeToProjectRoot(physicalCandidate, physicalRoot);
+       if (physicalRootRelative !== null) return physicalRootRelative;
+@@ -162,6 +179,12 @@ async function loadGoverningChange(changeDir: string): Promise<GoverningChange |
+     // Legacy/partial state without the required Classic fields: fall back to a
+     // direct yaml read so the guard still respects the recorded phase rather
+     // than crashing the way master's lenient shell scripts did not.
++    const document = parseDocument(await fs.readFile(path.join(changeDir, '.comet.yaml'), 'utf8'));
++    const managed = document.get('managed_delivery');
++    if (document.errors.length || (document.has('managed_delivery') && managed !== false)
++      || ['delivery_policy', 'gate_dispatches', 'gate_receipts', 'gate_invalidations'].some((key) => document.get(key) != null)) {
++      throw new Error('UNVERIFIED: invalid managed Classic state cannot use legacy write permissions');
++    }
+     const legacy = await readLegacyState(changeDir);
+     if (!legacy.phase) return null;
+     return {
+@@ -325,6 +348,7 @@ async function allowsSuperpowersArtifactWrite(
+     (
+       await hookPlanReadiness(projectRoot, governing.classic?.plan ?? null, {
+         requireNonempty: governing.classic?.buildMode === 'autonomous',
++        managedDelivery: governing.classic?.managedDelivery,
+       })
+     ).status === 'broken'
+   );
+@@ -607,6 +631,23 @@ async function governingChange(
+   return repoSourceGoverningChange(projectRoot, relativePath, selectedChangeName);
+ }
+ 
++async function hasManagedRuntimeState(projectRoot: string, layout: ClassicLayoutPaths): Promise<boolean> {
++  for (const directory of [layout.changesDir, layout.archiveDir]) {
++    const inspected = await inspectClassicProjectTarget(projectRoot, directory, { label: 'Managed control namespace', expected: 'directory' });
++    if (!inspected.exists) continue;
++    for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
++      if (!entry.isDirectory() || entry.name === 'archive') continue;
++      const changeDir = path.join(directory, entry.name);
++      const stateFile = await inspectClassicProjectTarget(projectRoot, path.join(changeDir, '.comet.yaml'), { label: 'Managed control state', expected: 'file' });
++      if (!stateFile.exists) continue;
++      try {
++        if ((await readClassicState(changeDir, { migrate: false })).classic?.managedDelivery) return true;
++      } catch { return true; } // unparseable control state never widens write rights
++    }
++  }
++  return false;
++}
++
+ function isRootMarkdown(relativePath: string): boolean {
+   return !relativePath.includes('/') && relativePath.endsWith('.md');
+ }
+@@ -748,7 +789,7 @@ function blockedPlanNotReady(
+   const changeDirectory = governing.changeDir
+     ? classicProjectRelative(projectRoot, governing.changeDir)
+     : '<classic-change-dir>';
+-  const plansDirectory = classicProjectRelative(projectRoot, layout.superpowersPlansDir);
++  const plansDirectory = governing.classic?.managedDelivery ? MANAGED_PLANS_ROOT : classicProjectRelative(projectRoot, layout.superpowersPlansDir);
+   const autonomous = governing.classic?.buildMode === 'autonomous';
+   const createCommand = missing
+     ? `comet state set ${name} plan <repository-relative-plan-path>`
+@@ -955,6 +996,7 @@ async function inspectClassicHookTarget(
+   target: string,
+   selectedChangeName?: string,
+   scopeTargets: typeof scopeCometHookTargets = scopeCometHookTargets,
++  request?: CometHookRequest,
+ ): Promise<ClassicCommandResult> {
+   try {
+     const scoped = await scopeTargets(projectRoot, [target]);
+@@ -993,6 +1035,41 @@ async function inspectClassicHookTarget(
+   );
+   if (ownershipBlock) return ownershipBlock;
+ 
++  // Agent file tools may propose artifacts, never edit the controller's
++  // Run/transaction/dispatch/policy namespace through generic whitelists.
++  const controlPath = /(?:^|\/)\.comet(?:\/|\.yaml$|-state(?:[-.]|$))/iu.test(relativePath)
++    || /(?:^|\/)\.openspec\.yaml$/iu.test(relativePath);
++  if (controlPath) {
++    try {
++      if (await hasManagedRuntimeState(projectRoot, layout)) return result(2, `[COMET-HOOK] blocked: controller-owned managed Runtime file: ${relativePath}`);
++    } catch { return result(2, '[COMET-HOOK] blocked: controller-owned namespace cannot be checked safely'); }
++  }
++
++  const candidates = selectedChangeName
++    ? [await activeGoverningChange(projectRoot, selectedChangeName)].filter((change): change is GoverningChange => Boolean(change))
++    : await activeChanges(projectRoot);
++  const managedChanges = candidates.filter((change) => change.classic?.managedDelivery);
++  if (managedChanges.length > 0) {
++    if (managedChanges.length !== 1) return result(2, 'UNVERIFIED: a managed write needs one authoritative selected Run');
++    const managed = managedChanges[0]!;
++    const host = managedDeliveryHost();
++    if (!host || !request || !managed.changeDir) return result(2, 'UNVERIFIED: managed writes require the fixed in-process protected harness');
++    const run = await readRunState(managed.changeDir);
++    const permission = host.authorizeWrite({ projectRoot, changeDir: managed.changeDir, nativeRunId: run?.runId, request });
++    const dispatch = permission?.dispatch;
++    if (permission?.allowed !== true || !dispatch || !host.authority.verifyDispatch(dispatch).ok || !run
++      || dispatch.actionBinding?.run !== run.runId) return result(2, 'UNVERIFIED: no current authenticated execution authorizes this write');
++    const key = comparisonKey(relativePath);
++    const permitted = dispatch.actionBinding.allowedPaths.some((allowedPath: string) => {
++      const prefix = comparisonKey(allowedPath).replace(/\/+$/u, '');
++      return prefix === '.' || key === prefix || key.startsWith(`${prefix}/`);
++    });
++    if (!permitted) return result(2, 'UNVERIFIED: target is outside the protected ActionBinding write scope');
++    // Observe drift before every subsequent permitted write, including a
++    // restoring write to requirement/design files. No old bytes revive it.
++    await syncGateInvalidations(managed.changeDir, projectRoot);
++  }
++
+   if (isCometConfig(relativePath)) {
+     return allowed(`${relativePath} (whitelist: comet config)`);
+   }
+@@ -1074,6 +1151,47 @@ async function inspectClassicHookTarget(
      if (problems.length) return result(2, problems.join('\n'));
    }
  
@@ -1341,7 +1926,14 @@ index 25f3f53..82ce3b1 100644
    const openSpec = openSpecAllowed(
      relativePath,
      phase,
-@@ -1110,6 +1152,29 @@ async function inspectClassicHookTarget(
+@@ -1104,12 +1222,36 @@ async function inspectClassicHookTarget(
+   if (phase === 'build' && governing.classic?.workflow === 'full') {
+     const planReadiness = await hookPlanReadiness(projectRoot, governing.classic.plan, {
+       requireNonempty: governing.classic.buildMode === 'autonomous',
++      managedDelivery: governing.classic.managedDelivery,
+     });
+     if (planReadiness.status !== 'ready') {
+       return blockedPlanNotReady(relativePath, governing, planReadiness, projectRoot, layout);
      }
    }
    if (phase === 'build') {
@@ -1371,8 +1963,829 @@ index 25f3f53..82ce3b1 100644
      if (governing.classic?.buildMode === 'autonomous') {
        const problems = await inspectClassicAutonomousBuildProblems(
          projectRoot,
+@@ -1180,6 +1322,7 @@ export async function inspectClassicHookGuard(
+       target,
+       changeName,
+       dependencies.scopeTargets,
++      request,
+     );
+     if (inspected.exitCode !== 0) {
+       return {
+diff --git a/domains/comet-classic/classic-managed-host.ts b/domains/comet-classic/classic-managed-host.ts
+new file mode 100644
+index 0000000..9f46b14
+--- /dev/null
++++ b/domains/comet-classic/classic-managed-host.ts
+@@ -0,0 +1,215 @@
++// Fixed in-process host binding. Only the trusted bootstrap calls install;
++// CLI/JSON/environment/module paths cannot select an admission consumer.
++// Registration proves code wiring only. I02/P1_3 own OS, installation and
++// process integrity; this module does not qualify a source by itself.
++export type ManagedRecord = Record<string, any>;
++export interface ManagedDeliveryHost {
++  authority: {
++    issueDispatch(binding: ManagedRecord): ManagedRecord;
++    verifyDispatch(record: ManagedRecord): ManagedRecord;
++    collectResult(packet: ManagedRecord): Promise<ManagedRecord>;
++    verifyCollection(packet: ManagedRecord): ManagedRecord;
++  };
++  // Pure projection of already-read protected policy/source/Run facts.
++  context(intent: ManagedRecord): ManagedRecord;
++  policy(scope: ManagedRecord): ManagedRecord;
++  definitionDigest(source: string): string;
++  authorizeWrite(request: ManagedRecord): ManagedRecord;
++  // Actual launch/artifact readback; invoked only outside the state lock.
++  readResult(intent: ManagedRecord, submitted: ManagedRecord): Promise<ManagedRecord>;
++  // Bind the original P2_2 functions, not a worker's boolean verdict.
++  admitEvidence(packet: ManagedRecord, options: ManagedRecord): ManagedRecord;
++  evaluate(
++    inputs: ManagedRecord,
++    entries: ManagedRecord[],
++    policy: ManagedRecord,
++    options: ManagedRecord,
++  ): ManagedRecord;
++  verifyReview(request: ManagedRecord): ManagedRecord;
++}
++export class ManagedSourceUnverifiedError extends Error {
++  constructor(message: string) {
++    super(message);
++    this.name = 'ManagedSourceUnverifiedError';
++  }
++}
++let installed: Readonly<ManagedDeliveryHost> | null = null;
++const syncCode = (fn: unknown): boolean =>
++  typeof fn === 'function' &&
++  !['AsyncFunction', 'GeneratorFunction', 'AsyncGeneratorFunction'].includes(fn.constructor.name);
++export function installManagedDeliveryHost(host: ManagedDeliveryHost): void {
++  if (installed) throw new Error('Managed host is already bound; replacement is forbidden');
++  if (
++    !host ||
++    !host.authority ||
++    !syncCode(host.authority.issueDispatch) ||
++    !syncCode(host.authority.verifyDispatch) ||
++    !syncCode(host.authority.verifyCollection) ||
++    typeof host.authority.collectResult !== 'function' ||
++    typeof host.readResult !== 'function' ||
++    ![
++      host.context,
++      host.policy,
++      host.definitionDigest,
++      host.authorizeWrite,
++      host.admitEvidence,
++      host.evaluate,
++      host.verifyReview,
++    ].every(syncCode)
++  ) {
++    throw new Error(
++      'Managed host requires fixed code ports for collector, strict admission and pure Gate',
++    );
++  }
++  installed = Object.freeze({
++    authority: Object.freeze({
++      issueDispatch: host.authority.issueDispatch,
++      verifyDispatch: host.authority.verifyDispatch,
++      collectResult: host.authority.collectResult,
++      verifyCollection: host.authority.verifyCollection,
++    }),
++    context: host.context,
++    policy: host.policy,
++    definitionDigest: host.definitionDigest,
++    authorizeWrite: host.authorizeWrite,
++    readResult: host.readResult,
++    admitEvidence: host.admitEvidence,
++    evaluate: host.evaluate,
++    verifyReview: host.verifyReview,
++  });
++}
++export function managedDeliveryHost(): Readonly<ManagedDeliveryHost> | null {
++  return installed;
++}
++export function requireManagedDeliveryHost(): Readonly<ManagedDeliveryHost> {
++  if (!installed)
++    throw new ManagedSourceUnverifiedError(
++      'UNVERIFIED: protected managed source/admission/review host is not installed',
++    );
++  return installed;
++}
++
++// Preserve standard Node Buffer JSON across the existing YAML transaction.
++// Only the three raw packet fields are decoded, never arbitrary input code.
++export function restoreManagedEntry(entry: ManagedRecord): ManagedRecord {
++  const packet = { ...entry.sourcePacket };
++  for (const key of ['reportBytes', 'resultBytes', 'methodTraceBytes']) {
++    const raw = packet[key];
++    if (Buffer.isBuffer(raw)) continue;
++    if (raw instanceof Uint8Array) {
++      packet[key] = Buffer.from(raw);
++      continue;
++    }
++    if (
++      !raw ||
++      raw.type !== 'Buffer' ||
++      !Array.isArray(raw.data) ||
++      !raw.data.every(
++        (byte: unknown) =>
++          Number.isInteger(byte) && (byte as number) >= 0 && (byte as number) <= 255,
++      )
++    ) {
++      throw new ManagedSourceUnverifiedError(
++        'UNVERIFIED: persisted original source bytes are missing or malformed',
++      );
++    }
++    packet[key] = Buffer.from(raw.data);
++  }
++  return { ...entry, sourcePacket: packet };
++}
++
++export function evaluateManagedSource(
++  intent: ManagedRecord,
++  supplied: ManagedRecord,
++  receipts: ManagedRecord[],
++  readback = false,
++): ManagedRecord {
++  const host = requireManagedDeliveryHost();
++  const entry = restoreManagedEntry(supplied);
++  const context = host.context(intent);
++  const action = context.actionBinding;
++  if (
++    !action ||
++    action.run !== intent.nativeRunId ||
++    action.profile !== 'comet-managed-v2' ||
++    action.execution !== intent.execution ||
++    action.attempt !== intent.attempt ||
++    action.epoch !== intent.epoch ||
++    action.gate !== intent.gate ||
++    action.inputDigest !== intent.inputDigest ||
++    !intent.protectedDispatch
++  ) {
++    throw new ManagedSourceUnverifiedError(
++      'UNVERIFIED: current protected ActionBinding does not match the native intent',
++    );
++  }
++  const recorded = receipts.filter((receipt) => receipt.sourceEntry);
++  const options = {
++    ...context.admissionOptions,
++    requireManaged: true,
++    authority: host.authority,
++    actionBinding: action,
++    consumedCollections: recorded.map((receipt) => receipt.sourceEntry.collectionId),
++    issuedExecutions: recorded.map((receipt) => receipt.sourceEntry.execution),
++    ...(readback ? { acceptedEntry: entry } : {}),
++  };
++  if (!readback) {
++    const admitted = host.admitEvidence(
++      { ...entry.sourcePacket, dispatch: intent.protectedDispatch, envelope: entry.envelope },
++      options,
++    );
++    if (!admitted.ok)
++      throw new ManagedSourceUnverifiedError(
++        `UNVERIFIED: strict managed admission refused (${admitted.error})`,
++      );
++  }
++  // The original P2_2 Gate owns exact recorded-entry replay exclusion. Direct
++  // admission intentionally rejects consumed collections even on readback.
++  const inputs = {
++    inputDigest: action.inputDigest,
++    testContract: context.testContract,
++    builderExecution: options.builderExecution,
++  };
++  const evaluated = host.evaluate(inputs, [entry], context.policy, {
++    requireManaged: true,
++    admissionOptionsFor: () => options,
++    verifyReview: host.verifyReview,
++  });
++  // A missing completed review is unverified, not an authenticated rejection.
++  const review = host.verifyReview({ entry, inputs, policy: context.policy });
++  if (
++    !review ||
++    review.ok !== true ||
++    review.envelopeDigest !== entry.digest ||
++    review.reportDigest !== entry.sourcePacket.collection.reportDigest ||
++    review.actionDigest !== entry.sourcePacket.collection.actionDigest
++  ) {
++    throw new ManagedSourceUnverifiedError(
++      'UNVERIFIED: current completed independent semantic review is missing',
++    );
++  }
++  return { entry, evaluated };
++}
++
++export function admitManagedPacket(
++  intent: ManagedRecord,
++  packet: ManagedRecord,
++  receipts: ManagedRecord[],
++): ManagedRecord {
++  const host = requireManagedDeliveryHost();
++  const context = host.context(intent);
++  const recorded = receipts.filter((receipt) => receipt.sourceEntry);
++  const admitted = host.admitEvidence(packet, {
++    ...context.admissionOptions,
++    requireManaged: true,
++    authority: host.authority,
++    actionBinding: context.actionBinding,
++    consumedCollections: recorded.map((receipt) => receipt.sourceEntry.collectionId),
++    issuedExecutions: recorded.map((receipt) => receipt.sourceEntry.execution),
++  });
++  if (!admitted.ok)
++    throw new ManagedSourceUnverifiedError(
++      `UNVERIFIED: collected source was not admitted (${admitted.error})`,
++    );
++  return evaluateManagedSource(intent, admitted.entry, receipts);
++}
+diff --git a/domains/comet-classic/classic-openspec-binding.ts b/domains/comet-classic/classic-openspec-binding.ts
+new file mode 100644
+index 0000000..8e5dcaa
+--- /dev/null
++++ b/domains/comet-classic/classic-openspec-binding.ts
+@@ -0,0 +1,213 @@
++import { findClassicArchiveChangeDirectory } from './classic-paths.js';
++// Identity facts come only from the fixed bootstrap policy, never CLI/env data.
++// Byte identity is not I02 OS/UID/image qualification or a publication grant.
++import { createHash } from 'node:crypto';
++import { promises as fs } from 'node:fs';
++import path from 'node:path';
++import {
++  requireManagedDeliveryHost,
++  ManagedSourceUnverifiedError,
++  type ManagedRecord,
++} from './classic-managed-host.js';
++import { stableStringify } from './classic-gate-runtime.js';
++import { readClassicState } from './classic-store.js';
++
++export const OPENSPEC_ARTIFACT_SHA256 =
++  '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f';
++const HEX = /^[a-f0-9]{64}$/u;
++const hash = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
++const bad = (message: string): never => {
++  throw new ManagedSourceUnverifiedError(`UNVERIFIED: OpenSpec binding ${message}`);
++};
++const object = (value: unknown): value is ManagedRecord =>
++  value !== null && typeof value === 'object' && !Array.isArray(value);
++const inside = (root: string, target: string) => {
++  const rel = path.relative(root, target);
++  return rel === '' || (!path.isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${path.sep}`));
++};
++const relative = (value: unknown): value is string =>
++  typeof value === 'string' &&
++  value !== '' &&
++  !path.isAbsolute(value) &&
++  !value.includes(String.fromCharCode(92)) &&
++  !value.split('/').some((part) => part === '' || part === '.' || part === '..');
++
++export interface OpenSpecInvocation {
++  origin: { projectRoot: string; changeDir: string; runId?: string };
++  binding: ManagedRecord;
++  digest: string;
++}
++
++export async function managedOpenSpecInvocation(
++  projectRoot: string,
++  changeDir: string,
++  runId?: string,
++): Promise<OpenSpecInvocation> {
++  const originalExists = await fs.lstat(changeDir).then(() => true, (error: NodeJS.ErrnoException) => { if (error.code === 'ENOENT') return false; throw error; });
++  let state = originalExists ? await readClassicState(changeDir, { migrate: false }) : { classic: null, run: null, unknownKeys: [] };
++  if (runId && !state.run) {
++    const archived = await findClassicArchiveChangeDirectory(path.basename(changeDir), projectRoot);
++    if (!archived) return bad('original Run is unavailable after the operation');
++    changeDir = archived.directory;
++    state = await readClassicState(changeDir, { migrate: false });
++  }
++  if (!state.classic?.managedDelivery || (runId && state.run?.runId !== runId))
++    bad('is not linked to the same managed Run');
++  const origin = { projectRoot, changeDir, runId };
++  const policy = requireManagedDeliveryHost().policy(origin);
++  const binding = policy?.openSpecBinding;
++  if (!object(binding) || binding.schema !== 'comet.openspec.binding.v1')
++    bad('is missing from the protected policy');
++  if (binding.scope !== 'component-mechanism' && binding.scope !== 'registered-runner')
++    bad('scope is invalid');
++  if ((policy.executionScope ?? 'business') !== 'component-mechanism') {
++    if (
++      binding.scope !== 'registered-runner' ||
++      !object(binding.qualification) ||
++      typeof binding.qualification.ref !== 'string' ||
++      !binding.qualification.ref ||
++      binding.qualification.ref === 'UNVERIFIED' ||
++      !HEX.test(binding.qualification.digest ?? '')
++    )
++      bad('has no registered production qualification');
++  } else if (binding.scope !== 'component-mechanism')
++    bad('does not match the protected mechanism scope');
++  if (
++    !HEX.test(binding.environmentDigest ?? '') ||
++    policy.controllerEnvironmentDigest !== binding.environmentDigest
++  )
++    bad('does not match the current controller environment');
++  const digest = hash(stableStringify(binding));
++  if (state.run && runId && state.run.runId !== runId) bad('belongs to another Run');
++  if (state.classic?.deliveryPolicy) {
++    const frozen = JSON.parse(state.classic.deliveryPolicy);
++    if (!object(frozen.openSpecBinding) || hash(stableStringify(frozen.openSpecBinding)) !== digest)
++      bad('differs from the original delivery_policy snapshot');
++  }
++  return { origin, binding: structuredClone(binding), digest };
++}
++
++// Observes the COMPLETE installed tree, including lookup-relevant directories
++// and in-root npm links. A manifest cannot omit an extra or changed dependency.
++async function installationEntries(root: string): Promise<ManagedRecord[]> {
++  const entries: ManagedRecord[] = [];
++  const walk = async (directory: string): Promise<void> => {
++    for (const item of (await fs.readdir(directory, { withFileTypes: true })).sort((a, b) =>
++      a.name.localeCompare(b.name),
++    )) {
++      const target = path.join(directory, item.name);
++      const name = path.relative(root, target).split(path.sep).join('/');
++      if (item.isSymbolicLink()) {
++        const link = await fs.readlink(target);
++        const resolved = await fs.realpath(target);
++        if (!inside(root, resolved)) bad('dependency link escapes the registered installation');
++        entries.push({ path: name, type: 'link', sha256: hash(link) });
++      } else if (item.isDirectory()) {
++        entries.push({ path: name, type: 'directory' });
++        await walk(target);
++      } else if (item.isFile())
++        entries.push({ path: name, type: 'file', sha256: hash(await fs.readFile(target)) });
++      else bad('installation contains an unsupported target');
++    }
++  };
++  await walk(root);
++  return entries;
++}
++
++export async function verifyOpenSpecInvocation(invocation: OpenSpecInvocation): Promise<void> {
++  const current = await managedOpenSpecInvocation(
++    invocation.origin.projectRoot,
++    invocation.origin.changeDir,
++    invocation.origin.runId,
++  );
++  if (
++    current.digest !== invocation.digest ||
++    hash(stableStringify(invocation.binding)) !== invocation.digest
++  )
++    bad('changed across the operation');
++  const binding = invocation.binding;
++  if (
++    !object(binding.artifact) ||
++    binding.artifact.name !== '@fission-ai/openspec' ||
++    binding.artifact.version !== '1.11.0' ||
++    binding.artifact.tarballSha256 !== OPENSPEC_ARTIFACT_SHA256 ||
++    typeof binding.artifact.evidenceRef !== 'string' ||
++    !binding.artifact.evidenceRef
++  )
++    bad('does not reference the pinned P1_1 artifact');
++  if (
++    !object(binding.node) ||
++    typeof binding.node.path !== 'string' ||
++    !path.isAbsolute(binding.node.path) ||
++    !HEX.test(binding.node.sha256 ?? '')
++  )
++    bad('Node identity is invalid');
++  if (
++    (await fs.realpath(binding.node.path)) !== binding.node.path ||
++    hash(await fs.readFile(binding.node.path)) !== binding.node.sha256
++  )
++    bad('Node bytes or identity changed');
++  if (
++    typeof binding.installationRoot !== 'string' ||
++    !path.isAbsolute(binding.installationRoot) ||
++    (await fs.realpath(binding.installationRoot)) !== binding.installationRoot ||
++    path.basename(binding.installationRoot) !== 'node_modules'
++  )
++    bad('installation root is not the registered canonical tree');
++  if (!relative(binding.cliEntry) || binding.cliEntry !== '@fission-ai/openspec/bin/openspec.js')
++    bad('CLI entry is outside the pinned package');
++  if (
++    !object(binding.manifest) ||
++    typeof binding.manifest.path !== 'string' ||
++    !path.isAbsolute(binding.manifest.path) ||
++    !HEX.test(binding.manifest.sha256 ?? '')
++  )
++    bad('closure manifest identity is missing');
++  const bytes = await fs.readFile(binding.manifest.path);
++  if (hash(bytes) !== binding.manifest.sha256) bad('closure manifest changed');
++  const manifest = JSON.parse(bytes.toString('utf8'));
++  if (
++    !object(manifest) ||
++    manifest.schema !== 'comet.openspec.installation-manifest.v1' ||
++    manifest.artifactSha256 !== OPENSPEC_ARTIFACT_SHA256 ||
++    !Array.isArray(manifest.entries) ||
++    manifest.entries.length === 0
++  )
++    bad('closure manifest is invalid');
++  for (const entry of manifest.entries) {
++    if (
++      !object(entry) ||
++      !relative(entry.path) ||
++      !['file', 'directory', 'link'].includes(entry.type) ||
++      (entry.type !== 'directory' && !HEX.test(entry.sha256 ?? ''))
++    )
++      bad('closure entry is invalid');
++  }
++  if (
++    stableStringify(await installationEntries(binding.installationRoot)) !==
++    stableStringify(manifest.entries)
++  )
++    bad('CLI/package/dependency bytes or lookup tree changed');
++  const pkg = JSON.parse(
++    await fs.readFile(
++      path.join(binding.installationRoot, '@fission-ai/openspec/package.json'),
++      'utf8',
++    ),
++  );
++  if (pkg.name !== binding.artifact.name || pkg.version !== binding.artifact.version)
++    bad('package metadata does not match the pin');
++}
++
++export function boundOpenSpecEnvironment(): NodeJS.ProcessEnv {
++  const env: NodeJS.ProcessEnv = { ...process.env, OPENSPEC_TELEMETRY: '0' };
++  for (const key of Object.keys(env))
++    if (
++      /^(?:NODE_OPTIONS|NODE_PATH|NODE_REPL_EXTERNAL_MODULE|NODE_V8_COVERAGE|NODE_COMPILE_CACHE|NODE_REDIRECT_WARNINGS|COMET_OPENSPEC)$/iu.test(
++        key,
++      ) ||
++      /^(?:LD_|DYLD_)/iu.test(key)
++    )
++      delete env[key];
++  // PATH never selects the launcher: absolute Node + fixed CLI entry are used.
++  return env;
++}
+diff --git a/domains/comet-classic/classic-openspec-command.ts b/domains/comet-classic/classic-openspec-command.ts
+index 3a05725..f75dee3 100644
+--- a/domains/comet-classic/classic-openspec-command.ts
++++ b/domains/comet-classic/classic-openspec-command.ts
+@@ -1,3 +1,8 @@
++import { managedDeliveryHost, ManagedSourceUnverifiedError } from './classic-managed-host.js';
++import { managedOpenSpecInvocation, verifyOpenSpecInvocation, boundOpenSpecEnvironment, type OpenSpecInvocation } from './classic-openspec-binding.js';
++import { promises as fs } from 'node:fs';
++import { readClassicState } from './classic-store.js';
++import { inspectClassicProjectTarget } from './classic-protected-path.js';
+ import path from 'node:path';
+ import { spawnSync } from 'child_process';
+ 
+@@ -88,6 +93,7 @@ async function discoverClassicCapability(
+ export async function executeClassicOpenSpec(
+   args: readonly string[],
+   startPath = process.cwd(),
++  captured?: OpenSpecInvocation,
+ ): Promise<ClassicCommandResult> {
+   const openSpecArgs = normalizedArguments(args);
+   if (openSpecArgs.length === 0) {
+@@ -100,8 +106,24 @@ export async function executeClassicOpenSpec(
+   const projectRoot = await discoverClassicProject(startPath);
+   const layout = await assertClassicLayoutWritable(projectRoot);
+   await assertClassicOpenSpecRootHealthy(projectRoot, layout);
+-  const command = process.env.COMET_OPENSPEC || 'openspec';
+-  const launch = resolveNodeCliCommand(command, openSpecArgs, { cwd: layout.openSpecBase });
++  let invocation = captured;
++  if (!invocation) {
++    const scopes = await managedOpenSpecScopes(projectRoot);
++    if (scopes.length > 0 || managedDeliveryHost()) {
++      const named = openSpecArgs.includes('--change') ? openSpecArgs[openSpecArgs.indexOf('--change') + 1]
++        : ['show','archive'].includes(openSpecArgs[0]) ? openSpecArgs[1] : undefined;
++      const matches = named ? scopes.filter((scope) => path.basename(scope.directory) === named || path.basename(scope.directory).endsWith(`-${named}`)) : scopes;
++      const active = matches.filter((scope) => path.basename(path.dirname(scope.directory)) !== 'archive');
++      const candidates = active.length ? active : matches;
++      if (candidates.length !== 1) throw new ManagedSourceUnverifiedError('UNVERIFIED: managed OpenSpec requires one original Run toolchain scope');
++      invocation = await managedOpenSpecInvocation(projectRoot,candidates[0].directory,candidates[0].runId);
++    }
++  }
++  if (invocation) await verifyOpenSpecInvocation(invocation);
++  const command = invocation ? invocation.binding.node.path : process.env.COMET_OPENSPEC || 'openspec';
++  const launch = invocation
++    ? { command, args: [path.join(invocation.binding.installationRoot,invocation.binding.cliEntry), ...openSpecArgs], env: boundOpenSpecEnvironment() }
++    : resolveNodeCliCommand(command, openSpecArgs, { cwd: layout.openSpecBase });
+   const result = spawnSync(launch.command, launch.args, {
+     cwd: layout.openSpecBase,
+     encoding: 'utf8',
+@@ -109,8 +131,9 @@ export async function executeClassicOpenSpec(
+     windowsHide: true,
+     // A wedged OpenSpec process must not hang the whole comet command with it.
+     timeout: 120_000,
+-    ...(launch.env ? { env: launch.env } : {}),
++    env: invocation ? launch.env : { ...process.env, ...(launch.env ?? {}), OPENSPEC_TELEMETRY: '0' },
+   });
++  if (invocation) await verifyOpenSpecInvocation(invocation);
+   if (result.error) {
+     const code = (result.error as NodeJS.ErrnoException).code;
+     return {
+@@ -125,12 +148,13 @@ export async function executeClassicOpenSpec(
+     exitCode: result.status ?? 1,
+     stdout: result.stdout || undefined,
+     stderr: result.stderr || undefined,
++    ...(invocation ? { data: { toolIdentity: { bindingDigest: invocation.digest, manifestDigest: invocation.binding.manifest.sha256, artifactSha256: invocation.binding.artifact.tarballSha256, scope: invocation.binding.scope } } } : {}),
+   };
+ }
+ 
+-async function agentOpenSpec(args: string[]): Promise<ClassicCommandResult> {
++async function agentOpenSpec(args: string[], startPath = process.cwd()): Promise<ClassicCommandResult> {
+   const forwarded = normalizedArguments(args.slice(1));
+-  const root = await discoverClassicProject(process.cwd());
++  const root = await discoverClassicProject(startPath);
+   const layout = await assertClassicLayoutWritable(root);
+   const creatingChange = forwarded[0] === 'new' && forwarded[1] === 'change';
+   const task = creatingChange ? takeCustomOption(forwarded, '--task') : undefined;
+@@ -251,11 +275,64 @@ async function agentOpenSpec(args: string[]): Promise<ClassicCommandResult> {
+   };
+ }
+ 
+-export const classicOpenSpecCommand: ClassicCommandHandler = async (args) => {
++async function managedOpenSpecScopes(root: string): Promise<Array<{directory:string;runId?:string}>> {
++  const layout = await assertClassicLayoutWritable(root);
++  const scopes: Array<{directory:string;runId?:string}> = [];
++  for (const parent of [layout.changesDir,layout.archiveDir]) {
++    const exists = await inspectClassicProjectTarget(root,parent,{label:'Managed OpenSpec toolchain scope',expected:'directory'});
++    if (!exists.exists) continue;
++    for (const entry of await fs.readdir(parent,{withFileTypes:true})) {
++      if (entry.name==='archive') continue;
++      if (entry.isSymbolicLink()) throw new ManagedSourceUnverifiedError('UNVERIFIED: managed OpenSpec scope contains a link');
++      if (!entry.isDirectory()) continue;
++      const directory=path.join(parent,entry.name);
++      const file=await inspectClassicProjectTarget(root,path.join(directory,'.comet.yaml'),{label:'Managed OpenSpec state',expected:'file'});
++      if (!file.exists) continue;
++      const state=await readClassicState(directory,{migrate:false});
++      if (state.classic?.managedDelivery) scopes.push({directory,runId:state.run?.runId});
++    }
++  }
++  return scopes;
++}
++
++async function blocksManagedForwarding(args: string[], root: string): Promise<boolean> {
++  const forwarded = normalizedArguments(args[0] === '--agent-json' ? args.slice(1) : args);
++  if (forwarded.length === 1 && ['--help', '-h', '--version', '-V'].includes(forwarded[0])) return false;
++  const command = forwarded.find((arg) => !arg.startsWith('-'));
++  const foreignStore = forwarded.some((arg) => arg === '--store' || arg.startsWith('--store='));
++  // Only pinned, known read-only command implementations may use the bare
++  // adapter in a managed project. Unknown syntax is never a write grant.
++  if (!foreignStore && command && ['list', 'show', 'status', 'instructions', 'validate'].includes(command)) return false;
++  const layout = await assertClassicLayoutWritable(root);
++  for (const parent of [layout.changesDir, layout.archiveDir]) {
++    const inspected = await inspectClassicProjectTarget(root, parent, { label: 'OpenSpec forwarding scope', expected: 'directory' });
++    if (!inspected.exists) continue;
++    for (const entry of await fs.readdir(parent, { withFileTypes: true })) {
++      if (entry.name === 'archive') continue;
++      if (entry.isSymbolicLink()) throw new Error('UNVERIFIED: OpenSpec forwarding scope contains a symbolic link');
++      if (!entry.isDirectory()) continue;
++      const directory = path.join(parent,entry.name);
++      const state = await inspectClassicProjectTarget(root, path.join(directory,'.comet.yaml'), { label: 'OpenSpec forwarding state', expected: 'file' });
++      if (state.exists && (await readClassicState(directory, { migrate: false })).classic?.managedDelivery) return true;
++    }
++  }
++  return false;
++}
++
++export const classicOpenSpecCommand: ClassicCommandHandler = async (args, options) => {
++  const start = options.projectRoot ?? options.invocationCwd ?? process.cwd();
++  try {
++    const root = await discoverClassicProject(start);
++    if (await blocksManagedForwarding(args, root)) return {
++      exitCode: 2, stderr: 'UNVERIFIED: managed OpenSpec forwarding is read-only; use the original Comet controlled entrance for archive or other mutations; bare forwarding cannot bypass RATPV/Kp or same-Run closeout',
++    };
++  } catch (error) {
++    return { exitCode: 70, stderr: `UNVERIFIED: archive forwarding scope cannot be verified: ${error instanceof Error ? error.message : String(error)}` };
++  }
+   // Opt-in agent projection leaves the historical raw upstream stdout/JSON contract intact.
+-  if (args[0] !== '--agent-json') return executeClassicOpenSpec(args);
++  if (args[0] !== '--agent-json') return executeClassicOpenSpec(args, start);
+   try {
+-    return await agentOpenSpec(args);
++    return await agentOpenSpec(args, start);
+   } catch (error) {
+     const data = {
+       issues: [
+diff --git a/domains/comet-classic/classic-plan-readiness.ts b/domains/comet-classic/classic-plan-readiness.ts
+index 835442c..322bf4a 100644
+--- a/domains/comet-classic/classic-plan-readiness.ts
++++ b/domains/comet-classic/classic-plan-readiness.ts
+@@ -1,3 +1,4 @@
++import { requireManagedDeliveryHost, ManagedSourceUnverifiedError } from './classic-managed-host.js';
+ import {
+   classicProjectTargetExists,
+   classicProjectFileNonempty,
+@@ -9,6 +10,15 @@ import { parseDocument } from 'yaml';
+ import { assertClassicLayoutReadable } from './classic-layout.js';
+ import path from 'node:path';
+ 
++export const MANAGED_PLANS_ROOT = 'docs/comet/plans';
++
++export async function classicPlansDirectory(projectRoot: string, managedDelivery = false): Promise<string> {
++  if (!managedDelivery) return (await assertClassicLayoutReadable(projectRoot)).superpowersPlansDir;
++  const snapshot = requireManagedDeliveryHost().policy({ projectRoot });
++  if (snapshot?.plansRoot !== MANAGED_PLANS_ROOT) throw new ManagedSourceUnverifiedError('UNVERIFIED: fixed managed plansRoot is missing or incompatible');
++  return path.join(projectRoot, MANAGED_PLANS_ROOT);
++}
++
+ export type ClassicPlanReadiness =
+   | { status: 'missing'; recordedPath: null }
+   | { status: 'broken'; recordedPath: string }
+@@ -62,6 +72,7 @@ export async function inspectClassicAutonomousBuildProblems(
+   if (options.requirePlan !== false) {
+     const readiness = await inspectClassicPlanReadiness(projectRoot, state.plan, {
+       requireNonempty: true,
++      managedDelivery: state.managedDelivery,
+     });
+     if (readiness.status !== 'ready') {
+       problems.push(
+@@ -75,13 +86,13 @@ export async function inspectClassicAutonomousBuildProblems(
+ export async function inspectClassicPlanReadiness(
+   projectRoot: string,
+   plan: string | null,
+-  options: { requireNonempty?: boolean } = {},
++  options: { requireNonempty?: boolean; managedDelivery?: boolean } = {},
+ ): Promise<ClassicPlanReadiness> {
+   if (!plan || plan === 'null') return { status: 'missing', recordedPath: null };
+ 
+-  const layout = await assertClassicLayoutReadable(projectRoot);
++  const plansDirectory = await classicPlansDirectory(projectRoot, options.managedDelivery === true);
+   const planPath = path.resolve(projectRoot, plan);
+-  const relativeToPlans = path.relative(layout.superpowersPlansDir, planPath);
++  const relativeToPlans = path.relative(plansDirectory, planPath);
+   if (
+     path.isAbsolute(plan) ||
+     !relativeToPlans ||
+diff --git a/domains/comet-classic/classic-progress.ts b/domains/comet-classic/classic-progress.ts
+index 595d7a4..6445f74 100644
+--- a/domains/comet-classic/classic-progress.ts
++++ b/domains/comet-classic/classic-progress.ts
+@@ -1,3 +1,5 @@
++import { readClassicState } from './classic-store.js';
++import { managedDeliveryHost } from './classic-managed-host.js';
+ import path from 'node:path';
+ import { createHash, randomUUID } from 'node:crypto';
+ import { promises as fs } from 'node:fs';
+@@ -540,7 +542,28 @@ function archiveCommitMatches(
+   }
+ }
+ 
++interface ManagedArchiveSeal { schemaVersion: 2; scope: 'managed-source-inputs'; profile: 'comet-managed-v2'; runId: string }
++function archiveSeal(value: unknown): ManagedArchiveSeal {
++  const seal = object(value);
++  keys(seal, ['schemaVersion', 'scope', 'profile', 'runId']);
++  if (seal.schemaVersion !== 2 || seal.scope !== 'managed-source-inputs' || seal.profile !== 'comet-managed-v2' || typeof seal.runId !== 'string' || !seal.runId)
++    throw new Error('Invalid Classic managed document seal');
++  return seal as unknown as ManagedArchiveSeal;
++}
++async function currentManagedArchiveSeal(changeDir: string): Promise<ManagedArchiveSeal | undefined> {
++  const state = await readClassicState(changeDir, { migrate: false });
++  if (!state.classic?.managedDelivery) return undefined;
++  const host = managedDeliveryHost();
++  const kp = (JSON.parse(state.classic.gateReceipts ?? '[]') as Array<Record<string, any>>).reverse().find((entry) => entry.gate === 'Kp' && entry.verdict === 'pass');
++  const action = kp?.intent?.protectedDispatch;
++  if (!host || !state.run || state.classic.gateRunId !== state.run.runId || !action
++    || action.run !== state.run.runId || action.actionBinding?.profile !== 'comet-managed-v2'
++    || !host.authority.verifyDispatch(action).ok) throw new Error('UNVERIFIED: managed document seal requires the original protected Run/profile');
++  return { schemaVersion: 2, scope: 'managed-source-inputs', profile: 'comet-managed-v2', runId: state.run.runId };
++}
++
+ interface DeliveryReceipt {
++  archiveSeal?: ManagedArchiveSeal;
+   schemaVersion: 1;
+   changeIdentity: string;
+   authorizationId: string;
+@@ -550,10 +573,21 @@ interface DeliveryReceipt {
+   archiveFiles?: Record<string, string>;
+ }
+ 
++async function inspectManagedControlSpace(root: string, target: string): Promise<void> {
++  const inspected = await inspectClassicProjectTarget(root, target, { label: 'Managed document seal control space', expected: 'any' });
++  if (!inspected.exists) throw new Error('UNVERIFIED: managed Runtime control target is missing');
++  const stat = await fs.lstat(target);
++  if (stat.isDirectory()) for (const entry of await fs.readdir(target)) await inspectManagedControlSpace(root, path.join(target, entry));
++  else if (!stat.isFile()) throw new Error('UNVERIFIED: managed Runtime control space contains a non-file target');
++}
++
+ async function archiveFileManifest(
+   root: string,
+   changeDir: string,
++  seal?: ManagedArchiveSeal,
+ ): Promise<Record<string, string>> {
++  if (seal && JSON.stringify(await currentManagedArchiveSeal(changeDir)) !== JSON.stringify(seal))
++    throw new Error('UNVERIFIED: managed document seal does not match the original Run/profile');
+   const files: Record<string, string> = {};
+   const visit = async (directory: string): Promise<void> => {
+     await inspectClassicProjectTarget(root, directory, {
+@@ -565,6 +599,11 @@ async function archiveFileManifest(
+     );
+     for (const entry of entries) {
+       if (['.comet-state.lock', '.comet-state-transaction.json'].includes(entry.name)) continue;
++      if (seal && directory === changeDir && (entry.name === '.comet' || entry.name === '.comet.yaml')) {
++        const control = path.join(directory, entry.name);
++        await inspectManagedControlSpace(root, control);
++        continue;
++      }
+       const target = path.join(directory, entry.name);
+       if (entry.isDirectory()) {
+         await visit(target);
+@@ -657,8 +696,10 @@ export async function recordClassicDocumentArchive(root: string, changeDir: stri
+   const actual = await currentState(root, changeDir);
+   if (actual.archived !== true) throw new Error('Classic document archive must be completed first');
+   await preserveMainSpecSnapshot(root, changeDir);
+-  const archiveFiles = await archiveFileManifest(root, changeDir);
+   const previous = await readReceipt(root, delivery.changeIdentity);
++  // Existing seals keep their original scope; a failed old seal is never upgraded.
++  const seal = previous?.archiveFiles !== undefined ? previous.archiveSeal : await currentManagedArchiveSeal(changeDir);
++  const archiveFiles = await archiveFileManifest(root, changeDir, seal);
+   if (previous?.archiveFiles !== undefined) {
+     if (!archiveManifestsMatch(previous.archiveFiles, archiveFiles))
+       throw new Error('Classic document archive differs from its sealed receipt');
+@@ -669,6 +710,7 @@ export async function recordClassicDocumentArchive(root: string, changeDir: stri
+     changeIdentity: delivery.changeIdentity,
+     authorizationId: delivery.authorizationId,
+     archiveFiles,
++    ...(seal ? { archiveSeal: seal } : {}),
+   });
+ }
+ 
+@@ -708,6 +750,7 @@ async function readReceipt(root: string, changeIdentity: string): Promise<Delive
+       'commit',
+       'prUrl',
+       'archiveFiles',
++      'archiveSeal',
+     ]);
+     if (value.schemaVersion !== 1 || value.changeIdentity !== changeIdentity)
+       throw new Error('Invalid Classic delivery receipt schema or identity');
+@@ -723,6 +766,7 @@ async function readReceipt(root: string, changeIdentity: string): Promise<Delive
+       schemaVersion: 1,
+       changeIdentity,
+       authorizationId: text(value.authorizationId, 'authorizationId'),
++      ...(value.archiveSeal === undefined ? {} : { archiveSeal: archiveSeal(value.archiveSeal) }),
+       ...(value.invalidated === true ? { invalidated: true } : {}),
+       ...(evidence.commit ? { commit: evidence.commit } : {}),
+       ...(evidence.prUrl ? { prUrl: evidence.prUrl } : {}),
+@@ -943,7 +987,7 @@ export async function readClassicDelivery(
+   if (effectiveInput.action === 'archive-only') {
+     let archiveVerified = false;
+     if (state.archived === true && receipt?.archiveFiles !== undefined) {
+-      const files = await archiveFileManifest(root, changeDir).catch((error: unknown) => {
++      const files = await archiveFileManifest(root, changeDir, receipt.archiveSeal).catch((error: unknown) => {
+         const code = (error as NodeJS.ErrnoException | undefined)?.code;
+         if (code === 'ENOENT' || code === 'ENOTDIR') return null;
+         throw error;
+diff --git a/domains/comet-classic/classic-protected-path.ts b/domains/comet-classic/classic-protected-path.ts
+index 2435204..07f7c74 100644
+--- a/domains/comet-classic/classic-protected-path.ts
++++ b/domains/comet-classic/classic-protected-path.ts
+@@ -1,3 +1,4 @@
++import { realpathSync } from 'node:fs';
+ import path from 'path';
+ 
+ import { atomicWriteContainedText } from '../workflow-contract/contained-atomic-write.js';
+@@ -17,7 +18,20 @@ function projectTarget(
+   label: string,
+ ): { root: string; relative: string; target: string } {
+   const root = path.resolve(projectRoot);
+-  const absolute = path.isAbsolute(target) ? path.resolve(target) : path.resolve(root, target);
++  let absolute = path.isAbsolute(target) ? path.resolve(target) : path.resolve(root, target);
++  // Canonicalize only verified macOS system-root aliases. Never resolve a
++  // target suffix: its original case and descendant symlinks remain checked.
++  if (process.platform === 'darwin' && path.isAbsolute(target)) {
++    for (const alias of ['/var', '/tmp']) {
++      if (!absolute.startsWith(`${alias}/`)) continue;
++      let canonical: string;
++      try { canonical = realpathSync(alias); } catch { continue; }
++      if (canonical !== `/private${alias}`) continue;
++      const mapped = canonical + absolute.slice(alias.length);
++      const relative = path.relative(root, mapped);
++      if (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)) absolute = mapped;
++    }
++  }
+   const relative = path.relative(root, absolute).replaceAll('\\', '/');
+   return {
+     root,
+diff --git a/domains/comet-classic/classic-recovery.ts b/domains/comet-classic/classic-recovery.ts
+index 8d5f5cd..557d88c 100644
+--- a/domains/comet-classic/classic-recovery.ts
++++ b/domains/comet-classic/classic-recovery.ts
+@@ -10,7 +10,7 @@ import {
+   type ClassicTask,
+ } from './classic-tasks.js';
+ import { readClassicCheckpoint, readClassicDelivery } from './classic-progress.js';
+-import { inspectClassicPlanReadiness } from './classic-plan-readiness.js';
++import { inspectClassicPlanReadiness, MANAGED_PLANS_ROOT } from './classic-plan-readiness.js';
+ import { inspectClassicDesignReadiness } from './classic-design-readiness.js';
+ import { readClassicState } from './classic-store.js';
+ import { classicConfigurationReadiness } from './classic-build-configuration.js';
+@@ -68,7 +68,7 @@ export async function classicRecoveryContext(
+     : '';
+   const mapping = inspectClassicPlanTasks(plan, tasks);
+   const planReadiness =
+-    state.workflow === 'full' ? await inspectClassicPlanReadiness(root, state.plan) : null;
++    state.workflow === 'full' ? await inspectClassicPlanReadiness(root, state.plan, { managedDelivery: state.managedDelivery }) : null;
+   const configurationReadiness = classicConfigurationReadiness(state);
+   const hasConfigurationGap =
+     configurationReadiness.missingFields.length > 0 ||
+@@ -229,7 +229,7 @@ export async function classicRecoveryContext(
+         state.designDoc ??
+         path.relative(root, path.join(directory, 'design.md')).replaceAll('\\', '/'),
+       plan: state.plan,
+-      plansRoot: path
++      plansRoot: state.managedDelivery ? MANAGED_PLANS_ROOT : path
+         .relative(root, path.join(paths.superpowersRoot, 'plans'))
+         .replaceAll('\\', '/'),
+       handoffContext: state.handoffContext,
 diff --git a/domains/comet-classic/classic-resolver.ts b/domains/comet-classic/classic-resolver.ts
-index 0b274c7..01a68cf 100644
+index 0b274c7..11141a5 100644
 --- a/domains/comet-classic/classic-resolver.ts
 +++ b/domains/comet-classic/classic-resolver.ts
 @@ -3,6 +3,11 @@ import type { ClassicEvidence } from './classic-evidence.js';
@@ -1387,7 +2800,17 @@ index 0b274c7..01a68cf 100644
  
  export interface ClassicResolverContext {
    classic: ClassicState;
-@@ -79,7 +84,26 @@ export function resolveClassicStepId(
+@@ -36,6 +41,9 @@ function resolveBuild(
+   }
+ 
+   if (profile === 'full') {
++    // Build must be able to produce P. Only plan/configuration actions are
++    // available until P is current; product writes still require R/A/T/P.
++    if (classic.managedDelivery && !evidenceSatisfied(evidence, 'gate.P.current')) return 'full.build.plan';
+     if (evidenceSatisfied(evidence, 'build.plan') && classic.buildPause === 'plan-ready')
+       return 'full.build.plan-ready';
+     if (!fullBuildConfigured(classic)) return 'full.build.configure';
+@@ -79,7 +87,27 @@ export function resolveClassicStepId(
    if (classic.archived && classic.phase !== 'archive') {
      throw new Error('archived=true requires phase=archive');
    }
@@ -1397,7 +2820,8 @@ index 0b274c7..01a68cf 100644
 +    // unmet knowledge-closeout obligation is not completed; it parks on the
 +    // post-archive closeout step of the SAME run until the obligation is
 +    // recorded (comet state knowledge-closeout).
-+    if (knowledgeCloseoutBlocked(classic)) return 'full.closeout.knowledge';
++    if (knowledgeCloseoutBlocked(classic) || managedPremisesBlocked(classic, evidence, 'archive').blocked) return 'full.closeout.knowledge';
++    if (classic.managedDelivery && !evidenceSatisfied(evidence, 'delivery.current')) return 'full.closeout.knowledge';
 +    return 'completed';
 +  }
 +
@@ -1416,18 +2840,25 @@ index 0b274c7..01a68cf 100644
      throw new Error(`${profile} workflow cannot enter design`);
    }
 diff --git a/domains/comet-classic/classic-runtime-run.ts b/domains/comet-classic/classic-runtime-run.ts
-index 96d7550..68e0dd4 100644
+index 96d7550..c657ab6 100644
 --- a/domains/comet-classic/classic-runtime-run.ts
 +++ b/domains/comet-classic/classic-runtime-run.ts
-@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
+@@ -1,7 +1,13 @@
++import { createHash } from 'node:crypto';
++import { stableStringify } from './classic-gate-runtime.js';
++import { managedDeliveryHost } from './classic-managed-host.js';
++import { syncGateInvalidations } from './classic-gate-runtime.js';
++import { discoverClassicProject } from './classic-layout.js';
+ import { promises as fs } from 'fs';
  import path from 'path';
  import { fileURLToPath } from 'url';
- import { collectClassicEvidence } from './classic-evidence.js';
+-import { collectClassicEvidence } from './classic-evidence.js';
++import { collectClassicEvidence, type ClassicEvidence } from './classic-evidence.js';
 +import { ManagedGatePremisesError } from './classic-gate-runtime.js';
  import { ensureClassicRun, type ClassicRunContext } from './classic-migrate.js';
  import { resolveClassicStepId } from './classic-resolver.js';
  import { readClassicState, writeClassicState, withClassicStateLock } from './classic-store.js';
-@@ -153,6 +154,15 @@ function embeddedClassicRuntimePackage(root: string): SkillPackage {
+@@ -153,6 +159,15 @@ function embeddedClassicRuntimePackage(root: string): SkillPackage {
              action: { type: 'invoke_skill', ref: 'comet-archive' },
              next: 'completed',
            },
@@ -1443,11 +2874,101 @@ index 96d7550..68e0dd4 100644
            {
              id: 'hotfix.open',
              action: { type: 'invoke_skill', ref: 'comet-hotfix' },
-@@ -404,7 +414,15 @@ async function reconcileClassicRuntimeRunLocked(
+@@ -299,11 +314,19 @@ async function loadClassicRuntimePackage(root: string) {
+ 
+ export async function ensureClassicRuntimeRun(changeDir: string): Promise<ClassicRunContext> {
+   const root = await classicRuntimeRoot();
+-  return ensureClassicRun(changeDir, {
++  const prior = await readClassicState(changeDir, { migrate: false });
++  if (prior.run && prior.classic?.managedDelivery && managedDeliveryHost()) await syncGateInvalidations(changeDir, await discoverClassicProject(changeDir));
++  const ensured = await ensureClassicRun(changeDir, {
+     skillPackage: root
+       ? await loadClassicRuntimePackage(root)
+       : embeddedClassicRuntimePackage(path.dirname(fileURLToPath(import.meta.url))),
+   });
++  if (ensured.classic.managedDelivery && managedDeliveryHost()) {
++    await syncGateInvalidations(changeDir, await discoverClassicProject(changeDir));
++    const current = await readClassicState(changeDir, { migrate: false });
++    if (current.classic && current.run) return { ...ensured, classic: current.classic, run: current.run };
++  }
++  return ensured;
+ }
+ 
+ export async function ensureStrictClassicRuntimeRun(changeDir: string): Promise<ClassicRunContext> {
+@@ -363,9 +386,14 @@ export async function validateClassicRuntimeRun(
+   changeDir: string,
+   existingProjection?: ClassicStateProjection,
+ ): Promise<ClassicRunContext> {
+-  const projection = existingProjection ?? (await readClassicState(changeDir, { migrate: false }));
++  if (managedDeliveryHost()) await syncGateInvalidations(changeDir, await discoverClassicProject(changeDir));
++  const projection = await readClassicState(changeDir, { migrate: false });
+   const validated = await loadValidatedClassicRuntime(changeDir, projection);
+   const evidence = await collectClassicEvidence(changeDir, projection);
++  if (validated.classic.managedDelivery && validated.run.status === 'completed') {
++    await checkCompletedIntegrity(changeDir, { ...validated, evidence, migrated: false }, evidence, false);
++    return { ...validated, evidence, migrated: false };
++  }
+   const currentStep = resolveClassicStepId(validated.classic, evidence);
+   if (validated.run.currentStep !== currentStep) {
+     throw new Error(
+@@ -375,6 +403,41 @@ export async function validateClassicRuntimeRun(
+   return { ...validated, evidence, migrated: false };
+ }
+ 
++export class ManagedCompletionIntegrityError extends Error {
++  readonly view: Record<string, unknown>;
++  constructor(run: RunState, completion: Record<string, unknown>, faults: Array<Record<string, unknown>>) {
++    super('RECOVERY_REQUIRED: completed delivery history is retained; current integrity is unverified; linked maintenance is blocked');
++    this.name = 'ManagedCompletionIntegrityError';
++    this.view = { status: 'blocked', lifecycle: { runId: run.runId, status: run.status, currentStep: run.currentStep, completion },
++      currentIntegrity: { status: 'UNVERIFIED', faults }, continuation: null,
++      maintenance: { status: 'blocked', executionRegistered: false } };
++  }
++}
++
++// Completion is lifecycle history; current eligibility is a fresh predicate.
++// This never reopens a completed product or manufactures a maintenance job.
++async function checkCompletedIntegrity(changeDir: string, context: ClassicRunContext, evidence: ClassicEvidence[], audit: boolean): Promise<void> {
++  const { run, classic } = context;
++  if (!classic.managedDelivery || run.status !== 'completed') return;
++  const faults: Array<Record<string, unknown>> = [];
++  try {
++    if (resolveClassicStepId(classic, evidence) !== 'completed') {
++      faults.push(...evidence.filter((entry) => !entry.satisfied).map((entry) => ({ code: entry.code, detail: entry.detail ?? 'current evidence is unavailable' })));
++      if (faults.length === 0) faults.push({ code: 'CURRENT_PREDICATE_UNVERIFIED' });
++    }
++    if (run.pending !== null) faults.push({ code: 'PENDING_OPERATION_UNRECONCILED', operation: run.pending });
++  } catch (error) { faults.push({ code: 'CURRENT_PREDICATE_UNVERIFIED', detail: error instanceof Error ? error.message : String(error) }); }
++  const trajectory = await readTrajectory(changeDir, run.trajectoryRef);
++  const completed = [...trajectory].reverse().find((event) => event.runId === run.runId && event.type === 'state_transitioned' && event.data.toStep === 'completed');
++  const completion = { runId: run.runId, sequence: completed?.sequence ?? null, source: completed ? 'original-trajectory' : 'original-RunState', skillHash: run.skillHash };
++  const bindingDigest = createHash('sha256').update(stableStringify({ completion, policy: classic.deliveryPolicy, invalidations: classic.gateInvalidations, faults })).digest('hex');
++  if (audit && managedDeliveryHost() && !trajectory.some((event) => event.type === 'eval_completed' && event.data.evalId === 'classic-current-integrity' && event.data.bindingDigest === bindingDigest)) {
++    await appendTrajectory(changeDir, run.trajectoryRef, { sequence: trajectory.length + 1, timestamp: new Date().toISOString(), type: 'eval_completed', runId: run.runId,
++      data: { scope: 'completion', results: [{ evalId: 'classic-current-integrity', passed: faults.length === 0, evidence: bindingDigest }], evalId: 'classic-current-integrity', passed: faults.length === 0, bindingDigest, completion, faults } });
++  }
++  if (faults.length > 0) throw new ManagedCompletionIntegrityError(run, completion, faults);
++}
++
+ export interface ClassicRuntimeReconciliation {
+   context: ClassicRunContext;
+   reconciled: boolean;
+@@ -398,13 +461,26 @@ async function reconcileClassicRuntimeRunLocked(
+   changeDir: string,
+   existingProjection?: ClassicStateProjection,
+ ): Promise<ClassicRuntimeReconciliation> {
++  if (managedDeliveryHost()) await syncGateInvalidations(changeDir, await discoverClassicProject(changeDir));
+   const projection = await readClassicState(changeDir, { migrate: false });
+   if (existingProjection?.run && existingProjection.run.runId !== projection.run?.runId) {
+     throw new Error('Classic reconciliation Run changed; reload the current state');
    }
    const validated = await loadValidatedClassicRuntime(changeDir, projection);
    const evidence = await collectClassicEvidence(changeDir, projection);
 -  const currentStep = resolveClassicStepId(validated.classic, evidence);
++  if (validated.classic.managedDelivery && validated.run.status === 'completed') {
++    await checkCompletedIntegrity(changeDir, { ...validated, evidence, migrated: false }, evidence, true);
++    return { context: { ...validated, evidence, migrated: false }, reconciled: false, fromStep: null };
++  }
 +  let currentStep: string;
 +  try {
 +    currentStep = resolveClassicStepId(validated.classic, evidence);
@@ -1460,11 +2981,24 @@ index 96d7550..68e0dd4 100644
    if (validated.run.currentStep === currentStep) {
      return {
        context: { ...validated, evidence, migrated: false },
+@@ -465,6 +541,9 @@ async function transitionClassicRuntimeRunLocked(
+   if (!projection.classic || !projection.run) {
+     throw new Error('Classic transition requires synchronized Classic and Run projections');
+   }
++  if (projection.classic.managedDelivery && projection.run.status === 'completed') {
++    throw new Error('RUN_COMPLETED: completed product lifecycle cannot be reopened by a transition; linked maintenance is required');
++  }
+   if (
+     projection.run.runId !== run.runId ||
+     projection.run.iteration !== run.iteration ||
 diff --git a/domains/comet-classic/classic-state-command.ts b/domains/comet-classic/classic-state-command.ts
-index 00699b4..c3a3dc0 100644
+index 00699b4..1a43a54 100644
 --- a/domains/comet-classic/classic-state-command.ts
 +++ b/domains/comet-classic/classic-state-command.ts
-@@ -1,8 +1,20 @@
+@@ -1,8 +1,22 @@
++import { ManagedCompletionIntegrityError } from './classic-runtime-run.js';
++import { ensureClassicRuntimeRun } from './classic-runtime-run.js';
++import { requireManagedDeliveryHost, admitManagedPacket, ManagedSourceUnverifiedError } from './classic-managed-host.js';
  import { measureCometGitCommand } from '../../platform/process/runtime-metrics.js';
  import { spawnSync } from 'child_process';
 +import { randomBytes } from 'crypto';
@@ -1477,7 +3011,6 @@ index 00699b4..c3a3dc0 100644
 +// the downstream patch stack (0003 binds its own import context there).
 +import {
 +  gateGenerationOf,
-+  gatePassEvidenceProblems,
 +  parseGateInvalidations,
 +  syncGateInvalidations,
 +  syncGateInvalidationsLocked,
@@ -1485,7 +3018,7 @@ index 00699b4..c3a3dc0 100644
  import type { CliOutputEnvelope } from '../workflow-contract/output-envelope.js';
  import type { ClassicCommandHandler, ClassicCommandResult } from './classic-cli.js';
  import {
-@@ -35,8 +47,9 @@ import {
+@@ -35,8 +49,9 @@ import {
    withProjectContext,
  } from './classic-command-context.js';
  import { resolveClassicStepId } from './classic-resolver.js';
@@ -1496,13 +3029,14 @@ index 00699b4..c3a3dc0 100644
  import { parseClassicStateDocument, type ClassicState } from './classic-state.js';
  import { FIELD_ENUMS, MACHINE_OWNED_FIELDS, SETTABLE_FIELDS } from './classic-state-options.js';
  import { readClassicState, writeClassicState, withClassicStateLock } from './classic-store.js';
-@@ -46,6 +59,24 @@ import {
+@@ -46,6 +61,25 @@ import {
    type ClassicTransitionEvent,
  } from './classic-transitions.js';
  import { readRunState } from '../../domains/engine/state.js';
 +import {
 +  computeGateInputs,
 +  evaluateGatePremises,
++  entryGateAction,
 +  GATE_POLICY_VERSION,
 +  GATE_REWORK_BUDGET,
 +  GATE_ROLES,
@@ -1521,7 +3055,7 @@ index 00699b4..c3a3dc0 100644
  import { appendTrajectory, readTrajectory } from '../../domains/engine/run-store.js';
  import {
    recordCommandCheck,
-@@ -100,7 +131,7 @@ const PROFILES = ['full', 'hotfix', 'tweak'] as const;
+@@ -100,7 +134,7 @@ const PROFILES = ['full', 'hotfix', 'tweak'] as const;
  const PHASES = ['open', 'design', 'build', 'verify', 'archive'] as const;
  const ARTIFACT_LANGUAGES = ['en', 'zh-CN'] as const;
  const EVENTS = CLASSIC_TRANSITION_EVENTS;
@@ -1530,7 +3064,7 @@ index 00699b4..c3a3dc0 100644
  const CLASSIC_FIELD_WIRE_NAMES: Partial<Record<keyof ClassicState, string>> = {
    archived: 'archived',
    branchStatus: 'branch_status',
-@@ -371,6 +402,12 @@ function sparseClassicState(record: Record<string, unknown>): ClassicState {
+@@ -371,6 +405,14 @@ function sparseClassicState(record: Record<string, unknown>): ClassicState {
      classicProfile: enumRecordValue(record, 'classic_profile', PROFILES, workflow),
      classicMigration:
        typeof record.classic_migration === 'number' ? record.classic_migration : null,
@@ -1538,20 +3072,22 @@ index 00699b4..c3a3dc0 100644
 +    knowledgeCloseoutRequired: record.knowledge_closeout_required === true,
 +    testIntent: typeof record.test_intent === 'string' && record.test_intent !== 'null' ? record.test_intent : null,
 +    gateReceipts: typeof record.gate_receipts === 'string' ? record.gate_receipts : null,
++    gateDispatches: typeof record.gate_dispatches === 'string' ? record.gate_dispatches : null,
++    deliveryPolicy: typeof record.delivery_policy === 'string' ? record.delivery_policy : null,
 +    gateInvalidations: typeof record.gate_invalidations === 'string' ? record.gate_invalidations : null,
 +    knowledgeCloseout: typeof record.knowledge_closeout === 'string' ? record.knowledge_closeout : null,
    };
  }
  
-@@ -557,7 +594,22 @@ async function setFieldsLocked(
+@@ -557,7 +599,22 @@ async function setFieldsLocked(
    const { file, directory } = await stateFile(name);
    const document = await readDocument(file);
    const previousRecord = (document.toJS() ?? {}) as Record<string, unknown>;
 +  const managedDelivery = previousRecord.managed_delivery === true;
    for (const [field, value] of updates) {
-+    if (managedDelivery && field === 'verify_result') {
++    if (managedDelivery && (field === 'verify_result' || (field === 'archived' && !options.internal))) {
 +      fail(
-+        "ERROR: 'verify_result' is Runtime-stamped in managed delivery; it changes only through the verify-pass transition",
++        "ERROR: 'verify_result' and 'archived' are Runtime-stamped in managed delivery; use the guarded native transitions",
 +      );
 +    }
 +    if (field === 'phase' && managedDelivery && !options.internal) {
@@ -1566,7 +3102,7 @@ index 00699b4..c3a3dc0 100644
      document.set(field, parsedValue(field, value));
      if (field === 'phase' && previousRecord.phase !== value) {
        const epoch = nonNegativeRecordInteger(previousRecord, 'check_epoch');
-@@ -602,7 +654,15 @@ async function setFieldsLocked(
+@@ -602,7 +659,15 @@ async function setFieldsLocked(
    if (projection.run) {
      if (!projection.classic) fail('ERROR: migrated Run is missing its Classic projection');
      const evidence = await collectClassicEvidence(directory, projection);
@@ -1583,7 +3119,7 @@ index 00699b4..c3a3dc0 100644
      const stepChanged = currentStep !== projection.run.currentStep;
      const run = {
        ...projection.run,
-@@ -653,10 +713,15 @@ async function init(
+@@ -653,10 +718,15 @@ async function init(
    name: string,
    workflow: string,
    isolation: string | null = null,
@@ -1599,7 +3135,7 @@ index 00699b4..c3a3dc0 100644
    const boundBranch = isolation !== null ? liveGitBranch(classicCommandProjectRoot()) : null;
    if (isolation !== null && isolation !== 'current' && boundBranch === null) {
      fail(
-@@ -694,6 +759,18 @@ async function init(
+@@ -694,6 +764,20 @@ async function init(
      verified_at: null,
      archive_confirmation: null,
      archived: false,
@@ -1608,7 +3144,9 @@ index 00699b4..c3a3dc0 100644
 +    ...(managedDelivery
 +      ? {
 +          managed_delivery: true,
-+          knowledge_closeout_required: knowledgeCloseoutRequired,
++          knowledge_closeout_required: true,
++          delivery_policy: null,
++          gate_dispatches: null,
 +          test_intent: null,
 +          gate_receipts: null,
 +          gate_invalidations: null,
@@ -1618,7 +3156,7 @@ index 00699b4..c3a3dc0 100644
    });
    if (isolation !== null) document.set('bound_branch', boundBranch);
    await atomicWrite(file, document.toString());
-@@ -707,6 +784,77 @@ async function requirePhase(name: string, expected: string): Promise<void> {
+@@ -707,6 +791,78 @@ async function requirePhase(name: string, expected: string): Promise<void> {
    }
  }
  
@@ -1676,6 +3214,7 @@ index 00699b4..c3a3dc0 100644
 +    testIntent: typeof record.test_intent === 'string' && record.test_intent !== 'null' ? record.test_intent : null,
 +    gateReceipts: record.gate_receipts ?? null,
 +    gateInvalidations: record.gate_invalidations ?? null,
++    deliveryPolicy: record.delivery_policy ?? null,
 +  };
 +}
 +
@@ -1696,7 +3235,15 @@ index 00699b4..c3a3dc0 100644
  async function requireBuildDecisions(name: string): Promise<void> {
    const { file } = await stateFile(name);
    const record = (await readDocument(file)).toJS() as Record<string, unknown>;
-@@ -874,9 +1022,14 @@ async function transitionLocked(output: CommandOutput, name: string, event: stri
+@@ -769,6 +925,7 @@ async function requireOpenArtifacts(name: string): Promise<void> {
+   }
+   if (
+     workflow === 'full' &&
++    (await readField(name, 'managed_delivery')) !== 'true' &&
+     requirements.designRequired &&
+     !(await nonempty(path.join(directory, 'design.md')))
+   ) {
+@@ -874,9 +1031,14 @@ async function transitionLocked(output: CommandOutput, name: string, event: stri
    if (event === 'open-complete') {
      await requirePhase(name, 'open');
      await requireOpenArtifacts(name);
@@ -1711,17 +3258,18 @@ index 00699b4..c3a3dc0 100644
    } else if (event === 'build-complete') {
      await requirePhase(name, 'build');
      await requireBuildDecisions(name);
-@@ -916,6 +1069,18 @@ async function transitionLocked(output: CommandOutput, name: string, event: stri
+@@ -916,6 +1078,19 @@ async function transitionLocked(output: CommandOutput, name: string, event: stri
      if ((await readField(name, 'archived')) === 'true') {
        fail(`ERROR: Cannot transition '${name}': already archived`);
      }
-+  } else if (event === 'architecture-repair' || event === 'test-design-repair') {
++  } else if (event === 'requirements-repair' || event === 'architecture-repair' || event === 'test-design-repair') {
 +    // Managed rework routes (contract section 5): the SAME run returns to
 +    // design for the named repair. Only managed delivery exposes them, so
 +    // hand phase edits stay impossible everywhere else.
 +    await requireManagedDelivery(name, `transition '${event}'`);
 +    const phaseNow = await readField(name, 'phase');
-+    const allowedPhases = event === 'architecture-repair' ? ['build'] : ['build', 'verify'];
++    const allowedPhases = event === 'requirements-repair' ? ['open', 'design', 'build', 'verify'] : ['build', 'verify'];
++    if ((await readField(name, 'archived')) === 'true') fail('ERROR: archived history requires a new Change');
 +    if (!allowedPhases.includes(phaseNow)) {
 +      fail(
 +        `ERROR: Cannot transition '${name}': ${event} requires phase ${allowedPhases.join(' or ')}, got ${phaseNow}`,
@@ -1730,7 +3278,26 @@ index 00699b4..c3a3dc0 100644
    } else if (event === 'preset-escalate') {
      // preset (hotfix/tweak) → full: rewind phase to design so the agent can
      // supplement a Design Doc before continuing. Unlike verify-fail /
-@@ -976,6 +1141,25 @@ async function next(output: CommandOutput, name: string): Promise<void> {
+@@ -960,7 +1135,17 @@ async function next(output: CommandOutput, name: string): Promise<void> {
+   validateChangeName(name);
+   const { file, label, directory } = await stateFile(name);
+   if (!(await exists(file))) fail(`ERROR: .comet.yaml not found at ${label}/.comet.yaml`);
+-  const record = (await readDocument(file)).toJS() as Record<string, unknown>;
++  let record = (await readDocument(file)).toJS() as Record<string, unknown>;
++  if (record.managed_delivery === true && record.archived === true) {
++    // The original resolver owns completion. Reconcile a consumed Kt after
++    // crash/restart before presenting done; never stamp a status by hand.
++    await withClassicStateLock(directory, async () => {
++      await ensureClassicRuntimeRun(directory);
++      await syncGateInvalidationsLocked(directory, classicCommandProjectRoot());
++      await reconcileClassicRuntimeRun(directory);
++    });
++    record = (await readDocument(file)).toJS() as Record<string, unknown>;
++  }
+   const phase = scalar(record.phase);
+   const workflow = scalar(record.workflow);
+   const automatic = await readRecordField(record, 'auto_transition');
+@@ -976,6 +1161,28 @@ async function next(output: CommandOutput, name: string): Promise<void> {
      configuration: sparseClassicState(record),
    };
    if (scalar(record.archived) === 'true') {
@@ -1741,6 +3308,9 @@ index 00699b4..c3a3dc0 100644
 +      managedDelivery: record.managed_delivery === true,
 +      knowledgeCloseoutRequired: record.knowledge_closeout_required === true,
 +      knowledgeCloseout: record.knowledge_closeout ?? null,
++    gateReceipts: record.gate_receipts ?? null,
++    deliveryPolicy: record.delivery_policy ?? null,
++      gateRunId: (await readRunState(directory))?.runId ?? null,
 +    })) {
 +      output.data = {
 +        change: name,
@@ -1756,7 +3326,7 @@ index 00699b4..c3a3dc0 100644
      const delivery = await readClassicDelivery(classicCommandProjectRoot(), directory);
      const complete = ['complete', 'local-verified'].includes(delivery.verification.status);
      output.data = {
-@@ -1020,6 +1204,29 @@ async function next(output: CommandOutput, name: string): Promise<void> {
+@@ -1020,6 +1227,29 @@ async function next(output: CommandOutput, name: string): Promise<void> {
    if (!skill) {
      fail(`ERROR: Cannot resolve next step for '${name}': unknown phase '${phase || 'null'}'`);
    }
@@ -1764,10 +3334,10 @@ index 00699b4..c3a3dc0 100644
 +  // entrance consumes, with the fixed rework route when blocked. The open
 +  // phase evaluates enter-design (P1-01): without a current R the next
 +  // surface routes to the requirements gate instead of forward.
-+  if (record.managed_delivery === true && ['open', 'design', 'build', 'verify'].includes(phase)) {
++  if (record.managed_delivery === true && entryGateAction(phase) !== null) {
 +    const { directory: gateDir } = await stateFile(name);
 +    await syncGateInvalidations(gateDir, classicCommandProjectRoot());
-+    const action = phase === 'open' ? 'enter-design' : phase === 'design' ? 'enter-build' : phase === 'build' ? 'enter-verify' : 'enter-archive';
++    const action = entryGateAction(phase)!;
 +    const evaluation = await evaluateGatePremises({
 +      projectRoot: classicCommandProjectRoot(),
 +      changeDir: gateDir,
@@ -1786,16 +3356,24 @@ index 00699b4..c3a3dc0 100644
    output.envelope = classicNextEnvelope({
      name,
      phase,
-@@ -1330,6 +1537,26 @@ async function check(
+@@ -1299,6 +1529,7 @@ async function check(
+     );
+     for (const problem of requirements.problems) reject(problem);
+     for (const artifact of requirements.files) {
++      if (record.managed_delivery === true && path.basename(artifact) === 'design.md' && !(await exists(artifact))) continue;
+       const present = await nonempty(artifact);
+       (present ? pass : reject)(`${artifact} ${present ? 'non-empty' : 'missing or empty'}`);
+     }
+@@ -1330,6 +1561,26 @@ async function check(
          : `archived=${archived} (ready for archive confirmation)`,
      );
    }
 +  // Managed delivery entry gates (C07 7th entrance semantics): the entry
 +  // check set for a phase includes the same gate premises the guard,
 +  // transitions, write hook, resolver and completion predicate consume.
-+  if (record.managed_delivery === true && ['open', 'design', 'build', 'verify'].includes(phase)) {
++  if (record.managed_delivery === true && entryGateAction(phase) !== null) {
 +    await syncGateInvalidations(directory, classicCommandProjectRoot());
-+    const action = phase === 'open' ? 'enter-design' : phase === 'design' ? 'enter-build' : phase === 'build' ? 'enter-verify' : 'enter-archive';
++    const action = entryGateAction(phase)!;
 +    const evaluation = await evaluateGatePremises({
 +      projectRoot: classicCommandProjectRoot(),
 +      changeDir: directory,
@@ -1813,7 +3391,7 @@ index 00699b4..c3a3dc0 100644
    const binding = await resolveBranchBinding(directory, {
      heal: true,
      cwd: classicCommandInvocationCwd(),
-@@ -1795,6 +2022,342 @@ async function recordCheck(
+@@ -1795,6 +2046,344 @@ async function recordCheck(
    }
  }
  
@@ -1833,7 +3411,7 @@ index 00699b4..c3a3dc0 100644
 +          ? 'enter-verify'
 +          : phase === 'verify'
 +            ? 'enter-archive'
-+            : null;
++            : phase === 'archive' ? (record.archived === true ? 'complete' : 'archive-spec') : null;
 +  let evaluation = null;
 +  if (managed && action) {
 +    // P1-03: the gates surface persists observed invalidations before it
@@ -1851,6 +3429,9 @@ index 00699b4..c3a3dc0 100644
 +    managedDelivery: managed,
 +    knowledgeCloseoutRequired: record.knowledge_closeout_required === true,
 +    knowledgeCloseout: record.knowledge_closeout ?? null,
++    gateReceipts: record.gate_receipts ?? null,
++    deliveryPolicy: record.delivery_policy ?? null,
++      gateRunId: (await readRunState(directory))?.runId ?? null,
 +  });
 +  output.data = {
 +    change: name,
@@ -1878,19 +3459,32 @@ index 00699b4..c3a3dc0 100644
 +async function dispatchGate(output: CommandOutput, name: string, gate: string): Promise<void> {
 +  validateChangeName(name);
 +  if (!isGateId(gate)) fail(`ERROR: gate must be one of R/A/T/P/V/K, got '${gate}'`);
++  if (gate === 'K') fail('UNVERIFIED: generic K is historical only; separate Kp/Kt are required');
 +  const { directory, record } = await managedStateRecord(name);
++  if ((await readRunState(directory))?.status === 'completed') throw new CommandFailure('RUN_COMPLETED: completed product Runs cannot dispatch new gates; linked maintenance is required', 2, { code: 'RUN_COMPLETED', message: 'Completed product lifecycle is immutable' });
 +  if (record.managed_delivery !== true) {
 +    fail(`ERROR: gate dispatching requires managed delivery; '${name}' is not managed`);
 +  }
 +  if (record.archived === true) fail(`ERROR: '${name}' is archived; gate dispatching is closed`);
 +  await withClassicStateLock(directory, async () => {
++    requireManagedDeliveryHost();
++    if ((await readRunState(directory))?.status === 'completed') throw new CommandFailure('RUN_COMPLETED: completed product Run cannot dispatch a new gate', 2, { code: 'RUN_COMPLETED', message: 'Completed product lifecycle is immutable' });
++    await ensureClassicRuntimeRun(directory);
++    await syncGateInvalidationsLocked(directory, classicCommandProjectRoot());
++    const { record: freshRecord } = await managedStateRecord(name);
 +    const registry = await readGateDispatches(directory);
-+    const inputs = await currentGateInputs(directory, record, gate);
++    const permittedPhase: Record<string, string[]> = { R: ['open'], A: ['design'], T: ['design'], P: ['build'], V: ['verify'], Kp: ['verify', 'archive'], Kt: ['archive'] };
++    if (!permittedPhase[gate]?.includes(String(freshRecord.phase))) fail(`UNVERIFIED: gate ${gate} is not authorized in the current native phase; use its controlled repair route`);
++    const inputs = await currentGateInputs(directory, freshRecord, gate);
 +    if (inputs.missing.length > 0) {
 +      fail(
 +        `ERROR: gate ${gate} inputs are incomplete:\n  ${inputs.missing.join('\n  ')}\n  Declare the artifacts (design_doc / test_intent / plan) before dispatching.`,
 +      );
 +    }
++    const dependencies = await evaluateGatePremises({ projectRoot: classicCommandProjectRoot(), changeDir: directory,
++      classic: { ...gateStateInputFrom(freshRecord), managedDelivery: true }, run: await readRunState(directory),
++      action: 'enter-design', dependencyOf: gate });
++    if (!dependencies.allowed) fail(`UNVERIFIED: prerequisite gates for ${gate} are not current: ${dependencies.details.join('; ')}`);
 +    const priorForVersion = registry.dispatches.filter(
 +      (entry) => entry.gate === gate && entry.inputDigest === inputs.digest,
 +    );
@@ -1910,7 +3504,7 @@ index 00699b4..c3a3dc0 100644
 +      typeof currentRecord.gate_invalidations === 'string' ? currentRecord.gate_invalidations : null,
 +    );
 +    const execution = `gate-${gate.toLowerCase()}-${Date.now().toString(36)}-${randomBytes(4).toString('hex')}`;
-+    const dispatch = {
++    const dispatch: import('./classic-gate-runtime.js').GateDispatch = {
 +      gate,
 +      role: GATE_ROLES[gate],
 +      execution,
@@ -1922,6 +3516,27 @@ index 00699b4..c3a3dc0 100644
 +      generation: gateGenerationOf(invalidations, gate),
 +      state: 'open' as const,
 +    };
++    const host = requireManagedDeliveryHost();
++    const nativeRun = await readRunState(directory);
++    if (!nativeRun) fail('UNVERIFIED: a managed gate requires the original synchronized Run');
++    const context = host.context({ ...dispatch, runId: nativeRun.runId, projectRoot: classicCommandProjectRoot(), changeDir: directory });
++    const eligibility = context.admissionOptions;
++    const qualified = eligibility?.sourceQualification;
++    const clock = typeof eligibility?.now === 'string' ? Date.parse(eligibility.now) : NaN;
++    if (!qualified || qualified.scope !== 'protected-source' || qualified.status !== 'qualified'
++      || typeof qualified.expiresAt !== 'string' || !Number.isFinite(Date.parse(qualified.expiresAt)) || !Number.isFinite(clock) || Date.parse(qualified.expiresAt) <= clock
++      || !Array.isArray(qualified.evidenceRefs) || qualified.evidenceRefs.length === 0) fail('UNVERIFIED: current protected source eligibility is missing or expired');
++    const action = context.actionBinding;
++    if (gate === 'P' && (!Array.isArray(action?.allowedTools) || action.allowedTools.some((tool: unknown) => typeof tool !== 'string' || /(?:^|__)(?:create_goal|update_goal|spawn_agent|send_message_to_thread|automation_update|dispatch|schedule|archive.*|publish.*)$/u.test(tool)))) fail('UNVERIFIED: planner P permits plan artifacts only; controller tools are not authorized');
++    const frozenPolicy = JSON.parse(String(currentRecord.delivery_policy));
++    if (!context.policy || context.policy.digest !== frozenPolicy.digest || action?.policyDigest !== frozenPolicy.digest) fail('UNVERIFIED: protected policy snapshot changed before dispatch');
++    if (!action || action.profile !== GATE_POLICY_VERSION || action.run !== nativeRun.runId || action.gate !== gate
++      || action.execution !== execution || action.role !== dispatch.role || action.inputDigest !== inputs.digest
++      || action.attempt !== dispatch.attempt || action.epoch !== epoch) fail('UNVERIFIED: protected current ActionBinding mismatches native intent');
++    dispatch.sourceQualification = qualified;
++    dispatch.runId = nativeRun.runId;
++    dispatch.actionBinding = action;
++    dispatch.protectedDispatch = host.authority.issueDispatch({ ...action, actionBinding: action });
 +    registry.dispatches.push(dispatch);
 +    await writeGateDispatches(directory, registry);
 +    output.data = { change: name, gate, dispatch };
@@ -1944,8 +3559,11 @@ index 00699b4..c3a3dc0 100644
 +  gate: string,
 +  resultFile: string,
 +): Promise<void> {
++  let intent: import('./classic-gate-runtime.js').GateDispatch | undefined;
 +  validateChangeName(name);
 +  if (!isGateId(gate)) fail(`ERROR: gate must be one of R/A/T/P/V/K, got '${gate}'`);
++  const terminalDirectory = (await stateFile(name)).directory;
++  if ((await readRunState(terminalDirectory))?.status === 'completed') throw new CommandFailure('RUN_COMPLETED: completed product Run cannot accept new product gate results', 2, { code: 'RUN_COMPLETED', message: 'Completed product lifecycle is immutable' });
 +  let raw: string;
 +  try {
 +    raw = await fs.readFile(path.resolve(classicCommandInvocationCwd(), resultFile), 'utf8');
@@ -1979,94 +3597,55 @@ index 00699b4..c3a3dc0 100644
 +        entry.execution === result.execution &&
 +        entry.attempt === result.attempt,
 +    );
-+    if (!dispatch) {
-+      fail(
-+        `ERROR: no Runtime dispatch for gate ${gate} execution ${result.execution} attempt ${result.attempt}; author-written results are never acceptable without a Runtime-issued dispatch (D01)`,
-+      );
-+    }
-+    if (dispatch.state !== 'open') {
-+      fail(`ERROR: dispatch ${dispatch.execution} is already ${dispatch.state}; a dispatch accepts exactly one result (idempotent refusal)`);
-+    }
-+    // P1-03: persist observed invalidations first, then judge the dispatch
-+    // against the CURRENT generation — a late attempt from a pre-invalidation
-+    // generation cannot revive a gate even when its inputDigest matches
-+    // byte-restored inputs.
++    if (!dispatch) fail('ERROR: no Runtime dispatch; author-written results do not establish a source');
++    if (dispatch.state !== 'open') fail(`ERROR: dispatch is already ${dispatch.state}`);
 +    await syncGateInvalidationsLocked(directory, classicCommandProjectRoot());
++    intent = structuredClone(dispatch);
++  });
++  if (!intent) fail('RECOVERY_REQUIRED: missing native intent');
++  const originalIntent = intent;
++  const host = requireManagedDeliveryHost();
++  // Long readback/collector phase happens outside the state lock. The fixed
++  // host reads original registered launch artifacts, not caller claims.
++  const rawPacket = await host.readResult(originalIntent, result);
++  const packet: import('./classic-managed-host.js').ManagedRecord = { ...rawPacket, dispatch: originalIntent.protectedDispatch };
++  const collected = await host.authority.collectResult(packet);
++  if (!collected.ok) fail(`UNVERIFIED: protected source collection refused (${collected.error})`);
++  await withClassicStateLock(directory, async () => {
++    await syncGateInvalidationsLocked(directory, classicCommandProjectRoot());
++    const registry = await readGateDispatches(directory);
++    const dispatch = registry.dispatches.find((entry) => entry.execution === originalIntent.execution && entry.attempt === originalIntent.attempt && entry.gate === gate);
++    if (!dispatch || dispatch.state !== 'open') fail('RECOVERY_REQUIRED: original intent was consumed or replaced during collection');
++    const projection = await readClassicState(directory, { migrate: false });
++    if (!projection.classic || !projection.run) fail('RECOVERY_REQUIRED: original Classic Run is missing');
++    if (projection.run.status === 'completed') throw new CommandFailure('RUN_COMPLETED: completed product Run cannot consume a late product gate', 2, { code: 'RUN_COMPLETED', message: 'Completed product lifecycle is immutable' });
 +    const { record } = await managedStateRecord(name);
 +    const inputs = await currentGateInputs(directory, record, gate);
-+    if (inputs.digest !== dispatch.inputDigest) {
-+      dispatch.state = 'stale';
-+      await writeGateDispatches(directory, registry);
-+      fail(
-+        `ERROR: gate ${gate} inputs changed after dispatch — the review result is stale and cannot be accepted (D02)\n  Route: re-dispatch and re-review the current inputs`,
-+      );
-+    }
-+    const projection = await readClassicState(directory, { migrate: false });
-+    if (!projection.classic) fail('ERROR: Classic state is missing');
-+    const invalidations = parseGateInvalidations(projection.classic.gateInvalidations);
-+    const currentGeneration = gateGenerationOf(invalidations, gate);
-+    if ((dispatch.generation ?? 0) !== currentGeneration) {
-+      fail(
-+        `ERROR: gate ${gate} dispatch ${dispatch.execution} was issued at invalidation generation ${dispatch.generation ?? 0} but the gate is now at generation ${currentGeneration} — inputs changed and were observed after this dispatch; a late old-attempt result cannot revive the gate (P1-03)\n  Route: re-dispatch and re-review the current inputs`,
-+      );
-+    }
-+    // P1-02: a Runtime dispatch registration is not review evidence. A pass
-+    // acceptance must carry the dispatched binding, the original report with
-+    // its digest, and the gate-specific independent-review artifact (A: closed
-+    // unanimous consensus tally; T: test-design sufficiency with an attested
-+    // oracle). Same-caller dispatches cannot manufacture a pass.
-+    if (result.verdict === 'pass') {
-+      const problems = gatePassEvidenceProblems(gate, result, dispatch);
-+      if (problems.length > 0) {
-+        fail(`ERROR: gate ${gate} pass result lacks bound review evidence (P1-02)\n  ${problems.join('\n  ')}`);
-+      }
-+    }
++    const generation = gateGenerationOf(parseGateInvalidations(projection.classic.gateInvalidations), gate);
++    const latestAttempt = registry.dispatches.filter((entry) => entry.gate === gate && entry.inputDigest === inputs.digest && entry.generation === generation).at(-1)?.attempt;
++    if (dispatch.inputDigest !== inputs.digest || dispatch.generation !== generation || dispatch.attempt !== latestAttempt
++      || dispatch.epoch !== (projection.classic.checkEpoch ?? 0)) fail('STALE_ATTEMPT: current inputs/generation/epoch or native attempt changed during collection');
++    if (stableStringify(dispatch) !== stableStringify(originalIntent)) fail('RECOVERY_REQUIRED: native intent binding changed during collection');
 +    const receipts = parseGateReceipts(projection.classic.gateReceipts);
-+    const receipt = {
-+      gate,
-+      verdict: result.verdict as 'pass' | 'reject',
-+      digest: inputs.digest,
-+      dependsOn: inputs.dependsOn,
-+      execution: dispatch.execution,
-+      attempt: dispatch.attempt,
-+      epoch: (projection.classic.checkEpoch ?? 0) + 1,
-+      generation: currentGeneration,
-+      policyVersion: GATE_POLICY_VERSION,
-+      acceptedAt: new Date().toISOString(),
-+      report: typeof result.report === 'string' ? result.report : null,
-+      reportDigest: typeof result.reportDigest === 'string' ? result.reportDigest : null,
-+      findings: Array.isArray(result.findings) ? result.findings.map(String) : [],
-+    };
-+    // Consume the dispatch first: an interrupted acceptance re-evaluates as
-+    // "no receipt" (safe retry) instead of allowing a duplicate accept.
-+    dispatch.state = 'consumed';
-+    dispatch.verdict = receipt.verdict;
-+    await writeGateDispatches(directory, registry);
-+    const classic: ClassicState = {
-+      ...projection.classic,
-+      gateReceipts: stableStringify([...receipts, receipt]),
-+      checkEpoch: (projection.classic.checkEpoch ?? 0) + 1,
-+    };
-+    await writeClassicState(directory, {
-+      classic,
-+      run: projection.run,
-+      unknownKeys: projection.unknownKeys,
-+    });
-+    await appendClassicStateEvent(directory, {
-+      change: name,
-+      event: `gate-${gate.toLowerCase()}-${receipt.verdict}` as ClassicStateEventInput['event'],
-+      source: 'comet-state',
-+      from: projection.classic,
-+      to: classic,
-+      effects: [{ field: 'gateReceipts', from: null, to: receipt.verdict }],
-+    });
-+    output.data = { change: name, gate, verdict: receipt.verdict, receipt };
-+    output.stderr.push(
-+      green(`[ACCEPTED] gate ${gate} ${receipt.verdict} execution ${dispatch.execution} (epoch ${classic.checkEpoch})`),
-+    );
-+    if (receipt.verdict === 'reject') {
-+      output.stderr.push(yellow(`ROUTE: ${repairRoute(gate)}`));
-+    }
++    if (originalIntent.runId !== projection.run.runId) fail('UNVERIFIED: collected intent belongs to another native Run');
++    const judged = admitManagedPacket({ ...originalIntent, nativeRunId: projection.run.runId }, { ...packet, collection: collected.collection }, receipts);
++    const verdict = judged.evaluated.verdict === 'pass' ? 'pass' : 'reject';
++    const receipt = { gate, verdict, digest: inputs.digest, dependsOn: inputs.dependsOn,
++      execution: dispatch.execution, attempt: dispatch.attempt, epoch: projection.classic.checkEpoch ?? 0,
++      generation, policyVersion: GATE_POLICY_VERSION, acceptedAt: new Date().toISOString(),
++      report: packet.reportBytes.toString('utf8'), reportDigest: collected.collection.reportDigest,
++      findings: judged.evaluated.receipt.blocked, sourceEntry: JSON.parse(JSON.stringify(judged.entry)), intent: originalIntent, evaluated: judged.evaluated.receipt };
++    dispatch.state = 'consumed'; dispatch.verdict = verdict;
++    // Intent consumption and its original bound evidence commit in ONE
++    // existing YAML/Run transaction. Recovery never reconstructs a pass.
++    const classic: ClassicState = { ...projection.classic,
++      gateReceipts: stableStringify([...receipts, receipt]), gateDispatches: stableStringify(registry),
++      checkEpoch: projection.classic.checkEpoch ?? 0 };
++    await writeClassicState(directory, { ...projection, classic });
++    if (gate === 'Kt' && classic.archived) await reconcileClassicRuntimeRun(directory);
++    output.data = { change: name, gate, verdict, receipt };
++    output.stderr.push(green(`[ACCEPTED] gate ${gate} ${verdict}; source-bound single-gate judgment, not overall completion`));
++    if (verdict === 'reject') output.stderr.push(yellow(`ROUTE: ${repairRoute(gate)}`));
 +  });
 +}
 +
@@ -2089,6 +3668,7 @@ index 00699b4..c3a3dc0 100644
 +    fail(error instanceof Error ? error.message : String(error));
 +  }
 +  if (!closeout) fail('ERROR: knowledge closeout receipt is empty');
++  if ((await readField(name, 'managed_delivery')) === 'true') fail('UNVERIFIED: generic/file-K closeout is historical only; accept separate protected Kp/Kt source results');
 +  const { directory } = await stateFile(name);
 +  await withClassicStateLock(directory, async () => {
 +    if (closeout.targetKind === 'file') {
@@ -2156,7 +3736,7 @@ index 00699b4..c3a3dc0 100644
  function required(args: string[], count: number, usage: string): void {
    if (args.length < count) fail(usage);
  }
-@@ -1816,6 +2379,9 @@ const MUTATING_STATE_COMMANDS = new Set([
+@@ -1816,6 +2405,9 @@ const MUTATING_STATE_COMMANDS = new Set([
    'select',
    'clear-selection',
    'complete-design',
@@ -2166,7 +3746,7 @@ index 00699b4..c3a3dc0 100644
  ]);
  
  async function assertStateCommandWritable(subcommand: string | undefined): Promise<void> {
-@@ -1949,13 +2515,25 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
+@@ -1949,13 +2541,26 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
          required(rest, 2, 'Usage: comet state init <change-name> <workflow>');
          const initOptions = rest.slice(2);
          let isolation: string | null = null;
@@ -2187,6 +3767,7 @@ index 00699b4..c3a3dc0 100644
 +              fail('Usage: comet state init <change-name> <workflow> [--isolation <mode>] [--managed-delivery] [--knowledge-closeout-required <true|false>]');
 +            }
 +            knowledgeCloseoutRequired = initOptions[++index] === 'true';
++            if (!knowledgeCloseoutRequired && initOptions.includes('--managed-delivery')) fail('ERROR: comet-managed-v2 requires both Kp and Kt; false cannot waive knowledge obligations');
 +          } else {
 +            fail('Usage: comet state init <change-name> <workflow> [--isolation <mode>] [--managed-delivery] [--knowledge-closeout-required <true|false>]');
            }
@@ -2197,7 +3778,7 @@ index 00699b4..c3a3dc0 100644
        } else if (subcommand === 'get') {
          required(rest, 2, 'Usage: comet state get <change-name> <field>');
          validateChangeName(rest[0]);
-@@ -2051,6 +2629,22 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
+@@ -2051,6 +2656,22 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
        } else if (subcommand === 'next') {
          required(rest, 1, 'Usage: comet state next <change-name>');
          await next(output, rest[0]);
@@ -2220,6 +3801,29 @@ index 00699b4..c3a3dc0 100644
        } else {
          fail(`Unknown subcommand: ${subcommand ?? ''}`);
        }
+@@ -2076,6 +2697,13 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
+       if (options.json && ['check', 'complete-design'].includes(subcommand)) output.stdout = [];
+       return output.result();
+     } catch (error) {
++      if (error instanceof ManagedCompletionIntegrityError) {
++        output.data = { ...error.view, issues: [{ code: 'RECOVERY_REQUIRED', message: error.message }] };
++        output.envelope = undefined;
++        output.stdout = [];
++        output.stderr.push(red(error.message));
++        return output.result(2);
++      }
+       const issue = error instanceof CommandFailure ? error.issue : undefined;
+       const previous =
+         output.data && typeof output.data === 'object'
+@@ -2091,7 +2719,7 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
+       if (message) {
+         for (const line of message.split('\n')) output.stderr.push(red(line));
+       }
+-      return output.result(error instanceof CommandFailure ? error.exitCode : 70);
++      return output.result(error instanceof CommandFailure ? error.exitCode : error instanceof ManagedSourceUnverifiedError ? 2 : 70);
+     }
+   },
+ );
 diff --git a/domains/comet-classic/classic-state-events.ts b/domains/comet-classic/classic-state-events.ts
 index 4e7c8c9..12e48be 100644
 --- a/domains/comet-classic/classic-state-events.ts
@@ -2234,22 +3838,24 @@ index 4e7c8c9..12e48be 100644
    from: ClassicState;
    to: ClassicState;
 diff --git a/domains/comet-classic/classic-state-options.ts b/domains/comet-classic/classic-state-options.ts
-index 798f913..ca8d303 100644
+index 798f913..2292a75 100644
 --- a/domains/comet-classic/classic-state-options.ts
 +++ b/domains/comet-classic/classic-state-options.ts
-@@ -8,6 +8,11 @@ export const MACHINE_OWNED_FIELDS = new Set<string>([
+@@ -8,6 +8,13 @@ export const MACHINE_OWNED_FIELDS = new Set<string>([
    'classic_profile',
    'classic_migration',
    'bound_branch',
 +  'managed_delivery',
 +  'knowledge_closeout_required',
 +  'gate_receipts',
++  'gate_dispatches',
++  'delivery_policy',
 +  'gate_invalidations',
 +  'knowledge_closeout',
  ]);
  export const SETTABLE_FIELDS = new Set<string>(
    CLASSIC_WIRE_KEYS.filter((field) => !MACHINE_OWNED_FIELDS.has(field)),
-@@ -31,4 +36,6 @@ export const FIELD_ENUMS: Record<string, readonly string[]> = {
+@@ -31,4 +38,6 @@ export const FIELD_ENUMS: Record<string, readonly string[]> = {
    direct_override: ['true', 'false'],
    classic_profile: ['full', 'hotfix', 'tweak'],
    classic_migration: ['1'],
@@ -2257,10 +3863,10 @@ index 798f913..ca8d303 100644
 +  knowledge_closeout_required: ['true', 'false'],
  };
 diff --git a/domains/comet-classic/classic-state.ts b/domains/comet-classic/classic-state.ts
-index 3181d17..33b753e 100644
+index 3181d17..6baaec3 100644
 --- a/domains/comet-classic/classic-state.ts
 +++ b/domains/comet-classic/classic-state.ts
-@@ -58,6 +58,12 @@ export interface ClassicState {
+@@ -58,6 +58,16 @@ export interface ClassicState {
    handoffHash: string | null;
    classicProfile: ClassicProfile | null;
    classicMigration: number | null;
@@ -2268,12 +3874,16 @@ index 3181d17..33b753e 100644
 +  knowledgeCloseoutRequired: boolean;
 +  testIntent: string | null;
 +  gateReceipts: string | null;
++  gateDispatches?: string | null;
++  /** Read-only projection of the original Run, never serialized as a second identity. */
++  gateRunId?: string | null;
++  deliveryPolicy?: string | null;
 +  gateInvalidations: string | null;
 +  knowledgeCloseout: string | null;
  }
  
  export interface ClassicStateProjection {
-@@ -97,6 +103,12 @@ export const CLASSIC_WIRE_KEYS = [
+@@ -97,6 +107,14 @@ export const CLASSIC_WIRE_KEYS = [
    'handoff_hash',
    'classic_profile',
    'classic_migration',
@@ -2281,12 +3891,14 @@ index 3181d17..33b753e 100644
 +  'knowledge_closeout_required',
 +  'test_intent',
 +  'gate_receipts',
++  'gate_dispatches',
++  'delivery_policy',
 +  'gate_invalidations',
 +  'knowledge_closeout',
  ] as const;
  
  /** Fields that appear in .comet.yaml to link to the Run state. */
-@@ -190,6 +202,22 @@ function sha256(doc: StateDocument, key: string): string | null {
+@@ -190,6 +208,22 @@ function sha256(doc: StateDocument, key: string): string | null {
    return value;
  }
  
@@ -2309,7 +3921,21 @@ index 3181d17..33b753e 100644
  function migrationVersion(doc: StateDocument): number | null {
    const value = doc.classic_migration;
    if (value === null || value === undefined || value === '') return null;
-@@ -240,6 +268,12 @@ function classicStateFromDocument(doc: StateDocument): ClassicState | null {
+@@ -205,6 +239,13 @@ function classicStateFromDocument(doc: StateDocument): ClassicState | null {
+   const hasClassicProjection = CLASSIC_WIRE_KEYS.some((key) => has(doc, key));
+   if (!hasClassicProjection) return null;
+ 
++  if (Object.prototype.hasOwnProperty.call(doc, 'managed_delivery') && typeof doc.managed_delivery !== 'boolean') {
++    throw new Error('Invalid Classic state: managed_delivery must be a boolean');
++  }
++  if (doc.managed_delivery !== true && ['delivery_policy', 'gate_dispatches', 'gate_receipts', 'gate_invalidations'].some((key) => doc[key] !== undefined && doc[key] !== null && doc[key] !== '')) {
++    throw new Error('Invalid Classic state: managed Runtime history cannot be downgraded to legacy');
++  }
++
+   for (const key of REQUIRED_CLASSIC_KEYS) {
+     if (!has(doc, key)) return null;
+   }
+@@ -240,6 +281,14 @@ function classicStateFromDocument(doc: StateDocument): ClassicState | null {
      handoffHash: sha256(doc, 'handoff_hash'),
      classicProfile: enumValue(doc, 'classic_profile', CLASSIC_PROFILES),
      classicMigration: migrationVersion(doc),
@@ -2317,12 +3943,23 @@ index 3181d17..33b753e 100644
 +    knowledgeCloseoutRequired: booleanOrMissing(doc, 'knowledge_closeout_required', false),
 +    testIntent: relativePath(doc, 'test_intent'),
 +    gateReceipts: jsonDocumentValue(doc, 'gate_receipts'),
++    gateDispatches: jsonDocumentValue(doc, 'gate_dispatches'),
++    deliveryPolicy: jsonDocumentValue(doc, 'delivery_policy'),
 +    gateInvalidations: jsonDocumentValue(doc, 'gate_invalidations'),
 +    knowledgeCloseout: jsonDocumentValue(doc, 'knowledge_closeout'),
    };
  }
  
-@@ -331,5 +365,11 @@ export function classicStateToDocument(state: ClassicState): StateDocument {
+@@ -265,7 +314,7 @@ export function parseClassicStateDocument(
+   }
+ 
+   return {
+-    classic: classicStateFromDocument(doc),
++    classic: (() => { const state = classicStateFromDocument(doc); return state?.managedDelivery ? { ...state, gateRunId: resolvedRun?.runId ?? null } : state; })(),
+     run: resolvedRun,
+     unknownKeys: Object.keys(doc).filter((key) => !KNOWN_KEYS.has(key)),
+   };
+@@ -331,5 +380,13 @@ export function classicStateToDocument(state: ClassicState): StateDocument {
      handoff_hash: state.handoffHash,
      classic_profile: state.classicProfile,
      classic_migration: state.classicMigration,
@@ -2330,24 +3967,32 @@ index 3181d17..33b753e 100644
 +    knowledge_closeout_required: state.knowledgeCloseoutRequired,
 +    test_intent: state.testIntent,
 +    gate_receipts: state.gateReceipts,
++    gate_dispatches: state.gateDispatches ?? null,
++    delivery_policy: state.deliveryPolicy ?? null,
 +    gate_invalidations: state.gateInvalidations,
 +    knowledge_closeout: state.knowledgeCloseout,
    };
  }
 diff --git a/domains/comet-classic/classic-transitions.ts b/domains/comet-classic/classic-transitions.ts
-index b517351..3f6f9d9 100644
+index b517351..4b73c11 100644
 --- a/domains/comet-classic/classic-transitions.ts
 +++ b/domains/comet-classic/classic-transitions.ts
-@@ -10,6 +10,8 @@ export const CLASSIC_TRANSITION_EVENTS = [
+@@ -1,3 +1,4 @@
++import { controlledGateRevision } from './classic-gate-runtime.js';
+ import type { ClassicPhase, ClassicState } from './classic-state.js';
+ 
+ export const CLASSIC_TRANSITION_EVENTS = [
+@@ -10,6 +11,9 @@ export const CLASSIC_TRANSITION_EVENTS = [
    'archive-reopen',
    'archived',
    'preset-escalate',
++  'requirements-repair',
 +  'architecture-repair',
 +  'test-design-repair',
  ] as const;
  
  export type ClassicTransitionEvent = (typeof CLASSIC_TRANSITION_EVENTS)[number];
-@@ -79,6 +81,20 @@ export const CLASSIC_TRANSITION_TABLE: Record<ClassicTransitionEvent, ClassicTra
+@@ -79,6 +83,21 @@ export const CLASSIC_TRANSITION_TABLE: Record<ClassicTransitionEvent, ClassicTra
        from: 'build',
        guardRefs: ['preset-workflow'],
      },
@@ -2355,6 +4000,7 @@ index b517351..3f6f9d9 100644
 +    // run back to design for the named repair; there is no hand phase edit
 +    // and no second controller. Gated to managed delivery at the command
 +    // surface.
++    'requirements-repair': { event: 'requirements-repair', from: 'build', guardRefs: ['managed-delivery'] },
 +    'architecture-repair': {
 +      event: 'architecture-repair',
 +      from: 'build',
@@ -2368,15 +4014,16 @@ index b517351..3f6f9d9 100644
    };
  
  export const CLASSIC_GUARD_TRANSITION_EVENT: Partial<Record<ClassicPhase, ClassicTransitionEvent>> =
-@@ -110,7 +126,15 @@ export function applyClassicTransition(
+@@ -110,7 +129,16 @@ export function applyClassicTransition(
    options: { now?: Date } = {},
  ): ClassicTransitionResult {
    const definition = CLASSIC_TRANSITION_TABLE[event];
 -  if (current.phase !== definition.from) {
 +  // test-design-repair is reachable from build and from verify (a V finding
 +  // can be a test-intent defect): the route always lands in design.
-+  if (event === 'test-design-repair') {
-+    if (current.phase !== 'build' && current.phase !== 'verify') {
++  if (event === 'requirements-repair' || event === 'architecture-repair' || event === 'test-design-repair') {
++    if (current.archived || !['open', 'design', 'build', 'verify'].includes(current.phase)) throw new Error('Archived history requires a new Change, never a phase rewind');
++    if (event !== 'requirements-repair' && current.phase !== 'build' && current.phase !== 'verify') {
 +      throw new Error(
 +        `Cannot apply ${event}: phase is '${current.phase}', expected 'build' or 'verify'`,
 +      );
@@ -2385,22 +4032,25 @@ index b517351..3f6f9d9 100644
      throw new Error(
        `Cannot apply ${event}: phase is '${current.phase}', expected '${definition.from}'`,
      );
-@@ -149,6 +173,18 @@ export function applyClassicTransition(
+@@ -149,6 +177,21 @@ export function applyClassicTransition(
      setField(classic, effects, 'verifyFailures', classic.verifyFailures + 1);
      setField(classic, effects, 'phase', 'build');
      setField(classic, effects, 'branchStatus', 'pending');
-+  } else if (event === 'architecture-repair' || event === 'test-design-repair') {
++  } else if (event === 'requirements-repair' || event === 'architecture-repair' || event === 'test-design-repair') {
 +    // The same run returns to design for the named repair. A repair from a
 +    // verify-phase rejection resets the verification surface exactly like
 +    // archive-reopen does; from build only the phase moves.
-+    if (event === 'test-design-repair' && current.phase === 'verify') {
++    const revision = controlledGateRevision(classic, event === 'requirements-repair' ? 'R' : event === 'architecture-repair' ? 'A' : 'T');
++    setField(classic, effects, 'gateInvalidations', revision.gateInvalidations);
++    setField(classic, effects, 'gateDispatches', revision.gateDispatches);
++    if (current.phase === 'verify') {
 +      setField(classic, effects, 'verifyResult', 'pending');
 +      setField(classic, effects, 'verifyFailures', 0);
 +      setField(classic, effects, 'verifiedAt', null);
 +      setField(classic, effects, 'archiveConfirmation', null);
 +      setField(classic, effects, 'branchStatus', 'pending');
 +    }
-+    setField(classic, effects, 'phase', 'design');
++    setField(classic, effects, 'phase', event === 'requirements-repair' ? 'open' : 'design');
    } else if (event === 'preset-escalate') {
      if (classic.workflow !== 'hotfix' && classic.workflow !== 'tweak') {
        throw new Error(

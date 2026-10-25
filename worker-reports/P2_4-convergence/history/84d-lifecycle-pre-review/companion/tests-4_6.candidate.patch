@@ -1,0 +1,241 @@
+diff --git a/test/domains/comet-classic/comet-scripts.test.ts b/test/domains/comet-classic/comet-scripts.test.ts
+index 0d4b79c..6b2e633 100644
+--- a/test/domains/comet-classic/comet-scripts.test.ts
++++ b/test/domains/comet-classic/comet-scripts.test.ts
+@@ -7248,3 +7248,236 @@ describe('managed delivery gate runtime (0002-managed-delivery-runtime)', () =>
+     expect(knowledge.status).not.toBe(0);
+   }, 20_000);
+ });
++
++describe('post-archive closeout runtime (0003-post-archive-closeout)', () => {
++  let tmpDir: string;
++  let stateScript: string;
++  let checkScript: string;
++
++  beforeEach(async () => {
++    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'comet-p46-'));
++    await fs.mkdir(tmpDir, { recursive: true });
++    const tmpScriptsDir = path.join(tmpDir, 'scripts');
++    await fs.mkdir(tmpScriptsDir, { recursive: true });
++    for (const name of [
++      'comet-runtime.mjs', 'comet-env.mjs', 'comet-state.mjs', 'comet-check.mjs',
++      'comet-yaml-validate.mjs',
++    ]) {
++      const content = await fs.readFile(path.join(scriptsDir, name), 'utf-8');
++      const destination = path.join(tmpScriptsDir, name);
++      await fs.writeFile(destination, content.replace(/\r\n/g, '\n'));
++      await fs.chmod(destination, 0o755);
++    }
++    stateScript = path.join(tmpScriptsDir, 'comet-state.mjs');
++    checkScript = path.join(tmpScriptsDir, 'comet-check.mjs');
++    await writeFile(path.join(tmpDir, '.comet', 'config.yaml'), canonicalProjectConfig());
++    await writeFile(path.join(tmpDir, 'openspec', 'config.yaml'), 'schema: spec-driven\n');
++  });
++
++  afterEach(async () => {
++    await fs.rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
++  });
++
++  const initManaged = (change: string, env: NodeJS.ProcessEnv = {}) => {
++    const result = runNode(tmpDir, stateScript, [
++      'init', change, 'full', '--managed-delivery', '--knowledge-closeout-required', 'true',
++    ], env);
++    expect(result.status).toBe(0);
++    return result;
++  };
++
++  it('binds the run authority at managed init and refuses foreign writers; transfer is explicit (H09)', async () => {
++    initManaged('h09', { COMET_RUN_AUTHORITY: 'auth-alpha' });
++    const binding = JSON.parse(
++      await fs.readFile(path.join(tmpDir, 'openspec', 'changes', 'h09', '.comet', 'run-authority.json'), 'utf-8'),
++    );
++    expect(binding.authorityId).toBe('auth-alpha');
++    // A foreign environment cannot write the bound run…
++    const foreign = runNode(tmpDir, stateScript, ['dispatch-gate', 'h09', 'R'], { COMET_RUN_AUTHORITY: 'auth-beta' });
++    expect(foreign.status).not.toBe(0);
++    expect(foreign.stderr).toContain('run authority mismatch');
++    expect(foreign.stderr).toContain('auth-alpha');
++    // …but queries stay readable from any host.
++    const query = runNode(tmpDir, stateScript, ['get', 'h09', 'phase'], { COMET_RUN_AUTHORITY: 'auth-beta' });
++    expect(query.status).toBe(0);
++    // The transfer is performed BY the authoritative environment.
++    const transferFile = path.join(tmpDir, 'transfer.json');
++    await fs.writeFile(transferFile, JSON.stringify({ to: 'auth-beta', confirm: true }));
++    const transfer = runNode(tmpDir, stateScript, ['authority-transfer', 'h09', '--file', transferFile], { COMET_RUN_AUTHORITY: 'auth-alpha' });
++    expect(transfer.status).toBe(0);
++    const transferred = JSON.parse(
++      await fs.readFile(path.join(tmpDir, 'openspec', 'changes', 'h09', '.comet', 'run-authority.json'), 'utf-8'),
++    );
++    expect(transferred.authorityId).toBe('auth-beta');
++    expect(transferred.transfers).toHaveLength(1);
++    const oldAuthority = runNode(tmpDir, stateScript, ['dispatch-gate', 'h09', 'R'], { COMET_RUN_AUTHORITY: 'auth-alpha' });
++    expect(oldAuthority.status).not.toBe(0);
++    // A transfer launched by a foreign environment is refused.
++    initManaged('h09-b', { COMET_RUN_AUTHORITY: 'auth-alpha' });
++    await fs.writeFile(transferFile, JSON.stringify({ to: 'auth-gamma', confirm: true }));
++    const foreignTransfer = runNode(tmpDir, stateScript, ['authority-transfer', 'h09-b', '--file', transferFile], { COMET_RUN_AUTHORITY: 'auth-beta' });
++    expect(foreignTransfer.status).not.toBe(0);
++    expect(foreignTransfer.stderr).toContain('authoritative environment');
++  }, 20_000);
++
++  it('refuses an unregistered standalone managed source; actual single-owner recovery uses the fixed aggregate (H03/H06)', async () => {
++    initManaged('h03');
++    const dir = path.join(tmpDir, 'openspec', 'changes', 'h03');
++    await fs.writeFile(path.join(dir, 'proposal.md'), '# Proposal\n\nProbe.\n');
++    for (let index = 0; index < 2; index += 1) {
++      const refused = runNode(tmpDir, stateScript, ['dispatch-gate', 'h03', 'R']);
++      expect(refused.status).not.toBe(0);
++      expect(refused.stderr).toContain('UNVERIFIED');
++    }
++    // Original single-owner/concurrent WHEN/THEN remains in repository-owned
++    // delivery-cases/2_4.mjs concurrent: real default Native handlers and
++    // original P2_2 authority/collector/admission/Gate, one original Run intent.
++    expect(await fs.readFile(path.join(dir,'.comet.yaml'),'utf8')).toContain('gate_receipts: null');
++  }, 20_000);
++
++  it('registers knowledge publish operations with a fixed document UUID and idempotent recovery (H04)', async () => {
++    initManaged('h04');
++    const operation = {
++      knowledgeId: 'k-entry',
++      documentId: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
++      collection: 'engineering',
++      payloadDigest: 'a'.repeat(64),
++    };
++    const operationFile = path.join(tmpDir, 'op.json');
++    await fs.writeFile(operationFile, JSON.stringify(operation));
++    const registered = runNode(tmpDir, stateScript, ['knowledge-publish', 'h04', '--file', operationFile, '--json']);
++    expect(registered.status).toBe(0);
++    const registeredEnvelope = JSON.parse(registered.stdout);
++    expect(registeredEnvelope.data.operation.documentId).toBe('3f2504e0-4f89-11d3-9a0c-0305e82c3301');
++    expect(registeredEnvelope.data.directive.action).toBe('create');
++    // The retry (lost receipt) recovers the SAME operation and document.
++    const retry = runNode(tmpDir, stateScript, ['knowledge-publish', 'h04', '--file', operationFile, '--json']);
++    expect(retry.status).toBe(0);
++    const retryEnvelope = JSON.parse(retry.stdout);
++    expect(retryEnvelope.data.recovered).toBe(true);
++    expect(retryEnvelope.data.operation.attempts).toBe(2);
++    expect(retryEnvelope.data.operation.documentId).toBe('3f2504e0-4f89-11d3-9a0c-0305e82c3301');
++    // The same job key never changes its fixed target UUID.
++    const conflicting = { ...operation, documentId: '9f2504e0-4f89-11d3-9a0c-0305e82c3302' };
++    const conflictingFile = path.join(tmpDir, 'op-conflict.json');
++    await fs.writeFile(conflictingFile, JSON.stringify(conflicting));
++    const refused = runNode(tmpDir, stateScript, ['knowledge-publish', 'h04', '--file', conflictingFile]);
++    expect(refused.status).not.toBe(0);
++    expect(refused.stderr).toContain('fixed target UUID');
++    // A document UUID is owned by exactly one logical knowledge entry.
++    const identity = { ...operation, knowledgeId: 'k-other' };
++    const identityFile = path.join(tmpDir, 'op-identity.json');
++    await fs.writeFile(identityFile, JSON.stringify(identity));
++    const identityRefused = runNode(tmpDir, stateScript, ['knowledge-publish', 'h04', '--file', identityFile]);
++    expect(identityRefused.status).not.toBe(0);
++    expect(identityRefused.stderr).toContain('owned by exactly one logical knowledge entry');
++    // Unmanaged changes never gain the publication surface.
++    runNode(tmpDir, stateScript, ['init', 'plain', 'full']);
++    const unmanaged = runNode(tmpDir, stateScript, ['knowledge-publish', 'plain', '--file', operationFile]);
++    expect(unmanaged.status).not.toBe(0);
++    expect(unmanaged.stderr).toContain('managed delivery');
++  }, 20_000);
++
++  it('classifies remote observations: unknown is never absence and conflicts stay open (H04/H05)', async () => {
++    initManaged('h05');
++    const documentId = '5f2504e0-4f89-11d3-9a0c-0305e82c3303';
++    const operation = {
++      knowledgeId: 'k-entry',
++      documentId,
++      collection: 'engineering',
++      payloadDigest: 'b'.repeat(64),
++    };
++    const operationFile = path.join(tmpDir, 'op.json');
++    await fs.writeFile(operationFile, JSON.stringify(operation));
++    const registered = JSON.parse(
++      runNode(tmpDir, stateScript, ['knowledge-publish', 'h05', '--file', operationFile, '--json']).stdout,
++    );
++    expect(registered.data.directive.action).toBe('create');
++    // 403/timeout: the operation stays open and the directive is a readback.
++    const unknownFile = path.join(tmpDir, 'obs-unknown.json');
++    await fs.writeFile(unknownFile, JSON.stringify({ operationKey: registered.data.operation.operationKey, outcome: 'unknown' }));
++    const observedUnknown = JSON.parse(
++      runNode(tmpDir, stateScript, ['knowledge-observe', 'h05', '--file', unknownFile, '--json']).stdout,
++    );
++    expect(observedUnknown.data.operation.state).toBe('pending');
++    expect(observedUnknown.data.directive.action).toBe('reconcile-info');
++    expect(observedUnknown.data.directive.reason).toContain('not absence');
++    // A readback over different content is a conflict, not a publication.
++    const existsFile = path.join(tmpDir, 'obs-exists.json');
++    await fs.writeFile(existsFile, JSON.stringify({
++      operationKey: registered.data.operation.operationKey,
++      outcome: 'exists', revision: 'rev-1', readbackDigest: 'c'.repeat(64),
++    }));
++    const observedConflict = JSON.parse(
++      runNode(tmpDir, stateScript, ['knowledge-observe', 'h05', '--file', existsFile, '--json']).stdout,
++    );
++    expect(observedConflict.data.operation.state).toBe('conflict');
++    expect(observedConflict.data.directive.action).toBe('reconcile-readback');
++    // While the conflict is open, another revision of the entry is refused…
++    const earlyUpdate = { ...operation, payloadDigest: 'd'.repeat(64), baseRevision: 'rev-1' };
++    const earlyUpdateFile = path.join(tmpDir, 'op-early.json');
++    await fs.writeFile(earlyUpdateFile, JSON.stringify(earlyUpdate));
++    const earlyRefused = runNode(tmpDir, stateScript, ['knowledge-publish', 'h05', '--file', earlyUpdateFile]);
++    expect(earlyRefused.status).not.toBe(0);
++    expect(earlyRefused.stderr).toContain('unresolved publication conflict');
++    // …and the independent readback over the registered payload resolves it:
++    // the directive flips to record-closeout.
++    const matchedFile = path.join(tmpDir, 'obs-matched.json');
++    await fs.writeFile(matchedFile, JSON.stringify({
++      operationKey: registered.data.operation.operationKey,
++      outcome: 'exists', revision: 'rev-1', readbackDigest: 'b'.repeat(64),
++    }));
++    const matched = JSON.parse(
++      runNode(tmpDir, stateScript, ['knowledge-observe', 'h05', '--file', matchedFile, '--json']).stdout,
++    );
++    expect(matched.data.directive.action).toBe('record-closeout');
++    // A revision refresh that skips the registered revision is refused…
++    const refreshed = { ...operation, payloadDigest: 'd'.repeat(64), baseRevision: 'rev-9' };
++    const refreshedFile = path.join(tmpDir, 'op-refresh.json');
++    await fs.writeFile(refreshedFile, JSON.stringify(refreshed));
++    const refreshRefused = runNode(tmpDir, stateScript, ['knowledge-publish', 'h05', '--file', refreshedFile]);
++    expect(refreshRefused.status).not.toBe(0);
++    expect(refreshRefused.stderr).toContain('registered last revision');
++    // …while a revision building on the registered readback revision is legal.
++    const updateFile = path.join(tmpDir, 'op-update.json');
++    await fs.writeFile(updateFile, JSON.stringify(earlyUpdate));
++    const updateOp = JSON.parse(
++      runNode(tmpDir, stateScript, ['knowledge-publish', 'h05', '--file', updateFile, '--json']).stdout,
++    );
++    expect(updateOp.data.directive.action).toBe('update');
++    expect(updateOp.data.directive.lastRevision).toBe('rev-1');
++  }, 20_000);
++
++  it('never fabricates a lost Run state: the closeout entrance is recovery-required (H08)', async () => {
++    initManaged('h08');
++    const dir = path.join(tmpDir, 'openspec', 'changes', 'h08');
++    await fs.writeFile(path.join(dir, 'proposal.md'), '# Proposal\n\nProbe.\n');
++    await fs.writeFile(path.join(dir, 'tasks.md'), '# Tasks\n\n- [ ] 1.1 Probe\n');
++    await fs.writeFile(path.join(dir, 'design.md'), '---\ncomet_change: h08\nrole: technical-design\ncanonical_spec: openspec\n---\n\n# D\n');
++    await fs.writeFile(path.join(dir, 'test-intent.md'), 'cases: c1\n');
++    // A real runtime entrance (a check run) creates the Run projection…
++    expect(runNode(tmpDir, checkScript, [
++      'run', 'h08', 'build', '--local', '--', 'node', '-e', 'process.exit(0)',
++    ]).status).toBe(0);
++    const runStateFile = path.join(dir, '.comet', 'run-state.json');
++    expect(await fs.readFile(runStateFile, 'utf-8')).toContain('"runId"');
++    // …losing it afterwards is recovery-required, never a fabricated run.
++    await fs.rm(runStateFile);
++    const receiptFile = path.join(tmpDir, 'kc.json');
++    await fs.writeFile(receiptFile, JSON.stringify({
++      targetKind: 'file',
++      target: 'knowledge/entry.md',
++      revision: 'r1',
++      readbackDigest: 'e'.repeat(64),
++      execution: 'driver-exec',
++      recordedAt: new Date().toISOString(),
++    }));
++    const refused = runNode(tmpDir, stateScript, ['knowledge-closeout', 'h08', '--file', receiptFile]);
++    expect(refused.status).not.toBe(0);
++    expect(refused.stderr).toContain('Run state file is missing');
++    expect(refused.stderr).toContain('recovery-required');
++    // The refused entrance mutated nothing: the closeout seat stays empty.
++    const yaml = await fs.readFile(path.join(dir, '.comet.yaml'), 'utf-8');
++    expect(yaml).toContain('knowledge_closeout: null');
++  }, 20_000);
++});

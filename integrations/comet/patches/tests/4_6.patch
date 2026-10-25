@@ -1,8 +1,8 @@
 diff --git a/test/domains/comet-classic/comet-scripts.test.ts b/test/domains/comet-classic/comet-scripts.test.ts
-index f9d97a7..7da7287 100644
+index 0d4b79c..6b2e633 100644
 --- a/test/domains/comet-classic/comet-scripts.test.ts
 +++ b/test/domains/comet-classic/comet-scripts.test.ts
-@@ -7199,3 +7199,241 @@ describe('managed delivery gate runtime (0002-managed-delivery-runtime)', () =>
+@@ -7248,3 +7248,236 @@ describe('managed delivery gate runtime (0002-managed-delivery-runtime)', () =>
      expect(knowledge.status).not.toBe(0);
    }, 20_000);
  });
@@ -78,24 +78,19 @@ index f9d97a7..7da7287 100644
 +    expect(foreignTransfer.stderr).toContain('authoritative environment');
 +  }, 20_000);
 +
-+  it('keeps one open owner per job key: a second claim recovers the original dispatch (H03/H06)', async () => {
++  it('refuses an unregistered standalone managed source; actual single-owner recovery uses the fixed aggregate (H03/H06)', async () => {
 +    initManaged('h03');
 +    const dir = path.join(tmpDir, 'openspec', 'changes', 'h03');
 +    await fs.writeFile(path.join(dir, 'proposal.md'), '# Proposal\n\nProbe.\n');
-+    const first = runNode(tmpDir, stateScript, ['dispatch-gate', 'h03', 'R']);
-+    expect(first.status).toBe(0);
-+    const firstBinding = JSON.parse(first.stdout.trim().split('\n').pop() ?? '{}');
-+    const second = runNode(tmpDir, stateScript, ['dispatch-gate', 'h03', 'R']);
-+    expect(second.status).toBe(0);
-+    expect(second.stdout).toContain('"recovered":true');
-+    const secondBinding = JSON.parse(second.stdout.trim().split('\n').pop() ?? '{}');
-+    expect(secondBinding.execution).toBe(firstBinding.execution);
-+    expect(secondBinding.attempt).toBe(firstBinding.attempt);
-+    const registry = JSON.parse(
-+      await fs.readFile(path.join(dir, '.comet', 'gate-dispatches.json'), 'utf-8'),
-+    );
-+    expect(registry.dispatches).toHaveLength(1);
-+    expect(registry.dispatches[0].state).toBe('open');
++    for (let index = 0; index < 2; index += 1) {
++      const refused = runNode(tmpDir, stateScript, ['dispatch-gate', 'h03', 'R']);
++      expect(refused.status).not.toBe(0);
++      expect(refused.stderr).toContain('UNVERIFIED');
++    }
++    // Original single-owner/concurrent WHEN/THEN remains in repository-owned
++    // delivery-cases/2_4.mjs concurrent: real default Native handlers and
++    // original P2_2 authority/collector/admission/Gate, one original Run intent.
++    expect(await fs.readFile(path.join(dir,'.comet.yaml'),'utf8')).toContain('gate_receipts: null');
 +  }, 20_000);
 +
 +  it('registers knowledge publish operations with a fixed document UUID and idempotent recovery (H04)', async () => {

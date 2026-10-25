@@ -1,8 +1,14 @@
 diff --git a/domains/comet-classic/classic-archive.ts b/domains/comet-classic/classic-archive.ts
-index da4e095..7246ebf 100644
+index 355bec1..7c7dadd 100644
 --- a/domains/comet-classic/classic-archive.ts
 +++ b/domains/comet-classic/classic-archive.ts
-@@ -14,6 +14,7 @@ import {
+@@ -1,4 +1,5 @@
+ import { managedOpenSpecInvocation } from './classic-openspec-binding.js';
++import { requireRunAuthority } from './classic-gate-runtime.js';
+ import { prepareArchiveInputBridge, registerArchiveInputBridge, archivedGateInputs } from './classic-archive-input-bridge.js';
+ import { evaluateGatePremises, computeGateInputs, parseGateReceipts, type GateId, type GateInputs } from './classic-gate-runtime.js';
+ import { createHash } from 'crypto';
+@@ -17,6 +18,7 @@ import {
    inspectClassicActiveChangeDirectory,
    openSpecChangeNameError,
  } from './classic-paths.js';
@@ -10,7 +16,7 @@ index da4e095..7246ebf 100644
  import { ensureClassicRuntimeRun, transitionClassicRuntimeRun } from './classic-runtime-run.js';
  import { appendClassicStateEvent } from './classic-state-events.js';
  import { readClassicState, withClassicStateLock, writeClassicState } from './classic-store.js';
-@@ -339,6 +340,9 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args) => {
+@@ -342,6 +344,9 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args, options
      const today = new Date().toISOString().slice(0, 10);
      let archiveName = `${today}-${change}`;
      let archiveDir = path.join(layout.archiveDir, archiveName);
@@ -20,7 +26,15 @@ index da4e095..7246ebf 100644
  
      output.stderr.push(`=== Comet Archive: ${change} ===`);
  
-@@ -581,6 +585,11 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args) => {
+@@ -566,6 +571,7 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args, options
+       }
+ 
+       await withClassicStateLock(archiveDir, async () => {
++        await requireRunAuthority(archiveDir);
+         const archivedProjection = await readClassicState(archiveDir);
+         if (!archivedProjection.classic || !archivedProjection.run) {
+           throw new ArchiveFailure(red('  [FAIL] archived state projection is incomplete'));
+@@ -622,6 +628,11 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args, options
              archiveTransition.classic.handoffContext,
            ),
          };
@@ -32,7 +46,7 @@ index da4e095..7246ebf 100644
          let transitionedRun = archivedProjection.run;
          if (
            archivedProjection.run.currentStep !== 'completed' ||
-@@ -615,7 +624,11 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args) => {
+@@ -656,7 +667,11 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args, options
          const completedRun: RunState = {
            ...transitionedRun,
            pending: null,
@@ -45,7 +59,7 @@ index da4e095..7246ebf 100644
          };
          await writeClassicState(archiveDir, {
            classic: archivedClassic,
-@@ -635,6 +648,13 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args) => {
+@@ -676,6 +691,13 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args, options
        output.stderr.push(green('  [OK] archived: true'));
        output.stepsOk += 1;
        output.stepsTotal += 1;
@@ -59,7 +73,7 @@ index da4e095..7246ebf 100644
      } else {
        if (!projection.run) {
          throw new ArchiveFailure(
-@@ -685,7 +705,15 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args) => {
+@@ -726,7 +748,15 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args, options
      if (!dryRun) {
        const delivery = await readClassicDelivery(layout.projectRoot, archiveDir);
        if (['complete', 'local-verified'].includes(delivery.verification.status)) {
@@ -115,10 +129,10 @@ index 235b7b7..5300c4b 100644
          throw error;
        }
 diff --git a/domains/comet-classic/classic-gate-runtime.ts b/domains/comet-classic/classic-gate-runtime.ts
-index 9dcc161..2ea1333 100644
+index a49d567..bd64a12 100644
 --- a/domains/comet-classic/classic-gate-runtime.ts
 +++ b/domains/comet-classic/classic-gate-runtime.ts
-@@ -16,6 +16,7 @@
+@@ -17,6 +17,7 @@ import { archivedGateInputs } from './classic-archive-input-bridge.js';
  // (managed_delivery: true in .comet.yaml).
  import { createHash } from 'node:crypto';
  import { promises as fs, type Dirent } from 'node:fs';
@@ -126,7 +140,7 @@ index 9dcc161..2ea1333 100644
  import path from 'path';
  import {
    readOptionalEngineRunText,
-@@ -632,3 +633,279 @@ export function managedPremisesBlocked(
+@@ -911,3 +912,278 @@ export function managedPremisesBlocked(
  export async function knowledgeTargetDigest(projectRoot: string, target: string): Promise<string | null> {
    return hashProjectFile(projectRoot, path.resolve(projectRoot, target));
  }
@@ -153,16 +167,15 @@ index 9dcc161..2ea1333 100644
 +
 +// Snake-case document record -> the closeout predicate input (shared by the
 +// callers that read .comet.yaml directly instead of the parsed projection).
-+export function closeoutPredicateFromDocument(record: Record<string, unknown>): {
-+  managedDelivery: boolean;
-+  knowledgeCloseoutRequired: boolean;
-+  knowledgeCloseout: unknown;
++export function closeoutPredicateFromDocument(record: Record<string, unknown>, actualRunId?: string): {
++  managedDelivery: boolean; knowledgeCloseoutRequired: boolean; knowledgeCloseout: unknown;
++  gateReceipts: unknown; deliveryPolicy: unknown; gateRunId: string | null;
 +} {
-+  return {
-+    managedDelivery: record.managed_delivery === true,
++  return { managedDelivery: record.managed_delivery === true,
 +    knowledgeCloseoutRequired: record.knowledge_closeout_required === true,
 +    knowledgeCloseout: record.knowledge_closeout ?? null,
-+  };
++    gateReceipts: record.gate_receipts ?? null, deliveryPolicy: record.delivery_policy ?? null,
++    gateRunId: typeof actualRunId === 'string' && record.run_id === actualRunId ? actualRunId : null };
 +}
 +
 +// ---- knowledge publish operations (0003, H04/H05) ---------------------------
@@ -471,10 +484,41 @@ index 2e5ce7c..f65a21f 100644
      const diagnostic = diagnosticFromProjection(inspection.target, name, projection);
      const change: ActiveProbeChange = {
 diff --git a/domains/comet-classic/classic-runtime-run.ts b/domains/comet-classic/classic-runtime-run.ts
-index 68e0dd4..281fa59 100644
+index c657ab6..0d08b56 100644
 --- a/domains/comet-classic/classic-runtime-run.ts
 +++ b/domains/comet-classic/classic-runtime-run.ts
-@@ -434,7 +434,14 @@ async function reconcileClassicRuntimeRunLocked(
+@@ -1,5 +1,6 @@
+ import { createHash } from 'node:crypto';
+ import { stableStringify } from './classic-gate-runtime.js';
++import { requireRunAuthority } from './classic-gate-runtime.js';
+ import { managedDeliveryHost } from './classic-managed-host.js';
+ import { syncGateInvalidations } from './classic-gate-runtime.js';
+ import { discoverClassicProject } from './classic-layout.js';
+@@ -314,6 +315,7 @@ async function loadClassicRuntimePackage(root: string) {
+ 
+ export async function ensureClassicRuntimeRun(changeDir: string): Promise<ClassicRunContext> {
+   const root = await classicRuntimeRoot();
++  await requireRunAuthority(changeDir);
+   const prior = await readClassicState(changeDir, { migrate: false });
+   if (prior.run && prior.classic?.managedDelivery && managedDeliveryHost()) await syncGateInvalidations(changeDir, await discoverClassicProject(changeDir));
+   const ensured = await ensureClassicRun(changeDir, {
+@@ -386,6 +388,7 @@ export async function validateClassicRuntimeRun(
+   changeDir: string,
+   existingProjection?: ClassicStateProjection,
+ ): Promise<ClassicRunContext> {
++  await requireRunAuthority(changeDir);
+   if (managedDeliveryHost()) await syncGateInvalidations(changeDir, await discoverClassicProject(changeDir));
+   const projection = await readClassicState(changeDir, { migrate: false });
+   const validated = await loadValidatedClassicRuntime(changeDir, projection);
+@@ -461,6 +464,7 @@ async function reconcileClassicRuntimeRunLocked(
+   changeDir: string,
+   existingProjection?: ClassicStateProjection,
+ ): Promise<ClassicRuntimeReconciliation> {
++  await requireRunAuthority(changeDir);
+   if (managedDeliveryHost()) await syncGateInvalidations(changeDir, await discoverClassicProject(changeDir));
+   const projection = await readClassicState(changeDir, { migrate: false });
+   if (existingProjection?.run && existingProjection.run.runId !== projection.run?.runId) {
+@@ -492,7 +496,14 @@ async function reconcileClassicRuntimeRunLocked(
      ...validated.run,
      currentStep,
      iteration: validated.run.iteration + 1,
@@ -490,7 +534,7 @@ index 68e0dd4..281fa59 100644
    };
    await writeClassicState(changeDir, {
      classic: validated.classic,
-@@ -501,7 +508,14 @@ async function transitionClassicRuntimeRunLocked(
+@@ -562,7 +573,14 @@ async function transitionClassicRuntimeRunLocked(
      ...run,
      currentStep,
      iteration: run.iteration + 1,
@@ -507,19 +551,16 @@ index 68e0dd4..281fa59 100644
  
    await writeClassicState(changeDir, {
 diff --git a/domains/comet-classic/classic-state-command.ts b/domains/comet-classic/classic-state-command.ts
-index b3217fc..37ef2e7 100644
+index 1a43a54..17b4260 100644
 --- a/domains/comet-classic/classic-state-command.ts
 +++ b/domains/comet-classic/classic-state-command.ts
-@@ -50,6 +50,8 @@ import {
- } from './classic-transitions.js';
- import { readRunState } from '../../domains/engine/state.js';
- import {
-+  bindRunAuthority,
-+  closeoutPredicateFromDocument,
-   computeGateInputs,
-   evaluateGatePremises,
-   GATE_POLICY_VERSION,
-@@ -57,15 +59,25 @@ import {
+@@ -1,4 +1,5 @@
+ import { ManagedCompletionIntegrityError } from './classic-runtime-run.js';
++import { bindRunAuthority, closeoutPredicateFromDocument } from './classic-gate-runtime.js';
+ import { ensureClassicRuntimeRun } from './classic-runtime-run.js';
+ import { requireManagedDeliveryHost, admitManagedPacket, ManagedSourceUnverifiedError } from './classic-managed-host.js';
+ import { measureCometGitCommand } from '../../platform/process/runtime-metrics.js';
+@@ -70,15 +71,25 @@ import {
    GATE_ROLES,
    isGateId,
    knowledgeCloseoutBlocked,
@@ -545,7 +586,7 @@ index b3217fc..37ef2e7 100644
  } from './classic-gate-runtime.js';
  import { appendTrajectory, readTrajectory } from '../../domains/engine/run-store.js';
  import {
-@@ -762,6 +774,13 @@ async function init(
+@@ -781,6 +792,13 @@ async function init(
    });
    if (isolation !== null) document.set('bound_branch', boundBranch);
    await atomicWrite(file, document.toString());
@@ -559,59 +600,32 @@ index b3217fc..37ef2e7 100644
    output.stdout.push(green(`Initialized: ${label}/.comet.yaml (workflow=${workflow})`));
  }
  
-@@ -2048,7 +2067,21 @@ async function dispatchGate(output: CommandOutput, name: string, gate: string):
+@@ -2116,7 +2134,9 @@ async function dispatchGate(output: CommandOutput, name: string, gate: string):
    if (record.managed_delivery !== true) {
      fail(`ERROR: gate dispatching requires managed delivery; '${name}' is not managed`);
    }
 -  if (record.archived === true) fail(`ERROR: '${name}' is archived; gate dispatching is closed`);
-+  // H01/H04: the post-archive closeout window stays open for the knowledge
-+  // publisher role — the Runtime K dispatch that registers an authorized
-+  // publication is exactly how a pending closeout proceeds on the SAME run.
-+  if (
-+    record.archived === true &&
-+    !(gate === 'K' && knowledgeCloseoutBlocked(closeoutPredicateFromDocument(record)))
-+  ) {
-+    fail(`ERROR: '${name}' is archived; gate dispatching is closed`);
-+  }
-+  try {
-+    await requireRunAuthority(directory);
-+  } catch (error) {
-+    if (error instanceof RunAuthorityError) fail(error.message);
-+    throw error;
-+  }
++  const actualRunId = (await readRunState(directory))?.runId;
++  if (record.archived === true && !(gate === 'Kt' && knowledgeCloseoutBlocked(closeoutPredicateFromDocument(record, actualRunId)))) fail(`ERROR: '${name}' is archived; gate dispatching is closed`);
++  await requireRunAuthority(directory);
    await withClassicStateLock(directory, async () => {
-     const registry = await readGateDispatches(directory);
-     const inputs = await currentGateInputs(directory, record, gate);
-@@ -2057,6 +2090,28 @@ async function dispatchGate(output: CommandOutput, name: string, gate: string):
-         `ERROR: gate ${gate} inputs are incomplete:\n  ${inputs.missing.join('\n  ')}\n  Declare the artifacts (design_doc / test_intent / plan) before dispatching.`,
-       );
-     }
-+    // H03/H06: one open owner per job key. A second claim of the SAME
-+    // (gate, input version) recovers the original dispatch instead of
-+    // minting a duplicate attempt; the state lock makes the check atomic,
-+    // so two concurrent sessions converge on one open operation.
-+    const openDispatch = registry.dispatches.find(
-+      (entry) => entry.gate === gate && entry.inputDigest === inputs.digest && entry.state === 'open',
-+    );
+     requireManagedDeliveryHost();
+     if ((await readRunState(directory))?.status === 'completed') throw new CommandFailure('RUN_COMPLETED: completed product Run cannot dispatch a new gate', 2, { code: 'RUN_COMPLETED', message: 'Completed product lifecycle is immutable' });
+@@ -2136,6 +2156,13 @@ async function dispatchGate(output: CommandOutput, name: string, gate: string):
+       classic: { ...gateStateInputFrom(freshRecord), managedDelivery: true }, run: await readRunState(directory),
+       action: 'enter-design', dependencyOf: gate });
+     if (!dependencies.allowed) fail(`UNVERIFIED: prerequisite gates for ${gate} are not current: ${dependencies.details.join('; ')}`);
++    const openDispatch = registry.dispatches.find((entry) => entry.gate === gate && entry.inputDigest === inputs.digest && entry.state === 'open');
 +    if (openDispatch) {
 +      output.data = { change: name, gate, dispatch: openDispatch, recovered: true };
-+      output.stdout.push(
-+        JSON.stringify({
-+          execution: openDispatch.execution,
-+          attempt: openDispatch.attempt,
-+          role: openDispatch.role,
-+          inputDigest: openDispatch.inputDigest,
-+          dependsOn: openDispatch.dependsOn,
-+          recovered: true,
-+        }),
-+      );
-+      output.stderr.push(green(`[RECOVERED] gate ${gate} open execution ${openDispatch.execution} (attempt ${openDispatch.attempt}); the same job_key is already claimed`));
++      output.stdout.push(JSON.stringify({ execution: openDispatch.execution, attempt: openDispatch.attempt, role: openDispatch.role, inputDigest: openDispatch.inputDigest, dependsOn: openDispatch.dependsOn, recovered: true }));
++      output.stderr.push(green(`[RECOVERED] gate ${gate} open execution ${openDispatch.execution}; same job_key`));
 +      return;
 +    }
      const priorForVersion = registry.dispatches.filter(
        (entry) => entry.gate === gate && entry.inputDigest === inputs.digest,
      );
-@@ -2128,6 +2183,12 @@ async function acceptGate(
+@@ -2240,6 +2267,12 @@ async function acceptGate(
      fail('ERROR: a gate rejection must carry structured findings (the rework route needs them)');
    }
    const { directory } = await stateFile(name);
@@ -624,34 +638,38 @@ index b3217fc..37ef2e7 100644
    await withClassicStateLock(directory, async () => {
      const registry = await readGateDispatches(directory);
      const dispatch = registry.dispatches.find(
-@@ -2223,6 +2284,26 @@ async function recordKnowledgeCloseout(
+@@ -2262,7 +2295,9 @@ async function acceptGate(
+   const packet: import('./classic-managed-host.js').ManagedRecord = { ...rawPacket, dispatch: originalIntent.protectedDispatch };
+   const collected = await host.authority.collectResult(packet);
+   if (!collected.ok) fail(`UNVERIFIED: protected source collection refused (${collected.error})`);
++  await requireRunAuthority(directory);
+   await withClassicStateLock(directory, async () => {
++    await requireRunAuthority(directory);
+     await syncGateInvalidationsLocked(directory, classicCommandProjectRoot());
+     const registry = await readGateDispatches(directory);
+     const dispatch = registry.dispatches.find((entry) => entry.execution === originalIntent.execution && entry.attempt === originalIntent.attempt && entry.gate === gate);
+@@ -2319,6 +2354,11 @@ async function recordKnowledgeCloseout(
+     fail(error instanceof Error ? error.message : String(error));
    }
    if (!closeout) fail('ERROR: knowledge closeout receipt is empty');
++  const authorityLocation = await stateFile(name);
++  await requireRunAuthority(authorityLocation.directory);
++  const authorityProjection = await readClassicState(authorityLocation.directory, { migrate: false });
++  const authorityRecord = (await readDocument(authorityLocation.file)).toJS() as Record<string, unknown>;
++  if (!authorityProjection.run && typeof authorityRecord.run_id === 'string') fail('RECOVERY_REQUIRED: original Run state file is missing; restore it, never create another Run (recovery-required, H08)');
+   if ((await readField(name, 'managed_delivery')) === 'true') fail('UNVERIFIED: generic/file-K closeout is historical only; accept separate protected Kp/Kt source results');
    const { directory } = await stateFile(name);
-+  try {
-+    await requireRunAuthority(directory);
-+  } catch (error) {
-+    if (error instanceof RunAuthorityError) fail(error.message);
-+    throw error;
-+  }
-+  // H08: a run-less state (run_id recorded, Run state file lost) is
-+  // recovery-required — the entrance refuses before it can mutate anything,
-+  // and the original Run is never fabricated from an empty projection.
-+  {
-+    const projection = await readClassicState(directory, { migrate: false });
-+    const { file: stateDocument } = await stateFile(name);
-+    const record = (await readDocument(stateDocument)).toJS() as Record<string, unknown>;
-+    const recordedRunId = typeof record.run_id === 'string' && record.run_id !== 'null' ? record.run_id : null;
-+    if (projection.classic && !projection.run && recordedRunId) {
-+      fail(
-+        `ERROR: Classic Run state file is missing while run_id ${recordedRunId} is recorded in ${directory}/.comet.yaml; restore the original workspace state before recording closeouts — the Run is never fabricated (recovery-required, H08)`,
-+      );
-+    }
-+  }
    await withClassicStateLock(directory, async () => {
-     if (closeout.targetKind === 'file') {
-       // D06: the Runtime reads the target back itself before recording; an
-@@ -2253,6 +2334,39 @@ async function recordKnowledgeCloseout(
+@@ -2339,7 +2379,7 @@ async function recordKnowledgeCloseout(
+       // Runtime-issued K dispatch — the driver registers the publication.
+       const registry = await readGateDispatches(directory);
+       const dispatch = registry.dispatches.find(
+-        (entry) => entry.gate === 'K' && entry.execution === closeout.execution,
++        (entry) => entry.gate === 'Kt' && entry.execution === closeout.execution,
+       );
+       if (!dispatch) {
+         fail(
+@@ -2351,6 +2391,39 @@ async function recordKnowledgeCloseout(
          dispatch.verdict = 'pass';
          await writeGateDispatches(directory, registry);
        }
@@ -691,7 +709,7 @@ index b3217fc..37ef2e7 100644
      }
      const projection = await readClassicState(directory, { migrate: false });
      if (!projection.classic) fail('ERROR: Classic state is missing');
-@@ -2286,6 +2400,254 @@ async function recordKnowledgeCloseout(
+@@ -2384,6 +2457,254 @@ async function recordKnowledgeCloseout(
    });
  }
  
@@ -946,7 +964,7 @@ index b3217fc..37ef2e7 100644
  function required(args: string[], count: number, usage: string): void {
    if (args.length < count) fail(usage);
  }
-@@ -2310,6 +2672,9 @@ const MUTATING_STATE_COMMANDS = new Set([
+@@ -2408,6 +2729,9 @@ const MUTATING_STATE_COMMANDS = new Set([
    'dispatch-gate',
    'accept-gate',
    'knowledge-closeout',
@@ -956,7 +974,7 @@ index b3217fc..37ef2e7 100644
  ]);
  
  async function assertStateCommandWritable(subcommand: string | undefined): Promise<void> {
-@@ -2573,6 +2938,21 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
+@@ -2672,6 +2996,21 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
            fail('Usage: comet state knowledge-closeout <change-name> --file <receipt.json>');
          }
          await recordKnowledgeCloseout(output, rest[0], rest[2]);
