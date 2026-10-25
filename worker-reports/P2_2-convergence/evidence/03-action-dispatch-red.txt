@@ -1,0 +1,230 @@
+TAP version 13
+# Subtest: A05: an envelope with no authority-issued dispatch is refused as an unregistered source, audit kept
+ok 1 - A05: an envelope with no authority-issued dispatch is refused as an unregistered source, audit kept
+  ---
+  duration_ms: 2.936875
+  type: 'test'
+  ...
+# Subtest: A05: a self-declared role label or origin string grants nothing
+ok 2 - A05: a self-declared role label or origin string grants nothing
+  ---
+  duration_ms: 0.263458
+  type: 'test'
+  ...
+# Subtest: 2.2.c: a forged dispatch record (fixture or worker-built) fails the launcher integrity check
+ok 3 - 2.2.c: a forged dispatch record (fixture or worker-built) fails the launcher integrity check
+  ---
+  duration_ms: 0.890375
+  type: 'test'
+  ...
+# Subtest: A06: the builder execution cannot sign acceptance evidence (identity conflict)
+ok 4 - A06: the builder execution cannot sign acceptance evidence (identity conflict)
+  ---
+  duration_ms: 0.227125
+  type: 'test'
+  ...
+# Subtest: A06: verifier evidence is admitted only when pinned to the dispatch the launcher issued
+ok 5 - A06: verifier evidence is admitted only when pinned to the dispatch the launcher issued
+  ---
+  duration_ms: 0.574833
+  type: 'test'
+  ...
+# Subtest: A06: the same execution identity cannot issue evidence twice (duplicate issuance refused)
+ok 6 - A06: the same execution identity cannot issue evidence twice (duplicate issuance refused)
+  ---
+  duration_ms: 0.187875
+  type: 'test'
+  ...
+# Subtest: receipts bound to an old policy digest are refused (STALE_POLICY)
+ok 7 - receipts bound to an old policy digest are refused (STALE_POLICY)
+  ---
+  duration_ms: 0.158709
+  type: 'test'
+  ...
+# Subtest: receipts bound to an old candidate input digest are refused (STALE_CANDIDATE)
+ok 8 - receipts bound to an old candidate input digest are refused (STALE_CANDIDATE)
+  ---
+  duration_ms: 0.1315
+  type: 'test'
+  ...
+# Subtest: receipts observed in a different environment are refused (STALE_ENVIRONMENT)
+ok 9 - receipts observed in a different environment are refused (STALE_ENVIRONMENT)
+  ---
+  duration_ms: 0.145708
+  type: 'test'
+  ...
+# Subtest: expired envelopes are refused
+ok 10 - expired envelopes are refused
+  ---
+  duration_ms: 0.167
+  type: 'test'
+  ...
+# Subtest: A18: a pass claim without real observation data is refused at admission
+ok 11 - A18: a pass claim without real observation data is refused at admission
+  ---
+  duration_ms: 0.202541
+  type: 'test'
+  ...
+# Subtest: A18: a truthful unverified envelope (capability missing, real probe log attached) is admitted to block the gate
+ok 12 - A18: a truthful unverified envelope (capability missing, real probe log attached) is admitted to block the gate
+  ---
+  duration_ms: 0.129667
+  type: 'test'
+  ...
+# Subtest: B03: test-author execution evidence is admitted only as authoring self-check
+ok 13 - B03: test-author execution evidence is admitted only as authoring self-check
+  ---
+  duration_ms: 0.121333
+  type: 'test'
+  ...
+# Subtest: B07: imported reports with an incompatible contract version are refused explicitly, never field-fabricated
+ok 14 - B07: imported reports with an incompatible contract version are refused explicitly, never field-fabricated
+  ---
+  duration_ms: 1.0185
+  type: 'test'
+  ...
+# Subtest: A19 (local half): the launch authority never exposes its signing secret
+ok 15 - A19 (local half): the launch authority never exposes its signing secret
+  ---
+  duration_ms: 1.230458
+  type: 'test'
+  ...
+# Subtest: 2.2.c: a worker process that does not inherit the launcher secret cannot mint a dispatch (real spawnSync)
+ok 16 - 2.2.c: a worker process that does not inherit the launcher secret cannot mint a dispatch (real spawnSync)
+  ---
+  duration_ms: 93.153666
+  type: 'test'
+  ...
+# Subtest: envelopeDigest binds envelope content deterministically
+ok 17 - envelopeDigest binds envelope content deterministically
+  ---
+  duration_ms: 0.187667
+  type: 'test'
+  ...
+# Subtest: protected managed admission cannot be downgraded by worker profile flags or legacy dispatch
+ok 18 - protected managed admission cannot be downgraded by worker profile flags or legacy dispatch
+  ---
+  duration_ms: 0.209541
+  type: 'test'
+  ...
+# Subtest: dispatch integrity binds the complete validated ActionBinding rather than silently discarding it
+not ok 19 - dispatch integrity binds the complete validated ActionBinding rather than silently discarding it
+  ---
+  duration_ms: 2
+  type: 'test'
+  location: '<managed-worktree>/test/delivery-evidence.test.js:393:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + undefined
+    - {
+    -   action: 'verify-case',
+    -   allowedPaths: [
+    -     '.whitebox'
+    -   ],
+    -   allowedTools: [
+    -     'read_file'
+    -   ],
+    -   attempt: 1,
+    -   environmentDigest: '3274dbb925222f77c6e73069769990b06e0edf98063b7e47bfcd375b4de039f1',
+    -   epoch: 1,
+    -   execution: 'exec-verifier-1',
+    -   gate: 'V',
+    -   inputDigest: '88b8302d9dde689abcf157a9226a0044262c7ad93c011acb630e19057abd0d7b',
+    -   inputs: [
+    -     {
+    -       digest: 'dda18a0e21ae47c53b4309434cbc02ae8bf764fa83a6defbb719431242722aa7',
+    -       name: 'candidate',
+    -       ref: 'src/app.js'
+    -     }
+    -   ],
+    -   methods: [
+    -     {
+    -       digest: '4221470b0b513474586f573df82fbe739f6353a4b89a22b4e19c23727d2a39fc',
+    -       name: 'whitebox-verify',
+    -       ref: '.agents/skills/whitebox-verify/SKILL.md',
+    -       version: '1.0.0'
+    -     }
+    -   ],
+    -   outputs: [
+    -     {
+    -       name: 'report',
+    -       ref: '.whitebox/report.json'
+    -     }
+    -   ],
+    -   policyDigest: '7d5f76269cc39de60ca966097d31feb14c703c71487dafa137afdd486635b60c',
+    -   profile: 'comet-managed-v2',
+    -   revision: 'revision-1',
+    -   role: 'verifier',
+    -   run: 'run-1',
+    -   runnerId: 'runner-1',
+    -   schemaVersion: 1,
+    -   workPackage: {
+    -     id: 'wp-1',
+    -     taskIds: [
+    -       '2.2.a'
+    -     ]
+    -   }
+    - }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    schemaVersion: 1
+    profile: 'comet-managed-v2'
+    runnerId: 'runner-1'
+    run: 'run-1'
+    action: 'verify-case'
+    gate: 'V'
+    execution: 'exec-verifier-1'
+    role: 'verifier'
+    revision: 'revision-1'
+    attempt: 1
+    epoch: 1
+    inputDigest: '88b8302d9dde689abcf157a9226a0044262c7ad93c011acb630e19057abd0d7b'
+    policyDigest: '7d5f76269cc39de60ca966097d31feb14c703c71487dafa137afdd486635b60c'
+    environmentDigest: '3274dbb925222f77c6e73069769990b06e0edf98063b7e47bfcd375b4de039f1'
+    workPackage:
+      id: 'wp-1'
+      taskIds:
+        0: '2.2.a'
+    methods:
+      0:
+        name: 'whitebox-verify'
+        version: '1.0.0'
+        ref: '.agents/skills/whitebox-verify/SKILL.md'
+        digest: '4221470b0b513474586f573df82fbe739f6353a4b89a22b4e19c23727d2a39fc'
+    allowedPaths:
+      0: '.whitebox'
+    allowedTools:
+      0: 'read_file'
+    inputs:
+      0:
+        name: 'candidate'
+        ref: 'src/app.js'
+        digest: 'dda18a0e21ae47c53b4309434cbc02ae8bf764fa83a6defbb719431242722aa7'
+    outputs:
+      0:
+        name: 'report'
+        ref: '.whitebox/report.json'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<managed-worktree>/test/delivery-evidence.test.js:396:10)
+    Test.runInAsyncScope (node:async_hooks:213:14)
+    Test.run (node:internal/test_runner/test:1106:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+    Test.postRun (node:internal/test_runner/test:1235:19)
+    Test.run (node:internal/test_runner/test:1163:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:788:7)
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 18
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 220.820458

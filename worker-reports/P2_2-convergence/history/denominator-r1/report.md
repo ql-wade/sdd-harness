@@ -1,0 +1,15 @@
+# P2_2 execution denominator correction
+
+This is a construction artifact for independent review, not whole-task acceptance. Parent commit `643325e68bf28c9e6709a33edd324cc871d8bc5b` and its original 53-file manifest, input manifest, reports and raw audit evidence remain unchanged. This history and CURRENT.json supersede only the current review pointer.
+
+The original public Gate accepted one authenticated subprocess assertion while the frozen TestContract required five. The first RED reproduces that exact positive launch → raw bytes → protocol-only protected source → admission → completed independent review chain, with a real passing child and a failing outer assertion. No missing dependency or reporter failure is counted as RED. A second behavioral RED reproduces one entry repeated five times passing the new sum-only check.
+
+`gate.js` now counts only passing, independently admitted observations whose case, reciprocal check and actual command belong to the frozen mandatory graph. It reuses P2_1 evaluateExecutionDenominator on authenticated effective counts; it does not fabricate or parse a replacement TAP transcript. The declared totalCases stays frozen. Repeated execution, collection, envelope, raw report, raw result or launch identities block and never add counts. Multiple check declarations covering the same observation cannot multiply executions. Existing GateReceipt shape and single-controller ownership remain unchanged.
+
+The real child command uses one fixed five-example integer-parsing fixture. Runs of one or four omit required examples; five executes all. The signed protocol-port fixture tests binding and counting only, not business sufficiency, OS protection, method application or deployed source qualification. A deliberately hostile port can rewrap the same raw report in another launch; Gate rejects that duplication. No live source/key/service is exercised.
+
+Regressions cover 1/5 and 4/5 blocked, 5/5 passing, five distinct real executions passing, four distinct executions blocked, repeated entry/collection/execution/raw evidence blocked, unrelated case and incorrect command contributing zero, and repeated coverage declarations contributing once. All temporary child fixtures clean up in finally. Initial RED/GREEN transcripts precede the final fixed-example fixture refinement and remain preserved; final combined execution records current input hashes and actual process timing.
+
+Commands use Node22.13.1 and explicit `--test --test-reporter=tap`. P2_2 evidence/Gate/original2_2:58/58. Full P2_1 baseline/TestContract/original2_1:61/61. Final combined:119/119, exit0, no skips. The 2_2 user line, schemas, lock, adapters, Comet and root task state were untouched. No unrelated full-repository rerun; original repository/check failures remain in the prior report. Original raw logs live in ignored non-distribution storage; normalized logs and both hashes are recorded here.
+
+Actual Runner/OS/key isolation still requires I02/P1_3. This does not close P2_2 overall, register a source or sign a Journey; a legal individual gate can still pass for Comet to consume. Root owns independent review and acceptance.
