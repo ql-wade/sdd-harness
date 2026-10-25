@@ -210,10 +210,10 @@
 
 ### Task P1_3: 原任务 1.3 — 验证 Comet 单主控模式、受管驱动、OpenSpec 接入、不可省略检查集合、独立验证回执和唯一 closeout owner（TeamAI 只验证分发）；真实渠道探针覆盖编辑/Shell/MCP（F05/F07/A09）。失败 NO-GO，不扩建第二调度器。
 
-**Files:** lib/adapters/comet.js, lib/adapters/harness.js, test/comet-driver.test.js, openspec/changes/delivery-foundation-rearchitecture/host-probes, test/delivery-cases/1_3.mjs, lib/adapters/comet-executor.js, test/comet-execution-binding.test.js
+**Files:** lib/adapters/comet.js, lib/adapters/harness.js, test/comet-driver.test.js, openspec/changes/delivery-foundation-rearchitecture/host-probes, test/delivery-cases/1_3.mjs, lib/adapters/comet-executor.js, test/comet-execution-binding.test.js, mcp-capabilities.yaml, .mcp.json, tools/register-mcps.mjs
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
 **Dependencies:** P1_2, I02
-**Owns:** lib/adapters/comet.js, lib/adapters/harness.js, test/comet-driver.test.js, openspec/changes/delivery-foundation-rearchitecture/host-probes, test/delivery-cases/1_3.mjs, lib/adapters/comet-executor.js, test/comet-execution-binding.test.js
+**Owns:** lib/adapters/comet.js, lib/adapters/harness.js, test/comet-driver.test.js, openspec/changes/delivery-foundation-rearchitecture/host-probes, test/delivery-cases/1_3.mjs, lib/adapters/comet-executor.js, test/comet-execution-binding.test.js, mcp-capabilities.yaml, .mcp.json, tools/register-mcps.mjs
 **Parallel safe:** false
 **Acceptance IDs:** F05, F07, A09, N01, N03
 
