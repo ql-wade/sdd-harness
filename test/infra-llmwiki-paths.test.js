@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { AssertionError } from 'node:assert';
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import test, { after } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 // V_INFRA_I04 — I04 项目LLMWiki MCP、索引与worktree安全路径 的契约检查。
@@ -28,6 +29,10 @@ import { fileURLToPath } from 'node:url';
 // 负例 fixture 全部在 os.tmpdir() 生成，不向活配置写入任何状态；
 // llmwiki/ 内容目录是数据不是本任务的，所有写入只落在 sandbox workspace。
 
+const fixtureRoots = new Set();
+const makeTemp = (prefix) => { const dir = fs.mkdtempSync(prefix); fixtureRoots.add(dir); return dir; };
+after(() => { for (const dir of fixtureRoots) fs.rmSync(dir, { recursive: true, force: true }); });
+
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, '..');
 const llmwikiDir = path.join(repoRoot, 'infra', 'delivery', 'llmwiki');
@@ -45,9 +50,14 @@ const DOMAIN_FILES = [
 const SOURCE_REF = 'secret-ref:sdd-harness-pilot/llmwiki-source-read';
 const HOST_PATH_OUTPUT_RE = /\/(Users|home|root|private|var|usr|etc|opt|tmp)\//;
 
-function runCli(args) {
+const gitCommon = spawnSync('git', ['rev-parse', '--git-common-dir'], { cwd: repoRoot, encoding: 'utf8' });
+assert.equal(gitCommon.status, 0);
+const mainTree = path.resolve(repoRoot, gitCommon.stdout.trim(), '..');
+
+function runCli(args, overrides = {}) {
   return spawnSync(process.execPath, [cliPath, ...args], {
     cwd: repoRoot,
+    env: { ...process.env, SDD_HOME: process.env.SDD_HOME ?? path.join(mainTree, '.sdd'), SDD_WIKI_HOME: process.env.SDD_WIKI_HOME ?? path.join(mainTree, JSON.parse(fs.readFileSync(path.join(llmwikiDir, 'project-root-policy.json'), 'utf8')).canonicalWiki.root), PYTHONDONTWRITEBYTECODE: '1', ...overrides },
     encoding: 'utf8',
     timeout: RUN_TIMEOUT_MS,
   });
@@ -57,13 +67,13 @@ function parseJsonOut(result, label) {
   try {
     return JSON.parse(result.stdout);
   } catch {
-    throw new AssertionError(`${label}: stdout is not JSON: ${result.stdout}\nstderr: ${result.stderr}`);
+    throw new AssertionError({ message: `${label}: stdout is not JSON: ${result.stdout}\nstderr: ${result.stderr}` });
   }
 }
 
 // 把已提交的 llmwiki 域整体拷到 tmp fixture，应用 mutate({dir, read, write, json, writeJson}) 后返回 fixture 目录。
 function makeFixtureDir(mutate) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i04-'));
+  const dir = makeTemp(path.join(os.tmpdir(), 'infra-i04-'));
   for (const name of DOMAIN_FILES) {
     fs.copyFileSync(path.join(llmwikiDir, name), path.join(dir, name));
   }
@@ -116,7 +126,7 @@ test('V_INFRA_I04 contract: committed llmwiki domain validates clean; qualify ho
   assert.equal(runCli(['probe', '--case', 'not-a-case', '--json']).status, 1);
 
   // 域文件缺失 = 前置无效 → 退出 1（不是静默跳过）。
-  const partial = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i04-partial-'));
+  const partial = makeTemp(path.join(os.tmpdir(), 'infra-i04-partial-'));
   for (const name of DOMAIN_FILES.filter((n) => n !== 'index-policy.json')) {
     fs.copyFileSync(path.join(llmwikiDir, name), path.join(partial, name));
   }
@@ -308,24 +318,22 @@ test('RED cross-worktree identity + index consistency: worktree-mcp-readback run
   // MCP 通道绝不能被 mock 成 skip。
   assert.doesNotMatch(result.stdout, /"skip"\s*:\s*true/, 'probes must not skip');
 
-  // 文件级等价探针：本地实跑（写/独立读回/索引一致 + 负对照），无论 MCP 通道成败。
-  const fileLevel = report.fileLevelEquivalent ?? {};
-  assert.equal(fileLevel.executed, true, 'the file-level equivalent probe must really run');
-  const stepByName = new Map((fileLevel.steps ?? []).map((s) => [s.step, s]));
-  const readback = stepByName.get('independent-file-readback');
-  assert.ok(readback, 'an independent file readback step must run');
-  assert.equal(readback.status, 'VERIFIED', 'independent file readback must succeed locally');
-  const negative = stepByName.get('index-mismatch-detection');
-  assert.ok(negative, 'the negative control (file without index row) must run');
-  assert.equal(negative.status, 'VERIFIED', 'a file existing without an index row must be DETECTED as inconsistent (gate fires, Kp fail signal)');
-  assert.equal(negative.observed?.consistency, 'INCONSISTENT', 'the negative control must record INCONSISTENT — file existence alone never passes');
-  const positive = stepByName.get('index-consistent-readback');
-  assert.ok(positive, 'the positive control (file + independently registered index row) must run');
-  assert.equal(positive.status, 'VERIFIED');
-  assert.equal(positive.observed?.consistency, 'CONSISTENT');
-  // sandbox workspace 绝不能是仓库的 llmwiki/ 数据目录。
-  assert.equal(fileLevel.workspace, 'sandbox', 'file-level probe writes only into a sandbox workspace');
-  assert.doesNotMatch(result.stdout, HOST_PATH_OUTPUT_RE, 'probe output must not carry host absolute paths');
+  assert.equal(report.knowledgeGateSigned, false, 'infrastructure observations never sign Kp');
+  assert.equal(report.legacyFileLevelEquivalent?.acceptedForCurrentProof, false);
+  if (result.status === 0) {
+    assert.equal(report.nativeReadback?.source, 'upstream-documents-and-fts');
+    assert.equal(report.nativeReadback?.consistency, 'CONSISTENT');
+    assert.equal(report.payloadUnchanged, true);
+    assert.equal(report.nativeReadback?.file?.sha256, report.nativeReadback?.index?.contentSha256);
+    assert.ok(report.nativeReadback.index.chunkCount > 0);
+    assert.ok(report.nativeReadback.index.ftsMatches > 0);
+    assert.equal(report.negativeControls.fileWithoutNativeIndex.consistency, 'INCONSISTENT');
+    assert.equal(report.negativeControls.changedFileStaleIndex.consistency, 'INCONSISTENT');
+  } else {
+    assert.equal(report.nativeReadback?.status, 'UNVERIFIED', 'absent execution cannot be replaced by a synthetic local table');
+  }
+  assert.doesNotMatch(result.stdout, HOST_PATH_OUTPUT_RE);
+
 });
 
 test('secret-ref discipline: the source-read ref is referenced only, catalog gap reported explicitly, no secret-shaped values', async () => {
@@ -348,4 +356,551 @@ test('secret-ref discipline: the source-read ref is referenced only, catalog gap
     (report.catalogGaps ?? []).includes(SOURCE_REF),
     'validate must explicitly report the unregistered ref as a catalogGap instead of passing silently',
   );
+});
+
+
+test('I04 convergence qualify keeps semantic admission violations before runtime checks', () => {
+  const dir = makeFixtureDir(({ json, writeJson }) => {
+    const policy = json('project-root-policy.json');
+    policy.projectId = 'another-project';
+    writeJson('project-root-policy.json', policy);
+  });
+  const result = runCli(['qualify', '--registry', registryPath, '--dir', dir, '--json']);
+  assert.equal(result.status, 2);
+  const report = parseJsonOut(result, 'qualify semantic admission');
+  assert.ok(codes(report).includes('PROJECT_ID_MISMATCH'), `semantic denial must survive qualify: ${JSON.stringify(report)}`);
+  assert.equal(report.runtimeExecuted, false, 'invalid identity must be rejected before any runtime execution');
+});
+
+test('I04 convergence probe cannot bypass the registry prerequisite', () => {
+  const result = runCli(['probe', '--case', 'escape-denial', '--registry', path.join(os.tmpdir(), 'i04-never-registered.json'), '--dir', llmwikiDir, '--json']);
+  assert.equal(result.status, 1, `missing registry must prevent a probe: ${result.stdout}`);
+  assert.match(result.stderr, /registry unreadable/);
+});
+
+
+test('I04 convergence MCP storage readback uses the unchanged created entry and native index', () => {
+  const result = runCli(['probe', '--case', 'worktree-mcp-readback', '--registry', registryPath, '--dir', llmwikiDir, '--json']);
+  const report = parseJsonOut(result, 'actual MCP index readback');
+  if (report.mcpSession?.write?.status !== 'VERIFIED') {
+    assert.equal(result.status, 2);
+    assert.equal(report.nativeReadback?.status, 'UNVERIFIED', 'missing runtime cannot be replaced by a hand-built equivalent');
+    return;
+  }
+  assert.equal(report.nativeReadback?.source, 'upstream-documents-and-fts', `a same-entry native index readback is required: ${JSON.stringify(report)}`);
+  assert.equal(report.nativeReadback?.consistency, 'CONSISTENT');
+  assert.equal(report.nativeReadback?.file?.sha256, report.nativeReadback?.index?.contentSha256);
+  assert.ok(report.nativeReadback?.index?.chunkCount > 0);
+  assert.ok(report.nativeReadback?.index?.ftsMatches > 0);
+  assert.equal(report.negativeControls?.fileWithoutNativeIndex?.consistency, 'INCONSISTENT');
+  assert.equal(report.negativeControls?.changedFileStaleIndex?.consistency, 'INCONSISTENT');
+  assert.equal(report.negativeControls?.fileWithoutNativeIndex?.status, 'MISMATCH');
+  assert.equal(report.negativeControls?.changedFileStaleIndex?.status, 'MISMATCH');
+  assert.equal(report.knowledgeGateSigned, false);
+});
+
+
+for (const command of ['validate', 'qualify', 'probe']) {
+  test(`I04 convergence ${command} rejects a registry without registered identity`, () => {
+    const dir = makeTemp(path.join(os.tmpdir(), 'i04-empty-registry-'));
+    const file = path.join(dir, 'registry.json'); fs.writeFileSync(file, '{}');
+    const args = [command, '--registry', file, '--dir', llmwikiDir, '--json'];
+    if (command === 'probe') args.push('--case', 'escape-denial');
+    const result = runCli(args); const report = parseJsonOut(result, 'registered identity is required');
+    assert.equal(result.status, 2, result.stdout);
+    assert.ok(codes(report).some((code) => /REGISTRY|PROJECT_ID/.test(code)), result.stdout);
+    assert.equal(report.runtimeExecuted, false);
+  });
+}
+
+test('I04 convergence path admission distinguishes dot segments and exact canonical roots', () => {
+  const result = runCli(['probe', '--case', 'escape-denial', '--registry', registryPath, '--dir', llmwikiDir, '--json']);
+  const report = parseJsonOut(result, 'path geometry');
+  for (const claim of ['release..notes.md', '..draft.md']) {
+    const control = report.positiveControls.find((c) => c.claim === claim);
+    assert.equal(control?.allowed, true, `a safe filename is not a real parent segment: ${JSON.stringify(control)}`);
+  }
+  assert.equal(report.exactRootControl?.allowed, false, 'a contained subdirectory is not the one canonical root');
+  assert.equal(report.hardInvariantsHeld, true);
+});
+
+
+for (const command of ['validate', 'qualify', 'probe']) {
+  test(`I04 convergence ${command} rejects a policy and env that jointly invent a wiki target`, () => {
+    const dir = makeFixtureDir(({ json, writeJson }) => {
+      const policy = json('project-root-policy.json'); policy.canonicalWiki.root = 'unregistered-project-wiki'; writeJson('project-root-policy.json', policy);
+    });
+    const args = [command, '--registry', registryPath, '--dir', dir, '--json'];
+    if (command === 'probe') args.push('--case', 'escape-denial');
+    const result = runCli(args, { SDD_WIKI_HOME: path.join(mainTree, 'unregistered-project-wiki') });
+    const report = parseJsonOut(result, 'unregistered wiki target');
+    assert.equal(result.status, 2, result.stdout);
+    assert.ok(codes(report).includes('ROOT_REGISTRATION_MISMATCH'), result.stdout);
+    assert.equal(report.runtimeExecuted, false);
+  });
+}
+
+test('I04 convergence probe rejects an explicit foreign wiki binding before fixture execution', () => {
+  const dir = makeTemp(path.join(os.tmpdir(), 'i04-foreign-binding-'));
+  const result = runCli(['probe', '--case', 'escape-denial', '--registry', registryPath, '--dir', llmwikiDir, '--json'], { SDD_WIKI_HOME: dir });
+  assert.equal(result.status, 2, result.stdout);
+  const report = parseJsonOut(result, 'foreign runtime binding');
+  assert.equal(report.runtimeExecuted, false);
+  assert.match(report.reason, /CLI_WIKI_BINDING_MISMATCH/);
+});
+
+test('I04 convergence unknown CLI options cannot silently bypass declared inputs', () => {
+  const result = runCli(['probe', '--case', 'escape-denial', '--unrecognized-binding', 'ignored', '--json']);
+  assert.equal(result.status, 1, result.stdout);
+});
+
+
+test('I04 convergence arbitrary interpreter overrides are not executed', () => {
+  const dir = makeTemp(path.join(os.tmpdir(), 'i04-interpreter-denial-'));
+  const marker = path.join(dir, 'unexpected-execution');
+  const fake = path.join(dir, 'fake-python');
+  fs.writeFileSync(fake, `#!/bin/sh\nprintf ran > '${marker}'\nexit 0\n`); fs.chmodSync(fake, 0o755);
+  const result = runCli(['qualify', '--registry', registryPath, '--dir', llmwikiDir, '--json'], { LLMWIKI_PYTHON: fake });
+  assert.equal(result.status, 2);
+  const report = parseJsonOut(result, 'unregistered interpreter');
+  assert.equal(report.categories['venv-runtime'].status, 'REJECTED');
+  assert.equal(fs.existsSync(marker), false);
+});
+
+test('I04 convergence required tier and denial fields cannot be omitted to weaken admission', () => {
+  for (const mutate of [
+    ({ json, writeJson }) => { const p = json('project-root-policy.json'); delete p.denials.traversal; writeJson('project-root-policy.json', p); },
+    ({ json, writeJson }) => { const p = json('index-policy.json'); p.tiers.raw.isWikiFactAuthority = true; writeJson('index-policy.json', p); },
+    ({ json, writeJson }) => { const p = json('index-policy.json'); p.knowledgeWrite.requiredEntryFields = ['tier','content']; writeJson('index-policy.json', p); },
+    ({ json, writeJson }) => { const p = json('package.lock.json'); p.distribution.packages = []; writeJson('package.lock.json', p); },
+  ]) {
+    const dir = makeFixtureDir(mutate);
+    for (const command of ['validate','qualify','probe']) {
+      const args = [command,'--registry',registryPath,'--dir',dir,'--json']; if (command==='probe') args.push('--case','escape-denial');
+      const result = runCli(args); assert.equal(result.status,2,result.stdout);
+      const report = parseJsonOut(result,'required admission fields');
+      assert.ok(report.violations.length>0); assert.equal(report.runtimeExecuted,false);
+    }
+  }
+});
+
+
+test('I04 convergence denial receipts never echo simulated credential-shaped policy values', () => {
+  const simulated = 'ghp_' + 'A'.repeat(36);
+  for (const [file, field] of [['package.lock.json','commit'],['project-root-policy.json','projectId']]) {
+    const dir = makeFixtureDir(({ json, writeJson }) => {
+      const p = json(file); if (field === 'commit') p.source.commit = simulated; else p.projectId = simulated; writeJson(file,p);
+    });
+    const result = runCli(['validate','--registry',registryPath,'--dir',dir,'--json']);
+    assert.equal(result.status,2);
+    assert.equal((result.stdout+result.stderr).includes(simulated),false,'a rejected field must not be copied into a receipt');
+    assert.ok(parseJsonOut(result,'safe refusal').violations.length>0);
+  }
+});
+
+test('I04 convergence malformed option errors do not echo simulated credentials', () => {
+  const simulated = 'ghp_' + 'B'.repeat(36);
+  const result = runCli(['validate',`--unknown-${simulated}`,'ignored','--json']);
+  assert.equal(result.status,1);
+  assert.equal((result.stdout+result.stderr).includes(simulated),false);
+});
+
+
+for (const [name, mutate] of [
+  ['wrong component identity', (p) => { p.component = 'another-knowledge-component'; }],
+  ['unknown tool', (p) => p.capabilities.push('unregistered-knowledge-tool')],
+  ['missing required tool', (p) => { p.capabilities = p.capabilities.filter((tool) => tool !== 'create'); }],
+  ['foreign entry prefix', (p) => { p.hostEntry.command = 'unregistered/' + p.hostEntry.command; }],
+  ['host registration grab', (p) => { p.hostRegistration.thisFileDoesNotRegister = false; }],
+]) {
+  test(`I04 convergence profile admission rejects ${name}`, () => {
+    const dir = makeFixtureDir(({ json, writeJson }) => { const p = json('mcp-profile.json'); mutate(p); writeJson('mcp-profile.json',p); });
+    const result = runCli(['validate','--registry',registryPath,'--dir',dir,'--json']);
+    assert.equal(result.status,2,result.stdout);
+    assert.ok(parseJsonOut(result,'profile admission').violations.length>0);
+  });
+}
+
+
+const INPUT_ENTRYPOINTS = [
+  ['validate', ['validate']],
+  ['qualify', ['qualify']],
+  ['probe escape-denial', ['probe', '--case', 'escape-denial']],
+  ['probe worktree-mcp-readback', ['probe', '--case', 'worktree-mcp-readback']],
+];
+
+function schemaRejection(entrypoint, dir, label, overrides = {}) {
+  const result = runCli([...entrypoint, '--registry', registryPath, '--dir', dir, '--json'], overrides);
+  const report = parseJsonOut(result, label);
+  assert.equal(result.status, 2, `${label}: ${result.stdout}\n${result.stderr}`);
+  assert.equal(report.ok, false, label);
+  assert.equal(report.runtimeExecuted, false, label);
+  assert.equal(report.executed, false, label);
+  assert.equal(report.status, 'REJECTED', label);
+  assert.ok(codes(report).includes('DOMAIN_SCHEMA_INVALID'), `${label}: ${result.stdout}`);
+  for (const key of ['packageLock', 'projectRoot', 'indexPolicy', 'mcpProfile', 'categories', 'inputs', 'mcpSession']) {
+    assert.equal(Object.hasOwn(report, key), false, `${label}: invalid input cannot publish a ${key} observation`);
+  }
+  assert.doesNotMatch(result.stderr, /TypeError|ReferenceError|at .*llmwiki/);
+}
+
+for (const [name, entrypoint] of INPUT_ENTRYPOINTS) {
+  test(`I04 input types ${name}: null documents reject before summaries and runtime`, () => {
+    const failures = [];
+    for (const file of DOMAIN_FILES) {
+      const dir = makeFixtureDir(({ writeJson }) => writeJson(file, null));
+      try { schemaRejection(entrypoint, dir, file); }
+      catch (error) { failures.push({ file, error: error.message }); }
+    }
+    assert.deepEqual(failures, [], JSON.stringify(failures, null, 2));
+  });
+}
+
+test('I04 input types: commit coercion and null tiers are rejected structurally', () => {
+  const pin = '075c5b4996ff4e07f9d3c57c1f14fd2b54a955db';
+  const failures = [];
+  for (const [file, field, value] of [
+    ['package.lock.json', 'source.commit', [pin]],
+    ['package.lock.json', 'source.commit', { toString: null }],
+    ['index-policy.json', 'tiers', null],
+  ]) {
+    const dir = makeFixtureDir(({ json, writeJson }) => {
+      const doc = json(file); const keys = field.split('.'); let parent = doc;
+      for (const key of keys.slice(0, -1)) parent = parent[key];
+      parent[keys.at(-1)] = value; writeJson(file, doc);
+    });
+    for (const [name, entrypoint] of INPUT_ENTRYPOINTS) {
+      try { schemaRejection(entrypoint, dir, `${name} ${file}:${field}`); }
+      catch (error) { failures.push({ name, file, field, value, error: error.message }); }
+    }
+  }
+  assert.deepEqual(failures, [], JSON.stringify(failures, null, 2));
+});
+
+
+for (const [name, entrypoint] of INPUT_ENTRYPOINTS) {
+  test(`I04 input types ${name}: document arrays, primitives and hostile objects fail closed`, () => {
+    const failures = [];
+    for (const file of DOMAIN_FILES) {
+      for (const value of [[], 'not-a-domain', true, 7, { toString: null }]) {
+        const dir = makeFixtureDir(({ writeJson }) => writeJson(file, value));
+        try { schemaRejection(entrypoint, dir, `${file} ${JSON.stringify(value)}`); }
+        catch (error) { failures.push({ file, value, error: error.message }); }
+      }
+    }
+    assert.deepEqual(failures, [], JSON.stringify(failures, null, 2));
+  });
+}
+
+// Independent malformed examples for every field consumed by validation,
+// path/runtime helpers or validate summaries; prose metadata is not execution input.
+const MALFORMED_DOMAIN_FIELDS = [
+  ['package.lock.json', 'interface', ['PackageLock.v1']],
+  ['package.lock.json', 'component', { toString: null }],
+  ['package.lock.json', 'source', null],
+  ['package.lock.json', 'source', []],
+  ['package.lock.json', 'source.commit', { toString: null }],
+  ['package.lock.json', 'source.treeSha256', ['861319ee0c84d0ef2aa56ee5ac1ee507364785b5fe48295bde17d9e4dcd99357']],
+  ['package.lock.json', 'source.treeSha256', { toString: null }],
+  ['package.lock.json', 'distribution', []],
+  ['package.lock.json', 'distribution.launcher', null],
+  ['package.lock.json', 'distribution.launcher.path', ['tools/mcp/llmwiki.sh']],
+  ['package.lock.json', 'distribution.launcher.sha256', []],
+  ['package.lock.json', 'distribution.requirementsLock', []],
+  ['package.lock.json', 'distribution.requirementsLock.sha256', ['678bd7301d80a602336e8fd3a81f98adcd4c5beaec4e2f1f2bfb8d2e04a9e732']],
+  ['package.lock.json', 'distribution.requirementsLock.bytes', '154140'],
+  ['package.lock.json', 'distribution.packages', null],
+  ['package.lock.json', 'distribution.packages.0', null],
+  ['package.lock.json', 'distribution.packages.0', []],
+  ['package.lock.json', 'distribution.packages.0.name', ['mcp']],
+  ['package.lock.json', 'distribution.packages.0.observedVersion', ['1.27.0']],
+  ['package.lock.json', 'mcpSession', null],
+  ['package.lock.json', 'mcpSession.toolsObserved', { toString: null }],
+  ['package.lock.json', 'mcpSession.toolsObserved.0', null],
+  ['package.lock.json', 'upGate', []],
+  ['package.lock.json', 'upGate.enabled', 'false'],
+  ['project-root-policy.json', 'interface', ['ProjectRoot.v1']],
+  ['project-root-policy.json', 'component', []],
+  ['project-root-policy.json', 'projectId', { toString: null }],
+  ['project-root-policy.json', 'repoId', ['ql-wade/sdd-harness']],
+  ['project-root-policy.json', 'canonicalWiki', null],
+  ['project-root-policy.json', 'canonicalWiki.root', ['.sdd/wiki/sdd-harness']],
+  ['project-root-policy.json', 'denials', null],
+  ...['traversal', 'symlinkEscape', 'foreignWikiRoot', 'projectIdMismatch', 'uncontainedPaths']
+    .map((key) => ['project-root-policy.json', `denials.${key}`, 'true']),
+  ['index-policy.json', 'interface', ['IndexPolicy.v1']],
+  ['index-policy.json', 'component', []],
+  ['index-policy.json', 'tiers', null],
+  ['index-policy.json', 'tiers.raw', []],
+  ['index-policy.json', 'tiers.staging', null],
+  ['index-policy.json', 'tiers.curated', { toString: null }],
+  ...['raw', 'staging', 'curated'].flatMap((tier) => [
+    ['index-policy.json', `tiers.${tier}.path`, ['wiki/curated/']],
+    ['index-policy.json', `tiers.${tier}.isWikiFactAuthority`, String(tier === 'curated')],
+  ]),
+  ['index-policy.json', 'index', []],
+  ...['rebuildable', 'knowledgeAuthority', 'overridesSourceRecords', 'grantsKnowledgeAuthority']
+    .map((key) => ['index-policy.json', `index.${key}`, 'false']),
+  ['index-policy.json', 'knowledgeAuthority', null],
+  ['index-policy.json', 'knowledgeAuthority.wikiFactAuthorities', {}],
+  ['index-policy.json', 'knowledgeAuthority.wikiFactAuthorities.0', { toString: null }],
+  ['index-policy.json', 'knowledgeWrite', null],
+  ...['requiresApproval', 'requiresSourceAndRevision', 'independentReadbackRequired']
+    .map((key) => ['index-policy.json', `knowledgeWrite.${key}`, 'true']),
+  ['index-policy.json', 'knowledgeWrite.requiredEntryFields', null],
+  ['index-policy.json', 'knowledgeWrite.requiredEntryFields.0', {}],
+  ['index-policy.json', 'intake', []],
+  ['index-policy.json', 'intake.fullGitIngestWithoutApproval', ['forbidden']],
+  ['mcp-profile.json', 'interface', ['McpComponentProfile.v1']],
+  ['mcp-profile.json', 'component', []],
+  ['mcp-profile.json', 'registrationScope', ['component-profile-only']],
+  ['mcp-profile.json', 'hostRegistration', null],
+  ['mcp-profile.json', 'hostRegistration.thisFileDoesNotRegister', 'true'],
+  ['mcp-profile.json', 'hostRegistration.liveConfigDoubleWriteForbidden', 1],
+  ['mcp-profile.json', 'hostEntry', []],
+  ['mcp-profile.json', 'hostEntry.command', ['${CLAUDE_PROJECT_DIR}/tools/mcp/llmwiki.sh']],
+  ['mcp-profile.json', 'hostEntry.args', null],
+  ['mcp-profile.json', 'hostEntry.args.0', {}],
+  ['mcp-profile.json', 'hostEntry.transport', ['stdio']],
+  ['mcp-profile.json', 'capabilities', { toString: null }],
+  ['mcp-profile.json', 'capabilities.0', null],
+  ['mcp-profile.json', 'observation', null],
+  ['mcp-profile.json', 'observation.hostDiscoveryStatus', ['VERIFIED']],
+  ['mcp-profile.json', 'observation.hostDiscovered', 'false'],
+];
+
+function malformedFieldFixture(file, field, value) {
+  return makeFixtureDir(({ json, writeJson }) => {
+    const doc = json(file); const keys = field.split('.'); let parent = doc;
+    for (const key of keys.slice(0, -1)) parent = parent[key];
+    parent[keys.at(-1)] = value; writeJson(file, doc);
+  });
+}
+
+for (const [name, entrypoint] of INPUT_ENTRYPOINTS) {
+  test(`I04 input types ${name}: every consumed nested field is typed before use`, () => {
+    const failures = [];
+    for (const [file, field, value] of MALFORMED_DOMAIN_FIELDS) {
+      const dir = malformedFieldFixture(file, field, value);
+      try { schemaRejection(entrypoint, dir, `${file}:${field}`); }
+      catch (error) { failures.push({ file, field, error: error.message }); }
+    }
+    assert.deepEqual(failures, [], JSON.stringify(failures, null, 2));
+  });
+}
+
+test('I04 input types: malformed domains cannot reach source inspection or runtime child processes', () => {
+  const dir = makeTemp(path.join(os.tmpdir(), 'i04-input-io-guard-'));
+  const marker = path.join(dir, 'unexpected-io'); const guard = path.join(dir, 'guard.cjs');
+  fs.writeFileSync(guard, `const fs=require('node:fs'),cp=require('node:child_process');
+const mark=${JSON.stringify(marker)},source=${JSON.stringify(path.join(mainTree, '.sdd/repos/llmwiki'))};
+const write=fs.writeFileSync.bind(fs);
+function deny(){write(mark,'unexpected domain/runtime I/O');throw Error('invalid domain reached runtime I/O');}
+for(const key of ['readFileSync','readdirSync','statSync','lstatSync','realpathSync']){
+ const original=fs[key];fs[key]=function(target,...args){if(typeof target==='string'&&(target===source||target.startsWith(source+'/')))deny();return original.call(this,target,...args);};
+ if(original.native)fs[key].native=original.native;
+}
+const spawn=cp.spawnSync;cp.spawnSync=function(command,args,...rest){
+ if(!(command===process.execPath&&args[0].endsWith('/tools/infra/registry.mjs')))deny();return spawn.call(this,command,args,...rest);
+};require('node:module').syncBuiltinESMExports();\n`);
+  for (const fixture of [
+    malformedFieldFixture('package.lock.json', 'source.commit', ['075c5b4996ff4e07f9d3c57c1f14fd2b54a955db']),
+    malformedFieldFixture('project-root-policy.json', 'canonicalWiki.root', []),
+    malformedFieldFixture('index-policy.json', 'tiers', null),
+    malformedFieldFixture('mcp-profile.json', 'capabilities', null),
+  ]) {
+    for (const [name, entrypoint] of INPUT_ENTRYPOINTS) {
+      schemaRejection(entrypoint, fixture, name, { NODE_OPTIONS: `--require ${guard}` });
+      assert.equal(fs.existsSync(marker), false, 'invalid input must precede source/path/runtime I/O; guard records attempts before any access');
+    }
+  }
+});
+
+test('I04 input types read-only runtime: missing source does not claim interpreter execution', () => {
+  const dir = makeTemp(path.join(os.tmpdir(), 'i04-empty-runtime-'));
+  const result = runCli(['qualify', '--registry', registryPath, '--dir', llmwikiDir, '--json'], { SDD_HOME: dir });
+  const report = parseJsonOut(result, 'unexecuted interpreter');
+  assert.equal(result.status, 2);
+  assert.equal(report.sourceRuntimeReady, false);
+  assert.equal(report.runtimeExecuted, false, 'workspace admission alone is not actual interpreter execution');
+  assert.equal(report.categories['upstream-source'].status, 'UNVERIFIED');
+  assert.equal(report.categories['venv-runtime'].status, 'UNVERIFIED');
+});
+
+
+test('I04 input types: minimum valid v1 documents need no optional history or observation claims', () => {
+  const minimal = {
+    'package.lock.json': {
+      interface: 'PackageLock.v1', component: 'llmwiki',
+      source: { commit: '075c5b4996ff4e07f9d3c57c1f14fd2b54a955db', treeSha256: '861319ee0c84d0ef2aa56ee5ac1ee507364785b5fe48295bde17d9e4dcd99357' },
+      distribution: {
+        launcher: { path: 'tools/mcp/llmwiki.sh', sha256: 'bd18bfea155ec0fc8c1ce9fb23414dafbeb94416f4096eb92624eb59932ae863' },
+        packages: [{ name: 'mcp', observedVersion: '1.27.0' }],
+        requirementsLock: { sha256: '678bd7301d80a602336e8fd3a81f98adcd4c5beaec4e2f1f2bfb8d2e04a9e732', bytes: 154140 },
+      },
+      mcpSession: { toolsObserved: ['create', 'read', 'search'] }, upGate: { enabled: false },
+    },
+    'project-root-policy.json': {
+      interface: 'ProjectRoot.v1', component: 'llmwiki', projectId: 'sdd-harness-pilot', repoId: 'ql-wade/sdd-harness',
+      canonicalWiki: { root: '.sdd/wiki/sdd-harness' },
+      denials: { traversal: true, symlinkEscape: true, foreignWikiRoot: true, projectIdMismatch: true, uncontainedPaths: true },
+    },
+    'index-policy.json': {
+      interface: 'IndexPolicy.v1', component: 'llmwiki',
+      tiers: {
+        raw: { path: 'raw/', isWikiFactAuthority: false },
+        staging: { path: 'staging/', isWikiFactAuthority: false },
+        curated: { path: 'wiki/curated/', isWikiFactAuthority: true },
+      },
+      index: { rebuildable: true, knowledgeAuthority: false, overridesSourceRecords: false, grantsKnowledgeAuthority: false },
+      knowledgeAuthority: { wikiFactAuthorities: ['approved-curated-entry'] },
+      knowledgeWrite: { requiresApproval: true, requiresSourceAndRevision: true, independentReadbackRequired: true,
+        requiredEntryFields: ['tier', 'title', 'content', 'approvedBy', 'source', 'revision'] },
+      intake: { fullGitIngestWithoutApproval: 'forbidden' },
+    },
+    'mcp-profile.json': {
+      interface: 'McpComponentProfile.v1', component: 'llmwiki', registrationScope: 'component-profile-only',
+      hostRegistration: { thisFileDoesNotRegister: true, liveConfigDoubleWriteForbidden: true },
+      hostEntry: { command: '${CLAUDE_PROJECT_DIR}/tools/mcp/llmwiki.sh', args: [], transport: 'stdio' },
+      capabilities: ['create', 'read', 'search'],
+    },
+  };
+  for (const observation of [undefined, {}, { hostDiscoveryStatus: 'UNVERIFIED', hostDiscovered: false }]) {
+    const dir = makeFixtureDir(({ writeJson }) => {
+      const docs = structuredClone(minimal);
+      if (observation !== undefined) docs['mcp-profile.json'].observation = observation;
+      for (const [name, doc] of Object.entries(docs)) writeJson(name, doc);
+    });
+    const result = runCli(['validate', '--registry', registryPath, '--dir', dir, '--json']);
+    const report = parseJsonOut(result, 'minimal v1 configuration');
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(report.ok, true);
+    assert.deepEqual(report.violations, []);
+    assert.equal(report.packageLock.interface, 'PackageLock.v1');
+    assert.equal(report.projectRoot.interface, 'ProjectRoot.v1');
+    assert.equal(report.indexPolicy.interface, 'IndexPolicy.v1');
+    assert.equal(report.mcpProfile.interface, 'McpComponentProfile.v1');
+    const escape = runCli(['probe', '--case', 'escape-denial', '--registry', registryPath, '--dir', dir, '--json']);
+    assert.equal(escape.status, 0, escape.stdout + escape.stderr);
+    assert.equal(parseJsonOut(escape, 'minimal policy geometry').hardInvariantsHeld, true);
+  }
+});
+
+const DIAGNOSTIC_INPUTS = [...DOMAIN_FILES, 'registry', 'refs'];
+const DIAGNOSTIC_SENTINELS = [
+  { text: 'PRIV3KEY_invalid_json', fragments: ['PRIV3KEY'] },
+  { text: 'mQ7v', fragments: ['mQ7v'] },
+];
+
+function diagnosticIoGuard() {
+  const dir = makeTemp(path.join(os.tmpdir(), 'i04-diagnostic-guard-'));
+  const marker = path.join(dir, 'unexpected-io'); const guard = path.join(dir, 'guard.cjs');
+  fs.writeFileSync(guard, `const fs=require('node:fs'),cp=require('node:child_process');
+const marker=${JSON.stringify(marker)},source=${JSON.stringify(path.join(mainTree, '.sdd/repos/llmwiki'))};
+const write=fs.writeFileSync.bind(fs);function deny(){write(marker,'unexpected runtime I/O');throw Error('runtime I/O after invalid JSON');}
+for(const key of ['readFileSync','readdirSync','statSync','lstatSync']){const original=fs[key];fs[key]=function(target,...args){if(typeof target==='string'&&(target===source||target.startsWith(source+'/')))deny();return original.call(this,target,...args);};}
+const spawn=cp.spawnSync;cp.spawnSync=function(command,args,...rest){if(!(command===process.execPath&&args[0].endsWith('/tools/infra/registry.mjs')))deny();return spawn.call(this,command,args,...rest);};require('node:module').syncBuiltinESMExports();\n`);
+  return { marker, env: { NODE_OPTIONS: `--require ${guard}` } };
+}
+
+function diagnosticInput(target, state) {
+  let registry = registryPath; let refs = path.join(repoRoot, 'infra/delivery/secrets.refs.example.json'); let dir = llmwikiDir;
+  if (DOMAIN_FILES.includes(target)) {
+    dir = makeFixtureDir(({ dir: fixture, write }) => {
+      const file = path.join(fixture, target);
+      if (state === 'directory') { fs.rmSync(file); fs.mkdirSync(file); }
+      else write(target, state);
+    });
+  } else {
+    const fixture = makeTemp(path.join(os.tmpdir(), 'i04-diagnostic-input-'));
+    const file = path.join(fixture, 'input.json');
+    if (state === 'directory') fs.mkdirSync(file); else fs.writeFileSync(file, state);
+    if (target === 'registry') registry = file; else refs = file;
+  }
+  return { registry, refs, dir };
+}
+
+function diagnosticRun(entrypoint, input, env = {}) {
+  return runCli([...entrypoint, '--registry', input.registry, '--refs', input.refs, '--dir', input.dir, '--json'], env);
+}
+
+for (const [name, entrypoint] of INPUT_ENTRYPOINTS) {
+  test(`I04 diagnostic privacy ${name}: bad JSON never echoes arbitrary content`, () => {
+    const guard = diagnosticIoGuard(); const failures = [];
+    for (const target of DIAGNOSTIC_INPUTS) {
+      for (const sentinel of DIAGNOSTIC_SENTINELS) {
+        const result = diagnosticRun(entrypoint, diagnosticInput(target, sentinel.text), guard.env);
+        try {
+          assert.equal(result.status, 1);
+          assert.equal(result.stdout, '');
+          for (const fragment of sentinel.fragments) assert.equal((result.stdout + result.stderr).includes(fragment), false, `private JSON fragment echoed: ${result.stderr}`);
+          assert.match(result.stderr, /JSON_INVALID/, 'a safe useful parse category must remain');
+          assert.match(result.stderr, target === 'registry' ? /registry unreadable/ : target === 'refs' ? /refs catalog unreadable/ : /domain input invalid/);
+          assert.equal(fs.existsSync(guard.marker), false, 'invalid JSON cannot inspect source or launch runtime');
+          assert.doesNotMatch(result.stderr, /SyntaxError|TypeError|\n\s+at /);
+        } catch (error) { failures.push({ target, sentinel: sentinel.text, error: error.message }); }
+      }
+    }
+    assert.deepEqual(failures, [], JSON.stringify(failures, null, 2));
+  });
+
+  test(`I04 diagnostic privacy ${name}: file failures retain safe labels and reason codes`, () => {
+    const guard = diagnosticIoGuard(); const failures = [];
+    for (const target of DIAGNOSTIC_INPUTS) {
+      for (const kind of ['missing', 'directory']) {
+        let input;
+        if (kind === 'directory') input = diagnosticInput(target, 'directory');
+        else {
+          const missing = path.join(repoRoot, '.local', 'i04-never-created-' + crypto.randomUUID(), 'mQ7v-private-input.json');
+          assert.equal(fs.existsSync(missing), false);
+          input = { registry: registryPath, refs: path.join(repoRoot, 'infra/delivery/secrets.refs.example.json'), dir: llmwikiDir };
+          if (target === 'registry') input.registry = missing;
+          else if (target === 'refs') input.refs = missing;
+          else input.dir = missing;
+        }
+        const result = diagnosticRun(entrypoint, input, guard.env);
+        try {
+          assert.equal(result.status, 1);
+          assert.equal(result.stdout, '');
+          assert.equal(result.stderr.includes('mQ7v'), false, `untrusted relative path was echoed: ${result.stderr}`);
+          assert.match(result.stderr, kind === 'missing' ? /FILE_READ_ENOENT/ : /FILE_READ_EISDIR/);
+          assert.match(result.stderr, target === 'registry' ? /registry unreadable/ : target === 'refs' ? /refs catalog unreadable/ : /domain input invalid/);
+          if (DOMAIN_FILES.includes(target)) assert.ok(result.stderr.includes(target), 'only the fixed domain file label is reported');
+          assert.equal(fs.existsSync(guard.marker), false, 'file failure cannot inspect source or launch runtime');
+          assert.doesNotMatch(result.stderr, /SyntaxError|TypeError|\n\s+at /);
+        } catch (error) { failures.push({ target, kind, error: error.message }); }
+      }
+    }
+    assert.deepEqual(failures, [], JSON.stringify(failures, null, 2));
+  });
+}
+
+test('I04 diagnostic privacy: malformed command, option and case values are never repeated', () => {
+  const sentinel = 'mQ7v';
+  for (const [args, code] of [
+    [[sentinel, '--json'], 'COMMAND_UNKNOWN'],
+    [['validate', `--${sentinel}`, 'value', '--json'], 'ARGUMENT_OPTION_INVALID'],
+    [['probe', '--case', sentinel, '--json'], 'PROBE_CASE_INVALID'],
+  ]) {
+    const result = runCli(args);
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.equal(result.stderr.includes(sentinel), false, result.stderr);
+    assert.ok(result.stderr.includes(code), 'fixed error code is useful without the rejected input');
+  }
+});
+
+test('I04 diagnostic privacy: unexpected exceptions stay nonzero and distinct without raw message, code or stack', () => {
+  const dir = makeTemp(path.join(os.tmpdir(), 'i04-diagnostic-internal-'));
+  const input = path.join(dir, 'registry.json'); fs.writeFileSync(input, '{}');
+  const guard = path.join(dir, 'fault.cjs');
+  fs.writeFileSync(guard, `const fs=require('node:fs'),original=fs.readFileSync;fs.readFileSync=function(file,...args){if(file===${JSON.stringify(input)}){const error=Error('mQ7v');error.code='mQ7v';throw error;}return original.call(this,file,...args);};require('node:module').syncBuiltinESMExports();\n`);
+  for (const [, entrypoint] of INPUT_ENTRYPOINTS) {
+    const result = diagnosticRun(entrypoint, { registry: input, refs: path.join(repoRoot, 'infra/delivery/secrets.refs.example.json'), dir: llmwikiDir }, { NODE_OPTIONS: `--require ${guard}` });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, /internal failure: INTERNAL_FAILURE/);
+    assert.equal(result.stderr.includes('mQ7v'), false);
+    assert.doesNotMatch(result.stderr, /registry unreadable|usage:|\n\s+at /, 'a genuine unexpected failure must not masquerade as invalid input');
+  }
 });

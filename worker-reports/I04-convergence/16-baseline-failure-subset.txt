@@ -1,0 +1,764 @@
+TAP version 13
+# Subtest: boundary: test T stays a single automatic review — the delivery gate is not extended to the consensus quorum
+not ok 1 - boundary: test T stays a single automatic review — the delivery gate is not extended to the consensus quorum
+  ---
+  duration_ms: 106.658583
+  type: 'test'
+  location: '<worker-tree>/test/architecture-review-adapter.test.js:500:1'
+  failureType: 'testCodeFailure'
+  error: 'precondition: real TAP executions observed'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/architecture-review-adapter.test.js:512:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+not ok 2 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it
+  ---
+  duration_ms: 5.85075
+  type: 'test'
+  location: '<worker-tree>/test/classic-integration.test.js:476:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the registered refusal must cite the pinned host CLI version
+
+    '1.3.1' !== '1.14.3'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '1.14.3'
+  actual: '1.3.1'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/classic-integration.test.js:478:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: P1_5 method dispatch content is pinned and matches the vendored snapshots
+not ok 3 - P1_5 method dispatch content is pinned and matches the vendored snapshots
+  ---
+  duration_ms: 83.98575
+  type: 'test'
+  location: '<worker-tree>/test/classic-integration.test.js:559:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    vendored whitebox-verify drifted from the pinned dispatch content; re-record classic-integration-probes/method-dispatch-content.json
+    + actual - expected
+
+    + '79e325e4cc1ccd169626d2a5a805deb2907dd5c820ef21754101264c2c482763'
+    - 'a5fe673a13e92cc2853baf15efc4fd7c0739a91492040f540407487a2e66d71c'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'a5fe673a13e92cc2853baf15efc4fd7c0739a91492040f540407487a2e66d71c'
+  actual: '79e325e4cc1ccd169626d2a5a805deb2907dd5c820ef21754101264c2c482763'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/classic-integration.test.js:578:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: committed foundation artifacts match live sources (repo-level drift gate)
+not ok 4 - committed foundation artifacts match live sources (repo-level drift gate)
+  ---
+  duration_ms: 210.663084
+  type: 'test'
+  location: '<worker-tree>/test/foundation-distribution.test.js:196:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    committed foundation drifted from sources: [{"kind":"lock","item":"multi-agent-consensus-review","expected":"50d5ff30833bae1846d60b0a19560037dcf0c47905aad847005ff26e22f820fc","actual":"cb69635b85a14727e3d239a5bfc7d95aa85a50a9ef7a980c5f8bf7180640383f","detail":"skill digest drifted from the pinned lock"},{"kind":"lock","item":"whitebox-verify","expected":"a822390307b4e743e7433c2f625ef5e69c6efa36a164531eed90ae2c4c53310c","actual":"391296c90fea357c9e9d2401b7107b30cc69da6962232215d718fb8c93f93e22","detail":"skill digest drifted from the pinned lock"},{"kind":"lock","item":"method-profile","expected":"2f55b5a42efb5800b9c3aaf9512a4477bdf8ce56c9c9900a2abcface9969115c","actual":"8030fd622a48289e273e83898a44051c0b66de6b549f95b8df65dcb112e46d2e","detail":"method profile drifted"},{"kind":"release","item":"release/skills/MANIFEST.json","detail":"release skill manifest drifted from sources"}]
+    + actual - expected
+
+    + [
+    +   {
+    +     actual: 'cb69635b85a14727e3d239a5bfc7d95aa85a50a9ef7a980c5f8bf7180640383f',
+    +     detail: 'skill digest drifted from the pinned lock',
+    +     expected: '50d5ff30833bae1846d60b0a19560037dcf0c47905aad847005ff26e22f820fc',
+    +     item: 'multi-agent-consensus-review',
+    +     kind: 'lock'
+    +   },
+    +   {
+    +     actual: '391296c90fea357c9e9d2401b7107b30cc69da6962232215d718fb8c93f93e22',
+    +     detail: 'skill digest drifted from the pinned lock',
+    +     expected: 'a822390307b4e743e7433c2f625ef5e69c6efa36a164531eed90ae2c4c53310c',
+    +     item: 'whitebox-verify',
+    +     kind: 'lock'
+    +   },
+    +   {
+    +     actual: '8030fd622a48289e273e83898a44051c0b66de6b549f95b8df65dcb112e46d2e',
+    +     detail: 'method profile drifted',
+    +     expected: '2f55b5a42efb5800b9c3aaf9512a4477bdf8ce56c9c9900a2abcface9969115c',
+    +     item: 'method-profile',
+    +     kind: 'lock'
+    +   },
+    +   {
+    +     detail: 'release skill manifest drifted from sources',
+    +     item: 'release/skills/MANIFEST.json',
+    +     kind: 'release'
+    +   }
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      kind: 'lock'
+      item: 'multi-agent-consensus-review'
+      expected: '50d5ff30833bae1846d60b0a19560037dcf0c47905aad847005ff26e22f820fc'
+      actual: 'cb69635b85a14727e3d239a5bfc7d95aa85a50a9ef7a980c5f8bf7180640383f'
+      detail: 'skill digest drifted from the pinned lock'
+    1:
+      kind: 'lock'
+      item: 'whitebox-verify'
+      expected: 'a822390307b4e743e7433c2f625ef5e69c6efa36a164531eed90ae2c4c53310c'
+      actual: '391296c90fea357c9e9d2401b7107b30cc69da6962232215d718fb8c93f93e22'
+      detail: 'skill digest drifted from the pinned lock'
+    2:
+      kind: 'lock'
+      item: 'method-profile'
+      expected: '2f55b5a42efb5800b9c3aaf9512a4477bdf8ce56c9c9900a2abcface9969115c'
+      actual: '8030fd622a48289e273e83898a44051c0b66de6b549f95b8df65dcb112e46d2e'
+      detail: 'method profile drifted'
+    3:
+      kind: 'release'
+      item: 'release/skills/MANIFEST.json'
+      detail: 'release skill manifest drifted from sources'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/foundation-distribution.test.js:200:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+not ok 5 - old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+  ---
+  duration_ms: 1455.569125
+  type: 'test'
+  location: '<worker-tree>/test/foundation-distribution.test.js:865:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"ok":false,"action":"check","reason":"silent-rebaseline-blocked","drift":true,"baseline":{"ok":true,"resolvable":true,"reason":"all pinned digests resolve from the frozen release commit","resolvedSkills":["claude-parallel-tdd-planner","code-review","diagnosing-bugs","grill-me","grilling","multi-agent-consensus-review","openspec-lifecycle-guard","ponytail","tdd","test-authoring","whitebox-verify"],"missing":[]},"migration":"explicit paths: (1) rerun with --migrate --owner <run-owner> after review, or (2) close this run and start a new run against commit 6ec46aab — a run is never silently re-baselined"}
+
+    false !== true
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/foundation-distribution.test.js:870:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: unresolvable pinned baseline is blocked explicitly, never silently swapped
+not ok 6 - unresolvable pinned baseline is blocked explicitly, never silently swapped
+  ---
+  duration_ms: 134.553417
+  type: 'test'
+  location: '<worker-tree>/test/foundation-distribution.test.js:904:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'silent-rebaseline-blocked'
+    - 'baseline-unresolvable'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'baseline-unresolvable'
+  actual: 'silent-rebaseline-blocked'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/foundation-distribution.test.js:912:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: image admission gates stay coherent with the committed lock state (state-agnostic)
+not ok 7 - image admission gates stay coherent with the committed lock state (state-agnostic)
+  ---
+  duration_ms: 177.081042
+  type: 'test'
+  location: '<worker-tree>/test/infra-outline.test.js:149:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /UP_REFUSED_IMAGES_LOCK_NOT_READY|UP_NOT_AUTHORIZED|UP_REFUSED_CONTAINER_DAEMON_UNREACHABLE/. Input:
+
+    'UP_NOT_EXECUTED: runtime launch requires an authorized operator context; I03 declares the domain and gates, admission is a later explicit decision'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'UP_NOT_EXECUTED: runtime launch requires an authorized operator context; I03 declares the domain and gates, admission is a later explicit decision'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-outline.test.js:159:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract
+not ok 8 - V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract
+  ---
+  duration_ms: 77.44025
+  type: 'test'
+  location: '<worker-tree>/test/infra-runner-isolation.test.js:94:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    validate must PASS on committed files: {
+      "interface": "RunnerInfra.v1",
+      "command": "validate",
+      "registry": "infra/delivery/registry.json",
+      "refs": "infra/delivery/secrets.refs.example.json",
+      "dir": "infra/delivery/runner",
+      "ok": false,
+      "violations": [
+        {
+          "code": "PATCH_LOCK_MISMATCH",
+          "at": "image.lock.json:sourceInputs.patches",
+          "reason": "the runner lock must mirror the upstream patch list exactly (order + sha256)",
+          "lockedCount": 6,
+          "upstreamCount": 6
+        },
+        {
+          "code": "FINGERPRINT_STALE",
+          "at": "image.lock.json:sourceInputs.hostBuildFingerprint",
+          "reason": "the recorded fingerprint must equal the freshly recomputed lock-derived fingerprint (archive+patches+toolchain)",
+          "expected": "b11b20e1b6401533d75a4838e85e0b8b5389d1b0e819fc67c8d69adff696a2ed"
+        }
+      ],
+      "catalogGaps": [],
+      "roles": [
+        {
+          "role": "controller",
+          "principalLabel": "runner-controller",
+          "credentialRef": "secret-ref:sdd-harness-pilot/runner-authority",
+          "provisioningStatus": "NOT_PROVISIONED",
+          "workspaceVolume": "ws-controller",
+          "grantedRefCount": 2
+        },
+        {
+          "role": "author",
+          "principalLabel": "worker-author",
+          "credentialRef": "secret-ref:sdd-harness-pilot/worker-author-api",
+          "provisioningStatus": "NOT_PROVISIONED",
+          "workspaceVolume": "ws-author",
+          "grantedRefCount": 1
+        },
+        {
+          "role": "test-author",
+          "principalLabel": "worker-test-author",
+          "credentialRef": null,
+          "provisioningStatus": "UNASSIGNED",
+          "workspaceVolume": "ws-test-author",
+          "grantedRefCount": 0
+        },
+        {
+          "role": "reviewer",
+          "principalLabel": "worker-reviewer",
+          "credentialRef": "secret-ref:sdd-harness-pilot/worker-review-api",
+          "provisioningStatus": "NOT_PROVISIONED",
+          "workspaceVolume": "ws-reviewer",
+          "grantedRefCount": 1
+        },
+        {
+          "role": "publisher",
+          "principalLabel": "runner-publisher",
+          "credentialRef": null,
+          "provisioningStatus": "UNASSIGNED",
+          "workspaceVolume": "ws-publisher",
+          "grantedRefCount": 0
+        },
+        {
+          "role": "isolator",
+          "principalLabel": "runner-isolator",
+          "credentialRef": null,
+          "provisioningStatus": "UNASSIGNED",
+          "workspaceVolume": "ws-isolator",
+          "grantedRefCount": 0
+        }
+      ],
+      "methodState": {
+        "declaration": "METHOD_STATE_SHARED_DECLARED",
+        "model": "cooperative-local",
+        "identityBasis": false,
+        "permissionBasis": false,
+        "completionBasis": false,
+        "dispatchRecordStatus": "UNVERIFIED"
+      },
+      "authority": {
+        "interface": "Authority.v1",
+        "authorityStatus": "UNVERIFIED",
+        "registrations": 0,
+        "concurrentWriterPolicy": "REFUSE",
+        "copiedStatePolicy": "REFUSE"
+      },
+      "imageLock": {
+        "interface": "RunnerImageLock.v1",
+        "upGate": {
+          "enabled": true,
+          "requireAllComponentsAuthenticated": true,
+          "reason": "S2/S3 真实构建与 digest 回填完成；准入为本地构建镜像（六补丁链 digest 校验）",
+          "admittedBy": "user directive 2026-10-22: 端到端执行授权（\"你可以端到端执行吧\"）",
+          "admittedAt": "2026-10-22T12:10:00.000Z"
+        },
+        "containerBuildStatus": "VERIFIED",
+        "components": [
+          {
+            "component": "comet-runner",
+            "reference": "comet-runner:locked-local",
+            "digest": "sha256:4dfd24ed0677d401f202c2ab70f1115ca074d7038e143c10e75eea4b51c91b13",
+            "status": "UNVERIFIED"
+          },
+          {
+            "component": "runner-base",
+            "reference": "node@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d",
+            "digest": "sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d",
+            "status": "UNVERIFIED"
+          }
+        ]
+      },
+      "checkedAt": "2026-10-25T07:12:26.213Z"
+    }
+
+
+    2 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-runner-isolation.test.js:96:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: image admission gates stay coherent with the committed lock state (state-agnostic)
+not ok 9 - image admission gates stay coherent with the committed lock state (state-agnostic)
+  ---
+  duration_ms: 55.017917
+  type: 'test'
+  location: '<worker-tree>/test/infra-runner-isolation.test.js:182:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    committed lock must validate clean:
+
+    2 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-runner-isolation.test.js:190:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    node:internal/test_runner/test:1133:31
+    node:internal/process/task_queues:150:7
+    AsyncResource.runInAsyncScope (node:async_hooks:227:14)
+    AsyncResource.runMicrotask (node:internal/process/task_queues:147:8)
+  ...
+# Subtest: RED image gate: floating tag rejected; malformed digest rejected; unauthenticated digest never reaches ready
+not ok 10 - RED image gate: floating tag rejected; malformed digest rejected; unauthenticated digest never reaches ready
+  ---
+  duration_ms: 144.109292
+  type: 'test'
+  location: '<worker-tree>/test/infra-runner-isolation.test.js:197:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    structurally honest lock (unauthenticated flag set) still validates
+
+    2 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-runner-isolation.test.js:226:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: catalog gap reporting: registered refs read RECORDED; a missing ref is still explicit readiness evidence, never silent
+not ok 11 - catalog gap reporting: registered refs read RECORDED; a missing ref is still explicit readiness evidence, never silent
+  ---
+  duration_ms: 43.114917
+  type: 'test'
+  location: '<worker-tree>/test/infra-runner-isolation.test.js:620:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    committed domain must validate clean: {
+      "interface": "RunnerInfra.v1",
+      "command": "validate",
+      "registry": "infra/delivery/registry.json",
+      "refs": "infra/delivery/secrets.refs.example.json",
+      "dir": "infra/delivery/runner",
+      "ok": false,
+      "violations": [
+        {
+          "code": "PATCH_LOCK_MISMATCH",
+          "at": "image.lock.json:sourceInputs.patches",
+          "reason": "the runner lock must mirror the upstream patch list exactly (order + sha256)",
+          "lockedCount": 6,
+          "upstreamCount": 6
+        },
+        {
+          "code": "FINGERPRINT_STALE",
+          "at": "image.lock.json:sourceInputs.hostBuildFingerprint",
+          "reason": "the recorded fingerprint must equal the freshly recomputed lock-derived fingerprint (archive+patches+toolchain)",
+          "expected": "b11b20e1b6401533d75a4838e85e0b8b5389d1b0e819fc67c8d69adff696a2ed"
+        }
+      ],
+      "catalogGaps": [],
+      "roles": [
+        {
+          "role": "controller",
+          "principalLabel": "runner-controller",
+          "credentialRef": "secret-ref:sdd-harness-pilot/runner-authority",
+          "provisioningStatus": "NOT_PROVISIONED",
+          "workspaceVolume": "ws-controller",
+          "grantedRefCount": 2
+        },
+        {
+          "role": "author",
+          "principalLabel": "worker-author",
+          "credentialRef": "secret-ref:sdd-harness-pilot/worker-author-api",
+          "provisioningStatus": "NOT_PROVISIONED",
+          "workspaceVolume": "ws-author",
+          "grantedRefCount": 1
+        },
+        {
+          "role": "test-author",
+          "principalLabel": "worker-test-author",
+          "credentialRef": null,
+          "provisioningStatus": "UNASSIGNED",
+          "workspaceVolume": "ws-test-author",
+          "grantedRefCount": 0
+        },
+        {
+          "role": "reviewer",
+          "principalLabel": "worker-reviewer",
+          "credentialRef": "secret-ref:sdd-harness-pilot/worker-review-api",
+          "provisioningStatus": "NOT_PROVISIONED",
+          "workspaceVolume": "ws-reviewer",
+          "grantedRefCount": 1
+        },
+        {
+          "role": "publisher",
+          "principalLabel": "runner-publisher",
+          "credentialRef": null,
+          "provisioningStatus": "UNASSIGNED",
+          "workspaceVolume": "ws-publisher",
+          "grantedRefCount": 0
+        },
+        {
+          "role": "isolator",
+          "principalLabel": "runner-isolator",
+          "credentialRef": null,
+          "provisioningStatus": "UNASSIGNED",
+          "workspaceVolume": "ws-isolator",
+          "grantedRefCount": 0
+        }
+      ],
+      "methodState": {
+        "declaration": "METHOD_STATE_SHARED_DECLARED",
+        "model": "cooperative-local",
+        "identityBasis": false,
+        "permissionBasis": false,
+        "completionBasis": false,
+        "dispatchRecordStatus": "UNVERIFIED"
+      },
+      "authority": {
+        "interface": "Authority.v1",
+        "authorityStatus": "UNVERIFIED",
+        "registrations": 0,
+        "concurrentWriterPolicy": "REFUSE",
+        "copiedStatePolicy": "REFUSE"
+      },
+      "imageLock": {
+        "interface": "RunnerImageLock.v1",
+        "upGate": {
+          "enabled": true,
+          "requireAllComponentsAuthenticated": true,
+          "reason": "S2/S3 真实构建与 digest 回填完成；准入为本地构建镜像（六补丁链 digest 校验）",
+          "admittedBy": "user directive 2026-10-22: 端到端执行授权（\"你可以端到端执行吧\"）",
+          "admittedAt": "2026-10-22T12:10:00.000Z"
+        },
+        "containerBuildStatus": "VERIFIED",
+        "components": [
+          {
+            "component": "comet-runner",
+            "reference": "comet-runner:locked-local",
+            "digest": "sha256:4dfd24ed0677d401f202c2ab70f1115ca074d7038e143c10e75eea4b51c91b13",
+            "status": "UNVERIFIED"
+          },
+          {
+            "component": "runner-base",
+            "reference": "node@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d",
+            "digest": "sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d",
+            "status": "UNVERIFIED"
+          }
+        ]
+      },
+      "checkedAt": "2026-10-25T07:12:26.459Z"
+    }
+
+
+    2 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-runner-isolation.test.js:624:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+  ...
+# Subtest: RW_RUNNER_BUILD: committed image lock mirrors the six-patch upstream lock (patches, toolchain, openspec pin, freshly recomputed fingerprint)
+not ok 12 - RW_RUNNER_BUILD: committed image lock mirrors the six-patch upstream lock (patches, toolchain, openspec pin, freshly recomputed fingerprint)
+  ---
+  duration_ms: 1.156375
+  type: 'test'
+  location: '<worker-tree>/test/infra-runner-isolation.test.js:682:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    runner lock must mirror the upstream patch list exactly (order + shas)
+    + actual - expected
+
+      [
+        {
+          path: 'integrations/comet/patches/0001-matt-method-profile.patch',
+    +     sha256: '56581963fa2222f79a31db61a569c4e289890c890003895fd5d973849ff008e9'
+    -     sha256: '14a93e69f98b4f35080cd5c0b7666cea2a7e95ce73e66c4aebefd400ee66d15b'
+        },
+        {
+          path: 'integrations/comet/patches/tests/1_6.patch',
+    +     sha256: 'de09de41adad8ea8f56e67a4a8d866e3cf2af86309acba98059e6a7ba9163f90'
+    -     sha256: '8edd518897a035617b20e9fba9a4179a618efe45c0b2a92e72d48dab242e1ec9'
+        },
+        {
+          path: 'integrations/comet/patches/0002-managed-delivery-runtime.patch',
+          sha256: '47d2eebd57d4b8735a54333b0bf79a93c8812ae9037be9b9d0e141a9d5b38b16'
+        },
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      path: 'integrations/comet/patches/0001-matt-method-profile.patch'
+      sha256: '14a93e69f98b4f35080cd5c0b7666cea2a7e95ce73e66c4aebefd400ee66d15b'
+    1:
+      path: 'integrations/comet/patches/tests/1_6.patch'
+      sha256: '8edd518897a035617b20e9fba9a4179a618efe45c0b2a92e72d48dab242e1ec9'
+    2:
+      path: 'integrations/comet/patches/0002-managed-delivery-runtime.patch'
+      sha256: '47d2eebd57d4b8735a54333b0bf79a93c8812ae9037be9b9d0e141a9d5b38b16'
+    3:
+      path: 'integrations/comet/patches/tests/2_4.patch'
+      sha256: '3b8aab434d0af664e6aca656bcdaaae1da1f80145d17ba99e0a2f01c0219545e'
+    4:
+      path: 'integrations/comet/patches/0003-post-archive-closeout.patch'
+      sha256: 'f89fe71da11d356d7f4abf839273024e7094ae04dd301d3abc6d342147f33783'
+    5:
+      path: 'integrations/comet/patches/tests/4_6.patch'
+      sha256: '49441b359e27c8a21948db6b14ae666ab89e1adc790cfbadbb511d02367f777e'
+  actual:
+    0:
+      path: 'integrations/comet/patches/0001-matt-method-profile.patch'
+      sha256: '56581963fa2222f79a31db61a569c4e289890c890003895fd5d973849ff008e9'
+    1:
+      path: 'integrations/comet/patches/tests/1_6.patch'
+      sha256: 'de09de41adad8ea8f56e67a4a8d866e3cf2af86309acba98059e6a7ba9163f90'
+    2:
+      path: 'integrations/comet/patches/0002-managed-delivery-runtime.patch'
+      sha256: '47d2eebd57d4b8735a54333b0bf79a93c8812ae9037be9b9d0e141a9d5b38b16'
+    3:
+      path: 'integrations/comet/patches/tests/2_4.patch'
+      sha256: '3b8aab434d0af664e6aca656bcdaaae1da1f80145d17ba99e0a2f01c0219545e'
+    4:
+      path: 'integrations/comet/patches/0003-post-archive-closeout.patch'
+      sha256: 'f89fe71da11d356d7f4abf839273024e7094ae04dd301d3abc6d342147f33783'
+    5:
+      path: 'integrations/comet/patches/tests/4_6.patch'
+      sha256: '49441b359e27c8a21948db6b14ae666ab89e1adc790cfbadbb511d02367f777e'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-runner-isolation.test.js:686:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that drifts from upstream refuses
+not ok 13 - RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that drifts from upstream refuses
+  ---
+  duration_ms: 39.071959
+  type: 'test'
+  location: '<worker-tree>/test/infra-runner-isolation.test.js:807:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    build-plan must PASS on the committed repo: {
+      "interface": "RunnerInfra.v1",
+      "command": "build-plan",
+      "dir": "infra/delivery/runner",
+      "drift": [
+        "PATCH_LOCK_MISMATCH",
+        "FINGERPRINT_STALE"
+      ],
+      "sourceCommit": "c90af44a4474662d7853aae76ce785404974fb0a",
+      "fingerprint": "b11b20e1b6401533d75a4838e85e0b8b5389d1b0e819fc67c8d69adff696a2ed",
+      "patches": [
+        {
+          "path": "integrations/comet/patches/0001-matt-method-profile.patch",
+          "sha256": "14a93e69f98b4f35080cd5c0b7666cea2a7e95ce73e66c4aebefd400ee66d15b",
+          "sha256Verified": true
+        },
+        {
+          "path": "integrations/comet/patches/tests/1_6.patch",
+          "sha256": "8edd518897a035617b20e9fba9a4179a618efe45c0b2a92e72d48dab242e1ec9",
+          "sha256Verified": true
+        },
+        {
+          "path": "integrations/comet/patches/0002-managed-delivery-runtime.patch",
+          "sha256": "47d2eebd57d4b8735a54333b0bf79a93c8812ae9037be9b9d0e141a9d5b38b16",
+          "sha256Verified": true
+        },
+        {
+          "path": "integrations/comet/patches/tests/2_4.patch",
+          "sha256": "3b8aab434d0af664e6aca656bcdaaae1da1f80145d17ba99e0a2f01c0219545e",
+          "sha256Verified": true
+        },
+        {
+          "path": "integrations/comet/patches/0003-post-archive-closeout.patch",
+          "sha256": "f89fe71da11d356d7f4abf839273024e7094ae04dd301d3abc6d342147f33783",
+          "sha256Verified": true
+        },
+        {
+          "path": "integrations/comet/patches/tests/4_6.patch",
+          "sha256": "49441b359e27c8a21948db6b14ae666ab89e1adc790cfbadbb511d02367f777e",
+          "sha256Verified": true
+        }
+      ],
+      "entrypoint": "/build/repo/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/b11b20e1b6401533d75a4838e85e0b8b5389d1b0e819fc67c8d69adff696a2ed/work/bin/comet.js",
+      "inputs": {
+        "cometSourceArchive": {
+          "path": ".sdd/cache/runner-build/comet-source.tar.gz",
+          "status": "ACQUISITION_REQUIRED",
+          "expectedSha256": "28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f",
+          "acquisition": {
+            "url": "https://codeload.github.com/rpamis/comet/tar.gz/c90af44a4474662d7853aae76ce785404974fb0a",
+            "bytes": 40474019,
+            "command": "mkdir -p .sdd/cache/runner-build && curl -fsSL https://codeload.github.com/rpamis/comet/tar.gz/c90af44a4474662d7853aae76ce785404974fb0a -o .sdd/cache/runner-build/comet-source.tar.gz"
+          }
+        },
+        "openspecTarball": {
+          "path": ".sdd/cache/runner-build/openspec-1.11.0.tgz",
+          "status": "ACQUISITION_REQUIRED",
+          "expectedSha256": "84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f",
+          "acquisition": {
+            "url": "https://registry.npmmirror.com/@fission-ai/openspec/-/openspec-1.11.0.tgz",
+            "bytes": 471694,
+            "command": "mkdir -p .sdd/cache/runner-build && curl -fsSL https://registry.npmmirror.com/@fission-ai/openspec/-/openspec-1.11.0.tgz -o .sdd/cache/runner-build/openspec-1.11.0.tgz"
+          }
+        }
+      },
+      "dockerBuild": {
+        "dockerfile": "infra/delivery/runner/Dockerfile",
+        "context": ".",
+        "buildArgs": {
+          "RUNNER_BASE_IMAGE": "<resolved-at-admission:image.lock.json:components.runner-base>",
+          "SOURCE_COMMIT": "c90af44a4474662d7853aae76ce785404974fb0a",
+          "SOURCE_SHA256": "28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f",
+          "EXPECTED_FINGERPRINT": "b11b20e1b6401533d75a4838e85e0b8b5389d1b0e819fc67c8d69adff696a2ed",
+          "OPENSPEC_VERSION": "1.11.0",
+          "OPENSPEC_TARBALL_SHA256": "84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f",
+          "PATCH_1_SHA256": "14a93e69f98b4f35080cd5c0b7666cea2a7e95ce73e66c4aebefd400ee66d15b",
+          "PATCH_2_SHA256": "8edd518897a035617b20e9fba9a4179a618efe45c0b2a92e72d48dab242e1ec9",
+          "PATCH_3_SHA256": "47d2eebd57d4b8735a54333b0bf79a93c8812ae9037be9b9d0e141a9d5b38b16",
+          "PATCH_4_SHA256": "3b8aab434d0af664e6aca656bcdaaae1da1f80145d17ba99e0a2f01c0219545e",
+          "PATCH_5_SHA256": "f89fe71da11d356d7f4abf839273024e7094ae04dd301d3abc6d342147f33783",
+          "PATCH_6_SHA256": "49441b359e27c8a21948db6b14ae666ab89e1adc790cfbadbb511d02367f777e"
+        },
+        "command": "docker build -f infra/delivery/runner/Dockerfile --build-arg RUNNER_BASE_IMAGE=<resolved-at-admission:image.lock.json:components.runner-base> --build-arg SOURCE_COMMIT=c90af44a4474662d7853aae76ce785404974fb0a --build-arg SOURCE_SHA256=28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f --build-arg EXPECTED_FINGERPRINT=b11b20e1b6401533d75a4838e85e0b8b5389d1b0e819fc67c8d69adff696a2ed --build-arg OPENSPEC_VERSION=1.11.0 --build-arg OPENSPEC_TARBALL_SHA256=84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f --build-arg PATCH_1_SHA256=14a93e69f98b4f35080cd5c0b7666cea2a7e95ce73e66c4aebefd400ee66d15b --build-arg PATCH_2_SHA256=8edd518897a035617b20e9fba9a4179a618efe45c0b2a92e72d48dab242e1ec9 --build-arg PATCH_3_SHA256=47d2eebd57d4b8735a54333b0bf79a93c8812ae9037be9b9d0e141a9d5b38b16 --build-arg PATCH_4_SHA256=3b8aab434d0af664e6aca656bcdaaae1da1f80145d17ba99e0a2f01c0219545e --build-arg PATCH_5_SHA256=f89fe71da11d356d7f4abf839273024e7094ae04dd301d3abc6d342147f33783 --build-arg PATCH_6_SHA256=49441b359e27c8a21948db6b14ae666ab89e1adc790cfbadbb511d02367f777e ."
+      },
+      "upGate": "OPEN",
+      "containerBuildStatus": "VERIFIED",
+      "checkedAt": "2026-10-25T07:12:26.500Z"
+    }
+
+
+    2 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-runner-isolation.test.js:809:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+  ...
+# Subtest: B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+not ok 14 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently
+  ---
+  duration_ms: 257.078625
+  type: 'test'
+  location: '<worker-tree>/test/spec-closeout.test.js:321:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/spec-closeout.test.js:330:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 0
+# fail 14
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1931.563208
+
+# STDERR

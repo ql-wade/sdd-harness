@@ -1,0 +1,325 @@
+TAP version 13
+# Subtest: I04 convergence validate rejects a registry without registered identity
+not ok 1 - I04 convergence validate rejects a registry without registered identity
+  ---
+  duration_ms: 46.831417
+  type: 'test'
+  location: '<worker-tree>/test/infra-llmwiki-paths.test.js:398:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    {
+      "interface": "ProjectWikiInfra.v1",
+      "command": "validate",
+      "registry": "<host-path-redacted>",
+      "refs": "infra/delivery/secrets.refs.example.json",
+      "dir": "infra/delivery/llmwiki",
+      "ok": true,
+      "violations": [],
+      "catalogGaps": [
+        "secret-ref:sdd-harness-pilot/llmwiki-source-read"
+      ],
+      "packageLock": {
+        "interface": "PackageLock.v1",
+        "component": "llmwiki",
+        "upGate": {
+          "enabled": false,
+          "reason": "I04 registers and qualifies the llmwiki distribution only; MCP host registration is owned by a later P task through mcp-capabilities.yaml (single source of truth) and runtime up needs authorization that does not exist"
+        }
+      },
+      "projectRoot": {
+        "interface": "ProjectRoot.v1",
+        "projectId": "sdd-harness-pilot",
+        "repoId": "ql-wade/sdd-harness",
+        "canonicalWiki": {
+          "root": ".sdd/wiki/sdd-harness",
+          "resolution": "existing lib/sdd-paths.js getWikiHome(canonical registered main tree), exactly equal to this registered relative target; Git common-dir locates project identity only",
+          "rule": "exactly one wiki root per project; every CLI / MCP host / worktree must resolve to it",
+          "workspaceBinding": "SDD_HOME/SDD_WIKI_HOME values never register a target or confer permission. CLI result must equal the pre-registered target under the same project, without link escape. P4_4 owns the one resolver and launcher."
+        }
+      },
+      "indexPolicy": {
+        "interface": "IndexPolicy.v1",
+        "tiers": [
+          "raw",
+          "staging",
+          "curated"
+        ],
+        "knowledgeWrite": {
+          "interface": "KnowledgeWrite.v1",
+          "requiresApproval": true,
+          "requiresSourceAndRevision": true,
+          "independentReadbackRequired": true,
+          "requiredEntryFields": [
+            "tier",
+            "title",
+            "content",
+            "approvedBy",
+            "source",
+            "revision"
+          ],
+          "indexConsistencyGate": "I04 emits storage/index facts only. A missing/stale native row is INCONSISTENT and cannot close Kp; the original Comet gate and independent verifier own the judgment."
+        }
+      },
+      "mcpProfile": {
+        "interface": "McpComponentProfile.v1",
+        "registrationScope": "component-profile-only",
+        "hostDiscoveryStatus": "UNVERIFIED"
+      },
+      "checkedAt": "2026-10-25T06:16:14.255Z"
+    }
+
+
+    0 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-llmwiki-paths.test.js:404:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: I04 convergence qualify rejects a registry without registered identity
+not ok 2 - I04 convergence qualify rejects a registry without registered identity
+  ---
+  duration_ms: 207.160334
+  type: 'test'
+  location: '<worker-tree>/test/infra-llmwiki-paths.test.js:398:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    {
+      "interface": "Qualification.v1",
+      "domain": "llmwiki",
+      "scope": "infrastructure-observation-only",
+      "ready": false,
+      "unverifiedCount": 5,
+      "categories": {
+        "upstream-source": {
+          "status": "VERIFIED",
+          "sourceCommit": "075c5b4996ff4e07f9d3c57c1f14fd2b54a955db",
+          "treeSha256": "861319ee0c84d0ef2aa56ee5ac1ee507364785b5fe48295bde17d9e4dcd99357",
+          "files": 300,
+          "proof": "current byte tree equals the fixed Git-archive tree"
+        },
+        "requirements-lock-digest": {
+          "status": "VERIFIED",
+          "observed": "678bd7301d80a602336e8fd3a81f98adcd4c5beaec4e2f1f2bfb8d2e04a9e732",
+          "bytes": 154140
+        },
+        "venv-runtime": {
+          "status": "VERIFIED",
+          "python": "3.11.13",
+          "mcp": "1.27.0"
+        },
+        "workspace-identity": {
+          "status": "UNVERIFIED",
+          "reason": "CLI_WIKI_BINDING_MISMATCH: environment path is not the registered project wiki target"
+        },
+        "launcher-entry": {
+          "status": "VERIFIED",
+          "observed": "bd18bfea155ec0fc8c1ce9fb23414dafbeb94416f4096eb92624eb59932ae863"
+        },
+        "distribution-project-location": {
+          "status": "VERIFIED"
+        },
+        "mcp-host-discovery": {
+          "status": "UNVERIFIED",
+          "reason": "read-only qualification does not start a host or trust static hostDiscovered flags; actual isolated host observation remains a separate proof"
+        },
+        "mcp-write-channel": {
+          "status": "UNVERIFIED",
+          "reason": "not executed by read-only qualify; use the current real sandbox MCP probe, never historical claim fields"
+        },
+        "index-consistency": {
+          "status": "UNVERIFIED",
+          "reason": "not executed by read-only qualify; the current probe must query native documents/chunks/FTS for the same MCP-created bytes"
+        },
+        "secret-provisioned": {
+          "status": "UNVERIFIED",
+          "reason": "source-read reference is not resolved by I04; fixture writes do not confer source access or a managed write grant"
+        }
+      },
+      "inputs": {
+        "registrySha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "domainFiles": {
+          "package.lock.json": "afb3e05cdb5cf8868fd8b0382a6cd161facaae86a69e1229efc42825c7dc0b90",
+          "project-root-policy.json": "d5a101fe1419867ac36095f958ad827f22876aa9ae41ca372d276b3002fe7a8d",
+          "index-policy.json": "3f59c57f621687040344e2e8625445e6df8467fde5d4d53e6538dadf0fc9208e",
+          "mcp-profile.json": "a8ce6feabf66c18b200c0a9f7a414fba068a60a5bd1a3d8b903edad82cc0c692"
+        }
+      },
+      "grantsAuthority": false,
+      "knowledgeGateSigned": false,
+      "violations": [],
+      "runtimeExecuted": true,
+      "catalogGaps": [
+        "secret-ref:sdd-harness-pilot/llmwiki-source-read"
+      ],
+      "checkedAt": "2026-10-25T06:16:14.463Z"
+    }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-llmwiki-paths.test.js:405:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: I04 convergence probe rejects a registry without registered identity
+not ok 3 - I04 convergence probe rejects a registry without registered identity
+  ---
+  duration_ms: 103.893542
+  type: 'test'
+  location: '<worker-tree>/test/infra-llmwiki-paths.test.js:398:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    {
+      "interface": "ProjectWikiInfra.v1",
+      "command": "probe",
+      "case": "escape-denial",
+      "executed": true,
+      "status": "VERIFIED",
+      "reason": null,
+      "sandbox": "git-repo-with-linked-worktree",
+      "denials": [
+        {
+          "code": "PATH_TRAVERSAL_DENIED",
+          "allowed": false,
+          "reason": "claimed path carries a .. segment; traversal out of the canonical wiki root is refused regardless of policy flags"
+        },
+        {
+          "code": "SYMLINK_ESCAPE_DENIED",
+          "allowed": false,
+          "reason": "realpath resolves outside the canonical wiki root (symlink escape); refusal is unconditional"
+        },
+        {
+          "code": "FOREIGN_WIKI_ROOT_DENIED",
+          "allowed": false,
+          "reason": "a per-worktree or foreign llmwiki/ directory is never a wiki root; every worktree must use the canonical main-tree root"
+        },
+        {
+          "code": "PROJECT_ID_MISMATCH_DENIED",
+          "allowed": false,
+          "reason": "claimed project id pav-legacy does not match the policy-bound project sdd-harness-pilot"
+        }
+      ],
+      "positiveControls": [
+        {
+          "code": "CONTAINED",
+          "allowed": true
+        },
+        {
+          "claim": "release..notes.md",
+          "code": "PATH_TRAVERSAL_DENIED",
+          "allowed": false
+        },
+        {
+          "claim": "..draft.md",
+          "code": "PATH_TRAVERSAL_DENIED",
+          "allowed": false
+        }
+      ],
+      "hardInvariantsHeld": true,
+      "knowledgeWrite": {
+        "denials": [
+          {
+            "code": "KNOWLEDGE_AUTHORITY_DENIED",
+            "allowed": false,
+            "reason": "openspec-tasks is a forbidden wiki fact authority; specs/tasks checkmarks, source code and Comet state never author wiki facts"
+          },
+          {
+            "code": "UNAPPROVED_INTAKE_DENIED",
+            "allowed": false,
+            "reason": "full Git code intake without an explicit approval channel is forbidden by intake policy"
+          },
+          {
+            "code": "ENTRY_ADMISSION_DENIED",
+            "allowed": false,
+            "reason": "curated entry is missing required fields: approvedBy, revision (approval + source + revision are non-negotiable)"
+          },
+          {
+            "code": "ENTRY_ADMISSION_DENIED",
+            "allowed": false,
+            "reason": "only curated tier entries are admissible; raw/staging are never wiki facts"
+          }
+        ],
+        "positiveControls": [
+          {
+            "code": "ADMITTED",
+            "allowed": true,
+            "reason": "approved curated entry with source and revision; independent readback still required before any write is called successful"
+          }
+        ]
+      },
+      "exactRootControl": {
+        "code": "CONTAINED",
+        "allowed": true
+      },
+      "checkedAt": "2026-10-25T06:16:14.563Z"
+    }
+
+
+    0 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-llmwiki-paths.test.js:404:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: I04 convergence path admission distinguishes dot segments and exact canonical roots
+not ok 4 - I04 convergence path admission distinguishes dot segments and exact canonical roots
+  ---
+  duration_ms: 107.440584
+  type: 'test'
+  location: '<worker-tree>/test/infra-llmwiki-paths.test.js:410:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    a safe filename is not a real parent segment: {"claim":"release..notes.md","code":"PATH_TRAVERSAL_DENIED","allowed":false}
+
+    false !== true
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-llmwiki-paths.test.js:415:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 523.415791
+
+# STDERR

@@ -15,14 +15,15 @@
 // ProjectRoot.v1 硬不变量：包含性拒绝（目录穿越、符号链接越域、未包含路径）由解析器无条件执行；
 // policy 文件里的 denials.* 是声明记录，关掉声明既过不了 validate，也削弱不了解析器（probe 实证）。
 
-import { spawn, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { parseSecretRef, scanForForbiddenValues } from './secret-refs.mjs';
+import { parseSecretRef, scanForForbiddenValues, redactSecretValue } from './secret-refs.mjs';
+import { getWikiHome } from '../../lib/sdd-paths.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const EXIT_PASS = 0;
@@ -36,12 +37,9 @@ const DOMAIN_FILES = ['package.lock.json', 'project-root-policy.json', 'index-po
 const FORBIDDEN_AUTHORITIES = ['openspec-specs', 'openspec-tasks', 'task-checkmarks', 'source-code', 'comet-state'];
 const SECRET_REF_PREFIX = 'secret-ref:';
 const MAIN_TREE_LABEL = '<main-working-tree>';
-const MCP_INIT_TIMEOUT_MS = 15_000;
-const MCP_LIST_TIMEOUT_MS = 15_000;
-const MCP_WRITE_TIMEOUT_MS = 20_000;
 
 // 宿主私有路径绝不进入结构化回执/报告；对外输出统一脱敏（与 secret-refs 的 ABSOLUTE_PATH_FORBIDDEN 同源规则）。
-const HOST_PATH_REDACTION = /(^|[\s"'=(:/])\/(Users|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
+const HOST_PATH_REDACTION = /(^|[\s"'=(:/])\/(Users|Volumes|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
 const redactHostPaths = (text) => String(text ?? '').replace(HOST_PATH_REDACTION, '$1<host-path-redacted>');
 
 // 结构化输出里的文件字段一律 repo 相对；repo 之外（fixture/临时目录）则复用宿主路径脱敏。
@@ -51,7 +49,6 @@ const displayPath = (file) => {
 };
 
 const UNVERIFIED = (reason) => ({ status: 'UNVERIFIED', reason });
-const RECORDED = (reason) => ({ status: 'RECORDED', reason });
 
 const sha256Text = (text) => crypto.createHash('sha256').update(text).digest('hex');
 const sha256File = (file) => sha256Text(fs.readFileSync(file));
@@ -66,56 +63,63 @@ function usage() {
 }
 
 function parseArgs(argv) {
-  const opts = { _: [] };
-  const command = argv[0];
+  const opts = { _: [] }; const command = argv[0];
+  const valueOptions = new Set(['--registry', '--refs', '--dir', '--case']);
   for (let i = 1; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === '--json') {
-      opts.json = true;
-    } else if (arg.startsWith('--')) {
-      const value = argv[++i];
-      if (value === undefined) return { command, opts, error: `missing value for ${arg}` };
-      opts[arg.slice(2)] = value;
-    } else {
-      opts._.push(arg);
-    }
+    if (arg === '--json' && !opts.json) { opts.json = true; continue; }
+    if (!valueOptions.has(arg) || Object.hasOwn(opts, arg.slice(2))) return { command, opts, error: 'ARGUMENT_OPTION_INVALID' };
+    const value = argv[++i];
+    if (typeof value !== 'string' || !value.trim() || value.startsWith('--')) return { command, opts, error: 'ARGUMENT_VALUE_REQUIRED' };
+    opts[arg.slice(2)] = value;
   }
+  if (command !== 'probe' && opts.case) return { command, opts, error: 'ARGUMENT_CASE_SCOPE' };
   return { command, opts };
 }
 
+const safeText = (value) => redactHostPaths(redactSecretValue(String(value)));
+function safeOutput(value) {
+  if (typeof value === 'string') return safeText(value);
+  if (Array.isArray(value)) return value.map(safeOutput);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, safeOutput(item)]));
+  return value;
+}
 function print(payload) {
-  process.stdout.write(JSON.stringify({ ...payload, checkedAt: new Date().toISOString() }, null, 2) + '\n');
+  process.stdout.write(JSON.stringify(safeOutput({ ...payload, checkedAt: new Date().toISOString() }), null, 2) + '\n');
 }
 
-function failInput(message) {
-  process.stderr.write(`${message}\n${usage()}\n`);
+const FILE_READ_CODES = new Set(['ENOENT', 'EACCES', 'EPERM', 'EISDIR', 'ENOTDIR', 'ELOOP', 'ENAMETOOLONG', 'EINVAL', 'EMFILE', 'ENFILE', 'EBUSY', 'ENOSPC', 'EIO', 'ERR_INVALID_ARG_TYPE', 'ERR_INVALID_ARG_VALUE', 'ERR_ACCESS_DENIED']);
+const DIAGNOSTIC_CODES = new Set([...FILE_READ_CODES, 'ETIMEDOUT', 'SOURCE_PRIVATE_ENV_FORBIDDEN', 'SOURCE_SYMLINK_FORBIDDEN', 'SOURCE_FILE_TYPE_UNSUPPORTED']);
+const safeFailureCode = (error) => typeof error?.code === 'string' && DIAGNOSTIC_CODES.has(error.code) ? error.code : 'UNEXPECTED_FAILURE';
+const childFailureCode = (run) => run.error ? safeFailureCode(run.error) : Number.isInteger(run.status) ? `EXIT_${run.status}` : 'EXIT_UNKNOWN';
+
+function failInput(category, code) {
+  process.stderr.write(`${category}: ${code}\n${usage()}\n`);
   return EXIT_INPUT;
 }
 
 function readJson(file) {
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
+  let text;
+  try { text = fs.readFileSync(file, 'utf8'); }
+  catch (error) {
+    if (!FILE_READ_CODES.has(error?.code)) throw error;
+    return { ok: false, code: `FILE_READ_${error.code}` };
+  }
+  try { return { ok: true, value: JSON.parse(text), text }; }
+  catch (error) {
+    if (!(error instanceof SyntaxError)) throw error;
+    return { ok: false, code: 'JSON_INVALID' };
+  }
 }
 
 function loadDomainFiles(dir) {
-  const files = new Map();
-  const missing = [];
-  const unparseable = [];
+  const files = new Map(); const issues = [];
   for (const name of DOMAIN_FILES) {
-    try {
-      files.set(name, fs.readFileSync(path.join(dir, name), 'utf8'));
-    } catch {
-      missing.push(name);
-    }
+    const result = readJson(path.join(dir, name));
+    if (result.ok) files.set(name, result.text);
+    else issues.push(`${name}:${result.code}`);
   }
-  for (const name of DOMAIN_FILES) {
-    if (!files.has(name)) continue;
-    try {
-      JSON.parse(files.get(name));
-    } catch (error) {
-      unparseable.push(`${name}: ${redactHostPaths(error.message)}`);
-    }
-  }
-  return { files, missing, unparseable };
+  return { files, issues };
 }
 
 function collectSecretRefs(node, out) {
@@ -132,7 +136,7 @@ function collectSecretRefs(node, out) {
 
 function runGit(cwd, args, timeoutMs = 15_000) {
   const run = spawnSync('git', args, { cwd, encoding: 'utf8', timeout: timeoutMs });
-  return run.status === 0 ? { ok: true, out: run.stdout.trim() } : { ok: false, err: redactHostPaths((run.stderr ?? '').trim().split('\n')[0] || `git exited ${run.status}`) };
+  return run.status === 0 ? { ok: true, out: run.stdout.trim() } : { ok: false, err: `GIT_EXECUTION_FAILED:${childFailureCode(run)}` };
 }
 
 // ---- ProjectRoot.v1：worktree -> canonical root 解析与包含性判定（硬不变量） ----
@@ -146,13 +150,44 @@ const realpathIfExists = (dir) => {
 };
 
 // git worktree list 语义：git-common-dir 的父目录就是 main working tree。
+function resolveMainTree(cwd = repoRoot) {
+  const common = runGit(cwd, ['rev-parse', '--git-common-dir']);
+  return common.ok ? { ok: true, mainTree: path.resolve(cwd, common.out, '..') }
+    : { ok: false, reason: `git-common-dir unavailable: ${common.err}` };
+}
+
+function contained(root, target) {
+  const rel = path.relative(root, target);
+  return rel === '' || (rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel));
+}
+
+function registeredWikiTarget(policy) {
+  const project = resolveMainTree();
+  if (!project.ok) return project;
+  const mainTree = fs.realpathSync.native(project.mainTree);
+  // P4_4 owns the pending shell repair. Never pass an untrusted path to it.
+  if (/[$`\r\n]/.test(mainTree)) return { ok: false, reason: 'unsafe input to pending P4_4 path authority; no invocation' };
+  const env = { ...process.env, SDD_HOME: path.join(mainTree, '.sdd') };
+  delete env.SDD_WIKI_HOME;
+  const script = `import { getWikiHome } from ${JSON.stringify(new URL('../../lib/sdd-paths.js', import.meta.url).href)}; process.stdout.write(getWikiHome(process.argv[1]));`;
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', script, '--', mainTree], { cwd: repoRoot, env, encoding: 'utf8', timeout: 15000 });
+  const declared = path.resolve(mainTree, policy.canonicalWiki.root);
+  if (result.status !== 0 || !path.isAbsolute(result.stdout) || declared !== path.resolve(result.stdout)) {
+    return { ok: false, reason: 'ROOT_REGISTRATION_MISMATCH: policy/env cannot invent a target different from the existing project path authority under registered project-local bindings' };
+  }
+  let ancestor = declared;
+  while (!fs.existsSync(ancestor) && path.dirname(ancestor) !== ancestor) ancestor = path.dirname(ancestor);
+  const realRoot = path.resolve(fs.realpathSync.native(ancestor), path.relative(ancestor, declared));
+  if (!contained(mainTree, realRoot) || (fs.existsSync(declared) && !fs.statSync(declared).isDirectory())) return { ok: false, reason: 'registered wiki target escapes the project or is not a directory' };
+  return { ok: true, mainTree, root: declared, realRoot, rootPresent: fs.existsSync(declared), rootLabel: `${MAIN_TREE_LABEL}/${policy.canonicalWiki.root}` };
+}
+
 function resolveCanonicalRoot(policy) {
-  const common = runGit(repoRoot, ['rev-parse', '--git-common-dir']);
-  if (!common.ok) return { ok: false, reason: `git-common-dir unavailable: ${common.err}` };
-  const mainTree = path.resolve(repoRoot, common.out, '..');
-  const root = path.join(mainTree, policy.canonicalWiki?.root ?? 'llmwiki');
-  const realRoot = realpathIfExists(root) ?? path.resolve(root);
-  return { ok: true, mainTree, root, realRoot, rootPresent: realpathIfExists(root) !== null, rootLabel: `${MAIN_TREE_LABEL}/${policy.canonicalWiki?.root ?? 'llmwiki'}` };
+  const registered = registeredWikiTarget(policy);
+  if (!registered.ok) return registered;
+  const { mainTree, root, rootLabel } = registered;
+  if (path.resolve(getWikiHome(mainTree)) !== root) return { ok: false, reason: 'CLI_WIKI_BINDING_MISMATCH: environment path is not the registered project wiki target' };
+  return registered;
 }
 
 function listWorktrees() {
@@ -179,7 +214,7 @@ function resolveContainedPath(canonicalRootReal, claimedRelative, flags) {
     return denied('CLAIM_INVALID', 'claimed path must be a non-empty string');
   }
   const target = path.resolve(canonicalRootReal, claimedRelative);
-  if (claimedRelative.split(path.sep).includes('..') || claimedRelative.includes('..')) {
+  if (claimedRelative.split(path.sep).includes('..')) {
     return denied('PATH_TRAVERSAL_DENIED', 'claimed path carries a .. segment; traversal out of the canonical wiki root is refused regardless of policy flags');
   }
   let realTarget;
@@ -189,8 +224,8 @@ function resolveContainedPath(canonicalRootReal, claimedRelative, flags) {
     return denied('PATH_NOT_RESOLVABLE', 'claimed path does not resolve to an existing filesystem entry');
   }
   const rel = path.relative(canonicalRootReal, realTarget);
-  const contained = rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
-  if (!contained) {
+  const inside = rel === '' || (rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel));
+  if (!inside) {
     return denied('SYMLINK_ESCAPE_DENIED', 'realpath resolves outside the canonical wiki root (symlink escape); refusal is unconditional');
   }
   return { code: 'CONTAINED', allowed: true, flagsRecorded: { ...flags } };
@@ -201,11 +236,9 @@ function resolveForeignRoot(canonicalRootReal, claimedRootDir) {
   try {
     realClaimed = fs.realpathSync.native(claimedRootDir);
   } catch (error) {
-    return { code: 'FOREIGN_WIKI_ROOT_DENIED', allowed: false, reason: `claimed wiki root does not resolve: ${redactHostPaths(error.message)}` };
+    return { code: 'FOREIGN_WIKI_ROOT_DENIED', allowed: false, reason: `claimed wiki root does not resolve: ${safeFailureCode(error)}` };
   }
-  const rel = path.relative(canonicalRootReal, realClaimed);
-  const contained = rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
-  if (!contained) {
+  if (realClaimed !== canonicalRootReal) {
     return {
       code: 'FOREIGN_WIKI_ROOT_DENIED',
       allowed: false,
@@ -253,6 +286,69 @@ function admitKnowledgeEntry(entry, policy) {
 
 // ---- validate ----
 
+// Only consumed fields are typed here; descriptive/historical metadata remains inert.
+const DOMAIN_TYPES = {
+  'package.lock.json': {
+    interface: 'string', component: 'string',
+    source: { commit: 'string', treeSha256: 'string' },
+    distribution: {
+      launcher: { path: 'string', sha256: 'string' },
+      packages: [{ name: 'string', observedVersion: 'string' }],
+      requirementsLock: { sha256: 'string', bytes: 'positive integer' },
+    },
+    mcpSession: { toolsObserved: ['string'] }, upGate: { enabled: 'boolean' },
+  },
+  'project-root-policy.json': {
+    interface: 'string', component: 'string', projectId: 'string', repoId: 'string',
+    canonicalWiki: { root: 'string' },
+    denials: { traversal: 'boolean', symlinkEscape: 'boolean', foreignWikiRoot: 'boolean', projectIdMismatch: 'boolean', uncontainedPaths: 'boolean' },
+  },
+  'index-policy.json': {
+    interface: 'string', component: 'string',
+    tiers: {
+      raw: { path: 'string', isWikiFactAuthority: 'boolean' },
+      staging: { path: 'string', isWikiFactAuthority: 'boolean' },
+      curated: { path: 'string', isWikiFactAuthority: 'boolean' },
+    },
+    index: { rebuildable: 'boolean', knowledgeAuthority: 'boolean', overridesSourceRecords: 'boolean', grantsKnowledgeAuthority: 'boolean' },
+    knowledgeAuthority: { wikiFactAuthorities: ['string'] },
+    knowledgeWrite: { requiresApproval: 'boolean', requiresSourceAndRevision: 'boolean', independentReadbackRequired: 'boolean', requiredEntryFields: ['string'] },
+    intake: { fullGitIngestWithoutApproval: 'string' },
+  },
+  'mcp-profile.json': {
+    interface: 'string', component: 'string', registrationScope: 'string',
+    hostRegistration: { thisFileDoesNotRegister: 'boolean', liveConfigDoubleWriteForbidden: 'boolean' },
+    hostEntry: { command: 'string', args: ['string'], transport: 'string' }, capabilities: ['string'],
+  },
+};
+
+function validateDomainTypes(docs) {
+  const violations = [];
+  const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+  const reject = (value, expected, at) => violations.push({ code: 'DOMAIN_SCHEMA_INVALID', at, expected,
+    actual: value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value });
+  const visit = (value, type, at) => {
+    if (Array.isArray(type)) {
+      if (!Array.isArray(value)) { reject(value, 'array', at); return; }
+      for (const [i, item] of value.entries()) visit(item, type[0], `${at}[${i}]`);
+    } else if (isObject(type)) {
+      if (!isObject(value)) { reject(value, 'object', at); return; }
+      for (const [key, expected] of Object.entries(type)) visit(value[key], expected, `${at}.${key}`);
+    } else if (type === 'string' ? typeof value !== 'string' || !value.trim()
+      : type === 'positive integer' ? !Number.isSafeInteger(value) || value <= 0
+        : typeof value !== type) reject(value, type === 'string' ? 'non-blank string' : type, at);
+  };
+  for (const [name, type] of Object.entries(DOMAIN_TYPES)) visit(docs.get(name), type, name);
+  const profile = docs.get('mcp-profile.json');
+  if (isObject(profile) && Object.hasOwn(profile, 'observation')) {
+    if (!isObject(profile.observation)) reject(profile.observation, 'object', 'mcp-profile.json.observation');
+    else for (const [key, type] of [['hostDiscoveryStatus', 'string'], ['hostDiscovered', 'boolean']]) {
+      if (Object.hasOwn(profile.observation, key)) visit(profile.observation[key], type, `mcp-profile.json.observation.${key}`);
+    }
+  }
+  return violations;
+}
+
 function validateDomain({ registry, refsDoc, files }) {
   const violations = [];
   const add = (code, at, extra) => violations.push({ code, at, ...(extra ?? {}) });
@@ -262,12 +358,16 @@ function validateDomain({ registry, refsDoc, files }) {
   const rootPolicy = docs.get('project-root-policy.json');
   const indexPolicy = docs.get('index-policy.json');
   const profile = docs.get('mcp-profile.json');
+  const typeViolations = validateDomainTypes(docs);
+  if (typeViolations.length) return { violations: typeViolations, catalogGaps: [], docs };
+  for (const name of DOMAIN_FILES) if (docs.get(name).component !== 'llmwiki') add('COMPONENT_IDENTITY_MISMATCH', name);
 
   // package.lock.json：接口、commit 形态、upGate 关闭、无虚构字段。
   if (lock.interface !== 'PackageLock.v1') add('LOCK_INTERFACE_INVALID', 'package.lock.json', { expected: 'PackageLock.v1' });
-  if (!/^[0-9a-f]{40}$/.test(lock.source?.commit ?? '')) add('LOCK_COMMIT_FORMAT_INVALID', 'package.lock.json:source.commit', { commit: lock.source?.commit ?? null });
+  if (typeof lock.source.commit !== 'string' || !/^[0-9a-f]{40}$/.test(lock.source.commit)) add('LOCK_COMMIT_FORMAT_INVALID', 'package.lock.json:source.commit', { commit: lock.source?.commit ?? null });
+  if (!lock.distribution.packages.some((pkg) => pkg?.name === 'mcp' && typeof pkg.observedVersion === 'string' && /^\d+\.\d+\.\d+$/.test(pkg.observedVersion))) add('LOCK_PACKAGE_RECORD_INCOMPLETE', 'package.lock.json:distribution.packages');
   for (const [index, pkg] of (lock.distribution?.packages ?? []).entries()) {
-    if (!pkg.name || !pkg.observedVersion) add('LOCK_PACKAGE_RECORD_INCOMPLETE', `package.lock.json:distribution.packages[${index}]`);
+    if (!pkg?.name || !pkg?.observedVersion) add('LOCK_PACKAGE_RECORD_INCOMPLETE', `package.lock.json:distribution.packages[${index}]`);
   }
   if (lock.upGate?.enabled !== false) {
     add('UP_GATE_NOT_CLOSED', 'package.lock.json:upGate', { reason: 'committed lock must declare upGate.enabled=false until host admission by the P task' });
@@ -281,19 +381,26 @@ function validateDomain({ registry, refsDoc, files }) {
   if (registry?.project?.github?.repoFullname && rootPolicy.repoId !== registry.project.github.repoFullname) {
     add('REPO_ID_MISMATCH', 'project-root-policy.json:repoId', { policy: rootPolicy.repoId, registry: registry.project.github.repoFullname });
   }
-  for (const [flag, value] of Object.entries(rootPolicy.denials ?? {})) {
+  for (const flag of ['traversal', 'symlinkEscape', 'foreignWikiRoot', 'projectIdMismatch', 'uncontainedPaths']) {
+    const value = rootPolicy.denials?.[flag];
     if (value !== true) add('POLICY_DENIAL_DISABLED', `project-root-policy.json:denials.${flag}`, { reason: 'containment denial declarations must all be true; flags are records, and a false record fails validate' });
   }
   const rootClaim = rootPolicy.canonicalWiki?.root ?? '';
-  if (!rootClaim || path.isAbsolute(rootClaim) || rootClaim.includes('..')) {
-    add('CANONICAL_ROOT_NOT_CONTAINED', 'project-root-policy.json:canonicalWiki.root', { root: rootClaim });
+  if (typeof rootClaim !== 'string' || !rootClaim || path.isAbsolute(rootClaim) || rootClaim.split(path.sep).includes('..')) {
+    add('CANONICAL_ROOT_NOT_CONTAINED', 'project-root-policy.json:canonicalWiki.root');
+  } else {
+    const registered = registeredWikiTarget(rootPolicy);
+    if (!registered.ok) add('ROOT_REGISTRATION_MISMATCH', 'project-root-policy.json:canonicalWiki.root', { reason: registered.reason });
   }
+
+  if (typeof lock.source.treeSha256 !== 'string' || !/^[0-9a-f]{64}$/.test(lock.source.treeSha256) || typeof lock.distribution.requirementsLock.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(lock.distribution.requirementsLock.sha256) || !Number.isSafeInteger(lock.distribution?.requirementsLock?.bytes) || lock.distribution.requirementsLock.bytes <= 0) add('SOURCE_INTEGRITY_BINDING_MISSING', 'package.lock.json');
 
   // index-policy.json：接口、三态、索引非权威、知识权威边界、写入门禁、intake 禁令。
   if (indexPolicy.interface !== 'IndexPolicy.v1') add('INDEX_POLICY_INTERFACE_INVALID', 'index-policy.json', { expected: 'IndexPolicy.v1' });
   for (const tier of ['raw', 'staging', 'curated']) {
-    if (!indexPolicy.tiers?.[tier]) add('TIER_MODEL_INCOMPLETE', `index-policy.json:tiers.${tier}`);
+    if (!indexPolicy.tiers?.[tier] || indexPolicy.tiers[tier].isWikiFactAuthority !== (tier === 'curated')) add('TIER_MODEL_INCOMPLETE', `index-policy.json:tiers.${tier}`);
   }
+  if (['raw','staging','curated'].some((tier) => indexPolicy.tiers[tier]?.path !== { raw: 'raw/', staging: 'staging/', curated: 'wiki/curated/' }[tier])) add('TIER_PATH_SEPARATION_INVALID', 'index-policy.json:tiers');
   if (indexPolicy.index?.knowledgeAuthority !== false) {
     add('INDEX_AS_AUTHORITY_FORBIDDEN', 'index-policy.json:index.knowledgeAuthority', { reason: 'the index is a rebuildable cache and never the knowledge authority' });
   }
@@ -312,8 +419,15 @@ function validateDomain({ registry, refsDoc, files }) {
     add('KNOWLEDGE_WRITE_GATE_DISABLED', 'index-policy.json:knowledgeWrite', { reason: 'approval, source/revision and independent readback must all be required' });
   }
 
+  if (indexPolicy.index?.grantsKnowledgeAuthority !== false || ['tier', 'title', 'content', 'approvedBy', 'source', 'revision'].some((field) => !indexPolicy.knowledgeWrite.requiredEntryFields.includes(field))) add('KNOWLEDGE_WRITE_GATE_DISABLED', 'index-policy.json:requiredEntryFields');
+
   // mcp-profile.json：接口、component-profile-only 边界（不得双写活配置）。
   if (profile.interface !== 'McpComponentProfile.v1') add('MCP_PROFILE_INTERFACE_INVALID', 'mcp-profile.json', { expected: 'McpComponentProfile.v1' });
+  const observedTools = lock.mcpSession?.toolsObserved;
+  if (!Array.isArray(observedTools) || !profile.capabilities.length || new Set(profile.capabilities).size !== profile.capabilities.length
+      || profile.capabilities.some((tool) => typeof tool !== 'string' || !observedTools.includes(tool))
+      || ['create','read','search'].some((tool) => !profile.capabilities.includes(tool))) add('MCP_CAPABILITY_MISMATCH', 'mcp-profile.json:capabilities');
+  if (profile.hostRegistration?.thisFileDoesNotRegister !== true || profile.hostRegistration?.liveConfigDoubleWriteForbidden !== true) add('HOST_REGISTRATION_SCOPE_INVALID', 'mcp-profile.json:hostRegistration');
   if (profile.registrationScope !== 'component-profile-only') {
     add('HOST_REGISTRATION_SCOPE_INVALID', 'mcp-profile.json:registrationScope', { declared: profile.registrationScope, reason: 'this task produces a component profile only; host registration belongs to the P task via mcp-capabilities.yaml' });
   }
@@ -322,7 +436,7 @@ function validateDomain({ registry, refsDoc, files }) {
   }
   const launcherPath = lock.distribution?.launcher?.path ?? '';
   const entryCommand = profile.hostEntry?.command ?? '';
-  if (launcherPath && entryCommand && !entryCommand.endsWith(launcherPath)) {
+  if (launcherPath !== 'tools/mcp/llmwiki.sh' || entryCommand !== '${CLAUDE_PROJECT_DIR}/tools/mcp/llmwiki.sh' || !Array.isArray(profile.hostEntry?.args) || profile.hostEntry.args.length !== 0 || profile.hostEntry?.transport !== 'stdio') {
     add('LAUNCHER_PATH_MISMATCH', 'mcp-profile.json:hostEntry.command', { launcherPath });
   }
 
@@ -354,365 +468,205 @@ function validateDomain({ registry, refsDoc, files }) {
 // ---- qualify ----
 
 function resolveDistributionPaths(lock) {
-  const sddHome = process.env.SDD_HOME || path.join(os.homedir(), '.sdd');
-  return {
-    sddHome,
+  const project = resolveMainTree();
+  if (!project.ok) return { error: project.reason };
+  const registeredHome = path.join(project.mainTree, '.sdd');
+  const sddHome = process.env.SDD_HOME ? path.resolve(process.env.SDD_HOME) : registeredHome;
+  const registeredPython = path.join(registeredHome, 'venvs', 'llmwiki-311', 'bin', 'python');
+  return { sddHome, registeredHome, registeredPython,
     cloneDir: path.join(sddHome, 'repos', 'llmwiki'),
     mcpDir: path.join(sddHome, 'repos', 'llmwiki', 'mcp'),
     requirementsLock: path.join(sddHome, 'repos', 'llmwiki', 'mcp', 'requirements.lock'),
-    venvPython: process.env.LLMWIKI_PYTHON || path.join(sddHome, 'repos', 'llmwiki', '.venv', 'bin', 'python'),
-    launcher: path.join(repoRoot, lock.distribution?.launcher?.path ?? 'tools/mcp/llmwiki.sh'),
+    venvPython: process.env.LLMWIKI_PYTHON ? path.resolve(process.env.LLMWIKI_PYTHON) : registeredPython,
+    launcher: path.resolve(repoRoot, lock.distribution.launcher.path),
   };
+}
+
+function sourceTreeDigest(root) {
+  const files = [];
+  const visit = (dir) => {
+    for (const name of fs.readdirSync(dir).sort()) {
+      if (['.git', '.venv', '__pycache__'].includes(name)) continue;
+      if (name === '.env' || name.startsWith('.env.local')) throw Object.assign(new Error('SOURCE_PRIVATE_ENV_FORBIDDEN'), { code: 'SOURCE_PRIVATE_ENV_FORBIDDEN' });
+      const file = path.join(dir, name); const stat = fs.lstatSync(file);
+      if (stat.isSymbolicLink()) throw Object.assign(new Error('SOURCE_SYMLINK_FORBIDDEN'), { code: 'SOURCE_SYMLINK_FORBIDDEN' });
+      if (stat.isDirectory()) visit(file);
+      else if (stat.isFile()) files.push([path.relative(root, file).split(path.sep).join('/'), sha256File(file)]);
+      else throw Object.assign(new Error('SOURCE_FILE_TYPE_UNSUPPORTED'), { code: 'SOURCE_FILE_TYPE_UNSUPPORTED' });
+    }
+  };
+  visit(root); files.sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+  return { sha256: sha256Text(files.map(([name, hash]) => `${name}\0${hash}\n`).join('')), files: files.length };
+}
+
+function inspectRuntime(lock) {
+  const dist = resolveDistributionPaths(lock); const categories = {}; let runtimeExecuted = false;
+  if (dist.error) return { dist, ready: false, runtimeExecuted, categories: { distribution: UNVERIFIED(dist.error) } };
+  try {
+    const tree = sourceTreeDigest(dist.cloneDir);
+    categories['upstream-source'] = tree.sha256 === lock.source.treeSha256
+      ? { status: 'VERIFIED', sourceCommit: lock.source.commit, treeSha256: tree.sha256, files: tree.files, proof: 'current byte tree equals the fixed Git-archive tree' }
+      : { status: 'MISMATCH', observed: tree.sha256, expected: lock.source.treeSha256 };
+    const requirements = sha256File(dist.requirementsLock);
+    categories['requirements-lock-digest'] = requirements === lock.distribution.requirementsLock.sha256 && fs.statSync(dist.requirementsLock).size === lock.distribution.requirementsLock.bytes
+      ? { status: 'VERIFIED', observed: requirements, bytes: fs.statSync(dist.requirementsLock).size }
+      : { status: 'MISMATCH', observed: requirements };
+  } catch (error) { categories['upstream-source'] = UNVERIFIED(`SOURCE_INSPECTION_FAILED:${safeFailureCode(error)}`); }
+  if (dist.venvPython !== dist.registeredPython) {
+    categories['venv-runtime'] = { status: 'REJECTED', reason: 'PYTHON_NOT_REGISTERED: only the existing project-local 3.11 venv may execute; arbitrary overrides are not admitted' };
+  } else if (Object.values(categories).every((item) => item.status === 'VERIFIED')) {
+    const run = spawnSync(dist.venvPython, ['-c', 'import sys,importlib.metadata,json; print(json.dumps({"python":sys.version.split()[0],"mcp":importlib.metadata.version("mcp")}))'], { encoding: 'utf8', timeout: 15000, env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } });
+    runtimeExecuted = Number.isSafeInteger(run.pid) && run.pid > 0;
+    try {
+      const versions = JSON.parse(run.stdout);
+      if (!versions || typeof versions !== 'object' || Array.isArray(versions) || typeof versions.python !== 'string' || typeof versions.mcp !== 'string') {
+        categories['venv-runtime'] = UNVERIFIED('registered interpreter returned invalid version types');
+      } else categories['venv-runtime'] = run.status === 0 && /^3\.11\./.test(versions.python) && versions.mcp === lock.distribution.packages.find((p) => p.name === 'mcp').observedVersion
+        ? { status: 'VERIFIED', python: versions.python, mcp: versions.mcp } : { status: 'MISMATCH', python: versions.python, mcp: versions.mcp };
+    } catch { categories['venv-runtime'] = UNVERIFIED('registered Python/SDK versions could not be read'); }
+  } else categories['venv-runtime'] = UNVERIFIED('source/requirements admission failed before interpreter execution');
+  return { dist, categories, runtimeExecuted, ready: Object.values(categories).every((item) => item.status === 'VERIFIED'), distributionLocationMatches: dist.sddHome === dist.registeredHome };
 }
 
 function buildQualification({ registryFile, dir, docs }) {
   const lock = docs.get('package.lock.json');
-  const indexPolicy = docs.get('index-policy.json');
-  const dist = resolveDistributionPaths(lock);
-  const categories = {};
-  const inputs = { registrySha256: sha256File(registryFile), domainFiles: {} };
-  for (const name of DOMAIN_FILES) inputs.domainFiles[name] = sha256Text(fs.readFileSync(path.join(dir, name)));
-
-  const expectedLauncherSha = lock.distribution?.launcher?.sha256 ?? null;
-  try {
-    const observed = sha256File(dist.launcher);
-    const executable = (() => {
-      try {
-        fs.accessSync(dist.launcher, fs.constants.X_OK);
-        return true;
-      } catch {
-        return false;
-      }
-    })();
-    categories['launcher-entry'] =
-      observed === expectedLauncherSha && executable
-        ? { status: 'VERIFIED', observed, executable }
-        : UNVERIFIED(`launcher ${lock.distribution?.launcher?.path} missing, not executable, or digest mismatch (observed ${observed.slice(0, 12)}…)`);
-  } catch (error) {
-    categories['launcher-entry'] = UNVERIFIED(`launcher unreadable: ${redactHostPaths(error.message)}`);
-  }
-
-  try {
-    const observed = sha256File(dist.requirementsLock);
-    const expected = lock.distribution?.requirementsLock?.sha256 ?? null;
-    categories['requirements-lock-digest'] =
-      observed === expected
-        ? { status: 'VERIFIED', observed, bytes: fs.statSync(dist.requirementsLock).size }
-        : { status: 'MISMATCH', observed, expected };
-  } catch (error) {
-    categories['requirements-lock-digest'] = UNVERIFIED(`requirements.lock not resolvable via SDD_HOME: ${redactHostPaths(error.message)}`);
-  }
-
-  const head = runGit(dist.cloneDir, ['rev-parse', 'HEAD']);
-  categories['upstream-source'] = !head.ok
-    ? UNVERIFIED(`local llmwiki clone not resolvable via SDD_HOME: ${head.err}`)
-    : head.out === lock.source?.commit
-      ? { status: 'VERIFIED', observedCommit: head.out, note: 'matches the lock; remote confirmation against the upstream is still pending' }
-      : { status: 'MISMATCH', observedCommit: head.out, expected: lock.source?.commit ?? null };
-
-  const pyRun = spawnSync(dist.venvPython, ['--version'], { encoding: 'utf8', timeout: 15_000 });
-  if (pyRun.status !== 0) {
-    categories['venv-runtime'] = UNVERIFIED(`resolved python did not run: ${redactHostPaths((pyRun.stderr ?? '').trim().split('\n')[0] || `exited ${pyRun.status}`)}`);
-  } else {
-    const observedPython = pyRun.stdout.trim();
-    const pkgRun = spawnSync(dist.venvPython, ['-c', 'import importlib.metadata as m; print(m.version("mcp"))'], { encoding: 'utf8', timeout: 15_000 });
-    const observedPkg = pkgRun.status === 0 ? pkgRun.stdout.trim() : null;
-    const expectedPkg = (lock.distribution?.packages ?? []).find((pkg) => pkg.name === 'mcp')?.observedVersion ?? null;
-    categories['venv-runtime'] = { status: 'VERIFIED', observed: observedPython, driftNote: lock.distribution?.python?.note ?? null };
-    categories['mcp-package-version'] =
-      observedPkg === null
-        ? UNVERIFIED('mcp package version not observable in the resolved venv')
-        : observedPkg === expectedPkg
-          ? { status: 'VERIFIED', observed: observedPkg }
-          : { status: 'MISMATCH', observed: observedPkg, expected: expectedPkg };
-  }
-
   const roots = resolveCanonicalRoot(docs.get('project-root-policy.json'));
-  categories['workspace-identity'] = !roots.ok
-    ? UNVERIFIED(roots.reason)
-    : {
-        status: 'VERIFIED',
-        canonicalRootLabel: roots.rootLabel,
-        rootPresent: fs.existsSync(roots.realRoot),
-        note: 'resolution observed; the root directory existing is NOT host discovery and grants nothing',
-      };
-
-  categories['mcp-host-discovery'] = UNVERIFIED(
-    'file existence is not host discovery: no real MCP host admission evidence exists; the 2026-10-20 session observed the host entry failing with ENOENT. Host registration is adopted by the P task via mcp-capabilities.yaml',
-  );
-  categories['mcp-write-channel'] = UNVERIFIED(
-    'no successful MCP write round-trip is registered; run probe --case worktree-mcp-readback (create did not return in the recording session — recorded in package.lock.json:mcpSession)',
-  );
-  categories['index-consistency'] = UNVERIFIED(
-    'independent file+index readback against a real MCP write is pending; the local gate mechanics (file without index row = INCONSISTENT) are exercised by probe --case worktree-mcp-readback',
-  );
-  categories['knowledge-authority-separation'] = RECORDED(
-    'policy declares the separation (curated only; specs/tasks/source-code/comet-state forbidden) and validate enforces the declaration; runtime admission denials are exercised by probe --case escape-denial',
-  );
-  categories['secret-provisioned'] = UNVERIFIED(
-    `${indexPolicy.secretRefs?.sourceRead ?? 'source-read ref'} is referenced, never provisioned; resolution requires a runtime-authorized secret store this task deliberately does not implement`,
-  );
-
-  const values = Object.values(categories);
-  return {
-    interface: 'Qualification.v1',
-    domain: 'llmwiki',
-    dir: displayPath(dir),
-    ready: values.every((category) => category.status === 'VERIFIED'),
-    unverifiedCount: values.filter((category) => category.status === 'UNVERIFIED').length,
-    catalogGaps: [],
-    categories,
-    inputs,
-  };
+  const runtime = roots.ok ? inspectRuntime(lock) : { dist: resolveDistributionPaths(lock), runtimeExecuted: false, categories: { 'venv-runtime': UNVERIFIED('workspace admission failed before Python execution') } };
+  const categories = { ...runtime.categories };
+  categories['workspace-identity'] = roots.ok ? { status: 'VERIFIED', canonicalRootLabel: roots.rootLabel, rootPresent: roots.rootPresent, grantsAuthority: false } : UNVERIFIED(roots.reason);
+  try {
+    fs.accessSync(runtime.dist.launcher, fs.constants.X_OK);
+    const observed = sha256File(runtime.dist.launcher);
+    categories['launcher-entry'] = observed === lock.distribution.launcher.sha256 ? { status: 'VERIFIED', observed, executable: true } : { status: 'MISMATCH', observed, reason: 'P4_4 must refresh the same path authority/launcher; no self-refreeze' };
+  } catch { categories['launcher-entry'] = UNVERIFIED('launcher not readable or executable'); }
+  categories['distribution-project-location'] = runtime.distributionLocationMatches ? { status: 'VERIFIED' } : UNVERIFIED('public source cache is a fixture runtime, not the registered main project distribution');
+  categories['mcp-host-discovery'] = UNVERIFIED('read-only qualification does not start a host or trust static hostDiscovered flags; actual isolated host observation remains a separate proof');
+  categories['mcp-write-channel'] = UNVERIFIED('not executed by read-only qualify; use the current real sandbox MCP probe, never historical claim fields');
+  categories['index-consistency'] = UNVERIFIED('not executed by read-only qualify; the current probe must query native documents/chunks/FTS for the same MCP-created bytes');
+  categories['secret-provisioned'] = UNVERIFIED('source-read reference is not resolved by I04; fixture writes do not confer source access or a managed write grant');
+  const inputs = { registrySha256: sha256File(registryFile), domainFiles: Object.fromEntries(DOMAIN_FILES.map((name) => [name, sha256File(path.join(dir, name))])) };
+  return { interface: 'Qualification.v1', domain: 'llmwiki', scope: 'infrastructure-observation-only', ready: Object.values(categories).every((c) => c.status === 'VERIFIED'), sourceRuntimeReady: Boolean(runtime.ready && roots.ok), runtimeExecuted: runtime.runtimeExecuted,
+    unverifiedCount: Object.values(categories).filter((c) => c.status === 'UNVERIFIED').length, categories, inputs, grantsAuthority: false, knowledgeGateSigned: false };
 }
 
 // ---- probe: worktree-mcp-readback ----
 
-async function mcpJsonRpcStep(frames, timeoutMs, workspace, venvPython, mcpDir) {
-  // llmwiki local_server 在 stdin EOF 后死锁（即使已无在途请求也永不退出）；而
-  // spawnSync(input:) 写完帧即 EOF——initialize 尚能返回、后续 tools/call 挂起。
-  // 修复：交互式 spawn 保持 stdin 开放直到全部期望响应到齐再主动结束子进程；
-  // 响应判定保持原语义（只看响应是否出现）。python 仍是直接子进程，stdout 捕获无竞态。
-  const expectedIds = frames.map((f) => JSON.parse(f).id).filter((id) => id !== undefined);
-  return await new Promise((resolve) => {
-    const child = spawn(venvPython, ['-m', 'local_server', '--workspace', workspace], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, PYTHONPATH: mcpDir, LLMWIKI_USER_ID: 'i04-probe-user' },
-    });
-    const responses = new Map();
-    let stdoutBuf = '';
-    let stderrTail = '';
-    let settled = false;
-    const finish = (timedOut) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      try { child.kill('SIGKILL'); } catch { /* 已退出 */ }
-      resolve({
-        responses,
-        timedOut: Boolean(timedOut),
-        stderrTail: redactHostPaths(stderrTail.trim().split('\n').slice(-2).join(' | ')),
-        status: child.exitCode,
-        signal: child.signalCode ?? (timedOut ? 'SIGTERM' : null),
-      });
-    };
-    const timer = setTimeout(() => finish(true), timeoutMs);
-    child.stdout.on('data', (chunk) => {
-      stdoutBuf += chunk;
-      let idx;
-      while ((idx = stdoutBuf.indexOf('\n')) >= 0) {
-        const line = stdoutBuf.slice(0, idx).trim();
-        stdoutBuf = stdoutBuf.slice(idx + 1);
-        if (!line.startsWith('{')) continue;
-        try {
-          const message = JSON.parse(line);
-          if (message.id !== undefined) responses.set(message.id, message);
-        } catch {
-          // 非 JSON 行（日志混流）忽略；真实性由 stderr 记录补充。
-        }
-      }
-      if (expectedIds.length > 0 && expectedIds.every((id) => responses.has(id))) {
-        // 全部期望响应已到：server 不会在 EOF 后自行退出，主动结束（留 250ms 刷出窗口）。
-        setTimeout(() => finish(false), 250);
-      }
-    });
-    child.stderr.on('data', (chunk) => { stderrTail = (stderrTail + chunk.toString()).slice(-4000); });
-    child.on('error', (err) => { stderrTail += ` | spawn error: ${err.message}`; finish(false); });
-    child.on('close', () => finish(false));
-    child.stdin.on('error', () => { /* EPIPE：server 提前退出 */ });
-    child.stdin.write(frames.join('\n') + '\n');
-  });
+const MCP_SDK_PROBE = String.raw`import asyncio, datetime, json, os, sys
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+async def main():
+    request = json.loads(sys.stdin.read())
+    env = {"PYTHONPATH": request["mcpDir"], "PYTHONDONTWRITEBYTECODE": "1", "LLMWIKI_USER_ID": "i04-fixture-user"}
+    server = StdioServerParameters(command=sys.executable, args=["-m", "local_server", "--workspace", request["workspace"]], env=env, cwd=request["mcpDir"])
+    result = {"responses": {}, "steps": []}
+    async with stdio_client(server) as (reader, writer):
+        async with ClientSession(reader, writer, read_timeout_seconds=datetime.timedelta(seconds=20)) as session:
+            async def observe(label, call):
+                value = await call
+                result["responses"][label] = value.model_dump(mode="json", by_alias=True)
+                result["steps"].append({"method": label, "observedAt": datetime.datetime.now(datetime.timezone.utc).isoformat()})
+                return value
+            await observe("initialize", session.initialize())
+            await observe("tools/list", session.list_tools())
+            await observe("create", session.call_tool("create", {"knowledge_base":"wiki", "title":"i04-probe-entry.md", "content":request["body"], "tags":["fixture","curated"], "path":"/wiki/curated/"}))
+            await observe("read", session.call_tool("read", {"knowledge_base":"wiki", "path":"/wiki/curated/i04-probe-entry.md"}))
+            await observe("search", session.call_tool("search", {"knowledge_base":"wiki", "mode":"search", "query":request["marker"], "path":"/wiki/**"}))
+    sys.stdout.write(json.dumps(result)+"\n")
+    sys.stdout.flush()
+
+asyncio.run(main())
+`;
+
+function nativeReadback(sandbox, entry, marker, python) {
+  const file = path.join(sandbox, entry);
+  const actual = fs.existsSync(file) && fs.statSync(file).isFile() ? fs.readFileSync(file, 'utf8') : null;
+  const script = String.raw`import sqlite3,sys,json,hashlib
+conn=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True)
+rows=conn.execute("SELECT id,content,relative_path,status,source_kind,version FROM documents WHERE relative_path=?",(sys.argv[2],)).fetchall()
+result={"rows":len(rows),"chunkCount":0,"ftsMatches":0}
+if len(rows)==1:
+ r=rows[0]
+ result.update({"id":r[0],"contentSha256":hashlib.sha256((r[1] or "").encode()).hexdigest(),"relativePath":r[2],"status":r[3],"sourceKind":r[4],"version":r[5]})
+ result["chunkCount"]=conn.execute("SELECT count(*) FROM document_chunks WHERE document_id=?",(r[0],)).fetchone()[0]
+ result["ftsMatches"]=conn.execute("SELECT count(*) FROM chunks_fts JOIN document_chunks c ON c.rowid=chunks_fts.rowid WHERE chunks_fts MATCH ? AND c.document_id=?",(sys.argv[3],r[0])).fetchone()[0]
+conn.close()
+print(json.dumps(result))`;
+  const read = spawnSync(python, ['-c', script, path.join(sandbox, '.llmwiki/index.db'), entry, marker], { encoding: 'utf8', timeout: 15000, env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } });
+  let index = null; try { index = JSON.parse(read.stdout); } catch { /* retained below as an actual read failure */ }
+  const fileHash = actual === null ? null : sha256Text(actual);
+  const consistent = read.status === 0 && index?.rows === 1 && actual !== null && index.contentSha256 === fileHash
+    && index.relativePath === entry && index.status === 'ready' && index.sourceKind === 'wiki' && index.version >= 1 && index.chunkCount > 0 && index.ftsMatches > 0;
+  return { status: consistent ? 'VERIFIED' : read.status === 0 ? 'MISMATCH' : 'UNVERIFIED', queryExecuted: read.status === 0, source: 'upstream-documents-and-fts',
+    consistency: consistent ? 'CONSISTENT' : 'INCONSISTENT', file: { relativePath: entry, sha256: fileHash }, index,
+    sqliteReadOnly: true, reason: read.status === 0 ? null : `NATIVE_INDEX_READ_FAILED:${childFailureCode(read)}` };
 }
 
 async function probeWorktreeMcpReadback(domainDir, docs) {
-  const receipt = {
-    interface: 'ProjectWikiInfra.v1',
-    command: 'probe',
-    case: 'worktree-mcp-readback',
-    executed: true,
-    status: 'UNVERIFIED',
-    reason: null,
-    worktrees: [],
-    worktreesCanonicalRootsConsistent: false,
-    mcpSession: { workspace: 'sandbox' },
-    fileLevelEquivalent: { executed: false, workspace: 'sandbox', steps: [] },
-    requiredInputs: [
-      'a resolved llmwiki venv python (LLMWIKI_PYTHON or SDD_HOME/repos/llmwiki/.venv/bin/python) with the mcp package installed',
-      'a real MCP host admission (owned by the P task via mcp-capabilities.yaml) before any host-level claim',
-      'the sqlite3 CLI for independent index readback (present on this host at probe time)',
-    ],
-    plannedSteps: [
-      'resolve every git worktree to the canonical main-tree wiki root and require one identical root',
-      'open a real stdio MCP session against a disposable sandbox workspace: initialize, tools/list',
-      'perform a real create write via the MCP channel with a bounded timeout',
-      'independently read the written file back (content hash) and query the index separately; file without index row must read INCONSISTENT (Kp fail signal)',
-      'file-level equivalent: the same write/readback/index-consistency gate executed directly against the sandbox workspace when (or after) the MCP channel is unavailable',
-    ],
-  };
-
-  // 1) worktree -> canonical root 一致性（只读；绝不写仓库 llmwiki/）。
-  const rootPolicy = docs.get('project-root-policy.json');
-  const canonical = resolveCanonicalRoot(rootPolicy);
-  if (!canonical.ok) {
-    receipt.reason = `canonical root unresolved: ${canonical.reason}`;
-    print(receipt);
-    return EXIT_VERIFY;
-  }
+  const receipt = { interface: 'ProjectWikiInfra.v1', command: 'probe', case: 'worktree-mcp-readback', scope: 'component/stdio-sandbox',
+    status: 'UNVERIFIED', executed: false, reason: null, knowledgeGateSigned: false, grantsAuthority: false,
+    worktrees: [], worktreesCanonicalRootsConsistent: false, mcpSession: { workspace: 'sandbox' },
+    nativeReadback: UNVERIFIED('no actual MCP-created entry has been read'),
+    legacyFileLevelEquivalent: { status: 'HISTORICAL_COMPONENT_ONLY', acceptedForCurrentProof: false, reason: 'the former file overwrite/self-built i04_index_gate is retired; original Git evidence preserved' },
+    requiredInputs: ['registered project identity and matching CLI wiki target','fixed source tree and requirements digest','registered Python 3.11 / MCP SDK version','actual host observation is separate from direct stdio'],
+    plannedSteps: ['initialize/list/create/read/search through one actual SDK stdio session','read the unchanged created file and the native SQLite documents/chunks/FTS in a separate read-only process','exercise missing-index and stale-index negatives only in the disposable fixture'] };
+  const finish = (reason) => { receipt.reason = reason; print(receipt); return EXIT_VERIFY; };
+  const canonical = resolveCanonicalRoot(docs.get('project-root-policy.json'));
+  if (!canonical.ok) return finish(canonical.reason);
   const worktreeList = listWorktrees();
-  if (!worktreeList.ok) {
-    receipt.reason = `worktree list unavailable: ${worktreeList.reason}`;
-    print(receipt);
-    return EXIT_VERIFY;
+  if (!worktreeList.ok) return finish(worktreeList.reason);
+  for (const [i, wt] of worktreeList.worktrees.entries()) {
+    const main = resolveMainTree(wt.path);
+    const same = main.ok && realpathIfExists(main.mainTree) === canonical.mainTree;
+    receipt.worktrees.push({ label: i === 0 ? MAIN_TREE_LABEL : `<linked-worktree:${path.basename(wt.path)}>`, canonicalRootLabel: same ? canonical.rootLabel : '<mismatch>', resolvesToCanonicalRoot: same });
   }
-  let consistent = true;
-  for (const [index, worktree] of worktreeList.worktrees.entries()) {
-    const common = runGit(worktree.path, ['rev-parse', '--git-common-dir']);
-    // git 可能对当前目录返回相对路径（如 '.git'），必须相对该 worktree 解析。
-    const root = common.ok ? path.join(path.resolve(worktree.path, common.out, '..'), rootPolicy.canonicalWiki.root) : null;
-    const realRoot = realpathIfExists(root);
-    const same =
-      root !== null &&
-      (realRoot !== null ? realRoot === fs.realpathSync.native(canonical.realRoot) : path.resolve(root) === path.resolve(canonical.realRoot));
-    consistent = consistent && same;
-    receipt.worktrees.push({
-      label: index === 0 ? MAIN_TREE_LABEL : `<linked-worktree:${path.basename(worktree.path)}>`,
-      canonicalRootLabel: same ? canonical.rootLabel : '<mismatch>',
-      resolvesToCanonicalRoot: same,
-    });
-  }
-  receipt.worktreesCanonicalRootsConsistent = consistent;
-
-  // 2+3) 真实 stdio MCP 会话（sandbox workspace），写通道有界超时。
-  const lock = docs.get('package.lock.json');
-  const dist = resolveDistributionPaths(lock);
-  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i04-probe-'));
+  receipt.worktreesCanonicalRootsConsistent = receipt.worktrees.every((wt) => wt.resolvesToCanonicalRoot);
+  const runtime = inspectRuntime(docs.get('package.lock.json'));
+  receipt.runtime = { categories: runtime.categories, distributionLocationMatches: runtime.distributionLocationMatches };
+  if (!runtime.ready || !receipt.worktreesCanonicalRootsConsistent) return finish('runtime or project/worktree identity admission failed before MCP execution');
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i04-native-'));
   try {
-    const initFrames = [
-      JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'i04-infra-probe', version: '0.0.1' } } }),
-      JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
-      JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }),
-    ];
-    const session = await mcpJsonRpcStep(initFrames, MCP_INIT_TIMEOUT_MS + MCP_LIST_TIMEOUT_MS, sandbox, dist.venvPython, dist.mcpDir);
-    const initResult = session.responses.get(1)?.result ?? null;
-    receipt.mcpSession.initialize = initResult
-      ? { status: 'VERIFIED', serverName: initResult.serverInfo?.name ?? null, serverVersion: initResult.serverInfo?.version ?? null, protocolVersion: initResult.protocolVersion ?? null }
-      : { status: 'UNVERIFIED', reason: `no initialize response (signal=${session.signal ?? session.status}); stderr: ${session.stderrTail}` };
-    const tools = session.responses.get(2)?.result?.tools?.map((tool) => tool.name) ?? null;
-    receipt.mcpSession.toolsList = tools
-      ? { status: 'VERIFIED', tools }
-      : { status: 'UNVERIFIED', reason: `no tools/list response; stderr: ${session.stderrTail}` };
-
-    const writeFrames = [
-      JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'i04-infra-probe', version: '0.0.1' } } }),
-      JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
-      JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'create', arguments: { knowledge_base: 'wiki', title: 'I04 Probe Entry', content: 'curated probe entry body (sandbox)', tags: ['probe'], path: '/wiki/probes/' } } }),
-    ];
-    const writeRun = await mcpJsonRpcStep(writeFrames, MCP_WRITE_TIMEOUT_MS, sandbox, dist.venvPython, dist.mcpDir);
-    const writeResult = writeRun.responses.get(3) ?? null;
-    if (writeResult) {
-      const errorText = writeResult.result?.isError ? String(writeResult.result?.content?.[0]?.text ?? 'tool error') : null;
-      receipt.mcpSession.write = errorText
-        ? { status: 'UNVERIFIED', reason: `MCP create returned an error: ${redactHostPaths(errorText.slice(0, 300))}` }
-        : { status: 'VERIFIED', response: redactHostPaths(JSON.stringify(writeResult.result ?? {}).slice(0, 300)) };
-    } else {
-      receipt.mcpSession.write = {
-        status: 'UNVERIFIED',
-        reason: `no response to the create write within ${MCP_WRITE_TIMEOUT_MS}ms (tool call hangs in this environment; recorded, not mocked); nothing was written via MCP`,
-      };
-    }
-
-    // 4+5) 文件级等价探针：直接对 sandbox workspace 的写 / 独立读回 / 索引一致门（正负对照都实跑）。
-    receipt.fileLevelEquivalent = runFileLevelEquivalent(sandbox, lock);
-    receipt.fileLevelEquivalent.executed = true;
-
-    const steps = new Map(receipt.fileLevelEquivalent.steps.map((step) => [step.step, step]));
-    const allFileLevelVerified = receipt.fileLevelEquivalent.steps.every((step) => step.status === 'VERIFIED');
-    const mcpWriteVerified = receipt.mcpSession.write?.status === 'VERIFIED';
-    if (mcpWriteVerified && allFileLevelVerified && consistent) {
-      receipt.status = 'VERIFIED';
-      print(receipt);
-      return EXIT_PASS;
-    }
-    const failures = [
-      ...(consistent ? [] : ['worktrees resolve to divergent canonical roots']),
-      ...(mcpWriteVerified ? [] : ['real MCP write channel not verified']),
-      ...(allFileLevelVerified ? [] : [`file-level gate steps failed: ${receipt.fileLevelEquivalent.steps.filter((s) => s.status !== 'VERIFIED').map((s) => s.step).join(', ')}`]),
-    ];
-    receipt.reason = `${failures.join('; ')} — infrastructure returns facts only and signs no Kp receipt; archiving stays blocked`;
-    print(receipt);
-    return EXIT_VERIFY;
-  } finally {
-    fs.rmSync(sandbox, { recursive: true, force: true });
-  }
-}
-
-function runFileLevelEquivalent(sandbox, lock) {
-  const steps = [];
-  const record = (step, status, observed) => steps.push({ step, status, ...(observed ? { observed } : {}) });
-  const entryRel = 'wiki/probes/i04-probe-entry.md';
-  const entryAbs = path.join(sandbox, ...entryRel.split('/'));
-  const body = [
-    '---',
-    'tier: curated',
-    'title: I04 Probe Entry',
-    'approvedBy: ql-wade',
-    'source: curated digest; source read bound to secret-ref:sdd-harness-pilot/llmwiki-source-read',
-    `revision: ${(lock.source?.commit ?? '').slice(0, 12) || 'unrecorded'}`,
-    '---',
-    '',
-    'curated probe entry body (sandbox).',
-    '',
-  ].join('\n');
-  try {
-    fs.mkdirSync(path.dirname(entryAbs), { recursive: true });
-    fs.writeFileSync(entryAbs, body);
-  } catch (error) {
-    record('curated-entry-write', 'UNVERIFIED', { reason: redactHostPaths(error.message) });
-    return { workspace: 'sandbox', steps };
-  }
-  record('curated-entry-write', 'VERIFIED', { entry: entryRel });
-
-  try {
-    const written = fs.readFileSync(entryAbs, 'utf8');
-    const match = sha256Text(written) === sha256Text(body);
-    record('independent-file-readback', match ? 'VERIFIED' : 'UNVERIFIED', { contentHashMatches: match, sha256: sha256Text(written) });
-  } catch (error) {
-    record('independent-file-readback', 'UNVERIFIED', { reason: redactHostPaths(error.message) });
-    return { workspace: 'sandbox', steps };
-  }
-
-  // 负对照：文件存在但没有索引行 → 门必须读到 INCONSISTENT（Kp 失败信号；绝不因文件存在放行）。
-  const indexDb = path.join(sandbox, '.llmwiki', 'index.db');
-  const gateTable = 'i04_index_gate';
-  const query = (sql) => {
-    const run = spawnSync('sqlite3', [indexDb, sql], { encoding: 'utf8', timeout: 15_000 });
-    return run.status === 0 ? { ok: true, out: run.stdout.trim() } : { ok: false, err: redactHostPaths((run.stderr ?? '').trim().split('\n')[0] || `sqlite3 exited ${run.status}`) };
-  };
-  if (!query('').ok) {
-    record('index-mismatch-detection', 'UNVERIFIED', { reason: 'sqlite3 CLI unavailable; independent index readback cannot run' });
-    return { workspace: 'sandbox', steps };
-  }
-  query(`CREATE TABLE IF NOT EXISTS ${gateTable}(relative_path TEXT PRIMARY KEY, title TEXT, content_hash TEXT);`);
-  const before = query(`SELECT title FROM ${gateTable} WHERE relative_path='${entryRel}';`);
-  const inconsistentDetected = before.ok && before.out === '';
-  record('index-mismatch-detection', inconsistentDetected ? 'VERIFIED' : 'UNVERIFIED', {
-    consistency: inconsistentDetected ? 'INCONSISTENT' : 'UNKNOWN',
-    reason: inconsistentDetected
-      ? 'file exists but the independent index readback finds no row: gate reads INCONSISTENT — a Kp failure signal, never an archiving pass'
-      : `unexpected index readback: ${before.ok ? before.out : before.err}`,
-  });
-
-  // 正对照：独立通道登记索引行后重读 → CONSISTENT（门通过仅当双方一致）。
-  const insert = query(`INSERT INTO ${gateTable}(relative_path, title, content_hash) VALUES('${entryRel}','I04 Probe Entry','${sha256Text(body)}');`);
-  const after = insert.ok ? query(`SELECT content_hash FROM ${gateTable} WHERE relative_path='${entryRel}';`) : { ok: false, err: insert.err };
-  const hashMatches = after.ok && after.out === sha256Text(body);
-  record('index-consistent-readback', hashMatches ? 'VERIFIED' : 'UNVERIFIED', {
-    consistency: hashMatches ? 'CONSISTENT' : 'UNKNOWN',
-    reason: hashMatches
-      ? 'file and independently registered index row agree on the content hash; gate reads CONSISTENT (sandbox gate exercise, not an MCP write substitute)'
-      : `index readback mismatch or insert failure: ${after.ok ? after.out : after.err}`,
-  });
-  return { workspace: 'sandbox', steps };
+    receipt.executed = true;
+    const marker = `i04fixtureproof${crypto.randomBytes(12).toString('hex')}`;
+    const body = `---\ntier: curated\napprovedBy: fixture-owner\nsource: fixture://I04/readonly-public-source\nrevision: ${docs.get('package.lock.json').source.commit}\n---\n\n${marker}\nDisposable approved fixture knowledge only.\n`;
+    const admission = admitKnowledgeEntry({ tier: 'curated', title: 'i04-probe-entry', content: body, approvedBy: 'fixture-owner', source: 'fixture://I04/readonly-public-source', revision: docs.get('package.lock.json').source.commit, factAuthority: 'approved-curated-entry' }, docs.get('index-policy.json'));
+    receipt.fixtureAdmission = { ...admission, scope: 'disposable-owned-fixture-only', standingProjectGrant: false };
+    if (!admission.allowed) return finish('fixture entry admission failed');
+    const run = spawnSync(runtime.dist.venvPython, ['-c', MCP_SDK_PROBE], { input: JSON.stringify({ mcpDir: runtime.dist.mcpDir, workspace: sandbox, body, marker }), encoding: 'utf8', timeout: 60000, maxBuffer: 16 * 1024 * 1024, env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } });
+    let result = null; try { result = JSON.parse(run.stdout); } catch { /* no manufactured response */ }
+    const responses = result?.responses ?? {};
+    const texts = (value) => (value?.content ?? []).filter((part) => part.type === 'text').map((part) => part.text).join('\n');
+    const success = (value) => value && !value.isError && !/^Error:/i.test(texts(value));
+    const tools = responses['tools/list']?.tools?.map((tool) => tool.name);
+    const readVerified = success(responses.read) && texts(responses.read).includes(marker);
+    const searchVerified = success(responses.search) && texts(responses.search).includes(marker);
+    receipt.mcpSession = { workspace: 'sandbox', client: 'installed mcp SDK stdio_client / ClientSession', childExit: run.status,
+      initialize: responses.initialize ? { status: 'VERIFIED', ...responses.initialize } : UNVERIFIED('no initialize response'),
+      toolsList: tools ? { status: 'VERIFIED', tools } : UNVERIFIED('no tools/list response'),
+      write: success(responses.create) ? { status: 'VERIFIED', response: texts(responses.create) } : UNVERIFIED('actual create did not succeed'),
+      read: readVerified ? { status: 'VERIFIED', response: texts(responses.read) } : UNVERIFIED('MCP_READ_UNVERIFIED'),
+      search: searchVerified ? { status: 'VERIFIED', response: texts(responses.search) } : UNVERIFIED('MCP_SEARCH_UNVERIFIED'),
+      observedSteps: result?.steps ?? [], stderr: run.stderr ? 'MCP_STDIO_STDERR_PRESENT' : '', executionErrorCode: run.error ? safeFailureCode(run.error) : null, nativeHostDiscovery: 'NOT_PROVEN_BY_DIRECT_STDIO' };
+    if (run.status !== 0 || !responses.initialize || !tools || !docs.get('mcp-profile.json').capabilities.every((name) => tools.includes(name)) || receipt.mcpSession.write.status !== 'VERIFIED') return finish('actual SDK stdio initialize/list/create failed');
+    const entry = 'wiki/curated/i04-probe-entry.md';
+    receipt.nativeReadback = nativeReadback(sandbox, entry, marker, runtime.dist.venvPython);
+    receipt.createdPayloadSha256 = sha256Text(body);
+    receipt.payloadUnchanged = receipt.nativeReadback.file.sha256 === sha256Text(body);
+    const ghost = 'wiki/curated/no-native-index.md'; fs.writeFileSync(path.join(sandbox, ghost), body);
+    const missingIndex = nativeReadback(sandbox, ghost, marker, runtime.dist.venvPython);
+    const entryPath = path.join(sandbox, entry); const original = fs.readFileSync(entryPath);
+    let stale;
+    try { fs.writeFileSync(entryPath, Buffer.concat([original, Buffer.from('\ncontrolled stale-file negative\n')])); stale = nativeReadback(sandbox, entry, marker, runtime.dist.venvPython); }
+    finally { fs.writeFileSync(entryPath, original); }
+    receipt.negativeControls = { fileWithoutNativeIndex: missingIndex, changedFileStaleIndex: stale };
+    receipt.restoredPayloadSha256 = sha256File(entryPath);
+    const good = receipt.payloadUnchanged && receipt.nativeReadback.consistency === 'CONSISTENT'
+      && receipt.mcpSession.read.status === 'VERIFIED' && receipt.mcpSession.search.status === 'VERIFIED'
+      && missingIndex.consistency === 'INCONSISTENT' && stale.consistency === 'INCONSISTENT'
+      && receipt.restoredPayloadSha256 === receipt.createdPayloadSha256;
+    if (!good) return finish('same-entry actual storage/index consistency or its fault controls failed; infrastructure signs no Kp');
+    receipt.status = 'VERIFIED'; receipt.reason = 'actual private fixture stdio/storage/index only; no managed write or Kp authority'; print(receipt); return EXIT_PASS;
+  } finally { fs.rmSync(sandbox, { recursive: true, force: true }); }
 }
 
 // ---- probe: escape-denial ----
@@ -739,6 +693,7 @@ function probeEscapeDenial(domainDir, docs) {
   // sandbox：一个真实 git 仓库 + 一个真实 linked worktree（git worktree list 语义）。
   const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i04-escape-'));
   const gitIdentity = ['-c', 'user.email=i04@probe.invalid', '-c', 'user.name=i04-probe'];
+  let outsideDir = null;
   try {
     const init = runGit(sandbox, ['init', '-q']);
     if (!init.ok) {
@@ -759,6 +714,13 @@ function probeEscapeDenial(domainDir, docs) {
     fs.writeFileSync(path.join(canonicalRoot, 'contained.md'), 'contained\n');
     const positive = resolveContainedPath(realCanonicalRoot, 'contained.md', rootPolicy.denials ?? {});
     receipt.positiveControls.push({ code: positive.code, allowed: positive.allowed });
+    for (const claim of ['release..notes.md', '..draft.md']) {
+      fs.writeFileSync(path.join(canonicalRoot, claim), 'safe filename\n');
+      const result = resolveContainedPath(realCanonicalRoot, claim, rootPolicy.denials ?? {});
+      receipt.positiveControls.push({ claim, code: result.code, allowed: result.allowed });
+    }
+    fs.mkdirSync(path.join(canonicalRoot, 'subtree'));
+    receipt.exactRootControl = resolveForeignRoot(realCanonicalRoot, path.join(canonicalRoot, 'subtree'));
 
     // 目录穿越：.. 逃出 canonical root（目标文件真实存在，穿越被几何拒绝）。
     fs.writeFileSync(path.join(sandbox, 'outside.md'), 'outside\n');
@@ -766,7 +728,7 @@ function probeEscapeDenial(domainDir, docs) {
     receipt.denials.push({ code: traversal.code, allowed: traversal.allowed, reason: traversal.reason });
 
     // 符号链接越域：canonical root 内的 symlink 指向 sandbox 外。
-    const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i04-outside-'));
+    outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i04-outside-'));
     const outsideFile = path.join(outsideDir, 'target.md');
     fs.writeFileSync(outsideFile, 'secret-outside\n');
     fs.symlinkSync(outsideFile, path.join(canonicalRoot, 'escape.md'));
@@ -818,6 +780,7 @@ function probeEscapeDenial(domainDir, docs) {
     print(receipt);
     return EXIT_VERIFY;
   } finally {
+    if (outsideDir) fs.rmSync(outsideDir, { recursive: true, force: true });
     fs.rmSync(sandbox, { recursive: true, force: true });
   }
 }
@@ -826,45 +789,46 @@ function probeEscapeDenial(domainDir, docs) {
 
 async function main(argv) {
   const { command, opts, error } = parseArgs(argv);
-  if (error) return failInput(error);
-  if (!command) return failInput('missing command');
+  if (error) return failInput('arguments invalid', error);
+  if (!command) return failInput('command invalid', 'COMMAND_REQUIRED');
 
-  if (command === 'probe') {
-    const dir = opts.dir ?? DEFAULT_DIR;
-    const { files, missing, unparseable } = loadDomainFiles(dir);
-    if (missing.length > 0) return failInput(`domain files missing (${displayPath(dir)}): ${missing.join(', ')}`);
-    if (unparseable.length > 0) return failInput(`domain files unparseable: ${unparseable.join('; ')}`);
-    const docs = new Map(DOMAIN_FILES.map((name) => [name, JSON.parse(files.get(name))]));
-    if (opts.case === 'worktree-mcp-readback') return await probeWorktreeMcpReadback(dir, docs);
-    if (opts.case === 'escape-denial') return probeEscapeDenial(dir, docs);
-    return failInput(`unknown probe case: ${opts.case ?? '(missing --case)'}`);
-  }
+  if (!['validate', 'qualify', 'probe'].includes(command)) return failInput('command invalid', 'COMMAND_UNKNOWN');
+  if (command === 'probe' && !['worktree-mcp-readback', 'escape-denial'].includes(opts.case)) return failInput('probe input invalid', opts.case ? 'PROBE_CASE_INVALID' : 'PROBE_CASE_REQUIRED');
 
-  // validate/qualify：registry 与 refs 目录必须先可读（fail-closed，绝不静默降级为空规则）。
-  const registryFile = opts.registry ?? DEFAULT_REGISTRY;
-  const refsFile = opts.refs ?? DEFAULT_REFS;
-  let registry;
-  let refsDoc;
-  try {
-    registry = readJson(registryFile);
-  } catch (err) {
-    return failInput(`registry unreadable: ${redactHostPaths(err.message)}`);
+  // All entrypoints share registry/domain admission before any runtime/fixture action.
+  // registry 与 refs 目录必须先可读（fail-closed，绝不静默降级为空规则）。
+  const registryFile = path.resolve(opts.registry ?? DEFAULT_REGISTRY);
+  const refsFile = path.resolve(opts.refs ?? DEFAULT_REFS);
+  const registryInput = readJson(registryFile);
+  if (!registryInput.ok) return failInput('registry unreadable', registryInput.code);
+  const refsInput = readJson(refsFile);
+  if (!refsInput.ok) return failInput('refs catalog unreadable', refsInput.code);
+  const registry = registryInput.value; const refsDoc = refsInput.value;
+  // Reuse I01's current public validator rather than inventing another registry authority.
+  const admission = spawnSync(process.execPath, [path.join(repoRoot, 'tools/infra/registry.mjs'), 'validate', '--registry', registryFile, '--refs', refsFile, '--json'], { cwd: repoRoot, encoding: 'utf8', timeout: 15000 });
+  let registration = null; try { registration = JSON.parse(admission.stdout); } catch { /* reject below */ }
+  if (admission.status !== 0 || registration?.ok !== true) {
+    print({ interface: command === 'qualify' ? 'Qualification.v1' : 'ProjectWikiInfra.v1', command, ok: false, ready: false,
+      status: 'REJECTED', runtimeExecuted: false, reason: 'I01 registry/identity/reference admission failed',
+      violations: registration?.violations?.length ? registration.violations : [{ code: 'REGISTRY_VALIDATION_UNAVAILABLE' }] });
+    return EXIT_VERIFY;
   }
-  try {
-    refsDoc = readJson(refsFile);
-  } catch (err) {
-    return failInput(`refs catalog unreadable (${displayPath(refsFile)}): ${redactHostPaths(err.message)}`);
-  }
-  const dir = opts.dir ?? DEFAULT_DIR;
-  const { files, missing, unparseable } = loadDomainFiles(dir);
-  if (missing.length > 0) return failInput(`domain files missing (${displayPath(dir)}): ${missing.join(', ')}`);
-  if (unparseable.length > 0) return failInput(`domain files unparseable: ${unparseable.join('; ')}`);
+  const dir = path.resolve(opts.dir ?? DEFAULT_DIR);
+  const { files, issues } = loadDomainFiles(dir);
+  if (issues.length > 0) return failInput('domain input invalid', issues.join('; '));
 
+  const { violations, catalogGaps, docs } = validateDomain({ registry, refsDoc, files });
+  if (violations.length > 0) {
+    print({ interface: command === 'qualify' ? 'Qualification.v1' : 'ProjectWikiInfra.v1', command,
+      case: opts.case ?? null, ready: false, ok: false, status: 'REJECTED', violations, catalogGaps,
+      executed: false, runtimeExecuted: false, reason: 'domain admission failed before summaries, runtime or sandbox execution' });
+    return EXIT_VERIFY;
+  }
   if (command === 'validate') {
-    const { violations, catalogGaps, docs } = validateDomain({ registry, refsDoc, files });
     print({
       interface: 'ProjectWikiInfra.v1',
       command: 'validate',
+      runtimeExecuted: false,
       registry: displayPath(registryFile),
       refs: displayPath(refsFile),
       dir: displayPath(dir),
@@ -879,15 +843,24 @@ async function main(argv) {
     return violations.length === 0 ? EXIT_PASS : EXIT_VERIFY;
   }
 
+  if (command === 'probe') {
+    if (opts.case === 'worktree-mcp-readback') return await probeWorktreeMcpReadback(dir, docs);
+    const target = resolveCanonicalRoot(docs.get('project-root-policy.json'));
+    if (!target.ok) {
+      print({ interface: 'ProjectWikiInfra.v1', command, case: opts.case, status: 'UNVERIFIED', runtimeExecuted: false, executed: false, reason: target.reason, nativeReadback: UNVERIFIED(target.reason), grantsAuthority: false, knowledgeGateSigned: false });
+      return EXIT_VERIFY;
+    }
+    return probeEscapeDenial(dir, docs);
+  }
   if (command === 'qualify') {
-    const { catalogGaps, docs } = validateDomain({ registry, refsDoc, files });
     const qualification = buildQualification({ registryFile, dir, docs });
+    qualification.violations = violations;
     qualification.catalogGaps = catalogGaps;
     print(qualification);
     return qualification.ready ? EXIT_PASS : EXIT_VERIFY;
   }
 
-  return failInput(`unknown command: ${command}`);
+  return failInput('command invalid', 'COMMAND_UNKNOWN');
 }
 
 // 管道下 process.exit 不等 stdout flush 会截断回执（实测 8427B 收 8190B）；
@@ -898,5 +871,5 @@ async function exitAfterDrain(code) {
 }
 main(process.argv.slice(2)).then(
   (code) => exitAfterDrain(code),
-  (err) => { console.error(err?.stack ?? err); exitAfterDrain(1); },
+  (error) => { process.stderr.write(`internal failure: INTERNAL_FAILURE (${safeFailureCode(error)})\n`); exitAfterDrain(1); },
 );

@@ -1,0 +1,434 @@
+TAP version 13
+# Subtest: I04 input types validate: null documents reject before summaries and runtime
+not ok 1 - I04 input types validate: null documents reject before summaries and runtime
+  ---
+  duration_ms: 335.186416
+  type: 'test'
+  location: '<worker-tree>/test/infra-llmwiki-paths.test.js:547:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    [
+      {
+        "file": "package.lock.json",
+        "error": "package.lock.json: stdout is not JSON: \nstderr: TypeError: Cannot read properties of null (reading 'interface')\n    at main (file://<host-path-redacted>\n    at file://<host-path-redacted>\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async node:internal/modules/esm/loader:639:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n"
+      },
+      {
+        "file": "project-root-policy.json",
+        "error": "project-root-policy.json: stdout is not JSON: \nstderr: TypeError: Cannot read properties of null (reading 'interface')\n    at main (file://<host-path-redacted>\n    at file://<host-path-redacted>\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async node:internal/modules/esm/loader:639:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n"
+      },
+      {
+        "file": "index-policy.json",
+        "error": "index-policy.json: stdout is not JSON: \nstderr: TypeError: Cannot read properties of null (reading 'interface')\n    at main (file://<host-path-redacted>\n    at file://<host-path-redacted>\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async node:internal/modules/esm/loader:639:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n"
+      },
+      {
+        "file": "mcp-profile.json",
+        "error": "mcp-profile.json: stdout is not JSON: \nstderr: TypeError: Cannot read properties of null (reading 'interface')\n    at main (file://<host-path-redacted>\n    at file://<host-path-redacted>\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async node:internal/modules/esm/loader:639:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n"
+      }
+    ]
+    + actual - expected
+
+    + [
+    +   {
+    +     error: 'package.lock.json: stdout is not JSON: \n' +
+    +       "stderr: TypeError: Cannot read properties of null (reading 'interface')\n" +
+    +       '    at main (file://<host-path-redacted>\n' +
+    +       '    at file://<host-path-redacted>\n' +
+    +       '    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n' +
+    +       '    at async node:internal/modules/esm/loader:639:26\n' +
+    +       '    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n',
+    +     file: 'package.lock.json'
+    +   },
+    +   {
+    +     error: 'project-root-policy.json: stdout is not JSON: \n' +
+    +       "stderr: TypeError: Cannot read properties of null (reading 'interface')\n" +
+    +       '    at main (file://<host-path-redacted>\n' +
+    +       '    at file://<host-path-redacted>\n' +
+    +       '    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n' +
+    +       '    at async node:internal/modules/esm/loader:639:26\n' +
+    +       '    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n',
+    +     file: 'project-root-policy.json'
+    +   },
+    +   {
+    +     error: 'index-policy.json: stdout is not JSON: \n' +
+    +       "stderr: TypeError: Cannot read properties of null (reading 'interface')\n" +
+    +       '    at main (file://<host-path-redacted>\n' +
+    +       '    at file://<host-path-redacted>\n' +
+    +       '    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n' +
+    +       '    at async node:internal/modules/esm/loader:639:26\n' +
+    +       '    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n',
+    +     file: 'index-policy.json'
+    +   },
+    +   {
+    +     error: 'mcp-profile.json: stdout is not JSON: \n' +
+    +       "stderr: TypeError: Cannot read properties of null (reading 'interface')\n" +
+    +       '    at main (file://<host-path-redacted>\n' +
+    +       '    at file://<host-path-redacted>\n' +
+    +       '    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n' +
+    +       '    at async node:internal/modules/esm/loader:639:26\n' +
+    +       '    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n',
+    +     file: 'mcp-profile.json'
+    +   }
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      file: 'package.lock.json'
+      error: |-
+        package.lock.json: stdout is not JSON:
+        stderr: TypeError: Cannot read properties of null (reading 'interface')
+            at main (file://<host-path-redacted>
+            at file://<host-path-redacted>
+            at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+            at async node:internal/modules/esm/loader:639:26
+            at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+    1:
+      file: 'project-root-policy.json'
+      error: |-
+        project-root-policy.json: stdout is not JSON:
+        stderr: TypeError: Cannot read properties of null (reading 'interface')
+            at main (file://<host-path-redacted>
+            at file://<host-path-redacted>
+            at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+            at async node:internal/modules/esm/loader:639:26
+            at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+    2:
+      file: 'index-policy.json'
+      error: |-
+        index-policy.json: stdout is not JSON:
+        stderr: TypeError: Cannot read properties of null (reading 'interface')
+            at main (file://<host-path-redacted>
+            at file://<host-path-redacted>
+            at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+            at async node:internal/modules/esm/loader:639:26
+            at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+    3:
+      file: 'mcp-profile.json'
+      error: |-
+        mcp-profile.json: stdout is not JSON:
+        stderr: TypeError: Cannot read properties of null (reading 'interface')
+            at main (file://<host-path-redacted>
+            at file://<host-path-redacted>
+            at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+            at async node:internal/modules/esm/loader:639:26
+            at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-llmwiki-paths.test.js:554:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: I04 input types qualify: null documents reject before summaries and runtime
+not ok 2 - I04 input types qualify: null documents reject before summaries and runtime
+  ---
+  duration_ms: 379.375583
+  type: 'test'
+  location: '<worker-tree>/test/infra-llmwiki-paths.test.js:547:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    [
+      {
+        "file": "package.lock.json",
+        "error": "package.lock.json\n+ actual - expected\n\n+ undefined\n- false\n"
+      },
+      {
+        "file": "project-root-policy.json",
+        "error": "project-root-policy.json\n+ actual - expected\n\n+ undefined\n- false\n"
+      },
+      {
+        "file": "index-policy.json",
+        "error": "index-policy.json\n+ actual - expected\n\n+ undefined\n- false\n"
+      },
+      {
+        "file": "mcp-profile.json",
+        "error": "mcp-profile.json\n+ actual - expected\n\n+ undefined\n- false\n"
+      }
+    ]
+    + actual - expected
+
+    + [
+    +   {
+    +     error: 'package.lock.json\n+ actual - expected\n\n+ undefined\n- false\n',
+    +     file: 'package.lock.json'
+    +   },
+    +   {
+    +     error: 'project-root-policy.json\n+ actual - expected\n\n+ undefined\n- false\n',
+    +     file: 'project-root-policy.json'
+    +   },
+    +   {
+    +     error: 'index-policy.json\n+ actual - expected\n\n+ undefined\n- false\n',
+    +     file: 'index-policy.json'
+    +   },
+    +   {
+    +     error: 'mcp-profile.json\n+ actual - expected\n\n+ undefined\n- false\n',
+    +     file: 'mcp-profile.json'
+    +   }
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      file: 'package.lock.json'
+      error: |-
+        package.lock.json
+        + actual - expected
+
+        + undefined
+        - false
+
+    1:
+      file: 'project-root-policy.json'
+      error: |-
+        project-root-policy.json
+        + actual - expected
+
+        + undefined
+        - false
+
+    2:
+      file: 'index-policy.json'
+      error: |-
+        index-policy.json
+        + actual - expected
+
+        + undefined
+        - false
+
+    3:
+      file: 'mcp-profile.json'
+      error: |-
+        mcp-profile.json
+        + actual - expected
+
+        + undefined
+        - false
+
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-llmwiki-paths.test.js:554:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: I04 input types probe escape-denial: null documents reject before summaries and runtime
+not ok 3 - I04 input types probe escape-denial: null documents reject before summaries and runtime
+  ---
+  duration_ms: 331.02275
+  type: 'test'
+  location: '<worker-tree>/test/infra-llmwiki-paths.test.js:547:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    [
+      {
+        "file": "package.lock.json",
+        "error": "package.lock.json\n+ actual - expected\n\n+ undefined\n- false\n"
+      },
+      {
+        "file": "project-root-policy.json",
+        "error": "project-root-policy.json\n+ actual - expected\n\n+ undefined\n- false\n"
+      },
+      {
+        "file": "index-policy.json",
+        "error": "index-policy.json\n+ actual - expected\n\n+ undefined\n- false\n"
+      },
+      {
+        "file": "mcp-profile.json",
+        "error": "mcp-profile.json\n+ actual - expected\n\n+ undefined\n- false\n"
+      }
+    ]
+    + actual - expected
+
+    + [
+    +   {
+    +     error: 'package.lock.json\n+ actual - expected\n\n+ undefined\n- false\n',
+    +     file: 'package.lock.json'
+    +   },
+    +   {
+    +     error: 'project-root-policy.json\n+ actual - expected\n\n+ undefined\n- false\n',
+    +     file: 'project-root-policy.json'
+    +   },
+    +   {
+    +     error: 'index-policy.json\n+ actual - expected\n\n+ undefined\n- false\n',
+    +     file: 'index-policy.json'
+    +   },
+    +   {
+    +     error: 'mcp-profile.json\n+ actual - expected\n\n+ undefined\n- false\n',
+    +     file: 'mcp-profile.json'
+    +   }
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      file: 'package.lock.json'
+      error: |-
+        package.lock.json
+        + actual - expected
+
+        + undefined
+        - false
+
+    1:
+      file: 'project-root-policy.json'
+      error: |-
+        project-root-policy.json
+        + actual - expected
+
+        + undefined
+        - false
+
+    2:
+      file: 'index-policy.json'
+      error: |-
+        index-policy.json
+        + actual - expected
+
+        + undefined
+        - false
+
+    3:
+      file: 'mcp-profile.json'
+      error: |-
+        mcp-profile.json
+        + actual - expected
+
+        + undefined
+        - false
+
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-llmwiki-paths.test.js:554:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: I04 input types probe worktree-mcp-readback: null documents reject before summaries and runtime
+not ok 4 - I04 input types probe worktree-mcp-readback: null documents reject before summaries and runtime
+  ---
+  duration_ms: 321.432542
+  type: 'test'
+  location: '<worker-tree>/test/infra-llmwiki-paths.test.js:547:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    [
+      {
+        "file": "package.lock.json",
+        "error": "package.lock.json\n+ actual - expected\n\n+ undefined\n- false\n"
+      },
+      {
+        "file": "project-root-policy.json",
+        "error": "project-root-policy.json\n+ actual - expected\n\n+ undefined\n- false\n"
+      },
+      {
+        "file": "index-policy.json",
+        "error": "index-policy.json\n+ actual - expected\n\n+ undefined\n- false\n"
+      },
+      {
+        "file": "mcp-profile.json",
+        "error": "mcp-profile.json\n+ actual - expected\n\n+ undefined\n- false\n"
+      }
+    ]
+    + actual - expected
+
+    + [
+    +   {
+    +     error: 'package.lock.json\n+ actual - expected\n\n+ undefined\n- false\n',
+    +     file: 'package.lock.json'
+    +   },
+    +   {
+    +     error: 'project-root-policy.json\n+ actual - expected\n\n+ undefined\n- false\n',
+    +     file: 'project-root-policy.json'
+    +   },
+    +   {
+    +     error: 'index-policy.json\n+ actual - expected\n\n+ undefined\n- false\n',
+    +     file: 'index-policy.json'
+    +   },
+    +   {
+    +     error: 'mcp-profile.json\n+ actual - expected\n\n+ undefined\n- false\n',
+    +     file: 'mcp-profile.json'
+    +   }
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      file: 'package.lock.json'
+      error: |-
+        package.lock.json
+        + actual - expected
+
+        + undefined
+        - false
+
+    1:
+      file: 'project-root-policy.json'
+      error: |-
+        project-root-policy.json
+        + actual - expected
+
+        + undefined
+        - false
+
+    2:
+      file: 'index-policy.json'
+      error: |-
+        index-policy.json
+        + actual - expected
+
+        + undefined
+        - false
+
+    3:
+      file: 'mcp-profile.json'
+      error: |-
+        mcp-profile.json
+        + actual - expected
+
+        + undefined
+        - false
+
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-llmwiki-paths.test.js:554:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 0
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1456.818209
+
+# STDERR

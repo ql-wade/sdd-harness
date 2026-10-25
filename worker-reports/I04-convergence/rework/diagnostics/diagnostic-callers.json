@@ -1,0 +1,65 @@
+{
+  "at_utc": "2026-10-25T08:40:33.710381+00:00",
+  "source": "tools/infra/llmwiki.mjs",
+  "before_sha256": "5ae3dedbd5a7817fe5eab9d69f8f75f98bd9084b59255270a7e92ad50d28ac81",
+  "after_sha256": "3fedf93a758f3a20ea1f77c7e28535df9fe87f3cb6a758dac16423b75358db71",
+  "callers": [
+    {
+      "caller": "readJson / main registry and refs",
+      "before": "JSON.parse/readFileSync exception.message was concatenated into stderr; refs also echoed displayPath of user input",
+      "after": "shared read stage returns only FILE_READ_<allowlisted code>; parse stage only JSON_INVALID; unexpected exceptions rethrow",
+      "provenance": "real four-entrypoint malformed JSON + actual ENOENT/EISDIR + injected unexpected filesystem fault"
+    },
+    {
+      "caller": "loadDomainFiles / main domain input rejection",
+      "before": "native JSON.parse error.message quoted document prefix; missing errors echoed the user directory",
+      "after": "same shared reader; fixed DOMAIN_FILES label plus static reason code only; no input path/text/message",
+      "provenance": "four entrypoints x four documents x two non-token synthetic fragments, plus actual read errors"
+    },
+    {
+      "caller": "parseArgs / main command and probe case rejection",
+      "before": "unknown command, option and probe case values were interpolated",
+      "after": "static category plus COMMAND/ARGUMENT/PROBE_CASE reason code; known usage remains",
+      "provenance": "three public malformed argv examples"
+    },
+    {
+      "caller": "runGit",
+      "before": "first raw child stderr line was copied",
+      "after": "GIT_EXECUTION_FAILED with typed child exit or allowlisted native reason code; no stderr text",
+      "provenance": "source audit and unchanged original regression; no new Git failure injection claimed"
+    },
+    {
+      "caller": "resolveForeignRoot",
+      "before": "raw realpath exception.message was copied into the denial reason",
+      "after": "same FOREIGN_WIKI_ROOT_DENIED with allowlisted code or UNEXPECTED_FAILURE",
+      "provenance": "source audit and original escape-denial regression; no new missing-root injection claimed"
+    },
+    {
+      "caller": "sourceTreeDigest / inspectRuntime",
+      "before": "raw filesystem exception.message was copied into upstream-source UNVERIFIED",
+      "after": "SOURCE_INSPECTION_FAILED plus bounded known cause; source env/symlink/type denials have fixed codes",
+      "provenance": "source audit and retained actual missing-source qualification regression"
+    },
+    {
+      "caller": "nativeReadback",
+      "before": "raw SQLite child stderr was returned as reason",
+      "after": "NATIVE_INDEX_READ_FAILED plus typed exit or bounded cause; existing failure status/query facts remain",
+      "provenance": "source audit and original real private native-index positive/mismatch regression; no new child failure injection claimed"
+    },
+    {
+      "caller": "probeWorktreeMcpReadback SDK diagnostics",
+      "before": "raw SDK child stderr and unverified read/search text were copied",
+      "after": "stderr presence label and bounded execution error only; unverified read/search carry static reason, successful fixture content stays data",
+      "provenance": "source audit and original private SDK regression; no new host/model turn or SDK failure injection claimed"
+    },
+    {
+      "caller": "top-level rejection handler",
+      "before": "raw stack/message from any uncaught exception was printed",
+      "after": "internal failure: INTERNAL_FAILURE plus allowlisted cause or UNEXPECTED_FAILURE, nonzero1; no usage/input-failure disguise",
+      "provenance": "injected arbitrary message and arbitrary error.code on all four public entrypoints"
+    }
+  ],
+  "boundary": "native exception/parse/read/argument/failed-child diagnostic text; successful authorized fixture data remains data, not an error message",
+  "no_regex_dependence": "short arbitrary mQ7v and PRIV3KEY prefix prove this rejection path does not depend on known credential token patterns",
+  "no_catch_all_success": "only expected file/parse classes are converted to input failure; unexpected faults rethrow to a separately labeled nonzero failure"
+}

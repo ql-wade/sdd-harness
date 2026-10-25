@@ -1,0 +1,97 @@
+TAP version 13
+# Subtest: I04 convergence profile admission rejects wrong component identity
+not ok 1 - I04 convergence profile admission rejects wrong component identity
+  ---
+  duration_ms: 143.793583
+  type: 'test'
+  location: '<worker-tree>/test/infra-llmwiki-paths.test.js:515:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    {
+      "interface": "ProjectWikiInfra.v1",
+      "command": "validate",
+      "runtimeExecuted": false,
+      "registry": "infra/delivery/registry.json",
+      "refs": "infra/delivery/secrets.refs.example.json",
+      "dir": "<host-path-redacted>",
+      "ok": true,
+      "violations": [],
+      "catalogGaps": [
+        "secret-ref:sdd-harness-pilot/llmwiki-source-read"
+      ],
+      "packageLock": {
+        "interface": "PackageLock.v1",
+        "component": "llmwiki",
+        "upGate": {
+          "enabled": false,
+          "reason": "I04 registers and qualifies the llmwiki distribution only; MCP host registration is owned by a later P task through mcp-capabilities.yaml (single source of truth) and runtime up needs authorization that does not exist"
+        }
+      },
+      "projectRoot": {
+        "interface": "ProjectRoot.v1",
+        "projectId": "sdd-harness-pilot",
+        "repoId": "ql-wade/sdd-harness",
+        "canonicalWiki": {
+          "root": ".sdd/wiki/sdd-harness",
+          "resolution": "existing lib/sdd-paths.js getWikiHome(canonical registered main tree), exactly equal to this registered relative target; Git common-dir locates project identity only",
+          "rule": "exactly one wiki root per project; every CLI / MCP host / worktree must resolve to it",
+          "workspaceBinding": "SDD_HOME/SDD_WIKI_HOME values never register a target or confer permission. CLI result must equal the pre-registered target under the same project, without link escape. P4_4 owns the one resolver and launcher."
+        }
+      },
+      "indexPolicy": {
+        "interface": "IndexPolicy.v1",
+        "tiers": [
+          "raw",
+          "staging",
+          "curated"
+        ],
+        "knowledgeWrite": {
+          "interface": "KnowledgeWrite.v1",
+          "requiresApproval": true,
+          "requiresSourceAndRevision": true,
+          "independentReadbackRequired": true,
+          "requiredEntryFields": [
+            "tier",
+            "title",
+            "content",
+            "approvedBy",
+            "source",
+            "revision"
+          ],
+          "indexConsistencyGate": "I04 emits storage/index facts only. A missing/stale native row is INCONSISTENT and cannot close Kp; the original Comet gate and independent verifier own the judgment."
+        }
+      },
+      "mcpProfile": {
+        "interface": "McpComponentProfile.v1",
+        "registrationScope": "component-profile-only",
+        "hostDiscoveryStatus": "UNVERIFIED"
+      },
+      "checkedAt": "2026-10-25T07:17:16.988Z"
+    }
+
+
+    0 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-llmwiki-paths.test.js:518:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 231.981875
+
+# STDERR

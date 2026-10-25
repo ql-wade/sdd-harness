@@ -1,0 +1,128 @@
+TAP version 13
+# Subtest: I04 convergence qualify keeps semantic admission violations before runtime checks
+not ok 1 - I04 convergence qualify keeps semantic admission violations before runtime checks
+  ---
+  duration_ms: 151.948792
+  type: 'test'
+  location: '<worker-tree>/test/infra-llmwiki-paths.test.js:358:1'
+  failureType: 'testCodeFailure'
+  error: 'semantic denial must survive qualify: {"interface":"Qualification.v1","domain":"llmwiki","dir":"<host-path-redacted>","ready":false,"unverifiedCount":4,"catalogGaps":["secret-ref:sdd-harness-pilot/llmwiki-source-read"],"categories":{"launcher-entry":{"status":"VERIFIED","observed":"bd18bfea155ec0fc8c1ce9fb23414dafbeb94416f4096eb92624eb59932ae863","executable":true},"requirements-lock-digest":{"status":"VERIFIED","observed":"678bd7301d80a602336e8fd3a81f98adcd4c5beaec4e2f1f2bfb8d2e04a9e732","bytes":154140},"upstream-source":{"status":"VERIFIED","observedCommit":"075c5b4996ff4e07f9d3c57c1f14fd2b54a955db","note":"matches the lock; remote confirmation against the upstream is still pending"},"venv-runtime":{"status":"VERIFIED","observed":"Python 3.14.7","driftNote":"requirements.lock is compiled for python 3.11 (uv header inside the lock); the project-local landed venv ($SDD_HOME/venvs/llmwiki-311) runs 3.11.13 — lock-aligned, the drift is eliminated by the P1_1 landing (toolchain-baseline.json llmwiki_project_local). The earlier 3.14.7 observation belonged to the external venv resolved by the superseded external default (SDD_HOME=$HOME/.sdd -> repos/llmwiki/.venv) and is kept here only as a historical fact"},"mcp-package-version":{"status":"VERIFIED","observed":"1.27.0"},"workspace-identity":{"status":"VERIFIED","canonicalRootLabel":"<main-working-tree>/llmwiki","rootPresent":false,"note":"resolution observed; the root directory existing is NOT host discovery and grants nothing"},"mcp-host-discovery":{"status":"UNVERIFIED","reason":"file existence is not host discovery: no real MCP host admission evidence exists; the 2026-10-20 session observed the host entry failing with ENOENT. Host registration is adopted by the P task via mcp-capabilities.yaml"},"mcp-write-channel":{"status":"UNVERIFIED","reason":"no successful MCP write round-trip is registered; run probe --case worktree-mcp-readback (create did not return in the recording session — recorded in package.lock.json:mcpSession)"},"index-consistency":{"status":"UNVERIFIED","reason":"independent file+index readback against a real MCP write is pending; the local gate mechanics (file without index row = INCONSISTENT) are exercised by probe --case worktree-mcp-readback"},"knowledge-authority-separation":{"status":"RECORDED","reason":"policy declares the separation (curated only; specs/tasks/source-code/comet-state forbidden) and validate enforces the declaration; runtime admission denials are exercised by probe --case escape-denial"},"secret-provisioned":{"status":"UNVERIFIED","reason":"secret-ref:sdd-harness-pilot/llmwiki-source-read is referenced, never provisioned; resolution requires a runtime-authorized secret store this task deliberately does not implement"}},"inputs":{"registrySha256":"c62a3a17d1d169dcfeb0cda5569c41c16a276254164a6466e61e645b395d768e","domainFiles":{"package.lock.json":"62890d5f072db081f863bb09352e5bbd7fc464129401d91d2cd7692221af336d","project-root-policy.json":"864e107ea13bbdec8973e9c56c4857bb3e525f96f11317d47a0fa74bba8ab49e","index-policy.json":"e7e37de72b0d63bd4a39d0a696696b7f776c40e243d3152c85a2f0c3f55e471c","mcp-profile.json":"9e241243ce2ac491adec6ac8ea1efd4af11353e1073d42475341cae03179d22a"}},"checkedAt":"2026-10-25T05:56:16.911Z"}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-llmwiki-paths.test.js:367:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: I04 convergence probe cannot bypass the registry prerequisite
+not ok 2 - I04 convergence probe cannot bypass the registry prerequisite
+  ---
+  duration_ms: 103.625041
+  type: 'test'
+  location: '<worker-tree>/test/infra-llmwiki-paths.test.js:371:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    missing registry must prevent a probe: {
+      "interface": "ProjectWikiInfra.v1",
+      "command": "probe",
+      "case": "escape-denial",
+      "executed": true,
+      "status": "VERIFIED",
+      "reason": null,
+      "sandbox": "git-repo-with-linked-worktree",
+      "denials": [
+        {
+          "code": "PATH_TRAVERSAL_DENIED",
+          "allowed": false,
+          "reason": "claimed path carries a .. segment; traversal out of the canonical wiki root is refused regardless of policy flags"
+        },
+        {
+          "code": "SYMLINK_ESCAPE_DENIED",
+          "allowed": false,
+          "reason": "realpath resolves outside the canonical wiki root (symlink escape); refusal is unconditional"
+        },
+        {
+          "code": "FOREIGN_WIKI_ROOT_DENIED",
+          "allowed": false,
+          "reason": "a per-worktree or foreign llmwiki/ directory is never a wiki root; every worktree must use the canonical main-tree root"
+        },
+        {
+          "code": "PROJECT_ID_MISMATCH_DENIED",
+          "allowed": false,
+          "reason": "claimed project id pav-legacy does not match the policy-bound project sdd-harness-pilot"
+        }
+      ],
+      "positiveControls": [
+        {
+          "code": "CONTAINED",
+          "allowed": true
+        }
+      ],
+      "hardInvariantsHeld": true,
+      "knowledgeWrite": {
+        "denials": [
+          {
+            "code": "KNOWLEDGE_AUTHORITY_DENIED",
+            "allowed": false,
+            "reason": "openspec-tasks is a forbidden wiki fact authority; specs/tasks checkmarks, source code and Comet state never author wiki facts"
+          },
+          {
+            "code": "UNAPPROVED_INTAKE_DENIED",
+            "allowed": false,
+            "reason": "full Git code intake without an explicit approval channel is forbidden by intake policy"
+          },
+          {
+            "code": "ENTRY_ADMISSION_DENIED",
+            "allowed": false,
+            "reason": "curated entry is missing required fields: approvedBy, revision (approval + source + revision are non-negotiable)"
+          },
+          {
+            "code": "ENTRY_ADMISSION_DENIED",
+            "allowed": false,
+            "reason": "only curated tier entries are admissible; raw/staging are never wiki facts"
+          }
+        ],
+        "positiveControls": [
+          {
+            "code": "ADMITTED",
+            "allowed": true,
+            "reason": "approved curated entry with source and revision; independent readback still required before any write is called successful"
+          }
+        ]
+      },
+      "checkedAt": "2026-10-25T05:56:17.012Z"
+    }
+
+
+    0 !== 1
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-llmwiki-paths.test.js:373:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 308.3945
+
+# STDERR

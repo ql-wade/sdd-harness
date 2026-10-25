@@ -5,10 +5,10 @@
   "projectId": "sdd-harness-pilot",
   "repoId": "ql-wade/sdd-harness",
   "canonicalWiki": {
-    "root": "llmwiki",
-    "resolution": "git rev-parse --git-common-dir -> main working tree -> <main-tree>/llmwiki",
+    "root": ".sdd/wiki/sdd-harness",
+    "resolution": "existing lib/sdd-paths.js getWikiHome(canonical registered main tree), exactly equal to this registered relative target; Git common-dir locates project identity only",
     "rule": "exactly one wiki root per project; every CLI / MCP host / worktree must resolve to it",
-    "workspaceBinding": "launcher + CLI (lib/sdd-paths.js getWikiHome) bind the MCP wiki workspace at $SDD_WIKI_HOME > $SDD_HOME/wiki/<project-slug>; SDD_HOME is project-local post-P1_1 (<repo>/.sdd), so the bound workspace root is <repo>/.sdd/wiki/<project-slug> (launcher==CLI parity re-observed 2026-10-22, I04 rework). This canonical-root resolution (<main-working-tree>/llmwiki) is the containment authority and is independent of where the llmwiki distribution lives"
+    "workspaceBinding": "SDD_HOME/SDD_WIKI_HOME values never register a target or confer permission. CLI result must equal the pre-registered target under the same project, without link escape. P4_4 owns the one resolver and launcher."
   },
   "worktreeMapping": {
     "strategy": "git-worktree-list",

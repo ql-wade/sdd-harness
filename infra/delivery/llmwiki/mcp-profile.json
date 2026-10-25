@@ -13,10 +13,11 @@
     "command": "${CLAUDE_PROJECT_DIR}/tools/mcp/llmwiki.sh",
     "args": [],
     "transport": "stdio",
-    "workspaceBinding": "canonical wiki root shared with the CLI (lib/sdd-paths.js getWikiHome): $SDD_WIKI_HOME when set, else $SDD_HOME/wiki/<project-slug>; the slug derives from the git common-dir main repository directory name (worktree-safe: every worktree of one repo shares one wiki root); a per-worktree llmwiki copy is never the wiki root (ProjectRoot.v1); post-P1_1 the registered SDD_HOME is project-local (<repo>/.sdd), so the bound root is <repo>/.sdd/wiki/<project-slug> and the external-root cross-project collision is eliminated",
+    "workspaceBinding": "sole getWikiHome authority, exactly the registered main-tree .sdd/wiki/sdd-harness target; environment paths are requests, not registration or grants",
     "env": {
-      "SDD_HOME": "project-local llmwiki distribution root; landed by P1_1 as SDD_HOME=<repo>/.sdd (clone $SDD_HOME/repos/llmwiki pinned 075c5b4, venv $SDD_HOME/venvs/llmwiki-311); an unset SDD_HOME still falls back to the external $HOME/.sdd inside the launcher, but that external default is superseded and is not the registered landing (I04 rework calibration 2026-10-22)",
-      "LLMWIKI_PYTHON": "optional explicit python override"
+      "SDD_HOME": "registered main project .sdd only for the active deployment; a separately verified public source cache is fixture-runtime proof only",
+      "LLMWIKI_PYTHON": "registered main project .sdd/venvs/llmwiki-311/bin/python only",
+      "SDD_WIKI_HOME": "must equal the registered project wiki target from the existing getWikiHome authority under project-local bindings; arbitrary values or matching forged policy values are denied"
     }
   },
   "capabilities": [
@@ -31,10 +32,39 @@
     "lint",
     "ping"
   ],
-  "capabilitySource": "observed via stdio JSON-RPC tools/list against a disposable sandbox workspace; see package.lock.json:mcpSession",
+  "capabilitySource": "current probe separately observes SDK stdio initialize/list/create/read/search, unchanged file and native documents/chunks/FTS; SDK direct is never native-host discovery",
   "observation": {
     "hostDiscovered": false,
     "hostDiscoveryStatus": "UNVERIFIED",
-    "sessionObservation": "2026-10-20 会话中宿主经 .mcp.json 入口启动 tools/mcp/llmwiki.sh 失败（ENOENT）；同机直连 venv 启动则 initialize/tools/list 成功而 create 写调用长时间无返回。两条观察都如实登记，宿主发现只有真实宿主证据出现后才可 VERIFIED（文件存在不算宿主已发现）"
+    "sessionObservation": "Current source/runtime and SDK stdio storage/index are measured by per-invocation I04 receipts. No static field in this profile qualifies discovery or managed writes.",
+    "currentAcceptance": "UNVERIFIED: historical package/session claims do not establish current native-host discovery, managed grant, Kp, same-Run or complete I04 acceptance",
+    "historicalObservation": {
+      "recordedAt": "2026-10-20",
+      "scope": "HISTORICAL_NOT_CURRENT_QUALIFICATION",
+      "observation": "2026-10-20 会话中宿主经 .mcp.json 入口启动 tools/mcp/llmwiki.sh 失败（ENOENT）；同机直连 venv 启动则 initialize/tools/list 成功而 create 写调用长时间无返回。两条观察都如实登记，宿主发现只有真实宿主证据出现后才可 VERIFIED（文件存在不算宿主已发现）"
+    },
+    "liveRegistrationScope": "hostDiscovered/hostDiscoveryStatus refer to active managed registration, which I04 never changes; isolated native-host capability is recorded separately below",
+    "privateStateHomeAttemptHistory": {
+      "host": "Codex app-server, one isolated fixture MCP enabled, other configured MCP servers disabled for that process",
+      "result": "UNVERIFIED",
+      "reason": "private SQLite state runtime backfill did not finish before the native 30-second initialization deadline; no initialize response or tool discovery was accepted",
+      "protocolThreadsCreated": 0,
+      "modelTurnsStarted": 0,
+      "managedRoleQualified": false
+    },
+    "isolatedNativeHost": {
+      "status": "VERIFIED",
+      "scope": "one temporary fixture MCP configuration on the selected local Codex app-server, not managed role or project knowledge grant",
+      "toolsDiscovered": 10,
+      "entryKind": "registered pinned Python -m local_server with disposable workspace; product launcher assembly belongs to P4_4",
+      "ephemeralProtocolThreads": 1,
+      "modelTurns": 0,
+      "fileAndNativeSqliteFtsReadback": "CONSISTENT",
+      "normalHostStateBookkeepingMayOccur": true,
+      "globalDbInspectedOrCopiedByProbe": false,
+      "evidence": "worker-reports/I04-convergence/native-host-evidence.json",
+      "managedRoleQualified": false,
+      "knowledgeGateSigned": false
+    }
   }
 }

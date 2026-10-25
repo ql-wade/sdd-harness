@@ -1,0 +1,363 @@
+{
+  "scope": "I04 original eight case IDs, exact original oracles retained; not a case-plan amendment",
+  "canonical_case_plan_sha256": "56e3967c0cfd1212831d1fe24d1e55e2ad7e2cc71c52e318948309f756eb18a2",
+  "current_source_hashes": {
+    "infra/delivery/llmwiki/package.lock.json": "afb3e05cdb5cf8868fd8b0382a6cd161facaae86a69e1229efc42825c7dc0b90",
+    "infra/delivery/llmwiki/project-root-policy.json": "d5a101fe1419867ac36095f958ad827f22876aa9ae41ca372d276b3002fe7a8d",
+    "infra/delivery/llmwiki/index-policy.json": "6ae814b4e174b6930c5bc0c1598e97d02f30dda00fc09a8bbdd98aaeb899a755",
+    "infra/delivery/llmwiki/mcp-profile.json": "5a75dfee5433ad032eaf735389bb83fdd8af6a6d9e1aae6a4333e7ea7708d0fe",
+    "tools/infra/llmwiki.mjs": "822f15e09c1c26e0d0e95c828246d40347583da670047f3b029c4fa9483408af",
+    "test/infra-llmwiki-paths.test.js": "4026f6ff5f477a905c8c51cd0b9b40670e9ad6e76ec7af02959cddea71474120"
+  },
+  "canonical_paths_modified": false,
+  "cases": [
+    {
+      "id": "C04",
+      "status": "PROPOSED_COMPONENT_INPUTS_ONLY_NOT_ACCEPTED",
+      "canonical_case_module": "test/delivery-cases/1_5.mjs",
+      "canonical_intended_command": "node tools/verify/delivery-journey.mjs --scenario C04 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/C04 --json",
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic single-controller integration",
+          "scenario": "C04"
+        }
+      ],
+      "original_oracle": "- **GIVEN** planner 产出 OpenSpec tasks/DAG，而 Classic 需要 plan 指针和任务映射\n- **WHEN** 导入计划并恢复执行\n- **THEN** tasks 保持唯一可写任务权威，Classic 视图引用同一任务与输入版本，不创建第二套任务勾选或启动第二 controller；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "original_oracle_sha256": "30470b6301a379606c6f2646faa6c9537ccb9cf2eca22c96a74932dd052bfb92",
+      "canonical_checks": [
+        "V_C04",
+        "V_INFRA_I04"
+      ],
+      "component_producer_command": "node tools/infra/llmwiki.mjs probe --case worktree-mcp-readback --registry infra/delivery/registry.json --json",
+      "component_json_fields": [
+        "grantsAuthority",
+        "knowledgeGateSigned"
+      ],
+      "mandatory_component_relations": [
+        "nativeReadback.file.sha256 == nativeReadback.index.contentSha256 == createdPayloadSha256 == restoredPayloadSha256",
+        "nativeReadback.consistency == CONSISTENT and nativeReadback.status == VERIFIED",
+        "both negativeControls have status MISMATCH and consistency INCONSISTENT",
+        "knowledgeGateSigned == false and grantsAuthority == false"
+      ],
+      "component_evidence_scope": "private source/runtime/stdio/native-index fixture only",
+      "native_host_evidence_separate": "native-host-evidence.json; different private entry, never join its UUID/hash with the direct-stdio fixture",
+      "whole_oracle_owners": [
+        "P1_5",
+        "P1_3"
+      ],
+      "whole_oracle_gap": "Comet original plan/Run/task-pointer uniqueness and import/recovery are not exercised by infrastructure fixtures.",
+      "whole_oracle_readback_command": null,
+      "whole_oracle_readback_path": null,
+      "whole_oracle_runtime_identity_and_frozen_expected_values": null,
+      "full_scenario_passed": false
+    },
+    {
+      "id": "C06",
+      "status": "PROPOSED_COMPONENT_INPUTS_ONLY_NOT_ACCEPTED",
+      "canonical_case_module": "test/delivery-cases/1_5.mjs",
+      "canonical_intended_command": "node tools/verify/delivery-journey.mjs --scenario C06 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/C06 --json",
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic single-controller integration",
+          "scenario": "C06"
+        }
+      ],
+      "original_oracle": "- **GIVEN** policy 要求更新项目或团队知识，但缺少有效授权、正确目标版本或独立读回\n- **WHEN** 请求对应收尾或最终完成\n- **THEN** 同一 Comet Run 保持未完成，恢复原知识动作，不用原生 remember 提示或本地成功声明代替外部知识证据；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "original_oracle_sha256": "7912c917ef9a814ea5a3b58debf3ac12ad636057fc0287f490f2a53eaaa58661",
+      "canonical_checks": [
+        "V_C06",
+        "V_INFRA_I04",
+        "V_INFRA_I05"
+      ],
+      "component_producer_command": "node tools/infra/llmwiki.mjs probe --case worktree-mcp-readback --registry infra/delivery/registry.json --json",
+      "component_json_fields": [
+        "nativeReadback.consistency",
+        "nativeReadback.file.sha256",
+        "nativeReadback.index.contentSha256",
+        "negativeControls.changedFileStaleIndex.consistency"
+      ],
+      "mandatory_component_relations": [
+        "nativeReadback.file.sha256 == nativeReadback.index.contentSha256 == createdPayloadSha256 == restoredPayloadSha256",
+        "nativeReadback.consistency == CONSISTENT and nativeReadback.status == VERIFIED",
+        "both negativeControls have status MISMATCH and consistency INCONSISTENT",
+        "knowledgeGateSigned == false and grantsAuthority == false"
+      ],
+      "component_evidence_scope": "private source/runtime/stdio/native-index fixture only",
+      "native_host_evidence_separate": "native-host-evidence.json; different private entry, never join its UUID/hash with the direct-stdio fixture",
+      "whole_oracle_owners": [
+        "P4_4",
+        "P3_2"
+      ],
+      "whole_oracle_gap": "A real authorized knowledge operation must remain pending in the original Comet Run after denied or mismatched readback; fixture success cannot provide a grant.",
+      "whole_oracle_readback_command": null,
+      "whole_oracle_readback_path": null,
+      "whole_oracle_runtime_identity_and_frozen_expected_values": null,
+      "full_scenario_passed": false
+    },
+    {
+      "id": "E01",
+      "status": "PROPOSED_COMPONENT_INPUTS_ONLY_NOT_ACCEPTED",
+      "canonical_case_module": "test/delivery-cases/4_4.mjs",
+      "canonical_intended_command": "node tools/verify/delivery-journey.mjs --scenario E01 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/E01 --json",
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Architecture methods and advisory hooks",
+          "scenario": "E01"
+        }
+      ],
+      "original_oracle": "- **GIVEN** 本次 policy 要求项目知识更新，产品验收已通过但 LLMWiki 的必要写入或独立读回失败\n- **WHEN** 请求规格归档\n- **THEN** 按所选关闭策略执行相应前置 gate，不得因产品测试通过就跳过必需知识义务；仍有效产品证据保留，不重复部署；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "original_oracle_sha256": "e691ea2fda71e0703062d36a0cced6bfd07e14077d9e733254da5e3d0dc7692b",
+      "canonical_checks": [
+        "V_E01",
+        "V_INFRA_I04",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "component_producer_command": "node tools/infra/llmwiki.mjs probe --case worktree-mcp-readback --registry infra/delivery/registry.json --json",
+      "component_json_fields": [
+        "negativeControls.fileWithoutNativeIndex.status",
+        "negativeControls.changedFileStaleIndex.status",
+        "knowledgeGateSigned"
+      ],
+      "mandatory_component_relations": [
+        "nativeReadback.file.sha256 == nativeReadback.index.contentSha256 == createdPayloadSha256 == restoredPayloadSha256",
+        "nativeReadback.consistency == CONSISTENT and nativeReadback.status == VERIFIED",
+        "both negativeControls have status MISMATCH and consistency INCONSISTENT",
+        "knowledgeGateSigned == false and grantsAuthority == false"
+      ],
+      "component_evidence_scope": "private source/runtime/stdio/native-index fixture only",
+      "native_host_evidence_separate": "native-host-evidence.json; different private entry, never join its UUID/hash with the direct-stdio fixture",
+      "whole_oracle_owners": [
+        "P4_4",
+        "VERIFY"
+      ],
+      "whole_oracle_gap": "Actual Kp failure must block every real archive entry with current Run/action/candidate binding. This worker signs no Kp or archive verdict.",
+      "whole_oracle_readback_command": null,
+      "whole_oracle_readback_path": null,
+      "whole_oracle_runtime_identity_and_frozen_expected_values": null,
+      "full_scenario_passed": false
+    },
+    {
+      "id": "E06",
+      "status": "PROPOSED_COMPONENT_INPUTS_ONLY_NOT_ACCEPTED",
+      "canonical_case_module": "test/delivery-cases/4_4.mjs",
+      "canonical_intended_command": "node tools/verify/delivery-journey.mjs --scenario E06 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/E06 --json",
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Architecture methods and advisory hooks",
+          "scenario": "E06"
+        }
+      ],
+      "original_oracle": "- **GIVEN** 恢复/压缩/子会话启动重复发生，或规格已归档而 Outline 发布曾超时\n- **WHEN** 读取下一动作并恢复处理\n- **THEN** hook 仅恢复方法上下文，Comet 绑定原审查/发布 operation；不重复派发评审、不重复创建知识页，不产生第二控制器；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "original_oracle_sha256": "1636e220b803d852d9fbb4895e28578d4660977ce18c77fd56f232761f695c94",
+      "canonical_checks": [
+        "V_E06",
+        "V_INFRA_I04",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "component_producer_command": "node tools/infra/llmwiki.mjs probe --case worktree-mcp-readback --registry infra/delivery/registry.json --json",
+      "component_json_fields": [
+        "grantsAuthority",
+        "knowledgeGateSigned"
+      ],
+      "mandatory_component_relations": [
+        "nativeReadback.file.sha256 == nativeReadback.index.contentSha256 == createdPayloadSha256 == restoredPayloadSha256",
+        "nativeReadback.consistency == CONSISTENT and nativeReadback.status == VERIFIED",
+        "both negativeControls have status MISMATCH and consistency INCONSISTENT",
+        "knowledgeGateSigned == false and grantsAuthority == false"
+      ],
+      "component_evidence_scope": "private source/runtime/stdio/native-index fixture only",
+      "native_host_evidence_separate": "native-host-evidence.json; different private entry, never join its UUID/hash with the direct-stdio fixture",
+      "whole_oracle_owners": [
+        "P4_6",
+        "P4_8"
+      ],
+      "whole_oracle_gap": "Original operation IDs, hook replay and post-archive Outline continuation are outside the I04 fixture; no business retry/continuation state is created here.",
+      "whole_oracle_readback_command": null,
+      "whole_oracle_readback_path": null,
+      "whole_oracle_runtime_identity_and_frozen_expected_values": null,
+      "full_scenario_passed": false
+    },
+    {
+      "id": "H08",
+      "status": "PROPOSED_COMPONENT_INPUTS_ONLY_NOT_ACCEPTED",
+      "canonical_case_module": "test/delivery-cases/4_6.mjs",
+      "canonical_intended_command": "node tools/verify/delivery-journey.mjs --scenario H08 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/H08 --json",
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Post-archive continuation and idempotent control",
+          "scenario": "H08"
+        }
+      ],
+      "original_oracle": "- **GIVEN** 运行记录、批准 payload 或原 operation 的唯一副本仍在待收尾工作区\n- **WHEN** 请求自动清理工作区\n- **THEN** 未证明完整状态迁移与恢复前阻断清理，不能删除原状态后创建空 Run 假装恢复；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "original_oracle_sha256": "88ad59a920aa7e374c0159085a845f13664a192732064db9d6547902d07435bd",
+      "canonical_checks": [
+        "V_H08",
+        "V_INFRA_I04",
+        "V_INFRA_I08"
+      ],
+      "component_producer_command": "node tools/infra/llmwiki.mjs probe --case worktree-mcp-readback --registry infra/delivery/registry.json --json",
+      "component_json_fields": [
+        "worktreesCanonicalRootsConsistent",
+        "payloadUnchanged",
+        "restoredPayloadSha256"
+      ],
+      "mandatory_component_relations": [
+        "nativeReadback.file.sha256 == nativeReadback.index.contentSha256 == createdPayloadSha256 == restoredPayloadSha256",
+        "nativeReadback.consistency == CONSISTENT and nativeReadback.status == VERIFIED",
+        "both negativeControls have status MISMATCH and consistency INCONSISTENT",
+        "knowledgeGateSigned == false and grantsAuthority == false"
+      ],
+      "component_evidence_scope": "private source/runtime/stdio/native-index fixture only",
+      "native_host_evidence_separate": "native-host-evidence.json; different private entry, never join its UUID/hash with the direct-stdio fixture",
+      "whole_oracle_owners": [
+        "P4_6",
+        "I08"
+      ],
+      "whole_oracle_gap": "Actual unfinished-Run staging/approved payload backup, restoration and cleanup refusal need the original Comet state and real recovery resources; fixtures are intentionally disposable.",
+      "whole_oracle_readback_command": null,
+      "whole_oracle_readback_path": null,
+      "whole_oracle_runtime_identity_and_frozen_expected_values": null,
+      "full_scenario_passed": false
+    },
+    {
+      "id": "F01",
+      "status": "PROPOSED_COMPONENT_INPUTS_ONLY_NOT_ACCEPTED",
+      "canonical_case_module": "test/delivery-cases/1_1.mjs",
+      "canonical_intended_command": "node tools/verify/delivery-journey.mjs --scenario F01 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/F01 --json",
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Foundation distribution and deployment",
+          "scenario": "F01"
+        }
+      ],
+      "original_oracle": "- **GIVEN** 干净成员工作区\n- **WHEN** 接入同一 Foundation release\n- **THEN** 实际工具版本、技能、契约、hooks/MCP 内容与清单一致；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "original_oracle_sha256": "2f4e565d4456684e4a6f7fabe24a1601af30948d80f13a253a9204e4ec249683",
+      "canonical_checks": [
+        "V_F01",
+        "V_INFRA_I01",
+        "V_INFRA_I04",
+        "V_INFRA_I05",
+        "V_RW_RUNNER_BUILD"
+      ],
+      "component_producer_command": "node tools/infra/llmwiki.mjs probe --case worktree-mcp-readback --registry infra/delivery/registry.json --json",
+      "component_json_fields": [
+        "runtime.categories.upstream-source.treeSha256",
+        "runtime.categories.venv-runtime.python",
+        "runtime.categories.venv-runtime.mcp",
+        "mcpSession.toolsList.tools"
+      ],
+      "mandatory_component_relations": [
+        "nativeReadback.file.sha256 == nativeReadback.index.contentSha256 == createdPayloadSha256 == restoredPayloadSha256",
+        "nativeReadback.consistency == CONSISTENT and nativeReadback.status == VERIFIED",
+        "both negativeControls have status MISMATCH and consistency INCONSISTENT",
+        "knowledgeGateSigned == false and grantsAuthority == false"
+      ],
+      "component_evidence_scope": "private source/runtime/stdio/native-index fixture only",
+      "native_host_evidence_separate": "native-host-evidence.json; different private entry, never join its UUID/hash with the direct-stdio fixture",
+      "whole_oracle_owners": [
+        "P1_1",
+        "P1_3",
+        "VERIFY"
+      ],
+      "whole_oracle_gap": "The fixed source/80 applicable locked packages and temporary native host were observed; production launcher/role assembly and fresh-member Foundation release still require actual installation and role evidence.",
+      "whole_oracle_readback_command": null,
+      "whole_oracle_readback_path": null,
+      "whole_oracle_runtime_identity_and_frozen_expected_values": null,
+      "full_scenario_passed": false
+    },
+    {
+      "id": "B09",
+      "status": "PROPOSED_COMPONENT_INPUTS_ONLY_NOT_ACCEPTED",
+      "canonical_case_module": "test/delivery-cases/1_6.mjs",
+      "canonical_intended_command": "node tools/verify/delivery-journey.mjs --scenario B09 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/B09 --json",
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Method and closeout boundaries",
+          "scenario": "B09"
+        }
+      ],
+      "original_oracle": "- **GIVEN** 旧技能 controller 仍活跃\n- **WHEN** 新 runtime 尝试取得同一任务\n- **THEN** 拒绝第二写者，不重复派发、监控或归档；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "original_oracle_sha256": "5de89801bc3b78c5d2c88bbafb78b3d3b4b69297cf5c6b0b756d9da159a6b74c",
+      "canonical_checks": [
+        "V_B09",
+        "V_INFRA_I04",
+        "V_P1_2_PLUGIN_REGISTRATION_DIVISION"
+      ],
+      "component_producer_command": "node tools/infra/llmwiki.mjs probe --case worktree-mcp-readback --registry infra/delivery/registry.json --json",
+      "component_json_fields": [
+        "grantsAuthority",
+        "knowledgeGateSigned"
+      ],
+      "mandatory_component_relations": [
+        "nativeReadback.file.sha256 == nativeReadback.index.contentSha256 == createdPayloadSha256 == restoredPayloadSha256",
+        "nativeReadback.consistency == CONSISTENT and nativeReadback.status == VERIFIED",
+        "both negativeControls have status MISMATCH and consistency INCONSISTENT",
+        "knowledgeGateSigned == false and grantsAuthority == false"
+      ],
+      "component_evidence_scope": "private source/runtime/stdio/native-index fixture only",
+      "native_host_evidence_separate": "native-host-evidence.json; different private entry, never join its UUID/hash with the direct-stdio fixture",
+      "whole_oracle_owners": [
+        "P1_3",
+        "I02"
+      ],
+      "whole_oracle_gap": "Absence of a controller in this utility is not a runtime proof that a second writer is denied. Actual single-controller lease and role-capability rejection remain required.",
+      "whole_oracle_readback_command": null,
+      "whole_oracle_readback_path": null,
+      "whole_oracle_runtime_identity_and_frozen_expected_values": null,
+      "full_scenario_passed": false
+    },
+    {
+      "id": "N05",
+      "status": "PROPOSED_COMPONENT_INPUTS_ONLY_NOT_ACCEPTED",
+      "canonical_case_module": "test/delivery-cases/3_2.mjs",
+      "canonical_intended_command": "node tools/verify/delivery-journey.mjs --scenario N05 --profile comet-managed-v2 --evidence-dir .whitebox/comet-managed-v2/N05 --json",
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N05"
+        }
+      ],
+      "original_oracle": "实际工具返回有来源/版本/权限的上下文；不把知识页变成已批准spec，不批量摄入源码；Graph关闭不破坏正确性",
+      "original_oracle_sha256": "4e18857052cbefbe752a8500258f4dfad6a3ef3c68f0a0e0e66ba3d807db05c2",
+      "canonical_checks": [
+        "V_N05"
+      ],
+      "component_producer_command": "node tools/infra/llmwiki.mjs probe --case worktree-mcp-readback --registry infra/delivery/registry.json --json",
+      "component_json_fields": [
+        "mcpSession.read.status",
+        "mcpSession.search.status",
+        "nativeReadback.index.relativePath",
+        "nativeReadback.index.version",
+        "createdPayloadSha256"
+      ],
+      "mandatory_component_relations": [
+        "nativeReadback.file.sha256 == nativeReadback.index.contentSha256 == createdPayloadSha256 == restoredPayloadSha256",
+        "nativeReadback.consistency == CONSISTENT and nativeReadback.status == VERIFIED",
+        "both negativeControls have status MISMATCH and consistency INCONSISTENT",
+        "knowledgeGateSigned == false and grantsAuthority == false"
+      ],
+      "component_evidence_scope": "private source/runtime/stdio/native-index fixture only",
+      "native_host_evidence_separate": "native-host-evidence.json; different private entry, never join its UUID/hash with the direct-stdio fixture",
+      "whole_oracle_owners": [
+        "P1_3",
+        "P4_4",
+        "I05"
+      ],
+      "whole_oracle_gap": "Actual R/A context must include source/revision/current permission from authorized real sources; fixed fixture metadata is not a real source grant, and Outline/deepwiki/optional Graph integration is not exercised here.",
+      "whole_oracle_readback_command": null,
+      "whole_oracle_readback_path": null,
+      "whole_oracle_runtime_identity_and_frozen_expected_values": null,
+      "full_scenario_passed": false
+    }
+  ],
+  "cases_accepted": 0,
+  "current_component_probe": "24-final-stdio.txt"
+}
