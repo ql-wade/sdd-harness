@@ -14,8 +14,7 @@
 //   B08  concurrent drift — a main-spec or change mutation between rehearsal
 //        and execution blocks closeout with SPEC_DRIFT and requires a fresh
 //        rehearsal; MODIFIED requirements keep every existing scenario (the
-//        host CLI 1.3.1 silently drops scenarios a truncated delta omits —
-//        this suite proves that gap and the adapter guard against it).
+//        pinned 1.11 and the adapter independently reject omitted scenarios).
 //   Sole writer — O_EXCL file lock; a second concurrent writer (in-process or
 //   a real child process) is refused; a completed archive refuses a second
 //   closeout.
@@ -32,7 +31,7 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const adapterPath = path.join(projectRoot, 'lib/adapters/spec.js');
 const adapter = await import(adapterPath);
 
-const OPENSPEC_CLI = process.env.OPENSPEC_CLI ?? 'openspec';
+const OPENSPEC_CLI = path.join(projectRoot, '.sdd/tools/openspec-1.11.0/node_modules/.bin/openspec');
 const CLI_TIMEOUT_MS = 120_000;
 
 const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
@@ -106,9 +105,8 @@ const FULL_DELTA = [
   '',
 ].join('\n');
 
-// Truncated delta: MODIFIED drops the "Invalid login" scenario. The host CLI
-// archives this silently (proven in the B08 preservation case), which is
-// exactly the loss the adapter pre-check must refuse.
+// Truncated delta: MODIFIED drops the existing "Invalid login" scenario.
+// Pinned 1.11 and the adapter must both refuse this potential loss.
 const TRUNCATED_DELTA = FULL_DELTA.split('#### Scenario: Invalid login')[0];
 
 function writeProject({ delta }) {
@@ -318,22 +316,24 @@ test('sole writer: two concurrent full closeouts produce exactly one archive and
   assert.equal(archiveDirsOf(root).length, 1, 'exactly one archive directory must exist');
 });
 
-test('B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently', { skip: hostCliAvailable ? false : `host CLI ${OPENSPEC_CLI} unavailable` }, (t) => {
-  // Layer proof first: the host CLI 1.3.1 really archives the truncated delta
-  // and loses the scenario — in a throwaway copy only. This documents why the
-  // adapter pre-check exists (native validate --strict passes this delta).
+test('B08 preservation: pinned native CLI and adapter both refuse omitted existing scenarios', { skip: hostCliAvailable ? false : `host CLI ${OPENSPEC_CLI} unavailable` }, (t) => {
+  // Both pinned 1.11 and the adapter independently preserve existing scenarios.
+  // The prior 1.3.1 silent-loss oracle is historical, never a required outcome.
   const cliRoot = writeProject({ delta: TRUNCATED_DELTA });
   t.after(() => fs.rmSync(cliRoot, { recursive: true, force: true }));
   const nativeValidate = spawnSync(OPENSPEC_CLI, ['validate', 'demo', '--type', 'change', '--strict', '--json'], {
     cwd: cliRoot, encoding: 'utf8', timeout: CLI_TIMEOUT_MS, env: cliEnv(),
   });
-  assert.equal(nativeValidate.status, 0);
-  assert.equal(JSON.parse(nativeValidate.stdout).items[0].valid, true, 'precondition: native strict validation passes the truncated delta');
+  assert.equal(nativeValidate.status, 1);
+  assert.equal(JSON.parse(nativeValidate.stdout).items[0].valid, false);
+  assert.match(nativeValidate.stdout, /Invalid login/);
   const cliArchive = spawnSync(OPENSPEC_CLI, ['archive', 'demo', '-y'], {
     cwd: cliRoot, encoding: 'utf8', timeout: CLI_TIMEOUT_MS, env: cliEnv(),
   });
-  assert.equal(cliArchive.status, 0, 'precondition: the host CLI archives the truncated delta with exit 0');
-  assert.ok(!readMainSpec(cliRoot).includes('#### Scenario: Invalid login'), 'precondition: the host CLI silently dropped the scenario — the gap the adapter guards');
+  assert.equal(cliArchive.status, 1);
+  assert.equal(readMainSpec(cliRoot), MAIN_SPEC);
+  assert.equal(fs.existsSync(path.join(cliRoot, 'openspec/changes/demo')), true);
+  assert.deepEqual(archiveDirsOf(cliRoot), []);
 
   // Adapter layer: the same delta is refused BEFORE any archive, and the real
   // project stays byte-identical.
@@ -348,10 +348,11 @@ test('B08 preservation: adapter refuses a MODIFIED delta that drops an existing 
   assert.deepEqual(dropped.missing, ['Invalid login']);
 
   const rehearsal = adapter.rehearseArchive({ projectRoot: root, change: 'demo', openspecCli: OPENSPEC_CLI });
-  assert.equal(rehearsal.ok, true, 'rehearsal itself runs in the throwaway copy even for a bad delta');
+  assert.equal(rehearsal.ok, false, 'pinned 1.11 refuses the same missing scenario during isolated rehearsal');
+  assert.equal(rehearsal.error, 'SPEC_VALIDATION_FAILED');
   assert.throws(
     () => adapter.closeoutSpecs({ projectRoot: root, change: 'demo', openspecCli: OPENSPEC_CLI, rehearsal, knowledgeCloseout: KNOWLEDGE, execution: EXECUTION }),
-    (error) => error.code === 'SCENARIO_PRESERVATION_VIOLATION' && /Invalid login/.test(error.message),
+    (error) => error.code === 'REHEARSAL_NOT_OK',
   );
   assert.equal(readMainSpec(root), MAIN_SPEC, 'refused closeout must leave real main specs untouched');
   assert.deepEqual(archiveDirsOf(root), [], 'refused closeout must not archive');
@@ -558,4 +559,140 @@ test('A11 silent CLI abort: exit-0-with-abort (unwritable rebuild) is detected a
   );
   assert.equal(readMainSpec(root), MAIN_SPEC, 'the aborted archive must leave the real project untouched');
   assert.deepEqual(archiveDirsOf(root), []);
+});
+
+// The legacy component writer must never mutate a Comet-managed change.
+test('managed closeout refuses caller-authored Kp without the original Runtime', (t) => {
+  const root = writeProject({ delta: FULL_DELTA });
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const before = readMainSpec(root);
+  const rehearsal = adapter.rehearseArchive({ projectRoot: root, change: 'demo', openspecCli: OPENSPEC_CLI });
+  assert.equal(rehearsal.ok, true);
+  fs.writeFileSync(path.join(root, 'openspec/changes/demo/.comet.yaml'),
+    'managed_delivery: true\nrun_id: component-original-run\n');
+  assert.throws(() => adapter.closeoutSpecs({ projectRoot: root, change: 'demo',
+    openspecCli: OPENSPEC_CLI, rehearsal, knowledgeCloseout: KNOWLEDGE, execution: EXECUTION }),
+    (error) => error.code === 'MANAGED_RUNTIME_REQUIRED');
+  assert.equal(readMainSpec(root), before);
+  assert.equal(fs.existsSync(path.join(root, 'openspec/changes/demo')), true);
+  assert.deepEqual(archiveDirsOf(root), []);
+});
+
+test('all legacy write and rehearsal helpers refuse Comet-owned control variants', (t) => {
+  for (const [relative, content] of [
+    ['.comet/config.yaml', 'not: [valid'],
+    ['openspec/changes/demo/.comet.yaml', 'managed_delivery: unknown\n'],
+    ['openspec/changes/demo/.comet', null],
+  ]) {
+    const root=writeProject({delta:FULL_DELTA});
+    t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+    const marker=path.join(root,relative); fs.mkdirSync(path.dirname(marker),{recursive:true});
+    if(content===null) fs.mkdirSync(marker); else fs.writeFileSync(marker,content);
+    const before=readMainSpec(root);
+    const calls=[
+      ()=>adapter.closeoutSpecs({projectRoot:root,change:'demo',knowledgeCloseout:KNOWLEDGE,execution:EXECUTION}),
+      ()=>adapter.recoverCloseout({projectRoot:root,change:'demo'}),
+      ()=>adapter.rehearseArchive({projectRoot:root,change:'demo',openspecCli:OPENSPEC_CLI}),
+      ()=>adapter.acquireArchiveLock({projectRoot:root,change:'demo',writerId:EXECUTION}),
+      ()=>adapter.releaseArchiveLock({projectRoot:root,change:'demo'}),
+    ];
+    for(const call of calls) assert.throws(call,e=>e.code==='MANAGED_RUNTIME_REQUIRED');
+    assert.equal(readMainSpec(root),before);
+    assert.deepEqual(archiveDirsOf(root),[]);
+    assert.equal(fs.existsSync(path.join(root,'openspec/changes/demo/.spec-closeout-state.json')),false);
+    assert.equal(fs.existsSync(path.join(root,'openspec/changes/demo/.spec-closeout.lock')),false);
+  }
+});
+
+function managedReadFixture(t) {
+  const root = writeProject({delta: FULL_DELTA});
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-read-boundary-'));
+  t.after(() => { fs.rmSync(root,{recursive:true,force:true}); fs.rmSync(outside,{recursive:true,force:true}); });
+  const control = path.join(root,'openspec/changes/demo/.comet');
+  fs.mkdirSync(control,{recursive:true});
+  fs.writeFileSync(path.join(control,'run-state.json'),JSON.stringify({runId:'read-boundary-run',status:'running'}));
+  let runtimeCalls=0;
+  const instance=adapter.createManagedSpecAdapter({projectRoot:root,runtime:{runClassicCli(){runtimeCalls++; throw new Error('read boundary must reject before Native');}}});
+  return {root,outside,control,instance,calls:()=>runtimeCalls};
+}
+
+test('managed inspect rejects a spec file link before reading external ordinary data', (t) => {
+  const f=managedReadFixture(t);
+  const external=path.join(f.outside,'ordinary.md');
+  fs.writeFileSync(external,'## ADDED Requirements\n\n### Requirement: Outside ordinary data\nThe system SHALL keep this file outside the project.\n');
+  const spec=path.join(f.root,'openspec/changes/demo/specs/cap-a/spec.md');
+  fs.unlinkSync(spec); fs.symlinkSync(external,spec);
+  assert.throws(()=>f.instance.inspect({change:'demo'}),e=>e.code==='PROJECT_PATH_UNSAFE');
+  assert.equal(f.calls(),0);
+});
+
+test('managed inspect rejects null Run JSON with a coded error', (t) => {
+  const f=managedReadFixture(t);
+  fs.writeFileSync(path.join(f.control,'run-state.json'),'null');
+  assert.throws(()=>f.instance.inspect({change:'demo'}),e=>e.code==='MANAGED_RUNTIME_REQUIRED');
+  assert.equal(f.calls(),0);
+});
+
+test('all managed read entries reject directory, Run and main-spec links before Native', async (t) => {
+  for (const relative of ['openspec/changes/demo/specs/cap-a/spec.md',
+    'openspec/changes/demo/specs/cap-a','openspec/changes/demo/.comet/run-state.json',
+    'openspec/changes/demo/.comet','openspec/changes/demo','openspec/specs/cap-a/spec.md', 'openspec/specs/cap-a']) {
+    const f=managedReadFixture(t);
+    const source=path.join(f.root,relative);
+    const external=path.join(f.outside,'ordinary');
+    const directory=fs.lstatSync(source).isDirectory();
+    if(directory) fs.mkdirSync(external); else fs.writeFileSync(external,'ordinary external data');
+    fs.rmSync(source,{recursive:directory}); fs.symlinkSync(external,source);
+    for(const method of ['inspect','closeout','recover']) {
+      await assert.rejects(async()=>f.instance[method]({change:'demo'}),e=>e.code==='PROJECT_PATH_UNSAFE',relative+' '+method);
+    }
+    assert.equal(f.calls(),0);
+  }
+});
+
+test('archived managed projection and pure main readback reject links and relative escape', async (t) => {
+  const f=managedReadFixture(t);
+  const archive=path.join(f.root,'openspec/changes/archive/2026-10-25-demo');
+  fs.mkdirSync(path.dirname(archive),{recursive:true});
+  fs.renameSync(path.join(f.root,'openspec/changes/demo'),archive);
+  const external=path.join(f.outside,'ordinary.md'); fs.writeFileSync(external,'ordinary outside data');
+  const target=path.join(archive,'specs/cap-a/spec.md'); fs.unlinkSync(target);fs.symlinkSync(external,target);
+  for(const method of ['inspect','closeout','recover'])
+    await assert.rejects(async()=>f.instance[method]({change:'demo'}),e=>e.code==='PROJECT_PATH_UNSAFE');
+  assert.equal(f.calls(),0);
+  assert.throws(()=>adapter.readBackMainSpecs({projectRoot:f.root,
+    summary:{capabilities:{'../changes':{added:[],modified:[],removed:[]}}}}),e=>e.code==='PROJECT_PATH_UNSAFE');
+  assert.throws(()=>adapter.readBackMainSpecs({projectRoot:f.root,summary:{capabilities:{}},
+    expectedMainSpecs:{'../../outside.md':'0'.repeat(64)}}),e=>e.code==='PROJECT_PATH_UNSAFE');
+  const main=path.join(f.root,'openspec/specs/cap-a/spec.md'); fs.unlinkSync(main);fs.symlinkSync(external,main);
+  assert.throws(()=>adapter.readBackMainSpecs({projectRoot:f.root,summary:{capabilities:{'cap-a':{added:[],modified:[],removed:[]}}}}),e=>e.code==='PROJECT_PATH_UNSAFE');
+});
+
+test('Run and summary JSON shape failures use coded errors without Native or raw content', async (t) => {
+  const f=managedReadFixture(t);
+  for(const value of [null,[],true,1,'ordinary',{}, {runId:null,status:'running'},
+    {runId:'read-boundary-run',status:{}}, {runId:'read-boundary-run',status:'unknown'}]) {
+    fs.writeFileSync(path.join(f.control,'run-state.json'),JSON.stringify(value));
+    for(const method of ['inspect','closeout','recover'])
+      await assert.rejects(async()=>f.instance[method]({change:'demo'}),e=>e.code==='MANAGED_RUNTIME_REQUIRED' && !e.message.includes('ordinary'));
+  }
+  for(const summary of [null,[],{capabilities:null},{capabilities:[]},{capabilities:{sample:null}},
+    {capabilities:{sample:{added:[null],modified:[],removed:[]}}}])
+    assert.throws(()=>adapter.readBackMainSpecs({projectRoot:f.root,summary}),e=>e.code==='SUMMARY_INVALID');
+  assert.equal(f.calls(),0);
+});
+
+test('legacy summary, rehearsal and archived recovery share the project-bound read guard', (t) => {
+  const root=writeProject({delta:FULL_DELTA});
+  const outside=fs.mkdtempSync(path.join(os.tmpdir(),'spec-legacy-read-'));
+  t.after(()=>{fs.rmSync(root,{recursive:true,force:true});fs.rmSync(outside,{recursive:true,force:true});});
+  const external=path.join(outside,'ordinary.md');fs.writeFileSync(external,'ordinary outside requirement');
+  const spec=path.join(root,'openspec/changes/demo/specs/cap-a/spec.md');fs.unlinkSync(spec);fs.symlinkSync(external,spec);
+  assert.throws(()=>adapter.computeTargetSummary({projectRoot:root,change:'demo'}),e=>e.code==='PROJECT_PATH_UNSAFE');
+  assert.equal(adapter.rehearseArchive({projectRoot:root,change:'demo',openspecCli:OPENSPEC_CLI}).error,'PROJECT_PATH_UNSAFE');
+  const archive=path.join(root,'openspec/changes/archive/2026-10-25-demo');fs.mkdirSync(path.dirname(archive),{recursive:true});
+  fs.renameSync(path.join(root,'openspec/changes/demo'),archive);
+  assert.throws(()=>adapter.recoverCloseout({projectRoot:root,change:'demo'}),e=>e.code==='PROJECT_PATH_UNSAFE');
+  assert.equal(fs.existsSync(path.join(archive,'.spec-closeout-state.json')),false);
+  assert.equal(fs.readFileSync(external,'utf8'),'ordinary outside requirement');
 });

@@ -1,0 +1,189 @@
+TAP version 13
+# Subtest: V_A11: archive interruption recovery continues from authoritative state without repeating side effects
+ok 1 - V_A11: archive interruption recovery continues from authoritative state without repeating side effects
+  ---
+  duration_ms: 1181.760542
+  type: 'test'
+  ...
+# Subtest: V_A11: post-archive interruption recovery does not repeat the sync (archive already contains it)
+ok 2 - V_A11: post-archive interruption recovery does not repeat the sync (archive already contains it)
+  ---
+  duration_ms: 677.582625
+  type: 'test'
+  ...
+# Subtest: V_B08: main-spec drift after acceptance blocks closeout until a fresh rehearsal, and old scenarios survive
+ok 3 - V_B08: main-spec drift after acceptance blocks closeout until a fresh rehearsal, and old scenarios survive
+  ---
+  duration_ms: 2458.580917
+  type: 'test'
+  ...
+# Subtest: V_B08: native 1.11 and adapter refuse the same lossy MODIFIED delta
+ok 4 - V_B08: native 1.11 and adapter refuse the same lossy MODIFIED delta
+  ---
+  duration_ms: 306.789666
+  type: 'test'
+  ...
+# Subtest: P3_4 exact official SDK distribution is verified
+ok 5 - P3_4 exact official SDK distribution is verified
+  ---
+  duration_ms: 22115.642667
+  type: 'test'
+  ...
+# Subtest: A11/N07: actual Adapter archive preserves original pending Run and resumes Kt
+ok 6 - A11/N07: actual Adapter archive preserves original pending Run and resumes Kt
+  ---
+  duration_ms: 33790.344417
+  type: 'test'
+  ...
+# Subtest: B08/N07: main-spec drift and restored bytes cannot revive current archive permission
+ok 7 - B08/N07: main-spec drift and restored bytes cannot revive current archive permission
+  ---
+  duration_ms: 10490.579458
+  type: 'test'
+  ...
+# Subtest: A11: actual archive writer crash resumes the original committed Run without repeat sync
+ok 8 - A11: actual archive writer crash resumes the original committed Run without repeat sync
+  ---
+  duration_ms: 34706.945125
+  type: 'test'
+  ...
+# Subtest: A11: before-move archive target conflict recovers on the same original Run
+not ok 9 - A11: before-move archive target conflict recovers on the same original Run
+  ---
+  duration_ms: 10732.314125
+  type: 'test'
+  location: '<WORKTREE>/test/delivery-cases/3_4.mjs:1060:5'
+  failureType: 'testCodeFailure'
+  error: |-
+    node:internal/modules/run_main:107
+        triggerUncaughtException(
+        ^
+
+    AssertionError [ERR_ASSERTION]: {"exitCode":1,"stdout":"{\"command\":\"archive\",\"exitCode\":1,\"agent\":{\"phase\":null,\"status\":null,\"stateVersion\":null,\"workspace\":{\"cwd\":null},\"continuation\":null},\"stderr\":\"=== Comet Archive: demo ===\\n\\u001b[31mUNVERIFIED: archive prerequisites are not current: gate V: receipt from epoch 4 is stale against the current input binding (inputs changed after acceptance); gate Kp: receipt from epoch 6 is stale against the current input binding (inputs changed after acceptance)\\u001b[0m\\n\"}\n"}
+
+    false !== true
+
+        at nativeSpecScenario (file://<WORKTREE>/test/delivery-cases/3_4.mjs:1014:14)
+        at async file://<WORKTREE>/test/delivery-cases/3_4.mjs:1052:3 {
+      generatedMessage: false,
+      code: 'ERR_ASSERTION',
+      actual: false,
+      expected: true,
+      operator: 'strictEqual',
+      diff: 'simple'
+    }
+
+    Node.js v24.15.0
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    nativeSpecScenario (file://<WORKTREE>/test/delivery-cases/3_4.mjs:1014:14)
+    async file://<WORKTREE>/test/delivery-cases/3_4.mjs:1052:3 {
+    TestContext.<anonymous> (file://<WORKTREE>/test/delivery-cases/3_4.mjs:1063:14)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: A11 happy path: rehearse then closeout archives once, syncs specs, readback matches, state completes and lock releases
+ok 10 - A11 happy path: rehearse then closeout archives once, syncs specs, readback matches, state completes and lock releases
+  ---
+  duration_ms: 1163.053084
+  type: 'test'
+  ...
+# Subtest: sole writer: second writer refused by O_EXCL lock in-process and from a real child process
+ok 11 - sole writer: second writer refused by O_EXCL lock in-process and from a real child process
+  ---
+  duration_ms: 76.239375
+  type: 'test'
+  ...
+# Subtest: sole writer: two concurrent full closeouts produce exactly one archive and one refusal
+ok 12 - sole writer: two concurrent full closeouts produce exactly one archive and one refusal
+  ---
+  duration_ms: 1600.269916
+  type: 'test'
+  ...
+# Subtest: B08 preservation: pinned native CLI and adapter both refuse omitted existing scenarios
+ok 13 - B08 preservation: pinned native CLI and adapter both refuse omitted existing scenarios
+  ---
+  duration_ms: 840.991667
+  type: 'test'
+  ...
+# Subtest: B08 MODIFIED target missing from main specs is refused before archive
+ok 14 - B08 MODIFIED target missing from main specs is refused before archive
+  ---
+  duration_ms: 7.59325
+  type: 'test'
+  ...
+# Subtest: B08 drift: main-spec or change mutation between rehearsal and closeout blocks execution and demands a fresh rehearsal
+ok 15 - B08 drift: main-spec or change mutation between rehearsal and closeout blocks execution and demands a fresh rehearsal
+  ---
+  duration_ms: 6748.780833
+  type: 'test'
+  ...
+# Subtest: Knowledge.Closeout.v1 ordering: closeout refuses without a recorded Kp knowledge obligation, before any archive
+ok 16 - Knowledge.Closeout.v1 ordering: closeout refuses without a recorded Kp knowledge obligation, before any archive
+  ---
+  duration_ms: 891.444459
+  type: 'test'
+  ...
+# Subtest: A11 pre-archive interruption: stale lock reclaimed, closeout re-run archives exactly once
+ok 17 - A11 pre-archive interruption: stale lock reclaimed, closeout re-run archives exactly once
+  ---
+  duration_ms: 1482.778084
+  type: 'test'
+  ...
+# Subtest: A11 post-archive interruption: recovery detects the completed CLI archive and completes by readback WITHOUT repeating the sync
+ok 18 - A11 post-archive interruption: recovery detects the completed CLI archive and completes by readback WITHOUT repeating the sync
+  ---
+  duration_ms: 323.385125
+  type: 'test'
+  ...
+# Subtest: A11 post-archive drift: recovery readback detects real main-spec corruption and refuses to mark complete
+ok 19 - A11 post-archive drift: recovery readback detects real main-spec corruption and refuses to mark complete
+  ---
+  duration_ms: 351.45575
+  type: 'test'
+  ...
+# Subtest: A11 ambiguous recovery: multiple archives of the same change name block recovery instead of guessing the newest
+ok 20 - A11 ambiguous recovery: multiple archives of the same change name block recovery instead of guessing the newest
+  ---
+  duration_ms: 3.363167
+  type: 'test'
+  ...
+# Subtest: A11 silent CLI abort: exit-0-with-abort (unwritable rebuild) is detected as not-applied, real project untouched
+ok 21 - A11 silent CLI abort: exit-0-with-abort (unwritable rebuild) is detected as not-applied, real project untouched
+  ---
+  duration_ms: 825.742375
+  type: 'test'
+  ...
+# Subtest: managed closeout refuses caller-authored Kp without the original Runtime
+ok 22 - managed closeout refuses caller-authored Kp without the original Runtime
+  ---
+  duration_ms: 751.384791
+  type: 'test'
+  ...
+# Subtest: all legacy write and rehearsal helpers refuse Comet-owned control variants
+ok 23 - all legacy write and rehearsal helpers refuse Comet-owned control variants
+  ---
+  duration_ms: 10.312334
+  type: 'test'
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 22
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 116943.241042

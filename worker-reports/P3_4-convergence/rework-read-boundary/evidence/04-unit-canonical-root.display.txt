@@ -1,0 +1,124 @@
+TAP version 13
+# Subtest: A11 happy path: rehearse then closeout archives once, syncs specs, readback matches, state completes and lock releases
+ok 1 - A11 happy path: rehearse then closeout archives once, syncs specs, readback matches, state completes and lock releases
+  ---
+  duration_ms: 1434.108583
+  type: 'test'
+  ...
+# Subtest: sole writer: second writer refused by O_EXCL lock in-process and from a real child process
+ok 2 - sole writer: second writer refused by O_EXCL lock in-process and from a real child process
+  ---
+  duration_ms: 81.983083
+  type: 'test'
+  ...
+# Subtest: sole writer: two concurrent full closeouts produce exactly one archive and one refusal
+ok 3 - sole writer: two concurrent full closeouts produce exactly one archive and one refusal
+  ---
+  duration_ms: 1232.382167
+  type: 'test'
+  ...
+# Subtest: B08 preservation: pinned native CLI and adapter both refuse omitted existing scenarios
+ok 4 - B08 preservation: pinned native CLI and adapter both refuse omitted existing scenarios
+  ---
+  duration_ms: 1064.609708
+  type: 'test'
+  ...
+# Subtest: B08 MODIFIED target missing from main specs is refused before archive
+ok 5 - B08 MODIFIED target missing from main specs is refused before archive
+  ---
+  duration_ms: 7.545875
+  type: 'test'
+  ...
+# Subtest: B08 drift: main-spec or change mutation between rehearsal and closeout blocks execution and demands a fresh rehearsal
+ok 6 - B08 drift: main-spec or change mutation between rehearsal and closeout blocks execution and demands a fresh rehearsal
+  ---
+  duration_ms: 2328.405375
+  type: 'test'
+  ...
+# Subtest: Knowledge.Closeout.v1 ordering: closeout refuses without a recorded Kp knowledge obligation, before any archive
+ok 7 - Knowledge.Closeout.v1 ordering: closeout refuses without a recorded Kp knowledge obligation, before any archive
+  ---
+  duration_ms: 682.337875
+  type: 'test'
+  ...
+# Subtest: A11 pre-archive interruption: stale lock reclaimed, closeout re-run archives exactly once
+ok 8 - A11 pre-archive interruption: stale lock reclaimed, closeout re-run archives exactly once
+  ---
+  duration_ms: 1240.568292
+  type: 'test'
+  ...
+# Subtest: A11 post-archive interruption: recovery detects the completed CLI archive and completes by readback WITHOUT repeating the sync
+ok 9 - A11 post-archive interruption: recovery detects the completed CLI archive and completes by readback WITHOUT repeating the sync
+  ---
+  duration_ms: 278.295125
+  type: 'test'
+  ...
+# Subtest: A11 post-archive drift: recovery readback detects real main-spec corruption and refuses to mark complete
+ok 10 - A11 post-archive drift: recovery readback detects real main-spec corruption and refuses to mark complete
+  ---
+  duration_ms: 274.426792
+  type: 'test'
+  ...
+# Subtest: A11 ambiguous recovery: multiple archives of the same change name block recovery instead of guessing the newest
+ok 11 - A11 ambiguous recovery: multiple archives of the same change name block recovery instead of guessing the newest
+  ---
+  duration_ms: 4.649917
+  type: 'test'
+  ...
+# Subtest: A11 silent CLI abort: exit-0-with-abort (unwritable rebuild) is detected as not-applied, real project untouched
+ok 12 - A11 silent CLI abort: exit-0-with-abort (unwritable rebuild) is detected as not-applied, real project untouched
+  ---
+  duration_ms: 681.802167
+  type: 'test'
+  ...
+# Subtest: managed closeout refuses caller-authored Kp without the original Runtime
+ok 13 - managed closeout refuses caller-authored Kp without the original Runtime
+  ---
+  duration_ms: 664.6015
+  type: 'test'
+  ...
+# Subtest: all legacy write and rehearsal helpers refuse Comet-owned control variants
+ok 14 - all legacy write and rehearsal helpers refuse Comet-owned control variants
+  ---
+  duration_ms: 13.180125
+  type: 'test'
+  ...
+# Subtest: managed inspect rejects a spec file link before reading external ordinary data
+ok 15 - managed inspect rejects a spec file link before reading external ordinary data
+  ---
+  duration_ms: 4.243
+  type: 'test'
+  ...
+# Subtest: managed inspect rejects null Run JSON with a coded error
+ok 16 - managed inspect rejects null Run JSON with a coded error
+  ---
+  duration_ms: 3.937792
+  type: 'test'
+  ...
+# Subtest: all managed read entries reject directory, Run and main-spec links before Native
+ok 17 - all managed read entries reject directory, Run and main-spec links before Native
+  ---
+  duration_ms: 35.146917
+  type: 'test'
+  ...
+# Subtest: archived managed projection and pure main readback reject links and relative escape
+ok 18 - archived managed projection and pure main readback reject links and relative escape
+  ---
+  duration_ms: 10.86475
+  type: 'test'
+  ...
+# Subtest: Run and summary JSON shape failures use coded errors without Native or raw content
+ok 19 - Run and summary JSON shape failures use coded errors without Native or raw content
+  ---
+  duration_ms: 15.357
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10633.635833

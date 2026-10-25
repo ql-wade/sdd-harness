@@ -1,0 +1,674 @@
+{
+  "schema_version": "test-authoring/v1",
+  "mode": "automate",
+  "status": "ready_for_acceptance",
+  "project_root": "<repo>",
+  "scope": "construction author TestPack only; no whole task or business acceptance",
+  "basis": [
+    {
+      "id": "R_P25",
+      "kind": "requirement",
+      "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
+      "sha256": "2ca7fb9c9fe50f96ebcdc9b159cf907cc0e1f26f45adf05a0e03b9bfa406d6a1"
+    },
+    {
+      "id": "R_BOUNDARY",
+      "kind": "requirement",
+      "path": "docs/architecture/comet-ai-devops-convergence.md",
+      "sha256": "3f3e754406b4195c7edf5dbd33c02f4327125dc309bb5a0113620afb461851a1"
+    },
+    {
+      "id": "S_ADAPTER",
+      "kind": "source",
+      "path": "lib/adapters/architecture-review.js",
+      "sha256": "2607c0023f94f0b601cad8a0f26529d929e2d7aafa41309e8e023f56d69e0545"
+    },
+    {
+      "id": "S_TEST",
+      "kind": "source",
+      "path": "test/architecture-review-adapter.test.js",
+      "sha256": "fa0f523273bd0a8e93fc0ba5a58278d4195022fe22546ed54a41ebb97cac9e3d"
+    },
+    {
+      "id": "S_NATIVE_TEST",
+      "kind": "source",
+      "path": "test/delivery-cases/2_5.mjs",
+      "sha256": "a9c3bdc0b4f172960912dae6dbe6969190409768ca2e7cf83854ce884e395f65"
+    }
+  ],
+  "requirements": [
+    "R_P25",
+    "R_BOUNDARY"
+  ],
+  "dimensions": {
+    "Journey-A": {
+      "required": true,
+      "reason": "Current P2_5 admission and refusal rules require explicit approved oracles.",
+      "basis_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "case_ids": [
+        "P25-TAP",
+        "P25-FRESH",
+        "P25-A",
+        "P25-T",
+        "P25-CURRENT",
+        "P25-REVISION",
+        "P25-IMMUTABLE",
+        "P25-NATIVE"
+      ]
+    },
+    "Journey-B": {
+      "required": false,
+      "reason": "No UI or browser interface is owned by this task; source is library/Python/Native CLI.",
+      "basis_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "case_ids": []
+    },
+    "Journey-C": {
+      "required": false,
+      "reason": "No rendered UI or interaction affordance is changed by the owned library/CLI mechanisms.",
+      "basis_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "case_ids": []
+    },
+    "Journey-D": {
+      "required": true,
+      "reason": "Original Native state persistence and immutable review evidence are required.",
+      "basis_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "case_ids": [
+        "P25-FRESH",
+        "P25-IMMUTABLE",
+        "P25-NATIVE"
+      ]
+    },
+    "Journey-E": {
+      "required": true,
+      "reason": "Authenticated source, role independence, version and current qualification denials are required.",
+      "basis_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "case_ids": [
+        "P25-FRESH",
+        "P25-A",
+        "P25-T",
+        "P25-CURRENT",
+        "P25-IMMUTABLE",
+        "P25-NATIVE"
+      ]
+    },
+    "Journey-F": {
+      "required": true,
+      "reason": "Existing Native host, shared SDK and real Python mechanical gate cross boundaries.",
+      "basis_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "case_ids": [
+        "P25-FRESH",
+        "P25-A",
+        "P25-T",
+        "P25-NATIVE"
+      ]
+    },
+    "Journey-G": {
+      "required": true,
+      "reason": "Original pending-job deduplication and replay/immutable evidence must be checked.",
+      "basis_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "case_ids": [
+        "P25-CURRENT",
+        "P25-REVISION",
+        "P25-IMMUTABLE",
+        "P25-NATIVE"
+      ]
+    },
+    "Journey-H": {
+      "required": true,
+      "reason": "Fresh-process resume and same-Run owner-fixture revision/review must not revive old evidence; real authenticated author Tool.Write remains unverified.",
+      "basis_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "case_ids": [
+        "P25-CURRENT",
+        "P25-REVISION",
+        "P25-NATIVE"
+      ]
+    },
+    "Journey-I": {
+      "required": true,
+      "reason": "Node/TAP, schema versions and frozen revisions must be explicit.",
+      "basis_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "case_ids": [
+        "P25-TAP",
+        "P25-T",
+        "P25-CURRENT",
+        "P25-REVISION",
+        "P25-IMMUTABLE",
+        "P25-NATIVE"
+      ]
+    },
+    "Journey-J": {
+      "required": true,
+      "reason": "Runnable named tests and directly related regression with raw evidence are required.",
+      "basis_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "case_ids": [
+        "P25-TAP",
+        "P25-FRESH",
+        "P25-A",
+        "P25-T",
+        "P25-CURRENT",
+        "P25-REVISION",
+        "P25-IMMUTABLE",
+        "P25-NATIVE"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "P25-TAP",
+      "requirement_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Exact Node24.15.0 and calibrated guarded PATH",
+        "Current frozen candidate bytes; private source/reviewer data fixtures only",
+        "Native case additionally requires the controller-approved official6da distribution and pinned OpenSpec1.11.0 read-only artifacts; absent resources are not PASS"
+      ],
+      "inputs": {
+        "scope": "construction only",
+        "productionQualification": "UNVERIFIED"
+      },
+      "steps": [
+        "Run the named existing public test with the frozen inputs",
+        "Retain actual TAP/raw metadata and source byte hashes",
+        "Independently inspect the source boundary and raw negative/positive evidence"
+      ],
+      "oracle": {
+        "basis_id": "R_P25",
+        "expected": "The unchanged T boundary observes nonzero actual TAP executions from one automatic review.",
+        "authority": "approved P2_5 task and current convergence architecture; author self-check only"
+      },
+      "cleanup": [
+        "Test afterEach/finally removes its private fixtures",
+        "Original run/review data is not modified; ignored raw audit snapshots retained"
+      ],
+      "evidence_plan": [
+        "run-results.json maps raw and display hashes",
+        "Native case maps original CLI commands and control snapshots; no real-role acceptance"
+      ],
+      "automation": {
+        "path": "test/architecture-review-adapter.test.js",
+        "sha256": "fa0f523273bd0a8e93fc0ba5a58278d4195022fe22546ed54a41ebb97cac9e3d",
+        "test_id": "boundary: test T stays a single automatic review",
+        "command": [
+          "<node24.15>",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "boundary: test T stays a single automatic review",
+          "test/architecture-review-adapter.test.js"
+        ]
+      }
+    },
+    {
+      "id": "P25-FRESH",
+      "requirement_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-D",
+        "Journey-E",
+        "Journey-F",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Exact Node24.15.0 and calibrated guarded PATH",
+        "Current frozen candidate bytes; private source/reviewer data fixtures only",
+        "Native case additionally requires the controller-approved official6da distribution and pinned OpenSpec1.11.0 read-only artifacts; absent resources are not PASS"
+      ],
+      "inputs": {
+        "scope": "construction only",
+        "productionQualification": "UNVERIFIED"
+      },
+      "steps": [
+        "Run the named existing public test with the frozen inputs",
+        "Retain actual TAP/raw metadata and source byte hashes",
+        "Independently inspect the source boundary and raw negative/positive evidence"
+      ],
+      "oracle": {
+        "basis_id": "R_P25",
+        "expected": "Changed artifact, late dissent or forged report refuses; verification preserves original tally bytes.",
+        "authority": "approved P2_5 task and current convergence architecture; author self-check only"
+      },
+      "cleanup": [
+        "Test afterEach/finally removes its private fixtures",
+        "Original run/review data is not modified; ignored raw audit snapshots retained"
+      ],
+      "evidence_plan": [
+        "run-results.json maps raw and display hashes",
+        "Native case maps original CLI commands and control snapshots; no real-role acceptance"
+      ],
+      "automation": {
+        "path": "test/architecture-review-adapter.test.js",
+        "sha256": "fa0f523273bd0a8e93fc0ba5a58278d4195022fe22546ed54a41ebb97cac9e3d",
+        "test_id": "completed consensus rechecks",
+        "command": [
+          "<node24.15>",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "completed consensus rechecks",
+          "test/architecture-review-adapter.test.js"
+        ]
+      }
+    },
+    {
+      "id": "P25-A",
+      "requirement_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-F",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Exact Node24.15.0 and calibrated guarded PATH",
+        "Current frozen candidate bytes; private source/reviewer data fixtures only",
+        "Native case additionally requires the controller-approved official6da distribution and pinned OpenSpec1.11.0 read-only artifacts; absent resources are not PASS"
+      ],
+      "inputs": {
+        "scope": "construction only",
+        "productionQualification": "UNVERIFIED"
+      },
+      "steps": [
+        "Run the named existing public test with the frozen inputs",
+        "Retain actual TAP/raw metadata and source byte hashes",
+        "Independently inspect the source boundary and raw negative/positive evidence"
+      ],
+      "oracle": {
+        "basis_id": "R_P25",
+        "expected": "A requires three original independent collected sources, complete grill and real mechanical evidence.",
+        "authority": "approved P2_5 task and current convergence architecture; author self-check only"
+      },
+      "cleanup": [
+        "Test afterEach/finally removes its private fixtures",
+        "Original run/review data is not modified; ignored raw audit snapshots retained"
+      ],
+      "evidence_plan": [
+        "run-results.json maps raw and display hashes",
+        "Native case maps original CLI commands and control snapshots; no real-role acceptance"
+      ],
+      "automation": {
+        "path": "test/architecture-review-adapter.test.js",
+        "sha256": "fa0f523273bd0a8e93fc0ba5a58278d4195022fe22546ed54a41ebb97cac9e3d",
+        "test_id": "managed A refuses missing",
+        "command": [
+          "<node24.15>",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "managed A refuses missing",
+          "test/architecture-review-adapter.test.js"
+        ]
+      }
+    },
+    {
+      "id": "P25-T",
+      "requirement_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-F",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Exact Node24.15.0 and calibrated guarded PATH",
+        "Current frozen candidate bytes; private source/reviewer data fixtures only",
+        "Native case additionally requires the controller-approved official6da distribution and pinned OpenSpec1.11.0 read-only artifacts; absent resources are not PASS"
+      ],
+      "inputs": {
+        "scope": "construction only",
+        "productionQualification": "UNVERIFIED"
+      },
+      "steps": [
+        "Run the named existing public test with the frozen inputs",
+        "Retain actual TAP/raw metadata and source byte hashes",
+        "Independently inspect the source boundary and raw negative/positive evidence"
+      ],
+      "oracle": {
+        "basis_id": "R_P25",
+        "expected": "An authenticated semantic insufficiency remains sufficient=false even with complete fields or a strong label.",
+        "authority": "approved P2_5 task and current convergence architecture; author self-check only"
+      },
+      "cleanup": [
+        "Test afterEach/finally removes its private fixtures",
+        "Original run/review data is not modified; ignored raw audit snapshots retained"
+      ],
+      "evidence_plan": [
+        "run-results.json maps raw and display hashes",
+        "Native case maps original CLI commands and control snapshots; no real-role acceptance"
+      ],
+      "automation": {
+        "path": "test/architecture-review-adapter.test.js",
+        "sha256": "fa0f523273bd0a8e93fc0ba5a58278d4195022fe22546ed54a41ebb97cac9e3d",
+        "test_id": "managed T requires a full",
+        "command": [
+          "<node24.15>",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "managed T requires a full",
+          "test/architecture-review-adapter.test.js"
+        ]
+      }
+    },
+    {
+      "id": "P25-CURRENT",
+      "requirement_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-G",
+        "Journey-H",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Exact Node24.15.0 and calibrated guarded PATH",
+        "Current frozen candidate bytes; private source/reviewer data fixtures only",
+        "Native case additionally requires the controller-approved official6da distribution and pinned OpenSpec1.11.0 read-only artifacts; absent resources are not PASS"
+      ],
+      "inputs": {
+        "scope": "construction only",
+        "productionQualification": "UNVERIFIED"
+      },
+      "steps": [
+        "Run the named existing public test with the frozen inputs",
+        "Retain actual TAP/raw metadata and source byte hashes",
+        "Independently inspect the source boundary and raw negative/positive evidence"
+      ],
+      "oracle": {
+        "basis_id": "R_P25",
+        "expected": "Missing or changed current Run/action/qualification/clock cannot reuse a prepared query.",
+        "authority": "approved P2_5 task and current convergence architecture; author self-check only"
+      },
+      "cleanup": [
+        "Test afterEach/finally removes its private fixtures",
+        "Original run/review data is not modified; ignored raw audit snapshots retained"
+      ],
+      "evidence_plan": [
+        "run-results.json maps raw and display hashes",
+        "Native case maps original CLI commands and control snapshots; no real-role acceptance"
+      ],
+      "automation": {
+        "path": "test/architecture-review-adapter.test.js",
+        "sha256": "fa0f523273bd0a8e93fc0ba5a58278d4195022fe22546ed54a41ebb97cac9e3d",
+        "test_id": "prepared review query requires",
+        "command": [
+          "<node24.15>",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "prepared review query requires",
+          "test/architecture-review-adapter.test.js"
+        ]
+      }
+    },
+    {
+      "id": "P25-REVISION",
+      "requirement_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-G",
+        "Journey-H",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Exact Node24.15.0 and calibrated guarded PATH",
+        "Current frozen candidate bytes; private source/reviewer data fixtures only",
+        "Native case additionally requires the controller-approved official6da distribution and pinned OpenSpec1.11.0 read-only artifacts; absent resources are not PASS"
+      ],
+      "inputs": {
+        "scope": "construction only",
+        "productionQualification": "UNVERIFIED"
+      },
+      "steps": [
+        "Run the named existing public test with the frozen inputs",
+        "Retain actual TAP/raw metadata and source byte hashes",
+        "Independently inspect the source boundary and raw negative/positive evidence"
+      ],
+      "oracle": {
+        "basis_id": "R_P25",
+        "expected": "The same old review ID and restored artifact bytes cannot satisfy a newer frozen revision.",
+        "authority": "approved P2_5 task and current convergence architecture; author self-check only"
+      },
+      "cleanup": [
+        "Test afterEach/finally removes its private fixtures",
+        "Original run/review data is not modified; ignored raw audit snapshots retained"
+      ],
+      "evidence_plan": [
+        "run-results.json maps raw and display hashes",
+        "Native case maps original CLI commands and control snapshots; no real-role acceptance"
+      ],
+      "automation": {
+        "path": "test/architecture-review-adapter.test.js",
+        "sha256": "fa0f523273bd0a8e93fc0ba5a58278d4195022fe22546ed54a41ebb97cac9e3d",
+        "test_id": "a newer frozen revision cannot",
+        "command": [
+          "<node24.15>",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "a newer frozen revision cannot",
+          "test/architecture-review-adapter.test.js"
+        ]
+      }
+    },
+    {
+      "id": "P25-IMMUTABLE",
+      "requirement_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-D",
+        "Journey-E",
+        "Journey-G",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Exact Node24.15.0 and calibrated guarded PATH",
+        "Current frozen candidate bytes; private source/reviewer data fixtures only",
+        "Native case additionally requires the controller-approved official6da distribution and pinned OpenSpec1.11.0 read-only artifacts; absent resources are not PASS"
+      ],
+      "inputs": {
+        "scope": "construction only",
+        "productionQualification": "UNVERIFIED"
+      },
+      "steps": [
+        "Run the named existing public test with the frozen inputs",
+        "Retain actual TAP/raw metadata and source byte hashes",
+        "Independently inspect the source boundary and raw negative/positive evidence"
+      ],
+      "oracle": {
+        "basis_id": "R_P25",
+        "expected": "Duplicate identical evidence resumes without overwrite; changed ballot and malformed inputs refuse before execution.",
+        "authority": "approved P2_5 task and current convergence architecture; author self-check only"
+      },
+      "cleanup": [
+        "Test afterEach/finally removes its private fixtures",
+        "Original run/review data is not modified; ignored raw audit snapshots retained"
+      ],
+      "evidence_plan": [
+        "run-results.json maps raw and display hashes",
+        "Native case maps original CLI commands and control snapshots; no real-role acceptance"
+      ],
+      "automation": {
+        "path": "test/architecture-review-adapter.test.js",
+        "sha256": "fa0f523273bd0a8e93fc0ba5a58278d4195022fe22546ed54a41ebb97cac9e3d",
+        "test_id": "review evidence is immutable",
+        "command": [
+          "<node24.15>",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "review evidence is immutable",
+          "test/architecture-review-adapter.test.js"
+        ]
+      }
+    },
+    {
+      "id": "P25-NATIVE",
+      "requirement_ids": [
+        "R_P25",
+        "R_BOUNDARY"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-D",
+        "Journey-E",
+        "Journey-F",
+        "Journey-G",
+        "Journey-H",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Exact Node24.15.0 and calibrated guarded PATH",
+        "Current frozen candidate bytes; private source/reviewer data fixtures only",
+        "Native case additionally requires the controller-approved official6da distribution and pinned OpenSpec1.11.0 read-only artifacts; absent resources are not PASS"
+      ],
+      "inputs": {
+        "scope": "construction only",
+        "productionQualification": "UNVERIFIED"
+      },
+      "steps": [
+        "Run the named existing public test with the frozen inputs",
+        "Retain actual TAP/raw metadata and source byte hashes",
+        "Independently inspect the source boundary and raw negative/positive evidence"
+      ],
+      "oracle": {
+        "basis_id": "R_P25",
+        "expected": "Actual accepted 6da Native resumes the same pending execution across processes, records T reject then fresh T pass on the same Run, and retains design invalidation after byte restoration.",
+        "authority": "approved P2_5 task and current convergence architecture; author self-check only"
+      },
+      "cleanup": [
+        "Test afterEach/finally removes its private fixtures",
+        "Original run/review data is not modified; ignored raw audit snapshots retained"
+      ],
+      "evidence_plan": [
+        "run-results.json maps raw and display hashes",
+        "Native case maps original CLI commands and control snapshots; no real-role acceptance"
+      ],
+      "automation": {
+        "path": "test/delivery-cases/2_5.mjs",
+        "sha256": "a9c3bdc0b4f172960912dae6dbe6969190409768ca2e7cf83854ce884e395f65",
+        "test_id": "P2_5 Native same-Run review chain",
+        "command": [
+          "<node24.15>",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "P2_5 Native same-Run review chain",
+          "test/delivery-cases/2_5.mjs"
+        ]
+      }
+    }
+  ],
+  "unresolved": [],
+  "self_checks": [
+    {
+      "command": [
+        "<node24.15>",
+        "--test",
+        "--test-reporter=tap",
+        "test/architecture-review-adapter.test.js",
+        "test/delivery-cases/2_5.mjs"
+      ],
+      "exit_code": 0,
+      "expected": "pass",
+      "log_path": "worker-reports/P2_5-convergence/evidence/final-owned/stdout.txt",
+      "log_sha256": "26ce4def8f9093ceca99070d949bad8b4f5c4f147322f965fe7ca47300938ffe"
+    },
+    {
+      "command": [
+        "<node24.15>",
+        "--test",
+        "--test-reporter=tap",
+        "test/delivery-evidence.test.js",
+        "test/delivery-gate.test.js",
+        "test/delivery-baseline.test.js"
+      ],
+      "exit_code": 0,
+      "expected": "pass",
+      "log_path": "worker-reports/P2_5-convergence/evidence/final-related/stdout.txt",
+      "log_sha256": "a4fd669d7ffe99c2da6fcf0365d377cb9219d258449c5af0394ce836f1f9607e"
+    }
+  ],
+  "unverifiedProductionObligations": [
+    "actual independent model/role qualification",
+    "real method application and semantic review",
+    "N04/N06 business terminal flow",
+    "full downstream V/Kp/Kt and final129/103 required closure",
+    "authenticated author Tool.Write to exact registered test-intent; fixture owner FS is not that proof"
+  ]
+}

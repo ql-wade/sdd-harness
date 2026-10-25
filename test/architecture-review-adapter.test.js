@@ -21,7 +21,7 @@ import { spawnSync } from 'node:child_process';
 import fsSync from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import test, { afterEach } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,7 +30,7 @@ const { REVIEW_PARTICIPANTS, REVIEW_THRESHOLDS, ARCHITECTURE_CRITERIA, ARCHITECT
   freezeReviewPackage, initConsensusRun, admitBallot, mechanicalTally, mechanicalFinalize,
   openLoadBearingQuestions, closeLoadBearingQuestion, loadBearingStatus,
   judgeArchitectureGate, createReviewJobSeat } = await import(path.join(projectRoot, 'lib/adapters/architecture-review.js'));
-const { admitEvidence, createLaunchAuthority } = await import(path.join(projectRoot, 'lib/delivery/evidence.js'));
+const { admitEvidence, createLaunchAuthority, envelopeDigest } = await import(path.join(projectRoot, 'lib/delivery/evidence.js'));
 const { evaluate } = await import(path.join(projectRoot, 'lib/delivery/gate.js'));
 const { parseTapSummary } = await import(path.join(projectRoot, 'lib/delivery/test-contract.js'));
 const { invalidateOnScopeChange } = await import(path.join(projectRoot, 'lib/delivery/baseline.js'));
@@ -55,9 +55,16 @@ test('precondition: the real mechanical gate script is present', () => {
 });
 
 // --- fixtures ----------------------------------------------------------------
+const privateRoots = new Set();
 function makeTmp(label) {
-  return fsSync.mkdtempSync(path.join(os.tmpdir(), label));
+  const directory = fsSync.mkdtempSync(path.join(os.tmpdir(), label));
+  privateRoots.add(directory);
+  return directory;
 }
+afterEach(() => {
+  for (const directory of privateRoots) fsSync.rmSync(directory, { recursive: true, force: true });
+  privateRoots.clear();
+});
 
 // A real frozen review package file: requirements + design digests are bound
 // in the content, so any requirements/design change moves the artifact digest.
@@ -318,6 +325,36 @@ test('a passed tally without the real finalize output refuses with exactly FINAL
   assert.deepEqual(refusalCodes(accepted), []);
 });
 
+test('completed consensus rechecks current artifact, ballots and finalize bytes without rewriting the original evidence', () => {
+  const changed = runConsensus({ dir: makeTmp('sdd-p25-after-final-'), reviewId: 'arch-after-final', requirementsDigest: sha('req'), designDigest: sha('design') });
+  const runDir = path.join(changed.runRoot, changed.pkg.reviewId);
+  const tallyPath = path.join(runDir, 'round-00/tally.json');
+  const originalTally = fsSync.readFileSync(tallyPath);
+  fsSync.appendFileSync(changed.pkg.artifactPath, '\nchanged after finalize\n');
+  assert.equal(judgeArchitectureGate({ package: changed.pkg, runRoot: changed.runRoot }).status, 'REFUSED', 'a previously passing tally cannot hide changed artifact bytes');
+  assert.deepEqual(fsSync.readFileSync(tallyPath), originalTally, 'verification must preserve the original tally');
+
+  const late = runConsensus({ dir: makeTmp('sdd-p25-ballot-after-'), reviewId: 'arch-ballot-after', requirementsDigest: sha('req'), designDigest: sha('design') });
+  const paperPath = path.join(late.runRoot, late.pkg.reviewId, 'round-00/ballot-zcode.json');
+  const paper = JSON.parse(fsSync.readFileSync(paperPath));
+  paper.verdict = 'REJECT';
+  fsSync.writeFileSync(paperPath, JSON.stringify(paper));
+  assert.equal(judgeArchitectureGate({ package: late.pkg, runRoot: late.runRoot }).status, 'REFUSED', 'a late dissent cannot inherit the old tally approval');
+
+  const forged = runConsensus({ dir: makeTmp('sdd-p25-report-after-'), reviewId: 'arch-report-after', requirementsDigest: sha('req'), designDigest: sha('design') });
+  fsSync.writeFileSync(path.join(forged.runRoot, forged.pkg.reviewId, 'final-report.md'), 'PASSED strong independent review');
+  assert.equal(judgeArchitectureGate({ package: forged.pkg, runRoot: forged.runRoot }).status, 'REFUSED', 'report existence and a strong label are not mechanical finalize evidence');
+});
+
+test('a newer frozen revision cannot reuse the same old review ID and artifact bytes', () => {
+  const f = runConsensus({ dir: makeTmp('sdd-p25-same-id-'), reviewId: 'same-review-id', requirementsDigest: sha('req'), designDigest: sha('design') });
+  assert.equal(f.judged.status, 'PASSED');
+  const newer = freezeReviewPackage({ reviewId: f.pkg.reviewId, artifactPath: f.pkg.artifactPath, revision: 2 });
+  const judged = judgeArchitectureGate({ package: newer, runRoot: f.runRoot });
+  assert.equal(judged.status, 'REFUSED', 'revision identity is required even when the restored content hash and review ID match');
+  assert.ok(refusalCodes(judged).includes('REVIEW_REVISION_MISMATCH'));
+});
+
 test('E04: the frozen new revision completes its own cold-start review end to end', () => {
   const dir = makeTmp('sdd-p25-e04journey-');
   const first = runConsensus({ dir: path.join(dir, 'r1'), reviewId: 'arch-e04j-r1', requirementsDigest: sha('req-r1'), designDigest: sha('design-r1') });
@@ -503,7 +540,7 @@ test('boundary: test T stays a single automatic review — the delivery gate is 
   fsSync.writeFileSync(path.join(root, 'pass.test.js'), PASSING_TEST);
   const env = { ...process.env };
   delete env.NODE_TEST_CONTEXT;
-  const raw = spawnSync(process.execPath, ['--test', 'pass.test.js'], { cwd: root, encoding: 'utf8', timeout: 60_000, env });
+  const raw = spawnSync(process.execPath, ['--test', '--test-reporter=tap', 'pass.test.js'], { cwd: root, encoding: 'utf8', timeout: 60_000, env });
   assert.equal(raw.status, 0, 'precondition: the real automatic review run passes');
   const artifactDir = makeTmp('sdd-p25-tartifact-');
   const artifactPath = path.join(artifactDir, 'run.tap.txt');
@@ -671,4 +708,274 @@ test('consumeTestDesignReview admits ONE independent review on sufficiency plus 
   // no quorum: exactly one review object is the whole input — the surface has
   // no participant list to fill, so T is never extended to the consensus quorum
   assert.equal(typeof review, 'object', 'the T consumption takes a single review');
+});
+
+// Signed, isolated data fixtures exercise the SDK's real collection protocol.
+// They deliberately provide no real reviewer, OS, model or source qualification.
+async function managedReviewFixture(gate = 'T') {
+  const records = new Map();
+  const policy = { ref: 'fixture/protected-policy', digest: sha('fixture-policy'), revision: 1 };
+  const actionBinding = {
+    schemaVersion: 1, profile: 'comet-managed-v2', runnerId: 'fixture-recorder-NOT-PRODUCTION',
+    run: 'fixture-native-run', gate, action: gate === 'T' ? 'test-design-review' : 'architecture-review',
+    execution: `fixture-${gate}-review`, role: 'reviewer', revision: 'revision-1', attempt: 1, epoch: 1,
+    inputDigest: sha('fixture-current-input'), policyDigest: policy.digest, environmentDigest: sha('fixture-environment'),
+    workPackage: { id: `fixture-${gate}-job`, taskIds: ['2.5'] },
+    methods: [{ name: 'test-authoring', version: 'fixture-only', ref: '.agents/skills/test-authoring/SKILL.md', digest: sha('fixture-method') }],
+    allowedPaths: ['.whitebox'], allowedTools: ['read_file'],
+    inputs: [{ name: 'test-intent', ref: 'openspec/changes/fixture/test-intent.md', digest: sha('fixture-test-intent') }],
+    outputs: [{ name: 'review', ref: '.whitebox/review.md' }],
+  };
+  const qualification = { id: 'fixture-source-NOT-PRODUCTION', sourceId: 'fixture-source', revision: 'fixture-1',
+    scope: 'protected-source', status: 'qualified', expiresAt: '2099-01-01T00:00:00Z',
+    evidenceRefs: [{ ref: 'fixture/data-only', digest: sha('no-real-qualification') }] };
+  const testContract = {
+    schemaVersion: 1, commandBindingsRequired: true, project: 'fixture', change: 'fixture',
+    cases: [{ id: 'design.case', ac: 'T-review', oracle: 'denied source cannot satisfy an independent review', checkIds: ['design.check'] }],
+    requiredChecks: [{ id: 'design.check', level: 'review', capability: 'test-design-review', command: 'fixture:semantic-review', caseIds: ['design.case'] }],
+    executionDenominator: { totalCases: 1 }, cleanup: { environment: 'remove private fixture', data: 'no production data' },
+    dependencyBaselines: [{ kind: 'test-intent', digest: sha('fixture-test-intent') }],
+  };
+  actionBinding.inputs.push({ name: 'test-contract', ref: 'openspec/changes/fixture/test-contract.json', digest: envelopeDigest(testContract) });
+  const authority = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex'), sourceVerifier: async (request) => {
+    const known = records.get(request.dispatch.execution);
+    if (!known || ['reportBytes', 'resultBytes', 'methodTraceBytes'].some((key) => !Buffer.from(known[key]).equals(Buffer.from(request[key])))) return { ok: false };
+    const { dispatch, envelope, launchRecord, reportBytes, resultBytes, methodTraceBytes } = known;
+    return { ok: true, qualification, facts: {
+      actionDigest: envelopeDigest(dispatch.actionBinding), dispatchDigest: envelopeDigest(dispatch), envelopeDigest: envelopeDigest(envelope),
+      launchDigest: envelopeDigest(launchRecord), reportDigest: sha(reportBytes), resultDigest: sha(resultBytes), methodTraceDigest: sha(methodTraceBytes),
+      run: dispatch.run, execution: dispatch.execution, launchId: launchRecord.launchId, environmentDigest: dispatch.actionBinding.environmentDigest,
+      principal: known.principal, observations: [{ caseId: envelope.caseId, check: envelope.check, command: 'fixture:semantic-review', result: envelope.result, executions: envelope.executions }],
+    } };
+  } });
+  const source = async ({ action = actionBinding, result, rawResult, report = 'Independent fixture analysis: the oracle rejects an unauthenticated source at the public intake; coverage, environment and cleanup are reviewed.', principal = 'fixture-independent-principal', trace } = {}) => {
+    const dispatch = authority.issueDispatch({ ...action, actionBinding: action });
+    const reportBytes = Buffer.from(report), resultBytes = rawResult ?? Buffer.from(JSON.stringify(result));
+    const methodTraceBytes = Buffer.from(JSON.stringify(trace ?? { schemaVersion: 1, run: action.run, execution: action.execution,
+      actionDigest: envelopeDigest(action), methods: action.methods.map((method) => ({ ...method, status: 'completed' })) }));
+    const envelope = { schemaVersion: 1, candidateDigest: action.inputDigest, caseId: 'design.case', check: 'test-design-review',
+      origin: { kind: 'registered-runner', id: action.runnerId }, execution: { id: action.execution }, environment: 'fixture-environment',
+      toolchain: `node ${process.version}`, executions: { total: 1, valid: 1 }, result: 'pass', evidence: [{ uri: '.whitebox/review.md', sha256: sha(reportBytes) }], expiry: '2099-01-01T00:00:00Z' };
+    const packet = { dispatch, envelope, launchRecord: { launchId: `fixture-launch:${action.execution}`, execution: action.execution }, reportBytes, resultBytes, methodTraceBytes };
+    records.set(action.execution, { ...packet, principal });
+    const collected = await authority.collectResult(packet);
+    assert.equal(collected.ok, true, 'the real SDK collects the isolated data fixture');
+    return { ...packet, collection: collected.collection };
+  };
+  const review = {
+    schemaVersion: 1, candidateDigest: actionBinding.inputDigest, contractDigest: envelopeDigest(testContract), sufficient: true,
+    oracleStrength: 'strong', summary: 'Independent case and oracle sufficiency review with explicit environment and cleanup findings.',
+    caseReviews: [{ caseId: 'design.case', checkIds: ['design.check'], oracle: testContract.cases[0].oracle,
+      sufficient: true, rationale: 'The deny case has an observable public refusal and cannot pass on a self-declared label.' }],
+    environmentReview: { digest: actionBinding.environmentDigest, sufficient: true, rationale: 'The private fixture environment is specified; production qualification is not claimed.' },
+    cleanupReview: { ...testContract.cleanup, sufficient: true, rationale: 'Private fixtures are removed in finally.' }, findings: [],
+  };
+  const packet = await source({ result: review });
+  const managed = { actionBinding, policy, testContract, packet, jobKey: 'fixture-native-job',
+    admissionOptions: { sourceQualification: qualification, environment: 'fixture-environment', purpose: 'independent-acceptance',
+      builderExecution: 'fixture-builder', builderPrincipal: 'fixture-builder-principal', authoringExecutions: ['fixture-test-author'],
+      authoringPrincipals: ['fixture-test-author-principal'], consumedCollections: [], issuedExecutions: [], now: '2026-10-25T12:00:00Z' } };
+  return { authority, actionBinding, policy, qualification, testContract, packet, managed, review, source };
+}
+
+test('managed T consumes original collected semantic review bytes, never a dispatch plus a strong label or empty report', async () => {
+  const f = await managedReviewFixture();
+  const consume = (managed) => consumeTestDesignReview({ dispatch: f.packet.dispatch, authority: f.authority,
+    current: { inputDigest: f.actionBinding.inputDigest }, review: f.review, authorExecution: 'fixture-test-author', managed });
+  const missing = consume({ ...f.managed, packet: { ...f.packet, collection: null } });
+  assert.equal(missing.ok, false, 'protected T must not ignore a missing original collection');
+  assert.equal(missing.error, 'INVALID_COLLECTION');
+  const empty = consume({ ...f.managed, packet: { ...f.packet, reportBytes: Buffer.from(' ') } });
+  assert.equal(empty.ok, false, 'an empty raw review never becomes sufficient from a strong label');
+  const good = consume(f.managed);
+  assert.equal(good.ok, true, good.error);
+  assert.equal(typeof good.verifyReview, 'function', 'long source preparation exposes only a pure exact-record query');
+  const admitted = admitEvidence(f.packet, { ...f.managed.admissionOptions, actionBinding: f.actionBinding, authority: f.authority, requireManaged: true });
+  assert.equal(admitted.ok, true);
+  const query = { entry: admitted.entry, inputs: { inputDigest: f.actionBinding.inputDigest, testContract: f.testContract }, policy: f.policy };
+  assert.equal(good.verifyReview(query, f.managed).sufficient, true, 'one independent collected review is sufficient without any quorum surface');
+  assert.equal(good.verifyReview({ ...query, policy: { ...f.policy, digest: sha('next-policy') } }, f.managed).ok, false, 'old policy preparation cannot revive');
+});
+
+async function managedArchitectureFixture({ dissent = false } = {}) {
+  const f = await managedReviewFixture('A');
+  const root = makeTmp('sdd-p25-managed-a-');
+  const questions = closeLoadBearingQuestion(openLoadBearingQuestions([{ id: 'ownership', question: 'Who owns state and recovery?' }]), 'ownership', 'The original Comet Run alone owns both; the adapter has no phase or retry store.');
+  const grillResult = { schemaVersion: 1, requirementsDigest: sha('req'), designDigest: sha('design'), questions };
+  const grillAction = { ...f.actionBinding, execution: 'fixture-grill-author', role: 'architect',
+    inputs: [{ name: 'requirements', ref: 'proposal.md', digest: grillResult.requirementsDigest }, { name: 'design', ref: 'design.md', digest: grillResult.designDigest }],
+    methods: [{ name: 'grill-me', version: 'fixture-only', ref: '.agents/skills/grill-me/SKILL.md', digest: sha('fixture-grill-method') }] };
+  const grill = await f.source({ action: grillAction, result: grillResult, principal: 'fixture-architect-principal' });
+  const artifactPath = writePackageFile(root, { requirementsDigest: sha('req'), designDigest: sha('design') });
+  const artifact = JSON.parse(fsSync.readFileSync(artifactPath));
+  artifact.grillDigest = sha(grill.resultBytes);
+  fsSync.writeFileSync(artifactPath, JSON.stringify(artifact));
+  const pkg = freezeReviewPackage({ reviewId: 'fixture-current-architecture', artifactPath, revision: 1 });
+  // This first isolated counterexample shares the input digest for compatibility
+  // with the old dispatch seam. Native tests use its distinct original digest.
+  f.actionBinding.inputDigest = pkg.artifactSha256;
+  f.actionBinding.inputs = [{ name: 'requirements', ref: 'proposal.md', digest: artifact.requirementsDigest },
+    { name: 'design', ref: 'design.md', digest: artifact.designDigest },
+    { name: 'architecture-package', ref: '.whitebox/package.json', digest: pkg.artifactSha256 },
+    { name: 'grill-closure', ref: '.whitebox/grill.json', digest: artifact.grillDigest }];
+  f.actionBinding.methods = [{ name: 'multi-agent-consensus-review', version: 'fixture-only', ref: '.agents/skills/multi-agent-consensus-review/SKILL.md', digest: sha('fixture-consensus-method') }];
+  const runRoot = path.join(root, 'runs');
+  assert.equal(initConsensusRun({ package: pkg, runRoot, initiator: 'codex-agent' }).ok, true);
+  const reviewers = [];
+  for (const participant of P0_QUORUM) {
+    assert.equal(admitBallot({ package: pkg, runRoot, participant, ballot: ballot({ reviewId: pkg.reviewId, agent: participant, artifactSha256: pkg.artifactSha256,
+      verdict: dissent && participant === 'zcode' ? 'REJECT' : 'APPROVE' }) }).ok, true);
+    const rawResult = fsSync.readFileSync(path.join(runRoot, pkg.reviewId, 'round-00', `ballot-${participant}.json`));
+    const action = { ...f.actionBinding, execution: `fixture-review:${participant}` };
+    reviewers.push({ participant, packet: await f.source({ action, rawResult, principal: `fixture-principal:${participant}` }) });
+  }
+  assert.equal(mechanicalTally({ package: pkg, runRoot }).ok, !dissent);
+  if (!dissent) assert.equal(mechanicalFinalize({ package: pkg, runRoot, conclusion: 'Fixture unanimous decision; no actual model review.', nextPlan: 'Independent runtime qualification remains unverified.' }).ok, true);
+  const runDir = path.join(runRoot, pkg.reviewId);
+  const result = { schemaVersion: 1, reviewId: pkg.reviewId, artifactSha256: pkg.artifactSha256, revision: pkg.revision, round: 0,
+    manifestDigest: shaFile(path.join(runDir, 'manifest.json')), tallyDigest: shaFile(path.join(runDir, 'round-00/tally.json')),
+    finalReportDigest: dissent ? null : shaFile(path.join(runDir, 'final-report.md')), grillDigest: artifact.grillDigest };
+  const packet = await f.source({ result, report: dissent ? 'Fixture independent rejection: architecture requires revision.' : fsSync.readFileSync(path.join(runDir, 'final-report.md')) });
+  const sourceBindings = [{ actionBinding: grillAction, sourceQualification: f.qualification }, ...reviewers.map(({ packet }) => ({ actionBinding: packet.dispatch.actionBinding, sourceQualification: f.qualification }))];
+  const managed = { ...f.managed, actionBinding: f.actionBinding, packet, reviewers, grill: { packet: grill }, sourceBindings };
+  return { ...f, pkg, runRoot, questions, packet, reviewers, grill, managed };
+}
+
+test('managed A refuses missing or same-principal reviewer collections despite a real unanimous tally', async () => {
+  const f = await managedArchitectureFixture();
+  const rawJudgment = judgeArchitectureGate({ package: f.pkg, runRoot: f.runRoot, questions: f.questions });
+  assert.equal(rawJudgment.status, 'PASSED', JSON.stringify(rawJudgment.refusals));
+  const consume = (managed) => consumeArchitectureGate({ package: f.pkg, runRoot: f.runRoot, questions: f.questions, dispatch: f.packet.dispatch, authority: f.authority, managed });
+  const missing = consume({ ...f.managed, reviewers: f.reviewers.slice(0, 2) });
+  assert.equal(missing.ok, false, 'a valid aggregate dispatch and tally cannot replace one missing independent source');
+  assert.equal(missing.error, 'REVIEWER_COLLECTIONS_REQUIRED');
+  const good = consume(f.managed);
+  assert.equal(good.ok, true, good.error);
+  assert.equal(typeof good.verifyReview, 'function');
+  const same = await f.source({ action: f.reviewers[1].packet.dispatch.actionBinding, rawResult: f.reviewers[1].packet.resultBytes, principal: 'fixture-principal:claude-code' });
+  const conflict = consume({ ...f.managed, reviewers: [f.reviewers[0], { participant: 'zcode', packet: same }, f.reviewers[2]] });
+  assert.equal(conflict.ok, false, 'different labels and executions cannot make one principal independent');
+  assert.equal(conflict.error, 'REVIEWER_IDENTITY_CONFLICT');
+});
+
+test('prepared review query requires fresh protected action, source qualification and clock on every Native readback', async () => {
+  const f = await managedReviewFixture();
+  const prepared = consumeTestDesignReview({ authority: f.authority, managed: f.managed });
+  const admitted = admitEvidence(f.packet, { ...f.managed.admissionOptions, actionBinding: f.actionBinding, authority: f.authority, requireManaged: true });
+  const request = { entry: admitted.entry, inputs: { inputDigest: f.actionBinding.inputDigest, testContract: f.testContract }, policy: f.policy };
+  assert.equal(prepared.verifyReview(request).ok, false, 'a cached prepared result is not a current source/identity lookup');
+  assert.equal(prepared.verifyReview(request, f.managed).sufficient, true);
+  for (const [name, current] of [
+    ['qualification revoked', { ...f.managed, admissionOptions: { ...f.managed.admissionOptions, sourceQualification: { ...f.qualification, status: 'revoked' } } }],
+    ['qualification expired', { ...f.managed, admissionOptions: { ...f.managed.admissionOptions, now: '2100-01-01T00:00:00Z' } }],
+    ['late attempt', { ...f.managed, actionBinding: { ...f.actionBinding, attempt: 2 } }],
+    ['changed revision', { ...f.managed, actionBinding: { ...f.actionBinding, revision: 'revision-2' } }],
+    ['foreign Run', { ...f.managed, actionBinding: { ...f.actionBinding, run: 'another-native-run' } }],
+  ]) assert.equal(prepared.verifyReview(request, current).ok, false, name);
+});
+
+test('review evidence is immutable on duplicate admission and malformed package/round/grill inputs are refused before execution', () => {
+  const dir = makeTmp('sdd-p25-inputs-');
+  const artifactPath = writePackageFile(dir, { requirementsDigest: sha('req'), designDigest: sha('design') });
+  assert.throws(() => freezeReviewPackage({ reviewId: '../escaped-review', artifactPath, revision: 1 }), /PACKAGE_REVIEW_ID_INVALID/);
+  const pkg = freezeReviewPackage({ reviewId: 'immutable-review', artifactPath, revision: 1 });
+  const runRoot = path.join(dir, 'runs');
+  const open = openLoadBearingQuestions([{ id: 'unresolved', question: 'Who owns recovery?' }]);
+  assert.equal(initConsensusRun({ package: pkg, runRoot, initiator: 'codex-agent', questions: open }).ok, false, 'open grill questions refuse review submission');
+  assert.equal(fsSync.existsSync(runRoot), false, 'no review run is created before grill closure');
+  const closed = closeLoadBearingQuestion(open, 'unresolved', 'The original Comet Run owns recovery.');
+  assert.equal(initConsensusRun({ package: pkg, runRoot, initiator: 'codex-agent', questions: closed }).ok, true);
+  const paper = ballot({ reviewId: pkg.reviewId, agent: 'zcode', artifactSha256: pkg.artifactSha256 });
+  const admitted = admitBallot({ package: pkg, runRoot, participant: 'zcode', ballot: paper });
+  assert.equal(admitted.ok, true);
+  const original = fsSync.readFileSync(admitted.ballotPath);
+  assert.equal(admitBallot({ package: pkg, runRoot, participant: 'zcode', ballot: paper }).ok, true, 'duplicate identical admission resumes evidence');
+  const changed = admitBallot({ package: pkg, runRoot, participant: 'zcode', ballot: { ...paper, verdict: 'REJECT' } });
+  assert.equal(changed.ok, false, 'changed review material must use a new round, never overwrite the original vote');
+  assert.deepEqual(fsSync.readFileSync(admitted.ballotPath), original);
+  for (const round of [null, -1, 0.5, '0', 3, {}, []]) {
+    assert.throws(() => mechanicalTally({ package: pkg, runRoot, round }), /ROUND_INVALID/);
+  }
+  for (const questions of [null, {}, [null], [{ id: 'x', question: 'q', closed: 'yes' }], [{ id: 'x', question: 'q', closed: true, resolution: '' }]]) {
+    assert.throws(() => loadBearingStatus(questions), /QUESTION_INVALID/);
+    assert.throws(() => initConsensusRun({ package: pkg, runRoot, initiator: 'codex-agent', questions }), /QUESTION_INVALID/);
+  }
+  for (const entry of [freezeReviewPackage, initConsensusRun, admitBallot, mechanicalTally, mechanicalFinalize,
+    judgeArchitectureGate, consumeArchitectureGate, consumeTestDesignReview]) assert.throws(() => entry(null), /INPUT_INVALID/);
+  assert.equal(consumeTestDesignReview({ dispatch: {}, authority: {} }).ok, false);
+  assert.equal(consumeArchitectureGate({ package: pkg, runRoot, dispatch: {}, authority: {} }).ok, false);
+  assert.equal(createReviewJobSeat().claim({ jobKey: 'component', reviewId: pkg.reviewId, artifactSha256: pkg.artifactSha256, revision: 1 }).job.managedClosureEligible, false);
+});
+
+test('managed T requires a full independent semantic conclusion, not field counts, and handles all external collection shapes safely', async (t) => {
+  const f = await managedReviewFixture();
+  const malformed = [
+    ['schema missing', { ...f.review, schemaVersion: undefined }], ['future schema', { ...f.review, schemaVersion: 2 }],
+    ['root array', []], ['root null', null], ['no case review', { ...f.review, caseReviews: [] }],
+    ['case map', { ...f.review, caseReviews: {} }], ['null case', { ...f.review, caseReviews: [null] }],
+    ['no rationale', { ...f.review, caseReviews: [{ ...f.review.caseReviews[0], rationale: '' }] }],
+    ['different oracle', { ...f.review, caseReviews: [{ ...f.review.caseReviews[0], oracle: 'file exists' }] }],
+    ['wrong check', { ...f.review, caseReviews: [{ ...f.review.caseReviews[0], checkIds: ['different-check'] }] }],
+    ['different material', { ...f.review, candidateDigest: sha('old-candidate') }],
+    ['different test contract', { ...f.review, contractDigest: sha('old-test-contract') }],
+    ['no environment review', { ...f.review, environmentReview: null }],
+    ['different cleanup', { ...f.review, cleanupReview: { ...f.review.cleanupReview, data: 'erase another project' } }],
+    ['null finding', { ...f.review, findings: [null] }], ['no written conclusion', { ...f.review, summary: ' ' }],
+  ];
+  for (const [name, result] of malformed) await t.test(name, async () => {
+    const action = { ...f.actionBinding, execution: `fixture-malformed:${name}` };
+    const packet = await f.source({ action, result });
+    assert.equal(consumeTestDesignReview({ authority: f.authority, managed: { ...f.managed, actionBinding: action, packet } }).ok, false);
+  });
+  for (const [name, result] of [
+    ['explicit insufficient', { ...f.review, sufficient: false }],
+    ['weak oracle', { ...f.review, oracleStrength: 'weak' }],
+    ['case is insufficient', { ...f.review, caseReviews: [{ ...f.review.caseReviews[0], sufficient: false }] }],
+    ['environment is insufficient', { ...f.review, environmentReview: { ...f.review.environmentReview, sufficient: false } }],
+    ['cleanup is insufficient', { ...f.review, cleanupReview: { ...f.review.cleanupReview, sufficient: false } }],
+    ['blocking finding', { ...f.review, findings: [{ id: 'weak-oracle', blocking: true, rationale: 'The deny oracle can pass without observing a denial.' }] }],
+  ]) await t.test(name, async () => {
+    const action = { ...f.actionBinding, execution: `fixture-insufficient:${name}` }, packet = await f.source({ action, result });
+    const managed = { ...f.managed, actionBinding: action, packet };
+    const prepared = consumeTestDesignReview({ authority: f.authority, managed });
+    assert.equal(prepared.ok, true, 'a completed authenticated negative review is observable for Native rework');
+    assert.equal(prepared.prepared, true);
+    assert.equal(prepared.consumed, false, 'the adapter does not consume the original Native intent');
+    const admitted = admitEvidence(packet, { ...managed.admissionOptions, actionBinding: action, authority: f.authority, requireManaged: true });
+    const queried = prepared.verifyReview({ entry: admitted.entry, inputs: { inputDigest: action.inputDigest, testContract: f.testContract }, policy: f.policy }, managed);
+    assert.equal(queried.ok, true);
+    assert.equal(queried.sufficient, false, 'complete fields and a strong label cannot override an independent insufficiency conclusion');
+  });
+  for (const [name, managed] of [
+    ['null context', null], ['array context', []], ['null packet', { ...f.managed, packet: null }],
+    ['null binding', { ...f.managed, actionBinding: null }], ['future binding', { ...f.managed, actionBinding: { ...f.actionBinding, schemaVersion: 2 } }],
+    ['null contract', { ...f.managed, testContract: null }], ['array contract', { ...f.managed, testContract: [] }],
+    ['null policy', { ...f.managed, policy: null }], ['null admission', { ...f.managed, admissionOptions: null }],
+    ['old trace', { ...f.managed, packet: { ...f.packet, methodTraceBytes: Buffer.from('old trace') } }],
+  ]) await t.test(name, () => assert.equal(consumeTestDesignReview({ authority: f.authority, managed }).ok, false));
+});
+
+test('managed A retains an authenticated dissent for Native rework and refuses stale policy, closure or raw source evidence', async () => {
+  const negative = await managedArchitectureFixture({ dissent: true });
+  const prepared = consumeArchitectureGate({ package: negative.pkg, runRoot: negative.runRoot, questions: negative.questions, authority: negative.authority, managed: negative.managed });
+  assert.equal(prepared.ok, true, prepared.error);
+  assert.equal(prepared.sufficient, false);
+  assert.equal(prepared.consumed, false);
+  const f = await managedArchitectureFixture();
+  const consume = (managed, questions = f.questions) => consumeArchitectureGate({ package: f.pkg, runRoot: f.runRoot, questions, authority: f.authority, managed });
+  assert.equal(consume(f.managed, []).error, 'LOAD_BEARING_OPEN');
+  assert.equal(consume({ ...f.managed, reviewers: [f.reviewers[0], f.reviewers[0], f.reviewers[2]] }).error, 'REVIEWER_COLLECTIONS_REQUIRED');
+  assert.equal(consume({ ...f.managed, sourceBindings: null }).error, 'CURRENT_REVIEW_SOURCES_REQUIRED');
+  assert.equal(consume({ ...f.managed, policy: { ...f.policy, digest: sha('new-policy') } }).ok, false);
+  assert.equal(consume({ ...f.managed, packet: { ...f.packet, resultBytes: Buffer.from('{"status":"PASSED"}') } }).ok, false);
+  assert.equal(consume({ ...f.managed, reviewers: [f.reviewers[0], { ...f.reviewers[1], packet: { ...f.reviewers[1].packet, collection: null } }, f.reviewers[2]] }).ok, false);
+  const passing = consume(f.managed);
+  const admitted = admitEvidence(f.packet, { ...f.managed.admissionOptions, actionBinding: f.actionBinding, authority: f.authority, requireManaged: true });
+  const query = { entry: admitted.entry, inputs: { inputDigest: f.actionBinding.inputDigest, testContract: f.testContract }, policy: f.policy };
+  const read = fsSync.readFileSync;
+  fsSync.readFileSync = () => { throw new Error('query attempted filesystem IO'); };
+  try { assert.equal(passing.verifyReview(query, f.managed).sufficient, true, 'prepared query has no filesystem or subprocess work'); }
+  finally { fsSync.readFileSync = read; }
+  assert.equal(passing.verifyReview(query, { ...f.managed, sourceBindings: f.managed.sourceBindings.map((item, index) => index === 1
+    ? { ...item, sourceQualification: { ...item.sourceQualification, status: 'revoked' } } : item) }).ok, false, 'a revoked child reviewer invalidates the prepared aggregate');
 });

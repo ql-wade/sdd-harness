@@ -15,7 +15,8 @@ import crypto from 'node:crypto';
 import fsSync from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import test, { afterEach } from 'node:test';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -31,9 +32,16 @@ const sha = (data) => crypto.createHash('sha256').update(data).digest('hex');
 const shaFile = (file) => sha(fsSync.readFileSync(file));
 const P0_QUORUM = ['claude-code', 'zcode', 'codex-agent'];
 
+const privateRoots = new Set();
 function makeTmp(label) {
-  return fsSync.mkdtempSync(path.join(os.tmpdir(), label));
+  const directory = fsSync.mkdtempSync(path.join(os.tmpdir(), label));
+  privateRoots.add(directory);
+  return directory;
 }
+afterEach(() => {
+  for (const directory of privateRoots) fsSync.rmSync(directory, { recursive: true, force: true });
+  privateRoots.clear();
+});
 
 function writePackageFile(dir, { requirementsDigest, designDigest }) {
   fsSync.mkdirSync(dir, { recursive: true });
@@ -435,4 +443,311 @@ test('boundary: the T gate consumes sufficiency and attested oracle strength fro
   const none = consumeTestDesignReview({ current, review: reviewFor() });
   assert.equal(none.ok, false);
   assert.equal(none.error, 'UNREGISTERED_SOURCE');
+});
+
+// Run in fresh Node processes so the original Native module owns one fixed
+// host per process. Reviewer records below are explicit DATA fixtures, not
+// production principals, actual model reviews or OS isolation evidence.
+async function nativeReviewScenario(config) {
+  const assert = (await import('node:assert/strict')).default;
+  const fs = (await import('node:fs')).default;
+  const path = (await import('node:path')).default;
+  const crypto = (await import('node:crypto')).default;
+  const { pathToFileURL } = await import('node:url');
+  const { createLaunchAuthority, admitEvidence, envelopeDigest } = await import(pathToFileURL(path.join(config.repository, 'lib/delivery/evidence.js')));
+  const { evaluate } = await import(pathToFileURL(path.join(config.repository, 'lib/delivery/gate.js')));
+  const { taskDefinitionDigest } = await import(pathToFileURL(path.join(config.repository, 'lib/delivery/baseline.js')));
+  const review = await import(pathToFileURL(path.join(config.repository, 'lib/adapters/architecture-review.js')));
+  const sha = (value) => crypto.createHash('sha256').update(value).digest('hex');
+  assert.equal(sha(fs.readFileSync(config.nativePath)), config.nativeSha, 'exact accepted Native aggregate bytes');
+  const native = await import(pathToFileURL(config.nativePath));
+  const project = path.join(config.scratch, 'project'), artifacts = path.join(config.scratch, 'artifacts');
+  for (const directory of [project, artifacts]) fs.mkdirSync(directory, { recursive: true });
+  const change = path.join(project, 'openspec/changes/fixture');
+  const lockHeld = () => fs.existsSync(path.join(change, '.comet-state.lock'));
+  const commands = [], packets = new Map(), prepared = new Map(), contexts = new Map();
+  const records = new Map();
+  const qualification = { id: 'fixture-only-NOT-PRODUCTION', sourceId: 'fixture-recorded-source', revision: 'fixture-1',
+    scope: 'protected-source', status: 'qualified', expiresAt: '2099-01-01T00:00:00Z',
+    evidenceRefs: [{ ref: 'fixture/data-records', digest: sha('no-real-reviewer-or-OS-qualification') }] };
+  const policy = { ...config.policy, openSpecBinding: config.openSpecBinding };
+  const targetContract = { schemaVersion: 1, commandBindingsRequired: true, project: 'fixture', change: 'fixture',
+    cases: [{ id: 'design-denial', ac: 'E03', oracle: 'an unregistered review cannot pass the architecture or test-design gate', checkIds: ['semantic-review'] }],
+    requiredChecks: [{ id: 'semantic-review', level: 'review', capability: 'design-review', command: 'fixture:review-target-design', caseIds: ['design-denial'] }],
+    executionDenominator: { totalCases: 1 }, cleanup: { environment: 'remove private fixture', data: 'no production data' },
+    dependencyBaselines: [{ kind: 'fixture-design', digest: sha('fixture-design') }] };
+  const method = (name) => ({ name, version: 'vendored-construction-only', ref: `.agents/skills/${name}/SKILL.md`,
+    digest: sha(fs.readFileSync(path.join(config.repository, '.agents/skills', name, 'SKILL.md'))) });
+  const methods = { R: [method('grill-me')], A: [method('multi-agent-consensus-review')], T: [method('test-authoring')], P: [method('claude-parallel-tdd-planner')] };
+  let architecture = null, missingSource = false;
+  if (config.stage === 'resume') architecture = JSON.parse(fs.readFileSync(path.join(artifacts, 'architecture-binding.json')));
+  const baseOptions = () => ({ sourceQualification: qualification, environment: 'fixture-environment', purpose: 'independent-acceptance',
+    builderExecution: 'fixture-builder', builderPrincipal: 'fixture-builder-principal', authoringExecutions: ['fixture-test-author'],
+    authoringPrincipals: ['fixture-test-author-principal'], consumedCollections: [], issuedExecutions: [], now: new Date().toISOString() });
+  const context = (intent) => {
+    const run = intent.runId ?? intent.actionBinding?.run;
+    const action = { schemaVersion: 1, profile: 'comet-managed-v2', runnerId: 'fixture-native-source', run, gate: intent.gate,
+      action: `${intent.gate}-review`, execution: intent.execution, role: intent.role, revision: `r${intent.generation}`,
+      attempt: intent.attempt, epoch: intent.epoch, inputDigest: intent.inputDigest, policyDigest: policy.digest,
+      environmentDigest: policy.controllerEnvironmentDigest, workPackage: { id: intent.jobKey ?? intent.execution, taskIds: ['2.5'] },
+      methods: methods[intent.gate], allowedPaths: ['.whitebox'], allowedTools: ['read_file'],
+      inputs: intent.gate === 'A' ? architecture.inputs : [{ name: 'test-contract', ref: '.whitebox/target-contract.json', digest: envelopeDigest(targetContract) }],
+      outputs: [{ name: 'review', ref: '.whitebox/review.md' }] };
+    return { actionBinding: action, policy, admissionOptions: baseOptions(), testContract: {
+      ...targetContract, cases: [{ id: `native.${intent.gate}`, ac: 'P2_5-native-mechanism', oracle: 'the original completed source is bound to the current Native gate', checkIds: ['native-review'] }],
+      requiredChecks: [{ id: 'native-review', level: 'review', capability: `native:${intent.gate}`, command: `fixture:original-review:${intent.gate}`, caseIds: [`native.${intent.gate}`] }],
+    } };
+  };
+  const authority = createLaunchAuthority({ secret: 'public-test-fixture-key-not-a-production-credential', sourceVerifier: async (request) => {
+    const known = records.get(request.dispatch.execution);
+    if (!known || ['reportBytes', 'resultBytes', 'methodTraceBytes'].some((key) => !Buffer.from(known[key]).equals(Buffer.from(request[key])))) return { ok: false };
+    const { dispatch, envelope, launchRecord, reportBytes, resultBytes, methodTraceBytes } = known;
+    return { ok: true, qualification, facts: { actionDigest: envelopeDigest(dispatch.actionBinding), dispatchDigest: envelopeDigest(dispatch),
+      envelopeDigest: envelopeDigest(envelope), launchDigest: envelopeDigest(launchRecord), reportDigest: sha(reportBytes), resultDigest: sha(resultBytes), methodTraceDigest: sha(methodTraceBytes),
+      run: dispatch.run, execution: dispatch.execution, launchId: launchRecord.launchId, environmentDigest: dispatch.actionBinding.environmentDigest,
+      principal: known.principal, observations: [{ caseId: envelope.caseId, check: envelope.check, command: `fixture:original-review:${dispatch.gate}`, result: envelope.result, executions: envelope.executions }] } };
+  } });
+  const source = async (action, { result, rawResult, report = 'Fixture completed original source; no actual model review is claimed.', principal = 'fixture-independent-principal', dispatch } = {}) => {
+    const signed = dispatch ?? authority.issueDispatch({ ...action, actionBinding: action }); // private data signer only
+    const reportBytes = Buffer.from(report), resultBytes = rawResult ?? Buffer.from(JSON.stringify(result));
+    const methodTraceBytes = Buffer.from(JSON.stringify({ schemaVersion: 1, run: action.run, execution: action.execution,
+      actionDigest: envelopeDigest(action), methods: action.methods.map((item) => ({ ...item, status: 'completed' })) }));
+    const envelope = { schemaVersion: 1, candidateDigest: action.inputDigest, caseId: `native.${action.gate}`, check: `native:${action.gate}`,
+      origin: { kind: 'registered-runner', id: action.runnerId }, execution: { id: action.execution }, environment: 'fixture-environment',
+      toolchain: `node ${process.version}`, executions: { total: 1, valid: 1 }, result: 'pass', evidence: [{ uri: '.whitebox/review.md', sha256: sha(reportBytes) }], expiry: '2099-01-01T00:00:00Z' };
+    const packet = { dispatch: signed, envelope, launchRecord: { launchId: `fixture-launch:${action.execution}`, execution: action.execution }, reportBytes, resultBytes, methodTraceBytes };
+    records.set(action.execution, { ...packet, principal });
+    const collected = await authority.collectResult(packet);
+    assert.equal(collected.ok, true);
+    return { ...packet, collection: collected.collection };
+  };
+  const host = { authority: { ...authority, issueDispatch(binding) { assert.equal(lockHeld(), true, 'only original Native registers the primary job under its short lock'); return authority.issueDispatch(binding); } },
+    policy: () => policy, context, definitionDigest: taskDefinitionDigest, authorizeWrite: () => ({ allowed: false }), admitEvidence, evaluate,
+    readResult: async (intent) => {
+      assert.equal(lockHeld(), false, 'collection and mechanical recheck run outside the original state lock');
+      const packet = packets.get(intent.execution);
+      if (!packet) throw new Error('UNVERIFIED: original source has no completed result');
+      if (intent.gate === 'A' || intent.gate === 'T') {
+        const current = contexts.get(intent.execution);
+        const actual = missingSource && intent.gate === 'A' ? { ...current, reviewers: current.reviewers.slice(0, 2) } : current;
+        const result = intent.gate === 'A'
+          ? review.consumeArchitectureGate({ package: architecture.pkg, runRoot: architecture.runRoot, questions: architecture.questions, authority, managed: actual })
+          : review.consumeTestDesignReview({ authority, managed: actual });
+        if (!result.ok) throw new Error(`UNVERIFIED: ${result.error}`);
+        prepared.set(intent.execution, result);
+      }
+      return packet;
+    },
+    verifyReview: (request) => {
+      const entry = request.entry;
+      if (['A', 'T'].includes(entry.dispatch.gate)) {
+        const known = prepared.get(entry.execution);
+        const current = contexts.get(entry.execution);
+        return known?.verifyReview(request, { ...current, admissionOptions: baseOptions() }) ?? { ok: false };
+      }
+      // R/P here exercise existing Core source mechanics only. They are not
+      // substitutes for their original owners' real methods/semantic reviews.
+      return { ok: true, sufficient: true, evidenceDigest: sha('fixture-R-P-component-only'), envelopeDigest: entry.digest,
+        reportDigest: entry.sourcePacket.collection.reportDigest, actionDigest: entry.sourcePacket.collection.actionDigest,
+        execution: entry.execution, principal: entry.sourcePacket.collection.source.facts.principal };
+    } };
+  native.installManagedDeliveryHost(host);
+  const invoke = async (argv) => {
+    const result = await native.runClassicCli(['--json', 'state', ...argv], undefined, { projectRoot: project, invocationCwd: project });
+    const json = JSON.parse(result.stdout ?? '{}');
+    commands.push({ argv: ['state', ...argv], exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr });
+    fs.appendFileSync(path.join(config.auditDir, `${config.stage}-commands.raw.jsonl`), JSON.stringify({ at: new Date().toISOString(), ...commands.at(-1) }) + '\n');
+    return { ...result, json };
+  };
+  const ok = async (argv) => { const result = await invoke(argv); assert.equal(result.exitCode, 0, JSON.stringify(result.json)); return result; };
+  const issue = async (gate) => (await ok(['dispatch-gate', 'fixture', gate])).json.data.dispatch;
+  const accept = async (intent) => {
+    const file = path.join(artifacts, 'proposal-result.json');
+    fs.writeFileSync(file, JSON.stringify({ execution: intent.execution, attempt: intent.attempt, verdict: 'pass' }));
+    return invoke(['accept-gate', 'fixture', intent.gate, '--file', file]);
+  };
+  const originalRun = () => JSON.parse(fs.readFileSync(path.join(change, '.comet/run-state.json'))).runId;
+  const observeSimple = async (intent) => { const c = context(intent); packets.set(intent.execution, await source(c.actionBinding, { result: { fixture: true }, dispatch: intent.protectedDispatch })); };
+  if (config.stage === 'start') {
+    fs.mkdirSync(path.join(project, '.comet'), { recursive: true });
+    fs.writeFileSync(path.join(project, '.comet/config.yaml'), 'schema: comet.project.v1\ndefault_workflow: classic\nworkflows: [classic]\nclassic:\n  artifact_layout: legacy\n');
+    fs.mkdirSync(path.join(project, 'openspec'), { recursive: true });
+    fs.writeFileSync(path.join(project, 'openspec/config.yaml'), 'schema: spec-driven\n');
+    await ok(['init', 'fixture', 'full', '--managed-delivery']);
+    fs.writeFileSync(path.join(change, 'proposal.md'), '# Requirements\n\nOnly the original Comet Run owns delivery state and recovery.\n');
+    const r = await issue('R'); await observeSimple(r); assert.equal((await accept(r)).exitCode, 0);
+    fs.writeFileSync(path.join(change, 'tasks.md'), '- [ ] Validate original review mechanisms. <!-- comet-task:task1 -->\n');
+    await ok(['transition', 'fixture', 'open-complete']);
+    fs.mkdirSync(path.join(project, 'docs/comet/plans'), { recursive: true });
+    fs.writeFileSync(path.join(project, 'docs/design.md'), '---\ncomet_change: fixture\nrole: technical-design\ncanonical_spec: openspec\n---\n# Design\n\nOne Native Run owns the review job.\n');
+    fs.writeFileSync(path.join(change, 'design.md'), '# Design\n\nNo second controller.\n');
+    fs.writeFileSync(path.join(change, 'test-intent.md'), '# Test design\n\nCheck current source, oracle, environment and cleanup.\n');
+    await ok(['set', 'fixture', 'design_doc', 'docs/design.md', 'test_intent', 'openspec/changes/fixture/test-intent.md']);
+    const questions = review.closeLoadBearingQuestion(review.openLoadBearingQuestions([{ id: 'owner', question: 'Who resumes a review?' }]), 'owner', 'The original Native pending dispatch resumes; no second phase or job ledger.');
+    const closure = { schemaVersion: 1, requirementsDigest: sha(fs.readFileSync(path.join(change, 'proposal.md'))), designDigest: sha(fs.readFileSync(path.join(project, 'docs/design.md'))), questions };
+    const grillBytes = Buffer.from(JSON.stringify(closure));
+    const artifactPath = path.join(artifacts, 'architecture-package.json');
+    fs.writeFileSync(artifactPath, JSON.stringify({ requirementsDigest: closure.requirementsDigest, designDigest: closure.designDigest, grillDigest: sha(grillBytes) }));
+    const pkg = review.freezeReviewPackage({ reviewId: 'native-current-architecture-r1', artifactPath, revision: 1 });
+    const inputs = [{ name: 'requirements', ref: 'openspec/changes/fixture/proposal.md', digest: closure.requirementsDigest },
+      { name: 'design', ref: 'docs/design.md', digest: closure.designDigest }, { name: 'architecture-package', ref: '.whitebox/package.json', digest: pkg.artifactSha256 },
+      { name: 'grill-closure', ref: '.whitebox/grill.json', digest: sha(grillBytes) }];
+    architecture = { pkg, inputs, questions, closure, runRoot: path.join(artifacts, 'consensus') };
+    fs.writeFileSync(path.join(artifacts, 'architecture-binding.json'), JSON.stringify(architecture));
+    const a = await issue('A');
+    assert.equal((await issue('A')).execution, a.execution, 'same original pending job is returned on a repeated trigger');
+    return { stage: 'start', runId: originalRun(), execution: a.execution, attempt: a.attempt, generation: a.generation,
+      jobKey: a.jobKey ?? null, commands, scope: 'component/native-review-mechanism', actualRolesMethodsOS: 'UNVERIFIED' };
+  }
+  const a = await issue('A');
+  assert.equal(originalRun(), config.expected.runId, 'a fresh process resumes the same original Run');
+  assert.equal(a.execution, config.expected.execution, 'fresh host resumes the original execution without new dispatch');
+  assert.equal(a.attempt, config.expected.attempt);
+  const cA = context(a), action = cA.actionBinding;
+  const grillAction = { ...action, execution: `${a.execution}:grill`, role: 'architect', methods: [method('grill-me')], inputs: architecture.inputs.slice(0, 2) };
+  const grill = await source(grillAction, { result: architecture.closure, principal: 'fixture-architect-principal' });
+  assert.equal(review.initConsensusRun({ package: architecture.pkg, runRoot: architecture.runRoot, initiator: 'codex-agent', questions: architecture.questions }).ok, true);
+  const reviewers = [];
+  for (const participant of review.REVIEW_PARTICIPANTS) {
+    const paper = { review_id: architecture.pkg.reviewId, round: 0, agent: participant, artifact_sha256: architecture.pkg.artifactSha256,
+      verdict: 'APPROVE', score: { overall: 9, criteria: Object.fromEntries(review.ARCHITECTURE_CRITERIA.map((key) => [key, 9])) }, findings: [], assumptions: [], confidence: 0.9,
+      summary: 'Private fixture ballot; no external model was called.' };
+    assert.equal(review.admitBallot({ package: architecture.pkg, runRoot: architecture.runRoot, participant, ballot: paper }).ok, true);
+    const rawResult = fs.readFileSync(path.join(architecture.runRoot, architecture.pkg.reviewId, 'round-00', `ballot-${participant}.json`));
+    const childAction = { ...action, execution: `${a.execution}:${participant}` };
+    reviewers.push({ participant, packet: await source(childAction, { rawResult, principal: `fixture-independent:${participant}` }) });
+  }
+  assert.equal(review.mechanicalTally({ package: architecture.pkg, runRoot: architecture.runRoot }).ok, true);
+  assert.equal(review.mechanicalFinalize({ package: architecture.pkg, runRoot: architecture.runRoot,
+    conclusion: 'Private fixture unanimous decision; not actual three-party review.', nextPlan: 'Production role qualification remains required.' }).ok, true);
+  const runDir = path.join(architecture.runRoot, architecture.pkg.reviewId);
+  const result = { schemaVersion: 1, reviewId: architecture.pkg.reviewId, artifactSha256: architecture.pkg.artifactSha256, revision: 1, round: 0,
+    manifestDigest: sha(fs.readFileSync(path.join(runDir, 'manifest.json'))), tallyDigest: sha(fs.readFileSync(path.join(runDir, 'round-00/tally.json'))),
+    finalReportDigest: sha(fs.readFileSync(path.join(runDir, 'final-report.md'))), grillDigest: sha(grill.resultBytes) };
+  const packet = await source(action, { result, report: fs.readFileSync(path.join(runDir, 'final-report.md')), dispatch: a.protectedDispatch });
+  packets.set(a.execution, packet);
+  const managedA = { actionBinding: action, policy, packet, testContract: targetContract, gateTestContract: cA.testContract,
+    admissionOptions: baseOptions(), jobKey: a.jobKey ?? a.execution, grill: { packet: grill }, reviewers,
+    sourceBindings: [{ actionBinding: grillAction, sourceQualification: qualification }, ...reviewers.map(({ packet }) => ({ actionBinding: packet.dispatch.actionBinding, sourceQualification: qualification }))] };
+  contexts.set(a.execution, managedA);
+  missingSource = true;
+  const denied = await accept(a);
+  assert.notEqual(denied.exitCode, 0, 'the actual Native intake refuses missing original reviewer evidence');
+  assert.match(JSON.stringify(denied.json), /REVIEWER_COLLECTIONS_REQUIRED/);
+  assert.equal((await issue('A')).execution, a.execution, 'source readback failure retains the original pending job');
+  missingSource = false;
+  assert.equal((await accept(a)).json.data.verdict, 'pass');
+  assert.notEqual((await accept(a)).exitCode, 0, 'a consumed original execution is not accepted twice');
+  const observeT = async (intent, sufficient) => {
+    const c = context(intent), action = c.actionBinding;
+    const result = { schemaVersion: 1, candidateDigest: action.inputDigest, contractDigest: envelopeDigest(targetContract), sufficient,
+      oracleStrength: sufficient ? 'strong' : 'weak', summary: 'Independent fixture semantic review of the target TestContract, environment and cleanup.',
+      caseReviews: [{ caseId: 'design-denial', checkIds: ['semantic-review'], oracle: targetContract.cases[0].oracle, sufficient,
+        rationale: sufficient ? 'The oracle observes the actual public denial boundary.' : 'The oracle would accept an unregistered source and is insufficient.' }],
+      environmentReview: { digest: action.environmentDigest, sufficient: true, rationale: 'Private fixture environment; production identity remains unverified.' },
+      cleanupReview: { ...targetContract.cleanup, sufficient: true, rationale: 'All private resources are removed in finally.' },
+      findings: sufficient ? [] : [{ id: 'weak-oracle', blocking: true, rationale: 'Test author must strengthen the observable oracle.' }] };
+    const packet = await source(action, { result, dispatch: intent.protectedDispatch });
+    packets.set(intent.execution, packet);
+    contexts.set(intent.execution, { actionBinding: action, policy, packet, testContract: targetContract, gateTestContract: c.testContract,
+      admissionOptions: baseOptions(), jobKey: intent.jobKey ?? intent.execution });
+  };
+  const weak = await issue('T'); await observeT(weak, false);
+  const rejected = await accept(weak);
+  assert.equal(rejected.exitCode, 0, JSON.stringify(rejected.json));
+  assert.equal(rejected.json.data.verdict, 'reject', 'Native consumes the authenticated insufficiency as a rejection, despite submitted pass');
+  // Design already permits its author to revise the current test intent.
+  assert.equal(originalRun(), config.expected.runId);
+  fs.appendFileSync(path.join(change, 'test-intent.md'), '\nRequire the oracle to observe the original intake refusal.\n');
+  const fresh = await issue('T');
+  assert.notEqual(fresh.execution, weak.execution);
+  await observeT(fresh, true);
+  assert.equal((await accept(fresh)).json.data.verdict, 'pass', 'ONE fresh independent semantic review is sufficient');
+  assert.notEqual((await accept(weak)).exitCode, 0, 'a late previous T attempt cannot revive');
+  await ok(['complete-design', 'fixture', '--design-doc', 'docs/design.md']);
+  fs.writeFileSync(path.join(project, 'docs/comet/plans/derived-plan.md'), '# Plan\n\n- [ ] Validate original review mechanisms. <!-- comet-task:task1 -->\n');
+  await ok(['set', 'fixture', 'plan', 'docs/comet/plans/derived-plan.md', 'build_mode', 'autonomous', 'tdd_mode', 'tdd', 'isolation', 'current']);
+  const p = await issue('P'); await observeSimple(p); assert.equal((await accept(p)).json.data.verdict, 'pass');
+  const good = (await ok(['gates', 'fixture'])).json.data;
+  assert.equal(good.phase, 'build');
+  assert.equal(good.evaluation.allowed, true, JSON.stringify(good.evaluation));
+  const design = path.join(project, 'docs/design.md'), original = fs.readFileSync(design);
+  fs.appendFileSync(design, '\nChanged architecture ownership.\n');
+  assert.deepEqual((await ok(['gates', 'fixture'])).json.data.evaluation.stale, ['A', 'T', 'P']);
+  fs.writeFileSync(design, original);
+  const restored = (await ok(['gates', 'fixture'])).json.data;
+  assert.deepEqual(restored.evaluation.stale, ['A', 'T', 'P'], 'restoring bytes never restores old A/T/P evidence');
+  assert.equal(originalRun(), config.expected.runId);
+  return { stage: 'resume', runId: originalRun(), execution: a.execution, jobKey: a.jobKey ?? null,
+    commands, assertions: ['same-run-fresh-process-resume', 'same-pending-execution', 'missing-reviewer-refused', 'duplicate-consumption-refused',
+      'authenticated-T-insufficiency-rejected', 'same-run-T-repair', 'one-independent-T-review', 'R-A-T-P-boundary', 'design-restore-does-not-revive'],
+    scope: 'component/native-review-mechanism', actualRolesMethodsOS: 'UNVERIFIED', runtimeScenariosAccepted: 0 };
+}
+
+test('P2_5 Native same-Run review chain: resume exact job, refuse missing sources, rework T independently and invalidate restored design', async () => {
+  const artifactRoot = path.resolve(process.env.P25_NATIVE_ARTIFACT_ROOT ?? projectRoot);
+  const lock = JSON.parse(fsSync.readFileSync(path.join(projectRoot, 'integrations/comet/upstream.lock.json')));
+  const { verifyCometDistribution } = await import(path.join(projectRoot, 'tools/comet/build.mjs'));
+  const verified = await verifyCometDistribution({ projectRoot: artifactRoot, lock });
+  const fingerprint = '6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a';
+  assert.equal(verified.fingerprint, fingerprint, 'the exact controller-accepted construction build');
+  const build = path.join(artifactRoot, '.sdd/vendor/comet', lock.source.commit, 'builds', fingerprint);
+  const manifest = JSON.parse(fsSync.readFileSync(path.join(build, 'distribution.json')));
+  const nativePath = path.join(build, 'work/assets/skills/comet/scripts/comet-runtime.mjs');
+  const scratch = makeTmp('sdd-p25-native-'), artifacts = path.join(scratch, 'artifacts');
+  fsSync.mkdirSync(artifacts, { recursive: true });
+  const audit = path.join(projectRoot, '.local/P2_5-convergence/native-audits', crypto.randomUUID());
+  fsSync.mkdirSync(audit, { recursive: true });
+  const installationRoot = fsSync.realpathSync(path.join(artifactRoot, '.sdd/tools/openspec-1.11.0/node_modules'));
+  const packageInfo = JSON.parse(fsSync.readFileSync(path.join(installationRoot, '@fission-ai/openspec/package.json')));
+  assert.equal(packageInfo.version, '1.11.0');
+  const entries = [];
+  const walk = (directory) => {
+    for (const item of fsSync.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const absolute = path.join(directory, item.name), name = path.relative(installationRoot, absolute).replaceAll('\\', '/');
+      if (item.isSymbolicLink()) {
+        const relative = path.relative(installationRoot, fsSync.realpathSync(absolute));
+        assert.ok(!path.isAbsolute(relative) && relative !== '..' && !relative.startsWith('..' + path.sep));
+        entries.push({ path: name, type: 'link', sha256: sha(fsSync.readlinkSync(absolute)) });
+      } else if (item.isDirectory()) { entries.push({ path: name, type: 'directory' }); walk(absolute); }
+      else { assert.ok(item.isFile()); entries.push({ path: name, type: 'file', sha256: sha(fsSync.readFileSync(absolute)) }); }
+    }
+  };
+  walk(installationRoot);
+  const artifactSha = '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f';
+  assert.equal(shaFile(path.join(artifactRoot, '.sdd/cache/artifacts/openspec-1.11.0.tgz')), artifactSha);
+  const manifestPath = path.join(artifacts, 'openspec-manifest.json');
+  fsSync.writeFileSync(manifestPath, JSON.stringify({ schema: 'comet.openspec.installation-manifest.v1', artifactSha256: artifactSha, entries }));
+  const nodePath = fsSync.realpathSync(process.execPath), nodeSha = shaFile(nodePath), environmentDigest = sha(JSON.stringify({ nodeSha, closure: shaFile(manifestPath), platform: process.platform, arch: process.arch }));
+  const openSpecBinding = { schema: 'comet.openspec.binding.v1', scope: 'component-mechanism',
+    artifact: { name: packageInfo.name, version: packageInfo.version, tarballSha256: artifactSha,
+      evidenceRef: 'openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json#openspec.npm_artifact' },
+    qualification: { ref: null, digest: null, production: 'UNVERIFIED' }, node: { path: nodePath, sha256: nodeSha },
+    installationRoot, cliEntry: '@fission-ai/openspec/bin/openspec.js', manifest: { path: manifestPath, sha256: shaFile(manifestPath) }, environmentDigest };
+  const config = { repository: projectRoot, scratch, auditDir: audit, nativePath, nativeSha: manifest.files['assets/skills/comet/scripts/comet-runtime.mjs'].sha256, openSpecBinding,
+    policy: { executionScope: 'component-mechanism', controllerEnvironmentDigest: environmentDigest,
+      ref: 'foundation/profiles/comet-managed.json', digest: shaFile(path.join(projectRoot, 'foundation/profiles/comet-managed.json')),
+      revision: 'fixture-qualification-only', projectKnowledgeRequired: true, teamKnowledgeRequired: true, plansRoot: 'docs/comet/plans' } };
+  const run = (stage, expected) => {
+    const env = { ...process.env };
+    for (const key of ['NODE_TEST_CONTEXT', 'NODE_OPTIONS', 'NODE_PATH']) delete env[key];
+    const script = path.join(audit, `${stage}-child.mjs`);
+    fsSync.writeFileSync(script, `const result=await (${nativeReviewScenario.toString()})(${JSON.stringify({ ...config, stage, expected })});process.stdout.write(JSON.stringify(result));`);
+    const startedAt = new Date().toISOString();
+    const child = spawnSync(process.execPath, [script],
+      { cwd: projectRoot, env, encoding: 'utf8', timeout: 120_000, maxBuffer: 16 * 1024 * 1024 });
+    fsSync.writeFileSync(path.join(audit, `${stage}-stdout.raw.txt`), child.stdout ?? '');
+    fsSync.writeFileSync(path.join(audit, `${stage}-stderr.raw.txt`), child.stderr ?? '');
+    fsSync.writeFileSync(path.join(audit, `${stage}-command.raw.json`), JSON.stringify({ startedAt, endedAt: new Date().toISOString(),
+      cwd: projectRoot, argv: [process.execPath, script], scriptSha256: shaFile(script), exitCode: child.status, signal: child.signal, fingerprint }, null, 2));
+    fsSync.cpSync(scratch, path.join(audit, `${stage}-fixture-snapshot`), { recursive: true, force: false, errorOnExist: true });
+    assert.equal(child.status, 0, child.stderr);
+    return JSON.parse(child.stdout);
+  };
+  const started = run('start');
+  const resumed = run('resume', started);
+  assert.equal(resumed.runId, started.runId);
+  assert.equal(resumed.execution, started.execution);
+  fsSync.writeFileSync(path.join(audit, 'commands.raw.json'), JSON.stringify({ fingerprint, started, resumed }, null, 2) + '\n');
+  assert.equal(resumed.runtimeScenariosAccepted, 0, 'a local Native fixture cannot close real-role or business acceptance');
 });
