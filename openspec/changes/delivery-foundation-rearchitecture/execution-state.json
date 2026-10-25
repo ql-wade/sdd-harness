@@ -240,10 +240,12 @@
       "worktree": "/Volumes/mac-extend/codex/worktrees/comet-observer-qualification/sdd-harness"
     },
     "P1_6": {
-      "status": "IMPLEMENTING",
+      "status": "REWORK_PORTABILITY_METADATA_ONLY",
       "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
       "worker": "/root/method_profile",
-      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-method-profile/sdd-harness"
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-method-profile/sdd-harness",
+      "worker_commit": "1da48bee8dd4fcc782a1d0a31015e43a22f82de7",
+      "scope": "method supply/profile data only; no actual role/gate qualification"
     },
     "P1_2": {
       "status": "SAFETY_SUBSTEP_INTEGRATED_PROFILE_NOT_VERIFIED",
@@ -258,8 +260,10 @@
       }
     },
     "P2_2": {
-      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
-      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+      "status": "IMPLEMENTING",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "worker": "/root/comet_source_probe",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-delivery-contracts/sdd-harness"
     },
     "P2_3": {
       "status": "NOT_VERIFIED_ON_NEW_PROFILE",
@@ -274,7 +278,7 @@
       "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
     },
     "I01": {
-      "status": "IMPLEMENTING",
+      "status": "CANDIDATE_AWAITING_INDEPENDENT_REVIEW",
       "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
       "evidence": ".local/comet-reset/registry-integration/integration.json",
       "component_tests": "26/26 PASS on main; zero skip",
@@ -287,7 +291,9 @@
         "platform_validate_exit": 0,
         "llmwiki_validate_exit": 0,
         "evidence": ".local/comet-reset/identity-callers-integration/integration.json"
-      }
+      },
+      "worker_commit": "09b422b7f0147b601331010249ff4b59870b0766",
+      "scope": "component construction only candidate; actual full-resource qualifications not claimed"
     },
     "I02": {
       "status": "NOT_VERIFIED_ON_NEW_PROFILE",
@@ -491,7 +497,9 @@
       "agent_name": "/root/registry_qualification",
       "worktree": "/Volumes/mac-extend/codex/worktrees/comet-registry-qualification/sdd-harness",
       "base_head": "36fcf5c",
-      "status": "RUNNING_CONFIRMED_BY_AGENT_MESSAGE"
+      "status": "TERMINAL_CANDIDATE_AWAITING_INDEPENDENT_REVIEW",
+      "worker_commit": "09b422b7f0147b601331010249ff4b59870b0766",
+      "scope": "registry and restricted read-only metadata; full audience/runtime refs/resource/action qualification unverified"
     },
     {
       "task": "P2_1",
@@ -505,7 +513,9 @@
       "task": "P1_6",
       "agent_name": "/root/method_profile",
       "worktree": "/Volumes/mac-extend/codex/worktrees/comet-method-profile/sdd-harness",
-      "status": "RUNNING_CONFIRMED_BY_AGENT_MESSAGE"
+      "status": "RUNNING_PORTABILITY_ONLY_REWORK",
+      "worker_commit": "1da48bee8dd4fcc782a1d0a31015e43a22f82de7",
+      "round": 2
     },
     {
       "task": "P3_1",
@@ -515,6 +525,16 @@
       "base_head": "c26d43cd5f5e93fb23245066b5c7b280802c82e2",
       "status": "RUNNING_DISPATCHED_NATIVE_HANDLE",
       "scope": "observer component qualification only; no product state or final business acceptance"
+    },
+    {
+      "task": "P2_2",
+      "executor": "native subagent",
+      "agent_name": "/root/comet_source_probe",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-delivery-contracts/sdd-harness",
+      "base_head": "ed4d61a",
+      "branch": "codex/comet-evidence-admission",
+      "status": "RUNNING_DISPATCHED_NATIVE_HANDLE",
+      "scope": "evidence origin admission and pure gate only; no controller/state or actual permission claims"
     }
   ],
   "safety_cleanup": {
@@ -553,14 +573,16 @@
       {
         "id": "F3",
         "owner": "P3_1",
-        "status": "OPEN_UNTIL_IMPLEMENTED",
-        "action": "unify current verification profile token across original and new commands; do not inherit old-profile passes"
+        "status": "METADATA_CLOSED_CODE_QUALIFICATION_PENDING_P3_1",
+        "action": "unify current verification profile token across original and new commands; do not inherit old-profile passes",
+        "evidence": "p3_1-f3-f4-amendment.json"
       },
       {
         "id": "F4",
         "owner": "P3_2",
-        "status": "OPEN_UNTIL_IMPLEMENTED",
-        "action": "retire stale IMPLEMENTED/PASS journey-definition labels from current projection; keep history"
+        "status": "CURRENT_TAGS_CLOSED_HISTORY_RETAINED_RECIPES_PENDING_ORIGINAL_OWNERS",
+        "action": "retire stale IMPLEMENTED/PASS journey-definition labels from current projection; keep history",
+        "evidence": "p3_1-f3-f4-amendment.json"
       }
     ],
     "receipt": "openspec/changes/delivery-foundation-rearchitecture/architecture-review/comet-convergence-r1/receipt.json",
@@ -593,9 +615,9 @@
     "timezone": "Asia/Shanghai",
     "basis": "architecture consensus completed; method/source integration, real execution gates, knowledge/publication authority and final same-Run journey still open"
   },
-  "updated_at": "2026-10-25T02:05:57.388629+00:00",
+  "updated_at": "2026-10-25T02:25:41.109006+00:00",
   "last_progress_at": "2026-10-25T02:04:21.901811+00:00",
-  "current_focus": "P1_6 methods/source, I01 registry and P3_1 observer active; P2_1 component integrated61/61. F3/F4 draft prepared for review; no runtime scene accepted.",
+  "current_focus": "P3_1 and P2_2 actual observer/admission seams active; P1_6 metadata-only portability rework active after Standards finding. I01 candidate09b422b awaiting review; full audience and service grants remain unverified.",
   "historical_execution_state": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
   "lifecycle_guard": {
     "path": ".agents/skills/openspec-lifecycle-guard/SKILL.md",
@@ -781,7 +803,7 @@
     "not_complete": true
   },
   "outline_readonly_authorization": {
-    "status": "HUMAN_AUTHORIZED_EXECUTION_SCRIPT_REVIEW_PENDING",
+    "status": "EXECUTED_ONCE_SANITIZED_METADATA_VERIFIED",
     "question_id": "call_d02eaa0619b4495a9ecd760d91bc919e",
     "plan_payload_sha256": "f505d1fb99874eb82ca040bdc9af69e66ec461f0d9ec3afa19ac551003b77613",
     "origin": "http://127.0.0.1:3000",
@@ -790,6 +812,32 @@
       "collections.info",
       "collections.memberships"
     ],
-    "scope": "fixed registered owner/team/collection; key memory only; no publish/isolate/issue grant or remote mutation"
-  }
+    "scope": "fixed registered owner/team/collection; key memory only; no publish/isolate/issue grant or remote mutation",
+    "script_sha256": "9185662c4f6694f3e26e9423facbbeec5df3f472bb5490b427ae88073819c826",
+    "attempt": ".local/comet-reset/outline-readonly-authorization/one-shot-attempt.json",
+    "metadata_sha256": "c5c538218fe6d48ba2cc066b82247a36e8a72fd362c11518490e9095e3e60c99",
+    "full_audience": "UNVERIFIED",
+    "actions_granted": false
+  },
+  "reviews": [
+    {
+      "task": "P1_6",
+      "axis": "Spec",
+      "agent": "/root/preparer_spec_review",
+      "status": "PASSED_DECLARED_SUPPLIER_SCOPE",
+      "candidate": "1da48bee8dd4fcc782a1d0a31015e43a22f82de7",
+      "secondary_scope": "F3/F4 metadata-only draft; not applied",
+      "started_at": "2026-10-25T02:16:34.509445+00:00",
+      "finished_at": "2026-10-25T02:23:51.049015+00:00"
+    },
+    {
+      "task": "P1_6",
+      "axis": "Standards",
+      "agent": "/root/preparer_standards_review",
+      "status": "P2_PORTABILITY_REWORK_REQUIRED",
+      "candidate": "1da48bee8dd4fcc782a1d0a31015e43a22f82de7",
+      "at": "2026-10-25T02:23:51.049015+00:00",
+      "finding": "project-owned metadata/logs retain machine paths; raw method bodies must stay verbatim"
+    }
+  ]
 }

@@ -43,4 +43,4 @@ Docker可用；Outline容器运行且healthy。六个Runner角色容器均退出
 
 本次15份冻结材料的真实三方共识已完成并finalize，回执architecture-review/comet-convergence-r1/receipt.json；只批准实施。P0_1–P0_4文档/设计、P1_1工具链（c797aa3）与P2_1共享契约（c26d43c）在声明范围接纳，共6/39，104业务场景仍0。P2_1两位独立审查员分别实跑61/61组件及27/27生产AST矩阵；主检出锁定安装后61/61、0跳过。原始日志保留，分发空白规范化有双摘要。不能据此宣称受信身份、Comet业务门禁或真实旅程通过。
 
-P1_6整体方法快照/原生Comet模板与I01登记核验继续。Outline本次固定文集只读核验已获人明确授权，执行脚本尚待root审查；不授予publisher/isolator/issuer权限。人已恢复原生Goal并读回active，沿唯一DAG继续，整体ETA尚无法可靠估计。新候选130required均待最终复跑；旧36fcf5c回归7失败和Whitebox自测失败仍开放，不以过期结果充抵验收。
+P1_6整体方法快照/原生Comet模板与I01登记核验继续。Outline本次固定文集只读核验已获人明确授权，并由root审查脚本及独立8/8离线自测后实际执行一次；owner/team/文集匹配，直接用户成员分页完整，collection.permission=null、sharing=true。组/继承和完整受众仍UNVERIFIED；此结果不授予publisher/isolator/issuer权限。人已恢复原生Goal并读回active，沿唯一DAG继续，整体ETA尚无法可靠估计。新候选130required均待最终复跑；旧36fcf5c回归7失败和Whitebox自测失败仍开放，不以过期结果充抵验收。
