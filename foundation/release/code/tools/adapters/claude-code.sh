@@ -14,10 +14,9 @@
 #      adapter 自有；目标串“包含 .agents/skills/”不构成归属证明。按前缀删除
 #      真实目录/外部链接 = 毁用户数据，绝无此路径。
 #
-# 幂等：重复运行安全。受管块边界：凡 command 引用 hooks/{pre-tool-gate,
-# session-context,stop-reminder}.sh 且不指向插件基础设施的条目都是本 adapter
-# 的受管条目——升级时整体替换（旧格式不残留、不产生第二个 Guard），用户自有
-# 条目永不动。
+# 幂等：重复运行安全。仅完整匹配本 adapter 当前 Bash 或旧直接调用格式的
+# command handler 归本项目；路径文字、附加用户命令及插件基础设施不授予所有权。
+# 升级按 handler 替换，保留同组用户/插件 handler、matcher 与元数据。
 #
 # 注册分工与固定事件集（V_P1_2_PLUGIN_REGISTRATION_DIVISION，契约 §7.2/§7.3）：
 #   - 插件生命周期 Hook（Ponytail 入口管理的 SessionStart/SubagentStart/
@@ -191,16 +190,20 @@ from managed_io import ManagedOutputs, SETTINGS
 io = ManagedOutputs(sys.argv[2])
 files = io.validate()
 settings_path = sys.argv[3]
-MANAGED_SCRIPT_RE = re.compile(r"hooks/(pre-tool-gate|session-context|stop-reminder)\.sh")
+# Only complete commands emitted by this adapter (current Bash and direct
+# legacy forms) establish ownership; path mentions and suffixes do not.
+MANAGED_SCRIPT_RE = re.compile(r'(?:bash[ \t]+)?(?:"\$CLAUDE_PROJECT_DIR"/)?hooks/(pre-tool-gate|session-context|stop-reminder)\.sh')
 PLUGIN_SOURCE_RE = re.compile(r"CLAUDE_PLUGIN_ROOT|\.claude/plugins/")
 
 # 来源分类（§7.2）：插件条目（命令引用插件基础设施）与用户条目一样不可移除；
 # 只有本项目受管脚本条目参与卸载。
 def hook_source(hook):
-    text = str(hook.get("command", ""))
+    if not isinstance(hook, dict) or hook.get("type") != "command":
+        return "user"
+    text = str(hook.get("command", "")).strip()
     if PLUGIN_SOURCE_RE.search(text):
         return "plugin"
-    if MANAGED_SCRIPT_RE.search(text):
+    if MANAGED_SCRIPT_RE.fullmatch(text):
         return "managed"
     return "user"
 
@@ -217,13 +220,13 @@ if files[SETTINGS] is not None:
         kept = []
         for entry in entries:
             entry_hooks = entry.get("hooks", []) if isinstance(entry, dict) else []
-            sources = {hook_source(h) for h in entry_hooks}
-            if "plugin" in sources:
+            remaining = [hook for hook in entry_hooks if hook_source(hook) != "managed"]
+            if len(remaining) == len(entry_hooks):
                 kept.append(entry)
-            elif "managed" in sources:
-                removed += 1
             else:
-                kept.append(entry)
+                removed += len(entry_hooks) - len(remaining)
+                if remaining:
+                    kept.append({**entry, "hooks": remaining})
         if kept:
             hooks[group] = kept
         else:
@@ -362,7 +365,9 @@ if files[SETTINGS] is not None:
 if not isinstance(settings, dict) or not isinstance(settings.get("hooks", {}), dict):
     raise SystemExit("❌ invalid settings object; no changes")
 
-MANAGED_SCRIPT_RE = re.compile(r"hooks/(pre-tool-gate|session-context|stop-reminder)\.sh")
+# Only complete commands emitted by this adapter (current Bash and direct
+# legacy forms) establish ownership; path mentions and suffixes do not.
+MANAGED_SCRIPT_RE = re.compile(r'(?:bash[ \t]+)?(?:"\$CLAUDE_PROJECT_DIR"/)?hooks/(pre-tool-gate|session-context|stop-reminder)\.sh')
 
 def entry_hooks(entry):
     return [h for h in (entry.get("hooks") or []) if isinstance(h, dict)]
@@ -370,10 +375,12 @@ def entry_hooks(entry):
 # 来源分类（§7.2）：插件标记优先——即使插件条目引用了与本项目同名的受管脚本，
 # 只要命令指向插件基础设施就归插件入口管理，绝不参与项目受管块的移交与去重。
 def hook_source(hook):
-    text = str(hook.get("command", ""))
+    if not isinstance(hook, dict) or hook.get("type") != "command":
+        return "user"
+    text = str(hook.get("command", "")).strip()
     if PLUGIN_SOURCE_RE.search(text):
         return "plugin"
-    if MANAGED_SCRIPT_RE.search(text):
+    if MANAGED_SCRIPT_RE.fullmatch(text):
         return "managed"
     return "user"
 
@@ -414,11 +421,19 @@ if not deny_matchers:
 pre_matcher = "|".join(deny_matchers)
 
 def upsert_hook_array(group, ours):
-    """受管块移交：只移除本项目受管脚本条目（来源分类 = managed，含旧格式），再追加当前格式。
+    """受管块移交：只移除本项目受管 handler（含旧格式），保留同组其它内容，再追加当前格式。
     插件条目（plugin）与用户自有条目（user）永不触碰——插件 Hook 由插件入口管理，
     项目正确性不依赖对它们的改写。这样升级不会留下第二个 Guard。"""
     arr = settings.get("hooks", {}).get(group, [])
-    arr = [e for e in arr if not is_ours(e)]
+    kept = []
+    for entry in arr:
+        if not is_ours(entry):
+            kept.append(entry)
+            continue
+        remaining = [hook for hook in entry.get("hooks", []) if hook_source(hook) != "managed"]
+        if remaining:
+            kept.append({**entry, "hooks": remaining})
+    arr = kept
     arr.append(ours)
     settings.setdefault("hooks", {})[group] = arr
 
@@ -441,6 +456,8 @@ for group, ours in MANAGED_ENTRIES.items():
         if is_ours(entry):
             continue
         for hook in entry_hooks(entry):
+            if hook.get("type") != "command":
+                continue
             source = hook_source(hook)
             command = normalize_command(hook.get("command", ""))
             if source == "plugin":
