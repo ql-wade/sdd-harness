@@ -26,4 +26,4 @@
 
 建设资格修订：0c228bd仅冻结五条已有依赖的具名工件消费规则，13→18，contract680f5be...；39/69/步骤/勾选/原依赖/接口/130总记录104场景及129/103不变，VERIFY与所有真实角色/授权/资源义务不减。尚未ready的工件不可因规则先行消费。P1_2自身已完成67及真实冷资产验证，但Step9缺真实TeamAI分发，原bootstrap不是TeamAI pull；现固定0.22原生能力已定位，Root限定隔离容器/私有bareGit补证，未授真实远端推送/全局hooks/内置Wiki接纳或模型权限。无需给P1_2另加trustedHook条款，完整Journey仍归VERIFY。
 
-当前源码预审：P2_4 fresh84（六补丁与owned case逐摘要一致）被Standards轴一项P2退回：archive bridge只核OpenSpec版本文本，实际程序仍可由COMET_OPENSPEC/PATH选择，未绑定程序及依赖身份；Spec轴未发现独立阻断，仅source-only，不构成接纳。原矩阵输入保持冻结，待原会话终态后由同一worker修复受保护工具身份、真实负例和新候选；证据保存在.local/comet-reset/p2_4-pre-review-84。P1_2隔离探针为Node24.15/arm64、Git缺失exit2，容器已删除，nativeTeamAI分发仍未验；公开Git依赖仅签名索引/模拟准备，未下载二进制、安装或构建。当前6节点/0业务场景、129required/103场景及F10另期未验边界不变，整体ETA未知。
+当前源码预审与矩阵：P2_4 fresh84被Standards轴OpenSpec执行身份P2退回；Spec轴source-only未见独立阻断。原会话157已终态：33项32通过、1项postarchive最后的completed后source-change/next子进程110秒超时、0跳过，exit1/961.592秒；输入字节未变，158原生12组与159生成校验exit0。超时不能当行为RED或通过，原owner正实测重复输入库存热点并修复受保护工具身份；证据已保全于.local/comet-reset/p2_4-pre-review-84。P1_2 Git闭包f22215c经Root核51证据文件、三签名索引对应24包/20,133,064字节/78组依赖，0基包升级；仅允许精确公开字节下载及固定base离线fixture构建，镜像读回/nativeTeamAI分发尚未完成，不代表Runner资格。当前6节点/0业务场景、129required/103场景及F10另期未验不变，整体ETA未知。
