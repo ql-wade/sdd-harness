@@ -23,8 +23,9 @@ const required = [
   { id: 'comet-cli-version', expectVersion: '0.4.5', expectExit: 0 },
   { id: 'comet-cli-minimal-call', expectVersion: null, expectExit: 0 },
   { id: 'openspec-local-version', expectVersion: baseline.openspec?.current ?? null, expectExit: 0 },
-  // The replayed 1.3.1 rejection IS the expected outcome, so its claim exits 3 by design.
-  { id: 'openspec-local-dependency-edges', expectVersion: null, expectExit: 3 },
+  // Current-host evidence is distinct from the fixed legacy 1.3.1 replay.
+  { id: 'openspec-local-dependency-edges', expectVersion: null, expectExit: 0 },
+  { id: 'openspec-legacy-dependency-edges', expectVersion: null, expectExit: 3 },
   { id: 'openspec-candidate-version', expectVersion: baseline.openspec?.isolated_candidate ?? null, expectExit: 0 },
   { id: 'teamai-cli-version', expectVersion: baseline.teamai?.version ?? null, expectExit: 0 },
 ];
@@ -51,13 +52,15 @@ for (const requiredClaim of required) {
   }
 }
 
-// Compatibility matrix: the local OpenSpec must have its old dependency-edge
-// gap replayed against the exact published Comet artifact, not just asserted.
+// Preserve the legacy rejection as history; never assign it to the current host.
 const matrix = baseline.openspec?.compatibility_matrix;
 check('compatibility_matrix recorded', Array.isArray(matrix) && matrix.length >= 2);
 if (Array.isArray(matrix)) {
   const localRow = matrix.find((row) => row.version === baseline.openspec?.current);
   check('matrix local row replayed', localRow?.dependency_edges?.replayed === true, JSON.stringify(localRow?.dependency_edges ?? null));
+  check('matrix current host is accepted', localRow?.dependency_edges?.result === 'ACCEPTED');
+  const legacyRow = matrix.find((row) => row.version === '1.3.1');
+  check('matrix legacy replay stays rejected', legacyRow?.dependency_edges?.result === 'REJECTED' && legacyRow?.dependency_edges?.exposed === false);
   const candidateRow = matrix.find((row) => row.version === baseline.openspec?.isolated_candidate);
   check('matrix candidate row runtime verified', candidateRow?.dependency_edges?.runtime_verified === true, JSON.stringify(candidateRow?.dependency_edges ?? null));
 }

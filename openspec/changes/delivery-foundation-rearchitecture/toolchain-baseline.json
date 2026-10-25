@@ -1,9 +1,9 @@
 {
   "schema_version": 2,
   "status": "QUALIFIED",
-  "qualified_at": "2026-10-22T11:38:00+08:00",
-  "qualified_by": "P1_1 rework worker, run rework-seven-p1-r1, worktree rw-p1-1, branch rework/p1-1-toolchain @ master@ebe5fff",
-  "qualification_scope": "Rework re-verification from current source (old PASS not inherited): fresh artifact downloads with live registry integrity comparison, isolated CLI version/status/minimal-call probes, fresh pristine-source preparation and real 6-patch distribution build at the current lock fingerprint with generated checks and runtime smoke re-executed in this worktree, plus llmwiki project-local landing (amendment 3). Journey-level F01/F03 execution (tools/verify/delivery-journey.mjs) is a later task and remains open.",
+  "qualified_at": "2026-10-25T00:40:43.074502+00:00",
+  "qualified_by": "P1_1 convergence worker",
+  "qualification_scope": "Current artifact/source/preparation/build/CLI compatibility qualification only. Journey-level F01/F03, fresh role harness discovery and product profile execution remain UNVERIFIED. Existing historical accepted statuses do not close the new convergence profile.",
   "comet": {
     "version": "0.4.5",
     "gitHead": "c90af44a4474662d7853aae76ce785404974fb0a",
@@ -14,19 +14,20 @@
       "version": "0.4.5",
       "integrity": "sha512-zUs13Rq6Lk1mDgKGk/K3kbdiRLqv1j0DSw9oswwljIrVPiJ+NvfTYlKp2eLpIaIAzMA34RDx6KpenFC39qbR3A==",
       "shasum": "b427034c7eda2b8496fd1e2b1f38fc966936d52f",
-      "registry_tarball": "https://registry.npmmirror.com/@rpamis/comet/-/comet-0.4.5.tgz",
+      "registry_tarball": "https://registry.npmjs.org/@rpamis/comet/-/comet-0.4.5.tgz",
       "tarball_bytes": 8737385,
       "tarball_sha256": "d1713b5d80c1fffdb04586f53dfe227a418dd1b44a0c87b4f8c3b09ef06b84bb",
       "tarball_sha256_verified": true,
       "registry_integrity_matches": true,
-      "verified_at": "2026-10-22T11:38:00+08:00",
-      "local_copy": ".sdd/cache/artifacts/comet-0.4.5.tgz"
+      "verified_at": "2026-10-25T00:39:17.275770+00:00",
+      "local_copy": ".sdd/cache/artifacts/comet-0.4.5.tgz",
+      "gitHead": "c90af44a4474662d7853aae76ce785404974fb0a"
     },
     "source_url": "https://codeload.github.com/rpamis/comet/tar.gz/c90af44a4474662d7853aae76ce785404974fb0a",
     "source_archive_sha256": "28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f",
     "source_archive_bytes": 40474019,
     "source_archive_reverified": true,
-    "source_archive_local_copy": ".sdd/cache/artifacts/comet-source-c90af44a4474662d7853aae76ce785404974fb0a.tar.gz (gitignored local cache; re-downloaded from codeload this run, digest == integrations/comet/upstream.lock.json)",
+    "source_archive_local_copy": ".sdd/cache/runner-build/comet-source.tar.gz (copied read-only main cache into this isolated worktree; archive hash/bytes freshly verified; no current codeload download claimed)",
     "source_package_sha256": "34885620dcf7ff0536638f8fa80dcfa07b1603183d5b303d1bcdaf1a093ce7f0",
     "source_lock_sha256": "9f7f32604f9370b8aa1fa94499a7567e2235b22b4dbe9a3f4107e3ddffd81cc3",
     "required_node": "^22.16.0 || >=24.0.0",
@@ -53,14 +54,15 @@
     },
     "worktree_build": {
       "status": "PASS",
-      "date": "2026-10-22T11:31+08:00",
+      "date": "2026-10-25T00:40:43.074502+00:00",
       "node": "24.15.0",
-      "pnpm": "10.18.3 (corepack, confirmed by build log \"Done in 1m 29.3s using pnpm v10.18.3\")",
-      "fingerprint": "beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966",
+      "pnpm": "10.18.3",
+      "fingerprint": "d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6",
       "reused": false,
       "patches": 6,
-      "note": "real rebuild from the pinned archive + 6 SHA256-locked patches in a fresh worktree; no build cache inherited (this environment held only the 0-patch-era 72e5ce0e build, see RED evidence)",
-      "log": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-c-comet-build.log"
+      "entrypoint": ".sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6/work/bin/comet.js",
+      "log": "worker-reports/P1_1-convergence/evidence/03-fresh-patched-build.txt",
+      "scope": "fresh six-patch distribution; not product profile qualification"
     },
     "generated_check": {
       "status": "PASS",
@@ -69,15 +71,21 @@
         "native",
         "entry"
       ],
-      "reverified_by": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-c-comet-build.log (V_COMET_NATIVE steps check-generated:classic/native/entry)"
+      "evidence": "worker-reports/P1_1-convergence/evidence/10-native-verification.json",
+      "scope": "actual full generated checks, no product profile acceptance"
     },
     "runtime_smoke": {
       "status": "PASS_WITH_SKIPS",
       "files_passed": 4,
-      "tests_passed": 253,
+      "tests_passed": 255,
       "tests_skipped": 2,
-      "reverified_scope": "unmodified upstream smoke scope re-executed in this worktree against the fresh beab355d build; not managed delivery qualification",
-      "log": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-c-comet-build.log"
+      "evidence": "worker-reports/P1_1-convergence/evidence/10-native-verification.txt",
+      "scope": "unmodified upstream smoke,2 native skips retained; does not prove managed profile or F03 fresh host discovery"
+    },
+    "observed": {
+      "command_version": "0.4.5",
+      "evidence": "worker-reports/P1_1-convergence/evidence/12-comet-version.txt",
+      "scope": "actual pinned CLI version only"
     }
   },
   "teamai": {
@@ -90,20 +98,19 @@
       "version": "0.22.0",
       "integrity": "sha512-HMWxm9QsfPLMHGmiJ481PCkIAiPha0Rk2wGK5FfLRnVtwKpRb7sgJMLZkEW6AH8ETHgiTXunkrzbUb0OmlZ4xQ==",
       "shasum": "7f73f02a8dc518bb03576f81053ca00aea7aaf31",
-      "registry_tarball": "https://registry.npmmirror.com/teamai-cli/-/teamai-cli-0.22.0.tgz",
+      "registry_tarball": "https://registry.npmjs.org/teamai-cli/-/teamai-cli-0.22.0.tgz",
       "tarball_bytes": 414510,
       "tarball_sha256": "e8e057802e6bb837a891a8c3b25c92496ca82e15f24bfcc78d22512e09642d13",
       "tarball_sha256_verified": true,
       "registry_integrity_matches": true,
-      "verified_at": "2026-10-22T11:38:00+08:00",
-      "local_copy": ".sdd/cache/artifacts/teamai-cli-0.22.0.tgz"
+      "verified_at": "2026-10-25T00:39:17.275770+00:00",
+      "local_copy": ".sdd/cache/artifacts/teamai-0.22.0.tgz",
+      "gitHead": "81574f65418d8588c2605a1f9edeb492b14884e6"
     },
     "observed": {
       "command_version": "0.22.0",
-      "version_exit": 0,
-      "install_scope": "isolated prefix .sdd/tools/teamai-0.22.0 (no global mutation)",
-      "minimal_call": "teamai status on an uninitialized directory rejects exit 1 with \"teamai is not initialized. Run `teamai init` first.\" — real CLI execution, init-gated by design",
-      "evidence": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-teamai-cli.log"
+      "evidence": "worker-reports/P1_1-convergence/evidence/07-teamai-version.txt",
+      "scope": "actual pinned CLI version only"
     },
     "historical_basis": ".local/delivery-foundation-baseline/teamai-022-{registry,install,version,help}.log (integrity/shasum match this re-verification)"
   },
@@ -116,20 +123,20 @@
       "exit_code": 0,
       "install_scope": "host-global install (homebrew prefix, outside this repo); not upgraded by this task — the 1.3.1 -> 1.14.3 drift happened in the host environment, recorded as observed fact",
       "drift_note": "toolchain-baseline recorded 1.3.1 at the 2026-10-20 qualification; observed 1.14.3 in this rework run",
-      "evidence": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-openspec-local.log"
+      "evidence": "worker-reports/P1_1-convergence/evidence/09-openspec-host-version.txt"
     },
     "isolated_candidate": "1.11.0",
     "candidate_basis": "exact upstream test/helpers/openspec-upstream.mjs",
     "candidate_runtime_verified": true,
-    "candidate_runtime_scope": "upstream classic-openspec-upstream.test.ts 1/1 PASS re-executed this run in the freshly built beab355d work tree against the isolated 1.11.0 install (COMET_TEST_OPENSPEC_PACKAGE); not full target workflow",
-    "candidate_log": ".local/delivery-foundation-baseline/comet-openspec-111.log",
-    "candidate_evidence": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-openspec-candidate.log",
+    "candidate_runtime_scope": "Current convergence run: isolated OpenSpec1.11.0 actual init/new/status response accepted by requiredArtifactClosure from exact published Comet0.4.5 npm artifact. This run did not rerun classic-openspec-upstream.test.ts; prior beab355d 1/1 result is historical only.",
+    "candidate_log": "worker-reports/P1_1-convergence/evidence/08-openspec-candidate-status.txt",
+    "candidate_evidence": "worker-reports/P1_1-convergence/evidence/11-candidate-111.txt",
     "npm_artifact": {
       "name": "@fission-ai/openspec",
       "version": "1.11.0",
       "integrity": "sha512-P9h8H4Snit8I7tHmCopjg3QDwBllIlObxb+/DebvBwhWTj6YEPPYRYkC4n5GqG4PdQnKMA6E1AlEOI9FT4G7FA==",
       "shasum": "0637db769ac89a2120f98f5ce23f05f29e50c193",
-      "registry_tarball": "https://registry.npmmirror.com/@fission-ai/openspec/-/openspec-1.11.0.tgz",
+      "registry_tarball": "https://registry.npmjs.org/@fission-ai/openspec/-/openspec-1.11.0.tgz",
       "engines": {
         "node": ">=20.19.0"
       },
@@ -137,8 +144,9 @@
       "tarball_sha256": "84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f",
       "tarball_sha256_verified": true,
       "registry_integrity_matches": true,
-      "verified_at": "2026-10-22T11:38:00+08:00",
-      "local_copy": ".sdd/cache/artifacts/openspec-1.11.0.tgz"
+      "verified_at": "2026-10-25T00:39:17.275770+00:00",
+      "local_copy": ".sdd/cache/artifacts/openspec-1.11.0.tgz",
+      "gitHead": null
     },
     "compatibility_matrix": [
       {
@@ -153,7 +161,10 @@
           "replay_module": "dist/domains/comet-classic/classic-artifact-requirements.js requiredArtifactClosure from the published @rpamis/comet@0.4.5 tarball",
           "replay_evidence": "openspec/changes/delivery-foundation-rearchitecture/package-probes/1_1.b-green-openspec-compat-replay.log (historical run)",
           "rework_reproduction": "NOT_REPRODUCIBLE this run: host-global binary replaced by 1.14.3 between runs; matrix row retained as recorded history"
-        }
+        },
+        "evidence": "worker-reports/P1_1-convergence/evidence/11-legacy-131.txt",
+        "scope": "historical real status capture replayed against exact published Comet artifact",
+        "observed_at": "2026-10-25T00:40:43.074502+00:00"
       },
       {
         "version": "1.14.3",
@@ -165,7 +176,10 @@
           "replay_output": "{\"accepted\":true,\"artifacts\":4}",
           "replay_input": "real `openspec status --change delivery-foundation-rearchitecture --json` (exit 0, 3403 bytes) captured this run",
           "evidence": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-openspec-local.log"
-        }
+        },
+        "evidence": "worker-reports/P1_1-convergence/evidence/11-host-114.txt",
+        "scope": "fresh actual CLI status response replayed against exact published Comet artifact",
+        "observed_at": "2026-10-25T00:40:43.074502+00:00"
       },
       {
         "version": "1.11.0",
@@ -175,18 +189,27 @@
           "runtime_verified": true,
           "result": "ACCEPTED"
         },
-        "evidence": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-openspec-candidate.log",
-        "scope": "upstream compatibility predicate only; adopt via isolated install per extension_delivery, never a global upgrade"
+        "evidence": "worker-reports/P1_1-convergence/evidence/11-candidate-111.txt",
+        "scope": "fresh actual CLI status response replayed against exact published Comet artifact",
+        "observed_at": "2026-10-25T00:40:43.074502+00:00"
       }
     ],
-    "upgrade_policy": "isolated installs only (.sdd/tools/openspec-1.11.0); host-global CLI version is environment-owned — observed 1.14.3 this run, no global upgrade performed or reverted by this task"
+    "upgrade_policy": "No global upgrade or downgrade. Current host1.14.3, pinned isolated candidate1.11.0 and historical1.3.1 response are distinct evidence sources.",
+    "historical_candidate_test": {
+      "scope": "historical only, not rerun in current convergence slice",
+      "build_fingerprint_prefix": "beab355d",
+      "test": "classic-openspec-upstream.test.ts",
+      "passed": 1,
+      "observed_at": "2026-10-22T11:38:00+08:00"
+    }
   },
   "toolchain": {
     "node": {
-      "host_observed": "22.13.1",
+      "host_observed": "25.2.1",
       "pinned_for_comet_build": "24.15.0",
-      "pinned_source": "local nvm install ~/.nvm/versions/node/v24.15.0",
-      "enforcement": "tools/comet/build.mjs exits TOOLCHAIN_MISMATCH unless process.versions.node equals the pinned value"
+      "pinned_source": "runtime-resolved local executable, exact version verified; no distributed machine path",
+      "enforcement": "tools/comet/build.mjs exits TOOLCHAIN_MISMATCH unless process.versions.node equals the pinned value",
+      "observed_at": "2026-10-25T00:40:43.074502+00:00"
     },
     "pnpm": {
       "observed": "10.18.3",
@@ -204,9 +227,19 @@
     "arch": "arm64",
     "os_version": "15.6.1",
     "kernel": "Darwin 24.6.0",
-    "digest": "9fd97c024a2368a7fbd62ac244051a2b3f07ceb0dadc24db0b4482b939c0d6cf",
-    "digest_basis": "platform=darwin;arch=arm64;os_version=15.6.1;kernel=Darwin 24.6.0;host_node=22.13.1;build_node=24.15.0;python=3.14.7",
-    "observed_at": "2026-10-22T11:38:00+08:00"
+    "digest": "95ebb1c650ec20408deaf5a9cfd4737f212405fa79b4ac06de7c9d64ebb5f8d2",
+    "digest_basis": "platform=Darwin;arch=arm64;os_version=15.6.1;host_node=25.2.1;build_node=24.15.0",
+    "observed_at": "2026-10-25T00:40:43.074502+00:00",
+    "historical_observations": [
+      {
+        "scope": "pre-convergence historical host observation",
+        "observed_at": "2026-10-22T11:38:00+08:00",
+        "digest": "9fd97c024a2368a7fbd62ac244051a2b3f07ceb0dadc24db0b4482b939c0d6cf",
+        "digest_basis": "platform=darwin;arch=arm64;os_version=15.6.1;kernel=Darwin 24.6.0;host_node=22.13.1;build_node=24.15.0;python=3.14.7",
+        "host_node": "22.13.1"
+      }
+    ],
+    "observation_scope": "Current convergence execution; host Node25.2.1 and digest recorded at qualified_at. Historical2026-10-22 observation kept separately."
   },
   "skills_inventory": [
     {
@@ -226,7 +259,7 @@
     "patches_dir": "integrations/comet/patches",
     "workspace": ".sdd/vendor/comet/<commit>",
     "builds_dir": ".sdd/vendor/comet/<commit>/builds/<fingerprint>",
-    "built_entrypoint": ".sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966/work/bin/comet.js",
+    "built_entrypoint": ".sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6/work/bin/comet.js",
     "distribution": "source distribution: pinned archive + SHA256-locked patches rebuilt reproducibly on each receiving host via tools/comet/build.mjs; fingerprint pins archive+patches+toolchain; work tree is manifest-verified (distribution.json) on every reuse",
     "contract_check": "node tools/comet/build.mjs --check-generated --runtime-smoke --json (V_COMET_NATIVE; prerequisite-missing exits 1, assertion failure exits 2)",
     "safety_tests": [
@@ -239,60 +272,75 @@
       ".agents skill bodies (skills must not carry Runtime patches)",
       "host-global npm prefixes (isolated installs under .sdd/tools only)"
     ],
-    "built_entrypoint_note": "rebuilt this rework run in worktree rw-p1-1; fingerprint beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966 == lock-derived fingerprint of the 6-patch upstream.lock.json",
+    "built_entrypoint_note": "Current convergence run: fresh six-patch d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6 distribution, reused=false, matching current lock-derived fingerprint; former beab355d qualification is historical only.",
     "prepare_tool_note": "prepareCometSource implementation lives in tools/comet/source.js",
     "build_tool_note": "buildCometDistribution + verifyCometDistribution; exact toolchain precondition",
     "patches_dir_note": "6 patches pinned in upstream.lock.json (0001-matt-method-profile, tests/1_6, 0002-managed-delivery-runtime, tests/2_4, 0003-post-archive-closeout, tests/4_6); digests re-verified this run; applied in lock order by build.mjs (PATCH_INTEGRITY_MISMATCH gate); patch files owned by P1_6/P2_4/P4_6"
   },
-  "build_runtime_candidate": "Node 24.15.0 executed the upstream build, generated checks and the 4-file runtime smoke (253 pass / 2 skip) in this worktree against the fresh beab355d build; the full upstream vitest suite remains outside P1_1 scope",
+  "build_runtime_candidate": "Current convergence run: Node24.15.0/pnpm10.18.3 fresh d4370930 build; all three generated-runtime checks PASS; four-file native smoke255passed/2skipped. Previous beab355d/253pass observation is historical, not this worktree result. Full upstream suite not executed.",
   "runtime_claims": [
     {
       "id": "comet-cli-version",
-      "command": "node .sdd/vendor/comet/<commit>/builds/beab355def4fc2b4873889b7c0fb8702b9d093f241f442515f82cd08d639e966/work/bin/comet.js --version",
-      "observed": "0.4.5 (fresh beab355d build this run)",
+      "command": "node <built-entrypoint> --version",
+      "observed": "0.4.5",
       "exit_code": 0,
-      "executed_at": "2026-10-22T11:38:00+08:00",
-      "evidence": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-comet-cli.log"
+      "executed_at": "2026-10-25T00:40:43.074502+00:00",
+      "evidence": "worker-reports/P1_1-convergence/evidence/12-comet-version.txt",
+      "evidence_kind": "current-runtime"
     },
     {
       "id": "comet-cli-minimal-call",
-      "command": "node <entrypoint> status <scratch> --json ; node <entrypoint> state current",
-      "observed": "status --json exit 0 with real unmanaged-project JSON (comet.status.v2); state current answers exit 1 \"Use: comet state select <change-name>\" (uninitialized project)",
+      "command": "node <built-entrypoint> classic --help",
+      "observed": "Classic public command help, exit0",
       "exit_code": 0,
-      "executed_at": "2026-10-22T11:38:00+08:00",
-      "evidence": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-comet-cli.log"
+      "executed_at": "2026-10-25T00:40:43.074502+00:00",
+      "evidence": "worker-reports/P1_1-convergence/evidence/12-comet-minimal-call.txt",
+      "evidence_kind": "current-runtime"
     },
     {
       "id": "openspec-local-version",
-      "command": "openspec --version ; openspec status --change delivery-foundation-rearchitecture --json",
-      "observed": "1.14.3 (host drift from recorded 1.3.1) ; status JSON exit 0 with requires edges exposed",
+      "command": "openspec --version",
+      "observed": "1.14.3",
       "exit_code": 0,
-      "executed_at": "2026-10-22T11:38:00+08:00",
-      "evidence": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-openspec-local.log"
+      "executed_at": "2026-10-25T00:40:43.074502+00:00",
+      "evidence": "worker-reports/P1_1-convergence/evidence/09-openspec-host-version.txt",
+      "evidence_kind": "current-runtime"
     },
     {
       "id": "openspec-local-dependency-edges",
-      "command": "node --experimental-vm-modules <replay harness> <published classic-artifact-requirements.js> <real 1.14.3 status JSON>",
-      "observed": "accepted:true artifacts:4 — the historical 1.3.1 gap (accepted:false REJECTED) no longer reproduces on this host; both rows recorded in compatibility_matrix",
+      "command": "current host status -> exact published Comet closure",
+      "observed": "1.14.3 current host dependency edges accepted",
       "exit_code": 0,
-      "executed_at": "2026-10-22T11:38:00+08:00",
-      "evidence": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-openspec-local.log"
+      "executed_at": "2026-10-25T00:40:43.074502+00:00",
+      "evidence": "worker-reports/P1_1-convergence/evidence/11-host-114.txt",
+      "evidence_kind": "current-runtime"
     },
     {
       "id": "openspec-candidate-version",
-      "command": "node .sdd/tools/openspec-1.11.0/node_modules/.bin/openspec --version ; upstream classic-openspec-upstream.test.ts in the fresh beab355d work tree",
-      "observed": "1.11.0 (upstream test re-run 1/1 PASS, exit 0)",
+      "command": "node .sdd/tools/openspec-1.11.0/node_modules/.bin/openspec --version/status",
+      "observed": "1.11.0 isolated status dependency edges accepted",
       "exit_code": 0,
-      "executed_at": "2026-10-22T11:38:00+08:00",
-      "evidence": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-openspec-candidate.log"
+      "executed_at": "2026-10-25T00:40:43.074502+00:00",
+      "evidence": "worker-reports/P1_1-convergence/evidence/08-openspec-candidate-version.txt",
+      "evidence_kind": "current-runtime"
     },
     {
       "id": "teamai-cli-version",
-      "command": "node .sdd/tools/teamai-0.22.0/node_modules/.bin/teamai --version ; teamai status (uninitialized scratch)",
-      "observed": "0.22.0 (exit 0); status rejects uninitialized workspace by design (exit 1)",
+      "command": "node .sdd/tools/teamai-0.22.0/node_modules/.bin/teamai --version",
+      "observed": "0.22.0 distribution-only CLI; no workflow dispatched",
       "exit_code": 0,
-      "executed_at": "2026-10-22T11:38:00+08:00",
-      "evidence": "openspec/changes/delivery-foundation-rearchitecture/package-probes/rework-r1-b-teamai-cli.log"
+      "executed_at": "2026-10-25T00:40:43.074502+00:00",
+      "evidence": "worker-reports/P1_1-convergence/evidence/07-teamai-version.txt",
+      "evidence_kind": "current-runtime"
+    },
+    {
+      "id": "openspec-legacy-dependency-edges",
+      "command": "published Comet closure replay with committed historical OpenSpec1.3.1 status capture",
+      "observed": "1.3.1 historical response: dependency edges absent; REJECTED by exact npm0.4.5 closure",
+      "exit_code": 3,
+      "executed_at": "2026-10-25T00:40:43.074502+00:00",
+      "evidence": "worker-reports/P1_1-convergence/evidence/11-legacy-131.txt",
+      "evidence_kind": "historical-response-replay"
     }
   ],
   "llmwiki_project_local": {
@@ -300,7 +348,7 @@
     "sdd_home": "<project>/.sdd (project-local; overrides external ~/.sdd default)",
     "clone": {
       "location": ".sdd/repos/llmwiki",
-      "source": "real network git clone of https://github.com/lucasastorian/llmwiki (this run; git global http.proxy unreachable in sandbox, overridden per-invocation)",
+      "source": "real network git clone of https://github.com/lucasastorian/llmwiki (historical2026-10-22 run; git global http.proxy unreachable in sandbox, overridden per-invocation)",
       "upstream_head": "f102a812f3e2bd35a02dbae03b9f88ba33f658db",
       "pinned_commit": "075c5b4996ff4e07f9d3c57c1f14fd2b54a955db",
       "pinned_checkout": "git checkout (detached) -> HEAD == pin, status clean",
@@ -337,6 +385,13 @@
       "launcher": "tools/mcp/llmwiki.sh with SDD_HOME=<repo>/.sdd -> wiki workspace <repo>/.sdd/wiki/sdd-harness",
       "parity": "launcher == CLI; project-local root in effect; external ~/.sdd/wiki/sdd-harness cross-project collision eliminated",
       "contrast_red": "SDD_HOME unset resolves <home>/.sdd/wiki/sdd-harness (external) — see worker-reports/P1_1-rework/evidence/02-red-llmwiki-project-local-missing.txt"
-    }
+    },
+    "convergence_status": "HISTORICAL_NOT_REVERIFIED_IN_P1_1; actual current knowledge profile is later-task acceptance",
+    "source_scope": "Historical2026-10-22 observations only; not rerun or accepted by this convergence slice"
+  },
+  "product_profile": {
+    "status": "UNVERIFIED",
+    "accepted_scenarios": 0,
+    "reason": "Toolchain qualification does not execute the required new managed role/knowledge/platform journey."
   }
 }
