@@ -1,0 +1,2629 @@
+{
+  "interface": "I03.TypedCaseBindingAdvice.v1",
+  "adviceOnly": true,
+  "canonicalModified": false,
+  "newCaseIds": false,
+  "sourceCasePlanSha256": "56e3967c0cfd1212831d1fe24d1e55e2ad7e2cc71c52e318948309f756eb18a2",
+  "sourceContractSha256": "dff53cec6b7a2ebc048d76e380e46cd1839ac6a667cfdfa759be3ea87b5fc5a8",
+  "sourceSpecSha256": "a419362140a056d7d59a8392b6a9cb0d84df52e170e74a7cac511aee24e477a9",
+  "currentScope": "129 checks/103 cases; 130/104 history preserved; F10 remains deferred",
+  "nativeBinding": {
+    "url": "http://127.0.0.1:3000",
+    "version": "1.11.0",
+    "imageId": "sha256:777f35ad2ee7e86fca52a0a24fb5a37661d5440e2665d6ea42e8f4b2acc126ce",
+    "imageReference": "outlinewiki/outline@sha256:08ee9ffdb847e1bd35ded30ee832090dd06a7f93f67422687db59e70bc7f5393",
+    "teamIdHistorical": "cb59131d-2d7c-421e-a818-44f84236b56d",
+    "managedCollectionIdHistorical": "a3c6b4d8-1f1e-473d-9f49-ea5c48b7a818",
+    "isolationCollectionId": null,
+    "historicalIdentitySha256": "c5c538218fe6d48ba2cc066b82247a36e8a72fd362c11518490e9095e3e60c99",
+    "historyIsNotCurrentGrant": true,
+    "nativeSchemaSha256": "e9331931a598468217e918234a2f6c98c6098de3fef3b7fa7ad8233662f9f171",
+    "documentPresenterSha256": "f1fbf1fe8ef12ef2b166732307580ed494a587e24b4371c8a4b5420d9e133d86",
+    "attachmentPresenterSha256": "29f19682e673cc32b1e2eb59145c8d5330b03faaa37b09d3d46eed416b1b7f80"
+  },
+  "cases": {
+    "U01": {
+      "canonicalCaseId": "U01",
+      "canonicalSourceBinding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U01"
+        }
+      ],
+      "canonicalOracle": "- **GIVEN** 作者自写批准记录，或者凭证的 issuer/approver 无对应源/目标权力、已过期或被撤销\n- **WHEN** 请求知识自动发布\n- **THEN** Comet 拒绝授权，不因有签名、PR 合并或 approved 字段就放行；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "oracleSha256": "3cdbb34539e090fc3e8f7cda2ac272e6b8e7cda2b6f8db0f9476af4b09b56071",
+      "canonicalIntendedCommand": "node tools/verify/delivery-journey.mjs --scenario U01 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/U01 --json",
+      "commandQualification": "NOT_EXERCISED_BY_I03; real executor/identities/grants must be qualified by controller before canonical run",
+      "caseModule": "test/delivery-cases/4_7.mjs",
+      "caseModuleSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94",
+      "requiredAssertionDenominator": 3,
+      "assertions": [
+        {
+          "key": "issuer-authority",
+          "oracle": "decision.verdict=deny and reasons[].code contains SELF_AUTHORED_APPROVAL / ISSUER_UNREGISTERED / ISSUER_AUTHORITY_INVALID / GRANT_EXPIRED / GRANT_REVOKED as exercised",
+          "requiredProofLayer": "live-Comet+protected-issuer-chain",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "no-target-write",
+          "oracle": "native documents.create/update call count=0 after the denied operation; independent target document count/revision unchanged",
+          "requiredProofLayer": "live-wire+storage",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "real-attempt",
+          "oracle": "same Run/action/attempt/epoch and trusted launcher principal; gate execution count>0, no author-written approval accepted",
+          "requiredProofLayer": "trusted-runtime",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        }
+      ],
+      "nativeOperations": [
+        {
+          "method": "POST",
+          "path": "/api/auth.info",
+          "source": "build/server/routes/api/auth/auth.js",
+          "sourceSha256": "b96f72bb66c1a3e9785ba48169744caf83fb11da3c74600bedab00ecd8f7dc8a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.info",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.group_memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.info",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.group_memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/groups.memberships",
+          "source": "build/server/routes/api/groups/groups.js",
+          "sourceSha256": "5713646ea4375b5f4505faa158022e2c20857bd0d93ffa8c317de4ec27e3da54",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.list",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.info",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.search",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/attachments.list",
+          "source": "build/server/routes/api/attachments/attachments.js",
+          "sourceSha256": "197cb4b87c453c7eeb6481ade9fc63327d8e40aaae044f995b1a4d0bba074e62",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        }
+      ],
+      "wireFields": [
+        "request.body.id",
+        "request.body.collectionId",
+        "request.body.lastRevision",
+        "response.status",
+        "response.body.data.id",
+        "response.body.data.revision",
+        "response.body.pagination.offset",
+        "response.body.pagination.limit",
+        "response.body.pagination.total"
+      ],
+      "fieldCaveat": "document API revision is response data.revision; revisionCount is internal DB field. Endpoint-specific shape and optional collectionId need first authorized response binding; do not fabricate absent fields. Signed attachment URL is not produced/registered yet.",
+      "expectedArtifacts": {
+        "status": "EXPECTED_NOT_PRODUCED",
+        "directory": ".whitebox/delivery-foundation/U01",
+        "files": [
+          "frozen-inputs.json",
+          "actor-binding.json",
+          "wire.ndjson",
+          "decision.json",
+          "readback-before.json",
+          "readback-after.json",
+          "channel-matrix.json",
+          "screenshots/",
+          "storage-readback.json",
+          "cleanup.json"
+        ]
+      },
+      "freezeBeforeExecution": {
+        "runId": null,
+        "operationId": null,
+        "documentUuid": null,
+        "initialRevision": null,
+        "payloadDigest": null,
+        "issuerGrantId": null,
+        "readerPrincipalActualId": null,
+        "publisherPrincipalActualId": null,
+        "isolatorPrincipalActualId": null,
+        "sourceConnectorBindings": null,
+        "meaning": "UNVERIFIED slots; exact registered values and independent provenance are mandatory, do not substitute fixture labels or the historical owner key"
+      },
+      "availableComponentSupport": [
+        {
+          "command": "node --test --test-reporter=tap test/infra-outline.test.js",
+          "layer": "OFFLINE_COMPONENT_ONLY",
+          "source": "test/infra-outline.test.js",
+          "sha256": "4d2160a232fb71a8739a42ca8be6ca0bd503e8ccee9318110f531b849b0ee716"
+        },
+        {
+          "command": "node tools/infra/outline.mjs probe --case managed-publish --publish-request <approved-local-declared-fixture> --json",
+          "expectedExit": 2,
+          "layer": "DECLARED_GATE_NOT_REMOTE_EXECUTION",
+          "outputFields": [
+            "status",
+            "blocks[].code",
+            "liveReadback=false"
+          ],
+          "source": "tools/infra/outline.mjs",
+          "sha256": "f081bb388f6397cbbe50485e65140c68a52d32851361a553e2f5c13a47d16868"
+        }
+      ],
+      "currentStatus": "UNVERIFIED",
+      "unlocks": [
+        "registered independent purpose-bound runtime identities and issuer/source/target grants",
+        "authorized native API/capture executor with exact target/payload",
+        "first-party native browser runtime and real OIDC role sessions",
+        "authorized fixture document/attachment lifecycle plus independent DB/object-store readback",
+        "same-Run Comet and monitoring/recovery owners supply trusted execution/terminal evidence"
+      ],
+      "caseModuleShaBaseline": "worktree base 2a45bb4; independent integrated producer qualification remains required",
+      "caseModuleMainObservedSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94"
+    },
+    "U02": {
+      "canonicalCaseId": "U02",
+      "canonicalSourceBinding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U02"
+        }
+      ],
+      "canonicalOracle": "- **GIVEN** 候选由多个不同授权域的实际资料提炼，目标受众落在来源受众并集但不在其允许披露交集\n- **WHEN** 独立内容审查通过后请求发布\n- **THEN** 权限 gate 仍拒绝，审查通过不扩大资料授权，交有权主体处理明确范围；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "oracleSha256": "c4e07e469ee94e5d1fb95eee451af5b69c4426441b081622c352dfa8ca7afd83",
+      "canonicalIntendedCommand": "node tools/verify/delivery-journey.mjs --scenario U02 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/U02 --json",
+      "commandQualification": "NOT_EXERCISED_BY_I03; real executor/identities/grants must be qualified by controller before canonical run",
+      "caseModule": "test/delivery-cases/4_7.mjs",
+      "caseModuleSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94",
+      "requiredAssertionDenominator": 2,
+      "assertions": [
+        {
+          "key": "intersection-not-union",
+          "oracle": "KnowledgePublishDecision/deny reasons has AUDIENCE_OUTSIDE_INTERSECTION for union-only reader; live source readers recomputed per source/version",
+          "requiredProofLayer": "live-source-connectors",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "no-draft-disclosure",
+          "oracle": "no documents.create/update to target outside disclosure intersection, including draft; target effective audience remains unchanged",
+          "requiredProofLayer": "live-wire+native-UI",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        }
+      ],
+      "nativeOperations": [
+        {
+          "method": "POST",
+          "path": "/api/auth.info",
+          "source": "build/server/routes/api/auth/auth.js",
+          "sourceSha256": "b96f72bb66c1a3e9785ba48169744caf83fb11da3c74600bedab00ecd8f7dc8a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.info",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.group_memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.info",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.group_memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/groups.memberships",
+          "source": "build/server/routes/api/groups/groups.js",
+          "sourceSha256": "5713646ea4375b5f4505faa158022e2c20857bd0d93ffa8c317de4ec27e3da54",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.list",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.info",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.search",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/attachments.list",
+          "source": "build/server/routes/api/attachments/attachments.js",
+          "sourceSha256": "197cb4b87c453c7eeb6481ade9fc63327d8e40aaae044f995b1a4d0bba074e62",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        }
+      ],
+      "wireFields": [
+        "request.body.id",
+        "request.body.collectionId",
+        "request.body.lastRevision",
+        "response.status",
+        "response.body.data.id",
+        "response.body.data.revision",
+        "response.body.pagination.offset",
+        "response.body.pagination.limit",
+        "response.body.pagination.total"
+      ],
+      "fieldCaveat": "document API revision is response data.revision; revisionCount is internal DB field. Endpoint-specific shape and optional collectionId need first authorized response binding; do not fabricate absent fields. Signed attachment URL is not produced/registered yet.",
+      "expectedArtifacts": {
+        "status": "EXPECTED_NOT_PRODUCED",
+        "directory": ".whitebox/delivery-foundation/U02",
+        "files": [
+          "frozen-inputs.json",
+          "actor-binding.json",
+          "wire.ndjson",
+          "decision.json",
+          "readback-before.json",
+          "readback-after.json",
+          "channel-matrix.json",
+          "screenshots/",
+          "storage-readback.json",
+          "cleanup.json"
+        ]
+      },
+      "freezeBeforeExecution": {
+        "runId": null,
+        "operationId": null,
+        "documentUuid": null,
+        "initialRevision": null,
+        "payloadDigest": null,
+        "issuerGrantId": null,
+        "readerPrincipalActualId": null,
+        "publisherPrincipalActualId": null,
+        "isolatorPrincipalActualId": null,
+        "sourceConnectorBindings": null,
+        "meaning": "UNVERIFIED slots; exact registered values and independent provenance are mandatory, do not substitute fixture labels or the historical owner key"
+      },
+      "availableComponentSupport": [
+        {
+          "command": "node --test --test-reporter=tap test/infra-outline.test.js",
+          "layer": "OFFLINE_COMPONENT_ONLY",
+          "source": "test/infra-outline.test.js",
+          "sha256": "4d2160a232fb71a8739a42ca8be6ca0bd503e8ccee9318110f531b849b0ee716"
+        },
+        {
+          "command": "node tools/infra/outline.mjs probe --case managed-publish --publish-request <approved-local-declared-fixture> --json",
+          "expectedExit": 2,
+          "layer": "DECLARED_GATE_NOT_REMOTE_EXECUTION",
+          "outputFields": [
+            "status",
+            "blocks[].code",
+            "liveReadback=false"
+          ],
+          "source": "tools/infra/outline.mjs",
+          "sha256": "f081bb388f6397cbbe50485e65140c68a52d32851361a553e2f5c13a47d16868"
+        }
+      ],
+      "currentStatus": "UNVERIFIED",
+      "unlocks": [
+        "registered independent purpose-bound runtime identities and issuer/source/target grants",
+        "authorized native API/capture executor with exact target/payload",
+        "first-party native browser runtime and real OIDC role sessions",
+        "authorized fixture document/attachment lifecycle plus independent DB/object-store readback",
+        "same-Run Comet and monitoring/recovery owners supply trusted execution/terminal evidence"
+      ],
+      "caseModuleShaBaseline": "worktree base 2a45bb4; independent integrated producer qualification remains required",
+      "caseModuleMainObservedSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94"
+    },
+    "U03": {
+      "canonicalCaseId": "U03",
+      "canonicalSourceBinding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U03"
+        }
+      ],
+      "canonicalOracle": "- **GIVEN** 预授权与独立审查曾有效\n- **WHEN** 源权限、grant 或目标受众在实际写入前收缩/改变\n- **THEN** 写前复核阻断旧发布判定，不能靠旧快照继续或用同 operation 自动续期；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "oracleSha256": "278e9af50066848f05755f6017a0e1f26489305b9314e2a4d2d24d7d1dadc221",
+      "canonicalIntendedCommand": "node tools/verify/delivery-journey.mjs --scenario U03 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/U03 --json",
+      "commandQualification": "NOT_EXERCISED_BY_I03; real executor/identities/grants must be qualified by controller before canonical run",
+      "caseModule": "test/delivery-cases/4_7.mjs",
+      "caseModuleSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94",
+      "requiredAssertionDenominator": 2,
+      "assertions": [
+        {
+          "key": "write-time-recheck",
+          "oracle": "recheck.ok=false with GRANT_NO_LONGER_VALID / LEDGER_CHANGED / MODEL_CHANGED / POLICY_CHANGED after real source/target/grant change",
+          "requiredProofLayer": "live-Comet+authority",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "no-renewal",
+          "oracle": "original operation remains pending/blocked; no new grant issuance or document write using old decision; independent readback unchanged",
+          "requiredProofLayer": "live-wire+same-run",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        }
+      ],
+      "nativeOperations": [
+        {
+          "method": "POST",
+          "path": "/api/auth.info",
+          "source": "build/server/routes/api/auth/auth.js",
+          "sourceSha256": "b96f72bb66c1a3e9785ba48169744caf83fb11da3c74600bedab00ecd8f7dc8a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.info",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.group_memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.info",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.group_memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/groups.memberships",
+          "source": "build/server/routes/api/groups/groups.js",
+          "sourceSha256": "5713646ea4375b5f4505faa158022e2c20857bd0d93ffa8c317de4ec27e3da54",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.list",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.info",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.search",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/attachments.list",
+          "source": "build/server/routes/api/attachments/attachments.js",
+          "sourceSha256": "197cb4b87c453c7eeb6481ade9fc63327d8e40aaae044f995b1a4d0bba074e62",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        }
+      ],
+      "wireFields": [
+        "request.body.id",
+        "request.body.collectionId",
+        "request.body.lastRevision",
+        "response.status",
+        "response.body.data.id",
+        "response.body.data.revision",
+        "response.body.pagination.offset",
+        "response.body.pagination.limit",
+        "response.body.pagination.total"
+      ],
+      "fieldCaveat": "document API revision is response data.revision; revisionCount is internal DB field. Endpoint-specific shape and optional collectionId need first authorized response binding; do not fabricate absent fields. Signed attachment URL is not produced/registered yet.",
+      "expectedArtifacts": {
+        "status": "EXPECTED_NOT_PRODUCED",
+        "directory": ".whitebox/delivery-foundation/U03",
+        "files": [
+          "frozen-inputs.json",
+          "actor-binding.json",
+          "wire.ndjson",
+          "decision.json",
+          "readback-before.json",
+          "readback-after.json",
+          "channel-matrix.json",
+          "screenshots/",
+          "storage-readback.json",
+          "cleanup.json"
+        ]
+      },
+      "freezeBeforeExecution": {
+        "runId": null,
+        "operationId": null,
+        "documentUuid": null,
+        "initialRevision": null,
+        "payloadDigest": null,
+        "issuerGrantId": null,
+        "readerPrincipalActualId": null,
+        "publisherPrincipalActualId": null,
+        "isolatorPrincipalActualId": null,
+        "sourceConnectorBindings": null,
+        "meaning": "UNVERIFIED slots; exact registered values and independent provenance are mandatory, do not substitute fixture labels or the historical owner key"
+      },
+      "availableComponentSupport": [
+        {
+          "command": "node --test --test-reporter=tap test/infra-outline.test.js",
+          "layer": "OFFLINE_COMPONENT_ONLY",
+          "source": "test/infra-outline.test.js",
+          "sha256": "4d2160a232fb71a8739a42ca8be6ca0bd503e8ccee9318110f531b849b0ee716"
+        },
+        {
+          "command": "node tools/infra/outline.mjs probe --case managed-publish --publish-request <approved-local-declared-fixture> --json",
+          "expectedExit": 2,
+          "layer": "DECLARED_GATE_NOT_REMOTE_EXECUTION",
+          "outputFields": [
+            "status",
+            "blocks[].code",
+            "liveReadback=false"
+          ],
+          "source": "tools/infra/outline.mjs",
+          "sha256": "f081bb388f6397cbbe50485e65140c68a52d32851361a553e2f5c13a47d16868"
+        }
+      ],
+      "currentStatus": "UNVERIFIED",
+      "unlocks": [
+        "registered independent purpose-bound runtime identities and issuer/source/target grants",
+        "authorized native API/capture executor with exact target/payload",
+        "first-party native browser runtime and real OIDC role sessions",
+        "authorized fixture document/attachment lifecycle plus independent DB/object-store readback",
+        "same-Run Comet and monitoring/recovery owners supply trusted execution/terminal evidence"
+      ],
+      "caseModuleShaBaseline": "worktree base 2a45bb4; independent integrated producer qualification remains required",
+      "caseModuleMainObservedSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94"
+    },
+    "U04": {
+      "canonicalCaseId": "U04",
+      "canonicalSourceBinding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U04"
+        }
+      ],
+      "canonicalOracle": "- **GIVEN** 审查和批准绑定了候选版本\n- **WHEN** 作者修改标题、正文、附件/引用、目标集合或可见性\n- **THEN** 旧审查/发布判定失效，不能凭语义类似或同一文档 ID 沿用旧授权结论；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "oracleSha256": "b0b0eb10e5d697a499f3b803df566da390a62cefecfaa7660822c5d55cae7fb3",
+      "canonicalIntendedCommand": "node tools/verify/delivery-journey.mjs --scenario U04 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/U04 --json",
+      "commandQualification": "NOT_EXERCISED_BY_I03; real executor/identities/grants must be qualified by controller before canonical run",
+      "caseModule": "test/delivery-cases/4_7.mjs",
+      "caseModuleSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94",
+      "requiredAssertionDenominator": 2,
+      "assertions": [
+        {
+          "key": "payload-binding",
+          "oracle": "changed title/body/attachment/reference/collection/visibility changes payloadDigest; recheck rejects PAYLOAD_DRIFTED or invalidated decision binding",
+          "requiredProofLayer": "live-Comet+frozen-payload",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "no-old-review-reuse",
+          "oracle": "review.boundPayloadDigest and decisionId cannot authorize changed payload; no remote write before new independent review",
+          "requiredProofLayer": "trusted-review+live-wire",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        }
+      ],
+      "nativeOperations": [
+        {
+          "method": "POST",
+          "path": "/api/auth.info",
+          "source": "build/server/routes/api/auth/auth.js",
+          "sourceSha256": "b96f72bb66c1a3e9785ba48169744caf83fb11da3c74600bedab00ecd8f7dc8a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.info",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.group_memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.info",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.group_memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/groups.memberships",
+          "source": "build/server/routes/api/groups/groups.js",
+          "sourceSha256": "5713646ea4375b5f4505faa158022e2c20857bd0d93ffa8c317de4ec27e3da54",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.list",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.info",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.search",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/attachments.list",
+          "source": "build/server/routes/api/attachments/attachments.js",
+          "sourceSha256": "197cb4b87c453c7eeb6481ade9fc63327d8e40aaae044f995b1a4d0bba074e62",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        }
+      ],
+      "wireFields": [
+        "request.body.id",
+        "request.body.collectionId",
+        "request.body.lastRevision",
+        "response.status",
+        "response.body.data.id",
+        "response.body.data.revision",
+        "response.body.pagination.offset",
+        "response.body.pagination.limit",
+        "response.body.pagination.total"
+      ],
+      "fieldCaveat": "document API revision is response data.revision; revisionCount is internal DB field. Endpoint-specific shape and optional collectionId need first authorized response binding; do not fabricate absent fields. Signed attachment URL is not produced/registered yet.",
+      "expectedArtifacts": {
+        "status": "EXPECTED_NOT_PRODUCED",
+        "directory": ".whitebox/delivery-foundation/U04",
+        "files": [
+          "frozen-inputs.json",
+          "actor-binding.json",
+          "wire.ndjson",
+          "decision.json",
+          "readback-before.json",
+          "readback-after.json",
+          "channel-matrix.json",
+          "screenshots/",
+          "storage-readback.json",
+          "cleanup.json"
+        ]
+      },
+      "freezeBeforeExecution": {
+        "runId": null,
+        "operationId": null,
+        "documentUuid": null,
+        "initialRevision": null,
+        "payloadDigest": null,
+        "issuerGrantId": null,
+        "readerPrincipalActualId": null,
+        "publisherPrincipalActualId": null,
+        "isolatorPrincipalActualId": null,
+        "sourceConnectorBindings": null,
+        "meaning": "UNVERIFIED slots; exact registered values and independent provenance are mandatory, do not substitute fixture labels or the historical owner key"
+      },
+      "availableComponentSupport": [
+        {
+          "command": "node --test --test-reporter=tap test/infra-outline.test.js",
+          "layer": "OFFLINE_COMPONENT_ONLY",
+          "source": "test/infra-outline.test.js",
+          "sha256": "4d2160a232fb71a8739a42ca8be6ca0bd503e8ccee9318110f531b849b0ee716"
+        },
+        {
+          "command": "node tools/infra/outline.mjs probe --case managed-publish --publish-request <approved-local-declared-fixture> --json",
+          "expectedExit": 2,
+          "layer": "DECLARED_GATE_NOT_REMOTE_EXECUTION",
+          "outputFields": [
+            "status",
+            "blocks[].code",
+            "liveReadback=false"
+          ],
+          "source": "tools/infra/outline.mjs",
+          "sha256": "f081bb388f6397cbbe50485e65140c68a52d32851361a553e2f5c13a47d16868"
+        }
+      ],
+      "currentStatus": "UNVERIFIED",
+      "unlocks": [
+        "registered independent purpose-bound runtime identities and issuer/source/target grants",
+        "authorized native API/capture executor with exact target/payload",
+        "first-party native browser runtime and real OIDC role sessions",
+        "authorized fixture document/attachment lifecycle plus independent DB/object-store readback",
+        "same-Run Comet and monitoring/recovery owners supply trusted execution/terminal evidence"
+      ],
+      "caseModuleShaBaseline": "worktree base 2a45bb4; independent integrated producer qualification remains required",
+      "caseModuleMainObservedSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94"
+    },
+    "U05": {
+      "canonicalCaseId": "U05",
+      "canonicalSourceBinding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U05"
+        }
+      ],
+      "canonicalOracle": "- **GIVEN** 目标集合名字和 ID 符合 allowlist，但继承、单页/子树分享或公开入口使实际读者越界\n- **WHEN** 请求正式发布\n- **THEN** Comet 按有效受众拒绝，不向更大受众先写草稿再审核，也不自动改 ACL 使之通过；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "oracleSha256": "a4ca800087a407af44c9dec1822cc0313261d14c012d2b0da865734afd843c00",
+      "canonicalIntendedCommand": "node tools/verify/delivery-journey.mjs --scenario U05 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/U05 --json",
+      "commandQualification": "NOT_EXERCISED_BY_I03; real executor/identities/grants must be qualified by controller before canonical run",
+      "caseModule": "test/delivery-cases/4_7.mjs",
+      "caseModuleSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94",
+      "requiredAssertionDenominator": 3,
+      "assertions": [
+        {
+          "key": "all-entrypoints",
+          "oracle": "effective audience closure includes collection/parents/page/groups/shares/public, all pagination total/offset/limit/unique IDs complete; union-only external reader causes deny",
+          "requiredProofLayer": "live-ACL",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "no-acl-fixup",
+          "oracle": "publisher makes no collections.update/add/remove-user/group or shares.create/update/revoke calls merely to pass; no draft to expanded audience",
+          "requiredProofLayer": "live-wire",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "ui-access",
+          "oracle": "real unauthenticated/member/offboarded sessions exercise page/subtree/share/search/attachment, record each denial or residual separately",
+          "requiredProofLayer": "native-UI+storage",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        }
+      ],
+      "nativeOperations": [
+        {
+          "method": "POST",
+          "path": "/api/auth.info",
+          "source": "build/server/routes/api/auth/auth.js",
+          "sourceSha256": "b96f72bb66c1a3e9785ba48169744caf83fb11da3c74600bedab00ecd8f7dc8a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.info",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.group_memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.info",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.group_memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/groups.memberships",
+          "source": "build/server/routes/api/groups/groups.js",
+          "sourceSha256": "5713646ea4375b5f4505faa158022e2c20857bd0d93ffa8c317de4ec27e3da54",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.list",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.info",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.search",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/attachments.list",
+          "source": "build/server/routes/api/attachments/attachments.js",
+          "sourceSha256": "197cb4b87c453c7eeb6481ade9fc63327d8e40aaae044f995b1a4d0bba074e62",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        }
+      ],
+      "wireFields": [
+        "request.body.id",
+        "request.body.collectionId",
+        "request.body.lastRevision",
+        "response.status",
+        "response.body.data.id",
+        "response.body.data.revision",
+        "response.body.pagination.offset",
+        "response.body.pagination.limit",
+        "response.body.pagination.total"
+      ],
+      "fieldCaveat": "document API revision is response data.revision; revisionCount is internal DB field. Endpoint-specific shape and optional collectionId need first authorized response binding; do not fabricate absent fields. Signed attachment URL is not produced/registered yet.",
+      "expectedArtifacts": {
+        "status": "EXPECTED_NOT_PRODUCED",
+        "directory": ".whitebox/delivery-foundation/U05",
+        "files": [
+          "frozen-inputs.json",
+          "actor-binding.json",
+          "wire.ndjson",
+          "decision.json",
+          "readback-before.json",
+          "readback-after.json",
+          "channel-matrix.json",
+          "screenshots/",
+          "storage-readback.json",
+          "cleanup.json"
+        ]
+      },
+      "freezeBeforeExecution": {
+        "runId": null,
+        "operationId": null,
+        "documentUuid": null,
+        "initialRevision": null,
+        "payloadDigest": null,
+        "issuerGrantId": null,
+        "readerPrincipalActualId": null,
+        "publisherPrincipalActualId": null,
+        "isolatorPrincipalActualId": null,
+        "sourceConnectorBindings": null,
+        "meaning": "UNVERIFIED slots; exact registered values and independent provenance are mandatory, do not substitute fixture labels or the historical owner key"
+      },
+      "availableComponentSupport": [
+        {
+          "command": "node --test --test-reporter=tap test/infra-outline.test.js",
+          "layer": "OFFLINE_COMPONENT_ONLY",
+          "source": "test/infra-outline.test.js",
+          "sha256": "4d2160a232fb71a8739a42ca8be6ca0bd503e8ccee9318110f531b849b0ee716"
+        },
+        {
+          "command": "node tools/infra/outline.mjs probe --case managed-publish --publish-request <approved-local-declared-fixture> --json",
+          "expectedExit": 2,
+          "layer": "DECLARED_GATE_NOT_REMOTE_EXECUTION",
+          "outputFields": [
+            "status",
+            "blocks[].code",
+            "liveReadback=false"
+          ],
+          "source": "tools/infra/outline.mjs",
+          "sha256": "f081bb388f6397cbbe50485e65140c68a52d32851361a553e2f5c13a47d16868"
+        }
+      ],
+      "currentStatus": "UNVERIFIED",
+      "unlocks": [
+        "registered independent purpose-bound runtime identities and issuer/source/target grants",
+        "authorized native API/capture executor with exact target/payload",
+        "first-party native browser runtime and real OIDC role sessions",
+        "authorized fixture document/attachment lifecycle plus independent DB/object-store readback",
+        "same-Run Comet and monitoring/recovery owners supply trusted execution/terminal evidence"
+      ],
+      "caseModuleShaBaseline": "worktree base 2a45bb4; independent integrated producer qualification remains required",
+      "caseModuleMainObservedSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94"
+    },
+    "U06": {
+      "canonicalCaseId": "U06",
+      "canonicalSourceBinding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U06"
+        }
+      ],
+      "canonicalOracle": "- **GIVEN** 源/目标权限分页不完整、principal 无法映射或权限 API 返回错误\n- **WHEN** 自动发布核验\n- **THEN** 保持 blocked，不能把未知当空集/公开，也不能只凭连接器服务账号能读就放行；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "oracleSha256": "7071afe0bcfe01c47c17cf429e06f672a93a521335dc5516a11d29c7fe829dc5",
+      "canonicalIntendedCommand": "node tools/verify/delivery-journey.mjs --scenario U06 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/U06 --json",
+      "commandQualification": "NOT_EXERCISED_BY_I03; real executor/identities/grants must be qualified by controller before canonical run",
+      "caseModule": "test/delivery-cases/4_7.mjs",
+      "caseModuleSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94",
+      "requiredAssertionDenominator": 3,
+      "assertions": [
+        {
+          "key": "unknown-is-not-empty",
+          "oracle": "partial page, duplicate/missing cursor, unknown principal, 403/timeout/5xx remains blocked/unknown, not empty/public; independent connector result attached",
+          "requiredProofLayer": "live-ACL+source",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "typed-failclosed",
+          "oracle": "I03 local probe blocks incomplete declared pagination/closure; this fixture support alone never closes live scenario",
+          "requiredProofLayer": "component-fixture",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "no-fallback-owner",
+          "oracle": "reader failures do not trigger owner-key borrowing, privilege expansion, new document create or alternate endpoint",
+          "requiredProofLayer": "trusted-runtime+live-wire",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        }
+      ],
+      "nativeOperations": [
+        {
+          "method": "POST",
+          "path": "/api/auth.info",
+          "source": "build/server/routes/api/auth/auth.js",
+          "sourceSha256": "b96f72bb66c1a3e9785ba48169744caf83fb11da3c74600bedab00ecd8f7dc8a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.info",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.group_memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.info",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.group_memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/groups.memberships",
+          "source": "build/server/routes/api/groups/groups.js",
+          "sourceSha256": "5713646ea4375b5f4505faa158022e2c20857bd0d93ffa8c317de4ec27e3da54",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.list",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.info",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.search",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/attachments.list",
+          "source": "build/server/routes/api/attachments/attachments.js",
+          "sourceSha256": "197cb4b87c453c7eeb6481ade9fc63327d8e40aaae044f995b1a4d0bba074e62",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        }
+      ],
+      "wireFields": [
+        "request.body.id",
+        "request.body.collectionId",
+        "request.body.lastRevision",
+        "response.status",
+        "response.body.data.id",
+        "response.body.data.revision",
+        "response.body.pagination.offset",
+        "response.body.pagination.limit",
+        "response.body.pagination.total"
+      ],
+      "fieldCaveat": "document API revision is response data.revision; revisionCount is internal DB field. Endpoint-specific shape and optional collectionId need first authorized response binding; do not fabricate absent fields. Signed attachment URL is not produced/registered yet.",
+      "expectedArtifacts": {
+        "status": "EXPECTED_NOT_PRODUCED",
+        "directory": ".whitebox/delivery-foundation/U06",
+        "files": [
+          "frozen-inputs.json",
+          "actor-binding.json",
+          "wire.ndjson",
+          "decision.json",
+          "readback-before.json",
+          "readback-after.json",
+          "channel-matrix.json",
+          "screenshots/",
+          "storage-readback.json",
+          "cleanup.json"
+        ]
+      },
+      "freezeBeforeExecution": {
+        "runId": null,
+        "operationId": null,
+        "documentUuid": null,
+        "initialRevision": null,
+        "payloadDigest": null,
+        "issuerGrantId": null,
+        "readerPrincipalActualId": null,
+        "publisherPrincipalActualId": null,
+        "isolatorPrincipalActualId": null,
+        "sourceConnectorBindings": null,
+        "meaning": "UNVERIFIED slots; exact registered values and independent provenance are mandatory, do not substitute fixture labels or the historical owner key"
+      },
+      "availableComponentSupport": [
+        {
+          "command": "node --test --test-reporter=tap test/infra-outline.test.js",
+          "layer": "OFFLINE_COMPONENT_ONLY",
+          "source": "test/infra-outline.test.js",
+          "sha256": "4d2160a232fb71a8739a42ca8be6ca0bd503e8ccee9318110f531b849b0ee716"
+        },
+        {
+          "command": "node tools/infra/outline.mjs probe --case managed-publish --publish-request <approved-local-declared-fixture> --json",
+          "expectedExit": 2,
+          "layer": "DECLARED_GATE_NOT_REMOTE_EXECUTION",
+          "outputFields": [
+            "status",
+            "blocks[].code",
+            "liveReadback=false"
+          ],
+          "source": "tools/infra/outline.mjs",
+          "sha256": "f081bb388f6397cbbe50485e65140c68a52d32851361a553e2f5c13a47d16868"
+        }
+      ],
+      "currentStatus": "UNVERIFIED",
+      "unlocks": [
+        "registered independent purpose-bound runtime identities and issuer/source/target grants",
+        "authorized native API/capture executor with exact target/payload",
+        "first-party native browser runtime and real OIDC role sessions",
+        "authorized fixture document/attachment lifecycle plus independent DB/object-store readback",
+        "same-Run Comet and monitoring/recovery owners supply trusted execution/terminal evidence"
+      ],
+      "caseModuleShaBaseline": "worktree base 2a45bb4; independent integrated producer qualification remains required",
+      "caseModuleMainObservedSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94"
+    },
+    "U07": {
+      "canonicalCaseId": "U07",
+      "canonicalSourceBinding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U07"
+        }
+      ],
+      "canonicalOracle": "- **GIVEN** author、reviewer、publisher 与授权签发主体按受管角色隔离\n- **WHEN** 普通 Agent 尝试修改可信策略/批准、获取签发或超范围写凭据、调用任意集合/分享修改\n- **THEN** 被实际受管权限/发布入口拒绝并审计，不能仅以提示词声明禁止作为验收；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "oracleSha256": "fc5b30c3780376ffc505439a65eb8c5ca818a3b23c877f2b3c045674b7ab3629",
+      "canonicalIntendedCommand": "node tools/verify/delivery-journey.mjs --scenario U07 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/U07 --json",
+      "commandQualification": "NOT_EXERCISED_BY_I03; real executor/identities/grants must be qualified by controller before canonical run",
+      "caseModule": "test/delivery-cases/4_7.mjs",
+      "caseModuleSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94",
+      "requiredAssertionDenominator": 2,
+      "assertions": [
+        {
+          "key": "os-tool-boundary",
+          "oracle": "author/reviewer/reader cannot write protected policy/grant/issuer material or access publisher/isolator runtime credential mounts; exact process identity and errno/request denial audited",
+          "requiredProofLayer": "OS-container+trusted-runtime",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "native-target-boundary",
+          "oracle": "ordinary principal calls outside registered collection/share scope are actually denied; no role string/prompt substitute",
+          "requiredProofLayer": "live-API+native-UI",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        }
+      ],
+      "nativeOperations": [
+        {
+          "method": "POST",
+          "path": "/api/auth.info",
+          "source": "build/server/routes/api/auth/auth.js",
+          "sourceSha256": "b96f72bb66c1a3e9785ba48169744caf83fb11da3c74600bedab00ecd8f7dc8a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.info",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.group_memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.info",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.group_memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/groups.memberships",
+          "source": "build/server/routes/api/groups/groups.js",
+          "sourceSha256": "5713646ea4375b5f4505faa158022e2c20857bd0d93ffa8c317de4ec27e3da54",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.list",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.info",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.search",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/attachments.list",
+          "source": "build/server/routes/api/attachments/attachments.js",
+          "sourceSha256": "197cb4b87c453c7eeb6481ade9fc63327d8e40aaae044f995b1a4d0bba074e62",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        }
+      ],
+      "wireFields": [
+        "request.body.id",
+        "request.body.collectionId",
+        "request.body.lastRevision",
+        "response.status",
+        "response.body.data.id",
+        "response.body.data.revision",
+        "response.body.pagination.offset",
+        "response.body.pagination.limit",
+        "response.body.pagination.total"
+      ],
+      "fieldCaveat": "document API revision is response data.revision; revisionCount is internal DB field. Endpoint-specific shape and optional collectionId need first authorized response binding; do not fabricate absent fields. Signed attachment URL is not produced/registered yet.",
+      "expectedArtifacts": {
+        "status": "EXPECTED_NOT_PRODUCED",
+        "directory": ".whitebox/delivery-foundation/U07",
+        "files": [
+          "frozen-inputs.json",
+          "actor-binding.json",
+          "wire.ndjson",
+          "decision.json",
+          "readback-before.json",
+          "readback-after.json",
+          "channel-matrix.json",
+          "screenshots/",
+          "storage-readback.json",
+          "cleanup.json"
+        ]
+      },
+      "freezeBeforeExecution": {
+        "runId": null,
+        "operationId": null,
+        "documentUuid": null,
+        "initialRevision": null,
+        "payloadDigest": null,
+        "issuerGrantId": null,
+        "readerPrincipalActualId": null,
+        "publisherPrincipalActualId": null,
+        "isolatorPrincipalActualId": null,
+        "sourceConnectorBindings": null,
+        "meaning": "UNVERIFIED slots; exact registered values and independent provenance are mandatory, do not substitute fixture labels or the historical owner key"
+      },
+      "availableComponentSupport": [
+        {
+          "command": "node --test --test-reporter=tap test/infra-outline.test.js",
+          "layer": "OFFLINE_COMPONENT_ONLY",
+          "source": "test/infra-outline.test.js",
+          "sha256": "4d2160a232fb71a8739a42ca8be6ca0bd503e8ccee9318110f531b849b0ee716"
+        },
+        {
+          "command": "node tools/infra/outline.mjs probe --case managed-publish --publish-request <approved-local-declared-fixture> --json",
+          "expectedExit": 2,
+          "layer": "DECLARED_GATE_NOT_REMOTE_EXECUTION",
+          "outputFields": [
+            "status",
+            "blocks[].code",
+            "liveReadback=false"
+          ],
+          "source": "tools/infra/outline.mjs",
+          "sha256": "f081bb388f6397cbbe50485e65140c68a52d32851361a553e2f5c13a47d16868"
+        }
+      ],
+      "currentStatus": "UNVERIFIED",
+      "unlocks": [
+        "registered independent purpose-bound runtime identities and issuer/source/target grants",
+        "authorized native API/capture executor with exact target/payload",
+        "first-party native browser runtime and real OIDC role sessions",
+        "authorized fixture document/attachment lifecycle plus independent DB/object-store readback",
+        "same-Run Comet and monitoring/recovery owners supply trusted execution/terminal evidence"
+      ],
+      "caseModuleShaBaseline": "worktree base 2a45bb4; independent integrated producer qualification remains required",
+      "caseModuleMainObservedSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94"
+    },
+    "U08": {
+      "canonicalCaseId": "U08",
+      "canonicalSourceBinding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U08"
+        }
+      ],
+      "canonicalOracle": "- **GIVEN** 合法 owner 的预授权有效，真实输入来源完整，当前源/目标权限和 payload 均匹配，独立审查通过\n- **WHEN** Comet 执行已登记的允许发布操作并完成独立读回\n- **THEN** 自动接纳对应知识回执并继续同一 Run，不重复人工确认，也不把批准扩大到其他对象或未来版本；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "oracleSha256": "0a9f777d585023a0fd733dda804fbded27ea44bf568d92a2ea7be675afb55e38",
+      "canonicalIntendedCommand": "node tools/verify/delivery-journey.mjs --scenario U08 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/U08 --json",
+      "commandQualification": "NOT_EXERCISED_BY_I03; real executor/identities/grants must be qualified by controller before canonical run",
+      "caseModule": "test/delivery-cases/4_7.mjs",
+      "caseModuleSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94",
+      "requiredAssertionDenominator": 3,
+      "assertions": [
+        {
+          "key": "bound-authorized-input",
+          "oracle": "current owner-issued grant, source disclosure intersection, independent review and payload/target digests match; distinct registered publisher identity",
+          "requiredProofLayer": "live-authority+trusted-review",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "remote-result",
+          "oracle": "documents.create body.id=frozen UUID and body.collectionId=fixed managed collection; response.data.id matches, response.data.revision recorded; independent documents.info/DB readback agrees",
+          "requiredProofLayer": "live-API+storage",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "same-run-continuation",
+          "oracle": "Comet accepts actual knowledge receipt and continues same Run/operation once, without duplicate request/extra confirmation or scope extension",
+          "requiredProofLayer": "same-run-controller",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        }
+      ],
+      "nativeOperations": [
+        {
+          "method": "POST",
+          "path": "/api/auth.info",
+          "source": "build/server/routes/api/auth/auth.js",
+          "sourceSha256": "b96f72bb66c1a3e9785ba48169744caf83fb11da3c74600bedab00ecd8f7dc8a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.info",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.group_memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.info",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.group_memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/groups.memberships",
+          "source": "build/server/routes/api/groups/groups.js",
+          "sourceSha256": "5713646ea4375b5f4505faa158022e2c20857bd0d93ffa8c317de4ec27e3da54",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.list",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.info",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.search",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/attachments.list",
+          "source": "build/server/routes/api/attachments/attachments.js",
+          "sourceSha256": "197cb4b87c453c7eeb6481ade9fc63327d8e40aaae044f995b1a4d0bba074e62",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.create",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.update",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        }
+      ],
+      "wireFields": [
+        "request.body.id",
+        "request.body.collectionId",
+        "request.body.lastRevision",
+        "response.status",
+        "response.body.data.id",
+        "response.body.data.revision",
+        "response.body.pagination.offset",
+        "response.body.pagination.limit",
+        "response.body.pagination.total"
+      ],
+      "fieldCaveat": "document API revision is response data.revision; revisionCount is internal DB field. Endpoint-specific shape and optional collectionId need first authorized response binding; do not fabricate absent fields. Signed attachment URL is not produced/registered yet.",
+      "expectedArtifacts": {
+        "status": "EXPECTED_NOT_PRODUCED",
+        "directory": ".whitebox/delivery-foundation/U08",
+        "files": [
+          "frozen-inputs.json",
+          "actor-binding.json",
+          "wire.ndjson",
+          "decision.json",
+          "readback-before.json",
+          "readback-after.json",
+          "channel-matrix.json",
+          "screenshots/",
+          "storage-readback.json",
+          "cleanup.json"
+        ]
+      },
+      "freezeBeforeExecution": {
+        "runId": null,
+        "operationId": null,
+        "documentUuid": null,
+        "initialRevision": null,
+        "payloadDigest": null,
+        "issuerGrantId": null,
+        "readerPrincipalActualId": null,
+        "publisherPrincipalActualId": null,
+        "isolatorPrincipalActualId": null,
+        "sourceConnectorBindings": null,
+        "meaning": "UNVERIFIED slots; exact registered values and independent provenance are mandatory, do not substitute fixture labels or the historical owner key"
+      },
+      "availableComponentSupport": [
+        {
+          "command": "node --test --test-reporter=tap test/infra-outline.test.js",
+          "layer": "OFFLINE_COMPONENT_ONLY",
+          "source": "test/infra-outline.test.js",
+          "sha256": "4d2160a232fb71a8739a42ca8be6ca0bd503e8ccee9318110f531b849b0ee716"
+        },
+        {
+          "command": "node tools/infra/outline.mjs probe --case managed-publish --publish-request <approved-local-declared-fixture> --json",
+          "expectedExit": 2,
+          "layer": "DECLARED_GATE_NOT_REMOTE_EXECUTION",
+          "outputFields": [
+            "status",
+            "blocks[].code",
+            "liveReadback=false"
+          ],
+          "source": "tools/infra/outline.mjs",
+          "sha256": "f081bb388f6397cbbe50485e65140c68a52d32851361a553e2f5c13a47d16868"
+        }
+      ],
+      "currentStatus": "UNVERIFIED",
+      "unlocks": [
+        "registered independent purpose-bound runtime identities and issuer/source/target grants",
+        "authorized native API/capture executor with exact target/payload",
+        "first-party native browser runtime and real OIDC role sessions",
+        "authorized fixture document/attachment lifecycle plus independent DB/object-store readback",
+        "same-Run Comet and monitoring/recovery owners supply trusted execution/terminal evidence"
+      ],
+      "caseModuleShaBaseline": "worktree base 2a45bb4; independent integrated producer qualification remains required",
+      "caseModuleMainObservedSha256": "e66b2c3a4af5fafea4714d2f6cac7c4e2d92bb352a0a0ecbcc166d946c4bfe94"
+    },
+    "H04": {
+      "canonicalCaseId": "H04",
+      "canonicalSourceBinding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Post-archive continuation and idempotent control",
+          "scenario": "H04"
+        }
+      ],
+      "canonicalOracle": "- **GIVEN** 新 Outline 文档创建已成功，但响应或本地接纳回执丢失\n- **WHEN** 恢复原发布 operation\n- **THEN** 按首次请求前固定的目标 UUID 读回并核验，重试不生成新逻辑文档；403/超时不能当作不存在；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "oracleSha256": "69b35ab9e8e4b4d3579df011bc0a70ff70e2685eefd2710f6dd4a077bb82ad44",
+      "canonicalIntendedCommand": "node tools/verify/delivery-journey.mjs --scenario H04 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/H04 --json",
+      "commandQualification": "NOT_EXERCISED_BY_I03; real executor/identities/grants must be qualified by controller before canonical run",
+      "caseModule": "test/delivery-cases/4_6.mjs",
+      "caseModuleSha256": "c437f2cea4adf556af158287594b750b475b93fedc207a495e9786c6da035bbc",
+      "requiredAssertionDenominator": 3,
+      "assertions": [
+        {
+          "key": "preallocated-target",
+          "oracle": "before first request fixed document UUID/payload/operation digest; installed create schema/handler supports id but actual response behavior still must be proved",
+          "requiredProofLayer": "static-source+live-API",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "lost-response-reconcile",
+          "oracle": "create succeeds then response/local receipt is lost; same operation queries documents.info body.id=frozen UUID, response.data.id/revision and DB documents.id count=1",
+          "requiredProofLayer": "live-API+DB+fault-window",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "no-error-recreate",
+          "oracle": "403/timeout/5xx is unknown existence; no new UUID/create or duplicate document; Comet reconciliation stays same operation",
+          "requiredProofLayer": "live-wire+same-run",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        }
+      ],
+      "nativeOperations": [
+        {
+          "method": "POST",
+          "path": "/api/auth.info",
+          "source": "build/server/routes/api/auth/auth.js",
+          "sourceSha256": "b96f72bb66c1a3e9785ba48169744caf83fb11da3c74600bedab00ecd8f7dc8a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.info",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.group_memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.info",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.group_memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/groups.memberships",
+          "source": "build/server/routes/api/groups/groups.js",
+          "sourceSha256": "5713646ea4375b5f4505faa158022e2c20857bd0d93ffa8c317de4ec27e3da54",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.list",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.info",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.search",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/attachments.list",
+          "source": "build/server/routes/api/attachments/attachments.js",
+          "sourceSha256": "197cb4b87c453c7eeb6481ade9fc63327d8e40aaae044f995b1a4d0bba074e62",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.create",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.update",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        }
+      ],
+      "wireFields": [
+        "request.body.id",
+        "request.body.collectionId",
+        "request.body.lastRevision",
+        "response.status",
+        "response.body.data.id",
+        "response.body.data.revision",
+        "response.body.pagination.offset",
+        "response.body.pagination.limit",
+        "response.body.pagination.total"
+      ],
+      "fieldCaveat": "document API revision is response data.revision; revisionCount is internal DB field. Endpoint-specific shape and optional collectionId need first authorized response binding; do not fabricate absent fields. Signed attachment URL is not produced/registered yet.",
+      "expectedArtifacts": {
+        "status": "EXPECTED_NOT_PRODUCED",
+        "directory": ".whitebox/delivery-foundation/H04",
+        "files": [
+          "frozen-inputs.json",
+          "actor-binding.json",
+          "wire.ndjson",
+          "decision.json",
+          "readback-before.json",
+          "readback-after.json",
+          "channel-matrix.json",
+          "screenshots/",
+          "storage-readback.json",
+          "cleanup.json"
+        ]
+      },
+      "freezeBeforeExecution": {
+        "runId": null,
+        "operationId": null,
+        "documentUuid": null,
+        "initialRevision": null,
+        "payloadDigest": null,
+        "issuerGrantId": null,
+        "readerPrincipalActualId": null,
+        "publisherPrincipalActualId": null,
+        "isolatorPrincipalActualId": null,
+        "sourceConnectorBindings": null,
+        "meaning": "UNVERIFIED slots; exact registered values and independent provenance are mandatory, do not substitute fixture labels or the historical owner key"
+      },
+      "availableComponentSupport": [
+        {
+          "command": "node --test --test-reporter=tap test/infra-outline.test.js",
+          "layer": "OFFLINE_COMPONENT_ONLY",
+          "source": "test/infra-outline.test.js",
+          "sha256": "4d2160a232fb71a8739a42ca8be6ca0bd503e8ccee9318110f531b849b0ee716"
+        },
+        {
+          "command": "node tools/infra/outline.mjs probe --case managed-publish --publish-request <approved-local-declared-fixture> --json",
+          "expectedExit": 2,
+          "layer": "DECLARED_GATE_NOT_REMOTE_EXECUTION",
+          "outputFields": [
+            "status",
+            "blocks[].code",
+            "liveReadback=false"
+          ],
+          "source": "tools/infra/outline.mjs",
+          "sha256": "f081bb388f6397cbbe50485e65140c68a52d32851361a553e2f5c13a47d16868"
+        }
+      ],
+      "currentStatus": "UNVERIFIED",
+      "unlocks": [
+        "registered independent purpose-bound runtime identities and issuer/source/target grants",
+        "authorized native API/capture executor with exact target/payload",
+        "first-party native browser runtime and real OIDC role sessions",
+        "authorized fixture document/attachment lifecycle plus independent DB/object-store readback",
+        "same-Run Comet and monitoring/recovery owners supply trusted execution/terminal evidence"
+      ],
+      "caseModuleShaBaseline": "worktree base 2a45bb4; independent integrated producer qualification remains required",
+      "caseModuleMainObservedSha256": "c437f2cea4adf556af158287594b750b475b93fedc207a495e9786c6da035bbc"
+    },
+    "H05": {
+      "canonicalCaseId": "H05",
+      "canonicalSourceBinding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Post-archive continuation and idempotent control",
+          "scenario": "H05"
+        }
+      ],
+      "canonicalOracle": "- **GIVEN** Outline 目标 revision 在读取后被其他合法写者改变\n- **WHEN** 使用原 lastRevision 更新返回冲突\n- **THEN** 读回判断预期结果或保持冲突，不能刷新版本后盲目覆盖他人编辑；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "oracleSha256": "425c60588d3fc152d0a3e3014d518c57d677d5fb0f557ad79a6b7ab37106c1fa",
+      "canonicalIntendedCommand": "node tools/verify/delivery-journey.mjs --scenario H05 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/H05 --json",
+      "commandQualification": "NOT_EXERCISED_BY_I03; real executor/identities/grants must be qualified by controller before canonical run",
+      "caseModule": "test/delivery-cases/4_6.mjs",
+      "caseModuleSha256": "c437f2cea4adf556af158287594b750b475b93fedc207a495e9786c6da035bbc",
+      "requiredAssertionDenominator": 2,
+      "assertions": [
+        {
+          "key": "revision-conflict",
+          "oracle": "read response.data.revision=n, independent authorized writer advances revision; update body.lastRevision=n produces actual HTTP409 (not assumed from schema)",
+          "requiredProofLayer": "live-API+concurrent-writer",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "no-blind-overwrite",
+          "oracle": "read current document after conflict, preserve competing content/revision and original operation; no refreshed lastRevision+automatic overwrite",
+          "requiredProofLayer": "DB+native-UI+same-run",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        }
+      ],
+      "nativeOperations": [
+        {
+          "method": "POST",
+          "path": "/api/auth.info",
+          "source": "build/server/routes/api/auth/auth.js",
+          "sourceSha256": "b96f72bb66c1a3e9785ba48169744caf83fb11da3c74600bedab00ecd8f7dc8a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.info",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.group_memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.info",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.group_memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/groups.memberships",
+          "source": "build/server/routes/api/groups/groups.js",
+          "sourceSha256": "5713646ea4375b5f4505faa158022e2c20857bd0d93ffa8c317de4ec27e3da54",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.list",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.info",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.search",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/attachments.list",
+          "source": "build/server/routes/api/attachments/attachments.js",
+          "sourceSha256": "197cb4b87c453c7eeb6481ade9fc63327d8e40aaae044f995b1a4d0bba074e62",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.create",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.update",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        }
+      ],
+      "wireFields": [
+        "request.body.id",
+        "request.body.collectionId",
+        "request.body.lastRevision",
+        "response.status",
+        "response.body.data.id",
+        "response.body.data.revision",
+        "response.body.pagination.offset",
+        "response.body.pagination.limit",
+        "response.body.pagination.total"
+      ],
+      "fieldCaveat": "document API revision is response data.revision; revisionCount is internal DB field. Endpoint-specific shape and optional collectionId need first authorized response binding; do not fabricate absent fields. Signed attachment URL is not produced/registered yet.",
+      "expectedArtifacts": {
+        "status": "EXPECTED_NOT_PRODUCED",
+        "directory": ".whitebox/delivery-foundation/H05",
+        "files": [
+          "frozen-inputs.json",
+          "actor-binding.json",
+          "wire.ndjson",
+          "decision.json",
+          "readback-before.json",
+          "readback-after.json",
+          "channel-matrix.json",
+          "screenshots/",
+          "storage-readback.json",
+          "cleanup.json"
+        ]
+      },
+      "freezeBeforeExecution": {
+        "runId": null,
+        "operationId": null,
+        "documentUuid": null,
+        "initialRevision": null,
+        "payloadDigest": null,
+        "issuerGrantId": null,
+        "readerPrincipalActualId": null,
+        "publisherPrincipalActualId": null,
+        "isolatorPrincipalActualId": null,
+        "sourceConnectorBindings": null,
+        "meaning": "UNVERIFIED slots; exact registered values and independent provenance are mandatory, do not substitute fixture labels or the historical owner key"
+      },
+      "availableComponentSupport": [
+        {
+          "command": "node --test --test-reporter=tap test/infra-outline.test.js",
+          "layer": "OFFLINE_COMPONENT_ONLY",
+          "source": "test/infra-outline.test.js",
+          "sha256": "4d2160a232fb71a8739a42ca8be6ca0bd503e8ccee9318110f531b849b0ee716"
+        },
+        {
+          "command": "node tools/infra/outline.mjs probe --case managed-publish --publish-request <approved-local-declared-fixture> --json",
+          "expectedExit": 2,
+          "layer": "DECLARED_GATE_NOT_REMOTE_EXECUTION",
+          "outputFields": [
+            "status",
+            "blocks[].code",
+            "liveReadback=false"
+          ],
+          "source": "tools/infra/outline.mjs",
+          "sha256": "f081bb388f6397cbbe50485e65140c68a52d32851361a553e2f5c13a47d16868"
+        }
+      ],
+      "currentStatus": "UNVERIFIED",
+      "unlocks": [
+        "registered independent purpose-bound runtime identities and issuer/source/target grants",
+        "authorized native API/capture executor with exact target/payload",
+        "first-party native browser runtime and real OIDC role sessions",
+        "authorized fixture document/attachment lifecycle plus independent DB/object-store readback",
+        "same-Run Comet and monitoring/recovery owners supply trusted execution/terminal evidence"
+      ],
+      "caseModuleShaBaseline": "worktree base 2a45bb4; independent integrated producer qualification remains required",
+      "caseModuleMainObservedSha256": "c437f2cea4adf556af158287594b750b475b93fedc207a495e9786c6da035bbc"
+    },
+    "L02": {
+      "canonicalCaseId": "L02",
+      "canonicalSourceBinding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Published knowledge revocation and restoration",
+          "scenario": "L02"
+        }
+      ],
+      "canonicalOracle": "- **GIVEN** 某条目已标 stale 或移动到隔离位置，但原分享/继承/搜索/附件等 required 通道仍可被不再授权的身份访问\n- **WHEN** 请求隔离完成\n- **THEN** 保持 isolating/unknown，继续同一 operation 并告警，不因标签、unpublish、archive 或管理员能读到就宣称不可访问；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "oracleSha256": "e826ece884ed1abba21284ddff1373d1939dad3fd541cea095575544ba0f1db7",
+      "canonicalIntendedCommand": "node tools/verify/delivery-journey.mjs --scenario L02 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/L02 --json",
+      "commandQualification": "NOT_EXERCISED_BY_I03; real executor/identities/grants must be qualified by controller before canonical run",
+      "caseModule": "test/delivery-cases/4_8.mjs",
+      "caseModuleSha256": "4a1c44374a6fa8a805bf5a0d009e6f640a1440452501d62e36f8c7c3ac70dfc1",
+      "requiredAssertionDenominator": 3,
+      "assertions": [
+        {
+          "key": "all-channel-isolation",
+          "oracle": "after stale/move isolation, original share/inheritance/search/attachment URLs tested using no-longer-authorized real identities; any residual access keeps isolating/unknown",
+          "requiredProofLayer": "native-UI+API+object-store",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "residual-evidence",
+          "oracle": "record signed URL hash/expiry/status without leaking signature; old valid URL residual cannot be replaced by stale label or admin readability",
+          "requiredProofLayer": "storage+live-wire",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "same-operation-alert",
+          "oracle": "original isolation operation/knowledge/origin Run retained; actual alarm delivery receipt required, no caller-filled ack",
+          "requiredProofLayer": "same-run+external-monitor",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        }
+      ],
+      "nativeOperations": [
+        {
+          "method": "POST",
+          "path": "/api/auth.info",
+          "source": "build/server/routes/api/auth/auth.js",
+          "sourceSha256": "b96f72bb66c1a3e9785ba48169744caf83fb11da3c74600bedab00ecd8f7dc8a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.info",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.group_memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.info",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.group_memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/groups.memberships",
+          "source": "build/server/routes/api/groups/groups.js",
+          "sourceSha256": "5713646ea4375b5f4505faa158022e2c20857bd0d93ffa8c317de4ec27e3da54",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.list",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.info",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.search",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/attachments.list",
+          "source": "build/server/routes/api/attachments/attachments.js",
+          "sourceSha256": "197cb4b87c453c7eeb6481ade9fc63327d8e40aaae044f995b1a4d0bba074e62",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.move",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.update",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        }
+      ],
+      "wireFields": [
+        "request.body.id",
+        "request.body.collectionId",
+        "request.body.lastRevision",
+        "response.status",
+        "response.body.data.id",
+        "response.body.data.revision",
+        "response.body.pagination.offset",
+        "response.body.pagination.limit",
+        "response.body.pagination.total"
+      ],
+      "fieldCaveat": "document API revision is response data.revision; revisionCount is internal DB field. Endpoint-specific shape and optional collectionId need first authorized response binding; do not fabricate absent fields. Signed attachment URL is not produced/registered yet.",
+      "expectedArtifacts": {
+        "status": "EXPECTED_NOT_PRODUCED",
+        "directory": ".whitebox/delivery-foundation/L02",
+        "files": [
+          "frozen-inputs.json",
+          "actor-binding.json",
+          "wire.ndjson",
+          "decision.json",
+          "readback-before.json",
+          "readback-after.json",
+          "channel-matrix.json",
+          "screenshots/",
+          "storage-readback.json",
+          "cleanup.json"
+        ]
+      },
+      "freezeBeforeExecution": {
+        "runId": null,
+        "operationId": null,
+        "documentUuid": null,
+        "initialRevision": null,
+        "payloadDigest": null,
+        "issuerGrantId": null,
+        "readerPrincipalActualId": null,
+        "publisherPrincipalActualId": null,
+        "isolatorPrincipalActualId": null,
+        "sourceConnectorBindings": null,
+        "meaning": "UNVERIFIED slots; exact registered values and independent provenance are mandatory, do not substitute fixture labels or the historical owner key"
+      },
+      "availableComponentSupport": [
+        {
+          "command": "node --test --test-reporter=tap test/infra-outline.test.js",
+          "layer": "OFFLINE_COMPONENT_ONLY",
+          "source": "test/infra-outline.test.js",
+          "sha256": "4d2160a232fb71a8739a42ca8be6ca0bd503e8ccee9318110f531b849b0ee716"
+        },
+        {
+          "command": "node tools/infra/outline.mjs probe --case managed-publish --publish-request <approved-local-declared-fixture> --json",
+          "expectedExit": 2,
+          "layer": "DECLARED_GATE_NOT_REMOTE_EXECUTION",
+          "outputFields": [
+            "status",
+            "blocks[].code",
+            "liveReadback=false"
+          ],
+          "source": "tools/infra/outline.mjs",
+          "sha256": "f081bb388f6397cbbe50485e65140c68a52d32851361a553e2f5c13a47d16868"
+        }
+      ],
+      "currentStatus": "UNVERIFIED",
+      "unlocks": [
+        "registered independent purpose-bound runtime identities and issuer/source/target grants",
+        "authorized native API/capture executor with exact target/payload",
+        "first-party native browser runtime and real OIDC role sessions",
+        "authorized fixture document/attachment lifecycle plus independent DB/object-store readback",
+        "same-Run Comet and monitoring/recovery owners supply trusted execution/terminal evidence"
+      ],
+      "caseModuleShaBaseline": "worktree base 2a45bb4; independent integrated producer qualification remains required",
+      "caseModuleMainObservedSha256": "4a1c44374a6fa8a805bf5a0d009e6f640a1440452501d62e36f8c7c3ac70dfc1"
+    },
+    "L04": {
+      "canonicalCaseId": "L04",
+      "canonicalSourceBinding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Published knowledge revocation and restoration",
+          "scenario": "L04"
+        }
+      ],
+      "canonicalOracle": "- **GIVEN** 已发布内容的持续披露许可到期或当前目标受众不再落在源许可交集\n- **WHEN** 到期/权限核验维护动作执行\n- **THEN** 不能以原发布成功或未到期的其他操作凭证继续消费，按已授予的隔离能力收窄访问并独立验证；实际执行计数大于0，记录当前候选和环境；依赖缺失退出非零/UNVERIFIED，不得跳过判PASS。",
+      "oracleSha256": "470232dfc7f65d8313df4d96808af3412a9606ef1c9d3991e3a0fce04a70b5e7",
+      "canonicalIntendedCommand": "node tools/verify/delivery-journey.mjs --scenario L04 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/L04 --json",
+      "commandQualification": "NOT_EXERCISED_BY_I03; real executor/identities/grants must be qualified by controller before canonical run",
+      "caseModule": "test/delivery-cases/4_8.mjs",
+      "caseModuleSha256": "4a1c44374a6fa8a805bf5a0d009e6f640a1440452501d62e36f8c7c3ac70dfc1",
+      "requiredAssertionDenominator": 3,
+      "assertions": [
+        {
+          "key": "expiry-or-shrink",
+          "oracle": "real current source disclosure license expires/shrinks; previous successful publication cannot stand in for current rights",
+          "requiredProofLayer": "live-source+authority-clock",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "separate-isolator",
+          "oracle": "only current independent isolator grant executes explicitly allowed narrowing; expired publisher grant cannot grant isolation or auto-renewal",
+          "requiredProofLayer": "live-authority+OS-runtime",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "post-isolation-readback",
+          "oracle": "all required channels independently denied or residual keeps unknown; current membership/source rights rechecked after any restore, not old ACL replay",
+          "requiredProofLayer": "native-UI+storage+recovery",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        }
+      ],
+      "nativeOperations": [
+        {
+          "method": "POST",
+          "path": "/api/auth.info",
+          "source": "build/server/routes/api/auth/auth.js",
+          "sourceSha256": "b96f72bb66c1a3e9785ba48169744caf83fb11da3c74600bedab00ecd8f7dc8a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.info",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.group_memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.info",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.group_memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/groups.memberships",
+          "source": "build/server/routes/api/groups/groups.js",
+          "sourceSha256": "5713646ea4375b5f4505faa158022e2c20857bd0d93ffa8c317de4ec27e3da54",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.list",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.info",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.search",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/attachments.list",
+          "source": "build/server/routes/api/attachments/attachments.js",
+          "sourceSha256": "197cb4b87c453c7eeb6481ade9fc63327d8e40aaae044f995b1a4d0bba074e62",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.move",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.update",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        }
+      ],
+      "wireFields": [
+        "request.body.id",
+        "request.body.collectionId",
+        "request.body.lastRevision",
+        "response.status",
+        "response.body.data.id",
+        "response.body.data.revision",
+        "response.body.pagination.offset",
+        "response.body.pagination.limit",
+        "response.body.pagination.total"
+      ],
+      "fieldCaveat": "document API revision is response data.revision; revisionCount is internal DB field. Endpoint-specific shape and optional collectionId need first authorized response binding; do not fabricate absent fields. Signed attachment URL is not produced/registered yet.",
+      "expectedArtifacts": {
+        "status": "EXPECTED_NOT_PRODUCED",
+        "directory": ".whitebox/delivery-foundation/L04",
+        "files": [
+          "frozen-inputs.json",
+          "actor-binding.json",
+          "wire.ndjson",
+          "decision.json",
+          "readback-before.json",
+          "readback-after.json",
+          "channel-matrix.json",
+          "screenshots/",
+          "storage-readback.json",
+          "cleanup.json"
+        ]
+      },
+      "freezeBeforeExecution": {
+        "runId": null,
+        "operationId": null,
+        "documentUuid": null,
+        "initialRevision": null,
+        "payloadDigest": null,
+        "issuerGrantId": null,
+        "readerPrincipalActualId": null,
+        "publisherPrincipalActualId": null,
+        "isolatorPrincipalActualId": null,
+        "sourceConnectorBindings": null,
+        "meaning": "UNVERIFIED slots; exact registered values and independent provenance are mandatory, do not substitute fixture labels or the historical owner key"
+      },
+      "availableComponentSupport": [
+        {
+          "command": "node --test --test-reporter=tap test/infra-outline.test.js",
+          "layer": "OFFLINE_COMPONENT_ONLY",
+          "source": "test/infra-outline.test.js",
+          "sha256": "4d2160a232fb71a8739a42ca8be6ca0bd503e8ccee9318110f531b849b0ee716"
+        },
+        {
+          "command": "node tools/infra/outline.mjs probe --case managed-publish --publish-request <approved-local-declared-fixture> --json",
+          "expectedExit": 2,
+          "layer": "DECLARED_GATE_NOT_REMOTE_EXECUTION",
+          "outputFields": [
+            "status",
+            "blocks[].code",
+            "liveReadback=false"
+          ],
+          "source": "tools/infra/outline.mjs",
+          "sha256": "f081bb388f6397cbbe50485e65140c68a52d32851361a553e2f5c13a47d16868"
+        }
+      ],
+      "currentStatus": "UNVERIFIED",
+      "unlocks": [
+        "registered independent purpose-bound runtime identities and issuer/source/target grants",
+        "authorized native API/capture executor with exact target/payload",
+        "first-party native browser runtime and real OIDC role sessions",
+        "authorized fixture document/attachment lifecycle plus independent DB/object-store readback",
+        "same-Run Comet and monitoring/recovery owners supply trusted execution/terminal evidence"
+      ],
+      "caseModuleShaBaseline": "worktree base 2a45bb4; independent integrated producer qualification remains required",
+      "caseModuleMainObservedSha256": "4a1c44374a6fa8a805bf5a0d009e6f640a1440452501d62e36f8c7c3ac70dfc1"
+    },
+    "N05": {
+      "canonicalCaseId": "N05",
+      "canonicalSourceBinding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N05"
+        }
+      ],
+      "canonicalOracle": "实际工具返回有来源/版本/权限的上下文；不把知识页变成已批准spec，不批量摄入源码；Graph关闭不破坏正确性",
+      "oracleSha256": "4e18857052cbefbe752a8500258f4dfad6a3ef3c68f0a0e0e66ba3d807db05c2",
+      "canonicalIntendedCommand": "node tools/verify/delivery-journey.mjs --scenario N05 --profile comet-managed-v2 --evidence-dir .whitebox/comet-managed-v2/N05 --json",
+      "commandQualification": "NOT_EXERCISED_BY_I03; real executor/identities/grants must be qualified by controller before canonical run",
+      "caseModule": "test/delivery-cases/3_2.mjs",
+      "caseModuleSha256": "63699f53ef658fd27223d32bf8b1ee54b277e4348a80c77408dd114a2f846292",
+      "requiredAssertionDenominator": 4,
+      "assertions": [
+        {
+          "key": "real-context-tool",
+          "oracle": "actual registered reader/tool returns curated Outline context with source document ID, response.data.revision from info, permission evidence and current provenance; not merely tool inventory",
+          "requiredProofLayer": "live-reader+trusted-tool",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "no-spec-authority",
+          "oracle": "retrieved knowledge does not set approved spec/review state and does not ingest full repository source; formal spec remains OpenSpec",
+          "requiredProofLayer": "same-run+OpenSpec",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "graph-optional",
+          "oracle": "repeat actual knowledge retrieval/action with optional Graph disabled; correctness and permission gates unchanged",
+          "requiredProofLayer": "same-run+configuration",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        },
+        {
+          "key": "role-channel",
+          "oracle": "MCP/API/UI use intended independent identity and target scope; API key alone does not prove Web/share/search/attachment denial",
+          "requiredProofLayer": "live-API+native-UI",
+          "currentStatus": "UNVERIFIED",
+          "actualArtifactProduced": false
+        }
+      ],
+      "nativeOperations": [
+        {
+          "method": "POST",
+          "path": "/api/auth.info",
+          "source": "build/server/routes/api/auth/auth.js",
+          "sourceSha256": "b96f72bb66c1a3e9785ba48169744caf83fb11da3c74600bedab00ecd8f7dc8a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.info",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/collections.group_memberships",
+          "source": "build/server/routes/api/collections/collections.js",
+          "sourceSha256": "927b4deb20d8ed4490d3396d30699ec73d1e143d5ba6ebc359365115cf3cd7b9",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.info",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.group_memberships",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/groups.memberships",
+          "source": "build/server/routes/api/groups/groups.js",
+          "sourceSha256": "5713646ea4375b5f4505faa158022e2c20857bd0d93ffa8c317de4ec27e3da54",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.list",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/shares.info",
+          "source": "build/server/routes/api/shares/shares.js",
+          "sourceSha256": "6239a0760114c507d0910ca4dc2c957452316a3f76fdf1a2aa223114a97cae74",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/documents.search",
+          "source": "build/server/routes/api/documents/documents.js",
+          "sourceSha256": "98d53ca7e35f2085cf88622ec43b6474e3f2ffe7a3a713b073228b77bc67894a",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        },
+        {
+          "method": "POST",
+          "path": "/api/attachments.list",
+          "source": "build/server/routes/api/attachments/attachments.js",
+          "sourceSha256": "197cb4b87c453c7eeb6481ade9fc63327d8e40aaae044f995b1a4d0bba074e62",
+          "availability": "INSTALLED_STATIC_ROUTE_ONLY_API_NOT_EXERCISED"
+        }
+      ],
+      "wireFields": [
+        "request.body.id",
+        "request.body.collectionId",
+        "request.body.lastRevision",
+        "response.status",
+        "response.body.data.id",
+        "response.body.data.revision",
+        "response.body.pagination.offset",
+        "response.body.pagination.limit",
+        "response.body.pagination.total"
+      ],
+      "fieldCaveat": "document API revision is response data.revision; revisionCount is internal DB field. Endpoint-specific shape and optional collectionId need first authorized response binding; do not fabricate absent fields. Signed attachment URL is not produced/registered yet.",
+      "expectedArtifacts": {
+        "status": "EXPECTED_NOT_PRODUCED",
+        "directory": ".whitebox/comet-managed-v2/N05",
+        "files": [
+          "frozen-inputs.json",
+          "actor-binding.json",
+          "wire.ndjson",
+          "decision.json",
+          "readback-before.json",
+          "readback-after.json",
+          "channel-matrix.json",
+          "screenshots/",
+          "storage-readback.json",
+          "cleanup.json"
+        ]
+      },
+      "freezeBeforeExecution": {
+        "runId": null,
+        "operationId": null,
+        "documentUuid": null,
+        "initialRevision": null,
+        "payloadDigest": null,
+        "issuerGrantId": null,
+        "readerPrincipalActualId": null,
+        "publisherPrincipalActualId": null,
+        "isolatorPrincipalActualId": null,
+        "sourceConnectorBindings": null,
+        "meaning": "UNVERIFIED slots; exact registered values and independent provenance are mandatory, do not substitute fixture labels or the historical owner key"
+      },
+      "availableComponentSupport": [
+        {
+          "command": "node --test --test-reporter=tap test/infra-outline.test.js",
+          "layer": "OFFLINE_COMPONENT_ONLY",
+          "source": "test/infra-outline.test.js",
+          "sha256": "4d2160a232fb71a8739a42ca8be6ca0bd503e8ccee9318110f531b849b0ee716"
+        },
+        {
+          "command": "node tools/infra/outline.mjs probe --case managed-publish --publish-request <approved-local-declared-fixture> --json",
+          "expectedExit": 2,
+          "layer": "DECLARED_GATE_NOT_REMOTE_EXECUTION",
+          "outputFields": [
+            "status",
+            "blocks[].code",
+            "liveReadback=false"
+          ],
+          "source": "tools/infra/outline.mjs",
+          "sha256": "f081bb388f6397cbbe50485e65140c68a52d32851361a553e2f5c13a47d16868"
+        }
+      ],
+      "currentStatus": "UNVERIFIED",
+      "unlocks": [
+        "registered independent purpose-bound runtime identities and issuer/source/target grants",
+        "authorized native API/capture executor with exact target/payload",
+        "first-party native browser runtime and real OIDC role sessions",
+        "authorized fixture document/attachment lifecycle plus independent DB/object-store readback",
+        "same-Run Comet and monitoring/recovery owners supply trusted execution/terminal evidence"
+      ],
+      "caseModuleShaBaseline": "worktree base 2a45bb4; independent integrated producer qualification remains required",
+      "caseModuleMainObservedSha256": "63699f53ef658fd27223d32bf8b1ee54b277e4348a80c77408dd114a2f846292"
+    }
+  }
+}

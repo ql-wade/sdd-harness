@@ -11,13 +11,12 @@
 //   2 = 验证失败（语义违规、qualify NOT_READY、up 被拒、probe/stop 环境缺失 UNVERIFIED）
 //   环境缺失必须显式 UNVERIFIED 并以非零退出，不允许 skip 或 mock 转绿。
 
-import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { parseSecretRef, scanForForbiddenValues } from './secret-refs.mjs';
+import { parseSecretRef, redactSecretValue, scanForForbiddenValues, validateRefsCatalog } from './secret-refs.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const EXIT_PASS = 0;
@@ -35,7 +34,7 @@ const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const SECRET_REF_PREFIX = 'secret-ref:';
 
 // 宿主私有路径绝不进入结构化回执/报告；对外输出统一脱敏（与 secret-refs 的 ABSOLUTE_PATH_FORBIDDEN 同源规则）。
-const HOST_PATH_REDACTION = /(^|[\s"'=(:/])\/(Users|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
+const HOST_PATH_REDACTION = /(^|[\s"'=(:/])\/(Users|Volumes|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
 const redactHostPaths = (text) => String(text ?? '').replace(HOST_PATH_REDACTION, '$1<host-path-redacted>');
 
 // 结构化输出里的文件字段一律 repo 相对；repo 之外（fixture/临时目录）则复用宿主路径脱敏。
@@ -44,8 +43,8 @@ const displayPath = (file) => {
   return rel.startsWith('..') ? redactHostPaths(String(file)) : rel;
 };
 
-const HOST_PATH_IN_VALUE = /(^|[\s"'=(:])\/(Users|home|root|private|var|usr|etc|opt|tmp)\//;
-const HOST_USER_PATH = /(^|[\s"'=(:])\/(Users|home|root)\//;
+const HOST_PATH_IN_VALUE = /(^|[\s"'=(:])\/(Users|Volumes|home|root|private|var|usr|etc|opt|tmp)\//;
+const HOST_USER_PATH = /(^|[\s"'=(:])\/(Users|Volumes|home|root)\//;
 const SECRET_PLAINTEXT = [
   /ghp_[A-Za-z0-9]{20,}/,
   /gho_[A-Za-z0-9]{20,}/,
@@ -76,13 +75,17 @@ function usage() {
 function parseArgs(argv) {
   const opts = { _: [] };
   const command = argv[0];
+  const allowed = ['registry', 'refs', 'dir', 'json', ...(command === 'probe' ? ['case', 'endpoint', 'publish-request'] : [])];
+  if (command && !['validate', 'qualify', 'up', 'probe', 'stop'].includes(command)) return { command, opts, error: 'unknown command' };
   for (let i = 1; i < argv.length; i++) {
     const arg = argv[i];
+    if (!arg.startsWith('--') || !allowed.includes(arg.slice(2))) return { command, opts, error: 'unknown option or positional argument' };
+    if (Object.hasOwn(opts, arg.slice(2))) return { command, opts, error: 'duplicate option' };
     if (arg === '--json') {
       opts.json = true;
     } else if (arg.startsWith('--')) {
       const value = argv[++i];
-      if (value === undefined) return { command, opts, error: `missing value for ${arg}` };
+      if (!value || value.startsWith('--')) return { command, opts, error: `missing value for ${arg}` };
       opts[arg.slice(2)] = value;
     } else {
       opts._.push(arg);
@@ -92,11 +95,11 @@ function parseArgs(argv) {
 }
 
 function print(payload) {
-  process.stdout.write(JSON.stringify({ ...payload, checkedAt: new Date().toISOString() }, null, 2) + '\n');
+  process.stdout.write(JSON.stringify({ ...payload, checkedAt: new Date().toISOString() }, (_key, value) => typeof value === 'string' ? redactHostPaths(redactSecretValue(value)) : value, 2) + '\n');
 }
 
 function failInput(message) {
-  process.stderr.write(`${message}\n${usage()}\n`);
+  process.stderr.write(`${redactHostPaths(redactSecretValue(message))}\n${usage()}\n`);
   return EXIT_INPUT;
 }
 
@@ -118,10 +121,105 @@ function loadDomainFiles(dir) {
     try {
       JSON.parse(files.get(name));
     } catch (error) {
-      unparseable.push(`${name}: ${redactHostPaths(error.message)}`);
+      unparseable.push(`${name}: JSON input is not parseable`);
     }
   }
   return { files, missing, unparseable };
+}
+
+const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const nonBlank = (value) => typeof value === 'string' && value.trim() !== '';
+const strings = (value) => Array.isArray(value) && Array.from(value).every(nonBlank) && new Set(value).size === value.length;
+
+function inputShapes({ registry, refsDoc, files }) {
+  const violations = [];
+  const add = (at, expected, code = 'INPUT_SHAPE_INVALID') => violations.push({ code, at, expected });
+  const object = (value, at, code) => { if (!isObject(value)) { add(at, 'object', code); return false; } return true; };
+  const text = (value, at, nullable = false, code) => { if (!(nullable && value === null) && !nonBlank(value)) add(at, nullable ? 'non-blank string or null' : 'non-blank string', code); };
+  const list = (value, at, code) => { if (!strings(value)) add(at, 'unique non-blank string array', code); };
+  if (!object(registry, 'registry') || !object(registry.project, 'registry.project')) return violations;
+  if (registry.interface !== 'Registry.v1' || registry.schemaVersion !== 1) add('registry', 'Registry.v1 schemaVersion 1');
+  text(registry.project.id, 'registry.project.id');
+  violations.push(...validateRefsCatalog(refsDoc, typeof registry.project.id === 'string' ? registry.project.id : undefined));
+  const docs = new Map();
+  for (const name of JSON_FILES) {
+    const doc = JSON.parse(files.get(name)); docs.set(name, doc);
+    if (!object(doc, name)) continue;
+    if (doc.schemaVersion !== 1) add(`${name}.schemaVersion`, 'version 1');
+    if (doc.project !== registry.project.id) add(`${name}.project`, 'the registered project namespace', 'CROSS_PROJECT_REF');
+  }
+  const lock = docs.get('images.lock.json');
+  if (isObject(lock)) {
+    if (lock.interface !== 'OutlineImageLock.v1') add('images.lock.json.interface', 'OutlineImageLock.v1');
+    if (!Array.isArray(lock.components)) add('images.lock.json.components', 'object array');
+    else {
+      const names = new Set();
+      for (const [index, component] of lock.components.entries()) {
+        const at = `images.lock.json.components[${index}]`;
+        if (!object(component, at)) continue;
+        text(component.component, `${at}.component`);
+        if (names.has(component.component)) add(`${at}.component`, 'unique component identity');
+        names.add(component.component);
+        text(component.reference, `${at}.reference`, true); text(component.digest, `${at}.digest`, true);
+        if (typeof component.digestAuthenticated !== 'boolean') add(`${at}.digestAuthenticated`, 'boolean');
+        if (component.required !== undefined && typeof component.required !== 'boolean') add(`${at}.required`, 'boolean');
+      }
+    }
+    if (object(lock.upGate, 'images.lock.json.upGate')) {
+      if (typeof lock.upGate.enabled !== 'boolean') add('images.lock.json.upGate.enabled', 'boolean');
+      for (const field of ['admittedBy', 'admittedAt', 'reason']) if (lock.upGate[field] !== undefined) text(lock.upGate[field], `upGate.${field}`);
+    }
+  }
+  const oidc = docs.get('oidc-registration.example.json');
+  const oidcCode = 'OIDC_REGISTRATION_INCOMPLETE';
+  if (isObject(oidc)) {
+    if (oidc.interface !== 'OutlineOidcRegistration.v1') add('oidc.interface', 'OutlineOidcRegistration.v1', oidcCode);
+    if (object(oidc.provider, 'oidc.provider', oidcCode)) {
+      text(oidc.provider.issuerUrl, 'oidc.provider.issuerUrl', true, oidcCode);
+      text(oidc.provider.discoveryUrl, 'oidc.provider.discoveryUrl', true, oidcCode);
+    }
+    if (object(oidc.client, 'oidc.client', oidcCode)) {
+      for (const field of ['credentialRef', 'sessionCredentialRef']) text(oidc.client[field], `oidc.client.${field}`, false, oidcCode);
+      text(oidc.client.clientId, 'oidc.client.clientId', true, oidcCode);
+      list(oidc.client.redirectUris, 'oidc.client.redirectUris', oidcCode);
+    }
+    object(oidc.subjectMapping, 'oidc.subjectMapping', oidcCode);
+    if (object(oidc.testPrincipals, 'oidc.testPrincipals', oidcCode)) for (const field of ['owner', 'member', 'offboarded']) object(oidc.testPrincipals[field], `oidc.testPrincipals.${field}`, oidcCode);
+  }
+  const policy = docs.get('storage-policy.json');
+  const storageCode = 'STORAGE_POLICY_INCOMPLETE';
+  if (isObject(policy)) {
+    if (policy.interface !== 'OutlineStoragePolicy.v1') add('storage.interface', 'OutlineStoragePolicy.v1', storageCode);
+    if (object(policy.state, 'storage.state', storageCode)) for (const field of ['database', 'attachments', 'cache']) {
+      if (object(policy.state[field], `storage.state.${field}`, storageCode) && typeof policy.state[field].durable !== 'boolean') add(`storage.state.${field}.durable`, 'boolean', storageCode);
+    }
+    if (isObject(policy.state?.cache) && typeof policy.state.cache.rightsAuthority !== 'boolean') add('storage.state.cache.rightsAuthority', 'boolean', storageCode);
+    object(policy.storage, 'storage.storage', storageCode); object(policy.revocation, 'storage.revocation', storageCode);
+    if (object(policy.apiContracts, 'storage.apiContracts', storageCode)) for (const field of ['fixedCreateUuid', 'lastRevision']) {
+      if (object(policy.apiContracts[field], `apiContracts.${field}`, storageCode)) text(policy.apiContracts[field].status, `apiContracts.${field}.status`, false, storageCode);
+    }
+  }
+  const domain = docs.get('collection-registration.example.json');
+  const domainCode = 'DOMAIN_REGISTRATION_INCOMPLETE';
+  if (isObject(domain)) {
+    if (domain.interface !== 'OutlineDomain.v1') add('domain.interface', 'OutlineDomain.v1', domainCode);
+    if (object(domain.instance, 'domain.instance', domainCode)) {
+      text(domain.instance.id, 'domain.instance.id', true, domainCode);
+      text(domain.instance.url, 'domain.instance.url', true, domainCode);
+    }
+    if (!Array.isArray(domain.collections)) add('domain.collections', 'object array', domainCode);
+    else for (const [index, collection] of domain.collections.entries()) {
+      const at = `domain.collections[${index}]`;
+      if (!object(collection, at, domainCode)) continue;
+      text(collection.name, `${at}.name`, false, domainCode); text(collection.id, `${at}.id`, true, domainCode);
+      if (object(collection.owner, `${at}.owner`, 'OWNER_REGISTRATION_MISSING')) text(collection.owner.grantRef, `${at}.owner.grantRef`, false, 'GRANT_REF_MISSING');
+      if (object(collection.audience, `${at}.audience`, 'AUDIENCE_REGISTRATION_MISSING')) {
+        list(collection.audience.readers, `${at}.audience.readers`, 'AUDIENCE_REGISTRATION_MISSING');
+        if (collection.audience.effectiveReaderSet !== null) list(collection.audience.effectiveReaderSet, `${at}.audience.effectiveReaderSet`, 'AUDIENCE_REGISTRATION_MISSING');
+      }
+    }
+  }
+  return violations;
 }
 
 function collectSecretRefs(node, out) {
@@ -213,6 +311,7 @@ function validateCompose(text) {
   let svcName = null;
   let svcSubKey = null;
   const svcNamedVolumeMounts = new Map();
+  const serviceEnv = new Map();
   const closeNetwork = () => {
     if (netName !== null) declaredNetworks.push({ name: netName, internal: netInternal, external: netExternal });
     netName = null;
@@ -252,6 +351,11 @@ function validateCompose(text) {
       } else if (indent === 4) {
         const subKeyMatch = trimmedLine.match(/^([A-Za-z0-9_-]+):\s*$/);
         if (subKeyMatch) svcSubKey = subKeyMatch[1];
+        if (svcName === 'outline' && /^env_file:/.test(trimmedLine)) add('APP_SHARED_ENV_FILE_FORBIDDEN', `compose.yaml:${lineNo}`, { reason: 'app configuration must explicitly select its own fields; shared bootstrap material must not be injected' });
+      }
+      if (svcName && svcSubKey === 'environment' && indent === 6) {
+        const entry = trimmedLine.match(/^([A-Z][A-Z0-9_]*):/);
+        if (entry) { const keys = serviceEnv.get(svcName) ?? new Set(); keys.add(entry[1]); serviceEnv.set(svcName, keys); }
       }
       if (svcName && svcSubKey === 'volumes' && indent > 4 && /^-\s*[A-Za-z][A-Za-z0-9_.-]*:\S/.test(trimmedLine)) {
         const mounts = svcNamedVolumeMounts.get(svcName) ?? [];
@@ -280,6 +384,17 @@ function validateCompose(text) {
         reason: `${durableService} carries durable state (OutlineState.v1) and must mount a named volume`,
       });
     }
+  }
+  const requiredEnv = {
+    outline: ['URL', 'SECRET_KEY', 'UTILS_SECRET', 'DATABASE_URL', 'REDIS_URL', 'OIDC_CLIENT_ID', 'OIDC_CLIENT_SECRET', 'OIDC_AUTH_URI', 'OIDC_TOKEN_URI', 'OIDC_USERINFO_URI', 'FILE_STORAGE', 'AWS_S3_UPLOAD_BUCKET_URL', 'AWS_S3_UPLOAD_BUCKET_NAME', 'AWS_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'],
+    'outline-postgres': ['POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD'],
+    'outline-object-store': ['MINIO_ROOT_USER', 'MINIO_ROOT_PASSWORD'],
+  };
+  for (const [service, fields] of Object.entries(requiredEnv)) for (const field of fields) {
+    if (!serviceEnv.get(service)?.has(field)) add('COMPOSE_REQUIRED_BINDING_MISSING', `compose.yaml:${service}:${field}`);
+  }
+  for (const field of ['MINIO_ROOT_USER', 'MINIO_ROOT_PASSWORD', 'POSTGRES_PASSWORD']) {
+    if (serviceEnv.get('outline')?.has(field)) add('APP_BOOTSTRAP_CREDENTIAL_FORBIDDEN', `compose.yaml:outline:${field}`);
   }
   return violations;
 }
@@ -447,7 +562,7 @@ function validateDomain({ registry, refsDoc, files }) {
   return { violations, catalogGaps };
 }
 
-function buildQualification({ registryFile, dir, files, catalogGaps }) {
+function buildQualification({ registryFile, refsFile, dir, files, catalogGaps }) {
   const lock = JSON.parse(files.get('images.lock.json'));
   const components = Array.isArray(lock.components) ? lock.components : [];
   const unreadyComponents = [];
@@ -465,21 +580,23 @@ function buildQualification({ registryFile, dir, files, catalogGaps }) {
   }
   const categories = {
     'image-digest-authenticated': unreadyComponents.length === 0
-      ? { status: 'VERIFIED', observed: 'all required components carry an authenticated digest' }
+      ? RECORDED('pinned references and historical digest flags recorded; current independent provenance/platform qualification is still required')
       : UNVERIFIED(`no required component image has an authenticated digest (${unreadyComponents.map((c) => c.component).join(', ')}); inventing tags/digests is forbidden (images_policy.invented_tags_or_digests=false)`),
-    'oidc-registration': UNVERIFIED('issuer/discovery unprovisioned; no discovery readback performed'),
+    'oidc-registration': UNVERIFIED('current issuer/discovery/client and principal mapping are not independently qualified'),
     'oidc-login-proof': UNVERIFIED('no real issuance or login evidence; requires a live instance and a real issuer'),
     'object-store-access': UNVERIFIED('storage type/endpoint/bucket unselected; no bucket access proof'),
     'credentials-provisioned': UNVERIFIED('all 7 secret refs are NOT_PROVISIONED; no runtime secret store authorization exists'),
     'secret-refs-registered': catalogGaps.length === 0
       ? RECORDED('all 7 outline refs present in the I01 catalog; all remain NOT_PROVISIONED')
       : UNVERIFIED(`refs missing from the I01 catalog (catalog is I01-owned and needs a registration update): ${catalogGaps.join(', ')}`),
-    'domain-registration': UNVERIFIED('immutable instance/collection IDs and effective reader sets not observed from a real deployment'),
+    'domain-registration': UNVERIFIED('historical immutable-ID observations do not establish current full audience or action authority'),
     'state-durability': UNVERIFIED('restart-persistence probe never executed against a live instance; durable DB+attachment readback unproven'),
-    'health-api': UNVERIFIED('no running service; health evidence requires the stack up'),
+    'health-api': UNVERIFIED('no current qualified health receipt supplied; an existing healthy process is not full resource readiness'),
+    'license-platform': UNVERIFIED('installed version/license/platform metadata requires compatibility and authorized-use review'),
+    'role-isolation': UNVERIFIED('independent Reader/Publisher/Isolator/Issuer runtime principals and grants remain unprovisioned'),
     'backup-compatibility': UNVERIFIED('no restore drill registered'),
   };
-  const inputs = { registrySha256: sha256Text(fs.readFileSync(registryFile)), domainFiles: {} };
+  const inputs = { registrySha256: sha256Text(fs.readFileSync(registryFile)), refsSha256: sha256Text(fs.readFileSync(refsFile)), domainFiles: {} };
   for (const name of DOMAIN_FILES) inputs.domainFiles[name] = sha256Text(files.get(name));
   const values = Object.values(categories);
   return {
@@ -549,7 +666,7 @@ const PROBE_CASES = {
       'pagination must be complete — a failed or partial source enumeration blocks the publish',
       'every subject must map to a principal — an unmappable principal blocks the publish',
       'publisher/isolator grant must be unexpired — an expired grant blocks the publish',
-      'timeout/403 observation errors must never be recorded as target absence',
+      'any observation error, including non-2xx HTTP, timeout, network and unknown failures, must never be recorded as target absence',
       'all declared preconditions satisfied is still not authorization: effective audience closure requires live readback, so the gate stays closed (UNVERIFIED) without it',
     ],
   },
@@ -559,16 +676,33 @@ async function main(argv) {
   const { command, opts, error } = parseArgs(argv);
   if (error) return failInput(error);
   if (!command) return failInput('missing command');
+  const registryFile = opts.registry ?? DEFAULT_REGISTRY;
+  const refsFile = opts.refs ?? DEFAULT_REFS;
+  const dir = opts.dir ?? DEFAULT_DIR;
+  let registry; let refsDoc;
+  try { registry = JSON.parse(fs.readFileSync(registryFile, 'utf8')); }
+  catch { return failInput('registry unreadable or unparseable'); }
+  try { refsDoc = JSON.parse(fs.readFileSync(refsFile, 'utf8')); }
+  catch { return failInput('refs catalog unreadable or unparseable'); }
+  const { files, missing, unparseable } = loadDomainFiles(dir);
+  if (missing.length) return failInput(`domain files missing (${displayPath(dir)}): ${missing.join(', ')}`);
+  if (unparseable.length) return failInput(`domain files unparseable: ${unparseable.join('; ')}`);
+  const shapes = inputShapes({ registry, refsDoc, files });
+  if (shapes.length) { print({ interface: 'OutlineInfra.v1', command, ready: false, refused: true, violations: shapes }); return EXIT_VERIFY; }
+  const admission = validateDomain({ registry, refsDoc, files });
+  if (admission.violations.length && command !== 'validate') {
+    print({ interface: 'OutlineInfra.v1', command, ready: false, refused: true, ...admission }); return EXIT_VERIFY;
+  }
 
   if (command === 'probe') {
-    const spec = PROBE_CASES[opts.case];
+    const spec = Object.hasOwn(PROBE_CASES, opts.case) ? PROBE_CASES[opts.case] : null;
     if (!spec) return failInput(`unknown probe case: ${opts.case ?? '(missing --case)'}`);
-    const dir = opts.dir ?? DEFAULT_DIR;
-    const { files, missing, unparseable } = loadDomainFiles(dir);
-    if (missing.length > 0) return failInput(`domain files missing (${displayPath(dir)}): ${missing.join(', ')}`);
-    if (unparseable.length > 0) return failInput(`domain files unparseable: ${unparseable.join('; ')}`);
     const registration = JSON.parse(files.get('collection-registration.example.json'));
-    const endpoint = opts.endpoint ?? process.env.OUTLINE_ENDPOINT ?? registration.instance?.url ?? null;
+    const endpoint = opts.endpoint ?? registration.instance?.url ?? null;
+    if (endpoint !== null) {
+      let url; try { url = new URL(endpoint); } catch { return failInput('endpoint must be a loopback HTTP origin'); }
+      if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) || url.username || url.password || url.search || url.hash || url.pathname !== '/') return failInput('endpoint must be a loopback HTTP origin');
+    }
     const observation = {
       interface: 'OutlineInfra.v1',
       command: 'probe',
@@ -583,18 +717,29 @@ async function main(argv) {
     };
     if (opts.case === 'managed-publish' && opts['publish-request'] !== undefined) {
       // 受管发布门（本地半边，纯声明证据、fail-closed）：来源交集/分页/principal映射/grant 期限任一不满足即受控阻断；
-      // admin 读得到不算受众证据；超时/403 绝不记为目标不存在；全部满足仍不转绿——有效受众闭包须活实例读回。
+      // admin 读得到不算受众证据；任何观察错误都不证明目标不存在；全部满足仍不转绿——有效受众闭包须活实例读回。
       let request;
       try {
         request = JSON.parse(fs.readFileSync(opts['publish-request'], 'utf8'));
-      } catch (err) {
-        return failInput(`publish request unreadable: ${redactHostPaths(err.message)}`);
+      } catch {
+        return failInput('publish request unreadable or unparseable');
       }
-      if (typeof request.targetReader !== 'string' || request.targetReader.length === 0) {
+      if (!isObject(request) || !nonBlank(request.targetReader)) {
         return failInput('publish request invalid: targetReader (non-empty string) is required');
       }
+      if (!strings(request.audienceIntersection) || !isObject(request.pagination) || typeof request.pagination.complete !== 'boolean'
+        || (request.pagination.reason !== undefined && !nonBlank(request.pagination.reason))
+        || !isObject(request.principalMapping) || !nonBlank(request.principalMapping.status)
+        || (request.principalMapping.subject !== undefined && request.principalMapping.subject !== null && !nonBlank(request.principalMapping.subject))
+        || (request.principalMapping.status === 'MAPPED' && !nonBlank(request.principalMapping.subject))
+        || (request.adminReadable !== undefined && typeof request.adminReadable !== 'boolean')
+        || !isObject(request.grant) || typeof request.grant.expired !== 'boolean' || !nonBlank(request.grant.ref)
+        || (request.observationError !== undefined && (!isObject(request.observationError) || !nonBlank(request.observationError.kind)
+          || (request.observationError.targetRecordedAbsent !== undefined && typeof request.observationError.targetRecordedAbsent !== 'boolean')))
+        || (request.effectiveAudience !== undefined && (!isObject(request.effectiveAudience) || !strings(request.effectiveAudience.channels)))) return failInput('publish request has invalid nested input shapes');
       const intersection = Array.isArray(request.audienceIntersection) ? request.audienceIntersection : [];
       const blocks = [];
+      if (request.grant.ref !== `secret-ref:${registry.project.id}/outline-publisher`) blocks.push({ code: 'BLOCKED_GRANT_PURPOSE_MISMATCH', detail: 'publication requires its distinct purpose-bound grant; reader or owner material is not a substitute' });
       if (!intersection.includes(request.targetReader)) {
         blocks.push({
           code: 'BLOCKED_SOURCE_INTERSECTION_EXCLUDES_READER',
@@ -604,11 +749,28 @@ async function main(argv) {
       if (request.adminReadable === true && intersection.length === 0) {
         blocks.push({ code: 'BLOCKED_ADMIN_READ_NOT_AUDIENCE', detail: 'admin readability of the source is never audience evidence' });
       }
-      if (request.pagination?.complete !== true) {
+      let pagesComplete = true;
+      if (request.pagination.pages !== undefined) {
+        const pages = request.pagination.pages;
+        if (!Array.isArray(pages)) return failInput('pagination.pages must be an array');
+        let offset = 0; let total = null; const ids = new Set();
+        for (const page of pages) {
+          if (!isObject(page) || !strings(page.ids) || !Number.isSafeInteger(page.total) || page.total < 0 || !Number.isSafeInteger(page.limit) || page.limit <= 0 || page.offset !== offset || page.ids.length > page.limit) { pagesComplete = false; break; }
+          if (total === null) total = page.total;
+          if (page.total !== total || page.ids.some((id) => ids.has(id))) pagesComplete = false;
+          page.ids.forEach((id) => ids.add(id)); offset += page.ids.length;
+        }
+        if (total === null || offset !== total || ids.size !== total) pagesComplete = false;
+      }
+      if (request.pagination?.complete !== true || !pagesComplete) {
         blocks.push({
           code: 'BLOCKED_PAGINATION_INCOMPLETE',
           detail: `source enumeration incomplete (${request.pagination?.reason ?? 'no completion proof'})`,
         });
+      }
+      if (request.effectiveAudience && (request.effectiveAudience.complete !== true
+        || !['collection', 'parents', 'page', 'groups', 'shares', 'public'].every((channel) => request.effectiveAudience.channels.includes(channel)))) {
+        blocks.push({ code: 'BLOCKED_EFFECTIVE_AUDIENCE_INCOMPLETE', detail: 'all native entry points and pagination require independent current readback' });
       }
       if (request.principalMapping?.status !== 'MAPPED') {
         blocks.push({
@@ -619,10 +781,8 @@ async function main(argv) {
       if (request.grant?.expired === true) {
         blocks.push({ code: 'BLOCKED_GRANT_EXPIRED', detail: `grant ${request.grant.ref ?? '(unspecified)'} is expired` });
       }
-      if (
-        request.observationError?.targetRecordedAbsent === true
-        && ['timeout', 'http-403'].includes(request.observationError.kind)
-      ) {
+      // Error classification must fail closed, even for a previously unseen kind.
+      if (request.observationError?.targetRecordedAbsent === true) {
         blocks.push({
           code: 'BLOCKED_ABSENCE_INFERRED_FROM_ERROR',
           detail: `${request.observationError.kind} must never be recorded as target absence`,
@@ -634,7 +794,7 @@ async function main(argv) {
       observation.blocks = blocks;
       observation.observedSteps.push({
         step: 'evaluate declared publish-request evidence',
-        status: 'VERIFIED',
+        status: 'RECORDED',
         note: 'pure fail-closed gate evaluation over declared values; no live instance consulted',
       });
       observation.observedSteps.push({
@@ -658,24 +818,12 @@ async function main(argv) {
       print(observation);
       return EXIT_VERIFY;
     }
-    // 真实可达性尝试：探针永远先打真实请求，失败即如实上报，绝不 mock。
-    try {
-      const response = await fetch(String(endpoint).replace(/\/$/, '') + '/api/config', { signal: AbortSignal.timeout(5000) });
-      observation.observedSteps.push({ step: 'GET /api/config', status: 'VERIFIED', httpStatus: response.status });
-    } catch (err) {
-      const causeDetail = err?.cause ? (err.cause.code ?? err.cause.message ?? err.cause.name) : (err?.code ?? err?.message ?? err?.name ?? 'ERROR');
-      const cause = redactHostPaths(String(causeDetail));
-      observation.observedSteps.push({ step: 'GET /api/config', status: 'UNVERIFIED', error: cause });
-      observation.reason = `endpoint unreachable (GET /api/config): ${cause}`;
-      print(observation);
-      return EXIT_VERIFY;
-    }
     observation.observedSteps.push({
       step: 'authenticated principal channels',
       status: 'UNVERIFIED',
       reason: 'requires a real authenticated session (OIDC login proof not performed); credentials resolve only via runtime-authorized secret refs',
     });
-    observation.reason = 'endpoint reachable, but probe channels require authenticated principals and admission evidence that do not exist yet; no step may be fabricated';
+    observation.reason = 'endpoint registration alone is not action authority; authenticated role/channel and lifecycle operations require separate verified runtime grants. No API or restart was attempted.';
     print(observation);
     return EXIT_VERIFY;
   }
@@ -687,30 +835,10 @@ async function main(argv) {
       executed: false,
       status: 'UNVERIFIED',
       reason:
-        'no Outline stack was ever started by this tool (up refuses until the images lock qualifies and admission is granted); there is nothing this tool can stop. A stack started outside this tool must be stopped by its own supervisor.',
+        'no qualified lifecycle operation grant belongs to this invocation; an existing managed stack must not be stopped by declaration or historical admission. Comet retains the lifecycle decision.',
     });
     return EXIT_VERIFY;
   }
-
-  // validate/qualify/up：registry 与 refs 目录必须先可读（fail-closed，绝不静默降级为空规则）。
-  const registryFile = opts.registry ?? DEFAULT_REGISTRY;
-  const refsFile = opts.refs ?? DEFAULT_REFS;
-  let registry;
-  let refsDoc;
-  try {
-    registry = JSON.parse(fs.readFileSync(registryFile, 'utf8'));
-  } catch (err) {
-    return failInput(`registry unreadable: ${redactHostPaths(err.message)}`);
-  }
-  try {
-    refsDoc = JSON.parse(fs.readFileSync(refsFile, 'utf8'));
-  } catch (err) {
-    return failInput(`refs catalog unreadable (${displayPath(refsFile)}): ${redactHostPaths(err.message)}`);
-  }
-  const dir = opts.dir ?? DEFAULT_DIR;
-  const { files, missing, unparseable } = loadDomainFiles(dir);
-  if (missing.length > 0) return failInput(`domain files missing (${displayPath(dir)}): ${missing.join(', ')}`);
-  if (unparseable.length > 0) return failInput(`domain files unparseable: ${unparseable.join('; ')}`);
 
   if (command === 'validate') {
     const { violations, catalogGaps } = validateDomain({ registry, refsDoc, files });
@@ -750,7 +878,7 @@ async function main(argv) {
   if (command === 'qualify' || command === 'up') {
     // 单一事实源：catalog 缺口来自同一 validateDomain 结果，validate/qualify/up 共享。
     const { catalogGaps } = validateDomain({ registry, refsDoc, files });
-    const qualification = buildQualification({ registryFile, dir, files, catalogGaps });
+    const qualification = buildQualification({ registryFile, refsFile, dir, files, catalogGaps });
     if (command === 'qualify') {
       print(qualification);
       return qualification.ready ? EXIT_PASS : EXIT_VERIFY;
@@ -775,21 +903,8 @@ async function main(argv) {
         command: 'up',
         domain: 'outline',
         refused: true,
-        ready: true,
+        ready: qualification.ready,
         error: `UP_NOT_AUTHORIZED: ${lock.upGate?.reason ?? 'up gate is closed in this task'}`,
-      });
-      return EXIT_VERIFY;
-    }
-    const daemon = spawnSync('docker', ['version', '--format', '{{.Server.Version}}'], { encoding: 'utf8', timeout: 8000 });
-    if (daemon.status !== 0) {
-      print({
-        interface: 'Qualification.v1',
-        command: 'up',
-        domain: 'outline',
-        refused: true,
-        ready: true,
-        status: 'UNVERIFIED',
-        error: `UP_REFUSED_CONTAINER_DAEMON_UNREACHABLE: ${redactHostPaths(daemon.stderr.trim().split('\n')[0] || `docker exited ${daemon.status}`)}`,
       });
       return EXIT_VERIFY;
     }
@@ -798,9 +913,9 @@ async function main(argv) {
       command: 'up',
       domain: 'outline',
       refused: true,
-      ready: true,
+      ready: qualification.ready,
       status: 'UNVERIFIED',
-      error: 'UP_NOT_EXECUTED: runtime launch requires an authorized operator context; I03 declares the domain and gates, admission is a later explicit decision',
+      error: 'UP_NOT_AUTHORIZED: complete current qualification and separately verified operation authority are required; a historical lock admission cannot launch a stack',
     });
     return EXIT_VERIFY;
   }

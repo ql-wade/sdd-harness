@@ -1,0 +1,90 @@
+{
+  "observedAt": "2026-10-25T05:06:23.945603+00:00",
+  "scope": "current container mounts metadata only; no host sources, data or credentials read",
+  "containers": [
+    {
+      "name": "/outline-outline-1",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "outline_outline-data",
+          "destination": "/var/lib/outline/data",
+          "rw": true
+        }
+      ],
+      "networks": [
+        "outline_outline-access",
+        "outline_outline-internal"
+      ]
+    },
+    {
+      "name": "/outline-outline-postgres-1",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "outline_outline-db",
+          "destination": "/var/lib/postgresql/data",
+          "rw": true
+        }
+      ],
+      "networks": [
+        "outline_outline-internal"
+      ]
+    },
+    {
+      "name": "/outline-outline-redis-1",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "560d6a14260a4f4be746c4d58098615d08ded887503e35104e28961e91bb4b1d",
+          "destination": "/data",
+          "rw": true
+        }
+      ],
+      "networks": [
+        "outline_outline-internal"
+      ]
+    },
+    {
+      "name": "/outline-outline-object-store-1",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "outline_outline-attachments",
+          "destination": "/data",
+          "rw": true
+        }
+      ],
+      "networks": [
+        "outline_outline-internal"
+      ]
+    },
+    {
+      "name": "/outline-outline-dex-1",
+      "mounts": [
+        {
+          "type": "bind",
+          "name": "",
+          "destination": "/etc/dex/config.yaml",
+          "rw": false
+        }
+      ],
+      "networks": [
+        "outline_outline-access",
+        "outline_outline-internal"
+      ]
+    }
+  ],
+  "networks": [
+    {
+      "name": "outline_outline-access",
+      "internal": false,
+      "project": "outline"
+    },
+    {
+      "name": "outline_outline-internal",
+      "internal": true,
+      "project": "outline"
+    }
+  ]
+}

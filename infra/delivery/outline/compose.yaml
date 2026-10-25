@@ -9,6 +9,27 @@ services:
   outline:
     image: ${OUTLINE_IMAGE:?must be resolved from infra/delivery/outline/images.lock.json before up}
     restart: "no"
+    environment:
+      URL: ${URL:?registered loopback URL required}
+      PORT: "3000"
+      NODE_ENV: production
+      FORCE_HTTPS: "false"
+      SECRET_KEY: ${SECRET_KEY:?resolved app-session ref required}
+      UTILS_SECRET: ${UTILS_SECRET:?separate utilities binding required}
+      DATABASE_URL: ${DATABASE_URL:?resolved application DB role required}
+      REDIS_URL: ${REDIS_URL:?registered private cache URL required}
+      FILE_STORAGE: s3
+      AWS_S3_UPLOAD_BUCKET_URL: ${AWS_S3_UPLOAD_BUCKET_URL:?endpoint reachable by server and signed-URL clients required}
+      AWS_S3_UPLOAD_BUCKET_NAME: ${AWS_S3_UPLOAD_BUCKET_NAME:?registered bucket required}
+      AWS_REGION: ${AWS_REGION:?registered region required}
+      AWS_S3_FORCE_PATH_STYLE: "true"
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?bucket-scoped application credential required}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?bucket-scoped application credential required}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?registered client required}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?resolved client ref required}
+      OIDC_AUTH_URI: ${OIDC_AUTH_URI:?registered authorization endpoint required}
+      OIDC_TOKEN_URI: ${OIDC_TOKEN_URI:?registered token endpoint required}
+      OIDC_USERINFO_URI: ${OIDC_USERINFO_URI:?registered userinfo endpoint required}
     depends_on:
       - outline-postgres
       - outline-redis
@@ -23,6 +44,10 @@ services:
   outline-postgres:
     image: ${OUTLINE_POSTGRES_IMAGE:?must be resolved from infra/delivery/outline/images.lock.json before up}
     restart: "no"
+    environment:
+      POSTGRES_DB: outline
+      POSTGRES_USER: outline-bootstrap
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?separate DB bootstrap credential required}
     networks:
       - outline-internal
     volumes:
@@ -37,6 +62,10 @@ services:
   outline-object-store:
     image: ${OUTLINE_OBJECT_STORE_IMAGE:?must be resolved from infra/delivery/outline/images.lock.json before up}
     restart: "no"
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?separate storage bootstrap identity required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?separate storage bootstrap credential required}
     networks:
       - outline-internal
     ports:

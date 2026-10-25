@@ -2,23 +2,26 @@
   "schemaVersion": 1,
   "interface": "OutlineDomain.v1",
   "project": "sdd-harness-pilot",
-  "note": "示例登记：结构与绑定声明在位；不可变 ID、有效读者集与真实 owner 全部未观测（UNVERIFIED/UNREGISTERED），不得用占位值冒充事实。publisher/isolator grant 须由有权主体分别签发，本任务不代签。",
+  "note": "Known existing project identities are registered from the preserved one-shot historical readback only. Current full audience, OIDC mapping and independent action grants remain UNVERIFIED; readable owner is not publisher authority.",
   "instance": {
-    "id": null,
-    "url": null,
-    "immutableId": null,
-    "status": "UNVERIFIED",
-    "reason": "专用 loopback 实例尚未部署；不可变实例 ID 须从真实部署观测"
+    "id": "cb59131d-2d7c-421e-a818-44f84236b56d",
+    "url": "http://127.0.0.1:3000",
+    "immutableId": "cb59131d-2d7c-421e-a818-44f84236b56d",
+    "status": "HISTORICAL_IDENTITY_ONLY",
+    "reason": "c5c538 historical auth/team readback, not refreshed and not a standing grant",
+    "identityKind": "Outline workspace/team UUID, not a server-host identity"
   },
   "collections": [
     {
       "name": "managed-source-collection",
       "purpose": "受管源文集：交付资料的受控发布面",
-      "id": null,
+      "id": "a3c6b4d8-1f1e-473d-9f49-ea5c48b7a818",
       "owner": {
         "principal": null,
         "grantRef": "secret-ref:sdd-harness-pilot/outline-publisher",
-        "status": "UNREGISTERED"
+        "status": "UNREGISTERED",
+        "observedOutlineUserId": "17fcd2c1-2d60-4c2e-bd8c-327db9d6fb4c",
+        "note": "Historical admin/readable identity only; principal mapping and publisher grant are not registered by this observation"
       },
       "audience": {
         "readers": [],
@@ -46,6 +49,29 @@
   ],
   "evidence": {
     "effectiveAudienceClosure": "UNVERIFIED",
-    "note": "admin 能读不代表目标受众被允许；受管发布阻断不能以 admin 读得到替代"
+    "note": "admin 能读不代表目标受众被允许；受管发布阻断不能以 admin 读得到替代",
+    "historicalIdentity": {
+      "observedAt": "2026-10-25T02:11:45.872969+00:00",
+      "sha256": "c5c538218fe6d48ba2cc066b82247a36e8a72fd362c11518490e9095e3e60c99",
+      "evidenceRef": "worker-reports/I01-convergence/evidence/outline-http-metadata.json",
+      "scope": "owner/team/collection and direct-user membership only; no current group/inheritance/share closure or grant"
+    },
+    "requiredAudienceChannels": [
+      "collection",
+      "parents",
+      "page",
+      "groups",
+      "shares",
+      "public"
+    ],
+    "requiredAccessChannels": [
+      "collection",
+      "page",
+      "subtree",
+      "public-share",
+      "search",
+      "attachment"
+    ],
+    "paginationMustBeComplete": true
   }
 }

@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "interface": "OutlineStoragePolicy.v1",
   "project": "sdd-harness-pilot",
-  "note": "对象存储与状态策略（OutlineState.v1）：结构在位，endpoint/bucket/TTL 全部未选定；不得假定附件撤回立即生效；cache 仅缓存，永非权限权威。",
+  "note": "Existing project Minio/app process metadata observed; endpoint/bucket/region/access policy/signed-URL lifetime and independent application/bootstrap credentials are not qualified. Redis is cache, never ACL authority.",
   "storage": {
-    "type": "UNSELECTED",
+    "type": "s3-compatible",
     "endpoint": null,
     "bucket": null,
     "region": null,
@@ -50,13 +50,46 @@
     "fixedCreateUuid": {
       "declaredBySpec": true,
       "status": "UNVERIFIED",
-      "reason": "官方 API spec 声明了 client-supplied create UUID；仅真实部署验证后才可 VERIFIED"
+      "reason": "官方 API spec 声明了 client-supplied create UUID；仅真实部署验证后才可 VERIFIED",
+      "installedSchemaObservation": {
+        "version": "1.11.0",
+        "scope": "STATIC_SOURCE_ONLY_NOT_LIVE_API_VERIFICATION",
+        "schemaSha256": "e9331931a598468217e918234a2f6c98c6098de3fef3b7fa7ad8233662f9f171",
+        "evidenceRef": "worker-reports/I03-convergence/evidence/resource-readonly.json"
+      },
+      "parameter": "id"
     },
     "lastRevision": {
       "declaredBySpec": true,
       "conflictStatusDeclared": 409,
       "status": "UNVERIFIED",
-      "reason": "官方 API spec 声明了 lastRevision 冲突 409；仅真实部署验证后才可 VERIFIED，更新冲突不盲覆盖"
+      "reason": "官方 API spec 声明了 lastRevision 冲突 409；仅真实部署验证后才可 VERIFIED，更新冲突不盲覆盖",
+      "installedSchemaObservation": {
+        "version": "1.11.0",
+        "scope": "STATIC_SOURCE_ONLY_NOT_LIVE_API_VERIFICATION",
+        "schemaSha256": "e9331931a598468217e918234a2f6c98c6098de3fef3b7fa7ad8233662f9f171",
+        "evidenceRef": "worker-reports/I03-convergence/evidence/resource-readonly.json"
+      },
+      "parameter": "lastRevision"
     }
+  },
+  "runtimeBindings": {
+    "appUtilities": {
+      "credentialRef": null,
+      "status": "UNREGISTERED"
+    },
+    "reader": {
+      "credentialRef": null,
+      "status": "UNREGISTERED"
+    },
+    "databaseBootstrap": {
+      "credentialRef": null,
+      "status": "UNREGISTERED"
+    },
+    "objectStoreBootstrap": {
+      "credentialRef": null,
+      "status": "UNREGISTERED"
+    },
+    "rule": "bootstrap identities must not be placed in the Outline app environment or reused as application DB/bucket identity"
   }
 }

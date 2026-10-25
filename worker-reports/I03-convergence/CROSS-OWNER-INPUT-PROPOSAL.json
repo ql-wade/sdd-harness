@@ -1,0 +1,57 @@
+{
+  "scope": "metadata/input proposal only; not applied, provisioned or granted",
+  "owner": "I01 registry/refcatalog and P4_7 authority model controlled by root",
+  "refs": [
+    {
+      "ref": "secret-ref:sdd-harness-pilot/outline-reader",
+      "boundRole": "service",
+      "allowedPrincipals": [
+        "svc:sdd-harness-pilot/outline-reader"
+      ],
+      "purpose": "read only registered managed collection and relevant ACL metadata; not publisher/isolator/issuer",
+      "status": "NOT_PROVISIONED"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/outline-utilities",
+      "boundRole": "service",
+      "allowedPrincipals": [
+        "svc:sdd-harness-pilot/outline-app"
+      ],
+      "purpose": "distinct UTILS_SECRET material, not session or API key",
+      "status": "NOT_PROVISIONED"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/outline-db-bootstrap",
+      "boundRole": "service",
+      "allowedPrincipals": [
+        "svc:sdd-harness-pilot/outline-db-bootstrap"
+      ],
+      "purpose": "authorized DB app-role initialization only; never mount in app",
+      "status": "NOT_PROVISIONED"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/outline-object-store-bootstrap",
+      "boundRole": "service",
+      "allowedPrincipals": [
+        "svc:sdd-harness-pilot/outline-storage-bootstrap"
+      ],
+      "purpose": "authorized bucket-scoped app principal setup only; never mount in app",
+      "status": "NOT_PROVISIONED"
+    }
+  ],
+  "authorityModelDeltaAdvice": [
+    {
+      "path": "targets[id=outline-managed-collection].instanceStatus",
+      "proposed": "HISTORICAL_IDENTITY_ONLY_NOT_CURRENTLY_QUALIFIED"
+    },
+    {
+      "path": "targets[id=outline-managed-collection].audienceReadback",
+      "proposed": "preserve historical record separately; current-profile channels remain UNVERIFIED until independent readback"
+    },
+    {
+      "path": "targets[id=outline-managed-collection].registration",
+      "proposed": "consume single I03 registration source; readable admin is not a new service principal or grant"
+    }
+  ],
+  "runtimeAuthorityGranted": false
+}

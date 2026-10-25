@@ -1,0 +1,62 @@
+TAP version 13
+# Subtest: I03 every consumed input shape is rejected before qualification or probe use
+not ok 1 - I03 every consumed input shape is rejected before qualification or probe use
+  ---
+  duration_ms: 6559.826583
+  type: 'test'
+  location: '<worker-tree>/test/infra-outline.test.js:99:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"failures":25,"samples":[{"file":"images.lock.json","command":"validate","exitCode":0,"json":true},{"file":"images.lock.json","command":"qualify","exitCode":2,"json":true},{"file":"images.lock.json","command":"up","exitCode":2,"json":true},{"file":"images.lock.json","command":"probe","exitCode":2,"json":true},{"file":"images.lock.json","command":"stop","exitCode":2,"json":true},{"file":"oidc-registration.example.json","command":"validate","exitCode":0,"json":true},{"file":"oidc-registration.example.json","command":"qualify","exitCode":2,"json":true},{"file":"oidc-registration.example.json","command":"up","exitCode":2,"json":true}]}
+
+    25 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 25
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-outline.test.js:126:10)
+    Test.runInAsyncScope (node:async_hooks:213:14)
+    Test.run (node:internal/test_runner/test:1106:25)
+    Test.start (node:internal/test_runner/test:1003:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:358:17)
+  ...
+# Subtest: I03 native error and pagination observations never become absence or audience permission
+not ok 2 - I03 native error and pagination observations never become absence or audience permission
+  ---
+  duration_ms: 625.278292
+  type: 'test'
+  location: '<worker-tree>/test/infra-outline.test.js:142:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    a missing actual identity claim is an unknown authorization observation, not a crash
+
+    1 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-tree>/test/infra-outline.test.js:160:10)
+    Test.runInAsyncScope (node:async_hooks:213:14)
+    Test.run (node:internal/test_runner/test:1106:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+    Test.postRun (node:internal/test_runner/test:1235:19)
+    node:internal/test_runner/test:1040:31
+    node:internal/process/task_queues:149:7
+    AsyncResource.runInAsyncScope (node:async_hooks:213:14)
+    AsyncResource.runMicrotask (node:internal/process/task_queues:146:8)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7291.401875

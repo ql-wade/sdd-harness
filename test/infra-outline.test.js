@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import test, { afterEach } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 // V_INFRA_I03 — I03 Outline独立资料域、Postgres/Redis、OIDC与对象存储 的契约检查。
@@ -40,6 +41,18 @@ const DOMAIN_FILES = [
   'collection-registration.example.json',
 ];
 const HOST_PATH_OUTPUT_RE = /\/(Users|home|root|private|var|usr|etc|opt|tmp)\//;
+const NOMINAL_PUBLISH_REQUEST = {
+  interface: 'OutlinePublishRequest.example.v1',
+  collection: 'managed-source-collection',
+  targetReader: 'principal:reader-a@example.test',
+  audienceIntersection: ['principal:owner@example.test', 'principal:reader-a@example.test'],
+  pagination: { complete: true },
+  principalMapping: { status: 'MAPPED', subject: 'sub-reader-a' },
+  grant: { ref: 'secret-ref:sdd-harness-pilot/outline-publisher', expired: false },
+};
+const fixtureDirs = new Set();
+function fixtureDir(prefix) { const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix)); fixtureDirs.add(dir); return dir; }
+afterEach(() => { for (const dir of fixtureDirs) fs.rmSync(dir, { recursive: true, force: true }); fixtureDirs.clear(); });
 
 function runCli(args) {
   return spawnSync(process.execPath, [cliPath, ...args], {
@@ -53,7 +66,7 @@ function parseJsonOut(result, label) {
   try {
     return JSON.parse(result.stdout);
   } catch {
-    throw new AssertionError(`${label}: stdout is not JSON: ${result.stdout}\nstderr: ${result.stderr}`);
+    throw new Error(`${label}: stdout is not JSON: ${result.stdout}\nstderr: ${result.stderr}`);
   }
 }
 
@@ -67,7 +80,7 @@ function readDomainJson(name) {
 
 // 把已提交的 outline 域整体拷到 tmp fixture，应用 mutate({dir, read, write, json, writeJson}) 后返回 fixture 目录。
 function makeFixtureDir(mutate) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i03-'));
+  const dir = fixtureDir('infra-i03-');
   for (const name of DOMAIN_FILES) {
     fs.copyFileSync(path.join(outlineDir, name), path.join(dir, name));
   }
@@ -82,6 +95,129 @@ function makeFixtureDir(mutate) {
 function codes(report) {
   return (report.violations ?? []).map((v) => v.code);
 }
+
+test('I03 every consumed input shape is rejected before qualification or probe use', () => {
+  const failures = [];
+  const cases = [
+    ['images.lock.json', null], ['images.lock.json', { components: [null] }],
+    ['oidc-registration.example.json', null], ['oidc-registration.example.json', { provider: 1 }],
+    ['storage-policy.json', null], ['storage-policy.json', { state: [] }],
+    ['collection-registration.example.json', null], ['collection-registration.example.json', { collections: [null] }],
+    ...['images.lock.json', 'oidc-registration.example.json', 'storage-policy.json', 'collection-registration.example.json'].map((file) => [file, { ...readDomainJson(file), project: 'foreign-project' }]),
+    ['images.lock.json', (() => { const lock = readDomainJson('images.lock.json'); lock.components.push({ ...lock.components[0] }); return lock; })()],
+  ];
+  for (const [file, value] of cases) {
+    const dir = makeFixtureDir(({ writeJson }) => writeJson(file, value));
+    for (const command of ['validate', 'qualify', 'up', 'probe', 'stop']) {
+      const result = runCli([command, ...(command === 'probe' ? ['--case', 'managed-publish'] : []), '--dir', dir, '--json']);
+      let report; try { report = JSON.parse(result.stdout); } catch { report = null; }
+      if (result.status !== 2 || !report?.violations?.length || result.stderr) failures.push({ file, command, exitCode: result.status, json: Boolean(report) });
+    }
+  }
+  const dir = fixtureDir('infra-i03-refs-shape-');
+  for (const value of [null, { interface: 'SecretRef.v1', refs: {} }, { interface: 'SecretRef.v1', refs: [null] }]) {
+    const file = path.join(dir, 'refs.json'); fs.writeFileSync(file, JSON.stringify(value));
+    for (const command of ['validate', 'qualify', 'up', 'probe']) {
+      const result = runCli([command, ...(command === 'probe' ? ['--case', 'managed-publish'] : []), '--refs', file, '--json']);
+      let report; try { report = JSON.parse(result.stdout); } catch { report = null; }
+      if (result.status !== 2 || !report?.violations?.length || result.stderr) failures.push({ input: 'refs', command, exitCode: result.status, json: Boolean(report) });
+    }
+  }
+  assert.equal(failures.length, 0, JSON.stringify({ failures: failures.length, samples: failures.slice(0, 8) }));
+});
+
+test('I03 semantic admission and image flags cannot be bypassed by qualify or up', () => {
+  const dir = makeFixtureDir(({ read, write }) => write('compose.yaml', read('compose.yaml').replace('127.0.0.1:', '0.0.0.0:')));
+  for (const command of ['qualify', 'up', 'probe']) {
+    const result = runCli([command, ...(command === 'probe' ? ['--case', 'managed-publish'] : []), '--dir', dir, '--json']);
+    assert.equal(result.status, 2);
+    assert.ok(codes(parseJsonOut(result, command)).includes('PORT_BINDING_NOT_LOOPBACK'), 'every path consumes the same admission violation');
+  }
+  const qualify = parseJsonOut(runCli(['qualify', '--json']), 'recorded image');
+  assert.notEqual(qualify.categories['image-digest-authenticated'].status, 'VERIFIED', 'a lock boolean is not independent current image qualification');
+  const up = parseJsonOut(runCli(['up', '--json']), 'unqualified up');
+  assert.equal(up.ready, false, 'image labels never imply full resource readiness');
+});
+
+test('I03 native error and pagination observations never become absence or audience permission', () => {
+  for (const kind of ['http-403', 'http-409', 'http-500', 'timeout', 'network']) {
+    const request = structuredClone(NOMINAL_PUBLISH_REQUEST);
+    request.observationError = { kind, targetRecordedAbsent: true };
+    const result = runPublishGate(writePublishRequest(request));
+    assert.equal(result.status, 2);
+    assert.ok(parseJsonOut(result, kind).blocks.some((block) => block.code === 'BLOCKED_ABSENCE_INFERRED_FROM_ERROR'), kind);
+  }
+  const request = structuredClone(NOMINAL_PUBLISH_REQUEST);
+  request.pagination.pages = [{ offset: 0, limit: 1, total: 2, ids: ['one'] }];
+  request.effectiveAudience = { channels: ['collection', 'page'], complete: true };
+  const result = parseJsonOut(runPublishGate(writePublishRequest(request)), 'incomplete closure');
+  assert.ok(result.blocks.some((b) => b.code === 'BLOCKED_PAGINATION_INCOMPLETE'));
+  assert.ok(result.blocks.some((b) => b.code === 'BLOCKED_EFFECTIVE_AUDIENCE_INCOMPLETE'));
+  assert.equal(result.liveReadback, false);
+  const unmapped = structuredClone(NOMINAL_PUBLISH_REQUEST);
+  unmapped.principalMapping = { status: 'UNMAPPABLE', subject: null };
+  const unmappedRun = runPublishGate(writePublishRequest(unmapped));
+  assert.equal(unmappedRun.status, 2, 'a missing actual identity claim is an unknown authorization observation, not a crash');
+  assert.ok(parseJsonOut(unmappedRun, 'unmapped identity').blocks.some((b) => b.code === 'BLOCKED_PRINCIPAL_UNMAPPABLE'));
+});
+
+test('I03 managed-publish rejects target absence inferred from every error observation', async (t) => {
+  for (const kind of [
+    'http-100', 'http-199', 'http-300', 'http-302', 'http-399',
+    'http-400', 'http-401', 'http-403', 'http-404', 'http-409', 'http-429', 'http-499',
+    'http-500', 'http-503', 'http-599', 'timeout', 'network', 'unrecognized-failure',
+  ]) {
+    await t.test(kind, () => {
+      const request = structuredClone(NOMINAL_PUBLISH_REQUEST);
+      request.observationError = { kind, targetRecordedAbsent: true };
+      const result = runPublishGate(writePublishRequest(request));
+      const observation = parseJsonOut(result, kind);
+      assert.equal(result.status, 2, 'an observation error never authorizes a publish');
+      assert.equal(observation.liveReadback, false);
+      assert.equal(observation.status, 'BLOCKED', `${kind} cannot establish target absence`);
+      assert.deepEqual(observation.blocks, [{
+        code: 'BLOCKED_ABSENCE_INFERRED_FROM_ERROR',
+        detail: `${kind} must never be recorded as target absence`,
+      }]);
+      assert.match(observation.reason, /BLOCKED_ABSENCE_INFERRED_FROM_ERROR/);
+      assert.equal(result.stderr, '');
+    });
+  }
+  await t.test('no error observation leaves only the live-readback gate unverified', () => {
+    const result = runPublishGate(writePublishRequest(structuredClone(NOMINAL_PUBLISH_REQUEST)));
+    const observation = parseJsonOut(result, 'no error observation');
+    assert.equal(result.status, 2);
+    assert.equal(observation.liveReadback, false);
+    assert.equal(observation.status, 'UNVERIFIED');
+    assert.deepEqual(observation.blocks, []);
+    assert.match(observation.reason, /^declared preconditions hold,/);
+    assert.equal(result.stderr, '');
+  });
+});
+
+test('I03 malformed publish objects and diagnostic paths never escape the input boundary', () => {
+  for (const request of [null, [], { targetReader: {} }, { ...NOMINAL_PUBLISH_REQUEST, pagination: 1 }]) {
+    const result = runPublishGate(writePublishRequest(request));
+    assert.equal(result.status, 1);
+    assert.equal(/TypeError/.test(result.stderr), false);
+  }
+  const request = structuredClone(NOMINAL_PUBLISH_REQUEST);
+  request.pagination = { complete: false, reason: '/Volumes/private-example/request' };
+  const result = runPublishGate(writePublishRequest(request));
+  assert.equal(result.status, 2);
+  assert.equal(result.stdout.includes('/Volumes/private-example/request'), false);
+});
+
+test('I03 native compose bindings require explicit service scope and exclude storage administrator material from app', () => {
+  for (const key of ['DATABASE_URL', 'SECRET_KEY', 'OIDC_CLIENT_SECRET', 'AWS_REGION']) {
+    const dir = makeFixtureDir(({ read, write }) => write('compose.yaml', read('compose.yaml').split('\n').filter((line) => !new RegExp(`^      ${key}:`).test(line)).join('\n')));
+    const result = runCli(['validate', '--dir', dir, '--json']);
+    assert.equal(result.status, 2, `missing native app binding ${key} must not validate`);
+    assert.ok(codes(parseJsonOut(result, key)).includes('COMPOSE_REQUIRED_BINDING_MISSING'));
+  }
+  const dir = makeFixtureDir(({ read, write }) => write('compose.yaml', read('compose.yaml').replace('    restart:', '    env_file: ./shared-secrets.env\n    restart:')));
+  assert.ok(codes(parseJsonOut(runCli(['validate', '--dir', dir, '--json']), 'shared env')).includes('APP_SHARED_ENV_FILE_FORBIDDEN'));
+});
 
 test('V_INFRA_I03 contract: committed outline domain validates clean; qualify/up/probe/stop honor the exit contract', () => {
   const validate = runCli(['validate', '--registry', registryPath, '--dir', outlineDir, '--json']);
@@ -120,7 +256,7 @@ test('V_INFRA_I03 contract: committed outline domain validates clean; qualify/up
   assert.equal(runCli(['probe', '--case', 'not-a-case', '--json']).status, 1);
 
   // 域文件缺失 = 前置无效 → 退出 1（不是静默跳过）。
-  const partial = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i03-partial-'));
+  const partial = fixtureDir('infra-i03-partial-');
   for (const name of DOMAIN_FILES.filter((n) => n !== 'storage-policy.json')) {
     fs.copyFileSync(path.join(outlineDir, name), path.join(partial, name));
   }
@@ -134,7 +270,7 @@ test('gap-reporting behavior: a ref missing from a supplied catalog is explicitl
   // 断言 validate 仍显式上报缺口——覆盖不依赖已被 I01 修正案修复的真实缺口。
   const refsDoc = JSON.parse(fs.readFileSync(path.join(repoRoot, 'infra', 'delivery', 'secrets.refs.example.json'), 'utf8'));
   refsDoc.refs = refsDoc.refs.filter((entry) => entry.ref !== 'secret-ref:sdd-harness-pilot/outline-publisher');
-  const refsFixture = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i03-refs-')), 'refs.json');
+  const refsFixture = path.join(fixtureDir('infra-i03-refs-'), 'refs.json');
   fs.writeFileSync(refsFixture, JSON.stringify(refsDoc, null, 2) + '\n');
   const result = runCli(['validate', '--registry', registryPath, '--dir', outlineDir, '--refs', refsFixture, '--json']);
   assert.equal(result.status, 0, 'a catalog gap is readiness evidence (qualify), not a structural violation');
@@ -355,7 +491,7 @@ test('probes are real subcommands: without a live instance they exit 2 with stru
     assert.doesNotMatch(result.stdout, /"skip"\s*:\s*true/, 'probes must not skip');
   }
 
-  // 有 --endpoint 但不可达：必须真实尝试并如实报告连接失败（未来有真实实例时同一命令直接可跑）。
+  // Endpoint is not an authenticated lifecycle grant; no implicit API request or restart is permitted.
   const unreachable = runCli([
     'probe', '--case', 'restart-persistence', '--endpoint', 'http://127.0.0.1:59999',
     '--registry', registryPath, '--dir', outlineDir, '--json',
@@ -365,6 +501,7 @@ test('probes are real subcommands: without a live instance they exit 2 with stru
   assert.equal(unreachableReport.executed, false);
   assert.equal(unreachableReport.status, 'UNVERIFIED');
   assert.ok(unreachableReport.reason.length > 0);
+  assert.equal(unreachableReport.observedSteps.some((step) => /GET \/api\/config/.test(step.step)), false);
   assert.doesNotMatch(unreachable.stdout, HOST_PATH_OUTPUT_RE);
 });
 
@@ -406,9 +543,16 @@ test('OutlineState.v1 contract: durable db+attachments declared, cache not right
     assert.ok(collection.owner, 'owner registration present');
     assert.match(collection.owner.grantRef, /^secret-ref:sdd-harness-pilot\//);
     assert.ok(collection.audience, 'audience registration present');
-    assert.equal(collection.id, null, 'immutable collection id stays UNVERIFIED until a real deployment');
+    if (collection.name === 'managed-source-collection') {
+      assert.equal(collection.id, 'a3c6b4d8-1f1e-473d-9f49-ea5c48b7a818');
+      assert.equal(collection.owner.status, 'UNREGISTERED', 'historical admin readability must not register an action principal/grant');
+      assert.equal(collection.audience.status, 'UNVERIFIED');
+    } else assert.equal(collection.id, null, 'isolation collection is still unprovisioned');
   }
-  assert.equal(domain.instance.id, null, 'immutable instance id stays UNVERIFIED until a real deployment');
+  assert.equal(domain.instance.id, 'cb59131d-2d7c-421e-a818-44f84236b56d');
+  const historical = fs.readFileSync(path.join(repoRoot, domain.evidence.historicalIdentity.evidenceRef));
+  assert.equal(crypto.createHash('sha256').update(historical).digest('hex'), 'c5c538218fe6d48ba2cc066b82247a36e8a72fd362c11518490e9095e3e60c99');
+  assert.equal(domain.evidence.effectiveAudienceClosure, 'UNVERIFIED');
 
   // 7 个计划 secret-ref 全部被域文件引用；catalog 缺 outline-app-session 必须仍被显式报告（I01 目录缺口）。
   const referenced = JSON.stringify([
@@ -466,7 +610,7 @@ test('compose declaration gate: loopback binds, dedicated internal network, no h
 // publish-request 一律 os.tmpdir() fixture（输入证据，不是期望值副本——期望值独立断言于真实子进程输出）。
 
 function writePublishRequest(value, raw) {
-  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i03-pub-')), 'publish-request.json');
+  const file = path.join(fixtureDir('infra-i03-pub-'), 'publish-request.json');
   fs.writeFileSync(file, raw ?? JSON.stringify(value, null, 2) + '\n');
   return file;
 }
@@ -477,16 +621,6 @@ function runPublishGate(requestFile) {
     '--registry', registryPath, '--dir', outlineDir, '--json',
   ]);
 }
-
-const NOMINAL_PUBLISH_REQUEST = {
-  interface: 'OutlinePublishRequest.example.v1',
-  collection: 'managed-source-collection',
-  targetReader: 'principal:reader-a@example.test',
-  audienceIntersection: ['principal:owner@example.test', 'principal:reader-a@example.test'],
-  pagination: { complete: true },
-  principalMapping: { status: 'MAPPED', subject: 'sub-reader-a' },
-  grant: { ref: 'secret-ref:sdd-harness-pilot/outline-publisher', expired: false },
-};
 
 test('managed-publish gate: each blocking precondition refuses the publish with its exact cause; admin read never substitutes; timeout/403 is never absence', () => {
   const cases = [
@@ -622,10 +756,10 @@ test('compose gate: loopback exposure must not auto-open a public network and du
   assert.ok(!externalNetCodes.includes('NETWORK_NOT_INTERNAL'), 'the smuggled network is caught even though one internal network remains');
 
   const hostMode = makeFixtureDir(({ read, write }) => {
-    write('compose.yaml', read('compose.yaml').replace(
-      '    restart: "no"\n    depends_on:',
-      '    restart: "no"\n    network_mode: host\n    depends_on:',
-    ));
+    const source = read('compose.yaml');
+    const mutated = source.replace('    restart: "no"\n', '    restart: "no"\n    network_mode: host\n');
+    assert.notEqual(mutated, source, 'the host-network negative payload must actually land after template layout changes');
+    write('compose.yaml', mutated);
   });
   const hostModeRun = runCli(['validate', '--registry', registryPath, '--dir', hostMode, '--json']);
   assert.equal(hostModeRun.status, 2);

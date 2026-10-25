@@ -1,0 +1,502 @@
+TAP version 13
+# Subtest: V_INFRA_I08 contract: committed backup domain validates clean with explicit catalog gaps and honest retention
+ok 1 - V_INFRA_I08 contract: committed backup domain validates clean with explicit catalog gaps and honest retention
+  ---
+  duration_ms: 162.79525
+  type: 'test'
+  ...
+# Subtest: secret-ref discipline: the three backup refs are referenced only and resolve honestly (registered -> UNRESOLVED, unregistered -> REF_NOT_REGISTERED)
+ok 2 - secret-ref discipline: the three backup refs are referenced only and resolve honestly (registered -> UNRESOLVED, unregistered -> REF_NOT_REGISTERED)
+  ---
+  duration_ms: 3.525916
+  type: 'test'
+  ...
+# Subtest: validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay rules, secret-shaped key, malformed/cross-project ref, project mismatch — all exit 2
+ok 3 - validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay rules, secret-shaped key, malformed/cross-project ref, project mismatch — all exit 2
+  ---
+  duration_ms: 1034.287084
+  type: 'test'
+  ...
+# Subtest: validate fail-closed: missing or unparseable domain file exits 1, never silently degrades to empty rules
+ok 4 - validate fail-closed: missing or unparseable domain file exits 1, never silently degrades to empty rules
+  ---
+  duration_ms: 296.330666
+  type: 'test'
+  ...
+# Subtest: backup: real bytes are copied and the manifest digests match the target byte-for-byte; revoked cache is recorded, never copied
+ok 5 - backup: real bytes are copied and the manifest digests match the target byte-for-byte; revoked cache is recorded, never copied
+  ---
+  duration_ms: 107.201
+  type: 'test'
+  ...
+# Subtest: backup refuses an inconsistent workspace: an open transaction means no consistent point-in-time backup (exit 2)
+ok 6 - backup refuses an inconsistent workspace: an open transaction means no consistent point-in-time backup (exit 2)
+  ---
+  duration_ms: 101.395791
+  type: 'test'
+  ...
+# Subtest: backup input errors: missing workspace or missing arguments — exit 1 with usage
+ok 7 - backup input errors: missing workspace or missing arguments — exit 1 with usage
+  ---
+  duration_ms: 188.587
+  type: 'test'
+  ...
+# Subtest: restore: quarantined restore verifies manifest digests, fences the old writer, reconciles permissions honestly, and releases only after the same-operation readback
+ok 8 - restore: quarantined restore verifies manifest digests, fences the old writer, reconciles permissions honestly, and releases only after the same-operation readback
+  ---
+  duration_ms: 197.39675
+  type: 'test'
+  ...
+# Subtest: restore negatives: corrupt backup byte, incomplete backup, missing/unconfirmed/live-writer fence, missing key ref, point-in-time mismatch, second writer — all exit 2 and refuse release
+ok 9 - restore negatives: corrupt backup byte, incomplete backup, missing/unconfirmed/live-writer fence, missing key ref, point-in-time mismatch, second writer — all exit 2 and refuse release
+  ---
+  duration_ms: 2685.057541
+  type: 'test'
+  ...
+# Subtest: retention: pending obligations deny cleanup with the explicit list; disk pressure only warns and the workspace stays byte-identical
+ok 10 - retention: pending obligations deny cleanup with the explicit list; disk pressure only warns and the workspace stays byte-identical
+  ---
+  duration_ms: 227.320542
+  type: 'test'
+  ...
+# Subtest: retention: only verified completion — or a separately approved migration with proven restore — moves the R10 A boundary
+ok 11 - retention: only verified completion — or a separately approved migration with proven restore — moves the R10 A boundary
+  ---
+  duration_ms: 572.90425
+  type: 'test'
+  ...
+# Subtest: authority transfer: requires a controlled approval and process-level fence evidence, then registers the new authority with an epoch bump
+ok 12 - authority transfer: requires a controlled approval and process-level fence evidence, then registers the new authority with an epoch bump
+  ---
+  duration_ms: 688.028584
+  type: 'test'
+  ...
+# Subtest: probe cases run the real local mechanisms and verify them
+ok 13 - probe cases run the real local mechanisms and verify them
+  ---
+  duration_ms: 944.892708
+  type: 'test'
+  ...
+# Subtest: V_INFRA_P4_7: committed authorization artifacts validate clean against the real CLI and the I01 catalog
+ok 14 - V_INFRA_P4_7: committed authorization artifacts validate clean against the real CLI and the I01 catalog
+  ---
+  duration_ms: 168.10475
+  type: 'test'
+  ...
+# Subtest: committed state fails closed: decide on the committed artifacts refuses because no audience is registered
+ok 15 - committed state fails closed: decide on the committed artifacts refuses because no audience is registered
+  ---
+  duration_ms: 142.537875
+  type: 'test'
+  ...
+# Subtest: role isolation structure: pairwise-distinct principals and refs; tampering is a named violation
+ok 16 - role isolation structure: pairwise-distinct principals and refs; tampering is a named violation
+  ---
+  duration_ms: 142.331
+  type: 'test'
+  ...
+# Subtest: owner registration ties to the I01 registry; mismatch is a named violation
+ok 17 - owner registration ties to the I01 registry; mismatch is a named violation
+  ---
+  duration_ms: 161.817834
+  type: 'test'
+  ...
+# Subtest: credential alignment: role refs resolve in the I01 catalog with matching boundRole; policy/author refs are denied
+ok 18 - credential alignment: role refs resolve in the I01 catalog with matching boundRole; policy/author refs are denied
+  ---
+  duration_ms: 372.631625
+  type: 'test'
+  ...
+# Subtest: grant lifecycle over the real clock: verify, authority-gated revoke, expiry, and the time-bending refusal
+ok 19 - grant lifecycle over the real clock: verify, authority-gated revoke, expiry, and the time-bending refusal
+  ---
+  duration_ms: 730.552458
+  type: 'test'
+  ...
+# Subtest: trusted issuance (U01): signature presence, PR merges and approved fields never substitute for a registered issuer with domain authority
+ok 20 - trusted issuance (U01): signature presence, PR merges and approved fields never substitute for a registered issuer with domain authority
+  ---
+  duration_ms: 190.625875
+  type: 'test'
+  ...
+# Subtest: decide positive path: a fully grounded request yields an allow receipt bound to digests, grants and audience
+ok 21 - decide positive path: a fully grounded request yields an allow receipt bound to digests, grants and audience
+  ---
+  duration_ms: 177.284
+  type: 'test'
+  ...
+# Subtest: auto-publish identity and review gates: not-publisher, self-review, unregistered reviewer, stale review
+ok 22 - auto-publish identity and review gates: not-publisher, self-review, unregistered reviewer, stale review
+  ---
+  duration_ms: 401.312833
+  type: 'test'
+  ...
+# Subtest: multi-source disclosure intersection: union membership is not enough (U02 semantics)
+ok 23 - multi-source disclosure intersection: union membership is not enough (U02 semantics)
+  ---
+  duration_ms: 184.291875
+  type: 'test'
+  ...
+# Subtest: pre-write recheck blocks drifted ground truth: ledger change, payload drift, receipt tamper, same-operation renewal
+ok 24 - pre-write recheck blocks drifted ground truth: ledger change, payload drift, receipt tamper, same-operation renewal
+  ---
+  duration_ms: 1656.217042
+  type: 'test'
+  ...
+# Subtest: fail-closed evidence gates: incomplete/error/service-only/unmapped permission evidence is never an empty set or public
+ok 25 - fail-closed evidence gates: incomplete/error/service-only/unmapped permission evidence is never an empty set or public
+  ---
+  duration_ms: 1126.086542
+  type: 'test'
+  ...
+# Subtest: audience enlargement surface (U05 semantics): allowlisted collection, but share/inheritance/public paths are refused; no ACL mutation entrance exists
+ok 26 - audience enlargement surface (U05 semantics): allowlisted collection, but share/inheritance/public paths are refused; no ACL mutation entrance exists
+  ---
+  duration_ms: 1588.991167
+  type: 'test'
+  ...
+# Subtest: self-authored inputs are refused as a class: inline grant, approved flag, author sensitivity label, PR merge field
+ok 27 - self-authored inputs are refused as a class: inline grant, approved flag, author sensitivity label, PR merge field
+  ---
+  duration_ms: 626.453125
+  type: 'test'
+  ...
+# Subtest: input contract: unreadable files and unknown commands exit 1; structured output never leaks host paths
+ok 28 - input contract: unreadable files and unknown commands exit 1; structured output never leaks host paths
+  ---
+  duration_ms: 258.002834
+  type: 'test'
+  ...
+# Subtest: V_INFRA_I08 contract: committed backup domain validates clean with explicit catalog gaps and honest retention
+ok 29 - V_INFRA_I08 contract: committed backup domain validates clean with explicit catalog gaps and honest retention
+  ---
+  duration_ms: 192.477542
+  type: 'test'
+  ...
+# Subtest: secret-ref discipline: the three backup refs are referenced only and resolve honestly (registered -> UNRESOLVED, unregistered -> REF_NOT_REGISTERED)
+ok 30 - secret-ref discipline: the three backup refs are referenced only and resolve honestly (registered -> UNRESOLVED, unregistered -> REF_NOT_REGISTERED)
+  ---
+  duration_ms: 4.470709
+  type: 'test'
+  ...
+# Subtest: validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay rules, secret-shaped key, malformed/cross-project ref, project mismatch — all exit 2
+ok 31 - validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay rules, secret-shaped key, malformed/cross-project ref, project mismatch — all exit 2
+  ---
+  duration_ms: 1450.236084
+  type: 'test'
+  ...
+# Subtest: validate fail-closed: missing or unparseable domain file exits 1, never silently degrades to empty rules
+ok 32 - validate fail-closed: missing or unparseable domain file exits 1, never silently degrades to empty rules
+  ---
+  duration_ms: 371.778917
+  type: 'test'
+  ...
+# Subtest: backup: real bytes are copied and the manifest digests match the target byte-for-byte; revoked cache is recorded, never copied
+ok 33 - backup: real bytes are copied and the manifest digests match the target byte-for-byte; revoked cache is recorded, never copied
+  ---
+  duration_ms: 103.912042
+  type: 'test'
+  ...
+# Subtest: backup refuses an inconsistent workspace: an open transaction means no consistent point-in-time backup (exit 2)
+ok 34 - backup refuses an inconsistent workspace: an open transaction means no consistent point-in-time backup (exit 2)
+  ---
+  duration_ms: 94.63625
+  type: 'test'
+  ...
+# Subtest: backup input errors: missing workspace or missing arguments — exit 1 with usage
+ok 35 - backup input errors: missing workspace or missing arguments — exit 1 with usage
+  ---
+  duration_ms: 207.154208
+  type: 'test'
+  ...
+# Subtest: restore: quarantined restore verifies manifest digests, fences the old writer, reconciles permissions honestly, and releases only after the same-operation readback
+ok 36 - restore: quarantined restore verifies manifest digests, fences the old writer, reconciles permissions honestly, and releases only after the same-operation readback
+  ---
+  duration_ms: 212.728083
+  type: 'test'
+  ...
+# Subtest: restore negatives: corrupt backup byte, incomplete backup, missing/unconfirmed/live-writer fence, missing key ref, point-in-time mismatch, second writer — all exit 2 and refuse release
+ok 37 - restore negatives: corrupt backup byte, incomplete backup, missing/unconfirmed/live-writer fence, missing key ref, point-in-time mismatch, second writer — all exit 2 and refuse release
+  ---
+  duration_ms: 3195.884833
+  type: 'test'
+  ...
+# Subtest: retention: pending obligations deny cleanup with the explicit list; disk pressure only warns and the workspace stays byte-identical
+ok 38 - retention: pending obligations deny cleanup with the explicit list; disk pressure only warns and the workspace stays byte-identical
+  ---
+  duration_ms: 154.489958
+  type: 'test'
+  ...
+# Subtest: retention: only verified completion — or a separately approved migration with proven restore — moves the R10 A boundary
+ok 39 - retention: only verified completion — or a separately approved migration with proven restore — moves the R10 A boundary
+  ---
+  duration_ms: 396.604959
+  type: 'test'
+  ...
+# Subtest: authority transfer: requires a controlled approval and process-level fence evidence, then registers the new authority with an epoch bump
+ok 40 - authority transfer: requires a controlled approval and process-level fence evidence, then registers the new authority with an epoch bump
+  ---
+  duration_ms: 624.484708
+  type: 'test'
+  ...
+# Subtest: probe cases run the real local mechanisms and verify them
+ok 41 - probe cases run the real local mechanisms and verify them
+  ---
+  duration_ms: 811.739792
+  type: 'test'
+  ...
+# Subtest: qualification policy shape admission rejects every consumed field before CLI use
+ok 42 - qualification policy shape admission rejects every consumed field before CLI use
+  ---
+  duration_ms: 33817.492583
+  type: 'test'
+  ...
+# Subtest: shared catalog and resolver reject malformed policy options and iterable bindings
+ok 43 - shared catalog and resolver reject malformed policy options and iterable bindings
+  ---
+  duration_ms: 9.014208
+  type: 'test'
+  ...
+# Subtest: public option and optional input shape errors refuse before external tools
+ok 44 - public option and optional input shape errors refuse before external tools
+  ---
+  duration_ms: 4970.79425
+  type: 'test'
+  ...
+# Subtest: registry rejects malformed reference catalogs before runtime observation in every command
+ok 45 - registry rejects malformed reference catalogs before runtime observation in every command
+  ---
+  duration_ms: 5127.11025
+  type: 'test'
+  ...
+# Subtest: secret reference API denials never echo caller-supplied principal role or project paths
+ok 46 - secret reference API denials never echo caller-supplied principal role or project paths
+  ---
+  duration_ms: 2.694167
+  type: 'test'
+  ...
+# Subtest: registry admission rejects blank project/resource ownership and purpose
+ok 47 - registry admission rejects blank project/resource ownership and purpose
+  ---
+  duration_ms: 253.361791
+  type: 'test'
+  ...
+# Subtest: qualification and up reject invalid registration through the same owner gate
+ok 48 - qualification and up reject invalid registration through the same owner gate
+  ---
+  duration_ms: 166.464667
+  type: 'test'
+  ...
+# Subtest: registry rejection does not echo a credential-shaped value supplied as an owner
+ok 49 - registry rejection does not echo a credential-shaped value supplied as an owner
+  ---
+  duration_ms: 164.991583
+  type: 'test'
+  ...
+# Subtest: qualification reports unavailable dependency executables as structured UNVERIFIED
+ok 50 - qualification reports unavailable dependency executables as structured UNVERIFIED
+  ---
+  duration_ms: 87.27675
+  type: 'test'
+  ...
+# Subtest: secret reference resolution rejects missing purpose and ambiguous catalog bindings
+ok 51 - secret reference resolution rejects missing purpose and ambiguous catalog bindings
+  ---
+  duration_ms: 1.572416
+  type: 'test'
+  ...
+# Subtest: registry lock references cannot traverse or follow symlinks outside the project
+ok 52 - registry lock references cannot traverse or follow symlinks outside the project
+  ---
+  duration_ms: 344.257917
+  type: 'test'
+  ...
+# Subtest: registry admission rejects missing identity and invalid resource collections as structured failures
+ok 53 - registry admission rejects missing identity and invalid resource collections as structured failures
+  ---
+  duration_ms: 339.199417
+  type: 'test'
+  ...
+# Subtest: automatic cleanup remains refused when its destruction precondition is unverified
+ok 54 - automatic cleanup remains refused when its destruction precondition is unverified
+  ---
+  duration_ms: 247.259166
+  type: 'test'
+  ...
+# Subtest: resource qualification does not claim absent source pins as recorded
+ok 55 - resource qualification does not claim absent source pins as recorded
+  ---
+  duration_ms: 246.644125
+  type: 'test'
+  ...
+# Subtest: qualification input binding changes with the actual reference catalog or policy
+ok 56 - qualification input binding changes with the actual reference catalog or policy
+  ---
+  duration_ms: 685.383
+  type: 'test'
+  ...
+# Subtest: V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract
+ok 57 - V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract
+  ---
+  duration_ms: 821.548125
+  type: 'test'
+  ...
+# Subtest: RED owner gate: resource owned by an unregistered owner is rejected
+ok 58 - RED owner gate: resource owned by an unregistered owner is rejected
+  ---
+  duration_ms: 81.107667
+  type: 'test'
+  ...
+# Subtest: RED cross-project gate: credentialRef resolving into another project (pav-*) is rejected
+ok 59 - RED cross-project gate: credentialRef resolving into another project (pav-*) is rejected
+  ---
+  duration_ms: 80.784709
+  type: 'test'
+  ...
+# Subtest: RED principal gate: ordinary agent identity is denied publisher/isolator material
+ok 60 - RED principal gate: ordinary agent identity is denied publisher/isolator material
+  ---
+  duration_ms: 0.595417
+  type: 'test'
+  ...
+# Subtest: RED image gate: floating tag and fake digest do not pass
+ok 61 - RED image gate: floating tag and fake digest do not pass
+  ---
+  duration_ms: 168.055541
+  type: 'test'
+  ...
+# Subtest: RED evidence gate: license/platform/backup compatibility missing means NOT_READY and up refuses
+ok 62 - RED evidence gate: license/platform/backup compatibility missing means NOT_READY and up refuses
+  ---
+  duration_ms: 471.672333
+  type: 'test'
+  ...
+# Subtest: RED digest binding: qualify receipt recomputes the actual input archive and rejects mismatch
+ok 63 - RED digest binding: qualify receipt recomputes the actual input archive and rejects mismatch
+  ---
+  duration_ms: 246.191041
+  type: 'test'
+  ...
+# Subtest: RED plaintext gate: secret-shaped values and secret-value keys are rejected
+ok 64 - RED plaintext gate: secret-shaped values and secret-value keys are rejected
+  ---
+  duration_ms: 164.496791
+  type: 'test'
+  ...
+# Subtest: RED host-path gate: host absolute paths are rejected in committed structure
+ok 65 - RED host-path gate: host absolute paths are rejected in committed structure
+  ---
+  duration_ms: 86.104708
+  type: 'test'
+  ...
+# Subtest: RED role-reuse gate: one credential bound to two high-privilege roles is rejected
+ok 66 - RED role-reuse gate: one credential bound to two high-privilege roles is rejected
+  ---
+  duration_ms: 85.131459
+  type: 'test'
+  ...
+# Subtest: RED schema shape gate: type-invalid fields and duplicate resource ids are rejected
+ok 67 - RED schema shape gate: type-invalid fields and duplicate resource ids are rejected
+  ---
+  duration_ms: 335.856542
+  type: 'test'
+  ...
+# Subtest: retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED
+ok 68 - retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED
+  ---
+  duration_ms: 83.503
+  type: 'test'
+  ...
+# Subtest: committed registry and refs catalog contain no secret material
+ok 69 - committed registry and refs catalog contain no secret material
+  ---
+  duration_ms: 0.590959
+  type: 'test'
+  ...
+# Subtest: SecretRef.v1 format: parse accepts only well-formed project-bound refs
+ok 70 - SecretRef.v1 format: parse accepts only well-formed project-bound refs
+  ---
+  duration_ms: 0.254667
+  type: 'test'
+  ...
+# Subtest: authority readback is honestly recorded as UNVERIFIED with the exact failure
+ok 71 - authority readback is honestly recorded as UNVERIFIED with the exact failure
+  ---
+  duration_ms: 227.886375
+  type: 'test'
+  ...
+# Subtest: every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is registered with distinct purposes and bound roles
+ok 72 - every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is registered with distinct purposes and bound roles
+  ---
+  duration_ms: 0.271833
+  type: 'test'
+  ...
+# Subtest: github readback: derives the GitHub target from the registered identity and verifies repo plus authenticated caller
+ok 73 - github readback: derives the GitHub target from the registered identity and verifies repo plus authenticated caller
+  ---
+  duration_ms: 503.10825
+  type: 'test'
+  ...
+# Subtest: github readback: arbitrary alternate registered project fixture is honored, not the hardcoded repo
+ok 74 - github readback: arbitrary alternate registered project fixture is honored, not the hardcoded repo
+  ---
+  duration_ms: 372.213375
+  type: 'test'
+  ...
+# Subtest: github readback: repo answering with a different repoId, fullname or owner is refused as MISMATCH
+ok 75 - github readback: repo answering with a different repoId, fullname or owner is refused as MISMATCH
+  ---
+  duration_ms: 1100.879083
+  type: 'test'
+  ...
+# Subtest: github readback: public repo readability with a different authenticated caller is NOT authority VERIFIED
+ok 76 - github readback: public repo readability with a different authenticated caller is NOT authority VERIFIED
+  ---
+  duration_ms: 376.326625
+  type: 'test'
+  ...
+# Subtest: github readback: nonzero gh exit, error envelopes, non-repo JSON and caller failure are refused
+ok 77 - github readback: nonzero gh exit, error envelopes, non-repo JSON and caller failure are refused
+  ---
+  duration_ms: 1863.137333
+  type: 'test'
+  ...
+# Subtest: github readback: malformed or missing registered identity is rejected before any gh call
+ok 78 - github readback: malformed or missing registered identity is rejected before any gh call
+  ---
+  duration_ms: 843.296291
+  type: 'test'
+  ...
+# Subtest: github readback: committed registry identity labels point at the actual ql-wade project
+ok 79 - github readback: committed registry identity labels point at the actual ql-wade project
+  ---
+  duration_ms: 0.183042
+  type: 'test'
+  ...
+# Subtest: github readback: null and non-object API payloads are structured UNVERIFIED with exit 2, never a crash
+ok 80 - github readback: null and non-object API payloads are structured UNVERIFIED with exit 2, never a crash
+  ---
+  duration_ms: 1811.310167
+  type: 'test'
+  ...
+# Subtest: github readback: registered repoId/principalId must be positive safe integers, rejected before any gh call
+ok 81 - github readback: registered repoId/principalId must be positive safe integers, rejected before any gh call
+  ---
+  duration_ms: 562.769792
+  type: 'test'
+  ...
+# Subtest: github readback: repoFullname owner segment must equal registered github.owner before any gh call
+ok 82 - github readback: repoFullname owner segment must equal registered github.owner before any gh call
+  ---
+  duration_ms: 197.031459
+  type: 'test'
+  ...
+1..82
+# tests 82
+# suites 0
+# pass 82
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 57134.4035

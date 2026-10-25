@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "interface": "OutlineImageLock.v1",
   "project": "sdd-harness-pilot",
-  "note": "当前不存在已认证的 Outline/Postgres/Redis/对象存储镜像：版本未选定，reference/digest 保持 null，严禁虚构 tag/digest（images_policy.invented_tags_or_digests=false）。每个组件必须经 registry 认证 digest 后才允许 up。",
+  "note": "Existing selected digest pins and historical admission retained. Selection flags are recorded metadata; current source/license/platform/recovery qualification and purpose-bound runtime/lifecycle grants remain required.",
   "resolution": {
     "lockSource": "infra/delivery/outline/images.lock.json",
     "composeMapping": {
@@ -14,11 +14,15 @@
     "rule": "compose 的 image 一律经由本锁解析注入；本锁未 ready 时 tools/infra/outline.mjs up 必须拒绝"
   },
   "upGate": {
-    "enabled": true,
-    "requireAllComponentsAuthenticated": true,
-    "admittedBy": "user directive 2026-10-22: \"按照你的建议来\"（默认准入清单）",
-    "admittedAt": "2026-10-22T08:00:00.000Z",
-    "reason": "资源准入波次：默认 digest 钉定清单获批；oidc issuer (dex) 为部署波次新增组件，运行时面见 .sdd/outline/runtime"
+    "enabled": false,
+    "reason": "Construction only: no current lifecycle grant or complete resource qualification",
+    "historicalAdmission": {
+      "enabled": true,
+      "requireAllComponentsAuthenticated": true,
+      "admittedBy": "user directive 2026-10-22: \"按照你的建议来\"（默认准入清单）",
+      "admittedAt": "2026-10-22T08:00:00.000Z",
+      "reason": "资源准入波次：默认 digest 钉定清单获批；oidc issuer (dex) 为部署波次新增组件，运行时面见 .sdd/outline/runtime"
+    }
   },
   "components": [
     {

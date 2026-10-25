@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "interface": "OutlineOidcRegistration.v1",
   "project": "sdd-harness-pilot",
-  "note": "OIDC 注册示例：issuer/discovery/client/subject映射全部未开通；启用前必须有真实签发与登录证明。client 凭据只经 secret-ref 引用，绝不存值。",
+  "note": "A project Dex process is observed, but exact issuer/discovery/client registration, subject mapping, independent role sessions and login proof are not qualified. No credentials or users are provisioned by this registration.",
   "provider": {
     "issuerUrl": null,
     "discoveryUrl": null,
@@ -13,7 +13,9 @@
     "clientId": null,
     "credentialRef": "secret-ref:sdd-harness-pilot/outline-oidc-client",
     "sessionCredentialRef": "secret-ref:sdd-harness-pilot/outline-app-session",
-    "redirectUris": ["http://127.0.0.1:3000/auth/oidc.callback"],
+    "redirectUris": [
+      "http://127.0.0.1:3000/auth/oidc.callback"
+    ],
     "loopbackOnly": true,
     "status": "UNPROVISIONED"
   },
@@ -24,9 +26,19 @@
     "reason": "subject→principal 映射未确定；无法映射 principal 的请求必须被受管发布阻断"
   },
   "testPrincipals": {
-    "owner": { "subject": null, "status": "UNREGISTERED" },
-    "member": { "subject": null, "status": "UNREGISTERED" },
-    "offboarded": { "subject": null, "status": "UNREGISTERED", "note": "离组用户是权限负例的主角" }
+    "owner": {
+      "subject": null,
+      "status": "UNREGISTERED"
+    },
+    "member": {
+      "subject": null,
+      "status": "UNREGISTERED"
+    },
+    "offboarded": {
+      "subject": null,
+      "status": "UNREGISTERED",
+      "note": "离组用户是权限负例的主角"
+    }
   },
   "evidence": {
     "realIssuanceProof": "UNVERIFIED",
