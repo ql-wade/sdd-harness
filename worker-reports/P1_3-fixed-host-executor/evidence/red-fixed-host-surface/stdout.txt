@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: fixed runner admission refuses a caller-supplied authority even when its foreign dispatch is valid
+ok 1 - fixed runner admission refuses a caller-supplied authority even when its foreign dispatch is valid
+  ---
+  duration_ms: 5.039458
+  type: 'test'
+  ...
+# Subtest: the bound Comet authority exposes the original collector without admitting foreign Run packets
+not ok 2 - the bound Comet authority exposes the original collector without admitting foreign Run packets
+  ---
+  duration_ms: 2.626417
+  type: 'test'
+  location: '<repo>/test/comet-execution-binding.test.js:34:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    the fixed host needs the original P2_2 collector, not dispatch-only labels
+    + actual - expected
+    
+    + 'undefined'
+    - 'function'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'function'
+  actual: 'undefined'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/comet-execution-binding.test.js:37:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: the original Comet adapter exposes a fixed executor that refuses unregistered construction before launch
+not ok 3 - the original Comet adapter exposes a fixed executor that refuses unregistered construction before launch
+  ---
+  duration_ms: 0.19325
+  type: 'test'
+  location: '<repo>/test/comet-execution-binding.test.js:43:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    P1_3 currently has no fixed host/executor implementation
+    + actual - expected
+    
+    + 'undefined'
+    - 'function'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'function'
+  actual: 'undefined'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/comet-execution-binding.test.js:45:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 1
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 100.714459

@@ -1,0 +1,165 @@
+TAP version 13
+# Subtest: fixed host rejects malformed registration data before consulting code or process ports
+    # Subtest: root array
+    ok 1 - root array
+      ---
+      duration_ms: 0.623083
+      type: 'test'
+      ...
+    # Subtest: unknown version
+    ok 2 - unknown version
+      ---
+      duration_ms: 0.092125
+      type: 'test'
+      ...
+    # Subtest: change number
+    not ok 3 - change number
+      ---
+      duration_ms: 0.493584
+      type: 'test'
+      location: '<repo>/test/comet-execution-binding.test.js:69:47'
+      failureType: 'testCodeFailure'
+      error: |-
+        The validation function is expected to return "true". Received false
+        
+        Caught error:
+        
+        CometExecutionError: UNVERIFIED: NATIVE_PORTS_REQUIRED
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      stack: |-
+        TestContext.<anonymous> (file://<repo>/test/comet-execution-binding.test.js:70:12)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/comet-execution-binding.test.js:69:47)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      ...
+    # Subtest: change object
+    ok 4 - change object
+      ---
+      duration_ms: 0.10975
+      type: 'test'
+      ...
+    # Subtest: project not string
+    ok 5 - project not string
+      ---
+      duration_ms: 0.082375
+      type: 'test'
+      ...
+    # Subtest: run not string
+    ok 6 - run not string
+      ---
+      duration_ms: 0.200458
+      type: 'test'
+      ...
+    # Subtest: runner null
+    ok 7 - runner null
+      ---
+      duration_ms: 0.110125
+      type: 'test'
+      ...
+    # Subtest: roles not array
+    ok 8 - roles not array
+      ---
+      duration_ms: 0.094292
+      type: 'test'
+      ...
+    # Subtest: docker null
+    ok 9 - docker null
+      ---
+      duration_ms: 0.108459
+      type: 'test'
+      ...
+    # Subtest: digest array
+    not ok 10 - digest array
+      ---
+      duration_ms: 0.208125
+      type: 'test'
+      location: '<repo>/test/comet-execution-binding.test.js:69:47'
+      failureType: 'testCodeFailure'
+      error: |-
+        The validation function is expected to return "true". Received false
+        
+        Caught error:
+        
+        CometExecutionError: UNVERIFIED: NATIVE_PORTS_REQUIRED
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      stack: |-
+        TestContext.<anonymous> (file://<repo>/test/comet-execution-binding.test.js:70:12)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/comet-execution-binding.test.js:69:47)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      ...
+    # Subtest: actions null
+    ok 11 - actions null
+      ---
+      duration_ms: 0.080792
+      type: 'test'
+      ...
+    # Subtest: action null
+    ok 12 - action null
+      ---
+      duration_ms: 0.063959
+      type: 'test'
+      ...
+    # Subtest: argv null
+    ok 13 - argv null
+      ---
+      duration_ms: 0.052792
+      type: 'test'
+      ...
+    # Subtest: argv null item
+    ok 14 - argv null item
+      ---
+      duration_ms: 0.040791
+      type: 'test'
+      ...
+    # Subtest: worker qualification field
+    ok 15 - worker qualification field
+      ---
+      duration_ms: 0.0365
+      type: 'test'
+      ...
+    1..15
+not ok 1 - fixed host rejects malformed registration data before consulting code or process ports
+  ---
+  duration_ms: 29.139083
+  type: 'test'
+  location: '<repo>/test/comet-execution-binding.test.js:54:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: original Native intent runs through the fixed I02 three-port implementation and returns real process evidence to the same Run
+not ok 2 - original Native intent runs through the fixed I02 three-port implementation and returns real process evidence to the same Run
+  ---
+  duration_ms: 864.224792
+  type: 'test'
+  location: '<repo>/test/comet-execution-binding.test.js:212:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection: a bound executor must never forward a different Run registration'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async nativeProcessFixture (file://<repo>/test/comet-execution-binding.test.js:178:5)
+    async TestContext.<anonymous> (file://<repo>/test/comet-execution-binding.test.js:216:20)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..2
+# tests 17
+# suites 0
+# pass 13
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 953.591

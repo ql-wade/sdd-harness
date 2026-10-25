@@ -1,0 +1,3 @@
+# Root v1 entry decision at this checkpoint
+
+Use the already owned lib/adapters/comet-executor.js as the future thin executable main. OriginalI02 owns fixed image symlink /opt/sdd/runner-host.mjs -> /opt/sdd/lib/adapters/comet-executor.js and packaging closure. No tools script/factory path is newly owned. This checkpoint does not yet implement that main. Next same-task slice must preserve actual controller/worker/source/secretRef boundaries and call only original Native main/ports; unknown source/identity/grant refuses UNVERIFIED/0 children. No env/argv role tag can install issuer. Existing I01 resolver remainsUNRESOLVED; do not invent a credential reader. The earlier plan remains historical, not authorization for an extra source path.
