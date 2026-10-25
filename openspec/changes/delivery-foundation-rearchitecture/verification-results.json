@@ -1147,6 +1147,30 @@
       "receipt": ".local/comet-reset/outline-readonly-authorization/one-shot-attempt.json",
       "business_actions_granted": false,
       "scope": "fixed three API read-only qualification only; no runtime or publication acceptance"
+    },
+    "p1_6_supplier": {
+      "integrated_commit": "3f69f9c5c3c49f0146974fb28c90c1ed8f403496",
+      "worker_commit": "4761130158a90c38f9e90c551fcff5e472643f50",
+      "full_task_status": "INTEGRATED_AWAITING_REAL_QUALIFICATION",
+      "fresh_root_build_reused": false,
+      "fingerprint": "b11b20e1b6401533d75a4838e85e0b8b5389d1b0e819fc67c8d69adff696a2ed",
+      "generated_groups_pass": 3,
+      "native_smoke": {
+        "pass": 255,
+        "skip": 2
+      },
+      "real_cli_supplier": {
+        "pass": 8,
+        "fail": 0,
+        "skip": 0
+      },
+      "raw_methods": {
+        "snapshots": 11,
+        "files": 245,
+        "all_hashes_exact": true
+      },
+      "evidence": ".local/comet-reset/p1_6-integration/integration-checks.json",
+      "full_profile_qualified": false
     }
   },
   "review_authorization": {
@@ -1170,38 +1194,54 @@
     "agent_skill_check": "PASS; five base skills only",
     "git_diff_check": "PASS",
     "repository_check": {
-      "command": "bash scripts/check.sh",
+      "status": "FAIL",
       "exit_code": 1,
-      "reason": "Whitebox GREEN fixture self-test failed; full check stopped before npm regression",
-      "evidence": ".local/comet-reset/final-local-checks/check.sh-unsandboxed.log",
-      "sandbox_first_attempt": ".local/comet-reset/final-local-checks/check.sh.log"
+      "whitebox_source_selftest": "PASS full15negative+3invariants and remaining source-owned checks",
+      "npm_regression": {
+        "tests": 521,
+        "pass": 507,
+        "fail": 14,
+        "skip": 0
+      },
+      "later_yaml_json_stages": "NOT_REACHED_AFTER_NPM_FAILURE",
+      "evidence": ".local/comet-reset/p1_6-integration/root-check.log"
     }
   },
-  "source_head": "c26d43cd5f5e93fb23245066b5c7b280802c82e2",
-  "updated_at": "2026-10-25T02:23:51.049015+00:00",
+  "source_head": "3f69f9c5c3c49f0146974fb28c90c1ed8f403496",
+  "updated_at": "2026-10-25T03:01:06.579547+00:00",
   "regression": {
-    "command": "npm test",
+    "command": "Node24.15.0/PYTHONDONTWRITEBYTECODE=1 bash scripts/check.sh -> npm test",
     "exit_code": 1,
-    "source_head": "36fcf5c4780dc4caa2b85a98b5d0bf70c360af97",
-    "config_unchanged": true,
-    "summary": [
-      "# tests 496",
-      "# pass 489",
-      "# fail 7",
-      "# cancelled 0",
-      "# skipped 0"
-    ],
+    "execution_revision": "13035d1 + reviewed staged P1_6 artifact + preserved preexisting user changes; P1_6 code committed unchanged as3f69f9c",
+    "source_commit_for_P1_6_equivalent_bytes": "3f69f9c5c3c49f0146974fb28c90c1ed8f403496",
+    "summary": {
+      "tests": 521,
+      "suites": 0,
+      "pass": 507,
+      "fail": 14,
+      "cancelled": 0,
+      "skipped": 0
+    },
     "failures": [
-      "not ok 62 - C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it",
-      "not ok 189 - exporter builds a contract-valid lock from the unique sources (real repo)",
-      "not ok 194 - committed foundation artifacts match live sources (repo-level drift gate)",
-      "not ok 218 - old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)",
-      "not ok 220 - unresolvable pinned baseline is blocked explicitly, never silently swapped",
-      "not ok 294 - image admission gates stay coherent with the committed lock state (state-agnostic)",
-      "not ok 484 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently"
+      "✖ boundary: test T stays a single automatic review — the delivery gate is not extended to the consensus quorum (125.806875ms)",
+      "✖ C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it (2.218917ms)",
+      "✖ P1_5 method dispatch content is pinned and matches the vendored snapshots (223.812ms)",
+      "✖ committed foundation artifacts match live sources (repo-level drift gate) (398.3065ms)",
+      "✖ old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline) (2569.725459ms)",
+      "✖ unresolvable pinned baseline is blocked explicitly, never silently swapped (184.634542ms)",
+      "✖ image admission gates stay coherent with the committed lock state (state-agnostic) (147.719667ms)",
+      "✖ V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract (73.204708ms)",
+      "✖ image admission gates stay coherent with the committed lock state (state-agnostic) (74.612ms)",
+      "✖ RED image gate: floating tag rejected; malformed digest rejected; unauthenticated digest never reaches ready (177.7135ms)",
+      "✖ catalog gap reporting: registered refs read RECORDED; a missing ref is still explicit readiness evidence, never silent (52.266542ms)",
+      "✖ RW_RUNNER_BUILD: committed image lock mirrors the six-patch upstream lock (patches, toolchain, openspec pin, freshly recomputed fingerprint) (0.78325ms)",
+      "✖ RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that drifts from upstream refuses (81.623667ms)",
+      "✖ B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently (167.764042ms)"
     ],
-    "current_candidate": false,
-    "status": "HISTORICAL_NEW_CANDIDATE_RETEST_REQUIRED"
+    "evidence": ".local/comet-reset/p1_6-integration/root-check.log",
+    "post_run_manifest": ".local/comet-reset/p1_6-integration/post-run-input-manifest.json",
+    "scope": "supporting current workingtree regression; not final required check acceptance",
+    "current_candidate": true
   },
   "qualified_toolchain": {
     "openspec": "1.11.0",

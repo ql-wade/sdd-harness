@@ -1,46 +1,34 @@
-# Comet架构端到端核验：未通过
+# Comet架构端到端核验：尚未通过
 
-当前集成代码基线为`master@c26d43c`。原39节点、69工作包与唯一DAG继续使用；原92场景加12个贯通场景，共104场景、130项required检查。当前接纳6/39节点，其中4个是文档/设计、2个是基础工具链/共享契约组件；真实业务场景接纳仍0。130项required等待最终候选实跑，旧三项支持命令结果已移为历史。不能用组件通过数关闭整体目标。
+当前方法供应代码已串行集成到`master@3f69f9c`，原39节点、30父任务、69工作包及唯一DAG保留，当前104场景、130required。已接纳6个声明范围内节点：P0_1–P0_4文档/设计、P1_1基础工具链、P2_1共享契约。P1_6方法供应建设工件已集成，整个任务仍待实际冷Agent/角色链资格；没有用安装成功勾选运行义务。业务场景接纳仍0，130required等待最终候选真实复跑。
 
-## 本轮已完成的限定修复
+## 当前真实证据
 
-- `291ccc8`：装配测试全部使用私有目标；真实hook与同次生成的策略一起执行。独立复验源配置缺失/存在/外来策略均8/8、0 skip，源文件摘要不变；故意缺hook时非零且清理fixture。主检出8/8通过。
-- `36fcf5c`：三个平台/知识调用配置对齐登记仓库；validate与probe共用完整身份核；两侧缺值、错仓库、错误API fullname、畸形响应和无法启动gh均拒绝。独立复验原3项P1及进程错误P2已闭合；主检出相关77/77、0 skip，平台与LLMWiki validate均exit0。授权状态保持UNVERIFIED，未授予远端写。
-- 此前`e0fde44`、`6bb1b4c`分别完成旧入口防再生和GitHub仓库/调用者回读修复。18个旧入口退出项目发现链，17份原始旅程证据保留。Comet内部退役方法仍待清除。
-- 验收索引深层残留的旧component ACCEPTED、旧环境缺席判断及118/92旧统计已清理；历史保留在replan-history。当前索引只投影当前证据，旧生成器尚未资格化，不提供其为当前重建命令。
-
-上述是安全子步，未勾选对应完整任务。它们的子集测试与全量回归重叠，不相加为验收分母。
-
-## 历史候选36fcf5c的真实执行结果（不可继承当前PASS）
-
-| 检查 | 当前结果 | 证据 |
+| 证据范围 | 实际结果 | 证据位置 |
 | --- | --- | --- |
-| `npm test` | 496项：489通过、7失败、0跳过；源活配置摘要不变 | `.local/comet-reset/final-regression/round2/result.json`及同目录npm-test.log |
-| `bash scripts/check.sh` | exit1，停于Whitebox GREEN fixture自测 | `.local/comet-reset/final-regression/check.sh.log` |
-| `openspec validate delivery-foundation-rearchitecture --strict` | exit0，使用钉定的隔离1.11.0，未改全局工具 | `.local/comet-reset/final-regression/strict-result.json` |
-| C08隔离1.11.0正例 | 实际通过，已消除前轮因缺canonical安装而跳过 | `.local/comet-reset/toolchain/canonical-c08-positive.tap.txt` |
-| plan_guard / 规则与基础技能检查 | 结构检查通过；不代表业务Run通过 | 当前计划契约及本轮日志 |
+| 新15份架构材料的三方共识 | 2轮后全票通过并finalize，仅批准实施；一次性许可已消耗 | architecture-review/comet-convergence-r1/receipt.json |
+| P2_1共享合同、输入/进度摘要、严格执行分母 | 双独立审查各61/61和生产AST27/27；主检出61/61、0skip，集成c26d43c | worker-reports/P2_1-convergence/；.local/comet-reset/p2_1-integration/ |
+| P1_6原样方法源/真实CLI供应 | 两轴独立审查；主检出245个方法文件摘要精确；CLI8/8零跳过 | worker-reports/P1_6-convergence/；.local/comet-reset/p1_6-integration/integration-checks.json |
+| P1_6正式源码发行 | 主检出从正式6补丁锁新建，reused=false，指纹b11b20e1…a2ed；3生成族PASS；原生smoke255通过、2上游条件跳过 | .local/comet-reset/p1_6-integration/build-observation.json及verify-result.json |
+| 当前全仓总检查 | Node24.15.0下521项：507通过、14失败、0跳过；完整Whitebox15负例+3不变量已通过，npm失败后未到后续YAML/JSON阶段 | .local/comet-reset/p1_6-integration/root-check.log |
+| Outline专项只读核验 | 经本次人明确授权、脚本审查及独立8/8模拟自检后执行一次，owner/team/指定文集匹配；直接成员分页完整，permission=null、sharing=true | .local/comet-reset/outline-readonly-authorization/；历史白名单报告SHA c5c538… |
 
-七项回归失败仍阻断总验收：四项是共识技能当前源码与方法/分发清单摘要漂移；C08负例和B08保存场景仍与宿主OpenSpec版本/行为冲突；Outline镜像准入测试未接受实际返回的UP_NOT_EXECUTED拒绝分支。未放宽断言、未将这些失败豁免为通过，也不据此声明零新增失败。
+这些数字按各自边界使用，存在重叠，不相加为业务验收分母。全仓结果来自含保留用户未提交改动的工作树；post-run-input-manifest明确记录实际字节，没有把事后摘要冒称执行前冻结。
 
-Whitebox故障已隔离复现：六份正例日志缺失，补入与旧ledger摘要一致的原始字节后私有副本STRUCTURE_PASS；负例还缺一份日志，共享源文件与旧ledger摘要不同。139文件的完整共享源候选已通过其离线总自测（15负例及3不变量等），项目快照未替换，不能只刷新摘要转绿。安装到`.sdd/tools/openspec-1.11.0`的包来自现有钉定tarball并复核SHA，全局工具未升级。
+## 已修复与仍阻断
 
-## 运行现实与未完成主链
+- 原装配/身份子步e0fde44、6bb1b4c、291ccc8、36fcf5c保留原独立复验证据，均不代表完整产品Run。旧18入口及17份原始旅程证据保留备份，主检出仍是唯一集成/台账写点。
+- Whitebox缺日志和自测caller固定8个负例的问题，通过整份139源文件升级与完整source-owned自测解决。原8负例逐字保留，新15负例及3不变量实跑。主检出初次供应7/8发现3份旧未跟踪pyc污染；逐字节迁存ignored审计后8/8，不修改源清单或放宽断言。
+- 当前14项回归失败仍开放：旧宿主OpenSpec/归档oracle、P1_5方法与T审查调用协议、Foundation发布/旧Run版本解析、Outline准入状态及Runner锁/镜像指纹消费。它们由原owner修复，不豁免为历史环境绿。Mac大小写路径拒绝在旧/新源码构建均失败，仍交P2_4；没有因此启用profile。
+- I01原两项边界P2经独立Spec关闭，另一轴又复现policy.roles畸形输入崩溃。原工人正在盘点全部policy输入字段并修共同根因，I01未集成也未接纳；38/98绿色不能覆盖这项反例。平台调用方提前访问refs的同类风险交原P4_1。
+- P3_1验收器正在修正式命令只跑组件即PASS、显式定义绕过目标、弱/未知读回、TODO与复合断言缺失等实际RED。P2_2正在接受信启动/原始报告/当前ActionBinding及纯Gate接纳。两个当前工人尚未交完整双审结果，正式受管路径缺真实保护接口继续UNVERIFIED。
 
-Docker可用；Outline容器运行且healthy。六个Runner角色容器均退出；抽查controller与author为CLI entrypoint、无执行命令、exit1，controller日志只有帮助。该状态不能归因为Docker缺席，也不是受控角色执行证明。只读观测见`.local/comet-reset/runtime-readonly/container-state.json`，未启动旧流程。
+## 建设工件与整体验收的边界
 
-尚需按原DAG完成：Comet实际action/harness派发与可信结果接纳、清除分发assets中的退役调用、独立R/A/T与真实TDD/Whitebox、平台SHA/digest/目标终态、LLMWiki Kp先于归档、同Run归档后Outline Kt及未知结果恢复、权限事件/全量核验/隔离告警、原生备份恢复与R10，以及最终完整产品Run和关联维护旅程。F10独立范围门与真实授权不能由未启用态拒绝冒充正向验收。
+F3/F4元数据修订已两轴审查并提交13035d1：95条profile命令统一、115项执行属主明确、104case命令补齐，旧三条旅程通过标签留历史；ID/oracle/步骤/模块/required分母不变。另只有P1_2←P1_6的建设工件入口获双审并受控登记，允许消费精确3f69f9c方法供应工件，父任务仍待真实资格。I01五条建设入口提案尚未应用，须修复后双审、主集成与复验；VERIFY始终没有工件例外。
 
-## 历史外发阻断（已解除）
+Outline专项只读结果没有证明groups/继承/分享的完整受众，也没有授予publisher/isolator/issuer权限。24个运行时引用、真实角色隔离、平台SHA/digest与目标终态、LLMWiki Kp、唯一OpenSpec归档、同Run Outline Kt、权限事件/周期核验/隔离告警及原生备份恢复仍需逐项真实闭合。
 
-此前自动审批拒绝将本次冻结15份架构/规范/计划发送给配置的Claude Code、ZCode和Codex，理由是此前14份材料的一次性授权已使用，不覆盖新增材料及新一轮披露。摘要`9784847e35f5c1cbfdb154cc22f604035486458181959410420158b0fedbefa4`；用户已明确授权本次一次性审查，冻结包未变，评审现已完成。
+F10是否纳入本轮整体完成已向人提出明确范围问题，尚未收到答复。当前130required保持原状，F10正向仍未验；推荐项预选或等待时间不构成裁决，未启用负例不算正向能力。
 
-三方共识技能要求：“Pass only when every required participant votes `APPROVE`”。规则来源为[multi-agent-consensus-review](../../../.agents/skills/multi-agent-consensus-review/SKILL.md)第14行；未缩减人数或用局部组件审查替代它。新业务profile未启用，整体目标未完成。
-
-架构见`docs/architecture/comet-ai-devops-convergence.md`，执行/恢复见当前`HANDOFF.md`，任务进度仍只由`tasks.md`与同一DAG接纳。完整交付ETA受专项授权和后续真实门禁影响，当前无法可靠估计。
-
-## 当前实施与证据边界
-
-本次15份冻结材料的真实三方共识已完成并finalize，回执architecture-review/comet-convergence-r1/receipt.json；只批准实施。P0_1–P0_4文档/设计、P1_1工具链（c797aa3）与P2_1共享契约（c26d43c）在声明范围接纳，共6/39，104业务场景仍0。P2_1两位独立审查员分别实跑61/61组件及27/27生产AST矩阵；主检出锁定安装后61/61、0跳过。原始日志保留，分发空白规范化有双摘要。不能据此宣称受信身份、Comet业务门禁或真实旅程通过。
-
-P1_6整体方法快照/原生Comet模板与I01登记核验继续。Outline本次固定文集只读核验已获人明确授权，并由root审查脚本及独立8/8离线自测后实际执行一次；owner/team/文集匹配，直接用户成员分页完整，collection.permission=null、sharing=true。组/继承和完整受众仍UNVERIFIED；此结果不授予publisher/isolator/issuer权限。人已恢复原生Goal并读回active，沿唯一DAG继续，整体ETA尚无法可靠估计。新候选130required均待最终复跑；旧36fcf5c回归7失败和Whitebox自测失败仍开放，不以过期结果充抵验收。
+原生Goal仍active，监督20分钟任务已读回ACTIVE且使用当前唯一控制器说明。整体ETA受实际角色/资源资格及未决范围影响，当前无法可靠估计。最终必须在同最终候选执行完整产品Run和关联维护旅程，完成130required当前适用条件、独立Whitebox/Grill、状态一致性及Comet唯一closeout，才可签交付完成。
