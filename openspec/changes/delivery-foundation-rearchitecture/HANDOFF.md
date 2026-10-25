@@ -2,6 +2,10 @@
 
 日期：2026-10-25。用户已经明确要求清理旧流程、按最新架构实际落地并端到端完成；不是只交计划。当前root聊天是唯一迁移planner/台账写者，当前原生实施工人使用隔离工作树。产品业务的状态、派发、返工、恢复和完成权只属于Comet。TeamAI只分发，方法技能不成为第二主控。
 
+## 当前控制器检查点
+
+当前已核更新：主检出884880a已接入双审P1_3固定Gate执行适配器，Root新增22/22、驱动与证据门65/65、完整check981/981，零失败/跳过且输入不变。作者35=新增22+驱动13；旧6da仅为组件机制材料，不冒充当前3056运行资格。Python3.12.15候选已在断网/只读/无挂载容器实测，Runner镜像仍未构建认证。原生producer/薄main/执行槽及真实角色/权限/平台/Kp→归档→Kt/恢复未完成；6节点接纳/32待办/1F10另期、129required/103场景实际未验不变。详见worker-reports/Root-P1_3-fixed-host-integration/。
+
 ## 目标与证据边界
 
 原目标是Foundation、两类知识库和Command门禁驱动的AI DevOps全链路。读`docs/architecture/comet-ai-devops-convergence.md`、ADR-0020及本Change的proposal/design/spec，再读tasks/DAG/contract。
