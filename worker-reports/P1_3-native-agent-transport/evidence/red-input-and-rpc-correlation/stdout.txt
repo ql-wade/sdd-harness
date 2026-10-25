@@ -1,0 +1,209 @@
+TAP version 13
+# Subtest: native transport rejects malformed public input without getter diagnostics, unknown environment or hidden argv selection
+    # Subtest: null options
+    ok 1 - null options
+      ---
+      duration_ms: 0.88825
+      type: 'test'
+      ...
+    # Subtest: array options
+    ok 2 - array options
+      ---
+      duration_ms: 0.098625
+      type: 'test'
+      ...
+    # Subtest: extra provider
+    ok 3 - extra provider
+      ---
+      duration_ms: 0.211791
+      type: 'test'
+      ...
+    # Subtest: null registration
+    ok 4 - null registration
+      ---
+      duration_ms: 0.153375
+      type: 'test'
+      ...
+    # Subtest: network listener
+    ok 5 - network listener
+      ---
+      duration_ms: 0.182334
+      type: 'test'
+      ...
+    # Subtest: external command
+    ok 6 - external command
+      ---
+      duration_ms: 0.13275
+      type: 'test'
+      ...
+    # Subtest: hidden argv key
+    not ok 7 - hidden argv key
+      ---
+      duration_ms: 1.658833
+      type: 'test'
+      location: '<repo>/test/comet-driver.test.js:400:48'
+      failureType: 'testCodeFailure'
+      error: 'Missing expected exception.'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      stack: |-
+        TestContext.<anonymous> (file://<repo>/test/comet-driver.test.js:401:14)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/comet-driver.test.js:400:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      ...
+    # Subtest: null env
+    ok 8 - null env
+      ---
+      duration_ms: 0.116708
+      type: 'test'
+      ...
+    # Subtest: HOME
+    ok 9 - HOME
+      ---
+      duration_ms: 0.111375
+      type: 'test'
+      ...
+    # Subtest: CODEX_HOME
+    ok 10 - CODEX_HOME
+      ---
+      duration_ms: 0.124166
+      type: 'test'
+      ...
+    # Subtest: NODE_OPTIONS
+    ok 11 - NODE_OPTIONS
+      ---
+      duration_ms: 0.086958
+      type: 'test'
+      ...
+    # Subtest: NODE_PATH
+    ok 12 - NODE_PATH
+      ---
+      duration_ms: 0.138333
+      type: 'test'
+      ...
+    # Subtest: API_KEY
+    ok 13 - API_KEY
+      ---
+      duration_ms: 0.193334
+      type: 'test'
+      ...
+    # Subtest: TOKEN
+    ok 14 - TOKEN
+      ---
+      duration_ms: 0.085667
+      type: 'test'
+      ...
+    # Subtest: ROLE
+    ok 15 - ROLE
+      ---
+      duration_ms: 0.065334
+      type: 'test'
+      ...
+    # Subtest: AUTHORITY
+    ok 16 - AUTHORITY
+      ---
+      duration_ms: 0.06675
+      type: 'test'
+      ...
+    # Subtest: PROVIDER
+    ok 17 - PROVIDER
+      ---
+      duration_ms: 0.062542
+      type: 'test'
+      ...
+    # Subtest: MODULE
+    ok 18 - MODULE
+      ---
+      duration_ms: 0.071625
+      type: 'test'
+      ...
+    # Subtest: sparse input
+    ok 19 - sparse input
+      ---
+      duration_ms: 0.114208
+      type: 'test'
+      ...
+    # Subtest: null tool
+    ok 20 - null tool
+      ---
+      duration_ms: 0.31425
+      type: 'test'
+      ...
+    # Subtest: unknown tool
+    ok 21 - unknown tool
+      ---
+      duration_ms: 0.160167
+      type: 'test'
+      ...
+    # Subtest: root getter
+    not ok 22 - root getter
+      ---
+      duration_ms: 0.151583
+      type: 'test'
+      location: '<repo>/test/comet-driver.test.js:400:48'
+      failureType: 'testCodeFailure'
+      error: |-
+        The validation function is expected to return "true". Received false
+
+        Caught error:
+
+        Error: P13_PRIVATE_NOTE_NOT_SECRET
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      stack: |-
+        TestContext.<anonymous> (file://<repo>/test/comet-driver.test.js:401:14)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/comet-driver.test.js:400:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      ...
+    1..22
+not ok 1 - native transport rejects malformed public input without getter diagnostics, unknown environment or hidden argv selection
+  ---
+  duration_ms: 7.35925
+  type: 'test'
+  location: '<repo>/test/comet-driver.test.js:381:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: one RPC id cannot authorize a different tool call on the same action
+not ok 2 - one RPC id cannot authorize a different tool call on the same action
+  ---
+  duration_ms: 813.71525
+  type: 'test'
+  location: '<repo>/test/comet-driver.test.js:408:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    reused RPC id must not reach the second protected operation
+
+    true !== false
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/comet-driver.test.js:420:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..2
+# tests 24
+# suites 0
+# pass 20
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 900.105583

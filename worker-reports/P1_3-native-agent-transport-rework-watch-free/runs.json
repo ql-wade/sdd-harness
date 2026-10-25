@@ -1,0 +1,139 @@
+[
+  {
+    "label": "red-watch-free-negative",
+    "startedAt": "2026-10-25T23:32:27.924048+00:00",
+    "endedAt": "2026-10-25T23:32:30.434498+00:00",
+    "argv": [
+      "<node24.15>",
+      "--test",
+      "--test-reporter=tap",
+      "--test-name-pattern=native close rechecks",
+      "<tmp>/p13-watch-free-negative-bkhqbdf7/test/comet-driver.test.js"
+    ],
+    "cwd": "<repo>",
+    "environment": {
+      "PATH": "<repo>/.local/P1_3-native-agent-transport/offline-bin:<node24-bin>:<trusted-python-bin>:/usr/bin:/bin",
+      "TMPDIR": "<tmp>",
+      "LANG": "C.UTF-8",
+      "P1_3_GUARD_TRACE": "<repo>/.local/P1_3-native-agent-transport-rework-watch-free/red-watch-free-negative/external-guard.raw.txt",
+      "P1_3_ACCEPTED_ARTIFACT_ROOT": "<controller-repo>"
+    },
+    "exitCode": 1,
+    "counts": {
+      "tests": 5,
+      "pass": 2,
+      "fail": 3,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "inputsUnchanged": true,
+    "guardInvocations": [],
+    "expected": "expected_failure"
+  },
+  {
+    "label": "green-watch-free",
+    "startedAt": "2026-10-25T23:32:53.379346+00:00",
+    "endedAt": "2026-10-25T23:32:56.014963+00:00",
+    "argv": [
+      "<node24.15>",
+      "--test",
+      "--test-reporter=tap",
+      "--test-name-pattern=native close rechecks",
+      "test/comet-driver.test.js"
+    ],
+    "cwd": "<repo>",
+    "environment": {
+      "PATH": "<repo>/.local/P1_3-native-agent-transport/offline-bin:<node24-bin>:<trusted-python-bin>:/usr/bin:/bin",
+      "TMPDIR": "<tmp>",
+      "LANG": "C.UTF-8",
+      "P1_3_GUARD_TRACE": "<repo>/.local/P1_3-native-agent-transport-rework-watch-free/green-watch-free/external-guard.raw.txt",
+      "P1_3_ACCEPTED_ARTIFACT_ROOT": "<controller-repo>"
+    },
+    "exitCode": 0,
+    "counts": {
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "inputsUnchanged": true,
+    "guardInvocations": [],
+    "expected": "pass"
+  },
+  {
+    "label": "final-driver",
+    "startedAt": "2026-10-25T23:32:51.985979+00:00",
+    "endedAt": "2026-10-25T23:33:04.723535+00:00",
+    "argv": [
+      "<node24.15>",
+      "--test",
+      "--test-reporter=tap",
+      "test/comet-driver.test.js"
+    ],
+    "cwd": "<repo>",
+    "environment": {
+      "PATH": "<repo>/.local/P1_3-native-agent-transport/offline-bin:<node24-bin>:<trusted-python-bin>:/usr/bin:/bin",
+      "TMPDIR": "<tmp>",
+      "LANG": "C.UTF-8",
+      "P1_3_GUARD_TRACE": "<repo>/.local/P1_3-native-agent-transport-rework-watch-free/final-driver/external-guard.raw.txt",
+      "P1_3_ACCEPTED_ARTIFACT_ROOT": "<controller-repo>"
+    },
+    "exitCode": 0,
+    "counts": {
+      "tests": 81,
+      "pass": 81,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "inputsUnchanged": true,
+    "guardInvocations": [],
+    "expected": "pass"
+  },
+  {
+    "label": "guard-calibration",
+    "startedAt": "2026-10-25T23:33:17.225207+00:00",
+    "endedAt": "2026-10-25T23:33:17.348874+00:00",
+    "argv": [
+      "<node24.15>",
+      "--input-type=module",
+      "-e",
+      "import fs from 'node:fs'; import path from 'node:path'; import assert from 'node:assert/strict'; import {spawnSync} from 'node:child_process'; const bin=path.resolve('.local/P1_3-native-agent-transport/offline-bin'); const names=['claude','zcode','codex','docker','gh','curl']; for(const name of names){const file=path.join(bin,name);assert.equal(fs.lstatSync(file).isFile(),true);const result=spawnSync(file,['--version'],{encoding:'utf8'});assert.equal(result.status,97);assert.equal(result.error,undefined);console.log(JSON.stringify({name,status:result.status,scope:'offline guard'}));} console.log(JSON.stringify({node:process.version,platform:process.platform}));"
+    ],
+    "cwd": "<repo>",
+    "environment": {
+      "PATH": "<repo>/.local/P1_3-native-agent-transport/offline-bin:<node24-bin>:<trusted-python-bin>:/usr/bin:/bin",
+      "TMPDIR": "<tmp>",
+      "LANG": "C.UTF-8",
+      "P1_3_GUARD_TRACE": "<repo>/.local/P1_3-native-agent-transport-rework-watch-free/guard-calibration/external-guard.raw.txt"
+    },
+    "exitCode": 0,
+    "counts": {},
+    "inputsUnchanged": true,
+    "guardInvocations": [
+      "claude",
+      "zcode",
+      "codex",
+      "docker",
+      "gh",
+      "curl"
+    ],
+    "expected": "pass"
+  },
+  {
+    "label": "pack-structure",
+    "startedAt": "2026-10-25T23:34:46.146426+00:00",
+    "endedAt": "2026-10-25T23:34:46.208425+00:00",
+    "argv": [
+      "python3",
+      ".agents/skills/test-authoring/scripts/validate_test_pack.py",
+      ".local/P1_3-native-agent-transport-rework-watch-free/test-pack.raw.json",
+      "--project-root",
+      "<repo>"
+    ],
+    "cwd": "<repo>",
+    "exitCode": 0,
+    "scope": "TestPack structure/hash only, not acceptance"
+  }
+]

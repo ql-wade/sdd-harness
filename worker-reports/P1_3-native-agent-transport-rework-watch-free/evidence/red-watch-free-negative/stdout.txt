@@ -1,0 +1,85 @@
+TAP version 13
+# Subtest: native close rechecks the original tuple without rewriting process facts or reviving unknown results
+    # Subtest: stable
+    ok 1 - stable
+      ---
+      duration_ms: 719.588
+      type: 'test'
+      ...
+    # Subtest: epoch-changed
+    not ok 2 - epoch-changed
+      ---
+      duration_ms: 333.278583
+      type: 'test'
+      location: '<tmp>/p13-watch-free-negative-bkhqbdf7/test/comet-driver.test.js:641:97'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+
+        + 'OBSERVED_TERMINAL'
+        - 'UNKNOWN'
+
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'UNKNOWN'
+      actual: 'OBSERVED_TERMINAL'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file://<tmp>/p13-watch-free-negative-bkhqbdf7/test/comet-driver.test.js:686:16)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async TestContext.<anonymous> (file://<tmp>/p13-watch-free-negative-bkhqbdf7/test/comet-driver.test.js:641:89)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      ...
+    # Subtest: current-throws
+    not ok 3 - current-throws
+      ---
+      duration_ms: 301.329375
+      type: 'test'
+      location: '<tmp>/p13-watch-free-negative-bkhqbdf7/test/comet-driver.test.js:641:97'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+
+        + 'OBSERVED_TERMINAL'
+        - 'UNKNOWN'
+
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'UNKNOWN'
+      actual: 'OBSERVED_TERMINAL'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file://<tmp>/p13-watch-free-negative-bkhqbdf7/test/comet-driver.test.js:686:16)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async TestContext.<anonymous> (file://<tmp>/p13-watch-free-negative-bkhqbdf7/test/comet-driver.test.js:641:89)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      ...
+    # Subtest: timeout-restored
+    ok 4 - timeout-restored
+      ---
+      duration_ms: 1015.056959
+      type: 'test'
+      ...
+    1..4
+not ok 1 - native close rechecks the original tuple without rewriting process facts or reviving unknown results
+  ---
+  duration_ms: 2370.075667
+  type: 'test'
+  location: '<tmp>/p13-watch-free-negative-bkhqbdf7/test/comet-driver.test.js:640:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 5
+# suites 0
+# pass 2
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2454.954375
