@@ -1323,3 +1323,32 @@ test('managed code/profile outputs and existing output aliases cannot redirect e
     }finally{fs.rmSync(root,{recursive:true,force:true});fs.rmSync(outer,{recursive:true,force:true});}
   }
 });
+
+
+test('Git exports remain verifiable after transport without Git', async () => {
+  const root = makeFixture();
+  const transported = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-fdn-transport-'));
+  try {
+    fs.mkdirSync(path.join(root, '.agents/skills/alpha/guide'));
+    fs.writeFileSync(path.join(root, '.agents/skills/alpha/guide/page.md'), 'guide page\n');
+    fs.writeFileSync(path.join(root, '.agents/skills/alpha/guide.md'), 'guide summary\n');
+    const git = (...args) => execFileSync('git', ['-C', root, ...args], { stdio: 'ignore' });
+    git('init', '--quiet');
+    git('add', '-f', '--all');
+    git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '--quiet', '-m', 'fixture sources');
+    const out = path.join(root, 'foundation');
+    await exporter.exportRelease(root, out, { releaseCommit: FIXED_COMMIT, skillsCopy: true });
+    assert.equal((await exporter.verifyLock(path.join(out, 'foundation-lock.json'), root, { requireBodies: true })).ok, true);
+    const manifest = fs.readFileSync(path.join(out, 'release/skills/MANIFEST.json'));
+    for (const name of fs.readdirSync(root)) {
+      if (name !== '.git') fs.cpSync(path.join(root, name), path.join(transported, name), { recursive: true });
+    }
+    assert.equal(fs.existsSync(path.join(transported, '.git')), false);
+    const verdict = await exporter.verifyLock(path.join(transported, 'foundation/foundation-lock.json'), transported, { requireBodies: true });
+    assert.equal(verdict.ok, true, JSON.stringify(verdict));
+    assert.deepEqual(fs.readFileSync(path.join(transported, 'foundation/release/skills/MANIFEST.json')), manifest, 'verification must not rebuild transported assets');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(transported, { recursive: true, force: true });
+  }
+});

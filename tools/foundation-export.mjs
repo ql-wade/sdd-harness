@@ -139,7 +139,8 @@ function skillFiles(root, name) {
     if (ls.status !== 0) throw new Error(`git ls-files failed for ${name}: ${ls.stderr}`);
     return ls.stdout.split('\n').filter(Boolean).map((rel) => ({ rel: rel.slice(`.agents/skills/${name}/`.length), abs: path.join(root, rel) }));
   }
-  return walkFiles(dir);
+  // Prefix siblings must use Git file order, rather than directory traversal order.
+  return walkFiles(dir).sort((a, b) => a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0);
 }
 
 export function skillDigest(root, name) {
