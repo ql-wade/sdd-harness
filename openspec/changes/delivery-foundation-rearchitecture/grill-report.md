@@ -1,12 +1,10 @@
 # 当前 Grill：整体交付未通过
 
-当前主代码`1c66edf`的支持回归仍1022/1022通过，不是整体交付通过。I02槽/只读查回与内部薄入口已合入；实际provider、模型/工具/SourceReader、角色卷到canonical的制品回流与真实恢复仍未接通。
+当前主代码仍`1c66edf`，已有支持回归1022/1022，完整业务未通过。Core自审P1原反例复跑已Native exit2/receipt0，窄16通过；但本版85实际45通过/40缺合法producer来源前置失败，不继承旧74。原“Builder不能勾选”旧用例仅撞Usage，已降为SETUP；真正task-complete/id/expect的新V与身份4例通过，另inputSnapshot篡改claim成功的新RED在修。
 
-原生候选`5e19890`作者完整74/74、相关481通过/4Windows未验、generated完整性通过；Standards独立8/8支持construction。但独立Spec实证P1：同一已认证principal仅换execution，仍可批准自己产出的R材料并生成receipt，原签名/collection未改。候选未合入，原owner正从原Native已认证producer history修复独立性；不能以74或Standards绿抵该P1。证据17文件在`worker-reports/P2_4-native-producer-review-rework/`。
+执行桥`e361f09`作者76/76+52/52、Standards25/25，仍被Spec实证P2退回：turn结束后close之前epoch变化，最终返回旧context状态。候选未合入，原owner在最终回传边界补当前性，保留真实exit0/closed事实。证据见`worker-reports/P1_3-stdio-review-rework/`。
 
-I02阶段A已实际续工：固定公开镜像两条无网/只读/无挂载probe均0，23库owner/版权元数据已取；PyYAML精确wheel已验775116字节/SHA且未安装，完整Runner构建未执行。P1_3原生CLI接口intake完成；既有CLI认证是候选，不假定必须新APIkey，登录/无旁路/模型运行仍未验。6节点接纳/32待办/1F10另期与129required/103场景业务未验不变，Goal/监督保持；整体上海时区ETA未知。
-
-本轮新增支持证据：自审P1返工私有fd360f34窄16/16通过，覆盖RATP同主体、缺来源、过期事实与恢复旧字节；完整旧矩阵和独立复审未完成。stdio客户端作者76/76与相关52/52正在冻结，未跑真实CLI/模型。481个固定公开tar实际取得118362711字节，原下载器末尾异常保留，离线逐size/SHA/SRI核验后发布，没有重新请求；官方PM的10包import试验因缺registry metadata真实失败，listener已关闭、0外部请求，不能称offline image ready。
+Root已实际完成纯公开Linux断网pnpm机制构建，429原tar/原锁、loopback GET全部200、监听关闭后同seed offline fetch成功，本地image e0b77edb…；这不证明fresh工作区从store恢复，更不证明完整Runner/角色。新目录补证与完整离线bootstrap仍待做。I02代码205aa仅14新例、原92未复验。实际CLI/认证/模型/SourceReader/制品回流/权限/知识/平台及最终验收未完；6节点接纳/32待办/1F10另期，129required/103场景业务未验不变，整体上海时区ETA未知。
 
 以下均为先前历史快照，不作为当前计数。
 
