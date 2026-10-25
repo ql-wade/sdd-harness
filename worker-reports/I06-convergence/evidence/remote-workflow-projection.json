@@ -1,0 +1,105 @@
+{
+  "scope": "read-only registered repository source metadata; no workflow action",
+  "repository": {
+    "id": 1285806550,
+    "fullName": "ql-wade/sdd-harness"
+  },
+  "ref": "cd64618563d6e08c5c2f35b1bdf92d37e58a9d7d",
+  "workflows": [
+    {
+      "path": ".github/workflows/live-integration.yml",
+      "ref": "cd64618563d6e08c5c2f35b1bdf92d37e58a9d7d",
+      "blobSha": "861a180e6b8e508d486fc85c6d378f8539a3b222",
+      "selectedLines": [
+        {
+          "line": 4,
+          "text": "  schedule:"
+        },
+        {
+          "line": 5,
+          "text": "    - cron: \"17 18 * * *\""
+        },
+        {
+          "line": 6,
+          "text": "  workflow_dispatch:"
+        },
+        {
+          "line": 7,
+          "text": "  workflow_call:"
+        },
+        {
+          "line": 10,
+          "text": "  contents: read"
+        },
+        {
+          "line": 13,
+          "text": "  live-integration:"
+        },
+        {
+          "line": 27,
+          "text": "      - run: npm ci --ignore-scripts"
+        },
+        {
+          "line": 29,
+          "text": "        run: npm run test:e2e:live:nightly"
+        }
+      ],
+      "jobKeys": [
+        "live-integration"
+      ]
+    },
+    {
+      "path": ".github/workflows/quality-gates.yml",
+      "ref": "cd64618563d6e08c5c2f35b1bdf92d37e58a9d7d",
+      "blobSha": "0bc00798241d72784db6eef69fc996f14666d880",
+      "selectedLines": [
+        {
+          "line": 4,
+          "text": "  pull_request:"
+        },
+        {
+          "line": 5,
+          "text": "  push:"
+        },
+        {
+          "line": 9,
+          "text": "  contents: read"
+        },
+        {
+          "line": 20,
+          "text": "      - run: npm ci --ignore-scripts"
+        },
+        {
+          "line": 21,
+          "text": "      - run: npm run test:e2e:core"
+        },
+        {
+          "line": 31,
+          "text": "      - run: npm ci --ignore-scripts"
+        },
+        {
+          "line": 32,
+          "text": "      - run: npm run test:e2e:claude"
+        },
+        {
+          "line": 34,
+          "text": "  preview-adapter-smoke:"
+        },
+        {
+          "line": 42,
+          "text": "      - run: npm ci --ignore-scripts"
+        },
+        {
+          "line": 43,
+          "text": "      - run: npm run test:adapter:preview"
+        }
+      ],
+      "jobKeys": [
+        "core-e2e",
+        "claude-reference-adapter-e2e",
+        "preview-adapter-smoke"
+      ]
+    }
+  ],
+  "remoteWrites": []
+}

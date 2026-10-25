@@ -1,0 +1,184 @@
+TAP version 13
+# Subtest: V_INFRA_I06 contract: five platform files exist and committed validate passes with LOCAL_ONLY and honest gaps
+ok 1 - V_INFRA_I06 contract: five platform files exist and committed validate passes with LOCAL_ONLY and honest gaps
+  ---
+  duration_ms: 59.389166
+  type: 'test'
+  ...
+# Subtest: committed platform files carry the interface bindings and honest UNVERIFIED identity facts
+ok 2 - committed platform files carry the interface bindings and honest UNVERIFIED identity facts
+  ---
+  duration_ms: 0.483292
+  type: 'test'
+  ...
+# Subtest: RED same-origin labels: stale or missing repoFullname/url fails validate with IDENTITY_NOT_SAME_ORIGIN while IDs and owner stay stable
+ok 3 - RED same-origin labels: stale or missing repoFullname/url fails validate with IDENTITY_NOT_SAME_ORIGIN while IDs and owner stay stable
+  ---
+  duration_ms: 177.39925
+  type: 'test'
+  ...
+# Subtest: RED direct-probe preflight: drifted repoFullname/url is rejected before any gh call, even with stable IDs and owner
+ok 4 - RED direct-probe preflight: drifted repoFullname/url is rejected before any gh call, even with stable IDs and owner
+  ---
+  duration_ms: 87.747791
+  type: 'test'
+  ...
+# Subtest: RED equal-but-absent labels: both sides missing/blank/invalid-typed identity fields fail same-origin in validate and probe
+ok 5 - RED equal-but-absent labels: both sides missing/blank/invalid-typed identity fields fail same-origin in validate and probe
+  ---
+  duration_ms: 534.185166
+  type: 'test'
+  ...
+# Subtest: RED authorization gate: configuring required checks without remote write authorization is refused — admin identity is not this run approval
+ok 6 - RED authorization gate: configuring required checks without remote write authorization is refused — admin identity is not this run approval
+  ---
+  duration_ms: 138.078
+  type: 'test'
+  ...
+# Subtest: RED credential tier: development identity cannot read release/rollback secrets (SecretRef.v1 resolver semantics)
+ok 7 - RED credential tier: development identity cannot read release/rollback secrets (SecretRef.v1 resolver semantics)
+  ---
+  duration_ms: 46.147416
+  type: 'test'
+  ...
+# Subtest: IntegrationIdentity.v1: a fully bound chain verifies locally (head -> mergeSHA -> digest -> deployment -> readback)
+ok 8 - IntegrationIdentity.v1: a fully bound chain verifies locally (head -> mergeSHA -> digest -> deployment -> readback)
+  ---
+  duration_ms: 57.527625
+  type: 'test'
+  ...
+# Subtest: RED stale evidence: a new head/mergeSHA reusing an old check blocks candidate promotion
+ok 9 - RED stale evidence: a new head/mergeSHA reusing an old check blocks candidate promotion
+  ---
+  duration_ms: 44.328584
+  type: 'test'
+  ...
+# Subtest: RED missing / skipped / timed-out checks each block promotion with distinct codes
+not ok 10 - RED missing / skipped / timed-out checks each block promotion with distinct codes
+  ---
+  duration_ms: 41.514333
+  type: 'test'
+  location: '<worktree>/test/infra-platform.test.js:484:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    fixture 0 must block
+
+    1 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/infra-platform.test.js:494:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: RED tag drift: a tag repointed to a different digest blocks promotion; digest must build from the integration merge SHA
+ok 11 - RED tag drift: a tag repointed to a different digest blocks promotion; digest must build from the integration merge SHA
+  ---
+  duration_ms: 86.714208
+  type: 'test'
+  ...
+# Subtest: RED deployment identity: digest mismatch and missing receipt correlation block promotion
+ok 12 - RED deployment identity: digest mismatch and missing receipt correlation block promotion
+  ---
+  duration_ms: 89.613625
+  type: 'test'
+  ...
+# Subtest: timeout query path: lost deployment response is confirmed by querying the original correlation ID
+ok 13 - timeout query path: lost deployment response is confirmed by querying the original correlation ID
+  ---
+  duration_ms: 128.389167
+  type: 'test'
+  ...
+# Subtest: RED rollback gate: unapproved requests are refused; approved rollback needs the same digest and an independent business terminal state
+ok 14 - RED rollback gate: unapproved requests are refused; approved rollback needs the same digest and an independent business terminal state
+  ---
+  duration_ms: 219.981417
+  type: 'test'
+  ...
+# Subtest: RED isolation: cross-project refs (pav-*) and foreign project bindings are rejected; missing registration is an input failure
+ok 15 - RED isolation: cross-project refs (pav-*) and foreign project bindings are rejected; missing registration is an input failure
+  ---
+  duration_ms: 129.683375
+  type: 'test'
+  ...
+# Subtest: fail-closed structure: rollback approval, correlation oracle and retention rules cannot be flipped off without a violation
+not ok 16 - fail-closed structure: rollback approval, correlation oracle and retention rules cannot be flipped off without a violation
+  ---
+  duration_ms: 135.682125
+  type: 'test'
+  location: '<worktree>/test/infra-platform.test.js:653:1'
+  failureType: 'testCodeFailure'
+  error: 'flip example-declaration: expected EXAMPLE_DECLARATION_REQUIRED, got ["REGISTRY_ENDPOINT_INVALID","LIVE_REGISTRATION_INCOMPLETE"]'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/infra-platform.test.js:745:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: probes are real and honest: repository-identity performs exactly one read-only gh attempt whose outcome is reported verbatim; bare chain probe is structured UNVERIFIED
+ok 17 - probes are real and honest: repository-identity performs exactly one read-only gh attempt whose outcome is reported verbatim; bare chain probe is structured UNVERIFIED
+  ---
+  duration_ms: 952.645208
+  type: 'test'
+  ...
+# Subtest: RED spawn-failure path: missing or non-executable gh yields structured UNVERIFIED (exit 2) with a spawn diagnostic, never a crash
+ok 18 - RED spawn-failure path: missing or non-executable gh yields structured UNVERIFIED (exit 2) with a spawn diagnostic, never a crash
+  ---
+  duration_ms: 87.924542
+  type: 'test'
+  ...
+# Subtest: CLI input contract: malformed chain fixtures are input failures (exit 1), distinct from semantic blocks (exit 2)
+ok 19 - CLI input contract: malformed chain fixtures are input failures (exit 1), distinct from semantic blocks (exit 2)
+  ---
+  duration_ms: 162.198667
+  type: 'test'
+  ...
+# Subtest: parseJsonOut raises a real AssertionError (not a ReferenceError) when the tool prints no JSON
+ok 20 - parseJsonOut raises a real AssertionError (not a ReferenceError) when the tool prints no JSON
+  ---
+  duration_ms: 37.995209
+  type: 'test'
+  ...
+# Subtest: I06 refs admission blocks direct repository probing before any external I/O
+ok 21 - I06 refs admission blocks direct repository probing before any external I/O
+  ---
+  duration_ms: 262.618666
+  type: 'test'
+  ...
+# Subtest: I06 direct probes consume versioned platform input through the same admission gate
+ok 22 - I06 direct probes consume versioned platform input through the same admission gate
+  ---
+  duration_ms: 44.760792
+  type: 'test'
+  ...
+# Subtest: I06 integration chain never accepts a foreign project or a normal-response correlation mismatch
+ok 23 - I06 integration chain never accepts a foreign project or a normal-response correlation mismatch
+  ---
+  duration_ms: 88.986333
+  type: 'test'
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 21
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3679.519167

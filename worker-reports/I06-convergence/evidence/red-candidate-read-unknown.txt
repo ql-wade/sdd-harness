@@ -1,0 +1,182 @@
+TAP version 13
+# Subtest: I06 observer keeps forbidden, truncated, foreign and missing-ID pages unverified
+not ok 1 - I06 observer keeps forbidden, truncated, foreign and missing-ID pages unverified
+  ---
+  duration_ms: 2696.078
+  type: 'test'
+  location: '<worktree>/test/infra-platform.test.js:1002:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    candidate-unreadable: {
+      "interface": "PlatformInfra.v1",
+      "case": "platform-observation",
+      "readOnly": true,
+      "observation": {
+        "status": "OBSERVED",
+        "scope": "OPERATOR_READ_ONLY_METADATA",
+        "executed": true,
+        "operator": {
+          "id": 262266039,
+          "login": "ql-wade"
+        },
+        "repository": {
+          "id": 1285806550,
+          "fullName": "ql-wade/sdd-harness"
+        },
+        "branch": {
+          "status": "OBSERVED",
+          "branch": "master",
+          "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "protected": true
+        },
+        "protection": {
+          "status": "OBSERVED",
+          "requiredChecks": [
+            "ci-test"
+          ],
+          "enforceAdmins": true
+        },
+        "rulesets": {
+          "status": "OBSERVED",
+          "complete": true,
+          "observedItems": 0,
+          "items": []
+        },
+        "workflows": {
+          "status": "OBSERVED",
+          "complete": true,
+          "observedItems": 3,
+          "items": [
+            {
+              "id": 11,
+              "name": "CI",
+              "path": ".github/workflows/ci.yml",
+              "state": "active"
+            },
+            {
+              "id": 12,
+              "name": "Gate",
+              "path": ".github/workflows/gate.yml",
+              "state": "active"
+            },
+            {
+              "id": 13,
+              "name": "Third",
+              "path": ".github/workflows/third.yml",
+              "state": "active"
+            }
+          ]
+        },
+        "requests": [
+          {
+            "method": "GET",
+            "route": "user",
+            "startedAt": "2026-10-25T08:40:50.949Z",
+            "endedAt": "2026-10-25T08:40:51.116Z",
+            "executed": true,
+            "httpStatus": 200,
+            "complete": true
+          },
+          {
+            "method": "GET",
+            "route": "repos/ql-wade/sdd-harness",
+            "startedAt": "2026-10-25T08:40:51.116Z",
+            "endedAt": "2026-10-25T08:40:51.146Z",
+            "executed": true,
+            "httpStatus": 200,
+            "complete": true
+          },
+          {
+            "method": "GET",
+            "route": "repos/ql-wade/sdd-harness/branches/master",
+            "startedAt": "2026-10-25T08:40:51.146Z",
+            "endedAt": "2026-10-25T08:40:51.176Z",
+            "executed": true,
+            "httpStatus": 200,
+            "complete": true
+          },
+          {
+            "method": "GET",
+            "route": "repos/ql-wade/sdd-harness/branches/master/protection",
+            "startedAt": "2026-10-25T08:40:51.176Z",
+            "endedAt": "2026-10-25T08:40:51.206Z",
+            "executed": true,
+            "httpStatus": 200,
+            "complete": true
+          },
+          {
+            "method": "GET",
+            "route": "repos/ql-wade/sdd-harness/rulesets?per_page=2&page=1",
+            "startedAt": "2026-10-25T08:40:51.206Z",
+            "endedAt": "2026-10-25T08:40:51.238Z",
+            "executed": true,
+            "httpStatus": 200,
+            "complete": true
+          },
+          {
+            "method": "GET",
+            "route": "repos/ql-wade/sdd-harness/actions/workflows?per_page=2&page=1",
+            "startedAt": "2026-10-25T08:40:51.238Z",
+            "endedAt": "2026-10-25T08:40:51.268Z",
+            "executed": true,
+            "httpStatus": 200,
+            "complete": true
+          },
+          {
+            "method": "GET",
+            "route": "repos/ql-wade/sdd-harness/actions/workflows?per_page=2&page=2",
+            "startedAt": "2026-10-25T08:40:51.268Z",
+            "endedAt": "2026-10-25T08:40:51.298Z",
+            "executed": true,
+            "httpStatus": 200,
+            "complete": true
+          },
+          {
+            "method": "GET",
+            "route": "repos/ql-wade/sdd-harness/commits/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "startedAt": "2026-10-25T08:40:51.298Z",
+            "endedAt": "2026-10-25T08:40:51.328Z",
+            "executed": true,
+            "httpStatus": 404,
+            "complete": false,
+            "code": "HTTP_READ_UNVERIFIED"
+          }
+        ],
+        "runtimeAuthority": {
+          "status": "UNVERIFIED",
+          "valuesRead": false,
+          "reason": "Operator readability does not attest the CI/source/control runtime actor or grant writer authority."
+        },
+        "candidate": {
+          "status": "UNVERIFIED",
+          "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "code": "CANDIDATE_READBACK_UNVERIFIED"
+        }
+      },
+      "checkedAt": "2026-10-25T08:40:51.328Z"
+    }
+
+
+    0 !== 2
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/infra-platform.test.js:1012:162)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2747.641083

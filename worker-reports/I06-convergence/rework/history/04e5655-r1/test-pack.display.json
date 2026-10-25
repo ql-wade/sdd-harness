@@ -1,0 +1,501 @@
+{
+  "schema_version": "test-authoring/v1",
+  "mode": "automate",
+  "status": "ready_for_acceptance",
+  "project_root": "<worker-root>",
+  "scope": "I06 source/artifact metadata correlation rework only; no formal qualification verdict.",
+  "basis": [
+    {
+      "id": "REQ-I06",
+      "kind": "requirement",
+      "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
+      "sha256": "58671b548b0130f6e14c218a6d5bceb671e2c3b798bc09422a886dd98f509202"
+    },
+    {
+      "id": "SRC-I06",
+      "kind": "source",
+      "path": "tools/infra/platform.mjs",
+      "sha256": "91d0cf2193e99a2eed85d797740230748205fd8790dcf11a20fe75939cb93da8"
+    },
+    {
+      "id": "SRC-TEST",
+      "kind": "source",
+      "path": "test/infra-platform.test.js",
+      "sha256": "b6723c63fae1b26d4d50eaaab793a546ba84297db5586da27f350cbb829f4d5f"
+    }
+  ],
+  "requirements": [
+    "REQ-I06"
+  ],
+  "dimensions": {
+    "Journey-A": {
+      "required": true,
+      "reason": "Read-only source/producer correlation, privacy, complete-read recovery and related CLI regression.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": [
+        "I06-R1-PRODUCER",
+        "I06-R1-WORKFLOW",
+        "I06-R1-SOURCE",
+        "I06-R1-COMPLETE",
+        "I06-R1-NULLABLE",
+        "I06-R1-DEPLOY"
+      ]
+    },
+    "Journey-B": {
+      "required": false,
+      "reason": "This owner changes stateless metadata observation only: no browser/accessibility, durable writes or concurrent delivery operation.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": []
+    },
+    "Journey-C": {
+      "required": false,
+      "reason": "This owner changes stateless metadata observation only: no browser/accessibility, durable writes or concurrent delivery operation.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": []
+    },
+    "Journey-D": {
+      "required": false,
+      "reason": "This owner changes stateless metadata observation only: no browser/accessibility, durable writes or concurrent delivery operation.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": []
+    },
+    "Journey-E": {
+      "required": true,
+      "reason": "Read-only source/producer correlation, privacy, complete-read recovery and related CLI regression.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": [
+        "I06-R1-PRODUCER",
+        "I06-R1-WORKFLOW",
+        "I06-R1-SOURCE",
+        "I06-R1-COMPLETE",
+        "I06-R1-NULLABLE",
+        "I06-R1-DEPLOY"
+      ]
+    },
+    "Journey-F": {
+      "required": true,
+      "reason": "Read-only source/producer correlation, privacy, complete-read recovery and related CLI regression.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": [
+        "I06-R1-PRODUCER",
+        "I06-R1-WORKFLOW",
+        "I06-R1-SOURCE",
+        "I06-R1-COMPLETE",
+        "I06-R1-NULLABLE",
+        "I06-R1-DEPLOY"
+      ]
+    },
+    "Journey-G": {
+      "required": false,
+      "reason": "This owner changes stateless metadata observation only: no browser/accessibility, durable writes or concurrent delivery operation.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": []
+    },
+    "Journey-H": {
+      "required": true,
+      "reason": "Read-only source/producer correlation, privacy, complete-read recovery and related CLI regression.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": [
+        "I06-R1-COMPLETE"
+      ]
+    },
+    "Journey-I": {
+      "required": true,
+      "reason": "Read-only source/producer correlation, privacy, complete-read recovery and related CLI regression.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": [
+        "I06-R1-PRODUCER",
+        "I06-R1-WORKFLOW",
+        "I06-R1-SOURCE",
+        "I06-R1-COMPLETE",
+        "I06-R1-NULLABLE",
+        "I06-R1-DEPLOY"
+      ]
+    },
+    "Journey-J": {
+      "required": true,
+      "reason": "Read-only source/producer correlation, privacy, complete-read recovery and related CLI regression.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": [
+        "I06-R1-PRODUCER",
+        "I06-R1-WORKFLOW",
+        "I06-R1-SOURCE",
+        "I06-R1-COMPLETE",
+        "I06-R1-NULLABLE",
+        "I06-R1-DEPLOY"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "I06-R1-PRODUCER",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-F",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "contract",
+      "priority": "P1",
+      "preconditions": [
+        "Private gh process-boundary fixture; no real network, live config or writer authority."
+      ],
+      "inputs": {
+        "test_pattern": "producer run must",
+        "candidate": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "steps": [
+        "Invoke existing public platform-observation CLI with exact candidate SHA.",
+        "Read structured observation, exit code and admitted collection identities."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "same-SHA artifact producer999 is not candidate run31; exit2 and no matchesCandidate",
+        "authority": "Approved I06 exact source/artifact/target linkage and Root Spec counterexamples; API identity shapes referenced in README."
+      },
+      "cleanup": [
+        "Test finally removes only its private fixture directories; no remote side effects."
+      ],
+      "evidence_plan": [
+        "Node TAP with actual stdout, UTC, argv and SHA records; independent Root re-run required."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "b6723c63fae1b26d4d50eaaab793a546ba84297db5586da27f350cbb829f4d5f",
+        "test_id": "producer run must",
+        "command": [
+          "<node24-bin>/node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern=producer run must",
+          "test/infra-platform.test.js"
+        ]
+      }
+    },
+    {
+      "id": "I06-R1-WORKFLOW",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-F",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "contract",
+      "priority": "P1",
+      "preconditions": [
+        "Private gh process-boundary fixture; no real network, live config or writer authority."
+      ],
+      "inputs": {
+        "test_pattern": "workflow identity is required",
+        "candidate": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "steps": [
+        "Invoke existing public platform-observation CLI with exact candidate SHA.",
+        "Read structured observation, exit code and admitted collection identities."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "missing workflow_id remains UNVERIFIED/exit2 without inferring a name/app identity",
+        "authority": "Approved I06 exact source/artifact/target linkage and Root Spec counterexamples; API identity shapes referenced in README."
+      },
+      "cleanup": [
+        "Test finally removes only its private fixture directories; no remote side effects."
+      ],
+      "evidence_plan": [
+        "Node TAP with actual stdout, UTC, argv and SHA records; independent Root re-run required."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "b6723c63fae1b26d4d50eaaab793a546ba84297db5586da27f350cbb829f4d5f",
+        "test_id": "workflow identity is required",
+        "command": [
+          "<node24-bin>/node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern=workflow identity is required",
+          "test/infra-platform.test.js"
+        ]
+      }
+    },
+    {
+      "id": "I06-R1-SOURCE",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-F",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "contract",
+      "priority": "P1",
+      "preconditions": [
+        "Private gh process-boundary fixture; no real network, live config or writer authority."
+      ],
+      "inputs": {
+        "test_pattern": "producer source correlation",
+        "candidate": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "steps": [
+        "Invoke existing public platform-observation CLI with exact candidate SHA.",
+        "Read structured observation, exit code and admitted collection identities."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "foreign/missing/null source, wrong path/workflow or missing status/conclusion remain unknown/exit2",
+        "authority": "Approved I06 exact source/artifact/target linkage and Root Spec counterexamples; API identity shapes referenced in README."
+      },
+      "cleanup": [
+        "Test finally removes only its private fixture directories; no remote side effects."
+      ],
+      "evidence_plan": [
+        "Node TAP with actual stdout, UTC, argv and SHA records; independent Root re-run required."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "b6723c63fae1b26d4d50eaaab793a546ba84297db5586da27f350cbb829f4d5f",
+        "test_id": "producer source correlation",
+        "command": [
+          "<node24-bin>/node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern=producer source correlation",
+          "test/infra-platform.test.js"
+        ]
+      }
+    },
+    {
+      "id": "I06-R1-COMPLETE",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-F",
+        "Journey-I",
+        "Journey-J",
+        "Journey-H"
+      ],
+      "level": "contract",
+      "priority": "P1",
+      "preconditions": [
+        "Private gh process-boundary fixture; no real network, live config or writer authority."
+      ],
+      "inputs": {
+        "test_pattern": "incomplete .* inventory|current run ID",
+        "candidate": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "steps": [
+        "Invoke existing public platform-observation CLI with exact candidate SHA.",
+        "Read structured observation, exit code and admitted collection identities."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "incomplete producer inventories and conflicting producer SHA never establish candidate correlation",
+        "authority": "Approved I06 exact source/artifact/target linkage and Root Spec counterexamples; API identity shapes referenced in README."
+      },
+      "cleanup": [
+        "Test finally removes only its private fixture directories; no remote side effects."
+      ],
+      "evidence_plan": [
+        "Node TAP with actual stdout, UTC, argv and SHA records; independent Root re-run required."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "b6723c63fae1b26d4d50eaaab793a546ba84297db5586da27f350cbb829f4d5f",
+        "test_id": "incomplete .* inventory|current run ID",
+        "command": [
+          "<node24-bin>/node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern=incomplete .* inventory|current run ID",
+          "test/infra-platform.test.js"
+        ]
+      }
+    },
+    {
+      "id": "I06-R1-NULLABLE",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-F",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "contract",
+      "priority": "P1",
+      "preconditions": [
+        "Private gh process-boundary fixture; no real network, live config or writer authority."
+      ],
+      "inputs": {
+        "test_pattern": "legal queued/null|null artifact workflow",
+        "candidate": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "steps": [
+        "Invoke existing public platform-observation CLI with exact candidate SHA.",
+        "Read structured observation, exit code and admitted collection identities."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "legal queued conclusion=null and historical digest=null preserve metadata; absent producer remains UNVERIFIED/2",
+        "authority": "Approved I06 exact source/artifact/target linkage and Root Spec counterexamples; API identity shapes referenced in README."
+      },
+      "cleanup": [
+        "Test finally removes only its private fixture directories; no remote side effects."
+      ],
+      "evidence_plan": [
+        "Node TAP with actual stdout, UTC, argv and SHA records; independent Root re-run required."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "b6723c63fae1b26d4d50eaaab793a546ba84297db5586da27f350cbb829f4d5f",
+        "test_id": "legal queued/null|null artifact workflow",
+        "command": [
+          "<node24-bin>/node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern=legal queued/null|null artifact workflow",
+          "test/infra-platform.test.js"
+        ]
+      }
+    },
+    {
+      "id": "I06-R1-DEPLOY",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-F",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "contract",
+      "priority": "P1",
+      "preconditions": [
+        "Private gh process-boundary fixture; no real network, live config or writer authority."
+      ],
+      "inputs": {
+        "test_pattern": "deployment metadata never",
+        "candidate": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "steps": [
+        "Invoke existing public platform-observation CLI with exact candidate SHA.",
+        "Read structured observation, exit code and admitted collection identities."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "UNSELECTED target never registers by string equality; productionCorrelation stays UNVERIFIED",
+        "authority": "Approved I06 exact source/artifact/target linkage and Root Spec counterexamples; API identity shapes referenced in README."
+      },
+      "cleanup": [
+        "Test finally removes only its private fixture directories; no remote side effects."
+      ],
+      "evidence_plan": [
+        "Node TAP with actual stdout, UTC, argv and SHA records; independent Root re-run required."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "b6723c63fae1b26d4d50eaaab793a546ba84297db5586da27f350cbb829f4d5f",
+        "test_id": "deployment metadata never",
+        "command": [
+          "<node24-bin>/node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern=deployment metadata never",
+          "test/infra-platform.test.js"
+        ]
+      }
+    }
+  ],
+  "unresolved": [],
+  "self_checks": [
+    {
+      "command": [
+        "<node24-bin>/node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-name-pattern=reads exact registered IDs|producer run must|workflow identity is required",
+        "test/infra-platform.test.js"
+      ],
+      "exit_code": 1,
+      "expected": "expected_failure",
+      "log_path": ".local/platform-convergence/rework/04e5655-r1/raw/red-producer-workflow-correlation.txt",
+      "log_sha256": "c0c693754afa6b6f47bce3a928fe611b40a76ddb1d2bac2a5d61392529374d57"
+    },
+    {
+      "command": [
+        "<node24-bin>/node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-name-pattern=reads exact registered IDs|producer source correlation|legal queued/null|current run ID|deployment metadata never",
+        "test/infra-platform.test.js"
+      ],
+      "exit_code": 1,
+      "expected": "expected_failure",
+      "log_path": ".local/platform-convergence/rework/04e5655-r1/raw/red-source-production-chain.txt",
+      "log_sha256": "3fcdac64e12202697df57d6d0e656a696919a9a33a9e4942e6d4f95995e2e7b7"
+    },
+    {
+      "command": [
+        "<node24-bin>/node",
+        "--test",
+        "--test-reporter=tap",
+        "test/infra-platform.test.js",
+        "test/release-protocol.test.js",
+        "test/ci-delivery-gate.test.js",
+        "test/delivery-cases/4_1.mjs",
+        "test/delivery-cases/4_2.mjs"
+      ],
+      "exit_code": 0,
+      "expected": "pass",
+      "log_path": ".local/platform-convergence/rework/04e5655-r1/raw/final-original-and-correlation-matrix.txt",
+      "log_sha256": "91d8e6726cbfdc83cbb7888251f2fa7c0d4febfd144a0d6d2e188e274be29995"
+    }
+  ]
+}

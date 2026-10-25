@@ -1,5 +1,6 @@
 import assert, { AssertionError } from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
+import { spawnSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -19,9 +20,8 @@ import { fileURLToPath } from 'node:url';
 //   0=PASS，1=输入/前置无效（文件缺失/不可解析/SHA/digest 格式错误/参数错误），2=验证失败（语义违规、
 //   授权门拒绝、UNVERIFIED）。环境缺失必须显式 UNVERIFIED 且退出码非零，不允许 skip 转 PASS。
 //
-// 环境事实（2026-10-20 实测，evidence/env-probe.txt）：gh 令牌失效 + TLS 拦截（x509 OSStatus -26276），
-// GitHub 只读读回不可行 → 如实 UNVERIFIED；无远端分支保护/CI 配置写授权 → LOCAL_ONLY；
-// docker daemon EPERM。管理员身份不等于本次批准修改分支保护（计划明示）。
+// Historical TLS failures are history only. Fresh operator metadata is recorded separately;
+// provider/workflow presence never qualifies the runtime actor or authorizes policy writes.
 //
 // 负例 fixture 全部在 os.tmpdir() 生成，不向活配置写入任何状态。
 // required-check 名称/CI provider/Registry endpoint/环境 endpoint 均为未提供的输入——严禁虚构，
@@ -187,8 +187,8 @@ test('V_INFRA_I06 contract: five platform files exist and committed validate pas
   // 绝不伪报 required checks 已配置 / 平台已保护。
   assert.equal(report.summary.ci.requiredChecks.registrationStatus, 'UNSELECTED');
   assert.deepEqual(report.summary.ci.requiredChecks.names, []);
-  assert.equal(report.summary.repository.branchProtection.configuredStatus, 'UNVERIFIED');
-  assert.equal(report.summary.ci.providerStatus, 'UNSELECTED');
+  assert.equal(report.summary.repository.branchProtection.configuredStatus, 'NOT_CONFIGURED');
+  assert.equal(report.summary.ci.providerStatus, 'OBSERVED_NOT_QUALIFIED');
 });
 
 test('committed platform files carry the interface bindings and honest UNVERIFIED identity facts', () => {
@@ -201,9 +201,9 @@ test('committed platform files carry the interface bindings and honest UNVERIFIE
   assert.equal(repo.repository.principalId, registry.project.github.principalId);
   assert.equal(repo.repository.owner, registry.project.github.owner);
   assert.ok(repo.repository.sameOriginRef, 'must reference the I01 registry as the identity source of truth');
-  assert.equal(repo.identity.readback.status, 'UNVERIFIED', 'gh TLS/token failure must stay honest');
-  assert.ok(String(repo.identity.readback.error).includes('x509'), 'raw readback error preserved verbatim');
-  assert.equal(repo.branchProtection.configuredStatus, 'UNVERIFIED');
+  assert.equal(repo.identity.readback.status, 'VERIFIED', 'fresh operator readback is separate from standing authority');
+  assert.ok(String(repo.identity.readback.history[0].error).includes('x509'), 'raw readback error preserved verbatim');
+  assert.equal(repo.branchProtection.configuredStatus, 'NOT_CONFIGURED');
   assert.equal(repo.remotePolicyWrites.allowed, false);
   assert.equal(repo.localOnly, true);
 
@@ -214,7 +214,7 @@ test('committed platform files carry the interface bindings and honest UNVERIFIE
   }
   assert.equal(ci.requiredChecks.failClosed, true);
   assert.equal(ci.authorization.remotePolicyWriteAuthorized, false);
-  assert.equal(ci.provider.status, 'UNSELECTED', 'CI provider is an unprovided input; must not be invented');
+  assert.equal(ci.provider.status, 'OBSERVED_NOT_QUALIFIED', 'workflow presence does not qualify CI/runtime/protected policy');
 
   const env = JSON.parse(fs.readFileSync(path.join(platformDir, 'environment-registration.example.json'), 'utf8'));
   assert.equal(env.interface, 'Environment.v1');
@@ -489,7 +489,8 @@ test('RED missing / skipped / timed-out checks each block promotion with distinc
     { checks: [{ name: 'ci-test', boundSha: SHA('b'), conclusion: 'failure' }], expected: 'CHECK_NOT_SUCCESS' },
   ];
   for (const [index, fixture] of cases.entries()) {
-    const chainFile = tmpFile(`chain-check-${index}`, greenChain(fixture));
+    const {expected,...input}=fixture;
+    const chainFile = tmpFile(`chain-check-${index}`, greenChain(input));
     const probe = runCli(['probe', '--case', 'registry-environment-identity', '--chain', chainFile, '--json']);
     assert.equal(probe.status, 2, `fixture ${index} must block`);
     const report = parseJsonOut(probe, `check fixture ${index}`);
@@ -803,7 +804,8 @@ test('probes are real and honest: repository-identity performs exactly one read-
     assert.equal(mallory.status, 2, 'a correct id with a foreign full_name must fail verification');
     assert.equal(malloryReport.readback.status, 'MISMATCH');
     assert.equal(malloryReport.readback.observed.repoId, gh.repoId);
-    assert.equal(malloryReport.readback.observed.fullName, 'mallory/other');
+    assert.equal(malloryReport.readback.observed.fullName, undefined, 'out-of-scope provider labels are not echoed');
+    assert.equal(malloryReport.readback.observed.identityMatches,false);
     assert.equal(malloryReport.readback.expected.repoFullname, gh.repoFullname, 'expected stays pinned to the registry source');
     assert.equal(stub.calls().length, 3);
     assert.equal(stub.calls().at(-1), `api repos/${gh.repoFullname}`, 'the probe always targets the registered repository');
@@ -922,4 +924,268 @@ test('parseJsonOut raises a real AssertionError (not a ReferenceError) when the 
     () => parseJsonOut(result, 'no-json probe'),
     (err) => err instanceof AssertionError && /stdout is not JSON/.test(err.message),
   );
+});
+
+
+// Convergence I06 public CLI admission seam; fake gh only at the process boundary.
+test('I06 refs admission blocks direct repository probing before any external I/O', () => {
+  const stub=makeGhStub();const dir=fs.mkdtempSync(path.join(os.tmpdir(),'i06-preflight-'));
+  try {
+    const expected=JSON.parse(fs.readFileSync(registryPath)).project.github;
+    const control=runCli(['probe','--case','repository-identity','--read-only','--json'],{env:stub.envFor({mode:'ok',body:JSON.stringify({id:expected.repoId,full_name:expected.repoFullname})})});
+    assert.equal(control.status,0,'a reachable valid control prevents a missing-tool/input RED');
+    const refs=JSON.parse(fs.readFileSync(refsPath));refs.refs='not-an-array';const file=path.join(dir,'refs.json');fs.writeFileSync(file,JSON.stringify(refs));
+    const before=stub.calls().length;
+    const rejected=runCli(['probe','--case','repository-identity','--read-only','--refs',file,'--json'],{env:stub.envFor({mode:'ok',body:JSON.stringify({id:expected.repoId,full_name:expected.repoFullname})})});
+    assert.equal(rejected.status,2,'invalid catalog must refuse before a repository read, not verify');
+    assert.equal(parseJsonOut(rejected,'refs preflight').executed,false);assert.equal(stub.calls().length,before,'invalid refs never launch the network client');
+  }finally{fs.rmSync(stub.dir,{recursive:true,force:true});fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+
+test('I06 direct probes consume versioned platform input through the same admission gate', () => {
+  const stub=makeGhStub();const dir=makeFixtureDir(({readJson,writeJson})=>{const doc=readJson('ci-policy.json');doc.schemaVersion=2;writeJson('ci-policy.json',doc);});
+  try {
+    const expected=JSON.parse(fs.readFileSync(registryPath)).project.github;
+    const run=runCli(['probe','--case','repository-identity','--read-only','--platform-dir',dir,'--json'],{env:stub.envFor({mode:'ok',body:JSON.stringify({id:expected.repoId,full_name:expected.repoFullname})})});
+    assert.equal(run.status,2,'future schema cannot bypass validate via direct probing');assert.equal(parseJsonOut(run,'version admission').executed,false);assert.deepEqual(stub.calls(),[]);
+  }finally{fs.rmSync(stub.dir,{recursive:true,force:true});fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+
+test('I06 integration chain never accepts a foreign project or a normal-response correlation mismatch', () => {
+  for(const chain of [greenChain({project:'foreign-project',deployment:{...greenChain().deployment,project:'foreign-project'}}),greenChain({readback:{correlationId:'another-operation',observed:{businessTerminalState:'healthy'}}})]) {
+    const file=tmpFile('i06-chain-binding',chain);
+    try{const result=runCli(['probe','--case','registry-environment-identity','--chain',file,'--json']);assert.equal(result.status,2,'each metadata hop stays bound to the registered project and original operation');}
+    finally{fs.rmSync(path.dirname(file),{recursive:true,force:true});}
+  }
+});
+
+
+function makePlatformGhStub(responses){
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'i06-http-gh-'));const fixtures=path.join(dir,'responses.json');const log=path.join(dir,'requests.jsonl');fs.writeFileSync(fixtures,JSON.stringify(responses));
+  const program=[ '#!'+process.execPath,
+    "const fs=require('node:fs');const args=process.argv.slice(2),route=args.at(-1);fs.appendFileSync(process.env.I06_TEST_LOG,JSON.stringify(args)+'\\n');const map=JSON.parse(fs.readFileSync(process.env.I06_TEST_RESPONSES));const r=map[route]??{status:404,body:{message:'not registered fixture'}};if(r.delayMs)Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,r.delayMs);console.log('HTTP/2.0 '+r.status);for(const [key,value]of Object.entries(r.headers??{}))console.log(key+': '+value);console.log('');console.log(JSON.stringify(r.body));process.exit(r.exit??(r.status>=400?1:0));",
+  ].join('\n');fs.writeFileSync(path.join(dir,'gh'),program);fs.chmodSync(path.join(dir,'gh'),0o755);
+  return {dir,env:{PATH:dir+path.delimiter+process.env.PATH,I06_TEST_LOG:log,I06_TEST_RESPONSES:fixtures},calls:()=>fs.existsSync(log)?fs.readFileSync(log,'utf8').trim().split('\n').filter(Boolean).map(x=>JSON.parse(x)):[]};
+}
+function platformResponses(){
+  const gh=JSON.parse(fs.readFileSync(registryPath)).project.github;const base='repos/'+gh.repoFullname;const sha=SHA('b');const r=(body,status=200,headers={})=>({body,status,headers});
+  return {
+    user:r({id:gh.principalId,login:gh.owner,email:'PRIVATE_PROVIDER_FIELD_NOT_FOR_OUTPUT'}),
+    [base]:r({id:gh.repoId,full_name:gh.repoFullname,owner:{id:gh.principalId,login:gh.owner}}),
+    [base+'/branches/master']:r({name:'master',commit:{sha},protected:true}),
+    [base+'/branches/master/protection']:r({required_status_checks:{contexts:['ci-test']},enforce_admins:{enabled:true}}),
+    [base+'/rulesets?per_page=2&page=1']:r([]),
+    [base+'/actions/workflows?per_page=2&page=1']:r({total_count:3,workflows:[{id:11,name:'CI',path:'.github/workflows/ci.yml',state:'active'},{id:12,name:'Gate',path:'.github/workflows/gate.yml',state:'active'}]},200,{Link:'<https://api.github.com/'+base+'/actions/workflows?per_page=2&page=2>; rel="next"'}),
+    [base+'/actions/workflows?per_page=2&page=2']:r({total_count:3,workflows:[{id:13,name:'Third',path:'.github/workflows/third.yml',state:'active'}]}),
+    [base+'/commits/'+sha]:r({sha}),
+    [base+'/commits/'+sha+'/check-runs?per_page=2&page=1']:r({total_count:1,check_runs:[{id:21,name:'ci-test',head_sha:sha,status:'completed',conclusion:'success',app:{id:1}}]}),
+    [base+'/actions/runs?head_sha='+sha+'&per_page=2&page=1']:r({total_count:1,workflow_runs:[{id:31,head_sha:sha,repository:{id:gh.repoId,full_name:gh.repoFullname},head_repository:{id:gh.repoId,full_name:gh.repoFullname},path:'.github/workflows/ci.yml@master',status:'completed',conclusion:'success',workflow_id:11}]}),
+    [base+'/actions/artifacts?per_page=2&page=1']:r({total_count:1,artifacts:[{id:41,name:'build',expired:false,digest:DIGEST('c'),workflow_run:{id:31,repository_id:gh.repoId,head_repository_id:gh.repoId,head_sha:sha}}]}),
+    [base+'/deployments?sha='+sha+'&per_page=2&page=1']:r([]),
+  };
+}
+function makeObservedPlatformFixture(){return makeFixtureDir(({readJson,writeJson})=>{const repo=readJson('repository-registration.json');repo.readOnly={apiOrigin:'https://api.github.com',branch:'master',pageSize:2,maxPages:4,timeoutMs:2000,operatorObservationOnly:true};writeJson('repository-registration.json',repo);});}
+
+test('I06 platform observer reads exact registered IDs, all pages and candidate-linked artifact metadata only',()=>{
+  const stub=makePlatformGhStub(platformResponses());const dir=makeObservedPlatformFixture();
+  try{
+    const result=runCli(['probe','--case','platform-observation','--read-only','--candidate-sha',SHA('b'),'--platform-dir',dir,'--json'],{env:stub.env});
+    assert.equal(result.status,0,result.stderr||result.stdout);const report=parseJsonOut(result,'platform metadata').observation;
+    assert.equal(report.workflows.complete,true);assert.deepEqual(report.workflows.items.map(r=>r.id),[11,12,13]);assert.equal(report.artifacts.items[0].digest,DIGEST('c'));assert.equal(report.artifacts.items[0].matchesCandidate,true);assert.equal(report.artifacts.items[0].mediaType,'github-actions-artifact-zip');
+    assert.equal(report.runtimeAuthority.status,'UNVERIFIED','operator metadata never provisions a control/source actor');assert.doesNotMatch(result.stdout,/PRIVATE_PROVIDER_FIELD_NOT_FOR_OUTPUT/);
+    for(const call of stub.calls()){assert.equal(call[0],'api');assert.ok(call.includes('GET'));assert.ok(!call.includes('POST'));assert.match(call.at(-1),/^(user$|repos\/ql-wade\/sdd-harness(?:$|\/))/);}
+  }finally{fs.rmSync(stub.dir,{recursive:true,force:true});fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('I06 observer keeps forbidden, truncated, foreign and missing-ID pages unverified',()=>{
+  const base='repos/'+JSON.parse(fs.readFileSync(registryPath)).project.github.repoFullname;
+  for(const change of ['forbidden','lost-next-page','foreign-next-page','missing-artifact-id','candidate-unreadable']){
+    const responses=platformResponses();
+    if(change==='forbidden')responses[base+'/rulesets?per_page=2&page=1']={status:403,body:{message:'PRIVATE_ERROR_MUST_NOT_LEAK'}};
+    if(change==='lost-next-page')responses[base+'/actions/workflows?per_page=2&page=1'].headers={};
+    if(change==='foreign-next-page')responses[base+'/actions/workflows?per_page=2&page=1'].headers.Link='<https://api.github.com/repos/other/private/actions/workflows?per_page=2&page=2>; rel="next"';
+    if(change==='candidate-unreadable')responses[base+'/commits/'+SHA('b')]={status:404,body:{message:'not readable'}};
+    if(change==='missing-artifact-id')delete responses[base+'/actions/artifacts?per_page=2&page=1'].body.artifacts[0].id;
+    const stub=makePlatformGhStub(responses);const dir=makeObservedPlatformFixture();
+    try{const run=runCli(['probe','--case','platform-observation','--read-only','--candidate-sha',SHA('b'),'--platform-dir',dir,'--json'],{env:stub.env});assert.equal(run.status,2,change+': '+run.stdout);assert.doesNotMatch(run.stdout,/PRIVATE_ERROR_MUST_NOT_LEAK/);assert.ok(!stub.calls().some(args=>args.at(-1).includes('repos/other')));}
+    finally{fs.rmSync(stub.dir,{recursive:true,force:true});fs.rmSync(dir,{recursive:true,force:true});}
+  }
+});
+
+
+test('I06 all operations share nullable, nested, unknown, duplicate and reference admission before I/O',()=>{
+  const operations=[['validate'],['qualify','--read-only','--candidate-sha',SHA('b'),'--artifact-digest',DIGEST('c'),'--operation-id','run:op'],['probe','--case','repository-identity','--read-only'],['probe','--case','registry-environment-identity']];
+  for(const mutation of ['null-root','null-nested','unknown-root','unknown-nested','version','array-type','duplicate-list']){
+    const dir=makeFixtureDir(({readJson,writeJson})=>{
+      const d=readJson('ci-policy.json');
+      if(mutation==='null-root'){writeJson('ci-policy.json',null);return;}
+      if(mutation==='null-nested')d.requiredChecks=null;
+      if(mutation==='unknown-root')d.implicitPolicyWriter=true;
+      if(mutation==='unknown-nested')d.requiredChecks.implicitPass=true;
+      if(mutation==='version')d.schemaVersion=7;
+      if(mutation==='array-type')d.requiredChecks.names={name:'wrong'};
+      if(mutation==='duplicate-list')d.requiredChecks.blockingSemantics.push('MISSING');
+      writeJson('ci-policy.json',d);
+    });const stub=makeGhStub();
+    try{for(const command of operations){const run=runCli([...command,'--platform-dir',dir,'--json'],{env:stub.envFor()});assert.equal(run.status,2,mutation+': '+run.stdout);assert.equal(parseJsonOut(run,mutation).executed,false);}assert.deepEqual(stub.calls(),[]);}
+    finally{fs.rmSync(dir,{recursive:true,force:true});fs.rmSync(stub.dir,{recursive:true,force:true});}
+  }
+  for(const mutation of ['null','version','duplicate','foreign','unknown']){
+    const dir=fs.mkdtempSync(path.join(os.tmpdir(),'i06-ref-matrix-'));const stub=makeGhStub();
+    try{let d=JSON.parse(fs.readFileSync(refsPath));if(mutation==='null')d=null;if(mutation==='version')d.schemaVersion=2;if(mutation==='duplicate')d.refs.push(d.refs[0]);if(mutation==='foreign')d.refs[0].ref='secret-ref:other-project/source-read';if(mutation==='unknown')d.refs[0].implicitValueReader=true;const file=path.join(dir,'refs.json');fs.writeFileSync(file,JSON.stringify(d));for(const command of operations){const run=runCli([...command,'--refs',file,'--json'],{env:stub.envFor()});assert.equal(run.status,2,mutation);assert.equal(parseJsonOut(run,mutation).executed,false);}assert.deepEqual(stub.calls(),[]);}
+    finally{fs.rmSync(dir,{recursive:true,force:true});fs.rmSync(stub.dir,{recursive:true,force:true});}
+  }
+  for(const args of [['validate','--unknown','x'],['validate','positional'],['validate','--registry',registryPath,'--registry',registryPath],['validate','--chain','ignored'],['probe','--case','repository-identity','--read-only','--refs','--json']])assert.equal(runCli(args).status,1,JSON.stringify(args));
+});
+
+async function makeReadOnlyHttpFixture(){
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'i06-read-http-'));const map=path.join(dir,'responses.json');const log=path.join(dir,'requests.jsonl');fs.writeFileSync(map,'{}');
+  const source="const http=require('node:http'),fs=require('node:fs');http.createServer((req,res)=>{fs.appendFileSync(process.env.I06_HTTP_LOG,JSON.stringify({method:req.method,url:req.url})+'\\n');const map=JSON.parse(fs.readFileSync(process.env.I06_HTTP_MAP));const route=req.url.split('?')[0],value=map[route]??{status:404,body:{}};res.writeHead(value.status??200,value.headers??{});res.end(typeof value.body==='string'?value.body:JSON.stringify(value.body));}).listen(0,'127.0.0.1',function(){console.log(JSON.stringify({port:this.address().port}));});";
+  const script=path.join(dir,'server.cjs');fs.writeFileSync(script,source);const child=spawn(process.execPath,[script],{env:{...process.env,I06_HTTP_LOG:log,I06_HTTP_MAP:map},stdio:['ignore','pipe','pipe']});
+  const port=await new Promise((resolve,reject)=>{let text='';const timer=setTimeout(()=>reject(new Error('fixture server did not start')),5000);child.stdout.on('data',(d)=>{text+=d;if(text.includes('\n')){clearTimeout(timer);try{resolve(JSON.parse(text.split('\n')[0]).port);}catch(error){reject(error);}}});child.once('error',reject);});
+  return {dir,url:'http://127.0.0.1:'+port,set:(value)=>fs.writeFileSync(map,JSON.stringify(value)),calls:()=>fs.existsSync(log)?fs.readFileSync(log,'utf8').trim().split('\n').filter(Boolean).map(JSON.parse):[],async close(){child.kill('SIGTERM');await new Promise(resolve=>child.exitCode!==null?resolve():child.once('exit',resolve));fs.rmSync(dir,{recursive:true,force:true});}};
+}
+
+test('I06 registered independent target readback matches project, SHA, digest, original operation and terminal state',async()=>{
+  const server=await makeReadOnlyHttpFixture();const dir=makeFixtureDir(({readJson,writeJson})=>{const d=readJson('environment-registration.example.json');d.example=false;Object.assign(d.environment,{id:'isolated-pilot',endpoint:server.url+'/readback',owner:'ql-wade'});Object.assign(d.environment.readbackOracle,{expectedBusinessTerminalState:'healthy',transport:'http-local-test'});writeJson('environment-registration.example.json',d);});
+  const body={schemaVersion:1,project:PROJECT,environmentId:'isolated-pilot',candidateSha:SHA('b'),operationId:'run:op',artifactDigest:DIGEST('c'),businessTerminalState:'healthy',privateField:'PRIVATE_PROVIDER_VALUE'};
+  const args=['probe','--case','environment-readback','--read-only','--candidate-sha',SHA('b'),'--artifact-digest',DIGEST('c'),'--operation-id','run:op','--platform-dir',dir,'--json'];
+  try{
+    server.set({'/readback':{body}});const good=runCli(args);assert.equal(good.status,0,good.stdout||good.stderr);assert.equal(parseJsonOut(good,'target match').observation.status,'OBSERVED_MATCH');assert.doesNotMatch(good.stdout,/PRIVATE_PROVIDER_VALUE/);
+    for(const changed of [{...body,project:'other-project'},{...body,operationId:'old-operation'},{...body,artifactDigest:DIGEST('d')},{...body,businessTerminalState:'failed'}]){server.set({'/readback':{body:changed}});assert.equal(runCli(args).status,2);}
+    server.set({'/readback':{status:302,headers:{Location:server.url+'/unregistered'},body:{}}});assert.equal(runCli(args).status,2);assert.ok(!server.calls().some(r=>r.url.startsWith('/unregistered')),'redirect never extends the registered endpoint');
+    server.set({'/readback':{status:403,body:{privateField:'DO_NOT_ECHO'}}});const forbidden=runCli(args);assert.equal(forbidden.status,2);assert.doesNotMatch(forbidden.stdout,/DO_NOT_ECHO/);
+    assert.ok(server.calls().every(r=>r.method==='GET'));
+  }finally{fs.rmSync(dir,{recursive:true,force:true});await server.close();}
+});
+
+test('I06 registered OCI readback rehashes manifest/config and binds actual source SHA without claiming signing',async()=>{
+  const server=await makeReadOnlyHttpFixture();const config=JSON.stringify({config:{Labels:{'org.opencontainers.image.revision':SHA('b')}}});
+  const sha=(value)=>'sha256:'+crypto.createHash('sha256').update(value).digest('hex');const configDigest=sha(config);const manifest=JSON.stringify({schemaVersion:2,mediaType:'application/vnd.oci.image.manifest.v1+json',config:{digest:configDigest}});const digest=sha(manifest);
+  const dir=makeFixtureDir(({readJson,writeJson})=>{const d=readJson('registry-registration.example.json');d.example=false;Object.assign(d.registry,{endpoint:server.url,kind:'oci-v2',repository:'ql-wade/sdd-harness',transport:'http-local-test'});writeJson('registry-registration.example.json',d);});
+  const base='/v2/ql-wade/sdd-harness';const args=['probe','--case','artifact-readback','--read-only','--candidate-sha',SHA('b'),'--artifact-digest',digest,'--operation-id','run:op','--platform-dir',dir,'--json'];
+  try{
+    server.set({[base+'/manifests/'+digest]:{headers:{'Docker-Content-Digest':digest},body:manifest},[base+'/blobs/'+configDigest]:{body:config}});
+    const good=runCli(args);assert.equal(good.status,0,good.stdout||good.stderr);assert.equal(parseJsonOut(good,'OCI').observation.digest,digest);assert.equal(parseJsonOut(good,'OCI').observation.signingStatus,'UNVERIFIED');
+    server.set({[base+'/manifests/'+digest]:{headers:{'Docker-Content-Digest':digest},body:manifest+' '}});assert.equal(runCli(args).status,2,'the response body is rehashed, not its own digest string');
+    assert.ok(server.calls().every(r=>r.method==='GET'&&r.url.startsWith(base)));
+  }finally{fs.rmSync(dir,{recursive:true,force:true});await server.close();}
+});
+
+
+test('I06 malformed input diagnostics never echo private JSON fragments or untrusted paths',()=>{
+  const marker='s0priv';const dir=makeFixtureDir(({dir})=>{fs.writeFileSync(path.join(dir,'ci-policy.json'),marker);});
+  try{const result=runCli(['validate','--platform-dir',dir,'--json']);assert.equal(result.status,1);assert.doesNotMatch(result.stdout+result.stderr,new RegExp(marker),'parser exceptions are not a safe public diagnostic');}
+  finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+
+test('I06 timeout remains unknown and never triggers a replacement platform action',()=>{
+  const responses=platformResponses();responses.user.delayMs=350;const stub=makePlatformGhStub(responses);const dir=makeObservedPlatformFixture();
+  try{const p=path.join(dir,'repository-registration.json');const d=JSON.parse(fs.readFileSync(p));d.readOnly.timeoutMs=100;fs.writeFileSync(p,JSON.stringify(d));const result=runCli(['probe','--case','platform-observation','--read-only','--candidate-sha',SHA('b'),'--platform-dir',dir,'--json'],{env:stub.env});assert.equal(result.status,2);const value=parseJsonOut(result,'timeout').observation;assert.equal(value.status,'UNVERIFIED');assert.equal(value.requests.length,1);assert.equal(value.requests[0].code,'TIMEOUT');}
+  finally{fs.rmSync(stub.dir,{recursive:true,force:true});fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+
+test('I06 artifact producer run must belong to the complete candidate run inventory',()=>{
+  const responses=platformResponses();const base='repos/'+JSON.parse(fs.readFileSync(registryPath)).project.github.repoFullname;
+  responses[base+'/actions/artifacts?per_page=2&page=1'].body.artifacts[0].workflow_run.id=999;
+  const stub=makePlatformGhStub(responses);const dir=makeObservedPlatformFixture();
+  try{
+    const run=runCli(['probe','--case','platform-observation','--read-only','--candidate-sha',SHA('b'),'--platform-dir',dir,'--json'],{env:stub.env});
+    assert.equal(run.status,2,'same SHA cannot substitute for the original producing run identity');
+    const report=parseJsonOut(run,'foreign artifact producer').observation;
+    assert.equal(report.status,'OBSERVED_WITH_GAPS');assert.ok(!report.artifacts.items.some(item=>item.matchesCandidate===true));
+  }finally{fs.rmSync(stub.dir,{recursive:true,force:true});fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('I06 workflow identity is required before a candidate run can correlate artifacts',()=>{
+  const responses=platformResponses();const base='repos/'+JSON.parse(fs.readFileSync(registryPath)).project.github.repoFullname;
+  delete responses[base+'/actions/runs?head_sha='+SHA('b')+'&per_page=2&page=1'].body.workflow_runs[0].workflow_id;
+  const stub=makePlatformGhStub(responses);const dir=makeObservedPlatformFixture();
+  try{
+    const run=runCli(['probe','--case','platform-observation','--read-only','--candidate-sha',SHA('b'),'--platform-dir',dir,'--json'],{env:stub.env});
+    assert.equal(run.status,2,'a missing workflow ID cannot be inferred from check names or candidate SHA');
+    const report=parseJsonOut(run,'missing workflow identity').observation;
+    assert.equal(report.status,'OBSERVED_WITH_GAPS');assert.equal(report.runs.status,'UNVERIFIED');assert.ok(!report.artifacts.items.some(item=>item.matchesCandidate===true));
+  }finally{fs.rmSync(stub.dir,{recursive:true,force:true});fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+
+for(const mutation of ['foreign-source-repository','missing-source-repository','null-source-repository','conflicting-repository-name','missing-workflow-path','conflicting-workflow-path','unknown-workflow','missing-run-status','missing-run-conclusion']) {
+  test('I06 producer source correlation refuses '+mutation,()=>{
+    const responses=platformResponses();const base='repos/'+JSON.parse(fs.readFileSync(registryPath)).project.github.repoFullname;
+    const item=responses[base+'/actions/runs?head_sha='+SHA('b')+'&per_page=2&page=1'].body.workflow_runs[0];
+    if(mutation==='foreign-source-repository')item.head_repository.id=999;
+    if(mutation==='missing-source-repository')delete item.head_repository;
+    if(mutation==='null-source-repository')item.head_repository=null;
+    if(mutation==='conflicting-repository-name')item.repository.full_name='other/private';
+    if(mutation==='missing-workflow-path')delete item.path;
+    if(mutation==='conflicting-workflow-path')item.path='.github/workflows/other.yml@master';
+    if(mutation==='unknown-workflow')item.workflow_id=999;
+    if(mutation==='missing-run-status')delete item.status;
+    if(mutation==='missing-run-conclusion')delete item.conclusion;
+    const stub=makePlatformGhStub(responses);const dir=makeObservedPlatformFixture();
+    try{
+      const run=runCli(['probe','--case','platform-observation','--read-only','--candidate-sha',SHA('b'),'--platform-dir',dir,'--json'],{env:stub.env});
+      assert.equal(run.status,2,mutation+' must remain unknown metadata, not an input parse error or an observed producer');
+      const report=parseJsonOut(run,mutation).observation;assert.equal(report.status,'OBSERVED_WITH_GAPS');assert.equal(report.runs.status,'UNVERIFIED');assert.ok(!report.artifacts.items.some(item=>item.matchesCandidate===true));assert.doesNotMatch(run.stdout,/other\/private/);
+    }finally{fs.rmSync(stub.dir,{recursive:true,force:true});fs.rmSync(dir,{recursive:true,force:true});}
+  });
+}
+
+test('I06 legal queued/null metadata and historical artifacts do not authorize a producer attempt',()=>{
+  const responses=platformResponses();const gh=JSON.parse(fs.readFileSync(registryPath)).project.github;const base='repos/'+gh.repoFullname;
+  const item=responses[base+'/actions/runs?head_sha='+SHA('b')+'&per_page=2&page=1'].body.workflow_runs[0];item.status='queued';item.conclusion=null;item.path='.github/workflows/ci.yml';
+  const artifacts=responses[base+'/actions/artifacts?per_page=2&page=1'].body;artifacts.total_count=1;artifacts.artifacts=[{id:42,name:'older-build',expired:true,digest:null,workflow_run:{id:999,repository_id:gh.repoId,head_repository_id:gh.repoId,head_sha:SHA('d')}}];
+  const stub=makePlatformGhStub(responses);const dir=makeObservedPlatformFixture();
+  try{
+    const run=runCli(['probe','--case','platform-observation','--read-only','--candidate-sha',SHA('b'),'--platform-dir',dir,'--json'],{env:stub.env});assert.equal(run.status,0,run.stdout);
+    const report=parseJsonOut(run,'legal nullable metadata').observation;assert.equal(report.runs.items[0].conclusion,null);assert.equal(report.artifacts.items[0].matchesCandidate,false);assert.equal(report.artifacts.items[0].digest,null);assert.equal(report.runtimeAuthority.status,'UNVERIFIED');
+  }finally{fs.rmSync(stub.dir,{recursive:true,force:true});fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('I06 a current run ID with conflicting artifact SHA cannot be hidden as historical metadata',()=>{
+  const responses=platformResponses();const base='repos/'+JSON.parse(fs.readFileSync(registryPath)).project.github.repoFullname;
+  responses[base+'/actions/artifacts?per_page=2&page=1'].body.artifacts[0].workflow_run.head_sha=SHA('d');
+  const stub=makePlatformGhStub(responses);const dir=makeObservedPlatformFixture();
+  try{
+    const run=runCli(['probe','--case','platform-observation','--read-only','--candidate-sha',SHA('b'),'--platform-dir',dir,'--json'],{env:stub.env});assert.equal(run.status,2,'the same producer run cannot report a different source SHA');
+    const report=parseJsonOut(run,'artifact producer SHA conflict').observation;assert.equal(report.artifacts.status,'UNVERIFIED');assert.equal(report.status,'OBSERVED_WITH_GAPS');
+  }finally{fs.rmSync(stub.dir,{recursive:true,force:true});fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('I06 deployment metadata never treats an unselected environment as a registered business terminal',()=>{
+  const responses=platformResponses();const base='repos/'+JSON.parse(fs.readFileSync(registryPath)).project.github.repoFullname;
+  responses[base+'/deployments?sha='+SHA('b')+'&per_page=2&page=1'].body=[{id:51,sha:SHA('b'),environment:'UNSELECTED',creator:null,performed_via_github_app:null,payload:{privateValue:'PRIVATE_DEPLOYMENT_VALUE'}}];
+  const stub=makePlatformGhStub(responses);const dir=makeObservedPlatformFixture();
+  try{
+    const run=runCli(['probe','--case','platform-observation','--read-only','--candidate-sha',SHA('b'),'--platform-dir',dir,'--json'],{env:stub.env});assert.equal(run.status,0,run.stdout);
+    const report=parseJsonOut(run,'deployment scope').observation;assert.equal(report.deployments.items[0].registeredEnvironment,false);assert.equal(report.deployments.items[0].productionCorrelation,'UNVERIFIED');assert.equal(report.runtimeAuthority.status,'UNVERIFIED');assert.doesNotMatch(run.stdout,/PRIVATE_DEPLOYMENT_VALUE/);
+  }finally{fs.rmSync(stub.dir,{recursive:true,force:true});fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+
+for(const collection of ['runs','workflows']) {
+  test('I06 incomplete '+collection+' inventory cannot correlate a valid prefix producer',()=>{
+    const responses=platformResponses();const base='repos/'+JSON.parse(fs.readFileSync(registryPath)).project.github.repoFullname;
+    if(collection==='runs')responses[base+'/actions/runs?head_sha='+SHA('b')+'&per_page=2&page=1'].body.total_count=2;
+    else for(const page of [1,2])responses[base+'/actions/workflows?per_page=2&page='+page].body.total_count=4;
+    const stub=makePlatformGhStub(responses);const dir=makeObservedPlatformFixture();
+    try{
+      const run=runCli(['probe','--case','platform-observation','--read-only','--candidate-sha',SHA('b'),'--platform-dir',dir,'--json'],{env:stub.env});assert.equal(run.status,2);
+      const report=parseJsonOut(run,'incomplete producer inventory').observation;assert.equal(report[collection].complete,false);assert.equal(report.artifacts.status,'UNVERIFIED');assert.ok(!report.artifacts.items.some(item=>item.matchesCandidate===true),'a valid prefix is not a complete producer inventory');
+    }finally{fs.rmSync(stub.dir,{recursive:true,force:true});fs.rmSync(dir,{recursive:true,force:true});}
+  });
+}
+
+test('I06 a legal null artifact workflow reference remains unverified instead of inventing a producer',()=>{
+  const responses=platformResponses();const base='repos/'+JSON.parse(fs.readFileSync(registryPath)).project.github.repoFullname;responses[base+'/actions/artifacts?per_page=2&page=1'].body.artifacts[0].workflow_run=null;
+  const stub=makePlatformGhStub(responses);const dir=makeObservedPlatformFixture();
+  try{
+    const run=runCli(['probe','--case','platform-observation','--read-only','--candidate-sha',SHA('b'),'--platform-dir',dir,'--json'],{env:stub.env});assert.equal(run.status,2);
+    const report=parseJsonOut(run,'null artifact producer').observation;assert.equal(report.artifacts.status,'UNVERIFIED');assert.equal(report.status,'OBSERVED_WITH_GAPS');
+  }finally{fs.rmSync(stub.dir,{recursive:true,force:true});fs.rmSync(dir,{recursive:true,force:true});}
 });

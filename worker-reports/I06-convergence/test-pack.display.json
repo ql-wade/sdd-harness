@@ -1,0 +1,571 @@
+{
+  "schema_version": "test-authoring/v1",
+  "mode": "automate",
+  "status": "ready_for_acceptance",
+  "project_root": "<worktree>",
+  "scope": "Only I06 admission/read-only observer authoring; not full resource qualification, not a closure ledger.",
+  "basis": [
+    {
+      "id": "REQ-I06",
+      "kind": "requirement",
+      "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
+      "sha256": "58671b548b0130f6e14c218a6d5bceb671e2c3b798bc09422a886dd98f509202"
+    },
+    {
+      "id": "SRC-I06",
+      "kind": "source",
+      "path": "tools/infra/platform.mjs",
+      "sha256": "a8c1a154d4592b87b5446c4f38c5f564010f20c17fb944f91dbecc8cd4e15d21"
+    },
+    {
+      "id": "SRC-TEST",
+      "kind": "source",
+      "path": "test/infra-platform.test.js",
+      "sha256": "7f5ef3dc95959a82b4d909a86175f5bf36478ad8dca79877d8b6018fc0a6cbf5"
+    }
+  ],
+  "requirements": [
+    "REQ-I06"
+  ],
+  "dimensions": {
+    "Journey-A": {
+      "required": true,
+      "reason": "CLI admission/permission, cross-resource metadata, pagination/recovery/configuration and regression construction coverage.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": [
+        "I06-REFS",
+        "I06-SHAPES",
+        "I06-BINDING",
+        "I06-PAGES",
+        "I06-TIMEOUT",
+        "I06-TARGET",
+        "I06-OCI",
+        "I06-DIAGNOSTIC"
+      ]
+    },
+    "Journey-B": {
+      "required": false,
+      "reason": "This pack tests stateless read-only CLI construction; no browser/accessibility or durable business write is implemented by this owner. Local release-store persistence is in the separately run P4_2 consumer tests.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": []
+    },
+    "Journey-C": {
+      "required": false,
+      "reason": "This pack tests stateless read-only CLI construction; no browser/accessibility or durable business write is implemented by this owner. Local release-store persistence is in the separately run P4_2 consumer tests.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": []
+    },
+    "Journey-D": {
+      "required": false,
+      "reason": "This pack tests stateless read-only CLI construction; no browser/accessibility or durable business write is implemented by this owner. Local release-store persistence is in the separately run P4_2 consumer tests.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": []
+    },
+    "Journey-E": {
+      "required": true,
+      "reason": "CLI admission/permission, cross-resource metadata, pagination/recovery/configuration and regression construction coverage.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": [
+        "I06-REFS",
+        "I06-SHAPES",
+        "I06-BINDING",
+        "I06-PAGES",
+        "I06-TARGET",
+        "I06-DIAGNOSTIC"
+      ]
+    },
+    "Journey-F": {
+      "required": true,
+      "reason": "CLI admission/permission, cross-resource metadata, pagination/recovery/configuration and regression construction coverage.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": [
+        "I06-REFS",
+        "I06-BINDING",
+        "I06-PAGES",
+        "I06-TIMEOUT",
+        "I06-TARGET",
+        "I06-OCI"
+      ]
+    },
+    "Journey-G": {
+      "required": true,
+      "reason": "CLI admission/permission, cross-resource metadata, pagination/recovery/configuration and regression construction coverage.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": [
+        "I06-PAGES"
+      ]
+    },
+    "Journey-H": {
+      "required": true,
+      "reason": "CLI admission/permission, cross-resource metadata, pagination/recovery/configuration and regression construction coverage.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": [
+        "I06-BINDING",
+        "I06-TIMEOUT",
+        "I06-TARGET"
+      ]
+    },
+    "Journey-I": {
+      "required": true,
+      "reason": "CLI admission/permission, cross-resource metadata, pagination/recovery/configuration and regression construction coverage.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": [
+        "I06-REFS",
+        "I06-SHAPES",
+        "I06-OCI"
+      ]
+    },
+    "Journey-J": {
+      "required": true,
+      "reason": "CLI admission/permission, cross-resource metadata, pagination/recovery/configuration and regression construction coverage.",
+      "basis_ids": [
+        "REQ-I06",
+        "SRC-I06"
+      ],
+      "case_ids": [
+        "I06-REFS",
+        "I06-SHAPES",
+        "I06-PAGES",
+        "I06-TIMEOUT",
+        "I06-DIAGNOSTIC"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "I06-REFS",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-F",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Fixed Node24.15.0; isolated process-boundary/HTTP fixtures; no live write permission."
+      ],
+      "inputs": {
+        "scope": "construction author self-check only"
+      },
+      "steps": [
+        "Invoke the named public CLI test with its valid control and negative variants."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "Invalid reference catalogs reject before any external client.",
+        "authority": "public CLI exit + typed output and isolated endpoint observation"
+      },
+      "cleanup": [
+        "finally remove only owned temporary fixtures and wait for every child process."
+      ],
+      "evidence_plan": [
+        "Exact stdout/exit/UTC/input hashes; independent reviewer reruns; live facts are separate."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "7f5ef3dc95959a82b4d909a86175f5bf36478ad8dca79877d8b6018fc0a6cbf5",
+        "test_id": "I06 refs admission blocks direct repository probing before any external I/O",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "I06 refs admission blocks direct repository probing before any external I/O",
+          "test/infra-platform.test.js"
+        ]
+      }
+    },
+    {
+      "id": "I06-SHAPES",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Fixed Node24.15.0; isolated process-boundary/HTTP fixtures; no live write permission."
+      ],
+      "inputs": {
+        "scope": "construction author self-check only"
+      },
+      "steps": [
+        "Invoke the named public CLI test with its valid control and negative variants."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "Every operation consumes the same closed/versioned context.",
+        "authority": "public CLI exit + typed output and isolated endpoint observation"
+      },
+      "cleanup": [
+        "finally remove only owned temporary fixtures and wait for every child process."
+      ],
+      "evidence_plan": [
+        "Exact stdout/exit/UTC/input hashes; independent reviewer reruns; live facts are separate."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "7f5ef3dc95959a82b4d909a86175f5bf36478ad8dca79877d8b6018fc0a6cbf5",
+        "test_id": "I06 all operations share nullable, nested, unknown, duplicate and reference admission before I/O",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "I06 all operations share nullable, nested, unknown, duplicate and reference admission before I/O",
+          "test/infra-platform.test.js"
+        ]
+      }
+    },
+    {
+      "id": "I06-BINDING",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-F",
+        "Journey-H"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Fixed Node24.15.0; isolated process-boundary/HTTP fixtures; no live write permission."
+      ],
+      "inputs": {
+        "scope": "construction author self-check only"
+      },
+      "steps": [
+        "Invoke the named public CLI test with its valid control and negative variants."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "Foreign project or old operation cannot promote a candidate.",
+        "authority": "public CLI exit + typed output and isolated endpoint observation"
+      },
+      "cleanup": [
+        "finally remove only owned temporary fixtures and wait for every child process."
+      ],
+      "evidence_plan": [
+        "Exact stdout/exit/UTC/input hashes; independent reviewer reruns; live facts are separate."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "7f5ef3dc95959a82b4d909a86175f5bf36478ad8dca79877d8b6018fc0a6cbf5",
+        "test_id": "I06 integration chain never accepts a foreign project or a normal-response correlation mismatch",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "I06 integration chain never accepts a foreign project or a normal-response correlation mismatch",
+          "test/infra-platform.test.js"
+        ]
+      }
+    },
+    {
+      "id": "I06-PAGES",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-F",
+        "Journey-G",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Fixed Node24.15.0; isolated process-boundary/HTTP fixtures; no live write permission."
+      ],
+      "inputs": {
+        "scope": "construction author self-check only"
+      },
+      "steps": [
+        "Invoke the named public CLI test with its valid control and negative variants."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "Non-2xx/incomplete/foreign pagination never becomes success.",
+        "authority": "public CLI exit + typed output and isolated endpoint observation"
+      },
+      "cleanup": [
+        "finally remove only owned temporary fixtures and wait for every child process."
+      ],
+      "evidence_plan": [
+        "Exact stdout/exit/UTC/input hashes; independent reviewer reruns; live facts are separate."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "7f5ef3dc95959a82b4d909a86175f5bf36478ad8dca79877d8b6018fc0a6cbf5",
+        "test_id": "I06 observer keeps forbidden, truncated, foreign and missing-ID pages unverified",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "I06 observer keeps forbidden, truncated, foreign and missing-ID pages unverified",
+          "test/infra-platform.test.js"
+        ]
+      }
+    },
+    {
+      "id": "I06-TIMEOUT",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-F",
+        "Journey-H",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Fixed Node24.15.0; isolated process-boundary/HTTP fixtures; no live write permission."
+      ],
+      "inputs": {
+        "scope": "construction author self-check only"
+      },
+      "steps": [
+        "Invoke the named public CLI test with its valid control and negative variants."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "Timeout is nonzero unknown with no replacement write.",
+        "authority": "public CLI exit + typed output and isolated endpoint observation"
+      },
+      "cleanup": [
+        "finally remove only owned temporary fixtures and wait for every child process."
+      ],
+      "evidence_plan": [
+        "Exact stdout/exit/UTC/input hashes; independent reviewer reruns; live facts are separate."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "7f5ef3dc95959a82b4d909a86175f5bf36478ad8dca79877d8b6018fc0a6cbf5",
+        "test_id": "I06 timeout remains unknown and never triggers a replacement platform action",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "I06 timeout remains unknown and never triggers a replacement platform action",
+          "test/infra-platform.test.js"
+        ]
+      }
+    },
+    {
+      "id": "I06-TARGET",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-F",
+        "Journey-H"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Fixed Node24.15.0; isolated process-boundary/HTTP fixtures; no live write permission."
+      ],
+      "inputs": {
+        "scope": "construction author self-check only"
+      },
+      "steps": [
+        "Invoke the named public CLI test with its valid control and negative variants."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "Only exact registered target correlation and expected business terminal metadata match.",
+        "authority": "public CLI exit + typed output and isolated endpoint observation"
+      },
+      "cleanup": [
+        "finally remove only owned temporary fixtures and wait for every child process."
+      ],
+      "evidence_plan": [
+        "Exact stdout/exit/UTC/input hashes; independent reviewer reruns; live facts are separate."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "7f5ef3dc95959a82b4d909a86175f5bf36478ad8dca79877d8b6018fc0a6cbf5",
+        "test_id": "I06 registered independent target readback matches project, SHA, digest, original operation and terminal state",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "I06 registered independent target readback matches project, SHA, digest, original operation and terminal state",
+          "test/infra-platform.test.js"
+        ]
+      }
+    },
+    {
+      "id": "I06-OCI",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-F",
+        "Journey-I"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Fixed Node24.15.0; isolated process-boundary/HTTP fixtures; no live write permission."
+      ],
+      "inputs": {
+        "scope": "construction author self-check only"
+      },
+      "steps": [
+        "Invoke the named public CLI test with its valid control and negative variants."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "Manifest/config raw bytes and declared revision are independently checked; signing remains unqualified.",
+        "authority": "public CLI exit + typed output and isolated endpoint observation"
+      },
+      "cleanup": [
+        "finally remove only owned temporary fixtures and wait for every child process."
+      ],
+      "evidence_plan": [
+        "Exact stdout/exit/UTC/input hashes; independent reviewer reruns; live facts are separate."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "7f5ef3dc95959a82b4d909a86175f5bf36478ad8dca79877d8b6018fc0a6cbf5",
+        "test_id": "I06 registered OCI readback rehashes manifest/config and binds actual source SHA without claiming signing",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "I06 registered OCI readback rehashes manifest/config and binds actual source SHA without claiming signing",
+          "test/infra-platform.test.js"
+        ]
+      }
+    },
+    {
+      "id": "I06-DIAGNOSTIC",
+      "requirement_ids": [
+        "REQ-I06"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Fixed Node24.15.0; isolated process-boundary/HTTP fixtures; no live write permission."
+      ],
+      "inputs": {
+        "scope": "construction author self-check only"
+      },
+      "steps": [
+        "Invoke the named public CLI test with its valid control and negative variants."
+      ],
+      "oracle": {
+        "basis_id": "REQ-I06",
+        "expected": "Public diagnostics never return the short private sentinel.",
+        "authority": "public CLI exit + typed output and isolated endpoint observation"
+      },
+      "cleanup": [
+        "finally remove only owned temporary fixtures and wait for every child process."
+      ],
+      "evidence_plan": [
+        "Exact stdout/exit/UTC/input hashes; independent reviewer reruns; live facts are separate."
+      ],
+      "automation": {
+        "path": "test/infra-platform.test.js",
+        "sha256": "7f5ef3dc95959a82b4d909a86175f5bf36478ad8dca79877d8b6018fc0a6cbf5",
+        "test_id": "I06 malformed input diagnostics never echo private JSON fragments or untrusted paths",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "I06 malformed input diagnostics never echo private JSON fragments or untrusted paths",
+          "test/infra-platform.test.js"
+        ]
+      }
+    }
+  ],
+  "unresolved": [],
+  "self_checks": [
+    {
+      "command": [
+        "<node24-runtime>/node",
+        "--test",
+        "--test-reporter=tap",
+        "test/infra-platform.test.js",
+        "test/release-protocol.test.js",
+        "test/ci-delivery-gate.test.js",
+        "test/delivery-cases/4_1.mjs",
+        "test/delivery-cases/4_2.mjs"
+      ],
+      "exit_code": 0,
+      "expected": "pass",
+      "log_path": ".local/platform-convergence/raw/final-own-and-direct-consumers.txt",
+      "log_sha256": "3811140e63592c0a86cbcf83738f72a58665bc1a537dca56cb2bff3d3cad7b21"
+    },
+    {
+      "command": [
+        "<node24-runtime>/node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-name-pattern=I06 refs admission blocks",
+        "test/infra-platform.test.js"
+      ],
+      "exit_code": 1,
+      "expected": "expected_failure",
+      "log_path": ".local/platform-convergence/raw/red-refs-before-io.txt",
+      "log_sha256": "1cf54653eb89548018dd8cb84fb6745f0b6bb5ce9a77f25cec690e85f049028c"
+    }
+  ]
+}

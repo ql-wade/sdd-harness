@@ -1,0 +1,485 @@
+TAP version 13
+# Subtest: RED->GREEN delivery-gate.yml exists and parses as the protected CI entry
+ok 1 - RED->GREEN delivery-gate.yml exists and parses as the protected CI entry
+  ---
+  duration_ms: 2.929875
+  type: 'test'
+  ...
+# Subtest: delivery-gate.yml declares the gate job running tools/ci/verify-delivery.mjs
+ok 2 - delivery-gate.yml declares the gate job running tools/ci/verify-delivery.mjs
+  ---
+  duration_ms: 0.241708
+  type: 'test'
+  ...
+# Subtest: delivery-gate.yml pins collection and checkout to the exact integration SHA (A13)
+ok 3 - delivery-gate.yml pins collection and checkout to the exact integration SHA (A13)
+  ---
+  duration_ms: 0.181125
+  type: 'test'
+  ...
+# Subtest: delivery-gate.yml takes the required-check policy from the protected baseline, never hardcoded names
+ok 4 - delivery-gate.yml takes the required-check policy from the protected baseline, never hardcoded names
+  ---
+  duration_ms: 0.179875
+  type: 'test'
+  ...
+# Subtest: delivery-gate.yml fails closed: least-privilege permissions, serialized concurrency, launch secret from secrets
+ok 5 - delivery-gate.yml fails closed: least-privilege permissions, serialized concurrency, launch secret from secrets
+  ---
+  duration_ms: 0.544167
+  type: 'test'
+  ...
+# Subtest: delivery-gate.yml wires only the launch authority secret — the CI identity never reads release or rollback material
+ok 6 - delivery-gate.yml wires only the launch authority secret — the CI identity never reads release or rollback material
+  ---
+  duration_ms: 0.501167
+  type: 'test'
+  ...
+# Subtest: GREEN chain with registered baseline: exact-SHA evidence and passing gate verify (exit 0)
+ok 7 - GREEN chain with registered baseline: exact-SHA evidence and passing gate verify (exit 0)
+  ---
+  duration_ms: 64.855875
+  type: 'test'
+  ...
+# Subtest: A13 missing required check: the merge is blocked with CHECK_MISSING (exit 2)
+ok 8 - A13 missing required check: the merge is blocked with CHECK_MISSING (exit 2)
+  ---
+  duration_ms: 57.42475
+  type: 'test'
+  ...
+# Subtest: A13 stale evidence on a new integration SHA: old boundSha is refused (CHECK_STALE_EVIDENCE, exit 2)
+ok 9 - A13 stale evidence on a new integration SHA: old boundSha is refused (CHECK_STALE_EVIDENCE, exit 2)
+  ---
+  duration_ms: 64.467666
+  type: 'test'
+  ...
+# Subtest: F09 skipped and timed-out checks are never passed (CHECK_SKIPPED / CHECK_TIMED_OUT, exit 2)
+ok 10 - F09 skipped and timed-out checks are never passed (CHECK_SKIPPED / CHECK_TIMED_OUT, exit 2)
+  ---
+  duration_ms: 254.369125
+  type: 'test'
+  ...
+# Subtest: F06 workflow success never substitutes delivery: all checks green but the gate receipt is stale (exit 2)
+ok 11 - F06 workflow success never substitutes delivery: all checks green but the gate receipt is stale (exit 2)
+  ---
+  duration_ms: 53.745125
+  type: 'test'
+  ...
+# Subtest: F06 a forged dispatch never signs the gate (ADMISSION_REFUSED, exit 2)
+ok 12 - F06 a forged dispatch never signs the gate (ADMISSION_REFUSED, exit 2)
+  ---
+  duration_ms: 47.223667
+  type: 'test'
+  ...
+# Subtest: F06 an empty evidence stream cannot satisfy the gate (blocked receipt, exit 2)
+ok 13 - F06 an empty evidence stream cannot satisfy the gate (blocked receipt, exit 2)
+  ---
+  duration_ms: 45.887084
+  type: 'test'
+  ...
+# Subtest: Platform precondition: committed UNSELECTED baseline blocks the platform-merge authorization (UNVERIFIED, exit 2)
+ok 14 - Platform precondition: committed UNSELECTED baseline blocks the platform-merge authorization (UNVERIFIED, exit 2)
+  ---
+  duration_ms: 47.131417
+  type: 'test'
+  ...
+# Subtest: Protected baseline drift: a chain claiming a different required set than the registered one is blocked
+ok 15 - Protected baseline drift: a chain claiming a different required set than the registered one is blocked
+  ---
+  duration_ms: 45.795209
+  type: 'test'
+  ...
+# Subtest: An invalid protected baseline fails closed (PROTECTED_BASELINE_INVALID, exit 2)
+ok 16 - An invalid protected baseline fails closed (PROTECTED_BASELINE_INVALID, exit 2)
+  ---
+  duration_ms: 47.484083
+  type: 'test'
+  ...
+# Subtest: Missing launch authority keeps the gate unjudgeable — never a pass (UNVERIFIED, exit 2)
+ok 17 - Missing launch authority keeps the gate unjudgeable — never a pass (UNVERIFIED, exit 2)
+  ---
+  duration_ms: 44.728625
+  type: 'test'
+  ...
+# Subtest: Invalid inputs are input failures (exit 1): unreadable file, bad JSON, bad SHA, missing gate section
+ok 18 - Invalid inputs are input failures (exit 1): unreadable file, bad JSON, bad SHA, missing gate section
+  ---
+  duration_ms: 235.008166
+  type: 'test'
+  ...
+# Subtest: The structured verdict records the candidate identity and never leaks host paths
+    # Subtest: duplicate check runs for the same name+merge resolve to the latest run id (fail-closed latest-wins, OBS-1)
+    ok 1 - duplicate check runs for the same name+merge resolve to the latest run id (fail-closed latest-wins, OBS-1)
+      ---
+      duration_ms: 95.5295
+      type: 'test'
+      ...
+    1..1
+ok 19 - The structured verdict records the candidate identity and never leaks host paths
+  ---
+  duration_ms: 142.401417
+  type: 'test'
+  ...
+# Subtest: setup: the delivery gate artifacts exist — the workflow parses and the verifier is a real executable script
+ok 20 - setup: the delivery gate artifacts exist — the workflow parses and the verifier is a real executable script
+  ---
+  duration_ms: 1.099625
+  type: 'test'
+  ...
+# Subtest: V_A13: the protected entry re-verifies the exact new integration candidate — stale-SHA evidence is blocked, exact-SHA evidence passes
+ok 21 - V_A13: the protected entry re-verifies the exact new integration candidate — stale-SHA evidence is blocked, exact-SHA evidence passes
+  ---
+  duration_ms: 139.975833
+  type: 'test'
+  ...
+# Subtest: V_F09: skip and timeout are never passed — the gate blocks with CHECK_SKIPPED / CHECK_TIMED_OUT
+ok 22 - V_F09: skip and timeout are never passed — the gate blocks with CHECK_SKIPPED / CHECK_TIMED_OUT
+  ---
+  duration_ms: 182.126667
+  type: 'test'
+  ...
+# Subtest: V_F09: the same candidate digest runs through verification — a receipt bound to another digest is refused, the exact-digest chain verifies
+ok 23 - V_F09: the same candidate digest runs through verification — a receipt bound to another digest is refused, the exact-digest chain verifies
+  ---
+  duration_ms: 135.493792
+  type: 'test'
+  ...
+# Subtest: P4_1: the committed UNSELECTED baseline keeps the platform-merge authorization UNVERIFIED — plan fields never satisfy it
+ok 24 - P4_1: the committed UNSELECTED baseline keeps the platform-merge authorization UNVERIFIED — plan fields never satisfy it
+  ---
+  duration_ms: 51.537125
+  type: 'test'
+  ...
+# Subtest: P4_1: the workflow takes the check policy from the protected baseline and pins the exact merge SHA — no fabricated names
+ok 25 - P4_1: the workflow takes the check policy from the protected baseline and pins the exact merge SHA — no fabricated names
+  ---
+  duration_ms: 0.502125
+  type: 'test'
+  ...
+# Subtest: setup: the release protocol tool exists beside the accepted delivery gate as a real executable
+ok 26 - setup: the release protocol tool exists beside the accepted delivery gate as a real executable
+  ---
+  duration_ms: 0.703334
+  type: 'test'
+  ...
+# Subtest: 4.2.a journey: the gate-verified candidate builds and promotes the same digest — gate pass, promotion receipt, and the I06 evaluator independently verify the exact chain
+ok 27 - 4.2.a journey: the gate-verified candidate builds and promotes the same digest — gate pass, promotion receipt, and the I06 evaluator independently verify the exact chain
+  ---
+  duration_ms: 190.481292
+  type: 'test'
+  ...
+# Subtest: V_A14 negative: a deployment tag pointing at another digest is refused and recorded by the protocol and by I06
+ok 28 - V_A14 negative: a deployment tag pointing at another digest is refused and recorded by the protocol and by I06
+  ---
+  duration_ms: 179.036458
+  type: 'test'
+  ...
+# Subtest: V_A16: the lost deployment response is reconciled by the original correlation ID — original result bound, no duplicate deployment, idempotent re-promotion
+ok 29 - V_A16: the lost deployment response is reconciled by the original correlation ID — original result bound, no duplicate deployment, idempotent re-promotion
+  ---
+  duration_ms: 214.345208
+  type: 'test'
+  ...
+# Subtest: V_A17: the unapproved rollback is refused by protocol and I06; the approved same-digest rollback reads back digest, environment and business terminal state
+ok 30 - V_A17: the unapproved rollback is refused by protocol and I06; the approved same-digest rollback reads back digest, environment and business terminal state
+  ---
+  duration_ms: 275.119584
+  type: 'test'
+  ...
+# Subtest: 4.2.b boundary: no production release is claimed — an unregistered isolated environment blocks the action and every receipt stays LOCAL_ONLY
+ok 31 - 4.2.b boundary: no production release is claimed — an unregistered isolated environment blocks the action and every receipt stays LOCAL_ONLY
+  ---
+  duration_ms: 92.953167
+  type: 'test'
+  ...
+# Subtest: V_INFRA_I06 contract: five platform files exist and committed validate passes with LOCAL_ONLY and honest gaps
+ok 32 - V_INFRA_I06 contract: five platform files exist and committed validate passes with LOCAL_ONLY and honest gaps
+  ---
+  duration_ms: 65.281875
+  type: 'test'
+  ...
+# Subtest: committed platform files carry the interface bindings and honest UNVERIFIED identity facts
+ok 33 - committed platform files carry the interface bindings and honest UNVERIFIED identity facts
+  ---
+  duration_ms: 0.564458
+  type: 'test'
+  ...
+# Subtest: RED same-origin labels: stale or missing repoFullname/url fails validate with IDENTITY_NOT_SAME_ORIGIN while IDs and owner stay stable
+ok 34 - RED same-origin labels: stale or missing repoFullname/url fails validate with IDENTITY_NOT_SAME_ORIGIN while IDs and owner stay stable
+  ---
+  duration_ms: 248.995084
+  type: 'test'
+  ...
+# Subtest: RED direct-probe preflight: drifted repoFullname/url is rejected before any gh call, even with stable IDs and owner
+ok 35 - RED direct-probe preflight: drifted repoFullname/url is rejected before any gh call, even with stable IDs and owner
+  ---
+  duration_ms: 123.156167
+  type: 'test'
+  ...
+# Subtest: RED equal-but-absent labels: both sides missing/blank/invalid-typed identity fields fail same-origin in validate and probe
+ok 36 - RED equal-but-absent labels: both sides missing/blank/invalid-typed identity fields fail same-origin in validate and probe
+  ---
+  duration_ms: 559.9975
+  type: 'test'
+  ...
+# Subtest: RED authorization gate: configuring required checks without remote write authorization is refused — admin identity is not this run approval
+ok 37 - RED authorization gate: configuring required checks without remote write authorization is refused — admin identity is not this run approval
+  ---
+  duration_ms: 135.880667
+  type: 'test'
+  ...
+# Subtest: RED credential tier: development identity cannot read release/rollback secrets (SecretRef.v1 resolver semantics)
+ok 38 - RED credential tier: development identity cannot read release/rollback secrets (SecretRef.v1 resolver semantics)
+  ---
+  duration_ms: 48.53025
+  type: 'test'
+  ...
+# Subtest: IntegrationIdentity.v1: a fully bound chain verifies locally (head -> mergeSHA -> digest -> deployment -> readback)
+ok 39 - IntegrationIdentity.v1: a fully bound chain verifies locally (head -> mergeSHA -> digest -> deployment -> readback)
+  ---
+  duration_ms: 48.027875
+  type: 'test'
+  ...
+# Subtest: RED stale evidence: a new head/mergeSHA reusing an old check blocks candidate promotion
+ok 40 - RED stale evidence: a new head/mergeSHA reusing an old check blocks candidate promotion
+  ---
+  duration_ms: 45.305792
+  type: 'test'
+  ...
+# Subtest: RED missing / skipped / timed-out checks each block promotion with distinct codes
+ok 41 - RED missing / skipped / timed-out checks each block promotion with distinct codes
+  ---
+  duration_ms: 182.503875
+  type: 'test'
+  ...
+# Subtest: RED tag drift: a tag repointed to a different digest blocks promotion; digest must build from the integration merge SHA
+ok 42 - RED tag drift: a tag repointed to a different digest blocks promotion; digest must build from the integration merge SHA
+  ---
+  duration_ms: 89.919792
+  type: 'test'
+  ...
+# Subtest: RED deployment identity: digest mismatch and missing receipt correlation block promotion
+ok 43 - RED deployment identity: digest mismatch and missing receipt correlation block promotion
+  ---
+  duration_ms: 86.190208
+  type: 'test'
+  ...
+# Subtest: timeout query path: lost deployment response is confirmed by querying the original correlation ID
+ok 44 - timeout query path: lost deployment response is confirmed by querying the original correlation ID
+  ---
+  duration_ms: 135.650083
+  type: 'test'
+  ...
+# Subtest: RED rollback gate: unapproved requests are refused; approved rollback needs the same digest and an independent business terminal state
+ok 45 - RED rollback gate: unapproved requests are refused; approved rollback needs the same digest and an independent business terminal state
+  ---
+  duration_ms: 223.903292
+  type: 'test'
+  ...
+# Subtest: RED isolation: cross-project refs (pav-*) and foreign project bindings are rejected; missing registration is an input failure
+ok 46 - RED isolation: cross-project refs (pav-*) and foreign project bindings are rejected; missing registration is an input failure
+  ---
+  duration_ms: 122.301042
+  type: 'test'
+  ...
+# Subtest: fail-closed structure: rollback approval, correlation oracle and retention rules cannot be flipped off without a violation
+ok 47 - fail-closed structure: rollback approval, correlation oracle and retention rules cannot be flipped off without a violation
+  ---
+  duration_ms: 452.772208
+  type: 'test'
+  ...
+# Subtest: probes are real and honest: repository-identity performs exactly one read-only gh attempt whose outcome is reported verbatim; bare chain probe is structured UNVERIFIED
+ok 48 - probes are real and honest: repository-identity performs exactly one read-only gh attempt whose outcome is reported verbatim; bare chain probe is structured UNVERIFIED
+  ---
+  duration_ms: 813.712667
+  type: 'test'
+  ...
+# Subtest: RED spawn-failure path: missing or non-executable gh yields structured UNVERIFIED (exit 2) with a spawn diagnostic, never a crash
+ok 49 - RED spawn-failure path: missing or non-executable gh yields structured UNVERIFIED (exit 2) with a spawn diagnostic, never a crash
+  ---
+  duration_ms: 95.483625
+  type: 'test'
+  ...
+# Subtest: CLI input contract: malformed chain fixtures are input failures (exit 1), distinct from semantic blocks (exit 2)
+ok 50 - CLI input contract: malformed chain fixtures are input failures (exit 1), distinct from semantic blocks (exit 2)
+  ---
+  duration_ms: 174.834875
+  type: 'test'
+  ...
+# Subtest: parseJsonOut raises a real AssertionError (not a ReferenceError) when the tool prints no JSON
+ok 51 - parseJsonOut raises a real AssertionError (not a ReferenceError) when the tool prints no JSON
+  ---
+  duration_ms: 39.155209
+  type: 'test'
+  ...
+# Subtest: I06 refs admission blocks direct repository probing before any external I/O
+ok 52 - I06 refs admission blocks direct repository probing before any external I/O
+  ---
+  duration_ms: 229.862417
+  type: 'test'
+  ...
+# Subtest: I06 direct probes consume versioned platform input through the same admission gate
+ok 53 - I06 direct probes consume versioned platform input through the same admission gate
+  ---
+  duration_ms: 43.79625
+  type: 'test'
+  ...
+# Subtest: I06 integration chain never accepts a foreign project or a normal-response correlation mismatch
+ok 54 - I06 integration chain never accepts a foreign project or a normal-response correlation mismatch
+  ---
+  duration_ms: 87.669916
+  type: 'test'
+  ...
+# Subtest: I06 platform observer reads exact registered IDs, all pages and candidate-linked artifact metadata only
+ok 55 - I06 platform observer reads exact registered IDs, all pages and candidate-linked artifact metadata only
+  ---
+  duration_ms: 700.652042
+  type: 'test'
+  ...
+# Subtest: I06 observer keeps forbidden, truncated, foreign and missing-ID pages unverified
+ok 56 - I06 observer keeps forbidden, truncated, foreign and missing-ID pages unverified
+  ---
+  duration_ms: 2737.535208
+  type: 'test'
+  ...
+# Subtest: I06 all operations share nullable, nested, unknown, duplicate and reference admission before I/O
+ok 57 - I06 all operations share nullable, nested, unknown, duplicate and reference admission before I/O
+  ---
+  duration_ms: 2245.000708
+  type: 'test'
+  ...
+# Subtest: I06 registered independent target readback matches project, SHA, digest, original operation and terminal state
+ok 58 - I06 registered independent target readback matches project, SHA, digest, original operation and terminal state
+  ---
+  duration_ms: 508.818917
+  type: 'test'
+  ...
+# Subtest: I06 registered OCI readback rehashes manifest/config and binds actual source SHA without claiming signing
+ok 59 - I06 registered OCI readback rehashes manifest/config and binds actual source SHA without claiming signing
+  ---
+  duration_ms: 254.536625
+  type: 'test'
+  ...
+# Subtest: I06 malformed input diagnostics never echo private JSON fragments or untrusted paths
+ok 60 - I06 malformed input diagnostics never echo private JSON fragments or untrusted paths
+  ---
+  duration_ms: 44.937292
+  type: 'test'
+  ...
+# Subtest: I06 timeout remains unknown and never triggers a replacement platform action
+ok 61 - I06 timeout remains unknown and never triggers a replacement platform action
+  ---
+  duration_ms: 181.060041
+  type: 'test'
+  ...
+# Subtest: setup: the release protocol tool exists and declares its contract layering
+ok 62 - setup: the release protocol tool exists and declares its contract layering
+  ---
+  duration_ms: 0.830084
+  type: 'test'
+  ...
+# Subtest: V_A14/V_F09 positive: isolated build and promotion lock one digest through tag, deployment receipt and business readback; I06 independently verifies the emitted chain
+ok 63 - V_A14/V_F09 positive: isolated build and promotion lock one digest through tag, deployment receipt and business readback; I06 independently verifies the emitted chain
+  ---
+  duration_ms: 193.793291
+  type: 'test'
+  ...
+# Subtest: V_A14 negative: tag drift is refused with the actual identity mismatch recorded and nothing changes
+ok 64 - V_A14 negative: tag drift is refused with the actual identity mismatch recorded and nothing changes
+  ---
+  duration_ms: 180.760375
+  type: 'test'
+  ...
+# Subtest: same-digest lock: re-promoting the deployed digest returns the existing receipt and never deploys again
+ok 65 - same-digest lock: re-promoting the deployed digest returns the existing receipt and never deploys again
+  ---
+  duration_ms: 126.810833
+  type: 'test'
+  ...
+# Subtest: V_A16 positive: a lost deployment response is reconciled by the original correlation ID — the original result is bound, never redeployed
+ok 66 - V_A16 positive: a lost deployment response is reconciled by the original correlation ID — the original result is bound, never redeployed
+  ---
+  duration_ms: 135.996209
+  type: 'test'
+  ...
+# Subtest: V_A16 negative: an unknown correlation ID is answered UNCONFIRMED — the query runs first and nothing is deployed
+ok 67 - V_A16 negative: an unknown correlation ID is answered UNCONFIRMED — the query runs first and nothing is deployed
+  ---
+  duration_ms: 89.067625
+  type: 'test'
+  ...
+# Subtest: V_F09 negative: a deployment record whose digest diverges from the tag resolution is DEPLOYMENT_DIGEST_MISMATCH
+ok 68 - V_F09 negative: a deployment record whose digest diverges from the tag resolution is DEPLOYMENT_DIGEST_MISMATCH
+  ---
+  duration_ms: 88.450583
+  type: 'test'
+  ...
+# Subtest: V_A17 negative: an unapproved rollback is refused, changes nothing, and I06 independently blocks it
+ok 69 - V_A17 negative: an unapproved rollback is refused, changes nothing, and I06 independently blocks it
+  ---
+  duration_ms: 182.01175
+  type: 'test'
+  ...
+# Subtest: V_A17 negative: an approval for another digest is ROLLBACK_DIGEST_MISMATCH; an approval for another environment is ROLLBACK_NOT_APPROVED
+ok 70 - V_A17 negative: an approval for another digest is ROLLBACK_DIGEST_MISMATCH; an approval for another environment is ROLLBACK_NOT_APPROVED
+  ---
+  duration_ms: 180.507416
+  type: 'test'
+  ...
+# Subtest: V_A17 positive: the approved same-digest rollback reads back digest, environment and business terminal state; I06 verifies the chain
+ok 71 - V_A17 positive: the approved same-digest rollback reads back digest, environment and business terminal state; I06 verifies the chain
+  ---
+  duration_ms: 179.613584
+  type: 'test'
+  ...
+# Subtest: V_A17 negative: a rollback whose business terminal state cannot be observed stays UNCONFIRMED
+ok 72 - V_A17 negative: a rollback whose business terminal state cannot be observed stays UNCONFIRMED
+  ---
+  duration_ms: 133.187667
+  type: 'test'
+  ...
+# Subtest: rollback without a retained previous approved artifact is ROLLBACK_RETENTION_MISSING
+ok 73 - rollback without a retained previous approved artifact is ROLLBACK_RETENTION_MISSING
+  ---
+  duration_ms: 81.385834
+  type: 'test'
+  ...
+# Subtest: ISOLATED_RELEASE_ENVIRONMENT_REQUIRED: an unregistered environment blocks the release action — nothing is deployed, the plan shape never substitutes for registration
+ok 74 - ISOLATED_RELEASE_ENVIRONMENT_REQUIRED: an unregistered environment blocks the release action — nothing is deployed, the plan shape never substitutes for registration
+  ---
+  duration_ms: 76.094667
+  type: 'test'
+  ...
+# Subtest: ENVIRONMENT_PROJECT_MISMATCH: an environment registered to another project is refused with the I06 code
+ok 75 - ENVIRONMENT_PROJECT_MISMATCH: an environment registered to another project is refused with the I06 code
+  ---
+  duration_ms: 43.99725
+  type: 'test'
+  ...
+# Subtest: ARTIFACT_NOT_FROM_MERGE: a chain whose artifact claims another merge is refused before any write
+ok 76 - ARTIFACT_NOT_FROM_MERGE: a chain whose artifact claims another merge is refused before any write
+  ---
+  duration_ms: 78.448042
+  type: 'test'
+  ...
+# Subtest: input contract: malformed chains and arguments are input errors (exit 1) reported by the tool itself, never semantic verdicts
+ok 77 - input contract: malformed chains and arguments are input errors (exit 1) reported by the tool itself, never semantic verdicts
+  ---
+  duration_ms: 150.620833
+  type: 'test'
+  ...
+# Subtest: receipt honesty: structured output stays LOCAL_ONLY, carries the production-successor note and leaks no host private paths
+ok 78 - receipt honesty: structured output stays LOCAL_ONLY, carries the production-successor note and leaks no host private paths
+  ---
+  duration_ms: 87.316959
+  type: 'test'
+  ...
+1..78
+# tests 79
+# suites 0
+# pass 79
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10794.563334

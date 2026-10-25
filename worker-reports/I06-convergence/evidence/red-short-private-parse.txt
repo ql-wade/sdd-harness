@@ -1,0 +1,37 @@
+TAP version 13
+# Subtest: I06 malformed input diagnostics never echo private JSON fragments or untrusted paths
+not ok 1 - I06 malformed input diagnostics never echo private JSON fragments or untrusted paths
+  ---
+  duration_ms: 48.198958
+  type: 'test'
+  location: '<worktree>/test/infra-platform.test.js:1078:1'
+  failureType: 'testCodeFailure'
+  error: 'parser exceptions are not a safe public diagnostic'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    platform file unreadable (<host-path-redacted>): Unexpected token 's', "s0priv" is not valid JSON
+    usage:
+      platform.mjs validate --registry <file> [--refs <file>] [--platform-dir <dir>] [--json]
+      platform.mjs probe --case repository-identity --read-only [--registry <file>] [--platform-dir <dir>] [--json]
+      platform.mjs probe --case required-checks-authorization [--registry <file>] [--refs <file>] [--principal <id>] [--platform-dir <dir>] [--json]
+      platform.mjs probe --case registry-environment-identity [--chain <file>] [--platform-dir <dir>] [--json]
+
+  operator: 'doesNotMatch'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/infra-platform.test.js:1080:108)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 98.868083

@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "status": "PROPOSED_NOT_EXECUTED",
+  "controller": "same original Comet Run; root migration controller owns integration only",
+  "scope": "I06 read-only registration/observer construction; actual writers remain P4_1/P4_2 and existing identity owners",
+  "fixedRepository": {
+    "id": 1285806550,
+    "fullname": "ql-wade/sdd-harness",
+    "ownerPrincipalId": 262266039,
+    "targetBranch": "master"
+  },
+  "intake": {
+    "localBase": "2509fe95997b6c19cb0e980aec1041a3f534e87b",
+    "remoteObservedSha": "cd64618563d6e08c5c2f35b1bdf92d37e58a9d7d",
+    "localCandidatePlatformReadback": "HTTP422_UNVERIFIED; not proof of nonexistence",
+    "protected": false,
+    "protectionDetail": "HTTP404_UNVERIFIED",
+    "rulesetsObserved": 0,
+    "ciCheckNamesStill": "UNSELECTED"
+  },
+  "proposedOnly": {
+    "integrationBranch": "codex/comet-managed-v2-platform-pilot",
+    "negativeGateValidationBranch": "comet-managed-v2-gate-validation",
+    "requiredContexts": [
+      {
+        "name": "delivery-gate",
+        "source": ".github/workflows/delivery-gate.yml jobs.delivery-gate (current local baseline)"
+      },
+      {
+        "name": "checks",
+        "source": ".github/workflows/quality-gates.yml jobs.checks (current local baseline)"
+      }
+    ],
+    "expectedCheckAppId": 15368,
+    "checkAppRule": "Observed Actions app ID is a proposal only; reverify actual workflow/source/attempt identity before registration. Never infer required policy from a historical context name.",
+    "registry": {
+      "provider": "GHCR_PROPOSED_NOT_SELECTED",
+      "endpoint": "https://ghcr.io",
+      "repository": "ql-wade/sdd-harness",
+      "actualRegistration": "UNSELECTED"
+    },
+    "environment": {
+      "suggestedId": "sdd-harness-pilot-validation",
+      "endpoint": null,
+      "actualOwner": null,
+      "actualRegistration": "UNSELECTED",
+      "requiredOwnerInput": "dedicated endpoint/owner/source identity/independent business TestContract oracle, not a container health URL"
+    }
+  },
+  "principalsAndRefs": [
+    {
+      "principal": "svc:sdd-harness-pilot/ci",
+      "ref": "secret-ref:sdd-harness-pilot/ci-source-read",
+      "purpose": "read exact source candidate; no policy/deploy permission"
+    },
+    {
+      "principal": "svc:sdd-harness-pilot/ci-check",
+      "ref": "secret-ref:sdd-harness-pilot/ci-check-publisher",
+      "purpose": "publish exact-SHA check result only"
+    },
+    {
+      "principal": "svc:sdd-harness-pilot/ci",
+      "ref": "secret-ref:sdd-harness-pilot/ci-registry",
+      "purpose": "push built artifact to dedicated project repository only"
+    },
+    {
+      "principal": "svc:sdd-harness-pilot/artifact-reader",
+      "ref": "secret-ref:sdd-harness-pilot/artifact-reader",
+      "purpose": "read immutable artifact and source/signature/provenance"
+    },
+    {
+      "principal": "svc:sdd-harness-pilot/deployer",
+      "ref": "secret-ref:sdd-harness-pilot/pilot-deployer",
+      "purpose": "isolated target deploy; distinct from rollback"
+    },
+    {
+      "principal": "svc:sdd-harness-pilot/rollback",
+      "ref": "secret-ref:sdd-harness-pilot/pilot-rollback",
+      "purpose": "owner-approved rollback to retained digest only"
+    }
+  ],
+  "additionalProposedRef": {
+    "ref": "secret-ref:sdd-harness-pilot/ci-policy-admin",
+    "status": "NOT_REGISTERED_NOT_GRANTED",
+    "issuer": "verified project owner/human approval; no Agent self-issuance",
+    "purpose": "narrow repo/branch/check-policy mutation only, not shared with check publisher or deployer",
+    "holder": "I01 registration + P4_1 authorized writer; I06 never retrieves it"
+  },
+  "operationBinding": {
+    "source": "existing native Run/action/attempt/epoch/revision/authority",
+    "keyRule": "Comet allocates and persists the operation key before dispatch; adapters only execute/read back it. Unknown action result queries original key, no second operation or controller.",
+    "noNewStateStore": true
+  },
+  "actions": [
+    {
+      "id": "P4_1-bind-resources",
+      "executor": "I01/I02 source and runtime owner, consumed by same Comet",
+      "authorization": "owner registers exact runtime principals, purpose refs and source/OS/reader binding; current metadata NOT_PROVISIONED is not authority",
+      "change": "register actual OCI/target resources and protected policy source; fill seven owned registration inputs only through their owners",
+      "readback": "fresh registered actor and every API target ID; project/audience/version/source qualification",
+      "rollback": "no runtime activation if any identity/purpose/ref or resource cannot be verified"
+    },
+    {
+      "id": "P4_1-retire-old-CI",
+      "executor": "P4_1 authorized Git/workflow writer",
+      "authorization": "specific owner approval for remote workflow file/branch change and any cancellation/disable; none currently granted",
+      "targets": [
+        {
+          "workflowId": 349307181,
+          "path": ".github/workflows/live-integration.yml",
+          "sourceBlob": "861a180e6b8e508d486fc85c6d378f8539a3b222",
+          "cron": "17 18 * * *"
+        },
+        {
+          "workflowId": 349307182,
+          "path": ".github/workflows/quality-gates.yml",
+          "sourceBlob": "0bc00798241d72784db6eef69fc996f14666d880"
+        }
+      ],
+      "change": "review/replace historical nightly/core/claude/preview entries with the approved current profile; do not count 52 old-SHA checks or cancel unrelated work",
+      "readback": "exact new commit/workflow IDs/triggers/job names; independently prove old entry retirement and no regeneration",
+      "rollback": "retain old source blobs/history; never restart retired controller/skill flow as a rollback shortcut"
+    },
+    {
+      "id": "P4_1-protected-policy",
+      "executor": "existing Comet -> P4_1 policy writer",
+      "authorization": "human owner approval binds repo1285806550/master, exact context/app/source IDs, protected policy digest, principals, expiry, operation and allowed API mutations",
+      "proposal": "protect target master with owner-registered delivery-gate/checks, strict exact integration SHA, no force/deletion/bypass; final full API body must preserve owner baseline and be reviewed before submission",
+      "readback": "GET branch/protection/rulesets with complete pagination and canonical policy digest; admin read is not proof of write approval",
+      "rollback": "snapshot prior policy; any restoration/removal needs its own owner scope, never automatically weaken protection"
+    },
+    {
+      "id": "P4_1-candidate-CI",
+      "executor": "same Comet -> authorized source/CI adapter",
+      "authorization": "explicit branch push/PR/workflow-trigger permissions; not present in this task",
+      "change": "after Root integration, freeze the actual integrated source SHA; submit approved branch/PR and use platform head/merge_group SHA; every required check must carry that SHA and trusted workflow/app/attempt",
+      "readback": "complete check/run history for exact candidate, required policy source, missing/skipped/timed-out/stale/duplicate negative evidence",
+      "negativeCase": "separately approved disposable validation branch/PR with identical protected policy; do not use draft status or local test success as missing-check merge refusal",
+      "rollback": "stop promotion, preserve traces and original operation; no silent rebase or reuse of old checks"
+    },
+    {
+      "id": "P4_2-artifact",
+      "executor": "same Comet -> CI registry publisher -> independent artifact reader",
+      "authorization": "dedicated registry creation/push and signing/provenance grants, separate read identity; all currently absent",
+      "change": "build once from exact accepted integration SHA, capture OCI manifest/config digest, actual signature and provenance; optional tag pilot-<integrationSHA> only resolves to immutable digest",
+      "readback": "registered GET manifest/config raw byte rehash plus signature/provenance verification and actual CI build association; a GitHub ZIP digest or self-declared OCI revision label alone is insufficient",
+      "rollback": "preserve current/last-approved immutable artifacts, source/policy/check/signature manifest; tag drift blocks, never rebuild under the same promotion key"
+    },
+    {
+      "id": "P4_2-target-and-recovery",
+      "executor": "same Comet -> isolated deployer; independent target observer; separate rollback identity",
+      "authorization": "concrete endpoint/owner/audience/OS source/candidate/digest/operation and separate approved rollback; no target currently registered",
+      "change": "deploy the same accepted digest under the original Comet operation; on lost response query that operation before any retry",
+      "readback": "independent business TestContract terminal observation binds project/environment/candidate/digest/operation; current HTTP contract v1 fields documented in README, not generic process health",
+      "rollback": "only retained previous owner-approved digest, dedicated approval and independent terminal readback; unknown/missing retained digest cannot be replaced by a plan field"
+    },
+    {
+      "id": "P4_3-VERIFY",
+      "executor": "same Comet + independent Whitebox/Grill",
+      "authorization": "existing final closeout boundaries, after required actual gates",
+      "change": "replay actual same-Run platform and knowledge/permission/recovery journey on final baseline",
+      "readback": "all in-scope129required/103scenarios plus applicable closeout, no component/fixture exception; F10 remains separately deferred",
+      "rollback": "keep task/overall unqualified if required real source or platform evidence is missing"
+    }
+  ],
+  "remoteWritesExecuted": [],
+  "resourceQualification": "UNVERIFIED",
+  "formalCasesClosed": [],
+  "typedIntake": [
+    {
+      "owner": "P4_1",
+      "item": "existing verify-delivery consumer reads chain/policy before common reference/source admission; I06 did not edit that owner",
+      "source": "tools/ci/verify-delivery.mjs:299"
+    },
+    {
+      "owner": "P5_3",
+      "item": "two existing runbook/known-environment-gates cases failed in the one direct-consumer batch; preserved, not waived or repaired here",
+      "source": "test/delivery-cases/5_3.mjs:763"
+    },
+    {
+      "owner": "P4_2",
+      "item": "legacy chain without schemaVersion remains LOCAL_ONLY mechanism compatibility; explicit null previousApprovedDigest means missing retention, approvedBy is metadata not runtime grant",
+      "source": "tools/ci/release.mjs:698"
+    }
+  ]
+}

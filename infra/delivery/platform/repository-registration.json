@@ -12,16 +12,25 @@
     "owner": "ql-wade",
     "principalId": 262266039,
     "sameOriginRef": "infra/delivery/registry.json#project.github",
-    "sameOriginNote": "Identity facts are referenced from the I01 registry, never re-registered here as a second source of truth. A previous session observed admin for this principal; that observation is NOT carried forward as fact. repoFullname/url were synchronized to the registry on 2026-10-25 after the stale rpamis labels were corrected; Comet upstream rpamis references elsewhere are untouched upstream pins/history, not this project's identity."
+    "sameOriginNote": "Identity source remains the I01 registry. Fresh operator/repository readback is separate from standing runtime authority; historical pre-correction TLS diagnostics remain in identity.readback.history."
   },
   "identity": {
     "readback": {
-      "status": "UNVERIFIED",
-      "command": "gh api repos/ql-wade/sdd-harness + gh api user (caller must match project.github.principalId 262266039)",
-      "error": "Get \"https://api.github.com/repos/rpamis/sdd-harness\": tls: failed to verify certificate: x509: OSStatus -26276",
-      "ghAuthStatus": "INVALID",
-      "observedAt": "2026-10-20T10:11:13Z",
-      "note": "Read-back must succeed at execution time before any authorized action. The error, ghAuthStatus INVALID and the TLS interception above are the 2026-10-20 observation against the pre-correction rpamis target, preserved verbatim as history: they are not a claim that the credential currently fails. Per the I01 registry, no live readback has been executed since the 2026-10-25 label correction to ql-wade/sdd-harness, so the current state stays UNVERIFIED pending a post-fix live readback by the controller."
+      "status": "VERIFIED",
+      "command": "GitHub connector profile/repository projection + gh GET registered operator/repository",
+      "observedAt": "2026-10-25T08:38:10.129Z",
+      "scope": "Operator and repository identity only; no source/control runtime authority, publication, policy-write or delivery permission. Recheck before every action.",
+      "evidenceRef": "worker-reports/I06-convergence/evidence/live-github-registered-remote-sha.json",
+      "history": [
+        {
+          "status": "UNVERIFIED",
+          "command": "gh api repos/ql-wade/sdd-harness + gh api user (caller must match project.github.principalId 262266039)",
+          "error": "Get \"https://api.github.com/repos/rpamis/sdd-harness\": tls: failed to verify certificate: x509: OSStatus -26276",
+          "ghAuthStatus": "INVALID",
+          "observedAt": "2026-10-20T10:11:13Z",
+          "note": "Read-back must succeed at execution time before any authorized action. The error, ghAuthStatus INVALID and the TLS interception above are the 2026-10-20 observation against the pre-correction rpamis target, preserved verbatim as history: they are not a claim that the credential currently fails. Per the I01 registry, no live readback has been executed since the 2026-10-25 label correction to ql-wade/sdd-harness, so the current state stays UNVERIFIED pending a post-fix live readback by the controller."
+        }
+      ]
     },
     "permissions": {
       "status": "UNVERIFIED",
@@ -29,7 +38,7 @@
     }
   },
   "branchProtection": {
-    "configuredStatus": "UNVERIFIED",
+    "configuredStatus": "NOT_CONFIGURED",
     "requiredChecksSource": "infra/delivery/platform/ci-policy.json#requiredChecks",
     "evidenceRule": "Only protected-check history read back from the platform counts as protection evidence; workflow YAML, admin readability, simulated green status or local push success must never be claimed as platform protection."
   },
@@ -41,5 +50,13 @@
     "mode": "LOCAL_ONLY",
     "basis": "infrastructure-plan.md I06: this stage is design/read-only verification only; admin identity is not this run approval to modify branch protection, and no remote policy write authorization exists."
   },
-  "localOnly": true
+  "localOnly": true,
+  "readOnly": {
+    "apiOrigin": "https://api.github.com",
+    "branch": "master",
+    "pageSize": 100,
+    "maxPages": 5,
+    "timeoutMs": 15000,
+    "operatorObservationOnly": true
+  }
 }

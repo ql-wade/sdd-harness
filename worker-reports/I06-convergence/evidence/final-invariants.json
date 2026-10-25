@@ -1,0 +1,88 @@
+{
+  "utc": "2026-10-25T09:01:24.067790+00:00",
+  "head": "2509fe95997b6c19cb0e980aec1041a3f534e87b",
+  "input_contract": "dff53cec6b7a2ebc048d76e380e46cd1839ac6a667cfdfa759be3ea87b5fc5a8",
+  "case_plan": "56e3967c0cfd1212831d1fe24d1e55e2ad7e2cc71c52e318948309f756eb18a2",
+  "parent_metadata_update_only": {
+    "new_main_contract": "67f06aed2bcb732816d6003d5173ac463f7fa231bfeec17f2da30f42a7949302",
+    "scope": "MCP registration ownership only; I06 scope/39 nodes/69 workpackages/130 checks/104 scenarios unchanged; not consumed as new runtime authority or a rebase"
+  },
+  "configs_unchanged": {
+    "<primary-checkout>/.claude/settings.json": "5db2cdc72a0c5b1c1115c32b12cf0b1241c925086320e195e22a3732ab0a4f40",
+    "<primary-checkout>/.mcp.json": "a26098a0d0380ea0efe9f63f9fd1edc522667a43b47a28269d277f4f2f040042",
+    "<worktree>/.claude/settings.json": null,
+    "<worktree>/.mcp.json": "a26098a0d0380ea0efe9f63f9fd1edc522667a43b47a28269d277f4f2f040042",
+    "<host-home>/.claude/settings.json": "5e1393defd2e16b0586d9f81b3d2c6b4540932b11f12b34ad1cd488025d88ca9"
+  },
+  "canonical_protected_unchanged": {
+    "openspec/changes/delivery-foundation-rearchitecture/tasks.md": "58671b548b0130f6e14c218a6d5bceb671e2c3b798bc09422a886dd98f509202",
+    "openspec/changes/delivery-foundation-rearchitecture/task-dag.json": "5099b4d6f985a7436932d054cce990d365c93d6e9fae1bff559f0d8677b164be",
+    "openspec/changes/delivery-foundation-rearchitecture/execution-contract.json": "dff53cec6b7a2ebc048d76e380e46cd1839ac6a667cfdfa759be3ea87b5fc5a8",
+    "openspec/changes/delivery-foundation-rearchitecture/verification-case-plan.json": "56e3967c0cfd1212831d1fe24d1e55e2ad7e2cc71c52e318948309f756eb18a2",
+    "openspec/changes/delivery-foundation-rearchitecture/execution-state.json": "459300e8c13271bd4529904e51ec521dd177941b40ef8c17d6d756cb9239376c",
+    "openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl": "1f5e1808adf929caa266904b543fc52dde86366a301a8c4929a1f97299ef4fab",
+    "infra/delivery/registry.json": "c62a3a17d1d169dcfeb0cda5569c41c16a276254164a6466e61e645b395d768e",
+    "infra/delivery/secrets.refs.example.json": "123d36002aaaf9ab4142db55a6a781e67ad157737393d33a9b0213fa449bc5f2",
+    "integrations/comet/upstream.lock.json": "54da2f4871e79dd21a2476f4d008c7317265dbbd10586a983d9e72b4d7b54556",
+    "foundation/profiles/comet-managed.json": "5d2eede319ba2554f46ba851c6fa0df57791837cef858b25fe6c4ac72aaeb618"
+  },
+  "qualification_policy_sha256": "a6214a3eb9f93865ff839059f6cf1789aa232a8a37eae57b04225c5a54c82426",
+  "relevant_refs": [
+    {
+      "ref": "secret-ref:sdd-harness-pilot/ci-source-read",
+      "status": "NOT_PROVISIONED",
+      "boundRole": "ci",
+      "allowedPrincipals": [
+        "svc:sdd-harness-pilot/ci"
+      ],
+      "purpose": "CI pipeline's read-only access to sources for build runs; minimal scope, no write authorization to branch protection or remote policy"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/ci-check-publisher",
+      "status": "NOT_PROVISIONED",
+      "boundRole": "ci",
+      "allowedPrincipals": [
+        "svc:sdd-harness-pilot/ci-check"
+      ],
+      "purpose": "dedicated identity for publishing CI check/status results; separate from content publisher and from the source-read identity, so a leaked check token cannot read or deploy"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/ci-registry",
+      "status": "NOT_PROVISIONED",
+      "boundRole": "ci",
+      "allowedPrincipals": [
+        "svc:sdd-harness-pilot/ci"
+      ],
+      "purpose": "container registry credential for CI image delivery"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/artifact-reader",
+      "status": "NOT_PROVISIONED",
+      "boundRole": "service",
+      "allowedPrincipals": [
+        "svc:sdd-harness-pilot/artifact-reader"
+      ],
+      "purpose": "read-only access to build artifacts for the deployment pipeline; development identities must not read release or rollback material"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/pilot-deployer",
+      "status": "NOT_PROVISIONED",
+      "boundRole": "service",
+      "allowedPrincipals": [
+        "svc:sdd-harness-pilot/deployer"
+      ],
+      "purpose": "identity authorized to deploy approved artifacts to the isolated pilot environment; distinct from the rollback identity, no implicit remote policy writes"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/pilot-rollback",
+      "status": "NOT_PROVISIONED",
+      "boundRole": "service",
+      "allowedPrincipals": [
+        "svc:sdd-harness-pilot/rollback"
+      ],
+      "purpose": "approval-gated rollback identity for the isolated pilot environment; unapproved rollback requests must be denied, and it stays distinct from the deployer identity"
+    }
+  ],
+  "node": "{\"version\":\"v24.15.0\",\"execPath\":\"<node24-runtime>/node\"}",
+  "remote_writes": []
+}
