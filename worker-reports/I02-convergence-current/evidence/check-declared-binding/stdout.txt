@@ -1,0 +1,75 @@
+TAP version 13
+# Subtest: V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract
+ok 1 - V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract
+  ---
+  duration_ms: 377.773125
+  type: 'test'
+  ...
+# Subtest: RoleBoundary.v1 / Authority.v1 contract holds on committed files; refs are referenced, never valued
+ok 2 - RoleBoundary.v1 / Authority.v1 contract holds on committed files; refs are referenced, never valued
+  ---
+  duration_ms: 3.09275
+  type: 'test'
+  ...
+# Subtest: RW_RUNNER_BUILD: control-plane declarations align with the P2_4 runtime bindings; project root is a read-only boundary
+not ok 3 - RW_RUNNER_BUILD: control-plane declarations align with the P2_4 runtime bindings; project root is a read-only boundary
+  ---
+  duration_ms: 1.228916
+  type: 'test'
+  location: '<repo>/test/infra-runner-isolation.test.js:882:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'generation',
+    +   'revision',
+        'role',
+        'inputDigest',
+    +   'policyDigest',
+    +   'attempt',
+    +   'epoch',
+    +   'environmentDigest',
+    +   'workPackage',
+    +   'methods'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'generation'
+    1: 'role'
+    2: 'inputDigest'
+  actual:
+    0: 'generation'
+    1: 'revision'
+    2: 'role'
+    3: 'inputDigest'
+    4: 'policyDigest'
+    5: 'attempt'
+    6: 'epoch'
+    7: 'environmentDigest'
+    8: 'workPackage'
+    9: 'methods'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:891:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    node:internal/test_runner/test:1133:31
+    node:internal/process/task_queues:150:7
+    AsyncResource.runInAsyncScope (node:async_hooks:227:14)
+    AsyncResource.runMicrotask (node:internal/process/task_queues:147:8)
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 2
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 452.753083

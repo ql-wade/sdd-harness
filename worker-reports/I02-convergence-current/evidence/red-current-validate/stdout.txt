@@ -1,0 +1,115 @@
+{
+  "interface": "RunnerInfra.v1",
+  "command": "validate",
+  "registry": "infra/delivery/registry.json",
+  "refs": "infra/delivery/secrets.refs.example.json",
+  "dir": "infra/delivery/runner",
+  "ok": false,
+  "violations": [
+    {
+      "code": "PATCH_LOCK_MISMATCH",
+      "at": "image.lock.json:sourceInputs.patches",
+      "reason": "the runner lock must mirror the upstream patch list exactly (order + sha256)",
+      "lockedCount": 6,
+      "upstreamCount": 6
+    },
+    {
+      "code": "FINGERPRINT_STALE",
+      "at": "image.lock.json:sourceInputs.hostBuildFingerprint",
+      "reason": "the recorded fingerprint must equal the freshly recomputed lock-derived fingerprint (archive+patches+toolchain)",
+      "expected": "6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a"
+    }
+  ],
+  "catalogGaps": [],
+  "roles": [
+    {
+      "role": "controller",
+      "principalLabel": "runner-controller",
+      "credentialRef": "secret-ref:sdd-harness-pilot/runner-authority",
+      "provisioningStatus": "NOT_PROVISIONED",
+      "workspaceVolume": "ws-controller",
+      "grantedRefCount": 2
+    },
+    {
+      "role": "author",
+      "principalLabel": "worker-author",
+      "credentialRef": "secret-ref:sdd-harness-pilot/worker-author-api",
+      "provisioningStatus": "NOT_PROVISIONED",
+      "workspaceVolume": "ws-author",
+      "grantedRefCount": 1
+    },
+    {
+      "role": "test-author",
+      "principalLabel": "worker-test-author",
+      "credentialRef": null,
+      "provisioningStatus": "UNASSIGNED",
+      "workspaceVolume": "ws-test-author",
+      "grantedRefCount": 0
+    },
+    {
+      "role": "reviewer",
+      "principalLabel": "worker-reviewer",
+      "credentialRef": "secret-ref:sdd-harness-pilot/worker-review-api",
+      "provisioningStatus": "NOT_PROVISIONED",
+      "workspaceVolume": "ws-reviewer",
+      "grantedRefCount": 1
+    },
+    {
+      "role": "publisher",
+      "principalLabel": "runner-publisher",
+      "credentialRef": null,
+      "provisioningStatus": "UNASSIGNED",
+      "workspaceVolume": "ws-publisher",
+      "grantedRefCount": 0
+    },
+    {
+      "role": "isolator",
+      "principalLabel": "runner-isolator",
+      "credentialRef": null,
+      "provisioningStatus": "UNASSIGNED",
+      "workspaceVolume": "ws-isolator",
+      "grantedRefCount": 0
+    }
+  ],
+  "methodState": {
+    "declaration": "METHOD_STATE_SHARED_DECLARED",
+    "model": "cooperative-local",
+    "identityBasis": false,
+    "permissionBasis": false,
+    "completionBasis": false,
+    "dispatchRecordStatus": "UNVERIFIED"
+  },
+  "authority": {
+    "interface": "Authority.v1",
+    "authorityStatus": "UNVERIFIED",
+    "registrations": 0,
+    "concurrentWriterPolicy": "REFUSE",
+    "copiedStatePolicy": "REFUSE"
+  },
+  "imageLock": {
+    "interface": "RunnerImageLock.v1",
+    "upGate": {
+      "enabled": true,
+      "requireAllComponentsAuthenticated": true,
+      "reason": "S2/S3 真实构建与 digest 回填完成；准入为本地构建镜像（六补丁链 digest 校验）",
+      "admittedBy": "user directive 2026-10-22: 端到端执行授权（\"你可以端到端执行吧\"）",
+      "admittedAt": "2026-10-22T12:10:00.000Z"
+    },
+    "containerBuildStatus": "VERIFIED",
+    "components": [
+      {
+        "component": "comet-runner",
+        "reference": "comet-runner:locked-local",
+        "digest": "sha256:4dfd24ed0677d401f202c2ab70f1115ca074d7038e143c10e75eea4b51c91b13",
+        "status": "UNVERIFIED"
+      },
+      {
+        "component": "runner-base",
+        "reference": "node@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d",
+        "digest": "sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d",
+        "status": "UNVERIFIED"
+      }
+    ]
+  },
+  "checkedAt": "2026-10-25T13:54:44.392Z"
+}

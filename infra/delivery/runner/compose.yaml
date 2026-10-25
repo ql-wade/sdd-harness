@@ -4,7 +4,7 @@
 # 六角色（role-policy.json）：controller/author/test-author/reviewer/publisher/isolator —— 独立 principal、独立卷、独立凭据作用域。
 # 只读根文件系统、drop ALL capabilities、no-new-privileges；除具名卷外不挂载任何宿主路径；无 docker.sock、无宿主 HOME。
 # 控制卷（/comet/*）只挂 comet-controller；worker 角色只挂各自 ws-* 卷（workspace-mounts.json 结构表达）。
-# 端口仅绑定 loopback；专用 internal 网络（出网策略在资源准入时显式修订，当前 UNVERIFIED）。
+# CLI job 模板不发布任何端口；专用 internal 网络只表达默认出网拒绝，实际作业由固定受管 host 驱动。
 # restart 策略保持 "no"：原实例监督与复制状态拒绝属 Authority.v1 启动检查，由 probe duplicate-authority 实测而非 restart 策略假设。
 
 services:
@@ -18,8 +18,6 @@ services:
       - no-new-privileges:true
     networks:
       - runner-internal
-    ports:
-      - "127.0.0.1:${COMET_RUNNER_PORT:-7300}:7300"
     volumes:
       - comet-control-state:/comet/state
       - comet-receipts:/comet/receipts

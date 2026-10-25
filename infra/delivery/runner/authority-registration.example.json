@@ -27,5 +27,80 @@
     "stateOrigin": "authoritative | copied（仅 authoritative 可启动）",
     "writerExclusivity": "single | shared（仅 single 可启动）"
   },
-  "registrations": []
+  "registrations": [],
+  "physicalProcessBinding": {
+    "status": "UNVERIFIED",
+    "scope": "example of controller-fixed data consumed by createCliJobDriver; never a worker payload or authorization flag",
+    "producer": "P1_3 fixed protected bootstrap plus actual I01 owner/resource qualification",
+    "consumer": "tools/infra/runner.mjs createCliJobDriver",
+    "registration": {
+      "schemaVersion": 1,
+      "project": "sdd-harness-pilot",
+      "authorityId": null,
+      "workspaceId": null,
+      "namespace": "sdd-harness-i02-qualification",
+      "engineId": null,
+      "dockerContext": null,
+      "imageDigest": null,
+      "sdkFingerprint": null,
+      "bootstrapDigest": null,
+      "controlVolumes": {
+        "state": "sdd-harness-i02-qualification_state",
+        "receipts": "sdd-harness-i02-qualification_receipts",
+        "issuance": "sdd-harness-i02-qualification_issuance"
+      },
+      "roles": [
+        {
+          "id": "controller",
+          "actionRole": "controller",
+          "containerRole": "controller",
+          "principalId": null,
+          "workspaceVolume": "sdd-harness-i02-qualification_ws-controller"
+        },
+        {
+          "id": "author",
+          "actionRole": "author",
+          "containerRole": "author",
+          "principalId": null,
+          "workspaceVolume": "sdd-harness-i02-qualification_ws-author"
+        },
+        {
+          "id": "test-author",
+          "actionRole": "test-author",
+          "containerRole": "test-author",
+          "principalId": null,
+          "workspaceVolume": "sdd-harness-i02-qualification_ws-test-author"
+        },
+        {
+          "id": "reviewer",
+          "actionRole": "reviewer",
+          "containerRole": "reviewer",
+          "principalId": null,
+          "workspaceVolume": "sdd-harness-i02-qualification_ws-reviewer"
+        },
+        {
+          "id": "publisher",
+          "actionRole": "publisher",
+          "containerRole": "publisher",
+          "principalId": null,
+          "workspaceVolume": "sdd-harness-i02-qualification_ws-publisher"
+        },
+        {
+          "id": "isolator",
+          "actionRole": "isolator",
+          "containerRole": "isolator",
+          "principalId": null,
+          "workspaceVolume": "sdd-harness-i02-qualification_ws-isolator"
+        }
+      ]
+    },
+    "sourceRule": "Actual authority/workspace/engine/image/bootstrap/principal values must be independently read back and frozen by the controller before use. Null values are intentional blockers. A signed job binds runner-registration, runner-job and runner-role-binding digests, not an agent-selected path.",
+    "notGranted": [
+      "model use",
+      "new material disclosure",
+      "publication",
+      "grant issuance",
+      "platform mutation"
+    ]
+  }
 }

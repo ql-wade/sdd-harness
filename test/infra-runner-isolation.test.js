@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import test, { afterEach } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 // V_INFRA_I02 — I02 固定Comet Runner及真实OS/container角色隔离 的契约检查。
@@ -49,6 +49,17 @@ const RUNNER_REFS = [
 ];
 const HOST_PATH_OUTPUT_RE = /\/(Users|home|root|private|var|usr|etc|opt|tmp)\//;
 
+const privateRoots = new Set();
+function privateTmp(prefix) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  privateRoots.add(directory);
+  return directory;
+}
+afterEach(() => {
+  for (const directory of privateRoots) fs.rmSync(directory, { recursive: true, force: true });
+  privateRoots.clear();
+});
+
 function runCli(args) {
   return spawnSync(process.execPath, [cliPath, ...args], {
     cwd: repoRoot,
@@ -61,7 +72,7 @@ function parseJsonOut(result, label) {
   try {
     return JSON.parse(result.stdout);
   } catch {
-    throw new AssertionError(`${label}: stdout is not JSON: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.fail(`${label}: a structured JSON response is required`);
   }
 }
 
@@ -75,7 +86,7 @@ function readDomainJson(name) {
 
 // 把已提交的 runner 域整体拷到 tmp fixture，应用 mutate({dir, read, write, json, writeJson}) 后返回 fixture 目录。
 function makeFixtureDir(mutate) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i02-'));
+  const dir = privateTmp('infra-i02-');
   for (const name of DOMAIN_FILES) {
     fs.copyFileSync(path.join(runnerDir, name), path.join(dir, name));
   }
@@ -129,7 +140,7 @@ test('V_INFRA_I02 contract: committed runner domain validates clean; qualify hon
   assert.equal(runCli(['probe', '--case', 'not-a-case', '--json']).status, 1);
 
   // 域文件缺失 = 前置无效 → 退出 1（不是静默跳过）。
-  const partial = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i02-partial-'));
+  const partial = privateTmp('infra-i02-partial-');
   for (const name of DOMAIN_FILES.filter((n) => n !== 'workspace-mounts.json')) {
     fs.copyFileSync(path.join(runnerDir, name), path.join(partial, name));
   }
@@ -235,14 +246,14 @@ test('RED image gate: floating tag rejected; malformed digest rejected; unauthen
 
 test('RED compose gate: host sensitive mounts (/Users, host HOME, docker.sock) and non-loopback ports are rejected', () => {
   const hostMount = makeFixtureDir(({ read, write }) => {
-    write('compose.yaml', `${read('compose.yaml')}\n  extra:\n    image: \${EXTRA_IMAGE:?x}\n    volumes:\n      - /Users/example/data:/data\n`);
+    write('compose.yaml', read('compose.yaml').replace('      - ws-author:/workspace', '      - ws-author:/workspace\n      - /Users/example/data:/data'));
   });
   const hostMountRun = runCli(['validate', '--registry', registryPath, '--dir', hostMount, '--json']);
   assert.equal(hostMountRun.status, 2, 'host path bind mounts must be rejected');
   assert.ok(codes(parseJsonOut(hostMountRun, 'validate')).includes('HOST_MOUNT_FORBIDDEN'), JSON.stringify(hostMountRun.stdout));
 
   const dockerSock = makeFixtureDir(({ read, write }) => {
-    write('compose.yaml', `${read('compose.yaml')}      - /var/run/docker.sock:/var/run/docker.sock\n`);
+    write('compose.yaml', read('compose.yaml').replace('      - ws-author:/workspace', '      - ws-author:/workspace\n      - /var/run/docker.sock:/var/run/docker.sock'));
   });
   const sockRun = runCli(['validate', '--registry', registryPath, '--dir', dockerSock, '--json']);
   assert.equal(sockRun.status, 2, 'docker socket mounts must be rejected');
@@ -251,14 +262,14 @@ test('RED compose gate: host sensitive mounts (/Users, host HOME, docker.sock) a
   assert.doesNotMatch(sockRun.stdout, HOST_PATH_OUTPUT_RE, 'violation details must not echo the raw socket path');
 
   const homeMount = makeFixtureDir(({ read, write }) => {
-    write('compose.yaml', `${read('compose.yaml')}      - /root/home-dir:/home-dir\n`);
+    write('compose.yaml', read('compose.yaml').replace('      - ws-author:/workspace', '      - ws-author:/workspace\n      - /root/home-dir:/home-dir'));
   });
   const homeRun = runCli(['validate', '--registry', registryPath, '--dir', homeMount, '--json']);
   assert.equal(homeRun.status, 2, 'host HOME mounts must be rejected');
   assert.ok(codes(parseJsonOut(homeRun, 'validate')).includes('HOST_MOUNT_FORBIDDEN'));
 
   const notLoopback = makeFixtureDir(({ read, write }) => {
-    write('compose.yaml', read('compose.yaml').replace('"127.0.0.1:${COMET_RUNNER_PORT:-7300}:7300"', '"7300:7300"'));
+    write('compose.yaml', read('compose.yaml').replace('  comet-author:\n', '  comet-author:\n    ports: ["7300:7300"]\n'));
   });
   const loopbackRun = runCli(['validate', '--registry', registryPath, '--dir', notLoopback, '--json']);
   assert.equal(loopbackRun.status, 2, 'non-loopback port binding must be rejected');
@@ -295,7 +306,7 @@ test('RED compose gate: read-only rootfs, minimal capabilities, internal network
   assert.ok(codes(parseJsonOut(capsRun, 'validate')).includes('CAP_DROP_ALL_REQUIRED'), JSON.stringify(capsRun.stdout));
 
   const privileged = makeFixtureDir(({ read, write }) => {
-    write('compose.yaml', `${read('compose.yaml')}    privileged: true\n`);
+    write('compose.yaml', read('compose.yaml').replace('  comet-author:\n', '  comet-author:\n    privileged: true\n'));
   });
   const privilegedRun = runCli(['validate', '--registry', registryPath, '--dir', privileged, '--json']);
   assert.equal(privilegedRun.status, 2, 'privileged mode must be rejected');
@@ -508,18 +519,12 @@ test('probes and stop are real subcommands: without a runner runtime they exit 2
     assert.doesNotMatch(result.stdout, /"skip"\s*:\s*true/, 'probes must not skip');
   }
 
-  // 有 --endpoint 但不可达：必须真实尝试并如实报告连接失败（未来有真实 Runner 时同一命令直接可跑）。
-  const unreachable = runCli([
-    'probe', '--case', 'role-denial', '--endpoint', 'http://127.0.0.1:59999',
-    '--dir', runnerDir, '--json',
-  ]);
-  assert.equal(unreachable.status, 2, 'unreachable endpoint must stay UNVERIFIED with exit 2');
-  const unreachableReport = parseJsonOut(unreachable, 'probe unreachable');
-  assert.equal(unreachableReport.executed, false);
-  assert.equal(unreachableReport.status, 'UNVERIFIED');
-  assert.ok(unreachableReport.reason.length > 0);
-  assert.ok(unreachableReport.observedSteps.length > 0, 'the real reachability attempt must be recorded');
-  assert.doesNotMatch(unreachable.stdout, HOST_PATH_OUTPUT_RE);
+  // The current CLI-only scope rejects the retired HTTP selection itself.
+  const retired = runCli(['probe', '--case', 'role-denial', '--endpoint', 'i02-retired-origin', '--dir', runnerDir, '--json']);
+  assert.equal(retired.status, 1, 'HTTP control API selection is outside the registered Runner interface');
+  assert.equal(parseJsonOut(retired, 'retired endpoint').status, 'INPUT_INVALID');
+  assert.doesNotMatch(retired.stdout + retired.stderr, /i02-retired-origin/);
+
 });
 
 test('stop without a runner started by this tool is honestly UNVERIFIED and refuses', () => {
@@ -638,7 +643,7 @@ test('catalog gap reporting: registered refs read RECORDED; a missing ref is sti
   const refsDoc = JSON.parse(fs.readFileSync(refsPath, 'utf8'));
   const trimmed = JSON.parse(JSON.stringify(refsDoc));
   trimmed.refs = trimmed.refs.filter((entry) => entry.ref !== 'secret-ref:sdd-harness-pilot/runner-authority');
-  const refsFixture = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i02-refs-')), 'refs.json');
+  const refsFixture = path.join(privateTmp('infra-i02-refs-'), 'refs.json');
   fs.writeFileSync(refsFixture, JSON.stringify(trimmed, null, 2) + '\n');
   const result = runCli(['validate', '--registry', registryPath, '--refs', refsFixture, '--dir', runnerDir, '--json']);
   assert.equal(result.status, 0, 'a catalog gap is readiness evidence (qualify), not a structural violation');
@@ -664,9 +669,9 @@ test('catalog gap reporting: registered refs read RECORDED; a missing ref is sti
 import crypto from 'node:crypto';
 
 const upstreamLockPath = path.join(repoRoot, 'integrations', 'comet', 'upstream.lock.json');
-const P2_4_PATCH_0002_SHA = '47d2eebd57d4b8735a54333b0bf79a93c8812ae9037be9b9d0e141a9d5b38b16';
-const P2_4_PATCH_2_4_SHA = '3b8aab434d0af664e6aca656bcdaaae1da1f80145d17ba99e0a2f01c0219545e';
-const EXPECTED_FINGERPRINT_RW = 'd437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6';
+const P2_4_PATCH_0002_SHA = '214d65ccabbcb2e2e460ffa5e6958677c80c4d6495447cc4c82e5f2947e756cb';
+const P2_4_PATCH_2_4_SHA = '09d645fdec9ebdc8c71fcaf13be91c450abce489e5b22121bb87d37b7f442ac7';
+const EXPECTED_FINGERPRINT_RW = '6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a';
 
 const sha256File = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 // build.mjs:31 同算法：fingerprint = sha256(JSON({archive, patches, toolchain}))
@@ -825,7 +830,7 @@ test('RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that dri
   assert.equal(report.dockerBuild.buildArgs.EXPECTED_FINGERPRINT, EXPECTED_FINGERPRINT_RW);
   assert.equal(report.dockerBuild.buildArgs.OPENSPEC_TARBALL_SHA256, '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f');
   assert.ok(report.dockerBuild.command.includes('--build-arg SOURCE_SHA256=28a7e2fa'), 'the emitted build command pins the archive sha');
-  assert.ok(report.dockerBuild.command.includes('-f infra/delivery/runner/Dockerfile'), 'the emitted build command uses the committed Dockerfile');
+  assert.ok(report.dockerBuild.command.includes('-f ' + report.dockerBuild.context + '/infra/delivery/runner/Dockerfile'), 'the emitted build command uses its immutable exported Dockerfile');
   for (const input of [report.inputs.cometSourceArchive, report.inputs.openspecTarball]) {
     assert.ok(['PRESENT', 'ACQUISITION_REQUIRED'].includes(input.status), `input status is honest: ${input.path}`);
     if (input.status === 'ACQUISITION_REQUIRED') {
@@ -863,7 +868,7 @@ test('RW_RUNNER_BUILD: a missing project directory is a real ENOENT refusal by t
     const probe = spawnSync(candidate, ['--version'], { encoding: 'utf8' });
     if (probe.status === 0 && probe.stdout.trim() === `v${upstreamLock.toolchain.node}`) pinnedNodeExecutable = candidate;
   }
-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i02-enoent-'));
+  const scratch = privateTmp('infra-i02-enoent-');
   const absentProject = path.join(scratch, 'project-absent');
   const result = spawnSync(
     pinnedNodeExecutable,
@@ -883,9 +888,342 @@ test('RW_RUNNER_BUILD: control-plane declarations align with the P2_4 runtime bi
   assert.match(serialized, /inputDigest/, 'the inputDigest binding must be referenced');
   assert.match(serialized, /role/, 'the role==dispatch-role binding must be referenced');
   assert.equal(binding.status, 'UNVERIFIED', 'runtime binding observations stay UNVERIFIED until a real dispatch');
-  assert.deepEqual(binding.fields, ['generation', 'role', 'inputDigest']);
+  assert.deepEqual(binding.fields, ['generation', 'revision', 'role', 'inputDigest', 'policyDigest', 'attempt', 'epoch', 'environmentDigest', 'workPackage', 'methods']);
 
   const mounts = readDomainJson('workspace-mounts.json');
   assert.equal(mounts.rules.projectRootMount, 'READ_ONLY_BOUNDARY', 'the delivery project root, if mounted at admission, is a read-only boundary');
   assert.match(mounts.projectRoot.note, /只读/, 'the project-root boundary carries an explicit read-only note');
+});
+
+test('all Runner entrypoints reject malformed reference catalogs structurally before any runtime action', async (t) => {
+  for (const command of [['validate'], ['qualify'], ['up'], ['probe', '--case', 'role-denial'], ['build-plan']]) {
+    await t.test(command[0], () => {
+      const file = path.join(privateTmp('i02-invalid-refs-'), 'refs.json');
+      fs.writeFileSync(file, JSON.stringify({ schemaVersion: 1, interface: 'SecretRef.v1', refs: null }));
+      const result = runCli([...command, '--refs', file, '--json']);
+      assert.equal(result.status, 1, 'invalid input must not be interpreted as absent qualification or a successful build plan');
+      const report = parseJsonOut(result, command[0]);
+      assert.equal(report.status, 'INPUT_INVALID');
+      assert.equal(report.ready, false);
+      assert.doesNotMatch(result.stdout + result.stderr, /TypeError|at file:|host-private-marker/);
+    });
+  }
+});
+
+test('Runner Compose security uses actual YAML semantics for quoted keys, flow mounts and named-volume drivers', async (t) => {
+  const cases = [
+    ['quoted flow volume', (text) => text.replace('    volumes:\n      - ws-author:/workspace', '    "volumes": ["/etc:/input"]'), 'HOST_MOUNT_FORBIDDEN'],
+    ['quoted privilege', (text) => text.replace('  comet-author:\n', '  comet-author:\n    "privileged": true\n'), 'PRIVILEGED_FORBIDDEN'],
+    ['named volume remapped to host', (text) => text.replace('\n  ws-author:\n', '\n  ws-author:\n    driver: local\n    driver_opts: {type: none, o: bind, device: /etc}\n'), 'HOST_MOUNT_FORBIDDEN'],
+  ];
+  for (const [name, change, code] of cases) await t.test(name, () => {
+    const dir = makeFixtureDir(({ read, write }) => { const original = read('compose.yaml'), changed = change(original); assert.notEqual(changed, original); write('compose.yaml', changed); });
+    const yaml = fs.readFileSync(path.join(dir, 'compose.yaml'), 'utf8');
+    const proof = spawnSync('python3', ['-I', '-c', 'import yaml,json,sys;d=yaml.safe_load(sys.stdin.read());print(json.dumps({"parsed":isinstance(d,dict),"yaml":yaml.__version__}))'], { input: yaml, encoding: 'utf8', timeout: 5000 });
+    assert.equal(proof.status, 0, 'this counterexample must be valid YAML, not a parser/setup error');
+    assert.equal(JSON.parse(proof.stdout).parsed, true);
+    const result = runCli(['validate', '--dir', dir, '--json']);
+    assert.equal(result.status, 2, 'valid unsafe YAML must be semantically refused before Docker');
+    assert.ok(codes(parseJsonOut(result, name)).includes(code), 'the refusal must identify the actual permission boundary');
+  });
+});
+
+test('CLI-only Runner refuses retired endpoint selection before any network or runtime observation', () => {
+  const result = runCli(['probe', '--case', 'role-denial', '--endpoint', 'i02-synthetic-endpoint-marker', '--json']);
+  assert.equal(result.status, 1, 'the excluded HTTP control API is not a Runner qualification input');
+  const report = parseJsonOut(result, 'retired endpoint');
+  assert.equal(report.status, 'INPUT_INVALID');
+  assert.equal(report.ready, false);
+  assert.doesNotMatch(result.stdout + result.stderr, /i02-synthetic-endpoint-marker/);
+});
+
+test('controller-fixed CLI job driver exposes physical lifecycle without issuing a dispatch or accepting job-selected authority', async () => {
+  const api = await import(new URL('../tools/infra/runner.mjs', import.meta.url));
+  assert.equal(typeof api.createCliJobDriver, 'function', 'the original registered launcher needs a physical process lifecycle, not a permanent up stub');
+  assert.throws(() => api.createCliJobDriver({ authority: { verifyDispatch: () => ({ ok: true }) } }), /REGISTRATION_REQUIRED/);
+});
+
+function processRegistrationFixture() {
+  const namespace = 'sdd-harness-i02-fixture';
+  return { schemaVersion: 1, project: 'sdd-harness-pilot', authorityId: 'fixture-authority-not-production', workspaceId: 'fixture-workspace',
+    namespace, engineId: 'fixture-engine', dockerContext: 'fixture-context', imageDigest: 'sha256:' + 'a'.repeat(64),
+    sdkFingerprint: EXPECTED_FINGERPRINT_RW, bootstrapDigest: 'b'.repeat(64),
+    controlVolumes: { state: namespace + '_state', receipts: namespace + '_receipts', issuance: namespace + '_issuance' },
+    roles: RUNNER_ROLES.map((role) => ({ id: role, actionRole: role, containerRole: role, principalId: 'fixture-principal:' + role, workspaceVolume: namespace + '_ws-' + role })) };
+}
+
+test('CLI job registration cannot give a worker the control volume or share registered role identities', async () => {
+  const { createCliJobDriver } = await import(new URL('../tools/infra/runner.mjs', import.meta.url));
+  const registration = processRegistrationFixture();
+  const options = { authority: { verifyDispatch: () => ({ ok: false }) }, registration, dockerExecutable: process.execPath, dockerSha256: sha256File(process.execPath) };
+  registration.roles.find((role) => role.containerRole === 'author').workspaceVolume = registration.controlVolumes.state;
+  assert.throws(() => createCliJobDriver(options), /REGISTRATION_INVALID/, 'a registered worker workspace cannot alias controller state');
+  const shared = processRegistrationFixture();
+  shared.roles[1].principalId = shared.roles[0].principalId;
+  assert.throws(() => createCliJobDriver({ ...options, registration: shared }), /REGISTRATION_INVALID/, 'role labels cannot make a reused registered identity independent');
+});
+
+test('physical CLI job lifecycle preserves one authorized execution and cannot expand its fixed registration', async () => {
+  const { createCliJobDriver } = await import(new URL('../tools/infra/runner.mjs', import.meta.url));
+  const { createLaunchAuthority, envelopeDigest } = await import(new URL('../lib/delivery/evidence.js', import.meta.url));
+  const dir = privateTmp('i02-driver-command-contract-'), stateFile = path.join(dir, 'state.json'), traceFile = path.join(dir, 'trace.json');
+  const registration = processRegistrationFixture(), binary = path.join(dir, 'fixture-docker');
+  const script = `#!${process.execPath}
+import fs from 'node:fs';
+const file=${JSON.stringify(stateFile)},traceFile=${JSON.stringify(traceFile)},reg=${JSON.stringify(registration)};
+const a=process.argv.slice(2);if(a[0]!=='--context'||a[1]!==reg.dockerContext)process.exit(96);a.splice(0,2);
+const trace=fs.existsSync(traceFile)?JSON.parse(fs.readFileSync(traceFile)):[];trace.push(a);fs.writeFileSync(traceFile,JSON.stringify(trace));
+let s=fs.existsSync(file)?JSON.parse(fs.readFileSync(file)):{};
+const out=x=>process.stdout.write(JSON.stringify(x)+'\\n'),save=()=>fs.writeFileSync(file,JSON.stringify(s));
+if(a[0]==='info')out(reg.engineId);
+else if(a[0]==='image')out({id:reg.imageDigest,os:'linux',architecture:'arm64',sdk:reg.sdkFingerprint,bootstrap:reg.bootstrapDigest});
+else if(a[0]==='volume')out({name:a[2],driver:'local',hasOptions:false,project:reg.project,authority:reg.authorityId,workspace:reg.workspaceId});
+else if(a[0]==='container'){if(s.container)out(s.container.id);}
+else if(a[0]==='create'){
+ const labels={};for(let i=0;i<a.length;i++)if(a[i]==='--label'){const [k,...v]=a[i+1].split('=');labels[k]=v.join('=');}
+ s.container={id:'c'.repeat(64),name:'/'+a[a.indexOf('--name')+1],cwd:a[a.indexOf('--workdir')+1],mounts:a.filter(v=>v.startsWith('type=volume,')).map(v=>{const m=Object.fromEntries(v.split(',').map(x=>x.split('=')));return{type:m.type,name:m.source,destination:m.target,rw:true};}),image:reg.imageDigest,state:'created',exitCode:0,user:'10001:10001',readOnly:true,privileged:false,capDrop:['ALL'],capAdd:null,securityOpt:['no-new-privileges:true'],network:'none',project:labels['sdd.project'],authority:labels['sdd.authority'],workspace:labels['sdd.workspace'],execution:labels['sdd.execution'],run:labels['sdd.run'],registration:labels['sdd.registration']};save();process.stdout.write(s.container.id+'\\n');
+}else if(a[0]==='inspect')out(s.container);
+else if(a[0]==='start'){
+ s.container.state='running';save();let input='';process.stdin.on('data',x=>input+=x);process.stdin.on('end',()=>{const packet=JSON.parse(input);s.container.state='exited';save();out({fixtureOnly:true,execution:packet.job.execution});});
+}else if(a[0]==='stop'){s.container.state='exited';s.container.exitCode=143;save();out(s.container.id);}
+else process.exit(95);
+`;
+  fs.writeFileSync(binary, script); fs.chmodSync(binary, 0o755);
+  const authority = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+  const driver = createCliJobDriver({ authority, registration, dockerExecutable: binary, dockerSha256: sha256File(binary) });
+  const role = registration.roles.find((item) => item.containerRole === 'author');
+  const job = { schemaVersion: 1, run: 'fixture-original-run', execution: 'fixture-author-job', argv: ['state', 'gates', 'fixture'] };
+  const action = { schemaVersion: 1, profile: 'comet-managed-v2', runnerId: 'fixture-runner', run: job.run, gate: 'R', action: 'fixture-role-command',
+    execution: job.execution, role: role.actionRole, revision: 'fixture-r1', attempt: 1, epoch: 1, inputDigest: 'd'.repeat(64), policyDigest: 'e'.repeat(64), environmentDigest: 'f'.repeat(64),
+    workPackage: { id: 'I02-command-contract-only', taskIds: ['I02'] }, methods: [{ name: 'tdd', version: 'fixture-only', ref: '.agents/skills/tdd/SKILL.md', digest: '1'.repeat(64) }],
+    allowedPaths: ['fixture'], allowedTools: ['read_file'], inputs: [
+      { name: 'runner-job', ref: 'fixture/job.json', digest: envelopeDigest(job) },
+      { name: 'runner-registration', ref: 'fixture/registration.json', digest: driver.registrationDigest },
+      { name: 'runner-role-binding', ref: 'fixture/author.json', digest: envelopeDigest(role) },
+    ], outputs: [{ name: 'result', ref: 'fixture/result.json' }] };
+  const dispatch = authority.issueDispatch({ ...action, actionBinding: action });
+  const request = { dispatch, currentActionBinding: action, job };
+  assert.throws(() => driver.startCliJob({ ...request, job: { ...job, role: 'controller' } }), /JOB_INPUT_INVALID/);
+  assert.throws(() => driver.startCliJob({ ...request, job: { ...job, argv: ['--help'] } }), /JOB_BINDING_MISMATCH/);
+  assert.throws(() => driver.startCliJob({ ...request, currentActionBinding: { ...action, attempt: 2 } }), /CURRENT_DISPATCH_REQUIRED/);
+  assert.equal(fs.existsSync(traceFile), false, 'unbound worker fields must not reach any external CLI');
+  const started = driver.startCliJob(request);
+  assert.equal(started.resumed, false);
+  const terminal = await started.terminal;
+  assert.equal(terminal.clientExitCode, 0);
+  assert.equal(JSON.parse(terminal.stdoutBytes).execution, job.execution);
+  const observed = driver.observeCliJob({ ...request, handle: started.handle });
+  assert.equal(observed.observation.state, 'exited');
+  const badMount = JSON.parse(fs.readFileSync(stateFile));
+  const originalMounts = structuredClone(badMount.container.mounts);
+  badMount.container.mounts = [{ type: 'volume', name: registration.controlVolumes.state, destination: '/workspace', rw: true }];
+  fs.writeFileSync(stateFile, JSON.stringify(badMount));
+  assert.throws(() => driver.observeCliJob({ ...request, handle: started.handle }), /PROCESS_SCOPE_MISMATCH/, 'actual inspected mounts must match the fixed role registration');
+  badMount.container.mounts = originalMounts; fs.writeFileSync(stateFile, JSON.stringify(badMount));
+  const duplicate = driver.startCliJob(request);
+  assert.equal(duplicate.resumed, true);
+  assert.equal(duplicate.terminal, null);
+  let trace = JSON.parse(fs.readFileSync(traceFile));
+  assert.equal(trace.filter((argv) => argv[0] === 'start').length, 1, 'a repeated original execution observes its original process');
+  const create = trace.find((argv) => argv[0] === 'create');
+  assert.ok(create.includes('--read-only') && create.includes('--pull=never'));
+  const mounts = create.filter((value) => value.startsWith('type=volume,'));
+  assert.equal(mounts.length, 1, 'the author gets exactly its registered workspace');
+  assert.ok(mounts[0].includes(role.workspaceVolume));
+  assert.doesNotMatch(create.join(' '), /docker\.sock|type=bind|\/comet\/state|--privileged|--env/);
+  assert.throws(() => driver.stopCliJob({ ...request, handle: { ...started.handle, execution: 'another-execution' } }), /PROCESS_HANDLE_INVALID/);
+  assert.equal(JSON.parse(fs.readFileSync(traceFile)).filter((argv) => argv[0] === 'stop').length, 0);
+  const state = JSON.parse(fs.readFileSync(stateFile)); state.container.state = 'running'; fs.writeFileSync(stateFile, JSON.stringify(state));
+  assert.equal(driver.stopCliJob({ ...request, handle: started.handle }).observation.exitCode, 143);
+  assert.equal(terminal.managedClosureEligible, false, 'the external-CLI fixture proves a component protocol, not OS or real role qualification');
+});
+
+test('Runner public input matrix rejects null, wrong containers and null elements across every shared caller', async (t) => {
+  const cases = [
+    ['refs root null', null, () => null, 'refs'], ['refs not array', null, () => ({ interface: 'SecretRef.v1', refs: {} }), 'refs'],
+    ['refs null element', null, () => ({ interface: 'SecretRef.v1', refs: [null] }), 'refs'],
+    ['registry root null', null, () => null, 'registry'], ['registry null project', null, (d) => ({ ...d, project: null }), 'registry'],
+    ['registry null github', null, (d) => ({ ...d, project: { ...d.project, github: null } }), 'registry'],
+    ['registry null resource', null, (d) => ({ ...d, resources: [null] }), 'registry'],
+    ['policy null', null, () => null, 'policy'], ['policy roles object', null, (d) => ({ ...d, roles: {} }), 'policy'],
+    ['policy categories null', null, (d) => ({ ...d, evidenceCategories: null }), 'policy'],
+    ['image null', 'image.lock.json', () => null], ['image future schema', 'image.lock.json', (d) => ({ ...d, schemaVersion: 2 })],
+    ['image components object', 'image.lock.json', (d) => ({ ...d, components: {} })], ['image component null', 'image.lock.json', (d) => ({ ...d, components: [null] })],
+    ['source null', 'image.lock.json', (d) => ({ ...d, sourceInputs: null })], ['patch null', 'image.lock.json', (d) => ({ ...d, sourceInputs: { ...d.sourceInputs, patches: [null] } })],
+    ['roles null document', 'role-policy.json', () => null], ['roles object', 'role-policy.json', (d) => ({ ...d, roles: {} })],
+    ['roles null element', 'role-policy.json', (d) => ({ ...d, roles: [null] })], ['runnerRefs object', 'role-policy.json', (d) => ({ ...d, runnerRefs: {} })],
+    ['mounts root array', 'workspace-mounts.json', () => []], ['mount null control', 'workspace-mounts.json', (d) => ({ ...d, controlVolumes: [null] })],
+    ['mount null workspace', 'workspace-mounts.json', (d) => ({ ...d, roleWorkspaces: [null] })], ['mount worker list object', 'workspace-mounts.json', (d) => ({ ...d, rules: { ...d.rules, workerRoles: {} } })],
+    ['authority root null', 'authority-registration.example.json', () => null], ['authority registrations object', 'authority-registration.example.json', (d) => ({ ...d, registrations: {} })],
+    ['authority null registration', 'authority-registration.example.json', (d) => ({ ...d, registrations: [null] })],
+  ];
+  const paths = { registry: registryPath, refs: refsPath, policy: path.join(repoRoot, 'infra/delivery/qualification-policy.json') };
+  for (const [name, domain, mutate, override] of cases) await t.test(name, () => {
+    let args;
+    if (domain) args = ['--dir', makeFixtureDir(({ json, writeJson }) => writeJson(domain, mutate(json(domain))))];
+    else {
+      const file = path.join(privateTmp('i02-input-matrix-'), 'input.json');
+      fs.writeFileSync(file, JSON.stringify(mutate(JSON.parse(fs.readFileSync(paths[override])))));
+      args = ['--' + override, file];
+    }
+    for (const command of [['validate'], ['qualify'], ['up'], ['probe', '--case', 'role-denial'], ['build-plan']]) {
+      const result = runCli([...command, ...args, '--json']);
+      assert.equal(result.status, 1, `${name}/${command[0]} must be an input refusal`);
+      const parsed = parseJsonOut(result, name);
+      assert.equal(parsed.status, 'INPUT_INVALID');
+      assert.equal(parsed.ready, false);
+      assert.doesNotMatch(result.stdout + result.stderr, /TypeError|SyntaxError|at file:/);
+    }
+  });
+});
+
+test('Runner diagnostics never echo malformed JSON or input paths and preserve actual input byte hashes', () => {
+  const marker = 'i02-short-private-note';
+  for (const option of ['registry', 'refs', 'policy']) {
+    const file = path.join(privateTmp('i02-diagnostics-'), marker + '.json');
+    fs.writeFileSync(file, '{"note":"' + marker + '"');
+    const result = runCli(['validate', '--' + option, file, '--json']);
+    assert.equal(result.status, 1);
+    assert.equal(parseJsonOut(result, option).code, 'INPUT_JSON_INVALID');
+    assert.doesNotMatch(result.stdout + result.stderr, new RegExp(marker));
+  }
+  const domain = makeFixtureDir(({ write }) => write('role-policy.json', '{"note":"' + marker + '"'));
+  const result = runCli(['qualify', '--dir', domain, '--json']);
+  assert.equal(result.status, 1); assert.doesNotMatch(result.stdout + result.stderr, new RegExp(marker));
+  const qualified = runCli(['qualify', '--json']), report = parseJsonOut(qualified, 'raw source hash');
+  for (const file of DOMAIN_FILES) assert.equal(report.inputs.domainFiles[file], sha256File(path.join(runnerDir, file)), 'hash the actual original bytes, not reserialized JSON');
+});
+
+test('Runner build export uses a dedicated allowlisted context rather than the checkout root', () => {
+  const directory = makeFixtureDir(({ read, write }) => write('Dockerfile', read('Dockerfile') + '\n# private context fixture ' + crypto.randomUUID() + '\n'));
+  const result = runCli(['build-plan', '--dir', directory, '--json']);
+  assert.equal(result.status, 0);
+  const plan = parseJsonOut(result, 'allowlisted context');
+  assert.match(plan.dockerBuild.context, /^\.local\/I02-convergence-current\/build-context\/[a-f0-9]{64}$/);
+  assert.ok(Array.isArray(plan.dockerBuild.contextFiles) && plan.dockerBuild.contextFiles.length >= 11);
+  assert.ok(plan.dockerBuild.contextFiles.every((item) => typeof item.sha256 === 'string' && /^[a-f0-9]{64}$/.test(item.sha256)));
+  assert.ok(plan.dockerBuild.contextFiles.every((item) => !/^(?:\.git|\.local|\.claude|\.codex|node_modules)(?:\/|$)/.test(item.path)));
+  assert.ok(plan.dockerBuild.command.includes('-f ' + plan.dockerBuild.context + '/infra/delivery/runner/Dockerfile'), 'the command must build the frozen context Dockerfile, not a later changed checkout file');
+  assert.equal(plan.dockerBuild.materialized, false, 'a plan cannot claim a context was exported');
+});
+
+function makeBuildContextFixture() {
+  const fixture = privateTmp('i02-context-export-');
+  const copy = (relative, sourceRoot = repoRoot) => {
+    const target = path.join(fixture, relative); fs.mkdirSync(path.dirname(target), { recursive: true }); fs.copyFileSync(path.join(sourceRoot, relative), target);
+  };
+  const lock = JSON.parse(fs.readFileSync(upstreamLockPath));
+  const sources = ['tools/infra/runner.mjs', 'tools/infra/secret-refs.mjs', 'lib/delivery/evidence.js',
+    'infra/delivery/registry.json', 'infra/delivery/secrets.refs.example.json', 'infra/delivery/qualification-policy.json',
+    'integrations/comet/upstream.lock.json', ...lock.patches.map((item) => item.path),
+    'tools/comet/build.mjs', 'tools/comet/source.js', 'tools/comet/prepare-source.mjs',
+    ...DOMAIN_FILES.map((name) => 'infra/delivery/runner/' + name),
+    ...fs.readdirSync(path.join(repoRoot, 'contracts/delivery')).filter((name) => name.endsWith('.js')).map((name) => 'contracts/delivery/' + name)];
+  for (const file of sources) copy(file);
+  fs.writeFileSync(path.join(fixture, 'package.json'), '{"type":"module"}\n');
+  const artifacts = process.env.I02_ACCEPTED_ARTIFACT_ROOT ?? repoRoot;
+  for (const [file, digest] of [['.sdd/cache/runner-build/comet-source.tar.gz', lock.source.sha256],
+    ['.sdd/cache/runner-build/openspec-1.11.0.tgz', '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f']]) {
+    assert.equal(sha256File(path.join(artifacts, file)), digest, 'UNVERIFIED: actual integrity-locked public input must exist; no synthetic digest substitution');
+    copy(file, artifacts);
+  }
+  const invoke = (exportContext = true) => spawnSync(process.execPath, [path.join(fixture, 'tools/infra/runner.mjs'), 'build-plan', ...(exportContext ? ['--export-context'] : []), '--json'],
+    { cwd: fixture, encoding: 'utf8', timeout: 60_000 });
+  return { fixture, invoke };
+}
+
+test('Runner materializes and reuses only exact public input bytes in an isolated build context without building', () => {
+  const { fixture, invoke } = makeBuildContextFixture();
+  const first = invoke(); assert.equal(first.status, 0, first.stderr);
+  const plan = parseJsonOut(first, 'context export'); assert.equal(plan.dockerBuild.materialized, true);
+  const exported = path.join(fixture, plan.dockerBuild.context);
+  for (const item of plan.dockerBuild.contextFiles) assert.equal(sha256File(path.join(exported, item.path)), item.sha256);
+  const before = plan.dockerBuild.contextFiles.map((item) => fs.statSync(path.join(exported, item.path)).mtimeMs);
+  const second = invoke(); assert.equal(second.status, 0);
+  assert.equal(parseJsonOut(second, 'context reuse').dockerBuild.context, plan.dockerBuild.context);
+  assert.deepEqual(plan.dockerBuild.contextFiles.map((item) => fs.statSync(path.join(exported, item.path)).mtimeMs), before, 'repeated export must preserve the frozen context');
+  assert.equal(fs.existsSync(path.join(exported, '.git')), false);
+  assert.equal(fs.existsSync(path.join(exported, '.local')), false);
+  const extra = path.join(exported, '.env');
+  fs.writeFileSync(extra, 'I02_REVIEW_MARKER=not-a-secret\n');
+  const drifted = invoke();
+  assert.equal(drifted.status, 2, 'reuse must reject a real extra file outside the exported allowlist');
+  assert.equal(parseJsonOut(drifted, 'context drift').code, 'CONTEXT_CONFLICT');
+  assert.equal(fs.readFileSync(extra, 'utf8'), 'I02_REVIEW_MARKER=not-a-secret\n', 'rejection must preserve unknown bytes');
+});
+
+test('Runner refuses every unlisted or linked context path without changing the conflicting tree', async (t) => {
+  const addedFile = (exported, relative) => {
+    const file = path.join(exported, relative), bytes = Buffer.from('I02_REVIEW_MARKER=not-a-secret\n');
+    fs.writeFileSync(file, bytes);
+    return { preserved: () => assert.deepEqual(fs.readFileSync(file), bytes), restore: () => fs.unlinkSync(file) };
+  };
+  const addedDirectory = (exported, relative) => {
+    const directory = path.join(exported, relative); fs.mkdirSync(directory);
+    return { preserved: () => assert.deepEqual(fs.readdirSync(directory), []), restore: () => fs.rmdirSync(directory) };
+  };
+  const linked = (fixture, target) => {
+    const backup = path.join(fixture, 'private-link-target');
+    fs.renameSync(target, backup); fs.symlinkSync(backup, target);
+    return { preserved: () => assert.equal(fs.readlinkSync(target), backup), restore: () => { fs.unlinkSync(target); fs.renameSync(backup, target); } };
+  };
+  const cases = [
+    ['extra root .env', ({ exported }) => addedFile(exported, '.env')],
+    ['nested extra file', ({ exported }) => addedFile(exported, 'tools/comet/unlisted.txt')],
+    ['extra empty directory', ({ exported }) => addedDirectory(exported, '.unlisted')],
+    ['nested extra directory', ({ exported }) => addedDirectory(exported, 'tools/comet/.unlisted')],
+    ['changed manifest bytes', ({ declared }) => {
+      const original = fs.readFileSync(declared), changed = Buffer.concat([original, Buffer.from('\n# synthetic byte drift\n')]);
+      fs.writeFileSync(declared, changed);
+      return { preserved: () => assert.deepEqual(fs.readFileSync(declared), changed), restore: () => fs.writeFileSync(declared, original) };
+    }],
+    ['manifest file symlink to matching bytes', ({ fixture, declared }) => linked(fixture, declared)],
+    ['manifest ancestor directory symlink', ({ fixture, exported }) => linked(fixture, path.join(exported, 'tools'))],
+    ['context root symlink', ({ fixture, exported }) => linked(fixture, exported)],
+    ['context parent symlink', ({ fixture, exported }) => linked(fixture, path.dirname(exported))],
+    ['.local ancestor symlink', ({ fixture }) => linked(fixture, path.join(fixture, '.local'))],
+    ['dangling extra symlink', ({ fixture, exported }) => {
+      const file = path.join(exported, '.dangling'), target = path.join(fixture, 'nonexistent-target'); fs.symlinkSync(target, file);
+      return { preserved: () => assert.equal(fs.readlinkSync(file), target), restore: () => fs.unlinkSync(file) };
+    }],
+    ['extra special FIFO', ({ exported }) => {
+      const file = path.join(exported, '.private-fifo');
+      assert.equal(spawnSync('/usr/bin/mkfifo', [file]).status, 0, 'create an empty private FIFO without reading it');
+      return { preserved: () => assert.equal(fs.lstatSync(file).isFIFO(), true), restore: () => fs.unlinkSync(file) };
+    }],
+    ['manifest path special FIFO', ({ fixture, declared }) => {
+      const backup = path.join(fixture, 'private-file-backup'); fs.renameSync(declared, backup);
+      assert.equal(spawnSync('/usr/bin/mkfifo', [declared]).status, 0);
+      return { preserved: () => assert.equal(fs.lstatSync(declared).isFIFO(), true), restore: () => { fs.unlinkSync(declared); fs.renameSync(backup, declared); } };
+    }],
+    ['missing manifest file', ({ fixture, declared }) => {
+      const backup = path.join(fixture, 'private-file-backup'); fs.renameSync(declared, backup);
+      return { preserved: () => assert.equal(fs.existsSync(declared), false), restore: () => fs.renameSync(backup, declared) };
+    }],
+    ['first export beneath a linked parent', ({ fixture }) => {
+      const local = path.join(fixture, '.local'), backup = path.join(fixture, 'private-local-backup'), target = path.join(fixture, 'private-empty-target');
+      fs.renameSync(local, backup); fs.mkdirSync(target); fs.symlinkSync(target, local);
+      return { preserved: () => { assert.equal(fs.readlinkSync(local), target); assert.deepEqual(fs.readdirSync(target), [], 'rejection must not create files through an ancestor link'); },
+        restore: () => { fs.unlinkSync(local); fs.renameSync(backup, local); fs.rmSync(target, { recursive: true }); } };
+    }],
+  ];
+  for (const [label, mutate] of cases) await t.test(label, () => {
+    const { fixture, invoke } = makeBuildContextFixture();
+    const initial = invoke(); assert.equal(initial.status, 0);
+    const plan = parseJsonOut(initial, 'initial context'), exported = path.join(fixture, plan.dockerBuild.context);
+    const conflict = mutate({ fixture, exported, declared: path.join(exported, 'infra/delivery/runner/Dockerfile') });
+    try {
+      for (const exportContext of [false, true]) {
+        const result = invoke(exportContext);
+        assert.equal(result.status, 2, label + ' must fail closed for both plan and export');
+        const report = parseJsonOut(result, label);
+        assert.equal(report.code, 'CONTEXT_CONFLICT');
+        assert.equal(report.ready, false); assert.equal(report.status, 'UNVERIFIED');
+        assert.equal(report.dockerBuild, undefined, 'a conflicting context cannot emit an executable Docker build command');
+        conflict.preserved();
+      }
+    } finally { conflict.restore(); }
+    const reused = invoke(); assert.equal(reused.status, 0);
+    assert.equal(parseJsonOut(reused, 'restored context').dockerBuild.materialized, true);
+  });
 });

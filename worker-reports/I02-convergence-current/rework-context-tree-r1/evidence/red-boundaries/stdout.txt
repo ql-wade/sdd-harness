@@ -1,0 +1,363 @@
+TAP version 13
+# Subtest: Runner refuses every unlisted or linked context path without changing the conflicting tree
+    # Subtest: extra root .env
+    not ok 1 - extra root .env
+      ---
+      duration_ms: 178.448083
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: |-
+        extra root .env must fail closed for both plan and export
+        
+        0 !== 2
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 2
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1220:16)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+      ...
+    # Subtest: nested extra file
+    not ok 2 - nested extra file
+      ---
+      duration_ms: 0.196
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, open '<tmp>/i02-context-export-Xniecn/.local/I02-convergence-current/build-context/0f62e519fe2cd6e8e245d73d8f63378afad7dcfc9c20bf5d8577d90857e89bd2/tools/comet/unlisted.txt'"
+      code: 'ENOENT'
+      stack: |-
+        Object.openSync (node:fs:561:18)
+        Object.writeFileSync (node:fs:2428:35)
+        addedFile (file://<repo>/test/infra-runner-isolation.test.js:1163:8)
+        file://<repo>/test/infra-runner-isolation.test.js:1177:33
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+      ...
+    # Subtest: extra empty directory
+    not ok 3 - extra empty directory
+      ---
+      duration_ms: 0.145375
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, mkdir '<tmp>/i02-context-export-Xniecn/.local/I02-convergence-current/build-context/0f62e519fe2cd6e8e245d73d8f63378afad7dcfc9c20bf5d8577d90857e89bd2/.unlisted'"
+      code: 'ENOENT'
+      stack: |-
+        Object.mkdirSync (node:fs:1350:26)
+        addedDirectory (file://<repo>/test/infra-runner-isolation.test.js:1167:57)
+        file://<repo>/test/infra-runner-isolation.test.js:1178:37
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+      ...
+    # Subtest: nested extra directory
+    not ok 4 - nested extra directory
+      ---
+      duration_ms: 0.095333
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, mkdir '<tmp>/i02-context-export-Xniecn/.local/I02-convergence-current/build-context/0f62e519fe2cd6e8e245d73d8f63378afad7dcfc9c20bf5d8577d90857e89bd2/tools/comet/.unlisted'"
+      code: 'ENOENT'
+      stack: |-
+        Object.mkdirSync (node:fs:1350:26)
+        addedDirectory (file://<repo>/test/infra-runner-isolation.test.js:1167:57)
+        file://<repo>/test/infra-runner-isolation.test.js:1179:38
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+      ...
+    # Subtest: changed manifest bytes
+    not ok 5 - changed manifest bytes
+      ---
+      duration_ms: 0.151417
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, open '<tmp>/i02-context-export-Xniecn/.local/I02-convergence-current/build-context/0f62e519fe2cd6e8e245d73d8f63378afad7dcfc9c20bf5d8577d90857e89bd2/infra/delivery/runner/Dockerfile'"
+      code: 'ENOENT'
+      stack: |-
+        Object.openSync (node:fs:561:18)
+        Object.readFileSync (node:fs:445:35)
+        file://<repo>/test/infra-runner-isolation.test.js:1181:27
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+      ...
+    # Subtest: manifest file symlink to matching bytes
+    not ok 6 - manifest file symlink to matching bytes
+      ---
+      duration_ms: 0.117625
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, rename '<tmp>/i02-context-export-Xniecn/.local/I02-convergence-current/build-context/0f62e519fe2cd6e8e245d73d8f63378afad7dcfc9c20bf5d8577d90857e89bd2/infra/delivery/runner/Dockerfile' -> '<tmp>/i02-context-export-Xniecn/private-link-target'"
+      code: 'ENOENT'
+      stack: |-
+        Object.renameSync (node:fs:1013:11)
+        linked (file://<repo>/test/infra-runner-isolation.test.js:1172:8)
+        file://<repo>/test/infra-runner-isolation.test.js:1185:55
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+      ...
+    # Subtest: manifest ancestor directory symlink
+    not ok 7 - manifest ancestor directory symlink
+      ---
+      duration_ms: 0.112333
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, rename '<tmp>/i02-context-export-Xniecn/.local/I02-convergence-current/build-context/0f62e519fe2cd6e8e245d73d8f63378afad7dcfc9c20bf5d8577d90857e89bd2/tools' -> '<tmp>/i02-context-export-Xniecn/private-link-target'"
+      code: 'ENOENT'
+      stack: |-
+        Object.renameSync (node:fs:1013:11)
+        linked (file://<repo>/test/infra-runner-isolation.test.js:1172:8)
+        file://<repo>/test/infra-runner-isolation.test.js:1186:51
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+      ...
+    # Subtest: context root symlink
+    not ok 8 - context root symlink
+      ---
+      duration_ms: 0.120417
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, rename '<tmp>/i02-context-export-Xniecn/.local/I02-convergence-current/build-context/0f62e519fe2cd6e8e245d73d8f63378afad7dcfc9c20bf5d8577d90857e89bd2' -> '<tmp>/i02-context-export-Xniecn/private-link-target'"
+      code: 'ENOENT'
+      stack: |-
+        Object.renameSync (node:fs:1013:11)
+        linked (file://<repo>/test/infra-runner-isolation.test.js:1172:8)
+        file://<repo>/test/infra-runner-isolation.test.js:1187:36
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+      ...
+    # Subtest: context parent symlink
+    not ok 9 - context parent symlink
+      ---
+      duration_ms: 0.124916
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, rename '<tmp>/i02-context-export-Xniecn/.local/I02-convergence-current/build-context' -> '<tmp>/i02-context-export-Xniecn/private-link-target'"
+      code: 'ENOENT'
+      stack: |-
+        Object.renameSync (node:fs:1013:11)
+        linked (file://<repo>/test/infra-runner-isolation.test.js:1172:8)
+        file://<repo>/test/infra-runner-isolation.test.js:1188:38
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+      ...
+    # Subtest: .local ancestor symlink
+    not ok 10 - .local ancestor symlink
+      ---
+      duration_ms: 0.102709
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, rename '<tmp>/i02-context-export-Xniecn/.local' -> '<tmp>/i02-context-export-Xniecn/private-link-target'"
+      code: 'ENOENT'
+      stack: |-
+        Object.renameSync (node:fs:1013:11)
+        linked (file://<repo>/test/infra-runner-isolation.test.js:1172:8)
+        file://<repo>/test/infra-runner-isolation.test.js:1189:39
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+      ...
+    # Subtest: dangling extra symlink
+    not ok 11 - dangling extra symlink
+      ---
+      duration_ms: 0.085291
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, symlink '<tmp>/i02-context-export-Xniecn/nonexistent-target' -> '<tmp>/i02-context-export-Xniecn/.local/I02-convergence-current/build-context/0f62e519fe2cd6e8e245d73d8f63378afad7dcfc9c20bf5d8577d90857e89bd2/.dangling'"
+      code: 'ENOENT'
+      stack: |-
+        Object.symlinkSync (node:fs:1869:11)
+        file://<repo>/test/infra-runner-isolation.test.js:1191:108
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      ...
+    # Subtest: extra special FIFO
+    not ok 12 - extra special FIFO
+      ---
+      duration_ms: 3.539334
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: |-
+        create an empty private FIFO without reading it
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        file://<repo>/test/infra-runner-isolation.test.js:1196:14
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      ...
+    # Subtest: manifest path special FIFO
+    not ok 13 - manifest path special FIFO
+      ---
+      duration_ms: 0.117083
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, rename '<tmp>/i02-context-export-Xniecn/.local/I02-convergence-current/build-context/0f62e519fe2cd6e8e245d73d8f63378afad7dcfc9c20bf5d8577d90857e89bd2/infra/delivery/runner/Dockerfile' -> '<tmp>/i02-context-export-Xniecn/private-file-backup'"
+      code: 'ENOENT'
+      stack: |-
+        Object.renameSync (node:fs:1013:11)
+        file://<repo>/test/infra-runner-isolation.test.js:1200:68
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      ...
+    # Subtest: missing manifest file
+    not ok 14 - missing manifest file
+      ---
+      duration_ms: 0.091916
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, rename '<tmp>/i02-context-export-Xniecn/.local/I02-convergence-current/build-context/0f62e519fe2cd6e8e245d73d8f63378afad7dcfc9c20bf5d8577d90857e89bd2/infra/delivery/runner/Dockerfile' -> '<tmp>/i02-context-export-Xniecn/private-file-backup'"
+      code: 'ENOENT'
+      stack: |-
+        Object.renameSync (node:fs:1013:11)
+        file://<repo>/test/infra-runner-isolation.test.js:1205:68
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      ...
+    # Subtest: first export beneath a linked parent
+    not ok 15 - first export beneath a linked parent
+      ---
+      duration_ms: 0.0995
+      type: 'test'
+      location: '<repo>/test/infra-runner-isolation.test.js:1215:48'
+      failureType: 'testCodeFailure'
+      error: "ENOENT: no such file or directory, rename '<tmp>/i02-context-export-Xniecn/.local' -> '<tmp>/i02-context-export-Xniecn/private-local-backup'"
+      code: 'ENOENT'
+      stack: |-
+        Object.renameSync (node:fs:1013:11)
+        cases (file://<repo>/test/infra-runner-isolation.test.js:1210:10)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1216:22)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1201:25)
+        Test.start (node:internal/test_runner/test:1096:17)
+        TestContext.test (node:internal/test_runner/test:377:20)
+        TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1215:48)
+        async Test.run (node:internal/test_runner/test:1208:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+      ...
+    1..15
+not ok 1 - Runner refuses every unlisted or linked context path without changing the conflicting tree
+  ---
+  duration_ms: 538.795292
+  type: 'test'
+  location: '<repo>/test/infra-runner-isolation.test.js:1155:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    null !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: ~
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/test/infra-runner-isolation.test.js:1229:35)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+1..1
+# tests 16
+# suites 0
+# pass 0
+# fail 16
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 615.160708

@@ -1,0 +1,160 @@
+{
+  "schema": 1,
+  "status": "ON_HOLD_NOT_AUTHORIZED_FOR_EXECUTION",
+  "project": {
+    "id": "sdd-harness-pilot",
+    "repoId": 1285806550,
+    "repoFullname": "ql-wade/sdd-harness",
+    "owner": "ql-wade"
+  },
+  "versionRule": "Controller must bind the official supported Comet version/artifact and actual public API before any new image build or runtime start. Existing0.4.5/6da inputs are a preserved current-lock snapshot, not approval of a new SDK. No0.4-specific bootstrap is added.",
+  "alreadyExecuted": {
+    "dockerSafeMetadataReads": 9,
+    "build": 0,
+    "pull": 0,
+    "containerStart": 0,
+    "containerStop": 0,
+    "secretRead": 0,
+    "modelCall": 0
+  },
+  "namespace": "sdd-harness-i02-qualification",
+  "proposedContainers": [
+    "sdd-harness-i02-qualification-controller",
+    "sdd-harness-i02-qualification-author",
+    "sdd-harness-i02-qualification-test-author",
+    "sdd-harness-i02-qualification-reviewer",
+    "sdd-harness-i02-qualification-publisher",
+    "sdd-harness-i02-qualification-isolator"
+  ],
+  "proposedVolumes": [
+    "sdd-harness-i02-qualification_state",
+    "sdd-harness-i02-qualification_receipts",
+    "sdd-harness-i02-qualification_issuance",
+    "sdd-harness-i02-qualification_ws-controller",
+    "sdd-harness-i02-qualification_ws-author",
+    "sdd-harness-i02-qualification_ws-test-author",
+    "sdd-harness-i02-qualification_ws-reviewer",
+    "sdd-harness-i02-qualification_ws-publisher",
+    "sdd-harness-i02-qualification_ws-isolator"
+  ],
+  "runtimeLimits": {
+    "user": "10001:10001",
+    "readOnlyRootfs": true,
+    "capDrop": [
+      "ALL"
+    ],
+    "capAdd": [],
+    "noNewPrivileges": true,
+    "network": "none",
+    "ports": [],
+    "memory": "1g",
+    "cpus": 1,
+    "pidsLimit": 128,
+    "tmpfs": [
+      "/tmp:64m,noexec,nosuid",
+      "/home/comet:64m,noexec,nosuid"
+    ],
+    "hostBindMounts": false,
+    "dockerSocket": false,
+    "hostHome": false
+  },
+  "publicArtifactOptions": {
+    "cachedNodeBase": {
+      "reference": "node@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d",
+      "observedImageId": "sha256:401f10ae1c59171eb76a1d1f8ae62bdaad111a078c31fa7626acc4dc439cc288",
+      "platform": "linux/arm64",
+      "scope": "read-only local metadata; current runtime version/source use must be independently read back"
+    },
+    "pythonIfRequiredByChosenRecipe": {
+      "scope": "public metadata only; proposed dependency, not pulled or admitted",
+      "version": "3.12.15",
+      "indexDigest": "sha256:6a0e06f5ba0b373d051aabd3fffb9b873f27f9a2a3a14bcbe37dee6f0e3bbc70",
+      "linuxArm64Manifest": "sha256:c3729439afc4ec3f3e159e0c86aeabfadac8030ef46838a0256383d0511c5f5e",
+      "linuxArm64ImageId": "sha256:81c0aac584c3e136c75a8da272f5d08e45e1f2ae00701fbce768f490dd22164b",
+      "pythonSourceSha256": "c2c4321961fab0fb999d66e0cecf521c2ab3994c7992873ea99e306c1094fd5a",
+      "records": [
+        {
+          "url": "https://raw.githubusercontent.com/docker-library/python/master/versions.json",
+          "sha256": "d8aa62e21fe1fb5209ad70a426136440f302954ed8670b558a750423662b61da",
+          "bytes": 3083,
+          "observedAt": "2026-10-25T14:51:02.981660+00:00"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/docker-library/python/master/3.12/slim-bookworm/Dockerfile",
+          "sha256": "c0c7238fd4b49bbedb9397a4d473a61e1e51131e0e0decbd885a3460b93f5c80",
+          "bytes": 5608,
+          "observedAt": "2026-10-25T14:51:03.654175+00:00"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/docker-library/repo-info/master/repos/python/remote/3.12.15-slim-bookworm.md",
+          "sha256": "3a3211f2174b33d3f61ea39da8a992fb037e86a8a30d95a3fa831c045f5634c4",
+          "bytes": 30750,
+          "observedAt": "2026-10-25T14:51:04.701499+00:00"
+        }
+      ],
+      "imagesPulled": 0
+    }
+  },
+  "proposedCommandsNotExecuted": [
+    {
+      "purpose": "public acquisition only if selected/approved",
+      "argv": [
+        "docker",
+        "pull",
+        "--platform",
+        "linux/arm64",
+        "python@sha256:c3729439afc4ec3f3e159e0c86aeabfadac8030ef46838a0256383d0511c5f5e"
+      ]
+    },
+    {
+      "purpose": "local allowlisted export after selected source is rebound",
+      "argv": [
+        "node",
+        "tools/infra/runner.mjs",
+        "build-plan",
+        "--export-context",
+        "--json"
+      ]
+    },
+    {
+      "purpose": "build from the newly frozen allowlist, never checkout root",
+      "argv": [
+        "docker",
+        "build",
+        "--network=none",
+        "-f",
+        "<frozen-context>/infra/delivery/runner/Dockerfile",
+        "<frozen-context>"
+      ]
+    }
+  ],
+  "beforeExecution": [
+    "Root official version/artifact binding and independent construction review",
+    "revise/freeze the executable Dockerfile recipe for that exact artifact/toolchain; current old source-build recipe is not approved for new use",
+    "exact context manifest and all public inputs present/hash verified; no floating install or hidden fallback network",
+    "current fixed engine/context/authority/workspace/image/bootstrap identities independently read back; current examples remain null",
+    "P1_3 installs a fixed protected bootstrap and uses the selected version public runtime/application factories; job JSON cannot choose consumer/principal/role/mount",
+    "I01 owner/resource record and purpose-bound role eligibility; current4refs are not provisioned",
+    "preflight new namespace absent or exactly owned; never touch oldcomet-runner resources"
+  ],
+  "actualQualificationRecipe": [
+    "first actual built image digest/source/version/platform/import readback, with local Node/Git/Python/package tools as required by the selected version",
+    "actual namespace/mount/read-only/mincap inspection plus Shell requests/errno; neither configured user nor same UID is qualification",
+    "Edit and MCP require their actual registered tool/transport/executor and raw request/error; ordinary fs writes cannot be relabeled",
+    "one original fixed Comet Run/workspace/authority with authenticated role results, owner death/late result/duplicate writer/copied state refusal and same-original operation recovery",
+    "unknown completion reads back original execution/container; observation timeout does not terminate a process or create another operation"
+  ],
+  "rollback": [
+    "stop only the exact original authorized execution after current image/labels/engine/mount verification",
+    "preserve raw stdout/stderr/inspect/Run evidence before any later cleanup",
+    "remove only explicitly owned new qualification resources after Root closeout; old containers/volumes/Run and business stores remain intact"
+  ],
+  "missingAuthorizations": [
+    "no new model/material disclosure",
+    "no secret provisioning or signing grant",
+    "no Outline/Git/CI write",
+    "no deployment/publish authority",
+    "F10cross-machine API excluded"
+  ],
+  "wholeI02": "UNVERIFIED"
+}

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // RunnerInfra.v1 / RoleBoundary.v1 / Authority.v1 CLI — validate | qualify | up | probe | stop
 //
-// 只登记、声明与验收：不启动任何进程、不持有阶段/DAG/job queue、不改活配置（hooks/MCP 由对应 P 任务串行接纳）。
-// 镜像 tag/digest 一律来自 infra/delivery/runner/image.lock.json；本宿主无 container daemon（EPERM），
-// 容器化构建从未执行，严禁虚构 tag/digest。秘密值永不读写：四 ref 只引用，解析属运行时授权机制（I01 只读门）。
+// CLI validates the current declaration. Its standalone mode has no authority
+// to launch a product job. The fixed P1_3 host uses the physical lifecycle
+// below; Comet owns all dispatch/phase/retry state. No live settings or secrets
+// are read or written. Historical images never qualify the current candidate.
 //
 // 退出码契约（execution-contract.json V_INFRA_I02.cli_contract）：
 //   0 = PASS（validate 通过）
@@ -11,13 +12,15 @@
 //   2 = 验证失败（语义违规、qualify NOT_READY、up 被拒、probe/stop 环境缺失 UNVERIFIED）
 //   环境缺失必须显式 UNVERIFIED 并以非零退出，不允许 skip 或 mock 转绿。
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import { parseSecretRef, scanForForbiddenValues } from './secret-refs.mjs';
+import { parseSecretRef, redactSecretValue, scanForForbiddenValues, validateQualificationPolicy, validateRefsCatalog } from './secret-refs.mjs';
+import { envelopeDigest } from '../../lib/delivery/evidence.js';
+import { parseContract } from '../../contracts/delivery/index.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const EXIT_PASS = 0;
@@ -25,6 +28,7 @@ const EXIT_INPUT = 1;
 const EXIT_VERIFY = 2;
 const DEFAULT_REGISTRY = path.join(repoRoot, 'infra', 'delivery', 'registry.json');
 const DEFAULT_REFS = path.join(repoRoot, 'infra', 'delivery', 'secrets.refs.example.json');
+const DEFAULT_POLICY = path.join(repoRoot, 'infra', 'delivery', 'qualification-policy.json');
 const DEFAULT_DIR = path.join(repoRoot, 'infra', 'delivery', 'runner');
 
 const JSON_FILES = ['image.lock.json', 'role-policy.json', 'workspace-mounts.json', 'authority-registration.example.json'];
@@ -43,7 +47,7 @@ const SECRET_REF_PREFIX = 'secret-ref:';
 const PLACEHOLDER_IMAGE_RE = /^image:\s*\$\{[A-Z0-9_]+:\?[^}]*\}\s*$/;
 
 // 宿主私有路径绝不进入结构化回执/报告；对外输出统一脱敏（与 secret-refs 的 ABSOLUTE_PATH_FORBIDDEN 同源规则）。
-const HOST_PATH_REDACTION = /(^|[\s"'=(:/])\/(Users|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
+const HOST_PATH_REDACTION = /(^|[\s"'=(:/])\/(Users|Volumes|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
 const redactHostPaths = (text) => String(text ?? '').replace(HOST_PATH_REDACTION, '$1<host-path-redacted>');
 
 // 结构化输出里的文件字段一律 repo 相对；repo 之外（fixture/临时目录）则复用宿主路径脱敏。
@@ -76,7 +80,7 @@ function usage() {
     '  runner.mjs build-plan [--dir <runner dir>] [--json]',
     '  runner.mjs qualify  --registry <file> [--dir <runner dir>] [--json]',
     '  runner.mjs up       --registry <file> [--dir <runner dir>] [--json]',
-    '  runner.mjs probe    --case <role-denial|duplicate-authority> [--endpoint <url>] [--dir <runner dir>] [--json]',
+    '  runner.mjs probe    --case <role-denial|duplicate-authority> [--dir <runner dir>] [--json]',
     '  runner.mjs stop     [--dir <runner dir>] [--json]',
   ].join('\n');
 }
@@ -84,13 +88,18 @@ function usage() {
 function parseArgs(argv) {
   const opts = { _: [] };
   const command = argv[0];
+  const commands = ['validate', 'qualify', 'build-plan', 'up', 'probe', 'stop'];
+  if (command && !commands.includes(command)) return { command, opts, error: 'unknown command' };
+  const allowed = ['registry', 'refs', 'policy', 'dir', 'json', ...(command === 'probe' ? ['case'] : []), ...(command === 'build-plan' ? ['export-context'] : [])];
   for (let i = 1; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === '--json') {
-      opts.json = true;
+    if (!arg.startsWith('--') || !allowed.includes(arg.slice(2))) return { command, opts, error: 'unknown option or positional argument' };
+    if (Object.hasOwn(opts, arg.slice(2))) return { command, opts, error: 'duplicate option' };
+    if (arg === '--json' || arg === '--export-context') {
+      opts[arg.slice(2)] = true;
     } else if (arg.startsWith('--')) {
       const value = argv[++i];
-      if (value === undefined) return { command, opts, error: `missing value for ${arg}` };
+      if (!value || value.startsWith('--')) return { command, opts, error: 'missing option value' };
       opts[arg.slice(2)] = value;
     } else {
       opts._.push(arg);
@@ -100,36 +109,207 @@ function parseArgs(argv) {
 }
 
 function print(payload) {
-  process.stdout.write(JSON.stringify({ ...payload, checkedAt: new Date().toISOString() }, null, 2) + '\n');
+  process.stdout.write(JSON.stringify({ ...payload, checkedAt: new Date().toISOString() }, (_key, value) => typeof value === 'string' ? redactHostPaths(redactSecretValue(value)) : value, 2) + '\n');
 }
 
-function failInput(message) {
-  process.stderr.write(`${message}\n${usage()}\n`);
+function failInput(message, code = 'INPUT_INVALID', extra = {}) {
+  print({ interface: 'RunnerInfra.v1', status: 'INPUT_INVALID', ready: false, executed: false, code, error: message, ...extra });
   return EXIT_INPUT;
 }
 
 const sha256Text = (text) => crypto.createHash('sha256').update(text).digest('hex');
+const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const nonBlank = (value) => typeof value === 'string' && value.trim().length > 0;
+const INPUT_FILE_ERRORS = new Set(['ENOENT', 'EISDIR', 'ENOTDIR', 'EACCES', 'EPERM', 'ELOOP', 'ENAMETOOLONG']);
 
-function loadDomainFiles(dir) {
+// This exact context is an input snapshot, not a checkout: no unlisted paths,
+// links (including parents), or special entries may accompany the manifest.
+function buildContextStatus(context, contextFiles) {
+  const expected = new Map(contextFiles.map((item) => [item.path, item.sha256]));
+  const directories = new Set();
+  for (const file of expected.keys()) {
+    for (let parent = path.posix.dirname(file); parent !== '.'; parent = path.posix.dirname(parent)) directories.add(parent);
+  }
+  let current = repoRoot;
+  const parents = [];
+  for (const component of context.split('/')) {
+    current = path.join(current, component);
+    let stat;
+    try { stat = fs.lstatSync(current); }
+    catch (error) {
+      if (error?.code === 'ENOENT') return 'ABSENT';
+      if (INPUT_FILE_ERRORS.has(error?.code)) return 'CONFLICT';
+      throw error;
+    }
+    if (!stat.isDirectory() || stat.isSymbolicLink()) return 'CONFLICT';
+    parents.push({ file: current, stat });
+  }
+  const contextRoot = current;
+  let seen = 0;
+  const visit = (directory, prefix = '') => {
+    for (const entry of fs.readdirSync(directory)) {
+      const relative = prefix ? `${prefix}/${entry}` : entry;
+      const file = path.join(directory, entry), stat = fs.lstatSync(file);
+      if (stat.isSymbolicLink()) return false;
+      if (expected.has(relative)) {
+        if (!stat.isFile()) return false;
+        const fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK);
+        try {
+          const opened = fs.fstatSync(fd);
+          if (!opened.isFile() || opened.dev !== stat.dev || opened.ino !== stat.ino || sha256Text(fs.readFileSync(fd)) !== expected.get(relative)) return false;
+        } finally { fs.closeSync(fd); }
+        seen++;
+      } else if (directories.has(relative) && stat.isDirectory()) {
+        parents.push({ file, stat });
+        if (!visit(file, relative)) return false;
+      } else return false;
+    }
+    return true;
+  };
+  try {
+    if (!visit(contextRoot) || seen !== expected.size) return 'CONFLICT';
+    for (const parent of parents) {
+      const stat = fs.lstatSync(parent.file);
+      if (!stat.isDirectory() || stat.isSymbolicLink() || stat.dev !== parent.stat.dev || stat.ino !== parent.stat.ino) return 'CONFLICT';
+    }
+    return 'EXACT';
+  } catch (error) {
+    if (INPUT_FILE_ERRORS.has(error?.code)) return 'CONFLICT';
+    throw error;
+  }
+}
+
+function readInput(file, label, json = false) {
+  let value;
+  try { value = fs.readFileSync(file, 'utf8'); }
+  catch (error) {
+    const expected = INPUT_FILE_ERRORS.has(error?.code);
+    return { ok: false, exitCode: expected ? EXIT_INPUT : EXIT_VERIFY, status: expected ? 'INPUT_INVALID' : 'INTERNAL_FAILURE',
+      code: expected ? `INPUT_READ_${error.code}` : 'INPUT_READ_INTERNAL_FAILURE', error: `${label} unreadable` };
+  }
+  if (Buffer.byteLength(value) > 1024 * 1024) return { ok: false, exitCode: EXIT_INPUT, status: 'INPUT_INVALID', code: 'INPUT_TOO_LARGE', error: `${label} exceeds the input bound` };
+  if (!json) return { ok: true, value };
+  try { return { ok: true, value: JSON.parse(value), text: value }; }
+  catch (error) {
+    const expected = error instanceof SyntaxError;
+    return { ok: false, exitCode: expected ? EXIT_INPUT : EXIT_VERIFY, status: expected ? 'INPUT_INVALID' : 'INTERNAL_FAILURE',
+      code: expected ? 'INPUT_JSON_INVALID' : 'INPUT_PARSE_INTERNAL_FAILURE', error: `${label} JSON cannot be read` };
+  }
+}
+
+function inputShapes({ registry, refsDoc, policy, files }) {
+  const violations = [];
+  const add = (at, expected) => violations.push({ code: 'INPUT_SHAPE_INVALID', at, expected });
+  const object = (value, at, optional = false) => {
+    if (optional && value === undefined) return false;
+    if (!isObject(value)) { add(at, 'object'); return false; }
+    return true;
+  };
+  const list = (value, at, kind = 'object', optional = true) => {
+    if (optional && value === undefined) return [];
+    if (!Array.isArray(value)) { add(at, `${kind} array`); return []; }
+    for (const [index, item] of value.entries()) if (kind === 'object' ? !isObject(item) : !nonBlank(item)) add(`${at}[${index}]`, kind);
+    return value.filter((item) => kind === 'object' ? isObject(item) : nonBlank(item));
+  };
+  const scalar = (value, at, kind, optional = true, nullable = false) => {
+    if (optional && value === undefined || nullable && value === null) return;
+    if (kind === 'string' ? !nonBlank(value) : kind === 'boolean' ? typeof value !== 'boolean' : !Number.isSafeInteger(value)) add(at, kind);
+  };
+  if (!object(registry, 'registry') || !object(registry.project, 'registry.project')) return violations;
+  if (registry.schemaVersion !== 1 || registry.interface !== 'Registry.v1') add('registry', 'Registry.v1 version 1');
+  if (!nonBlank(registry.project.id) || !LABEL_RE.test(registry.project.id)) add('registry.project.id', 'project label');
+  scalar(registry.project.owner, 'registry.project.owner', 'string', false);
+  list(registry.project.delegates, 'registry.project.delegates', 'string');
+  for (const entry of list(registry.resources, 'registry.resources', 'object', false)) {
+    scalar(entry.id, 'registry.resources.id', 'string', false);
+    scalar(entry.owner, 'registry.resources.owner', 'string', false);
+  }
+  if (object(registry.project.github, 'registry.project.github')) {
+    for (const key of ['repoId', 'principalId']) scalar(registry.project.github[key], `registry.project.github.${key}`, 'integer', false);
+    for (const key of ['repoFullname', 'owner', 'url']) scalar(registry.project.github[key], `registry.project.github.${key}`, 'string', false);
+  }
+  violations.push(...validateQualificationPolicy(policy).map(({ code, at, expected }) => ({ code, at, expected })));
+  violations.push(...validateRefsCatalog(refsDoc, registry.project.id, { policy }).map(({ code }) => ({ code, at: 'refs catalog' })));
+  const docs = new Map(JSON_FILES.map((name) => [name, JSON.parse(files.get(name))]));
+  for (const [name, value] of docs) {
+    if (!object(value, name)) continue;
+    if (value.schemaVersion !== 1) add(`${name}.schemaVersion`, 'version 1');
+    if (value.project !== registry.project.id) add(`${name}.project`, 'the registered project');
+  }
+  const lock = docs.get('image.lock.json');
+  if (isObject(lock)) {
+    for (const entry of list(lock.components, 'image.lock.components')) {
+      for (const key of ['component', 'role']) scalar(entry[key], `image.lock.components.${key}`, 'string', false);
+      for (const key of ['reference', 'digest']) scalar(entry[key], `image.lock.components.${key}`, 'string', false, true);
+      for (const key of ['required', 'digestAuthenticated']) scalar(entry[key], `image.lock.components.${key}`, 'boolean', false);
+    }
+    if (object(lock.upGate, 'image.lock.upGate', true)) scalar(lock.upGate.enabled, 'image.lock.upGate.enabled', 'boolean');
+    if (object(lock.sourceInputs, 'image.lock.sourceInputs', true)) {
+      const source = lock.sourceInputs;
+      for (const entry of list(source.patches, 'image.lock.sourceInputs.patches')) for (const key of ['path', 'sha256']) scalar(entry[key], `image.lock.sourceInputs.patches.${key}`, 'string', false);
+      for (const key of ['sourceCommit', 'archiveSha256', 'hostBuildFingerprint']) scalar(source[key], `image.lock.sourceInputs.${key}`, 'string');
+      if (source.hostBuildFingerprint !== undefined && (typeof source.hostBuildFingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(source.hostBuildFingerprint))) add('image.lock.sourceInputs.hostBuildFingerprint', 'SHA256 hex');
+      scalar(source.archiveBytes, 'image.lock.sourceInputs.archiveBytes', 'integer');
+      for (const key of ['toolchain', 'openspec']) object(source[key], `image.lock.sourceInputs.${key}`, true);
+    }
+  }
+  const roles = docs.get('role-policy.json');
+  if (isObject(roles)) {
+    for (const role of list(roles.roles, 'role-policy.roles')) {
+      scalar(role.role, 'role-policy.roles.role', 'string', false);
+      if (role.role !== undefined && !RUNNER_ROLES.includes(role.role)) add('role-policy.roles.role', 'one of the six fixed roles');
+      scalar(role.workspaceVolume, 'role-policy.roles.workspaceVolume', 'string');
+      for (const key of ['principal', 'capabilities']) if (role[key] !== null) object(role[key], `role-policy.roles.${key}`, true);
+      list(role.grantedRefs, 'role-policy.roles.grantedRefs', 'string');
+      if (isObject(role.principal)) {
+        scalar(role.principal.label, 'role-policy.roles.principal.label', 'string');
+        scalar(role.principal.credentialRef, 'role-policy.roles.principal.credentialRef', 'string', true, true);
+      }
+      if (isObject(role.capabilities)) for (const key of ['add', 'drop']) list(role.capabilities[key], `role-policy.roles.capabilities.${key}`, 'string');
+    }
+    for (const entry of list(roles.runnerRefs, 'role-policy.runnerRefs')) for (const key of ['ref', 'bindingRole']) scalar(entry[key], `role-policy.runnerRefs.${key}`, 'string', false);
+    if (object(roles.methodStateScope, 'role-policy.methodStateScope', true)) {
+      const scope = roles.methodStateScope;
+      for (const key of ['identityBasis', 'permissionBasis', 'completionBasis']) scalar(scope[key], `role-policy.methodStateScope.${key}`, 'boolean');
+      if (object(scope.dispatchRecord, 'role-policy.dispatchRecord', true)) {
+        object(scope.dispatchRecord.fields, 'role-policy.dispatchRecord.fields', true);
+        if (object(scope.dispatchRecord.runtimeBinding, 'role-policy.dispatchRecord.runtimeBinding', true)) list(scope.dispatchRecord.runtimeBinding.fields, 'role-policy.runtimeBinding.fields', 'string');
+      }
+    }
+  }
+  const mounts = docs.get('workspace-mounts.json');
+  if (isObject(mounts)) {
+    for (const control of list(mounts.controlVolumes, 'workspace-mounts.controlVolumes')) {
+      for (const key of ['volume', 'mountPath', 'purpose']) scalar(control[key], `workspace-mounts.controlVolumes.${key}`, 'string');
+      list(control.mountedBy, 'workspace-mounts.controlVolumes.mountedBy', 'string');
+    }
+    for (const entry of list(mounts.roleWorkspaces, 'workspace-mounts.roleWorkspaces')) for (const key of ['role', 'volume', 'mountPath', 'hostPath']) scalar(entry[key], `workspace-mounts.roleWorkspaces.${key}`, 'string');
+    if (object(mounts.rules, 'workspace-mounts.rules', true)) list(mounts.rules.workerRoles, 'workspace-mounts.rules.workerRoles', 'string');
+    object(mounts.methodState, 'workspace-mounts.methodState', true);
+  }
+  const authority = docs.get('authority-registration.example.json');
+  if (isObject(authority)) {
+    object(authority.authority, 'authority.authority', true); object(authority.uniqueness, 'authority.uniqueness', true);
+    for (const entry of list(authority.registrations, 'authority.registrations')) for (const key of ['registrationId', 'authorityId', 'workspaceId', 'instanceId', 'stateOrigin', 'writerExclusivity']) scalar(entry[key], `authority.registrations.${key}`, 'string');
+  }
+  return violations;
+}
+
+function loadInputs(opts) {
+  const registryFile = opts.registry ?? DEFAULT_REGISTRY, refsFile = opts.refs ?? DEFAULT_REFS, policyFile = opts.policy ?? DEFAULT_POLICY;
+  const dir = opts.dir ?? DEFAULT_DIR;
+  const registry = readInput(registryFile, 'registry', true), refs = readInput(refsFile, 'refs catalog', true), policy = readInput(policyFile, 'qualification policy', true);
+  const failed = [registry, refs, policy].find((item) => !item.ok);
+  if (failed) return failed;
   const files = new Map();
-  const missing = [];
-  const unparseable = [];
   for (const name of DOMAIN_FILES) {
-    try {
-      files.set(name, fs.readFileSync(path.join(dir, name), 'utf8'));
-    } catch {
-      missing.push(name);
-    }
+    const read = readInput(path.join(dir, name), 'domain input', JSON_FILES.includes(name));
+    if (!read.ok) return read;
+    files.set(name, JSON_FILES.includes(name) ? read.text : read.value);
   }
-  for (const name of JSON_FILES) {
-    if (!files.has(name)) continue;
-    try {
-      JSON.parse(files.get(name));
-    } catch (error) {
-      unparseable.push(`${name}: ${redactHostPaths(error.message)}`);
-    }
-  }
-  return { files, missing, unparseable };
+  const violations = inputShapes({ registry: registry.value, refsDoc: refs.value, policy: policy.value, files });
+  if (violations.length) return { ok: false, exitCode: EXIT_INPUT, status: 'INPUT_INVALID', code: 'INPUT_SHAPE_INVALID', error: 'runner input shape is invalid', violations };
+  return { ok: true, registry: registry.value, refsDoc: refs.value, policy: policy.value, registryFile, refsFile, dir, files };
 }
 
 // ref → 允许解析它的唯一角色：runner 四 ref 按本域声明，其余引用 I01 目录的 boundRole。
@@ -439,104 +619,160 @@ function validateAuthority({ authority, projectId }) {
   return violations;
 }
 
-// compose 仅声明门（行级结构检查；真实 UID/挂载/负向写效果属 up 后的运行时证据 probe role-denial）。
-function validateCompose(text, { controlVolumeNames, roleNames }) {
-  const violations = [];
-  const add = (code, at, extra) => violations.push({ code, at, ...(extra ?? {}) });
-  let section = null;
-  let service = null;
-  let key = null;
-  let sawServices = false;
-  let sawNetworks = false;
-  const services = [];
-  const stateByService = new Map();
-  let state = null;
+// The installed PyYAML safe loader is isolated and bounded; no regex is a security oracle.
+const COMPOSE_INPUT_LIMIT = 65_536, COMPOSE_OUTPUT_LIMIT = 65_536, COMPOSE_TIMEOUT_MS = 5_000;
+const COMPOSE_YAML_VERSION = '6.0.3';
+const COMPOSE_VALIDATOR = String.raw`
+import json, sys
+VERSION = None
+AVAILABLE = False
 
-  for (const [index, raw] of text.split('\n').entries()) {
-    const lineNo = index + 1;
-    const trimmedRaw = raw.trim();
-    if (!trimmedRaw || trimmedRaw.startsWith('#')) continue;
-    if (trimmedRaw.includes('docker.sock')) add('DOCKER_SOCK_MOUNT_FORBIDDEN', `compose.yaml:${lineNo}`, { reason: 'workers and runner services never get the docker socket' });
-    const stripped = raw.replace(/\$\{[^}]*\}/g, 'PLACEHOLDER').trim();
-    if (HOST_USER_PATH.test(stripped)) add('HOST_MOUNT_FORBIDDEN', `compose.yaml:${lineNo}`, { reason: 'host user paths never belong in compose' });
-    if (/^image:\s*/.test(trimmedRaw)) {
-      if (!PLACEHOLDER_IMAGE_RE.test(trimmedRaw)) {
-        add('COMPOSE_IMAGE_NOT_LOCK_RESOLVED', `compose.yaml:${lineNo}`, { line: trimmedRaw.slice(0, 120) });
-      }
-      continue;
-    }
-    if (/^privileged:\s*true/.test(stripped)) add('PRIVILEGED_FORBIDDEN', `compose.yaml:${lineNo}`);
-    if (/^network_mode:\s*host/.test(stripped)) add('HOST_NETWORK_FORBIDDEN', `compose.yaml:${lineNo}`);
+def emit(violations):
+    print(json.dumps({"ok": not violations, "parser": "PyYAML", "version": VERSION,
+                      "available": AVAILABLE, "violations": violations}, separators=(",", ":")))
+    raise SystemExit(0 if not violations else 2)
 
-    const indent = raw.length - raw.trimStart().length;
-    if (indent === 0) {
-      const topMatch = stripped.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-      if (topMatch) {
-        section = topMatch[1];
-        service = null;
-        key = null;
-        if (section === 'services') sawServices = true;
-        if (section === 'networks') sawNetworks = true;
-      }
-      continue;
-    }
-    if (indent === 2 && section === 'services') {
-      const serviceMatch = stripped.match(/^([A-Za-z0-9_-]+):\s*$/);
-      if (serviceMatch) {
-        service = serviceMatch[1];
-        key = null;
-        services.push(service);
-        state = { readOnly: false, capDropAll: false, noNewPrivs: false };
-        stateByService.set(service, state);
-        const role = service.match(/^comet-([a-z-]+)$/)?.[1];
-        if (!role || !roleNames.includes(role)) {
-          add('SERVICE_ROLE_UNKNOWN', `compose.yaml:${lineNo}`, { service, reason: 'services must map 1:1 onto the role-policy roles' });
-        }
-      }
-      continue;
-    }
-    if (service && indent === 4) {
-      const kv = stripped.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-      if (kv) {
-        key = kv[1];
-        if (key === 'read_only' && kv[2] === 'true') state.readOnly = true;
-        continue;
-      }
-    }
-    if (service && indent >= 6 && stripped.startsWith('-') && key) {
-      let item = stripped.slice(1).trim();
-      if (item.startsWith('"') && item.endsWith('"')) item = item.slice(1, -1);
-      if (key === 'ports') {
-        if (item.split(':')[0] !== '127.0.0.1') add('PORT_BINDING_NOT_LOOPBACK', `compose.yaml:${lineNo}`, { binding: item });
-      } else if (key === 'volumes') {
-        const left = item.split(':')[0];
-        if (left === 'PLACEHOLDER' || !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(left)) {
-          add('HOST_MOUNT_FORBIDDEN', `compose.yaml:${lineNo}`, { mount: redactHostPaths(item), reason: 'only named volumes are allowed; no host bind mounts' });
-        } else if (controlVolumeNames.has(left) && service !== 'comet-controller') {
-          add('WORKER_CONTROL_PATH_FORBIDDEN', `compose.yaml:${lineNo}`, { volume: left, reason: 'control state/receipts/issuance volumes mount for the controller only' });
-        }
-      } else if (key === 'cap_drop') {
-        if (item === 'ALL') state.capDropAll = true;
-      } else if (key === 'security_opt') {
-        if (item === 'no-new-privileges:true') state.noNewPrivs = true;
-      }
-    }
-  }
+def reject(code):
+    emit([{"code": code, "at": "compose.yaml"},
+          {"code": "HOST_MOUNT_FORBIDDEN", "at": "compose.yaml"}])
 
-  if (!sawServices) add('SERVICES_MISSING', 'compose.yaml');
-  if (!sawNetworks) add('NETWORK_MISSING', 'compose.yaml');
-  if (!/internal:\s*true/.test(text)) add('NETWORK_NOT_INTERNAL', 'compose.yaml');
-  for (const name of services) {
-    const at = `compose.yaml:${name}`;
-    const state2 = stateByService.get(name);
-    if (!state2.readOnly) add('READ_ONLY_ROOTFS_REQUIRED', at, { reason: 'every runner service must declare a read-only root filesystem' });
-    if (!state2.capDropAll) add('CAP_DROP_ALL_REQUIRED', at, { reason: 'every runner service must drop ALL capabilities' });
-    if (!state2.noNewPrivs) add('NO_NEW_PRIVILEGES_REQUIRED', at, { reason: 'no-new-privileges is invariant for runner services' });
-  }
-  for (const role of roleNames) {
-    if (!services.includes(`comet-${role}`)) add('ROLE_SERVICE_MISSING', 'compose.yaml', { role, reason: 'each role-policy role needs exactly one service' });
-  }
-  return violations;
+try:
+    import yaml
+except Exception:
+    reject("COMPOSE_PARSER_UNAVAILABLE")
+if getattr(yaml, "__version__", None) != "6.0.3":
+    reject("COMPOSE_PARSER_VERSION_MISMATCH")
+VERSION = yaml.__version__
+AVAILABLE = True
+
+class ForbiddenYaml(Exception):
+    pass
+
+class StrictLoader(yaml.SafeLoader):
+    def construct_mapping(self, node, deep=False):
+        result = {}
+        for key_node, value_node in node.value:
+            if key_node.tag == "tag:yaml.org,2002:merge":
+                raise ForbiddenYaml("COMPOSE_YAML_MERGE_UNSUPPORTED")
+            key = self.construct_object(key_node, deep=deep)
+            if not isinstance(key, str):
+                raise ForbiddenYaml("COMPOSE_YAML_KEY_UNSUPPORTED")
+            if key in result:
+                raise ForbiddenYaml("COMPOSE_YAML_DUPLICATE_KEY")
+            result[key] = self.construct_object(value_node, deep=deep)
+        return result
+
+try:
+    raw = sys.stdin.buffer.read(65537)
+    if len(raw) > 65536:
+        reject("COMPOSE_INPUT_LIMIT_EXCEEDED")
+    source = raw.decode("utf-8", errors="strict")
+    for token in yaml.scan(source, Loader=StrictLoader):
+        if isinstance(token, yaml.tokens.TagToken):
+            reject("COMPOSE_YAML_TAG_UNSUPPORTED")
+    depth = 0
+    nodes = 0
+    for event in yaml.parse(source, Loader=StrictLoader):
+        if isinstance(event, yaml.events.AliasEvent) or getattr(event, "anchor", None) is not None:
+            reject("COMPOSE_YAML_ALIAS_UNSUPPORTED")
+        if isinstance(event, (yaml.events.MappingStartEvent, yaml.events.SequenceStartEvent)):
+            depth += 1
+            if depth > 24:
+                reject("COMPOSE_YAML_DEPTH_LIMIT_EXCEEDED")
+        if isinstance(event, (yaml.events.MappingEndEvent, yaml.events.SequenceEndEvent)):
+            depth -= 1
+        nodes += 1
+        if nodes > 4096:
+            reject("COMPOSE_YAML_NODE_LIMIT_EXCEEDED")
+    document = yaml.load(source, Loader=StrictLoader)
+except ForbiddenYaml as error:
+    reject(str(error))
+except Exception:
+    reject("COMPOSE_YAML_INVALID")
+
+violations = []
+def add(code, at="compose.yaml"):
+    item={"code":code,"at":at}
+    if item not in violations: violations.append(item)
+
+def mapping(value, allowed, at):
+    if not isinstance(value,dict):
+        add("COMPOSE_SCHEMA_INVALID",at)
+        return False
+    if set(value)-set(allowed): add("COMPOSE_FIELD_FORBIDDEN",at)
+    return True
+
+roles=["controller","author","test-author","reviewer","publisher","isolator"]
+controls=["comet-control-state:/comet/state","comet-receipts:/comet/receipts","comet-issuance:/comet/issuance"]
+volume_names=["comet-control-state","comet-receipts","comet-issuance"]+["ws-"+role for role in roles]
+if not mapping(document,["services","volumes","networks"],"compose.yaml"):
+    emit(violations)
+services=document.get("services")
+if not isinstance(services,dict):
+    add("SERVICES_MISSING")
+else:
+    if set(services)-{"comet-"+role for role in roles}: add("SERVICE_ROLE_UNKNOWN")
+    if {"comet-"+role for role in roles}-set(services): add("ROLE_SERVICE_MISSING")
+    for role in roles:
+        service=services.get("comet-"+role)
+        at="compose.yaml:comet-"+role
+        fields=["image","restart","read_only","cap_drop","security_opt","networks","volumes","ports"]
+        if not mapping(service,fields,at): continue
+        if service.get("privileged") is True: add("PRIVILEGED_FORBIDDEN",at)
+        if service.get("network_mode")=="host": add("HOST_NETWORK_FORBIDDEN",at)
+        if any(key in service for key in ["pid","ipc","uts","userns_mode","cgroup_parent","devices","device_cgroup_rules"]): add("HOST_NAMESPACE_FORBIDDEN",at)
+        if "env_file" in service or "environment" in service: add("HOST_ENV_FILE_FORBIDDEN",at)
+        image=chr(36)+"{COMET_RUNNER_IMAGE:?must be resolved from infra/delivery/runner/image.lock.json before up}"
+        if service.get("image")!=image: add("COMPOSE_IMAGE_NOT_LOCK_RESOLVED",at)
+        if service.get("read_only") is not True: add("READ_ONLY_ROOTFS_REQUIRED",at)
+        if service.get("cap_drop")!=["ALL"] or "cap_add" in service: add("CAP_DROP_ALL_REQUIRED",at)
+        if service.get("security_opt")!=["no-new-privileges:true"]: add("NO_NEW_PRIVILEGES_REQUIRED",at)
+        if service.get("restart")!="no": add("RESTART_POLICY_FORBIDDEN",at)
+        if service.get("networks")!=["runner-internal"]: add("NETWORK_NOT_INTERNAL",at)
+        expected=([*controls] if role=="controller" else [])+["ws-"+role+":/workspace"]
+        mounts=service.get("volumes")
+        if isinstance(mounts,list) and any(isinstance(item,str) and "docker.sock" in item for item in mounts): add("DOCKER_SOCK_MOUNT_FORBIDDEN",at)
+        if not isinstance(mounts,list) or any(not isinstance(item,str) for item in mounts) or len(mounts)!=len(expected) or sorted(mounts)!=sorted(expected):
+            add("HOST_MOUNT_FORBIDDEN",at)
+        if isinstance(mounts,list) and role!="controller" and any(isinstance(item,str) and (item.split(":")[0] in volume_names[:3] or ":/comet/" in item) for item in mounts): add("WORKER_CONTROL_PATH_FORBIDDEN",at)
+        ports=service.get("ports",[])
+        if ports: add("PORT_BINDING_NOT_LOOPBACK",at)
+volumes=document.get("volumes")
+if not isinstance(volumes,dict) or set(volumes)!=set(volume_names): add("HOST_MOUNT_FORBIDDEN")
+elif any(value is not None and not (isinstance(value,dict) and not value) for value in volumes.values()): add("HOST_MOUNT_FORBIDDEN")
+networks=document.get("networks")
+if not isinstance(networks,dict) or set(networks)!={"runner-internal"}: add("NETWORK_MISSING")
+else:
+    network=networks["runner-internal"]
+    if not isinstance(network,dict) or set(network)!={"internal"} or network.get("internal") is not True: add("NETWORK_NOT_INTERNAL")
+emit(violations)
+`;
+const COMPOSE_CODES = new Set(['COMPOSE_PARSER_UNAVAILABLE','COMPOSE_PARSER_VERSION_MISMATCH','COMPOSE_INPUT_LIMIT_EXCEEDED',
+  'COMPOSE_YAML_TAG_UNSUPPORTED','COMPOSE_YAML_MERGE_UNSUPPORTED','COMPOSE_YAML_KEY_UNSUPPORTED','COMPOSE_YAML_DUPLICATE_KEY',
+  'COMPOSE_YAML_ALIAS_UNSUPPORTED','COMPOSE_YAML_DEPTH_LIMIT_EXCEEDED','COMPOSE_YAML_NODE_LIMIT_EXCEEDED','COMPOSE_YAML_INVALID',
+  'COMPOSE_SCHEMA_INVALID','COMPOSE_FIELD_FORBIDDEN','HOST_MOUNT_FORBIDDEN','DOCKER_SOCK_MOUNT_FORBIDDEN','SERVICES_MISSING','ROLE_SERVICE_MISSING','SERVICE_ROLE_UNKNOWN',
+  'PRIVILEGED_FORBIDDEN','HOST_NETWORK_FORBIDDEN','HOST_NAMESPACE_FORBIDDEN','HOST_ENV_FILE_FORBIDDEN',
+  'COMPOSE_IMAGE_NOT_LOCK_RESOLVED','READ_ONLY_ROOTFS_REQUIRED','CAP_DROP_ALL_REQUIRED','NO_NEW_PRIVILEGES_REQUIRED',
+  'RESTART_POLICY_FORBIDDEN','NETWORK_NOT_INTERNAL','WORKER_CONTROL_PATH_FORBIDDEN','PORT_BINDING_NOT_LOOPBACK','NETWORK_MISSING']);
+const COMPOSE_LOCATIONS = new Set(['compose.yaml', ...RUNNER_ROLES.map((role) => 'compose.yaml:comet-' + role)]);
+function validateCompose(source) {
+  const parser = { command:'python3', flags:['-I'], implementation:'PyYAML', requiredVersion:COMPOSE_YAML_VERSION, version:null, status:'UNVERIFIED', proofLayer:'component-parser' };
+  const no = (code) => ({ violations:[{code,at:'compose.yaml'},{code:'HOST_MOUNT_FORBIDDEN',at:'compose.yaml'}],parser });
+  if (Buffer.byteLength(source)>COMPOSE_INPUT_LIMIT) return no('COMPOSE_INPUT_LIMIT_EXCEEDED');
+  const result=spawnSync('python3',['-I','-c',COMPOSE_VALIDATOR],{input:source,encoding:'utf8',timeout:COMPOSE_TIMEOUT_MS,maxBuffer:COMPOSE_OUTPUT_LIMIT,killSignal:'SIGKILL'});
+  if (result.error?.code==='ENOENT') return no('COMPOSE_PARSER_UNAVAILABLE');
+  if (result.error?.code==='ETIMEDOUT') return no('COMPOSE_PARSER_TIMEOUT');
+  if (result.error?.code==='ENOBUFS') return no('COMPOSE_PARSER_OUTPUT_LIMIT');
+  if (result.error||result.signal||result.stderr||![0,2].includes(result.status)) return no('COMPOSE_PARSER_FAILED');
+  let output;try{output=JSON.parse(result.stdout);}catch{return no('COMPOSE_PARSER_INVALID_OUTPUT');}
+  if (!isObject(output)||Object.keys(output).sort().join(',')!=='available,ok,parser,version,violations'
+    ||output.parser!=='PyYAML'||typeof output.available!=='boolean'||typeof output.ok!=='boolean'
+    ||!Array.isArray(output.violations)||output.violations.length>128||output.violations.some((item)=>!isObject(item)||Object.keys(item).sort().join(',')!=='at,code'||!COMPOSE_CODES.has(item.code)||!COMPOSE_LOCATIONS.has(item.at))
+    ||output.ok!==(output.violations.length===0)||result.status!==(output.ok?0:2)
+    ||(output.available?output.version!==COMPOSE_YAML_VERSION:output.version!==null)
+    ||output.available===output.violations.some((item)=>['COMPOSE_PARSER_UNAVAILABLE','COMPOSE_PARSER_VERSION_MISMATCH'].includes(item.code))) return no('COMPOSE_PARSER_INVALID_OUTPUT');
+  if(output.available){parser.status='AVAILABLE';parser.version=output.version;}
+  return {violations:output.violations,parser};
 }
 
 function validateDockerfile(text) {
@@ -576,11 +812,19 @@ function computeBuildFingerprint(upstream) {
 }
 
 function loadUpstreamLock() {
-  try {
-    return { upstream: JSON.parse(fs.readFileSync(path.join(repoRoot, 'integrations', 'comet', 'upstream.lock.json'), 'utf8')), error: null };
-  } catch (error) {
-    return { upstream: null, error: redactHostPaths(error.message) };
-  }
+  const read = readInput(path.join(repoRoot, 'integrations/comet/upstream.lock.json'), 'upstream lock', true);
+  if (!read.ok) return { upstream: null, error: read.code };
+  const value = read.value;
+  const valid = isObject(value) && value.schemaVersion === 1 && isObject(value.source) && isObject(value.toolchain)
+    && typeof value.source.commit === 'string' && /^[a-f0-9]{40}$/.test(value.source.commit)
+    && typeof value.source.sha256 === 'string' && /^[a-f0-9]{64}$/.test(value.source.sha256)
+    && Number.isSafeInteger(value.source.bytes) && value.source.bytes > 0
+    && Array.isArray(value.patches) && value.patches.length > 0
+    && value.patches.every((item) => isObject(item) && typeof item.path === 'string'
+      && /^integrations\/comet\/patches\/[A-Za-z0-9_./-]+\.patch$/.test(item.path) && !item.path.split('/').includes('..')
+      && typeof item.sha256 === 'string' && /^[a-f0-9]{64}$/.test(item.sha256))
+    && ['node', 'pnpm'].every((key) => typeof value.toolchain[key] === 'string' && /^\d+\.\d+\.\d+$/.test(value.toolchain[key]));
+  return valid ? { upstream: value, error: null } : { upstream: null, error: 'UPSTREAM_SHAPE_INVALID' };
 }
 
 // RW_RUNNER_BUILD 一致性发现：runner 域（image.lock.json）与当前上游锁/磁盘补丁的漂移。
@@ -593,6 +837,9 @@ function buildChainFindings({ lock, upstream, upstreamError }) {
     return { findings, fingerprint: null, patchVerification: [], upstreamPatches: [] };
   }
   const source = lock.sourceInputs ?? {};
+  if (source.sourceCommit !== upstream.source.commit || source.archiveSha256 !== upstream.source.sha256 || source.archiveBytes !== upstream.source.bytes) {
+    add('SOURCE_PIN_MISMATCH', 'image.lock.json:sourceInputs', { reason: 'source commit, archive digest and size must equal the current protected upstream lock' });
+  }
   const upstreamPatches = Array.isArray(upstream.patches) ? upstream.patches : [];
   if (JSON.stringify(source.patches ?? null) !== JSON.stringify(upstreamPatches)) {
     add('PATCH_LOCK_MISMATCH', 'image.lock.json:sourceInputs.patches', {
@@ -605,7 +852,9 @@ function buildChainFindings({ lock, upstream, upstreamError }) {
     add('TOOLCHAIN_PIN_MISMATCH', 'image.lock.json:sourceInputs.toolchain', { reason: 'toolchain pins must equal the upstream lock' });
   }
   const openspec = source.openspec;
-  if (!openspec || openspec.package !== '@fission-ai/openspec' || typeof openspec.version !== 'string' || openspec.version.length === 0 || !/^[0-9a-f]{64}$/.test(openspec.tarballSha256 ?? '')) {
+  if (!openspec || openspec.package !== '@fission-ai/openspec' || openspec.version !== '1.11.0'
+    || openspec.tarballSha256 !== '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f'
+    || openspec.registryTarball !== 'https://registry.npmmirror.com/@fission-ai/openspec/-/openspec-1.11.0.tgz' || openspec.tarballBytes !== 471694) {
     add('OPENSPEC_PIN_INVALID', 'image.lock.json:sourceInputs.openspec', { reason: 'the openspec pin (package/version/tarballSha256) must be recorded from the verified isolated candidate' });
   }
   const fingerprint = computeBuildFingerprint(upstream);
@@ -661,6 +910,10 @@ function validateDomain({ registry, refsDoc, files }) {
   const jsonDocs = new Map(JSON_FILES.map((name) => [name, JSON.parse(files.get(name))]));
   const rolePolicy = jsonDocs.get('role-policy.json');
   const mounts = jsonDocs.get('workspace-mounts.json');
+  if (registry.project.id !== 'sdd-harness-pilot' || registry.project.github.repoId !== 1285806550
+    || registry.project.github.repoFullname !== 'ql-wade/sdd-harness' || registry.project.github.principalId !== 262266039) {
+    violations.push({ code: 'REGISTRY_SOURCE_BINDING_MISMATCH', at: 'registry.project', reason: 'the fixed Runner belongs to the registered pilot repository and operator; identity is not a business grant' });
+  }
 
   // I01 目录缺口：runner 四 ref 中未登记的显式上报（缺口是 readiness 证据，不是结构违规——沿 I03 先例）。
   const catalogRefs = new Set((refsDoc?.refs ?? []).map((entry) => entry.ref));
@@ -680,10 +933,11 @@ function validateDomain({ registry, refsDoc, files }) {
   violations.push(...chain.findings);
   violations.push(...validateDockerfileChain(files.get('Dockerfile'), chain.upstreamPatches));
 
-  violations.push(...validateCompose(files.get('compose.yaml'), { controlVolumeNames, roleNames: RUNNER_ROLES }));
+  const composition = validateCompose(files.get('compose.yaml'));
+  violations.push(...composition.violations);
   violations.push(...validateDockerfile(files.get('Dockerfile')));
 
-  return { violations, catalogGaps };
+  return { violations, catalogGaps, composeParser: composition.parser };
 }
 
 function buildQualification({ registryFile, dir, files, violations, catalogGaps }) {
@@ -705,11 +959,11 @@ function buildQualification({ registryFile, dir, files, violations, catalogGaps 
   const source = lock.sourceInputs ?? {};
   const categories = {
     'source-pins': RECORDED(
-      `comet commit/archive sha256, ${source.patches?.length ?? 0} patch sha256s, toolchain and host build fingerprint ${source.hostBuildFingerprint ?? '(absent)'} recorded from integrations/comet/upstream.lock.json + P1_6; no independent recomputation was performed on this host`,
+      `current source, ${source.patches?.length ?? 0} patch digests and fingerprint ${source.hostBuildFingerprint ?? '(absent)'} are checked against the protected upstream lock and actual patch bytes; runtime identity remains separate`,
     ),
     'container-image': unreadyComponents.length === 0
       ? RECORDED('digests recorded for all components; container daemon verification of the built image is still pending')
-      : UNVERIFIED(`no runner/base image has an authenticated digest: the containerized build never executed (docker daemon unreachable on this host: EPERM); inventing tags/digests is forbidden (${unreadyComponents.map((c) => c.component).join(', ')})`),
+      : UNVERIFIED(`current candidate image readback is missing for ${unreadyComponents.map((c) => c.component).join(', ')}; historical image observations are not current qualification`),
     'role-boundary-declaration': violations.length === 0
       ? RECORDED('six roles with distinct principals/credentials/volumes, read-only rootfs, dropped capabilities, worker-unwritable control paths — structurally declared and self-consistent')
       : UNVERIFIED(`role boundary structure violates its own invariants: ${[...new Set(violations.map((violation) => violation.code))].join(', ')}`),
@@ -771,22 +1025,29 @@ async function main(argv) {
   const { command, opts, error } = parseArgs(argv);
   if (error) return failInput(error);
   if (!command) return failInput('missing command');
+  if (command === 'probe' && !Object.hasOwn(PROBE_CASES, opts.case)) return failInput('unknown probe case');
+  const loaded = loadInputs(opts);
+  if (!loaded.ok) {
+    print({ interface: 'RunnerInfra.v1', ready: false, executed: false, ...loaded });
+    return loaded.exitCode;
+  }
+  const { registry, refsDoc, registryFile, refsFile, dir, files } = loaded;
+  const admission = validateDomain({ registry, refsDoc, files });
+  if (['up', 'probe'].includes(command) && admission.violations.length > 0) {
+    print({ interface: 'RunnerInfra.v1', command, ready: false, executed: false, refused: true, status: 'UNVERIFIED',
+      error: 'RUNNER_CONFIGURATION_REFUSED', violations: admission.violations });
+    return EXIT_VERIFY;
+  }
 
   if (command === 'probe') {
     const spec = PROBE_CASES[opts.case];
     if (!spec) return failInput(`unknown probe case: ${opts.case ?? '(missing --case)'}`);
-    const dir = opts.dir ?? DEFAULT_DIR;
-    const { files, missing, unparseable } = loadDomainFiles(dir);
-    if (missing.length > 0) return failInput(`domain files missing (${displayPath(dir)}): ${missing.join(', ')}`);
-    if (unparseable.length > 0) return failInput(`domain files unparseable: ${unparseable.join('; ')}`);
     const rolePolicy = JSON.parse(files.get('role-policy.json'));
     const authority = JSON.parse(files.get('authority-registration.example.json'));
-    const endpoint = opts.endpoint ?? process.env.COMET_RUNNER_ENDPOINT ?? null;
     const observation = {
       interface: 'RunnerInfra.v1',
       command: 'probe',
       case: opts.case,
-      endpoint,
       executed: false,
       status: 'UNVERIFIED',
       reason: null,
@@ -803,30 +1064,7 @@ async function main(argv) {
         },
       },
     };
-    if (!endpoint) {
-      observation.reason =
-        'no live runner runtime configured; probes require a real runner stack started by an authorized operator (up refuses until the image lock authenticates and admission is granted). Pass --endpoint <url> once the stack exists — this command never mocks and never skips.';
-      print(observation);
-      return EXIT_VERIFY;
-    }
-    // 真实可达性尝试：探针永远先打真实请求，失败即如实上报，绝不 mock。
-    try {
-      const response = await fetch(String(endpoint).replace(/\/$/, '') + '/', { signal: AbortSignal.timeout(5000) });
-      observation.observedSteps.push({ step: `GET ${endpoint}/`, status: 'VERIFIED', httpStatus: response.status });
-    } catch (err) {
-      const causeDetail = err?.cause ? (err.cause.code ?? err.cause.message ?? err.cause.name) : (err?.code ?? err?.message ?? err?.name ?? 'ERROR');
-      const cause = redactHostPaths(String(causeDetail));
-      observation.observedSteps.push({ step: `GET ${endpoint}/`, status: 'UNVERIFIED', error: cause });
-      observation.reason = `runner endpoint unreachable (GET ${endpoint}/): ${cause}`;
-      print(observation);
-      return EXIT_VERIFY;
-    }
-    observation.observedSteps.push({
-      step: 'role denial / authority exclusivity channels',
-      status: 'UNVERIFIED',
-      reason: 'requires real worker principals with runtime-resolved credentials and the authoritative state volume; none exist yet',
-    });
-    observation.reason = 'endpoint reachable, but probe channels require runtime principals and admission evidence that do not exist yet; no step may be fabricated';
+    observation.reason = 'No current registered CLI Runner and execution source is qualified. Only the fixed original harness can supply an authorized work package; no HTTP endpoint is a qualification prerequisite.';
     print(observation);
     return EXIT_VERIFY;
   }
@@ -838,7 +1076,7 @@ async function main(argv) {
       executed: false,
       status: 'UNVERIFIED',
       reason:
-        'no runner stack was ever started by this tool (up refuses until the image lock qualifies and admission is granted); there is nothing this tool can stop. A stack started outside this tool must be stopped by its own supervisor.',
+        'standalone CLI has no original authorized execution handle; the fixed Comet host stops only the matching original execution through stopCliJob',
     });
     return EXIT_VERIFY;
   }
@@ -846,14 +1084,11 @@ async function main(argv) {
   // build-plan：由当前上游锁导出 Runner 镜像构建计划（六补丁链/工具链/现算指纹/确定性入口/构建参数/输入获取）。
   // 只导出声明：绝不执行构建、绝不打开 up 门（digest 回填是资源准入决策）；与上游锁漂移即拒绝（退出 2）。
   if (command === 'build-plan') {
-    const dir = opts.dir ?? DEFAULT_DIR;
-    const { files, missing, unparseable } = loadDomainFiles(dir);
-    if (missing.length > 0) return failInput(`domain files missing (${displayPath(dir)}): ${missing.join(', ')}`);
-    if (unparseable.length > 0) return failInput(`domain files unparseable: ${unparseable.join('; ')}`);
     const lock = JSON.parse(files.get('image.lock.json'));
     const { upstream, error: upstreamError } = loadUpstreamLock();
     const chain = buildChainFindings({ lock, upstream, upstreamError });
-    const drift = chain.findings.map((finding) => finding.code);
+    const drift = [...new Set(admission.violations.map((finding) => finding.code))];
+    if (drift.length) { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', drift }); return EXIT_VERIFY; }
     const sourceCommit = upstream?.source?.commit ?? null;
     const openspec = lock.sourceInputs?.openspec ?? {};
     const runnerCache = '.sdd/cache/runner-build';
@@ -880,6 +1115,58 @@ async function main(argv) {
       OPENSPEC_TARBALL_SHA256: openspec.tarballSha256 ?? null,
       ...Object.fromEntries(chain.patchVerification.map((patch, index) => [`PATCH_${index + 1}_SHA256`, patch.sha256])),
     };
+    const contextSources = [
+      { path: 'infra/delivery/runner/Dockerfile', bytes: Buffer.from(files.get('Dockerfile')) },
+      ...['tools/comet/build.mjs', 'tools/comet/source.js', 'tools/comet/prepare-source.mjs', 'integrations/comet/upstream.lock.json',
+        ...chain.upstreamPatches.map((patch) => patch.path)].map((file) => ({ path: file, bytes: fs.readFileSync(path.join(repoRoot, file)) })),
+    ];
+    const contextFiles = contextSources.map(({ path: file, bytes }) => ({ path: file, sha256: sha256Text(bytes), status: 'PRESENT' }));
+    for (const [file, digest, size] of [[`${runnerCache}/comet-source.tar.gz`, upstream.source.sha256, upstream.source.bytes],
+      [`${runnerCache}/openspec-${openspec.version}.tgz`, openspec.tarballSha256, openspec.tarballBytes]]) {
+      let bytes = null;
+      try {
+        const target = path.join(repoRoot, file), stat = fs.lstatSync(target);
+        if (stat.isFile() && !stat.isSymbolicLink() && stat.size === size) { const data = fs.readFileSync(target); if (sha256Text(data) === digest) bytes = data; }
+      } catch { /* explicit missing input below; never acquire or follow a symlink */ }
+      contextSources.push({ path: file, bytes }); contextFiles.push({ path: file, sha256: digest, status: bytes ? 'PRESENT' : 'ACQUISITION_REQUIRED' });
+    }
+    const contextDigest = envelopeDigest(contextFiles.map(({ path: file, sha256 }) => ({ path: file, sha256 })));
+    const context = '.local/I02-convergence-current/build-context/' + contextDigest;
+    const contextRoot = path.join(repoRoot, context);
+    const conflict = () => { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', code: 'CONTEXT_CONFLICT' }); return EXIT_VERIFY; };
+    const contextStatus = buildContextStatus(context, contextFiles);
+    if (contextStatus === 'CONFLICT') return conflict();
+    let materialized = contextStatus === 'EXACT';
+    if (opts['export-context'] && !materialized) {
+      if (contextSources.some((item) => !item.bytes)) { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', code: 'CONTEXT_INPUTS_MISSING', contextFiles }); return EXIT_VERIFY; }
+      try {
+        let directory = repoRoot;
+        for (const component of context.split('/').slice(0, -1)) {
+          directory = path.join(directory, component);
+          try { fs.mkdirSync(directory, { mode: 0o700 }); }
+          catch (error) { if (error?.code !== 'EEXIST') throw error; }
+          const stat = fs.lstatSync(directory);
+          if (!stat.isDirectory() || stat.isSymbolicLink()) return conflict();
+        }
+        fs.mkdirSync(contextRoot, { mode: 0o700 });
+        for (const item of contextSources) {
+          let parent = contextRoot;
+          for (const component of item.path.split('/').slice(0, -1)) {
+            parent = path.join(parent, component);
+            try { fs.mkdirSync(parent, { mode: 0o700 }); }
+            catch (error) { if (error?.code !== 'EEXIST') throw error; }
+            const stat = fs.lstatSync(parent);
+            if (!stat.isDirectory() || stat.isSymbolicLink()) return conflict();
+          }
+          fs.writeFileSync(path.join(contextRoot, item.path), item.bytes, { flag: 'wx', mode: 0o600 });
+        }
+      } catch (error) {
+        if (error?.code === 'EEXIST' || INPUT_FILE_ERRORS.has(error?.code)) return conflict();
+        throw error;
+      }
+      if (buildContextStatus(context, contextFiles) !== 'EXACT') return conflict();
+      materialized = true;
+    }
     print({
       interface: 'RunnerInfra.v1',
       command: 'build-plan',
@@ -905,13 +1192,14 @@ async function main(argv) {
       },
       dockerBuild: {
         dockerfile: 'infra/delivery/runner/Dockerfile',
-        context: '.',
+        context, contextDigest, contextFiles, materialized,
+        exclusions: ['.git', '.local', '.claude', '.codex', 'node_modules', 'live settings', 'secret stores', 'unlisted files'],
         buildArgs,
         command: [
-          'docker build',
-          '-f infra/delivery/runner/Dockerfile',
+          'docker build --network=none',
+          `-f ${context}/infra/delivery/runner/Dockerfile`,
           ...Object.entries(buildArgs).map(([key, value]) => `--build-arg ${key}=${value}`),
-          '.',
+          context,
         ].join(' '),
       },
       upGate: lock.upGate?.enabled === true ? 'OPEN' : 'CLOSED',
@@ -920,34 +1208,20 @@ async function main(argv) {
     return drift.length === 0 ? EXIT_PASS : EXIT_VERIFY;
   }
 
-  // validate/qualify/up：registry 与 refs 目录必须先可读（fail-closed，绝不静默降级为空规则）。
-  const registryFile = opts.registry ?? DEFAULT_REGISTRY;
-  const refsFile = opts.refs ?? DEFAULT_REFS;
-  let registry;
-  let refsDoc;
-  try {
-    registry = JSON.parse(fs.readFileSync(registryFile, 'utf8'));
-  } catch (err) {
-    return failInput(`registry unreadable: ${redactHostPaths(err.message)}`);
-  }
-  try {
-    refsDoc = JSON.parse(fs.readFileSync(refsFile, 'utf8'));
-  } catch (err) {
-    return failInput(`refs catalog unreadable (${displayPath(refsFile)}): ${redactHostPaths(err.message)}`);
-  }
-  const dir = opts.dir ?? DEFAULT_DIR;
-  const { files, missing, unparseable } = loadDomainFiles(dir);
-  if (missing.length > 0) return failInput(`domain files missing (${displayPath(dir)}): ${missing.join(', ')}`);
-  if (unparseable.length > 0) return failInput(`domain files unparseable: ${unparseable.join('; ')}`);
-
   if (command === 'validate') {
-    const { violations, catalogGaps } = validateDomain({ registry, refsDoc, files });
+    const { violations, catalogGaps } = admission;
     const rolePolicy = JSON.parse(files.get('role-policy.json'));
     const authority = JSON.parse(files.get('authority-registration.example.json'));
     const lock = JSON.parse(files.get('image.lock.json'));
+    if (violations.length) {
+      print({ interface: 'RunnerInfra.v1', command, ready: false, ok: false,
+        violations: violations.map(({ code, at }) => ({ code, at })), catalogGaps });
+      return EXIT_VERIFY;
+    }
     print({
       interface: 'RunnerInfra.v1',
       command: 'validate',
+      composeParser: admission.composeParser,
       registry: displayPath(registryFile),
       refs: displayPath(refsFile),
       dir: displayPath(dir),
@@ -994,11 +1268,16 @@ async function main(argv) {
 
   if (command === 'qualify' || command === 'up') {
     // 单一事实源：violations 与 catalog 缺口来自同一 validateDomain 结果，validate/qualify/up 共享。
-    const { violations, catalogGaps } = validateDomain({ registry, refsDoc, files });
+    const { violations, catalogGaps } = admission;
     const qualification = buildQualification({ registryFile, dir, files, violations, catalogGaps });
     if (command === 'qualify') {
       print(qualification);
       return qualification.ready ? EXIT_PASS : EXIT_VERIFY;
+    }
+    if (!qualification.ready) {
+      print({ interface: 'Qualification.v1', command: 'up', domain: 'comet-runner', refused: true, ready: false, executed: false,
+        status: 'UNVERIFIED', error: qualification.unreadyComponents.length ? 'UP_REFUSED_RUNNER_LOCK_NOT_READY' : 'UP_REFUSED_RUNNER_NOT_QUALIFIED', receipt: qualification });
+      return EXIT_VERIFY;
     }
     if (qualification.unreadyComponents.length > 0) {
       print({
@@ -1053,4 +1332,172 @@ async function main(argv) {
   return failInput(`unknown command: ${command}`);
 }
 
-process.exit(await main(process.argv.slice(2)));
+const PROCESS_INSPECT = '{"id":{{json .Id}},"name":{{json .Name}},"image":{{json .Image}},"state":{{json .State.Status}},"exitCode":{{json .State.ExitCode}},"user":{{json .Config.User}},"cwd":{{json .Config.WorkingDir}},"readOnly":{{json .HostConfig.ReadonlyRootfs}},"privileged":{{json .HostConfig.Privileged}},"capDrop":{{json .HostConfig.CapDrop}},"capAdd":{{json .HostConfig.CapAdd}},"securityOpt":{{json .HostConfig.SecurityOpt}},"network":{{json .HostConfig.NetworkMode}},"project":{{json (index .Config.Labels "sdd.project")}},"authority":{{json (index .Config.Labels "sdd.authority")}},"workspace":{{json (index .Config.Labels "sdd.workspace")}},"execution":{{json (index .Config.Labels "sdd.execution")}},"run":{{json (index .Config.Labels "sdd.run")}},"registration":{{json (index .Config.Labels "sdd.registration")}},"mounts":[{{range $i,$m := .Mounts}}{{if $i}},{{end}}{"type":{{json $m.Type}},"name":{{json $m.Name}},"destination":{{json $m.Destination}},"rw":{{json $m.RW}}}{{end}}]}';
+const IMAGE_INSPECT = '{"id":{{json .Id}},"os":{{json .Os}},"architecture":{{json .Architecture}},"sdk":{{json (index .Config.Labels "sdd.sdk")}},"bootstrap":{{json (index .Config.Labels "sdd.bootstrap")}}}';
+const VOLUME_INSPECT = '{"name":{{json .Name}},"driver":{{json .Driver}},"hasOptions":{{if .Options}}true{{else}}false{{end}},"project":{{json (index .Labels "sdd.project")}},"authority":{{json (index .Labels "sdd.authority")}},"workspace":{{json (index .Labels "sdd.workspace")}}}';
+
+// Only the fixed P1_3 host constructs this driver. Registration/current action
+// are protected data, never fields selected by worker JSON or an environment.
+// The driver signs nothing and stores no Run/phase/queue/retry state.
+export function createCliJobDriver(options = {}) {
+  const fail = (code) => { const error = new Error(code); error.code = code; throw error; };
+  if (!isObject(options) || !isObject(options.registration)) fail('REGISTRATION_REQUIRED');
+  const registration = structuredClone(options.registration);
+  const { authority, dockerExecutable, dockerSha256 } = options;
+  const name = (value) => typeof value === 'string' && /^[a-z0-9][a-z0-9_.-]{0,95}$/.test(value);
+  const hash = (value) => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+  if (registration.schemaVersion !== 1 || registration.project !== 'sdd-harness-pilot'
+    || !nonBlank(registration.authorityId) || !nonBlank(registration.workspaceId)
+    || !name(registration.namespace) || !registration.namespace.startsWith('sdd-harness-i02-')
+    || !nonBlank(registration.engineId) || !name(registration.dockerContext)
+    || !DIGEST_RE.test(registration.imageDigest ?? '') || !hash(registration.sdkFingerprint) || !hash(registration.bootstrapDigest)
+    || !isObject(registration.controlVolumes) || !Array.isArray(registration.roles) || registration.roles.length < 6) fail('REGISTRATION_INVALID');
+  const volume = (value) => name(value) && value.startsWith(registration.namespace + '_');
+  const ids = new Set(), roles = new Set();
+  for (const role of registration.roles) {
+    if (!isObject(role) || !name(role.id) || ids.has(role.id) || !nonBlank(role.actionRole)
+      || !RUNNER_ROLES.includes(role.containerRole) || !nonBlank(role.principalId) || !volume(role.workspaceVolume)) fail('REGISTRATION_INVALID');
+    ids.add(role.id); roles.add(role.containerRole);
+  }
+  if (RUNNER_ROLES.some((role) => !roles.has(role)) || ['state', 'receipts', 'issuance'].some((key) => !volume(registration.controlVolumes[key]))) fail('REGISTRATION_INVALID');
+  const controlNames = Object.values(registration.controlVolumes);
+  const workspaces = registration.roles.map((role) => role.workspaceVolume);
+  if (controlNames.length !== 3 || new Set([...controlNames, ...workspaces]).size !== controlNames.length + workspaces.length) fail('REGISTRATION_INVALID');
+  for (const role of registration.roles) if (registration.roles.some((other) => other.containerRole !== role.containerRole && other.principalId === role.principalId)) fail('REGISTRATION_INVALID');
+  if (!authority || typeof authority.verifyDispatch !== 'function') fail('AUTHORITY_REQUIRED');
+  if (typeof dockerExecutable !== 'string' || !path.isAbsolute(dockerExecutable) || !hash(dockerSha256)) fail('DOCKER_TOOL_BINDING_REQUIRED');
+  const registrationDigest = envelopeDigest(registration);
+  const childEnvironment = Object.fromEntries(['PATH', 'HOME', 'LANG', 'TMPDIR'].filter((key) => typeof process.env[key] === 'string').map((key) => [key, process.env[key]]));
+  const call = (args) => {
+    try { if (sha256Text(fs.readFileSync(dockerExecutable)) !== dockerSha256) fail('DOCKER_TOOL_CHANGED'); }
+    catch { fail('DOCKER_TOOL_UNVERIFIED'); }
+    const result = spawnSync(dockerExecutable, ['--context', registration.dockerContext, ...args], {
+      encoding: 'utf8', env: childEnvironment, timeout: 10_000, maxBuffer: 1024 * 1024,
+    });
+    if (result.error || result.signal || result.status !== 0) fail('DOCKER_OPERATION_UNVERIFIED');
+    return result.stdout.trim();
+  };
+  const json = (args) => { try { return JSON.parse(call(args)); } catch { fail('DOCKER_METADATA_UNVERIFIED'); } };
+  const authorize = (request) => {
+    if (!isObject(request) || !isObject(request.job) || !isObject(request.dispatch)) fail('JOB_INPUT_INVALID');
+    const { job, dispatch, currentActionBinding } = request;
+    const parsed = parseContract('SDD.Delivery.ActionBinding', currentActionBinding);
+    if (!parsed.ok || authority.verifyDispatch(dispatch)?.ok !== true
+      || envelopeDigest(dispatch.actionBinding) !== envelopeDigest(parsed.value)) fail('CURRENT_DISPATCH_REQUIRED');
+    const action = parsed.value;
+    if (Object.keys(job).sort().join(',') !== 'argv,execution,run,schemaVersion' || job.schemaVersion !== 1
+      || job.execution !== action.execution || job.run !== action.run || !Array.isArray(job.argv) || job.argv.length < 1 || job.argv.length > 64
+      || job.argv.some((arg) => typeof arg !== 'string' || arg.length > 4096 || arg.includes('\0'))
+      || Buffer.byteLength(JSON.stringify(job)) > 65_536) fail('JOB_INPUT_INVALID');
+    const bound = (key, digest) => action.inputs.some((input) => input.name === key && input.digest === digest);
+    if (!bound('runner-job', envelopeDigest(job)) || !bound('runner-registration', registrationDigest)) fail('JOB_BINDING_MISMATCH');
+    const binding = action.inputs.find((input) => input.name === 'runner-role-binding');
+    const selected = registration.roles.filter((role) => envelopeDigest(role) === binding?.digest && role.actionRole === action.role);
+    if (selected.length !== 1) fail('ROLE_BINDING_REQUIRED');
+    const role = selected[0];
+    return { job, dispatch, action, role, name: registration.namespace + '-' + role.id };
+  };
+  const roleMounts = (grant) => [[grant.role.workspaceVolume, '/workspace'], ...(grant.role.containerRole === 'controller'
+    ? ['state', 'receipts', 'issuance'].map((key) => [registration.controlVolumes[key], '/comet/' + key]) : [])];
+  const checkEngine = () => { if (json(['info', '--format', '{{json .ID}}']) !== registration.engineId) fail('DOCKER_ENGINE_MISMATCH'); };
+  const inspect = (grant, id) => {
+    if (typeof id !== 'string' || !/^[a-f0-9]{64}$/.test(id)) fail('PROCESS_HANDLE_INVALID');
+    const value = json(['inspect', id, '--format', PROCESS_INSPECT]);
+    if (!isObject(value) || value.id !== id || value.name !== '/' + grant.name || value.image !== registration.imageDigest
+      || value.project !== registration.project || value.authority !== registration.authorityId || value.workspace !== registration.workspaceId
+      || value.execution !== grant.action.execution || value.run !== grant.action.run || value.registration !== registrationDigest
+      || value.user !== '10001:10001' || value.cwd !== (grant.role.containerRole === 'controller' ? '/comet/state/project' : '/workspace') || value.readOnly !== true || value.privileged !== false
+      || !Array.isArray(value.capDrop) || value.capDrop.length !== 1 || value.capDrop[0] !== 'ALL'
+      || value.capAdd !== null && (!Array.isArray(value.capAdd) || value.capAdd.length)
+      || !Array.isArray(value.securityOpt) || !value.securityOpt.includes('no-new-privileges:true') || value.network !== 'none') fail('PROCESS_SCOPE_MISMATCH');
+    const expected = roleMounts(grant), mounts = value.mounts;
+    if (!Array.isArray(mounts) || mounts.some((item) => !isObject(item) || (item.type !== 'volume' && !(item.type === 'tmpfs' && ['/tmp', '/home/comet'].includes(item.destination))))
+      || mounts.filter((item) => item.type === 'volume').length !== expected.length
+      || expected.some(([source, target]) => mounts.filter((item) => item.type === 'volume' && item.name === source && item.destination === target && item.rw === true).length !== 1)) fail('PROCESS_SCOPE_MISMATCH');
+    return value;
+  };
+  const find = (grant) => {
+    const output = call(['container', 'ls', '--all', '--no-trunc', '--filter', 'name=^/' + grant.name + '$', '--format', '{{json .ID}}']);
+    if (!output) return null;
+    const lines = output.split('\n');
+    if (lines.length !== 1) fail('PROCESS_SCOPE_AMBIGUOUS');
+    let id; try { id = JSON.parse(lines[0]); } catch { fail('DOCKER_METADATA_UNVERIFIED'); }
+    return inspect(grant, id);
+  };
+  const handle = (grant, value) => Object.freeze({ containerId: value.id, execution: grant.action.execution, run: grant.action.run,
+    roleBindingId: grant.role.id, registrationDigest });
+  const observe = (grant, original) => {
+    if (!isObject(original) || original.execution !== grant.action.execution || original.run !== grant.action.run
+      || original.roleBindingId !== grant.role.id || original.registrationDigest !== registrationDigest) fail('PROCESS_HANDLE_INVALID');
+    checkEngine();
+    const value = inspect(grant, original.containerId);
+    return { scope: 'component/physical-process', managedClosureEligible: false, handle: handle(grant, value), observation: value };
+  };
+  return Object.freeze({
+    registrationDigest,
+    startCliJob(request) {
+      const grant = authorize(request);
+      checkEngine();
+      const image = json(['image', 'inspect', registration.imageDigest, '--format', IMAGE_INSPECT]);
+      if (!isObject(image) || image.id !== registration.imageDigest || image.os !== 'linux' || image.architecture !== 'arm64'
+        || image.sdk !== registration.sdkFingerprint || image.bootstrap !== registration.bootstrapDigest) fail('IMAGE_BINDING_MISMATCH');
+      let existing = find(grant);
+      const resumed = Boolean(existing);
+      if (existing && existing.state !== 'created') return { ...observe(grant, handle(grant, existing)), resumed: true, terminal: null };
+      if (!existing) {
+        const mounts = roleMounts(grant);
+        for (const [source] of mounts) {
+          const value = json(['volume', 'inspect', source, '--format', VOLUME_INSPECT]);
+          if (!isObject(value) || value.name !== source || value.driver !== 'local' || value.hasOptions !== false
+            || value.project !== registration.project || value.authority !== registration.authorityId || value.workspace !== registration.workspaceId) fail('VOLUME_BINDING_MISMATCH');
+        }
+        const labels = { project: registration.project, authority: registration.authorityId, workspace: registration.workspaceId,
+          execution: grant.action.execution, run: grant.action.run, registration: registrationDigest };
+        const args = ['create', '--name', grant.name, '--pull=never', '--interactive', '--read-only', '--user', '10001:10001',
+          '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges:true', '--network', 'none', '--pids-limit', '128', '--memory', '1g', '--cpus', '1',
+          '--workdir', grant.role.containerRole === 'controller' ? '/comet/state/project' : '/workspace',
+          '--tmpfs', '/tmp:rw,noexec,nosuid,size=64m,uid=10001,gid=10001', '--tmpfs', '/home/comet:rw,noexec,nosuid,size=64m,uid=10001,gid=10001'];
+        for (const [key, value] of Object.entries(labels)) args.push('--label', 'sdd.' + key + '=' + value);
+        for (const [source, target] of mounts) args.push('--mount', `type=volume,source=${source},target=${target},volume-nocopy`);
+        args.push('--entrypoint', '/usr/local/bin/node', registration.imageDigest, '/opt/sdd/runner-host.mjs');
+        const id = call(args); existing = inspect(grant, id);
+      }
+      if (existing.state !== 'created') fail('PROCESS_START_UNKNOWN');
+      const original = handle(grant, existing);
+      const child = spawn(dockerExecutable, ['--context', registration.dockerContext, 'start', '--attach', '--interactive', existing.id],
+        { env: childEnvironment, stdio: ['pipe', 'pipe', 'pipe'] });
+      const stdout = [], stderr = []; let size = 0, overflow = false;
+      const collect = (chunks) => (data) => { size += data.length; if (size <= 8 * 1024 * 1024) chunks.push(Buffer.from(data)); else overflow = true; };
+      child.stdout.on('data', collect(stdout)); child.stderr.on('data', collect(stderr));
+      child.stdin.on('error', () => {});
+      const terminal = new Promise((resolve) => {
+        const finish = (code, signal, failed = false) => resolve({ scope: 'component/physical-process', managedClosureEligible: false,
+          handle: original, clientProcessId: child.pid ?? null, clientExitCode: code, signal, status: failed || overflow ? 'UNVERIFIED' : 'CLIENT_TERMINAL',
+          stdoutBytes: Buffer.concat(stdout), stderrBytes: Buffer.concat(stderr), outputTruncated: overflow });
+        child.once('error', () => finish(null, null, true)); child.once('close', (code, signal) => finish(code, signal));
+      });
+      child.stdin.end(JSON.stringify({ dispatch: grant.dispatch, job: grant.job }) + '\n');
+      return { scope: 'component/physical-process', managedClosureEligible: false, handle: original, resumed, clientProcessId: child.pid ?? null, terminal };
+    },
+    observeCliJob(request) {
+      const grant = authorize(request);
+      return observe(grant, request.handle);
+    },
+    stopCliJob(request) {
+      const grant = authorize(request);
+      const before = observe(grant, request.handle);
+      if (before.observation.state === 'running') call(['stop', '--time', '5', before.handle.containerId]);
+      const after = observe(grant, request.handle);
+      if (after.observation.state === 'running') fail('PROCESS_STOP_UNVERIFIED');
+      return after;
+    },
+  });
+}
+
+let isCli = false;
+try { isCli = Boolean(process.argv[1]) && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url)); }
+catch { /* imported code has no CLI entry; no caller-selected module is loaded */ }
+if (isCli) {
+  try { process.exitCode = await main(process.argv.slice(2)); }
+  catch { print({ interface: 'RunnerInfra.v1', status: 'INTERNAL_FAILURE', ready: false, executed: false, code: 'INTERNAL_FAILURE', error: 'runner operation failed' }); process.exitCode = EXIT_VERIFY; }
+}

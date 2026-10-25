@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "interface": "RoleBoundary.v1",
   "project": "sdd-harness-pilot",
-  "note": "六角色边界（controller/author/test-author/reviewer/publisher/isolator）：独立 principal、独立卷、独立凭据作用域；只读根文件系统、最小能力、internal 网络。运行时强制（真实 UID/挂载/负向写）属真实 Runner 阶段（probe role-denial），本文件固定结构声明。worker 无 Docker socket、宿主 HOME、控制状态/策略/回执/签发材料读写权。",
+  "note": "Six declared role boundaries. Labels are expected bindings, not verified runtime principals, credentials or method application. Only the fixed controller registry and original signed current ActionBinding select a process; ordinary job JSON/env cannot choose identity, image, volumes or consumer.",
   "roles": [
     {
       "role": "controller",
@@ -152,13 +152,13 @@
       "ref": "secret-ref:sdd-harness-pilot/worker-author-api",
       "bindingRole": "author",
       "tier": "worker",
-      "note": "author 受管 API 凭据；I01 目录未登记（缺口由 validate 显式上报）"
+      "note": "I01 catalog registers this purpose-bound reference; it is not provisioned or currently authorized for runtime use."
     },
     {
       "ref": "secret-ref:sdd-harness-pilot/worker-review-api",
       "bindingRole": "reviewer",
       "tier": "worker",
-      "note": "reviewer 受管 API 凭据；I01 目录未登记（缺口由 validate 显式上报）"
+      "note": "I01 catalog registers this purpose-bound reference; it is not provisioned or currently authorized for runtime use."
     }
   ],
   "methodStateScope": {
@@ -190,11 +190,18 @@
         "injectionObservation": "注入观察（上下文实际送达/遵守的独立观察，与资产摘要分开记录）"
       },
       "runtimeBinding": {
-        "note": "P2_4 运行时绑定声明：可信派发要求 dispatch.generation==当前代且由回执记录、role==dispatch 指定角色、inputDigest==本次派发方法资产的 sha256；普通 agent 不可构造可信 dispatch 身份（env 角色字符串或同主体签名均不成立）。真实派发观察前保持 UNVERIFIED",
+        "note": "Original Native generation/revision, dispatched role and current inputDigest/policyDigest/attempt/epoch bind the execution. inputDigest is the current gate input; pinned method digests remain separate ActionBinding.methods fields. Shared mode labels are not identity or permission evidence. Actual process, principal and method injection require independent qualification.",
         "fields": [
           "generation",
+          "revision",
           "role",
-          "inputDigest"
+          "inputDigest",
+          "policyDigest",
+          "attempt",
+          "epoch",
+          "environmentDigest",
+          "workPackage",
+          "methods"
         ],
         "status": "UNVERIFIED"
       },

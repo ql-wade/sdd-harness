@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "interface": "RunnerImageLock.v1",
   "project": "sdd-harness-pilot",
-  "note": "Runner 镜像由固定 Comet 源 + 项目完整补丁链构建：sourceInputs 逐字镜像当前 integrations/comet/upstream.lock.json（六补丁 + 工具链 + 指纹 d4370930…现算）并附 P1_1 openspec 钉定 tarball；本宿主无 container daemon（EPERM），容器化构建从未执行，无任何已认证 digest——reference/digest 保持 null，严禁虚构（images_policy.invented_tags_or_digests=false）。每个组件必须经认证 digest 后才允许 up。",
+  "note": "Current construction candidate consumes the exact controller-approved Comet source/patch/toolchain lock. Prior d437 image and startup observations are retained under historicalBuilds; they do not qualify this candidate or authorize runtime/model/publication actions.",
   "sourceInputs": {
     "lockRef": "integrations/comet/upstream.lock.json",
     "sourceCommit": "c90af44a4474662d7853aae76ce785404974fb0a",
@@ -11,27 +11,27 @@
     "patches": [
       {
         "path": "integrations/comet/patches/0001-matt-method-profile.patch",
-        "sha256": "56581963fa2222f79a31db61a569c4e289890c890003895fd5d973849ff008e9"
+        "sha256": "14a93e69f98b4f35080cd5c0b7666cea2a7e95ce73e66c4aebefd400ee66d15b"
       },
       {
         "path": "integrations/comet/patches/tests/1_6.patch",
-        "sha256": "de09de41adad8ea8f56e67a4a8d866e3cf2af86309acba98059e6a7ba9163f90"
+        "sha256": "8edd518897a035617b20e9fba9a4179a618efe45c0b2a92e72d48dab242e1ec9"
       },
       {
         "path": "integrations/comet/patches/0002-managed-delivery-runtime.patch",
-        "sha256": "47d2eebd57d4b8735a54333b0bf79a93c8812ae9037be9b9d0e141a9d5b38b16"
+        "sha256": "214d65ccabbcb2e2e460ffa5e6958677c80c4d6495447cc4c82e5f2947e756cb"
       },
       {
         "path": "integrations/comet/patches/tests/2_4.patch",
-        "sha256": "3b8aab434d0af664e6aca656bcdaaae1da1f80145d17ba99e0a2f01c0219545e"
+        "sha256": "09d645fdec9ebdc8c71fcaf13be91c450abce489e5b22121bb87d37b7f442ac7"
       },
       {
         "path": "integrations/comet/patches/0003-post-archive-closeout.patch",
-        "sha256": "f89fe71da11d356d7f4abf839273024e7094ae04dd301d3abc6d342147f33783"
+        "sha256": "b266706c207ae09db17e4a2e005dd42e785d99d84800af244da020a835c0bd2e"
       },
       {
         "path": "integrations/comet/patches/tests/4_6.patch",
-        "sha256": "49441b359e27c8a21948db6b14ae666ab89e1adc790cfbadbb511d02367f777e"
+        "sha256": "34b3f1efd748296fae4da953f9032ad1f061c3423a49fc6c454958f86d50c0f5"
       }
     ],
     "toolchain": {
@@ -42,10 +42,10 @@
     "prepareTool": "tools/comet/prepare-source.mjs",
     "buildTool": "tools/comet/build.mjs",
     "buildContract": "toolchain-baseline.json extension_delivery：受控源分布，fingerprint 固定 archive+patches+toolchain，每次重建按 manifest 校验",
-    "hostBuildFingerprint": "d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6",
-    "hostBuildEvidence": "P2_4 集成后按当前 upstream.lock 六补丁链现算指纹 d4370930…（archive+patches+toolchain，与 tools/comet/build.mjs fingerprintOf 同算法）；该指纹的隔离重建已落地主树 .sdd/vendor/comet/c90af44a…/builds/d4370930…/distribution.json（node 24.15.0 / pnpm 10.18.3）并经 build.mjs --check-generated 验证；容器化构建仍未执行，与本指纹无关",
-    "containerBuildStatus": "VERIFIED",
-    "containerBuildReason": "本宿主 docker daemon 不可达（EPERM）；容器内构建与 digest 认证只能在具备 daemon 的准入环境执行",
+    "hostBuildFingerprint": "6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a",
+    "hostBuildEvidence": "Controller-accepted P2_4 ddb7849 official6da construction artifact; actual current image/runtime qualification remains pending. Source/patch/toolchain equality is verified mechanically, not a role or credential grant.",
+    "containerBuildStatus": "UNVERIFIED",
+    "containerBuildReason": "This current source/patch candidate has not been built or independently read back in the current Runner image. Historical Docker observations do not qualify it.",
     "openspec": {
       "package": "@fission-ai/openspec",
       "version": "1.11.0",
@@ -54,18 +54,9 @@
       "tarballBytes": 471694,
       "pinBasis": "P1_1 验证并钉定的隔离兼容候选（P1_5 classic 闭合谓词消费）；绝不浮动升级、绝不宿主全局安装"
     },
-    "containerBuildEvidence": "terminal channel S0-S3: build rc=0 (python3/git/pnpm 10.18.3 补齐后), deterministic entrypoint readback S2.3 PASS (readlink==fingerprint path, --version 0.4.5), digest backfilled 4dfd24ed…",
+    "containerBuildEvidence": null,
     "containerStartupStatus": "UNVERIFIED",
-    "containerStartupNote": "六角色容器 created+started 后 exit 1（bare compose 无角色运行上下文/authority refs 未 provisioning——预期行为非缺陷）; 角色探针/正向链 holder=I01 refs 准入+运行上下文注入",
-    "containerStartupDetail": {
-      "executed_at": "2026-10-23",
-      "finding": "S5 已执行: 六容器创建+Started 后即退出——镜像 runner CLI 无 daemon/serve 模式, :7300 控制面 HTTP 服务在当前构建中不存在(全仓无该 API 定义, 架构发现); S6 角色边界矩阵以 compose 等旗标 one-shot 实测全过(六容器 inspect: controller 独占控制卷/worker 仅各自 workspace/全员 comet+只读根+caps ALL drop+no-new-privs; 负向写: worker 控制路径 EROFS/docker.sock 不存在//usr EROFS/各自 workspace OK; controller 控制卷写 OK)",
-      "evidence": "worker-reports/I02-rework/evidence/s5-*.txt s6-*.txt",
-      "remaining_holders": {
-        "S7_positive_chain": "I01 四 runner ref 真实 provisioning(用户裁决 PUBLISHER_ISOLATOR_CREDS)",
-        "S8_duplicate_authority": "经 S7 产生权威状态卷后执行"
-      }
-    }
+    "containerStartupNote": "CLI jobs require an original registered authority/current work package and qualified execution source. No daemon/HTTP7300 is assumed."
   },
   "resolution": {
     "lockSource": "infra/delivery/runner/image.lock.json",
@@ -78,23 +69,21 @@
     "rule": "compose 与 Dockerfile 的镜像引用一律经由本锁解析注入；本锁未 ready 时 tools/infra/runner.mjs up 必须拒绝"
   },
   "upGate": {
-    "enabled": true,
+    "enabled": false,
     "requireAllComponentsAuthenticated": true,
-    "reason": "S2/S3 真实构建与 digest 回填完成；准入为本地构建镜像（六补丁链 digest 校验）",
-    "admittedBy": "user directive 2026-10-22: 端到端执行授权（\"你可以端到端执行吧\"）",
-    "admittedAt": "2026-10-22T12:10:00.000Z"
+    "reason": "Current candidate requires exact image/source readback, protected authority registration and purpose-bound execution eligibility. Pending newer SDK must be formally bound by the controller before enablement."
   },
   "components": [
     {
       "component": "comet-runner",
       "role": "runner-image",
       "required": true,
-      "reference": "comet-runner:locked-local",
-      "digest": "sha256:4dfd24ed0677d401f202c2ab70f1115ca074d7038e143c10e75eea4b51c91b13",
-      "digestAuthenticated": true,
-      "selectionStatus": "SELECTED_LOCAL_BUILD",
+      "reference": null,
+      "digest": null,
+      "digestAuthenticated": false,
+      "selectionStatus": "UNBUILT_CURRENT_CANDIDATE",
       "status": "UNVERIFIED",
-      "reason": "S2 真实容器化构建产物（terminal channel S0-S3）；fingerprint d4370930… 构建内确定性入口回读一致（S2.3 readlink+version 0.4.5 rc=0）"
+      "reason": "The historical d437 image is not the current SDK/source candidate; a new exact build/readback is required."
     },
     {
       "component": "runner-base",
@@ -106,6 +95,101 @@
       "selectionStatus": "SELECTED",
       "status": "UNVERIFIED",
       "reason": "node:24.15.0-bookworm-slim digest-pinned（P1_1 toolchain-baseline node 24.15.0 一致）"
+    }
+  ],
+  "historicalBuilds": [
+    {
+      "scope": "historical-only; never current qualification or authorization",
+      "recordedSourceFileSha256": "ffbe25c51475e22f0a93177de246be85f783340699497c375fa1f7db48339f2a",
+      "snapshot": {
+        "note": "Runner 镜像由固定 Comet 源 + 项目完整补丁链构建：sourceInputs 逐字镜像当前 integrations/comet/upstream.lock.json（六补丁 + 工具链 + 指纹 d4370930…现算）并附 P1_1 openspec 钉定 tarball；本宿主无 container daemon（EPERM），容器化构建从未执行，无任何已认证 digest——reference/digest 保持 null，严禁虚构（images_policy.invented_tags_or_digests=false）。每个组件必须经认证 digest 后才允许 up。",
+        "sourceInputs": {
+          "lockRef": "integrations/comet/upstream.lock.json",
+          "sourceCommit": "c90af44a4474662d7853aae76ce785404974fb0a",
+          "archiveSha256": "28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f",
+          "archiveBytes": 40474019,
+          "patches": [
+            {
+              "path": "integrations/comet/patches/0001-matt-method-profile.patch",
+              "sha256": "14a93e69f98b4f35080cd5c0b7666cea2a7e95ce73e66c4aebefd400ee66d15b"
+            },
+            {
+              "path": "integrations/comet/patches/tests/1_6.patch",
+              "sha256": "8edd518897a035617b20e9fba9a4179a618efe45c0b2a92e72d48dab242e1ec9"
+            },
+            {
+              "path": "integrations/comet/patches/0002-managed-delivery-runtime.patch",
+              "sha256": "214d65ccabbcb2e2e460ffa5e6958677c80c4d6495447cc4c82e5f2947e756cb"
+            },
+            {
+              "path": "integrations/comet/patches/tests/2_4.patch",
+              "sha256": "09d645fdec9ebdc8c71fcaf13be91c450abce489e5b22121bb87d37b7f442ac7"
+            },
+            {
+              "path": "integrations/comet/patches/0003-post-archive-closeout.patch",
+              "sha256": "b266706c207ae09db17e4a2e005dd42e785d99d84800af244da020a835c0bd2e"
+            },
+            {
+              "path": "integrations/comet/patches/tests/4_6.patch",
+              "sha256": "34b3f1efd748296fae4da953f9032ad1f061c3423a49fc6c454958f86d50c0f5"
+            }
+          ],
+          "toolchain": {
+            "node": "24.15.0",
+            "pnpm": "10.18.3",
+            "pythonMinimum": "3.12"
+          },
+          "prepareTool": "tools/comet/prepare-source.mjs",
+          "buildTool": "tools/comet/build.mjs",
+          "buildContract": "toolchain-baseline.json extension_delivery：受控源分布，fingerprint 固定 archive+patches+toolchain，每次重建按 manifest 校验",
+          "hostBuildFingerprint": "6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a",
+          "hostBuildEvidence": "Controller-accepted P2_4 ddb7849 official6da construction artifact; actual current image/runtime qualification remains pending. Source/patch/toolchain equality is verified mechanically, not a role or credential grant.",
+          "containerBuildStatus": "UNVERIFIED",
+          "containerBuildReason": "This current source/patch candidate has not been built or independently read back in the current Runner image. Historical Docker observations do not qualify it.",
+          "openspec": {
+            "package": "@fission-ai/openspec",
+            "version": "1.11.0",
+            "tarballSha256": "84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f",
+            "registryTarball": "https://registry.npmmirror.com/@fission-ai/openspec/-/openspec-1.11.0.tgz",
+            "tarballBytes": 471694,
+            "pinBasis": "P1_1 验证并钉定的隔离兼容候选（P1_5 classic 闭合谓词消费）；绝不浮动升级、绝不宿主全局安装"
+          },
+          "containerBuildEvidence": null,
+          "containerStartupStatus": "UNVERIFIED",
+          "containerStartupNote": "CLI jobs require an original registered authority/current work package and qualified execution source. No daemon/HTTP7300 is assumed."
+        },
+        "upGate": {
+          "enabled": true,
+          "requireAllComponentsAuthenticated": true,
+          "reason": "S2/S3 真实构建与 digest 回填完成；准入为本地构建镜像（六补丁链 digest 校验）",
+          "admittedBy": "user directive 2026-10-22: 端到端执行授权（\"你可以端到端执行吧\"）",
+          "admittedAt": "2026-10-22T12:10:00.000Z"
+        },
+        "components": [
+          {
+            "component": "comet-runner",
+            "role": "runner-image",
+            "required": true,
+            "reference": null,
+            "digest": null,
+            "digestAuthenticated": false,
+            "selectionStatus": "UNBUILT_CURRENT_CANDIDATE",
+            "status": "UNVERIFIED",
+            "reason": "The historical d437 image is not the current SDK/source candidate; a new exact build/readback is required."
+          },
+          {
+            "component": "runner-base",
+            "role": "base-image",
+            "required": true,
+            "reference": "node@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d",
+            "digest": "sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d",
+            "digestAuthenticated": true,
+            "selectionStatus": "SELECTED",
+            "status": "UNVERIFIED",
+            "reason": "node:24.15.0-bookworm-slim digest-pinned（P1_1 toolchain-baseline node 24.15.0 一致）"
+          }
+        ]
+      }
     }
   ]
 }

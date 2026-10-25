@@ -1,0 +1,271 @@
+{
+  "schema_version": "test-authoring/v1",
+  "mode": "automate",
+  "status": "ready_for_acceptance",
+  "project_root": "<repo>",
+  "scope": "I02 context tree construction rework author pack only; no whole/runtime acceptance",
+  "basis": [
+    {
+      "id": "R_I02",
+      "kind": "requirement",
+      "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
+      "sha256": "2ca7fb9c9fe50f96ebcdc9b159cf907cc0e1f26f45adf05a0e03b9bfa406d6a1"
+    },
+    {
+      "id": "S_RUNNER",
+      "kind": "source",
+      "path": "tools/infra/runner.mjs",
+      "sha256": "528930d243b6e45a1d0d3242cfa6e4691ac97420ff527a04217a3698c9897caf"
+    },
+    {
+      "id": "S_TEST",
+      "kind": "source",
+      "path": "test/infra-runner-isolation.test.js",
+      "sha256": "058b63279df7ce61f73f244d3e33e6d5e0734d12fc16b840a4232f653aaec6b8"
+    },
+    {
+      "id": "R_CONTEXT_REWORK",
+      "kind": "requirement",
+      "path": "worker-reports/I02-convergence-current/rework-context-tree-r1/SPEC-REVIEW.md",
+      "sha256": "8d7f3d792e33c6e032788ed330bca9de43dbcb148c29270f12b66478b6b87d60"
+    }
+  ],
+  "requirements": [
+    "R_I02",
+    "R_CONTEXT_REWORK"
+  ],
+  "dimensions": {
+    "Journey-A": {
+      "required": true,
+      "reason": "Finite exact-context rule/privacy/persistence/CLI/idempotency/configuration/regression construction only.",
+      "basis_ids": [
+        "R_I02",
+        "R_CONTEXT_REWORK"
+      ],
+      "case_ids": [
+        "I02-CONTEXT"
+      ]
+    },
+    "Journey-B": {
+      "required": false,
+      "reason": "This CLI/context patch owns no browser/UI interaction.",
+      "basis_ids": [
+        "R_I02",
+        "R_CONTEXT_REWORK"
+      ],
+      "case_ids": []
+    },
+    "Journey-C": {
+      "required": false,
+      "reason": "This CLI/context patch owns no browser/UI interaction.",
+      "basis_ids": [
+        "R_I02",
+        "R_CONTEXT_REWORK"
+      ],
+      "case_ids": []
+    },
+    "Journey-D": {
+      "required": true,
+      "reason": "Finite exact-context rule/privacy/persistence/CLI/idempotency/configuration/regression construction only.",
+      "basis_ids": [
+        "R_I02",
+        "R_CONTEXT_REWORK"
+      ],
+      "case_ids": [
+        "I02-CONTEXT"
+      ]
+    },
+    "Journey-E": {
+      "required": true,
+      "reason": "Finite exact-context rule/privacy/persistence/CLI/idempotency/configuration/regression construction only.",
+      "basis_ids": [
+        "R_I02",
+        "R_CONTEXT_REWORK"
+      ],
+      "case_ids": [
+        "I02-CONTEXT"
+      ]
+    },
+    "Journey-F": {
+      "required": true,
+      "reason": "Finite exact-context rule/privacy/persistence/CLI/idempotency/configuration/regression construction only.",
+      "basis_ids": [
+        "R_I02",
+        "R_CONTEXT_REWORK"
+      ],
+      "case_ids": [
+        "I02-CONTEXT"
+      ]
+    },
+    "Journey-G": {
+      "required": true,
+      "reason": "Finite exact-context rule/privacy/persistence/CLI/idempotency/configuration/regression construction only.",
+      "basis_ids": [
+        "R_I02",
+        "R_CONTEXT_REWORK"
+      ],
+      "case_ids": [
+        "I02-CONTEXT"
+      ]
+    },
+    "Journey-H": {
+      "required": false,
+      "reason": "No asynchronous process termination/recovery change in this patch.",
+      "basis_ids": [
+        "R_I02",
+        "R_CONTEXT_REWORK"
+      ],
+      "case_ids": []
+    },
+    "Journey-I": {
+      "required": true,
+      "reason": "Finite exact-context rule/privacy/persistence/CLI/idempotency/configuration/regression construction only.",
+      "basis_ids": [
+        "R_I02",
+        "R_CONTEXT_REWORK"
+      ],
+      "case_ids": [
+        "I02-CONTEXT"
+      ]
+    },
+    "Journey-J": {
+      "required": true,
+      "reason": "Finite exact-context rule/privacy/persistence/CLI/idempotency/configuration/regression construction only.",
+      "basis_ids": [
+        "R_I02",
+        "R_CONTEXT_REWORK"
+      ],
+      "case_ids": [
+        "I02-CONTEXT"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "I02-CONTEXT",
+      "requirement_ids": [
+        "R_I02",
+        "R_CONTEXT_REWORK"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-D",
+        "Journey-E",
+        "Journey-F",
+        "Journey-G",
+        "Journey-I",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Exact Node24.15 and isolatedPyYAML6.0.3",
+        "Private data/externalCLI fixture only; no actualrole/OS grant",
+        "Context case needs controller-approved integrity-locked public cache; missing is nonzeroUNVERIFIED"
+      ],
+      "inputs": {
+        "scope": "generic construction only"
+      },
+      "steps": [
+        "Create a private minimal clone and export actual integrity-locked public input bytes via the public CLI.",
+        "Confirm repeated exact export preserves file mtimes.",
+        "Independently mutate15 real tree boundaries: extra .env/nested file/empty directory, bytes, file/parent/root links, dangling link, FIFO, missing file and linked parent before first export.",
+        "For both build-plan and build-plan --export-context, require exit2 CONTEXT_CONFLICT, readyfalse UNVERIFIED, no Docker command and untouched conflict; restore only owned test mutation.",
+        "Re-export the restored known tree and require materializedtrue."
+      ],
+      "oracle": {
+        "basis_id": "R_CONTEXT_REWORK",
+        "expected": "Only manifest files and their ancestor directories with matching bytes are reusable; extra paths/links/special files/byte drift fail closed without deletion or overwrite.",
+        "authority": "independent Spec report and explicit same-task rework instruction; not inferred from implementation"
+      },
+      "cleanup": [
+        "afterEach removes owned private fixture",
+        "Raw records retained; no original Run/volume/model/keys touched"
+      ],
+      "evidence_plan": [
+        "rework-context-tree-r1/run-results.json raw/display and source hashes",
+        "rework-context-tree-r1/history-preservation.json",
+        "Existing runtime-resource-plan.json remains unexecuted/ON_HOLD"
+      ],
+      "automation": {
+        "path": "test/infra-runner-isolation.test.js",
+        "sha256": "058b63279df7ce61f73f244d3e33e6d5e0734d12fc16b840a4232f653aaec6b8",
+        "test_id": "Runner materializes|Runner refuses every unlisted",
+        "command": [
+          "<node24.15>",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern",
+          "Runner materializes|Runner refuses every unlisted",
+          "test/infra-runner-isolation.test.js"
+        ]
+      }
+    }
+  ],
+  "unresolved": [],
+  "self_checks": [
+    {
+      "command": [
+        "<node24.15>",
+        "--test",
+        "--test-reporter=tap",
+        "--test-name-pattern=Runner materializes",
+        "test/infra-runner-isolation.test.js"
+      ],
+      "exit_code": 1,
+      "expected": "expected_failure",
+      "log_path": "worker-reports/I02-convergence-current/rework-context-tree-r1/evidence/red-extra/stdout.txt",
+      "log_sha256": "eff02badacb049de73e0f57a9cc67d0726fe54f1ae6cc410485e8694fd2be142"
+    },
+    {
+      "command": [
+        "<node24.15>",
+        "--test",
+        "--test-reporter=tap",
+        "--test-name-pattern=Runner refuses every unlisted",
+        "test/infra-runner-isolation.test.js"
+      ],
+      "exit_code": 1,
+      "expected": "expected_failure",
+      "log_path": "worker-reports/I02-convergence-current/rework-context-tree-r1/evidence/red-boundaries-v2/stdout.txt",
+      "log_sha256": "8c09a9310cf19b09926192b2b8604d8314aa9e816bf8ea40dc1d16de7458c7c2"
+    },
+    {
+      "command": [
+        "<node24.15>",
+        "--test",
+        "--test-reporter=tap",
+        "test/infra-runner-isolation.test.js"
+      ],
+      "exit_code": 0,
+      "expected": "pass",
+      "log_path": "worker-reports/I02-convergence-current/rework-context-tree-r1/evidence/final-owned/stdout.txt",
+      "log_sha256": "ff23c2da10e183f8d6bb5c962d662f0b39b44ac73bb0ae3ae9d61246e14abd24"
+    },
+    {
+      "command": [
+        "<node24.15>",
+        "--test",
+        "--test-reporter=tap",
+        "test/infra-registry.test.js"
+      ],
+      "exit_code": 0,
+      "expected": "pass",
+      "log_path": "worker-reports/I02-convergence-current/rework-context-tree-r1/evidence/final-related/stdout.txt",
+      "log_sha256": "d06622fd249046b87e8903fe4b5966fae731d97f17c87df671ab2ae404504454"
+    }
+  ],
+  "unverifiedRuntimeObligations": [
+    "official version binding",
+    "actual built image/source/OS/channels",
+    "actual fixed identity/model/secret/purpose eligibility",
+    "sameOriginalRun positive/recovery with qualified P1_3",
+    "all wholeI02/required acceptance"
+  ],
+  "environmentPrerequisites": {
+    "Node": "24.15.0",
+    "Python": "3.14.7 with isolated PyYAML6.0.3",
+    "PATH": "offline-bin first; exact Node and trusted Python; see run metadata",
+    "I02_ACCEPTED_ARTIFACT_ROOT": "<accepted-public-input-root> containing the exact locked PUBLIC source/OpenSpec archives; absent prerequisites must fail, never skip"
+  }
+}
