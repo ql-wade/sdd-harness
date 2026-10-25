@@ -1,6 +1,6 @@
 # Comet架构端到端核验：尚未通过
 
-当前建设代码/资产为 `master@07bf495`；P1_2排序修复源码提交为6433df6。39节点、30父任务、69工作包与唯一DAG不变。130检查/104场景总记录保留；本轮完成条件129检查/103场景，F10正向跨机器API按人决定另期，保留NOT-EXERCISED。
+当前建设代码/资产为 `master@05e36d0`；P1_2排序修复源码提交为6433df6。39节点、30父任务、69工作包与唯一DAG不变。130检查/104场景总记录保留；本轮完成条件129检查/103场景，F10正向跨机器API按人决定另期，保留NOT-EXERCISED。
 
 接纳仍为6个声明范围内节点：P0_1–P0_4文档/设计、P1_1基础工具链、P2_1共享契约。业务场景接纳0。下表是建设与支持证据，不相加充当业务验收分母。
 
@@ -15,7 +15,7 @@
 | P3_1验收器 | 主72/72；正式A01缺typed来源时NOT-EXERCISED/2、零动作；104终态绑定未冻结 | .local/comet-reset/p3_1-integration/integration-checks.json |
 | I03 Outline建设 | 双审/主43+82，零跳过，5活配置不变；模板实际编译，未改活栈 | .local/comet-reset/i03-integration/integration-checks.json |
 | P1_2分发建设 | 双审/主67/67；固定源码6433后重建资产2509；真实Git归档无Git/无node_modules，由副本自己的verifier通过；816旧缓存字节与5活配置不变 | .local/comet-reset/p1_2-convergence-integration/integration-checks.json |
-| 最新总检查 | Node24.15，785项775通过/10失败/0跳过；I04六项输入与5活配置不变；npm失败后后续YAML/JSON阶段未执行 | .local/comet-reset/i04-integration/full-check-after-root-registration/result.json |
+| 最新总检查 | Node24.15，801项791通过/10失败/0跳过；I04六项输入与5活配置不变；npm失败后后续YAML/JSON阶段未执行 | .local/comet-reset/i05-diagnostic-integration/full-check/result.json |
 | LLMWiki源码分发 | 缺席主clone已补齐固定075c；上游commit/tree、300源文件和requirements摘要匹配；不是宿主或Kp接受 | .local/comet-reset/llmwiki-distribution-install/result.json |
 | I04当前工人观察 | fixture真实SDK/同entry原生索引读回；正常原生Codex宿主发现10工具并create/read/search，1个ephemeral协议线程、无model turn/Goal/用户任务，process exit0；候选待独立审查 | 原I04工人待交当前报告；不计whole或业务通过 |
 | GitHub只读 | 账号/仓库ID匹配；远端master为cd64618、未保护、无required checks/rulesets；2条workflow启用、deployment列表为空；未写远端 | .local/comet-reset/i06-live-readonly-intake/evidence-index.json |
@@ -33,6 +33,8 @@ I05共同安全YAML解析/模板结构边界已在原挂载绕过RED后经独立
 
 只有合同13条具名建设边可以消费准确双审/主复验工件，whole义务不勾选，VERIFY无建设例外。最终仍需同一最终Comet Run跑完R/A/T/P/TDD/V、平台SHA/digest/目标终态、LLMWiki Kp、唯一OpenSpec归档、同Run Outline Kt，以及关联权限事件/周期核验、多渠道隔离、告警和原生备份恢复；129当前required、独立Whitebox/Grill及唯一Comet closeout均待完成。Goal及原监督继续，上海时区整体ETA未知。
 
-最新I05建设证据：91b08be（source4458c17），主83/83，六离线守卫+隔离PyYaml6.0.3校准；最新总检查785/775/10fail0skip，七输入/五配置不变，未新增失败身份。该建设接受不含部署、生成、真实认证/API-MCP或恢复，wholeI05仍未验。I04原703类型缺陷已由独立公开反例退回，原owner最后43项已报通过、候选待交；I06原任务已启动只读接线，不因GitHub可读授予写权。
+最新I05建设证据：91b08be（source4458c17），主83/83，六离线守卫+隔离PyYaml6.0.3校准；最新总检查801/791/10fail0skip，七输入/五配置不变，未新增失败身份。该建设接受不含部署、生成、真实认证/API-MCP或恢复，wholeI05仍未验。I04原703类型缺陷已由独立公开反例退回，原owner最后43项已报通过、候选待交；I06原任务已启动只读接线，不因GitHub可读授予写权。
 
-当前补充：I04 source6633913已双审并在主53/53后集成07bf495，生产注册/角色/grant/Kp/sameRun仍未验。MCP三路径已按metadata双审归原P1_3，commit47528ef，39/69/步骤/deps/验收与权限不变，contract67f06a；pilot PlanBundle仅跟随明确归属修订显式重冻结到618d3431，资格仍NOT_VERIFIED。Root生成的两pyc已逐字节保全迁出，不改原方法源/断言；初次785/773/12fail记录保留，修后全785/775/10fail0skip，6输入/5配置不变。I05安全YAML83边界仍成立，但另有manifest坏JSON任意片段回显P2正由原owner修，不能据旧83宣称完整诊断安全。最终required与真实同Run交付仍未通过。
+当前补充：I04 source6633913已双审并在主53/53后集成07bf495，生产注册/角色/grant/Kp/sameRun仍未验。MCP三路径已按metadata双审归原P1_3，commit47528ef，39/69/步骤/deps/验收与权限不变，contract67f06a；pilot PlanBundle仅跟随明确归属修订显式重冻结到618d3431，资格仍NOT_VERIFIED。Root生成的两pyc已逐字节保全迁出，不改原方法源/断言；初次785/773/12fail记录保留，修后全801/791/10fail0skip，6输入/5配置不变。I05安全YAML83边界仍成立，但另有manifest坏JSON任意片段回显P2正由原owner修，不能据旧83宣称完整诊断安全。最终required与真实同Run交付仍未通过。
+
+最新诊断闭合：I05 f985800已独立两轴、主99/99后集成05e36d0，安全YAML原段未变；最新全仓801/791/10fail0skip，二输入/五配置不变，旧失败身份保留。I06 04e5655因run/workflow/artifact关联P2退回原owner，未真实写平台；Core P2_4最新fresh/完整用例仍待限定候选和独立双审。五个登记Outline容器当前running、应用healthy仅是liveness（.local/comet-reset/i03-current-liveness/observation.json），不证明权限或知识交付。最终129检查/103场景和whole角色/平台/Kp/归档/Kt/权限恢复未验收。
