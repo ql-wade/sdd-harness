@@ -1,6 +1,6 @@
 # 当前Grill结论：整体交付未通过
 
-当前代码`36fcf5c`，39节点、69工作包、104场景、130required检查；整节点与业务场景接纳仍为0。三项支持性命令为1通过/2失败，127项未验，不继承历史PASS。全量回归496项489通过、7失败、0跳过，总检查停在Whitebox fixture自测。
+当前集成代码`c26d43c`，39节点、69工作包、104场景、130required检查；声明范围内接纳6/39节点，业务场景接纳仍0；130required等待当前最终候选实跑，不继承旧支持命令PASS。全量回归496项489通过、7失败、0跳过，总检查停在Whitebox fixture自测。
 
 本轮限定修复已独立复验并合入：`291ccc8`装配测试与源活配置解耦；`36fcf5c`身份配置同源、直接probe绕过/双侧缺值/API错fullname拒绝，以及missing/nonexec gh结构化失败。相关77/77与8/8不替代真实Comet门禁、平台、知识及恢复旅程。
 
@@ -10,6 +10,8 @@
 
 历史外发阻断已由用户专项授权解除；本次两轮真实三方审查均保留原票，未缩减共识。当前没有整体通过结论。详细证据、七项失败、来源快照问题和后续验收边界见`verification-report.md`、`verification-results.json`和`execution-state.json`。
 
-## 当前架构实施状态
+## 当前实施与证据边界
 
-新15份材料的三方共识已全票通过并机械finalize：Claude Code8.8、ZCode9.2、Codex8.6，共用两轮，回执见architecture-review/comet-convergence-r1/receipt.json。只批准按原DAG实施；运行、profile启用与外部发布仍未验收或授权。P0_1–P0_4在文档/设计声明范围内接纳，当前4/39节点；P1_1独立受管工作树实施中，业务场景接纳仍0。人已恢复原生Goal，工具读回active；监督沿原计划继续，不新增主控或Goal。首轮读取可见性弃权、模型目录缓存自刷新及续段只读快照均有原始记录，不能把这些技术处理当业务验收。三条旅程旧标签与profile命名混用仍由原任务闭合。
+本次15份冻结材料的真实三方共识已完成并finalize，回执architecture-review/comet-convergence-r1/receipt.json；只批准实施。P0_1–P0_4文档/设计、P1_1工具链（c797aa3）与P2_1共享契约（c26d43c）在声明范围接纳，共6/39，104业务场景仍0。P2_1两位独立审查员分别实跑61/61组件及27/27生产AST矩阵；主检出锁定安装后61/61、0跳过。原始日志保留，分发空白规范化有双摘要。不能据此宣称受信身份、Comet业务门禁或真实旅程通过。
+
+P1_6整体方法快照/原生Comet模板与I01登记核验继续。Outline本次固定文集只读核验已获人明确授权，执行脚本尚待root审查；不授予publisher/isolator/issuer权限。人已恢复原生Goal并读回active，沿唯一DAG继续，整体ETA尚无法可靠估计。新候选130required均待最终复跑；旧36fcf5c回归7失败和Whitebox自测失败仍开放，不以过期结果充抵验收。

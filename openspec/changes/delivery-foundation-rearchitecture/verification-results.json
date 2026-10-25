@@ -7,9 +7,9 @@
   "original_scenario_count": 92,
   "convergence_scenario_count": 12,
   "tally": {
-    "pass": 1,
-    "fail": 2,
-    "not_verified": 127
+    "pass": 0,
+    "fail": 0,
+    "not_verified": 130
   },
   "source_history": "replan-history/2026-10-24-comet-convergence/previous/verification-results.json",
   "per_check": [
@@ -753,26 +753,40 @@
       "check_id": "V_NPM_REGRESSION",
       "required": true,
       "command": "npm test",
-      "status": "FAIL",
-      "scope": "supporting CLI check on current candidate only; no scenario, whole-node or product-Journey acceptance",
-      "evidence": [
-        ".local/comet-reset/final-regression/round2/result.json",
-        ".local/comet-reset/final-regression/round2/npm-test.log"
-      ],
-      "exit_code": 1,
-      "source_head": "36fcf5c4780dc4caa2b85a98b5d0bf70c360af97"
+      "status": "NOT_VERIFIED",
+      "scope": "current candidate requires final rerun; older command observation preserved in historical_attempts",
+      "evidence": [],
+      "historical_attempts": [
+        {
+          "status": "FAIL",
+          "scope": "supporting CLI check on current candidate only; no scenario, whole-node or product-Journey acceptance",
+          "evidence": [
+            ".local/comet-reset/final-regression/round2/result.json",
+            ".local/comet-reset/final-regression/round2/npm-test.log"
+          ],
+          "exit_code": 1,
+          "source_head": "36fcf5c4780dc4caa2b85a98b5d0bf70c360af97"
+        }
+      ]
     },
     {
       "check_id": "V_FULL_CHECK",
       "required": true,
       "command": "bash scripts/check.sh",
-      "status": "FAIL",
-      "scope": "supporting CLI check on current candidate only; no scenario, whole-node or product-Journey acceptance",
-      "evidence": [
-        ".local/comet-reset/final-regression/check.sh.log"
-      ],
-      "exit_code": 1,
-      "source_head": "36fcf5c4780dc4caa2b85a98b5d0bf70c360af97"
+      "status": "NOT_VERIFIED",
+      "scope": "current candidate requires final rerun; older command observation preserved in historical_attempts",
+      "evidence": [],
+      "historical_attempts": [
+        {
+          "status": "FAIL",
+          "scope": "supporting CLI check on current candidate only; no scenario, whole-node or product-Journey acceptance",
+          "evidence": [
+            ".local/comet-reset/final-regression/check.sh.log"
+          ],
+          "exit_code": 1,
+          "source_head": "36fcf5c4780dc4caa2b85a98b5d0bf70c360af97"
+        }
+      ]
     },
     {
       "check_id": "V_SCOPED_REGRESSION",
@@ -786,14 +800,21 @@
       "check_id": "V_OPENSPEC_STRICT",
       "required": true,
       "command": "openspec validate delivery-foundation-rearchitecture --strict",
-      "status": "PASS",
-      "scope": "supporting CLI check on current candidate only; no scenario, whole-node or product-Journey acceptance",
-      "evidence": [
-        ".local/comet-reset/final-regression/strict-result.json",
-        ".local/comet-reset/final-regression/strict.stdout.txt"
-      ],
-      "exit_code": 0,
-      "source_head": "36fcf5c4780dc4caa2b85a98b5d0bf70c360af97"
+      "status": "NOT_VERIFIED",
+      "scope": "current candidate requires final rerun; older command observation preserved in historical_attempts",
+      "evidence": [],
+      "historical_attempts": [
+        {
+          "status": "PASS",
+          "scope": "supporting CLI check on current candidate only; no scenario, whole-node or product-Journey acceptance",
+          "evidence": [
+            ".local/comet-reset/final-regression/strict-result.json",
+            ".local/comet-reset/final-regression/strict.stdout.txt"
+          ],
+          "exit_code": 0,
+          "source_head": "36fcf5c4780dc4caa2b85a98b5d0bf70c360af97"
+        }
+      ]
     },
     {
       "check_id": "V_COMET_NATIVE",
@@ -1105,6 +1126,15 @@
       "platform_validate_exit": 0,
       "llmwiki_validate_exit": 0,
       "evidence": ".local/comet-reset/identity-callers-integration/integration.json"
+    },
+    "p2_1": {
+      "commit": "c26d43cd5f5e93fb23245066b5c7b280802c82e2",
+      "tests": 61,
+      "pass": 61,
+      "fail": 0,
+      "skip": 0,
+      "evidence": ".local/comet-reset/p2_1-integration/main-checks.json",
+      "scope": "component only; no final required check or managed runtime scenario credited"
     }
   },
   "review_authorization": {
@@ -1135,8 +1165,8 @@
       "sandbox_first_attempt": ".local/comet-reset/final-local-checks/check.sh.log"
     }
   },
-  "source_head": "36fcf5c4780dc4caa2b85a98b5d0bf70c360af97",
-  "updated_at": "2026-10-24T18:26:44.218247+00:00",
+  "source_head": "c26d43cd5f5e93fb23245066b5c7b280802c82e2",
+  "updated_at": "2026-10-25T02:04:21.901811+00:00",
   "regression": {
     "command": "npm test",
     "exit_code": 1,
@@ -1157,7 +1187,9 @@
       "not ok 220 - unresolvable pinned baseline is blocked explicitly, never silently swapped",
       "not ok 294 - image admission gates stay coherent with the committed lock state (state-agnostic)",
       "not ok 484 - B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently"
-    ]
+    ],
+    "current_candidate": false,
+    "status": "HISTORICAL_NEW_CANDIDATE_RETEST_REQUIRED"
   },
   "qualified_toolchain": {
     "openspec": "1.11.0",
@@ -1166,5 +1198,6 @@
     "global_tool_changed": false
   },
   "accepted_document_nodes": 4,
-  "runtime_scenarios_accepted": 0
+  "runtime_scenarios_accepted": 0,
+  "accepted_component_nodes": 2
 }

@@ -265,19 +265,19 @@
 **Parallel safe:** false
 **Acceptance IDs:** A01, A02, A03, A04, A07, A08
 
-- [ ] **Step 1 [5 min]: Test** 2.1.a 定义共享契约及版本：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：FoundationLock/BaselineRef/TestContract/PlanBundle/CandidateRef/EvidenceEnvelope/GateReceipt/ReleaseReceipt 输入、错误与兼容边界。
-- [ ] **Step 2 [5 min]: Implement** 2.1.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 3 [5 min]: Test** 2.1.b 实现全输入绑定和追踪：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：先 RED 非 JS/锁文件/迁移漂移与 AC→case 缺项，再 GREEN；tasks 定义摘要与进度勾选分离。
-- [ ] **Step 4 [5 min]: Implement** 2.1.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 5 [5 min]: Test** 2.1.c 实现有效 RED 与执行分母检查：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：零测试/全 skip/环境失败拒绝；不通过造测试数量闭合行为覆盖。
-- [ ] **Step 6 [5 min]: Implement** 2.1.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
-- [ ] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
-- [ ] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
+- [x] **Step 1 [5 min]: Test** 2.1.a 定义共享契约及版本：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：FoundationLock/BaselineRef/TestContract/PlanBundle/CandidateRef/EvidenceEnvelope/GateReceipt/ReleaseReceipt 输入、错误与兼容边界。
+- [x] **Step 2 [5 min]: Implement** 2.1.a 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 3 [5 min]: Test** 2.1.b 实现全输入绑定和追踪：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：先 RED 非 JS/锁文件/迁移漂移与 AC→case 缺项，再 GREEN；tasks 定义摘要与进度勾选分离。
+- [x] **Step 4 [5 min]: Implement** 2.1.b 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 5 [5 min]: Test** 2.1.c 实现有效 RED 与执行分母检查：先实际复现失败并保存 oracle/命令/输入/日志；验收边界：零测试/全 skip/环境失败拒绝；不通过造测试数量闭合行为覆盖。
+- [x] **Step 6 [5 min]: Implement** 2.1.c 在该包归属内作最小GREEN实现，运行对应真实检查和回归；不接受环境失败、零执行、mock或旧候选代替目标行为。
+- [x] **Step 7 [5 min]: Review** 按当前候选独立审查本任务全部工作包，核对AC、来源/角色与跨边界故障，更新同一父任务证据；未通过保持未勾选。
+- [x] **Step 8 [3 min]: Commit** 审查通过后串行接纳仅本任务授权文件与RED/GREEN/回归证据；工作区已有无关改动不加入提交。
 
 本轮流程/知识收敛（不是新任务；旧验收不继承）：
 
-- [ ] **Step 9 [5 min]: Implement** 定义现有schema-kernel上的ActionBinding，统一动作、输入/输出、方法版本、权限和Gate引用；它是不可变合同数据，不是可编排DSL或第二state store。
-- [ ] **Step 10 [5 min]: Review** 按当前任务声明范围保存真实RED/GREEN/原始读回及独立审查；新profile完整旅程只由VERIFY最后签验，不用已实现工件或局部绿关闭更宽要求。
+- [x] **Step 9 [5 min]: Implement** 定义现有schema-kernel上的ActionBinding，统一动作、输入/输出、方法版本、权限和Gate引用；它是不可变合同数据，不是可编排DSL或第二state store。
+- [x] **Step 10 [5 min]: Review** 按当前任务声明范围保存真实RED/GREEN/原始读回及独立审查；新profile完整旅程只由VERIFY最后签验，不用已实现工件或局部绿关闭更宽要求。
 
 
 ### Task P1_5: 原任务 1.5 — 按 classic-integration-design.md 验证 R/A/T 分离、P 计划单一权威、V 独立回执及 Kp/Kt 读回门禁；覆盖 C01–C08 的正常与旁路/恢复负例。先在隔离工具环境解决实际 OpenSpec 兼容失败，固定 test-authoring/Whitebox/planner 分发内容；不得改活配置或直接升全局工具。
