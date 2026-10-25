@@ -415,6 +415,85 @@ test('I05 YAML parser isolated import ignores untrusted Python module environmen
   assert.equal(result.stderr, '');
 });
 
+test('I05 manifest input diagnostics use static labels and known codes without raw data or paths', async (t) => {
+  for (const [label, value] of [['short invalid JSON', 'x'], ['arbitrary marker', 'PRIV5NOTE_manifest_invalid_json'], ['trailing marker', '{"value":1} PRIV5NOTE_tail']]) await t.test(label, () => {
+    const file = path.join(fixtureDir('infra-i05-diag-'), 'PRIV5NOTE_relative_manifest.json');
+    fs.writeFileSync(file, value);
+    const result = runCli(['probe', '--case', 'pinned-code-wiki', '--manifest', path.relative(repoRoot, file), '--json']);
+    const report = parseJsonOut(result, label);
+    assert.equal(result.status, 1);
+    assert.equal(report.status, 'INPUT_INVALID');
+    assert.equal(report.code, 'MANIFEST_JSON_INVALID');
+    assert.equal(report.error, 'manifest invalid JSON');
+    assert.equal(result.stdout.includes('PRIV5NOTE_'), false);
+    assert.equal(result.stderr, '');
+  });
+  for (const [label, expected] of [['missing', 'MANIFEST_READ_ENOENT'], ['directory', 'MANIFEST_READ_EISDIR']]) await t.test(label, () => {
+    const dir = fixtureDir('infra-i05-diag-');
+    const file = path.join(dir, 'PRIV5NOTE_input_path');
+    if (label === 'directory') fs.mkdirSync(file);
+    const result = runCli(['probe', '--case', 'pinned-code-wiki', '--manifest', path.relative(repoRoot, file), '--json']);
+    const report = parseJsonOut(result, label);
+    assert.equal(result.status, 1);
+    assert.equal(report.status, 'INPUT_INVALID');
+    assert.equal(report.code, expected);
+    assert.equal(report.error, 'manifest unreadable');
+    assert.equal(result.stdout.includes('PRIV5NOTE_'), false);
+    assert.equal(result.stderr, '');
+  });
+});
+
+test('I05 unexpected own input I/O and JSON exceptions stay INTERNAL_FAILURE without details', async (t) => {
+  for (const kind of ['manifest', 'registry', 'refs', 'domain']) for (const mode of ['read', 'parse']) await t.test(`${kind} ${mode}`, () => {
+    const dir = makeFixtureDir(() => {});
+    const faultDir = fixtureDir('infra-i05-diag-fault-');
+    const target = kind === 'domain' ? path.join(dir, 'deepwiki-profile.json') : path.join(faultDir, `${kind}.json`);
+    if (kind === 'registry') fs.copyFileSync(registryPath, target);
+    if (kind === 'refs') fs.copyFileSync(path.join(repoRoot, 'infra/delivery/secrets.refs.example.json'), target);
+    if (kind === 'manifest') fs.writeFileSync(target, '{}');
+    const preload = path.join(faultDir, 'fault.mjs');
+    fs.writeFileSync(preload, `import fs from 'node:fs';\nconst read=fs.readFileSync;const parse=JSON.parse;\nfs.readFileSync=function(file,...args){if(file===process.env.I05_DIAG_TARGET){if(process.env.I05_DIAG_MODE==='read')throw Object.assign(new Error('PRIV5NOTE_read_message'),{code:'PRIV5NOTE_unknown_errno'});return 'PRIV5NOTE_parse_target';}return read.call(this,file,...args);};\nJSON.parse=function(value,...args){if(value==='PRIV5NOTE_parse_target')throw new RangeError('PRIV5NOTE_parse_message');return parse(value,...args);};\n`);
+    const args = ['probe', '--case', 'pinned-code-wiki', '--dir', dir, '--json'];
+    if (kind !== 'domain') args.push(`--${kind}`, target);
+    const result = runCli(args, { ...process.env, NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import=${preload}`, I05_DIAG_TARGET: target, I05_DIAG_MODE: mode });
+    const report = parseJsonOut(result, `${kind} ${mode}`);
+    assert.equal(result.status, 2);
+    assert.equal(report.status, 'INTERNAL_FAILURE');
+    assert.equal(report.code, `${kind.toUpperCase()}_${mode === 'read' ? 'READ' : 'PARSE'}_INTERNAL_FAILURE`);
+    assert.equal(result.stdout.includes('PRIV5NOTE_'), false);
+    assert.equal(result.stderr, '');
+  });
+});
+
+test('I05 normal manifest evaluation and static argv rejection retain their separate semantics', () => {
+  const dir = makeFixtureDir(({ json, writeJson }) => {
+    addApprovedSource(json, writeJson);
+    const profile = json('deepwiki-profile.json');
+    profile.generation.freshness.maxCommitAgeDays = 30;
+    profile.generation.freshness.languageCoverageMin = 1;
+    writeJson('deepwiki-profile.json', profile);
+  });
+  const file = path.join(fixtureDir('infra-i05-manifest-'), 'manifest.json');
+  fs.writeFileSync(file, JSON.stringify({ immutableId: '1285806550', commit: PINNED_COMMIT, generation: { status: 'succeeded' }, generatedAt: new Date().toISOString(), languageCoverage: [{ language: 'javascript', filesIndexed: 1 }] }));
+  const result = runCli(['probe', '--case', 'pinned-code-wiki', '--dir', dir, '--manifest', file, '--json']);
+  const report = parseJsonOut(result, 'normal manifest');
+  assert.equal(result.status, 2);
+  assert.equal(report.status, 'UNVERIFIED');
+  assert.equal(report.freshness.passed, true);
+  assert.equal(report.liveReadback, false);
+  for (const value of [{ generation: { status: 'PRIV5NOTE_generation' } }, { generation: { status: 'succeeded' }, immutableId: 'PRIV5NOTE_source' }]) {
+    fs.writeFileSync(file, JSON.stringify(value));
+    const refused = runCli(['probe', '--case', 'pinned-code-wiki', '--manifest', file, '--json']);
+    assert.equal(refused.status, 2);
+    assert.equal(parseJsonOut(refused, 'valid but rejected manifest').status, 'UNVERIFIED');
+    assert.equal(refused.stdout.includes('PRIV5NOTE_'), false);
+  }
+  const invalid = runCli(['probe', '--case', 'PRIV5NOTE_unknown_probe', '--json']);
+  assert.equal(invalid.status, 1);
+  assert.equal(parseJsonOut(invalid, 'unknown probe').error, 'unknown probe case');
+  assert.equal(invalid.stdout.includes('PRIV5NOTE_'), false);
+});
+
 test('V_INFRA_I05 contract: committed code-knowledge domain validates clean; qualify/up honor the exit contract', () => {
   const validate = runCli(['validate', '--registry', registryPath, '--dir', domainDir, '--json']);
   assert.equal(validate.status, 0, `validate must PASS on committed files: ${validate.stderr || validate.stdout}`);

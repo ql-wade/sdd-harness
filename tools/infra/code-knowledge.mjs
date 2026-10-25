@@ -92,12 +92,44 @@ function print(payload) {
   process.stdout.write(JSON.stringify({ ...payload, checkedAt: new Date().toISOString() }, (_key, value) => typeof value === 'string' ? redactHostPaths(redactSecretValue(value)) : value, 2) + '\n');
 }
 
-function failInput(message) {
-  print({ interface: 'CodeKnowledgeInfra.v1', status: 'INPUT_INVALID', ready: false, error: message });
+function failInput(message, code = 'INPUT_INVALID') {
+  print({ interface: 'CodeKnowledgeInfra.v1', status: 'INPUT_INVALID', ready: false, code, error: message });
   return EXIT_INPUT;
 }
 
 const sha256Text = (text) => crypto.createHash('sha256').update(text).digest('hex');
+
+const INPUT_FILE_ERRORS = new Set(['ENOENT', 'EISDIR', 'ENOTDIR', 'EACCES', 'EPERM', 'ELOOP', 'ENAMETOOLONG']);
+
+function readInputText(file, label, prefix) {
+  try { return { ok: true, text: fs.readFileSync(file, 'utf8') }; }
+  catch (error) {
+    const expected = typeof error?.code === 'string' && INPUT_FILE_ERRORS.has(error.code);
+    return { ok: false, status: expected ? 'INPUT_INVALID' : 'INTERNAL_FAILURE', exitCode: expected ? EXIT_INPUT : EXIT_VERIFY,
+      code: `${prefix}_READ_${expected ? error.code : 'INTERNAL_FAILURE'}`, error: `${label} ${expected ? 'unreadable' : 'read failed'}` };
+  }
+}
+
+function parseInputJson(text, label, prefix) {
+  try { return { ok: true, value: JSON.parse(text) }; }
+  catch (error) {
+    const expected = error instanceof SyntaxError;
+    return { ok: false, status: expected ? 'INPUT_INVALID' : 'INTERNAL_FAILURE', exitCode: expected ? EXIT_INPUT : EXIT_VERIFY,
+      code: `${prefix}_${expected ? 'JSON_INVALID' : 'PARSE_INTERNAL_FAILURE'}`, error: `${label} ${expected ? 'invalid JSON' : 'parse failed'}` };
+  }
+}
+
+function readInputJson(file, label, prefix) {
+  const read = readInputText(file, label, prefix);
+  if (!read.ok) return read;
+  const parsed = parseInputJson(read.text, label, prefix);
+  return parsed.ok ? { ...parsed, text: read.text } : parsed;
+}
+
+function reportInputFailure(failure) {
+  print({ interface: 'CodeKnowledgeInfra.v1', status: failure.status, ready: false, code: failure.code, error: failure.error });
+  return failure.exitCode;
+}
 
 function loadDomainFiles(dir) {
   const files = new Map();
@@ -105,21 +137,20 @@ function loadDomainFiles(dir) {
   const unparseable = [];
   const optionalMissing = [];
   for (const name of DOMAIN_FILES) {
-    try {
-      files.set(name, fs.readFileSync(path.join(dir, name), 'utf8'));
-    } catch (error) {
-      if (name === 'graph-profile.json' && error.code === 'ENOENT') {
+    const read = readInputText(path.join(dir, name), 'domain input', 'DOMAIN');
+    if (read.ok) files.set(name, read.text);
+    else {
+      if (name === 'graph-profile.json' && read.code === 'DOMAIN_READ_ENOENT') {
         files.set(name, JSON.stringify(ABSENT_GRAPH)); optionalMissing.push(name);
-      } else missing.push(name);
+      } else if (read.exitCode === EXIT_VERIFY) return { files, missing, unparseable, optionalMissing, internalFailure: read };
+      else missing.push(name);
     }
   }
   for (const name of JSON_FILES) {
     if (!files.has(name)) continue;
-    try {
-      JSON.parse(files.get(name));
-    } catch {
-      unparseable.push(name);
-    }
+    const parsed = parseInputJson(files.get(name), 'domain input', 'DOMAIN');
+    if (!parsed.ok && parsed.exitCode === EXIT_VERIFY) return { files, missing, unparseable, optionalMissing, internalFailure: parsed };
+    if (!parsed.ok) unparseable.push(name);
   }
   return { files, missing, unparseable, optionalMissing };
 }
@@ -602,7 +633,7 @@ function validateDomain({ registry, refsDoc, files }) {
   return { violations, catalogGaps, jsonDocs, scopeSources: scopeResult.sources, composeParser: compose.parser };
 }
 
-function buildQualification({ registryFile, dir, files, catalogGaps, scopeSources, optionalMissing }) {
+function buildQualification({ registryText, dir, files, catalogGaps, scopeSources, optionalMissing }) {
   const lock = JSON.parse(files.get('images.lock.json'));
   const profile = JSON.parse(files.get('deepwiki-profile.json'));
   const graph = JSON.parse(files.get('graph-profile.json'));
@@ -649,7 +680,7 @@ function buildQualification({ registryFile, dir, files, catalogGaps, scopeSource
       : UNVERIFIED('graph enabled flag is not the committed disabled state; coverage evidence still requires a live component'),
     'backup-compatibility': UNVERIFIED('no restore drill registered for generation policy/source versions/authorization mapping and required wiki artifacts'),
   };
-  const inputs = { registrySha256: sha256Text(fs.readFileSync(registryFile)), domainFiles: {} };
+  const inputs = { registrySha256: sha256Text(registryText), domainFiles: {} };
   for (const name of DOMAIN_FILES) inputs.domainFiles[name] = optionalMissing.includes(name) ? null : sha256Text(files.get(name));
   const values = Object.values(categories);
   return {
@@ -672,16 +703,16 @@ function evaluateFreshness({ manifest, profile, scopeSources }) {
   const denial = (code, reason) => ({ evaluated: true, passed: false, code, reason });
   const generationStatus = manifest?.generation?.status;
   if (generationStatus !== 'succeeded') {
-    return denial('GENERATION_NOT_CONFIRMED', `manifest generation status is ${JSON.stringify(generationStatus ?? null)}, not "succeeded"; a failed/incomplete generation can never report freshness`);
+    return denial('GENERATION_NOT_CONFIRMED', 'manifest generation is not confirmed as succeeded; a failed or incomplete generation cannot report freshness');
   }
   const immutableId = manifest?.immutableId;
   const approved = scopeSources.find((entry) => entry.immutableId === immutableId);
   if (!approved || approved.status !== 'AUTHORIZED') {
-    return denial('SOURCE_NOT_AUTHORIZED', `manifest immutableId ${JSON.stringify(immutableId ?? null)} is not an authorized entry of this project's approved scope; foreign/other-project indexes are never accepted as the project result`);
+    return denial('SOURCE_NOT_AUTHORIZED', 'manifest source is not an authorized entry of the current project scope; foreign or other-project indexes are never accepted as the project result');
   }
   const manifestCommit = manifest?.commit;
   if (typeof manifestCommit !== 'string' || !COMMIT_RE.test(manifestCommit) || manifestCommit !== approved.commit) {
-    return denial('COMMIT_MISMATCH_STALE', `manifest commit does not match the approved pinned commit for ${immutableId}; a stale commit can never report freshness`);
+    return denial('COMMIT_MISMATCH_STALE', 'manifest commit does not match the approved pinned source commit; a stale commit cannot report freshness');
   }
   const freshness = profile.generation?.freshness ?? {};
   const policyDecided = freshness.maxCommitAgeDays !== null && freshness.maxCommitAgeDays !== undefined
@@ -746,12 +777,14 @@ async function main(argv) {
   const registryFile = opts.registry ?? DEFAULT_REGISTRY;
   const refsFile = opts.refs ?? DEFAULT_REFS;
   const dir = opts.dir ?? DEFAULT_DIR;
-  let registry; let refsDoc;
-  try { registry = JSON.parse(fs.readFileSync(registryFile, 'utf8')); }
-  catch { return failInput('registry unreadable or unparseable'); }
-  try { refsDoc = JSON.parse(fs.readFileSync(refsFile, 'utf8')); }
-  catch { return failInput('refs catalog unreadable or unparseable'); }
-  const { files, missing, unparseable, optionalMissing } = loadDomainFiles(dir);
+  const registryInput = readInputJson(registryFile, 'registry', 'REGISTRY');
+  if (!registryInput.ok) return reportInputFailure(registryInput);
+  const registry = registryInput.value;
+  const refsInput = readInputJson(refsFile, 'refs catalog', 'REFS');
+  if (!refsInput.ok) return reportInputFailure(refsInput);
+  const refsDoc = refsInput.value;
+  const { files, missing, unparseable, optionalMissing, internalFailure } = loadDomainFiles(dir);
+  if (internalFailure) return reportInputFailure(internalFailure);
   if (missing.length) return failInput(`domain files missing: ${missing.join(', ')}`);
   if (unparseable.length) return failInput(`domain files unparseable: ${unparseable.join(', ')}`);
   const shapes = inputShapes({ registry, refsDoc, files });
@@ -763,7 +796,7 @@ async function main(argv) {
 
   if (command === 'probe') {
     const spec = Object.hasOwn(PROBE_CASES, opts.case) ? PROBE_CASES[opts.case] : null;
-    if (!spec) return failInput(`unknown probe case: ${opts.case ?? '(missing --case)'}`);
+    if (!spec) return failInput('unknown probe case', 'PROBE_CASE_INVALID');
     if (opts.endpoint !== undefined) {
       let endpoint;
       try { endpoint = new URL(opts.endpoint); } catch { return failInput('endpoint must be a loopback HTTP origin'); }
@@ -833,12 +866,9 @@ async function main(argv) {
       observedSteps: [],
     };
     if (opts.manifest) {
-      let manifest;
-      try {
-        manifest = JSON.parse(fs.readFileSync(opts.manifest, 'utf8'));
-      } catch (err) {
-        return failInput(`manifest unreadable/unparseable (${displayPath(opts.manifest)}): ${redactHostPaths(err.message)}`);
-      }
+      const manifestInput = readInputJson(opts.manifest, 'manifest', 'MANIFEST');
+      if (!manifestInput.ok) return reportInputFailure(manifestInput);
+      const manifest = manifestInput.value;
       const freshness = evaluateFreshness({ manifest, profile, scopeSources });
       observation.freshness = freshness;
       observation.executed = true;
@@ -932,7 +962,7 @@ async function main(argv) {
 
   if (command === 'qualify' || command === 'up') {
     // 单一事实源：catalog 缺口来自同一 validateDomain 结果，validate/qualify/up 共享。
-    const qualification = buildQualification({ registryFile, dir, files, catalogGaps: domain.catalogGaps, scopeSources: domain.scopeSources, optionalMissing });
+    const qualification = buildQualification({ registryText: registryInput.text, dir, files, catalogGaps: domain.catalogGaps, scopeSources: domain.scopeSources, optionalMissing });
     qualification.composeParser = domain.composeParser;
     if (command === 'qualify') {
       print(qualification);
@@ -974,7 +1004,7 @@ async function main(argv) {
         domain: 'code-knowledge',
         refused: true,
         ready: false,
-        error: `UP_NOT_AUTHORIZED: ${lock.upGate?.reason ?? 'up gate is closed in this task'}`,
+        error: 'UP_NOT_AUTHORIZED: runtime launch is not admitted',
       });
       return EXIT_VERIFY;
     }
@@ -990,7 +1020,10 @@ async function main(argv) {
     return EXIT_VERIFY;
   }
 
-  return failInput(`unknown command: ${command}`);
+  return failInput('unknown command');
 }
 
-process.exit(await main(process.argv.slice(2)));
+let exitCode;
+try { exitCode = await main(process.argv.slice(2)); }
+catch { exitCode = reportInputFailure({ status: 'INTERNAL_FAILURE', code: 'INTERNAL_FAILURE', error: 'unexpected internal failure', exitCode: EXIT_VERIFY }); }
+process.exit(exitCode);
