@@ -1,0 +1,24 @@
+{
+  "scope": "public base OS/ABI metadata only;no mounts/network/credentials or project qualification",
+  "probes": [
+    {
+      "name": "python",
+      "image": "python@sha256:c3729439afc4ec3f3e159e0c86aeabfadac8030ef46838a0256383d0511c5f5e",
+      "entry": "python3",
+      "args": [
+        "-I",
+        "-c",
+        "import pathlib,platform,json; print(json.dumps({\"osRelease\":pathlib.Path(\"/etc/os-release\").read_text(),\"libc\":platform.libc_ver()}))"
+      ]
+    },
+    {
+      "name": "node",
+      "image": "node@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d",
+      "entry": "node",
+      "args": [
+        "-e",
+        "console.log(JSON.stringify({version:process.version,osRelease:require(\"fs\").readFileSync(\"/etc/os-release\",\"utf8\"),libc:process.report.getReport().header.glibcVersionRuntime}))"
+      ]
+    }
+  ]
+}

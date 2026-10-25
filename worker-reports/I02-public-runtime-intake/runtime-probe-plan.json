@@ -1,0 +1,22 @@
+{
+  "scope": "public immutable Python runtime version probe only;no project or service qualification",
+  "image": "python@sha256:c3729439afc4ec3f3e159e0c86aeabfadac8030ef46838a0256383d0511c5f5e",
+  "expectedImageId": "sha256:81c0aac584c3e136c75a8da272f5d08e45e1f2ae00701fbce768f490dd22164b",
+  "network": "none",
+  "mounts": [],
+  "user": "65534:65534",
+  "readOnly": true,
+  "capDrop": [
+    "ALL"
+  ],
+  "memory": "128m",
+  "pidsLimit": 32,
+  "timeoutSeconds": 40,
+  "command": [
+    "python3",
+    "-I",
+    "-c",
+    "import sys,ssl,tarfile,hashlib,json; print(json.dumps({\"version\":sys.version.split()[0],\"ssl\":ssl.OPENSSL_VERSION,\"sha256\":hashlib.sha256(b\"probe\").hexdigest(),\"tarFilter\":hasattr(tarfile,\"data_filter\")}))"
+  ],
+  "credentialsOrBusinessActions": false
+}

@@ -1,0 +1,13 @@
+# I02 public toolchain resource intake — Root actual evidence
+
+This is an isolated public-resource experiment for the existing I02 task, not an image-lock/Runner/profile activation or new controller. It does not prove Claude Code sandbox permission; actual executions were Root's current tool host.
+
+Fixed Node source `node@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d` and Python source `python@sha256:c3729439afc4ec3f3e159e0c86aeabfadac8030ef46838a0256383d0511c5f5e` were inspected/run: both linux/arm64, Debian12 bookworm/glibc2.36; Node24.15.0 and Python3.12.15. Public image bytes only, no repository context/credentials/mounts, pull disabled for experiments, network disabled in build steps and runtime, nonroot/read-only/cap-drop runtime with128MiB/32pids/0.5CPU bounds.
+
+Actual first composition copied Python `/usr/local/` into the pinned Node base and failed importing ssl with missing `libssl.so.3`. This actual ABI failure is preserved. Earlier sandbox failure at Docker's own builder-activity metadata is also preserved and distinct from ABI/product behavior. The bounded retry was allowed via normal host review; no sandbox policy or global configuration was changed.
+
+A subsequent actual ldd inspection of80 Python executable/extension objects enumerated their shared libraries. Copying the measured23 non-glibc dependencies from the same immutable Python source, without copying/replacing glibc, allowed the original import/version assertions to pass in a network-disabled local build. Current experimental image ID is `sha256:a2698311297c1361d0027fa9bb0b50462efff96e145651b57e45522ee7f9d94e`,294143668bytes; declared UID65534:65534. It is a local image ID, not a published OCI repository digest.
+
+Actual isolated execution then ran Node→Python subprocess and checked both exact versions plus SSL,tarfile,bz2,lzma,ctypes,sqlite3,readline,curses,dbm.gnu imports, UID65534, no project mounts: exit0. A prior Node-script quoting error is kept separately; it was a probe-construction failure, not Runner product RED. BuildKit warns empty ARG defaults; both values were explicitly passed and pinned, and no default/tag was used.
+
+The original Runner Dockerfile/validator/locks were not modified. The experiment does not include pnpm10.18.3/Comet full build, bootstrap packaging, PyYAML qualification, signed current source/identity, role mounts/channels, models/MCP, service permissions or sameRun end-to-end flow. Whole I02 remainsUNVERIFIED; no required business check/scenario is markedPASS. OriginalI02 owner must review and integrate the exact recipe/build plan and its complete dependency graph before actual Runner qualification.

@@ -1,0 +1,42 @@
+{
+  "at": "2026-10-25T20:43:21.460048+00:00",
+  "image": {
+    "id": "sha256:a2698311297c1361d0027fa9bb0b50462efff96e145651b57e45522ee7f9d94e",
+    "os": "linux",
+    "arch": "arm64",
+    "size": 294143668,
+    "declaredUser": "65534:65534"
+  },
+  "argv": [
+    "docker",
+    "run",
+    "--pull",
+    "never",
+    "--rm",
+    "--network",
+    "none",
+    "--read-only",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges:true",
+    "--pids-limit",
+    "32",
+    "--memory",
+    "128m",
+    "--cpus",
+    "0.5",
+    "--user",
+    "65534:65534",
+    "--entrypoint",
+    "node",
+    "sha256:a2698311297c1361d0027fa9bb0b50462efff96e145651b57e45522ee7f9d94e",
+    "-e",
+    "const a=require(\"assert/strict\"),s=require(\"child_process\").spawnSync;a.equal(process.version,\"v24.15.0\");const p=s(\"python3\",[\"-I\",\"-c\",\"import sys,ssl,tarfile,bz2,lzma,ctypes,sqlite3,readline,curses,dbm.gnu,json; print(json.dumps({\"version\":sys.version.split()[0],\"ssl\":ssl.OPENSSL_VERSION}))\"],{encoding:\"utf8\"});a.equal(p.status,0,p.stderr);a.equal(JSON.parse(p.stdout).version,\"3.12.15\");console.log(JSON.stringify({node:process.version,python:JSON.parse(p.stdout),uid:process.getuid(),projectMounts:[]}))"
+  ],
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "[eval]:1\nconst a=require(\"assert/strict\"),s=require(\"child_process\").spawnSync;a.equal(process.version,\"v24.15.0\");const p=s(\"python3\",[\"-I\",\"-c\",\"import sys,ssl,tarfile,bz2,lzma,ctypes,sqlite3,readline,curses,dbm.gnu,json; print(json.dumps({\"version\":sys.version.split()[0],\"ssl\":ssl.OPENSSL_VERSION}))\"],{encoding:\"utf8\"});a.equal(p.status,0,p.stderr);a.equal(JSON.parse(p.stdout).version,\"3.12.15\");console.log(JSON.stringify({node:process.version,python:JSON.parse(p.stdout),uid:process.getuid(),projectMounts:[]}))\n                                                                                                                                                                                                                                          ^^^^^^^\nExpected ',', got 'ident'\n\nSyntaxError: Unexpected identifier 'version'\n    at makeContextifyScript (node:internal/vm:194:14)\n    at compileScript (node:internal/process/execution:388:10)\n    at evalTypeScript (node:internal/process/execution:260:22)\n    at node:internal/main/eval_string:71:3\n\nNode.js v24.15.0\n",
+  "scope": "public composed toolchain only",
+  "fullRunnerNotQualified": true
+}

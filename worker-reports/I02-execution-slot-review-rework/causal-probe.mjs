@@ -1,0 +1,31 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+const dir=path.dirname(new URL(import.meta.url).pathname);
+const sourcePath='/Volumes/mac-extend/codex/worktrees/comet-delivery-contracts/sdd-harness/test/infra-runner-isolation.test.js';
+const source=fs.readFileSync(sourcePath,'utf8');
+const start=source.indexOf('  const script = String.raw`',source.indexOf('async function executionSlotFixture'));
+const end=source.indexOf('\n`;\n',start)+3;
+const expr=source.slice(start,end).replace('  const script = ','return ');
+const stateFile=path.join(dir,'probe-containers.json'),traceFile=path.join(dir,'probe-trace.json');
+const registration={dockerContext:'fixture-context',engineId:'fixture-engine'};
+const generated=new Function('stateFile','traceFile','registration',expr)(stateFile,traceFile,registration);
+const binary=path.join(dir,'exact-fixture-engine.mjs');fs.writeFileSync(binary,generated);fs.chmodSync(binary,0o755);
+const intact=Buffer.from(JSON.stringify({containers:[{id:'0'.repeat(63)+'1',state:'running'}],starts:1}));
+fs.writeFileSync(stateFile,intact);
+const argv=[binary,'--context','fixture-context','info','--format','{{json .ID}}'];
+const run=()=>{const r=spawnSync(argv[0],argv.slice(1),{env:{PATH:path.dirname(process.execPath)+':/usr/bin:/bin',LANG:'en_US.UTF-8',TZ:'UTC',TMPDIR:'/private/tmp'},encoding:'utf8'});return {exit:r.status,stdout:r.stdout,stderr:r.stderr};};
+const before=run();
+// Deterministically hold the exact truncation window opened by writeFileSync.
+// This uses only inert tmp fixture state, never Docker or user files.
+const fd=fs.openSync(stateFile,'w');
+fs.writeFileSync(path.join(dir,'probe-state-during.json'),fs.readFileSync(stateFile));
+const during=run();
+fs.writeSync(fd,intact);fs.closeSync(fd);
+const after=run();
+const hash=p=>crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+const proof={scope:'deterministic fixture file truncation mechanism, no Docker/product behavior claim',argv,utc:new Date().toISOString(),sourcePath,sourceSha256:hash(sourcePath),generatedSha256:hash(binary),fixtureContainerHandle:'0'.repeat(63)+'1',before,during,after,assertions:{beforeExitZero:before.exit===0,duringFails:during.exit!==0,duringIsJSONParse: /SyntaxError/.test(during.stderr)&&/JSON/.test(during.stderr),afterExitZero:after.exit===0},matchesOriginalFailure:'original driver json() maps nonzero fake-engine info or parse failure to DOCKER_METADATA_UNVERIFIED; original stderr was intentionally not exposed by wrapper'};
+fs.writeFileSync(path.join(dir,'causal-proof.json'),JSON.stringify(proof,null,2)+'\n');
+if(!Object.values(proof.assertions).every(Boolean))process.exitCode=1;
+console.log(JSON.stringify({assertions:proof.assertions,beforeExit:before.exit,duringExit:during.exit,afterExit:after.exit,proofSha256:hash(path.join(dir,'causal-proof.json'))}));
