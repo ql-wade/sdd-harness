@@ -1,0 +1,56 @@
+✔ the original eight delivery contracts and additive ActionBinding are registered at v1 (1.937917ms)
+✔ each contract parses its valid v1 payload (1.394917ms)
+✔ a missing schemaVersion is rejected explicitly for every contract (never guessed) (0.304083ms)
+✔ unknown future, legacy and non-integer versions are explicitly refused, never silently accepted (0.375541ms)
+✔ unknown contract names are refused by the registry (0.084125ms)
+✔ required content is enforced per contract with field-level errors (0.229209ms)
+✔ FoundationLock models the exporter artifact: mcps and methodProfile payloads pass (0.102167ms)
+✔ FoundationLock v1 accepts the real exported foundation lock artifact (0.2325ms)
+✔ FoundationLock rejects machine absolute paths in version and path fields (ABSOLUTE_PATH_FORBIDDEN) (0.137041ms)
+✔ FoundationLock rejects floating versions (latest/HEAD/@latest/unpinned ranges) in version fields (0.210792ms)
+✔ FoundationLock v1 has a closed top-level field set; BaselineRef keeps the additive evolution path (0.100334ms)
+✔ parseTapSummary reads the top-level TAP summary and rejects output without one (0.408208ms)
+✔ A03: zero-test and all-skip runs are classified as empty, not pass (0.336292ms)
+✔ A04: environment crashes are classified as environment failures, never behavior RED (0.149167ms)
+✔ real behavior failures without environment signatures are behavior RED (0.707708ms)
+✔ an exit code contradicting a passing TAP summary is a conservative environment failure (0.1355ms)
+✔ the execution denominator refuses zero tests and zero effective executions (0.127959ms)
+✔ A04: requireValidRed accepts behavior RED and refuses environment/empty/pass runs (0.12025ms)
+✔ evaluateExecution accepts a passing run that meets the declared denominator (0.155542ms)
+✔ A03: evaluateExecution refuses zero-test, all-skip and environment-crash runs (0.12425ms)
+✔ evaluateExecution refuses an invalid TestContract and an unmet declared denominator (0.125292ms)
+✔ a behavior-red run is refused as acceptance evidence even when the denominator is met (0.058875ms)
+✔ cancelled or partially skipped required runs never become passing execution or valid RED evidence (0.073125ms)
+✔ ActionBinding parses immutable generic work-package data without granting origin or dispatch authority (0.278708ms)
+✖ ActionBinding rejects unsafe scope, mutable methods, forged trust and embedded control state (0.85725ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 24
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 115.186
+
+✖ failing tests:
+
+test at test/delivery-test-contract.test.js:565:1
+✖ ActionBinding rejects unsafe scope, mutable methods, forged trust and embedded control state (0.85725ms)
+  AssertionError [ERR_ASSERTION]: {"schemaVersion":1,"profile":"comet-managed-v2","runnerId":"comet-classic","run":"run-1","action":"review-design","gate":"A","execution":"exec-review-1","role":"reviewer","revision":"design-r2","attempt":1,"epoch":0,"inputDigest":"c96c6d5be8d08a12e7b5cdc1b207fa6b2430974c86803d8891675e76fd992c20","policyDigest":"823412d1eacb67956220e532959f0104603057c88704863ca38e7cd188fda812","environmentDigest":"ba5285161ba6eed0085fb13784ce5c92f70ebc268b94fd66aa1d68a32884204d","workPackage":{"id":"wp-1","taskIds":["2.1.a"]},"methods":[{"name":"grill-me","version":"1.0.0","ref":".agents/skills/grill-me/SKILL.md","digest":"5b7e6bf2dc4a32a6aa4770cd5639c2c7af890fc86c273b5c8567fe5382086bf3"}],"allowedPaths":["../other-project"],"allowedTools":["read_file"],"inputs":[{"name":"design","ref":"openspec/changes/change/design.md","digest":"a77de8a6daa1129516b14c8ca1e233a51a8414b202eac7c8acfbb9b485046ad4"}],"outputs":[{"name":"review","ref":"reports/review.json"}]}
+
+  true !== false
+
+      at TestContext.<anonymous> (file://<worktree>/test/delivery-test-contract.test.js:579:12)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

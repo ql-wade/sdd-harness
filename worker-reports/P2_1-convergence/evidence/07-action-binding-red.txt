@@ -1,0 +1,55 @@
+✔ the eight frozen delivery contracts are registered at v1 (1.763708ms)
+✔ each contract parses its valid v1 payload (1.444417ms)
+✔ a missing schemaVersion is rejected explicitly for every contract (never guessed) (0.481541ms)
+✔ unknown future, legacy and non-integer versions are explicitly refused, never silently accepted (0.475ms)
+✔ unknown contract names are refused by the registry (0.1165ms)
+✔ required content is enforced per contract with field-level errors (0.248417ms)
+✔ FoundationLock models the exporter artifact: mcps and methodProfile payloads pass (0.115958ms)
+✔ FoundationLock v1 accepts the real exported foundation lock artifact (0.530709ms)
+✔ FoundationLock rejects machine absolute paths in version and path fields (ABSOLUTE_PATH_FORBIDDEN) (0.15125ms)
+✔ FoundationLock rejects floating versions (latest/HEAD/@latest/unpinned ranges) in version fields (0.226125ms)
+✔ FoundationLock v1 has a closed top-level field set; BaselineRef keeps the additive evolution path (0.103333ms)
+✔ parseTapSummary reads the top-level TAP summary and rejects output without one (0.428916ms)
+✔ A03: zero-test and all-skip runs are classified as empty, not pass (0.365ms)
+✔ A04: environment crashes are classified as environment failures, never behavior RED (0.155625ms)
+✔ real behavior failures without environment signatures are behavior RED (0.641625ms)
+✔ an exit code contradicting a passing TAP summary is a conservative environment failure (0.097625ms)
+✔ the execution denominator refuses zero tests and zero effective executions (0.124167ms)
+✔ A04: requireValidRed accepts behavior RED and refuses environment/empty/pass runs (0.120125ms)
+✔ evaluateExecution accepts a passing run that meets the declared denominator (0.134375ms)
+✔ A03: evaluateExecution refuses zero-test, all-skip and environment-crash runs (0.118292ms)
+✔ evaluateExecution refuses an invalid TestContract and an unmet declared denominator (0.120875ms)
+✔ a behavior-red run is refused as acceptance evidence even when the denominator is met (0.060417ms)
+✔ cancelled or partially skipped required runs never become passing execution or valid RED evidence (0.074084ms)
+✖ ActionBinding parses immutable generic work-package data without granting origin or dispatch authority (0.809333ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 23
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 124.3115
+
+✖ failing tests:
+
+test at test/delivery-test-contract.test.js:553:1
+✖ ActionBinding parses immutable generic work-package data without granting origin or dispatch authority (0.809333ms)
+  AssertionError [ERR_ASSERTION]: unknown contract SDD.Delivery.ActionBinding — refusing to parse (registered contracts: SDD.Delivery.FoundationLock, SDD.Delivery.BaselineRef, SDD.Delivery.TestContract, SDD.Delivery.PlanBundle, SDD.Delivery.CandidateRef, SDD.Delivery.EvidenceEnvelope, SDD.Delivery.GateReceipt, SDD.Delivery.ReleaseReceipt)
+
+  false !== true
+
+      at TestContext.<anonymous> (file://<worktree>/test/delivery-test-contract.test.js:556:10)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

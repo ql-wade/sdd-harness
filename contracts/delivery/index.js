@@ -11,7 +11,10 @@ import { CONTRACT as EVIDENCE_ENVELOPE_CONTRACT, validateEvidenceEnvelope } from
 import { CONTRACT as GATE_RECEIPT_CONTRACT, validateGateReceipt } from './gate-receipt.schema.js';
 import { CONTRACT as RELEASE_RECEIPT_CONTRACT, validateReleaseReceipt } from './release-receipt.schema.js';
 
+import { CONTRACT as ACTION_BINDING_CONTRACT, validateActionBinding } from './action-binding.schema.js';
+
 export const CONTRACTS = {
+  'SDD.Delivery.ActionBinding': { contract: ACTION_BINDING_CONTRACT, validate: validateActionBinding },
   'SDD.Delivery.FoundationLock': { contract: FOUNDATION_LOCK_CONTRACT, validate: validateFoundationLock },
   'SDD.Delivery.BaselineRef': { contract: BASELINE_REF_CONTRACT, validate: validateBaselineRef },
   'SDD.Delivery.TestContract': { contract: TEST_CONTRACT_CONTRACT, validate: validateTestContract },
@@ -23,7 +26,7 @@ export const CONTRACTS = {
 };
 
 export function parseContract(name, payload) {
-  const entry = CONTRACTS[name];
+  const entry = Object.hasOwn(CONTRACTS, name) ? CONTRACTS[name] : null;
   if (!entry) {
     return {
       ok: false,

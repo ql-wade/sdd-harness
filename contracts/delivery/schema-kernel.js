@@ -17,7 +17,7 @@ const UNPINNED_VERSION_PATTERN = /@latest|@head|[~^><=]|\d+\.(x|\*)$/i;
 function validateValue(errors, label, value, rule) {
   switch (rule.type) {
     case 'string':
-      if (typeof value !== 'string' || value.length === 0) errors.push(`${label}: must be a non-empty string`);
+      if (typeof value !== 'string' || value.trim().length === 0) errors.push(`${label}: must be a non-empty string`);
       break;
     case 'sha256':
       if (typeof value !== 'string' || !SHA256_RE.test(value)) errors.push(`${label}: must be a sha256 hex digest`);
@@ -34,11 +34,11 @@ function validateValue(errors, label, value, rule) {
       if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) errors.push(`${label}: must be an ISO-8601 timestamp`);
       break;
     case 'path':
-      if (typeof value !== 'string' || value.length === 0) errors.push(`${label}: must be a non-empty repo-relative path`);
-      else if (HOST_PATH_PATTERN.test(value)) errors.push(`${label}: machine absolute paths are forbidden (ABSOLUTE_PATH_FORBIDDEN)`);
+      if (typeof value !== 'string' || value.trim().length === 0) errors.push(`${label}: must be a non-empty repo-relative path`);
+      else if (/^(?:[A-Za-z][A-Za-z0-9+.-]*:|[\\/]|~)/.test(value) || value.split(/[\\/]/).includes('..') || value.includes('\0')) errors.push(`${label}: relative contained paths required (ABSOLUTE_PATH_FORBIDDEN)`);
       break;
     case 'pinnedVersion':
-      if (typeof value !== 'string' || value.length === 0) errors.push(`${label}: must be a non-empty version`);
+      if (typeof value !== 'string' || value.trim().length === 0) errors.push(`${label}: must be a non-empty version`);
       else if (HOST_PATH_PATTERN.test(value)) errors.push(`${label}: machine absolute paths are forbidden (ABSOLUTE_PATH_FORBIDDEN)`);
       else if (FLOATING_VERSION_EXACT.test(value) || UNPINNED_VERSION_PATTERN.test(value)) errors.push(`${label}: floating versions are forbidden (latest/HEAD/unpinned) — pin an exact release`);
       break;
@@ -61,7 +61,7 @@ function validateValue(errors, label, value, rule) {
               errors.push(`${itemLabel}: must be an object`);
               return;
             }
-            validateFields(errors, `${itemLabel}.`, item, rule.items.fields);
+            validateFields(errors, `${itemLabel}.`, item, rule.items.fields, rule.items.unknownFields === 'reject');
           } else {
             validateValue(errors, itemLabel, item, rule.items);
           }
@@ -74,7 +74,7 @@ function validateValue(errors, label, value, rule) {
         errors.push(`${label}: must be an object`);
         break;
       }
-      if (rule.fields) validateFields(errors, `${label}.`, value, rule.fields);
+      if (rule.fields) validateFields(errors, `${label}.`, value, rule.fields, rule.unknownFields === 'reject');
       break;
     }
     default:
@@ -82,7 +82,10 @@ function validateValue(errors, label, value, rule) {
   }
 }
 
-function validateFields(errors, prefix, payload, fields) {
+function validateFields(errors, prefix, payload, fields, rejectUnknown = false) {
+  if (rejectUnknown) {
+    for (const key of Object.keys(payload)) if (!Object.hasOwn(fields, key)) errors.push(`${prefix}${key}: unknown field`);
+  }
   for (const [key, rule] of Object.entries(fields)) {
     const label = `${prefix}${key}`;
     const value = payload[key];
@@ -120,7 +123,7 @@ export function defineContract({ name, version, description, fields, unknownFiel
       validateFields(errors, '', payload, fields);
       if (unknownFields === 'reject') {
         for (const key of Object.keys(payload)) {
-          if (key !== 'schemaVersion' && !fields[key]) {
+          if (key !== 'schemaVersion' && !Object.hasOwn(fields, key)) {
             errors.push(`${key}: unknown field — ${name} v${version} has a closed field set`);
           }
         }

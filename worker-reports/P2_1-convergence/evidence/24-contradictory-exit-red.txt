@@ -1,0 +1,63 @@
+✔ the original eight delivery contracts and additive ActionBinding are registered at v1 (2.313084ms)
+✔ each contract parses its valid v1 payload (1.425166ms)
+✔ a missing schemaVersion is rejected explicitly for every contract (never guessed) (0.335625ms)
+✔ unknown future, legacy and non-integer versions are explicitly refused, never silently accepted (0.508084ms)
+✔ unknown contract names are refused by the registry (0.106292ms)
+✔ required content is enforced per contract with field-level errors (0.255125ms)
+✔ FoundationLock models the exporter artifact: mcps and methodProfile payloads pass (0.144ms)
+✔ FoundationLock v1 accepts the real exported foundation lock artifact (1.103ms)
+✔ FoundationLock rejects machine absolute paths in version and path fields (ABSOLUTE_PATH_FORBIDDEN) (0.195ms)
+✔ FoundationLock rejects floating versions (latest/HEAD/@latest/unpinned ranges) in version fields (0.2605ms)
+✔ FoundationLock v1 has a closed top-level field set; BaselineRef keeps the additive evolution path (1.132542ms)
+✔ parseTapSummary reads the top-level TAP summary and rejects output without one (1.94925ms)
+✔ A03: zero-test and all-skip runs are classified as empty, not pass (0.669875ms)
+✔ A04: environment crashes are classified as environment failures, never behavior RED (0.243ms)
+✔ real behavior failures without environment signatures are behavior RED (0.06525ms)
+✔ an exit code contradicting a passing TAP summary is a conservative environment failure (0.077ms)
+✔ the execution denominator refuses zero tests and zero effective executions (0.14525ms)
+✔ A04: requireValidRed accepts behavior RED and refuses environment/empty/pass runs (0.126417ms)
+✔ evaluateExecution accepts a passing run that meets the declared denominator (0.235708ms)
+✔ A03: evaluateExecution refuses zero-test, all-skip and environment-crash runs (0.144291ms)
+✔ evaluateExecution refuses an invalid TestContract and an unmet declared denominator (0.098917ms)
+✔ a behavior-red run is refused as acceptance evidence even when the denominator is met (0.058708ms)
+✔ cancelled or partially skipped required runs never become passing execution or valid RED evidence (0.073833ms)
+✔ ActionBinding parses immutable generic work-package data without granting origin or dispatch authority (0.422292ms)
+✔ ActionBinding rejects unsafe scope, mutable methods, forged trust and embedded control state (0.593958ms)
+✔ a command-bound contract cannot accept counts from unrelated cases or an unexecuted required command (0.514ms)
+✔ a command-bound denominator cannot undercount its distinct required cases (0.100042ms)
+✔ strict intent cannot leave a required command outside the mandatory case graph (0.1025ms)
+✔ prototype member names are not registered contracts or declared ActionBinding fields (0.161291ms)
+✔ ActionBinding output targets must stay inside its declared write scope (0.166625ms)
+✔ protected caller strictness cannot be downgraded by an old contract, false flag or self-declared profile (0.333459ms)
+✖ a real zero-exit wrapper carrying a failed TAP assertion is not valid behavior RED (291.394583ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 31
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 454.020542
+
+✖ failing tests:
+
+test at test/delivery-test-contract.test.js:663:1
+✖ a real zero-exit wrapper carrying a failed TAP assertion is not valid behavior RED (291.394583ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  true !== false
+
+      at TestContext.<anonymous> (file://<worktree>/test/delivery-test-contract.test.js:673:12)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,54 @@
+✔ the eight frozen delivery contracts are registered at v1 (1.817791ms)
+✔ each contract parses its valid v1 payload (1.433625ms)
+✔ a missing schemaVersion is rejected explicitly for every contract (never guessed) (0.373083ms)
+✔ unknown future, legacy and non-integer versions are explicitly refused, never silently accepted (0.392042ms)
+✔ unknown contract names are refused by the registry (0.076875ms)
+✔ required content is enforced per contract with field-level errors (0.238375ms)
+✔ FoundationLock models the exporter artifact: mcps and methodProfile payloads pass (0.105125ms)
+✔ FoundationLock v1 accepts the real exported foundation lock artifact (0.733666ms)
+✔ FoundationLock rejects machine absolute paths in version and path fields (ABSOLUTE_PATH_FORBIDDEN) (0.251708ms)
+✔ FoundationLock rejects floating versions (latest/HEAD/@latest/unpinned ranges) in version fields (0.279458ms)
+✔ FoundationLock v1 has a closed top-level field set; BaselineRef keeps the additive evolution path (0.104625ms)
+✔ parseTapSummary reads the top-level TAP summary and rejects output without one (0.398916ms)
+✔ A03: zero-test and all-skip runs are classified as empty, not pass (0.327958ms)
+✔ A04: environment crashes are classified as environment failures, never behavior RED (0.14425ms)
+✔ real behavior failures without environment signatures are behavior RED (0.067584ms)
+✔ an exit code contradicting a passing TAP summary is a conservative environment failure (0.063875ms)
+✔ the execution denominator refuses zero tests and zero effective executions (0.094625ms)
+✔ A04: requireValidRed accepts behavior RED and refuses environment/empty/pass runs (0.71575ms)
+✔ evaluateExecution accepts a passing run that meets the declared denominator (0.193208ms)
+✔ A03: evaluateExecution refuses zero-test, all-skip and environment-crash runs (0.168292ms)
+✔ evaluateExecution refuses an invalid TestContract and an unmet declared denominator (0.105917ms)
+✔ a behavior-red run is refused as acceptance evidence even when the denominator is met (0.06425ms)
+✖ cancelled or partially skipped required runs never become passing execution or valid RED evidence (0.928041ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 22
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 118.826541
+
+✖ failing tests:
+
+test at test/delivery-test-contract.test.js:535:1
+✖ cancelled or partially skipped required runs never become passing execution or valid RED evidence (0.928041ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  'accept' !== 'reject'
+
+      at TestContext.<anonymous> (file://<worktree>/test/delivery-test-contract.test.js:537:10)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'accept',
+    expected: 'reject',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

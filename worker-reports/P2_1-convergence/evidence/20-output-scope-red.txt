@@ -1,0 +1,61 @@
+✔ the original eight delivery contracts and additive ActionBinding are registered at v1 (1.711041ms)
+✔ each contract parses its valid v1 payload (1.303167ms)
+✔ a missing schemaVersion is rejected explicitly for every contract (never guessed) (0.477917ms)
+✔ unknown future, legacy and non-integer versions are explicitly refused, never silently accepted (0.426917ms)
+✔ unknown contract names are refused by the registry (0.080791ms)
+✔ required content is enforced per contract with field-level errors (0.240459ms)
+✔ FoundationLock models the exporter artifact: mcps and methodProfile payloads pass (0.1105ms)
+✔ FoundationLock v1 accepts the real exported foundation lock artifact (0.862458ms)
+✔ FoundationLock rejects machine absolute paths in version and path fields (ABSOLUTE_PATH_FORBIDDEN) (0.278ms)
+✔ FoundationLock rejects floating versions (latest/HEAD/@latest/unpinned ranges) in version fields (0.295042ms)
+✔ FoundationLock v1 has a closed top-level field set; BaselineRef keeps the additive evolution path (0.151291ms)
+✔ parseTapSummary reads the top-level TAP summary and rejects output without one (0.420625ms)
+✔ A03: zero-test and all-skip runs are classified as empty, not pass (1.066917ms)
+✔ A04: environment crashes are classified as environment failures, never behavior RED (0.17475ms)
+✔ real behavior failures without environment signatures are behavior RED (0.059ms)
+✔ an exit code contradicting a passing TAP summary is a conservative environment failure (0.068166ms)
+✔ the execution denominator refuses zero tests and zero effective executions (0.101958ms)
+✔ A04: requireValidRed accepts behavior RED and refuses environment/empty/pass runs (0.104291ms)
+✔ evaluateExecution accepts a passing run that meets the declared denominator (0.177709ms)
+✔ A03: evaluateExecution refuses zero-test, all-skip and environment-crash runs (0.1865ms)
+✔ evaluateExecution refuses an invalid TestContract and an unmet declared denominator (0.109375ms)
+✔ a behavior-red run is refused as acceptance evidence even when the denominator is met (0.066375ms)
+✔ cancelled or partially skipped required runs never become passing execution or valid RED evidence (0.07575ms)
+✔ ActionBinding parses immutable generic work-package data without granting origin or dispatch authority (0.804417ms)
+✔ ActionBinding rejects unsafe scope, mutable methods, forged trust and embedded control state (0.519792ms)
+✔ a command-bound contract cannot accept counts from unrelated cases or an unexecuted required command (0.453083ms)
+✔ a command-bound denominator cannot undercount its distinct required cases (0.096209ms)
+✔ strict intent cannot leave a required command outside the mandatory case graph (0.102959ms)
+✔ prototype member names are not registered contracts or declared ActionBinding fields (0.165958ms)
+✖ ActionBinding output targets must stay inside its declared write scope (0.830583ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 29
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 130.482
+
+✖ failing tests:
+
+test at test/delivery-test-contract.test.js:628:1
+✖ ActionBinding output targets must stay inside its declared write scope (0.830583ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  true !== false
+
+      at TestContext.<anonymous> (file://<worktree>/test/delivery-test-contract.test.js:630:10)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

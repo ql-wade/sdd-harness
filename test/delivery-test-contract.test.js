@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
@@ -16,6 +18,7 @@ import {
 const sha = (label) => crypto.createHash('sha256').update(label).digest('hex');
 
 const FROZEN_CONTRACTS = [
+  'SDD.Delivery.ActionBinding',
   'SDD.Delivery.FoundationLock',
   'SDD.Delivery.BaselineRef',
   'SDD.Delivery.TestContract',
@@ -163,7 +166,7 @@ const FIXTURES = {
   'SDD.Delivery.ReleaseReceipt': releaseReceiptFixture,
 };
 
-test('the eight frozen delivery contracts are registered at v1', () => {
+test('the original eight delivery contracts and additive ActionBinding are registered at v1', () => {
   assert.deepEqual(Object.keys(CONTRACTS).sort(), [...FROZEN_CONTRACTS].sort());
   for (const name of FROZEN_CONTRACTS) {
     assert.equal(CONTRACTS[name].contract.version, 1, `${name} must be frozen at v1`);
@@ -530,4 +533,147 @@ test('a behavior-red run is refused as acceptance evidence even when the denomin
   const result = evaluateExecution({ testContract: testContractFixture(), run: { exitCode: 1, output: TAP_BEHAVIOR_RED } });
   assert.equal(result.verdict, 'reject');
   assert.match(result.reasons.join('\n'), /acceptance requires a passing run/);
+});
+
+test('cancelled or partially skipped required runs never become passing execution or valid RED evidence', () => {
+  const cancelled = TAP_PASS.replace('# cancelled 0', '# cancelled 1').replace('# tests 1', '# tests 2');
+  assert.equal(evaluateExecution({ testContract: testContractFixture(), run: { exitCode: 0, output: cancelled } }).verdict, 'reject');
+  const contradictory = TAP_BEHAVIOR_RED.replace('# tests 3', '# tests 0');
+  assert.equal(requireValidRed({ exitCode: 1, output: contradictory }).ok, false);
+});
+
+const actionBindingFixture = () => ({
+  schemaVersion: 1, profile: 'comet-managed-v2', runnerId: 'comet-classic', run: 'run-1',
+  action: 'review-design', gate: 'A', execution: 'exec-review-1', role: 'reviewer', revision: 'design-r2', attempt: 1, epoch: 0,
+  inputDigest: sha('input'), policyDigest: sha('policy'), environmentDigest: sha('environment'),
+  workPackage: { id: 'wp-1', taskIds: ['2.1.a'] },
+  methods: [{ name: 'grill-me', version: '1.0.0', ref: '.agents/skills/grill-me/SKILL.md', digest: sha('method') }],
+  allowedPaths: ['reports/review.json'], allowedTools: ['read_file'],
+  inputs: [{ name: 'design', ref: 'openspec/changes/change/design.md', digest: sha('design') }],
+  outputs: [{ name: 'review', ref: 'reports/review.json' }],
+});
+
+test('ActionBinding parses immutable generic work-package data without granting origin or dispatch authority', () => {
+  const input = actionBindingFixture();
+  const parsed = parseContract('SDD.Delivery.ActionBinding', input);
+  assert.equal(parsed.ok, true, parsed.errors?.join('; '));
+  input.methods[0].digest = sha('changed-after-validation');
+  assert.equal(parsed.value.methods[0].digest, sha('method'));
+  assert.equal(Object.isFrozen(parsed.value.methods[0]), true);
+  assert.equal(parsed.value.trusted, undefined);
+  assert.equal(parsed.value.currentPhase, undefined);
+});
+
+test('ActionBinding rejects unsafe scope, mutable methods, forged trust and embedded control state', () => {
+  for (const mutate of [
+    (x) => { x.allowedPaths = ['../other-project']; },
+    (x) => { x.outputs[0].ref = '/Volumes/data/report.json'; },
+    (x) => { x.inputs[0].ref = 'C:\\private\\input'; },
+    (x) => { x.methods[0].version = 'latest'; },
+    (x) => { x.methods[0].trusted = true; },
+    (x) => { x.currentPhase = 'build'; },
+    (x) => { x.trusted = true; },
+    (x) => { x.methods = []; },
+    (x) => { x.revision = ' '; },
+    (x) => { x.allowedTools = ['*']; },
+  ]) {
+    const input = actionBindingFixture(); mutate(input);
+    assert.equal(parseContract('SDD.Delivery.ActionBinding', input).ok, false, JSON.stringify(input));
+  }
+});
+
+test('a command-bound contract cannot accept counts from unrelated cases or an unexecuted required command', () => {
+  const contract = testContractFixture();
+  contract.commandBindingsRequired = true;
+  contract.cases[0].checkIds = ['v1'];
+  contract.requiredChecks[0] = { ...contract.requiredChecks[0], id: 'v1', command: 'node --test test/feature.test.js', caseIds: ['c1'] };
+  const passing = { exitCode: 0, output: TAP_PASS };
+  assert.equal(evaluateExecution({ testContract: contract, run: passing }).verdict, 'reject');
+  const caseResults = [{ caseId: 'c1', checkId: 'v1', command: 'node --test test/feature.test.js', status: 'pass' }];
+  assert.equal(evaluateExecution({ testContract: contract, run: { ...passing, caseResults } }).verdict, 'accept');
+  for (const changed of [[], [{ ...caseResults[0], caseId: 'other' }], [{ ...caseResults[0], command: 'printf pass' }], [{ ...caseResults[0], status: 'skipped' }]]) {
+    assert.equal(evaluateExecution({ testContract: contract, run: { ...passing, caseResults: changed } }).verdict, 'reject');
+  }
+});
+
+test('a command-bound denominator cannot undercount its distinct required cases', () => {
+  const contract = testContractFixture();
+  contract.commandBindingsRequired = true;
+  contract.cases = [{ id: 'c1', ac: 'A03', oracle: 'first outcome', checkIds: ['v1'] }, { id: 'c2', ac: 'A03', oracle: 'second outcome', checkIds: ['v1'] }];
+  contract.requiredChecks[0] = { ...contract.requiredChecks[0], id: 'v1', command: 'node --test test/feature.test.js', caseIds: ['c1', 'c2'] };
+  assert.equal(parseContract('SDD.Delivery.TestContract', contract).ok, false);
+  contract.executionDenominator.totalCases = 2;
+  assert.equal(parseContract('SDD.Delivery.TestContract', contract).ok, true);
+});
+
+test('strict intent cannot leave a required command outside the mandatory case graph', () => {
+  const contract = testContractFixture(); contract.commandBindingsRequired = true;
+  contract.cases[0].checkIds = ['v1'];
+  contract.requiredChecks = [{ id: 'v1', level: 'unit', capability: 'unit', command: 'node --test one.test.js', caseIds: ['c1'] }, { id: 'v2', level: 'unit', capability: 'other', command: 'node --test two.test.js', caseIds: ['c1'] }];
+  assert.equal(parseContract('SDD.Delivery.TestContract', contract).ok, false);
+  contract.cases[0].checkIds.push('v2');
+  assert.equal(parseContract('SDD.Delivery.TestContract', contract).ok, true);
+  contract.cases[0].required = false;
+  assert.equal(parseContract('SDD.Delivery.TestContract', contract).ok, false);
+});
+
+test('prototype member names are not registered contracts or declared ActionBinding fields', () => {
+  assert.equal(parseContract('constructor', {}).ok, false);
+  assert.equal(parseContract('toString', {}).ok, false);
+  for (const field of ['constructor', 'toString', '__proto__']) {
+    const payload = JSON.parse(JSON.stringify(actionBindingFixture()));
+    Object.defineProperty(payload, field, { enumerable: true, value: { trusted: true } });
+    assert.equal(parseContract('SDD.Delivery.ActionBinding', payload).ok, false, field);
+  }
+});
+
+test('ActionBinding output targets must stay inside its declared write scope', () => {
+  const payload = actionBindingFixture(); payload.outputs[0].ref = 'other-project/write.json';
+  assert.equal(parseContract('SDD.Delivery.ActionBinding', payload).ok, false);
+  payload.allowedPaths = ['reports']; payload.outputs[0].ref = 'reports/nested/review.json';
+  assert.equal(parseContract('SDD.Delivery.ActionBinding', payload).ok, true);
+  payload.outputs[0].ref = 'reports-other/write.json';
+  assert.equal(parseContract('SDD.Delivery.ActionBinding', payload).ok, false);
+});
+
+test('protected caller strictness cannot be downgraded by an old contract, false flag or self-declared profile', () => {
+  const passing = { exitCode: 0, output: TAP_PASS };
+  for (const amend of [() => {}, (c) => { c.commandBindingsRequired = false; }, (c) => { c.profile = 'comet-managed-v2'; c.trusted = true; }]) {
+    const contract = testContractFixture(); amend(contract);
+    const result = evaluateExecution({ testContract: contract, run: passing }, { requireCommands: true });
+    assert.equal(result.verdict, 'reject');
+    assert.equal(result.scope, 'component/required-command-links');
+    assert.equal(result.managedClosureEligible, false);
+  }
+  const compatibility = evaluateExecution({ testContract: testContractFixture(), run: passing });
+  assert.equal(compatibility.verdict, 'accept');
+  assert.equal(compatibility.scope, 'component/ac-only');
+  assert.equal(compatibility.managedClosureEligible, false);
+  const contract = testContractFixture(); contract.commandBindingsRequired = true;
+  contract.cases[0].checkIds = ['v1'];
+  contract.requiredChecks[0] = { ...contract.requiredChecks[0], id: 'v1', command: 'node --test feature.test.js', caseIds: ['c1'] };
+  const caseResults = [{ caseId: 'c1', checkId: 'v1', command: 'node --test feature.test.js', status: 'pass' }];
+  const bound = evaluateExecution({ testContract: contract, run: { ...passing, caseResults } }, { requireCommands: true });
+  assert.equal(bound.verdict, 'accept');
+  assert.equal(bound.scope, 'component/required-command-links');
+  assert.equal(bound.managedClosureEligible, false);
+});
+
+
+test('a real zero-exit wrapper carrying a failed TAP assertion is not valid behavior RED', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'p21-contradictory-exit-'));
+  try {
+    const file = path.join(root, 'failure.test.mjs');
+    fs.writeFileSync(file, "import test from 'node:test'; import assert from 'node:assert/strict'; test('actual oracle fails', () => assert.equal(1, 2));\n");
+    const env = { ...process.env }; delete env.NODE_TEST_CONTEXT;
+    const wrapper = "import { spawnSync } from 'node:child_process'; const env = { ...process.env }; delete env.NODE_TEST_CONTEXT; const child = spawnSync(process.execPath, ['--test', '--test-reporter=tap', process.argv[1]], { env, encoding: 'utf8' }); process.stdout.write(child.stdout); process.exit(0);";
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', wrapper, file], { env, encoding: 'utf8' });
+    assert.equal(result.status, 0);
+    assert.equal(parseTapSummary(result.stdout).fail, 1);
+    assert.equal(requireValidRed({ exitCode: result.status, output: result.stdout }).ok, false);
+    const normal = spawnSync(process.execPath, ['--test', '--test-reporter=tap', file], { env, encoding: 'utf8' });
+    assert.equal(normal.status, 1);
+    assert.equal(requireValidRed({ exitCode: normal.status, output: normal.stdout }).ok, true);
+    assert.equal(requireValidRed({ exitCode: null, output: normal.stdout }).ok, false);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

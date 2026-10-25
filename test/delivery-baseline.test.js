@@ -8,6 +8,7 @@ import {
   computeFullInputBaseline,
   digestInputs,
   taskDefinitionDigest,
+  normalizeTaskProgress,
   traceAcToCases,
   requireImplementationBaselines,
   REQUIRED_IMPLEMENTATION_BASELINES,
@@ -233,4 +234,119 @@ test('digestInputs ordering is code-unit deterministic, not locale-dependent (nb
     .join('\n');
   const expected = crypto.createHash('sha256').update(canonical).digest('hex');
   assert.equal(digestInputs([lower, upper]), expected, 'B.txt must precede a.txt by code unit');
+});
+
+test('declared design, test intent, method, policy and environment files all invalidate a current report', () => {
+  const names = { designs: 'design.md', testIntents: 'cases.md', methods: 'method.md', policies: 'policy.json', environments: 'environment.json' };
+  const root = makeProject(Object.fromEntries(Object.values(names).map((p) => [p, 'revision1'])));
+  try {
+    const manifest = Object.fromEntries(Object.entries(names).map(([g, p]) => [g, [p]]));
+    let prior = computeFullInputBaseline({ root, manifest });
+    assert.equal(prior.ok, true);
+    for (const p of Object.values(names)) {
+      fs.writeFileSync(path.join(root, p), 'revision2');
+      const current = computeFullInputBaseline({ root, manifest });
+      assert.equal(current.ok, true);
+      assert.notEqual(current.digest, prior.digest, p);
+      assert.equal(verifyReportCurrency({ report: { id: 'old', inputDigest: prior.digest }, currentDigest: current.digest }).ok, false);
+      prior = current;
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('a baseline refuses unknown, empty, malformed and escaping manifest scope instead of hashing an empty or outside input set', () => {
+  const root = makeProject({ 'input.txt': 'declared' });
+  const outside = makeProject({ 'private.txt': 'must not be read' });
+  try {
+    fs.symlinkSync(path.join(outside, 'private.txt'), path.join(root, 'linked.txt'));
+    for (const manifest of [{}, { typoMethods: ['input.txt'] }, { sources: 'input.txt' }, { sources: [path.join(outside, 'private.txt')] }, { sources: ['../escape'] }, { sources: ['linked.txt'] }]) {
+      const result = computeFullInputBaseline({ root, manifest });
+      assert.equal(result.ok, false, JSON.stringify(manifest));
+      assert.equal(result.digest, undefined);
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); fs.rmSync(outside, { recursive: true, force: true }); }
+});
+
+test('only actual Markdown progress markers are normalized, never prose or fenced code checkbox literals', () => {
+  assert.equal(taskDefinitionDigest('- [ ] task\r\n'), taskDefinitionDigest('- [x] task\n'));
+  for (const [a, b] of [['literal [ ]', 'literal [x]'], ['```md\n- [ ] example\n```\n', '```md\n- [x] example\n```\n'], ['~~~\n- [ ] example\n~~~\n', '~~~\n- [X] example\n~~~\n']]) {
+    assert.notEqual(taskDefinitionDigest(a), taskDefinitionDigest(b));
+  }
+});
+
+test('declared baseline kinds without current version/content identity do not authorize implementation', () => {
+  const baselines = REQUIRED_IMPLEMENTATION_BASELINES.map((kind) => ({ kind }));
+  assert.equal(requireImplementationBaselines({ baselines }).ok, false);
+  const invalidCurrent = baselines.map((b) => ({ ...b, revision: 'r1', digest: 'not-a-digest' }));
+  assert.equal(requireImplementationBaselines({ baselines: invalidCurrent }).ok, false);
+  assert.equal(verifyReportCurrency({ report: { id: 'missing' }, currentDigest: undefined }).ok, false);
+});
+
+test('required case/oracle/command trace rejects duplicates, missing commands and dangling check links', () => {
+  const contract = {
+    cases: [{ id: 'c1', ac: 'A01', oracle: 'persisted result matches expected', checkIds: ['v1'] }],
+    requiredChecks: [{ id: 'v1', level: 'unit', capability: 'node:test', command: 'node --test test/feature.test.js', caseIds: ['c1'] }],
+  };
+  assert.equal(traceAcToCases({ acceptanceIds: ['A01'], testContract: contract, requireCommands: true }).ok, true);
+  for (const mutate of [
+    (c) => { c.cases[0].oracle = ' '; },
+    (c) => { c.requiredChecks[0].command = ''; },
+    (c) => { c.requiredChecks[0].caseIds = ['absent']; },
+    (c) => { c.cases[0].checkIds = ['absent']; },
+    (c) => { c.cases.push({ ...c.cases[0] }); },
+    (c) => { c.requiredChecks = []; },
+  ]) {
+    const changed = structuredClone(contract); mutate(changed);
+    assert.equal(traceAcToCases({ acceptanceIds: ['A01'], testContract: changed, requireCommands: true }).ok, false);
+  }
+});
+
+test('indented Markdown code remains input while genuine nested list progress is normalized', () => {
+  for (const source of ['Example:\n\n    - [ ] payload\n', 'Example:\n\n\t- [ ] payload\n', '- parent\n\n      - [ ] payload\n', '- parent\n\nparagraph\n\n    - [ ] payload\n']) {
+    assert.notEqual(taskDefinitionDigest(source), taskDefinitionDigest(source.replace('[ ]', '[x]')), source);
+  }
+  for (const source of ['- parent\n  - [ ] nested\n', '- parent\n    - [ ] nested\n', '- parent\n\t- [ ] nested\n', '1. parent\n   - [ ] nested\n']) {
+    assert.equal(taskDefinitionDigest(source), taskDefinitionDigest(source.replace('[ ]', '[x]')), source);
+  }
+});
+
+test('a fence marker followed by text cannot close a code block and hide changed code payload', () => {
+  for (const source of ['```md\n```not-a-closing-fence\n- [ ] payload\n```\n', '~~~~\n~~~~text\n- [ ] payload\n~~~~\n', '````\n```\n- [ ] payload\n````\n', '```\n~~~\n- [ ] payload\n```\n']) {
+    assert.notEqual(taskDefinitionDigest(source), taskDefinitionDigest(source.replace('[ ]', '[x]')), source);
+  }
+  const realTask = '```\n- [ ] code\n```   \n- [ ] task\n';
+  assert.equal(taskDefinitionDigest(realTask), taskDefinitionDigest(realTask.replace('- [ ] task', '- [x] task')));
+});
+
+test('root fences end prior list context without discarding genuine nested-list context', () => {
+  for (const source of ['- parent\n\n```\ncode\n```\n\n    - [ ] payload\n', '1. parent\n\n~~~\ncode\n~~~\n\n\t- [ ] payload\n']) {
+    assert.notEqual(taskDefinitionDigest(source), taskDefinitionDigest(source.replace('[ ]', '[x]')), source);
+  }
+  const nested = '- parent\n\n  ```\n  code\n  ```\n    - [ ] nested\n';
+  assert.equal(taskDefinitionDigest(nested), taskDefinitionDigest(nested.replace('[ ]', '[x]')));
+});
+
+test('CommonMark block membership protects overindented fence closes and HTML blocks', () => {
+  for (const source of [
+    '```\n    ```\n- [ ] payload\n```\n',
+    '- parent\n  ```\n      ```\n  - [ ] payload\n  ```\n',
+    '<!--\n- [ ] payload\n-->\n',
+    '<script>\n- [ ] payload\n</script>\n',
+    '<div>\n- [ ] payload\n</div>\n',
+    '- intro\n\n  [ ] payload\n',
+  ]) {
+    assert.notEqual(taskDefinitionDigest(source), taskDefinitionDigest(source.replace('[ ]', '[x]')), source);
+  }
+  for (const source of ['> - [ ] quoted task\n', '1. [ ] ordered task\n', '```\ncode\n   ```\n- [ ] task\n']) {
+    assert.equal(taskDefinitionDigest(source), taskDefinitionDigest(source.replace('[ ]', '[x]')), source);
+  }
+});
+
+
+test('production AST normalization changes only located task characters, preserving all other source bytes', () => {
+  const source = '> - [X] 中文 🧪  task\r\n\r\n<div>\r\n- [x] code\r\n</div>\r\n';
+  const expected = source.replace('[X]', '[ ]');
+  assert.equal(normalizeTaskProgress(source), expected);
+  assert.equal(Buffer.byteLength(normalizeTaskProgress(source)), Buffer.byteLength(source));
+  assert.equal(normalizeTaskProgress('- \\[x] escaped\n'), '- \\[x] escaped\n');
 });
