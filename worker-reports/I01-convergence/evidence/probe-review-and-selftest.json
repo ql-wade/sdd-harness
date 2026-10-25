@@ -1,0 +1,27 @@
+{
+  "scope": "local one-shot probe preparation and synthetic-only safety self-test; no runtime service grant",
+  "planSha256": "f505d1fb99874eb82ca040bdc9af69e66ec461f0d9ec3afa19ac551003b77613",
+  "scriptRef": ".local/I01-convergence/outline-readonly-probe.py",
+  "scriptSha256": "9185662c4f6694f3e26e9423facbbeec5df3f472bb5490b427ae88073819c826",
+  "selfTestRef": ".local/I01-convergence/outline-readonly-probe-selftest.py",
+  "selfTestSha256": "6f405b3dc823f2ba6e8b852d399aa697bc59415caa70a81d4fb876ba1eb9cbd2",
+  "command": "python3 -B .local/I01-convergence/outline-readonly-probe-selftest.py",
+  "exitCode": 0,
+  "tests": 8,
+  "passed": 8,
+  "failed": 0,
+  "durationSeconds": 0.006,
+  "outputFieldAllowlistCount": 10,
+  "actualDatabaseOrHttpInSelfTest": false,
+  "cases": [
+    "wrong/unknown/exposed loopback binding refuses before key read and HTTP",
+    "unknown API route and wrong collection refuse before HTTP construction",
+    "redirect refuses without response-body read or second request",
+    "complete direct-user membership pagination retains only allowed fields",
+    "duplicate membership/user IDs, missing pages, wrong offset, changing total and invalid limit remain unverified",
+    "hash-only material has no recovery or network fallback",
+    "existing-key SQL binds exact identifiers and live validity without putting a credential value in argv",
+    "default is dry-run and unexpected exception text never reaches stdout"
+  ],
+  "codeReview": "original controller inspected the full script, requested and verified the loopback-binding guard, then separately executed the specifically authorized one-shot operation; worker did not repeat it"
+}

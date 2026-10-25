@@ -16,9 +16,20 @@
     "authority": {
       "readbackStatus": "UNVERIFIED",
       "readbackCommand": "gh api repos/ql-wade/sdd-harness + gh api user (caller must match project.github.principalId 262266039)",
-      "readbackError": "no live readback executed since the 2026-10-25 label correction; last live attempt (observedAt below, pre-correction) failed: tls x509 OSStatus -26276 on all api.github.com calls",
+      "readbackError": "Historical pre-correction attempt (observedAt below) failed: tls x509 OSStatus -26276 on all api.github.com calls; current operator identity is recorded separately in latestIdentityObservation",
       "observedAt": "2026-10-20T03:20:00Z",
-      "note": "Repository and principal ids are plan-registered labels, not secrets. Labels corrected 2026-10-25 from the stale rpamis target to the actual project ql-wade/sdd-harness (repoId 1285806550, owner ql-wade, principalId 262266039, default branch master) based on the root controller's live GitHub readback and authenticated user ql-wade. The same controller read permissions admin/maintain/pull/push for this principal; that is an observation only, NOT a grant, and NOT authorization to alter GitHub policy or publish content. Verification in tests uses a stub gh transport and never promotes stub results to live authority; readbackStatus stays UNVERIFIED until a post-fix live readback by the controller succeeds."
+      "note": "Original authentication failure retained as history. The separate fresh identity observation is not standing runtime authority, disclosure, publication, CI mutation or grant-issuance authorization. Registry labels and service-principal bindings do not grant permissions.",
+      "recordScope": "historical UNVERIFIED snapshot; not a current live identity or standing runtime authority",
+      "latestIdentityObservation": {
+        "status": "VERIFIED",
+        "observedAt": "2026-10-25T01:02:45.726Z",
+        "repoId": 1285806550,
+        "repoFullname": "ql-wade/sdd-harness",
+        "principalId": 262266039,
+        "login": "ql-wade",
+        "scope": "operator identity only; recheck before action; no publication/CI/issuance grant",
+        "evidenceRef": "worker-reports/I01-convergence/evidence/github-identity-readback.json"
+      }
     }
   },
   "resources": [
@@ -47,6 +58,58 @@
         "encryptionOwner": "UNVERIFIED",
         "destructionPrecondition": "UNVERIFIED",
         "autoCleanupEnabled": false
+      }
+    },
+    {
+      "id": "outline-managed-collection",
+      "kind": "managed-knowledge-collection",
+      "owner": "ql-wade",
+      "backupOwner": "UNVERIFIED",
+      "purpose": "Dedicated managed team knowledge collection; curated content only, publication and isolation require separately registered grants",
+      "audience": "UNVERIFIED: process health and database identity do not establish full publication audience",
+      "credentialRef": "secret-ref:sdd-harness-pilot/outline-publisher",
+      "lockRef": "infra/delivery/outline/images.lock.json",
+      "registrationRef": "infra/delivery/knowledge/authorization-model.json#targets[outline-managed-collection]",
+      "image": {
+        "reference": "outlinewiki/outline@sha256:08ee9ffdb847e1bd35ded30ee832090dd06a7f93f67422687db59e70bc7f5393",
+        "digest": "sha256:08ee9ffdb847e1bd35ded30ee832090dd06a7f93f67422687db59e70bc7f5393"
+      },
+      "domain": {
+        "network": "loopback-only",
+        "failureDomain": "single-host",
+        "crossProjectIsolation": "dedicated project deployment; not a PAV resource or credential",
+        "origin": "http://127.0.0.1:3000"
+      },
+      "retention": {
+        "rpo": "UNVERIFIED",
+        "rto": "UNVERIFIED",
+        "retentionPeriod": "UNVERIFIED",
+        "encryptionOwner": "UNVERIFIED",
+        "destructionPrecondition": "UNVERIFIED",
+        "autoCleanupEnabled": false
+      },
+      "observation": {
+        "scope": "PROCESS_HEALTH_DB_IDENTITY_AND_THREE_AUTHORIZED_READ_APIS_ONLY",
+        "healthStatus": 200,
+        "bodyIsOk": true,
+        "ownerAndAudienceHttpStatus": "UNVERIFIED",
+        "identityAndCollectionHttpStatus": "VERIFIED",
+        "directUserMembershipsHttpStatus": "VERIFIED",
+        "fullAudienceStatus": "UNVERIFIED",
+        "httpObservedAt": "2026-10-25T02:11:45.872969+00:00",
+        "apiRoutes": ["auth.info", "collections.info", "collections.memberships"],
+        "permission": null,
+        "sharing": true,
+        "paginationComplete": true,
+        "authority": "publisher/isolator/issuer NOT_GRANTED; owner API readability is not an action grant",
+        "audienceLimit": "complete direct-user membership pagination only; groups, inherited access and actual share channels remain UNVERIFIED",
+        "runtimeCredentialStatus": "UNRESOLVED",
+        "evidenceRefs": [
+          "worker-reports/I01-convergence/evidence/runtime-readonly.json",
+          "worker-reports/I01-convergence/evidence/outline-db-identity-metadata.json",
+          "worker-reports/I01-convergence/evidence/outline-http-metadata.json",
+          "worker-reports/I01-convergence/evidence/http-qualification-block.json"
+        ]
       }
     }
   ]

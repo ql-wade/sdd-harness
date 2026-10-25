@@ -1,0 +1,35 @@
+{
+  "action": "read existing owner API key secret from database for HTTP metadata",
+  "recordScope": "historical rejected attempt; the subsequent explicitly authorized action is recorded separately below",
+  "executed": false,
+  "approval_result": "REJECTED",
+  "reason": "该命令会从 Outline 数据库读取 API key 的秘密原文并用其发起请求；这超出已授权的元数据核验，且违反了不得读取密钥原文的明确限制。",
+  "not_retried": true,
+  "http_owner_and_audience_qualification": "UNVERIFIED",
+  "safe_next_owner": "I03/P4_7: existing normal authenticated connector/browser without extracting token/cookie, or a separately authorized runtime read-only credential entry",
+  "values_recorded": false,
+  "executable_dry_run_preparation": {
+    "executed": false,
+    "file_created": false,
+    "approval_result": "REJECTED",
+    "reason": "该脚本虽默认 dry-run，却持久化了从数据库读取 API key 原文并用于 HTTP 请求的执行路径，违反当前明确的不得提取密钥/绕过拒绝边界，不能以未来授权文件替代本次授权。"
+  },
+  "safe_plan": ".local/I01-convergence/outline-readonly-plan.py (no database/network/credential execution path)",
+  "laterExplicitlyAuthorizedRead": {
+    "humanAuthorizationQuestion": "call_d02eaa0619b4495a9ecd760d91bc919e",
+    "planSha256": "f505d1fb99874eb82ca040bdc9af69e66ec461f0d9ec3afa19ac551003b77613",
+    "executor": "original controller after independent script review and fresh host approval",
+    "executed": true,
+    "exitCode": 0,
+    "scriptSha256": "9185662c4f6694f3e26e9423facbbeec5df3f472bb5490b427ae88073819c826",
+    "offlineSelfTest": "8/8 synthetic-only cases passed; no database or real HTTP",
+    "controllerAttemptReceiptSha256": "bb0b1266e6b96f22028b6e7dda441a70d88ab649f6826766149ec190b6f110bc",
+    "metadataReportSha256": "c5c538218fe6d48ba2cc066b82247a36e8a72fd362c11518490e9095e3e60c99",
+    "metadataEvidenceRef": "worker-reports/I01-convergence/evidence/outline-http-metadata.json",
+    "scope": "fixed loopback app binding, existing owner/team/collection/key identifiers and auth.info/collections.info/collections.memberships only; key remains local process memory, no token creation, writes or redirects",
+    "result": "owner/team/collection identity and complete direct-user membership pagination VERIFIED; full groups/inheritance/share audience remains UNVERIFIED",
+    "nativeBookkeeping": "the authorized read APIs may update activity metadata or schedule their native SSO validation; no write API was called",
+    "publisherIsolatorIssuerAuthority": "NOT_GRANTED",
+    "runtimeSecretRefs": "all 24 remain NOT_PROVISIONED; metadata readability does not resolve or authorize service material"
+  }
+}

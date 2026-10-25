@@ -1,0 +1,218 @@
+✖ registry admission rejects blank project/resource ownership and purpose (171.555375ms)
+✖ qualification and up reject invalid registration through the same owner gate (436.576417ms)
+✖ registry rejection does not echo a credential-shaped value supplied as an owner (82.823958ms)
+✖ qualification reports unavailable dependency executables as structured UNVERIFIED (89.485292ms)
+✖ secret reference resolution rejects missing purpose and ambiguous catalog bindings (1.762834ms)
+✖ registry lock references cannot traverse or follow symlinks outside the project (124.317708ms)
+✖ registry admission rejects missing identity and invalid resource collections as structured failures (84.375333ms)
+✖ automatic cleanup remains refused when its destruction precondition is unverified (82.501833ms)
+✖ resource qualification does not claim absent source pins as recorded (274.904667ms)
+✖ qualification input binding changes with the actual reference catalog or policy (533.924875ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 0
+ℹ fail 10
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2001.570833
+
+✖ failing tests:
+
+test at test/infra-registry.test.js:69:1
+✖ registry admission rejects blank project/resource ownership and purpose (171.555375ms)
+  AssertionError [ERR_ASSERTION]: blank ownership or purpose must not validate
+
+  0 !== 2
+
+      at TestContext.<anonymous> (file://<host-path-redacted>
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.start (node:internal/test_runner/test:1003:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:358:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/infra-registry.test.js:91:1
+✖ qualification and up reject invalid registration through the same owner gate (436.576417ms)
+  AssertionError [ERR_ASSERTION]: qualify must not bypass registry admission
+      at TestContext.<anonymous> (file://<host-path-redacted>
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/infra-registry.test.js:110:1
+✖ registry rejection does not echo a credential-shaped value supplied as an owner (82.823958ms)
+  AssertionError [ERR_ASSERTION]: rejection receipts must not expose rejected secrets
+
+  true !== false
+
+      at TestContext.<anonymous> (file://<host-path-redacted>
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/infra-registry.test.js:132:1
+✖ qualification reports unavailable dependency executables as structured UNVERIFIED (89.485292ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  1 !== 2
+
+      at TestContext.<anonymous> (file://<host-path-redacted>
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/infra-registry.test.js:151:1
+✖ secret reference resolution rejects missing purpose and ambiguous catalog bindings (1.762834ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception: REF_PURPOSE_MISSING
+      at TestContext.<anonymous> (file://<host-path-redacted>
+      at async Test.run (node:internal/test_runner/test:1113:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at test/infra-registry.test.js:172:1
+✖ registry lock references cannot traverse or follow symlinks outside the project (124.317708ms)
+  AssertionError [ERR_ASSERTION]: ../outside.json must not escape the registered project
+
+  0 !== 2
+
+      at TestContext.<anonymous> (file://<host-path-redacted>
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/infra-registry.test.js:198:1
+✖ registry admission rejects missing identity and invalid resource collections as structured failures (84.375333ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  0 !== 2
+
+      at TestContext.<anonymous> (file://<host-path-redacted>
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/infra-registry.test.js:221:1
+✖ automatic cleanup remains refused when its destruction precondition is unverified (82.501833ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  0 !== 2
+
+      at TestContext.<anonymous> (file://<host-path-redacted>
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/infra-registry.test.js:246:1
+✖ resource qualification does not claim absent source pins as recorded (274.904667ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+
+  + 'RECORDED'
+  - 'UNVERIFIED'
+
+      at TestContext.<anonymous> (file://<host-path-redacted>
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'RECORDED',
+    expected: 'UNVERIFIED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/infra-registry.test.js:256:1
+✖ qualification input binding changes with the actual reference catalog or policy (533.924875ms)
+  AssertionError [ERR_ASSERTION]: Expected "actual" to be strictly unequal to:
+
+  undefined
+      at TestContext.<anonymous> (file://<host-path-redacted>
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'notStrictEqual',
+    diff: 'simple'
+  }

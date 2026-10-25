@@ -1,0 +1,64 @@
+{
+  "taskId": "I01",
+  "rework": "Spec-P2-r1",
+  "baseCommit": "09b422b7f0147b601331010249ff4b59870b0766",
+  "historyManifestSha256": "8fbe2e83018920431a7f18e9c54ed9c97918d1573c0b9eee23a0d4a66934e59c",
+  "historyManifestContentFiles": 33,
+  "historicalReportBytesUnchanged": true,
+  "candidateInputs": {
+    "tools/infra/registry.mjs": "d9e0e5cd9cb1f64ad5cfeb6d6c395d9182984a21cec8796fc3168eaa4219ea12",
+    "tools/infra/secret-refs.mjs": "4869517e14a975a035106ad690ba01c20a093d85bb0866ae5a92cac71e9c0265",
+    "test/infra-registry.test.js": "bef541e2b86bc5881c6b731ebe7a89f99fa8595cdec261328a09ab3ebbc5f3e7",
+    "infra/delivery/registry.json": "c62a3a17d1d169dcfeb0cda5569c41c16a276254164a6466e61e645b395d768e",
+    "infra/delivery/secrets.refs.example.json": "123d36002aaaf9ab4142db55a6a781e67ad157737393d33a9b0213fa449bc5f2",
+    "infra/delivery/qualification-policy.json": "a6214a3eb9f93865ff839059f6cf1789aa232a8a37eae57b04225c5a54c82426",
+    "infra/delivery/registry.schema.json": "1ab77c28b54bd532155001f09a1fbc35813c47e9eb10475b813688136585118a"
+  },
+  "candidateInputDigest": "d3173e5268d06e155906fc99594ded4662396e2b51e7358449ffc22341553000",
+  "independentBehaviorRed": [
+    {
+      "run": [
+        "node",
+        "--test",
+        "--test-name-pattern",
+        "registry rejects malformed reference catalogs before runtime observation",
+        "test/infra-registry.test.js"
+      ],
+      "startedAt": "2026-10-25T02:41:44.456335+00:00",
+      "finishedAt": "2026-10-25T02:41:49.486915+00:00",
+      "exitCode": 1
+    },
+    {
+      "run": [
+        "node",
+        "--test",
+        "--test-name-pattern",
+        "secret reference API denials never echo caller-supplied principal role or project paths",
+        "test/infra-registry.test.js"
+      ],
+      "startedAt": "2026-10-25T02:41:43.672334+00:00",
+      "finishedAt": "2026-10-25T02:41:43.865496+00:00",
+      "exitCode": 1
+    }
+  ],
+  "green": {
+    "registry": {
+      "passed": 38,
+      "failed": 0,
+      "skipped": 0
+    },
+    "related": {
+      "passed": 98,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "state": "REVIEWABLE_FOR_SPEC_AND_STANDARDS_NOT_ACCEPTED",
+  "taskReady": false,
+  "runtimeReady": false,
+  "onceProbeReexecuted": false,
+  "historicalHttpMetadataSha256": "c5c538218fe6d48ba2cc066b82247a36e8a72fd362c11518490e9095e3e60c99",
+  "historyMetadataIsFreshLiveEvidence": false,
+  "controllerOrDagChanged": false,
+  "officialLocksChanged": false
+}

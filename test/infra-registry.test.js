@@ -66,6 +66,510 @@ function violationCodes(report) {
   return (report.violations ?? []).map((v) => v.code);
 }
 
+function malformedQualificationPolicies() {
+  const source = JSON.parse(fs.readFileSync(path.join(repoRoot, 'infra/delivery/qualification-policy.json'), 'utf8'));
+  const cases = [['policy-null', null], ['policy-array', []], ['policy-number', 1], ['policy-string', 'policy'], ['policy-empty', {}]];
+  const change = (name, mutate) => { const copy = structuredClone(source); mutate(copy); cases.push([name, copy]); };
+  for (const [field, values] of [['schemaVersion', [null, '1', 2]], ['interface', [null, 'Qualification.v99']]]) {
+    change(`${field}-missing`, (p) => { delete p[field]; });
+    for (const [index, value] of values.entries()) change(`${field}-${index}`, (p) => { p[field] = value; });
+  }
+  for (const field of ['roles', 'evidenceCategories', 'secretValueKeyNames', 'forbiddenHostPathPrefixes']) {
+    change(`${field}-missing`, (p) => { delete p[field]; });
+    for (const [index, value] of [null, {}, 'not-array', [], [null], [{}], ['']].entries()) change(`${field}-${index}`, (p) => { p[field] = value; });
+    change(`${field}-duplicate`, (p) => { p[field].push(p[field][0]); });
+  }
+  change('category-unknown', (p) => { p.evidenceCategories[0] = 'unimplemented-category'; });
+  change('category-incomplete', (p) => { p.evidenceCategories.pop(); });
+  for (const field of ['imageReference', 'upGate']) {
+    change(`${field}-missing`, (p) => { delete p[field]; });
+    for (const [index, value] of [null, []].entries()) change(`${field}-${index}`, (p) => { p[field] = value; });
+  }
+  for (const [section, field] of [['imageReference', 'digestPinnedRequired'], ['imageReference', 'floatingTagsForbidden'], ['upGate', 'enabled'], ['upGate', 'requireAllCategoriesVerified']]) {
+    change(`${section}-${field}-missing`, (p) => { delete p[section][field]; });
+    change(`${section}-${field}-type`, (p) => { p[section][field] = 'true'; });
+  }
+  for (const [index, value] of [null, {}, '[', '^.*$'].entries()) change(`digest-format-${index}`, (p) => { p.imageReference.digestFormat = value; });
+  change('digest-format-missing', (p) => { delete p.imageReference.digestFormat; });
+  for (const [index, value] of [null, {}, ''].entries()) change(`refusal-reason-${index}`, (p) => { p.upGate.refusalReason = value; });
+  change('refusal-reason-missing', (p) => { delete p.upGate.refusalReason; });
+  return { source, cases };
+}
+
+function inputTripwire() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i01-policy-shape-'));
+  const marker = path.join(dir, 'calls.txt');
+  const bin = path.join(dir, 'bin');
+  const empty = path.join(dir, 'empty');
+  fs.mkdirSync(bin); fs.mkdirSync(empty);
+  for (const name of ['npm', 'docker', 'tar', 'gh']) {
+    fs.writeFileSync(path.join(bin, name), `#!${process.execPath}\nrequire('node:fs').appendFileSync(${JSON.stringify(marker)}, ${JSON.stringify(name + '\n')});\nprocess.stdout.write('10.0.0\\n');\n`, { mode: 0o700 });
+  }
+  return {
+    dir, marker, bin, empty,
+    run(args, commandPath = bin, cli = registryCli) { return spawnSync(process.execPath, [cli, ...args], { cwd: repoRoot, encoding: 'utf8', timeout: RUN_TIMEOUT_MS, env: { ...process.env, PATH: commandPath } }); },
+    clear() { fs.rmSync(marker, { force: true }); },
+    close() { fs.rmSync(dir, { recursive: true, force: true }); },
+  };
+}
+
+test('qualification policy shape admission rejects every consumed field before CLI use', () => {
+  const harness = inputTripwire();
+  try {
+    const { source, cases } = malformedQualificationPolicies();
+    const policyFile = path.join(harness.dir, 'policy.json');
+    const badRefsFile = path.join(harness.dir, 'refs.json');
+    const refs = JSON.parse(fs.readFileSync(refsExamplePath, 'utf8'));
+    refs.refs.unshift(null); fs.writeFileSync(badRefsFile, JSON.stringify(refs));
+    fs.writeFileSync(policyFile, JSON.stringify(source));
+    const args = (command) => [command, ...(['qualify', 'up'].includes(command) ? ['--resource', 'comet-source'] : []), '--policy', policyFile, '--json'];
+    const control = harness.run(args('qualify'));
+    assert.equal(control.status, 2);
+    assert.ok(parseJsonOut(control, 'policy tripwire control').runtime);
+    assert.match(fs.readFileSync(harness.marker, 'utf8'), /npm\ndocker\n/);
+    harness.clear();
+    const failures = [];
+    const check = (name, policy, extra = [], commandPath = harness.bin) => {
+      fs.writeFileSync(policyFile, JSON.stringify(policy));
+      for (const command of ['validate', 'status', 'qualify', 'up']) {
+        const result = harness.run([...args(command), ...extra], commandPath);
+        let report; try { report = JSON.parse(result.stdout); } catch { report = null; }
+        const codes = report ? violationCodes(report) : [];
+        if (result.status !== 2 || !codes.some((code) => code.startsWith('POLICY_')) || result.stderr || report?.runtime || report?.receipt?.runtime || fs.existsSync(harness.marker)) {
+          failures.push({ name, command, exitCode: result.status, json: Boolean(report), policyRefusal: codes.some((code) => code.startsWith('POLICY_')), externalCli: fs.existsSync(harness.marker) });
+        }
+        harness.clear();
+      }
+    };
+    for (const [name, policy] of cases) check(name, policy);
+    for (const [name, policy] of cases.filter(([name]) => ['roles-1', 'evidenceCategories-1', 'policy-null', 'schemaVersion-2'].includes(name))) {
+      check(`${name}-with-null-ref`, policy, ['--refs', badRefsFile]);
+      check(`${name}-empty-path`, policy, [], harness.empty);
+    }
+    assert.equal(failures.length, 0, JSON.stringify({ failures: failures.length, samples: failures.slice(0, 10) }));
+    fs.writeFileSync(policyFile, '{broken JSON');
+    for (const command of ['validate', 'status', 'qualify', 'up']) {
+      const result = harness.run(args(command));
+      assert.equal(result.status, 1);
+      assert.equal(result.stdout, '');
+      assert.match(result.stderr, /qualification policy unreadable/);
+      assert.equal(fs.existsSync(harness.marker), false);
+    }
+  } finally { harness.close(); }
+});
+
+test('shared catalog and resolver reject malformed policy options and iterable bindings', async () => {
+  const { resolveSecretRef, validateRefsCatalog } = await import(secretRefsModuleUrl);
+  const refsDoc = JSON.parse(fs.readFileSync(refsExamplePath, 'utf8'));
+  const entry = refsDoc.refs.find((item) => item.ref === 'secret-ref:sdd-harness-pilot/outline-publisher');
+  const base = { ref: entry.ref, principalId: entry.allowedPrincipals[0], role: entry.boundRole, project: 'sdd-harness-pilot', refsDoc };
+  const { source, cases } = malformedQualificationPolicies();
+  assert.equal(resolveSecretRef({ ...base, policy: source }).status, 'UNRESOLVED');
+  assert.equal(resolveSecretRef(base).status, 'UNRESOLVED');
+  const failures = [];
+  for (const [name, policy] of cases) {
+    try {
+      const violations = validateRefsCatalog(refsDoc, base.project, { policy });
+      if (!violations.some((v) => v.code.startsWith('POLICY_'))) failures.push(`${name}:catalog-not-refused`);
+    } catch { failures.push(`${name}:catalog-threw`); }
+    try { resolveSecretRef({ ...base, policy }); failures.push(`${name}:resolver-not-refused`); }
+    catch (error) { if (!error.code?.startsWith('POLICY_')) failures.push(`${name}:resolver-wrong-error`); }
+  }
+  for (const options of [null, [], 1, 'options', { roles: null }, { roles: {} }, { roles: [null] }, { roles: [{}] }, { roles: [] }, { roles: [''] }, { roles: undefined }]) {
+    try { if (validateRefsCatalog(refsDoc, base.project, options).length === 0) failures.push('catalog-options-not-refused'); }
+    catch { failures.push('catalog-options-threw'); }
+  }
+  for (const options of [null, [], 1, 'options', undefined]) {
+    try { resolveSecretRef(options); failures.push('resolver-options-not-refused'); }
+    catch (error) { if (!error.code || error instanceof TypeError) failures.push('resolver-options-threw-type-error'); }
+  }
+  for (const project of [null, 0, '']) {
+    try { resolveSecretRef({ ...base, project }); failures.push('explicit-invalid-project-not-refused'); }
+    catch (error) { if (!error.code || error instanceof TypeError) failures.push('invalid-project-threw-type-error'); }
+    if (validateRefsCatalog(refsDoc, project).length === 0) failures.push('invalid-expected-project-not-refused');
+  }
+  for (const principals of [undefined, null, {}, [null], [{}], [''], [], [entry.allowedPrincipals[0], entry.allowedPrincipals[0]]]) {
+    const catalog = structuredClone(refsDoc);
+    catalog.refs.find((item) => item.ref === entry.ref).allowedPrincipals = principals;
+    try { if (validateRefsCatalog(catalog, base.project).length === 0) failures.push('principals-not-refused'); }
+    catch { failures.push('principals-threw'); }
+  }
+  const unknownVersion = { ...refsDoc, schemaVersion: 2 };
+  if (validateRefsCatalog(unknownVersion, base.project).length === 0) failures.push('unknown-catalog-version-not-refused');
+  for (const boundRole of [null, {}, { toString: null }, 1]) {
+    const catalog = structuredClone(refsDoc); catalog.refs[0].boundRole = boundRole;
+    try { if (validateRefsCatalog(catalog, base.project).length === 0) failures.push('bound-role-not-refused'); }
+    catch { failures.push('bound-role-threw'); }
+  }
+  assert.equal(failures.length, 0, JSON.stringify({ failures: failures.length, samples: failures.slice(0, 12) }));
+});
+
+test('public option and optional input shape errors refuse before external tools', () => {
+  const harness = inputTripwire();
+  try {
+    const registryFile = path.join(harness.dir, 'registry.json');
+    const metadataFile = path.join(harness.dir, 'metadata.json');
+    const failures = [];
+    const check = (name, args, expected) => {
+      const result = harness.run([...args, '--json']);
+      if (result.status !== expected || /TypeError|SyntaxError.* at /s.test(result.stderr) || fs.existsSync(harness.marker)) failures.push({ name, exitCode: result.status, externalCli: fs.existsSync(harness.marker) });
+      harness.clear();
+    };
+    for (const [name, mutate] of [['delegates-null', (r) => { r.project.delegates = null; }], ['id-object', (r) => { r.resources[0].id = { toString: null }; }]]) {
+      const registry = loadCommittedRegistry(); mutate(registry);
+      fs.writeFileSync(registryFile, JSON.stringify(registry));
+      for (const command of ['validate', 'status', 'qualify', 'up']) check(name, [command, ...(['qualify', 'up'].includes(command) ? ['--resource', 'comet-source'] : []), '--registry', registryFile], 2);
+    }
+    for (const [name, value] of [['node-object', {}], ['node-null', null], ['node-array', []]]) {
+      const registry = loadCommittedRegistry(); registry.resources[0].runtimeRequirement.node = value;
+      fs.writeFileSync(registryFile, JSON.stringify(registry));
+      for (const command of ['validate', 'status', 'qualify', 'up']) check(name, [command, ...(['qualify', 'up'].includes(command) ? ['--resource', 'comet-source'] : []), '--registry', registryFile], 2);
+    }
+    for (const value of [null, [], { reference: 'fixture', digest: { toString: null } }]) {
+      const registry = loadCommittedRegistry(); registry.resources[0].image = value;
+      fs.writeFileSync(registryFile, JSON.stringify(registry));
+      check('image-shape', ['qualify', '--resource', 'comet-source', '--registry', registryFile], 2);
+    }
+    check('unknown-option', ['qualify', '--resource', 'comet-source', '--unknown', 'value'], 1);
+    check('extra-positional', ['qualify', '--resource', 'comet-source', 'extra'], 1);
+    check('irrelevant-readback-policy', ['readback', '--kind', 'github', '--policy', metadataFile], 1);
+    check('missing-option-value', ['qualify', '--resource', 'comet-source', '--policy'], 1);
+    check('duplicate-option', ['qualify', '--resource', 'comet-source', '--resource', 'comet-source'], 1);
+    check('archive-missing', ['qualify', '--resource', 'comet-source', '--archive', path.join(harness.dir, 'missing')], 1);
+    check('archive-directory', ['qualify', '--resource', 'comet-source', '--archive', harness.dir], 1);
+    check('metadata-missing', ['qualify', '--resource', 'comet-source', '--npm-metadata', metadataFile], 1);
+    for (const value of [null, [], { version: {} }, { integrity: [null] }, { license: {} }]) {
+      fs.writeFileSync(metadataFile, JSON.stringify(value));
+      check('metadata-shape', ['qualify', '--resource', 'comet-source', '--npm-metadata', metadataFile], 2);
+    }
+    fs.writeFileSync(metadataFile, JSON.stringify({ license: 'MIT' }));
+    const incomplete = harness.run(['qualify', '--resource', 'outline-managed-collection', '--npm-metadata', metadataFile, '--json']);
+    if (parseJsonOut(incomplete, 'incomplete metadata').categories.license.status !== 'UNVERIFIED') failures.push({ name: 'missing-bindings-verified-license' });
+    harness.clear();
+    const project = path.join(harness.dir, 'project');
+    for (const file of ['tools/infra/registry.mjs', 'tools/infra/secret-refs.mjs', 'infra/delivery/qualification-policy.json', 'infra/delivery/secrets.refs.example.json']) {
+      fs.mkdirSync(path.dirname(path.join(project, file)), { recursive: true });
+      fs.copyFileSync(path.join(repoRoot, file), path.join(project, file));
+    }
+    fs.writeFileSync(path.join(project, 'package.json'), '{"type":"module"}');
+    const registry = loadCommittedRegistry(); registry.resources[0].lockRef = 'fixture-lock.json';
+    fs.writeFileSync(path.join(project, 'infra/delivery/registry.json'), JSON.stringify(registry));
+    for (const lock of [null, [], { schemaVersion: 2 }, { source: [] }, { source: { sha256: { toString: null } } }, { package: { version: [] } }]) {
+      fs.writeFileSync(path.join(project, 'fixture-lock.json'), JSON.stringify(lock));
+      for (const command of ['qualify', 'up']) {
+        const result = harness.run([command, '--resource', 'comet-source', '--json'], harness.bin, path.join(project, 'tools/infra/registry.mjs'));
+        let report; try { report = JSON.parse(result.stdout); } catch { report = null; }
+        if (result.status !== 2 || !report?.violations?.some((v) => v.code === 'EVIDENCE_INPUT_INVALID') || fs.existsSync(harness.marker)) failures.push({ name: 'lock-shape', exitCode: result.status, externalCli: fs.existsSync(harness.marker) });
+        harness.clear();
+      }
+    }
+    assert.equal(failures.length, 0, JSON.stringify({ failures: failures.length, samples: failures.slice(0, 10) }));
+  } finally { harness.close(); }
+});
+
+test('registry rejects malformed reference catalogs before runtime observation in every command', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i01-refs-shape-'));
+  try {
+    const source = JSON.parse(fs.readFileSync(refsExamplePath, 'utf8'));
+    const file = path.join(dir, 'refs.json');
+    const marker = path.join(dir, 'external-cli-calls.txt');
+    const bin = path.join(dir, 'bin');
+    const empty = path.join(dir, 'empty');
+    fs.mkdirSync(bin);
+    fs.mkdirSync(empty);
+    for (const name of ['npm', 'docker', 'tar', 'gh']) {
+      fs.writeFileSync(path.join(bin, name), `#!${process.execPath}\nconst fs = require('node:fs');\nfs.appendFileSync(${JSON.stringify(marker)}, ${JSON.stringify(name + '\n')});\nprocess.stdout.write('10.0.0\\n');\n`, { mode: 0o700 });
+    }
+    const run = (command, commandPath) => spawnSync(process.execPath, [registryCli, command,
+      ...(['qualify', 'up'].includes(command) ? ['--resource', 'comet-source'] : []), '--refs', file, '--json'], {
+      cwd: repoRoot, encoding: 'utf8', timeout: RUN_TIMEOUT_MS, env: { ...process.env, PATH: commandPath },
+    });
+    fs.writeFileSync(file, JSON.stringify(source));
+    const control = run('qualify', bin);
+    assert.equal(control.status, 2);
+    assert.ok(parseJsonOut(control, 'valid catalog control').runtime, 'valid qualification reaches runtime observation');
+    assert.match(fs.readFileSync(marker, 'utf8'), /npm\ndocker\n/, 'the CLI tripwire must be active');
+    fs.rmSync(marker);
+
+    const cases = [
+      ['catalog-null', null],
+      ['refs-null', { ...source, refs: null }],
+      ['refs-object', { ...source, refs: {} }],
+      ['refs-string', { ...source, refs: 'not-an-array' }],
+      ['null-first', { ...source, refs: [null, ...source.refs] }],
+      ['null-last', { ...source, refs: [...source.refs, null] }],
+    ];
+    const failures = [];
+    for (const [name, refs] of cases) {
+      fs.writeFileSync(file, JSON.stringify(refs));
+      for (const [pathMode, commandPath] of [['tripwire', bin], ['empty', empty]]) {
+        for (const command of ['validate', 'status', 'qualify', 'up']) {
+          const result = run(command, commandPath);
+          let report;
+          try { report = JSON.parse(result.stdout); } catch { report = null; }
+          const issues = [];
+          if (result.status !== 2) issues.push('not-verification-exit-2');
+          if (!report || !violationCodes(report).includes('REFS_SCHEMA_INVALID')) issues.push('missing-structured-catalog-refusal');
+          if (result.stderr) issues.push('unexpected-stderr');
+          if (report?.runtime || report?.receipt?.runtime) issues.push('runtime-observed-before-refusal');
+          if (fs.existsSync(marker)) issues.push('external-cli-called-before-refusal');
+          if (issues.length) failures.push({ fixture: name, command, pathMode, exitCode: result.status, issues });
+          fs.rmSync(marker, { force: true });
+        }
+      }
+    }
+    assert.deepEqual(failures, [], 'every malformed catalog must be rejected as JSON before external CLI access');
+
+    fs.writeFileSync(file, '{broken JSON');
+    for (const command of ['validate', 'status', 'qualify', 'up']) {
+      const result = run(command, empty);
+      assert.equal(result.status, 1, 'unparseable JSON retains invalid-input exit 1');
+      assert.equal(result.stdout, '');
+      assert.match(result.stderr, /refs catalog unreadable/);
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('secret reference API denials never echo caller-supplied principal role or project paths', async () => {
+  const { resolveSecretRef } = await import(secretRefsModuleUrl);
+  const refsDoc = JSON.parse(fs.readFileSync(refsExamplePath, 'utf8'));
+  const entry = refsDoc.refs.find((item) => item.ref === 'secret-ref:sdd-harness-pilot/outline-publisher');
+  const base = { ref: entry.ref, principalId: entry.allowedPrincipals[0], role: entry.boundRole, project: 'sdd-harness-pilot', refsDoc };
+  const failures = [];
+  for (const prefix of ['Users', 'Volumes', 'home', 'root', 'private', 'var', 'usr', 'etc', 'opt', 'tmp']) {
+    for (const field of ['principalId', 'role', 'project']) {
+      const supplied = `/${prefix}/private-example/${field}`;
+      try {
+        resolveSecretRef({ ...base, [field]: supplied });
+        failures.push({ prefix, field, issue: 'not-denied' });
+      } catch (error) {
+        const expected = field === 'project' ? 'CROSS_PROJECT_REF' : 'PRINCIPAL_NOT_AUTHORIZED';
+        if (error.code !== expected) failures.push({ prefix, field, issue: 'wrong-code' });
+        if (error.message.includes(supplied) || String(error).includes(supplied)) failures.push({ prefix, field, issue: 'caller-path-leaked' });
+      }
+    }
+  }
+  assert.deepEqual(failures, [], 'direct API denials must preserve codes without serializing caller paths');
+});
+
+test('registry admission rejects blank project/resource ownership and purpose', () => {
+  const cases = [
+    (r) => { r.project.owner = ''; },
+    (r) => { r.resources[0].owner = ''; },
+    (r) => { r.resources[0].purpose = '   '; },
+  ];
+  for (const mutate of cases) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i01-required-'));
+    try {
+      const registry = loadCommittedRegistry();
+      mutate(registry);
+      const file = path.join(dir, 'registry.json');
+      fs.writeFileSync(file, JSON.stringify(registry));
+      const result = runRegistry(['validate', '--registry', file, '--json']);
+      assert.equal(result.status, 2, 'blank ownership or purpose must not validate');
+      assert.equal(parseJsonOut(result, 'blank fields').ok, false);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+});
+
+test('qualification and up reject invalid registration through the same owner gate', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i01-admission-'));
+  try {
+    const registry = loadCommittedRegistry();
+    registry.resources[0].owner = 'unregistered-owner';
+    const file = path.join(dir, 'registry.json');
+    fs.writeFileSync(file, JSON.stringify(registry));
+    for (const command of ['qualify', 'up']) {
+      const result = runRegistry([command, '--resource', 'comet-source', '--registry', file, '--json']);
+      assert.equal(result.status, 2);
+      const report = parseJsonOut(result, command);
+      assert.ok(violationCodes(report).includes('UNKNOWN_OWNER'), `${command} must not bypass registry admission`);
+      assert.equal(report.ready, false);
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('registry rejection does not echo a credential-shaped value supplied as an owner', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i01-no-echo-'));
+  try {
+    const registry = loadCommittedRegistry();
+    const fakeCredential = `ghp_${'A'.repeat(36)}`;
+    registry.resources[0].owner = fakeCredential;
+    const file = path.join(dir, 'registry.json');
+    fs.writeFileSync(file, JSON.stringify(registry));
+    const result = runRegistry(['validate', '--registry', file, '--json']);
+    assert.equal(result.status, 2);
+    assert.equal(result.stdout.includes(fakeCredential), false, 'rejection receipts must not expose rejected secrets');
+    assert.ok(violationCodes(parseJsonOut(result, 'secret rejection')).includes('SECRET_PLAINTEXT_FORBIDDEN'));
+    registry.project.github.owner = fakeCredential;
+    fs.writeFileSync(file, JSON.stringify(registry));
+    const invalidIdentity = runRegistry(['readback', '--kind', 'github', '--registry', file, '--json']);
+    assert.equal(invalidIdentity.status, 1);
+    assert.equal((invalidIdentity.stdout + invalidIdentity.stderr).includes(fakeCredential), false, 'input errors must not expose rejected secrets');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('qualification reports unavailable dependency executables as structured UNVERIFIED', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i01-no-tools-'));
+  try {
+    const result = spawnSync(process.execPath, [registryCli, 'qualify', '--resource', 'comet-source', '--registry', registryPath, '--json'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: dir },
+    });
+    assert.equal(result.status, 2);
+    const receipt = parseJsonOut(result, 'missing executables');
+    assert.equal(receipt.ready, false);
+    assert.equal(receipt.runtime.containerDaemon.observed, false);
+    assert.match(receipt.runtime.npm, /UNAVAILABLE/);
+    assert.match(receipt.runtime.containerDaemon.reason, /ENOENT/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('secret reference resolution rejects missing purpose and ambiguous catalog bindings', async () => {
+  const { resolveSecretRef } = await import(secretRefsModuleUrl);
+  const source = JSON.parse(fs.readFileSync(refsExamplePath, 'utf8'));
+  const ref = 'secret-ref:sdd-harness-pilot/outline-publisher';
+  const original = source.refs.find((entry) => entry.ref === ref);
+  const cases = [
+    { code: 'REF_PURPOSE_MISSING', mutate: (doc) => { doc.refs.find((entry) => entry.ref === ref).purpose = '  '; } },
+    { code: 'ROLE_REUSE', mutate: (doc) => { doc.refs.push({ ...original, boundRole: 'isolator' }); } },
+    { code: 'REFS_SCHEMA_INVALID', mutate: (doc) => { doc.refs.push(null); } },
+  ];
+  for (const fixture of cases) {
+    const refsDoc = structuredClone(source);
+    fixture.mutate(refsDoc);
+    assert.throws(
+      () => resolveSecretRef({ ref, principalId: original.allowedPrincipals[0], role: original.boundRole, project: 'sdd-harness-pilot', refsDoc }),
+      (error) => error.code === fixture.code,
+      fixture.code,
+    );
+  }
+});
+
+test('registry lock references cannot traverse or follow symlinks outside the project', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i01-lock-scope-'));
+  try {
+    const root = path.join(dir, 'project');
+    for (const relative of ['tools/infra/registry.mjs', 'tools/infra/secret-refs.mjs', 'infra/delivery/registry.json', 'infra/delivery/secrets.refs.example.json', 'infra/delivery/qualification-policy.json']) {
+      fs.mkdirSync(path.dirname(path.join(root, relative)), { recursive: true });
+      fs.copyFileSync(path.join(repoRoot, relative), path.join(root, relative));
+    }
+    fs.writeFileSync(path.join(root, 'package.json'), '{"type":"module"}');
+    const outside = path.join(dir, 'outside.json');
+    fs.writeFileSync(outside, '{"source":{"commit":"' + 'a'.repeat(40) + '"}}');
+    fs.symlinkSync(outside, path.join(root, 'linked-lock.json'));
+    fs.symlinkSync(dir, path.join(root, 'linked-parent'));
+    fs.symlinkSync(path.join(dir, 'missing.json'), path.join(root, 'dangling-lock.json'));
+    for (const lockRef of ['../outside.json', 'linked-lock.json', 'linked-parent/missing.json', 'dangling-lock.json']) {
+      const registry = loadCommittedRegistry();
+      registry.resources[0].lockRef = lockRef;
+      const file = path.join(root, 'infra/delivery/registry.json');
+      fs.writeFileSync(file, JSON.stringify(registry));
+      const result = spawnSync(process.execPath, [path.join(root, 'tools/infra/registry.mjs'), 'validate', '--registry', file, '--json'], { cwd: root, encoding: 'utf8' });
+      assert.equal(result.status, 2, `${lockRef} must not escape the registered project`);
+      assert.ok(violationCodes(parseJsonOut(result, 'lock containment')).includes('LOCK_REF_NOT_CONTAINED'));
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('registry admission rejects missing identity and invalid resource collections as structured failures', () => {
+  const cases = [
+    (r) => { delete r.project.github; },
+    (r) => { r.resources = []; },
+    (r) => { r.resources = {}; },
+    (r) => { r.project.authority.readbackStatus = 'ASSUMED'; },
+  ];
+  for (const mutate of cases) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i01-shape-'));
+    try {
+      const registry = loadCommittedRegistry();
+      mutate(registry);
+      const file = path.join(dir, 'registry.json');
+      fs.writeFileSync(file, JSON.stringify(registry));
+      const result = runRegistry(['validate', '--registry', file, '--json']);
+      assert.equal(result.status, 2);
+      assert.equal(parseJsonOut(result, 'registry shape').ok, false);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+});
+
+test('automatic cleanup remains refused when its destruction precondition is unverified', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i01-retention-'));
+  try {
+    const registry = loadCommittedRegistry();
+    Object.assign(registry.resources[0].retention, {
+      rpo: 'one hour', rto: 'four hours', retentionPeriod: 'one week', encryptionOwner: 'ql-wade',
+      destructionPrecondition: 'UNVERIFIED', autoCleanupEnabled: true,
+    });
+    const file = path.join(dir, 'registry.json');
+    for (const precondition of ['UNVERIFIED', ' UNVERIFIED ']) {
+      registry.resources[0].retention.destructionPrecondition = precondition;
+      fs.writeFileSync(file, JSON.stringify(registry));
+      const result = runRegistry(['validate', '--registry', file, '--json']);
+      assert.equal(result.status, 2, 'whitespace must not turn an unverified destruction precondition into authority');
+      const violation = parseJsonOut(result, 'retention').violations.find((v) => v.code === 'AUTO_CLEANUP_WITHOUT_CONFIRMED_RECOVERY');
+      assert.ok(violation?.unconfirmed.includes('destructionPrecondition'));
+    }
+    registry.resources[0].retention.destructionPrecondition = 'explicit owner approval';
+    registry.resources[0].retention.rpo = {};
+    fs.writeFileSync(file, JSON.stringify(registry));
+    const invalidType = runRegistry(['validate', '--registry', file, '--json']);
+    assert.equal(invalidType.status, 2, 'a non-string recovery field must not count as confirmed');
+    assert.ok(parseJsonOut(invalidType, 'retention type').violations.some((v) => v.code === 'REGISTRY_TYPE_INVALID' && v.field === 'retention.rpo'));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('resource qualification does not claim absent source pins as recorded', () => {
+  const result = runRegistry(['qualify', '--resource', 'outline-managed-collection', '--registry', registryPath, '--json']);
+  assert.equal(result.status, 2);
+  const report = parseJsonOut(result, 'service source pins');
+  assert.equal(report.categories['source-commit'].status, 'UNVERIFIED');
+  assert.equal(report.categories['source-digest'].status, 'UNVERIFIED');
+  assert.equal(report.categories['artifact-size'].status, 'UNVERIFIED');
+  assert.equal(report.ready, false);
+});
+
+test('qualification input binding changes with the actual reference catalog or policy', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i01-inputs-'));
+  try {
+    const base = parseJsonOut(runRegistry(['qualify', '--resource', 'comet-source', '--json']), 'base qualification');
+    const refs = JSON.parse(fs.readFileSync(refsExamplePath, 'utf8'));
+    refs.refs[0].purpose += ' (qualified read-only purpose revision)';
+    const refsFile = path.join(dir, 'refs.json');
+    fs.writeFileSync(refsFile, JSON.stringify(refs));
+    const withRefs = parseJsonOut(runRegistry(['qualify', '--resource', 'comet-source', '--refs', refsFile, '--json']), 'reference revision');
+    assert.notEqual(base.inputs.refsSha256, withRefs.inputs.refsSha256);
+    assert.equal(base.inputs.registrySha256, withRefs.inputs.registrySha256);
+
+    const policy = JSON.parse(fs.readFileSync(path.join(repoRoot, 'infra/delivery/qualification-policy.json'), 'utf8'));
+    policy.note = 'qualification input revision';
+    const policyFile = path.join(dir, 'policy.json');
+    fs.writeFileSync(policyFile, JSON.stringify(policy));
+    const withPolicy = parseJsonOut(runRegistry(['qualify', '--resource', 'comet-source', '--policy', policyFile, '--json']), 'policy revision');
+    assert.notEqual(base.inputs.policySha256, withPolicy.inputs.policySha256);
+    assert.equal(base.inputs.registrySha256, withPolicy.inputs.registrySha256);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract', () => {
   const validate = runRegistry(['validate', '--registry', registryPath, '--json']);
   assert.equal(validate.status, 0, `validate must PASS on committed registry: ${validate.stderr || validate.stdout}`);

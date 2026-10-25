@@ -14,16 +14,16 @@
       "properties": {
         "id": { "$ref": "#/definitions/label" },
         "displayName": { "type": "string" },
-        "owner": { "type": "string" },
-        "delegates": { "type": "array", "items": { "type": "string" } },
+        "owner": { "type": "string", "minLength": 1, "pattern": "\\S" },
+        "delegates": { "type": "array", "items": { "type": "string", "minLength": 1, "pattern": "\\S" } },
         "github": {
           "type": "object",
-          "required": ["repoId", "principalId"],
+          "required": ["repoId", "repoFullname", "principalId", "owner"],
           "properties": {
-            "repoId": { "type": "integer" },
-            "repoFullname": { "type": "string" },
-            "principalId": { "type": "integer" },
-            "owner": { "type": "string" },
+            "repoId": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+            "repoFullname": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]+$" },
+            "principalId": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+            "owner": { "type": "string", "minLength": 1, "pattern": "\\S" },
             "url": { "type": "string" }
           }
         },
@@ -49,23 +49,23 @@
         "properties": {
           "id": { "$ref": "#/definitions/label" },
           "kind": { "$ref": "#/definitions/label" },
-          "owner": { "type": "string" },
+          "owner": { "type": "string", "minLength": 1, "pattern": "\\S" },
           "backupOwner": { "type": "string" },
-          "purpose": { "type": "string", "minLength": 1 },
+          "purpose": { "type": "string", "minLength": 1, "pattern": "\\S" },
           "audience": { "type": "string" },
           "credentialRef": { "$ref": "#/definitions/secretRef" },
-          "lockRef": { "type": "string", "description": "repo-root-relative path to the component lock file" },
+          "lockRef": { "type": "string", "minLength": 1, "description": "repo-root-relative path to the component lock file; lexical traversal and symlink targets outside the project are rejected" },
           "runtimeRequirement": {
             "type": "object",
             "properties": {
-              "node": { "type": "string" },
-              "source": { "type": "string" }
+              "node": { "type": "string", "minLength": 1, "pattern": "\\S" },
+              "source": { "type": "string", "minLength": 1, "pattern": "\\S" }
             }
           },
           "image": {
             "type": "object",
             "properties": {
-              "reference": { "type": "string" },
+              "reference": { "type": "string", "minLength": 1, "pattern": "\\S" },
               "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
             }
           },
@@ -73,7 +73,7 @@
             "type": "object",
             "required": ["network"],
             "properties": {
-              "network": { "type": "string" },
+              "network": { "type": "string", "minLength": 1, "pattern": "\\S" },
               "failureDomain": { "type": "string" },
               "crossProjectIsolation": { "type": "string" }
             }

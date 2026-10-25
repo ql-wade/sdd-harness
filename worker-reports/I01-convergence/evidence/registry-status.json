@@ -1,0 +1,48 @@
+{
+  "interface": "Registry.v1",
+  "registry": "infra/delivery/registry.json",
+  "project": {
+    "id": "sdd-harness-pilot",
+    "owner": "ql-wade",
+    "authorityReadback": "UNVERIFIED"
+  },
+  "resources": [
+    {
+      "id": "comet-source",
+      "kind": "source-archive",
+      "owner": "ql-wade",
+      "credentialRef": "secret-ref:sdd-harness-pilot/source-git-read",
+      "lockRef": "integrations/comet/upstream.lock.json",
+      "lockPresent": true,
+      "retention": {
+        "autoCleanupEnabled": false,
+        "unconfirmedFields": [
+          "rpo",
+          "rto",
+          "retentionPeriod",
+          "encryptionOwner",
+          "destructionPrecondition"
+        ]
+      }
+    },
+    {
+      "id": "outline-managed-collection",
+      "kind": "managed-knowledge-collection",
+      "owner": "ql-wade",
+      "credentialRef": "secret-ref:sdd-harness-pilot/outline-publisher",
+      "lockRef": "infra/delivery/outline/images.lock.json",
+      "lockPresent": true,
+      "retention": {
+        "autoCleanupEnabled": false,
+        "unconfirmedFields": [
+          "rpo",
+          "rto",
+          "retentionPeriod",
+          "encryptionOwner",
+          "destructionPrecondition"
+        ]
+      }
+    }
+  ],
+  "checkedAt": "2026-10-25T02:15:42.014Z"
+}

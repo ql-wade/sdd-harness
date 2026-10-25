@@ -6,6 +6,36 @@
 
 export const SECRET_REF_PREFIX = 'secret-ref:';
 const NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,62}$/;
+const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const nonBlank = (value) => typeof value === 'string' && value.trim() !== '';
+const stringList = (values, predicate = () => true) => Array.isArray(values) && values.length > 0
+  && Array.from(values).every((value) => nonBlank(value) && predicate(value)) && new Set(values).size === values.length;
+const QUALIFICATION_CATEGORIES = ['source-commit', 'source-digest', 'artifact-size', 'image-digest', 'platform', 'license', 'health-api', 'backup-compatibility'];
+
+export function validateQualificationPolicy(policy) {
+  const violations = [];
+  const require = (ok, at, expected) => { if (!ok) violations.push({ code: 'POLICY_SCHEMA_INVALID', at, expected }); };
+  if (!isObject(policy)) return [{ code: 'POLICY_SCHEMA_INVALID', at: 'policy', expected: 'object' }];
+  require(policy.schemaVersion === 1, 'policy.schemaVersion', 'version 1');
+  require(policy.interface === 'Qualification.v1', 'policy.interface', 'Qualification.v1');
+  require(stringList(policy.roles, (role) => NAME_PATTERN.test(role)), 'policy.roles', 'non-empty unique role-name array');
+  const categories = policy.evidenceCategories;
+  require(stringList(categories, (category) => QUALIFICATION_CATEGORIES.includes(category))
+    && categories.length === QUALIFICATION_CATEGORIES.length,
+  'policy.evidenceCategories', 'all eight implemented categories, without duplicates');
+  for (const [section, fields] of [['imageReference', ['digestPinnedRequired', 'floatingTagsForbidden']], ['upGate', ['enabled', 'requireAllCategoriesVerified']]]) {
+    require(isObject(policy[section]), `policy.${section}`, 'object');
+    if (isObject(policy[section])) {
+      for (const field of fields) require(typeof policy[section][field] === 'boolean', `policy.${section}.${field}`, 'boolean');
+    }
+  }
+  if (isObject(policy.imageReference)) require(policy.imageReference.digestFormat === '^sha256:[0-9a-f]{64}$', 'policy.imageReference.digestFormat', 'canonical SHA256 format');
+  if (isObject(policy.upGate)) require(nonBlank(policy.upGate.refusalReason), 'policy.upGate.refusalReason', 'non-blank string');
+  require(stringList(policy.secretValueKeyNames, (key) => /^[a-z][a-z0-9_-]*$/.test(key)), 'policy.secretValueKeyNames', 'non-empty unique field-name array');
+  require(stringList(policy.forbiddenHostPathPrefixes, (prefix) => /^\/(?:[A-Za-z0-9._-]+\/)+$/.test(prefix) && !prefix.includes('/../')),
+    'policy.forbiddenHostPathPrefixes', 'non-empty unique absolute directory-prefix array');
+  return violations;
+}
 
 // 键名疑为秘密持有者的：非空即拒绝（引用目录只允许引用，不允许值）。
 const SECRET_VALUE_KEY_PATTERN = /secret|token|password|passwd|apikey|api_key|privatekey|private_key|credentialvalue/i;
@@ -18,13 +48,19 @@ const SECRET_PLAINTEXT_PATTERNS = [
   /github_pat_[A-Za-z0-9_]{20,}/,
   /AKIA[0-9A-Z]{16}/,
   /xox[baprs]-[A-Za-z0-9-]{10,}/,
-  /sk-[A-Za-z0-9]{20,}/,
+  /sk-[A-Za-z0-9_-]{20,}/,
   /npm_[A-Za-z0-9]{20,}/,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
   /Bearer\s+[A-Za-z0-9._-]{25,}/,
 ];
 
-const HOST_PATH_PATTERN = /(^|[\s"'=(:/])\/(Users|home|root|private|var|usr|etc|opt|tmp)\//;
+const HOST_PATH_PATTERN = /(^|[\s"'=(:/])\/(Users|Volumes|home|root|private|var|usr|etc|opt|tmp)\//;
+
+export function redactSecretValue(value) {
+  return typeof value === 'string' && SECRET_PLAINTEXT_PATTERNS.some((pattern) => pattern.test(value))
+    ? '<secret-redacted>'
+    : value;
+}
 
 export function parseSecretRef(ref) {
   if (typeof ref !== 'string' || !ref.startsWith(SECRET_REF_PREFIX)) {
@@ -66,20 +102,38 @@ export function scanForForbiddenValues(node, key = '', out = []) {
   return out;
 }
 
-export function validateRefsCatalog(refsDoc, expectedProject, { roles } = {}) {
+export function validateRefsCatalog(refsDoc, expectedProject, options = {}) {
   const violations = [];
-  if (!refsDoc || refsDoc.interface !== 'SecretRef.v1' || !Array.isArray(refsDoc.refs)) {
+  if (!isObject(options) || Object.keys(options).some((key) => !['roles', 'policy'].includes(key))
+    || (Object.hasOwn(options, 'roles') && Object.hasOwn(options, 'policy'))) {
+    return [{ code: 'REFS_OPTIONS_INVALID', reason: 'options must be an object with at most one role-policy source' }];
+  }
+  let roles;
+  if (Object.hasOwn(options, 'policy')) {
+    const policyViolations = validateQualificationPolicy(options.policy);
+    if (policyViolations.length) return policyViolations;
+    roles = options.policy.roles;
+  } else if (Object.hasOwn(options, 'roles')) {
+    if (!stringList(options.roles, (role) => NAME_PATTERN.test(role))) return [{ code: 'REFS_OPTIONS_INVALID', reason: 'roles must be a non-empty unique role-name array' }];
+    roles = options.roles;
+  }
+  if (!isObject(refsDoc) || refsDoc.interface !== 'SecretRef.v1' || !Array.isArray(refsDoc.refs)
+    || (Object.hasOwn(refsDoc, 'schemaVersion') && refsDoc.schemaVersion !== 1)) {
     violations.push({ code: 'REFS_SCHEMA_INVALID', reason: 'refs catalog must carry interface SecretRef.v1 and a refs array' });
     return violations;
   }
   const seen = new Map();
   for (const entry of refsDoc.refs) {
+    if (!isObject(entry)) {
+      violations.push({ code: 'REFS_SCHEMA_INVALID', reason: 'each registered reference must be an object' });
+      continue;
+    }
     const parsed = parseSecretRef(entry.ref);
     if (!parsed.ok) {
       violations.push({ code: parsed.code, ref: entry.ref, reason: parsed.error });
       continue;
     }
-    if (expectedProject && parsed.project !== expectedProject) {
+    if (expectedProject !== undefined && parsed.project !== expectedProject) {
       violations.push({ code: 'CROSS_PROJECT_REF', ref: entry.ref, project: parsed.project });
     }
     const previous = seen.get(entry.ref);
@@ -93,34 +147,42 @@ export function validateRefsCatalog(refsDoc, expectedProject, { roles } = {}) {
     } else {
       seen.set(entry.ref, entry);
     }
-    if (!entry.purpose || typeof entry.purpose !== 'string') {
+    if (typeof entry.purpose !== 'string' || entry.purpose.trim() === '') {
       violations.push({ code: 'REF_PURPOSE_MISSING', ref: entry.ref });
     }
-    if (!entry.boundRole || !NAME_PATTERN.test(entry.boundRole)) {
+    if (typeof entry.boundRole !== 'string' || !NAME_PATTERN.test(entry.boundRole)) {
       violations.push({ code: 'ROLE_INVALID', ref: entry.ref, role: entry.boundRole ?? null });
     } else if (roles && !roles.includes(entry.boundRole)) {
       violations.push({ code: 'ROLE_NOT_IN_POLICY', ref: entry.ref, role: entry.boundRole });
     }
+    if (!stringList(entry.allowedPrincipals)) violations.push({ code: 'REF_PRINCIPALS_INVALID', ref: entry.ref, reason: 'allowedPrincipals must be a non-empty unique string array' });
   }
   return violations.concat(scanForForbiddenValues(refsDoc));
 }
 
-export function resolveSecretRef({ ref, principalId, role, refsDoc, project }) {
-  const deny = (code, reason) => {
-    const error = new Error(reason);
+export function resolveSecretRef(options) {
+  const deny = (code) => {
+    const error = new Error('secret reference resolution denied');
     error.code = code;
     throw error;
   };
+  if (!isObject(options) || Object.keys(options).some((key) => !['ref', 'principalId', 'role', 'refsDoc', 'project', 'policy'].includes(key))) deny('RESOLUTION_INPUT_INVALID');
+  const { ref, principalId, role, refsDoc, project } = options;
   const parsed = parseSecretRef(ref);
-  if (!parsed.ok) deny(parsed.code, parsed.error);
-  if (project && parsed.project !== project) {
-    deny('CROSS_PROJECT_REF', `ref ${ref} belongs to project ${parsed.project}, not ${project}`);
+  if (!parsed.ok) deny(parsed.code);
+  if (project !== undefined && parsed.project !== project) {
+    deny('CROSS_PROJECT_REF');
+  }
+  const violations = validateRefsCatalog(refsDoc, project ?? parsed.project,
+    Object.hasOwn(options, 'policy') ? { policy: options.policy } : {});
+  if (violations.length > 0) {
+    deny(violations[0].code);
   }
   const entry = (refsDoc && Array.isArray(refsDoc.refs) ? refsDoc.refs : []).find((item) => item.ref === ref);
-  if (!entry) deny('REF_NOT_REGISTERED', `ref ${ref} is not registered in the project catalog`);
+  if (!entry) deny('REF_NOT_REGISTERED');
   const principals = Array.isArray(entry.allowedPrincipals) ? entry.allowedPrincipals : [];
   if (!principalId || !principals.includes(principalId) || (entry.boundRole && role !== entry.boundRole)) {
-    deny('PRINCIPAL_NOT_AUTHORIZED', `principal ${principalId ?? '(none)'} with role ${role ?? '(none)'} may not resolve ${ref}`);
+    deny('PRINCIPAL_NOT_AUTHORIZED');
   }
   // 四重检查全部通过：本任务仍无运行时 secret store 授权，如实 UNRESOLVED，绝不产生值。
   return {
