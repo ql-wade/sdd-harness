@@ -85,3 +85,5 @@ P1_2安装防再生子步已独立审查并合入`e0fde44`，主检出行为测�
 最新平台建设：8acfecb两轴审查后在主96/96+rollback6/6通过，集成9324d7b；七输入/五配置不变。Root最初网络守卫把标准URL对象当Request导致95/96，原记录保留，修复并实测string/URL/Request与外部拒绝后原96通过，未改产品断言。全仓828/818/10fail0skip，旧十失败身份未新增；真实CI生产者/保护、OCI签名、目标部署及wholeI06不因metadata关联而通过。Core终局completed与当前完整性分开：合法完成历史不被后续fault抹掉，currentIntegrity未知必须RECOVERY_REQUIRED且不重新宣传done，未完成时缺delivery仍阻断首次完成。原Core候选继续最终fresh/精确回归；后继不提前放行。
 
 建设资格修订：0c228bd仅冻结五条已有依赖的具名工件消费规则，13→18，contract680f5be...；39/69/步骤/勾选/原依赖/接口/130总记录104场景及129/103不变，VERIFY与所有真实角色/授权/资源义务不减。尚未ready的工件不可因规则先行消费。P1_2自身已完成67及真实冷资产验证，但Step9缺真实TeamAI分发，原bootstrap不是TeamAI pull；现固定0.22原生能力已定位，Root限定隔离容器/私有bareGit补证，未授真实远端推送/全局hooks/内置Wiki接纳或模型权限。无需给P1_2另加trustedHook条款，完整Journey仍归VERIFY。
+
+当前源码预审：P2_4 fresh84（六补丁与owned case逐摘要一致）被Standards轴一项P2退回：archive bridge只核OpenSpec版本文本，实际程序仍可由COMET_OPENSPEC/PATH选择，未绑定程序及依赖身份；Spec轴未发现独立阻断，仅source-only，不构成接纳。原矩阵输入保持冻结，待原会话终态后由同一worker修复受保护工具身份、真实负例和新候选；证据保存在.local/comet-reset/p2_4-pre-review-84。P1_2隔离探针为Node24.15/arm64、Git缺失exit2，容器已删除，nativeTeamAI分发仍未验；公开Git依赖仅签名索引/模拟准备，未下载二进制、安装或构建。当前6节点/0业务场景、129required/103场景及F10另期未验边界不变，整体ETA未知。
