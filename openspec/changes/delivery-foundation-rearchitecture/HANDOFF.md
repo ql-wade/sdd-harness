@@ -4,11 +4,11 @@
 
 ## 当前控制器检查点
 
-当前主代码仍`1c66edf`，已有支持回归1022/1022，完整业务未通过。Core自审P1原反例复跑已Native exit2/receipt0，窄16通过；但本版85实际45通过/40缺合法producer来源前置失败，不继承旧74。原“Builder不能勾选”旧用例仅撞Usage，已降为SETUP；真正task-complete/id/expect的新V与身份4例通过，另inputSnapshot篡改claim成功的新RED在修。
+当前主代码`9f912d1`：有界原生stdio客户端经独立Spec/Standards各5/5后合入，Root相关133/133与完整仓库1090/1090零失败/跳过，输入不变。原close P2与fs.watch资源阻塞证据保留；源码保持失效UNKNOWN、历史真实退出和原digest，无新主控/phase/队列。真实CLI、认证、工具隔离、SourceReader、I02/worker/canonical制品桥仍未启动或未验。
 
-执行桥`e361f09`作者76/76+52/52、Standards25/25，仍被Spec实证P2退回：turn结束后close之前epoch变化，最终返回旧context状态。候选未合入，原owner在最终回传边界补当前性，保留真实exit0/closed事实。证据见`worker-reports/P1_3-stdio-review-rework/`。
+I02完整106/106作者回归已通过，原103/3保留、路径扫描无洞、OpenSpec oracle加强为同原tar/冻结项目锁/实际离线ci/固定CLI。最终源码待独立审查；Root已核完整镜像582输入182716240字节，但D/E尚未执行，资格不开放。原生Core d0b0仅窄21与481+4Windows支持，完整90=50/40缺作者前置，未接纳；原owner继续补合法Native前置与知识writer来源，不填空名单或加legacy豁免。
 
-Root已实际完成纯公开Linux断网pnpm机制构建，429原tar/原锁、loopback GET全部200、监听关闭后同seed offline fetch成功，本地image e0b77edb…；这不证明fresh工作区从store恢复，更不证明完整Runner/角色。新目录补证与完整离线bootstrap仍待做。I02代码205aa仅14新例、原92未复验。实际CLI/认证/模型/SourceReader/制品回流/权限/知识/平台及最终验收未完；6节点接纳/32待办/1F10另期，129required/103场景业务未验不变，整体上海时区ETA未知。
+Root已实证freshLinux原manifest/锁不变，429reused/0downloaded/429added，仅离线依赖闭包维度通过。6节点接纳/32待办/1F10另期、129required/103场景业务未验不变；真实平台、权限、Kp/规格归档/Kt/持续维护恢复及最终Whitebox/Grill/唯一closeout未完，Goal与监督保持，整体上海时区ETA未知。
 
 ## 目标与证据边界
 
