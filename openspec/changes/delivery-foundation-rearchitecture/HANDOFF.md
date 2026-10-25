@@ -4,11 +4,11 @@
 
 ## 当前控制器检查点
 
-当前代码`1c66edf`：I02确定性执行槽/只读查回`beeff57`已双审、主127/127及全仓992/992；薄main`1c66edf`已双审、主65/65及全仓1022/1022，均零失败/跳过且输入不变。内部入口不等于用户阶段命令已安装；缺生产provider时仍exit2/0启动。新3056 Host绑定未激活，旧6da仅作机械材料。
+当前主代码`1c66edf`的支持回归仍1022/1022通过，不是整体交付通过。I02槽/只读查回与内部薄入口已合入；实际provider、模型/工具/SourceReader、角色卷到canonical的制品回流与真实恢复仍未接通。
 
-原生候选曾实际50/65，15项归档目标失败，旧40de也复现UTC/本地日期差异；额外反例又发现拒审作者无法返工、真实exit7与pass矛盾和launch事实替换。原owner保全原失败后修复，Root对0003仅上下文/index重放、全部+/-程序行不变；当前私有afa7的9针对例通过，74完整矩阵仍待终态和独立审查，不称Core通过。
+原生候选`5e19890`作者完整74/74、相关481通过/4Windows未验、generated完整性通过；Standards独立8/8支持construction。但独立Spec实证P1：同一已认证principal仅换execution，仍可批准自己产出的R材料并生成receipt，原签名/collection未改。候选未合入，原owner正从原Native已认证producer history修复独立性；不能以74或Standards绿抵该P1。证据17文件在`worker-reports/P2_4-native-producer-review-rework/`。
 
-当前仍6节点接纳/32待办/1F10另期；全部129required/103场景真实业务未验。模型CLI/工具桥、worker frame、canonical输出带回、真实来源/issuer/角色/OS/知识/平台/权限恢复与最终Whitebox/Grill/唯一closeout未完。Root公开Node/Python实验镜像和锁定npm10包只作资源供给，不签Runner资格。详见`worker-reports/Root-I02-execution-slot-integration/`与`worker-reports/Root-P1_3-bootstrap-integration/`；总体上海时区ETA未知。
+I02阶段A已实际续工：固定公开镜像两条无网/只读/无挂载probe均0，23库owner/版权元数据已取；PyYAML精确wheel已验775116字节/SHA且未安装，完整Runner构建未执行。P1_3原生CLI接口intake完成；既有CLI认证是候选，不假定必须新APIkey，登录/无旁路/模型运行仍未验。6节点接纳/32待办/1F10另期与129required/103场景业务未验不变，Goal/监督保持；整体上海时区ETA未知。
 
 ## 目标与证据边界
 

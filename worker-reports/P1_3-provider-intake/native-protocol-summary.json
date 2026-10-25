@@ -1,0 +1,556 @@
+{
+  "scope": "exact generated0.163 metadata;not runtime no-bypass proof",
+  "schemas": {
+    "v2/EnvironmentAddParams.json": {
+      "sha256": "0ae0f9528196ee34205ac3003306924d57ec9cc77b05ce1ce7b4966b6187a106",
+      "required": [
+        "environmentId",
+        "execServerUrl"
+      ],
+      "properties": {
+        "authBearerToken": {
+          "description": "Optional raw bearer token for executor authentication, including reconnects. Requires a secure transport or a loopback destination.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "connectTimeoutMs": {
+          "description": "Optional WebSocket connection timeout. The server default applies when omitted.",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "environmentId": {
+          "type": "string"
+        },
+        "execServerUrl": {
+          "type": "string"
+        },
+        "skills": {
+          "description": "Required skills supplied by this environment, checked before model inference."
+        },
+        "websocketRequestId": {
+          "description": "Optional X-Request-ID for the direct WebSocket upgrade, including reconnects. Requires a secure transport or a loopback destination.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "rawRef": ".local/P1_3-provider-intake/codex-protocol-schema/schemas/v2/EnvironmentAddParams.json"
+    },
+    "v2/EnvironmentStatusResponse.json": {
+      "sha256": "43798149b75ee5c6fb8e3113019f9b0db9860102ec87be4f17fb84d8f10068b6",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "error": {
+          "description": "Human-readable detail for `disconnected` and `unknown`; omitted for other statuses.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "description": "Current status observed without starting or recovering the environment."
+        }
+      },
+      "rawRef": ".local/P1_3-provider-intake/codex-protocol-schema/schemas/v2/EnvironmentStatusResponse.json"
+    },
+    "v2/ThreadStartParams.json": {
+      "sha256": "80a40a7fac15b4bf70efb7f893fb353acc0a0d30c68f54aee4f01923deca85de",
+      "required": [],
+      "properties": {
+        "allowProviderModelFallback": {
+          "description": "Allow a provider with an authoritative static model catalog to replace an unavailable requested model with its default.",
+          "type": "boolean"
+        },
+        "approvalPolicy": {},
+        "approvalsReviewer": {
+          "description": "Override where approval requests are routed for review on this thread and subsequent turns."
+        },
+        "baseInstructions": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "config": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "cwd": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "daybreakEnabled": {
+          "description": "Initial Daybreak choice for this persistent thread. Omitted or null leaves it unset. This does not select a turn's `cyberAccessProgram` or grant access. Not supported for ephemeral threads.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "developerInstructions": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dynamicTools": {
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "environments": {
+          "description": "Optional sticky environments for this thread.\n\nOmitted selects the default environment when environment access is enabled. Empty disables environment access for turns that do not provide a turn override. Non-empty selects the first environment as the current turn environment.",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "ephemeral": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "experimentalRawEvents": {
+          "description": "If true, opt into emitting raw Responses API items on the event stream. This is for internal use only (e.g. Codex Cloud).",
+          "type": "boolean"
+        },
+        "historyMode": {
+          "description": "Persisted thread history contract to use for this new thread."
+        },
+        "mockExperimentalField": {
+          "description": "Test-only experimental field used to validate experimental gating and schema filtering behavior in a stable way.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "modelProvider": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "multiAgentMode": {
+          "description": "@deprecated Ignored. Use Ultra reasoning effort for proactive multi-agent behavior."
+        },
+        "permissions": {
+          "description": "Named profile id for this thread. Cannot be combined with `sandbox`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "personality": {
+          "description": "@deprecated `friendly` and `pragmatic` no longer select a style."
+        },
+        "projectId": {
+          "description": "Optional project identity for this new thread. Durable threads persist the assignment; ephemeral threads expose it only in live responses.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "runtimeWorkspaceRoots": {
+          "description": "Replace the thread's runtime workspace roots. Paths must be absolute.",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "sandbox": {},
+        "selectedCapabilityRoots": {
+          "description": "Capability roots selected for this thread by the hosting platform.",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "serviceName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "serviceTier": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sessionStartSource": {},
+        "threadSource": {
+          "description": "Optional client-supplied analytics source classification for this thread."
+        }
+      },
+      "rawRef": ".local/P1_3-provider-intake/codex-protocol-schema/schemas/v2/ThreadStartParams.json"
+    },
+    "v2/TurnStartParams.json": {
+      "sha256": "abf0d6d29d223b38c650ff1155cb9c9f9b4211e6d0e20c57d750a9e1babfdb41",
+      "required": [
+        "input",
+        "threadId"
+      ],
+      "properties": {
+        "additionalContext": {
+          "description": "Optional client-provided context fragments keyed by an opaque source identifier.",
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "approvalPolicy": {
+          "description": "Override the approval policy for this turn and subsequent turns."
+        },
+        "approvalsReviewer": {
+          "description": "Override where approval requests are routed for review on this turn and subsequent turns."
+        },
+        "clientUserMessageId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "collaborationMode": {
+          "description": "EXPERIMENTAL - Set a pre-set collaboration mode. Takes precedence over model, reasoning_effort, and developer instructions if set.\n\nFor `collaboration_mode.settings.developer_instructions`, `null` means \"use the built-in instructions for the selected mode\"."
+        },
+        "cwd": {
+          "description": "Override the working directory for this turn and subsequent turns.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cyberAccessProgram": {
+          "description": "EXPERIMENTAL - Request an authorized cyber program for this turn. Omission preserves automatic behavior. This does not grant access."
+        },
+        "disabledPluginIds": {
+          "description": "Replace this thread's disabled plugin IDs. Omitted/null preserves the list; [] clears it.",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "effort": {
+          "description": "Override the reasoning effort for this turn and subsequent turns."
+        },
+        "environments": {
+          "description": "Optional environments for this turn and subsequent turns.\n\nOmitted uses the thread sticky environments. Empty disables environment access for this turn. Non-empty selects the first environment as the current turn environment for this turn.",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "input": {
+          "type": "array"
+        },
+        "model": {
+          "description": "Override the model for this turn and subsequent turns.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "multiAgentMode": {
+          "description": "@deprecated Ignored. Use `effort: \"ultra\"` for proactive multi-agent behavior."
+        },
+        "outputSchema": {
+          "description": "Optional JSON Schema used to constrain the final assistant message for this turn."
+        },
+        "parentTurnId": {
+          "description": "ID of the turn that caused this new turn to start.\n\nSet this when starting work on behalf of another turn, such as delegated work in a different thread. Leave unset for work started directly by the user. Ignored when this request adds input to an active turn.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "permissions": {
+          "description": "Select a named permissions profile id for this turn and subsequent turns. Cannot be combined with `sandboxPolicy`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "personality": {
+          "description": "@deprecated `friendly` and `pragmatic` no longer select a style. Changing this does not rewrite the thread's existing instructions."
+        },
+        "responsesapiClientMetadata": {
+          "description": "Optional metadata to enrich Codex's ResponsesAPI turn metadata.\n\nEntries are flattened into the JSON string sent as `client_metadata[\"x-codex-turn-metadata\"]` on ResponsesAPI HTTP and websocket requests.\n\nThey are not sent as top-level ResponsesAPI `client_metadata` keys, and reserved keys such as `session_id`, `thread_id`, `turn_id`, and `window_id` cannot be overridden.",
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "rootTurnId": {
+          "description": "ID of the first turn in the chain of work that led to this new turn.\n\nWhen setting `parentTurnId`, set this to the parent turn's `rootTurnId` when known. This keeps descendant work attributed to the original turn. If omitted, the new turn becomes its own root. Ignored when this request adds input to an active turn.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "runtimeWorkspaceRoots": {
+          "description": "Replace the thread's runtime workspace roots for this turn and subsequent turns. Paths must be absolute.",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "sandboxPolicy": {
+          "description": "Override the sandbox policy for this turn and subsequent turns."
+        },
+        "serviceTier": {
+          "description": "Override the service tier for this turn and subsequent turns.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "serviceTierForTurn": {
+          "description": "Override the service tier only when this request starts a new turn. Use \"default\" for standard speed. Omitted or null inherits the thread's tier. Does not change the thread's tier or a turn being steered.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "summary": {
+          "description": "Override the reasoning summary for this turn and subsequent turns."
+        },
+        "threadId": {
+          "type": "string"
+        },
+        "toolOutput": {},
+        "turnTrigger": {
+          "description": "Optional source classification for the caller that starts this turn. Ignored when this request steers an already-active turn.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "rawRef": ".local/P1_3-provider-intake/codex-protocol-schema/schemas/v2/TurnStartParams.json"
+    },
+    "v2/CommandExecParams.json": {
+      "sha256": "fd034b4c85d7b6f466e30a3cbb73db86be1263aca3f81b89b547f14817dfb62e",
+      "required": [
+        "command"
+      ],
+      "properties": {
+        "command": {
+          "description": "Command argv vector. Empty arrays are rejected.",
+          "type": "array"
+        },
+        "cwd": {
+          "description": "Optional working directory. Defaults to the server cwd.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disableOutputCap": {
+          "description": "Disable stdout/stderr capture truncation for this request.\n\nCannot be combined with `outputBytesCap`.",
+          "type": "boolean"
+        },
+        "disableTimeout": {
+          "description": "Disable the timeout entirely for this request.\n\nCannot be combined with `timeoutMs`.",
+          "type": "boolean"
+        },
+        "env": {
+          "description": "Optional environment overrides merged into the server-computed environment.\n\nMatching names override inherited values. Set a key to `null` to unset an inherited variable.",
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "outputBytesCap": {
+          "description": "Optional per-stream stdout/stderr capture cap in bytes.\n\nWhen omitted, the server default applies. Cannot be combined with `disableOutputCap`.",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "permissionProfile": {
+          "description": "Optional active permissions profile id for this command.\n\nDefaults to the user's configured permissions when omitted. Cannot be combined with `sandboxPolicy`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "processId": {
+          "description": "Optional client-supplied, connection-scoped process id.\n\nRequired for `tty`, `streamStdin`, `streamStdoutStderr`, and follow-up `command/exec/write`, `command/exec/resize`, and `command/exec/terminate` calls. When omitted, buffered execution gets an internal id that is not exposed to the client.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sandboxPolicy": {
+          "description": "Optional sandbox policy for this command.\n\nUses the same shape as thread/turn execution sandbox configuration and defaults to the user's configured policy when omitted. Cannot be combined with `permissionProfile`."
+        },
+        "size": {
+          "description": "Optional initial PTY size in character cells. Only valid when `tty` is true."
+        },
+        "streamStdin": {
+          "description": "Allow follow-up `command/exec/write` requests to write stdin bytes.\n\nRequires a client-supplied `processId`.",
+          "type": "boolean"
+        },
+        "streamStdoutStderr": {
+          "description": "Stream stdout/stderr via `command/exec/outputDelta` notifications.\n\nStreamed bytes are not duplicated into the final response and require a client-supplied `processId`.",
+          "type": "boolean"
+        },
+        "timeoutMs": {
+          "description": "Optional timeout in milliseconds.\n\nWhen omitted, the server default applies. Cannot be combined with `disableTimeout`.",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "tty": {
+          "description": "Enable PTY mode.\n\nThis implies `streamStdin` and `streamStdoutStderr`.",
+          "type": "boolean"
+        }
+      },
+      "rawRef": ".local/P1_3-provider-intake/codex-protocol-schema/schemas/v2/CommandExecParams.json"
+    },
+    "DynamicToolCallParams.json": {
+      "sha256": "401bba20cfbd95762bef0467d840430c46be53369093ad9f26425ba757e34efc",
+      "required": [
+        "arguments",
+        "callId",
+        "threadId",
+        "tool",
+        "turnId"
+      ],
+      "properties": {
+        "arguments": true,
+        "callId": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "threadId": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "turnId": {
+          "type": "string"
+        }
+      },
+      "rawRef": ".local/P1_3-provider-intake/codex-protocol-schema/schemas/DynamicToolCallParams.json"
+    },
+    "CommandExecutionRequestApprovalParams.json": {
+      "sha256": "c9728280b8f3204fd729d0fb3d1ca7bb05b1150de26b3653f7163e6a9bd941e7",
+      "required": [
+        "itemId",
+        "startedAtMs",
+        "threadId",
+        "turnId"
+      ],
+      "properties": {
+        "additionalPermissions": {
+          "description": "Optional additional permissions requested for this command."
+        },
+        "approvalId": {
+          "description": "Unique identifier for this specific approval callback.\n\nFor regular shell/unified_exec approvals, this is null.\n\nFor zsh-exec-bridge subcommand approvals, multiple callbacks can belong to one parent `itemId`, so `approvalId` is a distinct opaque callback id (a UUID) used to disambiguate routing. Stdin approvals also use a distinct callback id; inspect `kind` to distinguish them.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "availableDecisions": {
+          "description": "Ordered list of decisions the client may present for this prompt.",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "command": {
+          "description": "The command to be executed.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "commandActions": {
+          "description": "Best-effort parsed command actions for friendly display.",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "cwd": {
+          "description": "The command's working directory."
+        },
+        "environmentId": {
+          "description": "Environment in which the command will run.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "itemId": {
+          "type": "string"
+        },
+        "kind": {
+          "description": "Kind of action under review. Defaults to `command` for older servers."
+        },
+        "networkApprovalContext": {
+          "description": "Optional context for a managed-network approval prompt."
+        },
+        "proposedExecpolicyAmendment": {
+          "description": "Optional proposed execpolicy amendment to allow similar commands without prompting.",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "proposedNetworkPolicyAmendments": {
+          "description": "Optional proposed network policy amendments (allow/deny host) for future requests.",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "reason": {
+          "description": "Optional explanatory reason (e.g. request for network access).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "startedAtMs": {
+          "description": "Unix timestamp (in milliseconds) when this approval request started.",
+          "type": "integer"
+        },
+        "threadId": {
+          "type": "string"
+        },
+        "turnId": {
+          "type": "string"
+        }
+      },
+      "rawRef": ".local/P1_3-provider-intake/codex-protocol-schema/schemas/CommandExecutionRequestApprovalParams.json"
+    }
+  }
+}
