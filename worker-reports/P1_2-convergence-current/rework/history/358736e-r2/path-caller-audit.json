@@ -1,0 +1,219 @@
+{
+  "scope": "same P1_2 distribution path boundary only; no controller or runtime qualification",
+  "file": "tools/foundation-export.mjs",
+  "sha256": "d8fad4265c815708623491fdb6b0dd7d261bc9377f0034e0d6492afc176d38c1",
+  "root_ancestor_leaf_guard": [
+    {
+      "line": 57,
+      "source": "function rejectLinkedPath(root, relative = '') {"
+    },
+    {
+      "line": 77,
+      "source": "function outputFile(file) {"
+    },
+    {
+      "line": 78,
+      "source": "const info = rejectLinkedPath(path.dirname(file), path.basename(file));"
+    },
+    {
+      "line": 82,
+      "source": "function readOutputFile(file, encoding) {"
+    },
+    {
+      "line": 83,
+      "source": "outputFile(file);"
+    },
+    {
+      "line": 103,
+      "source": "const info = rejectLinkedPath(root, relative);"
+    },
+    {
+      "line": 110,
+      "source": "if (!rejectLinkedPath(dir)?.isDirectory()) throw new Error(`not a real asset directory: ${dir}`);"
+    },
+    {
+      "line": 116,
+      "source": "if (!excludeGenerated && entry.isFile()) outputFile(abs);"
+    },
+    {
+      "line": 329,
+      "source": "const before = outputFile(file);"
+    },
+    {
+      "line": 331,
+      "source": "outputFile(file);"
+    },
+    {
+      "line": 333,
+      "source": "const prior = before ? readOutputFile(file) : null;"
+    },
+    {
+      "line": 344,
+      "source": "const current = outputFile(file);"
+    },
+    {
+      "line": 424,
+      "source": "rejectLinkedPath(outDir);"
+    },
+    {
+      "line": 426,
+      "source": "if (rejectLinkedPath(releaseRoot)) walkFiles(releaseRoot, '', [], false);"
+    },
+    {
+      "line": 427,
+      "source": "for (const [file] of emissions) outputFile(file);"
+    },
+    {
+      "line": 450,
+      "source": "if (!rejectLinkedPath(root)?.isDirectory()) throw new Error('not a real cache directory');"
+    },
+    {
+      "line": 457,
+      "source": "else if (entry.isFile()) found[rel]=sha256Bytes(readOutputFile(abs));"
+    },
+    {
+      "line": 467,
+      "source": "const pinned=JSON.parse(readOutputFile(path.join(cache,'foundation-lock.json'),'utf8'));"
+    },
+    {
+      "line": 472,
+      "source": "files['foundation-lock.json']=sha256Bytes(readOutputFile(path.join(cache,'foundation-lock.json')));"
+    },
+    {
+      "line": 473,
+      "source": "const seal=JSON.parse(readOutputFile(path.join(cache,'manifest.json'),'utf8'));"
+    },
+    {
+      "line": 481,
+      "source": "rejectLinkedPath(parent);"
+    },
+    {
+      "line": 482,
+      "source": "fs.mkdirSync(parent,{recursive:true});rejectLinkedPath(parent);"
+    },
+    {
+      "line": 483,
+      "source": "const cache=path.join(parent,lock.release.exportDigest);rejectLinkedPath(cache);"
+    },
+    {
+      "line": 501,
+      "source": "rejectLinkedPath(outDir);"
+    },
+    {
+      "line": 502,
+      "source": "outputFile(lockPath);"
+    },
+    {
+      "line": 504,
+      "source": "if (rejectLinkedPath(releaseRoot)) walkFiles(releaseRoot, '', [], false);"
+    },
+    {
+      "line": 505,
+      "source": "lock = JSON.parse(readOutputFile(lockPath,'utf8'));"
+    },
+    {
+      "line": 551,
+      "source": "if (!fs.existsSync(file) || (source && !readOutputFile(file).equals(fs.readFileSync(path.join(root, source))))) drifts.push({kind:'release', item:view, detail:'required distribution file missing or drifted'});"
+    },
+    {
+      "line": 563,
+      "source": "if (fs.existsSync(bindingFile) && readOutputFile(bindingFile, 'utf8') !== JSON.stringify(current.__sources.profileBinding, null, 2) + '\\n') drifts.push({kind:'release',item:'profile-binding',detail:'profile binding drifted'});"
+    },
+    {
+      "line": 569,
+      "source": "if (readOutputFile(hooksView, 'utf8') !== fs.readFileSync(path.join(root, 'hooks.yaml'), 'utf8')) {"
+    },
+    {
+      "line": 576,
+      "source": "if (readOutputFile(mcpView, 'utf8') !== expected) {"
+    },
+    {
+      "line": 582,
+      "source": "try { bodyCopies = JSON.parse(readOutputFile(manifestView, 'utf8')).bodyCopies === true; } catch {}"
+    },
+    {
+      "line": 584,
+      "source": "if (readOutputFile(manifestView, 'utf8') !== skillsManifest(current.__sources.skills, bodyCopies)) {"
+    },
+    {
+      "line": 600,
+      "source": "if (!fs.existsSync(copy) || !readOutputFile(copy).equals(fs.readFileSync(abs))) {"
+    },
+    {
+      "line": 615,
+      "source": "try {rejectLinkedPath(root,`foundation/baselines/${lock.release.exportDigest}`);} catch(error) {return {ok:false,resolvable:false,reason:error.message,resolvedSkills:[],missing:['unsafe-cache-path']};}"
+    }
+  ],
+  "planned_release_outputs": [
+    {
+      "line": 378,
+      "source": "emit(path.join(outDir, 'foundation-lock.json'), JSON.stringify(lock, null, 2) + '\\n');"
+    },
+    {
+      "line": 382,
+      "source": "emit(path.join(outDir, 'release/hooks/hooks.yaml'), fs.readFileSync(hooksSrc, 'utf8'));"
+    },
+    {
+      "line": 387,
+      "source": "emit(path.join(outDir, 'release/mcp/mcp-capabilities.yaml'), fs.readFileSync(capsPath, 'utf8'));"
+    },
+    {
+      "line": 393,
+      "source": "emit(path.join(outDir, 'release/mcp/mcp.json'), JSON.stringify(view, null, 2) + '\\n');"
+    },
+    {
+      "line": 397,
+      "source": "emit(path.join(outDir, 'release/skills/MANIFEST.json'), skillsManifest(skills, options.skillsCopy === true));"
+    },
+    {
+      "line": 403,
+      "source": "emit(path.join(outDir, 'release/skills', skill.name, rel), fs.readFileSync(abs));"
+    },
+    {
+      "line": 412,
+      "source": "emit(path.join(outDir, dest), fs.readFileSync(sourceFile(root,relative)));"
+    },
+    {
+      "line": 415,
+      "source": "emit(path.join(outDir,'release/code/MANIFEST.json'),codeManifest(lock));"
+    },
+    {
+      "line": 418,
+      "source": "emit(path.join(outDir, dest), fs.readFileSync(path.join(root, source)));"
+    },
+    {
+      "line": 421,
+      "source": "emit(path.join(outDir, 'release/profile/binding.json'), JSON.stringify(lock.__sources.profileBinding, null, 2) + '\\n');"
+    }
+  ],
+  "writeIfChanged_callers": [
+    {
+      "line": 328,
+      "source": "function writeIfChanged(file, content) {"
+    },
+    {
+      "line": 429,
+      "source": "for (const [file, bytes] of emissions) writeIfChanged(file, bytes);"
+    },
+    {
+      "line": 488,
+      "source": "for (const [rel,bytes] of Object.entries(pureAssets(root,lock))) {const dest=path.join(temporary,'source',rel);fs.mkdirSync(path.dirname(dest),{recursive:true});writeIfChanged(dest,bytes);files['source/'+rel]=sha256Bytes(bytes);}"
+    },
+    {
+      "line": 489,
+      "source": "const bytes=Buffer.from(JSON.stringify(lock,null,2)+'\\n');writeIfChanged(path.join(temporary,'foundation-lock.json'),bytes);files['foundation-lock.json']=sha256Bytes(bytes);"
+    },
+    {
+      "line": 490,
+      "source": "writeIfChanged(path.join(temporary,'manifest.json'),JSON.stringify({schemaVersion:1,exportDigest:lock.release.exportDigest,files},null,2)+'\\n');"
+    }
+  ],
+  "boundaries": [
+    "All release emissions are collected and preflighted before cache creation or any view write.",
+    "walkFiles validates its root and ancestor chain; release scanning includes generated-name entries.",
+    "Every output read uses the same root/ancestor/leaf guard and O_NOFOLLOW.",
+    "Writes reject symlink/special/hardlinked outputs, stage exclusively, recheck and atomically rename; user links are never deleted to proceed.",
+    "Darwin root namespace aliases var/tmp/etc only resolve to their exact private system targets; user aliases are refused.",
+    "Limited legacy checkRun metadata compatibility remains unchanged; native Comet Run stays read-only."
+  ]
+}

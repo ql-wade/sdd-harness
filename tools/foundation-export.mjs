@@ -21,7 +21,7 @@
 //   <runDir>/foundation-lock.json — run 启动时冻结的锁（复制）
 //   <runDir>/run-state.json       — {schemaVersion,runId,status,owner,...}
 
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -29,12 +29,16 @@ import { fileURLToPath } from 'node:url';
 import { parseContract } from '../contracts/delivery/index.js';
 
 const PROFILE_REL = 'openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json';
+const PROFILE_DATA_REL = 'foundation/profiles/comet-managed.json';
+const retiredName = (name) => /^(sdd-|trinity-|source-command-sdd-)|^superpowers$/.test(name);
 const COMET_LOCK_REL = 'integrations/comet/upstream.lock.json';
 const MANAGED_SCRIPT_RE = /hooks\/(pre-tool-gate|session-context|stop-reminder)\.sh/;
 const MACHINE_PATH_RE = /\/Users\/|\/home\/|\$HOME|%USERPROFILE%/;
 const FLOATING_RE = /@latest|unpinned/i;
 
 export const sha256Bytes = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
+// Filesystem names are data: prototype keys must remain enumerable own keys.
+const assetDictionary = (entries = []) => Object.assign(Object.create(null), Object.fromEntries(entries));
 
 // Canonical JSON: recursively sorted keys — the digest basis for everything
 // the lock freezes (deterministic across machines and runs).
@@ -50,23 +54,77 @@ function aggregateDigest(lines) {
   return sha256Bytes(lines.slice().sort().join('\n'));
 }
 
-const EXCLUDED = new Set(['__pycache__', '.DS_Store']);
+function rejectLinkedPath(root, relative = '') {
+  if (path.isAbsolute(relative) || relative.split(/[\\/]/).includes('..')) throw new Error('STATE_SYNC_REQUIRED: asset path escape');
+  const absolute = path.resolve(root, relative);
+  let at = path.parse(absolute).root;
+  const parts = absolute.slice(at.length).split(path.sep).filter(Boolean);
+  let info = fs.lstatSync(at);
+  for (const [index, part] of parts.entries()) {
+    at = path.join(at, part);
+    try { info = fs.lstatSync(at); } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+    if (info.isSymbolicLink()) {
+      // Darwin's root namespace aliases are OS-owned, not package redirects.
+      const systemAlias = process.platform === 'darwin' && ({'/var':'/private/var','/tmp':'/private/tmp','/etc':'/private/etc'})[at];
+      if (!systemAlias || fs.realpathSync(at) !== systemAlias) throw new Error(`STATE_SYNC_REQUIRED: symlink asset path: ${at}`);
+      at = systemAlias;
+      info = fs.lstatSync(at);
+    }
+    if ((!info.isDirectory() && !info.isFile()) || (index < parts.length - 1 && !info.isDirectory())) throw new Error(`STATE_SYNC_REQUIRED: unsafe asset path type: ${at}`);
+  }
+  return info;
+}
+function outputFile(file) {
+  const info = rejectLinkedPath(path.dirname(file), path.basename(file));
+  if (info && (!info.isFile() || info.nlink !== 1)) throw new Error(`STATE_SYNC_REQUIRED: unsafe output file: ${file}`);
+  return info;
+}
+function readOutputFile(file, encoding) {
+  outputFile(file);
+  return fs.readFileSync(file, {encoding,flag:fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW|fs.constants.O_NONBLOCK});
+}
+// Explicit project call closure, audited in the P1_2 rework dependency inventory.
+// Host runtimes, npm modules and generated/user state are never recursively packed.
+const CODE_ASSETS = [
+  'tools/foundation-export.mjs', 'tools/bootstrap.sh', 'tools/adapters/claude-code.sh',
+  'foundation/managed_io.py',
+  'hooks/pre-tool-gate.sh', 'hooks/session-context.sh', 'hooks/stop-reminder.sh', 'hooks/_resolve-project-dir.sh',
+  'tools/register-mcps.mjs', 'tools/mcp/llmwiki.sh',
+  'scripts/agent-instructions-check.sh', 'scripts/agent-skill-check.sh',
+  'contracts/delivery/index.js', 'contracts/delivery/schema-kernel.js',
+  'contracts/delivery/foundation-lock.schema.js', 'contracts/delivery/baseline-ref.schema.js',
+  'contracts/delivery/test-contract.schema.js', 'contracts/delivery/plan-bundle.schema.js',
+  'contracts/delivery/candidate-ref.schema.js', 'contracts/delivery/evidence-envelope.schema.js',
+  'contracts/delivery/gate-receipt.schema.js', 'contracts/delivery/release-receipt.schema.js',
+  'contracts/delivery/action-binding.schema.js',
+];
+const DEPENDENCY_METADATA = ['package.json', 'package-lock.json', COMET_LOCK_REL];
+function sourceFile(root, relative) {
+  const info = rejectLinkedPath(root, relative);
+  if (!info?.isFile()) throw new Error(`not a regular asset: ${relative}`);
+  return path.resolve(root, relative);
+}
+const EXCLUDED = new Set(['__pycache__', '.DS_Store', '.git']);
 
-function walkFiles(dir, prefix = '', out = []) {
+function walkFiles(dir, prefix = '', out = [], excludeGenerated = true) {
+  if (!rejectLinkedPath(dir)?.isDirectory()) throw new Error(`not a real asset directory: ${dir}`);
   for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
-    if (EXCLUDED.has(entry.name) || entry.name.startsWith('.')) continue;
     const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
     const abs = path.join(dir, entry.name);
-    if (entry.isDirectory()) walkFiles(abs, rel, out);
-    else if (entry.isFile()) out.push({ rel, abs });
+    if (entry.isSymbolicLink()) throw new Error(`symlink asset refused: ${rel}`);
+    if (!entry.isDirectory() && !entry.isFile()) throw new Error(`special asset refused: ${rel}`);
+    if (!excludeGenerated && entry.isFile()) outputFile(abs);
+    if (excludeGenerated && EXCLUDED.has(entry.name)) continue;
+    if (entry.isDirectory()) walkFiles(abs, rel, out, excludeGenerated);
+    else out.push({ rel, abs });
   }
   return out;
 }
-
 // Aggregate digest of one skill directory (identical basis to the P1_6
 // method-profile manifest, so both can be cross-checked).
 function isGitWorkTree(root) {
-  return spawnSync('git', ['-C', root, 'rev-parse', '--git-dir'], { encoding: 'utf8' }).status === 0;
+  const probe = spawnSync('git', ['-C', root, 'rev-parse', '--show-toplevel'], {encoding:'utf8'});
+  return probe.status === 0 && fs.realpathSync(probe.stdout.trim()) === fs.realpathSync(root);
 }
 
 // Enumerate a skill's distributable files. In a git work tree the basis is
@@ -88,9 +146,9 @@ export function skillDigest(root, name) {
   const files = skillFiles(root, name);
   if (files.length === 0) throw new Error(`skill ${name} has no files — refusing to freeze an empty asset`);
   const lines = [];
-  const byRel = {};
+  const byRel = assetDictionary();
   for (const f of files) {
-    const digest = sha256Bytes(fs.readFileSync(f.abs));
+    const digest = sha256Bytes(fs.readFileSync(sourceFile(root,path.relative(root,f.abs))));
     byRel[f.rel] = digest;
     // Line path includes the skill name — the exact P1_6 manifest basis.
     lines.push(`${digest}  ${name}/${f.rel}`);
@@ -110,6 +168,7 @@ export function guardLock(lock, { mcpRaw } = {}) {
   if (!contract.ok) errors.push(...contract.errors.map((e) => `contract: ${e}`));
 
   const serialized = canonicalJson(lock);
+  if (!/^[a-f0-9]{40}$/.test(lock.release?.commit ?? '')) errors.push('release.commit must be a fixed Git SHA');
   if (MACHINE_PATH_RE.test(serialized)) errors.push('machine absolute path found in lock (must contain no host-specific paths)');
 
   for (const [label, version] of [
@@ -135,6 +194,7 @@ export function guardLock(lock, { mcpRaw } = {}) {
     }
     for (const [name, entry] of Object.entries(mcpJson?.mcpServers ?? {})) {
       const args = Array.isArray(entry?.args) ? entry.args.map(String) : [];
+      for (const [key,value] of Object.entries(entry.env ?? {})) if (/token|password|secret|api.?key/i.test(key) && value && !/^\$\{[^}]+\}$/.test(String(value))) errors.push(`MCP ${name}: literal credential refused at env.${key}`);
       const isNpx = entry?.command === 'npx';
       const hasWrapper = args.some((a) => a.includes('${') || a.includes('}'));
       if (isNpx && !hasWrapper) {
@@ -166,13 +226,21 @@ function gitRevParseHead(root) {
 export async function buildLock(root, options = {}) {
   const skillsDir = path.join(root, '.agents/skills');
   if (!fs.existsSync(skillsDir)) throw new Error(`unique skill source missing: ${skillsDir}`);
-  const names = fs.readdirSync(skillsDir, { withFileTypes: true })
+  const manifestPath = path.join(root, PROFILE_REL);
+  const manifest = readJsonIfExists(manifestPath);
+  const directories = fs.readdirSync(skillsDir, { withFileTypes: true })
     .filter((e) => e.isDirectory() && !e.name.startsWith('.'))
     .map((e) => e.name)
     .sort();
 
+  const retired = directories.filter(retiredName);
+  if (retired.length) throw new Error(`retired workflow sources refuse distribution: ${retired.join(', ')}`);
+  const names = manifest?.snapshots?.map((s) => s.name).sort() ?? directories;
+  if (new Set(names).size !== names.length || names.some((n) => !/^[a-z0-9][a-z0-9-]*$/.test(n))) throw new Error('invalid selected method names');
   const skills = names.map((name) => {
     const d = skillDigest(root, name);
+    const expected = manifest?.snapshots?.find((s) => s.name === name);
+    if (expected && (d.digest !== expected.content_sha256 || Object.keys(d.files).length !== expected.file_count)) throw new Error(`selected source drift: ${name}`);
     return { name, digest: d.digest, fileCount: d.fileCount, files: d.files };
   });
 
@@ -197,13 +265,17 @@ export async function buildLock(root, options = {}) {
     .map(([name, entry]) => ({ name, digest: sha256Bytes(canonicalJson({ command: entry.command ?? '', args: entry.args ?? [], env: entry.env ?? {} })) }))
     .sort((a, b) => (a.name < b.name ? -1 : 1));
 
-  const manifestPath = path.join(root, PROFILE_REL);
-  const manifest = readJsonIfExists(manifestPath);
-  const profile = options.profile ?? manifest?.method_profile?.controller;
+  const profile = options.profile ?? manifest?.current_profile_id ?? manifest?.method_profile?.controller;
+  let profileBinding = null;
+  if (manifest?.current_profile_id) {
+    const data = readJsonIfExists(path.join(root, PROFILE_DATA_REL));
+    if (!data || data.id !== manifest.current_profile_id || profile !== data.id) throw new Error('current profile data/id mismatch');
+    profileBinding = { schemaVersion: 1, id: data.id, manifest: { path: PROFILE_REL, sha256: sha256Bytes(fs.readFileSync(manifestPath)) }, data: { path: PROFILE_DATA_REL, sha256: sha256Bytes(fs.readFileSync(path.join(root, PROFILE_DATA_REL))) } };
+  }
   if (!profile) throw new Error(`method profile missing (no controller in ${PROFILE_REL}); pass --profile explicitly`);
   const methodProfile = {
     path: PROFILE_REL,
-    digest: manifest ? sha256Bytes(fs.readFileSync(manifestPath)) : sha256Bytes(canonicalJson({})),
+    digest: profileBinding ? sha256Bytes(canonicalJson(profileBinding)) : manifest ? sha256Bytes(fs.readFileSync(manifestPath)) : sha256Bytes(canonicalJson({})),
     profile,
   };
 
@@ -219,6 +291,8 @@ export async function buildLock(root, options = {}) {
     platforms: ['darwin', 'linux'],
   };
 
+  const assetCode = profileBinding ? assetDictionary(CODE_ASSETS.map((rel)=>[rel,sha256Bytes(fs.readFileSync(sourceFile(root,rel)))])) : null;
+  const assetData = profileBinding ? assetDictionary(DEPENDENCY_METADATA.map((rel)=>[rel,sha256Bytes(fs.readFileSync(sourceFile(root,rel)))])) : null;
   const commit = options.releaseCommit ?? gitRevParseHead(root);
 
   const lock = {
@@ -231,6 +305,7 @@ export async function buildLock(root, options = {}) {
         mcps,
         methodProfile,
         toolchain,
+        ...(profileBinding ? { assetCode, assetData, capabilities: fs.existsSync(path.join(root, 'mcp-capabilities.yaml')) ? sha256Bytes(fs.readFileSync(path.join(root, 'mcp-capabilities.yaml'))) : null } : {}),
       })),
     },
     skills: skills.map(({ name, digest }) => ({ name, digest })),
@@ -246,24 +321,50 @@ export async function buildLock(root, options = {}) {
     throw new Error(`foundation export refused by emission gates:\n  - ${gate.errors.join('\n  - ')}`);
   }
   // Non-enumerable carrier for view writers; excluded from JSON and digests.
-  Object.defineProperty(lock, '__sources', { enumerable: false, value: { skills } });
+  Object.defineProperty(lock, '__sources', { enumerable: false, value: { skills, profileBinding, assetCode, assetData } });
   return lock;
 }
 
 function writeIfChanged(file, content) {
+  const before = outputFile(file);
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const prior = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
-  if (prior !== content) fs.writeFileSync(file, content);
-  return prior !== content;
+  outputFile(file);
+  const bytes = Buffer.isBuffer(content) ? content : Buffer.from(content);
+  const prior = before ? readOutputFile(file) : null;
+  if (prior?.equals(bytes)) return false;
+  const temporary = path.join(path.dirname(file), `.${path.basename(file)}.sdd-${crypto.randomBytes(12).toString('hex')}`);
+  let fd, created = false;
+  try {
+    fd = fs.openSync(temporary, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, before ? before.mode & 0o777 : 0o644);
+    created = true;
+    fs.writeFileSync(fd, bytes);
+    fs.fsyncSync(fd);
+    if (before) fs.fchmodSync(fd, before.mode & 0o777);
+    fs.closeSync(fd); fd = undefined;
+    const current = outputFile(file);
+    if (before?.ino !== current?.ino || before?.mtimeMs !== current?.mtimeMs || before?.size !== current?.size) throw new Error('STATE_SYNC_REQUIRED: output changed during export');
+    fs.renameSync(temporary, file);
+  } finally {
+    if (fd !== undefined) fs.closeSync(fd);
+    if (created && fs.existsSync(temporary)) fs.unlinkSync(temporary);
+  }
+  return true;
 }
-
-function skillsManifest(skills) {
+function skillsManifest(skills, bodyCopies = false) {
   return JSON.stringify({
     schemaVersion: 1,
     generatedBy: 'tools/foundation-export.mjs',
+    bodyCopies,
     digestBasis: 'sha256 over the sorted "sha256  relative-path" lines of every file under .agents/skills/<name> (matches method-profile-manifest.json)',
-    skills: Object.fromEntries(skills.map((s) => [s.name, { fileCount: s.fileCount, digest: s.digest, files: s.files }])),
+    skills: assetDictionary(skills.map((s) => [s.name, { fileCount: s.fileCount, digest: s.digest, files: s.files }])),
   }, null, 2) + '\n';
+}
+
+function codeSources(lock) {
+  return assetDictionary([...Object.entries(lock.__sources.assetCode ?? {}), ...Object.entries(lock.__sources.assetData ?? {})]);
+}
+function codeManifest(lock) {
+  return JSON.stringify({schemaVersion:1, files:codeSources(lock)}, null, 2) + '\n';
 }
 
 // Generate the release view (产物) + foundation-lock.json under outDir.
@@ -271,56 +372,140 @@ function skillsManifest(skills) {
 export async function exportRelease(root, outDir, options = {}) {
   const lock = await buildLock(root, options);
   const { skills } = lock.__sources;
+  const emissions = [];
+  const emit = (file, bytes) => emissions.push([file, bytes]);
 
-  writeIfChanged(path.join(outDir, 'foundation-lock.json'), JSON.stringify(lock, null, 2) + '\n');
+  emit(path.join(outDir, 'foundation-lock.json'), JSON.stringify(lock, null, 2) + '\n');
   const viewFiles = ['foundation-lock.json'];
 
   const hooksSrc = path.join(root, 'hooks.yaml');
-  writeIfChanged(path.join(outDir, 'release/hooks/hooks.yaml'), fs.readFileSync(hooksSrc, 'utf8'));
+  emit(path.join(outDir, 'release/hooks/hooks.yaml'), fs.readFileSync(hooksSrc, 'utf8'));
   viewFiles.push('release/hooks/hooks.yaml');
 
   const capsPath = path.join(root, 'mcp-capabilities.yaml');
   if (fs.existsSync(capsPath)) {
-    writeIfChanged(path.join(outDir, 'release/mcp/mcp-capabilities.yaml'), fs.readFileSync(capsPath, 'utf8'));
+    emit(path.join(outDir, 'release/mcp/mcp-capabilities.yaml'), fs.readFileSync(capsPath, 'utf8'));
     viewFiles.push('release/mcp/mcp-capabilities.yaml');
   }
   const mcpJsonPath = path.join(root, '.mcp.json');
   if (fs.existsSync(mcpJsonPath)) {
     const view = { mcpServers: JSON.parse(fs.readFileSync(mcpJsonPath, 'utf8')).mcpServers ?? {} };
-    writeIfChanged(path.join(outDir, 'release/mcp/mcp.json'), JSON.stringify(view, null, 2) + '\n');
+    emit(path.join(outDir, 'release/mcp/mcp.json'), JSON.stringify(view, null, 2) + '\n');
     viewFiles.push('release/mcp/mcp.json');
   }
 
-  writeIfChanged(path.join(outDir, 'release/skills/MANIFEST.json'), skillsManifest(skills));
+  emit(path.join(outDir, 'release/skills/MANIFEST.json'), skillsManifest(skills, options.skillsCopy === true));
   viewFiles.push('release/skills/MANIFEST.json');
 
   if (options.skillsCopy) {
     for (const skill of skills) {
       for (const [rel, abs] of Object.entries(fileMapFor(root, skill.name))) {
-        writeIfChanged(path.join(outDir, 'release/skills', skill.name, rel), fs.readFileSync(abs, 'utf8'));
+        emit(path.join(outDir, 'release/skills', skill.name, rel), fs.readFileSync(abs));
         viewFiles.push(`release/skills/${skill.name}/${rel}`);
       }
     }
   }
 
+  if (lock.__sources.profileBinding) {
+    for (const relative of Object.keys(codeSources(lock))) {
+      const dest = `release/code/${relative}`;
+      emit(path.join(outDir, dest), fs.readFileSync(sourceFile(root,relative)));
+      viewFiles.push(dest);
+    }
+    emit(path.join(outDir,'release/code/MANIFEST.json'),codeManifest(lock));
+    viewFiles.push('release/code/MANIFEST.json');
+    for (const [dest, source] of [['release/profile/manifest.json', PROFILE_REL], ['release/profile/comet-managed.json', PROFILE_DATA_REL]]) {
+      emit(path.join(outDir, dest), fs.readFileSync(path.join(root, source)));
+      viewFiles.push(dest);
+    }
+    emit(path.join(outDir, 'release/profile/binding.json'), JSON.stringify(lock.__sources.profileBinding, null, 2) + '\n');
+    viewFiles.push('release/profile/binding.json');
+  }
+  rejectLinkedPath(outDir);
+  const releaseRoot = path.join(outDir, 'release');
+  if (rejectLinkedPath(releaseRoot)) walkFiles(releaseRoot, '', [], false);
+  for (const [file] of emissions) outputFile(file);
+  if (options.freezeBaseline) await freezeBaseline(root, outDir, lock);
+  for (const [file, bytes] of emissions) writeIfChanged(file, bytes);
   return { lock, outDir, files: viewFiles };
 }
 
 function fileMapFor(root, skillName) {
-  const dir = path.join(root, '.agents/skills', skillName);
-  return Object.fromEntries(walkFiles(dir).map((f) => [f.rel, f.abs]));
+  return assetDictionary(skillFiles(root, skillName).map((f) => [f.rel, f.abs]));
+}
+
+// Content-addressed pure asset store; no Run, user settings, credentials or knowledge.
+function pureAssets(root, lock) {
+  const result = assetDictionary();
+  for (const skill of lock.__sources.skills) for (const relative of Object.keys(skill.files)) {
+    const rel = `.agents/skills/${skill.name}/${relative}`;
+    result[rel] = fs.readFileSync(sourceFile(root, rel));
+  }
+  const metadata = ['hooks.yaml','package.json',COMET_LOCK_REL,PROFILE_REL,PROFILE_DATA_REL,'mcp-capabilities.yaml',...CODE_ASSETS,...DEPENDENCY_METADATA];
+  for (const rel of metadata) if (fs.existsSync(path.join(root,rel))) result[rel] = fs.readFileSync(sourceFile(root,rel));
+  if (fs.existsSync(path.join(root,'.mcp.json'))) result['.mcp.json'] = Buffer.from(JSON.stringify({mcpServers:JSON.parse(fs.readFileSync(sourceFile(root,'.mcp.json'),'utf8')).mcpServers??{}},null,2)+'\n');
+  return result;
+}
+function cacheTree(root, prefix='') {
+  if (!rejectLinkedPath(root)?.isDirectory()) throw new Error('not a real cache directory');
+  const found = assetDictionary();
+  if (!fs.readdirSync(root).length) throw new Error('unregistered empty cache directory');
+  for (const entry of fs.readdirSync(root,{withFileTypes:true})) {
+    const rel=prefix?`${prefix}/${entry.name}`:entry.name;const abs=path.join(root,entry.name);
+    if (entry.isSymbolicLink()) throw new Error('symlink in sealed asset cache');
+    if (entry.isDirectory()) Object.assign(found,cacheTree(abs,rel));
+    else if (entry.isFile()) found[rel]=sha256Bytes(readOutputFile(abs));
+    else throw new Error('special file in sealed asset cache');
+  }
+  return found;
+}
+async function verifyCache(cache, expected) {
+  if (fs.lstatSync(cache).isSymbolicLink()) throw new Error('symlink cache root');
+  const source=path.join(cache,'source');
+  // Inspect first, before a source reader may follow a nested link.
+  const actual=cacheTree(cache);
+  const pinned=JSON.parse(readOutputFile(path.join(cache,'foundation-lock.json'),'utf8'));
+  if (canonicalJson(pinned)!==canonicalJson(expected)) throw new Error('frozen lock mismatch');
+  const rebuilt=await buildLock(source,{releaseCommit:pinned.release.commit});
+  if (canonicalJson(rebuilt)!==canonicalJson(pinned)) throw new Error('whole exportDigest or asset binding mismatch');
+  const files=assetDictionary(Object.entries(pureAssets(source,rebuilt)).map(([p,b])=>['source/'+p,sha256Bytes(b)]));
+  files['foundation-lock.json']=sha256Bytes(readOutputFile(path.join(cache,'foundation-lock.json')));
+  const seal=JSON.parse(readOutputFile(path.join(cache,'manifest.json'),'utf8'));
+  if (seal.exportDigest!==pinned.release.exportDigest || canonicalJson(seal.files)!==canonicalJson(files)) throw new Error('per-file sealed bytes mismatch');
+  delete actual['manifest.json'];
+  if (canonicalJson(actual)!==canonicalJson(files)) throw new Error('unexpected or missing sealed asset');
+  return rebuilt;
+}
+async function freezeBaseline(root,outDir,lock) {
+  const parent=path.join(outDir,'baselines');
+  rejectLinkedPath(parent);
+  fs.mkdirSync(parent,{recursive:true});rejectLinkedPath(parent);
+  const cache=path.join(parent,lock.release.exportDigest);rejectLinkedPath(cache);
+  if (fs.existsSync(cache)) {try {await verifyCache(cache,lock);return;} catch(error) {throw new Error(`STATE_SYNC_REQUIRED: old cache preserved: ${error.message}`);}}
+  const temporary=fs.mkdtempSync(path.join(parent,'.pending-'));
+  try {
+    const files=assetDictionary();
+    for (const [rel,bytes] of Object.entries(pureAssets(root,lock))) {const dest=path.join(temporary,'source',rel);fs.mkdirSync(path.dirname(dest),{recursive:true});writeIfChanged(dest,bytes);files['source/'+rel]=sha256Bytes(bytes);}
+    const bytes=Buffer.from(JSON.stringify(lock,null,2)+'\n');writeIfChanged(path.join(temporary,'foundation-lock.json'),bytes);files['foundation-lock.json']=sha256Bytes(bytes);
+    writeIfChanged(path.join(temporary,'manifest.json'),JSON.stringify({schemaVersion:1,exportDigest:lock.release.exportDigest,files},null,2)+'\n');
+    await verifyCache(temporary,lock);fs.renameSync(temporary,cache);
+  } finally {if(fs.existsSync(temporary))fs.rmSync(temporary,{recursive:true,force:true});}
 }
 
 // Verify: lock vs live sources, and release view vs sources/lock. Read-only.
-export async function verifyLock(lockPath, root) {
+export async function verifyLock(lockPath, root, { requireBodies = false } = {}) {
   const drifts = [];
+  const outDir = path.dirname(lockPath);
   let lock;
   try {
-    lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+    rejectLinkedPath(outDir);
+    outputFile(lockPath);
+    const releaseRoot = path.join(outDir, 'release');
+    if (rejectLinkedPath(releaseRoot)) walkFiles(releaseRoot, '', [], false);
+    lock = JSON.parse(readOutputFile(lockPath,'utf8'));
   } catch (err) {
     return { ok: false, error: `lock unreadable: ${err.message}`, drifts };
   }
-  const outDir = path.dirname(lockPath);
 
   const gate = guardLock(lock, { mcpRaw: fs.existsSync(path.join(root, '.mcp.json')) ? fs.readFileSync(path.join(root, '.mcp.json'), 'utf8') : undefined });
   if (!gate.ok) return { ok: false, error: `lock fails emission gates: ${gate.errors.join('; ')}`, drifts };
@@ -328,7 +513,7 @@ export async function verifyLock(lockPath, root) {
   let current;
   try {
     // Recompute with the PINNED commit/profile so only content digests drive drift.
-    current = await buildLock(root, { releaseCommit: lock.release.commit, profile: lock.profile });
+    current = await buildLock(root, { releaseCommit: lock.release.commit });
   } catch (err) {
     return { ok: false, error: `sources no longer produce a lock: ${err.message}`, drifts };
   }
@@ -356,41 +541,70 @@ export async function verifyLock(lockPath, root) {
     drifts.push({ kind: 'lock', item: 'toolchain', expected: JSON.stringify(lock.toolchain ?? {}), actual: JSON.stringify(current.toolchain), detail: 'toolchain versions drifted' });
   }
 
+  if (lock.release.exportDigest !== current.release.exportDigest) drifts.push({kind: 'lock', item: 'exportDigest', detail: 'complete asset set drifted'});
+  const required = [['release/hooks/hooks.yaml', 'hooks.yaml'], ['release/skills/MANIFEST.json', null]];
+  if (fs.existsSync(path.join(root, '.mcp.json'))) required.push(['release/mcp/mcp.json', null]);
+  if (fs.existsSync(path.join(root, 'mcp-capabilities.yaml'))) required.push(['release/mcp/mcp-capabilities.yaml', 'mcp-capabilities.yaml']);
+  if (current.__sources.profileBinding) required.push(['release/profile/manifest.json', PROFILE_REL], ['release/profile/comet-managed.json', PROFILE_DATA_REL], ['release/profile/binding.json', null]);
+  for (const [view, source] of required) {
+    const file = path.join(outDir, view);
+    if (!fs.existsSync(file) || (source && !readOutputFile(file).equals(fs.readFileSync(path.join(root, source))))) drifts.push({kind:'release', item:view, detail:'required distribution file missing or drifted'});
+  }
+  if (current.__sources.profileBinding) {
+    const codeRoot = path.join(outDir,'release/code');
+    try {
+      if (fs.lstatSync(codeRoot).isSymbolicLink()) throw new Error('symlink code release');
+      const actual = cacheTree(codeRoot);
+      const expected = codeSources(current);
+      expected['MANIFEST.json'] = sha256Bytes(codeManifest(current));
+      if (canonicalJson(actual)!==canonicalJson(expected)) drifts.push({kind:'release',item:'code',detail:'project code closure bytes or complete file set differs'});
+    } catch(error) {drifts.push({kind:'release',item:'code',detail:error.message});}
+    const bindingFile = path.join(outDir, 'release/profile/binding.json');
+    if (fs.existsSync(bindingFile) && readOutputFile(bindingFile, 'utf8') !== JSON.stringify(current.__sources.profileBinding, null, 2) + '\n') drifts.push({kind:'release',item:'profile-binding',detail:'profile binding drifted'});
+  }
+
   // Release view vs sources (second-source detection).
   const hooksView = path.join(outDir, 'release/hooks/hooks.yaml');
   if (fs.existsSync(hooksView)) {
-    if (fs.readFileSync(hooksView, 'utf8') !== fs.readFileSync(path.join(root, 'hooks.yaml'), 'utf8')) {
+    if (readOutputFile(hooksView, 'utf8') !== fs.readFileSync(path.join(root, 'hooks.yaml'), 'utf8')) {
       drifts.push({ kind: 'release', item: 'release/hooks/hooks.yaml', detail: 'hand-edited release view or drifted source — the view is a product, regenerate via export' });
     }
   }
   const mcpView = path.join(outDir, 'release/mcp/mcp.json');
   if (fs.existsSync(mcpView) && fs.existsSync(path.join(root, '.mcp.json'))) {
     const expected = JSON.stringify({ mcpServers: JSON.parse(fs.readFileSync(path.join(root, '.mcp.json'), 'utf8')).mcpServers ?? {} }, null, 2) + '\n';
-    if (fs.readFileSync(mcpView, 'utf8') !== expected) {
+    if (readOutputFile(mcpView, 'utf8') !== expected) {
       drifts.push({ kind: 'release', item: 'release/mcp/mcp.json', detail: 'release MCP view drifted from the generated registration artifact' });
     }
   }
   const manifestView = path.join(outDir, 'release/skills/MANIFEST.json');
+  let bodyCopies = false;
+  try { bodyCopies = JSON.parse(readOutputFile(manifestView, 'utf8')).bodyCopies === true; } catch {}
   if (fs.existsSync(manifestView)) {
-    if (fs.readFileSync(manifestView, 'utf8') !== skillsManifest(current.__sources.skills)) {
+    if (readOutputFile(manifestView, 'utf8') !== skillsManifest(current.__sources.skills, bodyCopies)) {
       drifts.push({ kind: 'release', item: 'release/skills/MANIFEST.json', detail: 'release skill manifest drifted from sources' });
     }
   }
+  if (requireBodies && !bodyCopies) drifts.push({kind:'release',item:'bodyCopies',detail:'consumer requires complete method bodies'});
   // Full-body copies, when the view was exported with --skills-copy.
   const skillsCopyRoot = path.join(outDir, 'release/skills');
   if (fs.existsSync(skillsCopyRoot)) {
     for (const skill of current.__sources.skills) {
       const copyDir = path.join(skillsCopyRoot, skill.name);
-      if (!fs.existsSync(copyDir)) continue;
+      if (!fs.existsSync(copyDir)) { if (bodyCopies || requireBodies) drifts.push({kind:'release',item:skill.name,detail:'complete method directory missing'}); continue; }
+      const actualFiles = walkFiles(copyDir,'',[],false).map((f)=>f.rel).sort();
+      const expectedFiles = Object.keys(skill.files).sort();
+      if (JSON.stringify(actualFiles)!==JSON.stringify(expectedFiles)) drifts.push({kind:'release',item:skill.name,detail:'copied method file set differs from selected source'});
       for (const [rel, abs] of Object.entries(fileMapFor(root, skill.name))) {
         const copy = path.join(copyDir, rel);
-        if (fs.existsSync(copy) && fs.readFileSync(copy, 'utf8') !== fs.readFileSync(abs, 'utf8')) {
+        if (!fs.existsSync(copy) || !readOutputFile(copy).equals(fs.readFileSync(abs))) {
           drifts.push({ kind: 'release', item: `release/skills/${skill.name}/${rel}`, detail: 'release skill body differs from the unique source (hand-edited distribution copy)' });
         }
       }
     }
   }
 
+  if (fs.existsSync(skillsCopyRoot)) for (const entry of fs.readdirSync(skillsCopyRoot,{withFileTypes:true})) { if (entry.isDirectory() && !current.skills.some((s)=>s.name===entry.name)) drifts.push({kind:'release',item:entry.name,detail:'unselected method in release view'}); }
   return drifts.length > 0 ? { ok: false, drifts } : { ok: true, drifts };
 }
 
@@ -398,6 +612,9 @@ export async function verifyLock(lockPath, root) {
 // pinned digest must be re-derivable from the frozen commit (F04 keep-old-
 // baseline). Read-only.
 export async function resolveBaseline(root, lock) {
+  try {rejectLinkedPath(root,`foundation/baselines/${lock.release.exportDigest}`);} catch(error) {return {ok:false,resolvable:false,reason:error.message,resolvedSkills:[],missing:['unsafe-cache-path']};}
+  const cache=path.join(root,'foundation/baselines',lock.release.exportDigest);
+  if (fs.existsSync(cache)) {try {await verifyCache(cache,lock);return {ok:true,resolvable:true,reason:'sealed pure assets verified byte-for-byte and whole exportDigest',resolvedSkills:lock.skills.map((s)=>s.name),missing:[],source:'sealed-assets'};} catch(error) {return {ok:false,resolvable:false,reason:`STATE_SYNC_REQUIRED: ${error.message}`,resolvedSkills:[],missing:['sealed-assets']};}}
   const resolvedSkills = [];
   const missing = [];
   const commit = lock?.release?.commit;
@@ -436,6 +653,31 @@ export async function resolveBaseline(root, lock) {
   const policyOk = policy.status === 0 && sha256Bytes(policy.out) === lock.policy?.digest;
   if (!policyOk) missing.push('hooks.yaml (policy digest mismatch or missing at commit)');
 
+  const manifest = show(PROFILE_REL);
+  if (lock.methodProfile) {
+    let expected = manifest.status === 0 ? sha256Bytes(manifest.out) : null;
+    try {
+      const data = JSON.parse(manifest.out);
+      if (data.current_profile_id && lock.profile === data.current_profile_id) {
+        const profileData = show(PROFILE_DATA_REL);
+        if (profileData.status !== 0 || JSON.parse(profileData.out).id !== lock.profile) throw new Error('profile unavailable');
+        expected = sha256Bytes(canonicalJson({schemaVersion:1,id:lock.profile,manifest:{path:PROFILE_REL,sha256:sha256Bytes(manifest.out)},data:{path:PROFILE_DATA_REL,sha256:sha256Bytes(profileData.out)}}));
+      }
+    } catch { expected = null; }
+    if (lock.methodProfile.digest !== expected) missing.push('method profile (historical manifest/data mismatch)');
+  }
+  try {
+    const registrations = JSON.parse(show('.mcp.json').out);
+    const mcps = Object.entries(registrations.mcpServers ?? {}).map(([name,e])=>({name,digest:sha256Bytes(canonicalJson({command:e.command??'',args:e.args??[],env:e.env??{}}))})).sort((a,b)=>a.name.localeCompare(b.name));
+    if (canonicalJson(mcps)!==canonicalJson(lock.mcps??[])) missing.push('MCP registrations (historical mismatch)');
+    const pkg = JSON.parse(show('package.json').out);const upstream = JSON.parse(show(COMET_LOCK_REL).out);
+    if (lock.toolchain.cli.version!==pkg.version || lock.toolchain.runner.version!==upstream.package.version || lock.toolchain.node!==upstream.toolchain.node) missing.push('toolchain (historical mismatch)');
+    const fields={skills:lock.skills,policy:lock.policy,mcps:lock.mcps,methodProfile:lock.methodProfile,toolchain:lock.toolchain};
+    const sourceManifest=JSON.parse(manifest.out);
+    if (sourceManifest.current_profile_id && lock.profile===sourceManifest.current_profile_id) { const caps=show('mcp-capabilities.yaml');fields.capabilities=caps.status===0?sha256Bytes(caps.out):null;fields.assetCode=assetDictionary(CODE_ASSETS.map((rel)=>{const file=show(rel);if(file.status!==0)throw new Error('historical code asset missing');return [rel,sha256Bytes(file.out)];}));fields.assetData=assetDictionary(DEPENDENCY_METADATA.map((rel)=>{const file=show(rel);if(file.status!==0)throw new Error('historical dependency metadata missing');return [rel,sha256Bytes(file.out)];})); }
+    if (sha256Bytes(canonicalJson(fields))!==lock.release.exportDigest) missing.push('complete export digest (historical mismatch)');
+  } catch { missing.push('historical asset metadata unavailable'); }
+
   if (missing.length === 0) return { ok: true, resolvable: true, reason: 'all pinned digests resolve from the frozen release commit', resolvedSkills, missing };
   return { ok: false, resolvable: false, reason: `pinned baseline not resolvable: ${missing.join('; ')}`, resolvedSkills, missing };
 }
@@ -454,8 +696,11 @@ function readRunDir(runDir) {
 // check-run — F04 (old-run baseline keep/migrate) + B09 (single writer).
 // Read-only unless options.acquire or options.migrate.
 export async function checkRun(runDir, root, options = {}) {
-  const { lock, state, stateFile } = readRunDir(runDir);
-  const current = await buildLock(root, { releaseCommit: lock.release.commit, profile: lock.profile });
+  let material;try {material=readRunDir(runDir);} catch(error) {return {ok:false,action:'check',reason:'baseline-unresolvable',status:'STATE_SYNC_REQUIRED',detail:error.message};}
+  const {lock,state,stateFile}=material;
+  const native = (typeof state.skill === 'string' && typeof state.skillHash === 'string') || path.basename(runDir)==='.comet' || fs.existsSync(path.join(runDir,'../.comet.yaml'));
+  if (native && (options.acquire || options.migrate)) return {ok:false,action:'check',reason:'native-run-readonly',status:'STATE_SYNC_REQUIRED',detail:'Foundation helpers cannot acquire or mutate a native Comet Run; use the same Comet kernel'};
+  const current = await buildLock(root, { releaseCommit: lock.release.commit });
   const drift = current.release.exportDigest !== lock.release.exportDigest;
   const baseline = await resolveBaseline(root, lock);
 
@@ -467,6 +712,7 @@ export async function checkRun(runDir, root, options = {}) {
     if (state.status === 'active' && state.owner && state.owner !== owner) {
       return { ok: false, action: 'acquire', reason: 'second-writer-refused', detail: `active run is owned by ${state.owner} (B09: no second writer)`, drift, baseline };
     }
+    if (!baseline.ok) return {ok:false,action:'acquire',reason:'baseline-unresolvable',status:'STATE_SYNC_REQUIRED',baseline,drift};
     const next = { ...state, status: 'active', owner, pinnedCommit: lock.release.commit, baselineLock: 'foundation-lock.json' };
     fs.writeFileSync(stateFile, JSON.stringify(next, null, 2) + '\n');
     return { ok: true, action: 'acquire', owner, drift, baseline, runId: next.runId };
@@ -491,6 +737,8 @@ export async function checkRun(runDir, root, options = {}) {
     return { ok: true, action: 'migrate', drift, baseline, migrations };
   }
 
+  if (!baseline.ok) return {ok:false,action:'check',reason:'baseline-unresolvable',status:'STATE_SYNC_REQUIRED',baseline,drift,migration:migrationHint};
+  if (native) return {ok:!drift,action:'check',reason:drift?'silent-rebaseline-blocked':'native-assets-resolvable',status:drift?'STATE_SYNC_REQUIRED':'ASSETS_ONLY',baseline,drift,runId:state.runId,detail:'read-only asset observation; no Run or role authority granted'};
   if (!drift) {
     if (!baseline.ok) {
       return { ok: false, action: 'check', reason: 'baseline-unresolvable', drift, baseline, migration: migrationHint };
@@ -520,6 +768,7 @@ async function main(argv) {
       releaseCommit: argValue(rest, '--release-commit'),
       profile: argValue(rest, '--profile'),
       skillsCopy: rest.includes('--skills-copy'),
+      freezeBaseline: rest.includes('--freeze-baseline'),
     });
     process.stdout.write(`✅ foundation export: ${files.length} files under ${out} (release commit ${lock.release.commit.slice(0, 8)}, exportDigest ${lock.release.exportDigest.slice(0, 12)})\n`);
     return 0;
@@ -527,7 +776,7 @@ async function main(argv) {
   if (cmd === 'verify') {
     const root = path.resolve(argValue(rest, '--root') ?? process.cwd());
     const lockPath = path.resolve(argValue(rest, '--lock') ?? path.join(root, 'foundation/foundation-lock.json'));
-    const verdict = await verifyLock(lockPath, root);
+    const verdict = await verifyLock(lockPath, root, {requireBodies: rest.includes('--require-bodies')});
     if (!verdict.ok) {
       process.stderr.write(`❌ foundation verify failed: ${verdict.error ?? 'drift detected'}\n`);
       for (const d of verdict.drifts ?? []) process.stderr.write(`  - [${d.kind}] ${d.item}: ${d.detail}${d.expected ? ` (expected ${String(d.expected).slice(0, 12)}, actual ${String(d.actual).slice(0, 12)})` : ''}\n`);

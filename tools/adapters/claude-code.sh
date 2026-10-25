@@ -99,6 +99,15 @@ is_managed_skill_link() {
 # 的残留，安装阶段移除（见 link_skills），不构成拒绝。
 audit_retired_workflow_entries() {
   local refusals=0 entry name dest
+  for entry in "$TARGET_ROOT"/.claude/commands/*; do
+    [ -e "$entry" ] || [ -L "$entry" ] || continue
+    name="$(basename "$entry")"
+    if retired_workflow_name "${name%.md}"; then
+      echo "❌ retired command discovery input preserved: ${name}; move it out before managed installation" >&2
+      refusals=$((refusals+1))
+    fi
+  done
+
   shopt -s nullglob
   for entry in "$TARGET_ROOT"/.agents/skills/*/; do
     name="$(basename "$entry")"
@@ -132,72 +141,56 @@ audit_retired_workflow_entries() {
 }
 
 link_skills() {
-  # 在 TARGET_ROOT 注入软链：只对真实目录源 .agents/skills 里的技能建链。
-  # 前置条件：audit_retired_workflow_entries 已通过（否则安装早已失败关闭）。
-  local skills_src="$TARGET_ROOT/.agents/skills"
-  [ -d "$skills_src" ] || { echo "  ⚠️  无 $TARGET_ROOT/.agents/skills —— 跳过 skills 注入"; return 0; }
-  mkdir -p "$TARGET_ROOT/.claude/skills"
-  # 清理仅限“本 adapter 自有”的退役命名残留软链（readlink 逐字等于受管目标）。
-  # 其余退役命名条目已被只读预检拒绝——本函数绝无按前缀删除真实目录/外部
-  # 链接的路径。
-  shopt -s nullglob
-  local entry name
-  for entry in "$TARGET_ROOT"/.claude/skills/*; do
-    name="$(basename "$entry")"
-    retired_workflow_name "$name" || continue
-    if is_managed_skill_link "$entry"; then
-      rm -f "$entry"
-      echo "  🧹 移除本 adapter 的受管软链残留: ${name} -> $(managed_skill_dest "$name")"
-    else
-      # 预检通过后仍出现非受管退役条目 = 预检与清理之间状态被并发改动：
-      # fail closed，绝不删除归属不明的内容。
-      echo "❌ ${name} 命中退役工作流命名且非本 adapter 受管软链（预检后状态变化）——保留不动，安装中止" >&2
-      exit 1
-    fi
-  done
-  local linked=0
-  for dir in "$skills_src"/*/; do
-    name="$(basename "$dir")"
-    if retired_workflow_name "$name"; then
-      # 预检应已拒绝该源；到达这里说明审计后被并发加入。绝不建链，fail closed。
-      echo "❌ 退役工作流技能源仍存在: ${name} —— 拒绝建链，安装中止（ADR-0015/0016）" >&2
-      exit 1
-    fi
-    ln -sfn "$(managed_skill_dest "$name")" "$TARGET_ROOT/.claude/skills/$name"
-    linked=$((linked+1))
-  done
-  # 链接解析断言：每个注入的软链必须能解析到存在的 SKILL.md（共识评审 F-003）
-  local broken=0
-  for link in "$TARGET_ROOT"/.claude/skills/*/; do
-    name="$(basename "${link%/}")"
-    [ -f "${link%/}/SKILL.md" ] || { echo "❌ broken skill link: $name" >&2; broken=$((broken+1)); }
-  done
-  shopt -u nullglob
-  [ "$broken" -eq 0 ] || exit 1
-  echo "✅ .claude/skills 注入 ${linked} 个技能软链（全部可解析）"
+  python3 -B - "$ROOT" "$TARGET_ROOT" "$SELECTED_SKILLS" <<'PYLINK'
+import sys
+sys.path.insert(0, sys.argv[1] + "/foundation")
+from managed_io import ManagedOutputs
+io = ManagedOutputs(sys.argv[2])
+try:
+    io.skills(sys.argv[3].splitlines())
+finally:
+    io.close()
+print("✅ selected method links installed; unrelated user entries preserved")
+PYLINK
 }
 
 unlink_skills() {
-  # 卸载只删本 adapter 生成的软链（readlink 逐字等于受管目标
-  # ../../.agents/skills/<name>），真实目录与任何用户/外部软链一律不动。
-  # 卸载是回退路径，永不做退役预检（评审 R2：uninstall 只碰 adapter 自有条目）。
-  shopt -s nullglob
-  local removed=0 link
-  for link in "$TARGET_ROOT"/.claude/skills/*; do
-    is_managed_skill_link "$link" || continue
-    rm -f "$link"
-    removed=$((removed+1))
-  done
-  shopt -u nullglob
-  echo "  🧹 移除受管技能软链 ${removed} 个（用户自有条目不动）"
+  python3 -B - "$ROOT" "$TARGET_ROOT" <<'PYUNLINK'
+import sys
+sys.path.insert(0, sys.argv[1] + "/foundation")
+from managed_io import ManagedOutputs
+io = ManagedOutputs(sys.argv[2])
+try:
+    io.skills(uninstall=True)
+finally:
+    io.close()
+print("✅ adapter-owned method links removed; user entries preserved")
+PYUNLINK
 }
+
+# Shared no-follow preflight also covers uninstall, before any settings/link mutation.
+command -v python3 >/dev/null 2>&1 || { echo "❌ python3 required by claude-code adapter" >&2; exit 1; }
+python3 -B - "$ROOT" "$TARGET_ROOT" <<'PYPREFLIGHT'
+import sys
+sys.path.insert(0, sys.argv[1] + "/foundation")
+from managed_io import ManagedOutputs
+io = ManagedOutputs(sys.argv[2])
+try:
+    io.validate()
+finally:
+    io.close()
+PYPREFLIGHT
 
 if [ "$UNINSTALL" = true ]; then
   command -v python3 >/dev/null 2>&1 || { echo "❌ python3 required by claude-code adapter" >&2; exit 1; }
-  python3 - "$SETTINGS" <<'PYUNINSTALL'
+  python3 -B - "$ROOT" "$TARGET_ROOT" "$SETTINGS" <<'PYUNINSTALL'
 import json, os, re, sys
 
-settings_path = sys.argv[1]
+sys.path.insert(0, sys.argv[1] + "/foundation")
+from managed_io import ManagedOutputs, SETTINGS
+io = ManagedOutputs(sys.argv[2])
+files = io.validate()
+settings_path = sys.argv[3]
 MANAGED_SCRIPT_RE = re.compile(r"hooks/(pre-tool-gate|session-context|stop-reminder)\.sh")
 PLUGIN_SOURCE_RE = re.compile(r"CLAUDE_PLUGIN_ROOT|\.claude/plugins/")
 
@@ -211,9 +204,9 @@ def hook_source(hook):
         return "managed"
     return "user"
 
-if os.path.exists(settings_path):
+if files[SETTINGS] is not None:
     try:
-        settings = json.load(open(settings_path, encoding="utf-8"))
+        settings = json.loads(files[SETTINGS])
     except Exception as err:
         print(f"❌ uninstall: settings.json unreadable, refusing to edit ({err})", file=sys.stderr)
         raise SystemExit(1)
@@ -237,13 +230,13 @@ if os.path.exists(settings_path):
             del hooks[group]
     if not hooks:
         settings.pop("hooks", None)
-    os.makedirs(os.path.dirname(settings_path), exist_ok=True)
-    json.dump(settings, open(settings_path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    io.write_many({SETTINGS: json.dumps(settings, ensure_ascii=False, indent=2).encode("utf-8")}, expected=files)
     print("✅ uninstall：受管 hook 条目已移除 %d 个，用户与插件条目保留（插件条目由插件入口管理）" % removed)
 else:
     print("✅ uninstall：无 settings.json，无需清理")
+io.remove_compiled()
+io.close()
 PYUNINSTALL
-  rm -f "$COMPILED"
   unlink_skills
   exit 0
 fi
@@ -251,16 +244,46 @@ fi
 command -v python3 >/dev/null 2>&1 || { echo "❌ python3 required by claude-code adapter" >&2; exit 1; }
 [ -f "$HOOKS_YAML" ] || { echo "❌ hooks.yaml not found at $HOOKS_YAML" >&2; exit 1; }
 
+# 选择只读MF登记的方法；source_path只是显示，不参与加载。
+SELECTED_SKILLS="$(python3 -B - "$TARGET_ROOT" "$ROOT" <<'PYSELECT'
+import json, pathlib, re, sys
+sys.path.insert(0, sys.argv[2] + "/foundation")
+from managed_io import ManagedOutputs
+io = ManagedOutputs(sys.argv[1])
+root=pathlib.Path(sys.argv[1]);skills=root/".agents/skills"
+manifest=root/"openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json"
+if skills.is_symlink():raise SystemExit("symlink method source root refused")
+if manifest.is_file():
+    data=json.loads(manifest.read_text());selected=data.get("snapshots")
+else:selected=None
+names=[x["name"] for x in selected] if selected is not None else ([p.name for p in skills.iterdir() if p.is_dir()] if skills.is_dir() else [])
+if len(names)!=len(set(names)) or any(not re.fullmatch(r"[a-z0-9][a-z0-9-]*",n) for n in names):raise SystemExit("invalid selected methods")
+io.check_skill_sources(names)
+io.close()
+for name in sorted(names):
+    source=skills/name
+    if source.is_symlink() or not (source/"SKILL.md").is_file():raise SystemExit("invalid selected source: "+name)
+    target=root/".claude/skills"/name
+    if target.exists() or target.is_symlink():
+        if not target.is_symlink() or str(target.readlink())!="../../.agents/skills/"+name:raise SystemExit("unowned selected method preserved: "+name)
+    print(name)
+PYSELECT
+)" || exit 1
+
 # 只读退役预检：先于任何产物写入（settings.json / .compiled.env / 软链）执行，
 # 拒绝 = 零改动退出（评审 R2：readonly preflight before refusal mutations）。
 if ! audit_retired_workflow_entries; then
   exit 1
 fi
 
-python3 - "$HOOKS_YAML" "$COMPILED" "$SETTINGS" "$ROOT" "$TARGET_ROOT" <<'PYEOF'
+python3 -B - "$HOOKS_YAML" "$COMPILED" "$SETTINGS" "$ROOT" "$TARGET_ROOT" <<'PYEOF'
 import json, re, sys, os
 
 yaml_path, compiled_path, settings_path, root, target_root = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]
+sys.path.insert(0, root + "/foundation")
+from managed_io import ManagedOutputs, SETTINGS, COMPILED, HEADER
+io = ManagedOutputs(target_root)
+files = io.validate()
 raw = open(yaml_path, encoding="utf-8").read()
 
 # ---- 最小 YAML 解析（仅支持本文件的固定结构：两层列表 + 标量字段）----
@@ -329,25 +352,15 @@ deny_msg = next((field(p, "message") for p in policies
 kb_msg = next((field(p, "message") for p in policies
                if field(p, "id") == "kb-write-protection"), "")
 
-os.makedirs(os.path.dirname(compiled_path), exist_ok=True)
-with open(compiled_path, "w", encoding="utf-8") as f:
-    # ⚠️ 值必须 shell-quote（强制单引号）：本文件会被 pre-tool-gate.sh source，
-    #    未加引号时 deny 模式（破坏性命令串）会被当作命令执行。
-    def q(s):
-        return "'" + s.replace("'", "'\\''") + "'"
-    f.write("# Auto-generated by tools/adapters/claude-code.sh — DO NOT EDIT (source: hooks.yaml)\n")
-    f.write("KB_PROTECT_PATHS=%s\n" % q(":".join(kb_paths)))
-    f.write("DENY_PATTERNS=%s\n" % q("|".join(deny_patterns)))
-    f.write("DENY_MESSAGE=%s\n" % q(deny_msg))
-    f.write("DENY_KB_MESSAGE=%s\n" % q(kb_msg))
-
 # ---- 2. 合并 .claude/settings.json hooks 段 ----
 settings = {}
-if os.path.exists(settings_path):
+if files[SETTINGS] is not None:
     try:
-        settings = json.load(open(settings_path, encoding="utf-8"))
-    except Exception:
-        settings = {}
+        settings = json.loads(files[SETTINGS])
+    except Exception as err:
+        raise SystemExit(f"❌ settings.json unreadable; no changes: {err}")
+if not isinstance(settings, dict) or not isinstance(settings.get("hooks", {}), dict):
+    raise SystemExit("❌ invalid settings object; no changes")
 
 MANAGED_SCRIPT_RE = re.compile(r"hooks/(pre-tool-gate|session-context|stop-reminder)\.sh")
 
@@ -449,8 +462,17 @@ for p in policies:
         if missing:
             raise SystemExit(f"❌ policy {field(p,'id')} matchers {missing} missing from compiled settings — aborting")
 
-os.makedirs(os.path.dirname(settings_path), exist_ok=True)
-json.dump(settings, open(settings_path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+# Values are shell-quoted data; existing unowned policy files are never overwritten.
+def q(s):
+    return "'" + s.replace("'", "'\\''") + "'"
+compiled = HEADER + "\n" + "\n".join([
+    "KB_PROTECT_PATHS=" + q(":".join(kb_paths)),
+    "DENY_PATTERNS=" + q("|".join(deny_patterns)),
+    "DENY_MESSAGE=" + q(deny_msg),
+    "DENY_KB_MESSAGE=" + q(kb_msg),
+]) + "\n"
+io.write_many({COMPILED: compiled.encode("utf-8"), SETTINGS: json.dumps(settings, ensure_ascii=False, indent=2).encode("utf-8")}, expected=files)
+io.close()
 print("✅ hooks 策略已编译：%s + %s (%d deny 策略)%s" % (
     os.path.relpath(compiled_path, target_root),
     os.path.relpath(settings_path, target_root),

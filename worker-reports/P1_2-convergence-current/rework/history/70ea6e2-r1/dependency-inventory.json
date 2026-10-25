@@ -1,0 +1,423 @@
+{
+  "scope": "explicit project code closure and existing pin metadata only; not controller/runtime qualification",
+  "roots": [
+    "tools/foundation-export.mjs",
+    "tools/bootstrap.sh",
+    "tools/adapters/claude-code.sh",
+    "hooks/pre-tool-gate.sh",
+    "hooks/session-context.sh",
+    "hooks/stop-reminder.sh"
+  ],
+  "project_code": {
+    "tools/foundation-export.mjs": "6acf45281d9c7016a130be839d446a3578a3f4f810ddc81b90adb8271569c44f",
+    "tools/bootstrap.sh": "ad3bd76bb7e94cbb68a97d65e7d6850f51462f16f8d8ca837ea91a6b4f1c031d",
+    "tools/adapters/claude-code.sh": "58e617fce77e3a4978837e5657f6a30ee1d6c0258463e1b42c6b6cc6deb201c8",
+    "foundation/managed_io.py": "522a0d14baa864e1149f0c8d28f5263a3099a0a1d7e6b1229730b575e2372f4a",
+    "hooks/pre-tool-gate.sh": "02f17b484ab8949ad6317cc38c8a812b9e1ff8ad826b5aaa588627f9b4dd81a4",
+    "hooks/session-context.sh": "4fce3fc08cdb6cf0e9feed3f64c645419e40a89affba43dbc58b15634b5f3302",
+    "hooks/stop-reminder.sh": "1f7904fc1e574866c45a93dddabff080f9c0d5c227c48a4894ad82078ae52dc0",
+    "hooks/_resolve-project-dir.sh": "0f7df17bf2038e59e5c84458d964d6bb7fe168c6fad77e55e92baee0c16d526c",
+    "tools/register-mcps.mjs": "440b45ac6c61c2055bc90ecb2730bad75f886ef59e870caaf446a328a10ed165",
+    "tools/mcp/llmwiki.sh": "bd18bfea155ec0fc8c1ce9fb23414dafbeb94416f4096eb92624eb59932ae863",
+    "scripts/agent-instructions-check.sh": "952a36894f459070e64d9f9eaf359d89384f1bd427d17a645d7d2da0e60cd608",
+    "scripts/agent-skill-check.sh": "a2a078eacd24f29225850479eae5518b6ac205151abeaeaa04147fb1ca263bbe",
+    "contracts/delivery/index.js": "dd26f7f456cbed46bab7d44f0bdad292e279f8cf01378897cd1d66c0d9645c6a",
+    "contracts/delivery/schema-kernel.js": "1affea9481be15b96a9a989e1302afd83deabf6954f754ce7a12b60497bdb886",
+    "contracts/delivery/foundation-lock.schema.js": "577b687f73caf6aabb13836de6578bda66cd33bfee601d4bb6d3826f4c611ff7",
+    "contracts/delivery/baseline-ref.schema.js": "e616923161e5448a9a18c64e6615f9408bf84eb42f867deba1ba51437254c898",
+    "contracts/delivery/test-contract.schema.js": "327e388dcb62ae110c304a56a3c30cde14fa6aefdc49456030c81dcd8cb0f872",
+    "contracts/delivery/plan-bundle.schema.js": "70d3b9f58195b79c65015f5096bf35ab8f8d24eca32e8b1b5d3d3d4ef990ffff",
+    "contracts/delivery/candidate-ref.schema.js": "6ebf818e7ae3d47c9f072923640ec7bb48f2d62bf360105946fcc187fb52b6c3",
+    "contracts/delivery/evidence-envelope.schema.js": "933e941e08d8653ceaaf2a9d5a2d6a4b3e0a90aa83c3adb0ac8a39e99e3409a4",
+    "contracts/delivery/gate-receipt.schema.js": "087cb513a86108154d0d2a297fb4bab0231fd27d6006d647fa31d7fe11a9d09b",
+    "contracts/delivery/release-receipt.schema.js": "cb9ab7a2d0ae49a10b3da0d690f7ab925fd39737eace05c002e31c06b3689a27",
+    "contracts/delivery/action-binding.schema.js": "2a8e0d1bb775ce09d316900c426d203c2bb72bee7db36980227b3f9629b84592"
+  },
+  "dependency_metadata": {
+    "package.json": "2ec81a5212398d365750f62fcbf404ad597ab3ad3c272b4ff74292eba0a87db0",
+    "package-lock.json": "b71f28223acb3fef11522615dd7bf521a51d2547dc2aca96ab59efe3bc467f5e",
+    "integrations/comet/upstream.lock.json": "54da2f4871e79dd21a2476f4d008c7317265dbbd10586a983d9e72b4d7b54556"
+  },
+  "caller_edges": [
+    {
+      "caller": "tools/foundation-export.mjs",
+      "dependency": "contracts/delivery/index.js",
+      "evidence": [
+        {
+          "line": 29,
+          "source": "import { parseContract } from '../contracts/delivery/index.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/index.js",
+      "dependency": "contracts/delivery/action-binding.schema.js",
+      "evidence": [
+        {
+          "line": 14,
+          "source": "import { CONTRACT as ACTION_BINDING_CONTRACT, validateActionBinding } from './action-binding.schema.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/action-binding.schema.js",
+      "dependency": "contracts/delivery/schema-kernel.js",
+      "evidence": [
+        {
+          "line": 4,
+          "source": "import { defineContract } from './schema-kernel.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/index.js",
+      "dependency": "contracts/delivery/baseline-ref.schema.js",
+      "evidence": [
+        {
+          "line": 6,
+          "source": "import { CONTRACT as BASELINE_REF_CONTRACT, validateBaselineRef } from './baseline-ref.schema.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/baseline-ref.schema.js",
+      "dependency": "contracts/delivery/schema-kernel.js",
+      "evidence": [
+        {
+          "line": 4,
+          "source": "import { defineContract } from './schema-kernel.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/index.js",
+      "dependency": "contracts/delivery/candidate-ref.schema.js",
+      "evidence": [
+        {
+          "line": 9,
+          "source": "import { CONTRACT as CANDIDATE_REF_CONTRACT, validateCandidateRef } from './candidate-ref.schema.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/candidate-ref.schema.js",
+      "dependency": "contracts/delivery/schema-kernel.js",
+      "evidence": [
+        {
+          "line": 4,
+          "source": "import { defineContract } from './schema-kernel.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/index.js",
+      "dependency": "contracts/delivery/evidence-envelope.schema.js",
+      "evidence": [
+        {
+          "line": 10,
+          "source": "import { CONTRACT as EVIDENCE_ENVELOPE_CONTRACT, validateEvidenceEnvelope } from './evidence-envelope.schema.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/evidence-envelope.schema.js",
+      "dependency": "contracts/delivery/schema-kernel.js",
+      "evidence": [
+        {
+          "line": 5,
+          "source": "import { defineContract } from './schema-kernel.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/index.js",
+      "dependency": "contracts/delivery/foundation-lock.schema.js",
+      "evidence": [
+        {
+          "line": 5,
+          "source": "import { CONTRACT as FOUNDATION_LOCK_CONTRACT, validateFoundationLock } from './foundation-lock.schema.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/foundation-lock.schema.js",
+      "dependency": "contracts/delivery/schema-kernel.js",
+      "evidence": [
+        {
+          "line": 11,
+          "source": "import { defineContract } from './schema-kernel.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/index.js",
+      "dependency": "contracts/delivery/gate-receipt.schema.js",
+      "evidence": [
+        {
+          "line": 11,
+          "source": "import { CONTRACT as GATE_RECEIPT_CONTRACT, validateGateReceipt } from './gate-receipt.schema.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/gate-receipt.schema.js",
+      "dependency": "contracts/delivery/schema-kernel.js",
+      "evidence": [
+        {
+          "line": 5,
+          "source": "import { defineContract } from './schema-kernel.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/index.js",
+      "dependency": "contracts/delivery/plan-bundle.schema.js",
+      "evidence": [
+        {
+          "line": 8,
+          "source": "import { CONTRACT as PLAN_BUNDLE_CONTRACT, validatePlanBundle } from './plan-bundle.schema.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/plan-bundle.schema.js",
+      "dependency": "contracts/delivery/schema-kernel.js",
+      "evidence": [
+        {
+          "line": 4,
+          "source": "import { defineContract } from './schema-kernel.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/index.js",
+      "dependency": "contracts/delivery/release-receipt.schema.js",
+      "evidence": [
+        {
+          "line": 12,
+          "source": "import { CONTRACT as RELEASE_RECEIPT_CONTRACT, validateReleaseReceipt } from './release-receipt.schema.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/release-receipt.schema.js",
+      "dependency": "contracts/delivery/schema-kernel.js",
+      "evidence": [
+        {
+          "line": 5,
+          "source": "import { defineContract } from './schema-kernel.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/index.js",
+      "dependency": "contracts/delivery/test-contract.schema.js",
+      "evidence": [
+        {
+          "line": 7,
+          "source": "import { CONTRACT as TEST_CONTRACT_CONTRACT, validateTestContract } from './test-contract.schema.js';"
+        }
+      ]
+    },
+    {
+      "caller": "contracts/delivery/test-contract.schema.js",
+      "dependency": "contracts/delivery/schema-kernel.js",
+      "evidence": [
+        {
+          "line": 5,
+          "source": "import { defineContract } from './schema-kernel.js';"
+        }
+      ]
+    },
+    {
+      "caller": "hooks/pre-tool-gate.sh",
+      "dependency": "hooks/_resolve-project-dir.sh",
+      "evidence": [
+        {
+          "line": 12,
+          "source": "source \"${SCRIPT_DIR}/_resolve-project-dir.sh\""
+        }
+      ]
+    },
+    {
+      "caller": "hooks/session-context.sh",
+      "dependency": "hooks/_resolve-project-dir.sh",
+      "evidence": [
+        {
+          "line": 6,
+          "source": "source \"${SCRIPT_DIR}/_resolve-project-dir.sh\""
+        }
+      ]
+    },
+    {
+      "caller": "hooks/stop-reminder.sh",
+      "dependency": "hooks/_resolve-project-dir.sh",
+      "evidence": [
+        {
+          "line": 6,
+          "source": "source \"${SCRIPT_DIR}/_resolve-project-dir.sh\""
+        }
+      ]
+    },
+    {
+      "caller": "tools/bootstrap.sh",
+      "dependency": "tools/adapters/claude-code.sh",
+      "evidence": [
+        {
+          "line": 40,
+          "source": "bash \"$SCRIPT_DIR/adapters/claude-code.sh\" --uninstall"
+        },
+        {
+          "line": 51,
+          "source": "SDD_TARGET_ROOT=\"$TARGET_ROOT\" bash \"$SCRIPT_DIR/adapters/claude-code.sh\""
+        },
+        {
+          "line": 92,
+          "source": "bash \"$SCRIPT_DIR/adapters/claude-code.sh\""
+        }
+      ]
+    },
+    {
+      "caller": "tools/bootstrap.sh",
+      "dependency": "tools/foundation-export.mjs",
+      "evidence": [
+        {
+          "line": 56,
+          "source": "node \"$SCRIPT_DIR/foundation-export.mjs\" export --root \"$TARGET_ROOT\" --out \"$TARGET_ROOT/foundation\" --release-commit \"$TARGET_COMMIT\" --freeze-baseline"
+        },
+        {
+          "line": 57,
+          "source": "node \"$SCRIPT_DIR/foundation-export.mjs\" verify --root \"$TARGET_ROOT\" --lock \"$TARGET_ROOT/foundation/foundation-lock.json\""
+        },
+        {
+          "line": 103,
+          "source": "node \"$SCRIPT_DIR/foundation-export.mjs\" verify --root \"$ROOT\" --lock \"$ROOT/foundation/foundation-lock.json\""
+        }
+      ]
+    },
+    {
+      "caller": "tools/bootstrap.sh",
+      "dependency": "tools/register-mcps.mjs",
+      "evidence": [
+        {
+          "line": 97,
+          "source": "node \"$SCRIPT_DIR/register-mcps.mjs\""
+        },
+        {
+          "line": 124,
+          "source": "node \"$SCRIPT_DIR/register-mcps.mjs\" --with-llmwiki"
+        }
+      ]
+    },
+    {
+      "caller": "tools/bootstrap.sh",
+      "dependency": "scripts/agent-instructions-check.sh",
+      "evidence": [
+        {
+          "line": 133,
+          "source": "bash \"$ROOT/scripts/agent-instructions-check.sh\""
+        }
+      ]
+    },
+    {
+      "caller": "tools/bootstrap.sh",
+      "dependency": "scripts/agent-skill-check.sh",
+      "evidence": [
+        {
+          "line": 134,
+          "source": "bash \"$ROOT/scripts/agent-skill-check.sh\""
+        }
+      ]
+    },
+    {
+      "caller": "tools/adapters/claude-code.sh",
+      "dependency": "foundation/managed_io.py",
+      "evidence": [
+        {
+          "line": 146,
+          "source": "sys.path.insert(0, sys.argv[1] + \"/foundation\")"
+        },
+        {
+          "line": 147,
+          "source": "from managed_io import ManagedOutputs"
+        },
+        {
+          "line": 160,
+          "source": "sys.path.insert(0, sys.argv[1] + \"/foundation\")"
+        },
+        {
+          "line": 161,
+          "source": "from managed_io import ManagedOutputs"
+        },
+        {
+          "line": 175,
+          "source": "sys.path.insert(0, sys.argv[1] + \"/foundation\")"
+        },
+        {
+          "line": 176,
+          "source": "from managed_io import ManagedOutputs"
+        },
+        {
+          "line": 189,
+          "source": "sys.path.insert(0, sys.argv[1] + \"/foundation\")"
+        },
+        {
+          "line": 190,
+          "source": "from managed_io import ManagedOutputs, SETTINGS"
+        },
+        {
+          "line": 250,
+          "source": "sys.path.insert(0, sys.argv[2] + \"/foundation\")"
+        },
+        {
+          "line": 251,
+          "source": "from managed_io import ManagedOutputs"
+        },
+        {
+          "line": 283,
+          "source": "sys.path.insert(0, root + \"/foundation\")"
+        },
+        {
+          "line": 284,
+          "source": "from managed_io import ManagedOutputs, SETTINGS, COMPILED, HEADER"
+        }
+      ]
+    },
+    {
+      "caller": "tools/register-mcps.mjs",
+      "dependency": "tools/mcp/llmwiki.sh",
+      "evidence": [
+        {
+          "line": 74,
+          "source": "const wrapper = path.join(ROOT, 'tools', 'mcp', 'llmwiki.sh');"
+        }
+      ]
+    }
+  ],
+  "external_runtime_observed": {
+    "node": "v24.15.0",
+    "nodeExecutable": "<node24-runtime>/node",
+    "python": "Python 3.14.7",
+    "bash": "GNU bash, version 3.2.57(1)-release (arm64-apple-darwin24)"
+  },
+  "external_dependencies": {
+    "node": "exact pin is integrations/comet/upstream.lock.json toolchain.node; builtin modules are supplied by that external runtime",
+    "python": "python3 stdlib os/re/secrets/stat/json/pathlib; POSIX dir_fd/O_NOFOLLOW required; actual missing Python fails nonzero before outputs",
+    "bash": "external Bash plus OS tools; observed version recorded; source bootstrap requires git/npm and install locks, not copied modules",
+    "npm": "original package-lock.json exact versions and integrity; modules are not cached or inherited as cold-target proof",
+    "llmwiki": "launcher code is sealed; venv/local_server and its existing pinned install remain external; no server or knowledge was accessed"
+  },
+  "excluded_inputs": [
+    "generated .claude/settings.json and hooks/.compiled.env",
+    "Run/phase/ACL/owner or progress state",
+    "real knowledge/business source and credentials",
+    "project AGENTS/docs/workspace context read by checks/hooks; supplied by the project, not the pure asset cache",
+    "external providers, modules, Node/Python/venv artifacts"
+  ],
+  "supplementary_runtime_observed": {
+    "node": "v25.2.1",
+    "nodeExecutable": "<node25-runtime>/node",
+    "python": "Python 3.14.7",
+    "bash": "GNU bash, version 3.2.57(1)-release (arm64-apple-darwin24)"
+  }
+}

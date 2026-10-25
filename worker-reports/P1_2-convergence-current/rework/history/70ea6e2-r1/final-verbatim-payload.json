@@ -1,0 +1,13 @@
+{
+  "label": "final-verbatim-payload",
+  "command": [
+    "python3",
+    "-c",
+    "from pathlib import Path; import hashlib,json; r=Path.cwd(); d=json.loads((r/\"foundation/foundation-lock.json\").read_text())[\"release\"][\"exportDigest\"]; old=\"017ab073e62471da3b40df11b3be298bce9145ea07c52dcd8ad79693dc8e329c\"; result=[]\nfor f in [\".agents/skills/ponytail/package.json\",\"mcp-capabilities.yaml\"]:\n b=(r/f).read_bytes(); assert b==(r/\"foundation/baselines\"/old/\"source\"/f).read_bytes(); assert b==(r/\"foundation/baselines\"/d/\"source\"/f).read_bytes(); result.append({\"source\":f,\"sha256\":hashlib.sha256(b).hexdigest(),\"bytes\":len(b),\"oldAndNewPayloadExact\":True})\nprint(json.dumps(result,indent=2))"
+  ],
+  "cwd": "<worktree>",
+  "started_at": "2026-10-25T05:19:28.435454+00:00",
+  "ended_at": "2026-10-25T05:19:28.478299+00:00",
+  "exit": 0,
+  "log_sha256": "d8fc08dfb0527f3dc378b691f37e948f9731cb420a0c5974d22bd30fe33809a6"
+}

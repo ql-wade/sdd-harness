@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: current managed distribution binds the exact profile data and all 245 source files
+not ok 1 - current managed distribution binds the exact profile data and all 245 source files
+  ---
+  duration_ms: 502.673292
+  type: 'test'
+  location: '<worktree>/test/foundation-distribution.test.js:1000:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'comet-classic'
+    - 'comet-managed-v2'
+             ^
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'comet-managed-v2'
+  actual: 'comet-classic'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (<worktree>/test/foundation-distribution.test.js:1004:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: export refuses retired sources instead of distributing a valid-looking old workflow
+not ok 2 - export refuses retired sources instead of distributing a valid-looking old workflow
+  ---
+  duration_ms: 26.792291
+  type: 'test'
+  location: '<worktree>/test/foundation-distribution.test.js:1016:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (<worktree>/test/foundation-distribution.test.js:1021:5)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 655.228292

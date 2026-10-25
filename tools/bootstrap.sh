@@ -53,7 +53,7 @@ if [ "$TARGET_ROOT" != "$ROOT" ]; then
   say "── 2/2 foundation 发布视图 + 锁 pull（幂等）──"
   # 发布 commit：目标自身是 git 工作区用其 HEAD；否则记源仓库 HEAD（资产来源）。
   TARGET_COMMIT="$(git -C "$TARGET_ROOT" rev-parse HEAD 2>/dev/null || git -C "$ROOT" rev-parse HEAD)"
-  node "$SCRIPT_DIR/foundation-export.mjs" export --root "$TARGET_ROOT" --out "$TARGET_ROOT/foundation" --release-commit "$TARGET_COMMIT"
+  node "$SCRIPT_DIR/foundation-export.mjs" export --root "$TARGET_ROOT" --out "$TARGET_ROOT/foundation" --release-commit "$TARGET_COMMIT" --freeze-baseline
   node "$SCRIPT_DIR/foundation-export.mjs" verify --root "$TARGET_ROOT" --lock "$TARGET_ROOT/foundation/foundation-lock.json"
   say ""
   say "✅ target bootstrap 完成（跳过源仓库动作：npm / MCP 注册 / LLMWiki / 仓库自检）"

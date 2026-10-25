@@ -1,0 +1,425 @@
+[
+  {
+    "label": "current-release-and-cache",
+    "command": [
+      "node",
+      "tools/foundation-export.mjs",
+      "export",
+      "--root",
+      ".",
+      "--out",
+      "foundation",
+      "--release-commit",
+      "f49795bc5ae534019f91b893dadb414d4fc5019f",
+      "--freeze-baseline"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:04:51.370065+00:00",
+    "ended_at": "2026-10-25T05:04:51.919601+00:00",
+    "exit": 0,
+    "log_sha256": "e8b51e5e2e1222251b22b54ab2a56ef127a609535f7da3acd752687a486bb390"
+  },
+  {
+    "label": "final-foundation-verify",
+    "command": [
+      "node",
+      "tools/foundation-export.mjs",
+      "verify",
+      "--root",
+      ".",
+      "--lock",
+      "foundation/foundation-lock.json"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:08:05.918899+00:00",
+    "ended_at": "2026-10-25T05:08:06.268851+00:00",
+    "exit": 0,
+    "log_sha256": "ef7e703fc08f243e2b4e13e907af6b59c5789fb5211d1a6fcbdcf85b86ad6b90"
+  },
+  {
+    "label": "final-index-whitespace",
+    "command": [
+      "git",
+      "diff",
+      "--cached",
+      "--check"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:19:28.596214+00:00",
+    "ended_at": "2026-10-25T05:19:28.697657+00:00",
+    "exit": 0,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "final-invariant-readback",
+    "command": [
+      "node",
+      ".local/distribution-rework-r1/final-invariant-probe.mjs"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:09:58.010702+00:00",
+    "ended_at": "2026-10-25T05:10:01.191833+00:00",
+    "exit": 0,
+    "log_sha256": "de94d2325c576f1b43f72242a8acb2006465927781dc56f25aed26515d1ba5d3"
+  },
+  {
+    "label": "final-node24-foundation-verify",
+    "command": [
+      "<node24-runtime>/node",
+      "tools/foundation-export.mjs",
+      "verify",
+      "--root",
+      ".",
+      "--lock",
+      "foundation/foundation-lock.json"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:18:09.911717+00:00",
+    "ended_at": "2026-10-25T05:18:10.112683+00:00",
+    "exit": 0,
+    "log_sha256": "ef7e703fc08f243e2b4e13e907af6b59c5789fb5211d1a6fcbdcf85b86ad6b90"
+  },
+  {
+    "label": "final-node24-invariant-readback",
+    "command": [
+      "<node24-runtime>/node",
+      ".local/distribution-rework-r1/final-invariant-probe.mjs"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:18:10.153957+00:00",
+    "ended_at": "2026-10-25T05:18:12.852608+00:00",
+    "exit": 0,
+    "log_sha256": "739338141361c412d19fbf0beec6a7abacf5def0eeacfc916fb73ae71fdda569"
+  },
+  {
+    "label": "final-node24-own-regression",
+    "command": [
+      "<node24-runtime>/node",
+      "--test",
+      "--test-reporter=tap",
+      "test/foundation-distribution.test.js",
+      "test/legacy-workflow-routing.test.js",
+      "test/delivery-cases/1_2.mjs"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:17:55.919287+00:00",
+    "ended_at": "2026-10-25T05:18:09.862209+00:00",
+    "exit": 0,
+    "log_sha256": "f1027455e58fba5a32d02dd0988e3d997fee9abd3396cbc77e3331283f877e88"
+  },
+  {
+    "label": "final-node24-runtime",
+    "command": [
+      "<node24-runtime>/node",
+      "-e",
+      "const fs=require(\"node:fs\"),c=require(\"node:crypto\"),cp=require(\"node:child_process\"); console.log(JSON.stringify({node:process.version,executable:process.execPath,executableSha256:c.createHash(\"sha256\").update(fs.readFileSync(process.execPath)).digest(\"hex\"),pathPrefix:process.env.PATH.split(\":\")[0],bareChild:JSON.parse(cp.execFileSync(\"node\",[\"-p\",\"JSON.stringify({version:process.version,execPath:process.execPath})\"],{encoding:\"utf8\"}))},null,2))"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:19:28.042303+00:00",
+    "ended_at": "2026-10-25T05:19:28.387888+00:00",
+    "exit": 0,
+    "log_sha256": "ca26ece580a7c6711fa12bb4f6e352c5d4a21b15103bd6eb7a9235c6236708cd"
+  },
+  {
+    "label": "final-own-regression-2",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "test/foundation-distribution.test.js",
+      "test/legacy-workflow-routing.test.js",
+      "test/delivery-cases/1_2.mjs"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:05:46.512198+00:00",
+    "ended_at": "2026-10-25T05:06:00.688147+00:00",
+    "exit": 0,
+    "log_sha256": "8efd844de70039463a9dcb0ac8a18934915a91155be260de3dbf15a9b640fbc1"
+  },
+  {
+    "label": "final-own-regression",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "test/foundation-distribution.test.js",
+      "test/legacy-workflow-routing.test.js",
+      "test/delivery-cases/1_2.mjs"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:04:51.961834+00:00",
+    "ended_at": "2026-10-25T05:05:05.610414+00:00",
+    "exit": 1,
+    "log_sha256": "07441a46da34edd270090655f3ba2fadc07f43eee1b6a6589b62a486fdef4221"
+  },
+  {
+    "label": "final-python-syntax",
+    "command": [
+      "python3",
+      "-B",
+      "-c",
+      "import ast,pathlib; ast.parse(pathlib.Path(\"foundation/managed_io.py\").read_text())"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:08:06.509874+00:00",
+    "ended_at": "2026-10-25T05:08:06.549124+00:00",
+    "exit": 0,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "final-release-and-cache",
+    "command": [
+      "node",
+      "tools/foundation-export.mjs",
+      "export",
+      "--root",
+      ".",
+      "--out",
+      "foundation",
+      "--release-commit",
+      "f49795bc5ae534019f91b893dadb414d4fc5019f",
+      "--freeze-baseline"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:05:45.943144+00:00",
+    "ended_at": "2026-10-25T05:05:46.471224+00:00",
+    "exit": 0,
+    "log_sha256": "7064916bd07d921867a1f905a087dad5b308742250140b4b37d8f1f58a469f5b"
+  },
+  {
+    "label": "final-rules-assembly",
+    "command": [
+      "bash",
+      "scripts/agent-instructions-check.sh"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:08:06.357935+00:00",
+    "ended_at": "2026-10-25T05:08:06.378076+00:00",
+    "exit": 0,
+    "log_sha256": "f747570b88c8cc70de52c7e3ff0477beb3c211f73696172dc4ea6151de02c39b"
+  },
+  {
+    "label": "final-shell-syntax",
+    "command": [
+      "bash",
+      "-n",
+      "tools/bootstrap.sh",
+      "tools/adapters/claude-code.sh"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:08:06.312401+00:00",
+    "ended_at": "2026-10-25T05:08:06.317873+00:00",
+    "exit": 0,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "final-skill-assembly",
+    "command": [
+      "bash",
+      "scripts/agent-skill-check.sh"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:08:06.419930+00:00",
+    "ended_at": "2026-10-25T05:08:06.470086+00:00",
+    "exit": 0,
+    "log_sha256": "15cbb4706a7917eb0e5ed5b429348a8cd762123f713fc7396fcac5e150b09817"
+  },
+  {
+    "label": "final-verbatim-payload",
+    "command": [
+      "python3",
+      "-c",
+      "from pathlib import Path; import hashlib,json; r=Path.cwd(); d=json.loads((r/\"foundation/foundation-lock.json\").read_text())[\"release\"][\"exportDigest\"]; old=\"017ab073e62471da3b40df11b3be298bce9145ea07c52dcd8ad79693dc8e329c\"; result=[]\nfor f in [\".agents/skills/ponytail/package.json\",\"mcp-capabilities.yaml\"]:\n b=(r/f).read_bytes(); assert b==(r/\"foundation/baselines\"/old/\"source\"/f).read_bytes(); assert b==(r/\"foundation/baselines\"/d/\"source\"/f).read_bytes(); result.append({\"source\":f,\"sha256\":hashlib.sha256(b).hexdigest(),\"bytes\":len(b),\"oldAndNewPayloadExact\":True})\nprint(json.dumps(result,indent=2))"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:19:28.435454+00:00",
+    "ended_at": "2026-10-25T05:19:28.478299+00:00",
+    "exit": 0,
+    "log_sha256": "d8fc08dfb0527f3dc378b691f37e948f9731cb420a0c5974d22bd30fe33809a6"
+  },
+  {
+    "label": "final-whitespace-attributes",
+    "command": [
+      "git",
+      "check-attr",
+      "--cached",
+      "whitespace",
+      "--",
+      "foundation/baselines/d6ea4fea19222dca09e480b6f7c87d3a77fa3b913660ac51e237b22851583c51/source/.agents/skills/ponytail/package.json",
+      "foundation/baselines/d6ea4fea19222dca09e480b6f7c87d3a77fa3b913660ac51e237b22851583c51/source/mcp-capabilities.yaml",
+      "foundation/baselines/d6ea4fea19222dca09e480b6f7c87d3a77fa3b913660ac51e237b22851583c51/manifest.json",
+      ".agents/skills/ponytail/package.json",
+      "mcp-capabilities.yaml",
+      "tools/adapters/claude-code.sh",
+      "test/foundation-distribution.test.js"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:19:28.545875+00:00",
+    "ended_at": "2026-10-25T05:19:28.556214+00:00",
+    "exit": 0,
+    "log_sha256": "b963c8a744899e681c97c4df209a848ea22abeb879c450edd08e97f770b20ad0"
+  },
+  {
+    "label": "green-adapter-compiled-link",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-name-pattern=external compiled symlink",
+      "test/legacy-workflow-routing.test.js"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T04:54:10.966224+00:00",
+    "ended_at": "2026-10-25T04:54:11.238959+00:00",
+    "exit": 0,
+    "log_sha256": "46928a3e740706515c5d22c105aaff739167f7c49e06f725db616463a1e13ab4"
+  },
+  {
+    "label": "green-adapter-final-refinement",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "test/legacy-workflow-routing.test.js"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:03:20.264752+00:00",
+    "ended_at": "2026-10-25T05:03:23.003233+00:00",
+    "exit": 0,
+    "log_sha256": "c5716508d59e9f0c7a2d5dc26f2766581e686979296c24e54bd1a66bdf022412"
+  },
+  {
+    "label": "green-adapter-io-matrix",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "test/legacy-workflow-routing.test.js"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T04:54:59.110502+00:00",
+    "ended_at": "2026-10-25T04:55:01.694225+00:00",
+    "exit": 0,
+    "log_sha256": "98e564526dcd1cf3a6482c7b28436489d990559cc37f0b0dab1ef32af61e00eb"
+  },
+  {
+    "label": "green-cache-prototype",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-name-pattern=injected prototype-named",
+      "test/foundation-distribution.test.js"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T04:55:47.528936+00:00",
+    "ended_at": "2026-10-25T04:55:47.823892+00:00",
+    "exit": 0,
+    "log_sha256": "c3edc5f48429ed613b68136b9f009d516c10678ad34feaa004afca7130fc0498"
+  },
+  {
+    "label": "green-cache-special-names",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-name-pattern=prototype-named|extra special-named",
+      "test/foundation-distribution.test.js"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T04:56:13.924657+00:00",
+    "ended_at": "2026-10-25T04:56:14.650814+00:00",
+    "exit": 0,
+    "log_sha256": "0077cc4cea26252dbebb9496f9e403be6970f4b03f50ffaa0412c7c7a49464a7"
+  },
+  {
+    "label": "green-code-closure-matrix",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-name-pattern=every project code dependency|transported closure executes",
+      "test/foundation-distribution.test.js"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:01:29.460343+00:00",
+    "ended_at": "2026-10-25T05:01:32.010478+00:00",
+    "exit": 0,
+    "log_sha256": "50f58db499aff2700b4b3e50d7e3803fa4c0d5aa17d6d83a7dcd19f47610eb80"
+  },
+  {
+    "label": "green-managed-code-closure",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-name-pattern=hook resolver changes invalidate",
+      "test/foundation-distribution.test.js"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:00:08.949452+00:00",
+    "ended_at": "2026-10-25T05:00:09.299301+00:00",
+    "exit": 0,
+    "log_sha256": "979c3afbcdcb7eeeb722d3f911bf3815d314fbcca4b65f4e1bdd6b3358948e06"
+  },
+  {
+    "label": "green-retirement-diagnostics",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-name-pattern=every retired naming family|exact adapter-owned stale link",
+      "test/foundation-distribution.test.js"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T05:05:45.157814+00:00",
+    "ended_at": "2026-10-25T05:05:45.896040+00:00",
+    "exit": 0,
+    "log_sha256": "3473fe6005aff4e1fe1b35c8d8014c8507a14686f065ed51985d501b774235b6"
+  },
+  {
+    "label": "red-adapter-compiled-link",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-name-pattern=external compiled symlink",
+      "test/legacy-workflow-routing.test.js"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T04:52:32.562457+00:00",
+    "ended_at": "2026-10-25T04:52:32.882774+00:00",
+    "exit": 1,
+    "log_sha256": "7067b508d7a406c72fc824a34ed128d1d3d72582b321cc1261fed9a818010090"
+  },
+  {
+    "label": "red-cache-prototype",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-name-pattern=injected prototype-named",
+      "test/foundation-distribution.test.js"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T04:55:37.683854+00:00",
+    "ended_at": "2026-10-25T04:55:38.043818+00:00",
+    "exit": 1,
+    "log_sha256": "379b2b001ac5bf6186f73ae7efd15a20b2ef8597d26b99b0b7e33b4975432828"
+  },
+  {
+    "label": "red-managed-code-closure",
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-name-pattern=hook resolver changes invalidate",
+      "test/foundation-distribution.test.js"
+    ],
+    "cwd": "<worktree>",
+    "started_at": "2026-10-25T04:58:40.273724+00:00",
+    "ended_at": "2026-10-25T04:58:40.593644+00:00",
+    "exit": 1,
+    "log_sha256": "5e9e29ef079420154fd7dabf868896649ce069b619893e233f6af216386ee120"
+  }
+]

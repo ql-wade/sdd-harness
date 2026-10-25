@@ -1,0 +1,35 @@
+# MCP 能力清单 — MCP 层的唯一事实源
+#
+# status 三态（诚实性原则，ADR-0015）：
+#   ready    = 能力真实具备，可直接使用
+#   degraded = 预制注册但能力受限（缺 token/依赖），如实标注
+#   planned  = 预注册但能力未实现；agent 引用其能力前必须先看本清单，禁止当作可用
+#
+# tools/register-mcps.mjs 据此生成 .mcp.json。
+# 本地个人 MCP（如自建服务）放未跟踪的本地 overlay，不入本清单。
+
+mcps:
+  - name: chrome-devtools
+    status: ready
+    provides: [浏览器调试、性能 trace、a11y 快照、网络检查]
+    depends: [Chrome 本体]
+    required_by: [whitebox-verify 调试模式]
+
+  - name: playwright
+    status: ready
+    provides: [浏览器自动化、截图、表单交互]
+    depends: [npx]
+    required_by: [whitebox-verify Journey 证据采集]
+
+  - name: github
+    status: degraded
+    provides: [PR/issue 操作]
+    depends: [GITHUB_TOKEN 环境变量]
+    note: "未配置 token 时能力降级，不阻塞其他能力"
+
+  - name: llmwiki
+    status: ready
+    provides: [知识库 create/edit/append/read/search/lint, SQLite+FTS+引用索引]
+    depends: [python3 venv + mcp 包（bootstrap --with-llmwiki 安装，commit/版本已 pin）]
+    note: "写入必须走 MCP；直接 fs.write 绕过索引（hooks 策略 kb-write-protection 拦截）"
+
