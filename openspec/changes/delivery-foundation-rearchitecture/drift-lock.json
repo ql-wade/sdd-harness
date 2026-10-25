@@ -2,10 +2,10 @@
   "schema_version": 2,
   "feature": "delivery-foundation-rearchitecture",
   "hash_mode": "checkbox-normalized-v1",
-  "plan_sha256": "618d3431cf0514a8bff25b0a2e8120b9d13f4032818bd54594b580f4e9a9a0c3",
+  "plan_sha256": "8b91e35e764ae52b5628507174d7aadf8cff2927c3a9fddebe62771360fa84e5",
   "architecture_sha256": "36e14eb296995562f75f801a5087096fd53ed3e34529cd1f236b8eaf6503e589",
-  "dag_sha256": "ce4dedfc5e0b928ad6357fa61b25166819e8c76feb533d5cfcdc7d86b4aef566",
-  "execution_contract_sha256": "680f5be65f90d68516a9b0d2129e04d7617cdfd908356fe5082b71000d7f2326",
+  "dag_sha256": "1211ec6cadc58aeeac4a300749d9738037b6158fccec44222e6157dfebaa43cc",
+  "execution_contract_sha256": "41fc7da2604e31b4b85ac99d2092e554f31155ccfa08c49fae7726eaa538dc41",
   "acceptance_ids": [
     "A01",
     "A02",
@@ -197,7 +197,9 @@
       "tools/comet/prepare-source.mjs",
       "tools/comet/build.mjs",
       "test/comet-source-preparation.test.js",
-      "test/comet-build.test.js"
+      "test/comet-build.test.js",
+      "integrations/comet/patches/0004-upstream-security-backports.patch",
+      "test/comet-security-backports.test.js"
     ],
     "P2_1": [
       "contracts/delivery",
@@ -807,6 +809,22 @@
         "noadditionalcredential/API/provider/service/businesswrites",
         "39/69/130/104recordidentitiesandhumanF10scope129/103preserved"
       ]
+    },
+    {
+      "id": "2026-10-26-p1_1-security-backport-ownership",
+      "at": "2026-10-25T16:54:55.587282+00:00",
+      "task": "P1_1",
+      "added_paths": [
+        "integrations/comet/patches/0004-upstream-security-backports.patch",
+        "test/comet-security-backports.test.js"
+      ],
+      "scope": "two file ownership only for reviewed0.4 safety backports;no new workflow,task,workpackage,check,scenario,interface,dependency,exception,permission or productionpin",
+      "source_applicability_report_sha256": "f28bd366fe3eefca5eb3b6cbbab2008b30c6426b42a24c99538e70b501443100",
+      "old_contract_sha256": "680f5be65f90d68516a9b0d2129e04d7617cdfd908356fe5082b71000d7f2326",
+      "new_contract_sha256": "41fc7da2604e31b4b85ac99d2092e554f31155ccfa08c49fae7726eaa538dc41",
+      "old_tasks_normalized_sha256": "618d3431cf0514a8bff25b0a2e8120b9d13f4032818bd54594b580f4e9a9a0c3",
+      "new_tasks_normalized_sha256": "8b91e35e764ae52b5628507174d7aadf8cff2927c3a9fddebe62771360fa84e5",
+      "old_results": "historical only;new source/patch pin requires current complete sourcebuild/generated/runtime and applicable backport tests before acceptance"
     }
   ]
 }

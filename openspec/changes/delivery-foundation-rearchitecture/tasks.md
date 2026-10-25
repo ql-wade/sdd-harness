@@ -131,10 +131,10 @@
 
 ### Task P1_1: 原任务 1.1 — 固定 TeamAI、Comet、OpenSpec、共同工具链实际分发产物版本和完整性；读取实际命令版本并运行最小探针（F01/F03）。源码 commit 不代替 npm 产物。2026-10-22 用户裁决（amendment 3）：SDD 分发项目化——SDD_HOME 固定为仓库内 .sdd/，llmwiki 克隆按 pin 075c5b4 落 .sdd/repos/llmwiki、venv 复用 .sdd/venvs/llmwiki-311、wiki 数据根项目内解析，消除跨项目目录名撞根。
 
-**Files:** openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json, openspec/changes/delivery-foundation-rearchitecture/package-probes, integrations/comet/upstream.lock.json, test/delivery-cases/1_1.mjs, tools/comet/source.js, tools/comet/prepare-source.mjs, tools/comet/build.mjs, test/comet-source-preparation.test.js, test/comet-build.test.js
+**Files:** openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json, openspec/changes/delivery-foundation-rearchitecture/package-probes, integrations/comet/upstream.lock.json, test/delivery-cases/1_1.mjs, tools/comet/source.js, tools/comet/prepare-source.mjs, tools/comet/build.mjs, test/comet-source-preparation.test.js, test/comet-build.test.js, integrations/comet/patches/0004-upstream-security-backports.patch, test/comet-security-backports.test.js
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state; Comet.SourcePreparation.v1: prepareCometSource({projectRoot,lock,archivePath}) returns canonical pristine source and verified provenance; Comet.DistributionBuild.v1: buildCometDistribution({projectRoot,lock,archivePath}) returns buildRoot, entrypoint, sourceCommit, fingerprint with exact toolchain precondition
 **Dependencies:** P0_4
-**Owns:** openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json, openspec/changes/delivery-foundation-rearchitecture/package-probes, integrations/comet/upstream.lock.json, test/delivery-cases/1_1.mjs, tools/comet/source.js, tools/comet/prepare-source.mjs, tools/comet/build.mjs, test/comet-source-preparation.test.js, test/comet-build.test.js
+**Owns:** openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json, openspec/changes/delivery-foundation-rearchitecture/package-probes, integrations/comet/upstream.lock.json, test/delivery-cases/1_1.mjs, tools/comet/source.js, tools/comet/prepare-source.mjs, tools/comet/build.mjs, test/comet-source-preparation.test.js, test/comet-build.test.js, integrations/comet/patches/0004-upstream-security-backports.patch, test/comet-security-backports.test.js
 **Parallel safe:** false
 **Acceptance IDs:** F01, F03
 
@@ -155,8 +155,8 @@
 
 本轮流程/知识收敛（不是新任务；旧验收不继承）：
 
-- [x] **Step 12 [5 min]: Implement** 资格化当前完整Comet构建、项目/方法/CLI版本和分发完整性；旧缓存、旧宿主路径与旧聊天上下文不作为启动前置，冻结版可在全新检出重建。
-- [x] **Step 13 [5 min]: Review** 按当前任务声明范围保存真实RED/GREEN/原始读回及独立审查；新profile完整旅程只由VERIFY最后签验，不用已实现工件或局部绿关闭更宽要求。
+- [ ] **Step 12 [5 min]: Implement** 资格化当前完整Comet构建、项目/方法/CLI版本和分发完整性；旧缓存、旧宿主路径与旧聊天上下文不作为启动前置，冻结版可在全新检出重建。
+- [ ] **Step 13 [5 min]: Review** 按当前任务声明范围保存真实RED/GREEN/原始读回及独立审查；新profile完整旅程只由VERIFY最后签验，不用已实现工件或局部绿关闭更宽要求。
 
 
 

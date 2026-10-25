@@ -1,52 +1,24 @@
-# Comet架构端到端核验：尚未通过
+# Comet 架构端到端核验：尚未通过
 
-当前建设代码/资产为 `master@9324d7b`；P1_2排序修复源码提交为6433df6。39节点、30父任务、69工作包与唯一DAG不变。130检查/104场景总记录保留；本轮完成条件129检查/103场景，F10正向跨机器API按人决定另期，保留NOT-EXERCISED。
+当前建设代码为 `master@751d6ab`（I02集成为67095e2）。官方实践对齐采用原生五 phase，明确 R/A/T/P、测试作者/Builder、V 与 Kp→Archive→Kt；本轮继续冻结的 Comet 0.4.5，0.5 研究不构成升级前置。
 
-接纳仍为6个声明范围内节点：P0_1–P0_4文档/设计、P1_1基础工具链、P2_1共享契约。业务场景接纳0。下表是建设与支持证据，不相加充当业务验收分母。
+39 节点、69 工作包、130 检查/104 场景总记录保留。本轮必须实际通过 129 检查/103 场景；F10 跨机器 API 正向另期，保留 NOT-EXERCISED。当前接纳 5 个节点（P0_1–P0_4文档及P2_1共享合同）；P1_1第12/13步因已证安全缺口重开，原工具链资格保留历史，业务场景接纳0。
 
-| 证据范围 | 实际结果 | 证据位置 |
-| --- | --- | --- |
-| 当前架构三方共识 | 两轮后全票通过，仅批准实施；该批一次性许可已使用 | architecture-review/comet-convergence-r1/receipt.json |
-| P1_6方法/CLI供应 | 245源文件精确；主8/8；正式六补丁fresh b11，原生smoke255通过/2上游条件跳过；whole仍未验 | .local/comet-reset/p1_6-integration/integration-checks.json |
-| P2_1合同/分母 | 主61/61，另有原生AST27/27 | .local/comet-reset/p2_1-integration/ |
-| P2_2来源/纯Gate | 主121/121；实际I02/P1_3受保护来源与角色未完 | .local/comet-reset/p2_2-integration/integration-checks.json |
-| I01登记准入 | 主41/41；运行时引用、完整权限和服务资格未完 | .local/comet-reset/i01-convergence-integration/integration-checks.json |
-| P2_3薄CLI | 主31项及60项来源兼容通过；无调度/业务状态权 | .local/comet-reset/p2_3-integration/integration-checks.json |
-| P3_1验收器 | 主72/72；正式A01缺typed来源时NOT-EXERCISED/2、零动作；104终态绑定未冻结 | .local/comet-reset/p3_1-integration/integration-checks.json |
-| I03 Outline建设 | 双审/主43+82，零跳过，5活配置不变；模板实际编译，未改活栈 | .local/comet-reset/i03-integration/integration-checks.json |
-| P1_2分发建设 | 双审/主67/67；固定源码6433后重建资产2509；真实Git归档无Git/无node_modules，由副本自己的verifier通过；816旧缓存字节与5活配置不变 | .local/comet-reset/p1_2-convergence-integration/integration-checks.json |
-| 最新总检查 | Node24.15，828项818通过/10失败/0跳过；I04六项输入与5活配置不变；npm失败后后续YAML/JSON阶段未执行 | .local/comet-reset/i06-integration/full-check/result.json |
-| LLMWiki源码分发 | 缺席主clone已补齐固定075c；上游commit/tree、300源文件和requirements摘要匹配；不是宿主或Kp接受 | .local/comet-reset/llmwiki-distribution-install/result.json |
-| I04当前工人观察 | fixture真实SDK/同entry原生索引读回；正常原生Codex宿主发现10工具并create/read/search，1个ephemeral协议线程、无model turn/Goal/用户任务，process exit0；候选待独立审查 | 原I04工人待交当前报告；不计whole或业务通过 |
-| GitHub只读 | 账号/仓库ID匹配；远端master为cd64618、未保护、无required checks/rulesets；2条workflow启用、deployment列表为空；未写远端 | .local/comet-reset/i06-live-readonly-intake/evidence-index.json |
-| Outline历史专项只读 | 一次受限三API证明owner/team/文集及直接成员；完整受众和publisher/isolator/issuer未证明，许可不可再用 | .local/comet-reset/outline-readonly-authorization/ |
+| 当前证据 | 实际结果与边界 |
+| --- | --- |
+| I02 通用建设 | 636 最终候选经独立双审；Root 主 81/81、关联 I01 41/41，0 skip，8 项用户文件/活配置不变；已集成67095e2。完整 context 拒绝额外内容，物理三口不拥有阶段/调度权。不是镜像、OS、身份或 whole I02 资格 |
+| 最新全仓回归 | 941 项：939 pass、2 fail、0 skip。原 I02 六处失败关闭；剩余原 P1_5 的 OpenSpec 负例版本和方法快照登记问题，仍 FAIL |
+| Root 首轮环境校准 | 原941/938/3保留；额外一项由移除现有HOME导致。继承原HOME后窄8/8、再跑全仓得到941/939/2，未改产品断言 |
+| 官方0.5研究 | 精确包机械full经双审/Root四进程复跑；另loader/CLI切片作者自检、180文件Root保全。均为synthetic角色/决定，不计业务或旧Run迁移证明 |
+| 官方安全适用性 | 当前0.4 Hook shell参数和Eval文件链接读取存在未修代码风险；原P1_1已获两个具名修复路径，代码尚待实施/审查/重建。Vite区分普通CLI与开发服务器，不以平台标签豁免 |
+| 私有设计写门修复 | 5ec/40de已双审限定construction，Root尚未联编接纳。44及345+4skip属于作者记录，不能称真实角色/OS资格 |
+| 元数据所有权修订 | 六份冻结工件按双审草案增加两条P1_1路径，39/69/130/104及全部依赖/18工件边不变；pilot仅显式跟随任务摘要，仍NOT_VERIFIED；plan_guard及隔离OpenSpec1.11 strict实际0 |
+| 正式A01预检 | 新元数据下实际exit2、NOT-EXERCISED、proof-registration-missing、0动作，无源漂移；未提升为PASS |
 
-10项总检查失败仍开放：P2_5的T审查协议1项，P1_5的OpenSpec/方法绑定2项，I02锁/镜像消费6项，P3_4归档oracle1项。三项Foundation原失败已实际关闭；剩余失败身份与此前R2相同，不予豁免。总检查在保留用户原有改动的工作树执行，并非最终不可变业务候选验收。
+原始集成及校准见 `worker-reports/I02-main-integration/` 与 `.local/comet-reset/i02-main-integration/`。Docker9次/gh2次尝试均被离线guard拒绝，不是当前服务成功；无模型调用。历史快照保留于本次replan-history及Git父版本，不能替代当前结果。
 
-P1_2运输缺陷有实际RED→GREEN及独立两轴复验。曾因Root未检查git add失败而少暂存42份上游缓存fixture，已通过更正提交保全原字节并核对1034候选文件进入Git；新缓存14份必需日志也明确入提交。失败的旧干净归档、修后对旧包的只读验证、新提交自校验和所有原始记录均保留，未通过重建旧包掩盖缺陷。
+当前缺口仍包括：真实宿主Comet入口/步骤显示与方法发现、固定P1_3执行者/受保护来源/独立角色、逐渠道Edit/Shell/MCP、真实平台SHA/checks/digest部署读回、项目Kp阻归档、唯一规格归档、Outline Kt同Run恢复、预授权/完整受众/撤权隔离告警及原生备份恢复。129/103必须在最终候选、实际产品Run及关联维护中完成；Whitebox/Grill/唯一closeout未完成。
 
-P2_4沿原工人/树续做真实Run事务与六补丁联编，旧checkpoint18哈希/已知终态句柄经Root核对。已观察控制写/archived旁路、R先于Design、P入口死锁等真实RED→GREEN，仍为本机机制；实际角色/方法、并发崩溃恢复与完整发行未通过。受管派生计划根选择docs/comet/plans，不新建可编辑DAG，OpenSpec仍是正式计划和规格权威。
+15份材料一次外发和Outline owner三API一次只读许可均已消耗，不复用。总体Goal和20分钟监督继续active；上海时区整体ETA未知。
 
-I04已去掉自写文件/自建表冒充原生索引的旧等价证明；真实宿主样例成功不代表生产launcher、受管角色或Kp。旧P4_4 adapter参数与075c真实create schema不符，共享路径shell展开缺陷及注册源所有权须原任务继续闭合。正常原生宿主可能有自身状态记账，未声称全局DB零写；没有直接查询/复制全局DB，失败私有探针数据已按范围清理。
-
-I05共同安全YAML解析/模板结构边界已在原挂载绕过RED后经独立两轴、主83/83通过并提交91b08be；现有PyYaml6.0.3依赖的实际Runner发行仍需资格化。未部署、摄入、调用模型或授予真实身份。所有当前实际模型/平台/知识运行权仍须已登记且核验的角色/来源/用途授权。
-
-只有合同18条具名建设边可以消费准确双审/主复验工件，whole义务不勾选，VERIFY无建设例外。最终仍需同一最终Comet Run跑完R/A/T/P/TDD/V、平台SHA/digest/目标终态、LLMWiki Kp、唯一OpenSpec归档、同Run Outline Kt，以及关联权限事件/周期核验、多渠道隔离、告警和原生备份恢复；129当前required、独立Whitebox/Grill及唯一Comet closeout均待完成。Goal及原监督继续，上海时区整体ETA未知。
-
-最新I05建设证据：91b08be（source4458c17），主83/83，六离线守卫+隔离PyYaml6.0.3校准；最新总检查828/818/10fail0skip，七输入/五配置不变，未新增失败身份。该建设接受不含部署、生成、真实认证/API-MCP或恢复，wholeI05仍未验。I04原703类型缺陷已由独立公开反例退回，原owner最后43项已报通过、候选待交；I06原任务已启动只读接线，不因GitHub可读授予写权。
-
-当前补充：I04 source6633913已双审并在主53/53后集成07bf495，生产注册/角色/grant/Kp/sameRun仍未验。MCP三路径已按metadata双审归原P1_3，commit47528ef，39/69/步骤/deps/验收与权限不变，contract67f06a；pilot PlanBundle仅跟随明确归属修订显式重冻结到618d3431，资格仍NOT_VERIFIED。Root生成的两pyc已逐字节保全迁出，不改原方法源/断言；初次785/773/12fail记录保留，修后全828/818/10fail0skip，6输入/5配置不变。I05安全YAML83边界仍成立，但另有manifest坏JSON任意片段回显P2正由原owner修，不能据旧83宣称完整诊断安全。最终required与真实同Run交付仍未通过。
-
-最新诊断闭合：I05 f985800已独立两轴、主99/99后集成05e36d0，安全YAML原段未变；最新全仓828/818/10fail0skip，二输入/五配置不变，旧失败身份保留。I06 04e5655因run/workflow/artifact关联P2退回原owner，未真实写平台；Core P2_4最新fresh/完整用例仍待限定候选和独立双审。五个登记Outline容器当前running、应用healthy仅是liveness（.local/comet-reset/i03-current-liveness/observation.json），不证明权限或知识交付。最终129检查/103场景和whole角色/平台/Kp/归档/Kt/权限恢复未验收。
-
-最新平台建设：8acfecb两轴审查后在主96/96+rollback6/6通过，集成9324d7b；七输入/五配置不变。Root最初网络守卫把标准URL对象当Request导致95/96，原记录保留，修复并实测string/URL/Request与外部拒绝后原96通过，未改产品断言。全仓828/818/10fail0skip，旧十失败身份未新增；真实CI生产者/保护、OCI签名、目标部署及wholeI06不因metadata关联而通过。Core终局completed与当前完整性分开：合法完成历史不被后续fault抹掉，currentIntegrity未知必须RECOVERY_REQUIRED且不重新宣传done，未完成时缺delivery仍阻断首次完成。原Core候选继续最终fresh/精确回归；后继不提前放行。
-
-建设资格修订：0c228bd仅冻结五条已有依赖的具名工件消费规则，13→18，contract680f5be...；39/69/步骤/勾选/原依赖/接口/130总记录104场景及129/103不变，VERIFY与所有真实角色/授权/资源义务不减。尚未ready的工件不可因规则先行消费。P1_2自身已完成67及真实冷资产验证，但Step9缺真实TeamAI分发，原bootstrap不是TeamAI pull；现固定0.22原生能力已定位，Root限定隔离容器/私有bareGit补证，未授真实远端推送/全局hooks/内置Wiki接纳或模型权限。无需给P1_2另加trustedHook条款，完整Journey仍归VERIFY。
-
-当前源码预审与矩阵：P2_4 fresh84被Standards轴OpenSpec执行身份P2退回；Spec轴source-only未见独立阻断。原会话157已终态：33项32通过、1项postarchive最后的completed后source-change/next子进程110秒超时、0跳过，exit1/961.592秒；输入字节未变，158原生12组与159生成校验exit0。超时不能当行为RED或通过，原owner正实测重复输入库存热点并修复受保护工具身份；证据已保全于.local/comet-reset/p2_4-pre-review-84。P1_2 Git闭包f22215c经Root核51证据文件、三签名索引对应24包/20,133,064字节/78组依赖，0基包升级；仅允许精确公开字节下载及固定base离线fixture构建，镜像读回/nativeTeamAI分发尚未完成，不代表Runner资格。当前6节点/0业务场景、129required/103场景及F10另期未验不变，整体ETA未知。
-
-当前原生分发增量：固定隔离镜像b05a0a6f（Node24.15/Git2.39.5/TeamAI0.22）已实际init/pull/repeat；首次noexec导致hook校准失败，保留setup失败且未运行native。只在/work显式exec后，第二轮真实拒绝非成员写且HEAD不变，CLI均0，但完整Foundation期望558文件、实际0，故为运输格式RED；245方法文件字节一致、额外12内置文件仅staging。原owner正补最小顶层packet运输并复用外部冻结Lock/既有adapter接纳；Python实际ENOENT，装配段未验。Core伪1.11程序已真实修改隔离fixture规格并登记bridge，身份绑定仍返工；私有Map诊断762→42读取、78.869→5.475秒只是窄诊断，未关闭原矩阵失败。仍6节点/0业务场景，最终129/103未验，F10另期未验。
-
-最新主集成：Core ddb7849/官方6da由两轴独立审查、主fresh重建、主38/38/0skip和发行smoke257通过+2平台skip/三类generated0确认；TeamAI 9c9b70b经两轴、主71/71及当前视图2aba3aa完整正文验证，1372旧baseline文件未变，245方法源/发布副本/Git暂存字节一致。主总检查832/822/10fail0skip，原10失败身份不变，组合引入的2项视图漂移已真正重建消除，绝不豁免剩余10；npm不含owned.mjs，主38和71已单独实跑。P2_5与P3_4沿原具名边建设，I02仍待P2_5；P3_4已实测原archive-reopen恢复同Run而非再扩SDK。真实coding-agent冷发现仅有受控计划，未启动host，MCP完整禁用和Comet全局登记隔离仍待解决。当前仍6节点/0业务场景，129required/103场景及F10另期未验处置不变，生产角色/权限/平台/知识全链与唯一Comet收尾未完成，整体ETA未知。
-
-最新审查/归档适配主集成：cbde39e已接P2_5 8386447与P3_4 ee52a45，两轴分别支持限定construction，主67/67+相关74/74、Spec29/29均零跳过且输入未变。总检查880/872/8fail0skip，关闭原T审查和B08两项旧失败，无新失败位置；Docker9次/gh2次尝试由校准拒绝器挡住，不作平台资格证明。两adapter不改变Foundation分发资产，全锁在原assetcommit比较完全一致，2aba旧缓存继续保留并requireBodies验证0；默认HEAD导出导致的STATE_SYNC_REQUIRED原记录保留，未覆盖缓存。P3_4原越界read P2经独立外链/null复现确认闭合。原I02已按具名工件边开始CLI job/隔离建设；原P2_4私有窄修登记testIntent写门和phase-aware A/T指引，6da当前保持不可变，sameRun fence不冒actor/OS身份。实际coding-agent冷发现仍计划态，真实角色/权限/平台/知识全链与129/103最终验收未通过，仍6节点/0业务场景，F10正向另期未验，整体ETA未知。
+检查入口补充：751d6ab将上游Whitebox完整自测在临时副本执行，原139文件字节/mtime不变；实际check.sh六组Whitebox及共识gate自测通过，随后npm941/939/2/0skip，仍被原P1_5两项失败阻断，YAML/JSON尾阶段未运行。原受保护源mtime失败和两项取证环境校准记录均保留；没有修改方法快照或削减检查。

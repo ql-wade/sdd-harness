@@ -58,7 +58,7 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
     },
     "planBundle": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
-      "sha256": "618d3431cf0514a8bff25b0a2e8120b9d13f4032818bd54594b580f4e9a9a0c3",
+      "sha256": "8b91e35e764ae52b5628507174d7aadf8cff2927c3a9fddebe62771360fa84e5",
       "digestNormalization": "checkbox-state-agnostic（与 lib/delivery/baseline.js taskDefinitionDigest 同一归一化；勾选状态不构成计划漂移）"
     }
   },
@@ -94,3 +94,5 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
 P3_1本轮显式重冻结：消费已批准收敛设计及P2_1的公开AST任务摘要，PlanBundle从旧实现摘要改绑当前真实任务定义；仅进度勾选不改摘要。变更双摘要在worker-reports/P3_1-convergence/pilot-freeze-amendment.json。其余三件实测未漂移；本登记仍NOT_VERIFIED，不提供角色/权限/旅程批准。
 
 P1_3注册归属修订的显式重冻结附记：仅Files/Owns/DAG三路径归属改变任务定义摘要；PlanBundle从`f46cb7049d021b9ba28d5fa79e8f566240a2817ebd247de228e0c1093009f1a2`改绑`618d3431cf0514a8bff25b0a2e8120b9d13f4032818bd54594b580f4e9a9a0c3`。其余product/design/testContract原字节与摘要不变，原步骤/勾选/依赖/验收条件不变，本登记仍NOT_VERIFIED、不授运行或发布权。原登记保存在该修订的Git父版本与私有审计；本次不是自动续期。
+
+P1_1安全补丁所有权修订的显式派生登记：仅PlanBundle任务定义摘要从`618d3431cf0514a8bff25b0a2e8120b9d13f4032818bd54594b580f4e9a9a0c3`跟随已独立审查的所有权元数据改为`8b91e35e764ae52b5628507174d7aadf8cff2927c3a9fddebe62771360fa84e5`。product/design/testContract、试点、验收/权限/资格原字段全部不变；仍NOT_VERIFIED，不续期任何票或grant。原登记完整保存在本次replan-history。

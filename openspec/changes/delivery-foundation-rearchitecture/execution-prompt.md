@@ -11,10 +11,10 @@ paths relative to it, verifying the repository identity before any write:
 plan `tasks.md`, architecture `architecture.md`, DAG `task-dag.json`,
 lock `drift-lock.json`, execution contract `execution-contract.json`.
 
-Locked plan SHA-256: `618d3431cf0514a8bff25b0a2e8120b9d13f4032818bd54594b580f4e9a9a0c3` (checkbox-normalized-v1).
+Locked plan SHA-256: `8b91e35e764ae52b5628507174d7aadf8cff2927c3a9fddebe62771360fa84e5` (checkbox-normalized-v1).
 Architecture SHA-256: `36e14eb296995562f75f801a5087096fd53ed3e34529cd1f236b8eaf6503e589` (raw bytes).
-DAG SHA-256: `ce4dedfc5e0b928ad6357fa61b25166819e8c76feb533d5cfcdc7d86b4aef566` (raw bytes).
-Execution-contract SHA-256: `680f5be65f90d68516a9b0d2129e04d7617cdfd908356fe5082b71000d7f2326` (raw bytes).
+DAG SHA-256: `1211ec6cadc58aeeac4a300749d9738037b6158fccec44222e6157dfebaa43cc` (raw bytes).
+Execution-contract SHA-256: `41fc7da2604e31b4b85ac99d2092e554f31155ccfa08c49fae7726eaa538dc41` (raw bytes).
 Normalize CRLF to LF and change only line-leading Markdown checked boxes to
 unchecked for the plan digest; preserve fenced code exactly. Verify all four
 hashes before dispatch and integration; mismatch means HALT_AND_REPLAN.
