@@ -14,7 +14,11 @@ bash scripts/agent-skill-check.sh
 # 使用源快照自己的完整自测入口；缺入口或任一子检查失败都阻断。
 WBV="$(pwd)/.agents/skills/whitebox-verify"
 [ -f "$WBV/tests/run_all.sh" ] || { echo "❌ whitebox-verify required selftest entry missing" >&2; exit 1; }
-bash "$WBV/tests/run_all.sh" || { echo "❌ whitebox-verify source selftests failed" >&2; exit 1; }
+# 上游夹具会改时间戳；在副本运行，保持分发快照和受保护源目录不变。
+WBV_TEST_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/sdd-whitebox-selftest.XXXXXX")"
+trap 'rm -rf -- "$WBV_TEST_ROOT"' EXIT
+cp -R "$WBV/." "$WBV_TEST_ROOT/"
+bash "$WBV_TEST_ROOT/tests/run_all.sh" || { echo "❌ whitebox-verify source selftests failed" >&2; exit 1; }
 
 # multi-agent-consensus-review 技能自测：gate 机械验证（review init/validate/tally）
 MCR="$(pwd)/.agents/skills/multi-agent-consensus-review"
