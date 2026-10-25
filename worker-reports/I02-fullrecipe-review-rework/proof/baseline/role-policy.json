@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "interface": "RoleBoundary.v1",
+  "project": "sdd-harness-pilot",
+  "note": "Six declared role boundaries. Labels are expected bindings, not verified runtime principals, credentials or method application. Only the fixed controller registry and original signed current ActionBinding select a process; ordinary job JSON/env cannot choose identity, image, volumes or consumer.",
+  "roles": [
+    {
+      "role": "controller",
+      "principal": {
+        "label": "runner-controller",
+        "credentialRef": "secret-ref:sdd-harness-pilot/runner-authority",
+        "provisioningStatus": "NOT_PROVISIONED"
+      },
+      "workspaceVolume": "ws-controller",
+      "networkScope": "runner-internal",
+      "readOnlyRootFilesystem": true,
+      "capabilities": {
+        "drop": [
+          "ALL"
+        ],
+        "add": []
+      },
+      "note": "唯一 Comet 控制平面持有者（唯一写者）；派发凭据按动作隔离，不读写签发材料",
+      "grantedRefs": [
+        "secret-ref:sdd-harness-pilot/runner-authority",
+        "secret-ref:sdd-harness-pilot/runner-source-read"
+      ]
+    },
+    {
+      "role": "author",
+      "principal": {
+        "label": "worker-author",
+        "credentialRef": "secret-ref:sdd-harness-pilot/worker-author-api",
+        "provisioningStatus": "NOT_PROVISIONED"
+      },
+      "workspaceVolume": "ws-author",
+      "networkScope": "runner-internal",
+      "readOnlyRootFilesystem": true,
+      "capabilities": {
+        "drop": [
+          "ALL"
+        ],
+        "add": []
+      },
+      "note": "实现写入走受管执行器；源由镜像内置，无源读取凭据；无任何控制状态写权",
+      "grantedRefs": [
+        "secret-ref:sdd-harness-pilot/worker-author-api"
+      ]
+    },
+    {
+      "role": "test-author",
+      "principal": {
+        "label": "worker-test-author",
+        "credentialRef": null,
+        "provisioningStatus": "UNASSIGNED"
+      },
+      "workspaceVolume": "ws-test-author",
+      "networkScope": "runner-internal",
+      "readOnlyRootFilesystem": true,
+      "capabilities": {
+        "drop": [
+          "ALL"
+        ],
+        "add": []
+      },
+      "note": "本任务四 ref 集内无专用凭据：签发属后续任务/准入的显式决定，此处不代签、不虚构",
+      "grantedRefs": []
+    },
+    {
+      "role": "reviewer",
+      "principal": {
+        "label": "worker-reviewer",
+        "credentialRef": "secret-ref:sdd-harness-pilot/worker-review-api",
+        "provisioningStatus": "NOT_PROVISIONED"
+      },
+      "workspaceVolume": "ws-reviewer",
+      "networkScope": "runner-internal",
+      "readOnlyRootFilesystem": true,
+      "capabilities": {
+        "drop": [
+          "ALL"
+        ],
+        "add": []
+      },
+      "note": "独立审查身份；审查通过不扩大任何资料或发布授权",
+      "grantedRefs": [
+        "secret-ref:sdd-harness-pilot/worker-review-api"
+      ]
+    },
+    {
+      "role": "publisher",
+      "principal": {
+        "label": "runner-publisher",
+        "credentialRef": null,
+        "provisioningStatus": "UNASSIGNED"
+      },
+      "workspaceVolume": "ws-publisher",
+      "networkScope": "runner-internal",
+      "readOnlyRootFilesystem": true,
+      "capabilities": {
+        "drop": [
+          "ALL"
+        ],
+        "add": []
+      },
+      "note": "publisher 级凭据（outline-publisher，I01 目录 boundRole=publisher）由有权主体另行签发；本任务不声明、不引用为自身凭据",
+      "grantedRefs": []
+    },
+    {
+      "role": "isolator",
+      "principal": {
+        "label": "runner-isolator",
+        "credentialRef": null,
+        "provisioningStatus": "UNASSIGNED"
+      },
+      "workspaceVolume": "ws-isolator",
+      "networkScope": "runner-internal",
+      "readOnlyRootFilesystem": true,
+      "capabilities": {
+        "drop": [
+          "ALL"
+        ],
+        "add": []
+      },
+      "note": "isolator 级凭据（outline-isolator，I01 目录 boundRole=isolator）由有权主体另行签发；本任务不声明、不引用为自身凭据",
+      "grantedRefs": []
+    }
+  ],
+  "boundaryInvariants": {
+    "distinctPrincipals": true,
+    "distinctWorkspaceVolumes": true,
+    "readOnlyRootFilesystem": true,
+    "dropAllCapabilities": true,
+    "noNewPrivileges": true,
+    "network": "internal-only",
+    "workerControlWrite": "FORBIDDEN"
+  },
+  "runnerRefs": [
+    {
+      "ref": "secret-ref:sdd-harness-pilot/runner-authority",
+      "bindingRole": "controller",
+      "tier": "controller",
+      "note": "Runner 单实例权威凭据；I01 目录已登记（boundRole=controller，NOT_PROVISIONED）"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/runner-source-read",
+      "bindingRole": "controller",
+      "tier": "worker-read",
+      "note": "源读取/构建 staging 用（controller 持有）；worker 的源由镜像内置，无需源凭据；源读取权不等于外发权"
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/worker-author-api",
+      "bindingRole": "author",
+      "tier": "worker",
+      "note": "I01 catalog registers this purpose-bound reference; it is not provisioned or currently authorized for runtime use."
+    },
+    {
+      "ref": "secret-ref:sdd-harness-pilot/worker-review-api",
+      "bindingRole": "reviewer",
+      "tier": "worker",
+      "note": "I01 catalog registers this purpose-bound reference; it is not provisioned or currently authorized for runtime use."
+    }
+  ],
+  "methodStateScope": {
+    "declaration": "METHOD_STATE_SHARED_DECLARED",
+    "model": "cooperative-local",
+    "isolationAchieved": false,
+    "knownFacts": {
+      "ref": "classic-closeout-and-hook-contract.md §6（Ponytail 补充，用户裁决 A）",
+      "facts": [
+        "同仓库并发会话可能共享 mode 文件，最后写入生效",
+        "hook exit 0、模式徽章和地图存在均不能证明实际规则已送达或被遵守"
+      ]
+    },
+    "scopeRule": "本环境 method-state 为共享 cooperative-local：不得作为角色/权限/身份依据，不得作为任何完成判定依据；无法隔离时不能承诺并发角色级不同模式（§7.4）",
+    "identityBasis": false,
+    "permissionBasis": false,
+    "completionBasis": false,
+    "modeFilesInWorkerWritableSurface": "FORBIDDEN",
+    "nonEvidence": [
+      "hook exit 0",
+      "mode badge",
+      "codebase map"
+    ],
+    "dispatchRecord": {
+      "note": "§7.4：每次派发记录以下字段；有效资产摘要与注入观察分开记录。本任务无真实派发，运行时填充前如实 UNVERIFIED",
+      "fields": {
+        "actualAssetDigest": "实际资产摘要（本次派发方法资产的 sha256）",
+        "effectiveLevel": "有效级别（实际生效的方法模式级别）",
+        "injectionObservation": "注入观察（上下文实际送达/遵守的独立观察，与资产摘要分开记录）"
+      },
+      "runtimeBinding": {
+        "note": "Original Native generation/revision, dispatched role and current inputDigest/policyDigest/attempt/epoch bind the execution. inputDigest is the current gate input; pinned method digests remain separate ActionBinding.methods fields. Shared mode labels are not identity or permission evidence. Actual process, principal and method injection require independent qualification.",
+        "fields": [
+          "generation",
+          "revision",
+          "role",
+          "inputDigest",
+          "policyDigest",
+          "attempt",
+          "epoch",
+          "environmentDigest",
+          "workPackage",
+          "methods"
+        ],
+        "status": "UNVERIFIED"
+      },
+      "inferIdentityFromSharedMode": "FORBIDDEN",
+      "status": "UNVERIFIED"
+    }
+  }
+}

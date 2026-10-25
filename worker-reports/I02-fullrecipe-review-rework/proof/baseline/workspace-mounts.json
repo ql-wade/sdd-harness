@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "interface": "RoleBoundary.v1",
+  "project": "sdd-harness-pilot",
+  "note": "worker 无控制目录写权的结构表达：Comet 唯一控制状态/锁/事务、回执与批准 payload、签发材料只挂 controller；任何 worker 可写挂载不得与控制路径重叠；全部为具名卷，无宿主绑定、无 docker socket。控制卷挂载点为 Runner 容器内部路径（由 Dockerfile 声明创建），不代表任何宿主路径。",
+  "controlVolumes": [
+    {
+      "volume": "comet-control-state",
+      "mountPath": "/comet/state",
+      "purpose": "Comet 唯一控制状态、锁与事务（run-state/locks）；杀掉 controller 后不得由 worker 自行领取 phase/重试",
+      "workerWritable": false,
+      "mountedBy": [
+        "controller"
+      ]
+    },
+    {
+      "volume": "comet-receipts",
+      "mountPath": "/comet/receipts",
+      "purpose": "回执与批准 payload 的受管入口；工件/角色结果经受控入口交原 Comet",
+      "workerWritable": false,
+      "mountedBy": [
+        "controller"
+      ]
+    },
+    {
+      "volume": "comet-issuance",
+      "mountPath": "/comet/issuance",
+      "purpose": "签发材料（授权签发）；worker 永不可读写",
+      "workerWritable": false,
+      "mountedBy": [
+        "controller"
+      ]
+    }
+  ],
+  "roleWorkspaces": [
+    {
+      "role": "controller",
+      "volume": "ws-controller",
+      "mountPath": "/workspace",
+      "writable": true
+    },
+    {
+      "role": "author",
+      "volume": "ws-author",
+      "mountPath": "/workspace",
+      "writable": true
+    },
+    {
+      "role": "test-author",
+      "volume": "ws-test-author",
+      "mountPath": "/workspace",
+      "writable": true
+    },
+    {
+      "role": "reviewer",
+      "volume": "ws-reviewer",
+      "mountPath": "/workspace",
+      "writable": true
+    },
+    {
+      "role": "publisher",
+      "volume": "ws-publisher",
+      "mountPath": "/workspace",
+      "writable": true
+    },
+    {
+      "role": "isolator",
+      "volume": "ws-isolator",
+      "mountPath": "/workspace",
+      "writable": true
+    }
+  ],
+  "rules": {
+    "namedVolumesOnly": true,
+    "hostBindMounts": "FORBIDDEN",
+    "dockerSocket": "FORBIDDEN",
+    "controlOverlap": "FORBIDDEN",
+    "workerControlWrite": "FORBIDDEN",
+    "workerRoles": [
+      "author",
+      "test-author",
+      "reviewer",
+      "publisher",
+      "isolator"
+    ],
+    "projectRootMount": "READ_ONLY_BOUNDARY"
+  },
+  "methodState": {
+    "modeFileLocations": "同仓库共享 Ponytail/mode 状态文件（并发会话最后写入生效）",
+    "workerWritable": false,
+    "mountedIntoRunner": false,
+    "identityOrPermissionBasis": false,
+    "rule": "mode 文件不进任何 worker 角色可写面：不挂载进 Runner、不写入任何 ws-* 角色工作区卷；无法隔离的共享状态按 cooperative-local 限制如实声明，不作角色/权限/身份依据"
+  },
+  "projectRoot": {
+    "note": "交付项目根（仓库根）若在资源准入时挂载进 Runner，一律是只读边界（READ_ONLY_BOUNDARY）：任何角色容器对其无写权，源码/spec/任务清单不被运行时改写；是否挂载由准入显式决定，默认不挂载",
+    "mountDecision": "ADMISSION_DECIDED",
+    "mountPolicy": "READ_ONLY_BOUNDARY"
+  }
+}

@@ -1,10 +1,10 @@
 # Comet 架构端到端核验：尚未通过
 
-当前主代码`9f912d1`：有界原生stdio客户端经独立Spec/Standards各5/5后合入，Root相关133/133与完整仓库1090/1090零失败/跳过，输入不变。原close P2与fs.watch资源阻塞证据保留；源码保持失效UNKNOWN、历史真实退出和原digest，无新主控/phase/队列。真实CLI、认证、工具隔离、SourceReader、I02/worker/canonical制品桥仍未启动或未验。
+当前主代码`9f912d1`支持回归1090/1090，业务仍未验。I02最终候选7e48作者106/106后被独立Standards有效P2退回：真实OpenSpec离线ci/CLI链接只留注释文本，坏recipe仍能exit0给构建argv；没有伪造runtime资格，但违背坏recipe拒绝。Root未合入、完整D/E未执行，原作者修执行内容识别。原始3次公共CLI与修改文件见worker-reports/I02-fullrecipe-review-rework/。
 
-I02完整106/106作者回归已通过，原103/3保留、路径扫描无洞、OpenSpec oracle加强为同原tar/冻结项目锁/实际离线ci/固定CLI。最终源码待独立审查；Root已核完整镜像582输入182716240字节，但D/E尚未执行，资格不开放。原生Core d0b0仅窄21与481+4Windows支持，完整90=50/40缺作者前置，未接纳；原owner继续补合法Native前置与知识writer来源，不填空名单或加legacy豁免。
+Core正在将旧40非法准备恢复为真实Native作者前置，R/Design/P已有10条原语义通过，测试/Builder/独立审查/task-complete仍在接。知识creator与实际writer来源缺口不靠空名单/角色/假SKILL填补；沿原pending/trajectory/artifacts/collection关联的工具CODE方案正在收口。真实CLI隔离发现版本实际开关与配置继承限制，尚未启动CLI、认证或模型，字段存在不当无旁路证明。
 
-Root已实证freshLinux原manifest/锁不变，429reused/0downloaded/429added，仅离线依赖闭包维度通过。6节点接纳/32待办/1F10另期、129required/103场景业务未验不变；真实平台、权限、Kp/规格归档/Kt/持续维护恢复及最终Whitebox/Grill/唯一closeout未完，Goal与监督保持，整体上海时区ETA未知。
+已证明freshLinux原manifest/锁、429reused/0downloaded/429added只闭合离线依赖维度。6节点接纳/32待办/1F10另期、129required/103场景业务未验不变；平台/知识/权限恢复/Whitebox/Grill/唯一closeout均未完成，Goal/监督保持，整体上海时区ETA未知。
 
 以下均为先前历史快照，不作为当前计数。
 
