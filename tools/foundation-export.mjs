@@ -13,6 +13,7 @@
 // 用法：
 //   node tools/foundation-export.mjs export  --root DIR --out DIR
 //        [--release-commit SHA] [--skills-copy] [--profile P]
+//        [--teamai-view DIR --teamai-expected FILE --teamai-repo HTTPS_URL]
 //   node tools/foundation-export.mjs verify  --root DIR --lock FILE
 //   node tools/foundation-export.mjs check-run --run-dir DIR --root DIR
 //        [--acquire --owner ID] [--migrate --owner ID]
@@ -753,6 +754,139 @@ export async function checkRun(runDir, root, options = {}) {
   return { ok: true, action: 'check', reason: 'drift-noted', drift, baseline, report: 'run is not active; asset drift recorded as informational (no silent re-baseline possible)' };
 }
 
+// TeamAI is a transport, not a second source or controller. Its native docs
+// copier filters dotfiles; one top-level JSON packet carries every original byte.
+const TEAMAI_PACKET = 'foundation-assets.json';
+const PACKET_LIMIT = 96 * 1024 * 1024;
+const ASSET_LIMIT = 64 * 1024 * 1024;
+const FILE_LIMIT = 16 * 1024 * 1024;
+const exactFields = (value, fields) => value && typeof value === 'object' && !Array.isArray(value)
+  && Object.keys(value).sort().join('\0') === fields.slice().sort().join('\0');
+function assetPath(relative) {
+  if (typeof relative !== 'string' || !relative || /^[A-Za-z]:/.test(relative) || /[\\\x00-\x1f]/.test(relative)
+      || path.posix.isAbsolute(relative) || relative.split('/').some(part => !part || part === '.' || part === '..')) {
+    throw new Error('STATE_SYNC_REQUIRED: invalid asset path');
+  }
+  return relative;
+}
+function metadataFile(item, body = false) {
+  const fields = ['path','bytes','sha256','mode', ...(body ? ['base64'] : [])];
+  if (!exactFields(item, fields)) throw new Error('STATE_SYNC_REQUIRED: invalid asset fields');
+  assetPath(item.path);
+  if (!Number.isSafeInteger(item.bytes) || item.bytes < 0 || item.bytes > FILE_LIMIT
+      || !/^[a-f0-9]{64}$/.test(item.sha256) || ![0o644,0o755].includes(item.mode)) {
+    throw new Error('STATE_SYNC_REQUIRED: invalid asset metadata or mode');
+  }
+  return {path:item.path,bytes:item.bytes,sha256:item.sha256,mode:item.mode};
+}
+function metadataSet(items, body = false) {
+  if (!Array.isArray(items) || !items.length || items.length > 4096) throw new Error('STATE_SYNC_REQUIRED: asset count limit');
+  const seen = new Set(); let total = 0;
+  return items.map(item => {
+    const meta = metadataFile(item, body);
+    if (seen.has(meta.path)) throw new Error('STATE_SYNC_REQUIRED: duplicate asset path');
+    seen.add(meta.path); total += meta.bytes;
+    if (total > ASSET_LIMIT) throw new Error('STATE_SYNC_REQUIRED: asset byte limit');
+    return meta;
+  });
+}
+function inputDigest(sourceCommit, exportDigest, files) {
+  return sha256Bytes(canonicalJson({sourceCommit,exportDigest,files}));
+}
+function sourceIdentity(value) {
+  if (value.format !== 1 || !/^[a-f0-9]{40}$/.test(value.sourceCommit) || !/^[a-f0-9]{64}$/.test(value.exportDigest)
+      || !/^[a-f0-9]{64}$/.test(value.inputDigest)) throw new Error('STATE_SYNC_REQUIRED: invalid packet source');
+}
+
+export async function exportTeamaiView(foundationRoot, viewRoot, expectedFile, {repo} = {}) {
+  if (!/^https:\/\/[^/?#@]+\/[^?#]+$/.test(repo ?? '')) throw new Error('registered TeamAI Git URL required');
+  foundationRoot = path.resolve(foundationRoot); viewRoot = path.resolve(viewRoot); expectedFile = path.resolve(expectedFile);
+  for (const parent of [foundationRoot,viewRoot]) {
+    const relative = path.relative(parent,expectedFile);
+    if (!relative || (!relative.startsWith('..'+path.sep) && !path.isAbsolute(relative))) throw new Error('expected descriptor must remain outside supplier views');
+  }
+  if (viewRoot === foundationRoot || !path.relative(foundationRoot,viewRoot).startsWith('..'+path.sep)) throw new Error('TeamAI view must be separate from Foundation source');
+  const lock = JSON.parse(readOutputFile(path.join(foundationRoot,'foundation-lock.json'),'utf8'));
+  const sourceRoot = path.join(foundationRoot,'baselines',lock.release.exportDigest,'source');
+  const verified = await verifyLock(path.join(foundationRoot,'foundation-lock.json'),sourceRoot,{requireBodies:true});
+  if (!verified.ok) throw new Error('STATE_SYNC_REQUIRED: Foundation source is not verified');
+  const files = walkFiles(foundationRoot,'',[],false).map(({rel,abs}) => {
+    const bytes = readOutputFile(abs); const mode = fs.statSync(abs).mode & 0o777;
+    return {path:rel,bytes:bytes.length,sha256:sha256Bytes(bytes),mode,base64:bytes.toString('base64')};
+  }).sort((a,b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+  const metadata = metadataSet(files,true);
+  const packet = {format:1,sourceCommit:lock.release.commit,exportDigest:lock.release.exportDigest,
+    inputDigest:inputDigest(lock.release.commit,lock.release.exportDigest,metadata),files};
+  const packetBytes = Buffer.from(JSON.stringify(packet)+'\n');
+  if (packetBytes.length > PACKET_LIMIT) throw new Error('STATE_SYNC_REQUIRED: packet byte limit');
+  const expected = {format:1,sourceCommit:packet.sourceCommit,exportDigest:packet.exportDigest,inputDigest:packet.inputDigest,
+    packetSha256:sha256Bytes(packetBytes),files:metadata};
+  const stage = '.teamai/distribution-staging';
+  const config = {team:'foundation',repo,provider:'git',reviewers:[],autoUpdate:false,
+    sharing:{docs:{localDir:'./'+stage+'/docs'},env:{injectShellProfile:false},recall:{enabled:false},coAuthor:{enabled:false},hooks:{autoApply:false},mcp:{autoApply:false}},
+    toolPaths:{claude:{skills:stage+'/claude/skills',rules:stage+'/claude/rules',settings:stage+'/claude/settings.json',claudemd:stage+'/claude/CLAUDE.md',agents:stage+'/claude/agents',mcpProject:stage+'/claude/mcp.json'}}};
+  const disabled = ['Hook dispatch session-start','Hook dispatch stop','Hook dispatch post-tool-use wildcard','Hook dispatch post-tool-use Skill','Hook dispatch post-tool-use TodoWrite','Hook dispatch prompt-submit'];
+  const outputs = new Map([['teamai.yaml',Buffer.from(JSON.stringify(config,null,2)+'\n')],['hooks/hooks.yaml',Buffer.from(JSON.stringify({hooks:[],builtin:{disabled,overrides:{}}})+'\n')],['docs/'+TEAMAI_PACKET,packetBytes]]);
+  for (const item of files) if (item.path.startsWith('release/skills/') && item.path !== 'release/skills/MANIFEST.json') {
+    outputs.set('skills/'+item.path.slice('release/skills/'.length),Buffer.from(item.base64,'base64'));
+  }
+  const present = rejectLinkedPath(viewRoot);
+  if (present) {
+    if (!present.isDirectory()) throw new Error('STATE_SYNC_REQUIRED: unsafe TeamAI view');
+    const actual = walkFiles(viewRoot,'',[],false);
+    if (actual.length !== outputs.size || actual.some(({rel,abs}) => !outputs.has(rel) || !readOutputFile(abs).equals(outputs.get(rel)))) {
+      throw new Error('STATE_SYNC_REQUIRED: existing supplier view preserved; publish into a fresh directory');
+    }
+  }
+  const expectedBytes = Buffer.from(JSON.stringify(expected,null,2)+'\n');
+  if (outputFile(expectedFile) && !readOutputFile(expectedFile).equals(expectedBytes)) throw new Error('STATE_SYNC_REQUIRED: existing expected descriptor preserved');
+  for (const rel of outputs.keys()) outputFile(path.join(viewRoot,assetPath(rel)));
+  for (const [rel,bytes] of outputs) writeIfChanged(path.join(viewRoot,rel),bytes);
+  writeIfChanged(expectedFile,expectedBytes);
+  return {expectedSha256:sha256Bytes(expectedBytes),packetSha256:expected.packetSha256,inputDigest:expected.inputDigest,files:files.length};
+}
+
+export async function receiveTeamaiPacket(packetFile, expectedFile, expectedSha256, stageRoot) {
+  // The descriptor and its exact byte hash come from the external controller's
+  // frozen source, never from the supplier packet or its embedded lock.
+  if (!/^[a-f0-9]{64}$/.test(expectedSha256 ?? '')) throw new Error('external expected descriptor hash required');
+  const expectedInfo = outputFile(expectedFile);
+  if (!expectedInfo || expectedInfo.size > PACKET_LIMIT) throw new Error('STATE_SYNC_REQUIRED: external expected descriptor byte limit');
+  const expectedBytes = readOutputFile(expectedFile);
+  if (expectedBytes.length > PACKET_LIMIT || sha256Bytes(expectedBytes) !== expectedSha256) throw new Error('STATE_SYNC_REQUIRED: external expected descriptor mismatch');
+  const expected = JSON.parse(expectedBytes);
+  if (!exactFields(expected,['format','sourceCommit','exportDigest','inputDigest','packetSha256','files'])) throw new Error('STATE_SYNC_REQUIRED: invalid expected fields');
+  sourceIdentity(expected); const wanted = metadataSet(expected.files);
+  if (!/^[a-f0-9]{64}$/.test(expected.packetSha256) || inputDigest(expected.sourceCommit,expected.exportDigest,wanted) !== expected.inputDigest) throw new Error('STATE_SYNC_REQUIRED: inconsistent external source');
+  const info = outputFile(packetFile);
+  if (!info || info.size > PACKET_LIMIT) throw new Error('STATE_SYNC_REQUIRED: packet byte limit or missing packet');
+  const bytes = readOutputFile(packetFile);
+  // Exact external binding also rejects ambiguous/duplicate JSON object keys.
+  if (sha256Bytes(bytes) !== expected.packetSha256) throw new Error('STATE_SYNC_REQUIRED: supplier packet differs from frozen source');
+  const packet = JSON.parse(bytes);
+  if (!exactFields(packet,['format','sourceCommit','exportDigest','inputDigest','files'])) throw new Error('STATE_SYNC_REQUIRED: invalid packet fields');
+  sourceIdentity(packet); const metadata = metadataSet(packet.files,true);
+  if (packet.sourceCommit !== expected.sourceCommit || packet.exportDigest !== expected.exportDigest || packet.inputDigest !== expected.inputDigest
+      || canonicalJson(metadata) !== canonicalJson(wanted)) throw new Error('STATE_SYNC_REQUIRED: incomplete or stale supplier source');
+  const decoded = packet.files.map(item => {
+    if (typeof item.base64 !== 'string' || item.base64.length > Math.ceil(FILE_LIMIT/3)*4) throw new Error('STATE_SYNC_REQUIRED: invalid base64 size');
+    const body = Buffer.from(item.base64,'base64');
+    if (body.toString('base64') !== item.base64 || body.length !== item.bytes || sha256Bytes(body) !== item.sha256) throw new Error('STATE_SYNC_REQUIRED: invalid base64 or file digest');
+    return {path:item.path,body,mode:item.mode};
+  });
+  // Validate every byte/path before creating a new private stage; never merge
+  // into a user tree or replace a link. Stage has no authority until verifyLock.
+  stageRoot = path.resolve(stageRoot); const present = rejectLinkedPath(stageRoot);
+  if (present) throw new Error('STATE_SYNC_REQUIRED: receiver requires a fresh private stage');
+  for (const item of decoded) outputFile(path.join(stageRoot,item.path));
+  fs.mkdirSync(stageRoot,{recursive:true,mode:0o700});
+  for (const item of decoded) { const dest = path.join(stageRoot,item.path);writeIfChanged(dest,item.body);fs.chmodSync(dest,item.mode); }
+  const sourceRoot = path.join(stageRoot,'baselines',expected.exportDigest,'source');
+  const verified = await verifyLock(path.join(stageRoot,'foundation-lock.json'),sourceRoot,{requireBodies:true});
+  if (!verified.ok) throw new Error('STATE_SYNC_REQUIRED: decoded FoundationLock verification failed');
+  return {foundationRoot:stageRoot,sourceRoot,inputDigest:expected.inputDigest,files:decoded.length,scope:'verified asset bytes only; runtime/profile qualification unchanged'};
+}
+
 // ---- CLI ----
 
 function argValue(args, flag) {
@@ -765,16 +899,29 @@ async function main(argv) {
   if (cmd === 'export') {
     const root = path.resolve(argValue(rest, '--root') ?? process.cwd());
     const out = path.resolve(argValue(rest, '--out') ?? path.join(root, 'foundation'));
+    const teamaiView = argValue(rest, '--teamai-view');
+    const teamaiExpected = argValue(rest, '--teamai-expected');
+    const teamaiRepo = argValue(rest, '--teamai-repo');
+    if (rest.some(flag => ['--teamai-view','--teamai-expected','--teamai-repo'].includes(flag)) && ![teamaiView,teamaiExpected,teamaiRepo].every(Boolean)) throw new Error('TeamAI export requires view, external expected file and Git URL');
     const { lock, files } = await exportRelease(root, out, {
       releaseCommit: argValue(rest, '--release-commit'),
       profile: argValue(rest, '--profile'),
       skillsCopy: rest.includes('--skills-copy'),
-      freezeBaseline: rest.includes('--freeze-baseline'),
+      freezeBaseline: rest.includes('--freeze-baseline') || !!teamaiView,
     });
+    if (teamaiView) await exportTeamaiView(out,path.resolve(teamaiView),path.resolve(teamaiExpected),{repo:teamaiRepo});
     process.stdout.write(`✅ foundation export: ${files.length} files under ${out} (release commit ${lock.release.commit.slice(0, 8)}, exportDigest ${lock.release.exportDigest.slice(0, 12)})\n`);
     return 0;
   }
   if (cmd === 'verify') {
+    const packet = argValue(rest,'--teamai-packet');
+    if (packet) {
+      const expected = argValue(rest,'--teamai-expected'), expectedSha = argValue(rest,'--teamai-expected-sha256'), stage = argValue(rest,'--teamai-stage');
+      if (![expected,expectedSha,stage].every(Boolean)) throw new Error('TeamAI receive requires external expected file/hash and private stage');
+      const result = await receiveTeamaiPacket(path.resolve(packet),path.resolve(expected),expectedSha,path.resolve(stage));
+      process.stdout.write(`✅ foundation TeamAI receive: ${result.files} verified assets; runtime qualification unchanged\n`);
+      return 0;
+    }
     const root = path.resolve(argValue(rest, '--root') ?? process.cwd());
     const lockPath = path.resolve(argValue(rest, '--lock') ?? path.join(root, 'foundation/foundation-lock.json'));
     const verdict = await verifyLock(lockPath, root, {requireBodies: rest.includes('--require-bodies')});

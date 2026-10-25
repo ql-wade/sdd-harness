@@ -384,7 +384,15 @@ def is_plugin(entry):
     return any(hook_source(h) == "plugin" for h in entry_hooks(entry))
 
 def normalize_command(text):
-    return str(text).strip(" \t" + chr(34) + chr(39))
+    command = str(text).strip()
+    # Older project registrations directly executed the same script. Preserve
+    # duplicate detection across the explicit Bash caller fix, without treating
+    # unrelated user/plugin shell commands as equivalent.
+    project_commands = {'"$CLAUDE_PROJECT_DIR"/hooks/' + script for script in
+                        ("pre-tool-gate.sh", "session-context.sh", "stop-reminder.sh")}
+    if command.startswith("bash ") and command[5:].lstrip() in project_commands:
+        command = command[5:].lstrip()
+    return command.strip(" \t" + chr(34) + chr(39))
 
 pre = os.path.relpath(os.path.join(root, "hooks/pre-tool-gate.sh"), root)
 session = os.path.relpath(os.path.join(root, "hooks/session-context.sh"), root)
@@ -415,9 +423,9 @@ def upsert_hook_array(group, ours):
     settings.setdefault("hooks", {})[group] = arr
 
 MANAGED_ENTRIES = {
-    "PreToolUse": {"matcher": pre_matcher, "hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + pre}]},
-    "SessionStart": {"matcher": "startup|resume", "hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + session}]},
-    "Stop": {"hooks": [{"type": "command", "command": '"$CLAUDE_PROJECT_DIR"/' + stop}]},
+    "PreToolUse": {"matcher": pre_matcher, "hooks": [{"type": "command", "command": 'bash "$CLAUDE_PROJECT_DIR"/' + pre}]},
+    "SessionStart": {"matcher": "startup|resume", "hooks": [{"type": "command", "command": 'bash "$CLAUDE_PROJECT_DIR"/' + session}]},
+    "Stop": {"hooks": [{"type": "command", "command": 'bash "$CLAUDE_PROJECT_DIR"/' + stop}]},
 }
 for group, ours in MANAGED_ENTRIES.items():
     upsert_hook_array(group, ours)

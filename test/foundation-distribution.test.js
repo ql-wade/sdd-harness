@@ -1352,3 +1352,55 @@ test('Git exports remain verifiable after transport without Git', async () => {
     fs.rmSync(transported, { recursive: true, force: true });
   }
 });
+
+// Native TeamAI init/pull/repeat returned0 but transported0 of558 nested
+// Foundation files. The top-level packet must survive that real transport.
+test('TeamAI packet roundtrip preserves the externally frozen full file set', async () => {
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'foundation-teamai-'));
+  try {
+    const out=path.join(temp,'foundation'),view=path.join(temp,'publisher'),expected=path.join(temp,'expected.json');
+    await exporter.exportRelease(projectRoot,out,{releaseCommit:FIXED_COMMIT,profile:'comet-managed-v2',skillsCopy:true,freezeBaseline:true});
+    const receipt=await exporter.exportTeamaiView(out,view,expected,{repo:'https://fixture.invalid/team/foundation.git'});
+    const accepted=await exporter.receiveTeamaiPacket(path.join(view,'docs/foundation-assets.json'),expected,receipt.expectedSha256,path.join(temp,'accepted'));
+    const descriptor=JSON.parse(fs.readFileSync(expected));assert.equal(accepted.files,descriptor.files.length);
+    assert.ok(descriptor.files.some(file=>file.path.endsWith('/whitebox-verify/.gitignore')));
+    for(const file of descriptor.files)assert.equal(sha256(fs.readFileSync(path.join(accepted.foundationRoot,file.path))),file.sha256,file.path);
+    assert.equal((await exporter.verifyLock(path.join(accepted.foundationRoot,'foundation-lock.json'),accepted.sourceRoot,{requireBodies:true})).ok,true);
+  } finally {fs.rmSync(temp,{recursive:true,force:true});}
+});
+
+test('TeamAI packet rejects tamper, omission, duplicate, escape, unsafe mode and stale source before writing', async () => {
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'foundation-teamai-negative-'));
+  try {
+    const out=path.join(temp,'foundation'),view=path.join(temp,'publisher'),expected=path.join(temp,'expected.json');
+    await exporter.exportRelease(projectRoot,out,{releaseCommit:FIXED_COMMIT,profile:'comet-managed-v2',skillsCopy:true,freezeBaseline:true});
+    const receipt=await exporter.exportTeamaiView(out,view,expected,{repo:'https://fixture.invalid/team/foundation.git'});
+    const original=fs.readFileSync(path.join(view,'docs/foundation-assets.json'));const source=JSON.parse(original);
+    const changes=[['tamper',p=>{p.files[0].base64='AAAA';}],['dotfile',p=>{p.files=p.files.filter(f=>!f.path.endsWith('/whitebox-verify/.gitignore'));}],['extra',p=>{p.files.push({...p.files[0],path:'unexpected'});}],['duplicate',p=>{p.files.push(p.files[0]);}],['escape',p=>{p.files[0].path='../outside';}],['absolute',p=>{p.files[0].path='/tmp/outside';}],['mode',p=>{p.files[0].mode=0o120777;}],['base64',p=>{p.files[0].base64='%%%';}],['field',p=>{p.files[0].unknown=true;}],['stale',p=>{p.sourceCommit='b'.repeat(40);}]];
+    for(const [name,change] of changes){const packet=path.join(temp,name+'.json'),stage=path.join(temp,'stage-'+name);const modified=structuredClone(source);change(modified);writeJson(packet,modified);await assert.rejects(exporter.receiveTeamaiPacket(packet,expected,receipt.expectedSha256,stage),/STATE_SYNC_REQUIRED/);assert.equal(fs.existsSync(stage),false,name);}
+    const other=path.join(temp,'other-expected.json');writeJson(other,{...JSON.parse(fs.readFileSync(expected)),packetSha256:'0'.repeat(64)});await assert.rejects(exporter.receiveTeamaiPacket(path.join(view,'docs/foundation-assets.json'),other,receipt.expectedSha256,path.join(temp,'untrusted-stage')),/external expected descriptor mismatch/);
+    const sentinel=path.join(temp,'sentinel');fs.mkdirSync(sentinel);fs.writeFileSync(path.join(sentinel,'user'),'unchanged');const linked=path.join(temp,'linked');fs.symlinkSync(sentinel,linked,'dir');await assert.rejects(exporter.receiveTeamaiPacket(path.join(view,'docs/foundation-assets.json'),expected,receipt.expectedSha256,linked),/symlink|fresh private stage/);assert.equal(fs.readFileSync(path.join(sentinel,'user'),'utf8'),'unchanged');
+  } finally {fs.rmSync(temp,{recursive:true,force:true});}
+});
+
+test('original Foundation CLI connects TeamAI view export and externally pinned receive', () => {
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'foundation-teamai-cli-'));
+  try {
+    const out=path.join(temp,'foundation'),view=path.join(temp,'view'),expected=path.join(temp,'expected.json'),stage=path.join(temp,'received');
+    const exported=spawnSync(process.execPath,[exporterPath,'export','--root',projectRoot,'--out',out,'--release-commit',FIXED_COMMIT,'--profile','comet-managed-v2','--skills-copy','--teamai-view',view,'--teamai-expected',expected,'--teamai-repo','https://fixture.invalid/team/foundation.git'],{encoding:'utf8',timeout:60000});assert.equal(exported.status,0,exported.stderr);
+    const expectedHash=sha256(fs.readFileSync(expected));const received=spawnSync(process.execPath,[exporterPath,'verify','--teamai-packet',path.join(view,'docs/foundation-assets.json'),'--teamai-expected',expected,'--teamai-expected-sha256',expectedHash,'--teamai-stage',stage],{encoding:'utf8',timeout:60000});assert.equal(received.status,0,received.stderr);assert.deepEqual(fs.readFileSync(path.join(stage,'foundation-lock.json')),fs.readFileSync(path.join(out,'foundation-lock.json')));
+    const packet=path.join(view,'docs/foundation-assets.json');const large=path.join(temp,'oversized.json');fs.closeSync(fs.openSync(large,'w'));fs.truncateSync(large,96*1024*1024+1);const denied=spawnSync(process.execPath,[exporterPath,'verify','--teamai-packet',large,'--teamai-expected',expected,'--teamai-expected-sha256',expectedHash,'--teamai-stage',path.join(temp,'oversized-stage')],{encoding:'utf8',timeout:60000});assert.notEqual(denied.status,0);assert.equal(fs.existsSync(path.join(temp,'oversized-stage')),false);
+    assert.ok(fs.statSync(packet).size>0);
+  } finally {fs.rmSync(temp,{recursive:true,force:true});}
+});
+
+test('Bash project caller equivalence leaves unrelated user scripts and Ponytail plugin entries unchanged', () => {
+  const root=makeFixture();
+  try {
+    const entries=[{hooks:[{type:'command',command:'bash "/private-fixture/user-script.sh"'}]},{hooks:[{type:'command',command:'"/private-fixture/user-script.sh"'}]},{hooks:[{type:'command',command:'"${CLAUDE_PLUGIN_ROOT}/ponytail/hooks/stop.sh"'}]}];
+    const original={permissions:{deny:['Bash(private-fixture-user-deny)']},hooks:{Stop:entries}};writeJson(path.join(root,'.claude/settings.json'),original);
+    const installed=spawnSync('bash',[adapterPath],{encoding:'utf8',env:{...process.env,SDD_TARGET_ROOT:root},timeout:30000});assert.equal(installed.status,0,installed.stderr);
+    const actual=JSON.parse(fs.readFileSync(path.join(root,'.claude/settings.json')));assert.deepEqual(actual.hooks.Stop.slice(0,3),entries);assert.deepEqual(actual.permissions,original.permissions);
+    const removed=spawnSync('bash',[adapterPath,'--uninstall'],{encoding:'utf8',env:{...process.env,SDD_TARGET_ROOT:root},timeout:30000});assert.equal(removed.status,0,removed.stderr);assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root,'.claude/settings.json'))),original);
+  } finally {fs.rmSync(root,{recursive:true,force:true});}
+});

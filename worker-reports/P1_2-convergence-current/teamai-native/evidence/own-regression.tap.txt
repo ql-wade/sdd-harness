@@ -1,0 +1,552 @@
+TAP version 13
+# Subtest: CLI export produces a contract-valid lock and verify accepts it (real repo)
+ok 1 - CLI export produces a contract-valid lock and verify accepts it (real repo)
+  ---
+  duration_ms: 1014.49675
+  type: 'test'
+  ...
+# Subtest: V_F04: CLI verify fails on drifted assets and check-run blocks an active run (explicit migration path)
+ok 2 - V_F04: CLI verify fails on drifted assets and check-run blocks an active run (explicit migration path)
+  ---
+  duration_ms: 177.585458
+  type: 'test'
+  ...
+# Subtest: CLI check-run refuses a second writer on an active run (B09) and allows the owner
+ok 3 - CLI check-run refuses a second writer on an active run (B09) and allows the owner
+  ---
+  duration_ms: 775.415125
+  type: 'test'
+  ...
+# Subtest: V_F02: forward then reverse composition: init, user edit, re-pull, uninstall, re-init
+ok 4 - V_F02: forward then reverse composition: init, user edit, re-pull, uninstall, re-init
+  ---
+  duration_ms: 1039.030375
+  type: 'test'
+  ...
+# Subtest: plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched
+ok 5 - plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched
+  ---
+  duration_ms: 773.662375
+  type: 'test'
+  ...
+# Subtest: duplicate same event/command registration (plugin entry wrapping the managed command) is refused via bootstrap with a conflict list
+not ok 6 - duplicate same event/command registration (plugin entry wrapping the managed command) is refused via bootstrap with a conflict list
+  ---
+  duration_ms: 349.301041
+  type: 'test'
+  location: '<worker-root>/test/delivery-cases/1_2.mjs:152:3'
+  failureType: 'testCodeFailure'
+  error: 'bootstrap must refuse the duplicate registration'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 0
+  operator: 'notStrictEqual'
+  stack: |-
+    file://<worker-root>/test/delivery-cases/1_2.mjs:264:12
+    TestContext.<anonymous> (file://<worker-root>/test/delivery-cases/1_2.mjs:156:5)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: V_F02: repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable
+ok 7 - V_F02: repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable
+  ---
+  duration_ms: 1250.039042
+  type: 'test'
+  ...
+# Subtest: exporter builds a contract-valid lock from the unique sources (real repo)
+ok 8 - exporter builds a contract-valid lock from the unique sources (real repo)
+  ---
+  duration_ms: 403.576167
+  type: 'test'
+  ...
+# Subtest: lock emission gates: full digests, no machine paths, no floating versions
+ok 9 - lock emission gates: full digests, no machine paths, no floating versions
+  ---
+  duration_ms: 152.123875
+  type: 'test'
+  ...
+# Subtest: exporter refuses to emit when an MCP registration floats (@latest)
+ok 10 - exporter refuses to emit when an MCP registration floats (@latest)
+  ---
+  duration_ms: 18.358916
+  type: 'test'
+  ...
+# Subtest: release view + lock are byte-stable across repeated exports (repeat-pull idempotency)
+ok 11 - release view + lock are byte-stable across repeated exports (repeat-pull idempotency)
+  ---
+  duration_ms: 69.251541
+  type: 'test'
+  ...
+# Subtest: dual-write drift is detected in both directions (source edit and hand-edited view)
+ok 12 - dual-write drift is detected in both directions (source edit and hand-edited view)
+  ---
+  duration_ms: 138.263958
+  type: 'test'
+  ...
+# Subtest: committed foundation artifacts match live sources (repo-level drift gate)
+not ok 13 - committed foundation artifacts match live sources (repo-level drift gate)
+  ---
+  duration_ms: 172.567333
+  type: 'test'
+  location: '<worker-root>/test/foundation-distribution.test.js:196:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    committed foundation drifted from sources: [{"kind":"lock","item":"exportDigest","detail":"complete asset set drifted"},{"kind":"release","item":"code","detail":"project code closure bytes or complete file set differs"}]
+    + actual - expected
+
+    + [
+    +   {
+    +     detail: 'complete asset set drifted',
+    +     item: 'exportDigest',
+    +     kind: 'lock'
+    +   },
+    +   {
+    +     detail: 'project code closure bytes or complete file set differs',
+    +     item: 'code',
+    +     kind: 'release'
+    +   }
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      kind: 'lock'
+      item: 'exportDigest'
+      detail: 'complete asset set drifted'
+    1:
+      kind: 'release'
+      item: 'code'
+      detail: 'project code closure bytes or complete file set differs'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-root>/test/foundation-distribution.test.js:200:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: composition requires adapter fixture isolation and uninstall capability
+ok 14 - composition requires adapter fixture isolation and uninstall capability
+  ---
+  duration_ms: 0.081167
+  type: 'test'
+  ...
+# Subtest: reverse order A: existing user config survives bootstrap, guard installed once
+ok 15 - reverse order A: existing user config survives bootstrap, guard installed once
+  ---
+  duration_ms: 186.151958
+  type: 'test'
+  ...
+# Subtest: reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept
+ok 16 - reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept
+  ---
+  duration_ms: 523.561375
+  type: 'test'
+  ...
+# Subtest: upgrade: stale managed entry in an older command format is replaced, not duplicated
+ok 17 - upgrade: stale managed entry in an older command format is replaced, not duplicated
+  ---
+  duration_ms: 166.496833
+  type: 'test'
+  ...
+# Subtest: uninstall removes managed entries only, is idempotent, and re-init restores
+ok 18 - uninstall removes managed entries only, is idempotent, and re-init restores
+  ---
+  duration_ms: 568.102833
+  type: 'test'
+  ...
+# Subtest: uninstall is locale-safe: UTF-8 locale must not crash bootstrap (regression: unbraced $var before a multibyte char)
+ok 19 - uninstall is locale-safe: UTF-8 locale must not crash bootstrap (regression: unbraced $var before a multibyte char)
+  ---
+  duration_ms: 280.385584
+  type: 'test'
+  ...
+# Subtest: owned control-plane scripts never place an unbraced variable expansion adjacent to multibyte text
+ok 20 - owned control-plane scripts never place an unbraced variable expansion adjacent to multibyte text
+  ---
+  duration_ms: 0.25375
+  type: 'test'
+  ...
+# Subtest: matcher registration and gate script behavior are tested together
+ok 21 - matcher registration and gate script behavior are tested together
+  ---
+  duration_ms: 396.438667
+  type: 'test'
+  ...
+# Subtest: adapter declares the fixed event set and the plugin registration division
+ok 22 - adapter declares the fixed event set and the plugin registration division
+  ---
+  duration_ms: 0.188292
+  type: 'test'
+  ...
+# Subtest: plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall
+ok 23 - plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall
+  ---
+  duration_ms: 448.432042
+  type: 'test'
+  ...
+# Subtest: same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched
+not ok 24 - same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched
+  ---
+  duration_ms: 204.183875
+  type: 'test'
+  location: '<worker-root>/test/foundation-distribution.test.js:270:3'
+  failureType: 'testCodeFailure'
+  error: 'duplicate registration of the same event/command must be refused'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 0
+  operator: 'notStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-root>/test/foundation-distribution.test.js:517:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: duplicate user entries for the same event/command are refused, not composed twice
+ok 25 - duplicate user entries for the same event/command are refused, not composed twice
+  ---
+  duration_ms: 126.948792
+  type: 'test'
+  ...
+# Subtest: hooks.yaml events outside the adapter fixed event set are refused, never silently dropped
+ok 26 - hooks.yaml events outside the adapter fixed event set are refused, never silently dropped
+  ---
+  duration_ms: 127.099167
+  type: 'test'
+  ...
+# Subtest: plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2)
+ok 27 - plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2)
+  ---
+  duration_ms: 135.212292
+  type: 'test'
+  ...
+# Subtest: exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts
+ok 28 - exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts
+  ---
+  duration_ms: 16.301458
+  type: 'test'
+  ...
+# Subtest: bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo
+ok 29 - bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo
+  ---
+  duration_ms: 722.606667
+  type: 'test'
+  ...
+# Subtest: legacy workflow: retired source-command-sdd-code source under .agents/skills refuses activation with zero mutations (direct-discovery refusal)
+ok 30 - legacy workflow: retired source-command-sdd-code source under .agents/skills refuses activation with zero mutations (direct-discovery refusal)
+  ---
+  duration_ms: 96.189917
+  type: 'test'
+  ...
+# Subtest: legacy workflow: every retired naming family refuses with per-name diagnostics, bodies untouched, no artifacts
+ok 31 - legacy workflow: every retired naming family refuses with per-name diagnostics, bodies untouched, no artifacts
+  ---
+  duration_ms: 102.798875
+  type: 'test'
+  ...
+# Subtest: legacy workflow: unowned retired-name directory with user files is preserved and blocks install (no prefix deletion)
+ok 32 - legacy workflow: unowned retired-name directory with user files is preserved and blocks install (no prefix deletion)
+  ---
+  duration_ms: 88.748375
+  type: 'test'
+  ...
+# Subtest: legacy workflow: retired-name symlink pointing at an external .agents/skills path is preserved (exact-ownership proof required)
+ok 33 - legacy workflow: retired-name symlink pointing at an external .agents/skills path is preserved (exact-ownership proof required)
+  ---
+  duration_ms: 100.841708
+  type: 'test'
+  ...
+# Subtest: legacy workflow: exact adapter-owned stale link to a retired name is removed on install; valid sources assemble settings and stay idempotent
+ok 34 - legacy workflow: exact adapter-owned stale link to a retired name is removed on install; valid sources assemble settings and stay idempotent
+  ---
+  duration_ms: 338.165834
+  type: 'test'
+  ...
+# Subtest: legacy workflow: uninstall removes only adapter-owned links — unowned dirs, external retired-name links and user config survive
+ok 35 - legacy workflow: uninstall removes only adapter-owned links — unowned dirs, external retired-name links and user config survive
+  ---
+  duration_ms: 319.7645
+  type: 'test'
+  ...
+# Subtest: legacy workflow: refusal is readonly and reversible — human disposal of the residue unblocks activation
+ok 36 - legacy workflow: refusal is readonly and reversible — human disposal of the residue unblocks activation
+  ---
+  duration_ms: 408.948125
+  type: 'test'
+  ...
+# Subtest: old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+not ok 37 - old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+  ---
+  duration_ms: 287.916125
+  type: 'test'
+  location: '<worker-root>/test/foundation-distribution.test.js:865:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"ok":false,"action":"check","reason":"silent-rebaseline-blocked","drift":true,"baseline":{"ok":true,"resolvable":true,"reason":"sealed pure assets verified byte-for-byte and whole exportDigest","resolvedSkills":["claude-parallel-tdd-planner","code-review","diagnosing-bugs","grill-me","grilling","multi-agent-consensus-review","openspec-lifecycle-guard","ponytail","tdd","test-authoring","whitebox-verify"],"missing":[],"source":"sealed-assets"},"migration":"explicit paths: (1) rerun with --migrate --owner <run-owner> after review, or (2) close this run and start a new run against commit 6433df61 — a run is never silently re-baselined"}
+
+    false !== true
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worker-root>/test/foundation-distribution.test.js:870:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: active run blocks silent re-baseline after asset drift; closed run only notes it
+ok 38 - active run blocks silent re-baseline after asset drift; closed run only notes it
+  ---
+  duration_ms: 285.048334
+  type: 'test'
+  ...
+# Subtest: unresolvable pinned baseline is blocked explicitly, never silently swapped
+ok 39 - unresolvable pinned baseline is blocked explicitly, never silently swapped
+  ---
+  duration_ms: 170.059834
+  type: 'test'
+  ...
+# Subtest: B09: a second writer cannot take over an active run
+ok 40 - B09: a second writer cannot take over an active run
+  ---
+  duration_ms: 569.295625
+  type: 'test'
+  ...
+# Subtest: explicit migration re-pins only with ownership and a resolvable old baseline
+ok 41 - explicit migration re-pins only with ownership and a resolvable old baseline
+  ---
+  duration_ms: 371.626583
+  type: 'test'
+  ...
+# Subtest: cold package keeps declared dot files and binary source bytes
+ok 42 - cold package keeps declared dot files and binary source bytes
+  ---
+  duration_ms: 78.762375
+  type: 'test'
+  ...
+# Subtest: cold package verification refuses a missing copied source file
+ok 43 - cold package verification refuses a missing copied source file
+  ---
+  duration_ms: 100.217875
+  type: 'test'
+  ...
+# Subtest: current managed distribution binds the exact profile data and all 245 source files
+ok 44 - current managed distribution binds the exact profile data and all 245 source files
+  ---
+  duration_ms: 2490.451333
+  type: 'test'
+  ...
+# Subtest: export refuses retired sources instead of distributing a valid-looking old workflow
+ok 45 - export refuses retired sources instead of distributing a valid-looking old workflow
+  ---
+  duration_ms: 4.175375
+  type: 'test'
+  ...
+# Subtest: legacy asset ownership helper never acquires or rewrites an actual native Comet Run
+ok 46 - legacy asset ownership helper never acquires or rewrites an actual native Comet Run
+  ---
+  duration_ms: 870.095959
+  type: 'test'
+  ...
+# Subtest: complete copied distribution refuses a removed method directory and an injected file
+ok 47 - complete copied distribution refuses a removed method directory and an injected file
+  ---
+  duration_ms: 153.572833
+  type: 'test'
+  ...
+# Subtest: frozen pure assets resolve after transport without Git history and reject corruption or symlink escape
+ok 48 - frozen pure assets resolve after transport without Git history and reject corruption or symlink escape
+  ---
+  duration_ms: 144.988333
+  type: 'test'
+  ...
+# Subtest: sealed cache parents cannot redirect writes and release references cannot float
+ok 49 - sealed cache parents cannot redirect writes and release references cannot float
+  ---
+  duration_ms: 50.750458
+  type: 'test'
+  ...
+# Subtest: sealed cache refuses an injected prototype-named file in the complete set
+ok 50 - sealed cache refuses an injected prototype-named file in the complete set
+  ---
+  duration_ms: 119.236583
+  type: 'test'
+  ...
+# {"clean":{"ok":true,"resolvable":true,"reason":"sealed pure assets verified byte-for-byte and whole exportDigest","resolvedSkills":["alpha","beta"],"missing":[],"source":"sealed-assets"},"modified":{"ok":false,"resolvable":false,"reason":"STATE_SYNC_REQUIRED: unexpected or missing sealed asset","resolvedSkills":[],"missing":["sealed-assets"]},"files":["__proto__","foundation-lock.json","manifest.json","source"]}
+# Subtest: legal prototype-named source files round trip byte-exact through release and sealed cache
+ok 51 - legal prototype-named source files round trip byte-exact through release and sealed cache
+  ---
+  duration_ms: 224.663041
+  type: 'test'
+  ...
+# Subtest: sealed cache complete set rejects extra special-named files, directories and symlinks
+ok 52 - sealed cache complete set rejects extra special-named files, directories and symlinks
+  ---
+  duration_ms: 355.138125
+  type: 'test'
+  ...
+# Subtest: managed hook resolver changes invalidate the lock and are sealed as explicit code assets
+ok 53 - managed hook resolver changes invalidate the lock and are sealed as explicit code assets
+  ---
+  duration_ms: 373.042708
+  type: 'test'
+  ...
+# {"before":"c90f8154a7b5ea3c72e28756614258607a18759c6f5ba12b51174d33dd99047a","after":"fc0dd2933ba9f5d38bb86a997bb4c840f3e1846c09b0076e56b44811f145bded","verify":{"ok":false,"drifts":[{"kind":"lock","item":"exportDigest","detail":"complete asset set drifted"},{"kind":"release","item":"code","detail":"project code closure bytes or complete file set differs"}]},"cacheHasResolver":true}
+# Subtest: every project code dependency and pin metadata is bound in digest, release and immutable cache
+ok 54 - every project code dependency and pin metadata is bound in digest, release and immutable cache
+  ---
+  duration_ms: 2202.779042
+  type: 'test'
+  ...
+# Subtest: transported closure executes exporter and adapter without parent source modules; missing Python refuses cleanly
+ok 55 - transported closure executes exporter and adapter without parent source modules; missing Python refuses cleanly
+  ---
+  duration_ms: 1046.325625
+  type: 'test'
+  ...
+# {"export":{"exit":0,"stdout":"✅ foundation export: 34 files under <fixture-tmp>/fdn-transport-code-aNCyve/foundation (release commit aaaaaaaa, exportDigest c90f8154a7b5)\\n","stderr":""},"verify":{"exit":0,"stdout":"✅ foundation verify: lock, sources and release view are consistent\\n","stderr":""},"adapter":{"exit":0,"stdout":"✅ hooks 策略已编译：hooks/.compiled.env + .claude/settings.json (1 deny 策略)\\n✅ selected method links installed; unrelated user entries preserved\\n","stderr":""},"gate":{"exit":2,"stderr":"❌ 禁止执行「git push --force」：blocked（hooks.yaml dangerous-command-blocklist）\\n"},"missingPython":{"exit":1,"stderr":"❌ python3 required by claude-code adapter\\n"},"parentModules":false}
+# Subtest: copied method directory symlinks refuse verification and export without changing user bytes
+ok 56 - copied method directory symlinks refuse verification and export without changing user bytes
+  ---
+  duration_ms: 103.1415
+  type: 'test'
+  ...
+# {"verify":{"ok":false,"error":"lock unreadable: symlink asset refused: skills/alpha","drifts":[]},"exportRejected":true,"error":"symlink asset refused: skills/alpha","before":"1fd0d20e25f00bb273c3891b885729613ad25d24e3f331d5ede0cdd69e681537","after":"1fd0d20e25f00bb273c3891b885729613ad25d24e3f331d5ede0cdd69e681537"}
+# Subtest: export and verify reject linked package roots, every view ancestor and output file before any mutation
+ok 57 - export and verify reject linked package roots, every view ancestor and output file before any mutation
+  ---
+  duration_ms: 983.174625
+  type: 'test'
+  ...
+# {"slot":"package-root","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+# {"slot":"package-ancestor","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+# {"slot":"foundation-lock.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+# {"slot":"release","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+# {"slot":"release/skills","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+# {"slot":"release/skills/alpha","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+# {"slot":"release/skills/alpha/SKILL.md","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+# {"slot":"release/skills/MANIFEST.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"2b5629f0d08890d8a180020d317963782175969acb5388d81adfbaadb1986bd6"}
+# {"slot":"release/hooks","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+# {"slot":"release/hooks/hooks.yaml","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+# {"slot":"release/mcp","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"57eefe7379a348936054bfef83361655671bca3cc51f34b75575fd86c4245f46"}
+# {"slot":"release/mcp/mcp.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"57eefe7379a348936054bfef83361655671bca3cc51f34b75575fd86c4245f46"}
+# Subtest: managed code/profile outputs and existing output aliases cannot redirect export or verification
+ok 58 - managed code/profile outputs and existing output aliases cannot redirect export or verification
+  ---
+  duration_ms: 2039.282459
+  type: 'test'
+  ...
+# {"slot":"release/profile","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"release/profile/binding.json","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"release/profile/comet-managed.json","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"release/code","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"release/code/tools","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"release/code/tools/bootstrap.sh","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"release/code/MANIFEST.json","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"hardlink","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"fifo","verification":false,"wholeFixtureUnchanged":true}
+# Subtest: Git exports remain verifiable after transport without Git
+ok 59 - Git exports remain verifiable after transport without Git
+  ---
+  duration_ms: 212.168834
+  type: 'test'
+  ...
+# Subtest: TeamAI packet roundtrip preserves the externally frozen full file set
+ok 60 - TeamAI packet roundtrip preserves the externally frozen full file set
+  ---
+  duration_ms: 8364.559917
+  type: 'test'
+  ...
+# Subtest: TeamAI packet rejects tamper, omission, duplicate, escape, unsafe mode and stale source before writing
+ok 61 - TeamAI packet rejects tamper, omission, duplicate, escape, unsafe mode and stale source before writing
+  ---
+  duration_ms: 6516.187125
+  type: 'test'
+  ...
+# Subtest: original Foundation CLI connects TeamAI view export and externally pinned receive
+ok 62 - original Foundation CLI connects TeamAI view export and externally pinned receive
+  ---
+  duration_ms: 8973.429833
+  type: 'test'
+  ...
+# Subtest: managed discovery links only selected methods and preserves unrelated source directories
+ok 63 - managed discovery links only selected methods and preserves unrelated source directories
+  ---
+  duration_ms: 188.052292
+  type: 'test'
+  ...
+# Subtest: managed discovery refuses old command migration inputs without deleting user data
+ok 64 - managed discovery refuses old command migration inputs without deleting user data
+  ---
+  duration_ms: 93.85575
+  type: 'test'
+  ...
+# Subtest: managed discovery refuses selected-name user directories before any configuration write
+ok 65 - managed discovery refuses selected-name user directories before any configuration write
+  ---
+  duration_ms: 103.123
+  type: 'test'
+  ...
+# Subtest: managed configuration refuses malformed settings before creating compiled policy
+ok 66 - managed configuration refuses malformed settings before creating compiled policy
+  ---
+  duration_ms: 135.021416
+  type: 'test'
+  ...
+# Subtest: managed policy output refuses an external compiled symlink without changing either tree
+ok 67 - managed policy output refuses an external compiled symlink without changing either tree
+  ---
+  duration_ms: 64.249542
+  type: 'test'
+  ...
+# {"exit":1,"stderr":"unsafe managed output; user object preserved: hooks/.compiled.env\\n","before":[["user.env","file","03f9d2650b2b33a5b04e1bd95dfaccc796f5ee48348138f5e7ebbff57de4d48d"]],"after":[["user.env","file","03f9d2650b2b33a5b04e1bd95dfaccc796f5ee48348138f5e7ebbff57de4d48d"]]}
+# Subtest: managed I/O preflights every output and ancestor for install and uninstall
+ok 68 - managed I/O preflights every output and ancestor for install and uninstall
+  ---
+  duration_ms: 479.037584
+  type: 'test'
+  ...
+# {"rel":".claude","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","link","<fixture-tmp>/foundation-io-outside-JfFYqj"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+# {"rel":".claude/skills","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/skills","link","<fixture-tmp>/foundation-io-outside-WUwdmU"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+# {"rel":".claude/settings.json","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/settings.json","link","<fixture-tmp>/foundation-io-outside-EpkTvU/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+# {"rel":"hooks","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","link","<fixture-tmp>/foundation-io-outside-Z2jfyV"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+# {"rel":"hooks/.compiled.env","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","directory"],["hooks/.compiled.env","link","<fixture-tmp>/foundation-io-outside-iNdvAc/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+# {"rel":".claude","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","link","<fixture-tmp>/foundation-io-outside-dWJLfs"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+# {"rel":".claude/skills","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/skills","link","<fixture-tmp>/foundation-io-outside-K447LK"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+# {"rel":".claude/settings.json","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/settings.json","link","<fixture-tmp>/foundation-io-outside-d1nd6I/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+# {"rel":"hooks","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","link","<fixture-tmp>/foundation-io-outside-J202Ok"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+# {"rel":"hooks/.compiled.env","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","directory"],["hooks/.compiled.env","link","<fixture-tmp>/foundation-io-outside-QF3Mp2/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+# Subtest: managed I/O preserves unowned policy, special outputs and hardlinked user files
+ok 69 - managed I/O preserves unowned policy, special outputs and hardlinked user files
+  ---
+  duration_ms: 558.842166
+  type: 'test'
+  ...
+# Subtest: managed replacement is atomic and repeat install/uninstall preserves user settings and quoted policy
+ok 70 - managed replacement is atomic and repeat install/uninstall preserves user settings and quoted policy
+  ---
+  duration_ms: 742.458125
+  type: 'test'
+  ...
+1..70
+# tests 70
+# suites 0
+# pass 66
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 43510.842166

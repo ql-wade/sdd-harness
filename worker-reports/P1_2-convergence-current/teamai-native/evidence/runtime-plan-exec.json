@@ -1,0 +1,199 @@
+{
+  "status": "PROPOSED_NOT_EXECUTED_PENDING_ROOT_RUNTIME_REVIEW",
+  "utc": "2026-10-25T10:34:24.445160+00:00",
+  "image": {
+    "id": "sha256:b05a0a6f66594050b79d06a75dc334eef33220f0fdf471e07fe4bc8fa8055766",
+    "repo_digests": [],
+    "architecture": "arm64",
+    "os": "linux",
+    "user": "node",
+    "tag": "sdd-p1-2-teamai-fixture:f22215c860bc-20261025t102715z",
+    "labels": {
+      "com.sdd.fixture.product-qualification": "none",
+      "com.sdd.fixture.project": "sdd-p1-2-teamai-fixture-f22215c860bc-20261025t102715z",
+      "com.sdd.fixture.purpose": "p1-2-teamai-distribution"
+    },
+    "bytes": 426538693
+  },
+  "docker_create_argv": [
+    "docker",
+    "create",
+    "--interactive",
+    "--pull=never",
+    "--name",
+    "sdd-p1-2-teamai-native-20261025t103424z",
+    "--label",
+    "com.sdd.fixture.project=sdd-p1-2-teamai-native-20261025t103424z",
+    "--label",
+    "com.sdd.fixture.purpose=p1-2-teamai-native-distribution",
+    "--network",
+    "none",
+    "--read-only",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--user",
+    "1000:1000",
+    "--pids-limit",
+    "128",
+    "--memory",
+    "768m",
+    "--cpus",
+    "1",
+    "--tmpfs",
+    "/home/node:rw,nosuid,nodev,noexec,uid=1000,gid=1000,mode=0700,size=64m",
+    "--tmpfs",
+    "/work:rw,nosuid,nodev,exec,uid=1000,gid=1000,mode=0700,size=512m",
+    "--tmpfs",
+    "/tmp:rw,nosuid,nodev,noexec,mode=1777,size=64m",
+    "--workdir",
+    "/home/node",
+    "--env",
+    "GIT_CONFIG_GLOBAL=/home/node/.fixture.gitconfig",
+    "--env",
+    "GIT_CONFIG_NOSYSTEM=1",
+    "--env",
+    "GIT_TERMINAL_PROMPT=0",
+    "--env",
+    "PATH=/work/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "sha256:b05a0a6f66594050b79d06a75dc334eef33220f0fdf471e07fe4bc8fa8055766",
+    "node",
+    "--input-type=module"
+  ],
+  "start_protocol": [
+    "docker",
+    "start",
+    "--attach",
+    "--interactive",
+    "sdd-p1-2-teamai-native-20261025t103424z"
+  ],
+  "stdin_protocol": "Frozen private fixture harness supplied through stdin; do not mount host paths. Freeze exact harness and public Foundation asset input SHA before execution. Native actions remain forbidden until Root review.",
+  "inspect_before_start": {
+    "expected_image": "sha256:b05a0a6f66594050b79d06a75dc334eef33220f0fdf471e07fe4bc8fa8055766",
+    "user": "1000:1000",
+    "network": "none",
+    "privileged": false,
+    "readonly_rootfs": true,
+    "cap_drop": [
+      "ALL"
+    ],
+    "security_opt": [
+      "no-new-privileges"
+    ],
+    "binds": null,
+    "host_mounts": 0,
+    "socket_mounts": 0,
+    "tmpfs_paths": [
+      "/home/node",
+      "/work",
+      "/tmp"
+    ],
+    "no_host_key_or_auth_env": true
+  },
+  "natural_home": {
+    "path": "/home/node",
+    "source": "Base image node user natural home; private empty tmpfs, not copied/bound/reassigned from host. No HOME/CODEX_HOME override."
+  },
+  "private_git": {
+    "bare": "/work/remotes/foundation.git",
+    "publisher": "/work/publisher",
+    "consumer": "/work/consumer",
+    "declared_origin": "https://teamai-fixture.invalid/sdd/foundation.git",
+    "rewrite_target": "file:///work/remotes/foundation.git",
+    "config_scope": "/home/node/.fixture.gitconfig only, no host/global modifications",
+    "config_entries": {
+      "user.name": "teamai-fixture",
+      "user.email": "fixture@invalid.example",
+      "url.file:///work/remotes/foundation.git.insteadOf": "https://teamai-fixture.invalid/sdd/foundation.git",
+      "protocol.allow": "never",
+      "protocol.file.allow": "always",
+      "credential.helper": ""
+    },
+    "branch": "master",
+    "network_transport": "local file only; all other Git protocols disabled in private configuration and OS network none"
+  },
+  "write_guard": {
+    "location": "/work/remotes/foundation.git/hooks/pre-receive",
+    "implementation": "Node hook using real /usr/bin/git, exact paths and structured JSONL audit. No second workflow/controller.",
+    "allow_only": "An update of refs/heads/master whose sole changed path is regular file members/teamai-fixture.yaml; YAML shape limited to fixture username/displayName/registeredAt. The initial public seed is created locally before installing this hook.",
+    "deny": [
+      "any refs/heads/teamai-reports or other ref",
+      "stats/sessions/votes/learnings/knowledge or any non-member path",
+      "deletion/new unexpected ref/symlink/oversize or malformed member content"
+    ],
+    "reporting_policy": "No usage/session/knowledge automatic reports. Start with zero fixture history. Every attempted non-member push is rejected and makes the experiment fail even if TeamAI catches it or exits0. Do not retry or remove the guard.",
+    "audit": [
+      "UTC + old/new/ref + exact changed path set + accepted/rejected reason",
+      "real git argv/cwd/exit via /work/bin/git wrapper delegating only to /usr/bin/git",
+      "no credential values; only dummy fixture identity exists"
+    ],
+    "calibration": "Before native commands, prove a synthetic non-member stats update is rejected and bare HEAD is unchanged. Test namespaces and branches are disposable only."
+  },
+  "teamai_native_commands": [
+    {
+      "cwd": "/work/consumer",
+      "argv": [
+        "teamai",
+        "init",
+        "https://teamai-fixture.invalid/sdd/foundation.git",
+        "--scope",
+        "project",
+        "--no-inherit-user-scope",
+        "--agent",
+        "claude",
+        "--force"
+      ]
+    },
+    {
+      "cwd": "/work/consumer",
+      "argv": [
+        "teamai",
+        "pull",
+        "--force"
+      ]
+    },
+    {
+      "cwd": "/work/consumer",
+      "argv": [
+        "teamai",
+        "pull"
+      ]
+    },
+    {
+      "cwd": "/work/consumer",
+      "argv": [
+        "teamai",
+        "uninstall",
+        "--agent",
+        "claude",
+        "--force"
+      ]
+    }
+  ],
+  "distribution_boundary": {
+    "unique_source": "Existing Foundation exporter and fixed method/profile manifest; no vendored body modification.",
+    "method_manifest_sha256": "8030fd622a48289e273e83898a44051c0b66de6b549f95b8df65dcb112e46d2e",
+    "profile_sha256": "5d2eede319ba2554f46ba851c6fa0df57791837cef858b25fe6c4ac72aaeb618",
+    "source_commit": "0c228bd9671ffb2f206ceb363f23710ac18e18d5",
+    "accepted_profile": "comet-managed-v2, remains UNQUALIFIED",
+    "native_output": "TeamAI staged tool paths only under /work/consumer/.teamai/distribution-staging; built-in codewiki/report/hooks cannot enter accepted profile discovery.",
+    "consumer": "Existing adapter plus FoundationLock exact complete-file/digest allowlist; source acceptance is not inferred from CLI exit0.",
+    "fresh_home_options": "No user inheritance; explicit sharing.recall.enabled=false, env.injectShellProfile=false, coauthor disabled, hook/MCP autoApply=false, built-in hooks disabled; verify actual assembly, not config-only counts.",
+    "next_authoring": "Prepare minimal native-format release view and fixture harness in original P1_2 owns. Preserve real RED/GREEN for init/pull/update/repeat/order/user entries/retirement/uninstall/cold discovery. No host model turn or global state access."
+  },
+  "network_attempts": "Any native outside-network attempt must remain denied by OS namespace, retain actual stderr/exit evidence and stop for Root. Do not switch sources/providers or add permissions.",
+  "not_authorized_by_this_plan": [
+    "native init/pull before Root approval",
+    "new images or dependencies",
+    "real remote push/API/model",
+    "automatic reports",
+    "product Runner/profile/AC qualification",
+    "host HOME/config/secret/socket or live repository mounts"
+  ],
+  "root_approved_single_delta": {
+    "original_plan_sha256": "798023f8881295264deb224f3ca957916d9e281339cbd3a19d2a42e9d6570c46",
+    "change": "/work tmpfs explicitly exec only; home/tmp remain noexec; all other options unchanged",
+    "basis": "actual mode755/X_OK EACCES and mount noexec; Root explicit subsequent authorization"
+  }
+}
