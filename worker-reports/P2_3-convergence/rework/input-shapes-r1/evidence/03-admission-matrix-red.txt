@@ -1,0 +1,45 @@
+TAP version 13
+# Subtest: legacy JSON matrix validates report identity versions and clocks without string coercion
+ok 1 - legacy JSON matrix validates report identity versions and clocks without string coercion
+  ---
+  duration_ms: 12.758625
+  ...
+# Subtest: legacy admission validates top-level protected dispatch and current inputs before issuing
+not ok 2 - legacy admission validates top-level protected dispatch and current inputs before issuing
+  ---
+  duration_ms: 0.8595
+  location: '<managed-worktree>/test/delivery-cli.test.js:478:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Got unwanted exception.
+    Actual message: "Cannot destructure property 'report' of 'object null' as it is null."
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+  error: "Cannot destructure property 'report' of 'object null' as it is null."
+  name: 'TypeError'
+  stack: |-
+    admitLegacyReport (file://<managed-worktree>/lib/adapters/legacy-evidence.js:131:37)
+    file://<managed-worktree>/test/delivery-cli.test.js:486:42
+    getActual (node:assert:805:5)
+    Function.doesNotThrow (node:assert:971:32)
+    refused (file://<managed-worktree>/test/delivery-cli.test.js:486:12)
+    TestContext.<anonymous> (file://<managed-worktree>/test/delivery-cli.test.js:489:54)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  operator: 'doesNotThrow'
+  stack: |-
+    refused (file://<managed-worktree>/test/delivery-cli.test.js:486:12)
+    TestContext.<anonymous> (file://<managed-worktree>/test/delivery-cli.test.js:489:54)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 1
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 91.420541

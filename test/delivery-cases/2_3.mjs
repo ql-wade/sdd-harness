@@ -17,7 +17,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import test, { after } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -30,8 +30,12 @@ const shaBytes = (data) => crypto.createHash('sha256').update(data).digest('hex'
 const sha = (label) => shaBytes(label);
 const ENVIRONMENT = 'local-node-test-env';
 
+const fixtureRoots = new Set();
+after(() => { for (const root of fixtureRoots) fs.rmSync(root, { recursive: true, force: true }); });
 function makeTmp(label) {
-  return fs.mkdtempSync(path.join(os.tmpdir(), label));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), label));
+  fixtureRoots.add(root);
+  return root;
 }
 
 // A real project whose on-disk facts match its markdown claims: the old
@@ -219,4 +223,34 @@ test('2.3 A20 (executable half): the delivery gate chain runs correctly as plain
   assert.equal(JSON.parse(scrubbed.stdout).verdict, 'pass');
   fs.rmSync(dir, { recursive: true, force: true });
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('2.3 A20 component: disabled CodeGraph and RTK do not substitute missing required evidence', async () => {
+  const root = makeMatchingProject();
+  const dir = makeTmp('sdd-p23-optional-off-');
+  try {
+    const bin = path.join(dir, 'disabled-tools'); fs.mkdirSync(bin);
+    const marker = path.join(dir, 'optional-tool-called');
+    for (const name of ['codegraph', 'code-graph', 'rtk']) {
+      const target = path.join(bin, name);
+      fs.writeFileSync(target, '#!/bin/sh\n/bin/echo called >> "' + marker + '"\nexit 97\n', { mode: 0o755 });
+    }
+    const report = await realLegacyReport(root);
+    const entry = await admittedEntryFrom(report, 'exec-optional-off');
+    const files = writeGateInputs(dir, { contract: contractFixture(), receipts: [entry] });
+    const args = ['delivery-gate', '--contract', files.contractPath, '--receipts', files.receiptsPath, '--policy', files.policyPath,
+      '--input-digest', report.evidenceSha256.sourceTree, '--builder-execution', 'builder', '--json'];
+    const env = { PATH: bin, HOME: dir };
+    const pass = runCli(args, { env });
+    assert.equal(pass.status, 0, pass.stderr || pass.stdout);
+    assert.equal(JSON.parse(pass.stdout).managedClosureEligible, false);
+    fs.writeFileSync(files.contractPath, JSON.stringify(contractFixture({ requiredChecks: [{ level: 'unit', capability: 'unit:node:test' }] })));
+    const missing = runCli(args, { env });
+    assert.equal(missing.status, 2, missing.stderr || missing.stdout);
+    assert.match(JSON.parse(missing.stdout).receipt.blocked.join('\n'), /MISSING_OBSERVATION/);
+    assert.equal(fs.existsSync(marker), false, 'optional executables are neither prerequisites nor substitutes');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

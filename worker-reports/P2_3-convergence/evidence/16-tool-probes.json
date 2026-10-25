@@ -1,0 +1,47 @@
+{
+  "probes": [
+    {
+      "command": [
+        "node@22.13.1",
+        "--version"
+      ],
+      "exit_code": 0,
+      "output": "v22.13.1\n"
+    },
+    {
+      "command": [
+        "node@22.13.1",
+        "bin/cli.js",
+        "--version"
+      ],
+      "exit_code": 0,
+      "output": "0.2.4\n"
+    },
+    {
+      "command": [
+        "node@22.13.1",
+        "bin/cli.js",
+        "--help"
+      ],
+      "exit_code": 0,
+      "output": "Usage: sdd [options] [command]\n\n团队 AI coding scaffold — 验证工具薄 CLI\n\nOptions:\n  -V, --version                  output the version number\n  -h, --help                     display help for command\n\nCommands:\n  init [options]                 初始化 scaffold（hooks + skills + MCP；等价 bash\n                                 tools/bootstrap.sh）\n  doctor                         环境与骨架自检\n  probe [options]                Evaluate deterministic browser/runtime probe\n                                 evidence\n  deliverable-audit [options]    Audit run deliverables — each completed stage\n                                 produced its expected outputs\n  workflow-audit [options]       Re-evaluate an existing run against its\n                                 current stage prerequisites\n  evidence-audit [options]       Audit evidence claims against disk facts and\n                                 captured command output\n  test-gate [options]            Run the project test suite and persist\n                                 sha256-bound evidence\n  generation-capture [options]   Capture the current test-file inventory\n                                 (before TDD generation)\n  generation-evaluate [options]  Evaluate that newly generated tests match the\n                                 inventory delta and pass\n  delivery-gate [options]        Component-only receipt coverage check; file\n                                 inputs cannot authorize managed acceptance; no\n                                 dispatch, no writes\n  knowledge-closeout [options]   Judge the R06 knowledge closeout obligations\n                                 (Kp wiki readback + Kt publish ledger + code\n                                 wiki freshness); read-only, no dispatch, no\n                                 redeploy\n  wiki                           管理 LLMWiki（init / ingest）\n  help [command]                 display help for command\n"
+    },
+    {
+      "command": [
+        "node@22.13.1",
+        "bin/cli.js",
+        "delivery-gate",
+        "--help"
+      ],
+      "exit_code": 0,
+      "output": "Usage: sdd delivery-gate [options]\n\nComponent-only receipt coverage check; file inputs cannot authorize managed\nacceptance; no dispatch, no writes\n\nOptions:\n  --contract <file>         TestContract JSON (SDD.Delivery.TestContract v1)\n  --receipts <file>         Admitted evidence entries JSON array (produced by\n                            the trusted-launcher admission path)\n  --policy <file>           Policy JSON { ref, digest }\n  --input-digest <sha256>   Current full input digest (sha256 hex)\n  --builder-execution <id>  Builder execution id\n  --json                    Print a machine-readable report (default: false)\n  -h, --help                display help for command\n"
+    }
+  ],
+  "installed_dependencies": {
+    "commander": "12.1.0",
+    "commonmark": "0.31.2",
+    "fs-extra": "11.3.3",
+    "chalk": "5.6.2"
+  },
+  "package_lock_sha256": "b71f28223acb3fef11522615dd7bf521a51d2547dc2aca96ab59efe3bc467f5e"
+}

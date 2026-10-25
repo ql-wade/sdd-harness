@@ -83,6 +83,11 @@ async function ptyClaude(prompt, { cwd, model = 'sonnet', timeoutMs = 600000 } =
 }
 
 program.name('sdd').description('团队 AI coding scaffold — 验证工具薄 CLI').version(VERSION);
+// Parser refusals obey --json too; no unknown/retired entry can dispatch.
+const jsonRequested = process.argv.slice(2).includes('--json');
+program.exitOverride().configureOutput({
+  writeErr: (text) => { if (!jsonRequested) process.stderr.write(text); },
+});
 
 // ---- init：委托 bootstrap ----
 program
@@ -360,26 +365,29 @@ program
 
 // ---- delivery-gate（SDD.Gate.v1 纯判定入口，P2_3）----
 // 只判定：evaluate(inputs, receipts, policy) 纯函数；本命令不派发、不写入、
-// 不持有 launcher secret —— receipts 必须来自受信 launcher 的准入路径。
+// 不持有 launcher secret；文件输入只作 component 机械检查，不能认证受信来源。
 // 退出码契约：0 = 判定通过；1 = 输入无效（文件不可读/schema 不符/形状错误）；
 // 2 = 判定已执行但验收失败（verdict blocked）。
 program
   .command('delivery-gate')
-  .description('Pure SDD.Gate.v1 evaluation — frozen TestContract + admitted receipts + policy; no dispatch, no writes')
+  .description('Component-only receipt coverage check; file inputs cannot authorize managed acceptance; no dispatch, no writes')
   .requiredOption('--contract <file>', 'TestContract JSON (SDD.Delivery.TestContract v1)')
-  .requiredOption('--receipts <file>', 'Admitted evidence entries JSON array (produced by the trusted-launcher admission path)')
+  .requiredOption('--receipts <file>', 'Receipt claims JSON array (mechanical file check only; no source authentication)')
   .requiredOption('--policy <file>', 'Policy JSON { ref, digest }')
   .requiredOption('--input-digest <sha256>', 'Current full input digest (sha256 hex)')
   .requiredOption('--builder-execution <id>', 'Builder execution id')
   .option('--json', 'Print a machine-readable report', false)
   .action(async (options) => {
     try {
-      const readJson = async (file) => JSON.parse(await fs.readFile(path.resolve(file), 'utf8'));
-      const parsedContract = parseContract('SDD.Delivery.TestContract', await readJson(options.contract));
-      if (!parsedContract.ok) throw new Error(`invalid TestContract: ${parsedContract.errors.join('; ')}`);
-      const receipts = await readJson(options.receipts);
+      const readJson = async (file, label) => {
+        try { return JSON.parse(await fs.readFile(path.resolve(file), 'utf8')); }
+        catch { throw new Error(`cannot read ${label} as JSON`); }
+      };
+      const parsedContract = parseContract('SDD.Delivery.TestContract', await readJson(options.contract, 'TestContract'));
+      if (!parsedContract.ok) throw new Error('invalid TestContract: required fields/version must match v1');
+      const receipts = await readJson(options.receipts, 'receipts');
       if (!Array.isArray(receipts)) throw new Error('receipts file must contain a JSON array of admitted evidence entries');
-      const policy = await readJson(options.policy);
+      const policy = await readJson(options.policy, 'policy');
       if (!/^[a-f0-9]{64}$/.test(options.inputDigest ?? '')) throw new Error('--input-digest must be a sha256 hex digest');
       if (typeof options.builderExecution !== 'string' || options.builderExecution.length === 0) throw new Error('--builder-execution must be a non-empty execution id');
       const result = evaluate(
@@ -388,9 +396,9 @@ program
         policy,
       );
       if (options.json) {
-        console.log(JSON.stringify({ schemaVersion: 1, verdict: result.verdict, receipt: result.receipt }));
+        console.log(JSON.stringify({ schemaVersion: 1, scope: result.scope, managedClosureEligible: false, verdict: result.verdict, receipt: result.receipt }));
       } else {
-        console.log(chalk.blue('\n🚦 Delivery Gate\n'));
+        console.log(chalk.blue('\n🚦 Delivery Gate (component receipt coverage; managed acceptance unverified)\n'));
         for (const reason of result.receipt.blocked) console.log(chalk.red(`❌ ${reason}`));
         console.log(`  verdict: ${result.receipt.verdict}  required checks: ${result.receipt.requiredDenominator.valid}/${result.receipt.requiredDenominator.required}`);
       }
@@ -611,4 +619,13 @@ ${sourcesContent}
     }
   });
 
-program.parse();
+try {
+  await program.parseAsync();
+} catch (error) {
+  if (error.exitCode === 0) process.exitCode = 0; // native help/version
+  else {
+    if (jsonRequested) console.log(JSON.stringify({ schemaVersion: 1, scope: 'component/cli-input', managedClosureEligible: false, pass: false, error: error.code ?? 'INVALID_INPUT', reason: error.message }));
+    else if (!error.code?.startsWith('commander.')) console.error(error.message);
+    process.exitCode = 1;
+  }
+}

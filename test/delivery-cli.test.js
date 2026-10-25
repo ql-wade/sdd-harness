@@ -25,7 +25,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import test from 'node:test';
+import test, { after } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -33,8 +33,12 @@ const cliPath = path.join(repoRoot, 'bin', 'cli.js');
 
 const sha = (label) => crypto.createHash('sha256').update(label).digest('hex');
 
+const fixtureRoots = new Set();
+after(() => { for (const root of fixtureRoots) fs.rmSync(root, { recursive: true, force: true }); });
 function makeTmp(label) {
-  return fs.mkdtempSync(path.join(os.tmpdir(), label));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), label));
+  fixtureRoots.add(root);
+  return root;
 }
 
 function makeProject({ progress = '', review = '', testOutput = '' } = {}) {
@@ -353,4 +357,163 @@ test('adapter: admission trust is untouched admitEvidence behavior — no dispat
   const replay = await admitFixtureReport(launcher, report, { issuedExecutions: [first.entry.execution] });
   assert.equal(replay.ok, false);
   assert.equal(replay.error, 'DUPLICATE_ISSUANCE');
+});
+
+test('legacy adapter cannot downgrade a protected managed caller into historical acceptance', async () => {
+  const { admitLegacyReport } = await import('../lib/adapters/legacy-evidence.js');
+  const { createLaunchAuthority } = await import('../lib/delivery/evidence.js');
+  const report = legacyReportFixture();
+  const args = { report: { ...report, profile: 'comet-managed-v2', trusted: true },
+    identity: { runnerId: 'runner-1', execution: 'exec-legacy', environment: ENVIRONMENT },
+    authority: createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') }), current: currentFor(report),
+    requireManaged: false, dispatch: { role: 'verifier', profile: 'comet-managed-v2' } };
+  const refused = admitLegacyReport(args, { requireManaged: true });
+  assert.equal(refused.ok, false);
+  assert.equal(refused.error, 'LEGACY_REPORT_NOT_MANAGED');
+});
+
+test('legacy mapping and admission always declare finite historical component scope', async () => {
+  const { adaptLegacyReport, admitLegacyReport } = await import('../lib/adapters/legacy-evidence.js');
+  const { createLaunchAuthority } = await import('../lib/delivery/evidence.js');
+  const report = legacyReportFixture();
+  const adapted = adaptLegacyReport(report, { runnerId: 'runner-1', execution: 'historical-run', environment: ENVIRONMENT });
+  const admitted = await admitFixtureReport(createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') }), report);
+  for (const result of [adapted, admitted, admitted.entry]) {
+    assert.equal(result.scope, 'component/legacy-report');
+    assert.equal(result.managedClosureEligible, false);
+  }
+  assert.equal(admitLegacyReport({ report }, { requireManaged: 'true' }).error, 'INVALID_PROTECTED_POLICY');
+});
+
+test('delivery-gate JSON labels a self-claimed pass only as an unqualified component check', async () => {
+  const dir = makeTmp('sdd-p23-untrusted-json-');
+  try {
+    const report = legacyReportFixture();
+    const digest = report.evidenceSha256.sourceTree;
+    const policy = { ref: 'untrusted-file-policy', digest: sha('file-policy') };
+    // Deliberately self-written input, never a real managed attestation.
+    const envelope = { schemaVersion: 1, candidateDigest: digest, caseId: 'c1', check: 'report:evidence-audit:v1', origin: { kind: 'legacy-report', id: 'self-claimed-runner' }, execution: { id: 'self-claimed-execution' }, environment: ENVIRONMENT, toolchain: 'fixture', executions: { total: 1, valid: 1 }, result: 'pass', evidence: [{ uri: 'historical:claim', sha256: sha('claim') }], expiry: '2099-01-01T00:00:00Z' };
+    const { envelopeDigest } = await import('../lib/delivery/evidence.js');
+    const entry = { class: 'independent-acceptance', digest: envelopeDigest(envelope), envelope,
+      origin: envelope.origin.id, execution: envelope.execution.id, profile: 'comet-managed-v2', trusted: true,
+      dispatch: { runnerId: envelope.origin.id, execution: envelope.execution.id, inputDigest: digest, policyDigest: policy.digest } };
+    const files = writeDeliveryGateInputs(dir, { contract: contractFixture(), receipts: [entry], policy });
+    const run = runCli(['delivery-gate', '--contract', files.contractPath, '--receipts', files.receiptsPath, '--policy', files.policyPath, '--input-digest', digest, '--builder-execution', 'builder', '--json']);
+    assert.equal(run.status, 0, run.stderr || run.stdout);
+    const result = parseJsonOut(run);
+    assert.equal(result.scope, 'component/receipt-coverage');
+    assert.equal(result.managedClosureEligible, false);
+    assert.equal(result.receipt.managedClosureEligible, false);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('unknown retired workflow and self-authorizing CLI inputs return explicit JSON exit1 without side effects', () => {
+  const root = makeTmp('sdd-p23-refused-entry-');
+  try {
+    const cases = [['run'], ['stage'], ['source-command-sdd-code'], ['delivery-gate'], ['delivery-gate', '--authority', 'self'], ['delivery-gate', '--secret', 'self'], ['delivery-gate', '--qualification', 'self'], ['delivery-gate', '--profile', 'comet-managed-v2']];
+    for (const args of cases) {
+      const run = spawnSync(process.execPath, [cliPath, ...args, '--json'], { cwd: root, encoding: 'utf8' });
+      assert.equal(run.status, 1, `${args}: ${run.stderr || run.stdout}`);
+      assert.ok(run.stdout.trim().startsWith('{'), 'invalid input with --json must emit a machine-readable refusal');
+      const result = JSON.parse(run.stdout);
+      assert.equal(result.pass, false);
+      assert.equal(typeof result.error, 'string');
+      assert.equal(result.managedClosureEligible, false);
+      assert.deepEqual(fs.readdirSync(root), [], 'a refused entry cannot create runtime or control state');
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('legacy protected refusal never issues a dispatch and invalid clocks return explicit refusal', async () => {
+  const { admitLegacyReport, adaptLegacyReport } = await import('../lib/adapters/legacy-evidence.js');
+  const { createLaunchAuthority } = await import('../lib/delivery/evidence.js');
+  let dispatches = 0;
+  const launcher = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+  const authority = { ...launcher, issueDispatch: (...args) => { dispatches++; return launcher.issueDispatch(...args); } };
+  const report = legacyReportFixture();
+  const result = admitLegacyReport({ report, authority, current: currentFor(report), identity: { runnerId: 'r', execution: 'e', environment: ENVIRONMENT } }, { requireManaged: true });
+  assert.equal(result.error, 'LEGACY_REPORT_NOT_MANAGED');
+  assert.equal(dispatches, 0);
+  let invalid;
+  assert.doesNotThrow(() => { invalid = adaptLegacyReport(report, { runnerId: 'r', execution: 'e', environment: ENVIRONMENT, now: 'not-a-time' }); });
+  assert.equal(invalid.ok, false);
+  assert.equal(invalid.error, 'INVALID_LEGACY_IDENTITY');
+});
+
+for (const [label, reportOverride, identityOverride] of [
+  ['null identity', {}, null],
+  ['object schemaVersion', { schemaVersion: { toString: null } }, {}],
+  ['object clock', {}, { now: { toString: null } }],
+]) {
+  test(`legacy raw JSON shape refuses ${label} without coercion or TypeError`, async () => {
+    const { adaptLegacyReport } = await import('../lib/adapters/legacy-evidence.js');
+    const identity = identityOverride === null ? null : { runnerId: 'r', execution: 'e', environment: ENVIRONMENT, ...identityOverride };
+    let result;
+    assert.doesNotThrow(() => { result = adaptLegacyReport(legacyReportFixture(reportOverride), identity); });
+    assert.equal(result.ok, false);
+    assert.equal(typeof result.error, 'string');
+    assert.equal(result.managedClosureEligible, false);
+  });
+}
+
+test('legacy JSON matrix validates report identity versions and clocks without string coercion', async () => {
+  const { adaptLegacyReport } = await import('../lib/adapters/legacy-evidence.js');
+  const identity = { runnerId: 'r', execution: 'e', environment: ENVIRONMENT };
+  const refused = (report, who) => {
+    let result; assert.doesNotThrow(() => { result = adaptLegacyReport(report, who); });
+    assert.equal(result.ok, false); assert.equal(typeof result.error, 'string');
+  };
+  for (const bad of [null, [], false, 7, 'identity']) refused(legacyReportFixture(), bad);
+  for (const bad of [undefined, null, 0, 2, '1', {}, [], { toString: null }, false]) refused(legacyReportFixture({ schemaVersion: bad }), identity);
+  for (const key of ['now', 'expiry', 'toolchain', 'reportPath']) {
+    for (const bad of [null, [], {}, { toString: null }, 7, false, '']) refused(legacyReportFixture(), { ...identity, [key]: bad });
+  }
+  for (const key of ['now', 'expiry']) refused(legacyReportFixture(), { ...identity, [key]: 'not-a-time' });
+  for (const bad of [null, [], false, 7, 'report']) refused(bad, identity);
+  for (const bad of [null, [], 'digest', { sourceTree: { toString: null } }]) refused(legacyReportFixture({ evidenceSha256: bad }), identity);
+  const good = adaptLegacyReport(legacyReportFixture(), { ...identity, now: '2026-10-25T12:00:00Z', expiry: '2026-11-01T12:00:00Z', toolchain: 'test recorder', reportPath: 'history/report.json' });
+  assert.equal(good.ok, true);
+});
+
+test('legacy admission validates top-level protected dispatch and current inputs before issuing', async () => {
+  const { admitLegacyReport } = await import('../lib/adapters/legacy-evidence.js');
+  const { createLaunchAuthority } = await import('../lib/delivery/evidence.js');
+  const report = legacyReportFixture(); let dispatches = 0;
+  const launcher = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+  const authority = { ...launcher, issueDispatch: (...args) => { dispatches++; return launcher.issueDispatch(...args); } };
+  const args = { report, identity: { runnerId: 'r', execution: 'e', environment: ENVIRONMENT }, current: currentFor(report), authority };
+  const refused = (payload, options) => { let result;
+    assert.doesNotThrow(() => { result = admitLegacyReport(payload, options); });
+    assert.equal(result.ok, false); assert.equal(typeof result.error, 'string'); assert.equal(dispatches, 0);
+  };
+  for (const bad of [null, [], false, 7, 'payload']) refused(bad);
+  for (const bad of [null, [], false, 7, 'options']) refused(args, bad);
+  for (const key of ['identity', 'dispatch', 'current', 'issuedExecutions']) {
+    for (const bad of [null, false, true, 7, 'object', ...(key === 'issuedExecutions' ? [] : [[]])]) refused({ ...args, [key]: bad });
+  }
+  for (const key of ['current', 'authority']) refused({ ...args, [key]: {} });
+  for (const key of ['inputDigest', 'policyDigest', 'environment']) refused({ ...args, current: { ...args.current, [key]: { toString: null } } });
+  for (const key of ['run', 'gate', 'role', 'inputDigest', 'policyDigest', 'attempt', 'epoch']) refused({ ...args, dispatch: { [key]: { toString: null } } });
+  for (const bad of [null, [], {}, { toString: null }, 7, false, 'not-a-time']) refused({ ...args, now: bad });
+  refused({ ...args, issuedExecutions: [null] });
+});
+
+test('delivery-gate invalid JSON returns exit1 without echoing input contents or host file paths', () => {
+  const dir = makeTmp('sdd-p23-private-input-');
+  try {
+    const files = writeDeliveryGateInputs(dir, { contract: contractFixture(), receipts: [] });
+    const bad = path.join(dir, 'private-file-name.json');
+    const args = ['delivery-gate', '--contract', bad, '--receipts', files.receiptsPath, '--policy', files.policyPath,
+      '--input-digest', sha('current'), '--builder-execution', 'builder', '--json'];
+    const sentinel = 'PRIVATE_INPUT_MUST_NOT_BE_ECHOED';
+    for (const contents of [undefined, '{"private":"' + sentinel + '"invalid}', 'null', '[]', JSON.stringify(contractFixture({ schemaVersion: { toString: null, private: sentinel } }))]) {
+      if (contents === undefined) fs.rmSync(bad, { force: true }); else fs.writeFileSync(bad, contents);
+      const run = runCli(args);
+      assert.equal(run.status, 1, run.stderr || run.stdout);
+      const result = JSON.parse(run.stdout); assert.equal(result.pass, false);
+      assert.equal(run.stdout.includes(dir), false, 'input error must not echo host path');
+      assert.equal(run.stdout.includes(sentinel), false, 'input error must not echo raw JSON');
+      assert.equal(run.stderr.includes(dir), false);
+    }
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
