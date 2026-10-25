@@ -1395,17 +1395,24 @@ export function createCliJobDriver(options = {}) {
     const selected = registration.roles.filter((role) => envelopeDigest(role) === binding?.digest && role.actionRole === action.role);
     if (selected.length !== 1) fail('ROLE_BINDING_REQUIRED');
     const role = selected[0];
-    return { job, dispatch, action, role, name: registration.namespace + '-' + role.id };
+    const legacyName = registration.namespace + '-' + role.id;
+    const slotDigest = envelopeDigest({ registration: registrationDigest, run: action.run, execution: action.execution,
+      roleBinding: envelopeDigest(role), job: envelopeDigest(job) });
+    return { job, dispatch, action, role, legacyName, name: legacyName + '-' + slotDigest };
   };
   const roleMounts = (grant) => [[grant.role.workspaceVolume, '/workspace'], ...(grant.role.containerRole === 'controller'
     ? ['state', 'receipts', 'issuance'].map((key) => [registration.controlVolumes[key], '/comet/' + key]) : [])];
   const checkEngine = () => { if (json(['info', '--format', '{{json .ID}}']) !== registration.engineId) fail('DOCKER_ENGINE_MISMATCH'); };
-  const inspect = (grant, id) => {
+  const readProcess = (id) => {
     if (typeof id !== 'string' || !/^[a-f0-9]{64}$/.test(id)) fail('PROCESS_HANDLE_INVALID');
-    const value = json(['inspect', id, '--format', PROCESS_INSPECT]);
-    if (!isObject(value) || value.id !== id || value.name !== '/' + grant.name || value.image !== registration.imageDigest
+    return json(['inspect', id, '--format', PROCESS_INSPECT]);
+  };
+  // This checks fixed physical scope, not a dispatch/execution. Peer metadata
+  // can only fence a new start; it can never mint a handle for another job.
+  const assertRegisteredProcess = (grant, id, value) => {
+    if (!isObject(value) || value.id !== id || value.image !== registration.imageDigest
       || value.project !== registration.project || value.authority !== registration.authorityId || value.workspace !== registration.workspaceId
-      || value.execution !== grant.action.execution || value.run !== grant.action.run || value.registration !== registrationDigest
+      || value.registration !== registrationDigest
       || value.user !== '10001:10001' || value.cwd !== (grant.role.containerRole === 'controller' ? '/comet/state/project' : '/workspace') || value.readOnly !== true || value.privileged !== false
       || !Array.isArray(value.capDrop) || value.capDrop.length !== 1 || value.capDrop[0] !== 'ALL'
       || value.capAdd !== null && (!Array.isArray(value.capAdd) || value.capAdd.length)
@@ -1414,15 +1421,47 @@ export function createCliJobDriver(options = {}) {
     if (!Array.isArray(mounts) || mounts.some((item) => !isObject(item) || (item.type !== 'volume' && !(item.type === 'tmpfs' && ['/tmp', '/home/comet'].includes(item.destination))))
       || mounts.filter((item) => item.type === 'volume').length !== expected.length
       || expected.some(([source, target]) => mounts.filter((item) => item.type === 'volume' && item.name === source && item.destination === target && item.rw === true).length !== 1)) fail('PROCESS_SCOPE_MISMATCH');
+  };
+  const inspect = (grant, id) => {
+    const value = readProcess(id);
+    assertRegisteredProcess(grant, id, value);
+    // The fixed legacy name is observation-only compatibility. Execution/run
+    // equality is still mandatory, including when an original handle is used.
+    if (![grant.name, grant.legacyName].some((name) => value.name === '/' + name)
+      || value.execution !== grant.action.execution || value.run !== grant.action.run) fail('PROCESS_SCOPE_MISMATCH');
     return value;
   };
+  const roleProcesses = (grant) => {
+    // Registration names permit only letters/digits/underscore/dash/dot;
+    // escape the sole regexp metacharacter instead of broad prefix matching.
+    const pattern = '^/' + grant.legacyName.replaceAll('.', '\\.') + '(-[a-f0-9]{64})?$';
+    const output = call(['container', 'ls', '--all', '--no-trunc', '--filter', 'name=' + pattern, '--format', '{{json .ID}}']);
+    if (!output) return [];
+    const ids = output.split('\n').map((line) => { try { return JSON.parse(line); } catch { fail('DOCKER_METADATA_UNVERIFIED'); } });
+    if (new Set(ids).size !== ids.length) fail('PROCESS_SCOPE_AMBIGUOUS');
+    return ids.map((id) => {
+      const value = readProcess(id);
+      assertRegisteredProcess(grant, id, value);
+      if (!nonBlank(value.execution) || !nonBlank(value.run) || typeof value.name !== 'string' || !new RegExp(pattern).test(value.name)) fail('PROCESS_SCOPE_MISMATCH');
+      return value;
+    });
+  };
   const find = (grant) => {
-    const output = call(['container', 'ls', '--all', '--no-trunc', '--filter', 'name=^/' + grant.name + '$', '--format', '{{json .ID}}']);
-    if (!output) return null;
-    const lines = output.split('\n');
-    if (lines.length !== 1) fail('PROCESS_SCOPE_AMBIGUOUS');
-    let id; try { id = JSON.parse(lines[0]); } catch { fail('DOCKER_METADATA_UNVERIFIED'); }
-    return inspect(grant, id);
+    const processes = roleProcesses(grant);
+    const original = processes.filter((value) => value.name === '/' + grant.name
+      || value.name === '/' + grant.legacyName && value.execution === grant.action.execution && value.run === grant.action.run);
+    if (original.length > 1) fail('PROCESS_SCOPE_AMBIGUOUS');
+    if (processes.some((value) => value.run === grant.action.run && value.execution === grant.action.execution
+      && ![grant.name, grant.legacyName].some((name) => value.name === '/' + name))) fail('PROCESS_SCOPE_MISMATCH');
+    return { existing: original.length ? inspect(grant, original[0].id) : null, processes };
+  };
+  const requireTerminalPeers = (processes, ownId = null) => {
+    for (const value of processes) {
+      if (value.id === ownId) continue;
+      if (value.state === 'exited' && Number.isInteger(value.exitCode) && value.exitCode >= 0) continue;
+      if (['created', 'running', 'paused', 'restarting'].includes(value.state)) fail('PROCESS_ROLE_BUSY');
+      fail('PROCESS_START_UNKNOWN');
+    }
   };
   const handle = (grant, value) => Object.freeze({ containerId: value.id, execution: grant.action.execution, run: grant.action.run,
     roleBindingId: grant.role.id, registrationDigest });
@@ -1441,9 +1480,16 @@ export function createCliJobDriver(options = {}) {
       const image = json(['image', 'inspect', registration.imageDigest, '--format', IMAGE_INSPECT]);
       if (!isObject(image) || image.id !== registration.imageDigest || image.os !== 'linux' || image.architecture !== 'arm64'
         || image.sdk !== registration.sdkFingerprint || image.bootstrap !== registration.bootstrapDigest) fail('IMAGE_BINDING_MISMATCH');
-      let existing = find(grant);
+      const resolved = find(grant);
+      let existing = resolved.existing;
       const resumed = Boolean(existing);
-      if (existing && existing.state !== 'created') return { ...observe(grant, handle(grant, existing)), resumed: true, terminal: null };
+      // An existing created/unknown process is not a fresh launch claim. Only
+      // Comet can reconcile its original starting/started/unknown record.
+      if (existing) {
+        requireTerminalPeers(resolved.processes, existing.id);
+        return { ...observe(grant, handle(grant, existing)), resumed: true, terminal: null };
+      }
+      requireTerminalPeers(resolved.processes);
       if (!existing) {
         const mounts = roleMounts(grant);
         for (const [source] of mounts) {
@@ -1461,6 +1507,11 @@ export function createCliJobDriver(options = {}) {
         for (const [source, target] of mounts) args.push('--mount', `type=volume,source=${source},target=${target},volume-nocopy`);
         args.push('--entrypoint', '/usr/local/bin/node', registration.imageDigest, '/opt/sdd/runner-host.mjs');
         const id = call(args); existing = inspect(grant, id);
+        // Recheck after create: a competing created/running slot is a fence,
+        // never permission to start a second writer or clean either resource.
+        const afterCreate = roleProcesses(grant);
+        if (!afterCreate.some((value) => value.id === existing.id)) fail('PROCESS_START_UNKNOWN');
+        requireTerminalPeers(afterCreate, existing.id);
       }
       if (existing.state !== 'created') fail('PROCESS_START_UNKNOWN');
       const original = handle(grant, existing);
@@ -1478,6 +1529,15 @@ export function createCliJobDriver(options = {}) {
       });
       child.stdin.end(JSON.stringify({ dispatch: grant.dispatch, job: grant.job }) + '\n');
       return { scope: 'component/physical-process', managedClosureEligible: false, handle: original, resumed, clientProcessId: child.pid ?? null, terminal };
+    },
+    resolveCliJob(request) {
+      const grant = authorize(request);
+      checkEngine();
+      const { existing } = find(grant);
+      const lookup = { scope: 'component/physical-process', managedClosureEligible: false, launchPermitted: false };
+      return existing
+        ? { ...lookup, found: true, status: 'FOUND', handle: handle(grant, existing), observation: existing }
+        : { ...lookup, found: false, status: 'ABSENT', handle: null, observation: null };
     },
     observeCliJob(request) {
       const grant = authorize(request);

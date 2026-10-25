@@ -1,0 +1,356 @@
+{
+  "schema_version": "test-authoring/v1",
+  "mode": "automate",
+  "status": "ready_for_acceptance",
+  "project_root": "<worker-root>",
+  "basis": [
+    {
+      "id": "R-review",
+      "kind": "requirement",
+      "path": ".local/I02-execution-slot/rework-atomic-fixture/snapshots/review.md",
+      "sha256": "9be040362c411c8097dcbb1388ce73fda955338e24688b484ecc6be034496dc9"
+    },
+    {
+      "id": "R-I02",
+      "kind": "requirement",
+      "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
+      "sha256": "b5bce9ce5c68772048700c203d84a01d049a1380f1864493cc72cf6aa4879f3d"
+    },
+    {
+      "id": "S-test",
+      "kind": "source",
+      "path": "test/infra-runner-isolation.test.js",
+      "sha256": "bbbaae1ca3504135f16d7f73e3a4c966e41cf227f1f5b457af1dbb64547098f5"
+    },
+    {
+      "id": "S-runner",
+      "kind": "source",
+      "path": "tools/infra/runner.mjs",
+      "sha256": "837751b28f1bc25ff55e5b40673e4138cbd0797acabf115f33f20363808a7072"
+    }
+  ],
+  "requirements": [
+    "R-review",
+    "R-I02"
+  ],
+  "dimensions": {
+    "Journey-A": {
+      "required": true,
+      "reason": "Fixture publication rules have fixed independent expected states.",
+      "basis_ids": [
+        "R-review",
+        "S-test"
+      ],
+      "case_ids": [
+        "published-snapshot",
+        "parallel-command-records",
+        "overlap-completion"
+      ]
+    },
+    "Journey-B": {
+      "required": false,
+      "reason": "No browser surface exists at the fake CLI fixture seam.",
+      "basis_ids": [
+        "R-review",
+        "S-test"
+      ],
+      "case_ids": []
+    },
+    "Journey-C": {
+      "required": false,
+      "reason": "No rendered/accessibility surface exists at this fixture seam.",
+      "basis_ids": [
+        "R-review",
+        "S-test"
+      ],
+      "case_ids": []
+    },
+    "Journey-D": {
+      "required": true,
+      "reason": "Held file descriptor and fresh state readback distinguish the previous and new complete snapshots.",
+      "basis_ids": [
+        "R-review",
+        "S-test"
+      ],
+      "case_ids": [
+        "published-snapshot",
+        "parallel-command-records",
+        "overlap-completion"
+      ]
+    },
+    "Journey-E": {
+      "required": false,
+      "reason": "No authorization logic is changed; original strict handle/scope cases remain in the unchanged regression suite.",
+      "basis_ids": [
+        "R-review",
+        "S-test"
+      ],
+      "case_ids": []
+    },
+    "Journey-F": {
+      "required": true,
+      "reason": "Actual executable Node CLI processes and IPC/FIFO boundaries are exercised, not real Docker.",
+      "basis_ids": [
+        "R-review",
+        "S-test"
+      ],
+      "case_ids": [
+        "published-snapshot",
+        "parallel-command-records",
+        "overlap-completion"
+      ]
+    },
+    "Journey-G": {
+      "required": true,
+      "reason": "Two publishers overlap deterministically and one completion overlaps an independent mutation without sleep/retry.",
+      "basis_ids": [
+        "R-review",
+        "S-test"
+      ],
+      "case_ids": [
+        "published-snapshot",
+        "parallel-command-records",
+        "overlap-completion"
+      ]
+    },
+    "Journey-H": {
+      "required": false,
+      "reason": "No product recovery or compensation behavior is added by the fixture publication repair.",
+      "basis_ids": [
+        "R-review",
+        "S-test"
+      ],
+      "case_ids": []
+    },
+    "Journey-I": {
+      "required": false,
+      "reason": "No product configuration, deployment or compatibility pin is modified.",
+      "basis_ids": [
+        "R-review",
+        "S-test"
+      ],
+      "case_ids": []
+    },
+    "Journey-J": {
+      "required": true,
+      "reason": "Exact original I02 suite plus new deterministic regressions and external-action guards.",
+      "basis_ids": [
+        "R-review",
+        "S-test"
+      ],
+      "case_ids": [
+        "published-snapshot",
+        "parallel-command-records",
+        "overlap-completion"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "published-snapshot",
+      "requirement_ids": [
+        "R-review",
+        "R-I02"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-D",
+        "Journey-F",
+        "Journey-G",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P2",
+      "preconditions": [
+        "Exact Node24.15.0 with rejecting external-tool PATH; generated private fake-engine fixture only."
+      ],
+      "inputs": {},
+      "steps": [
+        "Run the exact fixture regression using the recorded Node argv; do not await an original operation before its declared overlap boundary."
+      ],
+      "oracle": {
+        "basis_id": "R-review",
+        "expected": "An existing reader retains its complete old snapshot after a new state is published; new readers see the stop terminal state.",
+        "authority": "Independent Standards P2 and Root-approved fixture publication repair; no Runner or business qualification."
+      },
+      "cleanup": [
+        "Await each own child close and remove only privateRoots; real Docker/model/API is not invoked."
+      ],
+      "evidence_plan": [
+        "Raw TAP/UTC/pid/exit/source SHA and deterministic RED retained separately from GREEN."
+      ],
+      "automation": {
+        "path": "test/infra-runner-isolation.test.js",
+        "sha256": "bbbaae1ca3504135f16d7f73e3a4c966e41cf227f1f5b457af1dbb64547098f5",
+        "test_id": "execution slot fixture publishes state snapshots without truncating an existing reader",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern=execution slot fixture",
+          "test/infra-runner-isolation.test.js"
+        ]
+      }
+    },
+    {
+      "id": "parallel-command-records",
+      "requirement_ids": [
+        "R-review",
+        "R-I02"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-D",
+        "Journey-F",
+        "Journey-G",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P2",
+      "preconditions": [
+        "Exact Node24.15.0 with rejecting external-tool PATH; generated private fake-engine fixture only."
+      ],
+      "inputs": {},
+      "steps": [
+        "Run the exact fixture regression using the recorded Node argv; do not await an original operation before its declared overlap boundary."
+      ],
+      "oracle": {
+        "basis_id": "R-review",
+        "expected": "Two successful overlapping info CLI processes retain exactly two independently parseable records and cannot change engine state.",
+        "authority": "Independent Standards P2 and Root-approved fixture publication repair; no Runner or business qualification."
+      },
+      "cleanup": [
+        "Await each own child close and remove only privateRoots; real Docker/model/API is not invoked."
+      ],
+      "evidence_plan": [
+        "Raw TAP/UTC/pid/exit/source SHA and deterministic RED retained separately from GREEN."
+      ],
+      "automation": {
+        "path": "test/infra-runner-isolation.test.js",
+        "sha256": "bbbaae1ca3504135f16d7f73e3a4c966e41cf227f1f5b457af1dbb64547098f5",
+        "test_id": "execution slot fixture retains both command records at an overlapping publication boundary",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern=execution slot fixture",
+          "test/infra-runner-isolation.test.js"
+        ]
+      }
+    },
+    {
+      "id": "overlap-completion",
+      "requirement_ids": [
+        "R-review",
+        "R-I02"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-D",
+        "Journey-F",
+        "Journey-G",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P2",
+      "preconditions": [
+        "Exact Node24.15.0 with rejecting external-tool PATH; generated private fake-engine fixture only."
+      ],
+      "inputs": {},
+      "steps": [
+        "Run the exact fixture regression using the recorded Node argv; do not await an original operation before its declared overlap boundary."
+      ],
+      "oracle": {
+        "basis_id": "R-review",
+        "expected": "The delayed stdin completion changes only its original operation and retains an independently published peer and note.",
+        "authority": "Independent Standards P2 and Root-approved fixture publication repair; no Runner or business qualification."
+      },
+      "cleanup": [
+        "Await each own child close and remove only privateRoots; real Docker/model/API is not invoked."
+      ],
+      "evidence_plan": [
+        "Raw TAP/UTC/pid/exit/source SHA and deterministic RED retained separately from GREEN."
+      ],
+      "automation": {
+        "path": "test/infra-runner-isolation.test.js",
+        "sha256": "bbbaae1ca3504135f16d7f73e3a4c966e41cf227f1f5b457af1dbb64547098f5",
+        "test_id": "execution slot fixture completion preserves state changes published while stdin is still open",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern=execution slot fixture",
+          "test/infra-runner-isolation.test.js"
+        ]
+      }
+    }
+  ],
+  "unresolved": [],
+  "self_checks": [
+    {
+      "command": [
+        "<node24-bin>/node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-name-pattern=execution slot fixture",
+        "test/infra-runner-isolation.test.js"
+      ],
+      "exit_code": 1,
+      "expected": "expected_failure",
+      "log_path": ".local/I02-execution-slot/rework-atomic-fixture/raw/red-publication.stdout.txt",
+      "log_sha256": "07dc2c443352e3de1beae5425a0768e799fbf6bb70c0dfcfeda98ecd7acbef8a"
+    },
+    {
+      "command": [
+        "<node24-bin>/node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-name-pattern=execution slot fixture completion",
+        "test/infra-runner-isolation.test.js"
+      ],
+      "exit_code": 1,
+      "expected": "expected_failure",
+      "log_path": ".local/I02-execution-slot/rework-atomic-fixture/raw/red-overlap-completion.stdout.txt",
+      "log_sha256": "dcc5bca2787f90d3def46d708e49b1751337879cfed982d6393402988aa58580"
+    },
+    {
+      "command": [
+        "<node24-bin>/node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-name-pattern=execution slot fixture",
+        "test/infra-runner-isolation.test.js"
+      ],
+      "exit_code": 0,
+      "expected": "pass",
+      "log_path": ".local/I02-execution-slot/rework-atomic-fixture/raw/green-publication.stdout.txt",
+      "log_sha256": "a126361905c850147afa5415ed7b994ff6d79abb9bdac7fec5d54626a2393b0c"
+    },
+    {
+      "command": [
+        "<node24-bin>/node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-name-pattern=execution slot",
+        "test/infra-runner-isolation.test.js"
+      ],
+      "exit_code": 0,
+      "expected": "pass",
+      "log_path": ".local/I02-execution-slot/rework-atomic-fixture/raw/green-slots.stdout.txt",
+      "log_sha256": "5d356f85cfb0f88d58a7d34b205d168d4fe150b8ec9c8e09b801ba4d87c4721e"
+    },
+    {
+      "command": [
+        "<node24-bin>/node",
+        "--test",
+        "--test-reporter=tap",
+        "test/infra-runner-isolation.test.js"
+      ],
+      "exit_code": 0,
+      "expected": "pass",
+      "log_path": ".local/I02-execution-slot/rework-atomic-fixture/raw/green-full-runner.stdout.txt",
+      "log_sha256": "0eea06f6f23238c8bbf6f8f6f4a29e4085be5fd3f8ec08bdac988a705b2d706b"
+    }
+  ],
+  "scope_note": "Author handoff for the three fixture regressions only; ready_for_acceptance is not business acceptance. Original89 remain in full92 unchanged."
+}

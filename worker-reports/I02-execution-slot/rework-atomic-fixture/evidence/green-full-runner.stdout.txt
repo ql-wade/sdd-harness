@@ -1,0 +1,566 @@
+TAP version 13
+# Subtest: V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract
+ok 1 - V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract
+  ---
+  duration_ms: 382.175708
+  type: 'test'
+  ...
+# Subtest: RED role gate: role-policy without role definitions, missing principal bindings or reused principals is rejected
+ok 2 - RED role gate: role-policy without role definitions, missing principal bindings or reused principals is rejected
+  ---
+  duration_ms: 358.424209
+  type: 'test'
+  ...
+# Subtest: image admission gates stay coherent with the committed lock state (state-agnostic)
+ok 3 - image admission gates stay coherent with the committed lock state (state-agnostic)
+  ---
+  duration_ms: 174.882542
+  type: 'test'
+  ...
+# Subtest: RED image gate: floating tag rejected; malformed digest rejected; unauthenticated digest never reaches ready
+ok 4 - RED image gate: floating tag rejected; malformed digest rejected; unauthenticated digest never reaches ready
+  ---
+  duration_ms: 446.774584
+  type: 'test'
+  ...
+# Subtest: RED compose gate: host sensitive mounts (/Users, host HOME, docker.sock) and non-loopback ports are rejected
+ok 5 - RED compose gate: host sensitive mounts (/Users, host HOME, docker.sock) and non-loopback ports are rejected
+  ---
+  duration_ms: 379.518958
+  type: 'test'
+  ...
+# Subtest: RED compose gate: read-only rootfs, minimal capabilities, internal network and per-role services are enforced
+ok 6 - RED compose gate: read-only rootfs, minimal capabilities, internal network and per-role services are enforced
+  ---
+  duration_ms: 462.731291
+  type: 'test'
+  ...
+# Subtest: RED workspace gate: worker-writable control paths and host bind mounts are rejected
+ok 7 - RED workspace gate: worker-writable control paths and host bind mounts are rejected
+  ---
+  duration_ms: 364.776916
+  type: 'test'
+  ...
+# Subtest: RED authority gate: duplicate registrations, copied state and concurrent writers are rejected
+ok 8 - RED authority gate: duplicate registrations, copied state and concurrent writers are rejected
+  ---
+  duration_ms: 364.762667
+  type: 'test'
+  ...
+# Subtest: RED secret tier gate: ordinary roles cannot reach publisher/isolator-tier refs (I01 resolution semantics reused)
+ok 9 - RED secret tier gate: ordinary roles cannot reach publisher/isolator-tier refs (I01 resolution semantics reused)
+  ---
+  duration_ms: 181.404
+  type: 'test'
+  ...
+# Subtest: RED method-state gate: shared mode state never becomes identity/permission basis, never enters worker-writable surfaces
+ok 10 - RED method-state gate: shared mode state never becomes identity/permission basis, never enters worker-writable surfaces
+  ---
+  duration_ms: 358.423791
+  type: 'test'
+  ...
+# Subtest: probes and stop are real subcommands: without a runner runtime they exit 2 with structured UNVERIFIED, never mock-green, never skip
+ok 11 - probes and stop are real subcommands: without a runner runtime they exit 2 with structured UNVERIFIED, never mock-green, never skip
+  ---
+  duration_ms: 216.431334
+  type: 'test'
+  ...
+# Subtest: stop without a runner started by this tool is honestly UNVERIFIED and refuses
+ok 12 - stop without a runner started by this tool is honestly UNVERIFIED and refuses
+  ---
+  duration_ms: 84.69725
+  type: 'test'
+  ...
+# Subtest: RoleBoundary.v1 / Authority.v1 contract holds on committed files; refs are referenced, never valued
+ok 13 - RoleBoundary.v1 / Authority.v1 contract holds on committed files; refs are referenced, never valued
+  ---
+  duration_ms: 1.726208
+  type: 'test'
+  ...
+# Subtest: catalog gap reporting: registered refs read RECORDED; a missing ref is still explicit readiness evidence, never silent
+ok 14 - catalog gap reporting: registered refs read RECORDED; a missing ref is still explicit readiness evidence, never silent
+  ---
+  duration_ms: 360.946917
+  type: 'test'
+  ...
+# Subtest: RW_RUNNER_BUILD: committed image lock mirrors the seven-patch upstream lock (patches, toolchain, openspec pin, freshly recomputed fingerprint)
+ok 15 - RW_RUNNER_BUILD: committed image lock mirrors the seven-patch upstream lock (patches, toolchain, openspec pin, freshly recomputed fingerprint)
+  ---
+  duration_ms: 1.7305
+  type: 'test'
+  ...
+# Subtest: RW_RUNNER_BUILD: committed Dockerfile consumes the full ordered patch chain and pins a deterministic managed entrypoint
+ok 16 - RW_RUNNER_BUILD: committed Dockerfile consumes the full ordered patch chain and pins a deterministic managed entrypoint
+  ---
+  duration_ms: 0.777417
+  type: 'test'
+  ...
+# Subtest: RW_RUNNER_BUILD: validate enforces chain completeness, deterministic entrypoint, fingerprint freshness and upstream mirroring
+ok 17 - RW_RUNNER_BUILD: validate enforces chain completeness, deterministic entrypoint, fingerprint freshness and upstream mirroring
+  ---
+  duration_ms: 626.402958
+  type: 'test'
+  ...
+# Subtest: RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that drifts from upstream refuses
+ok 18 - RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that drifts from upstream refuses
+  ---
+  duration_ms: 206.709583
+  type: 'test'
+  ...
+# Subtest: RW_RUNNER_BUILD: a missing project directory is a real ENOENT refusal by the build tool (no fabricated pass)
+ok 19 - RW_RUNNER_BUILD: a missing project directory is a real ENOENT refusal by the build tool (no fabricated pass)
+  ---
+  duration_ms: 37.483417
+  type: 'test'
+  ...
+# Subtest: RW_RUNNER_BUILD: control-plane declarations align with the P2_4 runtime bindings; project root is a read-only boundary
+ok 20 - RW_RUNNER_BUILD: control-plane declarations align with the P2_4 runtime bindings; project root is a read-only boundary
+  ---
+  duration_ms: 0.285417
+  type: 'test'
+  ...
+# Subtest: all Runner entrypoints reject malformed reference catalogs structurally before any runtime action
+    # Subtest: validate
+    ok 1 - validate
+      ---
+      duration_ms: 41.16525
+      type: 'test'
+      ...
+    # Subtest: qualify
+    ok 2 - qualify
+      ---
+      duration_ms: 39.668333
+      type: 'test'
+      ...
+    # Subtest: up
+    ok 3 - up
+      ---
+      duration_ms: 39.343459
+      type: 'test'
+      ...
+    # Subtest: probe
+    ok 4 - probe
+      ---
+      duration_ms: 39.692208
+      type: 'test'
+      ...
+    # Subtest: build-plan
+    ok 5 - build-plan
+      ---
+      duration_ms: 40.053584
+      type: 'test'
+      ...
+    1..5
+ok 21 - all Runner entrypoints reject malformed reference catalogs structurally before any runtime action
+  ---
+  duration_ms: 200.419834
+  type: 'test'
+  ...
+# Subtest: Runner Compose security uses actual YAML semantics for quoted keys, flow mounts and named-volume drivers
+    # Subtest: quoted flow volume
+    ok 1 - quoted flow volume
+      ---
+      duration_ms: 127.611875
+      type: 'test'
+      ...
+    # Subtest: quoted privilege
+    ok 2 - quoted privilege
+      ---
+      duration_ms: 125.284375
+      type: 'test'
+      ...
+    # Subtest: named volume remapped to host
+    ok 3 - named volume remapped to host
+      ---
+      duration_ms: 129.97575
+      type: 'test'
+      ...
+    1..3
+ok 22 - Runner Compose security uses actual YAML semantics for quoted keys, flow mounts and named-volume drivers
+  ---
+  duration_ms: 383.231125
+  type: 'test'
+  ...
+# Subtest: CLI-only Runner refuses retired endpoint selection before any network or runtime observation
+ok 23 - CLI-only Runner refuses retired endpoint selection before any network or runtime observation
+  ---
+  duration_ms: 37.91125
+  type: 'test'
+  ...
+# Subtest: controller-fixed CLI job driver exposes physical lifecycle without issuing a dispatch or accepting job-selected authority
+ok 24 - controller-fixed CLI job driver exposes physical lifecycle without issuing a dispatch or accepting job-selected authority
+  ---
+  duration_ms: 4.565708
+  type: 'test'
+  ...
+# Subtest: CLI job registration cannot give a worker the control volume or share registered role identities
+ok 25 - CLI job registration cannot give a worker the control volume or share registered role identities
+  ---
+  duration_ms: 100.397708
+  type: 'test'
+  ...
+# Subtest: physical CLI job lifecycle preserves one authorized execution and cannot expand its fixed registration
+ok 26 - physical CLI job lifecycle preserves one authorized execution and cannot expand its fixed registration
+  ---
+  duration_ms: 1122.108125
+  type: 'test'
+  ...
+# Subtest: Runner public input matrix rejects null, wrong containers and null elements across every shared caller
+    # Subtest: refs root null
+    ok 1 - refs root null
+      ---
+      duration_ms: 204.721291
+      type: 'test'
+      ...
+    # Subtest: refs not array
+    ok 2 - refs not array
+      ---
+      duration_ms: 204.02625
+      type: 'test'
+      ...
+    # Subtest: refs null element
+    ok 3 - refs null element
+      ---
+      duration_ms: 203.864625
+      type: 'test'
+      ...
+    # Subtest: registry root null
+    ok 4 - registry root null
+      ---
+      duration_ms: 203.56975
+      type: 'test'
+      ...
+    # Subtest: registry null project
+    ok 5 - registry null project
+      ---
+      duration_ms: 202.795166
+      type: 'test'
+      ...
+    # Subtest: registry null github
+    ok 6 - registry null github
+      ---
+      duration_ms: 226.271709
+      type: 'test'
+      ...
+    # Subtest: registry null resource
+    ok 7 - registry null resource
+      ---
+      duration_ms: 202.0315
+      type: 'test'
+      ...
+    # Subtest: policy null
+    ok 8 - policy null
+      ---
+      duration_ms: 210.266709
+      type: 'test'
+      ...
+    # Subtest: policy roles object
+    ok 9 - policy roles object
+      ---
+      duration_ms: 200.007417
+      type: 'test'
+      ...
+    # Subtest: policy categories null
+    ok 10 - policy categories null
+      ---
+      duration_ms: 215.065333
+      type: 'test'
+      ...
+    # Subtest: image null
+    ok 11 - image null
+      ---
+      duration_ms: 223.9305
+      type: 'test'
+      ...
+    # Subtest: image future schema
+    ok 12 - image future schema
+      ---
+      duration_ms: 286.408333
+      type: 'test'
+      ...
+    # Subtest: image components object
+    ok 13 - image components object
+      ---
+      duration_ms: 205.590459
+      type: 'test'
+      ...
+    # Subtest: image component null
+    ok 14 - image component null
+      ---
+      duration_ms: 210.545917
+      type: 'test'
+      ...
+    # Subtest: source null
+    ok 15 - source null
+      ---
+      duration_ms: 204.357042
+      type: 'test'
+      ...
+    # Subtest: patch null
+    ok 16 - patch null
+      ---
+      duration_ms: 204.872458
+      type: 'test'
+      ...
+    # Subtest: roles null document
+    ok 17 - roles null document
+      ---
+      duration_ms: 207.899959
+      type: 'test'
+      ...
+    # Subtest: roles object
+    ok 18 - roles object
+      ---
+      duration_ms: 211.390667
+      type: 'test'
+      ...
+    # Subtest: roles null element
+    ok 19 - roles null element
+      ---
+      duration_ms: 206.243041
+      type: 'test'
+      ...
+    # Subtest: runnerRefs object
+    ok 20 - runnerRefs object
+      ---
+      duration_ms: 207.962917
+      type: 'test'
+      ...
+    # Subtest: mounts root array
+    ok 21 - mounts root array
+      ---
+      duration_ms: 210.469625
+      type: 'test'
+      ...
+    # Subtest: mount null control
+    ok 22 - mount null control
+      ---
+      duration_ms: 207.237917
+      type: 'test'
+      ...
+    # Subtest: mount null workspace
+    ok 23 - mount null workspace
+      ---
+      duration_ms: 204.318541
+      type: 'test'
+      ...
+    # Subtest: mount worker list object
+    ok 24 - mount worker list object
+      ---
+      duration_ms: 207.001083
+      type: 'test'
+      ...
+    # Subtest: authority root null
+    ok 25 - authority root null
+      ---
+      duration_ms: 206.533333
+      type: 'test'
+      ...
+    # Subtest: authority registrations object
+    ok 26 - authority registrations object
+      ---
+      duration_ms: 209.185166
+      type: 'test'
+      ...
+    # Subtest: authority null registration
+    ok 27 - authority null registration
+      ---
+      duration_ms: 207.407042
+      type: 'test'
+      ...
+    1..27
+ok 27 - Runner public input matrix rejects null, wrong containers and null elements across every shared caller
+  ---
+  duration_ms: 5696.243833
+  type: 'test'
+  ...
+# Subtest: Runner diagnostics never echo malformed JSON or input paths and preserve actual input byte hashes
+ok 28 - Runner diagnostics never echo malformed JSON or input paths and preserve actual input byte hashes
+  ---
+  duration_ms: 245.54625
+  type: 'test'
+  ...
+# Subtest: Runner build export uses a dedicated allowlisted context rather than the checkout root
+ok 29 - Runner build export uses a dedicated allowlisted context rather than the checkout root
+  ---
+  duration_ms: 90.745125
+  type: 'test'
+  ...
+# Subtest: Runner materializes and reuses only exact public input bytes in an isolated build context without building
+ok 30 - Runner materializes and reuses only exact public input bytes in an isolated build context without building
+  ---
+  duration_ms: 647.461708
+  type: 'test'
+  ...
+# Subtest: Runner refuses every unlisted or linked context path without changing the conflicting tree
+    # Subtest: extra root .env
+    ok 1 - extra root .env
+      ---
+      duration_ms: 717.726916
+      type: 'test'
+      ...
+    # Subtest: nested extra file
+    ok 2 - nested extra file
+      ---
+      duration_ms: 774.261
+      type: 'test'
+      ...
+    # Subtest: extra empty directory
+    ok 3 - extra empty directory
+      ---
+      duration_ms: 737.358625
+      type: 'test'
+      ...
+    # Subtest: nested extra directory
+    ok 4 - nested extra directory
+      ---
+      duration_ms: 690.959791
+      type: 'test'
+      ...
+    # Subtest: changed manifest bytes
+    ok 5 - changed manifest bytes
+      ---
+      duration_ms: 692.638792
+      type: 'test'
+      ...
+    # Subtest: manifest file symlink to matching bytes
+    ok 6 - manifest file symlink to matching bytes
+      ---
+      duration_ms: 743.27825
+      type: 'test'
+      ...
+    # Subtest: manifest ancestor directory symlink
+    ok 7 - manifest ancestor directory symlink
+      ---
+      duration_ms: 806.713083
+      type: 'test'
+      ...
+    # Subtest: context root symlink
+    ok 8 - context root symlink
+      ---
+      duration_ms: 723.987583
+      type: 'test'
+      ...
+    # Subtest: context parent symlink
+    ok 9 - context parent symlink
+      ---
+      duration_ms: 721.324625
+      type: 'test'
+      ...
+    # Subtest: .local ancestor symlink
+    ok 10 - .local ancestor symlink
+      ---
+      duration_ms: 719.303291
+      type: 'test'
+      ...
+    # Subtest: dangling extra symlink
+    ok 11 - dangling extra symlink
+      ---
+      duration_ms: 683.463625
+      type: 'test'
+      ...
+    # Subtest: extra special FIFO
+    ok 12 - extra special FIFO
+      ---
+      duration_ms: 690.637
+      type: 'test'
+      ...
+    # Subtest: manifest path special FIFO
+    ok 13 - manifest path special FIFO
+      ---
+      duration_ms: 721.529667
+      type: 'test'
+      ...
+    # Subtest: missing manifest file
+    ok 14 - missing manifest file
+      ---
+      duration_ms: 705.723959
+      type: 'test'
+      ...
+    # Subtest: first export beneath a linked parent
+    ok 15 - first export beneath a linked parent
+      ---
+      duration_ms: 647.770917
+      type: 'test'
+      ...
+    1..15
+ok 31 - Runner refuses every unlisted or linked context path without changing the conflicting tree
+  ---
+  duration_ms: 10778.329917
+  type: 'test'
+  ...
+# Subtest: execution slot permits a new authorized job after the same role terminal execution without weakening old handle checks
+ok 32 - execution slot permits a new authorized job after the same role terminal execution without weakening old handle checks
+  ---
+  duration_ms: 1447.984583
+  type: 'test'
+  ...
+# Subtest: execution slot cold resolution is read-only and ABSENT never grants launch permission
+ok 33 - execution slot cold resolution is read-only and ABSENT never grants launch permission
+  ---
+  duration_ms: 1471.3405
+  type: 'test'
+  ...
+# Subtest: execution slot refuses old active or unknown role writers without creating a new job
+ok 34 - execution slot refuses old active or unknown role writers without creating a new job
+  ---
+  duration_ms: 2144.343417
+  type: 'test'
+  ...
+# Subtest: execution slot observes a created original resource after an unknown start without starting it again
+ok 35 - execution slot observes a created original resource after an unknown start without starting it again
+  ---
+  duration_ms: 1134.643917
+  type: 'test'
+  ...
+# Subtest: execution slot preserves exact legacy observation but rejects copied handles and changed scope
+ok 36 - execution slot preserves exact legacy observation but rejects copied handles and changed scope
+  ---
+  duration_ms: 2207.603375
+  type: 'test'
+  ...
+# Subtest: execution slot metadata failures never masquerade as absence or authorize a fresh start
+ok 37 - execution slot metadata failures never masquerade as absence or authorize a fresh start
+  ---
+  duration_ms: 684.54425
+  type: 'test'
+  ...
+# Subtest: execution slot rechecks peers after create and leaves uncertain resources for the original Comet to reconcile
+ok 38 - execution slot rechecks peers after create and leaves uncertain resources for the original Comet to reconcile
+  ---
+  duration_ms: 1198.425041
+  type: 'test'
+  ...
+# Subtest: execution slot treats registered namespace dots literally and never adopts a lookalike namespace
+ok 39 - execution slot treats registered namespace dots literally and never adopts a lookalike namespace
+  ---
+  duration_ms: 864.427833
+  type: 'test'
+  ...
+# Subtest: execution slot fixture publishes state snapshots without truncating an existing reader
+ok 40 - execution slot fixture publishes state snapshots without truncating an existing reader
+  ---
+  duration_ms: 827.898709
+  type: 'test'
+  ...
+# Subtest: execution slot fixture retains both command records at an overlapping publication boundary
+ok 41 - execution slot fixture retains both command records at an overlapping publication boundary
+  ---
+  duration_ms: 47.669083
+  type: 'test'
+  ...
+# Subtest: execution slot fixture completion preserves state changes published while stdin is still open
+ok 42 - execution slot fixture completion preserves state changes published while stdin is still open
+  ---
+  duration_ms: 39.978
+  type: 'test'
+  ...
+1..42
+# tests 92
+# suites 0
+# pass 92
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 36455.187333

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -1227,4 +1227,385 @@ test('Runner refuses every unlisted or linked context path without changing the 
     const reused = invoke(); assert.equal(reused.status, 0);
     assert.equal(parseJsonOut(reused, 'restored context').dockerBuild.materialized, true);
   });
+});
+
+// An executable Node fake implements only the pinned Docker CLI process
+// protocol. Its private containers.json is fixture engine data, never a
+// product slot/lease table, role qualification, or real Docker observation.
+function publishExecutionFixtureJson(file, value) {
+  const pending = file + '.' + process.pid + '.' + crypto.randomUUID() + '.tmp';
+  try {
+    fs.writeFileSync(pending, JSON.stringify(value), { flag: 'wx' });
+    fs.renameSync(pending, file);
+  } finally { fs.rmSync(pending, { force: true }); }
+}
+
+async function executionSlotFixture({ namespace } = {}) {
+  const { createCliJobDriver } = await import(new URL('../tools/infra/runner.mjs', import.meta.url));
+  const { createLaunchAuthority, envelopeDigest } = await import(new URL('../lib/delivery/evidence.js', import.meta.url));
+  const root = privateTmp('i02-execution-slot-'), stateFile = path.join(root, 'containers.json'), traceFile = path.join(root, 'trace');
+  fs.mkdirSync(traceFile);
+  const registration = processRegistrationFixture(), binary = path.join(root, 'fake-docker.mjs');
+  if (namespace) {
+    const before = registration.namespace;
+    registration.namespace = namespace;
+    for (const key of Object.keys(registration.controlVolumes)) registration.controlVolumes[key] = registration.controlVolumes[key].replace(before, namespace);
+    for (const role of registration.roles) role.workspaceVolume = role.workspaceVolume.replace(before, namespace);
+  }
+  const script = String.raw`#!${process.execPath}
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+${publishExecutionFixtureJson.toString()}
+const file=${JSON.stringify(stateFile)}, traceFile=${JSON.stringify(traceFile)}, reg=${JSON.stringify(registration)};
+const args=process.argv.slice(2);
+if(args[0]!=='--context'||args[1]!==reg.dockerContext) process.exit(96);
+args.splice(0,2);
+// Independent immutable command records cannot lose another process's event.
+publishExecutionFixtureJson(path.join(traceFile,crypto.randomUUID()+'.json'),args);
+const read=()=>fs.existsSync(file)?JSON.parse(fs.readFileSync(file)):{containers:[],starts:0};
+const state=read();
+const save=(value=state)=>publishExecutionFixtureJson(file,value);
+const out=value=>process.stdout.write(JSON.stringify(value)+'\n');
+if(args[0]==='info') out(reg.engineId);
+else if(args[0]==='image') out({id:reg.imageDigest,os:'linux',architecture:'arm64',sdk:reg.sdkFingerprint,bootstrap:reg.bootstrapDigest});
+else if(args[0]==='volume') out({name:args[2],driver:'local',hasOptions:false,project:reg.project,authority:reg.authorityId,workspace:reg.workspaceId});
+else if(args[0]==='container'&&args[1]==='ls') {
+  if(state.listError) process.exit(91);
+  if(state.listMalformed) process.stdout.write('not-json\n');
+  else {
+    const filters=args.flatMap((value,index)=>value==='--filter'?[args[index+1]]:[]);
+    for(const value of state.containers) {
+      const matches=filters.every(filter=>filter.startsWith('name=')&&new RegExp(filter.slice(5)).test(value.name));
+      if(matches) out(value.id);
+    }
+  }
+} else if(args[0]==='create') {
+  const name='/'+args[args.indexOf('--name')+1];
+  if(state.containers.some(value=>value.name===name)) process.exit(92);
+  const labels={};for(let i=0;i<args.length;i++) if(args[i]==='--label') {const [key,...rest]=args[i+1].split('=');labels[key]=rest.join('=');}
+  state.sequence=(state.sequence??state.containers.length)+1;
+  const id=state.sequence.toString(16).padStart(64,'0');
+  state.containers.push({id,name,cwd:args[args.indexOf('--workdir')+1],mounts:args.filter(value=>value.startsWith('type=volume,')).map(value=>{const fields=Object.fromEntries(value.split(',').map(part=>part.split('=')));return {type:fields.type,name:fields.source,destination:fields.target,rw:true};}),image:reg.imageDigest,state:'created',exitCode:0,user:'10001:10001',readOnly:true,privileged:false,capDrop:['ALL'],capAdd:null,securityOpt:['no-new-privileges:true'],network:'none',project:labels['sdd.project'],authority:labels['sdd.authority'],workspace:labels['sdd.workspace'],execution:labels['sdd.execution'],run:labels['sdd.run'],registration:labels['sdd.registration']});
+  if(state.peerAfterCreate) {state.containers.push(state.peerAfterCreate);delete state.peerAfterCreate;}
+  save();process.stdout.write(id+'\n');
+} else if(args[0]==='inspect') {
+  const value=state.containers.find(value=>value.id===args[1]);if(!value) process.exit(93);out(value);
+} else if(args[0]==='start') {
+  const value=state.containers.find(value=>value.id===args.at(-1));if(!value||value.state!=='created') process.exit(94);
+  state.starts++;value.state='running';save();process.send?.({boundary:'running-published'});let input='';process.stdin.on('data',bytes=>input+=bytes);
+  process.stdin.on('end',()=>{const packet=JSON.parse(input);if(packet.job.execution!==value.execution||packet.job.run!==value.run) process.exit(95);
+    // stdin may stay open while independent fixture state is published.
+    const latest=read(), finished=latest.containers.find(item=>item.id===value.id);
+    if(!finished||finished.execution!==value.execution||finished.run!==value.run) process.exit(95);
+    finished.state='exited';save(latest);out({fixtureOnly:true,execution:packet.job.execution});});
+} else if(args[0]==='stop') {
+  const value=state.containers.find(value=>value.id===args.at(-1));if(!value) process.exit(93);value.state='exited';value.exitCode=143;save();out(value.id);
+} else process.exit(97);
+`;
+  fs.writeFileSync(binary, script); fs.chmodSync(binary, 0o755);
+  const secret = crypto.randomBytes(32).toString('hex');
+  const authority = createLaunchAuthority({ secret });
+  const options = { authority, registration, dockerExecutable: binary, dockerSha256: sha256File(binary) };
+  const driver = createCliJobDriver(options);
+  const request = (execution, { run = 'fixture-original-run', argv = ['fixture-command'], roleId = 'author' } = {}) => {
+    const role = registration.roles.find(value => value.id === roleId);
+    const job = { schemaVersion: 1, run, execution, argv };
+    const action = { schemaVersion: 1, profile: 'comet-managed-v2', runnerId: 'fixture-runner', run, gate: 'R', action: 'fixture-role-command', execution,
+      role: role.actionRole, revision: 'fixture-r1', attempt: 1, epoch: 1, inputDigest: 'd'.repeat(64), policyDigest: 'e'.repeat(64), environmentDigest: 'f'.repeat(64),
+      workPackage: { id: 'I02-execution-slot-component', taskIds: ['I02'] }, methods: [{ name: 'tdd', version: 'fixture-only', ref: '.agents/skills/tdd/SKILL.md', digest: '1'.repeat(64) }],
+      allowedPaths: ['fixture'], allowedTools: ['read_file'], inputs: [
+        { name: 'runner-job', ref: 'fixture/job.json', digest: envelopeDigest(job) },
+        { name: 'runner-registration', ref: 'fixture/registration.json', digest: driver.registrationDigest },
+        { name: 'runner-role-binding', ref: 'fixture/role.json', digest: envelopeDigest(role) },
+      ], outputs: [{ name: 'result', ref: 'fixture/result.json' }] };
+    return { job, currentActionBinding: action, dispatch: authority.issueDispatch({ ...action, actionBinding: action }) };
+  };
+  return { root, registration, driver, options, secret, binary, stateFile, traceFile, request,
+    read: () => JSON.parse(fs.readFileSync(stateFile)), write: value => publishExecutionFixtureJson(stateFile, value),
+    trace: () => fs.readdirSync(traceFile).filter(name => name.endsWith('.json')).sort().map(name => JSON.parse(fs.readFileSync(path.join(traceFile, name)))),
+    fresh: () => createCliJobDriver(options),
+  };
+}
+
+test('execution slot permits a new authorized job after the same role terminal execution without weakening old handle checks', async () => {
+  const f = await executionSlotFixture();
+  const firstRequest = f.request('fixture-r1-execution');
+  const first = f.driver.startCliJob(firstRequest);
+  const firstTerminal = await first.terminal;
+  assert.equal(firstTerminal.clientExitCode, 0);
+  assert.equal(JSON.parse(firstTerminal.stdoutBytes).execution, firstRequest.job.execution);
+  const secondRequest = f.request('fixture-r2-execution');
+  const second = f.driver.startCliJob(secondRequest);
+  const secondTerminal = await second.terminal;
+  assert.equal(secondTerminal.clientExitCode, 0);
+  assert.equal(JSON.parse(secondTerminal.stdoutBytes).execution, secondRequest.job.execution);
+  assert.notEqual(first.handle.containerId, second.handle.containerId);
+  const state = f.read();
+  assert.equal(state.containers.length, 2);
+  assert.equal(new Set(state.containers.map(value => value.name)).size, 2);
+  assert.equal(state.starts, 2, 'exactly one physical start per authorized original execution');
+  const repeated = f.fresh().startCliJob(firstRequest);
+  assert.equal(repeated.resumed, true);
+  assert.equal(repeated.terminal, null);
+  assert.deepEqual(repeated.handle, first.handle);
+  assert.equal(f.read().starts, 2);
+  assert.throws(() => f.driver.observeCliJob({ ...secondRequest, handle: first.handle }), /PROCESS_HANDLE_INVALID/);
+  assert.throws(() => f.driver.observeCliJob({ ...secondRequest, handle: { ...first.handle, execution: secondRequest.job.execution } }), /PROCESS_SCOPE_MISMATCH/);
+});
+
+function coldExecutionLookup(fixture, request, operation = 'resolveCliJob') {
+  const payload = path.join(fixture.root, 'cold-input.json'), entry = path.join(fixture.root, 'cold-client.mjs');
+  // A generated fixture HMAC seed is private test data, not a provisioned
+  // credential. It is never included in stdout or tracked evidence.
+  fs.writeFileSync(payload, JSON.stringify({ request, operation, secret: fixture.secret, registration: fixture.registration,
+    binary: fixture.binary, dockerSha256: fixture.options.dockerSha256 }));
+  fs.writeFileSync(entry, `import fs from 'node:fs';
+import {createCliJobDriver} from ${JSON.stringify(new URL('../tools/infra/runner.mjs', import.meta.url).href)};
+import {createLaunchAuthority} from ${JSON.stringify(new URL('../lib/delivery/evidence.js', import.meta.url).href)};
+const data=JSON.parse(fs.readFileSync(process.argv[2]));
+if(!['resolveCliJob','startCliJob'].includes(data.operation)) throw new Error('fixture operation');
+const driver=createCliJobDriver({authority:createLaunchAuthority({secret:data.secret}),registration:data.registration,dockerExecutable:data.binary,dockerSha256:data.dockerSha256});
+process.stdout.write(JSON.stringify(driver[data.operation](data.request))+'\\n');
+`);
+  const result = spawnSync(process.execPath, [entry, payload], { encoding: 'utf8', timeout: 15000 });
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout);
+}
+
+test('execution slot cold resolution is read-only and ABSENT never grants launch permission', async () => {
+  const f = await executionSlotFixture(), request = f.request('fixture-cold-original');
+  const absent = coldExecutionLookup(f, request);
+  assert.equal(absent.found, false);
+  assert.equal(absent.status, 'ABSENT');
+  assert.equal(absent.launchPermitted, false);
+  assert.equal(absent.managedClosureEligible, false);
+  assert.equal(absent.handle, null);
+  assert.equal(f.trace().some(args => ['create', 'start', 'stop'].includes(args[0])), false);
+  const first = f.driver.startCliJob(request);
+  const duplicate = f.fresh().startCliJob(request);
+  await Promise.all([first.terminal, duplicate.terminal].filter(Boolean));
+  assert.equal(duplicate.terminal, null);
+  assert.deepEqual(duplicate.handle, first.handle);
+  const found = coldExecutionLookup(f, request);
+  assert.equal(found.found, true);
+  assert.equal(found.launchPermitted, false);
+  assert.deepEqual(found.handle, first.handle);
+  assert.equal(found.observation.state, 'exited');
+  const coldRepeat = coldExecutionLookup(f, request, 'startCliJob');
+  assert.equal(coldRepeat.resumed, true);
+  assert.equal(coldRepeat.terminal, null);
+  assert.deepEqual(coldRepeat.handle, first.handle);
+  assert.equal(f.read().starts, 1);
+  assert.equal(f.trace().filter(args => args[0] === 'start').length, 1, 'both live and cold re-entry must preserve the single original start');
+});
+
+test('execution slot refuses old active or unknown role writers without creating a new job', async () => {
+  const f = await executionSlotFixture(), original = f.request('fixture-old-author');
+  const started = f.driver.startCliJob(original); await started.terminal;
+  const saved = f.read();
+  for (const state of ['created', 'running', 'paused', 'restarting', 'unknown', 'removing', 'dead', 'exited']) {
+    const current = structuredClone(saved); current.containers[0].state = state;
+    if (state === 'exited') current.containers[0].exitCode = null;
+    f.write(current);
+    assert.throws(() => f.fresh().startCliJob(f.request('fixture-next-author')), /PROCESS_ROLE_BUSY|PROCESS_START_UNKNOWN/, state);
+    assert.equal(f.read().containers.length, 1, state);
+    assert.equal(f.read().starts, 1, state);
+  }
+  const legacy = structuredClone(saved);
+  legacy.containers[0].name = '/' + f.registration.namespace + '-author';
+  legacy.containers[0].state = 'running'; f.write(legacy);
+  assert.throws(() => f.driver.startCliJob(f.request('fixture-after-legacy')), /PROCESS_ROLE_BUSY/);
+  assert.equal(f.read().starts, 1);
+});
+
+test('execution slot observes a created original resource after an unknown start without starting it again', async () => {
+  const f = await executionSlotFixture(), request = f.request('fixture-created-original');
+  const first = f.driver.startCliJob(request); await first.terminal;
+  const state = f.read(); state.containers[0].state = 'created'; f.write(state);
+  const lookup = coldExecutionLookup(f, request);
+  assert.equal(lookup.found, true);
+  assert.equal(lookup.observation.state, 'created');
+  assert.equal(lookup.launchPermitted, false);
+  const resumed = f.fresh().startCliJob(request);
+  assert.equal(resumed.resumed, true);
+  assert.equal(resumed.terminal, null);
+  assert.equal(f.read().starts, 1, 'created is not permission to re-run an unknown original start');
+});
+
+test('execution slot preserves exact legacy observation but rejects copied handles and changed scope', async () => {
+  const f = await executionSlotFixture(), request = f.request('fixture-legacy-original');
+  const first = f.driver.startCliJob(request); await first.terminal;
+  const saved = f.read(); saved.containers[0].name = '/' + f.registration.namespace + '-author'; f.write(saved);
+  const lookup = f.fresh().resolveCliJob(request);
+  assert.equal(lookup.found, true);
+  assert.deepEqual(lookup.handle, first.handle);
+  assert.deepEqual(f.driver.observeCliJob({ ...request, handle: first.handle }).handle, first.handle);
+  assert.equal(f.driver.startCliJob(request).terminal, null);
+  assert.equal(f.read().starts, 1);
+  for (const mutate of [
+    value => { value.name = '/outside-namespace-author'; },
+    value => { value.execution = 'copied-execution'; },
+    value => { value.run = 'another-run'; },
+    value => { value.registration = 'f'.repeat(64); },
+    value => { value.image = 'sha256:' + 'b'.repeat(64); },
+    value => { value.user = '0:0'; },
+    value => { value.mounts[0].name = f.registration.controlVolumes.state; },
+  ]) {
+    const changed = structuredClone(saved); mutate(changed.containers[0]); f.write(changed);
+    assert.throws(() => f.driver.observeCliJob({ ...request, handle: first.handle }), /PROCESS_SCOPE_MISMATCH/);
+    assert.equal(f.read().starts, 1);
+  }
+  f.write(saved);
+  assert.throws(() => f.driver.observeCliJob({ ...request, handle: { ...first.handle, roleBindingId: 'reviewer' } }), /PROCESS_HANDLE_INVALID/);
+  assert.throws(() => f.driver.stopCliJob({ ...request, handle: { ...first.handle, execution: 'copied-execution' } }), /PROCESS_HANDLE_INVALID/);
+  const nextRequest = f.request('fixture-next-after-legacy');
+  const next = f.driver.startCliJob(nextRequest); await next.terminal;
+  assert.equal(f.read().starts, 2);
+  assert.notEqual(next.handle.containerId, first.handle.containerId);
+});
+
+test('execution slot metadata failures never masquerade as absence or authorize a fresh start', async () => {
+  const f = await executionSlotFixture(), request = f.request('fixture-unverified-read');
+  for (const fault of ['listError', 'listMalformed']) {
+    f.write({ containers: [], starts: 0, [fault]: true });
+    assert.throws(() => f.driver.resolveCliJob(request), /DOCKER_OPERATION_UNVERIFIED|DOCKER_METADATA_UNVERIFIED/);
+    assert.throws(() => f.driver.startCliJob(request), /DOCKER_OPERATION_UNVERIFIED|DOCKER_METADATA_UNVERIFIED/);
+    assert.equal(f.trace().some(args => ['create', 'start', 'stop'].includes(args[0])), false);
+  }
+});
+
+test('execution slot rechecks peers after create and leaves uncertain resources for the original Comet to reconcile', async () => {
+  const f = await executionSlotFixture(), previous = f.request('fixture-race-old');
+  const first = f.driver.startCliJob(previous); await first.terminal;
+  const state = f.read(), old = structuredClone(state.containers[0]); old.state = 'running';
+  state.containers = []; state.peerAfterCreate = old; f.write(state);
+  assert.throws(() => f.driver.startCliJob(f.request('fixture-race-new')), /PROCESS_ROLE_BUSY/);
+  const after = f.read();
+  assert.equal(after.containers.length, 2);
+  assert.equal(after.starts, 1, 'a new created resource is not started past a competing writer');
+  assert.equal(f.trace().some(args => ['rm', 'rename', 'kill', 'stop'].includes(args[0])), false);
+});
+
+test('execution slot treats registered namespace dots literally and never adopts a lookalike namespace', async () => {
+  const f = await executionSlotFixture({ namespace: 'sdd-harness-i02-fixture.extra' });
+  const request = f.request('fixture-literal-namespace');
+  const first = f.driver.startCliJob(request); await first.terminal;
+  const state = f.read(), foreign = structuredClone(state.containers[0]);
+  foreign.id = 'f'.repeat(64);
+  foreign.name = '/' + f.registration.namespace.replace('.', 'x') + '-author';
+  state.containers.push(foreign); f.write(state);
+  const resolved = f.fresh().resolveCliJob(request);
+  assert.equal(resolved.found, true);
+  assert.deepEqual(resolved.handle, first.handle);
+  assert.throws(() => f.driver.observeCliJob({ ...request, handle: { ...first.handle, containerId: foreign.id } }), /PROCESS_SCOPE_MISMATCH/);
+  assert.equal(f.read().starts, 1);
+});
+
+
+test('execution slot fixture publishes state snapshots without truncating an existing reader', async () => {
+  const f = await executionSlotFixture(), request = f.request('fixture-publication-original');
+  const first = f.driver.startCliJob(request); await first.terminal;
+  const running = f.read(); running.containers[0].state = 'running'; f.write(running);
+  const before = fs.readFileSync(f.stateFile), reader = fs.openSync(f.stateFile, 'r');
+  try {
+    f.driver.stopCliJob({ ...request, handle: first.handle });
+    assert.deepEqual(fs.readFileSync(reader), before, 'a state publication must preserve an already-open complete snapshot');
+    assert.equal(f.read().containers[0].state, 'exited');
+    assert.equal(f.read().containers[0].exitCode, 143);
+  } finally { fs.closeSync(reader); }
+});
+
+test('execution slot fixture retains both command records at an overlapping publication boundary', async () => {
+  const f = await executionSlotFixture(); f.write({ containers: [], starts: 0 });
+  const before = fs.readFileSync(f.stateFile), clients = [];
+  const preload = path.join(f.root, 'publication-barrier.mjs');
+  // A FIFO holds each actual filesystem publication at the same boundary;
+  // release follows both ready messages, with no timing sleep or retry.
+  fs.writeFileSync(preload, `import fs from 'node:fs';
+import path from 'node:path';
+const original=fs.writeFileSync, traceFile=${JSON.stringify(f.traceFile)};
+let held=false;
+fs.writeFileSync=function(file,...rest) {
+  if(!held&&(String(file)===traceFile||path.dirname(String(file))===traceFile)) {
+    held=true;process.send({boundary:'trace-publication'});
+    const fd=fs.openSync(process.env.I02_FIXTURE_GATE,'r'), token=Buffer.alloc(1);
+    try {if(fs.readSync(fd,token)!==1)throw new Error('fixture publication gate closed');} finally {fs.closeSync(fd);}
+  }
+  return original.call(this,file,...rest);
+};
+`);
+  try {
+    for (let index = 0; index < 2; index++) {
+      const gate = path.join(f.root, 'publication-' + index + '.fifo');
+      assert.equal(spawnSync('/usr/bin/mkfifo', [gate]).status, 0);
+      const child = spawn(process.execPath, ['--import', preload, f.binary, '--context', f.registration.dockerContext, 'info'], {
+        env: { ...process.env, I02_FIXTURE_GATE: gate }, stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+      });
+      let stdout = '', stderr = '';
+      child.stdout.on('data', bytes => { stdout += bytes; });
+      child.stderr.on('data', bytes => { stderr += bytes; });
+      const timer = setTimeout(() => child.kill('SIGKILL'), 15000);
+      const terminal = new Promise(resolve => child.once('close', (code, signal) => {
+        clearTimeout(timer); resolve({ code, signal, stdout, stderr });
+      }));
+      const ready = new Promise((resolve, reject) => {
+        child.once('message', message => {
+          try { assert.deepEqual(message, { boundary: 'trace-publication' }); resolve(); } catch (error) { reject(error); }
+        });
+        child.once('error', reject);
+        child.once('exit', code => reject(new Error('fixture exited before release: ' + code)));
+      });
+      clients.push({ child, gate, ready, terminal });
+    }
+    await Promise.all(clients.map(client => client.ready));
+    for (const client of clients) fs.writeFileSync(client.gate, '1');
+    for (const result of await Promise.all(clients.map(client => client.terminal))) {
+      assert.equal(result.code, 0, result.stderr);
+      assert.equal(JSON.parse(result.stdout), f.registration.engineId);
+    }
+    assert.equal(f.trace().length, 2, 'each successful concurrent CLI call must retain its own record');
+    assert.deepEqual(f.trace(), [['info'], ['info']]);
+    assert.deepEqual(fs.readFileSync(f.stateFile), before, 'read-only engine calls cannot overwrite state');
+  } finally {
+    for (const client of clients) if (client.child.exitCode === null && client.child.signalCode === null) client.child.kill('SIGKILL');
+    await Promise.all(clients.map(client => client.terminal));
+  }
+});
+
+
+test('execution slot fixture completion preserves state changes published while stdin is still open', async () => {
+  const f = await executionSlotFixture(), id = '1'.repeat(64);
+  const job = { execution: 'fixture-overlap-execution', run: 'fixture-overlap-run' };
+  f.write({ containers: [{ id, state: 'created', ...job }], starts: 0 });
+  const child = spawn(process.execPath, [f.binary, '--context', f.registration.dockerContext, 'start', id], {
+    stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+  });
+  let stderr = ''; child.stderr.on('data', bytes => { stderr += bytes; });
+  const timer = setTimeout(() => child.kill('SIGKILL'), 15000);
+  const terminal = new Promise(resolve => child.once('close', (code, signal) => { clearTimeout(timer); resolve({ code, signal }); }));
+  const ready = new Promise((resolve, reject) => {
+    child.once('message', message => {
+      try { assert.deepEqual(message, { boundary: 'running-published' }); resolve(); } catch (error) { reject(error); }
+    });
+    child.once('error', reject);
+    child.once('exit', code => reject(new Error('fixture exited before running publication: ' + code)));
+  });
+  try {
+    await ready;
+    const concurrent = f.read();
+    concurrent.containers.push({ id: '2'.repeat(64), state: 'created', execution: 'fixture-other-execution', run: job.run });
+    concurrent.fixtureOnlyNote = 'preserve the independently published update';
+    f.write(concurrent);
+    child.stdin.end(JSON.stringify({ job }));
+    assert.equal((await terminal).code, 0, stderr);
+    const final = f.read();
+    assert.equal(final.starts, 1);
+    assert.equal(final.containers[0].state, 'exited');
+    assert.deepEqual(final.containers[1], concurrent.containers[1], 'an asynchronous completion cannot restore its old whole-file snapshot');
+    assert.equal(final.fixtureOnlyNote, concurrent.fixtureOnlyNote);
+  } finally {
+    if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+    await terminal;
+  }
 });
