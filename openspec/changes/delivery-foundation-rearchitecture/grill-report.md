@@ -16,3 +16,5 @@
 只放行已双审且主复验的精确建设工件，不标未完成父任务ACCEPTED；当前已列原3条及新增P1_2←P1_6、P2_3←P2_2、I02–I06←I01六条精确工件建设入口。VERIFY无例外，未新增任何secret访问/外发/服务或业务写入权。
 
 人类已明确F10正向API另期并排除首版完成条件；130记录/104ID保留，F10仍NOT-EXERCISED，129/103当前完成口径已按技术合同双审落地，未启用负例不算通过。原生Goal/监督继续；最终Whitebox原始ledger、validator、实际数据/截图/日志与状态须在同最终候选一致，整体ETA未知。
+
+最新observer建设工件：c82096f（源8b25259）双轴72/72后主Node24 72/72、零跳过；不同cwd正式A01返回NOT-EXERCISED/2、零动作。原typed期待与cwd错目标P2均关闭。当前case-plan全部typed assertion/proof/readback注册和实际protected adapter仍缺，104映射只候选；没有业务场景因此被接受。P2_4/I02只可按精确受限工件边建设，未完父任务不勾。

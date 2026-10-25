@@ -32,3 +32,5 @@ Outline专项只读结果没有证明groups/继承/分享的完整受众，也�
 人类已明确选择首版CLI+固定Runner：F10跨机器API正向另期，保留NOT-EXERCISED且排除本轮完成条件。总130记录/104场景及原F10 oracle不删；当前完成拟为129检查/103场景，技术合同已获两轴独立复核并受控落地。P5_1/P5_3固定Runner与其它知识/平台/权限/恢复义务仍保持，未启用负例不算API正向能力。
 
 原生Goal仍active，监督20分钟任务已读回ACTIVE且使用当前唯一控制器说明。整体ETA受实际角色/资源资格及未决范围影响，当前无法可靠估计。最终必须在同最终候选执行完整产品Run和关联维护旅程，完成129项本轮required及明确的F10未验处置、独立Whitebox/Grill、状态一致性及Comet唯一closeout，才可签交付完成。
+
+最新observer建设工件：c82096f（源8b25259）双轴72/72后主Node24 72/72、零跳过；不同cwd正式A01返回NOT-EXERCISED/2、零动作。原typed期待与cwd错目标P2均关闭。当前case-plan全部typed assertion/proof/readback注册和实际protected adapter仍缺，104映射只候选；没有业务场景因此被接受。P2_4/I02只可按精确受限工件边建设，未完父任务不勾。

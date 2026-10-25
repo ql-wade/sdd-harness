@@ -14,7 +14,7 @@ lock `drift-lock.json`, execution contract `execution-contract.json`.
 Locked plan SHA-256: `f46cb7049d021b9ba28d5fa79e8f566240a2817ebd247de228e0c1093009f1a2` (checkbox-normalized-v1).
 Architecture SHA-256: `36e14eb296995562f75f801a5087096fd53ed3e34529cd1f236b8eaf6503e589` (raw bytes).
 DAG SHA-256: `5099b4d6f985a7436932d054cce990d365c93d6e9fae1bff559f0d8677b164be` (raw bytes).
-Execution-contract SHA-256: `d375853ed96e06adf53e2277fa7f4ea1f12571212aca711eefb2259239202fb6` (raw bytes).
+Execution-contract SHA-256: `dff53cec6b7a2ebc048d76e380e46cd1839ac6a667cfdfa759be3ea87b5fc5a8` (raw bytes).
 Normalize CRLF to LF and change only line-leading Markdown checked boxes to
 unchecked for the plan digest; preserve fenced code exactly. Verify all four
 hashes before dispatch and integration; mismatch means HALT_AND_REPLAN.
