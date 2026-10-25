@@ -4,7 +4,11 @@
 
 ## 当前控制器检查点
 
-当前已核更新：主检出884880a已接入双审P1_3固定Gate执行适配器，Root新增22/22、驱动与证据门65/65、完整check981/981，零失败/跳过且输入不变。作者35=新增22+驱动13；旧6da仅为组件机制材料，不冒充当前3056运行资格。Python3.12.15候选已在断网/只读/无挂载容器实测，Runner镜像仍未构建认证。原生producer/薄main/执行槽及真实角色/权限/平台/Kp→归档→Kt/恢复未完成；6节点接纳/32待办/1F10另期、129required/103场景实际未验不变。详见worker-reports/Root-P1_3-fixed-host-integration/。
+当前代码`1c66edf`：I02确定性执行槽/只读查回`beeff57`已双审、主127/127及全仓992/992；薄main`1c66edf`已双审、主65/65及全仓1022/1022，均零失败/跳过且输入不变。内部入口不等于用户阶段命令已安装；缺生产provider时仍exit2/0启动。新3056 Host绑定未激活，旧6da仅作机械材料。
+
+原生候选曾实际50/65，15项归档目标失败，旧40de也复现UTC/本地日期差异；额外反例又发现拒审作者无法返工、真实exit7与pass矛盾和launch事实替换。原owner保全原失败后修复，Root对0003仅上下文/index重放、全部+/-程序行不变；当前私有afa7的9针对例通过，74完整矩阵仍待终态和独立审查，不称Core通过。
+
+当前仍6节点接纳/32待办/1F10另期；全部129required/103场景真实业务未验。模型CLI/工具桥、worker frame、canonical输出带回、真实来源/issuer/角色/OS/知识/平台/权限恢复与最终Whitebox/Grill/唯一closeout未完。Root公开Node/Python实验镜像和锁定npm10包只作资源供给，不签Runner资格。详见`worker-reports/Root-I02-execution-slot-integration/`与`worker-reports/Root-P1_3-bootstrap-integration/`；总体上海时区ETA未知。
 
 ## 目标与证据边界
 

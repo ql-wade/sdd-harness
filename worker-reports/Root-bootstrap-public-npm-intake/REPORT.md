@@ -1,0 +1,5 @@
+# Existing Root npm public package closure intake
+
+The ten already locked root-package dependencies were downloaded from the exact official registry URLs in package-lock.json, without executing package code or lifecycle scripts. Every archive matched the original SHA512 integrity; total327496bytes, no version change. SHA256,size,URL,UTC and existing lock hash are adjacent. Exact archives remain in the controller private .local/comet-reset/runner-bootstrap-graph/public-tarballs and may be consumed only by individually verified identity, never as an arbitrary user cache.
+
+The18-file static import intake is historical discovery, not a current packaging manifest: executor and runner changed after it was recorded, so I02 must recompute at the accepted commit and account for runtime file reads, original Native/OpenSpec/pnpm/Linux-native/PyYAML/Git/license inputs. These ten archives are only the root runtime dependency subset, not a complete Runner offline closure or qualification. No model, credential, service mutation or production launch occurred.

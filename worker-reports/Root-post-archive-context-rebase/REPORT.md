@@ -1,0 +1,7 @@
+# Root post-archive patch context rebase — not a behavior change
+
+Original P2_4 direct-local source fixes an actually reproduced UTC/local archive-target mismatch. Its correct single local-date initialization changes context used by existing0003. Keeping an incorrect UTC initialization and compensating later would retain unnecessary logic. Root rebased one0003 context hunk and updated eight index metadata pairs instead.
+
+Original0003 SHA b266706c207ae09db17e4a2e005dd42e785d99d84800af244da020a835c0bd2e; derived private SHA861d60b7bb26bc29db0fe708bacee5c962338b92fd1b8c37943890cf76594742. Every added/deleted program line is byte-identical. Root actually checked/applied the derived patch twice against independent temporary copies; all eight after-file hashes matched. Exact before/after bytes are adjacent for independent replay.
+
+The direct-local0002 source is8fcbeb2d11c11e5b1f34eb04ac21bdb5bb265685e564046fc2d785b0393112c5. This record permits only an explicit private mechanical build in the original P2_4 task. Shared0003/upstream lock/image/profile/qualification were not changed. Final serial integration still requires independent review and rebind/rebuild against all current patches, including security backports. Root retains prior setup failures and original65/50/15 evidence. The newprivate9 counterexamples passed and full74 remains underway; no production/role/OS/business acceptance follows.

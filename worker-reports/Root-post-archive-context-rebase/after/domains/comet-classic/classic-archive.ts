@@ -1,0 +1,807 @@
+import { managedOpenSpecInvocation } from './classic-openspec-binding.js';
+import { requireRunAuthority } from './classic-gate-runtime.js';
+import { prepareArchiveInputBridge, registerArchiveInputBridge, archivedGateInputs } from './classic-archive-input-bridge.js';
+import { evaluateGatePremises, computeGateInputs, parseGateReceipts, type GateId, type GateInputs } from './classic-gate-runtime.js';
+import { createHash } from 'crypto';
+import {
+  classicArchivedRequirementsProblems,
+  recordClassicArchiveRequirements,
+} from './classic-artifact-requirements.js';
+import path from 'path';
+import type { ClassicCommandHandler, ClassicCommandResult } from './classic-cli.js';
+import { executeClassicOpenSpec } from './classic-openspec-command.js';
+import { classicArchiveEnvelope, classicLocale } from './classic-output-language.js';
+import type { CliOutputEnvelope, CliOutputLocale } from '../workflow-contract/output-envelope.js';
+import {
+  collectClassicSpecFiles,
+  findClassicArchiveChangeDirectory,
+  inspectClassicActiveChangeDirectory,
+  openSpecChangeNameError,
+} from './classic-paths.js';
+import { knowledgeCloseoutBlocked } from './classic-gate-runtime.js';
+import { ensureClassicRuntimeRun, transitionClassicRuntimeRun } from './classic-runtime-run.js';
+import { appendClassicStateEvent } from './classic-state-events.js';
+import { readClassicState, withClassicStateLock, writeClassicState } from './classic-store.js';
+import { applyClassicTransition } from './classic-transitions.js';
+import { clearCurrentChangeIf } from './classic-current-change.js';
+import { readClassicDelivery, recordClassicDocumentArchive } from './classic-progress.js';
+import {
+  appendTrajectory,
+  clearPendingAction,
+  readArtifacts,
+  readContext,
+  readPendingAction,
+  readTrajectory,
+  writeArtifacts,
+  writeCheckpoint,
+  writePendingAction,
+} from '../../domains/engine/run-store.js';
+import type { Checkpoint, EngineAction, RunState } from '../../domains/engine/types.js';
+import {
+  assertClassicLayoutWritable,
+  classicProjectRelative,
+  discoverClassicProject,
+} from './classic-layout.js';
+import {
+  classicProjectTargetExists,
+  ensureClassicProjectDirectory,
+  inspectClassicProjectTarget,
+  readClassicProjectFile,
+  writeClassicProjectText,
+} from './classic-protected-path.js';
+import { requireManagedDeliveryHost } from './classic-managed-host.js';
+import { stableStringify } from './classic-gate-runtime.js';
+
+const GREEN = '\u001b[32m';
+const RED = '\u001b[31m';
+const YELLOW = '\u001b[33m';
+const RESET = '\u001b[0m';
+
+function green(message: string): string {
+  return `${GREEN}${message}${RESET}`;
+}
+
+function red(message: string): string {
+  return `${RED}${message}${RESET}`;
+}
+
+function yellow(message: string): string {
+  return `${YELLOW}${message}${RESET}`;
+}
+
+class ArchiveFailure extends Error {
+  constructor(
+    message: string,
+    readonly exitCode = 1,
+  ) {
+    super(message);
+  }
+}
+
+class ArchiveOutput {
+  readonly stderr: string[] = [];
+  readonly openSpecStdout: string[] = [];
+  readonly openSpecStderr: string[] = [];
+  stepsOk = 0;
+  stepsTotal = 0;
+  envelope?: CliOutputEnvelope;
+
+  captureOpenSpec(result: ClassicCommandResult): void {
+    if (result.stdout) this.openSpecStdout.push(result.stdout);
+    if (result.stderr) this.openSpecStderr.push(result.stderr);
+  }
+
+  finishEnvelope(options: { name: string; dryRun: boolean; locale: CliOutputLocale }): void {
+    this.envelope = classicArchiveEnvelope({
+      name: options.name,
+      stepsOk: this.stepsOk,
+      stepsTotal: this.stepsTotal,
+      dryRun: options.dryRun,
+      locale: options.locale,
+    });
+    this.stderr.push(this.envelope.summary);
+  }
+
+  toResult(exitCode = 0): ClassicCommandResult {
+    const diagnostics = this.stderr.length > 0 ? this.stderr.join('\n') + '\n' : '';
+    const openSpecStderr = this.openSpecStderr.join('');
+    const separator = openSpecStderr && diagnostics && !openSpecStderr.endsWith('\n') ? '\n' : '';
+    return {
+      exitCode,
+      ...(this.openSpecStdout.length > 0 ? { stdout: this.openSpecStdout.join('') } : {}),
+      ...(openSpecStderr || diagnostics
+        ? { stderr: `${openSpecStderr}${separator}${diagnostics}` }
+        : {}),
+      ...(this.envelope === undefined ? {} : { envelope: this.envelope }),
+    };
+  }
+}
+
+function validateChangeName(name: string): void {
+  const error = openSpecChangeNameError(name);
+  if (error) throw new ArchiveFailure(red(`FATAL: ${error}`));
+}
+
+function hashText(content: string): string {
+  return createHash('sha256').update(content).digest('hex');
+}
+
+function artifactsHash(artifacts: Record<string, string>): string {
+  return hashText(
+    JSON.stringify(
+      Object.fromEntries(
+        Object.entries(artifacts).sort(([left], [right]) => left.localeCompare(right)),
+      ),
+    ),
+  );
+}
+
+function isPathInside(parent: string, target: string): boolean {
+  const relative = path.relative(parent, target);
+  return (
+    relative !== '' &&
+    !path.isAbsolute(relative) &&
+    relative !== '..' &&
+    !relative.startsWith(`..${path.sep}`)
+  );
+}
+
+function archivedPointer(
+  projectRoot: string,
+  activeDir: string,
+  archiveDir: string,
+  pointer: string | null,
+): string | null {
+  if (!pointer) return pointer;
+  const absolute = path.resolve(projectRoot, pointer);
+  if (!isPathInside(activeDir, absolute)) return pointer;
+  return classicProjectRelative(
+    projectRoot,
+    path.join(archiveDir, path.relative(activeDir, absolute)),
+  );
+}
+
+function archivedArtifacts(
+  projectRoot: string,
+  activeDir: string,
+  archiveDir: string,
+  artifacts: Record<string, string>,
+): Record<string, string> {
+  const rewritten = { ...artifacts };
+  for (const field of ['handoff_context', 'handoff_markdown'] as const) {
+    const value = rewritten[field];
+    if (!value) continue;
+    rewritten[field] = archivedPointer(projectRoot, activeDir, archiveDir, value) ?? value;
+  }
+  return rewritten;
+}
+
+async function verifyFinalArchiveIntegrity(projectRoot: string, archiveDir: string): Promise<void> {
+  const projection = await readClassicState(archiveDir);
+  if (!projection.classic || !projection.run || !projection.classic.archived) {
+    throw new ArchiveFailure(red('  [FAIL] Final archived state is incomplete'));
+  }
+  const requiredProblems = await classicArchivedRequirementsProblems(projectRoot, archiveDir);
+  if (requiredProblems.length) throw new ArchiveFailure(red(requiredProblems.join('\n')));
+  const statePointers = [
+    ['design_doc', projection.classic.designDoc],
+    ['plan', projection.classic.plan],
+    ['verification_report', projection.classic.verificationReport],
+    ['handoff_context', projection.classic.handoffContext],
+  ] as const;
+  const artifacts = await readArtifacts(archiveDir, projection.run.artifactsRef);
+  const artifactPointers = [
+    ['artifacts.handoff_context', artifacts.handoff_context],
+    ['artifacts.handoff_markdown', artifacts.handoff_markdown],
+  ] as const;
+  for (const [field, pointer] of [...statePointers, ...artifactPointers]) {
+    if (!pointer) continue;
+    if (
+      !(await classicProjectTargetExists(projectRoot, path.resolve(projectRoot, pointer), {
+        label: `Classic archived ${field}`,
+        expected: 'file',
+      }))
+    ) {
+      throw new ArchiveFailure(red(`  [FAIL] Final archived ${field} does not exist: ${pointer}`));
+    }
+  }
+}
+
+function exactlyOneFinalNewline(markdown: string): string {
+  return `${markdown.replace(/\n+$/u, '')}\n`;
+}
+
+export function annotatedMarkdown(
+  original: string,
+  archiveName: string,
+  extraFields: string,
+): string {
+  const normalized = original.replace(/\r\n/gu, '\n');
+  const lines = normalized.split('\n');
+  const closingDelimiter = lines[0] === '---' ? lines.indexOf('---', 1) : -1;
+  const extraFieldName = extraFields.match(/^([^:\n]+):/u)?.[1]?.trim();
+
+  if (closingDelimiter !== -1) {
+    const frontmatter = lines.slice(1, closingDelimiter).filter((line) => {
+      const fieldName = line.match(/^([^:\n]+):/u)?.[1]?.trim();
+      if (fieldName === undefined) return true;
+      return fieldName !== 'archived-with' && fieldName !== extraFieldName;
+    });
+    frontmatter.push(`archived-with: ${archiveName}`);
+    if (extraFields) frontmatter.push(extraFields);
+    return exactlyOneFinalNewline(
+      ['---', ...frontmatter, '---', ...lines.slice(closingDelimiter + 1)].join('\n'),
+    );
+  }
+
+  const header = ['---', `archived-with: ${archiveName}`];
+  if (extraFields) header.push(extraFields);
+  if (extraFieldName !== 'status') header.push('status: final');
+  header.push('---');
+  return exactlyOneFinalNewline([...header, normalized].join('\n'));
+}
+
+async function appendRecoveryEvent(
+  changeDir: string,
+  run: RunState,
+  actionId: string,
+): Promise<void> {
+  const trajectory = await readTrajectory(changeDir, run.trajectoryRef);
+  if (
+    trajectory.some(
+      (event) =>
+        event.type === 'recovery_reconciled' &&
+        event.data.kind === 'classic-archive' &&
+        event.data.actionId === actionId,
+    )
+  ) {
+    return;
+  }
+  await appendTrajectory(changeDir, run.trajectoryRef, {
+    sequence: trajectory.length + 1,
+    timestamp: new Date().toISOString(),
+    type: 'recovery_reconciled',
+    runId: run.runId,
+    data: {
+      kind: 'classic-archive',
+      actionId,
+    },
+  });
+}
+
+async function annotateFrontmatter(
+  output: ArchiveOutput,
+  projectRoot: string,
+  file: string,
+  archiveName: string,
+  extraFields: string,
+  dryRun: boolean,
+): Promise<void> {
+  if (
+    !(await classicProjectTargetExists(projectRoot, file, {
+      label: 'Classic archive annotation target',
+      expected: 'file',
+    }))
+  ) {
+    return;
+  }
+  if (dryRun) {
+    output.stderr.push(yellow(`  [DRY-RUN] Would annotate: ${file}`));
+    output.stepsOk += 1;
+    output.stepsTotal += 1;
+    return;
+  }
+  const original = await readClassicProjectFile(projectRoot, file, {
+    label: 'Classic archive annotation target',
+  });
+  const updated = annotatedMarkdown(original, archiveName, extraFields);
+  await writeClassicProjectText(projectRoot, file, updated, {
+    label: 'Classic archive annotation target',
+  });
+  output.stderr.push(green(`  [OK] Annotated: ${file}`));
+  output.stepsOk += 1;
+  output.stepsTotal += 1;
+}
+
+async function verifyMainSpecsClean(projectRoot: string, specsRoot: string): Promise<void> {
+  const rootInspection = await inspectClassicProjectTarget(projectRoot, specsRoot, {
+    label: 'Classic main specs directory',
+    expected: 'directory',
+  });
+  if (!rootInspection.exists) return;
+  let found = false;
+  for (const specFile of await collectClassicSpecFiles(projectRoot, specsRoot)) {
+    const content = await readClassicProjectFile(projectRoot, specFile, {
+      label: `Classic main spec ${specFile}`,
+    });
+    const matches = content
+      .split(/\r?\n/u)
+      .map((line, index) => ({ line, number: index + 1 }))
+      .filter((item) => /^## (ADDED|MODIFIED|REMOVED|RENAMED) Requirements$/u.test(item.line));
+    if (matches.length > 0) {
+      found = true;
+      process.stderr.write(
+        red(`FATAL: delta-only section heading leaked into main spec: ${specFile}`) + '\n',
+      );
+      for (const match of matches) process.stderr.write(`${match.number}:${match.line}\n`);
+    }
+  }
+  if (found) throw new ArchiveFailure('');
+}
+
+export const classicArchiveCommand: ClassicCommandHandler = async (args, options) => {
+  if (args.length < 1 || args.length > 2 || (args[1] !== undefined && args[1] !== '--dry-run')) {
+    return { exitCode: 64, stderr: 'Usage: comet archive <change-name> [--dry-run]' };
+  }
+  const output = new ArchiveOutput();
+  const change = args[0];
+  const dryRun = args[1] === '--dry-run';
+  try {
+    validateChangeName(change);
+    const projectRoot = await discoverClassicProject(options.projectRoot ?? options.invocationCwd ?? process.cwd());
+    const layout = await assertClassicLayoutWritable(projectRoot);
+    const active = await inspectClassicActiveChangeDirectory(change, layout.projectRoot);
+    const activeDir = active.directory;
+    const activeRef = classicProjectRelative(layout.projectRoot, activeDir);
+    // Fixed OpenSpec 1.11 formatLocalDate and its bound child use local TZ.
+    const currentArchiveName = (): string => {
+      const date = new Date();
+      const local = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+      return `${local}-${change}`;
+    };
+    let archiveName = currentArchiveName();
+    let archiveDir = path.join(layout.archiveDir, archiveName);
+    // H07: set inside the archive transaction; consumed by the completion
+    // write and the clear-current decision below.
+    let closeoutBlocked = false;
+
+    output.stderr.push(`=== Comet Archive: ${change} ===`);
+
+    const activeExists = active.stateExists;
+    const recoveredArchive = activeExists
+      ? null
+      : await findClassicArchiveChangeDirectory(change, layout.projectRoot);
+    const changeDir = activeExists ? activeDir : recoveredArchive?.directory;
+    if (
+      !changeDir ||
+      !(await classicProjectTargetExists(layout.projectRoot, `${changeDir}/.comet.yaml`, {
+        label: `Classic change ${change} state`,
+        expected: 'file',
+      }))
+    ) {
+      throw new ArchiveFailure(red(`FATAL: .comet.yaml not found in ${activeRef}/`));
+    }
+    if (recoveredArchive) {
+      archiveDir = recoveredArchive.directory;
+      archiveName = path.basename(recoveredArchive.directory);
+    }
+    const projection = await readClassicState(changeDir);
+    if (!projection.classic) {
+      throw new ArchiveFailure(red('FATAL: archive requires Classic state'));
+    }
+    const classic = projection.classic;
+    if (classic.managedDelivery && projection.run) {
+      const artifacts = await readArtifacts(changeDir, projection.run.artifactsRef);
+      const encoded = artifacts.managed_archive_input_bridge;
+      if (encoded) {
+        let frozen;
+        try { frozen = JSON.parse(encoded); } catch { throw new ArchiveFailure('UNVERIFIED: original archive bridge is malformed'); }
+        const bridge = frozen?.bridge, signature = frozen?.signature;
+        if (!bridge || typeof bridge !== 'object' || Array.isArray(bridge) || !signature || typeof signature !== 'object' || Array.isArray(signature))
+          throw new ArchiveFailure('UNVERIFIED: original archive bridge is malformed');
+        const digest = createHash('sha256').update(stableStringify(bridge)).digest('hex');
+        if (bridge.runId !== projection.run.runId || bridge.actionId !== `classic-archive:${change}`
+          || signature?.run !== projection.run.runId || signature?.actionBinding?.action !== 'archive-transformation-only'
+          || signature?.actionBinding?.inputDigest !== digest || !requireManagedDeliveryHost().authority.verifyDispatch(signature).ok)
+          throw new ArchiveFailure('UNVERIFIED: original archive bridge is not authentic for this Run');
+        if (bridge.archived !== classicProjectRelative(layout.projectRoot, archiveDir))
+          throw new ArchiveFailure('UNVERIFIED: frozen archive target changed; observe and reconcile the original operation before retrying');
+      }
+    }
+    const designDoc = classic.designDoc;
+    const planPath = classic.plan;
+
+    if (classic.phase !== 'archive') {
+      throw new ArchiveFailure(red(`FATAL: phase is '${classic.phase}', expected 'archive'`));
+    }
+    if (classic.verifyResult !== 'pass') {
+      throw new ArchiveFailure(
+        red(
+          `FATAL: verify_result is '${classic.verifyResult}', expected 'pass'. Run comet-verify first.`,
+        ),
+      );
+    }
+    if (classic.managedDelivery) {
+      const gates = await evaluateGatePremises({ projectRoot: layout.projectRoot, changeDir,
+        classic: classic as unknown as Record<string, unknown>, run: projection.run, action: 'archive-spec' });
+      if (!gates.allowed) throw new ArchiveFailure(red(`UNVERIFIED: archive prerequisites are not current: ${gates.details.join('; ')}`));
+    }
+    output.stderr.push(green('  [OK] Entry state verified'));
+    output.stepsOk += 1;
+    output.stepsTotal += 1;
+
+    const archiveTarget = await inspectClassicProjectTarget(layout.projectRoot, archiveDir, {
+      label: `Classic archive target ${archiveName}`,
+      expected: 'directory',
+    });
+    if (activeExists && archiveTarget.exists) {
+      throw new ArchiveFailure(red(`FATAL: archive target already exists: ${archiveDir}`));
+    }
+    output.stderr.push(green('  [OK] Archive target available'));
+    output.stepsOk += 1;
+    output.stepsTotal += 1;
+
+    const toolInvocation = classic.managedDelivery
+      ? await managedOpenSpecInvocation(layout.projectRoot,changeDir,projection.run?.runId) : undefined;
+    let preparedBridge: Awaited<ReturnType<typeof prepareArchiveInputBridge>> | null = null;
+    if (classic.managedDelivery && !dryRun && !recoveredArchive) {
+      if (!projection.run) throw new ArchiveFailure('UNVERIFIED: archive input bridge requires the original Run');
+      const gates: Partial<Record<GateId, GateInputs>> = {};
+      for (const gate of ['R', 'A', 'T', 'P', 'V', 'Kp'] as GateId[]) {
+        gates[gate] = await computeGateInputs({ projectRoot: layout.projectRoot, changeDir, gate, state: classic, run: projection.run });
+      }
+      preparedBridge = await prepareArchiveInputBridge({ toolInvocation: toolInvocation!, projectRoot: layout.projectRoot, changeDir, archiveDir,
+        run: projection.run, policy: classic.deliveryPolicy, epoch: classic.checkEpoch ?? 0, gates,
+        annotations: [
+          ...(designDoc ? [{ file: path.resolve(layout.projectRoot, designDoc), transform: (source: string) => annotatedMarkdown(source, archiveName, 'status: final') }] : []),
+          ...(planPath ? [{ file: path.resolve(layout.projectRoot, planPath), transform: (source: string) => annotatedMarkdown(source, archiveName, '') }] : []),
+        ] });
+    }
+
+    if (dryRun) {
+      output.stderr.push(yellow(`  [DRY-RUN] Would run OpenSpec archive: ${change}`));
+      output.stepsOk += 1;
+      output.stepsTotal += 1;
+    } else if (!classic.archived || projection.run?.pending) {
+      await ensureClassicProjectDirectory(
+        layout.projectRoot,
+        `${changeDir}/.comet`,
+        'Classic change runtime directory',
+      );
+      const actionId = `classic-archive:${change}`;
+      const recovering = await withClassicStateLock(changeDir, async () => {
+        const runtime = await ensureClassicRuntimeRun(changeDir);
+        if (runtime.classic.phase !== 'archive' || runtime.classic.verifyResult !== 'pass') {
+          throw new ArchiveFailure(
+            red('FATAL: Archive state changed before preparing the pending action.'),
+          );
+        }
+        const pendingAction = await readPendingAction(changeDir, runtime.run.pendingRef);
+        const recovering =
+          Boolean(recoveredArchive) ||
+          (pendingAction?.id === actionId &&
+            pendingAction.type === 'checkpoint' &&
+            pendingAction.ref === change);
+        if (runtime.run.pending && runtime.run.pending !== actionId) {
+          throw new ArchiveFailure(red(`FATAL: another action is pending: ${runtime.run.pending}`));
+        }
+        if (
+          !recovering &&
+          !runtime.classic.archived &&
+          runtime.classic.archiveConfirmation !== 'confirmed'
+        ) {
+          throw new ArchiveFailure(
+            red(
+              `FATAL: archive_confirmation is '${classic.archiveConfirmation ?? 'null'}', expected 'confirmed'. Run final archive confirmation first.`,
+            ),
+          );
+        }
+
+        if (runtime.classic.managedDelivery && preparedBridge) {
+          const current = await evaluateGatePremises({ projectRoot: layout.projectRoot, changeDir,
+            classic: runtime.classic as unknown as Record<string, unknown>, run: runtime.run, action: 'archive-spec' });
+          if (!current.allowed || (runtime.classic.checkEpoch ?? 0) !== preparedBridge.epoch)
+            throw new ArchiveFailure('UNVERIFIED: archive premises changed during preview');
+          const prior = [...parseGateReceipts(runtime.classic.gateReceipts)].reverse().find((receipt) => receipt.gate === 'Kp');
+          if (!prior?.intent?.actionBinding) throw new ArchiveFailure('UNVERIFIED: no original Kp binding for archive artifact integrity');
+          await registerArchiveInputBridge(layout.projectRoot, changeDir, runtime.run, preparedBridge, prior.intent.actionBinding);
+        }
+        if (!recovering) {
+          await recordClassicArchiveRequirements(layout.projectRoot, changeDir);
+          const action: EngineAction = {
+            id: actionId,
+            stepId: runtime.run.currentStep,
+            type: 'checkpoint',
+            ref: change,
+          };
+          await writePendingAction(changeDir, runtime.run.pendingRef, action);
+          const current = await readClassicState(changeDir);
+          if (
+            !current.classic ||
+            !current.run ||
+            current.run.runId !== runtime.run.runId ||
+            current.classic.phase !== 'archive' ||
+            current.classic.verifyResult !== 'pass' ||
+            current.classic.archiveConfirmation !== 'confirmed'
+          ) {
+            throw new ArchiveFailure(
+              red('FATAL: Archive state changed while preparing the pending action.'),
+            );
+          }
+          await writeClassicState(changeDir, {
+            classic: current.classic,
+            run: {
+              ...current.run,
+              pending: actionId,
+              status: 'waiting',
+            },
+            unknownKeys: current.unknownKeys,
+          });
+        }
+        return recovering;
+      });
+
+      if (!recoveredArchive) {
+        if (classic.managedDelivery && currentArchiveName() !== archiveName)
+          throw new ArchiveFailure('UNVERIFIED: archive calendar changed after preview; preserve and reconcile the original frozen operation');
+        const archiveRun = await executeClassicOpenSpec(
+          ['archive', change, '--yes'],
+          layout.projectRoot,
+          toolInvocation,
+        );
+        if (toolInvocation && (archiveRun.data as {toolIdentity?:{bindingDigest?:string}} | undefined)?.toolIdentity?.bindingDigest !== toolInvocation.digest)
+          throw new ArchiveFailure('UNVERIFIED: formal archive did not use the same captured OpenSpec identity');
+        output.captureOpenSpec(archiveRun);
+        if (archiveRun.exitCode !== 0) {
+          throw new ArchiveFailure('', archiveRun.exitCode);
+        }
+      }
+
+      let resolvedArchive = await findClassicArchiveChangeDirectory(change, layout.projectRoot, {
+        preferredArchiveName: archiveName,
+      });
+      if (!resolvedArchive && !recoveredArchive && !classic.managedDelivery) {
+        resolvedArchive = await findClassicArchiveChangeDirectory(change, layout.projectRoot, {
+          skipExactCompatibility: true,
+        });
+      }
+      if (!resolvedArchive) {
+        output.stderr.push(red('  [FAIL] OpenSpec archive output not found'));
+        output.stepsTotal += 1;
+        output.stderr.push('');
+        output.finishEnvelope({ name: change, dryRun, locale: classicLocale(classic.language) });
+        output.stderr.push(
+          green(`Archive complete. ${output.stepsOk}/${output.stepsTotal} steps succeeded.`),
+        );
+        return output.toResult(1);
+      }
+      archiveDir = resolvedArchive.directory;
+      archiveName = path.basename(resolvedArchive.directory);
+      output.stderr.push(green(`  [OK] OpenSpec archive completed: ${archiveDir}`));
+      output.stepsOk += 1;
+      output.stepsTotal += 1;
+
+      await verifyMainSpecsClean(layout.projectRoot, layout.specsDir);
+      output.stderr.push(green('  [OK] Main specs verified clean'));
+      output.stepsOk += 1;
+      output.stepsTotal += 1;
+
+      if (designDoc) {
+        await annotateFrontmatter(
+          output,
+          layout.projectRoot,
+          archivedPointer(layout.projectRoot, activeDir, archiveDir, designDoc)!,
+          archiveName,
+          'status: final',
+          false,
+        );
+      }
+      if (planPath) {
+        await annotateFrontmatter(
+          output,
+          layout.projectRoot,
+          archivedPointer(layout.projectRoot, activeDir, archiveDir, planPath)!,
+          archiveName,
+          '',
+          false,
+        );
+      }
+
+      await withClassicStateLock(archiveDir, async () => {
+        await requireRunAuthority(archiveDir);
+        const archivedProjection = await readClassicState(archiveDir);
+        if (!archivedProjection.classic || !archivedProjection.run) {
+          throw new ArchiveFailure(red('  [FAIL] archived state projection is incomplete'));
+        }
+        const artifacts = {
+          ...archivedArtifacts(
+            layout.projectRoot,
+            activeDir,
+            archiveDir,
+            await readArtifacts(archiveDir, archivedProjection.run.artifactsRef),
+          ),
+          archive_directory: classicProjectRelative(layout.projectRoot, archiveDir),
+        };
+        await writeArtifacts(archiveDir, archivedProjection.run.artifactsRef, artifacts);
+
+        if (archivedProjection.classic.managedDelivery && !await archivedGateInputs(layout.projectRoot, archiveDir,
+          archivedProjection.run, archivedProjection.classic.deliveryPolicy, 'Kp'))
+          throw new ArchiveFailure('UNVERIFIED: actual archive output does not match the pre-authorized transformation; recovery required');
+
+        const archiveTransition = applyClassicTransition(
+          recovering && archivedProjection.classic.archiveConfirmation !== 'confirmed'
+            ? { ...archivedProjection.classic, archiveConfirmation: 'confirmed' }
+            : archivedProjection.classic,
+          'archived',
+        );
+        const documentDelivery =
+          (await readClassicDelivery(layout.projectRoot, archiveDir)).delivery?.action ===
+          'archive-only';
+        const archivedClassic = {
+          ...archiveTransition.classic,
+          ...(documentDelivery ? { branchStatus: 'handled' as const } : {}),
+          designDoc: archivedPointer(
+            layout.projectRoot,
+            activeDir,
+            archiveDir,
+            archiveTransition.classic.designDoc,
+          ),
+          plan: archivedPointer(
+            layout.projectRoot,
+            activeDir,
+            archiveDir,
+            archiveTransition.classic.plan,
+          ),
+          verificationReport: archivedPointer(
+            layout.projectRoot,
+            activeDir,
+            archiveDir,
+            archiveTransition.classic.verificationReport,
+          ),
+          handoffContext: archivedPointer(
+            layout.projectRoot,
+            activeDir,
+            archiveDir,
+            archiveTransition.classic.handoffContext,
+          ),
+        };
+        // H07: the archive proves the spec operation only. A managed run
+        // with an unmet knowledge-closeout obligation stays open on the SAME
+        // run — the archive neither completes it nor clears its recovery
+        // entry.
+        closeoutBlocked = knowledgeCloseoutBlocked(archivedClassic);
+        let transitionedRun = archivedProjection.run;
+        if (
+          archivedProjection.run.currentStep !== 'completed' ||
+          archivedProjection.run.status !== 'completed'
+        ) {
+          transitionedRun = await transitionClassicRuntimeRun(
+            archiveDir,
+            archivedClassic,
+            archivedProjection.run,
+            {
+              actionId,
+              archiveDirectory: classicProjectRelative(layout.projectRoot, archiveDir),
+              event: 'archived',
+              source: 'comet-archive',
+            },
+          );
+        }
+        if (recovering) {
+          await appendRecoveryEvent(archiveDir, transitionedRun, actionId);
+        }
+        const trajectory = await readTrajectory(archiveDir, transitionedRun.trajectoryRef);
+        const context = await readContext(archiveDir, transitionedRun.contextRef);
+        const checkpoint: Checkpoint = {
+          runId: transitionedRun.runId,
+          stateVersion: transitionedRun.iteration,
+          trajectoryOffset: trajectory.length,
+          contextHash: context === null ? null : hashText(context),
+          artifactsHash: artifactsHash(artifacts),
+          createdAt: new Date().toISOString(),
+        };
+        await writeCheckpoint(archiveDir, transitionedRun.checkpointRef, checkpoint);
+        const completedRun: RunState = {
+          ...transitionedRun,
+          pending: null,
+          // H07: only the archive's own pending intent is cleared here. The
+          // run is stamped completed ONLY when the aggregated closeout
+          // predicate says the run is actually done; a pending knowledge
+          // closeout parks the run on waiting with the closeout step.
+          status: closeoutBlocked ? 'waiting' : 'completed',
+        };
+        await writeClassicState(archiveDir, {
+          classic: archivedClassic,
+          run: completedRun,
+          unknownKeys: archivedProjection.unknownKeys,
+        });
+        await appendClassicStateEvent(archiveDir, {
+          change: archiveName,
+          event: 'archived',
+          source: 'comet-archive',
+          from: archivedProjection.classic,
+          to: archivedClassic,
+          effects: archiveTransition.effects,
+        });
+        await clearPendingAction(archiveDir, completedRun.pendingRef);
+      });
+      output.stderr.push(green('  [OK] archived: true'));
+      output.stepsOk += 1;
+      output.stepsTotal += 1;
+      if (closeoutBlocked) {
+        output.stderr.push(
+          yellow(
+            '  [PENDING] knowledge closeout: the run stays open (waiting) on the SAME run until the obligation is recorded; do not archive again',
+          ),
+        );
+      }
+    } else {
+      if (!projection.run) {
+        throw new ArchiveFailure(
+          red('FATAL: archived Classic state is missing its Run projection'),
+        );
+      }
+      output.stderr.push(green(`  [OK] OpenSpec archive completed: ${archiveDir}`));
+      output.stepsOk += 1;
+      output.stepsTotal += 1;
+      output.stderr.push(green('  [OK] Main specs verified clean'));
+      output.stepsOk += 1;
+      output.stepsTotal += 1;
+      output.stderr.push(green('  [OK] archived: true'));
+      output.stepsOk += 1;
+      output.stepsTotal += 1;
+    }
+
+    if (dryRun) {
+      if (designDoc) {
+        await annotateFrontmatter(
+          output,
+          layout.projectRoot,
+          designDoc,
+          archiveName,
+          'status: final',
+          true,
+        );
+      }
+      if (planPath) {
+        await annotateFrontmatter(output, layout.projectRoot, planPath, archiveName, '', true);
+      }
+      output.stderr.push(
+        yellow(`  [DRY-RUN] Would set archived: true in ${archiveDir}/.comet.yaml`),
+      );
+      output.stepsOk += 1;
+      output.stepsTotal += 1;
+      output.stderr.push(yellow('  [DRY-RUN] Would verify final archive integrity'));
+      output.stepsOk += 1;
+      output.stepsTotal += 1;
+    } else {
+      await verifyFinalArchiveIntegrity(layout.projectRoot, archiveDir);
+      await recordClassicDocumentArchive(layout.projectRoot, archiveDir);
+      output.stderr.push(green('  [OK] Final archive integrity verified'));
+      output.stepsOk += 1;
+      output.stepsTotal += 1;
+    }
+
+    if (!dryRun) {
+      const delivery = await readClassicDelivery(layout.projectRoot, archiveDir);
+      if (['complete', 'local-verified'].includes(delivery.verification.status)) {
+        if (closeoutBlocked) {
+          // H01/H07: Git delivery is done but the knowledge closeout is not;
+          // the current-change entry is the recovery anchor of the SAME run.
+          output.stderr.push(
+            yellow('  [KEPT] current-change recovery entry retained while the knowledge closeout is pending'),
+          );
+        } else {
+          await clearCurrentChangeIf(layout.projectRoot, change);
+        }
+      }
+    }
+
+    output.stderr.push('');
+    output.finishEnvelope({ name: change, dryRun, locale: classicLocale(classic.language) });
+    output.stderr.push(
+      dryRun
+        ? yellow(`Dry run complete. ${output.stepsOk}/${output.stepsTotal} steps would succeed.`)
+        : green(`Archive complete. ${output.stepsOk}/${output.stepsTotal} steps succeeded.`),
+    );
+    return output.toResult(output.stepsOk < output.stepsTotal ? 1 : 0);
+  } catch (error) {
+    if (error instanceof ArchiveFailure) {
+      if (error.message) {
+        for (const line of error.message.split('\n')) output.stderr.push(line);
+      }
+      return output.toResult(error.exitCode);
+    }
+    throw error;
+  }
+};
