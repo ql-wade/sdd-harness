@@ -9,7 +9,8 @@
   "tally": {
     "pass": 0,
     "fail": 0,
-    "not_verified": 130
+    "not_verified": 129,
+    "deferred_not_exercised": 1
   },
   "source_history": "replan-history/2026-10-24-comet-convergence/previous/verification-results.json",
   "per_check": [
@@ -505,9 +506,13 @@
       "check_id": "V_F10",
       "required": true,
       "command": "node tools/verify/delivery-journey.mjs --scenario F10 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/F10 --json",
-      "status": "NOT_VERIFIED",
-      "scope": "current Comet managed profile only; no inherited old PASS",
-      "evidence": []
+      "status": "NOT-EXERCISED",
+      "scope": "explicit human deferral of positive Control API from firstCLI fixedRunner completion; neverpositivePASS",
+      "evidence": [
+        "f10-current-scope-decision.json"
+      ],
+      "required_in_current_completion": false,
+      "scope_disposition": "f10-current-scope-decision.json"
     },
     {
       "check_id": "V_H01",
@@ -1208,7 +1213,7 @@
     }
   },
   "source_head": "3f69f9c5c3c49f0146974fb28c90c1ed8f403496",
-  "updated_at": "2026-10-25T03:01:06.579547+00:00",
+  "updated_at": "2026-10-25T03:38:54.202046+00:00",
   "regression": {
     "command": "Node24.15.0/PYTHONDONTWRITEBYTECODE=1 bash scripts/check.sh -> npm test",
     "exit_code": 1,
@@ -1251,5 +1256,18 @@
   },
   "accepted_document_nodes": 4,
   "runtime_scenarios_accepted": 0,
-  "accepted_component_nodes": 2
+  "accepted_component_nodes": 2,
+  "checks_current_scope": 129,
+  "scenarios_current_scope": 103,
+  "explicit_scope_deferrals": [
+    {
+      "check_id": "V_F10",
+      "scenario_id": "F10",
+      "task_id": "P5_2",
+      "decision": "f10-current-scope-decision.json",
+      "status": "NOT-EXERCISED",
+      "positive_api_certification": "UNVERIFIED",
+      "required_before_api_enablement": true
+    }
+  ]
 }

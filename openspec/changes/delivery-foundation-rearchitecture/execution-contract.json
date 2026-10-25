@@ -2108,7 +2108,11 @@
       "cli_contract": "Repository CLI: 0=PASS, 1=invalid input/prerequisite, 2=verification failure; missing environment explicitly UNVERIFIED and nonzero. Upstream tools retain native exit contracts.",
       "current_status": "NOT_VERIFIED_ON_CONVERGENCE_BASELINE",
       "historical_results_may_close": false,
-      "execution_owner": "VERIFY"
+      "execution_owner": "VERIFY",
+      "required_in_current_completion": false,
+      "scope_disposition_ref": "f10-current-scope-decision.json",
+      "scope_status": "DEFERRED_EXPLICIT_HUMAN_NOT_EXERCISED",
+      "required_before_control_api_enablement": true
     },
     {
       "id": "V_H01",
@@ -4192,9 +4196,15 @@
       "P5_2",
       "P5_3"
     ],
-    "status": "PRE_ENABLE_REQUIRED_NOT_CERTIFIED",
+    "status": "FIXED_RUNNER_SCOPE_CONTROL_API_POSITIVE_DEFERRED_BY_HUMAN",
     "scope_activation": "explicit cross-machine/host authorization and registered environment required",
-    "acceptance": "F10 positive/negative identity/isolation/recovery remains required before enabling Control API; not satisfied by static disabled configuration"
+    "acceptance": "F10 positive/negative identity/isolation/recovery remains required before any future Control API enablement; disabled refusals do not certify positive capability.",
+    "current_scope_decision": "f10-current-scope-decision.json",
+    "current_scope": {
+      "P5_1": "actual selected host/driver/install matrix; no support inferred for unselected hosts",
+      "P5_2": "positive Control API deferred, not passed; enforce disabled gate before any attempted activation",
+      "P5_3": "fixed-runner fencing/background/recovery/version rollback and operations remain required"
+    }
   },
   "openspec": {
     "change_id": "delivery-foundation-rearchitecture",
@@ -4239,7 +4249,7 @@
     "prerequisites_do_not_count_as_gate_acceptance": true
   },
   "completion_predicate": {
-    "all_required_checks": "All130 required checks current PASS; no old check deleted or waived by known-env, holder, snapshot shape or local green.",
+    "all_required_checks": "All129 checks included in the explicitly approved current delivery scope must be current PASS. Preserve all130 records; V_F10 alone stays NOT-EXERCISED with the named human scope disposition, never converted to PASS or silently deleted. No other check is waived by known-env, holder, snapshot shape or local green.",
     "all_original_scenarios": "All92 original and12 convergence scenarios preserve actual WHEN/THEN and required proof scope. Wrong old test oracle is repaired under original scenario, not retained as compatibility.",
     "findings": "Close known gaps in real role dispatch/review, Kp-before-archive, event+periodic maintenance, native-state backup/retention, code knowledge integration and evidence/state consistency, with actual independent retests.",
     "full_journeys": [
@@ -4249,9 +4259,9 @@
     ],
     "same_product_run": "Run identity remains same through archive, pending knowledge publication, restart and overall completed",
     "maintenance": "After completion use same Comet engine linked maintenance Run with origin_run and knowledge/operation linkage; do not rewrite delivered history or create peer scheduler",
-    "conditional_scope": "F10 stays required before cross-machine activation; current required UNVERIFIED prevents whole-goal completion unless user explicitly approves a separate scope replan. Do not implement cross-machine just to inflate completion.",
+    "conditional_scope": "Human choice A in f10-current-scope-decision.json explicitly excludes P5_2/F10 positive Control API capability from this first CLI+fixedRunner completion. F10 remains unverified and required before any future Control API activation. P5_1/P5_3 fixed-runner host/isolation/rollback/recovery obligations stay in scope; unselected hosts are not certified.",
     "closeout": "Migration Change archive/post-audit through sole Comet owner after VERIFY; no helper finalize",
-    "failure": "FAIL/GATED/UNVERIFIED/EVIDENCE_UNSTABLE or missing UI/raw readback => not complete"
+    "failure": "Any in-scope FAIL/GATED/UNVERIFIED/EVIDENCE_UNSTABLE or missing required UI/raw readback prevents completion. Only the exact P5_2/F10/V_F10 scope disposition is allowed; incomplete source/knowledge/platform/permissions/recovery evidence cannot inherit it."
   },
   "observer_contract": {
     "planned_extension": "--journey same-run-delivery|real-comet-recovery|post-delivery-permissions",
@@ -4288,7 +4298,19 @@
     ],
     "required_evidence": "actual implementation artifact committed/snapshotted, current tests and independent code review passed, exact artifact/build binding; only then may named consumer start",
     "status_rule": "original task checkboxes stay unchecked and current status INTEGRATED_AWAITING_REAL_QUALIFICATION until actual I02/P1_5 integration acceptance closes its declared obligations For the P1_2<-P1_6 supplier-artifact edge, P1_6 remains INTEGRATED_AWAITING_REAL_QUALIFICATION until actual cold Agent discovery and real method/role no-nested-dispatch evidence is accepted; installing files cannot close it. Only construction/qualified observation is allowed; no business or credential authority is added.",
-    "no_waiver": "These three dependency edges permit verification of the artifact, not product execution or gate approval; VERIFY requires actual task/AC acceptance and all118 checks PASS. No other edge inherits this exception."
+    "no_waiver": "These three dependency edges permit verification of the artifact, not product execution or gate approval; VERIFY requires actual task/AC acceptance and all118 checks PASS. No other edge inherits this exception.",
+    "explicit_scope_dispositions": [
+      {
+        "task": "P5_2",
+        "decision_ref": "f10-current-scope-decision.json",
+        "status": "DEFERRED_NOT_ACCEPTED",
+        "consumers": [
+          "P5_3",
+          "VERIFY"
+        ],
+        "meaning": "satisfies only current-scope dependency accounting; no artifact or runtime qualification is granted; P5_3 other dependencies/requirements remain and VERIFY still needs every in-scope task accepted"
+      }
+    ]
   },
   "journey_execution": {
     "owner": "VERIFY",
@@ -4308,7 +4330,7 @@
     "order_semantics": "顺序表达旅程依赖与验收消费链, 不是墙钟完成顺序: V_RW_REAL_COMET_RECOVERY 是 V_SAME_RUN_DELIVERY 同一产品 Run 进行中(completed 之前)注入的实际故障窗口, 先于该 Run 的 completed 步骤执行并恢复; V_POST_DELIVERY_PERMISSIONS 消费该 Run 实际发布的知识对象, 在 completed 之后执行。执行者不得先让产品 Run completed 再补拍恢复窗口。"
   },
   "acceptance_aggregation": {
-    "rule": "For each original scenario require every required check listing its AC plus mandatory terminal-layer evidence; component PASS never overrides failed/missing real-path check.",
+    "rule": "For each original scenario require every required check listing its AC plus mandatory terminal-layer evidence; component PASS never overrides failed/missing real-path check. For this current delivery only, F10/V_F10 retains NOT-EXERCISED under the explicit human scope decision; every other scenario retains all its mapped checks and terminal evidence. Never count this disposition as a positive pass.",
     "scenario_required_checks": {
       "A01": [
         "V_A01",
@@ -4758,7 +4780,8 @@
       "N12": [
         "V_N12"
       ]
-    }
+    },
+    "current_scope_decision": "f10-current-scope-decision.json"
   },
   "flow_convergence": {
     "revision": "2026-10-24-comet-convergence",
@@ -4779,5 +4802,33 @@
     "old_run_rule": "preserve original states/evidence and immutable profile; no silent migration, deletion or importing old pass to new profile",
     "implementation_rule": "real work rather than passResult builders/rewritten old artifactDigest/strong labels/print-ok/fake service or archive in full journeys",
     "migration_safety_work": "User-authorized retirement and P1_2 anti-reintroduction repair may execute under existing ADR-0015/0016 while converged artifacts undergo review; no business-profile enablement before actual architecture/runtime gates."
+  },
+  "current_delivery_scope": {
+    "decision_ref": "f10-current-scope-decision.json",
+    "description": "CLI plus fixed managed Runner; Control API positive capability deferred by explicit human choice A",
+    "record_totals": {
+      "nodes": 39,
+      "workpackages": 69,
+      "scenarios": 104,
+      "checks": 130
+    },
+    "current_required": {
+      "nodes": 38,
+      "scenarios": 103,
+      "checks": 129
+    },
+    "deferred_tasks": [
+      "P5_2"
+    ],
+    "deferred_scenarios": [
+      "F10"
+    ],
+    "deferred_checks": [
+      "V_F10"
+    ],
+    "deferred_check_status": "NOT-EXERCISED",
+    "control_api_enablement": "NOT_AUTHORIZED_OR_CERTIFIED",
+    "future_activation_requires": "fresh explicit activation, registered resources and actual complete F10 positive/negative identity/isolation/recovery evidence",
+    "only_this_named_disposition": "all other missing/failed capability or evidence still blocks current delivery; no JSON/worker supplied arbitrary exclusions"
   }
 }
