@@ -2,10 +2,10 @@
   "schema_version": 2,
   "feature": "delivery-foundation-rearchitecture",
   "hash_mode": "checkbox-normalized-v1",
-  "plan_sha256": "e7c0f3d299006d78c9cf2ad370b5aa88c5ec73a7c8b6d5fd7f1c7901f2e5c9bb",
+  "plan_sha256": "11a5945b690e195be06f18caa30374d5755ae54f9489fd5d4c32537eff183df3",
   "architecture_sha256": "36e14eb296995562f75f801a5087096fd53ed3e34529cd1f236b8eaf6503e589",
-  "dag_sha256": "dc03a3d9d1a6564975c451f56d7541c1daee5a3947840bcb2638a70b5166c628",
-  "execution_contract_sha256": "63eff92389d52ec48a3d729813f78330eb3ce0bf8409acc25e47bf96771b5194",
+  "dag_sha256": "69d3c6bf950dc4d4cec6fd5cce4c35203d35f2b0c0b49104508ad750c5c10c5f",
+  "execution_contract_sha256": "5bccfa254613cf0e399cfc3ab4aa7ae2a22a49e4ad244dfd1b227edc2048fa17",
   "acceptance_ids": [
     "A01",
     "A02",
@@ -223,7 +223,8 @@
       "test/delivery-cases/1_6.mjs",
       "integrations/comet/patches/tests/1_6.patch",
       "foundation/profiles/comet-managed.json",
-      "test/comet-method-binding.test.js"
+      "test/comet-method-binding.test.js",
+      "scripts/check.sh"
     ],
     "P1_2": [
       "foundation",
@@ -544,6 +545,26 @@
         "checks": 130
       },
       "historical_pass_inheritance": false
+    },
+    {
+      "id": "2026-10-25-p1_6-selftest-caller",
+      "at": "2026-10-25T01:22:12.110780+00:00",
+      "task_id": "P1_6",
+      "change": "add scripts/check.sh as required caller ownership for source-owned full selftest after whole snapshot upgrade",
+      "reviews": [
+        "native Spec approved necessary scope-only caller sync",
+        "native Standards approved minimal scope; no new controller or relaxed verification"
+      ],
+      "reviewed_architecture_receipt": "architecture-review/comet-convergence-r1/receipt.json",
+      "requirements_interfaces_and_task_ids_unchanged": true,
+      "old_hashes": {
+        "tasks.md": "8b709ab2b9055acedd7192cc30f7acaed2e2dd1467edd9ac4fc03cc035926f08",
+        "task-dag.json": "dc03a3d9d1a6564975c451f56d7541c1daee5a3947840bcb2638a70b5166c628",
+        "drift-lock.json": "a111e49df9285a1dc90342bf4da46a50617382bd139eaef050ff2fa7a901653d",
+        "convergence-replan-record.json": "c5fe8bc6a777508c0e8921de59707319b153fdd4fa2b328753fc1f25b726f8b4"
+      },
+      "runtime_evidence_inherited": false,
+      "binding_update_reason": "Ownership-only tasks header changed normalized source; update only that source digest plus its chained baseline/contract pins. No scenario or public interface changed."
     }
   ]
 }

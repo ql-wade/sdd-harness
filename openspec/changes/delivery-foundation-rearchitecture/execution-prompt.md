@@ -1,11 +1,3 @@
-# 当前项目执行覆盖
-
-先读同目录HANDOFF.md。用户已明确授权清理旧流程并按最新架构实际端到端完成，当前不是仅规划。root聊天唯一迁移planner，Claude工人隔离实施原任务；产品权威只有Comet。原39节点/69工作包/92场景/118检查保留，追加N01–N12，共104场景/130required，新profile0通过。旧入口已备份退休，安装防再生在执行，不能继承旧COMPLETE。
-
-通用模板与项目冲突时以当前合同/实际授权为准：禁止helper finalize；实际规格归档仅Comet Spec Adapter，产品Run旅程内归档与迁移Change在VERIFY后归档分开。完整旅程只在VERIFY、所有机制就绪后执行；工件交接不等于验收。旧票改绑、脚本strong/print-ok、假MCP/归档、目录Registry不能代替实际角色/知识/平台终态。监控不得成为第二控制器，无变化不重复报告；所有required/P1/Whitebox/Grill/状态一致后才完成。
-
----
-
 # Agent Execution Controller
 
 Execute this frozen plan with its included goal settings, recurring 20-minute
@@ -19,10 +11,10 @@ paths relative to it, verifying the repository identity before any write:
 plan `tasks.md`, architecture `architecture.md`, DAG `task-dag.json`,
 lock `drift-lock.json`, execution contract `execution-contract.json`.
 
-Locked plan SHA-256: `e7c0f3d299006d78c9cf2ad370b5aa88c5ec73a7c8b6d5fd7f1c7901f2e5c9bb` (checkbox-normalized-v1).
+Locked plan SHA-256: `11a5945b690e195be06f18caa30374d5755ae54f9489fd5d4c32537eff183df3` (checkbox-normalized-v1).
 Architecture SHA-256: `36e14eb296995562f75f801a5087096fd53ed3e34529cd1f236b8eaf6503e589` (raw bytes).
-DAG SHA-256: `dc03a3d9d1a6564975c451f56d7541c1daee5a3947840bcb2638a70b5166c628` (raw bytes).
-Execution-contract SHA-256: `63eff92389d52ec48a3d729813f78330eb3ce0bf8409acc25e47bf96771b5194` (raw bytes).
+DAG SHA-256: `69d3c6bf950dc4d4cec6fd5cce4c35203d35f2b0c0b49104508ad750c5c10c5f` (raw bytes).
+Execution-contract SHA-256: `5bccfa254613cf0e399cfc3ab4aa7ae2a22a49e4ad244dfd1b227edc2048fa17` (raw bytes).
 Normalize CRLF to LF and change only line-leading Markdown checked boxes to
 unchecked for the plan digest; preserve fenced code exactly. Verify all four
 hashes before dispatch and integration; mismatch means HALT_AND_REPLAN.

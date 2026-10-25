@@ -162,10 +162,10 @@
 
 ### Task P1_6: 原任务 1.6 — 按 matt-method-profile-migration.md 显式解决本仓库旧 planner/Comet Classic 的 Superpowers 硬依赖和初始化安装路径；固定 Matt 基础方法与必要专门技能快照。按 M01/M02 验证全局停用不被重启、没有嵌套 planner/implement-spec controller；不修改上游正文或用本机软链接分发。
 
-**Files:** .agents/skills, docs/agent/skill-architecture.md, openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json, integrations/comet/patches/0001-matt-method-profile.patch, test/delivery-cases/1_6.mjs, integrations/comet/patches/tests/1_6.patch, foundation/profiles/comet-managed.json, test/comet-method-binding.test.js
+**Files:** .agents/skills, docs/agent/skill-architecture.md, openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json, integrations/comet/patches/0001-matt-method-profile.patch, test/delivery-cases/1_6.mjs, integrations/comet/patches/tests/1_6.patch, foundation/profiles/comet-managed.json, test/comet-method-binding.test.js, scripts/check.sh
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
 **Dependencies:** P1_1
-**Owns:** .agents/skills, docs/agent/skill-architecture.md, openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json, integrations/comet/patches/0001-matt-method-profile.patch, test/delivery-cases/1_6.mjs, integrations/comet/patches/tests/1_6.patch, foundation/profiles/comet-managed.json, test/comet-method-binding.test.js
+**Owns:** .agents/skills, docs/agent/skill-architecture.md, openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json, integrations/comet/patches/0001-matt-method-profile.patch, test/delivery-cases/1_6.mjs, integrations/comet/patches/tests/1_6.patch, foundation/profiles/comet-managed.json, test/comet-method-binding.test.js, scripts/check.sh
 **Parallel safe:** false
 **Acceptance IDs:** M01, M02, B01, B09, N01, N02, N04
 
