@@ -1,0 +1,9 @@
+# Root P1_3 thin executable integration
+
+Candidate9434a5edffb9ec3f3cc56a12bb3a25bc19ba769f passed two independent reviews, each actually executing the30 new cases. Root main (already containing I02 slot/resolvebeeff57) then ran owned+driver65/65 and complete bash scripts/check.sh1022/1022, no failures/skips. All captured source/contract inputs and eight protected/live files remained unchanged. Commands/UTC/input hashes/raw/exit and reviews are adjacent.
+
+This makes the module executable/symlink-aware with bounded state argv, install-once same-module CODE identity and delegation to the existing Native invoke. It refuses environment/provider/module/role selection, copied/Proxy identities, cross-change forwarding, invalid output and private diagnostics. It adds no scheduler, phase, loop or persistent retry owner.
+
+The earlier3056 patch was rejected and never applied. Root reviewed the explicitly different R1 interface before implementation; it retains the old6da component material and original559 test bytes, and its new private originalRun readback is mechanical only. WeakMap identity, successful Native readback and exit0 are not real source/issuer/principal/OS qualification. No production provider or worker stdin frame execution exists in this slice; the standalone unbound entry refuses with exit2 and0start. No new user slash command was registered.
+
+Full P1_3 still requires current source/image binding, static protected provider/issuer, actual OS/role/model/method/Edit/Shell/MCP delivery, original nonGate ports, accepted readonly resolve consumer and sameRun positive cold recovery. Core original archive/timezone and producer refusals found by its current owner remain open. No129required/103business Journey is signed by this integration, and the original Goal stays active.

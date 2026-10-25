@@ -1,0 +1,56 @@
+TAP version 13
+# Subtest: the CODE-bound main delegates repeat and concurrent reads to one original Native Host on the same private Run
+not ok 1 - the CODE-bound main delegates repeat and concurrent reads to one original Native Host on the same private Run
+  ---
+  duration_ms: 415.564791
+  type: 'test'
+  location: '<repo>/test/comet-execution-binding.test.js:417:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    node:internal/modules/run_main:107
+        triggerUncaughtException(
+        ^
+
+    AssertionError [ERR_ASSERTION]: {"status":"UNVERIFIED","code":"PROTECTED_BOOTSTRAP_REQUIRED","scope":"component/fixed-host-bootstrap","managedClosureEligible":false,"productionQualified":false}
+
+
+    2 !== 0
+
+        at bootstrapReadFixture (file://<tmp>/p13-bootstrap-read-QnRpbs/read-entry.mjs:59:14)
+        at async file://<tmp>/p13-bootstrap-read-QnRpbs/read-entry.mjs:77:30 {
+      generatedMessage: false,
+      code: 'ERR_ASSERTION',
+      actual: 2,
+      expected: 0,
+      operator: 'strictEqual',
+      diff: 'simple'
+    }
+
+    Node.js v24.15.0
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    bootstrapReadFixture (file://<tmp>/p13-bootstrap-read-QnRpbs/read-entry.mjs:59:14)
+    async file://<tmp>/p13-bootstrap-read-QnRpbs/read-entry.mjs:77:30 {
+    TestContext.<anonymous> (file://<repo>/test/comet-execution-binding.test.js:424:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 469.683583

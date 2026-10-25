@@ -272,3 +272,183 @@ test('client exit zero with unknown worker bytes cannot authorize an original Na
     console.log(child.stdout.trim());
   } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
 });
+
+test('the packaged executable and its fixed symlink refuse an unbound controller despite environment role labels', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-bootstrap-entry-'));
+  try {
+    const entry = path.join(repository, 'lib/adapters/comet-executor.js');
+    const linked = path.join(scratch, 'runner-host.mjs');
+    const marker = path.join(scratch, 'untrusted-module-loaded');
+    const untrusted = path.join(scratch, 'untrusted-bootstrap.mjs');
+    fs.writeFileSync(untrusted, `import fs from 'node:fs';fs.writeFileSync(${JSON.stringify(marker)},'loaded');\n`);
+    fs.writeFileSync(path.join(scratch, '.env'), 'P13_SYNTHETIC_NOT_A_CREDENTIAL\n');
+    fs.symlinkSync(entry, linked);
+    const before = fs.readdirSync(scratch).sort();
+    for (const executable of [entry, linked]) {
+      const result = spawnSync(process.execPath, [executable, '--json', 'state', 'next', 'demo'], {
+        cwd: scratch, encoding: 'utf8', timeout: 10_000,
+        env: { PATH: process.env.PATH, HOME: scratch, LANG: 'C.UTF-8',
+          P1_3_GUARD_TRACE: process.env.P1_3_GUARD_TRACE ?? '', COMET_ROLE: 'controller',
+          SDD_RUNNER_ROLE: 'controller', COMET_BOOTSTRAP_MODULE: untrusted },
+      });
+      assert.equal(result.signal, null);
+      assert.equal(result.status, 2, 'a missing protected bootstrap must not silently exit successfully');
+      const status = JSON.parse(result.stdout);
+      assert.equal(status.status, 'UNVERIFIED');
+      assert.equal(status.code, 'PROTECTED_BOOTSTRAP_REQUIRED');
+      assert.equal(status.managedClosureEligible, false);
+      assert.equal(status.productionQualified, false);
+      assert.equal(result.stderr, '');
+      assert.doesNotMatch(result.stdout, /P13_SYNTHETIC|untrusted-bootstrap/);
+    }
+    assert.equal(fs.existsSync(marker), false, 'the entry must never load a caller-selected module');
+    assert.deepEqual(fs.readdirSync(scratch).sort(), before, 'no original Run, provider or credential file is created');
+  } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
+});
+
+test('the executable rejects malformed or authority-selecting arguments before any bootstrap', async (t) => {
+  const { runCometHostMain } = await import('../lib/adapters/comet-executor.js');
+  const cases = [
+    ['undefined', undefined], ['null', null], ['object', {}], ['string', 'state next demo'], ['empty', []],
+    ['null item', ['state', null, 'demo']], ['zero byte', ['state', 'next', 'de\0mo']],
+    ['sparse argument', ['state', 'set', 'demo', 'proposal', ,]],
+    ['overlong item', ['state', 'next', 'x'.repeat(4097)]], ['too many items', Array(65).fill('state')],
+    ['unknown command', ['/comet-build']], ['unknown state operation', ['state', 'init', 'demo', 'full']],
+    ['get without required field', ['state', 'get', 'demo']],
+    ['escaped change', ['state', 'next', '../foreign']],
+    ['json option twice', ['--json', '--json', 'state', 'next', 'demo']],
+    ['json option misplaced', ['state', '--json', 'next', 'demo']],
+    ['controller option', ['state', 'next', 'demo', '--role', 'controller']],
+    ['provider option', ['state', 'next', 'demo', '--provider', 'P13_ARBITRARY_SHORT_NOTE']],
+    ['module option', ['state', 'next', 'demo', '--module', './P13_ARBITRARY_SHORT_NOTE.mjs']],
+    ['project override', ['state', 'next', 'demo', '--project-root', '/P13_ARBITRARY_SHORT_NOTE']],
+    ['cwd override', ['state', 'next', 'demo', '--cwd', '/P13_ARBITRARY_SHORT_NOTE']],
+    ['external forwarding', ['state', 'next', 'demo', '--', 'node']],
+  ];
+  for (const [name, argv] of cases) await t.test(name, async () => {
+    const result = await runCometHostMain(argv);
+    assert.equal(result.exitCode, 1, 'invalid input must be distinguished from absent qualification');
+    const status = JSON.parse(result.stdout);
+    assert.equal(status.status, 'INPUT_INVALID');
+    assert.equal(status.code, 'NATIVE_ARGUMENTS_INVALID');
+    assert.doesNotMatch(result.stdout, /P13_ARBITRARY_SHORT_NOTE|4097|foreign/);
+  });
+});
+
+// Separate entry fixture: the historical 559 Gate fixture above is unchanged.
+// These CODE ports carry no source qualification and never launch a worker.
+async function bootstrapReadFixture(material) {
+  const fs = await import('node:fs'), path = await import('node:path'), crypto = await import('node:crypto');
+  const { pathToFileURL } = await import('node:url');
+  const assert = (await import('node:assert/strict')).default;
+  const sha = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
+  const { createCometExecutor, runCometHostMain } = await import(pathToFileURL(path.join(material.repository, 'lib/adapters/comet-executor.js')));
+  const { cometLaunchAuthority } = await import(pathToFileURL(path.join(material.repository, 'lib/adapters/comet.js')));
+  const sdkFingerprint = '6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a';
+  const runtimeFile = path.join(material.artifacts, '.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds', sdkFingerprint, 'work/assets/skills/comet/scripts/comet-runtime.mjs');
+  assert.equal(sha(fs.readFileSync(runtimeFile)), '04795080295d7174af82913757254426b82037ea5028296a3602b86d200559dd');
+  const native = await import(pathToFileURL(runtimeFile));
+  const priorHome = process.env.HOME;
+  process.env.HOME = path.join(material.scratch, 'home'); fs.mkdirSync(process.env.HOME);
+  try {
+    const project = path.join(material.scratch, 'project');
+    fs.mkdirSync(path.join(project, '.comet'), { recursive: true }); fs.mkdirSync(path.join(project, 'openspec'));
+    fs.writeFileSync(path.join(project, '.comet/config.yaml'), 'schema: comet.project.v1\ndefault_workflow: classic\nworkflows: [classic]\nclassic:\n  artifact_layout: legacy\n');
+    fs.writeFileSync(path.join(project, 'openspec/config.yaml'), 'schema: spec-driven\n');
+    const options = { projectRoot: project, invocationCwd: project };
+    const init = await native.runClassicCli(['--json', 'state', 'init', 'demo', 'full', '--managed-delivery'], undefined, options);
+    assert.equal(init.exitCode, 0, init.stdout);
+    const change = path.join(project, 'openspec/changes/demo');
+    const { run } = await native.ensureClassicRuntimeRun(change);
+    const namespace = 'sdd-harness-i02-entry-component';
+    const roles = ['controller', 'author', 'test-author', 'reviewer', 'publisher', 'isolator'].map((role) => ({
+      id: role, actionRole: role, containerRole: role, principalId: 'component-NOT-PRODUCTION-' + role,
+      workspaceVolume: namespace + '_' + role.replaceAll('-', '_') }));
+    const runner = { schemaVersion: 1, project: 'sdd-harness-pilot', authorityId: 'component-only-authority',
+      workspaceId: 'component-only-workspace', namespace, engineId: 'NOT-A-REAL-ENGINE', dockerContext: 'component',
+      imageDigest: 'sha256:' + 'a'.repeat(64), sdkFingerprint, bootstrapDigest: sha('component-not-a-packaged-image'), roles,
+      controlVolumes: { state: namespace + '_state', receipts: namespace + '_receipts', issuance: namespace + '_issuance' } };
+    const sentinel = 'P13_SHORT_NON_CREDENTIAL_NOTE';
+    const producer = material.fault ? { ...native, runClassicCli() {
+      if (material.fault === 'throw') throw Object.assign(new Error(sentinel), { code: sentinel });
+      if (material.fault === 'bad-result') return { exitCode: 0, stdout: { value: sentinel } };
+      if (material.fault === 'unknown-exit') return { exitCode: 64, stdout: sentinel };
+      return { exitCode: 2, stdout: '{"status":"UNVERIFIED","code":"NATIVE_FIXTURE_REFUSAL"}\n', productionQualified: true };
+    } } : native;
+    const authority = cometLaunchAuthority({ secret: 'public-entry-fixture-key-not-a-production-credential', runId: run.runId });
+    const source = { policy: () => ({}), context: () => ({}), authorizeWrite: () => ({ allowed: false }), verifyReview: () => ({ ok: false }) };
+    const physicalMarker = path.join(material.scratch, 'unexpected-physical-command');
+    const physicalGuard = path.join(material.scratch, 'forbidden-physical-cli.mjs');
+    fs.writeFileSync(physicalGuard, `#!${process.execPath}\nimport fs from 'node:fs';fs.appendFileSync(${JSON.stringify(physicalMarker)},'attempt\\n');process.exitCode=97;\n`, { mode: 0o755 });
+    const physicalAttempts = () => fs.existsSync(physicalMarker) ? fs.readFileSync(physicalMarker, 'utf8').trim().split('\n').length : 0;
+    const executor = createCometExecutor({ native: producer, authority, source,
+      registration: { schemaVersion: 1, projectRoot: project, change: 'demo', runId: run.runId, runner,
+        docker: { executable: physicalGuard, sha256: sha(fs.readFileSync(physicalGuard)) },
+        actions: [{ gate: 'R', roleBindingId: 'reviewer', argv: ['UNBOUND-WORKER-MUST-NOT-LAUNCH'] }] } });
+    const argv = ['--json', 'state', 'get', 'demo', 'phase'];
+    if (material.fault) {
+      const result = await runCometHostMain(argv, executor);
+      assert.equal(result.exitCode, material.fault === 'native-refusal' ? 2 : 1, result.stdout);
+      assert.equal(result.productionQualified ?? JSON.parse(result.stdout).productionQualified, false);
+      assert.doesNotMatch(result.stdout, new RegExp(sentinel));
+      if (material.fault !== 'native-refusal') assert.equal(JSON.parse(result.stdout).status, 'INTERNAL_FAILURE');
+      assert.equal(physicalAttempts(), 0);
+      return { fault: material.fault, exitCode: result.exitCode, status: result.stdout.trim(), productionQualified: false };
+    }
+    const expected = await native.runClassicCli(argv, undefined, options);
+    assert.equal(expected.exitCode, 0, expected.stdout); assert.equal(JSON.parse(expected.stdout).stdout.trim(), 'open');
+    const results = [await runCometHostMain(argv, executor), ...await Promise.all([
+      runCometHostMain(argv, executor), runCometHostMain(argv, executor), runCometHostMain(argv, executor) ])];
+    for (const result of results) {
+      assert.equal(result.exitCode, 0, result.stdout); assert.equal(result.stdout, expected.stdout);
+      assert.equal(result.managedClosureEligible, false); assert.equal(result.productionQualified, false);
+    }
+    for (const copied of [{ ...executor }, new Proxy(executor, {})]) {
+      const refusal = await runCometHostMain(argv, copied);
+      assert.equal(refusal.exitCode, 1); assert.equal(JSON.parse(refusal.stdout).code, 'FIXED_HOST_CAPABILITY_REQUIRED');
+    }
+    let invoked = false;
+    const fake = { install() { invoked = true; }, invokeNative() { invoked = true; } };
+    assert.equal((await runCometHostMain(argv, fake)).exitCode, 1); assert.equal(invoked, false);
+    const foreign = await runCometHostMain(['--json', 'state', 'get', 'foreign', 'phase'], executor);
+    assert.equal(foreign.exitCode, 1); assert.equal(JSON.parse(foreign.stdout).code, 'NATIVE_COMMAND_SCOPE_REQUIRED');
+    assert.equal(fs.existsSync(path.join(project, 'openspec/changes/foreign')), false);
+    const current = await runCometHostMain(['--json', 'state', 'get', 'demo', 'run_id'], executor);
+    assert.equal(current.exitCode, 0, current.stdout); assert.equal(JSON.parse(current.stdout).stdout.trim(), run.runId);
+    assert.equal(physicalAttempts(), 0);
+    return { sdkFingerprint, entryRead: 'open', repeatedReads: results.length, run: run.runId,
+      sourceQualification: 'ABSENT', physicalCommandAttempts: physicalAttempts(), productionQualified: false };
+  } finally { if (priorHome === undefined) delete process.env.HOME; else process.env.HOME = priorHome; }
+}
+
+test('the CODE-bound main delegates repeat and concurrent reads to one original Native Host on the same private Run', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-bootstrap-read-'));
+  try {
+    const material = { repository, artifacts: process.env.P1_3_ACCEPTED_ARTIFACT_ROOT ?? repository, scratch };
+    const program = path.join(scratch, 'read-entry.mjs');
+    fs.writeFileSync(program, `const f=${bootstrapReadFixture.toString()};console.log(JSON.stringify(await f(${JSON.stringify(material)})));\n`);
+    const child = spawnSync(process.execPath, [program], { encoding: 'utf8', timeout: 30_000 });
+    assert.equal(child.status, 0, child.stderr);
+    const result = JSON.parse(child.stdout); assert.equal(result.entryRead, 'open'); assert.equal(result.repeatedReads, 4);
+    assert.equal(result.physicalCommandAttempts, 0); assert.equal(result.productionQualified, false);
+    console.log(child.stdout.trim());
+  } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
+});
+
+test('the main distinguishes Native refusal from malformed results and unknown exceptions without echoing producer diagnostics', async (t) => {
+  for (const fault of ['throw', 'bad-result', 'unknown-exit', 'native-refusal']) await t.test(fault, () => {
+    const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-bootstrap-result-'));
+    try {
+      const material = { repository, artifacts: process.env.P1_3_ACCEPTED_ARTIFACT_ROOT ?? repository, scratch, fault };
+      const program = path.join(scratch, 'result-entry.mjs');
+      fs.writeFileSync(program, `const f=${bootstrapReadFixture.toString()};console.log(JSON.stringify(await f(${JSON.stringify(material)})));\n`);
+      const child = spawnSync(process.execPath, [program], { encoding: 'utf8', timeout: 30_000 });
+      assert.equal(child.status, 0, child.stderr);
+      const result = JSON.parse(child.stdout);
+      assert.equal(result.exitCode, fault === 'native-refusal' ? 2 : 1);
+      assert.equal(result.productionQualified, false);
+      assert.doesNotMatch(child.stdout, /P13_SHORT_NON_CREDENTIAL_NOTE/);
+      console.log(child.stdout.trim());
+    } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
+  });
+});

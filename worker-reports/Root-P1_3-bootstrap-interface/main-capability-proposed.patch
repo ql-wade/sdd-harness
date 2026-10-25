@@ -1,0 +1,61 @@
+--- a/lib/adapters/comet-executor.js
++++ b/lib/adapters/comet-executor.js
+@@ -18,6 +18,8 @@
+ const text = (value) => typeof value === 'string' && value.trim().length > 0;
+ const exact = (value, keys) => object(value) && Object.keys(value).sort().join(',') === [...keys].sort().join(',');
+ const boundary = { scope: 'component/fixed-host-execution', managedClosureEligible: false };
++// CODE object identity only; not a process/role/source qualification record.
++const fixedEntries = new WeakMap();
+ 
+ export class CometExecutionError extends Error {
+   constructor(code) { super(`UNVERIFIED: ${code}`); this.name = 'CometExecutionError'; this.code = code; }
+@@ -226,7 +228,7 @@
+     return terminal;
+   };
+ 
+-  return Object.freeze({
++  const executor = Object.freeze({
+     ...boundary,
+     install() {
+       if (installed) no('FIXED_HOST_ALREADY_INSTALLED');
+@@ -290,6 +292,11 @@
+       } };
+     },
+   });
++  fixedEntries.set(executor, (argv) => {
++    if (!installed) executor.install();
++    return invoke(argv);
++  });
++  return executor;
+ }
+ 
+ function clonePacket(packet) {
+@@ -322,9 +329,25 @@
+     && tail[1] === '--file' && text(tail[2]) && !tail[2].startsWith('--');
+ }
+ 
+-export async function runCometHostMain(argv) {
+-  if (!bootstrapArguments(argv)) return bootstrapResult('INPUT_INVALID', 'NATIVE_ARGUMENTS_INVALID', 1);
+-  return bootstrapResult('UNVERIFIED', 'PROTECTED_BOOTSTRAP_REQUIRED', 2);
++export async function runCometHostMain(argv, executor) {
++  try {
++    if (!bootstrapArguments(argv)) return bootstrapResult('INPUT_INVALID', 'NATIVE_ARGUMENTS_INVALID', 1);
++    if (executor === undefined) return bootstrapResult('UNVERIFIED', 'PROTECTED_BOOTSTRAP_REQUIRED', 2);
++    const invoke = fixedEntries.get(executor);
++    if (!invoke) return bootstrapResult('INPUT_INVALID', 'FIXED_HOST_CAPABILITY_REQUIRED', 1);
++    const result = await invoke([...argv]);
++    if (!object(result) || ![0, 1, 2].includes(result.exitCode) || typeof result.stdout !== 'string'
++      || Buffer.byteLength(result.stdout) > 8 * 1024 * 1024) {
++      return bootstrapResult('INTERNAL_FAILURE', 'NATIVE_RESULT_INVALID', 1);
++    }
++    return { ...boundary, productionQualified: false, exitCode: result.exitCode, stdout: result.stdout };
++  } catch (error) {
++    if (error instanceof CometExecutionError) {
++      if (error.code === 'NATIVE_COMMAND_SCOPE_REQUIRED') return bootstrapResult('INPUT_INVALID', 'NATIVE_COMMAND_SCOPE_REQUIRED', 1);
++      return bootstrapResult('UNVERIFIED', 'PROTECTED_HOST_INVOCATION_UNVERIFIED', 2);
++    }
++    return bootstrapResult('INTERNAL_FAILURE', 'BOOTSTRAP_INTERNAL_FAILURE', 1);
++  }
+ }
+ 
+ let isMain = false;
