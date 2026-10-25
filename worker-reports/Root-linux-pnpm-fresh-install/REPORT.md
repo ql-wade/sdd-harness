@@ -1,0 +1,7 @@
+# Root actual fresh Linux offline install
+
+Root verified435 input files/116963203bytes and executed exact v3 once, reusing the explicitly cached public v2 layers. Actual27.6seconds,exit0,no timeout/output overflow. Source was the original6033byte manifest SHA594d4f6334e09e317f08fdb8bb4f177817b236ddfdd9c390a31a1f8b15883a09 and unchanged8ecc lock. The new target started without node_modules and its actual virtual-store directory differed from the seed. With listener already closed and physical networknone, official pnpm10.18.3 frozen/offline/ignore-scripts installed429 resolved,429 reused,0downloaded,429added; manifest and both lock copies stayed unchanged.
+
+This closes the specific same-seed-only ambiguity in v2. It validates a Linux/arm64 package store/install mechanism, not full Comet build, OpenSpec/root/PyYAML/Git installation, complete bootstrap image, source/role/OS/Agent/model/tool isolation or business journey. It does not enable upGate or publish any image. The emitted local image config ID is recorded in observed-summary, not mislabeled as a repository manifest digest.
+
+Only pinned public source images/tars and mechanism code were present; no host mounts,ports,secrets,models,project CODE,Role orRun. Existing VM4CPU/6212636672B provided the resource envelope; no perbuild hardCPU/RSS cap, and1024MiB Node heap option did not automatically cap pnpm child/totalRSS. Source and actual command/time/exit/raw plus byte proofs are adjacent. Formal129/103 remain unaccepted.

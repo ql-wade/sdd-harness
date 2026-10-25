@@ -6,6 +6,8 @@
 
 Root已实际完成纯公开Linux断网pnpm机制构建，429原tar/原锁、loopback GET全部200、监听关闭后同seed offline fetch成功，本地image e0b77edb…；这不证明fresh工作区从store恢复，更不证明完整Runner/角色。新目录补证与完整离线bootstrap仍待做。I02代码205aa仅14新例、原92未复验。实际CLI/认证/模型/SourceReader/制品回流/权限/知识/平台及最终验收未完；6节点接纳/32待办/1F10另期，129required/103场景业务未验不变，整体上海时区ETA未知。
 
+最新Root实证：fresh Linux目标初始无node_modules、未复用旧virtual目录；原manifest/8ecc锁不变，物理netnone、监听已关，实际pnpm frozen/offline安装429resolved/429reused/0downloaded/429added，v3实际exit0。该维度已从“同seed重复”提升到“新工作区store恢复”，仍非完整Comet/Runner/角色资格。执行桥P2作者81+52绿待冻结/复审；Core当前90矩阵尚待结果，不继承旧85/74。
+
 以下均为先前历史快照，不作为当前计数。
 
 
