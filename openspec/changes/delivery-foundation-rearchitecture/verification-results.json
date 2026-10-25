@@ -1308,6 +1308,26 @@
       "root_smoke": "257pass2platformskip",
       "generated": 3,
       "whole_accepted": false
+    },
+    "p2_5_current": {
+      "commit": "cbde39e6b811b94fec89fd6ae11a31b009704097",
+      "worker": "83864475924e78e0a3e4accfd201d95f0c5c3065",
+      "root_owned": 67,
+      "root_zero_fail_skip": true,
+      "independent_review": "Spec and Standards support exact construction",
+      "evidence": "worker-reports/review-spec-main-integration/integration.json",
+      "whole_accepted": false,
+      "runtime_scenarios_accepted": 0
+    },
+    "p3_4_current": {
+      "commit": "cbde39e6b811b94fec89fd6ae11a31b009704097",
+      "worker": "ee52a45f49a847972aa1f086ad18905da8d11240",
+      "root_owned": 29,
+      "root_zero_fail_skip": true,
+      "independent_review": "Spec and Standards support exact construction",
+      "evidence": "worker-reports/review-spec-main-integration/integration.json",
+      "whole_accepted": false,
+      "runtime_scenarios_accepted": 0
     }
   },
   "review_authorization": {
@@ -1346,65 +1366,62 @@
       "evidence": ".local/comet-reset/i06-integration/full-check/result.json"
     }
   },
-  "source_head": "9c9b70b92f1c5f548c5f84cad24c644657a4c30d",
-  "updated_at": "2026-10-25T12:46:02.094207+00:00",
+  "source_head": "cbde39e6b811b94fec89fd6ae11a31b009704097",
+  "updated_at": "2026-10-25T13:53:38.103547+00:00",
   "regression": {
-    "command": "Node24.15 PATH/PYTHONDONTWRITEBYTECODE=1 bash scripts/check.sh",
+    "command": "Node24.15/PYTHONDONTWRITE1 + calibrated externalCLI guards bash scripts/check.sh",
     "exit_code": 1,
-    "integrated_code_commit": "9c9b70b92f1c5f548c5f84cad24c644657a4c30d",
+    "integrated_code_commit": "cbde39e6b811b94fec89fd6ae11a31b009704097",
     "counts": {
-      "tests": 832,
-      "pass": 822,
-      "fail": 10,
+      "tests": 880,
+      "pass": 872,
+      "fail": 8,
       "skipped": 0
     },
     "failures": [
       {
-        "location": "test/architecture-review-adapter.test.js:500:1",
-        "test": "boundary: test T stays a single automatic review — the delivery gate is not extended to the consensus quorum (119.704375ms)"
-      },
-      {
         "location": "test/classic-integration.test.js:476:1",
-        "test": "C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it (2.332208ms)"
+        "test": "C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it (3.706375ms)"
       },
       {
         "location": "test/classic-integration.test.js:559:1",
-        "test": "P1_5 method dispatch content is pinned and matches the vendored snapshots (196.959917ms)"
+        "test": "P1_5 method dispatch content is pinned and matches the vendored snapshots (68.657833ms)"
       },
       {
         "location": "test/infra-runner-isolation.test.js:94:1",
-        "test": "V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract (85.583917ms)"
+        "test": "V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract (72.559917ms)"
       },
       {
         "location": "test/infra-runner-isolation.test.js:182:1",
-        "test": "image admission gates stay coherent with the committed lock state (state-agnostic) (57.233333ms)"
+        "test": "image admission gates stay coherent with the committed lock state (state-agnostic) (63.484625ms)"
       },
       {
         "location": "test/infra-runner-isolation.test.js:197:1",
-        "test": "RED image gate: floating tag rejected; malformed digest rejected; unauthenticated digest never reaches ready (212.904917ms)"
+        "test": "RED image gate: floating tag rejected; malformed digest rejected; unauthenticated digest never reaches ready (270.96225ms)"
       },
       {
         "location": "test/infra-runner-isolation.test.js:620:1",
-        "test": "catalog gap reporting: registered refs read RECORDED; a missing ref is still explicit readiness evidence, never silent (56.633083ms)"
+        "test": "catalog gap reporting: registered refs read RECORDED; a missing ref is still explicit readiness evidence, never silent (78.950959ms)"
       },
       {
         "location": "test/infra-runner-isolation.test.js:682:1",
-        "test": "RW_RUNNER_BUILD: committed image lock mirrors the six-patch upstream lock (patches, toolchain, openspec pin, freshly recomputed fingerprint) (0.893208ms)"
+        "test": "RW_RUNNER_BUILD: committed image lock mirrors the six-patch upstream lock (patches, toolchain, openspec pin, freshly recomputed fingerprint) (1.152458ms)"
       },
       {
         "location": "test/infra-runner-isolation.test.js:807:1",
-        "test": "RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that drifts from upstream refuses (90.895041ms)"
-      },
-      {
-        "location": "test/spec-closeout.test.js:321:1",
-        "test": "B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently (232.048375ms)"
+        "test": "RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that drifts from upstream refuses (117.165ms)"
       }
     ],
     "config_unchanged": true,
     "input_bytes_unchanged": true,
-    "evidence": ".local/comet-reset/p1_2-native-integration/full-combined/result.json",
-    "status": "FAIL_OLD10_REQUIRED_NOT_WAIVED",
-    "current_candidate": true
+    "evidence": ".local/comet-reset/review-spec-integration/full/result.json",
+    "status": "FAIL_EIGHT_OLD_REQUIRED_NO_NEW_LOCATIONS",
+    "current_candidate": true,
+    "guarded_external_attempts": {
+      "docker_attempts_blocked": 9,
+      "gh_attempts_blocked": 2,
+      "model_attempts": 0
+    }
   },
   "qualified_toolchain": {
     "openspec": "1.11.0",
@@ -1925,6 +1942,64 @@
       "current_candidate": true,
       "scope": "current construction supporting,not final129/103",
       "later_yaml_json_stages": "NOT_REACHED_AFTER_NPM_FAILURE"
+    },
+    {
+      "command": "Node24.15 PATH/PYTHONDONTWRITEBYTECODE=1 bash scripts/check.sh",
+      "exit_code": 1,
+      "integrated_code_commit": "9c9b70b92f1c5f548c5f84cad24c644657a4c30d",
+      "counts": {
+        "tests": 832,
+        "pass": 822,
+        "fail": 10,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "location": "test/architecture-review-adapter.test.js:500:1",
+          "test": "boundary: test T stays a single automatic review — the delivery gate is not extended to the consensus quorum (119.704375ms)"
+        },
+        {
+          "location": "test/classic-integration.test.js:476:1",
+          "test": "C08 negative: the pinned host OpenSpec 1.3.1 status lacks dependency edges and the Classic closure refuses it (2.332208ms)"
+        },
+        {
+          "location": "test/classic-integration.test.js:559:1",
+          "test": "P1_5 method dispatch content is pinned and matches the vendored snapshots (196.959917ms)"
+        },
+        {
+          "location": "test/infra-runner-isolation.test.js:94:1",
+          "test": "V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract (85.583917ms)"
+        },
+        {
+          "location": "test/infra-runner-isolation.test.js:182:1",
+          "test": "image admission gates stay coherent with the committed lock state (state-agnostic) (57.233333ms)"
+        },
+        {
+          "location": "test/infra-runner-isolation.test.js:197:1",
+          "test": "RED image gate: floating tag rejected; malformed digest rejected; unauthenticated digest never reaches ready (212.904917ms)"
+        },
+        {
+          "location": "test/infra-runner-isolation.test.js:620:1",
+          "test": "catalog gap reporting: registered refs read RECORDED; a missing ref is still explicit readiness evidence, never silent (56.633083ms)"
+        },
+        {
+          "location": "test/infra-runner-isolation.test.js:682:1",
+          "test": "RW_RUNNER_BUILD: committed image lock mirrors the six-patch upstream lock (patches, toolchain, openspec pin, freshly recomputed fingerprint) (0.893208ms)"
+        },
+        {
+          "location": "test/infra-runner-isolation.test.js:807:1",
+          "test": "RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that drifts from upstream refuses (90.895041ms)"
+        },
+        {
+          "location": "test/spec-closeout.test.js:321:1",
+          "test": "B08 preservation: adapter refuses a MODIFIED delta that drops an existing scenario while the host CLI would archive it silently (232.048375ms)"
+        }
+      ],
+      "config_unchanged": true,
+      "input_bytes_unchanged": true,
+      "evidence": ".local/comet-reset/p1_2-native-integration/full-combined/result.json",
+      "status": "FAIL_OLD10_REQUIRED_NOT_WAIVED",
+      "current_candidate": true
     }
   ]
 }
