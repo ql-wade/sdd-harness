@@ -2,19 +2,21 @@
   "schema_version": 2,
   "change": "delivery-foundation-rearchitecture",
   "acceptance_id": "B10",
-  "semantics_source": "specs/delivery-foundation/spec.md (92 scenarios, sole semantic source)",
+  "semantics_source": "specs/delivery-foundation/spec.md (104 scenarios; original92 plus12 convergence scenarios)",
   "generated_from": {
-    "execution_contract": "openspec/changes/delivery-foundation-rearchitecture/execution-contract.json (118 required checks)",
-    "verification_case_plan": "openspec/changes/delivery-foundation-rearchitecture/verification-case-plan.json (92 cases, 3 journeys)",
+    "execution_contract": "openspec/changes/delivery-foundation-rearchitecture/execution-contract.json (130 required checks)",
+    "verification_case_plan": "openspec/changes/delivery-foundation-rearchitecture/verification-case-plan.json (104 scenarios; full product journeys pending)",
     "execution_state": "openspec/changes/delivery-foundation-rearchitecture/execution-state.json (node_status/open_p1 snapshot)",
-    "regenerate_command": "node test/delivery-cases/4_3.mjs --generate"
+    "regenerate_command": null,
+    "current_results": "verification-results.json at 36fcf5c4780dc4caa2b85a98b5d0bf70c360af97",
+    "generation_status": "P4_3 current-profile generator requalification pending; current projection built from canonical contract/bindings and observed results, not legacy --generate"
   },
-  "generated_at": "2026-10-23T07:37:17.222Z",
-  "generated_by": "P4_3 rework r1 (rework/p4-3)",
+  "generated_at": "2026-10-24T18:26:44.218247+00:00",
+  "generated_by": "root projection of current contract, bindings and observed command results; final VERIFY remains pending",
   "layer_definitions": {
     "component_pass": "组件通过 — 构建任务在其声明范围内交付的机制证据（当前候选提交指针）；组件通过永不覆盖缺失/未执行的真实路径检查",
     "env_qualification": "环境资格 — 真实 Outline 活栈、.sdd 预备构建、钉定工具链、真实 Registry/Runner 等环境资格；与组件通过分开登记",
-    "same_run_finality": "同 Run 终局 — 三旅程（same-run-delivery / real-comet-recovery / post-delivery-permissions）在同一产品 Run 内的终局 oracle，executionOwner=VERIFY；构建方交付配方不等于旅程已跑",
+    "same_run_finality": "交付与故障恢复沿用同一产品Run；完成后权限维护由同Comet引擎关联maintenance Run。真实执行与独立终态证据均由VERIFY接纳，构建配方不代替实际旅程。",
     "deployment_status": "部署状态 — delivered 判定；目标环境确认前不得 delivered（B10）"
   },
   "status_rule": {
@@ -25,7 +27,8 @@
     "UNVERIFIED": "本修订未执行/无当前证据；UNVERIFIED 保持 UNVERIFIED",
     "QUALIFIED": "该场景全部环境资格检查 PASS",
     "VERIFIED": "该场景消费的同 Run 旅程检查 PASS",
-    "NOT_DELIVERED": "目标环境未确认，不得声明 delivered"
+    "NOT_DELIVERED": "目标环境未确认，不得声明 delivered",
+    "supporting_cli": "PASS on a supporting CLI command records only that command; it never closes a scenario, task or Journey."
   },
   "required_checks": {
     "V_A01": {
@@ -35,10 +38,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_1.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A02": {
       "acceptance_ids": [
@@ -47,10 +52,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_1.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A03": {
       "acceptance_ids": [
@@ -59,10 +66,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_1.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A04": {
       "acceptance_ids": [
@@ -71,10 +80,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_1.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A05": {
       "acceptance_ids": [
@@ -83,10 +94,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A06": {
       "acceptance_ids": [
@@ -95,10 +108,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A07": {
       "acceptance_ids": [
@@ -107,10 +122,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_1.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A08": {
       "acceptance_ids": [
@@ -119,10 +136,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_1.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A09": {
       "acceptance_ids": [
@@ -131,10 +150,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_3.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A10": {
       "acceptance_ids": [
@@ -143,10 +164,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/3_3.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A11": {
       "acceptance_ids": [
@@ -155,10 +178,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/3_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A12": {
       "acceptance_ids": [
@@ -167,10 +192,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/3_3.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A13": {
       "acceptance_ids": [
@@ -179,10 +206,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_1.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A14": {
       "acceptance_ids": [
@@ -191,10 +220,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A15": {
       "acceptance_ids": [
@@ -203,10 +234,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/3_1.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A16": {
       "acceptance_ids": [
@@ -215,10 +248,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A17": {
       "acceptance_ids": [
@@ -227,10 +262,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A18": {
       "acceptance_ids": [
@@ -239,10 +276,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A19": {
       "acceptance_ids": [
@@ -251,10 +290,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_A20": {
       "acceptance_ids": [
@@ -263,10 +304,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_3.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_B01": {
       "acceptance_ids": [
@@ -275,10 +318,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_6.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_B02": {
       "acceptance_ids": [
@@ -287,10 +332,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/3_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_B03": {
       "acceptance_ids": [
@@ -299,10 +346,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_B04": {
       "acceptance_ids": [
@@ -311,10 +360,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/3_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_B05": {
       "acceptance_ids": [
@@ -323,10 +374,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/3_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_B06": {
       "acceptance_ids": [
@@ -335,10 +388,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_B07": {
       "acceptance_ids": [
@@ -347,10 +402,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_B08": {
       "acceptance_ids": [
@@ -359,10 +416,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/3_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_B09": {
       "acceptance_ids": [
@@ -371,10 +430,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_6.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_B10": {
       "acceptance_ids": [
@@ -383,10 +444,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_3.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_C01": {
       "acceptance_ids": [
@@ -395,10 +458,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_5.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_C02": {
       "acceptance_ids": [
@@ -407,10 +472,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_5.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_C03": {
       "acceptance_ids": [
@@ -419,10 +486,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_5.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_C04": {
       "acceptance_ids": [
@@ -431,10 +500,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_5.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_C05": {
       "acceptance_ids": [
@@ -443,10 +514,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_5.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_C06": {
       "acceptance_ids": [
@@ -455,10 +528,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_5.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_C07": {
       "acceptance_ids": [
@@ -467,10 +542,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_C08": {
       "acceptance_ids": [
@@ -479,10 +556,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_5.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_D01": {
       "acceptance_ids": [
@@ -491,10 +570,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_D02": {
       "acceptance_ids": [
@@ -503,10 +584,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_D03": {
       "acceptance_ids": [
@@ -515,10 +598,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_D04": {
       "acceptance_ids": [
@@ -527,10 +612,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_D05": {
       "acceptance_ids": [
@@ -539,10 +626,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_D06": {
       "acceptance_ids": [
@@ -551,10 +640,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_D07": {
       "acceptance_ids": [
@@ -563,10 +654,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_D08": {
       "acceptance_ids": [
@@ -575,10 +668,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_E01": {
       "acceptance_ids": [
@@ -587,10 +682,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_E02": {
       "acceptance_ids": [
@@ -599,10 +696,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_E03": {
       "acceptance_ids": [
@@ -611,10 +710,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_5.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_E04": {
       "acceptance_ids": [
@@ -623,10 +724,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_5.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_E05": {
       "acceptance_ids": [
@@ -635,10 +738,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_5.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_E06": {
       "acceptance_ids": [
@@ -647,10 +752,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_F01": {
       "acceptance_ids": [
@@ -659,10 +766,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_1.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_F02": {
       "acceptance_ids": [
@@ -671,10 +780,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_F03": {
       "acceptance_ids": [
@@ -683,10 +794,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_1.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_F04": {
       "acceptance_ids": [
@@ -695,10 +808,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_F05": {
       "acceptance_ids": [
@@ -707,10 +822,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_3.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_F06": {
       "acceptance_ids": [
@@ -719,10 +836,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_4.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_F07": {
       "acceptance_ids": [
@@ -731,10 +850,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_3.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_F08": {
       "acceptance_ids": [
@@ -743,10 +864,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/3_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_F09": {
       "acceptance_ids": [
@@ -755,10 +878,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_1.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_F10": {
       "acceptance_ids": [
@@ -767,10 +892,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/5_2.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_H01": {
       "acceptance_ids": [
@@ -779,10 +906,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_6.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_H02": {
       "acceptance_ids": [
@@ -791,10 +920,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_6.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_H03": {
       "acceptance_ids": [
@@ -803,10 +934,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_6.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_H04": {
       "acceptance_ids": [
@@ -815,10 +948,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_6.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_H05": {
       "acceptance_ids": [
@@ -827,10 +962,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_6.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_H06": {
       "acceptance_ids": [
@@ -839,10 +976,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/2_5.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_H07": {
       "acceptance_ids": [
@@ -851,10 +990,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_6.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_H08": {
       "acceptance_ids": [
@@ -863,10 +1004,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_6.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_H09": {
       "acceptance_ids": [
@@ -875,10 +1018,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_6.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_L01": {
       "acceptance_ids": [
@@ -887,10 +1032,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_8.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_L02": {
       "acceptance_ids": [
@@ -899,10 +1046,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_8.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_L03": {
       "acceptance_ids": [
@@ -911,10 +1060,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_8.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_L04": {
       "acceptance_ids": [
@@ -923,10 +1074,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_8.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_L05": {
       "acceptance_ids": [
@@ -935,10 +1088,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_8.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_L06": {
       "acceptance_ids": [
@@ -947,10 +1102,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_8.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_L07": {
       "acceptance_ids": [
@@ -959,10 +1116,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_8.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_L08": {
       "acceptance_ids": [
@@ -971,10 +1130,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_8.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_L09": {
       "acceptance_ids": [
@@ -983,10 +1144,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_8.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_L10": {
       "acceptance_ids": [
@@ -995,10 +1158,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_8.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_L11": {
       "acceptance_ids": [
@@ -1007,10 +1172,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_8.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_M01": {
       "acceptance_ids": [
@@ -1019,10 +1186,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_6.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_M02": {
       "acceptance_ids": [
@@ -1031,10 +1200,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/1_6.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_U01": {
       "acceptance_ids": [
@@ -1043,10 +1214,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_7.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_U02": {
       "acceptance_ids": [
@@ -1055,10 +1228,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_7.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_U03": {
       "acceptance_ids": [
@@ -1067,10 +1242,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_7.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_U04": {
       "acceptance_ids": [
@@ -1079,10 +1256,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_7.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_U05": {
       "acceptance_ids": [
@@ -1091,10 +1270,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_7.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_U06": {
       "acceptance_ids": [
@@ -1103,10 +1284,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_7.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_U07": {
       "acceptance_ids": [
@@ -1115,10 +1298,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_7.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_U08": {
       "acceptance_ids": [
@@ -1127,10 +1312,12 @@
       "implementedBy": "P3_1",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
       "case_module": "test/delivery-cases/4_7.mjs",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "component_pass",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_NPM_REGRESSION": {
       "acceptance_ids": [
@@ -1138,10 +1325,17 @@
       ],
       "implementedBy": "VERIFY",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
-      "layer": "gate_support",
-      "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "layer": "supporting_cli_check",
+      "status": "FAIL",
+      "readback_evidence": "RECORDED",
+      "historical_results_may_close": false,
+      "readback_scope": "command_output_only",
+      "evidence": [
+        ".local/comet-reset/final-regression/round2/result.json",
+        ".local/comet-reset/final-regression/round2/npm-test.log"
+      ],
+      "source_head": "36fcf5c4780dc4caa2b85a98b5d0bf70c360af97"
     },
     "V_FULL_CHECK": {
       "acceptance_ids": [
@@ -1150,10 +1344,16 @@
       ],
       "implementedBy": "VERIFY",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
-      "layer": "gate_support",
-      "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "layer": "supporting_cli_check",
+      "status": "FAIL",
+      "readback_evidence": "RECORDED",
+      "historical_results_may_close": false,
+      "readback_scope": "command_output_only",
+      "evidence": [
+        ".local/comet-reset/final-regression/check.sh.log"
+      ],
+      "source_head": "36fcf5c4780dc4caa2b85a98b5d0bf70c360af97"
     },
     "V_SCOPED_REGRESSION": {
       "acceptance_ids": [
@@ -1161,10 +1361,12 @@
       ],
       "implementedBy": "VERIFY",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "gate_support",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_OPENSPEC_STRICT": {
       "acceptance_ids": [
@@ -1172,10 +1374,17 @@
       ],
       "implementedBy": "VERIFY",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
-      "layer": "gate_support",
-      "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "layer": "supporting_cli_check",
+      "status": "PASS",
+      "readback_evidence": "RECORDED",
+      "historical_results_may_close": false,
+      "readback_scope": "command_output_only",
+      "evidence": [
+        ".local/comet-reset/final-regression/strict-result.json",
+        ".local/comet-reset/final-regression/strict.stdout.txt"
+      ],
+      "source_head": "36fcf5c4780dc4caa2b85a98b5d0bf70c360af97"
     },
     "V_COMET_NATIVE": {
       "acceptance_ids": [
@@ -1185,10 +1394,12 @@
       ],
       "implementedBy": "P1_1",
       "availability": "EXISTS_REQUIRES_CURRENT_VERIFIED_BUILD_AND_PINNED_NODE",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "env_qualification",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_INFRA_I01": {
       "acceptance_ids": [
@@ -1199,10 +1410,12 @@
       ],
       "implementedBy": "I01",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "env_qualification",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_INFRA_I02": {
       "acceptance_ids": [
@@ -1222,10 +1435,12 @@
       ],
       "implementedBy": "I02",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "env_qualification",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_INFRA_I03": {
       "acceptance_ids": [
@@ -1244,10 +1459,12 @@
       ],
       "implementedBy": "I03",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "env_qualification",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_INFRA_I04": {
       "acceptance_ids": [
@@ -1261,10 +1478,12 @@
       ],
       "implementedBy": "I04",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "env_qualification",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_INFRA_I05": {
       "acceptance_ids": [
@@ -1275,10 +1494,12 @@
       ],
       "implementedBy": "I05",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "env_qualification",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_INFRA_I06": {
       "acceptance_ids": [
@@ -1293,10 +1514,12 @@
       ],
       "implementedBy": "I06",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "env_qualification",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_INFRA_I07": {
       "acceptance_ids": [
@@ -1309,10 +1532,12 @@
       ],
       "implementedBy": "I07",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "env_qualification",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_INFRA_I08": {
       "acceptance_ids": [
@@ -1327,10 +1552,12 @@
       ],
       "implementedBy": "I08",
       "availability": "TO_IMPLEMENT_CANONICAL_RENAME",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "env_qualification",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_P1_6_PONYTAIL_ASSETS": {
       "acceptance_ids": [
@@ -1340,10 +1567,12 @@
       ],
       "implementedBy": "P1_6",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "gate_support",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_P1_2_PLUGIN_REGISTRATION_DIVISION": {
       "acceptance_ids": [
@@ -1353,10 +1582,12 @@
       ],
       "implementedBy": "P1_2",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "gate_support",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_I02_METHOD_STATE_SCOPE": {
       "acceptance_ids": [
@@ -1366,10 +1597,12 @@
       ],
       "implementedBy": "I02",
       "availability": "RECHECK_OR_REPAIR_BY_OWNER",
-      "contract_status": "RETEST_REQUIRED_NEW_REPLAN",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "env_qualification",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_RW_TARGET_REQUIRED": {
       "acceptance_ids": [
@@ -1379,10 +1612,12 @@
       ],
       "implementedBy": "P3_1",
       "availability": "TO_IMPLEMENT",
-      "contract_status": null,
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "gate_support",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_RW_OBSERVATION_REQUIRED": {
       "acceptance_ids": [
@@ -1393,10 +1628,12 @@
       ],
       "implementedBy": "P3_1",
       "availability": "TO_IMPLEMENT",
-      "contract_status": null,
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "gate_support",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_RW_R_ENTRY": {
       "acceptance_ids": [
@@ -1406,10 +1643,12 @@
       ],
       "implementedBy": "P2_4",
       "availability": "TO_IMPLEMENT",
-      "contract_status": null,
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "gate_support",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_RW_TRUSTED_REVIEW": {
       "acceptance_ids": [
@@ -1421,10 +1660,12 @@
       ],
       "implementedBy": "P2_4",
       "availability": "TO_IMPLEMENT",
-      "contract_status": null,
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "gate_support",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_RW_REVISION_NO_REVIVE": {
       "acceptance_ids": [
@@ -1434,10 +1675,12 @@
       ],
       "implementedBy": "P2_4",
       "availability": "TO_IMPLEMENT",
-      "contract_status": null,
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "gate_support",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_RW_RUNNER_BUILD": {
       "acceptance_ids": [
@@ -1449,10 +1692,12 @@
       ],
       "implementedBy": "I02",
       "availability": "TO_IMPLEMENT",
-      "contract_status": null,
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "env_qualification",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_RW_REAL_COMET_RECOVERY": {
       "acceptance_ids": [
@@ -1465,10 +1710,12 @@
       ],
       "implementedBy": "P3_3",
       "availability": "TO_IMPLEMENT",
-      "contract_status": null,
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "same_run_finality",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_RW_COMPLETION_REQUIRED": {
       "acceptance_ids": [
@@ -1477,10 +1724,12 @@
       ],
       "implementedBy": "P4_3",
       "availability": "TO_IMPLEMENT",
-      "contract_status": null,
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "gate_support",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_SAME_RUN_DELIVERY": {
       "acceptance_ids": [
@@ -1498,10 +1747,12 @@
       ],
       "implementedBy": "P3_2",
       "availability": "TO_IMPLEMENT",
-      "contract_status": null,
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "same_run_finality",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     },
     "V_POST_DELIVERY_PERMISSIONS": {
       "acceptance_ids": [
@@ -1523,10 +1774,156 @@
       ],
       "implementedBy": "P4_8",
       "availability": "TO_IMPLEMENT",
-      "contract_status": null,
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
       "layer": "same_run_finality",
       "status": "UNVERIFIED",
-      "readback_evidence": "ABSENT"
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
+    },
+    "V_N01": {
+      "acceptance_ids": [
+        "N01"
+      ],
+      "implementedBy": "P1_2",
+      "availability": "TO_IMPLEMENT_AND_QUALIFY_NEW_PROFILE",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
+    },
+    "V_N02": {
+      "acceptance_ids": [
+        "N02"
+      ],
+      "implementedBy": "P1_2",
+      "availability": "TO_IMPLEMENT_AND_QUALIFY_NEW_PROFILE",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
+    },
+    "V_N03": {
+      "acceptance_ids": [
+        "N03"
+      ],
+      "implementedBy": "P1_3",
+      "availability": "TO_IMPLEMENT_AND_QUALIFY_NEW_PROFILE",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
+    },
+    "V_N04": {
+      "acceptance_ids": [
+        "N04"
+      ],
+      "implementedBy": "P1_6",
+      "availability": "TO_IMPLEMENT_AND_QUALIFY_NEW_PROFILE",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
+    },
+    "V_N05": {
+      "acceptance_ids": [
+        "N05"
+      ],
+      "implementedBy": "P3_2",
+      "availability": "TO_IMPLEMENT_AND_QUALIFY_NEW_PROFILE",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
+    },
+    "V_N06": {
+      "acceptance_ids": [
+        "N06"
+      ],
+      "implementedBy": "P3_2",
+      "availability": "TO_IMPLEMENT_AND_QUALIFY_NEW_PROFILE",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
+    },
+    "V_N07": {
+      "acceptance_ids": [
+        "N07"
+      ],
+      "implementedBy": "P4_4",
+      "availability": "TO_IMPLEMENT_AND_QUALIFY_NEW_PROFILE",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
+    },
+    "V_N08": {
+      "acceptance_ids": [
+        "N08"
+      ],
+      "implementedBy": "P4_7",
+      "availability": "TO_IMPLEMENT_AND_QUALIFY_NEW_PROFILE",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
+    },
+    "V_N09": {
+      "acceptance_ids": [
+        "N09"
+      ],
+      "implementedBy": "P4_8",
+      "availability": "TO_IMPLEMENT_AND_QUALIFY_NEW_PROFILE",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
+    },
+    "V_N10": {
+      "acceptance_ids": [
+        "N10"
+      ],
+      "implementedBy": "P4_2",
+      "availability": "TO_IMPLEMENT_AND_QUALIFY_NEW_PROFILE",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
+    },
+    "V_N11": {
+      "acceptance_ids": [
+        "N11"
+      ],
+      "implementedBy": "P3_3",
+      "availability": "TO_IMPLEMENT_AND_QUALIFY_NEW_PROFILE",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
+    },
+    "V_N12": {
+      "acceptance_ids": [
+        "N12"
+      ],
+      "implementedBy": "VERIFY",
+      "availability": "TO_IMPLEMENT_AND_QUALIFY_NEW_PROFILE",
+      "contract_status": "CURRENT_CANDIDATE_RESULT_ONLY",
+      "status": "UNVERIFIED",
+      "readback_evidence": "ABSENT",
+      "historical_results_may_close": false,
+      "evidence": []
     }
   },
   "journeys": {
@@ -1553,42 +1950,16 @@
     }
   },
   "environment_gates": {
-    "from_partial_nodes": [
-      {
-        "task": "I03",
-        "gated": {
-          "Step 3": "原生浏览器/独立读回: 无真实 Outline 实例/凭据/文集/OIDC/对象存储 — holder: user/Outline 部署波次"
-        }
-      },
-      {
-        "task": "P1_6",
-        "gated": {
-          "Step 5": "宿主会话证明(真实 Runner/host) — holder: 真实 Runner 验证(manifest unverified[0])"
-        }
-      },
-      {
-        "task": "I05",
-        "gated": {
-          "Step 3": "真实容器/认证API/MCP读回: docker 沙箱拒+上游未选定 — holder: user/runtime admission"
-        }
-      }
-    ],
-    "open_decisions": [
-      "UTILS_SECRET_REF",
-      "PUBLISHER_ISOLATOR_CREDS",
-      "EVIDENCE_INPUT_MISSING_EXIT_CODE",
-      "DELIVERY_CASES_NODE_PIN",
-      "I08_FILENAME_DEVIATION",
-      "OV_OVERLAY_CANDIDATE",
-      "HOST_OPENSPEC_DRIFT",
-      "REMOTE_URL_DISCREPANCY",
-      "GH_AUTH_TOKEN",
-      "CONSUMER_CLOSEOUT_FORGED_RECORDS",
-      "LEDGER_CHANNELS_PERSISTENCE",
-      "BACKUP_V1_SHAPE_MAPPING",
-      "RETENTION_LIVE_SHAPE_INTAKE"
-    ],
-    "source": "execution-state.json"
+    "qualification_status": "UNVERIFIED",
+    "source": "execution-state.json",
+    "open_decisions_source": "execution-state.json#open_decisions",
+    "readonly_observations": {
+      "docker_daemon": "available",
+      "outline": "running healthy",
+      "runner": "sixrole containers exited; inspected controller/author no command",
+      "evidence": ".local/comet-reset/runtime-readonly/container-state.json"
+    },
+    "observation_rule": "container health and readback availability do not prove source ACLs, grants, role execution or any business Journey"
   },
   "open_p1": [
     "P1-01",
@@ -1602,7 +1973,8 @@
   "historical": {
     "verify_result": "108 checks real-executed (87 PASS/18 GATED/1 UNVERIFIED/2 FAILED documented); 92 scenarios 76/15/1 zero unexplained diff; whitebox 27 modules + 423/425 known-only; 10 findings recorded; archive NOT executed",
     "inherited": false,
-    "rule": "历史 VERIFY 结果（108 检查 87 PASS、92 场景 76/15/1 分割）只作历史记录；本修订状态只由当前来源推导，不自动继承"
+    "rule": "历史 VERIFY 结果（108 检查 87 PASS、92 场景 76/15/1 分割）只作历史记录；本修订状态只由当前来源推导，不自动继承",
+    "current_projection_before_sync": ".local/comet-reset/final-projection/before-acceptance-index.json"
   },
   "deployment": {
     "status": "NOT_DELIVERED",
@@ -1617,17 +1989,10 @@
         "V_RW_TARGET_REQUIRED"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P0_1": "ACCEPTED_DOCUMENT_ONLY",
-          "P0_2": "ACCEPTED_DOCUMENT_ONLY",
-          "P2_1": "ACCEPTED",
-          "P3_1": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:501be7f",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:e278b81"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -1648,13 +2013,10 @@
         "V_RW_REVISION_NO_REVIVE"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_1": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:501be7f"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -1675,13 +2037,10 @@
         "V_RW_TARGET_REQUIRED"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_1": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:501be7f"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -1702,13 +2061,10 @@
         "V_RW_OBSERVATION_REQUIRED"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_1": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:501be7f"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -1728,13 +2084,10 @@
         "V_A05"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -1754,13 +2107,10 @@
         "V_A06"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -1780,13 +2130,10 @@
         "V_A07"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_1": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:501be7f"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -1806,13 +2153,10 @@
         "V_A08"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_1": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:501be7f"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -1835,23 +2179,14 @@
         "V_RW_RUNNER_BUILD"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_3": "ACCEPTED",
-          "P5_1": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:023f664",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:ce005ce"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I02",
-          "V_I02_METHOD_STATE_SCOPE",
-          "V_RW_RUNNER_BUILD"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -1870,25 +2205,14 @@
         "V_I02_METHOD_STATE_SCOPE"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P3_3": "ACCEPTED",
-          "P5_1": "ACCEPTED",
-          "P5_3": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:e42c348",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:ce005ce",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:6918798"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I02",
-          "V_INFRA_I08",
-          "V_I02_METHOD_STATE_SCOPE"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -1908,27 +2232,14 @@
         "V_I02_METHOD_STATE_SCOPE"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P3_4": "ACCEPTED",
-          "P3_3": "ACCEPTED",
-          "P5_1": "ACCEPTED",
-          "P5_3": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:e42c348",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:ce005ce",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:6918798"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I02",
-          "V_INFRA_I07",
-          "V_INFRA_I08",
-          "V_I02_METHOD_STATE_SCOPE"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -1944,15 +2255,10 @@
         "V_A12"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P3_3": "ACCEPTED",
-          "P5_1": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:e42c348",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:ce005ce"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -1973,19 +2279,14 @@
         "V_INFRA_I06"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_1": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:37ba350"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I06"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2002,17 +2303,14 @@
         "V_INFRA_I06"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_2": "ACCEPTED"
-        },
-        "evidence": []
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I06"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2030,15 +2328,10 @@
         "V_RW_OBSERVATION_REQUIRED"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P3_1": "ACCEPTED",
-          "P3_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:e278b81",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2059,17 +2352,14 @@
         "V_INFRA_I06"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_2": "ACCEPTED"
-        },
-        "evidence": []
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I06"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2086,17 +2376,14 @@
         "V_INFRA_I06"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_2": "ACCEPTED"
-        },
-        "evidence": []
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I06"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2112,13 +2399,10 @@
         "V_A18"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2142,22 +2426,14 @@
         "V_RW_RUNNER_BUILD"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I01",
-          "V_INFRA_I02",
-          "V_INFRA_I06",
-          "V_RW_RUNNER_BUILD"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2176,19 +2452,14 @@
         "V_RW_COMPLETION_REQUIRED"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_3": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:253c897"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I05"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2205,14 +2476,10 @@
         "V_P1_6_PONYTAIL_ASSETS"
       ],
       "component_pass": {
-        "status": "PARTIAL_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_6": "PARTIAL_ACCEPTED",
-          "P3_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2232,13 +2499,10 @@
         "V_B02"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P3_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2258,15 +2522,10 @@
         "V_B03"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_2": "ACCEPTED",
-          "P3_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2286,13 +2545,10 @@
         "V_B04"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P3_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2312,13 +2568,10 @@
         "V_B05"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P3_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2339,15 +2592,10 @@
         "V_RW_OBSERVATION_REQUIRED"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_2": "ACCEPTED",
-          "P3_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2368,15 +2616,10 @@
         "V_RW_OBSERVATION_REQUIRED"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_2": "ACCEPTED",
-          "P3_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:0c4bd84",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2398,18 +2641,14 @@
         "V_INFRA_I08"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P3_4": "ACCEPTED"
-        },
-        "evidence": []
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I06",
-          "V_INFRA_I08"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2427,20 +2666,14 @@
         "V_P1_2_PLUGIN_REGISTRATION_DIVISION"
       ],
       "component_pass": {
-        "status": "PARTIAL_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_6": "PARTIAL_ACCEPTED",
-          "P1_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f14c58e"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I04"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2461,16 +2694,10 @@
         "V_RW_COMPLETION_REQUIRED"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P0_3": "ACCEPTED_DOCUMENT_ONLY",
-          "P2_3": "ACCEPTED",
-          "P4_3": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:253c897",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:72b3a9e"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2494,22 +2721,14 @@
         "V_RW_RUNNER_BUILD"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_1": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:65598f7"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I01",
-          "V_INFRA_I04",
-          "V_INFRA_I05",
-          "V_RW_RUNNER_BUILD"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2527,19 +2746,14 @@
         "V_RW_RUNNER_BUILD"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f14c58e"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_RW_RUNNER_BUILD"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2556,21 +2770,14 @@
         "V_INFRA_I05"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_1": "ACCEPTED",
-          "P5_1": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:65598f7",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:ce005ce"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I05"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2587,13 +2794,10 @@
         "V_P1_2_PLUGIN_REGISTRATION_DIVISION"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f14c58e"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2615,20 +2819,14 @@
         "V_RW_RUNNER_BUILD"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_3": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:023f664"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I02",
-          "V_RW_RUNNER_BUILD"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2645,21 +2843,14 @@
         "V_INFRA_I06"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_4": "ACCEPTED",
-          "P4_1": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:92964bd",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:37ba350"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I06"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2676,21 +2867,14 @@
         "V_INFRA_I02"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_3": "ACCEPTED",
-          "P3_3": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:023f664",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:e42c348"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I02"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2706,15 +2890,10 @@
         "V_F08"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P3_2": "ACCEPTED",
-          "P5_1": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:302dc9b",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:ce005ce"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2735,20 +2914,14 @@
         "V_INFRA_I06"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_1": "ACCEPTED",
-          "P4_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:37ba350"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I06"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2764,13 +2937,10 @@
         "V_F10"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P5_2": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:fd5c8a2"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2792,13 +2962,10 @@
         "V_SAME_RUN_DELIVERY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_5": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2806,9 +2973,7 @@
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_SAME_RUN_DELIVERY"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -2822,13 +2987,10 @@
         "V_SAME_RUN_DELIVERY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_5": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2836,9 +2998,7 @@
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_SAME_RUN_DELIVERY"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -2852,13 +3012,10 @@
         "V_SAME_RUN_DELIVERY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_5": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2866,9 +3023,7 @@
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_SAME_RUN_DELIVERY"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -2881,19 +3036,14 @@
         "V_INFRA_I04"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_5": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I04"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2909,13 +3059,10 @@
         "V_C05"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_5": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -2937,22 +3084,14 @@
         "V_INFRA_I05"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_5": "ACCEPTED",
-          "P4_4": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f41aab9"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I04",
-          "V_INFRA_I05"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -2971,24 +3110,14 @@
         "V_RW_R_ENTRY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_4": "ACCEPTED",
-          "P1_5": "ACCEPTED",
-          "P2_4": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:92964bd",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_COMET_NATIVE",
-          "V_INFRA_I02"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -3005,19 +3134,14 @@
         "V_COMET_NATIVE"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_5": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:bdac92f"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_COMET_NATIVE"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -3035,19 +3159,14 @@
         "V_RW_TRUSTED_REVIEW"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_4": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I02"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -3064,13 +3183,10 @@
         "V_RW_TRUSTED_REVIEW"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_4": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3090,13 +3206,10 @@
         "V_D03"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_4": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3117,13 +3230,10 @@
         "V_RW_REVISION_NO_REVIVE"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_4": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3143,13 +3253,10 @@
         "V_D05"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_4": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3170,15 +3277,10 @@
         "V_SAME_RUN_DELIVERY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_4": "ACCEPTED",
-          "P4_4": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f41aab9"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3186,9 +3288,7 @@
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_SAME_RUN_DELIVERY"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3201,15 +3301,10 @@
         "V_SAME_RUN_DELIVERY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_4": "ACCEPTED",
-          "P4_4": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f41aab9"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3217,9 +3312,7 @@
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_SAME_RUN_DELIVERY"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3233,25 +3326,18 @@
         "V_RW_REAL_COMET_RECOVERY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_4": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:27aeea2"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I02"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_RW_REAL_COMET_RECOVERY"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3265,25 +3351,18 @@
         "V_SAME_RUN_DELIVERY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_4": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f41aab9"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I04"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_SAME_RUN_DELIVERY"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3296,13 +3375,10 @@
         "V_SAME_RUN_DELIVERY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_4": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f41aab9"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3310,9 +3386,7 @@
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_SAME_RUN_DELIVERY"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3326,14 +3400,10 @@
         "V_SAME_RUN_DELIVERY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P0_4": "ACCEPTED_DOCUMENT_ONLY",
-          "P2_5": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:ea996c7"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3341,9 +3411,7 @@
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_SAME_RUN_DELIVERY"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3357,14 +3425,10 @@
         "V_RW_REVISION_NO_REVIVE"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P0_4": "ACCEPTED_DOCUMENT_ONLY",
-          "P2_5": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:ea996c7"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3384,13 +3448,10 @@
         "V_E05"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_5": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df47630"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3412,27 +3473,18 @@
         "V_SAME_RUN_DELIVERY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_4": "ACCEPTED",
-          "P4_5": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:f41aab9",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df47630"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I04"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_SAME_RUN_DELIVERY"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3446,13 +3498,10 @@
         "V_SAME_RUN_DELIVERY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_6": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3460,10 +3509,7 @@
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_RW_REAL_COMET_RECOVERY",
-          "V_SAME_RUN_DELIVERY"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3475,15 +3521,10 @@
         "V_H02"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_6": "ACCEPTED",
-          "P4_5": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df47630"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3506,26 +3547,18 @@
         "V_SAME_RUN_DELIVERY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_6": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I02"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_RW_REAL_COMET_RECOVERY",
-          "V_SAME_RUN_DELIVERY"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3538,19 +3571,14 @@
         "V_INFRA_I03"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_6": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I03"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -3567,19 +3595,14 @@
         "V_INFRA_I03"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_6": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I03"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -3595,15 +3618,10 @@
         "V_H06"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P2_5": "ACCEPTED",
-          "P4_6": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:ea996c7",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3624,13 +3642,10 @@
         "V_RW_REAL_COMET_RECOVERY"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_6": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3638,9 +3653,7 @@
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_RW_REAL_COMET_RECOVERY"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3654,20 +3667,14 @@
         "V_INFRA_I08"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_6": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I04",
-          "V_INFRA_I08"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -3686,23 +3693,14 @@
         "V_INFRA_I08"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_6": "ACCEPTED",
-          "P5_3": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cbe4dc5",
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:6918798"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I02",
-          "V_INFRA_I07",
-          "V_INFRA_I08"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -3721,26 +3719,18 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_7": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I01",
-          "V_INFRA_I03"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3753,19 +3743,14 @@
         "V_INFRA_I03"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_7": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I03"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -3783,25 +3768,18 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_7": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I03"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3814,19 +3792,14 @@
         "V_INFRA_I03"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_7": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I03"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -3844,25 +3817,18 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_7": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I03"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3875,19 +3841,14 @@
         "V_INFRA_I03"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_7": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I03"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -3907,22 +3868,14 @@
         "V_INFRA_I08"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_7": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I01",
-          "V_INFRA_I02",
-          "V_INFRA_I03",
-          "V_INFRA_I08"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -3940,25 +3893,18 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_7": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:df18e7d"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I03"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -3971,13 +3917,10 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_8": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -3985,9 +3928,7 @@
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -4001,25 +3942,18 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_8": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I03"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -4032,13 +3966,10 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_8": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -4046,9 +3977,7 @@
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -4062,25 +3991,18 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_8": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I03"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -4093,13 +4015,10 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_8": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -4107,9 +4026,7 @@
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -4123,25 +4040,18 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_8": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I08"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -4154,13 +4064,10 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_8": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
@@ -4168,9 +4075,7 @@
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -4184,25 +4089,18 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_8": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I07"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -4216,25 +4114,18 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_8": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I07"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -4249,26 +4140,18 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_8": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I07"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_RW_REAL_COMET_RECOVERY",
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -4284,27 +4167,18 @@
         "V_POST_DELIVERY_PERMISSIONS"
       ],
       "component_pass": {
-        "status": "MECHANISM_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P4_8": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:cb9eb0c"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I07",
-          "V_INFRA_I08"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
-        "journey_checks": [
-          "V_RW_REAL_COMET_RECOVERY",
-          "V_POST_DELIVERY_PERMISSIONS"
-        ],
+        "journey_checks": [],
         "owner": "VERIFY"
       },
       "deployment_status": "NOT_DELIVERED",
@@ -4318,20 +4192,14 @@
         "V_P1_6_PONYTAIL_ASSETS"
       ],
       "component_pass": {
-        "status": "PARTIAL_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_6": "PARTIAL_ACCEPTED",
-          "P1_4": "ACCEPTED"
-        },
-        "evidence": [
-          "openspec/changes/delivery-foundation-rearchitecture/execution-state.json :: commit:92964bd"
-        ]
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_COMET_NATIVE"
-        ]
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -4349,17 +4217,278 @@
         "V_P1_6_PONYTAIL_ASSETS"
       ],
       "component_pass": {
-        "status": "PARTIAL_AT_DECLARED_SCOPE",
-        "tasks": {
-          "P1_6": "PARTIAL_ACCEPTED"
-        },
-        "evidence": []
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
       },
       "env_qualification": {
         "status": "UNVERIFIED",
-        "checks": [
-          "V_INFRA_I02"
-        ]
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "N01": {
+      "required_checks": [
+        "V_N01"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "N02": {
+      "required_checks": [
+        "V_N02"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "N03": {
+      "required_checks": [
+        "V_N03"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "N04": {
+      "required_checks": [
+        "V_N04"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "N05": {
+      "required_checks": [
+        "V_N05"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "N06": {
+      "required_checks": [
+        "V_N06"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "N07": {
+      "required_checks": [
+        "V_N07"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "N08": {
+      "required_checks": [
+        "V_N08"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "N09": {
+      "required_checks": [
+        "V_N09"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "N10": {
+      "required_checks": [
+        "V_N10"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "N11": {
+      "required_checks": [
+        "V_N11"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
+      },
+      "same_run_finality": {
+        "status": "UNVERIFIED",
+        "journey_checks": [],
+        "owner": "VERIFY"
+      },
+      "deployment_status": "NOT_DELIVERED",
+      "scenario_status": "UNVERIFIED"
+    },
+    "N12": {
+      "required_checks": [
+        "V_N12"
+      ],
+      "component_pass": {
+        "status": "UNVERIFIED",
+        "tasks": {},
+        "evidence": [],
+        "history": "replan-history/2026-10-24-comet-convergence/previous/acceptance-index.json"
+      },
+      "env_qualification": {
+        "status": "UNVERIFIED",
+        "checks": []
       },
       "same_run_finality": {
         "status": "UNVERIFIED",
@@ -4374,39 +4503,1720 @@
     "rule": "RW_COMPLETION_REQUIRED",
     "complete": false,
     "blocking": {
-      "required_checks_not_pass": 118,
-      "missing_readback": 118,
-      "scenarios_not_closed": 92,
+      "required_checks_not_pass": 129,
+      "checks_failed": 2,
+      "checks_not_executed": 127,
+      "scenarios_not_closed": 104,
       "journeys_not_run": 3,
       "open_p1": 7
     }
   },
   "summary": {
-    "scenarios": 92,
-    "required_checks": 118,
-    "layer_statuses": {
-      "component_pass": {
-        "MECHANISM_AT_DECLARED_SCOPE": 88,
-        "PARTIAL_AT_DECLARED_SCOPE": 4
-      },
-      "env_qualification": {
-        "UNVERIFIED": 92
-      },
-      "same_run_finality": {
-        "UNVERIFIED": 92
-      },
-      "deployment_status": {
-        "NOT_DELIVERED": 92
-      }
+    "total": 104,
+    "VERIFIED": 0,
+    "NOT_VERIFIED": 104,
+    "required_checks": 130,
+    "supporting_pass": 1,
+    "failed": 2,
+    "not_executed": 127
+  },
+  "entries": {
+    "A01": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Delivery contract and evidence",
+          "scenario": "A01"
+        }
+      ],
+      "required_checks": [
+        "V_A01",
+        "V_RW_TARGET_REQUIRED"
+      ]
     },
-    "required_check_statuses": {
-      "UNVERIFIED": 118
+    "A02": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Delivery contract and evidence",
+          "scenario": "A02"
+        }
+      ],
+      "required_checks": [
+        "V_A02",
+        "V_RW_REVISION_NO_REVIVE"
+      ]
     },
-    "required_checks_by_layer": {
-      "component_pass": 92,
-      "gate_support": 12,
-      "env_qualification": 11,
-      "same_run_finality": 3
+    "A03": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Delivery contract and evidence",
+          "scenario": "A03"
+        }
+      ],
+      "required_checks": [
+        "V_A03",
+        "V_RW_TARGET_REQUIRED"
+      ]
+    },
+    "A04": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Delivery contract and evidence",
+          "scenario": "A04"
+        }
+      ],
+      "required_checks": [
+        "V_A04",
+        "V_RW_OBSERVATION_REQUIRED"
+      ]
+    },
+    "A05": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Delivery contract and evidence",
+          "scenario": "A05"
+        }
+      ],
+      "required_checks": [
+        "V_A05"
+      ]
+    },
+    "A06": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Delivery contract and evidence",
+          "scenario": "A06"
+        }
+      ],
+      "required_checks": [
+        "V_A06"
+      ]
+    },
+    "A07": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Delivery contract and evidence",
+          "scenario": "A07"
+        }
+      ],
+      "required_checks": [
+        "V_A07"
+      ]
+    },
+    "A08": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Delivery contract and evidence",
+          "scenario": "A08"
+        }
+      ],
+      "required_checks": [
+        "V_A08"
+      ]
+    },
+    "A09": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Runtime ownership and recovery",
+          "scenario": "A09"
+        }
+      ],
+      "required_checks": [
+        "V_A09",
+        "V_INFRA_I02",
+        "V_I02_METHOD_STATE_SCOPE",
+        "V_RW_RUNNER_BUILD"
+      ]
+    },
+    "A10": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Runtime ownership and recovery",
+          "scenario": "A10"
+        }
+      ],
+      "required_checks": [
+        "V_A10",
+        "V_INFRA_I02",
+        "V_INFRA_I08",
+        "V_I02_METHOD_STATE_SCOPE"
+      ]
+    },
+    "A11": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Runtime ownership and recovery",
+          "scenario": "A11"
+        }
+      ],
+      "required_checks": [
+        "V_A11",
+        "V_INFRA_I02",
+        "V_INFRA_I07",
+        "V_INFRA_I08",
+        "V_I02_METHOD_STATE_SCOPE"
+      ]
+    },
+    "A12": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Runtime ownership and recovery",
+          "scenario": "A12"
+        }
+      ],
+      "required_checks": [
+        "V_A12"
+      ]
+    },
+    "A13": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Runtime ownership and recovery",
+          "scenario": "A13"
+        }
+      ],
+      "required_checks": [
+        "V_A13",
+        "V_INFRA_I06"
+      ]
+    },
+    "A14": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Runtime ownership and recovery",
+          "scenario": "A14"
+        }
+      ],
+      "required_checks": [
+        "V_A14",
+        "V_INFRA_I06"
+      ]
+    },
+    "A15": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Runtime ownership and recovery",
+          "scenario": "A15"
+        }
+      ],
+      "required_checks": [
+        "V_A15",
+        "V_RW_TARGET_REQUIRED",
+        "V_RW_OBSERVATION_REQUIRED"
+      ]
+    },
+    "A16": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Runtime ownership and recovery",
+          "scenario": "A16"
+        }
+      ],
+      "required_checks": [
+        "V_A16",
+        "V_INFRA_I06"
+      ]
+    },
+    "A17": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Runtime ownership and recovery",
+          "scenario": "A17"
+        }
+      ],
+      "required_checks": [
+        "V_A17",
+        "V_INFRA_I06"
+      ]
+    },
+    "A18": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Runtime ownership and recovery",
+          "scenario": "A18"
+        }
+      ],
+      "required_checks": [
+        "V_A18"
+      ]
+    },
+    "A19": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Runtime ownership and recovery",
+          "scenario": "A19"
+        }
+      ],
+      "required_checks": [
+        "V_A19",
+        "V_INFRA_I01",
+        "V_INFRA_I02",
+        "V_INFRA_I06",
+        "V_RW_RUNNER_BUILD"
+      ]
+    },
+    "A20": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Runtime ownership and recovery",
+          "scenario": "A20"
+        }
+      ],
+      "required_checks": [
+        "V_A20",
+        "V_FULL_CHECK",
+        "V_INFRA_I05",
+        "V_RW_COMPLETION_REQUIRED"
+      ]
+    },
+    "B01": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Method and closeout boundaries",
+          "scenario": "B01"
+        }
+      ],
+      "required_checks": [
+        "V_B01",
+        "V_P1_6_PONYTAIL_ASSETS"
+      ]
+    },
+    "B02": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Method and closeout boundaries",
+          "scenario": "B02"
+        }
+      ],
+      "required_checks": [
+        "V_B02"
+      ]
+    },
+    "B03": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Method and closeout boundaries",
+          "scenario": "B03"
+        }
+      ],
+      "required_checks": [
+        "V_B03"
+      ]
+    },
+    "B04": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Method and closeout boundaries",
+          "scenario": "B04"
+        }
+      ],
+      "required_checks": [
+        "V_B04"
+      ]
+    },
+    "B05": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Method and closeout boundaries",
+          "scenario": "B05"
+        }
+      ],
+      "required_checks": [
+        "V_B05"
+      ]
+    },
+    "B06": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Method and closeout boundaries",
+          "scenario": "B06"
+        }
+      ],
+      "required_checks": [
+        "V_B06",
+        "V_RW_OBSERVATION_REQUIRED"
+      ]
+    },
+    "B07": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Method and closeout boundaries",
+          "scenario": "B07"
+        }
+      ],
+      "required_checks": [
+        "V_B07",
+        "V_RW_OBSERVATION_REQUIRED"
+      ]
+    },
+    "B08": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Method and closeout boundaries",
+          "scenario": "B08"
+        }
+      ],
+      "required_checks": [
+        "V_B08",
+        "V_INFRA_I06",
+        "V_INFRA_I08"
+      ]
+    },
+    "B09": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Method and closeout boundaries",
+          "scenario": "B09"
+        }
+      ],
+      "required_checks": [
+        "V_B09",
+        "V_INFRA_I04",
+        "V_P1_2_PLUGIN_REGISTRATION_DIVISION"
+      ]
+    },
+    "B10": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Method and closeout boundaries",
+          "scenario": "B10"
+        }
+      ],
+      "required_checks": [
+        "V_B10",
+        "V_NPM_REGRESSION",
+        "V_FULL_CHECK",
+        "V_SCOPED_REGRESSION",
+        "V_OPENSPEC_STRICT",
+        "V_RW_COMPLETION_REQUIRED"
+      ]
+    },
+    "F01": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Foundation distribution and deployment",
+          "scenario": "F01"
+        }
+      ],
+      "required_checks": [
+        "V_F01",
+        "V_INFRA_I01",
+        "V_INFRA_I04",
+        "V_INFRA_I05",
+        "V_RW_RUNNER_BUILD"
+      ]
+    },
+    "F02": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Foundation distribution and deployment",
+          "scenario": "F02"
+        }
+      ],
+      "required_checks": [
+        "V_F02",
+        "V_P1_2_PLUGIN_REGISTRATION_DIVISION",
+        "V_RW_RUNNER_BUILD"
+      ]
+    },
+    "F03": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Foundation distribution and deployment",
+          "scenario": "F03"
+        }
+      ],
+      "required_checks": [
+        "V_F03",
+        "V_INFRA_I05"
+      ]
+    },
+    "F04": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Foundation distribution and deployment",
+          "scenario": "F04"
+        }
+      ],
+      "required_checks": [
+        "V_F04",
+        "V_P1_2_PLUGIN_REGISTRATION_DIVISION"
+      ]
+    },
+    "F05": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Foundation distribution and deployment",
+          "scenario": "F05"
+        }
+      ],
+      "required_checks": [
+        "V_F05",
+        "V_INFRA_I02",
+        "V_RW_RUNNER_BUILD"
+      ]
+    },
+    "F06": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Foundation distribution and deployment",
+          "scenario": "F06"
+        }
+      ],
+      "required_checks": [
+        "V_F06",
+        "V_INFRA_I06"
+      ]
+    },
+    "F07": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Foundation distribution and deployment",
+          "scenario": "F07"
+        }
+      ],
+      "required_checks": [
+        "V_F07",
+        "V_INFRA_I02"
+      ]
+    },
+    "F08": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Foundation distribution and deployment",
+          "scenario": "F08"
+        }
+      ],
+      "required_checks": [
+        "V_F08"
+      ]
+    },
+    "F09": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Foundation distribution and deployment",
+          "scenario": "F09"
+        }
+      ],
+      "required_checks": [
+        "V_F09",
+        "V_INFRA_I06"
+      ]
+    },
+    "F10": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Foundation distribution and deployment",
+          "scenario": "F10"
+        }
+      ],
+      "required_checks": [
+        "V_F10"
+      ]
+    },
+    "C01": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic single-controller integration",
+          "scenario": "C01"
+        }
+      ],
+      "required_checks": [
+        "V_C01",
+        "V_RW_R_ENTRY",
+        "V_SAME_RUN_DELIVERY"
+      ]
+    },
+    "C02": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic single-controller integration",
+          "scenario": "C02"
+        }
+      ],
+      "required_checks": [
+        "V_C02",
+        "V_RW_R_ENTRY",
+        "V_SAME_RUN_DELIVERY"
+      ]
+    },
+    "C03": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic single-controller integration",
+          "scenario": "C03"
+        }
+      ],
+      "required_checks": [
+        "V_C03",
+        "V_RW_TRUSTED_REVIEW",
+        "V_SAME_RUN_DELIVERY"
+      ]
+    },
+    "C04": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic single-controller integration",
+          "scenario": "C04"
+        }
+      ],
+      "required_checks": [
+        "V_C04",
+        "V_INFRA_I04"
+      ]
+    },
+    "C05": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic single-controller integration",
+          "scenario": "C05"
+        }
+      ],
+      "required_checks": [
+        "V_C05"
+      ]
+    },
+    "C06": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic single-controller integration",
+          "scenario": "C06"
+        }
+      ],
+      "required_checks": [
+        "V_C06",
+        "V_INFRA_I04",
+        "V_INFRA_I05"
+      ]
+    },
+    "C07": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic single-controller integration",
+          "scenario": "C07"
+        }
+      ],
+      "required_checks": [
+        "V_C07",
+        "V_COMET_NATIVE",
+        "V_INFRA_I02",
+        "V_RW_R_ENTRY"
+      ]
+    },
+    "C08": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic single-controller integration",
+          "scenario": "C08"
+        }
+      ],
+      "required_checks": [
+        "V_C08",
+        "V_COMET_NATIVE"
+      ]
+    },
+    "D01": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic gate runtime enforcement",
+          "scenario": "D01"
+        }
+      ],
+      "required_checks": [
+        "V_D01",
+        "V_INFRA_I02",
+        "V_RW_TRUSTED_REVIEW"
+      ]
+    },
+    "D02": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic gate runtime enforcement",
+          "scenario": "D02"
+        }
+      ],
+      "required_checks": [
+        "V_D02",
+        "V_RW_TRUSTED_REVIEW"
+      ]
+    },
+    "D03": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic gate runtime enforcement",
+          "scenario": "D03"
+        }
+      ],
+      "required_checks": [
+        "V_D03"
+      ]
+    },
+    "D04": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic gate runtime enforcement",
+          "scenario": "D04"
+        }
+      ],
+      "required_checks": [
+        "V_D04",
+        "V_RW_REVISION_NO_REVIVE"
+      ]
+    },
+    "D05": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic gate runtime enforcement",
+          "scenario": "D05"
+        }
+      ],
+      "required_checks": [
+        "V_D05"
+      ]
+    },
+    "D06": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic gate runtime enforcement",
+          "scenario": "D06"
+        }
+      ],
+      "required_checks": [
+        "V_D06",
+        "V_SAME_RUN_DELIVERY"
+      ]
+    },
+    "D07": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic gate runtime enforcement",
+          "scenario": "D07"
+        }
+      ],
+      "required_checks": [
+        "V_D07",
+        "V_SAME_RUN_DELIVERY"
+      ]
+    },
+    "D08": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Classic gate runtime enforcement",
+          "scenario": "D08"
+        }
+      ],
+      "required_checks": [
+        "V_D08",
+        "V_INFRA_I02",
+        "V_RW_REAL_COMET_RECOVERY"
+      ]
+    },
+    "E01": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Architecture methods and advisory hooks",
+          "scenario": "E01"
+        }
+      ],
+      "required_checks": [
+        "V_E01",
+        "V_INFRA_I04",
+        "V_SAME_RUN_DELIVERY"
+      ]
+    },
+    "E02": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Architecture methods and advisory hooks",
+          "scenario": "E02"
+        }
+      ],
+      "required_checks": [
+        "V_E02",
+        "V_SAME_RUN_DELIVERY"
+      ]
+    },
+    "E03": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Architecture methods and advisory hooks",
+          "scenario": "E03"
+        }
+      ],
+      "required_checks": [
+        "V_E03",
+        "V_RW_TRUSTED_REVIEW",
+        "V_SAME_RUN_DELIVERY"
+      ]
+    },
+    "E04": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Architecture methods and advisory hooks",
+          "scenario": "E04"
+        }
+      ],
+      "required_checks": [
+        "V_E04",
+        "V_RW_TRUSTED_REVIEW",
+        "V_RW_REVISION_NO_REVIVE"
+      ]
+    },
+    "E05": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Architecture methods and advisory hooks",
+          "scenario": "E05"
+        }
+      ],
+      "required_checks": [
+        "V_E05"
+      ]
+    },
+    "E06": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Architecture methods and advisory hooks",
+          "scenario": "E06"
+        }
+      ],
+      "required_checks": [
+        "V_E06",
+        "V_INFRA_I04",
+        "V_SAME_RUN_DELIVERY"
+      ]
+    },
+    "H01": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Post-archive continuation and idempotent control",
+          "scenario": "H01"
+        }
+      ],
+      "required_checks": [
+        "V_H01",
+        "V_RW_REAL_COMET_RECOVERY",
+        "V_SAME_RUN_DELIVERY"
+      ]
+    },
+    "H02": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Post-archive continuation and idempotent control",
+          "scenario": "H02"
+        }
+      ],
+      "required_checks": [
+        "V_H02"
+      ]
+    },
+    "H03": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Post-archive continuation and idempotent control",
+          "scenario": "H03"
+        }
+      ],
+      "required_checks": [
+        "V_H03",
+        "V_INFRA_I02",
+        "V_RW_REAL_COMET_RECOVERY",
+        "V_SAME_RUN_DELIVERY"
+      ]
+    },
+    "H04": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Post-archive continuation and idempotent control",
+          "scenario": "H04"
+        }
+      ],
+      "required_checks": [
+        "V_H04",
+        "V_INFRA_I03"
+      ]
+    },
+    "H05": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Post-archive continuation and idempotent control",
+          "scenario": "H05"
+        }
+      ],
+      "required_checks": [
+        "V_H05",
+        "V_INFRA_I03"
+      ]
+    },
+    "H06": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Post-archive continuation and idempotent control",
+          "scenario": "H06"
+        }
+      ],
+      "required_checks": [
+        "V_H06"
+      ]
+    },
+    "H07": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Post-archive continuation and idempotent control",
+          "scenario": "H07"
+        }
+      ],
+      "required_checks": [
+        "V_H07",
+        "V_RW_REAL_COMET_RECOVERY"
+      ]
+    },
+    "H08": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Post-archive continuation and idempotent control",
+          "scenario": "H08"
+        }
+      ],
+      "required_checks": [
+        "V_H08",
+        "V_INFRA_I04",
+        "V_INFRA_I08"
+      ]
+    },
+    "H09": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Post-archive continuation and idempotent control",
+          "scenario": "H09"
+        }
+      ],
+      "required_checks": [
+        "V_H09",
+        "V_INFRA_I02",
+        "V_INFRA_I07",
+        "V_INFRA_I08"
+      ]
+    },
+    "U01": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U01"
+        }
+      ],
+      "required_checks": [
+        "V_U01",
+        "V_INFRA_I01",
+        "V_INFRA_I03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "U02": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U02"
+        }
+      ],
+      "required_checks": [
+        "V_U02",
+        "V_INFRA_I03"
+      ]
+    },
+    "U03": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U03"
+        }
+      ],
+      "required_checks": [
+        "V_U03",
+        "V_INFRA_I03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "U04": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U04"
+        }
+      ],
+      "required_checks": [
+        "V_U04",
+        "V_INFRA_I03"
+      ]
+    },
+    "U05": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U05"
+        }
+      ],
+      "required_checks": [
+        "V_U05",
+        "V_INFRA_I03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "U06": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U06"
+        }
+      ],
+      "required_checks": [
+        "V_U06",
+        "V_INFRA_I03"
+      ]
+    },
+    "U07": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U07"
+        }
+      ],
+      "required_checks": [
+        "V_U07",
+        "V_INFRA_I01",
+        "V_INFRA_I02",
+        "V_INFRA_I03",
+        "V_INFRA_I08"
+      ]
+    },
+    "U08": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Knowledge publication authorization",
+          "scenario": "U08"
+        }
+      ],
+      "required_checks": [
+        "V_U08",
+        "V_INFRA_I03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "L01": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Published knowledge revocation and restoration",
+          "scenario": "L01"
+        }
+      ],
+      "required_checks": [
+        "V_L01",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "L02": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Published knowledge revocation and restoration",
+          "scenario": "L02"
+        }
+      ],
+      "required_checks": [
+        "V_L02",
+        "V_INFRA_I03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "L03": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Published knowledge revocation and restoration",
+          "scenario": "L03"
+        }
+      ],
+      "required_checks": [
+        "V_L03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "L04": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Published knowledge revocation and restoration",
+          "scenario": "L04"
+        }
+      ],
+      "required_checks": [
+        "V_L04",
+        "V_INFRA_I03",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "L05": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Published knowledge revocation and restoration",
+          "scenario": "L05"
+        }
+      ],
+      "required_checks": [
+        "V_L05",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "L06": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Published knowledge revocation and restoration",
+          "scenario": "L06"
+        }
+      ],
+      "required_checks": [
+        "V_L06",
+        "V_INFRA_I08",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "L07": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Published knowledge revocation and restoration",
+          "scenario": "L07"
+        }
+      ],
+      "required_checks": [
+        "V_L07",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "L08": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Published knowledge revocation and restoration",
+          "scenario": "L08"
+        }
+      ],
+      "required_checks": [
+        "V_L08",
+        "V_INFRA_I07",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "L09": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Published knowledge revocation and restoration",
+          "scenario": "L09"
+        }
+      ],
+      "required_checks": [
+        "V_L09",
+        "V_INFRA_I07",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "L10": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Published knowledge revocation and restoration",
+          "scenario": "L10"
+        }
+      ],
+      "required_checks": [
+        "V_L10",
+        "V_INFRA_I07",
+        "V_RW_REAL_COMET_RECOVERY",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "L11": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Published knowledge revocation and restoration",
+          "scenario": "L11"
+        }
+      ],
+      "required_checks": [
+        "V_L11",
+        "V_INFRA_I07",
+        "V_INFRA_I08",
+        "V_RW_REAL_COMET_RECOVERY",
+        "V_POST_DELIVERY_PERMISSIONS"
+      ]
+    },
+    "M01": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Matt method profile without nested controllers",
+          "scenario": "M01"
+        }
+      ],
+      "required_checks": [
+        "V_M01",
+        "V_COMET_NATIVE",
+        "V_P1_6_PONYTAIL_ASSETS"
+      ]
+    },
+    "M02": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Matt method profile without nested controllers",
+          "scenario": "M02"
+        }
+      ],
+      "required_checks": [
+        "V_M02",
+        "V_INFRA_I02",
+        "V_P1_6_PONYTAIL_ASSETS"
+      ]
+    },
+    "N01": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N01"
+        }
+      ],
+      "required_checks": [
+        "V_N01"
+      ]
+    },
+    "N02": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N02"
+        }
+      ],
+      "required_checks": [
+        "V_N02"
+      ]
+    },
+    "N03": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N03"
+        }
+      ],
+      "required_checks": [
+        "V_N03"
+      ]
+    },
+    "N04": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N04"
+        }
+      ],
+      "required_checks": [
+        "V_N04"
+      ]
+    },
+    "N05": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N05"
+        }
+      ],
+      "required_checks": [
+        "V_N05"
+      ]
+    },
+    "N06": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N06"
+        }
+      ],
+      "required_checks": [
+        "V_N06"
+      ]
+    },
+    "N07": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N07"
+        }
+      ],
+      "required_checks": [
+        "V_N07"
+      ]
+    },
+    "N08": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N08"
+        }
+      ],
+      "required_checks": [
+        "V_N08"
+      ]
+    },
+    "N09": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N09"
+        }
+      ],
+      "required_checks": [
+        "V_N09"
+      ]
+    },
+    "N10": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N10"
+        }
+      ],
+      "required_checks": [
+        "V_N10"
+      ]
+    },
+    "N11": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N11"
+        }
+      ],
+      "required_checks": [
+        "V_N11"
+      ]
+    },
+    "N12": {
+      "status": "NOT_VERIFIED",
+      "layer": "real-flow-required",
+      "historical_results_may_close": false,
+      "source_binding": [
+        {
+          "path": "specs/delivery-foundation/spec.md",
+          "requirement": "Command knowledge infrastructure convergence",
+          "scenario": "N12"
+        }
+      ],
+      "required_checks": [
+        "V_N12"
+      ]
     }
-  }
+  },
+  "convergence_revision": "2026-10-24-comet-convergence"
 }

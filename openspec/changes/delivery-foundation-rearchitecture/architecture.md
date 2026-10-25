@@ -89,3 +89,9 @@ Runner镜像必须消费当前完整有序补丁和正确构建根/入口，真�
 冻结接口增量：
 - SDD.Verification.Journey.v2: observer requires exact targets and typed terminal readback and observes real Comet Run without controlling phase or recovery
 - Comet.GateRevision.v2: same Run persists monotonic requirement and design revisions and trusted reviewer result binding and never revives invalidated receipts by restoring bytes
+
+## 2026-10-24 流程与知识收敛
+
+用户明确要求清理旧流程并按最新架构实际端到端完成。权威实施细化见docs/architecture/comet-ai-devops-convergence.md，ADR-0020；原始目标为六环节与知识闭环，不是仅增加Comet校验。当前39节点/69工作包继续；104场景/130required检查在新profile0通过。旧命令/阶段别名退出发现，方法保持原样；profile绑定数据不能变第二流程引擎。
+
+LLMWiki项目知识、Outline团队精华、自托管deepwiki-open代码Wiki和可选CodeGraph分开；OpenSpec持有规范，Git不强行承接所有团队正文。Kp卡实际归档、Kt卡整体完成，事件+周期核验接同Comet维护；角色/平台/资源/原生恢复均需真实证据。迁移控制器仍是原root planner，产品P不得启动完整planner控制器。

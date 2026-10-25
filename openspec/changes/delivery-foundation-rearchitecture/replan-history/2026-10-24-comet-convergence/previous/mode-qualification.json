@@ -1,0 +1,348 @@
+{
+  "schemaVersion": 1,
+  "task": "P1_4 (原 1.4)",
+  "qualifiedAt": "2026-10-20T18:20:00+08:00",
+  "qualifiedBy": "P1_4 implementation worker, run impl-dfr-20261020-r1, worktree impl/p1-4-mode-qualification",
+  "build": {
+    "name": "patched pinned Comet distribution",
+    "sourceCommit": "c90af44a4474662d7853aae76ce785404974fb0a",
+    "fingerprint": "d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6",
+    "patches": [
+      "integrations/comet/patches/0001-matt-method-profile.patch",
+      "integrations/comet/patches/tests/1_6.patch",
+      "integrations/comet/patches/0002-managed-delivery-runtime.patch",
+      "integrations/comet/patches/tests/2_4.patch",
+      "integrations/comet/patches/0003-post-archive-closeout.patch",
+      "integrations/comet/patches/tests/4_6.patch"
+    ],
+    "verification": "node(24.15.0) tools/comet/build.mjs --check-generated --runtime-smoke --json -> PASS (check-generated classic/native/entry all PASS; runtime smoke green 4/4; distribution manifest verified clean after the smoke; re-verified on the d4370930 six-patch build, rework-seven-p1-r1)",
+    "note": "all probes in mode-probes/ ran against this exact six-patch stack; the case qualifies the stack by identity (patch-path set) and the registration is bound to the current lock fingerprint, asserted by test/delivery-cases/1_4.mjs",
+    "repinNote": "lock revision: 4 patches @ 9b95a0ff (P2_4 0002 + tests/2_4). The P1_4 probe evidence in mode-probes/ was captured on cb1151b4 (pre-0002); 0002 behavior is dormant unless a change is managed_delivery:true, so the qualified surface carries over; generated checks and runtime smoke re-verified PASS on 9b95a0ff by P2_4. Second repin (P4_6 integration): lock revision 6 patches @ beab355d (0003 post-archive closeout + tests/4_6 added); generated checks and runtime smoke re-verified PASS on beab355d. Third repin (P2_4 rework integration, rework-seven-p1-r1): the 0002 patch was revised in place — same six-patch stack, lock fingerprint d437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6; generated checks and runtime smoke re-verified PASS on d4370930 (node 24.15.0 tools/comet/build.mjs --check-generated --runtime-smoke --json -> PASS 4/4, distribution manifest verified clean after the smoke) by the P1_4 rework worker in worktree rw-p1-4."
+  },
+  "capabilityMatrix": [
+    {
+      "id": "mode-authority",
+      "obligation": "唯一交付主控与模式绑定（SC-04：模式和方法不能叠加成多个 controller）",
+      "classic": {
+        "observed": "init --workflow classic writes .comet/config.yaml (comet.project.v1, default_workflow: classic); `workflow resolve` answers comet.workflow-resolution.v1 workflow=classic; full classic state machine (state init/transition/check/next/tasks/guard/archive) and guard hook installed",
+        "verdict": "classic-admitted",
+        "evidence": "mode-probes/1_4-classic-init.json"
+      },
+      "native": {
+        "observed": "init --workflow native writes the same config schema with default_workflow: native, workflows=[native]; `workflow resolve` answers workflow=native skill=comet-native source=project-config; classic control commands refuse (state init exit 1 'Classic artifact layout is unavailable because Classic is not enabled'); 12 comet-native-*.mjs scripts installed as its own method surface",
+        "verdict": "comparison-only",
+        "evidence": "mode-probes/1_4-native-mode.json"
+      },
+      "verdict": "classic-admitted; native recorded as capability comparison only; the binding is the init-time project config — switching modes requires explicit re-init, there is no runtime or automatic switch path"
+    },
+    {
+      "id": "openspec-authority",
+      "obligation": "OpenSpec 唯一规范权威",
+      "classic": {
+        "observed": "classic layout is OpenSpec-native: docs/openspec/changes/<change>/.comet.yaml state, openspec archive adapter invoked by `comet archive`; classic init requires an OpenSpec runtime >= 1.5.0",
+        "verdict": "direct-reuse",
+        "evidence": "mode-probes/1_4-classic-init.json"
+      },
+      "native": {
+        "observed": "native artifact root is its own (default docs/, native.brief/specs under it per comet.project.v1 config); not wired to the OpenSpec change lifecycle",
+        "verdict": "own-spec-system",
+        "evidence": "mode-probes/1_4-native-mode.json"
+      },
+      "verdict": "classic-admitted (OpenSpec strong constraint favors direct reuse; compatible OpenSpec is an isolated install per extension_delivery/toolchain-baseline, never a global upgrade)"
+    },
+    {
+      "id": "default-progression",
+      "obligation": "默认推进与人工决策点",
+      "classic": {
+        "observed": "every state envelope carries agent.continuation / data.nextAction (automatic: true) derived from the real state; guard refuses progression at decision gates until preconditions hold",
+        "verdict": "auto-with-gates",
+        "evidence": "mode-probes/1_4-gate-negatives.json"
+      },
+      "native": {
+        "observed": "continuation-driven shape with user-choice persistence; not evaluated further (comparison only)",
+        "verdict": "not-qualified",
+        "evidence": "mode-probes/1_4-native-mode.json"
+      },
+      "verdict": "classic-admitted (A 不是一个删除必要授权：未授权决定必须停 — gate refusals observed enforce this)"
+    },
+    {
+      "id": "real-command-evidence",
+      "obligation": "真命令执行与旧证据失效",
+      "classic": {
+        "observed": "real `check run` writes .comet/checks/<uuid>.log runtime records bound to argv/cwd/environment/inputs/log-hash; stale inputs refused ('check inputs changed since execution. Changed inputs: src/feature.js'); manual declarations refused and shadow earlier runtime evidence; cross-scope substitution refused",
+        "verdict": "enforced-with-gaps",
+        "evidence": "mode-probes/1_4-gate-negatives.json"
+      },
+      "native": {
+        "observed": "native check execution binds candidate/verifier identity (upstream design); not re-evidenced here (comparison only)",
+        "verdict": "not-qualified",
+        "evidence": "mode-probes/1_4-native-mode.json"
+      },
+      "verdict": "classic-admitted with B1/B3 blocking items (staleness and manual receipts natively blocked; required-check identity is a registered gap)"
+    },
+    {
+      "id": "no-bypass",
+      "obligation": "不可省略检查不可绕过（普通执行可达的逃生路径）",
+      "classic": {
+        "observed": "all gated entrances (transition, guard preview, guard --apply, archive entry, phase-guard write hook) refuse without the required check — but COMET_SKIP_BUILD=1 alone voids the whole evidence chain (build-complete, verify-pass, archive-confirm, archive all exit 0 with zero check logs) and COMET_FORCE_PHASE=1 allows direct phase writes",
+        "verdict": "gap",
+        "evidence": "mode-probes/1_4-escape-paths.json"
+      },
+      "native": {
+        "observed": "not probed for escapes (comparison only; native has its own candidate/check/verifier control)",
+        "verdict": "not-qualified",
+        "evidence": "mode-probes/1_4-native-mode.json"
+      },
+      "verdict": "classic-admitted only with B4 as a mandatory blocking item and its extension acceptance (no verdict change)"
+    },
+    {
+      "id": "knowledge-closeout",
+      "obligation": "项目知识/团队发布硬门禁（Kp 先于归档、Kt 先于整体完成）",
+      "classic": {
+        "observed": "archive entry checks pass 5/5 with zero knowledge receipts; `comet knowledge remember` writes a HOME-cache markdown; no LLMWiki/Outline consult anywhere in the native gate",
+        "verdict": "gap",
+        "evidence": "mode-probes/1_4-knowledge-boundary.json"
+      },
+      "native": {
+        "observed": "native SKILL.md likewise prompts comet knowledge remember; native has its own Project Knowledge/Personal Memory — equally not an external-knowledge closeout",
+        "verdict": "comparison-only",
+        "evidence": "mode-probes/1_4-knowledge-boundary.json"
+      },
+      "verdict": "classic-admitted only with B5 (knowledge boundary) and the driver-gate Kp/Kt extension (Knowledge.Closeout.v1, P1_3 sealCloseout) — 技能提示不满足硬门禁目标"
+    },
+    {
+      "id": "roles-verification",
+      "obligation": "planner/test-authoring/whitebox 角色与独立验证",
+      "classic": {
+        "observed": "classic dispatches roles as skills (comet-open/design/build/verify/review/archive) over one Run state; independent acceptance receipts are NOT natively identity-bound to a whitebox executor (driver-layer Runner.Dispatch.v1 admission supplies this, P1_3)",
+        "verdict": "requires-driver-binding",
+        "evidence": "mode-probes/1_4-classic-init.json"
+      },
+      "native": {
+        "observed": "native carries its own independent Verifier concept; not qualified against the three-skill combination (comparison only)",
+        "verdict": "not-qualified",
+        "evidence": "mode-probes/1_4-native-mode.json"
+      },
+      "verdict": "classic-admitted with driver-layer admission binding (already delivered by P1_3 harness/comet adapter, reused unmodified)"
+    },
+    {
+      "id": "background-driving",
+      "obligation": "持续后台驱动",
+      "classic": {
+        "observed": "continuation/nextAction are state envelopes executed by the host agent; a refused guard leaves the phase unchanged and points at the recovery action — no resident scheduler exists or is needed",
+        "verdict": "host-executed",
+        "evidence": "mode-probes/1_4-gate-negatives.json"
+      },
+      "native": {
+        "observed": "same dependence on host execution (recovery states exist; no resident service)",
+        "verdict": "comparison-only",
+        "evidence": "mode-probes/1_4-native-mode.json"
+      },
+      "verdict": "classic-admitted; Runner only drives Comet, no business-phase second authority is created"
+    },
+    {
+      "id": "closeout-exclusivity",
+      "obligation": "归档/收尾单一 owner（含知识闭合次序）",
+      "classic": {
+        "observed": "upstream `comet archive` converges idempotently on repeat; archive entry checks refuse premature/forged states ('FATAL: verify_result is pending, expected pass'); exclusivity and Kp-before-archive are expressed at the driver gate (P1_3 sealCloseout, ARCHIVE_ALREADY_SEALED / KNOWLEDGE_CLOSEOUT_REQUIRED)",
+        "verdict": "requires-driver-gate",
+        "evidence": "mode-probes/1_4-escape-paths.json"
+      },
+      "native": {
+        "observed": "native archive is its own script (comet-native-archive.mjs) with automatic confirmation; not qualified",
+        "verdict": "not-qualified",
+        "evidence": "mode-probes/1_4-native-mode.json"
+      },
+      "verdict": "classic-admitted with the driver gate as the single closeout owner"
+    }
+  ],
+  "classicAdmission": {
+    "admitted": true,
+    "basis": "固定 Comet 发行包（fingerprint cb1151b4…）上 Classic 的真实命令面/状态机/门禁行为逐项探测：全部 C07 受管入口执行同一前置规则；真命令/旧证据失效/手工回执拒绝原生成立；缺口以 B1/B4/B5/B6 扩展验收登记，不以改判定转绿",
+    "entryConditions": [
+      "explicit init binding: --workflow classic at init time writes the project config binding; no runtime or automatic Classic/Native switch exists (workflow resolve source=project-config)",
+      "OpenSpec runtime >= 1.5.0 via isolated install only (.sdd/tools/openspec-1.11.0 per toolchain-baseline upgrade_policy); classic init's floating global upgrade attempt (B6) must stay neutralized in managed use",
+      "managed launch authority strips/forbids the escape env vars (B4) for ordinary agent execution before any managed delivery",
+      "knowledge closeout receipts are accepted from LLMWiki/Outline external evidence only (B5); built-in memory is never a receipt"
+    ],
+    "autoSwitch": {
+      "allowed": false,
+      "observed": "workflow-resolve-config-binding"
+    },
+    "mandatoryBlocks": [
+      "B1",
+      "B2",
+      "B3",
+      "B4",
+      "B5",
+      "B6"
+    ]
+  },
+  "blockingItems": [
+    {
+      "id": "B1",
+      "class": "irrelevant-successful-command",
+      "nativeBehavior": "partially-blocked",
+      "blocked": [
+        "cross-scope substitution refused natively: a real successful verify-scope check does not satisfy the build gate (transition build-complete exit 1, '[FAIL] Build passes')",
+        "a recorded check must be scope-matched, provenance=runtime, exit 0, input/env/log unchanged and not superseded (evaluateCommandCheck revalidation)"
+      ],
+      "gap": "no required-check identity registry exists: a trivial successful command (probe script is only 'process.exit(0)') run under the required scope satisfies the build gate and advances the phase (review SC-01) — the executor, not a policy, picks the command",
+      "extensionAcceptance": "managed check policy extension must pin the required command identity per scope (argv/cwd/files/outputs in .comet/check-policy.json v2 + runner-side validation of check-run argv against the registered required set, via the upstream patch seam); acceptance = a trivial command under the required scope is refused by the extension while the verdict logic itself stays untouched",
+      "extensionAcceptanceForbidden": "do not pass by editing the driver gate verdict or by reclassifying the gap as covered",
+      "evidence": "mode-probes/1_4-gate-negatives.json"
+    },
+    {
+      "id": "B2",
+      "class": "missing-required-check",
+      "nativeBehavior": "blocked",
+      "blocked": [
+        "direct transition build-complete refused with zero check evidence (exit 1, '[FAIL] Build passes')",
+        "guard preview refused (exit 1); guard --apply refused and the phase stays unchanged",
+        "state next/continuation stays guidance (never claims completion past the missing check)",
+        "archive request refused outside the archive phase (FATAL: phase is 'build', expected 'archive')"
+      ],
+      "gap": "none observed for this class",
+      "extensionAcceptance": "none required; regression is pinned by test/delivery-cases/1_4.mjs (the four refusals are asserted on every run)",
+      "evidence": "mode-probes/1_4-gate-negatives.json"
+    },
+    {
+      "id": "B3",
+      "class": "stale-or-manual-receipt",
+      "nativeBehavior": "blocked",
+      "blocked": [
+        "hand written record-check refused: 'Manual declarations never satisfy the guard, and they shadow the earlier runtime evidence until a new runtime check runs'",
+        "stale evidence refused after source mutation: 'Why: check inputs changed since execution. Changed inputs: src/feature.js' (manifest-based input revalidation)",
+        "evaluateCommandCheck additionally revalidates environment fingerprint, evidence log integrity and supersession — recorded as code-level observations of the same patched build"
+      ],
+      "gap": "none observed for this class",
+      "extensionAcceptance": "none required; regression is pinned by test/delivery-cases/1_4.mjs",
+      "evidence": "mode-probes/1_4-gate-negatives.json"
+    },
+    {
+      "id": "B4",
+      "class": "escape-path",
+      "nativeBehavior": "gap",
+      "blocked": [
+        "downstream entry checks still hold against forged state: archive on a COMET_FORCE_PHASE-written phase refuses with \"FATAL: verify_result is 'pending', expected 'pass'. Run comet-verify first.\"",
+        "direct phase write refuses by default and names the escape ('Repair-only escape hatch: COMET_FORCE_PHASE=1')"
+      ],
+      "gap": "COMET_SKIP_BUILD=1 — an ordinary environment variable reachable by any process — voids the entire evidence chain: with zero `check run` invocations the lifecycle ran build-complete, verify-pass (verify_result stamped 'pass'), archive-confirm and archive, exiting 0 throughout and archiving the change with zero check logs (review SC-02). COMET_FORCE_PHASE=1 likewise allows direct `state set phase archive` writes. 提示词层面的'禁止使用'不构成阻断",
+      "extensionAcceptance": "managed runner/launch authority env hygiene: the trusted launcher (Runner.Dispatch.v1 launch authority, P2_2/P1_3 layer) strips or refuses COMET_SKIP_BUILD/COMET_FORCE_PHASE for ordinary agent executions, and protected CI re-verifies the managed delivery without those variables; acceptance = a managed execution carrying either variable is refused at launch (or its receipts rejected at admission) while the upstream verdict logic stays untouched",
+      "extensionAcceptanceForbidden": "do not pass by editing the driver gate verdict, and do not rely on prompt-level prohibition",
+      "evidence": "mode-probes/1_4-escape-paths.json"
+    },
+    {
+      "id": "B5",
+      "class": "knowledge-boundary",
+      "nativeBehavior": "gap",
+      "blocked": [
+        "the driver gate (P1_3, reused unmodified) already refuses closeout without the recorded Kp (KNOWLEDGE_CLOSEOUT_REQUIRED) and refuses a second closeout execution (ARCHIVE_ALREADY_SEALED)"
+      ],
+      "gap": "the native gate has no knowledge precondition at all: archive entry checks pass 5/5 with zero knowledge receipts; both modes prompt `comet knowledge remember` (classic SKILL.md:35-37, native SKILL.md:24-28) whose store is a HOME cache — no LLMWiki/Outline/DeepWiki consult exists natively (review SC-03)",
+      "extensionAcceptance": "keep knowledge closeout at the driver gate: Kp/Kt receipts are accepted from LLMWiki (project) and approved Outline publishing (team) external evidence only (Knowledge.Closeout.v1: Kp before archive, Kt before overall completion); built-in memory output must never be admitted as a Kp/Kt receipt",
+      "extensionAcceptanceForbidden": "do not admit built-in memory output as a knowledge receipt and do not pass the closeout without external evidence",
+      "evidence": "mode-probes/1_4-knowledge-boundary.json"
+    },
+    {
+      "id": "B6",
+      "class": "openspec-supply-chain",
+      "nativeBehavior": "gap",
+      "blocked": [
+        "the mismatch is detected by classic init (host 1.3.1 < required >= 1.5.0) — detection itself is correct behavior"
+      ],
+      "gap": "on a mismatched host, classic init attempts `npm install -g @fission-ai/openspec@latest` — a floating-version global host mutation (supply-chain rule violation; neutralized by PATH stubs in all managed probes, stub log is the witness)",
+      "extensionAcceptance": "managed use supplies the compatible OpenSpec via isolated install only (.sdd/tools/openspec-1.11.0, integrity-locked per toolchain-baseline.json upgrade_policy); the global upgrade path must never run in managed execution (env hygiene/PATH control at the launch authority, same seam as B4)",
+      "extensionAcceptanceForbidden": "do not allow the floating global upgrade to run and do not widen host-global installs",
+      "evidence": "mode-probes/1_4-classic-init.json"
+    }
+  ],
+  "knowledgeBoundary": {
+    "llmwikiOutlineDeepWikiRemainSoleSources": true,
+    "soleSources": {
+      "projectKnowledge": "LLMWiki (local project knowledge)",
+      "teamEssence": "Outline (approved team publishing)",
+      "codeWiki": "self-hosted deepwiki-open"
+    },
+    "builtinMemory": {
+      "commands": [
+        "comet knowledge remember/list/get/correct/forget",
+        "comet memory"
+      ],
+      "storage": "$HOME/Library/Caches/Comet/project-knowledge/<project-hash>/memory/<slug>.md (HOME cache; also .comet/plugins/storage under HOME) — outside the project repo",
+      "authoritative": false,
+      "role": "Comet-internal convenience cache and generated topology records; never a knowledge master, never a fourth knowledge store (review SC-03)"
+    },
+    "conflictPolicy": "内置项目记忆不覆盖、不替代 LLMWiki/Outline/DeepWiki 唯一知识源：不用它充当 Kp/Kt 回执，不把它的输出当作知识闭合证据；两模式 SKILL 提示的 comet knowledge remember 仅视为缓存便利功能；不能禁用或隔离时不启用冲突功能（不以提示词充当不可绕过性）",
+    "nativeArchiveKnowledgeCheck": "state check archive: entry checks 5/5 pass with zero knowledge receipts; envelope never mentions llmwiki/outline — the native gate carries no Kp precondition",
+    "kpEnforcement": "driver gate (lib/adapters/comet.js sealCloseout, Knowledge.Closeout.v1: Kp before archive, Kt before overall completion) — reused unmodified from P1_3; enforcement seat for the sole-source boundary",
+    "evidence": "mode-probes/1_4-knowledge-boundary.json"
+  },
+  "c07Entrances": [
+    {
+      "entrance": "state transition (direct transition)",
+      "refusesWithoutCheck": true,
+      "evidence": "mode-probes/1_4-c07-entrances.json"
+    },
+    {
+      "entrance": "guard preview",
+      "refusesWithoutCheck": true,
+      "evidence": "mode-probes/1_4-c07-entrances.json"
+    },
+    {
+      "entrance": "guard --apply",
+      "refusesWithoutCheck": true,
+      "evidence": "mode-probes/1_4-c07-entrances.json"
+    },
+    {
+      "entrance": "next/continuation recovery",
+      "refusesWithoutCheck": "guidance-only",
+      "evidence": "mode-probes/1_4-c07-entrances.json"
+    },
+    {
+      "entrance": "archive request",
+      "refusesWithoutCheck": true,
+      "evidence": "mode-probes/1_4-c07-entrances.json"
+    },
+    {
+      "entrance": "phase-guard write hook (edit channel)",
+      "refusesWithoutCheck": true,
+      "evidence": "mode-probes/1_4-c07-entrances.json"
+    },
+    {
+      "entrance": "state check <phase>",
+      "refusesWithoutCheck": "entry-checks-only",
+      "evidence": "mode-probes/1_4-c07-entrances.json"
+    }
+  ],
+  "c07Note": "state check <phase> is the ENTRY check set of the requested phase (6/6 passed with no build evidence) — it is not an exit gate; exit gating happens at transition/guard/--apply/archive, all of which refuse. Shell/MCP write channels remain an A09 capability gap of the guard hook (recorded by P1_3, re-verified here via the same adapter); the managed downstream gates remain the holding enforcement.",
+  "m01Note": "M01: the fixed distribution carries the pre-fixed Classic method only; no Superpowers runtime is installed or invoked by managed delivery (docs/superpowers is an upstream artifact root name, not a runtime; assert 'superpowers enabled' absent from comet status output). The 0001-matt-method-profile.patch is part of the pinned build; source references are not a runtime dependency.",
+  "probes": [
+    "mode-probes/1_4-classic-init.json",
+    "mode-probes/1_4-native-mode.json",
+    "mode-probes/1_4-gate-negatives.json",
+    "mode-probes/1_4-escape-paths.json",
+    "mode-probes/1_4-knowledge-boundary.json",
+    "mode-probes/1_4-c07-entrances.json"
+  ],
+  "observations": [
+    {
+      "id": "OBS-design-confirmation",
+      "observation": "state complete-design is the strict design confirmation: when the design doc carries frontmatter it must declare the binding triple comet_change: <change>, role: technical-design, canonical_spec: openspec; without the triple the command refuses (naming 'Design Doc …' checks) AFTER registering the design_doc reference, and `state transition design-complete` is the phase driver (design -> build). Managed use should author the frontmatter triple so the strict path passes (both recipes drive the same gate set).",
+      "evidence": "test/delivery-cases/1_4.mjs (complete-design recipe comments + refusals asserted)",
+      "verifiedOn": "cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187"
+    },
+    {
+      "id": "OBS-verification-report-field",
+      "observation": "the build-complete/verify-pass transitions rewrite .comet.yaml and drop the verification_report field when it was recorded before the transition; `state set verification_report` must (re-)run at the verify phase, where the field persists (state set additionally requires the report file to exist). The escape-path probe records this ordering.",
+      "evidence": "mode-probes/1_4-escape-paths.json",
+      "verifiedOn": "cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187"
+    },
+    {
+      "id": "OVS-builtin-memory-storage",
+      "observation": "comet knowledge remember stores $HOME/Library/Caches/Comet/project-knowledge/<project-hash>/memory/<slug>.md; knowledge list additionally exposes Comet-generated topology records (provider=local). Nothing in either flow touches LLMWiki/Outline/DeepWiki.",
+      "evidence": "mode-probes/1_4-knowledge-boundary.json",
+      "verifiedOn": "cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187"
+    }
+  ]
+}

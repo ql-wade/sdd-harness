@@ -1,95 +1,77 @@
-# 给 Claude 的七P1返工交接
+# 当前执行入口：Comet流程与知识基础设施收敛
 
-本次请求是**计划修订和交接**，没有启动实施、Goal、定时任务、部署或发布。用户把本包交给Claude并要求执行后，由Claude按下述流程自动推进；技术修复不反复询问，只有真实授权/业务范围/不可恢复阻塞交人。
+日期：2026-10-25。用户已经明确要求清理旧流程、按最新架构实际落地并端到端完成；不是只交计划。当前root聊天是唯一迁移planner/台账写者，Claude实施工人使用隔离工作树。产品业务的状态、派发、返工、恢复和完成权只属于Comet。TeamAI只分发，方法技能不成为第二主控。
 
-## 先读与唯一权威
+## 目标与证据边界
 
-1. 仓库AGENTS、README、主架构、ADR-0015/0019及技能分工。
-2. `docs/research/2026-10-22-delivery-implementation-grill.md`：7项P1与真实反例。
-3. 本Change的proposal/design/spec、tasks.md、task-dag.json、execution-contract.json、drift-lock.json、replan-record.json。
-4. 运行plan guard，核对冻结输入及身份；然后读execution-prompt.md的**项目优先覆盖**。guard通过只证明计划有效。
+原目标是Foundation、两类知识库和Command门禁驱动的AI DevOps全链路。读`docs/architecture/comet-ai-devops-convergence.md`、ADR-0020及本Change的proposal/design/spec，再读tasks/DAG/contract。
 
-唯一任务/进度源仍为本Change的tasks.md；唯一依赖图仍为task-dag.json。**39节点、原30父任务、69工作包、92场景，原108检查全部保留，新增10项返工检查，共118项required。** 历史总结的“40节点”不作为增删节点依据。P1-01等只是审查finding，不是新任务或第二套DAG。
+- 保留原39节点、30父任务、69工作包、92场景和118检查。
+- 新增N01–N12命令/知识贯通场景与检查：现104场景、130required检查，全部在新profile重新验证。
+- 旧报告、原票、原始日志、Run及知识记录保留历史；新profile0验收，不继承原39/39或104 PASS。
+- 九个旧业务命令及九个source-command迁移副本已移到可恢复备份。还要证明安装/更新/分发/冷会话不再生，不能仅凭文件移走勾选完成。
+- raw旅程证据保留于主检出`.local/comet-reset/preserved-full-journey/`并有摘要清单；原rw-p4-4工作树不清理。
 
-Claude是迁移实施的唯一planner控制器；目标产品的业务派发、phase/currentStep、重试、恢复与关闭仅由Comet持有。TeamAI只分发；Ponytail只提供方法上下文。不得嵌套implement-spec或另造主控。
+所有当前任务步骤只在tasks.md维护。旧30行别名勾选已转为只读身份映射，避免第二进度和归档时的重复未勾项。任何状态汇总从该唯一源和实际证据派生；不能再并存COMPLETE与remaining35等矛盾字段。
 
-## 版本与移交前置
+## 术语与清理范围
 
-本次源代码HEAD是`f4afe05`，原VERIFY测试基线`68f7963`；旧计划/状态/报告的完整字节及摘要见`replan-history/2026-10-22-seven-p1/previous/`与`replan-record.json`。原报告与测试日志作为历史保留，不继承为返工候选PASS。
+- 统一业务入口是原生`/comet`，机器驱动/诊断沿用固定版本的实际Comet CLI。
+- R/A/T/P/V/Kp/Kt是既有Run内的逻辑门/义务，不创建新阶段引擎。
+- 删除发现链里的旧sdd阶段命令、Trinity/Superpowers运行依赖及stage薄壳，不暗中重定向旧入口。
+- 合法Matt方法、test-authoring、Whitebox、consensus、lifecycle-guard、Ponytail原样快照保留。历史引用和许可证不因字符串命中被篡改。
+- LLMWiki=单项目Agent精华，Outline=团队精华/跨项目知识，deepwiki-open=代码Wiki，CodeGraph=可选结构索引。OpenSpec仍持有需求/设计/测试意图/任务的正式权威；源码不全量入知识库。
+- 不清空真实知识/数据库，不卸载全局/其它项目技能，不销毁旧Run或唯一工作区，不为健康端口新增一台主控服务。
 
-本轮继续已冻结的Classic同Runtime受控补丁方案。未接纳的官方overlay候选、主工作区现有架构/config改动不得混入实现；它们的观察摘要与字节保存在同一history的observed-inputs。当前`openspec/config.yaml`字节是本次校验的观察输入，不表示批准覆盖原项目规则或采纳overlay方案。
+## 当前安全子步
 
-**本包未创建计划提交。** 在新worktree实施前，由唯一控制器把本包和全部冻结输入做可回滚的独立计划提交或受控快照，并记录准确基线；不能只从`f4afe05`创建工作树却漏掉本次返工计划。不得整体提交主工作区的无关改动。移交时核对spec-baseline.sources，尤其现有未提交config：在隔离快照中保留其冻结字节，不恢复/覆盖用户主工作区。缺冻结输入即HALT_AND_REPLAN，不静默重锁。
+P1_2安装防再生子步已独立审查并合入`e0fde44`，主检出行为测试7/7通过；I01项目/调用者身份回读子步已独立审查并合入`6bb1b4c`，测试26/26通过且真实GitHub只读身份匹配。两者均不代表完整任务或新profile验收。当前两个安全子步工人均已结束；实际句柄和进展见execution-state。
 
-当前可用工具与构建必须重验。完整保留构建缓存曾报manifest漂移，不能以目录存在或fingerprint文本正确当发行资格。OpenSpec优先用隔离、实测兼容的工具链；禁止为了过旧测试降全局版本。每次补丁集成由P1_1归属的唯一集成人更新有序锁、重新构建及回读，worker不能随意改共享锁。
+本轮进一步合入`291ccc8`装配测试隔离和`36fcf5c`三个身份调用点/平台完整校验修复：独立复验后主检出8/8与77/77通过。全量回归最终496项489通过、7失败、0跳过，源活配置摘要不变；总检查失败，隔离OpenSpec1.11.0 strict通过。支持检查1通过/2失败/127未验，整节点和业务场景仍未接纳。详情见verification-report；工人已结束。
 
-## 固定返工顺序
+15份冻结材料已获人明确授权，实际用两轮完成三方共识并经机械finalize；Claude Code8.8、ZCode9.2、Codex8.6，全部APPROVE且无阻断。回执在architecture-review/comet-convergence-r1/receipt.json；只批准实施，不授权profile启用、平台写或发布。两项MINOR在原P3_1/P3_2等任务闭合：统一profile token，清除三条旅程的旧IMPLEMENTED/PASS当前标签。原包/原票保留；本次一次性资料外发许可已用于完成该评审，不能借余下轮次复用于新材料。
 
-| 顺序 | 沿用任务 | 交付与放行条件 |
-| --- | --- | --- |
-| 资格前置 | P1_1、P2_1 | 当前源码/补丁/工具链与测试边界可复验；不沿用漂移缓存或旧报告。 |
-| 第一修复 | **P3_1** | 修验收器的目标分母/断言映射/typed终态读回；无关全绿、零目标、skip、必需观察失败都非零；独立反例通过后才信后续绿色。 |
-| 第二修复 | **P2_4、P2_5** | R在正式架构前硬阻断；A/T消费真实独立结果；A真正消费grill闭合与精确全票共识；单调revision使旧字节还原也不复活批准。 |
-| 真实运行资格 | **I02，继而P1_3/P1_4/P1_5** | 修Dockerfile完整补丁/项目根/入口与image lock，真实镜像启动及角色隔离，重新走生成脚本与全部正常/旁路/恢复入口。 |
-| 跨边界接线 | P3_2/P3_3/P3_4、P4_4/P4_6/P4_7/P4_8、I01–I08 | 建设观察配方并在声明范围验证真实机制；完整三旅程统一留到VERIFY，等全部知识/监控/备份机制齐备后执行。组件任务不提前签完整旅程，缺资源保持未验。 |
-| 终局验收 | **P4_3、VERIFY** | 重建按层索引；同一最终候选重跑118检查、92场景及三条真实旅程，独立Whitebox与Grill，逐一关闭7P1。 |
+根控制器只串行接纳已独立审查的diff。工人不改tasks/DAG/contracts/锁/台账，不碰主检出活配置，不复用带原始证据的旧工作树。
 
-原DAG已重排，依赖改动与原因逐条见replan-record.json。为解决“Runtime修复需要Runner验真、Runner又要打包修复后Runtime”的集成依赖，**仅三条边**允许消费已独立审查、准确绑定并串行集成的实现工件：P2_5←P2_4、I02←P2_4/P2_5。不是验收豁免：上游未验证的任务仍不勾选，状态为INTEGRATED_AWAITING_REAL_QUALIFICATION；I02/P1_5实际资格验证后才能关闭对应义务。若P2_5接线要求补Runtime，恢复原P2_4 worker/任务版本，不新建替代节点。VERIFY对所有任务和required结果保持严格通过条件。
+## 分阶段执行（全部仍在原DAG）
 
-## 七项P1怎么修、怎么验
+1. P0_1–P0_4：对齐原目标、收敛架构/术语/动作I/O及独立架构审查，冻结当前制品。旧架构票不是新制品通过证明。当前授权允许旧入口安全退休/防再生修复先做；新业务profile的启用仍须实际Gate。
+2. P1_6/P1_2：方法/profile唯一源与安装/分发/卸载，退役源/生成副本/受管链接同时处理，防恢复和自动迁移重新暴露。不要改上游技能正文或增加阶段技能壳。
+3. P1_1/I01–I06：精确工具链/Comet构建、身份与动作授权、固定Runner、LLMWiki、Outline、deepwiki及平台逐项资格化。环境缺失就UNVERIFIED；CodeGraph是可选件，不把所有MCP变服务。
+4. P1_3–P2_5：真正接通Comet工作包→实际角色/工具→正式产物→可信结果接纳。R/A/T独立，A真实grill/原摘要共识、T实际测试设计审查，P只生成计划。受信身份不能是调用者填role；hash不能证明来源。
+5. P3_1–P3_3：先资格化验收器，再跑实际角色R→V切片与核心事务恢复；真实行为RED/GREEN和独立Whitebox。完整旅程配方交VERIFY，在所有下游机制齐备后才执行，避免验收循环。
+6. P3_4/P4_1–P4_7：真实平台SHA/checks/制品digest/目标环境、LLMWiki Kp、唯一OpenSpec归档、Outline Kt及同Run未知结果/重启恢复。Kp缺失所有归档入口都拒绝；Kt缺失同Run仍pending。
+7. P4_8/I07/I08/P5_1/P5_3：权限事件+周期全量核验接同Comet维护，真实多渠道隔离、告警送达、新授权恢复；原生状态/知识DB/附件备份及R10保留。F10保持独立启用范围，不为凑完成扩建或伪报未启用为通过。
+8. P4_3/VERIFY：全新会话、新profile、同最终候选的完整Comet产品Run，随后关联权限维护；130required/104场景及正式Whitebox/Grill/状态一致性通过后，才由Comet继续本迁移Change的规格归档和后审。
 
-| Finding | 原任务 | 必须观察到的RED→GREEN |
-| --- | --- | --- |
-| P1-01 | P2_4、P1_5 | 无R仍进入Design的反例先真实失败；修复后正式架构/转换/Guard/next/resume/恢复统一拒绝，可信R后正向推进。 |
-| P1-02 | P2_4、P2_5、I02 | 同调用者dispatch+空报告pass不得获准；缺票/旧摘要/假身份及弱oracle的T审查必须拒绝；实际独立角色产出的正确结果能自动放行。 |
-| P1-03 | P2_4、P3_3 | 修改→阻断→恢复原字节仍阻断；新revision独立重审后放行。旧回调、旧attempt不得复活；历史事务恢复不授权新动作。 |
-| P1-04 | P3_1、VERIFY | A01登记执行无关算术套件必须非零；复合场景缺子断言、required inspect失败、伪/旧读回同样拒绝。按schema绑定具体case/check/assertion和非零分母。 |
-| P1-05 | P1_1、I02 | 缺补丁/错入口/缺目录先复现；真实镜像消费当前完整锁，启动命令、工具链、fingerprint/digest与实际进程一致，并通过真实角色拒绝与正向链。 |
-| P1-06 | P3_2/P3_3、P4_6/P4_8、I07/I08 | 对实际Comet进程与真实资源注入故障，原authority/同Run/operation恢复；临时计数worker、假MCP、假archive不作为此层证据。 |
-| P1-07 | P4_3、VERIFY | 任一required未通过或P1未关闭，整体必须未完成；holder、显式处置、组件PASS或报告计数一致均不能解除。 |
+三条受限工件交接边仍仅允许验证准确绑定、已独立审查并集成的实现工件，不能签业务接受；详见contract.dependency_readiness。建设任务不提前要求下游完整旅程通过；反过来局部建设接受也不能关闭完整旅程。
 
-每项先由test-authoring设计正反例、独立oracle、数据/环境与清理，再由Builder按Matt TDD做行为RED→最小GREEN→回归。测试必须已经存在并真实执行；MODULE_NOT_FOUND、没有匹配测试、缺服务、缺依赖不是行为RED。`node --test`采集显式使用`--test-reporter=tap`。独立审查者重现负例，Whitebox不替作者修测试。
+## 新流程验证必须观察什么
 
-新10检查的命令/归属/oracle在execution-contract；`--journey`与`current-build-role-isolation`是**待实现接口**，必须先由P3_1/I02实现并验证，不能照抄运行失败后当作完成。现有108检查也要复核实际命令与执行环境；I08按原canonical命名迁移，覆盖旧调用和合同，不再用另一文件的绿色代替合同命令。
+完整链是：
 
-## 最终必须跑的三条真实旅程
+`目标→知识检索→R→A→T→P→实际测试作者/Builder RED-GREEN→Reviewer/Whitebox V→真实CI/CD→LLMWiki Kp→真实OpenSpec归档→Outline Kt→completed→关联权限维护`。
 
-**1. 产品同Run交付（V_SAME_RUN_DELIVERY）。** 首先在批准的本仓库试点冻结一个实际受管Change及其可观察交付目标、环境、来源和专用Outline文集。由真实Comet执行：
+- 实际工具/方法快照、角色、允许路径与真实execution必须能关联到当前Run/action/输入/策略/attempt/epoch/revision。
+- A使用当前制品的原票/manifest/tally，禁止从旧计划票复制APPROVE再改artifactDigest；T不能由脚本写strong标签替代；Build/Verify不能用print-ok替代真实测试与业务读回。
+- 产品Run中真实故障窗口必须继续同Run/authority/operation。远端未知结果先读回，不能另建页/重复部署/假装completed。
+- Kp是项目精华并有LLMWiki索引/引用独立读回；Kt是受管团队精华的Outline发布/版本/受众读回。不能一张generic closeout同时冒充两类独立义务。
+- 完成后维护由同Comet引擎关联maintenance Run承接，保留origin_run/knowledge/operation，原交付历史不改；事件/漏报全量扫描/隔离失败和授权恢复均真实执行。
+- 所需Web/分享/搜索/附件/MCP、截图/网络/console/服务日志不能互相替代。缺能力/资源不是not-applicable，局部/mock/protocol结果不能关闭跨边界要求。
+- 备份/保留必须直接消费原生Comet目录和状态形状，不用自有fixture信封替代；旧writer未围栏不启用恢复。
 
-`R确认 → A grill与独立全票共识 → T独立测试设计审查 → P → 实际TDD → 独立Whitebox → Kp项目知识读回 → 真实OpenSpec归档 → Outline发布未知结果/重启恢复 → Kt真实读回 → completed`。
+## 原任务、检查与外部边界
 
-每个角色使用实际登记的独立执行身份；记录Comet authority_id、同一product run_id、revision/candidate、gate/execution/attempt/epoch、报告摘要、knowledge/operation/document UUID、原始请求、响应及持久化读回。拒绝作者自填pass/伪造共识票、手改phase、手写completed、测试直接复制正确产物充当Builder或自建状态机绕过Comet。
+每个check的命令、owner、expected和证据要求在execution-contract，N01–N12已进入正式spec。新profile/新目标尚未实现时必须返回非零UNVERIFIED，不能把空匹配/缺模块当行为RED。先写有效负例，实际RED→最小GREEN→回归→独立审查后再接纳。
 
-在本产品Run内，Kp缺失必须拦archive，Kt缺失必须拦整体completed；归档后仍恢复同一Run、同operation、稳定UUID，未知结果先独立读回，不能重复归档/部署/建页。产品试点归档不是本迁移Change的归档，避免用自身VERIFY作为已归档前提的循环。
+旧118检查ID全部保留，但违反原spec的旧oracle应按正确语义重新RED/GREEN；不能为了保持旧绿继续允许缺Kp归档。known-env/pre-existing/holder不能豁免required。OpenSpec使用资格验证的隔离工具链，不随意降全局。
 
-**2. 真实Comet故障恢复（V_RW_REAL_COMET_RECOVERY）。** 在原Run实际事务提交前/后、远端写已成功但本地结果未知等窗口，杀实际Comet进程；独立监控留下故障证据，监督器仅恢复原实例。Comet恢复原Run/operation，旧writer/attempt拒绝，无重复发布；同时回读Run、journal、批准依据、资源版本和continuation。不能通过测试手构成功journal或杀计数脚本签通过。
+先完成可审查的实际配置/变更，再处理确需授权的外部写：源/目标owner、发布/隔离grant、告警发送、平台保护/部署/回滚。密钥不进代码/报告；不复用其它项目凭据。旧一次性资料外发授权不能覆盖新审查材料。敏感/越授权回owner；常规命名/路径/发现/工具版本问题由原owner修复。
 
-**3. 发布后的权限维护（V_POST_DELIVERY_PERMISSIONS）。** 消费第一条旅程实际发布的知识对象；真实源撤权、受众变化、两种期限、漏事件/周期对账、隔离失败和恢复都要测试。已完成产品历史保留，维护由同一Comet引擎关联maintenance Run承接，记录origin_run、knowledge/operation关联，禁止另起业务主控。Outline Web/分享/搜索/附件及受控MCP等required渠道需真实不可访问读回；恢复必须新授权。正常3分钟发现+2分钟隔离目标与故障暴露/检测/投递分别计时。无外部监控故障域或缺真实权限，不签通过。
+## 目标与监督
 
-**防验收循环：**P3_2只交付配方及实际R至V角色切片，P3_3交付配方与有限核心事务恢复，P4_8交付维护配方与已具备的权限机制；它们不以整条最终旅程PASS作为建设前置。三条完整旅程的execution_owner都是VERIFY，后者已依赖I03/I04/I07/I08及全部P4机制。V_RW_REAL_COMET_RECOVERY是V_SAME_RUN_DELIVERY启动的同产品Run内故障窗口，不是另开Run拼接日志；第三条消费其准确发布对象。任何局部任务接纳不关闭完整旅程。
+当前原生Goal已由人恢复并读回active，目标仍为完整架构端到端验证和报告。20分钟监督复用现有sdd任务，读取唯一DAG/台账、实际worker句柄和证据，只报告有依据的进展/阻塞/终态及上海时区ETA；未知ETA明说。监督不成为第二派发者，不因静态锁/超时重新启动工人，无变化不重复报告。
 
-完整同Run与撤权旅程所需Outline UI截图、网络、日志及独立资源读回不能互相替代；缺浏览器/服务属于未满足前置，不是not-applicable。
+只有所有required当前通过、原始Whitebox ledger/validator/证据审阅及Grill完成、已知阻断/P1有独立复验、平台/知识/恢复终态和唯一状态一致，才能关闭总体目标。产品试点Run中的archive与本迁移Change的VERIFY后closeout分开，后者也只由Comet Spec Adapter写；禁止调用planner helper finalize代替实际运行责任。
 
-## 权限、资源与技术裁决
-
-沿用本仓库专用试点，禁止复用其它项目凭据/卷/网络。现有Docker和gh只读可达只是观察，不代表Runner/Outline/平台写权限已准入。各动作先核验owner、当前源权限、目标受众、grant及秘密引用，值不进Git。对外发布、真实告警消息、远端保护修改和生产部署须有明确动作授权；缺授权先完成配置与待审内容，不绕路外发。
-
-新架构审查若涉及外发材料，不能复用此前已使用的一次性冻结包授权。先准备精确审查包，按当前授权边界执行；缺独立审查能力保持门未通过。
-
-文件命名、TAP、构建路径、悬空证据指针和可诊断网络故障属于原owner修复，不一律转成用户裁决。跨机器F10仍按原范围处理：未授权不扩建API，也不得将其正向UNVERIFIED写PASS；原required仍在，整体目标不完成，除非用户另行明确批准范围重规划。
-
-## Goal、监督与完成
-
-接收实际实施请求后，Claude发现宿主真实dispatch/resume/wait/隔离及Goal/调度能力，绑定唯一控制器。当前合同保守serial/max_workers=1；若要并行，先验证独立worktree和写入归属，经显式重规划再改锁，不能直接改max_workers。独立评审必须另有真实身份；缺失则报告阻塞，不能自评冒充。
-
-目标使用contract.goal.objective，native_option=auto；宿主没有原生Goal就明确UNAVAILABLE，保留显式验收目标，不编造flags。20分钟监督收到实施请求再启用：
-
-> 只读取本Change tasks、唯一DAG、execution-state及ledger和实际worker/进程句柄。核对修订/基线、7P1修复与复验、未完成波次、资源资格和证据时间；报告有依据的进展、阻塞、下一步及上海时区ETA，未知就说未知。每次检查落回执，无实质变化不通知。不得签业务Gate、改phase、发布知识、另派worker或接管重试；仅原唯一控制器推进已授权工作。VERIFY期间继续监督，所有required和Whitebox/Grill/适用closeout闭合后才停止并读回。无调度能力标manual，不安装新daemon。
-
-只认当前候选、实际来源和相应证明层级。组件通过、环境已准备、产品旅程通过、知识关闭、规格归档分别记录。118项required全部PASS、92场景适用性/终态齐备、7P1及新P0/P1均有修复和独立复验、完整Whitebox Journey与Grill通过后，才接受VERIFY。FAIL/GATED/UNVERIFIED/不稳定证据一律保持整体未完成。
-
-VERIFY之后，本迁移Change的规格一致性、真实归档和后审由唯一Comet Spec Adapter继续，不调用planner helper finalize，不重复sync。只读freeze/check/prepare不等于实际归档。交付verification-results、verification-report、grill-report、原始Whitebox ledger/报告/validator输出、P1逐项closure与最终候选证据；未完成则报告具体阻塞并保留Run/恢复状态，不写“所有硬门满足”。
-
-## 本次计划检查及既有总检查缺口
-
-plan guard、OpenSpec strict、身份/分母/依赖与未提交输入保留检查是本轮规划验证。`bash scripts/check.sh`已真实执行，但本宿主在Whitebox green fixture的os.utime触发只读保护，未跑到完整回归；详见本地rework-plan-check-sh.log及handoff-validation.json。此限制不能签总检查通过。若新检出还缺原fixture工件，归原P1_6按显式完整快照升级纪律处理；不修改上游正文或放宽断言，不以pre-existing/零新增失败豁免V_FULL_CHECK。
+当前进度：P0_1–P0_4文档/设计和P1_1基础工具链范围已接纳（5/39）；I01登记资格工人在独立受管树实施，P2_1/P1_6已满足上游依赖，实际工人与路径以execution-state为准。104个业务场景均待真实验收。主检出仍是唯一集成/台账写点，切勿在旧会话壳工作。

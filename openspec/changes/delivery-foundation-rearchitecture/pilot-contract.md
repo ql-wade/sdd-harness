@@ -36,7 +36,7 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
 ```pilot-contract
 {
   "schemaVersion": 1,
-  "profile": "managed-pilot",
+  "profile": "comet-managed-v2",
   "pilot": {
     "repository": "sdd-harness（本仓库工作树；I01 registry project id: sdd-harness-pilot；repoId 1285806550）",
     "ownerRegistry": "infra/delivery/registry.json#project.sdd-harness-pilot（owner ql-wade，principalId 262266039；authority.readbackStatus=UNVERIFIED，执行时读回成功前不执行需要授权的动作）",
@@ -46,19 +46,19 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
   "frozenArtifacts": {
     "product": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/proposal.md",
-      "sha256": "7cf2cfc360501f08845ce50b883a5a8da23a4066b6cb4455d515728025f3e4ba"
+      "sha256": "1f0311ab4d7a9f9d29d66982bc8327588f9258fee224500f2c345b16cbcbfd71"
     },
     "design": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/design.md",
-      "sha256": "bf43383f68b81e2af5515ec284df4b412c8fc74316a30d4aa98f3a74823c155e"
+      "sha256": "688dd99110673b389bd339c4a807c0ae1ef88dbe378f755cdd10244302709fb4"
     },
     "testContract": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md",
-      "sha256": "a3a7763cb3f4131b9b4a33ab1934a268a0a429d1653ad280de9ca33a7b176c1e"
+      "sha256": "a419362140a056d7d59a8392b6a9cb0d84df52e170e74a7cac511aee24e477a9"
     },
     "planBundle": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
-      "sha256": "56aa574bdd530b2df435f837aaeab0ee90aa72a58ecdb3f4329ef40e7b3b7aa3",
+      "sha256": "e7c0f3d299006d78c9cf2ad370b5aa88c5ec73a7c8b6d5fd7f1c7901f2e5c9bb",
       "digestNormalization": "checkbox-state-agnostic（与 lib/delivery/baseline.js taskDefinitionDigest 同一归一化；勾选状态不构成计划漂移）"
     }
   },
@@ -85,9 +85,8 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
     ]
   },
   "qualification": {
-    "status": "NOT_QUALIFIED_FOR_REAL_JOURNEY",
-    "owner_task": "P3_1/P3_2/I01-I08",
-    "requires": "actual identities, environment, real Change, sources and managed Outline collection read back; no LOCAL_FIXTURE substitution"
+    "status": "NOT_VERIFIED",
+    "required": "Actual project/roles/grants/resources and final candidate; old transcript/fixture not a qualifier"
   }
 }
 ```

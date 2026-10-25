@@ -1,6 +1,6 @@
 # AI Coding Scaffold
 
-> 交付架构迁移设计已进入仓库：[新架构](docs/architecture/delivery-architecture.md) · [ADR-0019 提案](docs/architecture/adr/0019-delivery-foundation.md) · [分批实施与验收](openspec/changes/delivery-foundation-rearchitecture/tasks.md)。目标为 Foundation（TeamAI 仅分发）+ Comet 唯一主控候选 + 检查器 + CI/CD；当前运行仍为下述 scaffold，新增能力尚未实现。
+> 当前交付实施：[Comet流程与知识收敛架构](docs/architecture/comet-ai-devops-convergence.md) · [执行入口](openspec/changes/delivery-foundation-rearchitecture/HANDOFF.md) · [唯一任务清单](openspec/changes/delivery-foundation-rearchitecture/tasks.md)。已有基础设施与部分交付机制，完整受管流程仍在实施和独立验收中。
 
 团队 AI coding 项目的脚手架：**统一规则入口 + 方法论技能 + hooks 控制平面 + MCP 能力清单 + 验证工具**。
 
@@ -18,9 +18,11 @@
 验证层   lib/ gate/audit 程序化验证 + scripts/check.sh
 ```
 
-详见 [docs/architecture/scaffold-architecture.md](docs/architecture/scaffold-architecture.md)；交付生命周期视角（角色×环节×能力）见 [ai-devops-architecture.md](docs/architecture/ai-devops-architecture.md)；知识闭环架构（生产×消费×桥）见 [knowledge-architecture.md](docs/architecture/knowledge-architecture.md)。
+基础设施分层见 [scaffold-architecture.md](docs/architecture/scaffold-architecture.md)。当前六环节、角色和知识边界统一见 [收敛架构](docs/architecture/comet-ai-devops-convergence.md)；旧AI DevOps、vault与知识蓝图作为历史对照。
 
-## 快速开始
+## 基础设施初始化
+
+以下命令只初始化规则、方法与工具；受管交付的安装、资格与恢复按上面的当前执行入口进行。
 
 ```bash
 git clone <本仓库> my-project && cd my-project

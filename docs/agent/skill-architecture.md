@@ -2,7 +2,7 @@
 
 > **状态**：权威（Coding Agent 协作层）。Agent 指开发执行器（Claude Code、Codex、Cursor 等），不是项目业务中的运行时 Agent。
 
-> 迁移目标见 [交付架构](../architecture/delivery-architecture.md)：Planner 只计划，test-authoring 编写测试，Whitebox 独立验收，运行机制由后端/适配器承担。本页及 vendored 快照仍描述现有版本；新边界须经显式升级与兼容验证后启用，不能将目标接口视作当前技能能力。
+> 当前交付方法与角色绑定以 [收敛架构](../architecture/comet-ai-devops-convergence.md) 和 [HANDOFF](../../openspec/changes/delivery-foundation-rearchitecture/HANDOFF.md) 为准。本页保留基础方法职责；快照存在不等于实际调用或产品验收，当前运行资格从原始证据核验。
 
 ## 1. 目标与边界
 

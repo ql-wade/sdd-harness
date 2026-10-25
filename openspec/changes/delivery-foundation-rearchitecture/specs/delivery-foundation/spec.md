@@ -493,3 +493,66 @@
 - **GIVEN** 本项目显式选择 Comet 单主控，而本机默认并行 planner 合同拥有自身执行/监督权
 - **WHEN** 需要规划或方法校验
 - **THEN** 只经明确兼容的方法/工具入口复用，不加载完整 controller 后无视其合同，也不隐式启动 Matt 用户专用控制器；交付仍只有一份 Comet 进度与任务权威
+
+### Requirement: Command knowledge infrastructure convergence
+系统 SHALL 清理旧业务流程入口并把Foundation、项目/团队知识与真实角色通过Comet唯一运行时连接起来；全部新流程按当前输入和独立终态重新验证，不能继承历史PASS或以协议形状替代真实工作。
+
+#### Scenario: N01
+- **GIVEN** 存在旧命令、同名别名或多个权威流程定义
+- **WHEN** 在全新会话发起同一研发目标
+- **THEN** 只由当前受管Comet入口处理；旧sdd阶段入口不可执行/自动回退，规则、制品与运行状态各有单一权威
+
+#### Scenario: N02
+- **GIVEN** 旧命令与source-command副本已备份退出发现链
+- **WHEN** 重复安装、更新、卸载恢复或启动全新宿主/子会话
+- **THEN** 退役路线不会被扫描/链接/导出/加载回来；保留合法方法和无关用户条目；保留可恢复备份
+
+#### Scenario: N03
+- **GIVEN** 目标已确认且Runner资源和身份已准入
+- **WHEN** Comet发出下一动作并派发角色执行
+- **THEN** 真实执行者消费绑定Run/action/输入/策略/方法/attempt的工作包，产物经可信通道读回；只有Comet推进/重试/恢复
+
+#### Scenario: N04
+- **GIVEN** 当前profile声明R/A/T/P/实施/V的方法快照
+- **WHEN** 执行节点或恢复节点上下文
+- **THEN** 实际读取并调用选定方法且产出合格制品；P不启动另一调度/Goal/归档，测试作者不签独立验收，Ponytail不放行
+
+#### Scenario: N05
+- **GIVEN** 已登记项目和成员以及LLMWiki/Outline/代码Wiki的资料域和版本
+- **WHEN** R/A/实施节点检索或引用知识与代码事实
+- **THEN** 实际工具返回有来源/版本/权限的上下文；不把知识页变成已批准spec，不批量摄入源码；Graph关闭不破坏正确性
+
+#### Scenario: N06
+- **GIVEN** 当前需求/设计/用例和候选已冻结
+- **WHEN** 执行A/T审查、TDD与独立V
+- **THEN** 当前制品由真实独立执行审查；旧票不能重绑摘要、strong标签和print-ok不能代替语义审查/RED-GREEN/业务终态；原始证据与实际执行可核验
+
+#### Scenario: N07
+- **GIVEN** policy要求项目知识更新且团队发布可能尚未完成
+- **WHEN** 请求实际归档、next、恢复或completed
+- **THEN** 缺LLMWiki必需Kp时任何归档入口拒绝；Kp通过后可以归档一次，Kt未通过同Run保持pending；原操作重启读回后才整体完成
+
+#### Scenario: N08
+- **GIVEN** 独立审核的精华条目、源权限及预授权边界已登记
+- **WHEN** 请求Outline发布/更新或接纳结果
+- **THEN** 预授权内自动执行并独立读回；实际多源披露交集/目标受众/版本/grant重验；越界与敏感内容回有权owner，不自签或把服务可读当披露授权
+
+#### Scenario: N09
+- **GIVEN** 同Run交付已实际发布知识并保留原Run关联
+- **WHEN** 源撤权/到期/受众变化、漏事件或隔离失败
+- **THEN** 事件和周期全量核验均接入同Comet维护，实际多渠道不可读；重试/告警/恢复分权且新授权后恢复；真实时限和故障暴露分别记录
+
+#### Scenario: N10
+- **GIVEN** 独立V通过且实际平台/Registry/验证环境和动作授权已准入
+- **WHEN** 集成检查、构建提升、部署或批准回滚
+- **THEN** 真实required checks绑定准确SHA，提升同digest且目标环境业务独立读回；本地目录/状态绿不能代替要求真实平台的终态
+
+#### Scenario: N11
+- **GIVEN** 从当前已验证profile及冻结资产创建全新会话或真实Comet中断
+- **WHEN** 初始化/恢复/升级并重新消费原工作包或备份
+- **THEN** 不依赖旧聊天、旧临时目录或手工命令拼装；准确Run/authority/operation继续，旧writer拒绝，备份适配原生状态和真实知识数据，R10阻断未完成清理
+
+#### Scenario: N12
+- **GIVEN** 旧结果仅保留历史且当前Comet流程已集成
+- **WHEN** 独立验收新profile的完整AI DevOps旅程
+- **THEN** 单一真实Run从R经A/T/P/TDD/V/真实平台、Kp、归档、Kt到completed，随后关联权限维护/故障恢复；所有required当前有效且Whitebox/Grill/台账一致才整体通过

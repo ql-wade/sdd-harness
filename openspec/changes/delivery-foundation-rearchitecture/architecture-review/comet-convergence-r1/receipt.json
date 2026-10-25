@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "status": "PASSED_IMPLEMENTATION_ONLY",
+  "review_id": "run-r1",
+  "artifact_sha256": "9784847e35f5c1cbfdb154cc22f604035486458181959410420158b0fedbefa4",
+  "total_rounds_used": 2,
+  "authorized_max_total_rounds": 3,
+  "participants": [
+    "claude-code",
+    "zcode",
+    "codex-agent"
+  ],
+  "votes": [
+    {
+      "agent": "claude-code",
+      "blocking_findings": 0,
+      "min_criterion": 8.0,
+      "overall": 8.8,
+      "summary": "Round-1 re-ballot after visibility was resolved via the exact file index: I read all 17 listed files (bounded pages for the large JSON contracts) and can now score on evidence, superseding my round-0 abstention which was purely an artifact-readability failure. The artifact is a coherent, internally consistent architecture and execution contract for converging the legacy command/knowledge flows onto the frozen Comet single-controller profile, and it matches the gated decision exactly: implementation authorization only, with runtime acceptance, business-profile enablement, and all external writes/publication still gated. Independently verified: task-dag.json has 39 nodes / 69 work packages, all depends_on edges point backward within the 39 single-node waves, and VERIFY is the sole sink depending on all 38 other nodes; counts 92 original + 12 new = 104 scenarios and 108 retained + 10 repair + 12 new = 130 required checks are consistent across SOURCE-MANIFEST, replan record, handoff, contract, and commands_status; the acceptance_aggregation maps all 104 scenarios (A01-N12) to concrete check IDs; spec.md N01-N12 oracles textually match the V_N01-V_N12 expected fields; bindings.json covers N01-N12. Boundary design is strong and frozen: Comet sole Run/state/dispatch/recovery owner with no second currentPhase, TeamAI distribute-only, pure-evaluate Gate, execute-only Runner/adapter, method skills without dispatch authority, Kp blocking all archive entries and Kt blocking completion, monitor/supervisor outside business authority (drift-lock frozen interfaces lines 115-155, global constraints 157-167, controller_override/closeout_override lines 4072-4073). Security posture for this stage is sound: trusted identity from launcher records not role strings (V_RW_TRUSTED_REVIEW, observer_contract pass_requirements), real OS/container role isolation as a negative gate (V_RW_RUNNER_BUILD, RoleBoundary.v1), secrets only as purpose-bound SecretRef.v1, fail-closed disclosure-intersection publication authorization with unknown≠public (U02/U06, V_U04-U06), quarantine/fence-on-restore (Restore.v1), R10 sole-workspace retention, no production/remote writes without registered grants, credentials_included=false. Fail-closed reliability semantics (UNVERIFIED nonzero, no skip-to-PASS, historical_results_may_close=false everywhere, monotonic invalidation with no byte-restore revival) are consistently expressed. Two non-blocking drift risks remain and are owned by existing DAG tasks: the managed-pilot vs comet-managed-v2 profile token split (R2-001) and the stale pre-convergence IMPLEMENTED/PASS journey_definitions labels (R2-002), both explicitly flagged as planned-not-executed interfaces by the governing contract. I would authorize implementing the frozen converged profile under the recorded existing authorization with the artifact's own verification gates left intact.",
+      "verdict": "APPROVE"
+    },
+    {
+      "agent": "zcode",
+      "blocking_findings": 0,
+      "min_criterion": 9.0,
+      "overall": 9.2,
+      "summary": "APPROVE for implementation scope only. With the coordinator's exact file index I re-read the unchanged artifact (SHA 9784847e...) and independently re-verified it end to end this round: all 15 manifest per-file hashes and 9 in-staged replan hashes match actual bytes; drift-lock's four internal sha256 pins match; the DAG has 39 nodes / 69 unique work packages, is acyclic, has zero dangling references, a single VERIFY sink, and waves that cover every node exactly once in valid topological order with all nodes CURRENT_PROFILE_NOT_VERIFIED; the execution contract has 130 unique checks, all required, all historical_results_may_close=false, all in planned-not-executed states, with every task_ids/implementedBy reference resolving to a real DAG node; scenario coverage is exact and mutually consistent (104 DAG acceptance IDs = 104 spec.md scenarios incl. N01–N12 = 104 case-plan cases all CURRENT_PROFILE_RETEST_REQUIRED with historical_pass_inherits=false = 104 bindings keys = 104-entry aggregation map verified check-for-check). The single-controller boundaries in ADR-0020 and the convergence architecture (no second currentPhase, pure Gate, dispatch-only TeamAI, Runner without business state, Kp blocks archive / Kt blocks completion, fencing on restore, R10 retention, purpose-bound secret references, disclosure-intersection publication, separately gated F10 cross-machine scope) are enforced identically in drift-lock frozen interfaces and the N01–N12 WHEN/THEN oracles. This matches the gated decision exactly: it authorizes implementing the frozen converged profile under existing authorization while runtime acceptance, business-profile enablement, and all external writes/publication stay gated behind the artifact's own VERIFY. The two MINOR findings re-confirmed open (R1-Z1 profile-token split across 95/12/12 commands plus a third token in flow_convergence; R1-Z2 stale pre-convergence IMPLEMENTED labels on three journey_definitions) are forward drift risks inside interfaces explicitly declared 'planned, not executable evidence', are barred from closing anything by historical_results_may_close=false and the all-130-current-PASS completion predicate, and are already owned by P3_1/P3_2 — not blockers. Round-0 visibility dissent (R1-001/CA-001) reflects a round-0 tooling limitation now resolved by the exact file index, not an architecture defect. I would authorize the gated decision now.",
+      "verdict": "APPROVE"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking_findings": 0,
+      "min_criterion": 8.2,
+      "overall": 8.6,
+      "summary": "APPROVE，仅批准既有授权内实施。重新读取并独立核对后，单主控边界、原DAG、104场景与130检查映射，以及Kp阻断归档、Kt阻断完成、权限和恢复约束均支持该决策。两项命令与历史标签问题可在既有任务中修订，须于VERIFY前闭合；本票不证明运行或发布已通过。",
+      "verdict": "APPROVE"
+    }
+  ],
+  "raw_manifest_sha256": "61ab0f77b7c6973f5b72ea46ff87c87d48712eb66f7c6807496bc843da4db6dc",
+  "raw_evidence_root": ".local/comet-reset/architecture-consensus/completed-review",
+  "final_report_sha256": "e0861dbd8f489cd87df4df8204c3102257db7f483d8c7b6c783f7d9a065d5587",
+  "runtime_accepted": false,
+  "business_profile_enabled": false,
+  "publication_authorized": false,
+  "immutable_artifact_source": ".local/comet-reset/architecture-consensus/artifact-r1",
+  "nonblocking_followups": [
+    "profile-token consistency by P3_1",
+    "historical journey labels by P3_2/P3_3/P4_8"
+  ],
+  "portable_artifact": "openspec/changes/delivery-foundation-rearchitecture/architecture-review/comet-convergence-r1/artifact-r1"
+}

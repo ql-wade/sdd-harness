@@ -2,10 +2,10 @@
   "schema_version": 2,
   "feature": "delivery-foundation-rearchitecture",
   "hash_mode": "checkbox-normalized-v1",
-  "plan_sha256": "56aa574bdd530b2df435f837aaeab0ee90aa72a58ecdb3f4329ef40e7b3b7aa3",
-  "architecture_sha256": "648ec4e7508f68268cdc2c60dcd47f35b9d3856ba51e37f87b4046046e0b6d0f",
-  "dag_sha256": "aa410a1a703700c3e7e426657f311e838679266afd60b4ef7519eb5671bff8e3",
-  "execution_contract_sha256": "fa258ec5623d0d094f882e494535f7a514a3dae56d24c4bcbfe06b7424770e6f",
+  "plan_sha256": "e7c0f3d299006d78c9cf2ad370b5aa88c5ec73a7c8b6d5fd7f1c7901f2e5c9bb",
+  "architecture_sha256": "36e14eb296995562f75f801a5087096fd53ed3e34529cd1f236b8eaf6503e589",
+  "dag_sha256": "dc03a3d9d1a6564975c451f56d7541c1daee5a3947840bcb2638a70b5166c628",
+  "execution_contract_sha256": "63eff92389d52ec48a3d729813f78330eb3ce0bf8409acc25e47bf96771b5194",
   "acceptance_ids": [
     "A01",
     "A02",
@@ -37,6 +37,16 @@
     "B08",
     "B09",
     "B10",
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "F08",
+    "F09",
+    "F10",
     "C01",
     "C02",
     "C03",
@@ -59,16 +69,6 @@
     "E04",
     "E05",
     "E06",
-    "F01",
-    "F02",
-    "F03",
-    "F04",
-    "F05",
-    "F06",
-    "F07",
-    "F08",
-    "F09",
-    "F10",
     "H01",
     "H02",
     "H03",
@@ -78,6 +78,14 @@
     "H07",
     "H08",
     "H09",
+    "U01",
+    "U02",
+    "U03",
+    "U04",
+    "U05",
+    "U06",
+    "U07",
+    "U08",
     "L01",
     "L02",
     "L03",
@@ -91,14 +99,18 @@
     "L11",
     "M01",
     "M02",
-    "U01",
-    "U02",
-    "U03",
-    "U04",
-    "U05",
-    "U06",
-    "U07",
-    "U08"
+    "N01",
+    "N02",
+    "N03",
+    "N04",
+    "N05",
+    "N06",
+    "N07",
+    "N08",
+    "N09",
+    "N10",
+    "N11",
+    "N12"
   ],
   "frozen_interfaces": [
     "Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase",
@@ -157,7 +169,9 @@
   "allowed_paths_by_task": {
     "P0_1": [
       "docs/architecture/delivery-architecture.md",
-      "docs/architecture/adr/0019-delivery-foundation.md"
+      "docs/architecture/adr/0019-delivery-foundation.md",
+      "docs/architecture/comet-ai-devops-convergence.md",
+      "docs/architecture/adr/0020-comet-command-knowledge-convergence.md"
     ],
     "P0_2": [
       "openspec/changes/delivery-foundation-rearchitecture/proposal.md",
@@ -191,13 +205,15 @@
       "lib/delivery/test-contract.js",
       "test/delivery-baseline.test.js",
       "test/delivery-test-contract.test.js",
-      "test/delivery-cases/2_1.mjs"
+      "test/delivery-cases/2_1.mjs",
+      "contracts/delivery/action-binding.schema.js"
     ],
     "P3_1": [
       "openspec/changes/delivery-foundation-rearchitecture/pilot-contract.md",
       "tools/verify/delivery-journey.mjs",
       "tools/verify/delivery-case-schema.json",
-      "test/delivery-cases/3_1.mjs"
+      "test/delivery-cases/3_1.mjs",
+      "test/comet-flow-acceptance.test.js"
     ],
     "P1_6": [
       ".agents/skills",
@@ -205,7 +221,9 @@
       "openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json",
       "integrations/comet/patches/0001-matt-method-profile.patch",
       "test/delivery-cases/1_6.mjs",
-      "integrations/comet/patches/tests/1_6.patch"
+      "integrations/comet/patches/tests/1_6.patch",
+      "foundation/profiles/comet-managed.json",
+      "test/comet-method-binding.test.js"
     ],
     "P1_2": [
       "foundation",
@@ -214,7 +232,8 @@
       "tools/adapters/claude-code.sh",
       "test/foundation-distribution.test.js",
       "hooks.yaml",
-      "test/delivery-cases/1_2.mjs"
+      "test/delivery-cases/1_2.mjs",
+      "test/legacy-workflow-routing.test.js"
     ],
     "P2_2": [
       "lib/delivery/evidence.js",
@@ -263,7 +282,9 @@
       "lib/adapters/harness.js",
       "test/comet-driver.test.js",
       "openspec/changes/delivery-foundation-rearchitecture/host-probes",
-      "test/delivery-cases/1_3.mjs"
+      "test/delivery-cases/1_3.mjs",
+      "lib/adapters/comet-executor.js",
+      "test/comet-execution-binding.test.js"
     ],
     "P1_4": [
       "openspec/changes/delivery-foundation-rearchitecture/mode-qualification.json",
@@ -298,6 +319,24 @@
       "tools/infra/llmwiki.mjs",
       "test/infra-llmwiki-paths.test.js"
     ],
+    "I05": [
+      "infra/delivery/code-knowledge/compose.yaml",
+      "infra/delivery/code-knowledge/images.lock.json",
+      "infra/delivery/code-knowledge/deepwiki-profile.json",
+      "infra/delivery/code-knowledge/graph-profile.json",
+      "infra/delivery/code-knowledge/repository-scope.json",
+      "tools/infra/code-knowledge.mjs",
+      "test/infra-code-knowledge.test.js"
+    ],
+    "I06": [
+      "infra/delivery/platform/repository-registration.json",
+      "infra/delivery/platform/ci-policy.json",
+      "infra/delivery/platform/registry-registration.example.json",
+      "infra/delivery/platform/environment-registration.example.json",
+      "infra/delivery/platform/artifact-retention.json",
+      "tools/infra/platform.mjs",
+      "test/infra-platform.test.js"
+    ],
     "P3_2": [
       "openspec/changes/delivery-foundation-rearchitecture/pilot-journey",
       "test/delivery-cases/3_2.mjs",
@@ -320,24 +359,6 @@
       "test/delivery-cases/4_7.mjs",
       "tools/infra/knowledge-authz.mjs",
       "infra/delivery/knowledge"
-    ],
-    "I05": [
-      "infra/delivery/code-knowledge/compose.yaml",
-      "infra/delivery/code-knowledge/images.lock.json",
-      "infra/delivery/code-knowledge/deepwiki-profile.json",
-      "infra/delivery/code-knowledge/graph-profile.json",
-      "infra/delivery/code-knowledge/repository-scope.json",
-      "tools/infra/code-knowledge.mjs",
-      "test/infra-code-knowledge.test.js"
-    ],
-    "I06": [
-      "infra/delivery/platform/repository-registration.json",
-      "infra/delivery/platform/ci-policy.json",
-      "infra/delivery/platform/registry-registration.example.json",
-      "infra/delivery/platform/environment-registration.example.json",
-      "infra/delivery/platform/artifact-retention.json",
-      "tools/infra/platform.mjs",
-      "test/infra-platform.test.js"
     ],
     "P4_1": [
       ".github/workflows/delivery-gate.yml",
@@ -401,7 +422,8 @@
     "P4_3": [
       "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json",
       "openspec/changes/delivery-foundation-rearchitecture/verification.md",
-      "test/delivery-cases/4_3.mjs"
+      "test/delivery-cases/4_3.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/legacy-entry-inventory.json"
     ],
     "P5_1": [
       "openspec/changes/delivery-foundation-rearchitecture/team-host-matrix",
@@ -433,7 +455,7 @@
     "Receiver must receive full plan and exact frozen inputs before creating execution worktree."
   ],
   "change_policy": "halt-and-replan",
-  "scope": "AUTHORIZED_SEVEN_P1_REWORK_PLAN_NOT_RUNTIME_ACCEPTANCE",
+  "scope": "USER_AUTHORIZED_COMET_CONVERGENCE_NOT_YET_ACCEPTED",
   "identity_map_sha256": "d617ea8db9c3af01160c8b34e3c928d82b2d04981d0d71f4537cef4d7c3b08e3",
   "amendments": [
     {
@@ -491,6 +513,37 @@
         "execution_contract": "73c64d27"
       },
       "prior_amendment": "env-capability-20261022 (amendment 3) 哈希保持在其记录中"
+    },
+    {
+      "id": "2026-10-24-comet-convergence",
+      "authorization": "User explicit: clear old flow, implement latest architecture and complete end-to-end; restore original infrastructure/knowledge-driven AI DevOps intent",
+      "history": "replan-history/2026-10-24-comet-convergence/previous",
+      "identity_preserved": {
+        "nodes": 39,
+        "parents": 30,
+        "workpackages": 69,
+        "original_scenarios": 92,
+        "original_checks": 118
+      },
+      "new_scenarios": [
+        "N01",
+        "N02",
+        "N03",
+        "N04",
+        "N05",
+        "N06",
+        "N07",
+        "N08",
+        "N09",
+        "N10",
+        "N11",
+        "N12"
+      ],
+      "new_totals": {
+        "scenarios": 104,
+        "checks": 130
+      },
+      "historical_pass_inheritance": false
     }
   ]
 }

@@ -34,11 +34,11 @@
 
 文档与代码不一致时，先说明冲突并通过 ADR 固化决定，不默默选边。
 
-### 交付架构迁移
+### 当前交付实施
 
-- 目标设计：[delivery-architecture.md](docs/architecture/delivery-architecture.md)，决策：[ADR-0019](docs/architecture/adr/0019-delivery-foundation.md)（架构评审已通过；运行未验收）。
-- 变更：[delivery-foundation-rearchitecture](openspec/changes/delivery-foundation-rearchitecture/tasks.md)。现行 scaffold 约束继续适用；delivery profile、Comet 单一主控、Gate/API 均不得当作已实现；TeamAI 首期仅分发。
-- ADR-0019 三方架构评审已通过，仅在其明确替代范围内实施 Comet 单主控 profile；运行启用仍逐项实证，不改 vendored 技能正文。
+- 实施目标：[Comet流程与知识收敛架构](docs/architecture/comet-ai-devops-convergence.md)，沿用ADR-0019单主控边界，实施细化见[ADR-0020](docs/architecture/adr/0020-comet-command-knowledge-convergence.md)。
+- 执行和恢复先读当前Change的[HANDOFF](openspec/changes/delivery-foundation-rearchitecture/HANDOFF.md)，任务只消费同一[清单](openspec/changes/delivery-foundation-rearchitecture/tasks.md)与DAG；按实际资格和独立证据接纳，文档不宣称运行就绪。
+- 方法快照保持原样。当前profile绑定Comet原Run；TeamAI只分发。基础scaffold职责保留，历史蓝图仅供演进对照，不能作为当前阶段命令/知识库路由。
 
 ### 局部 AGENTS.md 索引
 

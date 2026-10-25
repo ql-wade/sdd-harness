@@ -1,22 +1,8 @@
-# Claude返工：本项目优先覆盖
+# 当前项目执行覆盖
 
-先读本目录HANDOFF.md。当前只是计划交接，未收到实施请求前不派发、不激活Goal/监督。以下规则覆盖后面的通用模板：
+先读同目录HANDOFF.md。用户已明确授权清理旧流程并按最新架构实际端到端完成，当前不是仅规划。root聊天唯一迁移planner，Claude工人隔离实施原任务；产品权威只有Comet。原39节点/69工作包/92场景/118检查保留，追加N01–N12，共104场景/130required，新profile0通过。旧入口已备份退休，安装防再生在执行，不能继承旧COMPLETE。
 
-1. 同一tasks.md/task-dag.json，原39节点/30父任务/69工作包/92场景不变，原108+10=118required检查；不新增替代DAG，不继承旧PASS。P1映射与批准的重规划见replan-record.json。
-2. 迁移控制器为Claude唯一planner，目标产品业务控制器只允许Comet。先P3_1验收器，再P2_4/P2_5门禁，再I02真实Runner与接入复验。三条受限工件交接边只许可验证工件，不能签业务通过。
-3. P3_2/P3_3/P4_8建设观察配方及声明范围的真实机制；完整三旅程仅在VERIFY、全部知识/监控/备份机制就绪后执行。真实Comet故障窗口必须嵌入同一产品Run，撤权旅程消费它的实际知识对象，不拼接不同Run片段。
-4. 任何required FAIL/GATED/UNVERIFIED、局部测试、holder或显式处置都不能关闭整体目标；7P1需修复提交、独立复验及当前最终候选真实终态，先Whitebox再证据Grill。
-5. 本项目closeout_override优先：helper只freeze/check/prepare，禁止调用后文通用finalize；真实归档只由Comet Spec Adapter写。产品试点Run的archive→Kt恢复属于VERIFY旅程，本迁移Change的归档/后审在VERIFY之后，由控制器另行收尾，不造成任务自依赖。
-6. 20分钟监督在实施交接后才绑定真实宿主；无变化只留回执不通知，不继承旧sdd实例或已用的一次性外发授权，不安装新daemon。现有未提交用户改动不得覆盖，本包尚未提交，先作独立计划提交或受控快照再创建实施worktree。
-7. --journey及新probe/check名是待实现接口；先由原owner实现并写真实行为RED/GREEN，缺模块/零目标不算RED。新旧测试必须显式记录scope/来源/当前候选，不能以fixture替代真实Comet或知识资源。
-
----
-
-# Agent Execution Controller
-
-0. 2026-10-22 环境能力（amendment 3）：(a) llmwiki 项目化——试点 SDD_HOME 固定 <repo>/.sdd（克隆 pin 075c5b4 落 .sdd/repos/llmwiki、venv .sdd/venvs/llmwiki-311、wiki 根项目内）；(b) Docker 操作经用户可见的终端面板 tab 通道执行（daemon server 29.6.2 实测可达；会话 Bash 沙箱拒 socket，不得伪装沙箱内可达），docker 类命令逐条走 run_in_terminal 并保留回执；(c) 环境门控纪律：缺资源=未满足前置，UNVERIFIED 不转 PASS。
-
----
+通用模板与项目冲突时以当前合同/实际授权为准：禁止helper finalize；实际规格归档仅Comet Spec Adapter，产品Run旅程内归档与迁移Change在VERIFY后归档分开。完整旅程只在VERIFY、所有机制就绪后执行；工件交接不等于验收。旧票改绑、脚本strong/print-ok、假MCP/归档、目录Registry不能代替实际角色/知识/平台终态。监控不得成为第二控制器，无变化不重复报告；所有required/P1/Whitebox/Grill/状态一致后才完成。
 
 ---
 
@@ -33,10 +19,10 @@ paths relative to it, verifying the repository identity before any write:
 plan `tasks.md`, architecture `architecture.md`, DAG `task-dag.json`,
 lock `drift-lock.json`, execution contract `execution-contract.json`.
 
-Locked plan SHA-256: `56aa574bdd530b2df435f837aaeab0ee90aa72a58ecdb3f4329ef40e7b3b7aa3` (checkbox-normalized-v1).
-Architecture SHA-256: `648ec4e7508f68268cdc2c60dcd47f35b9d3856ba51e37f87b4046046e0b6d0f` (raw bytes).
-DAG SHA-256: `aa410a1a703700c3e7e426657f311e838679266afd60b4ef7519eb5671bff8e3` (raw bytes).
-Execution-contract SHA-256: `73c64d27630bed00a7bcb60fd7346ead4ac4981cf43780b9d4fc79f5aeb2358e` (raw bytes).
+Locked plan SHA-256: `e7c0f3d299006d78c9cf2ad370b5aa88c5ec73a7c8b6d5fd7f1c7901f2e5c9bb` (checkbox-normalized-v1).
+Architecture SHA-256: `36e14eb296995562f75f801a5087096fd53ed3e34529cd1f236b8eaf6503e589` (raw bytes).
+DAG SHA-256: `dc03a3d9d1a6564975c451f56d7541c1daee5a3947840bcb2638a70b5166c628` (raw bytes).
+Execution-contract SHA-256: `63eff92389d52ec48a3d729813f78330eb3ce0bf8409acc25e47bf96771b5194` (raw bytes).
 Normalize CRLF to LF and change only line-leading Markdown checked boxes to
 unchecked for the plan digest; preserve fenced code exactly. Verify all four
 hashes before dispatch and integration; mismatch means HALT_AND_REPLAN.

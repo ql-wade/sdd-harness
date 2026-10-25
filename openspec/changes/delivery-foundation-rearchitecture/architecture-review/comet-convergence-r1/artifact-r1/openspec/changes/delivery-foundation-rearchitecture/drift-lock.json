@@ -1,0 +1,549 @@
+{
+  "schema_version": 2,
+  "feature": "delivery-foundation-rearchitecture",
+  "hash_mode": "checkbox-normalized-v1",
+  "plan_sha256": "e7c0f3d299006d78c9cf2ad370b5aa88c5ec73a7c8b6d5fd7f1c7901f2e5c9bb",
+  "architecture_sha256": "36e14eb296995562f75f801a5087096fd53ed3e34529cd1f236b8eaf6503e589",
+  "dag_sha256": "dc03a3d9d1a6564975c451f56d7541c1daee5a3947840bcb2638a70b5166c628",
+  "execution_contract_sha256": "63eff92389d52ec48a3d729813f78330eb3ce0bf8409acc25e47bf96771b5194",
+  "acceptance_ids": [
+    "A01",
+    "A02",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10",
+    "A11",
+    "A12",
+    "A13",
+    "A14",
+    "A15",
+    "A16",
+    "A17",
+    "A18",
+    "A19",
+    "A20",
+    "B01",
+    "B02",
+    "B03",
+    "B04",
+    "B05",
+    "B06",
+    "B07",
+    "B08",
+    "B09",
+    "B10",
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "F08",
+    "F09",
+    "F10",
+    "C01",
+    "C02",
+    "C03",
+    "C04",
+    "C05",
+    "C06",
+    "C07",
+    "C08",
+    "D01",
+    "D02",
+    "D03",
+    "D04",
+    "D05",
+    "D06",
+    "D07",
+    "D08",
+    "E01",
+    "E02",
+    "E03",
+    "E04",
+    "E05",
+    "E06",
+    "H01",
+    "H02",
+    "H03",
+    "H04",
+    "H05",
+    "H06",
+    "H07",
+    "H08",
+    "H09",
+    "U01",
+    "U02",
+    "U03",
+    "U04",
+    "U05",
+    "U06",
+    "U07",
+    "U08",
+    "L01",
+    "L02",
+    "L03",
+    "L04",
+    "L05",
+    "L06",
+    "L07",
+    "L08",
+    "L09",
+    "L10",
+    "L11",
+    "M01",
+    "M02",
+    "N01",
+    "N02",
+    "N03",
+    "N04",
+    "N05",
+    "N06",
+    "N07",
+    "N08",
+    "N09",
+    "N10",
+    "N11",
+    "N12"
+  ],
+  "frozen_interfaces": [
+    "Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase",
+    "SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch",
+    "Knowledge.Closeout.v1: Kp before archive, Kt before overall completion",
+    "Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state",
+    "Comet.SourcePreparation.v1: prepareCometSource({projectRoot,lock,archivePath}) returns canonical pristine source and verified provenance",
+    "Comet.DistributionBuild.v1: buildCometDistribution({projectRoot,lock,archivePath}) returns buildRoot, entrypoint, sourceCommit, fingerprint with exact toolchain precondition",
+    "Registry.v1 -> project/resource/owner/credentialRef/lockRef/authority/domain/retention, no secret values",
+    "SecretRef.v1 -> purpose-bound opaque reference resolved only by allowed service principal",
+    "Qualification.v1 -> exact source commit, image digest/platform/size, license, health API and backup compatibility evidence before up",
+    "RunnerInfra.v1 validate|qualify|up|probe|stop -> process/mount/principal observations only",
+    "RoleBoundary.v1 -> immutable tool image, distinct principal/mount/credential scopes for controller/author/test-author/reviewer/publisher/isolator",
+    "Authority.v1 -> one fixed Comet authority and workspace",
+    "startup refuses copied state or concurrent writer",
+    "OutlineInfra.v1 validate|qualify|up|probe|stop -> actual API/UI/storage/principal evidence",
+    "OutlineDomain.v1 -> instance/collection immutable IDs, actual effective reader set and registered owner",
+    "OutlineState.v1 -> durable database+attachment storage",
+    "cache is not rights authority",
+    "API contracts include fixed create UUID and lastRevision only if verified",
+    "ProjectWikiInfra.v1 validate|qualify|probe -> canonical project/wiki/index identity and MCP read/write observations",
+    "ProjectRoot.v1 -> projectID/repoID/wikiRoot/worktree mapping, contained paths only",
+    "KnowledgeWrite.v1 -> approved curated entry plus source/revision and independent readback",
+    "no task/phase/spec authority",
+    "CodeKnowledgeInfra.v1 validate|qualify|probe -> selfhost code-wiki and separate graph provenance/freshness evidence",
+    "CodeWiki.v1 -> repository immutableID/commit and wiki generation manifest, approved code access scope",
+    "CodeGraph.v1 -> structure-only index with exact input commit/coverage",
+    "removable optimization, no gate or knowledge authority",
+    "PlatformInfra.v1 validate|probe -> repository identity/permissions/check policy/registry/environment evidence, no implicit remote policy writes",
+    "IntegrationIdentity.v1 -> PR head/mergeSHA -> build artifact digest -> target deployment identity",
+    "Environment.v1 -> isolated endpoint/owner/rollback authorization and readback oracle",
+    "Health.v1 -> heartbeat_age, complete_scan_watermark, unresolved_isolation/deadlines and authority identity",
+    "read-only",
+    "Monitor.v1 -> external fault-domain registration and alert delivery/ack/escalation only, never business phase/retry/ACL",
+    "Supervisor.v1 -> restart same fixed Comet authority only after old writer gone",
+    "bounded attempts and escalation",
+    "Backup.v1 -> consistent manifest of Comet state/transaction/receipts/approved payload plus knowledge/database/objects/config refs",
+    "Restore.v1 -> restore into quarantine, authenticate current permissions, fence old writer, verify same operation and readback before release",
+    "Retention.v1 -> R10 A: unresolved Run/knowledge obligation retains sole workspace",
+    "cleanup requires verified completed or separately approved migration+restore proof",
+    "SDD.Verification.Journey.v2: observer requires exact targets and typed terminal readback and observes real Comet Run without controlling phase or recovery",
+    "Comet.GateRevision.v2: same Run persists monotonic requirement and design revisions and trusted reviewer result binding and never revives invalidated receipts by restoring bytes"
+  ],
+  "global_constraints": [
+    "Comet Classic is sole target runtime controller; TeamAI distributes only",
+    "Matt reusable methods only; no Superpowers restart or nested planner/implement-spec controller",
+    "Preserve original parent IDs and workpackage IDs; aliases are parser adapter keys only",
+    "One canonical tasks/DAG/progress source; no worker-owned lifecycle writer",
+    "Managed Runner OS/container separation is a required real negative gate, not local signature evidence",
+    "R10 A retains sole workspace until overall completion; G15 A healthy-dependency five-minute containment only",
+    "Batch5 is conditional pre-enable certification; never silently waive F10 or claim untested team API",
+    "No production effects or remote branch protection mutation implied; honor registered grants before live writes",
+    "Parent task completion requires all its required workpackages and current acceptance evidence",
+    "Any scope/interface/input hash drift halts and requires reviewed replan; no silent lock refresh"
+  ],
+  "allowed_paths_by_task": {
+    "P0_1": [
+      "docs/architecture/delivery-architecture.md",
+      "docs/architecture/adr/0019-delivery-foundation.md",
+      "docs/architecture/comet-ai-devops-convergence.md",
+      "docs/architecture/adr/0020-comet-command-knowledge-convergence.md"
+    ],
+    "P0_2": [
+      "openspec/changes/delivery-foundation-rearchitecture/proposal.md",
+      "openspec/changes/delivery-foundation-rearchitecture/design.md",
+      "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md"
+    ],
+    "P0_3": [
+      "README.md",
+      "AGENTS.md",
+      "docs/architecture/scaffold-architecture.md",
+      "docs/agent/skill-architecture.md"
+    ],
+    "P0_4": [
+      "docs/architecture/adr/0019-delivery-foundation.md",
+      "openspec/changes/delivery-foundation-rearchitecture/architecture-review"
+    ],
+    "P1_1": [
+      "openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json",
+      "openspec/changes/delivery-foundation-rearchitecture/package-probes",
+      "integrations/comet/upstream.lock.json",
+      "test/delivery-cases/1_1.mjs",
+      "tools/comet/source.js",
+      "tools/comet/prepare-source.mjs",
+      "tools/comet/build.mjs",
+      "test/comet-source-preparation.test.js",
+      "test/comet-build.test.js"
+    ],
+    "P2_1": [
+      "contracts/delivery",
+      "lib/delivery/baseline.js",
+      "lib/delivery/test-contract.js",
+      "test/delivery-baseline.test.js",
+      "test/delivery-test-contract.test.js",
+      "test/delivery-cases/2_1.mjs",
+      "contracts/delivery/action-binding.schema.js"
+    ],
+    "P3_1": [
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-contract.md",
+      "tools/verify/delivery-journey.mjs",
+      "tools/verify/delivery-case-schema.json",
+      "test/delivery-cases/3_1.mjs",
+      "test/comet-flow-acceptance.test.js"
+    ],
+    "P1_6": [
+      ".agents/skills",
+      "docs/agent/skill-architecture.md",
+      "openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json",
+      "integrations/comet/patches/0001-matt-method-profile.patch",
+      "test/delivery-cases/1_6.mjs",
+      "integrations/comet/patches/tests/1_6.patch",
+      "foundation/profiles/comet-managed.json",
+      "test/comet-method-binding.test.js"
+    ],
+    "P1_2": [
+      "foundation",
+      "tools/foundation-export.mjs",
+      "tools/bootstrap.sh",
+      "tools/adapters/claude-code.sh",
+      "test/foundation-distribution.test.js",
+      "hooks.yaml",
+      "test/delivery-cases/1_2.mjs",
+      "test/legacy-workflow-routing.test.js"
+    ],
+    "P2_2": [
+      "lib/delivery/evidence.js",
+      "lib/delivery/gate.js",
+      "test/delivery-evidence.test.js",
+      "test/delivery-gate.test.js",
+      "test/delivery-cases/2_2.mjs"
+    ],
+    "P2_3": [
+      "bin/cli.js",
+      "lib/adapters/legacy-evidence.js",
+      "test/delivery-cli.test.js",
+      "test/delivery-cases/2_3.mjs"
+    ],
+    "P2_4": [
+      "integrations/comet/patches/0002-managed-delivery-runtime.patch",
+      "test/delivery-cases/2_4.mjs",
+      "integrations/comet/patches/tests/2_4.patch"
+    ],
+    "P2_5": [
+      "lib/adapters/architecture-review.js",
+      "test/architecture-review-adapter.test.js",
+      "test/delivery-cases/2_5.mjs"
+    ],
+    "I01": [
+      "infra/delivery/registry.json",
+      "infra/delivery/registry.schema.json",
+      "infra/delivery/secrets.refs.example.json",
+      "infra/delivery/qualification-policy.json",
+      "tools/infra/registry.mjs",
+      "tools/infra/secret-refs.mjs",
+      "test/infra-registry.test.js"
+    ],
+    "I02": [
+      "infra/delivery/runner/compose.yaml",
+      "infra/delivery/runner/Dockerfile",
+      "infra/delivery/runner/image.lock.json",
+      "infra/delivery/runner/role-policy.json",
+      "infra/delivery/runner/workspace-mounts.json",
+      "infra/delivery/runner/authority-registration.example.json",
+      "tools/infra/runner.mjs",
+      "test/infra-runner-isolation.test.js"
+    ],
+    "P1_3": [
+      "lib/adapters/comet.js",
+      "lib/adapters/harness.js",
+      "test/comet-driver.test.js",
+      "openspec/changes/delivery-foundation-rearchitecture/host-probes",
+      "test/delivery-cases/1_3.mjs",
+      "lib/adapters/comet-executor.js",
+      "test/comet-execution-binding.test.js"
+    ],
+    "P1_4": [
+      "openspec/changes/delivery-foundation-rearchitecture/mode-qualification.json",
+      "openspec/changes/delivery-foundation-rearchitecture/mode-probes",
+      "test/delivery-cases/1_4.mjs"
+    ],
+    "P1_5": [
+      "test/classic-integration.test.js",
+      "openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes",
+      "test/delivery-cases/1_5.mjs"
+    ],
+    "P3_4": [
+      "lib/adapters/spec.js",
+      "test/spec-closeout.test.js",
+      "test/delivery-cases/3_4.mjs"
+    ],
+    "I03": [
+      "infra/delivery/outline/compose.yaml",
+      "infra/delivery/outline/images.lock.json",
+      "infra/delivery/outline/outline.env.example",
+      "infra/delivery/outline/oidc-registration.example.json",
+      "infra/delivery/outline/storage-policy.json",
+      "infra/delivery/outline/collection-registration.example.json",
+      "tools/infra/outline.mjs",
+      "test/infra-outline.test.js"
+    ],
+    "I04": [
+      "infra/delivery/llmwiki/package.lock.json",
+      "infra/delivery/llmwiki/project-root-policy.json",
+      "infra/delivery/llmwiki/index-policy.json",
+      "infra/delivery/llmwiki/mcp-profile.json",
+      "tools/infra/llmwiki.mjs",
+      "test/infra-llmwiki-paths.test.js"
+    ],
+    "I05": [
+      "infra/delivery/code-knowledge/compose.yaml",
+      "infra/delivery/code-knowledge/images.lock.json",
+      "infra/delivery/code-knowledge/deepwiki-profile.json",
+      "infra/delivery/code-knowledge/graph-profile.json",
+      "infra/delivery/code-knowledge/repository-scope.json",
+      "tools/infra/code-knowledge.mjs",
+      "test/infra-code-knowledge.test.js"
+    ],
+    "I06": [
+      "infra/delivery/platform/repository-registration.json",
+      "infra/delivery/platform/ci-policy.json",
+      "infra/delivery/platform/registry-registration.example.json",
+      "infra/delivery/platform/environment-registration.example.json",
+      "infra/delivery/platform/artifact-retention.json",
+      "tools/infra/platform.mjs",
+      "test/infra-platform.test.js"
+    ],
+    "P3_2": [
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-journey",
+      "test/delivery-cases/3_2.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.case.json"
+    ],
+    "P3_3": [
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery",
+      "test/delivery-cases/3_3.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.case.json"
+    ],
+    "P4_6": [
+      "integrations/comet/patches/0003-post-archive-closeout.patch",
+      "test/delivery-cases/4_6.mjs",
+      "integrations/comet/patches/tests/4_6.patch"
+    ],
+    "P4_7": [
+      "lib/adapters/knowledge-authorization.js",
+      "test/knowledge-authorization.test.js",
+      "openspec/changes/delivery-foundation-rearchitecture/authorization-journey",
+      "test/delivery-cases/4_7.mjs",
+      "tools/infra/knowledge-authz.mjs",
+      "infra/delivery/knowledge"
+    ],
+    "P4_1": [
+      ".github/workflows/delivery-gate.yml",
+      "tools/ci/verify-delivery.mjs",
+      "test/ci-delivery-gate.test.js",
+      "test/delivery-cases/4_1.mjs"
+    ],
+    "P4_2": [
+      "tools/ci/release.mjs",
+      "test/release-protocol.test.js",
+      "openspec/changes/delivery-foundation-rearchitecture/release-journey",
+      "test/delivery-cases/4_2.mjs"
+    ],
+    "P4_4": [
+      "lib/adapters/llmwiki.js",
+      "lib/adapters/outline.js",
+      "lib/adapters/code-wiki.js",
+      "lib/sdd-paths.js",
+      "tools/mcp/llmwiki.sh",
+      "test/knowledge-closeout.test.js",
+      "lib/knowledge-seed.js",
+      "bin/cli.js",
+      "test/delivery-cases/4_4.mjs"
+    ],
+    "P4_5": [
+      "hooks.yaml",
+      "hooks",
+      "tools/adapters/claude-code.sh",
+      "test/delivery-hook-assembly.test.js",
+      "test/delivery-cases/4_5.mjs"
+    ],
+    "I07": [
+      "infra/delivery/monitor/monitor-registration.example.json",
+      "infra/delivery/monitor/health-contract.json",
+      "infra/delivery/monitor/alert-policy.json",
+      "infra/delivery/monitor/supervisor-policy.json",
+      "infra/delivery/monitor/fault-domain-policy.json",
+      "tools/infra/monitor.mjs",
+      "test/infra-monitor.test.js"
+    ],
+    "I08": [
+      "infra/delivery/recovery/backup-policy.json",
+      "infra/delivery/recovery/restore-policy.json",
+      "infra/delivery/recovery/retention-policy.json",
+      "infra/delivery/recovery/authority-transfer.schema.json",
+      "infra/delivery/recovery/operations-runbook.md",
+      "tools/infra/recovery.mjs",
+      "test/infra-recovery.test.js",
+      "infra/delivery/backup",
+      "tools/infra/backup-restore.mjs",
+      "test/infra-backup-restore.test.js",
+      "test/delivery-cases/i08.mjs"
+    ],
+    "P4_8": [
+      "lib/adapters/knowledge-revocation.js",
+      "test/knowledge-revocation.test.js",
+      "openspec/changes/delivery-foundation-rearchitecture/revocation-journey",
+      "test/delivery-cases/4_8.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/revocation-journey/post-delivery-permissions.case.json"
+    ],
+    "P4_3": [
+      "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json",
+      "openspec/changes/delivery-foundation-rearchitecture/verification.md",
+      "test/delivery-cases/4_3.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/legacy-entry-inventory.json"
+    ],
+    "P5_1": [
+      "openspec/changes/delivery-foundation-rearchitecture/team-host-matrix",
+      "test/delivery-cases/5_1.mjs"
+    ],
+    "P5_2": [
+      "services/delivery-control",
+      "test/delivery-control.test.js",
+      "test/delivery-cases/5_2.mjs"
+    ],
+    "P5_3": [
+      "openspec/changes/delivery-foundation-rearchitecture/operations-runbook.md",
+      "openspec/changes/delivery-foundation-rearchitecture/team-recovery",
+      "test/delivery-cases/5_3.mjs"
+    ],
+    "VERIFY": [
+      "openspec/changes/delivery-foundation-rearchitecture/verification-report.md",
+      "openspec/changes/delivery-foundation-rearchitecture/grill-report.md",
+      "openspec/changes/delivery-foundation-rearchitecture/verification-results.json",
+      "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json",
+      "openspec/changes/delivery-foundation-rearchitecture/execution-state.json",
+      "openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl"
+    ]
+  },
+  "assumptions": [
+    "Current plan and all118 required checks are unexecuted for this rework revision.",
+    "Existing partial components remain reusable only at their proved scope; no inherited business PASS.",
+    "Current dirty OpenSpec config bytes are observed/frozen inputs, not acceptance of unrelated overlay candidate.",
+    "Receiver must receive full plan and exact frozen inputs before creating execution worktree."
+  ],
+  "change_policy": "halt-and-replan",
+  "scope": "USER_AUTHORIZED_COMET_CONVERGENCE_NOT_YET_ACCEPTED",
+  "identity_map_sha256": "d617ea8db9c3af01160c8b34e3c928d82b2d04981d0d71f4537cef4d7c3b08e3",
+  "amendments": [
+    {
+      "id": "ponytail-supplement-20261020",
+      "approved_by": "user decision A (2026-10-20 实施会话裁决: 'A接纳，你审视下我们架构，hook关系')",
+      "content": "Ponytail 五层职责/原生 Hook/注册分工/full 方法默认/模式隔离/验收细项 (classic-closeout-and-hook-contract.md §6-8 + architecture.md 冻结后补充注记)",
+      "old_architecture_sha256": "8bd5316106944a28b58ab2a0f1468537227ce7b78dd7009ece0bdbdf9ec97aed",
+      "old_execution_contract_sha256": "9f36b3d9a8c13865a19cdc3b5113c658fced5ca5b1fd71dc13e8a32907328824",
+      "delta_checks": [
+        "V_P1_6_PONYTAIL_ASSETS",
+        "V_P1_2_PLUGIN_REGISTRATION_DIVISION",
+        "V_I02_METHOD_STATE_SCOPE"
+      ],
+      "delta_review_required": [
+        "P1_6",
+        "P1_2",
+        "I02"
+      ],
+      "external_overlay_candidate": "V_OV01-08 + V_OVERLAY_REVIEW + OVR/OVQ 任务 + 锁/契约/计划的外部 overlay 编辑已全部移除，存档 .local/plan-history/ponytail-supplement-20261020/；OPEN_DECISION: OV_OVERLAY_CANDIDATE 待用户另行裁决",
+      "recorded_at": "2026-10-20T09:01:56.803571+00:00",
+      "new_spec_baseline_sha256": "cc8fd58ad200c0402c26a848525d76b07e6c25909f652dfe84801adb8a294a4b"
+    },
+    {
+      "id": "2026-10-22-seven-p1",
+      "approved_by": "current user request: 按7个P1修订Claude TDD plan，沿用原任务和唯一DAG",
+      "record": "replan-record.json",
+      "old_hashes": {
+        "plan_sha256": "aac0152e4ea360d3e03f2f5f7f14cc203f74b4525de48fde04e6fbe359cb6ad9",
+        "architecture_sha256": "91bc1a334005a9abc7c70754622c5e241ff7cd0839843f1ef492a9e6f6b49228",
+        "dag_sha256": "c402254ba67a80106fbf2484a38d55f5899fa59a426fe7cbdb252c4a8d4f5d0b",
+        "execution_contract_sha256": "0250b905377c681b7d3cb93833adefe1365566696283f4017dc9a2d2b31e2a8a"
+      },
+      "old_check_count": 108,
+      "new_check_count": 118,
+      "task_count_unchanged": 39,
+      "scenario_count_unchanged": 92
+    },
+    {
+      "id": "env-capability-20261022",
+      "approved_by": "user directives 2026-10-22 会话裁决: \"llmwiki项目化\" + \"确认docker的权限\"(实测终端通道可用)",
+      "content": "SDD 分发项目化(SDD_HOME=<repo>/.sdd, 克隆 pin 075c5b4, venv llmwiki-311, wiki 根项目内) + Docker 终端面板通道执行能力(daemon UP server 29.6.2, 沙箱拒 socket 属实) + 环境门控纪律重申; tasks.md P1_1 描述句 + architecture.md 环境能力裁决节 + infrastructure-plan.md 注记; dag/contract 零改动; 共识决议修复(r2 codex findings): journey_execution.order_semantics + V_RW 同Run窗口先行 + replan-record 哈希刷新; contract hash 相应更新",
+      "recorded_at": "2026-10-22T02:00:03.395531+00:00",
+      "supersedes_hashes": {
+        "plan": "eb7ed2cb",
+        "architecture": "66ac6e36"
+      },
+      "prior_amendment": "seven-p1 replan (amendment 2) 哈希保持在其记录中"
+    },
+    {
+      "id": "contract-command-reconciliation-20261023",
+      "approved_by": "controller pre-VERIFY obligation (execution-state P3_1 notes: \"check 116 命令串调和 pre-VERIFY 归 P3_1/控制器\") under user end-to-end execution mandate 2026-10-22",
+      "content": "checks[114]/[116]/[117] (V_RW_REAL_COMET_RECOVERY / V_SAME_RUN_DELIVERY / V_POST_DELIVERY_PERMISSIONS) 命令串去除冗余 --scenario：runner 的 --scenario/--journey 互斥是 P3_1 验收设计（journey 配方自带 scenario，same-run-delivery.case.json=E06、real-comet-recovery.case.json=L11），合并 flag 会在 VERIFY 输入校验即失败。scenario 记录保留于 acceptance_ids 与配方文件；语义零变化，post-delivery-permissions 配方仍归 P4_8 返工交付",
+      "recorded_at": "2026-10-22T22:51:20.208393+00:00",
+      "supersedes_hashes": {
+        "execution_contract": "73c64d27"
+      },
+      "prior_amendment": "env-capability-20261022 (amendment 3) 哈希保持在其记录中"
+    },
+    {
+      "id": "2026-10-24-comet-convergence",
+      "authorization": "User explicit: clear old flow, implement latest architecture and complete end-to-end; restore original infrastructure/knowledge-driven AI DevOps intent",
+      "history": "replan-history/2026-10-24-comet-convergence/previous",
+      "identity_preserved": {
+        "nodes": 39,
+        "parents": 30,
+        "workpackages": 69,
+        "original_scenarios": 92,
+        "original_checks": 118
+      },
+      "new_scenarios": [
+        "N01",
+        "N02",
+        "N03",
+        "N04",
+        "N05",
+        "N06",
+        "N07",
+        "N08",
+        "N09",
+        "N10",
+        "N11",
+        "N12"
+      ],
+      "new_totals": {
+        "scenarios": 104,
+        "checks": 130
+      },
+      "historical_pass_inheritance": false
+    }
+  ]
+}
