@@ -1,0 +1,532 @@
+TAP version 13
+# Subtest: claude-code adapter compiles hooks.yaml to safely-sourceable env
+ok 1 - claude-code adapter compiles hooks.yaml to safely-sourceable env
+  ---
+  duration_ms: 173.432625
+  type: 'test'
+  ...
+# Subtest: sourcing .compiled.env has no side effects and preserves deny patterns
+ok 2 - sourcing .compiled.env has no side effects and preserves deny patterns
+  ---
+  duration_ms: 182.495667
+  type: 'test'
+  ...
+# Subtest: pre-tool-gate denies blocked commands and allows normal ones
+ok 3 - pre-tool-gate denies blocked commands and allows normal ones
+  ---
+  duration_ms: 320.170917
+  type: 'test'
+  ...
+# Subtest: pre-tool-gate fails closed on unparseable non-empty input (r2 F4)
+ok 4 - pre-tool-gate fails closed on unparseable non-empty input (r2 F4)
+  ---
+  duration_ms: 244.000875
+  type: 'test'
+  ...
+# Subtest: .mcp.json carries pinned versions, never @latest (r2 F-001/zcode F1)
+ok 5 - .mcp.json carries pinned versions, never @latest (r2 F-001/zcode F1)
+  ---
+  duration_ms: 0.387042
+  type: 'test'
+  ...
+# Subtest: pre-tool-gate denies direct wiki writes (kb-write-protection)
+ok 6 - pre-tool-gate denies direct wiki writes (kb-write-protection)
+  ---
+  duration_ms: 252.7345
+  type: 'test'
+  ...
+# Subtest: compiled settings.json PreToolUse matcher covers every deny policy
+ok 7 - compiled settings.json PreToolUse matcher covers every deny policy
+  ---
+  duration_ms: 170.821916
+  type: 'test'
+  ...
+# Subtest: adapter preserves user hook entries it does not own
+ok 8 - adapter preserves user hook entries it does not own
+  ---
+  duration_ms: 193.914417
+  type: 'test'
+  ...
+# Subtest: mixed hook installation preserves each user and plugin handler with its group metadata
+ok 9 - mixed hook installation preserves each user and plugin handler with its group metadata
+  ---
+  duration_ms: 321.863708
+  type: 'test'
+  ...
+# Subtest: hook path text and user command suffixes never grant adapter ownership
+ok 10 - hook path text and user command suffixes never grant adapter ownership
+  ---
+  duration_ms: 160.324042
+  type: 'test'
+  ...
+# Subtest: mixed hook uninstall removes only owned handlers and preserves plugin plus user metadata
+ok 11 - mixed hook uninstall removes only owned handlers and preserves plugin plus user metadata
+  ---
+  duration_ms: 234.658583
+  type: 'test'
+  ...
+# Subtest: target bootstrap repeats and uninstall preserve mixed hooks without regenerating legacy registrations
+ok 12 - target bootstrap repeats and uninstall preserve mixed hooks without regenerating legacy registrations
+  ---
+  duration_ms: 807.176167
+  type: 'test'
+  ...
+# Subtest: H02: SessionStart startup/resume and Stop — native settings layer and script layer agree; repeats in mixed order stay advisory and byte-identical
+ok 13 - H02: SessionStart startup/resume and Stop — native settings layer and script layer agree; repeats in mixed order stay advisory and byte-identical
+  ---
+  duration_ms: 492.4105
+  type: 'test'
+  ...
+# Subtest: E06: compact and sub-session starts are not project-assembled — the adapter refuses them in YAML, the composed settings stay silent, and the real Ponytail plugin snapshot owns those surfaces
+ok 14 - E06: compact and sub-session starts are not project-assembled — the adapter refuses them in YAML, the composed settings stay silent, and the real Ponytail plugin snapshot owns those surfaces
+  ---
+  duration_ms: 437.620959
+  type: 'test'
+  ...
+# Subtest: E05: three-subject coexistence on real plugin bytes — plugin and user entries survive composition verbatim, one managed entry per fixed event, idempotent repeat
+ok 15 - E05: three-subject coexistence on real plugin bytes — plugin and user entries survive composition verbatim, one managed entry per fixed event, idempotent repeat
+  ---
+  duration_ms: 503.536333
+  type: 'test'
+  ...
+# Subtest: E05/E06: cross-session and cross-role crosstalk — hook output is role-independent, a switched shared mode never moves the gates, and the verbatim knownFacts reuse still holds after the I02 rework
+ok 16 - E05/E06: cross-session and cross-role crosstalk — hook output is role-independent, a switched shared mode never moves the gates, and the verbatim knownFacts reuse still holds after the I02 rework
+  ---
+  duration_ms: 704.764666
+  type: 'test'
+  ...
+# Subtest: E05: failure, silence and timeout never fabricate a method receipt — and the required gates still actually block afterwards
+ok 17 - E05: failure, silence and timeout never fabricate a method receipt — and the required gates still actually block afterwards
+  ---
+  duration_ms: 701.81475
+  type: 'test'
+  ...
+# Subtest: E06: user start/stop of the project assembly — uninstall keeps plugin and user subjects, re-init restores the managed block byte-identically
+ok 18 - E06: user start/stop of the project assembly — uninstall keeps plugin and user subjects, re-init restores the managed block byte-identically
+  ---
+  duration_ms: 611.007292
+  type: 'test'
+  ...
+# Subtest: exporter builds a contract-valid lock from the unique sources (real repo)
+ok 19 - exporter builds a contract-valid lock from the unique sources (real repo)
+  ---
+  duration_ms: 379.944625
+  type: 'test'
+  ...
+# Subtest: lock emission gates: full digests, no machine paths, no floating versions
+ok 20 - lock emission gates: full digests, no machine paths, no floating versions
+  ---
+  duration_ms: 151.787041
+  type: 'test'
+  ...
+# Subtest: exporter refuses to emit when an MCP registration floats (@latest)
+ok 21 - exporter refuses to emit when an MCP registration floats (@latest)
+  ---
+  duration_ms: 14.849959
+  type: 'test'
+  ...
+# Subtest: release view + lock are byte-stable across repeated exports (repeat-pull idempotency)
+ok 22 - release view + lock are byte-stable across repeated exports (repeat-pull idempotency)
+  ---
+  duration_ms: 64.790375
+  type: 'test'
+  ...
+# Subtest: dual-write drift is detected in both directions (source edit and hand-edited view)
+ok 23 - dual-write drift is detected in both directions (source edit and hand-edited view)
+  ---
+  duration_ms: 151.810167
+  type: 'test'
+  ...
+# Subtest: committed foundation artifacts match live sources (repo-level drift gate)
+not ok 24 - committed foundation artifacts match live sources (repo-level drift gate)
+  ---
+  duration_ms: 394.190875
+  type: 'test'
+  location: '<worktree>/test/foundation-distribution.test.js:196:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    committed foundation drifted from sources: [{"kind":"lock","item":"exportDigest","detail":"complete asset set drifted"},{"kind":"release","item":"code","detail":"project code closure bytes or complete file set differs"}]
+    + actual - expected
+
+    + [
+    +   {
+    +     detail: 'complete asset set drifted',
+    +     item: 'exportDigest',
+    +     kind: 'lock'
+    +   },
+    +   {
+    +     detail: 'project code closure bytes or complete file set differs',
+    +     item: 'code',
+    +     kind: 'release'
+    +   }
+    + ]
+    - []
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      kind: 'lock'
+      item: 'exportDigest'
+      detail: 'complete asset set drifted'
+    1:
+      kind: 'release'
+      item: 'code'
+      detail: 'project code closure bytes or complete file set differs'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/foundation-distribution.test.js:200:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: composition requires adapter fixture isolation and uninstall capability
+ok 25 - composition requires adapter fixture isolation and uninstall capability
+  ---
+  duration_ms: 0.080291
+  type: 'test'
+  ...
+# Subtest: reverse order A: existing user config survives bootstrap, guard installed once
+ok 26 - reverse order A: existing user config survives bootstrap, guard installed once
+  ---
+  duration_ms: 182.208625
+  type: 'test'
+  ...
+# Subtest: reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept
+ok 27 - reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept
+  ---
+  duration_ms: 548.282375
+  type: 'test'
+  ...
+# Subtest: upgrade: stale managed entry in an older command format is replaced, not duplicated
+ok 28 - upgrade: stale managed entry in an older command format is replaced, not duplicated
+  ---
+  duration_ms: 170.081041
+  type: 'test'
+  ...
+# Subtest: uninstall removes managed entries only, is idempotent, and re-init restores
+ok 29 - uninstall removes managed entries only, is idempotent, and re-init restores
+  ---
+  duration_ms: 573.3045
+  type: 'test'
+  ...
+# Subtest: uninstall is locale-safe: UTF-8 locale must not crash bootstrap (regression: unbraced $var before a multibyte char)
+ok 30 - uninstall is locale-safe: UTF-8 locale must not crash bootstrap (regression: unbraced $var before a multibyte char)
+  ---
+  duration_ms: 296.207208
+  type: 'test'
+  ...
+# Subtest: owned control-plane scripts never place an unbraced variable expansion adjacent to multibyte text
+ok 31 - owned control-plane scripts never place an unbraced variable expansion adjacent to multibyte text
+  ---
+  duration_ms: 0.229167
+  type: 'test'
+  ...
+# Subtest: matcher registration and gate script behavior are tested together
+ok 32 - matcher registration and gate script behavior are tested together
+  ---
+  duration_ms: 416.685792
+  type: 'test'
+  ...
+# Subtest: adapter declares the fixed event set and the plugin registration division
+ok 33 - adapter declares the fixed event set and the plugin registration division
+  ---
+  duration_ms: 0.186292
+  type: 'test'
+  ...
+# Subtest: plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall
+ok 34 - plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall
+  ---
+  duration_ms: 460.396209
+  type: 'test'
+  ...
+# Subtest: same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched
+ok 35 - same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched
+  ---
+  duration_ms: 132.483375
+  type: 'test'
+  ...
+# Subtest: duplicate user entries for the same event/command are refused, not composed twice
+ok 36 - duplicate user entries for the same event/command are refused, not composed twice
+  ---
+  duration_ms: 131.921834
+  type: 'test'
+  ...
+# Subtest: hooks.yaml events outside the adapter fixed event set are refused, never silently dropped
+ok 37 - hooks.yaml events outside the adapter fixed event set are refused, never silently dropped
+  ---
+  duration_ms: 129.478833
+  type: 'test'
+  ...
+# Subtest: plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2)
+ok 38 - plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2)
+  ---
+  duration_ms: 130.598584
+  type: 'test'
+  ...
+# Subtest: exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts
+ok 39 - exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts
+  ---
+  duration_ms: 14.625666
+  type: 'test'
+  ...
+# Subtest: bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo
+ok 40 - bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo
+  ---
+  duration_ms: 714.966084
+  type: 'test'
+  ...
+# Subtest: legacy workflow: retired source-command-sdd-code source under .agents/skills refuses activation with zero mutations (direct-discovery refusal)
+ok 41 - legacy workflow: retired source-command-sdd-code source under .agents/skills refuses activation with zero mutations (direct-discovery refusal)
+  ---
+  duration_ms: 100.200208
+  type: 'test'
+  ...
+# Subtest: legacy workflow: every retired naming family refuses with per-name diagnostics, bodies untouched, no artifacts
+ok 42 - legacy workflow: every retired naming family refuses with per-name diagnostics, bodies untouched, no artifacts
+  ---
+  duration_ms: 119.555875
+  type: 'test'
+  ...
+# Subtest: legacy workflow: unowned retired-name directory with user files is preserved and blocks install (no prefix deletion)
+ok 43 - legacy workflow: unowned retired-name directory with user files is preserved and blocks install (no prefix deletion)
+  ---
+  duration_ms: 117.3915
+  type: 'test'
+  ...
+# Subtest: legacy workflow: retired-name symlink pointing at an external .agents/skills path is preserved (exact-ownership proof required)
+ok 44 - legacy workflow: retired-name symlink pointing at an external .agents/skills path is preserved (exact-ownership proof required)
+  ---
+  duration_ms: 125.967708
+  type: 'test'
+  ...
+# Subtest: legacy workflow: exact adapter-owned stale link to a retired name is removed on install; valid sources assemble settings and stay idempotent
+ok 45 - legacy workflow: exact adapter-owned stale link to a retired name is removed on install; valid sources assemble settings and stay idempotent
+  ---
+  duration_ms: 368.924208
+  type: 'test'
+  ...
+# Subtest: legacy workflow: uninstall removes only adapter-owned links — unowned dirs, external retired-name links and user config survive
+ok 46 - legacy workflow: uninstall removes only adapter-owned links — unowned dirs, external retired-name links and user config survive
+  ---
+  duration_ms: 297.777875
+  type: 'test'
+  ...
+# Subtest: legacy workflow: refusal is readonly and reversible — human disposal of the residue unblocks activation
+ok 47 - legacy workflow: refusal is readonly and reversible — human disposal of the residue unblocks activation
+  ---
+  duration_ms: 457.562292
+  type: 'test'
+  ...
+# Subtest: old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+not ok 48 - old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+  ---
+  duration_ms: 321.981083
+  type: 'test'
+  location: '<worktree>/test/foundation-distribution.test.js:865:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"ok":false,"action":"check","reason":"silent-rebaseline-blocked","drift":true,"baseline":{"ok":true,"resolvable":true,"reason":"sealed pure assets verified byte-for-byte and whole exportDigest","resolvedSkills":["claude-parallel-tdd-planner","code-review","diagnosing-bugs","grill-me","grilling","multi-agent-consensus-review","openspec-lifecycle-guard","ponytail","tdd","test-authoring","whitebox-verify"],"missing":[],"source":"sealed-assets"},"migration":"explicit paths: (1) rerun with --migrate --owner <run-owner> after review, or (2) close this run and start a new run against commit ddb78491 — a run is never silently re-baselined"}
+
+    false !== true
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/foundation-distribution.test.js:870:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: active run blocks silent re-baseline after asset drift; closed run only notes it
+ok 49 - active run blocks silent re-baseline after asset drift; closed run only notes it
+  ---
+  duration_ms: 279.078583
+  type: 'test'
+  ...
+# Subtest: unresolvable pinned baseline is blocked explicitly, never silently swapped
+ok 50 - unresolvable pinned baseline is blocked explicitly, never silently swapped
+  ---
+  duration_ms: 182.5315
+  type: 'test'
+  ...
+# Subtest: B09: a second writer cannot take over an active run
+ok 51 - B09: a second writer cannot take over an active run
+  ---
+  duration_ms: 578.223208
+  type: 'test'
+  ...
+# Subtest: explicit migration re-pins only with ownership and a resolvable old baseline
+ok 52 - explicit migration re-pins only with ownership and a resolvable old baseline
+  ---
+  duration_ms: 374.664167
+  type: 'test'
+  ...
+# Subtest: cold package keeps declared dot files and binary source bytes
+ok 53 - cold package keeps declared dot files and binary source bytes
+  ---
+  duration_ms: 66.936
+  type: 'test'
+  ...
+# Subtest: cold package verification refuses a missing copied source file
+ok 54 - cold package verification refuses a missing copied source file
+  ---
+  duration_ms: 75.211125
+  type: 'test'
+  ...
+# Subtest: current managed distribution binds the exact profile data and all 245 source files
+ok 55 - current managed distribution binds the exact profile data and all 245 source files
+  ---
+  duration_ms: 2207.085833
+  type: 'test'
+  ...
+# Subtest: export refuses retired sources instead of distributing a valid-looking old workflow
+ok 56 - export refuses retired sources instead of distributing a valid-looking old workflow
+  ---
+  duration_ms: 3.823083
+  type: 'test'
+  ...
+# Subtest: legacy asset ownership helper never acquires or rewrites an actual native Comet Run
+ok 57 - legacy asset ownership helper never acquires or rewrites an actual native Comet Run
+  ---
+  duration_ms: 839.211416
+  type: 'test'
+  ...
+# Subtest: complete copied distribution refuses a removed method directory and an injected file
+ok 58 - complete copied distribution refuses a removed method directory and an injected file
+  ---
+  duration_ms: 147.595083
+  type: 'test'
+  ...
+# Subtest: frozen pure assets resolve after transport without Git history and reject corruption or symlink escape
+ok 59 - frozen pure assets resolve after transport without Git history and reject corruption or symlink escape
+  ---
+  duration_ms: 135.576625
+  type: 'test'
+  ...
+# Subtest: sealed cache parents cannot redirect writes and release references cannot float
+ok 60 - sealed cache parents cannot redirect writes and release references cannot float
+  ---
+  duration_ms: 46.327791
+  type: 'test'
+  ...
+# Subtest: sealed cache refuses an injected prototype-named file in the complete set
+ok 61 - sealed cache refuses an injected prototype-named file in the complete set
+  ---
+  duration_ms: 115.298042
+  type: 'test'
+  ...
+# {"clean":{"ok":true,"resolvable":true,"reason":"sealed pure assets verified byte-for-byte and whole exportDigest","resolvedSkills":["alpha","beta"],"missing":[],"source":"sealed-assets"},"modified":{"ok":false,"resolvable":false,"reason":"STATE_SYNC_REQUIRED: unexpected or missing sealed asset","resolvedSkills":[],"missing":["sealed-assets"]},"files":["__proto__","foundation-lock.json","manifest.json","source"]}
+# Subtest: legal prototype-named source files round trip byte-exact through release and sealed cache
+ok 62 - legal prototype-named source files round trip byte-exact through release and sealed cache
+  ---
+  duration_ms: 228.63
+  type: 'test'
+  ...
+# Subtest: sealed cache complete set rejects extra special-named files, directories and symlinks
+ok 63 - sealed cache complete set rejects extra special-named files, directories and symlinks
+  ---
+  duration_ms: 360.582208
+  type: 'test'
+  ...
+# Subtest: managed hook resolver changes invalidate the lock and are sealed as explicit code assets
+ok 64 - managed hook resolver changes invalidate the lock and are sealed as explicit code assets
+  ---
+  duration_ms: 369.948833
+  type: 'test'
+  ...
+# {"before":"1bcc363667382ca3326da27199f5eb2578457c6823314be2bb4fdb324c11afe7","after":"8db1f8cc7694dd217d6bd34b14a5229561af3f015a6c5cd77439e68aadfe4852","verify":{"ok":false,"drifts":[{"kind":"lock","item":"exportDigest","detail":"complete asset set drifted"},{"kind":"release","item":"code","detail":"project code closure bytes or complete file set differs"}]},"cacheHasResolver":true}
+# Subtest: every project code dependency and pin metadata is bound in digest, release and immutable cache
+ok 65 - every project code dependency and pin metadata is bound in digest, release and immutable cache
+  ---
+  duration_ms: 1953.817208
+  type: 'test'
+  ...
+# Subtest: transported closure executes exporter and adapter without parent source modules; missing Python refuses cleanly
+ok 66 - transported closure executes exporter and adapter without parent source modules; missing Python refuses cleanly
+  ---
+  duration_ms: 1102.788375
+  type: 'test'
+  ...
+# {"export":{"exit":0,"stdout":"✅ foundation export: 34 files under /tmp/fdn-transport-code-pSYi3C/foundation (release commit aaaaaaaa, exportDigest 1bcc36366738)\\n","stderr":""},"verify":{"exit":0,"stdout":"✅ foundation verify: lock, sources and release view are consistent\\n","stderr":""},"adapter":{"exit":0,"stdout":"✅ hooks 策略已编译：hooks/.compiled.env + .claude/settings.json (1 deny 策略)\\n✅ selected method links installed; unrelated user entries preserved\\n","stderr":""},"gate":{"exit":2,"stderr":"❌ 禁止执行「git push --force」：blocked（hooks.yaml dangerous-command-blocklist）\\n"},"missingPython":{"exit":1,"stderr":"❌ python3 required by claude-code adapter\\n"},"parentModules":false}
+# Subtest: copied method directory symlinks refuse verification and export without changing user bytes
+ok 67 - copied method directory symlinks refuse verification and export without changing user bytes
+  ---
+  duration_ms: 107.747041
+  type: 'test'
+  ...
+# {"verify":{"ok":false,"error":"lock unreadable: symlink asset refused: skills/alpha","drifts":[]},"exportRejected":true,"error":"symlink asset refused: skills/alpha","before":"1fd0d20e25f00bb273c3891b885729613ad25d24e3f331d5ede0cdd69e681537","after":"1fd0d20e25f00bb273c3891b885729613ad25d24e3f331d5ede0cdd69e681537"}
+# Subtest: export and verify reject linked package roots, every view ancestor and output file before any mutation
+ok 68 - export and verify reject linked package roots, every view ancestor and output file before any mutation
+  ---
+  duration_ms: 986.319084
+  type: 'test'
+  ...
+# {"slot":"package-root","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+# {"slot":"package-ancestor","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+# {"slot":"foundation-lock.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+# {"slot":"release","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+# {"slot":"release/skills","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+# {"slot":"release/skills/alpha","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+# {"slot":"release/skills/alpha/SKILL.md","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+# {"slot":"release/skills/MANIFEST.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"2b5629f0d08890d8a180020d317963782175969acb5388d81adfbaadb1986bd6"}
+# {"slot":"release/hooks","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+# {"slot":"release/hooks/hooks.yaml","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+# {"slot":"release/mcp","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"57eefe7379a348936054bfef83361655671bca3cc51f34b75575fd86c4245f46"}
+# {"slot":"release/mcp/mcp.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"57eefe7379a348936054bfef83361655671bca3cc51f34b75575fd86c4245f46"}
+# Subtest: managed code/profile outputs and existing output aliases cannot redirect export or verification
+ok 69 - managed code/profile outputs and existing output aliases cannot redirect export or verification
+  ---
+  duration_ms: 2000.8825
+  type: 'test'
+  ...
+# {"slot":"release/profile","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"release/profile/binding.json","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"release/profile/comet-managed.json","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"release/code","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"release/code/tools","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"release/code/tools/bootstrap.sh","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"release/code/MANIFEST.json","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"hardlink","verification":false,"wholeFixtureUnchanged":true}
+# {"slot":"fifo","verification":false,"wholeFixtureUnchanged":true}
+# Subtest: Git exports remain verifiable after transport without Git
+ok 70 - Git exports remain verifiable after transport without Git
+  ---
+  duration_ms: 207.899459
+  type: 'test'
+  ...
+# Subtest: TeamAI packet roundtrip preserves the externally frozen full file set
+ok 71 - TeamAI packet roundtrip preserves the externally frozen full file set
+  ---
+  duration_ms: 7743.197125
+  type: 'test'
+  ...
+# Subtest: TeamAI packet rejects tamper, omission, duplicate, escape, unsafe mode and stale source before writing
+ok 72 - TeamAI packet rejects tamper, omission, duplicate, escape, unsafe mode and stale source before writing
+  ---
+  duration_ms: 4301.658708
+  type: 'test'
+  ...
+# Subtest: original Foundation CLI connects TeamAI view export and externally pinned receive
+ok 73 - original Foundation CLI connects TeamAI view export and externally pinned receive
+  ---
+  duration_ms: 6821.908167
+  type: 'test'
+  ...
+# Subtest: Bash project caller equivalence leaves unrelated user scripts and Ponytail plugin entries unchanged
+ok 74 - Bash project caller equivalence leaves unrelated user scripts and Ponytail plugin entries unchanged
+  ---
+  duration_ms: 278.65
+  type: 'test'
+  ...
+1..74
+# tests 74
+# suites 0
+# pass 72
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 38578.265916

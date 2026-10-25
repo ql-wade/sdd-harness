@@ -1,0 +1,7 @@
+# P1_2 mixed hook：Root源码与装配复验
+
+最终a666候选经过独立Spec+Standards及追加复审，原d0非command重复空串误报P2记录保留。仅handler级移除受管命令，保留user/plugin/组metadata/其他event，完整匹配不认路径文字或附加用户命令。重复扫描仅处理command，prompt作为数据完整保留且不执行。
+
+Root确认59个候选路径逐字节与Git相同，主adapter实际13/13、0skip、输入不变、无外部guard调用。capture标签adapter19沿用作者联合组名，不能据标签称Root19。原作者19及command冲突2、独立窄3各按原范围保留。8项用户/活配置摘要未改。
+
+原相关74/72/2仍待Root联合源3056和此adapter的Git锚统一资产发行，不能说oracle过时、改弱F04/B09或把oldRun偷偷改基线。旧sealed2aba和所有前次来源保留。当前仅源码构造可消费，实际宿主发现/Hook启用/角色/OS和whole仍未验，业务增量0。

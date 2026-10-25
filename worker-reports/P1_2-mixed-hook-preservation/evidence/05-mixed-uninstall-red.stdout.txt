@@ -1,0 +1,141 @@
+TAP version 13
+# Subtest: mixed hook uninstall removes only owned handlers and preserves plugin plus user metadata
+not ok 1 - mixed hook uninstall removes only owned handlers and preserves plugin plus user metadata
+  ---
+  duration_ms: 121.718959
+  type: 'test'
+  location: '<worktree>/test/adapter-quoting.test.js:252:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    ... Skipped lines
+
+      {
+        hooks: {
+          OtherEvent: [
+            {
+              hooks: [
+    ...
+                {
+    +             command: 'bash "$CLAUDE_PROJECT_DIR"/hooks/session-context.sh',
+    +             type: 'command'
+    +           },
+    +           {
+                  command: 'printf "$CLAUDE_PLUGIN_ROOT"',
+                  timeout: 13,
+                  type: 'command'
+                },
+                {
+    ...
+          ],
+    -     Stop: [
+    -       {
+    -         hooks: [
+    -           {
+    -             command: 'printf user-uninstall',
+    -             timeout: 11,
+    -             type: 'command'
+    -           },
+    -           {
+    -             command: "printf 'hooks/stop-reminder.sh'",
+    -             type: 'command'
+    -           },
+    -           {
+    -             command: 'bash "$CLAUDE_PROJECT_DIR"/hooks/stop-reminder.sh; printf user-tail',
+    -             type: 'command'
+    -           }
+    -         ],
+    -         note: 'keep user-only remainder'
+    -       }
+    -     ]
+        },
+        permissions: {
+          allow: [
+            'Bash(npm test)'
+          ]
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    permissions:
+      allow:
+        0: 'Bash(npm test)'
+    hooks:
+      Stop:
+        0:
+          note: 'keep user-only remainder'
+          hooks:
+            0:
+              type: 'command'
+              command: 'printf user-uninstall'
+              timeout: 11
+            1:
+              type: 'command'
+              command: "printf 'hooks/stop-reminder.sh'"
+            2:
+              type: 'command'
+              command: 'bash "$CLAUDE_PROJECT_DIR"/hooks/stop-reminder.sh; printf user-tail'
+      SessionStart:
+        0:
+          matcher: 'resume'
+          note:
+            owner: 'plugin and user'
+          hooks:
+            0:
+              type: 'command'
+              command: 'printf "$CLAUDE_PLUGIN_ROOT"'
+              timeout: 13
+            1: <Circular>
+      OtherEvent:
+        0:
+          note: 'untouched'
+          hooks:
+            0: <Circular>
+  actual:
+    permissions:
+      allow:
+        0: 'Bash(npm test)'
+    hooks:
+      SessionStart:
+        0:
+          matcher: 'resume'
+          note:
+            owner: 'plugin and user'
+          hooks:
+            0:
+              type: 'command'
+              command: 'bash "$CLAUDE_PROJECT_DIR"/hooks/session-context.sh'
+            1:
+              type: 'command'
+              command: 'printf "$CLAUDE_PLUGIN_ROOT"'
+              timeout: 13
+            2:
+              type: 'command'
+              command: 'printf user-uninstall'
+              timeout: 11
+      OtherEvent:
+        0:
+          note: 'untouched'
+          hooks:
+            0:
+              type: 'command'
+              command: 'printf "$CLAUDE_PLUGIN_ROOT"'
+              timeout: 13
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/adapter-quoting.test.js:271:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 180.9485

@@ -1,0 +1,124 @@
+TAP version 13
+# Subtest: claude-code adapter compiles hooks.yaml to safely-sourceable env
+ok 1 - claude-code adapter compiles hooks.yaml to safely-sourceable env
+  ---
+  duration_ms: 156.837334
+  type: 'test'
+  ...
+# Subtest: sourcing .compiled.env has no side effects and preserves deny patterns
+ok 2 - sourcing .compiled.env has no side effects and preserves deny patterns
+  ---
+  duration_ms: 172.575375
+  type: 'test'
+  ...
+# Subtest: pre-tool-gate denies blocked commands and allows normal ones
+ok 3 - pre-tool-gate denies blocked commands and allows normal ones
+  ---
+  duration_ms: 307.787791
+  type: 'test'
+  ...
+# Subtest: pre-tool-gate fails closed on unparseable non-empty input (r2 F4)
+ok 4 - pre-tool-gate fails closed on unparseable non-empty input (r2 F4)
+  ---
+  duration_ms: 217.6025
+  type: 'test'
+  ...
+# Subtest: .mcp.json carries pinned versions, never @latest (r2 F-001/zcode F1)
+ok 5 - .mcp.json carries pinned versions, never @latest (r2 F-001/zcode F1)
+  ---
+  duration_ms: 0.809458
+  type: 'test'
+  ...
+# Subtest: pre-tool-gate denies direct wiki writes (kb-write-protection)
+ok 6 - pre-tool-gate denies direct wiki writes (kb-write-protection)
+  ---
+  duration_ms: 225.983958
+  type: 'test'
+  ...
+# Subtest: compiled settings.json PreToolUse matcher covers every deny policy
+ok 7 - compiled settings.json PreToolUse matcher covers every deny policy
+  ---
+  duration_ms: 149.891
+  type: 'test'
+  ...
+# Subtest: adapter preserves user hook entries it does not own
+ok 8 - adapter preserves user hook entries it does not own
+  ---
+  duration_ms: 160.179916
+  type: 'test'
+  ...
+# Subtest: mixed hook installation preserves each user and plugin handler with its group metadata
+ok 9 - mixed hook installation preserves each user and plugin handler with its group metadata
+  ---
+  duration_ms: 335.222334
+  type: 'test'
+  ...
+# Subtest: hook path text and user command suffixes never grant adapter ownership
+ok 10 - hook path text and user command suffixes never grant adapter ownership
+  ---
+  duration_ms: 164.119541
+  type: 'test'
+  ...
+# Subtest: mixed hook uninstall removes only owned handlers and preserves plugin plus user metadata
+ok 11 - mixed hook uninstall removes only owned handlers and preserves plugin plus user metadata
+  ---
+  duration_ms: 226.184959
+  type: 'test'
+  ...
+# Subtest: target bootstrap repeats and uninstall preserve mixed hooks without regenerating legacy registrations
+ok 12 - target bootstrap repeats and uninstall preserve mixed hooks without regenerating legacy registrations
+  ---
+  duration_ms: 781.810083
+  type: 'test'
+  ...
+# Subtest: distinct non-command handlers survive mixed install repeat and uninstall without command conflicts
+ok 13 - distinct non-command handlers survive mixed install repeat and uninstall without command conflicts
+  ---
+  duration_ms: 410.944417
+  type: 'test'
+  ...
+# Subtest: H02: SessionStart startup/resume and Stop — native settings layer and script layer agree; repeats in mixed order stay advisory and byte-identical
+ok 14 - H02: SessionStart startup/resume and Stop — native settings layer and script layer agree; repeats in mixed order stay advisory and byte-identical
+  ---
+  duration_ms: 481.119416
+  type: 'test'
+  ...
+# Subtest: E06: compact and sub-session starts are not project-assembled — the adapter refuses them in YAML, the composed settings stay silent, and the real Ponytail plugin snapshot owns those surfaces
+ok 15 - E06: compact and sub-session starts are not project-assembled — the adapter refuses them in YAML, the composed settings stay silent, and the real Ponytail plugin snapshot owns those surfaces
+  ---
+  duration_ms: 386.374042
+  type: 'test'
+  ...
+# Subtest: E05: three-subject coexistence on real plugin bytes — plugin and user entries survive composition verbatim, one managed entry per fixed event, idempotent repeat
+ok 16 - E05: three-subject coexistence on real plugin bytes — plugin and user entries survive composition verbatim, one managed entry per fixed event, idempotent repeat
+  ---
+  duration_ms: 457.197958
+  type: 'test'
+  ...
+# Subtest: E05/E06: cross-session and cross-role crosstalk — hook output is role-independent, a switched shared mode never moves the gates, and the verbatim knownFacts reuse still holds after the I02 rework
+ok 17 - E05/E06: cross-session and cross-role crosstalk — hook output is role-independent, a switched shared mode never moves the gates, and the verbatim knownFacts reuse still holds after the I02 rework
+  ---
+  duration_ms: 692.669125
+  type: 'test'
+  ...
+# Subtest: E05: failure, silence and timeout never fabricate a method receipt — and the required gates still actually block afterwards
+ok 18 - E05: failure, silence and timeout never fabricate a method receipt — and the required gates still actually block afterwards
+  ---
+  duration_ms: 694.364042
+  type: 'test'
+  ...
+# Subtest: E06: user start/stop of the project assembly — uninstall keeps plugin and user subjects, re-init restores the managed block byte-identically
+ok 19 - E06: user start/stop of the project assembly — uninstall keeps plugin and user subjects, re-init restores the managed block byte-identically
+  ---
+  duration_ms: 591.991167
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3374.033709

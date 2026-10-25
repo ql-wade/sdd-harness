@@ -1,0 +1,87 @@
+TAP version 13
+# Subtest: hook path text and user command suffixes never grant adapter ownership
+not ok 1 - hook path text and user command suffixes never grant adapter ownership
+  ---
+  duration_ms: 171.987333
+  type: 'test'
+  location: '<worktree>/test/adapter-quoting.test.js:231:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + undefined
+    - {
+    -   hooks: [
+    -     {
+    -       command: "printf 'hooks/stop-reminder.sh'",
+    -       type: 'command'
+    -     },
+    -     {
+    -       command: 'bash "$CLAUDE_PROJECT_DIR"/hooks/stop-reminder.sh; printf user-tail',
+    -       type: 'command'
+    -     },
+    -     {
+    -       command: 'hooks/stop-reminder.sh user-argument',
+    -       type: 'command'
+    -     },
+    -     {
+    -       command: 'hooks/stop-reminder.sh.backup',
+    -       type: 'command'
+    -     },
+    -     {
+    -       command: '/other-project/hooks/stop-reminder.sh',
+    -       type: 'command'
+    -     },
+    -     {
+    -       command: 'hooks/stop-reminder.sh',
+    -       prompt: 'user-owned non-command metadata',
+    -       type: 'prompt'
+    -     }
+    -   ],
+    -   matcher: 'user-match',
+    -   note: 'ownership is exact'
+    - }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    matcher: 'user-match'
+    note: 'ownership is exact'
+    hooks:
+      0:
+        type: 'command'
+        command: "printf 'hooks/stop-reminder.sh'"
+      1:
+        type: 'command'
+        command: 'bash "$CLAUDE_PROJECT_DIR"/hooks/stop-reminder.sh; printf user-tail'
+      2:
+        type: 'command'
+        command: 'hooks/stop-reminder.sh user-argument'
+      3:
+        type: 'command'
+        command: 'hooks/stop-reminder.sh.backup'
+      4:
+        type: 'command'
+        command: '/other-project/hooks/stop-reminder.sh'
+      5:
+        type: 'prompt'
+        command: 'hooks/stop-reminder.sh'
+        prompt: 'user-owned non-command metadata'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/adapter-quoting.test.js:249:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 231.398625

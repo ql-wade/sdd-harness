@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: mixed hook installation preserves each user and plugin handler with its group metadata
+not ok 1 - mixed hook installation preserves each user and plugin handler with its group metadata
+  ---
+  duration_ms: 195.683791
+  type: 'test'
+  location: '<worktree>/test/adapter-quoting.test.js:194:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+
+    + undefined
+    - {
+    -   hooks: [
+    -     {
+    -       command: 'printf user-Stop',
+    -       timeout: 19,
+    -       type: 'command'
+    -     },
+    -     {
+    -       command: 'printf "$CLAUDE_PLUGIN_ROOT"',
+    -       timeout: 17,
+    -       type: 'command'
+    -     }
+    -   ],
+    -   matcher: 'stop-custom',
+    -   note: {
+    -     owner: 'user metadata'
+    -   }
+    - }
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    matcher: 'stop-custom'
+    note:
+      owner: 'user metadata'
+    hooks:
+      0:
+        type: 'command'
+        command: 'printf user-Stop'
+        timeout: 19
+      1:
+        type: 'command'
+        command: 'printf "$CLAUDE_PLUGIN_ROOT"'
+        timeout: 17
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<worktree>/test/adapter-quoting.test.js:220:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 257.035916

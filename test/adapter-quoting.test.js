@@ -26,8 +26,8 @@ function makeTargetRoot(t) {
 }
 
 // 真 adapter + 真 hooks.yaml（源仓库回退），唯一变量是隔离的 TARGET_ROOT。
-function runAdapter(targetRoot) {
-  return spawnSync('bash', [adapterPath], {
+function runAdapter(targetRoot, args = []) {
+  return spawnSync('bash', [adapterPath, ...args], {
     cwd: repoRoot,
     encoding: 'utf8',
     env: { ...process.env, SDD_TARGET_ROOT: targetRoot },
@@ -190,3 +190,156 @@ test('adapter preserves user hook entries it does not own', { skip: !hasPython3 
   assert.ok(cmds.includes(sentinel), 'user hook entry was clobbered by adapter');
 });
 
+
+test('mixed hook installation preserves each user and plugin handler with its group metadata', (t) => {
+  assert.ok(hasPython3, 'Python is required; a missing interpreter is not behavior evidence');
+  const targetRoot = makeTargetRoot(t);
+  const settingsPath = path.join(targetRoot, '.claude/settings.json');
+  const plugin = { type: 'command', command: 'printf "$CLAUDE_PLUGIN_ROOT"', timeout: 17 };
+  const specs = [
+    ['Stop', 'stop-reminder.sh', 'stop-custom'],
+    ['SessionStart', 'session-context.sh', 'startup'],
+    ['PreToolUse', 'pre-tool-gate.sh', 'WebFetch'],
+  ];
+  const initial = { permissions: { allow: ['Bash(npm test)'] }, hooks: { OtherEvent: [{ note: 'other event', hooks: [plugin] }] } };
+  for (const [event, script, matcher] of specs) {
+    initial.hooks[event] = [{ matcher, note: { owner: 'user metadata' }, hooks: [
+      { type: 'command', command: `"$CLAUDE_PROJECT_DIR"/hooks/${script}` },
+      { type: 'command', command: `printf user-${event}`, timeout: 19 }, plugin,
+    ] }];
+  }
+  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+  fs.writeFileSync(settingsPath, JSON.stringify(initial));
+  const installed = runAdapter(targetRoot);
+  assert.equal(installed.status, 0, installed.stderr || installed.stdout);
+  const after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+  assert.deepEqual(after.permissions, initial.permissions);
+  assert.deepEqual(after.hooks.OtherEvent, initial.hooks.OtherEvent);
+  for (const [event, script] of specs) {
+    const preserved = after.hooks[event].find((entry) => entry.note);
+    assert.deepEqual(preserved, { ...initial.hooks[event][0], hooks: initial.hooks[event][0].hooks.slice(1) });
+    const current = after.hooks[event].filter((entry) => entry.hooks?.some((hook) => hook.command === `bash "$CLAUDE_PROJECT_DIR"/hooks/${script}`));
+    assert.equal(current.length, 1);
+    if (event === 'SessionStart') assert.equal(current[0].matcher, 'startup|resume');
+    if (event === 'PreToolUse') assert.ok(current[0].matcher.split('|').includes('Bash'));
+  }
+  const bytes = fs.readFileSync(settingsPath);
+  assert.equal(runAdapter(targetRoot).status, 0);
+  assert.deepEqual(fs.readFileSync(settingsPath), bytes, 'repeat composition must not duplicate or reorder preserved handlers');
+});
+
+test('hook path text and user command suffixes never grant adapter ownership', (t) => {
+  assert.ok(hasPython3);
+  const targetRoot = makeTargetRoot(t);
+  const settingsPath = path.join(targetRoot, '.claude/settings.json');
+  const users = [
+    { type: 'command', command: "printf 'hooks/stop-reminder.sh'" },
+    { type: 'command', command: 'bash "$CLAUDE_PROJECT_DIR"/hooks/stop-reminder.sh; printf user-tail' },
+    { type: 'command', command: 'hooks/stop-reminder.sh user-argument' },
+    { type: 'command', command: 'hooks/stop-reminder.sh.backup' },
+    { type: 'command', command: '/other-project/hooks/stop-reminder.sh' },
+    { type: 'prompt', command: 'hooks/stop-reminder.sh', prompt: 'user-owned non-command metadata' },
+  ];
+  const initial = { hooks: { Stop: [{ matcher: 'user-match', note: 'ownership is exact', hooks: users }] } };
+  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+  fs.writeFileSync(settingsPath, JSON.stringify(initial));
+  const run = runAdapter(targetRoot);
+  assert.equal(run.status, 0, run.stderr || run.stdout);
+  const after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+  assert.deepEqual(after.hooks.Stop.find((entry) => entry.note), initial.hooks.Stop[0]);
+});
+
+test('mixed hook uninstall removes only owned handlers and preserves plugin plus user metadata', (t) => {
+  assert.ok(hasPython3);
+  const targetRoot = makeTargetRoot(t);
+  const settingsPath = path.join(targetRoot, '.claude/settings.json');
+  const user = { type: 'command', command: 'printf user-uninstall', timeout: 11 };
+  const plugin = { type: 'command', command: 'printf "$CLAUDE_PLUGIN_ROOT"', timeout: 13 };
+  const literal = { type: 'command', command: "printf 'hooks/stop-reminder.sh'" };
+  const appended = { type: 'command', command: 'bash "$CLAUDE_PROJECT_DIR"/hooks/stop-reminder.sh; printf user-tail' };
+  const initial = { permissions: { allow: ['Bash(npm test)'] }, hooks: {
+    Stop: [{ note: 'keep user-only remainder', hooks: [{ type: 'command', command: 'hooks/stop-reminder.sh' }, user, literal, appended] }],
+    SessionStart: [{ matcher: 'resume', note: { owner: 'plugin and user' }, hooks: [{ type: 'command', command: 'bash "$CLAUDE_PROJECT_DIR"/hooks/session-context.sh' }, plugin, user] }],
+    PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'hooks/pre-tool-gate.sh' }] }],
+    OtherEvent: [{ note: 'untouched', hooks: [plugin] }],
+  } };
+  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+  fs.writeFileSync(settingsPath, JSON.stringify(initial));
+  const removed = runAdapter(targetRoot, ['--uninstall']);
+  assert.equal(removed.status, 0, removed.stderr || removed.stdout);
+  const after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+  assert.deepEqual(after, { ...initial, hooks: {
+    Stop: [{ ...initial.hooks.Stop[0], hooks: [user, literal, appended] }],
+    SessionStart: [{ ...initial.hooks.SessionStart[0], hooks: [plugin, user] }],
+    OtherEvent: initial.hooks.OtherEvent,
+  } });
+  const bytes = fs.readFileSync(settingsPath);
+  assert.equal(runAdapter(targetRoot, ['--uninstall']).status, 0);
+  assert.deepEqual(fs.readFileSync(settingsPath), bytes);
+});
+
+test('target bootstrap repeats and uninstall preserve mixed hooks without regenerating legacy registrations', (t) => {
+  assert.ok(hasPython3);
+  const targetRoot = makeTargetRoot(t);
+  const write = (relative, value) => {
+    const file = path.join(targetRoot, relative);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, typeof value === 'string' ? value : JSON.stringify(value));
+  };
+  // Use an unchanged approved method snapshot; the isolated fixture metadata
+  // selects only this source and makes no managed-profile/role qualification.
+  const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json'), 'utf8'));
+  fs.cpSync(path.join(repoRoot, '.agents/skills/tdd'), path.join(targetRoot, '.agents/skills/tdd'), { recursive: true });
+  write('openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json', {
+    schema_version: 1, method_profile: { controller: 'fixture-profile' }, snapshots: manifest.snapshots.filter((snapshot) => snapshot.name === 'tdd'),
+  });
+  write('hooks.yaml', fs.readFileSync(path.join(repoRoot, 'hooks.yaml'), 'utf8'));
+  write('package.json', { name: 'mixed-hook-fixture', version: '1.0.0' });
+  write('integrations/comet/upstream.lock.json', fs.readFileSync(path.join(repoRoot, 'integrations/comet/upstream.lock.json'), 'utf8'));
+  write('.mcp.json', { mcpServers: {} });
+  const user = { type: 'command', command: 'printf bootstrap-user', timeout: 23 };
+  const kept = { matcher: 'user-stop', note: 'bootstrap metadata', hooks: [user] };
+  write('.claude/settings.json', { hooks: { Stop: [{ ...kept, hooks: [{ type: 'command', command: 'hooks/stop-reminder.sh' }, user] }] } });
+  const bootstrap = (...args) => spawnSync('bash', [path.join(repoRoot, 'tools/bootstrap.sh'), ...args], {
+    cwd: repoRoot, encoding: 'utf8', env: { ...process.env, SDD_TARGET_ROOT: targetRoot },
+  });
+  const first = bootstrap();
+  assert.equal(first.status, 0, first.stderr || first.stdout);
+  const settingsPath = path.join(targetRoot, '.claude/settings.json');
+  const bytes = fs.readFileSync(settingsPath);
+  const settings = JSON.parse(bytes);
+  assert.deepEqual(settings.hooks.Stop.find((entry) => entry.note), kept);
+  assert.equal(settings.hooks.Stop.flatMap((entry) => entry.hooks).filter((hook) => hook.command === 'bash "$CLAUDE_PROJECT_DIR"/hooks/stop-reminder.sh').length, 1);
+  const second = bootstrap();
+  assert.equal(second.status, 0, second.stderr || second.stdout);
+  assert.deepEqual(fs.readFileSync(settingsPath), bytes);
+  const removed = bootstrap('--uninstall');
+  assert.equal(removed.status, 0, removed.stderr || removed.stdout);
+  assert.deepEqual(JSON.parse(fs.readFileSync(settingsPath, 'utf8')).hooks, { Stop: [kept] });
+});
+
+test('distinct non-command handlers survive mixed install repeat and uninstall without command conflicts', (t) => {
+  assert.ok(hasPython3);
+  const targetRoot = makeTargetRoot(t);
+  const settingsPath = path.join(targetRoot, '.claude/settings.json');
+  const prompts = [
+    { type: 'prompt', prompt: 'First local configuration text; never executed', timeout: 31, metadata: { id: 'first' } },
+    { type: 'prompt', prompt: 'Different local configuration text; never executed', timeout: 47, metadata: { id: 'second' } },
+  ];
+  const kept = { matcher: 'user-stop', note: { owner: 'prompt metadata' }, hooks: prompts };
+  fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+  fs.writeFileSync(settingsPath, JSON.stringify({ hooks: { Stop: [{ ...kept, hooks: [
+    { type: 'command', command: 'hooks/stop-reminder.sh' }, ...prompts,
+  ] }] } }));
+  const installed = runAdapter(targetRoot);
+  assert.equal(installed.status, 0, installed.stderr || installed.stdout);
+  const after = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+  assert.deepEqual(after.hooks.Stop.find((entry) => entry.note), kept);
+  assert.equal(after.hooks.Stop.flatMap((entry) => entry.hooks).filter((hook) => hook.type === 'command').length, 1);
+  const bytes = fs.readFileSync(settingsPath);
+  assert.equal(runAdapter(targetRoot).status, 0);
+  assert.deepEqual(fs.readFileSync(settingsPath), bytes);
+  const removed = runAdapter(targetRoot, ['--uninstall']);
+  assert.equal(removed.status, 0, removed.stderr || removed.stdout);
+  assert.deepEqual(JSON.parse(fs.readFileSync(settingsPath, 'utf8')).hooks, { Stop: [kept] });
+});
