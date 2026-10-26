@@ -11,9 +11,15 @@
     "upstream_lock": "integrations/comet/upstream.lock.json",
     "upstream_version": "0.5.0",
     "upstream_commit": "aeb1a6598034e28ce46b8422d4dbd8785e607bd7",
-    "upstream_patches": [],
+    "upstream_patches": [
+      {
+        "path": "integrations/comet/patches/0005-comet-050-kt-closeout.patch",
+        "sha256": "74e6c8108967ac10b9ac31e2f4c3ba2dfa6d53930dcf2b5068fe7d9be003b18d"
+      }
+    ],
     "method_profile_manifest": "openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json",
-    "foundation_profile": "foundation/profiles/comet-managed.json"
+    "foundation_profile": "foundation/profiles/comet-managed.json",
+    "repin_note": "P1_4 supply re-lock (controller-granted exception, revision 2026-10-26-comet-050-adoption-v1): upstream.lock.json patches moved from [] to [0005 Kt closeout]. The patch touches only domains/comet-classic/classic-resolver.ts (read-side predicate) and does not affect any packaged method asset; the basis is re-pinned to the live lock identity so the packaging-vs-supply drift guard in test/comet-method-binding.test.js stays exact (no weakening)."
   },
   "digest_basis": "sha256 over the sorted \"sha256  relative-path\" lines of every packaged file; relative-path keys are prefixed with the skill name, identical to the method-profile-manifest snapshot inventory basis",
   "naming_rule": {

@@ -1,0 +1,686 @@
+{
+  "schemaVersion": 1,
+  "probe": "1_4-compiler-compile",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "recordedAt": "2026-10-26T15:43:35.028Z",
+  "node": "v24.15.0",
+  "build": {
+    "version": "0.5.0",
+    "commit": "aeb1a6598034e28ce46b8422d4dbd8785e607bd7",
+    "fingerprint": "de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a",
+    "patches": [
+      "integrations/comet/patches/0005-comet-050-kt-closeout.patch"
+    ]
+  },
+  "compiler": "prepareWorkflowApplicationPlan + compileWorkflowApplication (official, imported from the pinned built dist)",
+  "sourceUnderTest": {
+    "composition": "integrations/comet/application/composition.json",
+    "bindings": "integrations/comet/application/bindings.mjs",
+    "skills": "integrations/comet/application/skills (P1_6 packaged method skills)"
+  },
+  "attempts": [
+    {
+      "id": "a",
+      "description": "as-declared: the P2_4 composition verbatim; modules.bindings.mjs is the verbatim repository file",
+      "stages": {
+        "prepare": {
+          "status": "FAIL",
+          "error": "INVALID_WORKFLOW: INVALID_WORKFLOW: 应用模块依赖缺失或越过包目录：bindings.mjs -> ../../../lib/delivery/gate.js；请修正适配契约或恢复已固定的依赖后继续"
+        }
+      },
+      "outcome": "REFUSED_AT_PREPARE"
+    },
+    {
+      "id": "b",
+      "description": "bundled-gate + deconflicted: hostContract import rebasing applied AND one-skill-many-schemas dual uses split onto distinct synthetic ids",
+      "stages": {
+        "prepare": {
+          "status": "FAIL",
+          "error": "INVALID_WORKFLOW: INVALID_WORKFLOW: Skill 缺少可路由且具备所需能力的执行端口：comet-classic-full/classic.extension.architecture-consensus；请修正适配契约或恢复已固定的依赖后继续"
+        }
+      },
+      "deviations": [
+        "full.open: unreplaced in the declared composition (ref comet-open); the compile shape requires a per-step replacement id comet-open-full-open (the domain ref comet-open is shared across schema-different steps and can never hash-match once)",
+        "full.design.handoff: declared skill grill-me is one id serving multiple steps/schemas; per-step id grill-me-full-design-handoff used instead",
+        "full.design.document: declared skill grill-me is one id serving multiple steps/schemas; per-step id grill-me-full-design-document used instead",
+        "full.build.configure: declared skill ponytail is one id serving multiple steps/schemas; per-step id ponytail-full-build-configure used instead",
+        "full.build.plan: declared skill claude-parallel-tdd-planner is one id serving multiple steps/schemas; per-step id claude-parallel-tdd-planner-full-build-plan used instead",
+        "full.build.execute: declared skill tdd is one id serving multiple steps/schemas; per-step id tdd-full-build-execute used instead",
+        "full.verify.run: unreplaced in the declared composition (ref comet-verify); the compile shape requires a per-step replacement id comet-verify-full-verify-run (the domain ref comet-verify is shared across schema-different steps and can never hash-match once)",
+        "full.archive.prepare: unreplaced in the declared composition (ref comet-archive); the compile shape requires a per-step replacement id comet-archive-full-archive-prepare (the domain ref comet-archive is shared across schema-different steps and can never hash-match once)",
+        "full.archive.deliver: unreplaced in the declared composition (ref comet-archive); the compile shape requires a per-step replacement id comet-archive-full-archive-deliver (the domain ref comet-archive is shared across schema-different steps and can never hash-match once)"
+      ],
+      "outcome": "REFUSED_AT_PREPARE"
+    },
+    {
+      "id": "c",
+      "description": "DIAGNOSTIC ONLY: bundled-gate + deconflicted + createSkillExecutor host stub (authorize:false, never executes)",
+      "stages": {
+        "prepare": {
+          "status": "PASS",
+          "compositionHash": "c2749a75eca37befe6bc16960540d65888cd37a4fc71b23d3665e030dc2d0bea"
+        },
+        "compile": {
+          "status": "PASS",
+          "file": "../../../../var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/p14-compile-PT3Q9m/pkg-c/application.json",
+          "compositionHash": "c2749a75eca37befe6bc16960540d65888cd37a4fc71b23d3665e030dc2d0bea",
+          "contentHash": "674781488d25f85b5cc7d0747c74a0be2e92506400463ab12c0d7535aed877f6",
+          "workflowHashes": {
+            "comet-classic-full@1": "98234a22af3057d6c264510e7c98a7da2650693c757f1763849e0ceed0c64a81"
+          }
+        }
+      },
+      "deviations": [
+        "full.open: unreplaced in the declared composition (ref comet-open); the compile shape requires a per-step replacement id comet-open-full-open (the domain ref comet-open is shared across schema-different steps and can never hash-match once)",
+        "full.design.handoff: declared skill grill-me is one id serving multiple steps/schemas; per-step id grill-me-full-design-handoff used instead",
+        "full.design.document: declared skill grill-me is one id serving multiple steps/schemas; per-step id grill-me-full-design-document used instead",
+        "full.build.configure: declared skill ponytail is one id serving multiple steps/schemas; per-step id ponytail-full-build-configure used instead",
+        "full.build.plan: declared skill claude-parallel-tdd-planner is one id serving multiple steps/schemas; per-step id claude-parallel-tdd-planner-full-build-plan used instead",
+        "full.build.execute: declared skill tdd is one id serving multiple steps/schemas; per-step id tdd-full-build-execute used instead",
+        "full.verify.run: unreplaced in the declared composition (ref comet-verify); the compile shape requires a per-step replacement id comet-verify-full-verify-run (the domain ref comet-verify is shared across schema-different steps and can never hash-match once)",
+        "full.archive.prepare: unreplaced in the declared composition (ref comet-archive); the compile shape requires a per-step replacement id comet-archive-full-archive-prepare (the domain ref comet-archive is shared across schema-different steps and can never hash-match once)",
+        "full.archive.deliver: unreplaced in the declared composition (ref comet-archive); the compile shape requires a per-step replacement id comet-archive-full-archive-deliver (the domain ref comet-archive is shared across schema-different steps and can never hash-match once)"
+      ],
+      "outcome": "COMPILED",
+      "packageRoot": "/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/p14-compile-PT3Q9m/pkg-c",
+      "packageFiles": [
+        "SKILL.md",
+        "application.json",
+        "application.mjs",
+        "bindings.mjs",
+        "installation.json",
+        "rules",
+        "scripts",
+        "sdd",
+        "skills",
+        "workflow.json"
+      ]
+    }
+  ],
+  "conclusions": [
+    "as-declared compile: REFUSED_AT_PREPARE (INVALID_WORKFLOW: INVALID_WORKFLOW: 应用模块依赖缺失或越过包目录：bindings.mjs -> ../../../lib/delivery/gate.js；请修正适配契约或恢复已固定的依赖后继续 )",
+    "bundled+deconflicted compile: REFUSED_AT_PREPARE (INVALID_WORKFLOW: INVALID_WORKFLOW: Skill 缺少可路由且具备所需能力的执行端口：comet-classic-full/classic.extension.architecture-consensus；请修正适配契约或恢复已固定的依赖后继续 )",
+    "diagnostic host variant: COMPILED (PASS PASS)",
+    "with (1) import rebasing, (2) per-step skill ids where one composition skill id would have to hash-match two different original output schemas, and (3) a host executor from createBindings, the official compiler ACCEPTS the composition — the delivered bindings.mjs lacks (1) and (3), and the declared composition lacks (2); variant c is a diagnostic, not a deliverable"
+  ],
+  "baseInvokeSkillSteps": [
+    {
+      "stepId": "full.open",
+      "ref": "comet-open",
+      "outputSchema": null
+    },
+    {
+      "stepId": "full.design.handoff",
+      "ref": "comet-design",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "proposal"
+        ],
+        "properties": {
+          "proposal": {
+            "type": "string",
+            "minLength": 1
+          },
+          "handoffContext": {
+            "type": "string",
+            "minLength": 1
+          },
+          "handoffHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    {
+      "stepId": "full.design.document",
+      "ref": "comet-design",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "designDoc"
+        ],
+        "properties": {
+          "designDoc": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    {
+      "stepId": "full.build.configure",
+      "ref": "comet-build",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "buildMode",
+          "tddMode",
+          "reviewMode",
+          "isolation"
+        ],
+        "properties": {
+          "buildMode": {
+            "enum": [
+              "subagent-driven-development",
+              "executing-plans",
+              "direct",
+              "autonomous"
+            ]
+          },
+          "tddMode": {
+            "enum": [
+              "tdd",
+              "direct"
+            ]
+          },
+          "reviewMode": {
+            "enum": [
+              "off",
+              "standard",
+              "thorough"
+            ]
+          },
+          "isolation": {
+            "enum": [
+              "current",
+              "branch",
+              "worktree"
+            ]
+          },
+          "boundBranch": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subagentDispatch": {
+            "enum": [
+              "confirmed",
+              null
+            ]
+          },
+          "directOverride": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "stepId": "full.build.plan",
+      "ref": "comet-build",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "plan"
+        ],
+        "properties": {
+          "plan": {
+            "type": "string",
+            "minLength": 1
+          },
+          "buildPause": {
+            "enum": [
+              "plan-ready"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "stepId": "full.build.execute",
+      "ref": "comet-build",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "event"
+        ],
+        "properties": {
+          "event": {
+            "enum": [
+              "build-complete"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "stepId": "full.verify.run",
+      "ref": "comet-verify",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "event"
+        ],
+        "properties": {
+          "event": {
+            "enum": [
+              "verification-ready",
+              "verify-fail"
+            ]
+          },
+          "verificationReport": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "stepId": "full.archive.prepare",
+      "ref": "comet-archive",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "targetBranch",
+          "summary"
+        ],
+        "properties": {
+          "targetBranch": {
+            "type": "string",
+            "minLength": 1
+          },
+          "remote": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prBaseBranch": {
+            "type": "string",
+            "minLength": 1
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "stepId": "full.archive.deliver",
+      "ref": "comet-archive",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "action",
+          "targetBranch",
+          "commit"
+        ],
+        "properties": {
+          "action": {
+            "enum": [
+              "local",
+              "push",
+              "pr"
+            ]
+          },
+          "targetBranch": {
+            "type": "string",
+            "minLength": 1
+          },
+          "commit": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$"
+          },
+          "remote": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prUrl": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  ],
+  "upstreamAssetEscapeFinding": "pristine assets/skills/<name> SKILL.md links to ../comet-classic/reference/* escape the dependency root and are refused by inspectApplicationSkill (INVALID_WORKFLOW: Skill 引用越过依赖目录) — upstream domain skill assets are NOT embeddable as package skills",
+  "schemaConflicts": [
+    {
+      "skill": "grill-me",
+      "existingUse": "replacement for full.design.handoff (original ref comet-design); outputSchema cloned from the built factory",
+      "additionalUse": "replacement for full.design.document (original ref comet-design); outputSchema cloned from the built factory",
+      "outputSchemasEqual": false,
+      "additionalOutputSchema": {
+        "type": "object",
+        "required": [
+          "designDoc"
+        ],
+        "properties": {
+          "designDoc": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    {
+      "skill": "comet-archive",
+      "existingUse": "domain-owned step full.archive.prepare kept on the upstream ref comet-archive; SYNTHETIC self-contained skill (pristine assets/skills assets carry links escaping the dependency root and are refused by inspectApplicationSkill — see upstreamAssetEscapeFinding)",
+      "additionalUse": "domain-owned step full.archive.deliver kept on the upstream ref comet-archive; SYNTHETIC self-contained skill (pristine assets/skills assets carry links escaping the dependency root and are refused by inspectApplicationSkill — see upstreamAssetEscapeFinding)",
+      "outputSchemasEqual": false,
+      "additionalOutputSchema": {
+        "type": "object",
+        "required": [
+          "action",
+          "targetBranch",
+          "commit"
+        ],
+        "properties": {
+          "action": {
+            "enum": [
+              "local",
+              "push",
+              "pr"
+            ]
+          },
+          "targetBranch": {
+            "type": "string",
+            "minLength": 1
+          },
+          "commit": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$"
+          },
+          "remote": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prUrl": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "skill": "grill-me",
+      "existingUse": "replacement for full.design.handoff (original ref comet-design); outputSchema cloned from the built factory",
+      "additionalUse": "extension skill for classic.extension.requirements-open @ full.open.evidence — extension steps carry NO preset outputSchema, so the single adapter schema of this skill id is what the extension step adopts",
+      "outputSchemasEqual": false,
+      "additionalOutputSchema": {
+        "type": "object",
+        "required": [
+          "verdict",
+          "sourceHash",
+          "artifactHashes",
+          "gateEvidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "verdict": {
+            "enum": [
+              "pass",
+              "repair",
+              "revise-requirements"
+            ]
+          },
+          "sourceHash": {
+            "type": "string"
+          },
+          "artifactHashes": {
+            "type": "object"
+          },
+          "gateEvidence": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "skill": "claude-parallel-tdd-planner",
+      "existingUse": "replacement for full.build.plan (original ref comet-build); outputSchema cloned from the built factory",
+      "additionalUse": "extension skill for classic.extension.build-plan-unique @ full.build.plan.evidence — extension steps carry NO preset outputSchema, so the single adapter schema of this skill id is what the extension step adopts",
+      "outputSchemasEqual": false,
+      "additionalOutputSchema": {
+        "type": "object",
+        "required": [
+          "verdict",
+          "sourceHash",
+          "artifactHashes",
+          "gateEvidence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "verdict": {
+            "enum": [
+              "pass",
+              "repair",
+              "revise-requirements"
+            ]
+          },
+          "sourceHash": {
+            "type": "string"
+          },
+          "artifactHashes": {
+            "type": "object"
+          },
+          "gateEvidence": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  ],
+  "supplyGaps": [
+    {
+      "skill": "ponytail",
+      "root": "integrations/comet/application/skills/ponytail",
+      "error": "INVALID_WORKFLOW: INVALID_WORKFLOW: Skill 引用资源缺失：README.md -> benchmarks/results/2026-10-07-agentic.md；请修正适配契约或恢复已固定的依赖后继续"
+    },
+    {
+      "skill": "ponytail-full-build-configure",
+      "root": "integrations/comet/application/skills/ponytail",
+      "error": "INVALID_WORKFLOW: INVALID_WORKFLOW: Skill 引用资源缺失：README.md -> benchmarks/results/2026-10-07-agentic.md；请修正适配契约或恢复已固定的依赖后继续"
+    },
+    {
+      "skill": "ponytail-full-build-configure",
+      "root": "integrations/comet/application/skills/ponytail",
+      "error": "INVALID_WORKFLOW: INVALID_WORKFLOW: Skill 引用资源缺失：README.md -> benchmarks/results/2026-10-07-agentic.md；请修正适配契约或恢复已固定的依赖后继续"
+    }
+  ],
+  "asDeclaredSkills": [
+    {
+      "id": "comet-open",
+      "root": "../../../../private/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/p14-skills-UjJh39/comet-open",
+      "contentHash": "e29585367ed4ce10fd732f0f8415f0954d7c0628614b290c2152859ca9364ce1",
+      "note": "domain-owned step full.open kept on the upstream ref comet-open; SYNTHETIC self-contained skill (pristine assets/skills assets carry links escaping the dependency root and are refused by inspectApplicationSkill — see upstreamAssetEscapeFinding)"
+    },
+    {
+      "id": "grill-me",
+      "root": "integrations/comet/application/skills/grill-me",
+      "contentHash": "cf9d49f076e2e95f3ffda19c6b128758baced14805854e6f0d9b1196b463be40",
+      "note": "replacement for full.design.handoff (original ref comet-design); outputSchema cloned from the built factory"
+    },
+    {
+      "id": "ponytail",
+      "root": "../../../../private/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/p14-skills-UjJh39/ponytail-stand-in",
+      "contentHash": "7b5d088d2fc4875822db24d89612dab088f550518b7c31a83a1cd9248d287f41",
+      "note": "replacement for full.build.configure (original ref comet-build); outputSchema cloned from the built factory [STAND-IN: declared skill not embeddable]"
+    },
+    {
+      "id": "claude-parallel-tdd-planner",
+      "root": "integrations/comet/application/skills/claude-parallel-tdd-planner",
+      "contentHash": "2e101811d5699d0be05e5dd6a4121da763d6befc598e47e6c1156e2a0a5ff701",
+      "note": "replacement for full.build.plan (original ref comet-build); outputSchema cloned from the built factory"
+    },
+    {
+      "id": "tdd",
+      "root": "integrations/comet/application/skills/tdd",
+      "contentHash": "9529925179f19821d2c4c59cf156a380f18d415f731ad005b26ebb23e9d8f08d",
+      "note": "replacement for full.build.execute (original ref comet-build); outputSchema cloned from the built factory"
+    },
+    {
+      "id": "comet-verify",
+      "root": "../../../../private/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/p14-skills-UjJh39/comet-verify",
+      "contentHash": "ea7ac8c025a3216351a58e385060e2c87fe011f9e4c147860086b501f1e050e8",
+      "note": "domain-owned step full.verify.run kept on the upstream ref comet-verify; SYNTHETIC self-contained skill (pristine assets/skills assets carry links escaping the dependency root and are refused by inspectApplicationSkill — see upstreamAssetEscapeFinding)"
+    },
+    {
+      "id": "comet-archive",
+      "root": "../../../../private/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/p14-skills-UjJh39/comet-archive",
+      "contentHash": "469810eb0ac0dc0344bf88503c5dbe95b7572a0e7523d60aa7028078b805878e",
+      "note": "domain-owned step full.archive.prepare kept on the upstream ref comet-archive; SYNTHETIC self-contained skill (pristine assets/skills assets carry links escaping the dependency root and are refused by inspectApplicationSkill — see upstreamAssetEscapeFinding)"
+    },
+    {
+      "id": "multi-agent-consensus-review",
+      "root": "integrations/comet/application/skills/multi-agent-consensus-review",
+      "contentHash": "cb9ff81d5c138f927b8cbf9b9eb74fc553a5cd2762aa7ea80222cd60afe8bc6b",
+      "note": "extension skill for classic.extension.architecture-consensus @ full.design.evidence (validator sdd.delivery.gate.a@1)"
+    },
+    {
+      "id": "test-authoring",
+      "root": "integrations/comet/application/skills/test-authoring",
+      "contentHash": "29871479d1c224d6f52bcc752f926fd491ad7b57a5b320a575cf43a5cb4a4ca1",
+      "note": "extension skill for classic.extension.test-design-review @ full.design.evidence (validator sdd.delivery.gate.t@1)"
+    },
+    {
+      "id": "whitebox-verify",
+      "root": "integrations/comet/application/skills/whitebox-verify",
+      "contentHash": "59f15d6e12c00852ed9221968f747d7afa9010bea846e4121c4b0bec30dd816a",
+      "note": "extension skill for classic.extension.verify-whitebox @ full.verify.check.evidence (validator sdd.delivery.gate.v@1)"
+    },
+    {
+      "id": "openspec-lifecycle-guard",
+      "root": "integrations/comet/application/skills/openspec-lifecycle-guard",
+      "contentHash": "8b56dfb106416d22009fa184dea839d4a5a0c3bce8fbc491688132f8d9339329",
+      "note": "extension skill for classic.extension.knowledge-project-closeout @ full.verify.check.evidence (validator sdd.delivery.gate.kp@1)"
+    }
+  ],
+  "asDeclaredBindings": [
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "full.open",
+      "skillId": "comet-open",
+      "capability": "comet-open.work",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "full.design.handoff",
+      "skillId": "grill-me",
+      "capability": "grill-me.work",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "full.design.document",
+      "skillId": "grill-me",
+      "capability": "grill-me.work",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "full.build.configure",
+      "skillId": "ponytail",
+      "capability": "ponytail.work",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "full.build.plan",
+      "skillId": "claude-parallel-tdd-planner",
+      "capability": "claude-parallel-tdd-planner.work",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "full.build.execute",
+      "skillId": "tdd",
+      "capability": "tdd.work",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "full.verify.run",
+      "skillId": "comet-verify",
+      "capability": "comet-verify.work",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "full.archive.prepare",
+      "skillId": "comet-archive",
+      "capability": "comet-archive.work",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "full.archive.deliver",
+      "skillId": "comet-archive",
+      "capability": "comet-archive.work",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "classic.extension.requirements-open",
+      "skillId": "grill-me",
+      "capability": "grill-me.gate",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "classic.extension.architecture-consensus",
+      "skillId": "multi-agent-consensus-review",
+      "capability": "multi-agent-consensus-review.gate",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "classic.extension.test-design-review",
+      "skillId": "test-authoring",
+      "capability": "test-authoring.gate",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "classic.extension.build-plan-unique",
+      "skillId": "claude-parallel-tdd-planner",
+      "capability": "claude-parallel-tdd-planner.gate",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "classic.extension.verify-whitebox",
+      "skillId": "whitebox-verify",
+      "capability": "whitebox-verify.gate",
+      "usage": "action"
+    },
+    {
+      "workflowId": "comet-classic-full",
+      "stepId": "classic.extension.knowledge-project-closeout",
+      "skillId": "openspec-lifecycle-guard",
+      "capability": "openspec-lifecycle-guard.gate",
+      "usage": "action"
+    }
+  ],
+  "bundledGateModules": [
+    "sdd/contracts-delivery-action_binding_schema.mjs",
+    "sdd/contracts-delivery-baseline_ref_schema.mjs",
+    "sdd/contracts-delivery-candidate_ref_schema.mjs",
+    "sdd/contracts-delivery-evidence_envelope_schema.mjs",
+    "sdd/contracts-delivery-foundation_lock_schema.mjs",
+    "sdd/contracts-delivery-gate_receipt_schema.mjs",
+    "sdd/contracts-delivery-index.mjs",
+    "sdd/contracts-delivery-plan_bundle_schema.mjs",
+    "sdd/contracts-delivery-release_receipt_schema.mjs",
+    "sdd/contracts-delivery-schema_kernel.mjs",
+    "sdd/contracts-delivery-test_contract_schema.mjs",
+    "sdd/lib-delivery-evidence.mjs",
+    "sdd/lib-delivery-gate.mjs",
+    "sdd/lib-delivery-test_contract.mjs"
+  ],
+  "scratchWorlds": {
+    "skills": "/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/p14-skills-UjJh39",
+    "compile": "/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/p14-compile-PT3Q9m"
+  }
+}

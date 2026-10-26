@@ -315,17 +315,19 @@
       }
     },
     "P2_4": {
-      "status": "ACCEPTED_COMET_050",
+      "status": "REOPENED_R1_R6_REWORK",
       "planning_revision": "2026-10-26-comet-050-adoption-v1",
-      "accepted_at": "2026-10-26T13:35:29.892777+00:00",
-      "evidence": {
-        "composition": "base classic-full; 6 extensions (R/A,T split/P/V/Kp) verbatim-hit pristine checkpoint whitelist; 5 replacements = ALL design/build invoke_skill steps with pinned output contracts (reviewer line-verified)",
-        "bindings": "six validators delegate entirely to lib/delivery/gate.js evaluate; ids three-way consistent",
-        "patch0005": "sha256 + preimage blob-hash byte-verified vs pristine; apply diff = 2 hunks single file; truth table default-open legacy behavior",
-        "suites": "2_4 14/14 + adjacent 126/126 reviewer-rerun; RED 44/44 recorded",
-        "unverified_declared": "official compiler run (P1_3/P1_4), real-Run extension behavior (P1_5/P3_2/VERIFY), supply relock adding 0005 (later wave), Kt write path",
-        "independent_review": "APPROVE strict (2 test-fidelity observations, non-blocking)"
-      }
+      "reopened_at": "2026-10-26T16:25:16.660491+00:00",
+      "reason": "P1_4 official compiler live test: as-declared composition REFUSED (bindings import escapes package; no executors; per-step unique skill ids required incl. unreplaced domain steps; approval anchors; ponytail/upstream skills not embeddable). Diagnostic-stub compile proves fixable.",
+      "repair_scope": [
+        "R1 bundle imports (vendor gate.js into package)",
+        "R2 executors layer in createBindings",
+        "R3 per-step unique skill ids incl. managed per-step replacement of unreplaced domain steps",
+        "R4 approval anchors",
+        "R5 ponytail packaging boundary",
+        "R6 upstream assets/skills non-embedding boundary"
+      ],
+      "prior_acceptance": "evidence preserved; acceptance superseded by live compiler finding"
     },
     "P2_5": {
       "status": "ACCEPTED_COMET_050",
@@ -354,8 +356,18 @@
       }
     },
     "P1_4": {
-      "status": "PLANNED_COMET_050",
-      "planning_revision": "2026-10-26-comet-050-adoption-v1"
+      "status": "ACCEPTED_COMET_050",
+      "planning_revision": "2026-10-26-comet-050-adoption-v1",
+      "accepted_at": "2026-10-26T16:25:16.660491+00:00",
+      "evidence": {
+        "supply": "relocked patches=[0005]; rebuild fingerprint de39629a…; 0005 dual-verified source+dist; check-generated+runtime-smoke PASS; old builds preserved",
+        "compiler_live": "as-declared REFUSED (import escape) -> relocated REFUSED (no executors) -> diagnostic-stub COMPILED; R1-R6 repair list nailed with probe data; no application.json produced (honest)",
+        "init": "0.5.0 has NO superpowers exclusion switch (B8 gap, real attempt evidenced); native workflow immune; B6 mitigation verified (pinned openspec kills upgrade attempt); escape doors B4 re-verified dead",
+        "suites": "1_4 7/7 + merged 43/43 + adjacent 171/171 + 18/18; forced assertion updates verified equal-or-stronger by reviewer",
+        "annex": "toolchain-baseline built_entrypoint -> de39629a + 1_1 re-verified 8/8",
+        "errata": "report RED counts transcription (evidence file authoritative: 13/11/2)",
+        "independent_review": "APPROVE"
+      }
     },
     "P1_5": {
       "status": "PLANNED_COMET_050",
@@ -1281,9 +1293,9 @@
     "timezone": "Asia/Shanghai",
     "basis": "documents only; receiving Agent estimates from observed native host/resources and first real R-to-V, not old infrastructure waves"
   },
-  "updated_at": "2026-10-26T16:09:09.969020+00:00",
-  "last_progress_at": "2026-10-26T16:09:09.969020+00:00",
-  "current_focus": "Wave10: I02 accepted (21/39), full-suite reds 39->10. P1_4 in flight (supply relock + compiler live test). After P1_4: reseal foundation, then wave 11 (P1_5).",
+  "updated_at": "2026-10-26T16:25:16.660491+00:00",
+  "last_progress_at": "2026-10-26T16:25:16.660491+00:00",
+  "current_focus": "Wave10 done-ish: P1_4 accepted, P2_4 REOPENED for R1-R6 rework (first real conservative-invalidation cycle). Foundation reseal next, then P2_4 rework worker.",
   "historical_execution_state": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
   "lifecycle_guard": {
     "path": ".agents/skills/openspec-lifecycle-guard/SKILL.md",

@@ -423,7 +423,12 @@ test('composition, bindings, typed declarations and the 0005 patch exist with cr
   assert.equal(composition.runtimeAccepted, false, 'a source artifact must not claim runtime acceptance');
   assert.equal(composition.upstream.commit, upstreamLock.source.commit, 'composition must pin the locked upstream commit');
   assert.equal(composition.upstream.version, upstreamLock.package.version);
-  assert.equal(upstreamLock.patches.length, 0, 'the lock is patch-free at this revision; 0005 is applied by the supply wave');
+  // Supply wave landed (P1_4, controller-granted exception): the lock now
+  // carries exactly the 0005 bytes this file pins below — same strength as
+  // before, pinned to the post-supply state instead of the pre-supply one.
+  assert.deepEqual(upstreamLock.patches, [
+    { path: 'integrations/comet/patches/0005-comet-050-kt-closeout.patch', sha256: composition.knowledgeCloseout.patchSha256 },
+  ], 'the lock must carry exactly the 0005 Kt closeout patch pinned by this composition');
   const patchBytes = fs.readFileSync(patchPath);
   assert.equal(
     composition.knowledgeCloseout.patchSha256,

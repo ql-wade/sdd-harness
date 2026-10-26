@@ -128,13 +128,16 @@ const allOutput = (result) => plain(result.stdout) + plain(result.stderr);
 const CHANGE = 'probe-change';
 
 test('setup: the pinned 0.5.0 build named by the source lock is manifest-verified in this project', () => {
-  // ADR-0022: the baseline is upstream 0.5.0 with NO patch in the lock —
-  // the retired 0.4.5 six-patch stack (0001/0002/0003/0004 + tests) and its
-  // builds must never satisfy this case again; 0005 is delivered as a file
-  // (pin-verified by 2_4) but applied by the supply wave, not here.
+  // ADR-0022: the retired 0.4.5 six-patch stack (0001/0002/0003/0004 +
+  // tests) and its builds must never satisfy this case again. The supply
+  // wave (P1_4, controller-granted exception) landed 0005 into lock.patches,
+  // so the pinned baseline is now upstream 0.5.0 + exactly the 0005 Kt
+  // closeout patch (bytes pin-verified by 2_4 against composition.json).
   assert.equal(lock.package.version, '0.5.0');
   assert.equal(lock.source.commit, 'aeb1a6598034e28ce46b8422d4dbd8785e607bd7');
-  assert.equal(lock.patches.length, 0, 'the 0.5.0 lock is patch-free at this revision; 0005 enters via the supply wave');
+  assert.deepEqual(lock.patches, [
+    { path: 'integrations/comet/patches/0005-comet-050-kt-closeout.patch', sha256: '74e6c8108967ac10b9ac31e2f4c3ba2dfa6d53930dcf2b5068fe7d9be003b18d' },
+  ], 'the supply re-lock must carry exactly the 0005 Kt closeout patch');
   assert.notEqual(fingerprint, 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187', 'the 0.4.5 discovery build must not satisfy this case');
   assert.ok(prepared, 'pristine Comet source has not been prepared; run tools/comet/prepare-source.mjs first');
   assert.ok(built, 'the 0.5.0 build is not present; run tools/comet/build.mjs --archive first');

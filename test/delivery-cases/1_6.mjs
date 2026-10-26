@@ -29,10 +29,15 @@ const build = path.join(root, '.sdd/vendor/comet', lock.source.commit, 'builds',
 const retiredNamePattern = /(superpowers|sdd-|trinity)/i;
 const digest = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 
-test('M01/B09 supplier: the locked 0.5.0 build supply is present and patch-free', async () => {
+test('M01/B09 supplier: the locked 0.5.0 build supply is present with exactly the supply-wave 0005 patch', async () => {
   assert.equal(lock.package.version, '0.5.0');
   assert.equal(lock.source.commit, 'aeb1a6598034e28ce46b8422d4dbd8785e607bd7');
-  assert.deepEqual(lock.patches, []);
+  // P1_4 supply re-lock (controller-granted exception): the baseline moved
+  // from patch-free to exactly the 0005 Kt closeout patch; the retired 0.4.5
+  // six-patch stack still never satisfies this case.
+  assert.deepEqual(lock.patches, [
+    { path: 'integrations/comet/patches/0005-comet-050-kt-closeout.patch', sha256: '74e6c8108967ac10b9ac31e2f4c3ba2dfa6d53930dcf2b5068fe7d9be003b18d' },
+  ]);
   // Required case: a missing distribution is nonzero UNVERIFIED, never skip/PASS.
   await fs.access(path.join(build, 'distribution.json'));
   await fs.access(path.join(build, 'work/bin/comet.js'));
@@ -47,7 +52,8 @@ test('M02/N04 supplier: application manifest binds to the locked baseline and pa
   assert.equal(appManifest.runtime_accepted, false);
   assert.equal(appManifest.basis.upstream_version, lock.package.version);
   assert.equal(appManifest.basis.upstream_commit, lock.source.commit);
-  assert.deepEqual(appManifest.basis.upstream_patches, []);
+  assert.deepEqual(appManifest.basis.upstream_patches, lock.patches,
+    'the packaging basis must mirror the live supply lock (repinned at the P1_4 supply re-lock; 0005 touches only the resolver, not method assets)');
   const names = appManifest.skills.map((skill) => skill.name).sort();
   assert.deepEqual(names, methodManifest.snapshots.map((snapshot) => snapshot.name).sort());
   assert.deepEqual(names, Object.keys(profile.methods).sort());

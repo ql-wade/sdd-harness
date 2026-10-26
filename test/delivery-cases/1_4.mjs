@@ -1,21 +1,30 @@
-// P1_4 delivery case: mode qualification of the fixed Comet distribution
-// (patched six-patch build qualified by stack identity, manifest-verified on reuse) —
-// 1.4.a pins the Classic/Native capability matrix and the Classic admission
-// decision over the real built CLI (no automatic mode switch exists), 1.4.b
-// reproduces the four release loopholes for real against the patched build —
-// irrelevant successful commands, missing required checks, stale or hand
-// written receipts, and skip/ops escape paths reachable by ordinary
-// execution — and requires every one of them to be registered as a mandatory
-// Classic-admission block (native refusals are covered; native gaps get
-// extension acceptance, never a verdict change), and 1.4.c pins the knowledge
-// boundary: Comet's built-in project memory is a HOME-scoped cache that never
-// overrides or replaces LLMWiki/Outline/DeepWiki as the sole knowledge
-// sources. C07: every managed entrance (transition, guard preview,
-// guard --apply, next/continuation, archive request, phase-guard write hook)
-// enforces the same precondition rule; F06: workflow success never stands in
-// for the required checks; M01: the Classic binding is the pre-fixed method,
-// Superpowers is not loaded (M01 evidence: no superpowers runtime in the
-// managed path; docs/superpowers is an upstream artifact root only).
+// P1_4 delivery case, revision 2026-10-26-comet-050-adoption-v1 (ADR-0022):
+// mode qualification of the pinned, REBUILT Comet 0.5.0 distribution
+// (upstream.lock.json carries exactly one patch — the P2_4-delivered 0005 Kt
+// closeout — re-locked by the P1_4 supply wave under the controller-granted
+// exception). The case pins three things:
+//
+//   1.4.a the structured mode registration (mode-qualification.json v2) is
+//         bound to THIS build fingerprint, preserves the 0.4.5 record as
+//         history, and carries the 0.5.0 capability matrix with the
+//         mandatory blocking items B1–B8;
+//   1.4.b the official-compiler qualification: the P2_4-declared composition
+//         is REFUSED as declared (import escape), refused again after the
+//         hostContract rebasing (missing executor layer), and a clearly
+//         labeled DIAGNOSTIC variant compiles — the repair list R1–R6 is the
+//         deliverable and NO application.json may exist yet;
+//   1.4.c the managed-init and escape-hatch qualification: classic init
+//         attempts the 13-skill obra/superpowers install and the floating
+//         openspec global upgrade (no exclusion switch exists; pre-seeding
+//         does not suppress it; a compatible pinned openspec on PATH does
+//         suppress the upgrade), and COMET_SKIP_BUILD/COMET_FORCE_PHASE keep
+//         voiding/bypassing the gates on the 0005 tree — every one of these
+//         facts is asserted against the probe records AND re-witnessed live
+//         in a scratch project.
+//
+// C07: entrance gating carries over to the 0.5.0 compat face (pinned by
+// 1_3.mjs); F06: workflow success never stands in for required checks; M01:
+// the managed method supply is the packaged application skills, never init.
 // Every Comet interaction runs in scratch projects under $TMPDIR with an
 // isolated HOME and PATH stubs; live host configuration is never touched.
 import assert from 'node:assert/strict';
@@ -33,11 +42,12 @@ const lock = JSON.parse(await fs.readFile(path.join(projectRoot, 'integrations/c
 
 const fingerprint = crypto.createHash('sha256').update(JSON.stringify({
   archive: lock.source.sha256,
-  patches: lock.patches.map(({ path, sha256 }) => ({ path, sha256 })),
+  patches: lock.patches.map(({ path: p, sha256 }) => ({ path: p, sha256 })),
   toolchain: lock.toolchain,
 })).digest('hex');
 const buildDir = path.join(projectRoot, '.sdd/vendor/comet', lock.source.commit, 'builds', fingerprint);
-const entrypoint = path.join(buildDir, 'work/bin/comet.js');
+const work = path.join(buildDir, 'work');
+const entrypoint = path.join(work, 'bin/comet.js');
 
 const built = await fs.access(path.join(buildDir, 'distribution.json')).then(() => true, () => false);
 const prepared = await fs.access(path.join(projectRoot, '.sdd/vendor/comet', lock.source.commit, 'provenance.json')).then(() => true, () => false);
@@ -52,57 +62,33 @@ if (process.versions.node !== pinnedNode) {
 
 const plain = (text) => String(text ?? '').replace(/\x1b\[[0-9;]*m/g, '');
 
-// Structured mode registration is the deliverable under test. Loading it is
-// the RED boundary: without mode-qualification.json the Classic/Native
-// differences have no structured registration at all, and without the
-// mode-probes records the registration carries no per-probe evidence.
-async function loadQualification() {
-  const file = path.join(changeRoot, 'mode-qualification.json');
-  let raw;
+async function loadJson(relative) {
   try {
-    raw = await fs.readFile(file, 'utf8');
+    return JSON.parse(await fs.readFile(path.join(changeRoot, relative), 'utf8'));
   } catch (error) {
     if (error.code === 'ENOENT') {
-      const failure = new Error('mode-qualification.json is missing: the Classic/Native capability differences, the Classic admission decision, the four loophole classes and the knowledge boundary have no structured registration (task P1_4 RED)');
-      failure.code = 'MODE_QUALIFICATION_MISSING';
-      throw failure;
-    }
-    throw error;
-  }
-  return JSON.parse(raw);
-}
-
-async function loadProbeRecords(name) {
-  const file = path.join(changeRoot, 'mode-probes', name);
-  try {
-    return JSON.parse(await fs.readFile(file, 'utf8'));
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      const failure = new Error(`mode-probes/${name} is missing: a registered probe carries no command/output/exit-code evidence`);
-      failure.code = 'MODE_PROBE_EVIDENCE_MISSING';
+      const failure = new Error(`${relative} is missing: the 0.5.0 mode qualification carries no record for it (task P1_4 RED)`);
+      failure.code = 'MODE_QUALIFICATION_EVIDENCE_MISSING';
       throw failure;
     }
     throw error;
   }
 }
 
-// --- scratch world (created once; all probes are real CLI interactions)
+// --- scratch world (isolated HOME + PATH stubs; all probes are real CLI runs)
 const scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'p14-case-'));
 const fakeHome = path.join(scratch, 'home');
 const stubs = path.join(scratch, 'stubs');
 const classicProject = path.join(scratch, 'classic');
-const nativeProject = path.join(scratch, 'native');
-const stubLog = path.join(scratch, 'stub-calls.log');
 await fs.mkdir(fakeHome, { recursive: true });
 await fs.mkdir(classicProject, { recursive: true });
-await fs.mkdir(nativeProject, { recursive: true });
 await fs.mkdir(stubs, { recursive: true });
+const stubLog = path.join(scratch, 'stub-calls.log');
 const logger = '#!/bin/sh\necho "[stub] $0 $@" >> "${STUB_LOG:-/dev/null}"\nexit 0\n';
 await fs.writeFile(path.join(stubs, 'npm'), logger, { mode: 0o755 });
 await fs.writeFile(path.join(stubs, 'npx'), logger, { mode: 0o755 });
-// A faithful-enough openspec stub: `init <dir>` creates the openspec root;
-// `archive <change>` moves the change into the dated archive directory Comet
-// expects (<today>-<change>) exactly like the upstream CLI.
+// openspec stub: incompatible host by default (no --version answer); init
+// creates the root; archive moves the change into the dated archive dir.
 await fs.writeFile(path.join(stubs, 'openspec'), `#!/bin/sh
 echo "[stub] openspec $@" >> "\${STUB_LOG:-/dev/null}"
 pos1=""; pos2=""; count=0
@@ -124,270 +110,201 @@ fi
 exit 0
 `, { mode: 0o755 });
 
-// The comet CLI is itself a Node program: the test runner's child context
-// marker (NODE_TEST_CONTEXT) must never reach it, or it boots in test-child
-// protocol mode and its stdout stops being the CLI's own output.
-const childEnv = (extra = {}) => {
+const childEnv = (extra = {}, cwd = classicProject) => {
   const { NODE_TEST_CONTEXT: _stripped, ...inherited } = process.env;
   return {
     ...inherited,
     HOME: fakeHome,
     STUB_LOG: stubLog,
-    COMET_PROJECT_ROOT: classicProject,
+    COMET_PROJECT_ROOT: cwd,
     PATH: `${stubs}:${process.env.PATH ?? ''}`,
     ...extra,
   };
 };
-
-function comet(args, { env = {}, timeout = 180_000, cwd = classicProject } = {}) {
-  const result = spawnSync(nodeExecutable, [entrypoint, ...args], {
-    cwd,
-    encoding: 'utf8',
-    timeout,
-    env: childEnv(env),
-  });
+const comet = (args, { env = {}, timeout = 420_000, cwd = classicProject } = {}) => {
+  const result = spawnSync(nodeExecutable, [entrypoint, ...args], { cwd, encoding: 'utf8', timeout, env: childEnv(env, cwd) });
   let json = null;
-  try { json = JSON.parse(result.stdout ?? ''); } catch { /* non-JSON output stays raw */ }
+  try { json = JSON.parse(result.stdout ?? ''); } catch { /* raw output stays raw */ }
   return { ...result, json };
-}
-
-const gateVerdict = (result) => {
-  const issues = (result.json?.data?.issues ?? []).map((issue) => issue.message ?? '').join('\n');
-  return { exitCode: result.json?.exitCode, issues: plain(issues) };
 };
+const stubCalls = async () => (await fs.readFile(stubLog, 'utf8').catch(() => '')).split('\n').filter(Boolean);
 
-const CHANGE = 'qualify-change';
-
-test('setup: the patched pinned build named by the source lock is manifest-verified in this project', () => {
-  // The case qualifies the six-patch stack by IDENTITY, not by byte
-  // fingerprint: patch bytes revise without changing the stack's shape (the
-  // P2_4 rework integrated the 0002 revision @ d4370930), while the original
-  // discovery session's pre-0002 build (cb1151b4) must never satisfy it.
-  assert.equal(lock.patches.length, 6, 'the patched build must carry the six locked patches');
-  assert.deepEqual(lock.patches.map((patch) => patch.path), [
-    'integrations/comet/patches/0001-matt-method-profile.patch',
-    'integrations/comet/patches/tests/1_6.patch',
-    'integrations/comet/patches/0002-managed-delivery-runtime.patch',
-    'integrations/comet/patches/tests/2_4.patch',
-    'integrations/comet/patches/0003-post-archive-closeout.patch',
-    'integrations/comet/patches/tests/4_6.patch',
-  ], 'the locked stack must be exactly 0001 + tests/1_6 + 0002 (managed delivery runtime) + tests/2_4 + 0003 (post-archive closeout) + tests/4_6');
-  assert.notEqual(fingerprint, 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187', 'the pre-0002 discovery build must not satisfy this case');
+test('setup: the rebuilt 0.5.0+0005 distribution named by the source lock is manifest-verified and carries the Kt patch', async () => {
+  assert.equal(lock.package.version, '0.5.0');
+  assert.equal(lock.source.commit, 'aeb1a6598034e28ce46b8422d4dbd8785e607bd7');
+  assert.deepEqual(lock.patches, [
+    { path: 'integrations/comet/patches/0005-comet-050-kt-closeout.patch', sha256: '74e6c8108967ac10b9ac31e2f4c3ba2dfa6d53930dcf2b5068fe7d9be003b18d' },
+  ], 'the supply re-lock must carry exactly the P2_4-delivered 0005 bytes (sha-pinned)');
+  assert.equal(crypto.createHash('sha256').update(await fs.readFile(path.join(projectRoot, lock.patches[0].path))).digest('hex'), lock.patches[0].sha256,
+    'the patch file on disk must match the locked sha256');
+  for (const stale of ['29f2332b4f624c1595d6d1304456f5de4e6b9b7642633995b79c0cab60ea1aad', 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187', 'd437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6']) {
+    assert.notEqual(fingerprint, stale, 'no pre-relock or 0.4.5 build may satisfy this case');
+  }
   assert.ok(prepared, 'pristine Comet source has not been prepared; run tools/comet/prepare-source.mjs first');
   assert.ok(built, 'patched Comet build is not present; run tools/comet/build.mjs --archive first');
   const version = comet(['--version']);
   assert.equal(version.status, 0);
   assert.equal((version.stdout ?? '').trim(), lock.package.version);
+  // 0005 really is in the rebuilt tree (source and compiled dist).
+  const resolverSource = await fs.readFile(path.join(work, 'domains/comet-classic/classic-resolver.ts'), 'utf8');
+  const resolverDist = await fs.readFile(path.join(work, 'dist/domains/comet-classic/classic-resolver.js'), 'utf8');
+  assert.match(resolverSource, /knowledgeCloseoutBlocked/, 'the rebuilt source tree must carry the 0005 predicate');
+  assert.match(resolverDist, /knowledgeCloseoutBlocked/, 'the rebuilt dist must carry the 0005 predicate');
+  assert.match(resolverSource, /\$\{profile\}\.archive\.execute/, 'the Kt parking step must appear in the patched resolver');
 });
 
-test('1.4.a: the structured mode registration exists and pins this exact patched build', async () => {
-  const qualification = await loadQualification();
-  assert.equal(qualification.schemaVersion, 1);
-  assert.equal(qualification.build.fingerprint, fingerprint, 'the qualification must be bound to the patched build fingerprint');
-  assert.equal(qualification.build.sourceCommit, lock.source.commit);
+test('1.4.a: the v2 mode registration exists, binds this exact build, preserves the 0.4.5 history and pins B1–B8', async () => {
+  const qualification = await loadJson('mode-qualification.json');
+  assert.equal(qualification.schemaVersion, 2);
+  assert.equal(qualification.revision, '2026-10-26-comet-050-adoption-v1');
+  assert.equal(qualification.build.version, '0.5.0');
+  assert.equal(qualification.build.fingerprint, fingerprint, 'the registration must be bound to the rebuilt supply fingerprint');
+  assert.deepEqual(qualification.build.patches, lock.patches);
   assert.ok(Array.isArray(qualification.capabilityMatrix) && qualification.capabilityMatrix.length >= 9,
-    'the matrix must pin the Classic/Native obligations from comet-single-controller-review.md (7 rows) plus closeout exclusivity and runner binding');
-  assert.equal(qualification.classicAdmission.admitted, true, 'the fixed distribution admits Classic as the managed mode');
-  assert.equal(qualification.classicAdmission.autoSwitch.allowed, false, 'no automatic Classic/Native switch path may exist');
-  for (const record of qualification.capabilityMatrix) {
-    assert.ok(record.id && record.obligation, `matrix row needs id and obligation: ${JSON.stringify(record).slice(0, 120)}`);
-    assert.ok(record.classic?.observed, `matrix row ${record.id} must record what Classic really exposes`);
-    assert.ok(record.native?.observed, `matrix row ${record.id} must record what Native really exposes`);
-    assert.ok(record.classic?.evidence && record.native?.evidence, `matrix row ${record.id} must cite probe evidence for both modes`);
+    'the matrix must carry the 0.5.0 rows (mode authority, compiler route, gates, evidence, bypass, openspec, methods, knowledge, closeout)');
+  for (const row of qualification.capabilityMatrix) {
+    assert.ok(row.id && row.obligation && row.verdict, `matrix row needs id/obligation/verdict: ${JSON.stringify(row).slice(0, 120)}`);
+    assert.ok(row.classic?.observed && row.classic?.evidence, `matrix row ${row.id} must record the live classic observation with evidence`);
+  }
+  const route = qualification.capabilityMatrix.find((row) => row.id === 'managed-delivery-route');
+  assert.ok(route, 'the compiler route must be a matrix row');
+  assert.match(route.classic.verdict, /refused-as-declared/);
+  assert.equal(qualification.classicAdmission.admitted, true);
+  assert.equal(qualification.classicAdmission.autoSwitch.allowed, false);
+  assert.deepEqual(qualification.classicAdmission.mandatoryBlocks, ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8']);
+  for (const id of qualification.classicAdmission.mandatoryBlocks) {
+    const item = qualification.blockingItems.find((entry) => entry.id === id);
+    assert.ok(item, `mandatory block ${id} must be a registered blocking item`);
+    assert.ok(item.gap && item.evidence, `blocking item ${id} must carry a gap and evidence`);
+    if (['B1', 'B4', 'B5', 'B6', 'B7', 'B8'].includes(id)) assert.ok(item.extensionAcceptance, `blocking item ${id} must carry an extension acceptance instead of a verdict change`);
+  }
+  // The 0.4.5 record is preserved wholesale, never overwritten.
+  const history = qualification.history045;
+  assert.ok(history, 'the 0.4.5 record must be preserved under history045');
+  assert.equal(history.build.sourceCommit, 'c90af44a4474662d7853aae76ce785404974fb0a');
+  assert.equal(history.build.fingerprint, 'd437093083ad4500253795fe231484c606e925b2404f958e5a7dd4fd4c11cba6');
+  assert.deepEqual(history.classicAdmission.mandatoryBlocks, ['B1', 'B2', 'B3', 'B4', 'B5', 'B6']);
+  for (const relative of qualification.probes) {
+    if (relative.endsWith('.json')) await loadJson(relative);
+    else assert.ok(await fs.access(path.join(changeRoot, relative)).then(() => true, () => false), `declared probe ${relative} must exist`);
   }
 });
 
-test('1.4.a/M01: Classic init exposes the real state machine, guard hook and check runtime — the surfaces the registration pins', async () => {
-  const init = comet(['init', classicProject, '--yes', '--scope', 'project', '--workflow', 'classic', '--platform', 'claude', '--codegraph', 'skip', '--language', 'en'], { timeout: 300_000 });
-  assert.equal(init.status, 0, `comet init (classic) failed: ${plain(init.stderr).slice(0, 400)}`);
+test('1.4.b: the official compiler refuses the declared composition; the diagnostic compiles; the repair list is the deliverable — no application.json exists', async () => {
+  const probe = await loadJson('mode-probes/1_4-compiler-compile.json');
+  assert.equal(probe.build.fingerprint, fingerprint, 'the compile probe must have run against this exact build');
+  const byId = Object.fromEntries(probe.attempts.map((attempt) => [attempt.id, attempt]));
+  assert.equal(byId.a.outcome, 'REFUSED_AT_PREPARE');
+  assert.match(byId.a.stages.prepare.error, /应用模块依赖缺失或越过包目录.*bindings\.mjs/,
+    'the as-declared refusal must be the bindings import escape');
+  assert.equal(byId.b.outcome, 'REFUSED_AT_PREPARE');
+  assert.match(byId.b.stages.prepare.error, /缺少可路由且具备所需能力的执行端口/,
+    'after the import rebasing the next refusal must be the missing executor layer');
+  assert.equal(byId.c.outcome, 'COMPILED', 'the diagnostic variant must prove the repair list exhaustive');
+  assert.ok(byId.c.deviations?.length >= 9, 'the diagnostic must declare its deviations from the P2_4 composition');
+  const repairList = (await loadJson('mode-qualification.json')).compilerQualification.repairList;
+  assert.equal(repairList.length, 6, 'the registration must pin the six-part repair list R1–R6');
+  for (const marker of ['R1', 'R2', 'R3', 'R4', 'R5', 'R6']) {
+    assert.ok(repairList.some((entry) => entry.startsWith(marker)), `repair list must carry ${marker}`);
+  }
+  // The supply gaps the probe surfaced are part of the pinned record.
+  assert.ok(probe.supplyGaps.some((gap) => gap.skill === 'ponytail' && /引用资源缺失/.test(gap.error)),
+    'the non-embeddable ponytail packaging must be a recorded supply gap');
+  assert.ok(probe.schemaConflicts.some((conflict) => conflict.skill === 'grill-me' && conflict.outputSchemasEqual === false),
+    'the grill-me one-id-many-schemas conflict must be recorded');
+  assert.ok(probe.schemaConflicts.some((conflict) => conflict.skill === 'comet-archive'),
+    'the domain comet-archive shared-ref conflict must be recorded');
+  // And the honest deliverable state: NO compiled package exists.
+  assert.equal(await fs.access(path.join(projectRoot, 'integrations/comet/application/application.json')).then(() => true, () => false), false,
+    'no application.json may exist while the as-declared compile fails (B7 open)');
+});
 
+test('1.4.c: the managed-init/escape probe record pins superpowers supply, openspec hygiene and the escape hatches', async () => {
+  const probe = await loadJson('mode-probes/1_4-managed-init-escape.json');
+  assert.equal(probe.build.fingerprint, fingerprint, 'the init probe must have run against this exact build');
+
+  const clean = probe.probes.classicInitCleanHost;
+  assert.equal(clean.exitCode, 0);
+  assert.ok(clean.superpowersInstallAttempts.length >= 1, 'classic init must be recorded attempting the superpowers install');
+  assert.match(clean.superpowersInstallAttempts.join('\n'), /skills add obra\/superpowers/);
+  assert.ok(clean.openspecGlobalUpgradeAttempts.some((call) => /install -g @fission-ai\/openspec@latest/.test(call)),
+    'the floating openspec global upgrade attempt must be recorded (B6)');
+  assert.equal(clean.projectConfigWorkflowBinding, 'default_workflow: classic');
+
+  const compat = probe.probes.classicInitCompatibleOpenspec;
+  assert.equal(compat.exitCode, 0);
+  assert.equal(compat.openspecGlobalUpgradeAttempts.length, 0,
+    'a compatible pinned openspec on PATH must suppress the global upgrade (proven B6 mitigation)');
+  assert.ok(compat.superpowersInstallAttempts.length >= 1, 'the superpowers attempt must NOT be suppressed by openspec compatibility');
+
+  const native = probe.probes.nativeInitControl;
+  assert.equal(native.exitCode, 0);
+  assert.equal(native.superpowersInstallAttempts.length, 0, 'native workflow selection must not reach the classic superpowers path');
+
+  const preseeded = probe.probes.classicInitPreseededSuperpowers;
+  assert.equal(preseeded.exitCode, 0);
+  assert.ok(preseeded.superpowersInstallAttempts.length >= 1,
+    'pre-seeding .claude/skills/superpowers must NOT suppress the install (no exclusion switch exists)');
+
+  const escape = probe.probes.escapeHatches;
+  assert.equal(escape.skipBuildChain.archiveExit, 0, 'COMET_SKIP_BUILD=1 must be recorded archiving with zero checks');
+  assert.deepEqual(escape.skipBuildChain.checkLogsInArchive, [], 'the archived change must carry zero check logs');
+  assert.equal(escape.skipBuildChain.verifyResult, 'pass', 'verify_result must be stamped pass without evidence');
+  assert.equal(escape.forcePhase.refusedWriteExit, 1);
+  assert.equal(escape.forcePhase.refusedWriteNamesEscape, true, 'the default refusal must name COMET_FORCE_PHASE');
+  assert.equal(escape.forcePhase.forcedWriteExit, 0, 'COMET_FORCE_PHASE=1 must be recorded allowing the direct phase write');
+  assert.equal(escape.forcePhase.forcedPhaseReadback, 'archive');
+  assert.equal(escape.forcePhase.forgedArchiveExit, 1, 'the downstream archive entry checks must still refuse the forged state');
+  assert.match(escape.forcePhase.forgedArchiveStderrTail, /verify_result is 'pending', expected 'pass'/);
+  assert.ok(escape.ktPredicateCompatFaceAttempt, 'the live 0005 compat-face attempt must be recorded');
+  assert.match(JSON.stringify(escape.ktPredicateCompatFaceAttempt.nextAction ?? {}), /delivery|completed/,
+    'the compat face must be recorded ignoring the hand-written knowledgeCloseout field (write path still open)');
+});
+
+test('1.4.c live: classic init on an isolated probe HOME really attempts superpowers + the openspec upgrade and binds classic', async () => {
+  await fs.writeFile(stubLog, '');
+  const init = comet(['init', classicProject, '--yes', '--scope', 'project', '--workflow', 'classic', '--platform', 'claude', '--codegraph', 'skip', '--language', 'en'], { timeout: 420_000 });
+  assert.equal(init.status, 0, `comet init (classic) failed: ${plain(init.stderr).slice(0, 400)}`);
+  const calls = await stubCalls();
+  assert.ok(calls.some((call) => /skills add obra\/superpowers/.test(call)),
+    'the live init must attempt the superpowers install (stub log is the witness)');
+  assert.ok(calls.some((call) => /install -g @fission-ai\/openspec@latest/.test(call)),
+    'the live init must attempt the floating openspec global upgrade (stub log is the witness)');
+  const config = await fs.readFile(path.join(classicProject, '.comet/config.yaml'), 'utf8');
+  assert.match(config, /^default_workflow: classic$/m);
   const resolve = comet(['workflow', 'resolve', '--json']);
   assert.equal(resolve.status, 0);
-  assert.equal(resolve.json?.workflow, 'classic', 'the workflow binding must resolve to classic in a classic-initialized project');
+  assert.equal(resolve.json?.workflow, 'classic');
   assert.equal(resolve.json?.schema, 'comet.workflow-resolution.v1');
-
-  // The surfaces the matrix's classic rows cite, verified live.
-  for (const relative of [
-    '.comet/config.yaml',
-    '.claude/skills/comet-classic/SKILL.md',
-    '.claude/skills/comet/scripts/comet-hook-router.mjs',
-    '.claude/skills/comet/runtime/classic/checks.yaml',
-  ]) {
-    assert.ok(await fs.access(path.join(classicProject, relative)).then(() => true, () => false),
-      `classic mode must install ${relative}`);
-  }
-  const settings = JSON.parse(await fs.readFile(path.join(classicProject, '.claude/settings.local.json'), 'utf8'));
-  const entry = settings.hooks?.PreToolUse?.[0];
-  assert.equal(entry?.matcher, 'Write|Edit', 'the classic guard hook must be registered for the edit channel');
-
-  // M01: the managed path carries the pre-fixed Classic method only. No
-  // Superpowers runtime is installed or invoked by the fixed distribution;
-  // docs/superpowers is an upstream artifact root name, not a runtime.
-  const superpowersRuntime = comet(['status', '--json']);
-  assert.doesNotMatch(plain(superpowersRuntime.stdout), /superpowers enabled/i, 'no Superpowers runtime may be present in managed delivery (M01)');
-
-  // B6 (probe): classic init tries a floating global OpenSpec upgrade on a
-  // mismatched host — the stub log is the neutralized witness.
-  assert.match(plain(init.stderr), /Upgrading OpenSpec CLI/,
-    'the registered B6 gap must stay reproducible: classic init attempts the global OpenSpec upgrade on a mismatched host');
-  const qualification = await loadQualification();
-  const b6 = qualification.blockingItems.find((item) => item.id === 'B6');
-  assert.ok(b6, 'the global OpenSpec upgrade attempt must be a registered blocking item');
-  assert.match(b6.gap, /npm install -g @fission-ai\/openspec@latest/);
+  // M01: no superpowers runtime may enter the host skill surface — the stub
+  // neutralized the install, and the only superpowers-named path is the
+  // upstream classic artifact root docs/superpowers.
+  const skillsDir = path.join(classicProject, '.claude/skills');
+  const entries = await fs.readdir(skillsDir).catch(() => []);
+  assert.ok(!entries.some((name) => /superpowers/i.test(name)),
+    `no superpowers runtime may appear in the host skills dir (found: ${entries.join(',')})`);
+  // The probe HOME is disposable state, never the real host HOME.
+  assert.ok(await fs.access(fakeHome).then(() => true, () => false));
+  assert.notEqual(fakeHome, process.env.HOME);
 });
 
-test('1.4.a: Native mode is a capability comparison only — own surfaces, no classic control plane, not a fallback', async () => {
-  const init = comet(['init', nativeProject, '--yes', '--scope', 'project', '--workflow', 'native', '--platform', 'claude', '--codegraph', 'skip', '--language', 'en'], { timeout: 300_000, cwd: nativeProject });
-  assert.equal(init.status, 0, `comet init (native) failed: ${plain(init.stderr).slice(0, 400)}`);
+test('1.4.c live: escape hatches on the rebuilt tree — FORCE_PHASE refuses by default and SKIP_BUILD voids the chain', async () => {
+  const FORGED = 'force-change';
+  assert.equal(comet(['state', 'init', FORGED, 'full', '--json']).json?.exitCode, 0);
+  const refusedWrite = comet(['state', 'set', FORGED, 'phase', 'archive', '--json']);
+  assert.equal(refusedWrite.json?.exitCode, 1, 'a direct phase write must refuse by default');
+  assert.match(JSON.stringify(refusedWrite.json?.data ?? refusedWrite.json), /COMET_FORCE_PHASE/);
+  const forcedWrite = comet(['state', 'set', FORGED, 'phase', 'archive', '--json'], { env: { COMET_FORCE_PHASE: '1' } });
+  assert.equal(forcedWrite.json?.exitCode, 0, 'COMET_FORCE_PHASE=1 must be observed allowing the direct write');
+  assert.equal(comet(['state', 'get', FORGED, 'phase']).stdout?.trim(), 'archive');
+  const forgedArchive = comet(['archive', FORGED, '--json'], { timeout: 420_000 });
+  assert.equal(forgedArchive.json?.exitCode, 1, 'the archive entry checks must refuse the forged state');
+  assert.match(plain(forgedArchive.json?.stderr), /verify_result is 'pending', expected 'pass'/);
 
-  // Native installs its own skill surface…
-  assert.ok(await fs.access(path.join(nativeProject, '.claude/skills/comet-native/SKILL.md')).then(() => true, () => false));
-  const scripts = (await fs.readdir(path.join(nativeProject, '.claude/skills/comet-native/scripts'))).filter((name) => name.endsWith('.mjs'));
-  assert.ok(scripts.length >= 8, `native mode must carry its own script surface: ${scripts.join(',')}`);
-
-  // …and its config binding selects native, so classic control commands refuse:
-  // the mode is the init-time project config, never a runtime switch.
-  const nativeConfigYaml = await fs.readFile(path.join(nativeProject, '.comet/config.yaml'), 'utf8');
-  assert.match(nativeConfigYaml, /^default_workflow: native$/m);
-  assert.doesNotMatch(nativeConfigYaml, /^  - classic$/m, 'native binding must not silently enable classic');
-  const resolve = comet(['workflow', 'resolve', '--json'], { cwd: nativeProject });
-  assert.equal(resolve.status, 0);
-  assert.equal(resolve.json?.workflow, 'native', 'resolution must follow the init-time binding (project-config)');
-  assert.equal(resolve.json?.source, 'project-config');
-  const stateInit = comet(['state', 'init', 'native-change', 'full', '--json'], { cwd: nativeProject });
-  assert.equal(stateInit.json?.exitCode, 1, 'classic state commands must refuse in a native project');
-  assert.match(JSON.stringify(stateInit.json?.data?.issues ?? []), /Classic artifact layout is unavailable/);
-
-  const qualification = await loadQualification();
-  assert.equal(qualification.classicAdmission.autoSwitch.observed, 'workflow-resolve-config-binding',
-    'the registration must record that resolution derives from the init-time config binding, never a runtime switch');
-  const nativeRow = qualification.capabilityMatrix.find((row) => row.id === 'mode-authority');
-  assert.ok(nativeRow, 'the matrix must carry the mode-authority row');
-  assert.match(nativeRow.verdict, /classic-admitted/);
-  assert.match(nativeRow.native.verdict ?? '', /comparison-only/);
-});
-
-test('1.4.b/F06 class 2 (missing required check): every gated entrance refuses, next stays guidance', async () => {
-  await loadQualification(); // RED boundary first
-  const setup = comet(['state', 'init', CHANGE, 'full', '--json']);
-  assert.equal(setup.json?.exitCode, 0);
-  assert.equal(comet(['state', 'select', CHANGE, '--json']).json?.exitCode, 0);
-  await fs.writeFile(path.join(classicProject, 'docs/openspec/changes', CHANGE, 'proposal.md'), '# Proposal\n\nMode qualification probe.\n');
-  await fs.writeFile(path.join(classicProject, 'docs/openspec/changes', CHANGE, 'tasks.md'), '# Tasks\n\n- [ ] 1.1 Implement probe product code');
-  await fs.writeFile(path.join(classicProject, 'docs/openspec/changes', CHANGE, 'design.md'), '# Design\n\nClassic managed probe.\n');
-  await fs.mkdir(path.join(classicProject, 'src'), { recursive: true });
-  await fs.writeFile(path.join(classicProject, 'src/feature.js'), 'export const v1 = 1;\n');
-  assert.equal(comet(['state', 'transition', CHANGE, 'open-complete', '--json']).json?.exitCode, 0);
-  // The strict design confirmation demands the frontmatter triple
-  // (comet_change/role/canonical_spec); without it the command refuses after
-  // registering the reference (observed), and transition design-complete is
-  // the phase driver — the same recipe as the recorded probe evidence.
-  const completeDesign = comet(['state', 'complete-design', CHANGE, '--design-doc', `docs/openspec/changes/${CHANGE}/design.md`, '--json']);
-  assert.ok(completeDesign.json, 'complete-design must answer');
-  if (completeDesign.json?.exitCode !== 0) {
-    assert.match(JSON.stringify(completeDesign.json?.data?.issues ?? []), /Design Doc/,
-      'a refused complete-design must name the design-doc binding checks');
-  }
-  assert.equal(comet(['state', 'transition', CHANGE, 'design-complete', '--json']).json?.exitCode, 0);
-  assert.equal(comet(['state', 'set', CHANGE, 'build_mode', 'executing-plans', 'tdd_mode', 'tdd', 'isolation', 'current', '--json']).json?.exitCode, 0);
-  const tasks = comet(['state', 'tasks', CHANGE, '--assign-ids', '--json']);
-  const revision = tasks.json?.data?.revision;
-  const taskId = tasks.json?.data?.tasks?.[0]?.id;
-  assert.equal(comet(['state', 'task-complete', CHANGE, taskId, '--expect', revision, '--json']).json?.exitCode, 0);
-
-  // C07: with zero check evidence, all gated entrances refuse.
-  const transition = gateVerdict(comet(['state', 'transition', CHANGE, 'build-complete', '--json']));
-  assert.equal(transition.exitCode, 1, 'direct transition must refuse without the build check');
-  assert.match(transition.issues, /Build passes/);
-
-  const guardPreview = gateVerdict(comet(['guard', CHANGE, 'build', '--json']));
-  assert.equal(guardPreview.exitCode, 1, 'guard preview must refuse without the build check');
-  const guardApply = gateVerdict(comet(['guard', CHANGE, 'build', '--apply', '--json']));
-  assert.equal(guardApply.exitCode, 1, 'guard --apply must refuse without the build check');
-  assert.equal((await fs.readFile(path.join(classicProject, 'docs/openspec/changes', CHANGE, '.comet.yaml'), 'utf8')).match(/^phase: (\w+)$/m)?.[1], 'build',
-    'a refused guard --apply must not advance the phase');
-
-  const next = comet(['state', 'next', CHANGE, '--json']);
-  assert.equal(next.json?.exitCode, 0);
-  const nextKind = next.json?.data?.nextAction?.kind ?? next.json?.agent?.continuation?.kind;
-  assert.notEqual(nextKind, 'archive', 'continuation guidance must not claim completion past the missing check');
-
-  const archive = comet(['archive', CHANGE, '--json']);
-  assert.equal(archive.json?.exitCode, 1, 'the archive entrance must refuse outside the archive phase');
-  assert.match(plain(archive.json?.stderr), /FATAL: phase is 'build', expected 'archive'/);
-});
-
-test('1.4.b class 1 (irrelevant successful command): a cross-scope success is refused natively; the registered gap is the missing required-check identity', async () => {
-  await loadQualification();
-  // A real, successful check under the WRONG scope must not satisfy the build gate.
-  await fs.writeFile(path.join(classicProject, 'verify-probe.js'), 'process.exit(0);\n');
-  const wrongScope = comet(['check', 'run', CHANGE, 'verify', '--local', '--', nodeExecutable, 'verify-probe.js']);
-  assert.match(plain(wrongScope.stdout), /Check verify: exit=0/, 'the cross-scope probe must itself really run and succeed');
-  const refused = gateVerdict(comet(['state', 'transition', CHANGE, 'build-complete', '--json']));
-  assert.equal(refused.exitCode, 1, 'a verify-scope success must not stand in for the build check');
-  assert.match(refused.issues, /Build passes/);
-
-  // The registered gap: no required-check identity registry exists, so a
-  // trivial successful command under the required scope satisfies the gate
-  // (review SC-01). The registration must carry it as a gap with an
-  // extension acceptance — never smoothed into "blocked".
-  const qualification = await loadQualification();
-  const b1 = qualification.blockingItems.find((item) => item.id === 'B1');
-  assert.ok(b1, 'class 1 (irrelevant successful command) must be a registered blocking item');
-  assert.equal(b1.class, 'irrelevant-successful-command');
-  assert.equal(b1.nativeBehavior, 'partially-blocked');
-  assert.match(b1.blocked.join('\n'), /verify-scope.*refused|cross-scope.*refused/i, 'B1 must record the natively covered facet');
-  assert.match(b1.gap, /trivial|no required-check identity|SC-01/i, 'B1 must record the native gap');
-  assert.ok(b1.extensionAcceptance && b1.extensionAcceptance.length > 20, 'B1 must carry an extension acceptance instead of a verdict change');
-  const probe = await loadProbeRecords(b1.evidence.replace(/^mode-probes\//, ''));
-  const gapRecord = probe.records.find((record) => record.id === 'trivial-command-satisfies-build-gate');
-  assert.equal(gapRecord?.exitCode, 0, 'the recorded gap evidence must show the gate really passing on a trivial command');
-});
-
-test('1.4.b class 3 (hand written receipt): the guard refuses a manual record-check declaration', async () => {
-  await loadQualification();
-  const manual = comet(['state', 'record-check', CHANGE, 'build', '--command', 'node -e 0', '--exit-code', '0', '--json']);
-  assert.equal(manual.json?.exitCode, 0, 'recording the manual declaration itself is allowed');
-  const refused = gateVerdict(comet(['state', 'transition', CHANGE, 'build-complete', '--json']));
-  assert.equal(refused.exitCode, 1, 'a hand written receipt must not pass the gate');
-  assert.match(refused.issues, /Manual declarations never satisfy the guard/);
-});
-
-test('1.4.b class 1b (registered gap, real): a trivial exit-0 command under the build scope satisfies the gate', async () => {
-  await loadQualification();
-  await fs.writeFile(path.join(classicProject, 'build-probe.js'), 'process.exit(0);\n');
-  const trivial = comet(['check', 'run', CHANGE, 'build', '--local', '--', nodeExecutable, 'build-probe.js']);
-  assert.match(plain(trivial.stdout), /Check build: exit=0/);
-  const passed = comet(['state', 'transition', CHANGE, 'build-complete', '--json']);
-  assert.equal(passed.json?.exitCode, 0, 'the registered SC-01 gap must stay reproducible: a trivial command passes the build gate');
-  assert.equal(comet(['state', 'get', CHANGE, 'phase']).stdout?.trim(), 'verify');
-});
-
-test('1.4.b class 3 (stale receipt): evidence that predates a source mutation is refused at the verify gate', async () => {
-  await loadQualification();
-  await fs.writeFile(path.join(classicProject, 'docs/openspec/changes', CHANGE, 'verification.md'), '# Verification Report\n\nProbe.\n');
-  assert.equal(comet(['state', 'set', CHANGE, 'verification_report', `docs/openspec/changes/${CHANGE}/verification.md`, '--json']).json?.exitCode, 0);
-  const fresh = comet(['check', 'run', CHANGE, 'verify', '--local', '--', nodeExecutable, 'verify-probe.js']);
-  assert.match(plain(fresh.stdout), /Check verify: exit=0/);
-  await fs.appendFile(path.join(classicProject, 'src/feature.js'), 'export const v2 = 2;\n');
-  const refused = gateVerdict(comet(['state', 'transition', CHANGE, 'verify-pass', '--json']));
-  assert.equal(refused.exitCode, 1, 'a receipt whose inputs changed must not pass the verify gate');
-  assert.match(refused.issues, /check inputs changed since execution/);
-  assert.match(refused.issues, /src\/feature\.js/);
-
-  const qualification = await loadQualification();
-  const b3 = qualification.blockingItems.find((item) => item.id === 'B3');
-  assert.ok(b3, 'class 3 (stale or manual receipts) must be a registered blocking item');
-  assert.equal(b3.nativeBehavior, 'blocked');
-  assert.match(b3.blocked.join('\n'), /Manual declarations never satisfy the guard/);
-  assert.match(b3.blocked.join('\n'), /check inputs changed since execution/);
-});
-
-test('1.4.b class 4 (escape path, real): COMET_SKIP_BUILD=1 alone voids the whole evidence chain — registered gap with extension acceptance', async () => {
-  await loadQualification();
-  const ESCAPE = 'escape-change';
+  const ESCAPE = 'skip-change';
   assert.equal(comet(['state', 'init', ESCAPE, 'full', '--json']).json?.exitCode, 0);
   assert.equal(comet(['state', 'select', ESCAPE, '--json']).json?.exitCode, 0);
+  await fs.mkdir(path.join(classicProject, 'docs/openspec/changes', ESCAPE), { recursive: true });
   await fs.writeFile(path.join(classicProject, 'docs/openspec/changes', ESCAPE, 'proposal.md'), '# P\n');
   await fs.writeFile(path.join(classicProject, 'docs/openspec/changes', ESCAPE, 'tasks.md'), '# T\n\n- [ ] 1.1 x');
   await fs.writeFile(path.join(classicProject, 'docs/openspec/changes', ESCAPE, 'design.md'), '# D\n');
@@ -397,113 +314,19 @@ test('1.4.b class 4 (escape path, real): COMET_SKIP_BUILD=1 alone voids the whol
   assert.equal(comet(['state', 'set', ESCAPE, 'build_mode', 'executing-plans', 'tdd_mode', 'tdd', 'isolation', 'current', '--json']).json?.exitCode, 0);
   const tasks = comet(['state', 'tasks', ESCAPE, '--assign-ids', '--json']);
   assert.equal(comet(['state', 'task-complete', ESCAPE, tasks.json.data.tasks[0].id, '--expect', tasks.json.data.revision, '--json']).json?.exitCode, 0);
-  // The escape: one ordinary environment variable, zero check executions.
-  // (the build-complete transition rewrites .comet.yaml and drops the
-  // verification_report field, so the field is recorded at the verify phase)
   const skip = { COMET_SKIP_BUILD: '1' };
-  assert.equal(comet(['state', 'transition', ESCAPE, 'build-complete', '--json'], { env: skip }).json?.exitCode, 0, 'SKIP_BUILD must be observed to void the build gate');
+  assert.equal(comet(['state', 'transition', ESCAPE, 'build-complete', '--json'], { env: skip }).json?.exitCode, 0, 'SKIP_BUILD must void the build gate live');
   await fs.writeFile(path.join(classicProject, 'docs/openspec/changes', ESCAPE, 'verification.md'), '# V\n');
   assert.equal(comet(['state', 'set', ESCAPE, 'verification_report', `docs/openspec/changes/${ESCAPE}/verification.md`, '--json']).json?.exitCode, 0);
-  assert.equal(comet(['state', 'transition', ESCAPE, 'verify-pass', '--json'], { env: skip }).json?.exitCode, 0, 'SKIP_BUILD must be observed to void the verify gate');
+  assert.equal(comet(['state', 'transition', ESCAPE, 'verify-pass', '--json'], { env: skip }).json?.exitCode, 0, 'SKIP_BUILD must void the verify gate live');
   assert.equal(comet(['state', 'transition', ESCAPE, 'archive-confirm', '--json'], { env: skip }).json?.exitCode, 0);
-  assert.equal(comet(['state', 'get', ESCAPE, 'verify_result'], { env: skip }).stdout?.trim(), 'pass', 'verify_result is stamped pass without any real evidence');
-  const archive = comet(['archive', ESCAPE, '--json'], { env: skip });
-  assert.equal(archive.json?.exitCode, 0, 'the full lifecycle must be observed archiving under the escape');
-  assert.match(plain(archive.json?.stderr), /archived successfully/);
+  assert.equal(comet(['state', 'get', ESCAPE, 'verify_result'], { env: skip }).stdout?.trim(), 'pass');
+  const archive = comet(['archive', ESCAPE, '--json'], { env: skip, timeout: 420_000 });
+  assert.equal(archive.json?.exitCode, 0, 'the full lifecycle must archive under the escape with zero real checks');
   const archivedDirName = (await fs.readdir(path.join(classicProject, 'docs/openspec/changes/archive'))).find((name) => name.endsWith(ESCAPE));
   const checksDir = path.join(classicProject, 'docs/openspec/changes/archive', archivedDirName, '.comet/checks');
   const checkLogs = await fs.readdir(checksDir).then((names) => names.filter((name) => name.endsWith('.log')), () => []);
-  assert.equal(checkLogs.length, 0, 'the archived change must carry zero real check logs — the escape voided the entire evidence chain');
-
-  // The second escape: direct phase write.
-  const FORGED = 'force-change';
-  assert.equal(comet(['state', 'init', FORGED, 'full', '--json']).json?.exitCode, 0);
-  const refusedWrite = comet(['state', 'set', FORGED, 'phase', 'archive', '--json']);
-  assert.equal(refusedWrite.json?.exitCode, 1, 'a direct phase write must refuse by default');
-  assert.match(JSON.stringify(refusedWrite.json?.data ?? refusedWrite.json), /COMET_FORCE_PHASE/);
-  const forcedWrite = comet(['state', 'set', FORGED, 'phase', 'archive', '--json'], { env: { COMET_FORCE_PHASE: '1' } });
-  assert.equal(forcedWrite.json?.exitCode, 0, 'COMET_FORCE_PHASE=1 must be observed to allow the direct phase write');
-  assert.equal(comet(['state', 'get', FORGED, 'phase']).stdout?.trim(), 'archive');
-  const forgedArchive = comet(['archive', FORGED, '--json']);
-  assert.equal(forgedArchive.json?.exitCode, 1, 'the archive entry checks must still refuse the forged state');
-  assert.match(plain(forgedArchive.json?.stderr), /verify_result is 'pending', expected 'pass'/);
-
-  const qualification = await loadQualification();
-  const b4 = qualification.blockingItems.find((item) => item.id === 'B4');
-  assert.ok(b4, 'class 4 (escape paths) must be a registered blocking item');
-  assert.equal(b4.nativeBehavior, 'gap');
-  assert.match(b4.gap, /COMET_SKIP_BUILD/);
-  assert.match(b4.gap, /COMET_FORCE_PHASE/);
-  assert.match(b4.extensionAcceptance, /launch authority|protected CI|env hygiene/i,
-    'B4 extension acceptance must name the managed-env/CI countermeasure, not a verdict change');
-  assert.match(b4.blocked.join('\n'), /verify_result is 'pending'/, 'B4 must record the downstream entry-check refusal that does hold');
-  const probe = await loadProbeRecords(b4.evidence.replace(/^mode-probes\//, ''));
-  const chain = probe.records.find((record) => record.id === 'skip-build-full-chain');
-  assert.equal(chain?.records?.archiveExit, 0, 'the recorded escape evidence must carry the real full-chain archive');
-  assert.equal(chain?.records?.checkLogs, 0);
-});
-
-test('1.4.c: the built-in project memory is a HOME-scoped cache, never an LLMWiki/Outline receipt — boundary registered', async () => {
-  await loadQualification();
-  const remember = comet(['knowledge', 'remember', '--title', 'probe-lesson', '--text', 'probe knowledge body', '--json']);
-  assert.ok(remember.json, 'comet knowledge remember must answer');
-  const storedFile = remember.json?.data?.file ?? remember.json?.file;
-  assert.equal(typeof storedFile, 'string', 'the built-in memory must reveal where it stores');
-  assert.ok(storedFile.includes(fakeHome) || storedFile.includes(os.tmpdir()), 'the built-in memory store must live outside the project repo (HOME cache)');
-  assert.equal(await fs.access(storedFile).then(() => true, () => false), true, 'the memory record must really exist');
-  assert.doesNotMatch(storedFile, /llmwiki|outline|deepwiki/i, 'the built-in memory store must not be an LLMWiki/Outline/DeepWiki artifact');
-  const list = comet(['knowledge', 'list', '--json']);
-  assert.equal(list.status, 0);
-
-  // The archive entry check set carries no knowledge requirement at all —
-  // the knowledge closeout (Kp) is enforced by the driver gate extension
-  // (P1_3), not by the native gate.
-  const archiveCheck = comet(['state', 'check', 'escape-change', 'archive', '--json']);
-  assert.equal(archiveCheck.json?.exitCode, 0);
-  assert.ok(archiveCheck.json?.data?.checks?.blocked === false || archiveCheck.json?.data?.checks?.passed > 0,
-    'the archive entry checks were observed passing without any knowledge receipt');
-  assert.doesNotMatch(JSON.stringify(archiveCheck.json?.data ?? {}), /llmwiki|outline/i,
-    'the native gate must not consult LLMWiki/Outline receipts');
-
-  const qualification = await loadQualification();
-  const boundary = qualification.knowledgeBoundary;
-  assert.ok(boundary, 'the knowledge boundary must be registered');
-  assert.equal(boundary.llmwikiOutlineDeepWikiRemainSoleSources, true);
-  assert.equal(boundary.builtinMemory.authoritative, false, 'the built-in memory must be registered as non-authoritative');
-  assert.match(boundary.builtinMemory.storage, /Library\/Caches|\$HOME|home cache/i);
-  assert.match(boundary.conflictPolicy, /不能禁用或隔离时不启用|not enabled when it cannot be disabled or isolated/i);
-  assert.match(boundary.kpEnforcement, /driver gate|Knowledge\.Closeout\.v1|sealCloseout/i,
-    'the registration must point at the Kp enforcement seat');
-  const b5 = qualification.blockingItems.find((item) => item.id === 'B5');
-  assert.ok(b5, 'the knowledge boundary must also be a mandatory Classic-admission block');
-  assert.equal(b5.class, 'knowledge-boundary');
-});
-
-test('1.4.b/C07: the registered entrance matrix covers the write channel and every record cites real probe files', async () => {
-  const { probeWriteChannels } = await import('../../lib/adapters/comet.js');
-  const records = await probeWriteChannels({ projectRoot: classicProject, nodeExecutable, change: CHANGE, env: childEnv() });
-  assert.equal(records.length, 3);
-  const byChannel = Object.fromEntries(records.map((record) => [record.channel, record]));
-  assert.equal(byChannel.edit.outcome, 'rejected', 'the write-channel entrance must really refuse a cross-phase write (C07)');
-  assert.equal(byChannel.edit.exitCode, 2);
-
-  const qualification = await loadQualification();
-  assert.ok(Array.isArray(qualification.c07Entrances) && qualification.c07Entrances.length >= 6,
-    'C07: transition, guard preview, guard --apply, next/continuation, archive, phase-guard write hook');
-  for (const entrance of qualification.c07Entrances) {
-    assert.ok(entrance.entrance && entrance.refusesWithoutCheck !== undefined,
-      `entrance record incomplete: ${JSON.stringify(entrance).slice(0, 120)}`);
-  }
-  const declaredProbes = qualification.probes ?? [];
-  assert.ok(declaredProbes.length >= 5, 'the registration must cite its probe files');
-  for (const relative of declaredProbes) {
-    const probe = await loadProbeRecords(relative.replace(/^mode-probes\//, ''));
-    assert.ok(Array.isArray(probe.records) && probe.records.length > 0, `${relative} carries no records`);
-    for (const record of probe.records) {
-      assert.ok(record.id !== undefined && record.command !== undefined && record.exitCode !== undefined,
-        `${relative} record without command/exit evidence: ${JSON.stringify(record).slice(0, 120)}`);
-    }
-  }
+  assert.equal(checkLogs.length, 0, 'the archived change must carry zero real check logs (B4 registered, not smoothed)');
 });
 
 test('cleanup removes the scratch world', async () => {
