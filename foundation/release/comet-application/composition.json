@@ -16,57 +16,114 @@
     "kind": "classic",
     "profile": "full",
     "replacements": [
-      { "stepId": "full.open", "skillId": "comet-open-full-open" },
-      { "stepId": "full.design.handoff", "skillId": "grill-me-full-design-handoff" },
-      { "stepId": "full.design.document", "skillId": "grill-me-full-design-document" },
-      { "stepId": "full.build.configure", "skillId": "comet-build-full-build-configure" },
-      { "stepId": "full.build.plan", "skillId": "claude-parallel-tdd-planner-full-build-plan" },
-      { "stepId": "full.build.execute", "skillId": "tdd-full-build-execute" },
-      { "stepId": "full.verify.run", "skillId": "comet-verify-full-verify-run" },
-      { "stepId": "full.archive.prepare", "skillId": "comet-archive-full-archive-prepare" },
-      { "stepId": "full.archive.deliver", "skillId": "comet-archive-full-archive-deliver" }
+      {
+        "stepId": "full.open",
+        "skillId": "comet-open-full-open"
+      },
+      {
+        "stepId": "full.design.handoff",
+        "skillId": "grill-me-full-design-handoff"
+      },
+      {
+        "stepId": "full.design.document",
+        "skillId": "grill-me-full-design-document"
+      },
+      {
+        "stepId": "full.build.configure",
+        "skillId": "comet-build-full-build-configure"
+      },
+      {
+        "stepId": "full.build.plan",
+        "skillId": "claude-parallel-tdd-planner-full-build-plan"
+      },
+      {
+        "stepId": "full.build.execute",
+        "skillId": "tdd-full-build-execute"
+      },
+      {
+        "stepId": "full.verify.run",
+        "skillId": "comet-verify-full-verify-run"
+      },
+      {
+        "stepId": "full.archive.prepare",
+        "skillId": "comet-archive-full-archive-prepare"
+      },
+      {
+        "stepId": "full.archive.deliver",
+        "skillId": "comet-archive-full-archive-deliver"
+      }
     ],
     "extensions": [
       {
         "id": "requirements-open",
         "skillId": "grill-me",
-        "artifactRefs": [".sdd/delivery/gates/r/receipt-bundle.json"],
-        "validator": { "id": "sdd.delivery.gate.r", "version": "1" },
+        "artifactRefs": [
+          ".sdd/delivery/gates/r/receipt-bundle.json"
+        ],
+        "validator": {
+          "id": "sdd.delivery.gate.r",
+          "version": "1"
+        },
         "afterStep": "full.open.evidence"
       },
       {
         "id": "architecture-consensus",
         "skillId": "multi-agent-consensus-review",
-        "artifactRefs": [".sdd/delivery/gates/a/receipt-bundle.json"],
-        "validator": { "id": "sdd.delivery.gate.a", "version": "1" },
+        "artifactRefs": [
+          ".sdd/delivery/gates/a/receipt-bundle.json"
+        ],
+        "validator": {
+          "id": "sdd.delivery.gate.a",
+          "version": "1"
+        },
         "afterStep": "full.design.evidence"
       },
       {
         "id": "test-design-review",
         "skillId": "test-authoring",
-        "artifactRefs": [".sdd/delivery/gates/t/receipt-bundle.json"],
-        "validator": { "id": "sdd.delivery.gate.t", "version": "1" },
+        "artifactRefs": [
+          ".sdd/delivery/gates/t/receipt-bundle.json"
+        ],
+        "validator": {
+          "id": "sdd.delivery.gate.t",
+          "version": "1"
+        },
         "afterStep": "full.design.evidence"
       },
       {
         "id": "build-plan-unique",
         "skillId": "claude-parallel-tdd-planner",
-        "artifactRefs": [".sdd/delivery/gates/p/receipt-bundle.json"],
-        "validator": { "id": "sdd.delivery.gate.p", "version": "1" },
+        "artifactRefs": [
+          ".sdd/delivery/gates/p/receipt-bundle.json"
+        ],
+        "validator": {
+          "id": "sdd.delivery.gate.p",
+          "version": "1"
+        },
         "afterStep": "full.build.plan.evidence"
       },
       {
         "id": "verify-whitebox",
         "skillId": "whitebox-verify",
-        "artifactRefs": [".sdd/delivery/gates/v/receipt-bundle.json"],
-        "validator": { "id": "sdd.delivery.gate.v", "version": "1" },
+        "artifactRefs": [
+          ".sdd/delivery/gates/v/receipt-bundle.json"
+        ],
+        "validator": {
+          "id": "sdd.delivery.gate.v",
+          "version": "1"
+        },
         "afterStep": "full.verify.check.evidence"
       },
       {
         "id": "knowledge-project-closeout",
         "skillId": "openspec-lifecycle-guard",
-        "artifactRefs": [".sdd/delivery/gates/kp/receipt-bundle.json"],
-        "validator": { "id": "sdd.delivery.gate.kp", "version": "1" },
+        "artifactRefs": [
+          ".sdd/delivery/gates/kp/receipt-bundle.json"
+        ],
+        "validator": {
+          "id": "sdd.delivery.gate.kp",
+          "version": "1"
+        },
         "afterStep": "full.verify.check.evidence"
       }
     ],
@@ -183,29 +240,49 @@
     "steps": {
       "full.open": {
         "originalSkillRef": "comet-open",
-        "outputContract": { "preset": false, "adoptedAdapterSchema": { "type": "object" } },
+        "outputContract": {
+          "preset": false,
+          "adoptedAdapterSchema": {
+            "type": "object"
+          }
+        },
         "methodBasis": "domain-owned open work kept managed on a per-step domain-work skill (upstream comet-open assets are not embeddable — repair R6)"
       },
       "full.design.handoff": {
         "originalSkillRef": "comet-design",
         "outputContract": {
-          "required": ["proposal"],
-          "properties": ["proposal", "handoffContext", "handoffHash"]
+          "required": [
+            "proposal"
+          ],
+          "properties": [
+            "proposal",
+            "handoffContext",
+            "handoffHash"
+          ]
         },
         "methodBasis": "foundation/profiles/comet-managed.json action A (architecture-author) methods [grill-me]; per-step variant of the packaged grill-me skill (repair R3: the two design steps carry different original schemas and can never share one skill id)"
       },
       "full.design.document": {
         "originalSkillRef": "comet-design",
         "outputContract": {
-          "required": ["designDoc"],
-          "properties": ["designDoc"]
+          "required": [
+            "designDoc"
+          ],
+          "properties": [
+            "designDoc"
+          ]
         },
         "methodBasis": "foundation/profiles/comet-managed.json action A methods [grill-me]; per-step variant of the packaged grill-me skill (repair R3)"
       },
       "full.build.configure": {
         "originalSkillRef": "comet-build",
         "outputContract": {
-          "required": ["buildMode", "tddMode", "reviewMode", "isolation"],
+          "required": [
+            "buildMode",
+            "tddMode",
+            "reviewMode",
+            "isolation"
+          ],
           "properties": [
             "buildMode",
             "tddMode",
@@ -221,40 +298,73 @@
       "full.build.plan": {
         "originalSkillRef": "comet-build",
         "outputContract": {
-          "required": ["plan"],
-          "properties": ["plan", "buildPause"]
+          "required": [
+            "plan"
+          ],
+          "properties": [
+            "plan",
+            "buildPause"
+          ]
         },
         "methodBasis": "foundation/profiles/comet-managed.json action P (plan-author) methods [claude-parallel-tdd-planner]; per-step variant (repair R3: the packaged id is also the build-plan-unique gate extension skill with a different schema); load=references-only, no second controller"
       },
       "full.build.execute": {
         "originalSkillRef": "comet-build",
         "outputContract": {
-          "required": ["event"],
-          "properties": ["event"]
+          "required": [
+            "event"
+          ],
+          "properties": [
+            "event"
+          ]
         },
         "methodBasis": "foundation/profiles/comet-managed.json action build methods [tdd, diagnosing-bugs]; tdd is the implementation default (Matt test-first); per-step variant of the packaged tdd skill"
       },
       "full.verify.run": {
         "originalSkillRef": "comet-verify",
         "outputContract": {
-          "required": ["event"],
-          "properties": ["event", "verificationReport", "reason"]
+          "required": [
+            "event"
+          ],
+          "properties": [
+            "event",
+            "verificationReport",
+            "reason"
+          ]
         },
         "methodBasis": "domain-owned verification run kept managed on a per-step domain-work skill (upstream comet-verify assets are not embeddable — repair R6)"
       },
       "full.archive.prepare": {
         "originalSkillRef": "comet-archive",
         "outputContract": {
-          "required": ["targetBranch", "summary"],
-          "properties": ["targetBranch", "remote", "prBaseBranch", "summary"]
+          "required": [
+            "targetBranch",
+            "summary"
+          ],
+          "properties": [
+            "targetBranch",
+            "remote",
+            "prBaseBranch",
+            "summary"
+          ]
         },
         "methodBasis": "domain-owned archive preparation kept managed on a per-step domain-work skill (repair R3: the upstream comet-archive ref is shared by the schema-different prepare/deliver steps; R6: upstream assets not embeddable)"
       },
       "full.archive.deliver": {
         "originalSkillRef": "comet-archive",
         "outputContract": {
-          "required": ["action", "targetBranch", "commit"],
-          "properties": ["action", "targetBranch", "commit", "remote", "prUrl"]
+          "required": [
+            "action",
+            "targetBranch",
+            "commit"
+          ],
+          "properties": [
+            "action",
+            "targetBranch",
+            "commit",
+            "remote",
+            "prUrl"
+          ]
         },
         "methodBasis": "domain-owned archive delivery kept managed on a per-step domain-work skill (repair R3/R6, same as prepare)"
       }
@@ -285,6 +395,54 @@
     ],
     "sameCheckpointSemantics": "A and T are two independent extensions on full.design.evidence and V and Kp two on full.verify.check.evidence: the upstream chain runs them in order and ALL must pass — one passing never substitutes the other (AND, not OR)"
   },
+  "startContract": {
+    "blocker": "B-① (P2_4-r3): initialState.isolation=null can never satisfy full.build.configure — the step validator demands non-null state isolation, the step output schema forbids null, the confirm transition throws on null and refuses failed configures, and the classic factory workflow carries no definition-side initialState through the official compile seam (runtime start forbids both faces specifying it). Managed composition runs MUST start with isolation set.",
+    "constructedBy": "lib/adapters/comet.js classicCompositionStartRequest — the only mechanically enforced managed start face; the initialState is derived there and caller-supplied start state is refused (START_STATE_CONFLICT face). Cross-pinned field-for-field by test/delivery-cases/2_4.mjs against this declaration and the pristine full-profile stateSchema.",
+    "initialState": {
+      "workflow": "full",
+      "language": "en",
+      "phase": "open",
+      "contextCompression": "off",
+      "buildMode": null,
+      "buildPause": null,
+      "subagentDispatch": null,
+      "tddMode": null,
+      "reviewMode": "standard",
+      "isolation": "current",
+      "boundBranch": null,
+      "verifyMode": null,
+      "autoTransition": true,
+      "baseRef": null,
+      "designDoc": null,
+      "plan": null,
+      "verifyResult": "pending",
+      "verifyFailures": 0,
+      "checkEpoch": 0,
+      "verificationReport": null,
+      "branchStatus": "pending",
+      "createdAt": null,
+      "verifiedAt": null,
+      "archiveConfirmation": null,
+      "archived": false,
+      "directOverride": null,
+      "handoffContext": null,
+      "handoffHash": null,
+      "classicProfile": "full",
+      "classicMigration": 1
+    },
+    "isolationPolicy": "the managed default is 'current' (same workspace — the isolation used by every upstream 0.5.0 pristine test and by the pilot runs r2/r3 once unblocked); branch/worktree isolation requires the domain bound-branch machinery and is NOT offered by the managed constructor",
+    "refinableFields": {
+      "baseRef": "40-64 hex commit or null",
+      "createdAt": "YYYY-MM-DD or null"
+    }
+  },
+  "gateArtifactContract": {
+    "blocker": "B-③ (P2_4-r3): the official compiler accepts only STATIC artifactRef strings (compiler planSchema; upstream artifactRef path checks), so epoch-qualified per-gate paths are inexpressible through the compile seam, while upstream re-hashes the static ref against every recorded pass on every future re-validation (classic-application.ts) and again at archive. A same-gate re-run that writes different bytes to the static ref permanently orphans the earlier pass hash (pilot: P round-1 536b5b49… unrecoverable after the task-id revise loop).",
+    "scheme": "content-address-stable-v1 (relative): within one Run, IDENTICAL judged evidence for a gate must always bind IDENTICAL artifactHashes[ref] bytes at the declared static ref",
+    "contract": "enforced fail-closed by integrations/comet/application/bindings.mjs validateGateExtension at record time: a claimed pass whose gateEvidence (gate/inputs/receipts/policy, key-order-insensitive) deep-equals an earlier recorded pass of the same extension step but binds a different artifact hash is refused with a precise reason — the diverging rewrite never gets recorded, so the earlier pass can never be silently orphaned. A re-run on genuinely CHANGED evidence binds new bytes legitimately: revise loops always supersede earlier extension passes (they re-run full.open), so no stale binding survives.",
+    "writeProtocol": "managed extension executions should write the canonical byte-stable bundle — recursively key-sorted JSON of {schema: sdd.delivery.gate.receipt-bundle.v1, kind, gate, artifactRef, hashBinding, writtenBy, inputs, receipts, policy, evaluatedBy, verdict, receipt}, 2-space indent, trailing newline, utf8 — a pure function of the judged evidence with no epoch-derived or random field; same-evidence re-runs then rewrite identical bytes and the guard never fires. This is the declared write protocol, not a validator-imposed format: bundle format stays producer-owned (e.g. the P2_5 consensus adapter's richer audit bundle is legal), the STABILITY of the binding is the composition's contract.",
+    "motivation": "byte-stable same-evidence bundles make same-gate re-runs non-destructive across revise/repair epochs; epoch-qualified refs were assessed and are inexpressible through the official compile seam (static artifactRef strings only)."
+  },
   "package": {
     "build": "integrations/comet/application/internal/build-application.mjs",
     "outputRoot": "integrations/comet/application/package",
@@ -309,24 +467,38 @@
     "manifest": "integrations/comet/application/manifest.json",
     "packagedRoot": "integrations/comet/application/skills",
     "packagedBy": "P1_6, revision 2026-10-26-comet-050-adoption-v1",
-    "retiredTokensForbidden": ["superpowers", "sdd-", "trinity"],
+    "retiredTokensForbidden": [
+      "superpowers",
+      "sdd-",
+      "trinity"
+    ],
     "usage": "extension skills bind the packaged assets directly (grill-me, multi-agent-consensus-review, test-authoring, claude-parallel-tdd-planner, whitebox-verify, openspec-lifecycle-guard); work steps bind per-step managed skills (internal/domain-skills + build-time method variants); ponytail stays packaged but unbound (repair R5)"
   },
   "bindings": {
     "module": "integrations/comet/application/bindings.mjs",
     "export": "createBindings",
-    "returns": ["validators", "executors"],
-    "delegatesTo": ["lib/delivery/gate.js#evaluate", "lib/delivery/evidence.js#admitEvidence (inside evaluate on the managed path)"],
+    "returns": [
+      "validators",
+      "executors"
+    ],
+    "delegatesTo": [
+      "lib/delivery/gate.js#evaluate",
+      "lib/delivery/evidence.js#admitEvidence (inside evaluate on the managed path)"
+    ],
     "executors": {
       "port": "context.createSkillExecutor (WorkflowApplicationFactoryContext)",
       "id": "sdd-managed-skill-host",
-      "capabilities": ["skill-host"],
+      "capabilities": [
+        "skill-host"
+      ],
       "semantics": "HOST CONTRACT, not an execution implementation: authorize covers only bindings declared by the loaded application manifest and refuses everything else; invokeSkill always refuses automated execution — the pinned SKILL.md of each bound skill must be loaded and performed by the real host through the public SDK claim/report protocol (repair R2; compile-time routing probe requires preflight+execute+supports+capabilities)"
     },
     "hostContract": "the repository bindings.mjs imports lib/delivery via repository-relative specifiers (single source of judgment); the package build (internal/build-application.mjs) embeds it with that import mechanically rebased onto the in-package vendored closure sdd/*.mjs generated byte-verbatim from lib/delivery sources — sha256 provenance in internal/compile-manifest.json, re-verified by test/delivery-cases/2_4.mjs (repair R1)",
     "approvalAnchor": {
       "id": "classic.composition.confirm",
-      "choices": ["approved"],
+      "choices": [
+        "approved"
+      ],
       "appliesTo": "every write-side-effect work binding (per-step domain-work and method-variant skills); read-only gate extension bindings carry no anchor (repair R4)"
     }
   },

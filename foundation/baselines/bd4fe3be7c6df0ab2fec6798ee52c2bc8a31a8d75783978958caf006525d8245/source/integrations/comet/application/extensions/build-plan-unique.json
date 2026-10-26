@@ -1,0 +1,50 @@
+{
+  "schema": "sdd.comet.classic.extension.v1",
+  "id": "build-plan-unique",
+  "gate": "P",
+  "afterStep": "full.build.plan.evidence",
+  "skillId": "claude-parallel-tdd-planner",
+  "artifactRefs": [
+    {
+      "ref": ".sdd/delivery/gates/p/receipt-bundle.json",
+      "kind": "gate-receipt-bundle",
+      "hashBinding": "artifactHashes",
+      "writtenBy": "extension-execution",
+      "contentAddressing": {
+        "scheme": "content-address-stable-v1",
+        "stability": "identical judged evidence (gate/inputs/receipts/policy) must always bind identical artifactHashes[ref] bytes within the Run; enforced fail-closed by the packaged validator at record time",
+        "writeProtocolFields": [
+          "schema",
+          "kind",
+          "gate",
+          "artifactRef",
+          "hashBinding",
+          "writtenBy",
+          "inputs",
+          "receipts",
+          "policy",
+          "evaluatedBy",
+          "verdict",
+          "receipt"
+        ],
+        "contract": "a diverging rewrite of the static per-gate ref for unchanged evidence is refused before it can orphan an earlier recorded pass (B-③, P2_4-r3); re-runs on genuinely changed evidence bind new bytes legitimately"
+      }
+    }
+  ],
+  "validator": {
+    "id": "sdd.delivery.gate.p",
+    "version": "1"
+  },
+  "verdictProtocol": {
+    "verdicts": [
+      "pass",
+      "repair",
+      "revise-requirements"
+    ],
+    "sourceHash": "domain-bound",
+    "artifactHashes": "domain-bound"
+  },
+  "semantics": "P (D05/D06): the one canonical same-Change plan — the plan bundle admitted here must be the same Change's tasks/DAG root, never a second DAG or an imported plan; real plan progress preserves definitions (baseline invalidation on scope change stays inside lib/delivery).",
+  "bindings": "integrations/comet/application/bindings.mjs",
+  "judgment": "lib/delivery/gate.js evaluate (pure SDD.Gate.v1) with baseline digests from lib/delivery/baseline.js supplied as payload inputs, reached only through bindings.mjs delegation; no local plan parsing or verdict logic."
+}

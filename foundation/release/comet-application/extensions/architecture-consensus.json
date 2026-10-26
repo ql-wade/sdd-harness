@@ -9,12 +9,38 @@
       "ref": ".sdd/delivery/gates/a/receipt-bundle.json",
       "kind": "gate-receipt-bundle",
       "hashBinding": "artifactHashes",
-      "writtenBy": "extension-execution"
+      "writtenBy": "extension-execution",
+      "contentAddressing": {
+        "scheme": "content-address-stable-v1",
+        "stability": "identical judged evidence (gate/inputs/receipts/policy) must always bind identical artifactHashes[ref] bytes within the Run; enforced fail-closed by the packaged validator at record time",
+        "writeProtocolFields": [
+          "schema",
+          "kind",
+          "gate",
+          "artifactRef",
+          "hashBinding",
+          "writtenBy",
+          "inputs",
+          "receipts",
+          "policy",
+          "evaluatedBy",
+          "verdict",
+          "receipt"
+        ],
+        "contract": "a diverging rewrite of the static per-gate ref for unchanged evidence is refused before it can orphan an earlier recorded pass (B-③, P2_4-r3); re-runs on genuinely changed evidence bind new bytes legitimately"
+      }
     }
   ],
-  "validator": { "id": "sdd.delivery.gate.a", "version": "1" },
+  "validator": {
+    "id": "sdd.delivery.gate.a",
+    "version": "1"
+  },
   "verdictProtocol": {
-    "verdicts": ["pass", "repair", "revise-requirements"],
+    "verdicts": [
+      "pass",
+      "repair",
+      "revise-requirements"
+    ],
     "sourceHash": "domain-bound",
     "artifactHashes": "domain-bound"
   },

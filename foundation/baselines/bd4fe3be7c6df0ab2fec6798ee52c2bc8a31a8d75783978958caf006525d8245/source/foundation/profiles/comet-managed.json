@@ -1,0 +1,462 @@
+{
+  "schemaVersion": 1,
+  "id": "comet-managed-v2",
+  "optional": true,
+  "controller": "comet-classic",
+  "qualification": {
+    "status": "ASSETS_PACKAGED",
+    "reason": "Method skill assets are packaged verbatim under integrations/comet/application/skills (supply side of 0.5.0 application composition, ADR-0022). Execution bindings, composition wiring, a qualified executor, protected launcher identity and runtime gates are still required before enablement; this status is not QUALIFIED and implies no runtime acceptance.",
+    "assetPackaging": {
+      "manifest": "integrations/comet/application/manifest.json",
+      "packagedRoot": "integrations/comet/application/skills",
+      "revision": "2026-10-26-comet-050-adoption-v1",
+      "upstreamCommit": "aeb1a6598034e28ce46b8422d4dbd8785e607bd7"
+    },
+    "enablementOwners": [
+      "P1_3",
+      "P2_2",
+      "P2_4",
+      "P2_5",
+      "VERIFY"
+    ]
+  },
+  "entrypoint": "/comet",
+  "nativePhases": [
+    "open",
+    "design",
+    "build",
+    "verify",
+    "archive"
+  ],
+  "authority": {
+    "state": "Comet.Run",
+    "dispatch": "Comet.Run",
+    "rework": "Comet.Run",
+    "recovery": "Comet.Run",
+    "completion": "Comet.Run",
+    "teamai": "distribution-only",
+    "gate": "pure-evaluate",
+    "runner": "execute-only",
+    "spec": "OpenSpec",
+    "plan": "same Change tasks.md and task-dag.json",
+    "progress": "same Comet Run; no method ledger as authority"
+  },
+  "sourceManifest": "openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json",
+  "methods": {
+    "claude-parallel-tdd-planner": {
+      "snapshot": ".agents/skills/claude-parallel-tdd-planner",
+      "sha256": "d43f87a4d9e2983ee68be313736581f41e673f0e18c8dfa5455594a2161130d9",
+      "load": "references-only",
+      "references": [
+        {
+          "path": "references/plan-contract.md",
+          "sections": [
+            "One root and acceptance source",
+            "DAG"
+          ]
+        }
+      ],
+      "validators": [
+        {
+          "path": "scripts/plan_guard.py",
+          "mode": "read-only"
+        }
+      ],
+      "forbidden": [
+        "SKILL.md",
+        "references/automation.md",
+        "references/parallel-execution.md",
+        "references/execution-prompt-template.md",
+        "references/openspec-closeout.md",
+        "references/completion-verification.md",
+        "scripts/openspec_lifecycle.py",
+        "scripts/render_execution_prompt.py",
+        "scripts/install_global.py"
+      ],
+      "capabilities": [
+        "read-current-artifacts",
+        "write-current-plan-artifacts",
+        "validate-plan"
+      ],
+      "deniedCapabilities": [
+        "dispatch",
+        "goal",
+        "schedule",
+        "retry",
+        "archive",
+        "publish",
+        "write-run-state"
+      ]
+    },
+    "code-review": {
+      "snapshot": ".agents/skills/code-review",
+      "sha256": "43e7a9821e32bceb8d0d2a8d3fcb5e2ff44f175d67ed5f6f8771332a5c44ead1",
+      "load": "skill",
+      "entry": "SKILL.md"
+    },
+    "diagnosing-bugs": {
+      "snapshot": ".agents/skills/diagnosing-bugs",
+      "sha256": "5967f635c8bd5b2d47cf091ad47accf678046600120f794fe582b708334828a4",
+      "load": "skill",
+      "entry": "SKILL.md"
+    },
+    "grill-me": {
+      "snapshot": ".agents/skills/grill-me",
+      "sha256": "7fecd90aad8424d5d3dd0d2402db6406935b5f765c7bbb00e97503634d5258a2",
+      "load": "skill",
+      "entry": "SKILL.md"
+    },
+    "grilling": {
+      "snapshot": ".agents/skills/grilling",
+      "sha256": "e322883f8b04494b2ff5a1fed9d1243486ee3819bf614d872184e3f8694ecc11",
+      "load": "skill",
+      "entry": "SKILL.md"
+    },
+    "multi-agent-consensus-review": {
+      "snapshot": ".agents/skills/multi-agent-consensus-review",
+      "sha256": "cb69635b85a14727e3d239a5bfc7d95aa85a50a9ef7a980c5f8bf7180640383f",
+      "load": "skill",
+      "entry": "SKILL.md"
+    },
+    "openspec-lifecycle-guard": {
+      "snapshot": ".agents/skills/openspec-lifecycle-guard",
+      "sha256": "d082c7b7e9f717da1b0a8d4f56a93ed46e71621f5d71a24d0f8add7ec5f08c4b",
+      "load": "skill",
+      "entry": "SKILL.md"
+    },
+    "ponytail": {
+      "snapshot": ".agents/skills/ponytail",
+      "sha256": "7a9c344fa0f1fca0d453bc6e11f95cf7409d40fb0fa21f28a439c3d0850e42a7",
+      "load": "skill",
+      "entry": "SKILL.md"
+    },
+    "tdd": {
+      "snapshot": ".agents/skills/tdd",
+      "sha256": "fd74eb470ca923b2a866a004009f5025e0d4fd470b5cc41482466ba5925127eb",
+      "load": "skill",
+      "entry": "SKILL.md"
+    },
+    "test-authoring": {
+      "snapshot": ".agents/skills/test-authoring",
+      "sha256": "f633b2a6fd1d24a16870728f2c695c6bf273a187f84dcb3ff50b04782b083c6d",
+      "load": "skill",
+      "entry": "SKILL.md"
+    },
+    "whitebox-verify": {
+      "snapshot": ".agents/skills/whitebox-verify",
+      "sha256": "391296c90fea357c9e9d2401b7107b30cc69da6962232215d718fb8c93f93e22",
+      "load": "skill",
+      "entry": "SKILL.md"
+    }
+  },
+  "actions": [
+    {
+      "action": "R",
+      "nativePhase": "open",
+      "role": "requirements-author",
+      "methods": [
+        "grill-me"
+      ],
+      "inputs": [
+        "goal",
+        "authorized-knowledge-context"
+      ],
+      "outputs": [
+        "proposal",
+        "acceptance-criteria",
+        "scope",
+        "requirements-revision"
+      ],
+      "gate": "R",
+      "dispatchOwner": "Comet.Run",
+      "resultAcceptance": "trusted execution identity and independent semantic evidence required"
+    },
+    {
+      "action": "A",
+      "nativePhase": "design",
+      "role": "architecture-author",
+      "methods": [
+        "grill-me"
+      ],
+      "inputs": [
+        "approved-requirements",
+        "authorized-knowledge-context"
+      ],
+      "outputs": [
+        "design",
+        "ADR",
+        "frozen-review-artifact"
+      ],
+      "gate": "A",
+      "dispatchOwner": "Comet.Run",
+      "resultAcceptance": "trusted execution identity and independent semantic evidence required"
+    },
+    {
+      "action": "A.review",
+      "nativePhase": "design",
+      "role": "independent-architecture-review",
+      "methods": [
+        "multi-agent-consensus-review"
+      ],
+      "inputs": [
+        "frozen-review-artifact",
+        "protected-review-policy"
+      ],
+      "outputs": [
+        "original-manifest",
+        "original-ballots",
+        "tally",
+        "final-report"
+      ],
+      "gate": "A",
+      "dispatchOwner": "Comet.Run",
+      "resultAcceptance": "trusted execution identity and independent semantic evidence required"
+    },
+    {
+      "action": "T",
+      "nativePhase": "design",
+      "role": "test-author",
+      "methods": [
+        "test-authoring"
+      ],
+      "inputs": [
+        "approved-requirements",
+        "approved-design"
+      ],
+      "outputs": [
+        "TestPack-design",
+        "cases",
+        "oracles",
+        "coverage",
+        "environment-and-cleanup"
+      ],
+      "gate": "T",
+      "dispatchOwner": "Comet.Run",
+      "resultAcceptance": "trusted execution identity and independent semantic evidence required"
+    },
+    {
+      "action": "T.review",
+      "nativePhase": "design",
+      "role": "independent-test-design-review",
+      "methods": [],
+      "inputs": [
+        "TestPack-design",
+        "requirements",
+        "design",
+        "test-authoring/references/test-quality.md"
+      ],
+      "outputs": [
+        "independent-test-design-verdict"
+      ],
+      "gate": "T",
+      "dispatchOwner": "Comet.Run",
+      "resultAcceptance": "trusted execution identity and independent semantic evidence required"
+    },
+    {
+      "action": "P",
+      "nativePhase": "build",
+      "role": "plan-author",
+      "methods": [
+        "claude-parallel-tdd-planner"
+      ],
+      "inputs": [
+        "approved-requirements",
+        "approved-design",
+        "approved-TestPack"
+      ],
+      "outputs": [
+        "same-Change tasks.md",
+        "same-Change task-dag.json"
+      ],
+      "gate": "P",
+      "dispatchOwner": "Comet.Run",
+      "resultAcceptance": "trusted execution identity and independent semantic evidence required"
+    },
+    {
+      "action": "test.automate",
+      "nativePhase": "build",
+      "role": "test-author",
+      "methods": [
+        "test-authoring"
+      ],
+      "inputs": [
+        "approved-TestPack",
+        "plan-work-package"
+      ],
+      "outputs": [
+        "executable-tests",
+        "fixtures",
+        "author-self-check"
+      ],
+      "gate": "Build",
+      "dispatchOwner": "Comet.Run",
+      "resultAcceptance": "trusted execution identity and independent semantic evidence required"
+    },
+    {
+      "action": "build",
+      "nativePhase": "build",
+      "role": "builder",
+      "methods": [
+        "tdd",
+        "diagnosing-bugs"
+      ],
+      "inputs": [
+        "plan-work-package",
+        "approved-TestPack",
+        "executable-tests"
+      ],
+      "outputs": [
+        "cause-matched-RED",
+        "GREEN",
+        "implementation-candidate"
+      ],
+      "gate": "Build",
+      "dispatchOwner": "Comet.Run",
+      "resultAcceptance": "trusted execution identity and independent semantic evidence required"
+    },
+    {
+      "action": "code.review",
+      "nativePhase": "build",
+      "role": "independent-code-review",
+      "methods": [
+        "code-review"
+      ],
+      "inputs": [
+        "current-candidate",
+        "requirements",
+        "design",
+        "test-results"
+      ],
+      "outputs": [
+        "standards-review",
+        "spec-review"
+      ],
+      "gate": "Build",
+      "dispatchOwner": "Comet.Run",
+      "resultAcceptance": "trusted execution identity and independent semantic evidence required"
+    },
+    {
+      "action": "V",
+      "nativePhase": "verify",
+      "role": "independent-whitebox",
+      "methods": [
+        "whitebox-verify"
+      ],
+      "inputs": [
+        "current-candidate",
+        "approved-TestPack",
+        "runtime-environment"
+      ],
+      "outputs": [
+        "typed-ledger",
+        "validator-result",
+        "raw-evidence",
+        "business-terminal-readback"
+      ],
+      "gate": "V",
+      "dispatchOwner": "Comet.Run",
+      "resultAcceptance": "trusted execution identity and independent semantic evidence required"
+    },
+    {
+      "action": "Kp",
+      "nativePhase": "archive",
+      "role": "project-knowledge-writer",
+      "methods": [],
+      "inputs": [
+        "verified-experience",
+        "independent-knowledge-review"
+      ],
+      "outputs": [
+        "LLMWiki-entry",
+        "index-and-reference-readback"
+      ],
+      "gate": "Kp",
+      "dispatchOwner": "Comet.Run",
+      "resultAcceptance": "trusted execution identity and independent semantic evidence required"
+    },
+    {
+      "action": "spec.archive",
+      "nativePhase": "archive",
+      "role": "Comet-Spec-Adapter",
+      "methods": [
+        "openspec-lifecycle-guard"
+      ],
+      "inputs": [
+        "Kp-receipt",
+        "current-OpenSpec-artifacts"
+      ],
+      "outputs": [
+        "archive",
+        "main-spec-readback"
+      ],
+      "gate": "archive",
+      "dispatchOwner": "Comet.Run",
+      "resultAcceptance": "trusted execution identity and independent semantic evidence required"
+    },
+    {
+      "action": "Kt",
+      "nativePhase": "archive",
+      "role": "managed-team-publisher",
+      "methods": [],
+      "inputs": [
+        "archived-change",
+        "approved-knowledge",
+        "current-owner-grant",
+        "source-permissions",
+        "target-audience"
+      ],
+      "outputs": [
+        "Outline-operation",
+        "fixed-document-UUID",
+        "revision-and-audience-readback"
+      ],
+      "gate": "Kt",
+      "dispatchOwner": "Comet.Run",
+      "resultAcceptance": "trusted execution identity and independent semantic evidence required"
+    }
+  ],
+  "bindingRequirements": [
+    "runId",
+    "action",
+    "taskId",
+    "gate",
+    "trustedExecutionId",
+    "inputDigest",
+    "policyDigest",
+    "methodSnapshotDigest",
+    "attempt",
+    "epoch",
+    "revision",
+    "allowedPaths",
+    "allowedTools",
+    "rawEvidenceRefs"
+  ],
+  "isolation": {
+    "testAuthorNotBuilder": true,
+    "verifierNotBuilderOrTestAuthor": true,
+    "architectureReview": "independent exact quorum from protected policy",
+    "testDesignReview": "independent semantic review, no invented three-party quorum",
+    "workerMayWriteControlState": false
+  },
+  "knowledge": {
+    "project": "llmwiki",
+    "team": "outline",
+    "codeWiki": "deepwiki-open",
+    "codeGraph": "optional",
+    "sourceCodeBulkIngest": false,
+    "Kp": "required before every archive entry",
+    "Kt": "may resume after archive in same Run; required before completed"
+  },
+  "methodDefaults": {
+    "ponytail": "full",
+    "methodTogglesMayChangeGatesOrPermissions": false
+  },
+  "failurePolicy": {
+    "missingMethod": "UNQUALIFIED",
+    "missingExecutor": "UNQUALIFIED",
+    "missingTrustedIdentity": "UNQUALIFIED",
+    "fallbackToRetiredMethods": false,
+    "inputChange": "invalidate all downstream evidence; restoring old bytes never revives approval"
+  },
+  "runtimeAccepted": false
+}
