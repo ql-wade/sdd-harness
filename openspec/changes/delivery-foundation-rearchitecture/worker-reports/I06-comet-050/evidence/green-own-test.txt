@@ -1,0 +1,255 @@
+TAP version 13
+# Subtest: V_INFRA_I06 contract: five platform files exist and committed validate passes with LOCAL_ONLY and honest gaps
+ok 1 - V_INFRA_I06 contract: five platform files exist and committed validate passes with LOCAL_ONLY and honest gaps
+  ---
+  duration_ms: 60.499917
+  ...
+# Subtest: committed platform files carry the interface bindings and honest UNVERIFIED identity facts
+ok 2 - committed platform files carry the interface bindings and honest UNVERIFIED identity facts
+  ---
+  duration_ms: 0.450709
+  ...
+# Subtest: adoption-v1 registration: existing pipelines, candidate required checks, digest source and pending owners are registered as locally verifiable facts
+ok 3 - adoption-v1 registration: existing pipelines, candidate required checks, digest source and pending owners are registered as locally verifiable facts
+  ---
+  duration_ms: 58.926
+  ...
+# Subtest: RED same-origin labels: stale or missing repoFullname/url fails validate with IDENTITY_NOT_SAME_ORIGIN while IDs and owner stay stable
+ok 4 - RED same-origin labels: stale or missing repoFullname/url fails validate with IDENTITY_NOT_SAME_ORIGIN while IDs and owner stay stable
+  ---
+  duration_ms: 231.289
+  ...
+# Subtest: RED direct-probe preflight: drifted repoFullname/url is rejected before any gh call, even with stable IDs and owner
+ok 5 - RED direct-probe preflight: drifted repoFullname/url is rejected before any gh call, even with stable IDs and owner
+  ---
+  duration_ms: 117.701
+  ...
+# Subtest: RED equal-but-absent labels: both sides missing/blank/invalid-typed identity fields fail same-origin in validate and probe
+ok 6 - RED equal-but-absent labels: both sides missing/blank/invalid-typed identity fields fail same-origin in validate and probe
+  ---
+  duration_ms: 687.497708
+  ...
+# Subtest: RED authorization gate: configuring required checks without remote write authorization is refused — admin identity is not this run approval
+ok 7 - RED authorization gate: configuring required checks without remote write authorization is refused — admin identity is not this run approval
+  ---
+  duration_ms: 176.051
+  ...
+# Subtest: RED credential tier: development identity cannot read release/rollback secrets (SecretRef.v1 resolver semantics)
+ok 8 - RED credential tier: development identity cannot read release/rollback secrets (SecretRef.v1 resolver semantics)
+  ---
+  duration_ms: 65.154583
+  ...
+# Subtest: IntegrationIdentity.v1: a fully bound chain verifies locally (head -> mergeSHA -> digest -> deployment -> readback)
+ok 9 - IntegrationIdentity.v1: a fully bound chain verifies locally (head -> mergeSHA -> digest -> deployment -> readback)
+  ---
+  duration_ms: 60.134083
+  ...
+# Subtest: RED stale evidence: a new head/mergeSHA reusing an old check blocks candidate promotion
+ok 10 - RED stale evidence: a new head/mergeSHA reusing an old check blocks candidate promotion
+  ---
+  duration_ms: 58.627917
+  ...
+# Subtest: RED missing / skipped / timed-out checks each block promotion with distinct codes
+ok 11 - RED missing / skipped / timed-out checks each block promotion with distinct codes
+  ---
+  duration_ms: 232.146541
+  ...
+# Subtest: RED tag drift: a tag repointed to a different digest blocks promotion; digest must build from the integration merge SHA
+ok 12 - RED tag drift: a tag repointed to a different digest blocks promotion; digest must build from the integration merge SHA
+  ---
+  duration_ms: 114.431083
+  ...
+# Subtest: RED queued checks and expired artifacts never count as this production success
+ok 13 - RED queued checks and expired artifacts never count as this production success
+  ---
+  duration_ms: 230.691583
+  ...
+# Subtest: RED deployment identity: digest mismatch and missing receipt correlation block promotion
+ok 14 - RED deployment identity: digest mismatch and missing receipt correlation block promotion
+  ---
+  duration_ms: 116.682084
+  ...
+# Subtest: timeout query path: lost deployment response is confirmed by querying the original correlation ID
+ok 15 - timeout query path: lost deployment response is confirmed by querying the original correlation ID
+  ---
+  duration_ms: 173.640458
+  ...
+# Subtest: RED rollback gate: unapproved requests are refused; approved rollback needs the same digest and an independent business terminal state
+ok 16 - RED rollback gate: unapproved requests are refused; approved rollback needs the same digest and an independent business terminal state
+  ---
+  duration_ms: 292.266375
+  ...
+# Subtest: RED isolation: cross-project refs (pav-*) and foreign project bindings are rejected; missing registration is an input failure
+ok 17 - RED isolation: cross-project refs (pav-*) and foreign project bindings are rejected; missing registration is an input failure
+  ---
+  duration_ms: 170.680708
+  ...
+# Subtest: fail-closed structure: rollback approval, correlation oracle and retention rules cannot be flipped off without a violation
+ok 18 - fail-closed structure: rollback approval, correlation oracle and retention rules cannot be flipped off without a violation
+  ---
+  duration_ms: 1005.789208
+  ...
+# Subtest: probes are real and honest: repository-identity performs exactly one read-only gh attempt whose outcome is reported verbatim; bare chain probe is structured UNVERIFIED
+ok 19 - probes are real and honest: repository-identity performs exactly one read-only gh attempt whose outcome is reported verbatim; bare chain probe is structured UNVERIFIED
+  ---
+  duration_ms: 958.790792
+  ...
+# Subtest: RED spawn-failure path: missing or non-executable gh yields structured UNVERIFIED (exit 2) with a spawn diagnostic, never a crash
+ok 20 - RED spawn-failure path: missing or non-executable gh yields structured UNVERIFIED (exit 2) with a spawn diagnostic, never a crash
+  ---
+  duration_ms: 115.614875
+  ...
+# Subtest: CLI input contract: malformed chain fixtures are input failures (exit 1), distinct from semantic blocks (exit 2)
+ok 21 - CLI input contract: malformed chain fixtures are input failures (exit 1), distinct from semantic blocks (exit 2)
+  ---
+  duration_ms: 227.254792
+  ...
+# Subtest: parseJsonOut raises a real AssertionError (not a ReferenceError) when the tool prints no JSON
+ok 22 - parseJsonOut raises a real AssertionError (not a ReferenceError) when the tool prints no JSON
+  ---
+  duration_ms: 58.379084
+  ...
+# Subtest: I06 refs admission blocks direct repository probing before any external I/O
+ok 23 - I06 refs admission blocks direct repository probing before any external I/O
+  ---
+  duration_ms: 256.780375
+  ...
+# Subtest: I06 direct probes consume versioned platform input through the same admission gate
+ok 24 - I06 direct probes consume versioned platform input through the same admission gate
+  ---
+  duration_ms: 59.657458
+  ...
+# Subtest: I06 integration chain never accepts a foreign project or a normal-response correlation mismatch
+ok 25 - I06 integration chain never accepts a foreign project or a normal-response correlation mismatch
+  ---
+  duration_ms: 121.23425
+  ...
+# Subtest: I06 platform observer reads exact registered IDs, all pages and candidate-linked artifact metadata only
+ok 26 - I06 platform observer reads exact registered IDs, all pages and candidate-linked artifact metadata only
+  ---
+  duration_ms: 730.078084
+  ...
+# Subtest: I06 observer keeps forbidden, truncated, foreign and missing-ID pages unverified
+ok 27 - I06 observer keeps forbidden, truncated, foreign and missing-ID pages unverified
+  ---
+  duration_ms: 3445.723375
+  ...
+# Subtest: I06 all operations share nullable, nested, unknown, duplicate and reference admission before I/O
+ok 28 - I06 all operations share nullable, nested, unknown, duplicate and reference admission before I/O
+  ---
+  duration_ms: 2897.181
+  ...
+# Subtest: I06 registered independent target readback matches project, SHA, digest, original operation and terminal state
+ok 29 - I06 registered independent target readback matches project, SHA, digest, original operation and terminal state
+  ---
+  duration_ms: 570.993625
+  ...
+# Subtest: I06 registered OCI readback rehashes manifest/config and binds actual source SHA without claiming signing
+ok 30 - I06 registered OCI readback rehashes manifest/config and binds actual source SHA without claiming signing
+  ---
+  duration_ms: 204.66325
+  ...
+# Subtest: I06 malformed input diagnostics never echo private JSON fragments or untrusted paths
+ok 31 - I06 malformed input diagnostics never echo private JSON fragments or untrusted paths
+  ---
+  duration_ms: 55.77075
+  ...
+# Subtest: I06 timeout remains unknown and never triggers a replacement platform action
+ok 32 - I06 timeout remains unknown and never triggers a replacement platform action
+  ---
+  duration_ms: 178.006416
+  ...
+# Subtest: I06 artifact producer run must belong to the complete candidate run inventory
+ok 33 - I06 artifact producer run must belong to the complete candidate run inventory
+  ---
+  duration_ms: 715.199875
+  ...
+# Subtest: I06 workflow identity is required before a candidate run can correlate artifacts
+ok 34 - I06 workflow identity is required before a candidate run can correlate artifacts
+  ---
+  duration_ms: 716.745
+  ...
+# Subtest: I06 producer source correlation refuses foreign-source-repository
+ok 35 - I06 producer source correlation refuses foreign-source-repository
+  ---
+  duration_ms: 727.204167
+  ...
+# Subtest: I06 producer source correlation refuses missing-source-repository
+ok 36 - I06 producer source correlation refuses missing-source-repository
+  ---
+  duration_ms: 733.375208
+  ...
+# Subtest: I06 producer source correlation refuses null-source-repository
+ok 37 - I06 producer source correlation refuses null-source-repository
+  ---
+  duration_ms: 718.692041
+  ...
+# Subtest: I06 producer source correlation refuses conflicting-repository-name
+ok 38 - I06 producer source correlation refuses conflicting-repository-name
+  ---
+  duration_ms: 717.227125
+  ...
+# Subtest: I06 producer source correlation refuses missing-workflow-path
+ok 39 - I06 producer source correlation refuses missing-workflow-path
+  ---
+  duration_ms: 726.174458
+  ...
+# Subtest: I06 producer source correlation refuses conflicting-workflow-path
+ok 40 - I06 producer source correlation refuses conflicting-workflow-path
+  ---
+  duration_ms: 727.085833
+  ...
+# Subtest: I06 producer source correlation refuses unknown-workflow
+ok 41 - I06 producer source correlation refuses unknown-workflow
+  ---
+  duration_ms: 800.373292
+  ...
+# Subtest: I06 producer source correlation refuses missing-run-status
+ok 42 - I06 producer source correlation refuses missing-run-status
+  ---
+  duration_ms: 728.054125
+  ...
+# Subtest: I06 producer source correlation refuses missing-run-conclusion
+ok 43 - I06 producer source correlation refuses missing-run-conclusion
+  ---
+  duration_ms: 725.531458
+  ...
+# Subtest: I06 legal queued/null metadata and historical artifacts do not authorize a producer attempt
+ok 44 - I06 legal queued/null metadata and historical artifacts do not authorize a producer attempt
+  ---
+  duration_ms: 727.755875
+  ...
+# Subtest: I06 a current run ID with conflicting artifact SHA cannot be hidden as historical metadata
+ok 45 - I06 a current run ID with conflicting artifact SHA cannot be hidden as historical metadata
+  ---
+  duration_ms: 738.452166
+  ...
+# Subtest: I06 deployment metadata never treats an unselected environment as a registered business terminal
+ok 46 - I06 deployment metadata never treats an unselected environment as a registered business terminal
+  ---
+  duration_ms: 773.898666
+  ...
+# Subtest: I06 incomplete runs inventory cannot correlate a valid prefix producer
+ok 47 - I06 incomplete runs inventory cannot correlate a valid prefix producer
+  ---
+  duration_ms: 738.882583
+  ...
+# Subtest: I06 incomplete workflows inventory cannot correlate a valid prefix producer
+ok 48 - I06 incomplete workflows inventory cannot correlate a valid prefix producer
+  ---
+  duration_ms: 721.07025
+  ...
+# Subtest: I06 a legal null artifact workflow reference remains unverified instead of inventing a producer
+ok 49 - I06 a legal null artifact workflow reference remains unverified instead of inventing a producer
+  ---
+  duration_ms: 713.783458
+  ...
+1..49
+# tests 49
+# suites 0
+# pass 49
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 26249.915916

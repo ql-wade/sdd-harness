@@ -10,6 +10,11 @@
     "endpoint": "UNSELECTED",
     "kind": "UNSELECTED",
     "note": "No dedicated artifact registry is registered. The read-only OCI-v2 probe can rehash a registered manifest/config and bind the source revision; it never substitutes GitHub ZIP artifact metadata or a tag for OCI digest/signing/provenance. Reader/push refs remain declarations, not runtime authority.",
+    "digestSource": {
+      "kind": "github-actions-artifact-zip-metadata",
+      "status": "UNVERIFIED",
+      "note": "No registered pipeline produces a build artifact today (neither committed workflow uploads artifacts). The only observable digest-like metadata on the platform is the GitHub Actions artifact ZIP digest; it is archive metadata, never OCI digest/signing/provenance, and its live readback stays UNVERIFIED until a producing pipeline exists and is read back."
+    },
     "credentialRef": "secret-ref:sdd-harness-pilot/ci-registry",
     "readerCredentialRef": "secret-ref:sdd-harness-pilot/artifact-reader",
     "pushIdentity": {
@@ -28,7 +33,15 @@
   "artifactIdentity": {
     "digestFormat": "sha256:<64 lowercase hex>",
     "tagBinding": "A tag must resolve to exactly one immutable digest; a tag repointed to a different digest blocks candidate promotion (TAG_DIGEST_DRIFT).",
-    "buildBinding": "An artifact digest must be built from the integration merge SHA of the candidate (ARTIFACT_NOT_FROM_MERGE otherwise)."
+    "buildBinding": "An artifact digest must be built from the integration merge SHA of the candidate (ARTIFACT_NOT_FROM_MERGE otherwise).",
+    "notSuccessEvidence": {
+      "queuedOrInProgressBuildNotSuccess": true,
+      "historicalArtifactNotSuccess": true,
+      "expiredArtifactNotSuccess": true,
+      "artifactFromOlderShaNotSuccess": true,
+      "artifactFromForeignRepoNotSuccess": true,
+      "unknownProducerIdentityNotSuccess": true
+    }
   },
   "localOnly": true
 }

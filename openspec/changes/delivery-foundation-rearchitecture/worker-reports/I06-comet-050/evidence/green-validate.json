@@ -1,0 +1,92 @@
+{
+  "interface": "PlatformInfra.v1",
+  "platformDir": "infra/delivery/platform",
+  "registry": "infra/delivery/registry.json",
+  "refs": "infra/delivery/secrets.refs.example.json",
+  "mode": "LOCAL_ONLY",
+  "ok": true,
+  "violations": [],
+  "catalogGaps": [],
+  "summary": {
+    "repository": {
+      "readbackStatus": "VERIFIED",
+      "branchProtection": {
+        "configuredStatus": "NOT_CONFIGURED"
+      },
+      "remoteEnforcement": {
+        "status": "UNVERIFIED",
+        "pendingOwner": "P4_1"
+      },
+      "remotePolicyWritesAllowed": false
+    },
+    "ci": {
+      "providerStatus": "OBSERVED_NOT_QUALIFIED",
+      "committedWorkflows": [
+        {
+          "path": ".github/workflows/delivery-gate.yml",
+          "checkName": "delivery-gate",
+          "owner": "P4_1"
+        },
+        {
+          "path": ".github/workflows/quality-gates.yml",
+          "checkName": "checks",
+          "owner": "scaffold baseline"
+        }
+      ],
+      "declaredCandidateChecks": {
+        "names": [
+          "delivery-gate",
+          "checks"
+        ],
+        "sourceKind": "committed-workflow-files"
+      },
+      "requiredChecks": {
+        "registrationStatus": "UNSELECTED",
+        "names": [],
+        "blockingSemantics": [
+          "MISSING",
+          "SKIPPED",
+          "TIMED_OUT",
+          "STALE_EVIDENCE",
+          "QUEUED"
+        ],
+        "failClosed": true
+      }
+    },
+    "registryExample": {
+      "endpoint": "UNSELECTED",
+      "digestSource": {
+        "kind": "github-actions-artifact-zip-metadata",
+        "status": "UNVERIFIED"
+      },
+      "signingStatus": "UNVERIFIED",
+      "provenanceStatus": "UNVERIFIED",
+      "notSuccessEvidenceRedLines": 6
+    },
+    "environmentExample": {
+      "id": "UNSELECTED",
+      "ownerRegistration": {
+        "status": "UNSELECTED",
+        "pendingOwner": "P4_2"
+      },
+      "rollback": {
+        "approvalRequired": true,
+        "sameDigestRequired": true,
+        "independentBusinessTerminalStateRequired": true
+      },
+      "readbackOracle": {
+        "correlationIdRequired": true
+      }
+    },
+    "retention": {
+      "autoCleanupEnabled": false,
+      "unconfirmedFields": [
+        "rpo",
+        "rto",
+        "retentionPeriod",
+        "encryptionOwner"
+      ]
+    }
+  },
+  "checkedAt": "2026-10-26T10:44:15.264Z"
+}

@@ -235,6 +235,85 @@ test('committed platform files carry the interface bindings and honest UNVERIFIE
   assert.equal(retention.rollbackRetention.retainLastApprovedArtifact, true);
 });
 
+// ---------- adoption-v1 登记：实际平台 / 已有流水线 required checks / digest 来源 / owner ----------
+
+// 2026-10-26-comet-050-adoption-v1：I06 只登记本地可证事实——
+//   实际平台 ql-wade/sdd-harness（与 I01 registry 同源）、两个在库 workflow 的检查名（候选集，
+//   绝不冒充 admin 已登记）、构建产物 digest 来源（今天没有任何流水线产 artifact）、
+//   目标环境 owner（未选择，P4_2 待登记）与远端 required-check 保护（本地不可证，P4_1 待验）。
+// 远端保护是否生效本地不可证：registrationStatus 必须保持 UNSELECTED（P4_1 契约：
+// admin 登记只在 tmpdir fixture 里模拟，committed 文件永远不伪造）。
+test('adoption-v1 registration: existing pipelines, candidate required checks, digest source and pending owners are registered as locally verifiable facts', () => {
+  const repo = JSON.parse(fs.readFileSync(path.join(platformDir, 'repository-registration.json'), 'utf8'));
+  // 实际平台：登记身份必须就是真实 remote（git remote -v: origin ql-wade/sdd-harness）。
+  assert.equal(repo.repository.repoFullname, 'ql-wade/sdd-harness');
+  assert.equal(repo.repository.owner, 'ql-wade');
+  assert.equal(repo.repository.url, 'https://github.com/ql-wade/sdd-harness');
+  // 远端 required-check 保护本地不可证：UNVERIFIED 且待验 owner 在案（P4_1）。
+  assert.equal(repo.branchProtection.remoteEnforcement?.status, 'UNVERIFIED');
+  assert.equal(repo.branchProtection.remoteEnforcement?.pendingOwner, 'P4_1');
+
+  const ci = JSON.parse(fs.readFileSync(path.join(platformDir, 'ci-policy.json'), 'utf8'));
+  // 候选 required-check 集来自在库 workflow 文件（本地可证），与 provider 登记的 workflow 事实一致。
+  const declared = ci.requiredChecks.declaredCandidateChecks ?? {};
+  assert.equal(declared.sourceKind, 'committed-workflow-files');
+  assert.deepEqual([...(declared.names ?? [])].sort(), ['checks', 'delivery-gate']);
+  const workflows = ci.provider.committedWorkflows ?? [];
+  assert.deepEqual(
+    workflows.map((w) => w.checkName).sort(),
+    ['checks', 'delivery-gate'],
+    'declared candidate names must be exactly the check names of the registered committed workflows',
+  );
+  for (const workflow of workflows) {
+    const file = path.join(repoRoot, workflow.path);
+    assert.ok(fs.existsSync(file), `declared workflow file must exist in the repository: ${workflow.path}`);
+    const text = fs.readFileSync(file, 'utf8');
+    if (workflow.path.endsWith('delivery-gate.yml')) {
+      assert.match(text, /^name:\s*delivery-gate\s*$/m, 'delivery-gate.yml must keep workflow/job name delivery-gate');
+      assert.match(text, /^\s{2}delivery-gate:\s*$/m, 'delivery-gate.yml must keep job id delivery-gate');
+    } else {
+      // quality-gates job has no explicit name: the check-run name is the job id.
+      assert.match(text, /^\s{2}checks:\s*$/m, 'quality-gates.yml job id must stay checks (the check name it produces)');
+    }
+  }
+  // 登记诚实分离：候选集绝不冒充 admin 已登记/平台已保护（P4_1 契约保持）。
+  assert.equal(ci.requiredChecks.registrationStatus, 'UNSELECTED');
+  assert.deepEqual(ci.requiredChecks.names, []);
+
+  // 构建产物 digest 来源：今天没有任何在库流水线产出 artifact；唯一可观测 digest 元数据是
+  // GitHub Actions artifact ZIP 元数据，且它不是 OCI digest/签名/来源证明。
+  const registryDoc = JSON.parse(fs.readFileSync(path.join(platformDir, 'registry-registration.example.json'), 'utf8'));
+  assert.equal(registryDoc.registry.digestSource?.kind, 'github-actions-artifact-zip-metadata');
+  assert.equal(registryDoc.registry.digestSource?.status, 'UNVERIFIED');
+  const redLines = registryDoc.artifactIdentity.notSuccessEvidence ?? {};
+  for (const redLine of [
+    'queuedOrInProgressBuildNotSuccess',
+    'historicalArtifactNotSuccess',
+    'expiredArtifactNotSuccess',
+    'artifactFromOlderShaNotSuccess',
+    'artifactFromForeignRepoNotSuccess',
+    'unknownProducerIdentityNotSuccess',
+  ]) {
+    assert.equal(redLines[redLine], true, `artifact red line must be registered true: ${redLine}`);
+  }
+
+  // 目标环境 owner：未选择，P4_2 待登记——不虚构隔离环境属主。
+  const env = JSON.parse(fs.readFileSync(path.join(platformDir, 'environment-registration.example.json'), 'utf8'));
+  assert.equal(env.environment.ownerRegistration?.status, 'UNSELECTED');
+  assert.equal(env.environment.ownerRegistration?.pendingOwner, 'P4_2');
+
+  // validate 结构化读回必须把这些登记事实带出来（机器可读，不靠人读 JSON）。
+  const validate = runCli(['validate', '--registry', registryPath, '--json']);
+  assert.equal(validate.status, 0, `validate must PASS with the adoption registration: ${validate.stderr || validate.stdout}`);
+  const summary = parseJsonOut(validate, 'adoption validate').summary;
+  assert.equal(summary.repository.remoteEnforcement.status, 'UNVERIFIED');
+  assert.equal(summary.repository.remoteEnforcement.pendingOwner, 'P4_1');
+  assert.deepEqual([...summary.ci.declaredCandidateChecks.names].sort(), ['checks', 'delivery-gate']);
+  assert.equal(summary.ci.declaredCandidateChecks.sourceKind, 'committed-workflow-files');
+  assert.equal(summary.registryExample.digestSource.kind, 'github-actions-artifact-zip-metadata');
+  assert.equal(summary.environmentExample.ownerRegistration.pendingOwner, 'P4_2');
+});
+
 // ---------- RED I01 caller convergence: repoFullname/url 必须与 registry 同源 ----------
 
 test('RED same-origin labels: stale or missing repoFullname/url fails validate with IDENTITY_NOT_SAME_ORIGIN while IDs and owner stay stable', () => {
@@ -515,6 +594,38 @@ test('RED tag drift: a tag repointed to a different digest blocks promotion; dig
   assert.ok(parseJsonOut(foreignProbe, 'foreign build').codes.includes('ARTIFACT_NOT_FROM_MERGE'));
 });
 
+test('RED queued checks and expired artifacts never count as this production success', () => {
+  // 排队/进行中的检查不是成功：即使绑定 SHA 正确，未完成的 check 绝不放行候选提升。
+  const queuedStatus = tmpFile('chain-check-queued-status', greenChain({
+    checks: [{ name: 'ci-test', boundSha: SHA('b'), conclusion: 'pending', status: 'queued' }],
+  }));
+  const queuedProbe = runCli(['probe', '--case', 'registry-environment-identity', '--chain', queuedStatus, '--json']);
+  assert.equal(queuedProbe.status, 2, 'a queued check must block promotion');
+  assert.ok(parseJsonOut(queuedProbe, 'queued status').codes.includes('CHECK_QUEUED'));
+
+  const queuedConclusion = tmpFile('chain-check-queued-conclusion', greenChain({
+    checks: [{ name: 'ci-test', boundSha: SHA('b'), conclusion: 'queued' }],
+  }));
+  const queuedConclusionProbe = runCli(['probe', '--case', 'registry-environment-identity', '--chain', queuedConclusion, '--json']);
+  assert.equal(queuedConclusionProbe.status, 2, 'a queued conclusion must block promotion');
+  assert.ok(parseJsonOut(queuedConclusionProbe, 'queued conclusion').codes.includes('CHECK_QUEUED'));
+
+  const inProgress = tmpFile('chain-check-in-progress', greenChain({
+    checks: [{ name: 'ci-test', boundSha: SHA('b'), conclusion: 'pending', status: 'in_progress' }],
+  }));
+  const inProgressProbe = runCli(['probe', '--case', 'registry-environment-identity', '--chain', inProgress, '--json']);
+  assert.equal(inProgressProbe.status, 2, 'an in-progress check must block promotion');
+  assert.ok(parseJsonOut(inProgressProbe, 'in progress').codes.includes('CHECK_QUEUED'));
+
+  // 历史（已过期）artifact 不算成功：digest 正确、绑定正确也阻断。
+  const expiredArtifact = tmpFile('chain-artifact-expired', greenChain({
+    artifact: { tag: 'pilot-v0', digest: DIGEST('c'), builtFromMerge: SHA('b'), tagResolvedDigest: DIGEST('c'), expired: true },
+  }));
+  const expiredProbe = runCli(['probe', '--case', 'registry-environment-identity', '--chain', expiredArtifact, '--json']);
+  assert.equal(expiredProbe.status, 2, 'an expired artifact must block promotion');
+  assert.ok(parseJsonOut(expiredProbe, 'expired artifact').codes.includes('ARTIFACT_EXPIRED'));
+});
+
 test('RED deployment identity: digest mismatch and missing receipt correlation block promotion', () => {
   const mismatch = tmpFile('chain-deploy-digest', greenChain({
     deployment: {
@@ -733,6 +844,63 @@ test('fail-closed structure: rollback approval, correlation oracle and retention
         doc.retention.autoCleanupEnabled = true;
       },
       expected: 'AUTO_CLEANUP_WITHOUT_CONFIRMED_RECOVERY',
+    },
+    // adoption-v1 登记红线：登记事实漂移/伪称已验，一律验证失败。
+    {
+      name: 'declared-candidate-empty',
+      file: 'ci-policy.json',
+      mutate: (doc) => {
+        doc.requiredChecks.declaredCandidateChecks.names = [];
+      },
+      expected: 'DECLARED_CANDIDATE_CHECKS_EMPTY',
+    },
+    {
+      name: 'declared-candidate-drift',
+      file: 'ci-policy.json',
+      mutate: (doc) => {
+        doc.requiredChecks.declaredCandidateChecks.names = ['delivery-gate'];
+      },
+      expected: 'DECLARED_CANDIDATE_CHECKS_MISMATCH',
+    },
+    {
+      name: 'committed-workflow-missing',
+      file: 'ci-policy.json',
+      mutate: (doc) => {
+        doc.provider.committedWorkflows[0].path = '.github/workflows/ghost.yml';
+      },
+      expected: 'COMMITTED_WORKFLOW_FILE_MISSING',
+    },
+    {
+      name: 'remote-enforcement-claim',
+      file: 'repository-registration.json',
+      mutate: (doc) => {
+        doc.branchProtection.remoteEnforcement.status = 'VERIFIED';
+      },
+      expected: 'REMOTE_ENFORCEMENT_CLAIM_FORBIDDEN',
+    },
+    {
+      name: 'artifact-not-success-red-line',
+      file: 'registry-registration.example.json',
+      mutate: (doc) => {
+        doc.artifactIdentity.notSuccessEvidence.historicalArtifactNotSuccess = false;
+      },
+      expected: 'ARTIFACT_NOT_SUCCESS_RED_LINE_REQUIRED',
+    },
+    {
+      name: 'digest-source-claim',
+      file: 'registry-registration.example.json',
+      mutate: (doc) => {
+        doc.registry.digestSource.status = 'VERIFIED';
+      },
+      expected: 'DIGEST_SOURCE_CLAIM_FORBIDDEN',
+    },
+    {
+      name: 'owner-registration-removed',
+      file: 'environment-registration.example.json',
+      mutate: (doc) => {
+        delete doc.environment.ownerRegistration;
+      },
+      expected: 'INPUT_SCHEMA_INVALID',
     },
   ];
   for (const flip of flips) {

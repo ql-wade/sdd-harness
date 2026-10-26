@@ -1,0 +1,37 @@
+I06 adoption-v1 consumer regressions (pinned, 2026-10-26, repo HEAD 6441014ddfd4d5c2b7606b882a1f251b979bd0ae + this task's uncommitted I06 changes)
+
+== node --test test/ci-delivery-gate.test.js (P4_1 ci-policy consumer) ==
+# tests 20
+# pass 20
+# fail 0
+
+== node --test test/release-protocol.test.js (release.mjs -> platform.mjs chain re-evaluation) ==
+# tests 17
+# pass 17
+# fail 0
+
+== node test/delivery-cases/4_1.mjs (P4_1 journey) ==
+# tests 6
+# pass 6
+# fail 0
+
+== node test/delivery-cases/4_2.mjs (P4_2 journey) ==
+# tests 6
+# pass 6
+# fail 0
+
+== node test/delivery-cases/5_3.mjs (P5_3 journey; consumes platform.mjs chain evaluation) ==
+# tests 16
+# pass 13
+# fail 3   -> J2 drill live re-run, J4 runbook gates, J4 negative
+PRE-EXISTING: identical 3 subtests fail on baseline with this task's changes stashed
+(git stash push -- infra/delivery/platform tools/infra/platform.mjs test/infra-platform.test.js;
+ baseline run: tests 16, pass 13, fail 3, same J2/J4/J4-negative). Owned by acceptance-index/
+P5_2 gate-row and drill executor work, not by I06 files.
+
+== npm test (full suite) ==
+with this task's changes:   tests 1168, pass 1127, fail 41
+baseline (changes stashed): tests 1167, pass 1126, fail 41
+Delta: +1 test (adoption-v1 registration), +1 pass, 0 new failures; the 41 failures are
+other workers' in-flight modifications in the shared tree (Runner/outline/comet adapters),
+present identically on baseline.

@@ -171,17 +171,27 @@ const platformShapes = {
   'repository-registration.json':{...platformHeader('repository-registration'),
     repository:{...githubIdentityShape,sameOriginRef:text,'sameOriginNote?':text},
     identity:{readback:readbackShape,permissions:{status:text,'previousAdminObservation?':text}},
-    branchProtection:{configuredStatus:text,requiredChecksSource:text,'evidenceRule?':text},
+    branchProtection:{configuredStatus:text,requiredChecksSource:text,'evidenceRule?':text,
+      remoteEnforcement:{status:text,pendingOwner:text,'note?':text}},
     credentialRefs:[text],remotePolicyWrites:{allowed:flag,mode:exact('LOCAL_ONLY'),basis:text},
     'readOnly?':{apiOrigin:exact('https://api.github.com'),branch:text,pageSize:integer,maxPages:integer,timeoutMs:integer,operatorObservationOnly:exact(true)}},
-  'ci-policy.json':{...platformHeader('ci-policy'),mode:exact('LOCAL_ONLY'),provider:{status:text,'kind?':choice('github-actions'),'note?':text},
-    requiredChecks:{registrationStatus:choice('UNSELECTED','REGISTERED'),names:[text],binding:{mode:exact('exact-sha'),description:text},blockingSemantics:[text],failClosed:flag,'evidenceRule?':text},
+  'ci-policy.json':{...platformHeader('ci-policy'),mode:exact('LOCAL_ONLY'),
+    provider:{status:text,'kind?':choice('github-actions'),'note?':text,
+      committedWorkflows:[{path:text,workflowName:text,checkName:text,owner:text}]},
+    requiredChecks:{registrationStatus:choice('UNSELECTED','REGISTERED'),names:[text],
+      declaredCandidateChecks:{names:[text],sourceKind:exact('committed-workflow-files'),'note?':text},
+      binding:{mode:exact('exact-sha'),description:text},blockingSemantics:[text],failClosed:flag,'evidenceRule?':text},
     authorization:{remotePolicyWriteAuthorized:flag,writerOwner:text,basis:text},credentialRefs:[text]},
   'registry-registration.example.json':{...platformHeader('registry-registration'),example:flag,
-    registry:{endpoint:text,kind:text,'repository?':text,'transport?':choice('https','http-local-test'),'note?':text,credentialRef:text,readerCredentialRef:text,pushIdentity:booleanRules('digestPinnedRequired','floatingTagsForbidden'),signing:{mechanism:text,status:text},provenance:{mechanism:text,status:text}},
-    artifactIdentity:{digestFormat:text,tagBinding:text,buildBinding:text}},
+    registry:{endpoint:text,kind:text,'repository?':text,'transport?':choice('https','http-local-test'),'note?':text,
+      digestSource:{kind:text,status:text,'note?':text},
+      credentialRef:text,readerCredentialRef:text,pushIdentity:booleanRules('digestPinnedRequired','floatingTagsForbidden'),signing:{mechanism:text,status:text},provenance:{mechanism:text,status:text}},
+    artifactIdentity:{digestFormat:text,tagBinding:text,buildBinding:text,
+      notSuccessEvidence:booleanRules('queuedOrInProgressBuildNotSuccess','historicalArtifactNotSuccess','expiredArtifactNotSuccess','artifactFromOlderShaNotSuccess','artifactFromForeignRepoNotSuccess','unknownProducerIdentityNotSuccess')}},
   'environment-registration.example.json':{...platformHeader('environment-registration','Environment.v1'),example:flag,
-    environment:{id:text,endpoint:text,owner:text,'note?':text,networkIsolation:{status:text,crossProjectIsolation:text},deployCredentialRef:text,
+    environment:{id:text,endpoint:text,owner:text,
+      ownerRegistration:{status:choice('UNSELECTED','REGISTERED'),pendingOwner:text,'note?':text},
+      'note?':text,networkIsolation:{status:text,crossProjectIsolation:text},deployCredentialRef:text,
       rollback:{credentialRef:text,...booleanRules('approvalRequired','sameDigestRequired','retainLastApprovedArtifact','independentBusinessTerminalStateRequired')},
       readbackOracle:{kind:exact('independent-business-readback'),correlationIdRequired:flag,onTimeout:text,status:text,
         'expectedBusinessTerminalState?':text,'transport?':choice('https','http-local-test')}}},
@@ -278,6 +288,11 @@ function validatePlatform({ docs, registry, refsDoc }) {
   if (configuredStatus !== 'UNVERIFIED' && configuredStatus !== 'NOT_CONFIGURED') {
     violations.push({ code: 'PLATFORM_PROTECTION_CLAIM_FORBIDDEN', at: 'repository-registration.json', configuredStatus, reason: 'only UNVERIFIED/NOT_CONFIGURED or an evidenced platform readback may appear; claims of configured protection are forbidden' });
   }
+  // adoption-v1：远端 required-check 保护本地不可证——登记文件只能声明 UNVERIFIED + 待验 owner。
+  const remoteEnforcement = repo.branchProtection?.remoteEnforcement;
+  if (remoteEnforcement && remoteEnforcement.status !== 'UNVERIFIED') {
+    violations.push({ code: 'REMOTE_ENFORCEMENT_CLAIM_FORBIDDEN', at: 'repository-registration.json', status: remoteEnforcement.status, reason: 'remote required-check enforcement is not provable from this repository; only UNVERIFIED with a pending verification owner may be registered' });
+  }
   if (repo.remotePolicyWrites?.allowed === true) {
     violations.push({ code: 'REMOTE_POLICY_WRITE_FORBIDDEN', at: 'repository-registration.json', reason: 'no remote policy write authorization exists for this run' });
   }
@@ -292,6 +307,24 @@ function validatePlatform({ docs, registry, refsDoc }) {
   const missing = BLOCKING_SEMANTICS_REQUIRED.filter((code) => !semantics.includes(code));
   if (missing.length > 0 || requiredChecks.failClosed !== true) {
     violations.push({ code: 'BLOCKING_SEMANTICS_INCOMPLETE', at: 'ci-policy.json', missing, failClosed: requiredChecks.failClosed ?? null });
+  }
+  // adoption-v1：候选 required-check 集来自在库 workflow 文件——文件必须真实存在，
+  // 候选名必须恰好等于这些 workflow 的检查名（本地可证事实，不得漂移或虚构）。
+  const committedWorkflows = ci.provider?.committedWorkflows ?? [];
+  for (const workflow of committedWorkflows) {
+    if (!fs.existsSync(path.join(repoRoot, workflow.path))) {
+      violations.push({ code: 'COMMITTED_WORKFLOW_FILE_MISSING', at: 'ci-policy.json', path: workflow.path });
+    }
+  }
+  const declaredCandidates = requiredChecks.declaredCandidateChecks ?? {};
+  if ((declaredCandidates.names ?? []).length === 0) {
+    violations.push({ code: 'DECLARED_CANDIDATE_CHECKS_EMPTY', at: 'ci-policy.json', reason: 'the declared candidate required-check set must name the committed workflows it derives from' });
+  } else {
+    const declared = [...new Set(declaredCandidates.names)].sort();
+    const observed = [...new Set(committedWorkflows.map((workflow) => workflow.checkName))].sort();
+    if (JSON.stringify(declared) !== JSON.stringify(observed)) {
+      violations.push({ code: 'DECLARED_CANDIDATE_CHECKS_MISMATCH', at: 'ci-policy.json', declared, committedWorkflowChecks: observed, reason: 'declaredCandidateChecks.names must exactly equal the check names of provider.committedWorkflows' });
+    }
   }
   if (ci.authorization?.remotePolicyWriteAuthorized === true) {
     violations.push({ code: 'REMOTE_POLICY_WRITE_FORBIDDEN', at: 'ci-policy.json', reason: 'no remote policy write authorization exists for this run' });
@@ -316,6 +349,17 @@ function validatePlatform({ docs, registry, refsDoc }) {
   const pushIdentity = registryExample.registry?.pushIdentity ?? {};
   if (pushIdentity.digestPinnedRequired !== true || pushIdentity.floatingTagsForbidden !== true) {
     violations.push({ code: 'REGISTRY_IDENTITY_RULES_REQUIRED', at: 'registry-registration.example.json', pushIdentity });
+  }
+  // adoption-v1：digest 来源登记只能如实 UNVERIFIED（本任务无制品流水线读回）；
+  // "排队/历史/过期/错SHA/外repo/不明身份 artifact 不算成功"红线必须全部在案。
+  const digestSource = registryExample.registry?.digestSource ?? {};
+  if (digestSource.status && digestSource.status !== 'UNVERIFIED') {
+    violations.push({ code: 'DIGEST_SOURCE_CLAIM_FORBIDDEN', at: 'registry-registration.example.json', status: digestSource.status, reason: 'no live build-artifact digest source has been read back; only UNVERIFIED may be registered in this LOCAL_ONLY stage' });
+  }
+  const notSuccess = registryExample.artifactIdentity?.notSuccessEvidence ?? {};
+  const falseRedLines = Object.entries(notSuccess).filter(([, value]) => value !== true).map(([key]) => key);
+  if (falseRedLines.length > 0) {
+    violations.push({ code: 'ARTIFACT_NOT_SUCCESS_RED_LINE_REQUIRED', at: 'registry-registration.example.json', redLines: falseRedLines, reason: 'queued/historical/expired/wrong-SHA/foreign-repo/unknown-producer artifacts must all stay registered as never-success evidence' });
   }
 
   // artifact-retention：未确认值 fail-closed；恢复后旧证据不放行新 SHA；撤销后重验。
@@ -367,10 +411,19 @@ function validatePlatform({ docs, registry, refsDoc }) {
     repository: {
       readbackStatus,
       branchProtection: { configuredStatus },
+      remoteEnforcement: {
+        status: repo.branchProtection?.remoteEnforcement?.status ?? null,
+        pendingOwner: repo.branchProtection?.remoteEnforcement?.pendingOwner ?? null,
+      },
       remotePolicyWritesAllowed: repo.remotePolicyWrites?.allowed === true,
     },
     ci: {
       providerStatus: ci.provider?.status ?? null,
+      committedWorkflows: (ci.provider?.committedWorkflows ?? []).map((workflow) => ({ path: workflow.path, checkName: workflow.checkName, owner: workflow.owner })),
+      declaredCandidateChecks: {
+        names: requiredChecks.declaredCandidateChecks?.names ?? [],
+        sourceKind: requiredChecks.declaredCandidateChecks?.sourceKind ?? null,
+      },
       requiredChecks: {
         registrationStatus: requiredChecks.registrationStatus ?? null,
         names: requiredChecks.names ?? [],
@@ -380,11 +433,20 @@ function validatePlatform({ docs, registry, refsDoc }) {
     },
     registryExample: {
       endpoint: registryExample.registry?.endpoint ?? null,
+      digestSource: {
+        kind: registryExample.registry?.digestSource?.kind ?? null,
+        status: registryExample.registry?.digestSource?.status ?? null,
+      },
       signingStatus: registryExample.registry?.signing?.status ?? null,
       provenanceStatus: registryExample.registry?.provenance?.status ?? null,
+      notSuccessEvidenceRedLines: Object.keys(registryExample.artifactIdentity?.notSuccessEvidence ?? {}).length,
     },
     environmentExample: {
       id: environment.environment?.id ?? null,
+      ownerRegistration: {
+        status: environment.environment?.ownerRegistration?.status ?? null,
+        pendingOwner: environment.environment?.ownerRegistration?.pendingOwner ?? null,
+      },
       rollback: {
         approvalRequired: rollback.approvalRequired === true,
         sameDigestRequired: rollback.sameDigestRequired === true,
@@ -416,7 +478,9 @@ function evaluateIntegrationIdentity(chain, expectedProject) {
   const checkKeys=(chain.checks??[]).map((check)=>check.name+'@'+check.boundSha);
   if(new Set(checkKeys).size!==checkKeys.length)block('AMBIGUOUS_CHECK_EVIDENCE');
 
-  // required checks：证据必须精确绑定当前 merge SHA；缺项/skip/超时/旧证据四类全部阻断。
+  // required checks：证据必须精确绑定当前 merge SHA；缺项/skip/超时/排队/旧证据五类全部阻断。
+  // 排队（queued/in_progress/pending 或 conclusion=queued）= 检查未完成，绝不是成功（QUEUED 红线）。
+  const QUEUED_CHECK_STATUSES = new Set(['queued', 'in_progress', 'pending', 'waiting']);
   for (const name of chain.requiredChecks ?? []) {
     const evidences = (chain.checks ?? []).filter((check) => check.name === name);
     if (evidences.length === 0) {
@@ -428,15 +492,18 @@ function evaluateIntegrationIdentity(chain, expectedProject) {
       block('CHECK_STALE_EVIDENCE');
       continue;
     }
-    if (bound.timedOut === true || bound.conclusion === 'timed_out') block('CHECK_TIMED_OUT');
+    if (QUEUED_CHECK_STATUSES.has(String(bound.status ?? '').toLowerCase()) || bound.conclusion === 'queued') block('CHECK_QUEUED');
+    else if (bound.timedOut === true || bound.conclusion === 'timed_out') block('CHECK_TIMED_OUT');
     else if (bound.conclusion === 'skipped') block('CHECK_SKIPPED');
     else if (bound.conclusion !== 'success') block('CHECK_NOT_SUCCESS');
   }
   steps.push({ step: 'checks', binding: 'EXACT_SHA', verdict: blocked ? 'BLOCKED' : 'PASS' });
 
-  // artifact：digest 必须构建自 merge SHA；tag 必须解析到同一 digest（tag 改指不同 digest 即阻断）。
+  // artifact：digest 必须构建自 merge SHA；tag 必须解析到同一 digest（tag 改指不同 digest 即阻断）；
+  // 已过期（历史）artifact 即使 digest 与绑定全对也绝不放行（ARTIFACT_EXPIRED 红线）。
   if (chain.artifact?.builtFromMerge !== chain.merge) block('ARTIFACT_NOT_FROM_MERGE');
   if (chain.artifact?.tagResolvedDigest !== chain.artifact?.digest) block('TAG_DIGEST_DRIFT');
+  if (chain.artifact?.expired === true) block('ARTIFACT_EXPIRED');
   steps.push({ step: 'artifact', binding: 'TAG_TO_DIGEST', verdict: blocked ? 'BLOCKED' : 'PASS' });
 
   // 部署身份：环境归属本项目；digest 贯通；receipt 必须带原关联 ID。
@@ -492,8 +559,8 @@ function validateChainInput(chain) {
   const sha=(v)=>typeof v==='string'&&SHA_RE.test(v);
   const business=(v)=>text(v)||object(v)&&v.schemaVersion===1&&v.interface==='BusinessTerminalState.v1'&&text(v.environment)&&digest(v.serving)&&integer(v.revision)&&iso(v.observedAt);
   const observed={'businessTerminalState?':business,'environment?':text};
-  shape(chain,{'schemaVersion?':exact(1),'interface?':exact('IntegrationIdentity.v1'),project:label,head:sha,merge:sha,requiredChecks:[text],checks:[{name:text,boundSha:sha,conclusion:text,'timedOut?':flag}],
-    artifact:{'tag?':text,digest,tagResolvedDigest:digest,builtFromMerge:sha,'files?':integer,'expectedDigest?':digest},
+  shape(chain,{'schemaVersion?':exact(1),'interface?':exact('IntegrationIdentity.v1'),project:label,head:sha,merge:sha,requiredChecks:[text],checks:[{name:text,boundSha:sha,conclusion:text,'timedOut?':flag,'status?':text}],
+    artifact:{'tag?':text,digest,tagResolvedDigest:digest,builtFromMerge:sha,'files?':integer,'expectedDigest?':digest,'expired?':flag},
     deployment:{project:label,'environmentId?':text,artifactDigest:digest,'receipt?':{'correlationId?':text,'status?':text,'responseLost?':flag}},
     'readback?':{'correlationId?':text,'observed?':observed},
     'rollback?':{requested:flag,'approved?':flag,'previousApprovedDigest?':(v)=>v===null||digest(v),'digest?':digest,'approvedBy?':text,'observed?':observed},
