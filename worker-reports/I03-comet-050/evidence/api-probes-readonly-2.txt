@@ -1,0 +1,51 @@
+$ curl -sS -o dex-discovery.body -w "http_code=%{http_code}
+" http://127.0.0.1:5556/dex/.well-known/openid-configuration
+http_code=200
+exit=0
+--- body (first 900 chars) ---
+{
+  "issuer": "http://127.0.0.1:5556/dex",
+  "authorization_endpoint": "http://127.0.0.1:5556/dex/auth",
+  "token_endpoint": "http://127.0.0.1:5556/dex/token",
+  "jwks_uri": "http://127.0.0.1:5556/dex/keys",
+  "userinfo_endpoint": "http://127.0.0.1:5556/dex/userinfo",
+  "device_authorization_endpoint": "http://127.0.0.1:5556/dex/device/code",
+  "introspection_endpoint": "http://127.0.0.1:5556/dex/token/introspect",
+  "grant_types_supported": [
+    "authorization_code",
+    "refresh_token",
+    "urn:ietf:params:oauth:grant-type:device_code",
+    "urn:ietf:params:oauth:grant-type:token-exchange"
+  ],
+  "response_types_supported": [
+    "code"
+  ],
+  "subject_types_supported": [
+    "public"
+  ],
+  "id_token_signing_alg_values_supported": [
+    "RS256"
+  ],
+  "code_challenge_methods_supported": [
+    "S256",
+    "plain"
+  ],
+  "scopes_supported": [
+    "openid",
+    "email",
+    "groups",
+ 
+
+$ curl -sS -o api-config-info.body -w "http_code=%{http_code}
+" -X POST -H "Content-Type: application/json" -d "{}" http://127.0.0.1:3000/api/config.info
+http_code=404
+exit=0
+--- body ---
+{"ok":false,"error":"not_found","status":404,"message":"Resource not found"}
+
+$ curl -sS -o api-auth-info.body -w "http_code=%{http_code}
+" -X POST -H "Content-Type: application/json" -d "{}" http://127.0.0.1:3000/api/auth.info
+http_code=401
+exit=0
+--- body (first 900 chars) ---
+{"ok":false,"error":"authentication_required","status":401,"message":"Authentication required"}

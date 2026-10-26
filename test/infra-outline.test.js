@@ -566,6 +566,59 @@ test('OutlineState.v1 contract: durable db+attachments declared, cache not right
   }
 });
 
+// comet-050 修订（2026-10-26）：本地栈核验事实登记与权限边界的绑定回归。
+// 登记的运行时事实（pin 匹配、卷/端口配置、VERIFIED-LOCAL-API、dex discovery 读回）只证明本地配置/可达性；
+// 受众/grant/发布权限/持久化恢复必须保持 UNVERIFIED，登记本身绝不产生授权。
+test('comet-050 runtime registration: verified facts recorded with evidence, authority boundaries stay UNVERIFIED', async () => {
+  const secretRefs = await import(secretRefsModuleUrl);
+
+  const lock = readDomainJson('images.lock.json');
+  assert.equal(lock.runtimeVerification.runtimePinMatch, true, 'running-container pin match is recorded');
+  assert.equal(lock.upGate.enabled, false, 'a runtime pin match must not reopen the up gate');
+  for (const component of lock.components) {
+    assert.equal(component.status, 'RECORDED', 'component admission stays a recorded historical fact, not a verified qualification');
+  }
+
+  const policy = readDomainJson('storage-policy.json');
+  const runtime = policy.runtimeVerification;
+  const volumeNames = runtime.volumes.map((entry) => entry.volume);
+  assert.deepEqual(volumeNames.sort(), ['outline_outline-attachments', 'outline_outline-data', 'outline_outline-db'], 'durable state rides the three declared named volumes');
+  assert.equal(runtime.cacheVolume.anonymous, true, 'cache keeps an anonymous non-authoritative volume');
+  assert.ok(runtime.publishedPorts.every((port) => port.hostBinding.startsWith('127.0.0.1:')), 'every published port stays loopback-bound');
+  assert.equal(runtime.restartPersistenceProbe, 'UNVERIFIED', 'config facts never prove restart persistence');
+
+  const domain = readDomainJson('collection-registration.example.json');
+  const reachability = domain.instance.localApiReachability;
+  assert.equal(reachability.status, 'VERIFIED-LOCAL-API', 'API reachability is registered under its own narrow marker');
+  assert.match(reachability.scope, /NOT publish permission/);
+  assert.ok(reachability.observations.some((observation) => observation.httpStatus === 200 && observation.endpoint.endsWith('/_health')), 'health observation present');
+  assert.ok(reachability.observations.some((observation) => observation.httpStatus === 401 && observation.unauthenticated === true), 'unauthenticated API denial observed');
+  // VERIFIED-LOCAL-API 绝不升级受众/owner/发布权限（P4_7 域）。
+  for (const collection of domain.collections) {
+    assert.notEqual(collection.audience.status, 'VERIFIED');
+    assert.notEqual(collection.owner.status, 'VERIFIED');
+  }
+  assert.equal(domain.evidence.effectiveAudienceClosure, 'UNVERIFIED');
+
+  const oidc = readDomainJson('oidc-registration.example.json');
+  assert.equal(oidc.provider.status, 'UNPROVISIONED', 'runtime dex discovery does not provision the OIDC registration');
+  assert.equal(oidc.provider.runtimeObservation.issuerMatch, true);
+  assert.equal(oidc.evidence.loginProof, 'UNVERIFIED');
+
+  // 登记必须钉在真实证据文件上（仓库相对路径，存在且非空）。
+  const evidenceRefs = [lock.runtimeVerification.evidenceRef, runtime.evidenceRef, reachability.evidenceRef, oidc.provider.runtimeObservation.evidenceRef];
+  for (const ref of evidenceRefs) {
+    assert.ok(!path.isAbsolute(ref), `evidence refs stay repo-relative: ${ref}`);
+    const body = fs.readFileSync(path.join(repoRoot, ref));
+    assert.ok(body.length > 0, `evidence file must exist and be non-empty: ${ref}`);
+  }
+
+  // 登记载荷本身保持干净：无秘密形状、无宿主绝对路径。
+  for (const name of ['images.lock.json', 'oidc-registration.example.json', 'storage-policy.json', 'collection-registration.example.json']) {
+    assert.deepEqual(secretRefs.scanForForbiddenValues(readDomainJson(name)), [], `${name} must contain no secret-shaped values or host paths`);
+  }
+});
+
 test('compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders', () => {
   const compose = readDomainFile('compose.yaml');
   assert.ok(compose.includes('networks:'), 'a dedicated network must be declared');

@@ -45,6 +45,33 @@
       "note": "仅缓存；权限判定永不以 cache 为准"
     }
   },
+  "runtimeVerification": {
+    "observedAt": "2026-10-26T10:35:30Z",
+    "revision": "2026-10-26-comet-050-adoption-v1",
+    "scope": "configuration facts only (read-only docker inspect of mounts, published ports and networks; no data read, no restart executed)",
+    "volumes": [
+      { "volume": "outline_outline-db", "service": "outline-postgres", "mounted": true, "readWrite": true },
+      { "volume": "outline_outline-attachments", "service": "outline-object-store", "mounted": true, "readWrite": true },
+      { "volume": "outline_outline-data", "service": "outline", "mounted": true, "readWrite": true }
+    ],
+    "cacheVolume": {
+      "service": "outline-redis",
+      "anonymous": true,
+      "note": "anonymous container-local volume only; cache stays non-durable and is never the rights authority"
+    },
+    "publishedPorts": [
+      { "service": "outline", "hostBinding": "127.0.0.1:3000", "containerPort": 3000 },
+      { "service": "outline-dex", "hostBinding": "127.0.0.1:5556", "containerPort": 5556 }
+    ],
+    "unpublishedPorts": ["outline-postgres:5432", "outline-redis:6379", "outline-object-store:9000"],
+    "networks": [
+      { "name": "outline_outline-internal", "internal": true },
+      { "name": "outline_outline-access", "internal": false, "masqueradeDisabled": true }
+    ],
+    "restartPersistenceProbe": "UNVERIFIED",
+    "evidenceRef": "worker-reports/I03-comet-050/evidence/docker-runtime-readonly.json",
+    "note": "volume existence plus mount wiring are configuration facts; durability across restart, backup and restore remains unproven until the restart-persistence probe runs against the live stack"
+  },
   "apiContracts": {
     "observationRef": "openspec/changes/delivery-foundation-rearchitecture/outline-public-api-observation.json",
     "fixedCreateUuid": {

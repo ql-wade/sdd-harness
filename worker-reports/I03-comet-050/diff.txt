@@ -1,0 +1,179 @@
+diff --git a/infra/delivery/outline/collection-registration.example.json b/infra/delivery/outline/collection-registration.example.json
+index 42a780c..a74648a 100644
+--- a/infra/delivery/outline/collection-registration.example.json
++++ b/infra/delivery/outline/collection-registration.example.json
+@@ -9,7 +9,19 @@
+     "immutableId": "cb59131d-2d7c-421e-a818-44f84236b56d",
+     "status": "HISTORICAL_IDENTITY_ONLY",
+     "reason": "c5c538 historical auth/team readback, not refreshed and not a standing grant",
+-    "identityKind": "Outline workspace/team UUID, not a server-host identity"
++    "identityKind": "Outline workspace/team UUID, not a server-host identity",
++    "localApiReachability": {
++      "status": "VERIFIED-LOCAL-API",
++      "observedAt": "2026-10-26T10:35:30Z",
++      "revision": "2026-10-26-comet-050-adoption-v1",
++      "observations": [
++        { "endpoint": "http://127.0.0.1:3000/_health", "httpStatus": 200, "body": "OK", "bodySha256": "565339bc4d33d72817b583024112eb7f5cdf3e5eef0252d6ec1b9c9a94e12bb3" },
++        { "endpoint": "http://127.0.0.1:3000/api/documents.list", "unauthenticated": true, "httpStatus": 401, "error": "authentication_required" },
++        { "endpoint": "http://127.0.0.1:3000/api/config", "httpStatus": 404, "note": "route not served by the installed version; reachability is evidenced by health plus live API-router JSON error responses" }
++      ],
++      "evidenceRef": "worker-reports/I03-comet-050/evidence/api-probes-readonly.txt",
++      "scope": "loopback reachability of the local API only; healthy or reachable is NOT publish permission and NOT audience/grant/action authority — those remain UNVERIFIED (P4_7 domain)"
++    }
+   },
+   "collections": [
+     {
+diff --git a/infra/delivery/outline/images.lock.json b/infra/delivery/outline/images.lock.json
+index adddba8..6dcfb57 100644
+--- a/infra/delivery/outline/images.lock.json
++++ b/infra/delivery/outline/images.lock.json
+@@ -24,6 +24,23 @@
+       "reason": "资源准入波次：默认 digest 钉定清单获批；oidc issuer (dex) 为部署波次新增组件，运行时面见 .sdd/outline/runtime"
+     }
+   },
++  "runtimeVerification": {
++    "observedAt": "2026-10-26T10:35:30Z",
++    "revision": "2026-10-26-comet-050-adoption-v1",
++    "scope": "read-only observation of the running project stack (docker ps/inspect/image inspect; no container exec, no data or credential read); local pin match only",
++    "runtimePinMatch": true,
++    "containers": {
++      "outline-app": "outline-outline-1",
++      "outline-postgres": "outline-outline-postgres-1",
++      "outline-redis": "outline-outline-redis-1",
++      "outline-object-store": "outline-outline-object-store-1"
++    },
++    "runtimeOnlyComponent": {
++      "outline-dex": "outline-outline-dex-1"
++    },
++    "evidenceRef": "worker-reports/I03-comet-050/evidence/pin-match.json",
++    "note": "each running container's local image repo digest matches the registered pin and the runtime env.images pin file; this is a local runtime configuration fact — it is not source/provenance re-authentication and does not open the up gate"
++  },
+   "components": [
+     {
+       "component": "outline-app",
+diff --git a/infra/delivery/outline/oidc-registration.example.json b/infra/delivery/outline/oidc-registration.example.json
+index 5684707..50d2f7f 100644
+--- a/infra/delivery/outline/oidc-registration.example.json
++++ b/infra/delivery/outline/oidc-registration.example.json
+@@ -7,7 +7,18 @@
+     "issuerUrl": null,
+     "discoveryUrl": null,
+     "status": "UNPROVISIONED",
+-    "reason": "OIDC 提供方未选定；discovery 读回与 issuer 校验在开通后执行"
++    "reason": "OIDC 提供方未选定；discovery 读回与 issuer 校验在开通后执行",
++    "runtimeObservation": {
++      "observedAt": "2026-10-26T10:35:30Z",
++      "revision": "2026-10-26-comet-050-adoption-v1",
++      "observedIssuer": "http://127.0.0.1:5556/dex",
++      "discoveryEndpoint": "http://127.0.0.1:5556/dex/.well-known/openid-configuration",
++      "httpStatus": 200,
++      "issuerMatch": true,
++      "discoveryBodySha256": "1520fd67d3ac4b0b4be8aa8ec1e854d224c4f8b7f605e4bee886483e23dda100",
++      "evidenceRef": "worker-reports/I03-comet-050/evidence/api-probes-readonly-2.txt",
++      "scope": "discovery document reachable and issuer field matches the runtime dex config (issuer line only; config file not read beyond it); no client registration, no real issuance, no login proof — provider provisioning status unchanged"
++    }
+   },
+   "client": {
+     "clientId": null,
+diff --git a/infra/delivery/outline/storage-policy.json b/infra/delivery/outline/storage-policy.json
+index b468931..25cee9d 100644
+--- a/infra/delivery/outline/storage-policy.json
++++ b/infra/delivery/outline/storage-policy.json
+@@ -45,6 +45,33 @@
+       "note": "仅缓存；权限判定永不以 cache 为准"
+     }
+   },
++  "runtimeVerification": {
++    "observedAt": "2026-10-26T10:35:30Z",
++    "revision": "2026-10-26-comet-050-adoption-v1",
++    "scope": "configuration facts only (read-only docker inspect of mounts, published ports and networks; no data read, no restart executed)",
++    "volumes": [
++      { "volume": "outline_outline-db", "service": "outline-postgres", "mounted": true, "readWrite": true },
++      { "volume": "outline_outline-attachments", "service": "outline-object-store", "mounted": true, "readWrite": true },
++      { "volume": "outline_outline-data", "service": "outline", "mounted": true, "readWrite": true }
++    ],
++    "cacheVolume": {
++      "service": "outline-redis",
++      "anonymous": true,
++      "note": "anonymous container-local volume only; cache stays non-durable and is never the rights authority"
++    },
++    "publishedPorts": [
++      { "service": "outline", "hostBinding": "127.0.0.1:3000", "containerPort": 3000 },
++      { "service": "outline-dex", "hostBinding": "127.0.0.1:5556", "containerPort": 5556 }
++    ],
++    "unpublishedPorts": ["outline-postgres:5432", "outline-redis:6379", "outline-object-store:9000"],
++    "networks": [
++      { "name": "outline_outline-internal", "internal": true },
++      { "name": "outline_outline-access", "internal": false, "masqueradeDisabled": true }
++    ],
++    "restartPersistenceProbe": "UNVERIFIED",
++    "evidenceRef": "worker-reports/I03-comet-050/evidence/docker-runtime-readonly.json",
++    "note": "volume existence plus mount wiring are configuration facts; durability across restart, backup and restore remains unproven until the restart-persistence probe runs against the live stack"
++  },
+   "apiContracts": {
+     "observationRef": "openspec/changes/delivery-foundation-rearchitecture/outline-public-api-observation.json",
+     "fixedCreateUuid": {
+diff --git a/test/infra-outline.test.js b/test/infra-outline.test.js
+index 95c0c8f..aca3aac 100644
+--- a/test/infra-outline.test.js
++++ b/test/infra-outline.test.js
+@@ -566,6 +566,59 @@ test('OutlineState.v1 contract: durable db+attachments declared, cache not right
+   }
+ });
+ 
++// comet-050 修订（2026-10-26）：本地栈核验事实登记与权限边界的绑定回归。
++// 登记的运行时事实（pin 匹配、卷/端口配置、VERIFIED-LOCAL-API、dex discovery 读回）只证明本地配置/可达性；
++// 受众/grant/发布权限/持久化恢复必须保持 UNVERIFIED，登记本身绝不产生授权。
++test('comet-050 runtime registration: verified facts recorded with evidence, authority boundaries stay UNVERIFIED', async () => {
++  const secretRefs = await import(secretRefsModuleUrl);
++
++  const lock = readDomainJson('images.lock.json');
++  assert.equal(lock.runtimeVerification.runtimePinMatch, true, 'running-container pin match is recorded');
++  assert.equal(lock.upGate.enabled, false, 'a runtime pin match must not reopen the up gate');
++  for (const component of lock.components) {
++    assert.equal(component.status, 'RECORDED', 'component admission stays a recorded historical fact, not a verified qualification');
++  }
++
++  const policy = readDomainJson('storage-policy.json');
++  const runtime = policy.runtimeVerification;
++  const volumeNames = runtime.volumes.map((entry) => entry.volume);
++  assert.deepEqual(volumeNames.sort(), ['outline_outline-attachments', 'outline_outline-data', 'outline_outline-db'], 'durable state rides the three declared named volumes');
++  assert.equal(runtime.cacheVolume.anonymous, true, 'cache keeps an anonymous non-authoritative volume');
++  assert.ok(runtime.publishedPorts.every((port) => port.hostBinding.startsWith('127.0.0.1:')), 'every published port stays loopback-bound');
++  assert.equal(runtime.restartPersistenceProbe, 'UNVERIFIED', 'config facts never prove restart persistence');
++
++  const domain = readDomainJson('collection-registration.example.json');
++  const reachability = domain.instance.localApiReachability;
++  assert.equal(reachability.status, 'VERIFIED-LOCAL-API', 'API reachability is registered under its own narrow marker');
++  assert.match(reachability.scope, /NOT publish permission/);
++  assert.ok(reachability.observations.some((observation) => observation.httpStatus === 200 && observation.endpoint.endsWith('/_health')), 'health observation present');
++  assert.ok(reachability.observations.some((observation) => observation.httpStatus === 401 && observation.unauthenticated === true), 'unauthenticated API denial observed');
++  // VERIFIED-LOCAL-API 绝不升级受众/owner/发布权限（P4_7 域）。
++  for (const collection of domain.collections) {
++    assert.notEqual(collection.audience.status, 'VERIFIED');
++    assert.notEqual(collection.owner.status, 'VERIFIED');
++  }
++  assert.equal(domain.evidence.effectiveAudienceClosure, 'UNVERIFIED');
++
++  const oidc = readDomainJson('oidc-registration.example.json');
++  assert.equal(oidc.provider.status, 'UNPROVISIONED', 'runtime dex discovery does not provision the OIDC registration');
++  assert.equal(oidc.provider.runtimeObservation.issuerMatch, true);
++  assert.equal(oidc.evidence.loginProof, 'UNVERIFIED');
++
++  // 登记必须钉在真实证据文件上（仓库相对路径，存在且非空）。
++  const evidenceRefs = [lock.runtimeVerification.evidenceRef, runtime.evidenceRef, reachability.evidenceRef, oidc.provider.runtimeObservation.evidenceRef];
++  for (const ref of evidenceRefs) {
++    assert.ok(!path.isAbsolute(ref), `evidence refs stay repo-relative: ${ref}`);
++    const body = fs.readFileSync(path.join(repoRoot, ref));
++    assert.ok(body.length > 0, `evidence file must exist and be non-empty: ${ref}`);
++  }
++
++  // 登记载荷本身保持干净：无秘密形状、无宿主绝对路径。
++  for (const name of ['images.lock.json', 'oidc-registration.example.json', 'storage-policy.json', 'collection-registration.example.json']) {
++    assert.deepEqual(secretRefs.scanForForbiddenValues(readDomainJson(name)), [], `${name} must contain no secret-shaped values or host paths`);
++  }
++});
++
+ test('compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders', () => {
+   const compose = readDomainFile('compose.yaml');
+   assert.ok(compose.includes('networks:'), 'a dedicated network must be declared');

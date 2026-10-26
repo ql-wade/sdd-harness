@@ -24,6 +24,23 @@
       "reason": "资源准入波次：默认 digest 钉定清单获批；oidc issuer (dex) 为部署波次新增组件，运行时面见 .sdd/outline/runtime"
     }
   },
+  "runtimeVerification": {
+    "observedAt": "2026-10-26T10:35:30Z",
+    "revision": "2026-10-26-comet-050-adoption-v1",
+    "scope": "read-only observation of the running project stack (docker ps/inspect/image inspect; no container exec, no data or credential read); local pin match only",
+    "runtimePinMatch": true,
+    "containers": {
+      "outline-app": "outline-outline-1",
+      "outline-postgres": "outline-outline-postgres-1",
+      "outline-redis": "outline-outline-redis-1",
+      "outline-object-store": "outline-outline-object-store-1"
+    },
+    "runtimeOnlyComponent": {
+      "outline-dex": "outline-outline-dex-1"
+    },
+    "evidenceRef": "worker-reports/I03-comet-050/evidence/pin-match.json",
+    "note": "each running container's local image repo digest matches the registered pin and the runtime env.images pin file; this is a local runtime configuration fact — it is not source/provenance re-authentication and does not open the up gate"
+  },
   "components": [
     {
       "component": "outline-app",

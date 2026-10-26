@@ -1,0 +1,19 @@
+$ node tools/infra/outline.mjs probe --case oidc-principal-acl --endpoint http://127.0.0.1:3000 --json; echo exit=$?
+exit=2
+executed= False status= UNVERIFIED
+reason= endpoint registration alone is not action authority; authenticated role/channel and lifecycle operations require separate verified runtime grants. No API or res
+
+$ node tools/infra/outline.mjs probe --case restart-persistence --endpoint http://127.0.0.1:3000 --json; echo exit=$?
+exit=2
+executed= False status= UNVERIFIED
+
+$ node tools/infra/outline.mjs probe --case attachment-denial --endpoint http://127.0.0.1:3000 --json; echo exit=$?
+exit=2
+executed= False status= UNVERIFIED
+
+$ node --test test/infra-code-knowledge.test.js (adjacent consumer regression); echo exit=$?
+exit=0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 53064.010666

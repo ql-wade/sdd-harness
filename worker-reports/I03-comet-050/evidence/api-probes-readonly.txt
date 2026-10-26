@@ -1,0 +1,28 @@
+$ curl -sS -o api-health.body -w "http_code=%{http_code}
+" http://127.0.0.1:3000/_health
+http_code=200
+exit=0
+--- body ---
+OK
+
+$ curl -sS -o api-config.body -w "http_code=%{http_code}
+" http://127.0.0.1:3000/api/config
+http_code=404
+exit=0
+--- body ---
+{"ok":false,"error":"not_found","status":404,"message":"Resource not found"}
+
+$ curl -sS -o api-documents-list-unauth.body -w "http_code=%{http_code}
+" -X POST -H "Content-Type: application/json" -d "{}" http://127.0.0.1:3000/api/documents.list
+http_code=401
+exit=0
+--- body ---
+{"ok":false,"error":"authentication_required","status":401,"message":"Authentication required"}
+
+$ curl -sS -o dex-discovery.body -w "http_code=%{http_code}
+" http://127.0.0.1:5556/.well-known/openid-configuration
+http_code=404
+exit=0
+--- body (first 1200 chars) ---
+404 page not found
+
