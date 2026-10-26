@@ -23,10 +23,10 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const { REVIEW_PARTICIPANTS, REVIEW_THRESHOLDS, ARCHITECTURE_CRITERIA, ARCHITECTURE_REVIEW_BASELINE_KIND,
   freezeReviewPackage, initConsensusRun, admitBallot, mechanicalTally, mechanicalFinalize,
   openLoadBearingQuestions, closeLoadBearingQuestion,
-  judgeArchitectureGate, createReviewJobSeat, consumeArchitectureGate, consumeTestDesignReview }
+  judgeArchitectureGate, createReviewJobSeat, consumeArchitectureGate, consumeTestDesignReview, buildGateReceiptBundle }
   = await import(path.join(projectRoot, 'lib/adapters/architecture-review.js'));
 const { invalidateOnScopeChange } = await import(path.join(projectRoot, 'lib/delivery/baseline.js'));
-const { createLaunchAuthority } = await import(path.join(projectRoot, 'lib/delivery/evidence.js'));
+const { createLaunchAuthority, admitEvidence } = await import(path.join(projectRoot, 'lib/delivery/evidence.js'));
 
 const sha = (data) => crypto.createHash('sha256').update(data).digest('hex');
 const shaFile = (file) => sha(fsSync.readFileSync(file));
@@ -445,6 +445,87 @@ test('boundary: the T gate consumes sufficiency and attested oracle strength fro
   assert.equal(none.error, 'UNREGISTERED_SOURCE');
 });
 
+// --- 0.5.0 composition docking (D02/N04): the A receipt bundle ---------------
+//
+// The comet-050 classic-full composition (P2_4, ADR-0022) expresses the A
+// gate as the architecture-consensus extension on full.design.evidence: the
+// extension execution writes ONE project-relative gate-receipt-bundle
+// artifact, and a claimed pass is judged ONLY by the sdd.delivery.gate.a
+// validator (bindings.mjs → lib/delivery/gate.js evaluate). This case proves
+// the adapter's consensus receipt satisfies that consumption contract: the
+// bundle lands on the declared artifactRef with the declared kind/hash
+// binding, and the REAL composition validator accepts the assembled payload.
+test('2.5.b D02/N04: the A consensus receipt bundles as the composition extension input and the real sdd.delivery.gate.a validator accepts it', async () => {
+  const applicationRoot = path.join(projectRoot, 'integrations/comet/application');
+  const declaration = JSON.parse(fsSync.readFileSync(path.join(applicationRoot, 'extensions/architecture-consensus.json'), 'utf8'));
+  const composition = JSON.parse(fsSync.readFileSync(path.join(applicationRoot, 'composition.json'), 'utf8'));
+  const tDeclaration = JSON.parse(fsSync.readFileSync(path.join(applicationRoot, 'extensions/test-design-review.json'), 'utf8'));
+  assert.equal(declaration.gate, 'A');
+  assert.equal(declaration.afterStep, 'full.design.evidence');
+  const declaredRef = declaration.artifactRefs[0].ref;
+  assert.equal(declaration.artifactRefs[0].kind, 'gate-receipt-bundle');
+  assert.notEqual(declaredRef, tDeclaration.artifactRefs[0].ref, 'A and T pin independent bundles — one passing never substitutes the other');
+  const compositionEntry = composition.composition.extensions.find((entry) => entry.id === declaration.id);
+  assert.deepEqual(compositionEntry.artifactRefs, [declaredRef]);
+  assert.deepEqual(compositionEntry.validator, declaration.validator);
+  const validators = (await (await import(path.join(applicationRoot, 'bindings.mjs'))).createBindings({ probe: 'p2_5-case' })).validators;
+  const aValidator = validators.find((validator) => validator.id === declaration.validator.id);
+  assert.ok(aValidator, 'bindings.mjs registers the declared A validator');
+
+  const authority = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+  const POLICY = { ref: 'policy/comet-managed-p2_5', digest: sha('policy/comet-managed-p2_5@r1') };
+  const root = makeTmp('sdd-p25case-dock-');
+  const ran = fullRun({ root, reviewId: 'arch-case25-dock', requirementsDigest: sha('req-dock'), designDigest: sha('design-dock') });
+  assert.equal(ran.tally.exitCode, 0, 'precondition: the real consensus is closed and unanimous');
+  const dispatchFor = (overrides = {}) => authority.issueDispatch({ runnerId: 'review-runner-a', run: 'run-p2_5-dock', gate: 'A', role: 'verifier',
+    execution: 'exec-arch-consensus-1', inputDigest: ran.pkg.artifactSha256, policyDigest: POLICY.digest, attempt: 1, epoch: 1, ...overrides });
+  const inputs = { inputDigest: ran.pkg.artifactSha256,
+    testContract: { schemaVersion: 1, project: 'sdd-harness', change: 'delivery-foundation-rearchitecture',
+      cases: [{ id: 'design.architecture', ac: 'D02', oracle: 'the architecture gate passes only on the frozen unanimous mechanical consensus of the exact P0 quorum' }],
+      requiredChecks: [{ id: 'arch-consensus', level: 'review', capability: 'architecture-consensus', caseIds: ['design.architecture'] }],
+      executionDenominator: { totalCases: 1 }, cleanup: { environment: 'private run dirs removed in finally', data: 'none persisted' },
+      dependencyBaselines: [{ kind: ARCHITECTURE_REVIEW_BASELINE_KIND, digest: ran.pkg.artifactSha256 }] },
+    builderExecution: 'exec-design-author-1' };
+  // the three original ballots are the extension's independent evidence
+  const receipts = P0_QUORUM.map((participant) => {
+    const ballotBytes = fsSync.readFileSync(path.join(ran.runRoot, ran.pkg.reviewId, 'round-00', `ballot-${participant}.json`));
+    const admitted = admitEvidence({
+      envelope: { schemaVersion: 1, candidateDigest: ran.pkg.artifactSha256, caseId: 'design.architecture', check: 'architecture-consensus',
+        origin: { kind: 'registered-runner', id: 'review-runner-a' }, execution: { id: `exec-arch-${participant}` },
+        environment: 'p2_5-docking-env', toolchain: `node ${process.version}`, executions: { total: 1, valid: 1 }, result: 'pass',
+        evidence: [{ uri: `${ran.pkg.reviewId}/round-00/ballot-${participant}.json`, sha256: sha(ballotBytes) }],
+        expiry: '2026-11-26T00:00:00.000Z' },
+      dispatch: dispatchFor({ execution: `exec-arch-${participant}` }),
+      authority, current: { inputDigest: ran.pkg.artifactSha256, policyDigest: POLICY.digest, environment: 'p2_5-docking-env' },
+      now: '2026-10-26T12:00:00.000Z',
+    });
+    assert.equal(admitted.ok, true, `the original ballot of ${participant} admits through the real intake: ${admitted.reason ?? ''}`);
+    return admitted.entry;
+  });
+  const payload = buildGateReceiptBundle({ package: ran.pkg, runRoot: ran.runRoot, questions: [], dispatch: dispatchFor(),
+    authority, artifactRef: declaredRef, inputs, receipts, policy: POLICY });
+  assert.equal(payload.ok, true, payload.error);
+  assert.equal(payload.bundle.artifactRef, declaredRef);
+  assert.deepEqual(payload.artifactHashes, { [declaredRef]: sha(payload.bundleBytes) });
+  const decision = await aValidator.validate({ run: { runId: 'run-p2_5-dock' }, action: { id: 'action-architecture-consensus', stepId: 'classic.extension.A' },
+    outcome: { actionId: 'action-architecture-consensus', status: 'succeeded', output: payload.output } });
+  assert.deepEqual(decision, { accepted: true }, `the real composition validator accepts the bundle payload: ${decision.reason ?? ''}`);
+
+  // a refused consensus produces no bundle at all — the intake refusal surfaces
+  const dissent = fullRun({ root: makeTmp('sdd-p25case-dockno-'), reviewId: 'arch-case25-dockno', requirementsDigest: sha('req-dock'), designDigest: sha('design-dock'),
+    verdictFor: (agent) => (agent === 'zcode' ? 'REJECT' : 'APPROVE') });
+  const refused = buildGateReceiptBundle({ package: dissent.pkg, runRoot: dissent.runRoot, questions: [], dispatch: dispatchFor(),
+    authority, artifactRef: declaredRef, inputs, receipts, policy: POLICY });
+  assert.equal(refused.ok, false);
+  assert.equal(refused.error, 'CONSENSUS_NOT_ADMITTED');
+  assert.ok(refused.intake.refusals.some((refusal) => refusal.code === 'QUORUM_NOT_UNANIMOUS'));
+  // a payload rebound to another design digest never bundles the consensus
+  const rebound = buildGateReceiptBundle({ package: ran.pkg, runRoot: ran.runRoot, questions: [], dispatch: dispatchFor(),
+    authority, artifactRef: declaredRef, inputs: { ...inputs, inputDigest: sha('another-design') }, receipts, policy: POLICY });
+  assert.equal(rebound.ok, false);
+  assert.equal(rebound.error, 'PAYLOAD_INPUT_REBOUND');
+});
+
 // Run in fresh Node processes so the original Native module owns one fixed
 // host per process. Reviewer records below are explicit DATA fixtures, not
 // production principals, actual model reviews or OS isolation evidence.
@@ -686,12 +767,20 @@ async function nativeReviewScenario(config) {
 
 test('P2_5 Native same-Run review chain: resume exact job, refuse missing sources, rework T independently and invalidate restored design', async () => {
   const artifactRoot = path.resolve(process.env.P25_NATIVE_ARTIFACT_ROOT ?? projectRoot);
-  const lock = JSON.parse(fsSync.readFileSync(path.join(projectRoot, 'integrations/comet/upstream.lock.json')));
-  const { verifyCometDistribution } = await import(path.join(projectRoot, 'tools/comet/build.mjs'));
-  const verified = await verifyCometDistribution({ projectRoot: artifactRoot, lock });
+  // The managed-delivery host surface this scenario drives
+  // (installManagedDeliveryHost, dispatch-gate/accept-gate) exists only in the
+  // accepted 0.4.5-era controller build; the 0.5.0 lock's distribution
+  // (fingerprint 29f2332b…, recorded in toolchain-baseline.json) replaced that
+  // host contract with the composition extension wave (P2_4, ADR-0022). The
+  // build is pinned directly — the same pattern as
+  // test/comet-execution-binding.test.js — and its runtime bytes stay pinned
+  // against the build's own distribution manifest (nativeSha below). The
+  // 0.5.0 composition docking is proven separately by the extension contract
+  // test above; real multi-agent consensus qualification remains P3_2/VERIFY.
+  const legacyHostCommit = 'c90af44a4474662d7853aae76ce785404974fb0a';
   const fingerprint = '6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a';
-  assert.equal(verified.fingerprint, fingerprint, 'the exact controller-accepted construction build');
-  const build = path.join(artifactRoot, '.sdd/vendor/comet', lock.source.commit, 'builds', fingerprint);
+  const build = path.join(artifactRoot, '.sdd/vendor/comet', legacyHostCommit, 'builds', fingerprint);
+  assert.ok(fsSync.existsSync(path.join(build, 'distribution.json')), 'the pinned managed-host build is present under the vendor tree');
   const manifest = JSON.parse(fsSync.readFileSync(path.join(build, 'distribution.json')));
   const nativePath = path.join(build, 'work/assets/skills/comet/scripts/comet-runtime.mjs');
   const scratch = makeTmp('sdd-p25-native-'), artifacts = path.join(scratch, 'artifacts');

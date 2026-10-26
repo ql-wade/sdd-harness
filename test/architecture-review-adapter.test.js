@@ -29,7 +29,7 @@ const GATE_SCRIPT = path.join(projectRoot, '.agents/skills/multi-agent-consensus
 const { REVIEW_PARTICIPANTS, REVIEW_THRESHOLDS, ARCHITECTURE_CRITERIA, ARCHITECTURE_REVIEW_BASELINE_KIND,
   freezeReviewPackage, initConsensusRun, admitBallot, mechanicalTally, mechanicalFinalize,
   openLoadBearingQuestions, closeLoadBearingQuestion, loadBearingStatus,
-  judgeArchitectureGate, createReviewJobSeat } = await import(path.join(projectRoot, 'lib/adapters/architecture-review.js'));
+  judgeArchitectureGate, createReviewJobSeat, buildGateReceiptBundle } = await import(path.join(projectRoot, 'lib/adapters/architecture-review.js'));
 const { admitEvidence, createLaunchAuthority, envelopeDigest } = await import(path.join(projectRoot, 'lib/delivery/evidence.js'));
 const { evaluate } = await import(path.join(projectRoot, 'lib/delivery/gate.js'));
 const { parseTapSummary } = await import(path.join(projectRoot, 'lib/delivery/test-contract.js'));
@@ -978,4 +978,170 @@ test('managed A retains an authenticated dissent for Native rework and refuses s
   finally { fsSync.readFileSync = read; }
   assert.equal(passing.verifyReview(query, { ...f.managed, sourceBindings: f.managed.sourceBindings.map((item, index) => index === 1
     ? { ...item, sourceQualification: { ...item.sourceQualification, status: 'revoked' } } : item) }).ok, false, 'a revoked child reviewer invalidates the prepared aggregate');
+});
+
+// --- 0.5.0 composition docking: the A receipt bundle (D02/N04) ----------------
+//
+// The comet-050 classic-full composition expresses the A gate as the
+// architecture-consensus extension on full.design.evidence (P2_4, ADR-0022):
+// the extension execution writes ONE project-relative artifact of kind
+// gate-receipt-bundle, hash-bound through artifactHashes, and its result
+// carries { verdict, sourceHash, artifactHashes, gateEvidence }; acceptance
+// belongs ONLY to the sdd.delivery.gate.a validator
+// (integrations/comet/application/bindings.mjs delegating to
+// lib/delivery/gate.js evaluate). The adapter stays the evidence producer:
+// buildGateReceiptBundle formats an ALREADY admitted unanimous consensus into
+// exactly that input shape. The P2_4 artifacts below are read-only imports —
+// the acceptance decision is the real validator's, never this adapter's.
+const applicationRoot = path.join(projectRoot, 'integrations/comet/application');
+const architectureExtension = JSON.parse(fsSync.readFileSync(path.join(applicationRoot, 'extensions/architecture-consensus.json'), 'utf8'));
+const compositionDocument = JSON.parse(fsSync.readFileSync(path.join(applicationRoot, 'composition.json'), 'utf8'));
+const DECLARED_REF = architectureExtension.artifactRefs[0].ref;
+const compositionValidators = (await (await import(path.join(applicationRoot, 'bindings.mjs'))).createBindings({ probe: 'p2_5-docking' })).validators;
+const validatorFor = (gate) => compositionValidators.find((validator) => validator.id === `sdd.delivery.gate.${gate.toLowerCase()}`);
+
+// The A-extension docking world: a real unanimous (or dissenting) consensus,
+// a real launcher dispatch bound to the frozen package digest, and the three
+// original ballots admitted as independent-acceptance evidence through the
+// REAL intake.
+function dockingWorld({ dissent = false } = {}) {
+  const authority = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+  const POLICY = { ref: 'policy/comet-managed-p2_5', digest: sha('policy/comet-managed-p2_5@r1') };
+  const dir = makeTmp(dissent ? 'sdd-p25-dock-no-' : 'sdd-p25-dock-');
+  const reviewId = dissent ? 'arch-dock-dissent' : 'arch-dock-r1';
+  const pkg = freezeReviewPackage({ reviewId, artifactPath: writePackageFile(dir, { requirementsDigest: sha('req-dock'), designDigest: sha('design-dock') }), revision: 1 });
+  const world = runConsensus({ dir, reviewId, requirementsDigest: sha('req-dock'), designDigest: sha('design-dock'),
+    ballots: P0_QUORUM.map((agent) => ballot({ reviewId, agent, artifactSha256: pkg.artifactSha256, verdict: dissent && agent === 'zcode' ? 'REJECT' : 'APPROVE' })) });
+  const testContract = {
+    schemaVersion: 1, project: 'sdd-harness', change: 'delivery-foundation-rearchitecture',
+    cases: [{ id: 'design.architecture', ac: 'D02', oracle: 'the architecture gate passes only on the frozen unanimous mechanical consensus of the exact P0 quorum' }],
+    requiredChecks: [{ id: 'arch-consensus', level: 'review', capability: 'architecture-consensus', caseIds: ['design.architecture'] }],
+    executionDenominator: { totalCases: 1 },
+    cleanup: { environment: 'private review run dirs removed in finally', data: 'none persisted' },
+    dependencyBaselines: [{ kind: ARCHITECTURE_REVIEW_BASELINE_KIND, digest: pkg.artifactSha256 }],
+  };
+  const dispatchFor = (overrides = {}) => authority.issueDispatch({ runnerId: 'review-runner-a', run: 'run-p2_5-dock', gate: 'A', role: 'verifier',
+    execution: 'exec-arch-consensus-1', inputDigest: pkg.artifactSha256, policyDigest: POLICY.digest, attempt: 1, epoch: 1, ...overrides });
+  const inputs = { inputDigest: pkg.artifactSha256, testContract, builderExecution: 'exec-design-author-1' };
+  const receipts = P0_QUORUM.map((participant) => {
+    const ballotBytes = fsSync.readFileSync(path.join(world.runRoot, reviewId, 'round-00', `ballot-${participant}.json`));
+    const admitted = admitEvidence({
+      envelope: { schemaVersion: 1, candidateDigest: pkg.artifactSha256, caseId: 'design.architecture', check: 'architecture-consensus',
+        origin: { kind: 'registered-runner', id: 'review-runner-a' }, execution: { id: `exec-arch-${participant}` },
+        environment: 'p2_5-docking-env', toolchain: `node ${process.version}`, executions: { total: 1, valid: 1 }, result: 'pass',
+        evidence: [{ uri: `${reviewId}/round-00/ballot-${participant}.json`, sha256: sha(ballotBytes) }],
+        expiry: '2026-11-26T00:00:00.000Z' },
+      dispatch: dispatchFor({ execution: `exec-arch-${participant}` }),
+      authority, current: { inputDigest: pkg.artifactSha256, policyDigest: POLICY.digest, environment: 'p2_5-docking-env' },
+      now: '2026-10-26T12:00:00.000Z',
+    });
+    assert.equal(admitted.ok, true, `the original ballot of ${participant} admits through the real intake: ${admitted.reason ?? ''}`);
+    return admitted.entry;
+  });
+  return { ...world, pkg, authority, POLICY, dispatchFor, inputs, receipts };
+}
+
+test('buildGateReceiptBundle formats the admitted consensus as the composition gate-receipt-bundle; the real sdd.delivery.gate.a validator accepts it', async () => {
+  // docking preconditions: the P2_4 typed declaration and the compiler-shaped
+  // composition entry pin the same artifact ref and validator (read-only).
+  assert.equal(architectureExtension.gate, 'A');
+  assert.equal(architectureExtension.afterStep, 'full.design.evidence');
+  assert.equal(architectureExtension.artifactRefs[0].kind, 'gate-receipt-bundle');
+  assert.equal(architectureExtension.artifactRefs[0].hashBinding, 'artifactHashes');
+  assert.equal(architectureExtension.artifactRefs[0].writtenBy, 'extension-execution');
+  const compositionEntry = compositionDocument.composition.extensions.find((entry) => entry.id === architectureExtension.id);
+  assert.deepEqual(compositionEntry.artifactRefs, [DECLARED_REF], 'the composition pins the declared bundle ref');
+  assert.deepEqual(compositionEntry.validator, architectureExtension.validator, 'the composition pins the declared validator');
+  assert.ok(validatorFor('A'), 'bindings.mjs registers the declared A validator');
+
+  const world = dockingWorld();
+  assert.equal(world.judged.status, 'PASSED', 'precondition: the real consensus is closed and unanimous');
+  const payload = buildGateReceiptBundle({ package: world.pkg, runRoot: world.runRoot, questions: [], dispatch: world.dispatchFor(),
+    authority: world.authority, artifactRef: DECLARED_REF, inputs: world.inputs, receipts: world.receipts, policy: world.POLICY });
+  assert.equal(payload.ok, true, payload.error);
+
+  // bundle shape: exactly the declared artifact typing and hash binding
+  assert.equal(payload.bundle.schema, 'sdd.delivery.gate.receipt-bundle.v1');
+  assert.equal(payload.bundle.kind, 'gate-receipt-bundle');
+  assert.equal(payload.bundle.gate, 'A');
+  assert.equal(payload.bundle.artifactRef, DECLARED_REF);
+  assert.equal(payload.bundle.hashBinding, 'artifactHashes');
+  assert.equal(payload.bundle.writtenBy, 'extension-execution');
+  // the judged receipt rides verbatim — manifest/ballots/tally/report digests unchanged
+  assert.deepEqual(payload.bundle.review, world.judged.receipt);
+  assert.deepEqual(payload.bundle.review.ballots.map((entry) => entry.participant), P0_QUORUM);
+  assert.equal(payload.bundle.package.reviewId, world.pkg.reviewId);
+  assert.equal(payload.bundle.package.revision, world.pkg.revision);
+  assert.equal(payload.bundle.package.artifactSha256, world.pkg.artifactSha256);
+  assert.equal(payload.bundle.manifestSha256, shaFile(path.join(world.runRoot, world.pkg.reviewId, 'manifest.json')), 'the bundle binds the real manifest bytes');
+  // artifactHashes binds the declared ref to the exact bundle bytes, deterministically
+  assert.deepEqual(payload.artifactHashes, { [DECLARED_REF]: sha(payload.bundleBytes) });
+  const rebuilt = buildGateReceiptBundle({ package: world.pkg, runRoot: world.runRoot, questions: [], dispatch: world.dispatchFor(),
+    authority: world.authority, artifactRef: DECLARED_REF, inputs: world.inputs, receipts: world.receipts, policy: world.POLICY });
+  assert.deepEqual(rebuilt, payload, 'the bundle is deterministic over the same admitted evidence');
+  // tampering the written bytes breaks the recorded hash binding
+  const tampered = Buffer.from(payload.bundleBytes.toString('utf8').replace('PASSED', 'BLOCKED'));
+  assert.notEqual(sha(tampered), payload.artifactHashes[DECLARED_REF]);
+  // the extension result protocol shape bindings.mjs judges
+  assert.deepEqual(payload.output, { verdict: 'pass', sourceHash: world.pkg.artifactSha256, artifactHashes: payload.artifactHashes,
+    gateEvidence: { gate: 'A', inputs: world.inputs, receipts: world.receipts, policy: world.POLICY } });
+
+  // THE docking: the real composition validator accepts through its pure delegation
+  const decision = await validatorFor('A').validate({ run: { runId: 'run-p2_5-dock' }, action: { id: 'action-architecture-consensus', stepId: 'classic.extension.A' },
+    outcome: { actionId: 'action-architecture-consensus', status: 'succeeded', output: payload.output } });
+  assert.deepEqual(decision, { accepted: true }, `the sdd.delivery.gate.a validator must accept the assembled payload: ${decision.reason ?? ''}`);
+
+  // cross-gate replay: the same payload never satisfies another gate extension
+  const replay = await validatorFor('R').validate({ run: { runId: 'run-p2_5-dock' }, action: { id: 'action-requirements-open', stepId: 'classic.extension.R' },
+    outcome: { actionId: 'action-requirements-open', status: 'succeeded', output: payload.output } });
+  assert.equal(replay.accepted, false, 'gate evidence cannot be replayed across extensions');
+  assert.match(replay.reason, /bound to gate A/);
+});
+
+test('buildGateReceiptBundle refuses refused consensuses, builder identity, rebound digests and invalid refs — no bundle exists for a refused gate', async () => {
+  const world = dockingWorld();
+  const build = (overrides = {}) => buildGateReceiptBundle({ package: world.pkg, runRoot: world.runRoot, questions: [], dispatch: world.dispatchFor(),
+    authority: world.authority, artifactRef: DECLARED_REF, inputs: world.inputs, receipts: world.receipts, policy: world.POLICY, ...overrides });
+
+  // a refused consensus (dissent) never produces a bundle; the refusal surfaces
+  const dissent = dockingWorld({ dissent: true });
+  const dissentBuild = buildGateReceiptBundle({ package: dissent.pkg, runRoot: dissent.runRoot, questions: [], dispatch: dissent.dispatchFor(),
+    authority: dissent.authority, artifactRef: DECLARED_REF, inputs: dissent.inputs, receipts: dissent.receipts, policy: dissent.POLICY });
+  assert.equal(dissentBuild.ok, false, 'a majority verdict is not a pass bundle');
+  assert.equal(dissentBuild.error, 'CONSENSUS_NOT_ADMITTED');
+  assert.ok(dissentBuild.intake.refusals.some((refusal) => refusal.code === 'QUORUM_NOT_UNANIMOUS'), 'the mechanical refusal surfaces through the build');
+
+  // a passed tally without the real finalize never completes the bundle
+  const dir = makeTmp('sdd-p25-dock-nofin-');
+  const noFinal = runConsensus({ dir, reviewId: 'arch-dock-nofin', requirementsDigest: sha('req-nf'), designDigest: sha('design-nf'), finalize: false });
+  const noFinalDispatch = world.authority.issueDispatch({ runnerId: 'review-runner-a', run: 'run-p2_5-dock', gate: 'A', role: 'verifier',
+    execution: 'exec-arch-consensus-1', inputDigest: noFinal.pkg.artifactSha256, policyDigest: world.POLICY.digest, attempt: 1, epoch: 1 });
+  const noFinalBuild = buildGateReceiptBundle({ package: noFinal.pkg, runRoot: noFinal.runRoot, questions: [], dispatch: noFinalDispatch,
+    authority: world.authority, artifactRef: DECLARED_REF, inputs: { ...world.inputs, inputDigest: noFinal.pkg.artifactSha256 }, receipts: world.receipts, policy: world.POLICY });
+  assert.equal(noFinalBuild.ok, false, 'no bundle without the real finalize output');
+  assert.ok(noFinalBuild.intake.refusals.some((refusal) => refusal.code === 'FINAL_REPORT_REQUIRED'));
+
+  // the builder execution (the design author) cannot sign the consensus bundle
+  const self = build({ dispatch: world.dispatchFor({ role: 'builder', execution: 'exec-design-author-1' }) });
+  assert.equal(self.ok, false);
+  assert.equal(self.error, 'IDENTITY_CONFLICT');
+
+  // a dispatch bound to another artifact digest is a rebound summary at the intake
+  const reboundDispatch = build({ dispatch: world.dispatchFor({ inputDigest: sha('another-design') }) });
+  assert.equal(reboundDispatch.ok, false);
+  assert.equal(reboundDispatch.error, 'ARTIFACT_DIGEST_MISMATCH');
+
+  // a payload built for another input digest is a rebound summary at the docking layer
+  const reboundPayload = build({ inputs: { ...world.inputs, inputDigest: sha('another-design') } });
+  assert.equal(reboundPayload.ok, false);
+  assert.equal(reboundPayload.error, 'PAYLOAD_INPUT_REBOUND');
+
+  // the artifact ref keeps the upstream project-relative constraint
+  for (const ref of ['/absolute/bundle.json', '../escape.json', 'C:\\escape\\bundle.json', '']) {
+    assert.throws(() => build({ artifactRef: ref }), /BUNDLE_REF_INVALID/, `ref ${ref} must be refused`);
+  }
+  // the gateEvidence receipts are the extension's admission entries, not a free-form list
+  assert.throws(() => build({ receipts: { participant: 'zcode' } }), /BUNDLE_INPUT_INVALID/);
+  // invalid inputs
+  assert.throws(() => buildGateReceiptBundle(null), /INPUT_INVALID/);
 });

@@ -1,0 +1,64 @@
+{
+  "task": "P2_5 (架构A的grill与独立共识) — revision 2026-10-26-comet-050-adoption-v1",
+  "recordedAt": "2026-10-26T22:00:00+08:00",
+  "repository": "/Users/mac/Code/sdd-harness",
+  "baseCommit": "6cbcb59 (working tree; no commit made — worker role)",
+  "interpreters": {
+    "nodePinned": "v24.15.0 (/Users/mac/.nvm/versions/node/v24.15.0/bin/node)",
+    "nodeDefault": "v22.13.1 (/Users/mac/.nvm/versions/node/v22.13.1/bin/node)",
+    "python3": "3.14.7 (real review_gate.py subprocesses, local only)"
+  },
+  "ownedFiles": {
+    "lib/adapters/architecture-review.js": "2108933b806c2955533a095efbacd977a0e13f00f433bae1ee4cb0f19ea3c2df",
+    "test/architecture-review-adapter.test.js": "24167de7a933f18b3b401b6231bd058d78e10bb4107662791296618fc5b57b5a",
+    "test/delivery-cases/2_5.mjs": "492d9ca404f624ae4e150b5ff83ed9defcc44c3612a3037ba4cd1a400932058f"
+  },
+  "runs": [
+    {
+      "phase": "RED (before implementation)",
+      "command": "node --test --test-reporter=tap test/architecture-review-adapter.test.js",
+      "node": "v22.13.1",
+      "result": "tests 59, pass 57, fail 2 — both new docking tests fail: 'buildGateReceiptBundle is not a function'",
+      "evidence": "evidence/red-1-adapter-docking.tap"
+    },
+    {
+      "phase": "RED (before implementation)",
+      "command": "node --test --test-reporter=tap test/delivery-cases/2_5.mjs",
+      "node": "v24.15.0",
+      "result": "tests 11, pass 9, fail 2 — (1) new docking test 'buildGateReceiptBundle is not a function'; (2) PRE-EXISTING baseline failure: native chain pinned build 6da90e89… but the 0.5.0 lock distribution verifies as 29f2332b… (commit aeb1a659…) — the managed-host surface (installManagedDeliveryHost/dispatch-gate/accept-gate) exists only in the legacy c90af44a/6da90e89 build",
+      "evidence": "evidence/red-2-2_5-docking-and-stale-pin.tap"
+    },
+    {
+      "phase": "GREEN",
+      "command": "node --test --test-reporter=tap test/architecture-review-adapter.test.js test/delivery-cases/2_5.mjs",
+      "node": "v24.15.0 (pinned)",
+      "result": "tests 70, pass 70, fail 0, skipped 0, exit 0",
+      "evidence": "evidence/green-3-three-suite-node-24.15.0.tap"
+    },
+    {
+      "phase": "GREEN (CI parity)",
+      "command": "node --test --test-reporter=tap test/architecture-review-adapter.test.js test/delivery-cases/2_5.mjs",
+      "node": "v22.13.1 (default)",
+      "result": "tests 70, pass 70, fail 0, skipped 0, exit 0",
+      "evidence": "evidence/green-4-three-suite-node-22.13.1-default.tap"
+    },
+    {
+      "phase": "GREEN (P2_4 cross-check)",
+      "command": "node --test --test-reporter=tap test/delivery-cases/2_4.mjs",
+      "node": "v24.15.0",
+      "result": "tests 14, pass 14, fail 0, skipped 0, exit 0 — no conflict with the A-extension assertions",
+      "evidence": "evidence/green-5-2_4-crosscheck-node-24.15.0.tap"
+    },
+    {
+      "phase": "GREEN (related SDK regressions)",
+      "command": "node --test --test-reporter=tap test/delivery-evidence.test.js test/delivery-gate.test.js test/delivery-baseline.test.js",
+      "node": "v22.13.1",
+      "result": "tests 74, pass 74, fail 0, exit 0",
+      "evidence": "evidence/green-6-related-sdk-regressions.tap"
+    }
+  ],
+  "externalCalls": "none — review_gate.py ran as local subprocesses only; no model, network, Docker or secret access; no commit",
+  "notRun": [
+    "bash scripts/check.sh (full-repo entry; unrelated pre-existing failures elsewhere are Root/VERIFY scope — this task's verify contract was the pinned three-file suite plus the 2_4 cross-check, both green)"
+  ]
+}
