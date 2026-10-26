@@ -1,0 +1,24 @@
+{
+  "schema": "sdd.comet.classic.extension.v1",
+  "id": "verify-whitebox",
+  "gate": "V",
+  "afterStep": "full.verify.check.evidence",
+  "skillId": "whitebox-verify",
+  "artifactRefs": [
+    {
+      "ref": ".sdd/delivery/gates/v/receipt-bundle.json",
+      "kind": "gate-receipt-bundle",
+      "hashBinding": "artifactHashes",
+      "writtenBy": "extension-execution"
+    }
+  ],
+  "validator": { "id": "sdd.delivery.gate.v", "version": "1" },
+  "verdictProtocol": {
+    "verdicts": ["pass", "repair", "revise-requirements"],
+    "sourceHash": "domain-bound",
+    "artifactHashes": "domain-bound"
+  },
+  "semantics": "V (D07/D08): independent whitebox business criteria layered ON TOP of the native machine check at the same verify checkpoint — the native classic-check receipt stays authoritative for command identity; this extension adds the business-judgment gate over independently admitted evidence.",
+  "bindings": "integrations/comet/application/bindings.mjs",
+  "judgment": "lib/delivery/gate.js evaluate (pure SDD.Gate.v1) over the payload's inputs/receipts/policy, reached only through bindings.mjs delegation; observation-kind substitution (B06) and unverified capabilities (A18) are rejected inside that evaluation."
+}

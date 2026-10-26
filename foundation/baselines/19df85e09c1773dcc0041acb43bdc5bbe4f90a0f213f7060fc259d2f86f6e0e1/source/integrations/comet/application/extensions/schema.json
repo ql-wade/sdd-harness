@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sdd.comet.classic.extension.v1",
+  "description": "Typed declaration of ONE managed-delivery gate extension for the Comet 0.5.0 classic-full composition application (ADR-0022). The compiler-shaped subset (id/skillId/artifactRefs/validator/afterStep) must stay byte-equivalent to the entry in integrations/comet/application/composition.json; the typed fields here carry the audit semantics (gate identity, artifact typing, judgment owner). Validated by test/delivery-cases/2_4.mjs against the real composition and the pristine upstream constraints.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "gate",
+    "afterStep",
+    "skillId",
+    "artifactRefs",
+    "validator",
+    "verdictProtocol",
+    "semantics",
+    "bindings",
+    "judgment"
+  ],
+  "properties": {
+    "schema": { "const": "sdd.comet.classic.extension.v1" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z\\d]*(?:-[a-z\\d]+)*$",
+      "description": "Must satisfy the upstream extension identity regex read from pristine domains/comet-classic/classic-application.ts (createClassicApplication)."
+    },
+    "gate": { "enum": ["R", "A", "T", "P", "V", "Kp"] },
+    "afterStep": {
+      "enum": [
+        "full.open.evidence",
+        "full.open.revalidate",
+        "full.design.evidence",
+        "full.build.plan.evidence",
+        "full.build.check.evidence",
+        "full.verify.check.evidence"
+      ],
+      "description": "Must be a member of the upstream checkpoint whitelist for profile=full (pristine classic-application.ts checkpoints set)."
+    },
+    "skillId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Executing skill of the extension step; must be a packaged asset in integrations/comet/application/skills (P1_6 manifest)."
+    },
+    "artifactRefs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ref", "kind", "hashBinding", "writtenBy"],
+        "properties": {
+          "ref": {
+            "type": "string",
+            "pattern": "^(?!/)(?!\\.\\./)(?!.*(\\.|/|\\\\)\\.\\.($|/)).+$",
+            "description": "Project-relative, non-absolute, no '..' segments — the upstream artifactRef constraint (pristine classic-application.ts)."
+          },
+          "kind": { "const": "gate-receipt-bundle" },
+          "hashBinding": { "const": "artifactHashes" },
+          "writtenBy": { "const": "extension-execution" }
+        }
+      }
+    },
+    "validator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^sdd\\.delivery\\.gate\\.(r|a|t|p|v|kp)$" },
+        "version": { "const": "1" }
+      }
+    },
+    "verdictProtocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verdicts", "sourceHash", "artifactHashes"],
+      "properties": {
+        "verdicts": {
+          "type": "array",
+          "minItems": 3,
+          "items": { "enum": ["pass", "repair", "revise-requirements"] }
+        },
+        "sourceHash": { "const": "domain-bound" },
+        "artifactHashes": { "const": "domain-bound" }
+      },
+      "description": "The extension result protocol is enforced by the upstream domain wrapper before our validator runs; declared here for audit, implemented by upstream (classic-application.ts L285-L369)."
+    },
+    "semantics": { "type": "string", "minLength": 20 },
+    "bindings": { "const": "integrations/comet/application/bindings.mjs" },
+    "judgment": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Names the pure component that owns the verdict logic; the extension declaration itself must carry no verdict computation."
+    }
+  }
+}
