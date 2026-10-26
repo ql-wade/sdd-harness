@@ -68,11 +68,11 @@
 
 原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-command-first-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Record** 全新会话/默认安装不能重新发现旧sdd命令或六角色必需部署；保留用户原有条目。
-- [ ] **Step 2 [5 min]: Implement** 更新README/AGENTS/技能矩阵等当前入口，只暴露原生Comet阶段；区分计划态和运行态；仅文档，不改运行配置/代码。
-- [ ] **Step 3 [5 min]: Review** 逐条核当前用户决定、所有场景映射与原始来源；独立审查不得复用旧摘要票。
-- [ ] **Step 4 [5 min]: Verify** 运行同一plan_guard、OpenSpec strict与交接一致性校验；计划绿色不签业务通过。
-- [ ] **Step 5 [5 min]: Commit** 只记录该任务文档/实际检查/未验项，保留原用户改动与旧冻结包。
+- [x] **Step 1 [5 min]: Record** 全新会话/默认安装不能重新发现旧sdd命令或六角色必需部署；保留用户原有条目。
+- [x] **Step 2 [5 min]: Implement** 更新README/AGENTS/技能矩阵等当前入口，只暴露原生Comet阶段；区分计划态和运行态；仅文档，不改运行配置/代码。
+- [x] **Step 3 [5 min]: Review** 逐条核当前用户决定、所有场景映射与原始来源；独立审查不得复用旧摘要票。
+- [x] **Step 4 [5 min]: Verify** 运行同一plan_guard、OpenSpec strict与交接一致性校验；计划绿色不签业务通过。
+- [x] **Step 5 [5 min]: Commit** 只记录该任务文档/实际检查/未验项，保留原用户改动与旧冻结包。
 
 ### Task P0_4: 收敛架构独立技术审查
 

@@ -36,7 +36,7 @@
 
 ### 当前交付实施
 
-- 实施目标：[Comet流程与知识收敛架构](docs/architecture/comet-ai-devops-convergence.md)，沿用ADR-0019单主控边界，实施细化见[ADR-0020](docs/architecture/adr/0020-comet-command-knowledge-convergence.md)。
+- 实施目标：[Comet流程与知识收敛架构](docs/architecture/comet-ai-devops-convergence.md)，沿用ADR-0019单主控边界，实施细化见[ADR-0020](docs/architecture/adr/0020-comet-command-knowledge-convergence.md)，命令优先收敛（取消六角色常驻服务/Runner镜像/私有RPC前置）见[ADR-0021](docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md)。
 - 执行和恢复先读当前Change的[HANDOFF](openspec/changes/delivery-foundation-rearchitecture/HANDOFF.md)，任务只消费同一[清单](openspec/changes/delivery-foundation-rearchitecture/tasks.md)与DAG；按实际资格和独立证据接纳，文档不宣称运行就绪。
 - 方法快照保持原样。当前profile绑定Comet原Run；TeamAI只分发。基础scaffold职责保留，历史蓝图仅供演进对照，不能作为当前阶段命令/知识库路由。
 

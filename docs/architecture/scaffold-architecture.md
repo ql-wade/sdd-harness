@@ -3,7 +3,7 @@
 > 状态：权威（v2 定位）。本文是仓库重构的实施依据。
 > 前身：SDD Harness 9-stage 工作流（2026-09-04 必要性审计移除其文档，历史见 git log 与 ADR-0015/0017）。
 
-> 当前交付实施见 [Comet流程与知识收敛架构](comet-ai-devops-convergence.md) 和 [ADR-0020](adr/0020-comet-command-knowledge-convergence.md)。本文继续规定基础scaffold分层；可选profile按ADR-0019接入原Comet，运行资格单独验收。
+> 当前交付实施见 [Comet流程与知识收敛架构](comet-ai-devops-convergence.md)、[ADR-0020](adr/0020-comet-command-knowledge-convergence.md) 与命令优先收敛的[ADR-0021](adr/0021-comet-command-first-no-resident-role-services.md)。本文继续规定基础scaffold分层；可选profile按ADR-0019接入原Comet，运行资格单独验收。
 
 ## 0. 定位
 
