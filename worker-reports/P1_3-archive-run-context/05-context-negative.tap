@@ -1,0 +1,144 @@
+TAP version 13
+# Subtest: managed Run context refuses missing, foreign, ambiguous and linked Run locations before Native
+    # Subtest: missing-change
+    ok 1 - missing-change
+      ---
+      duration_ms: 4.888542
+      type: 'test'
+      ...
+    # Subtest: missing-run
+    ok 2 - missing-run
+      ---
+      duration_ms: 3.98925
+      type: 'test'
+      ...
+    # Subtest: foreign-run
+    ok 3 - foreign-run
+      ---
+      duration_ms: 4.196709
+      type: 'test'
+      ...
+    # Subtest: active-plus-archive
+    ok 4 - active-plus-archive
+      ---
+      duration_ms: 7.249042
+      type: 'test'
+      ...
+    # Subtest: two-archives
+    ok 5 - two-archives
+      ---
+      duration_ms: 7.217458
+      type: 'test'
+      ...
+    # Subtest: run-link
+    ok 6 - run-link
+      ---
+      duration_ms: 5.101
+      type: 'test'
+      ...
+    # Subtest: directory-link
+    ok 7 - directory-link
+      ---
+      duration_ms: 4.526666
+      type: 'test'
+      ...
+    # Subtest: archive-root-link
+    ok 8 - archive-root-link
+      ---
+      duration_ms: 6.5765
+      type: 'test'
+      ...
+    # Subtest: escape
+    ok 9 - escape
+      ---
+      duration_ms: 10.826875
+      type: 'test'
+      ...
+    # Subtest: unknown-location-option
+    ok 10 - unknown-location-option
+      ---
+      duration_ms: 13.501291
+      type: 'test'
+      ...
+    1..10
+ok 1 - managed Run context refuses missing, foreign, ambiguous and linked Run locations before Native
+  ---
+  duration_ms: 69.271542
+  type: 'test'
+  ...
+# Subtest: managed Run context retains Native state and an immutable same-location identity across archive readback
+not ok 2 - managed Run context retains Native state and an immutable same-location identity across archive readback
+  ---
+  duration_ms: 271.07425
+  type: 'test'
+  location: '/Volumes/mac-extend/codex/worktrees/comet-delivery-contracts/sdd-harness/test/spec-closeout.test.js:754:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + '/private/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/spec-closeout-ZJTwOP/openspec/changes/demo'
+    - '/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/spec-closeout-ZJTwOP/openspec/changes/demo'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/spec-closeout-ZJTwOP/openspec/changes/demo'
+  actual: '/private/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/spec-closeout-ZJTwOP/openspec/changes/demo'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Volumes/mac-extend/codex/worktrees/comet-delivery-contracts/sdd-harness/test/spec-closeout.test.js:759:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: managed Run context rejects location races, replacement directories and a different Native Run result
+    # Subtest: moved
+    ok 1 - moved
+      ---
+      duration_ms: 196.926917
+      type: 'test'
+      ...
+    # Subtest: replacement
+    ok 2 - replacement
+      ---
+      duration_ms: 232.053584
+      type: 'test'
+      ...
+    # Subtest: foreign-disk-run
+    ok 3 - foreign-disk-run
+      ---
+      duration_ms: 202.1935
+      type: 'test'
+      ...
+    # Subtest: foreign-native-run
+    ok 4 - foreign-native-run
+      ---
+      duration_ms: 187.255
+      type: 'test'
+      ...
+    # Subtest: new-conflict
+    ok 5 - new-conflict
+      ---
+      duration_ms: 216.971417
+      type: 'test'
+      ...
+    # Subtest: run-link
+    ok 6 - run-link
+      ---
+      duration_ms: 228.384166
+      type: 'test'
+      ...
+    1..6
+ok 3 - managed Run context rejects location races, replacement directories and a different Native Run result
+  ---
+  duration_ms: 1264.626875
+  type: 'test'
+  ...
+1..3
+# tests 19
+# suites 0
+# pass 18
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1662.3555

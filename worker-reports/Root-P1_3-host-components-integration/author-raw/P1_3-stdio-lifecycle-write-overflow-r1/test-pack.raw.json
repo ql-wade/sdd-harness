@@ -1,0 +1,225 @@
+{
+  "schema_version": "test-authoring/v1",
+  "mode": "automate",
+  "status": "ready_for_acceptance",
+  "project_root": "/Volumes/mac-extend/codex/worktrees/comet-registry-qualification/sdd-harness",
+  "basis": [
+    {
+      "id": "overflow-contract",
+      "kind": "requirement",
+      "path": "worker-reports/P1_3-stdio-lifecycle/write-overflow-r1/REPORT.md",
+      "sha256": "0deefb128715983daca6d1351ada5446e6a1b0ea784c89e8a7e902dfbc654902"
+    },
+    {
+      "id": "overflow-source",
+      "kind": "source",
+      "path": "lib/adapters/harness.js",
+      "sha256": "52cdcbdc792794da6bf10f8a326a3c521488a78a017803f4222746c3d9def0a9"
+    }
+  ],
+  "requirements": [
+    "overflow-contract"
+  ],
+  "dimensions": {
+    "Journey-A": {
+      "required": true,
+      "reason": "Local asynchronous wire/capture/refusal/restoration contract.",
+      "basis_ids": [
+        "overflow-contract"
+      ],
+      "case_ids": [
+        "initialized-write-overflow"
+      ]
+    },
+    "Journey-B": {
+      "required": false,
+      "reason": "No UI/storage/deploy behavior introduced by this synchronous write-gate rework.",
+      "basis_ids": [
+        "overflow-contract"
+      ],
+      "case_ids": []
+    },
+    "Journey-C": {
+      "required": false,
+      "reason": "No UI/storage/deploy behavior introduced by this synchronous write-gate rework.",
+      "basis_ids": [
+        "overflow-contract"
+      ],
+      "case_ids": []
+    },
+    "Journey-D": {
+      "required": false,
+      "reason": "No UI/storage/deploy behavior introduced by this synchronous write-gate rework.",
+      "basis_ids": [
+        "overflow-contract"
+      ],
+      "case_ids": []
+    },
+    "Journey-E": {
+      "required": true,
+      "reason": "Local asynchronous wire/capture/refusal/restoration contract.",
+      "basis_ids": [
+        "overflow-contract"
+      ],
+      "case_ids": [
+        "initialized-write-overflow"
+      ]
+    },
+    "Journey-F": {
+      "required": true,
+      "reason": "Local asynchronous wire/capture/refusal/restoration contract.",
+      "basis_ids": [
+        "overflow-contract"
+      ],
+      "case_ids": [
+        "initialized-write-overflow"
+      ]
+    },
+    "Journey-G": {
+      "required": true,
+      "reason": "Local asynchronous wire/capture/refusal/restoration contract.",
+      "basis_ids": [
+        "overflow-contract"
+      ],
+      "case_ids": [
+        "initialized-write-overflow"
+      ]
+    },
+    "Journey-H": {
+      "required": true,
+      "reason": "Local asynchronous wire/capture/refusal/restoration contract.",
+      "basis_ids": [
+        "overflow-contract"
+      ],
+      "case_ids": [
+        "initialized-write-overflow"
+      ]
+    },
+    "Journey-I": {
+      "required": false,
+      "reason": "No UI/storage/deploy behavior introduced by this synchronous write-gate rework.",
+      "basis_ids": [
+        "overflow-contract"
+      ],
+      "case_ids": []
+    },
+    "Journey-J": {
+      "required": true,
+      "reason": "Local asynchronous wire/capture/refusal/restoration contract.",
+      "basis_ids": [
+        "overflow-contract"
+      ],
+      "case_ids": [
+        "initialized-write-overflow"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "initialized-write-overflow",
+      "requirement_ids": [
+        "overflow-contract"
+      ],
+      "dimensions": [
+        "Journey-A",
+        "Journey-E",
+        "Journey-F",
+        "Journey-G",
+        "Journey-H",
+        "Journey-J"
+      ],
+      "level": "integration",
+      "priority": "P1",
+      "preconditions": [
+        "Exact Node24,private executable peer,offline guards,no actual native CLI/model/auth/connector."
+      ],
+      "inputs": {
+        "routes": [
+          "connect",
+          "start"
+        ],
+        "captureBudgetBytes": 2097152
+      },
+      "steps": [
+        "Hold valid initialize result until public stderr capture leaves one byte, then release; assert all public views remain unknown and no subsequent native work or restoration."
+      ],
+      "oracle": {
+        "basis_id": "overflow-contract",
+        "expected": "ready,done,observe remain UNKNOWN/NATIVE_CAPTURE_LIMIT and initialized=false after initialized-write overflow; no turn/thread or source reactivation; original physical close remains observable.",
+        "authority": "Independent Spec exact public counterexample and original sticky-UNKNOWN protocol requirement; real private wire/byte/process assertions only"
+      },
+      "cleanup": [
+        "Release only own barrier; cancel only the original handle if live; await closed and remove fixture in finally."
+      ],
+      "evidence_plan": [
+        "Raw command UTC/argv/cwd/input hashes/exit and separate normalized display index."
+      ],
+      "automation": {
+        "path": "test/comet-driver.test.js",
+        "sha256": "5716105558778f492e3d22e4aeb98d76a89989c704e65cea52fcedbc4c6acc5a",
+        "test_id": "native initialized write capture overflow keeps ready done and observation unknown for connect and legacy start",
+        "command": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "--test-name-pattern=native initialized write capture overflow",
+          "test/comet-driver.test.js"
+        ]
+      }
+    }
+  ],
+  "unresolved": [],
+  "self_checks": [
+    {
+      "command": [
+        "/Users/mac/.nvm/versions/node/v24.15.0/bin/node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-name-pattern=native initialized write capture overflow",
+        "test/comet-driver.test.js"
+      ],
+      "exit_code": 1,
+      "expected": "expected_failure",
+      "log_path": ".local/P1_3-stdio-lifecycle-write-overflow-r1/red-overflow-sharp-oracle/stdout.raw.txt",
+      "log_sha256": "bc8169be592e4b535984460877672f853414a3882bb969b9f6b1620135fa7b95"
+    },
+    {
+      "command": [
+        "/Users/mac/.nvm/versions/node/v24.15.0/bin/node",
+        "--test",
+        "--test-reporter=tap",
+        "--test-name-pattern=native initialized write capture overflow",
+        "test/comet-driver.test.js"
+      ],
+      "exit_code": 0,
+      "expected": "pass",
+      "log_path": ".local/P1_3-stdio-lifecycle-write-overflow-r1/green-initialized-write-overflow/stdout.raw.txt",
+      "log_sha256": "0bdd5a310839cf3a794af6e71b43ef84ef3ff56f69adff1f9b305dad0bad963a"
+    },
+    {
+      "command": [
+        "/Users/mac/.nvm/versions/node/v24.15.0/bin/node",
+        "--test",
+        "--test-reporter=tap",
+        "test/comet-driver.test.js"
+      ],
+      "exit_code": 0,
+      "expected": "pass",
+      "log_path": ".local/P1_3-stdio-lifecycle-write-overflow-r1/final-owned/stdout.raw.txt",
+      "log_sha256": "50787410467d841bffd063a5a783070f8765834152269599dfa623d733b7ec19"
+    },
+    {
+      "command": [
+        "/Users/mac/.nvm/versions/node/v24.15.0/bin/node",
+        "--test",
+        "--test-reporter=tap",
+        "test/comet-execution-binding.test.js"
+      ],
+      "exit_code": 0,
+      "expected": "pass",
+      "log_path": ".local/P1_3-stdio-lifecycle-write-overflow-r1/final-related/stdout.raw.txt",
+      "log_sha256": "92d6bf1ebf22eac52cae1f11ea4ec3b75d1bd813d5c73dc12b978773f3d879d3"
+    }
+  ],
+  "handoffLimit": "Runnable author packet only; independent acceptance and actual CLI/source/OS remain unverified."
+}

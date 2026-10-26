@@ -1,0 +1,69 @@
+{
+  "status": "DIAGNOSED_REPRODUCIBLE_PYTHON_DEADLINE_FAILURE_MAIN_ORIGIN_UNCONFIRMED",
+  "baseCommit": "ab90cc25ce194453ff63f346b20c39ba4deb02f9",
+  "node": "v24.15.0",
+  "originalMainFailure": {
+    "tests": 1164,
+    "pass": 1162,
+    "fail": 2,
+    "skip": 0,
+    "failingCase": "missing manifest file",
+    "actualCode": "OPENSPEC_INPUTS_UNVERIFIED",
+    "expectedCode": "CONTEXT_CONFLICT",
+    "finding": "NOT_RECORDED_IN_ORIGINAL_OUTPUT",
+    "durationMs": 7238.990958,
+    "windowUTC": [
+      "2026-10-26T02:04:15.193069+00:00",
+      "2026-10-26T02:06:49.401632+00:00"
+    ]
+  },
+  "narrowOriginalMutation": {
+    "iterations": 3,
+    "planAndExportPasses": 6,
+    "restoredPasses": 3,
+    "source": "01-narrow-plain.txt",
+    "conclusion": "No reproduction in the six original mutation checks; not a main failure resolution"
+  },
+  "originalMatrixDiagnostic": {
+    "file": "02-original-matrix-with-probe.tap",
+    "tests": 16,
+    "pass": 14,
+    "fail": 2,
+    "skip": 0,
+    "case": ".local ancestor symlink",
+    "stage": "initial preflight before mutation",
+    "python": {
+      "calls": 57,
+      "minimumMs": 45.560041,
+      "medianMs": 48.42104099999999,
+      "maximumMs": 5003.996583,
+      "nonSuccess": [
+        {
+          "durationMs": 5003.996583,
+          "timeoutMs": 5000,
+          "inputBytes": 471694,
+          "inputSha256": "84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f",
+          "status": null,
+          "signal": "SIGTERM",
+          "errorCode": "ETIMEDOUT",
+          "metadataClass": "EMPTY",
+          "startedAt": "2026-10-26T02:12:34.563Z"
+        }
+      ],
+      "scope": "Only original15-case matrix; previous completed probe used inherited NODE_OPTIONS, so this is diagnostic evidence and not the untouched main baseline."
+    },
+    "conclusion": "Actual original Python inspector can hit its unchanged 5000ms deadline even in a one-file matrix; different case/stage from main, so original main finding and resource cause remain unconfirmed"
+  },
+  "productChanges": [],
+  "testChanges": [
+    "Failure messages expose only code/findings at initial preflight and the exact CONTEXT_CONFLICT assertion; expected results and all deadlines unchanged"
+  ],
+  "rootCapture": "HANDOFF.md",
+  "deferred": [
+    "Root one-time full original check with only exact Runner build-plan child probe",
+    "Main failure same-attempt finding and Python result correlation",
+    "Resource/concurrency causal comparison before any scheduling change",
+    "Remove probe and pass original uninstrumented check"
+  ],
+  "sleep": "Root separately verified no actual Sleep in original main failure window; not attributed to sleep."
+}

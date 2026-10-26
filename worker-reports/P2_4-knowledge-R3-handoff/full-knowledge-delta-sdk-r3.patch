@@ -1,0 +1,785 @@
+diff --git a/domains/comet-classic/classic-archive-input-bridge.ts b/domains/comet-classic/classic-archive-input-bridge.ts
+--- a/domains/comet-classic/classic-archive-input-bridge.ts
++++ b/domains/comet-classic/classic-archive-input-bridge.ts
+@@ -1,3 +1,5 @@
++import { knowledgeOutputScope } from './classic-managed-knowledge.js';
++import { readRunState } from '../engine/state.js';
+ import { type OpenSpecInvocation } from './classic-openspec-binding.js';
+ import { readClassicDelivery } from './classic-progress.js';
+ // A signed native archive transformation, never an approval or dispatch queue.
+@@ -10,7 +12,8 @@
+ import type { RunState } from '../engine/types.js';
+ import { readClassicProjectBytes, inspectClassicProjectTarget } from './classic-protected-path.js';
+ import { managedDeliveryHost, requireManagedDeliveryHost } from './classic-managed-host.js';
+-import { stableStringify, type GateInputs, type GateId } from './classic-gate-runtime.js';
++import { stableStringify } from './classic-stable-json.js';
++import type { GateInputs, GateId } from './classic-gate-runtime.js';
+ import { executeClassicOpenSpec } from './classic-openspec-command.js';
+ 
+ const KEY = 'managed_archive_input_bridge';
+@@ -42,7 +45,9 @@
+   changeDir: string,
+   controlOutput: string | null = null,
+ ): Promise<RawInputs> {
+-  const snapshot = await collectCheckSnapshot(root, changeDir);
++  const run=await readRunState(changeDir),policy=managedDeliveryHost()?.policy({projectRoot:root,changeDir,runId:run?.runId});
++  const outputs=policy?await knowledgeOutputScope(root,changeDir,run,policy):null;
++  const snapshot = await collectCheckSnapshot(root, changeDir,undefined,outputs?{commandOutputs:outputs.identity}:{});
+   const inputs: RawInputs = Object.create(null);
+   for (const entry of snapshot.entries) {
+     // Existing native delivery receipts are controller outputs. Their own
+diff --git a/domains/comet-classic/classic-check-snapshot.ts b/domains/comet-classic/classic-check-snapshot.ts
+--- a/domains/comet-classic/classic-check-snapshot.ts
++++ b/domains/comet-classic/classic-check-snapshot.ts
+@@ -137,6 +137,7 @@
+ }
+ 
+ export interface CheckSnapshotOptions {
++  commandOutputs?: CheckIdentity;
+   /**
+    * Recorded entries from the check execution. Files whose stat identity still
+    * matches the baseline reuse the recorded content hash without rereading.
+@@ -168,7 +169,8 @@
+   const state = await readClassicState(changeDir, { migrate: false });
+   const report = state.classic?.verificationReport;
+   const reportPath = report && report.endsWith('.md') ? path.resolve(root, report) : null;
+-  const outputMatchers = (policy.outputs ?? []).map((pattern) =>
++  const outputPolicy = options.commandOutputs ? await readCheckPolicy(root,options.commandOutputs,legacy) : policy;
++  const outputMatchers = (outputPolicy.outputs ?? []).map((pattern) =>
+     compileCheckPolicyPattern(pattern),
+   );
+   const rootVariants = [root, await fs.realpath(root).catch(() => root)];
+@@ -543,8 +545,9 @@
+   root: string,
+   changeDir: string,
+   identity?: CheckIdentity,
++  options: Pick<CheckSnapshotOptions,'commandOutputs'> = {},
+ ): Promise<string> {
+-  return (await collectCheckSnapshot(root, changeDir, identity)).digest;
++  return (await collectCheckSnapshot(root, changeDir, identity, options)).digest;
+ }
+ 
+ /** Digest with the pre-manifest default bindings, for evidence recorded before manifests existed. */
+diff --git a/domains/comet-classic/classic-gate-runtime.ts b/domains/comet-classic/classic-gate-runtime.ts
+--- a/domains/comet-classic/classic-gate-runtime.ts
++++ b/domains/comet-classic/classic-gate-runtime.ts
+@@ -1,3 +1,5 @@
++import { stableStringify } from './classic-stable-json.js';
++import { knowledgeOutputScope } from './classic-managed-knowledge.js';
+ import { archivedGateInputs } from './classic-archive-input-bridge.js';
+ // Managed delivery gate runtime (patch 0002-managed-delivery-runtime).
+ //
+@@ -144,16 +146,7 @@
+ const SHA256_RE = /^[a-f0-9]{64}$/u;
+ const nonEmpty = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
+ 
+-export function stableStringify(value: unknown): string {
+-  if (Array.isArray(value)) return `[${value.map((entry) => stableStringify(entry)).join(',')}]`;
+-  if (value !== null && typeof value === 'object') {
+-    return `{${Object.keys(value as Record<string, unknown>)
+-      .sort()
+-      .map((key) => `${JSON.stringify(key)}:${stableStringify((value as Record<string, unknown>)[key])}`)
+-      .join(',')}}`;
+-  }
+-  return JSON.stringify(value) ?? 'null';
+-}
++export { stableStringify } from './classic-stable-json.js';
+ 
+ const sha256Text = (value: string): string => createHash('sha256').update(value).digest('hex');
+ 
+@@ -660,7 +653,8 @@
+ }): Promise<GateInputs> {
+   const { projectRoot, changeDir, gate, state } = options;
+   const run = options.run ?? null;
+-  const archived = await archivedGateInputs(projectRoot, changeDir, run, state.deliveryPolicy ?? null, gate);
++  let archived:GateInputs|null=null,archiveUnavailable:string|null=null;
++  try{archived=await archivedGateInputs(projectRoot,changeDir,run,state.deliveryPolicy??null,gate);}catch(error){archiveUnavailable=error instanceof Error?error.message:'archive input currentness is unavailable';}
+   let producerPolicy: ManagedRecord = {};
+   try { producerPolicy = typeof state.deliveryPolicy === 'string' ? JSON.parse(state.deliveryPolicy) : state.deliveryPolicy ?? {}; } catch { /* fail closed in source derivation */ }
+   const host = requireManagedDeliveryHost();
+@@ -677,6 +671,7 @@
+   const missing: string[] = [];
+   const files: Record<string, string> = {};
+   const extra: Record<string, unknown> = { deliveryPolicy: state.deliveryPolicy ?? null };
++  if(archiveUnavailable){extra.archiveInputs={unverified:archiveUnavailable};missing.push('original archive input currentness is unverified');}
+ 
+   const addFile = async (label: string, relative: string | null): Promise<void> => {
+     if (!relative || relative === 'null') {
+@@ -710,7 +705,10 @@
+     extra.tasksDefinition = await gateTasksDefinition(changeDir);
+   }
+   if (gate === 'V' || gate === 'Kp' || gate === 'Kt') {
+-    extra.candidate = await checkInputFingerprint(projectRoot, changeDir);
++    let outputScope:ManagedRecord|null=null;
++    try{outputScope=await knowledgeOutputScope(projectRoot,changeDir,run,producerPolicy);extra.knowledgeOutputs=outputScope;}
++    catch(error){extra.knowledgeOutputs={unverified:error instanceof Error?error.message:'knowledge output contract unavailable'};missing.push('knowledge output contract is unverified');}
++    extra.candidate = await checkInputFingerprint(projectRoot, changeDir,undefined,outputScope?{commandOutputs:outputScope.identity}:{});
+     // The receipt binds the IDENTITY of the latest runtime verification
+     // record — deliberately not evaluateCommandCheck, whose phase-boundary
+     // epoch rule must not make the V receipt self-stale after verify-pass
+diff --git a/domains/comet-classic/classic-managed-actions.ts b/domains/comet-classic/classic-managed-actions.ts
+--- a/domains/comet-classic/classic-managed-actions.ts
++++ b/domains/comet-classic/classic-managed-actions.ts
+@@ -1,3 +1,5 @@
++import { KNOWLEDGE_ACTIONS, knowledgeAction, knowledgeDefinition, knowledgeIntent, knowledgeContract, knowledgeWork, knowledgeReview, knowledgeWriterResult, knowledgeSnapshot, knowledgeCreated } from './classic-managed-knowledge.js';
++import { readAuthenticatedProducerFacts } from './classic-producer-sources.js';
+ import { createHash, randomBytes } from 'node:crypto';
+ import path from 'node:path';
+ import { readClassicState, writeClassicState, withClassicStateLock } from './classic-store.js';
+@@ -16,10 +18,10 @@
+ import type { SkillPackage } from '../skill/types.js';
+ 
+ const hash = (value: unknown): string => createHash('sha256').update(typeof value === 'string' ? value : stableStringify(value)).digest('hex');
+-const kinds = ['R', 'A', 'T', 'P', 'test.automate', 'build', 'code.review'] as const;
++const kinds = ['R', 'A', 'T', 'P', 'test.automate', 'build', 'code.review', ...KNOWLEDGE_ACTIONS] as const;
+ type Kind = typeof kinds[number];
+-const parentGate: Record<Kind, string> = { R: 'R', A: 'A', T: 'T', P: 'P', 'test.automate': 'V', build: 'V', 'code.review': 'V' };
+-const parentIds: Record<Kind, string[]> = { R: [], A: ['R'], T: ['R', 'A'], P: ['R', 'A', 'T'], 'test.automate': ['R', 'A', 'T', 'P'], build: ['R', 'A', 'T', 'P'], 'code.review': ['R', 'A', 'T', 'P'] };
++const parentGate: Record<Kind, string> = { R: 'R', A: 'A', T: 'T', P: 'P', 'test.automate': 'V', build: 'V', 'code.review': 'V', 'Kp.create':'Kp', 'Kp.review':'Kp', Kp:'Kp', 'Kt.create':'Kt', 'Kt.review':'Kt', Kt:'Kt' };
++const parentIds: Record<Kind, string[]> = { R: [], A: ['R'], T: ['R', 'A'], P: ['R', 'A', 'T'], 'test.automate': ['R', 'A', 'T', 'P'], build: ['R', 'A', 'T', 'P'], 'code.review': ['R', 'A', 'T', 'P'], 'Kp.create':['R','A','T','P','V'], 'Kp.review':['R','A','T','P','V'], Kp:['R','A','T','P','V'], 'Kt.create':['R','A','T','P','V','Kp'], 'Kt.review':['R','A','T','P','V','Kp'], Kt:['R','A','T','P','V','Kp'] };
+ function fail(reason: string): never { throw new ManagedSourceUnverifiedError('UNVERIFIED: ' + reason); }
+ const object = (value: unknown): value is ManagedRecord => value !== null && typeof value === 'object' && !Array.isArray(value);
+ const same = (left: unknown, right: unknown): boolean => stableStringify(left) === stableStringify(right);
+@@ -36,14 +38,15 @@
+   return createHash('sha256').update(source.bytes).digest('hex');
+ }
+ 
+-async function state(changeDir: string, allowArchive = false) {
++async function state(changeDir: string) {
+   await requireRunAuthority(changeDir);
+   const host = requireManagedDeliveryHost();
+   const root = await discoverClassicProject(changeDir);
+   await syncGateInvalidationsLocked(changeDir, root);
+   const projection = await readClassicState(changeDir, { migrate: false });
+   if (!projection.classic?.managedDelivery || !projection.run) fail('original synchronized managed Run is required');
+-  if ((!allowArchive && projection.classic.archived) || projection.run.status === 'completed') fail('producer actions cannot reopen archive or completed lifecycle');
++  const nativeKt = projection.classic.phase === 'archive' && projection.classic.archived && projection.run.currentStep === 'full.closeout.knowledge';
++  if ((projection.classic.archived && !nativeKt) || projection.run.status === 'completed') fail('producer actions cannot reopen archive or completed lifecycle');
+   const policy = structuredClone(host.policy({ projectRoot: root, changeDir, runId: projection.run.runId }));
+   const profile = policy?.producerProfile;
+   if (!object(profile) || profile.id !== 'comet-managed-v2' || !Array.isArray(profile.actions) || !object(profile.methods)
+@@ -53,6 +56,7 @@
+ type Current = Awaited<ReturnType<typeof state>>;
+ 
+ function itemFor(current: Current, kind: Kind): ManagedRecord {
++  if (knowledgeAction(kind)) return knowledgeDefinition(current.profile,current.policy,kind);
+   const rows = current.profile.actions.filter((entry: ManagedRecord) => entry.action === kind && entry.nativePhase === current.classic.phase);
+   if (rows.length !== 1 || !Array.isArray(rows[0].outputs) || !text(rows[0].role) || !Array.isArray(rows[0].methods) || rows[0].methods.length === 0
+     || rows[0].methods.some((name: unknown) => !text(name) || name.startsWith('comet-') || !object(current.profile.methods[name]))) fail('phase/action/method is not declared by the protected profile');
+@@ -76,13 +80,18 @@
+   return tasks.find((task) => !task.completed)?.id ?? null;
+ }
+ 
+-function intentFor(current: Current, kind: Kind, task: string | null): ManagedRecord {
++async function intentFor(current: Current, kind: Kind, task: string | null): Promise<ManagedRecord> {
+   const item = itemFor(current, kind);
+   const invalidations = parseGateInvalidations(current.classic.gateInvalidations);
+-  return { purpose: 'producer', action: kind, role: item.role, gate: item.gate, runId: current.run.runId, nativeRunId: current.run.runId,
++  const intent = { purpose: 'producer', action: kind, role: item.role, gate: item.gate, runId: current.run.runId, nativeRunId: current.run.runId,
+     stepId: current.run.currentStep, iteration: current.run.iteration, taskId: task,
+     epoch: current.classic.checkEpoch ?? 0, generation: Object.fromEntries(parentIds[kind].map((gate) => [gate, invalidations[gate as keyof typeof invalidations]?.count ?? 0])),
+     projectRoot: current.root, changeDir: currentChange(current) };
++  const knowledge=knowledgeAction(kind);if(!knowledge)return intent;
++  const draft={...intent,knowledge:knowledgeIntent(current.host,intent)};
++  if(knowledge.stage==='create')return draft;
++  const work=await currentKnowledge(current,draft);if(!work.creator)fail('original knowledge creator has not produced a payload');
++  return {...draft,knowledge:work.operation};
+ }
+ 
+ async function contractFor(current: Current, intent: ManagedRecord) {
+@@ -107,6 +116,7 @@
+   }
+   for (const ref of contract.allowedPaths) reference(ref, true);
+   if (contract.allowedTools.some((tool: unknown) => !text(tool) || !/^[-A-Za-z0-9_.:]+$/u.test(tool))) fail('exact producer tools are required');
++  if (knowledgeAction(intent.action)) knowledgeContract(intent,contract,item.code);
+   if (intent.action === 'P' && contract.allowedTools.some((tool: string) => /(?:^|__|[.:/])(?:create_goal|update_goal|spawn_agent|send_message_to_thread|automation_update|dispatch|schedule|archive[^.:/]*|publish[^.:/]*)$/u.test(tool))) fail('planner P is plan-only; controller capabilities are forbidden');
+   return { context, contract: structuredClone(contract), principal: context.producerPrincipal };
+ }
+@@ -133,6 +143,24 @@
+   return { execution: rejected.execution, attempt: rejected.attempt, epoch: rejected.epoch, generation: rejected.generation, digest: rejected.digest, reportDigest: rejected.reportDigest };
+ }
+ 
++
++function methodContext(current: Current, item: ManagedRecord): ManagedRecord[] {
++  return item.code ? [item.code] : item.methods.map((name: string) => ({ name, ...current.profile.methods[name] }));
++}
++async function currentKnowledge(current: Current, intent: ManagedRecord): Promise<ManagedRecord> {
++  return knowledgeWork({projectRoot:current.root,host:current.host,tuple:intent.knowledge,action:intent.action,
++    facts:await readAuthenticatedProducerFacts({changeDir:currentChange(current),run:current.run,profile:current.profile,policy:current.policy,host:current.host},KNOWLEDGE_ACTIONS),
++    artifacts:await readArtifacts(currentChange(current),current.run.artifactsRef)});
++}
++async function knowledgeSources(current: Current, intent: ManagedRecord): Promise<ManagedRecord> {
++  const kind=knowledgeAction(intent.action)!;const work=await currentKnowledge(current,intent);
++  if(kind.stage==='create')return work.revise?{revisionReview:work.lastRejection}:{};
++  if(!work.creator)fail('original knowledge content creator is missing');
++  if(kind.stage==='review')return {creator:work.creator.ref};
++  if(!work.review)fail('original independent knowledge content review/authorization is missing');
++  return {creator:work.creator.ref,review:work.review.ref};
++}
++
+ async function identities(current: Current, intent: ManagedRecord, contract: ManagedRecord) {
+   const outputs = new Set(contract.outputs.map((output: ManagedRecord) => output.ref));
+   const inputs = [];
+@@ -140,10 +168,12 @@
+     const digest = await fileDigest(current.root, input.ref);
+     inputs.push({ ...input, digest });
+   }
+-  const item = itemFor(current, intent.action), methods = item.methods.map((name: string) => ({ name, ...current.profile.methods[name] }));
++  const item = itemFor(current, intent.action), methods = methodContext(current,item);
++  const sources = knowledgeAction(intent.action) ? await knowledgeSources(current,intent) : null;
+   const base = { action: intent.action, taskId: intent.taskId, workPackage: contract.workPackage, policyDigest: current.policy.digest,
+-    epoch: intent.epoch, generation: intent.generation, reviewCycle: reviewCycle(current, intent.action), methods, outputs: contract.outputs, allowedPaths: contract.allowedPaths, allowedTools: contract.allowedTools, inputs: inputs.filter((input) => !outputs.has(input.ref)) };
+-  return { inputs, base: hash(base), digest: hash({ ...base, inputs, outputs: contract.outputs, allowedPaths: contract.allowedPaths, allowedTools: contract.allowedTools, skillHash: current.run.skillHash }) };
++    ...(sources?{knowledge:intent.knowledge,knowledgeSources:sources}:{}), epoch: intent.epoch, generation: intent.generation, reviewCycle: reviewCycle(current, intent.action), methods, outputs: contract.outputs, allowedPaths: contract.allowedPaths, allowedTools: contract.allowedTools, inputs: inputs.filter((input) => !outputs.has(input.ref)) };
++  const snapshot=stableStringify({ ...base, inputs, outputs: contract.outputs, allowedPaths: contract.allowedPaths, allowedTools: contract.allowedTools, skillHash: current.run.skillHash });
++  return { inputs, ...(sources?{knowledgeSources:sources,producerSnapshot:snapshot}:{}), base: hash(base), digest: hash(snapshot) };
+ }
+ 
+ function sourcePacket(value: ManagedRecord): ManagedRecord { return restoreManagedEntry({ sourcePacket: value }).sourcePacket; }
+@@ -166,6 +196,20 @@
+ }
+ 
+ async function selected(current: Current): Promise<{ kind: Kind; task: string | null } | null> {
++  if (current.classic.phase === 'archive') {
++    const gate = !current.classic.archived && current.run.currentStep === 'full.archive.execute' ? 'Kp'
++      : current.classic.archived && current.run.currentStep === 'full.closeout.knowledge' ? 'Kt' : null;
++    if (!gate) return null;
++    const evaluation = await evaluateGatePremises({projectRoot:current.root,changeDir:currentChange(current),classic:current.classic as unknown as ManagedRecord,
++      run:current.run,action:gate==='Kp'?'archive-spec':'complete'});
++    if(evaluation.allowed)return null;
++    const intent=await intentFor(current,gate+'.create' as Kind,null),work=await currentKnowledge(current,intent);
++    const pkg=await readSkillSnapshot(currentChange(current),current.run.skillHash);
++    if(work.rejected>=pkg.guardrails.maxRetriesPerAction)fail('original knowledge content rework budget exhausted');
++    if(!work.creator||work.revise)return {kind:gate+'.create' as Kind,task:null};
++    if(!work.review)return {kind:gate+'.review' as Kind,task:null};
++    return {kind:gate,task:null};
++  }
+   if (current.classic.phase === 'open') return await gateCurrent(current, 'R') ? null : { kind: 'R', task: null };
+   if (current.classic.phase === 'design') return await gateCurrent(current, 'T') ? null : { kind: await gateCurrent(current, 'A') ? 'T' : 'A', task: null };
+   if (current.classic.phase !== 'build') return null;
+@@ -181,7 +225,7 @@
+     return { kind: 'build', task };
+   }
+   for (const kind of ['test.automate', 'build', 'code.review'] as const) {
+-    const intent = intentFor(current, kind, task), { contract } = await contractFor(current, intent);
++    const intent = await intentFor(current, kind, task), { contract } = await contractFor(current, intent);
+     if (!(await previous(current, intent, contract))) return { kind, task };
+   }
+   return null;
+@@ -199,7 +243,7 @@
+     if (pending) fail('orphan original pending file requires reconciliation');
+     const selection = await selected(current);
+     if (!selection) return { status: 'WAIT_NATIVE_TRANSITION_OR_REVIEW', nativeRunId: current.run.runId, launchAuthorized: false };
+-    const item = itemFor(current, selection.kind), intent = intentFor(current, selection.kind, selection.task);
++    const item = itemFor(current, selection.kind), intent = await intentFor(current, selection.kind, selection.task);
+     let completed = false;
+     try { const { contract } = await contractFor(current, intent); completed = Boolean(await previous(current, intent, contract)); } catch { /* preparation must report the unavailable protected contract */ }
+     return { status: completed ? 'NEEDS_INDEPENDENT_REVIEW' : 'NEEDS_DISPATCH', nativeRunId: current.run.runId, action: selection.kind,
+@@ -208,6 +252,7 @@
+ }
+ 
+ function methodsMatch(current: Current, item: ManagedRecord, binding: ManagedRecord): boolean {
++  if(item.code)return same(binding.methods,[item.code]);
+   if (!Array.isArray(binding.methods) || binding.methods.length !== item.methods.length) return false;
+   return item.methods.every((name: string) => {
+     const source = current.profile.methods[name], actual = binding.methods.find((method: ManagedRecord) => method.name === name);
+@@ -230,7 +275,8 @@
+     const pkg = await readSkillSnapshot(changeDir, current.run.skillHash);
+     if (!pkg.definition.goal.inputs.some((input) => input.name === MANAGED_ACTION_PROTOCOL)) fail('old Run snapshot has no producer protocol; explicit controlled migration is required');
+     const selection = await selected(current); if (!selection) fail('no original producer action is ready');
+-    const item = itemFor(current, selection.kind), initial = intentFor(current, selection.kind, selection.task);
++    const item = itemFor(current, selection.kind), initial = await intentFor(current, selection.kind, selection.task);
++    if(item.code && (!same(pkg.definition.tools.find(tool=>tool.id===item.tool)?.code,item.code)||!pkg.guardrails.allowedTools.includes(item.tool)))fail('original Run snapshot does not bind the fixed knowledge CODE');
+     const parents = await evaluateGatePremises({ projectRoot: current.root, changeDir, classic: current.classic as unknown as ManagedRecord,
+       run: current.run, action: 'enter-design', dependencyOf: parentGate[selection.kind] as any });
+     if (!parents.allowed) fail('producer prerequisite gates are not current: ' + parents.details.join('; '));
+@@ -240,12 +286,12 @@
+     const evidence = await collectClassicEvidence(changeDir, current.projection);
+     const stepId = resolveClassicStepId(current.classic, evidence);
+     const resolver = { resolveStep: () => { const step = pkg.definition.orchestration.steps?.find((step) => step.id === stepId);
+-      return step ? { ...step, action: { type: 'invoke_skill' as const, ref: item.methods[0] } } : undefined; }, resolveNext: () => stepId };
++      return step ? { ...step, action: item.code ? {type:'call_tool' as const,ref:item.tool} : { type: 'invoke_skill' as const, ref: item.methods[0] } } : undefined; }, resolveNext: () => stepId };
+     const decision = decideWithResolver(pkg, current.run, new Set<string>(), resolver, undefined);
+     if (!decision.action) fail(decision.reason ?? 'original engine refused producer action');
+     const attempt = (current.run.retries[decision.action.id] ?? 0) + 1;
+     const intent: ManagedRecord = { ...initial, stepId: decision.action.stepId, execution: `producer-${selection.kind.toLowerCase().replaceAll('.', '-')}-${randomBytes(12).toString('hex')}`,
+-      attempt, inputDigest: identity.digest, revision: `${current.run.iteration}:${identity.base}`, producerInputs: identity.inputs };
++      ...(knowledgeAction(selection.kind)?{knowledgeSources:identity.knowledgeSources,producerSnapshot:identity.producerSnapshot}:{}), attempt, inputDigest: identity.digest, revision: `${current.run.iteration}:${identity.base}`, producerInputs: identity.inputs };
+     const context = current.host.context(intent), binding = context.actionBinding;
+     const q = qualification(context);
+     if (!object(binding) || binding.profile !== 'comet-managed-v2' || binding.run !== current.run.runId || binding.action !== selection.kind || binding.gate !== item.gate
+@@ -258,7 +304,7 @@
+     if (!job || !/^[a-f0-9]{64}$/u.test(job.digest)) fail('fixed physical operation input is not bound');
+     const dispatch = current.host.authority.issueDispatch({ ...binding, actionBinding: binding });
+     const action: EngineAction = { ...decision.action, managed: { protocol: MANAGED_ACTION_PROTOCOL, intent, contract, principal,
+-      base: identity.base, methodNames: item.methods, methodContext: item.methods.map((name: string) => ({ name, ...current.profile.methods[name] })), sourceQualification: q, actionBinding: binding, protectedDispatch: dispatch,
++      base: identity.base, methodNames: item.methods, methodContext: methodContext(current,item), sourceQualification: q, actionBinding: binding, protectedDispatch: dispatch,
+       launch: { state: 'prepared', operationDigest: job.digest } } };
+     await writeClassicState(changeDir, { ...current.projection, run: decision.state }, { pendingAction: action });
+     return { action, dispatch, nativeRunId: current.run.runId, execution: intent.execution, launchAuthorized: false, directive: 'claim-launch' };
+@@ -283,11 +329,26 @@
+     const kind = intent.action as Kind;
+     if (!kinds.includes(kind) || intent.nativeRunId !== current.run.runId || intent.stepId !== current.run.currentStep || intent.iteration !== current.run.iteration
+       || intent.epoch !== (current.classic.checkEpoch ?? 0) || intent.role !== itemFor(current, kind).role) return invalidate(current, pending, 'stale original Run/step/epoch/role');
+-    const fresh = intentFor(current, kind, intent.taskId);
++    const knowledge=knowledgeAction(kind);
++    if(knowledge && (current.classic.phase!=='archive' || current.run.currentStep!==(knowledge.gate==='Kp'?'full.archive.execute':'full.closeout.knowledge')
++      || Boolean(current.classic.archived)!==(knowledge.gate==='Kt') || pending.type!=='call_tool' || pending.ref!==itemFor(current,kind).tool))return invalidate(current,pending,'knowledge action escaped its fixed original Step');
++    const fresh = await intentFor(current, kind, intent.taskId);
++    if(knowledge && !same(fresh.knowledge,intent.knowledge))return invalidate(current,pending,'knowledge operation/payload/authorization changed');
+     if (!same(fresh.generation, intent.generation)) return invalidate(current, pending, 'upstream evidence generation changed');
+     try {
+       const { contract } = await contractFor(current, { ...intent, actionBinding: m.actionBinding, protectedDispatch: m.protectedDispatch });
++      const binding=m.actionBinding;
++      if(!object(m.contract)||!Array.isArray(m.contract.inputs)||!same(m.contract.outputs,binding.outputs)||!same(m.contract.allowedPaths,binding.allowedPaths)
++        ||!same(m.contract.allowedTools,binding.allowedTools)||!same(m.contract.workPackage,binding.workPackage)
++        ||!m.contract.inputs.every((input:ManagedRecord)=>binding.inputs?.some((actual:ManagedRecord)=>same(actual,input))))return invalidate(current,pending,'original pending contract differs from its authenticated ActionBinding');
+       const identity = await identities(current, fresh, contract);
++      if(binding.revision!==`${intent.iteration}:${m.base}`||intent.revision!==binding.revision||intent.inputDigest!==binding.inputDigest)return invalidate(current,pending,'original producer base/revision/input binding changed');
++      if(knowledge){
++        knowledgeSnapshot(intent,m.actionBinding,itemFor(current,kind).code);
++        const pkg=await readSkillSnapshot(currentChange(current),current.run.skillHash);
++        if(!same(pkg.definition.tools.find(tool=>tool.id===itemFor(current,kind).tool)?.code,itemFor(current,kind).code)||!pkg.guardrails.allowedTools.includes(itemFor(current,kind).tool))return invalidate(current,pending,'original Run snapshot knowledge CODE changed');
++      }
++      if (knowledge && (!same(identity.knowledgeSources,intent.knowledgeSources) || !methodsMatch(current,itemFor(current,kind),m.actionBinding))) return invalidate(current,pending,'original knowledge creator/reviewer/CODE changed');
+       if (identity.base !== m.base) return invalidate(current, pending, 'protected producer inputs or methods changed');
+       const context = current.host.context({ ...intent, actionBinding: m.actionBinding, protectedDispatch: m.protectedDispatch });
+       if (!same(qualification(context), m.sourceQualification) || !same(context.actionBinding, m.actionBinding) || context.producerPrincipal !== m.principal
+@@ -333,12 +394,12 @@
+ }
+ 
+ export async function readManagedExecution(changeDir: string, executionId: string): Promise<ManagedRecord> {
+-  return withClassicStateLock(changeDir, async () => { const current = await state(changeDir, true); current.changeDir = changeDir;
++  return withClassicStateLock(changeDir, async () => { const current = await state(changeDir); current.changeDir = changeDir;
+     return readManagedExecutionLocked(current, executionId); });
+ }
+ 
+ export async function claimManagedLaunch(changeDir: string, executionId: string): Promise<ManagedRecord> {
+-  return withClassicStateLock(changeDir, async () => { const current = await state(changeDir, true); current.changeDir = changeDir;
++  return withClassicStateLock(changeDir, async () => { const current = await state(changeDir); current.changeDir = changeDir;
+     const record = await execution(current, executionId);
+     if (typeof current.host.readExecution !== 'function') fail('fixed physical execution observation port is unavailable');
+     verifyOperation(record);
+@@ -351,7 +412,7 @@
+ }
+ 
+ export async function recordManagedLaunch(changeDir: string, executionId: string): Promise<ManagedRecord> {
+-  const original = await withClassicStateLock(changeDir, async () => { const current = await state(changeDir, true); current.changeDir = changeDir;
++  const original = await withClassicStateLock(changeDir, async () => { const current = await state(changeDir); current.changeDir = changeDir;
+     const record = await execution(current, executionId);
+     if (record.transport.state === 'prepared') fail('physical launch was not claimed');
+     verifyOperation(record);
+@@ -359,7 +420,7 @@
+       read: current.host.readExecution }; });
+   if (typeof original.read !== 'function') fail('fixed execution observation port is unavailable');
+   const observed = await original.read(original.intent);
+-  return withClassicStateLock(changeDir, async () => { const current = await state(changeDir, true); current.changeDir = changeDir;
++  return withClassicStateLock(changeDir, async () => { const current = await state(changeDir); current.changeDir = changeDir;
+     const record = await execution(current, executionId);
+     if (!object(observed) || observed.execution !== executionId || observed.nativeRunId !== current.run.runId || observed.operationDigest !== record.transport.operationDigest
+       || observed.actionDigest !== hash(record.binding) || observed.dispatchDigest !== hash(record.dispatch)) fail('physical observation is not bound to the original execution');
+@@ -413,6 +474,19 @@
+       outputs.push({ ...output, digest });
+     }
+     let reviewAccepted = false, reviewRejected = false;
++    const knowledge=knowledgeAction(record.intent.action);
++    if(knowledge){
++      const work=knowledge.stage==='create'?null:await currentKnowledge(current,record.intent);
++      if(knowledge.stage==='create' && envelope.result==='pass')knowledgeCreated(record.intent,outputs);
++      if(knowledge.stage==='review' && envelope.result==='pass'){
++        if(!work?.creator||!same(record.intent.knowledgeSources?.creator,work.creator.ref))fail('original knowledge creator changed');
++        reviewAccepted=knowledgeReview(current.host,packet,record.intent,work.creator);reviewRejected=!reviewAccepted;
++      }
++      if(knowledge.stage==='write'){
++        if(!work?.review||!same(record.intent.knowledgeSources,{creator:work.creator.ref,review:work.review.ref}))fail('original knowledge content review changed');
++        knowledgeWriterResult(packet,record.intent.knowledge);
++      }
++    }
+     if (record.intent.action === 'code.review' && envelope.result === 'pass') {
+       const builder = [...history].reverse().find((event) => event.data.producer?.action === 'build' && event.data.outcome?.status === 'succeeded')?.data.producer;
+       if (!builder || builder.principal === pending.managed.principal || builder.execution === executionId) fail('code review must be independent of Builder');
+@@ -436,7 +510,7 @@
+     const resolver = { resolveStep: () => pkg.definition.orchestration.steps?.find((step) => step.id === current.run.currentStep), resolveNext: () => currentStep };
+     const outcome = { actionId: pending.id, status: envelope.result === 'pass' && !reviewRejected ? 'succeeded' as const : 'failed' as const, summary: 'Authenticated producer result; no Gate approval issued' };
+     const next = recordOutcomeWithResolver(pkg, current.run, outcome, resolver, undefined);
+-    const producer = { action: record.intent.action, base: pending.managed.base, execution: executionId,
++    const producer = { ...(knowledge?{knowledge:knowledge.stage==='create'&&outcome.status==='succeeded'?knowledgeCreated(record.intent,outputs):record.intent.knowledge}:{}), action: record.intent.action, base: pending.managed.base, execution: executionId,
+       workPackage: record.binding.workPackage, principal: pending.managed.principal, reviewAccepted, reviewRejected, outputs, collectionId: verified.collectionId, sourcePacket: packet };
+     const artifacts = { ...(await readArtifacts(changeDir, current.run.artifactsRef)) };
+     for (const output of outputs) artifacts[record.intent.action + ':' + output.name] = output.ref;
+@@ -454,7 +528,7 @@
+     if (!projection.classic?.managedDelivery) return;
+     const current = await state(changeDir);
+     if (current.run.pending || await taskId(current) !== id) fail('original task completion has an active or foreign producer');
+-    const intent = intentFor(current, 'code.review', id), { contract } = await contractFor(current, intent);
++    const intent = await intentFor(current, 'code.review', id), { contract } = await contractFor(current, intent);
+     const completed = await previous(current, intent, contract);
+     if (!completed?.reviewAccepted) fail('original task needs its current independent code review');
+   });
+diff --git a/domains/comet-classic/classic-managed-knowledge.ts b/domains/comet-classic/classic-managed-knowledge.ts
+new file mode 100644
+--- /dev/null
++++ b/domains/comet-classic/classic-managed-knowledge.ts
+@@ -0,0 +1,176 @@
++import { stableStringify } from './classic-stable-json.js';
++import path from 'node:path';
++import { latestCommandCheck } from './classic-command-checks.js';
++import { readCheckPolicy } from './classic-check-policy.js';
++import { checkEnvironmentFingerprint } from './classic-check-snapshot.js';
++import { readArtifacts, readTrajectory } from '../engine/run-store.js';
++import type { RunState } from '../engine/types.js';
++import { createHash } from 'node:crypto';
++import { isDeepStrictEqual as same } from 'node:util';
++import { readProtectedProjectFile } from '../workflow-contract/protected-project-path.js';
++import { managedDeliveryHost, type ManagedRecord, type ManagedDeliveryHost } from './classic-managed-host.js';
++
++export const KNOWLEDGE_ACTIONS = ['Kp.create', 'Kp.review', 'Kp', 'Kt.create', 'Kt.review', 'Kt'] as const;
++const obj = (value: unknown): value is ManagedRecord => value !== null && typeof value === 'object' && !Array.isArray(value);
++const text = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
++const digest = (value: unknown): value is string => typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value);
++function fail(reason: string): never { throw new Error('UNVERIFIED: ' + reason); }
++export function knowledgeAction(action: string): { gate: 'Kp' | 'Kt'; stage: 'create' | 'review' | 'write' } | null {
++  if (!(KNOWLEDGE_ACTIONS as readonly string[]).includes(action)) return null;
++  return { gate: action.startsWith('Kp') ? 'Kp' : 'Kt', stage: action.endsWith('.create') ? 'create' : action.endsWith('.review') ? 'review' : 'write' };
++}
++export const knowledgeTool = (action: string): string => 'managed.knowledge.' + action;
++export function knowledgeDefinition(profile: ManagedRecord, policy: ManagedRecord, action: string): ManagedRecord {
++  const kind = knowledgeAction(action); if (!kind) return fail('unknown fixed knowledge action');
++  const rows = profile.actions?.filter((row: ManagedRecord) => row.action === kind.gate && row.nativePhase === 'archive');
++  const code = policy.producerTools?.[action];
++  if (!Array.isArray(rows) || rows.length !== 1 || !Array.isArray(rows[0].methods) || rows[0].methods.length
++    || !text(rows[0].role) || !Array.isArray(rows[0].outputs) || !rows[0].outputs.length || !obj(code)
++    || Object.keys(code).sort().join(',') !== 'digest,name,ref,version' || ![code.name, code.version, code.ref].every(text)
++    || !digest(code.digest) || code.ref.endsWith('/SKILL.md') || code.ref.startsWith('/') || code.ref.includes('\\')
++    || code.ref.split('/').some((part: string) => !part || part === '.' || part === '..')) return fail('fixed knowledge CODE is not registered');
++  const outputs = kind.stage === 'create' ? ['knowledge-payload'] : kind.stage === 'review' ? ['knowledge-content-review'] : [...rows[0].outputs, 'knowledge-write-result'];
++  return { ...rows[0], action, methods: [code.name], code: structuredClone(code), tool: knowledgeTool(action), outputs,
++    role: kind.stage === 'create' ? 'knowledge-content-creator' : kind.stage === 'review' ? 'independent-knowledge-content-reviewer' : rows[0].role };
++}
++export function knowledgeTools(profile: ManagedRecord, policy: ManagedRecord): ManagedRecord[] {
++  if (policy.producerTools === undefined) return [];
++  if (!obj(policy.producerTools) || Object.keys(policy.producerTools).some(action => !knowledgeAction(action))) fail('unknown protected knowledge CODE registration');
++  return Object.keys(policy.producerTools).map(action => { const item = knowledgeDefinition(profile, policy, action);
++    return { id: item.tool, kind: 'function', source: item.code.ref, code: item.code, sideEffect: knowledgeAction(action)!.stage === 'write' ? 'external' : 'write' }; });
++}
++
++export async function knowledgeOutputScope(projectRoot:string,changeDir:string,run:RunState|null,policy:ManagedRecord):Promise<ManagedRecord|null>{
++  const host=managedDeliveryHost();if(!run||!host||!policy.producerTools)return null;
++  const record=await latestCommandCheck(projectRoot,changeDir,run,'verify');
++  if(!record||record.runId!==run.runId||record.provenance!=='runtime'||record.exitCode!==0||!record.argv?.length||!record.inputBefore||record.inputBefore!==record.inputAfter)return null;
++  const identity={argv:record.argv,cwd:record.cwd},check=await readCheckPolicy(projectRoot,identity);
++  if(!check.outputs?.length||record.environment!==await checkEnvironmentFingerprint(record.argv,path.resolve(projectRoot,record.cwd),check))return null;
++  const artifacts=await readArtifacts(changeDir,run.artifactsRef);
++  let archive:ManagedRecord|null=null;
++  if(artifacts.managed_archive_input_bridge){
++    const saved=JSON.parse(artifacts.managed_archive_input_bridge),bridge=saved.bridge,signature=saved.signature;
++    if(bridge?.runId===run.runId&&bridge.archived===path.relative(projectRoot,changeDir).replaceAll('\\','/')&&signature?.actionBinding?.action==='archive-transformation-only'
++      &&signature.run===run.runId&&host.authority.verifyDispatch(signature).ok
++      &&signature.actionBinding.inputDigest===createHash('sha256').update(stableStringify(bridge)).digest('hex'))archive=bridge;
++  }
++  for(const [ref,expected]of [[record.logRef,record.logHash],[record.manifestRef,record.manifestHash]]){
++    if(!text(ref)||!digest(expected))return null;
++    const relative=archive&&ref.startsWith(archive.active+'/.comet/checks/')?archive.archived+ref.slice(archive.active.length):ref;
++    let bytes;try{bytes=(await readProtectedProjectFile(projectRoot,relative,64*1024*1024,{label:'Original verify output authority'})).bytes;}catch{return null;}
++    if(createHash('sha256').update(bytes).digest('hex')!==expected)return null;
++  }
++  const contracts:ManagedRecord[]=[],outputs=new Set<string>(),protectedInputs=new Set<string>(Object.values(policy.producerTools).map((code:any)=>code.ref));
++  for(const action of Object.keys(policy.producerTools)){
++    const item=knowledgeDefinition(policy.producerProfile,policy,action);
++    const contract=host.context({projectRoot,changeDir,runId:run.runId,nativeRunId:run.runId,purpose:'producer',action,role:item.role,gate:item.gate}).producerContract;
++    if(!obj(contract)||!Array.isArray(contract.outputs)||!Array.isArray(contract.inputs)||!Array.isArray(contract.allowedPaths)
++      ||contract.outputs.length!==item.outputs.length||new Set(contract.outputs.map((output:ManagedRecord)=>output.name)).size!==item.outputs.length
++      ||!item.outputs.every((name:string)=>contract.outputs.some((output:ManagedRecord)=>output.name===name)))fail('original fixed knowledge output contract is missing');
++    for(const input of contract.inputs)if(input.name!=='knowledge-payload')protectedInputs.add(input.ref);
++    for(const output of contract.outputs){if(!text(output.ref)||!contract.allowedPaths.includes(output.ref))fail('knowledge command output is not exactly authorized');outputs.add(output.ref);}
++    contracts.push({action,code:item.code,outputs:contract.outputs,allowedPaths:contract.allowedPaths,sourceRefs:contract.inputs.filter((input:ManagedRecord)=>input.name!=='knowledge-payload').map((input:ManagedRecord)=>input.ref)});
++  }
++  for(const event of await readTrajectory(changeDir,run.trajectoryRef)){const data=event.data as ManagedRecord;if(event.runId===run.runId&&data?.producer&&!knowledgeAction(data.producer.action))for(const output of data.producer.outputs??[])protectedInputs.add(output.ref);}
++  if([...outputs].some(ref=>protectedInputs.has(ref))||!same([...outputs].sort(),[...new Set(check.outputs)].sort()))fail('verify outputs must match exact knowledge evidence outputs without CODE/source/authorization inputs');
++  return {identity,contracts};
++}
++const tupleKeys = ['gate','operationKey','knowledgeId','payloadRef','payloadDigest','target','baseRevision','authorizationRef','authorizationDigest','sourcePermissionsRef','sourcePermissionsDigest','targetAudienceRef','targetAudienceDigest'];
++export function knowledgeTuple(value: unknown, gate: string, draft = false): ManagedRecord {
++  const keys=draft && obj(value) && !Object.hasOwn(value,'payloadDigest') ? tupleKeys.filter(key=>key!=='payloadDigest') : tupleKeys;
++  if (!obj(value) || value.gate !== gate || Object.keys(value).sort().join(',') !== [...keys].sort().join(',')
++    || keys.some(key => !text(value[key])) || keys.filter(key=>key.endsWith('Digest')).some(key => !digest(value[key]))) return fail('exact knowledge operation/authorization tuple is missing');
++  for (const key of ['payloadRef','authorizationRef','sourcePermissionsRef','targetAudienceRef']) {
++    const ref = value[key]; if (ref.startsWith('/') || ref.includes('\\') || ref.split('/').some((part: string) => !part || part === '.' || part === '..')) fail('knowledge input is not a project reference');
++  }
++  return structuredClone(value);
++}
++export function knowledgeIntent(host: Readonly<ManagedDeliveryHost>, intent: ManagedRecord): ManagedRecord {
++  const kind = knowledgeAction(intent.action); if (!kind) return fail('unknown knowledge intent');
++  return knowledgeTuple(host.context(intent).knowledgeOperation, kind.gate, true);
++}
++export function knowledgeContract(intent: ManagedRecord, contract: ManagedRecord, code: ManagedRecord): void {
++  const kind = knowledgeAction(intent.action)!; const tuple = knowledgeTuple(intent.knowledge, kind.gate, kind.stage==='create');
++  const required = [{ name: 'producer-code', ref: code.ref, digest: code.digest },
++    { name: 'knowledge-authorization', ref: tuple.authorizationRef, digest: tuple.authorizationDigest },
++    { name: 'knowledge-source-permissions', ref: tuple.sourcePermissionsRef, digest: tuple.sourcePermissionsDigest },
++    { name: 'knowledge-target-audience', ref: tuple.targetAudienceRef, digest: tuple.targetAudienceDigest }];
++  if (kind.stage !== 'create') required.push({ name: 'knowledge-payload', ref: tuple.payloadRef, digest: tuple.payloadDigest });
++  if (!required.every(input => contract.inputs.some((row: ManagedRecord) => same(row,input)))) fail('knowledge work does not bind current CODE/payload/authorization/permissions/audience');
++  const immutable=new Set([code.ref,tuple.authorizationRef,tuple.sourcePermissionsRef,tuple.targetAudienceRef,...(kind.stage==='create'?[]:[tuple.payloadRef])]);
++  if(contract.outputs.some((output:ManagedRecord)=>immutable.has(output.ref)))fail('knowledge output cannot overwrite its CODE/payload/authorization inputs');
++  if (kind.stage === 'create' && !contract.outputs.some((output: ManagedRecord) => output.name === 'knowledge-payload' && output.ref === tuple.payloadRef)) fail('knowledge creator does not own the exact payload');
++}
++export function knowledgeDraft(tuple: ManagedRecord): ManagedRecord { const {payloadDigest,...draft}=tuple;return draft; }
++export function knowledgeCreated(intent: ManagedRecord, outputs: ManagedRecord[]): ManagedRecord {
++  const draft=knowledgeTuple(intent.knowledge,knowledgeAction(intent.action)!.gate,true);
++  const produced=outputs.filter(output=>output.name==='knowledge-payload'&&output.ref===draft.payloadRef);
++  if(produced.length!==1||!digest(produced[0].digest)||(Object.hasOwn(draft,'payloadDigest')&&draft.payloadDigest!==produced[0].digest))fail('original creator did not produce one exact authenticated payload');
++  return {...knowledgeDraft(draft),payloadDigest:produced[0].digest};
++}
++export function knowledgeSnapshot(intent: ManagedRecord, binding: ManagedRecord, code: ManagedRecord): void {
++  if(typeof intent.producerSnapshot!=='string' || createHash('sha256').update(intent.producerSnapshot).digest('hex')!==binding.inputDigest)fail('knowledge producer snapshot is missing or unbound');
++  let frozen:ManagedRecord;try{frozen=JSON.parse(intent.producerSnapshot);}catch{return fail('knowledge producer snapshot is malformed');}
++  if(!obj(frozen)||frozen.action!==binding.action||frozen.policyDigest!==binding.policyDigest||frozen.epoch!==binding.epoch
++    || !same(frozen.knowledge,intent.knowledge)||!same(frozen.knowledgeSources,intent.knowledgeSources)||!same(frozen.methods,[code])
++    || !same(frozen.workPackage,binding.workPackage)||!same(frozen.outputs,binding.outputs)||!same(frozen.allowedPaths,binding.allowedPaths)
++    || !same(frozen.allowedTools,binding.allowedTools)||!Array.isArray(frozen.inputs)||!frozen.inputs.every((input:ManagedRecord)=>binding.inputs.some((actual:ManagedRecord)=>same(actual,input))))fail('knowledge source tuple/CODE/inputs do not match its signed snapshot');
++}
++export function knowledgeWriterResult(packet: ManagedRecord, tuple: ManagedRecord): ManagedRecord {
++  let result: ManagedRecord; try { result = JSON.parse(packet.resultBytes.toString('utf8')).knowledge; } catch { return fail('original writer result is missing'); }
++  if (!obj(result) || !same(result.operation,tuple) || !['written','not-written','unknown'].includes(result.outcome)) return fail('writer result does not bind the exact knowledge operation');
++  if (result.outcome === 'unknown') return fail('knowledge write outcome remains unknown; observe the same pending operation');
++  if (result.outcome === 'written' && (!text(result.revision) || result.contentDigest !== tuple.payloadDigest)) return fail('writer target revision/content readback is missing');
++  if ((packet.envelope.result === 'pass') !== (result.outcome === 'written')) return fail('writer effect disagrees with its authenticated process result');
++  return result;
++}
++export function knowledgeReview(host: Readonly<ManagedDeliveryHost>, packet: ManagedRecord, intent: ManagedRecord, creator: ManagedRecord): boolean {
++  let authorization: ManagedRecord;
++  try { authorization=JSON.parse(packet.resultBytes.toString('utf8')).knowledgeAuthorization; } catch { return fail('content review has no collected authorization decision'); }
++  if(!obj(authorization)||!same(authorization.operation,intent.knowledge)||authorization.decision!=='allow')fail('content review did not authorize this exact payload/target/audience');
++  const context = host.context({ ...intent, actionBinding: packet.dispatch.actionBinding, protectedDispatch: packet.dispatch });
++  const verified = host.authority.verifyCollection(packet), principal = verified.source?.facts?.principal;
++  if (!verified.ok || !text(principal) || principal === creator.ref.principal || intent.execution === creator.ref.execution
++    || !same(context.admissionOptions?.sourceQualification,verified.source.qualification)
++    || !Number.isFinite(Date.parse(context.admissionOptions?.now)) || !Number.isFinite(Date.parse(verified.source.qualification?.expiresAt))
++    || Date.parse(verified.source.qualification.expiresAt) <= Date.parse(context.admissionOptions.now)) fail('current independent knowledge reviewer source is unavailable');
++  const options = { ...context.admissionOptions, requireManaged: true, authority: host.authority, actionBinding: packet.dispatch.actionBinding,
++    purpose: 'independent-acceptance', builderExecution: creator.ref.execution, builderPrincipal: creator.ref.principal,
++    authoringExecutions: [creator.ref.execution], authoringPrincipals: [creator.ref.principal], consumedCollections: [], issuedExecutions: [] };
++  const admitted = host.admitEvidence(packet,options); if (!admitted.ok) return fail('independent knowledge content review source was not admitted');
++  const inputs = { inputDigest: packet.dispatch.actionBinding.inputDigest, testContract: context.testContract, builderExecution: creator.ref.execution };
++  const review = host.verifyReview({ entry: admitted.entry, inputs, policy: context.policy });
++  if (!review?.ok || !digest(review.evidenceDigest) || review.envelopeDigest !== admitted.entry.digest || review.reportDigest !== packet.collection.reportDigest
++    || review.actionDigest !== packet.collection.actionDigest) return fail('completed independent knowledge content review is missing or unbound');
++  return host.evaluate(inputs,[admitted.entry],context.policy,{ requireManaged: true, admissionOptionsFor: () => options, verifyReview: host.verifyReview }).verdict === 'pass';
++}
++export async function knowledgeWork(options: { projectRoot: string; host: Readonly<ManagedDeliveryHost>; tuple: ManagedRecord; action: string; facts: ManagedRecord[]; artifacts: ManagedRecord }): Promise<ManagedRecord> {
++  const { host } = options;
++  const facts = options.facts.filter(fact => knowledgeAction(fact.ref.action) && same(knowledgeDraft(fact.producer.knowledge),knowledgeDraft(options.tuple)));
++  const pointer = (fact: ManagedRecord): void => { for (const output of fact.outputs) if (options.artifacts[fact.ref.action + ':' + output.name] !== output.ref) fail('original knowledge artifact reference is missing'); };
++  const creator = [...facts].reverse().find(fact => fact.success && knowledgeAction(fact.ref.action)?.stage === 'create'
++    && fact.outputs.some((output: ManagedRecord) => output.name === 'knowledge-payload' && output.ref === fact.producer.knowledge.payloadRef && output.digest === fact.producer.knowledge.payloadDigest));
++  if (!creator) return { creator: null, review: null, writer: null, rejected: 0, revise: false };
++  pointer(creator);
++  const tuple=knowledgeTuple(creator.producer.knowledge,knowledgeAction(options.action)!.gate);
++  if(Object.hasOwn(options.tuple,'payloadDigest')&&!same(options.tuple,tuple))fail('frozen knowledge payload/version changed');
++  if(knowledgeAction(options.action)?.stage!=='create'){
++    const payload = await readProtectedProjectFile(options.projectRoot,tuple.payloadRef,64*1024*1024,{label:'Original knowledge payload'});
++    if(createHash('sha256').update(payload.bytes).digest('hex') !== tuple.payloadDigest) fail('original knowledge payload changed');
++  }
++  const reviews = facts.filter(fact => knowledgeAction(fact.ref.action)?.stage === 'review');
++  let review: ManagedRecord | null = null, rejected = 0, lastRejection: ManagedRecord | null = null;
++  for (const fact of reviews) {
++    if (fact.packet.envelope.result !== 'pass') continue;
++    const author = facts.find(candidate => same(candidate.ref,fact.intent.knowledgeSources?.creator));
++    if (!author || !author.success || knowledgeAction(author.ref.action)?.stage !== 'create') fail('original content reviewer lost its creator source');
++    const accepted = knowledgeReview(host,fact.packet,fact.intent,author);
++    if (accepted !== fact.success) fail('original knowledge review outcome was altered');
++    if (accepted && same(author.ref,creator.ref)) { pointer(fact); review = fact; }
++    else if (!accepted) { rejected++; if(same(author.ref,creator.ref))lastRejection=fact.ref; }
++  }
++  const writer = review ? [...facts].reverse().find(fact => fact.success && knowledgeAction(fact.ref.action)?.stage === 'write'
++    && same(fact.intent.knowledgeSources,{creator:creator.ref,review:review!.ref})) : null;
++  if (writer) { pointer(writer); knowledgeWriterResult(writer.packet,tuple); }
++  return { operation:tuple, creator, review, writer, rejected, lastRejection, revise: lastRejection !== null && !review };
++}
+diff --git a/domains/comet-classic/classic-producer-sources.ts b/domains/comet-classic/classic-producer-sources.ts
+--- a/domains/comet-classic/classic-producer-sources.ts
++++ b/domains/comet-classic/classic-producer-sources.ts
+@@ -1,3 +1,5 @@
++import { KNOWLEDGE_ACTIONS, knowledgeAction, knowledgeDefinition, knowledgeTuple, knowledgeIntent, knowledgeContract, knowledgeWriterResult, knowledgeSnapshot, knowledgeCreated, knowledgeWork } from './classic-managed-knowledge.js';
++import { readArtifacts } from '../engine/run-store.js';
+ import { createHash } from 'node:crypto';
+ import { isDeepStrictEqual } from 'node:util';
+ import { readTrajectory } from '../engine/run-store.js';
+@@ -10,9 +12,9 @@
+ const text = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
+ const hash = (bytes: string | Buffer): string => createHash('sha256').update(bytes).digest('hex');
+ const same = isDeepStrictEqual;
+-const authorKinds = ['R','A','T','P','test.automate','build','Kp','Kt'] as const;
+-const own: Record<string, readonly string[]> = {R:['R'],A:['A'],T:['T'],P:['P'],V:['test.automate','build'],Kp:['Kp'],Kt:['Kt']};
+-type Fact = { ref: ManagedRecord; binding: ManagedRecord; inputs: ManagedRecord[]; outputs: ManagedRecord[]; success: boolean };
++const authorKinds = ['R','A','T','P','test.automate','build',...KNOWLEDGE_ACTIONS] as const;
++const own: Record<string, readonly string[]> = {R:['R'],A:['A'],T:['T'],P:['P'],V:['test.automate','build'],Kp:['Kp.create','Kp'],Kt:['Kt.create','Kt']};
++type Fact = { ref: ManagedRecord; binding: ManagedRecord; inputs: ManagedRecord[]; outputs: ManagedRecord[]; success: boolean; intent: ManagedRecord; packet: ManagedRecord; producer: ManagedRecord };
+ 
+ 
+ function factOf(event: ManagedRecord, run: RunState, profile: ManagedRecord, policy: ManagedRecord, host: Readonly<ManagedDeliveryHost>, relevant:readonly string[]): Fact | null {
+@@ -26,10 +28,12 @@
+   if (!obj(producer) || !obj(m.intent) || !obj(producer.sourcePacket)) throw new Error('producer completion source is missing');
+   const packet = restoreManagedEntry({sourcePacket:producer.sourcePacket}).sourcePacket;
+   const verified = host.authority.verifyCollection(packet), binding = packet.dispatch?.actionBinding;
+-  const definition = profile.actions.filter((row: ManagedRecord) => row.action === m.intent.action);
++  const knowledge=knowledgeAction(m.intent.action);
++  const definition = knowledge ? [knowledgeDefinition(profile,policy,m.intent.action)] : profile.actions.filter((row: ManagedRecord) => row.action === m.intent.action);
+   if (definition.length !== 1 || !obj(binding) || !verified.ok || !host.authority.verifyDispatch(packet.dispatch).ok
+     || event.data.outcome?.actionId !== action.id || !['succeeded','failed'].includes(event.data.outcome?.status)
+-    || (event.data.outcome.status === 'succeeded') !== (packet.envelope?.result === 'pass')
++    || (knowledge?.stage!=='review' && (event.data.outcome.status === 'succeeded') !== (packet.envelope?.result === 'pass'))
++    || (event.data.outcome.status==='succeeded' && packet.envelope?.result!=='pass')
+     || !obj(verified.source?.facts) || !text(verified.source.facts.principal)
+     || verified.source.facts.run !== run.runId || verified.source.facts.execution !== binding.execution
+     || binding.profile !== 'comet-managed-v2' || binding.run !== run.runId || binding.action !== m.intent.action
+@@ -48,7 +52,12 @@
+   // Authorship is a historical fact, not an expiring permission. Current Gate
+   // source qualification is still checked by admission; expiry must not erase
+   // this already authenticated creator identity.
+-  if (!Array.isArray(binding.methods) || !same(binding.methods.map((row:ManagedRecord)=>row.name),definition[0].methods)
++  if(knowledge){
++    if(!same(binding.methods,[definition[0].code]) || action.type!=='call_tool' || action.ref!==definition[0].tool
++)throw new Error('knowledge CODE/operation binding is inconsistent');
++    knowledgeSnapshot(m.intent,binding,definition[0].code);knowledgeTuple(m.intent.knowledge,knowledge.gate,knowledge.stage==='create');knowledgeContract(m.intent,m.contract,definition[0].code);
++    if(knowledge.stage==='write')knowledgeWriterResult(packet,m.intent.knowledge);
++  }else if (!Array.isArray(binding.methods) || !same(binding.methods.map((row:ManagedRecord)=>row.name),definition[0].methods)
+     || binding.methods.some((row:ManagedRecord)=>row.digest !== profile.methods?.[row.name]?.sha256)) throw new Error('producer method binding is inconsistent');
+   const outputs:ManagedRecord[]=[];
+   if (event.data.outcome.status === 'succeeded') for (const output of binding.outputs) {
+@@ -57,9 +66,20 @@
+       || !packet.envelope.evidence?.some((row:ManagedRecord)=>row.uri===output.ref&&row.sha256===recorded.digest)) throw new Error('producer output provenance is missing');
+     outputs.push({...output,digest:recorded.digest});
+   }
++  if(knowledge&&!same(producer.knowledge,knowledge.stage==='create'&&event.data.outcome.status==='succeeded'?knowledgeCreated(m.intent,outputs):m.intent.knowledge))throw new Error('original collected creator payload binding was altered');
+   for (const input of m.contract.inputs) if (!binding.inputs.some((row:ManagedRecord)=>same(row,input))) throw new Error('producer input provenance is inconsistent');
+   return {ref:{action:binding.action,execution:binding.execution,principal:verified.source.facts.principal,collectionId:verified.collectionId,actionDigest:packet.collection.actionDigest},
+-    binding,inputs:m.contract.inputs,outputs,success:event.data.outcome.status==='succeeded'};
++    binding,inputs:m.contract.inputs,outputs,success:event.data.outcome.status==='succeeded',intent:m.intent,packet,producer};
++}
++
++export async function readAuthenticatedProducerFacts(options: {changeDir:string;run:RunState;profile:ManagedRecord;policy:ManagedRecord;host:Readonly<ManagedDeliveryHost>},relevant:readonly string[]):Promise<Fact[]> {
++  const history=await readTrajectory(options.changeDir,options.run.trajectoryRef),facts:Fact[]=[];
++  for(const [index,event]of history.entries()){
++    if(event.sequence!==index+1)throw new Error('original trajectory is incomplete');
++    const fact=factOf(event,options.run,options.profile,options.policy,options.host,relevant);if(fact)facts.push(fact);
++  }
++  const executions=new Set<string>();for(const fact of facts){if(executions.has(fact.ref.execution))throw new Error('duplicate original producer completion');executions.add(fact.ref.execution);}
++  return facts;
+ }
+ 
+ export async function collectProducerSources(options: {
+@@ -73,18 +93,25 @@
+     if (!run || !obj(profile) || profile.id!=='comet-managed-v2' || !Array.isArray(profile.actions) || !obj(profile.methods)) return empty('MANAGED_PRODUCER_PROFILE_REQUIRED');
+     const pkg=await readSkillSnapshot(options.changeDir,run.skillHash);
+     if (!pkg.definition.goal.inputs.some(input=>input.name===MANAGED_ACTION_PROTOCOL)) return empty('ORIGINAL_PRODUCER_PROTOCOL_REQUIRED');
+-    const relevant:Record<string,readonly string[]>={R:['R'],A:['R','A'],T:['R','A','T'],P:['R','A','T','P'],V:['R','A','T','P','test.automate','build'],Kp:['R','A','T','P','test.automate','build','Kp'],Kt:authorKinds};
++    const relevant:Record<string,readonly string[]>={R:['R'],A:['R','A'],T:['R','A','T'],P:['R','A','T','P'],V:['R','A','T','P','test.automate','build'],Kp:['R','A','T','P','test.automate','build','Kp.create','Kp.review','Kp'],Kt:authorKinds};
+     if(!relevant[gate])return empty('UNKNOWN_INDEPENDENT_GATE');
+-    const history=await readTrajectory(options.changeDir,run.trajectoryRef),facts:Fact[]=[];
+-    for (const [index,event] of history.entries()) { if(event.sequence!==index+1)return empty('ORIGINAL_TRAJECTORY_INCOMPLETE');const fact=factOf(event,run,profile,options.policy,host,relevant[gate]);if(fact)facts.push(fact); }
+-    const ids=new Set<string>();for(const fact of facts){if(ids.has(fact.ref.execution))return empty('DUPLICATE_PRODUCER_COMPLETION');ids.add(fact.ref.execution);}
++    const facts=await readAuthenticatedProducerFacts({changeDir:options.changeDir,run,profile,policy:options.policy,host},relevant[gate]);
+     const byId=new Map(facts.map(fact=>[fact.ref.execution,fact]));
+     const selected=new Set<Fact>();
+     const takeScope=(scope:ManagedRecord):void=>{
+       if(scope?.schema!=='comet.classic.producer-sources.v1'||scope.runId!==run.runId||scope.status!=='verified'||!Array.isArray(scope.contributors)||!scope.contributors.length)throw new Error('original author scope is incomplete');
+       for(const ref of scope.contributors){const fact=byId.get(ref.execution);if(!fact||!same(fact.ref,ref))throw new Error('original author collection disappeared or changed');selected.add(fact);}
+     };
+-    if(options.frozen){takeScope(options.frozen.extra?.nativeProducers);return options.frozen.extra.nativeProducers;}
++    let knowledge:ManagedRecord|null=null;
++    if(gate==='Kp'||gate==='Kt'){
++      const tuple=options.frozen ? knowledgeTuple(options.frozen.extra?.nativeProducers?.knowledge?.operation,gate)
++        : knowledgeIntent(host,{purpose:'producer',action:gate,gate,runId:run.runId,nativeRunId:run.runId,stepId:run.currentStep,epoch:options.base?.extra?.epoch});
++      const work=await knowledgeWork({projectRoot:options.projectRoot,host,tuple,action:gate,facts,artifacts:await readArtifacts(options.changeDir,run.artifactsRef)});
++      if(!work.creator||!work.review||!work.writer)return empty('AUTHENTICATED_KNOWLEDGE_CREATOR_REVIEW_WRITER_REQUIRED');
++      knowledge={operation:work.operation,creator:work.creator.ref,review:work.review.ref,writer:work.writer.ref};
++      selected.add(work.creator);selected.add(work.writer);
++    }
++    if(options.frozen){takeScope(options.frozen.extra?.nativeProducers);if(knowledge&&!same(knowledge,options.frozen.extra?.nativeProducers?.knowledge))throw new Error('original knowledge provenance changed');return options.frozen.extra.nativeProducers;}
+     for(const dependency of options.dependencies){const value=decodeProducerInputs({...dependency.intent,nativeRunId:run.runId},host);takeScope(value.extra.nativeProducers);}
+     // Exact semantic Gate input equality permits the original controller's
+     // task-checkbox projection; it never creates a new author/source record.
+@@ -107,7 +134,7 @@
+     for(const ref of targetRefs){try{const file=await readProtectedProjectFile(options.projectRoot,ref,64*1024*1024,{label:'Original producer artifact'});current.set(ref,hash(file.bytes));}catch{/* Missing input is handled by coverage, not silently trusted. */}}
+     const roots:ManagedRecord[]=[];
+     const visit=(ref:string,digest:string):boolean=>{
+-      const writers=facts.filter(fact=>fact.success&&fact.outputs.some(output=>output.ref===ref&&output.digest===digest));
++      const writers=facts.filter(fact=>fact.success&&knowledgeAction(fact.ref.action)?.stage!=='review'&&fact.outputs.some(output=>output.ref===ref&&output.digest===digest));
+       for(const writer of writers){if(selected.has(writer))continue;selected.add(writer);for(const input of writer.inputs)visit(input.ref,input.digest);}
+       return writers.length>0;
+     };
+@@ -124,6 +151,6 @@
+     for(const kind of ownKinds)if(![...selected].some(fact=>fact.success&&fact.ref.action===kind))missing.push('CURRENT_PRODUCER_REQUIRED:'+kind);
+     if(['V','Kp','Kt'].includes(gate)&&!selected.size)missing.push('CURRENT_CANDIDATE_AUTHORS_REQUIRED');
+     return {schema:'comet.classic.producer-sources.v1',runId:run.runId,gate,status:missing.length?'unverified':'verified',roots,
+-      contributors:[...selected].map(fact=>fact.ref).sort((a,b)=>a.execution.localeCompare(b.execution)),missing};
++      ...(knowledge?{knowledge}:{}),contributors:[...selected].map(fact=>fact.ref).sort((a,b)=>a.execution.localeCompare(b.execution)),missing};
+   } catch { return empty('ORIGINAL_PRODUCER_PROVENANCE_UNVERIFIED'); }
+ }
+diff --git a/domains/comet-classic/classic-runtime-run.ts b/domains/comet-classic/classic-runtime-run.ts
+--- a/domains/comet-classic/classic-runtime-run.ts
++++ b/domains/comet-classic/classic-runtime-run.ts
+@@ -1,2 +1,3 @@
++import { knowledgeTools } from './classic-managed-knowledge.js';
+ import { createHash } from 'node:crypto';
+ import { stableStringify } from './classic-gate-runtime.js';
+@@ -319,13 +320,19 @@
+   const projection = await readClassicState(changeDir, { migrate: false });
+   if (!projection.classic?.managedDelivery) return pkg;
+   const root = await discoverClassicProject(changeDir);
+-  const profile = managedDeliveryHost()?.policy({ projectRoot: root, changeDir, runId: projection.run?.runId })?.producerProfile;
++  const policy = managedDeliveryHost()?.policy({ projectRoot: root, changeDir, runId: projection.run?.runId });
++  const profile = policy?.producerProfile;
+   if (profile?.id !== 'comet-managed-v2' || !profile.methods || !Array.isArray(profile.actions)) return pkg;
+   const result = structuredClone(pkg);
+   const names = Object.keys(profile.methods).filter((name) => !name.startsWith('comet-'));
+   result.definition.goal.inputs.push({ name: MANAGED_ACTION_PROTOCOL, description: 'Protected managed producer binding protocol; not a worker controller', required: true });
+   for (const name of names) if (!result.definition.skills.some((skill) => skill.id === name)) result.definition.skills.push({ id: name });
+   result.guardrails.allowedSkills = [...new Set([...result.guardrails.allowedSkills, ...names])];
++  for(const tool of knowledgeTools(profile,policy!)){
++    if(result.definition.tools.some(existing=>existing.id===tool.id))throw new Error('UNVERIFIED: fixed knowledge tool id collides with the original Runtime');
++    result.definition.tools.push(tool as import('../skill/types.js').ToolDefinition);
++    result.guardrails.allowedTools.push(tool.id);
++  }
+   return result;
+ }
+ 
+diff --git a/domains/comet-classic/classic-stable-json.ts b/domains/comet-classic/classic-stable-json.ts
+new file mode 100644
+--- /dev/null
++++ b/domains/comet-classic/classic-stable-json.ts
+@@ -0,0 +1,10 @@
++export function stableStringify(value: unknown): string {
++  if (Array.isArray(value)) return `[${value.map((entry) => stableStringify(entry)).join(',')}]`;
++  if (value !== null && typeof value === 'object') {
++    return `{${Object.keys(value as Record<string, unknown>)
++      .sort()
++      .map((key) => `${JSON.stringify(key)}:${stableStringify((value as Record<string, unknown>)[key])}`)
++      .join(',')}}`;
++  }
++  return JSON.stringify(value) ?? 'null';
++}
+diff --git a/domains/comet-classic/classic-state-command.ts b/domains/comet-classic/classic-state-command.ts
+--- a/domains/comet-classic/classic-state-command.ts
++++ b/domains/comet-classic/classic-state-command.ts
+@@ -1200,6 +1200,7 @@
+       gateRunId: (await readRunState(directory))?.runId ?? null,
+     })) {
+       output.data = {
++        ...(output.data as Record<string,unknown>),
+         change: name,
+         phase,
+         configuration: sparseClassicState(record),
+diff --git a/domains/skill/types.ts b/domains/skill/types.ts
+--- a/domains/skill/types.ts
++++ b/domains/skill/types.ts
+@@ -21,6 +21,7 @@
+ }
+ 
+ export interface ToolDefinition {
++  code?: { name: string; version: string; ref: string; digest: string };
+   id: string;
+   kind: 'function' | 'mcp' | 'script' | 'agent';
+   source: string;

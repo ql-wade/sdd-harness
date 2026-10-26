@@ -1,0 +1,907 @@
+diff --git a/infra/delivery/runner/image.lock.json b/infra/delivery/runner/image.lock.json
+index 2d83697..d950a61 100644
+--- a/infra/delivery/runner/image.lock.json
++++ b/infra/delivery/runner/image.lock.json
+@@ -455,6 +455,7 @@
+           "infra/delivery/secrets.refs.example.json",
+           "lib/adapters/comet-executor.js",
+           "lib/adapters/comet.js",
++          "lib/adapters/spec.js",
+           "lib/delivery/baseline.js",
+           "lib/delivery/evidence.js",
+           "lib/delivery/gate.js",
+diff --git a/lib/adapters/comet-executor.js b/lib/adapters/comet-executor.js
+index 34b3af7..b83705e 100644
+--- a/lib/adapters/comet-executor.js
++++ b/lib/adapters/comet-executor.js
+@@ -10,6 +10,7 @@ import { parseContract } from '../../contracts/delivery/index.js';
+ import { taskDefinitionDigest } from '../delivery/baseline.js';
+ import { admitEvidence, envelopeDigest } from '../delivery/evidence.js';
+ import { evaluate } from '../delivery/gate.js';
++import { createManagedSpecAdapter } from './spec.js';
+ import { createCliJobDriver } from '../../tools/infra/runner.mjs';
+ 
+ const GATES = ['R', 'A', 'T', 'P', 'V', 'Kp', 'Kt'];
+@@ -75,7 +76,8 @@ export function createCometExecutor(options = {}) {
+   const ports = Object.freeze(Object.fromEntries(['policy', 'context', 'authorizeWrite', 'verifyReview'].map((key) => [key, source[key]])));
+   const original = Object.freeze(Object.fromEntries(['issueDispatch', 'verifyDispatch', 'collectResult', 'verifyCollection'].map((key) => [key, authority[key].bind(authority)])));
+   const runtime = Object.freeze(Object.fromEntries(['runClassicCli', 'ensureClassicRuntimeRun', 'installManagedDeliveryHost'].map((key) => [key, native[key].bind(native)])));
+-  const changeDir = path.join(fixed.projectRoot, 'openspec/changes', fixed.change);
++  const spec = createManagedSpecAdapter({ runtime, projectRoot: fixed.projectRoot });
++  const readRunContext = () => spec.readRunContext({ change: fixed.change, expectedRunId: fixed.runId });
+   const calls = new AsyncLocalStorage();
+   // Volatile observation/cache only. No durable action, lease, queue, phase or
+   // retry record is created here. Cold launch reconciliation needs the original
+@@ -130,7 +132,9 @@ export function createCometExecutor(options = {}) {
+       ...original,
+       issueDispatch(binding) {
+         const call = active(), prepared = call.bindings.get(binding?.execution);
+-        if (call.kind !== 'native' || !prepared || !fs.existsSync(path.join(changeDir, '.comet-state.lock'))
++        const current = call.runContext?.assertCurrent();
++        if (call.kind !== 'native' || !prepared || !current || current.run.status === 'completed'
++          || !fs.existsSync(path.join(current.directory, '.comet-state.lock'))
+           || envelopeDigest(binding.actionBinding) !== envelopeDigest(prepared.actionBinding)) no('NATIVE_SIGNING_SCOPE_REQUIRED');
+         eligible(prepared);
+         const dispatch = original.issueDispatch(binding);
+@@ -165,8 +169,10 @@ export function createCometExecutor(options = {}) {
+     const words = argv.filter((arg) => arg !== '--json');
+     if (words[0] !== 'state' || !STATE_OPERATIONS.includes(words[1]) || words[2] !== fixed.change
+       || words.includes('--') || words.includes('--project-root') || words.includes('--cwd')) no('NATIVE_COMMAND_SCOPE_REQUIRED');
+-    return calls.run({ kind: 'native', runId: fixed.runId, bindings: new Map() }, () => runtime.runClassicCli(argv, undefined,
+-      { projectRoot: fixed.projectRoot, invocationCwd: fixed.projectRoot }));
++    return calls.run({ kind: 'native', runId: fixed.runId, bindings: new Map() }, async () => {
++      active().runContext = await readRunContext();
++      return runtime.runClassicCli(argv, undefined, { projectRoot: fixed.projectRoot, invocationCwd: fixed.projectRoot });
++    });
+   };
+   const readField = async (field) => {
+     const result = await runtime.runClassicCli(['--json', 'state', 'get', fixed.change, field], undefined,
+@@ -179,19 +185,20 @@ export function createCometExecutor(options = {}) {
+   const currentIntent = async (execution) => {
+     active();
+     if (!text(execution) || execution.length > 256) no('EXECUTION_INVALID');
+-    const context = await runtime.ensureClassicRuntimeRun(changeDir);
+-    if (context.run.runId !== fixed.runId || context.run.status === 'completed') no('ORIGINAL_RUN_MISMATCH');
++    const context = await readRunContext();
++    if (context.assertCurrent().run.status === 'completed') no('ORIGINAL_RUN_MISMATCH');
+     let registry;
+     try { const raw = await readField('gate_dispatches'); registry = raw === 'null' ? { dispatches: [] } : JSON.parse(raw); }
+     catch { no('ORIGINAL_INTENT_UNVERIFIED'); }
+     if (!object(registry) || !Array.isArray(registry.dispatches)) no('ORIGINAL_INTENT_UNVERIFIED');
+     const matches = registry.dispatches.filter((item) => object(item) && item.execution === execution);
+     if (matches.length !== 1 || matches[0].state !== 'open' || matches[0].runId !== fixed.runId) no('ORIGINAL_INTENT_NOT_CURRENT');
+-    const intent = matches[0], bound = bind({ ...intent, projectRoot: fixed.projectRoot, changeDir });
++    const intent = matches[0], bound = bind({ ...intent, projectRoot: fixed.projectRoot, changeDir: context.changeDir });
+     eligible(bound.current);
+     if (original.verifyDispatch(intent.protectedDispatch).ok !== true
+       || envelopeDigest(bound.current.actionBinding) !== envelopeDigest(intent.actionBinding)
+       || envelopeDigest(intent.protectedDispatch.actionBinding) !== envelopeDigest(intent.actionBinding)) no('ORIGINAL_INTENT_STALE');
++    if (context.assertCurrent().run.status === 'completed') no('ORIGINAL_RUN_MISMATCH');
+     return { intent, ...bound };
+   };
+   const requestInput = (input) => {
+@@ -239,8 +246,7 @@ export function createCometExecutor(options = {}) {
+     async describeCurrent() {
+       return underSnapshot(async () => {
+         if (!installed) no('FIXED_HOST_NOT_INSTALLED');
+-        const context = await runtime.ensureClassicRuntimeRun(changeDir);
+-        if (context.run.runId !== fixed.runId) no('ORIGINAL_RUN_MISMATCH');
++        const context = await readRunContext();
+         const read = async (command) => {
+           const result = await runtime.runClassicCli(['--json', 'state', command, fixed.change], undefined,
+             { projectRoot: fixed.projectRoot, invocationCwd: fixed.projectRoot });
+@@ -250,6 +256,7 @@ export function createCometExecutor(options = {}) {
+           return document.data;
+         };
+         const next = await read('next'), gates = await read('gates');
++        context.assertCurrent();
+         return { ...boundary, run: clone(context.run), phase: context.classic.phase,
+           continuation: clone(next.continuation), nextAction: clone(next.nextAction), taskState: clone(next.taskState), gates,
+           authoring: { status: 'UNVERIFIED', code: 'NATIVE_AUTHOR_ACTION_PORT_REQUIRED' } };
+diff --git a/lib/adapters/harness.js b/lib/adapters/harness.js
+index 1a002a7..a3cea16 100644
+--- a/lib/adapters/harness.js
++++ b/lib/adapters/harness.js
+@@ -137,7 +137,7 @@ function nativeContext(value) {
+   if (!nativeKeys(v, ['actionBinding', 'model', 'cwd', 'input', 'dynamicTools']) || !nativeText(v.model, 128)
+     || !nativeText(v.cwd, 4096) || !path.isAbsolute(v.cwd) || !Array.isArray(v.input) || !v.input.length || v.input.length > 16
+     || v.input.some((item) => !nativeKeys(item, ['type', 'text']) || item.type !== 'text' || typeof item.text !== 'string')
+-    || !Array.isArray(v.dynamicTools) || !v.dynamicTools.length || v.dynamicTools.length > 16) nativeNo('NATIVE_CONTEXT_INVALID');
++    || !Array.isArray(v.dynamicTools) || v.dynamicTools.length > 16) nativeNo('NATIVE_CONTEXT_INVALID');
+   const parsed = parseContract('SDD.Delivery.ActionBinding', v.actionBinding);
+   if (!parsed.ok || parsed.value.profile !== 'comet-managed-v2' || parsed.value.runnerId !== 'comet-classic') nativeNo('NATIVE_CONTEXT_INVALID');
+   const names = new Set();
+@@ -179,12 +179,13 @@ function nativeMessage(bytes) {
+ export function createCodexStdioTransport(options) {
+   if (!nativeKeys(options, ['registration', 'context', 'currentContext', 'invokeTool'])) nativeNo('NATIVE_OPTIONS_INVALID');
+   const registration = nativeData(options.registration);
+-  if (!nativeKeys(registration, ['executable', 'sha256', 'argv', 'env', 'timeoutMs'])
++  if (!nativeKeys(registration, ['executable', 'sha256', 'argv', 'env', 'timeoutMs'], ['startPolicy'])
+     || !nativeText(registration.executable, 4096) || !path.isAbsolute(registration.executable)
+     || typeof registration.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(registration.sha256)
+     || !Array.isArray(registration.argv) || JSON.stringify(registration.argv) !== JSON.stringify(NATIVE_ARGV)
+     || !nativeObject(registration.env) || Object.entries(registration.env).some(([key, value]) => !['PATH', 'LANG', 'TZ', 'TMPDIR'].includes(key)
+       || typeof value !== 'string' || value.length > 8192 || value.includes('\0'))
++    || registration.startPolicy !== undefined && !['initialize-only', 'turn'].includes(registration.startPolicy)
+     || !Number.isSafeInteger(registration.timeoutMs) || registration.timeoutMs < 10 || registration.timeoutMs > 900000) nativeNo('NATIVE_REGISTRATION_INVALID');
+   let synchronous = false;
+   try { synchronous = typeof options.currentContext === 'function'
+@@ -199,15 +200,18 @@ export function createCodexStdioTransport(options) {
+   // Existing HOME/CODEX_HOME are inherited unchanged, not selected by a job.
+   const environment = { ...registration.env, ...Object.fromEntries(['HOME', 'CODEX_HOME'].filter((key) => typeof process.env[key] === 'string').map((key) => [key, process.env[key]])) };
+   let operation, child, state = 'NOT_STARTED', reason = null, deadline, forceTimer, startFailure = null;
++  let initialized = false, autoBegin = false, threadRequested = false;
+   let threadId = null, turnId = null, turnStatus = null, threadNotice = null, turnNotice = null, complete = false;
+   let ended = false, exitCode = null, signal = null, truncated = false, pendingBytes = Buffer.alloc(0), rawSize = 0;
+   const raw = { stdin: [], stdout: [], stderr: [] }, events = [], pending = new Map(), calls = new Map(), requestIds = new Map(), earlyCalls = [];
+-  const abort = new AbortController(); let resolveDone, resolveClosed, doneSettled = false;
++  const abort = new AbortController(); let resolveDone, resolveClosed, resolveReady, readySettled = false, doneSettled = false;
+   const snapshot = () => ({ ...NATIVE_SCOPE, status: state, reason, handle: operation?.handle ?? null, contextDigest,
+-    registrationDigest, threadId, turnId, turnStatus, protocolComplete: complete, truncated,
++    registrationDigest, initialized, threadId, turnId, turnStatus, protocolComplete: complete, truncated,
+     process: { pid: child?.pid ?? null, exitCode, signal, closed: ended },
+     raw: Object.fromEntries(Object.entries(raw).map(([key, chunks]) => [key, Buffer.concat(chunks)])), events: structuredClone(events) });
+-  const done = () => { if (!doneSettled) { doneSettled = true; resolveDone(snapshot()); } };
++  // Initialization is historical; begin still checks the original current tuple.
++  const ready = () => { if (!readySettled) { readySettled = true; resolveReady(snapshot()); } };
++  const done = () => { ready(); if (!doneSettled) { doneSettled = true; resolveDone(snapshot()); } };
+   const unknown = (code) => { if (state !== 'UNKNOWN') { state = 'UNKNOWN'; reason = code; } done(); };
+   const capture = (channel, bytes) => {
+     const remaining = Math.max(0, NATIVE_CAPTURE - rawSize);
+@@ -215,13 +219,20 @@ export function createCodexStdioTransport(options) {
+     if (bytes.length > remaining) { truncated = true; unknown('NATIVE_CAPTURE_LIMIT'); return false; } return true;
+   };
+   const write = (message) => {
+-    if (ended || state === 'UNKNOWN') return;
++    if (ended || state === 'UNKNOWN') return false;
+     const bytes = Buffer.from(JSON.stringify(message) + '\n');
+-    if (bytes.length > NATIVE_FRAME || !capture('stdin', bytes)) { unknown('NATIVE_FRAME_LIMIT'); return; }
++    if (bytes.length > NATIVE_FRAME || !capture('stdin', bytes)) { unknown('NATIVE_FRAME_LIMIT'); return false; }
+     try { child.stdin.write(bytes, (error) => { if (error) unknown('NATIVE_STDIN_UNAVAILABLE'); }); }
+     catch { unknown('NATIVE_STDIN_UNAVAILABLE'); }
++    return state !== 'UNKNOWN';
+   };
+   const request = (id, method, params) => { current(); pending.set(id, method); write({ id, method, params }); };
++  const beginTurn = () => {
++    if (threadRequested || state === 'UNKNOWN' || ended) return;
++    current(); threadRequested = true;
++    request('comet:thread', 'thread/start', { model: fixed.model, cwd: fixed.cwd, environments: [], dynamicTools: fixed.dynamicTools,
++      ephemeral: true, approvalPolicy: 'untrusted', sandbox: 'read-only' });
++  };
+   const deny = (id, code) => { if (id !== undefined) write({ id, error: { code: -32601, message: 'REQUEST_REFUSED' } }); unknown(code); };
+   const boundThread = (id) => {
+     if (!nativeText(id) || !threadId && !pending.has('comet:thread') || (threadId ?? threadNotice) && (threadId ?? threadNotice) !== id) return false;
+@@ -330,9 +341,9 @@ export function createCodexStdioTransport(options) {
+     const method = pending.get(m.id); pending.delete(m.id);
+     if (Object.hasOwn(m, 'error') || !nativeObject(m.result)) return unknown('NATIVE_RPC_ERROR');
+     if (method === 'initialize') {
+-      current(); write({ method: 'initialized', params: {} });
+-      request('comet:thread', 'thread/start', { model: fixed.model, cwd: fixed.cwd, environments: [], dynamicTools: fixed.dynamicTools,
+-        ephemeral: true, approvalPolicy: 'untrusted', sandbox: 'read-only' });
++      current(); if (!write({ method: 'initialized', params: {} })) return;
++      initialized = true; state = 'INITIALIZED'; ready();
++      if (autoBegin) beginTurn();
+     } else if (method === 'thread/start') {
+       if (!nativeText(m.result.thread?.id) || threadNotice && threadNotice !== m.result.thread.id) return unknown('NATIVE_THREAD_MISMATCH');
+       threadId = m.result.thread.id;
+@@ -357,9 +368,9 @@ export function createCodexStdioTransport(options) {
+     if (pendingBytes.length > NATIVE_FRAME) unknown('NATIVE_FRAME_LIMIT');
+   };
+   const requireHandle = (handle) => { if (!operation || handle !== operation.handle) nativeNo('NATIVE_HANDLE_REQUIRED'); };
+-  return Object.freeze({ ...NATIVE_SCOPE,
+-    start(...args) {
+-      if (args.length) nativeNo('NATIVE_START_ARGUMENTS_REFUSED');
++  const transport = { ...NATIVE_SCOPE,
++    connect(...args) {
++      if (args.length) nativeNo('NATIVE_CONNECT_ARGUMENTS_REFUSED');
+       if (operation) return operation;
+       if (startFailure) nativeNo(startFailure);
+       try { current(); } catch { startFailure = 'NATIVE_CONTEXT_STALE'; nativeNo(startFailure); }
+@@ -370,9 +381,10 @@ export function createCodexStdioTransport(options) {
+       if (process.platform === 'win32') { startFailure = 'NATIVE_PROCESS_GROUP_UNQUALIFIED'; nativeNo(startFailure); }
+       state = 'INITIALIZING';
+       const donePromise = new Promise((resolve) => { resolveDone = resolve; }), closed = new Promise((resolve) => { resolveClosed = resolve; });
++      const initializedPromise = new Promise((resolve) => { resolveReady = resolve; });
+       child = spawn(registration.executable, registration.argv, { cwd: fixed.cwd, env: environment, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
+       const handle = Object.freeze({ id: randomUUID(), run: fixed.actionBinding.run, execution: fixed.actionBinding.execution, processId: child.pid ?? null, contextDigest });
+-      operation = Object.freeze({ ...NATIVE_SCOPE, handle, done: donePromise, closed });
++      operation = Object.freeze({ ...NATIVE_SCOPE, handle, ready: initializedPromise, done: donePromise, closed });
+       deadline = setTimeout(() => unknown('NATIVE_TIMEOUT_UNKNOWN'), registration.timeoutMs); deadline.unref();
+       child.stdin.on('error', () => unknown('NATIVE_STDIN_UNAVAILABLE'));
+       child.stdout.on('data', receive); child.stderr.on('data', (bytes) => { if (!capture('stderr', bytes)) child.stderr.destroy(); });
+@@ -391,6 +403,21 @@ export function createCodexStdioTransport(options) {
+       });
+       return operation;
+     },
++    start(...args) {
++      if (args.length) nativeNo('NATIVE_START_ARGUMENTS_REFUSED');
++      if (registration.startPolicy === 'initialize-only') nativeNo('NATIVE_TURN_SCOPE_REQUIRED');
++      autoBegin = true; const value = transport.connect();
++      if (initialized) { try { beginTurn(); } catch { unknown('NATIVE_CONTEXT_STALE'); } }
++      return value;
++    },
++    begin(handle, ...args) {
++      requireHandle(handle);
++      if (args.length) nativeNo('NATIVE_BEGIN_ARGUMENTS_REFUSED');
++      if (registration.startPolicy === 'initialize-only') nativeNo('NATIVE_TURN_SCOPE_REQUIRED');
++      if (!initialized) nativeNo('NATIVE_NOT_INITIALIZED');
++      try { beginTurn(); } catch { unknown('NATIVE_CONTEXT_STALE'); }
++      return operation;
++    },
+     observe(handle) { requireHandle(handle); return snapshot(); },
+     cancel(handle) {
+       requireHandle(handle); if (ended) return snapshot();
+@@ -399,5 +426,6 @@ export function createCodexStdioTransport(options) {
+       kill('SIGTERM'); if (!forceTimer) { forceTimer = setTimeout(() => kill('SIGKILL'), 500); forceTimer.unref(); }
+       return snapshot();
+     },
+-  });
++  };
++  return Object.freeze(transport);
+ }
+diff --git a/lib/adapters/spec.js b/lib/adapters/spec.js
+index 70da37c..080a4cd 100644
+--- a/lib/adapters/spec.js
++++ b/lib/adapters/spec.js
+@@ -777,6 +777,8 @@ export function createManagedSpecAdapter(options = {}) {
+     coded('MANAGED_RUNTIME_REQUIRED', 'The fixed original Comet aggregate is required');
+   const root = projectRootPath(projectRoot);
+   const runClassicCli = runtime.runClassicCli.bind(runtime);
++  const ensureClassicRuntimeRun = typeof runtime.ensureClassicRuntimeRun === 'function'
++    ? runtime.ensureClassicRuntimeRun.bind(runtime) : null;
+   const nameOf = (change) => {
+     if (typeof change !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(change))
+       coded('CHANGE_INVALID', 'A canonical change name is required');
+@@ -803,7 +805,7 @@ export function createManagedSpecAdapter(options = {}) {
+     if (!isRecord(run) || typeof run.runId !== 'string' || !run.runId.trim() ||
+       !['running','waiting','completed','failed'].includes(run.status))
+       coded('MANAGED_RUNTIME_REQUIRED', 'The original Comet Run identity is unavailable');
+-    return { directory, run, archived: directory !== active };
++    return { directory, run, archived: directory !== active, stat: projectEntry(root,directory,{kind:'directory'}).stat };
+   };
+   const summaryAt = (directory, change) => {
+     return {change,capabilities:readDeltaCapabilities(root,path.join(directory,'specs'))};
+@@ -830,6 +832,32 @@ export function createManagedSpecAdapter(options = {}) {
+       readback, native: result };
+   };
+   return Object.freeze({
++    async readRunContext(request = {}) {
++      if (!isRecord(request) || Object.keys(request).some((key) => !['change','expectedRunId'].includes(key)))
++        coded('CHANGE_INVALID', 'A fixed Run context request is required');
++      const {change,expectedRunId} = request;
++      if (typeof expectedRunId !== 'string' || !expectedRunId.trim())
++        coded('RUN_MISMATCH', 'An original Comet Run identity is required');
++      const before = location(change);
++      if (before.run.runId !== expectedRunId) coded('RUN_MISMATCH', 'The original Comet Run must match');
++      if (!ensureClassicRuntimeRun)
++        coded('MANAGED_RUNTIME_REQUIRED', 'The original Comet Run reader is required');
++      const directory = before.directory, device = before.stat.dev, inode = before.stat.ino;
++      // Native signs synchronously; recheck the same protected location at that boundary.
++      const assertCurrent = () => {
++        const current = location(change);
++        if (current.directory !== directory || current.stat.dev !== device || current.stat.ino !== inode)
++          coded('RUN_LOCATION_CHANGED', 'The original Comet Run location changed during readback');
++        if (current.run.runId !== expectedRunId) coded('RUN_MISMATCH', 'The original Comet Run must match');
++        projectEntry(root,path.join(directory,'.comet-state.lock'),{kind:'file',optional:true});
++        return current;
++      };
++      const context = await ensureClassicRuntimeRun(directory);
++      assertCurrent();
++      if (!isRecord(context) || !isRecord(context.run) || context.run.runId !== expectedRunId)
++        coded('RUN_MISMATCH', 'Native must retain the original Comet Run');
++      return Object.freeze({...context, changeDir:directory, archived:before.archived, assertCurrent});
++    },
+     inspect(request = {}) {
+       if (!isRecord(request)) coded('CHANGE_INVALID', 'A change request is required');
+       const {change} = request;
+diff --git a/test/comet-driver.test.js b/test/comet-driver.test.js
+index eea17b0..5428b7b 100644
+--- a/test/comet-driver.test.js
++++ b/test/comet-driver.test.js
+@@ -24,7 +24,7 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
+ 
+ const harness = await import('../lib/adapters/harness.js');
+ const comet = await import('../lib/adapters/comet.js');
+-const { createLaunchAuthority } = await import('../lib/delivery/evidence.js');
++const { createLaunchAuthority, envelopeDigest } = await import('../lib/delivery/evidence.js');
+ const gateModule = await import('../lib/delivery/gate.js');
+ 
+ const sha = (label) => crypto.createHash('sha256').update(label).digest('hex');
+@@ -708,3 +708,269 @@ process.stdin.on('end',()=>fs.writeFileSync(${JSON.stringify(ready)},'original p
+     }
+   });
+ });
++
++function nativePeerWire(fixture) {
++  if (!fs.existsSync(fixture.log)) return [];
++  return fs.readFileSync(fixture.log, 'utf8').split('\n').slice(0, -1).map(JSON.parse);
++}
++
++async function waitForNativePeer(fixture, transport, operation, predicate) {
++  const deadline = Date.now() + 2000;
++  while (!predicate(nativePeerWire(fixture))) {
++    const observed = transport.observe(operation.handle);
++    assert.notEqual(observed.status, 'UNKNOWN', observed.reason);
++    assert.equal(observed.process.closed, false);
++    assert.equal(Date.now() < deadline, true, 'the actual peer must reach the declared wire condition');
++    await new Promise((resolve) => setImmediate(resolve));
++  }
++}
++
++test('native connect initializes one actual peer without silently starting a thread or turn', async () => {
++  const fixture = nativeTransportFixture('notifications'); let transport, operation;
++  try {
++    transport = harness.createCodexStdioTransport(fixture.options);
++    assert.equal(typeof transport.connect, 'function', 'connect must expose a separate bounded initialization seam');
++    const connections = await Promise.all(Array.from({ length: 4 }, async () => transport.connect()));
++    operation = connections[0]; assert.equal(connections.every((entry) => entry === operation), true);
++    const initialized = await operation.ready;
++    assert.equal(initialized.initialized, true); assert.equal(initialized.status, 'INITIALIZED');
++    assert.equal(initialized.threadId, null); assert.equal(initialized.turnId, null);
++    assert.equal(initialized.protocolComplete, false); assert.equal(initialized.process.closed, false);
++    assert.equal(initialized.handle, operation.handle); assert.equal(initialized.contextDigest, operation.handle.contextDigest);
++    assert.equal(initialized.runtimeQualified, false); assert.equal(initialized.managedClosureEligible, false);
++    await waitForNativePeer(fixture, transport, operation, (wire) => wire.some((m) => m.method === 'initialized'));
++    assert.deepEqual(nativePeerWire(fixture).map((m) => m.method), ['initialize', 'initialized']);
++    assert.deepEqual(transport.observe(operation.handle).raw.stdin.toString().trim().split('\n').map(JSON.parse).map((m) => m.method), ['initialize', 'initialized']);
++    assert.equal(fixture.calls(), 0); assert.equal(fs.existsSync(path.join(fixture.workspace, 'note.txt')), false);
++    assert.doesNotThrow(() => process.kill(operation.handle.processId, 0));
++    transport.cancel(operation.handle); const closed = await operation.closed;
++    assert.equal(closed.reason, 'NATIVE_CANCEL_REQUESTED'); assert.equal(closed.process.closed, true);
++    assert.equal(closed.protocolComplete, false); assert.equal(closed.contextDigest, initialized.contextDigest);
++  } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++});
++
++test('native begin sends a truly empty tool subset and completes a real text-only peer turn', async () => {
++  const fixture = nativeTransportFixture(); let transport, operation;
++  fixture.context.dynamicTools = [];
++  let peer = fs.readFileSync(fixture.peer, 'utf8');
++  const toolAssertion = "assert.equal(m.params.dynamicTools[0].name,'write_note');";
++  assert.equal(peer.includes(toolAssertion), true); assert.equal(peer.includes('const issue=()=>{'), true);
++  peer = peer.replace(toolAssertion, 'assert.deepEqual(m.params.dynamicTools,[]);')
++    .replace('const issue=()=>{', 'const issue=()=>{finish();return;');
++  fs.writeFileSync(fixture.peer, peer); fixture.options.registration.sha256 = sha(fs.readFileSync(fixture.peer));
++  try {
++    transport = harness.createCodexStdioTransport(fixture.options); operation = transport.connect();
++    const initialized = await operation.ready; assert.equal(initialized.initialized, true);
++    assert.equal(transport.begin(operation.handle), operation);
++    const result = await operation.done; const closed = await operation.closed;
++    assert.equal(result.status, 'OBSERVED_TERMINAL', result.reason); assert.equal(closed.process.exitCode, 0);
++    assert.equal(result.protocolComplete, true); assert.equal(result.turnStatus, 'completed');
++    const wire = nativePeerWire(fixture), thread = wire.find((m) => m.method === 'thread/start');
++    assert.deepEqual(thread.params.dynamicTools, []); assert.deepEqual(thread.params.environments, []);
++    assert.equal(wire.filter((m) => m.method === 'thread/start').length, 1);
++    assert.equal(wire.filter((m) => m.method === 'turn/start').length, 1);
++    assert.equal(result.events.some((event) => event.method === 'item/tool/call'), false);
++    assert.equal(fixture.calls(), 0); assert.equal(fs.existsSync(path.join(fixture.workspace, 'note.txt')), false);
++    assert.equal(result.contextDigest, initialized.contextDigest); assert.equal(result.verdict, undefined);
++    assert.equal(result.runtimeQualified, false); assert.equal(result.managedClosureEligible, false);
++  } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++});
++
++function gatedNativeInitializationFixture() {
++  const fixture = nativeTransportFixture('wait'), release = path.join(fixture.scratch, 'release-initialize');
++  const text = fs.readFileSync(fixture.peer, 'utf8'), needle = "if(mode==='wait')return;";
++  assert.equal(text.includes(needle), true);
++  fs.writeFileSync(fixture.peer, text.replace(needle, `if(mode==='wait'){const until=Date.now()+10000;const hold=setInterval(()=>{if(fs.existsSync(${JSON.stringify(release)})){clearInterval(hold);send({id:m.id,result:{userAgent:'private-delayed-peer'}});}else if(Date.now()>until){clearInterval(hold);process.exitCode=91;process.stdin.destroy();}},5);return;}`));
++  fixture.options.registration.sha256 = sha(fs.readFileSync(fixture.peer));
++  return { ...fixture, release };
++}
++
++test('native initialize-only policy is snapshotted, digested and cannot become turn authority through ready or caller mutation', async () => {
++  const fixture = nativeTransportFixture('notifications'); let transport, operation;
++  fixture.options.registration.startPolicy = 'initialize-only';
++  const expectedDigest = envelopeDigest(structuredClone(fixture.options.registration));
++  try {
++    transport = harness.createCodexStdioTransport(fixture.options);
++    fixture.options.registration.startPolicy = 'turn';
++    assert.throws(() => transport.start(), (e) => e.code === 'NATIVE_TURN_SCOPE_REQUIRED');
++    assert.equal(fs.existsSync(fixture.log), false, 'start must refuse before spawning even when caller changed its old object');
++    operation = transport.connect(); const initialized = await operation.ready;
++    assert.equal(initialized.registrationDigest, expectedDigest); assert.equal(initialized.initialized, true);
++    assert.throws(() => transport.begin(operation.handle), (e) => e.code === 'NATIVE_TURN_SCOPE_REQUIRED');
++    assert.throws(() => transport.start(), (e) => e.code === 'NATIVE_TURN_SCOPE_REQUIRED');
++    assert.equal(transport.connect(), operation);
++    await waitForNativePeer(fixture, transport, operation, (wire) => wire.some((m) => m.method === 'initialized'));
++    assert.deepEqual(nativePeerWire(fixture).map((m) => m.method), ['initialize', 'initialized']);
++    assert.equal(fixture.calls(), 0); assert.equal(fs.existsSync(path.join(fixture.workspace, 'note.txt')), false);
++    assert.equal(initialized.runtimeQualified, false); assert.equal(initialized.managedClosureEligible, false);
++  } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++});
++
++test('native explicit begin and legacy start after connect reuse one initialized thread and actual tool execution', async (t) => {
++  for (const route of ['begin', 'start']) await t.test(route, async () => {
++    const fixture = nativeTransportFixture('notifications'); let transport, operation;
++    try {
++      transport = harness.createCodexStdioTransport(fixture.options); operation = transport.connect(); const ready = await operation.ready;
++      assert.equal(ready.initialized, true, JSON.stringify({ status: ready.status, reason: ready.reason, process: ready.process,
++        stdoutBytes: ready.raw.stdout.length, stderrBytes: ready.raw.stderr.length, wireMethods: nativePeerWire(fixture).map((m) => m.method) }));
++      const calls = await Promise.all(Array.from({ length: 6 }, async () => route === 'begin' ? transport.begin(operation.handle) : transport.start()));
++      assert.equal(calls.every((value) => value === operation), true);
++      assert.equal(transport.begin(operation.handle), operation); assert.equal(transport.start(), operation);
++      const result = await operation.done; assert.equal(result.status, 'OBSERVED_TERMINAL', result.reason);
++      assert.equal(result.process.exitCode, 0); assert.equal(fixture.calls(), 1);
++      assert.equal(fs.readFileSync(path.join(fixture.workspace, 'note.txt'), 'utf8'), 'written by the protected callback');
++      const wire = nativePeerWire(fixture);
++      for (const method of ['initialize', 'thread/start', 'turn/start']) assert.equal(wire.filter((m) => m.method === method).length, 1, method);
++      assert.equal(result.contextDigest, operation.handle.contextDigest); assert.equal(result.runtimeQualified, false);
++    } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++  });
++});
++
++test('native begin requires initialized state and the exact original handle without accepting caller options', async () => {
++  const fixture = gatedNativeInitializationFixture(); let transport, operation;
++  try {
++    transport = harness.createCodexStdioTransport(fixture.options); operation = transport.connect();
++    await waitForNativePeer(fixture, transport, operation, (wire) => wire.some((m) => m.method === 'initialize'));
++    assert.throws(() => transport.begin(operation.handle), (e) => e.code === 'NATIVE_NOT_INITIALIZED');
++    for (const handle of [{ ...operation.handle }, new Proxy(operation.handle, {}), null]) assert.throws(() => transport.begin(handle), (e) => e.code === 'NATIVE_HANDLE_REQUIRED');
++    assert.throws(() => transport.begin(operation.handle, { role: 'controller' }), (e) => e.code === 'NATIVE_BEGIN_ARGUMENTS_REFUSED');
++    assert.throws(() => transport.connect({ model: 'caller-model' }), (e) => e.code === 'NATIVE_CONNECT_ARGUMENTS_REFUSED');
++    assert.deepEqual(nativePeerWire(fixture).map((m) => m.method), ['initialize']);
++    fs.writeFileSync(fixture.release, 'release exact initialized response'); await operation.ready;
++    assert.equal(transport.begin(operation.handle), operation);
++    const result = await operation.done; assert.equal(result.status, 'OBSERVED_TERMINAL', result.reason);
++    assert.equal(fixture.calls(), 1); assert.equal(result.process.exitCode, 0);
++  } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++});
++
++test('native begin rejects drift or source exceptions after ready and restoring its old tuple cannot revive the connection', async (t) => {
++  for (const field of ['run', 'execution', 'attempt', 'epoch', 'revision', 'inputDigest', 'policyDigest', 'throw']) await t.test(field, async () => {
++    const fixture = nativeTransportFixture(); let transport, operation, reject = false;
++    const read = fixture.options.currentContext;
++    fixture.options.currentContext = () => { if (reject) throw new Error('/PRIVATE_READY_SOURCE_NOTE'); return read(); };
++    try {
++      transport = harness.createCodexStdioTransport(fixture.options); operation = transport.connect(); const ready = await operation.ready;
++      const changed = structuredClone(fixture.context);
++      if (field === 'throw') reject = true;
++      else { changed.actionBinding[field] = ['attempt', 'epoch'].includes(field) ? 2 : ['inputDigest', 'policyDigest'].includes(field) ? sha('changed-' + field) : 'changed-' + field; fixture.setCurrent(changed); }
++      assert.equal(transport.begin(operation.handle), operation);
++      const result = await operation.done;
++      assert.equal(result.status, 'UNKNOWN'); assert.equal(result.reason, 'NATIVE_CONTEXT_STALE');
++      assert.equal(result.threadId, null); assert.equal(result.turnId, null); assert.equal(result.process.closed, false);
++      assert.equal(result.contextDigest, ready.contextDigest); assert.doesNotMatch(result.raw.stdin.toString(), /PRIVATE_READY_SOURCE_NOTE|thread\/start|turn\/start/);
++      reject = false; fixture.setCurrent(fixture.context);
++      assert.equal(transport.begin(operation.handle), operation); assert.equal(transport.start(), operation); assert.equal(transport.connect(), operation);
++      assert.equal(transport.observe(operation.handle).status, 'UNKNOWN'); assert.equal(transport.observe(operation.handle).reason, 'NATIVE_CONTEXT_STALE');
++      assert.equal(fixture.calls(), 0); assert.equal(fs.existsSync(path.join(fixture.workspace, 'note.txt')), false);
++    } finally { if (operation) { transport.cancel(operation.handle); const closed = await operation.closed; assert.equal(closed.reason, 'NATIVE_CONTEXT_STALE'); } fixture.cleanup(); }
++  });
++});
++
++test('native context changed before initialize completes cannot report initialized or start a turn', async () => {
++  const fixture = gatedNativeInitializationFixture(); let transport, operation;
++  try {
++    transport = harness.createCodexStdioTransport(fixture.options); operation = transport.connect();
++    await waitForNativePeer(fixture, transport, operation, (wire) => wire.some((m) => m.method === 'initialize'));
++    const changed = structuredClone(fixture.context); changed.actionBinding.epoch++; fixture.setCurrent(changed);
++    fs.writeFileSync(fixture.release, 'send initialize response only after source drift');
++    const ready = await operation.ready;
++    assert.equal(ready.status, 'UNKNOWN'); assert.equal(ready.initialized, false);
++    assert.equal(ready.reason, 'NATIVE_MESSAGE_OR_CONTEXT_UNVERIFIED'); assert.equal(ready.contextDigest, operation.handle.contextDigest);
++    fixture.setCurrent(fixture.context); assert.equal(transport.start(), operation);
++    assert.throws(() => transport.begin(operation.handle), (e) => e.code === 'NATIVE_NOT_INITIALIZED');
++    assert.equal(transport.observe(operation.handle).status, 'UNKNOWN'); assert.equal(fixture.calls(), 0);
++    assert.deepEqual(transport.observe(operation.handle).raw.stdin.toString().trim().split('\n').map(JSON.parse).map((m) => m.method), ['initialize']);
++  } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++});
++
++test('native ready settles unknown on initialization EOF, timeout or cancellation and none can revive after restoring context', async (t) => {
++  for (const mode of ['eof', 'timeout', 'cancel']) await t.test(mode, async () => {
++    const fixture = nativeTransportFixture('wait'); let transport, operation;
++    if (mode === 'timeout') fixture.options.registration.timeoutMs = 500;
++    if (mode === 'eof') {
++      const peer = fs.readFileSync(fixture.peer, 'utf8'); assert.equal(peer.includes("if(mode==='wait')return;"), true);
++      fs.writeFileSync(fixture.peer, peer.replace("if(mode==='wait')return;", "if(mode==='wait'){process.stdin.destroy();return;}"));
++      fixture.options.registration.sha256 = sha(fs.readFileSync(fixture.peer));
++    }
++    try {
++      transport = harness.createCodexStdioTransport(fixture.options); operation = transport.connect();
++      if (mode === 'cancel') transport.cancel(operation.handle);
++      const ready = await operation.ready, result = await operation.done;
++      const reason = { eof: 'NATIVE_EOF_UNKNOWN', timeout: 'NATIVE_TIMEOUT_UNKNOWN', cancel: 'NATIVE_CANCEL_REQUESTED' }[mode];
++      for (const value of [ready, result]) { assert.equal(value.status, 'UNKNOWN'); assert.equal(value.reason, reason); assert.equal(value.initialized, false); assert.equal(value.contextDigest, operation.handle.contextDigest); }
++      if (mode === 'timeout') { assert.equal(result.process.closed, false); assert.doesNotThrow(() => process.kill(operation.handle.processId, 0)); }
++      fixture.setCurrent(fixture.context); assert.equal(transport.start(), operation); assert.equal(transport.connect(), operation);
++      assert.throws(() => transport.begin(operation.handle), (e) => e.code === 'NATIVE_NOT_INITIALIZED');
++      transport.cancel(operation.handle); const closed = await operation.closed;
++      assert.equal(closed.process.closed, true); assert.equal(closed.reason, reason); assert.equal(closed.protocolComplete, false);
++      if (mode === 'eof') assert.equal(closed.process.exitCode, 0);
++      assert.equal(fixture.calls(), 0);
++    } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++  });
++});
++
++test('native malformed start policies are refused before any process and empty tools never expose an undeclared call', async (t) => {
++  for (const policy of ['', null, false, [], {}, 'controller', 'Initialize-only']) await t.test(JSON.stringify(policy), () => {
++    const fixture = nativeTransportFixture();
++    try { fixture.options.registration.startPolicy = policy; assert.throws(() => harness.createCodexStdioTransport(fixture.options), (e) => e.code === 'NATIVE_REGISTRATION_INVALID'); assert.equal(fs.existsSync(fixture.log), false); }
++    finally { fixture.cleanup(); }
++  });
++  await t.test('empty subset refuses a peer call despite larger fixture maximum permissions', async () => {
++    const fixture = nativeTransportFixture(); let transport, operation; fixture.context.dynamicTools = [];
++    const peer = fs.readFileSync(fixture.peer, 'utf8'), needle = "assert.equal(m.params.dynamicTools[0].name,'write_note');";
++    assert.equal(peer.includes(needle), true); fs.writeFileSync(fixture.peer, peer.replace(needle, 'assert.deepEqual(m.params.dynamicTools,[]);'));
++    fixture.options.registration.sha256 = sha(fs.readFileSync(fixture.peer));
++    try {
++      transport = harness.createCodexStdioTransport(fixture.options); operation = transport.start();
++      const result = await operation.done; assert.equal(result.status, 'UNKNOWN'); assert.equal(result.reason, 'NATIVE_TOOL_REFUSED');
++      assert.equal(fixture.calls(), 0); assert.equal(fs.existsSync(path.join(fixture.workspace, 'note.txt')), false);
++      assert.equal(result.raw.stdin.toString().includes('REQUEST_REFUSED'), true);
++    } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++  });
++});
++
++test('native initialized write capture overflow keeps ready done and observation unknown for connect and legacy start', async (t) => {
++  for (const route of ['connect', 'start']) await t.test(route, async () => {
++    const fixture = nativeTransportFixture(); let transport, operation;
++    const padded = path.join(fixture.scratch, 'padding-ready'), release = path.join(fixture.scratch, 'release-initialize');
++    fs.writeFileSync(fixture.peer, `#!${process.execPath}
++import readline from 'node:readline';import fs from 'node:fs';
++const lines=readline.createInterface({input:process.stdin});
++lines.on('line',(line)=>{const m=JSON.parse(line);fs.appendFileSync(${JSON.stringify(fixture.log)},line+'\\n');
++if(m.method==='initialize'){const result=JSON.stringify({id:m.id,result:{userAgent:'private-overflow-peer'}})+'\\n';
++const pad=2*1024*1024-Buffer.byteLength(line+'\\n')-Buffer.byteLength(result)-1;
++process.stderr.write(Buffer.alloc(pad,65),()=>fs.writeFileSync(${JSON.stringify(padded)},'padding written'));
++const until=Date.now()+10000;const hold=setInterval(()=>{if(fs.existsSync(${JSON.stringify(release)})){clearInterval(hold);process.stdout.write(result);}else if(Date.now()>until){clearInterval(hold);process.exitCode=91;process.stdin.destroy();}},5);}});
++`);
++    fixture.options.registration.sha256 = sha(fs.readFileSync(fixture.peer));
++    try {
++      transport = harness.createCodexStdioTransport(fixture.options); operation = transport[route]();
++      const until = Date.now() + 2000; let expectedPad;
++      while (expectedPad === undefined || transport.observe(operation.handle).raw.stderr.length !== expectedPad) {
++        if (fs.existsSync(padded)) expectedPad = 2 * 1024 * 1024 - transport.observe(operation.handle).raw.stdin.length
++          - Buffer.byteLength(JSON.stringify({ id: 'comet:init', result: { userAgent: 'private-overflow-peer' } }) + '\n') - 1;
++        const current = transport.observe(operation.handle); assert.notEqual(current.status, 'UNKNOWN', current.reason);
++        assert.equal(Date.now() < until, true, 'the actual stderr bytes must be captured before the initialize response is released');
++        await new Promise((resolve) => setImmediate(resolve));
++      }
++      fs.writeFileSync(release, 'release after captured stderr reached the exact byte budget');
++      const ready = await operation.ready, done = await operation.done, observed = transport.observe(operation.handle);
++      for (const value of [ready, done, observed]) {
++        assert.equal(value.status, 'UNKNOWN'); assert.equal(value.reason, 'NATIVE_CAPTURE_LIMIT'); assert.equal(value.initialized, false);
++        assert.equal(value.contextDigest, operation.handle.contextDigest); assert.equal(value.threadId, null); assert.equal(value.turnId, null);
++        assert.equal(value.runtimeQualified, false); assert.equal(value.managedClosureEligible, false);
++      }
++      assert.equal(observed.truncated, true); assert.equal(Object.values(observed.raw).reduce((sum, bytes) => sum + bytes.length, 0), 2 * 1024 * 1024);
++      assert.deepEqual(nativePeerWire(fixture).map((m) => m.method), ['initialize']);
++      const changed = structuredClone(fixture.context); changed.actionBinding.epoch++; fixture.setCurrent(changed); fixture.setCurrent(fixture.context);
++      assert.equal(transport.connect(), operation); assert.equal(transport.start(), operation);
++      assert.throws(() => transport.begin(operation.handle), (e) => e.code === 'NATIVE_NOT_INITIALIZED');
++      assert.equal(transport.observe(operation.handle).status, 'UNKNOWN'); assert.equal(fixture.calls(), 0);
++      transport.cancel(operation.handle); const closed = await operation.closed;
++      assert.equal(closed.status, 'UNKNOWN'); assert.equal(closed.reason, 'NATIVE_CAPTURE_LIMIT');
++    } finally {
++      if (operation) { transport.cancel(operation.handle); await operation.closed; }
++      fixture.cleanup();
++    }
++  });
++});
+diff --git a/test/comet-execution-binding.test.js b/test/comet-execution-binding.test.js
+index 5c47219..5d29900 100644
+--- a/test/comet-execution-binding.test.js
++++ b/test/comet-execution-binding.test.js
+@@ -94,7 +94,8 @@ async function nativeProcessFixture(material, resume = null) {
+   const runtimeFile = path.join(material.artifacts, '.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a/work/assets/skills/comet/scripts/comet-runtime.mjs');
+   assert.equal(sha(fs.readFileSync(runtimeFile)), '04795080295d7174af82913757254426b82037ea5028296a3602b86d200559dd', 'actual frozen6da source is required');
+   const native = await import(pathToFileURL(runtimeFile));
+-  const project = material.project, change = path.join(project, 'openspec/changes/demo');
++  const project = material.project;
++  let change = path.join(project, 'openspec/changes/demo');
+   const priorHome = process.env.HOME;
+   process.env.HOME = path.join(material.scratch, 'home'); fs.mkdirSync(process.env.HOME, { recursive: true });
+   const invoke = async (argv) => {
+@@ -173,9 +174,35 @@ async function nativeProcessFixture(material, resume = null) {
+       verifyReview: ({ entry }) => ({ ok: true, sufficient: parseTapSummary(Buffer.from(entry.sourcePacket.reportBytes).toString()).pass === 1,
+         evidenceDigest: sha('component-native-contract-not-semantic-review'), envelopeDigest: entry.digest, reportDigest: entry.sourcePacket.collection.reportDigest,
+         actionDigest: entry.sourcePacket.collection.actionDigest, execution: entry.execution, principal: roles[3].principalId }) };
+-    executor = createCometExecutor({ native, authority, source, registration: { schemaVersion: 1, projectRoot: project, change: 'demo', runId, runner,
++    let signatures = 0;
++    const signingAuthority = { ...authority, issueDispatch(binding) { signatures++; return authority.issueDispatch(binding); } };
++    const protectedSource = { ...source, context(intent) {
++      const current = source.context(intent);
++      if (material.signFault === 'completed' || material.signFault === 'foreign-run') {
++        const file = path.join(change, '.comet/run-state.json'), state = JSON.parse(fs.readFileSync(file));
++        if (material.signFault === 'completed') state.status = 'completed'; else state.runId = 'foreign-run';
++        fs.writeFileSync(file, JSON.stringify(state));
++      }
++      if (material.signFault === 'moved') {
++        const archive = path.join(project, 'openspec/changes/archive/2026-10-26-demo');
++        fs.mkdirSync(path.dirname(archive), { recursive: true }); fs.renameSync(change, archive);
++      }
++      if (material.signFault === 'missing-lock' || material.signFault === 'linked-lock') {
++        const lock = path.join(change, '.comet-state.lock'); fs.unlinkSync(lock);
++        if (material.signFault === 'linked-lock') {
++          const outside = path.join(material.scratch, 'ordinary-lock-file'); fs.writeFileSync(outside, 'ordinary outside data'); fs.symlinkSync(outside, lock);
++        }
++      }
++      return current;
++    } };
++    executor = createCometExecutor({ native, authority: signingAuthority, source: protectedSource, registration: { schemaVersion: 1, projectRoot: project, change: 'demo', runId, runner,
+       docker: { executable: physicalFile, sha256: sha(fs.readFileSync(physicalFile)) }, actions: [{ gate: 'R', roleBindingId: 'reviewer', argv: ['observe-original-native-contract'] }] } });
+     executor.install();
++    if (material.archiveBeforeDispatch) {
++      const archive = path.join(project, 'openspec/changes/archive/2026-10-26-demo');
++      fs.mkdirSync(path.dirname(archive), { recursive: true }); fs.renameSync(change, archive); change = archive;
++      assert.equal((await executor.describeCurrent()).run.runId, runId);
++    }
+     if (resume) {
+       const before = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '';
+       await assert.rejects(executor.execute({ execution: resume.execution }), (error) => error.code === 'NATIVE_EXECUTION_RECOVERY_PORT_REQUIRED');
+@@ -186,8 +213,21 @@ async function nativeProcessFixture(material, resume = null) {
+       (error) => error.code === 'NATIVE_COMMAND_SCOPE_REQUIRED', 'a bound executor must never forward a different Run registration');
+     assert.equal(fs.existsSync(path.join(project, 'openspec/changes/foreign')), false);
+     const issued = await executor.invokeNative(['--json', 'state', 'dispatch-gate', 'demo', 'R']);
++    if (material.signFault) {
++      assert.notEqual(issued.exitCode, 0, issued.stdout);
++      assert.equal(signatures, 0, 'the original authority must not sign a stale or completed Run');
++      assert.equal(fs.existsSync(logFile), false);
++      return { fault: material.signFault, refusedBeforeSigning: true, physicalCommandAttempts: 0 };
++    }
+     assert.equal(issued.exitCode, 0, issued.stdout);
+     let intent = JSON.parse(issued.stdout).data.dispatch;
++    if (material.archiveBeforeDispatch) {
++      assert.equal(intent.runId, runId);
++      assert.equal(authority.verifyDispatch(intent.protectedDispatch).ok, true);
++      assert.equal(fs.existsSync(path.join(project, 'openspec/changes/demo')), false);
++      assert.equal(fs.existsSync(logFile), false, 'archive signing does not launch any physical command');
++      return { runId, archiveDispatch: intent.execution, physicalCommandAttempts: 0, productionQualified: false };
++    }
+     qualification.status = 'unqualified';
+     await assert.rejects(executor.execute({ execution: intent.execution }),
+       (error) => ['SOURCE_UNQUALIFIED', 'ORIGINAL_INTENT_NOT_CURRENT'].includes(error.code));
+@@ -376,7 +416,9 @@ async function bootstrapReadFixture(material) {
+       return { exitCode: 2, stdout: '{"status":"UNVERIFIED","code":"NATIVE_FIXTURE_REFUSAL"}\n', productionQualified: true };
+     } } : native;
+     const authority = cometLaunchAuthority({ secret: 'public-entry-fixture-key-not-a-production-credential', runId: run.runId });
+-    const source = { policy: () => ({}), context: () => ({}), authorizeWrite: () => ({ allowed: false }), verifyReview: () => ({ ok: false }) };
++    const source = { policy: () => ({ ref: 'fixture/unqualified-policy', digest: sha('component-read-policy'), revision: 'component-only',
++      projectKnowledgeRequired: true, teamKnowledgeRequired: true }), context: () => ({}),
++      authorizeWrite: () => ({ allowed: false }), verifyReview: () => ({ ok: false }) };
+     const physicalMarker = path.join(material.scratch, 'unexpected-physical-command');
+     const physicalGuard = path.join(material.scratch, 'forbidden-physical-cli.mjs');
+     fs.writeFileSync(physicalGuard, `#!${process.execPath}\nimport fs from 'node:fs';fs.appendFileSync(${JSON.stringify(physicalMarker)},'attempt\\n');process.exitCode=97;\n`, { mode: 0o755 });
+@@ -416,6 +458,19 @@ async function bootstrapReadFixture(material) {
+     const current = await runCometHostMain(['--json', 'state', 'get', 'demo', 'run_id'], executor);
+     assert.equal(current.exitCode, 0, current.stdout); assert.equal(JSON.parse(current.stdout).stdout.trim(), run.runId);
+     assert.equal(physicalAttempts(), 0);
++    if (material.archiveContext) {
++      const archive = path.join(project, 'openspec/changes/archive/2026-10-26-demo');
++      fs.mkdirSync(path.dirname(archive), { recursive: true });
++      fs.renameSync(change, archive);
++      const current = await executor.describeCurrent();
++      assert.equal(current.run.runId, run.runId, 'the Host must follow the original Run after its directory moves');
++      assert.equal(current.phase, 'open');
++      await assert.rejects(executor.execute({ execution: 'unissued-after-archive' }),
++        (error) => error.code === 'ORIGINAL_INTENT_NOT_CURRENT');
++      assert.equal(fs.existsSync(change), false, 'readback must never synthesize a replacement active Run');
++      assert.equal(physicalAttempts(), 0);
++      return { archiveReadback: 'SAME_ORIGINAL_RUN', run: run.runId, physicalCommandAttempts: physicalAttempts() };
++    }
+     return { sdkFingerprint, entryRead: 'open', repeatedReads: results.length, run: run.runId,
+       sourceQualification: 'ABSENT', physicalCommandAttempts: physicalAttempts(), productionQualified: false };
+   } finally { if (priorHome === undefined) delete process.env.HOME; else process.env.HOME = priorHome; }
+@@ -452,3 +507,54 @@ test('the main distinguishes Native refusal from malformed results and unknown e
+     } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
+   });
+ });
++
++
++test('fixed Host follows the original Run after archive movement without creating another active Run', () => {
++  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-archive-context-'));
++  try {
++    const material = { repository, artifacts: process.env.P1_3_ACCEPTED_ARTIFACT_ROOT ?? repository, scratch, archiveContext: true };
++    const program = path.join(scratch, 'archive-context.mjs');
++    fs.writeFileSync(program, `const f=${bootstrapReadFixture.toString()};console.log(JSON.stringify(await f(${JSON.stringify(material)})));\n`);
++    const child = spawnSync(process.execPath, [program], { encoding: 'utf8', timeout: 30_000 });
++    assert.equal(child.status, 0, child.stderr);
++    const result = JSON.parse(child.stdout);
++    assert.equal(result.archiveReadback, 'SAME_ORIGINAL_RUN');
++    assert.equal(result.physicalCommandAttempts, 0);
++    console.log(child.stdout.trim());
++  } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
++});
++
++
++test('original Native signs at its current archive lock without a physical launch or replacement Run', async () => {
++  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-archive-signing-'));
++  try {
++    const material = { repository, artifacts: process.env.P1_3_ACCEPTED_ARTIFACT_ROOT ?? repository,
++      scratch, project: path.join(scratch, 'project'), archiveBeforeDispatch: true };
++    const program = path.join(scratch, 'archive-signing.mjs');
++    fs.writeFileSync(program, `const f=${nativeProcessFixture.toString()};console.log(JSON.stringify(await f(${JSON.stringify(material)})));\n`);
++    const child = spawnSync(process.execPath,[program],{encoding:'utf8',timeout:30_000});
++    assert.equal(child.status,0,child.stderr);
++    const result = JSON.parse(child.stdout);
++    assert.equal(result.physicalCommandAttempts, 0);
++    assert.equal(result.productionQualified, false);
++    console.log(JSON.stringify(result));
++  } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
++});
++
++
++test('Host refuses signing after a Run or lock changes inside the original Native call', async (t) => {
++  for (const signFault of ['completed','foreign-run','moved','missing-lock','linked-lock']) await t.test(signFault,async()=>{
++    const scratch = fs.mkdtempSync(path.join(os.tmpdir(),'p13-signing-current-'));
++    try {
++      const material = {repository,artifacts:process.env.P1_3_ACCEPTED_ARTIFACT_ROOT ?? repository,
++        scratch,project:path.join(scratch,'project'),signFault};
++      const program = path.join(scratch,'signing-current.mjs');
++      fs.writeFileSync(program,`const f=${nativeProcessFixture.toString()};console.log(JSON.stringify(await f(${JSON.stringify(material)})));\n`);
++      const child = spawnSync(process.execPath,[program],{encoding:'utf8',timeout:30_000});
++      assert.equal(child.status,0,child.stderr);
++      const result = JSON.parse(child.stdout);
++      assert.equal(result.refusedBeforeSigning,true); assert.equal(result.physicalCommandAttempts,0);
++      console.log(JSON.stringify(result));
++    } finally { fs.rmSync(scratch,{recursive:true,force:true}); }
++  });
++});
+diff --git a/test/infra-runner-isolation.test.js b/test/infra-runner-isolation.test.js
+index 9a436ca..629807b 100644
+--- a/test/infra-runner-isolation.test.js
++++ b/test/infra-runner-isolation.test.js
+@@ -1234,15 +1234,16 @@ test('Runner refuses every unlisted or linked context path without changing the
+   ];
+   for (const [label, mutate] of cases) await t.test(label, () => {
+     const { fixture, invoke } = makeBuildContextFixture();
+-    const initial = invoke(); assert.equal(initial.status, 0);
+-    const plan = parseJsonOut(initial, 'initial context'), exported = path.join(fixture, plan.dockerBuild.context);
++    const initial = invoke(), plan = parseJsonOut(initial, 'initial context');
++    assert.equal(initial.status, 0, JSON.stringify({ code: plan.code, findings: plan.findings ?? [] }));
++    const exported = path.join(fixture, plan.dockerBuild.context);
+     const conflict = mutate({ fixture, exported, declared: path.join(exported, 'infra/delivery/runner/Dockerfile') });
+     try {
+       for (const exportContext of [false, true]) {
+         const result = invoke(exportContext);
+         assert.equal(result.status, 2, label + ' must fail closed for both plan and export');
+         const report = parseJsonOut(result, label);
+-        assert.equal(report.code, 'CONTEXT_CONFLICT');
++        assert.equal(report.code, 'CONTEXT_CONFLICT', JSON.stringify({ code: report.code, findings: report.findings ?? [] }));
+         assert.equal(report.ready, false); assert.equal(report.status, 'UNVERIFIED');
+         assert.equal(report.dockerBuild, undefined, 'a conflicting context cannot emit an executable Docker build command');
+         conflict.preserved();
+@@ -1745,7 +1746,7 @@ test('Runner bootstrap plan seals both original CODE entries and ordinary infras
+   assert.equal(plan.bootstrap.entry, 'opt/sdd/lib/adapters/comet-executor.js');
+   assert.deepEqual(plan.bootstrap.link, { path: 'opt/sdd/runner-host.mjs', target: 'opt/sdd/lib/adapters/comet-executor.js' });
+   const files = new Map(plan.bootstrap.files.map(item => [item.path, item]));
+-  for (const file of ['lib/adapters/comet-executor.js', 'lib/adapters/comet.js', 'lib/delivery/baseline.js', 'lib/delivery/evidence.js',
++  for (const file of ['lib/adapters/comet-executor.js', 'lib/adapters/comet.js', 'lib/adapters/spec.js', 'lib/delivery/baseline.js', 'lib/delivery/evidence.js',
+     'lib/delivery/gate.js', 'lib/delivery/test-contract.js', 'tools/infra/runner.mjs', 'tools/infra/secret-refs.mjs',
+     'contracts/delivery/index.js', 'package.json', 'package-lock.json', 'infra/delivery/qualification-policy.json']) {
+     assert.equal(files.get(file)?.sha256, sha256File(path.join(repoRoot, file)), 'include the actual source bytes: ' + file);
+@@ -1837,7 +1838,9 @@ test('Runner runtime metadata rejects malformed nested input on every public cal
+ test('Runner bootstrap refuses an undeclared import and an unsafe file set before source materialization', () => {
+   for (const [mutate, expected] of [
+     [files => files.filter(file => file !== 'lib/delivery/test-contract.js'), 'BOOTSTRAP_DEPENDENCY_MISSING'],
++    [files => files.filter(file => file !== 'lib/adapters/spec.js'), 'BOOTSTRAP_DEPENDENCY_MISSING'],
+     [files => [...files, '../i02-private-outside.js'], 'BOOTSTRAP_FILE_SET_INVALID'],
++    [files => [...files, 'lib/adapters/spec-extra.js'], 'BOOTSTRAP_FILE_SET_INVALID'],
+   ]) {
+     const directory = makeFixtureDir(({ json, writeJson }) => {
+       const lock = json('image.lock.json'); lock.sourceInputs.runtime.bootstrap.files = mutate(lock.sourceInputs.runtime.bootstrap.files); writeJson('image.lock.json', lock);
+diff --git a/test/spec-closeout.test.js b/test/spec-closeout.test.js
+index 3a80338..1850692 100644
+--- a/test/spec-closeout.test.js
++++ b/test/spec-closeout.test.js
+@@ -31,7 +31,7 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
+ const adapterPath = path.join(projectRoot, 'lib/adapters/spec.js');
+ const adapter = await import(adapterPath);
+ 
+-const OPENSPEC_CLI = path.join(projectRoot, '.sdd/tools/openspec-1.11.0/node_modules/.bin/openspec');
++const OPENSPEC_CLI = path.join(process.env.P1_3_ACCEPTED_ARTIFACT_ROOT ?? projectRoot, '.sdd/tools/openspec-1.11.0/node_modules/.bin/openspec');
+ const CLI_TIMEOUT_MS = 120_000;
+ 
+ const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
+@@ -696,3 +696,99 @@ test('legacy summary, rehearsal and archived recovery share the project-bound re
+   assert.equal(fs.existsSync(path.join(archive,'.spec-closeout-state.json')),false);
+   assert.equal(fs.readFileSync(external,'utf8'),'ordinary outside requirement');
+ });
++
++
++// This is the same fixed CODE seam consumed by the Host, never a worker path
++// or an alternate archive resolver. The counter only detects forbidden entry.
++test('managed Run context refuses missing, foreign, ambiguous and linked Run locations before Native', async (t) => {
++  for (const fault of ['missing-change','missing-run','foreign-run','active-plus-archive','two-archives',
++    'run-link','directory-link','archive-root-link','escape','unknown-location-option']) await t.test(fault, async (t) => {
++    const f = managedReadFixture(t), active = path.join(f.root,'openspec/changes/demo');
++    let calls = 0;
++    const instance = adapter.createManagedSpecAdapter({projectRoot:f.root,runtime:{runClassicCli(){throw new Error('not a CLI test');},
++      ensureClassicRuntimeRun(){ calls++; throw new Error('unsafe context reached Native'); }}});
++    const request = {change:'demo',expectedRunId:'read-boundary-run'};
++    let code = 'PROJECT_PATH_UNSAFE';
++    const archive = path.join(f.root,'openspec/changes/archive/2026-10-26-demo');
++    if (fault === 'missing-change') { fs.rmSync(active,{recursive:true}); code='CHANGE_MISSING'; }
++    if (fault === 'missing-run') fs.unlinkSync(path.join(f.control,'run-state.json'));
++    if (fault === 'foreign-run') { request.expectedRunId='foreign-run'; code='RUN_MISMATCH'; }
++    if (fault === 'active-plus-archive' || fault === 'two-archives') {
++      fs.mkdirSync(path.dirname(archive),{recursive:true}); fs.cpSync(active,archive,{recursive:true}); code='AMBIGUOUS_ARCHIVE';
++      if (fault === 'two-archives') fs.renameSync(active,path.join(f.root,'openspec/changes/archive/2026-10-25-demo'));
++    }
++    if (fault === 'run-link') {
++      const external = path.join(f.outside,'run.json'); fs.copyFileSync(path.join(f.control,'run-state.json'),external);
++      fs.unlinkSync(path.join(f.control,'run-state.json')); fs.symlinkSync(external,path.join(f.control,'run-state.json'));
++    }
++    if (fault === 'directory-link') { fs.renameSync(active,path.join(f.outside,'demo')); fs.symlinkSync(path.join(f.outside,'demo'),active); }
++    if (fault === 'archive-root-link') fs.symlinkSync(f.outside,path.join(f.root,'openspec/changes/archive'));
++    if (fault === 'escape') { request.change='../demo'; code='CHANGE_INVALID'; }
++    if (fault === 'unknown-location-option') { request.archive=archive; code='CHANGE_INVALID'; }
++    await assert.rejects(instance.readRunContext(request),(error)=>error.code===code);
++    assert.equal(calls,0,'a read must not create or repair an absent or untrusted original Run');
++  });
++});
++
++async function originalRunReadFixture(t, mutate = () => {}) {
++  const artifacts = process.env.P1_3_ACCEPTED_ARTIFACT_ROOT ?? projectRoot;
++  const file = path.join(artifacts,'.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a/work/assets/skills/comet/scripts/comet-runtime.mjs');
++  assert.equal(sha256(fs.readFileSync(file)),'04795080295d7174af82913757254426b82037ea5028296a3602b86d200559dd');
++  const native = await import(file), root = fs.realpathSync(writeProject({delta:FULL_DELTA}));
++  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
++  fs.mkdirSync(path.join(root,'.comet'));
++  fs.writeFileSync(path.join(root,'.comet/config.yaml'),'schema: comet.project.v1\ndefault_workflow: classic\nworkflows: [classic]\nclassic:\n  artifact_layout: legacy\n');
++  const initialized = await native.runClassicCli(['--json','state','init','demo','full','--managed-delivery'],undefined,{projectRoot:root,invocationCwd:root});
++  assert.equal(initialized.exitCode,0,initialized.stdout);
++  const directory = path.join(root,'openspec/changes/demo');
++  const initial = await native.ensureClassicRuntimeRun(directory);
++  const instance = adapter.createManagedSpecAdapter({projectRoot:root,runtime:{runClassicCli:native.runClassicCli,
++    async ensureClassicRuntimeRun(current) {
++      const context = await native.ensureClassicRuntimeRun(current);
++      await mutate(current,context);
++      return context;
++    }}});
++  return {root,directory,instance,runId:initial.run.runId};
++}
++
++test('managed Run context retains Native state and an immutable same-location identity across archive readback', async (t) => {
++  const f = await originalRunReadFixture(t);
++  const request = {change:'demo',expectedRunId:f.runId};
++  const active = await f.instance.readRunContext(request);
++  assert.equal(active.run.runId,f.runId); assert.equal(active.classic.phase,'open');
++  assert.equal(active.changeDir,f.directory); assert.equal(active.archived,false);
++  const archive = path.join(f.root,'openspec/changes/archive/2026-10-26-demo');
++  fs.mkdirSync(path.dirname(archive),{recursive:true}); fs.renameSync(f.directory,archive);
++  assert.throws(()=>active.assertCurrent(),(error)=>error.code==='RUN_LOCATION_CHANGED');
++  const archived = await f.instance.readRunContext(request);
++  assert.equal(archived.changeDir,archive); assert.equal(archived.archived,true);
++  assert.equal(archived.run.runId,f.runId); assert.equal(archived.classic.phase,'open');
++  archived.run.runId='caller-mutated-view';
++  request.expectedRunId='caller-mutated-request';
++  assert.equal(archived.assertCurrent().run.runId,f.runId,'returned data and request mutations cannot redirect the closed-over identity');
++  assert.equal(fs.existsSync(f.directory),false);
++});
++
++test('managed Run context rejects location races, replacement directories and a different Native Run result', async (t) => {
++  for (const fault of ['moved','replacement','foreign-disk-run','foreign-native-run','new-conflict','run-link']) await t.test(fault,async(t)=>{
++    const f = await originalRunReadFixture(t,(directory,context)=>{
++      const archive = path.join(path.dirname(directory),'archive/2026-10-26-demo');
++      if (fault === 'moved' || fault === 'replacement') {
++        fs.mkdirSync(path.dirname(archive),{recursive:true}); fs.renameSync(directory,archive);
++        if (fault === 'replacement') { fs.cpSync(archive,directory,{recursive:true}); fs.rmSync(archive,{recursive:true}); }
++      }
++      if (fault === 'foreign-disk-run') {
++        const file=path.join(directory,'.comet/run-state.json');const run=JSON.parse(fs.readFileSync(file));run.runId='other-run';fs.writeFileSync(file,JSON.stringify(run));
++      }
++      if (fault === 'foreign-native-run') context.run.runId='other-run';
++      if (fault === 'new-conflict') { fs.mkdirSync(path.dirname(archive),{recursive:true});fs.cpSync(directory,archive,{recursive:true}); }
++      if (fault === 'run-link') {
++        const source=path.join(directory,'.comet/run-state.json'), target=path.join(directory,'original-run.json');
++        fs.renameSync(source,target);fs.symlinkSync(target,source);
++      }
++    });
++    const code = ['moved','replacement'].includes(fault) ? 'RUN_LOCATION_CHANGED'
++      : fault === 'new-conflict' ? 'AMBIGUOUS_ARCHIVE' : fault === 'run-link' ? 'PROJECT_PATH_UNSAFE' : 'RUN_MISMATCH';
++    await assert.rejects(f.instance.readRunContext({change:'demo',expectedRunId:f.runId}),(error)=>error.code===code);
++  });
++});
+diff --git a/tools/infra/runner.mjs b/tools/infra/runner.mjs
+index 271a9fa..16024f1 100644
+--- a/tools/infra/runner.mjs
++++ b/tools/infra/runner.mjs
+@@ -359,7 +359,7 @@ function runtimeInputShape(value) {
+ 
+ const RUNTIME_DEPENDENCY_SETS = ['bootstrap-npm', 'comet-pnpm', 'git-deb', 'openspec-npm', 'pnpm', 'python-wheel'];
+ function safeBootstrapFile(file) {
+-  return /^(?:package(?:-lock)?\.json|LICENSE|lib\/adapters\/comet(?:-executor)?\.js|lib\/delivery\/(?:baseline|evidence|gate|test-contract)\.js|tools\/infra\/(?:runner|secret-refs)\.mjs|contracts\/delivery\/[A-Za-z0-9.-]+\.js|infra\/delivery\/(?:registry\.json|secrets\.refs\.example\.json|qualification-policy\.json|runner\/(?:compose\.yaml|Dockerfile|role-policy\.json|workspace-mounts\.json|authority-registration\.example\.json)))$/.test(file);
++  return /^(?:package(?:-lock)?\.json|LICENSE|lib\/adapters\/(?:comet(?:-executor)?|spec)\.js|lib\/delivery\/(?:baseline|evidence|gate|test-contract)\.js|tools\/infra\/(?:runner|secret-refs)\.mjs|contracts\/delivery\/[A-Za-z0-9.-]+\.js|infra\/delivery\/(?:registry\.json|secrets\.refs\.example\.json|qualification-policy\.json|runner\/(?:compose\.yaml|Dockerfile|role-policy\.json|workspace-mounts\.json|authority-registration\.example\.json)))$/.test(file);
+ }
+ function safeRuntimeArtifact(file) {
+   return /^\.sdd\/cache\/runner-build\/public\/(?:npm|comet|deb|pnpm|wheel)\/[A-Za-z0-9_.+-]+\.(?:tgz|deb|whl)$/.test(file);

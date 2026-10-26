@@ -1,0 +1,16 @@
+diff --git a/domains/comet-classic/classic-managed-actions.ts b/domains/comet-classic/classic-managed-actions.ts
+--- a/domains/comet-classic/classic-managed-actions.ts
++++ b/domains/comet-classic/classic-managed-actions.ts
+@@ -337,7 +337,12 @@
+     if (!same(fresh.generation, intent.generation)) return invalidate(current, pending, 'upstream evidence generation changed');
+     try {
+       const { contract } = await contractFor(current, { ...intent, actionBinding: m.actionBinding, protectedDispatch: m.protectedDispatch });
++      const binding=m.actionBinding;
++      if(!object(m.contract)||!Array.isArray(m.contract.inputs)||!same(m.contract.outputs,binding.outputs)||!same(m.contract.allowedPaths,binding.allowedPaths)
++        ||!same(m.contract.allowedTools,binding.allowedTools)||!same(m.contract.workPackage,binding.workPackage)
++        ||!m.contract.inputs.every((input:ManagedRecord)=>binding.inputs?.some((actual:ManagedRecord)=>same(actual,input))))return invalidate(current,pending,'original pending contract differs from its authenticated ActionBinding');
+       const identity = await identities(current, fresh, contract);
++      if(binding.revision!==`${intent.iteration}:${m.base}`||intent.revision!==binding.revision||intent.inputDigest!==binding.inputDigest)return invalidate(current,pending,'original producer base/revision/input binding changed');
+       if(knowledge){
+         knowledgeSnapshot(intent,m.actionBinding,itemFor(current,kind).code);
+         const pkg=await readSkillSnapshot(currentChange(current),current.run.skillHash);

@@ -1,0 +1,403 @@
+diff --git a/test/domains/comet-classic/classic-hook-guard.test.ts b/test/domains/comet-classic/classic-hook-guard.test.ts
+index 7586923..7a6e427 100644
+--- a/test/domains/comet-classic/classic-hook-guard.test.ts
++++ b/test/domains/comet-classic/classic-hook-guard.test.ts
+@@ -942,6 +942,21 @@ describe('Classic hook guard command', () => {
+     expect(decision.reason).toContain('Target file: src/feature.ts');
+   });
+ 
++  it.each(['check_epoch: invalid', 'managed_delivery: invalid', 'managed_delivery: null'])(
++    'refuses malformed managed state without legacy write fallback: %s', async (invalid) => {
++      const dir = await makeProject();
++      const changeDir = await seedChange(dir, 'managed-invalid', 'build');
++      const file = path.join(changeDir, '.comet.yaml');
++      await fs.appendFile(file, invalid.startsWith('managed_delivery:') ? `${invalid}\n` : `managed_delivery: true\n${invalid}\n`);
++      for (const target of ['src/feature.ts', 'docs/change.md', '.comet/config.yaml', 'openspec/changes/managed-invalid/.comet.yaml']) {
++        const decision = await inspectClassicHookGuard(dir, 'managed-invalid', {
++          intent: 'write', targets: [path.join(dir, target)], toolName: 'Write',
++        });
++        expect(decision.allowed, target).toBe(false);
++      }
++    },
++  );
++
+   it('fails closed for source writes when a build state has unknown fields', async () => {
+     const dir = await makeProject();
+     const changeDir = await seedChange(dir, 'invalid-build', 'build');
+@@ -1184,3 +1199,13 @@ describe('Classic hook guard command', () => {
+     expect((await inspect('README.md')).allowed).toBe(true);
+   });
+ });
++
++it('keeps managed runtime transaction and policy files controller-owned before generic whitelists', async () => {
++  const dir = await makeProject();
++  expect(run(dir, 'state', ['init', 'managed-control', 'full', '--managed-delivery']).status).toBe(0);
++  for (const relative of ['.comet/config.yaml', '.comet/run-state.json', 'openspec/changes/managed-control/.comet.yaml', 'openspec/changes/managed-control/.comet-state-transaction.json']) {
++    const result = run(dir, 'hook-guard', [], hookInput(path.join(dir, relative)));
++    expect(result.status, relative + ': ' + result.stderr).toBe(2);
++    expect(result.stderr).toContain('controller-owned');
++  }
++});
+diff --git a/test/domains/comet-classic/classic-managed-repair-route.test.ts b/test/domains/comet-classic/classic-managed-repair-route.test.ts
+new file mode 100644
+index 0000000..f2af44f
+--- /dev/null
++++ b/test/domains/comet-classic/classic-managed-repair-route.test.ts
+@@ -0,0 +1,20 @@
++import { describe, expect, it } from 'vitest';
++import { repairRoute } from '../../../domains/comet-classic/classic-gate-runtime.js';
++
++describe('managed repair route respects the native phase', () => {
++  it.each(['A', 'T'] as const)('keeps %s authoring in Design', (gate) => {
++    const route = repairRoute(gate, 'design');
++    expect(route).toContain('Design');
++    expect(route).toContain('author');
++    expect(route).toContain('independent');
++    expect(route).not.toContain('state transition');
++  });
++  it.each(['build', 'verify'])('retains controlled rework from %s', (phase) => {
++    expect(repairRoute('A', phase)).toContain('state transition <change> architecture-repair');
++    expect(repairRoute('T', phase)).toContain('state transition <change> test-design-repair');
++  });
++  it.each([undefined, 'unknown', 'open', 'archive'])('does not guess a transition for %s', (phase) => {
++    expect(repairRoute('A', phase)).toContain('Native state');
++    expect(repairRoute('T', phase)).not.toContain('state transition');
++  });
++});
+diff --git a/test/domains/comet-classic/classic-state.test.ts b/test/domains/comet-classic/classic-state.test.ts
+index a51da16..cfc5c5d 100644
+--- a/test/domains/comet-classic/classic-state.test.ts
++++ b/test/domains/comet-classic/classic-state.test.ts
+@@ -43,6 +43,14 @@ function classicState(): ClassicState {
+     handoffHash: 'b'.repeat(64),
+     classicProfile: 'full',
+     classicMigration: 1,
++    managedDelivery: false,
++    knowledgeCloseoutRequired: false,
++    testIntent: null,
++    gateReceipts: null,
++    gateInvalidations: null,
++    gateDispatches: null,
++    deliveryPolicy: null,
++    knowledgeCloseout: null,
+   };
+ }
+ 
+diff --git a/test/domains/comet-classic/comet-scripts.test.ts b/test/domains/comet-classic/comet-scripts.test.ts
+index 3344526..0d4b79c 100644
+--- a/test/domains/comet-classic/comet-scripts.test.ts
++++ b/test/domains/comet-classic/comet-scripts.test.ts
+@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
+ import os from 'os';
+ import path from 'path';
+ import { parseDocument } from 'yaml';
++import crypto from 'node:crypto';
+ 
+ const scriptsDir = path.resolve('assets', 'skills', 'comet', 'scripts');
+ const classicRuntimeRoot = path.resolve('assets', 'skills', 'comet', 'runtime', 'classic');
+@@ -7082,3 +7083,168 @@ describe('comet scripts', () => {
+     );
+   });
+ });
++
++describe('managed delivery gate runtime (0002-managed-delivery-runtime)', () => {
++  let tmpDir: string;
++  let stateScript: string;
++  let tmpScriptsDir: string;
++
++  const writeManagedArtifacts = async (change: string) => {
++    const dir = path.join(tmpDir, 'openspec', 'changes', change);
++    await fs.mkdir(dir, { recursive: true });
++    await fs.writeFile(path.join(dir, 'proposal.md'), '# Proposal\n\nManaged smoke probe.\n');
++    return dir;
++  };
++
++  beforeEach(async () => {
++    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'comet-managed-'));
++    await fs.mkdir(tmpDir, { recursive: true });
++    tmpScriptsDir = path.join(tmpDir, 'scripts');
++    await fs.mkdir(tmpScriptsDir, { recursive: true });
++    for (const name of ['comet-runtime.mjs', 'comet-state.mjs', 'comet-yaml-validate.mjs']) {
++      const content = await fs.readFile(path.join(scriptsDir, name), 'utf-8');
++      const destination = path.join(tmpScriptsDir, name);
++      await fs.writeFile(destination, content.replace(/\r\n/g, '\n'));
++      await fs.chmod(destination, 0o755);
++    }
++    stateScript = path.join(tmpScriptsDir, 'comet-state.mjs');
++    await writeFile(path.join(tmpDir, '.comet', 'config.yaml'), canonicalProjectConfig());
++    await writeFile(path.join(tmpDir, 'openspec', 'config.yaml'), 'schema: spec-driven\n');
++  });
++
++  afterEach(async () => {
++    await fs.rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
++  });
++
++  it('writes the managed delivery wire fields only for --managed-delivery (full workflow only)', async () => {
++    const managed = runNode(tmpDir, stateScript, [
++      'init', 'managed-change', 'full', '--managed-delivery', '--knowledge-closeout-required', 'true',
++    ]);
++    expect(managed.status).toBe(0);
++    const yaml = await fs.readFile(path.join(tmpDir, 'openspec', 'changes', 'managed-change', '.comet.yaml'), 'utf-8');
++    expect(yaml).toContain('managed_delivery: true');
++    expect(yaml).toContain('knowledge_closeout_required: true');
++    expect(yaml).toContain('gate_receipts: null');
++
++    const preset = runNode(tmpDir, stateScript, [
++      'init', 'preset-managed', 'hotfix', '--managed-delivery',
++    ]);
++    expect(preset.status).not.toBe(0);
++    expect(preset.stderr).toContain('full workflow');
++
++    const unmanaged = runNode(tmpDir, stateScript, ['init', 'plain-change', 'full']);
++    expect(unmanaged.status).toBe(0);
++    const plainYaml = await fs.readFile(path.join(tmpDir, 'openspec', 'changes', 'plain-change', '.comet.yaml'), 'utf-8');
++    expect(plainYaml).not.toContain('managed_delivery');
++  }, 20_000);
++
++  it('keeps gate receipts machine-owned: hand-written receipts are refused (D01)', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'd01', 'full', '--managed-delivery']).status).toBe(0);
++    const forged = runNode(tmpDir, stateScript, [
++      'set', 'd01', 'gate_receipts', '[{"gate":"R","verdict":"pass"}]',
++    ]);
++    expect(forged.status).not.toBe(0);
++    expect(forged.stderr).toContain('machine-owned');
++    const forgedAuthor = runNode(tmpDir, stateScript, [
++      'set', 'd01', 'gate_receipts',
++      '[{"gate":"R","verdict":"pass","digest":"' + 'a'.repeat(64) + '","execution":"author","attempt":1,"epoch":0,"policyVersion":"managed-delivery.v1","acceptedAt":"2026-10-20"}]',
++    ]);
++    expect(forgedAuthor.status).not.toBe(0);
++    const resultFile = path.join(tmpDir, 'forged-result.json');
++    await fs.writeFile(resultFile, JSON.stringify({ execution: 'author-fabricated', attempt: 1, verdict: 'pass' }));
++    const refused = runNode(tmpDir, stateScript, ['accept-gate', 'd01', 'R', '--file', resultFile]);
++    expect(refused.status).not.toBe(0);
++    expect(refused.stderr).toContain('no Runtime dispatch');
++  }, 20_000);
++
++  it('refuses a same-caller report even when dispatch role digest and nonempty report match', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'unqualified-source', 'full', '--managed-delivery']).status).toBe(0);
++    await writeManagedArtifacts('unqualified-source');
++    const dispatched = runNode(tmpDir, stateScript, ['dispatch-gate', 'unqualified-source', 'R']);
++    // Without a registered protected host, even action dispatch is unqualified.
++    if (dispatched.status !== 0) { expect(dispatched.stderr).toContain('UNVERIFIED'); return; }
++    expect(dispatched.status).toBe(0);
++    const binding = JSON.parse(dispatched.stdout.trim().split('\n').pop() ?? '{}');
++    const report = 'Self-authored plausible review; no protected launch or registered source.';
++    const resultFile = path.join(tmpDir, 'self-report.json');
++    await fs.writeFile(resultFile, JSON.stringify({ ...binding, verdict: 'pass', report,
++      reportDigest: crypto.createHash('sha256').update(report).digest('hex') }));
++    const accepted = runNode(tmpDir, stateScript, ['accept-gate', 'unqualified-source', 'R', '--file', resultFile]);
++    expect(accepted.status).not.toBe(0);
++    expect(accepted.stderr).toContain('UNVERIFIED');
++  }, 20_000);
++
++  it('standalone cannot turn a Runtime role or report into protected source qualification', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'happy', 'full', '--managed-delivery']).status).toBe(0);
++    await writeManagedArtifacts('happy');
++    const dispatched = runNode(tmpDir, stateScript, ['dispatch-gate', 'happy', 'R']);
++    expect(dispatched.status).not.toBe(0);
++    expect(dispatched.stderr).toContain('UNVERIFIED');
++    const yaml = await fs.readFile(path.join(tmpDir, 'openspec/changes/happy/.comet.yaml'), 'utf8');
++    expect(yaml).toContain('gate_receipts: null');
++    // The matching positive transaction/replay WHEN/THEN is exercised using
++    // actual P2_2 functions by repository-owned delivery-cases/2_4.mjs.
++  }, 20_000);
++
++  it('standalone D02 cannot mutate a Run with an unregistered restored-input result', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'd02', 'full', '--managed-delivery']).status).toBe(0);
++    const dir = await writeManagedArtifacts('d02');
++    const original = await fs.readFile(path.join(dir, 'proposal.md'), 'utf8');
++    await fs.writeFile(path.join(dir, 'proposal.md'), original + 'Changed input.\n');
++    await fs.writeFile(path.join(dir, 'proposal.md'), original);
++    const resultFile = path.join(tmpDir, 'd02-result.json');
++    await fs.writeFile(resultFile, JSON.stringify({ execution: 'unregistered', attempt: 1, verdict: 'pass' }));
++    const accepted = runNode(tmpDir, stateScript, ['accept-gate', 'd02', 'R', '--file', resultFile]);
++    expect(accepted.status).not.toBe(0);
++    expect(accepted.stderr).toContain('no Runtime dispatch');
++    expect(await fs.readFile(path.join(dir, '.comet.yaml'), 'utf8')).toContain('gate_receipts: null');
++    // Real dispatched/long-read mutation and old-attempt roundtrip assertions
++    // live at the repo-owned Native aggregate + original P2_2 seam.
++  }, 20_000);
++
++  it('standalone refuses formal Design without R even with all legacy artifact files', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'p101', 'full', '--managed-delivery']).status).toBe(0);
++    const dir = await writeManagedArtifacts('p101');
++    await fs.writeFile(path.join(dir, 'design.md'), '# Design draft\n');
++    await fs.writeFile(path.join(dir, 'tasks.md'), '- [ ] Verify the declared native target.\n');
++    const moved = runNode(tmpDir, stateScript, ['transition', 'p101', 'open-complete']);
++    expect(moved.status).not.toBe(0);
++    expect(moved.stderr).toContain('gate R');
++    expect(await fs.readFile(path.join(dir, '.comet.yaml'), 'utf8')).toContain('phase: open');
++  }, 20_000);
++
++  it('standalone refuses empty strong-role and fake-consensus claims without protected source records', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'p102', 'full', '--managed-delivery']).status).toBe(0);
++    await writeManagedArtifacts('p102');
++    for (const gate of ['R', 'A', 'T']) {
++      const file = path.join(tmpDir, `p102-${gate}.json`);
++      await fs.writeFile(file, JSON.stringify({ execution: 'self-claimed-reviewer', attempt: 1, verdict: 'pass',
++        role: 'reviewer', profile: 'comet-managed-v2', trusted: true, report: '',
++        consensus: { rule: 'unanimous', status: 'CLOSED' }, testDesign: { oracle: 'strong', sufficient: true } }));
++      const refused = runNode(tmpDir, stateScript, ['accept-gate', 'p102', gate, '--file', file]);
++      expect(refused.status).not.toBe(0);
++      expect(refused.stderr).toContain('no Runtime dispatch');
++    }
++  }, 20_000);
++
++  it('refuses a direct archived marker even before required Kp or a spec transaction exists', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'archive-marker', 'full', '--managed-delivery']).status).toBe(0);
++    const bypass = runNode(tmpDir, stateScript, ['set', 'archive-marker', 'archived', 'true']);
++    expect(bypass.status).not.toBe(0);
++    expect(bypass.stderr).toContain('Runtime-stamped');
++    const yaml = await fs.readFile(path.join(tmpDir, 'openspec/changes/archive-marker/.comet.yaml'), 'utf8');
++    expect(yaml).toContain('archived: false');
++  });
++
++  it('refuses the phase escape hatch and Runtime-stamped fields in managed delivery (B4)', async () => {
++    expect(runNode(tmpDir, stateScript, ['init', 'b4', 'full', '--managed-delivery']).status).toBe(0);
++    const forced = runNode(tmpDir, stateScript, ['set', 'b4', 'phase', 'build'], { COMET_FORCE_PHASE: '1' });
++    expect(forced.status).not.toBe(0);
++    expect(forced.stderr).toContain('does not lower managed gates');
++    const stamped = runNode(tmpDir, stateScript, ['set', 'b4', 'verify_result', 'pass']);
++    expect(stamped.status).not.toBe(0);
++    expect(stamped.stderr).toContain('Runtime-stamped');
++    const knowledge = runNode(tmpDir, stateScript, ['set', 'b4', 'knowledge_closeout_required', 'false']);
++    expect(knowledge.status).not.toBe(0);
++  }, 20_000);
++});
+diff --git a/test/domains/comet-classic/managed-transaction-crash.test.ts b/test/domains/comet-classic/managed-transaction-crash.test.ts
+new file mode 100644
+index 0000000..439ffb3
+--- /dev/null
++++ b/test/domains/comet-classic/managed-transaction-crash.test.ts
+@@ -0,0 +1,131 @@
++import { it, expect } from 'vitest';
++import { promises as fs, writeSync } from 'node:fs';
++import os from 'node:os';
++import path from 'node:path';
++import { spawn } from 'node:child_process';
++import { once } from 'node:events';
++import { build } from 'esbuild';
++import { runClassicCli } from '../../../domains/comet-classic/classic-cli.js';
++import { ensureClassicRuntimeRun } from '../../../domains/comet-classic/classic-runtime-run.js';
++import {
++  readClassicState,
++  writeClassicState,
++} from '../../../domains/comet-classic/classic-store.js';
++
++it('actual killed writer recovers dispatch and receipt together in the original Run transaction', async () => {
++  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'native-managed-crash-'));
++  let child: ReturnType<typeof spawn> | undefined;
++  let exited: Promise<unknown> | undefined;
++  try {
++    await fs.mkdir(path.join(root, '.comet'), { recursive: true });
++    await fs.writeFile(
++      path.join(root, '.comet/config.yaml'),
++      'schema: comet.project.v1\ndefault_workflow: classic\nworkflows: [classic]\nclassic:\n  artifact_layout: legacy\n',
++    );
++    await fs.mkdir(path.join(root, 'openspec'), { recursive: true });
++    await fs.writeFile(path.join(root, 'openspec/config.yaml'), 'schema: spec-driven\n');
++    const initialized = await runClassicCli(
++      ['state', 'init', 'crash', 'full', '--managed-delivery'],
++      undefined,
++      { projectRoot: root, invocationCwd: root },
++    );
++    expect(initialized.exitCode).toBe(0);
++    const directory = path.join(root, 'openspec/changes/crash');
++    await ensureClassicRuntimeRun(directory);
++    const before = await readClassicState(directory, { migrate: false });
++    expect(before.classic).not.toBeNull();
++    expect(before.run).not.toBeNull();
++    // This is rejected structural fixture data, never a signed passing gate.
++    const registry = {
++      schema: 'comet.classic.gate-dispatches.v1',
++      dispatches: [{ gate: 'R', execution: 'transaction-fixture', state: 'open' }],
++    };
++    await writeClassicState(directory, {
++      ...before,
++      classic: { ...before.classic!, gateDispatches: JSON.stringify(registry), gateReceipts: '[]' },
++    });
++    const baseline = await readClassicState(directory, { migrate: false });
++    const marker = path.join(root, 'writer-reached-before-yaml');
++    const worker = path.join(root, 'writer.mjs');
++    await build({
++      stdin: {
++        contents: `
++      import {promises as fs} from 'node:fs';
++      import {readClassicState,writeClassicState} from ${JSON.stringify(path.resolve('domains/comet-classic/classic-store.ts'))};
++      const directory=process.argv[2], marker=process.argv[3];
++      const before=await readClassicState(directory,{migrate:false});
++      const registry=JSON.parse(before.classic.gateDispatches);
++      registry.dispatches[0].state='consumed';
++      await writeClassicState(directory,{...before,classic:{...before.classic,gateDispatches:JSON.stringify(registry),gateReceipts:JSON.stringify([{transactionFixture:'rejected-not-authenticated'}])},run:{...before.run,iteration:before.run.iteration+1}}, {beforeCommit:async()=>{await fs.writeFile(marker,'Run written, YAML not committed');await new Promise(()=>setInterval(()=>{},1000));}});
++    `,
++        resolveDir: process.cwd(),
++        loader: 'ts',
++      },
++      outfile: worker,
++      bundle: true,
++      platform: 'node',
++      format: 'esm',
++      target: 'node24',
++      banner: {
++        js: "import{createRequire}from'node:module';const require=createRequire(import.meta.url);",
++      },
++    });
++    child = spawn(process.execPath, [worker, directory, marker], {
++      stdio: ['ignore', 'pipe', 'pipe'],
++    });
++    exited = once(child, 'exit');
++    const deadline = Date.now() + 10000;
++    while (Date.now() < deadline) {
++      if (
++        await fs.stat(marker).then(
++          () => true,
++          () => false,
++        )
++      )
++        break;
++      await new Promise((r) => setTimeout(r, 10));
++    }
++    expect(await fs.readFile(marker, 'utf8')).toContain('YAML not committed');
++    expect(await fs.stat(path.join(directory, '.comet-state-transaction.json'))).toBeTruthy();
++    const intermediate = JSON.parse(
++      await fs.readFile(path.join(directory, '.comet/run-state.json'), 'utf8'),
++    );
++    expect(intermediate.runId).toBe(baseline.run!.runId);
++    expect(intermediate.iteration).toBe(baseline.run!.iteration + 1);
++    const killed = child.kill('SIGKILL');
++    expect(killed).toBe(true);
++    const terminal = (await exited) as [number | null, string | null];
++    expect(terminal[1]).toBe('SIGKILL');
++    const recovered = await readClassicState(directory, { migrate: false });
++    expect(recovered.run!.runId).toBe(baseline.run!.runId);
++    expect(recovered.run!.iteration).toBe(baseline.run!.iteration);
++    expect(recovered.classic!.phase).toBe('open');
++    expect(JSON.parse(recovered.classic!.gateDispatches!).dispatches[0].state).toBe('open');
++    expect(JSON.parse(recovered.classic!.gateReceipts!)).toEqual([]);
++    expect(
++      await fs.stat(path.join(directory, '.comet-state-transaction.json')).then(
++        () => true,
++        () => false,
++      ),
++    ).toBe(false);
++    writeSync(
++      2,
++      JSON.stringify({
++        scope: 'component/original-native-transaction-crash',
++        pid: child.pid,
++        signal: terminal[1],
++        runId: recovered.run!.runId,
++        phase: recovered.classic!.phase,
++        dispatch: 'open',
++        receipts: 0,
++        businessAcceptedScenarios: 0,
++      }) + '\n',
++    );
++  } finally {
++    if (child && child.exitCode === null && child.signalCode === null) {
++      child.kill('SIGKILL');
++      if (exited) await exited;
++    }
++    await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
++  }
++}, 20000);

@@ -1,0 +1,11 @@
+--- a/domains/comet-classic/classic-managed-knowledge.ts
++++ b/domains/comet-classic/classic-managed-knowledge.ts
+@@ -30,7 +30,7 @@
+   if (policy.producerTools === undefined) return [];
+   if (!obj(policy.producerTools) || Object.keys(policy.producerTools).some(action => !knowledgeAction(action))) fail('unknown protected knowledge CODE registration');
+   return Object.keys(policy.producerTools).map(action => { const item = knowledgeDefinition(profile, policy, action);
+-    return { id: item.tool, kind: 'script', source: item.code.ref, code: item.code, sideEffect: knowledgeAction(action)!.stage === 'write' ? 'external' : 'write' }; });
++    return { id: item.tool, kind: 'function', source: item.code.ref, code: item.code, sideEffect: knowledgeAction(action)!.stage === 'write' ? 'external' : 'write' }; });
+ }
+ const tupleKeys = ['gate','operationKey','knowledgeId','payloadRef','payloadDigest','target','baseRevision','authorizationRef','authorizationDigest','sourcePermissionsRef','sourcePermissionsDigest','targetAudienceRef','targetAudienceDigest'];
+ export function knowledgeTuple(value: unknown, gate: string): ManagedRecord {

@@ -1,0 +1,1031 @@
+diff --git a/domains/comet-classic/classic-archive.ts b/domains/comet-classic/classic-archive.ts
+index 5e515c4..2a68c56 100644
+--- a/domains/comet-classic/classic-archive.ts
++++ b/domains/comet-classic/classic-archive.ts
+@@ -1,4 +1,5 @@
+ import { managedOpenSpecInvocation } from './classic-openspec-binding.js';
++import { requireRunAuthority } from './classic-gate-runtime.js';
+ import { prepareArchiveInputBridge, registerArchiveInputBridge, archivedGateInputs } from './classic-archive-input-bridge.js';
+ import { evaluateGatePremises, computeGateInputs, parseGateReceipts, type GateId, type GateInputs } from './classic-gate-runtime.js';
+ import { createHash } from 'crypto';
+@@ -17,6 +18,7 @@ import {
+   inspectClassicActiveChangeDirectory,
+   openSpecChangeNameError,
+ } from './classic-paths.js';
++import { knowledgeCloseoutBlocked } from './classic-gate-runtime.js';
+ import { ensureClassicRuntimeRun, transitionClassicRuntimeRun } from './classic-runtime-run.js';
+ import { appendClassicStateEvent } from './classic-state-events.js';
+ import { readClassicState, withClassicStateLock, writeClassicState } from './classic-store.js';
+@@ -350,5 +352,8 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args, options
+     let archiveName = currentArchiveName();
+     let archiveDir = path.join(layout.archiveDir, archiveName);
++    // H07: set inside the archive transaction; consumed by the completion
++    // write and the clear-current decision below.
++    let closeoutBlocked = false;
+ 
+     output.stderr.push(`=== Comet Archive: ${change} ===`);
+ 
+@@ -566,6 +571,7 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args, options
+       }
+ 
+       await withClassicStateLock(archiveDir, async () => {
++        await requireRunAuthority(archiveDir);
+         const archivedProjection = await readClassicState(archiveDir);
+         if (!archivedProjection.classic || !archivedProjection.run) {
+           throw new ArchiveFailure(red('  [FAIL] archived state projection is incomplete'));
+@@ -622,6 +628,11 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args, options
+             archiveTransition.classic.handoffContext,
+           ),
+         };
++        // H07: the archive proves the spec operation only. A managed run
++        // with an unmet knowledge-closeout obligation stays open on the SAME
++        // run — the archive neither completes it nor clears its recovery
++        // entry.
++        closeoutBlocked = knowledgeCloseoutBlocked(archivedClassic);
+         let transitionedRun = archivedProjection.run;
+         if (
+           archivedProjection.run.currentStep !== 'completed' ||
+@@ -656,7 +667,11 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args, options
+         const completedRun: RunState = {
+           ...transitionedRun,
+           pending: null,
+-          status: 'completed',
++          // H07: only the archive's own pending intent is cleared here. The
++          // run is stamped completed ONLY when the aggregated closeout
++          // predicate says the run is actually done; a pending knowledge
++          // closeout parks the run on waiting with the closeout step.
++          status: closeoutBlocked ? 'waiting' : 'completed',
+         };
+         await writeClassicState(archiveDir, {
+           classic: archivedClassic,
+@@ -676,6 +691,13 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args, options
+       output.stderr.push(green('  [OK] archived: true'));
+       output.stepsOk += 1;
+       output.stepsTotal += 1;
++      if (closeoutBlocked) {
++        output.stderr.push(
++          yellow(
++            '  [PENDING] knowledge closeout: the run stays open (waiting) on the SAME run until the obligation is recorded; do not archive again',
++          ),
++        );
++      }
+     } else {
+       if (!projection.run) {
+         throw new ArchiveFailure(
+@@ -726,7 +748,15 @@ export const classicArchiveCommand: ClassicCommandHandler = async (args, options
+     if (!dryRun) {
+       const delivery = await readClassicDelivery(layout.projectRoot, archiveDir);
+       if (['complete', 'local-verified'].includes(delivery.verification.status)) {
+-        await clearCurrentChangeIf(layout.projectRoot, change);
++        if (closeoutBlocked) {
++          // H01/H07: Git delivery is done but the knowledge closeout is not;
++          // the current-change entry is the recovery anchor of the SAME run.
++          output.stderr.push(
++            yellow('  [KEPT] current-change recovery entry retained while the knowledge closeout is pending'),
++          );
++        } else {
++          await clearCurrentChangeIf(layout.projectRoot, change);
++        }
+       }
+     }
+ 
+diff --git a/domains/comet-classic/classic-current-change.ts b/domains/comet-classic/classic-current-change.ts
+index 235b7b7..5300c4b 100644
+--- a/domains/comet-classic/classic-current-change.ts
++++ b/domains/comet-classic/classic-current-change.ts
+@@ -17,6 +17,7 @@ import {
+   findClassicArchiveChangeDirectory,
+   inspectClassicActiveChangeDirectory,
+ } from './classic-paths.js';
++import { archivedDeliveryExcluded } from './classic-gate-runtime.js';
+ import { readClassicDelivery } from './classic-progress.js';
+ import { readClassicState } from './classic-store.js';
+ import { resolveClassicWorkspace } from './classic-workspace.js';
+@@ -66,9 +67,12 @@ async function validateSelectableChange(projectRoot: string, changeName: string)
+     if (!archived) throw activeError;
+     const projection = await readClassicState(archived.directory, { migrate: false });
+     const delivery = await readClassicDelivery(projectRoot, archived.directory);
++    // H01: a Git-delivery-complete archived change stays selectable while its
++    // managed knowledge closeout is pending — the aggregate closeout
++    // predicate, not the single Git status, decides.
+     if (
+       !projection.classic?.archived ||
+-      ['complete', 'local-verified'].includes(delivery.verification.status)
++      archivedDeliveryExcluded(projection.classic, delivery.verification.status)
+     ) {
+       throw activeError;
+     }
+@@ -149,9 +153,10 @@ export async function resolveCurrentChange(projectRoot: string): Promise<Current
+       if (!archived) throw error;
+       const projection = await readClassicState(archived.directory, { migrate: false });
+       const delivery = await readClassicDelivery(projectRoot, archived.directory);
++      // H01: same aggregate closeout predicate as selection.
+       if (
+         !projection.classic?.archived ||
+-        ['complete', 'local-verified'].includes(delivery.verification.status)
++        archivedDeliveryExcluded(projection.classic, delivery.verification.status)
+       ) {
+         throw error;
+       }
+diff --git a/domains/comet-classic/classic-gate-runtime.ts b/domains/comet-classic/classic-gate-runtime.ts
+index 623ea2f..79af3ea 100644
+--- a/domains/comet-classic/classic-gate-runtime.ts
++++ b/domains/comet-classic/classic-gate-runtime.ts
+@@ -17,6 +17,7 @@ import { archivedGateInputs } from './classic-archive-input-bridge.js';
+ // (managed_delivery: true in .comet.yaml).
+ import { createHash } from 'node:crypto';
+ import { promises as fs, type Dirent } from 'node:fs';
++import { hostname } from 'node:os';
+ import path from 'path';
+ import {
+   readOptionalEngineRunText,
+@@ -911,3 +912,278 @@ export function managedPremisesBlocked(
+ export async function knowledgeTargetDigest(projectRoot: string, target: string): Promise<string | null> {
+   return hashProjectFile(projectRoot, path.resolve(projectRoot, target));
+ }
++
++// ---- post-archive continuation (0003) --------------------------------------
++
++// H01 shared predicate: an archived change whose Git delivery verification is
++// complete is excluded from discovery/selection ONLY when its managed
++// knowledge-closeout obligation is met. A closeout-pending run stays
++// discoverable and selectable on the SAME run after the archive move.
++export function archivedDeliveryExcluded(
++  classic: {
++    managedDelivery?: boolean;
++    knowledgeCloseoutRequired?: boolean;
++    knowledgeCloseout?: unknown;
++  },
++  verificationStatus: string,
++): boolean {
++  return (
++    ['complete', 'local-verified'].includes(verificationStatus) &&
++    !knowledgeCloseoutBlocked(classic)
++  );
++}
++
++// Snake-case document record -> the closeout predicate input (shared by the
++// callers that read .comet.yaml directly instead of the parsed projection).
++export function closeoutPredicateFromDocument(record: Record<string, unknown>, actualRunId?: string): {
++  managedDelivery: boolean; knowledgeCloseoutRequired: boolean; knowledgeCloseout: unknown;
++  gateReceipts: unknown; deliveryPolicy: unknown; gateRunId: string | null;
++} {
++  return { managedDelivery: record.managed_delivery === true,
++    knowledgeCloseoutRequired: record.knowledge_closeout_required === true,
++    knowledgeCloseout: record.knowledge_closeout ?? null,
++    gateReceipts: record.gate_receipts ?? null, deliveryPolicy: record.delivery_policy ?? null,
++    gateRunId: typeof actualRunId === 'string' && record.run_id === actualRunId ? actualRunId : null };
++}
++
++// ---- knowledge publish operations (0003, H04/H05) ---------------------------
++//
++// The Outline publication ledger of the SAME run: one operation per logical
++// knowledge entry revision. The document UUID is fixed at first registration
++// (before any remote request) and retries recover the SAME operation; remote
++// observations classify what actually happened (absent / exists / conflict /
++// unknown) and unknown is never absence (H04); a lastRevision conflict stays
++// open until an independent readback resolves it, and the revision is never
++// refreshed into a blind overwrite (H05). Same ledger file discipline as the
++// gate dispatch registry: the run's own .comet directory, atomic writer, no
++// second control plane.
++
++export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
++export const MAX_KNOWLEDGE_OPERATIONS = 200;
++
++export type KnowledgeObservationOutcome = 'absent' | 'exists' | 'conflict' | 'unknown';
++
++export interface KnowledgeObservation {
++  outcome: KnowledgeObservationOutcome;
++  revision: string | null;
++  readbackDigest: string | null;
++  at: string;
++}
++
++export interface KnowledgePublishOperation {
++  operationKey: string;
++  knowledgeId: string;
++  documentId: string;
++  collection: string;
++  payloadDigest: string;
++  baseRevision: string | null;
++  lastRevision: string | null;
++  state: 'pending' | 'conflict' | 'published';
++  attempts: number;
++  lastObservation: KnowledgeObservation | null;
++  createdAt: string;
++  updatedAt: string;
++}
++
++export interface KnowledgePublishFile {
++  schema: 'comet.classic.knowledge-publish.v1';
++  operations: KnowledgePublishOperation[];
++}
++
++const KNOWLEDGE_PUBLISH_FILE = '.comet/knowledge-publish-operations.json';
++
++export function knowledgeOperationKey(input: {
++  knowledgeId: string;
++  collection: string;
++  payloadDigest: string;
++}): string {
++  return sha256Text(
++    stableStringify({
++      knowledgeId: input.knowledgeId,
++      collection: input.collection,
++      payloadDigest: input.payloadDigest,
++    }),
++  );
++}
++
++export async function readKnowledgePublishOperations(changeDir: string): Promise<KnowledgePublishFile> {
++  const raw = await readOptionalEngineRunText(changeDir, KNOWLEDGE_PUBLISH_FILE, Number.MAX_SAFE_INTEGER, 'Knowledge publish ledger');
++  if (raw === null) return { schema: 'comet.classic.knowledge-publish.v1', operations: [] };
++  const value = JSON.parse(raw) as KnowledgePublishFile;
++  if (
++    !value ||
++    value.schema !== 'comet.classic.knowledge-publish.v1' ||
++    !Array.isArray(value.operations)
++  ) {
++    throw new Error('Invalid Classic knowledge publish ledger');
++  }
++  return value;
++}
++
++export async function writeKnowledgePublishOperations(
++  changeDir: string,
++  file: KnowledgePublishFile,
++): Promise<void> {
++  if (file.operations.length > MAX_KNOWLEDGE_OPERATIONS) {
++    throw new Error(
++      `Knowledge publish ledger exceeds ${MAX_KNOWLEDGE_OPERATIONS} operations; reconcile ${KNOWLEDGE_PUBLISH_FILE} before publishing again`,
++    );
++  }
++  await writeEngineRunText(
++    changeDir,
++    KNOWLEDGE_PUBLISH_FILE,
++    `${stableStringify(file)}\n`,
++    Number.MAX_SAFE_INTEGER,
++    'Knowledge publish ledger',
++  );
++}
++
++// The next Comet-side directive for a registered publication operation. The
++// adapter (thin Outline MCP/API surface) executes exactly this directive; it
++// never decides the business next step.
++export function knowledgePublishDirective(operation: KnowledgePublishOperation): {
++  action: string;
++  documentId: string;
++  lastRevision?: string;
++  reason?: string;
++} {
++  if (operation.state === 'conflict') {
++    return {
++      action: 'reconcile-readback',
++      documentId: operation.documentId,
++      reason: '409 conflict: read back the registered document and reconcile; do not refresh the revision and overwrite the remote edit (H05)',
++    };
++  }
++  if (operation.lastObservation?.outcome === 'unknown') {
++    return {
++      action: 'reconcile-info',
++      documentId: operation.documentId,
++      reason: '403/timeout is not absence: read the fixed document UUID back (documents.info) before any create (H04)',
++    };
++  }
++  if (operation.lastObservation?.outcome === 'exists') {
++    return {
++      action: 'record-closeout',
++      documentId: operation.documentId,
++      reason: 'the independent readback matches the registered payload; record the knowledge closeout',
++    };
++  }
++  if (operation.lastObservation?.outcome === 'absent') {
++    return {
++      action: 'create',
++      documentId: operation.documentId,
++      ...(operation.baseRevision ? { lastRevision: operation.baseRevision } : {}),
++      reason: 'confirmed absent: create with the SAME fixed document UUID (H04)',
++    };
++  }
++  return {
++    action: operation.baseRevision ? 'update' : 'create',
++    documentId: operation.documentId,
++    ...(operation.baseRevision ? { lastRevision: operation.baseRevision } : {}),
++  };
++}
++
++// ---- run authority binding (0003, H09) --------------------------------------
++//
++// One run, one authoritative environment (R01 A): the binding is recorded by
++// the Runtime from the RUNTIME ENVIRONMENT configuration (never from a
++// client-filled host/session label), lives in the run's own .comet directory,
++// and every mutating closeout-window entrance verifies it. Other hosts keep
++// read-only query access; writes require the bound authority or an explicit,
++// Runtime-performed transfer.
++
++export interface RunAuthorityTransfer {
++  from: string;
++  to: string;
++  at: string;
++}
++
++export interface RunAuthorityFile {
++  schema: 'comet.classic.run-authority.v1';
++  authorityId: string;
++  boundAt: string;
++  transfers: RunAuthorityTransfer[];
++}
++
++const RUN_AUTHORITY_FILE = '.comet/run-authority.json';
++
++export class RunAuthorityError extends Error {
++  constructor(message: string) {
++    super(message);
++    this.name = 'RunAuthorityError';
++  }
++}
++
++export function currentRunAuthorityId(): string {
++  const configured = process.env.COMET_RUN_AUTHORITY;
++  return configured && configured.trim() !== '' ? configured.trim() : hostname();
++}
++
++export async function readRunAuthority(changeDir: string): Promise<RunAuthorityFile | null> {
++  const raw = await readOptionalEngineRunText(changeDir, RUN_AUTHORITY_FILE, Number.MAX_SAFE_INTEGER, 'Run authority binding');
++  if (raw === null) return null;
++  const value = JSON.parse(raw) as RunAuthorityFile;
++  if (
++    !value ||
++    value.schema !== 'comet.classic.run-authority.v1' ||
++    typeof value.authorityId !== 'string' ||
++    value.authorityId === '' ||
++    !Array.isArray(value.transfers)
++  ) {
++    throw new Error('Invalid Classic run authority binding');
++  }
++  return value;
++}
++
++async function writeRunAuthority(changeDir: string, file: RunAuthorityFile): Promise<void> {
++  await writeEngineRunText(
++    changeDir,
++    RUN_AUTHORITY_FILE,
++    `${stableStringify(file)}\n`,
++    Number.MAX_SAFE_INTEGER,
++    'Run authority binding',
++  );
++}
++
++// Create-if-absent at managed init: the first environment to run the Runtime
++// becomes the authoritative one; later binds never overwrite.
++export async function bindRunAuthority(changeDir: string): Promise<RunAuthorityFile> {
++  const existing = await readRunAuthority(changeDir);
++  if (existing) return existing;
++  const file: RunAuthorityFile = {
++    schema: 'comet.classic.run-authority.v1',
++    authorityId: currentRunAuthorityId(),
++    boundAt: new Date().toISOString(),
++    transfers: [],
++  };
++  await writeRunAuthority(changeDir, file);
++  return file;
++}
++
++// The transfer is performed BY the authoritative environment (the caller has
++// already passed requireRunAuthority) and recorded in the binding itself.
++export async function transferRunAuthority(changeDir: string, to: string): Promise<RunAuthorityFile> {
++  const existing = await readRunAuthority(changeDir);
++  if (!existing) throw new RunAuthorityError('ERROR: this run has no authority binding to transfer');
++  if (to === existing.authorityId) return existing;
++  const file: RunAuthorityFile = {
++    ...existing,
++    authorityId: to,
++    transfers: [...existing.transfers, { from: existing.authorityId, to, at: new Date().toISOString() }],
++  };
++  await writeRunAuthority(changeDir, file);
++  return file;
++}
++
++// H09 gate for every mutating closeout-window entrance: a copied workspace
++// under a foreign authority is refused as a second writer; queries stay open.
++export async function requireRunAuthority(changeDir: string): Promise<void> {
++  const binding = await readRunAuthority(changeDir);
++  if (!binding) return;
++  const current = currentRunAuthorityId();
++  if (current !== binding.authorityId) {
++    throw new RunAuthorityError(
++      `ERROR: run authority mismatch: this workspace is bound to authoritative environment '${binding.authorityId}' but the current environment is '${current}'. Return to the authoritative environment or perform an explicit, confirmed authority transfer; a copied workspace never becomes a second writer (H09)`,
++    );
++  }
++}
+diff --git a/domains/comet-classic/classic-migrate.ts b/domains/comet-classic/classic-migrate.ts
+index 64ae3ce..d1f32cf 100644
+--- a/domains/comet-classic/classic-migrate.ts
++++ b/domains/comet-classic/classic-migrate.ts
+@@ -1,6 +1,7 @@
+ import { createHash, randomUUID } from 'crypto';
+ import { promises as fs } from 'fs';
+ import path from 'path';
++import { parseDocument } from 'yaml';
+ import { collectClassicEvidence, type ClassicEvidence } from './classic-evidence.js';
+ import { resolveClassicStepId } from './classic-resolver.js';
+ import { readClassicState, writeClassicState, withClassicStateLock } from './classic-store.js';
+@@ -145,6 +146,28 @@ async function ensureClassicRunLocked(
+   const classic = projection.classic;
+   const profile = classic.classicProfile ?? classic.workflow;
+ 
++  if (!projection.run) {
++    // H08: a recorded run_id without its Run state file means the original
++    // Run record was lost (or the workspace was copied incompletely).
++    // Fabricating a fresh Run here would turn "restore the workspace" into
++    // "pretend nothing happened" — refuse with recovery-required instead of
++    // minting an empty replacement run.
++    let recordedRunId: string | null = null;
++    try {
++      const document = parseDocument(await fs.readFile(path.join(changeDir, '.comet.yaml'), 'utf8'));
++      const value = (document.toJS() ?? {}) as Record<string, unknown>;
++      recordedRunId =
++        typeof value.run_id === 'string' && value.run_id !== 'null' ? value.run_id : null;
++    } catch {
++      recordedRunId = null;
++    }
++    if (recordedRunId) {
++      throw new Error(
++        `Classic Run state file is missing while run_id ${recordedRunId} is recorded; restore the original workspace state before continuing — the Run is never fabricated (recovery-required, H08)`,
++      );
++    }
++  }
++
+   if (projection.run) {
+     if (classic.classicMigration !== CLASSIC_MIGRATION_VERSION) {
+       throw new Error('Classic Run exists without a supported classic_migration marker');
+diff --git a/domains/comet-classic/classic-resume-probe.ts b/domains/comet-classic/classic-resume-probe.ts
+index 2e5ce7c..f65a21f 100644
+--- a/domains/comet-classic/classic-resume-probe.ts
++++ b/domains/comet-classic/classic-resume-probe.ts
+@@ -7,6 +7,7 @@ import { readDir } from '../../platform/fs/file-system.js';
+ import type { ClassicDiagnostic } from './classic-diagnostics.js';
+ import { readClassicState } from './classic-store.js';
+ import type { ClassicStateProjection } from './classic-state.js';
++import { archivedDeliveryExcluded } from './classic-gate-runtime.js';
+ import { readClassicDelivery } from './classic-progress.js';
+ import { inspectClassicActiveChangeDirectory, openSpecChangeNameError } from './classic-paths.js';
+ import {
+@@ -325,7 +326,9 @@ async function discoverPendingArchivedChanges(projectRoot: string): Promise<Acti
+     const classic = projection.classic;
+     if (!classic?.archived || classic.phase !== 'archive') continue;
+     const delivery = await readClassicDelivery(projectRoot, inspection.target);
+-    if (['complete', 'local-verified'].includes(delivery.verification.status)) continue;
++    // H01: Git-delivery-complete no longer excludes a managed run whose
++    // knowledge closeout is still pending — the SAME run stays discoverable.
++    if (archivedDeliveryExcluded(classic, delivery.verification.status)) continue;
+ 
+     const diagnostic = diagnosticFromProjection(inspection.target, name, projection);
+     const change: ActiveProbeChange = {
+diff --git a/domains/comet-classic/classic-runtime-run.ts b/domains/comet-classic/classic-runtime-run.ts
+index 1a10290..51d0f88 100644
+--- a/domains/comet-classic/classic-runtime-run.ts
++++ b/domains/comet-classic/classic-runtime-run.ts
+@@ -1,5 +1,6 @@
+ import { createHash } from 'node:crypto';
+ import { stableStringify } from './classic-gate-runtime.js';
++import { requireRunAuthority } from './classic-gate-runtime.js';
+ import { managedDeliveryHost } from './classic-managed-host.js';
+ import { syncGateInvalidations } from './classic-gate-runtime.js';
+ import { discoverClassicProject } from './classic-layout.js';
+@@ -314,6 +315,7 @@ async function loadClassicRuntimePackage(root: string) {
+ 
+ export async function ensureClassicRuntimeRun(changeDir: string): Promise<ClassicRunContext> {
+   const root = await classicRuntimeRoot();
++  await requireRunAuthority(changeDir);
+   const prior = await readClassicState(changeDir, { migrate: false });
+   if (prior.run && prior.classic?.managedDelivery && managedDeliveryHost()) await syncGateInvalidations(changeDir, await discoverClassicProject(changeDir));
+   const ensured = await ensureClassicRun(changeDir, {
+@@ -386,6 +388,7 @@ export async function validateClassicRuntimeRun(
+   changeDir: string,
+   existingProjection?: ClassicStateProjection,
+ ): Promise<ClassicRunContext> {
++  await requireRunAuthority(changeDir);
+   if (managedDeliveryHost()) await syncGateInvalidations(changeDir, await discoverClassicProject(changeDir));
+   const projection = await readClassicState(changeDir, { migrate: false });
+   const validated = await loadValidatedClassicRuntime(changeDir, projection);
+@@ -461,6 +464,7 @@ async function reconcileClassicRuntimeRunLocked(
+   changeDir: string,
+   existingProjection?: ClassicStateProjection,
+ ): Promise<ClassicRuntimeReconciliation> {
++  await requireRunAuthority(changeDir);
+   if (managedDeliveryHost()) await syncGateInvalidations(changeDir, await discoverClassicProject(changeDir));
+   const projection = await readClassicState(changeDir, { migrate: false });
+   if (existingProjection?.run && existingProjection.run.runId !== projection.run?.runId) {
+@@ -492,7 +496,14 @@ async function reconcileClassicRuntimeRunLocked(
+     ...validated.run,
+     currentStep,
+     iteration: validated.run.iteration + 1,
+-    status: currentStep === 'completed' ? 'completed' : 'running',
++    // H07: the post-archive knowledge closeout parks the run on waiting —
++    // the aggregate closeout predicate, not the archive, decides completion.
++    status:
++      currentStep === 'completed'
++        ? 'completed'
++        : currentStep === 'full.closeout.knowledge'
++          ? 'waiting'
++          : 'running',
+   };
+   await writeClassicState(changeDir, {
+     classic: validated.classic,
+@@ -562,7 +573,14 @@ async function transitionClassicRuntimeRunLocked(
+     ...run,
+     currentStep,
+     iteration: run.iteration + 1,
+-    status: currentStep === 'completed' ? 'completed' : 'running',
++    // H07: the post-archive knowledge closeout parks the run on waiting —
++    // the aggregate closeout predicate, not the archive, decides completion.
++    status:
++      currentStep === 'completed'
++        ? 'completed'
++        : currentStep === 'full.closeout.knowledge'
++          ? 'waiting'
++          : 'running',
+   };
+ 
+   await writeClassicState(changeDir, {
+diff --git a/domains/comet-classic/classic-state-command.ts b/domains/comet-classic/classic-state-command.ts
+index 2e81f15..c2e83e5 100644
+--- a/domains/comet-classic/classic-state-command.ts
++++ b/domains/comet-classic/classic-state-command.ts
+@@ -1,4 +1,5 @@
+ import { ManagedCompletionIntegrityError } from './classic-runtime-run.js';
++import { bindRunAuthority, closeoutPredicateFromDocument } from './classic-gate-runtime.js';
+ import { ensureClassicRuntimeRun } from './classic-runtime-run.js';
+ import { requireManagedDeliveryHost, admitManagedPacket, ManagedSourceUnverifiedError } from './classic-managed-host.js';
+ import { measureCometGitCommand } from '../../platform/process/runtime-metrics.js';
+@@ -70,15 +71,25 @@ import {
+   GATE_ROLES,
+   isGateId,
+   knowledgeCloseoutBlocked,
++  knowledgeOperationKey,
++  knowledgePublishDirective,
+   knowledgeTargetDigest,
+   parseGateReceipts,
+   parseKnowledgeCloseout,
+   readGateDispatches,
++  readKnowledgePublishOperations,
++  readRunAuthority,
+   repairRoute,
+   requiredGates,
++  requireRunAuthority,
+   stableStringify,
++  transferRunAuthority,
++  UUID_RE,
+   writeGateDispatches,
++  writeKnowledgePublishOperations,
+   type GateId,
++  type KnowledgePublishOperation,
++  RunAuthorityError,
+ } from './classic-gate-runtime.js';
+ import { appendTrajectory, readTrajectory } from '../../domains/engine/run-store.js';
+ import {
+@@ -781,6 +792,13 @@ async function init(
+   });
+   if (isolation !== null) document.set('bound_branch', boundBranch);
+   await atomicWrite(file, document.toString());
++  if (managedDelivery) {
++    // H09: the first Runtime environment to initialize the managed run
++    // becomes its authoritative environment; the binding lives in the run's
++    // own .comet directory and every mutating entrance re-verifies it.
++    const authority = await bindRunAuthority(directory);
++    output.stderr.push(green(`[BOUND] run authority: ${authority.authorityId}`));
++  }
+   output.stdout.push(green(`Initialized: ${label}/.comet.yaml (workflow=${workflow})`));
+ }
+ 
+@@ -2116,7 +2134,9 @@ async function dispatchGate(output: CommandOutput, name: string, gate: string):
+   if (record.managed_delivery !== true) {
+     fail(`ERROR: gate dispatching requires managed delivery; '${name}' is not managed`);
+   }
+-  if (record.archived === true) fail(`ERROR: '${name}' is archived; gate dispatching is closed`);
++  const actualRunId = (await readRunState(directory))?.runId;
++  if (record.archived === true && !(gate === 'Kt' && knowledgeCloseoutBlocked(closeoutPredicateFromDocument(record, actualRunId)))) fail(`ERROR: '${name}' is archived; gate dispatching is closed`);
++  await requireRunAuthority(directory);
+   await withClassicStateLock(directory, async () => {
+     requireManagedDeliveryHost();
+     if ((await readRunState(directory))?.status === 'completed') throw new CommandFailure('RUN_COMPLETED: completed product Run cannot dispatch a new gate', 2, { code: 'RUN_COMPLETED', message: 'Completed product lifecycle is immutable' });
+@@ -2136,6 +2156,13 @@ async function dispatchGate(output: CommandOutput, name: string, gate: string):
+       classic: { ...gateStateInputFrom(freshRecord), managedDelivery: true }, run: await readRunState(directory),
+       action: 'enter-design', dependencyOf: gate });
+     if (!dependencies.allowed) fail(`UNVERIFIED: prerequisite gates for ${gate} are not current: ${dependencies.details.join('; ')}`);
++    const openDispatch = registry.dispatches.find((entry) => entry.gate === gate && entry.inputDigest === inputs.digest && entry.state === 'open');
++    if (openDispatch) {
++      output.data = { change: name, gate, dispatch: openDispatch, recovered: true };
++      output.stdout.push(JSON.stringify({ execution: openDispatch.execution, attempt: openDispatch.attempt, role: openDispatch.role, inputDigest: openDispatch.inputDigest, dependsOn: openDispatch.dependsOn, recovered: true }));
++      output.stderr.push(green(`[RECOVERED] gate ${gate} open execution ${openDispatch.execution}; same job_key`));
++      return;
++    }
+     const priorForVersion = registry.dispatches.filter(
+       (entry) => entry.gate === gate && entry.inputDigest === inputs.digest,
+     );
+@@ -2240,6 +2267,12 @@ async function acceptGate(
+     fail('ERROR: a gate rejection must carry structured findings (the rework route needs them)');
+   }
+   const { directory } = await stateFile(name);
++  try {
++    await requireRunAuthority(directory);
++  } catch (error) {
++    if (error instanceof RunAuthorityError) fail(error.message);
++    throw error;
++  }
+   await withClassicStateLock(directory, async () => {
+     const registry = await readGateDispatches(directory);
+     const dispatch = registry.dispatches.find(
+@@ -2262,7 +2295,9 @@ async function acceptGate(
+   const packet: import('./classic-managed-host.js').ManagedRecord = { ...rawPacket, dispatch: originalIntent.protectedDispatch };
+   const collected = await host.authority.collectResult(packet);
+   if (!collected.ok) fail(`UNVERIFIED: protected source collection refused (${collected.error})`);
++  await requireRunAuthority(directory);
+   await withClassicStateLock(directory, async () => {
++    await requireRunAuthority(directory);
+     await syncGateInvalidationsLocked(directory, classicCommandProjectRoot());
+     const registry = await readGateDispatches(directory);
+     const dispatch = registry.dispatches.find((entry) => entry.execution === originalIntent.execution && entry.attempt === originalIntent.attempt && entry.gate === gate);
+@@ -2319,6 +2354,11 @@ async function recordKnowledgeCloseout(
+     fail(error instanceof Error ? error.message : String(error));
+   }
+   if (!closeout) fail('ERROR: knowledge closeout receipt is empty');
++  const authorityLocation = await stateFile(name);
++  await requireRunAuthority(authorityLocation.directory);
++  const authorityProjection = await readClassicState(authorityLocation.directory, { migrate: false });
++  const authorityRecord = (await readDocument(authorityLocation.file)).toJS() as Record<string, unknown>;
++  if (!authorityProjection.run && typeof authorityRecord.run_id === 'string') fail('RECOVERY_REQUIRED: original Run state file is missing; restore it, never create another Run (recovery-required, H08)');
+   if ((await readField(name, 'managed_delivery')) === 'true') fail('UNVERIFIED: generic/file-K closeout is historical only; accept separate protected Kp/Kt source results');
+   const { directory } = await stateFile(name);
+   await withClassicStateLock(directory, async () => {
+@@ -2339,7 +2379,7 @@ async function recordKnowledgeCloseout(
+       // Runtime-issued K dispatch — the driver registers the publication.
+       const registry = await readGateDispatches(directory);
+       const dispatch = registry.dispatches.find(
+-        (entry) => entry.gate === 'K' && entry.execution === closeout.execution,
++        (entry) => entry.gate === 'Kt' && entry.execution === closeout.execution,
+       );
+       if (!dispatch) {
+         fail(
+@@ -2351,6 +2391,39 @@ async function recordKnowledgeCloseout(
+         dispatch.verdict = 'pass';
+         await writeGateDispatches(directory, registry);
+       }
++      // H04/H05: the receipt must close a REGISTERED publication operation on
++      // the fixed document UUID, and only over a matching independent
++      // readback observation. Lost, unknown, absent or conflicting results
++      // are never accepted as publication.
++      const ledger = await readKnowledgePublishOperations(directory);
++      const operation = ledger.operations.find((entry) => entry.documentId === closeout.target);
++      if (!operation) {
++        fail(
++          `ERROR: no registered knowledge publish operation for document ${closeout.target}; register it with 'comet state knowledge-publish' before closing the seat`,
++        );
++      }
++      if (operation.state === 'conflict') {
++        fail(
++          `ERROR: knowledge publish operation ${operation.operationKey.slice(0, 12)}… for document ${closeout.target} is in conflict; reconcile the remote readback before recording the closeout (H05)`,
++        );
++      }
++      const observation = operation.lastObservation;
++      if (
++        !observation ||
++        observation.outcome !== 'exists' ||
++        observation.readbackDigest !== closeout.readbackDigest ||
++        observation.revision !== closeout.revision
++      ) {
++        fail(
++          `ERROR: knowledge closeout for document ${closeout.target} has no matching independent readback; a lost, unknown or stale publication result is never accepted (H04)`,
++        );
++      }
++      if (operation.state !== 'published') {
++        operation.state = 'published';
++        operation.lastRevision = closeout.revision;
++        operation.updatedAt = new Date().toISOString();
++        await writeKnowledgePublishOperations(directory, ledger);
++      }
+     }
+     const projection = await readClassicState(directory, { migrate: false });
+     if (!projection.classic) fail('ERROR: Classic state is missing');
+@@ -2384,6 +2457,254 @@ async function recordKnowledgeCloseout(
+   });
+ }
+ 
++// ---- knowledge publish operations (0003, H04/H05) ---------------------------
++
++function knowledgeOperationFrom(value: unknown, label: string): {
++  knowledgeId: string;
++  documentId: string;
++  collection: string;
++  payloadDigest: string;
++  baseRevision: string | null;
++} {
++  if (!value || typeof value !== 'object' || Array.isArray(value)) {
++    fail(`ERROR: ${label} must be a JSON object`);
++  }
++  const record = value as Record<string, unknown>;
++  const nonEmpty = (input: unknown, field: string): string => {
++    if (typeof input !== 'string' || input.trim() === '') fail(`ERROR: ${label}.${field} must be a non-empty string`);
++    return input.trim();
++  };
++  const knowledgeId = nonEmpty(record.knowledgeId, 'knowledgeId');
++  const documentId = nonEmpty(record.documentId, 'documentId').toLowerCase();
++  if (!UUID_RE.test(documentId)) fail(`ERROR: ${label}.documentId must be a client UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)`);
++  const collection = nonEmpty(record.collection, 'collection');
++  const payloadDigest = nonEmpty(record.payloadDigest, 'payloadDigest');
++  if (!/^[a-f0-9]{64}$/u.test(payloadDigest)) fail(`ERROR: ${label}.payloadDigest must be a sha256 hex digest`);
++  let baseRevision: string | null = null;
++  if (record.baseRevision !== undefined && record.baseRevision !== null) {
++    baseRevision = nonEmpty(record.baseRevision, 'baseRevision');
++  }
++  return { knowledgeId, documentId, collection, payloadDigest, baseRevision };
++}
++
++
++
++function chainLastRevision(operations: KnowledgePublishOperation[], knowledgeId: string, collection: string): string | null {
++  let last: string | null = null;
++  for (const entry of operations) {
++    if (entry.knowledgeId !== knowledgeId || entry.collection !== collection) continue;
++    if (entry.lastObservation?.revision) last = entry.lastObservation.revision;
++    if (entry.lastRevision) last = entry.lastRevision;
++  }
++  return last;
++}
++
++async function knowledgePublish(
++  output: CommandOutput,
++  name: string,
++  operationFile: string,
++): Promise<void> {
++  validateChangeName(name);
++  let raw: string;
++  try {
++    raw = await fs.readFile(path.resolve(classicCommandInvocationCwd(), operationFile), 'utf8');
++  } catch (error) {
++    fail(`ERROR: cannot read knowledge publish operation file ${operationFile}: ${error instanceof Error ? error.message : String(error)}`);
++  }
++  const input = knowledgeOperationFrom(JSON.parse(raw), 'knowledge publish operation');
++  const { directory, record } = await managedStateRecord(name);
++  await requireManagedDelivery(name, 'knowledge publish');
++  try {
++    await requireRunAuthority(directory);
++  } catch (error) {
++    if (error instanceof RunAuthorityError) fail(error.message);
++    throw error;
++  }
++  const key = knowledgeOperationKey(input);
++  await withClassicStateLock(directory, async () => {
++    const ledger = await readKnowledgePublishOperations(directory);
++    const existing = ledger.operations.find((entry) => entry.operationKey === key);
++    if (existing) {
++      // Idempotent re-registration: the retry after a lost receipt recovers
++      // the SAME operation and the SAME fixed document UUID (H04). Neither
++      // the target identity nor the base revision of a registered operation
++      // can drift through a retry (H05: no revision refresh).
++      if (existing.documentId !== input.documentId) {
++        fail(
++          `ERROR: operation ${key.slice(0, 12)}… is bound to document ${existing.documentId}; a retried operation never changes its fixed target UUID (H04)`,
++        );
++      }
++      if ((input.baseRevision ?? null) !== (existing.baseRevision ?? null)) {
++        fail(
++          `ERROR: operation ${key.slice(0, 12)}… is registered on base revision '${existing.baseRevision ?? 'null'}'; a retry never refreshes the base revision — reconcile the remote state through an independent readback (H05)`,
++        );
++      }
++      existing.attempts += 1;
++      existing.updatedAt = new Date().toISOString();
++      await writeKnowledgePublishOperations(directory, ledger);
++      output.data = { change: name, operation: existing, recovered: true, directive: knowledgePublishDirective(existing) };
++      output.stderr.push(green(`[RECOVERED] knowledge operation ${existing.operationKey.slice(0, 12)}… attempt ${existing.attempts}; the same document UUID stays fixed`));
++      return;
++    }
++    const chain = ledger.operations.filter(
++      (entry) => entry.knowledgeId === input.knowledgeId && entry.collection === input.collection,
++    );
++    const identityOwner = ledger.operations.find(
++      (entry) =>
++        entry.documentId === input.documentId &&
++        (entry.knowledgeId !== input.knowledgeId || entry.collection !== input.collection),
++    );
++    if (identityOwner) {
++      fail(
++        `ERROR: document ${input.documentId} already belongs to knowledge entry '${identityOwner.knowledgeId}' in '${identityOwner.collection}'; a document UUID is owned by exactly one logical knowledge entry`,
++      );
++    }
++    if (chain.length > 0) {
++      // A revision of an existing knowledge entry: same fixed document, and
++      // the update must build on the last registered revision — never a
++      // silent refresh over a conflict (H05).
++      if (chain.some((entry) => entry.state === 'conflict')) {
++        fail(
++          `ERROR: knowledge entry '${input.knowledgeId}' in '${input.collection}' has an unresolved publication conflict; reconcile it through an independent readback before registering another revision (H05)`,
++        );
++      }
++      if (chain.some((entry) => entry.documentId !== input.documentId)) {
++        fail(
++          `ERROR: knowledge entry '${input.knowledgeId}' in '${input.collection}' is bound to document ${chain[0].documentId}; revisions reuse the same fixed document UUID (H04)`,
++        );
++      }
++      const lastRevision = chainLastRevision(ledger.operations, input.knowledgeId, input.collection);
++      if (lastRevision && input.baseRevision !== lastRevision) {
++        fail(
++          `ERROR: update for '${input.knowledgeId}' must build on the registered last revision '${lastRevision}', got '${input.baseRevision ?? 'null'}'; reconcile conflicts through readback instead of refreshing the revision (H05)`,
++        );
++      }
++    }
++    const now = new Date().toISOString();
++    const operation: KnowledgePublishOperation = {
++      operationKey: key,
++      knowledgeId: input.knowledgeId,
++      documentId: input.documentId,
++      collection: input.collection,
++      payloadDigest: input.payloadDigest,
++      baseRevision: input.baseRevision ?? (chain.length > 0 ? chainLastRevision(ledger.operations, input.knowledgeId, input.collection) : null),
++      lastRevision: null,
++      state: 'pending',
++      attempts: 1,
++      lastObservation: null,
++      createdAt: now,
++      updatedAt: now,
++    };
++    ledger.operations.push(operation);
++    await writeKnowledgePublishOperations(directory, ledger);
++    output.data = { change: name, operation, recovered: false, directive: knowledgePublishDirective(operation) };
++    output.stderr.push(green(`[REGISTERED] knowledge operation ${operation.operationKey.slice(0, 12)}… document ${operation.documentId} (fixed before the first request)`));
++  });
++}
++
++async function knowledgeObserve(
++  output: CommandOutput,
++  name: string,
++  observationFile: string,
++): Promise<void> {
++  validateChangeName(name);
++  let raw: string;
++  try {
++    raw = await fs.readFile(path.resolve(classicCommandInvocationCwd(), observationFile), 'utf8');
++  } catch (error) {
++    fail(`ERROR: cannot read knowledge observation file ${observationFile}: ${error instanceof Error ? error.message : String(error)}`);
++  }
++  const parsed = JSON.parse(raw) as Record<string, unknown>;
++  if (!parsed || typeof parsed !== 'object') fail('ERROR: knowledge observation must be a JSON object');
++  const operationKey = typeof parsed.operationKey === 'string' ? parsed.operationKey : '';
++  const outcome = parsed.outcome;
++  if (!operationKey) fail('ERROR: knowledge observation requires operationKey');
++  if (!['absent', 'exists', 'conflict', 'unknown'].includes(outcome as string)) {
++    fail("ERROR: knowledge observation outcome must be absent|exists|conflict|unknown");
++  }
++  const revision = typeof parsed.revision === 'string' && parsed.revision !== '' ? parsed.revision : null;
++  const readbackDigest = typeof parsed.readbackDigest === 'string' && parsed.readbackDigest !== '' ? parsed.readbackDigest : null;
++  if (outcome === 'exists' && (!revision || !readbackDigest)) {
++    fail('ERROR: an exists observation requires the read-back revision and readbackDigest');
++  }
++  const { directory } = await stateFile(name);
++  await requireManagedDelivery(name, 'knowledge observe');
++  try {
++    await requireRunAuthority(directory);
++  } catch (error) {
++    if (error instanceof RunAuthorityError) fail(error.message);
++    throw error;
++  }
++  await withClassicStateLock(directory, async () => {
++    const ledger = await readKnowledgePublishOperations(directory);
++    const operation = ledger.operations.find((entry) => entry.operationKey === operationKey);
++    if (!operation) {
++      fail(`ERROR: no registered knowledge publish operation ${operationKey.slice(0, 12)}…; register it first`);
++    }
++    operation.lastObservation = {
++      outcome: outcome as 'absent' | 'exists' | 'conflict' | 'unknown',
++      revision,
++      readbackDigest,
++      at: new Date().toISOString(),
++    };
++    operation.updatedAt = operation.lastObservation.at;
++    if (
++      outcome === 'conflict' ||
++      (outcome === 'exists' && readbackDigest !== operation.payloadDigest)
++    ) {
++      // H05: the remote moved under another legitimate writer (or carries
++      // unexpected content) — the conflict stays open until a readback
++      // matches the registered payload; the revision is never refreshed.
++      operation.state = 'conflict';
++    } else if (operation.state === 'conflict' && outcome === 'exists') {
++      // The independent readback over the registered payload resolves an
++      // earlier conflict: the expected result exists, so the operation is
++      // actionable again (record-closeout).
++      operation.state = 'pending';
++    }
++    await writeKnowledgePublishOperations(directory, ledger);
++    output.data = { change: name, operation, directive: knowledgePublishDirective(operation) };
++    output.stderr.push(green(`[OBSERVED] knowledge operation ${operation.operationKey.slice(0, 12)}… outcome=${outcome}`));
++  });
++}
++
++// ---- run authority transfer (0003, H09) --------------------------------------
++
++async function authorityTransfer(
++  output: CommandOutput,
++  name: string,
++  fileArgument: string,
++): Promise<void> {
++  validateChangeName(name);
++  let raw: string;
++  try {
++    raw = await fs.readFile(path.resolve(classicCommandInvocationCwd(), fileArgument), 'utf8');
++  } catch (error) {
++    fail(`ERROR: cannot read authority transfer file ${fileArgument}: ${error instanceof Error ? error.message : String(error)}`);
++  }
++  const parsed = JSON.parse(raw) as Record<string, unknown>;
++  const to = typeof parsed.to === 'string' ? parsed.to.trim() : '';
++  if (!to || parsed.confirm !== true) {
++    fail('ERROR: authority transfer requires { to: <authority-id>, confirm: true }; migration is explicit, never implied');
++  }
++  const { directory } = await stateFile(name);
++  const binding = await readRunAuthority(directory);
++  if (!binding) fail(`ERROR: run '${name}' has no authority binding; initialize it with --managed-delivery first`);
++  try {
++    await requireRunAuthority(directory);
++  } catch (error) {
++    if (error instanceof RunAuthorityError) {
++      fail(
++        `${error.message}\nThe transfer must be performed BY the authoritative environment; a foreign environment cannot re-home the run`,
++      );
++    }
++    throw error;
++  }
++  const transferred = await transferRunAuthority(directory, to);
++  output.data = { change: name, authority: transferred };
++  output.stderr.push(green(`[TRANSFERRED] run authority: ${binding.authorityId} -> ${transferred.authorityId}`));
++}
++
+ function required(args: string[], count: number, usage: string): void {
+   if (args.length < count) fail(usage);
+ }
+@@ -2408,6 +2729,9 @@ const MUTATING_STATE_COMMANDS = new Set([
+   'dispatch-gate',
+   'accept-gate',
+   'knowledge-closeout',
++  'knowledge-publish',
++  'knowledge-observe',
++  'authority-transfer',
+ ]);
+ 
+ async function assertStateCommandWritable(subcommand: string | undefined): Promise<void> {
+@@ -2672,6 +2996,21 @@ export const classicStateCommand: ClassicCommandHandler = withProjectContext(
+           fail('Usage: comet state knowledge-closeout <change-name> --file <receipt.json>');
+         }
+         await recordKnowledgeCloseout(output, rest[0], rest[2]);
++      } else if (subcommand === 'knowledge-publish') {
++        if (rest.length !== 3 || rest[1] !== '--file') {
++          fail('Usage: comet state knowledge-publish <change-name> --file <operation.json>');
++        }
++        await knowledgePublish(output, rest[0], rest[2]);
++      } else if (subcommand === 'knowledge-observe') {
++        if (rest.length !== 3 || rest[1] !== '--file') {
++          fail('Usage: comet state knowledge-observe <change-name> --file <observation.json>');
++        }
++        await knowledgeObserve(output, rest[0], rest[2]);
++      } else if (subcommand === 'authority-transfer') {
++        if (rest.length !== 3 || rest[1] !== '--file') {
++          fail('Usage: comet state authority-transfer <change-name> --file <transfer.json>');
++        }
++        await authorityTransfer(output, rest[0], rest[2]);
+       } else {
+         fail(`Unknown subcommand: ${subcommand ?? ''}`);
+       }
+diff --git a/domains/comet-classic/classic-workspace.ts b/domains/comet-classic/classic-workspace.ts
+index 6c102aa..b48d53c 100644
+--- a/domains/comet-classic/classic-workspace.ts
++++ b/domains/comet-classic/classic-workspace.ts
+@@ -18,6 +18,7 @@ import {
+   findClassicArchiveChangeDirectory,
+   inspectClassicActiveChangeDirectory,
+ } from './classic-paths.js';
++import { archivedDeliveryExcluded } from './classic-gate-runtime.js';
+ import { readClassicDelivery } from './classic-progress.js';
+ import { readWorkflowProjectConfigDocument } from '../workflow-contract/project-config-reader.js';
+ import { writeWorkflowProjectConfigSource } from '../workflow-contract/project-config-writer.js';
+@@ -412,7 +413,20 @@ async function readCandidate(
+       const archivedRecord = (archivedDocument.toJS() ?? {}) as Record<string, unknown>;
+       if (archivedRecord.archived !== true) return null;
+       const delivery = await readClassicDelivery(projectRoot, archived.directory);
+-      if (['complete', 'local-verified'].includes(delivery.verification.status)) return null;
++      // H01: a closeout-pending managed run remains a workspace candidate
++      // even when its Git delivery verification is complete.
++      if (
++        archivedDeliveryExcluded(
++          {
++            managedDelivery: archivedRecord.managed_delivery === true,
++            knowledgeCloseoutRequired: archivedRecord.knowledge_closeout_required === true,
++            knowledgeCloseout: archivedRecord.knowledge_closeout ?? null,
++          },
++          delivery.verification.status,
++        )
++      ) {
++        return null;
++      }
+       changeDirectory = archived.directory;
+     } catch {
+       return null;

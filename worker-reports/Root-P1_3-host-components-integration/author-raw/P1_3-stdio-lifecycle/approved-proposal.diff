@@ -1,0 +1,127 @@
+--- a/lib/adapters/harness.js
++++ b/lib/adapters/harness.js
+@@ -137,7 +137,7 @@
+   if (!nativeKeys(v, ['actionBinding', 'model', 'cwd', 'input', 'dynamicTools']) || !nativeText(v.model, 128)
+     || !nativeText(v.cwd, 4096) || !path.isAbsolute(v.cwd) || !Array.isArray(v.input) || !v.input.length || v.input.length > 16
+     || v.input.some((item) => !nativeKeys(item, ['type', 'text']) || item.type !== 'text' || typeof item.text !== 'string')
+-    || !Array.isArray(v.dynamicTools) || !v.dynamicTools.length || v.dynamicTools.length > 16) nativeNo('NATIVE_CONTEXT_INVALID');
++    || !Array.isArray(v.dynamicTools) || v.dynamicTools.length > 16) nativeNo('NATIVE_CONTEXT_INVALID');
+   const parsed = parseContract('SDD.Delivery.ActionBinding', v.actionBinding);
+   if (!parsed.ok || parsed.value.profile !== 'comet-managed-v2' || parsed.value.runnerId !== 'comet-classic') nativeNo('NATIVE_CONTEXT_INVALID');
+   const names = new Set();
+@@ -179,12 +179,13 @@
+ export function createCodexStdioTransport(options) {
+   if (!nativeKeys(options, ['registration', 'context', 'currentContext', 'invokeTool'])) nativeNo('NATIVE_OPTIONS_INVALID');
+   const registration = nativeData(options.registration);
+-  if (!nativeKeys(registration, ['executable', 'sha256', 'argv', 'env', 'timeoutMs'])
++  if (!nativeKeys(registration, ['executable', 'sha256', 'argv', 'env', 'timeoutMs'], ['startPolicy'])
+     || !nativeText(registration.executable, 4096) || !path.isAbsolute(registration.executable)
+     || typeof registration.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(registration.sha256)
+     || !Array.isArray(registration.argv) || JSON.stringify(registration.argv) !== JSON.stringify(NATIVE_ARGV)
+     || !nativeObject(registration.env) || Object.entries(registration.env).some(([key, value]) => !['PATH', 'LANG', 'TZ', 'TMPDIR'].includes(key)
+       || typeof value !== 'string' || value.length > 8192 || value.includes('\0'))
++    || registration.startPolicy !== undefined && !['initialize-only', 'turn'].includes(registration.startPolicy)
+     || !Number.isSafeInteger(registration.timeoutMs) || registration.timeoutMs < 10 || registration.timeoutMs > 900000) nativeNo('NATIVE_REGISTRATION_INVALID');
+   let synchronous = false;
+   try { synchronous = typeof options.currentContext === 'function'
+@@ -199,15 +200,17 @@
+   // Existing HOME/CODEX_HOME are inherited unchanged, not selected by a job.
+   const environment = { ...registration.env, ...Object.fromEntries(['HOME', 'CODEX_HOME'].filter((key) => typeof process.env[key] === 'string').map((key) => [key, process.env[key]])) };
+   let operation, child, state = 'NOT_STARTED', reason = null, deadline, forceTimer, startFailure = null;
++  let initialized = false, autoBegin = false, threadRequested = false;
+   let threadId = null, turnId = null, turnStatus = null, threadNotice = null, turnNotice = null, complete = false;
+   let ended = false, exitCode = null, signal = null, truncated = false, pendingBytes = Buffer.alloc(0), rawSize = 0;
+   const raw = { stdin: [], stdout: [], stderr: [] }, events = [], pending = new Map(), calls = new Map(), requestIds = new Map(), earlyCalls = [];
+-  const abort = new AbortController(); let resolveDone, resolveClosed, doneSettled = false;
++  const abort = new AbortController(); let resolveDone, resolveClosed, resolveReady, readySettled = false, doneSettled = false;
+   const snapshot = () => ({ ...NATIVE_SCOPE, status: state, reason, handle: operation?.handle ?? null, contextDigest,
+-    registrationDigest, threadId, turnId, turnStatus, protocolComplete: complete, truncated,
++    registrationDigest, initialized, threadId, turnId, turnStatus, protocolComplete: complete, truncated,
+     process: { pid: child?.pid ?? null, exitCode, signal, closed: ended },
+     raw: Object.fromEntries(Object.entries(raw).map(([key, chunks]) => [key, Buffer.concat(chunks)])), events: structuredClone(events) });
+-  const done = () => { if (!doneSettled) { doneSettled = true; resolveDone(snapshot()); } };
++  const ready = () => { if (!readySettled) { readySettled = true; resolveReady(snapshot()); } };
++  const done = () => { ready(); if (!doneSettled) { doneSettled = true; resolveDone(snapshot()); } };
+   const unknown = (code) => { if (state !== 'UNKNOWN') { state = 'UNKNOWN'; reason = code; } done(); };
+   const capture = (channel, bytes) => {
+     const remaining = Math.max(0, NATIVE_CAPTURE - rawSize);
+@@ -222,6 +225,12 @@
+     catch { unknown('NATIVE_STDIN_UNAVAILABLE'); }
+   };
+   const request = (id, method, params) => { current(); pending.set(id, method); write({ id, method, params }); };
++  const beginTurn = () => {
++    if (threadRequested || state === 'UNKNOWN' || ended) return;
++    current(); threadRequested = true;
++    request('comet:thread', 'thread/start', { model: fixed.model, cwd: fixed.cwd, environments: [], dynamicTools: fixed.dynamicTools,
++      ephemeral: true, approvalPolicy: 'untrusted', sandbox: 'read-only' });
++  };
+   const deny = (id, code) => { if (id !== undefined) write({ id, error: { code: -32601, message: 'REQUEST_REFUSED' } }); unknown(code); };
+   const boundThread = (id) => {
+     if (!nativeText(id) || !threadId && !pending.has('comet:thread') || (threadId ?? threadNotice) && (threadId ?? threadNotice) !== id) return false;
+@@ -331,8 +340,8 @@
+     if (Object.hasOwn(m, 'error') || !nativeObject(m.result)) return unknown('NATIVE_RPC_ERROR');
+     if (method === 'initialize') {
+       current(); write({ method: 'initialized', params: {} });
+-      request('comet:thread', 'thread/start', { model: fixed.model, cwd: fixed.cwd, environments: [], dynamicTools: fixed.dynamicTools,
+-        ephemeral: true, approvalPolicy: 'untrusted', sandbox: 'read-only' });
++      initialized = true; state = 'INITIALIZED'; ready();
++      if (autoBegin) beginTurn();
+     } else if (method === 'thread/start') {
+       if (!nativeText(m.result.thread?.id) || threadNotice && threadNotice !== m.result.thread.id) return unknown('NATIVE_THREAD_MISMATCH');
+       threadId = m.result.thread.id;
+@@ -357,9 +366,9 @@
+     if (pendingBytes.length > NATIVE_FRAME) unknown('NATIVE_FRAME_LIMIT');
+   };
+   const requireHandle = (handle) => { if (!operation || handle !== operation.handle) nativeNo('NATIVE_HANDLE_REQUIRED'); };
+-  return Object.freeze({ ...NATIVE_SCOPE,
+-    start(...args) {
+-      if (args.length) nativeNo('NATIVE_START_ARGUMENTS_REFUSED');
++  const transport = { ...NATIVE_SCOPE,
++    connect(...args) {
++      if (args.length) nativeNo('NATIVE_CONNECT_ARGUMENTS_REFUSED');
+       if (operation) return operation;
+       if (startFailure) nativeNo(startFailure);
+       try { current(); } catch { startFailure = 'NATIVE_CONTEXT_STALE'; nativeNo(startFailure); }
+@@ -370,9 +379,10 @@
+       if (process.platform === 'win32') { startFailure = 'NATIVE_PROCESS_GROUP_UNQUALIFIED'; nativeNo(startFailure); }
+       state = 'INITIALIZING';
+       const donePromise = new Promise((resolve) => { resolveDone = resolve; }), closed = new Promise((resolve) => { resolveClosed = resolve; });
++      const initializedPromise = new Promise((resolve) => { resolveReady = resolve; });
+       child = spawn(registration.executable, registration.argv, { cwd: fixed.cwd, env: environment, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
+       const handle = Object.freeze({ id: randomUUID(), run: fixed.actionBinding.run, execution: fixed.actionBinding.execution, processId: child.pid ?? null, contextDigest });
+-      operation = Object.freeze({ ...NATIVE_SCOPE, handle, done: donePromise, closed });
++      operation = Object.freeze({ ...NATIVE_SCOPE, handle, ready: initializedPromise, done: donePromise, closed });
+       deadline = setTimeout(() => unknown('NATIVE_TIMEOUT_UNKNOWN'), registration.timeoutMs); deadline.unref();
+       child.stdin.on('error', () => unknown('NATIVE_STDIN_UNAVAILABLE'));
+       child.stdout.on('data', receive); child.stderr.on('data', (bytes) => { if (!capture('stderr', bytes)) child.stderr.destroy(); });
+@@ -391,6 +401,21 @@
+       });
+       return operation;
+     },
++    start(...args) {
++      if (args.length) nativeNo('NATIVE_START_ARGUMENTS_REFUSED');
++      if (registration.startPolicy === 'initialize-only') nativeNo('NATIVE_TURN_SCOPE_REQUIRED');
++      autoBegin = true; const value = transport.connect();
++      if (initialized) { try { beginTurn(); } catch { unknown('NATIVE_CONTEXT_STALE'); } }
++      return value;
++    },
++    begin(handle, ...args) {
++      requireHandle(handle);
++      if (args.length) nativeNo('NATIVE_BEGIN_ARGUMENTS_REFUSED');
++      if (registration.startPolicy === 'initialize-only') nativeNo('NATIVE_TURN_SCOPE_REQUIRED');
++      if (!initialized) nativeNo('NATIVE_NOT_INITIALIZED');
++      try { beginTurn(); } catch { unknown('NATIVE_CONTEXT_STALE'); }
++      return operation;
++    },
+     observe(handle) { requireHandle(handle); return snapshot(); },
+     cancel(handle) {
+       requireHandle(handle); if (ended) return snapshot();
+@@ -399,5 +424,6 @@
+       kill('SIGTERM'); if (!forceTimer) { forceTimer = setTimeout(() => kill('SIGKILL'), 500); forceTimer.unref(); }
+       return snapshot();
+     },
+-  });
+-}
++  };
++  return Object.freeze(transport);
++}
