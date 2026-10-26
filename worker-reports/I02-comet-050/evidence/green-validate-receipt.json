@@ -1,0 +1,145 @@
+{
+  "interface": "RunnerInfra.v1",
+  "command": "validate",
+  "residentRoleServices": "RETIRED",
+  "retirement": {
+    "status": "RETIRED_RESIDENT_ROLE_DEPLOYMENT",
+    "decision": "docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md",
+    "revision": "2026-10-26-comet-050-adoption-v1",
+    "retiredSurface": [
+      "six-role resident compose stack as a default install/start/check prerequisite",
+      "image digest authentication and role/image qualification as a command-flow prerequisite",
+      "executable build-plan image build chain bound to the retired 0.4.5 seven-patch source"
+    ],
+    "successorBoundary": "on-demand ephemeral jobs only (createCliJobDriver in tools/infra/runner.mjs); native Comet Run/phase/lock/transaction stays the only business state authority",
+    "dataDisposition": "old Run records, evidence, image identification and volumes are RETAINED; this retirement performs and authorizes no container, volume, knowledge or backup deletion",
+    "historicalProvenance": "the retired 0.4.5 seven-patch runtime/bootstrap closure (252KB) is preserved verbatim in git history at the pre-retirement revision of this file; this record keeps the source/patch/toolchain identification needed to recognize retired images"
+  },
+  "composeParser": {
+    "command": "python3",
+    "flags": [
+      "-I"
+    ],
+    "implementation": "PyYAML",
+    "requiredVersion": "6.0.3",
+    "version": "6.0.3",
+    "status": "AVAILABLE",
+    "proofLayer": "component-parser"
+  },
+  "registry": "infra/delivery/registry.json",
+  "refs": "infra/delivery/secrets.refs.example.json",
+  "dir": "infra/delivery/runner",
+  "ok": true,
+  "violations": [],
+  "catalogGaps": [],
+  "defaultEntryCensus": {
+    "entries": [
+      "package.json",
+      "tools/bootstrap.sh",
+      "bin/cli.js",
+      "hooks.yaml",
+      "scripts/agent-instructions-check.sh",
+      "scripts/agent-skill-check.sh",
+      "scripts/check.sh",
+      ".github/workflows/delivery-gate.yml",
+      ".github/workflows/quality-gates.yml"
+    ],
+    "residentRoleReferences": 0
+  },
+  "roles": [
+    {
+      "role": "controller",
+      "principalLabel": "runner-controller",
+      "credentialRef": "secret-ref:sdd-harness-pilot/runner-authority",
+      "provisioningStatus": "NOT_PROVISIONED",
+      "workspaceVolume": "ws-controller",
+      "grantedRefCount": 2
+    },
+    {
+      "role": "author",
+      "principalLabel": "worker-author",
+      "credentialRef": "secret-ref:sdd-harness-pilot/worker-author-api",
+      "provisioningStatus": "NOT_PROVISIONED",
+      "workspaceVolume": "ws-author",
+      "grantedRefCount": 1
+    },
+    {
+      "role": "test-author",
+      "principalLabel": "worker-test-author",
+      "credentialRef": null,
+      "provisioningStatus": "UNASSIGNED",
+      "workspaceVolume": "ws-test-author",
+      "grantedRefCount": 0
+    },
+    {
+      "role": "reviewer",
+      "principalLabel": "worker-reviewer",
+      "credentialRef": "secret-ref:sdd-harness-pilot/worker-review-api",
+      "provisioningStatus": "NOT_PROVISIONED",
+      "workspaceVolume": "ws-reviewer",
+      "grantedRefCount": 1
+    },
+    {
+      "role": "publisher",
+      "principalLabel": "runner-publisher",
+      "credentialRef": null,
+      "provisioningStatus": "UNASSIGNED",
+      "workspaceVolume": "ws-publisher",
+      "grantedRefCount": 0
+    },
+    {
+      "role": "isolator",
+      "principalLabel": "runner-isolator",
+      "credentialRef": null,
+      "provisioningStatus": "UNASSIGNED",
+      "workspaceVolume": "ws-isolator",
+      "grantedRefCount": 0
+    }
+  ],
+  "methodState": {
+    "declaration": "METHOD_STATE_SHARED_DECLARED",
+    "model": "cooperative-local",
+    "identityBasis": false,
+    "permissionBasis": false,
+    "completionBasis": false,
+    "dispatchRecordStatus": "UNVERIFIED"
+  },
+  "authority": {
+    "interface": "Authority.v1",
+    "authorityStatus": "UNVERIFIED",
+    "registrations": 0,
+    "concurrentWriterPolicy": "REFUSE",
+    "copiedStatePolicy": "REFUSE"
+  },
+  "imageLock": {
+    "interface": "RunnerImageLock.v1",
+    "retirementStatus": "RETIRED_RESIDENT_ROLE_DEPLOYMENT",
+    "upGate": {
+      "enabled": false,
+      "requireAllComponentsAuthenticated": true,
+      "reason": "RETIRED (ADR-0021): resident role deployment retired; the up gate can never reopen for the six-role compose stack"
+    },
+    "containerBuildStatus": "RETIRED",
+    "components": [
+      {
+        "component": "comet-runner",
+        "reference": null,
+        "digest": null,
+        "status": "RETIRED_IMAGE_IDENTIFICATION"
+      },
+      {
+        "component": "runner-base",
+        "reference": "node@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d",
+        "digest": "sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d",
+        "status": "RETIRED_IMAGE_IDENTIFICATION"
+      },
+      {
+        "component": "python-runtime",
+        "reference": "python@sha256:c3729439afc4ec3f3e159e0c86aeabfadac8030ef46838a0256383d0511c5f5e",
+        "digest": "sha256:c3729439afc4ec3f3e159e0c86aeabfadac8030ef46838a0256383d0511c5f5e",
+        "status": "RETIRED_IMAGE_IDENTIFICATION"
+      }
+    ]
+  },
+  "checkedAt": "2026-10-26T15:53:24.444Z"
+}

@@ -1,0 +1,70 @@
+{
+  "interface": "Qualification.v1",
+  "domain": "comet-runner",
+  "dir": "infra/delivery/runner",
+  "ready": false,
+  "residentRoleServices": "RETIRED",
+  "retirement": {
+    "decision": "docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md",
+    "revision": "2026-10-26-comet-050-adoption-v1"
+  },
+  "unverifiedCount": 4,
+  "catalogGaps": [],
+  "categories": {
+    "default-chain-zero-resident-role-services": {
+      "status": "VERIFIED",
+      "reason": "mechanical census of 9 default install/start/check entries found zero resident role references; this CLI itself has no start path",
+      "entries": [
+        "package.json",
+        "tools/bootstrap.sh",
+        "bin/cli.js",
+        "hooks.yaml",
+        "scripts/agent-instructions-check.sh",
+        "scripts/agent-skill-check.sh",
+        "scripts/check.sh",
+        ".github/workflows/delivery-gate.yml",
+        ".github/workflows/quality-gates.yml"
+      ]
+    },
+    "retired-without-data-loss": {
+      "status": "RECORDED",
+      "reason": "the retirement record declares old Run/evidence/image/volume data RETAINED and authorizes no deletion; whether old resources still exist on a given host is separate UNVERIFIED inventory"
+    },
+    "old-resource-inventory": {
+      "status": "UNVERIFIED",
+      "reason": "read-only docker inventory of retired containers/volumes/images never executed on this host; ownership and existence of old resources stay unobserved"
+    },
+    "role-boundary-declaration": {
+      "status": "RECORDED",
+      "reason": "retired declarations remain self-consistent: distinct principals/credentials/volumes, read-only rootfs, dropped capabilities, worker-unwritable control paths"
+    },
+    "authority-exclusivity": {
+      "status": "UNVERIFIED",
+      "reason": "duplicate-authority never executed against a real Comet state: one-writer/refuse-copied-state evidence requires the original Run under native lock/transaction"
+    },
+    "on-demand-ephemeral-job": {
+      "status": "UNVERIFIED",
+      "reason": "createCliJobDriver protocol is component-tested only; a real authorized dispatch through the fixed host never executed on this host"
+    },
+    "secret-refs-registered": {
+      "status": "RECORDED",
+      "reason": "all 4 runner refs present in the I01 catalog; all remain NOT_PROVISIONED"
+    },
+    "credentials-provisioned": {
+      "status": "UNVERIFIED",
+      "reason": "all runner refs are NOT_PROVISIONED or UNASSIGNED; no runtime secret store authorization exists (I01 resolves read-only UNRESOLVED by design)"
+    }
+  },
+  "inputs": {
+    "registrySha256": "ccde085d9bc7c99a6d559aacf79a4e5e439075427f3a330cfb6d141c6afc3647",
+    "domainFiles": {
+      "compose.yaml": "28040fd29b79528151f3fb2a3a1096fd50201e1c5b47484d0470ff4fab987ff5",
+      "Dockerfile": "ac633df2a4707914b018263e13f45333314e6e6280474798860bf2e6eac954ee",
+      "image.lock.json": "ea336f754d2c94d832934bfbee2434297c37910a12db3c44de7455b0f160326c",
+      "role-policy.json": "1c174becdef6998281899fbc713fbba22f34456ceca33a077141d30013b44ba4",
+      "workspace-mounts.json": "0aedd67224cd5a88fadfa097a07921e52904481a3e086812d9af77d55decfc41",
+      "authority-registration.example.json": "259f804dc82120bbe0cf56b7c2c31b3f9f6dab8dcf8d548e9c4477be5434317e"
+    }
+  },
+  "checkedAt": "2026-10-26T15:53:24.545Z"
+}

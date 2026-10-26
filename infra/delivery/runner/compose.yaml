@@ -1,3 +1,9 @@
+# [RETIRED 2026-10-26 / ADR-0021 / 修订 2026-10-26-comet-050-adoption-v1]
+# 六角色常驻部署已从所有默认安装/启动/检查路径退休：本文件仅作为历史/按需声明保留，
+# 无任何自动入口；tools/infra/runner.mjs up 一律拒绝且绝不触碰 docker。
+# 按需临时作业走 createCliJobDriver（单次容器、network none、只读根），不经本 compose 栈。
+# 旧 Run/证据/镜像识别/卷保留，退休不删除任何容器、卷、知识或备份。
+#
 # Comet Runner 角色隔离声明（RunnerInfra.v1 / RoleBoundary.v1）—— 仅声明，绝不自动启动。
 # 镜像一律从 infra/delivery/runner/image.lock.json 解析后注入（${VAR:?} 占位）；
 # lock 未 ready（无任何已认证 digest）时 tools/infra/runner.mjs up 必须拒绝，本文件绝不内嵌 tag/digest。

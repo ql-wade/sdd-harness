@@ -1,15 +1,16 @@
 #!/usr/bin/env node
-// RunnerInfra.v1 / RoleBoundary.v1 / Authority.v1 CLI — validate | qualify | up | probe | stop
+// RunnerInfra.v1 — 退休边界 CLI（ADR-0021，修订 2026-10-26-comet-050-adoption-v1）
+// validate | qualify | up | probe | stop | build-plan
 //
-// CLI validates the current declaration. Its standalone mode has no authority
-// to launch a product job. The fixed P1_3 host uses the physical lifecycle
-// below; Comet owns all dispatch/phase/retry state. No live settings or secrets
-// are read or written. Historical images never qualify the current candidate.
+// 六角色常驻部署与 0.4.5 七补丁镜像构建链已从所有默认安装/启动/检查路径退休。
+// 剩余表面：退役声明的通用结构检查（复用既有校验器）、诚实的退休资格回执、
+// 以及按需临时作业驱动 createCliJobDriver —— 仅由真实授权 dispatch 后方的固定宿主使用。
+// 本 CLI 绝不启动/停止/删除任何容器、卷或镜像；普通命令不依赖临时 Docker。
 //
 // 退出码契约（execution-contract.json V_INFRA_I02.cli_contract）：
 //   0 = PASS（validate 通过）
 //   1 = 输入或前置无效（文件缺失/不可解析、参数错误、未知 probe case）
-//   2 = 验证失败（语义违规、qualify NOT_READY、up 被拒、probe/stop 环境缺失 UNVERIFIED）
+//   2 = 验证失败（语义违规、qualify NOT_READY、退休拒绝、probe/stop 环境缺失 UNVERIFIED）
 //   环境缺失必须显式 UNVERIFIED 并以非零退出，不允许 skip 或 mock 转绿。
 
 import { spawn, spawnSync } from 'node:child_process';
@@ -30,6 +31,8 @@ const DEFAULT_REGISTRY = path.join(repoRoot, 'infra', 'delivery', 'registry.json
 const DEFAULT_REFS = path.join(repoRoot, 'infra', 'delivery', 'secrets.refs.example.json');
 const DEFAULT_POLICY = path.join(repoRoot, 'infra', 'delivery', 'qualification-policy.json');
 const DEFAULT_DIR = path.join(repoRoot, 'infra', 'delivery', 'runner');
+const RETIREMENT_DECISION = 'docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md';
+const RETIREMENT_REVISION = '2026-10-26-comet-050-adoption-v1';
 
 const JSON_FILES = ['image.lock.json', 'role-policy.json', 'workspace-mounts.json', 'authority-registration.example.json'];
 const DOMAIN_FILES = ['compose.yaml', 'Dockerfile', ...JSON_FILES];
@@ -43,8 +46,6 @@ const RUNNER_REFS = [
 const LOCK_COMPONENTS = ['comet-runner', 'runner-base', 'python-runtime'];
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const LABEL_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
-const SECRET_REF_PREFIX = 'secret-ref:';
-const PLACEHOLDER_IMAGE_RE = /^image:\s*\$\{[A-Z0-9_]+:\?[^}]*\}\s*$/;
 
 // 宿主私有路径绝不进入结构化回执/报告；对外输出统一脱敏（与 secret-refs 的 ABSOLUTE_PATH_FORBIDDEN 同源规则）。
 const HOST_PATH_REDACTION = /(^|[\s"'=(:/])\/(Users|Volumes|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
@@ -77,9 +78,9 @@ function usage() {
   return [
     'usage:',
     '  runner.mjs validate --registry <file> [--refs <file>] [--dir <runner dir>] [--json]',
-    '  runner.mjs build-plan [--dir <runner dir>] [--json]',
     '  runner.mjs qualify  --registry <file> [--dir <runner dir>] [--json]',
-    '  runner.mjs up       --registry <file> [--dir <runner dir>] [--json]',
+    '  runner.mjs up       --registry <file> [--dir <runner dir>] [--json]   (retired: always refused)',
+    '  runner.mjs build-plan [--dir <runner dir>] [--json]                  (retired: always refused)',
     '  runner.mjs probe    --case <role-denial|duplicate-authority> [--dir <runner dir>] [--json]',
     '  runner.mjs stop     [--dir <runner dir>] [--json]',
   ].join('\n');
@@ -122,63 +123,6 @@ const isObject = (value) => value !== null && typeof value === 'object' && !Arra
 const nonBlank = (value) => typeof value === 'string' && value.trim().length > 0;
 const INPUT_FILE_ERRORS = new Set(['ENOENT', 'EISDIR', 'ENOTDIR', 'EACCES', 'EPERM', 'ELOOP', 'ENAMETOOLONG']);
 
-// This exact context is an input snapshot, not a checkout: no unlisted paths,
-// links (including parents), or special entries may accompany the manifest.
-function buildContextStatus(context, contextFiles) {
-  const expected = new Map(contextFiles.map((item) => [item.path, item.sha256]));
-  const directories = new Set();
-  for (const file of expected.keys()) {
-    for (let parent = path.posix.dirname(file); parent !== '.'; parent = path.posix.dirname(parent)) directories.add(parent);
-  }
-  let current = repoRoot;
-  const parents = [];
-  for (const component of context.split('/')) {
-    current = path.join(current, component);
-    let stat;
-    try { stat = fs.lstatSync(current); }
-    catch (error) {
-      if (error?.code === 'ENOENT') return 'ABSENT';
-      if (INPUT_FILE_ERRORS.has(error?.code)) return 'CONFLICT';
-      throw error;
-    }
-    if (!stat.isDirectory() || stat.isSymbolicLink()) return 'CONFLICT';
-    parents.push({ file: current, stat });
-  }
-  const contextRoot = current;
-  let seen = 0;
-  const visit = (directory, prefix = '') => {
-    for (const entry of fs.readdirSync(directory)) {
-      const relative = prefix ? `${prefix}/${entry}` : entry;
-      const file = path.join(directory, entry), stat = fs.lstatSync(file);
-      if (stat.isSymbolicLink()) return false;
-      if (expected.has(relative)) {
-        if (!stat.isFile()) return false;
-        const fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK);
-        try {
-          const opened = fs.fstatSync(fd);
-          if (!opened.isFile() || opened.dev !== stat.dev || opened.ino !== stat.ino || sha256Text(fs.readFileSync(fd)) !== expected.get(relative)) return false;
-        } finally { fs.closeSync(fd); }
-        seen++;
-      } else if (directories.has(relative) && stat.isDirectory()) {
-        parents.push({ file, stat });
-        if (!visit(file, relative)) return false;
-      } else return false;
-    }
-    return true;
-  };
-  try {
-    if (!visit(contextRoot) || seen !== expected.size) return 'CONFLICT';
-    for (const parent of parents) {
-      const stat = fs.lstatSync(parent.file);
-      if (!stat.isDirectory() || stat.isSymbolicLink() || stat.dev !== parent.stat.dev || stat.ino !== parent.stat.ino) return 'CONFLICT';
-    }
-    return 'EXACT';
-  } catch (error) {
-    if (INPUT_FILE_ERRORS.has(error?.code)) return 'CONFLICT';
-    throw error;
-  }
-}
-
 function readInput(file, label, json = false) {
   let value;
   try { value = fs.readFileSync(file, 'utf8'); }
@@ -195,6 +139,51 @@ function readInput(file, label, json = false) {
     return { ok: false, exitCode: expected ? EXIT_INPUT : EXIT_VERIFY, status: expected ? 'INPUT_INVALID' : 'INTERNAL_FAILURE',
       code: expected ? 'INPUT_JSON_INVALID' : 'INPUT_PARSE_INTERNAL_FAILURE', error: `${label} JSON cannot be read` };
   }
+}
+
+// ---------------------------------------------------------------------------
+// 默认入口普查（退休边界的机械 oracle）：默认安装/启动/检查入口不得引用六角色
+// compose 栈、Runner 镜像占位或 runner up/build-plan。纯函数可独立注入合成入口。
+// ---------------------------------------------------------------------------
+const RESIDENT_STACK_REFERENCE_RE = /infra\/delivery\/runner\/compose|COMET_RUNNER_IMAGE|runner\.mjs\s+(?:up|build-plan)|comet-(?:controller|author|test-author|reviewer|publisher|isolator)(?![-\w])|ws-(?:controller|author|test-author|reviewer|publisher|isolator)(?![-\w])/g;
+
+export function residentRoleReferenceFindings(entries) {
+  const findings = [];
+  if (!Array.isArray(entries)) return findings;
+  for (const entry of entries) {
+    if (!isObject(entry) || typeof entry.path !== 'string') continue;
+    const text = typeof entry.text === 'string' ? entry.text : '';
+    for (const match of text.matchAll(RESIDENT_STACK_REFERENCE_RE)) {
+      findings.push({ code: 'DEFAULT_ENTRY_RESIDENT_ROLE_REFERENCE', at: entry.path, matched: match[0] });
+    }
+  }
+  return findings;
+}
+
+function defaultEntryPaths() {
+  const entries = ['package.json', 'tools/bootstrap.sh', 'bin/cli.js', 'hooks.yaml'];
+  for (const [directory, matcher] of [['scripts', /\.sh$/], ['.github/workflows', /\.ya?ml$/]]) {
+    const root = path.join(repoRoot, directory);
+    let names = [];
+    try { names = fs.readdirSync(root); } catch { /* absent deployment surface is not a violation */ }
+    for (const name of names.filter((item) => matcher.test(item)).sort()) entries.push(`${directory}/${name}`);
+  }
+  return entries;
+}
+
+function defaultEntryCensus() {
+  const entries = [], findings = [];
+  for (const relative of defaultEntryPaths()) {
+    const read = readInput(path.join(repoRoot, relative), 'default entry');
+    if (!read.ok) {
+      if (read.code === 'INPUT_READ_ENOENT') continue;
+      findings.push({ code: 'DEFAULT_ENTRY_CENSUS_UNREADABLE', at: relative, reason: read.code });
+      continue;
+    }
+    entries.push({ path: relative, text: read.value });
+  }
+  findings.push(...residentRoleReferenceFindings(entries));
+  return { entries: entries.map((entry) => entry.path), findings };
 }
 
 function inputShapes({ registry, refsDoc, policy, files }) {
@@ -248,10 +237,12 @@ function inputShapes({ registry, refsDoc, policy, files }) {
       const source = lock.sourceInputs;
       for (const entry of list(source.patches, 'image.lock.sourceInputs.patches')) for (const key of ['path', 'sha256']) scalar(entry[key], `image.lock.sourceInputs.patches.${key}`, 'string', false);
       for (const key of ['sourceCommit', 'archiveSha256', 'hostBuildFingerprint']) scalar(source[key], `image.lock.sourceInputs.${key}`, 'string');
-      if (source.hostBuildFingerprint !== undefined && (typeof source.hostBuildFingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(source.hostBuildFingerprint))) add('image.lock.sourceInputs.hostBuildFingerprint', 'SHA256 hex');
       scalar(source.archiveBytes, 'image.lock.sourceInputs.archiveBytes', 'integer');
-      for (const key of ['toolchain', 'openspec']) object(source[key], `image.lock.sourceInputs.${key}`, true);
-      if (!runtimeInputShape(source.runtime)) add('image.lock.sourceInputs.runtime', 'fixed runtime input manifest');
+      object(source.toolchain, 'image.lock.sourceInputs.toolchain', true);
+      if (object(lock.retirement, 'image.lock.retirement', true)) {
+        for (const key of ['status', 'decision', 'revision', 'successorBoundary', 'dataDisposition']) scalar(lock.retirement[key], `image.lock.retirement.${key}`, 'string', false);
+        list(lock.retirement.retiredSurface, 'image.lock.retirement.retiredSurface', 'string', false);
+      }
     }
   }
   const roles = docs.get('role-policy.json');
@@ -324,226 +315,6 @@ function buildRefBindingMap(rolePolicy, refsDoc) {
     if (entry?.ref && entry.bindingRole) map.set(entry.ref, entry.bindingRole);
   }
   return map;
-}
-
-function runtimeInputShape(value) {
-  const exact = (object, keys) => isObject(object) && Object.keys(object).sort().join(',') === [...keys].sort().join(',');
-  const hash = text => typeof text === 'string' && /^[a-f0-9]{64}$/.test(text);
-  const bytes = number => Number.isSafeInteger(number) && number > 0 && number <= 128 * 1024 * 1024;
-  const measured = item => exact(item, ['path', 'realpath', 'bytes', 'sha256']) && typeof item.path === 'string'
-    && typeof item.realpath === 'string' && bytes(item.bytes) && hash(item.sha256);
-  const provenance = value?.python?.provenance;
-  const bootstrap = value?.bootstrap;
-  const dependency = item => exact(item, ['id', 'closed', 'sourceLockSha256', 'files']) && typeof item.id === 'string'
-    && typeof item.closed === 'boolean' && hash(item.sourceLockSha256) && Array.isArray(item.files) && item.files.length <= 2000
-    && item.files.every(file => exact(file, ['name', 'version', 'url', 'integrity', 'sha256', 'bytes', 'path'])
-      && ['name', 'version', 'url', 'path'].every(key => typeof file[key] === 'string') && hash(file.sha256) && bytes(file.bytes)
-      && (file.integrity === null || typeof file.integrity === 'string' && /^sha512-[A-Za-z0-9+/]{86}==$/.test(file.integrity)));
-  return exact(value, ['schemaVersion', 'platform', 'node', 'python', 'bootstrap', 'dependencies', 'projects']) && value.schemaVersion === 1
-    && typeof value.platform === 'string' && exact(value.node, ['component', 'version'])
-    && exact(value.python, ['component', 'version', 'minimum', 'libraries', 'provenance'])
-    && ['component', 'version'].every(key => typeof value.node[key] === 'string' && typeof value.python[key] === 'string')
-    && typeof value.python.minimum === 'string' && Array.isArray(value.python.libraries)
-    && value.python.libraries.every(item => typeof item === 'string')
-    && exact(provenance, ['libraries', 'pythonLicense']) && measured({ ...provenance.pythonLicense, realpath: provenance.pythonLicense?.path })
-    && Array.isArray(provenance.libraries) && provenance.libraries.every(item => exact(item, ['path', 'realpath', 'bytes', 'sha256', 'owner', 'version', 'copyright'])
-      && measured({ path: item.path, realpath: item.realpath, bytes: item.bytes, sha256: item.sha256 })
-      && typeof item.owner === 'string' && typeof item.version === 'string' && measured(item.copyright))
-    && exact(bootstrap, ['entry', 'adapter', 'link', 'files', 'packageLockSha256'])
-    && ['entry', 'adapter', 'link'].every(key => typeof bootstrap[key] === 'string') && hash(bootstrap.packageLockSha256)
-    && Array.isArray(bootstrap.files) && bootstrap.files.length <= 64 && bootstrap.files.every(file => typeof file === 'string')
-    && Array.isArray(value.dependencies) && value.dependencies.length === 6 && value.dependencies.every(dependency)
-    && exact(value.projects, ['openspec', 'comet']) && exact(value.projects.openspec, ['packageJson', 'packageLock']) && exact(value.projects.comet, ['pnpmLock', 'packageJson'])
-    && [value.projects.openspec.packageJson, value.projects.openspec.packageLock, value.projects.comet.pnpmLock, value.projects.comet.packageJson].every(item => exact(item, ['path', 'bytes', 'sha256']) && typeof item.path === 'string' && bytes(item.bytes) && hash(item.sha256));
-}
-
-const RUNTIME_DEPENDENCY_SETS = ['bootstrap-npm', 'comet-pnpm', 'git-deb', 'openspec-npm', 'pnpm', 'python-wheel'];
-function safeBootstrapFile(file) {
-  return /^(?:package(?:-lock)?\.json|LICENSE|lib\/adapters\/comet(?:-executor)?\.js|lib\/delivery\/(?:baseline|evidence|gate|test-contract)\.js|tools\/infra\/(?:runner|secret-refs)\.mjs|contracts\/delivery\/[A-Za-z0-9.-]+\.js|infra\/delivery\/(?:registry\.json|secrets\.refs\.example\.json|qualification-policy\.json|runner\/(?:compose\.yaml|Dockerfile|role-policy\.json|workspace-mounts\.json|authority-registration\.example\.json)))$/.test(file);
-}
-function safeRuntimeArtifact(file) {
-  return /^\.sdd\/cache\/runner-build\/public\/(?:npm|comet|deb|pnpm|wheel)\/[A-Za-z0-9_.+-]+\.(?:tgz|deb|whl)$/.test(file);
-}
-function repositoryBytes(relative) {
-  let file = repoRoot;
-  try {
-    const parts = relative.split('/');
-    for (const [index, part] of parts.entries()) {
-      if (!part || part === '.' || part === '..') return null;
-      file = path.join(file, part); const stat = fs.lstatSync(file);
-      if (stat.isSymbolicLink() || (index === parts.length - 1 ? !stat.isFile() || stat.size > 128 * 1024 * 1024 : !stat.isDirectory())) return null;
-    }
-    return fs.readFileSync(file);
-  } catch { return null; }
-}
-function verifiedOpenSpecProject(lock) {
-  const runtime = lock.sourceInputs.runtime, pin = lock.sourceInputs.openspec, project = runtime.projects.openspec;
-  const failure = code => ({ findings: [{ code, at: 'image.lock.json:sourceInputs.runtime.projects.openspec' }], package: null });
-  const packageBytes = repositoryBytes(project.packageJson.path), lockBytes = repositoryBytes(project.packageLock.path);
-  if (!packageBytes || !lockBytes || packageBytes.length !== project.packageJson.bytes || lockBytes.length !== project.packageLock.bytes
-    || sha256Text(packageBytes) !== project.packageJson.sha256 || sha256Text(lockBytes) !== project.packageLock.sha256) return failure('OPENSPEC_PROJECT_LOCK_DRIFT');
-  let manifest, frozen;
-  try { manifest = JSON.parse(packageBytes); frozen = JSON.parse(lockBytes); } catch { return failure('OPENSPEC_PROJECT_LOCK_INVALID'); }
-  const reference = 'file:../../../../.sdd/cache/runner-build/openspec-' + pin.version + '.tgz';
-  if (!isObject(manifest.dependencies) || Object.keys(manifest.dependencies).join(',') !== '@fission-ai/openspec'
-    || manifest.dependencies['@fission-ai/openspec'] !== reference || frozen.lockfileVersion !== 3 || !isObject(frozen.packages)
-    || JSON.stringify(frozen.packages['']?.dependencies) !== JSON.stringify(manifest.dependencies)) return failure('OPENSPEC_PROJECT_LOCK_INVALID');
-  const declared = runtime.dependencies.find(group => group.id === 'openspec-npm').files, unique = new Set();
-  for (const [location, item] of Object.entries(frozen.packages)) {
-    if (!location) continue;
-    if (!isObject(item) || typeof item.version !== 'string' || typeof item.resolved !== 'string'
-      || !/^sha512-[A-Za-z0-9+/]{86}==$/.test(item.integrity ?? '')) return failure('OPENSPEC_DEPENDENCY_UNLOCKED');
-    const matches = declared.filter(file => file.version === item.version && file.integrity === item.integrity);
-    if (matches.length !== 1) return failure('OPENSPEC_DEPENDENCY_UNLOCKED');
-    let wanted, supplied;
-    try {
-      wanted = new URL(item.resolved === reference ? pin.registryTarball : item.resolved); supplied = new URL(matches[0].url);
-      if (wanted.protocol !== 'https:' || !['registry.npmjs.org', 'registry.npmmirror.com'].includes(wanted.hostname)
-        || wanted.username || wanted.password || wanted.port || wanted.search || wanted.hash || wanted.pathname !== supplied.pathname) return failure('OPENSPEC_DEPENDENCY_UNLOCKED');
-    } catch { return failure('OPENSPEC_DEPENDENCY_UNLOCKED'); }
-    unique.add(item.integrity);
-  }
-  if (unique.size !== declared.length) return failure('OPENSPEC_DEPENDENCY_UNLOCKED');
-  const self = frozen.packages['node_modules/@fission-ai/openspec'];
-  const tar = repositoryBytes('.sdd/cache/runner-build/openspec-' + pin.version + '.tgz');
-  if (!tar || tar.length !== pin.tarballBytes || sha256Text(tar) !== pin.tarballSha256 || self?.resolved !== reference || self?.version !== pin.version
-    || self.integrity !== 'sha512-' + crypto.createHash('sha512').update(tar).digest('base64')) return failure('OPENSPEC_TARBALL_UNVERIFIED');
-  const inspect = String.raw`import io,json,sys,tarfile
-raw=sys.stdin.buffer.read(1048577)
-assert len(raw)<=1048576
-with tarfile.open(fileobj=io.BytesIO(raw),mode='r:gz') as archive:
-    member=archive.getmember('package/package.json')
-    assert member.isfile() and member.size<=65536
-    package=json.load(archive.extractfile(member))
-    assert package['name']=='@fission-ai/openspec' and package['version']=='1.11.0' and package['bin']['openspec']=='./bin/openspec.js'
-    entry=archive.getmember('package/bin/openspec.js')
-    assert entry.isfile() and 0<entry.size<=1048576
-print(json.dumps({'name':'@fission-ai/openspec','version':'1.11.0','entry':'bin/openspec.js'}))`;
-  const env = Object.fromEntries(['PATH', 'HOME', 'LANG', 'TMPDIR'].filter(key => typeof process.env[key] === 'string').map(key => [key, process.env[key]]));
-  const result = spawnSync('python3', ['-I', '-c', inspect], { input: tar, env, encoding: 'utf8', timeout: 5000, maxBuffer: 16384 });
-  if (result.error || result.signal || result.status !== 0) return failure('OPENSPEC_PACKAGE_METADATA_UNVERIFIED');
-  let metadata;
-  try { metadata = JSON.parse(result.stdout); } catch { return failure('OPENSPEC_PACKAGE_METADATA_UNVERIFIED'); }
-  if (metadata.name !== '@fission-ai/openspec' || metadata.version !== pin.version || metadata.entry !== 'bin/openspec.js') return failure('OPENSPEC_PACKAGE_METADATA_UNVERIFIED');
-  return { findings: [], package: { ...metadata, pathBase: 'image-root', cliTarget: 'build/repo/.sdd/cache/runner-build/openspec-project/node_modules/.bin/openspec',
-    cliLink: 'usr/local/bin/openspec', projectLockSha256: project.packageLock.sha256, sourceTarSha256: pin.tarballSha256, dependencyArtifacts: declared.length } };
-}
-
-function bootstrapSources(runtime, domainFiles) {
-  const source = runtime.bootstrap, files = [], findings = [], names = new Set(source.files);
-  for (const file of source.files) {
-    const domainName = file.startsWith('infra/delivery/runner/') ? file.slice('infra/delivery/runner/'.length) : null;
-    const bytes = domainName && domainFiles.has(domainName) ? Buffer.from(domainFiles.get(domainName)) : repositoryBytes(file);
-    if (!bytes) { findings.push({ code: 'BOOTSTRAP_SOURCE_UNVERIFIED', at: 'sourceInputs.runtime.bootstrap.files' }); continue; }
-    files.push({ path: file, bytes });
-    if (!/\.m?js$/.test(file)) continue;
-    const text = bytes.toString('utf8');
-    const imports = [...text.matchAll(/^(?:import|export)\s+(?:[\w*{},\s]+\s+from\s*)?['"]([^'"]+)['"]/gm),
-      ...text.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g)];
-    for (const match of imports) {
-      const dependency = match[1];
-      if (dependency.startsWith('.')) {
-        if (!names.has(path.posix.normalize(path.posix.join(path.posix.dirname(file), dependency)))) findings.push({ code: 'BOOTSTRAP_DEPENDENCY_MISSING', at: 'sourceInputs.runtime.bootstrap.files' });
-      } else if (!dependency.startsWith('node:') && dependency !== 'commonmark' && !['fs', 'path', 'crypto', 'child_process'].includes(dependency)) findings.push({ code: 'BOOTSTRAP_PACKAGE_UNDECLARED', at: 'sourceInputs.runtime.bootstrap.files' });
-    }
-  }
-  const npmLock = files.find(file => file.path === 'package-lock.json');
-  if (!npmLock || sha256Text(npmLock.bytes) !== source.packageLockSha256) findings.push({ code: 'BOOTSTRAP_PACKAGE_LOCK_DRIFT', at: 'sourceInputs.runtime.bootstrap.packageLockSha256' });
-  else {
-    try {
-      const expected = JSON.parse(npmLock.bytes).packages;
-      const declared = runtime.dependencies.find(item => item.id === 'bootstrap-npm').files;
-      const packages = Object.entries(expected).filter(([name]) => name);
-      if (declared.length !== packages.length || packages.some(([name, value]) => declared.filter(file => file.name === name.slice('node_modules/'.length)
-        && file.version === value.version && file.integrity === value.integrity).length !== 1)) findings.push({ code: 'BOOTSTRAP_NPM_CLOSURE_INVALID', at: 'sourceInputs.runtime.dependencies' });
-    } catch { findings.push({ code: 'BOOTSTRAP_PACKAGE_LOCK_UNVERIFIED', at: 'sourceInputs.runtime.bootstrap.packageLockSha256' }); }
-  }
-  return { files, findings };
-}
-
-function runtimeFindings(lock) {
-  const value = lock.sourceInputs.runtime, byName = new Map(lock.components.map(item => [item.component, item]));
-  const failures = [], add = (code) => failures.push({ code, at: 'image.lock.json:sourceInputs.runtime' });
-  const source = (component, prefix) => {
-    const item = byName.get(component);
-    return item && DIGEST_RE.test(item.digest ?? '') && item.reference === prefix + '@' + item.digest
-      && item.required === true && item.digestAuthenticated === true;
-  };
-  if (byName.size !== lock.components.length || value.platform !== 'linux/arm64' || value.node.component !== 'runner-base' || value.python.component !== 'python-runtime'
-    || !source(value.node.component, 'node') || !source(value.python.component, 'python')
-    || lock.resolution?.dockerfileMapping?.RUNNER_BASE_IMAGE !== value.node.component
-    || lock.resolution?.dockerfileMapping?.PYTHON_BASE_IMAGE !== value.python.component) add('RUNTIME_SOURCE_PIN_INVALID');
-  const python = /^(\d+)\.(\d+)\.(\d+)$/.exec(value.python.version);
-  if (value.node.version !== lock.sourceInputs.toolchain.node || value.python.minimum !== lock.sourceInputs.toolchain.pythonMinimum
-    || !python || Number(python[1]) < 3 || Number(python[1]) === 3 && Number(python[2]) < 12) add('RUNTIME_VERSION_INVALID');
-  if (value.python.libraries.length !== 23 || new Set(value.python.libraries).size !== value.python.libraries.length
-    || value.python.libraries.some(item => !/^lib\/aarch64-linux-gnu\/[A-Za-z0-9_.+-]+$/.test(item)
-      || /\/(?:libc|libm|libresolv)\.so/.test(item))) add('PYTHON_LIBRARY_CLOSURE_INVALID');
-  if (value.python.provenance.libraries.length !== 23 || value.python.provenance.libraries.some((item, index) => item.path !== value.python.libraries[index]
-    || !/^usr\/lib\/aarch64-linux-gnu\/[A-Za-z0-9_.+-]+$/.test(item.realpath)
-    || !/^[a-z0-9][a-z0-9+.-]*(?::arm64)?$/.test(item.owner)
-    || !/^[A-Za-z0-9.+:~_-]+$/.test(item.version) || item.copyright.path !== 'usr/share/doc/' + item.owner.split(':')[0] + '/copyright'
-    || !/^usr\/share\/(?:doc|common-licenses)\/[A-Za-z0-9_.+/-]+$/.test(item.copyright.realpath))
-    || value.python.provenance.pythonLicense.path !== 'usr/local/lib/python3.12/LICENSE.txt') add('PYTHON_PROVENANCE_INVALID');
-  const bootstrap = value.bootstrap;
-  if (bootstrap.entry !== 'lib/adapters/comet-executor.js' || bootstrap.adapter !== 'lib/adapters/comet.js' || bootstrap.link !== 'runner-host.mjs'
-    || new Set(bootstrap.files).size !== bootstrap.files.length || bootstrap.files.some(file => !safeBootstrapFile(file))
-    || ['lib/adapters/comet-executor.js', 'lib/adapters/comet.js', 'tools/infra/runner.mjs', 'package.json', 'package-lock.json'].some(file => !bootstrap.files.includes(file))) add('BOOTSTRAP_FILE_SET_INVALID');
-  if (value.dependencies.map(item => item.id).sort().join(',') !== RUNTIME_DEPENDENCY_SETS.join(',')) add('RUNTIME_DEPENDENCY_SET_INVALID');
-  if (value.projects.openspec.packageJson.path !== '.sdd/cache/runner-build/openspec-project/package.json'
-    || value.projects.openspec.packageLock.path !== '.sdd/cache/runner-build/openspec-project/package-lock.json'
-    || value.projects.comet.pnpmLock.path !== '.sdd/cache/runner-build/comet-pnpm-project/pnpm-lock.yaml'
-    || value.projects.comet.packageJson.path !== '.sdd/cache/runner-build/comet-pnpm-project/package.json'
-    || value.dependencies.find(item => item.id === 'openspec-npm')?.sourceLockSha256 !== value.projects.openspec.packageLock.sha256
-    || value.dependencies.find(item => item.id === 'comet-pnpm')?.sourceLockSha256 !== value.projects.comet.pnpmLock.sha256) add('RUNTIME_PROJECT_LOCK_INVALID');
-  for (const group of value.dependencies) {
-    if (group.closed && !group.files.length || new Set(group.files.map(file => file.path)).size !== group.files.length
-      || group.files.some(file => {
-        try { const url = new URL(file.url); return !safeRuntimeArtifact(file.path) || url.protocol !== 'https:' || url.username || url.password || url.port || url.hash || url.search
-          || !['registry.npmjs.org', 'registry.npmmirror.com', 'deb.debian.org', 'files.pythonhosted.org'].includes(url.hostname); }
-        catch { return true; }
-      })) add('RUNTIME_DEPENDENCY_INPUT_INVALID');
-  }
-  return failures;
-}
-
-function validateImageLock(lock) {
-  const violations = [];
-  const add = (code, at, extra) => violations.push({ code, at, ...(extra ?? {}) });
-  if (lock.interface !== 'RunnerImageLock.v1') add('LOCK_INTERFACE_INVALID', 'image.lock.json', { expected: 'RunnerImageLock.v1' });
-  const components = Array.isArray(lock.components) ? lock.components : [];
-  const byName = new Map(components.map((component) => [component.component, component]));
-  for (const name of LOCK_COMPONENTS) {
-    const entry = byName.get(name);
-    const at = `image.lock.json:${name}`;
-    if (!entry) {
-      add('MISSING_LOCK_COMPONENT', at);
-      continue;
-    }
-    if (typeof entry.reference === 'string') {
-      if (/:latest\s*$/.test(entry.reference)) add('FLOATING_TAG_FORBIDDEN', at, { reference: entry.reference });
-      if (!entry.digest) add('IMAGE_NOT_DIGEST_PINNED', at, { reference: entry.reference });
-    }
-    if (entry.digest !== null && entry.digest !== undefined && !DIGEST_RE.test(entry.digest)) {
-      add('DIGEST_FORMAT_INVALID', at, { digest: entry.digest });
-    }
-    if (entry.digestAuthenticated === true && !entry.digest) {
-      add('DIGEST_AUTH_FLAG_INCONSISTENT', at, { reason: 'digestAuthenticated=true requires a digest' });
-    }
-  }
-  violations.push(...runtimeFindings(lock));
-  // 准入语义与 outline.mjs 同款（amendment 3 资源准入波次）：开门必须携带完整准入记录。
-  const gate = lock.upGate ?? {};
-  const admissionRecordComplete = Boolean(gate.admittedBy && gate.admittedAt && gate.reason);
-  if (gate.enabled !== false && !admissionRecordComplete) {
-    add('UP_GATE_NOT_CLOSED', 'image.lock.json:upGate', { reason: 'up gate may open only with a complete admission record (admittedBy/admittedAt/reason); otherwise it must stay enabled=false' });
-  }
-  const source = lock.sourceInputs ?? {};
-  if (!/^[0-9a-f]{40}$/.test(source.sourceCommit ?? '')) add('SOURCE_COMMIT_NOT_PINNED', 'image.lock.json:sourceInputs', { reason: 'a 40-hex pinned Comet source commit is required' });
-  if (source.containerBuildStatus !== 'UNVERIFIED' && source.containerBuildStatus !== 'VERIFIED') {
-    add('CONTAINER_BUILD_STATUS_INVALID', 'image.lock.json:sourceInputs', { reason: 'containerized build status must be UNVERIFIED until a real build is evidenced' });
-  }
-  return violations;
 }
 
 function validateRolePolicy({ policy, refsDoc, projectId, catalogBoundRoles }) {
@@ -983,87 +754,6 @@ function validateDockerfile(text) {
   }
   return violations;
 }
-
-// 上游锁（integrations/comet/upstream.lock.json）是补丁链/工具链/指纹的唯一事实源。
-// fingerprint 算法与 tools/comet/build.mjs 的 fingerprintOf 完全一致：sha256(JSON({archive, patches, toolchain}))。
-function computeBuildFingerprint(upstream) {
-  return crypto.createHash('sha256').update(JSON.stringify({
-    archive: upstream.source.sha256,
-    patches: (upstream.patches ?? []).map(({ path: patchPath, sha256 }) => ({ path: patchPath, sha256 })),
-    toolchain: upstream.toolchain,
-  })).digest('hex');
-}
-
-function loadUpstreamLock() {
-  const read = readInput(path.join(repoRoot, 'integrations/comet/upstream.lock.json'), 'upstream lock', true);
-  if (!read.ok) return { upstream: null, error: read.code };
-  const value = read.value;
-  const valid = isObject(value) && value.schemaVersion === 1 && isObject(value.source) && isObject(value.toolchain)
-    && typeof value.source.commit === 'string' && /^[a-f0-9]{40}$/.test(value.source.commit)
-    && typeof value.source.sha256 === 'string' && /^[a-f0-9]{64}$/.test(value.source.sha256)
-    && Number.isSafeInteger(value.source.bytes) && value.source.bytes > 0
-    && Array.isArray(value.patches) && value.patches.length > 0
-    && value.patches.every((item) => isObject(item) && typeof item.path === 'string'
-      && /^integrations\/comet\/patches\/[A-Za-z0-9_./-]+\.patch$/.test(item.path) && !item.path.split('/').includes('..')
-      && typeof item.sha256 === 'string' && /^[a-f0-9]{64}$/.test(item.sha256))
-    && ['node', 'pnpm'].every((key) => typeof value.toolchain[key] === 'string' && /^\d+\.\d+\.\d+$/.test(value.toolchain[key]));
-  return valid ? { upstream: value, error: null } : { upstream: null, error: 'UPSTREAM_SHAPE_INVALID' };
-}
-
-// RW_RUNNER_BUILD 一致性发现：runner 域（image.lock.json）与当前上游锁/磁盘补丁的漂移。
-// validate 报违规、build-plan 报 drift，同源同码（validate/qualify/up/build-plan 共享同一结果）。
-function buildChainFindings({ lock, upstream, upstreamError }) {
-  const findings = [];
-  const add = (code, at, extra) => findings.push({ code, at, ...(extra ?? {}) });
-  if (!upstream) {
-    add('UPSTREAM_LOCK_UNREADABLE', 'integrations/comet/upstream.lock.json', { reason: upstreamError });
-    return { findings, fingerprint: null, patchVerification: [], upstreamPatches: [] };
-  }
-  const source = lock.sourceInputs ?? {};
-  if (source.sourceCommit !== upstream.source.commit || source.archiveSha256 !== upstream.source.sha256 || source.archiveBytes !== upstream.source.bytes) {
-    add('SOURCE_PIN_MISMATCH', 'image.lock.json:sourceInputs', { reason: 'source commit, archive digest and size must equal the current protected upstream lock' });
-  }
-  const upstreamPatches = Array.isArray(upstream.patches) ? upstream.patches : [];
-  if (JSON.stringify(source.patches ?? null) !== JSON.stringify(upstreamPatches)) {
-    add('PATCH_LOCK_MISMATCH', 'image.lock.json:sourceInputs.patches', {
-      reason: 'the runner lock must mirror the upstream patch list exactly (order + sha256)',
-      lockedCount: Array.isArray(source.patches) ? source.patches.length : 0,
-      upstreamCount: upstreamPatches.length,
-    });
-  }
-  if (JSON.stringify(source.toolchain ?? null) !== JSON.stringify(upstream.toolchain ?? null)) {
-    add('TOOLCHAIN_PIN_MISMATCH', 'image.lock.json:sourceInputs.toolchain', { reason: 'toolchain pins must equal the upstream lock' });
-  }
-  const openspec = source.openspec;
-  if (!openspec || openspec.package !== '@fission-ai/openspec' || openspec.version !== '1.11.0'
-    || openspec.tarballSha256 !== '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f'
-    || openspec.registryTarball !== 'https://registry.npmmirror.com/@fission-ai/openspec/-/openspec-1.11.0.tgz' || openspec.tarballBytes !== 471694) {
-    add('OPENSPEC_PIN_INVALID', 'image.lock.json:sourceInputs.openspec', { reason: 'the openspec pin (package/version/tarballSha256) must be recorded from the verified isolated candidate' });
-  }
-  const fingerprint = computeBuildFingerprint(upstream);
-  if (source.hostBuildFingerprint !== fingerprint) {
-    add('FINGERPRINT_STALE', 'image.lock.json:sourceInputs.hostBuildFingerprint', {
-      reason: 'the recorded fingerprint must equal the freshly recomputed lock-derived fingerprint (archive+patches+toolchain)',
-      expected: fingerprint,
-    });
-  }
-  const patchVerification = upstreamPatches.map((patch) => {
-    let actual = null;
-    try {
-      actual = crypto.createHash('sha256').update(fs.readFileSync(path.join(repoRoot, patch.path))).digest('hex');
-    } catch { /* absent or unreadable: fail closed below */ }
-    const sha256Verified = actual === patch.sha256;
-    if (!sha256Verified) {
-      add('PATCH_SHA256_MISMATCH', `integrations/comet/patches:${patch.path}`, { reason: 'a locked patch differs from its pinned sha256 on disk' });
-    }
-    return { path: patch.path, sha256: patch.sha256, sha256Verified };
-  });
-  return { findings, fingerprint, patchVerification, upstreamPatches };
-}
-
-// Dockerfile 必须消费锁定的完整有序补丁链（ARG 注入 + /build/repo 镜像路径 COPY + sha256 门），
-// 入口必须是 fingerprint 确定性路径；find 式漂移入口（历史缺陷：head -n 1 静默吞掉指纹漂移）拒绝。
-// Executable template changes require source/test review; caller-supplied locks cannot select this pin.
 const RUNNER_RECIPE_TEMPLATE = Object.freeze({
   bytes: 24569,
   sha256: 'ac633df2a4707914b018263e13f45333314e6e6280474798860bf2e6eac954ee',
@@ -1078,23 +768,113 @@ function validateRuntimeRecipe(text) {
     ? [{ code: 'RUNTIME_RECIPE_UNSAFE', at: 'Dockerfile', reason: 'the complete protected offline recipe template is required; only trailing nonexecuting metadata is permitted' }] : [];
 }
 
-function validateDockerfileChain(text, upstreamPatches) {
+// ---------------------------------------------------------------------------
+// 退休记录（image.lock.json）完整性：退休声明、关闭的 up 门、镜像识别摘要、
+// openspec 活性 pin、以及从记录自身现算的指纹（不再对照活的 upstream.lock —— 补丁
+// 链已从锁退位，0.4.5 源事实是历史识别信息，不是当前候选）。
+// ---------------------------------------------------------------------------
+const RETIREMENT_STATUS = 'RETIRED_RESIDENT_ROLE_DEPLOYMENT';
+
+// 指纹算法与 tools/comet/build.mjs 的 fingerprintOf 完全一致：sha256(JSON({archive, patches, toolchain}))。
+// 退休后从退休记录自身字段现算——记录内部自洽即可，无需活锁。
+function recordFingerprint(sourceInputs) {
+  return crypto.createHash('sha256').update(JSON.stringify({
+    archive: sourceInputs.archiveSha256,
+    patches: (sourceInputs.patches ?? []).map(({ path: patchPath, sha256 }) => ({ path: patchPath, sha256 })),
+    toolchain: sourceInputs.toolchain,
+  })).digest('hex');
+}
+
+function validateImageLock(lock) {
+  const violations = [];
+  const add = (code, at, extra) => violations.push({ code, at, ...(extra ?? {}) });
+  if (lock.interface !== 'RunnerImageLock.v1') add('LOCK_INTERFACE_INVALID', 'image.lock.json', { expected: 'RunnerImageLock.v1' });
+  const retirement = lock.retirement;
+  if (!isObject(retirement)) {
+    add('RETIREMENT_DECLARATION_MISSING', 'image.lock.json:retirement', { reason: 'the resident role deployment retirement must be declared in the lock itself (ADR-0021)' });
+  } else {
+    if (retirement.status !== RETIREMENT_STATUS) add('RETIREMENT_STATUS_INVALID', 'image.lock.json:retirement.status', { expected: RETIREMENT_STATUS, observed: retirement.status ?? null });
+    if (retirement.decision !== RETIREMENT_DECISION) add('RETIREMENT_DECISION_MISMATCH', 'image.lock.json:retirement.decision', { expected: RETIREMENT_DECISION, observed: retirement.decision ?? null });
+    if (retirement.revision !== RETIREMENT_REVISION) add('RETIREMENT_REVISION_MISMATCH', 'image.lock.json:retirement.revision', { expected: RETIREMENT_REVISION, observed: retirement.revision ?? null });
+    if (!nonBlank(retirement.successorBoundary) || !/createCliJobDriver|on-demand/i.test(retirement.successorBoundary)) add('RETIREMENT_DECLARATION_INVALID', 'image.lock.json:retirement.successorBoundary', { reason: 'the successor boundary must name the on-demand ephemeral job path' });
+    if (!nonBlank(retirement.dataDisposition) || !/RETAINED/i.test(retirement.dataDisposition)) add('DATA_DISPOSITION_MISSING', 'image.lock.json:retirement.dataDisposition', { reason: 'retirement must declare old Run/evidence/image/volume data RETAINED; no deletion is authorized by this record' });
+    if (!Array.isArray(retirement.retiredSurface) || retirement.retiredSurface.length < 3) add('RETIREMENT_DECLARATION_INVALID', 'image.lock.json:retirement.retiredSurface', { reason: 'the retired surface list must enumerate the retired default install/start/check chain' });
+  }
+  const components = Array.isArray(lock.components) ? lock.components : [];
+  const byName = new Map(components.map((component) => [component.component, component]));
+  for (const name of LOCK_COMPONENTS) {
+    const entry = byName.get(name);
+    const at = `image.lock.json:${name}`;
+    if (!entry) {
+      add('MISSING_LOCK_COMPONENT', at);
+      continue;
+    }
+    if (typeof entry.reference === 'string') {
+      if (/:latest\s*$/.test(entry.reference)) add('FLOATING_TAG_FORBIDDEN', at, { reference: entry.reference });
+      if (!entry.digest) add('IMAGE_NOT_DIGEST_PINNED', at, { reference: entry.reference });
+    }
+    if (entry.digest !== null && entry.digest !== undefined && !DIGEST_RE.test(entry.digest)) {
+      add('DIGEST_FORMAT_INVALID', at, { digest: entry.digest });
+    }
+    if (entry.digestAuthenticated === true && !entry.digest) {
+      add('DIGEST_AUTH_FLAG_INCONSISTENT', at, { reason: 'digestAuthenticated=true requires a digest' });
+    }
+  }
+  // 退休后 up 门永远关闭：任何 enabled=true 都违规（不再存在可开门的准入记录）。
+  if ((lock.upGate ?? {}).enabled !== false) {
+    add('UP_GATE_NOT_CLOSED', 'image.lock.json:upGate', { reason: 'the resident role up gate is retired and must stay enabled=false permanently (ADR-0021)' });
+  }
+  const source = lock.sourceInputs ?? {};
+  if (!/^[0-9a-f]{40}$/.test(source.sourceCommit ?? '')) add('SOURCE_COMMIT_NOT_PINNED', 'image.lock.json:sourceInputs', { reason: 'a 40-hex retired-era Comet source commit is required for image identification' });
+  if (!Array.isArray(source.patches) || source.patches.length === 0
+    || source.patches.some((item) => !isObject(item) || typeof item.path !== 'string'
+      || /^integrations\/comet\/patches\/[A-Za-z0-9_./-]+\.patch$/.test(item.path) === false
+      || typeof item.sha256 !== 'string' || /^[a-f0-9]{64}$/.test(item.sha256) === false)) {
+    add('RETIRED_PATCH_RECORD_INVALID', 'image.lock.json:sourceInputs.patches', { reason: 'the retired seven-patch identification list (path + sha256 per entry) must stay well-formed' });
+  }
+  const openspec = source.openspec;
+  if (!openspec || openspec.package !== '@fission-ai/openspec' || openspec.version !== '1.11.0'
+    || openspec.tarballSha256 !== '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f'
+    || openspec.registryTarball !== 'https://registry.npmmirror.com/@fission-ai/openspec/-/openspec-1.11.0.tgz' || openspec.tarballBytes !== 471694) {
+    add('OPENSPEC_PIN_INVALID', 'image.lock.json:sourceInputs.openspec', { reason: 'the still-live openspec pin (registry-referenced by openspec-isolated-tools) must stay exactly as P1_1 recorded it' });
+  }
+  if (source.hostBuildFingerprint !== undefined && source.hostBuildFingerprint !== recordFingerprint(source)) {
+    add('FINGERPRINT_STALE', 'image.lock.json:sourceInputs.hostBuildFingerprint', {
+      reason: 'the recorded retired-era fingerprint must equal the freshly recomputed record-derived fingerprint (archive+patches+toolchain from this record)',
+      expected: recordFingerprint(source),
+    });
+  }
+  if (source.containerBuildStatus !== 'UNVERIFIED' && source.containerBuildStatus !== 'VERIFIED' && source.containerBuildStatus !== 'RETIRED') {
+    add('CONTAINER_BUILD_STATUS_INVALID', 'image.lock.json:sourceInputs', { reason: 'containerized build status must be UNVERIFIED, VERIFIED or RETIRED' });
+  }
+  return violations;
+}
+
+// Dockerfile 是冻结的历史配方（镜像识别）：字节数与 sha 必须保持不变；
+// 其补丁链 COPY/ARG/门数量必须与退休记录的七补丁识别清单一致。
+// Executable template changes require source/test review; caller-supplied locks cannot select this pin.
+function validateRetiredDockerfileChain(text, retiredPatches) {
   const violations = [];
   const add = (code, at, extra) => violations.push({ code, at, ...(extra ?? {}) });
   const joined = text.replace(/\\\n/g, ' ');
   const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  for (const [index, patch] of upstreamPatches.entries()) {
+  const patches = Array.isArray(retiredPatches) ? retiredPatches : [];
+  for (const [index, patch] of patches.entries()) {
     const n = index + 1;
     const escaped = escapeRegExp(patch.path);
     if (!new RegExp(`^ARG PATCH_${n}_SHA256$`, 'm').test(text)) {
       add('PATCH_CHAIN_INCOMPLETE', `Dockerfile:PATCH_${n}_SHA256`, { patch: patch.path, reason: `ARG PATCH_${n}_SHA256 missing` });
     }
     if (!new RegExp(`^COPY ${escaped} /build/repo/${escaped}$`, 'm').test(text)) {
-      add('PATCH_CHAIN_INCOMPLETE', `Dockerfile:PATCH_${n}_COPY`, { patch: patch.path, reason: 'the patch must be mirrored under /build/repo at its lock-relative path' });
+      add('PATCH_CHAIN_INCOMPLETE', `Dockerfile:PATCH_${n}_COPY`, { patch: patch.path, reason: 'the historical recipe must mirror the retired patch at its lock-relative path' });
     }
     if (!joined.includes(`echo "\${PATCH_${n}_SHA256}  /build/repo/${patch.path}" | sha256sum -c -`)) {
-      add('PATCH_CHAIN_INCOMPLETE', `Dockerfile:PATCH_${n}_GATE`, { patch: patch.path, reason: 'the sha256sum gate for the mirrored patch is missing' });
+      add('PATCH_CHAIN_INCOMPLETE', `Dockerfile:PATCH_${n}_GATE`, { patch: patch.path, reason: 'the historical sha256sum gate for the mirrored patch is missing' });
     }
+  }
+  const declaredArgCount = (text.match(/^ARG PATCH_\d+_SHA256$/gm) ?? []).length;
+  if (declaredArgCount !== patches.length) {
+    add('PATCH_CHAIN_INCOMPLETE', 'Dockerfile', { reason: `the historical recipe declares ${declaredArgCount} PATCH_n args but the retirement record identifies ${patches.length} patches` });
   }
   if (/find\s+\/build/.test(text)) {
     add('ENTRYPOINT_NONDETERMINISTIC', 'Dockerfile', { reason: 'entrypoint resolution must be the fingerprint-deterministic managed path; find-based drift entry is forbidden' });
@@ -1119,56 +899,41 @@ function validateDomain({ registry, refsDoc, files }) {
   const catalogGaps = RUNNER_REFS.filter((ref) => !catalogRefs.has(ref)).sort();
   const catalogBoundRoles = (refsDoc?.refs ?? []).filter((entry) => !RUNNER_REFS.includes(entry.ref));
 
-  violations.push(...validateImageLock(jsonDocs.get('image.lock.json')));
+  const imageLock = jsonDocs.get('image.lock.json');
+  violations.push(...validateImageLock(imageLock));
   violations.push(...validateRolePolicy({ policy: rolePolicy, refsDoc, projectId, catalogBoundRoles }).violations);
   violations.push(...validateWorkspaceMounts({ mounts, policy: rolePolicy }));
   violations.push(...validateAuthority({ authority: jsonDocs.get('authority-registration.example.json'), projectId }));
 
-  const controlVolumeNames = new Set((mounts.controlVolumes ?? []).map((control) => control.volume));
-  // RW_RUNNER_BUILD：镜像构建链与当前上游锁/磁盘补丁的一致性（validate/qualify/up/build-plan 同源）。
-  const imageLock = jsonDocs.get('image.lock.json');
-  const { upstream, error: upstreamError } = loadUpstreamLock();
-  const chain = buildChainFindings({ lock: imageLock, upstream, upstreamError });
-  violations.push(...chain.findings);
-  violations.push(...validateDockerfileChain(files.get('Dockerfile'), chain.upstreamPatches));
+  // 历史配方完整性：与退休记录（而非活锁）对照。
+  violations.push(...validateRetiredDockerfileChain(files.get('Dockerfile'), imageLock.sourceInputs?.patches));
 
   const composition = validateCompose(files.get('compose.yaml'));
   violations.push(...composition.violations);
   violations.push(...validateDockerfile(files.get('Dockerfile')));
 
-  return { violations, catalogGaps, composeParser: composition.parser };
+  // 默认入口普查：默认链零常驻角色服务。
+  const census = defaultEntryCensus();
+  violations.push(...census.findings);
+
+  return { violations, catalogGaps, composeParser: composition.parser, census };
 }
 
-function buildQualification({ registryFile, dir, files, violations, catalogGaps }) {
-  const lock = JSON.parse(files.get('image.lock.json'));
-  const components = Array.isArray(lock.components) ? lock.components : [];
-  const unreadyComponents = [];
-  for (const name of LOCK_COMPONENTS) {
-    const entry = components.find((component) => component.component === name);
-    if (!entry || typeof entry.reference !== 'string' || !entry.digest || !DIGEST_RE.test(entry.digest) || entry.digestAuthenticated !== true) {
-      unreadyComponents.push({
-        component: name,
-        status: 'UNVERIFIED',
-        reason: !entry
-          ? 'component missing from lock'
-          : `reference=${entry.reference ? 'recorded' : 'UNBUILT/UNSELECTED'}, digest=${entry.digest ? 'recorded' : 'absent'}, digestAuthenticated=${entry.digestAuthenticated === true}`,
-      });
-    }
-  }
-  const source = lock.sourceInputs ?? {};
+function buildQualification({ registryFile, dir, files, violations, catalogGaps, census }) {
+  const censusClean = !census.findings.some((finding) => finding.code === 'DEFAULT_ENTRY_RESIDENT_ROLE_REFERENCE');
   const categories = {
-    'source-pins': RECORDED(
-      `current source, ${source.patches?.length ?? 0} patch digests and fingerprint ${source.hostBuildFingerprint ?? '(absent)'} are checked against the protected upstream lock and actual patch bytes; runtime identity remains separate`,
-    ),
-    'container-image': unreadyComponents.length === 0
-      ? RECORDED('digests recorded for all components; container daemon verification of the built image is still pending')
-      : UNVERIFIED(`current candidate image readback is missing for ${unreadyComponents.map((c) => c.component).join(', ')}; historical image observations are not current qualification`),
+    'default-chain-zero-resident-role-services': censusClean
+      ? { status: 'VERIFIED', reason: `mechanical census of ${census.entries.length} default install/start/check entries found zero resident role references; this CLI itself has no start path`, entries: census.entries }
+      : UNVERIFIED(`default-entry census found resident role references: ${[...new Set(census.findings.map((finding) => `${finding.at} (${finding.matched})`))].join(', ')}`),
+    'retired-without-data-loss': violations.every((violation) => violation.code !== 'DATA_DISPOSITION_MISSING')
+      ? RECORDED('the retirement record declares old Run/evidence/image/volume data RETAINED and authorizes no deletion; whether old resources still exist on a given host is separate UNVERIFIED inventory')
+      : UNVERIFIED('the lock lacks an honest data retention disposition for the retirement'),
+    'old-resource-inventory': UNVERIFIED('read-only docker inventory of retired containers/volumes/images never executed on this host; ownership and existence of old resources stay unobserved'),
     'role-boundary-declaration': violations.length === 0
-      ? RECORDED('six roles with distinct principals/credentials/volumes, read-only rootfs, dropped capabilities, worker-unwritable control paths — structurally declared and self-consistent')
-      : UNVERIFIED(`role boundary structure violates its own invariants: ${[...new Set(violations.map((violation) => violation.code))].join(', ')}`),
-    'role-isolation-enforcement': UNVERIFIED('probe role-denial never executed against a live runner: real container inspect (UID/GID/mounts) and per-channel (Edit/Shell/MCP) negative-write evidence is required; declared structure never substitutes for measured denial'),
-    'control-directory-closure': UNVERIFIED('probe role-denial (control-path writes) and live mount inspection must prove no worker-writable control path exists on a running stack'),
-    'authority-exclusivity': UNVERIFIED('probe duplicate-authority never executed: one-writer evidence across two start requests (copied state refused, old owner/attempt rejected) requires the authoritative state volume'),
+      ? RECORDED('retired declarations remain self-consistent: distinct principals/credentials/volumes, read-only rootfs, dropped capabilities, worker-unwritable control paths')
+      : UNVERIFIED(`declaration structure violates its own invariants: ${[...new Set(violations.map((violation) => violation.code))].join(', ')}`),
+    'authority-exclusivity': UNVERIFIED('duplicate-authority never executed against a real Comet state: one-writer/refuse-copied-state evidence requires the original Run under native lock/transaction'),
+    'on-demand-ephemeral-job': UNVERIFIED('createCliJobDriver protocol is component-tested only; a real authorized dispatch through the fixed host never executed on this host'),
     'secret-refs-registered': catalogGaps.length === 0
       ? RECORDED('all 4 runner refs present in the I01 catalog; all remain NOT_PROVISIONED')
       : UNVERIFIED(`refs missing from the I01 catalog (catalog is I01-owned and needs a registration update): ${catalogGaps.join(', ')}`),
@@ -1182,43 +947,84 @@ function buildQualification({ registryFile, dir, files, violations, catalogGaps 
     domain: 'comet-runner',
     dir: displayPath(dir),
     ready: values.every((category) => category.status === 'VERIFIED'),
+    residentRoleServices: 'RETIRED',
+    retirement: { decision: RETIREMENT_DECISION, revision: RETIREMENT_REVISION },
     unverifiedCount: values.filter((category) => category.status === 'UNVERIFIED').length,
     catalogGaps,
     categories,
     inputs,
-    unreadyComponents,
   };
 }
 
 const PROBE_CASES = {
   'role-denial': {
     requiredInputs: [
-      'a live runner stack started by an authorized operator (up refuses until the image lock authenticates and admission is granted)',
-      'real worker principals for controller/author/test-author/reviewer/publisher/isolator with runtime-resolved credentials (all refs are NOT_PROVISIONED/UNASSIGNED today)',
-      'a controlled write-channel matrix (Edit/Shell/MCP) executed inside each role container, retaining errno/request evidence per channel',
+      'real independent host sessions (native read/tool/path scopes on the current agent host or protected CI) — role containers are retired and are no longer a prerequisite (ADR-0021)',
+      'a controlled write-channel matrix (Edit/Shell/MCP) executed from an ordinary session, retaining errno/request evidence per channel',
+      'the current Comet control surfaces (comet-state.yaml / receipts under the native lock and transaction) identified as the protected targets',
     ],
     plannedSteps: [
-      'docker inspect each role service: record UID/GID, read-only rootfs, cap_drop, mounts and network scope',
-      'as each worker role, attempt writes to control state, policy, receipts and issuance paths via Edit/Shell/MCP channels (expect per-channel denial; keep errno/request evidence)',
-      'attempt docker.sock access and host HOME reads from a worker container (expect denial)',
-      'kill the controller, then attempt phase pickup/retry as a worker role (expect Comet to reject the old owner/attempt; infrastructure must not fabricate a new operation)',
+      'from an ordinary independent session, attempt writes to Comet control state, policy and receipts via Edit/Shell/MCP channels (expect per-channel denial by native scopes/host permissions; keep errno/request evidence)',
+      'attempt reads outside the session-scoped project paths (expect native path-scope denial)',
+      'confirm no default entry installs or starts any of the six retired role services (census oracle in validate)',
       'record the effective denial per channel; capability gaps stay UNVERIFIED and are never recorded as enforced',
     ],
   },
   'duplicate-authority': {
     requiredInputs: [
-      'the authoritative Comet state volume with the original RunID/authority registration',
-      'a copied state clone (second volume or second host)',
-      'two candidate runner instances pointing at the same authority/workspace',
+      'the authoritative Comet state (original RunID under the native lock and transaction)',
+      'a copied state clone (second directory or second host)',
+      'two candidate writers pointing at the same authority/workspace',
     ],
     plannedSteps: [
-      'start instance A against the authoritative state; record the single accepted writer identity',
-      'start instance B against the copied state with the same authority id (expect startup refusal; COPIED_STATE_FORBIDDEN semantics)',
+      'start writer A against the authoritative state; record the single accepted writer identity',
+      'start writer B against the copied state with the same authority id (expect startup refusal; COPIED_STATE_FORBIDDEN semantics)',
       'resume the original RunID/operation from the authoritative state (old owner/attempt results rejected by Comet; no fabricated new operation)',
-      'read back exactly one valid Comet writer across both start requests',
+      'read back exactly one valid Comet writer across both start attempts',
     ],
   },
 };
+
+// 退休拒绝（up / build-plan 共用）：退休先于资格化与 docker——
+// 不再有镜像资格前置，也不再触碰 docker daemon；不导出上下文、argv 或构建参数。
+function refuseRetiredCommand(command, files) {
+  const retiredProvenance = (() => {
+    try {
+      const lock = JSON.parse(files.get('image.lock.json'));
+      const source = lock.sourceInputs ?? {};
+      return {
+        sourceCommit: source.sourceCommit ?? null,
+        hostBuildFingerprint: source.hostBuildFingerprint ?? null,
+        patches: Array.isArray(source.patches) ? source.patches.length : 0,
+        record: 'infra/delivery/runner/image.lock.json (retirement record); full runtime closure in git history',
+      };
+    } catch { return null; }
+  })();
+  const payload = command === 'up'
+    ? {
+        code: 'RUNNER_RESIDENT_DEPLOYMENT_RETIRED',
+        error: 'UP_REFUSED_RESIDENT_DEPLOYMENT_RETIRED: the six-role resident compose stack is retired from every default install/start/check path (ADR-0021); up can never restart it',
+        retirement: { decision: RETIREMENT_DECISION, revision: RETIREMENT_REVISION, successor: 'on-demand ephemeral jobs via createCliJobDriver only' },
+        dockerInvoked: false,
+      }
+    : {
+        code: 'RUNNER_IMAGE_BUILD_CHAIN_RETIRED',
+        error: 'BUILD_PLAN_RETIRED: the 0.4.5 seven-patch image build chain is retired (ADR-0021 / ADR-0022 0.5.0 composition baseline); no executable build is exported',
+        retirement: { decision: RETIREMENT_DECISION, revision: RETIREMENT_REVISION, successor: 'on-demand ephemeral jobs consume an already-built image digest via createCliJobDriver' },
+        retiredProvenance,
+      };
+  print({
+    interface: 'RunnerInfra.v1',
+    command,
+    refused: true,
+    ready: false,
+    executed: false,
+    status: 'UNVERIFIED',
+    residentRoleServices: 'RETIRED',
+    ...payload,
+  });
+  return EXIT_VERIFY;
+}
 
 async function main(argv) {
   const { command, opts, error } = parseArgs(argv);
@@ -1231,8 +1037,13 @@ async function main(argv) {
     return loaded.exitCode;
   }
   const { registry, refsDoc, registryFile, refsFile, dir, files } = loaded;
+  // 退休拒绝先于任何资格化（ADR-0021：镜像/角色资格不再是命令前置）——
+  // 声明漂移不改变 up/build-plan 的答案：退休本身就是拒绝理由。
+  if (command === 'up' || command === 'build-plan') {
+    return refuseRetiredCommand(command, files);
+  }
   const admission = validateDomain({ registry, refsDoc, files });
-  if (['up', 'probe'].includes(command) && admission.violations.length > 0) {
+  if (command === 'probe' && admission.violations.length > 0) {
     print({ interface: 'RunnerInfra.v1', command, ready: false, executed: false, refused: true, status: 'UNVERIFIED',
       error: 'RUNNER_CONFIGURATION_REFUSED', violations: admission.violations });
     return EXIT_VERIFY;
@@ -1250,6 +1061,7 @@ async function main(argv) {
       executed: false,
       status: 'UNVERIFIED',
       reason: null,
+      residentRoleServices: 'RETIRED',
       requiredInputs: spec.requiredInputs,
       plannedSteps: spec.plannedSteps,
       observedSteps: [],
@@ -1263,7 +1075,7 @@ async function main(argv) {
         },
       },
     };
-    observation.reason = 'No current registered CLI Runner and execution source is qualified. Only the fixed original harness can supply an authorized work package; no HTTP endpoint is a qualification prerequisite.';
+    observation.reason = 'Resident role deployment is retired (ADR-0021); live denial evidence must come from real independent host sessions and native scopes, not from role containers. Only the fixed original harness can supply an authorized work package.';
     print(observation);
     return EXIT_VERIFY;
   }
@@ -1274,176 +1086,23 @@ async function main(argv) {
       command: 'stop',
       executed: false,
       status: 'UNVERIFIED',
+      residentRoleServices: 'RETIRED',
       reason:
-        'standalone CLI has no original authorized execution handle; the fixed Comet host stops only the matching original execution through stopCliJob',
+        'standalone CLI has no original authorized execution handle and never starts or stops anything; the fixed Comet host stops only the matching original execution through stopCliJob; retirement deletes no containers, volumes or images',
     });
     return EXIT_VERIFY;
   }
 
-  // build-plan：由当前上游锁导出 Runner 镜像构建计划（六补丁链/工具链/现算指纹/确定性入口/构建参数/输入获取）。
-  // 只导出声明：绝不执行构建、绝不打开 up 门（digest 回填是资源准入决策）；与上游锁漂移即拒绝（退出 2）。
-  if (command === 'build-plan') {
-    const lock = JSON.parse(files.get('image.lock.json'));
-    const { upstream, error: upstreamError } = loadUpstreamLock();
-    const chain = buildChainFindings({ lock, upstream, upstreamError });
-    const drift = [...new Set(admission.violations.map((finding) => finding.code))];
-    if (drift.length) { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', drift }); return EXIT_VERIFY; }
-    const sourceCommit = upstream?.source?.commit ?? null;
-    const openspec = lock.sourceInputs?.openspec ?? {};
-    const runnerCache = '.sdd/cache/runner-build';
-    // 镜像构建输入只认 .sdd/cache/runner-build 下的锁定副本：在场且 sha256 与锁一致才 PRESENT，
-    // 否则如实 ACQUISITION_REQUIRED 并声明期望 sha 与获取方式（绝不虚构“已就绪”）。
-    const buildInput = (relPath, expectedSha256, acquisition) => {
-      let sha256Verified = false;
-      try {
-        sha256Verified = crypto.createHash('sha256').update(fs.readFileSync(path.join(repoRoot, relPath))).digest('hex') === expectedSha256;
-      } catch { /* absent on this host */ }
-      return {
-        path: relPath,
-        status: sha256Verified ? 'PRESENT' : 'ACQUISITION_REQUIRED',
-        expectedSha256,
-        ...(sha256Verified ? { sha256Verified } : { acquisition }),
-      };
-    };
-    const runtime = lock.sourceInputs.runtime, bootstrap = bootstrapSources(runtime, files), openspecProject = verifiedOpenSpecProject(lock);
-    if (openspecProject.findings.length) { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', code: 'OPENSPEC_INPUTS_UNVERIFIED', findings: openspecProject.findings }); return EXIT_VERIFY; }
-    if (bootstrap.findings.length) { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', code: 'BOOTSTRAP_INPUTS_UNVERIFIED', findings: bootstrap.findings }); return EXIT_VERIFY; }
-    const bootstrapFiles = bootstrap.files.map(file => ({ path: file.path, bytes: file.bytes.length, sha256: sha256Text(file.bytes) }));
-    const bootstrapDigest = envelopeDigest({ files: bootstrapFiles, dependencies: runtime.dependencies, projects: runtime.projects, node: runtime.node, python: runtime.python });
-    const buildArgs = {
-      BOOTSTRAP_DIGEST: bootstrapDigest,
-      RUNNER_BASE_IMAGE: lock.components.find(item => item.component === lock.sourceInputs.runtime.node.component).reference,
-      PYTHON_BASE_IMAGE: lock.components.find(item => item.component === lock.sourceInputs.runtime.python.component).reference,
-      PYTHON_VERSION: lock.sourceInputs.runtime.python.version,
-      EXPECTED_NODE_VERSION: lock.sourceInputs.runtime.node.version,
-      SOURCE_COMMIT: sourceCommit,
-      SOURCE_SHA256: upstream?.source?.sha256 ?? null,
-      EXPECTED_FINGERPRINT: chain.fingerprint,
-      OPENSPEC_VERSION: openspec.version ?? null,
-      OPENSPEC_TARBALL_SHA256: openspec.tarballSha256 ?? null,
-      ...Object.fromEntries(chain.patchVerification.map((patch, index) => [`PATCH_${index + 1}_SHA256`, patch.sha256])),
-    };
-    const contextSources = [
-      { path: 'infra/delivery/runner/Dockerfile', bytes: Buffer.from(files.get('Dockerfile')) },
-      { path: 'infra/delivery/runner/image.lock.json', bytes: Buffer.from(files.get('image.lock.json')) },
-      ...bootstrap.files,
-      ...[runtime.projects.openspec.packageJson, runtime.projects.openspec.packageLock, runtime.projects.comet.pnpmLock, runtime.projects.comet.packageJson].map(item => { const bytes = repositoryBytes(item.path); return { path: item.path, bytes: bytes && bytes.length === item.bytes && sha256Text(bytes) === item.sha256 ? bytes : null }; }),
-      ...['tools/comet/build.mjs', 'tools/comet/source.js', 'tools/comet/prepare-source.mjs', 'integrations/comet/upstream.lock.json',
-        ...chain.upstreamPatches.map((patch) => patch.path)].map((file) => ({ path: file, bytes: fs.readFileSync(path.join(repoRoot, file)) })),
-    ];
-    const mergedSources = new Map();
-    for (const item of contextSources) {
-      if (mergedSources.has(item.path) && (!mergedSources.get(item.path).bytes || !item.bytes || !mergedSources.get(item.path).bytes.equals(item.bytes))) { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', code: 'CONTEXT_SOURCE_CONFLICT' }); return EXIT_VERIFY; }
-      mergedSources.set(item.path, item);
-    }
-    contextSources.splice(0, contextSources.length, ...mergedSources.values());
-    const contextFiles = contextSources.map(({ path: file, bytes }) => ({ path: file, sha256: bytes ? sha256Text(bytes) : [runtime.projects.openspec.packageJson, runtime.projects.openspec.packageLock, runtime.projects.comet.pnpmLock, runtime.projects.comet.packageJson].find(item => item.path === file).sha256, status: bytes ? 'PRESENT' : 'ACQUISITION_REQUIRED' }));
-    const dependencyInputs = runtime.dependencies.map(group => ({ id: group.id, closed: group.closed, files: group.files.map(file => {
-      const bytes = repositoryBytes(file.path), present = Boolean(bytes && bytes.length === file.bytes && sha256Text(bytes) === file.sha256
-        && (file.integrity === null || 'sha512-' + crypto.createHash('sha512').update(bytes).digest('base64') === file.integrity));
-      if (!mergedSources.has(file.path)) { const item = { path: file.path, bytes: present ? bytes : null }; mergedSources.set(file.path, item); contextSources.push(item); contextFiles.push({ path: file.path, sha256: file.sha256, status: present ? 'PRESENT' : 'ACQUISITION_REQUIRED' }); }
-      return { path: file.path, bytes: file.bytes, sha256: file.sha256, status: present ? 'PRESENT' : 'ACQUISITION_REQUIRED' };
-    }) }));
-    const dependenciesComplete = dependencyInputs.every(group => group.closed && group.files.length && group.files.every(file => file.status === 'PRESENT'));
+  if (command === 'up') {
+    return refuseRetiredCommand('up', files);
+  }
 
-    for (const [file, digest, size] of [[`${runnerCache}/comet-source.tar.gz`, upstream.source.sha256, upstream.source.bytes],
-      [`${runnerCache}/openspec-${openspec.version}.tgz`, openspec.tarballSha256, openspec.tarballBytes]]) {
-      let bytes = null;
-      try {
-        const target = path.join(repoRoot, file), stat = fs.lstatSync(target);
-        if (stat.isFile() && !stat.isSymbolicLink() && stat.size === size) { const data = fs.readFileSync(target); if (sha256Text(data) === digest) bytes = data; }
-      } catch { /* explicit missing input below; never acquire or follow a symlink */ }
-      contextSources.push({ path: file, bytes }); contextFiles.push({ path: file, sha256: digest, status: bytes ? 'PRESENT' : 'ACQUISITION_REQUIRED' });
-    }
-    const contextDigest = envelopeDigest(contextFiles.map(({ path: file, sha256 }) => ({ path: file, sha256 })));
-    const context = '.local/I02-convergence-current/build-context/' + contextDigest;
-    const contextRoot = path.join(repoRoot, context);
-    const conflict = () => { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', code: 'CONTEXT_CONFLICT' }); return EXIT_VERIFY; };
-    const contextStatus = buildContextStatus(context, contextFiles);
-    if (contextStatus === 'CONFLICT') return conflict();
-    let materialized = contextStatus === 'EXACT';
-    if (opts['export-context'] && !materialized) {
-      if (!dependenciesComplete || contextSources.some((item) => !item.bytes)) { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', code: 'CONTEXT_INPUTS_MISSING', dependencyInputs, contextFiles }); return EXIT_VERIFY; }
-      try {
-        let directory = repoRoot;
-        for (const component of context.split('/').slice(0, -1)) {
-          directory = path.join(directory, component);
-          try { fs.mkdirSync(directory, { mode: 0o700 }); }
-          catch (error) { if (error?.code !== 'EEXIST') throw error; }
-          const stat = fs.lstatSync(directory);
-          if (!stat.isDirectory() || stat.isSymbolicLink()) return conflict();
-        }
-        fs.mkdirSync(contextRoot, { mode: 0o700 });
-        for (const item of contextSources) {
-          let parent = contextRoot;
-          for (const component of item.path.split('/').slice(0, -1)) {
-            parent = path.join(parent, component);
-            try { fs.mkdirSync(parent, { mode: 0o700 }); }
-            catch (error) { if (error?.code !== 'EEXIST') throw error; }
-            const stat = fs.lstatSync(parent);
-            if (!stat.isDirectory() || stat.isSymbolicLink()) return conflict();
-          }
-          fs.writeFileSync(path.join(contextRoot, item.path), item.bytes, { flag: 'wx', mode: 0o600 });
-        }
-      } catch (error) {
-        if (error?.code === 'EEXIST' || INPUT_FILE_ERRORS.has(error?.code)) return conflict();
-        throw error;
-      }
-      if (buildContextStatus(context, contextFiles) !== 'EXACT') return conflict();
-      materialized = true;
-    }
-    print({
-      interface: 'RunnerInfra.v1',
-      command: 'build-plan',
-      dir: displayPath(dir),
-      drift,
-      sourceCommit,
-      fingerprint: chain.fingerprint,
-      runtime: { schemaVersion: runtime.schemaVersion, platform: runtime.platform, node: runtime.node,
-        python: { component: runtime.python.component, version: runtime.python.version, minimum: runtime.python.minimum, libraries: runtime.python.libraries } },
-      ready: false,
-      status: 'UNVERIFIED',
-      bootstrap: { pathBase: 'image-root', entry: 'opt/sdd/' + runtime.bootstrap.entry, link: { path: 'opt/sdd/' + runtime.bootstrap.link, target: 'opt/sdd/' + runtime.bootstrap.entry }, files: bootstrapFiles, digest: bootstrapDigest, provider: null, productionQualified: false },
-      dependencyInputs,
-      openspecPackage: openspecProject.package,
-      patches: chain.patchVerification,
-      entrypoint: sourceCommit && chain.fingerprint
-        ? `/build/repo/.sdd/vendor/comet/${sourceCommit}/builds/${chain.fingerprint}/work/bin/comet.js`
-        : null,
-      inputs: {
-        cometSourceArchive: buildInput(`${runnerCache}/comet-source.tar.gz`, upstream?.source?.sha256 ?? null, {
-          url: upstream?.source?.url ?? null,
-          bytes: upstream?.source?.bytes ?? null,
-          command: `mkdir -p ${runnerCache} && curl -fsSL ${upstream?.source?.url ?? ''} -o ${runnerCache}/comet-source.tar.gz`,
-        }),
-        openspecTarball: buildInput(`${runnerCache}/openspec-${openspec.version ?? 'PIN_MISSING'}.tgz`, openspec.tarballSha256 ?? null, {
-          url: openspec.registryTarball ?? null,
-          bytes: openspec.tarballBytes ?? null,
-          command: `mkdir -p ${runnerCache} && curl -fsSL ${openspec.registryTarball ?? ''} -o ${runnerCache}/openspec-${openspec.version ?? ''}.tgz`,
-        }),
-      },
-      dockerBuild: {
-        dockerfile: 'infra/delivery/runner/Dockerfile',
-        context, contextDigest, contextFiles, materialized,
-        exclusions: ['.git', '.local', '.claude', '.codex', 'node_modules', 'live settings', 'secret stores', 'unlisted files'],
-        buildArgs,
-        executable: dependenciesComplete && contextSources.every(item => item.bytes !== null) && materialized,
-        argv: dependenciesComplete && contextSources.every(item => item.bytes !== null) ? ['docker', 'build', '--pull=false', '--network=none', '--platform=linux/arm64', '-f', context + '/infra/delivery/runner/Dockerfile', ...Object.entries(buildArgs).flatMap(([key, value]) => ['--build-arg', key + '=' + value]), context] : null,
-        command: dependenciesComplete && contextSources.every(item => item.bytes !== null) ? [
-          'docker build --pull=false --network=none --platform=linux/arm64',
-          `-f ${context}/infra/delivery/runner/Dockerfile`,
-          ...Object.entries(buildArgs).map(([key, value]) => `--build-arg ${key}=${value}`),
-          context,
-        ].join(' ') : null,
-      },
-      upGate: lock.upGate?.enabled === true ? 'OPEN' : 'CLOSED',
-      containerBuildStatus: lock.sourceInputs?.containerBuildStatus ?? null,
-    });
-    return drift.length === 0 ? EXIT_PASS : EXIT_VERIFY;
+  if (command === 'build-plan') {
+    return refuseRetiredCommand('build-plan', files);
   }
 
   if (command === 'validate') {
-    const { violations, catalogGaps } = admission;
+    const { violations, catalogGaps, census } = admission;
     const rolePolicy = JSON.parse(files.get('role-policy.json'));
     const authority = JSON.parse(files.get('authority-registration.example.json'));
     const lock = JSON.parse(files.get('image.lock.json'));
@@ -1455,6 +1114,8 @@ async function main(argv) {
     print({
       interface: 'RunnerInfra.v1',
       command: 'validate',
+      residentRoleServices: 'RETIRED',
+      retirement: lock.retirement ?? null,
       composeParser: admission.composeParser,
       registry: displayPath(registryFile),
       refs: displayPath(refsFile),
@@ -1462,6 +1123,7 @@ async function main(argv) {
       ok: violations.length === 0,
       violations,
       catalogGaps,
+      defaultEntryCensus: { entries: census.entries, residentRoleReferences: 0 },
       roles: (rolePolicy.roles ?? []).map((role) => ({
         role: role.role,
         principalLabel: role.principal?.label ?? null,
@@ -1487,6 +1149,7 @@ async function main(argv) {
       },
       imageLock: {
         interface: lock.interface,
+        retirementStatus: lock.retirement?.status ?? null,
         upGate: lock.upGate ?? null,
         containerBuildStatus: lock.sourceInputs?.containerBuildStatus ?? null,
         components: (lock.components ?? []).map((component) => ({
@@ -1500,67 +1163,11 @@ async function main(argv) {
     return violations.length === 0 ? EXIT_PASS : EXIT_VERIFY;
   }
 
-  if (command === 'qualify' || command === 'up') {
-    // 单一事实源：violations 与 catalog 缺口来自同一 validateDomain 结果，validate/qualify/up 共享。
-    const { violations, catalogGaps } = admission;
-    const qualification = buildQualification({ registryFile, dir, files, violations, catalogGaps });
-    if (command === 'qualify') {
-      print(qualification);
-      return qualification.ready ? EXIT_PASS : EXIT_VERIFY;
-    }
-    if (!qualification.ready) {
-      print({ interface: 'Qualification.v1', command: 'up', domain: 'comet-runner', refused: true, ready: false, executed: false,
-        status: 'UNVERIFIED', error: qualification.unreadyComponents.length ? 'UP_REFUSED_RUNNER_LOCK_NOT_READY' : 'UP_REFUSED_RUNNER_NOT_QUALIFIED', receipt: qualification });
-      return EXIT_VERIFY;
-    }
-    if (qualification.unreadyComponents.length > 0) {
-      print({
-        interface: 'Qualification.v1',
-        command: 'up',
-        domain: 'comet-runner',
-        refused: true,
-        ready: false,
-        error: `UP_REFUSED_RUNNER_LOCK_NOT_READY: ${qualification.unreadyComponents.length} component images lack an authenticated digest (no containerized build has ever run on this host)`,
-        unverifiedComponents: qualification.unreadyComponents,
-        receipt: qualification,
-      });
-      return EXIT_VERIFY;
-    }
-    const lock = JSON.parse(files.get('image.lock.json'));
-    if (lock.upGate?.enabled !== true) {
-      print({
-        interface: 'Qualification.v1',
-        command: 'up',
-        domain: 'comet-runner',
-        refused: true,
-        ready: true,
-        error: `UP_NOT_AUTHORIZED: ${lock.upGate?.reason ?? 'up gate is closed in this task'}`,
-      });
-      return EXIT_VERIFY;
-    }
-    const daemon = spawnSync('docker', ['version', '--format', '{{.Server.Version}}'], { encoding: 'utf8', timeout: 8000 });
-    if (daemon.status !== 0) {
-      print({
-        interface: 'Qualification.v1',
-        command: 'up',
-        domain: 'comet-runner',
-        refused: true,
-        ready: true,
-        status: 'UNVERIFIED',
-        error: `UP_REFUSED_CONTAINER_DAEMON_UNREACHABLE: ${redactHostPaths(daemon.stderr.trim().split('\n')[0] || `docker exited ${daemon.status}`)}`,
-      });
-      return EXIT_VERIFY;
-    }
-    print({
-      interface: 'Qualification.v1',
-      command: 'up',
-      domain: 'comet-runner',
-      refused: true,
-      ready: true,
-      status: 'UNVERIFIED',
-      error: 'UP_NOT_EXECUTED: runtime launch requires an authorized operator context; I02 declares the role boundary and gates, admission is a later explicit decision',
-    });
-    return EXIT_VERIFY;
+  if (command === 'qualify') {
+    const { violations, catalogGaps, census } = admission;
+    const qualification = buildQualification({ registryFile, dir, files, violations, catalogGaps, census });
+    print(qualification);
+    return qualification.ready ? EXIT_PASS : EXIT_VERIFY;
   }
 
   return failInput(`unknown command: ${command}`);
