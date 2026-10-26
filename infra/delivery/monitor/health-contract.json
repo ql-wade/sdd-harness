@@ -36,6 +36,30 @@
     "latestDiscoverySeconds": 120,
     "basis": "discovery takes at most 2 minutes (30s heartbeat / 30s check budget)."
   },
+  "g15": {
+    "discoveryTargetSeconds": 180,
+    "isolationTargetSeconds": 120,
+    "segmentsTimedSeparately": [
+      "fault_exposure",
+      "alert_delivery",
+      "isolation"
+    ],
+    "alertIsNeverIsolation": true,
+    "basis": "ADR-0021 + comet-ai-devops-convergence.md: under normal dependencies discovery <=3 minutes and isolation <=2 minutes; fault exposure, alert delivery and isolation are timed separately from real timestamps, and an alert never counts as isolation. Fault-window breaches are recorded (exposure window/breach), never hidden by a timeout.",
+    "operationalEvidence": "UNVERIFIED",
+    "evidenceNote": "the targets and the separate-timing rule are registered here; production timing evidence from a real deployment (real external timestamps per segment) is still to be supplied and stays UNVERIFIED."
+  },
+  "r10": {
+    "soleWorkspaceRetentionForUnresolvedObligations": true,
+    "cleanupRequires": [
+      "verified-completed",
+      "separately-approved-migration-and-restore-proof"
+    ],
+    "monitorRole": "observe-and-alert-only",
+    "monitorNeverCleansUp": true,
+    "basis": "R10: an unresolved Run/knowledge obligation retains the sole workspace and blocks cleanup; the monitor observes unresolved obligations and their deadlines and alerts on them — it never performs, triggers or substitutes cleanup.",
+    "note": "cleanup eligibility evidence belongs to I08 (retention/restore policies); this registration only pins the monitor's observe-and-alert role."
+  },
   "authorityIdentity": {
     "required": true,
     "note": "Health reads report the fixed Comet authority identity; the supervisor and reconciliation both key on it."

@@ -1,0 +1,25 @@
+{
+  "interface": "MonitorInfra.v1",
+  "command": "probe",
+  "case": "external-host-down",
+  "executed": false,
+  "status": "UNVERIFIED",
+  "faultDomainSatisfied": false,
+  "mustNotPass": true,
+  "externalMonitorRegistered": false,
+  "coHostedMonitorCannotClaimHostFailure": true,
+  "reason": "no monitoring instance outside the Runner fault domain is registered (monitor-registration is an example with status UNREGISTERED); a co-hosted monitor dies with the host and must be marked fault-domain-NOT-satisfied — never PASS",
+  "requiredInputs": [
+    "a monitoring instance outside the Runner fault domain, registered with instance/owner/network/persistence (monitor-registration)",
+    "delivery authorization for the alert channels (monitor-alert ref; current task holds none)",
+    "real external timestamps + loss onset + monitor verdict + delivery/escalation receipts, timed as separate segments"
+  ],
+  "plannedSteps": [
+    "stop the Runner host (not just the process) under change control",
+    "the external monitor detects host loss within 2 minutes and alerts through the registered channels",
+    "record detection and delivery as separate segments with external timestamps",
+    "a co-hosted monitor result must be recorded as faultDomainSatisfied=false, never PASS"
+  ],
+  "registry": "infra/delivery/registry.json",
+  "checkedAt": "2026-10-26T13:49:40.980Z"
+}

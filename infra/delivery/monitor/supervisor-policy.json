@@ -1,12 +1,45 @@
 {
   "schemaVersion": 1,
-  "interface": "Supervisor.v1",
+  "interface": "Supervisor.v2",
   "kind": "supervisor-policy",
   "project": {
     "id": "sdd-harness-pilot"
   },
-  "scope": "PROCESS_LEVEL_RESTART_ONLY",
-  "note": "the process supervisor only restarts the same Comet service on the original Runner; Comet itself recovers its own transactions, compensation and retries. The supervisor never becomes a second control plane.",
+  "scope": "SCHEDULER_TRIGGERED_ORIGINAL_COMET_ONLY",
+  "note": "revision 2026-10-26-comet-050-adoption-v1: existing CI scheduled workflows / host timers only trigger the SAME original Comet maintenance entry; the trigger owns no business state or retry scheduling, no resident controller service is started, and the supervisor remains process-level restart of the original instance only. Comet itself recovers its own transactions, compensation and retries. The supervisor never becomes a second control plane.",
+  "schedulerInvocation": {
+    "basis": "docs/architecture/comet-ai-devops-convergence.md: reuse existing CI scheduled tasks / host timers to trigger the original command; the trigger owns no business state or retry scheduling.",
+    "surfaces": {
+      "ciScheduledWorkflow": {
+        "capability": "github-actions-on-schedule",
+        "status": "UNREGISTERED",
+        "committedWorkflowsWithScheduleTrigger": [],
+        "committedWorkflowsObserved": [
+          "delivery-gate.yml (pull_request/merge_group/push; no on.schedule)",
+          "quality-gates.yml (pull_request/push; no on.schedule)"
+        ],
+        "registeredAs": null,
+        "note": "the scheduling capability exists on the platform, but no committed workflow carries a schedule trigger today; registering one is a repository change that must update this registration in the same change, never an invention here."
+      },
+      "hostTimer": {
+        "capability": "host-cron-launchd-or-equivalent",
+        "status": "UNREGISTERED",
+        "registeredAs": null,
+        "note": "host timer facilities exist on the host, but this repository registers no timer (installer surface tools/hooks/scripts carries none); nothing here installs one."
+      }
+    },
+    "invocationContract": {
+      "triggersOnlyOriginalCometMaintenance": true,
+      "originalEntry": "same-original-comet-maintenance-entry",
+      "originalEntryStatus": "UNVERIFIED",
+      "originalEntryNote": "the real maintenance command wiring (knowledge revocation maintenance operations, permission maintenance) belongs to P4_8/pilot runs; this mapping declares WHAT a timer may invoke, not that a timer is wired.",
+      "schedulerOwnsBusinessState": false,
+      "schedulerOwnsRetryScheduling": false,
+      "checkOldWriterBeforeRecoveryInvocation": true,
+      "residentControllerService": "FORBIDDEN",
+      "note": "a registered timer may only invoke the same original Comet maintenance command entry used for manual permission maintenance; before any recovery invocation the old writer must be checked (startGate); no resident controller/monitor service is started by this domain."
+    }
+  },
   "forbiddenActions": [
     "change-phase",
     "create-maintenance-operation",

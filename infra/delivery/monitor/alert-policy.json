@@ -29,6 +29,19 @@
       "note": "the first isolation failure immediately raises an event to the independent alert system; it does not wait for the budget to expire."
     }
   },
+  "negativeRedLines": {
+    "missedAlertIsFailure": true,
+    "alertIsNeverIsolation": true,
+    "offlineMustBeDetectable": true,
+    "compensationOwner": "original-comet",
+    "requiredAlertEvents": [
+      "missed-event",
+      "watermark-stall",
+      "offline",
+      "isolation-failure"
+    ],
+    "note": "revision 2026-10-26-comet-050-adoption-v1 red lines: a missed required alert (missed event / stalled watermark / offline / isolation failure) is itself a failure, never a silent pass; an alert never substitutes isolation — isolation executes and reads back only through the original Comet maintenance entry; offline is detectable only from outside the fault domain (fault-domain-policy.json); compensation for any of these events belongs to the original Comet, never to the monitor or the scheduler."
+  },
   "rules": {
     "undeliveredIsNeverAcknowledged": true,
     "redeliverySeparateFromBusinessRetry": true,

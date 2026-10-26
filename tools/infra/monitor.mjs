@@ -1,9 +1,13 @@
 #!/usr/bin/env node
-// MonitorInfra.v1 / Health.v1 / AlertPolicy.v1 / Supervisor.v1 / FaultDomain.v1 CLI
+// MonitorInfra.v1 / Health.v1 / AlertPolicy.v1 / Supervisor.v2 / FaultDomain.v1 CLI
 //   — validate | health | alert | supervise | probe
 //
 // 只读既有 Comet 事实 + 决策与准备：不启动任何服务、不发送任何通知、不持有业务阶段/DAG/重试、
 // 不写 ACL、不创建 Comet 维护 operation。监督器仅进程级 restart 原实例（probe 内以真实本地进程注入实证）。
+// 修订 2026-10-26-comet-050-adoption-v1（Supervisor.v2）：既有 CI 定时 workflow / 宿主定时器只触发
+// "同 Comet 维护入口"的原命令，触发器不拥有业务状态/重试调度；不得起独立 controller 服务；
+// 漏事件/不进水位/离线/隔离失败必须告警并由原 Comet 补偿；G15 发现≤3min/隔离≤2min 分别计时；
+// R10 未完成义务保留唯一工作区，监控只观察并告警。
 // 秘密值永不读写：两个 ref（monitor-health-read / monitor-alert）只引用，解析属 I01 只读门（UNRESOLVED）。
 //
 // 退出码契约（execution-contract.json V_INFRA_I07.cli_contract）：
@@ -63,6 +67,12 @@ const FORBIDDEN_SUPERVISOR_ACTIONS = [
   'business-retry',
 ];
 const ALLOWED_SUPERVISOR_ACTIONS = ['restart'];
+
+// 修订 2026-10-26-comet-050-adoption-v1 登记常量：G15 目标 / 负向必告警事件 / R10 清理前置。
+const G15_SEGMENTS_SEPARATE = ['fault_exposure', 'alert_delivery', 'isolation'];
+const G15_DISCOVERY_TARGET_SECONDS = 180;
+const G15_ISOLATION_TARGET_SECONDS = 120;
+const REQUIRED_ALERT_EVENTS = ['missed-event', 'watermark-stall', 'offline', 'isolation-failure'];
 
 // 宿主私有路径绝不进入结构化回执/报告；对外输出统一脱敏（与 secret-refs 的 ABSOLUTE_PATH_FORBIDDEN 同源规则）。
 const HOST_PATH_REDACTION = /(^|[\s"'=(:/])\/(Users|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
@@ -205,7 +215,7 @@ function validateMonitor({ docs, registry, refsDoc, dir }) {
     ['monitor-registration.example.json', registration, 'MonitorRegistration.v1'],
     ['health-contract.json', health, 'Health.v1'],
     ['alert-policy.json', alert, 'AlertPolicy.v1'],
-    ['supervisor-policy.json', supervisor, 'Supervisor.v1'],
+    ['supervisor-policy.json', supervisor, 'Supervisor.v2'],
     ['fault-domain-policy.json', faultDomain, 'FaultDomain.v1'],
   ];
   for (const [name, doc, expected] of interfaces) {
@@ -287,6 +297,92 @@ function validateMonitor({ docs, registry, refsDoc, dir }) {
     });
   }
 
+  // 修订 2026-10-26-comet-050-adoption-v1：既有调度面触发映射（fail-closed、逐项可翻转钉住）。
+  const schedulerInvocation = supervisor?.schedulerInvocation ?? {};
+  const invocationContract = schedulerInvocation.invocationContract ?? {};
+  const schedulerSurfaces = schedulerInvocation.surfaces ?? {};
+  if (invocationContract.residentControllerService !== 'FORBIDDEN') {
+    add('RESIDENT_CONTROLLER_FORBIDDEN', 'supervisor-policy.json:schedulerInvocation.invocationContract', {
+      reason: 'no resident controller/monitor service may be started; scheduling reuses existing CI scheduled workflows / host timers that only trigger the original Comet maintenance entry',
+    });
+  }
+  if (invocationContract.triggersOnlyOriginalCometMaintenance !== true
+    || invocationContract.originalEntry !== 'same-original-comet-maintenance-entry'
+    || invocationContract.schedulerOwnsBusinessState !== false
+    || invocationContract.schedulerOwnsRetryScheduling !== false
+    || invocationContract.checkOldWriterBeforeRecoveryInvocation !== true) {
+    add('SCHEDULER_MAPPING_INVALID', 'supervisor-policy.json:schedulerInvocation.invocationContract', {
+      reason: 'a registered timer may only trigger the same original Comet maintenance entry; the trigger owns no business state and no retry scheduling; the old writer must be checked before any recovery invocation',
+    });
+  }
+  for (const surface of ['ciScheduledWorkflow', 'hostTimer']) {
+    const entry = schedulerSurfaces[surface];
+    if (!entry || !['UNREGISTERED', 'REGISTERED'].includes(entry.status)) {
+      add('SCHEDULER_SURFACE_REGISTRATION_INCOMPLETE', `supervisor-policy.json:schedulerInvocation.surfaces.${surface}`, {
+        reason: 'each scheduling surface must carry an honest UNREGISTERED/REGISTERED status',
+      });
+    } else if (entry.status === 'REGISTERED'
+      && !(typeof entry.registeredAs === 'string' && entry.registeredAs.length > 0)) {
+      add('SCHEDULER_SURFACE_REGISTRATION_INCOMPLETE', `supervisor-policy.json:schedulerInvocation.surfaces.${surface}`, {
+        reason: 'a REGISTERED surface must name what was registered (registeredAs); silently flipping the status is a fabricated registration',
+      });
+    }
+  }
+
+  // G15 目标登记：正常依赖下发现≤3min / 隔离≤2min；故障暴露/告警/隔离分别计时；告警不是隔离。
+  const g15 = health?.g15;
+  if (g15?.discoveryTargetSeconds !== G15_DISCOVERY_TARGET_SECONDS
+    || g15?.isolationTargetSeconds !== G15_ISOLATION_TARGET_SECONDS
+    || g15?.alertIsNeverIsolation !== true
+    || !Array.isArray(g15?.segmentsTimedSeparately)
+    || G15_SEGMENTS_SEPARATE.some((segment) => !g15.segmentsTimedSeparately.includes(segment))) {
+    add('G15_TARGETS_INVALID', 'health-contract.json:g15', {
+      expected: {
+        discoveryTargetSeconds: G15_DISCOVERY_TARGET_SECONDS,
+        isolationTargetSeconds: G15_ISOLATION_TARGET_SECONDS,
+        segmentsTimedSeparately: G15_SEGMENTS_SEPARATE,
+        alertIsNeverIsolation: true,
+      },
+      observed: g15 ?? null,
+      reason: 'G15 under normal dependencies: discovery <=3 minutes, isolation <=2 minutes; fault exposure / alert delivery / isolation are timed separately and an alert never counts as isolation',
+    });
+  }
+
+  // R10 登记字段：未完成义务保留唯一工作区；监控只观察并告警，绝不清理。
+  const r10 = health?.r10;
+  if (r10?.soleWorkspaceRetentionForUnresolvedObligations !== true
+    || r10?.monitorNeverCleansUp !== true
+    || r10?.monitorRole !== 'observe-and-alert-only'
+    || !(Array.isArray(r10?.cleanupRequires)
+      && r10.cleanupRequires.includes('verified-completed')
+      && r10.cleanupRequires.includes('separately-approved-migration-and-restore-proof'))) {
+    add('R10_RETENTION_INVALID', 'health-contract.json:r10', {
+      reason: 'R10: unresolved Run/knowledge obligations retain the sole workspace; the monitor observes and alerts only and never cleans up; cleanup requires verified completion or a separately approved migration+restore proof',
+    });
+  }
+
+  // 负向红线：漏报=失败（四类必告警事件 + 补偿归原 Comet）；告警≠隔离；离线可检测。
+  const redLines = alert?.negativeRedLines;
+  if (redLines?.missedAlertIsFailure !== true
+    || redLines?.compensationOwner !== 'original-comet'
+    || !(Array.isArray(redLines?.requiredAlertEvents)
+      && REQUIRED_ALERT_EVENTS.every((event) => redLines.requiredAlertEvents.includes(event)))) {
+    add('MISSED_ALERT_RED_LINE_REQUIRED', 'alert-policy.json:negativeRedLines', {
+      expected: { missedAlertIsFailure: true, compensationOwner: 'original-comet', requiredAlertEvents: REQUIRED_ALERT_EVENTS },
+      reason: 'a missed required alert (missed-event/watermark-stall/offline/isolation-failure) is itself a failure; compensation for these events belongs to the original Comet, never to the monitor or the scheduler',
+    });
+  }
+  if (redLines?.alertIsNeverIsolation !== true) {
+    add('ALERT_IS_NOT_ISOLATION_REQUIRED', 'alert-policy.json:negativeRedLines', {
+      reason: 'an alert never substitutes isolation; isolation executes and reads back only through the original Comet maintenance entry',
+    });
+  }
+  if (faultDomain?.offlineDetectability?.runnerOfflineRequiresExternalMonitor !== true) {
+    add('OFFLINE_DETECTABILITY_REQUIRED', 'fault-domain-policy.json:offlineDetectability', {
+      reason: 'offline must be detectable and alertable from outside the fault domain; an in-domain claim can never prove it',
+    });
+  }
+
   // 故障域：同宿主监控不得声称主机宕机发现能力。
   if (faultDomain?.domains?.runnerHostFailure?.requiresExternalMonitor !== true
     || faultDomain?.domains?.runnerHostFailure?.coHostedMonitorInsufficient !== true
@@ -337,6 +433,22 @@ function validateMonitor({ docs, registry, refsDoc, dir }) {
       coHostedMonitorCannotClaimHostFailure: faultDomain?.rules?.coHostedMonitorMustNotPassHostFailure === true,
       hostFailureRequiresExternalMonitor: faultDomain?.domains?.runnerHostFailure?.requiresExternalMonitor === true,
     },
+    schedulerInvocation: {
+      triggersOnlyOriginalCometMaintenance: invocationContract.triggersOnlyOriginalCometMaintenance === true,
+      originalEntry: invocationContract.originalEntry ?? null,
+      originalEntryStatus: invocationContract.originalEntryStatus ?? null,
+      residentControllerService: invocationContract.residentControllerService ?? null,
+      schedulerOwnsBusinessState: invocationContract.schedulerOwnsBusinessState === true,
+      schedulerOwnsRetryScheduling: invocationContract.schedulerOwnsRetryScheduling === true,
+      checkOldWriterBeforeRecoveryInvocation: invocationContract.checkOldWriterBeforeRecoveryInvocation === true,
+      surfaces: {
+        ciScheduledWorkflow: { status: schedulerSurfaces.ciScheduledWorkflow?.status ?? null },
+        hostTimer: { status: schedulerSurfaces.hostTimer?.status ?? null },
+      },
+    },
+    g15: health?.g15 ?? null,
+    r10: health?.r10 ?? null,
+    negativeRedLines: alert?.negativeRedLines ?? null,
     dir: displayPath(dir),
   };
 }
@@ -768,6 +880,10 @@ async function main(argv) {
       preEnableGate: outcome.preEnableGate,
       deliveryAuthorization: outcome.deliveryAuthorization,
       faultDomain: outcome.faultDomain,
+      schedulerInvocation: outcome.schedulerInvocation,
+      g15: outcome.g15,
+      r10: outcome.r10,
+      negativeRedLines: outcome.negativeRedLines,
     });
     return outcome.violations.length === 0 ? EXIT_PASS : EXIT_VERIFY;
   }
@@ -869,7 +985,7 @@ async function main(argv) {
 
     if (!ALLOWED_SUPERVISOR_ACTIONS.includes(request.action)) {
       print({
-        interface: 'Supervisor.v1',
+        interface: 'Supervisor.v2',
         command: 'supervise',
         action: request.action,
         decision: 'REFUSED',
@@ -886,7 +1002,7 @@ async function main(argv) {
 
     if (request.oldWriterAlive === true) {
       print({
-        interface: 'Supervisor.v1',
+        interface: 'Supervisor.v2',
         command: 'supervise',
         action: request.action,
         decision: 'REFUSED',
@@ -900,7 +1016,7 @@ async function main(argv) {
     }
     if (request.storageOwnershipKnown === false) {
       print({
-        interface: 'Supervisor.v1',
+        interface: 'Supervisor.v2',
         command: 'supervise',
         action: request.action,
         decision: 'REFUSED',
@@ -920,7 +1036,7 @@ async function main(argv) {
     const withinBudget = windowRestarts.length < maxRestarts;
     if (!withinBudget) {
       print({
-        interface: 'Supervisor.v1',
+        interface: 'Supervisor.v2',
         command: 'supervise',
         action: request.action,
         decision: 'STOP_AND_ESCALATE',
@@ -944,7 +1060,7 @@ async function main(argv) {
     }
 
     print({
-      interface: 'Supervisor.v1',
+      interface: 'Supervisor.v2',
       command: 'supervise',
       action: request.action,
       decision: 'ALLOW',

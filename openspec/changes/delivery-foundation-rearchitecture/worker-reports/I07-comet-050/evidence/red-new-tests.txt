@@ -1,0 +1,214 @@
+TAP version 13
+# Subtest: V_INFRA_I07 contract: committed monitor domain validates clean with honest gaps and spec-frozen deadlines
+ok 1 - V_INFRA_I07 contract: committed monitor domain validates clean with honest gaps and spec-frozen deadlines
+  ---
+  duration_ms: 61.430375
+  ...
+# Subtest: RED pre-enable gate: unattended release enabled without registered external monitor/on-call/backup channel is blocked
+ok 2 - RED pre-enable gate: unattended release enabled without registered external monitor/on-call/backup channel is blocked
+  ---
+  duration_ms: 113.493208
+  ...
+# Subtest: RED delivery authorization claim guard: no notification-send authorization exists in this task
+ok 3 - RED delivery authorization claim guard: no notification-send authorization exists in this task
+  ---
+  duration_ms: 58.143125
+  ...
+# Subtest: RED deadline freeze: tampering with the contract timings is rejected (30s/30s/90s/120s/120s/30s)
+ok 4 - RED deadline freeze: tampering with the contract timings is rejected (30s/30s/90s/120s/120s/30s)
+  ---
+  duration_ms: 169.376916
+  ...
+# Subtest: RED segment separation: a combined "total delivery" budget is rejected; three segments must stay separately timed
+ok 5 - RED segment separation: a combined "total delivery" budget is rejected; three segments must stay separately timed
+  ---
+  duration_ms: 287.396792
+  ...
+# Subtest: RED supervisor gate: forbidden actions, restart budget and start gate are structurally enforced in the policy
+ok 6 - RED supervisor gate: forbidden actions, restart budget and start gate are structurally enforced in the policy
+  ---
+  duration_ms: 510.378292
+  ...
+# Subtest: RED fault-domain gate: a co-hosted monitor can never be declared sufficient for host-failure detection
+ok 7 - RED fault-domain gate: a co-hosted monitor can never be declared sufficient for host-failure detection
+  ---
+  duration_ms: 56.768208
+  ...
+# Subtest: RED structural negatives: interface tag, project binding, example declaration, read-only health, authority binding, business-retry split and noBusinessWrites are each enforced
+ok 8 - RED structural negatives: interface tag, project binding, example declaration, read-only health, authority binding, business-retry split and noBusinessWrites are each enforced
+  ---
+  duration_ms: 397.354333
+  ...
+# Subtest: RED I01 isolation: cross-project refs are structural violations; unregistered ref stays an explicit gap and resolver refuses
+ok 9 - RED I01 isolation: cross-project refs are structural violations; unregistered ref stays an explicit gap and resolver refuses
+  ---
+  duration_ms: 118.326458
+  ...
+# Subtest: Health.v1: read-only evaluation of heartbeat age, scan watermark, isolation deadlines and authority identity
+ok 10 - Health.v1: read-only evaluation of heartbeat age, scan watermark, isolation deadlines and authority identity
+  ---
+  duration_ms: 555.200792
+  ...
+# Subtest: Monitor.v1: alerts are prepared only (never sent without authorization) and prepared from the exact breaches
+ok 11 - Monitor.v1: alerts are prepared only (never sent without authorization) and prepared from the exact breaches
+  ---
+  duration_ms: 109.84275
+  ...
+# Subtest: Monitor.v1 three-segment timing: detection/delivery/escalation are computed separately from real timestamps
+ok 12 - Monitor.v1 three-segment timing: detection/delivery/escalation are computed separately from real timestamps
+  ---
+  duration_ms: 391.647542
+  ...
+# Subtest: Supervisor.v1: out-of-scope actions are refused; the supervisor is process-level restart only
+ok 13 - Supervisor.v1: out-of-scope actions are refused; the supervisor is process-level restart only
+  ---
+  duration_ms: 330.862208
+  ...
+# Subtest: Supervisor.v1: dual start with a live old writer is refused; unknown storage ownership is refused
+ok 14 - Supervisor.v1: dual start with a live old writer is refused; unknown storage ownership is refused
+  ---
+  duration_ms: 162.448791
+  ...
+# Subtest: Supervisor.v1: exceeding 3 restarts within 5 minutes stops and escalates
+ok 15 - Supervisor.v1: exceeding 3 restarts within 5 minutes stops and escalates
+  ---
+  duration_ms: 108.691667
+  ...
+# Subtest: probes are real subcommands: runner-process-failure is provable at process level; external-host-down stays UNVERIFIED; scan-watermark-stall is locally provable
+ok 16 - probes are real subcommands: runner-process-failure is provable at process level; external-host-down stays UNVERIFIED; scan-watermark-stall is locally provable
+  ---
+  duration_ms: 782.862375
+  ...
+# Subtest: committed contract shape: interfaces, example declaration, read-only health and no secret values
+not ok 17 - committed contract shape: interfaces, example declaration, read-only health and no secret values
+  ---
+  duration_ms: 1.995792
+  location: '/Users/mac/Code/sdd-harness/test/infra-monitor.test.js:807:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'Supervisor.v1'
+    - 'Supervisor.v2'
+                   ^
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'Supervisor.v2'
+  actual: 'Supervisor.v1'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:820:10)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: comet-050 revision registration: scheduler mapping, G15/R10 targets and negative red lines are registered and surfaced by validate
+not ok 18 - comet-050 revision registration: scheduler mapping, G15/R10 targets and negative red lines are registered and surfaced by validate
+  ---
+  duration_ms: 55.757208
+  location: '/Users/mac/Code/sdd-harness/test/infra-monitor.test.js:852:1'
+  failureType: 'testCodeFailure'
+  error: 'validate receipt must surface the scheduler invocation mapping'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:859:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: scheduling surface inventory stays honest: no committed CI schedule trigger and no repo-registered host timer
+not ok 19 - scheduling surface inventory stays honest: no committed CI schedule trigger and no repo-registered host timer
+  ---
+  duration_ms: 14.592625
+  location: '/Users/mac/Code/sdd-harness/test/infra-monitor.test.js:902:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'surfaces')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:932:51)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED scheduler mapping gates: timers only trigger the original Comet entry; a resident controller service is forbidden
+not ok 20 - RED scheduler mapping gates: timers only trigger the original Comet entry; a resident controller service is forbidden
+  ---
+  duration_ms: 1.129875
+  location: '/Users/mac/Code/sdd-harness/test/infra-monitor.test.js:938:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'invocationContract')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:942:29
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:106:3)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:940:20)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED G15/R10 registration gates: 3-minute discovery / 2-minute isolation targets and R10 sole-workspace retention are flip-guarded
+not ok 21 - RED G15/R10 registration gates: 3-minute discovery / 2-minute isolation targets and R10 sole-workspace retention are flip-guarded
+  ---
+  duration_ms: 0.91575
+  location: '/Users/mac/Code/sdd-harness/test/infra-monitor.test.js:980:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot set properties of undefined (setting 'discoveryTargetSeconds')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    g15.isolationTargetSeconds (file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:982:43)
+    file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:990:7
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:106:3)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:988:17)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: RED negative red lines: missed alert is failure, alert never substitutes isolation, offline detectable, compensation owned by original Comet
+not ok 22 - RED negative red lines: missed alert is failure, alert never substitutes isolation, offline detectable, compensation owned by original Comet
+  ---
+  duration_ms: 1.060792
+  location: '/Users/mac/Code/sdd-harness/test/infra-monitor.test.js:1015:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot set properties of undefined (setting 'missedAlertIsFailure')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:1017:45
+    file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:1024:7
+    makeFixtureDir (file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:106:3)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/infra-monitor.test.js:1022:17)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 16
+# fail 6
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4363.161417

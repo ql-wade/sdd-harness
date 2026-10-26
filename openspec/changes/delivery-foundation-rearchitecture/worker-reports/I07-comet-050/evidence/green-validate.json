@@ -1,0 +1,124 @@
+{
+  "interface": "MonitorInfra.v1",
+  "command": "validate",
+  "registry": "infra/delivery/registry.json",
+  "refs": "infra/delivery/secrets.refs.example.json",
+  "dir": "infra/delivery/monitor",
+  "ok": true,
+  "violations": [],
+  "catalogGaps": [],
+  "files": {
+    "monitor-registration.example.json": {
+      "interface": "MonitorRegistration.v1"
+    },
+    "health-contract.json": {
+      "interface": "Health.v1"
+    },
+    "alert-policy.json": {
+      "interface": "AlertPolicy.v1"
+    },
+    "supervisor-policy.json": {
+      "interface": "Supervisor.v2"
+    },
+    "fault-domain-policy.json": {
+      "interface": "FaultDomain.v1"
+    }
+  },
+  "deadlines": {
+    "heartbeatIntervalSeconds": 30,
+    "monitorCheckIntervalSeconds": 30,
+    "heartbeatAlertAfterSeconds": 90,
+    "scanStallAlertAfterSeconds": 120,
+    "detectionLatestSeconds": 120,
+    "deliveryTargetSeconds": 30,
+    "escalationAckTimeoutSeconds": 300,
+    "restartWindowSeconds": 300,
+    "restartMax": 3,
+    "recoveryTargetSeconds": 600
+  },
+  "preEnableGate": {
+    "enabled": false,
+    "allowed": false,
+    "missing": [
+      "external-monitor-registered",
+      "oncall-platform-primary",
+      "oncall-platform-backup",
+      "channel-primary",
+      "channel-backup",
+      "delivery-authorized",
+      "isolation-operation-authorized"
+    ],
+    "state": {
+      "external-monitor-registered": false,
+      "oncall-platform-primary": false,
+      "oncall-platform-backup": false,
+      "channel-primary": false,
+      "channel-backup": false,
+      "delivery-authorized": false,
+      "isolation-operation-authorized": false
+    }
+  },
+  "deliveryAuthorization": {
+    "authorized": false,
+    "record": null
+  },
+  "faultDomain": {
+    "coHostedMonitorCannotClaimHostFailure": true,
+    "hostFailureRequiresExternalMonitor": true
+  },
+  "schedulerInvocation": {
+    "triggersOnlyOriginalCometMaintenance": true,
+    "originalEntry": "same-original-comet-maintenance-entry",
+    "originalEntryStatus": "UNVERIFIED",
+    "residentControllerService": "FORBIDDEN",
+    "schedulerOwnsBusinessState": false,
+    "schedulerOwnsRetryScheduling": false,
+    "checkOldWriterBeforeRecoveryInvocation": true,
+    "surfaces": {
+      "ciScheduledWorkflow": {
+        "status": "UNREGISTERED"
+      },
+      "hostTimer": {
+        "status": "UNREGISTERED"
+      }
+    }
+  },
+  "g15": {
+    "discoveryTargetSeconds": 180,
+    "isolationTargetSeconds": 120,
+    "segmentsTimedSeparately": [
+      "fault_exposure",
+      "alert_delivery",
+      "isolation"
+    ],
+    "alertIsNeverIsolation": true,
+    "basis": "ADR-0021 + comet-ai-devops-convergence.md: under normal dependencies discovery <=3 minutes and isolation <=2 minutes; fault exposure, alert delivery and isolation are timed separately from real timestamps, and an alert never counts as isolation. Fault-window breaches are recorded (exposure window/breach), never hidden by a timeout.",
+    "operationalEvidence": "UNVERIFIED",
+    "evidenceNote": "the targets and the separate-timing rule are registered here; production timing evidence from a real deployment (real external timestamps per segment) is still to be supplied and stays UNVERIFIED."
+  },
+  "r10": {
+    "soleWorkspaceRetentionForUnresolvedObligations": true,
+    "cleanupRequires": [
+      "verified-completed",
+      "separately-approved-migration-and-restore-proof"
+    ],
+    "monitorRole": "observe-and-alert-only",
+    "monitorNeverCleansUp": true,
+    "basis": "R10: an unresolved Run/knowledge obligation retains the sole workspace and blocks cleanup; the monitor observes unresolved obligations and their deadlines and alerts on them — it never performs, triggers or substitutes cleanup.",
+    "note": "cleanup eligibility evidence belongs to I08 (retention/restore policies); this registration only pins the monitor's observe-and-alert role."
+  },
+  "negativeRedLines": {
+    "missedAlertIsFailure": true,
+    "alertIsNeverIsolation": true,
+    "offlineMustBeDetectable": true,
+    "compensationOwner": "original-comet",
+    "requiredAlertEvents": [
+      "missed-event",
+      "watermark-stall",
+      "offline",
+      "isolation-failure"
+    ],
+    "note": "revision 2026-10-26-comet-050-adoption-v1 red lines: a missed required alert (missed event / stalled watermark / offline / isolation failure) is itself a failure, never a silent pass; an alert never substitutes isolation — isolation executes and reads back only through the original Comet maintenance entry; offline is detectable only from outside the fault domain (fault-domain-policy.json); compensation for any of these events belongs to the original Comet, never to the monitor or the scheduler."
+  },
+  "checkedAt": "2026-10-26T13:49:40.338Z"
+}

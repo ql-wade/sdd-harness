@@ -25,6 +25,11 @@
     "unregisteredMonitorIsAdmissionGap": true,
     "note": "when the co-hosted monitor stops with the host, the fault domain must be marked NOT satisfied — never PASS; failure of the monitoring system itself must be discovered by the existing platform monitoring, and an unregistered monitor keeps the admission gap open."
   },
+  "offlineDetectability": {
+    "runnerOfflineRequiresExternalMonitor": true,
+    "monitorSelfOfflineDiscoveredBy": "existing-platform-monitor",
+    "basis": "revision 2026-10-26-comet-050-adoption-v1: runner/host offline must be detectable and alertable, and that capability exists only outside the Runner fault domain; the monitoring system's own offline state is discovered by the existing platform monitoring — offline detectability may never be claimed from inside the failed domain."
+  },
   "alertAuditPersistence": {
     "independentOfRunnerBackup": true,
     "note": "alert delivery audit lives outside the Runner backup domain so a Runner volume failure cannot destroy all alert evidence."

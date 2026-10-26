@@ -15,8 +15,9 @@ import { fileURLToPath } from 'node:url';
 //                  unresolved_isolation+deadlines / authority identity，只读既有 Comet 事实。
 //   Monitor.v1     外部故障域登记 + 告警投递/确认/升级三段计时（检测/投递/升级分别计时，
 //                  绝不合并成"总送达"预算）；未经投递授权只 prepare 不发送。
-//   Supervisor.v1  仅进程级 restart 原实例（旧写者确认终止后才允许；5 分钟最多 3 次，
-//                  超限停止+升级）；不改 phase、不创建 Comet 维护 operation、不写 Outline ACL。
+//   Supervisor.v2  既有调度面（CI 定时 workflow / 宿主定时器）只触发"同 Comet 维护入口"的原命令，
+//                  触发器不拥有业务状态/重试调度；旧写者核验后才可调恢复；禁止常驻 controller 服务
+//                  （修订 2026-10-26-comet-050-adoption-v1；basis comet-ai-devops-convergence.md）。
 //
 // CLI 退出码契约（execution-contract.json V_INFRA_I07.cli_contract）：
 //   0=PASS，1=输入/前置无效（文件缺失/不可解析/参数错误/未知 probe case），2=验证失败（语义违规、探测拒绝、UNVERIFIED）。
@@ -52,6 +53,11 @@ const CONTRACT = {
   restartWindowSeconds: 300,
   restartMax: 3,
   recoveryTargetSeconds: 600,
+  // 修订 2026-10-26-comet-050-adoption-v1：G15 正常依赖下发现≤3分钟 / 隔离≤2分钟
+  // （ADR-0021；comet-ai-devops-convergence.md："故障暴露/告警/隔离分别计时，不把告警当隔离"）。
+  g15DiscoveryTargetSeconds: 180,
+  g15IsolationTargetSeconds: 120,
+  g15SegmentsTimedSeparately: ['fault_exposure', 'alert_delivery', 'isolation'],
 };
 const MONITOR_REFS = [
   'secret-ref:sdd-harness-pilot/monitor-health-read',
@@ -811,7 +817,7 @@ test('committed contract shape: interfaces, example declaration, read-only healt
   assert.equal(readMonitorJson('health-contract.json').interface, 'Health.v1');
   assert.equal(readMonitorJson('health-contract.json').readOnly, true, 'Health.v1 is read-only over existing Comet facts');
   assert.equal(readMonitorJson('alert-policy.json').interface, 'AlertPolicy.v1');
-  assert.equal(readMonitorJson('supervisor-policy.json').interface, 'Supervisor.v1');
+  assert.equal(readMonitorJson('supervisor-policy.json').interface, 'Supervisor.v2');
   assert.equal(readMonitorJson('fault-domain-policy.json').interface, 'FaultDomain.v1');
 
   // 两个计划 secret-ref 全部被域文件引用；只引用不存值。
@@ -835,4 +841,211 @@ test('committed contract shape: interfaces, example declaration, read-only healt
   // 与 supervised-restart 是两个独立步骤；此处钉住策略声明不被摘除）。
   assert.equal(supervisor.audit.restartAuditRequired, true);
   assert.equal(supervisor.audit.oldWriterStopSeparatelyAudited, true);
+});
+
+// ---------------------------------------------------------------------------
+// 修订 2026-10-26-comet-050-adoption-v1（复用既有调度和外部告警）：
+//   登记"同 Comet 维护入口"的触发映射 + G15/R10 登记字段 + 负向红线
+//   （漏报=失败、告警≠隔离、离线可检测、补偿归原 Comet、不得起独立 controller 服务）。
+// ---------------------------------------------------------------------------
+
+test('comet-050 revision registration: scheduler mapping, G15/R10 targets and negative red lines are registered and surfaced by validate', () => {
+  const validate = runCli(['validate', '--registry', registryPath, '--json']);
+  assert.equal(validate.status, 0, `validate must PASS with the new registration: ${validate.stderr || validate.stdout}`);
+  const report = parseJsonOut(validate, 'validate comet-050');
+
+  // 触发映射：定时器只触发原命令入口，不拥有业务状态/重试调度；禁止常驻 controller。
+  const mapping = report.schedulerInvocation;
+  assert.ok(mapping, 'validate receipt must surface the scheduler invocation mapping');
+  assert.equal(mapping.triggersOnlyOriginalCometMaintenance, true);
+  assert.equal(mapping.originalEntry, 'same-original-comet-maintenance-entry');
+  assert.equal(mapping.originalEntryStatus, 'UNVERIFIED', 'the real maintenance command wiring is P4_8/pilot territory and stays UNVERIFIED here');
+  assert.equal(mapping.residentControllerService, 'FORBIDDEN');
+  assert.equal(mapping.schedulerOwnsBusinessState, false);
+  assert.equal(mapping.schedulerOwnsRetryScheduling, false);
+  assert.equal(mapping.checkOldWriterBeforeRecoveryInvocation, true);
+  assert.equal(mapping.surfaces.ciScheduledWorkflow.status, 'UNREGISTERED');
+  assert.equal(mapping.surfaces.hostTimer.status, 'UNREGISTERED');
+
+  // G15：发现≤3min / 隔离≤2min；故障暴露/告警/隔离分别计时；告警不是隔离。
+  const g15 = report.g15;
+  assert.ok(g15, 'validate receipt must surface the G15 target registration');
+  assert.equal(g15.discoveryTargetSeconds, CONTRACT.g15DiscoveryTargetSeconds);
+  assert.equal(g15.isolationTargetSeconds, CONTRACT.g15IsolationTargetSeconds);
+  for (const segment of CONTRACT.g15SegmentsTimedSeparately) {
+    assert.ok(g15.segmentsTimedSeparately.includes(segment), `G15 segment ${segment} must be registered as separately timed`);
+  }
+  assert.equal(g15.alertIsNeverIsolation, true);
+  assert.equal(g15.operationalEvidence, 'UNVERIFIED', 'production timing evidence is not claimed by this registration');
+
+  // R10：未完成义务保留唯一工作区；监控只观察并告警，绝不清理。
+  const r10 = report.r10;
+  assert.ok(r10, 'validate receipt must surface the R10 registration');
+  assert.equal(r10.soleWorkspaceRetentionForUnresolvedObligations, true);
+  assert.equal(r10.monitorRole, 'observe-and-alert-only');
+  assert.equal(r10.monitorNeverCleansUp, true);
+  assert.ok(r10.cleanupRequires.includes('verified-completed'));
+  assert.ok(r10.cleanupRequires.includes('separately-approved-migration-and-restore-proof'));
+
+  // 负向红线：漏报=失败、告警≠隔离、离线可检测、补偿归原 Comet。
+  const redLines = report.negativeRedLines;
+  assert.ok(redLines, 'validate receipt must surface the negative red lines');
+  assert.equal(redLines.missedAlertIsFailure, true);
+  assert.equal(redLines.alertIsNeverIsolation, true);
+  assert.equal(redLines.offlineMustBeDetectable, true);
+  assert.equal(redLines.compensationOwner, 'original-comet');
+  for (const event of ['missed-event', 'watermark-stall', 'offline', 'isolation-failure']) {
+    assert.ok(redLines.requiredAlertEvents.includes(event), `negative event ${event} must be registered as required-alerting`);
+  }
+});
+
+test('scheduling surface inventory stays honest: no committed CI schedule trigger and no repo-registered host timer', () => {
+  // 事实侧：两个 committed workflow（delivery-gate / quality-gates）今天都没有 on.schedule 触发器。
+  const workflowsDir = path.join(repoRoot, '.github', 'workflows');
+  const workflowFiles = fs.readdirSync(workflowsDir).filter((name) => name.endsWith('.yml') || name.endsWith('.yaml'));
+  assert.ok(workflowFiles.length > 0, 'the repo must still carry its CI workflows for this inventory to be meaningful');
+  const withSchedule = [];
+  for (const name of workflowFiles) {
+    const text = fs.readFileSync(path.join(workflowsDir, name), 'utf8');
+    if (/^\s*schedule\s*:/m.test(text)) withSchedule.push(name);
+  }
+  assert.deepEqual(withSchedule, [], 'if a scheduled workflow is ever committed, the registration must be updated in the same change');
+
+  // 事实侧：仓库的安装面（tools/hooks/scripts）没有登记任何宿主定时器。
+  const timerPattern = /crontab|launchd|LaunchAgents|schtasks|systemd/;
+  const roots = [path.join(repoRoot, 'tools'), path.join(repoRoot, 'hooks'), path.join(repoRoot, 'scripts')];
+  const offenders = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.(sh|mjs|js|ya?ml)$/.test(entry.name)) {
+        if (timerPattern.test(fs.readFileSync(full, 'utf8'))) offenders.push(path.relative(repoRoot, full));
+      }
+    }
+  };
+  for (const root of roots) if (fs.existsSync(root)) walk(root);
+  assert.deepEqual(offenders, [], 'if a host timer is ever registered by this repo, the registration must be updated in the same change');
+
+  // 登记侧：两个调度面的状态必须与事实一致（都未登记）。
+  const supervisor = readMonitorJson('supervisor-policy.json');
+  const surfaces = supervisor.schedulerInvocation.surfaces;
+  assert.equal(surfaces.ciScheduledWorkflow.status, 'UNREGISTERED');
+  assert.deepEqual(surfaces.ciScheduledWorkflow.committedWorkflowsWithScheduleTrigger, []);
+  assert.equal(surfaces.hostTimer.status, 'UNREGISTERED');
+});
+
+test('RED scheduler mapping gates: timers only trigger the original Comet entry; a resident controller service is forbidden', () => {
+  // 不得起独立 controller 服务（负向红线单独码）。
+  const resident = makeFixtureDir(({ json, writeJson }) => {
+    const doc = json('supervisor-policy.json');
+    doc.schedulerInvocation.invocationContract.residentControllerService = 'ALLOWED';
+    writeJson('supervisor-policy.json', doc);
+  });
+  const residentRun = runCli(['validate', '--registry', registryPath, '--dir', resident, '--json']);
+  assert.equal(residentRun.status, 2, 'allowing a resident controller service must be rejected');
+  assert.ok(codes(parseJsonOut(residentRun, 'validate resident')).includes('RESIDENT_CONTROLLER_FORBIDDEN'));
+
+  // 定时器只触发原命令：翻掉任何一个映射约束 → SCHEDULER_MAPPING_INVALID。
+  const flips = [
+    (contract) => { contract.triggersOnlyOriginalCometMaintenance = false; },
+    (contract) => { contract.schedulerOwnsBusinessState = true; },
+    (contract) => { contract.schedulerOwnsRetryScheduling = true; },
+    (contract) => { contract.checkOldWriterBeforeRecoveryInvocation = false; },
+  ];
+  for (const flip of flips) {
+    const dir = makeFixtureDir(({ json, writeJson }) => {
+      const doc = json('supervisor-policy.json');
+      flip(doc.schedulerInvocation.invocationContract);
+      writeJson('supervisor-policy.json', doc);
+    });
+    const run = runCli(['validate', '--registry', registryPath, '--dir', dir, '--json']);
+    assert.equal(run.status, 2, `weakening the scheduler invocation contract must be rejected: ${run.stdout}`);
+    assert.ok(codes(parseJsonOut(run, 'validate mapping')).includes('SCHEDULER_MAPPING_INVALID'));
+  }
+
+  // 调度面声称 REGISTERED 却不给出登记标识 → SCHEDULER_SURFACE_REGISTRATION_INCOMPLETE（诚实登记守卫）。
+  for (const surface of ['ciScheduledWorkflow', 'hostTimer']) {
+    const dir = makeFixtureDir(({ json, writeJson }) => {
+      const doc = json('supervisor-policy.json');
+      doc.schedulerInvocation.surfaces[surface].status = 'REGISTERED';
+      writeJson('supervisor-policy.json', doc);
+    });
+    const run = runCli(['validate', '--registry', registryPath, '--dir', dir, '--json']);
+    assert.equal(run.status, 2, `flipping ${surface} to REGISTERED without naming what got registered must be rejected`);
+    assert.ok(codes(parseJsonOut(run, `validate ${surface}`)).includes('SCHEDULER_SURFACE_REGISTRATION_INCOMPLETE'));
+  }
+});
+
+test('RED G15/R10 registration gates: 3-minute discovery / 2-minute isolation targets and R10 sole-workspace retention are flip-guarded', () => {
+  const healthFlips = [
+    (g15) => { g15.discoveryTargetSeconds = 600; },
+    (g15) => { g15.isolationTargetSeconds = 600; },
+    (g15) => { g15.segmentsTimedSeparately = g15.segmentsTimedSeparately.filter((s) => s !== 'isolation'); },
+    (g15) => { g15.alertIsNeverIsolation = false; },
+  ];
+  for (const flip of healthFlips) {
+    const dir = makeFixtureDir(({ json, writeJson }) => {
+      const doc = json('health-contract.json');
+      flip(doc.g15);
+      writeJson('health-contract.json', doc);
+    });
+    const run = runCli(['validate', '--registry', registryPath, '--dir', dir, '--json']);
+    assert.equal(run.status, 2, `tampering with the G15 target registration must be rejected: ${run.stdout}`);
+    assert.ok(codes(parseJsonOut(run, 'validate g15')).includes('G15_TARGETS_INVALID'));
+  }
+
+  const r10Flips = [
+    (r10) => { r10.soleWorkspaceRetentionForUnresolvedObligations = false; },
+    (r10) => { r10.monitorNeverCleansUp = false; },
+    (r10) => { r10.monitorRole = 'observe-alert-and-cleanup'; },
+  ];
+  for (const flip of r10Flips) {
+    const dir = makeFixtureDir(({ json, writeJson }) => {
+      const doc = json('health-contract.json');
+      flip(doc.r10);
+      writeJson('health-contract.json', doc);
+    });
+    const run = runCli(['validate', '--registry', registryPath, '--dir', dir, '--json']);
+    assert.equal(run.status, 2, `weakening the R10 retention registration must be rejected: ${run.stdout}`);
+    assert.ok(codes(parseJsonOut(run, 'validate r10')).includes('R10_RETENTION_INVALID'));
+  }
+});
+
+test('RED negative red lines: missed alert is failure, alert never substitutes isolation, offline detectable, compensation owned by original Comet', () => {
+  const alertFlips = [
+    (lines) => { lines.missedAlertIsFailure = false; },
+    (lines) => { lines.requiredAlertEvents = lines.requiredAlertEvents.filter((e) => e !== 'offline'); },
+    (lines) => { lines.compensationOwner = 'monitor'; },
+  ];
+  for (const flip of alertFlips) {
+    const dir = makeFixtureDir(({ json, writeJson }) => {
+      const doc = json('alert-policy.json');
+      flip(doc.negativeRedLines);
+      writeJson('alert-policy.json', doc);
+    });
+    const run = runCli(['validate', '--registry', registryPath, '--dir', dir, '--json']);
+    assert.equal(run.status, 2, `dropping a negative red line must be rejected: ${run.stdout}`);
+    assert.ok(codes(parseJsonOut(run, 'validate red lines')).includes('MISSED_ALERT_RED_LINE_REQUIRED'));
+  }
+
+  // 告警≠隔离：单独码钉住（告警送达绝不充当隔离执行/读回）。
+  const alertNotIso = makeFixtureDir(({ json, writeJson }) => {
+    const doc = json('alert-policy.json');
+    doc.negativeRedLines.alertIsNeverIsolation = false;
+    writeJson('alert-policy.json', doc);
+  });
+  const alertNotIsoRun = runCli(['validate', '--registry', registryPath, '--dir', alertNotIso, '--json']);
+  assert.equal(alertNotIsoRun.status, 2, 'claiming an alert can substitute isolation must be rejected');
+  assert.ok(codes(parseJsonOut(alertNotIsoRun, 'validate alert!=isolation')).includes('ALERT_IS_NOT_ISOLATION_REQUIRED'));
+
+  // 离线可检测：只能由故障域外部证明（同 fault-domain 的 co-host 守卫同源）。
+  const offline = makeFixtureDir(({ json, writeJson }) => {
+    const doc = json('fault-domain-policy.json');
+    doc.offlineDetectability.runnerOfflineRequiresExternalMonitor = false;
+    writeJson('fault-domain-policy.json', doc);
+  });
+  const offlineRun = runCli(['validate', '--registry', registryPath, '--dir', offline, '--json']);
+  assert.equal(offlineRun.status, 2, 'weakening offline detectability to an in-domain claim must be rejected');
+  assert.ok(codes(parseJsonOut(offlineRun, 'validate offline')).includes('OFFLINE_DETECTABILITY_REQUIRED'));
 });
