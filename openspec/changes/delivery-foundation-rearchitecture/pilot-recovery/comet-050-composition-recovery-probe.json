@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "kind": "pilot-recovery-probe-record",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "task": "P3_3",
+  "purpose": "Empirical registration of the pristine comet-0.5.0 same-Run recovery faces BEFORE the 3_3.mjs assertions were written: every code below was observed live against the real CLI in a one-shot /tmp world (the world is disposable by design; this record is the durable registration).",
+  "environment": {
+    "cometBuildFingerprintSource": "integrations/comet/upstream.lock.json (aeb1a659 + patch 0005; build de39629a… resolved at run time — never a pinned value in artifacts)",
+    "cometVersion": "0.5.0",
+    "toolchainNode": "24.15.0 (pinned via upstream.lock.json toolchain)",
+    "runFace": "comet runtime dispatch --application-file <sdd-managed-delivery package>/application.json --project-root <project> --request <json> --json --details",
+    "worldWiring": "project with .comet/config.yaml (classic, artifact_layout docs) + git repo; composition package snapshotted into the world; node_modules/@rpamis/comet symlink to the pinned build work/ directory — the same wiring `comet application install` creates via ensureApplicationRuntimeDependency (no install is claimed)",
+    "runStoreLocation": "<HOME>/.comet/workspaces/<workspace-id>/runtime/applications/sdd-managed-delivery/.runtime-store-v2/<hash>/checkpoint.json (ApplicationRunRecord: runId, revision, application identity incl. contentHash, full SDK run)"
+  },
+  "startRecipe": {
+    "workflow": { "id": "comet-classic-full", "version": "1" },
+    "input": { "change": "<runId>", "changeDir": "docs/openspec/changes/<runId>" },
+    "initialState": "full canonical classic-full camelCase state with isolation:'current' (every schema field required; snake_case wire keys are rejected)",
+    "entryAction": "classic.composition.prepare (call_tool, engine executor comet-classic-composition-prepare; its validator pins the outcome to that executor's engine-computed work proposal — hosts cannot forge it)",
+    "afterPrepare": "classic.composition.confirm ask_user wait (resolve-wait approved → full.open scheduled)"
+  },
+  "observedFaces": [
+    { "probe": "start replay with identical runId+workflow+input+initialState", "result": "returns the existing run (inspect); no second checkpoint; different input on the same runId → RUN_CONFLICT ('该 Run 标识已绑定不同工作流或输入')" },
+    { "probe": "claim by a second executor/token while claimed", "result": "refused ACTION_ALREADY_CLAIMED" },
+    { "probe": "claim replay with the same executor+token while running", "result": "idempotent (revision unchanged)" },
+    { "probe": "record-outcome with a wrong claimToken", "result": "refused STALE_ACTION (engine-level, before any business validator)" },
+    { "probe": "record-outcome naming a superseded attempt", "result": "refused STALE_ACTION ('执行尝试或输入版本与当前 Action 不一致')" },
+    { "probe": "mark-unknown then retry(reconciliation not-executed)", "result": "attempt+1, status pending, dead claim cleared; reconciliations recorded" },
+    { "probe": "resolve-wait replay with the identical decision", "result": "idempotent (revision unchanged, one wait decision)" },
+    { "probe": "resolve-wait with a different decision on a resolved wait", "result": "refused DECISION_CONFLICT" },
+    { "probe": "one packaged byte drifts (any face: next or inspect)", "result": "refused WORKFLOW_CHANGED ('应用定义、执行/验证绑定、Skill 或工作区归属发生变化；请恢复原应用包和依赖后继续原 Run'); restoring the original bytes resumes the SAME run" },
+    { "probe": "execute (trusted executor) over a host-claimed action", "result": "refused ACTION_ALREADY_CLAIMED ('不能重复执行已派发的 Action；请先查询和核对结果')" },
+    { "probe": "mutation with a stale expectedRevision", "result": "refused REVISION_CONFLICT ('Run 已变化，请重新读取当前状态')" },
+    { "probe": "refused mutation CLI response (compact output, application-file face)", "result": "response carries continuation { mode:'reconcile', request:{ operation:'inspect', runId }, commandArgs: runtime dispatch --application-file … --details, instruction: '读取当前 Run 后按其合法续行处理，不盲目重试原写入' } — the classic composition recovery request surface" },
+    { "probe": "classic run_checkpoint recovery request (pristine source reading, not live in this slice)", "result": "the classic SDK state store names Recovery request { operation:'next', runId } — recovery restores the recorded state and advances only the Runtime; the composition-Run faces above are the live-probed subset" },
+    { "probe": "retired 0.4.5 face on the 0.5.0 build", "result": "comet state init <change> full --managed-delivery … refuses with a usage error — the honest RED that retired the previous L11-core-transaction/fencing slice (recorded in the P3_3 worker report)" }
+  ],
+  "consumedBy": [
+    "test/delivery-cases/3_3.mjs (V_RW_REAL_COMET_RECOVERY:C050-* assertions)",
+    "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.case.json (recipe)",
+    "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.journey.json (journey steps c050-*)"
+  ],
+  "boundary": "Probe worlds are one-shot /tmp directories (isolated HOME/TMPDIR/PATH). No live configuration, no repo control-plane file and no composition package byte was mutated; the drift probe mutated only the world's private package snapshot and restored it inside the same probe."
+}

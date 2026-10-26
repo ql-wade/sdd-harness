@@ -66,53 +66,47 @@ launcher）、`lib/adapters/harness.js`（driver 排他 + runner 拒绝 phase �
 - 夹具为 $TMPDIR 下生成的 slugify/pipeline 试点项目，状态无关；测试套件
   （test/delivery-cases/3_3.mjs）是夹具作者，执行器只消费。
 
-## 本轮返工增量（rework-seven-p1-r1，P3_3，分支 rework/p3-3-recovery，基 master@a1a7b31）
+## comet-050 修订增量（2026-10-26-comet-050-adoption-v1，P3_3）
 
-在上述 gate 层恢复/调和套件之外，本轮按 V_RW_REAL_COMET_RECOVERY 的 construction
-scope（execution-contract `journey_execution.construction_task_scopes.P3_3`）补齐
-**真实受管 Comet CLI 上的有限核心事务恢复切片**。恢复引擎就是 CLI 自己的
-classic-state 面（journal `.comet-state-transaction.json` + 锁
-`.comet-state.lock`，`.comet.yaml` rename 为提交点，下一个真实 CLI 操作执行
-roll-back/roll-forward 恢复）——本目录不新增任何业务主控，配方只触发/观察。
+前一轮（rework-seven-p1-r1）的"真实受管 Comet CLI 核心事务恢复切片"面向 0.4.5
+classic 状态面（journal `.comet-state-transaction.json` + 锁 `.comet-state.lock`，
+`.comet.yaml` rename 为提交点）。该面在钉版 0.5.0 供给（aeb1a659+0005，build
+de39629a…）上已消亡：修订前套件的真实 RED 显示 `state init <change> full
+--managed-delivery` 被 0.5.0 usage 拒绝（原件见
+`worker-reports/P3_3-comet-050/evidence/RED-pre050-face.txt`）。受管交付 Run 在
+0.5.0 上是**组合 Run**：`comet runtime dispatch --application-file <sdd-managed-delivery
+包>` 驱动，Run 记录持久化于隔离 HOME 下的
+`.comet/workspaces/<wsid>/runtime/applications/sdd-managed-delivery/.runtime-store-v2/<hash>/checkpoint.json`。
 
-- **配方（journey recipe）**：`real-comet-recovery.case.json`（注册面
-  `verification-case-plan.json journey_definitions.real-comet-recovery`，owner
-  P3_3，required_check V_RW_REAL_COMET_RECOVERY，scenario L11，
-  caseModule test/delivery-cases/3_3.mjs）+ `real-comet-recovery.journey.json`
-  九步旅程步骤计划。与 P3_2 的 `pilot-journey/same-run-delivery.journey.json`
-  步骤 9（同产品 Run 内故障窗口）协调：该窗口在 host journey 中保持
-  executionOwner=VERIFY，本配方只承接其"run-level recovery（bounded actual
-  Comet transaction recovery, P3_3 recipe）"门所指示的有限切片；步骤 1/7-9
-  （同 Run 前提、live Outline 未知结果调和、独立监控/备份资格、续跑至
-  completed）全部留在 VERIFY。
-- **真实故障注入（test/delivery-cases/3_3.mjs
-  V_RW_REAL_COMET_RECOVERY:L11-core-transaction）**：真实 SIGKILL（node spawn
-  + `process.kill('SIGKILL')`，monitor.mjs/I07 手法；fs.watch 在本沙箱被拒，
-  改用毫秒级 stat 轮询触发，逐尝试按磁盘字节分类、预算内未命中即失败，绝不
-  伪造落点）打在真实 CLI 核心事务的三个窗口：
-  1. **dispatch 窗口**：杀 dispatch-gate → 同 job key 再派发返回 `recovered:
-     true` 且 execution 不变（H03/H06 唯一 open owner，无双派发）；
-  2. **提交前窗口**：journal 在、`.comet.yaml` 仍为事务前字节 → 恢复回滚：
-     journal 被消费、零回执、phase 不变、被杀 attempt 重放被拒
-     （already consumed）、新派发干净重试且恰一次发布；
-  3. **提交后窗口**：journal 在、`.comet.yaml` 已含提交字节 → 恢复前滚：
-     journal 被消费、提交回执对被杀 execution 恰一次、重放被拒、恢复不重写
-     已提交字节。
-  每次 kill 后旧写者先经 pid liveness 确认死亡再读回；每窗口落盘证据（pid/
-  绑定/事务 digest/恢复读回）在 fixture `kill-evidence/` 并可经
-  `P33_KILL_EVIDENCE_DIR` 镜像。
-- **锁层旧写者栅栏（V_RW_REAL_COMET_RECOVERY:L11-fencing）**：真实存活 pid
-  持 `.comet-state.lock`（i08 fence-evidence 同形：真实 pid，绝不伪造）时，
-  真实 CLI 写操作被栅栏至超时拒绝且状态字节不动；真实 SIGKILL + 死亡确认后，
-  死写者锁被下一个真实操作自动回收、原操作继续、无残留锁文件（I08 fencing
-  语义在 CLI 锁层的同机半边；跨机仍归 I08/VERIFY）。
-- **配方/注册面绑定（V_RW_REAL_COMET_RECOVERY:recipe-tracking）**：注册面
-  字段逐项断言；与 host journey 步骤 9 的协调与所有权边界逐项断言；未知
-  journey 经真实 runner 拒绝（journey-not-registered exit 2）。
-- **边界（如实）**：本切片不签 V_RW_REAL_COMET_RECOVERY 完整旅程 PASS——
-  live Outline 未知结果、独立外部监控与备份资格依赖 I07/I08/P4 机制与同产品
-  Run，holder=VERIFY（`real-comet-recovery.journey.json` 步骤 1/7-9）；会话
-  沙箱 docker 不可用（EPERM），docker 类操作清单见
-  `worker-reports/P3_3-rework/terminal-channel-commands.sh`。本轮变异注入
-  ×3（配方 scenario、旅程步骤所有权、required 断言钉）全部被套件/runner
-  捕获并逐字节还原。
+- **探针登记**：`comet-050-composition-recovery-probe.json` —— 写断言前对 pristine
+  0.5.0 恢复面的逐项实证（start 幂等/RUN_CONFLICT、ACTION_ALREADY_CLAIMED、
+  STALE_ACTION、DECISION_CONFLICT、WORKFLOW_CHANGED、REVISION_CONFLICT、
+  refused 写的 inspect 续行面、classic run_checkpoint 的 next 面、0.4.5 面消亡）。
+- **五语义切片（test/delivery-cases/3_3.mjs V_RW_REAL_COMET_RECOVERY:C050-*）**：
+  全部真实 CLI、一次性 /tmp 世界（隔离 HOME/TMPDIR/PATH、钉版 node、组合包测试开始
+  时快照——与并行包工作隔离；断言结构性，绝不钉 compositionHash/contentHash 值）：
+  1. **中断后恢复**：真实 SIGKILL 落在 Run 记录持久化窗口（逐尝试按磁盘字节分类，
+     预算内未命中即红）；恢复入口=新 CLI 进程重发原请求（同 runId/同包/同输入）→
+     Run 恰好一次、身份/输入逐字节保持、续行正常（trusted prepare 收据恰 1、审批恰
+     一次、full.open 调度）；拒绝写暴露 inspect 续行请求面。
+  2. **重复调用幂等**：start 逐字节重放 x4 同 Run 同字节；审批同决定重放 x4
+     revision 不动、决定恰 1；同 runId 换输入 RUN_CONFLICT；换决定 DECISION_CONFLICT。
+  3. **内容变化拒绝**：包内 1 字节漂移 → next/inspect 双面 WORKFLOW_CHANGED、Run
+     字节不动；还原字节后同 Run 在原包归属下继续。
+  4. **旧证据**：错 claimToken / 被取代 attempt 回执 → STALE_ACTION（引擎级，先于
+     业务验证器），磁盘 receipts 恒 0——保守失效，旧证据不因恢复复活。
+  5. **并发写者**：第二写者 claim 与 trusted-executor 接管均 ACTION_ALREADY_CLAIMED；
+     同身份重领幂等；过期 expectedRevision REVISION_CONFLICT；磁盘恰一个 claim owner。
+- **配方与旅程**：`real-comet-recovery.case.json` 重写为 C050 钉（不钉包哈希值）；
+  `real-comet-recovery.journey.json` landed 步骤改为 c050-*（步骤 1/7-9 保持
+  VERIFY），profile 对齐 comet-managed-v2；旅程分母冻结（case_definition_sha256
+  注册）不在 P3_3 Owns，归 VERIFY 前步骤，runner 如实 NOT-EXERCISED。
+- **边界（如实）**：本切片不签 V_RW_REAL_COMET_RECOVERY 完整旅程 PASS——live
+  Outline 未知结果、独立外部监控与备份归 VERIFY（journey 步骤 1/7-9）；classic
+  `run_checkpoint` 的 `{operation:'next'}` 恢复面为 pristine 源码登记，本切片未在
+  classic SDK Run 上活体触发（组合 Run 走 application store 面）；跨机 fencing 归
+  I08。执行报告与逐语义证据：`worker-reports/P3_3-comet-050/`。
+
+以上 0.4.5 切片的历史描述（journal/锁窗口、dispatch 恢复、锁层栅栏）随该面一并
+退役，存档于 git 历史与本文件上一修订；其语义（唯一 open owner、恰一次结果、旧
+回执不复活）已由 C050 五语义在 0.5.0 组合 Run 面上重新实证。

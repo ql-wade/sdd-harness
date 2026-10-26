@@ -1,12 +1,22 @@
 {
   "schemaVersion": 1,
   "scenario": "L11",
-  "acceptanceIds": ["D08", "H01", "H03", "H07", "L10", "L11"],
+  "acceptanceIds": [
+    "D08",
+    "H01",
+    "H03",
+    "H07",
+    "L10",
+    "L11"
+  ],
   "requiredAssertions": [
     "L11",
-    "V_RW_REAL_COMET_RECOVERY:L11-core-transaction",
-    "V_RW_REAL_COMET_RECOVERY:L11-fencing",
-    "V_RW_REAL_COMET_RECOVERY:recipe-tracking"
+    "V_RW_REAL_COMET_RECOVERY:C050-interrupt-resume",
+    "V_RW_REAL_COMET_RECOVERY:C050-idempotent-recovery",
+    "V_RW_REAL_COMET_RECOVERY:C050-workflow-changed",
+    "V_RW_REAL_COMET_RECOVERY:C050-stale-evidence",
+    "V_RW_REAL_COMET_RECOVERY:C050-single-writer",
+    "V_RW_REAL_COMET_RECOVERY:L11-recipe-tracking"
   ],
   "caseModule": "test/delivery-cases/3_3.mjs",
   "sourceBinding": [
@@ -22,7 +32,7 @@
     },
     {
       "path": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.journey.json",
-      "requirement": "V_SAME_RUN_DELIVERY step 9-outline-unknown-recovery: the V_RW_REAL_COMET_RECOVERY fault window embedded inside the same product Run (P3_3 owns the bounded core-transaction recovery recipe; the live Outline unknown-result window stays execution_owner=VERIFY)",
+      "requirement": "V_SAME_RUN_DELIVERY step 9-outline-unknown-recovery: the V_RW_REAL_COMET_RECOVERY fault window embedded inside the same product Run (P3_3 owns the bounded composition-Run recovery recipe; the live Outline unknown-result window stays execution_owner=VERIFY)",
       "scenario": "L11"
     },
     {
@@ -35,14 +45,17 @@
     {
       "type": "spawn",
       "command": "node --test test/delivery-cases/3_3.mjs",
-      "expected": "exit 0; the case module executes the recovery recipe's declared construction scope: (1) V_RW_REAL_COMET_RECOVERY:L11-core-transaction drives the real managed Comet CLI (repo lock fingerprint d4370930) through real SIGKILL fault windows inside its classic state transaction — a kill in the pre-commit window rolls the recovery back to the pre-transaction bytes (journal consumed, no receipt, no phase change, replay of the killed attempt refused as already consumed, re-dispatch accepts cleanly exactly once), a kill in the post-commit window rolls the recovery forward (journal consumed, the committed receipt present exactly once for the killed execution, replay refused, recovery rewrites no committed bytes), and a kill during dispatch recovers the SAME open execution on re-dispatch (no duplicate dispatch for the same job key); (2) V_RW_REAL_COMET_RECOVERY:L11-fencing proves the lock-layer old-writer refusal live — a real live pid holding .comet-state.lock fences a real CLI operation until timeout while a dead old writer's lock is auto-recovered and the operation proceeds; (3) V_RW_REAL_COMET_RECOVERY:recipe-tracking binds this recipe to its journey_definitions registration and asserts the coordination with pilot-journey/same-run-delivery.journey.json step 9 (the fault window inside the same Run stays execution_owner=VERIFY); TAP summary fail=0 with pass>0 and every required assertion mapped to executed ok points",
+      "expected": "exit 0; the case module executes the recovery recipe's declared construction scope on the REAL comet-050 composition Run face (pinned 0.5.0 build, sdd-managed-delivery package driven through `comet runtime dispatch --application-file` in one-shot /tmp worlds with isolated HOME/TMPDIR and the pinned toolchain node): (1) C050-interrupt-resume — a real SIGKILL inside the run-record persistence window recovers through the ORIGINAL request (same runId/package/input): the run exists exactly once, identity and input survive byte-level, the run continues (trusted prepare, approval resolved exactly once, next step scheduled), and a refused write exposes the documented inspect recovery request face; (2) C050-idempotent-recovery — byte-identical start replays return the same single run with untouched record bytes, the same approval decision replayed N times never bumps the revision or mints a second decision, and a same-key start with different input is refused (RUN_CONFLICT); (3) C050-workflow-changed — mutated package content is refused with WORKFLOW_CHANGED on both the mutation and inspect faces, the refusals leave the run checkpoint bytes untouched, and restoring the original bytes lets the SAME run continue under its original package ownership; (4) C050-stale-evidence — wrong-claimToken and superseded-attempt receipts are refused STALE_ACTION by the engine before any business validator and never land (receipts stay zero); (5) C050-single-writer — a second host claim, a trusted-executor takeover of a host-claimed action and a stale expectedRevision are all refused (ACTION_ALREADY_CLAIMED / REVISION_CONFLICT) and the disk record holds exactly one claim owner; (6) L11-recipe-tracking binds this recipe to its journey_definitions registration and asserts the same-run journey step 9 stays execution_owner=VERIFY; TAP summary fail=0 with pass>0 and every required assertion mapped to executed ok points; no concrete compositionHash/contentHash value is ever pinned",
       "expect": {
         "kind": "tapRequiredAssertions",
         "assertions": [
           "L11",
-          "V_RW_REAL_COMET_RECOVERY:L11-core-transaction",
-          "V_RW_REAL_COMET_RECOVERY:L11-fencing",
-          "V_RW_REAL_COMET_RECOVERY:recipe-tracking"
+          "V_RW_REAL_COMET_RECOVERY:C050-interrupt-resume",
+          "V_RW_REAL_COMET_RECOVERY:C050-idempotent-recovery",
+          "V_RW_REAL_COMET_RECOVERY:C050-workflow-changed",
+          "V_RW_REAL_COMET_RECOVERY:C050-stale-evidence",
+          "V_RW_REAL_COMET_RECOVERY:C050-single-writer",
+          "V_RW_REAL_COMET_RECOVERY:L11-recipe-tracking"
         ]
       }
     },
@@ -50,7 +63,9 @@
       "type": "readState",
       "path": "action-1-stdout.txt",
       "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0 (zero effective execution never passes)",
-      "expect": { "kind": "nonEmptyFile" }
+      "expect": {
+        "kind": "nonEmptyFile"
+      }
     },
     {
       "type": "inspect",
@@ -69,9 +84,9 @@
     ]
   },
   "verdictSemantics": {
-    "PASS": "the recipe's actions executed (execution count > 0) and every expected outcome was met against live observation. This attests the DECLARED CONSTRUCTION SCOPE only: the bounded actual-Comet core-transaction recovery slice on the real managed CLI (pre-commit kill → rollback recovery, post-commit kill → roll-forward recovery, same-operation dispatch recovery without duplicate dispatch, old-attempt replay refusal, lock-layer old-writer fencing, and Run/journal/approval/continuation readback) plus the recipe/registration coordination. It NEVER asserts the full V_RW_REAL_COMET_RECOVERY journey: the live Outline unknown-result window, independent external monitoring and backup qualification run at execution_owner=VERIFY after I07/I08/P4 mechanisms exist (execution-contract journey_execution; same-run-delivery.journey.json step 9). Recipe validation alone never closes D08/H01/H03/H07/L10/L11.",
-    "FAIL": "the declared construction scope executed and the observed outcome contradicted the frozen THEN (a killed transaction did not recover to a consistent state, a replayed or old attempt was accepted, a duplicate receipt or duplicate dispatch appeared, the live old writer was not fenced, the dead writer's lock was not recovered, the recipe/registration binding drifted, or the case module reported failures)",
-    "NOT-EXERCISED": "a prerequisite was missing (registered recipe, schema-valid definition, frozen pilot baseline, identity or environment — e.g. the patched Comet build d4370930 is absent, or a kill window could not be landed within the bounded attempt budget); structured refusal with nonzero exit, never converted into a pass",
+    "PASS": "the recipe's actions executed (execution count > 0) and every expected outcome was met against live observation. This attests the DECLARED CONSTRUCTION SCOPE only: the bounded actual-Comet composition-Run recovery slice on the real managed face (interrupt-then-recover via the original request with no duplicate run, idempotent replay of the same recovery request, package content change refused as WORKFLOW_CHANGED with restoration resuming the SAME run, stale attempt/writer evidence refused and never landing, and single-writer ownership with all takeover faces refused) plus the recipe/registration coordination. It NEVER asserts the full V_RW_REAL_COMET_RECOVERY journey: the live Outline unknown-result window, independent external monitoring and backup qualification run at execution_owner=VERIFY after I07/I08/P4 mechanisms exist (execution-contract journey_execution; same-run-delivery.journey.json step 9). Recipe validation alone never closes D08/H01/H03/H07/L10/L11.",
+    "FAIL": "the declared construction scope executed and the observed outcome contradicted the frozen THEN (an interrupted run was duplicated or rebound, a replay minted a second decision or receipt, a drifted package was accepted or the restoration did not resume the same run, a stale attempt/writer receipt landed, a second writer or a stale revision was accepted, or the case module reported failures)",
+    "NOT-EXERCISED": "a prerequisite was missing (registered recipe, schema-valid definition, frozen pilot baseline, identity or environment — e.g. the pinned 0.5.0 Comet build is absent, or a kill window could not be landed within the bounded attempt budget); structured refusal with nonzero exit, never converted into a pass",
     "NOT-APPLICABLE": "explicitly out of scope for the registered profile with a recorded reason; still nonzero; the runner never self-assigns it"
   }
 }

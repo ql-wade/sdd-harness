@@ -1,0 +1,65 @@
+TAP version 13
+# Subtest: V_A10: a same-key second dispatch is refused, a replayed receipt is refused by the admission layer, and refusals leave the ledger byte-identical
+ok 1 - V_A10: a same-key second dispatch is refused, a replayed receipt is refused by the admission layer, and refusals leave the ledger byte-identical
+  ---
+  duration_ms: 643.439167
+  ...
+# Subtest: V_A11: a receipt from a superseded epoch is refused (STALE_EPOCH) and a late attempt-1 receipt after attempt 2 was admitted is refused (STALE_ATTEMPT), both traced
+ok 2 - V_A11: a receipt from a superseded epoch is refused (STALE_EPOCH) and a late attempt-1 receipt after attempt 2 was admitted is refused (STALE_ATTEMPT), both traced
+  ---
+  duration_ms: 2981.068667
+  ...
+# Subtest: V_A12: two real runner processes race to advance the same run — exactly one wins, the loser and a stale-epoch claimant are refused, the control plane keeps one writer
+ok 3 - V_A12: two real runner processes race to advance the same run — exactly one wins, the loser and a stale-epoch claimant are refused, the control plane keeps one writer
+  ---
+  duration_ms: 222.0635
+  ...
+# Subtest: V_F07: a real SIGKILLed leaf worker is recovered from the authoritative disk state — completed leaves keep their identity, no leaf is reopened, the dead attempt is refused
+ok 4 - V_F07: a real SIGKILLed leaf worker is recovered from the authoritative disk state — completed leaves keep their identity, no leaf is reopened, the dead attempt is refused
+  ---
+  duration_ms: 574.3865
+  ...
+# Subtest: V_A12b: leaves pass individually but the parent journey fails for real — the parent stays blocked and only a new candidate with full re-verification passes
+ok 5 - V_A12b: leaves pass individually but the parent journey fails for real — the parent stays blocked and only a new candidate with full re-verification passes
+  ---
+  duration_ms: 1408.554834
+  ...
+# Subtest: V_RW_REAL_COMET_RECOVERY:C050-interrupt-resume — a real SIGKILL inside the composition Run persistence window recovers through the original request: the run exists exactly once, identity/input survive byte-level, the run continues (trusted prepare, approval resolved exactly once, next step scheduled), and a refused write exposes the documented inspect recovery face
+ok 6 - V_RW_REAL_COMET_RECOVERY:C050-interrupt-resume — a real SIGKILL inside the composition Run persistence window recovers through the original request: the run exists exactly once, identity/input survive byte-level, the run continues (trusted prepare, approval resolved exactly once, next step scheduled), and a refused write exposes the documented inspect recovery face
+  ---
+  duration_ms: 20048.237042
+  ...
+# Subtest: V_RW_REAL_COMET_RECOVERY:C050-idempotent-recovery — the same recovery request replayed N times does no duplicate side work: byte-identical start replays return the same single run, the same approval replayed N times never bumps the revision or mints a second decision, and a same-key start with different input is refused (RUN_CONFLICT)
+ok 7 - V_RW_REAL_COMET_RECOVERY:C050-idempotent-recovery — the same recovery request replayed N times does no duplicate side work: byte-identical start replays return the same single run, the same approval replayed N times never bumps the revision or mints a second decision, and a same-key start with different input is refused (RUN_CONFLICT)
+  ---
+  duration_ms: 25595.231916
+  ...
+# Subtest: V_RW_REAL_COMET_RECOVERY:C050-workflow-changed — mutated package content at the recovery entry is refused with WORKFLOW_CHANGED on both the mutation and inspect faces, the refusals leave the run bytes untouched, and restoring the original bytes lets the SAME run continue under its original package ownership
+ok 8 - V_RW_REAL_COMET_RECOVERY:C050-workflow-changed — mutated package content at the recovery entry is refused with WORKFLOW_CHANGED on both the mutation and inspect faces, the refusals leave the run bytes untouched, and restoring the original bytes lets the SAME run continue under its original package ownership
+  ---
+  duration_ms: 16217.134458
+  ...
+# Subtest: V_RW_REAL_COMET_RECOVERY:C050-stale-evidence — receipts from a superseded writer or attempt are refused by the engine before any business validator: wrong claimToken and post-retry attempt-1 receipts are STALE_ACTION and never land (receipts stay zero — old evidence does not revive through recovery)
+ok 9 - V_RW_REAL_COMET_RECOVERY:C050-stale-evidence — receipts from a superseded writer or attempt are refused by the engine before any business validator: wrong claimToken and post-retry attempt-1 receipts are STALE_ACTION and never land (receipts stay zero — old evidence does not revive through recovery)
+  ---
+  duration_ms: 21225.996375
+  ...
+# Subtest: V_RW_REAL_COMET_RECOVERY:C050-single-writer — the composition Run keeps exactly one writer: a second host claim is ACTION_ALREADY_CLAIMED, the engine's own trusted executor cannot take over a host-claimed action, the same-identity re-claim is idempotent, a stale expectedRevision is REVISION_CONFLICT, and the disk record holds exactly one claim owner
+ok 10 - V_RW_REAL_COMET_RECOVERY:C050-single-writer — the composition Run keeps exactly one writer: a second host claim is ACTION_ALREADY_CLAIMED, the engine's own trusted executor cannot take over a host-claimed action, the same-identity re-claim is idempotent, a stale expectedRevision is REVISION_CONFLICT, and the disk record holds exactly one claim owner
+  ---
+  duration_ms: 12257.870125
+  ...
+# Subtest: V_RW_REAL_COMET_RECOVERY:L11-recipe-tracking — the real-comet-recovery recipe stays registered for the comet-050 revision with the five same-Run recovery pins bound to executed test points, the same-run journey step 9 stays VERIFY-owned, and the journey surface refuses unknown journeys and unfrozen registrations (never a default-success path)
+ok 11 - V_RW_REAL_COMET_RECOVERY:L11-recipe-tracking — the real-comet-recovery recipe stays registered for the comet-050 revision with the five same-Run recovery pins bound to executed test points, the same-run journey step 9 stays VERIFY-owned, and the journey surface refuses unknown journeys and unfrozen registrations (never a default-success path)
+  ---
+  duration_ms: 172.24775
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 101508.501333
