@@ -734,7 +734,22 @@ test('RW_RUNNER_BUILD: committed Dockerfile consumes the full ordered patch chai
   assert.ok(joined.includes('echo "${SOURCE_SHA256}  /build/comet-source.tar.gz" | sha256sum -c -'), 'archive sha256 gate missing');
   assert.ok(/^COPY \.sdd\/cache\/runner-build\/openspec-\$\{OPENSPEC_VERSION\}\.tgz \/build\/openspec\.tgz$/m.test(dockerfile), 'openspec tarball COPY missing');
   assert.ok(joined.includes('echo "${OPENSPEC_TARBALL_SHA256}  /build/openspec.tgz" | sha256sum -c -'), 'openspec tarball sha256 gate missing');
-  assert.ok(/npm install --global \/build\/openspec\.tgz/.test(joined), 'openspec must install from the verified pinned tarball');
+  assert.ok(dockerfile.includes("run('npm',['ci','--prefix','/build/repo/.sdd/cache/runner-build/openspec-project','--offline','--ignore-scripts','--no-audit','--no-fund'])"), 'openspec must consume its frozen local tar project offline without lifecycle scripts');
+  assert.ok(dockerfile.includes('ln -s /build/repo/.sdd/cache/runner-build/openspec-project/node_modules/.bin/openspec /usr/local/bin/openspec'), 'only the fixed installed CLI may be exposed');
+  const inputLock = readDomainJson('image.lock.json'), project = inputLock.sourceInputs.runtime.projects.openspec;
+  const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, project.packageJson.path))), dependencies = JSON.parse(fs.readFileSync(path.join(repoRoot, project.packageLock.path)));
+  const reference = 'file:../../../../.sdd/cache/runner-build/openspec-1.11.0.tgz';
+  assert.deepEqual(manifest.dependencies, { '@fission-ai/openspec': reference });
+  assert.deepEqual(dependencies.packages[''].dependencies, manifest.dependencies);
+  assert.equal(dependencies.packages['node_modules/@fission-ai/openspec'].resolved, reference);
+  assert.equal(dependencies.packages['node_modules/@fission-ai/openspec'].version, '1.11.0');
+  assert.equal(sha256File(path.join(repoRoot, project.packageLock.path)), project.packageLock.sha256);
+  const publicPlan = runCli(['build-plan', '--json']); assert.equal(publicPlan.status, 0, publicPlan.stdout);
+  const actualPackage = parseJsonOut(publicPlan, 'verified OpenSpec package').openspecPackage;
+  assert.equal(actualPackage.version, '1.11.0'); assert.equal(actualPackage.entry, 'bin/openspec.js');
+  assert.equal(actualPackage.projectLockSha256, project.packageLock.sha256);
+  assert.equal(actualPackage.sourceTarSha256, '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f');
+  assert.equal(actualPackage.cliTarget, 'build/repo/.sdd/cache/runner-build/openspec-project/node_modules/.bin/openspec');
   assert.ok(joined.includes('--project /build/repo'), 'build.mjs must run with --project /build/repo (patch paths are project-root relative)');
   const entryPath = '/build/repo/.sdd/vendor/comet/${SOURCE_COMMIT}/builds/${EXPECTED_FINGERPRINT}/work/bin/comet.js';
   assert.ok(dockerfile.includes(`test -f "${entryPath}"`), 'entrypoint must be gated by test -f on the fingerprint-deterministic path');
@@ -1120,8 +1135,17 @@ function makeBuildContextFixture() {
     'tools/comet/build.mjs', 'tools/comet/source.js', 'tools/comet/prepare-source.mjs',
     ...DOMAIN_FILES.map((name) => 'infra/delivery/runner/' + name),
     ...fs.readdirSync(path.join(repoRoot, 'contracts/delivery')).filter((name) => name.endsWith('.js')).map((name) => 'contracts/delivery/' + name)];
-  for (const file of sources) copy(file);
-  fs.writeFileSync(path.join(fixture, 'package.json'), '{"type":"module"}\n');
+  const runtime = readDomainJson('image.lock.json').sourceInputs.runtime;
+  // Extend legitimate prerequisites; every old context/materialization oracle stays unchanged.
+  for (const file of new Set([...sources, ...runtime.bootstrap.files])) copy(file);
+  for (const descriptor of [...Object.values(runtime.projects).flatMap(project => Object.values(project)),
+    ...runtime.dependencies.flatMap(group => group.files)]) {
+    const source = path.join(repoRoot, descriptor.path), bytes = fs.readFileSync(source);
+    assert.equal(bytes.length, descriptor.bytes, 'SETUP: exact approved public prerequisite size');
+    assert.equal(sha256File(source), descriptor.sha256, 'SETUP: exact approved public prerequisite SHA');
+    if (descriptor.integrity) assert.equal('sha512-' + crypto.createHash('sha512').update(bytes).digest('base64'), descriptor.integrity);
+    copy(descriptor.path);
+  }
   const artifacts = process.env.I02_ACCEPTED_ARTIFACT_ROOT ?? repoRoot;
   for (const [file, digest] of [['.sdd/cache/runner-build/comet-source.tar.gz', lock.source.sha256],
     ['.sdd/cache/runner-build/openspec-1.11.0.tgz', '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f']]) {
@@ -1608,4 +1632,250 @@ test('execution slot fixture completion preserves state changes published while 
     if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
     await terminal;
   }
+});
+
+
+test('Runner build-plan derives both immutable runtime sources and Python3.12.15 from its own lock', () => {
+  const result = runCli(['build-plan', '--json']);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const plan = parseJsonOut(result, 'runtime source plan');
+  assert.ok(plan.runtime, 'the public build-plan must expose the current locked runtime sources');
+  assert.equal(plan.runtime.platform, 'linux/arm64');
+  assert.equal(plan.runtime.python.version, '3.12.15');
+  assert.equal(plan.runtime.python.minimum, '3.12');
+  assert.equal(plan.dockerBuild.buildArgs.RUNNER_BASE_IMAGE, 'node@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d');
+  assert.equal(plan.dockerBuild.buildArgs.PYTHON_BASE_IMAGE, 'python@sha256:c3729439afc4ec3f3e159e0c86aeabfadac8030ef46838a0256383d0511c5f5e');
+  assert.equal(plan.dockerBuild.buildArgs.PYTHON_VERSION, '3.12.15');
+  assert.equal(plan.runtime.python.libraries.length, 23);
+  assert.equal(plan.runtime.python.libraries.some(file => /\/libc\.so|\/libm\.so|\/libresolv\.so/.test(file)), false);
+});
+
+
+test('Runner refuses online acquisition and recipes that only retain required operations as inert text', () => {
+  const link = 'ln -s /build/repo/.sdd/cache/runner-build/openspec-project/node_modules/.bin/openspec /usr/local/bin/openspec';
+  const install = "run('npm',['ci','--prefix','/build/repo/.sdd/cache/runner-build/openspec-project','--offline','--ignore-scripts','--no-audit','--no-fund']);";
+  const replaceOnce = (text, from, to) => {
+    assert.equal(text.split(from).length, 2, 'SETUP: mutate the one actual operation, never an absent fixture token');
+    return text.replace(from, to);
+  };
+  const variants = [
+    ['online acquisition', text => text + '\nRUN npm install --global fixture-unapproved-package\n'],
+    ['CLI retained only in Docker comment', text => replaceOnce(text, link, 'true') + '\n# ' + link + '\n'],
+    ['install retained only in JS line comment', text => replaceOnce(text, install, '// ' + install)],
+    ['install retained only in JS block comment', text => replaceOnce(text, install, '/* ' + install + ' */')],
+    ['install retained only in a JS string', text => replaceOnce(text, install, 'const inertInstall = ' + JSON.stringify(install) + ';')],
+    ['install inside a nonexecuting JS branch', text => replaceOnce(text, install, 'if (false) { ' + install + ' }')],
+    ['CLI inside a nonexecuting shell branch', text => replaceOnce(text, link, 'if false; then ' + link + '; fi')],
+    ['Python heredoc consumed by a noop', text => replaceOnce(text, "RUN python3 -I - <<'PY'", "RUN true <<'PY'")],
+    ['bootstrap link retained only in Docker comment', text => {
+      const bootstrap = 'ln -s /opt/sdd/lib/adapters/comet-executor.js /opt/sdd/runner-host.mjs';
+      return replaceOnce(text, bootstrap, 'true') + '\n# ' + bootstrap + '\n';
+    }],
+    ['fresh final stage discards installed tools', text => text + '\nFROM ${RUNNER_BASE_IMAGE}\n'],
+    ['additional trailing execution', text => text + '\nRUN true\n'],
+    ['trailing heredoc execution', text => text + "\nRUN <<'UNAPPROVED'\ntrue\nUNAPPROVED\n"],
+    ['appended frontend parser directive', text => text + '\n# syntax=docker/dockerfile:1\n'],
+    ['appended escape parser directive', text => text + '\n# escape=`\n'],
+    ['appended check parser directive', text => text + '\n# check=skip=all\n'],
+    ['incomplete trailing comment', text => text + '\n# incomplete metadata'],
+    ['trailing shell continuation', text => text + '\n\\\n'],
+  ];
+  for (const [name, mutate] of variants) {
+    const directory = makeFixtureDir(({ read, write }) => {
+      const original = read('Dockerfile'), changed = mutate(original);
+      assert.notEqual(changed, original, 'SETUP: negative must change the actual recipe');
+      write('Dockerfile', changed);
+    });
+    for (const command of [['validate'], ['qualify'], ['up'], ['probe', '--case', 'role-denial'], ['stop'], ['build-plan'], ['build-plan', '--export-context']]) {
+      const result = runCli([...command, '--dir', directory, '--json']);
+      assert.equal(result.status, 2, name + '/' + command.join(' ') + ' must fail closed before construction or runtime');
+      const report = parseJsonOut(result, name);
+      if (command[0] === 'qualify') assert.match(report.categories['role-boundary-declaration'].reason, /RUNTIME_RECIPE_UNSAFE/);
+      else if (command[0] === 'stop') assert.equal(report.executed, false, 'the standalone stop has no authorized handle and must never act');
+      else assert.ok((report.drift ?? codes(report)).includes('RUNTIME_RECIPE_UNSAFE'), name + '/' + command.join(' ') + ' must reject recipe identity, not an unrelated setup error');
+      assert.equal(report.dockerBuild, undefined, 'an unapproved recipe must not yield construction argv');
+      assert.notEqual(report.ready, true);
+    }
+  }
+  // Metadata follows the complete pinned ENTRYPOINT. It is transported verbatim, never stripped before hashing.
+  const metadata = '\n \t\n  # independent fixture metadata $(true)\n\t# ordinary comment\n';
+  const accepted = makeFixtureDir(({ read, write }) => write('Dockerfile', read('Dockerfile') + metadata));
+  for (const command of [['validate'], ['build-plan']]) {
+    const result = runCli([...command, '--dir', accepted, '--json']);
+    assert.equal(result.status, 0, 'safe complete metadata must preserve the legal template');
+    const report = parseJsonOut(result, 'safe metadata');
+    if (command[0] === 'build-plan') {
+      assert.equal(report.ready, false);
+      assert.equal(report.dockerBuild.contextFiles.find(item => item.path === 'infra/delivery/runner/Dockerfile').sha256,
+        sha256File(path.join(accepted, 'Dockerfile')), 'context binds original complete bytes including metadata');
+    }
+  }
+  const privateMarker = 's' + 'k-' + 'i02synthetic'.repeat(4);
+  for (const [suffix, expected, hidden] of [
+    ['\n# fixture path /Users/i02-synthetic/sentinel\n', 'DOCKERFILE_HOST_PATH', '/Users/i02-synthetic/sentinel'],
+    ['\n# fixture placeholder ' + privateMarker + '\n', 'SECRET_PLAINTEXT_FORBIDDEN', privateMarker],
+  ]) {
+    const directory = makeFixtureDir(({ read, write }) => write('Dockerfile', read('Dockerfile') + suffix));
+    for (const command of [['validate'], ['build-plan']]) {
+      const result = runCli([...command, '--dir', directory, '--json']); assert.equal(result.status, 2);
+      const report = parseJsonOut(result, 'unsafe metadata');
+      assert.ok((report.drift ?? codes(report)).includes(expected)); assert.equal(report.dockerBuild, undefined);
+      assert.equal((result.stdout + result.stderr).includes(hidden), false, 'refusal must not echo untrusted comment bytes');
+    }
+  }
+});
+
+test('Runner rejects ambiguous Python source components rather than selecting the last same-name item', () => {
+  const directory = makeFixtureDir(({ json, writeJson }) => {
+    const lock = json('image.lock.json'), python = lock.components.find(item => item.component === 'python-runtime');
+    lock.components.push(structuredClone(python)); writeJson('image.lock.json', lock);
+  });
+  const result = runCli(['validate', '--dir', directory, '--json']);
+  assert.equal(result.status, 2, 'duplicate component identities cannot make one source silently win');
+  assert.ok(codes(parseJsonOut(result, 'ambiguous source')).includes('RUNTIME_SOURCE_PIN_INVALID'));
+});
+
+
+test('Runner bootstrap plan seals both original CODE entries and ordinary infrastructure reads without selecting a provider', () => {
+  const directory = makeFixtureDir(({ json, writeJson }) => { const lock = json('image.lock.json'); lock.sourceInputs.runtime.dependencies.find(group => group.id === 'comet-pnpm').closed = false; writeJson('image.lock.json', lock); });
+  const result = runCli(['build-plan', '--dir', directory, '--json']); assert.equal(result.status, 0, result.stdout);
+  const plan = parseJsonOut(result, 'bootstrap closure');
+  assert.ok(plan.bootstrap, 'the public plan must expose a complete bootstrap source closure');
+  assert.equal(plan.bootstrap.pathBase, 'image-root');
+  assert.equal(plan.bootstrap.entry, 'opt/sdd/lib/adapters/comet-executor.js');
+  assert.deepEqual(plan.bootstrap.link, { path: 'opt/sdd/runner-host.mjs', target: 'opt/sdd/lib/adapters/comet-executor.js' });
+  const files = new Map(plan.bootstrap.files.map(item => [item.path, item]));
+  for (const file of ['lib/adapters/comet-executor.js', 'lib/adapters/comet.js', 'lib/delivery/baseline.js', 'lib/delivery/evidence.js',
+    'lib/delivery/gate.js', 'lib/delivery/test-contract.js', 'tools/infra/runner.mjs', 'tools/infra/secret-refs.mjs',
+    'contracts/delivery/index.js', 'package.json', 'package-lock.json', 'infra/delivery/qualification-policy.json']) {
+    assert.equal(files.get(file)?.sha256, sha256File(path.join(repoRoot, file)), 'include the actual source bytes: ' + file);
+    assert.equal(files.get(file)?.bytes, fs.statSync(path.join(repoRoot, file)).size);
+  }
+  assert.equal(plan.bootstrap.productionQualified, false);
+  assert.equal(plan.bootstrap.provider, null);
+  assert.equal(plan.ready, false);
+  assert.equal(plan.dockerBuild.executable, false, 'missing dependency groups cannot emit executable build argv');
+  assert.equal(plan.dockerBuild.argv, null);
+});
+
+
+test('Runner bootstrap source view loads in a fresh Node project with only its locked public npm inputs', () => {
+  const planRun = runCli(['build-plan', '--json']); assert.equal(planRun.status, 0, planRun.stdout);
+  const plan = parseJsonOut(planRun, 'bootstrap source view'), target = privateTmp('i02-cold-bootstrap-');
+  for (const item of plan.bootstrap.files) {
+    const source = path.join(repoRoot, item.path), output = path.join(target, item.path);
+    assert.equal(sha256File(source), item.sha256); fs.mkdirSync(path.dirname(output), { recursive: true }); fs.copyFileSync(source, output);
+  }
+  const emptyUser = path.join(target, 'empty-user.npmrc'), emptyGlobal = path.join(target, 'empty-global.npmrc');
+  fs.writeFileSync(emptyUser, ''); fs.writeFileSync(emptyGlobal, '');
+  const networkGuard = path.join(target, 'deny-network.mjs'), networkCalls = path.join(target, 'network-calls.txt');
+  fs.writeFileSync(networkGuard, `import fs from 'node:fs';import http from 'node:http';import https from 'node:https';import net from 'node:net';import tls from 'node:tls';import {syncBuiltinESMExports} from 'node:module';
+const denied=()=>{fs.appendFileSync(${JSON.stringify(networkCalls)},'NETWORK_FORBIDDEN\\n');throw new Error('NETWORK_FORBIDDEN');};
+http.request=http.get=https.request=https.get=net.connect=net.createConnection=tls.connect=denied;globalThis.fetch=denied;syncBuiltinESMExports();
+`);
+  const env = Object.fromEntries(['HOME', 'PATH', 'LANG', 'TMPDIR'].filter(key => process.env[key]).map(key => [key, process.env[key]]));
+  Object.assign(env, { CI: 'true', NO_UPDATE_NOTIFIER: '1', npm_config_offline: 'true', npm_config_ignore_scripts: 'true',
+    npm_config_userconfig: emptyUser, npm_config_globalconfig: emptyGlobal, npm_config_cache: path.join(target, 'npm-cache') });
+  const npm = path.resolve(path.dirname(process.execPath), '../lib/node_modules/npm/bin/npm-cli.js');
+  assert.equal(fs.existsSync(npm), true, 'SETUP: fixed Node installation must include its existing npm CLI');
+  const invokeNpm = args => {
+    const result = spawnSync(process.execPath, ['--import', networkGuard, npm, ...args, '--offline', '--ignore-scripts', '--no-audit', '--no-fund'], {
+      cwd: target, env, encoding: 'utf8', timeout: 30000,
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+  };
+  const lock = readDomainJson('image.lock.json'), inputs = lock.sourceInputs.runtime.dependencies.find(group => group.id === 'bootstrap-npm').files;
+  assert.equal(inputs.length, 10);
+  for (const item of inputs) {
+    const file = path.join(repoRoot, item.path); assert.equal(sha256File(file), item.sha256, 'SETUP: exact approved public input must be present');
+    assert.equal(fs.statSync(file).size, item.bytes); invokeNpm(['cache', 'add', file]);
+  }
+  invokeNpm(['ci']);
+  assert.equal(fs.existsSync(networkCalls), false, 'offline npm must not request metadata or any external endpoint');
+  const entry = path.join(target, 'runner-host.mjs'); fs.symlinkSync('lib/adapters/comet-executor.js', entry);
+  assert.equal(fs.realpathSync(entry), path.join(target, 'lib/adapters/comet-executor.js'));
+  const invoke = args => spawnSync(process.execPath, ['--import', networkGuard, entry, ...args], { cwd: target, env, encoding: 'utf8', timeout: 10000 });
+  const healthy = invoke(['state', 'get', 'fixture', 'probe']);
+  assert.equal(healthy.status, 2, healthy.stderr || healthy.stdout);
+  assert.equal(JSON.parse(healthy.stdout).code, 'PROTECTED_BOOTSTRAP_REQUIRED');
+  assert.equal(JSON.parse(healthy.stdout).productionQualified, false);
+  const invalid = invoke(['state', 'get', 'fixture', 'probe', 'unexpected']);
+  assert.equal(invalid.status, 1); assert.equal(JSON.parse(invalid.stdout).code, 'NATIVE_ARGUMENTS_INVALID');
+  const dependency = path.join(target, 'lib/delivery/test-contract.js'), original = fs.readFileSync(dependency);
+  try {
+    fs.unlinkSync(dependency);
+    const broken = invoke(['state', 'get', 'fixture', 'probe']);
+    assert.notEqual(broken.status, 0); assert.notEqual(broken.status, 2, 'missing loader bytes are failure, not the deliberate protected-bootstrap refusal');
+    assert.match(broken.stderr, /ERR_MODULE_NOT_FOUND/);
+  } finally { fs.writeFileSync(dependency, original); }
+  assert.equal(fs.existsSync(networkCalls), false);
+});
+
+
+test('Runner runtime metadata rejects malformed nested input on every public caller without echoing private values', async t => {
+  const marker = 'i02-runtime-private-marker';
+  const variants = [
+    ['runtime null', lock => { lock.sourceInputs.runtime = null; }],
+    ['bootstrap unknown field', lock => { lock.sourceInputs.runtime.bootstrap.unexpected = marker; }],
+    ['bootstrap null file', lock => { lock.sourceInputs.runtime.bootstrap.files[0] = null; }],
+    ['library null record', lock => { lock.sourceInputs.runtime.python.provenance.libraries[0] = null; }],
+    ['dependency null group', lock => { lock.sourceInputs.runtime.dependencies[0] = null; }],
+    ['artifact null', lock => { lock.sourceInputs.runtime.dependencies[0].files[0] = null; }],
+    ['artifact unknown field', lock => { lock.sourceInputs.runtime.dependencies[0].files[0].authorization = marker; }],
+  ];
+  for (const [name, mutate] of variants) await t.test(name, () => {
+    const directory = makeFixtureDir(({ json, writeJson }) => { const lock = json('image.lock.json'); mutate(lock); writeJson('image.lock.json', lock); });
+    for (const command of [['validate'], ['qualify'], ['up'], ['probe', '--case', 'role-denial'], ['stop'], ['build-plan']]) {
+      const result = runCli([...command, '--dir', directory, '--json']);
+      assert.equal(result.status, 1, name + '/' + command[0] + ' is a typed input refusal');
+      const report = parseJsonOut(result, name); assert.equal(report.status, 'INPUT_INVALID');
+      assert.doesNotMatch(result.stdout + result.stderr, new RegExp(marker + '|TypeError|SyntaxError|at file:'));
+    }
+  });
+});
+
+test('Runner bootstrap refuses an undeclared import and an unsafe file set before source materialization', () => {
+  for (const [mutate, expected] of [
+    [files => files.filter(file => file !== 'lib/delivery/test-contract.js'), 'BOOTSTRAP_DEPENDENCY_MISSING'],
+    [files => [...files, '../i02-private-outside.js'], 'BOOTSTRAP_FILE_SET_INVALID'],
+  ]) {
+    const directory = makeFixtureDir(({ json, writeJson }) => {
+      const lock = json('image.lock.json'); lock.sourceInputs.runtime.bootstrap.files = mutate(lock.sourceInputs.runtime.bootstrap.files); writeJson('image.lock.json', lock);
+    });
+    const result = runCli(['build-plan', '--dir', directory, '--json']);
+    assert.equal(result.status, 2);
+    const report = parseJsonOut(result, expected);
+    assert.ok((report.findings ?? []).some(item => item.code === expected) || (report.drift ?? []).includes(expected));
+    assert.equal(report.dockerBuild, undefined);
+    assert.doesNotMatch(result.stdout + result.stderr, /i02-private-outside/);
+  }
+  const cases = [
+    ['missing verified tar', fixture => fs.unlinkSync(path.join(fixture, '.sdd/cache/runner-build/openspec-1.11.0.tgz'))],
+    ['wrong tar bytes', fixture => fs.appendFileSync(path.join(fixture, '.sdd/cache/runner-build/openspec-1.11.0.tgz'), 'tampered')],
+    ['wrong project lock', fixture => {
+      const file = path.join(fixture, 'infra/delivery/runner/image.lock.json'), lock = JSON.parse(fs.readFileSync(file));
+      lock.sourceInputs.runtime.projects.openspec.packageLock.sha256 = 'a'.repeat(64);
+      lock.sourceInputs.runtime.dependencies.find(group => group.id === 'openspec-npm').sourceLockSha256 = 'a'.repeat(64);
+      fs.writeFileSync(file, JSON.stringify(lock));
+    }],
+    ['dependency integrity removed and metadata rehashed', fixture => {
+      const file = path.join(fixture, 'infra/delivery/runner/image.lock.json'), lock = JSON.parse(fs.readFileSync(file));
+      const descriptor = lock.sourceInputs.runtime.projects.openspec.packageLock, input = path.join(fixture, descriptor.path), project = JSON.parse(fs.readFileSync(input));
+      delete project.packages['node_modules/@inquirer/ansi'].integrity;
+      fs.writeFileSync(input, JSON.stringify(project)); descriptor.sha256 = sha256File(input); descriptor.bytes = fs.statSync(input).size;
+      lock.sourceInputs.runtime.dependencies.find(group => group.id === 'openspec-npm').sourceLockSha256 = descriptor.sha256;
+      fs.writeFileSync(file, JSON.stringify(lock));
+    }],
+    ['wrong installed CLI target', fixture => {
+      const file = path.join(fixture, 'infra/delivery/runner/Dockerfile'), original = fs.readFileSync(file, 'utf8');
+      const changed = original.replace('/openspec-project/node_modules/.bin/openspec /usr/local/bin/openspec', '/openspec-project/node_modules/.bin/unapproved /usr/local/bin/openspec');
+      assert.notEqual(changed, original); fs.writeFileSync(file, changed);
+    }],
+  ];
+  for (const [name, mutate] of cases) {
+    const { fixture, invoke } = makeBuildContextFixture(); mutate(fixture);
+    const result = invoke(); assert.equal(result.status, 2, name + ' must refuse before materializing a runnable input view');
+    const report = parseJsonOut(result, name); assert.equal(report.ready, false); assert.equal(report.dockerBuild, undefined);
+  }
+
 });

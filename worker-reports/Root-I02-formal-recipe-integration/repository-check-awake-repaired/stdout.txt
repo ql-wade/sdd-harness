@@ -1,0 +1,1479 @@
+✅ agent-instructions: 规则层完整（AGENTS.md / CLAUDE.md 软链 / docs/agent / hooks / capabilities）
+✅ agent-skills: 5 个基础层技能齐全，触发矩阵一致
+== [1/6] green fixture (STRUCTURE_PASS) ==
+STRUCTURE_PASS: 1 Journey(s), 1 mandatory hop(s), 1 mandatory path(s) internally consistent (local-observed; execution and authenticity require independent verification)
+== [2/6] negative corpus (old/new equivalence + detector hits) ==
+===== fixtures/f1-schema-mismatch.json [exit=1 errors=24] target_hit=YES
+FAIL: 24 closure error(s)
+- schema_version: must be '3.0'
+- plan.digest: required non-placeholder string
+- run.run_id: required non-placeholder string
+- run.status: required non-placeholder string
+- run.started_at: required ISO-8601 timestamp
+- run.completed_at: required ISO-8601 timestamp
+- run.environment: required non-placeholder string
+- run.sources: required non-empty list
+- evidence_catalog: required non-empty object
+- run.commands: required non-empty list
+- run.runner_reports: required non-empty list
+- run.services: required non-empty list
+- run.subagents: required non-empty list
+- run.provenance: required object
+- run.ci: required object
+- run.redaction: required object
+- root.journeys: required non-empty list
+- run.ci.required: must match the frozen Journey scope
+- plan.plan_id: required non-placeholder string
+- plan.status: must be 'frozen'
+- plan.frozen_at: required ISO-8601 timestamp
+- plan.digest: required non-placeholder string
+- plan.evidence: required non-empty list
+- plan.evidence: exactly one frozen scope artifact is required
+===== fixtures/f10-tdd-same-fingerprint.json [exit=1 errors=2] target_hit=YES
+FAIL: 2 closure error(s)
+- run.commands[1]: command-report field 'source_fingerprints' does not match the ledger
+- journeys[0].tdd: pre-fix RED and GREEN require distinct source fingerprints
+===== fixtures/f11-mtime-window.json [exit=1 errors=1] target_hit=YES
+FAIL: 1 closure error(s)
+- evidence_catalog.EV_PRODUCER.path: file mtime is outside the run window
+===== fixtures/f12-duplicate-artifact.json [exit=1 errors=4] target_hit=YES
+FAIL: 4 closure error(s)
+- evidence_catalog.EV_PRODUCER_CLONE.path: duplicates evidence file used by 'EV_PRODUCER'
+- evidence_catalog.EV_PRODUCER_CLONE: byte-identical to independent artifact 'EV_PRODUCER'
+- run.redaction: redaction-report must cover every other evidence artifact
+- evidence_catalog.EV_PRODUCER_CLONE: unused evidence entry
+===== fixtures/f13-route-scan-interception.json [exit=1 errors=7] target_hit=YES
+FAIL: 7 closure error(s)
+- run.redaction: redaction-report must cover every other evidence artifact
+- journeys[0].browser.report_evidence: required non-empty list
+- journeys[0].browser: scanned source contains browser interception/replay behavior in 'scansrc/app.spec.js'
+- journeys[0].browser: scanned source contains browser interception/replay behavior in 'scansrc/app.spec.js': browser interception/replay behavior uses member 'fulfill'
+- journeys[0].browser: scanned source contains browser interception/replay behavior in 'scansrc/app.spec.js': browser interception/replay behavior uses member 'route'
+- journeys[0].browser: route scan must include transitive fixtures/helpers
+- plan.evidence: frozen scope does not match current Journey declarations
+===== fixtures/f14-noncanonical-browser-assertion.json [exit=1 errors=6] target_hit=YES
+FAIL: 6 closure error(s)
+- journeys[0].browser.expected_actions must contain canonical machine-readable browser assertions
+- journeys[0].browser.route_scan_roots: required non-empty list
+- journeys[0].browser.route_scan_entrypoints: required non-empty list
+- journeys[0].browser.report_evidence: required non-empty list
+- journeys[0].browser.route_scan_evidence: required non-empty list
+- plan.evidence: frozen scope does not match current Journey declarations
+===== fixtures/f15-dimension-authority.json [exit=1 errors=2] target_hit=YES
+FAIL: 2 closure error(s)
+- journeys[0].dimensions.A: clean dimension evidence does not satisfy required authority 'contract'
+- plan.evidence: frozen scope does not match current Journey declarations
+===== fixtures/f16-missing-evidence-file.json [exit=1 errors=2] target_hit=YES
+FAIL: 2 closure error(s)
+- evidence_catalog.EV_SCOPE.path: evidence file does not exist
+- plan.evidence: scope artifact file does not exist
+===== fixtures/f2-missing-plan.json [exit=1 errors=5] target_hit=n/a
+FAIL: 5 closure error(s)
+- plan: required object
+- run: required object
+- evidence_catalog: required non-empty object
+- root.journeys: required non-empty list
+- run.ci.required: must match the frozen Journey scope
+===== fixtures/f3-forged-digest.json [exit=1 errors=23] target_hit=n/a
+FAIL: 23 closure error(s)
+- plan.digest: required non-placeholder string
+- run.run_id: required non-placeholder string
+- run.status: required non-placeholder string
+- run.started_at: required ISO-8601 timestamp
+- run.completed_at: required ISO-8601 timestamp
+- run.environment: required non-placeholder string
+- run.sources: required non-empty list
+- evidence_catalog: required non-empty object
+- run.commands: required non-empty list
+- run.runner_reports: required non-empty list
+- run.services: required non-empty list
+- run.subagents: required non-empty list
+- run.provenance: required object
+- run.ci: required object
+- run.redaction: required object
+- root.journeys: required non-empty list
+- run.ci.required: must match the frozen Journey scope
+- plan.plan_id: required non-placeholder string
+- plan.status: must be 'frozen'
+- plan.frozen_at: required ISO-8601 timestamp
+- plan.digest: required non-placeholder string
+- plan.evidence: required non-empty list
+- plan.evidence: exactly one frozen scope artifact is required
+===== fixtures/f4-path-escape.json [exit=1 errors=23] target_hit=n/a
+FAIL: 23 closure error(s)
+- plan.digest: required non-placeholder string
+- run.run_id: required non-placeholder string
+- run.status: required non-placeholder string
+- run.started_at: required ISO-8601 timestamp
+- run.completed_at: required ISO-8601 timestamp
+- run.environment: required non-placeholder string
+- run.sources: required non-empty list
+- evidence_catalog.evidence: required evidence object with non-placeholder ID
+- run.commands: required non-empty list
+- run.runner_reports: required non-empty list
+- run.services: required non-empty list
+- run.subagents: required non-empty list
+- run.provenance: required object
+- run.ci: required object
+- run.redaction: required object
+- root.journeys: required non-empty list
+- run.ci.required: must match the frozen Journey scope
+- plan.plan_id: required non-placeholder string
+- plan.status: must be 'frozen'
+- plan.frozen_at: required ISO-8601 timestamp
+- plan.digest: required non-placeholder string
+- plan.evidence: required non-empty list
+- plan.evidence: exactly one frozen scope artifact is required
+===== fixtures/f5-empty.json [exit=1 errors=6] target_hit=n/a
+FAIL: 6 closure error(s)
+- schema_version: must be '3.0'
+- plan: required object
+- run: required object
+- evidence_catalog: required non-empty object
+- root.journeys: required non-empty list
+- run.ci.required: must match the frozen Journey scope
+===== fixtures/f7-secret-scan.json [exit=1 errors=47] target_hit=YES
+FAIL: 47 closure error(s)
+- run.sources: required non-empty list
+- evidence_catalog.E_LEAK.source_revisions: required non-empty component->revision object
+- evidence_catalog.E_LEAK.sha256: hash does not match evidence file
+- evidence_catalog.E_LEAK.path: file mtime is outside the run window
+- evidence_catalog.E_LEAK: evidence content does not contain run.run_id
+- evidence_catalog.E_LEAK: possible AWS access key found; redact before closure
+- run.commands: required non-empty list
+- run.runner_reports: required non-empty list
+- run.services: required non-empty list
+- run.subagents: required non-empty list
+- run.provenance: required object
+- run.ci.evidence: required non-empty list
+- run.ci.reason: required non-placeholder string
+- run.redaction: required object
+- journeys[0].requirement_ids: required non-empty list
+- journeys[0].business_outcome: required non-placeholder string
+- journeys[0].entry.kind: required non-placeholder string
+- journeys[0].entry.description: required non-placeholder string
+- journeys[0].entry.kind: unsupported ingress kind
+- journeys[0].first_party_components: required non-empty list
+- journeys[0].ci_required: required boolean
+- journeys[0].test_doubles: required list
+- journeys[0].required_paths: required non-empty list
+- journeys[0].required_paths: at least one path must be mandatory
+- journeys[0].cases: required non-empty list
+- journeys[0].ci_expectations: required list
+- journeys[0].case_results: required non-empty list
+- journeys[0].tdd: required object
+- journeys[0].expected_hops: required non-empty list
+- journeys[0].expected_hops: at least one hop must be mandatory
+- journeys[0].observed_hops: required non-empty list
+- journeys[0].terminal_oracle: required object
+- journeys[0].browser: required object
+- journeys[0].grill: required object
+- journeys[0].dimensions: required object with A-J
+- journeys[0].dimensions.A: must pass for this Journey
+- journeys[0].dimensions.E: must pass for this Journey
+- journeys[0].dimensions.F: must pass for this Journey
+- journeys[0].dimensions.J: must pass for this Journey
+- journeys[0]: Journey mode requires a completed Journey Mapper subagent
+- journeys[0]: Journey mode requires a completed Test/Contract Designer or Journey Runner subagent
+- journeys[0]: Journey mode requires a completed Grill Reviewer subagent
+- journeys[0]: Journey roles require three distinct agent IDs
+- plan.plan_id: required non-placeholder string
+- plan.frozen_at: required ISO-8601 timestamp
+- evidence reference 'E_SCOPE' is absent from evidence_catalog
+- evidence_catalog.E_LEAK: unused evidence entry
+===== fixtures/f8-hash-mismatch.json [exit=1 errors=45] target_hit=YES
+FAIL: 45 closure error(s)
+- run.sources: required non-empty list
+- evidence_catalog.E_HASH.source_revisions: required non-empty component->revision object
+- evidence_catalog.E_HASH.sha256: hash does not match evidence file
+- evidence_catalog.E_HASH.path: file mtime is outside the run window
+- run.commands: required non-empty list
+- run.runner_reports: required non-empty list
+- run.services: required non-empty list
+- run.subagents: required non-empty list
+- run.provenance: required object
+- run.ci.evidence: required non-empty list
+- run.ci.reason: required non-placeholder string
+- run.redaction: required object
+- journeys[0].requirement_ids: required non-empty list
+- journeys[0].business_outcome: required non-placeholder string
+- journeys[0].entry.kind: required non-placeholder string
+- journeys[0].entry.description: required non-placeholder string
+- journeys[0].entry.kind: unsupported ingress kind
+- journeys[0].first_party_components: required non-empty list
+- journeys[0].ci_required: required boolean
+- journeys[0].test_doubles: required list
+- journeys[0].required_paths: required non-empty list
+- journeys[0].required_paths: at least one path must be mandatory
+- journeys[0].cases: required non-empty list
+- journeys[0].ci_expectations: required list
+- journeys[0].case_results: required non-empty list
+- journeys[0].tdd: required object
+- journeys[0].expected_hops: required non-empty list
+- journeys[0].expected_hops: at least one hop must be mandatory
+- journeys[0].observed_hops: required non-empty list
+- journeys[0].terminal_oracle: required object
+- journeys[0].browser: required object
+- journeys[0].grill: required object
+- journeys[0].dimensions: required object with A-J
+- journeys[0].dimensions.A: must pass for this Journey
+- journeys[0].dimensions.E: must pass for this Journey
+- journeys[0].dimensions.F: must pass for this Journey
+- journeys[0].dimensions.J: must pass for this Journey
+- journeys[0]: Journey mode requires a completed Journey Mapper subagent
+- journeys[0]: Journey mode requires a completed Test/Contract Designer or Journey Runner subagent
+- journeys[0]: Journey mode requires a completed Grill Reviewer subagent
+- journeys[0]: Journey roles require three distinct agent IDs
+- plan.plan_id: required non-placeholder string
+- plan.frozen_at: required ISO-8601 timestamp
+- evidence reference 'E_SCOPE' is absent from evidence_catalog
+- evidence_catalog.E_HASH: unused evidence entry
+===== fixtures/f9-correlation-absent.json [exit=1 errors=45] target_hit=YES
+FAIL: 45 closure error(s)
+- run.sources: required non-empty list
+- evidence_catalog.E_CORR.source_revisions: required non-empty component->revision object
+- evidence_catalog.E_CORR.path: file mtime is outside the run window
+- evidence_catalog.E_CORR: evidence content does not contain declared correlation 'MISSING_CORR_TOKEN'
+- run.commands: required non-empty list
+- run.runner_reports: required non-empty list
+- run.services: required non-empty list
+- run.subagents: required non-empty list
+- run.provenance: required object
+- run.ci.evidence: required non-empty list
+- run.ci.reason: required non-placeholder string
+- run.redaction: required object
+- journeys[0].requirement_ids: required non-empty list
+- journeys[0].business_outcome: required non-placeholder string
+- journeys[0].entry.kind: required non-placeholder string
+- journeys[0].entry.description: required non-placeholder string
+- journeys[0].entry.kind: unsupported ingress kind
+- journeys[0].first_party_components: required non-empty list
+- journeys[0].ci_required: required boolean
+- journeys[0].test_doubles: required list
+- journeys[0].required_paths: required non-empty list
+- journeys[0].required_paths: at least one path must be mandatory
+- journeys[0].cases: required non-empty list
+- journeys[0].ci_expectations: required list
+- journeys[0].case_results: required non-empty list
+- journeys[0].tdd: required object
+- journeys[0].expected_hops: required non-empty list
+- journeys[0].expected_hops: at least one hop must be mandatory
+- journeys[0].observed_hops: required non-empty list
+- journeys[0].terminal_oracle: required object
+- journeys[0].browser: required object
+- journeys[0].grill: required object
+- journeys[0].dimensions: required object with A-J
+- journeys[0].dimensions.A: must pass for this Journey
+- journeys[0].dimensions.E: must pass for this Journey
+- journeys[0].dimensions.F: must pass for this Journey
+- journeys[0].dimensions.J: must pass for this Journey
+- journeys[0]: Journey mode requires a completed Journey Mapper subagent
+- journeys[0]: Journey mode requires a completed Test/Contract Designer or Journey Runner subagent
+- journeys[0]: Journey mode requires a completed Grill Reviewer subagent
+- journeys[0]: Journey roles require three distinct agent IDs
+- plan.plan_id: required non-placeholder string
+- plan.frozen_at: required ISO-8601 timestamp
+- evidence reference 'E_SCOPE' is absent from evidence_catalog
+- evidence_catalog.E_CORR: unused evidence entry
+SUMMARY: 15 ok / 0 fail
+== [3/6] lint_debug_verdicts --selftest (skipped when absent) ==
+SELFTEST_PASS: 1 good sample clean; missing-dim / illegal-verb / planned / format-error rejected
+== [4/6] render_journey_summary --selftest (skipped when absent) ==
+SELFTEST_PASS: green-fixture ledger renders (57 markdown lines)
+== [5/6] deterministic invariants (green seed, 3 mutations) ==
+INVARIANT_PASS reorder_run_lists: STRUCTURE_PASS preserved
+INVARIANT_PASS insert_unknown_root_keys: STRUCTURE_PASS preserved
+INVARIANT_PASS reserialize_ledger: STRUCTURE_PASS preserved
+INVARIANTS_ALL_PASS
+== [6/6] SKILL.md budget gate ==
+SKILL.md budget OK: 13759 bytes / 111 lines
+RUN_ALL_PASS
+✅ multi-agent-consensus-review: gate 回归通过
+
+> ai-coding-scaffold@0.2.4 test
+> node --test test/*.test.js
+
+✔ claude-code adapter compiles hooks.yaml to safely-sourceable env (255.730917ms)
+✔ sourcing .compiled.env has no side effects and preserves deny patterns (215.056083ms)
+✔ pre-tool-gate denies blocked commands and allows normal ones (467.908583ms)
+✔ pre-tool-gate fails closed on unparseable non-empty input (r2 F4) (320.118709ms)
+✔ .mcp.json carries pinned versions, never @latest (r2 F-001/zcode F1) (0.718291ms)
+✔ pre-tool-gate denies direct wiki writes (kb-write-protection) (362.070666ms)
+✔ compiled settings.json PreToolUse matcher covers every deny policy (197.87775ms)
+✔ adapter preserves user hook entries it does not own (196.291583ms)
+✔ mixed hook installation preserves each user and plugin handler with its group metadata (397.330833ms)
+✔ hook path text and user command suffixes never grant adapter ownership (197.686ms)
+✔ mixed hook uninstall removes only owned handlers and preserves plugin plus user metadata (303.771792ms)
+✔ target bootstrap repeats and uninstall preserve mixed hooks without regenerating legacy registrations (1059.03675ms)
+✔ distinct non-command handlers survive mixed install repeat and uninstall without command conflicts (552.741375ms)
+✔ precondition: the real mechanical gate script is present (1.238625ms)
+✔ freezeReviewPackage binds the real file digest deterministically and refuses invalid revisions (1.952917ms)
+✔ the full mechanical journey passes and the receipt replicates the P0 receipt field-for-field (664.720166ms)
+✔ a hand-relaxed manifest (lowered thresholds or reduced quorum) is refused by the judge (1070.508959ms)
+✔ E03: an unclosed grill-me load-bearing question blocks the architecture gate even under unanimous PASSED consensus (533.940666ms)
+✔ E03: absent ballot, majority-only approval, low score, blocking finding and stale-digest ballot each refuse the gate (real gate exits) (1791.866334ms)
+✔ a review package edited after init is caught by the real tally (artifact_changed) and refused (435.890917ms)
+✔ a passed tally without the real finalize output refuses with exactly FINAL_REPORT_REQUIRED, and finalizing the same run admits it (546.774417ms)
+✔ completed consensus rechecks current artifact, ballots and finalize bytes without rewriting the original evidence (1843.715709ms)
+✔ a newer frozen revision cannot reuse the same old review ID and artifact bytes (548.54225ms)
+✔ E04: the frozen new revision completes its own cold-start review end to end (1057.134417ms)
+✔ E04: a design change invalidates every old ballot for the new package; the real gate refuses mixing them in (1007.720792ms)
+✔ E04: restoring the old design bytes does not auto-revive the old consensus; downstream evidence bound to the review is invalidated (539.542375ms)
+✔ H06: the seat holds exactly one review job — same job_key resumes it and a second job is refused (0.315125ms)
+✔ H06: stale attempts and superseded revisions cannot complete the job; a new revision keeps an independent manifest (0.220625ms)
+✔ H06: re-initializing the same review run is refused by the real gate (no duplicate review) (237.083208ms)
+✔ boundary: test T stays a single automatic review — the delivery gate is not extended to the consensus quorum (101.447833ms)
+✔ consumeArchitectureGate admits a closed consensus only through a launcher-issued dispatch bound to the frozen artifactDigest (604.390167ms)
+✔ consumeTestDesignReview admits ONE independent review on sufficiency plus strong|adequate oracle strength; weak or stale never (0.902584ms)
+✔ managed T consumes original collected semantic review bytes, never a dispatch plus a strong label or empty report (4.721375ms)
+✔ managed A refuses missing or same-principal reviewer collections despite a real unanimous tally (624.969625ms)
+✔ prepared review query requires fresh protected action, source qualification and clock on every Native readback (1.740417ms)
+✔ review evidence is immutable on duplicate admission and malformed package/round/grill inputs are refused before execution (229.845208ms)
+▶ managed T requires a full independent semantic conclusion, not field counts, and handles all external collection shapes safely
+  ✔ schema missing (0.800542ms)
+  ✔ future schema (1.221709ms)
+  ✔ root array (0.561542ms)
+  ✔ root null (0.586ms)
+  ✔ no case review (0.498333ms)
+  ✔ case map (1.115375ms)
+  ✔ null case (0.848333ms)
+  ✔ no rationale (0.874125ms)
+  ✔ different oracle (0.6955ms)
+  ✔ wrong check (0.757125ms)
+  ✔ different material (0.557167ms)
+  ✔ different test contract (0.606458ms)
+  ✔ no environment review (0.511542ms)
+  ✔ different cleanup (1.8385ms)
+  ✔ null finding (0.793125ms)
+  ✔ no written conclusion (0.590708ms)
+  ✔ explicit insufficient (1.387333ms)
+  ✔ weak oracle (1.533417ms)
+  ✔ case is insufficient (1.074792ms)
+  ✔ environment is insufficient (1.300666ms)
+  ✔ cleanup is insufficient (1.257416ms)
+  ✔ blocking finding (1.271917ms)
+  ✔ null context (0.073792ms)
+  ✔ array context (0.033625ms)
+  ✔ null packet (0.034041ms)
+  ✔ null binding (0.075167ms)
+  ✔ future binding (0.052708ms)
+  ✔ null contract (0.055208ms)
+  ✔ array contract (0.056ms)
+  ✔ null policy (0.0855ms)
+  ✔ null admission (0.0355ms)
+  ✔ old trace (0.237083ms)
+✔ managed T requires a full independent semantic conclusion, not field counts, and handles all external collection shapes safely (23.606708ms)
+✔ managed A retains an authenticated dissent for Native rework and refuses stale policy, closure or raw source evidence (927.876542ms)
+✔ RED->GREEN delivery-gate.yml exists and parses as the protected CI entry (2.643917ms)
+✔ delivery-gate.yml declares the gate job running tools/ci/verify-delivery.mjs (0.238625ms)
+✔ delivery-gate.yml pins collection and checkout to the exact integration SHA (A13) (0.849292ms)
+✔ delivery-gate.yml takes the required-check policy from the protected baseline, never hardcoded names (0.629708ms)
+✔ delivery-gate.yml fails closed: least-privilege permissions, serialized concurrency, launch secret from secrets (0.994833ms)
+✔ delivery-gate.yml wires only the launch authority secret — the CI identity never reads release or rollback material (0.262417ms)
+✔ GREEN chain with registered baseline: exact-SHA evidence and passing gate verify (exit 0) (97.254375ms)
+✔ A13 missing required check: the merge is blocked with CHECK_MISSING (exit 2) (58.591125ms)
+✔ A13 stale evidence on a new integration SHA: old boundSha is refused (CHECK_STALE_EVIDENCE, exit 2) (51.742958ms)
+✔ F09 skipped and timed-out checks are never passed (CHECK_SKIPPED / CHECK_TIMED_OUT, exit 2) (204.822541ms)
+✔ F06 workflow success never substitutes delivery: all checks green but the gate receipt is stale (exit 2) (53.049375ms)
+✔ F06 a forged dispatch never signs the gate (ADMISSION_REFUSED, exit 2) (51.722666ms)
+✔ F06 an empty evidence stream cannot satisfy the gate (blocked receipt, exit 2) (46.54725ms)
+✔ Platform precondition: committed UNSELECTED baseline blocks the platform-merge authorization (UNVERIFIED, exit 2) (52.124375ms)
+✔ Protected baseline drift: a chain claiming a different required set than the registered one is blocked (63.751417ms)
+✔ An invalid protected baseline fails closed (PROTECTED_BASELINE_INVALID, exit 2) (53.486583ms)
+✔ Missing launch authority keeps the gate unjudgeable — never a pass (UNVERIFIED, exit 2) (66.622875ms)
+✔ Invalid inputs are input failures (exit 1): unreadable file, bad JSON, bad SHA, missing gate section (249.070667ms)
+▶ The structured verdict records the candidate identity and never leaks host paths
+  ✔ duplicate check runs for the same name+merge resolve to the latest run id (fail-closed latest-wins, OBS-1) (140.686125ms)
+✔ The structured verdict records the candidate identity and never leaks host paths (194.146542ms)
+✔ C01 positive: an architecture request passes when the current R receipt is admitted (11.430416ms)
+✔ C01 negative: a T or A receipt cannot substitute the R baseline — the gates are not interchangeable (2.119333ms)
+✔ C01 negative: requirement artifact existence is not a confirmation — an unverified R receipt keeps the gate blocked (2.212042ms)
+✔ C02 positive: fresh A and T receipts admit the managed write driver (2.024709ms)
+✔ C02 negative: a source write is refused while the architecture or test-design receipt is stale (1.754916ms)
+✔ C02 negative: a read-only observer cannot perform the product write — the managed executor is named (0.374375ms)
+✔ C03 negative: design-only TestPack passes structure but the T gate stays blocked and returns it to the test author (1.767041ms)
+✔ C03 positive: an independent T receipt over the complete AC mapping passes the test design gate (0.965209ms)
+✔ C04 positive: deriving the Classic plan view never changes the frozen authority digest (3.887958ms)
+✔ C04 negative: a second writable plan authority is detected and refused (5.312291ms)
+✔ C05 negative: self-signed and forged receipts are refused at admission (9.8625ms)
+✔ C05 negative: duplicate, expired and zero-observation verifier claims are refused (1.84675ms)
+✔ C05 negative: the gate refuses acceptance signed by the builder execution (A06) (1.401584ms)
+✔ C05 positive: a launcher-dispatched verifier receipt signs independent acceptance and passes (2.137292ms)
+✔ C06 negative: the archive seal is refused without the knowledge closeout receipt (Kp first) (2.877542ms)
+✔ C06 negative: a forged seal state and a second closeout are refused (2.149708ms)
+✔ C06 positive: the seal succeeds exactly once and freezes the knowledge closeout (0.135292ms)
+✔ C08 negative: the captured historical OpenSpec 1.3.1 response is replayed, not impersonated by the current host (120.702125ms)
+✔ C08 current host: the observed CLI version and dependency edges are separate from the historical refusal (410.570458ms)
+✔ C08 positive: the isolated 1.11.0 candidate exposes the edges and the same closure accepts it — no global upgrade (630.178791ms)
+✔ C08 negative: missing or invalid dependency edges are refused without guessing a closure (302.217709ms)
+✔ P1_5 probe registration is complete and cites real-entry evidence (6.581584ms)
+✔ P1_5 method dispatch content is pinned to the approved P1_6 and sealed 245-file source, without claiming execution (250.865041ms)
+✔ P1_5 source drift is refused even when a caller re-hashes its modified dispatch content (1029.806458ms)
+✔ rejects an exact Node pin mismatch before reading source or writing project state (6.453334ms)
+✔ verification CLI failed real assertions preserve JSON and exit 2 (394.851667ms)
+✔ verification CLI passed real assertions preserve JSON and exit 0 (353.209667ms)
+✔ verification CLI invalid arguments keep input exit 1 and coded JSON (46.726083ms)
+✔ F05: drivers are machine-distinguishable by a frozen kind marker (1.630417ms)
+✔ F05: a read-only driver cannot carry an execute surface at all (0.43225ms)
+✔ F05: using a read-only driver for product writes is refused and names the managed executor (0.183875ms)
+✔ Runner.Dispatch.v1: the runner binds run/gate/input/policy/attempt/epoch/execution (0.719125ms)
+✔ Runner.Dispatch.v1: the runner interface has no phase write surface (0.183ms)
+✔ Runner.Dispatch.v1: a read-only driver cannot back a dispatching runner (0.092209ms)
+✔ F07: dispatch and verification are refused when run or runner identity does not match the bound authority (0.229084ms)
+✔ F07: a replayed receipt from the same execution is refused, not double-counted (2.239958ms)
+✔ F07: a receipt whose input rotated after dispatch is refused as stale (0.568125ms)
+✔ F07/A06: the builder execution cannot sign verification evidence (0.31125ms)
+✔ 1.3.c: closeout requires the knowledge obligation before the archive seal (0.192ms)
+✔ 1.3.c: a duplicate archive request from a second execution is refused at the driver layer (1.792833ms)
+✔ 1.3.c/SDD.Gate.v1: the driver reuses the pure gate judgment unmodified and it is deterministic (1.047833ms)
+✔ native stdio transport drives a real peer and a protected tool on the original action without declaring business success (627.798708ms)
+▶ native transport rejects malformed public input without getter diagnostics, unknown environment or hidden argv selection
+  ✔ null options (0.171875ms)
+  ✔ array options (0.078916ms)
+  ✔ extra provider (0.087792ms)
+  ✔ null registration (0.0675ms)
+  ✔ network listener (0.087125ms)
+  ✔ external command (0.072583ms)
+  ✔ hidden argv key (0.072833ms)
+  ✔ null env (0.072458ms)
+  ✔ HOME (0.075709ms)
+  ✔ CODEX_HOME (0.067166ms)
+  ✔ NODE_OPTIONS (0.077041ms)
+  ✔ NODE_PATH (0.067667ms)
+  ✔ API_KEY (0.05875ms)
+  ✔ TOKEN (0.059666ms)
+  ✔ ROLE (0.060334ms)
+  ✔ AUTHORITY (0.057208ms)
+  ✔ PROVIDER (0.065ms)
+  ✔ MODULE (0.064333ms)
+  ✔ sparse input (0.107209ms)
+  ✔ null tool (0.172ms)
+  ✔ unknown tool (0.164709ms)
+  ✔ root getter (0.065291ms)
+✔ native transport rejects malformed public input without getter diagnostics, unknown environment or hidden argv selection (3.323666ms)
+✔ one RPC id cannot authorize a different tool call on the same action (318.089625ms)
+▶ native control-stream violations never reach a protected tool and retain the original unknown handle
+  ✔ wrong-id (315.258708ms)
+  ✔ wrong-turn (313.842375ms)
+  ✔ wrong-thread (323.126541ms)
+  ✔ unknown-tool (329.076959ms)
+  ✔ namespace (337.412791ms)
+  ✔ approval (557.836125ms)
+  ✔ permission (308.309583ms)
+  ✔ builtin (308.939375ms)
+  ✔ collaboration (712.553042ms)
+  ✔ malformed (327.972333ms)
+  ✔ duplicate-key (316.649833ms)
+  ✔ oversized (351.507042ms)
+  ✔ truncated (349.883333ms)
+  ✔ eof (351.313875ms)
+✔ native control-stream violations never reach a protected tool and retain the original unknown handle (5205.762875ms)
+✔ native exact in-flight duplicates execute one real callback and a declared output does not rebase the input (508.226ms)
+✔ a known protected path refusal is returned as a failed tool result without a write or a gate verdict (325.612792ms)
+✔ native exit7 is preserved after a completed turn and cannot be advertised as successful transport (334.494125ms)
+✔ native timeout is unknown while the actual peer is alive and only its original handle can cancel it (506.640625ms)
+✔ a stale preflight cannot be restored into a new launch using the same transport attempt (1.602958ms)
+✔ changed current input after tool execution suppresses the reply and cannot revive after restoring old input (346.246334ms)
+▶ native tool callback failure or malformed replies fail closed without serializing private diagnostics
+  ✔ throw (335.275458ms)
+  ✔ wrong-type (382.398833ms)
+  ✔ extra-role (338.768792ms)
+  ✔ oversized-result (556.395958ms)
+✔ native tool callback failure or malformed replies fail closed without serializing private diagnostics (1613.35675ms)
+✔ native raw capture survives a UTF8 character split across process writes (347.858041ms)
+✔ native output overflow is explicitly truncated and unknown without invoking a tool (353.785917ms)
+▶ native fixed executable bytes, type and static start arguments are checked before creating a child
+  ✔ changed-bytes (1.314792ms)
+  ✔ symlink (1.086833ms)
+  ✔ start-options (0.822459ms)
+✔ native fixed executable bytes, type and static start arguments are checked before creating a child (3.460292ms)
+▶ native schema ordinary lifecycle notifications preserve exact binding across response order without becoming actions
+  ✔ notifications (328.835041ms)
+  ✔ notifications-early-tool (321.889959ms)
+✔ native schema ordinary lifecycle notifications preserve exact binding across response order without becoming actions (651.014125ms)
+▶ ordinary native notification fields and provisional turn identities fail closed when malformed
+  ✔ notifications-invalid-usage (329.586084ms)
+  ✔ notifications-wrong-turn (312.082709ms)
+✔ ordinary native notification fields and provisional turn identities fail closed when malformed (641.955667ms)
+▶ native close rechecks the original tuple without rewriting process facts or reviving unknown results
+  ✔ stable (401.3435ms)
+  ✔ epoch-changed (388.005125ms)
+  ✔ current-throws (335.678584ms)
+  ✔ timeout-restored (1009.353584ms)
+✔ native close rechecks the original tuple without rewriting process facts or reviving unknown results (2134.936167ms)
+✔ fixed runner admission refuses a caller-supplied authority even when its foreign dispatch is valid (4.69325ms)
+✔ the bound Comet authority exposes the original collector without admitting foreign Run packets (29.9695ms)
+✔ the original Comet adapter exposes a fixed executor that refuses unregistered construction before launch (0.631542ms)
+✔ fixed host constructor rejects non-object options and caller qualification switches structurally (0.163625ms)
+▶ fixed host rejects malformed registration data before consulting code or process ports
+  ✔ root array (0.103666ms)
+  ✔ unknown version (0.098667ms)
+  ✔ change number (0.089792ms)
+  ✔ change object (0.068542ms)
+  ✔ project not string (0.080459ms)
+  ✔ run not string (0.132417ms)
+  ✔ runner null (0.092833ms)
+  ✔ roles not array (0.056416ms)
+  ✔ docker null (0.052542ms)
+  ✔ digest array (0.063417ms)
+  ✔ actions null (0.055042ms)
+  ✔ action null (0.07025ms)
+  ✔ argv null (0.186959ms)
+  ✔ argv null item (0.080417ms)
+  ✔ worker qualification field (0.054542ms)
+✔ fixed host rejects malformed registration data before consulting code or process ports (7.653791ms)
+{"component":"fixed-host-native-three-port","runId":"e6903731-0d34-4d94-8017-97278239a3a4","execution":"gate-r-mvokns4i-c2428690","strictGate":"pass","starts":1,"pendingExecution":"gate-r-mvoknusk-304b9c1e","methodApplied":"UNVERIFIED","modelRoleOS":"UNVERIFIED","cold":{"runId":"e6903731-0d34-4d94-8017-97278239a3a4","coldRecovery":"UNVERIFIED_NO_RELAUNCH","sourceKeyIsPublicFixtureOnly":true},"realDocker":false,"productionQualified":false}
+{"runId":"bc010ad2-ff20-4e42-b6b0-57dcf85a0d95","result":"UNVERIFIED_UNKNOWN_WORKER_OUTPUT","starts":1,"realDocker":false,"productionQualified":false}
+{"sdkFingerprint":"6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a","entryRead":"open","repeatedReads":4,"run":"60cc3803-1627-46e8-927c-4106234671c3","sourceQualification":"ABSENT","physicalCommandAttempts":0,"productionQualified":false}
+{"fault":"throw","exitCode":1,"status":"{\"status\":\"INTERNAL_FAILURE\",\"code\":\"BOOTSTRAP_INTERNAL_FAILURE\",\"scope\":\"component/fixed-host-bootstrap\",\"managedClosureEligible\":false,\"productionQualified\":false}","productionQualified":false}
+{"fault":"bad-result","exitCode":1,"status":"{\"status\":\"INTERNAL_FAILURE\",\"code\":\"NATIVE_RESULT_INVALID\",\"scope\":\"component/fixed-host-bootstrap\",\"managedClosureEligible\":false,\"productionQualified\":false}","productionQualified":false}
+{"fault":"unknown-exit","exitCode":1,"status":"{\"status\":\"INTERNAL_FAILURE\",\"code\":\"NATIVE_RESULT_INVALID\",\"scope\":\"component/fixed-host-bootstrap\",\"managedClosureEligible\":false,\"productionQualified\":false}","productionQualified":false}
+{"fault":"native-refusal","exitCode":2,"status":"{\"status\":\"UNVERIFIED\",\"code\":\"NATIVE_FIXTURE_REFUSAL\"}","productionQualified":false}
+✔ original Native intent runs through the fixed I02 three-port implementation and returns real process evidence to the same Run (6908.199666ms)
+✔ client exit zero with unknown worker bytes cannot authorize an original Native gate or a retry (3948.873208ms)
+✔ the packaged executable and its fixed symlink refuse an unbound controller despite environment role labels (125.6865ms)
+▶ the executable rejects malformed or authority-selecting arguments before any bootstrap
+  ✔ undefined (0.215167ms)
+  ✔ null (0.071083ms)
+  ✔ object (0.034375ms)
+  ✔ string (0.031208ms)
+  ✔ empty (0.031333ms)
+  ✔ null item (0.048916ms)
+  ✔ zero byte (0.039958ms)
+  ✔ sparse argument (0.032958ms)
+  ✔ overlong item (0.033583ms)
+  ✔ too many items (0.035959ms)
+  ✔ unknown command (0.053041ms)
+  ✔ unknown state operation (0.033791ms)
+  ✔ get without required field (0.063542ms)
+  ✔ escaped change (0.0565ms)
+  ✔ json option twice (0.030584ms)
+  ✔ json option misplaced (0.034292ms)
+  ✔ controller option (0.029417ms)
+  ✔ provider option (0.028ms)
+  ✔ module option (0.030584ms)
+  ✔ project override (0.032208ms)
+  ✔ cwd override (0.040417ms)
+  ✔ external forwarding (0.029084ms)
+✔ the executable rejects malformed or authority-selecting arguments before any bootstrap (1.951708ms)
+✔ the CODE-bound main delegates repeat and concurrent reads to one original Native Host on the same private Run (540.55175ms)
+▶ the main distinguishes Native refusal from malformed results and unknown exceptions without echoing producer diagnostics
+  ✔ throw (678.139ms)
+  ✔ bad-result (379.380834ms)
+  ✔ unknown-exit (504.654334ms)
+  ✔ native-refusal (362.607584ms)
+✔ the main distinguishes Native refusal from malformed results and unknown exceptions without echoing producer diagnostics (1925.308917ms)
+✔ P31 unsupported expectation cannot pass a required readState action (120.886541ms)
+✔ P31 explicit definition cannot replace its scenario target with an unrelated passing assertion (81.707041ms)
+✔ P31 TODO target is unexecuted even when node exits zero (183.030583ms)
+✔ P31 retired profile cannot be re-enabled by a caller-supplied pilot contract (68.453291ms)
+✔ P31 explicit definition cannot delete a frozen composite sub-assertion (81.361958ms)
+✔ P31 typed JSON readback compares actual fields and rejects wrong run or primitive output (715.987083ms)
+✔ P31 node test actions execute with explicit TAP reporter on the current host (207.807ms)
+✔ P31 formal managed scenario refuses component tests without a protected runtime source (134.129459ms)
+✔ P31 runtime observation correlates original Run/dispatch/current raw evidence; fixture cannot become managed acceptance (1364.416209ms)
+✔ P31 frozen typed readback cannot be replaced by file existence, omitted, duplicated or changed oracle (615.012333ms)
+✔ P31 component overrides cannot satisfy a registry requirement for platform proof (80.526041ms)
+✔ P31 malformed frozen readback is a structured refusal, never an uncaught observer crash (80.938375ms)
+✔ P31 evidence output cannot follow existing symlinks or overwrite a previous trial (215.511209ms)
+✔ P31 truncated test protocol cannot pass from a surviving ok line without its summary (205.869916ms)
+✔ P31 exact frozen test names can bind a scenario without renaming the reusable test (184.308875ms)
+✔ P31 native dispatch observation cannot follow a replacement symlink outside its authority (188.389709ms)
+✔ P31 protected observation binds typed readback snapshots as well as test output (391.644583ms)
+✔ P31 declared evidence cannot escape the invocation directory or use a directory as persisted proof (167.09475ms)
+✔ P31 canonical registry can bind an existing case recipe by exact hash without a CLI definition override (276.962334ms)
+✔ P31 adapter dynamic binding is observed, never minted by a definition (component seam) (171.085459ms)
+✔ P31 denied entry preflight stops the declared command before it starts (88.791958ms)
+✔ P31 rework nonEmptyFile inspection refuses an empty directory (195.003292ms)
+✔ P31 rework commandSucceeds inspection refuses a filesystem executable path (100.681125ms)
+✔ P31 rework explicit inspection commands execute and check the real exit (466.750708ms)
+✔ P31 rework spawn rejects mixed command and path fields (101.708584ms)
+✔ P31 rework readState rejects mixed command and path fields (106.80075ms)
+✔ P31 rework inspect rejects mixed command and path fields (88.060167ms)
+✔ P31 rework readState typed file expectations reject empty-file (544.411ms)
+✔ P31 rework readState typed file expectations reject directory (525.307292ms)
+✔ P31 rework readState typed file expectations reject missing (559.745875ms)
+✔ P31 rework readState reads actual regular files with whitespace in their names (618.130208ms)
+✔ P31 rework inspect typed file expectations reject empty-file (557.527167ms)
+✔ P31 rework inspect typed file expectations reject directory (550.802833ms)
+✔ P31 rework inspect typed file expectations reject missing (533.059833ms)
+✔ P31 rework inspect reads actual regular files with whitespace in their names (533.083875ms)
+✔ P31 rework explicit command inspections evaluate real stdout and exit (1307.943959ms)
+✔ P31 rework command inspection rejects nonEmptyFile before executing (169.013166ms)
+✔ P31 rework legacy command paths stay component only (200.14875ms)
+✔ P31 rework unsupported action expectation and selector combinations fail before execution (2923.914292ms)
+✔ P31 root relative inspect rejects same-name bytes from another process cwd (197.443458ms)
+✔ P31 root relative inspect reads and displays the same repository target across cwd (180.308458ms)
+✔ P31 root absolute inspection targets preserve their requested file across cwd (502.289458ms)
+✔ P31 root relative file names with whitespace use the same target for classification and bytes (185.079417ms)
+✔ P31 root cwd whitespace collisions do not redefine the component legacy command target (191.696375ms)
+✔ P31 root readState relative targets retain the evidence directory across cwd collisions (368.510791ms)
+✔ P31 root a cwd regular file cannot hide a repository directory (177.54425ms)
+✔ P31 root a cwd file cannot hide a missing repository target (180.672583ms)
+✔ repository check runs the complete source-owned Whitebox corpus and invariants (5205.9695ms)
+✔ repository check refuses a missing required Whitebox selftest entry (214.971083ms)
+✔ repository check propagates a real Whitebox fixture failure (465.216458ms)
+✔ method supplier pins complete real source directories and a single unqualified optional profile (66.701292ms)
+✔ P exposes original plan protocol and pure validation without the planner controller (150.672708ms)
+✔ security backports belong to the exact complete distribution (38198.983042ms)
+✔ Hook shell form preserves the literal project path and argv (151.551041ms)
+✔ Eval collector excludes an external ordinary file link (387.538125ms)
+✔ Eval report persistence excludes an external ordinary file link (442.514541ms)
+✔ Hook update and uninstall preserve mixed user handlers and reject appended ownership (52.219583ms)
+....................................................ssssssssssssssss     [100%]
+52 passed, 16 skipped in 1.02s
+✔ pinned Vite resolution is exactly 8.2.4 without a Comet upgrade (0.968084ms)
+✔ Eval no-follow, report and unsupported-backend regression suite stays offline (1544.223833ms)
+✔ rejects a source archive with the wrong SHA before creating the vendor target (114.073542ms)
+✔ prepares a verified synthetic upstream archive into the pristine source directory (112.126958ms)
+✔ reuses an identical verified archive without rewriting the pristine source (152.306042ms)
+✔ rejects pristine source drift without overwriting the changed baseline (142.98325ms)
+✔ rejects an integrity-matching traversal archive without committing or escaping files (97.73925ms)
+✔ rejects an injected pristine file named __proto__ without deleting it (152.469042ms)
+✔ rejects executable-bit drift without changing the pristine script mode or bytes (165.092625ms)
+✔ rejects an injected empty pristine directory without deleting it (177.316708ms)
+✔ deliverable-audit reports all required deliverables present for a complete run (101.90425ms)
+✔ deliverable-audit flags missing required deliverables (78.611125ms)
+✔ deliverable-audit reports expected (non-blocking) gaps (84.769667ms)
+✔ deliverable-audit respects --stage filter (68.668875ms)
+✔ full-input baseline binds code, tests, lockfiles, migrations, deploy configs and non-JS inputs into one digest (5.567916ms)
+✔ A08: non-JS drift (Java, Python, deploy config) changes the full-input digest (5.489958ms)
+✔ migration drift changes the full-input digest (2.1.b) (1.939916ms)
+✔ missing declared lockfile is an explicit scope error, never a silent pass (2.1.b) (0.958667ms)
+✔ task definition digest separates the frozen definition from progress checkboxes (2.1.b) (3.198167ms)
+✔ AC-to-case traceability reports the exact missing acceptance mappings (2.1.b) (0.285166ms)
+✔ A01: implementation dispatch is refused with the missing baseline list (0.1785ms)
+✔ A02: scope change invalidates related downstream receipts and old approvals, keeps unrelated ones (0.192916ms)
+✔ A02 real-drift anchor: invalidation is driven by a digest recomputed from real file bytes, not a self-declared value (nb-3) (2.969542ms)
+✔ A07: a passed report is refused after inputs change and accepted while current (4.662125ms)
+✔ digestInputs is order-independent and binds every entry (0.123042ms)
+✔ digestInputs ordering is code-unit deterministic, not locale-dependent (nb-2) (10.582959ms)
+✔ declared design, test intent, method, policy and environment files all invalidate a current report (6.028542ms)
+✔ a baseline refuses unknown, empty, malformed and escaping manifest scope instead of hashing an empty or outside input set (2.0275ms)
+✔ only actual Markdown progress markers are normalized, never prose or fenced code checkbox literals (2.241541ms)
+✔ declared baseline kinds without current version/content identity do not authorize implementation (0.159ms)
+✔ required case/oracle/command trace rejects duplicates, missing commands and dangling check links (0.563834ms)
+✔ indented Markdown code remains input while genuine nested list progress is normalized (1.044667ms)
+✔ a fence marker followed by text cannot close a code block and hide changed code payload (0.309084ms)
+✔ root fences end prior list context without discarding genuine nested-list context (0.260083ms)
+✔ CommonMark block membership protects overindented fence closes and HTML blocks (2.206667ms)
+✔ production AST normalization changes only located task characters, preserving all other source bytes (0.299958ms)
+✔ evidence-audit: claims matching disk and command output exit 0 with a passing JSON report (113.014ms)
+✔ evidence-audit: a claim contradicting disk or command output is a verification failure, exit 2 (87.941291ms)
+✔ evidence-audit: nonexistent --project is invalid input, exit 1 (measured RED: exited 2) (73.537666ms)
+✔ evidence-audit: existing project with required evidence inputs missing stays exit 2 — pre-existing pinned oracle (nonzero, never a fake pass) (120.082791ms)
+✔ deliverable-audit: nonexistent --project is invalid input, exit 1 (measured RED: exited 2) (73.682333ms)
+✔ test-gate: nonexistent --project is invalid input, exit 1 (measured RED: exited 2) (74.978917ms)
+✔ delivery-gate: a satisfied report-layer check exits 0 and prints a schema-shaped receipt (82.041958ms)
+✔ delivery-gate: the legacy report layer cannot close a product capability — verdict blocked, exit 2 (B10) (87.676791ms)
+✔ delivery-gate: invalid inputs exit 1 — unreadable file, schema-invalid contract, non-array receipts, malformed policy, bad digest (430.4365ms)
+✔ adapter: a valid old-channel report adapts to a schema-valid envelope and is admitted unchanged through admitEvidence (0.840542ms)
+✔ adapter: a failing old-channel report maps to result fail, never to a fabricated pass (0.167542ms)
+✔ adapter B07: missing fields are refused explicitly by name, never fabricated (0.208792ms)
+✔ adapter B07: incompatible versions are refused explicitly (older and newer) (0.086792ms)
+✔ adapter: admission trust is untouched admitEvidence behavior — no dispatch is UNREGISTERED_SOURCE, replay is DUPLICATE_ISSUANCE (1.07325ms)
+✔ legacy adapter cannot downgrade a protected managed caller into historical acceptance (0.475125ms)
+✔ legacy mapping and admission always declare finite historical component scope (0.334916ms)
+✔ delivery-gate JSON labels a self-claimed pass only as an unqualified component check (69.0635ms)
+✔ unknown retired workflow and self-authorizing CLI inputs return explicit JSON exit1 without side effects (526.809167ms)
+✔ legacy protected refusal never issues a dispatch and invalid clocks return explicit refusal (0.368625ms)
+✔ legacy raw JSON shape refuses null identity without coercion or TypeError (0.108041ms)
+✔ legacy raw JSON shape refuses object schemaVersion without coercion or TypeError (0.070708ms)
+✔ legacy raw JSON shape refuses object clock without coercion or TypeError (0.054166ms)
+✔ legacy JSON matrix validates report identity versions and clocks without string coercion (0.564ms)
+✔ legacy admission validates top-level protected dispatch and current inputs before issuing (1.629917ms)
+✔ delivery-gate invalid JSON returns exit1 without echoing input contents or host file paths (365.988709ms)
+✔ committed enablement.json is the rework gate declaration: CROSS_MACHINE, enabled=false, decision_record=null, refuse=[start,release,implement], f10_state=UNVERIFIED_NOT_ENABLED (3.94475ms)
+✔ start request is REALLY denied: real process, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED, receipt carries the request digest as the trace (51.009292ms)
+✔ release request is REALLY denied: real process, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED (refuse_release, P5_1 wildcard semantics) (47.439042ms)
+✔ implement request is REALLY denied: real process, exit 2, CROSS_MACHINE_SCOPE_NOT_ENABLED (no team capability may be implemented cross-machine before enablement) (59.337375ms)
+✔ M1 tamper — enabled flipped true with no decision record is still denied (ENABLEMENT_DECISION_RECORD_REQUIRED); an incoherent bare flip fails closed (204.370209ms)
+✔ M2 tamper — a decision_record that does not resolve to an open_decisions adjudication is still denied (ENABLEMENT_DECISION_RECORD_UNRESOLVED); path escape refused (188.669791ms)
+✔ M3 tamper — NOT_ENABLED marked PASS fails closed: every action including the status readback is denied (GATE_FILE_FAIL_CLOSED) (197.096458ms)
+✔ M4 tamper — refuse semantics stripped fails closed: default-deny still refuses all three actions (257.215708ms)
+✔ environment variables can never flip the gate; a runtime enable record is digested, never trusted (ENABLEMENT_REQUIRES_REGISTERED_DECISION); a missing request file is invalid input (exit 1), not a denial (124.62775ms)
+✔ status readback reports the NOT_ENABLED state honestly (exit 0, UNVERIFIED_NOT_ENABLED, positive auth UNVERIFIED); the gate builds no positive cross-machine surface; the service dir ships exactly the gate artifacts + README (44.025417ms)
+✔ A05: an envelope with no authority-issued dispatch is refused as an unregistered source, audit kept (1.548791ms)
+✔ A05: a self-declared role label or origin string grants nothing (0.212875ms)
+✔ 2.2.c: a forged dispatch record (fixture or worker-built) fails the launcher integrity check (0.792208ms)
+✔ A06: the builder execution cannot sign acceptance evidence (identity conflict) (0.194708ms)
+✔ A06: verifier evidence is admitted only when pinned to the dispatch the launcher issued (0.320333ms)
+✔ A06: the same execution identity cannot issue evidence twice (duplicate issuance refused) (0.181459ms)
+✔ receipts bound to an old policy digest are refused (STALE_POLICY) (0.14325ms)
+✔ receipts bound to an old candidate input digest are refused (STALE_CANDIDATE) (0.123208ms)
+✔ receipts observed in a different environment are refused (STALE_ENVIRONMENT) (0.142916ms)
+✔ expired envelopes are refused (0.164209ms)
+✔ A18: a pass claim without real observation data is refused at admission (0.187042ms)
+✔ A18: a truthful unverified envelope (capability missing, real probe log attached) is admitted to block the gate (0.124375ms)
+✔ B03: test-author execution evidence is admitted only as authoring self-check (0.125916ms)
+✔ B07: imported reports with an incompatible contract version are refused explicitly, never field-fabricated (0.216542ms)
+✔ A19 (local half): the launch authority never exposes its signing secret (0.63075ms)
+✔ 2.2.c: a worker process that does not inherit the launcher secret cannot mint a dispatch (real spawnSync) (33.448041ms)
+✔ envelopeDigest binds envelope content deterministically (0.220333ms)
+✔ protected managed admission cannot be downgraded by worker profile flags or legacy dispatch (0.379625ms)
+✔ dispatch integrity binds the complete validated ActionBinding rather than silently discarding it (2.599084ms)
+✔ collection is unavailable without a protected source verifier and refuses boolean self-qualification (0.619875ms)
+✔ collected source signatures bind actual subprocess report/result/trace bytes, launch and envelope contents (105.720625ms)
+✔ managed protocol rejects stale action/environment/method/revision, foreign run, replay and same author principal (90.480208ms)
+✔ hash-only source acknowledgments cannot replace measured case/check/command observations (94.198333ms)
+✔ an invalid protected mode value cannot silently select legacy admission (0.237791ms)
+✔ managed admission requires the protected observation clock rather than worker or implicit wall time (96.008084ms)
+✔ the gate passes a fully covered candidate and the receipt validates against SDD.Delivery.GateReceipt (2.413083ms)
+✔ A18: a required capability with no receipt stays blocked (never fabricated as pass) (0.338167ms)
+✔ A18: an UNVERIFIED receipt cannot pass its required capability (0.221583ms)
+✔ B06: required observation kinds cannot substitute each other (service log is not console) (0.2935ms)
+✔ B03: authoring self-check receipts are recorded but never sign independent acceptance (0.480458ms)
+✔ A06: a receipt whose execution equals the builder execution is blocked at the gate (0.475834ms)
+✔ stale receipts are blocked when the policy or input digest rotated after admission (0.336833ms)
+✔ tampered receipts (entry digest not matching its envelope) are blocked (0.29475ms)
+✔ with zero receipts the receipt still validates (empty evidence set digest, honest blocked verdict) (0.151459ms)
+✔ the gate refuses to judge without a valid frozen TestContract or policy (0.588416ms)
+✔ evaluate is pure: deterministic output, no filesystem side effects, no stage writes (1.002792ms)
+✔ managed Gate refuses legacy entries and never interprets a self-declared profile as source qualification (0.26825ms)
+✔ managed coverage cannot promote a forged legacy class or a plain object verifier into a qualified source (0.954708ms)
+✔ authenticated collection bytes do not replace independent current report/method sufficiency review (102.101292ms)
+✔ Gate consumes an already completed independent verifier record without inventing a second review (101.57775ms)
+✔ Gate can revalidate its protected recorded admission but cannot treat a submitted replay as recorded (97.524667ms)
+✔ protected managed Gate cannot downgrade to a legacy non-command-bound TestContract (93.345166ms)
+✔ managed coverage requires every mandatory case and its actual frozen command, not only matching capability (101.850083ms)
+✔ an invalid protected Gate mode never selects passing compatibility coverage (0.167833ms)
+✔ a partial owning-Run admission record remains recovery-required instead of reissuing proof (116.44825ms)
+✔ managed GateReceipt binds the authenticated raw collection and completed review, not just envelope metadata (91.139625ms)
+✔ managed Gate enforces frozen execution denominator using actual authenticated observations (294.233959ms)
+✔ managed denominator refuses repeated source executions collections and envelopes (198.235416ms)
+✔ managed denominator cannot count unrelated or wrongly mapped authenticated cases (191.333875ms)
+✔ managed denominator sums distinct real executions once without multiplying coverage declarations (514.805708ms)
+✔ independent real processes with identical deterministic report and result bytes both count (202.696416ms)
+ℹ {"processIds":[86190,86316],"executions":["stable-process-1","stable-process-2"],"equalReportDigest":"64b14722606f76556e430cd476dbe55f9d800a1b5817b11c306e84caf689e349","equalResultDigest":"350f50dc989641e7337ae5bf7002b45ce4a6cf814df0aa7a26bce8026ac916b1","scope":"protocol-only-not-deployment"}
+✔ managed denominator admits distinct authenticated case and check mappings with equal content (190.931167ms)
+✔ H02: SessionStart startup/resume and Stop — native settings layer and script layer agree; repeats in mixed order stay advisory and byte-identical (623.698375ms)
+✔ E06: compact and sub-session starts are not project-assembled — the adapter refuses them in YAML, the composed settings stay silent, and the real Ponytail plugin snapshot owns those surfaces (516.10325ms)
+✔ E05: three-subject coexistence on real plugin bytes — plugin and user entries survive composition verbatim, one managed entry per fixed event, idempotent repeat (621.607084ms)
+✔ E05/E06: cross-session and cross-role crosstalk — hook output is role-independent, a switched shared mode never moves the gates, and the verbatim knownFacts reuse still holds after the I02 rework (803.074541ms)
+✔ E05: failure, silence and timeout never fabricate a method receipt — and the required gates still actually block afterwards (743.235167ms)
+✔ E06: user start/stop of the project assembly — uninstall keeps plugin and user subjects, re-init restores the managed block byte-identically (783.33ms)
+✔ the original eight delivery contracts and additive ActionBinding are registered at v1 (0.939917ms)
+✔ each contract parses its valid v1 payload (1.406917ms)
+✔ a missing schemaVersion is rejected explicitly for every contract (never guessed) (0.367542ms)
+✔ unknown future, legacy and non-integer versions are explicitly refused, never silently accepted (0.352ms)
+✔ unknown contract names are refused by the registry (0.077708ms)
+✔ required content is enforced per contract with field-level errors (0.224584ms)
+✔ FoundationLock models the exporter artifact: mcps and methodProfile payloads pass (0.120833ms)
+✔ FoundationLock v1 accepts the real exported foundation lock artifact (0.940875ms)
+✔ FoundationLock rejects machine absolute paths in version and path fields (ABSOLUTE_PATH_FORBIDDEN) (0.334ms)
+✔ FoundationLock rejects floating versions (latest/HEAD/@latest/unpinned ranges) in version fields (0.289584ms)
+✔ FoundationLock v1 has a closed top-level field set; BaselineRef keeps the additive evolution path (0.117625ms)
+✔ parseTapSummary reads the top-level TAP summary and rejects output without one (0.420709ms)
+✔ A03: zero-test and all-skip runs are classified as empty, not pass (0.368667ms)
+✔ A04: environment crashes are classified as environment failures, never behavior RED (0.217375ms)
+✔ real behavior failures without environment signatures are behavior RED (0.078542ms)
+✔ an exit code contradicting a passing TAP summary is a conservative environment failure (0.086417ms)
+✔ the execution denominator refuses zero tests and zero effective executions (0.122625ms)
+✔ A04: requireValidRed accepts behavior RED and refuses environment/empty/pass runs (0.11525ms)
+✔ evaluateExecution accepts a passing run that meets the declared denominator (0.190417ms)
+✔ A03: evaluateExecution refuses zero-test, all-skip and environment-crash runs (0.137584ms)
+✔ evaluateExecution refuses an invalid TestContract and an unmet declared denominator (0.10425ms)
+✔ a behavior-red run is refused as acceptance evidence even when the denominator is met (0.060417ms)
+✔ cancelled or partially skipped required runs never become passing execution or valid RED evidence (0.07375ms)
+✔ ActionBinding parses immutable generic work-package data without granting origin or dispatch authority (0.328292ms)
+✔ ActionBinding rejects unsafe scope, mutable methods, forged trust and embedded control state (0.896208ms)
+✔ a command-bound contract cannot accept counts from unrelated cases or an unexecuted required command (0.479458ms)
+✔ a command-bound denominator cannot undercount its distinct required cases (0.101416ms)
+✔ strict intent cannot leave a required command outside the mandatory case graph (0.11575ms)
+✔ prototype member names are not registered contracts or declared ActionBinding fields (0.174042ms)
+✔ ActionBinding output targets must stay inside its declared write scope (0.165708ms)
+✔ protected caller strictness cannot be downgraded by an old contract, false flag or self-declared profile (0.169084ms)
+✔ a real zero-exit wrapper carrying a failed TAP assertion is not valid behavior RED (234.732833ms)
+✔ evidence-audit rejects stale markdown claims that contradict disk and command output (78.923375ms)
+✔ evidence-audit accepts claims that match disk and command output (101.54725ms)
+✔ evidence-audit can compare archived OpenSpec evidence with a separate runtime run id (82.517125ms)
+✔ evidence-audit resolves an archived change when given its bare archive id (75.90875ms)
+✔ evidence-audit rejects missing progress, review, or captured test output (95.122958ms)
+✔ exporter builds a contract-valid lock from the unique sources (real repo) (512.490458ms)
+✔ lock emission gates: full digests, no machine paths, no floating versions (283.226834ms)
+✔ exporter refuses to emit when an MCP registration floats (@latest) (18.566708ms)
+✔ release view + lock are byte-stable across repeated exports (repeat-pull idempotency) (90.119667ms)
+✔ dual-write drift is detected in both directions (source edit and hand-edited view) (223.595917ms)
+✔ committed foundation artifacts match live sources (repo-level drift gate) (568.557791ms)
+✔ composition requires adapter fixture isolation and uninstall capability (0.116958ms)
+✔ reverse order A: existing user config survives bootstrap, guard installed once (219.778166ms)
+✔ reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept (664.5875ms)
+✔ upgrade: stale managed entry in an older command format is replaced, not duplicated (229.25725ms)
+✔ uninstall removes managed entries only, is idempotent, and re-init restores (748.157875ms)
+✔ uninstall is locale-safe: UTF-8 locale must not crash bootstrap (regression: unbraced $var before a multibyte char) (377.401167ms)
+✔ owned control-plane scripts never place an unbraced variable expansion adjacent to multibyte text (0.172916ms)
+✔ matcher registration and gate script behavior are tested together (556.612958ms)
+✔ adapter declares the fixed event set and the plugin registration division (0.169583ms)
+✔ plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall (558.69125ms)
+✔ same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched (165.772833ms)
+✔ duplicate user entries for the same event/command are refused, not composed twice (164.688875ms)
+✔ hooks.yaml events outside the adapter fixed event set are refused, never silently dropped (160.844334ms)
+✔ plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2) (177.261084ms)
+✔ exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts (22.917459ms)
+✔ bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo (939.352625ms)
+✔ legacy workflow: retired source-command-sdd-code source under .agents/skills refuses activation with zero mutations (direct-discovery refusal) (131.310833ms)
+✔ legacy workflow: every retired naming family refuses with per-name diagnostics, bodies untouched, no artifacts (143.035083ms)
+✔ legacy workflow: unowned retired-name directory with user files is preserved and blocks install (no prefix deletion) (111.335417ms)
+✔ legacy workflow: retired-name symlink pointing at an external .agents/skills path is preserved (exact-ownership proof required) (156.176625ms)
+✔ legacy workflow: exact adapter-owned stale link to a retired name is removed on install; valid sources assemble settings and stay idempotent (422.769458ms)
+✔ legacy workflow: uninstall removes only adapter-owned links — unowned dirs, external retired-name links and user config survive (367.151333ms)
+✔ legacy workflow: refusal is readonly and reversible — human disposal of the residue unblocks activation (529.0785ms)
+✔ old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline) (533.675708ms)
+✔ active run blocks silent re-baseline after asset drift; closed run only notes it (471.185833ms)
+✔ unresolvable pinned baseline is blocked explicitly, never silently swapped (260.383167ms)
+✔ B09: a second writer cannot take over an active run (1102.903625ms)
+✔ explicit migration re-pins only with ownership and a resolvable old baseline (458.768166ms)
+✔ cold package keeps declared dot files and binary source bytes (111.238875ms)
+✔ cold package verification refuses a missing copied source file (117.778417ms)
+✔ current managed distribution binds the exact profile data and all 245 source files (2949.833084ms)
+✔ export refuses retired sources instead of distributing a valid-looking old workflow (3.609083ms)
+✔ legacy asset ownership helper never acquires or rewrites an actual native Comet Run (1521.6655ms)
+✔ complete copied distribution refuses a removed method directory and an injected file (223.616167ms)
+✔ frozen pure assets resolve after transport without Git history and reject corruption or symlink escape (212.827666ms)
+✔ sealed cache parents cannot redirect writes and release references cannot float (86.131959ms)
+✔ sealed cache refuses an injected prototype-named file in the complete set (182.587292ms)
+ℹ {"clean":{"ok":true,"resolvable":true,"reason":"sealed pure assets verified byte-for-byte and whole exportDigest","resolvedSkills":["alpha","beta"],"missing":[],"source":"sealed-assets"},"modified":{"ok":false,"resolvable":false,"reason":"STATE_SYNC_REQUIRED: unexpected or missing sealed asset","resolvedSkills":[],"missing":["sealed-assets"]},"files":["__proto__","foundation-lock.json","manifest.json","source"]}
+✔ legal prototype-named source files round trip byte-exact through release and sealed cache (417.903125ms)
+✔ sealed cache complete set rejects extra special-named files, directories and symlinks (485.914417ms)
+✔ managed hook resolver changes invalidate the lock and are sealed as explicit code assets (542.868958ms)
+ℹ {"before":"da9bd0a95953f7daaae89329dd827afa65f89440c3f2d62404b34935ff1af4e2","after":"df089a0835ff63a26a76a8dc34776d0ba3ebbad63d5e9ba938bf24e9836ebba9","verify":{"ok":false,"drifts":[{"kind":"lock","item":"exportDigest","detail":"complete asset set drifted"},{"kind":"release","item":"code","detail":"project code closure bytes or complete file set differs"}]},"cacheHasResolver":true}
+✔ every project code dependency and pin metadata is bound in digest, release and immutable cache (3002.67ms)
+✔ transported closure executes exporter and adapter without parent source modules; missing Python refuses cleanly (1622.299875ms)
+ℹ {"export":{"exit":0,"stdout":"✅ foundation export: 34 files under /private/tmp/fdn-transport-code-3kJ8db/foundation (release commit aaaaaaaa, exportDigest da9bd0a95953)\n","stderr":""},"verify":{"exit":0,"stdout":"✅ foundation verify: lock, sources and release view are consistent\n","stderr":""},"adapter":{"exit":0,"stdout":"✅ hooks 策略已编译：hooks/.compiled.env + .claude/settings.json (1 deny 策略)\n✅ selected method links installed; unrelated user entries preserved\n","stderr":""},"gate":{"exit":2,"stderr":"❌ 禁止执行「git push --force」：blocked（hooks.yaml dangerous-command-blocklist）\n"},"missingPython":{"exit":1,"stderr":"❌ python3 required by claude-code adapter\n"},"parentModules":false}
+✔ copied method directory symlinks refuse verification and export without changing user bytes (174.189083ms)
+ℹ {"verify":{"ok":false,"error":"lock unreadable: symlink asset refused: skills/alpha","drifts":[]},"exportRejected":true,"error":"symlink asset refused: skills/alpha","before":"1fd0d20e25f00bb273c3891b885729613ad25d24e3f331d5ede0cdd69e681537","after":"1fd0d20e25f00bb273c3891b885729613ad25d24e3f331d5ede0cdd69e681537"}
+✔ export and verify reject linked package roots, every view ancestor and output file before any mutation (1481.927208ms)
+ℹ {"slot":"package-root","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+ℹ {"slot":"package-ancestor","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+ℹ {"slot":"foundation-lock.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+ℹ {"slot":"release","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+ℹ {"slot":"release/skills","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+ℹ {"slot":"release/skills/alpha","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+ℹ {"slot":"release/skills/alpha/SKILL.md","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+ℹ {"slot":"release/skills/MANIFEST.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"2b5629f0d08890d8a180020d317963782175969acb5388d81adfbaadb1986bd6"}
+ℹ {"slot":"release/hooks","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+ℹ {"slot":"release/hooks/hooks.yaml","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+ℹ {"slot":"release/mcp","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"57eefe7379a348936054bfef83361655671bca3cc51f34b75575fd86c4245f46"}
+ℹ {"slot":"release/mcp/mcp.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"57eefe7379a348936054bfef83361655671bca3cc51f34b75575fd86c4245f46"}
+✔ managed code/profile outputs and existing output aliases cannot redirect export or verification (2907.439292ms)
+ℹ {"slot":"release/profile","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/profile/binding.json","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/profile/comet-managed.json","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code/tools","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code/tools/bootstrap.sh","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code/MANIFEST.json","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"hardlink","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"fifo","verification":false,"wholeFixtureUnchanged":true}
+✔ Git exports remain verifiable after transport without Git (263.453375ms)
+✔ TeamAI packet roundtrip preserves the externally frozen full file set (11181.043125ms)
+✔ TeamAI packet rejects tamper, omission, duplicate, escape, unsafe mode and stale source before writing (5907.302375ms)
+✔ original Foundation CLI connects TeamAI view export and externally pinned receive (11728.097625ms)
+✔ Bash project caller equivalence leaves unrelated user scripts and Ponytail plugin entries unchanged (310.642584ms)
+✔ generation gate accepts a successful generator that produced a test file (18.0455ms)
+✔ generation gate rejects when beforeTestInventory was not captured (10.230542ms)
+✔ generation gate rejects timeout, non-zero exit, and empty test output (9.696417ms)
+✔ generation gate rejects an unchanged pre-existing test inventory (2.025625ms)
+✔ V_INFRA_I08 contract: committed backup domain validates clean with explicit catalog gaps and honest retention (48.335375ms)
+✔ secret-ref discipline: the three backup refs are referenced only and resolve honestly (registered -> UNRESOLVED, unregistered -> REF_NOT_REGISTERED) (3.539917ms)
+✔ validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay rules, secret-shaped key, malformed/cross-project ref, project mismatch — all exit 2 (489.787083ms)
+✔ validate fail-closed: missing or unparseable domain file exits 1, never silently degrades to empty rules (135.460708ms)
+✔ backup: real bytes are copied and the manifest digests match the target byte-for-byte; revoked cache is recorded, never copied (56.203583ms)
+✔ backup refuses an inconsistent workspace: an open transaction means no consistent point-in-time backup (exit 2) (53.728291ms)
+✔ backup input errors: missing workspace or missing arguments — exit 1 with usage (85.796375ms)
+✔ restore: quarantined restore verifies manifest digests, fences the old writer, reconciles permissions honestly, and releases only after the same-operation readback (104.752083ms)
+✔ restore negatives: corrupt backup byte, incomplete backup, missing/unconfirmed/live-writer fence, missing key ref, point-in-time mismatch, second writer — all exit 2 and refuse release (744.987208ms)
+✔ retention: pending obligations deny cleanup with the explicit list; disk pressure only warns and the workspace stays byte-identical (52.794208ms)
+✔ retention: only verified completion — or a separately approved migration with proven restore — moves the R10 A boundary (142.33025ms)
+✔ authority transfer: requires a controlled approval and process-level fence evidence, then registers the new authority with an epoch bump (236.185458ms)
+✔ probe cases run the real local mechanisms and verify them (312.848708ms)
+✔ I05 all public commands reject malformed shared inputs before consuming them (5762.355834ms)
+✔ I05 an absent optional graph never blocks wiki declarations or claims graph execution (326.350375ms)
+✔ I05 current repository identity cannot be replaced by a same-project label (765.166042ms)
+✔ I05 image booleans never produce verified resource or startup authority (192.714875ms)
+✔ I05 invalid options and endpoints are controlled input failures with no implicit API (727.616917ms)
+✔ I05 selected upstream and compose bind the observed self-hosted release layout (0.955333ms)
+✔ I05 the native named-volume target preserves every host bind-mount refusal (1187.454375ms)
+▶ I05 named-volume definitions cannot redirect fixed sources to host or existing storage
+  ✔ codewiki-data: local bind driver (607.149334ms)
+  ✔ codewiki-data: driver options (490.33375ms)
+  ✔ codewiki-data: device (473.743459ms)
+  ✔ codewiki-data: external volume (483.592375ms)
+  ✔ codewiki-data: existing volume name (467.908792ms)
+  ✔ codewiki-data: driver declaration (475.226375ms)
+  ✔ codewiki-data: flow redirect (498.088125ms)
+  ✔ codewiki-data: alias redirect (496.519792ms)
+  ✔ codewiki-logs: local bind driver (466.210333ms)
+  ✔ codewiki-logs: driver options (481.574166ms)
+  ✔ codewiki-logs: device (478.210708ms)
+  ✔ codewiki-logs: external volume (560.633125ms)
+  ✔ codewiki-logs: existing volume name (494.103916ms)
+  ✔ codewiki-logs: driver declaration (542.838958ms)
+  ✔ codewiki-logs: flow redirect (511.465ms)
+  ✔ codewiki-logs: alias redirect (452.375459ms)
+  ✔ missing definition (109.225583ms)
+  ✔ extra definition (93.781625ms)
+  ✔ duplicate definition (96.804834ms)
+  ✔ duplicate root (109.761584ms)
+  ✔ quoted duplicate redirect (120.817875ms)
+  ✔ explicit duplicate redirect (113.974458ms)
+  ✔ include redirect (111.52725ms)
+  ✔ the fixed empty named definitions remain valid (97.523416ms)
+✔ I05 named-volume definitions cannot redirect fixed sources to host or existing storage (8835.798083ms)
+▶ I05 parsed YAML rejects quoted and flow permission fields through every public command
+  ✔ quoted host bind (460.740666ms)
+  ✔ quoted external ports (482.663166ms)
+  ✔ quoted unpinned image (517.51275ms)
+  ✔ quoted privileged (550.163375ms)
+  ✔ quoted network_mode (498.500292ms)
+  ✔ quoted pid (475.7305ms)
+  ✔ quoted ipc (512.951791ms)
+  ✔ quoted userns_mode (492.950875ms)
+  ✔ quoted env_file (521.857042ms)
+  ✔ quoted cap_add (483.683125ms)
+  ✔ quoted devices (545.857875ms)
+  ✔ quoted volumes_from (453.267666ms)
+  ✔ quoted entrypoint (472.762958ms)
+  ✔ external network option (482.7295ms)
+  ✔ extra environment (474.601667ms)
+✔ I05 parsed YAML rejects quoted and flow permission fields through every public command (7429.884ms)
+✔ I05 equivalent safe quoted and flow YAML is validated structurally (108.709ms)
+▶ I05 YAML parser rejects unsupported syntax and bounded inputs without reflecting source
+  ✔ duplicate key (93.8705ms)
+  ✔ anchor (92.089167ms)
+  ✔ merge (109.669167ms)
+  ✔ custom tag (92.349708ms)
+  ✔ syntax failure (96.717833ms)
+  ✔ input limit (50.451375ms)
+  ✔ depth limit (94.009333ms)
+  ✔ node limit (178.891583ms)
+✔ I05 YAML parser rejects unsupported syntax and bounded inputs without reflecting source (809.998167ms)
+▶ I05 YAML parser dependency and process failures are never accepted as execution
+  ✔ missing interpreter (212.31175ms)
+  ✔ process exception (1059.759166ms)
+  ✔ unknown output (805.2855ms)
+  ✔ incomplete output (692.203125ms)
+  ✔ inconsistent availability (696.054208ms)
+  ✔ missing YAML dependency (644.743708ms)
+  ✔ unsupported YAML version (648.192959ms)
+  ✔ output bound (701.320875ms)
+  ✔ timeout (5047.532541ms)
+✔ I05 YAML parser dependency and process failures are never accepted as execution (10508.369041ms)
+✔ I05 YAML parser isolated import ignores untrusted Python module environment (95.695ms)
+▶ I05 manifest input diagnostics use static labels and known codes without raw data or paths
+  ✔ short invalid JSON (100.537291ms)
+  ✔ arbitrary marker (96.8375ms)
+  ✔ trailing marker (98.787208ms)
+  ✔ missing (99.475916ms)
+  ✔ directory (89.08325ms)
+✔ I05 manifest input diagnostics use static labels and known codes without raw data or paths (485.355041ms)
+▶ I05 unexpected own input I/O and JSON exceptions stay INTERNAL_FAILURE without details
+  ✔ manifest read (98.7355ms)
+  ✔ manifest parse (104.950958ms)
+  ✔ registry read (39.434709ms)
+  ✔ registry parse (48.602916ms)
+  ✔ refs read (47.467625ms)
+  ✔ refs parse (45.063875ms)
+  ✔ domain read (41.309416ms)
+  ✔ domain parse (42.829958ms)
+✔ I05 unexpected own input I/O and JSON exceptions stay INTERNAL_FAILURE without details (469.297709ms)
+✔ I05 normal manifest evaluation and static argv rejection retain their separate semantics (347.175083ms)
+✔ V_INFRA_I05 contract: committed code-knowledge domain validates clean; qualify/up honor the exit contract (422.549208ms)
+✔ gap-reporting behavior: registered refs are never reported as gaps; a missing ref is always explicitly reported (synthetic fixture) (164.135917ms)
+✔ RED image gate: images.lock without any authenticated digest refuses up (committed state, nothing fabricated) (85.11475ms)
+✔ RED image gate: floating tag is rejected (91.749209ms)
+✔ RED image gate: malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED (392.684083ms)
+✔ RED source scope gate: deny-by-default with zero authorized sources refuses startup/ingest; cross-project or unpinned sources rejected (422.253209ms)
+✔ RED substitute gate: declaring a public hosted service as the sensitive-code alternative is rejected in both CodeWiki files (181.0565ms)
+✔ RED cross-project gate: credential refs resolving into another project (pav-*) are rejected (178.856ms)
+✔ RED freshness gate: generation failure, stale commit, unauthorized source and undecided policy can never report freshness pass (848.621792ms)
+✔ CodeGraph.v1: removable optimization, no gate/knowledge authority; graph-disabled correctness is a real local probe (567.872875ms)
+✔ CodeWiki.v1 profile gates: selfhost pinned-upstream structure, manifest/freshness/readback policies must be declared (287.305167ms)
+✔ probes are real subcommands: graph-disabled-correctness runs locally; pinned-code-wiki attempts real endpoints only when given (96.67475ms)
+✔ compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders (335.685791ms)
+✔ SecretRef.v1 safety: the three planned refs are referenced by domain files, referenced only, never valued (2.189208ms)
+✔ V_INFRA_P4_7: committed authorization artifacts validate clean against the real CLI and the I01 catalog (50.542708ms)
+✔ committed state fails closed: decide on the committed artifacts refuses because no audience is registered (79.714959ms)
+✔ role isolation structure: pairwise-distinct principals and refs; tampering is a named violation (61.573958ms)
+✔ owner registration ties to the I01 registry; mismatch is a named violation (49.159375ms)
+✔ credential alignment: role refs resolve in the I01 catalog with matching boundRole; policy/author refs are denied (170.432167ms)
+✔ grant lifecycle over the real clock: verify, authority-gated revoke, expiry, and the time-bending refusal (328.070458ms)
+✔ trusted issuance (U01): signature presence, PR merges and approved fields never substitute for a registered issuer with domain authority (93.432666ms)
+✔ decide positive path: a fully grounded request yields an allow receipt bound to digests, grants and audience (94.353208ms)
+✔ auto-publish identity and review gates: not-publisher, self-review, unregistered reviewer, stale review (187.567417ms)
+✔ multi-source disclosure intersection: union membership is not enough (U02 semantics) (89.306333ms)
+✔ pre-write recheck blocks drifted ground truth: ledger change, payload drift, receipt tamper, same-operation renewal (319.919709ms)
+✔ fail-closed evidence gates: incomplete/error/service-only/unmapped permission evidence is never an empty set or public (264.304166ms)
+✔ audience enlargement surface (U05 semantics): allowlisted collection, but share/inheritance/public paths are refused; no ACL mutation entrance exists (441.002ms)
+✔ self-authored inputs are refused as a class: inline grant, approved flag, author sensitivity label, PR merge field (176.598958ms)
+✔ input contract: unreadable files and unknown commands exit 1; structured output never leaks host paths (125.856917ms)
+✔ V_INFRA_I04 contract: committed llmwiki domain validates clean; qualify honors the exit contract (798.746542ms)
+✔ RED worktree safety: escape-denial probe enforces traversal, symlink, foreign-root and project-ID denials for real (323.988542ms)
+✔ RED knowledge authority: spec/task checkmarks and unapproved full-git intake are denied as wiki authorities (315.157458ms)
+✔ RED policy fixtures: semantic violations are rejected at validate time (exit 2) (1583.918541ms)
+✔ RED cross-worktree identity + index consistency: worktree-mcp-readback runs the real MCP channel first and never pretends (7183.515667ms)
+✔ secret-ref discipline: the source-read ref is referenced only, catalog gap reported explicitly, no secret-shaped values (155.808208ms)
+✔ I04 convergence qualify keeps semantic admission violations before runtime checks (150.429042ms)
+✔ I04 convergence probe cannot bypass the registry prerequisite (39.843291ms)
+✔ I04 convergence MCP storage readback uses the unchanged created entry and native index (6574.668625ms)
+✔ I04 convergence validate rejects a registry without registered identity (92.894333ms)
+✔ I04 convergence qualify rejects a registry without registered identity (109.944375ms)
+✔ I04 convergence probe rejects a registry without registered identity (97.880792ms)
+✔ I04 convergence path admission distinguishes dot segments and exact canonical roots (312.972208ms)
+✔ I04 convergence validate rejects a policy and env that jointly invent a wiki target (153.431875ms)
+✔ I04 convergence qualify rejects a policy and env that jointly invent a wiki target (166.198667ms)
+✔ I04 convergence probe rejects a policy and env that jointly invent a wiki target (149.934375ms)
+✔ I04 convergence probe rejects an explicit foreign wiki binding before fixture execution (202.540167ms)
+✔ I04 convergence unknown CLI options cannot silently bypass declared inputs (38.926458ms)
+✔ I04 convergence arbitrary interpreter overrides are not executed (237.782917ms)
+✔ I04 convergence required tier and denial fields cannot be omitted to weaken admission (1650.633291ms)
+✔ I04 convergence denial receipts never echo simulated credential-shaped policy values (281.644209ms)
+✔ I04 convergence malformed option errors do not echo simulated credentials (39.096042ms)
+✔ I04 convergence profile admission rejects wrong component identity (155.227833ms)
+✔ I04 convergence profile admission rejects unknown tool (145.064291ms)
+✔ I04 convergence profile admission rejects missing required tool (214.667417ms)
+✔ I04 convergence profile admission rejects foreign entry prefix (150.049917ms)
+✔ I04 convergence profile admission rejects host registration grab (146.992541ms)
+✔ I04 input types validate: null documents reject before summaries and runtime (355.009416ms)
+✔ I04 input types qualify: null documents reject before summaries and runtime (371.77425ms)
+✔ I04 input types probe escape-denial: null documents reject before summaries and runtime (353.853375ms)
+✔ I04 input types probe worktree-mcp-readback: null documents reject before summaries and runtime (357.451125ms)
+✔ I04 input types: commit coercion and null tiers are rejected structurally (1060.465459ms)
+✔ I04 input types validate: document arrays, primitives and hostile objects fail closed (2071.708666ms)
+✔ I04 input types qualify: document arrays, primitives and hostile objects fail closed (1970.294ms)
+✔ I04 input types probe escape-denial: document arrays, primitives and hostile objects fail closed (1979.893916ms)
+✔ I04 input types probe worktree-mcp-readback: document arrays, primitives and hostile objects fail closed (1875.82225ms)
+✔ I04 input types validate: every consumed nested field is typed before use (6984.0405ms)
+✔ I04 input types qualify: every consumed nested field is typed before use (7383.539209ms)
+✔ I04 input types probe escape-denial: every consumed nested field is typed before use (7212.612375ms)
+✔ I04 input types probe worktree-mcp-readback: every consumed nested field is typed before use (6571.977209ms)
+✔ I04 input types: malformed domains cannot reach source inspection or runtime child processes (1452.183459ms)
+✔ I04 input types read-only runtime: missing source does not claim interpreter execution (221.402166ms)
+✔ I04 input types: minimum valid v1 documents need no optional history or observation claims (1269.145542ms)
+✔ I04 diagnostic privacy validate: bad JSON never echoes arbitrary content (836.726958ms)
+✔ I04 diagnostic privacy validate: file failures retain safe labels and reason codes (825.7105ms)
+✔ I04 diagnostic privacy qualify: bad JSON never echoes arbitrary content (776.048667ms)
+✔ I04 diagnostic privacy qualify: file failures retain safe labels and reason codes (792.393791ms)
+✔ I04 diagnostic privacy probe escape-denial: bad JSON never echoes arbitrary content (776.0665ms)
+✔ I04 diagnostic privacy probe escape-denial: file failures retain safe labels and reason codes (835.7535ms)
+✔ I04 diagnostic privacy probe worktree-mcp-readback: bad JSON never echoes arbitrary content (784.4ms)
+✔ I04 diagnostic privacy probe worktree-mcp-readback: file failures retain safe labels and reason codes (802.299083ms)
+✔ I04 diagnostic privacy: malformed command, option and case values are never repeated (110.707ms)
+✔ I04 diagnostic privacy: unexpected exceptions stay nonzero and distinct without raw message, code or stack (149.341833ms)
+✔ V_INFRA_I07 contract: committed monitor domain validates clean with honest gaps and spec-frozen deadlines (43.792875ms)
+✔ RED pre-enable gate: unattended release enabled without registered external monitor/on-call/backup channel is blocked (90.744917ms)
+✔ RED delivery authorization claim guard: no notification-send authorization exists in this task (43.32825ms)
+✔ RED deadline freeze: tampering with the contract timings is rejected (30s/30s/90s/120s/120s/30s) (146.280083ms)
+✔ RED segment separation: a combined "total delivery" budget is rejected; three segments must stay separately timed (218.0225ms)
+✔ RED supervisor gate: forbidden actions, restart budget and start gate are structurally enforced in the policy (445.591625ms)
+✔ RED fault-domain gate: a co-hosted monitor can never be declared sufficient for host-failure detection (45.987208ms)
+✔ RED structural negatives: interface tag, project binding, example declaration, read-only health, authority binding, business-retry split and noBusinessWrites are each enforced (312.098375ms)
+✔ RED I01 isolation: cross-project refs are structural violations; unregistered ref stays an explicit gap and resolver refuses (88.77125ms)
+✔ Health.v1: read-only evaluation of heartbeat age, scan watermark, isolation deadlines and authority identity (313.778333ms)
+✔ Monitor.v1: alerts are prepared only (never sent without authorization) and prepared from the exact breaches (84.069083ms)
+✔ Monitor.v1 three-segment timing: detection/delivery/escalation are computed separately from real timestamps (280.207875ms)
+✔ Supervisor.v1: out-of-scope actions are refused; the supervisor is process-level restart only (238.461708ms)
+✔ Supervisor.v1: dual start with a live old writer is refused; unknown storage ownership is refused (129.412458ms)
+✔ Supervisor.v1: exceeding 3 restarts within 5 minutes stops and escalates (81.397375ms)
+✔ probes are real subcommands: runner-process-failure is provable at process level; external-host-down stays UNVERIFIED; scan-watermark-stall is locally provable (705.26975ms)
+✔ committed contract shape: interfaces, example declaration, read-only health and no secret values (1.287ms)
+✔ I03 every consumed input shape is rejected before qualification or probe use (3509.607417ms)
+✔ I03 semantic admission and image flags cannot be bypassed by qualify or up (306.401042ms)
+✔ I03 native error and pagination observations never become absence or audience permission (336.216291ms)
+▶ I03 managed-publish rejects target absence inferred from every error observation
+  ✔ http-100 (44.989542ms)
+  ✔ http-199 (46.094167ms)
+  ✔ http-300 (45.184ms)
+  ✔ http-302 (52.240375ms)
+  ✔ http-399 (42.420708ms)
+  ✔ http-400 (51.931416ms)
+  ✔ http-401 (48.406917ms)
+  ✔ http-403 (45.316584ms)
+  ✔ http-404 (45.298375ms)
+  ✔ http-409 (47.3685ms)
+  ✔ http-429 (47.742208ms)
+  ✔ http-499 (44.451375ms)
+  ✔ http-500 (47.516541ms)
+  ✔ http-503 (61.734208ms)
+  ✔ http-599 (48.638ms)
+  ✔ timeout (45.250375ms)
+  ✔ network (51.969208ms)
+  ✔ unrecognized-failure (44.319792ms)
+  ✔ no error observation leaves only the live-readback gate unverified (45.771334ms)
+✔ I03 managed-publish rejects target absence inferred from every error observation (908.495542ms)
+✔ I03 malformed publish objects and diagnostic paths never escape the input boundary (240.835125ms)
+✔ I03 native compose bindings require explicit service scope and exclude storage administrator material from app (315.443709ms)
+✔ V_INFRA_I03 contract: committed outline domain validates clean; qualify/up/probe/stop honor the exit contract (257.3345ms)
+✔ gap-reporting behavior: a ref missing from a supplied catalog is explicitly reported as a catalogGap, never silent (46.458125ms)
+✔ image admission gates stay coherent with the committed lock state (state-agnostic) (90.610917ms)
+✔ RED image gate: floating tag is rejected (57.843458ms)
+✔ RED image gate: malformed digest rejected; well-formed but unauthenticated digest never reaches VERIFIED (243.554083ms)
+✔ RED oidc gate: missing issuer/client registration is rejected; non-loopback redirect is rejected (180.52875ms)
+✔ RED storage-policy gate: missing file exits 1; incomplete or policy-violating content exits 2 (157.484084ms)
+✔ RED env gate: secret plaintext, host absolute paths and unbound raw values are rejected (165.953542ms)
+✔ RED cross-project gate: credential refs resolving into another project (pav-*) are rejected (97.795458ms)
+✔ RED domain gate: collection registration without owner or audience registration is rejected (147.302167ms)
+✔ probes are real subcommands: without a live instance they exit 2 with structured UNVERIFIED, never mock-green, never skip (225.808333ms)
+✔ stop without an instance started by this tool is honestly UNVERIFIED and refuses (47.738708ms)
+✔ OutlineState.v1 contract: durable db+attachments declared, cache not rights authority, API contracts stay UNVERIFIED until real API evidence (2.886ms)
+✔ compose declaration gate: loopback binds, dedicated internal network, no host mounts, images only via lock-resolved placeholders (155.1345ms)
+✔ managed-publish gate: each blocking precondition refuses the publish with its exact cause; admin read never substitutes; timeout/403 is never absence (491.86125ms)
+✔ admission record opens the up gate honestly: enabled=true without an admission record still refuses; with admittedBy/admittedAt/reason it validates clean (96.676625ms)
+✔ compose gate: loopback exposure must not auto-open a public network and durable state must ride named volumes (262.25475ms)
+✔ lock and up gates: opened upGate, unpinned reference, unparseable lock, unreadable registry and up without authorization are all anchored (279.968625ms)
+✔ V_INFRA_I06 contract: five platform files exist and committed validate passes with LOCAL_ONLY and honest gaps (49.495166ms)
+✔ committed platform files carry the interface bindings and honest UNVERIFIED identity facts (0.408125ms)
+✔ RED same-origin labels: stale or missing repoFullname/url fails validate with IDENTITY_NOT_SAME_ORIGIN while IDs and owner stay stable (194.820542ms)
+✔ RED direct-probe preflight: drifted repoFullname/url is rejected before any gh call, even with stable IDs and owner (90.574ms)
+✔ RED equal-but-absent labels: both sides missing/blank/invalid-typed identity fields fail same-origin in validate and probe (582.506416ms)
+✔ RED authorization gate: configuring required checks without remote write authorization is refused — admin identity is not this run approval (155.13475ms)
+✔ RED credential tier: development identity cannot read release/rollback secrets (SecretRef.v1 resolver semantics) (48.357875ms)
+✔ IntegrationIdentity.v1: a fully bound chain verifies locally (head -> mergeSHA -> digest -> deployment -> readback) (51.103083ms)
+✔ RED stale evidence: a new head/mergeSHA reusing an old check blocks candidate promotion (53.487708ms)
+✔ RED missing / skipped / timed-out checks each block promotion with distinct codes (210.393292ms)
+✔ RED tag drift: a tag repointed to a different digest blocks promotion; digest must build from the integration merge SHA (103.628916ms)
+✔ RED deployment identity: digest mismatch and missing receipt correlation block promotion (110.182ms)
+✔ timeout query path: lost deployment response is confirmed by querying the original correlation ID (145.293958ms)
+✔ RED rollback gate: unapproved requests are refused; approved rollback needs the same digest and an independent business terminal state (242.939583ms)
+✔ RED isolation: cross-project refs (pav-*) and foreign project bindings are rejected; missing registration is an input failure (161.511834ms)
+✔ fail-closed structure: rollback approval, correlation oracle and retention rules cannot be flipped off without a violation (502.920125ms)
+✔ probes are real and honest: repository-identity performs exactly one read-only gh attempt whose outcome is reported verbatim; bare chain probe is structured UNVERIFIED (1073.584542ms)
+✔ RED spawn-failure path: missing or non-executable gh yields structured UNVERIFIED (exit 2) with a spawn diagnostic, never a crash (104.455791ms)
+✔ CLI input contract: malformed chain fixtures are input failures (exit 1), distinct from semantic blocks (exit 2) (183.952166ms)
+✔ parseJsonOut raises a real AssertionError (not a ReferenceError) when the tool prints no JSON (45.309291ms)
+✔ I06 refs admission blocks direct repository probing before any external I/O (243.996417ms)
+✔ I06 direct probes consume versioned platform input through the same admission gate (53.685917ms)
+✔ I06 integration chain never accepts a foreign project or a normal-response correlation mismatch (97.008625ms)
+✔ I06 platform observer reads exact registered IDs, all pages and candidate-linked artifact metadata only (787.92175ms)
+✔ I06 observer keeps forbidden, truncated, foreign and missing-ID pages unverified (2973.563833ms)
+✔ I06 all operations share nullable, nested, unknown, duplicate and reference admission before I/O (2550.654625ms)
+✔ I06 registered independent target readback matches project, SHA, digest, original operation and terminal state (627.924ms)
+✔ I06 registered OCI readback rehashes manifest/config and binds actual source SHA without claiming signing (223.054666ms)
+✔ I06 malformed input diagnostics never echo private JSON fragments or untrusted paths (48.811542ms)
+✔ I06 timeout remains unknown and never triggers a replacement platform action (150.541083ms)
+✔ I06 artifact producer run must belong to the complete candidate run inventory (606.933166ms)
+✔ I06 workflow identity is required before a candidate run can correlate artifacts (651.834792ms)
+✔ I06 producer source correlation refuses foreign-source-repository (599.362792ms)
+✔ I06 producer source correlation refuses missing-source-repository (680.643458ms)
+✔ I06 producer source correlation refuses null-source-repository (608.56275ms)
+✔ I06 producer source correlation refuses conflicting-repository-name (640.318167ms)
+✔ I06 producer source correlation refuses missing-workflow-path (615.069042ms)
+✔ I06 producer source correlation refuses conflicting-workflow-path (642.6115ms)
+✔ I06 producer source correlation refuses unknown-workflow (631.716042ms)
+✔ I06 producer source correlation refuses missing-run-status (625.45775ms)
+✔ I06 producer source correlation refuses missing-run-conclusion (770.024125ms)
+✔ I06 legal queued/null metadata and historical artifacts do not authorize a producer attempt (634.51275ms)
+✔ I06 a current run ID with conflicting artifact SHA cannot be hidden as historical metadata (604.915083ms)
+✔ I06 deployment metadata never treats an unselected environment as a registered business terminal (894.525917ms)
+✔ I06 incomplete runs inventory cannot correlate a valid prefix producer (751.444792ms)
+✔ I06 incomplete workflows inventory cannot correlate a valid prefix producer (702.355666ms)
+✔ I06 a legal null artifact workflow reference remains unverified instead of inventing a producer (694.505792ms)
+✔ V_INFRA_I08 contract: committed backup domain validates clean with explicit catalog gaps and honest retention (50.007209ms)
+✔ secret-ref discipline: the three backup refs are referenced only and resolve honestly (registered -> UNRESOLVED, unregistered -> REF_NOT_REGISTERED) (2.699792ms)
+✔ validate negatives: tampered R10 freeze, auto-cleanup flip, missing replay rules, secret-shaped key, malformed/cross-project ref, project mismatch — all exit 2 (622.600625ms)
+✔ validate fail-closed: missing or unparseable domain file exits 1, never silently degrades to empty rules (184.3775ms)
+✔ backup: real bytes are copied and the manifest digests match the target byte-for-byte; revoked cache is recorded, never copied (61.693166ms)
+✔ backup refuses an inconsistent workspace: an open transaction means no consistent point-in-time backup (exit 2) (47.270875ms)
+✔ backup input errors: missing workspace or missing arguments — exit 1 with usage (91.152375ms)
+✔ restore: quarantined restore verifies manifest digests, fences the old writer, reconciles permissions honestly, and releases only after the same-operation readback (107.84725ms)
+✔ restore negatives: corrupt backup byte, incomplete backup, missing/unconfirmed/live-writer fence, missing key ref, point-in-time mismatch, second writer — all exit 2 and refuse release (683.232917ms)
+✔ retention: pending obligations deny cleanup with the explicit list; disk pressure only warns and the workspace stays byte-identical (45.471417ms)
+✔ retention: only verified completion — or a separately approved migration with proven restore — moves the R10 A boundary (140.870208ms)
+✔ authority transfer: requires a controlled approval and process-level fence evidence, then registers the new authority with an epoch bump (235.673083ms)
+✔ probe cases run the real local mechanisms and verify them (392.752167ms)
+✔ qualification policy shape admission rejects every consumed field before CLI use (15242.996542ms)
+✔ shared catalog and resolver reject malformed policy options and iterable bindings (7.145416ms)
+✔ public option and optional input shape errors refuse before external tools (2949.153708ms)
+✔ registry rejects malformed reference catalogs before runtime observation in every command (3375.281791ms)
+✔ secret reference API denials never echo caller-supplied principal role or project paths (2.449ms)
+✔ registry admission rejects blank project/resource ownership and purpose (144.37375ms)
+✔ qualification and up reject invalid registration through the same owner gate (96.350875ms)
+✔ registry rejection does not echo a credential-shaped value supplied as an owner (87.235417ms)
+✔ qualification reports unavailable dependency executables as structured UNVERIFIED (40.743041ms)
+✔ secret reference resolution rejects missing purpose and ambiguous catalog bindings (1.027458ms)
+✔ registry lock references cannot traverse or follow symlinks outside the project (210.233917ms)
+✔ registry admission rejects missing identity and invalid resource collections as structured failures (182.029209ms)
+✔ automatic cleanup remains refused when its destruction precondition is unverified (157.411833ms)
+✔ resource qualification does not claim absent source pins as recorded (179.25375ms)
+✔ qualification input binding changes with the actual reference catalog or policy (471.027042ms)
+✔ V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract (490.439916ms)
+✔ RED owner gate: resource owned by an unregistered owner is rejected (45.227791ms)
+✔ RED cross-project gate: credentialRef resolving into another project (pav-*) is rejected (40.726958ms)
+✔ RED principal gate: ordinary agent identity is denied publisher/isolator material (0.768625ms)
+✔ RED image gate: floating tag and fake digest do not pass (87.41275ms)
+✔ RED evidence gate: license/platform/backup compatibility missing means NOT_READY and up refuses (320.790083ms)
+✔ RED digest binding: qualify receipt recomputes the actual input archive and rejects mismatch (204.137625ms)
+✔ RED plaintext gate: secret-shaped values and secret-value keys are rejected (94.079292ms)
+✔ RED host-path gate: host absolute paths are rejected in committed structure (38.72175ms)
+✔ RED role-reuse gate: one credential bound to two high-privilege roles is rejected (48.054333ms)
+✔ RED schema shape gate: type-invalid fields and duplicate resource ids are rejected (159.101166ms)
+✔ retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED (44.785417ms)
+✔ committed registry and refs catalog contain no secret material (0.533208ms)
+✔ SecretRef.v1 format: parse accepts only well-formed project-bound refs (0.133167ms)
+✔ authority readback is honestly recorded as UNVERIFIED with the exact failure (110.310416ms)
+✔ every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is registered with distinct purposes and bound roles (0.336459ms)
+✔ github readback: derives the GitHub target from the registered identity and verifies repo plus authenticated caller (416.368125ms)
+✔ github readback: arbitrary alternate registered project fixture is honored, not the hardcoded repo (259.846583ms)
+✔ github readback: repo answering with a different repoId, fullname or owner is refused as MISMATCH (750.153125ms)
+✔ github readback: public repo readability with a different authenticated caller is NOT authority VERIFIED (232.617959ms)
+✔ github readback: nonzero gh exit, error envelopes, non-repo JSON and caller failure are refused (1219.632042ms)
+✔ github readback: malformed or missing registered identity is rejected before any gh call (333.544542ms)
+✔ github readback: committed registry identity labels point at the actual ql-wade project (0.183708ms)
+✔ github readback: null and non-object API payloads are structured UNVERIFIED with exit 2, never a crash (1241.015375ms)
+✔ github readback: registered repoId/principalId must be positive safe integers, rejected before any gh call (307.642166ms)
+✔ github readback: repoFullname owner segment must equal registered github.owner before any gh call (86.26375ms)
+✔ V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract (443.749292ms)
+✔ RED role gate: role-policy without role definitions, missing principal bindings or reused principals is rejected (511.182417ms)
+✔ image admission gates stay coherent with the committed lock state (state-agnostic) (242.950291ms)
+✔ RED image gate: floating tag rejected; malformed digest rejected; unauthenticated digest never reaches ready (629.517167ms)
+✔ RED compose gate: host sensitive mounts (/Users, host HOME, docker.sock) and non-loopback ports are rejected (504.417209ms)
+✔ RED compose gate: read-only rootfs, minimal capabilities, internal network and per-role services are enforced (654.049166ms)
+✔ RED workspace gate: worker-writable control paths and host bind mounts are rejected (489.302208ms)
+✔ RED authority gate: duplicate registrations, copied state and concurrent writers are rejected (474.108084ms)
+✔ RED secret tier gate: ordinary roles cannot reach publisher/isolator-tier refs (I01 resolution semantics reused) (249.073875ms)
+✔ RED method-state gate: shared mode state never becomes identity/permission basis, never enters worker-writable surfaces (487.270291ms)
+✔ probes and stop are real subcommands: without a runner runtime they exit 2 with structured UNVERIFIED, never mock-green, never skip (345.98275ms)
+✔ stop without a runner started by this tool is honestly UNVERIFIED and refuses (122.624667ms)
+✔ RoleBoundary.v1 / Authority.v1 contract holds on committed files; refs are referenced, never valued (14.474ms)
+✔ catalog gap reporting: registered refs read RECORDED; a missing ref is still explicit readiness evidence, never silent (493.494708ms)
+✔ RW_RUNNER_BUILD: committed image lock mirrors the seven-patch upstream lock (patches, toolchain, openspec pin, freshly recomputed fingerprint) (2.920459ms)
+✔ RW_RUNNER_BUILD: committed Dockerfile consumes the full ordered patch chain and pins a deterministic managed entrypoint (716.845292ms)
+✔ RW_RUNNER_BUILD: validate enforces chain completeness, deterministic entrypoint, fingerprint freshness and upstream mirroring (904.27675ms)
+✔ RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that drifts from upstream refuses (636.003166ms)
+✔ RW_RUNNER_BUILD: a missing project directory is a real ENOENT refusal by the build tool (no fabricated pass) (43.780708ms)
+✔ RW_RUNNER_BUILD: control-plane declarations align with the P2_4 runtime bindings; project root is a read-only boundary (0.25025ms)
+▶ all Runner entrypoints reject malformed reference catalogs structurally before any runtime action
+  ✔ validate (49.825208ms)
+  ✔ qualify (58.17675ms)
+  ✔ up (50.013375ms)
+  ✔ probe (54.794542ms)
+  ✔ build-plan (57.028708ms)
+✔ all Runner entrypoints reject malformed reference catalogs structurally before any runtime action (270.363792ms)
+▶ Runner Compose security uses actual YAML semantics for quoted keys, flow mounts and named-volume drivers
+  ✔ quoted flow volume (168.694458ms)
+  ✔ quoted privilege (167.888167ms)
+  ✔ named volume remapped to host (167.359709ms)
+✔ Runner Compose security uses actual YAML semantics for quoted keys, flow mounts and named-volume drivers (504.329667ms)
+✔ CLI-only Runner refuses retired endpoint selection before any network or runtime observation (51.594792ms)
+✔ controller-fixed CLI job driver exposes physical lifecycle without issuing a dispatch or accepting job-selected authority (6.266208ms)
+✔ CLI job registration cannot give a worker the control volume or share registered role identities (79.251959ms)
+✔ physical CLI job lifecycle preserves one authorized execution and cannot expand its fixed registration (1433.790583ms)
+▶ Runner public input matrix rejects null, wrong containers and null elements across every shared caller
+  ✔ refs root null (260.586625ms)
+  ✔ refs not array (274.679416ms)
+  ✔ refs null element (278.898541ms)
+  ✔ registry root null (244.174917ms)
+  ✔ registry null project (254.241542ms)
+  ✔ registry null github (259.26525ms)
+  ✔ registry null resource (318.777333ms)
+  ✔ policy null (262.678125ms)
+  ✔ policy roles object (252.278084ms)
+  ✔ policy categories null (268.849417ms)
+  ✔ image null (271.361583ms)
+  ✔ image future schema (307.285834ms)
+  ✔ image components object (269.722ms)
+  ✔ image component null (278.245583ms)
+  ✔ source null (267.321792ms)
+  ✔ patch null (272.270833ms)
+  ✔ roles null document (258.987042ms)
+  ✔ roles object (252.856166ms)
+  ✔ roles null element (277.433584ms)
+  ✔ runnerRefs object (270.450125ms)
+  ✔ mounts root array (269.469292ms)
+  ✔ mount null control (282.248208ms)
+  ✔ mount null workspace (271.336416ms)
+  ✔ mount worker list object (251.304292ms)
+  ✔ authority root null (261.767ms)
+  ✔ authority registrations object (347.868ms)
+  ✔ authority null registration (416.017ms)
+✔ Runner public input matrix rejects null, wrong containers and null elements across every shared caller (7503.552542ms)
+✔ Runner diagnostics never echo malformed JSON or input paths and preserve actual input byte hashes (457.826125ms)
+✔ Runner build export uses a dedicated allowlisted context rather than the checkout root (725.972125ms)
+✔ Runner materializes and reuses only exact public input bytes in an isolated build context without building (6117.86675ms)
+▶ Runner refuses every unlisted or linked context path without changing the conflicting tree
+  ✔ extra root .env (4758.202791ms)
+  ✔ nested extra file (4292.161958ms)
+  ✔ extra empty directory (7270.807459ms)
+  ✔ nested extra directory (5371.573167ms)
+  ✔ changed manifest bytes (3298.55625ms)
+  ✔ manifest file symlink to matching bytes (3236.523333ms)
+  ✔ manifest ancestor directory symlink (3553.350375ms)
+  ✔ context root symlink (3096.270041ms)
+  ✔ context parent symlink (2907.191708ms)
+  ✔ .local ancestor symlink (2802.481875ms)
+  ✔ dangling extra symlink (2859.429125ms)
+  ✔ extra special FIFO (2881.995292ms)
+  ✔ manifest path special FIFO (3102.437834ms)
+  ✔ missing manifest file (3115.97825ms)
+  ✔ first export beneath a linked parent (3048.3785ms)
+✔ Runner refuses every unlisted or linked context path without changing the conflicting tree (55597.157167ms)
+✔ execution slot permits a new authorized job after the same role terminal execution without weakening old handle checks (1388.95425ms)
+✔ execution slot cold resolution is read-only and ABSENT never grants launch permission (1418.204625ms)
+✔ execution slot refuses old active or unknown role writers without creating a new job (1895.008ms)
+✔ execution slot observes a created original resource after an unknown start without starting it again (1038.041542ms)
+✔ execution slot preserves exact legacy observation but rejects copied handles and changed scope (1999.462542ms)
+✔ execution slot metadata failures never masquerade as absence or authorize a fresh start (637.056625ms)
+✔ execution slot rechecks peers after create and leaves uncertain resources for the original Comet to reconcile (968.592791ms)
+✔ execution slot treats registered namespace dots literally and never adopts a lookalike namespace (2092.814166ms)
+✔ execution slot fixture publishes state snapshots without truncating an existing reader (779.23775ms)
+✔ execution slot fixture retains both command records at an overlapping publication boundary (43.083291ms)
+✔ execution slot fixture completion preserves state changes published while stdin is still open (36.699208ms)
+✔ Runner build-plan derives both immutable runtime sources and Python3.12.15 from its own lock (597.889ms)
+✔ Runner refuses online acquisition and recipes that only retain required operations as inert text (12869.601916ms)
+✔ Runner rejects ambiguous Python source components rather than selecting the last same-name item (110.075584ms)
+✔ Runner bootstrap plan seals both original CODE entries and ordinary infrastructure reads without selecting a provider (440.33525ms)
+✔ Runner bootstrap source view loads in a fresh Node project with only its locked public npm inputs (2940.662917ms)
+▶ Runner runtime metadata rejects malformed nested input on every public caller without echoing private values
+  ✔ runtime null (259.598333ms)
+  ✔ bootstrap unknown field (271.421708ms)
+  ✔ bootstrap null file (273.210792ms)
+  ✔ library null record (272.323084ms)
+  ✔ dependency null group (269.368541ms)
+  ✔ artifact null (288.543833ms)
+  ✔ artifact unknown field (277.507166ms)
+✔ Runner runtime metadata rejects malformed nested input on every public caller without echoing private values (1912.780042ms)
+✔ Runner bootstrap refuses an undeclared import and an unsafe file set before source materialization (4448.777292ms)
+✔ adapter: committed authorization artifacts validate clean through the facade (42.60875ms)
+✔ adapter: verifyGrant surfaces the committed ledger through the exit contract (84.031166ms)
+✔ adapter: decide maps allow onto PASS with a bound receipt (42.908208ms)
+✔ adapter: self-authored grant input maps onto DENIED with the refusal codes (46.233875ms)
+✔ adapter: recheck after a real revocation goes stale — no renewal of the same operation (130.047958ms)
+✔ adapter: the author cannot resolve the publisher credential through the facade (50.145625ms)
+✔ adapter: invalid input maps onto INPUT (never a silent pass) (51.441708ms)
+✔ adapter: a LIVE audience claim missing any required channel is fail-closed (TARGET_CHANNEL_NOT_READ) (90.634125ms)
+✔ adapter: a LIVE claim with every required channel READ allows with LIVE_READBACK provenance (86.839458ms)
+✔ adapter: declared-only audience keeps the component-result provenance (45.782959ms)
+✔ E01: defineRequiredKnowledge enforces capability/digest/source/channel and rejects plan-shaped entries (1.362375ms)
+✔ E01 negative: a missing wiki entry blocks closeout and names the capability; digest drift is a mismatch, not a pass (5.102917ms)
+✔ E01 positive: a matching wiki entry with provenance satisfies Kp; a not-applicable entry needs its recorded basis (1.415833ms)
+✔ D06: the MCP protocol layer reports a real launcher refusal structurally — never a fake success (44.21725ms)
+✔ D06: a publication timeout resolves by independent readback of the original target — unknown stays blocked, no re-create (404.079625ms)
+✔ C06: the adapter Kp receipt seals the archive exactly once; a second seal is refused (no archive loop) (0.313125ms)
+✔ Step 11: the Kp archive receipt can only be minted from a confirmed independent readback — no readback, no door (0.214708ms)
+✔ C06: knowledge evidence is source-bound — an Outline publication cannot satisfy an llmwiki capability (0.112ms)
+✔ E02: publication requires an authorization receipt bound to the payload digest and a policy audience (0.738084ms)
+✔ E02/D06: the adapter executes runtime directives only — reconcile-info never degrades to create, and timeout is unknown (0.418ms)
+✔ Step 11: an exists observation requires independent multi-channel readback records — a bare adapter exists is not publication evidence (0.234583ms)
+✔ E02: the closeout receipt is only built from a confirmed independent readback (0.17825ms)
+✔ E02: evaluateKtFromLedger reads the single runtime publish ledger — pending stays blocked, published with the bound digest satisfies (0.28875ms)
+✔ 4.4.c: a mandatory code knowledge profile is required; undecided branches stay pending admission, never satisfied (0.243709ms)
+✔ 4.4.c: the freshness receipt binds the exact pinned commit and artifact digests (stale is refused) (0.204916ms)
+✔ CLI: a missing Kp entry blocks with exit 2 and names the capability; deploy evidence is retained read-only (no redeploy) (111.368042ms)
+✔ CLI: valid Kp but pending Kt blocks overall completion while the Kp pass stands (E02 separated verification) (81.583208ms)
+✔ CLI: an absent publish ledger blocks as NO_PUBLISH_OPERATION; a malformed one is invalid input (144.809166ms)
+✔ CLI: exit 0 requires Kp + Kt + code sections all green; invalid input exits 1 (326.003584ms)
+✔ 4.4.a: the CLI and the MCP launcher resolve the SAME canonical wiki root (worktree-safe slug) (49.183708ms)
+✔ 4.8.a: the frozen G15 A budget set judges clean — fault tolerance is recorded as violation, never a clock pause (3.209125ms)
+✔ 4.8.a: ISOLATION_GRANT_REQUIRED — a separate owner-issued isolation grant is the only path to narrowing; publish grants, expiry, revocation, scope and executor identity are each refused (0.618667ms)
+✔ 4.8.b/L01: a trusted source-shrink event stales current receipts, pauses managed reads and publishing, and schedules impact-closure maintenance — isolated is never shown before resource-side verification (0.696667ms)
+✔ 4.8.b/L01: an unprovable impact boundary conservatively pauses the managed domain — partial coverage is never reported as complete (0.11875ms)
+✔ 4.8.b/L07: duplicate and out-of-order events recover the SAME operation and a late restore never overrides a newer isolation epoch (0.270459ms)
+✔ 4.8.b/L08: the periodic full scan catches a missed permission change from the source-change timestamp — cursor replay alone is refused and a successful scan never clears failed objects (0.267125ms)
+✔ 4.8.b: the exposure window is real wall-clock arithmetic — fault downtime stays inside the window and deadline violations are kept, not paused away (0.316083ms)
+✔ 4.8.c/L02: labels never count as isolation — stale/unpublish/archive/move and admin-can-read leave the object isolating under the same operation with alerts (0.322709ms)
+✔ 4.8.c: real local channel readback — file-wiki narrowing and a real stdio MCP handshake prove unreadable; a real timeout is unknown, never unreadable; Outline web channels stay honestly UNVERIFIED (461.072125ms)
+✔ 4.8.c/L03+L04: the two deadlines — publish_until expiry blocks only new publication, content_use_until expiry or an escaped audience forces isolation, unclear semantics never auto-publish and a source revocation overrides an unexpired grant (0.325084ms)
+✔ 4.8.c/L06: restoration re-proves everything — a NEW authorization postdating the isolation, new epoch first, a current-audience plan, offboarded principals never re-added and stale callbacks refused (0.252375ms)
+✔ 4.8.c/L05: post-completion maintenance preserves the delivered history through the same single engine under a maintenance run naming origin_run, knowledge and operation IDs; an open run blocks closeout instead (0.414084ms)
+✔ 4.8.c/L04: a real source-permission shrink through the P4_7 KnowledgeAuthz.v1 CLI stales the publish decision (144.041792ms)
+✔ 4.8.d/L10: the first isolation failure alerts immediately, retries stay bounded inside the same operation, permission denial escalates instead of retrying and the exposure stays unresolved (0.284541ms)
+✔ 4.8.d/L09: a stale heartbeat and a stalled scan watermark each alert within the approved thresholds, the supervisor may only restart the original instance and an alert is never an isolation (0.215709ms)
+✔ 4.8.d/L11: recovery freezes new publishing, reconciles unknown writes first, keeps three separate watermarks — conflation and scan-clears-failure are refused and violations survive closure (0.171084ms)
+✔ 4.8.d: real fault injection — a real maintenance worker is SIGKILLed mid-isolation, the exposure window keeps the downtime and the restarted original instance resumes the SAME operation (388.259791ms)
+✔ managed discovery links only selected methods and preserves unrelated source directories (209.024875ms)
+✔ managed discovery refuses old command migration inputs without deleting user data (123.75025ms)
+✔ managed discovery refuses selected-name user directories before any configuration write (117.190292ms)
+✔ managed configuration refuses malformed settings before creating compiled policy (164.756875ms)
+✔ managed policy output refuses an external compiled symlink without changing either tree (76.116ms)
+ℹ {"exit":1,"stderr":"unsafe managed output; user object preserved: hooks/.compiled.env\n","before":[["user.env","file","03f9d2650b2b33a5b04e1bd95dfaccc796f5ee48348138f5e7ebbff57de4d48d"]],"after":[["user.env","file","03f9d2650b2b33a5b04e1bd95dfaccc796f5ee48348138f5e7ebbff57de4d48d"]]}
+✔ managed I/O preflights every output and ancestor for install and uninstall (654.037875ms)
+ℹ {"rel":".claude","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","link","/private/tmp/foundation-io-outside-E4g3u9"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude/skills","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/skills","link","/private/tmp/foundation-io-outside-1zCm3W"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude/settings.json","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/settings.json","link","/private/tmp/foundation-io-outside-vbBITe/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":"hooks","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","link","/private/tmp/foundation-io-outside-RFO36D"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":"hooks/.compiled.env","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","directory"],["hooks/.compiled.env","link","/private/tmp/foundation-io-outside-2PXc6l/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","link","/private/tmp/foundation-io-outside-Z1IORf"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude/skills","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/skills","link","/private/tmp/foundation-io-outside-khAvw8"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude/settings.json","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/settings.json","link","/private/tmp/foundation-io-outside-8zkrwB/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":"hooks","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","link","/private/tmp/foundation-io-outside-U2rc4l"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":"hooks/.compiled.env","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","directory"],["hooks/.compiled.env","link","/private/tmp/foundation-io-outside-V2HYHa/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+✔ managed I/O preserves unowned policy, special outputs and hardlinked user files (863.380708ms)
+✔ managed replacement is atomic and repeat install/uninstall preserves user settings and quoted policy (935.857708ms)
+✔ policy layer pins the read-only layering over the P1_2 single source and mirrors the live declaration (2.266792ms)
+✔ fixed event set matches the adapter compiler; every declared policy stays inside it (0.374084ms)
+✔ validation rules encode gap / unauthorized / duplicate / silent-failure / mode-crosstalk semantics (0.294583ms)
+✔ registration matrix models three subjects x event surfaces with the P1_2 source markers (0.576875ms)
+✔ doctor: the real composition of this repo is CONSISTENT and the live config is never touched (280.933459ms)
+✔ doctor: declared but not generated is a structured gap — the adapter compiles silently, the doctor refuses (436.400541ms)
+✔ doctor: generated but not declared is flagged as unauthorized generation (454.667458ms)
+✔ doctor: duplicate event+command registration is reported with §7.2 semantics; plugin disposition stays at the plugin entry (263.969292ms)
+✔ doctor: an event beyond the fixed set keeps the adapter refusal and reports the capability gap without crashing (384.016375ms)
+✔ silent failure: exit 0 without the declared effect is NOT execution — only the observed effect separates the two exit-0 runs (38.614292ms)
+✔ mode crosstalk: last write wins on a shared mode file and never weakens the deny gate (277.102292ms)
+✔ published package includes probe runtime modules (0.413708ms)
+✔ package exposes executable regressions without running browser source fixtures (0.080791ms)
+✔ probe rejects debug leakage and runaway canvas dimensions (70.729875ms)
+✔ probe accepts bounded layout, clean DOM, passing commands and interactions (79.3285ms)
+✔ probe rejects command evidence whose exit code is not a number (67.108416ms)
+✔ probe rejects self-reported interactions without state transition proof (70.194125ms)
+✔ probe rejects passed interactions that do not have matching state transitions (77.801083ms)
+✔ probe profile requires project-critical interactions to be present (74.923333ms)
+✔ probe profile requires every project-critical interaction to have state transition proof (73.567875ms)
+✔ probe profile enforces project-specific state transition semantics (74.970292ms)
+✔ probe profile requires its declared observation adapter in project source (76.698542ms)
+✔ probe profile requires runtime evidence that its observation adapter is callable (83.904542ms)
+✔ probe rejects source-level debug markers and canvas resize feedback loops (81.734958ms)
+✔ probe rejects debug DOM markers injected dynamically from project source (70.917833ms)
+✔ probe rejects incomplete evidence instead of treating missing observations as passing (65.321042ms)
+✔ project test gate runs the manifest test command and captures success (212.84475ms)
+✔ project test gate rejects a failing or missing test command (152.729041ms)
+✔ setup: the release protocol tool exists and declares its contract layering (1.904208ms)
+✔ V_A14/V_F09 positive: isolated build and promotion lock one digest through tag, deployment receipt and business readback; I06 independently verifies the emitted chain (178.290125ms)
+✔ V_A14 negative: tag drift is refused with the actual identity mismatch recorded and nothing changes (140.276458ms)
+✔ same-digest lock: re-promoting the deployed digest returns the existing receipt and never deploys again (89.821916ms)
+✔ V_A16 positive: a lost deployment response is reconciled by the original correlation ID — the original result is bound, never redeployed (135.703125ms)
+✔ V_A16 negative: an unknown correlation ID is answered UNCONFIRMED — the query runs first and nothing is deployed (87.097916ms)
+✔ V_F09 negative: a deployment record whose digest diverges from the tag resolution is DEPLOYMENT_DIGEST_MISMATCH (92.985125ms)
+✔ V_A17 negative: an unapproved rollback is refused, changes nothing, and I06 independently blocks it (185.701542ms)
+✔ V_A17 negative: an approval for another digest is ROLLBACK_DIGEST_MISMATCH; an approval for another environment is ROLLBACK_NOT_APPROVED (181.098209ms)
+✔ V_A17 positive: the approved same-digest rollback reads back digest, environment and business terminal state; I06 verifies the chain (207.747375ms)
+✔ V_A17 negative: a rollback whose business terminal state cannot be observed stays UNCONFIRMED (151.269875ms)
+✔ rollback without a retained previous approved artifact is ROLLBACK_RETENTION_MISSING (98.899583ms)
+✔ ISOLATED_RELEASE_ENVIRONMENT_REQUIRED: an unregistered environment blocks the release action — nothing is deployed, the plan shape never substitutes for registration (84.35ms)
+✔ ENVIRONMENT_PROJECT_MISMATCH: an environment registered to another project is refused with the I06 code (47.971584ms)
+✔ ARTIFACT_NOT_FROM_MERGE: a chain whose artifact claims another merge is refused before any write (151.097333ms)
+✔ input contract: malformed chains and arguments are input errors (exit 1) reported by the tool itself, never semantic verdicts (226.894958ms)
+✔ receipt honesty: structured output stays LOCAL_ONLY, carries the production-successor note and leaks no host private paths (104.059916ms)
+✔ A11 happy path: rehearse then closeout archives once, syncs specs, readback matches, state completes and lock releases (1491.885125ms)
+✔ sole writer: second writer refused by O_EXCL lock in-process and from a real child process (89.794667ms)
+✔ sole writer: two concurrent full closeouts produce exactly one archive and one refusal (1464.619125ms)
+✔ B08 preservation: pinned native CLI and adapter both refuse omitted existing scenarios (1032.692708ms)
+✔ B08 MODIFIED target missing from main specs is refused before archive (6.891375ms)
+✔ B08 drift: main-spec or change mutation between rehearsal and closeout blocks execution and demands a fresh rehearsal (2634.474708ms)
+✔ Knowledge.Closeout.v1 ordering: closeout refuses without a recorded Kp knowledge obligation, before any archive (740.037292ms)
+✔ A11 pre-archive interruption: stale lock reclaimed, closeout re-run archives exactly once (1351.923667ms)
+✔ A11 post-archive interruption: recovery detects the completed CLI archive and completes by readback WITHOUT repeating the sync (533.11775ms)
+✔ A11 post-archive drift: recovery readback detects real main-spec corruption and refuses to mark complete (427.287042ms)
+✔ A11 ambiguous recovery: multiple archives of the same change name block recovery instead of guessing the newest (20.694167ms)
+✔ A11 silent CLI abort: exit-0-with-abort (unwritable rebuild) is detected as not-applied, real project untouched (842.073833ms)
+✔ managed closeout refuses caller-authored Kp without the original Runtime (823.848083ms)
+✔ all legacy write and rehearsal helpers refuse Comet-owned control variants (143.41325ms)
+✔ managed inspect rejects a spec file link before reading external ordinary data (29.24325ms)
+✔ managed inspect rejects null Run JSON with a coded error (10.185083ms)
+✔ all managed read entries reject directory, Run and main-spec links before Native (212.281083ms)
+✔ archived managed projection and pure main readback reject links and relative escape (73.798666ms)
+✔ Run and summary JSON shape failures use coded errors without Native or raw content (57.236542ms)
+✔ legacy summary, rehearsal and archived recovery share the project-bound read guard (27.666084ms)
+✔ release version metadata is consistent across all sources (2.952542ms)
+✔ version gate fails on drift (negative path) (73.99325ms)
+✔ workflow-audit rejects an archived run whose latest review is not ready (94.156541ms)
+ℹ tests 1104
+ℹ suites 0
+ℹ pass 1104
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 133203.822834
+✅ yaml/json 静态校验通过（4 YAML, 3 JSON）
+✅ Repository checks passed.

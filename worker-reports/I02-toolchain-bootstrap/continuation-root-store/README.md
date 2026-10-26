@@ -1,0 +1,1 @@
+Root实际执行的资源机制证据：v2证明429原tar仅经loopback进入官方store；v3使用真实原manifest/8ecc锁在全新无node_modules目录真实frozen/offline/ignore-scripts安装429reused/0download/429added，旧virtual目录未复用。Root v3复用了v2 Docker层，不把缓存说成fresh重建。只这一Linux包store维度有证据；完整Comet构建/原Runner/source/provider/角色/whole不随之通过。显示副本与raw索引分开，Root原始字节不改。

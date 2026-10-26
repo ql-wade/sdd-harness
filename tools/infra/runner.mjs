@@ -40,7 +40,7 @@ const RUNNER_REFS = [
   'secret-ref:sdd-harness-pilot/worker-review-api',
   'secret-ref:sdd-harness-pilot/runner-source-read',
 ];
-const LOCK_COMPONENTS = ['comet-runner', 'runner-base'];
+const LOCK_COMPONENTS = ['comet-runner', 'runner-base', 'python-runtime'];
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const LABEL_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const SECRET_REF_PREFIX = 'secret-ref:';
@@ -251,6 +251,7 @@ function inputShapes({ registry, refsDoc, policy, files }) {
       if (source.hostBuildFingerprint !== undefined && (typeof source.hostBuildFingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(source.hostBuildFingerprint))) add('image.lock.sourceInputs.hostBuildFingerprint', 'SHA256 hex');
       scalar(source.archiveBytes, 'image.lock.sourceInputs.archiveBytes', 'integer');
       for (const key of ['toolchain', 'openspec']) object(source[key], `image.lock.sourceInputs.${key}`, true);
+      if (!runtimeInputShape(source.runtime)) add('image.lock.sourceInputs.runtime', 'fixed runtime input manifest');
     }
   }
   const roles = docs.get('role-policy.json');
@@ -325,6 +326,187 @@ function buildRefBindingMap(rolePolicy, refsDoc) {
   return map;
 }
 
+function runtimeInputShape(value) {
+  const exact = (object, keys) => isObject(object) && Object.keys(object).sort().join(',') === [...keys].sort().join(',');
+  const hash = text => typeof text === 'string' && /^[a-f0-9]{64}$/.test(text);
+  const bytes = number => Number.isSafeInteger(number) && number > 0 && number <= 128 * 1024 * 1024;
+  const measured = item => exact(item, ['path', 'realpath', 'bytes', 'sha256']) && typeof item.path === 'string'
+    && typeof item.realpath === 'string' && bytes(item.bytes) && hash(item.sha256);
+  const provenance = value?.python?.provenance;
+  const bootstrap = value?.bootstrap;
+  const dependency = item => exact(item, ['id', 'closed', 'sourceLockSha256', 'files']) && typeof item.id === 'string'
+    && typeof item.closed === 'boolean' && hash(item.sourceLockSha256) && Array.isArray(item.files) && item.files.length <= 2000
+    && item.files.every(file => exact(file, ['name', 'version', 'url', 'integrity', 'sha256', 'bytes', 'path'])
+      && ['name', 'version', 'url', 'path'].every(key => typeof file[key] === 'string') && hash(file.sha256) && bytes(file.bytes)
+      && (file.integrity === null || typeof file.integrity === 'string' && /^sha512-[A-Za-z0-9+/]{86}==$/.test(file.integrity)));
+  return exact(value, ['schemaVersion', 'platform', 'node', 'python', 'bootstrap', 'dependencies', 'projects']) && value.schemaVersion === 1
+    && typeof value.platform === 'string' && exact(value.node, ['component', 'version'])
+    && exact(value.python, ['component', 'version', 'minimum', 'libraries', 'provenance'])
+    && ['component', 'version'].every(key => typeof value.node[key] === 'string' && typeof value.python[key] === 'string')
+    && typeof value.python.minimum === 'string' && Array.isArray(value.python.libraries)
+    && value.python.libraries.every(item => typeof item === 'string')
+    && exact(provenance, ['libraries', 'pythonLicense']) && measured({ ...provenance.pythonLicense, realpath: provenance.pythonLicense?.path })
+    && Array.isArray(provenance.libraries) && provenance.libraries.every(item => exact(item, ['path', 'realpath', 'bytes', 'sha256', 'owner', 'version', 'copyright'])
+      && measured({ path: item.path, realpath: item.realpath, bytes: item.bytes, sha256: item.sha256 })
+      && typeof item.owner === 'string' && typeof item.version === 'string' && measured(item.copyright))
+    && exact(bootstrap, ['entry', 'adapter', 'link', 'files', 'packageLockSha256'])
+    && ['entry', 'adapter', 'link'].every(key => typeof bootstrap[key] === 'string') && hash(bootstrap.packageLockSha256)
+    && Array.isArray(bootstrap.files) && bootstrap.files.length <= 64 && bootstrap.files.every(file => typeof file === 'string')
+    && Array.isArray(value.dependencies) && value.dependencies.length === 6 && value.dependencies.every(dependency)
+    && exact(value.projects, ['openspec', 'comet']) && exact(value.projects.openspec, ['packageJson', 'packageLock']) && exact(value.projects.comet, ['pnpmLock', 'packageJson'])
+    && [value.projects.openspec.packageJson, value.projects.openspec.packageLock, value.projects.comet.pnpmLock, value.projects.comet.packageJson].every(item => exact(item, ['path', 'bytes', 'sha256']) && typeof item.path === 'string' && bytes(item.bytes) && hash(item.sha256));
+}
+
+const RUNTIME_DEPENDENCY_SETS = ['bootstrap-npm', 'comet-pnpm', 'git-deb', 'openspec-npm', 'pnpm', 'python-wheel'];
+function safeBootstrapFile(file) {
+  return /^(?:package(?:-lock)?\.json|LICENSE|lib\/adapters\/comet(?:-executor)?\.js|lib\/delivery\/(?:baseline|evidence|gate|test-contract)\.js|tools\/infra\/(?:runner|secret-refs)\.mjs|contracts\/delivery\/[A-Za-z0-9.-]+\.js|infra\/delivery\/(?:registry\.json|secrets\.refs\.example\.json|qualification-policy\.json|runner\/(?:compose\.yaml|Dockerfile|role-policy\.json|workspace-mounts\.json|authority-registration\.example\.json)))$/.test(file);
+}
+function safeRuntimeArtifact(file) {
+  return /^\.sdd\/cache\/runner-build\/public\/(?:npm|comet|deb|pnpm|wheel)\/[A-Za-z0-9_.+-]+\.(?:tgz|deb|whl)$/.test(file);
+}
+function repositoryBytes(relative) {
+  let file = repoRoot;
+  try {
+    const parts = relative.split('/');
+    for (const [index, part] of parts.entries()) {
+      if (!part || part === '.' || part === '..') return null;
+      file = path.join(file, part); const stat = fs.lstatSync(file);
+      if (stat.isSymbolicLink() || (index === parts.length - 1 ? !stat.isFile() || stat.size > 128 * 1024 * 1024 : !stat.isDirectory())) return null;
+    }
+    return fs.readFileSync(file);
+  } catch { return null; }
+}
+function verifiedOpenSpecProject(lock) {
+  const runtime = lock.sourceInputs.runtime, pin = lock.sourceInputs.openspec, project = runtime.projects.openspec;
+  const failure = code => ({ findings: [{ code, at: 'image.lock.json:sourceInputs.runtime.projects.openspec' }], package: null });
+  const packageBytes = repositoryBytes(project.packageJson.path), lockBytes = repositoryBytes(project.packageLock.path);
+  if (!packageBytes || !lockBytes || packageBytes.length !== project.packageJson.bytes || lockBytes.length !== project.packageLock.bytes
+    || sha256Text(packageBytes) !== project.packageJson.sha256 || sha256Text(lockBytes) !== project.packageLock.sha256) return failure('OPENSPEC_PROJECT_LOCK_DRIFT');
+  let manifest, frozen;
+  try { manifest = JSON.parse(packageBytes); frozen = JSON.parse(lockBytes); } catch { return failure('OPENSPEC_PROJECT_LOCK_INVALID'); }
+  const reference = 'file:../../../../.sdd/cache/runner-build/openspec-' + pin.version + '.tgz';
+  if (!isObject(manifest.dependencies) || Object.keys(manifest.dependencies).join(',') !== '@fission-ai/openspec'
+    || manifest.dependencies['@fission-ai/openspec'] !== reference || frozen.lockfileVersion !== 3 || !isObject(frozen.packages)
+    || JSON.stringify(frozen.packages['']?.dependencies) !== JSON.stringify(manifest.dependencies)) return failure('OPENSPEC_PROJECT_LOCK_INVALID');
+  const declared = runtime.dependencies.find(group => group.id === 'openspec-npm').files, unique = new Set();
+  for (const [location, item] of Object.entries(frozen.packages)) {
+    if (!location) continue;
+    if (!isObject(item) || typeof item.version !== 'string' || typeof item.resolved !== 'string'
+      || !/^sha512-[A-Za-z0-9+/]{86}==$/.test(item.integrity ?? '')) return failure('OPENSPEC_DEPENDENCY_UNLOCKED');
+    const matches = declared.filter(file => file.version === item.version && file.integrity === item.integrity);
+    if (matches.length !== 1) return failure('OPENSPEC_DEPENDENCY_UNLOCKED');
+    let wanted, supplied;
+    try {
+      wanted = new URL(item.resolved === reference ? pin.registryTarball : item.resolved); supplied = new URL(matches[0].url);
+      if (wanted.protocol !== 'https:' || !['registry.npmjs.org', 'registry.npmmirror.com'].includes(wanted.hostname)
+        || wanted.username || wanted.password || wanted.port || wanted.search || wanted.hash || wanted.pathname !== supplied.pathname) return failure('OPENSPEC_DEPENDENCY_UNLOCKED');
+    } catch { return failure('OPENSPEC_DEPENDENCY_UNLOCKED'); }
+    unique.add(item.integrity);
+  }
+  if (unique.size !== declared.length) return failure('OPENSPEC_DEPENDENCY_UNLOCKED');
+  const self = frozen.packages['node_modules/@fission-ai/openspec'];
+  const tar = repositoryBytes('.sdd/cache/runner-build/openspec-' + pin.version + '.tgz');
+  if (!tar || tar.length !== pin.tarballBytes || sha256Text(tar) !== pin.tarballSha256 || self?.resolved !== reference || self?.version !== pin.version
+    || self.integrity !== 'sha512-' + crypto.createHash('sha512').update(tar).digest('base64')) return failure('OPENSPEC_TARBALL_UNVERIFIED');
+  const inspect = String.raw`import io,json,sys,tarfile
+raw=sys.stdin.buffer.read(1048577)
+assert len(raw)<=1048576
+with tarfile.open(fileobj=io.BytesIO(raw),mode='r:gz') as archive:
+    member=archive.getmember('package/package.json')
+    assert member.isfile() and member.size<=65536
+    package=json.load(archive.extractfile(member))
+    assert package['name']=='@fission-ai/openspec' and package['version']=='1.11.0' and package['bin']['openspec']=='./bin/openspec.js'
+    entry=archive.getmember('package/bin/openspec.js')
+    assert entry.isfile() and 0<entry.size<=1048576
+print(json.dumps({'name':'@fission-ai/openspec','version':'1.11.0','entry':'bin/openspec.js'}))`;
+  const env = Object.fromEntries(['PATH', 'HOME', 'LANG', 'TMPDIR'].filter(key => typeof process.env[key] === 'string').map(key => [key, process.env[key]]));
+  const result = spawnSync('python3', ['-I', '-c', inspect], { input: tar, env, encoding: 'utf8', timeout: 5000, maxBuffer: 16384 });
+  if (result.error || result.signal || result.status !== 0) return failure('OPENSPEC_PACKAGE_METADATA_UNVERIFIED');
+  let metadata;
+  try { metadata = JSON.parse(result.stdout); } catch { return failure('OPENSPEC_PACKAGE_METADATA_UNVERIFIED'); }
+  if (metadata.name !== '@fission-ai/openspec' || metadata.version !== pin.version || metadata.entry !== 'bin/openspec.js') return failure('OPENSPEC_PACKAGE_METADATA_UNVERIFIED');
+  return { findings: [], package: { ...metadata, pathBase: 'image-root', cliTarget: 'build/repo/.sdd/cache/runner-build/openspec-project/node_modules/.bin/openspec',
+    cliLink: 'usr/local/bin/openspec', projectLockSha256: project.packageLock.sha256, sourceTarSha256: pin.tarballSha256, dependencyArtifacts: declared.length } };
+}
+
+function bootstrapSources(runtime, domainFiles) {
+  const source = runtime.bootstrap, files = [], findings = [], names = new Set(source.files);
+  for (const file of source.files) {
+    const domainName = file.startsWith('infra/delivery/runner/') ? file.slice('infra/delivery/runner/'.length) : null;
+    const bytes = domainName && domainFiles.has(domainName) ? Buffer.from(domainFiles.get(domainName)) : repositoryBytes(file);
+    if (!bytes) { findings.push({ code: 'BOOTSTRAP_SOURCE_UNVERIFIED', at: 'sourceInputs.runtime.bootstrap.files' }); continue; }
+    files.push({ path: file, bytes });
+    if (!/\.m?js$/.test(file)) continue;
+    const text = bytes.toString('utf8');
+    const imports = [...text.matchAll(/^(?:import|export)\s+(?:[\w*{},\s]+\s+from\s*)?['"]([^'"]+)['"]/gm),
+      ...text.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g)];
+    for (const match of imports) {
+      const dependency = match[1];
+      if (dependency.startsWith('.')) {
+        if (!names.has(path.posix.normalize(path.posix.join(path.posix.dirname(file), dependency)))) findings.push({ code: 'BOOTSTRAP_DEPENDENCY_MISSING', at: 'sourceInputs.runtime.bootstrap.files' });
+      } else if (!dependency.startsWith('node:') && dependency !== 'commonmark' && !['fs', 'path', 'crypto', 'child_process'].includes(dependency)) findings.push({ code: 'BOOTSTRAP_PACKAGE_UNDECLARED', at: 'sourceInputs.runtime.bootstrap.files' });
+    }
+  }
+  const npmLock = files.find(file => file.path === 'package-lock.json');
+  if (!npmLock || sha256Text(npmLock.bytes) !== source.packageLockSha256) findings.push({ code: 'BOOTSTRAP_PACKAGE_LOCK_DRIFT', at: 'sourceInputs.runtime.bootstrap.packageLockSha256' });
+  else {
+    try {
+      const expected = JSON.parse(npmLock.bytes).packages;
+      const declared = runtime.dependencies.find(item => item.id === 'bootstrap-npm').files;
+      const packages = Object.entries(expected).filter(([name]) => name);
+      if (declared.length !== packages.length || packages.some(([name, value]) => declared.filter(file => file.name === name.slice('node_modules/'.length)
+        && file.version === value.version && file.integrity === value.integrity).length !== 1)) findings.push({ code: 'BOOTSTRAP_NPM_CLOSURE_INVALID', at: 'sourceInputs.runtime.dependencies' });
+    } catch { findings.push({ code: 'BOOTSTRAP_PACKAGE_LOCK_UNVERIFIED', at: 'sourceInputs.runtime.bootstrap.packageLockSha256' }); }
+  }
+  return { files, findings };
+}
+
+function runtimeFindings(lock) {
+  const value = lock.sourceInputs.runtime, byName = new Map(lock.components.map(item => [item.component, item]));
+  const failures = [], add = (code) => failures.push({ code, at: 'image.lock.json:sourceInputs.runtime' });
+  const source = (component, prefix) => {
+    const item = byName.get(component);
+    return item && DIGEST_RE.test(item.digest ?? '') && item.reference === prefix + '@' + item.digest
+      && item.required === true && item.digestAuthenticated === true;
+  };
+  if (byName.size !== lock.components.length || value.platform !== 'linux/arm64' || value.node.component !== 'runner-base' || value.python.component !== 'python-runtime'
+    || !source(value.node.component, 'node') || !source(value.python.component, 'python')
+    || lock.resolution?.dockerfileMapping?.RUNNER_BASE_IMAGE !== value.node.component
+    || lock.resolution?.dockerfileMapping?.PYTHON_BASE_IMAGE !== value.python.component) add('RUNTIME_SOURCE_PIN_INVALID');
+  const python = /^(\d+)\.(\d+)\.(\d+)$/.exec(value.python.version);
+  if (value.node.version !== lock.sourceInputs.toolchain.node || value.python.minimum !== lock.sourceInputs.toolchain.pythonMinimum
+    || !python || Number(python[1]) < 3 || Number(python[1]) === 3 && Number(python[2]) < 12) add('RUNTIME_VERSION_INVALID');
+  if (value.python.libraries.length !== 23 || new Set(value.python.libraries).size !== value.python.libraries.length
+    || value.python.libraries.some(item => !/^lib\/aarch64-linux-gnu\/[A-Za-z0-9_.+-]+$/.test(item)
+      || /\/(?:libc|libm|libresolv)\.so/.test(item))) add('PYTHON_LIBRARY_CLOSURE_INVALID');
+  if (value.python.provenance.libraries.length !== 23 || value.python.provenance.libraries.some((item, index) => item.path !== value.python.libraries[index]
+    || !/^usr\/lib\/aarch64-linux-gnu\/[A-Za-z0-9_.+-]+$/.test(item.realpath)
+    || !/^[a-z0-9][a-z0-9+.-]*(?::arm64)?$/.test(item.owner)
+    || !/^[A-Za-z0-9.+:~_-]+$/.test(item.version) || item.copyright.path !== 'usr/share/doc/' + item.owner.split(':')[0] + '/copyright'
+    || !/^usr\/share\/(?:doc|common-licenses)\/[A-Za-z0-9_.+/-]+$/.test(item.copyright.realpath))
+    || value.python.provenance.pythonLicense.path !== 'usr/local/lib/python3.12/LICENSE.txt') add('PYTHON_PROVENANCE_INVALID');
+  const bootstrap = value.bootstrap;
+  if (bootstrap.entry !== 'lib/adapters/comet-executor.js' || bootstrap.adapter !== 'lib/adapters/comet.js' || bootstrap.link !== 'runner-host.mjs'
+    || new Set(bootstrap.files).size !== bootstrap.files.length || bootstrap.files.some(file => !safeBootstrapFile(file))
+    || ['lib/adapters/comet-executor.js', 'lib/adapters/comet.js', 'tools/infra/runner.mjs', 'package.json', 'package-lock.json'].some(file => !bootstrap.files.includes(file))) add('BOOTSTRAP_FILE_SET_INVALID');
+  if (value.dependencies.map(item => item.id).sort().join(',') !== RUNTIME_DEPENDENCY_SETS.join(',')) add('RUNTIME_DEPENDENCY_SET_INVALID');
+  if (value.projects.openspec.packageJson.path !== '.sdd/cache/runner-build/openspec-project/package.json'
+    || value.projects.openspec.packageLock.path !== '.sdd/cache/runner-build/openspec-project/package-lock.json'
+    || value.projects.comet.pnpmLock.path !== '.sdd/cache/runner-build/comet-pnpm-project/pnpm-lock.yaml'
+    || value.projects.comet.packageJson.path !== '.sdd/cache/runner-build/comet-pnpm-project/package.json'
+    || value.dependencies.find(item => item.id === 'openspec-npm')?.sourceLockSha256 !== value.projects.openspec.packageLock.sha256
+    || value.dependencies.find(item => item.id === 'comet-pnpm')?.sourceLockSha256 !== value.projects.comet.pnpmLock.sha256) add('RUNTIME_PROJECT_LOCK_INVALID');
+  for (const group of value.dependencies) {
+    if (group.closed && !group.files.length || new Set(group.files.map(file => file.path)).size !== group.files.length
+      || group.files.some(file => {
+        try { const url = new URL(file.url); return !safeRuntimeArtifact(file.path) || url.protocol !== 'https:' || url.username || url.password || url.port || url.hash || url.search
+          || !['registry.npmjs.org', 'registry.npmmirror.com', 'deb.debian.org', 'files.pythonhosted.org'].includes(url.hostname); }
+        catch { return true; }
+      })) add('RUNTIME_DEPENDENCY_INPUT_INVALID');
+  }
+  return failures;
+}
+
 function validateImageLock(lock) {
   const violations = [];
   const add = (code, at, extra) => violations.push({ code, at, ...(extra ?? {}) });
@@ -349,6 +531,7 @@ function validateImageLock(lock) {
       add('DIGEST_AUTH_FLAG_INCONSISTENT', at, { reason: 'digestAuthenticated=true requires a digest' });
     }
   }
+  violations.push(...runtimeFindings(lock));
   // 准入语义与 outline.mjs 同款（amendment 3 资源准入波次）：开门必须携带完整准入记录。
   const gate = lock.upGate ?? {};
   const admissionRecordComplete = Boolean(gate.admittedBy && gate.admittedAt && gate.reason);
@@ -781,15 +964,15 @@ function validateDockerfile(text) {
   for (const [index, raw] of text.split('\n').entries()) {
     const lineNo = index + 1;
     const trimmed = raw.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    if (/^FROM\s+\S+/.test(trimmed) && !/^FROM\s+\$\{RUNNER_BASE_IMAGE\}\s*$/.test(trimmed)) {
-      add('DOCKERFILE_FLOATING_BASE', `Dockerfile:${lineNo}`, { line: trimmed.slice(0, 120), reason: 'the base image resolves only from the lock via RUNNER_BASE_IMAGE' });
-    }
     if (HOST_USER_PATH.test(trimmed)) {
       add('DOCKERFILE_HOST_PATH', `Dockerfile:${lineNo}`, { reason: 'host user paths never belong in the runner image build' });
     }
     if (SECRET_PLAINTEXT.some((pattern) => pattern.test(trimmed))) {
       add('SECRET_PLAINTEXT_FORBIDDEN', `Dockerfile:${lineNo}`, { reason: 'value matches a known secret token shape' });
+    }
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    if (/^FROM\s+\S+/.test(trimmed) && !['FROM ${RUNNER_BASE_IMAGE}', 'FROM ${PYTHON_BASE_IMAGE} AS python-runtime'].includes(trimmed)) {
+      add('DOCKERFILE_FLOATING_BASE', `Dockerfile:${lineNo}`, { reason: 'both fixed stage images resolve only from the runtime lock mappings' });
     }
   }
   if (!/^ARG\s+RUNNER_BASE_IMAGE\s*$/m.test(text)) {
@@ -880,6 +1063,21 @@ function buildChainFindings({ lock, upstream, upstreamError }) {
 
 // Dockerfile 必须消费锁定的完整有序补丁链（ARG 注入 + /build/repo 镜像路径 COPY + sha256 门），
 // 入口必须是 fingerprint 确定性路径；find 式漂移入口（历史缺陷：head -n 1 静默吞掉指纹漂移）拒绝。
+// Executable template changes require source/test review; caller-supplied locks cannot select this pin.
+const RUNNER_RECIPE_TEMPLATE = Object.freeze({
+  bytes: 24569,
+  sha256: 'ac633df2a4707914b018263e13f45333314e6e6280474798860bf2e6eac954ee',
+});
+function validateRuntimeRecipe(text) {
+  const bytes = Buffer.from(text, 'utf8'), template = bytes.subarray(0, RUNNER_RECIPE_TEMPLATE.bytes);
+  // Hash every original byte, including heredoc bodies/comments. Only post-template Docker metadata may vary.
+  const suffix = bytes.subarray(RUNNER_RECIPE_TEMPLATE.bytes).toString('utf8');
+  const metadataOnly = suffix === '' || suffix.endsWith('\n') && suffix.split('\n').every(line =>
+    /^[ \t]*(?:#[^\r\n\0]*)?$/.test(line) && !/^[ \t]*#[ \t]*(?:syntax|escape|check)[ \t]*=/i.test(line));
+  return template.length !== RUNNER_RECIPE_TEMPLATE.bytes || sha256Text(template) !== RUNNER_RECIPE_TEMPLATE.sha256 || !metadataOnly
+    ? [{ code: 'RUNTIME_RECIPE_UNSAFE', at: 'Dockerfile', reason: 'the complete protected offline recipe template is required; only trailing nonexecuting metadata is permitted' }] : [];
+}
+
 function validateDockerfileChain(text, upstreamPatches) {
   const violations = [];
   const add = (code, at, extra) => violations.push({ code, at, ...(extra ?? {}) });
@@ -901,6 +1099,7 @@ function validateDockerfileChain(text, upstreamPatches) {
   if (/find\s+\/build/.test(text)) {
     add('ENTRYPOINT_NONDETERMINISTIC', 'Dockerfile', { reason: 'entrypoint resolution must be the fingerprint-deterministic managed path; find-based drift entry is forbidden' });
   }
+  violations.push(...validateRuntimeRecipe(text));
   return violations;
 }
 
@@ -1106,8 +1305,17 @@ async function main(argv) {
         ...(sha256Verified ? { sha256Verified } : { acquisition }),
       };
     };
+    const runtime = lock.sourceInputs.runtime, bootstrap = bootstrapSources(runtime, files), openspecProject = verifiedOpenSpecProject(lock);
+    if (openspecProject.findings.length) { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', code: 'OPENSPEC_INPUTS_UNVERIFIED', findings: openspecProject.findings }); return EXIT_VERIFY; }
+    if (bootstrap.findings.length) { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', code: 'BOOTSTRAP_INPUTS_UNVERIFIED', findings: bootstrap.findings }); return EXIT_VERIFY; }
+    const bootstrapFiles = bootstrap.files.map(file => ({ path: file.path, bytes: file.bytes.length, sha256: sha256Text(file.bytes) }));
+    const bootstrapDigest = envelopeDigest({ files: bootstrapFiles, dependencies: runtime.dependencies, projects: runtime.projects, node: runtime.node, python: runtime.python });
     const buildArgs = {
-      RUNNER_BASE_IMAGE: '<resolved-at-admission:image.lock.json:components.runner-base>',
+      BOOTSTRAP_DIGEST: bootstrapDigest,
+      RUNNER_BASE_IMAGE: lock.components.find(item => item.component === lock.sourceInputs.runtime.node.component).reference,
+      PYTHON_BASE_IMAGE: lock.components.find(item => item.component === lock.sourceInputs.runtime.python.component).reference,
+      PYTHON_VERSION: lock.sourceInputs.runtime.python.version,
+      EXPECTED_NODE_VERSION: lock.sourceInputs.runtime.node.version,
       SOURCE_COMMIT: sourceCommit,
       SOURCE_SHA256: upstream?.source?.sha256 ?? null,
       EXPECTED_FINGERPRINT: chain.fingerprint,
@@ -1117,10 +1325,27 @@ async function main(argv) {
     };
     const contextSources = [
       { path: 'infra/delivery/runner/Dockerfile', bytes: Buffer.from(files.get('Dockerfile')) },
+      { path: 'infra/delivery/runner/image.lock.json', bytes: Buffer.from(files.get('image.lock.json')) },
+      ...bootstrap.files,
+      ...[runtime.projects.openspec.packageJson, runtime.projects.openspec.packageLock, runtime.projects.comet.pnpmLock, runtime.projects.comet.packageJson].map(item => { const bytes = repositoryBytes(item.path); return { path: item.path, bytes: bytes && bytes.length === item.bytes && sha256Text(bytes) === item.sha256 ? bytes : null }; }),
       ...['tools/comet/build.mjs', 'tools/comet/source.js', 'tools/comet/prepare-source.mjs', 'integrations/comet/upstream.lock.json',
         ...chain.upstreamPatches.map((patch) => patch.path)].map((file) => ({ path: file, bytes: fs.readFileSync(path.join(repoRoot, file)) })),
     ];
-    const contextFiles = contextSources.map(({ path: file, bytes }) => ({ path: file, sha256: sha256Text(bytes), status: 'PRESENT' }));
+    const mergedSources = new Map();
+    for (const item of contextSources) {
+      if (mergedSources.has(item.path) && (!mergedSources.get(item.path).bytes || !item.bytes || !mergedSources.get(item.path).bytes.equals(item.bytes))) { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', code: 'CONTEXT_SOURCE_CONFLICT' }); return EXIT_VERIFY; }
+      mergedSources.set(item.path, item);
+    }
+    contextSources.splice(0, contextSources.length, ...mergedSources.values());
+    const contextFiles = contextSources.map(({ path: file, bytes }) => ({ path: file, sha256: bytes ? sha256Text(bytes) : [runtime.projects.openspec.packageJson, runtime.projects.openspec.packageLock, runtime.projects.comet.pnpmLock, runtime.projects.comet.packageJson].find(item => item.path === file).sha256, status: bytes ? 'PRESENT' : 'ACQUISITION_REQUIRED' }));
+    const dependencyInputs = runtime.dependencies.map(group => ({ id: group.id, closed: group.closed, files: group.files.map(file => {
+      const bytes = repositoryBytes(file.path), present = Boolean(bytes && bytes.length === file.bytes && sha256Text(bytes) === file.sha256
+        && (file.integrity === null || 'sha512-' + crypto.createHash('sha512').update(bytes).digest('base64') === file.integrity));
+      if (!mergedSources.has(file.path)) { const item = { path: file.path, bytes: present ? bytes : null }; mergedSources.set(file.path, item); contextSources.push(item); contextFiles.push({ path: file.path, sha256: file.sha256, status: present ? 'PRESENT' : 'ACQUISITION_REQUIRED' }); }
+      return { path: file.path, bytes: file.bytes, sha256: file.sha256, status: present ? 'PRESENT' : 'ACQUISITION_REQUIRED' };
+    }) }));
+    const dependenciesComplete = dependencyInputs.every(group => group.closed && group.files.length && group.files.every(file => file.status === 'PRESENT'));
+
     for (const [file, digest, size] of [[`${runnerCache}/comet-source.tar.gz`, upstream.source.sha256, upstream.source.bytes],
       [`${runnerCache}/openspec-${openspec.version}.tgz`, openspec.tarballSha256, openspec.tarballBytes]]) {
       let bytes = null;
@@ -1138,7 +1363,7 @@ async function main(argv) {
     if (contextStatus === 'CONFLICT') return conflict();
     let materialized = contextStatus === 'EXACT';
     if (opts['export-context'] && !materialized) {
-      if (contextSources.some((item) => !item.bytes)) { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', code: 'CONTEXT_INPUTS_MISSING', contextFiles }); return EXIT_VERIFY; }
+      if (!dependenciesComplete || contextSources.some((item) => !item.bytes)) { print({ interface: 'RunnerInfra.v1', command, ready: false, status: 'UNVERIFIED', code: 'CONTEXT_INPUTS_MISSING', dependencyInputs, contextFiles }); return EXIT_VERIFY; }
       try {
         let directory = repoRoot;
         for (const component of context.split('/').slice(0, -1)) {
@@ -1174,6 +1399,13 @@ async function main(argv) {
       drift,
       sourceCommit,
       fingerprint: chain.fingerprint,
+      runtime: { schemaVersion: runtime.schemaVersion, platform: runtime.platform, node: runtime.node,
+        python: { component: runtime.python.component, version: runtime.python.version, minimum: runtime.python.minimum, libraries: runtime.python.libraries } },
+      ready: false,
+      status: 'UNVERIFIED',
+      bootstrap: { pathBase: 'image-root', entry: 'opt/sdd/' + runtime.bootstrap.entry, link: { path: 'opt/sdd/' + runtime.bootstrap.link, target: 'opt/sdd/' + runtime.bootstrap.entry }, files: bootstrapFiles, digest: bootstrapDigest, provider: null, productionQualified: false },
+      dependencyInputs,
+      openspecPackage: openspecProject.package,
       patches: chain.patchVerification,
       entrypoint: sourceCommit && chain.fingerprint
         ? `/build/repo/.sdd/vendor/comet/${sourceCommit}/builds/${chain.fingerprint}/work/bin/comet.js`
@@ -1195,12 +1427,14 @@ async function main(argv) {
         context, contextDigest, contextFiles, materialized,
         exclusions: ['.git', '.local', '.claude', '.codex', 'node_modules', 'live settings', 'secret stores', 'unlisted files'],
         buildArgs,
-        command: [
-          'docker build --network=none',
+        executable: dependenciesComplete && contextSources.every(item => item.bytes !== null) && materialized,
+        argv: dependenciesComplete && contextSources.every(item => item.bytes !== null) ? ['docker', 'build', '--pull=false', '--network=none', '--platform=linux/arm64', '-f', context + '/infra/delivery/runner/Dockerfile', ...Object.entries(buildArgs).flatMap(([key, value]) => ['--build-arg', key + '=' + value]), context] : null,
+        command: dependenciesComplete && contextSources.every(item => item.bytes !== null) ? [
+          'docker build --pull=false --network=none --platform=linux/arm64',
           `-f ${context}/infra/delivery/runner/Dockerfile`,
           ...Object.entries(buildArgs).map(([key, value]) => `--build-arg ${key}=${value}`),
           context,
-        ].join(' '),
+        ].join(' ') : null,
       },
       upGate: lock.upGate?.enabled === true ? 'OPEN' : 'CLOSED',
       containerBuildStatus: lock.sourceInputs?.containerBuildStatus ?? null,
