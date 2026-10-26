@@ -223,7 +223,7 @@ test('V_A08: Java/Python/deploy drift changes the full-input digest and missing 
 test('frozen plan boundary: task definition digest ignores checkbox state in this change tasks.md', () => {
   const tasksPath = path.join(projectRoot, 'openspec/changes/delivery-foundation-rearchitecture/tasks.md');
   const tasksText = fs.readFileSync(tasksPath, 'utf8');
-  const stepLine = tasksText.split('\n').find((line) => /\*\*Step 1 \[5 min\]: Test\*\* 2\.1\.a /.test(line));
+  const stepLine = tasksText.split('\n').find((line) => /\*\*Step 1 \[5 min\]: Test\*\* 零执行\/全skip/.test(line));
   assert.ok(stepLine, 'precondition: the tasks.md P2_1 definition line is present');
   // State-independent toggle: whatever the current checkbox state is (the
   // acceptance pass may already have ticked it), flip to the opposite state.
@@ -235,7 +235,7 @@ test('frozen plan boundary: task definition digest ignores checkbox state in thi
   const toggled = tasksText.replace(stepLine, toggledLine);
   assert.equal(taskDefinitionDigest(tasksText), taskDefinitionDigest(toggled),
     'flipping a checkbox must not change the frozen definition digest');
-  const edited = tasksText.replace(stepLine, stepLine.replace('定义共享契约及版本', '定义共享契约及错误边界'));
+  const edited = tasksText.replace(stepLine, stepLine.replace('零执行', '空执行'));
   assert.notEqual(taskDefinitionDigest(tasksText), taskDefinitionDigest(edited),
     'an edited definition must change the digest');
 });
