@@ -1,0 +1,235 @@
+===== fixtures/f1-schema-mismatch.json [exit=1 errors=24] target_hit=YES
+FAIL: 24 closure error(s)
+- schema_version: must be '3.0'
+- plan.digest: required non-placeholder string
+- run.run_id: required non-placeholder string
+- run.status: required non-placeholder string
+- run.started_at: required ISO-8601 timestamp
+- run.completed_at: required ISO-8601 timestamp
+- run.environment: required non-placeholder string
+- run.sources: required non-empty list
+- evidence_catalog: required non-empty object
+- run.commands: required non-empty list
+- run.runner_reports: required non-empty list
+- run.services: required non-empty list
+- run.subagents: required non-empty list
+- run.provenance: required object
+- run.ci: required object
+- run.redaction: required object
+- root.journeys: required non-empty list
+- run.ci.required: must match the frozen Journey scope
+- plan.plan_id: required non-placeholder string
+- plan.status: must be 'frozen'
+- plan.frozen_at: required ISO-8601 timestamp
+- plan.digest: required non-placeholder string
+- plan.evidence: required non-empty list
+- plan.evidence: exactly one frozen scope artifact is required
+===== fixtures/f2-missing-plan.json [exit=1 errors=5] target_hit=n/a
+FAIL: 5 closure error(s)
+- plan: required object
+- run: required object
+- evidence_catalog: required non-empty object
+- root.journeys: required non-empty list
+- run.ci.required: must match the frozen Journey scope
+===== fixtures/f3-forged-digest.json [exit=1 errors=23] target_hit=n/a
+FAIL: 23 closure error(s)
+- plan.digest: required non-placeholder string
+- run.run_id: required non-placeholder string
+- run.status: required non-placeholder string
+- run.started_at: required ISO-8601 timestamp
+- run.completed_at: required ISO-8601 timestamp
+- run.environment: required non-placeholder string
+- run.sources: required non-empty list
+- evidence_catalog: required non-empty object
+- run.commands: required non-empty list
+- run.runner_reports: required non-empty list
+- run.services: required non-empty list
+- run.subagents: required non-empty list
+- run.provenance: required object
+- run.ci: required object
+- run.redaction: required object
+- root.journeys: required non-empty list
+- run.ci.required: must match the frozen Journey scope
+- plan.plan_id: required non-placeholder string
+- plan.status: must be 'frozen'
+- plan.frozen_at: required ISO-8601 timestamp
+- plan.digest: required non-placeholder string
+- plan.evidence: required non-empty list
+- plan.evidence: exactly one frozen scope artifact is required
+===== fixtures/f4-path-escape.json [exit=1 errors=23] target_hit=n/a
+FAIL: 23 closure error(s)
+- plan.digest: required non-placeholder string
+- run.run_id: required non-placeholder string
+- run.status: required non-placeholder string
+- run.started_at: required ISO-8601 timestamp
+- run.completed_at: required ISO-8601 timestamp
+- run.environment: required non-placeholder string
+- run.sources: required non-empty list
+- evidence_catalog.evidence: required evidence object with non-placeholder ID
+- run.commands: required non-empty list
+- run.runner_reports: required non-empty list
+- run.services: required non-empty list
+- run.subagents: required non-empty list
+- run.provenance: required object
+- run.ci: required object
+- run.redaction: required object
+- root.journeys: required non-empty list
+- run.ci.required: must match the frozen Journey scope
+- plan.plan_id: required non-placeholder string
+- plan.status: must be 'frozen'
+- plan.frozen_at: required ISO-8601 timestamp
+- plan.digest: required non-placeholder string
+- plan.evidence: required non-empty list
+- plan.evidence: exactly one frozen scope artifact is required
+===== fixtures/f5-empty.json [exit=1 errors=6] target_hit=n/a
+FAIL: 6 closure error(s)
+- schema_version: must be '3.0'
+- plan: required object
+- run: required object
+- evidence_catalog: required non-empty object
+- root.journeys: required non-empty list
+- run.ci.required: must match the frozen Journey scope
+===== fixtures/f7-secret-scan.json [exit=1 errors=47] target_hit=YES
+FAIL: 47 closure error(s)
+- run.sources: required non-empty list
+- evidence_catalog.E_LEAK.source_revisions: required non-empty component->revision object
+- evidence_catalog.E_LEAK.sha256: hash does not match evidence file
+- evidence_catalog.E_LEAK.path: file mtime is outside the run window
+- evidence_catalog.E_LEAK: evidence content does not contain run.run_id
+- evidence_catalog.E_LEAK: possible AWS access key found; redact before closure
+- run.commands: required non-empty list
+- run.runner_reports: required non-empty list
+- run.services: required non-empty list
+- run.subagents: required non-empty list
+- run.provenance: required object
+- run.ci.evidence: required non-empty list
+- run.ci.reason: required non-placeholder string
+- run.redaction: required object
+- journeys[0].requirement_ids: required non-empty list
+- journeys[0].business_outcome: required non-placeholder string
+- journeys[0].entry.kind: required non-placeholder string
+- journeys[0].entry.description: required non-placeholder string
+- journeys[0].entry.kind: unsupported ingress kind
+- journeys[0].first_party_components: required non-empty list
+- journeys[0].ci_required: required boolean
+- journeys[0].test_doubles: required list
+- journeys[0].required_paths: required non-empty list
+- journeys[0].required_paths: at least one path must be mandatory
+- journeys[0].cases: required non-empty list
+- journeys[0].ci_expectations: required list
+- journeys[0].case_results: required non-empty list
+- journeys[0].tdd: required object
+- journeys[0].expected_hops: required non-empty list
+- journeys[0].expected_hops: at least one hop must be mandatory
+- journeys[0].observed_hops: required non-empty list
+- journeys[0].terminal_oracle: required object
+- journeys[0].browser: required object
+- journeys[0].grill: required object
+- journeys[0].dimensions: required object with A-J
+- journeys[0].dimensions.A: must pass for this Journey
+- journeys[0].dimensions.E: must pass for this Journey
+- journeys[0].dimensions.F: must pass for this Journey
+- journeys[0].dimensions.J: must pass for this Journey
+- journeys[0]: Journey mode requires a completed Journey Mapper subagent
+- journeys[0]: Journey mode requires a completed Test/Contract Designer or Journey Runner subagent
+- journeys[0]: Journey mode requires a completed Grill Reviewer subagent
+- journeys[0]: Journey roles require three distinct agent IDs
+- plan.plan_id: required non-placeholder string
+- plan.frozen_at: required ISO-8601 timestamp
+- evidence reference 'E_SCOPE' is absent from evidence_catalog
+- evidence_catalog.E_LEAK: unused evidence entry
+===== fixtures/f8-hash-mismatch.json [exit=1 errors=45] target_hit=YES
+FAIL: 45 closure error(s)
+- run.sources: required non-empty list
+- evidence_catalog.E_HASH.source_revisions: required non-empty component->revision object
+- evidence_catalog.E_HASH.sha256: hash does not match evidence file
+- evidence_catalog.E_HASH.path: file mtime is outside the run window
+- run.commands: required non-empty list
+- run.runner_reports: required non-empty list
+- run.services: required non-empty list
+- run.subagents: required non-empty list
+- run.provenance: required object
+- run.ci.evidence: required non-empty list
+- run.ci.reason: required non-placeholder string
+- run.redaction: required object
+- journeys[0].requirement_ids: required non-empty list
+- journeys[0].business_outcome: required non-placeholder string
+- journeys[0].entry.kind: required non-placeholder string
+- journeys[0].entry.description: required non-placeholder string
+- journeys[0].entry.kind: unsupported ingress kind
+- journeys[0].first_party_components: required non-empty list
+- journeys[0].ci_required: required boolean
+- journeys[0].test_doubles: required list
+- journeys[0].required_paths: required non-empty list
+- journeys[0].required_paths: at least one path must be mandatory
+- journeys[0].cases: required non-empty list
+- journeys[0].ci_expectations: required list
+- journeys[0].case_results: required non-empty list
+- journeys[0].tdd: required object
+- journeys[0].expected_hops: required non-empty list
+- journeys[0].expected_hops: at least one hop must be mandatory
+- journeys[0].observed_hops: required non-empty list
+- journeys[0].terminal_oracle: required object
+- journeys[0].browser: required object
+- journeys[0].grill: required object
+- journeys[0].dimensions: required object with A-J
+- journeys[0].dimensions.A: must pass for this Journey
+- journeys[0].dimensions.E: must pass for this Journey
+- journeys[0].dimensions.F: must pass for this Journey
+- journeys[0].dimensions.J: must pass for this Journey
+- journeys[0]: Journey mode requires a completed Journey Mapper subagent
+- journeys[0]: Journey mode requires a completed Test/Contract Designer or Journey Runner subagent
+- journeys[0]: Journey mode requires a completed Grill Reviewer subagent
+- journeys[0]: Journey roles require three distinct agent IDs
+- plan.plan_id: required non-placeholder string
+- plan.frozen_at: required ISO-8601 timestamp
+- evidence reference 'E_SCOPE' is absent from evidence_catalog
+- evidence_catalog.E_HASH: unused evidence entry
+===== fixtures/f9-correlation-absent.json [exit=1 errors=45] target_hit=YES
+FAIL: 45 closure error(s)
+- run.sources: required non-empty list
+- evidence_catalog.E_CORR.source_revisions: required non-empty component->revision object
+- evidence_catalog.E_CORR.path: file mtime is outside the run window
+- evidence_catalog.E_CORR: evidence content does not contain declared correlation 'MISSING_CORR_TOKEN'
+- run.commands: required non-empty list
+- run.runner_reports: required non-empty list
+- run.services: required non-empty list
+- run.subagents: required non-empty list
+- run.provenance: required object
+- run.ci.evidence: required non-empty list
+- run.ci.reason: required non-placeholder string
+- run.redaction: required object
+- journeys[0].requirement_ids: required non-empty list
+- journeys[0].business_outcome: required non-placeholder string
+- journeys[0].entry.kind: required non-placeholder string
+- journeys[0].entry.description: required non-placeholder string
+- journeys[0].entry.kind: unsupported ingress kind
+- journeys[0].first_party_components: required non-empty list
+- journeys[0].ci_required: required boolean
+- journeys[0].test_doubles: required list
+- journeys[0].required_paths: required non-empty list
+- journeys[0].required_paths: at least one path must be mandatory
+- journeys[0].cases: required non-empty list
+- journeys[0].ci_expectations: required list
+- journeys[0].case_results: required non-empty list
+- journeys[0].tdd: required object
+- journeys[0].expected_hops: required non-empty list
+- journeys[0].expected_hops: at least one hop must be mandatory
+- journeys[0].observed_hops: required non-empty list
+- journeys[0].terminal_oracle: required object
+- journeys[0].browser: required object
+- journeys[0].grill: required object
+- journeys[0].dimensions: required object with A-J
+- journeys[0].dimensions.A: must pass for this Journey
+- journeys[0].dimensions.E: must pass for this Journey
+- journeys[0].dimensions.F: must pass for this Journey
+- journeys[0].dimensions.J: must pass for this Journey
+- journeys[0]: Journey mode requires a completed Journey Mapper subagent
+- journeys[0]: Journey mode requires a completed Test/Contract Designer or Journey Runner subagent
+- journeys[0]: Journey mode requires a completed Grill Reviewer subagent
+- journeys[0]: Journey roles require three distinct agent IDs
+- plan.plan_id: required non-placeholder string
+- plan.frozen_at: required ISO-8601 timestamp
+- evidence reference 'E_SCOPE' is absent from evidence_catalog
+- evidence_catalog.E_CORR: unused evidence entry
+SUMMARY: 8 ok / 0 fail

@@ -1,0 +1,2642 @@
+# P1_3-comet-050 diff — workspace state vs HEAD (9e822e45)
+# This wave's files: lib/adapters/comet.js (0.5.0 rewrite), lib/adapters/comet-executor.js (0.5.0 rewrite), test/comet-execution-binding.test.js (0.5.0 rewrite), test/delivery-cases/1_3.mjs (0.5.0 re-base), test/comet-driver.test.js (0.5.0 additions appended ON TOP of the retained 0.4.5 d4de546 session-semantics candidate — both parts visible below), mcp-capabilities.yaml (enforcement annotation per ENFORCEMENT_PAIR_ROUTED), foundation/ (mechanical re-export: release view + lock + new frozen baseline 788d2c9c…, the documented last-wave rule from P1_2 report §5.1), openspec/.../host-probes/1_3-050-surface.json (new, content appended).
+# Still carrying OTHER waves' un-admitted candidate diffs (not touched): lib/adapters/harness.js, lib/adapters/spec.js, test/spec-closeout.test.js, test/infra-runner-isolation.test.js, tools/infra/runner.mjs, infra/delivery/runner/image.lock.json, docs/architecture/*.
+
+diff --git a/lib/adapters/comet-executor.js b/lib/adapters/comet-executor.js
+index 34b3af7..f762f84 100644
+--- a/lib/adapters/comet-executor.js
++++ b/lib/adapters/comet-executor.js
+@@ -1,23 +1,76 @@
+-// Fixed CODE composition for the original Classic managed host. No worker
+-// JSON, environment value or module path chooses these consumers. Constructors
+-// and function shapes are not source/OS qualification: the protected bootstrap
+-// must supply the real current source ports. Missing registration fails closed.
++// Fixed CODE composition for the 0.5.0 composition-application host (task
++// P1_3, revision 2026-10-26-comet-050-adoption-v1, ADR-0022). No worker JSON,
++// environment value or module path chooses these consumers. Constructors and
++// function shapes are not source/OS qualification: the protected bootstrap
++// must supply the real current source ports. Missing registration fails
++// closed.
++//
++// 0.5.0 face (replaces the retired 0002 managed-delivery injection ports
++// runClassicCli/ensureClassicRuntimeRun/installManagedDeliveryHost — that
++// patch chain is gone from the lock; its archive-follow/signing-scope
++// session semantics that still hold here are reimplemented for this surface
++// and marked [reuse 0.4.5-candidate] where they came from):
++//   install        `comet application install <application.json>` — the
++//                  compiled classic-full composition package
++//                  (P2_4, integrations/comet/application) enters the project
++//                  through the official installer; preview-first, the actual
++//                  install carries the confirmed preview hash.
++//   schedule       `comet runtime dispatch --application-file … --request …`
++//                  is the ONLY entry that may advance an SDK composition Run
++//                  (app/cli/runtime-command.ts; the basic state commands
++//                  refuse a composition Run — classic-sdk-state-store.ts
++//                  recoveryRequired). Building a base state write for this
++//                  Run is refused here, not delegated.
++//   gate receipts  the six managed gates R/A/T/P/V/Kp are composition
++//                  extensions whose pass results are accepted ONLY through
++//                  the packaged bindings validators
++//                  (integrations/comet/application/bindings.mjs), which
++//                  delegate every verdict to the pure lib/delivery gate —
++//                  there is no fallback acceptance path in this module.
++//   Kt             no composition extension exists for Kt (0.5.0 has no
++//                  post-archive hook): the 0005 predicate
++//                  (lib/adapters/comet.js knowledgeCloseoutBlocked) parks the
++//                  SAME Run at <profile>.archive.execute until the optional
++//                  knowledgeCloseout state field is required-and-completed.
++//                  The WRITE path of that field is the supply/admission wave;
++//                  this module only refuses overall completion while it is
++//                  pending.
++// Real host execution (application install against a live project, dispatch
++// inside a real Run) is P1_4/P3_2/VERIFY — UNVERIFIED here by design.
+ import { AsyncLocalStorage } from 'node:async_hooks';
+ import fs from 'node:fs';
+ import path from 'node:path';
+ import { fileURLToPath } from 'node:url';
+-import { parseContract } from '../../contracts/delivery/index.js';
++
+ import { taskDefinitionDigest } from '../delivery/baseline.js';
+-import { admitEvidence, envelopeDigest } from '../delivery/evidence.js';
++import { admitEvidence } from '../delivery/evidence.js';
+ import { evaluate } from '../delivery/gate.js';
+-import { createCliJobDriver } from '../../tools/infra/runner.mjs';
++import {
++  applicationInstallArgv,
++  classicCompositionRecoveryRequest,
++  classicCompositionStartRequest,
++  knowledgeCloseoutBlocked,
++  runtimeDispatchArgv,
++  RUNTIME_REQUEST_OPERATIONS,
++} from './comet.js';
++import { createBindings } from '../../integrations/comet/application/bindings.mjs';
++
++// The packaged composition (single source of truth, P2_4). The executor reads
++// it — it never re-declares gates, extensions or validators that could drift
++// from the compiled package.
++const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
++const COMPOSITION_ROOT = path.join(repositoryRoot, 'integrations/comet/application');
++const COMPOSITION_FILE = path.join(COMPOSITION_ROOT, 'composition.json');
+ 
+-const GATES = ['R', 'A', 'T', 'P', 'V', 'Kp', 'Kt'];
+-const STATE_OPERATIONS = ['get', 'next', 'gates', 'dispatch-gate', 'accept-gate', 'transition', 'set', 'complete-design'];
++const COMPOSITION_GATES = Object.freeze(['R', 'A', 'T', 'P', 'V', 'Kp']);
++const KT_GATE = 'Kt';
+ const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+ const text = (value) => typeof value === 'string' && value.trim().length > 0;
+ const exact = (value, keys) => object(value) && Object.keys(value).sort().join(',') === [...keys].sort().join(',');
+ const boundary = { scope: 'component/fixed-host-execution', managedClosureEligible: false };
++// The packaged validator bindings, resolved once (createBindings is async and
++// ambient-state free — see bindings.mjs: context is deliberately unread).
++const bindingsPromise = createBindings();
+ // CODE object identity only; not a process/role/source qualification record.
+ const fixedEntries = new WeakMap();
+ 
+@@ -26,312 +79,294 @@ export class CometExecutionError extends Error {
+ }
+ const no = (code) => { throw new CometExecutionError(code); };
+ const clone = (value) => structuredClone(value);
+-const synchronous = (value) => typeof value === 'function'
+-  && !['AsyncFunction', 'GeneratorFunction', 'AsyncGeneratorFunction'].includes(value.constructor?.name);
+ 
+-function eligible(current) {
+-  const qualification = current.admissionOptions?.sourceQualification;
+-  const clock = current.admissionOptions?.now;
+-  if (!object(qualification) || qualification.scope !== 'protected-source' || qualification.status !== 'qualified'
+-    || typeof clock !== 'string' || !Number.isFinite(Date.parse(clock)) || typeof qualification.expiresAt !== 'string'
+-    || !Number.isFinite(Date.parse(qualification.expiresAt)) || Date.parse(qualification.expiresAt) <= Date.parse(clock)
+-    || !['id', 'sourceId', 'revision'].every((key) => text(qualification[key]))
+-    || !Array.isArray(qualification.evidenceRefs) || !qualification.evidenceRefs.length
+-    || qualification.evidenceRefs.some((ref) => !object(ref) || !text(ref.ref) || typeof ref.digest !== 'string' || !/^[a-f0-9]{64}$/.test(ref.digest))) no('SOURCE_UNQUALIFIED');
++function readComposition() {
++  let document;
++  try { document = JSON.parse(fs.readFileSync(COMPOSITION_FILE, 'utf8')); }
++  catch { no('COMPOSITION_PACKAGE_REQUIRED'); }
++  if (!object(document) || document.schema !== 'sdd.comet.classic-application.composition.v1'
++    || document.base !== 'classic-full' || !Array.isArray(document.composition?.extensions)) no('COMPOSITION_PACKAGE_INVALID');
++  return document;
++}
++
++// Gate -> extension mapping, read from the packaged composition (not
++// re-declared): the six managed gates plus their validator refs.
++function compositionGateMap(document) {
++  const gates = new Map();
++  for (const extension of document.composition.extensions) {
++    if (!exact(extension, ['id', 'skillId', 'artifactRefs', 'validator', 'afterStep']) || !text(extension.id)
++      || !text(extension.skillId) || !object(extension.validator)) no('COMPOSITION_PACKAGE_INVALID');
++    const declared = fs.existsSync(path.join(COMPOSITION_ROOT, 'extensions', `${extension.id}.json`))
++      ? JSON.parse(fs.readFileSync(path.join(COMPOSITION_ROOT, 'extensions', `${extension.id}.json`), 'utf8')) : null;
++    if (!object(declared) || declared.id !== extension.id || !COMPOSITION_GATES.includes(declared.gate)
++      || declared.validator?.id !== extension.validator.id || declared.validator?.version !== extension.validator.version) no('COMPOSITION_PACKAGE_INVALID');
++    if (gates.has(declared.gate)) no('COMPOSITION_PACKAGE_INVALID');
++    gates.set(declared.gate, {
++      extensionId: extension.id,
++      skillId: extension.skillId,
++      afterStep: extension.afterStep,
++      validator: Object.freeze({ ...extension.validator }),
++      artifactRefs: Object.freeze([...extension.artifactRefs]),
++    });
++  }
++  if (gates.size !== COMPOSITION_GATES.length || COMPOSITION_GATES.some((gate) => !gates.has(gate))) no('COMPOSITION_PACKAGE_INVALID');
++  return gates;
+ }
+ 
+ function registrationInput(value) {
+   if (value === undefined || value === null) no('HOST_REGISTRATION_REQUIRED');
+-  if (!exact(value, ['schemaVersion', 'projectRoot', 'change', 'runId', 'runner', 'docker', 'actions'])
++  if (!exact(value, ['schemaVersion', 'projectRoot', 'change', 'runId', 'applicationFile'])
+     || value.schemaVersion !== 1 || !text(value.projectRoot) || !path.isAbsolute(value.projectRoot)
+     || !text(value.change) || !/^[a-z0-9][a-z0-9-]*$/.test(value.change) || !text(value.runId)
+-    || !object(value.runner) || !Array.isArray(value.runner.roles)
+-    || !exact(value.docker, ['executable', 'sha256']) || !text(value.docker.executable)
+-    || !path.isAbsolute(value.docker.executable) || typeof value.docker.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(value.docker.sha256)
+-    || !Array.isArray(value.actions) || value.actions.length < 1 || value.actions.length > GATES.length) no('HOST_REGISTRATION_INVALID');
+-  const seen = new Set();
+-  for (const action of value.actions) {
+-    if (!exact(action, ['gate', 'roleBindingId', 'argv']) || !GATES.includes(action.gate) || seen.has(action.gate)
+-      || !text(action.roleBindingId) || !Array.isArray(action.argv) || action.argv.length < 1 || action.argv.length > 64
+-      || action.argv.some((arg) => typeof arg !== 'string' || arg.length > 4096 || arg.includes('\0'))) no('HOST_REGISTRATION_INVALID');
+-    seen.add(action.gate);
+-  }
++    // 0.5.0 invariant (assertBuiltInChangeInput): a Classic SDK Run's id IS
++    // the change name — a second, divergent run identity is refused here.
++    || value.runId !== value.change) no('HOST_REGISTRATION_INVALID');
++  if (typeof value.applicationFile !== 'string' || !path.isAbsolute(value.applicationFile)
++    || path.basename(value.applicationFile) !== 'application.json') no('HOST_REGISTRATION_INVALID');
+   let projectRoot;
+   try { projectRoot = fs.realpathSync(value.projectRoot); if (!fs.lstatSync(projectRoot).isDirectory()) no('PROJECT_ROOT_UNVERIFIED'); }
+   catch { no('PROJECT_ROOT_UNVERIFIED'); }
+-  return { ...clone(value), projectRoot };
++  // The registered package must be THE packaged composition's compiled
++  // application.json — a caller-supplied package never selects it. The
++  // compile wave (composition.json#unverified) has not produced that file
++  // yet at this revision: registration pins the canonical location, and the
++  // install/dispatch paths below refuse to execute until it exists.
++  const applicationFile = path.resolve(value.applicationFile);
++  if (applicationFile !== path.join(COMPOSITION_ROOT, 'application.json')) no('APPLICATION_PACKAGE_MISMATCH');
++  return { ...clone(value), projectRoot, applicationFile };
+ }
+ 
+-// These are the existing classic-managed-host CODE ports, not a generic
+-// callback loader. In particular context/qualification never come from a job
+-// or result JSON. The original Native kernel still owns signing and acceptance.
++// These are the existing managed-host CODE ports, not a generic callback
++// loader. In particular context/qualification never come from a job or
++// result JSON. The original launch authority still owns signing.
+ export function createCometExecutor(options = {}) {
+-  if (!object(options) || Object.keys(options).some((key) => !['native', 'authority', 'registration', 'source'].includes(key))) no('HOST_OPTIONS_INVALID');
+-  const { native, authority, registration, source } = options;
++  if (!object(options) || Object.keys(options).some((key) => !['native', 'authority', 'registration'].includes(key))) no('HOST_OPTIONS_INVALID');
++  const { native, authority, registration } = options;
++  const composition = readComposition();
++  const gateMap = compositionGateMap(composition);
+   const fixed = registrationInput(registration);
+-  if (!object(native) || ['runClassicCli', 'ensureClassicRuntimeRun', 'installManagedDeliveryHost'].some((key) => typeof native[key] !== 'function')) no('NATIVE_PORTS_REQUIRED');
+-  if (!object(authority) || ['issueDispatch', 'verifyDispatch', 'collectResult', 'verifyCollection'].some((key) => typeof authority[key] !== 'function')) no('AUTHORITY_PORTS_REQUIRED');
+-  if (!object(source) || ['policy', 'context', 'authorizeWrite', 'verifyReview'].some((key) => !synchronous(source[key]))) no('PROTECTED_SOURCE_PORTS_REQUIRED');
+-  const ports = Object.freeze(Object.fromEntries(['policy', 'context', 'authorizeWrite', 'verifyReview'].map((key) => [key, source[key]])));
+-  const original = Object.freeze(Object.fromEntries(['issueDispatch', 'verifyDispatch', 'collectResult', 'verifyCollection'].map((key) => [key, authority[key].bind(authority)])));
+-  const runtime = Object.freeze(Object.fromEntries(['runClassicCli', 'ensureClassicRuntimeRun', 'installManagedDeliveryHost'].map((key) => [key, native[key].bind(native)])));
++  if (!object(native) || typeof native.runCometCli !== 'function') no('NATIVE_PORTS_REQUIRED');
++  if (!object(authority) || ['issueDispatch', 'verifyDispatch'].some((key) => typeof authority[key] !== 'function')) no('AUTHORITY_PORTS_REQUIRED');
++  const runCometCli = native.runCometCli.bind(native);
++  const original = Object.freeze(Object.fromEntries(['issueDispatch', 'verifyDispatch'].map((key) => [key, authority[key].bind(authority)])));
+   const changeDir = path.join(fixed.projectRoot, 'openspec/changes', fixed.change);
+   const calls = new AsyncLocalStorage();
+-  // Volatile observation/cache only. No durable action, lease, queue, phase or
+-  // retry record is created here. Cold launch reconciliation needs the original
+-  // Native execution record; until that port exists it is explicitly refused.
+-  const createdHere = new Set(), observed = new Map();
+-  let installed = false;
++  // Volatile observation only. No durable action, lease, queue, phase or
++  // retry record is created here. Judged receipts live in this process's
++  // memory for the signing-scope check and are never persisted as control
++  // state; re-judging the same execution replaces the prior entry.
++  const judged = new Map();
+ 
+   const active = () => {
+     const call = calls.getStore();
+-    if (!call || call.runId !== fixed.runId) no('ORIGINAL_NATIVE_CALL_REQUIRED');
++    if (!call || call.runId !== fixed.runId || call.kind !== 'native') no('ORIGINAL_NATIVE_CALL_REQUIRED');
+     return call;
+   };
+-  const bind = (intent) => {
+-    const call = active();
+-    if (!object(intent) || !GATES.includes(intent.gate) || !text(intent.execution)) no('NATIVE_AUTHOR_ACTION_PORT_REQUIRED');
+-    if (intent.runId !== undefined && intent.runId !== fixed.runId) no('ORIGINAL_RUN_MISMATCH');
+-    const template = fixed.actions.find((entry) => entry.gate === intent.gate);
+-    if (!template) no('ACTION_NOT_REGISTERED');
+-    const current = ports.context(clone(intent));
+-    if (!object(current) || !object(current.admissionOptions) || !object(current.policy)) no('PROTECTED_CONTEXT_REQUIRED');
+-    const parsed = parseContract('SDD.Delivery.ActionBinding', current.actionBinding);
+-    if (!parsed.ok) no('PROTECTED_ACTION_REQUIRED');
+-    const action = parsed.value;
+-    if (action.profile !== 'comet-managed-v2' || action.run !== fixed.runId || action.gate !== intent.gate
+-      || ['execution', 'role', 'attempt', 'epoch', 'inputDigest'].some((key) => action[key] !== intent[key])
+-      || action.policyDigest !== current.policy.digest) no('ORIGINAL_ACTION_MISMATCH');
+-    const role = fixed.runner.roles.filter((entry) => object(entry) && entry.id === template.roleBindingId && entry.actionRole === action.role);
+-    if (role.length !== 1) no('ROLE_NOT_REGISTERED');
+-    // Project unqualified/expired facts too: the original Native invalidation
+-    // observer must see them and retire old intents. Eligibility is enforced
+-    // separately at signing and physical launch, never hidden by this reader.
+-    const job = { schemaVersion: 1, execution: action.execution, run: action.run, argv: [...template.argv] };
+-    const inputs = [...action.inputs];
+-    for (const [name, ref, digest] of [
+-      ['runner-registration', 'host/runner-registration', envelopeDigest(fixed.runner)],
+-      ['runner-role-binding', `host/roles/${role[0].id}`, envelopeDigest(role[0])],
+-      ['runner-job', `host/jobs/${action.execution}`, envelopeDigest(job)],
+-    ]) {
+-      const prior = inputs.find((item) => item.name === name);
+-      if (prior && prior.digest !== digest) no('PROTECTED_INPUT_BINDING_MISMATCH');
+-      if (!prior) inputs.push({ name, ref, digest });
+-    }
+-    const bound = parseContract('SDD.Delivery.ActionBinding', { ...action, inputs });
+-    if (!bound.ok) no('PROTECTED_ACTION_REQUIRED');
+-    const result = { ...current, actionBinding: bound.value };
+-    call.bindings.set(intent.execution, result);
+-    return { current: result, job, role: role[0] };
++
++  const validatorFor = (gate) => {
++    const entry = gateMap.get(gate);
++    if (!entry) no('ACTION_NOT_REGISTERED');
++    return entry;
+   };
+ 
+   const host = Object.freeze({
+     authority: Object.freeze({
+       ...original,
+       issueDispatch(binding) {
+-        const call = active(), prepared = call.bindings.get(binding?.execution);
+-        if (call.kind !== 'native' || !prepared || !fs.existsSync(path.join(changeDir, '.comet-state.lock'))
+-          || envelopeDigest(binding.actionBinding) !== envelopeDigest(prepared.actionBinding)) no('NATIVE_SIGNING_SCOPE_REQUIRED');
+-        eligible(prepared);
+-        const dispatch = original.issueDispatch(binding);
+-        createdHere.add(dispatch.execution);
+-        return dispatch;
++        active();
++        // [reuse 0.4.5-candidate] signing-scope semantics, re-based: the
++        // authority signs ONLY inside an executor-scoped native call, and
++        // only a gate whose extension result this executor judged accepted,
++        // for THIS run, bound to the same input digest — a stale, foreign or
++        // unjudged binding never reaches the signature.
++        const record = judged.get(binding?.execution);
++        if (!record || record.gate !== binding?.gate || record.run !== fixed.runId
++          || record.inputDigest !== binding?.inputDigest
++          || !fs.existsSync(path.join(changeDir, '.comet-state.lock'))) no('NATIVE_SIGNING_SCOPE_REQUIRED');
++        return original.issueDispatch(binding);
+       },
+     }),
+-    policy(request) { active(); return ports.policy(request); },
+-    context(intent) { return bind(intent).current; },
+     definitionDigest: taskDefinitionDigest,
+-    authorizeWrite(request) { active(); return ports.authorizeWrite(request); },
+-    verifyReview(request) { active(); return ports.verifyReview(request); },
+     admitEvidence,
+     evaluate,
+-    async readResult(intent) {
+-      active();
+-      const record = observed.get(intent?.execution);
+-      if (!record?.terminal) no('ORIGINAL_EXECUTION_UNRESOLVED');
+-      await record.terminal;
+-      await currentIntent(intent.execution);
+-      if (!record.packet) no('ORIGINAL_EXECUTION_UNVERIFIED');
+-      return clonePacket(record.packet);
+-    },
+   });
+-  const physical = createCliJobDriver({ authority: host.authority, registration: fixed.runner,
+-    dockerExecutable: fixed.docker.executable, dockerSha256: fixed.docker.sha256 });
+-  const invoke = async (argv) => {
+-    if (!installed) no('FIXED_HOST_NOT_INSTALLED');
+-    if (!Array.isArray(argv) || !argv.length || argv.some((arg) => typeof arg !== 'string' || arg.includes('\0'))) no('NATIVE_ARGUMENTS_INVALID');
+-    // Forward the existing kernel's scoped state operations, not an arbitrary
+-    // program, second Run, Spec owner or raw external-command forwarding path.
+-    const words = argv.filter((arg) => arg !== '--json');
+-    if (words[0] !== 'state' || !STATE_OPERATIONS.includes(words[1]) || words[2] !== fixed.change
+-      || words.includes('--') || words.includes('--project-root') || words.includes('--cwd')) no('NATIVE_COMMAND_SCOPE_REQUIRED');
+-    return calls.run({ kind: 'native', runId: fixed.runId, bindings: new Map() }, () => runtime.runClassicCli(argv, undefined,
+-      { projectRoot: fixed.projectRoot, invocationCwd: fixed.projectRoot }));
+-  };
+-  const readField = async (field) => {
+-    const result = await runtime.runClassicCli(['--json', 'state', 'get', fixed.change, field], undefined,
+-      { projectRoot: fixed.projectRoot, invocationCwd: fixed.projectRoot });
+-    let document;
+-    try { document = JSON.parse(result.stdout); } catch { no('ORIGINAL_NATIVE_READ_UNVERIFIED'); }
+-    if (result.exitCode !== 0 || document.exitCode !== 0) no('ORIGINAL_NATIVE_READ_UNVERIFIED');
+-    return document.stdout?.trim();
+-  };
+-  const currentIntent = async (execution) => {
+-    active();
+-    if (!text(execution) || execution.length > 256) no('EXECUTION_INVALID');
+-    const context = await runtime.ensureClassicRuntimeRun(changeDir);
+-    if (context.run.runId !== fixed.runId || context.run.status === 'completed') no('ORIGINAL_RUN_MISMATCH');
+-    let registry;
+-    try { const raw = await readField('gate_dispatches'); registry = raw === 'null' ? { dispatches: [] } : JSON.parse(raw); }
+-    catch { no('ORIGINAL_INTENT_UNVERIFIED'); }
+-    if (!object(registry) || !Array.isArray(registry.dispatches)) no('ORIGINAL_INTENT_UNVERIFIED');
+-    const matches = registry.dispatches.filter((item) => object(item) && item.execution === execution);
+-    if (matches.length !== 1 || matches[0].state !== 'open' || matches[0].runId !== fixed.runId) no('ORIGINAL_INTENT_NOT_CURRENT');
+-    const intent = matches[0], bound = bind({ ...intent, projectRoot: fixed.projectRoot, changeDir });
+-    eligible(bound.current);
+-    if (original.verifyDispatch(intent.protectedDispatch).ok !== true
+-      || envelopeDigest(bound.current.actionBinding) !== envelopeDigest(intent.actionBinding)
+-      || envelopeDigest(intent.protectedDispatch.actionBinding) !== envelopeDigest(intent.actionBinding)) no('ORIGINAL_INTENT_STALE');
+-    return { intent, ...bound };
+-  };
+-  const requestInput = (input) => {
+-    if (!exact(input, ['execution']) || !text(input.execution)) no('EXECUTION_REQUEST_INVALID');
+-    return input.execution;
+-  };
+-  const underSnapshot = (fn) => calls.run({ kind: 'snapshot', runId: fixed.runId, bindings: new Map() }, fn);
+-  const originalProcess = (execution) => {
+-    const record = observed.get(execution);
+-    if (!record?.handle) no('ORIGINAL_HANDLE_REQUIRED');
+-    return record;
+-  };
+-  const finish = async (record, terminal) => {
+-    record.raw = terminal;
+-    if (terminal.status !== 'CLIENT_TERMINAL' || terminal.outputTruncated || terminal.signal || terminal.clientExitCode === null) return terminal;
+-    const seen = physical.observeCliJob({ ...record.request, handle: record.handle });
+-    record.observation = seen;
+-    if (seen.observation.state !== 'exited' || seen.observation.exitCode !== terminal.clientExitCode) return terminal;
+-    let packet;
+-    try { packet = JSON.parse(terminal.stdoutBytes.toString('utf8')); } catch { return terminal; }
+-    if (!exact(packet, ['schemaVersion', 'run', 'execution', 'envelope', 'reportBase64', 'resultBase64', 'methodTraceBase64'])
+-      || packet.schemaVersion !== 1 || packet.run !== fixed.runId || packet.execution !== record.request.job.execution) return terminal;
+-    const bytes = [];
+-    for (const name of ['reportBase64', 'resultBase64', 'methodTraceBase64']) {
+-      if (typeof packet[name] !== 'string' || packet[name].length > 8 * 1024 * 1024) return terminal;
+-      const raw = Buffer.from(packet[name], 'base64');
+-      if (!raw.length || raw.toString('base64') !== packet[name]) return terminal;
+-      bytes.push(raw);
+-    }
+-    record.packet = { dispatch: record.request.dispatch, envelope: packet.envelope,
+-      launchRecord: { launchId: `native:${record.handle.containerId}`, execution: packet.execution,
+-        processId: terminal.clientProcessId, containerId: record.handle.containerId },
+-      reportBytes: bytes[0], resultBytes: bytes[1], methodTraceBytes: bytes[2] };
+-    return terminal;
+-  };
+ 
+   const executor = Object.freeze({
+     ...boundary,
+-    install() {
+-      if (installed) no('FIXED_HOST_ALREADY_INSTALLED');
+-      runtime.installManagedDeliveryHost(host); installed = true;
+-      return { ...boundary, installed: true, productionQualified: false };
++    // `comet application install` — construction + delegation through the
++    // fixed CLI port. The preview/install confirmation flow (hash) is the
++    // real host wave's responsibility; here the argv must be exactly the
++    // official installer's.
++    applicationInstallArgv,
++    async installApplication(install = {}) {
++      if (!object(install) || Object.keys(install).some((key) => !['platforms', 'host', 'scope', 'upgrade', 'confirmationHash', 'preview'].includes(key))) no('APPLICATION_INSTALL_INVALID');
++      return calls.run({ kind: 'native', runId: fixed.runId }, async () => {
++        // The compile wave must have produced the package before the official
++        // installer can run against it (honest UNVERIFIED boundary — the
++        // supply wave owns the build, not this component).
++        if (!fs.existsSync(fixed.applicationFile)) no('APPLICATION_PACKAGE_REQUIRED');
++        const argv = applicationInstallArgv({
++          applicationFile: fixed.applicationFile,
++          project: fixed.projectRoot,
++          platform: install.platforms,
++          host: install.host,
++          scope: install.scope,
++          upgrade: install.upgrade,
++          confirmationHash: install.confirmationHash,
++          preview: install.preview,
++          json: true,
++        });
++        return runCometCli([...argv], undefined, { projectRoot: fixed.projectRoot, invocationCwd: fixed.projectRoot });
++      });
++    },
++    // The scoped native session for the real host wave: recording an
++    // extension outcome, signing the judged binding and dispatching must all
++    // happen inside one executor-scoped native call — the authority wrapper
++    // below refuses to sign outside it.
++    async nativeCall(fn) {
++      if (typeof fn !== 'function') no('NATIVE_CALL_INVALID');
++      return calls.run({ kind: 'native', runId: fixed.runId }, fn);
+     },
+-    invokeNative: invoke,
+-    async describeCurrent() {
+-      return underSnapshot(async () => {
+-        if (!installed) no('FIXED_HOST_NOT_INSTALLED');
+-        const context = await runtime.ensureClassicRuntimeRun(changeDir);
+-        if (context.run.runId !== fixed.runId) no('ORIGINAL_RUN_MISMATCH');
+-        const read = async (command) => {
+-          const result = await runtime.runClassicCli(['--json', 'state', command, fixed.change], undefined,
+-            { projectRoot: fixed.projectRoot, invocationCwd: fixed.projectRoot });
+-          let document;
+-          try { document = JSON.parse(result.stdout); } catch { no('ORIGINAL_NATIVE_READ_UNVERIFIED'); }
+-          if (result.exitCode !== 0 || document.exitCode !== 0) no('ORIGINAL_NATIVE_READ_UNVERIFIED');
+-          return document.data;
+-        };
+-        const next = await read('next'), gates = await read('gates');
+-        return { ...boundary, run: clone(context.run), phase: context.classic.phase,
+-          continuation: clone(next.continuation), nextAction: clone(next.nextAction), taskState: clone(next.taskState), gates,
+-          authoring: { status: 'UNVERIFIED', code: 'NATIVE_AUTHOR_ACTION_PORT_REQUIRED' } };
++    // `comet runtime dispatch --application-file …` request construction for
++    // the composition Run. Only the declared read-only recovery operations
++    // and the checked start request are constructed here; everything else a
++    // composition Run needs (claim/record-outcome/…) is the real host wave.
++    buildStartRequest(details) {
++      return classicCompositionStartRequest({
++        change: fixed.change,
++        changeDir: path.relative(fixed.projectRoot, changeDir).split(path.sep).join('/'),
++        workflowId: 'comet-classic-full',
++        workflowVersion: '1',
++        ...details,
+       });
+     },
+-    async execute(input) {
+-      const execution = requestInput(input);
+-      return underSnapshot(async () => {
+-        if (!installed) no('FIXED_HOST_NOT_INSTALLED');
+-        const current = await currentIntent(execution);
+-        const known = observed.get(execution);
+-        if (known) {
+-          if (!known.handle) no('ORIGINAL_EXECUTION_UNRESOLVED');
+-          return { ...boundary, resumed: true, ...physical.observeCliJob({ ...known.request, handle: known.handle }), terminal: known.terminal };
+-        }
+-        if (!createdHere.has(execution)) no('NATIVE_EXECUTION_RECOVERY_PORT_REQUIRED');
+-        const request = { dispatch: current.intent.protectedDispatch, currentActionBinding: current.current.actionBinding, job: current.job };
+-        const record = { request }; observed.set(execution, record);
+-        let started;
+-        try { started = physical.startCliJob(request); } catch { no('PHYSICAL_START_UNVERIFIED'); }
+-        record.handle = started.handle;
+-        if (!started.terminal) no('ORIGINAL_EXECUTION_UNRESOLVED');
+-        record.terminal = started.terminal.then((terminal) => finish(record, terminal));
+-        return { ...boundary, handle: record.handle, clientProcessId: started.clientProcessId, terminal: record.terminal };
++    buildRecoveryRequest(details) {
++      return classicCompositionRecoveryRequest({ change: fixed.change, ...details });
++    },
++    async dispatchRequest({ request, requestFile }) {
++      return calls.run({ kind: 'native', runId: fixed.runId }, async () => {
++        if (!object(request) || !RUNTIME_REQUEST_OPERATIONS.includes(request.operation) || request.runId !== fixed.runId) no('DISPATCH_REQUEST_INVALID');
++        if (!text(requestFile) || !path.isAbsolute(requestFile)) no('DISPATCH_REQUEST_INVALID');
++        const resolved = path.resolve(requestFile);
++        if (resolved !== fixed.projectRoot && !resolved.startsWith(fixed.projectRoot + path.sep)) no('DISPATCH_REQUEST_INVALID');
++        if (!fs.existsSync(fixed.applicationFile)) no('APPLICATION_PACKAGE_REQUIRED');
++        const argv = runtimeDispatchArgv({
++          applicationFile: fixed.applicationFile,
++          requestFile: resolved,
++          projectRoot: fixed.projectRoot,
++          json: true,
++        });
++        fs.mkdirSync(path.dirname(resolved), { recursive: true });
++        fs.writeFileSync(resolved, `${JSON.stringify(clone(request), null, 2)}\n`);
++        return runCometCli([...argv], undefined, { projectRoot: fixed.projectRoot, invocationCwd: fixed.projectRoot });
+       });
+     },
+-    observe(input) {
+-      const record = originalProcess(requestInput(input));
+-      return { ...boundary, ...physical.observeCliJob({ ...record.request, handle: record.handle }) };
++    // The six-gate extension receipt acceptance: fail closed through the
++    // packaged bindings validators. The upstream domain wrapper checks
++    // verdict/sourceHash/artifactHashes BEFORE the validator runs — that
++    // order is mirrored here, then the validator judges the gateEvidence
++    // payload through the pure SDD.Gate.v1 evaluation. No fallback accepts.
++    async acceptGateReceipt({ gate, execution, outcome }) {
++      const entry = validatorFor(gate);
++      if (!text(execution) || execution.length > 256) no('EXECUTION_INVALID');
++      // Mirror of the domain wrapper's pre-validator binding (classic-
++      // application.ts): the claimed pass must carry a bound sourceHash and
++      // non-empty artifactHashes over the extension's declared artifactRefs
++      // before any validator judges the gateEvidence payload.
++      if (!object(outcome) || outcome.verdict !== 'pass' || !text(outcome.sourceHash)
++        || !object(outcome.artifactHashes) || Object.keys(outcome.artifactHashes).length === 0
++        || Object.values(outcome.artifactHashes).some((digest) => typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest))) no('EXTENSION_OUTCOME_INVALID');
++      const bindings = await bindingsPromise;
++      const validator = bindings.validators.find((candidate) => candidate.id === entry.validator.id && candidate.version === entry.validator.version);
++      if (!validator) no('VALIDATOR_NOT_REGISTERED');
++      const input = { run: { runId: fixed.runId }, action: { gate }, outcome: clone(outcome) };
++      const verdict = validator.validate(input);
++      if (!object(verdict) || verdict.accepted !== true) {
++        return { accepted: false, gate, extensionId: entry.extensionId,
++          reason: `SDD gate ${gate} extension ${entry.extensionId} refused: ${text(verdict?.reason) ? verdict.reason : 'no verdict'}` };
++      }
++      const evidence = outcome.output?.gateEvidence;
++      judged.set(execution, {
++        gate,
++        run: fixed.runId,
++        inputDigest: evidence?.inputs?.inputDigest,
++      });
++      return { accepted: true, gate, extensionId: entry.extensionId, validatorId: entry.validator.id };
+     },
+-    stop(input) {
+-      const record = originalProcess(requestInput(input));
+-      return { ...boundary, ...physical.stopCliJob({ ...record.request, handle: record.handle }) };
++    // Kt: the 0005 read-side predicate. No dispatch, no state write — the
++    // SAME Run simply may not be reported completed while the obligation is
++    // required and unmet. The write path (wire keys, managed admission) is
++    // the supply/admission wave — UNVERIFIED here.
++    ktCloseout(stateLike = {}) {
++      const state = stateLike.classic ?? stateLike;
++      const blocked = knowledgeCloseoutBlocked(state);
++      return Object.freeze({
++        gate: KT_GATE,
++        mechanism: 'upstream-minimal-patch-0005',
++        blocked,
++        overallCompletionEligible: !blocked,
++        writePath: 'UNVERIFIED: supply/admission wave (composition.json knowledgeCloseout.writePath)',
++      });
+     },
+-    readSourceRecord(input) {
+-      const record = observed.get(requestInput(input));
+-      if (!record?.packet) no('ORIGINAL_RESULT_UNVERIFIED');
+-      return { ...clonePacket(record.packet), ...boundary, physical: clone(record.observation), terminal: {
+-        processId: record.raw.clientProcessId, exitCode: record.raw.clientExitCode, status: record.raw.status,
+-      } };
++    describeComposition() {
++      return {
++        ...boundary,
++        base: composition.base,
++        revision: composition.revision,
++        applicationFile: fixed.applicationFile,
++        gates: Object.fromEntries([...gateMap.entries()].map(([gate, entry]) => [gate, clone(entry)])),
++        kt: this.ktCloseout(),
++        runtimeAccepted: composition.runtimeAccepted === true,
++      };
+     },
++    host,
+   });
+   fixedEntries.set(executor, (argv) => {
+-    if (!installed) executor.install();
+-    return invoke(argv);
++    // The bootstrap main may forward ONLY a runtime dispatch for the
++    // registered application package — a base state write for a composition
++    // Run is refused (0.5.0: those commands reject composition Runs anyway).
++    const words = argv.filter((arg) => arg !== '--json');
++    if (words[0] !== 'runtime' || words[1] !== 'dispatch' || words.includes('--application') || words.includes('--workflow')) no('NATIVE_COMMAND_SCOPE_REQUIRED');
++    return calls.run({ kind: 'native', runId: fixed.runId }, async () => {
++      const requestFile = words[words.indexOf('--request') + 1];
++      if (words[words.indexOf('--application-file') + 1] !== fixed.applicationFile
++        || !text(requestFile) || !path.isAbsolute(requestFile)) no('NATIVE_COMMAND_SCOPE_REQUIRED');
++      // Request validation first: a foreign or malformed request never even
++      // reaches the package-existence boundary.
++      let request;
++      try { request = JSON.parse(fs.readFileSync(requestFile, 'utf8')); }
++      catch { no('DISPATCH_REQUEST_INVALID'); }
++      if (!object(request) || request.runId !== fixed.runId || !RUNTIME_REQUEST_OPERATIONS.includes(request.operation)) no('DISPATCH_REQUEST_INVALID');
++      if (!fs.existsSync(fixed.applicationFile)) no('APPLICATION_PACKAGE_REQUIRED');
++      return runCometCli([...argv], undefined, { projectRoot: fixed.projectRoot, invocationCwd: fixed.projectRoot });
++    });
+   });
+   return executor;
+ }
+ 
+-function clonePacket(packet) {
+-  return { ...clone({ dispatch: packet.dispatch, envelope: packet.envelope, launchRecord: packet.launchRecord }),
+-    reportBytes: Buffer.from(packet.reportBytes), resultBytes: Buffer.from(packet.resultBytes), methodTraceBytes: Buffer.from(packet.methodTraceBytes) };
+-}
+-
+-// The packaged process has no production provider yet. Environment values,
+-// role labels and worker frames cannot manufacture a protected Host binding.
+ function bootstrapResult(status, code, exitCode) {
+   return { exitCode, stdout: JSON.stringify({ status, code, scope: 'component/fixed-host-bootstrap',
+     managedClosureEligible: false, productionQualified: false }) + '\n' };
+ }
+ 
+ function bootstrapArguments(argv) {
+-  if (!Array.isArray(argv) || !argv.length || argv.length > 64
+-    || Array.from(argv).some((arg) => typeof arg !== 'string' || arg.length > 4096 || arg.includes('\0'))
+-    || argv.reduce((size, arg) => size + Buffer.byteLength(arg), 0) > 64 * 1024) return false;
++  if (!Array.isArray(argv) || !argv.length || argv.length > 16
++    || Array.from(argv).some((arg) => typeof arg !== 'string' || arg.length > 4096 || arg.includes('\0'))) return false;
+   const words = argv[0] === '--json' ? argv.slice(1) : argv;
+-  const [command, operation, change, ...tail] = words;
+-  if (command !== 'state' || !STATE_OPERATIONS.includes(operation) || !/^[a-z0-9][a-z0-9-]*$/.test(change ?? '')
+-    || words.includes('--json')) return false;
+-  const field = (value) => typeof value === 'string' && /^[a-z][a-z0-9_]*$/.test(value);
+-  if (['next', 'gates', 'complete-design'].includes(operation)) return tail.length === 0;
+-  if (operation === 'get') return tail.length === 1 && field(tail[0]);
+-  if (operation === 'set') return tail.length === 2 && field(tail[0]);
+-  if (operation === 'transition') return tail.length === 1 && /^[a-z][a-z0-9-]*$/.test(tail[0]);
+-  if (operation === 'dispatch-gate') return tail.length === 1 && GATES.includes(tail[0]);
+-  return operation === 'accept-gate' && tail.length === 3 && GATES.includes(tail[0])
+-    && tail[1] === '--file' && text(tail[2]) && !tail[2].startsWith('--');
++  if (words[0] !== 'runtime' || words[1] !== 'dispatch' || words.includes('--json')) return false;
++  const flags = ['--application-file', '--request', '--project-root', '--details'];
++  for (let index = 2; index < words.length; index += 1) {
++    if (!flags.includes(words[index])) return false;
++    if (words[index] !== '--details' && !text(words[index + 1])) return false;
++    if (words[index] === '--details') continue;
++    index += 1;
++  }
++  return words.includes('--application-file') && words.includes('--request');
+ }
+ 
+ export async function runCometHostMain(argv, executor) {
+   try {
+-    if (!bootstrapArguments(argv)) return bootstrapResult('INPUT_INVALID', 'NATIVE_ARGUMENTS_INVALID', 1);
++    if (!bootstrapArguments(argv)) return bootstrapResult('INPUT_INVALID', 'NATIVE_COMMAND_SCOPE_REQUIRED', 1);
+     if (executor === undefined) return bootstrapResult('UNVERIFIED', 'PROTECTED_BOOTSTRAP_REQUIRED', 2);
+     const invoke = fixedEntries.get(executor);
+     if (!invoke) return bootstrapResult('INPUT_INVALID', 'FIXED_HOST_CAPABILITY_REQUIRED', 1);
+@@ -343,7 +378,10 @@ export async function runCometHostMain(argv, executor) {
+     return { ...boundary, productionQualified: false, exitCode: result.exitCode, stdout: result.stdout };
+   } catch (error) {
+     if (error instanceof CometExecutionError) {
+-      if (error.code === 'NATIVE_COMMAND_SCOPE_REQUIRED') return bootstrapResult('INPUT_INVALID', 'NATIVE_COMMAND_SCOPE_REQUIRED', 1);
++      if (error.code === 'NATIVE_COMMAND_SCOPE_REQUIRED' || error.code === 'DISPATCH_REQUEST_INVALID') return bootstrapResult('INPUT_INVALID', error.code, 1);
++      // The honest UNVERIFIED boundary keeps its specific code: a missing
++      // compiled package is a supply-wave fact, not an internal failure.
++      if (error.code === 'APPLICATION_PACKAGE_REQUIRED') return bootstrapResult('UNVERIFIED', error.code, 2);
+       return bootstrapResult('UNVERIFIED', 'PROTECTED_HOST_INVOCATION_UNVERIFIED', 2);
+     }
+     return bootstrapResult('INTERNAL_FAILURE', 'BOOTSTRAP_INTERNAL_FAILURE', 1);
+diff --git a/lib/adapters/comet.js b/lib/adapters/comet.js
+index 8545ef4..fbf5cf8 100644
+--- a/lib/adapters/comet.js
++++ b/lib/adapters/comet.js
+@@ -1,26 +1,46 @@
+-// Comet Classic host adapter (task P1_3, work packages 1.3.a/1.3.b/1.3.c).
++// Comet 0.5.0 host adapter (task P1_3, revision 2026-10-26-comet-050-adoption-v1).
+ //
+-// Everything here is the REAL interface of the patched pinned build (source
+-// lock integrations/comet/upstream.lock.json, six-patch stack incl. the 0002
+-// managed-delivery runtime), not a
+-// parallel control plane: the Classic Run keeps its single RunState, its
+-// .comet-state lock and its YAML+run transaction, and there is no second
+-// currentPhase anywhere in this module (Comet.Run.managedDelivery.v1). The
+-// single discovery run recorded (probe session, 2026-10-20):
++// Everything here is the REAL interface of the pinned 0.5.0 build (source lock
++// integrations/comet/upstream.lock.json, commit aeb1a659…, patches []),
++// not a parallel control plane: the Classic Run keeps its single RunState,
++// its .comet-state lock and its state transaction, and there is no second
++// currentPhase anywhere in this module (Comet.Run.managedDelivery.v1).
++// 0.5.0 discovery facts (pristine domains/comet-classic + live scratch probe
++// against builds/29f2332b…, recorded in host-probes/1_3-050-surface.json):
+ //   project config        <root>/.comet/config.yaml (comet.project.v1)
+-//   change control state  docs/openspec/changes/<change>/.comet.yaml
+-//                         (YAML, atomic rename = commit point; phase one of
+-//                         open|design|build|verify|archive)
+-//   engine Run state      docs/openspec/changes/<change>/.comet/run-state.json
+-//                         (atomic tmp+rename writer, run_id link in .comet.yaml)
++//   change control state  <changesRoot>/<change>/comet-state.yaml
++//                         (SDK default, NATIVE_CHANGE_STATE_FILE) with the
++//                         legacy .comet.yaml still readable — upstream
++//                         resolveClassicStateFile keeps whichever name exists,
++//                         refuses symlinks/directories, and refuses the change
++//                         outright when BOTH exist (ClassicStateFileConflict)
+ //   state lock            <changeDir>/.comet-state.lock (recoverable file lock)
+ //   state transaction     <changeDir>/.comet-state-transaction.json
+ //   change selection      <root>/.comet/current-change.json (comet.selection.v2)
+ //   check logs            <changeDir>/.comet/checks/<uuid>.log (real runtime
+ //                         checks; manual record-check declarations never
+ //                         satisfy the guard — observed upstream refusal)
+-//   host hook             <root>/.claude/settings.local.json PreToolUse
+-//                         matcher "Write|Edit" -> comet-hook-router.mjs
++//   check policy          <root>/.comet/check-policy.json — version 2 binds
++//                         command identity per entry (argv+cwd), so unrelated
++//                         entries no longer invalidate this command's evidence
++//                         (classic-check-policy.ts CheckPolicy.entryDigest)
++//   composition apps      `comet application install <pkg>` installs a compiled
++//                         SDK application package; SDK composition Runs are
++//                         driven ONLY through
++//                         `comet runtime dispatch --application-file <pkg>`
++//                         (app/cli/runtime-command.ts) — the basic state
++//                         commands refuse to advance a composition Run
++//                         (classic-sdk-state-store.ts recoveryRequired emits
++//                         the runtime-dispatch argv for application Runs)
++//   Kt closeout           0.5.0 has no post-archive hook; integrations/comet/
++//                         patches/0005-comet-050-kt-closeout.patch pins the
++//                         read-side predicate: an archived run with the
++//                         optional knowledgeCloseout state field
++//                         { required, completed } parks at
++//                         <profile>.archive.execute (same Run) instead of
++//                         'completed' until required===true is completed.
++//                         The WRITE path of that field is the supply/admission
++//                         wave — see knowledgeCloseoutBlocked below.
+ // The phase guard denies cross-phase product writes for the attributed edit
+ // channel with the claude hook contract (exit 2, "COMET PHASE GUARD — WRITE
+ // BLOCKED"); Shell and MCP write channels are not attributed by the guard —
+@@ -36,9 +56,16 @@ export { createCometExecutor } from './comet-executor.js';
+ 
+ export const RUNNER_ID = 'comet-classic';
+ 
+-// Runner.Dispatch.v1 for the single Comet Classic master: the authority is
+-// bound to one run id, so a dispatch or a verified record from any other run
+-// is refused before it can be confused with this run's receipts (F07).
++// 0.5.0 state-file face (pristine domains/comet-classic/classic-state-file.ts):
++// the SDK default name for new state, the legacy name still readable, and the
++// upstream default when neither exists.
++export const CHANGE_STATE_FILE = 'comet-state.yaml';
++export const LEGACY_CHANGE_STATE_FILE = '.comet.yaml';
++export const CHANGE_STATE_FILES = Object.freeze([CHANGE_STATE_FILE, LEGACY_CHANGE_STATE_FILE]);
++
++// Runner.Dispatch.v1 for the single Comet master: the authority is bound to
++// one run id, so a dispatch or a verified record from any other run is
++// refused before it can be confused with this run's receipts (F07).
+ export function cometLaunchAuthority({ secret, runId, sourceVerifier }) {
+   if (typeof runId !== 'string' || runId.length === 0) {
+     const error = new Error('cometLaunchAuthority: runId is required — the authority is bound to exactly one Comet run');
+@@ -78,6 +105,38 @@ export function cometLaunchAuthority({ secret, runId, sourceVerifier }) {
+   });
+ }
+ 
++// Mirror of upstream resolveClassicStateFile semantics (read side only): the
++// name that exists wins; both names at once is an ambiguous state the run
++// refuses to touch; a symlink/directory is refused; the 0.5.0 default for a
++// change with no state yet is comet-state.yaml. This never writes or renames.
++export async function resolveChangeStateFile(changeDir) {
++  const found = [];
++  for (const name of CHANGE_STATE_FILES) {
++    const target = path.join(changeDir, name);
++    let stat;
++    try { stat = await fs.lstat(target); } catch (error) {
++      if (error.code === 'ENOENT') continue;
++      throw error;
++    }
++    found.push({ name, target, stat });
++  }
++  if (found.length > 1) {
++    const error = new Error(`classic state files are ambiguous in ${changeDir}: ${CHANGE_STATE_FILES.join(' and ')} both exist; preserve both files and resolve the conflict before continuing`);
++    error.code = 'WORKSPACE_STATE_CONFLICT';
++    throw error;
++  }
++  if (found.length === 1) {
++    const { name, target, stat } = found[0];
++    if (!stat.isFile()) {
++      const error = new Error(`classic state must be a regular file, not a symlink or directory: ${target}`);
++      error.code = 'WORKSPACE_STATE_INVALID';
++      throw error;
++    }
++    return { file: target, name, legacy: name === LEGACY_CHANGE_STATE_FILE, default: false };
++  }
++  return { file: path.join(changeDir, CHANGE_STATE_FILE), name: CHANGE_STATE_FILE, legacy: false, default: true };
++}
++
+ function hookRegistration(settings) {
+   const preToolUse = settings?.hooks?.PreToolUse;
+   if (!Array.isArray(preToolUse) || preToolUse.length === 0) {
+@@ -100,7 +159,9 @@ function hookRegistration(settings) {
+ 
+ // The workspace half of the authority/workspace/execution interface: real
+ // paths and the real host hook registration, discovered and verified against
+-// the live project instead of assumed.
++// the live project instead of assumed. The change control state is resolved
++// with the 0.5.0 dual-name rule (comet-state.yaml default, legacy .comet.yaml
++// readable, both-present refused).
+ export async function describeWorkspace({ projectRoot, change }) {
+   const changeDir = path.join(projectRoot, 'docs/openspec/changes', change);
+   const settingsFile = path.join(projectRoot, '.claude/settings.local.json');
+@@ -120,19 +181,264 @@ export async function describeWorkspace({ projectRoot, change }) {
+     error.code = 'WORKSPACE_HOOK_MISSING';
+     throw error;
+   }
++  const state = await resolveChangeStateFile(changeDir);
+   return Object.freeze({
+     projectRoot,
+     projectConfig: path.join(projectRoot, '.comet/config.yaml'),
+-    changeStateFile: path.join(changeDir, '.comet.yaml'),
++    changeStateFile: state.file,
++    changeStateName: state.name,
++    changeStateLegacy: state.legacy,
++    changeStateDefaulted: Boolean(state.default),
+     runStateFile: path.join(changeDir, '.comet/run-state.json'),
+     stateLockFile: path.join(changeDir, '.comet-state.lock'),
+     stateTransactionFile: path.join(changeDir, '.comet-state-transaction.json'),
+     selectionFile: path.join(projectRoot, '.comet/current-change.json'),
++    checkPolicyFile: path.join(projectRoot, '.comet/check-policy.json'),
+     checksDir: path.join(changeDir, '.comet/checks'),
+     ...hook,
+   });
+ }
+ 
++// --- 0.5.0 composition-application command construction ----------------------
++//
++// These builders are ARGV/REQUEST CONSTRUCTION ONLY (their execution belongs
++// to the real host waves — P1_4/P3_2 and VERIFY). They fail closed on any
++// option the upstream CLI does not declare, so a caller cannot smuggle an
++// arbitrary program, a second Run, or an unpinned application through them.
++
++const APPLICATION_INSTALL_FLAGS = Object.freeze(['applicationFile', 'project', 'platform', 'host', 'scope', 'userRoot', 'upgrade', 'confirmationHash', 'preview', 'json']);
++const APPLICATION_HOSTS = Object.freeze(['codex', 'claude-code']);
++const APPLICATION_SCOPES = Object.freeze(['project', 'user']);
++
++// `comet application install <file>` (app/cli/index.ts): preview first, then
++// the confirmed preview hash installs the fixed version and platform entries.
++export function applicationInstallArgv(options = {}) {
++  if (options === null || typeof options !== 'object' || Array.isArray(options)) {
++    const error = new Error('applicationInstallArgv: an options object is required');
++    error.code = 'APPLICATION_OPTIONS_INVALID';
++    throw error;
++  }
++  const unknown = Object.keys(options).filter((key) => !APPLICATION_INSTALL_FLAGS.includes(key));
++  if (unknown.length > 0 || typeof options.applicationFile !== 'string' || !path.isAbsolute(options.applicationFile)) {
++    const error = new Error(`applicationInstallArgv: unknown fields [${unknown.join(', ')}] or a non-absolute application.json path — the install surface is fixed to the declared flags`);
++    error.code = 'APPLICATION_OPTIONS_INVALID';
++    throw error;
++  }
++  const argv = ['application', 'install', options.applicationFile];
++  const flag = (name, value) => argv.push(`--${name}`, value);
++  if (options.project !== undefined) flag('project', options.project);
++  for (const platform of options.platform ?? []) {
++    if (typeof platform !== 'string' || !platform.trim()) {
++      const error = new Error('applicationInstallArgv: --platform entries must be non-empty platform ids');
++      error.code = 'APPLICATION_OPTIONS_INVALID';
++      throw error;
++    }
++    flag('platform', platform);
++  }
++  if (options.host !== undefined) {
++    if (!APPLICATION_HOSTS.includes(options.host)) {
++      const error = new Error(`applicationInstallArgv: --host must be one of ${APPLICATION_HOSTS.join('|')}`);
++      error.code = 'APPLICATION_OPTIONS_INVALID';
++      throw error;
++    }
++    flag('host', options.host);
++  }
++  if (options.scope !== undefined) {
++    if (!APPLICATION_SCOPES.includes(options.scope)) {
++      const error = new Error(`applicationInstallArgv: --scope must be one of ${APPLICATION_SCOPES.join('|')}`);
++      error.code = 'APPLICATION_OPTIONS_INVALID';
++      throw error;
++    }
++    flag('scope', options.scope);
++  }
++  if (options.userRoot !== undefined) flag('user-root', options.userRoot);
++  if (options.upgrade === true) argv.push('--upgrade');
++  if (options.confirmationHash !== undefined) {
++    if (typeof options.confirmationHash !== 'string' || !/^[a-f0-9]{64}$/i.test(options.confirmationHash)) {
++      const error = new Error('applicationInstallArgv: --confirmation-hash must be the confirmed install preview digest');
++      error.code = 'APPLICATION_OPTIONS_INVALID';
++      throw error;
++    }
++    flag('confirmation-hash', options.confirmationHash);
++  }
++  if (options.preview === true) argv.push('--preview');
++  argv.push('--json');
++  return Object.freeze(argv);
++}
++
++const RUNTIME_DISPATCH_FLAGS = Object.freeze(['applicationFile', 'requestFile', 'projectRoot', 'details', 'json']);
++
++// `comet runtime dispatch` (app/cli/runtime-command.ts): the ONLY entry for an
++// SDK composition Run — one application selector, one request file, one
++// project context. Mutations carry the current Run revision; queries never
++// load execution modules.
++export function runtimeDispatchArgv(options = {}) {
++  if (options === null || typeof options !== 'object' || Array.isArray(options)) {
++    const error = new Error('runtimeDispatchArgv: an options object is required');
++    error.code = 'DISPATCH_OPTIONS_INVALID';
++    throw error;
++  }
++  const unknown = Object.keys(options).filter((key) => !RUNTIME_DISPATCH_FLAGS.includes(key));
++  if (unknown.length > 0 || typeof options.applicationFile !== 'string' || !path.isAbsolute(options.applicationFile)
++    || typeof options.requestFile !== 'string' || !path.isAbsolute(options.requestFile)) {
++    const error = new Error('runtimeDispatchArgv: exactly --application-file and --request (absolute paths) plus the declared flags are accepted');
++    error.code = 'DISPATCH_OPTIONS_INVALID';
++    throw error;
++  }
++  const argv = ['runtime', 'dispatch', '--application-file', options.applicationFile, '--request', options.requestFile];
++  if (options.projectRoot !== undefined) argv.push('--project-root', options.projectRoot);
++  if (options.details === true) argv.push('--details');
++  argv.push('--json');
++  return Object.freeze(argv);
++}
++
++// The runtime request operations the 0.5.0 command layer accepts
++// (app/commands/runtime.ts operationFields) — requests outside this face are
++// refused here instead of reaching the CLI as an unknown operation.
++export const RUNTIME_REQUEST_OPERATIONS = Object.freeze([
++  'start', 'inspect', 'query', 'acknowledge-stopped', 'inspect-storage-index',
++  'audit-storage-index', 'rebuild-storage-index', 'next', 'execute',
++  'dispatch-command', 'claim', 'record-outcome', 'record-evidence',
++  'invalidate-evidence', 'resolve-wait', 'revise-wait', 'mark-unknown', 'retry', 'cancel',
++]);
++
++const CHANGE_NAME_RE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
++
++// The start request for a classic composition Run (assertBuiltInChangeInput):
++// runId MUST equal the change name, changeDir is project-relative POSIX whose
++// basename is the change, and input.change must match when present.
++export function classicCompositionStartRequest({ change, changeDir, workflowId, workflowVersion }) {
++  if (typeof change !== 'string' || !CHANGE_NAME_RE.test(change)) {
++    const error = new Error('classicCompositionStartRequest: a canonical kebab-case change name is required');
++    error.code = 'REQUEST_CHANGE_INVALID';
++    throw error;
++  }
++  if (typeof changeDir !== 'string' || changeDir.startsWith('/') || changeDir.split('/').includes('..')
++    || path.posix.basename(changeDir.replaceAll('\\', '/')) !== change
++    || (changeDir !== `openspec/changes/${change}` && changeDir !== `docs/openspec/changes/${change}`)) {
++    const error = new Error(`classicCompositionStartRequest: changeDir must be the change's own directory under openspec/changes or docs/openspec/changes (got ${String(changeDir)})`);
++    error.code = 'REQUEST_CHANGE_DIR_INVALID';
++    throw error;
++  }
++  if (typeof workflowId !== 'string' || workflowId !== 'comet-classic-full'
++    || typeof workflowVersion !== 'string' || !workflowVersion.trim()) {
++    const error = new Error('classicCompositionStartRequest: the classic-full composition workflow { id, version } is required (the pristine workflows declare version "1")');
++    error.code = 'REQUEST_WORKFLOW_INVALID';
++    throw error;
++  }
++  return Object.freeze({
++    operation: 'start',
++    runId: change,
++    workflow: Object.freeze({ id: workflowId, version: workflowVersion }),
++    input: Object.freeze({ change, changeDir }),
++  });
++}
++
++// The documented recovery request for a composition Run whose portable
++// checkpoint exists (classic-sdk-state-store.ts recoveryRequired): a `next`
++// on the same runId restores the recorded state without executing host work.
++export function classicCompositionRecoveryRequest({ change, operation = 'next' }) {
++  if (typeof change !== 'string' || !CHANGE_NAME_RE.test(change)) {
++    const error = new Error('classicCompositionRecoveryRequest: a canonical kebab-case change name is required');
++    error.code = 'REQUEST_CHANGE_INVALID';
++    throw error;
++  }
++  if (!['next', 'inspect'].includes(operation)) {
++    const error = new Error('classicCompositionRecoveryRequest: only the read-only recovery operations next|inspect are constructed here');
++    error.code = 'REQUEST_OPERATION_INVALID';
++    throw error;
++  }
++  return Object.freeze({ operation, runId: change });
++}
++
++// --- check-policy v2 command identity ----------------------------------------
++
++const CHECK_POLICY_COMMAND_KEYS = Object.freeze(['argv', 'cwd', 'files', 'outputs', 'env', 'git', 'taskCheckboxes']);
++
++// Match one v2 command entry for an executed identity (classic-check-policy
++// parseCommandEntry + entry selection): unknown fields, empty argv, absolute
++// cwd or a non-directory cwd shape are refused exactly like the upstream
++// parser. The entryDigest itself stays upstream-owned — this helper selects
++// the entry, it never invents the digest the guard compares.
++export function selectCheckPolicyCommand(document, { argv, cwd = '.' }) {
++  if (document === null || typeof document !== 'object' || Array.isArray(document)
++    || document.version !== 2 || !Array.isArray(document.commands)) {
++    const error = new Error('selectCheckPolicyCommand: a version 2 check-policy document with a commands array is required');
++    error.code = 'CHECK_POLICY_INVALID';
++    throw error;
++  }
++  if (document.version === 2 && Object.keys(document).some((key) => !['version', 'commands'].includes(key))) {
++    const error = new Error('selectCheckPolicyCommand: version 2 allows only version and commands');
++    error.code = 'CHECK_POLICY_INVALID';
++    throw error;
++  }
++  if (!Array.isArray(argv) || argv.length === 0 || argv.some((part) => typeof part !== 'string' || !part || part.includes('\0'))) {
++    const error = new Error('selectCheckPolicyCommand: the executed argv must be literal non-empty strings');
++    error.code = 'CHECK_POLICY_IDENTITY_INVALID';
++    throw error;
++  }
++  if (typeof cwd !== 'string' || !cwd || path.isAbsolute(cwd)) {
++    const error = new Error('selectCheckPolicyCommand: the executed cwd must be a project-relative directory');
++    error.code = 'CHECK_POLICY_IDENTITY_INVALID';
++    throw error;
++  }
++  const normalizedCwd = cwd === '.' ? '.' : cwd.replaceAll('\\', '/').replace(/\/+$/u, '');
++  let match = null;
++  for (const entry of document.commands) {
++    if (entry === null || typeof entry !== 'object' || Array.isArray(entry)
++      || Object.keys(entry).some((key) => !CHECK_POLICY_COMMAND_KEYS.includes(key))
++      || !Array.isArray(entry.argv) || entry.argv.length === 0
++      || entry.argv.some((part) => typeof part !== 'string' || !part || part.includes('\0'))
++      || typeof entry.cwd !== 'string' || !entry.cwd) {
++      const error = new Error('selectCheckPolicyCommand: a commands entry violates the v2 shape (argv/cwd/files/outputs/env/git/taskCheckboxes only)');
++      error.code = 'CHECK_POLICY_INVALID';
++      throw error;
++    }
++    const entryCwd = entry.cwd === '.' ? '.' : entry.cwd.replaceAll('\\', '/').replace(/\/+$/u, '');
++    if (JSON.stringify(entry.argv) === JSON.stringify(argv) && entryCwd === normalizedCwd) {
++      if (match !== null) {
++        const error = new Error('selectCheckPolicyCommand: the executed command identity matches more than one v2 entry');
++        error.code = 'CHECK_POLICY_AMBIGUOUS';
++        throw error;
++      }
++      match = entry;
++    }
++  }
++  return match === null ? null : Object.freeze({
++    argv: Object.freeze([...match.argv]),
++    cwd: match.cwd,
++    files: Object.freeze([...(match.files ?? [])]),
++    outputs: Object.freeze([...(match.outputs ?? [])]),
++    env: Object.freeze([...(match.env ?? [])]),
++    git: match.git ?? 'none',
++    taskCheckboxes: match.taskCheckboxes ?? 'ignore',
++  });
++}
++
++// --- 0005 Kt read-side predicate ----------------------------------------------
++
++// EXACTLY the 0005 patch semantic (fail-open default): absent/null field —
++// every upstream and legacy state — keeps the original unconditional
++// completion; the predicate blocks ONLY while required === true and
++// completed !== true. The WRITE path that puts the field onto the state is
++// the supply/admission wave and is deliberately not implemented here.
++export function knowledgeCloseoutBlocked(classicState) {
++  if (classicState === null || typeof classicState !== 'object' || Array.isArray(classicState)) {
++    const error = new Error('knowledgeCloseoutBlocked: a ClassicState-shaped object is required');
++    error.code = 'KT_STATE_INVALID';
++    throw error;
++  }
++  const closeout = classicState.knowledgeCloseout;
++  if (closeout === null || closeout === undefined) return false;
++  if (typeof closeout !== 'object' || Array.isArray(closeout)
++    || Object.keys(closeout).some((key) => !['required', 'completed'].includes(key))) {
++    const error = new Error('knowledgeCloseoutBlocked: the optional knowledgeCloseout field is { required?, completed? } | null');
++    error.code = 'KT_STATE_INVALID';
++    throw error;
++  }
++  return closeout.required === true && closeout.completed !== true;
++}
++
+ function runRouter({ workspace, nodeExecutable, env, toolName, toolInput }) {
+   const payload = JSON.stringify({
+     session_id: 'p1-3-channel-probe',
+@@ -206,7 +512,9 @@ const STATE_FIELDS = [
+ ];
+ 
+ // Managed read of the closeout state through the CLI (never a hand parse of
+-// the YAML): the seal facts the single closeout owner judges on.
++// the YAML): the seal facts the single closeout owner judges on. 0.5.0 state
++// get answers data.fields (verified live: {"change":…,"fields":{"phase":"open"}})
++// with the bare value on stdout — both are read, fields first.
+ export async function readArchiveSeal({ projectRoot, change, nodeExecutable, entrypoint, env }) {
+   const seal = { change };
+   for (const [key, field] of STATE_FIELDS) {
+@@ -223,8 +531,11 @@ export async function readArchiveSeal({ projectRoot, change, nodeExecutable, ent
+       error.code = 'SEAL_READ_FAILED';
+       throw error;
+     }
+-    const raw = String(envelope.stdout ?? '').trim();
+-    seal[key] = key === 'checkEpoch' ? Number(raw) : key === 'archived' ? raw === 'true' : raw;
++    const fields = envelope?.data?.fields;
++    const raw = fields !== null && typeof fields === 'object' && !Array.isArray(fields) && typeof fields[field] === 'string'
++      ? fields[field].trim()
++      : String(envelope.stdout ?? '').trim();
++    seal[key] = key === 'checkEpoch' ? (raw === '' ? null : Number(raw)) : key === 'archived' ? raw === 'true' : raw;
+   }
+   return seal;
+ }
+@@ -233,8 +544,10 @@ export async function readArchiveSeal({ projectRoot, change, nodeExecutable, ent
+ // idempotently when `comet archive` repeats (archived: true, one archive
+ // directory); exclusivity is enforced here, at the driver gate: a second
+ // closeout execution is refused outright, and Knowledge.Closeout.v1 ordering
+-// (Kp before archive) is a precondition of sealing at all. Unsupported
+-// scenarios fail closed — no second scheduler is built.
++// (Kp before archive) is a precondition of sealing at all. Kt is NOT this
++// seal: on the 0.5.0 face Kt is the post-archive 0005 predicate
++// (knowledgeCloseoutBlocked) that parks the SAME Run before 'completed'.
++// Unsupported scenarios fail closed — no second scheduler is built.
+ export function sealCloseout({ seal, execution, knowledgeCloseout }) {
+   const fail = (code, message) => {
+     const error = new Error(message);
+@@ -263,7 +576,9 @@ export function sealCloseout({ seal, execution, knowledgeCloseout }) {
+ 
+ // SDD.Gate.v1 reuse: the pure delivery gate judgment, imported unmodified.
+ // The driver never dispatches from it and never writes a stage — it only
+-// consumes the verdict/receipt for the single verification execution.
++// consumes the verdict/receipt for the single verification execution. On the
++// 0.5.0 composition face the same judgment is reached through the packaged
++// bindings validators (integrations/comet/application/bindings.mjs).
+ export const evaluateGate = evaluate;
+ 
+ // Minimal SDD.Delivery.TestContract v1 fixture for gate-level judgments made
+diff --git a/mcp-capabilities.yaml b/mcp-capabilities.yaml
+index 6331203..e517866 100644
+--- a/mcp-capabilities.yaml
++++ b/mcp-capabilities.yaml
+@@ -32,4 +32,5 @@ mcps:
+     provides: [知识库 create/edit/append/read/search/lint, SQLite+FTS+引用索引]
+     depends: [python3 venv + mcp 包（bootstrap --with-llmwiki 安装，commit/版本已 pin）]
+     note: "写入必须走 MCP；直接 fs.write 绕过索引（hooks 策略 kb-write-protection 拦截）"
++    enforcement: "hook:kb-write-protection"
+ 
+diff --git a/test/comet-driver.test.js b/test/comet-driver.test.js
+index eea17b0..dbf3a12 100644
+--- a/test/comet-driver.test.js
++++ b/test/comet-driver.test.js
+@@ -24,7 +24,7 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
+ 
+ const harness = await import('../lib/adapters/harness.js');
+ const comet = await import('../lib/adapters/comet.js');
+-const { createLaunchAuthority } = await import('../lib/delivery/evidence.js');
++const { createLaunchAuthority, envelopeDigest } = await import('../lib/delivery/evidence.js');
+ const gateModule = await import('../lib/delivery/gate.js');
+ 
+ const sha = (label) => crypto.createHash('sha256').update(label).digest('hex');
+@@ -708,3 +708,491 @@ process.stdin.on('end',()=>fs.writeFileSync(${JSON.stringify(ready)},'original p
+     }
+   });
+ });
++
++function nativePeerWire(fixture) {
++  if (!fs.existsSync(fixture.log)) return [];
++  return fs.readFileSync(fixture.log, 'utf8').split('\n').slice(0, -1).map(JSON.parse);
++}
++
++async function waitForNativePeer(fixture, transport, operation, predicate) {
++  const deadline = Date.now() + 2000;
++  while (!predicate(nativePeerWire(fixture))) {
++    const observed = transport.observe(operation.handle);
++    assert.notEqual(observed.status, 'UNKNOWN', observed.reason);
++    assert.equal(observed.process.closed, false);
++    assert.equal(Date.now() < deadline, true, 'the actual peer must reach the declared wire condition');
++    await new Promise((resolve) => setImmediate(resolve));
++  }
++}
++
++test('native connect initializes one actual peer without silently starting a thread or turn', async () => {
++  const fixture = nativeTransportFixture('notifications'); let transport, operation;
++  try {
++    transport = harness.createCodexStdioTransport(fixture.options);
++    assert.equal(typeof transport.connect, 'function', 'connect must expose a separate bounded initialization seam');
++    const connections = await Promise.all(Array.from({ length: 4 }, async () => transport.connect()));
++    operation = connections[0]; assert.equal(connections.every((entry) => entry === operation), true);
++    const initialized = await operation.ready;
++    assert.equal(initialized.initialized, true); assert.equal(initialized.status, 'INITIALIZED');
++    assert.equal(initialized.threadId, null); assert.equal(initialized.turnId, null);
++    assert.equal(initialized.protocolComplete, false); assert.equal(initialized.process.closed, false);
++    assert.equal(initialized.handle, operation.handle); assert.equal(initialized.contextDigest, operation.handle.contextDigest);
++    assert.equal(initialized.runtimeQualified, false); assert.equal(initialized.managedClosureEligible, false);
++    await waitForNativePeer(fixture, transport, operation, (wire) => wire.some((m) => m.method === 'initialized'));
++    assert.deepEqual(nativePeerWire(fixture).map((m) => m.method), ['initialize', 'initialized']);
++    assert.deepEqual(transport.observe(operation.handle).raw.stdin.toString().trim().split('\n').map(JSON.parse).map((m) => m.method), ['initialize', 'initialized']);
++    assert.equal(fixture.calls(), 0); assert.equal(fs.existsSync(path.join(fixture.workspace, 'note.txt')), false);
++    assert.doesNotThrow(() => process.kill(operation.handle.processId, 0));
++    transport.cancel(operation.handle); const closed = await operation.closed;
++    assert.equal(closed.reason, 'NATIVE_CANCEL_REQUESTED'); assert.equal(closed.process.closed, true);
++    assert.equal(closed.protocolComplete, false); assert.equal(closed.contextDigest, initialized.contextDigest);
++  } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++});
++
++test('native begin sends a truly empty tool subset and completes a real text-only peer turn', async () => {
++  const fixture = nativeTransportFixture(); let transport, operation;
++  fixture.context.dynamicTools = [];
++  let peer = fs.readFileSync(fixture.peer, 'utf8');
++  const toolAssertion = "assert.equal(m.params.dynamicTools[0].name,'write_note');";
++  assert.equal(peer.includes(toolAssertion), true); assert.equal(peer.includes('const issue=()=>{'), true);
++  peer = peer.replace(toolAssertion, 'assert.deepEqual(m.params.dynamicTools,[]);')
++    .replace('const issue=()=>{', 'const issue=()=>{finish();return;');
++  fs.writeFileSync(fixture.peer, peer); fixture.options.registration.sha256 = sha(fs.readFileSync(fixture.peer));
++  try {
++    transport = harness.createCodexStdioTransport(fixture.options); operation = transport.connect();
++    const initialized = await operation.ready; assert.equal(initialized.initialized, true);
++    assert.equal(transport.begin(operation.handle), operation);
++    const result = await operation.done; const closed = await operation.closed;
++    assert.equal(result.status, 'OBSERVED_TERMINAL', result.reason); assert.equal(closed.process.exitCode, 0);
++    assert.equal(result.protocolComplete, true); assert.equal(result.turnStatus, 'completed');
++    const wire = nativePeerWire(fixture), thread = wire.find((m) => m.method === 'thread/start');
++    assert.deepEqual(thread.params.dynamicTools, []); assert.deepEqual(thread.params.environments, []);
++    assert.equal(wire.filter((m) => m.method === 'thread/start').length, 1);
++    assert.equal(wire.filter((m) => m.method === 'turn/start').length, 1);
++    assert.equal(result.events.some((event) => event.method === 'item/tool/call'), false);
++    assert.equal(fixture.calls(), 0); assert.equal(fs.existsSync(path.join(fixture.workspace, 'note.txt')), false);
++    assert.equal(result.contextDigest, initialized.contextDigest); assert.equal(result.verdict, undefined);
++    assert.equal(result.runtimeQualified, false); assert.equal(result.managedClosureEligible, false);
++  } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++});
++
++function gatedNativeInitializationFixture() {
++  const fixture = nativeTransportFixture('wait'), release = path.join(fixture.scratch, 'release-initialize');
++  const text = fs.readFileSync(fixture.peer, 'utf8'), needle = "if(mode==='wait')return;";
++  assert.equal(text.includes(needle), true);
++  fs.writeFileSync(fixture.peer, text.replace(needle, `if(mode==='wait'){const until=Date.now()+10000;const hold=setInterval(()=>{if(fs.existsSync(${JSON.stringify(release)})){clearInterval(hold);send({id:m.id,result:{userAgent:'private-delayed-peer'}});}else if(Date.now()>until){clearInterval(hold);process.exitCode=91;process.stdin.destroy();}},5);return;}`));
++  fixture.options.registration.sha256 = sha(fs.readFileSync(fixture.peer));
++  return { ...fixture, release };
++}
++
++test('native initialize-only policy is snapshotted, digested and cannot become turn authority through ready or caller mutation', async () => {
++  const fixture = nativeTransportFixture('notifications'); let transport, operation;
++  fixture.options.registration.startPolicy = 'initialize-only';
++  const expectedDigest = envelopeDigest(structuredClone(fixture.options.registration));
++  try {
++    transport = harness.createCodexStdioTransport(fixture.options);
++    fixture.options.registration.startPolicy = 'turn';
++    assert.throws(() => transport.start(), (e) => e.code === 'NATIVE_TURN_SCOPE_REQUIRED');
++    assert.equal(fs.existsSync(fixture.log), false, 'start must refuse before spawning even when caller changed its old object');
++    operation = transport.connect(); const initialized = await operation.ready;
++    assert.equal(initialized.registrationDigest, expectedDigest); assert.equal(initialized.initialized, true);
++    assert.throws(() => transport.begin(operation.handle), (e) => e.code === 'NATIVE_TURN_SCOPE_REQUIRED');
++    assert.throws(() => transport.start(), (e) => e.code === 'NATIVE_TURN_SCOPE_REQUIRED');
++    assert.equal(transport.connect(), operation);
++    await waitForNativePeer(fixture, transport, operation, (wire) => wire.some((m) => m.method === 'initialized'));
++    assert.deepEqual(nativePeerWire(fixture).map((m) => m.method), ['initialize', 'initialized']);
++    assert.equal(fixture.calls(), 0); assert.equal(fs.existsSync(path.join(fixture.workspace, 'note.txt')), false);
++    assert.equal(initialized.runtimeQualified, false); assert.equal(initialized.managedClosureEligible, false);
++  } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++});
++
++test('native explicit begin and legacy start after connect reuse one initialized thread and actual tool execution', async (t) => {
++  for (const route of ['begin', 'start']) await t.test(route, async () => {
++    const fixture = nativeTransportFixture('notifications'); let transport, operation;
++    try {
++      transport = harness.createCodexStdioTransport(fixture.options); operation = transport.connect(); const ready = await operation.ready;
++      assert.equal(ready.initialized, true, JSON.stringify({ status: ready.status, reason: ready.reason, process: ready.process,
++        stdoutBytes: ready.raw.stdout.length, stderrBytes: ready.raw.stderr.length, wireMethods: nativePeerWire(fixture).map((m) => m.method) }));
++      const calls = await Promise.all(Array.from({ length: 6 }, async () => route === 'begin' ? transport.begin(operation.handle) : transport.start()));
++      assert.equal(calls.every((value) => value === operation), true);
++      assert.equal(transport.begin(operation.handle), operation); assert.equal(transport.start(), operation);
++      const result = await operation.done; assert.equal(result.status, 'OBSERVED_TERMINAL', result.reason);
++      assert.equal(result.process.exitCode, 0); assert.equal(fixture.calls(), 1);
++      assert.equal(fs.readFileSync(path.join(fixture.workspace, 'note.txt'), 'utf8'), 'written by the protected callback');
++      const wire = nativePeerWire(fixture);
++      for (const method of ['initialize', 'thread/start', 'turn/start']) assert.equal(wire.filter((m) => m.method === method).length, 1, method);
++      assert.equal(result.contextDigest, operation.handle.contextDigest); assert.equal(result.runtimeQualified, false);
++    } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++  });
++});
++
++test('native begin requires initialized state and the exact original handle without accepting caller options', async () => {
++  const fixture = gatedNativeInitializationFixture(); let transport, operation;
++  try {
++    transport = harness.createCodexStdioTransport(fixture.options); operation = transport.connect();
++    await waitForNativePeer(fixture, transport, operation, (wire) => wire.some((m) => m.method === 'initialize'));
++    assert.throws(() => transport.begin(operation.handle), (e) => e.code === 'NATIVE_NOT_INITIALIZED');
++    for (const handle of [{ ...operation.handle }, new Proxy(operation.handle, {}), null]) assert.throws(() => transport.begin(handle), (e) => e.code === 'NATIVE_HANDLE_REQUIRED');
++    assert.throws(() => transport.begin(operation.handle, { role: 'controller' }), (e) => e.code === 'NATIVE_BEGIN_ARGUMENTS_REFUSED');
++    assert.throws(() => transport.connect({ model: 'caller-model' }), (e) => e.code === 'NATIVE_CONNECT_ARGUMENTS_REFUSED');
++    assert.deepEqual(nativePeerWire(fixture).map((m) => m.method), ['initialize']);
++    fs.writeFileSync(fixture.release, 'release exact initialized response'); await operation.ready;
++    assert.equal(transport.begin(operation.handle), operation);
++    const result = await operation.done; assert.equal(result.status, 'OBSERVED_TERMINAL', result.reason);
++    assert.equal(fixture.calls(), 1); assert.equal(result.process.exitCode, 0);
++  } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++});
++
++test('native begin rejects drift or source exceptions after ready and restoring its old tuple cannot revive the connection', async (t) => {
++  for (const field of ['run', 'execution', 'attempt', 'epoch', 'revision', 'inputDigest', 'policyDigest', 'throw']) await t.test(field, async () => {
++    const fixture = nativeTransportFixture(); let transport, operation, reject = false;
++    const read = fixture.options.currentContext;
++    fixture.options.currentContext = () => { if (reject) throw new Error('/PRIVATE_READY_SOURCE_NOTE'); return read(); };
++    try {
++      transport = harness.createCodexStdioTransport(fixture.options); operation = transport.connect(); const ready = await operation.ready;
++      const changed = structuredClone(fixture.context);
++      if (field === 'throw') reject = true;
++      else { changed.actionBinding[field] = ['attempt', 'epoch'].includes(field) ? 2 : ['inputDigest', 'policyDigest'].includes(field) ? sha('changed-' + field) : 'changed-' + field; fixture.setCurrent(changed); }
++      assert.equal(transport.begin(operation.handle), operation);
++      const result = await operation.done;
++      assert.equal(result.status, 'UNKNOWN'); assert.equal(result.reason, 'NATIVE_CONTEXT_STALE');
++      assert.equal(result.threadId, null); assert.equal(result.turnId, null); assert.equal(result.process.closed, false);
++      assert.equal(result.contextDigest, ready.contextDigest); assert.doesNotMatch(result.raw.stdin.toString(), /PRIVATE_READY_SOURCE_NOTE|thread\/start|turn\/start/);
++      reject = false; fixture.setCurrent(fixture.context);
++      assert.equal(transport.begin(operation.handle), operation); assert.equal(transport.start(), operation); assert.equal(transport.connect(), operation);
++      assert.equal(transport.observe(operation.handle).status, 'UNKNOWN'); assert.equal(transport.observe(operation.handle).reason, 'NATIVE_CONTEXT_STALE');
++      assert.equal(fixture.calls(), 0); assert.equal(fs.existsSync(path.join(fixture.workspace, 'note.txt')), false);
++    } finally { if (operation) { transport.cancel(operation.handle); const closed = await operation.closed; assert.equal(closed.reason, 'NATIVE_CONTEXT_STALE'); } fixture.cleanup(); }
++  });
++});
++
++test('native context changed before initialize completes cannot report initialized or start a turn', async () => {
++  const fixture = gatedNativeInitializationFixture(); let transport, operation;
++  try {
++    transport = harness.createCodexStdioTransport(fixture.options); operation = transport.connect();
++    await waitForNativePeer(fixture, transport, operation, (wire) => wire.some((m) => m.method === 'initialize'));
++    const changed = structuredClone(fixture.context); changed.actionBinding.epoch++; fixture.setCurrent(changed);
++    fs.writeFileSync(fixture.release, 'send initialize response only after source drift');
++    const ready = await operation.ready;
++    assert.equal(ready.status, 'UNKNOWN'); assert.equal(ready.initialized, false);
++    assert.equal(ready.reason, 'NATIVE_MESSAGE_OR_CONTEXT_UNVERIFIED'); assert.equal(ready.contextDigest, operation.handle.contextDigest);
++    fixture.setCurrent(fixture.context); assert.equal(transport.start(), operation);
++    assert.throws(() => transport.begin(operation.handle), (e) => e.code === 'NATIVE_NOT_INITIALIZED');
++    assert.equal(transport.observe(operation.handle).status, 'UNKNOWN'); assert.equal(fixture.calls(), 0);
++    assert.deepEqual(transport.observe(operation.handle).raw.stdin.toString().trim().split('\n').map(JSON.parse).map((m) => m.method), ['initialize']);
++  } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++});
++
++test('native ready settles unknown on initialization EOF, timeout or cancellation and none can revive after restoring context', async (t) => {
++  for (const mode of ['eof', 'timeout', 'cancel']) await t.test(mode, async () => {
++    const fixture = nativeTransportFixture('wait'); let transport, operation;
++    if (mode === 'timeout') fixture.options.registration.timeoutMs = 500;
++    if (mode === 'eof') {
++      const peer = fs.readFileSync(fixture.peer, 'utf8'); assert.equal(peer.includes("if(mode==='wait')return;"), true);
++      fs.writeFileSync(fixture.peer, peer.replace("if(mode==='wait')return;", "if(mode==='wait'){process.stdin.destroy();return;}"));
++      fixture.options.registration.sha256 = sha(fs.readFileSync(fixture.peer));
++    }
++    try {
++      transport = harness.createCodexStdioTransport(fixture.options); operation = transport.connect();
++      if (mode === 'cancel') transport.cancel(operation.handle);
++      const ready = await operation.ready, result = await operation.done;
++      const reason = { eof: 'NATIVE_EOF_UNKNOWN', timeout: 'NATIVE_TIMEOUT_UNKNOWN', cancel: 'NATIVE_CANCEL_REQUESTED' }[mode];
++      for (const value of [ready, result]) { assert.equal(value.status, 'UNKNOWN'); assert.equal(value.reason, reason); assert.equal(value.initialized, false); assert.equal(value.contextDigest, operation.handle.contextDigest); }
++      if (mode === 'timeout') { assert.equal(result.process.closed, false); assert.doesNotThrow(() => process.kill(operation.handle.processId, 0)); }
++      fixture.setCurrent(fixture.context); assert.equal(transport.start(), operation); assert.equal(transport.connect(), operation);
++      assert.throws(() => transport.begin(operation.handle), (e) => e.code === 'NATIVE_NOT_INITIALIZED');
++      transport.cancel(operation.handle); const closed = await operation.closed;
++      assert.equal(closed.process.closed, true); assert.equal(closed.reason, reason); assert.equal(closed.protocolComplete, false);
++      if (mode === 'eof') assert.equal(closed.process.exitCode, 0);
++      assert.equal(fixture.calls(), 0);
++    } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++  });
++});
++
++test('native malformed start policies are refused before any process and empty tools never expose an undeclared call', async (t) => {
++  for (const policy of ['', null, false, [], {}, 'controller', 'Initialize-only']) await t.test(JSON.stringify(policy), () => {
++    const fixture = nativeTransportFixture();
++    try { fixture.options.registration.startPolicy = policy; assert.throws(() => harness.createCodexStdioTransport(fixture.options), (e) => e.code === 'NATIVE_REGISTRATION_INVALID'); assert.equal(fs.existsSync(fixture.log), false); }
++    finally { fixture.cleanup(); }
++  });
++  await t.test('empty subset refuses a peer call despite larger fixture maximum permissions', async () => {
++    const fixture = nativeTransportFixture(); let transport, operation; fixture.context.dynamicTools = [];
++    const peer = fs.readFileSync(fixture.peer, 'utf8'), needle = "assert.equal(m.params.dynamicTools[0].name,'write_note');";
++    assert.equal(peer.includes(needle), true); fs.writeFileSync(fixture.peer, peer.replace(needle, 'assert.deepEqual(m.params.dynamicTools,[]);'));
++    fixture.options.registration.sha256 = sha(fs.readFileSync(fixture.peer));
++    try {
++      transport = harness.createCodexStdioTransport(fixture.options); operation = transport.start();
++      const result = await operation.done; assert.equal(result.status, 'UNKNOWN'); assert.equal(result.reason, 'NATIVE_TOOL_REFUSED');
++      assert.equal(fixture.calls(), 0); assert.equal(fs.existsSync(path.join(fixture.workspace, 'note.txt')), false);
++      assert.equal(result.raw.stdin.toString().includes('REQUEST_REFUSED'), true);
++    } finally { if (operation) { transport.cancel(operation.handle); await operation.closed; } fixture.cleanup(); }
++  });
++});
++
++test('native initialized write capture overflow keeps ready done and observation unknown for connect and legacy start', async (t) => {
++  for (const route of ['connect', 'start']) await t.test(route, async () => {
++    const fixture = nativeTransportFixture(); let transport, operation;
++    const padded = path.join(fixture.scratch, 'padding-ready'), release = path.join(fixture.scratch, 'release-initialize');
++    fs.writeFileSync(fixture.peer, `#!${process.execPath}
++import readline from 'node:readline';import fs from 'node:fs';
++const lines=readline.createInterface({input:process.stdin});
++lines.on('line',(line)=>{const m=JSON.parse(line);fs.appendFileSync(${JSON.stringify(fixture.log)},line+'\\n');
++if(m.method==='initialize'){const result=JSON.stringify({id:m.id,result:{userAgent:'private-overflow-peer'}})+'\\n';
++const pad=2*1024*1024-Buffer.byteLength(line+'\\n')-Buffer.byteLength(result)-1;
++process.stderr.write(Buffer.alloc(pad,65),()=>fs.writeFileSync(${JSON.stringify(padded)},'padding written'));
++const until=Date.now()+10000;const hold=setInterval(()=>{if(fs.existsSync(${JSON.stringify(release)})){clearInterval(hold);process.stdout.write(result);}else if(Date.now()>until){clearInterval(hold);process.exitCode=91;process.stdin.destroy();}},5);}});
++`);
++    fixture.options.registration.sha256 = sha(fs.readFileSync(fixture.peer));
++    try {
++      transport = harness.createCodexStdioTransport(fixture.options); operation = transport[route]();
++      const until = Date.now() + 2000; let expectedPad;
++      while (expectedPad === undefined || transport.observe(operation.handle).raw.stderr.length !== expectedPad) {
++        if (fs.existsSync(padded)) expectedPad = 2 * 1024 * 1024 - transport.observe(operation.handle).raw.stdin.length
++          - Buffer.byteLength(JSON.stringify({ id: 'comet:init', result: { userAgent: 'private-overflow-peer' } }) + '\n') - 1;
++        const current = transport.observe(operation.handle); assert.notEqual(current.status, 'UNKNOWN', current.reason);
++        assert.equal(Date.now() < until, true, 'the actual stderr bytes must be captured before the initialize response is released');
++        await new Promise((resolve) => setImmediate(resolve));
++      }
++      fs.writeFileSync(release, 'release after captured stderr reached the exact byte budget');
++      const ready = await operation.ready, done = await operation.done, observed = transport.observe(operation.handle);
++      for (const value of [ready, done, observed]) {
++        assert.equal(value.status, 'UNKNOWN'); assert.equal(value.reason, 'NATIVE_CAPTURE_LIMIT'); assert.equal(value.initialized, false);
++        assert.equal(value.contextDigest, operation.handle.contextDigest); assert.equal(value.threadId, null); assert.equal(value.turnId, null);
++        assert.equal(value.runtimeQualified, false); assert.equal(value.managedClosureEligible, false);
++      }
++      assert.equal(observed.truncated, true); assert.equal(Object.values(observed.raw).reduce((sum, bytes) => sum + bytes.length, 0), 2 * 1024 * 1024);
++      assert.deepEqual(nativePeerWire(fixture).map((m) => m.method), ['initialize']);
++      const changed = structuredClone(fixture.context); changed.actionBinding.epoch++; fixture.setCurrent(changed); fixture.setCurrent(fixture.context);
++      assert.equal(transport.connect(), operation); assert.equal(transport.start(), operation);
++      assert.throws(() => transport.begin(operation.handle), (e) => e.code === 'NATIVE_NOT_INITIALIZED');
++      assert.equal(transport.observe(operation.handle).status, 'UNKNOWN'); assert.equal(fixture.calls(), 0);
++      transport.cancel(operation.handle); const closed = await operation.closed;
++      assert.equal(closed.status, 'UNKNOWN'); assert.equal(closed.reason, 'NATIVE_CAPTURE_LIMIT');
++    } finally {
++      if (operation) { transport.cancel(operation.handle); await operation.closed; }
++      fixture.cleanup();
++    }
++  });
++});
++
++// --- P1_3 revision 2026-10-26-comet-050-adoption-v1: the 0.5.0 adapter surface
++//
++// The facts below are the pinned 0.5.0 build's real interface (see
++// openspec/.../host-probes/1_3-050-surface.json for the live-build evidence).
++// These are construction/path/command assertions: real host execution of the
++// composition package (install into a live project, dispatch inside a real
++// Run) stays UNVERIFIED and belongs to P1_4/P3_2/VERIFY.
++
++test('0.5.0: the change state file resolves with the dual-name rule (comet-state.yaml default, legacy readable, both refused)', async () => {
++  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-state-file-'));
++  try {
++    // No state yet: the 0.5.0 default name (NATIVE_CHANGE_STATE_FILE).
++    const neither = await comet.resolveChangeStateFile(dir);
++    assert.equal(neither.file, path.join(dir, 'comet-state.yaml'));
++    assert.equal(neither.name, 'comet-state.yaml');
++    assert.equal(neither.legacy, false);
++    assert.equal(neither.default, true);
++
++    // Legacy compat name (what `state init` creates in a non-Git project).
++    fs.writeFileSync(path.join(dir, '.comet.yaml'), 'phase: open\n');
++    const legacy = await comet.resolveChangeStateFile(dir);
++    assert.equal(legacy.file, path.join(dir, '.comet.yaml'));
++    assert.equal(legacy.legacy, true);
++    assert.equal(legacy.default, false);
++
++    // New SDK name wins its own file.
++    fs.rmSync(path.join(dir, '.comet.yaml'));
++    fs.writeFileSync(path.join(dir, 'comet-state.yaml'), 'phase: open\n');
++    const modern = await comet.resolveChangeStateFile(dir);
++    assert.equal(modern.file, path.join(dir, 'comet-state.yaml'));
++    assert.equal(modern.legacy, false);
++
++    // Both at once is the upstream conflict — the run refuses to choose.
++    fs.writeFileSync(path.join(dir, '.comet.yaml'), 'phase: open\n');
++    await assert.rejects(
++      () => comet.resolveChangeStateFile(dir),
++      (error) => error.code === 'WORKSPACE_STATE_CONFLICT',
++    );
++    fs.rmSync(path.join(dir, '.comet.yaml'));
++
++    // A symlinked state file is refused, not followed.
++    fs.rmSync(path.join(dir, 'comet-state.yaml'));
++    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-state-out-'));
++    fs.writeFileSync(path.join(outside, 'state'), 'phase: open\n');
++    fs.symlinkSync(path.join(outside, 'state'), path.join(dir, 'comet-state.yaml'));
++    await assert.rejects(
++      () => comet.resolveChangeStateFile(dir),
++      (error) => error.code === 'WORKSPACE_STATE_INVALID',
++    );
++    fs.rmSync(outside, { recursive: true, force: true });
++  } finally {
++    fs.rmSync(dir, { recursive: true, force: true });
++  }
++});
++
++test('0.5.0: describeWorkspace exposes the dual state resolution and the check-policy file', async () => {
++  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-ws-'));
++  try {
++    const project = path.join(dir, 'project');
++    const router = path.join(project, '.claude/skills/comet/scripts/comet-hook-router.mjs');
++    fs.mkdirSync(path.dirname(router), { recursive: true });
++    fs.writeFileSync(router, 'export {};');
++    fs.writeFileSync(path.join(project, '.claude/settings.local.json'), JSON.stringify({
++      hooks: { PreToolUse: [{ matcher: 'Write|Edit', hooks: [{ command: 'node runner', args: [router, '--platform', 'claude'] }] }] },
++    }));
++    const before = await comet.describeWorkspace({ projectRoot: project, change: 'demo' });
++    assert.equal(before.changeStateFile, path.join(project, 'docs/openspec/changes/demo/comet-state.yaml'));
++    assert.equal(before.changeStateName, 'comet-state.yaml');
++    assert.equal(before.changeStateDefaulted, true);
++    assert.equal(before.checkPolicyFile, path.join(project, '.comet/check-policy.json'));
++    assert.equal(before.stateLockFile, path.join(project, 'docs/openspec/changes/demo/.comet-state.lock'));
++    assert.equal(before.selectionFile, path.join(project, '.comet/current-change.json'));
++
++    // Once the legacy compat file exists (0.5.0 `state init` in non-Git
++    // roots) the same workspace resolves it — the adapter follows the run's
++    // own file, it never renames or copies state.
++    const changeDir = path.join(project, 'docs/openspec/changes/demo');
++    fs.mkdirSync(changeDir, { recursive: true });
++    fs.writeFileSync(path.join(changeDir, '.comet.yaml'), 'phase: open\n');
++    const after = await comet.describeWorkspace({ projectRoot: project, change: 'demo' });
++    assert.equal(after.changeStateFile, path.join(changeDir, '.comet.yaml'));
++    assert.equal(after.changeStateLegacy, true);
++    assert.equal(after.changeStateDefaulted, false);
++  } finally {
++    fs.rmSync(dir, { recursive: true, force: true });
++  }
++});
++
++test('0.5.0: applicationInstallArgv builds exactly the official installer surface and refuses anything else', () => {
++  const applicationFile = '/repo/integrations/comet/application/application.json';
++  assert.deepEqual(comet.applicationInstallArgv({ applicationFile }), [
++    'application', 'install', applicationFile, '--json',
++  ]);
++  assert.deepEqual(comet.applicationInstallArgv({
++    applicationFile, project: '/repo', platform: ['claude-code'], host: 'claude-code',
++    scope: 'project', upgrade: true, confirmationHash: 'a'.repeat(64), preview: true,
++  }), [
++    'application', 'install', applicationFile, '--project', '/repo', '--platform', 'claude-code',
++    '--host', 'claude-code', '--scope', 'project', '--upgrade', '--confirmation-hash', 'a'.repeat(64),
++    '--preview', '--json',
++  ]);
++  for (const bad of [
++    () => comet.applicationInstallArgv({ applicationFile, extra: 1 }),
++    () => comet.applicationInstallArgv({ applicationFile: 'relative/application.json' }),
++    () => comet.applicationInstallArgv({ applicationFile, host: 'cursor' }),
++    () => comet.applicationInstallArgv({ applicationFile, scope: 'global' }),
++    () => comet.applicationInstallArgv({ applicationFile, confirmationHash: 'nothash' }),
++    () => comet.applicationInstallArgv({ applicationFile, platform: [''] }),
++    () => comet.applicationInstallArgv(null),
++  ]) {
++    assert.throws(bad, (error) => error.code === 'APPLICATION_OPTIONS_INVALID');
++  }
++});
++
++test('0.5.0: runtimeDispatchArgv is the only composition Run entry and refuses second selectors', () => {
++  const applicationFile = '/repo/integrations/comet/application/application.json';
++  const requestFile = '/tmp/request.json';
++  assert.deepEqual(comet.runtimeDispatchArgv({ applicationFile, requestFile, projectRoot: '/repo' }), [
++    'runtime', 'dispatch', '--application-file', applicationFile, '--request', requestFile,
++    '--project-root', '/repo', '--json',
++  ]);
++  assert.deepEqual(comet.runtimeDispatchArgv({ applicationFile, requestFile, details: true }).slice(-2), ['--details', '--json']);
++  for (const bad of [
++    () => comet.runtimeDispatchArgv({ applicationFile, requestFile, application: 'classic-full' }),
++    () => comet.runtimeDispatchArgv({ applicationFile, requestFile, workflow: ['w.json'] }),
++    () => comet.runtimeDispatchArgv({ applicationFile: 'rel.json', requestFile }),
++    () => comet.runtimeDispatchArgv({ applicationFile }),
++    () => comet.runtimeDispatchArgv([]),
++  ]) {
++    assert.throws(bad, (error) => error.code === 'DISPATCH_OPTIONS_INVALID');
++  }
++  // The 0.5.0 runtime operation face (app/commands/runtime.ts operationFields):
++  // a request outside it never reaches the CLI through this adapter.
++  for (const operation of ['start', 'next', 'inspect', 'query', 'claim', 'record-outcome', 'cancel']) {
++    assert.ok(comet.RUNTIME_REQUEST_OPERATIONS.includes(operation), operation);
++  }
++  assert.equal(comet.RUNTIME_REQUEST_OPERATIONS.includes('destroy'), false);
++});
++
++test('0.5.0: the classic composition start/recovery requests mirror the upstream input contract', () => {
++  const start = comet.classicCompositionStartRequest({
++    change: 'demo', changeDir: 'openspec/changes/demo', workflowId: 'comet-classic-full', workflowVersion: '1',
++  });
++  assert.deepEqual(start, {
++    operation: 'start', runId: 'demo',
++    workflow: { id: 'comet-classic-full', version: '1' },
++    input: { change: 'demo', changeDir: 'openspec/changes/demo' },
++  });
++  assert.ok(Object.isFrozen(start));
++  // The docs-root layout is equally valid (legacy artifact_layout).
++  assert.equal(
++    comet.classicCompositionStartRequest({ change: 'demo', changeDir: 'docs/openspec/changes/demo', workflowId: 'comet-classic-full', workflowVersion: '1' }).input.changeDir,
++    'docs/openspec/changes/demo',
++  );
++  for (const bad of [
++    () => comet.classicCompositionStartRequest({ change: 'Demo', changeDir: 'openspec/changes/Demo', workflowId: 'comet-classic-full', workflowVersion: '1' }),
++    () => comet.classicCompositionStartRequest({ change: 'demo', changeDir: '/abs/openspec/changes/demo', workflowId: 'comet-classic-full', workflowVersion: '1' }),
++    () => comet.classicCompositionStartRequest({ change: 'demo', changeDir: 'openspec/changes/../changes/demo', workflowId: 'comet-classic-full', workflowVersion: '1' }),
++    () => comet.classicCompositionStartRequest({ change: 'demo', changeDir: 'openspec/changes/other', workflowId: 'comet-classic-full', workflowVersion: '1' }),
++    () => comet.classicCompositionStartRequest({ change: 'demo', changeDir: 'openspec/changes/demo', workflowId: 'comet-classic-hotfix', workflowVersion: '1' }),
++    () => comet.classicCompositionStartRequest({ change: 'demo', changeDir: 'openspec/changes/demo', workflowId: 'comet-classic-full', workflowVersion: '' }),
++  ]) {
++    assert.throws(bad, (error) => /^REQUEST_/.test(error.code), `expected a REQUEST_* refusal, got ${bad.toString()}`);
++  }
++  // Recovery is the documented read-only pair — a composition Run never
++  // recovers through base state commands.
++  assert.deepEqual(comet.classicCompositionRecoveryRequest({ change: 'demo' }), { operation: 'next', runId: 'demo' });
++  assert.deepEqual(comet.classicCompositionRecoveryRequest({ change: 'demo', operation: 'inspect' }), { operation: 'inspect', runId: 'demo' });
++  assert.throws(
++    () => comet.classicCompositionRecoveryRequest({ change: 'demo', operation: 'record-outcome' }),
++    (error) => error.code === 'REQUEST_OPERATION_INVALID',
++  );
++});
++
++test('0.5.0: check-policy v2 selects exactly one command identity and refuses drift', () => {
++  const policy = {
++    version: 2,
++    commands: [
++      { argv: ['node', '--test', 'test/'], cwd: '.', git: 'none' },
++      { argv: ['npm', 'test'], cwd: 'services/api', files: ['dist/**'], outputs: [], env: ['CI'], git: 'all', taskCheckboxes: 'include' },
++    ],
++  };
++  const second = comet.selectCheckPolicyCommand(policy, { argv: ['npm', 'test'], cwd: 'services/api/' });
++  assert.equal(second.argv.join(' '), 'npm test');
++  assert.equal(second.cwd, 'services/api');
++  assert.deepEqual(second.files, ['dist/**']);
++  assert.equal(second.git, 'all');
++  assert.equal(second.taskCheckboxes, 'include');
++  assert.deepEqual(comet.selectCheckPolicyCommand(policy, { argv: ['node', '--test', 'test/'] }).env, []);
++  assert.equal(comet.selectCheckPolicyCommand(policy, { argv: ['make', 'check'] }), null, 'an unlisted command is simply unmatched');
++  for (const bad of [
++    () => comet.selectCheckPolicyCommand({ version: 1, files: [] }, { argv: ['node'] }),
++    () => comet.selectCheckPolicyCommand({ version: 2, commands: [], extra: true }, { argv: ['node'] }),
++    () => comet.selectCheckPolicyCommand({ version: 2, commands: [{ argv: ['node'], cwd: '.', oops: 1 }] }, { argv: ['node'] }),
++    () => comet.selectCheckPolicyCommand(policy, { argv: [] }),
++    () => comet.selectCheckPolicyCommand(policy, { argv: ['node'], cwd: '/abs' }),
++  ]) {
++    assert.throws(bad, (error) => error.code.startsWith('CHECK_POLICY_'), `expected a CHECK_POLICY_* refusal`);
++  }
++  const ambiguous = { version: 2, commands: [
++    { argv: ['node'], cwd: '.' }, { argv: ['node'], cwd: '.' },
++  ] };
++  assert.throws(
++    () => comet.selectCheckPolicyCommand(ambiguous, { argv: ['node'] }),
++    (error) => error.code === 'CHECK_POLICY_AMBIGUOUS',
++  );
++});
++
++test('0.5.0/0005: knowledgeCloseoutBlocked is the fail-open patch predicate, not a scheduler', () => {
++  assert.equal(comet.knowledgeCloseoutBlocked({ archived: true, phase: 'archive' }), false, 'every upstream/legacy state (no field) keeps unconditional completion');
++  assert.equal(comet.knowledgeCloseoutBlocked({ knowledgeCloseout: null }), false);
++  assert.equal(comet.knowledgeCloseoutBlocked({ knowledgeCloseout: {} }), false, 'required is not true — fail-open');
++  assert.equal(comet.knowledgeCloseoutBlocked({ knowledgeCloseout: { required: false, completed: false } }), false);
++  assert.equal(comet.knowledgeCloseoutBlocked({ knowledgeCloseout: { required: true, completed: true } }), false, 'completed obligation unblocks');
++  assert.equal(comet.knowledgeCloseoutBlocked({ knowledgeCloseout: { required: true } }), true, 'pending obligation parks the SAME Run before completion');
++  assert.equal(comet.knowledgeCloseoutBlocked({ knowledgeCloseout: { required: true, completed: false } }), true);
++  for (const bad of [() => comet.knowledgeCloseoutBlocked(null), () => comet.knowledgeCloseoutBlocked([]),
++    () => comet.knowledgeCloseoutBlocked({ knowledgeCloseout: 'pending' }), () => comet.knowledgeCloseoutBlocked({ knowledgeCloseout: { required: true, done: true } })]) {
++    assert.throws(bad, (error) => error.code === 'KT_STATE_INVALID');
++  }
++});
+diff --git a/test/comet-execution-binding.test.js b/test/comet-execution-binding.test.js
+index 5c47219..3cbffb0 100644
+--- a/test/comet-execution-binding.test.js
++++ b/test/comet-execution-binding.test.js
+@@ -1,16 +1,41 @@
++// P1_3 execution binding, revision 2026-10-26-comet-050-adoption-v1 (ADR-0022).
++//
++// The executor under test is the 0.5.0 composition-application host face:
++// `comet application install` + `comet runtime dispatch --application-file`
++// construction, six-gate extension receipts accepted ONLY through the
++// packaged bindings validators, and Kt as the 0005 read-side predicate. The
++// retired 0.4.5 face (0002 managed-delivery ports runClassicCli/
++// ensureClassicRuntimeRun/installManagedDeliveryHost, the gate_dispatches
++// registry and the Docker CliJobDriver protocol) is gone with its patch
++// chain; the baseline of this suite against that old face is preserved at
++// worker-reports/P1_3-comet-050/evidence/red-baseline.txt (60/60 on the old
++// vendored 0.4.5 runtime — not re-runnable under the 0.5.0 lock).
++//
++// These are construction/path/command assertions plus fail-closed receipt
++// judgments: real host execution (installing the compiled package, dispatch
++// inside a real Run, the 0005 predicate inside a rebuilt tree) is UNVERIFIED
++// here and belongs to P1_4/P3_2/VERIFY — the compiled application.json does
++// not exist at this revision and the executor must say so, never pretend.
+ import assert from 'node:assert/strict';
+ import crypto from 'node:crypto';
+ import fs from 'node:fs';
+ import os from 'node:os';
+ import path from 'node:path';
+-import { spawnSync } from 'node:child_process';
+-import { fileURLToPath } from 'node:url';
+ import test from 'node:test';
++import { fileURLToPath } from 'node:url';
+ import { createRunner, defineDriver } from '../lib/adapters/harness.js';
+-import { createLaunchAuthority } from '../lib/delivery/evidence.js';
++import { createLaunchAuthority, admitEvidence } from '../lib/delivery/evidence.js';
++import { cometLaunchAuthority } from '../lib/adapters/comet.js';
++import { runCometHostMain } from '../lib/adapters/comet-executor.js';
+ 
+ const sha = (value) => crypto.createHash('sha256').update(value).digest('hex');
+ 
++const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
++const compositionRoot = path.join(repository, 'integrations/comet/application');
++const packagedApplicationFile = path.join(compositionRoot, 'application.json');
++// 0.5.0 invariant: a Classic SDK Run's id IS the change name.
++const RUN_ID = 'demo';
++
+ test('fixed runner admission refuses a caller-supplied authority even when its foreign dispatch is valid', () => {
+   const fixed = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+   const foreign = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+@@ -47,7 +72,7 @@ test('the bound Comet authority exposes the original collector without admitting
+ 
+ test('the original Comet adapter exposes a fixed executor that refuses unregistered construction before launch', async () => {
+   const comet = await import('../lib/adapters/comet.js');
+-  assert.equal(typeof comet.createCometExecutor, 'function', 'P1_3 currently has no fixed host/executor implementation');
++  assert.equal(typeof comet.createCometExecutor, 'function', 'P1_3 must keep the fixed host/executor implementation');
+   assert.throws(() => comet.createCometExecutor(), (error) => error.code === 'HOST_REGISTRATION_REQUIRED');
+ });
+ 
+@@ -58,397 +83,315 @@ test('fixed host constructor rejects non-object options and caller qualification
+   }
+ });
+ 
++// A scratch managed project: the change directory with its state lock (the
++// run's own coordination point), never the repository's packaged assets.
++function scratchProject(change = 'demo') {
++  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-050-executor-'));
++  const changeDir = path.join(projectRoot, 'openspec/changes', change);
++  fs.mkdirSync(changeDir, { recursive: true });
++  fs.writeFileSync(path.join(changeDir, '.comet-state.lock'), 'probe');
++  const calls = [];
++  const native = {
++    // The 0.5.0 CLI port: record every invocation, answer like the CLI
++    // envelope would. No real comet process is started in this suite.
++    async runCometCli(argv, input, options) {
++      calls.push({ argv: [...argv], input, options });
++      return { exitCode: 0, stdout: '{"command":"probe"}\n' };
++    },
++  };
++  const authority = cometLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex'), runId: RUN_ID });
++  return { projectRoot, changeDir, native, authority, calls };
++}
++
++function baseRegistration(projectRoot) {
++  return { schemaVersion: 1, projectRoot, change: RUN_ID, runId: RUN_ID, applicationFile: packagedApplicationFile };
++}
++
+ test('fixed host rejects malformed registration data before consulting code or process ports', async (t) => {
+   const { createCometExecutor } = await import('../lib/adapters/comet.js');
+-  const base = () => ({ schemaVersion: 1, projectRoot: process.cwd(), change: 'demo', runId: 'component-run', runner: { roles: [] },
+-    docker: { executable: process.execPath, sha256: 'a'.repeat(64) }, actions: [{ gate: 'R', roleBindingId: 'reviewer', argv: ['component'] }] });
++  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-050-reg-'));
++  const base = () => baseRegistration(project);
+   const cases = [
+     ['root array', () => []], ['unknown version', () => ({ ...base(), schemaVersion: 9 })],
+-    ['change number', () => ({ ...base(), change: 123 })], ['change object', () => ({ ...base(), change: {} })],
++    ['change number', () => ({ ...base(), change: 123 })], ['change bad name', () => ({ ...base(), change: 'Demo_Change' })],
+     ['project not string', () => ({ ...base(), projectRoot: [] })], ['run not string', () => ({ ...base(), runId: {} })],
+-    ['runner null', () => ({ ...base(), runner: null })], ['roles not array', () => ({ ...base(), runner: { roles: {} } })],
+-    ['docker null', () => ({ ...base(), docker: null })], ['digest array', () => ({ ...base(), docker: { executable: process.execPath, sha256: ['a'.repeat(64)] } })],
+-    ['actions null', () => ({ ...base(), actions: null })], ['action null', () => ({ ...base(), actions: [null] })],
+-    ['argv null', () => ({ ...base(), actions: [{ gate: 'R', roleBindingId: 'reviewer', argv: null }] })],
+-    ['argv null item', () => ({ ...base(), actions: [{ gate: 'R', roleBindingId: 'reviewer', argv: [null] }] })],
++    ['application relative', () => ({ ...base(), applicationFile: 'integrations/comet/application/application.json' })],
++    ['application wrong name', () => ({ ...base(), applicationFile: path.join(compositionRoot, 'other.json') })],
++    ['application foreign tree', () => ({ ...base(), applicationFile: path.join(project, 'application.json') }), 'APPLICATION_PACKAGE_MISMATCH'],
+     ['worker qualification field', () => ({ ...base(), qualified: true })],
+   ];
+-  for (const [name, mutate] of cases) await t.test(name, () => {
+-    assert.throws(() => createCometExecutor({ registration: mutate() }), (error) => error.code === 'HOST_REGISTRATION_INVALID');
++  for (const [name, mutate, expected = 'HOST_REGISTRATION_INVALID'] of cases) await t.test(name, () => {
++    assert.throws(() => createCometExecutor({ registration: mutate() }), (error) => error.code === expected);
+   });
++  fs.rmSync(project, { recursive: true, force: true });
+ });
+ 
+-// The actual Native aggregate and public OpenSpec closure are controller-fixed
+-// artifacts. This is a test-material root, never a product consumer loader.
+-const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+-
+-async function nativeProcessFixture(material, resume = null) {
+-  const fs = await import('node:fs'), path = await import('node:path'), crypto = await import('node:crypto');
+-  const { pathToFileURL } = await import('node:url');
+-  const { spawnSync } = await import('node:child_process');
+-  const assert = (await import('node:assert/strict')).default;
+-  const sha = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
+-  const { createCometExecutor, cometLaunchAuthority } = await import(pathToFileURL(path.join(material.repository, 'lib/adapters/comet.js')));
+-  const { envelopeDigest } = await import(pathToFileURL(path.join(material.repository, 'lib/delivery/evidence.js')));
+-  const { parseTapSummary } = await import(pathToFileURL(path.join(material.repository, 'lib/delivery/test-contract.js')));
+-  const runtimeFile = path.join(material.artifacts, '.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a/work/assets/skills/comet/scripts/comet-runtime.mjs');
+-  assert.equal(sha(fs.readFileSync(runtimeFile)), '04795080295d7174af82913757254426b82037ea5028296a3602b86d200559dd', 'actual frozen6da source is required');
+-  const native = await import(pathToFileURL(runtimeFile));
+-  const project = material.project, change = path.join(project, 'openspec/changes/demo');
+-  const priorHome = process.env.HOME;
+-  process.env.HOME = path.join(material.scratch, 'home'); fs.mkdirSync(process.env.HOME, { recursive: true });
+-  const invoke = async (argv) => {
+-    const result = await native.runClassicCli(['--json', 'state', ...argv], undefined, { projectRoot: project, invocationCwd: project });
+-    return { ...result, json: JSON.parse(result.stdout) };
++test('fixed host requires the exact 0.5.0 native and authority ports — no 0002-era injection port is accepted', async () => {
++  const { createCometExecutor } = await import('../lib/adapters/comet.js');
++  const { native, authority, projectRoot } = scratchProject();
++  const registration = baseRegistration(projectRoot);
++  // The retired 0002 port names must NOT satisfy the native port check.
++  const legacyNative = {
++    runClassicCli: () => {}, ensureClassicRuntimeRun: () => {}, installManagedDeliveryHost: () => {},
+   };
+-  try {
+-    if (!resume) {
+-      fs.mkdirSync(path.join(project, '.comet'), { recursive: true }); fs.mkdirSync(path.join(project, 'openspec'), { recursive: true });
+-      fs.writeFileSync(path.join(project, '.comet/config.yaml'), 'schema: comet.project.v1\ndefault_workflow: classic\nworkflows: [classic]\nclassic:\n  artifact_layout: legacy\n');
+-      fs.writeFileSync(path.join(project, 'openspec/config.yaml'), 'schema: spec-driven\n');
+-      assert.equal((await invoke(['init', 'demo', 'full', '--managed-delivery'])).exitCode, 0);
+-      fs.writeFileSync(path.join(change, 'proposal.md'), '# Why\n\nExercise an original Native worker-receipt refusal.\n');
+-      fs.writeFileSync(path.join(change, 'tasks.md'), '- [ ] 1.1 Original Native component observation\n');
+-    }
+-    const initial = await native.ensureClassicRuntimeRun(change), runId = initial.run.runId;
+-    const manifest = path.join(material.scratch, 'toolchain-manifest.json');
+-    const installationRoot = fs.realpathSync(path.join(material.artifacts, '.sdd/tools/openspec-1.11.0/node_modules'));
+-    const artifactSha = '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f';
+-    assert.equal(sha(fs.readFileSync(path.join(material.artifacts, '.sdd/cache/artifacts/openspec-1.11.0.tgz'))), artifactSha);
+-    const entries = [];
+-    const walk = (directory) => { for (const item of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+-      const target = path.join(directory, item.name), relative = path.relative(installationRoot, target).replaceAll('\\', '/');
+-      if (item.isSymbolicLink()) { assert.ok(fs.realpathSync(target).startsWith(installationRoot + path.sep)); entries.push({ path: relative, type: 'link', sha256: sha(fs.readlinkSync(target)) }); }
+-      else if (item.isDirectory()) { entries.push({ path: relative, type: 'directory' }); walk(target); }
+-      else { assert.equal(item.isFile(), true); entries.push({ path: relative, type: 'file', sha256: sha(fs.readFileSync(target)) }); }
+-    } };
+-    walk(installationRoot);
+-    if (!resume) fs.writeFileSync(manifest, JSON.stringify({ schema: 'comet.openspec.installation-manifest.v1', artifactSha256: artifactSha, entries }) + '\n');
+-    const nodePath = fs.realpathSync(process.execPath), nodeSha = sha(fs.readFileSync(nodePath));
+-    const environment = sha(JSON.stringify({ scope: 'component-mechanism', node: nodeSha, artifact: artifactSha, closure: sha(fs.readFileSync(manifest)), platform: process.platform, arch: process.arch }));
+-    const binding = { schema: 'comet.openspec.binding.v1', scope: 'component-mechanism', artifact: { name: '@fission-ai/openspec', version: '1.11.0', tarballSha256: artifactSha,
+-      evidenceRef: 'openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json#openspec.npm_artifact' },
+-    qualification: { ref: null, digest: null, production: 'UNVERIFIED' }, node: { path: nodePath, sha256: nodeSha }, installationRoot,
+-    cliEntry: '@fission-ai/openspec/bin/openspec.js', manifest: { path: manifest, sha256: sha(fs.readFileSync(manifest)) }, environmentDigest: environment };
+-    const policy = { executionScope: 'component-mechanism', controllerEnvironmentDigest: environment, openSpecBinding: binding,
+-      ref: 'foundation/profiles/comet-managed.json', digest: sha(fs.readFileSync(path.join(material.repository, 'foundation/profiles/comet-managed.json'))),
+-      revision: 'component-owned-source', projectKnowledgeRequired: true, teamKnowledgeRequired: true, plansRoot: 'docs/comet/plans' };
+-    const qualification = { id: 'component-owned-record-not-production', sourceId: 'fixed-component-source', revision: '1', scope: 'protected-source', status: 'qualified',
+-      expiresAt: '2099-01-01T00:00:00Z', evidenceRefs: [{ ref: 'test-only/actual-process-and-native-contract', digest: sha('component-is-not-role-or-OS-qualification') }] };
+-    const commandFile = path.join(material.scratch, 'actual-observer.test.mjs');
+-    const command = JSON.stringify([process.execPath, '--test', '--test-reporter=tap', commandFile]);
+-    if (!resume) fs.writeFileSync(commandFile, `import test from 'node:test';import assert from 'node:assert/strict';import {runClassicCli} from ${JSON.stringify(pathToFileURL(runtimeFile).href)};test('actual Native refuses worker-owned gate receipt writes',async()=>{const r=await runClassicCli(['--json','state','set','demo','gate_receipts','[]'],undefined,{projectRoot:${JSON.stringify(project)},invocationCwd:${JSON.stringify(project)}});assert.notEqual(r.exitCode,0);assert.match(r.stdout,/machine-owned/);});\n`);
+-    const namespace = 'sdd-harness-i02-component';
+-    const roles = ['controller', 'author', 'test-author', 'reviewer', 'publisher', 'isolator'].map((containerRole) => ({ id: containerRole,
+-      containerRole, actionRole: containerRole === 'reviewer' ? 'requirements-owner' : containerRole,
+-      principalId: 'component-' + containerRole + '-NOT-A-REAL-ROLE', workspaceVolume: namespace + '_' + containerRole.replaceAll('-', '_') }));
+-    const runner = { schemaVersion: 1, project: 'sdd-harness-pilot', authorityId: 'component-original-authority', workspaceId: 'component-workspace', namespace,
+-      engineId: 'component-engine', dockerContext: 'component', imageDigest: 'sha256:' + 'a'.repeat(64), sdkFingerprint: '6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a',
+-      bootstrapDigest: sha('fixture-bootstrap-not-production'), controlVolumes: { state: namespace + '_state', receipts: namespace + '_receipts', issuance: namespace + '_issuance' }, roles };
+-    const physicalFile = path.join(material.scratch, 'physical-cli.mjs'), stateFile = path.join(material.scratch, 'physical-state.json'), logFile = path.join(material.scratch, 'physical-calls.jsonl');
+-    if (!resume) fs.writeFileSync(physicalFile, `#!${process.execPath}\nimport fs from 'node:fs';import crypto from 'node:crypto';import{spawnSync}from'node:child_process';const reg=${JSON.stringify(runner)},project=${JSON.stringify(project)},stateFile=${JSON.stringify(stateFile)},log=${JSON.stringify(logFile)},commandFile=${JSON.stringify(commandFile)},node=${JSON.stringify(process.execPath)};const a=process.argv.slice(2);if(a.shift()!=='--context'||a.shift()!==reg.dockerContext)process.exit(96);fs.appendFileSync(log,JSON.stringify(a)+'\\n');const get=()=>fs.existsSync(stateFile)?JSON.parse(fs.readFileSync(stateFile)):null;const put=(s)=>fs.writeFileSync(stateFile,JSON.stringify(s));const out=(s)=>process.stdout.write(JSON.stringify(s));if(a[0]==='info')out(reg.engineId);else if(a[0]==='image')out({id:reg.imageDigest,os:'linux',architecture:'arm64',sdk:reg.sdkFingerprint,bootstrap:reg.bootstrapDigest});else if(a[0]==='volume')out({name:a[2],driver:'local',hasOptions:false,project:reg.project,authority:reg.authorityId,workspace:reg.workspaceId});else if(a[0]==='container'){const s=get();if(s)out(s.id);}else if(a[0]==='inspect')out(get());else if(a[0]==='create'){const labels=Object.fromEntries(a.flatMap((x,i)=>x==='--label'?[a[i+1].split('=')]:[]));const mounts=a.flatMap((x,i)=>x==='--mount'?[Object.fromEntries(a[i+1].split(',').map(v=>v.split('=')))]:[]).map(m=>({type:'volume',name:m.source,destination:m.target,rw:true}));const s={id:crypto.createHash('sha256').update(labels['sdd.execution']).digest('hex'),name:'/'+a[a.indexOf('--name')+1],image:reg.imageDigest,state:'created',exitCode:0,user:'10001:10001',cwd:'/workspace',readOnly:true,privileged:false,capDrop:['ALL'],capAdd:null,securityOpt:['no-new-privileges:true'],network:'none',project:labels['sdd.project'],authority:labels['sdd.authority'],workspace:labels['sdd.workspace'],execution:labels['sdd.execution'],run:labels['sdd.run'],registration:labels['sdd.registration'],mounts};put(s);process.stdout.write(s.id);}else if(a[0]==='start'){const chunks=[];for await(const c of process.stdin)chunks.push(c);const frame=JSON.parse(Buffer.concat(chunks));const s=get();s.state='running';put(s);const result=spawnSync(node,['--test','--test-reporter=tap',commandFile],{cwd:project,encoding:'utf8',env:{PATH:process.env.PATH,HOME:${JSON.stringify(process.env.HOME)},LANG:'C.UTF-8'}});s.state='exited';s.exitCode=result.status;put(s);const report=Buffer.from(result.stdout),value=Buffer.from(JSON.stringify({exitCode:result.status,output:result.stdout})),trace=Buffer.from(JSON.stringify({processId:result.pid,command:JSON.stringify([node,'--test','--test-reporter=tap',commandFile]),methodApplied:'UNVERIFIED',roleIsolation:'UNVERIFIED'}));const hash=crypto.createHash('sha256').update(report).digest('hex');if(${JSON.stringify(Boolean(material.malformedPacket))})process.stdout.write('P13_COMPONENT_NON_JSON');else out({schemaVersion:1,run:frame.job.run,execution:frame.job.execution,envelope:{schemaVersion:1,candidateDigest:frame.dispatch.inputDigest,caseId:'component.R',check:'component:R',origin:{kind:'registered-runner',id:frame.dispatch.runnerId},execution:{id:frame.job.execution},environment:${JSON.stringify('component-env')},toolchain:process.version,executions:{total:1,valid:result.status===0?1:0},result:result.status===0?'pass':'fail',evidence:[{uri:'.whitebox/result.txt',sha256:hash}],expiry:'2099-01-01T00:00:00Z'},reportBase64:report.toString('base64'),resultBase64:value.toString('base64'),methodTraceBase64:trace.toString('base64')});}else if(a[0]==='stop'){const s=get();s.state='exited';s.exitCode=143;put(s);}else process.exit(98);\n`, { mode: 0o755 });
+-    let executor;
+-    const authority = cometLaunchAuthority({ secret: 'public-component-fixture-key-not-production', runId, sourceVerifier: async (request) => {
+-      const known = executor.readSourceRecord({ execution: request.dispatch.execution });
+-      for (const key of ['reportBytes', 'resultBytes', 'methodTraceBytes']) if (!known[key].equals(request[key])) return { ok: false };
+-      const tap = parseTapSummary(known.reportBytes.toString()); if (tap.tests !== 1 || tap.pass !== 1 || known.terminal.exitCode !== 0) return { ok: false };
+-      return { ok: true, qualification, facts: { actionDigest: envelopeDigest(known.dispatch.actionBinding), dispatchDigest: envelopeDigest(known.dispatch),
+-        envelopeDigest: envelopeDigest(known.envelope), launchDigest: envelopeDigest(known.launchRecord), reportDigest: sha(known.reportBytes), resultDigest: sha(known.resultBytes),
+-        methodTraceDigest: sha(known.methodTraceBytes), run: known.dispatch.run, execution: known.dispatch.execution, launchId: known.launchRecord.launchId,
+-        environmentDigest: known.dispatch.actionBinding.environmentDigest, principal: roles[3].principalId,
+-        observations: [{ caseId: known.envelope.caseId, check: known.envelope.check, command, result: 'pass', executions: known.envelope.executions }] } };
+-    } });
+-    const source = { policy: () => policy, authorizeWrite: () => ({ allowed: false }),
+-      context: (intent) => ({ actionBinding: { schemaVersion: 1, profile: 'comet-managed-v2', runnerId: 'comet-classic', run: runId,
+-        gate: intent.gate, action: 'original-native-component-observation', execution: intent.execution, role: intent.role, revision: 'r' + intent.generation,
+-        attempt: intent.attempt, epoch: intent.epoch, inputDigest: intent.inputDigest, policyDigest: policy.digest, environmentDigest: environment,
+-        workPackage: { id: 'original-native-gate-component', taskIds: ['1.3.a'] }, methods: [{ name: 'whitebox-verify', version: 'component-NOT-APPLIED',
+-          ref: '.agents/skills/whitebox-verify/SKILL.md', digest: sha(fs.readFileSync(path.join(material.repository, '.agents/skills/whitebox-verify/SKILL.md'))) }],
+-        allowedPaths: ['.whitebox'], allowedTools: ['read_file'], inputs: [{ name: 'proposal', ref: 'openspec/changes/demo/proposal.md', digest: sha(fs.readFileSync(path.join(change, 'proposal.md'))) }], outputs: [{ name: 'report', ref: '.whitebox/result.txt' }] }, policy,
+-      admissionOptions: { sourceQualification: qualification, environment: 'component-env', purpose: 'independent-acceptance', builderExecution: 'component-builder', builderPrincipal: 'component-builder',
+-        authoringExecutions: [], authoringPrincipals: [], now: new Date().toISOString() },
+-      testContract: { schemaVersion: 1, project: 'p13-component', change: 'demo', commandBindingsRequired: true,
+-        cases: [{ id: 'component.R', ac: 'component.binding', oracle: 'actual Node executes the Native receipt-write refusal', checkIds: ['native-check'] }],
+-        requiredChecks: [{ id: 'native-check', level: 'unit', capability: 'component:R', command, caseIds: ['component.R'] }], executionDenominator: { totalCases: 1 }, cleanup: { environment: 'finally', data: 'finally' }, dependencyBaselines: [{ kind: 'fixture', digest: policy.digest }] } }),
+-      verifyReview: ({ entry }) => ({ ok: true, sufficient: parseTapSummary(Buffer.from(entry.sourcePacket.reportBytes).toString()).pass === 1,
+-        evidenceDigest: sha('component-native-contract-not-semantic-review'), envelopeDigest: entry.digest, reportDigest: entry.sourcePacket.collection.reportDigest,
+-        actionDigest: entry.sourcePacket.collection.actionDigest, execution: entry.execution, principal: roles[3].principalId }) };
+-    executor = createCometExecutor({ native, authority, source, registration: { schemaVersion: 1, projectRoot: project, change: 'demo', runId, runner,
+-      docker: { executable: physicalFile, sha256: sha(fs.readFileSync(physicalFile)) }, actions: [{ gate: 'R', roleBindingId: 'reviewer', argv: ['observe-original-native-contract'] }] } });
+-    executor.install();
+-    if (resume) {
+-      const before = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '';
+-      await assert.rejects(executor.execute({ execution: resume.execution }), (error) => error.code === 'NATIVE_EXECUTION_RECOVERY_PORT_REQUIRED');
+-      assert.equal(fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '', before);
+-      return { runId, coldRecovery: 'UNVERIFIED_NO_RELAUNCH', sourceKeyIsPublicFixtureOnly: true };
+-    }
+-    await assert.rejects(executor.invokeNative(['--json', 'state', 'init', 'foreign', 'full', '--managed-delivery']),
+-      (error) => error.code === 'NATIVE_COMMAND_SCOPE_REQUIRED', 'a bound executor must never forward a different Run registration');
+-    assert.equal(fs.existsSync(path.join(project, 'openspec/changes/foreign')), false);
+-    const issued = await executor.invokeNative(['--json', 'state', 'dispatch-gate', 'demo', 'R']);
+-    assert.equal(issued.exitCode, 0, issued.stdout);
+-    let intent = JSON.parse(issued.stdout).data.dispatch;
+-    qualification.status = 'unqualified';
+-    await assert.rejects(executor.execute({ execution: intent.execution }),
+-      (error) => ['SOURCE_UNQUALIFIED', 'ORIGINAL_INTENT_NOT_CURRENT'].includes(error.code));
+-    assert.equal(fs.existsSync(logFile), false, 'unqualified source must be refused before any physical operation');
+-    qualification.status = 'qualified';
+-    await assert.rejects(async () => {
+-      const attempt = await executor.execute({ execution: intent.execution });
+-      if (attempt.terminal) await attempt.terminal;
+-    }, (error) => error.code === 'ORIGINAL_INTENT_NOT_CURRENT', 'restoring old source status must not revive an observed old intent');
+-    const renewed = await executor.invokeNative(['--json', 'state', 'dispatch-gate', 'demo', 'R']);
+-    assert.equal(renewed.exitCode, 0, renewed.stdout); intent = JSON.parse(renewed.stdout).data.dispatch;
+-    for (const extra of [{ currentActionBinding: intent.actionBinding }, { role: 'controller' }, { phase: 'build' },
+-      { qualified: true }, { authority }, { handle: { containerId: 'forged' } }, { module: 'arbitrary-consumer.mjs' }]) {
+-      await assert.rejects(executor.execute({ execution: intent.execution, ...extra }), (error) => error.code === 'EXECUTION_REQUEST_INVALID');
+-    }
+-    const launch = await executor.execute({ execution: intent.execution });
+-    const terminal = await launch.terminal;
+-    assert.equal(terminal.clientExitCode, 0, terminal.stderrBytes.toString());
+-    assert.equal(launch.managedClosureEligible, false);
+-    assert.equal(executor.observe({ execution: intent.execution }).observation.state, 'exited');
+-    if (material.malformedPacket) {
+-      assert.throws(() => executor.readSourceRecord({ execution: intent.execution }), (error) => error.code === 'ORIGINAL_RESULT_UNVERIFIED');
+-      const proposal = path.join(project, 'unknown-result.json'); fs.writeFileSync(proposal, JSON.stringify({ execution: intent.execution, attempt: intent.attempt, verdict: 'pass' }));
+-      const refusal = await executor.invokeNative(['--json', 'state', 'accept-gate', 'demo', 'R', '--file', proposal]);
+-      assert.notEqual(refusal.exitCode, 0, 'a successful client with unknown worker bytes must never become a gate receipt');
+-      assert.match(refusal.stdout, /ORIGINAL_EXECUTION_UNVERIFIED/); assert.doesNotMatch(refusal.stdout, /P13_COMPONENT_NON_JSON/);
+-      await executor.execute({ execution: intent.execution });
+-      const starts = fs.readFileSync(logFile, 'utf8').split('\n').filter((line) => line && JSON.parse(line)[0] === 'start').length;
+-      assert.equal(starts, 1, 'unknown result readback never starts a replacement process');
+-      assert.equal((await executor.describeCurrent()).phase, 'open');
+-      return { runId, result: 'UNVERIFIED_UNKNOWN_WORKER_OUTPUT', starts, realDocker: false, productionQualified: false };
+-    }
+-    const record = executor.readSourceRecord({ execution: intent.execution });
+-    assert.equal(parseTapSummary(record.reportBytes.toString()).pass, 1);
+-    assert.equal((await authority.collectResult(record)).ok, true, 'the actual registered raw process bytes must pass the original collector');
+-    const starts = () => fs.readFileSync(logFile, 'utf8').split('\n').filter((line) => line && JSON.parse(line)[0] === 'start').length;
+-    const count = starts(); await executor.execute({ execution: intent.execution }); assert.equal(starts(), count, 'repeat observes exact original execution');
+-    executor.stop({ execution: intent.execution }); assert.equal(starts(), count, 'stop never starts work');
+-    const proposal = path.join(project, 'proposal-result.json'); fs.writeFileSync(proposal, JSON.stringify({ execution: intent.execution, attempt: intent.attempt, verdict: 'pass' }));
+-    const accepted = await executor.invokeNative(['--json', 'state', 'accept-gate', 'demo', 'R', '--file', proposal]);
+-    assert.equal(accepted.exitCode, 0, accepted.stdout);
+-    assert.equal(JSON.parse(accepted.stdout).data.verdict, 'pass', accepted.stdout);
+-    assert.equal(JSON.parse(accepted.stdout).data.receipt.sourceEntry.managedClosureEligible, false);
+-    await assert.rejects(executor.execute({ execution: intent.execution }), (error) => error.code === 'ORIGINAL_INTENT_NOT_CURRENT', 'consumed attempt cannot execute again');
+-    const current = await executor.describeCurrent();
+-    assert.equal(current.run.runId, runId);
+-    assert.equal(current.phase, 'open', 'Gate acceptance never invents a phase transition');
+-    assert.equal(current.continuation.skill, 'comet-open', 'entry comes from the original Runtime continuation');
+-    assert.equal(current.authoring.status, 'UNVERIFIED', 'Gate mechanics do not fill the missing native author/Builder port');
+-    fs.appendFileSync(path.join(change, 'proposal.md'), '\nNew source revision.\n');
+-    const pending = await executor.invokeNative(['--json', 'state', 'dispatch-gate', 'demo', 'R']); assert.equal(pending.exitCode, 0, pending.stdout);
+-    return { runId, execution: intent.execution, strictGate: JSON.parse(accepted.stdout).data.verdict, starts: count,
+-      pendingExecution: JSON.parse(pending.stdout).data.dispatch.execution, methodApplied: 'UNVERIFIED', modelRoleOS: 'UNVERIFIED' };
+-  } finally { if (priorHome === undefined) delete process.env.HOME; else process.env.HOME = priorHome; }
+-}
+-
+-test('original Native intent runs through the fixed I02 three-port implementation and returns real process evidence to the same Run', async () => {
+-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-fixed-host-'));
+-  try {
+-    const material = { repository, artifacts: process.env.P1_3_ACCEPTED_ARTIFACT_ROOT ?? repository, scratch, project: path.join(scratch, 'project') };
+-    const result = await nativeProcessFixture(material);
+-    const program = path.join(scratch, 'cold-readback.mjs');
+-    fs.writeFileSync(program, `const f=${nativeProcessFixture.toString()};console.log(JSON.stringify(await f(${JSON.stringify(material)},${JSON.stringify({ execution: result.pendingExecution })})));\n`);
+-    const cold = spawnSync(process.execPath, [program], { encoding: 'utf8', timeout: 60_000 });
+-    assert.equal(cold.status, 0, cold.stderr);
+-    const recovered = JSON.parse(cold.stdout); assert.equal(recovered.runId, result.runId); assert.equal(recovered.coldRecovery, 'UNVERIFIED_NO_RELAUNCH');
+-    assert.equal(fs.readFileSync(path.join(scratch, 'physical-calls.jsonl'), 'utf8').split('\n').filter((line) => line && JSON.parse(line)[0] === 'start').length, result.starts);
+-    console.log(JSON.stringify({ component: 'fixed-host-native-three-port', ...result, cold: recovered, realDocker: false, productionQualified: false }));
+-  } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
++  assert.throws(() => createCometExecutor({ native: legacyNative, authority, registration }), (error) => error.code === 'NATIVE_PORTS_REQUIRED');
++  assert.throws(() => createCometExecutor({ native: {}, authority, registration }), (error) => error.code === 'NATIVE_PORTS_REQUIRED');
++  assert.throws(() => createCometExecutor({ native, authority: { issueDispatch: () => {} }, registration }), (error) => error.code === 'AUTHORITY_PORTS_REQUIRED');
++  fs.rmSync(projectRoot, { recursive: true, force: true });
+ });
+ 
+-test('client exit zero with unknown worker bytes cannot authorize an original Native gate or a retry', () => {
+-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-unknown-result-'));
+-  try {
+-    const material = { repository, artifacts: process.env.P1_3_ACCEPTED_ARTIFACT_ROOT ?? repository, scratch,
+-      project: path.join(scratch, 'project'), malformedPacket: true };
+-    const program = path.join(scratch, 'unknown-result.mjs');
+-    fs.writeFileSync(program, `const f=${nativeProcessFixture.toString()};console.log(JSON.stringify(await f(${JSON.stringify(material)})));\n`);
+-    const child = spawnSync(process.execPath, [program], { encoding: 'utf8', timeout: 60_000 });
+-    assert.equal(child.status, 0, child.stderr);
+-    assert.equal(JSON.parse(child.stdout).result, 'UNVERIFIED_UNKNOWN_WORKER_OUTPUT');
+-    console.log(child.stdout.trim());
+-  } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
++test('the composition wiring is read from the packaged composition, not re-declared by the caller', async () => {
++  const { createCometExecutor } = await import('../lib/adapters/comet.js');
++  const { native, authority, projectRoot } = scratchProject();
++  const executor = createCometExecutor({ native, authority, registration: baseRegistration(projectRoot) });
++  const described = executor.describeComposition();
++  const composition = JSON.parse(fs.readFileSync(path.join(compositionRoot, 'composition.json'), 'utf8'));
++  assert.equal(described.base, 'classic-full');
++  assert.equal(described.revision, composition.revision);
++  assert.equal(described.runtimeAccepted, false, 'composition.json#runtimeAccepted is false at this revision and must surface as such');
++  assert.equal(described.applicationFile, packagedApplicationFile);
++  // The six managed gates map exactly to the packaged extensions.
++  assert.deepEqual(Object.keys(described.gates).sort(), ['A', 'Kp', 'P', 'R', 'T', 'V']);
++  assert.equal(described.gates.R.extensionId, 'requirements-open');
++  assert.equal(described.gates.A.extensionId, 'architecture-consensus');
++  assert.equal(described.gates.T.extensionId, 'test-design-review');
++  assert.equal(described.gates.P.extensionId, 'build-plan-unique');
++  assert.equal(described.gates.V.extensionId, 'verify-whitebox');
++  assert.equal(described.gates.Kp.extensionId, 'knowledge-project-closeout');
++  for (const gate of Object.keys(described.gates)) {
++    assert.equal(described.gates[gate].validator.version, '1');
++  }
++  // Kt is NOT an extension gate: it is the 0005 same-Run predicate.
++  assert.equal(executor.ktCloseout().gate, 'Kt');
++  assert.equal(executor.ktCloseout().mechanism, 'upstream-minimal-patch-0005');
++  assert.match(executor.ktCloseout().writePath, /UNVERIFIED/);
++  assert.equal(executor.ktCloseout({ knowledgeCloseout: { required: true } }).blocked, true);
++  assert.equal(executor.ktCloseout({ knowledgeCloseout: { required: true } }).overallCompletionEligible, false);
++  assert.equal(executor.ktCloseout({}).overallCompletionEligible, true, 'an absent obligation is fail-open, exactly like the patch');
++  fs.rmSync(projectRoot, { recursive: true, force: true });
+ });
+ 
+-test('the packaged executable and its fixed symlink refuse an unbound controller despite environment role labels', () => {
+-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-bootstrap-entry-'));
+-  try {
+-    const entry = path.join(repository, 'lib/adapters/comet-executor.js');
+-    const linked = path.join(scratch, 'runner-host.mjs');
+-    const marker = path.join(scratch, 'untrusted-module-loaded');
+-    const untrusted = path.join(scratch, 'untrusted-bootstrap.mjs');
+-    fs.writeFileSync(untrusted, `import fs from 'node:fs';fs.writeFileSync(${JSON.stringify(marker)},'loaded');\n`);
+-    fs.writeFileSync(path.join(scratch, '.env'), 'P13_SYNTHETIC_NOT_A_CREDENTIAL\n');
+-    fs.symlinkSync(entry, linked);
+-    const before = fs.readdirSync(scratch).sort();
+-    for (const executable of [entry, linked]) {
+-      const result = spawnSync(process.execPath, [executable, '--json', 'state', 'next', 'demo'], {
+-        cwd: scratch, encoding: 'utf8', timeout: 10_000,
+-        env: { PATH: process.env.PATH, HOME: scratch, LANG: 'C.UTF-8',
+-          P1_3_GUARD_TRACE: process.env.P1_3_GUARD_TRACE ?? '', COMET_ROLE: 'controller',
+-          SDD_RUNNER_ROLE: 'controller', COMET_BOOTSTRAP_MODULE: untrusted },
+-      });
+-      assert.equal(result.signal, null);
+-      assert.equal(result.status, 2, 'a missing protected bootstrap must not silently exit successfully');
+-      const status = JSON.parse(result.stdout);
+-      assert.equal(status.status, 'UNVERIFIED');
+-      assert.equal(status.code, 'PROTECTED_BOOTSTRAP_REQUIRED');
+-      assert.equal(status.managedClosureEligible, false);
+-      assert.equal(status.productionQualified, false);
+-      assert.equal(result.stderr, '');
+-      assert.doesNotMatch(result.stdout, /P13_SYNTHETIC|untrusted-bootstrap/);
+-    }
+-    assert.equal(fs.existsSync(marker), false, 'the entry must never load a caller-selected module');
+-    assert.deepEqual(fs.readdirSync(scratch).sort(), before, 'no original Run, provider or credential file is created');
+-  } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
++test('install and dispatch construct the official 0.5.0 commands and refuse before the compiled package exists', async () => {
++  const { createCometExecutor } = await import('../lib/adapters/comet.js');
++  const { native, authority, projectRoot, calls } = scratchProject();
++  const executor = createCometExecutor({ native, authority, registration: baseRegistration(projectRoot) });
++  assert.equal(fs.existsSync(packagedApplicationFile), false,
++    'fixture expectation: the compile wave has not produced application.json at this revision (if it has, this suite must be re-based on the compiled package)');
++
++  // The pure request builders answer without touching the CLI.
++  const start = executor.buildStartRequest();
++  assert.equal(start.operation, 'start');
++  assert.equal(start.runId, 'demo');
++  assert.equal(start.input.changeDir, 'openspec/changes/demo');
++  assert.deepEqual(executor.buildRecoveryRequest(), { operation: 'next', runId: 'demo' });
++
++  // Install: exactly the official installer argv — and a hard refusal while
++  // the compiled package does not exist, with ZERO CLI invocations.
++  await assert.rejects(() => executor.installApplication({ platforms: ['claude-code'], host: 'claude-code' }),
++    (error) => error.code === 'APPLICATION_PACKAGE_REQUIRED');
++  // Dispatch: request validation precedes the package check, then the same
++  // honest refusal — a foreign run never gets a command built at all.
++  const requestFile = path.join(fs.realpathSync(projectRoot), 'request.json');
++  await assert.rejects(() => executor.dispatchRequest({ request: { operation: 'start', runId: 'foreign-run' }, requestFile }),
++    (error) => error.code === 'DISPATCH_REQUEST_INVALID');
++  await assert.rejects(() => executor.dispatchRequest({ request: { operation: 'detonate', runId: RUN_ID }, requestFile }),
++    (error) => error.code === 'DISPATCH_REQUEST_INVALID');
++  await assert.rejects(() => executor.dispatchRequest({ request: executor.buildStartRequest(), requestFile: '/outside/project/request.json' }),
++    (error) => error.code === 'DISPATCH_REQUEST_INVALID');
++  await assert.rejects(() => executor.dispatchRequest({ request: executor.buildStartRequest(), requestFile }),
++    (error) => error.code === 'APPLICATION_PACKAGE_REQUIRED');
++  assert.deepEqual(calls, [], 'no CLI invocation may happen while the compiled composition package is absent');
++  assert.equal(fs.existsSync(requestFile), false, 'a refused dispatch writes no request file');
++  fs.rmSync(projectRoot, { recursive: true, force: true });
+ });
+ 
+-test('the executable rejects malformed or authority-selecting arguments before any bootstrap', async (t) => {
+-  const { runCometHostMain } = await import('../lib/adapters/comet-executor.js');
+-  const cases = [
+-    ['undefined', undefined], ['null', null], ['object', {}], ['string', 'state next demo'], ['empty', []],
+-    ['null item', ['state', null, 'demo']], ['zero byte', ['state', 'next', 'de\0mo']],
+-    ['sparse argument', ['state', 'set', 'demo', 'proposal', ,]],
+-    ['overlong item', ['state', 'next', 'x'.repeat(4097)]], ['too many items', Array(65).fill('state')],
+-    ['unknown command', ['/comet-build']], ['unknown state operation', ['state', 'init', 'demo', 'full']],
+-    ['get without required field', ['state', 'get', 'demo']],
+-    ['escaped change', ['state', 'next', '../foreign']],
+-    ['json option twice', ['--json', '--json', 'state', 'next', 'demo']],
+-    ['json option misplaced', ['state', '--json', 'next', 'demo']],
+-    ['controller option', ['state', 'next', 'demo', '--role', 'controller']],
+-    ['provider option', ['state', 'next', 'demo', '--provider', 'P13_ARBITRARY_SHORT_NOTE']],
+-    ['module option', ['state', 'next', 'demo', '--module', './P13_ARBITRARY_SHORT_NOTE.mjs']],
+-    ['project override', ['state', 'next', 'demo', '--project-root', '/P13_ARBITRARY_SHORT_NOTE']],
+-    ['cwd override', ['state', 'next', 'demo', '--cwd', '/P13_ARBITRARY_SHORT_NOTE']],
+-    ['external forwarding', ['state', 'next', 'demo', '--', 'node']],
+-  ];
+-  for (const [name, argv] of cases) await t.test(name, async () => {
+-    const result = await runCometHostMain(argv);
+-    assert.equal(result.exitCode, 1, 'invalid input must be distinguished from absent qualification');
+-    const status = JSON.parse(result.stdout);
+-    assert.equal(status.status, 'INPUT_INVALID');
+-    assert.equal(status.code, 'NATIVE_ARGUMENTS_INVALID');
+-    assert.doesNotMatch(result.stdout, /P13_ARBITRARY_SHORT_NOTE|4097|foreign/);
++// A genuinely covered gate payload, admitted through the real P2_2 evidence
++// path (same construction as test/delivery-cases/2_4.mjs).
++const INPUT = sha('p13-050-composition-input-r1');
++const POLICY = { ref: 'policy/managed-p1_3', digest: sha('policy/managed-p1_3') };
++
++function admittedReceipt(launcher, execution) {
++  const dispatch = launcher.issueDispatch({
++    runnerId: 'comet-classic', run: RUN_ID, gate: 'R',
++    inputDigest: INPUT, policyDigest: POLICY.digest,
++    attempt: 1, epoch: 1, role: 'verifier', execution,
+   });
+-});
++  const admitted = admitEvidence({
++    envelope: {
++      schemaVersion: 1, candidateDigest: INPUT, caseId: 'c1', check: 'unit:node:test',
++      origin: { kind: 'registered-runner', id: 'comet-classic' }, execution: { id: execution },
++      environment: 'p13-case-env', toolchain: 'node v24.15.0', executions: { total: 3, valid: 3 },
++      result: 'pass', evidence: [{ uri: '.whitebox/c1/tap.txt', sha256: sha('tap-output') }],
++      expiry: '2099-01-01T00:00:00.000Z',
++    },
++    dispatch, authority: launcher,
++    current: { inputDigest: INPUT, policyDigest: POLICY.digest, environment: 'p13-case-env' },
++    now: '2026-10-26T12:00:00.000Z',
++  });
++  assert.equal(admitted.ok, true, `fixture admission failed: ${admitted.reason ?? ''}`);
++  return admitted.entry;
++}
+ 
+-// Separate entry fixture: the historical 559 Gate fixture above is unchanged.
+-// These CODE ports carry no source qualification and never launch a worker.
+-async function bootstrapReadFixture(material) {
+-  const fs = await import('node:fs'), path = await import('node:path'), crypto = await import('node:crypto');
+-  const { pathToFileURL } = await import('node:url');
+-  const assert = (await import('node:assert/strict')).default;
+-  const sha = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
+-  const { createCometExecutor, runCometHostMain } = await import(pathToFileURL(path.join(material.repository, 'lib/adapters/comet-executor.js')));
+-  const { cometLaunchAuthority } = await import(pathToFileURL(path.join(material.repository, 'lib/adapters/comet.js')));
+-  const sdkFingerprint = '6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a';
+-  const runtimeFile = path.join(material.artifacts, '.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds', sdkFingerprint, 'work/assets/skills/comet/scripts/comet-runtime.mjs');
+-  assert.equal(sha(fs.readFileSync(runtimeFile)), '04795080295d7174af82913757254426b82037ea5028296a3602b86d200559dd');
+-  const native = await import(pathToFileURL(runtimeFile));
+-  const priorHome = process.env.HOME;
+-  process.env.HOME = path.join(material.scratch, 'home'); fs.mkdirSync(process.env.HOME);
+-  try {
+-    const project = path.join(material.scratch, 'project');
+-    fs.mkdirSync(path.join(project, '.comet'), { recursive: true }); fs.mkdirSync(path.join(project, 'openspec'));
+-    fs.writeFileSync(path.join(project, '.comet/config.yaml'), 'schema: comet.project.v1\ndefault_workflow: classic\nworkflows: [classic]\nclassic:\n  artifact_layout: legacy\n');
+-    fs.writeFileSync(path.join(project, 'openspec/config.yaml'), 'schema: spec-driven\n');
+-    const options = { projectRoot: project, invocationCwd: project };
+-    const init = await native.runClassicCli(['--json', 'state', 'init', 'demo', 'full', '--managed-delivery'], undefined, options);
+-    assert.equal(init.exitCode, 0, init.stdout);
+-    const change = path.join(project, 'openspec/changes/demo');
+-    const { run } = await native.ensureClassicRuntimeRun(change);
+-    const namespace = 'sdd-harness-i02-entry-component';
+-    const roles = ['controller', 'author', 'test-author', 'reviewer', 'publisher', 'isolator'].map((role) => ({
+-      id: role, actionRole: role, containerRole: role, principalId: 'component-NOT-PRODUCTION-' + role,
+-      workspaceVolume: namespace + '_' + role.replaceAll('-', '_') }));
+-    const runner = { schemaVersion: 1, project: 'sdd-harness-pilot', authorityId: 'component-only-authority',
+-      workspaceId: 'component-only-workspace', namespace, engineId: 'NOT-A-REAL-ENGINE', dockerContext: 'component',
+-      imageDigest: 'sha256:' + 'a'.repeat(64), sdkFingerprint, bootstrapDigest: sha('component-not-a-packaged-image'), roles,
+-      controlVolumes: { state: namespace + '_state', receipts: namespace + '_receipts', issuance: namespace + '_issuance' } };
+-    const sentinel = 'P13_SHORT_NON_CREDENTIAL_NOTE';
+-    const producer = material.fault ? { ...native, runClassicCli() {
+-      if (material.fault === 'throw') throw Object.assign(new Error(sentinel), { code: sentinel });
+-      if (material.fault === 'bad-result') return { exitCode: 0, stdout: { value: sentinel } };
+-      if (material.fault === 'unknown-exit') return { exitCode: 64, stdout: sentinel };
+-      return { exitCode: 2, stdout: '{"status":"UNVERIFIED","code":"NATIVE_FIXTURE_REFUSAL"}\n', productionQualified: true };
+-    } } : native;
+-    const authority = cometLaunchAuthority({ secret: 'public-entry-fixture-key-not-a-production-credential', runId: run.runId });
+-    const source = { policy: () => ({}), context: () => ({}), authorizeWrite: () => ({ allowed: false }), verifyReview: () => ({ ok: false }) };
+-    const physicalMarker = path.join(material.scratch, 'unexpected-physical-command');
+-    const physicalGuard = path.join(material.scratch, 'forbidden-physical-cli.mjs');
+-    fs.writeFileSync(physicalGuard, `#!${process.execPath}\nimport fs from 'node:fs';fs.appendFileSync(${JSON.stringify(physicalMarker)},'attempt\\n');process.exitCode=97;\n`, { mode: 0o755 });
+-    const physicalAttempts = () => fs.existsSync(physicalMarker) ? fs.readFileSync(physicalMarker, 'utf8').trim().split('\n').length : 0;
+-    const executor = createCometExecutor({ native: producer, authority, source,
+-      registration: { schemaVersion: 1, projectRoot: project, change: 'demo', runId: run.runId, runner,
+-        docker: { executable: physicalGuard, sha256: sha(fs.readFileSync(physicalGuard)) },
+-        actions: [{ gate: 'R', roleBindingId: 'reviewer', argv: ['UNBOUND-WORKER-MUST-NOT-LAUNCH'] }] } });
+-    const argv = ['--json', 'state', 'get', 'demo', 'phase'];
+-    if (material.fault) {
+-      const result = await runCometHostMain(argv, executor);
+-      assert.equal(result.exitCode, material.fault === 'native-refusal' ? 2 : 1, result.stdout);
+-      assert.equal(result.productionQualified ?? JSON.parse(result.stdout).productionQualified, false);
+-      assert.doesNotMatch(result.stdout, new RegExp(sentinel));
+-      if (material.fault !== 'native-refusal') assert.equal(JSON.parse(result.stdout).status, 'INTERNAL_FAILURE');
+-      assert.equal(physicalAttempts(), 0);
+-      return { fault: material.fault, exitCode: result.exitCode, status: result.stdout.trim(), productionQualified: false };
+-    }
+-    const expected = await native.runClassicCli(argv, undefined, options);
+-    assert.equal(expected.exitCode, 0, expected.stdout); assert.equal(JSON.parse(expected.stdout).stdout.trim(), 'open');
+-    const results = [await runCometHostMain(argv, executor), ...await Promise.all([
+-      runCometHostMain(argv, executor), runCometHostMain(argv, executor), runCometHostMain(argv, executor) ])];
+-    for (const result of results) {
+-      assert.equal(result.exitCode, 0, result.stdout); assert.equal(result.stdout, expected.stdout);
+-      assert.equal(result.managedClosureEligible, false); assert.equal(result.productionQualified, false);
+-    }
+-    for (const copied of [{ ...executor }, new Proxy(executor, {})]) {
+-      const refusal = await runCometHostMain(argv, copied);
+-      assert.equal(refusal.exitCode, 1); assert.equal(JSON.parse(refusal.stdout).code, 'FIXED_HOST_CAPABILITY_REQUIRED');
+-    }
+-    let invoked = false;
+-    const fake = { install() { invoked = true; }, invokeNative() { invoked = true; } };
+-    assert.equal((await runCometHostMain(argv, fake)).exitCode, 1); assert.equal(invoked, false);
+-    const foreign = await runCometHostMain(['--json', 'state', 'get', 'foreign', 'phase'], executor);
+-    assert.equal(foreign.exitCode, 1); assert.equal(JSON.parse(foreign.stdout).code, 'NATIVE_COMMAND_SCOPE_REQUIRED');
+-    assert.equal(fs.existsSync(path.join(project, 'openspec/changes/foreign')), false);
+-    const current = await runCometHostMain(['--json', 'state', 'get', 'demo', 'run_id'], executor);
+-    assert.equal(current.exitCode, 0, current.stdout); assert.equal(JSON.parse(current.stdout).stdout.trim(), run.runId);
+-    assert.equal(physicalAttempts(), 0);
+-    return { sdkFingerprint, entryRead: 'open', repeatedReads: results.length, run: run.runId,
+-      sourceQualification: 'ABSENT', physicalCommandAttempts: physicalAttempts(), productionQualified: false };
+-  } finally { if (priorHome === undefined) delete process.env.HOME; else process.env.HOME = priorHome; }
++function passingOutcome(launcher, execution, requiredChecks = [{ level: 'unit', capability: 'unit:node:test' }]) {
++  return {
++    verdict: 'pass',
++    sourceHash: sha('domain-bound-source'),
++    artifactHashes: { '.sdd/delivery/gates/r/receipt-bundle.json': sha('receipt-bundle-bytes') },
++    output: {
++      gateEvidence: {
++        gate: 'R',
++        inputs: { inputDigest: INPUT, testContract: {
++          schemaVersion: 1, project: 'sdd-harness', change: 'delivery-foundation-rearchitecture',
++          cases: [{ id: 'c1', ac: 'F05', oracle: 'required capabilities are observed before pass' }],
++          requiredChecks, executionDenominator: { totalCases: 1 },
++          cleanup: { environment: 'temp dir removed', data: 'none persisted' },
++          dependencyBaselines: [{ kind: 'product', digest: sha('product-r1') }],
++        }, builderExecution: 'exec-builder-1' },
++        receipts: [admittedReceipt(launcher, execution)],
++        policy: POLICY,
++      },
++    },
++  };
+ }
+ 
+-test('the CODE-bound main delegates repeat and concurrent reads to one original Native Host on the same private Run', () => {
+-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-bootstrap-read-'));
+-  try {
+-    const material = { repository, artifacts: process.env.P1_3_ACCEPTED_ARTIFACT_ROOT ?? repository, scratch };
+-    const program = path.join(scratch, 'read-entry.mjs');
+-    fs.writeFileSync(program, `const f=${bootstrapReadFixture.toString()};console.log(JSON.stringify(await f(${JSON.stringify(material)})));\n`);
+-    const child = spawnSync(process.execPath, [program], { encoding: 'utf8', timeout: 30_000 });
+-    assert.equal(child.status, 0, child.stderr);
+-    const result = JSON.parse(child.stdout); assert.equal(result.entryRead, 'open'); assert.equal(result.repeatedReads, 4);
+-    assert.equal(result.physicalCommandAttempts, 0); assert.equal(result.productionQualified, false);
+-    console.log(child.stdout.trim());
+-  } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
++test('a gate receipt is accepted only through the packaged bindings validators (no fallback path)', async () => {
++  const { createCometExecutor } = await import('../lib/adapters/comet.js');
++  const { native, authority, projectRoot } = scratchProject();
++  const executor = createCometExecutor({ native, authority, registration: baseRegistration(projectRoot) });
++  const launcher = cometLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex'), runId: RUN_ID });
++
++  const accepted = await await executor.acceptGateReceipt({ gate: 'R', execution: 'exec-r-1', outcome: passingOutcome(launcher, 'exec-r-1') });
++  assert.equal(accepted.accepted, true);
++  assert.equal(accepted.extensionId, 'requirements-open');
++  assert.equal(accepted.validatorId, 'sdd.delivery.gate.r');
++
++  // Fail-closed judgments, all through the same validator delegation:
++  // cross-gate replay is refused by the payload's gate binding.
++  const replay = await executor.acceptGateReceipt({ gate: 'V', execution: 'exec-v-1', outcome: passingOutcome(launcher, 'exec-v-1') });
++  assert.equal(replay.accepted, false);
++  assert.match(replay.reason, /bound to gate R/);
++  // Blocked coverage: a required capability with no receipt never passes.
++  const blocked = await executor.acceptGateReceipt({
++    gate: 'R', execution: 'exec-r-2',
++    outcome: passingOutcome(launcher, 'exec-r-2', [{ level: 'unit', capability: 'unit:node:test' }, { level: 'ui', capability: 'console' }]),
++  });
++  assert.equal(blocked.accepted, false);
++  assert.match(blocked.reason, /SDD gate R blocked/);
++  // Structural refusals before any validator runs (the domain-wrapper
++  // binding): non-pass verdict, missing hashes, no payload.
++  for (const outcome of [
++    { ...passingOutcome(launcher, 'exec-r-3'), verdict: 'repair' },
++    { ...passingOutcome(launcher, 'exec-r-3'), sourceHash: '' },
++    { ...passingOutcome(launcher, 'exec-r-3'), artifactHashes: {} },
++    { verdict: 'pass', sourceHash: sha('x'), artifactHashes: { ref: 'nothash' } },
++  ]) {
++    await assert.rejects(() => executor.acceptGateReceipt({ gate: 'R', execution: 'exec-r-3', outcome }),
++      (error) => error.code === 'EXTENSION_OUTCOME_INVALID');
++  }
++  // A structurally bound pass with NO gateEvidence payload is refused by the
++  // validator itself (a judgment refusal, not a structural throw).
++  const empty = await executor.acceptGateReceipt({
++    gate: 'R', execution: 'exec-r-3',
++    outcome: { verdict: 'pass', sourceHash: sha('x'), artifactHashes: { ref: sha('y') } },
++  });
++  assert.equal(empty.accepted, false);
++  assert.match(empty.reason, /no gateEvidence payload/);
++  await assert.rejects(() => executor.acceptGateReceipt({ gate: 'Kt', execution: 'exec-kt', outcome: passingOutcome(launcher, 'exec-kt') }),
++    (error) => error.code === 'ACTION_NOT_REGISTERED', 'Kt has no composition extension — it is the 0005 predicate, not a dispatchable gate');
++  await assert.rejects(() => executor.acceptGateReceipt({ gate: 'X', execution: 'exec-x', outcome: passingOutcome(launcher, 'exec-x') }),
++    (error) => error.code === 'ACTION_NOT_REGISTERED');
++  fs.rmSync(projectRoot, { recursive: true, force: true });
+ });
+ 
+-test('the main distinguishes Native refusal from malformed results and unknown exceptions without echoing producer diagnostics', async (t) => {
+-  for (const fault of ['throw', 'bad-result', 'unknown-exit', 'native-refusal']) await t.test(fault, () => {
+-    const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'p13-bootstrap-result-'));
+-    try {
+-      const material = { repository, artifacts: process.env.P1_3_ACCEPTED_ARTIFACT_ROOT ?? repository, scratch, fault };
+-      const program = path.join(scratch, 'result-entry.mjs');
+-      fs.writeFileSync(program, `const f=${bootstrapReadFixture.toString()};console.log(JSON.stringify(await f(${JSON.stringify(material)})));\n`);
+-      const child = spawnSync(process.execPath, [program], { encoding: 'utf8', timeout: 30_000 });
+-      assert.equal(child.status, 0, child.stderr);
+-      const result = JSON.parse(child.stdout);
+-      assert.equal(result.exitCode, fault === 'native-refusal' ? 2 : 1);
+-      assert.equal(result.productionQualified, false);
+-      assert.doesNotMatch(child.stdout, /P13_SHORT_NON_CREDENTIAL_NOTE/);
+-      console.log(child.stdout.trim());
+-    } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
++test('signing stays scoped: only a judged gate binding for this Run and input reaches the authority', async () => {
++  const { createCometExecutor } = await import('../lib/adapters/comet.js');
++  const { native, authority, projectRoot, changeDir } = scratchProject();
++  const executor = createCometExecutor({ native, authority, registration: baseRegistration(projectRoot) });
++  const launcher = cometLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex'), runId: RUN_ID });
++  const executorAuthority = executor.host.authority;
++  const binding = {
++    runnerId: 'comet-classic', run: RUN_ID, gate: 'R',
++    inputDigest: INPUT, policyDigest: POLICY.digest,
++    attempt: 1, epoch: 1, role: 'verifier', execution: 'exec-r-1',
++  };
++
++  // Outside an executor-scoped native call there is nothing to sign against.
++  assert.throws(() => executorAuthority.issueDispatch(binding), (error) => error.code === 'ORIGINAL_NATIVE_CALL_REQUIRED');
++  // Inside the scope but before any accepted receipt: unjudged work is not signed.
++  // Inside the scope with a judged receipt for ANOTHER execution: still refused.
++  // The input digest must match the judged payload (Runner.Dispatch.v1 binds
++  // run/gate/input/policy/attempt/epoch — the signature follows the judgment).
++  await executor.nativeCall(async () => {
++    assert.throws(() => executorAuthority.issueDispatch(binding), (error) => error.code === 'NATIVE_SIGNING_SCOPE_REQUIRED');
++    await executor.acceptGateReceipt({ gate: 'R', execution: 'exec-r-1', outcome: passingOutcome(launcher, 'exec-r-1') });
++    assert.throws(() => executorAuthority.issueDispatch({ ...binding, execution: 'exec-other' }),
++      (error) => error.code === 'NATIVE_SIGNING_SCOPE_REQUIRED');
++    assert.throws(() => executorAuthority.issueDispatch({ ...binding, inputDigest: sha('tampered-input') }),
++      (error) => error.code === 'NATIVE_SIGNING_SCOPE_REQUIRED');
++    assert.equal(executorAuthority.verifyDispatch(executorAuthority.issueDispatch(binding)).ok, true);
+   });
++  // Once the scope ends, signing is closed again.
++  assert.throws(() => executorAuthority.issueDispatch(binding), (error) => error.code === 'ORIGINAL_NATIVE_CALL_REQUIRED');
++  // The run's own lock disappearing closes the signing surface even inside a
++  // fresh scoped call with a judged receipt [reuse 0.4.5-candidate semantics].
++  await executor.acceptGateReceipt({ gate: 'R', execution: 'exec-r-1', outcome: passingOutcome(launcher, 'exec-r-1') });
++  fs.rmSync(path.join(changeDir, '.comet-state.lock'));
++  await assert.rejects(() => executor.nativeCall(async () => {
++    executorAuthority.issueDispatch(binding);
++  }), (error) => error.code === 'NATIVE_SIGNING_SCOPE_REQUIRED');
++  fs.rmSync(projectRoot, { recursive: true, force: true });
++});
++
++test('the bootstrap main forwards only a scoped runtime dispatch and nothing else', async () => {
++  const { createCometExecutor } = await import('../lib/adapters/comet.js');
++  const { native, authority, projectRoot, calls } = scratchProject();
++  const executor = createCometExecutor({ native, authority, registration: baseRegistration(projectRoot) });
++
++  // A base state write — the 0.4.5 executor's whole invoke surface — is now
++  // out of scope: a composition Run advances only through runtime dispatch.
++  for (const argv of [
++    ['--json', 'state', 'transition', 'demo', 'open-complete'],
++    ['state', 'dispatch-gate', 'demo', 'R'],
++    ['runtime', 'dispatch', '--application', 'classic-full', '--request', '/tmp/r.json'],
++    ['runtime', 'dispatch', '--application-file', packagedApplicationFile],
++    ['application', 'install', packagedApplicationFile, '--json'],
++    ['archive', 'demo'],
++    [],
++  ]) {
++    const refused = await runCometHostMain(argv, executor);
++    assert.equal(refused.exitCode, 1, JSON.stringify(argv));
++    assert.equal(JSON.parse(refused.stdout).code, 'NATIVE_COMMAND_SCOPE_REQUIRED');
++  }
++  assert.deepEqual(calls, []);
++
++  // A well-formed dispatch for the registered package with a matching
++  // request file is forwarded — and still refuses (UNVERIFIED, exit 2)
++  // because the compiled package does not exist at this revision.
++  const requestFile = path.join(projectRoot, 'recovery.json');
++  fs.writeFileSync(requestFile, JSON.stringify({ operation: 'next', runId: RUN_ID }));
++  const forwarded = await runCometHostMain(
++    ['runtime', 'dispatch', '--application-file', packagedApplicationFile, '--request', requestFile, '--project-root', projectRoot],
++    executor,
++  );
++  assert.equal(forwarded.exitCode, 2, forwarded.stdout);
++  assert.equal(JSON.parse(forwarded.stdout).status, 'UNVERIFIED');
++  assert.equal(JSON.parse(forwarded.stdout).code, 'APPLICATION_PACKAGE_REQUIRED');
++  assert.deepEqual(calls, [], 'the CLI port is never reached without the compiled package');
++  // A request bound to a foreign run never leaves the gate.
++  fs.writeFileSync(requestFile, JSON.stringify({ operation: 'next', runId: 'foreign' }));
++  const foreign = await runCometHostMain(
++    ['runtime', 'dispatch', '--application-file', packagedApplicationFile, '--request', requestFile],
++    executor,
++  );
++  assert.equal(foreign.exitCode, 1);
++  assert.equal(JSON.parse(foreign.stdout).code, 'DISPATCH_REQUEST_INVALID');
++
++  // No executor at all: the packaged bootstrap refuses to invent a provider.
++  const orphan = await runCometHostMain(['runtime', 'dispatch', '--application-file', packagedApplicationFile, '--request', requestFile]);
++  assert.equal(orphan.exitCode, 2);
++  assert.equal(JSON.parse(orphan.stdout).code, 'PROTECTED_BOOTSTRAP_REQUIRED');
++  const notFixed = await runCometHostMain(['runtime', 'dispatch', '--application-file', packagedApplicationFile, '--request', requestFile], {});
++  assert.equal(notFixed.exitCode, 1);
++  assert.equal(JSON.parse(notFixed.stdout).code, 'FIXED_HOST_CAPABILITY_REQUIRED');
++  fs.rmSync(projectRoot, { recursive: true, force: true });
+ });
+diff --git a/test/delivery-cases/1_3.mjs b/test/delivery-cases/1_3.mjs
+index 2df7c8b..48a04e9 100644
+--- a/test/delivery-cases/1_3.mjs
++++ b/test/delivery-cases/1_3.mjs
+@@ -1,14 +1,22 @@
+-// P1_3 delivery case: the Comet Classic single-master contract over the
+-// patched pinned build (six-patch stack with P2_4's managed-delivery runtime
+-// 0002 and P4_6's post-archive closeout 0003; distribution.json
+-// manifest-verified on reuse by tools/comet/build.mjs) — the driver/workspace/authority interface is
+-// the real one discovered from the built CLI (1.3.a), write channels are
+-// probed separately as edit / Shell / MCP with refusals and capability gaps
+-// recorded per channel (A09, never "one channel stands in for all"), and
+-// spec/verification closeout is single-owner: premature archive is refused,
+-// manual check declarations never satisfy the guard, and a duplicate archive
+-// request is refused at the driver layer even though the upstream CLI
+-// converges idempotently (F05/F07/OV01/OV03, task 1.3.b/1.3.c).
++// P1_3 delivery case, revision 2026-10-26-comet-050-adoption-v1 (ADR-0022):
++// the Comet single-master contract over the pinned 0.5.0 build — the
++// driver/workspace/authority interface is the real one discovered from the
++// built CLI (1.3.a), write channels are probed separately as edit / Shell /
++// MCP with refusals and capability gaps recorded per channel (A09, never
++// "one channel stands in for all"), and spec/verification closeout is
++// single-owner: premature archive is refused, manual check declarations never
++// satisfy the guard, and a duplicate archive request is refused at the driver
++// layer even though the upstream CLI converges idempotently
++// (F05/F07/OV01/OV03, task 1.3.b/1.3.c).
++//
++// 0.5.0 face additions asserted here: the dual change-state-file name
++// (comet-state.yaml default, legacy .comet.yaml compat, both-present
++// refused), the composition-application command surface (`comet application
++// install`, `comet runtime dispatch --application-file`) and the Kt 0005
++// fail-open predicate. What this case does NOT claim: installing a compiled
++// composition package, dispatching inside a real Run, and the 0005 predicate
++// inside a rebuilt tree are supply/admission + P1_4/P3_2/VERIFY waves —
++// recorded as UNVERIFIED, never as PASS.
+ // Every Comet interaction runs in a scratch project under $TMPDIR with an
+ // isolated HOME and PATH stubs; live host configuration is never touched.
+ import assert from 'node:assert/strict';
+@@ -49,6 +57,11 @@ const {
+   probeWriteChannels,
+   readArchiveSeal,
+   sealCloseout,
++  resolveChangeStateFile,
++  classicCompositionStartRequest,
++  classicCompositionRecoveryRequest,
++  runtimeDispatchArgv,
++  knowledgeCloseoutBlocked,
+ } = await import('../../lib/adapters/comet.js');
+ 
+ const sha = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
+@@ -114,29 +127,23 @@ const allOutput = (result) => plain(result.stdout) + plain(result.stderr);
+ 
+ const CHANGE = 'probe-change';
+ 
+-test('setup: the patched pinned build named by the source lock is manifest-verified in this project', () => {
+-  // The case qualifies the six-patch stack by IDENTITY, not by byte
+-  // fingerprint: patch bytes revise without changing the stack's shape (the
+-  // P2_4 rework integrated the 0002 revision @ d4370930), while the original
+-  // discovery session's pre-0002 build (cb1151b4) must never satisfy it.
+-  assert.equal(lock.patches.length, 6, 'the patched build must carry the six locked patches');
+-  assert.deepEqual(lock.patches.map((patch) => patch.path), [
+-    'integrations/comet/patches/0001-matt-method-profile.patch',
+-    'integrations/comet/patches/tests/1_6.patch',
+-    'integrations/comet/patches/0002-managed-delivery-runtime.patch',
+-    'integrations/comet/patches/tests/2_4.patch',
+-    'integrations/comet/patches/0003-post-archive-closeout.patch',
+-    'integrations/comet/patches/tests/4_6.patch',
+-  ], 'the locked stack must be exactly 0001 + tests/1_6 + 0002 (managed delivery runtime) + tests/2_4 + 0003 (post-archive closeout) + tests/4_6');
+-  assert.notEqual(fingerprint, 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187', 'the pre-0002 discovery build must not satisfy this case');
++test('setup: the pinned 0.5.0 build named by the source lock is manifest-verified in this project', () => {
++  // ADR-0022: the baseline is upstream 0.5.0 with NO patch in the lock —
++  // the retired 0.4.5 six-patch stack (0001/0002/0003/0004 + tests) and its
++  // builds must never satisfy this case again; 0005 is delivered as a file
++  // (pin-verified by 2_4) but applied by the supply wave, not here.
++  assert.equal(lock.package.version, '0.5.0');
++  assert.equal(lock.source.commit, 'aeb1a6598034e28ce46b8422d4dbd8785e607bd7');
++  assert.equal(lock.patches.length, 0, 'the 0.5.0 lock is patch-free at this revision; 0005 enters via the supply wave');
++  assert.notEqual(fingerprint, 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187', 'the 0.4.5 discovery build must not satisfy this case');
+   assert.ok(prepared, 'pristine Comet source has not been prepared; run tools/comet/prepare-source.mjs first');
+-  assert.ok(built, 'patched Comet build is not present; run tools/comet/build.mjs --archive first');
++  assert.ok(built, 'the 0.5.0 build is not present; run tools/comet/build.mjs --archive first');
+   const version = comet(['--version']);
+   assert.equal(version.status, 0);
+   assert.equal((version.stdout ?? '').trim(), lock.package.version);
+ });
+ 
+-test('1.3.a: init installs the real guard hook and the workspace layout is the discovered one', async () => {
++test('1.3.a: init installs the real guard hook and the workspace layout is the discovered 0.5.0 one', async () => {
+   const init = comet(['init', project, '--yes', '--scope', 'project', '--workflow', 'classic', '--platform', 'claude', '--codegraph', 'skip', '--language', 'en'], { timeout: 300_000 });
+   assert.equal(init.status, 0, `comet init failed: ${plain(init.stderr).slice(0, 400)}`);
+ 
+@@ -147,21 +154,42 @@ test('1.3.a: init installs the real guard hook and the workspace layout is the d
+   assert.equal(layout.hookCommand, 'node');
+   assert.equal(layout.routerPath, path.join(project, '.claude/skills/comet/scripts/comet-hook-router.mjs'));
+   assert.ok(await fs.access(layout.routerPath).then(() => true, () => false), 'the guard router must be installed inside the project');
+-  assert.equal(layout.changeStateFile, path.join(project, 'docs/openspec/changes', CHANGE, '.comet.yaml'));
++  // 0.5.0 dual-name rule: with no state yet the workspace resolves the SDK
++  // default comet-state.yaml (NATIVE_CHANGE_STATE_FILE) — never assumes the
++  // legacy name — and exposes the check-policy file of the v2 command identity.
++  assert.equal(layout.changeStateFile, path.join(project, 'docs/openspec/changes', CHANGE, 'comet-state.yaml'));
++  assert.equal(layout.changeStateName, 'comet-state.yaml');
++  assert.equal(layout.changeStateDefaulted, true);
+   assert.equal(layout.runStateFile, path.join(project, 'docs/openspec/changes', CHANGE, '.comet/run-state.json'));
+   assert.equal(layout.stateLockFile, path.join(project, 'docs/openspec/changes', CHANGE, '.comet-state.lock'));
+   assert.equal(layout.stateTransactionFile, path.join(project, 'docs/openspec/changes', CHANGE, '.comet-state-transaction.json'));
+   assert.equal(layout.selectionFile, path.join(project, '.comet/current-change.json'));
+-});
++  assert.equal(layout.checkPolicyFile, path.join(project, '.comet/check-policy.json'));
+ 
+-test('1.3.a/F07: Runner dispatch binds the real run id and leaves no phase trace on the run state', async () => {
+   const changeInit = comet(['state', 'init', CHANGE, 'full', '--json']);
+   assert.equal(changeInit.json?.exitCode, 0, `state init failed: ${plain(changeInit.json?.stderr).slice(0, 300)}`);
++  // 0.5.0 live fact (host-probes/1_3-050-surface.json): `state init` in a
++  // non-Git scratch root defaults to compat and creates the LEGACY state
++  // file name. The adapter follows the run's own file — no rename, no copy.
++  const afterInit = await describeWorkspace({ projectRoot: project, change: CHANGE });
++  assert.equal(afterInit.changeStateFile, path.join(project, 'docs/openspec/changes', CHANGE, '.comet.yaml'));
++  assert.equal(afterInit.changeStateLegacy, true);
++  assert.equal(afterInit.changeStateDefaulted, false);
++  // Both names at once is the upstream conflict the adapter refuses to pick
++  // from (classic-state-file.ts ClassicStateFileConflict).
++  await fs.writeFile(path.join(project, 'docs/openspec/changes', CHANGE, 'comet-state.yaml'), 'phase: open\n');
++  await assert.rejects(() => resolveChangeStateFile(path.join(project, 'docs/openspec/changes', CHANGE)),
++    (error) => error.code === 'WORKSPACE_STATE_CONFLICT');
++  await fs.rm(path.join(project, 'docs/openspec/changes', CHANGE, 'comet-state.yaml'));
++
+   const selected = comet(['state', 'select', CHANGE, '--json']);
+   assert.equal(selected.json?.exitCode, 0, `state select failed: ${plain(selected.stderr).slice(0, 300)}`);
++});
+ 
+-  const stateBefore = await fs.readFile(path.join(project, 'docs/openspec/changes', CHANGE, '.comet.yaml'), 'utf8');
+-  const dirBefore = new Set((await fs.readdir(path.join(project, 'docs/openspec/changes', CHANGE), { recursive: true })).sort());
++test('1.3.a/F07: Runner dispatch binds the real run id and leaves no phase trace on the run state', async () => {
++  const stateFile = (await describeWorkspace({ projectRoot: project, change: CHANGE })).changeStateFile;
++  const stateBefore = await fs.readFile(stateFile, 'utf8');
++  const dirBefore = new Set((await fs.readdir(path.dirname(stateFile), { recursive: true })).sort());
+ 
+   const authority = cometLaunchAuthority({ secret: 'x'.repeat(64), runId: `scratch-${path.basename(scratch)}` });
+   const writer = defineDriver({ id: 'comet-managed', kind: 'managed-write', execute: () => ({ exitCode: 0 }) });
+@@ -182,9 +210,9 @@ test('1.3.a/F07: Runner dispatch binds the real run id and leaves no phase trace
+   assert.equal(dispatch.phase, undefined, 'the dispatch must not carry a phase field');
+   // Runner.Dispatch.v1: dispatching must not write control state — the change
+   // YAML is byte-identical and no new state file appeared.
+-  const stateAfter = await fs.readFile(path.join(project, 'docs/openspec/changes', CHANGE, '.comet.yaml'), 'utf8');
++  const stateAfter = await fs.readFile(stateFile, 'utf8');
+   assert.equal(stateAfter, stateBefore, 'dispatch must not modify the change control state');
+-  const dirAfter = new Set((await fs.readdir(path.join(project, 'docs/openspec/changes', CHANGE), { recursive: true })).sort());
++  const dirAfter = new Set((await fs.readdir(path.dirname(stateFile), { recursive: true })).sort());
+   assert.deepEqual([...dirAfter], [...dirBefore], 'dispatch must not create or remove control-state files');
+ });
+ 
+@@ -212,7 +240,7 @@ test('1.3.b/A09: cross-phase writes are probed per channel — edit rejected, Sh
+ });
+ 
+ test('1.3.b/A09: a Shell-written control state cannot pass the managed gate — verify_result is required', async () => {
+-  const stateFile = path.join(project, 'docs/openspec/changes', CHANGE, '.comet.yaml');
++  const stateFile = (await describeWorkspace({ projectRoot: project, change: CHANGE })).changeStateFile;
+   const before = await fs.readFile(stateFile, 'utf8');
+   // Real Shell write of the control state (phase: open -> archive).
+   const shell = spawnSync('/bin/sh', ['-c', `sed -i '' 's/^phase: open$/phase: archive/' '${stateFile}'`], { encoding: 'utf8' });
+@@ -342,6 +370,49 @@ test('1.3.c: the archive succeeds exactly once and a duplicate closeout executio
+   assert.match(archivedYaml, /^run_id: [0-9a-f-]{36}$/m, 'the single Comet Run link must be preserved');
+ });
+ 
++test('1.3.a/0.5.0: the composition-application surface constructs exactly the official commands and the live CLI refuses the unbuilt package', async () => {
++  const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
++  const packagedApplicationFile = path.join(repository, 'integrations/comet/application/application.json');
++  const compiled = await fs.access(packagedApplicationFile).then(() => true, () => false);
++
++  // The start/recovery requests mirror the upstream input contract for a
++  // classic-full composition Run on THIS change.
++  const start = classicCompositionStartRequest({
++    change: CHANGE, changeDir: `docs/openspec/changes/${CHANGE}`, workflowId: 'comet-classic-full', workflowVersion: '1',
++  });
++  assert.equal(start.runId, CHANGE);
++  assert.equal(start.input.changeDir, `docs/openspec/changes/${CHANGE}`);
++  assert.deepEqual(classicCompositionRecoveryRequest({ change: CHANGE }), { operation: 'next', runId: CHANGE });
++  // A composition Run has exactly one dispatch entry; --application/--workflow
++  // selectors are not alternatives this driver may build.
++  const argv = runtimeDispatchArgv({ applicationFile: packagedApplicationFile, requestFile: path.join(project, 'request.json'), projectRoot: project });
++  assert.equal(argv[0], 'runtime'); assert.equal(argv[1], 'dispatch');
++  assert.equal(argv.includes('--application'), false); assert.equal(argv.includes('--workflow'), false);
++
++  // Kt: the 0005 read-side predicate is fail-open for every state the real
++  // CLI just produced in this case (none carries the optional field).
++  const stateFile = (await describeWorkspace({ projectRoot: project, change: CHANGE })).changeStateFile;
++  assert.equal(knowledgeCloseoutBlocked({ archived: true, phase: 'archive' }), false);
++  assert.equal(knowledgeCloseoutBlocked({ knowledgeCloseout: { required: true } }), true);
++
++  // UNVERIFIED boundary, honestly exercised: without the compiled package
++  // (the supply wave has not built it at this revision) the REAL 0.5.0 CLI
++  // refuses the dispatch — proving the command shape is live while claiming
++  // no runtime acceptance. When the compile wave lands, this leg flips to a
++  // real install/dispatch journey owned by P1_4/P3_2.
++  if (!compiled) {
++    const requestFile = path.join(project, 'request.json');
++    await fs.writeFile(requestFile, JSON.stringify(classicCompositionRecoveryRequest({ change: CHANGE })));
++    const dispatch = comet([...argv]);
++    assert.notEqual(dispatch.status, 0, 'the live CLI must refuse a dispatch for a missing application file');
++    const output = allOutput(dispatch);
++    assert.match(output, /application|application-file|ENOENT|not found|无法|不存在|读取/i);
++  } else {
++    console.log('UNVERIFIED-boundary note: a compiled application.json exists; this leg must be re-based on the real install/dispatch journey (P1_4).');
++  }
++  void stateFile;
++});
++
+ test('cleanup removes the scratch project', async () => {
+   await fs.rm(scratch, { recursive: true, force: true });
+ });
+
+# ---- new file: openspec/changes/delivery-foundation-rearchitecture/host-probes/1_3-050-surface.json ----
+{
+  "recordedAt": "2026-10-26",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "task": "P1_3",
+  "purpose": "0.5.0 host-probe registry: which surface facts were verified against the pinned 0.5.0 build (and how), and which capabilities remain for the real-host waves — recorded honestly as UNVERIFIED, never as PASS.",
+  "build": {
+    "lock": "integrations/comet/upstream.lock.json",
+    "version": "0.5.0",
+    "commit": "aeb1a6598034e28ce46b8422d4dbd8785e607bd7",
+    "fingerprint": "29f2332b4f624c1595d6d1304456f5de4e6b9b7642633995b79c0cab60ea1aad",
+    "patches": [],
+    "patchNote": "0005-comet-050-kt-closeout.patch is delivered (P2_4) but NOT yet in lock.patches and the supply is NOT rebuilt; nothing below depends on a patched tree"
+  },
+  "verifiedAgainstLiveBuild": [
+    {
+      "fact": "compat classic lifecycle still drives end to end in a scratch non-Git project: init -> state init/select/transition/check/record-check -> check run -> archive",
+      "evidence": "test/delivery-cases/1_3.mjs (baseline pre-rewrite run, 8/9 passing against the 0.5.0 build) and probe session /tmp scratch (init exit 0, state init exit 0)"
+    },
+    {
+      "fact": "state init in a non-Git root defaults to compat and creates the LEGACY state file name .comet.yaml plus .comet-state.lock in the change dir; the 0.5.0 SDK default name for new state is comet-state.yaml (NATIVE_CHANGE_STATE_FILE)",
+      "evidence": "pristine domains/comet-classic/classic-state-file.ts (CLASSIC_STATE_FILE/LEGACY_CLASSIC_STATE_FILE/CLASSIC_STATE_FILES, both-present -> ClassicStateFileConflict) + live scratch ls"
+    },
+    {
+      "fact": "state get answers envelope {command,exitCode,data:{change,fields:{...}},stdout}; single field keeps the bare value on stdout",
+      "evidence": "live probe: state get probe-change phase --json -> {\"data\":{\"change\":\"probe-change\",\"fields\":{\"phase\":\"open\"}},\"stdout\":\"open\\n\"}"
+    },
+    {
+      "fact": "runtime dispatch exposes --application-file <pkg> --request <file> --project-root <dir>; built-in applications native/classic-full/classic-hotfix/classic-tweak; storage ops reject --application-file and --root-dir",
+      "evidence": "pristine app/cli/runtime-command.ts help text + app/commands/runtime.ts operationFields"
+    },
+    {
+      "fact": "a Classic SDK Run bound to an application package answers recovery with the exact argv ['runtime','dispatch','--application-file',<pkg application.json>,'--project-root',<root>,'--request',<file>,'--json'] and request {\"operation\":\"next\",\"runId\":<change>}; the plain `comet state next` path is only for non-application runs",
+      "evidence": "pristine domains/comet-classic/classic-sdk-state-store.ts recoveryRequired()"
+    },
+    {
+      "fact": "application install is `comet application install <file>` with --project/--platform/--host codex|claude-code/--scope project|user/--user-root/--upgrade/--confirmation-hash/--preview/--json; preview-first, install applies the confirmed preview hash",
+      "evidence": "pristine app/cli/index.ts application command group"
+    },
+    {
+      "fact": "check-policy v2: .comet/check-policy.json {version:2, commands:[{argv,cwd,files,outputs,env,git,taskCheckboxes}]}, version 2 allows only version and commands, per-entry digest so unrelated entries stop invalidating this command's evidence",
+      "evidence": "pristine domains/comet-classic/classic-check-policy.ts (CHECK_POLICY_PATH, CheckPolicyCommand, COMMAND_KEYS, version-2 guard)"
+    },
+    {
+      "fact": "classic start request shape: {operation:'start', runId:<change>, workflow:{id:'comet-classic-full',version:'1'}, input:{change, changeDir}} with runId===change, changeDir relative whose basename is the change (recovery accepts openspec/changes/<c> or docs/openspec/changes/<c>)",
+      "evidence": "pristine app/commands/runtime.ts assertBuiltInChangeInput + classic-sdk-state-store.ts recovery checks; workflow version literal '1' in classic-sdk-application.ts"
+    }
+  ],
+  "unverified": [
+    {
+      "item": "composition package compile through the official compiler (application.json + manifest/modules + embedded bindings) and comet application install of THAT package in a real project",
+      "status": "UNVERIFIED",
+      "follow_up": "supply wave per ADR-0022 migration order, then P1_4 classic-mode qualification"
+    },
+    {
+      "item": "runtime dispatch --application-file inside a real Run (extensions blocking, repair routing, archive-time validateOutcome re-verification of Kp inside the archive directory)",
+      "status": "UNVERIFIED",
+      "follow_up": "P1_5 assembly + P3_2 pilot journey + VERIFY"
+    },
+    {
+      "item": "0005 patch applied to a rebuilt upstream tree: Kt parks <profile>.archive.execute on the SAME Run and completes only after the knowledgeCloseout field is required-and-completed; the state-field WRITE path (wire keys, managed admission)",
+      "status": "UNVERIFIED",
+      "follow_up": "supply/admission wave (composition.json knowledgeCloseout.writePath); P3_4/P4_6 recovery journeys"
+    },
+    {
+      "item": "basic state commands actually refusing a composition Run at the live CLI (assertion currently source-derived only)",
+      "status": "UNVERIFIED",
+      "follow_up": "P1_4 mode qualification with a compiled package installed"
+    }
+  ]
+}
+
+# ---- foundation mechanical re-export (release view + lock delta) ----
+ foundation/foundation-lock.json              | 4 ++--
+ foundation/release/mcp/mcp-capabilities.yaml | 1 +
+ 2 files changed, 3 insertions(+), 2 deletions(-)

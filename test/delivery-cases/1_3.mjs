@@ -1,14 +1,22 @@
-// P1_3 delivery case: the Comet Classic single-master contract over the
-// patched pinned build (six-patch stack with P2_4's managed-delivery runtime
-// 0002 and P4_6's post-archive closeout 0003; distribution.json
-// manifest-verified on reuse by tools/comet/build.mjs) — the driver/workspace/authority interface is
-// the real one discovered from the built CLI (1.3.a), write channels are
-// probed separately as edit / Shell / MCP with refusals and capability gaps
-// recorded per channel (A09, never "one channel stands in for all"), and
-// spec/verification closeout is single-owner: premature archive is refused,
-// manual check declarations never satisfy the guard, and a duplicate archive
-// request is refused at the driver layer even though the upstream CLI
-// converges idempotently (F05/F07/OV01/OV03, task 1.3.b/1.3.c).
+// P1_3 delivery case, revision 2026-10-26-comet-050-adoption-v1 (ADR-0022):
+// the Comet single-master contract over the pinned 0.5.0 build — the
+// driver/workspace/authority interface is the real one discovered from the
+// built CLI (1.3.a), write channels are probed separately as edit / Shell /
+// MCP with refusals and capability gaps recorded per channel (A09, never
+// "one channel stands in for all"), and spec/verification closeout is
+// single-owner: premature archive is refused, manual check declarations never
+// satisfy the guard, and a duplicate archive request is refused at the driver
+// layer even though the upstream CLI converges idempotently
+// (F05/F07/OV01/OV03, task 1.3.b/1.3.c).
+//
+// 0.5.0 face additions asserted here: the dual change-state-file name
+// (comet-state.yaml default, legacy .comet.yaml compat, both-present
+// refused), the composition-application command surface (`comet application
+// install`, `comet runtime dispatch --application-file`) and the Kt 0005
+// fail-open predicate. What this case does NOT claim: installing a compiled
+// composition package, dispatching inside a real Run, and the 0005 predicate
+// inside a rebuilt tree are supply/admission + P1_4/P3_2/VERIFY waves —
+// recorded as UNVERIFIED, never as PASS.
 // Every Comet interaction runs in a scratch project under $TMPDIR with an
 // isolated HOME and PATH stubs; live host configuration is never touched.
 import assert from 'node:assert/strict';
@@ -49,6 +57,11 @@ const {
   probeWriteChannels,
   readArchiveSeal,
   sealCloseout,
+  resolveChangeStateFile,
+  classicCompositionStartRequest,
+  classicCompositionRecoveryRequest,
+  runtimeDispatchArgv,
+  knowledgeCloseoutBlocked,
 } = await import('../../lib/adapters/comet.js');
 
 const sha = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
@@ -114,29 +127,23 @@ const allOutput = (result) => plain(result.stdout) + plain(result.stderr);
 
 const CHANGE = 'probe-change';
 
-test('setup: the patched pinned build named by the source lock is manifest-verified in this project', () => {
-  // The case qualifies the six-patch stack by IDENTITY, not by byte
-  // fingerprint: patch bytes revise without changing the stack's shape (the
-  // P2_4 rework integrated the 0002 revision @ d4370930), while the original
-  // discovery session's pre-0002 build (cb1151b4) must never satisfy it.
-  assert.equal(lock.patches.length, 6, 'the patched build must carry the six locked patches');
-  assert.deepEqual(lock.patches.map((patch) => patch.path), [
-    'integrations/comet/patches/0001-matt-method-profile.patch',
-    'integrations/comet/patches/tests/1_6.patch',
-    'integrations/comet/patches/0002-managed-delivery-runtime.patch',
-    'integrations/comet/patches/tests/2_4.patch',
-    'integrations/comet/patches/0003-post-archive-closeout.patch',
-    'integrations/comet/patches/tests/4_6.patch',
-  ], 'the locked stack must be exactly 0001 + tests/1_6 + 0002 (managed delivery runtime) + tests/2_4 + 0003 (post-archive closeout) + tests/4_6');
-  assert.notEqual(fingerprint, 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187', 'the pre-0002 discovery build must not satisfy this case');
+test('setup: the pinned 0.5.0 build named by the source lock is manifest-verified in this project', () => {
+  // ADR-0022: the baseline is upstream 0.5.0 with NO patch in the lock —
+  // the retired 0.4.5 six-patch stack (0001/0002/0003/0004 + tests) and its
+  // builds must never satisfy this case again; 0005 is delivered as a file
+  // (pin-verified by 2_4) but applied by the supply wave, not here.
+  assert.equal(lock.package.version, '0.5.0');
+  assert.equal(lock.source.commit, 'aeb1a6598034e28ce46b8422d4dbd8785e607bd7');
+  assert.equal(lock.patches.length, 0, 'the 0.5.0 lock is patch-free at this revision; 0005 enters via the supply wave');
+  assert.notEqual(fingerprint, 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187', 'the 0.4.5 discovery build must not satisfy this case');
   assert.ok(prepared, 'pristine Comet source has not been prepared; run tools/comet/prepare-source.mjs first');
-  assert.ok(built, 'patched Comet build is not present; run tools/comet/build.mjs --archive first');
+  assert.ok(built, 'the 0.5.0 build is not present; run tools/comet/build.mjs --archive first');
   const version = comet(['--version']);
   assert.equal(version.status, 0);
   assert.equal((version.stdout ?? '').trim(), lock.package.version);
 });
 
-test('1.3.a: init installs the real guard hook and the workspace layout is the discovered one', async () => {
+test('1.3.a: init installs the real guard hook and the workspace layout is the discovered 0.5.0 one', async () => {
   const init = comet(['init', project, '--yes', '--scope', 'project', '--workflow', 'classic', '--platform', 'claude', '--codegraph', 'skip', '--language', 'en'], { timeout: 300_000 });
   assert.equal(init.status, 0, `comet init failed: ${plain(init.stderr).slice(0, 400)}`);
 
@@ -147,21 +154,42 @@ test('1.3.a: init installs the real guard hook and the workspace layout is the d
   assert.equal(layout.hookCommand, 'node');
   assert.equal(layout.routerPath, path.join(project, '.claude/skills/comet/scripts/comet-hook-router.mjs'));
   assert.ok(await fs.access(layout.routerPath).then(() => true, () => false), 'the guard router must be installed inside the project');
-  assert.equal(layout.changeStateFile, path.join(project, 'docs/openspec/changes', CHANGE, '.comet.yaml'));
+  // 0.5.0 dual-name rule: with no state yet the workspace resolves the SDK
+  // default comet-state.yaml (NATIVE_CHANGE_STATE_FILE) — never assumes the
+  // legacy name — and exposes the check-policy file of the v2 command identity.
+  assert.equal(layout.changeStateFile, path.join(project, 'docs/openspec/changes', CHANGE, 'comet-state.yaml'));
+  assert.equal(layout.changeStateName, 'comet-state.yaml');
+  assert.equal(layout.changeStateDefaulted, true);
   assert.equal(layout.runStateFile, path.join(project, 'docs/openspec/changes', CHANGE, '.comet/run-state.json'));
   assert.equal(layout.stateLockFile, path.join(project, 'docs/openspec/changes', CHANGE, '.comet-state.lock'));
   assert.equal(layout.stateTransactionFile, path.join(project, 'docs/openspec/changes', CHANGE, '.comet-state-transaction.json'));
   assert.equal(layout.selectionFile, path.join(project, '.comet/current-change.json'));
+  assert.equal(layout.checkPolicyFile, path.join(project, '.comet/check-policy.json'));
+
+  const changeInit = comet(['state', 'init', CHANGE, 'full', '--json']);
+  assert.equal(changeInit.json?.exitCode, 0, `state init failed: ${plain(changeInit.json?.stderr).slice(0, 300)}`);
+  // 0.5.0 live fact (host-probes/1_3-050-surface.json): `state init` in a
+  // non-Git scratch root defaults to compat and creates the LEGACY state
+  // file name. The adapter follows the run's own file — no rename, no copy.
+  const afterInit = await describeWorkspace({ projectRoot: project, change: CHANGE });
+  assert.equal(afterInit.changeStateFile, path.join(project, 'docs/openspec/changes', CHANGE, '.comet.yaml'));
+  assert.equal(afterInit.changeStateLegacy, true);
+  assert.equal(afterInit.changeStateDefaulted, false);
+  // Both names at once is the upstream conflict the adapter refuses to pick
+  // from (classic-state-file.ts ClassicStateFileConflict).
+  await fs.writeFile(path.join(project, 'docs/openspec/changes', CHANGE, 'comet-state.yaml'), 'phase: open\n');
+  await assert.rejects(() => resolveChangeStateFile(path.join(project, 'docs/openspec/changes', CHANGE)),
+    (error) => error.code === 'WORKSPACE_STATE_CONFLICT');
+  await fs.rm(path.join(project, 'docs/openspec/changes', CHANGE, 'comet-state.yaml'));
+
+  const selected = comet(['state', 'select', CHANGE, '--json']);
+  assert.equal(selected.json?.exitCode, 0, `state select failed: ${plain(selected.stderr).slice(0, 300)}`);
 });
 
 test('1.3.a/F07: Runner dispatch binds the real run id and leaves no phase trace on the run state', async () => {
-  const changeInit = comet(['state', 'init', CHANGE, 'full', '--json']);
-  assert.equal(changeInit.json?.exitCode, 0, `state init failed: ${plain(changeInit.json?.stderr).slice(0, 300)}`);
-  const selected = comet(['state', 'select', CHANGE, '--json']);
-  assert.equal(selected.json?.exitCode, 0, `state select failed: ${plain(selected.stderr).slice(0, 300)}`);
-
-  const stateBefore = await fs.readFile(path.join(project, 'docs/openspec/changes', CHANGE, '.comet.yaml'), 'utf8');
-  const dirBefore = new Set((await fs.readdir(path.join(project, 'docs/openspec/changes', CHANGE), { recursive: true })).sort());
+  const stateFile = (await describeWorkspace({ projectRoot: project, change: CHANGE })).changeStateFile;
+  const stateBefore = await fs.readFile(stateFile, 'utf8');
+  const dirBefore = new Set((await fs.readdir(path.dirname(stateFile), { recursive: true })).sort());
 
   const authority = cometLaunchAuthority({ secret: 'x'.repeat(64), runId: `scratch-${path.basename(scratch)}` });
   const writer = defineDriver({ id: 'comet-managed', kind: 'managed-write', execute: () => ({ exitCode: 0 }) });
@@ -182,9 +210,9 @@ test('1.3.a/F07: Runner dispatch binds the real run id and leaves no phase trace
   assert.equal(dispatch.phase, undefined, 'the dispatch must not carry a phase field');
   // Runner.Dispatch.v1: dispatching must not write control state — the change
   // YAML is byte-identical and no new state file appeared.
-  const stateAfter = await fs.readFile(path.join(project, 'docs/openspec/changes', CHANGE, '.comet.yaml'), 'utf8');
+  const stateAfter = await fs.readFile(stateFile, 'utf8');
   assert.equal(stateAfter, stateBefore, 'dispatch must not modify the change control state');
-  const dirAfter = new Set((await fs.readdir(path.join(project, 'docs/openspec/changes', CHANGE), { recursive: true })).sort());
+  const dirAfter = new Set((await fs.readdir(path.dirname(stateFile), { recursive: true })).sort());
   assert.deepEqual([...dirAfter], [...dirBefore], 'dispatch must not create or remove control-state files');
 });
 
@@ -212,7 +240,7 @@ test('1.3.b/A09: cross-phase writes are probed per channel — edit rejected, Sh
 });
 
 test('1.3.b/A09: a Shell-written control state cannot pass the managed gate — verify_result is required', async () => {
-  const stateFile = path.join(project, 'docs/openspec/changes', CHANGE, '.comet.yaml');
+  const stateFile = (await describeWorkspace({ projectRoot: project, change: CHANGE })).changeStateFile;
   const before = await fs.readFile(stateFile, 'utf8');
   // Real Shell write of the control state (phase: open -> archive).
   const shell = spawnSync('/bin/sh', ['-c', `sed -i '' 's/^phase: open$/phase: archive/' '${stateFile}'`], { encoding: 'utf8' });
@@ -340,6 +368,49 @@ test('1.3.c: the archive succeeds exactly once and a duplicate closeout executio
   const archivedYaml = await fs.readFile(path.join(changesDir, 'archive', archiveDirs[0].name, '.comet.yaml'), 'utf8');
   assert.match(archivedYaml, /^archived: true$/m);
   assert.match(archivedYaml, /^run_id: [0-9a-f-]{36}$/m, 'the single Comet Run link must be preserved');
+});
+
+test('1.3.a/0.5.0: the composition-application surface constructs exactly the official commands and the live CLI refuses the unbuilt package', async () => {
+  const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+  const packagedApplicationFile = path.join(repository, 'integrations/comet/application/application.json');
+  const compiled = await fs.access(packagedApplicationFile).then(() => true, () => false);
+
+  // The start/recovery requests mirror the upstream input contract for a
+  // classic-full composition Run on THIS change.
+  const start = classicCompositionStartRequest({
+    change: CHANGE, changeDir: `docs/openspec/changes/${CHANGE}`, workflowId: 'comet-classic-full', workflowVersion: '1',
+  });
+  assert.equal(start.runId, CHANGE);
+  assert.equal(start.input.changeDir, `docs/openspec/changes/${CHANGE}`);
+  assert.deepEqual(classicCompositionRecoveryRequest({ change: CHANGE }), { operation: 'next', runId: CHANGE });
+  // A composition Run has exactly one dispatch entry; --application/--workflow
+  // selectors are not alternatives this driver may build.
+  const argv = runtimeDispatchArgv({ applicationFile: packagedApplicationFile, requestFile: path.join(project, 'request.json'), projectRoot: project });
+  assert.equal(argv[0], 'runtime'); assert.equal(argv[1], 'dispatch');
+  assert.equal(argv.includes('--application'), false); assert.equal(argv.includes('--workflow'), false);
+
+  // Kt: the 0005 read-side predicate is fail-open for every state the real
+  // CLI just produced in this case (none carries the optional field).
+  const stateFile = (await describeWorkspace({ projectRoot: project, change: CHANGE })).changeStateFile;
+  assert.equal(knowledgeCloseoutBlocked({ archived: true, phase: 'archive' }), false);
+  assert.equal(knowledgeCloseoutBlocked({ knowledgeCloseout: { required: true } }), true);
+
+  // UNVERIFIED boundary, honestly exercised: without the compiled package
+  // (the supply wave has not built it at this revision) the REAL 0.5.0 CLI
+  // refuses the dispatch — proving the command shape is live while claiming
+  // no runtime acceptance. When the compile wave lands, this leg flips to a
+  // real install/dispatch journey owned by P1_4/P3_2.
+  if (!compiled) {
+    const requestFile = path.join(project, 'request.json');
+    await fs.writeFile(requestFile, JSON.stringify(classicCompositionRecoveryRequest({ change: CHANGE })));
+    const dispatch = comet([...argv]);
+    assert.notEqual(dispatch.status, 0, 'the live CLI must refuse a dispatch for a missing application file');
+    const output = allOutput(dispatch);
+    assert.match(output, /application|application-file|ENOENT|not found|无法|不存在|读取/i);
+  } else {
+    console.log('UNVERIFIED-boundary note: a compiled application.json exists; this leg must be re-based on the real install/dispatch journey (P1_4).');
+  }
+  void stateFile;
 });
 
 test('cleanup removes the scratch project', async () => {

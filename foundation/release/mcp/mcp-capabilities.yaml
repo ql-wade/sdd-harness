@@ -32,4 +32,5 @@ mcps:
     provides: [知识库 create/edit/append/read/search/lint, SQLite+FTS+引用索引]
     depends: [python3 venv + mcp 包（bootstrap --with-llmwiki 安装，commit/版本已 pin）]
     note: "写入必须走 MCP；直接 fs.write 绕过索引（hooks 策略 kb-write-protection 拦截）"
+    enforcement: "hook:kb-write-protection"
 

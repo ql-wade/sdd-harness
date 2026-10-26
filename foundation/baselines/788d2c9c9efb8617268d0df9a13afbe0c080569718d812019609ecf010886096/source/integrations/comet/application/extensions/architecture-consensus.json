@@ -1,0 +1,24 @@
+{
+  "schema": "sdd.comet.classic.extension.v1",
+  "id": "architecture-consensus",
+  "gate": "A",
+  "afterStep": "full.design.evidence",
+  "skillId": "multi-agent-consensus-review",
+  "artifactRefs": [
+    {
+      "ref": ".sdd/delivery/gates/a/receipt-bundle.json",
+      "kind": "gate-receipt-bundle",
+      "hashBinding": "artifactHashes",
+      "writtenBy": "extension-execution"
+    }
+  ],
+  "validator": { "id": "sdd.delivery.gate.a", "version": "1" },
+  "verdictProtocol": {
+    "verdicts": ["pass", "repair", "revise-requirements"],
+    "sourceHash": "domain-bound",
+    "artifactHashes": "domain-bound"
+  },
+  "semantics": "A (D02): independent architecture consensus bound to the current design digest — original manifest, original ballots and tally must be admitted as evidence against the current design summary; author self-approval is not acceptance.",
+  "bindings": "integrations/comet/application/bindings.mjs",
+  "judgment": "lib/delivery/gate.js evaluate (pure SDD.Gate.v1) over the payload's inputs/receipts/policy, reached only through bindings.mjs delegation; independence and stale-digest rejection come from the same evaluation, never from local logic."
+}

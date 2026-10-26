@@ -1,0 +1,70 @@
+{
+  "recordedAt": "2026-10-26",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "task": "P1_3",
+  "purpose": "0.5.0 host-probe registry: which surface facts were verified against the pinned 0.5.0 build (and how), and which capabilities remain for the real-host waves — recorded honestly as UNVERIFIED, never as PASS.",
+  "build": {
+    "lock": "integrations/comet/upstream.lock.json",
+    "version": "0.5.0",
+    "commit": "aeb1a6598034e28ce46b8422d4dbd8785e607bd7",
+    "fingerprint": "29f2332b4f624c1595d6d1304456f5de4e6b9b7642633995b79c0cab60ea1aad",
+    "patches": [],
+    "patchNote": "0005-comet-050-kt-closeout.patch is delivered (P2_4) but NOT yet in lock.patches and the supply is NOT rebuilt; nothing below depends on a patched tree"
+  },
+  "verifiedAgainstLiveBuild": [
+    {
+      "fact": "compat classic lifecycle still drives end to end in a scratch non-Git project: init -> state init/select/transition/check/record-check -> check run -> archive",
+      "evidence": "test/delivery-cases/1_3.mjs (baseline pre-rewrite run, 8/9 passing against the 0.5.0 build) and probe session /tmp scratch (init exit 0, state init exit 0)"
+    },
+    {
+      "fact": "state init in a non-Git root defaults to compat and creates the LEGACY state file name .comet.yaml plus .comet-state.lock in the change dir; the 0.5.0 SDK default name for new state is comet-state.yaml (NATIVE_CHANGE_STATE_FILE)",
+      "evidence": "pristine domains/comet-classic/classic-state-file.ts (CLASSIC_STATE_FILE/LEGACY_CLASSIC_STATE_FILE/CLASSIC_STATE_FILES, both-present -> ClassicStateFileConflict) + live scratch ls"
+    },
+    {
+      "fact": "state get answers envelope {command,exitCode,data:{change,fields:{...}},stdout}; single field keeps the bare value on stdout",
+      "evidence": "live probe: state get probe-change phase --json -> {\"data\":{\"change\":\"probe-change\",\"fields\":{\"phase\":\"open\"}},\"stdout\":\"open\\n\"}"
+    },
+    {
+      "fact": "runtime dispatch exposes --application-file <pkg> --request <file> --project-root <dir>; built-in applications native/classic-full/classic-hotfix/classic-tweak; storage ops reject --application-file and --root-dir",
+      "evidence": "pristine app/cli/runtime-command.ts help text + app/commands/runtime.ts operationFields"
+    },
+    {
+      "fact": "a Classic SDK Run bound to an application package answers recovery with the exact argv ['runtime','dispatch','--application-file',<pkg application.json>,'--project-root',<root>,'--request',<file>,'--json'] and request {\"operation\":\"next\",\"runId\":<change>}; the plain `comet state next` path is only for non-application runs",
+      "evidence": "pristine domains/comet-classic/classic-sdk-state-store.ts recoveryRequired()"
+    },
+    {
+      "fact": "application install is `comet application install <file>` with --project/--platform/--host codex|claude-code/--scope project|user/--user-root/--upgrade/--confirmation-hash/--preview/--json; preview-first, install applies the confirmed preview hash",
+      "evidence": "pristine app/cli/index.ts application command group"
+    },
+    {
+      "fact": "check-policy v2: .comet/check-policy.json {version:2, commands:[{argv,cwd,files,outputs,env,git,taskCheckboxes}]}, version 2 allows only version and commands, per-entry digest so unrelated entries stop invalidating this command's evidence",
+      "evidence": "pristine domains/comet-classic/classic-check-policy.ts (CHECK_POLICY_PATH, CheckPolicyCommand, COMMAND_KEYS, version-2 guard)"
+    },
+    {
+      "fact": "classic start request shape: {operation:'start', runId:<change>, workflow:{id:'comet-classic-full',version:'1'}, input:{change, changeDir}} with runId===change, changeDir relative whose basename is the change (recovery accepts openspec/changes/<c> or docs/openspec/changes/<c>)",
+      "evidence": "pristine app/commands/runtime.ts assertBuiltInChangeInput + classic-sdk-state-store.ts recovery checks; workflow version literal '1' in classic-sdk-application.ts"
+    }
+  ],
+  "unverified": [
+    {
+      "item": "composition package compile through the official compiler (application.json + manifest/modules + embedded bindings) and comet application install of THAT package in a real project",
+      "status": "UNVERIFIED",
+      "follow_up": "supply wave per ADR-0022 migration order, then P1_4 classic-mode qualification"
+    },
+    {
+      "item": "runtime dispatch --application-file inside a real Run (extensions blocking, repair routing, archive-time validateOutcome re-verification of Kp inside the archive directory)",
+      "status": "UNVERIFIED",
+      "follow_up": "P1_5 assembly + P3_2 pilot journey + VERIFY"
+    },
+    {
+      "item": "0005 patch applied to a rebuilt upstream tree: Kt parks <profile>.archive.execute on the SAME Run and completes only after the knowledgeCloseout field is required-and-completed; the state-field WRITE path (wire keys, managed admission)",
+      "status": "UNVERIFIED",
+      "follow_up": "supply/admission wave (composition.json knowledgeCloseout.writePath); P3_4/P4_6 recovery journeys"
+    },
+    {
+      "item": "basic state commands actually refusing a composition Run at the live CLI (assertion currently source-derived only)",
+      "status": "UNVERIFIED",
+      "follow_up": "P1_4 mode qualification with a compiled package installed"
+    }
+  ]
+}
