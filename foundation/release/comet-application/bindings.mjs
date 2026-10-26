@@ -1,6 +1,7 @@
-// integrations/comet/application/bindings.mjs — host-side validator bindings
-// for the sdd comet-050 classic-full composition application (P2_4,
-// revision 2026-10-26-comet-050-adoption-v1, ADR-0022).
+// integrations/comet/application/bindings.mjs — host-side validator and
+// executor-port bindings for the sdd comet-050 classic-full composition
+// application (P2_4, revision 2026-10-26-comet-050-adoption-v1, ADR-0022;
+// executor layer added by the P2_4-r2 compiler rework, repair R2).
 //
 // Contract (upstream workflow-generation/compiler.ts, classic composition):
 // the compiled package embeds this module as modules['bindings.mjs'] and the
@@ -31,6 +32,17 @@
 // mismatch, malformed contract, blocked coverage, thrown evaluation — is
 // accepted:false with a reason. There is no fallback path that could turn a
 // refused judgment into an acceptance.
+//
+// Executor port (repair R2): the official compiler refuses to compile a
+// classic composition whose invoke_skill steps have no routable execution
+// port (compile-time routing probe: preflight + execute + supports +
+// capabilities, domains/workflow-generation/compiler.js inspectAssembly). The
+// port below is the HOST CONTRACT of this application, not an execution
+// implementation: `authorize` covers only bindings declared by the loaded
+// application manifest, and `invokeSkill` REFUSES automated execution — the
+// pinned SKILL.md of each bound skill must be loaded and performed by the
+// real host through the public SDK claim/report protocol (the generated
+// entry protocol), never by this module. No runtime acceptance is claimed.
 
 import { evaluate } from '../../../lib/delivery/gate.js';
 
@@ -46,6 +58,10 @@ const GATE_SPECS = [
 ];
 
 const VALIDATOR_VERSION = '1';
+
+// The execution-port identity pinned by composition.json#bindings.executors.
+const EXECUTOR_PORT_ID = 'sdd-managed-skill-host';
+const EXECUTOR_PORT_CAPABILITIES = ['skill-host'];
 
 function reasonOf(error) {
   return error instanceof Error ? error.message : String(error);
@@ -93,15 +109,54 @@ function validateGateExtension(spec, input) {
 }
 
 export async function createBindings(context) {
-  // `context` (WorkflowApplicationFactoryContext) is carried for the compile
-  // wave; the pure validators need nothing from it and must not depend on
-  // ambient state, so it is deliberately not read here.
-  void context;
-  return {
-    validators: GATE_SPECS.map((spec) => ({
-      id: spec.validatorId,
-      version: VALIDATOR_VERSION,
-      validate: (input) => validateGateExtension(spec, input),
-    })),
-  };
+  const validators = GATE_SPECS.map((spec) => ({
+    id: spec.validatorId,
+    version: VALIDATOR_VERSION,
+    validate: (input) => validateGateExtension(spec, input),
+  }));
+
+  // The executor port exists ONLY as a port of a loaded workflow application:
+  // its routing, preflight and capability semantics are constructed by the
+  // runtime factory context (WorkflowApplicationFactoryContext.createSkillExecutor,
+  // domains/workflow-application/application.js). Repo-side consumers that
+  // read only the pure validators (lib/adapters/comet-executor.js) call this
+  // function with no factory context — for them returning a fabricated stub
+  // port would be a lie, so the port is registered exactly when the runtime
+  // provides its constructor.
+  if (!context || typeof context.createSkillExecutor !== 'function') {
+    return { validators };
+  }
+
+  const declaredBindings = Array.isArray(context.manifest?.bindings)
+    ? context.manifest.bindings
+    : [];
+  const port = context.createSkillExecutor({
+    id: EXECUTOR_PORT_ID,
+    capabilities: [...EXECUTOR_PORT_CAPABILITIES],
+    // Fail-closed authorization: only a binding this application actually
+    // declared, resolved to a pinned skill of the same loaded application,
+    // may route through this port. Anything else is refused before execution.
+    authorize: async ({ binding, skill } = {}) => {
+      const known = binding && declaredBindings.some((entry) =>
+        entry.workflowId === binding.workflowId &&
+        entry.stepId === binding.stepId &&
+        entry.skillId === binding.skillId &&
+        entry.usage === binding.usage);
+      const pinned = skill && typeof context.skills?.get === 'function'
+        ? context.skills.get(binding?.skillId)?.id === binding.skillId
+        : false;
+      return Boolean(known && pinned && skill?.id === binding?.skillId);
+    },
+    // This port never auto-executes managed skills: the real host must load
+    // the pinned SKILL.md and perform the work through the public SDK
+    // claim/report protocol. Throwing keeps the original Action intact.
+    invokeSkill: async ({ skill } = {}) => {
+      throw new Error(
+        `SDD managed skill host: skill ${String(skill?.id)} must be executed by the real host ` +
+        'loading its pinned SKILL.md through the public SDK claim/report protocol; ' +
+        'this execution port never auto-executes managed skills',
+      );
+    },
+  });
+  return { validators, executors: [port] };
 }

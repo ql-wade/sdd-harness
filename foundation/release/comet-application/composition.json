@@ -10,17 +10,21 @@
     "lock": "integrations/comet/upstream.lock.json",
     "pristineRoot": ".sdd/vendor/comet/aeb1a6598034e28ce46b8422d4dbd8785e607bd7/pristine",
     "compositionSeam": "domains/comet-classic/classic-application.ts#createClassicApplication",
-    "compilerPlanShape": "comet.workflow.application.plan.v1 (domains/workflow-generation/compiler.ts planSchema); the composition object below is compiler-shaped verbatim — manifest/modules/workflows and skill contentHashes are produced by the compile wave, not declared here"
+    "compilerPlanShape": "comet.workflow.application.plan.v1 (domains/workflow-generation/compiler.ts planSchema)"
   },
   "composition": {
     "kind": "classic",
     "profile": "full",
     "replacements": [
-      { "stepId": "full.design.handoff", "skillId": "grill-me" },
-      { "stepId": "full.design.document", "skillId": "grill-me" },
-      { "stepId": "full.build.configure", "skillId": "ponytail" },
-      { "stepId": "full.build.plan", "skillId": "claude-parallel-tdd-planner" },
-      { "stepId": "full.build.execute", "skillId": "tdd" }
+      { "stepId": "full.open", "skillId": "comet-open-full-open" },
+      { "stepId": "full.design.handoff", "skillId": "grill-me-full-design-handoff" },
+      { "stepId": "full.design.document", "skillId": "grill-me-full-design-document" },
+      { "stepId": "full.build.configure", "skillId": "comet-build-full-build-configure" },
+      { "stepId": "full.build.plan", "skillId": "claude-parallel-tdd-planner-full-build-plan" },
+      { "stepId": "full.build.execute", "skillId": "tdd-full-build-execute" },
+      { "stepId": "full.verify.run", "skillId": "comet-verify-full-verify-run" },
+      { "stepId": "full.archive.prepare", "skillId": "comet-archive-full-archive-prepare" },
+      { "stepId": "full.archive.deliver", "skillId": "comet-archive-full-archive-deliver" }
     ],
     "extensions": [
       {
@@ -75,16 +79,120 @@
       "knowledge-project-closeout"
     ]
   },
+  "compilerRepair": {
+    "rework": "P2_4-r2 (REOPENED per mode-qualification.json compilerQualification.repairList)",
+    "evidence": {
+      "red": "worker-reports/P2_4-r2/evidence/red-1-as-declared-compile.txt",
+      "upstreamProbe": "openspec/changes/delivery-foundation-rearchitecture/mode-probes/1_4-compiler-compile.json"
+    },
+    "repairs": {
+      "R1": "bindings.mjs repo-relative lib/delivery import is bundled INTO the package: internal/build-application.mjs generates the vendored pure-module closure (byte-verbatim except rewritten relative specifiers) from lib/delivery sources — the judgment logic stays single-sourced in lib/delivery — embeds it as package sdd/*.mjs modules and mechanically rebases the embedded bindings.mjs import; sha256 provenance is recorded in internal/compile-manifest.json and re-verified by test/delivery-cases/2_4.mjs",
+      "R2": "createBindings now returns the executor port built from context.createSkillExecutor (id sdd-managed-skill-host, capabilities [skill-host]); the port is a HOST CONTRACT: it authorizes only managed bindings and refuses automated execution — pinned SKILL.md assets must be performed by the real host through the public SDK claim/report protocol",
+      "R3": "every invoke_skill step of classic-full is replaced by a DISTINCT per-step skill id whose adapter outputSchema hash-matches that step's ORIGINAL schema (enforced by the official factory at compile time); unreplaced domain steps (full.open, full.build.configure after R5, full.verify.run, full.archive.prepare, full.archive.deliver) run on managed per-step domain-work skills under internal/domain-skills/; method steps run on per-step variants generated at build time from the P1_6 packaged skill (verbatim copy, only the SKILL.md frontmatter name rewritten to the per-step id)",
+      "R4": "every write-side-effect work binding carries authorizationFrom classic.composition.confirm with authorizationChoices [approved] (the upstream-sanctioned work-approval anchor; the compiled workflow gains classic.composition.prepare/confirm and starts there); read-only gate extension bindings carry no anchor",
+      "R5": "ponytail removed from replacements (see removedReplacements); the P1_6 snapshot is not link-complete (README links to absent benchmark/example/INSTALL files) and is not embeddable; removal does not weaken the six managed gates",
+      "R6": "no upstream pristine assets/skills asset is embedded (their markdown links escape the dependency root); all package skills are self-contained managed directories — internal/domain-skills authored content, build-time verbatim method variants of the P1_6 snapshots, and the packaged extension skills, each re-inspected by the official inspectApplicationSkill at compile time and by test/delivery-cases/2_4.mjs"
+    }
+  },
+  "managedSkillVariants": {
+    "rule": "one managed skill per invoke_skill step, id == <base-skill>-<step-id-slug>, unique across the workflow; adapter outputSchema hash-matches the step's ORIGINAL factory schema (comet.workflow.application plan manifest, produced by the build)",
+    "work": [
+      {
+        "stepId": "full.open",
+        "skillId": "comet-open-full-open",
+        "kind": "domain-work",
+        "base": "comet-open",
+        "root": "internal/domain-skills/comet-open-full-open",
+        "presetOutputSchema": false
+      },
+      {
+        "stepId": "full.design.handoff",
+        "skillId": "grill-me-full-design-handoff",
+        "kind": "method-variant",
+        "base": "grill-me",
+        "source": "skills/grill-me",
+        "presetOutputSchema": true
+      },
+      {
+        "stepId": "full.design.document",
+        "skillId": "grill-me-full-design-document",
+        "kind": "method-variant",
+        "base": "grill-me",
+        "source": "skills/grill-me",
+        "presetOutputSchema": true
+      },
+      {
+        "stepId": "full.build.configure",
+        "skillId": "comet-build-full-build-configure",
+        "kind": "domain-work",
+        "base": "comet-build",
+        "root": "internal/domain-skills/comet-build-full-build-configure",
+        "presetOutputSchema": true
+      },
+      {
+        "stepId": "full.build.plan",
+        "skillId": "claude-parallel-tdd-planner-full-build-plan",
+        "kind": "method-variant",
+        "base": "claude-parallel-tdd-planner",
+        "source": "skills/claude-parallel-tdd-planner",
+        "presetOutputSchema": true
+      },
+      {
+        "stepId": "full.build.execute",
+        "skillId": "tdd-full-build-execute",
+        "kind": "method-variant",
+        "base": "tdd",
+        "source": "skills/tdd",
+        "presetOutputSchema": true
+      },
+      {
+        "stepId": "full.verify.run",
+        "skillId": "comet-verify-full-verify-run",
+        "kind": "domain-work",
+        "base": "comet-verify",
+        "root": "internal/domain-skills/comet-verify-full-verify-run",
+        "presetOutputSchema": true
+      },
+      {
+        "stepId": "full.archive.prepare",
+        "skillId": "comet-archive-full-archive-prepare",
+        "kind": "domain-work",
+        "base": "comet-archive",
+        "root": "internal/domain-skills/comet-archive-full-archive-prepare",
+        "presetOutputSchema": true
+      },
+      {
+        "stepId": "full.archive.deliver",
+        "skillId": "comet-archive-full-archive-deliver",
+        "kind": "domain-work",
+        "base": "comet-archive",
+        "root": "internal/domain-skills/comet-archive-full-archive-deliver",
+        "presetOutputSchema": true
+      }
+    ]
+  },
+  "removedReplacements": {
+    "stepId": "full.build.configure",
+    "skillId": "ponytail",
+    "reason": "the P1_6 packaged ponytail snapshot is not link-complete: README.md links to benchmarks/results/2026-10-07-agentic.md (and other benchmark/example/INSTALL targets) that are not in the snapshot, so inspectApplicationSkill refuses to embed it (live refusal recorded in worker-reports/P2_4-r2/evidence/red-1-as-declared-compile.txt supplyGaps and mode-probes/1_4-compiler-compile.json supplyGaps)",
+    "disposition": "removed from replacements; full.build.configure runs on the managed per-step domain-work skill comet-build-full-build-configure (repair R3/R5). ponytail is an auxiliary process-weight method, NOT one of the six managed gates: R/A/T/P/V/Kp remain composition extensions and are unaffected. The packaged snapshot stays in skills/ (P1_6 asset, unused by this composition).",
+    "revisit": "rebinding ponytail requires a link-complete P1_6 repackaging (or an upstream snapshot that carries the benchmark files) plus a new per-step variant id; it must never silently re-enter replacements"
+  },
   "replacementContracts": {
-    "sourceOfTruth": "pristine domains/comet-classic/classic-sdk-application.ts full-profile step definitions; a replacement keeps the stepId and the ORIGINAL step output contract — the upstream factory enforces outputSchema hash equality (classic-application.ts), these declarations pin the preserved contract for audit",
+    "sourceOfTruth": "pristine domains/comet-classic/classic-sdk-application.ts full-profile step definitions; a replacement keeps the stepId and the ORIGINAL step output contract — the official factory enforces outputSchema hash equality at compile time (domains/comet-classic/classic-application.ts), these declarations pin the preserved contract for audit",
     "steps": {
+      "full.open": {
+        "originalSkillRef": "comet-open",
+        "outputContract": { "preset": false, "adoptedAdapterSchema": { "type": "object" } },
+        "methodBasis": "domain-owned open work kept managed on a per-step domain-work skill (upstream comet-open assets are not embeddable — repair R6)"
+      },
       "full.design.handoff": {
         "originalSkillRef": "comet-design",
         "outputContract": {
           "required": ["proposal"],
           "properties": ["proposal", "handoffContext", "handoffHash"]
         },
-        "methodBasis": "foundation/profiles/comet-managed.json action A (architecture-author) methods [grill-me]"
+        "methodBasis": "foundation/profiles/comet-managed.json action A (architecture-author) methods [grill-me]; per-step variant of the packaged grill-me skill (repair R3: the two design steps carry different original schemas and can never share one skill id)"
       },
       "full.design.document": {
         "originalSkillRef": "comet-design",
@@ -92,7 +200,7 @@
           "required": ["designDoc"],
           "properties": ["designDoc"]
         },
-        "methodBasis": "foundation/profiles/comet-managed.json action A methods [grill-me]"
+        "methodBasis": "foundation/profiles/comet-managed.json action A methods [grill-me]; per-step variant of the packaged grill-me skill (repair R3)"
       },
       "full.build.configure": {
         "originalSkillRef": "comet-build",
@@ -108,7 +216,7 @@
             "directOverride"
           ]
         },
-        "methodBasis": "foundation/profiles/comet-managed.json methodDefaults.ponytail=full — the process-weight joint decision maps to the process-weight method; domain build_mode semantics stay owned by Classic"
+        "methodBasis": "ponytail removed (repair R5: packaged snapshot not link-complete/embeddable); the process-weight joint decision reverts to domain build-configure semantics owned by the managed per-step domain-work skill"
       },
       "full.build.plan": {
         "originalSkillRef": "comet-build",
@@ -116,7 +224,7 @@
           "required": ["plan"],
           "properties": ["plan", "buildPause"]
         },
-        "methodBasis": "foundation/profiles/comet-managed.json action P (plan-author) methods [claude-parallel-tdd-planner]; load=references-only (plan-contract sections + plan_guard.py), no second controller"
+        "methodBasis": "foundation/profiles/comet-managed.json action P (plan-author) methods [claude-parallel-tdd-planner]; per-step variant (repair R3: the packaged id is also the build-plan-unique gate extension skill with a different schema); load=references-only, no second controller"
       },
       "full.build.execute": {
         "originalSkillRef": "comet-build",
@@ -124,12 +232,44 @@
           "required": ["event"],
           "properties": ["event"]
         },
-        "methodBasis": "foundation/profiles/comet-managed.json action build methods [tdd, diagnosing-bugs]; tdd is the implementation default (Matt test-first)"
+        "methodBasis": "foundation/profiles/comet-managed.json action build methods [tdd, diagnosing-bugs]; tdd is the implementation default (Matt test-first); per-step variant of the packaged tdd skill"
+      },
+      "full.verify.run": {
+        "originalSkillRef": "comet-verify",
+        "outputContract": {
+          "required": ["event"],
+          "properties": ["event", "verificationReport", "reason"]
+        },
+        "methodBasis": "domain-owned verification run kept managed on a per-step domain-work skill (upstream comet-verify assets are not embeddable — repair R6)"
+      },
+      "full.archive.prepare": {
+        "originalSkillRef": "comet-archive",
+        "outputContract": {
+          "required": ["targetBranch", "summary"],
+          "properties": ["targetBranch", "remote", "prBaseBranch", "summary"]
+        },
+        "methodBasis": "domain-owned archive preparation kept managed on a per-step domain-work skill (repair R3: the upstream comet-archive ref is shared by the schema-different prepare/deliver steps; R6: upstream assets not embeddable)"
+      },
+      "full.archive.deliver": {
+        "originalSkillRef": "comet-archive",
+        "outputContract": {
+          "required": ["action", "targetBranch", "commit"],
+          "properties": ["action", "targetBranch", "commit", "remote", "prUrl"]
+        },
+        "methodBasis": "domain-owned archive delivery kept managed on a per-step domain-work skill (repair R3/R6, same as prepare)"
       }
     },
-    "notReplaced": {
-      "reason": "Machine checks (call_tool classic-check), user approvals (ask_user), archive (classic-archive tool steps) and the open/verify/archive skill steps are domain-owned and NOT replaceable upstream; comet-verify/comet-archive/comet-open execution skills are intentionally NOT replaced by this composition",
-      "steps": ["full.open", "full.verify.run", "full.archive.prepare", "full.archive.deliver"]
+    "nonReplaceableSurface": {
+      "reason": "machine checks (call_tool classic-check), user approvals (ask_user) and the archive tool steps are upstream non-invoke_skill surfaces and are NOT replaceable by the classic factory; no replacement in this composition touches them",
+      "steps": [
+        "full.build.check",
+        "full.verify.check",
+        "full.archive.execute",
+        "full.archive.confirm",
+        "full.open.confirm",
+        "full.design.confirm",
+        "full.build.confirm"
+      ]
     }
   },
   "extensionDeclarations": {
@@ -145,6 +285,15 @@
     ],
     "sameCheckpointSemantics": "A and T are two independent extensions on full.design.evidence and V and Kp two on full.verify.check.evidence: the upstream chain runs them in order and ALL must pass — one passing never substitutes the other (AND, not OR)"
   },
+  "package": {
+    "build": "integrations/comet/application/internal/build-application.mjs",
+    "outputRoot": "integrations/comet/application/package",
+    "manifest": "integrations/comet/application/internal/compile-manifest.json",
+    "compiler": "prepareWorkflowApplicationPlan + compileWorkflowApplication (official, imported from the pinned built distribution de39629a…)",
+    "manifestId": "sdd-managed-delivery",
+    "manifestVersion": "1",
+    "registrationBoundary": "lib/adapters/comet-executor.js still pins the canonical registration path integrations/comet/application/application.json; the compiled deliverable lives at package/application.json (a self-contained package directory — the compiler cannot emit into the populated application/ root). Registration/install/dispatch against the real host remains refused until that seam is reconciled by the owning wave (P1_4/P3_2); no runtime acceptance is claimed here"
+  },
   "knowledgeCloseout": {
     "gate": "Kt",
     "mechanism": "upstream-minimal-patch",
@@ -153,32 +302,44 @@
     "patchTarget": "domains/comet-classic/classic-resolver.ts",
     "semantics": "Kt may resume after the archive move on the SAME Run and is required before the resolver reports 'completed' (foundation/profiles/comet-managed.json knowledge.Kt)",
     "stateField": "knowledgeCloseout",
-    "writePath": "NOT IN THIS REVISION — the managed admission that writes the state field is a supply/admission-wave obligation (P1_3); this composition pins the read-side semantic and the patch bytes only",
-    "lockIntegration": "NOT APPLIED YET — upstream.lock.json patches == [] at this revision; the supply wave must add this patch (path+sha256 above) to lock.patches and rebuild before any runtime claim"
+    "writePath": "NOT IN THIS REVISION — the managed admission that writes the state field is a supply/admission-wave obligation; this composition pins the read-side semantic and the patch bytes only",
+    "lockIntegration": "APPLIED BY THE P1_4 SUPPLY RE-LOCK (controller-granted exception) — upstream.lock.json patches == [0005] with the sha256 pinned above; the rebuilt distribution de39629a… carries the predicate in source and dist. The patch's behavior inside a real Run remains claimed by no one in this wave"
   },
   "skillAssets": {
     "manifest": "integrations/comet/application/manifest.json",
     "packagedRoot": "integrations/comet/application/skills",
     "packagedBy": "P1_6, revision 2026-10-26-comet-050-adoption-v1",
-    "retiredTokensForbidden": ["superpowers", "sdd-", "trinity"]
+    "retiredTokensForbidden": ["superpowers", "sdd-", "trinity"],
+    "usage": "extension skills bind the packaged assets directly (grill-me, multi-agent-consensus-review, test-authoring, claude-parallel-tdd-planner, whitebox-verify, openspec-lifecycle-guard); work steps bind per-step managed skills (internal/domain-skills + build-time method variants); ponytail stays packaged but unbound (repair R5)"
   },
   "bindings": {
     "module": "integrations/comet/application/bindings.mjs",
     "export": "createBindings",
-    "returns": ["validators"],
+    "returns": ["validators", "executors"],
     "delegatesTo": ["lib/delivery/gate.js#evaluate", "lib/delivery/evidence.js#admitEvidence (inside evaluate on the managed path)"],
-    "hostContract": "bindings.mjs imports lib/delivery via repository-relative specifiers; the compile wave must preserve binding to THIS repository's lib/delivery pure components (rebase/alias imports when embedding as the package's bindings.mjs module)"
+    "executors": {
+      "port": "context.createSkillExecutor (WorkflowApplicationFactoryContext)",
+      "id": "sdd-managed-skill-host",
+      "capabilities": ["skill-host"],
+      "semantics": "HOST CONTRACT, not an execution implementation: authorize covers only bindings declared by the loaded application manifest and refuses everything else; invokeSkill always refuses automated execution — the pinned SKILL.md of each bound skill must be loaded and performed by the real host through the public SDK claim/report protocol (repair R2; compile-time routing probe requires preflight+execute+supports+capabilities)"
+    },
+    "hostContract": "the repository bindings.mjs imports lib/delivery via repository-relative specifiers (single source of judgment); the package build (internal/build-application.mjs) embeds it with that import mechanically rebased onto the in-package vendored closure sdd/*.mjs generated byte-verbatim from lib/delivery sources — sha256 provenance in internal/compile-manifest.json, re-verified by test/delivery-cases/2_4.mjs (repair R1)",
+    "approvalAnchor": {
+      "id": "classic.composition.confirm",
+      "choices": ["approved"],
+      "appliesTo": "every write-side-effect work binding (per-step domain-work and method-variant skills); read-only gate extension bindings carry no anchor (repair R4)"
+    }
   },
   "unverified": [
     {
-      "item": "composition package build through the official compileWorkflowApplication (manifest contentHashes, embedded bindings.mjs, deterministic byte digest) — comet-design/comet-build replaceability included",
+      "item": "extension behavior inside a real Run (blocking, repair routing, archive-time re-verification) and the 0005 predicate inside a live dispatched Run",
       "status": "UNVERIFIED",
-      "follow_up": "P1_3/P1_4 supply waves per ADR-0022 migration order; this file is the declarative source, not a compiled package"
+      "follow_up": "P1_5 assembly + VERIFY journeys; the compiled package is a deliverable, not a runtime acceptance"
     },
     {
-      "item": "extension behavior inside a real Run (blocking, repair routing, archive-time re-verification) and the 0005 patch inside a rebuilt upstream tree",
+      "item": "real host install/dispatch of the compiled package (comet application install + runtime dispatch against a live project) and the comet-executor canonical registration seam",
       "status": "UNVERIFIED",
-      "follow_up": "P1_3 supply step + P1_5 assembly + VERIFY journeys; no runtime acceptance is claimed here"
+      "follow_up": "P1_4/P3_2 own the install/dispatch journey; no runtime acceptance is claimed by the compile"
     },
     {
       "item": "Kt state-field write path (wire keys + managed admission of the closeout record)",

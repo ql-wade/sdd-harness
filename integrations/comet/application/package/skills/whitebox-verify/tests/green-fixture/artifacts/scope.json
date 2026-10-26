@@ -1,0 +1,223 @@
+{
+ "artifact_type": "scope-plan",
+ "captured_at": "2025-01-01T00:45:00+00:00",
+ "case_ids": [],
+ "correlation_values": [],
+ "frozen_at": "2025-01-01T00:00:00+00:00",
+ "hop_ids": [],
+ "journey_ids": [],
+ "plan_id": "green-fixture-plan-0001",
+ "run_id": "green-fixture-run-0001",
+ "scope": {
+  "journeys": [
+   {
+    "browser_required": false,
+    "browser_spec": {
+     "reason": "api ingress journey; no browser surface",
+     "required": false
+    },
+    "business_outcome": "fixture terminal business outcome",
+    "cases": [
+     {
+      "action": "fixture action",
+      "case_id": "CASE_RED_GREEN",
+      "correlation": "corr-green-0001",
+      "hop_ids": [
+       "HOP_1"
+      ],
+      "path_id": "PATH_HAPPY",
+      "preconditions": "fixture precondition",
+      "required_authority": "real-stack",
+      "risk_obligations": [
+       "retry"
+      ],
+      "runner_project": "fixture/repo",
+      "terminal_oracle": "state==completed",
+      "test_double_ids": []
+     }
+    ],
+    "ci_expectations": [],
+    "ci_required": false,
+    "dimension_applicability": {
+     "A": {
+      "required_authority": "real-stack",
+      "required_case_ids": [
+       "CASE_RED_GREEN"
+      ],
+      "required_hop_ids": [
+       "HOP_1"
+      ],
+      "status": "pass",
+      "test_obligations": [
+       "{\"actual\":\"report.logical_count\",\"expected\":1,\"operator\":\"eq\",\"test_id\":\"fixture::t/a.py::test_a\"}"
+      ]
+     },
+     "B": {
+      "reason": "no browser surface",
+      "status": "n_a"
+     },
+     "C": {
+      "reason": "no browser surface",
+      "status": "n_a"
+     },
+     "D": {
+      "reason": "no datastore hop",
+      "status": "n_a"
+     },
+     "E": {
+      "required_authority": "real-stack",
+      "required_case_ids": [
+       "CASE_RED_GREEN"
+      ],
+      "required_hop_ids": [
+       "HOP_1"
+      ],
+      "status": "pass",
+      "test_obligations": [
+       "{\"actual\":\"authorization.denied_count\",\"expected\":0,\"operator\":\"eq\",\"test_id\":\"fixture::t/e.py::test_e\"}"
+      ]
+     },
+     "F": {
+      "required_authority": "contract",
+      "required_case_ids": [
+       "CASE_RED_GREEN"
+      ],
+      "required_hop_ids": [
+       "HOP_1"
+      ],
+      "status": "pass",
+      "test_obligations": [
+       "{\"actual\":\"contract.match_count\",\"expected\":1,\"operator\":\"eq\",\"test_id\":\"fixture::t/contract.py::test_hop1\"}"
+      ]
+     },
+     "G": {
+      "reason": "no message/event transport",
+      "status": "n_a"
+     },
+     "H": {
+      "required_authority": "real-stack",
+      "required_case_ids": [
+       "CASE_RED_GREEN"
+      ],
+      "required_hop_ids": [
+       "HOP_1"
+      ],
+      "status": "pass",
+      "test_obligations": [
+       "{\"actual\":\"recovery.compensated_count\",\"expected\":1,\"operator\":\"eq\",\"test_id\":\"fixture::t/h.py::test_h\"}"
+      ]
+     },
+     "I": {
+      "reason": "no compatibility surface",
+      "status": "n_a"
+     },
+     "J": {
+      "required_authority": "real-stack",
+      "required_case_ids": [
+       "CASE_RED_GREEN"
+      ],
+      "required_hop_ids": [
+       "HOP_1"
+      ],
+      "status": "pass",
+      "test_obligations": [
+       "{\"actual\":\"runner.failed_count\",\"expected\":0,\"operator\":\"eq\",\"test_id\":\"fixture::t/j.py::test_j\"}"
+      ]
+     }
+    },
+    "entry_description": "fixture api ingress",
+    "entry_kind": "api",
+    "first_party_components": [
+     "PRODUCER"
+    ],
+    "journey_id": "JOURNEY_1",
+    "mandatory_hops": [
+     {
+      "allowed_double_ids": [],
+      "consistency": "eventual",
+      "consumer": "PRODUCER",
+      "consumer_build_digest": "build-0001",
+      "consumer_oracle": "state completed",
+      "consumer_scope": "first_party",
+      "contract": "fixture-contract",
+      "contract_digest": "sha256:fc6ea52eb0fadaa1c559b87c3249b2bb986b1146af74dff63716e54df7938db6",
+      "contract_version": "v1",
+      "hop_id": "HOP_1",
+      "interaction_ids": [
+       "INTERACTION_1"
+      ],
+      "producer": "PRODUCER",
+      "producer_build_digest": "build-0001",
+      "producer_oracle": "producer log entry",
+      "producer_scope": "first_party",
+      "provider_state_ids": [
+       "STATE_1"
+      ],
+      "required_authority": "real-stack",
+      "risk_obligations": [
+       "retry"
+      ],
+      "transport": "http/rpc",
+      "verification_mode": "consumer-provider",
+      "wire_oracle": "http 200 with body"
+     }
+    ],
+    "mandatory_paths": [
+     {
+      "closure_case_id": "CASE_RED_GREEN",
+      "path_id": "PATH_HAPPY",
+      "path_type": "happy",
+      "required_hop_ids": [
+       "HOP_1"
+      ],
+      "risk_obligations": [
+       "retry"
+      ]
+     }
+    ],
+    "required_dimensions": [
+     "A",
+     "E",
+     "F",
+     "H",
+     "J"
+    ],
+    "requirement_ids": [
+     "REQ_FIXTURE_1"
+    ],
+    "terminal_authority_components": [
+     "PRODUCER"
+    ],
+    "terminal_case_id": "CASE_RED_GREEN",
+    "terminal_claim": "fixture state reached completed",
+    "terminal_readback_expectations": [
+     {
+      "authority_component": "PRODUCER",
+      "command": "curl -s localhost:1/fixture/state",
+      "command_id": "CMD_JOURNEY",
+      "expected": "completed",
+      "query": "GET /fixture/state",
+      "query_type": "http-read-model",
+      "timeout_ms": 5000
+     }
+    ],
+    "test_doubles": []
+   }
+  ],
+  "requirements": [
+   "REQ_FIXTURE_1"
+  ],
+  "service_topology": [
+   {
+    "auth_fixture": "none",
+    "component": "PRODUCER",
+    "endpoint": "http://localhost:1",
+    "mode": "local-process",
+    "start_or_deployment": "fixture-start"
+   }
+  ]
+ },
+ "source_revisions": {
+  "PRODUCER": "rev-green-0001"
+ }
+}

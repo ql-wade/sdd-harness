@@ -1,32 +1,43 @@
 // P2_4 delivery case, revision 2026-10-26-comet-050-adoption-v1 (ADR-0022):
 // the managed delivery gates are expressed as a Comet 0.5.0 native
 // classic-full composition application, NOT as the retired 0.4.5 patch chain.
+// Rework round P2_4-r2: the composition now REALLY compiles through the
+// official compiler (repair list R1-R6, mode-qualification.json), and this
+// case pins the compiled package.
 //
 // What this case proves (mechanism/supply level — no runtime acceptance):
 //   1. the composition declares the six gate extensions (R/A/T/P/V/Kp) at
 //      exactly the upstream checkpoint whitelist positions, cross-checked
 //      against the PRISTINE 0.5.0 source, not against our own copies;
-//   2. replacements cover exactly the comet-design/comet-build invoke_skill
-//      steps, keep the original stepIds and output contracts (parsed from the
-//      pristine full-profile workflow), and never touch machine checks,
-//      approvals or archive steps (upstream non-replaceable surface);
-//   3. every referenced skill is a real P1_6 packaged asset;
-//   4. bindings.mjs registers exactly the declared validators and every
-//      verdict is delegated to the real lib/delivery pure components — a
-//      claimed pass is accepted ONLY when the pure SDD.Gate.v1 evaluation of
-//      the payload passes; malformed/blocked/mismatched/refused payloads all
-//      fail closed;
+//   2. every invoke_skill step of classic-full is replaced by a DISTINCT
+//      per-step managed skill id (R3) that keeps the original stepId and the
+//      ORIGINAL output contract (parsed from the pristine full-profile
+//      workflow), while machine checks, approvals and archive tool steps stay
+//      domain-owned; ponytail stays OUT of the replacements with a recorded
+//      boundary (R5);
+//   3. bindings.mjs registers exactly the declared validators AND the
+//      executor port (R2: context.createSkillExecutor, host contract that
+//      refuses automated execution) and every gate verdict is delegated to
+//      the real lib/delivery pure components — fail closed on everything else;
+//   4. the compiled package exists as a deliverable
+//      (integrations/comet/application/package) with pinned fingerprints:
+//      application.json/workflow.json/installation.json contents, the
+//      upstream work-approval anchor on every write binding (R4), the
+//      vendored lib/delivery closure reproducible byte-for-byte from the
+//      repository sources with only specifiers rebased (R1), and every
+//      packaged skill re-inspected by the official inspectApplicationSkill
+//      (link completeness, no symlinks — R6);
 //   5. the 0005 Kt patch applies cleanly to the pristine classic-resolver.ts,
 //      keeps the old unconditional completion for states without the optional
 //      field, and blocks completion only while the knowledge closeout
 //      obligation is required and unmet; a corrupted patch is rejected.
 //
-// What it does NOT claim: compilation through the official
-// compileWorkflowApplication, extension behavior inside a real Run, and the
-// rebuilt upstream tree with 0005 applied are P1_3/P1_4/P1_5/VERIFY waves
-// (composition.json#unverified). The legacy 0.4.5 patch-chain assertions that
-// previously lived in this file are RED against the 0.5.0 lock — recorded at
-// worker-reports/P2_4-comet-050/evidence/red-1-legacy-2_4-against-050-lock.txt.
+// What it does NOT claim: real host install/dispatch of the package,
+// extension behavior inside a real Run, and the 0005 predicate inside a live
+// dispatched Run stay UNVERIFIED (composition.json#unverified; P1_4/P3_2/VERIFY
+// waves). This case requires the pinned built distribution under
+// .sdd/vendor/comet/<commit>/builds/de39629a…/work (same environment the P1_4
+// compile probe and test/delivery-cases/1_3.mjs already require).
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -40,6 +51,7 @@ import { evaluate } from '../../lib/delivery/gate.js';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const applicationRoot = path.join(projectRoot, 'integrations/comet/application');
+const packageRoot = path.join(applicationRoot, 'package');
 const patchPath = path.join(projectRoot, 'integrations/comet/patches/0005-comet-050-kt-closeout.patch');
 const pristineRoot = path.join(
   projectRoot,
@@ -63,6 +75,7 @@ const upstreamLock = JSON.parse(
   fs.readFileSync(path.join(projectRoot, 'integrations/comet/upstream.lock.json'), 'utf8'),
 );
 const shaBytes = (data) => crypto.createHash('sha256').update(data).digest('hex');
+const readText = (relative) => fs.readFileSync(path.join(projectRoot, relative), 'utf8');
 
 const tempRoots = new Set();
 after(() => { for (const root of tempRoots) fs.rmSync(root, { recursive: true, force: true }); });
@@ -71,6 +84,38 @@ function makeTmp(label) {
   tempRoots.add(root);
   return root;
 }
+
+// ---- the pinned official build (same world the P1_4 compile probe used) ----
+
+const buildFingerprint = shaBytes(JSON.stringify({
+  archive: upstreamLock.source.sha256,
+  patches: upstreamLock.patches.map(({ path: p, sha256 }) => ({ path: p, sha256 })),
+  toolchain: upstreamLock.toolchain,
+}));
+const buildDist = path.join(
+  projectRoot,
+  '.sdd/vendor/comet',
+  upstreamLock.source.commit,
+  'builds',
+  buildFingerprint,
+  'work/dist',
+);
+if (!fs.existsSync(path.join(buildDist, 'domains/workflow-generation/compiler.js'))) {
+  throw new Error(
+    `pinned built distribution missing: ${path.relative(projectRoot, buildDist)} (fingerprint ${buildFingerprint}); ` +
+    'this case pins the compiled package and needs the official compiler of the locked build',
+  );
+}
+const fromBuild = (relative) => pathToFileURL(path.join(buildDist, relative)).href;
+const { inspectApplicationSkill } = await import(fromBuild('domains/workflow-application/index.js'));
+const { readApplicationFiles, applicationFilesHash } = await import(
+  fromBuild('domains/workflow-application/skill-adapter.js')
+);
+const { defineClassicWorkflowApplication } = await import(
+  fromBuild('domains/comet-classic/classic-sdk-application.js')
+);
+const factory = defineClassicWorkflowApplication('full');
+const factoryStep = (stepId) => factory.workflow.steps[stepId];
 
 // ---- upstream facts parsed from the pristine 0.5.0 tree --------------------
 
@@ -143,19 +188,52 @@ const EXPECTED_GATES = [
   { gate: 'V', extensionId: 'verify-whitebox', afterStep: 'full.verify.check.evidence' },
   { gate: 'Kp', extensionId: 'knowledge-project-closeout', afterStep: 'full.verify.check.evidence' },
 ];
+// R3: every invoke_skill step binds ONE per-step managed skill id (unique
+// across the workflow). `originalRef` is the upstream step ref the pristine
+// workflow declares; `kind` follows composition.json managedSkillVariants.
 const EXPECTED_REPLACEMENTS = {
-  'full.design.handoff': 'comet-design',
-  'full.design.document': 'comet-design',
-  'full.build.configure': 'comet-build',
-  'full.build.plan': 'comet-build',
-  'full.build.execute': 'comet-build',
+  'full.open': { originalRef: 'comet-open', kind: 'domain-work', skillId: 'comet-open-full-open' },
+  'full.design.handoff': { originalRef: 'comet-design', kind: 'method-variant', variantBase: 'grill-me', skillId: 'grill-me-full-design-handoff' },
+  'full.design.document': { originalRef: 'comet-design', kind: 'method-variant', variantBase: 'grill-me', skillId: 'grill-me-full-design-document' },
+  'full.build.configure': { originalRef: 'comet-build', kind: 'domain-work', skillId: 'comet-build-full-build-configure' },
+  'full.build.plan': { originalRef: 'comet-build', kind: 'method-variant', variantBase: 'claude-parallel-tdd-planner', skillId: 'claude-parallel-tdd-planner-full-build-plan' },
+  'full.build.execute': { originalRef: 'comet-build', kind: 'method-variant', variantBase: 'tdd', skillId: 'tdd-full-build-execute' },
+  'full.verify.run': { originalRef: 'comet-verify', kind: 'domain-work', skillId: 'comet-verify-full-verify-run' },
+  'full.archive.prepare': { originalRef: 'comet-archive', kind: 'domain-work', skillId: 'comet-archive-full-archive-prepare' },
+  'full.archive.deliver': { originalRef: 'comet-archive', kind: 'domain-work', skillId: 'comet-archive-full-archive-deliver' },
 };
-const DOMAIN_OWNED_STEPS = [
-  'full.open',
-  'full.verify.run',
-  'full.archive.prepare',
-  'full.archive.deliver',
+// Upstream non-replaceable surface: machine checks, approvals and archive
+// tool steps never appear in replacements.
+const NON_REPLACEABLE_STEPS = [
+  'full.build.check',
+  'full.verify.check',
+  'full.archive.execute',
+  'full.archive.confirm',
+  'full.open.confirm',
+  'full.design.confirm',
+  'full.build.confirm',
 ];
+const WORKFLOW_ID = 'comet-classic-full';
+const APPROVAL_ANCHOR = 'classic.composition.confirm';
+const GATE_RECEIPT_OUTPUT_SCHEMA = {
+  type: 'object',
+  required: ['verdict', 'sourceHash', 'artifactHashes', 'gateEvidence'],
+  additionalProperties: false,
+  properties: {
+    verdict: { enum: ['pass', 'repair', 'revise-requirements'] },
+    sourceHash: { type: 'string' },
+    artifactHashes: { type: 'object' },
+    gateEvidence: { type: 'object' },
+  },
+};
+// Stable structural comparison (key order independent).
+const stable = (value) => {
+  if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stable(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+};
 
 function relativeRefProblems(ref) {
   if (typeof ref !== 'string' || ref.length === 0) return 'not a non-empty string';
@@ -235,19 +313,41 @@ function compositionViolations(doc, validatorRegistry) {
     problems.push('order moved an extension across checkpoints');
   }
 
+  // ---- replacements (R3/R5) ----
   const replacements = compositionBody.replacements ?? [];
   const replacedSteps = replacements.map((entry) => entry.stepId);
   for (const stepId of Object.keys(EXPECTED_REPLACEMENTS)) {
     if (!replacedSteps.includes(stepId)) {
-      problems.push(`missing replacement for ${stepId} (upstream ${EXPECTED_REPLACEMENTS[stepId]} execution step)`);
+      problems.push(
+        `missing replacement for ${stepId} (upstream ${EXPECTED_REPLACEMENTS[stepId].originalRef} execution step)`,
+      );
     }
   }
-  for (const stepId of DOMAIN_OWNED_STEPS) {
+  for (const stepId of NON_REPLACEABLE_STEPS) {
     if (replacedSteps.includes(stepId)) {
-      problems.push(`domain-owned step ${stepId} must not be replaced`);
+      problems.push(`non-replaceable domain step ${stepId} must not be replaced`);
     }
   }
+  const replacementSkillIds = replacements.map((entry) => entry.skillId);
+  if (new Set(replacementSkillIds).size !== replacementSkillIds.length) {
+    problems.push('per-step skill ids must be unique across the workflow (one id can never serve two schema-different steps)');
+  }
+  const variants = doc.managedSkillVariants?.work ?? [];
   for (const replacement of replacements) {
+    const expected = EXPECTED_REPLACEMENTS[replacement.stepId];
+    if (expected && replacement.skillId !== expected.skillId) {
+      problems.push(`step ${replacement.stepId} must bind the managed skill ${expected.skillId}, found ${String(replacement.skillId)}`);
+    }
+    if (typeof replacement.skillId === 'string' && replacement.skillId.startsWith('ponytail')) {
+      problems.push('ponytail re-entered replacements (R5 boundary: not embeddable, removed with a recorded boundary)');
+    }
+    const variant = variants.find((entry) => entry.stepId === replacement.stepId);
+    if (!variant || variant.skillId !== replacement.skillId) {
+      problems.push(`no managedSkillVariants entry agrees with the replacement of ${String(replacement.stepId)}`);
+    }
+    if (expected && variant && variant.kind !== expected.kind) {
+      problems.push(`managed skill for ${replacement.stepId} must be of kind ${expected.kind}`);
+    }
     const block = pristineStepBlock(replacement.stepId);
     if (!block) {
       problems.push(`replacement stepId ${String(replacement.stepId)} does not exist in the pristine workflow`);
@@ -256,21 +356,27 @@ function compositionViolations(doc, validatorRegistry) {
     if (!block.includes("type: 'invoke_skill'")) {
       problems.push(`replacement stepId ${replacement.stepId} is not an invoke_skill step (not replaceable upstream)`);
     }
-    const expectedRef = EXPECTED_REPLACEMENTS[replacement.stepId];
-    // full.design.handoff is keyed by the computed followingStep variable and
-    // its ref is computed too (profile === 'full' ? 'comet-design' : ...);
-    // the alias-resolution assertion already pins the full-profile meaning,
-    // so the block must carry either the literal ref or that computed form.
+    // full.open and full.design.handoff are keyed by computed variables whose
+    // refs are computed too; the alias-resolution assertion above pins the
+    // full-profile meaning, so the block must carry either the literal ref or
+    // the documented computed form.
     const refForms = [
-      `ref: '${expectedRef}'`,
+      `ref: '${expected?.originalRef}'`,
       /ref: profile === 'full' \? 'comet-design' : 'comet-build',/,
+      /ref: profile === 'full' \? 'comet-open' : `comet-\$\{profile\}`,/,
     ];
-    if (expectedRef && !refForms.some((form) => (form instanceof RegExp ? form.test(block) : block.includes(form)))) {
-      problems.push(`replacement stepId ${replacement.stepId} is not a ${expectedRef} step`);
+    if (expected && !refForms.some((form) => (form instanceof RegExp ? form.test(block) : block.includes(form)))) {
+      problems.push(`replacement stepId ${replacement.stepId} is not a ${expected.originalRef} step`);
     }
     const contract = doc.replacementContracts?.steps?.[replacement.stepId];
-    if (!contract || contract.originalSkillRef !== expectedRef) {
+    if (!contract || contract.originalSkillRef !== expected?.originalRef) {
       problems.push(`replacement ${replacement.stepId} lacks the preserved output-contract declaration`);
+    } else if (contract.outputContract?.preset === false) {
+      // Steps without a preset upstream schema pin that fact instead of a
+      // required/properties list (the adapter schema is adopted).
+      if (factoryStep(replacement.stepId).outputSchema !== undefined) {
+        problems.push(`replacement ${replacement.stepId} declares no preset schema but the factory step carries one`);
+      }
     } else {
       const pristineRequired = block.match(/required:\s*\[([^\]]*)\]/);
       const requiredKeys = pristineRequired
@@ -331,9 +437,39 @@ function schemaViolations(schema, value, at = 'declaration') {
 // ---- bindings: the real module, the real registry ---------------------------
 
 const bindingsModule = await import(pathToFileURL(path.join(applicationRoot, 'bindings.mjs')).href);
-const bindingsResult = await bindingsModule.createBindings({ probe: 'p2_4-case' });
+// Repo-side call (lib/adapters/comet-executor.js calls createBindings() with
+// no factory context): pure validators only, never a fabricated port.
+const repoBindings = await bindingsModule.createBindings();
+// Factory-context call: a stub mirroring the official
+// WorkflowApplicationFactoryContext.createSkillExecutor wrapper
+// (domains/workflow-application/skill-executor.js returns
+// { id, capabilities, preflight, supports, execute } around the host).
+const stubBindingsList = [{
+  workflowId: WORKFLOW_ID,
+  stepId: 'full.open',
+  skillId: 'comet-open-full-open',
+  capability: 'comet-open-full-open.work',
+  usage: 'action',
+}];
+const stubSkills = new Map([['comet-open-full-open', { id: 'comet-open-full-open' }]]);
+const executorHosts = [];
+const executorContext = {
+  manifest: { bindings: stubBindingsList },
+  skills: stubSkills,
+  createSkillExecutor: (host) => {
+    executorHosts.push(host);
+    return {
+      id: host.id,
+      capabilities: host.capabilities,
+      preflight: async () => ({}),
+      supports: () => true,
+      execute: host.invokeSkill,
+    };
+  },
+};
+const hostedBindings = await bindingsModule.createBindings(executorContext);
 const validatorRegistry = new Map(
-  (bindingsResult.validators ?? []).map((validator) => [`${validator.id}@${validator.version}`, validator]),
+  hostedBindings.validators.map((validator) => [`${validator.id}@${validator.version}`, validator]),
 );
 const packagedSkills = new Set(assetsManifest.skills.map((skill) => skill.name));
 
@@ -418,7 +554,7 @@ function extensionInput(gate, evidence) {
 // 1. supplier fixtures and cross-artifact pins
 // ---------------------------------------------------------------------------
 
-test('composition, bindings, typed declarations and the 0005 patch exist with cross-pinned bytes', () => {
+test('composition, bindings, typed declarations, the 0005 patch and the compiled package exist with cross-pinned bytes', () => {
   assert.equal(composition.revision, '2026-10-26-comet-050-adoption-v1');
   assert.equal(composition.runtimeAccepted, false, 'a source artifact must not claim runtime acceptance');
   assert.equal(composition.upstream.commit, upstreamLock.source.commit, 'composition must pin the locked upstream commit');
@@ -442,10 +578,30 @@ test('composition, bindings, typed declarations and the 0005 patch exist with cr
     'integrations/comet/patches/0005-comet-050-kt-closeout.patch',
   );
   assert.match(composition.knowledgeCloseout.writePath, /NOT IN THIS REVISION/, 'the Kt write path must stay an explicit supply-wave obligation');
+  assert.match(
+    composition.knowledgeCloseout.lockIntegration,
+    /APPLIED BY THE P1_4 SUPPLY RE-LOCK/,
+    'the lock integration must state the post-relock truth (0005 in the lock), never silently',
+  );
   for (const file of composition.extensionDeclarations.files) {
     assert.ok(fs.existsSync(path.join(applicationRoot, 'extensions', file)), `declaration ${file} missing`);
   }
   assert.ok(fs.statSync(path.join(applicationRoot, 'bindings.mjs')).isFile());
+  // The compiled package is a deliverable (R1-R6 rework): its files and
+  // fingerprints are pinned by the dedicated tests below.
+  for (const required of [
+    'application.json',
+    'application.mjs',
+    'bindings.mjs',
+    'installation.json',
+    'workflow.json',
+    'SKILL.md',
+    'rules/workflow-guard.md',
+    'scripts/comet-run.mjs',
+  ]) {
+    assert.ok(fs.statSync(path.join(packageRoot, required)).isFile(), `compiled package missing ${required}`);
+  }
+  assert.ok(fs.statSync(path.join(applicationRoot, 'internal/compile-manifest.json')).isFile());
 });
 
 test('the six gate extensions sit exactly on the pristine checkpoint whitelist (A/T and V/Kp same-checkpoint AND)', () => {
@@ -475,47 +631,83 @@ test('the six gate extensions sit exactly on the pristine checkpoint whitelist (
   );
 });
 
-test('replacements keep the original stepIds and output contracts of exactly the comet-design/comet-build execution skills', () => {
+test('every invoke_skill step is replaced by a distinct per-step managed skill keeping the ORIGINAL output contract (R3)', () => {
   const problems = compositionViolations(composition, validatorRegistry);
   assert.deepEqual(problems, []);
-  const replaced = composition.composition.replacements.map((entry) => entry.stepId);
-  assert.deepEqual([...replaced].sort(), Object.keys(EXPECTED_REPLACEMENTS).sort());
-  // Machine checks, approvals and archive steps stay domain-owned.
-  for (const forbidden of [
-    'full.build.check',
-    'full.verify.check',
-    'full.archive.execute',
-    'full.archive.confirm',
-    'full.open.confirm',
-    'full.design.confirm',
-    'full.build.confirm',
-  ]) {
-    assert.ok(!replaced.includes(forbidden), `${forbidden} must stay domain-owned`);
+  const replacements = composition.composition.replacements;
+  assert.deepEqual(
+    [...replacements.map((entry) => entry.stepId)].sort(),
+    Object.keys(EXPECTED_REPLACEMENTS).sort(),
+    'replacements must cover exactly the nine invoke_skill steps of classic-full',
+  );
+  const ids = replacements.map((entry) => entry.skillId);
+  assert.equal(new Set(ids).size, ids.length, 'per-step skill ids must be pairwise distinct');
+  // Upstream non-replaceable surface stays untouched.
+  for (const forbidden of NON_REPLACEABLE_STEPS) {
+    assert.ok(!replacements.some((entry) => entry.stepId === forbidden), `${forbidden} must stay domain-owned`);
   }
-  for (const stepId of DOMAIN_OWNED_STEPS) {
+  // Every replaced step is still an invoke_skill step upstream, and the
+  // per-step id derivation is the declared base+step-slug shape.
+  for (const [stepId, expected] of Object.entries(EXPECTED_REPLACEMENTS)) {
     const block = pristineStepBlock(stepId);
     assert.ok(block, `pristine still defines ${stepId}`);
     assert.match(block, /type: 'invoke_skill'/);
+    const declared = replacements.find((entry) => entry.stepId === stepId);
+    assert.equal(declared.skillId, expected.skillId);
+    const base = expected.variantBase ?? expected.originalRef;
+    const slug = stepId.replace(/[^\w]+/g, '-').replace(/-+/g, '-');
+    assert.equal(declared.skillId, `${base}-${slug}`, `the per-step id must be the declared base+slug derivation`);
   }
+  // R5 boundary: ponytail is gone from the replacements and the boundary is recorded.
+  assert.equal(composition.removedReplacements.stepId, 'full.build.configure');
+  assert.equal(composition.removedReplacements.skillId, 'ponytail');
+  assert.match(composition.removedReplacements.reason, /benchmarks\/results\/2026-10-07-agentic\.md/);
+  assert.ok(ids.every((id) => !id.startsWith('ponytail')), 'no ponytail id may remain bound');
 });
 
-test('every referenced skill is a real P1_6 packaged asset with no retired tokens', () => {
+test('extension skills are real P1_6 packaged assets; work skills are managed domain/variant assets with no retired tokens', () => {
   const used = new Set([
-    ...composition.composition.replacements.map((entry) => entry.skillId),
     ...composition.composition.extensions.map((entry) => entry.skillId),
   ]);
   assert.ok(used.size > 0);
   for (const skillId of used) {
-    assert.ok(packagedSkills.has(skillId), `skill ${skillId} is not in the P1_6 packaged manifest`);
+    assert.ok(packagedSkills.has(skillId), `extension skill ${skillId} is not in the P1_6 packaged manifest`);
     const skillRoot = path.join(applicationRoot, 'skills', skillId);
     assert.ok(fs.statSync(skillRoot).isDirectory(), `packaged asset directory missing for ${skillId}`);
     assert.ok(fs.existsSync(path.join(skillRoot, 'SKILL.md')), `packaged skill ${skillId} has no SKILL.md`);
+  }
+  // Domain-work skills are authored managed directories with a pinned
+  // original output contract; method-variant skills derive from packaged
+  // assets and are pinned inside the compiled package (see the package tests).
+  for (const entry of composition.managedSkillVariants.work) {
+    if (entry.kind !== 'domain-work') continue;
+    const root = path.join(applicationRoot, entry.root);
+    assert.ok(fs.statSync(root).isDirectory(), `domain-work skill missing: ${entry.root}`);
+    assert.ok(fs.existsSync(path.join(root, 'SKILL.md')));
+    const blocks = [...fs.readFileSync(path.join(applicationRoot, entry.root, 'SKILL.md'), 'utf8').matchAll(/```json\r?\n([\s\S]*?)```/g)];
+    const factorySchema = factoryStep(entry.stepId).outputSchema;
+    if (factorySchema === undefined) {
+      assert.equal(blocks.length, 0, `${entry.skillId} must not pin a contract for a schema-less step`);
+    } else {
+      assert.equal(blocks.length, 1, `${entry.skillId} pins exactly its original output contract`);
+      assert.equal(
+        stable(JSON.parse(blocks[0][1])),
+        stable(factorySchema),
+        `${entry.skillId} pinned contract drifted from the pristine factory schema`,
+      );
+    }
   }
   for (const token of assetsManifest.naming_rule.retired_tokens) {
     for (const entry of fs.readdirSync(path.join(applicationRoot, 'skills'))) {
       assert.ok(
         !entry.toLowerCase().includes(token.toLowerCase()),
         `retired token ${token} re-entered the packaged assets as ${entry}`,
+      );
+    }
+    for (const entry of fs.readdirSync(path.join(applicationRoot, 'internal/domain-skills'))) {
+      assert.ok(
+        !entry.toLowerCase().includes(token.toLowerCase()),
+        `retired token ${token} re-entered the managed domain skills as ${entry}`,
       );
     }
   }
@@ -550,13 +742,14 @@ test('typed extension declarations match the composition and validate against th
 // 2. bindings: delegation to lib/delivery, fail-closed on everything else
 // ---------------------------------------------------------------------------
 
-test('createBindings registers exactly the declared validators (unregistered refs are impossible to miss)', () => {
-  assert.deepEqual(Object.keys(bindingsResult).sort(), ['validators']);
-  assert.equal(bindingsResult.validators.length, EXPECTED_GATES.length);
+test('createBindings registers exactly the declared validators and, under a factory context, the executor port (R2)', async () => {
+  assert.deepEqual(Object.keys(repoBindings).sort(), ['validators']);
+  assert.deepEqual(Object.keys(hostedBindings).sort(), ['executors', 'validators']);
+  assert.equal(repoBindings.validators.length, EXPECTED_GATES.length);
   const declared = composition.composition.extensions.map((entry) => `${entry.validator.id}@${entry.validator.version}`);
-  const registered = bindingsResult.validators.map((entry) => `${entry.id}@${entry.version}`);
+  const registered = repoBindings.validators.map((entry) => `${entry.id}@${entry.version}`);
   assert.deepEqual([...declared].sort(), [...registered].sort(), 'declared and registered validator sets must be identical');
-  for (const validator of bindingsResult.validators) {
+  for (const validator of repoBindings.validators) {
     assert.equal(typeof validator.validate, 'function', `${validator.id} must expose validate`);
   }
   // The delegation seam itself: bindings.mjs imports the real pure component
@@ -564,6 +757,40 @@ test('createBindings registers exactly the declared validators (unregistered ref
   const bindingsSource = fs.readFileSync(path.join(applicationRoot, 'bindings.mjs'), 'utf8');
   assert.match(bindingsSource, /from '\.\.\/\.\.\/\.\.\/lib\/delivery\/gate\.js'/);
   assert.match(bindingsSource, /\bevaluate\(/);
+
+  // The executor port: exactly one, officially wrapped, compile-probe
+  // sufficient (truthy preflight, executable execute, supports, capabilities
+  // covering the required 'skill-host').
+  assert.equal(hostedBindings.executors.length, 1);
+  const port = hostedBindings.executors[0];
+  assert.equal(port.id, 'sdd-managed-skill-host');
+  assert.ok(port.capabilities.includes('skill-host'));
+  assert.equal(typeof port.preflight, 'function');
+  assert.equal(typeof port.execute, 'function');
+  assert.equal(port.supports({ type: 'invoke_skill' }), true);
+  // Host contract semantics: refuse automated execution, authorize only
+  // bindings the loaded application actually declared with a pinned skill.
+  assert.equal(executorHosts.length, 1);
+  const host = executorHosts[0];
+  assert.equal(
+    await host.authorize({ binding: stubBindingsList[0], skill: stubSkills.get('comet-open-full-open') }),
+    true,
+    'a declared binding resolved to a pinned skill authorizes',
+  );
+  assert.equal(
+    await host.authorize({
+      binding: { workflowId: WORKFLOW_ID, stepId: 'full.open', skillId: 'ghost-skill', usage: 'action' },
+      skill: stubSkills.get('comet-open-full-open'),
+    }),
+    false,
+    'an undeclared skill id never authorizes',
+  );
+  assert.equal(await host.authorize({}), false, 'a bindingless request never authorizes');
+  await assert.rejects(
+    () => port.execute({ skill: { id: 'comet-open-full-open' } }),
+    /never auto-executes managed skills/,
+    'the port must refuse automated execution (the real host loads the pinned SKILL.md)',
+  );
 });
 
 test('a claimed extension pass is accepted only when the real SDD.Gate.v1 evaluation passes (per gate)', async () => {
@@ -634,7 +861,250 @@ test('bindings fail closed: no payload, cross-gate replay, blocked coverage, tam
 });
 
 // ---------------------------------------------------------------------------
-// 3. negative mutants: the composition checker must reject every drift
+// 3. the compiled package (official compiler output, pinned)
+// ---------------------------------------------------------------------------
+
+const compileManifest = JSON.parse(readText('integrations/comet/application/internal/compile-manifest.json'));
+const applicationJson = JSON.parse(readText('integrations/comet/application/package/application.json'));
+const installationJson = JSON.parse(readText('integrations/comet/application/package/installation.json'));
+const workflowDefinition = JSON.parse(readText('integrations/comet/application/package/workflow.json'));
+
+function walkPackageFiles(relative = '') {
+  const out = [];
+  for (const entry of fs.readdirSync(path.join(packageRoot, relative), { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name, 'en'))) {
+    const ref = relative ? `${relative}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) out.push(...walkPackageFiles(ref));
+    else out.push(ref);
+  }
+  return out;
+}
+const packageFileSet = new Set(walkPackageFiles());
+
+test('the package on disk is byte-identical to the officially compiled plan (drift detector)', async () => {
+  // Recompute the official content hash over the real on-disk package files:
+  // any single byte change anywhere in the deliverable breaks this pin.
+  const files = await readApplicationFiles(packageRoot);
+  assert.deepEqual(
+    [...Object.keys(files)].sort(),
+    [...packageFileSet].sort(),
+    'the walked package files must be exactly the files the official reader accepts',
+  );
+  assert.equal(
+    applicationFilesHash(files),
+    compileManifest.contentHash,
+    'package content hash drifted from the compile manifest; rebuild deliberately and update the manifest',
+  );
+  assert.equal(installationJson.recovery.compositionHash, compileManifest.compositionHash);
+  assert.deepEqual(installationJson.workflowHashes, compileManifest.workflowHashes);
+  assert.deepEqual(
+    compileManifest.packageFiles.slice().sort(),
+    [...packageFileSet].sort(),
+    'compile-manifest package file inventory must match the on-disk package',
+  );
+  assert.equal(compileManifest.build.fingerprint, buildFingerprint, 'the compile ran on the locked build');
+});
+
+test('application.json: identity, per-step skills with content hashes, and the R4 approval anchors on every write binding', () => {
+  assert.equal(applicationJson.id, composition.package.manifestId);
+  assert.equal(applicationJson.base, 'classic-full');
+  assert.equal(applicationJson.runtimeVersion, upstreamLock.package.version);
+  const expectedSkillIds = new Set([
+    ...Object.values(EXPECTED_REPLACEMENTS).map((entry) => entry.skillId),
+    ...composition.composition.extensions.map((entry) => entry.skillId),
+  ]);
+  assert.deepEqual(
+    [...applicationJson.skills.map((skill) => skill.id)].sort(),
+    [...expectedSkillIds].sort(),
+    'the compiled manifest carries exactly the managed per-step and extension skills',
+  );
+  for (const skill of applicationJson.skills) {
+    assert.equal(skill.root, `skills/${skill.id}`);
+    assert.match(skill.contentHash, /^[a-f0-9]{64}$/);
+  }
+  const bindings = applicationJson.bindings;
+  assert.equal(bindings.length, 9 + EXPECTED_GATES.length);
+  const workBindings = bindings.filter((binding) => !binding.stepId.startsWith('classic.extension.'));
+  const extensionBindings = bindings.filter((binding) => binding.stepId.startsWith('classic.extension.'));
+  assert.equal(workBindings.length, 9);
+  for (const binding of workBindings) {
+    const expected = EXPECTED_REPLACEMENTS[binding.stepId];
+    assert.ok(expected, `unexpected work binding ${binding.stepId}`);
+    assert.equal(binding.skillId, expected.skillId);
+    assert.equal(binding.capability, `${expected.skillId}.work`);
+    assert.equal(binding.authorizationFrom, APPROVAL_ANCHOR, `${binding.stepId} must carry the work-approval anchor (R4)`);
+    assert.deepEqual(binding.authorizationChoices, ['approved']);
+    const skill = applicationJson.skills.find((entry) => entry.id === binding.skillId);
+    assert.ok(
+      skill.adapter.review.capabilities.some((capability) => capability.id === binding.capability),
+      `${binding.stepId} capability must be a reviewed capability of its skill`,
+    );
+    assert.equal(skill.adapter.sideEffect, 'write');
+  }
+  assert.equal(extensionBindings.length, EXPECTED_GATES.length);
+  for (const binding of extensionBindings) {
+    assert.equal(binding.authorizationFrom, undefined, 'read-only gate bindings carry no approval anchor');
+    assert.equal(binding.usage, 'action');
+    assert.equal(binding.capability, `${binding.skillId}.gate`);
+  }
+});
+
+test('workflow.json: the approval anchor gates the entry and every invoke_skill step hash-keeps its ORIGINAL schema', () => {
+  const workflow = workflowDefinition.workflows[0];
+  assert.equal(workflow.id, WORKFLOW_ID);
+  assert.equal(workflow.version, '1');
+  // R4 live shape: the compiled workflow starts at the work-approval anchor.
+  assert.deepEqual(workflow.entry, ['classic.composition.prepare']);
+  assert.equal(workflow.steps['classic.composition.confirm'].type, 'ask_user');
+  assert.deepEqual(workflow.steps['classic.composition.confirm'].choices, ['approved', 'rejected']);
+  for (const [stepId, expected] of Object.entries(EXPECTED_REPLACEMENTS)) {
+    const step = workflow.steps[stepId];
+    assert.equal(step.type, 'invoke_skill');
+    assert.equal(step.ref, expected.skillId, `${stepId} routes to its per-step managed skill`);
+    const factorySchema = factoryStep(stepId).outputSchema;
+    if (factorySchema === undefined) {
+      assert.deepEqual(step.outputSchema, { type: 'object' }, `${stepId} adopts the adapter schema (no preset upstream)`);
+    } else {
+      assert.equal(
+        stable(step.outputSchema),
+        stable(factorySchema),
+        `${stepId} output schema must be the ORIGINAL factory schema (hash-checked by the official factory at compile time)`,
+      );
+    }
+  }
+  for (const extension of composition.composition.extensions) {
+    const step = workflow.steps[`classic.extension.${extension.id}`];
+    assert.ok(step, `extension step missing for ${extension.id}`);
+    assert.equal(step.type, 'invoke_skill');
+    assert.equal(step.ref, extension.skillId);
+    assert.equal(stable(step.outputSchema), stable(GATE_RECEIPT_OUTPUT_SCHEMA));
+  }
+  // Upstream non-replaceable surface survived the composition untouched.
+  for (const stepId of NON_REPLACEABLE_STEPS) {
+    if (stepId === 'full.archive.execute') {
+      assert.notEqual(workflow.steps[stepId].type, 'invoke_skill');
+    }
+    assert.ok(workflow.steps[stepId], `${stepId} still present in the compiled workflow`);
+  }
+});
+
+test('R1: the vendored sdd/ closure reproduces byte-for-byte from the repository sources; the embedded bindings import is rebased', () => {
+  const REPO_IMPORT = "from '../../../lib/delivery/gate.js'";
+  const REBASED_IMPORT = "from './sdd/lib-delivery-gate.mjs'";
+  // The embedded module is the repository module with exactly one mechanical
+  // rebase — no other difference is allowed.
+  const repoBindingsSource = readText('integrations/comet/application/bindings.mjs');
+  const packagedBindings = readText('integrations/comet/application/package/bindings.mjs');
+  assert.equal(packagedBindings, repoBindingsSource.split(REPO_IMPORT).join(REBASED_IMPORT));
+  // The vendored closure set matches the on-disk sdd/ directory exactly.
+  const sddFiles = new Set([...packageFileSet].filter((ref) => ref.startsWith('sdd/')));
+  assert.deepEqual(
+    compileManifest.vendoredModules.map((entry) => entry.moduleRef).sort(),
+    [...sddFiles].sort(),
+  );
+  // Single-source proof: every vendored module is the byte-verbatim source
+  // file with only the relative specifiers rewritten (mapping re-derived from
+  // the provenance list itself).
+  const refBySource = new Map(compileManifest.vendoredModules.map((entry) => [entry.sourcePath, entry.moduleRef]));
+  const IMPORT_RE = /(import|export)\s+(?:[\w$]+(?:\s*,\s*\{[^}]*\})?|\{[^}]*\}|\*(?:\s+as\s+[\w$]+)?)\s+from\s+['"]([^'"]+)['"]/g;
+  for (const entry of compileManifest.vendoredModules) {
+    const sourcePath = path.join(projectRoot, entry.sourcePath);
+    assert.ok(fs.existsSync(sourcePath), `vendored source missing: ${entry.sourcePath}`);
+    const source = fs.readFileSync(sourcePath, 'utf8');
+    assert.equal(shaBytes(source), entry.sourceSha256, `provenance sha256 drifted for ${entry.sourcePath}`);
+    const renames = [];
+    let match;
+    IMPORT_RE.lastIndex = 0;
+    while ((match = IMPORT_RE.exec(source))) {
+      const specifier = match[2];
+      if (!specifier.startsWith('.')) continue;
+      const resolved = path.relative(projectRoot, path.resolve(path.dirname(sourcePath), specifier)).split(path.sep).join('/');
+      const ref = refBySource.get(resolved);
+      assert.ok(ref, `vendored module ${entry.moduleRef} imports ${specifier} which is outside the vendored closure`);
+      renames.push([specifier, ref]);
+    }
+    let expected = source;
+    for (const [specifier, ref] of renames) {
+      let target = path.posix.relative(path.posix.dirname(entry.moduleRef), ref);
+      if (!target.startsWith('.')) target = `./${target}`;
+      expected = expected.split(`'${specifier}'`).join(`'${target}'`).split(`"${specifier}"`).join(`"${target}"`);
+    }
+    const packaged = readText(`integrations/comet/application/package/${entry.moduleRef}`);
+    assert.equal(packaged, expected, `vendored module ${entry.moduleRef} must be the byte-verbatim rebased ${entry.sourcePath}`);
+    assert.equal(shaBytes(packaged), entry.moduleSha256);
+  }
+  // No package module escapes the package (mini official import scan).
+  for (const ref of packageFileSet) {
+    if (!ref.endsWith('.mjs')) continue;
+    const source = readText(`integrations/comet/application/package/${ref}`);
+    for (const match2 of source.matchAll(/from\s+['"]([^'"]+)['"]/g)) {
+      const specifier = match2[1];
+      if (!specifier.startsWith('.')) continue; // node builtins + @rpamis/comet/* are loader-allowed
+      const target = path.posix.normalize(path.posix.join(path.posix.dirname(ref), specifier));
+      assert.ok(
+        packageFileSet.has(target) && !target.startsWith('../'),
+        `package module ${ref} escapes the package via ${specifier}`,
+      );
+    }
+  }
+});
+
+test('R6: every packaged skill is self-contained (official inspectApplicationSkill re-inspection; no link escape, no symlinks)', async () => {
+  const packagedSkillDirs = [...new Set([...packageFileSet]
+    .filter((ref) => ref.startsWith('skills/'))
+    .map((ref) => ref.split('/')[1]))].sort();
+  assert.deepEqual(
+    packagedSkillDirs,
+    applicationJson.skills.map((skill) => skill.id).sort(),
+    'the package embeds exactly the manifest skills as directories',
+  );
+  for (const skill of applicationJson.skills) {
+    const inspected = await inspectApplicationSkill(path.join(packageRoot, 'skills', skill.id));
+    assert.equal(
+      inspected.contentHash,
+      skill.contentHash,
+      `packaged skill ${skill.id} content drifted from the compiled content hash`,
+    );
+  }
+  // R5 boundary keeps holding inside the package: ponytail is not embedded.
+  assert.ok(!packagedSkillDirs.some((id) => id.startsWith('ponytail')), 'ponytail must not be embedded (R5)');
+});
+
+test('method-variant skills are verbatim copies of the P1_6 packaged skill with only the frontmatter name rewritten', () => {
+  for (const entry of composition.managedSkillVariants.work) {
+    if (entry.kind !== 'method-variant') continue;
+    const sourceRoot = path.join(applicationRoot, entry.source);
+    const variantRoot = path.join(packageRoot, 'skills', entry.skillId);
+    const sourceFiles = walkRelative(sourceRoot);
+    const variantFiles = walkRelative(variantRoot);
+    assert.deepEqual(variantFiles, sourceFiles, `variant ${entry.skillId} file set must equal the packaged ${entry.base} file set`);
+    for (const ref of sourceFiles) {
+      const sourceBytes = fs.readFileSync(path.join(sourceRoot, ref), 'utf8');
+      const variantBytes = fs.readFileSync(path.join(variantRoot, ref), 'utf8');
+      if (ref === 'SKILL.md') {
+        assert.equal(
+          variantBytes,
+          sourceBytes.replace(`name: ${entry.base}`, `name: ${entry.skillId}`),
+          `variant ${entry.skillId} SKILL.md must differ from ${entry.base} only in the frontmatter name`,
+        );
+      } else {
+        assert.equal(variantBytes, sourceBytes, `variant ${entry.skillId} file ${ref} must be byte-verbatim`);
+      }
+    }
+  }
+});
+
+function walkRelative(root, relative = '') {
+  const out = [];
+  for (const entry of fs.readdirSync(path.join(root, relative), { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name, 'en'))) {
+    const ref = relative ? `${relative}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) out.push(...walkRelative(root, ref));
+    else out.push(ref);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// 4. negative mutants: the composition checker must reject every drift
 // ---------------------------------------------------------------------------
 
 test('negative mutants: missing extension, moved checkpoint, stripped artifactRefs, unregistered validator, broken order', () => {
@@ -691,6 +1161,42 @@ test('negative mutants: missing extension, moved checkpoint, stripped artifactRe
   );
 });
 
+test('replacement mutants: id collision across schema-different steps, dropped step, ponytail re-entry, non-replaceable step', () => {
+  const baseline = compositionViolations(composition, validatorRegistry);
+  assert.deepEqual(baseline, []);
+  const clone = () => structuredClone(composition);
+
+  // R3 core: one skill id serving two schema-different steps can never
+  // compile (the factory hash-compares each step's ORIGINAL schema).
+  const collided = clone();
+  collided.composition.replacements.find((entry) => entry.stepId === 'full.design.document').skillId = 'grill-me-full-design-handoff';
+  assert.ok(
+    compositionViolations(collided, validatorRegistry).some((problem) => problem.includes('per-step skill ids must be unique')),
+    'an id shared across steps must be reported',
+  );
+
+  const dropped = clone();
+  dropped.composition.replacements = dropped.composition.replacements.filter((entry) => entry.stepId !== 'full.verify.run');
+  assert.ok(
+    compositionViolations(dropped, validatorRegistry).some((problem) => problem.includes('missing replacement for full.verify.run')),
+    'an unreplaced domain invoke_skill step must be reported',
+  );
+
+  const ponytailBack = clone();
+  ponytailBack.composition.replacements.find((entry) => entry.stepId === 'full.build.configure').skillId = 'ponytail-full-build-configure';
+  assert.ok(
+    compositionViolations(ponytailBack, validatorRegistry).some((problem) => problem.includes('ponytail re-entered replacements')),
+    'a ponytail re-entry must be reported (R5 boundary)',
+  );
+
+  const forbidden = clone();
+  forbidden.composition.replacements.push({ stepId: 'full.verify.check', skillId: 'ghost-check' });
+  assert.ok(
+    compositionViolations(forbidden, validatorRegistry).some((problem) => problem.includes('full.verify.check')),
+    'replacing a machine-check step must be reported',
+  );
+});
+
 test('declaration mutants: schema rejections for stripped refs, escaping paths and the patch-only Kt gate', () => {
   const schema = JSON.parse(fs.readFileSync(path.join(applicationRoot, 'extensions/schema.json'), 'utf8'));
   const declaration = JSON.parse(
@@ -722,7 +1228,7 @@ test('declaration mutants: schema rejections for stripped refs, escaping paths a
 });
 
 // ---------------------------------------------------------------------------
-// 4. the 0005 Kt patch: applicability + semantics against the pristine tree
+// 5. the 0005 Kt patch: applicability + semantics against the pristine tree
 // ---------------------------------------------------------------------------
 
 function applyPatchInTmp(patchBytes) {
@@ -804,10 +1310,9 @@ test('0005 corruption is rejected: a broken patch never reaches an upstream tree
   assert.match(target, /if \(classic\.archived\) return 'completed';/, 'rejected patch leaves the pristine behavior in place');
 });
 
-test('the Kt obligation stays declared and honest: patch-only, write path and lock integration unclaimed', () => {
+test('the Kt obligation stays declared and honest: patch-only, write path unclaimed, compile delivered, runtime unclaimed', () => {
   const closeout = composition.knowledgeCloseout;
   assert.equal(closeout.gate, 'Kt');
-  assert.match(closeout.lockIntegration, /NOT APPLIED YET/, 'the lock must not silently claim 0005 is applied');
   assert.match(closeout.writePath, /NOT IN THIS REVISION/);
   // Kt must NOT appear as a composition extension (no post-archive hook
   // upstream): the whitelist has no archive checkpoint to hang it on.
@@ -816,7 +1321,16 @@ test('the Kt obligation stays declared and honest: patch-only, write path and lo
     !composition.composition.extensions.some((entry) => entry.id.includes('team') || entry.afterStep.includes('archive')),
     'Kt is patch-only; no extension may claim a post-archive checkpoint',
   );
+  // Post-rework honesty state: the compile is DELIVERED (pinned above), the
+  // runtime surface stays explicitly unclaimed — never smoothed over.
   const unverified = composition.unverified.map((entry) => entry.item).join('\n');
-  assert.match(unverified, /compileWorkflowApplication/, 'compilation must stay an explicit UNVERIFIED item');
+  assert.match(unverified, /real host install\/dispatch/, 'the install/dispatch journey must stay an explicit UNVERIFIED item');
   assert.match(unverified, /extension behavior inside a real Run/);
+  assert.match(unverified, /Kt state-field write path/);
+  assert.equal(composition.runtimeAccepted, false);
+  assert.ok(
+    composition.package.outputRoot === 'integrations/comet/application/package'
+      && composition.package.build === 'integrations/comet/application/internal/build-application.mjs',
+    'the package section must pin the build entry and output root',
+  );
 });

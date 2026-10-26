@@ -1,0 +1,22 @@
+# command: npm test (full regression, current tree with P2_4-r2 deliverables) + baseline delta
+# date: 2026-10-26T17:08:09Z
+# baseline method: my change set stashed (bindings.mjs, composition.json, 2_4.mjs, internal/, package/ moved away), failing files rerun, then restored
+$ npm test 2>&1 | tail -8   (npm exit code 1: 10 failing tests, attribution below)
+# tests 1118
+# suites 0
+# pass 1108
+# fail 10
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 113127.85675
+exit=0
+
+# failing tests (10) attribution:
+#   MINE-PENDING-REPIN (1):
+#     foundation-distribution 'committed foundation artifacts match live sources (repo-level drift gate)' — the foundation lock freezes every byte under integrations/comet/application; the P2_4-r2 deliverable (package/ + internal/ + repaired composition.json/bindings.mjs) legitimately changes that frozen set. The established fix is the controller acceptance repin of foundation/foundation-lock.json + foundation/release/comet-application (precedent: commit 14dd516). Read-only recomputation: exportDigest moves c98b6f823fe00dfe72e27270cc3f152a4666e794ed5cf3e3b5e12fb7aed512b2 -> 19df85e09c1773dcc0041acb43bdc5bbe4f90a0f213f7060fc259d2f86f6e0e1 (same releaseCommit 0ed3b60b).
+#   PRE-EXISTING (8, identical set fails without my changes):
+#     foundation-distribution: 'old run pinned to the committed lock stays resolvable (F04 keep-baseline)', 'B09: a second writer cannot take over an active run'
+#     classic-integration: C08 negative + C08 current host + P1_5 probe registration + P1_5 method dispatch pinned + P1_5 source drift (5)
+#     comet-flow-acceptance: 'P31 formal managed scenario refuses component tests without a protected runtime source'
+#   PRE-EXISTING (9th): comet-security-backports.test.js asserts the upstream lock version is 0.4.5 while the committed lock says 0.5.0 (stale 0.4.5-era expectation; fails identically under node v22 and v24, independent of this rework — it reads integrations/comet/upstream.lock.json, untouched here)
