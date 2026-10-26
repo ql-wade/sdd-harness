@@ -140,12 +140,12 @@
 
 原工作包身份：3.1.a, 3.1.b。当前修订：2026-10-26-comet-050-adoption-v1；工作完成+独立复审APPROVE，提交按用户指示暂持。
 
-- [ ] **Step 1 [5 min]: Test** target不存在/无实际执行/弱oracle/缺真实UI或资源均不能PASS；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 登记一个已有试点/owner/目标及AC/TestPack，先证明验收器会拒绝假绿；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** target不存在/无实际执行/弱oracle/缺真实UI或资源均不能PASS；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 登记一个已有试点/owner/目标及AC/TestPack，先证明验收器会拒绝假绿；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
 ### Task P1_6: Matt方法与阶段调用绑定
 
@@ -158,12 +158,12 @@
 
 原工作包身份：1.6.a, 1.6.b, 1.6.c。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Test** 停用的Superpowers/Trinity和嵌套planner不得再生；读取技能名不等于正确执行；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 原样版本化grill/consensus/test-authoring/tdd/review/Whitebox，原Comet调用真实方法；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** 停用的Superpowers/Trinity和嵌套planner不得再生；读取技能名不等于正确执行；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 原样版本化grill/consensus/test-authoring/tdd/review/Whitebox，原Comet调用真实方法；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
 ### Task P1_2: 原生命令分发与旧入口防再生
 
@@ -176,12 +176,12 @@
 
 原工作包身份：1.2.a, 1.2.b, 1.2.c。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Test** 原sdd命令/迁移副本及六角色自动启动入口不得重新注册；只有安装文件不算技能实际运行；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 沿现有Foundation/TeamAI只分发；冷安装/升级/卸载保留用户配置并退出旧命令/部署模板；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** 原sdd命令/迁移副本及六角色自动启动入口不得重新注册；只有安装文件不算技能实际运行；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 沿现有Foundation/TeamAI只分发；冷安装/升级/卸载保留用户配置并退出旧命令/部署模板；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
 ### Task P2_2: 真实宿主/平台来源与独立证据准入
 
@@ -194,12 +194,12 @@
 
 原工作包身份：2.2.a, 2.2.b, 2.2.c。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Test** 同一执行者换role、自写pass、旧摘要/旧attempt/不明来源拒绝；不要求自建签发/通信服务；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 从现有宿主真实执行记录、测试进程/CI和资源读回绑定原Run与制品；Gate保持纯函数；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** 同一执行者换role、自写pass、旧摘要/旧attempt/不明来源拒绝；不要求自建签发/通信服务；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 从现有宿主真实执行记录、测试进程/CI和资源读回绑定原Run与制品；Gate保持纯函数；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
 ### Task P2_3: 薄CLI与历史报告边界
 
@@ -212,12 +212,12 @@
 
 原工作包身份：2.3.a, 2.3.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Test** 输入错1/验证失败2/通过0按仓库契约；原生上游保持自身语义，历史报告不签新流程；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 保留必要机器检查退出码和只读旧报告，不恢复旧业务阶段命令；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** 输入错1/验证失败2/通过0按仓库契约；原生上游保持自身语义，历史报告不签新流程；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 保留必要机器检查退出码和只读旧报告，不恢复旧业务阶段命令；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
 ### Task P2_4: 原Comet共同硬门与保守失效
 
@@ -230,12 +230,12 @@
 
 原工作包身份：2.4.a, 2.4.b, 2.4.c, 2.4.d。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Test** 缺R直接Design、跳transition/archive、手改回执、旧字节复活和控制写绕行均拒绝；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 在原Run/Guard/continuation上最小接R/A/T/P/V/Kp/Kt，不添加phase/队列/author账本；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** 缺R直接Design、跳transition/archive、手改回执、旧字节复活和控制写绕行均拒绝；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 在原Run/Guard/continuation上最小接R/A/T/P/V/Kp/Kt，不添加phase/队列/author账本；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
 ### Task P2_5: 架构A的grill与独立共识
 
@@ -248,12 +248,12 @@
 
 原工作包身份：2.5.a, 2.5.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Test** 作者自审、少票/旧票/改绑摘要拒绝；T维持独立充分性审查不强加相同quorum；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 现有宿主/技能执行grill及真实独立consensus，原manifest/原票/tally绑定同摘要；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** 作者自审、少票/旧票/改绑摘要拒绝；T维持独立充分性审查不强加相同quorum；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 现有宿主/技能执行grill及真实独立consensus，原manifest/原票/tally绑定同摘要；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
 ### Task P1_3: 原生宿主命令、技能与实际执行接线
 
@@ -266,12 +266,12 @@
 
 原工作包身份：1.3.a, 1.3.b, 1.3.c。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Test** 命令可见但不执行、只检查gate_dispatches无作者动作、角色混用、只读权限绕行拒绝；不建app-server RPC或六服务；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 用现有Claude/Codex宿主实际调用原阶段、方法、独立Agent与工具；显示当前子步骤/阻塞/下一步；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** 命令可见但不执行、只检查gate_dispatches无作者动作、角色混用、只读权限绕行拒绝；不建app-server RPC或六服务；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 用现有Claude/Codex宿主实际调用原阶段、方法、独立Agent与工具；显示当前子步骤/阻塞/下一步；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
 ### Task P1_4: 原生Classic模式与入口绕行证明
 
@@ -284,12 +284,12 @@
 
 原工作包身份：1.4.a, 1.4.b, 1.4.c。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Test** 成功的无关命令、手写通过、缺检查、force/skip逃生开关不能放行；不再泛研新版SDK；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 固定Classic，检查所有实际推进/恢复/写入入口共用门；方法与知识路由唯一；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** 成功的无关命令、手写通过、缺检查、force/skip逃生开关不能放行；不再泛研新版SDK；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 固定Classic，检查所有实际推进/恢复/写入入口共用门；方法与知识路由唯一；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
 ### Task P1_5: R/A/T/P与测试实现步骤装配
 
@@ -302,12 +302,12 @@
 
 原工作包身份：1.5.a, 1.5.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Test** A通过不代替T；弱TestPack不进Build；P不能派发第二DAG；hook缺席不能绕共同Guard；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 在同一原生阶段内明确A→T、P→测试自动化→Builder→Reviewer并实际调用技能；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** A通过不代替T；弱TestPack不进Build；P不能派发第二DAG；hook缺席不能绕共同Guard；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 在同一原生阶段内明确A→T、P→测试自动化→Builder→Reviewer并实际调用技能；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
 ### Task P3_2: 首个真实R到V纵向切片
 
