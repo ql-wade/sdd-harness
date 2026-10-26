@@ -58,6 +58,16 @@
     ],
     "indexConsistencyGate": "I04 emits storage/index facts only. A missing/stale native row is INCONSISTENT and cannot close Kp; the original Comet gate and independent verifier own the judgment."
   },
+  "observedEnforcement": {
+    "revision": "2026-10-26-comet-050-adoption-v1",
+    "serverContainment": "VERIFIED-LOCAL-RUNTIME (in-process probe, disposable tmp workspace): vaultfs _resolve_path resolve()+is_relative_to containment denied a dir_path carrying ../.. and denied writing through an in-workspace symlink to an outside file (outside file unchanged); contained positive write allowed. Nuance: a filename component carrying '..' is not rejected and resolves still INSIDE the workspace — no cross-workspace escape, but the file can land in a different directory within the workspace (source: mcp/vaultfs/sqlite.py write_to_disk/_resolve_path)",
+    "versionMechanism": "VERIFIED-LOCAL-RUNTIME: documents.version is set to 1 by create_document and incremented (COALESCE(version,0)+1) by every update_document; md/txt content is re-chunked into document_chunks and re-indexed into chunks_fts on every update (source: mcp/vaultfs/sqlite.py, mcp/services/chunker.py)",
+    "duplicateRejection": "VERIFIED-LOCAL-RUNTIME: documents UNIQUE(relative_path) turns a duplicate create into DuplicateDocumentError; the create tool surfaces an already-exists error unless overwrite=true (source: shared/sqlite_schema.sql, mcp/tools/write.py)",
+    "schemaRejection": "VERIFIED-LOCAL-STATIC: create rejects a missing title and missing tags with explicit error strings; edit requires a unique old_text match; delete refuses '*'/'**' and protects /wiki/overview.md and /wiki/log.md; tool argument types are enforced at the MCP protocol layer by the typed FastMCP tool signatures (source: mcp/tools/write.py, mcp/tools/delete.py)",
+    "writePathSingleChannel": "the server writes file and index in one operation (write_to_disk + create/update_document); direct fs writes that bypass the MCP are invisible to the server-side guard and rely on the control-plane hook — see the controlPlaneHookGap risk",
+    "controlPlaneHookGap": "hooks.yaml kb-write-protection does not currently cover the canonical landing path (see package.lock.json revisions[] risks); recorded for the control-plane owner, not fixed here",
+    "scope": "facts only; Kp / index-consistency judgment remains with the original Comet gate and the independent verifier"
+  },
   "intake": {
     "fullGitIngestWithoutApproval": "forbidden",
     "approvedCuratedSourceTypes": [

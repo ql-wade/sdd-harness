@@ -22,5 +22,13 @@
     "uncontainedPaths": true
   },
   "hardInvariants": "containment denials (traversal, symlink escape, uncontained paths) are enforced unconditionally by the resolver; the declarative flags above are records of intent — disabling a flag in this file can never weaken the resolver, and validate rejects any such mutation",
-  "identityLabels": "structured receipts carry stable labels (<main-working-tree>/<root>) and booleans only; raw host paths are redacted per the house displayPath rule"
+  "identityLabels": "structured receipts carry stable labels (<main-working-tree>/<root>) and booleans only; raw host paths are redacted per the house displayPath rule",
+  "revisionVerification": {
+    "revision": "2026-10-26-comet-050-adoption-v1",
+    "escapeDenial": "VERIFIED-LOCAL-RUNTIME: traversal / symlink-escape / foreign-wiki-root / project-id-mismatch denials re-executed and held (allowed=false each); hard invariants held again with all policy denial flags disabled — the flags above remain records that cannot weaken the resolver",
+    "worktreeConsistency": "VERIFIED-LOCAL-RUNTIME: 73 git worktrees (main tree + 72 linked) all resolve to the single canonical main-tree wiki root; no per-worktree wiki root was accepted",
+    "canonicalRootPresentOnHost": false,
+    "note": "the registered root .sdd/wiki/sdd-harness does not yet exist on this host; the resolution authority (lib/sdd-paths.js getWikiHome + tools/mcp/llmwiki.sh) was verified to resolve to exactly this target, the landing itself is uninitialized",
+    "receipts": "worker-reports/I04-comet-050/evidence/"
+  }
 }

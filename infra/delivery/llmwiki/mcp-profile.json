@@ -65,6 +65,19 @@
       "evidence": "worker-reports/I04-convergence/native-host-evidence.json",
       "managedRoleQualified": false,
       "knowledgeGateSigned": false
+    },
+    "revisionObservations": {
+      "revision": "2026-10-26-comet-050-adoption-v1",
+      "componentSessionEvidence": "VERIFIED-LOCAL-RUNTIME: disposable-sandbox stdio round-trip re-observed this revision — initialize (protocolVersion 2025-11-25, server LLM Wiki 1.27.0), tools/list 10 tools, create/read/search all VERIFIED with native documents/chunks/FTS readback CONSISTENT; details in package.lock.json revisions[] and worker-reports/I04-comet-050/evidence/",
+      "hostAdmissionStillUnverified": {
+        "status": "UNVERIFIED-NEEDS-LIVE-HOST",
+        "admissionConditions": [
+          "a real host (Claude Code / Codex app-server) starts tools/mcp/llmwiki.sh through the managed registration and completes initialize + tools/list in that host's session",
+          "a managed write lands in the registered canonical wiki root .sdd/wiki/sdd-harness (not yet initialized on this host) and is independently read back via native documents/document_chunks/chunks_fts",
+          "the admission receipt is produced by the owning P task against mcp-capabilities.yaml as the single source of truth; this component profile never self-verifies discovery and never writes live config"
+        ]
+      },
+      "controlPlaneGap": "hooks.yaml kb-write-protection compiled target 'llmwiki/wiki/' is a substring match and does not cover the registered canonical wiki landing .sdd/wiki/sdd-harness/wiki/; a direct fs write to the canonical landing is currently NOT denied by that hook (synthetic-payload probe: exit 0 on canonical landing vs exit 2 on the legacy substring). Recorded as a risk for the control-plane owner; this file changes no hook"
     }
   }
 }

@@ -1,0 +1,28 @@
+I04 static probes — revision 2026-10-26-comet-050-adoption-v1
+observedAt: 2026-10-26 (host clock, session-local; receipts referenced below are per-invocation)
+
+[1] node --check tools/infra/llmwiki.mjs
+    result: PASS (no syntax errors)
+
+[2] bash -n tools/mcp/llmwiki.sh
+    result: PASS (no syntax errors)
+
+[3] clone identity — git -C $SDD_HOME/repos/llmwiki rev-parse HEAD
+    result: 075c5b4996ff4e07f9d3c57c1f14fd2b54a955db
+    equals registered commit in infra/delivery/llmwiki/package.lock.json (source.commit): YES
+    equals registry.json llmwiki-project-stack observation.cloneCommit (I01, INVENTORY_ONLY): YES
+    working tree status: clean (0 dirty entries)
+
+[4] venv presence — $SDD_HOME/venvs/llmwiki-311 exists (llmwiki-311 listed)
+    runtime observation via qualify: python 3.11.13, mcp 1.27.0 (importlib.metadata)
+
+[5] canonical wiki root presence — <repo>/.sdd/wiki/
+    result: directory does NOT exist (rootPresent=false in qualify receipt)
+    implication: registered landing uninitialized; resolution authority verified, landing not created
+
+[6] entry command fact (source-level, tools/mcp/llmwiki.sh):
+    exec "$PY" -m local_server --workspace "$WIKI_HOME"
+    PYTHONPATH=$SDD_HOME/repos/llmwiki/mcp
+    wiki-home resolution: SDD_WIKI_HOME > $SDD_HOME/wiki/<git-common-dir-slug>
+    python resolution: LLMWIKI_PYTHON > $SDD_HOME/repos/llmwiki/.venv/bin/python (registered admission: project venv llmwiki-311 only)
+    launcher sha256 observed: bd18bfea155ec0fc8c1ce9fb23414dafbeb94416f4096eb92624eb59932ae863 (equals registered)

@@ -1,0 +1,58 @@
+I04 source-level write-path boundary verification (clone 075c5b4996ff4e07f9d3c57c1f14fd2b54a955db)
+revision: 2026-10-26-comet-050-adoption-v1 — all paths repo-relative to $SDD_HOME/repos/llmwiki
+
+[boundary 1] cross-workspace / traversal containment — SERVER LEVEL
+  mcp/vaultfs/sqlite.py :: _resolve_path(relative_path)
+    resolved = (_workspace_root / relative_path).resolve()
+    if not resolved.is_relative_to(_workspace_root): return None
+  mcp/vaultfs/sqlite.py :: write_to_disk returns False when _resolve_path is None
+  mcp/tools/write.py :: create returns "Error: invalid path ..." when write_to_disk is falsy
+  edit/append cannot traverse: they operate only on documents already present in the index
+  (get_document exact filename+path match), so dir_path/filename come from existing rows.
+  RUNTIME RECEIPT: server-boundary-inprocess.json — dir traversal denied; symlink escape denied.
+
+[boundary 2] symlink escape — SERVER LEVEL
+  same _resolve_path: .resolve() follows symlinks, an in-workspace symlink resolving outside
+  fails is_relative_to and is refused; the outside target file stayed unchanged in the probe.
+
+[nuance, honestly registered] filename component carrying '..'
+  write_to_disk("/wiki/", "../escape.md", ...) returned True: "wiki/../escape.md" resolves
+  INSIDE the workspace root. Containment to the workspace holds (no cross-workspace escape),
+  but the file relocates within the workspace (e.g. lands at workspace root instead of wiki/).
+  Registered in index-policy.json observedEnforcement.serverContainment.
+
+[boundary 3] bypass-index write — CONTROL PLANE, NOT SERVER
+  server writes file+index atomically per operation (write_to_disk + create/update_document);
+  the server has no guard against an external process writing the workspace files directly.
+  scaffold control plane: hooks.yaml kb-write-protection (PreToolUse deny Write|Edit|MultiEdit|NotebookEdit,
+  matcher target 'llmwiki/wiki/'). COVERAGE GAP found — see hook-kb-protect-probe.txt.
+
+[boundary 4] whole-repo ingestion — TOOL SURFACE
+  mcp/tools/__init__.py registers exactly: guide, list_knowledge_bases, search, read,
+  write(create/edit/append), delete, lint; local_server.py adds ping. No bulk/multi-file/repo-wide
+  ingest tool exists on the stdio surface. create requires explicit title+content+tags per document.
+  delete refuses '*'/'**' ("refusing to delete everything") and protects /wiki/overview.md,
+  /wiki/log.md (mcp/tools/delete.py _PROTECTED_FILES).
+  Policy layer: index-policy.json intake.fullGitIngestWithoutApproval=forbidden, enforced by
+  tools/infra/llmwiki.mjs admitKnowledgeEntry -> UNAPPROVED_INTAKE_DENIED (probe-escape-denial.json).
+
+[boundary 5] wrong-schema / duplicate rejection
+  typed FastMCP tool signatures enforce argument schema at the protocol layer;
+  create: "Error: title is required" / "Error: at least one tag is required" (mcp/tools/write.py);
+  edit: unique old_text match required (0 or >1 matches -> error);
+  duplicate: shared/sqlite_schema.sql documents UNIQUE(relative_path) ->
+  aiosqlite.IntegrityError -> DuplicateDocumentError -> create reports already-exists
+  (overwrite=false default). RUNTIME RECEIPT: server-boundary-inprocess.json duplicateRejected=true.
+
+[index/version mechanism]
+  documents.version: set 1 on create_document; update_document runs
+  version = COALESCE(version, 0) + 1 and refreshes updated_at;
+  md/txt re-chunked (services/chunker.py) into document_chunks and indexed into chunks_fts
+  (FTS5) on every create/update. RUNTIME RECEIPT: server-boundary-inprocess.json version 1 -> 2;
+  probe-worktree-mcp-readback.json native readback (documents row + chunks + FTS match).
+  filesystem is truth; index.db is rebuildable (schema header comment; ProjectWikiInfra semantics).
+
+[workspace landing / one-server-one-workspace]
+  mcp/local_server.py docstring: "One workspace = one MCP server. Filesystem is truth. SQLite is
+  the index." Workspace = the launcher's --workspace arg = getWikiHome canonical root
+  .sdd/wiki/sdd-harness; per-worktree llmwiki/ copies are never wiki roots (ProjectRoot.v1).

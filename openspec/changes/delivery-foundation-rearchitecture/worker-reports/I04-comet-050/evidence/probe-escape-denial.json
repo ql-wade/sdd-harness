@@ -1,0 +1,85 @@
+{
+  "interface": "ProjectWikiInfra.v1",
+  "command": "probe",
+  "case": "escape-denial",
+  "executed": true,
+  "status": "VERIFIED",
+  "reason": null,
+  "sandbox": "git-repo-with-linked-worktree",
+  "denials": [
+    {
+      "code": "PATH_TRAVERSAL_DENIED",
+      "allowed": false,
+      "reason": "claimed path carries a .. segment; traversal out of the canonical wiki root is refused regardless of policy flags"
+    },
+    {
+      "code": "SYMLINK_ESCAPE_DENIED",
+      "allowed": false,
+      "reason": "realpath resolves outside the canonical wiki root (symlink escape); refusal is unconditional"
+    },
+    {
+      "code": "FOREIGN_WIKI_ROOT_DENIED",
+      "allowed": false,
+      "reason": "a per-worktree or foreign llmwiki/ directory is never a wiki root; every worktree must use the canonical main-tree root"
+    },
+    {
+      "code": "PROJECT_ID_MISMATCH_DENIED",
+      "allowed": false,
+      "reason": "claimed project id pav-legacy does not match the policy-bound project sdd-harness-pilot"
+    }
+  ],
+  "positiveControls": [
+    {
+      "code": "CONTAINED",
+      "allowed": true
+    },
+    {
+      "claim": "release..notes.md",
+      "code": "CONTAINED",
+      "allowed": true
+    },
+    {
+      "claim": "..draft.md",
+      "code": "CONTAINED",
+      "allowed": true
+    }
+  ],
+  "hardInvariantsHeld": true,
+  "knowledgeWrite": {
+    "denials": [
+      {
+        "code": "KNOWLEDGE_AUTHORITY_DENIED",
+        "allowed": false,
+        "reason": "openspec-tasks is a forbidden wiki fact authority; specs/tasks checkmarks, source code and Comet state never author wiki facts"
+      },
+      {
+        "code": "UNAPPROVED_INTAKE_DENIED",
+        "allowed": false,
+        "reason": "full Git code intake without an explicit approval channel is forbidden by intake policy"
+      },
+      {
+        "code": "ENTRY_ADMISSION_DENIED",
+        "allowed": false,
+        "reason": "curated entry is missing required fields: approvedBy, revision (approval + source + revision are non-negotiable)"
+      },
+      {
+        "code": "ENTRY_ADMISSION_DENIED",
+        "allowed": false,
+        "reason": "only curated tier entries are admissible; raw/staging are never wiki facts"
+      }
+    ],
+    "positiveControls": [
+      {
+        "code": "ADMITTED",
+        "allowed": true,
+        "reason": "approved curated entry with source and revision; independent readback still required before any write is called successful"
+      }
+    ]
+  },
+  "exactRootControl": {
+    "code": "FOREIGN_WIKI_ROOT_DENIED",
+    "allowed": false,
+    "reason": "a per-worktree or foreign llmwiki/ directory is never a wiki root; every worktree must use the canonical main-tree root"
+  },
+  "checkedAt": "2026-10-26T10:21:58.056Z"
+}

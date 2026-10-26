@@ -1,0 +1,25 @@
+I04 control-plane observation — kb-write-protection hook coverage
+revision: 2026-10-26-comet-050-adoption-v1
+scope: synthetic-payload decision probe only (no file was written; payloads were piped to hooks/pre-tool-gate.sh stdin)
+
+compiled policy observed in hooks/.compiled.env:
+  KB_PROTECT_PATHS='llmwiki/wiki/'
+matcher semantics (hooks/pre-tool-gate.sh): substring match of the prefix inside tool_input.file_path/notebook_path
+
+probe A — Write tool_input.file_path = <repo>/.sdd/wiki/sdd-harness/wiki/curated/x.md
+  (the registered canonical wiki landing, ProjectRoot.v1 canonicalWiki.root = .sdd/wiki/sdd-harness)
+  hook exit: 0  (ALLOWED — not denied)
+
+probe B — Write tool_input.file_path = <redacted>/llmwiki/wiki/curated/x.md
+  (any path merely containing the legacy substring 'llmwiki/wiki/')
+  hook exit: 2  (DENIED, stderr: 禁止直接写入 llmwiki/wiki/* ...)
+
+conclusion (VERIFIED-LOCAL-RUNTIME):
+  the bypass-index write guard does NOT cover the registered canonical wiki landing;
+  direct fs writes to .sdd/wiki/sdd-harness/wiki/ would not be denied by this hook today.
+  hooks.yaml is the control-plane single source of truth and is NOT owned by I04;
+  recorded as a risk in infra/delivery/llmwiki/package.lock.json revisions[0].risks and
+  mcp-profile.json observation.revisionObservations.controlPlaneGap. No hook file was modified.
+mitigating context: the canonical landing does not exist yet on this host (rootPresent=false),
+  and the server-side channel (MCP tools) always writes file+index together; the gap concerns
+  only writes that bypass the MCP server entirely.

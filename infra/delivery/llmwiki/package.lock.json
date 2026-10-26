@@ -76,5 +76,40 @@
     "updatedAt": "2026-10-22",
     "updatedBy": "I04 (run rework-seven-p1-r1)",
     "change": "resolution semantics re-registered as project-local per the P1_1 landing (SDD_HOME=<repo>/.sdd): cloneResolution, commitStatusReason, python resolution/observedVersion/note, requirementsLock.logicalPath; requirements.lock bytes untouched so the registered digest is unchanged; evidence worker-reports/I04-rework/evidence/"
-  }
+  },
+  "revisions": [
+    {
+      "revision": "2026-10-26-comet-050-adoption-v1",
+      "observedAt": "2026-10-26",
+      "observedBy": "I04 (comet-050-adoption worker)",
+      "supplyFacts": {
+        "cloneHead": "VERIFIED-LOCAL-STATIC: git rev-parse HEAD in the project-local clone equals the registered commit 075c5b4996ff4e07f9d3c57c1f14fd2b54a955db; working tree clean (0 dirty entries)",
+        "treeSha256": "VERIFIED-LOCAL-RUNTIME: qualify upstream-source VERIFIED — 300 files, recomputed tree digest equals the registered 861319ee0c84d0ef2aa56ee5ac1ee507364785b5fe48295bde17d9e4dcd99357",
+        "requirementsLock": "VERIFIED-LOCAL-RUNTIME: recomputed sha256 678bd7301d80a602336e8fd3a81f98adcd4c5beaec4e2f1f2bfb8d2e04a9e732 and 154140 bytes equal the registered values",
+        "venvRuntime": "VERIFIED-LOCAL-RUNTIME: registered project-local venv python 3.11.13 + mcp 1.27.0 (importlib.metadata observation)",
+        "launcher": "VERIFIED-LOCAL-RUNTIME: tools/mcp/llmwiki.sh digest equals the registered bd18bfea155ec0fc8c1ce9fb23414dafbeb94416f4096eb92624eb59932ae863, executable bit set; bash -n syntax check clean; entry remains 'exec python -m local_server --workspace <wiki-home>' with PYTHONPATH=$SDD_HOME/repos/llmwiki/mcp"
+      },
+      "probeObservations": {
+        "escape-denial": "VERIFIED-LOCAL-RUNTIME: exit 0 — PATH_TRAVERSAL_DENIED / SYMLINK_ESCAPE_DENIED / FOREIGN_WIKI_ROOT_DENIED / PROJECT_ID_MISMATCH_DENIED all held with allowed=false; hard invariants held again with every policy denial flag disabled; KnowledgeWrite denials (forbidden authority, full-git intake, missing approval/revision, raw tier) held and the approved curated positive control was admitted",
+        "worktree-mcp-readback": "VERIFIED-LOCAL-RUNTIME: exit 0 — real SDK stdio session against a disposable sandbox: initialize VERIFIED, tools/list 10 tools (equals capabilities), create/read/search VERIFIED; 73 git worktrees (main + 72 linked) all resolve to the single canonical main-tree root; native read-only SQLite documents/document_chunks/chunks_fts readback CONSISTENT for the MCP-created entry; negative controls (file without index row, stale file vs index) both INCONSISTENT as required; payload restored byte-identical",
+        "serverBoundaryProbe": "VERIFIED-LOCAL-RUNTIME (in-process, disposable tmp workspace): vaultfs write_to_disk via _resolve_path (resolve() + is_relative_to containment) denied a dir_path carrying ../.. and denied writing through an in-workspace symlink to an outside file (outside file left unchanged); contained positive write allowed; nuance: a filename component carrying '..' is NOT rejected and resolves still INSIDE the workspace (no cross-workspace escape, but the file can land in a different directory inside the workspace — source: mcp/vaultfs/sqlite.py)",
+        "indexMechanisms": "VERIFIED-LOCAL-RUNTIME (in-process): create_document sets version=1; documents UNIQUE(relative_path) turns a duplicate create into DuplicateDocumentError (the create tool surfaces already-exists unless overwrite=true); update_document increments version 1->2 and re-chunks md/txt into document_chunks + chunks_fts",
+        "noBulkIngestSurface": "VERIFIED-LOCAL-STATIC: the local stdio server registers exactly guide/list_knowledge_bases/search/read/create/edit/append/delete/lint (+ ping in local_server.py); there is no repo-wide or multi-file ingest tool; delete refuses '*'/'**' patterns and protects /wiki/overview.md and /wiki/log.md (source: mcp/tools/__init__.py, mcp/tools/delete.py)"
+      },
+      "protocolVersionDrift": "the current stdio initialize observed protocolVersion 2025-11-25 with SDK mcp 1.27.0; the mcpSession.protocolVersionObserved 2024-11-05 field above is retained as a historical record and is superseded for current facts by this entry",
+      "risks": [
+        "CONTROL-PLANE GAP (observed, not I04-owned): hooks.yaml kb-write-protection (compiled KB_PROTECT_PATHS 'llmwiki/wiki/') matches by substring and does NOT match the registered canonical wiki landing .sdd/wiki/sdd-harness/wiki/ — a synthetic Write payload against the canonical landing exits 0 (allowed) while a path containing the legacy substring 'llmwiki/wiki/' exits 2 (denied). The bypass-index guard advertised in mcp-capabilities.yaml therefore does not currently cover the registered landing; hooks.yaml is the control-plane single source of truth and belongs to its owning task, recorded here as a risk only",
+        "The registered canonical wiki root .sdd/wiki/sdd-harness does not exist on this host yet (rootPresent=false); all verified writes this revision landed exclusively in disposable sandbox workspaces"
+      ],
+      "registryReference": "infra/delivery/registry.json resources entry llmwiki-project-stack (I01, KNOWLEDGE_STACK_INVENTORY_ONLY) references this lock as evidenceRef and declares the launcher and clone commit; registration is an inventory fact and grants no readiness, publication or audience",
+      "unverified": [
+        "host-discovered managed registration (a real host MCP session starting tools/mcp/llmwiki.sh) — UNVERIFIED-NEEDS-LIVE-HOST",
+        "mcp-write-channel against the registered project wiki root (canonical root not initialized; no managed write performed) — UNVERIFIED-NEEDS-LIVE-HOST",
+        "index-consistency against the registered project wiki root — UNVERIFIED-NEEDS-LIVE-HOST (sandbox readback only)",
+        "secret-provisioned (secret-ref:sdd-harness-pilot/llmwiki-source-read referenced, never resolved) — UNVERIFIED",
+        "independent upstream confirmation of cloneCommit against github.com/lucasastorian/llmwiki (network evidence) — UNVERIFIED"
+      ],
+      "receipts": "worker-reports/I04-comet-050/evidence/"
+    }
+  ]
 }
