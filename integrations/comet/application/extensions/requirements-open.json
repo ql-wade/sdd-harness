@@ -1,0 +1,24 @@
+{
+  "schema": "sdd.comet.classic.extension.v1",
+  "id": "requirements-open",
+  "gate": "R",
+  "afterStep": "full.open.evidence",
+  "skillId": "grill-me",
+  "artifactRefs": [
+    {
+      "ref": ".sdd/delivery/gates/r/receipt-bundle.json",
+      "kind": "gate-receipt-bundle",
+      "hashBinding": "artifactHashes",
+      "writtenBy": "extension-execution"
+    }
+  ],
+  "validator": { "id": "sdd.delivery.gate.r", "version": "1" },
+  "verdictProtocol": {
+    "verdicts": ["pass", "repair", "revise-requirements"],
+    "sourceHash": "domain-bound",
+    "artifactHashes": "domain-bound"
+  },
+  "semantics": "R (D01): requirements closure and scope confirmation — goal, scope, non-goals, acceptance criteria and delivery target are closed and bound to the current open evidence before the run may leave the open checkpoint.",
+  "bindings": "integrations/comet/application/bindings.mjs",
+  "judgment": "lib/delivery/gate.js evaluate (pure SDD.Gate.v1) over the payload's inputs/receipts/policy, reached only through bindings.mjs delegation; evidence admission refusals come from lib/delivery/evidence.js admitEvidence inside that evaluation."
+}

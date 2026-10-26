@@ -1,1706 +1,817 @@
-// Native gate/transaction MECHANISMS, not deployed source/role/method/Journey
-// qualification. Child sources assert the actual built Native implementation.
-// Consumer code is imported statically here; production exposes no test flag,
-// env/path consumer loader, injected kernel handler or generic signing API.
+// P2_4 delivery case, revision 2026-10-26-comet-050-adoption-v1 (ADR-0022):
+// the managed delivery gates are expressed as a Comet 0.5.0 native
+// classic-full composition application, NOT as the retired 0.4.5 patch chain.
+//
+// What this case proves (mechanism/supply level — no runtime acceptance):
+//   1. the composition declares the six gate extensions (R/A/T/P/V/Kp) at
+//      exactly the upstream checkpoint whitelist positions, cross-checked
+//      against the PRISTINE 0.5.0 source, not against our own copies;
+//   2. replacements cover exactly the comet-design/comet-build invoke_skill
+//      steps, keep the original stepIds and output contracts (parsed from the
+//      pristine full-profile workflow), and never touch machine checks,
+//      approvals or archive steps (upstream non-replaceable surface);
+//   3. every referenced skill is a real P1_6 packaged asset;
+//   4. bindings.mjs registers exactly the declared validators and every
+//      verdict is delegated to the real lib/delivery pure components — a
+//      claimed pass is accepted ONLY when the pure SDD.Gate.v1 evaluation of
+//      the payload passes; malformed/blocked/mismatched/refused payloads all
+//      fail closed;
+//   5. the 0005 Kt patch applies cleanly to the pristine classic-resolver.ts,
+//      keeps the old unconditional completion for states without the optional
+//      field, and blocks completion only while the knowledge closeout
+//      obligation is required and unmet; a corrupted patch is rejected.
+//
+// What it does NOT claim: compilation through the official
+// compileWorkflowApplication, extension behavior inside a real Run, and the
+// rebuilt upstream tree with 0005 applied are P1_3/P1_4/P1_5/VERIFY waves
+// (composition.json#unverified). The legacy 0.4.5 patch-chain assertions that
+// previously lived in this file are RED against the 0.5.0 lock — recorded at
+// worker-reports/P2_4-comet-050/evidence/red-1-legacy-2_4-against-050-lock.txt.
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
-import { spawnSync, spawn } from 'node:child_process';
-import { createRequire } from 'node:module';
+import test, { after } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import {
-  createLaunchAuthority,
-  admitEvidence,
-  envelopeDigest,
-} from '../../lib/delivery/evidence.js';
+import { createLaunchAuthority, admitEvidence } from '../../lib/delivery/evidence.js';
 import { evaluate } from '../../lib/delivery/gate.js';
-import { taskDefinitionDigest } from '../../lib/delivery/baseline.js';
-import { parseTapSummary } from '../../lib/delivery/test-contract.js';
-import { verifyCometDistribution } from '../../tools/comet/build.mjs';
 
-const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-// Build-pin seam for controller-reviewed pre-integration patches only. It
-// cannot choose host consumers: all callbacks below are this test's code.
-const lock = JSON.parse(
-  fs.readFileSync(
-    process.env.COMET_UPSTREAM_LOCK ??
-      path.join(repository, 'integrations/comet/upstream.lock.json'),
-    'utf8',
-  ),
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const applicationRoot = path.join(projectRoot, 'integrations/comet/application');
+const patchPath = path.join(projectRoot, 'integrations/comet/patches/0005-comet-050-kt-closeout.patch');
+const pristineRoot = path.join(
+  projectRoot,
+  '.sdd/vendor/comet/aeb1a6598034e28ce46b8422d4dbd8785e607bd7/pristine',
 );
-const sha = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
-const fingerprint = sha(
-  JSON.stringify({
-    archive: lock.source.sha256,
-    patches: lock.patches.map(({ path, sha256 }) => ({ path, sha256 })),
-    toolchain: lock.toolchain,
-  }),
+const classicApplicationSource = fs.readFileSync(
+  path.join(pristineRoot, 'domains/comet-classic/classic-application.ts'),
+  'utf8',
 );
-const work = path.join(
-  repository,
-  '.sdd/vendor/comet',
-  lock.source.commit,
-  'builds',
-  fingerprint,
-  'work',
+const classicWorkflowSource = fs.readFileSync(
+  path.join(pristineRoot, 'domains/comet-classic/classic-sdk-application.ts'),
+  'utf8',
 );
-const nativeUrl = pathToFileURL(
-  path.join(work, 'assets/skills/comet/scripts/comet-runtime.mjs'),
-).href;
-const scenario = process.argv.indexOf('--mechanism-case');
-const restartMode = process.argv.indexOf('--mechanism-restart');
-const scenarios = {
-  forwarding:
-    'C07: managed raw/agent/implicit/store/unknown OpenSpec mutations cannot bypass archive',
-  control: 'managed malformed state never falls back to a wider legacy write scope',
-  registration: 'Design registration cannot be repointed by a standalone unprotected caller',
-  authorwrite: 'Design registered test intent uses exact authenticated writer scope',
-  intentlinks: 'managed lexical write targets cannot escape through the external exemption',
-  designroutes: 'Design A/T rejection points to author revision without a forbidden phase transition',
-  origin: 'D01: actual collected source, exact Run readback and replay refusal',
-  pending:
-    'D02/RW_REVISION_NO_REVIVE: first pending revision and restored bytes never revive the old attempt',
-  longread: 'D02: A/T long collector releases lock and rejects changed design/test intent',
-  review: 'A/T: missing or insufficient completed review cannot become a passing gate',
-  candidate:
-    'D05: actual accepted V becomes stale on non-JS candidate change without revoking RATP',
-  planning: 'D05: original Build plan step precedes P; real progress preserves definitions',
-  design: 'D04: design drift invalidates downstream and survives byte restoration',
-  repairA: 'D03: controlled architecture repair keeps the same original Run',
-  repairT: 'D03: controlled test-design repair keeps the same original Run',
-  repairAverify: 'D03: Verify architecture repair retains its original event and Run',
-  repairTverify: 'D03: Verify test repair retains its original event and Run',
-  repair: 'D03: controlled requirements/architecture/test repair keeps the same Run',
-  versions: 'current source/method/policy versions cannot resurrect an observed old approval',
-  concurrent: 'same native intent has one owner and only one atomic acceptance',
-  plans: 'managed fixed derived plan root accepts only docs/comet/plans; missing host rejects',
-  toolpaths: 'registered real CLI ignores unavailable environment-selected locations',
-  toolmissing: 'missing protected tool binding refuses a public read request',
-  tooldigest: 'changed closure-manifest data refuses a public read request',
-  tooldata: 'changed installed ordinary data refuses a public read request',
-  toolrecheck: 'a subsequent public call revalidates the complete installed tree',
-  postgit:
-    'Git-tracked active inputs preserve the original Run and current Kt after controlled archive',
-  postcrash: 'actual SIGKILL after Kt commit restores the original Run in a new Native process',
-  postdeliverypending:
-    'independently current Kt cannot complete while original delivery verification fails',
-  postreceipttamper: 'native delivery receipt tampering still blocks completion after valid Kt',
-  postreceiptforeign: 'foreign delivery receipt identity never completes the same Run',
-  postauthorization: 'missing native delivery authorization blocks completion after valid Kt',
-  postdelta: 'actual pinned OpenSpec delta merge preserves same Run Kt continuation',
-  posttamper: 'post-archive bridge edits cannot authenticate an altered input mapping',
-  postdesign: 'post-archive design changes block Kt on the original Run',
-  postprotosource: 'ordinary root filename __proto__ remains a bound source input after archive',
-  postsource: 'post-archive source changes block Kt on the original Run',
-  postmethod: 'post-archive method changes block old approvals',
-  postenvironment: 'post-archive environment changes block old approvals',
-  postqualification:
-    'component source qualification revocation blocks old approvals; actual ACL remains UNVERIFIED',
-  postarchive: 'D07: actual Spec archive preserves the same pending Run and resumes Kt',
-  archive: 'D07: stale Kp cannot start the real archive operation',
-  throughverify: 'C07: actual Native commands and R/A/T/P/V/Kp enter Archive phase',
-};
+const resolverSource = fs.readFileSync(
+  path.join(pristineRoot, 'domains/comet-classic/classic-resolver.ts'),
+  'utf8',
+);
+const composition = JSON.parse(fs.readFileSync(path.join(applicationRoot, 'composition.json'), 'utf8'));
+const assetsManifest = JSON.parse(fs.readFileSync(path.join(applicationRoot, 'manifest.json'), 'utf8'));
+const upstreamLock = JSON.parse(
+  fs.readFileSync(path.join(projectRoot, 'integrations/comet/upstream.lock.json'), 'utf8'),
+);
+const shaBytes = (data) => crypto.createHash('sha256').update(data).digest('hex');
 
-function actualOpenSpecBinding(artifacts, isolated) {
-  const artifactSha = '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f';
-  const tar = path.join(repository, '.sdd/cache/artifacts/openspec-1.11.0.tgz');
-  assert.equal(
-    sha(fs.readFileSync(tar)),
-    artifactSha,
-    'UNVERIFIED: actual pinned P1_1 tool artifact missing or changed',
-  );
-  const original = fs.realpathSync(
-    path.join(repository, '.sdd/tools/openspec-1.11.0/node_modules'),
-  );
-  let installationRoot = isolated ? path.join(artifacts, 'toolchain/node_modules') : original;
-  if (isolated) {
-    fs.mkdirSync(path.dirname(installationRoot), { recursive: true });
-    fs.cpSync(original, installationRoot, { recursive: true, verbatimSymlinks: true });
-    installationRoot = fs.realpathSync(installationRoot);
-    // npm may create absolute in-tree launch links. Preserve their meaning
-    // in the private copy instead of pointing back at the original install.
-    const relocate = (directory) => {
-      for (const item of fs.readdirSync(directory,{withFileTypes:true})) {
-        const target=path.join(directory,item.name);
-        if (item.isDirectory()) relocate(target);
-        else if (item.isSymbolicLink()) {
-          const resolved=fs.realpathSync(target);
-          const copied=path.relative(installationRoot,resolved);
-          if (!path.isAbsolute(copied)&&copied!=='..'&&!copied.startsWith('..'+path.sep)) continue;
-          const origin=path.relative(original,resolved);
-          assert.ok(!path.isAbsolute(origin)&&origin!=='..'&&!origin.startsWith('..'+path.sep),'only genuine original in-tree links may relocate');
-          fs.unlinkSync(target);
-          fs.symlinkSync(path.relative(path.dirname(target),path.join(installationRoot,origin)),target);
-        }
-      }
-    };
-    relocate(installationRoot);
-  }
-  const pkg = JSON.parse(
-    fs.readFileSync(path.join(installationRoot, '@fission-ai/openspec/package.json'), 'utf8'),
-  );
-  assert.equal(pkg.name, '@fission-ai/openspec');
-  assert.equal(pkg.version, '1.11.0');
-  const entries = [];
-  const walk = (directory) => {
-    for (const item of fs
-      .readdirSync(directory, { withFileTypes: true })
-      .sort((a, b) => a.name.localeCompare(b.name))) {
-      const target = path.join(directory, item.name),
-        name = path.relative(installationRoot, target).replaceAll('\\', '/');
-      if (item.isSymbolicLink()) {
-        const rel = path.relative(installationRoot, fs.realpathSync(target));
-        assert.ok(!path.isAbsolute(rel) && rel !== '..' && !rel.startsWith('..' + path.sep));
-        entries.push({ path: name, type: 'link', sha256: sha(fs.readlinkSync(target)) });
-      } else if (item.isDirectory()) {
-        entries.push({ path: name, type: 'directory' });
-        walk(target);
-      } else {
-        assert.ok(item.isFile());
-        entries.push({ path: name, type: 'file', sha256: sha(fs.readFileSync(target)) });
-      }
-    }
-  };
-  walk(installationRoot);
-  const manifestPath = path.join(artifacts, 'toolchain-manifest.json');
-  fs.writeFileSync(
-    manifestPath,
-    JSON.stringify({
-      schema: 'comet.openspec.installation-manifest.v1',
-      artifactSha256: artifactSha,
-      entries,
-    }) + '\n',
-  );
-  const nodePath = fs.realpathSync(process.execPath),
-    nodeSha = sha(fs.readFileSync(nodePath));
-  return {
-    schema: 'comet.openspec.binding.v1',
-    scope: 'component-mechanism',
-    artifact: {
-      name: pkg.name,
-      version: pkg.version,
-      tarballSha256: artifactSha,
-      evidenceRef:
-        'openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json#openspec.npm_artifact',
-    },
-    qualification: { ref: null, digest: null, production: 'UNVERIFIED' },
-    node: { path: nodePath, sha256: nodeSha },
-    installationRoot: fs.realpathSync(installationRoot),
-    cliEntry: '@fission-ai/openspec/bin/openspec.js',
-    manifest: { path: manifestPath, sha256: sha(fs.readFileSync(manifestPath)) },
-    environmentDigest: sha(
-      JSON.stringify({
-        scope: 'component-mechanism',
-        node: nodeSha,
-        artifact: artifactSha,
-        closure: sha(fs.readFileSync(manifestPath)),
-        platform: process.platform,
-        arch: process.arch,
-      }),
+const tempRoots = new Set();
+after(() => { for (const root of tempRoots) fs.rmSync(root, { recursive: true, force: true }); });
+function makeTmp(label) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), label));
+  tempRoots.add(root);
+  return root;
+}
+
+// ---- upstream facts parsed from the pristine 0.5.0 tree --------------------
+
+// The checkpoint whitelist of createClassicApplication (profile=full):
+// resolve `${options.profile}` to 'full'. This is upstream evidence — if the
+// whitelist changes upstream, this test re-derives it instead of trusting our
+// composition copy.
+const checkpointWhitelist = (() => {
+  const match = classicApplicationSource.match(/const checkpoints = new Set\(\[([\s\S]*?)\]\);/);
+  assert.ok(match, 'pristine classic-application.ts still declares the checkpoint whitelist');
+  return new Set(
+    [...match[1].matchAll(/[`']([^`']+)[`']/g)].map(([, entry]) =>
+      entry.replaceAll('${options.profile}', 'full'),
     ),
-  };
-}
+  );
+})();
 
-async function fixture({
-  withDelta = false,
-  gitTracked = false,
-  isolatedToolchain = false,
-  resume = null,
-} = {}) {
-  assert.equal(
-    process.versions.node,
-    lock.toolchain.node,
-    'run the exact locked Node, not a host alias',
-  );
-  const native = await import(nativeUrl); // exact manifest-pinned built module, never caller-selected consumer code
-  const scratch = resume?.scratch ?? fs.mkdtempSync(path.join(os.tmpdir(), 'native-2-4-'));
-  const project = path.join(scratch, 'project');
-  const artifacts = path.join(scratch, 'artifacts');
-  const home = path.join(scratch, 'home');
-  for (const dir of [project, artifacts, home]) fs.mkdirSync(dir, { recursive: true });
-  const prior = {
-    HOME: process.env.HOME,
-    XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
-  };
-  process.env.HOME = home;
-  process.env.XDG_CONFIG_HOME = path.join(home, '.config');
-  const records = new Map(resume?.records ?? []),
-    commands = [],
-    assertions = [];
-  const openSpecBinding =
-    resume?.openSpecBinding ?? actualOpenSpecBinding(artifacts, isolatedToolchain);
-  const policy = {
-    executionScope: 'component-mechanism',
-    controllerEnvironmentDigest: openSpecBinding.environmentDigest,
-    openSpecBinding,
-    ref: 'foundation/profiles/comet-managed.json',
-    digest: sha(fs.readFileSync(path.join(repository, 'foundation/profiles/comet-managed.json'))),
-    revision: 'fixture-registry-1',
-    projectKnowledgeRequired: true,
-    teamKnowledgeRequired: true,
-    plansRoot: 'docs/comet/plans',
-  };
-  const methodDigest = sha(
-    fs.readFileSync(path.join(repository, '.agents/skills/whitebox-verify/SKILL.md')),
-  );
-  let environment = openSpecBinding.environmentDigest;
-  for (const record of records.values())
-    for (const key of ['reportBytes', 'resultBytes', 'methodTraceBytes'])
-      record[key] = Buffer.from(record[key].data);
-  const fixtureSecret = resume?.secret ?? crypto.randomBytes(32).toString('hex');
-  let inputDigest = resume?.inputDigest ?? sha('not-created'),
-    readHook = null,
-    reviewMode = 'sufficient',
-    methodVersion = methodDigest;
-  const qualification = {
-    id: 'component-registry-not-deployment',
-    sourceId: 'native-contract-source',
-    revision: '1',
-    scope: 'protected-source',
-    status: 'qualified',
-    expiresAt: '2099-01-01T00:00:00Z',
-    evidenceRefs: [
-      {
-        ref: 'test-only/source-record',
-        digest: sha('no-OS-or-role-qualification'),
-      },
-    ],
-  };
-  const commandArgv = [
-    process.execPath,
-    '--test',
-    '--test-reporter=tap',
-    path.join(artifacts, 'observer.test.mjs'),
-  ];
-  const commandIdentity = JSON.stringify(commandArgv);
-  const actionFor = (intent) => ({
-    schemaVersion: 1,
-    profile: 'comet-managed-v2',
-    runnerId: 'native-contract-source',
-    run: intent.runId ?? intent.actionBinding?.run,
-    gate: intent.gate,
-    action: 'observe-native-contract',
-    execution: intent.execution,
-    role: intent.role,
-    revision: `r${intent.generation}`,
-    attempt: intent.attempt,
-    epoch: intent.epoch,
-    inputDigest: intent.inputDigest,
-    policyDigest: policy.digest,
-    environmentDigest: environment,
-    workPackage: { id: 'component-2.4', taskIds: ['2.4.a'] },
-    methods: [
-      {
-        name: 'whitebox-verify',
-        version: 'fixture-method-NOT-APPLIED',
-        ref: '.agents/skills/whitebox-verify/SKILL.md',
-        digest: methodVersion,
-      },
-    ],
-    allowedPaths: ['.whitebox'],
-    allowedTools: ['read_file'],
-    inputs: [
-      {
-        name: 'proposal',
-        ref: 'openspec/changes/demo/proposal.md',
-        digest: inputDigest,
-      },
-    ],
-    outputs: [{ name: 'report', ref: '.whitebox/record.txt' }],
-  });
-  const context = (intent) => ({
-    actionBinding: actionFor(intent),
-    policy,
-    admissionOptions: {
-      sourceQualification: records.get(intent.execution)?.qualification ?? qualification,
-      environment: 'component-env',
-      purpose: 'independent-acceptance',
-      builderExecution: 'fixture-builder-NOT-A-REAL-ROLE',
-      builderPrincipal: 'fixture-builder-NOT-A-REAL-PRINCIPAL',
-      authoringExecutions: [],
-      authoringPrincipals: [],
-      now: new Date().toISOString(),
-    },
-    testContract: {
-      schemaVersion: 1,
-      project: 'native-component-contract',
-      change: 'demo',
-      commandBindingsRequired: true,
-      cases: [
-        {
-          id: `component.${intent.gate}`,
-          ac: 'component.binding',
-          oracle: 'original Native contract assertion runs and its byte-bound result is admitted',
-          checkIds: ['native-check'],
-        },
-      ],
-      requiredChecks: [
-        {
-          id: 'native-check',
-          level: 'unit',
-          capability: `component:${intent.gate}`,
-          command: commandIdentity,
-          caseIds: [`component.${intent.gate}`],
-        },
-      ],
-      executionDenominator: { totalCases: 1 },
-      cleanup: { environment: 'finally removed', data: 'finally removed' },
-      dependencyBaselines: [{ kind: 'fixture', digest: policy.digest }],
-    },
-  });
-  const actualAuthority = createLaunchAuthority({
-    secret: fixtureSecret,
-    sourceVerifier: async (request) => {
-      const known = records.get(request.dispatch.execution);
-      if (
-        !known ||
-        !known.reportBytes.equals(request.reportBytes) ||
-        !known.resultBytes.equals(request.resultBytes) ||
-        !known.methodTraceBytes.equals(request.methodTraceBytes)
-      )
-        return { ok: false };
-      const { dispatch, envelope, launchRecord, reportBytes, resultBytes, methodTraceBytes } =
-        known;
-      return {
-        ok: true,
-        qualification: known.qualification,
-        facts: {
-          actionDigest: envelopeDigest(dispatch.actionBinding),
-          dispatchDigest: envelopeDigest(dispatch),
-          envelopeDigest: envelopeDigest(envelope),
-          launchDigest: envelopeDigest(launchRecord),
-          reportDigest: sha(reportBytes),
-          resultDigest: sha(resultBytes),
-          methodTraceDigest: sha(methodTraceBytes),
-          run: dispatch.run,
-          execution: dispatch.execution,
-          launchId: launchRecord.launchId,
-          environmentDigest: dispatch.actionBinding.environmentDigest,
-          principal: 'component-recorder-NOT-A-REAL-ROLE',
-          observations: [
-            {
-              caseId: envelope.caseId,
-              check: envelope.check,
-              command: commandIdentity,
-              result: 'pass',
-              executions: envelope.executions,
-            },
-          ],
-        },
-      };
-    },
-  });
-  const authority = {
-    ...actualAuthority,
-    issueDispatch: (binding) => {
-      const roots = [path.join(project, 'openspec/changes/demo')];
-      const archive = path.join(project, 'openspec/changes/archive');
-      if (fs.existsSync(archive))
-        for (const name of fs.readdirSync(archive)) {
-          const directory = path.join(archive, name);
-          const state = path.join(directory, '.comet/run-state.json');
-          if (
-            fs.existsSync(state) &&
-            JSON.parse(fs.readFileSync(state, 'utf8')).runId === binding.run
-          )
-            roots.push(directory);
-        }
-      assert.equal(
-        roots.some((directory) => fs.existsSync(path.join(directory, '.comet-state.lock'))),
-        true,
-        'authority signs only under the same original Run short lock, including its controlled archive move',
-      );
-      return actualAuthority.issueDispatch(binding);
-    },
-  };
-  // This map is a fixture-owned source record, not caller-supplied identity.
-  // Real author launch/OS qualification remains UNVERIFIED.
-  const writeDrivers = new Map();
-  let activeWriteDriver = null;
-  const authorizeFixtureWrite = ({ nativeRunId, request }) => {
-    const known = writeDrivers.get(activeWriteDriver);
-    if (!known || request?.intent !== 'write' || request.toolName !== 'Write'
-      || !known.tools.includes(request.toolName) || !actualAuthority.verifyDispatch(known.dispatch).ok
-      || known.dispatch.actionBinding.run !== nativeRunId) return { allowed: false };
-    const requested = request.targets.map((file) => path.relative(project, file).replaceAll('\\', '/'));
-    const paths = known.dispatch.actionBinding.allowedPaths;
-    if (requested.some((target) => !paths.some((allow) => target === allow || target.startsWith(allow + '/')))) return { allowed: false };
-    return { allowed: true, dispatch: known.dispatch };
-  };
-  const host = {
-    authority,
-    policy: () => policy,
-    context,
-    definitionDigest: taskDefinitionDigest,
-    authorizeWrite: authorizeFixtureWrite,
-    admitEvidence,
-    evaluate,
-    readResult: async (intent) => {
-      assert.equal(
-        fs.existsSync(path.join(project, 'openspec/changes/demo/.comet-state.lock')),
-        false,
-        'long readback must not hold native lock',
-      );
-      if (readHook) await readHook(intent);
-      const record = records.get(intent.execution);
-      if (!record)
-        throw new Error('UNVERIFIED: registered source is not complete; do not relaunch');
-      return record;
-    },
-    verifyReview: ({ entry }) =>
-      reviewMode === 'missing'
-        ? { ok: false }
-        : {
-            ok: true,
-            sufficient: reviewMode === 'sufficient',
-            evidenceDigest: sha('component-only-completed-native-check'),
-            envelopeDigest: entry.digest,
-            reportDigest: entry.sourcePacket.collection.reportDigest,
-            actionDigest: entry.sourcePacket.collection.actionDigest,
-            execution: entry.execution,
-            principal: 'component-recorder-NOT-A-REAL-ROLE',
-          },
-  };
-  native.installManagedDeliveryHost(host);
-  assert.throws(() => native.installManagedDeliveryHost(host), /replacement is forbidden/);
-  const refresh = () => {
-    const file = path.join(project, 'openspec/changes/demo/proposal.md');
-    if (fs.existsSync(file)) inputDigest = sha(fs.readFileSync(file));
-  };
-  const invoke = async (argv) => {
-    refresh();
-    const started = new Date().toISOString();
-    const result = await native.runClassicCli(['--json', ...argv], undefined, {
-      projectRoot: project,
-      invocationCwd: project,
-    });
-    const json = JSON.parse(result.stdout ?? '{}');
-    commands.push({
-      argv,
-      started,
-      ended: new Date().toISOString(),
-      exitCode: result.exitCode,
-      stdout: result.stdout ?? '',
-      stderr: result.stderr ?? '',
-    });
-    return { ...result, json };
-  };
-  const state = (argv) => invoke(['state', ...argv]);
-  const ok = async (argv) => {
-    const result = await state(argv);
-    assert.equal(
-      result.exitCode,
-      0,
-      JSON.stringify(result.json.data?.issues ?? result.json.stderr),
-    );
-    return result;
-  };
-  const get = async (field) => JSON.parse((await ok(['get', 'demo', field])).stdout).stdout.trim();
-  const change = path.join(project, 'openspec/changes/demo');
-  if (!resume) {
-    fs.mkdirSync(path.join(project, '.comet'), { recursive: true });
-    fs.writeFileSync(
-      path.join(project, '.comet/config.yaml'),
-      'schema: comet.project.v1\ndefault_workflow: classic\nworkflows: [classic]\nclassic:\n  artifact_layout: legacy\n',
-    );
-    fs.mkdirSync(path.join(project, 'openspec'), { recursive: true });
-    fs.writeFileSync(path.join(project, 'openspec/config.yaml'), 'schema: spec-driven\n');
-    const existingSpec = path.join(project, 'openspec/specs/existing/spec.md');
-    fs.mkdirSync(path.dirname(existingSpec), { recursive: true });
-    fs.writeFileSync(
-      existingSpec,
-      '# Existing main spec\n\nThis content must remain unchanged on denied archive.\n',
-    );
-    await ok(['init', 'demo', 'full', '--managed-delivery']);
-    fs.writeFileSync(
-      path.join(change, 'proposal.md'),
-      '# Candidate requirements\n\nValidate the actual Native control contract.\n',
-    );
-    if (withDelta) {
-      const delta = path.join(change, 'specs/native-proof/spec.md');
-      fs.mkdirSync(path.dirname(delta), { recursive: true });
-      fs.writeFileSync(
-        delta,
-        '## ADDED Requirements\n\n### Requirement: Preserve the original Run\nThe system SHALL preserve the same Run through archive and closeout.\n\n#### Scenario: Resume knowledge closeout\n- **WHEN** a verified change is archived\n- **THEN** knowledge closeout resumes on the same Run\n',
-      );
-    }
-    if (gitTracked) {
-      for (const argv of [
-        ['init', '-b', 'main'],
-        ['config', 'user.email', 'fixture@example.invalid'],
-        ['config', 'user.name', 'Native Fixture'],
-        [
-          'add',
-          'openspec/config.yaml',
-          'openspec/specs/existing/spec.md',
-          'openspec/changes/demo/proposal.md',
-          'openspec/changes/demo/.comet.yaml',
-        ],
-        ['commit', '-m', 'Track original archive inputs'],
-      ]) {
-        const result = spawnSync('git', argv, { cwd: project, encoding: 'utf8' });
-        assert.equal(result.status, 0, result.stderr);
-      }
-    }
-    const observer = `import test from 'node:test';import assert from 'node:assert/strict';import{runClassicCli}from ${JSON.stringify(nativeUrl)};test('actual Native refuses worker receipt writes',async()=>{const r=await runClassicCli(['state','set','demo','gate_receipts','[]','--json'],undefined,{projectRoot:${JSON.stringify(project)},invocationCwd:${JSON.stringify(project)}});assert.notEqual(r.exitCode,0);assert.match(r.stdout,/machine-owned/);});\n`;
-    fs.writeFileSync(commandArgv.at(-1), observer);
-  }
-  const observe = async (intent) => {
-    const env = { ...process.env };
-    delete env.NODE_TEST_CONTEXT;
-    const child = spawnSync(process.execPath, commandArgv.slice(1), {
-      cwd: project,
-      env,
-      encoding: 'utf8',
-    });
-    assert.equal(child.status, 0, child.stdout + child.stderr);
-    const summary = parseTapSummary(child.stdout);
-    assert.equal(summary.tests, 1);
-    const reportBytes = Buffer.from(child.stdout),
-      resultBytes = Buffer.from(JSON.stringify({ exitCode: child.status, output: child.stdout })),
-      methodTraceBytes = Buffer.from(
-        JSON.stringify({
-          processId: child.pid,
-          methodApplied: 'UNVERIFIED',
-          roleIsolation: 'UNVERIFIED',
-        }),
-      );
-    const envelope = {
-      schemaVersion: 1,
-      candidateDigest: intent.inputDigest,
-      caseId: `component.${intent.gate}`,
-      check: `component:${intent.gate}`,
-      origin: { kind: 'registered-runner', id: 'native-contract-source' },
-      execution: { id: intent.execution },
-      environment: 'component-env',
-      toolchain: process.version,
-      executions: { total: summary.tests, valid: summary.pass },
-      result: 'pass',
-      evidence: [{ uri: '.whitebox/record.txt', sha256: sha(reportBytes) }],
-      expiry: '2099-01-01T00:00:00Z',
-    };
-    const record = {
-      dispatch: intent.protectedDispatch,
-      envelope,
-      launchRecord: {
-        launchId: `observed:${intent.execution}`,
-        execution: intent.execution,
-        processId: child.pid,
-      },
-      reportBytes,
-      resultBytes,
-      methodTraceBytes,
-      qualification,
-    };
-    records.set(intent.execution, record);
-    return record;
-  };
-  const issue = async (gate) => (await ok(['dispatch-gate', 'demo', gate])).json.data.dispatch;
-  const accept = async (intent) => {
-    const file = path.join(artifacts, `${intent.execution}.json`);
-    fs.writeFileSync(
-      file,
-      JSON.stringify({
-        execution: intent.execution,
-        attempt: intent.attempt,
-        verdict: 'pass',
-      }),
-    );
-    return state(['accept-gate', 'demo', intent.gate, '--file', file]);
-  };
-  const submit = async (gate) => {
-    const intent = await issue(gate);
-    await observe(intent);
-    const result = await accept(intent);
-    assert.equal(result.exitCode, 0, JSON.stringify(result.json.data?.issues));
-    return { intent, result };
-  };
-  const readback = async () => {
-    const r = await ok(['gates', 'demo']);
-    return r.json.data;
-  };
-  const prepareDesign = async () => {
-    await submit('R');
-    fs.writeFileSync(
-      path.join(change, 'tasks.md'),
-      '- [ ] Validate the actual Native kernel. <!-- comet-task:task1 -->\n',
-    );
-    await ok(['transition', 'demo', 'open-complete']);
-    fs.mkdirSync(path.join(project, 'docs/comet/plans'), { recursive: true });
-    fs.writeFileSync(
-      path.join(change, 'design.md'),
-      '# Design\n\nOne original Runtime owns the source-bound gate transaction.\n',
-    );
-    fs.writeFileSync(
-      path.join(project, 'docs/design.md'),
-      '---\ncomet_change: demo\nrole: technical-design\ncanonical_spec: openspec\n---\n# Architecture\n\nOne Runtime owns the control contract.\n',
-    );
-    fs.writeFileSync(
-      path.join(change, 'test-intent.md'),
-      '# Test intent\n\nAssert original source bytes, current versions and transaction recovery.\n',
-    );
-    await ok([
-      'set',
-      'demo',
-      'design_doc',
-      'docs/design.md',
-      'test_intent',
-      'openspec/changes/demo/test-intent.md',
-    ]);
-  };
-  const prepareP = async () => {
-    await prepareDesign();
-    await submit('A');
-    await submit('T');
-    await ok(['complete-design', 'demo', '--design-doc', 'docs/design.md']);
-    fs.writeFileSync(
-      path.join(project, 'docs/comet/plans/derived-plan.md'),
-      '# Plan\n\n- [ ] Validate Native source binding. <!-- comet-task:task1 -->\n',
-    );
-    await ok([
-      'set',
-      'demo',
-      'plan',
-      'docs/comet/plans/derived-plan.md',
-      'build_mode',
-      'autonomous',
-      'tdd_mode',
-      'tdd',
-      'isolation',
-      'current',
-    ]);
-    await submit('P');
-  };
-  const proof = (id, expected, actual, observed = null) => {
-    assert.deepEqual(actual, expected, id);
-    assertions.push({ id, expected, actual, ...(observed ? { observed } : {}) });
-  };
-  const close = () => {
-    const directory = path.join(repository, '.local/P2_4/case-audit', crypto.randomUUID());
-    fs.mkdirSync(directory, { recursive: true });
-    fs.writeFileSync(
-      path.join(directory, 'commands.json'),
-      JSON.stringify(commands, null, 2) + '\n',
-    );
-    fs.writeFileSync(
-      path.join(directory, 'proof.json'),
-      JSON.stringify(
-        {
-          scope: 'component/native-runtime-mechanism',
-          fingerprint,
-          assertions,
-          commands: commands.length,
-          sourceProcesses: [...records.values()].map((r) => r.launchRecord.processId),
-          actualRolesMethodsOS: 'UNVERIFIED',
-          acceptedBusinessScenarios: 0,
-        },
-        null,
-        2,
-      ) + '\n',
-    );
-    if (!resume) fs.rmSync(scratch, { recursive: true, force: true });
-    for (const key of Object.keys(prior)) {
-      if (prior[key] === undefined) delete process.env[key];
-      else process.env[key] = prior[key];
-    }
-    return path.relative(repository, directory);
-  };
-  return {
-    native,
-    restartData: () => ({
-      scratch,
-      secret: fixtureSecret,
-      inputDigest,
-      records: [...records],
-      openSpecBinding,
-    }),
-    project,
-    change,
-    artifacts,
-    records,
-    qualification,
-    registerWriteDriver: async (id, paths, { readonly = false, foreignRun = false, corruptSignature = false } = {}) => {
-      const run = JSON.parse(fs.readFileSync(path.join(change, '.comet/run-state.json'), 'utf8'));
-      const tools = readonly ? ['read_file'] : ['Write'];
-      const binding = { ...actionFor({ gate: 'T', runId: foreignRun ? 'foreign-run' : run.runId,
-        execution: `component-only:${id}`, role: readonly ? 'reviewer' : 'test-author',
-        generation: 0, attempt: 1, epoch: Number(await get('check_epoch')), inputDigest: sha('component-author-grant') }),
-        action: 'component-test-intent-author', allowedPaths: paths, allowedTools: tools,
-        outputs: [{ name: 'test-intent', ref: path.extname(paths[0]) ? paths[0] : 'openspec/changes/demo/test-intent.md' }] };
-      const dispatch = actualAuthority.issueDispatch({ ...binding, actionBinding: binding });
-      if (corruptSignature) dispatch.integrity = '0'.repeat(64);
-      writeDrivers.set(id, Object.freeze({ tools, dispatch }));
-      return dispatch;
-    },
-    useWriteDriver: (id) => { activeWriteDriver = id; },
-    setEnvironment: (value) => {
-      environment = value;
-    },
-    policy,
-    openSpecBinding,
-    state,
-    invoke,
-    ok,
-    get,
-    issue,
-    observe,
-    accept,
-    submit,
-    readback,
-    prepareP,
-    prepareDesign,
-    proof,
-    close,
-    commandArgv,
-    setReadHook: (fn) => {
-      readHook = fn;
-    },
-    setReview: (mode) => {
-      reviewMode = mode;
-    },
-    setMethod: (digest) => {
-      methodVersion = digest;
-    },
-  };
-}
+// The upstream extension identity rule, quoted from the pristine source.
+const extensionIdPattern = /^[a-z][a-z\d]*(?:-[a-z\d]+)*$/u;
+assert.match(
+  classicApplicationSource,
+  /!\/\^\[a-z\]\[a-z\\d\]\*\(\?:-\[a-z\\d\]\+\)\*\$\/u\.test\(extension\.id\)/,
+  'pristine source still enforces the extension id pattern this case applies',
+);
 
-async function crashAndRestartKt(f, moved, before) {
-  const parse = createRequire(path.join(work, 'package.json'))('yaml').parse;
-  const env = { ...process.env };
-  delete env.NODE_TEST_CONTEXT;
-  const child = spawn(
-    process.execPath,
-    [fileURLToPath(import.meta.url), '--mechanism-restart', 'accept-kt'],
-    { cwd: repository, env, stdio: ['pipe', 'pipe', 'pipe', 'ipc'] },
+// Some full-profile steps are keyed by computed variables (openStep,
+// evidenceStep, followingStep); their full-profile resolution is asserted
+// against the pristine definitions so the block lookup stays upstream truth.
+const STEP_KEY_ALIASES = (() => {
+  assert.match(
+    classicWorkflowSource,
+    /const openStep = `\$\{profile\}\.open`;\n\s*const evidenceStep = `\$\{profile\}\.open\.evidence`;\n\s*const followingStep = profile === 'full' \? 'full\.design\.handoff' : `\$\{profile\}\.build\.execute`;/,
+    'pristine step-key variables must keep the documented full-profile resolution',
   );
-  let terminal = null,
-    stderr = '',
-    stdout = '';
-  child.stderr.on('data', (value) => {
-    stderr += value;
-  });
-  child.stdout.on('data', (value) => {
-    stdout += value;
-  });
-  child.on('message', (message) => {
-    if (message.kind !== 'original-source-observed') return;
-    const record = message.record;
-    for (const key of ['reportBytes', 'resultBytes', 'methodTraceBytes'])
-      record[key] = Buffer.from(record[key].data);
-    f.records.set(message.execution, record);
-  });
-  const exited = new Promise((resolve) =>
-    child.once('exit', (code, signal) => {
-      terminal = { code, signal };
-      resolve(terminal);
-    }),
-  );
-  child.stdin.end(JSON.stringify(f.restartData()));
-  try {
-    let committed = false;
-    const deadline = Date.now() + 60000;
-    while (!terminal && Date.now() < deadline) {
-      try {
-        const state = parse(fs.readFileSync(path.join(moved, '.comet.yaml'), 'utf8'));
-        const receipts =
-          typeof state.gate_receipts === 'string'
-            ? JSON.parse(state.gate_receipts)
-            : state.gate_receipts;
-        const run = JSON.parse(fs.readFileSync(path.join(moved, '.comet/run-state.json'), 'utf8'));
-        if (
-          receipts?.some((entry) => entry.gate === 'Kt' && entry.verdict === 'pass') &&
-          run.status === 'waiting'
-        ) {
-          committed = true;
-          child.kill('SIGKILL');
-          break;
-        }
-      } catch {
-        /* writer may be between its original atomic filesystem operations */
-      }
-      await new Promise((resolve) => setTimeout(resolve, 5));
-    }
-    assert.equal(committed, true, JSON.stringify({ terminal, stdout, stderr }));
-    const stopped = await exited;
-    f.proof('KT_COMMIT_WRITER_SIGKILL', 'SIGKILL', stopped.signal, { writerPid: child.pid });
-    const pending = JSON.parse(fs.readFileSync(path.join(moved, '.comet/run-state.json'), 'utf8'));
-    f.proof('KT_CRASH_ORIGINAL_RUN', before.runId, pending.runId);
-    f.proof('KT_CRASH_BEFORE_RECONCILE', 'waiting', pending.status);
-    const resumed = spawnSync(
-      process.execPath,
-      [fileURLToPath(import.meta.url), '--mechanism-restart', 'next'],
-      {
-        cwd: repository,
-        env,
-        input: JSON.stringify(f.restartData()),
-        encoding: 'utf8',
-        timeout: 60000,
-      },
-    );
-    assert.equal(resumed.status, 0, resumed.stdout + resumed.stderr);
-    const readback = JSON.parse(resumed.stdout.trim().split('\n').at(-1));
-    f.proof('RESTART_SAME_PERSISTENT_RUN', before.runId, readback.runId);
-    f.proof('RESTART_NATIVE_COMPLETED', 'completed', readback.status, { restartPid: readback.pid });
-    assert.notEqual(readback.pid, child.pid);
-  } finally {
-    if (!terminal) {
-      child.kill('SIGKILL');
-      await exited;
+  return new Map([
+    ['full.open', 'openStep'],
+    ['full.open.evidence', 'evidenceStep'],
+    ['full.design.handoff', 'followingStep'],
+  ]);
+})();
+
+// Extract one workflow step block from the pristine full-profile definition
+// (brace-balanced) so replacement assertions read upstream's own contract.
+function pristineStepBlock(stepId) {
+  const alias = STEP_KEY_ALIASES.get(stepId);
+  const start = alias
+    ? classicWorkflowSource.indexOf(`[${alias}]: {`)
+    : classicWorkflowSource.indexOf(`'${stepId}': {`);
+  if (start === -1) return undefined;
+  const open = classicWorkflowSource.indexOf('{', start);
+  let depth = 0;
+  for (let index = open; index < classicWorkflowSource.length; index += 1) {
+    const char = classicWorkflowSource[index];
+    if (char === '{') depth += 1;
+    else if (char === '}') {
+      depth -= 1;
+      if (depth === 0) return classicWorkflowSource.slice(start, index + 1);
     }
   }
+  return undefined;
 }
 
-async function runScenario(id) {
-  const f = await fixture({
-    withDelta: id === 'postdelta',
-    gitTracked: id === 'postgit',
-    isolatedToolchain: ['tooldata', 'toolrecheck'].includes(id),
-  });
-  let audit;
-  try {
-    if (id.startsWith('tool')) {
-      const argv = ['openspec', '--', 'status', '--change', 'demo', '--json'];
-      const baseline = await f.invoke(argv);
-      f.proof('GENUINE_BOUND_CLI_BASELINE', 0, baseline.exitCode);
-      assert.equal(baseline.json.data.toolIdentity.scope, 'component-mechanism');
-      const main = path.join(f.project, 'openspec/specs/existing/spec.md');
-      const before = sha(fs.readFileSync(main));
-      if (id === 'toolpaths') {
-        const prior = {
-          COMET_OPENSPEC: process.env.COMET_OPENSPEC,
-          PATH: process.env.PATH,
-          NODE_OPTIONS: process.env.NODE_OPTIONS,
-          NODE_PATH: process.env.NODE_PATH,
-        };
-        try {
-          process.env.COMET_OPENSPEC = path.join(f.artifacts, 'unavailable-location');
-          process.env.PATH = path.join(f.artifacts, 'unavailable-search-directory');
-          process.env.NODE_OPTIONS = '--not-a-supported-node-setting';
-          process.env.NODE_PATH = path.join(f.artifacts, 'unavailable-module-directory');
-          const result = await f.invoke(argv);
-          f.proof('ENVIRONMENT_DOES_NOT_SELECT_MANAGED_PROGRAM', 0, result.exitCode);
-          f.proof(
-            'SAME_BOUND_IDENTITY',
-            baseline.json.data.toolIdentity.bindingDigest,
-            result.json.data.toolIdentity.bindingDigest,
-          );
-        } finally {
-          for (const key of Object.keys(prior)) {
-            if (prior[key] === undefined) delete process.env[key];
-            else process.env[key] = prior[key];
-          }
-        }
-      } else {
-        if (id === 'toolmissing') delete f.policy.openSpecBinding;
-        else if (id === 'tooldigest') fs.appendFileSync(f.openSpecBinding.manifest.path, '\n');
-        else if (id === 'tooldata') {
-          assert.ok(
-            f.openSpecBinding.installationRoot.startsWith(fs.realpathSync(f.artifacts) + path.sep),
-            'test changes must stay in the private fixture',
-          );
-          const pkg = path.join(f.openSpecBinding.installationRoot, '@fission-ai/openspec');
-          const file = fs.readdirSync(pkg).find((name) => /^readme/i.test(name));
-          assert.ok(file, 'ordinary pinned package data must exist');
-          fs.appendFileSync(path.join(pkg, file), '\ncomponent data observation\n');
-        } else {
-          assert.ok(
-            f.openSpecBinding.installationRoot.startsWith(fs.realpathSync(f.artifacts) + path.sep),
-            'test changes must stay in the private fixture',
-          );
-          fs.writeFileSync(
-            path.join(f.openSpecBinding.installationRoot, 'additional-data.txt'),
-            'component data observation\n',
-          );
-        }
-        const denied = await f.invoke(argv);
-        assert.notEqual(denied.exitCode, 0);
-        assert.match(JSON.stringify(denied), /UNVERIFIED/);
-        f.proof('CHANGED_OR_MISSING_BINDING_REFUSED', true, denied.exitCode !== 0);
-      }
-      f.proof('READ_REQUEST_NEVER_CHANGED_MAIN_SPEC', before, sha(fs.readFileSync(main)));
-    } else if (id === 'forwarding') {
-      await f.native.ensureClassicRuntimeRun(f.change);
-      fs.writeFileSync(path.join(f.change, 'design.md'), '# Unreviewed design\n');
-      fs.writeFileSync(path.join(f.change, 'tasks.md'), '- [x] Attack fixture only\n');
-      const main = path.join(f.project, 'openspec/specs/existing/spec.md');
-      const digest = sha(fs.readFileSync(main));
-      for (const argv of [
-        ['openspec', '--', 'archive', 'demo', '--yes'],
-        ['openspec', '--agent-json', 'archive', 'demo', '--yes'],
-        ['openspec', '--', 'archive', '--yes'],
-        ['openspec', '--', '--store', 'unregistered', 'archive', 'demo', '--yes'],
-        ['openspec', '--', '--store=unregistered', 'archive', 'another-name', '--yes'],
-        ['openspec', '--', 'arch', 'demo', '--yes'],
-        ['openspec', '--', 'new', 'change', 'forbidden-nested'],
-      ]) {
-        const result = await f.invoke(argv);
-        assert.notEqual(result.exitCode, 0);
-        assert.match(JSON.stringify(result), /UNVERIFIED/);
-        assert.equal(fs.existsSync(f.change), true);
-        assert.equal(sha(fs.readFileSync(main)), digest);
-      }
-      f.proof('FORWARDED_ARCHIVE_NO_MOVE', true, fs.existsSync(f.change));
-      f.proof('FORWARDED_ARCHIVE_MAIN_SPEC_UNCHANGED', digest, sha(fs.readFileSync(main)));
-      f.proof('FORWARDED_ARCHIVE_RUN_NOT_ARCHIVED', 'false', await f.get('archived'));
-      const status = await f.invoke(['openspec', '--', 'status', '--change', 'demo', '--json']);
-      f.proof('KNOWN_READ_ONLY_USES_SDK_SCOPE', 0, status.exitCode);
-    } else if (id === 'control') {
-      await f.prepareP();
-      const stateFile = path.join(f.change, '.comet.yaml');
-      const original = fs.readFileSync(stateFile, 'utf8');
-      assert.match(original, /check_epoch: \d+/);
-      fs.writeFileSync(stateFile, original.replace(/check_epoch: \d+/, 'check_epoch: invalid'));
-      for (const target of [
-        'src/feature.ts',
-        'docs/change.md',
-        '.comet/config.yaml',
-        'openspec/changes/demo/.comet.yaml',
-      ]) {
-        const decision = await f.native.inspectClassicHookGuard(f.project, 'demo', {
-          intent: 'write',
-          targets: [path.join(f.project, target)],
-          toolName: 'Write',
-        });
-        f.proof(`MALFORMED_STATE_DENIES_${target}`, false, decision.allowed);
-      }
-    } else if (id === 'registration') {
-      await f.prepareDesign();
-      const registered = await f.get('test_intent');
-      const neighbor = 'openspec/changes/demo/neighbor-test-intent.md';
-      fs.writeFileSync(path.join(f.project, neighbor), '# Neighbor artifact\n');
-      const attempt = spawnSync(process.execPath, [path.join(work, 'assets/skills/comet/scripts/comet-state.mjs'),
-        'set', 'demo', 'test_intent', neighbor, '--json'], { cwd: f.project, encoding: 'utf8', timeout: 15000 });
-      assert.notEqual(attempt.status, 0, 'standalone caller must not repoint the managed registered write target: ' + attempt.stdout + attempt.stderr);
-      f.proof('UNPROTECTED_REGISTRATION_UNCHANGED', registered, await f.get('test_intent'));
-      const previousAuthority = process.env.COMET_RUN_AUTHORITY;
-      try {
-        process.env.COMET_RUN_AUTHORITY = 'component-foreign-environment';
-        const foreign = await f.state(['set', 'demo', 'test_intent', neighbor]);
-        assert.notEqual(foreign.exitCode, 0);
-        f.proof('FOREIGN_REGISTRATION_UNCHANGED', registered, await f.get('test_intent'));
-      } finally {
-        if (previousAuthority === undefined) delete process.env.COMET_RUN_AUTHORITY;
-        else process.env.COMET_RUN_AUTHORITY = previousAuthority;
-      }
-      await f.ok(['set', 'demo', 'test_intent', neighbor]);
-      f.proof('ORIGINAL_RUNTIME_REGISTRATION_ALLOWED', neighbor, await f.get('test_intent'));
-      await f.ok(['set', 'demo', 'test_intent', registered]);
+// ---- the composition requirements, encoded once -----------------------------
 
-    } else if (id === 'authorwrite') {
-      await f.prepareDesign();
-      const target = 'openspec/changes/demo/test-intent.md';
-      const inspect = (relative = target) => f.native.inspectClassicHookGuard(f.project, 'demo', {
-        intent: 'write', targets: [path.join(f.project, relative)], toolName: 'Write',
-      });
-      f.proof('DEFAULT_FIXED_HOST_DENIES', false, (await inspect()).allowed);
-      const unbound = spawnSync(process.execPath, [path.join(work, 'assets/skills/comet/scripts/comet-hook-guard.mjs'),
-        '--project-root', f.project], { cwd: f.project, encoding: 'utf8', env: { ...process.env, FILE_PATH: path.join(f.project, target) } });
-      assert.notEqual(unbound.status, 0, 'a separate public guard process has no installed protected host');
-      assert.match(unbound.stdout + unbound.stderr, /UNVERIFIED/);
+const EXPECTED_GATES = [
+  { gate: 'R', extensionId: 'requirements-open', afterStep: 'full.open.evidence' },
+  { gate: 'A', extensionId: 'architecture-consensus', afterStep: 'full.design.evidence' },
+  { gate: 'T', extensionId: 'test-design-review', afterStep: 'full.design.evidence' },
+  { gate: 'P', extensionId: 'build-plan-unique', afterStep: 'full.build.plan.evidence' },
+  { gate: 'V', extensionId: 'verify-whitebox', afterStep: 'full.verify.check.evidence' },
+  { gate: 'Kp', extensionId: 'knowledge-project-closeout', afterStep: 'full.verify.check.evidence' },
+];
+const EXPECTED_REPLACEMENTS = {
+  'full.design.handoff': 'comet-design',
+  'full.design.document': 'comet-design',
+  'full.build.configure': 'comet-build',
+  'full.build.plan': 'comet-build',
+  'full.build.execute': 'comet-build',
+};
+const DOMAIN_OWNED_STEPS = [
+  'full.open',
+  'full.verify.run',
+  'full.archive.prepare',
+  'full.archive.deliver',
+];
 
-      const author = await f.registerWriteDriver('writer', [target]);
-      f.useWriteDriver('writer');
-      const before = fs.readFileSync(path.join(f.project, target));
-      const decision = await inspect();
-      assert.equal(decision.allowed, true, 'registered authenticated Design writer must reach the actual hook: ' + decision.reason);
-      fs.appendFileSync(path.join(f.project, target), '\nApproved fixture author revision.\n');
-      f.proof('REAL_FIXTURE_WRITE_CHANGED', false, before.equals(fs.readFileSync(path.join(f.project, target))));
-      f.proof('HMAC_FIXTURE_NOT_ROLE_QUALIFICATION', true, Boolean(author.integrity));
-      await f.registerWriteDriver('readonly', [target], { readonly: true }); f.useWriteDriver('readonly');
-      f.proof('READ_ONLY_DRIVER_DENIES', false, (await inspect()).allowed);
-      f.proof('READ_ONLY_NON_WRITE_STAYS_ALLOWED', true, (await f.native.inspectClassicHookGuard(f.project, 'demo', {
-        intent: 'non-write', targets: [], toolName: 'read_file',
-      })).allowed);
+function relativeRefProblems(ref) {
+  if (typeof ref !== 'string' || ref.length === 0) return 'not a non-empty string';
+  if (ref.startsWith('/') || /^[A-Za-z]:/.test(ref)) return 'absolute path';
+  if (ref.split(/[\\/]/u).includes('..')) return 'contains ..';
+  return null;
+}
 
-      await f.registerWriteDriver('foreign', [target], { foreignRun: true }); f.useWriteDriver('foreign');
-      f.proof('FOREIGN_RUN_DENIES', false, (await inspect()).allowed);
-      await f.registerWriteDriver('unsigned', [target], { corruptSignature: true }); f.useWriteDriver('unsigned');
-      f.proof('UNSIGNED_DRIVER_DENIES', false, (await inspect()).allowed);
-      await f.registerWriteDriver('broad', ['openspec/changes/demo']); f.useWriteDriver('broad');
-      f.proof('DIRECTORY_SCOPE_IS_NOT_EXACT_GRANT', false, (await inspect()).allowed);
-      f.useWriteDriver('writer');
-      f.proof('NEIGHBOR_DENIES', false, (await inspect('openspec/changes/demo/test-intent.md.other')).allowed);
-      f.proof('CONTROL_NAMESPACE_DENIES', false, (await inspect('openspec/changes/demo/.comet.yaml')).allowed);
-      const neighbor = 'openspec/changes/demo/neighbor-test-intent.md';
-      fs.writeFileSync(path.join(f.project, neighbor), '# Neighbor intent fixture\n');
-      await f.registerWriteDriver('neighbor', [neighbor]); f.useWriteDriver('neighbor');
-      f.proof('SIGNED_NEIGHBOR_IS_NOT_REGISTERED', false, (await inspect(neighbor)).allowed);
-      f.useWriteDriver('writer');
-      await f.ok(['set', 'demo', 'test_intent', neighbor]);
-      f.proof('REGISTRATION_CANNOT_WIDEN_ANOTHER_EXACT_GRANT', false, (await inspect()).allowed);
-      await f.ok(['set', 'demo', 'test_intent', target]);
-      const stored = fs.readFileSync(path.join(f.project, target));
-      for (const kind of ['inside-link', 'dangling-link', 'directory']) {
-        const file = path.join(f.project, target);
-        try {
-          fs.unlinkSync(file);
-          if (kind === 'directory') fs.mkdirSync(file);
-          else fs.symlinkSync(path.join(f.project, kind === 'inside-link' ? neighbor : 'missing-owned.md'), file);
-          const decision = await inspect();
-          f.proof(`REGISTERED_UNSAFE_${kind}_STRUCTURED_DENY`, false, decision.allowed);
-        } finally {
-          fs.rmSync(file, { recursive: true, force: true }); fs.writeFileSync(file, stored);
-        }
-      }
+// ALL structural requirements for the composition source artifact. Both the
+// real composition and every negative mutant go through this one checker.
+function compositionViolations(doc, validatorRegistry) {
+  const problems = [];
+  if (doc.schema !== 'sdd.comet.classic-application.composition.v1') problems.push('schema envelope mismatch');
+  if (doc.base !== 'classic-full') problems.push('base must be classic-full');
+  const compositionBody = doc.composition ?? {};
+  if (compositionBody.kind !== 'classic') problems.push('composition.kind must be classic');
+  if (compositionBody.profile !== 'full') problems.push('composition.profile must be full');
 
-      await f.ok(['set', 'demo', 'test_intent', 'null']);
-      f.proof('CONVENTIONAL_FILENAME_IS_NOT_REGISTRATION', false, (await inspect()).allowed);
-      await f.ok(['set', 'demo', 'test_intent', target]);
-      f.setMethod(sha('requirements source is no longer current'));
-      f.proof('NO_CURRENT_R_DENIES', false, (await inspect()).allowed);
-    } else if (id === 'intentlinks') {
-      await f.prepareDesign();
-      const outside = path.join(f.artifacts, 'outside-test-intent.md');
-      fs.writeFileSync(outside, '# Outside owned fixture data\n');
-      const targets = ['openspec/changes/demo/test-intent.md', 'docs/design.md',
-        'src/linked-source.ts', 'docs/linked-note.md', 'openspec/changes/demo/.comet/linked-control.md',
-        'openspec/changes/archive/2026-01-01-history/linked-history.md'];
-      await f.registerWriteDriver('link-writer', [targets[0]]); f.useWriteDriver('link-writer');
-      const failures = [];
-      for (const relative of targets) {
-        const target = path.join(f.project, relative);
-        const original = fs.existsSync(target) ? fs.readFileSync(target) : null;
-        fs.mkdirSync(path.dirname(target), { recursive: true });
-        try {
-          if (original !== null) fs.unlinkSync(target);
-          fs.symlinkSync(outside, target);
-          const decision = await f.native.inspectClassicHookGuard(f.project, 'demo', {
-            intent: 'write', targets: [target], toolName: 'Write',
-          });
-          if (decision.allowed !== false) failures.push({ relative, decision });
-        } finally {
-          fs.unlinkSync(target); if (original !== null) fs.writeFileSync(target, original);
-        }
-      }
-      const external = await f.native.inspectClassicHookGuard(f.project, 'demo', {
-        intent: 'write', targets: [outside], toolName: 'Write',
-      });
-      f.proof('TRUE_EXTERNAL_SCOPE_UNCHANGED_NOT_A_MANAGED_GRANT', true, external.allowed);
-      const legacy = path.join(f.artifacts, 'legacy-project');
-      fs.mkdirSync(path.join(legacy, '.comet'), { recursive: true });
-      fs.mkdirSync(path.join(legacy, 'openspec'), { recursive: true });
-      fs.writeFileSync(path.join(legacy, '.comet/config.yaml'), 'schema: comet.project.v1\ndefault_workflow: classic\nworkflows: [classic]\nclassic:\n  artifact_layout: legacy\n');
-      fs.writeFileSync(path.join(legacy, 'openspec/config.yaml'), 'schema: spec-driven\n');
-      assert.equal((await f.native.runClassicCli(['--json', 'state', 'init', 'legacy', 'full'], undefined,
-        { projectRoot: legacy, invocationCwd: legacy })).exitCode, 0);
-      const legacyTarget = path.join(legacy, 'legacy-link.md'); fs.symlinkSync(outside, legacyTarget);
-      const legacyScope = await f.native.inspectClassicHookGuard(legacy, 'legacy', {
-        intent: 'write', targets: [legacyTarget], toolName: 'Write',
-      });
-      f.proof('NON_MANAGED_EXTERNAL_SCOPE_UNCHANGED', true, legacyScope.allowed);
-      assert.deepEqual(failures, [], 'lexical ownership must precede the physical external exemption: ' + JSON.stringify(failures));
-      f.proof('OUTSIDE_LINK_SOURCE_UNCHANGED', '# Outside owned fixture data\n', fs.readFileSync(outside, 'utf8'));
-    } else if (id === 'designroutes') {
-      await f.prepareDesign();
-      for (const gate of ['A', 'T']) {
-        const intent = await f.issue(gate); await f.observe(intent); f.setReview('insufficient');
-        const rejected = await f.accept(intent);
-        assert.equal(rejected.exitCode, 0); assert.equal(rejected.json.data.verdict, 'reject');
-        const route = rejected.json.stderr;
-        assert.match(route, /Design/);
-        assert.match(route, /author/);
-        assert.doesNotMatch(route, /state transition <change> (architecture-repair|test-design-repair)/);
-        const invalid = await f.state(['transition', 'demo', gate === 'A' ? 'architecture-repair' : 'test-design-repair']);
-        assert.notEqual(invalid.exitCode, 0);
-        f.proof(`${gate}_STAYS_IN_DESIGN`, 'design', await f.get('phase'));
-        f.setReview('sufficient'); await f.submit(gate);
-      }
-    } else if (id === 'origin') {
-      const { intent, result } = await f.submit('R');
-      f.proof('R_SOURCE_ADMITTED', 'pass', result.json.data.verdict);
-      f.proof('R_RECORDED_CURRENT', true, (await f.readback()).evaluation.allowed);
-      const replay = await f.accept(intent);
-      assert.notEqual(replay.exitCode, 0);
-      f.proof('R_REPLAY_NOT_CONSUMED_TWICE', 1, JSON.parse(await f.get('gate_receipts')).length);
-      f.proof(
-        'NO_INDEPENDENT_GATE_STORE',
-        false,
-        fs.existsSync(path.join(f.change, '.comet/gate-dispatches.json')),
-      );
-    } else if (id === 'pending') {
-      const intent = await f.issue('R');
-      await f.observe(intent);
-      const file = path.join(f.change, 'proposal.md'),
-        bytes = fs.readFileSync(file);
-      fs.appendFileSync(file, 'Changed\n');
-      await f.readback();
-      fs.writeFileSync(file, bytes);
-      assert.notEqual((await f.accept(intent)).exitCode, 0);
-      f.proof(
-        'OLD_PENDING_STALE',
-        'stale',
-        JSON.parse(await f.get('gate_dispatches')).dispatches[0].state,
-      );
-    } else if (id === 'longread') {
-      await f.prepareDesign();
-      for (const gate of ['A', 'T']) {
-        if (gate === 'T') await f.submit('A');
-        const intent = await f.issue(gate);
-        await f.observe(intent);
-        const target =
-          gate === 'A'
-            ? path.join(f.project, 'docs/design.md')
-            : path.join(f.change, 'test-intent.md');
-        f.setReadHook(async () => {
-          const query = spawnSync(
-            process.execPath,
-            [
-              path.join(work, 'assets/skills/comet/scripts/comet-state.mjs'),
-              'gates',
-              'demo',
-              '--json',
-            ],
-            { cwd: f.project, encoding: 'utf8', timeout: 5000 },
-          );
-          assert.equal(query.status, 0, query.stderr);
-          fs.appendFileSync(target, 'Changed during unlocked collector\n');
-        });
-        assert.notEqual((await f.accept(intent)).exitCode, 0);
-        f.setReadHook(null);
-        const receipts = JSON.parse(await f.get('gate_receipts'));
-        f.proof(
-          `${gate}_STALE_RESULT_NOT_CURRENT`,
-          false,
-          receipts.some((r) => r.execution === intent.execution),
-        );
-      }
-    } else if (id === 'review') {
-      await f.prepareDesign();
-      for (const gate of ['A', 'T']) {
-        const intent = await f.issue(gate);
-        await f.observe(intent);
-        f.setReview('missing');
-        assert.notEqual((await f.accept(intent)).exitCode, 0);
-        f.proof(
-          `${gate}_MISSING_REVIEW_UNCONSUMED`,
-          'open',
-          JSON.parse(await f.get('gate_dispatches')).dispatches.find(
-            (entry) => entry.execution === intent.execution,
-          ).state,
-        );
-        f.setReview('insufficient');
-        const rejected = await f.accept(intent);
-        assert.equal(rejected.exitCode, 0);
-        f.proof(`${gate}_INSUFFICIENT_REVIEW_REJECT`, 'reject', rejected.json.data.verdict);
-        assert.ok((await f.readback()).evaluation.rejected.includes(gate));
-        f.setReview('sufficient');
-        await f.submit(gate);
-      }
-      f.proof('CORRECTED_A_T_ALLOW_DESIGN_HANDOFF', true, (await f.readback()).evaluation.allowed);
-    } else if (id === 'planning') {
-      await f.prepareP();
-      f.proof('SAME_NATIVE_BUILD', 'build', await f.get('phase'));
-      fs.mkdirSync(path.join(f.project, 'src'), { recursive: true });
-      fs.writeFileSync(
-        path.join(f.project, 'src/implementation.ts'),
-        'export const candidate = "changed";\n',
-      );
-      fs.writeFileSync(path.join(f.project, 'dependency.lock'), 'non-js dependency changed\n');
-      for (const file of [
-        path.join(f.change, 'tasks.md'),
-        path.join(f.project, 'docs/comet/plans/derived-plan.md'),
-      ])
-        fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('[ ]', '[x]'));
-      f.proof('CODE_AND_PROGRESS_KEEP_RATP', true, (await f.readback()).evaluation.allowed);
-    } else if (id === 'design') {
-      await f.prepareP();
-      const file = path.join(f.project, 'docs/design.md'),
-        bytes = fs.readFileSync(file);
-      fs.appendFileSync(file, 'Design boundary changed\n');
-      const changed = await f.readback();
-      assert.deepEqual(changed.evaluation.stale, ['A', 'T', 'P']);
-      fs.writeFileSync(file, bytes);
-      f.proof(
-        'RESTORED_DESIGN_STILL_STALE',
-        ['A', 'T', 'P'],
-        (await f.readback()).evaluation.stale,
-      );
-    } else if (['repair', 'repairA', 'repairT', 'repairAverify', 'repairTverify'].includes(id)) {
-      await f.prepareP();
-      if (id.endsWith('verify')) {
-        const tasks = path.join(f.change, 'tasks.md');
-        fs.writeFileSync(tasks, fs.readFileSync(tasks, 'utf8').replace('[ ]', '[x]'));
-        assert.equal((await f.invoke(['check', 'run', 'demo', 'build', '--', ...f.commandArgv])).exitCode, 0);
-        await f.ok(['transition', 'demo', 'build-complete']);
-        f.proof('ORIGINAL_VERIFY_PHASE', 'verify', await f.get('phase'));
-      }
-
-      const before = JSON.parse(
-        fs.readFileSync(path.join(f.change, '.comet/run-state.json'), 'utf8'),
-      ).runId;
-      const event =
-        id.startsWith('repairA')
-          ? 'architecture-repair'
-          : id.startsWith('repairT')
-            ? 'test-design-repair'
-            : 'requirements-repair';
-      await f.ok(['transition', 'demo', event]);
-      f.proof('CONTROLLED_REPAIR_PHASE', id === 'repair' ? 'open' : 'design', await f.get('phase'));
-      f.proof(
-        'ORIGINAL_RUN',
-        before,
-        JSON.parse(fs.readFileSync(path.join(f.change, '.comet/run-state.json'), 'utf8')).runId,
-      );
-      assert.equal((await f.readback()).evaluation.allowed, false);
-    } else if (id === 'versions') {
-      await f.submit('R');
-      f.setMethod(sha('changed method'));
-      assert.equal((await f.readback()).evaluation.allowed, false);
-      f.setMethod(
-        sha(fs.readFileSync(path.join(repository, '.agents/skills/whitebox-verify/SKILL.md'))),
-      );
-      f.proof('RESTORED_METHOD_STILL_STALE', false, (await f.readback()).evaluation.allowed);
-    } else if (id === 'concurrent') {
-      const [a, b] = await Promise.all([f.issue('R'), f.issue('R')]);
-      f.proof('ONE_ORIGINAL_EXECUTION', a.execution, b.execution);
-      await f.observe(a);
-      const results = await Promise.all([f.accept(a), f.accept(b)]);
-      f.proof('ONE_ATOMIC_ACCEPT', 1, results.filter((r) => r.exitCode === 0).length);
-      f.proof('ONE_RECEIPT', 1, JSON.parse(await f.get('gate_receipts')).length);
-    } else if (id === 'plans') {
-      await f.prepareP();
-      const good = 'docs/comet/plans/derived-plan.md';
-      const next = await f.ok(['next', 'demo']);
-      f.proof('FIXED_PLAN_VIEW_ROOT', 'docs/comet/plans', next.json.data.artifactRefs.plansRoot);
-      for (const bad of ['docs/superpowers/plans/old.md', 'docs/user-selected/plans/custom.md']) {
-        fs.mkdirSync(path.dirname(path.join(f.project, bad)), {
-          recursive: true,
-        });
-        fs.writeFileSync(path.join(f.project, bad), '# Unapproved plan root\n');
-        await f.ok(['set', 'demo', 'plan', bad]);
-        const failed = await f.state(['transition', 'demo', 'build-complete']);
-        assert.notEqual(failed.exitCode, 0);
-        assert.match(
-          failed.json.stderr ?? JSON.stringify(failed.json.data?.issues),
-          /plan|prerequisite|gate/i,
-        );
-      }
-      await f.ok(['set', 'demo', 'plan', good]);
-      const missing = spawnSync(
-        process.execPath,
-        [path.join(work, 'assets/skills/comet/scripts/comet-state.mjs'), 'next', 'demo', '--json'],
-        { cwd: f.project, encoding: 'utf8' },
-      );
-      assert.notEqual(missing.status, 0);
-      assert.match(missing.stdout + missing.stderr, /UNVERIFIED/);
-      f.policy.plansRoot = 'docs/user-selected/plans';
-      const wrong = await f.state(['next', 'demo']);
-      assert.notEqual(wrong.exitCode, 0);
-      assert.match(wrong.stdout, /UNVERIFIED/);
-    } else if (
-      id === 'throughverify' ||
-      id === 'candidate' ||
-      id === 'archive' ||
-      id.startsWith('post')
-    ) {
-      await f.prepareP();
-      fs.writeFileSync(
-        path.join(f.change, 'tasks.md'),
-        fs.readFileSync(path.join(f.change, 'tasks.md'), 'utf8').replace('[ ]', '[x]'),
-      );
-      assert.equal(
-        (await f.invoke(['check', 'run', 'demo', 'build', '--', ...f.commandArgv])).exitCode,
-        0,
-      );
-      await f.ok(['transition', 'demo', 'build-complete']);
-      fs.mkdirSync(path.join(f.project, '.whitebox'), { recursive: true });
-      fs.writeFileSync(
-        path.join(f.project, '.whitebox/verification.md'),
-        '# Component verification\n\nOnly Native target behavior is exercised; actual method/OS/roles are not qualified.\n',
-      );
-      await f.ok(['set', 'demo', 'verification_report', '.whitebox/verification.md']);
-      assert.equal(
-        (await f.invoke(['check', 'run', 'demo', 'verify', '--', ...f.commandArgv])).exitCode,
-        0,
-      );
-      await f.submit('V');
-      if (id === 'candidate') {
-        const changed = path.join(f.project, 'new-source.py');
-        fs.writeFileSync(changed, "candidate = 'changed'\n");
-        f.proof('CANDIDATE_ONLY_V_STALE', ['V'], (await f.readback()).evaluation.stale);
-        fs.rmSync(changed);
-        f.proof('RESTORED_CANDIDATE_V_NOT_REVIVED', ['V'], (await f.readback()).evaluation.stale);
-        const invalidations = JSON.parse(await f.get('gate_invalidations'));
-        for (const gate of ['R', 'A', 'T', 'P']) assert.equal(invalidations[gate], undefined);
-      } else {
-        await f.ok(['transition', 'demo', 'verify-pass']);
-        await f.ok(['transition', 'demo', 'archive-confirm']);
-        const mainSpec = path.join(f.project, 'openspec/specs/existing/spec.md');
-        const beforeSpec = sha(fs.readFileSync(mainSpec));
-        const denied = await f.invoke(['archive', 'demo']);
-        assert.notEqual(
-          denied.exitCode,
-          0,
-          'Kp blocks real Spec side effects, not entering Archive work',
-        );
-        f.proof('MISSING_KP_NO_MOVE', true, fs.existsSync(f.change));
-        f.proof('MISSING_KP_MAIN_SPEC_UNCHANGED', beforeSpec, sha(fs.readFileSync(mainSpec)));
-        f.proof('MISSING_KP_NOT_ARCHIVED', 'false', await f.get('archived'));
-        await f.submit('Kp');
-        f.proof('ARCHIVE_PHASE', 'archive', await f.get('phase'));
-        f.proof('KT_STILL_PENDING', true, (await f.readback()).completionBlocked);
-        if (id.startsWith('post')) {
-          if (id !== 'postgit') {
-            const deliveryInput = path.join(f.change, '.comet/native-document-delivery.json');
-            fs.writeFileSync(deliveryInput, JSON.stringify({ action: 'archive-only' }));
-            await f.ok(['delivery', 'demo', '--file', deliveryInput]);
-          }
-          const archived = await f.invoke(['archive', 'demo']);
-          assert.equal(
-            archived.exitCode,
-            0,
-            JSON.stringify(archived.json.data?.issues ?? archived.json.stderr),
-          );
-          if (id === 'postdelta') {
-            const main = fs.readFileSync(
-              path.join(f.project, 'openspec/specs/native-proof/spec.md'),
-              'utf8',
-            );
-            assert.match(main, /### Requirement: Preserve the original Run/);
-            assert.doesNotMatch(main, /## ADDED Requirements/);
-            f.proof(
-              'ACTUAL_OPENSPEC_DELTA_MERGED',
-              true,
-              main.includes('### Requirement: Preserve the original Run'),
-            );
-          }
-          const next = await f.ok(['next', 'demo']);
-          assert.notEqual(next.json.data?.completion, 'completed');
-          const directories = fs.readdirSync(path.join(f.project, 'openspec/changes/archive'));
-          const moved = path.join(
-            f.project,
-            'openspec/changes/archive',
-            directories.find((name) => name.endsWith('-demo')),
-          );
-          const before = JSON.parse(
-            fs.readFileSync(path.join(moved, '.comet/run-state.json'), 'utf8'),
-          );
-          const originalArtifacts = JSON.parse(
-            fs.readFileSync(path.join(moved, before.artifactsRef), 'utf8'),
-          );
-          const originalBridge = JSON.parse(originalArtifacts.managed_archive_input_bridge);
-          f.proof(
-            'PREVIEW_FORMAL_CAPTURED_TOOL_IDENTITY',
-            envelopeDigest(f.openSpecBinding),
-            originalBridge.bridge.toolBindingDigest,
-          );
-
-          f.proof('SPEC_ARCHIVE_SAME_RUN_PENDING', 'waiting', before.status);
-          if (
-            ![
-              'postarchive',
-              'postdelta',
-              'postgit',
-              'postcrash',
-              'postdeliverypending',
-              'postreceipttamper',
-              'postreceiptforeign',
-              'postauthorization',
-            ].includes(id)
-          ) {
-            if (id === 'posttamper') {
-              const file = path.join(moved, before.artifactsRef);
-              const artifacts = JSON.parse(fs.readFileSync(file, 'utf8'));
-              const mapping = JSON.parse(artifacts.managed_archive_input_bridge);
-              mapping.bridge.after['docs/design.md'] = sha('self-approved map');
-              artifacts.managed_archive_input_bridge = JSON.stringify(mapping);
-              fs.writeFileSync(file, JSON.stringify(artifacts));
-            } else if (id === 'postdesign')
-              fs.appendFileSync(
-                path.join(f.project, 'docs/design.md'),
-                'Unauthorized design change after archive\n',
-              );
-            else if (id === 'postsource') {
-              fs.mkdirSync(path.join(f.project, 'src'), { recursive: true });
-              fs.writeFileSync(path.join(f.project, 'src/changed.py'), 'changed = True\n');
-            } else if (id === 'postprotosource')
-              fs.writeFileSync(
-                path.join(f.project, '__proto__'),
-                'Changed ordinary source input\n',
-              );
-            else if (id === 'postmethod') f.setMethod(sha('changed after archive'));
-            else if (id === 'postenvironment') f.setEnvironment(sha('changed after archive'));
-            else if (id === 'postqualification') f.qualification.status = 'revoked';
-            const refused = await f.state(['dispatch-gate', 'demo', 'Kt']);
-            assert.notEqual(refused.exitCode, 0);
-            const current = JSON.parse(
-              fs.readFileSync(path.join(moved, '.comet/run-state.json'), 'utf8'),
-            );
-            f.proof('POST_CHANGE_PRESERVES_ORIGINAL_RUN', before.runId, current.runId);
-            f.proof('POST_CHANGE_NEVER_COMPLETES', 'waiting', current.status);
-            assert.equal(
-              JSON.parse(await f.get('gate_receipts')).some((entry) => entry.gate === 'Kt'),
-              false,
-            );
-          } else {
-            if (id === 'postdeliverypending') {
-              const artifacts = JSON.parse(
-                fs.readFileSync(path.join(moved, before.artifactsRef), 'utf8'),
-              );
-              const mapping = JSON.parse(artifacts.managed_archive_input_bridge);
-              const file = path.join(f.project, mapping.bridge.controlOutput);
-              const receipt = JSON.parse(fs.readFileSync(file, 'utf8'));
-              receipt.archiveFiles[Object.keys(receipt.archiveFiles)[0]] = '0'.repeat(64);
-              fs.writeFileSync(file, JSON.stringify(receipt));
-            }
-            if (id === 'postcrash') await crashAndRestartKt(f, moved, before);
-            else await f.submit('Kt');
-            const established = JSON.parse(
-              fs.readFileSync(path.join(moved, '.comet/run-state.json'), 'utf8'),
-            );
-            const historyBefore = fs.readFileSync(
-              path.join(moved, established.trajectoryRef),
-              'utf8',
-            );
-            const completions = (text) =>
-              text
-                .trim()
-                .split('\n')
-                .filter(Boolean)
-                .map(JSON.parse)
-                .filter(
-                  (event) =>
-                    event.type === 'state_transitioned' && event.data.toStep === 'completed',
-                );
-            const completionBefore = completions(historyBefore);
-            if (
-              [
-                'postdeliverypending',
-                'postreceipttamper',
-                'postreceiptforeign',
-                'postauthorization',
-              ].includes(id)
-            ) {
-              const artifacts = JSON.parse(
-                fs.readFileSync(path.join(moved, before.artifactsRef), 'utf8'),
-              );
-              const mapping = JSON.parse(artifacts.managed_archive_input_bridge);
-              const receipt = path.join(
-                f.project,
-                mapping.bridge.controlOutput ??
-                  `.comet/classic-deliveries/${sha(mapping.bridge.deliveryIdentity)}.json`,
-              );
-              if (id === 'postdeliverypending') {
-                /* Already failed BEFORE Kt: a current Kt must not waive delivery. */
-              } else if (id === 'postauthorization')
-                fs.rmSync(path.join(moved, '.comet/delivery.json'));
-              else {
-                const data = JSON.parse(fs.readFileSync(receipt, 'utf8'));
-                if (id === 'postreceiptforeign') data.changeIdentity = 'another-unrelated-run';
-                else {
-                  const key = Object.keys(data.archiveFiles)[0];
-                  data.archiveFiles[key] = '0'.repeat(64);
-                }
-                fs.writeFileSync(receipt, JSON.stringify(data));
-              }
-              const refused = await f.state(['next', 'demo']);
-              const observed = JSON.parse(
-                fs.readFileSync(path.join(moved, '.comet/run-state.json'), 'utf8'),
-              );
-              f.proof('DELIVERY_FAILURE_SAME_RUN', before.runId, observed.runId);
-              if (id === 'postdeliverypending') {
-                f.proof('FIRST_COMPLETION_DELIVERY_BLOCKS', 'waiting', observed.status);
-                assert.equal(completionBefore.length, 0);
-                assert.ok(
-                  refused.exitCode !== 0 ||
-                    refused.json.data?.delivery?.verification?.status !== 'complete',
-                );
-              } else {
-                f.proof('LEGAL_COMPLETION_PRECEDES_FAULT', 'completed', established.status);
-                assert.ok(completionBefore.length > 0);
-                f.proof('LIFECYCLE_HISTORY_RETAINED', 'completed', observed.status);
-                f.proof('TERMINAL_STEP_RETAINED', established.currentStep, observed.currentStep);
-                const historyAfter = fs.readFileSync(
-                  path.join(moved, observed.trajectoryRef),
-                  'utf8',
-                );
-                assert.equal(historyAfter.startsWith(historyBefore), true);
-                f.proof(
-                  'ORIGINAL_COMPLETION_EVENTS_RETAINED',
-                  completionBefore,
-                  completions(historyAfter),
-                );
-                assert.notEqual(refused.exitCode, 0);
-                f.proof(
-                  'CURRENT_INTEGRITY_UNVERIFIED',
-                  'UNVERIFIED',
-                  refused.json.data.currentIntegrity.status,
-                );
-                assert.equal(
-                  refused.json.data.issues.some((issue) => issue.code === 'RECOVERY_REQUIRED'),
-                  true,
-                );
-                assert.equal(refused.json.agent.continuation, null);
-                assert.notEqual(refused.json.data.nextAction?.kind, 'done');
-                const events = historyAfter.trim().split('\n').filter(Boolean).map(JSON.parse);
-                assert.equal(
-                  events.some(
-                    (event) =>
-                      event.type === 'eval_completed' &&
-                      event.data.evalId === 'classic-current-integrity' &&
-                      event.data.passed === false,
-                  ),
-                  true,
-                );
-              }
-            } else {
-              const resumed = await f.ok(['next', 'demo']);
-              const after = JSON.parse(
-                fs.readFileSync(path.join(moved, '.comet/run-state.json'), 'utf8'),
-              );
-              f.proof('POST_ARCHIVE_ORIGINAL_RUN', before.runId, after.runId);
-              if (id === 'postgit') {
-                f.proof('GIT_ARCHIVE_KT_CURRENT', true, (await f.readback()).evaluation.allowed);
-                f.proof('GIT_RUN_AWAITS_NATIVE_DELIVERY', 'waiting', after.status);
-              } else {
-                f.proof('POST_ARCHIVE_COMPLETED', 'completed', after.status);
-                if (id === 'postarchive') {
-                  const packet = path.join(
-                    f.artifacts,
-                    fs
-                      .readdirSync(f.artifacts)
-                      .find((name) => name.startsWith('gate-kt-') && name.endsWith('.json')),
-                  );
-                  for (const argv of [
-                    ['dispatch-gate', 'demo', 'Kt'],
-                    ['accept-gate', 'demo', 'Kt', '--file', packet],
-                  ]) {
-                    const denied = await f.state(argv);
-                    assert.notEqual(denied.exitCode, 0);
-                    assert.equal(
-                      denied.json.data.issues.some((issue) => issue.code === 'RUN_COMPLETED'),
-                      true,
-                    );
-                  }
-                  fs.writeFileSync(
-                    path.join(f.project, 'changed-after-completion.py'),
-                    'changed = True\n',
-                  );
-                  const fault = await f.state(['next', 'demo']);
-                  assert.notEqual(fault.exitCode, 0);
-                  assert.equal(fault.json.data.currentIntegrity.status, 'UNVERIFIED');
-                  const retained = JSON.parse(
-                    fs.readFileSync(path.join(moved, '.comet/run-state.json'), 'utf8'),
-                  );
-                  f.proof('POST_COMPLETION_SOURCE_HISTORY_RETAINED', 'completed', retained.status);
-                  assert.deepEqual(
-                    completions(fs.readFileSync(path.join(moved, retained.trajectoryRef), 'utf8')),
-                    completionBefore,
-                  );
-                  assert.equal(fault.json.agent.continuation, null);
-                }
-              }
-            }
-          }
-        }
-        if (id === 'archive') {
-          fs.appendFileSync(path.join(f.project, 'docs/design.md'), 'Changed after Kp\n');
-          const cwd = process.cwd();
-          let archived;
-          try {
-            process.chdir(f.project);
-            archived = await f.invoke(['archive', 'demo']);
-          } finally {
-            process.chdir(cwd);
-          }
-          assert.notEqual(archived.exitCode, 0);
-          f.proof('STALE_KP_NO_SPEC_MOVE', true, fs.existsSync(f.change));
-          f.proof('STALE_KP_MAIN_SPEC_UNCHANGED', beforeSpec, sha(fs.readFileSync(mainSpec)));
-          f.proof('STALE_KP_NOT_ARCHIVED', 'false', await f.get('archived'));
-          const changed = await f.readback();
-          assert.equal(changed.evaluation.allowed, false);
-          const design = path.join(f.project, 'docs/design.md');
-          fs.writeFileSync(
-            design,
-            fs.readFileSync(design, 'utf8').replace('Changed after Kp\n', ''),
-          );
-          f.proof(
-            'RESTORED_DESIGN_KP_STAYS_INVALID',
-            false,
-            (await f.readback()).evaluation.allowed,
-          );
-          const state = JSON.parse(
-            fs.readFileSync(path.join(f.change, '.comet/run-state.json'), 'utf8'),
-          );
-          f.proof('STALE_KP_NO_NEW_PENDING', null, state.pending);
-        }
-      }
-    } else throw new Error('unknown test scenario');
-  } finally {
-    audit = f.close();
+  const extensions = compositionBody.extensions ?? [];
+  const seen = new Map();
+  for (const extension of extensions) {
+    if (typeof extension.id !== 'string' || !extensionIdPattern.test(extension.id)) {
+      problems.push(`extension id violates the upstream identity rule: ${String(extension.id)}`);
+    }
+    if (seen.has(extension.id)) problems.push(`duplicate extension id: ${extension.id}`);
+    seen.set(extension.id, extension);
   }
-  console.log(
-    JSON.stringify({
-      case: id,
-      audit,
-      scope: 'component/native-runtime-mechanism',
-      actualRolesMethodsOS: 'UNVERIFIED',
-      acceptedBusinessScenarios: 0,
-    }),
-  );
-}
-
-if (restartMode >= 0) {
-  let input = '';
-  for await (const chunk of process.stdin) input += chunk;
-  const f = await fixture({ resume: JSON.parse(input) });
-  try {
-    if (process.argv[restartMode + 1] === 'accept-kt') {
-      const intent = await f.issue('Kt');
-      const record = await f.observe(intent);
-      process.send?.({ kind: 'original-source-observed', execution: intent.execution, record });
-      const result = await f.accept(intent);
-      assert.equal(result.exitCode, 0, JSON.stringify(result.json.data?.issues));
+  for (const expected of EXPECTED_GATES) {
+    const extension = seen.get(expected.extensionId);
+    if (!extension) {
+      problems.push(`missing gate extension ${expected.gate} (${expected.extensionId})`);
+      continue;
+    }
+    if (extension.afterStep !== expected.afterStep) {
+      problems.push(
+        `gate ${expected.gate} must sit at ${expected.afterStep}, found ${String(extension.afterStep)}`,
+      );
+    }
+    if (!checkpointWhitelist.has(extension.afterStep)) {
+      problems.push(`gate ${expected.gate} checkpoint ${String(extension.afterStep)} is not in the pristine whitelist`);
+    }
+    const refs = extension.artifactRefs;
+    if (!Array.isArray(refs) || refs.length === 0) {
+      problems.push(`gate ${expected.gate} must pin at least one artifact ref`);
     } else {
-      await f.ok(['next', 'demo']);
-      const name = fs
-        .readdirSync(path.join(f.project, 'openspec/changes/archive'))
-        .find((value) => value.endsWith('-demo'));
-      const state = JSON.parse(
-        fs.readFileSync(
-          path.join(f.project, 'openspec/changes/archive', name, '.comet/run-state.json'),
-          'utf8',
-        ),
-      );
-      console.log(
-        JSON.stringify({
-          scope: 'component/native-process-recovery',
-          runId: state.runId,
-          status: state.status,
-          pid: process.pid,
-        }),
+      if (new Set(refs).size !== refs.length) problems.push(`gate ${expected.gate} artifact refs are not unique`);
+      for (const ref of refs) {
+        const problem = relativeRefProblems(ref);
+        if (problem) problems.push(`gate ${expected.gate} artifact ref ${String(ref)}: ${problem}`);
+      }
+    }
+    const validator = extension.validator;
+    if (!validator || !validatorRegistry?.has(`${validator.id}@${validator.version}`)) {
+      problems.push(`gate ${expected.gate} validator ${JSON.stringify(validator)} is not registered by bindings.mjs`);
+    }
+    if (typeof extension.skillId !== 'string' || extension.skillId.length === 0) {
+      problems.push(`gate ${expected.gate} has no executing skill`);
+    }
+  }
+  if (seen.size !== EXPECTED_GATES.length) {
+    problems.push(`expected exactly ${EXPECTED_GATES.length} extensions, found ${seen.size}`);
+  }
+  const order = compositionBody.order;
+  if (
+    !Array.isArray(order) ||
+    order.length !== seen.size ||
+    new Set(order).size !== order.length ||
+    [...order].some((id) => !seen.has(id))
+  ) {
+    problems.push('order must list every extension id exactly once');
+  } else if (
+    // order may only permute within checkpoints: the (id@checkpoint) multiset
+    // must be preserved, otherwise an extension moved across checkpoints.
+    [...extensions.map((extension) => `${extension.id}@${extension.afterStep}`)].sort().join() !==
+    [...order.map((id) => `${id}@${seen.get(id).afterStep}`)].sort().join()
+  ) {
+    problems.push('order moved an extension across checkpoints');
+  }
+
+  const replacements = compositionBody.replacements ?? [];
+  const replacedSteps = replacements.map((entry) => entry.stepId);
+  for (const stepId of Object.keys(EXPECTED_REPLACEMENTS)) {
+    if (!replacedSteps.includes(stepId)) {
+      problems.push(`missing replacement for ${stepId} (upstream ${EXPECTED_REPLACEMENTS[stepId]} execution step)`);
+    }
+  }
+  for (const stepId of DOMAIN_OWNED_STEPS) {
+    if (replacedSteps.includes(stepId)) {
+      problems.push(`domain-owned step ${stepId} must not be replaced`);
+    }
+  }
+  for (const replacement of replacements) {
+    const block = pristineStepBlock(replacement.stepId);
+    if (!block) {
+      problems.push(`replacement stepId ${String(replacement.stepId)} does not exist in the pristine workflow`);
+      continue;
+    }
+    if (!block.includes("type: 'invoke_skill'")) {
+      problems.push(`replacement stepId ${replacement.stepId} is not an invoke_skill step (not replaceable upstream)`);
+    }
+    const expectedRef = EXPECTED_REPLACEMENTS[replacement.stepId];
+    // full.design.handoff is keyed by the computed followingStep variable and
+    // its ref is computed too (profile === 'full' ? 'comet-design' : ...);
+    // the alias-resolution assertion already pins the full-profile meaning,
+    // so the block must carry either the literal ref or that computed form.
+    const refForms = [
+      `ref: '${expectedRef}'`,
+      /ref: profile === 'full' \? 'comet-design' : 'comet-build',/,
+    ];
+    if (expectedRef && !refForms.some((form) => (form instanceof RegExp ? form.test(block) : block.includes(form)))) {
+      problems.push(`replacement stepId ${replacement.stepId} is not a ${expectedRef} step`);
+    }
+    const contract = doc.replacementContracts?.steps?.[replacement.stepId];
+    if (!contract || contract.originalSkillRef !== expectedRef) {
+      problems.push(`replacement ${replacement.stepId} lacks the preserved output-contract declaration`);
+    } else {
+      const pristineRequired = block.match(/required:\s*\[([^\]]*)\]/);
+      const requiredKeys = pristineRequired
+        ? pristineRequired[1].split(',').map((item) => item.trim().replace(/['"]/g, '')).filter(Boolean)
+        : [];
+      if (JSON.stringify(requiredKeys) !== JSON.stringify(contract.outputContract.required)) {
+        problems.push(
+          `replacement ${replacement.stepId} output contract ${JSON.stringify(contract.outputContract.required)} != pristine required ${JSON.stringify(requiredKeys)}`,
+        );
+      }
+      for (const property of contract.outputContract.properties) {
+        if (!block.includes(`${property}:`)) {
+          problems.push(`replacement ${replacement.stepId} contract names property ${property} absent from the pristine step`);
+        }
+      }
+    }
+  }
+  return problems;
+}
+
+// ---- mini JSON-schema checker for the typed extension declarations ----------
+
+function schemaViolations(schema, value, at = 'declaration') {
+  const problems = [];
+  if (schema.type === 'object' || schema.properties) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return [`${at}: expected object`];
+    for (const key of schema.required ?? []) {
+      if (!(key in value)) problems.push(`${at}.${key}: required`);
+    }
+    for (const [key, sub] of Object.entries(schema.properties ?? {})) {
+      if (key in value) problems.push(...schemaViolations(sub, value[key], `${at}.${key}`));
+    }
+    if (schema.additionalProperties === false) {
+      for (const key of Object.keys(value)) {
+        if (!Object.hasOwn(schema.properties ?? {}, key)) problems.push(`${at}.${key}: undeclared field`);
+      }
+    }
+    return problems;
+  }
+  if (schema.type === 'array') {
+    if (!Array.isArray(value)) return [`${at}: expected array`];
+    if (schema.minItems !== undefined && value.length < schema.minItems) problems.push(`${at}: fewer than ${schema.minItems} items`);
+    if (schema.items) value.forEach((item, index) => problems.push(...schemaViolations(schema.items, item, `${at}[${index}]`)));
+    return problems;
+  }
+  if (schema.const !== undefined && value !== schema.const) problems.push(`${at}: expected const ${JSON.stringify(schema.const)}`);
+  if (schema.enum !== undefined && !schema.enum.includes(value)) problems.push(`${at}: ${JSON.stringify(value)} not in enum`);
+  if (schema.type === 'string') {
+    if (typeof value !== 'string') problems.push(`${at}: expected string`);
+    else {
+      if (schema.minLength !== undefined && value.length < schema.minLength) problems.push(`${at}: shorter than ${schema.minLength}`);
+      if (schema.pattern && !new RegExp(schema.pattern, 'u').test(value)) problems.push(`${at}: violates pattern ${schema.pattern}`);
+    }
+  }
+  return problems;
+}
+
+// ---- bindings: the real module, the real registry ---------------------------
+
+const bindingsModule = await import(pathToFileURL(path.join(applicationRoot, 'bindings.mjs')).href);
+const bindingsResult = await bindingsModule.createBindings({ probe: 'p2_4-case' });
+const validatorRegistry = new Map(
+  (bindingsResult.validators ?? []).map((validator) => [`${validator.id}@${validator.version}`, validator]),
+);
+const packagedSkills = new Set(assetsManifest.skills.map((skill) => skill.name));
+
+// ---- gate payload fixtures (same admission path as test/delivery-gate.test.js)
+
+const INPUT = shaBytes('p2_4-composition-input-r1');
+const POLICY_DIGEST = shaBytes('policy/managed-p2_4@r1');
+const POLICY = { ref: 'policy/managed-p2_4', digest: POLICY_DIGEST };
+const NOW = '2026-10-26T12:00:00.000Z';
+
+function contractFixture(requiredChecks) {
+  return {
+    schemaVersion: 1,
+    project: 'sdd-harness',
+    change: 'delivery-foundation-rearchitecture',
+    cases: [{ id: 'c1', ac: 'D01', oracle: 'requirements closed and bound before pass' }],
+    requiredChecks,
+    executionDenominator: { totalCases: 1 },
+    cleanup: { environment: 'temp dir removed after run', data: 'none persisted' },
+    dependencyBaselines: [{ kind: 'product', digest: shaBytes('product-r1') }],
+  };
+}
+
+function envelopeFixture(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    candidateDigest: INPUT,
+    caseId: 'c1',
+    check: 'unit:node:test',
+    origin: { kind: 'registered-runner', id: 'runner-1' },
+    execution: { id: 'exec-verifier-1' },
+    environment: 'p2_4-case-env',
+    toolchain: 'node v22.13.1',
+    executions: { total: 3, valid: 3 },
+    result: 'pass',
+    evidence: [{ uri: '.whitebox/c1/tap.txt', sha256: shaBytes('tap-output') }],
+    expiry: '2026-11-26T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function admitOne(launcher, { gate = 'R', execution = 'exec-verifier-1', envelope } = {}) {
+  const dispatch = launcher.issueDispatch({
+    runnerId: 'runner-1',
+    run: 'run-p2_4',
+    gate,
+    inputDigest: INPUT,
+    policyDigest: POLICY_DIGEST,
+    attempt: 1,
+    epoch: 1,
+    role: 'verifier',
+    execution,
+  });
+  const admitted = admitEvidence({
+    envelope: envelope ?? envelopeFixture({ execution: { id: execution } }),
+    dispatch,
+    authority: launcher,
+    current: { inputDigest: INPUT, policyDigest: POLICY_DIGEST, environment: 'p2_4-case-env' },
+    now: NOW,
+  });
+  assert.equal(admitted.ok, true, `test setup admission failed: ${admitted.reason ?? ''}`);
+  return admitted.entry;
+}
+
+function inputsFixture(requiredChecks) {
+  return { inputDigest: INPUT, testContract: contractFixture(requiredChecks), builderExecution: 'exec-builder-1' };
+}
+
+function extensionInput(gate, evidence) {
+  return {
+    run: { runId: 'run-p2_4' },
+    action: { id: 'action-extension-1', stepId: `classic.extension.${gate}` },
+    outcome: {
+      actionId: 'action-extension-1',
+      status: 'succeeded',
+      output: { verdict: 'pass', sourceHash: 'domain-checked', artifactHashes: {}, gateEvidence: evidence },
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 1. supplier fixtures and cross-artifact pins
+// ---------------------------------------------------------------------------
+
+test('composition, bindings, typed declarations and the 0005 patch exist with cross-pinned bytes', () => {
+  assert.equal(composition.revision, '2026-10-26-comet-050-adoption-v1');
+  assert.equal(composition.runtimeAccepted, false, 'a source artifact must not claim runtime acceptance');
+  assert.equal(composition.upstream.commit, upstreamLock.source.commit, 'composition must pin the locked upstream commit');
+  assert.equal(composition.upstream.version, upstreamLock.package.version);
+  assert.equal(upstreamLock.patches.length, 0, 'the lock is patch-free at this revision; 0005 is applied by the supply wave');
+  const patchBytes = fs.readFileSync(patchPath);
+  assert.equal(
+    composition.knowledgeCloseout.patchSha256,
+    shaBytes(patchBytes),
+    'composition pins the exact 0005 patch bytes; silent patch edits break this pin',
+  );
+  assert.equal(composition.knowledgeCloseout.gate, 'Kt');
+  assert.equal(composition.knowledgeCloseout.mechanism, 'upstream-minimal-patch');
+  assert.equal(
+    composition.knowledgeCloseout.patch,
+    'integrations/comet/patches/0005-comet-050-kt-closeout.patch',
+  );
+  assert.match(composition.knowledgeCloseout.writePath, /NOT IN THIS REVISION/, 'the Kt write path must stay an explicit supply-wave obligation');
+  for (const file of composition.extensionDeclarations.files) {
+    assert.ok(fs.existsSync(path.join(applicationRoot, 'extensions', file)), `declaration ${file} missing`);
+  }
+  assert.ok(fs.statSync(path.join(applicationRoot, 'bindings.mjs')).isFile());
+});
+
+test('the six gate extensions sit exactly on the pristine checkpoint whitelist (A/T and V/Kp same-checkpoint AND)', () => {
+  const problems = compositionViolations(composition, validatorRegistry);
+  assert.deepEqual(problems, [], `composition violations: ${problems.join(' | ')}`);
+  // Explicit AND semantics evidence: two independent extensions per shared
+  // checkpoint, each with its own artifactRefs and validator.
+  const designGates = composition.composition.extensions.filter((entry) => entry.afterStep === 'full.design.evidence');
+  const verifyGates = composition.composition.extensions.filter((entry) => entry.afterStep === 'full.verify.check.evidence');
+  assert.deepEqual(
+    designGates.map((entry) => entry.id).sort(),
+    ['architecture-consensus', 'test-design-review'],
+  );
+  assert.deepEqual(
+    verifyGates.map((entry) => entry.id).sort(),
+    ['knowledge-project-closeout', 'verify-whitebox'],
+  );
+  assert.notEqual(
+    designGates[0].artifactRefs[0],
+    designGates[1].artifactRefs[0],
+    'A and T must pin independent artifact bundles',
+  );
+  assert.notEqual(
+    verifyGates[0].validator.id,
+    verifyGates[1].validator.id,
+    'V and Kp must be judged by independent validators',
+  );
+});
+
+test('replacements keep the original stepIds and output contracts of exactly the comet-design/comet-build execution skills', () => {
+  const problems = compositionViolations(composition, validatorRegistry);
+  assert.deepEqual(problems, []);
+  const replaced = composition.composition.replacements.map((entry) => entry.stepId);
+  assert.deepEqual([...replaced].sort(), Object.keys(EXPECTED_REPLACEMENTS).sort());
+  // Machine checks, approvals and archive steps stay domain-owned.
+  for (const forbidden of [
+    'full.build.check',
+    'full.verify.check',
+    'full.archive.execute',
+    'full.archive.confirm',
+    'full.open.confirm',
+    'full.design.confirm',
+    'full.build.confirm',
+  ]) {
+    assert.ok(!replaced.includes(forbidden), `${forbidden} must stay domain-owned`);
+  }
+  for (const stepId of DOMAIN_OWNED_STEPS) {
+    const block = pristineStepBlock(stepId);
+    assert.ok(block, `pristine still defines ${stepId}`);
+    assert.match(block, /type: 'invoke_skill'/);
+  }
+});
+
+test('every referenced skill is a real P1_6 packaged asset with no retired tokens', () => {
+  const used = new Set([
+    ...composition.composition.replacements.map((entry) => entry.skillId),
+    ...composition.composition.extensions.map((entry) => entry.skillId),
+  ]);
+  assert.ok(used.size > 0);
+  for (const skillId of used) {
+    assert.ok(packagedSkills.has(skillId), `skill ${skillId} is not in the P1_6 packaged manifest`);
+    const skillRoot = path.join(applicationRoot, 'skills', skillId);
+    assert.ok(fs.statSync(skillRoot).isDirectory(), `packaged asset directory missing for ${skillId}`);
+    assert.ok(fs.existsSync(path.join(skillRoot, 'SKILL.md')), `packaged skill ${skillId} has no SKILL.md`);
+  }
+  for (const token of assetsManifest.naming_rule.retired_tokens) {
+    for (const entry of fs.readdirSync(path.join(applicationRoot, 'skills'))) {
+      assert.ok(
+        !entry.toLowerCase().includes(token.toLowerCase()),
+        `retired token ${token} re-entered the packaged assets as ${entry}`,
       );
     }
-  } finally {
-    f.close();
-    process.disconnect?.();
   }
-} else if (scenario >= 0) {
-  await runScenario(process.argv[scenario + 1]);
-} else {
-  test('fixed six-patch Native distribution is actually present and integrity-verified', async () => {
-    assert.equal(process.versions.node, lock.toolchain.node);
-    const result = await verifyCometDistribution({
-      projectRoot: repository,
-      lock,
-    });
-    assert.equal(result.status, 'PASS');
+});
+
+test('typed extension declarations match the composition and validate against the declaration schema', () => {
+  const schema = JSON.parse(fs.readFileSync(path.join(applicationRoot, 'extensions/schema.json'), 'utf8'));
+  const byId = new Map(composition.composition.extensions.map((entry) => [entry.id, entry]));
+  for (const file of composition.extensionDeclarations.files) {
+    const declaration = JSON.parse(fs.readFileSync(path.join(applicationRoot, 'extensions', file), 'utf8'));
+    const problems = schemaViolations(schema, declaration);
+    assert.deepEqual(problems, [], `${file} schema violations: ${problems.join(' | ')}`);
+    const compilerShaped = byId.get(declaration.id);
+    assert.ok(compilerShaped, `${file} declares unknown extension ${declaration.id}`);
+    assert.equal(declaration.afterStep, compilerShaped.afterStep, `${file} afterStep drifted from composition`);
+    assert.equal(declaration.skillId, compilerShaped.skillId, `${file} skillId drifted from composition`);
+    assert.deepEqual(
+      declaration.artifactRefs.map((entry) => entry.ref),
+      compilerShaped.artifactRefs,
+      `${file} artifactRefs drifted from composition`,
+    );
+    assert.deepEqual(declaration.validator, compilerShaped.validator, `${file} validator drifted from composition`);
+    assert.ok(declaration.semantics.length >= 20, `${file} must declare its gate semantics`);
+    assert.match(declaration.judgment, /lib\/delivery\/gate\.js/, `${file} must name the pure judgment owner`);
+    assert.equal(declaration.bindings, 'integrations/comet/application/bindings.mjs');
+    const expectedGate = EXPECTED_GATES.find((entry) => entry.extensionId === declaration.id);
+    assert.equal(declaration.gate, expectedGate.gate, `${file} gate identity mismatch`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 2. bindings: delegation to lib/delivery, fail-closed on everything else
+// ---------------------------------------------------------------------------
+
+test('createBindings registers exactly the declared validators (unregistered refs are impossible to miss)', () => {
+  assert.deepEqual(Object.keys(bindingsResult).sort(), ['validators']);
+  assert.equal(bindingsResult.validators.length, EXPECTED_GATES.length);
+  const declared = composition.composition.extensions.map((entry) => `${entry.validator.id}@${entry.validator.version}`);
+  const registered = bindingsResult.validators.map((entry) => `${entry.id}@${entry.version}`);
+  assert.deepEqual([...declared].sort(), [...registered].sort(), 'declared and registered validator sets must be identical');
+  for (const validator of bindingsResult.validators) {
+    assert.equal(typeof validator.validate, 'function', `${validator.id} must expose validate`);
+  }
+  // The delegation seam itself: bindings.mjs imports the real pure component
+  // and carries no verdict logic of its own.
+  const bindingsSource = fs.readFileSync(path.join(applicationRoot, 'bindings.mjs'), 'utf8');
+  assert.match(bindingsSource, /from '\.\.\/\.\.\/\.\.\/lib\/delivery\/gate\.js'/);
+  assert.match(bindingsSource, /\bevaluate\(/);
+});
+
+test('a claimed extension pass is accepted only when the real SDD.Gate.v1 evaluation passes (per gate)', async () => {
+  const launcher = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+  const entry = admitOne(launcher);
+  const inputs = inputsFixture([{ level: 'unit', capability: 'unit:node:test' }]);
+  for (const expected of EXPECTED_GATES) {
+    const validator = validatorRegistry.get(
+      `${composition.composition.extensions.find((item) => item.id === expected.extensionId).validator.id}@1`,
+    );
+    const evidence = { gate: expected.gate, inputs, receipts: [entry], policy: POLICY };
+    const decision = await validator.validate(extensionInput(expected.gate, evidence));
+    assert.deepEqual(decision, { accepted: true }, `${expected.gate} must accept a genuinely covered payload`);
+  }
+  // Delegation equivalence: the same payload judged directly by the pure gate.
+  assert.equal(evaluate(inputs, [entry], POLICY).verdict, 'pass');
+});
+
+test('bindings fail closed: no payload, cross-gate replay, blocked coverage, tampered receipt, refused judgment', async () => {
+  const rValidator = validatorRegistry.get('sdd.delivery.gate.r@1');
+  const vValidator = validatorRegistry.get('sdd.delivery.gate.v@1');
+  const launcher = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+  const entry = admitOne(launcher, { gate: 'R' });
+
+  // No gateEvidence payload at all.
+  const empty = await rValidator.validate({
+    outcome: { status: 'succeeded', output: { verdict: 'pass', sourceHash: 'x', artifactHashes: {} } },
   });
-  for (const [id, name] of Object.entries(scenarios))
-    test(name, { timeout: 120000 }, () => {
-      const env = { ...process.env };
-      delete env.NODE_TEST_CONTEXT;
-      const child = spawnSync(
-        process.execPath,
-        [fileURLToPath(import.meta.url), '--mechanism-case', id],
-        { cwd: repository, env, encoding: 'utf8', timeout: 110000 },
-      );
-      assert.equal(child.status, 0, child.stdout + child.stderr);
-      const proof = JSON.parse(child.stdout.trim().split('\n').at(-1));
-      assert.equal(proof.scope, 'component/native-runtime-mechanism');
-      assert.equal(proof.acceptedBusinessScenarios, 0);
-    });
+  assert.equal(empty.accepted, false);
+  assert.match(empty.reason, /no gateEvidence payload/);
+
+  // Cross-gate replay: an R payload cannot satisfy the V extension.
+  const replay = await vValidator.validate(
+    extensionInput('V', { gate: 'R', inputs: inputsFixture([{ level: 'unit', capability: 'unit:node:test' }]), receipts: [entry], policy: POLICY }),
+  );
+  assert.equal(replay.accepted, false);
+  assert.match(replay.reason, /bound to gate R/);
+
+  // Blocked coverage: a required capability with no receipt never passes.
+  const blocked = await rValidator.validate(
+    extensionInput('R', {
+      gate: 'R',
+      inputs: inputsFixture([{ level: 'unit', capability: 'unit:node:test' }, { level: 'ui', capability: 'console' }]),
+      receipts: [entry],
+      policy: POLICY,
+    }),
+  );
+  assert.equal(blocked.accepted, false);
+  assert.match(blocked.reason, /SDD gate R blocked: .*MISSING_OBSERVATION/);
+
+  // Tampered receipt: mutating the admitted entry content is rejected inside
+  // the delegated evaluation, not by local logic.
+  const tampered = structuredClone(entry);
+  tampered.envelope.result = 'fail';
+  const tamperDecision = await rValidator.validate(
+    extensionInput('R', { gate: 'R', inputs: inputsFixture([{ level: 'unit', capability: 'unit:node:test' }]), receipts: [tampered], policy: POLICY }),
+  );
+  assert.equal(tamperDecision.accepted, false);
+  assert.match(tamperDecision.reason, /TAMPERED_RECEIPT/);
+
+  // Refused judgment: a malformed test contract makes the gate throw; the
+  // validator surfaces the refusal instead of guessing.
+  const refused = await rValidator.validate(
+    extensionInput('R', { gate: 'R', inputs: { inputDigest: INPUT, testContract: { schemaVersion: 999 }, builderExecution: 'exec-builder-1' }, receipts: [entry], policy: POLICY }),
+  );
+  assert.equal(refused.accepted, false);
+  assert.match(refused.reason, /refused to judge/);
+});
+
+// ---------------------------------------------------------------------------
+// 3. negative mutants: the composition checker must reject every drift
+// ---------------------------------------------------------------------------
+
+test('negative mutants: missing extension, moved checkpoint, stripped artifactRefs, unregistered validator, broken order', () => {
+  const baseline = compositionViolations(composition, validatorRegistry);
+  assert.deepEqual(baseline, []);
+
+  const clone = () => structuredClone(composition);
+
+  const missing = clone();
+  missing.composition.extensions = missing.composition.extensions.filter((entry) => entry.id !== 'test-design-review');
+  assert.ok(
+    compositionViolations(missing, validatorRegistry).some((problem) => problem.includes('test-design-review')),
+    'a missing gate extension must be reported',
+  );
+
+  const moved = clone();
+  moved.composition.extensions.find((entry) => entry.id === 'build-plan-unique').afterStep = 'full.open.evidence';
+  assert.ok(
+    compositionViolations(moved, validatorRegistry).some((problem) => problem.includes('gate P must sit at')),
+    'a moved checkpoint must be reported',
+  );
+
+  const stripped = clone();
+  stripped.composition.extensions.find((entry) => entry.id === 'architecture-consensus').artifactRefs = [];
+  assert.ok(
+    compositionViolations(stripped, validatorRegistry).some((problem) => problem.includes('gate A must pin')),
+    'stripped artifactRefs must be reported',
+  );
+
+  const unregistered = clone();
+  unregistered.composition.extensions.find((entry) => entry.id === 'verify-whitebox').validator = {
+    id: 'sdd.delivery.gate.ghost',
+    version: '1',
+  };
+  assert.ok(
+    compositionViolations(unregistered, validatorRegistry).some((problem) => problem.includes('not registered by bindings.mjs')),
+    'an unregistered validator ref must be reported',
+  );
+
+  const reordered = clone();
+  reordered.composition.order = reordered.composition.order.filter((id) => id !== 'knowledge-project-closeout');
+  assert.ok(
+    compositionViolations(reordered, validatorRegistry).some((problem) => problem.includes('order must list every extension')),
+    'an incomplete order must be reported',
+  );
+
+  // A checkpoint outside the pristine whitelist is rejected on upstream
+  // evidence, even though the id and registry entries are fine.
+  const invented = clone();
+  invented.composition.extensions.find((entry) => entry.id === 'requirements-open').afterStep = 'full.archive.execute';
+  assert.ok(
+    compositionViolations(invented, validatorRegistry).some((problem) => problem.includes('not in the pristine whitelist')),
+    'a checkpoint invented outside the upstream whitelist must be reported',
+  );
+});
+
+test('declaration mutants: schema rejections for stripped refs, escaping paths and the patch-only Kt gate', () => {
+  const schema = JSON.parse(fs.readFileSync(path.join(applicationRoot, 'extensions/schema.json'), 'utf8'));
+  const declaration = JSON.parse(
+    fs.readFileSync(path.join(applicationRoot, 'extensions/test-design-review.json'), 'utf8'),
+  );
+
+  const noRefs = structuredClone(declaration);
+  noRefs.artifactRefs = [];
+  assert.ok(schemaViolations(schema, noRefs).some((problem) => problem.includes('artifactRefs: fewer than 1')));
+
+  const badPath = structuredClone(declaration);
+  badPath.artifactRefs[0].ref = '../escape.json';
+  assert.ok(
+    schemaViolations(schema, badPath).some((problem) => problem.includes('violates pattern')),
+    'an escaping artifact ref must fail the declaration schema',
+  );
+
+  const badGate = structuredClone(declaration);
+  badGate.gate = 'Kt';
+  assert.ok(
+    schemaViolations(schema, badGate).some((problem) => problem.includes('not in enum')),
+    'Kt is patch-only and must not be declarable as an extension gate',
+  );
+
+  const drifted = structuredClone(declaration);
+  drifted.afterStep = 'full.open.evidence';
+  const compilerShaped = composition.composition.extensions.find((entry) => entry.id === drifted.id);
+  assert.notEqual(drifted.afterStep, compilerShaped.afterStep, 'mutant premise: declaration drift is detectable by comparison');
+});
+
+// ---------------------------------------------------------------------------
+// 4. the 0005 Kt patch: applicability + semantics against the pristine tree
+// ---------------------------------------------------------------------------
+
+function applyPatchInTmp(patchBytes) {
+  const root = makeTmp('sdd-p24-patch-');
+  const target = path.join(root, 'domains/comet-classic/classic-resolver.ts');
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(path.join(pristineRoot, 'domains/comet-classic/classic-resolver.ts'), target);
+  const patchFile = path.join(root, '0005.patch');
+  fs.writeFileSync(patchFile, patchBytes);
+  const check = spawnSync('git', ['apply', '--check', patchFile], { cwd: root, encoding: 'utf8' });
+  if (check.status !== 0) return { root, check, applied: false, target };
+  const applied = spawnSync('git', ['apply', patchFile], { cwd: root, encoding: 'utf8' });
+  return { root, check, applied: applied.status === 0, target };
 }
+
+test('0005 applies to the pristine classic-resolver.ts and gates exactly the archived->completed seam', () => {
+  // Pristine old behavior: unconditional completion right after the archive
+  // invariant check (the L79-82 seam named by the task).
+  assert.match(resolverSource, /if \(classic\.archived\) return 'completed';/);
+
+  const result = applyPatchInTmp(fs.readFileSync(patchPath));
+  assert.equal(result.check.status, 0, `git apply --check failed: ${result.check.stderr}`);
+  assert.equal(result.applied, true, 'git apply must succeed on the pristine copy');
+  const patched = fs.readFileSync(result.target, 'utf8');
+
+  // The Kt predicate is consulted BEFORE 'completed' is returned.
+  const branchMatch = patched.match(/if \(classic\.archived\) \{[\s\S]*?return 'completed';\s*\}/);
+  assert.ok(branchMatch, 'patched resolver keeps the archived branch');
+  assert.match(branchMatch[0], /knowledgeCloseoutBlocked\(classic\)/, 'the branch must consult the Kt predicate');
+  assert.ok(
+    branchMatch[0].indexOf('knowledgeCloseoutBlocked(classic)') < branchMatch[0].indexOf("return 'completed'"),
+    'the predicate must run before completion',
+  );
+  assert.match(
+    branchMatch[0],
+    /`\$\{profile\}\.archive\.execute`/,
+    'a pending closeout parks the SAME run at the existing archive step',
+  );
+  // The predicate itself is present exactly once, with the fail-open default.
+  assert.equal(patched.match(/function knowledgeCloseoutBlocked/g)?.length, 1);
+  assert.match(patched, /if \(closeout === null \|\| closeout === undefined\) return false;/);
+});
+
+test('0005 predicate truth table: fail-open default, blocks only required-and-unmet', () => {
+  const result = applyPatchInTmp(fs.readFileSync(patchPath));
+  assert.equal(result.applied, true);
+  const patched = fs.readFileSync(result.target, 'utf8');
+  const fnMatch = patched.match(/function knowledgeCloseoutBlocked\(classic: ClassicState\): boolean \{[\s\S]*?\n\}/);
+  assert.ok(fnMatch, 'predicate source found in the patched file');
+  // Strip the two TypeScript-only annotations; the judgment logic itself is
+  // evaluated verbatim from the patched bytes.
+  const jsSource = fnMatch[0]
+    .replace('function knowledgeCloseoutBlocked(classic: ClassicState): boolean {', 'function knowledgeCloseoutBlocked(classic) {')
+    .replace(/\(\s*classic as ClassicState & \{[\s\S]*?\}\)\.knowledgeCloseout/, 'classic.knowledgeCloseout');
+  const predicate = new Function(`${jsSource}; return knowledgeCloseoutBlocked;`)();
+
+  assert.equal(predicate({ archived: true, phase: 'archive' }), false, 'absent field keeps the old completion behavior');
+  assert.equal(predicate({ knowledgeCloseout: null }), false, 'null keeps the old behavior');
+  assert.equal(predicate({ knowledgeCloseout: {} }), false, 'not required keeps the old behavior');
+  assert.equal(predicate({ knowledgeCloseout: { required: true } }), true, 'required and unmet blocks completion');
+  assert.equal(predicate({ knowledgeCloseout: { required: true, completed: false } }), true, 'required and explicitly unmet blocks completion');
+  assert.equal(predicate({ knowledgeCloseout: { required: true, completed: true } }), false, 'a completed closeout releases completion');
+  assert.equal(predicate({ knowledgeCloseout: { required: false, completed: false } }), false, 'an unrequired closeout never blocks');
+});
+
+test('0005 corruption is rejected: a broken patch never reaches an upstream tree', () => {
+  const bytes = fs.readFileSync(patchPath, 'utf8');
+  // Corrupt one context line (flip the archive invariant message).
+  const corrupted = bytes.replace(
+    "     throw new Error('archived=true requires phase=archive');",
+    "     throw new Error('archived=true requires phase=archive-DRIFT');",
+  );
+  assert.notEqual(corrupted, bytes, 'mutant premise: the patch bytes changed');
+  const result = applyPatchInTmp(Buffer.from(corrupted, 'utf8'));
+  assert.notEqual(result.check.status, 0, 'git apply --check must reject the corrupted patch');
+  assert.equal(result.applied, false);
+  // And the pristine file in that tmp root is untouched.
+  const target = fs.readFileSync(path.join(result.root, 'domains/comet-classic/classic-resolver.ts'), 'utf8');
+  assert.match(target, /if \(classic\.archived\) return 'completed';/, 'rejected patch leaves the pristine behavior in place');
+});
+
+test('the Kt obligation stays declared and honest: patch-only, write path and lock integration unclaimed', () => {
+  const closeout = composition.knowledgeCloseout;
+  assert.equal(closeout.gate, 'Kt');
+  assert.match(closeout.lockIntegration, /NOT APPLIED YET/, 'the lock must not silently claim 0005 is applied');
+  assert.match(closeout.writePath, /NOT IN THIS REVISION/);
+  // Kt must NOT appear as a composition extension (no post-archive hook
+  // upstream): the whitelist has no archive checkpoint to hang it on.
+  assert.ok(!checkpointWhitelist.has('full.archive.execute'));
+  assert.ok(
+    !composition.composition.extensions.some((entry) => entry.id.includes('team') || entry.afterStep.includes('archive')),
+    'Kt is patch-only; no extension may claim a post-archive checkpoint',
+  );
+  const unverified = composition.unverified.map((entry) => entry.item).join('\n');
+  assert.match(unverified, /compileWorkflowApplication/, 'compilation must stay an explicit UNVERIFIED item');
+  assert.match(unverified, /extension behavior inside a real Run/);
+});

@@ -1,0 +1,94 @@
+From: sdd-harness P2_4 worker <delivery-foundation-rearchitecture>
+Subject: [PATCH 0005] comet 0.5.0: Kt knowledge-closeout blocks resolver completion (ADR-0022 B1)
+Date: 2026-10-26  revision 2026-10-26-comet-050-adoption-v1
+
+Purpose (ADR-0022, decision B1 — the ONLY patch kept on the 0.5.0 baseline):
+Comet 0.5.0 has no post-archive hook (the resolver goes archived -> completed
+unconditionally, and the composition factory rejects post-archive extensions),
+so the managed-delivery Kt gate cannot be expressed as a composition
+extension. This minimal successor of the retired 0003 patch restores the
+Knowledge.Closeout.v1 semantic at the single seam that decides overall
+completion:
+
+  - Kp (project knowledge) stays a composition extension at
+    full.verify.check.evidence and is re-verified by the upstream
+    archive-time validateOutcome inside the archive directory;
+  - Kt (team knowledge) MAY resume AFTER the archive move, on the SAME Run:
+    while the obligation is pending, the resolver parks the run at
+    <profile>.archive.execute instead of reporting 'completed'; once the
+    closeout completes on that same Run, the resolver reports completion.
+
+Predicate semantics — fail-open default, managed opt-in only:
+  knowledgeCloseoutBlocked(classic) reads the OPTIONAL `knowledgeCloseout`
+  field ({ required?: boolean; completed?: boolean } | null) from the
+  ClassicState object given to the resolver. Absent/null (every upstream and
+  legacy state) returns false, i.e. the previous unconditional completion is
+  preserved byte-for-byte in behavior. The predicate blocks ONLY when
+  required === true && completed !== true.
+
+Explicit boundary (do not read more into this patch than it does):
+  - ONLY domains/comet-classic/classic-resolver.ts is touched. The WRITE path
+    that puts `knowledgeCloseout` onto the state (state-file wire keys, the
+    managed admission that records the closeout) is NOT part of this patch;
+    it belongs to the supply/admission wave (P1_3 adapter wiring) — this file
+    pins the read-side semantic and its default-open behavior only.
+  - Applying this patch (tools/comet supply step: upstream.lock.json
+    patches[] + rebuild) is NOT done by P2_4; P2_4 ships the patch file and
+    unit-verifies applicability + semantics against the pristine tree at
+    .sdd/vendor/comet/aeb1a6598034e28ce46b8422d4dbd8785e607bd7/pristine.
+  - <profile>.archive.execute is an EXISTING package step; parking there is
+    non-destructive (the archive command reports the already-archived
+    projection instead of re-archiving).
+
+Verified by: test/delivery-cases/2_4.mjs (git apply --check + apply against a
+pristine copy, target-line presence, and predicate truth-table evaluation on
+the patched source).
+
+diff --git a/domains/comet-classic/classic-resolver.ts b/domains/comet-classic/classic-resolver.ts
+index 0b274c706f375b6e1f811ff821d41988fa95f063..55e900b7e8a851f573ebb55d316963a125b56a66 100644
+--- a/domains/comet-classic/classic-resolver.ts
++++ b/domains/comet-classic/classic-resolver.ts
+@@ -70,6 +70,25 @@ function resolveArchive(profile: ClassicProfile, classic: ClassicState): string
+     : `${profile}.archive.confirm`;
+ }
+ 
++// [sdd-harness 0005 / ADR-0022 decision B1] Optional managed-delivery
++// knowledge-closeout obligation (Knowledge.Closeout.v1: Kt may resume after
++// archive in the SAME Run and is required before overall completion). The
++// field is supplied by the managed host layer on the in-memory ClassicState;
++// upstream and legacy states never carry it, so an absent or null value keeps
++// the original resolver behavior exactly (fail-open default).
++interface KnowledgeCloseoutObligation {
++  required?: boolean;
++  completed?: boolean;
++}
++
++function knowledgeCloseoutBlocked(classic: ClassicState): boolean {
++  const closeout = (classic as ClassicState & {
++    knowledgeCloseout?: KnowledgeCloseoutObligation | null;
++  }).knowledgeCloseout;
++  if (closeout === null || closeout === undefined) return false;
++  return closeout.required === true && closeout.completed !== true;
++}
++
+ export function resolveClassicStepId(
+   classic: ClassicState,
+   evidence: readonly ClassicEvidence[],
+@@ -79,7 +98,16 @@ export function resolveClassicStepId(
+   if (classic.archived && classic.phase !== 'archive') {
+     throw new Error('archived=true requires phase=archive');
+   }
+-  if (classic.archived) return 'completed';
++  if (classic.archived) {
++    // [sdd-harness 0005 / ADR-0022 decision B1] Kt gate: an archived managed
++    // run whose knowledge closeout obligation is still pending stays on the
++    // SAME Run parked at the archive step instead of resolving 'completed';
++    // the closeout completes on this Run and only then does the resolver
++    // report completion. States without the optional field (all upstream
++    // states) keep the previous unconditional completion.
++    if (knowledgeCloseoutBlocked(classic)) return `${profile}.archive.execute`;
++    return 'completed';
++  }
+   if (profile !== 'full' && classic.phase === 'design') {
+     throw new Error(`${profile} workflow cannot enter design`);
+   }

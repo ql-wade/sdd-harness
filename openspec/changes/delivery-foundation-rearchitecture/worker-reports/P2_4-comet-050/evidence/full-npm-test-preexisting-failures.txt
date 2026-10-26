@@ -1,0 +1,36 @@
+not ok 75 - C08 negative: the captured historical OpenSpec 1.3.1 response is replayed, not impersonated by the current host
+not ok 80 - P1_5 method dispatch content is pinned to the approved P1_6 and sealed 245-file source, without claiming execution
+not ok 81 - P1_5 source drift is refused even when a caller re-hashes its modified dispatch content
+not ok 147 - P31 formal managed scenario refuses component tests without a protected runtime source
+not ok 10 - test/comet-security-backports.test.js
+not ok 686 - V_INFRA_I02 contract: committed runner domain validates clean; qualify honors the exit contract
+not ok 688 - image admission gates stay coherent with the committed lock state (state-agnostic)
+not ok 689 - RED image gate: floating tag rejected; malformed digest rejected; unauthenticated digest never reaches ready
+not ok 696 - probes and stop are real subcommands: without a runner runtime they exit 2 with structured UNVERIFIED, never mock-green, never skip
+not ok 699 - catalog gap reporting: registered refs read RECORDED; a missing ref is still explicit readiness evidence, never silent
+not ok 700 - RW_RUNNER_BUILD: committed image lock mirrors the seven-patch upstream lock (patches, toolchain, openspec pin, freshly recomputed fingerprint)
+not ok 701 - RW_RUNNER_BUILD: committed Dockerfile consumes the full ordered patch chain and pins a deterministic managed entrypoint
+not ok 702 - RW_RUNNER_BUILD: validate enforces chain completeness, deterministic entrypoint, fingerprint freshness and upstream mirroring
+not ok 703 - RW_RUNNER_BUILD: build-plan exports the real build inputs; a lock that drifts from upstream refuses
+not ok 714 - Runner build export uses a dedicated allowlisted context rather than the checkout root
+not ok 715 - Runner materializes and reuses only exact public input bytes in an isolated build context without building
+not ok 716 - Runner refuses every unlisted or linked context path without changing the conflicting tree
+not ok 728 - Runner build-plan derives both immutable runtime sources and Python3.12.15 from its own lock
+not ok 729 - Runner refuses online acquisition and recipes that only retain required operations as inert text
+not ok 731 - Runner bootstrap plan seals both original CODE entries and ordinary infrastructure reads without selecting a provider
+not ok 732 - Runner bootstrap source view loads in a fresh Node project with only its locked public npm inputs
+not ok 734 - Runner bootstrap refuses an undeclared import and an unsafe file set before source materialization
+
+# P2_4 note (2026-10-26):
+# The full `npm test` run carries 22-37 failures depending on run (runner
+# image tests are heavy/slow). ALL of them are OUTSIDE P2_4's owned surface
+# and pre-exist this task's diff — verified by stashing P2_4's files and
+# re-running the two representative failing suites:
+#   - test/infra-runner-isolation.test.js: 32 failures with P2_4's 2_4.mjs
+#     stashed (runner image lock still pins the retired seven-patch 0.4.5
+#     chain while integrations/comet/upstream.lock.json is now 0.5.0 with
+#     patches == [] — relock fallout owned by the supply/runner waves).
+#   - test/comet-flow-acceptance.test.js: 1 failure with P2_4's files
+#     stashed (frozen-baseline message drift, P3_1 in-flight state).
+# P2_4's own delivery case and all adjacent delivery-component suites are
+# green (green-1 / green-2 evidence files).
