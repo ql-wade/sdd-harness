@@ -1,10 +1,23 @@
-// Spec Adapter closeout tests (task P3_4, A11/B08).
+// Spec Adapter closeout tests (task P3_4, A11/B08) — Comet 0.5.0 face
+// (revision 2026-10-26-comet-050-adoption-v1).
 //
-// lib/adapters/spec.js is the SOLE archive writer for change spec closeout:
-// it wraps the real openspec CLI and owns rehearse -> drift-check -> archive ->
-// readback, plus interruption recovery. Everything runs against a REAL
-// temporary OpenSpec project (complete change structure under os.tmpdir())
-// with the real host CLI binary — zero mocks, no fake spec engines.
+// lib/adapters/spec.js: the openspec CLI (pinned 1.11.0, resolved through the
+// shared COMET_OPENSPEC seam) is the ONLY archive writer. The component-only
+// path wraps the real openspec CLI and owns rehearse -> drift-check ->
+// archive -> readback plus interruption recovery; the managed path binds the
+// pinned Comet 0.5.0 aggregate (upstream aeb1a659 + the 0005 Kt closeout
+// patch, build de39629a…) whose native `comet archive` is the single command
+// that invokes the openspec CLI — no adapter path performs a second sync or
+// archive, and native refusals (including a missing Kp composition
+// obligation) are forwarded verbatim.
+//
+// Same-Run context semantics reused from the 0.4.5-era candidate diffs
+// (ab90cc2+74607cc, preserved in worker-reports/Root-handoff-20261026):
+// fixed location/stat identity closure, assertCurrent at the native boundary,
+// native runId equality — re-targeted to the 0.5.0 dual-name change state
+// file (comet-state.yaml / .comet.yaml) and the pinned build's
+// ensureClassicRuntimeRun instead of the retired .comet/run-state.json read
+// and the retired 0.4.5 comet-runtime.mjs asset.
 //
 // Covered semantics:
 //   A11  interruption recovery — pre-archive (stale lock reclaimed, closeout
@@ -25,7 +38,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const adapterPath = path.join(projectRoot, 'lib/adapters/spec.js');
@@ -604,16 +617,40 @@ test('all legacy write and rehearsal helpers refuse Comet-owned control variants
   }
 });
 
+
+// --- managed adapter face (Comet 0.5.0) ---------------------------------------
+//
+// The managed fixtures model the 0.5.0 on-disk contract: the change state is
+// a dual-name file comet-state.yaml / .comet.yaml carrying the flat projection
+// (change_id / run_id / phase / archived); .comet/run-state.json is NOT a
+// change-dir read in 0.5.0 (local Run records live under the workspace
+// runtime root). Native (runClassicCli / ensureClassicRuntimeRun from the
+// pinned build) is stubbed with a counter so every refusal below is proven to
+// happen BEFORE any native dispatch.
+
+const RUN_STATE_FILE = 'read-boundary-run';
+const writeChangeState = (changeDir, fields = {}) => {
+  fs.mkdirSync(changeDir, { recursive: true });
+  const merged = {
+    change_id: '00000000-0000-4000-8000-000000000003',
+    run_id: RUN_STATE_FILE,
+    phase: 'open',
+    archived: false,
+    ...fields,
+  };
+  const lines = Object.entries(merged).map(([key, value]) => `${key}: ${value}`);
+  fs.writeFileSync(path.join(changeDir, '.comet.yaml'), `${lines.join('\n')}\n`);
+};
+
 function managedReadFixture(t) {
   const root = writeProject({delta: FULL_DELTA});
   const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-read-boundary-'));
   t.after(() => { fs.rmSync(root,{recursive:true,force:true}); fs.rmSync(outside,{recursive:true,force:true}); });
-  const control = path.join(root,'openspec/changes/demo/.comet');
-  fs.mkdirSync(control,{recursive:true});
-  fs.writeFileSync(path.join(control,'run-state.json'),JSON.stringify({runId:'read-boundary-run',status:'running'}));
+  const changeDir = path.join(root,'openspec/changes/demo');
+  writeChangeState(changeDir);
   let runtimeCalls=0;
   const instance=adapter.createManagedSpecAdapter({projectRoot:root,runtime:{runClassicCli(){runtimeCalls++; throw new Error('read boundary must reject before Native');}}});
-  return {root,outside,control,instance,calls:()=>runtimeCalls};
+  return {root,outside,changeDir,stateFile:path.join(changeDir,'.comet.yaml'),instance,calls:()=>runtimeCalls};
 }
 
 test('managed inspect rejects a spec file link before reading external ordinary data', (t) => {
@@ -626,17 +663,37 @@ test('managed inspect rejects a spec file link before reading external ordinary 
   assert.equal(f.calls(),0);
 });
 
-test('managed inspect rejects null Run JSON with a coded error', (t) => {
-  const f=managedReadFixture(t);
-  fs.writeFileSync(path.join(f.control,'run-state.json'),'null');
-  assert.throws(()=>f.instance.inspect({change:'demo'}),e=>e.code==='MANAGED_RUNTIME_REQUIRED');
-  assert.equal(f.calls(),0);
+test('managed inspect rejects an empty and a malformed Run state file with a coded error', (t) => {
+  for (const content of ['', 'not a classic state at all\n', 'null']) {
+    const f=managedReadFixture(t);
+    fs.writeFileSync(f.stateFile,content);
+    assert.throws(()=>f.instance.inspect({change:'demo'}),e=>e.code==='MANAGED_RUNTIME_REQUIRED',`content=${JSON.stringify(content)}`);
+    assert.equal(f.calls(),0);
+  }
 });
 
-test('all managed read entries reject directory, Run and main-spec links before Native', async (t) => {
+test('managed reads refuse both 0.5.0 state file names present at once (upstream conflict rule)', async (t) => {
+  for (const method of ['inspect','closeout','recover']) {
+    const f=managedReadFixture(t);
+    fs.writeFileSync(path.join(f.changeDir,'comet-state.yaml'),'run_id: other\nphase: open\narchived: false\n');
+    await assert.rejects(async()=>f.instance[method]({change:'demo'}),e=>e.code==='STATE_FILE_CONFLICT',method);
+    assert.equal(f.calls(),0);
+  }
+});
+
+test('managed reads refuse an archived projection outside phase=archive (upstream invariant)', async (t) => {
+  for (const method of ['inspect','recover']) {
+    const f=managedReadFixture(t);
+    writeChangeState(f.changeDir,{phase:'build',archived:true});
+    await assert.rejects(async()=>f.instance[method]({change:'demo'}),e=>e.code==='MANAGED_RUNTIME_REQUIRED',method);
+    assert.equal(f.calls(),0);
+  }
+});
+
+test('all managed read entries reject directory, state-file and main-spec links before Native', async (t) => {
   for (const relative of ['openspec/changes/demo/specs/cap-a/spec.md',
-    'openspec/changes/demo/specs/cap-a','openspec/changes/demo/.comet/run-state.json',
-    'openspec/changes/demo/.comet','openspec/changes/demo','openspec/specs/cap-a/spec.md', 'openspec/specs/cap-a']) {
+    'openspec/changes/demo/specs/cap-a','openspec/changes/demo/.comet.yaml',
+    'openspec/changes/demo','openspec/specs/cap-a/spec.md', 'openspec/specs/cap-a']) {
     const f=managedReadFixture(t);
     const source=path.join(f.root,relative);
     const external=path.join(f.outside,'ordinary');
@@ -654,7 +711,7 @@ test('archived managed projection and pure main readback reject links and relati
   const f=managedReadFixture(t);
   const archive=path.join(f.root,'openspec/changes/archive/2026-10-25-demo');
   fs.mkdirSync(path.dirname(archive),{recursive:true});
-  fs.renameSync(path.join(f.root,'openspec/changes/demo'),archive);
+  fs.renameSync(f.root+'/openspec/changes/demo',archive);
   const external=path.join(f.outside,'ordinary.md'); fs.writeFileSync(external,'ordinary outside data');
   const target=path.join(archive,'specs/cap-a/spec.md'); fs.unlinkSync(target);fs.symlinkSync(external,target);
   for(const method of ['inspect','closeout','recover'])
@@ -668,15 +725,19 @@ test('archived managed projection and pure main readback reject links and relati
   assert.throws(()=>adapter.readBackMainSpecs({projectRoot:f.root,summary:{capabilities:{'cap-a':{added:[],modified:[],removed:[]}}}}),e=>e.code==='PROJECT_PATH_UNSAFE');
 });
 
-test('Run and summary JSON shape failures use coded errors without Native or raw content', async (t) => {
+test('Run and summary shape failures use coded errors without Native or raw content', async (t) => {
   const f=managedReadFixture(t);
-  for(const value of [null,[],true,1,'ordinary',{}, {runId:null,status:'running'},
-    {runId:'read-boundary-run',status:{}}, {runId:'read-boundary-run',status:'unknown'}]) {
-    fs.writeFileSync(path.join(f.control,'run-state.json'),JSON.stringify(value));
+  const bodies = ['', 'ordinary', 'null',
+    'change_id: c\nrun_id: \nphase: open\narchived: false\n',
+    'change_id: c\nphase: open\narchived: false\n',
+    'change_id: c\nrun_id: r\nphase: teleporting\narchived: false\n',
+    'change_id: c\nrun_id: r\nphase: open\narchived: maybe\n'];
+  for (const value of bodies) {
+    fs.writeFileSync(f.stateFile,value);
     for(const method of ['inspect','closeout','recover'])
-      await assert.rejects(async()=>f.instance[method]({change:'demo'}),e=>e.code==='MANAGED_RUNTIME_REQUIRED' && !e.message.includes('ordinary'));
+      await assert.rejects(async()=>f.instance[method]({change:'demo'}),e=>e.code==='MANAGED_RUNTIME_REQUIRED' && !e.message.includes('ordinary'),`${method} ${JSON.stringify(value)}`);
   }
-  for(const summary of [null,[],{capabilities:null},{capabilities:[]},{capabilities:{sample:null}},
+  for (const summary of [null,[],{capabilities:null},{capabilities:[]},{capabilities:{sample:null}},
     {capabilities:{sample:{added:[null],modified:[],removed:[]}}}])
     assert.throws(()=>adapter.readBackMainSpecs({projectRoot:f.root,summary}),e=>e.code==='SUMMARY_INVALID');
   assert.equal(f.calls(),0);
@@ -695,4 +756,193 @@ test('legacy summary, rehearsal and archived recovery share the project-bound re
   assert.throws(()=>adapter.recoverCloseout({projectRoot:root,change:'demo'}),e=>e.code==='PROJECT_PATH_UNSAFE');
   assert.equal(fs.existsSync(path.join(archive,'.spec-closeout-state.json')),false);
   assert.equal(fs.readFileSync(external,'utf8'),'ordinary outside requirement');
+});
+
+test('managed closeout reconciles an already-archived Run with zero native dispatch and no second archive', async (t) => {
+  const f=managedReadFixture(t);
+  const archive=path.join(f.root,'openspec/changes/archive/2026-10-25-demo');
+  fs.mkdirSync(path.dirname(archive),{recursive:true});
+  writeChangeState(f.root+'/openspec/changes/demo',{phase:'archive',archived:true});
+  fs.renameSync(path.join(f.root,'openspec/changes/demo'),archive);
+  // Model the authoritative post-archive state: the openspec CLI already
+  // applied FULL_DELTA to the main specs when it moved the change — the
+  // MODIFIED description, the ADDED requirement, and the REMOVED one gone.
+  const applied=readMainSpec(f.root)
+    .replace('authenticate users.','authenticate users with rate limiting.')
+    .split('### Requirement: Legacy flow')[0]
+    +'### Requirement: Audit trail\nThe system SHALL log auth events.\n\n#### Scenario: Login logged\n- **WHEN** any login attempt\n- **THEN** audit record written\n';
+  fs.writeFileSync(path.join(f.root,'openspec/specs/cap-a/spec.md'),applied);
+  // The archived delta must read back green against that state — completion
+  // without dispatching any writer.
+  const result=await f.instance.closeout({change:'demo'});
+  assert.equal(result.ok,true,JSON.stringify(result.readback?.mismatches));
+  assert.equal(result.reconciled,'already-archived');
+  assert.equal(result.archived,true);
+  assert.equal(result.archiveName,'2026-10-25-demo');
+  assert.equal(result.native,null,'no second archive or sync may be dispatched');
+  assert.equal(result.overallCompletionEligible,false);
+  assert.equal(f.calls(),0);
+  assert.deepEqual(fs.readdirSync(path.join(f.root,'openspec/changes/archive')),['2026-10-25-demo']);
+});
+
+test('managed closeout forwards a native refusal verbatim and leaves the active position untouched', async (t) => {
+  const f=managedReadFixture(t);
+  const native={exitCode:1,stdout:'{"command":"archive"}\n',stderr:'FATAL: phase is \'verify\', expected \'archive\''};
+  let argv=null;
+  const instance=adapter.createManagedSpecAdapter({projectRoot:f.root,runtime:{runClassicCli(received){argv=received;return {...native};}}});
+  const refused=await instance.closeout({change:'demo'});
+  assert.equal(refused.ok,false);
+  assert.deepEqual(argv,['--json','archive','demo'],'the one native archive command');
+  assert.equal(refused.native.exitCode,1);
+  assert.equal(refused.native.stderr,native.stderr,'the native refusal is preserved verbatim, never masked');
+  assert.equal(refused.archived,false);
+  assert.equal(fs.existsSync(f.changeDir),true,'a refused closeout must leave the active change in place');
+  assert.equal(fs.existsSync(path.join(f.root,'openspec/changes/archive')),false);
+});
+
+test('managed closeout refuses a Run substitution behind a successful native exit', async (t) => {
+  const f=managedReadFixture(t);
+  const instance=adapter.createManagedSpecAdapter({projectRoot:f.root,runtime:{
+    runClassicCli(){ writeChangeState(f.changeDir,{run_id:'another-run'}); return {exitCode:0,stdout:''}; }}});
+  await assert.rejects(instance.closeout({change:'demo'}),e=>e.code==='RUN_MISMATCH');
+});
+
+test('managed closeout refuses scenario-dropping MODIFIED deltas and stale inspections before Native', async (t) => {
+  const lossy=writeProject({delta:TRUNCATED_DELTA});
+  t.after(()=>fs.rmSync(lossy,{recursive:true,force:true}));
+  writeChangeState(path.join(lossy,'openspec/changes/demo'));
+  let calls=0;
+  const instance=adapter.createManagedSpecAdapter({projectRoot:lossy,runtime:{runClassicCli(){calls++;throw new Error('must refuse before Native');}}});
+  await assert.rejects(instance.closeout({change:'demo'}),e=>e.code==='SCENARIO_PRESERVATION_VIOLATION');
+  const f=managedReadFixture(t);
+  const inspect=f.instance.inspect({change:'demo'});
+  fs.appendFileSync(path.join(f.root,'openspec/changes/demo/specs/cap-a/spec.md'),'\n');
+  await assert.rejects(f.instance.closeout({change:'demo',expectedSummaryDigest:inspect.digest}),e=>e.code==='SPEC_DRIFT');
+  assert.equal(calls,0);
+});
+
+// --- same-Run context against the pinned 0.5.0 build ---------------------------
+
+// The live fixture binds the REAL pinned aggregate named by
+// integrations/comet/upstream.lock.json (upstream 0.5.0 aeb1a659 + the 0005 Kt
+// closeout patch, build fingerprint de39629a…). runClassicCli comes from the
+// build's own runtime asset; ensureClassicRuntimeRun from its dist module.
+// Same-Run boundary semantics reused from the 0.4.5-era candidate
+// (ab90cc2+74607cc): location/stat identity closure + assertCurrent at the
+// native boundary + native runId equality.
+const lock = JSON.parse(fs.readFileSync(path.join(projectRoot,'integrations/comet/upstream.lock.json')));
+const buildFingerprint = sha256(JSON.stringify({archive:lock.source.sha256,
+  patches:lock.patches.map(({path,sha256})=>({path,sha256})),toolchain:lock.toolchain}));
+const cometBuild = path.join(projectRoot,'.sdd/vendor/comet',lock.source.commit,'builds',buildFingerprint);
+const cometRuntimeUrl = pathToFileURL(path.join(cometBuild,'work/assets/skills/comet/scripts/comet-runtime.mjs')).href;
+const cometRunModuleUrl = pathToFileURL(path.join(cometBuild,'work/dist/domains/comet-classic/classic-runtime-run.js')).href;
+
+async function pinnedRunFixture(t, mutate = () => {}) {
+  assert.equal(lock.package.version,'0.5.0','the pinned Comet supply must be the 0.5.0 baseline');
+  assert.equal(lock.source.commit,'aeb1a6598034e28ce46b8422d4dbd8785e607bd7');
+  const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'spec-pinned-run-'));
+  t.after(()=>fs.rmSync(scratch,{recursive:true,force:true}));
+  const root=path.join(scratch,'root');
+  for (const rel of ['openspec/changes/archive','openspec/specs/cap-a','docs/superpowers/plans',
+    'docs/superpowers/specs','docs/superpowers/reports','.comet']) fs.mkdirSync(path.join(root,rel),{recursive:true});
+  fs.writeFileSync(path.join(root,'.comet/config.yaml'),
+    'schema: comet.project.v1\ndefault_workflow: classic\nworkflows: [classic]\nclassic:\n  artifact_layout: legacy\n');
+  fs.writeFileSync(path.join(root,'openspec/config.yaml'),'schema: spec-driven\n');
+  fs.writeFileSync(path.join(root,'openspec/specs/cap-a/spec.md'),MAIN_SPEC);
+  const native = await import(cometRuntimeUrl);
+  const runModule = await import(cometRunModuleUrl);
+  const priorHome=process.env.HOME;
+  process.env.HOME=path.join(scratch,'home');
+  fs.mkdirSync(process.env.HOME,{recursive:true});
+  const initialized = await native.runClassicCli(['--json','state','init','demo','full'],undefined,
+    {projectRoot:root,invocationCwd:root});
+  assert.equal(initialized.exitCode,0,initialized.stderr);
+  const changeDir=path.join(root,'openspec/changes/demo');
+  const initial=await runModule.ensureClassicRuntimeRun(changeDir);
+  const deltaDir=path.join(changeDir,'specs/cap-a'); fs.mkdirSync(deltaDir,{recursive:true});
+  fs.writeFileSync(path.join(deltaDir,'spec.md'),FULL_DELTA);
+  const instance=adapter.createManagedSpecAdapter({projectRoot:root,runtime:{
+    runClassicCli:native.runClassicCli,
+    async ensureClassicRuntimeRun(current) {
+      const context=await runModule.ensureClassicRuntimeRun(current);
+      await mutate(current,context);
+      return context;
+    }}});
+  return {root,changeDir,instance,runId:initial.run.runId,restore(){ if(priorHome===undefined) delete process.env.HOME; else process.env.HOME=priorHome; }};
+}
+
+test('managed Run context refuses missing, foreign, ambiguous and linked Run locations before Native', async (t) => {
+  for (const fault of ['missing-change','missing-state','foreign-run','active-plus-archive','two-archives',
+    'state-link','directory-link','archive-root-link','escape','unknown-location-option']) await t.test(fault, async (t) => {
+    const f = await pinnedRunFixture(t);
+    t.after(()=>f.restore());
+    let calls = 0;
+    const instance=adapter.createManagedSpecAdapter({projectRoot:f.root,runtime:{runClassicCli(){throw new Error('not a CLI test');},
+      async ensureClassicRuntimeRun(current) { calls++; throw new Error('unsafe context reached Native'); }}});
+    const request = {change:'demo',expectedRunId:f.runId};
+    let code = 'PROJECT_PATH_UNSAFE';
+    const archive = path.join(f.root,'openspec/changes/archive/2026-10-26-demo');
+    if (fault === 'missing-change') { fs.rmSync(f.changeDir,{recursive:true}); code='CHANGE_MISSING'; }
+    if (fault === 'missing-state') { fs.rmSync(path.join(f.changeDir,'.comet.yaml')); code='MANAGED_RUNTIME_REQUIRED'; }
+    if (fault === 'foreign-run') { request.expectedRunId='foreign-run'; code='RUN_MISMATCH'; }
+    if (fault === 'active-plus-archive' || fault === 'two-archives') {
+      fs.cpSync(f.changeDir,archive,{recursive:true}); code='AMBIGUOUS_ARCHIVE';
+      if (fault === 'two-archives') fs.renameSync(f.changeDir,path.join(f.root,'openspec/changes/archive/2026-10-25-demo'));
+    }
+    if (fault === 'state-link') {
+      const external = path.join(f.root,'outside-run.yaml'); fs.renameSync(path.join(f.changeDir,'.comet.yaml'),external);
+      fs.symlinkSync(external,path.join(f.changeDir,'.comet.yaml'));
+    }
+    if (fault === 'directory-link') { fs.renameSync(f.changeDir,path.join(f.root,'outside-demo')); fs.symlinkSync(path.join(f.root,'outside-demo'),f.changeDir); }
+    if (fault === 'archive-root-link') { fs.rmSync(path.join(f.root,'openspec/changes/archive'),{recursive:true,force:true}); fs.symlinkSync(path.join(f.root,'outside'),path.join(f.root,'openspec/changes/archive')); }
+    if (fault === 'escape') { request.change='../demo'; code='CHANGE_INVALID'; }
+    if (fault === 'unknown-location-option') { request.archive=archive; code='CHANGE_INVALID'; }
+    await assert.rejects(instance.readRunContext(request),(error)=>error.code===code);
+    assert.equal(calls,0,'a read must not create or repair an absent or untrusted original Run');
+  });
+});
+
+test('managed Run context retains Native state and an immutable same-location identity across archive readback', async (t) => {
+  const f = await pinnedRunFixture(t);
+  t.after(()=>f.restore());
+  const request = {change:'demo',expectedRunId:f.runId};
+  const active = await f.instance.readRunContext(request);
+  assert.equal(active.run.runId,f.runId); assert.equal(active.classic.phase,'open');
+  assert.equal(active.changeDir,fs.realpathSync(f.changeDir)); assert.equal(active.archived,false);
+  const archive = path.join(f.root,'openspec/changes/archive/2026-10-26-demo');
+  fs.mkdirSync(path.dirname(archive),{recursive:true}); fs.renameSync(f.changeDir,archive);
+  assert.throws(()=>active.assertCurrent(),(error)=>error.code==='RUN_LOCATION_CHANGED');
+  const archived = await f.instance.readRunContext(request);
+  assert.equal(archived.changeDir,fs.realpathSync(archive)); assert.equal(archived.archived,true);
+  assert.equal(archived.run.runId,f.runId); assert.equal(archived.classic.phase,'open');
+  archived.run.runId='caller-mutated-view';
+  request.expectedRunId='caller-mutated-request';
+  assert.equal(archived.assertCurrent().projection.runId,f.runId,'returned data and request mutations cannot redirect the closed-over identity');
+  assert.equal(fs.existsSync(f.changeDir),false);
+});
+
+test('managed Run context rejects location races, replacement directories and a different Native Run result', async (t) => {
+  for (const fault of ['moved','replacement','foreign-disk-run','foreign-native-run','new-conflict','state-link']) await t.test(fault,async(t)=>{
+    const f = await pinnedRunFixture(t,(directory,context)=>{
+      const archive = path.join(path.dirname(directory),'archive/2026-10-26-demo');
+      if (fault === 'moved' || fault === 'replacement') {
+        fs.mkdirSync(path.dirname(archive),{recursive:true}); fs.renameSync(directory,archive);
+        if (fault === 'replacement') { fs.cpSync(archive,directory,{recursive:true}); fs.rmSync(archive,{recursive:true}); }
+      }
+      if (fault === 'foreign-disk-run') {
+        const file=path.join(directory,'.comet.yaml');
+        fs.writeFileSync(file,fs.readFileSync(file,'utf8').replace(/run_id: .*/,'run_id: other-run'));
+      }
+      if (fault === 'foreign-native-run') context.run.runId='other-run';
+      if (fault === 'new-conflict') { fs.mkdirSync(path.dirname(archive),{recursive:true});fs.cpSync(directory,archive,{recursive:true}); }
+      if (fault === 'state-link') {
+        const source=path.join(directory,'.comet.yaml'), target=path.join(directory,'original-state.yaml');
+        fs.renameSync(source,target);fs.symlinkSync(target,source);
+      }
+    });
+    t.after(()=>f.restore());
+    const code = ['moved','replacement'].includes(fault) ? 'RUN_LOCATION_CHANGED'
+      : fault === 'new-conflict' ? 'AMBIGUOUS_ARCHIVE' : fault === 'state-link' ? 'PROJECT_PATH_UNSAFE' : 'RUN_MISMATCH';
+    await assert.rejects(f.instance.readRunContext({change:'demo',expectedRunId:f.runId}),(error)=>error.code===code);
+  });
 });
