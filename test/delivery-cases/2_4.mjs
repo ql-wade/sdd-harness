@@ -48,6 +48,7 @@ import test, { after } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createLaunchAuthority, admitEvidence } from '../../lib/delivery/evidence.js';
 import { evaluate } from '../../lib/delivery/gate.js';
+import { classicCompositionStartRequest } from '../../lib/adapters/comet.js';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const applicationRoot = path.join(projectRoot, 'integrations/comet/application');
@@ -538,16 +539,82 @@ function inputsFixture(requiredChecks) {
   return { inputDigest: INPUT, testContract: contractFixture(requiredChecks), builderExecution: 'exec-builder-1' };
 }
 
-function extensionInput(gate, evidence) {
+function extensionInput(gate, evidence, options = {}) {
   return {
-    run: { runId: 'run-p2_4' },
-    action: { id: 'action-extension-1', stepId: `classic.extension.${gate}` },
+    run: options.run ?? { runId: 'run-p2_4' },
+    action: options.action ?? { id: 'action-extension-1', stepId: `classic.extension.${gate}` },
     outcome: {
       actionId: 'action-extension-1',
       status: 'succeeded',
-      output: { verdict: 'pass', sourceHash: 'domain-checked', artifactHashes: {}, gateEvidence: evidence },
+      output: {
+        verdict: 'pass',
+        sourceHash: 'domain-checked',
+        artifactHashes: options.artifactHashes ?? {},
+        gateEvidence: evidence,
+      },
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// P2_4-r3 blocker contract helpers (B-①/B-②/B-③, evidence comet-050-run)
+//
+// The canonical bundle serialization this file and the packaged validators
+// MUST agree on byte-for-byte (B-③): recursively key-sorted JSON, 2-space
+// indent, trailing newline — a pure function of the judged evidence payload
+// and the evaluate() result, with NO epoch-derived or random field.
+// ---------------------------------------------------------------------------
+
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value !== null && typeof value === 'object') {
+    const sorted = {};
+    for (const key of Object.keys(value).sort()) sorted[key] = canonicalize(value[key]);
+    return sorted;
+  }
+  return value;
+}
+
+function canonicalGateBundle(gate, artifactRef, evidence, verdict) {
+  return {
+    schema: 'sdd.delivery.gate.receipt-bundle.v1',
+    kind: 'gate-receipt-bundle',
+    gate,
+    artifactRef,
+    hashBinding: 'artifactHashes',
+    writtenBy: 'extension-execution',
+    inputs: evidence.inputs,
+    receipts: evidence.receipts,
+    policy: evidence.policy,
+    evaluatedBy: `sdd.delivery.gate.${gate.toLowerCase()}@1 (packaged bindings -> lib/delivery/gate.js evaluate)`,
+    verdict: verdict.verdict,
+    receipt: verdict.receipt,
+  };
+}
+
+function canonicalBundleBytes(gate, artifactRef, evidence, verdict) {
+  return Buffer.from(`${JSON.stringify(canonicalize(canonicalGateBundle(gate, artifactRef, evidence, verdict)), null, 2)}\n`, 'utf8');
+}
+
+function canonicalBundleHash(gate, artifactRef, evidence, verdict) {
+  return shaBytes(canonicalBundleBytes(gate, artifactRef, evidence, verdict));
+}
+
+// The static artifact ref each gate extension declares (single source:
+// composition.json, cross-pinned against bindings.mjs by the B-③ test).
+const gateArtifactRef = (gate) => {
+  const expected = EXPECTED_GATES.find((entry) => entry.gate === gate);
+  const extension = composition.composition.extensions.find((entry) => entry.id === expected.extensionId);
+  return extension.artifactRefs[0];
+};
+
+// A live-shape passing outcome for one gate: real admission, real evaluate
+// pass, canonical artifact hashes (the B-③ contract).
+function canonicalPassInput(gate, evidence, verdict) {
+  const ref = gateArtifactRef(gate);
+  return extensionInput(gate, evidence, {
+    artifactHashes: { [ref]: canonicalBundleHash(gate, ref, evidence, verdict) },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -802,7 +869,8 @@ test('a claimed extension pass is accepted only when the real SDD.Gate.v1 evalua
       `${composition.composition.extensions.find((item) => item.id === expected.extensionId).validator.id}@1`,
     );
     const evidence = { gate: expected.gate, inputs, receipts: [entry], policy: POLICY };
-    const decision = await validator.validate(extensionInput(expected.gate, evidence));
+    const verdict = evaluate(inputs, [entry], POLICY);
+    const decision = await validator.validate(canonicalPassInput(expected.gate, evidence, verdict));
     assert.deepEqual(decision, { accepted: true }, `${expected.gate} must accept a genuinely covered payload`);
   }
   // Delegation equivalence: the same payload judged directly by the pure gate.
@@ -858,6 +926,333 @@ test('bindings fail closed: no payload, cross-gate replay, blocked coverage, tam
   );
   assert.equal(refused.accepted, false);
   assert.match(refused.reason, /refused to judge/);
+});
+
+// ---------------------------------------------------------------------------
+// 2b. P2_4-r3 upstream blockers B-①/B-②/B-③ (pilot evidence comet-050-run)
+// ---------------------------------------------------------------------------
+
+test('B-① managed start: the start request carries a canonical initialState with isolation=current; the null-isolation configure deadlock is unreachable through the managed face', () => {
+  // Three-sided upstream deadlock proof from the pristine 0.5.0 source: with
+  // state.isolation=null the configure step can never be passed.
+  const configureBlock = pristineStepBlock('full.build.configure');
+  assert.ok(configureBlock, 'the pristine workflow still declares full.build.configure');
+  // (a) the step validator demands non-null state isolation and output parity.
+  assert.match(
+    classicWorkflowSource,
+    /!output \|\|\s*\n\s*!state\.isolation \|\|/,
+    'the buildConfigurationValidator must still refuse outcomes while state.isolation is null',
+  );
+  // (b) the step output schema forbids null isolation (no echo-null escape).
+  assert.match(
+    configureBlock,
+    /isolation: \{ enum: \['current', 'branch', 'worktree'\] \}/,
+    'the configure output schema must still forbid null isolation',
+  );
+  // (c) the confirm transition refuses null isolation and refuses failed
+  // configures, and the factory workflow carries no definition initialState
+  // (so a definition-side default cannot exist through the compile seam).
+  assert.match(
+    classicWorkflowSource,
+    /state\.isolation === null \|\|/,
+    'the confirm transition must still throw on null isolation',
+  );
+  assert.match(
+    classicWorkflowSource,
+    /Classic Build configuration did not succeed/,
+    'a failed configure outcome must still be refused by the transition',
+  );
+  assert.equal(factory.workflow.initialState, undefined, 'the classic factory workflow declares no definition initialState');
+
+  // The schema-legal-but-dead pin: null isolation PARSES against the pristine
+  // stateSchema (the deadlock is not caught at start).
+  assert.deepEqual(
+    schemaViolations(factory.workflow.stateSchema, { ...canonicalManagedInitialState(), isolation: null }, 'initialState'),
+    [],
+    'null isolation is schema-legal at start — exactly why the deadlock was silent',
+  );
+
+  // The managed face: the adapter start request builder now ALWAYS constructs
+  // the canonical initialState with isolation 'current'.
+  const CHANGE = 'p24-r3-start-probe';
+  const start = classicCompositionStartRequest({
+    change: CHANGE,
+    changeDir: `openspec/changes/${CHANGE}`,
+    workflowId: WORKFLOW_ID,
+    workflowVersion: '1',
+    baseRef: '8be26dc13a20732c1497ae708693ffca7a071ffd',
+    createdAt: '2026-10-26',
+  });
+  assert.equal(start.initialState.isolation, 'current', 'the managed start must carry isolation=current');
+  assert.deepEqual(
+    schemaViolations(factory.workflow.stateSchema, start.initialState, 'initialState'),
+    [],
+    'the managed initialState must satisfy the pristine full-profile stateSchema',
+  );
+
+  // The composition package declares the same start contract (P2_4 Owns
+  // face): declaration and adapter constructor must agree field-for-field on
+  // the default construction; the two provenance fields are the only
+  // refinable ones.
+  const declared = composition.startContract;
+  assert.ok(declared, 'composition.json declares the managed start contract');
+  assert.equal(declared.initialState.isolation, 'current');
+  const defaultStart = classicCompositionStartRequest({
+    change: CHANGE,
+    changeDir: `openspec/changes/${CHANGE}`,
+    workflowId: WORKFLOW_ID,
+    workflowVersion: '1',
+  });
+  assert.deepEqual(Object.keys(declared.initialState).sort(), Object.keys(defaultStart.initialState).sort());
+  for (const [key, value] of Object.entries(declared.initialState)) {
+    assert.deepEqual(defaultStart.initialState[key], value, `startContract.${key} must equal the constructed initialState`);
+  }
+  assert.equal(start.initialState.baseRef, '8be26dc13a20732c1497ae708693ffca7a071ffd', 'baseRef is the one refinable provenance field');
+  assert.equal(start.initialState.isolation, 'current', 'isolation is never refinable');
+  assert.deepEqual(
+    schemaViolations(factory.workflow.stateSchema, declared.initialState, 'startContract.initialState'),
+    [],
+    'the declared start contract must itself satisfy the pristine stateSchema',
+  );
+
+  // Fail closed: a caller cannot smuggle a null-isolation (or any foreign)
+  // initialState through the managed constructor.
+  assert.throws(
+    () => classicCompositionStartRequest({
+      change: CHANGE,
+      changeDir: `openspec/changes/${CHANGE}`,
+      workflowId: WORKFLOW_ID,
+      workflowVersion: '1',
+      initialState: { isolation: null },
+    }),
+    (error) => error.code === 'START_STATE_CONSTRUCTED',
+    'the constructor derives the initialState itself and refuses caller-supplied state',
+  );
+});
+
+// The canonical managed initialState field set, mirroring the live-proven
+// pilot start (r2/r3) minus the deadlock: isolation fixed to 'current'.
+function canonicalManagedInitialState() {
+  return {
+    workflow: 'full', language: 'en', phase: 'open', contextCompression: 'off',
+    buildMode: null, buildPause: null, subagentDispatch: null, tddMode: null,
+    reviewMode: 'standard', isolation: 'current', boundBranch: null, verifyMode: null,
+    autoTransition: true, baseRef: null, designDoc: null, plan: null,
+    verifyResult: 'pending', verifyFailures: 0, checkEpoch: 0, verificationReport: null,
+    branchStatus: 'pending', createdAt: null, verifiedAt: null,
+    archiveConfirmation: null, archived: false, directOverride: null,
+    handoffContext: null, handoffHash: null, classicProfile: 'full', classicMigration: 1,
+  };
+}
+
+test('B-② evidence dispatch: submissionIds are epoch-qualified and content-derived; the packaged validators refuse stale, colliding and cross-epoch activation bindings', async () => {
+  const adaptersModule = await import(pathToFileURL(path.join(projectRoot, 'lib/adapters/comet.js')).href);
+  const classicCompositionRecordEvidenceRequest = adaptersModule.classicCompositionRecordEvidenceRequest;
+  assert.equal(typeof classicCompositionRecordEvidenceRequest, 'function', 'the adapter face must construct record-evidence dispatch requests (B-②)');
+  const base = {
+    change: 'p24-r3-evidence-probe',
+    expectedRevision: 7,
+    evidenceId: 'wait-plan-evidence-1',
+    kind: 'classic-build-plan',
+    ref: 'docs/superpowers/plans/p24-r3-evidence-probe.md',
+    contentHash: shaBytes('plan-bytes-r3'),
+  };
+  // The adapter derives the submissionId itself: epoch-qualified and derived
+  // from the content it names, deterministic within one epoch, distinct
+  // across epochs (the P3_2 collision class).
+  const epoch4 = classicCompositionRecordEvidenceRequest({ ...base, checkEpoch: 4 });
+  const epoch5 = classicCompositionRecordEvidenceRequest({ ...base, checkEpoch: 5 });
+  const epoch4again = classicCompositionRecordEvidenceRequest({ ...base, checkEpoch: 4 });
+  assert.match(epoch4.submissionId, /epoch-4/u, 'the submissionId must carry the dispatch epoch');
+  assert.notEqual(epoch4.submissionId, epoch5.submissionId, 'submissionIds must differ across epochs');
+  assert.equal(epoch4.submissionId, epoch4again.submissionId, 'the submissionId is deterministic within one epoch+content');
+  assert.match(epoch4.submissionId, /[0-9a-f]{16}$/u, 'the submissionId derives from the evidence content');
+  // The request carries exactly the upstream record-evidence operation fields.
+  assert.deepEqual(
+    Object.keys(epoch4).sort(),
+    ['contentHash', 'evidenceId', 'expectedRevision', 'kind', 'operation', 'ref', 'runId', 'submissionId'],
+  );
+  assert.equal(epoch4.operation, 'record-evidence');
+  assert.equal(epoch4.runId, base.change);
+  // Fail closed: a raw caller submissionId is refused (no injection face).
+  assert.throws(
+    () => classicCompositionRecordEvidenceRequest({ ...base, checkEpoch: 4, submissionId: 'p32-reused-id' }),
+    (error) => error.code === 'SUBMISSION_ID_DERIVED',
+  );
+  assert.throws(
+    () => classicCompositionRecordEvidenceRequest({ ...base }),
+    (error) => error.code === 'CHECK_EPOCH_REQUIRED',
+    'an epoch-less evidence request reproduces the collision class and must be refused',
+  );
+  assert.throws(
+    () => classicCompositionRecordEvidenceRequest({ ...base, checkEpoch: 4, contentHash: 'not-a-digest' }),
+    (error) => error.code === 'EVIDENCE_INPUT_INVALID',
+  );
+
+  // The packaged validators guard the activation binding (defense in depth:
+  // even a raw dispatch request cannot record a stale-bound pass).
+  const rValidator = validatorRegistry.get('sdd.delivery.gate.r@1');
+  const launcher = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+  const entry = admitOne(launcher, { gate: 'R' });
+  const evidence = { gate: 'R', inputs: inputsFixture([{ level: 'unit', capability: 'unit:node:test' }]), receipts: [entry], policy: POLICY };
+  const verdict = evaluate(evidence.inputs, evidence.receipts, evidence.policy);
+  assert.equal(verdict.verdict, 'pass');
+  const ref = gateArtifactRef('R');
+  const hashes = { [ref]: canonicalBundleHash('R', ref, evidence, verdict) };
+  const waitOf = (sequence, submissionId, contentHash = shaBytes('open-artifacts'), refName = 'openspec/changes/p24-r3-evidence-probe/proposal.md') => ({
+    id: `wait-${sequence}`, stepId: 'full.open.evidence', sequence, status: 'resolved',
+    receipt: { ref: refName, contentHash, submissionId },
+  });
+  const sourceEvent = {
+    kind: 'evidence-recorded', stepId: 'full.open.evidence', evidenceKind: 'classic-open-artifacts',
+    ref: 'openspec/changes/p24-r3-evidence-probe/proposal.md', contentHash: shaBytes('open-artifacts'),
+    submissionId: 'open-ev-epoch-5',
+  };
+  const liveRun = (waits, checkEpoch = 5) => ({
+    runId: 'run-p2_4',
+    state: { ...canonicalManagedInitialState(), checkEpoch },
+    evidenceWaits: waits,
+  });
+  const liveAction = (source) => ({
+    id: 'action-extension-1', stepId: 'classic.extension.requirements-open',
+    input: { activation: { source } },
+  });
+
+  // (a) A current-epoch, unambiguous binding is accepted.
+  const current = await rValidator.validate(extensionInput('R', evidence, {
+    run: liveRun([waitOf(10, 'open-ev-epoch-4'), waitOf(38, 'open-ev-epoch-5')]),
+    action: liveAction({ event: sourceEvent, sequence: 38, checkEpoch: 5 }),
+    artifactHashes: hashes,
+  }));
+  assert.deepEqual(current, { accepted: true }, 'a current, unambiguous activation binding must pass');
+
+  // (b) submissionId collision across waits (the exact P3_2 defect): refused.
+  const collision = await rValidator.validate(extensionInput('R', evidence, {
+    run: liveRun([waitOf(10, 'open-ev-epoch-5'), waitOf(38, 'open-ev-epoch-5')]),
+    action: liveAction({ event: sourceEvent, sequence: 38, checkEpoch: 5 }),
+    artifactHashes: hashes,
+  }));
+  assert.equal(collision.accepted, false, 'a colliding submissionId must never yield a recorded pass');
+  assert.match(collision.reason, /colliding submissionId|ambiguous/u);
+
+  // (c) Stale binding: a NEWER resolved wait of the same checkpoint exists —
+  // the activation points at a superseded epoch's evidence.
+  const stale = await rValidator.validate(extensionInput('R', evidence, {
+    run: liveRun([waitOf(10, 'open-ev-epoch-3'), waitOf(38, 'open-ev-epoch-4'), waitOf(63, 'open-ev-epoch-5')]),
+    action: liveAction({ event: { ...sourceEvent, submissionId: 'open-ev-epoch-4' }, sequence: 38, checkEpoch: 5 }),
+    artifactHashes: hashes,
+  }));
+  assert.equal(stale.accepted, false, 'an activation bound to a superseded evidence wait must be refused');
+  assert.match(stale.reason, /superseded|stale/u);
+
+  // (d) Cross-epoch activation: the source epoch is behind the run state.
+  const crossEpoch = await rValidator.validate(extensionInput('R', evidence, {
+    run: liveRun([waitOf(10, 'open-ev-epoch-4')], 5),
+    action: liveAction({ event: { ...sourceEvent, submissionId: 'open-ev-epoch-4' }, sequence: 10, checkEpoch: 4 }),
+    artifactHashes: hashes,
+  }));
+  assert.equal(crossEpoch.accepted, false, 'a pass from a stale checkEpoch must be refused');
+  assert.match(crossEpoch.reason, /epoch/u);
+});
+
+test('B-③ content-address stability: identical judged evidence must bind identical per-gate bundle bytes — the revise-loop rewrite that orphaned the pilot P pass is refused at record time', async () => {
+  const launcher = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
+  const entry = admitOne(launcher);
+  const inputs = inputsFixture([{ level: 'unit', capability: 'unit:node:test' }]);
+  const rValidator = validatorRegistry.get('sdd.delivery.gate.r@1');
+  const evidence = { gate: 'R', inputs, receipts: [entry], policy: POLICY };
+  const verdict = evaluate(inputs, [entry], POLICY);
+  assert.equal(verdict.verdict, 'pass');
+  const ref = gateArtifactRef('R');
+  const stepId = 'classic.extension.requirements-open';
+
+  // A first recorded pass on the run (succeeded action with a pass output).
+  const firstHash = canonicalBundleHash('R', ref, evidence, verdict);
+  const recordedPassRun = {
+    runId: 'run-p2_4',
+    state: { ...canonicalManagedInitialState(), checkEpoch: 4 },
+    actions: [{
+      id: 'action-extension-round1', stepId, status: 'succeeded',
+      outcome: { output: { verdict: 'pass', sourceHash: 'domain-checked', artifactHashes: { [ref]: firstHash }, gateEvidence: evidence } },
+    }],
+  };
+
+  // (a) The SAME evidence re-bound in a LATER epoch to the SAME bytes: the
+  // byte-stable re-run of the pilot's final workaround — accepted.
+  const stable = await rValidator.validate(extensionInput('R', evidence, {
+    run: recordedPassRun,
+    action: { id: 'action-extension-round2', stepId },
+    artifactHashes: { [ref]: firstHash },
+  }));
+  assert.deepEqual(stable, { accepted: true }, 'a byte-stable same-evidence re-run must record');
+
+  // (b) The SAME evidence re-bound to DIVERGING bytes (the pilot class: the
+  // round-2 bundle embedded epoch/random fields, 536b5b49…→60c9ac68…):
+  // refused fail-closed at record time with the precise reason.
+  const divergedHash = shaBytes(Buffer.concat([canonicalBundleBytes('R', ref, evidence, verdict), Buffer.from('epoch-5-rebuild')]));
+  const diverged = await rValidator.validate(extensionInput('R', evidence, {
+    run: recordedPassRun,
+    action: { id: 'action-extension-round2', stepId },
+    artifactHashes: { [ref]: divergedHash },
+  }));
+  assert.equal(diverged.accepted, false, 'a same-evidence diverging rewrite must be refused before it orphans the earlier pass');
+  assert.match(diverged.reason, /diverging .*bytes|content-address/u);
+  assert.match(diverged.reason, /stable for unchanged evidence|epoch-derived/u);
+
+  // (c) GENUINELY CHANGED evidence (a real revise: new receipts/policy) may
+  // bind new bytes — the guard constrains only identical evidence.
+  const entry2 = admitOne(launcher, { gate: 'R', execution: 'exec-verifier-2' });
+  const changedEvidence = { gate: 'R', inputs, receipts: [entry, entry2], policy: POLICY };
+  const changedVerdict = evaluate(changedEvidence.inputs, changedEvidence.receipts, changedEvidence.policy);
+  assert.equal(changedVerdict.verdict, 'pass');
+  const changed = await rValidator.validate(extensionInput('R', changedEvidence, {
+    run: recordedPassRun,
+    action: { id: 'action-extension-round2', stepId },
+    artifactHashes: { [ref]: canonicalBundleHash('R', ref, changedEvidence, changedVerdict) },
+  }));
+  assert.deepEqual(changed, { accepted: true }, 'a genuinely changed gate judgment records new bytes legitimately');
+
+  // (d) The write protocol the pilot converged on (byte-stable canonical
+  // serialization) reproduces IDENTICAL bytes in any epoch: the hash is a
+  // pure function of the judged evidence — no epoch input exists.
+  assert.equal(
+    canonicalBundleHash('R', ref, evidence, { ...verdict, receipt: structuredClone(verdict.receipt) }),
+    firstHash,
+    'the canonical bundle hash is deterministic over the judged payload',
+  );
+
+  // The declared contract: every typed extension declaration and the
+  // composition document declare the content-address stability scheme, and
+  // the declaration refs, the composition refs and the packaged validator
+  // refs are the same three-way pin.
+  assert.ok(composition.gateArtifactContract, 'composition.json declares the gate artifact contract');
+  assert.match(composition.gateArtifactContract.scheme, /^content-address-stable-v1/u);
+  assert.match(composition.gateArtifactContract.scheme, /IDENTICAL judged evidence/u);
+  assert.match(composition.gateArtifactContract.contract, /deep-equals an earlier recorded pass/u);
+  assert.match(composition.gateArtifactContract.writeProtocol, /recursively key-sorted/u);
+  assert.match(
+    composition.gateArtifactContract.motivation,
+    /epoch/i,
+    'the contract must record the revise-loop blocker it eliminates',
+  );
+  for (const expected of EXPECTED_GATES) {
+    const declared = JSON.parse(readText(`integrations/comet/application/extensions/${expected.extensionId}.json`));
+    assert.equal(declared.artifactRefs[0].contentAddressing.scheme, 'content-address-stable-v1');
+    assert.match(declared.artifactRefs[0].contentAddressing.stability, /identical judged evidence/u);
+    assert.deepEqual(
+      declared.artifactRefs[0].contentAddressing.writeProtocolFields,
+      ['schema', 'kind', 'gate', 'artifactRef', 'hashBinding', 'writtenBy', 'inputs', 'receipts', 'policy', 'evaluatedBy', 'verdict', 'receipt'],
+    );
+    // three-way ref agreement: declaration == composition == packaged validator pin
+    assert.equal(declared.artifactRefs[0].ref, gateArtifactRef(expected.gate));
+  }
+  const bindingsSource = fs.readFileSync(path.join(applicationRoot, 'bindings.mjs'), 'utf8');
+  for (const expected of EXPECTED_GATES) {
+    assert.ok(
+      bindingsSource.includes(gateArtifactRef(expected.gate)),
+      `bindings.mjs pins the declared artifactRef of gate ${expected.gate}`,
+    );
+  }
 });
 
 // ---------------------------------------------------------------------------

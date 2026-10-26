@@ -47,7 +47,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["ref", "kind", "hashBinding", "writtenBy"],
+        "required": ["ref", "kind", "hashBinding", "writtenBy", "contentAddressing"],
         "properties": {
           "ref": {
             "type": "string",
@@ -56,7 +56,29 @@
           },
           "kind": { "const": "gate-receipt-bundle" },
           "hashBinding": { "const": "artifactHashes" },
-          "writtenBy": { "const": "extension-execution" }
+          "writtenBy": { "const": "extension-execution" },
+          "contentAddressing": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["scheme", "stability", "writeProtocolFields", "contract"],
+            "properties": {
+              "scheme": { "const": "content-address-stable-v1" },
+              "stability": {
+                "type": "string",
+                "pattern": "identical judged evidence"
+              },
+              "writeProtocolFields": {
+                "type": "array",
+                "minItems": 12,
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "contract": {
+                "type": "string",
+                "minLength": 20,
+                "description": "P2_4-r3 B-③: a diverging rewrite of the static ref for unchanged evidence is refused fail-closed by the packaged validators."
+              }
+            }
+          }
         }
       }
     },

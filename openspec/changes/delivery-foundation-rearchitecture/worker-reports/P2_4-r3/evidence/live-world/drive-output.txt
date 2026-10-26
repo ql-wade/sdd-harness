@@ -1,0 +1,19 @@
+B1-NEG null-isolation start status: succeeded (schema-legal => the deadlock is silent at start; frozen P3_2 Run#1 + pristine three-sided proof cover the unpassable configure)
+B1 start via adapter request: status succeeded
+B1 run state via inspect: isolation current | entry action classic.composition.prepare
+configure PASSED at epoch 0: phase=build checkEpoch=2 isolation=current buildMode=executing-plans tddMode=tdd next=[["full.build.plan","pending"]]
+P epoch0 activation: checkEpoch 2 | submissionId p24r3-live:classic-build-plan:epoch-0:5629feef3e2ecda0 | sequence 17
+P epoch0 PASS accepted; canonical bundle hash 352b9c91f955c4c9
+EPOCH0 done: phase build | actions []
+revised: checkEpoch 2
+configure PASSED at epoch 1: phase=build checkEpoch=5 isolation=current buildMode=executing-plans tddMode=tdd next=[["full.build.plan","pending"]]
+P epoch1 activation: checkEpoch 5 | submissionId p24r3-live:classic-build-plan:epoch-1:5629feef3e2ecda0 | sequence 38 (fresh epoch-qualified => B2 positive binding)
+B3-NEG diverging rewrite: failed | OUTCOME_REJECTED: SDD gate P: identical judged evidence is bound to diverging .sdd/delivery/gates/p/receipt-bundle.json bytes (earlier pass 352b9c91… vs this pass e913406d…); the per-gate bundle is content-addressed — keep the bytes stable 
+B3-POS byte-stable re-pass ACCEPTED; hash 352b9c91f955c4c9 | identical to round-1: true
+EPOCH1 done: phase build | actions []
+configure PASSED at epoch 2: phase=build checkEpoch=8 isolation=current buildMode=executing-plans tddMode=tdd next=[["full.build.plan","pending"]]
+B2-NEG plan evidence re-recorded with REUSED epoch-1 id p24r3-live:classic-build-plan:epoch-1:5629feef3e2ecda0 => runtime accepted (no uniqueness check)
+P epoch2 activation bound: submissionId p24r3-live:classic-build-plan:epoch-1:5629feef3e2ecda0 | sequence 38 (STALE: the epoch-1 wait)
+B2-NEG stale-bound pass: failed | OUTCOME_REJECTED: SDD gate activation binds a colliding submissionId (p24r3-live:classic-build-plan:epoch-1:5629feef3e2ecda0) shared by 2 evidence waits; submissionIds must be unique per wait (epoch-qualified)
+FINAL: status running checkEpoch 8 actions [["classic.extension.build-plan-unique","running"]]
+ALL LEGS DONE

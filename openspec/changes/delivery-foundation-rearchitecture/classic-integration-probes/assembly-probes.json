@@ -9,8 +9,8 @@
       "root": "integrations/comet/application/package",
       "runtimeVersion": "0.5.0",
       "workflowId": "comet-classic-full",
-      "compositionHash": "dbcb0eeefd38dcfa8f9107240ebc870f423d78061a6037a7a6d913d27881b44b",
-      "contentHash": "f76778251fe6415ad946c26633ecfd293fc75bf11473d9e6df460fa572c50766",
+      "compositionHash": "df916df6784d1ac809693babc9f59908eab4575a10c02e3bdddf0319ba1d8949",
+      "contentHash": "ba88b84dc5c1bff2984509667cb20252abcf0be6ade3dc28fa0d5efceccbbb66",
       "skills": 15,
       "bindings": 15
     },
@@ -25,7 +25,12 @@
       "oracle": "A (architecture-consensus) and T (test-design-review) are separate extensions at the SAME full.design.evidence checkpoint, each with its own artifactRef bundle and its own validator; neither artifactRef nor validator is shared",
       "observed": {
         "sameCheckpoint": "full.design.evidence",
-        "chain": ["full.design.evidence", "classic.extension.architecture-consensus", "classic.extension.test-design-review", "full.build.configure"],
+        "chain": [
+          "full.design.evidence",
+          "classic.extension.architecture-consensus",
+          "classic.extension.test-design-review",
+          "full.build.configure"
+        ],
         "aArtifactRef": ".sdd/delivery/gates/a/receipt-bundle.json",
         "tArtifactRef": ".sdd/delivery/gates/t/receipt-bundle.json",
         "aValidator": "comet-classic.extension.architecture-consensus-result",
@@ -48,10 +53,16 @@
       "entry": "package/workflow.json steps + package/application.json build-plan-unique binding + extensions/build-plan-unique.json",
       "oracle": "the plan surface is single-authority: exactly one step produces a plan (full.build.plan, the managed claude-parallel-tdd-planner variant), exactly one await_evidence of kind classic-build-plan judges it, and exactly one extension (build-plan-unique, gate P) binds the single plan receipt-bundle artifact",
       "observed": {
-        "planOutputSteps": ["full.build.plan"],
-        "planEvidenceSteps": ["full.build.plan.evidence"],
+        "planOutputSteps": [
+          "full.build.plan"
+        ],
+        "planEvidenceSteps": [
+          "full.build.plan.evidence"
+        ],
         "extension": "build-plan-unique",
-        "artifactRefs": [".sdd/delivery/gates/p/receipt-bundle.json"],
+        "artifactRefs": [
+          ".sdd/delivery/gates/p/receipt-bundle.json"
+        ],
         "validator": "sdd.delivery.gate.p",
         "afterStep": "full.build.plan.evidence"
       }
@@ -61,10 +72,17 @@
       "entry": "package/workflow.json stateSchema + steps + the adapter's runtime dispatch construction",
       "oracle": "no second scheduling surface exists in the assembled workflow: the state schema carries exactly one plan field, only one step declares a plan output, and the single dispatch entry for a composition Run is comet runtime dispatch --application-file (the adapter refuses --application/--workflow selectors)",
       "observed": {
-        "stateSchemaPlanFields": ["plan"],
+        "stateSchemaPlanFields": [
+          "plan"
+        ],
         "stepsDeclaringPlanOutput": 1,
-        "dispatchSelectors": ["--application-file"],
-        "forbiddenSelectorsAbsent": ["--application", "--workflow"]
+        "dispatchSelectors": [
+          "--application-file"
+        ],
+        "forbiddenSelectorsAbsent": [
+          "--application",
+          "--workflow"
+        ]
       }
     },
     {
@@ -72,13 +90,20 @@
       "entry": "package/workflow.json entry + transitions + classic.composition.confirm step",
       "oracle": "user approval is the sequence precondition of full.open: the workflow entry is classic.composition.prepare, prepare only transitions to the ask_user classic.composition.confirm, and only the approved choice reaches full.open — no direct prepare→full.open edge exists",
       "observed": {
-        "entry": ["classic.composition.prepare"],
-        "prepareSucceedsTo": ["classic.composition.confirm"],
+        "entry": [
+          "classic.composition.prepare"
+        ],
+        "prepareSucceedsTo": [
+          "classic.composition.confirm"
+        ],
         "confirmApprovedTo": "full.open",
         "confirmRejectedTo": "classic.composition.confirm",
         "directPrepareToOpen": false,
         "confirmType": "ask_user",
-        "confirmChoices": ["approved", "rejected"]
+        "confirmChoices": [
+          "approved",
+          "rejected"
+        ]
       }
     },
     {
@@ -88,9 +113,18 @@
       "observed": {
         "anchoredWorkBindings": 9,
         "anchor": "classic.composition.confirm",
-        "anchorChoices": ["approved"],
+        "anchorChoices": [
+          "approved"
+        ],
         "unanchoredGateBindings": 6,
-        "unanchoredCapabilities": ["grill-me.gate", "multi-agent-consensus-review.gate", "test-authoring.gate", "claude-parallel-tdd-planner.gate", "whitebox-verify.gate", "openspec-lifecycle-guard.gate"]
+        "unanchoredCapabilities": [
+          "grill-me.gate",
+          "multi-agent-consensus-review.gate",
+          "test-authoring.gate",
+          "claude-parallel-tdd-planner.gate",
+          "whitebox-verify.gate",
+          "openspec-lifecycle-guard.gate"
+        ]
       }
     },
     {
@@ -101,17 +135,48 @@
         "replacements": 9,
         "distinctIds": true,
         "methodVariants": [
-          { "stepId": "full.design.handoff", "skillId": "grill-me-full-design-handoff", "base": "grill-me" },
-          { "stepId": "full.design.document", "skillId": "grill-me-full-design-document", "base": "grill-me" },
-          { "stepId": "full.build.plan", "skillId": "claude-parallel-tdd-planner-full-build-plan", "base": "claude-parallel-tdd-planner" },
-          { "stepId": "full.build.execute", "skillId": "tdd-full-build-execute", "base": "tdd" }
+          {
+            "stepId": "full.design.handoff",
+            "skillId": "grill-me-full-design-handoff",
+            "base": "grill-me"
+          },
+          {
+            "stepId": "full.design.document",
+            "skillId": "grill-me-full-design-document",
+            "base": "grill-me"
+          },
+          {
+            "stepId": "full.build.plan",
+            "skillId": "claude-parallel-tdd-planner-full-build-plan",
+            "base": "claude-parallel-tdd-planner"
+          },
+          {
+            "stepId": "full.build.execute",
+            "skillId": "tdd-full-build-execute",
+            "base": "tdd"
+          }
         ],
         "domainWork": [
-          { "stepId": "full.open", "skillId": "comet-open-full-open" },
-          { "stepId": "full.build.configure", "skillId": "comet-build-full-build-configure" },
-          { "stepId": "full.verify.run", "skillId": "comet-verify-full-verify-run" },
-          { "stepId": "full.archive.prepare", "skillId": "comet-archive-full-archive-prepare" },
-          { "stepId": "full.archive.deliver", "skillId": "comet-archive-full-archive-deliver" }
+          {
+            "stepId": "full.open",
+            "skillId": "comet-open-full-open"
+          },
+          {
+            "stepId": "full.build.configure",
+            "skillId": "comet-build-full-build-configure"
+          },
+          {
+            "stepId": "full.verify.run",
+            "skillId": "comet-verify-full-verify-run"
+          },
+          {
+            "stepId": "full.archive.prepare",
+            "skillId": "comet-archive-full-archive-prepare"
+          },
+          {
+            "stepId": "full.archive.deliver",
+            "skillId": "comet-archive-full-archive-deliver"
+          }
         ],
         "extensionSkills": 6
       }
@@ -121,8 +186,19 @@
       "entry": "lib/adapters/comet-executor.js createCometExecutor + acceptGateReceipt over the packaged bindings validators",
       "oracle": "a gate pass receipt is accepted ONLY through the packaged bindings validator of that gate (pure SDD.Gate.v1 evaluation of the gateEvidence payload); the composition declares exactly the six managed gates R/A/T/P/V/Kp and Kt is not an extension",
       "observed": {
-        "gates": ["R", "A", "T", "P", "V", "Kp"],
-        "acceptedExample": { "gate": "A", "validatorId": "sdd.delivery.gate.a", "extensionId": "architecture-consensus" },
+        "gates": [
+          "R",
+          "A",
+          "T",
+          "P",
+          "V",
+          "Kp"
+        ],
+        "acceptedExample": {
+          "gate": "A",
+          "validatorId": "sdd.delivery.gate.a",
+          "extensionId": "architecture-consensus"
+        },
         "ktRegisteredAsExtension": false,
         "ktMechanism": "upstream-minimal-patch-0005"
       }
