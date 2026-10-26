@@ -929,7 +929,7 @@ test('every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is regi
 // 登记语义（负向红线）：只登记实际试点、知识栈与已有身份引用；
 // 服务账号可读、key 存在、同名组或本地目录存在，一律不得被登记为权限/受众资格。
 
-test('comet-050 adoption registration: PENDING_RELOCK supply records no fabricated 0.5.0 hash', () => {
+test('comet-050 adoption registration: supply hashes stay honest across relock states', () => {
   const registry = loadCommittedRegistry();
   const comet = registry.resources.find((r) => r.id === 'comet-source');
   assert.ok(comet, 'comet-source resource must remain registered');
@@ -937,14 +937,24 @@ test('comet-050 adoption registration: PENDING_RELOCK supply records no fabricat
   assert.equal(comet.observation.scope, 'COMET_050_ADOPTION_REGISTRATION_ONLY');
   assert.equal(adoption.revision, '2026-10-26-comet-050-adoption-v1');
   assert.equal(adoption.targetBaseline, '0.5.0');
-  assert.equal(adoption.status, 'PENDING_RELOCK');
+  assert.ok(['PENDING_RELOCK', 'RELOCKED'].includes(adoption.status), 'adoption status must be a known relock state');
   assert.equal(adoption.relockOwner, 'P1_1');
-  // 不虚构哈希：P1_1 重锁定被接纳前，adoption 载荷不得出现任何 40-hex commit 或 sha256 摘要。
-  assert.doesNotMatch(
-    JSON.stringify(adoption),
-    /[0-9a-f]{40}|sha256:[0-9a-f]{64}/,
-    'adoption payload must stay hash-free until P1_1 relocks 0.5.0',
-  );
+  if (adoption.status === 'PENDING_RELOCK') {
+    // 不虚构哈希：P1_1 重锁定被接纳前，adoption 载荷不得出现任何 40-hex commit 或 sha256 摘要。
+    assert.doesNotMatch(
+      JSON.stringify(adoption),
+      /[0-9a-f]{40}|sha256:[0-9a-f]{64}/,
+      'adoption payload must stay hash-free until P1_1 relocks 0.5.0',
+    );
+  } else {
+    // RELOCKED：哈希不得虚构——必须与已提交的 upstream.lock 源事实逐字一致，且构建指纹真实存在。
+    const lock = JSON.parse(fs.readFileSync(path.join(repoRoot, 'integrations/comet/upstream.lock.json'), 'utf8'));
+    assert.equal(adoption.commit, lock.source.commit, 'adoption commit must equal the committed lock source commit');
+    assert.equal(adoption.sourceArchiveSha256, lock.source.sha256, 'adoption archive digest must equal the committed lock digest');
+    const buildDir = path.join(repoRoot, '.sdd/vendor/comet', adoption.commit, 'builds', adoption.buildFingerprint);
+    assert.ok(fs.existsSync(buildDir), 'adoption build fingerprint must resolve to a real vendored build');
+    assert.ok(!Number.isNaN(Date.parse(adoption.relockedAt)), 'relockedAt must be a parsable timestamp');
+  }
   assert.match(comet.lockRef, /integrations\/comet\/upstream\.lock\.json/);
   assert.match(adoption.note, /P1_1-owned supply state/, 'registration must not assert which version the P1_1 lock currently holds');
   assert.equal(adoption.patchDisposition['0004'], 'retired; upstream 0.5.0 pins vite 8.2.4 and contains the remaining backports');
