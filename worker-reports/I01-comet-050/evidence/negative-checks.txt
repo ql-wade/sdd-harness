@@ -1,0 +1,28 @@
+run: comet-convergence-20261024-r1 / revision 2026-10-26-comet-050-adoption-v1 / I01 wave 1
+date: 2026-10-26T09:47:28Z
+
+== N1 no fabricated supply hash in adoption payload ==
+PASS: adoption payload carries no commit/digest
+exit=0
+
+== N2 no new authorization claims: every audience/retention stays UNVERIFIED ==
+PASS: all audiences UNVERIFIED, all retention UNVERIFIED, autoCleanup false
+exit=0
+
+== N3 project authority unchanged: readbackStatus still UNVERIFIED, no new grant text ==
+readbackStatus= UNVERIFIED
+exit=0
+
+== N4 secret/host-path scan over committed registry + refs catalog ==
+infra/delivery/registry.json PASS clean
+infra/delivery/secrets.refs.example.json PASS clean
+
+== N5 registration is not readiness: qualify on new stacks must refuse (exit 2, UNVERIFIED categories) ==
+llmwiki-project-stack exit=2
+ ready= False  unverified= 7  license= UNVERIFIED  image-digest= UNVERIFIED
+openspec-isolated-tools exit=2
+ ready= False  unverified= 8  license= UNVERIFIED  image-digest= UNVERIFIED
+
+== N6 local directory is not a permission: landing facts labeled inventory-only/non-committed ==
+PASS: both stacks scoped inventory-only with non-committed landing labels
+exit=0

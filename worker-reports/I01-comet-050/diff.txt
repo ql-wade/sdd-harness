@@ -1,0 +1,260 @@
+diff --git a/infra/delivery/registry.json b/infra/delivery/registry.json
+index 972d1b7..72431be 100644
+--- a/infra/delivery/registry.json
++++ b/infra/delivery/registry.json
+@@ -18,7 +18,7 @@
+       "readbackCommand": "gh api repos/ql-wade/sdd-harness + gh api user (caller must match project.github.principalId 262266039)",
+       "readbackError": "Historical pre-correction attempt (observedAt below) failed: tls x509 OSStatus -26276 on all api.github.com calls; current operator identity is recorded separately in latestIdentityObservation",
+       "observedAt": "2026-10-20T03:20:00Z",
+-      "note": "Original authentication failure retained as history. The separate fresh identity observation is not standing runtime authority, disclosure, publication, CI mutation or grant-issuance authorization. Registry labels and service-principal bindings do not grant permissions.",
++    "note": "Original authentication failure retained as history. The separate fresh identity observation is not standing runtime authority, disclosure, publication, CI mutation or grant-issuance authorization. Registry labels and service-principal bindings do not grant permissions. Verified pilot facts (repo ql-wade/sdd-harness, repoId 1285806550, principalId 262266039) are recorded in openspec/changes/delivery-foundation-rearchitecture/pilot-contract.md; citing them adds no grant.",
+       "recordScope": "historical UNVERIFIED snapshot; not a current live identity or standing runtime authority",
+       "latestIdentityObservation": {
+         "status": "VERIFIED",
+@@ -38,10 +38,29 @@
+       "kind": "source-archive",
+       "owner": "ql-wade",
+       "backupOwner": "UNVERIFIED",
+-      "purpose": "Pinned Comet Classic controller source for the delivery pilot; single control plane, no business retries and no second DAG",
++      "purpose": "Pinned Comet Classic controller source for the delivery pilot; single control plane, no business retries and no second DAG; adopted baseline moves to 0.5.0 native composition per the 2026-10-26 replan",
+       "audience": "controller runner and build tooling only; a public repository does not make external knowledge or attachments publishable",
+       "credentialRef": "secret-ref:sdd-harness-pilot/source-git-read",
+       "lockRef": "integrations/comet/upstream.lock.json",
++      "observation": {
++        "scope": "COMET_050_ADOPTION_REGISTRATION_ONLY",
++        "adoption": {
++          "revision": "2026-10-26-comet-050-adoption-v1",
++          "targetBaseline": "0.5.0",
++          "status": "PENDING_RELOCK",
++          "relockOwner": "P1_1",
++          "note": "The exact 0.5.0 commit, archive digest and build facts stay absent here until P1_1's re-qualification is accepted; this registration records no supply hash of any version. The lockRef content is P1_1-owned supply state and this entry asserts nothing about which version it currently holds",
++          "patchDisposition": {
++            "0001": "retired; replaced by bundled Matt skills in the composition application package (P1_6)",
++            "0002": "retired as an injected patch; R/A/T/P/V/Kp gates become 0.5.0 checkpoint extensions with validators bound to lib/delivery pure components (P2_4)",
++            "0003": "succeeded by the minimal 0005 completion-predicate patch on the 0.5.0 classic resolver",
++            "0004": "retired; upstream 0.5.0 pins vite 8.2.4 and contains the remaining backports"
++          },
++          "amendmentRef": "openspec/changes/delivery-foundation-rearchitecture/replans/2026-10-26-comet-050-adoption/amendment.json",
++          "authority": "registration is an inventory fact only; it grants no supply readiness, runner qualification or second-controller authority"
++        },
++        "observedAt": "2026-10-26T09:23:20Z"
++      },
+       "runtimeRequirement": {
+         "node": "^22.16.0 || >=24.0.0",
+         "source": "openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json (recorded; re-verify at execution time)"
+@@ -78,7 +97,8 @@
+         "network": "loopback-only",
+         "failureDomain": "single-host",
+         "crossProjectIsolation": "dedicated project deployment; not a PAV resource or credential",
+-        "origin": "http://127.0.0.1:3000"
++        "origin": "http://127.0.0.1:3000",
++        "runtimeStateLocation": ".sdd/outline/runtime (project-local runtime landing under the registered SDD home; existence observed on this host 2026-10-26, content is not committed; a local directory is not a permission, an audience or a publication fact)"
+       },
+       "retention": {
+         "rpo": "UNVERIFIED",
+@@ -111,6 +131,66 @@
+           "worker-reports/I01-convergence/evidence/http-qualification-block.json"
+         ]
+       }
++    },
++    {
++      "id": "llmwiki-project-stack",
++      "kind": "project-knowledge-stack",
++      "owner": "ql-wade",
++      "backupOwner": "UNVERIFIED",
++      "purpose": "Project-local LLMWiki stdio MCP knowledge stack for curated pilot knowledge; filesystem is truth, the SQLite index is rebuildable; registration is an inventory fact, never a publication or audience grant",
++      "audience": "UNVERIFIED: local tool admission and prior MCP readback evidence do not establish any publication audience or team-facing authorization",
++      "credentialRef": "secret-ref:sdd-harness-pilot/llmwiki-curated-write",
++      "lockRef": "infra/delivery/llmwiki/package.lock.json",
++      "observation": {
++        "scope": "KNOWLEDGE_STACK_INVENTORY_ONLY",
++        "landingRoot": ".sdd/repos/llmwiki (project-local SDD_HOME landing; existence observed on this host 2026-10-26, content is not committed)",
++        "cloneCommit": "075c5b4996ff4e07f9d3c57c1f14fd2b54a955db",
++        "cloneCommitStatus": "RECORDED in the referenced lock; independent upstream confirmation still requires network evidence",
++        "launcher": "tools/mcp/llmwiki.sh",
++        "evidenceRef": "infra/delivery/llmwiki/package.lock.json (I04-owned observations; this entry references, it does not re-verify)"
++      },
++      "domain": {
++        "network": "stdio-process-only (no resident HTTP service; no inbound listener)",
++        "failureDomain": "single-host",
++        "crossProjectIsolation": "project-local SDD_HOME landing; no cross-project wiki root, venv or credential reuse"
++      },
++      "retention": {
++        "rpo": "UNVERIFIED",
++        "rto": "UNVERIFIED",
++        "retentionPeriod": "UNVERIFIED",
++        "encryptionOwner": "UNVERIFIED",
++        "destructionPrecondition": "UNVERIFIED",
++        "autoCleanupEnabled": false
++      }
++    },
++    {
++      "id": "openspec-isolated-tools",
++      "kind": "isolated-toolchain",
++      "owner": "ql-wade",
++      "backupOwner": "UNVERIFIED",
++      "purpose": "Isolated OpenSpec 1.11.0 toolchain under the project-local SDD home for classic closeout compatibility; never a global install and never a second spec authority beyond the registered adapters",
++      "audience": "UNVERIFIED: a local install directory is not an authorization, a runner qualification or a spec-authority grant",
++      "credentialRef": "secret-ref:sdd-harness-pilot/openspec-tools-local",
++      "lockRef": "infra/delivery/runner/image.lock.json",
++      "observation": {
++        "scope": "KNOWLEDGE_STACK_INVENTORY_ONLY",
++        "landingRoot": ".sdd/tools/openspec-1.11.0 (project-local isolated install; existence and installed version 1.11.0 observed on this host 2026-10-26, content is not committed)",
++        "pinBasis": "P1_1-pinned @fission-ai/openspec 1.11.0 tarball recorded in the referenced lock; no floating upgrade, no host-global install",
++        "evidenceRef": "infra/delivery/runner/image.lock.json (P1_1/I02-owned pin; this entry references, it does not re-verify)"
++      },
++      "domain": {
++        "network": "local-filesystem-only (no network listener; no external API dependency)",
++        "failureDomain": "single-host",
++        "crossProjectIsolation": "isolated under the project SDD home; not a host-global or cross-project toolchain"
++      },
++      "retention": {
++        "rpo": "UNVERIFIED",
++        "rto": "UNVERIFIED",
++        "retentionPeriod": "UNVERIFIED",
++        "encryptionOwner": "UNVERIFIED",
++        "destructionPrecondition": "UNVERIFIED",
++        "autoCleanupEnabled": false
++      }
+     }
+   ]
+ }
+diff --git a/infra/delivery/secrets.refs.example.json b/infra/delivery/secrets.refs.example.json
+index 88d7b38..8d19100 100644
+--- a/infra/delivery/secrets.refs.example.json
++++ b/infra/delivery/secrets.refs.example.json
+@@ -253,6 +253,24 @@
+         "svc:sdd-harness-pilot/backup"
+       ],
+       "status": "NOT_PROVISIONED"
++    },
++    {
++      "ref": "secret-ref:sdd-harness-pilot/llmwiki-curated-write",
++      "purpose": "reserved curated-write admission reference for the project-local LLMWiki workspace (I04 KnowledgeWrite.v1); no runtime secret exists today, and this ref grants no write, publication or audience",
++      "boundRole": "publisher",
++      "allowedPrincipals": [
++        "svc:sdd-harness-pilot/llmwiki"
++      ],
++      "status": "NOT_PROVISIONED"
++    },
++    {
++      "ref": "secret-ref:sdd-harness-pilot/openspec-tools-local",
++      "purpose": "reserved local-tool admission reference for the isolated OpenSpec toolchain under the project-local SDD home; local-only tooling with no network or credential today, and this ref grants nothing",
++      "boundRole": "service",
++      "allowedPrincipals": [
++        "svc:sdd-harness-pilot/runner"
++      ],
++      "status": "NOT_PROVISIONED"
+     }
+   ]
+ }
+diff --git a/test/infra-registry.test.js b/test/infra-registry.test.js
+index 0c5b9d8..76df56b 100644
+--- a/test/infra-registry.test.js
++++ b/test/infra-registry.test.js
+@@ -708,6 +708,12 @@ test('RED digest binding: qualify receipt recomputes the actual input archive an
+   fs.writeFileSync(wrongArchive, 'not the comet source archive');
+   const wrongSha = crypto.createHash('sha256').update(fs.readFileSync(wrongArchive)).digest('hex');
+ 
++  // 期望摘要来自 registry 指向的实际 lock 内容（P1_1 拥有并可能重锁定该文件，
++  // 本测试断言绑定语义——回执绑定 lock 实际记录值——而不是钉死某个供给版本）。
++  const comet = loadCommittedRegistry().resources.find((r) => r.id === 'comet-source');
++  const lockedSha = JSON.parse(fs.readFileSync(path.join(repoRoot, comet.lockRef), 'utf8')).source.sha256;
++  assert.match(lockedSha, /^[0-9a-f]{64}$/, 'referenced lock must carry a source digest');
++
+   const result = runRegistry([
+     'qualify',
+     '--resource',
+@@ -723,9 +729,7 @@ test('RED digest binding: qualify receipt recomputes the actual input archive an
+   // 回执必须绑定实际输入摘要，而不是声称的摘要。
+   assert.equal(receipt.inputs.archiveSha256, wrongSha);
+   assert.equal(receipt.categories['source-digest'].status, 'MISMATCH');
+-  assert.ok(
+-    (receipt.categories['source-digest'].expected ?? '').endsWith('28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f'),
+-  );
++  assert.equal(receipt.categories['source-digest'].expected, lockedSha);
+ });
+ 
+ test('RED plaintext gate: secret-shaped values and secret-value keys are rejected', () => {
+@@ -921,6 +925,81 @@ test('every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is regi
+   }
+ });
+ 
++// ---- comet-050 采纳登记（revision 2026-10-26-comet-050-adoption-v1，wave 1 I01）---
++// 登记语义（负向红线）：只登记实际试点、知识栈与已有身份引用；
++// 服务账号可读、key 存在、同名组或本地目录存在，一律不得被登记为权限/受众资格。
++
++test('comet-050 adoption registration: PENDING_RELOCK supply records no fabricated 0.5.0 hash', () => {
++  const registry = loadCommittedRegistry();
++  const comet = registry.resources.find((r) => r.id === 'comet-source');
++  assert.ok(comet, 'comet-source resource must remain registered');
++  const adoption = comet.observation.adoption;
++  assert.equal(comet.observation.scope, 'COMET_050_ADOPTION_REGISTRATION_ONLY');
++  assert.equal(adoption.revision, '2026-10-26-comet-050-adoption-v1');
++  assert.equal(adoption.targetBaseline, '0.5.0');
++  assert.equal(adoption.status, 'PENDING_RELOCK');
++  assert.equal(adoption.relockOwner, 'P1_1');
++  // 不虚构哈希：P1_1 重锁定被接纳前，adoption 载荷不得出现任何 40-hex commit 或 sha256 摘要。
++  assert.doesNotMatch(
++    JSON.stringify(adoption),
++    /[0-9a-f]{40}|sha256:[0-9a-f]{64}/,
++    'adoption payload must stay hash-free until P1_1 relocks 0.5.0',
++  );
++  assert.match(comet.lockRef, /integrations\/comet\/upstream\.lock\.json/);
++  assert.match(adoption.note, /P1_1-owned supply state/, 'registration must not assert which version the P1_1 lock currently holds');
++  assert.equal(adoption.patchDisposition['0004'], 'retired; upstream 0.5.0 pins vite 8.2.4 and contains the remaining backports');
++  assert.ok(fs.existsSync(path.join(repoRoot, adoption.amendmentRef)), 'amendment reference must resolve');
++  assert.match(registry.project.authority.note, /pilot-contract\.md/, 'pilot facts must cite the verified registration');
++});
++
++test('knowledge stack registration: llmwiki and isolated openspec are inventory facts, not grants', () => {
++  const registry = loadCommittedRegistry();
++  const stacks = [
++    registry.resources.find((r) => r.id === 'llmwiki-project-stack'),
++    registry.resources.find((r) => r.id === 'openspec-isolated-tools'),
++  ];
++  for (const stack of stacks) {
++    assert.ok(stack, `${stack?.id ?? 'knowledge stack'} must be registered`);
++    assert.equal(stack.owner, registry.project.owner);
++    assert.match(stack.audience, /UNVERIFIED/, `${stack.id}: audience must stay UNVERIFIED`);
++    assert.equal(stack.retention.autoCleanupEnabled, false);
++    for (const field of ['rpo', 'rto', 'retentionPeriod', 'encryptionOwner', 'destructionPrecondition']) {
++      assert.equal(stack.retention[field], 'UNVERIFIED', `${stack.id}: ${field} must stay UNVERIFIED`);
++    }
++    assert.match(stack.observation.scope, /INVENTORY_ONLY/, `${stack.id}: observation must be scoped inventory-only`);
++    assert.match(stack.observation.landingRoot, /^\.sdd\//, `${stack.id}: landing must be the project-local SDD home`);
++    assert.match(stack.observation.landingRoot, /not committed/, 'local landing must be labeled non-committed content');
++    assert.ok(fs.existsSync(path.join(repoRoot, stack.lockRef)), `${stack.id}: lockRef must resolve to a committed lock`);
++  }
++  const llmwiki = stacks[0];
++  assert.match(llmwiki.observation.landingRoot, /^\.sdd\/repos\/llmwiki/);
++  assert.equal(llmwiki.observation.cloneCommitStatus.startsWith('RECORDED'), true, 'clone commit stays RECORDED, never independently-confirmed');
++  const openspec = stacks[1];
++  assert.match(openspec.observation.landingRoot, /\.sdd\/tools\/openspec-1\.11\.0/);
++  assert.match(openspec.purpose, /never a global install/);
++  // Outline 栈：既有资源补记运行态落位，不新增权限字段。
++  const outline = registry.resources.find((r) => r.id === 'outline-managed-collection');
++  assert.match(outline.domain.runtimeStateLocation, /\.sdd\/outline\/runtime/);
++  assert.match(outline.domain.runtimeStateLocation, /not a permission/);
++});
++
++test('knowledge stack registration never qualifies as ready: qualify refuses with honest UNVERIFIED categories', () => {
++  for (const id of ['llmwiki-project-stack', 'openspec-isolated-tools']) {
++    const result = runRegistry(['qualify', '--resource', id, '--registry', registryPath, '--json']);
++    assert.equal(result.status, 2, `${id}: registration is not readiness, qualify must refuse`);
++    const receipt = parseJsonOut(result, id);
++    assert.equal(receipt.ready, false);
++    for (const category of ['license', 'image-digest', 'platform', 'health-api', 'backup-compatibility']) {
++      assert.equal(receipt.categories[category].status, 'UNVERIFIED', `${id}: ${category} must be honestly UNVERIFIED`);
++    }
++    // 登记不得把已引用的记录事实（如 clone commit）升格为已验证摘要。
++    if (id === 'llmwiki-project-stack') {
++      assert.equal(receipt.categories['source-commit'].status, 'RECORDED');
++      assert.equal(receipt.categories['source-digest'].status, 'UNVERIFIED');
++    }
++  }
++});
++
+ // ---- github readback（V_INFRA_I01 身份收敛回归）---------------------------------
+ // 缺陷基线（2026-10-25）：
+ //   1) readback --kind github 硬编码 repos/rpamis/sdd-harness，忽略 --registry 与登记身份；

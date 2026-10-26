@@ -708,6 +708,12 @@ test('RED digest binding: qualify receipt recomputes the actual input archive an
   fs.writeFileSync(wrongArchive, 'not the comet source archive');
   const wrongSha = crypto.createHash('sha256').update(fs.readFileSync(wrongArchive)).digest('hex');
 
+  // 期望摘要来自 registry 指向的实际 lock 内容（P1_1 拥有并可能重锁定该文件，
+  // 本测试断言绑定语义——回执绑定 lock 实际记录值——而不是钉死某个供给版本）。
+  const comet = loadCommittedRegistry().resources.find((r) => r.id === 'comet-source');
+  const lockedSha = JSON.parse(fs.readFileSync(path.join(repoRoot, comet.lockRef), 'utf8')).source.sha256;
+  assert.match(lockedSha, /^[0-9a-f]{64}$/, 'referenced lock must carry a source digest');
+
   const result = runRegistry([
     'qualify',
     '--resource',
@@ -723,9 +729,7 @@ test('RED digest binding: qualify receipt recomputes the actual input archive an
   // 回执必须绑定实际输入摘要，而不是声称的摘要。
   assert.equal(receipt.inputs.archiveSha256, wrongSha);
   assert.equal(receipt.categories['source-digest'].status, 'MISMATCH');
-  assert.ok(
-    (receipt.categories['source-digest'].expected ?? '').endsWith('28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f'),
-  );
+  assert.equal(receipt.categories['source-digest'].expected, lockedSha);
 });
 
 test('RED plaintext gate: secret-shaped values and secret-value keys are rejected', () => {
@@ -918,6 +922,81 @@ test('every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is regi
     assert.ok(entry.boundRole, 'every ref binds exactly one role');
     assert.ok(Array.isArray(entry.allowedPrincipals) && entry.allowedPrincipals.length > 0);
     assert.equal(entry.ref.startsWith('secret-ref:sdd-harness-pilot/'), true);
+  }
+});
+
+// ---- comet-050 采纳登记（revision 2026-10-26-comet-050-adoption-v1，wave 1 I01）---
+// 登记语义（负向红线）：只登记实际试点、知识栈与已有身份引用；
+// 服务账号可读、key 存在、同名组或本地目录存在，一律不得被登记为权限/受众资格。
+
+test('comet-050 adoption registration: PENDING_RELOCK supply records no fabricated 0.5.0 hash', () => {
+  const registry = loadCommittedRegistry();
+  const comet = registry.resources.find((r) => r.id === 'comet-source');
+  assert.ok(comet, 'comet-source resource must remain registered');
+  const adoption = comet.observation.adoption;
+  assert.equal(comet.observation.scope, 'COMET_050_ADOPTION_REGISTRATION_ONLY');
+  assert.equal(adoption.revision, '2026-10-26-comet-050-adoption-v1');
+  assert.equal(adoption.targetBaseline, '0.5.0');
+  assert.equal(adoption.status, 'PENDING_RELOCK');
+  assert.equal(adoption.relockOwner, 'P1_1');
+  // 不虚构哈希：P1_1 重锁定被接纳前，adoption 载荷不得出现任何 40-hex commit 或 sha256 摘要。
+  assert.doesNotMatch(
+    JSON.stringify(adoption),
+    /[0-9a-f]{40}|sha256:[0-9a-f]{64}/,
+    'adoption payload must stay hash-free until P1_1 relocks 0.5.0',
+  );
+  assert.match(comet.lockRef, /integrations\/comet\/upstream\.lock\.json/);
+  assert.match(adoption.note, /P1_1-owned supply state/, 'registration must not assert which version the P1_1 lock currently holds');
+  assert.equal(adoption.patchDisposition['0004'], 'retired; upstream 0.5.0 pins vite 8.2.4 and contains the remaining backports');
+  assert.ok(fs.existsSync(path.join(repoRoot, adoption.amendmentRef)), 'amendment reference must resolve');
+  assert.match(registry.project.authority.note, /pilot-contract\.md/, 'pilot facts must cite the verified registration');
+});
+
+test('knowledge stack registration: llmwiki and isolated openspec are inventory facts, not grants', () => {
+  const registry = loadCommittedRegistry();
+  const stacks = [
+    registry.resources.find((r) => r.id === 'llmwiki-project-stack'),
+    registry.resources.find((r) => r.id === 'openspec-isolated-tools'),
+  ];
+  for (const stack of stacks) {
+    assert.ok(stack, `${stack?.id ?? 'knowledge stack'} must be registered`);
+    assert.equal(stack.owner, registry.project.owner);
+    assert.match(stack.audience, /UNVERIFIED/, `${stack.id}: audience must stay UNVERIFIED`);
+    assert.equal(stack.retention.autoCleanupEnabled, false);
+    for (const field of ['rpo', 'rto', 'retentionPeriod', 'encryptionOwner', 'destructionPrecondition']) {
+      assert.equal(stack.retention[field], 'UNVERIFIED', `${stack.id}: ${field} must stay UNVERIFIED`);
+    }
+    assert.match(stack.observation.scope, /INVENTORY_ONLY/, `${stack.id}: observation must be scoped inventory-only`);
+    assert.match(stack.observation.landingRoot, /^\.sdd\//, `${stack.id}: landing must be the project-local SDD home`);
+    assert.match(stack.observation.landingRoot, /not committed/, 'local landing must be labeled non-committed content');
+    assert.ok(fs.existsSync(path.join(repoRoot, stack.lockRef)), `${stack.id}: lockRef must resolve to a committed lock`);
+  }
+  const llmwiki = stacks[0];
+  assert.match(llmwiki.observation.landingRoot, /^\.sdd\/repos\/llmwiki/);
+  assert.equal(llmwiki.observation.cloneCommitStatus.startsWith('RECORDED'), true, 'clone commit stays RECORDED, never independently-confirmed');
+  const openspec = stacks[1];
+  assert.match(openspec.observation.landingRoot, /\.sdd\/tools\/openspec-1\.11\.0/);
+  assert.match(openspec.purpose, /never a global install/);
+  // Outline 栈：既有资源补记运行态落位，不新增权限字段。
+  const outline = registry.resources.find((r) => r.id === 'outline-managed-collection');
+  assert.match(outline.domain.runtimeStateLocation, /\.sdd\/outline\/runtime/);
+  assert.match(outline.domain.runtimeStateLocation, /not a permission/);
+});
+
+test('knowledge stack registration never qualifies as ready: qualify refuses with honest UNVERIFIED categories', () => {
+  for (const id of ['llmwiki-project-stack', 'openspec-isolated-tools']) {
+    const result = runRegistry(['qualify', '--resource', id, '--registry', registryPath, '--json']);
+    assert.equal(result.status, 2, `${id}: registration is not readiness, qualify must refuse`);
+    const receipt = parseJsonOut(result, id);
+    assert.equal(receipt.ready, false);
+    for (const category of ['license', 'image-digest', 'platform', 'health-api', 'backup-compatibility']) {
+      assert.equal(receipt.categories[category].status, 'UNVERIFIED', `${id}: ${category} must be honestly UNVERIFIED`);
+    }
+    // 登记不得把已引用的记录事实（如 clone commit）升格为已验证摘要。
+    if (id === 'llmwiki-project-stack') {
+      assert.equal(receipt.categories['source-commit'].status, 'RECORDED');
+      assert.equal(receipt.categories['source-digest'].status, 'UNVERIFIED');
+    }
   }
 });
 

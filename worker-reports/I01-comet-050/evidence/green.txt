@@ -1,0 +1,29 @@
+run: comet-convergence-20261024-r1 / revision 2026-10-26-comet-050-adoption-v1 / I01 wave 1
+head at start: 48da1fe; node v22.13.1
+date: 2026-10-26T09:48:31Z
+
+$ node /tmp/i01-red-probe.mjs
+registration present (all comet-050 adoption registration facts found)
+exit=0
+
+$ node tools/infra/registry.mjs validate --json (registry + refs admission)
+ok= True violations= []
+
+$ node tools/infra/platform.mjs validate --json (I06 closed-shape admission over registry)
+ok= True localConsistency= None violations= 0
+
+$ node tools/infra/registry.mjs status --json
+comet-source owner=ql-wade lockPresent=True unconfirmedRetention=5
+outline-managed-collection owner=ql-wade lockPresent=True unconfirmedRetention=5
+llmwiki-project-stack owner=ql-wade lockPresent=True unconfirmedRetention=5
+openspec-isolated-tools owner=ql-wade lockPresent=True unconfirmedRetention=5
+
+suites:
+  node --test test/infra-registry.test.js                 -> 44 pass / 0 fail (44 tests, incl. 3 new comet-050 registration tests)
+  node --test test/infra-platform.test.js                  -> 47 pass / 0 fail
+  node --test test/infra-knowledge-authz.test.js test/knowledge-authorization.test.js test/knowledge-closeout.test.js test/knowledge-revocation.test.js -> 62 pass / 0 fail
+  node --test test/infra-monitor.test.js                   -> 17 pass / 0 fail
+  bash scripts/agent-instructions-check.sh && bash scripts/agent-skill-check.sh -> exit 0
+  static JSON (registry/refs/.mcp.json) -> PASS
+
+NOT my seam (shared-tree parallel P1_1 in-flight relock, documented in report): test/infra-runner-isolation.test.js RW_RUNNER_BUILD/I02 suites currently fail on UPSTREAM_LOCK_UNREADABLE + upstream/image-lock mirror mismatch; runner validate shows zero violations attributable to registry.json or secrets.refs (catalogGaps empty, no REGISTRY/REFS codes).
