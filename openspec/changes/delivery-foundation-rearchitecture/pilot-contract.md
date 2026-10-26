@@ -58,7 +58,7 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
     },
     "planBundle": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
-      "sha256": "3907b1f690ca160f40414cfa8ca7a710cabf639c6bbc9c4f0a1a1ee5d0b0efea",
+      "sha256": "0010b135f43dff0be51ee4cb22f384e58f07ab7af9fea71a67e40462727c52f2",
       "digestNormalization": "checkbox-state-agnostic（与 lib/delivery/baseline.js taskDefinitionDigest 同一归一化；勾选状态不构成计划漂移）"
     }
   },
@@ -98,3 +98,5 @@ P1_3注册归属修订的显式重冻结附记：仅Files/Owns/DAG三路径归�
 P1_1安全补丁所有权修订的显式派生登记：仅PlanBundle任务定义摘要从`618d3431cf0514a8bff25b0a2e8120b9d13f4032818bd54594b580f4e9a9a0c3`跟随已独立审查的所有权元数据改为`8b91e35e764ae52b5628507174d7aadf8cff2927c3a9fddebe62771360fa84e5`。product/design/testContract、试点、验收/权限/资格原字段全部不变；仍NOT_VERIFIED，不续期任何票或grant。原登记完整保存在本次replan-history。
 
 重冻结记录 3：2026-10-26 command-first 计划修订（replan 2026-10-26-command-first-v1，基线提交252401a，接管实施agent执行）按程序显式更新四件摘要：product `1f0311ab…`→`9a19fad2…`、design `688dd991…`→`24196530…`、testContract `a4193621…`→`8bb67f81…`、planBundle `8b91e35e…`→`3907b1f6…`（checkbox-state-agnostic 归一化）。四值由接管agent与P1_1独立复审者各自独立计算一致；重冻结前 journey 对 F01/F03/C07 均以 frozen-baseline-drift 结构化拒绝（A15 保守失效，见 .whitebox 对应 verdict）。本登记仍NOT_VERIFIED，不提供角色/权限/旅程批准，不自动续期任何票。审计JSON：worker-reports/P3_1-command-first/pilot-freeze-amendment-20261026.json。
+
+重冻结记录 4：2026-10-27 comet-050 采纳并行重规划（replans/2026-10-26-comet-050-adoption，ADR-0022 Accepted）重写 tasks.md（归一化摘要 `3907b1f6…`→`0010b135…`），仅 planBundle 按程序显式更新；product/design/testContract 三件实测未漂移。由接管控制器在 P1_5 集成点执行（本条即审计记录）。本登记仍 NOT_VERIFIED，不续期任何票或 grant。
