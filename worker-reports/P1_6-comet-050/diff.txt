@@ -1,0 +1,467 @@
+# P1_6 diff evidence (revision 2026-10-26-comet-050-adoption-v1)
+# date: 2026-10-26T10:41:22Z
+
+## tracked modifications (git diff)
+diff --git a/foundation/profiles/comet-managed.json b/foundation/profiles/comet-managed.json
+index 4066fd6..ca11ec5 100644
+--- a/foundation/profiles/comet-managed.json
++++ b/foundation/profiles/comet-managed.json
+@@ -4,8 +4,14 @@
+   "optional": true,
+   "controller": "comet-classic",
+   "qualification": {
+-    "status": "UNQUALIFIED",
+-    "reason": "Method assets and bindings are construction inputs. A qualified executor, protected launcher identity and runtime gates are required before enablement.",
++    "status": "ASSETS_PACKAGED",
++    "reason": "Method skill assets are packaged verbatim under integrations/comet/application/skills (supply side of 0.5.0 application composition, ADR-0022). Execution bindings, composition wiring, a qualified executor, protected launcher identity and runtime gates are still required before enablement; this status is not QUALIFIED and implies no runtime acceptance.",
++    "assetPackaging": {
++      "manifest": "integrations/comet/application/manifest.json",
++      "packagedRoot": "integrations/comet/application/skills",
++      "revision": "2026-10-26-comet-050-adoption-v1",
++      "upstreamCommit": "aeb1a6598034e28ce46b8422d4dbd8785e607bd7"
++    },
+     "enablementOwners": [
+       "P1_3",
+       "P2_2",
+diff --git a/openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json b/openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json
+index 26042f8..5c41e43 100644
+--- a/openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json
++++ b/openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json
+@@ -1,6 +1,6 @@
+ {
+   "schema_version": 1,
+-  "status": "SOURCE_BOUND_RUNTIME_UNQUALIFIED",
++  "status": "APPLICATION_ASSETS_PACKAGED_RUNTIME_UNQUALIFIED",
+   "created_at": "2026-10-20T13:05:00+08:00",
+   "created_by": "P1_6 convergence worker; isolated original task, baseline 7dd64e1",
+   "briefing": "openspec/changes/delivery-foundation-rearchitecture/matt-method-profile-migration.md",
+@@ -12,7 +12,7 @@
+   ],
+   "method_profile": {
+     "controller": "comet-classic",
+-    "controller_basis": "@rpamis/comet@0.4.5 pinned by integrations/comet/upstream.lock.json; patches in integrations/comet/patches applied reproducibly by tools/comet/build.mjs; exactly one delivery controller",
++    "controller_basis": "@rpamis/comet@0.5.0 pinned by integrations/comet/upstream.lock.json (commit aeb1a6598034e28ce46b8422d4dbd8785e607bd7, lock.patches == [] — patch chain retired per ADR-0022); exactly one delivery controller",
+     "implementation_method": "matt-primitives",
+     "implementation_method_detail": "implementation defaults: Matt tdd (test-first), Matt diagnosing-bugs (diagnosis loop), Matt code-review (Standards/Spec review); specialized methods keep their own responsibilities",
+     "spec_source": "openspec",
+@@ -29,8 +29,8 @@
+     ],
+     "consensus": "architecture via grill-me + multi-agent-consensus-review unanimous gate; test design independently auto-reviewed (test-authoring); Matt user-entry policy unchanged (no implicit to-spec/to-tickets substitution)",
+     "superpowers": {
+-      "status": "globally disabled upstream; not an installation or execution dependency anywhere in this delivery",
+-      "init_install_path": "removed by integrations/comet/patches/0001-matt-method-profile.patch from init selection and all init/update installer calls",
++      "status": "not an installation or execution dependency anywhere in this delivery; upstream 0.5.0 baseline (patch chain retired) again offers Superpowers at init — the managed profile must never select it",
++      "init_install_path": "upstream baseline init calls `skills add obra/superpowers ...` again (RED evidence: worker-reports/P1_6-comet-050/evidence/red-1-delivery-case-1_6.txt); managed delivery excludes it via 0.5.0 application composition whose packaged assets (integrations/comet/application/skills) contain no superpowers/sdd-*/trinity names; enforcing exclusion at the real init/update seam is owned by the downstream composition and managed-init tasks per ADR-0022 migration order",
+       "legacy_layout_paths": "docs/superpowers / classic-superpowers-root names remain controlled compatibility artifact paths only; per briefing they grant no permission to execute Superpowers",
+       "attribution_links": "method-source links inside snapshots (e.g. whitebox-verify references to Superpowers TDD) are attribution references, not runtime dependencies; kept per briefing"
+     }
+@@ -494,23 +494,25 @@
+       "source_metadata_sha256": "c72fef7ddde87f091cb719ad85719e5cc870d6fb2351dc3d7319342c0aa7f708"
+     }
+   ],
++  "application_packaging": {
++    "status": "ASSETS_PACKAGED",
++    "revision": "2026-10-26-comet-050-adoption-v1",
++    "manifest": "integrations/comet/application/manifest.json",
++    "packaged_root": "integrations/comet/application/skills",
++    "packaged_from": "every snapshot under snapshots[] is copied verbatim (byte-identical, real directories, no symlinks) to integrations/comet/application/skills/<name>",
++    "role": "supply side of the 0.5.0 native application composition (ADR-0022): execution-skill replacements consume these packaged assets; composition wiring, stepId/output-contract preservation and managed init remain downstream tasks",
++    "naming_rule": "no packaged skill name and no path component under the packaged root may match superpowers/sdd-*/trinity (case-insensitive); attribution references inside verbatim bodies are kept per method_profile.superpowers.attribution_links",
++    "runtime_accepted": false
++  },
+   "comet_integration": {
+-    "patches_registered_in": "integrations/comet/upstream.lock.json; controller must integrate current patch hashes serially",
++    "upstream_lock": "integrations/comet/upstream.lock.json",
++    "upstream_version": "0.5.0",
++    "upstream_commit": "aeb1a6598034e28ce46b8422d4dbd8785e607bd7",
++    "patch_chain_status": "retired per ADR-0022 (lock.patches == []); legacy patch files under integrations/comet/patches/ remain on disk as historical evidence only and are never applied — their disposition is owned by I02",
++    "composition_route": "0.5.0 native application composition (base=classic-full); execution-skill replacements are supplied from integrations/comet/application/skills per application_packaging; validators bind to host-side lib/delivery/* via bindings.mjs (downstream)",
+     "profile_data": "comet-managed-v2",
+     "runtime_accepted": false,
+-    "patches": [
+-      {
+-        "path": "integrations/comet/patches/0001-matt-method-profile.patch",
+-        "scope": "init/update actual dependency installers, doctor diagnostic, native Hook plan-recovery guidance, bilingual Classic assets and asset manifest",
+-        "role": "Comet init/update can no longer select or install Superpowers. Actual shipped methods use Matt and the selected specialist snapshots; planning loads only original protocol sections, not the planner controller."
+-      },
+-      {
+-        "path": "integrations/comet/patches/tests/1_6.patch",
+-        "scope": "test/app/init-e2e.test.ts, test/app/update.test.ts, test/app/doctor.test.ts, test/app/matt-method-profile.test.ts, test/domains/comet-classic/classic-hook-guard.test.ts",
+-        "role": "Public platform installation seam verifies bilingual method data and assets; no runtime role/gate acceptance is signed."
+-      }
+-    ],
+-    "behavioral_probes": "test/delivery-cases/1_6.mjs runs the actual locked CLI in fresh isolated HOME/project roots for both languages; no external provider review is launched"
++    "behavioral_probes": "test/delivery-cases/1_6.mjs pins the locked 0.5.0 build presence and the packaged application asset manifest (supplier qualification); no external provider review is launched"
+   },
+   "unverified": [
+     {
+@@ -556,5 +558,6 @@
+   "current_profile_id": "comet-managed-v2",
+   "profile_data": "foundation/profiles/comet-managed.json",
+   "runtime_accepted": false,
+-  "updated_at": "2026-10-25T02:08:24.706860+00:00"
++  "updated_at": "2026-10-26T18:40:00+08:00",
++  "updated_by": "P1_6 worker, revision 2026-10-26-comet-050-adoption-v1: upstream relocked to 0.5.0 (patch chain retired per ADR-0022), skill assets packaged under integrations/comet/application, supplier tests re-pointed at the application manifest"
+ }
+diff --git a/test/comet-method-binding.test.js b/test/comet-method-binding.test.js
+index 29608ba..5ab5284 100644
+--- a/test/comet-method-binding.test.js
++++ b/test/comet-method-binding.test.js
+@@ -60,12 +60,13 @@ const readJson = async (file) => JSON.parse(await fs.readFile(path.join(root, fi
+ 
+ // Distribution is the public seam here: every retained source file, including
+ // log fixtures, must be pinned. This does not establish execution provenance.
+-test('method supplier pins complete real source directories and a single unqualified optional profile', async () => {
++test('method supplier pins complete real source directories and a single assets-packaged runtime-unqualified optional profile', async () => {
+   const manifest = await readJson('openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json');
+   const profile = await readJson('foundation/profiles/comet-managed.json');
+   assert.equal(profile.id, 'comet-managed-v2');
+   assert.equal(manifest.current_profile_id, profile.id);
+-  assert.equal(profile.qualification.status, 'UNQUALIFIED');
++  assert.equal(profile.qualification.status, 'ASSETS_PACKAGED');
++  assert.notEqual(profile.qualification.status, 'QUALIFIED');
+   assert.equal(profile.runtimeAccepted, false);
+   assert.equal(profile.optional, true);
+   assert.deepEqual(profile.nativePhases, ['open', 'design', 'build', 'verify', 'archive']);
+@@ -93,6 +94,178 @@ test('method supplier pins complete real source directories and a single unquali
+   }
+ });
+ 
++// ---- ADR-0022 application packaging (supply side of 0.5.0 composition) ----
++// Retired method roster may not re-enter the packaged assets under any name.
++const retiredNamePattern = /(superpowers|sdd-|trinity)/i;
++const aggregateOf = (files) => digest(Object.entries(files).map(([p, sha]) => `${sha}  ${p}`).sort().join('\n'));
++
++async function walkSkillAssets(dir) {
++  const files = {};
++  const issues = [];
++  async function walk(current) {
++    for (const entry of await fs.readdir(current, { withFileTypes: true })) {
++      const full = path.join(current, entry.name);
++      const rel = path.relative(dir, full).split(path.sep).join('/');
++      if (retiredNamePattern.test(entry.name)) issues.push(`retired-method-name: ${rel}`);
++      if (entry.isSymbolicLink()) { issues.push(`symlink-in-application-assets: ${rel}`); continue; }
++      if (entry.isDirectory()) await walk(full);
++      else if (entry.isFile()) files[rel] = digest(await fs.readFile(full));
++    }
++  }
++  await walk(dir);
++  return { files, issues };
++}
++
++async function walkPlain(dir) {
++  const { files } = await walkSkillAssets(dir);
++  return files;
++}
++
++// Pure, data-driven supplier validation: the same code path runs against the
++// real repository tree and against mutated synthetic fixtures.
++async function collectApplicationPackagingIssues({ appManifest, skillsRoot, sourceRoot, methodManifest, profile, lock }) {
++  const issues = [];
++  const no = (code, detail) => issues.push(`${code}: ${detail}`);
++  if (appManifest.kind !== 'comet-application-skill-assets') no('manifest-kind', String(appManifest.kind));
++  if (appManifest.status !== 'ASSETS_PACKAGED') no('manifest-status', String(appManifest.status));
++  if (appManifest.runtime_accepted !== false) no('manifest-runtime-accepted', String(appManifest.runtime_accepted));
++  if (appManifest.basis?.upstream_commit !== lock.source.commit) no('upstream-commit-mismatch', `${appManifest.basis?.upstream_commit} != ${lock.source.commit}`);
++  if (JSON.stringify(appManifest.basis?.upstream_patches ?? null) !== JSON.stringify(lock.patches)) no('upstream-patches-mismatch', 'manifest basis patches differ from upstream lock patches');
++  if (appManifest.basis?.method_profile_manifest !== 'openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json') no('basis-method-profile-manifest', String(appManifest.basis?.method_profile_manifest));
++  if (appManifest.basis?.foundation_profile !== 'foundation/profiles/comet-managed.json') no('basis-foundation-profile', String(appManifest.basis?.foundation_profile));
++  if (profile.qualification.status !== 'ASSETS_PACKAGED') no('profile-qualification-status', String(profile.qualification.status));
++  if (profile.runtimeAccepted !== false) no('profile-runtime-accepted', String(profile.runtimeAccepted));
++
++  const entries = appManifest.skills ?? [];
++  for (const entry of entries) if (retiredNamePattern.test(entry.name)) no('retired-method-name', `manifest skill entry ${entry.name}`);
++  const manifestNames = entries.map((entry) => entry.name).sort();
++  const snapshotNames = methodManifest.snapshots.map((snapshot) => snapshot.name).sort();
++  const profileNames = Object.keys(profile.methods).sort();
++  if (JSON.stringify(manifestNames) !== JSON.stringify(snapshotNames)) no('skill-set-mismatch', `manifest [${manifestNames}] != snapshots [${snapshotNames}]`);
++  if (JSON.stringify(manifestNames) !== JSON.stringify(profileNames)) no('skill-set-mismatch', `manifest [${manifestNames}] != profile methods [${profileNames}]`);
++  const actualDirs = (await fs.readdir(skillsRoot, { withFileTypes: true }))
++    .filter((entry) => entry.isDirectory() || entry.isFile() || entry.isSymbolicLink())
++    .map((entry) => entry.name).sort();
++  if (retiredNamePattern.test(actualDirs.join(' '))) no('retired-method-name', `packaged directory roster ${actualDirs.join(', ')}`);
++  if (JSON.stringify(actualDirs) !== JSON.stringify(manifestNames)) no('skill-set-mismatch', `packaged directories [${actualDirs}] != manifest [${manifestNames}]`);
++
++  for (const entry of entries) {
++    const packaged = path.join(skillsRoot, entry.name);
++    const source = path.join(sourceRoot, entry.name);
++    if (entry.source_path !== `.agents/skills/${entry.name}`) no('entry-source-path', `${entry.name}: ${entry.source_path}`);
++    if (entry.packaged_path !== `integrations/comet/application/skills/${entry.name}`) no('entry-packaged-path', `${entry.name}: ${entry.packaged_path}`);
++    if (entry.verbatim_copy !== true) no('entry-verbatim-copy', entry.name);
++    let packagedFiles;
++    try {
++      const walked = await walkSkillAssets(packaged);
++      packagedFiles = walked.files;
++      issues.push(...walked.issues.map((issue) => `${issue} (${entry.name})`));
++    } catch {
++      no('skill-directory-missing', packaged);
++      continue;
++    }
++    const snapshot = methodManifest.snapshots.find((candidate) => candidate.name === entry.name);
++    const sourceFiles = await walkPlain(source);
++    if (JSON.stringify(packagedFiles) !== JSON.stringify(sourceFiles)) no('packaged-source-mismatch', `${entry.name} packaged bytes/set differ from verbatim source`);
++    // The declared digest basis uses skill-name-prefixed relative paths.
++    const prefixed = Object.fromEntries(Object.entries(packagedFiles).map(([p, sha]) => [`${entry.name}/${p}`, sha]));
++    const aggregate = aggregateOf(prefixed);
++    if (aggregate !== entry.content_sha256) no('packaged-digest-drift', `${entry.name} ${aggregate} != ${entry.content_sha256}`);
++    if (Object.keys(packagedFiles).length !== entry.file_count) no('packaged-file-count', `${entry.name} ${Object.keys(packagedFiles).length} != ${entry.file_count}`);
++    if (snapshot && aggregate !== snapshot.content_sha256) no('cross-digest-mismatch', `${entry.name} != method-profile snapshot ${snapshot.content_sha256}`);
++    if (profile.methods[entry.name] && aggregate !== profile.methods[entry.name].sha256) no('cross-digest-mismatch', `${entry.name} != profile method digest`);
++  }
++  return issues;
++}
++
++test('application packaging pins verbatim method assets for 0.5.0 composition with no retired names', async () => {
++  const appManifest = await readJson('integrations/comet/application/manifest.json');
++  const methodManifest = await readJson('openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json');
++  const profile = await readJson('foundation/profiles/comet-managed.json');
++  const lock = await readJson('integrations/comet/upstream.lock.json');
++  const issues = await collectApplicationPackagingIssues({
++    appManifest,
++    skillsRoot: path.join(root, 'integrations/comet/application/skills'),
++    sourceRoot: path.join(root, '.agents/skills'),
++    methodManifest,
++    profile,
++    lock,
++  });
++  assert.deepEqual(issues, []);
++});
++
++// Minimal coherent synthetic world; the same validator that passes on the real
++// tree must reject mutated fixtures (missing piece, hash drift, retired name).
++async function packagingFixture(t, mutate) {
++  const scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'method-app-'));
++  t.after(() => fs.rm(scratch, { recursive: true, force: true }));
++  const sourceRoot = path.join(scratch, 'source');
++  const skillsRoot = path.join(scratch, 'app', 'skills');
++  await fs.mkdir(path.join(sourceRoot, 'alpha'), { recursive: true });
++  await fs.mkdir(path.join(sourceRoot, 'beta'), { recursive: true });
++  await fs.writeFile(path.join(sourceRoot, 'alpha/SKILL.md'), '# alpha method\n');
++  await fs.writeFile(path.join(sourceRoot, 'beta/SKILL.md'), '# beta method\n');
++  await fs.cp(path.join(sourceRoot, 'alpha'), path.join(skillsRoot, 'alpha'), { recursive: true });
++  await fs.cp(path.join(sourceRoot, 'beta'), path.join(skillsRoot, 'beta'), { recursive: true });
++  const filesOf = async (dir, name) => {
++    const files = {};
++    files['SKILL.md'] = digest(await fs.readFile(path.join(dir, name, 'SKILL.md')));
++    return Object.fromEntries(Object.entries(files).map(([p, sha]) => [`${name}/${p}`, sha]));
++  };
++  const snapshots = [];
++  const skills = [];
++  const methods = {};
++  for (const name of ['alpha', 'beta']) {
++    const files = await filesOf(sourceRoot, name);
++    const contentSha = aggregateOf(files);
++    snapshots.push({ name, files, file_count: Object.keys(files).length, content_sha256: contentSha });
++    skills.push({ name, source_path: `.agents/skills/${name}`, packaged_path: `integrations/comet/application/skills/${name}`, verbatim_copy: true, file_count: Object.keys(files).length, content_sha256: contentSha });
++    methods[name] = { sha256: contentSha };
++  }
++  const lock = { source: { commit: 'c0mmit' }, patches: [] };
++  const world = {
++    sourceRoot, skillsRoot, lock,
++    methodManifest: { snapshots },
++    profile: { methods, qualification: { status: 'ASSETS_PACKAGED' }, runtimeAccepted: false },
++    appManifest: {
++      kind: 'comet-application-skill-assets', status: 'ASSETS_PACKAGED', runtime_accepted: false,
++      basis: {
++        upstream_commit: 'c0mmit', upstream_patches: [],
++        method_profile_manifest: 'openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json',
++        foundation_profile: 'foundation/profiles/comet-managed.json',
++      },
++      skills,
++    },
++  };
++  await mutate(world);
++  return collectApplicationPackagingIssues(world);
++}
++
++test('application packaging validation rejects a missing packaged asset', async (t) => {
++  const issues = await packagingFixture(t, async (world) => {
++    await fs.rm(path.join(world.skillsRoot, 'beta', 'SKILL.md'));
++  });
++  assert.ok(issues.some((issue) => issue.startsWith('packaged-source-mismatch:')), issues.join('\n'));
++  assert.ok(issues.some((issue) => issue.startsWith('packaged-digest-drift:')), issues.join('\n'));
++});
++
++test('application packaging validation rejects hash drift in packaged bytes', async (t) => {
++  const issues = await packagingFixture(t, async (world) => {
++    await fs.writeFile(path.join(world.skillsRoot, 'alpha', 'SKILL.md'), '# alpha method (tampered)\n');
++  });
++  assert.ok(issues.some((issue) => issue.startsWith('packaged-source-mismatch:')), issues.join('\n'));
++  assert.ok(issues.some((issue) => issue.startsWith('packaged-digest-drift:')), issues.join('\n'));
++});
++
++test('application packaging validation rejects retired Superpowers/sdd/trinity names', async (t) => {
++  const issues = await packagingFixture(t, async (world) => {
++    await fs.mkdir(path.join(world.skillsRoot, 'superpowers-brainstorming'), { recursive: true });
++    await fs.writeFile(path.join(world.skillsRoot, 'superpowers-brainstorming/SKILL.md'), '# retired\n');
++  });
++  assert.ok(issues.some((issue) => issue.startsWith('retired-method-name:')), issues.join('\n'));
++  assert.ok(issues.some((issue) => issue.startsWith('skill-set-mismatch:')), issues.join('\n'));
++});
++
+ test('P exposes original plan protocol and pure validation without the planner controller', async (t) => {
+   const profile = await readJson('foundation/profiles/comet-managed.json');
+   const planner = profile.methods['claude-parallel-tdd-planner'];
+diff --git a/test/delivery-cases/1_6.mjs b/test/delivery-cases/1_6.mjs
+index 6d94fe7..abea7e8 100644
+--- a/test/delivery-cases/1_6.mjs
++++ b/test/delivery-cases/1_6.mjs
+@@ -1,10 +1,17 @@
+-// P1_6 supplier qualification only. These installation and source checks do not
+-// certify real roles, review provenance, business gates, or the complete Run.
++// P1_6 supplier qualification only, revision 2026-10-26-comet-050-adoption-v1.
++// ADR-0022: the upstream patch chain is retired and Comet is relocked to 0.5.0
++// (upstream.lock.json patches == []). This case now pins (a) the locked,
++// patch-free 0.5.0 build supply and (b) the packaged application skill assets
++// (integrations/comet/application) that feed downstream composition
++// replacements. Deep verbatim/digest validation and negative fixtures live in
++// comet-method-binding.test.js, imported below. No model or MCP is started, and
++// no runtime role/gate acceptance is certified here. Managed init/update
++// behavior against the real CLI moves with the composition task; the 0.5.0
++// baseline (upstream init offering Superpowers again) is recorded as RED
++// evidence in worker-reports/P1_6-comet-050/evidence/.
+ import assert from 'node:assert/strict';
+ import crypto from 'node:crypto';
+-import { spawnSync } from 'node:child_process';
+ import fs from 'node:fs/promises';
+-import os from 'node:os';
+ import path from 'node:path';
+ import test from 'node:test';
+ import { fileURLToPath } from 'node:url';
+@@ -15,78 +22,60 @@ const lockFile = process.env.P16_COMET_LOCK ?? 'integrations/comet/upstream.lock
+ const lock = JSON.parse(await fs.readFile(path.resolve(root, lockFile), 'utf8'));
+ const fingerprint = crypto.createHash('sha256').update(JSON.stringify({
+   archive: lock.source.sha256,
+-  patches: lock.patches.map(({ path, sha256 }) => ({ path, sha256 })),
++  patches: lock.patches.map(({ path: patchPath, sha256 }) => ({ path: patchPath, sha256 })),
+   toolchain: lock.toolchain,
+ })).digest('hex');
+ const build = path.join(root, '.sdd/vendor/comet', lock.source.commit, 'builds', fingerprint);
+-const entry = path.join(build, 'work/bin/comet.js');
+-const node = process.versions.node === lock.toolchain.node ? process.execPath
+-  : path.join(process.env.HOME, '.nvm/versions/node', `v${lock.toolchain.node}`, 'bin/node');
++const retiredNamePattern = /(superpowers|sdd-|trinity)/i;
++const digest = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
+ 
+-async function initFixture(t, language) {
+-  await fs.access(path.join(build, 'distribution.json')); // Required case: absence is nonzero UNVERIFIED, never skip/PASS.
+-  const scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'method-init-'));
+-  t.after(() => fs.rm(scratch, { recursive: true, force: true }));
+-  const project = path.join(scratch, 'project');
+-  const home = path.join(scratch, 'home');
+-  const stubs = path.join(scratch, 'stubs');
+-  for (const dir of [project, home, stubs]) await fs.mkdir(dir);
+-  const calls = path.join(scratch, 'install-calls.txt');
+-  for (const name of ['npm', 'npx']) {
+-    await fs.writeFile(path.join(stubs, name), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$P16_INSTALL_CALLS"\nexit 0\n', { mode: 0o755 });
+-  }
+-  await fs.writeFile(path.join(stubs, 'openspec'), '#!/bin/sh\nexec "$P16_NODE" "$P16_OPENSPEC_ENTRY" "$@"\n', { mode: 0o755 });
+-  const env = {
+-    ...process.env, HOME: home, XDG_CONFIG_HOME: path.join(home, '.config'),
+-    PATH: `${stubs}:${path.dirname(node)}:${process.env.PATH ?? ''}`,
+-    P16_INSTALL_CALLS: calls, P16_NODE: node, PYTHONDONTWRITEBYTECODE: '1',
+-    P16_OPENSPEC_ENTRY: path.join(root, '.sdd/tools/openspec-1.11.0/node_modules/@fission-ai/openspec/bin/openspec.js'),
+-    OPENSPEC_TELEMETRY: '0', CI: 'true',
+-  };
+-  const run = (args) => {
+-    const result = spawnSync(node, [entry, ...args], { cwd: project, env, encoding: 'utf8', timeout: 180000 });
+-    assert.ifError(result.error);
+-    return { ...result, output: `${result.stdout}\n${result.stderr}` };
+-  };
+-  const installed = run(['init', project, '--yes', '--scope', 'project', '--workflow', 'classic', '--platform', 'claude', '--codegraph', 'skip', '--language', language]);
+-  assert.equal(installed.status, 0, installed.output);
+-  return { project, calls, run, skills: path.join(project, '.claude/skills'), installed };
+-}
++test('M01/B09 supplier: the locked 0.5.0 build supply is present and patch-free', async () => {
++  assert.equal(lock.package.version, '0.5.0');
++  assert.equal(lock.source.commit, 'aeb1a6598034e28ce46b8422d4dbd8785e607bd7');
++  assert.deepEqual(lock.patches, []);
++  // Required case: a missing distribution is nonzero UNVERIFIED, never skip/PASS.
++  await fs.access(path.join(build, 'distribution.json'));
++  await fs.access(path.join(build, 'work/bin/comet.js'));
++});
+ 
+-for (const language of ['en', 'zh']) {
+-  test(`M01 supplier: real Classic init distributes Matt methods in ${language}, without activating a controller`, async (t) => {
+-    const { calls, skills, project, run } = await initFixture(t, language);
+-    const body = await fs.readFile(path.join(skills, 'comet-design/SKILL.md'), 'utf8');
+-    assert.match(body, /grill-me/);
+-    assert.doesNotMatch(body, /load the Superpowers `brainstorming`|加载 Superpowers `brainstorming`/);
+-    const protocol = await fs.readFile(path.join(skills, 'comet-classic/reference/method-profile.md'), 'utf8');
+-    assert.match(protocol, /comet-managed-v2/);
+-    assert.match(protocol, /UNQUALIFIED/);
+-    assert.match(protocol, /multi-agent-consensus-review/);
+-    assert.match(protocol, /test-authoring/);
+-    assert.match(protocol, /whitebox-verify/);
+-    const diagnostic = run(['doctor', project, '--scope', 'project', '--json']);
+-    const methods = JSON.parse(diagnostic.stdout).results.find((item) => item.check === 'Project methods');
+-    assert.equal(methods.status, 'warn');
+-    assert.match(methods.message, /UNQUALIFIED/);
+-    assert.doesNotMatch(methods.message, /npx skills add obra\/superpowers/);
+-    assert.doesNotMatch(await fs.readFile(calls, 'utf8').catch(() => ''), /obra\/superpowers/);
+-    for (const skill of ['comet-open', 'comet-design', 'comet-build', 'comet-verify', 'comet-archive']) {
+-      const installed = await fs.readFile(path.join(skills, skill, 'SKILL.md'), 'utf8');
+-      const source = await fs.readFile(path.join(build, 'work/assets', language === 'zh' ? 'skills-zh' : 'skills', skill, 'SKILL.md'), 'utf8');
+-      assert.equal(installed, source, `${skill} installation lost the patched method binding`);
++test('M02/N04 supplier: application manifest binds to the locked baseline and packages the declared method roster with no retired names', async () => {
++  const appManifest = JSON.parse(await fs.readFile(path.join(root, 'integrations/comet/application/manifest.json'), 'utf8'));
++  const methodManifest = JSON.parse(await fs.readFile(path.join(root, 'openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json'), 'utf8'));
++  const profile = JSON.parse(await fs.readFile(path.join(root, 'foundation/profiles/comet-managed.json'), 'utf8'));
++  assert.equal(appManifest.kind, 'comet-application-skill-assets');
++  assert.equal(appManifest.status, 'ASSETS_PACKAGED');
++  assert.equal(appManifest.runtime_accepted, false);
++  assert.equal(appManifest.basis.upstream_version, lock.package.version);
++  assert.equal(appManifest.basis.upstream_commit, lock.source.commit);
++  assert.deepEqual(appManifest.basis.upstream_patches, []);
++  const names = appManifest.skills.map((skill) => skill.name).sort();
++  assert.deepEqual(names, methodManifest.snapshots.map((snapshot) => snapshot.name).sort());
++  assert.deepEqual(names, Object.keys(profile.methods).sort());
++  const skillsRoot = path.join(root, 'integrations/comet/application/skills');
++  const directories = (await fs.readdir(skillsRoot, { withFileTypes: true }))
++    .filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
++  assert.deepEqual(directories, names);
++  for (const entry of appManifest.skills) {
++    assert.doesNotMatch(entry.name, retiredNamePattern);
++    assert.equal(entry.source_path, `.agents/skills/${entry.name}`);
++    const files = {};
++    async function walk(dir) {
++      for (const item of await fs.readdir(dir, { withFileTypes: true })) {
++        assert.equal(item.isSymbolicLink(), false, path.join(dir, item.name));
++        assert.doesNotMatch(item.name, retiredNamePattern, path.join(dir, item.name));
++        if (item.isDirectory()) await walk(path.join(dir, item.name));
++        else if (item.isFile()) {
++          files[`${entry.name}/${path.relative(path.join(skillsRoot, entry.name), path.join(dir, item.name)).split(path.sep).join('/')}`] = digest(await fs.readFile(path.join(dir, item.name)));
++        }
++      }
+     }
+-  });
+-}
+-
+-test('M01 supplier: update keeps residual user methods but never reinstalls the disabled dependency', async (t) => {
+-  const { project, skills, calls, run } = await initFixture(t, 'en');
+-  const residual = path.join(skills, 'brainstorming');
+-  await fs.mkdir(residual, { recursive: true });
+-  const userBody = '# pre-existing user method, outside Comet ownership\n';
+-  await fs.writeFile(path.join(residual, 'SKILL.md'), userBody);
+-  const updated = run(['update', project, '--scope', 'project', '--current-project', '--skip-self-update', '--language', 'en', '--json']);
+-  assert.equal(updated.status, 0, updated.output);
+-  assert.doesNotMatch(await fs.readFile(calls, 'utf8').catch(() => ''), /obra\/superpowers/);
+-  assert.equal(await fs.readFile(path.join(residual, 'SKILL.md'), 'utf8'), userBody);
++    await walk(path.join(skillsRoot, entry.name));
++    assert.equal(Object.keys(files).length, entry.file_count, entry.name);
++    const aggregate = digest(Object.entries(files).map(([p, sha]) => `${sha}  ${p}`).sort().join('\n'));
++    assert.equal(aggregate, entry.content_sha256, `${entry.name} packaged digest drift`);
++    assert.equal(aggregate, profile.methods[entry.name].sha256, `${entry.name} profile digest drift`);
++  }
++  assert.equal(profile.qualification.status, 'ASSETS_PACKAGED');
++  assert.notEqual(profile.qualification.status, 'QUALIFIED');
++  assert.equal(profile.runtimeAccepted, false);
+ });
+
+## new untracked assets owned by P1_6
+- integrations/comet/application/manifest.json (    6748 bytes)
+- integrations/comet/application/skills/: 245 files across 11 skill directories (byte-identical to .agents/skills snapshots; see evidence/verbatim-diff-r.txt)
+- worker-reports/P1_6-comet-050/ (this evidence bundle)
+
+## pollution cleanup (root-cause, no tracked bytes changed)
+- removed untracked, gitignored .agents/skills/claude-parallel-tdd-planner/scripts/__pycache__/plan_guard.cpython-314.pyc (session artifact violating the vendored-snapshot inventory; created 2026-10-26 17:09 by an earlier session, not by P1_6)
