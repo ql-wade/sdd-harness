@@ -1123,6 +1123,7 @@ test('0.5.0: the classic composition start/recovery requests mirror the upstream
     operation: 'start', runId: 'demo',
     workflow: { id: 'comet-classic-full', version: '1' },
     input: { change: 'demo', changeDir: 'openspec/changes/demo' },
+    initialState: comet.MANAGED_COMPOSITION_INITIAL_STATE,
   });
   assert.ok(Object.isFrozen(start));
   // The docs-root layout is equally valid (legacy artifact_layout).
