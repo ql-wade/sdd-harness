@@ -1,0 +1,32 @@
+{
+  "startedAt": "2026-10-26T01:38:15.771229+00:00",
+  "argv": [
+    "docker",
+    "run",
+    "--pull=never",
+    "--rm",
+    "--network=none",
+    "--read-only",
+    "--user=10001:10001",
+    "--cap-drop=ALL",
+    "--security-opt=no-new-privileges:true",
+    "--pids-limit=128",
+    "--memory=1g",
+    "--cpus=1",
+    "--tmpfs",
+    "/tmp:rw,noexec,nosuid,nodev,size=64m,uid=10001,gid=10001",
+    "--tmpfs",
+    "/home/comet:rw,noexec,nosuid,nodev,size=64m,uid=10001,gid=10001",
+    "--env",
+    "OPENSPEC_TELEMETRY=0",
+    "--env",
+    "DO_NOT_TRACK=1",
+    "--entrypoint=node",
+    "sha256:fad4c6a6ee25a0c65a0c665a7599d2b192ebe42e9bb490b2702c0fd1e718736c",
+    "-e",
+    "const a=require('node:assert/strict'),fs=require('node:fs'),cp=require('node:child_process');\nconst expected={\"sdk\": \"3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69\", \"bootstrap\": \"55ac772e81495c5575ccae0dacb9ef7ff140383b10d9516b39f3885ab93fb9f3\"};\na.equal(process.version,'v24.15.0');a.equal(process.getuid(),10001);a.equal(process.platform,'linux');a.equal(process.arch,'arm64');\nconst call=(cmd,args,wanted)=>{const p=cp.spawnSync(cmd,args,{encoding:'utf8',timeout:20000,env:{...process.env,OPENSPEC_TELEMETRY:'0',DO_NOT_TRACK:'1'}});a.equal(p.status,0,p.stderr);if(wanted!==null)a.equal(p.stdout.trim(),wanted);return p.stdout.trim();};\ncall('python3',['-I','-c','import sys,ssl,tarfile,hashlib,bz2,lzma,ctypes,sqlite3,readline,curses,dbm.gnu,yaml; assert sys.version.split()[0]==\"3.12.15\"; assert yaml.__version__==\"6.0.3\"; print(\"python-resource-ok\")'],'python-resource-ok');\ncall('git',['--version'],'git version 2.39.5');call('pnpm',['--version'],'10.18.3');call('openspec',['--version'],'1.11.0');call('/usr/local/bin/comet-runner',['--version'],'0.4.5');\na.equal(fs.realpathSync('/opt/sdd/runner-host.mjs'),'/opt/sdd/lib/adapters/comet-executor.js');a.equal(fs.realpathSync('/usr/local/bin/openspec'),'/build/repo/.sdd/cache/runner-build/openspec-project/node_modules/@fission-ai/openspec/bin/openspec.js');\nfor(const [args,code,status]of [[['state','get','fixture','probe'],2,'PROTECTED_BOOTSTRAP_REQUIRED'],[['state','get','fixture','probe','unexpected'],1,'NATIVE_ARGUMENTS_INVALID']]){const p=cp.spawnSync(process.execPath,['/opt/sdd/runner-host.mjs',...args],{encoding:'utf8',timeout:10000});a.equal(p.status,code,p.stderr);const value=JSON.parse(p.stdout);a.equal(value.code,status);a.equal(value.productionQualified,false);}\nconsole.log(JSON.stringify({scope:'full-image construction/toolchain/unboundbootstrap only',productionQualified:false,uid:process.getuid(),node:process.version,sdk:expected.sdk,bootstrap:expected.bootstrap,toolchainsObserved:true,protectedSourceBound:false}));"
+  ],
+  "planSha256": "406a7427ada211cb57a591c2e127cdce53760d83e004246a8194e71d2b488649",
+  "scope": "construction toolchain only",
+  "productionQualified": false
+}

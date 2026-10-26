@@ -4,9 +4,9 @@
 
 ## 当前控制器检查点
 
-当前主代码`9f912d1`支持回归1090/1090，业务仍未验。I02最终候选7e48作者106/106后被独立Standards有效P2退回：真实OpenSpec离线ci/CLI链接只留注释文本，坏recipe仍能exit0给构建argv；没有伪造runtime资格，但违背坏recipe拒绝。Root未合入、完整D/E未执行，原作者修执行内容识别。原始3次公共CLI与修改文件见worker-reports/I02-fullrecipe-review-rework/。
+当前主代码`1f6ec33`支持回归1104/1104，业务仍未验。I02 recipe 的注释绕过 P2 已由原作者修复，经两轴独立审查和主检出239/239关联回归后合入。Root 已执行冻结计划的完整镜像构建及非root/无网络/只读隔离工具链读回，均exit0；准确本地镜像ID和原始证据见`worker-reports/Root-I02-full-runner-build/REPORT.md`。镜像仍是旧冻结SDK，不含尚未合入的来源与知识修复，不代表完整Runner或业务资格。旧失败记录保留，未放宽断言。
 
-Core正在将旧40非法准备恢复为真实Native作者前置，R/Design/P已有10条原语义通过，测试/Builder/独立审查/task-complete仍在接。知识creator与实际writer来源缺口不靠空名单/角色/假SKILL填补；沿原pending/trajectory/artifacts/collection关联的工具CODE方案正在收口。真实CLI隔离发现版本实际开关与配置继承限制，尚未启动CLI、认证或模型，字段存在不当无旁路证明。
+Core已完成19条非知识原语义及真实测试写者路径正反例。知识CODE候选尚未接纳：先证明实际作者产出后冻结正文、独立审查、成功写入不重复发布及同Run恢复，再应用并复跑原矩阵；不靠空名单/角色/假SKILL填补来源。stdio生命周期候选50eec4a原105/111失败保留，原owner在固定输入与原时限下完成一次受控整矩阵复验。真实CLI的有效配置闭包尚未验证，未启动CLI、认证或模型。
 
 已证明freshLinux原manifest/锁、429reused/0downloaded/429added只闭合离线依赖维度。6节点接纳/32待办/1F10另期、129required/103场景业务未验不变；平台/知识/权限恢复/Whitebox/Grill/唯一closeout均未完成，Goal/监督保持，整体上海时区ETA未知。
 

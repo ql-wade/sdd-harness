@@ -1,0 +1,567 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 24.61kB 0.0s done
+#1 WARN: InvalidDefaultArgInFrom: Default value for ARG ${PYTHON_BASE_IMAGE} results in empty or invalid base image name (line 11)
+#1 WARN: InvalidDefaultArgInFrom: Default value for ARG ${RUNNER_BASE_IMAGE} results in empty or invalid base image name (line 43)
+#1 DONE 0.1s
+
+#2 [internal] load metadata for docker.io/library/python@sha256:c3729439afc4ec3f3e159e0c86aeabfadac8030ef46838a0256383d0511c5f5e
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d
+#3 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [stage-1  1/38] FROM docker.io/library/node@sha256:4e6b70dd6cbfc88c8157ba19aa3d9f9cce6ba4703576d55459e45efcbc9c5f5d
+#5 DONE 0.0s
+
+#6 [python-runtime 1/3] FROM docker.io/library/python@sha256:c3729439afc4ec3f3e159e0c86aeabfadac8030ef46838a0256383d0511c5f5e
+#6 CACHED
+
+#7 [internal] load build context
+#7 transferring context: 182.84MB 2.6s done
+#7 DONE 2.6s
+
+#8 [python-runtime 2/3] COPY infra/delivery/runner/image.lock.json /build/runner-image.lock.json
+#8 DONE 0.5s
+
+#9 [python-runtime 3/3] RUN python3 -I - <<'PY'
+#9 DONE 0.8s
+
+#10 [stage-1  2/38] COPY --from=python-runtime /usr/local/ /usr/local/
+#10 CACHED
+
+#11 [stage-1  3/38] COPY --from=python-runtime /public-pydeps/lib/ /lib/aarch64-linux-gnu/
+#11 CACHED
+
+#12 [stage-1  4/38] COPY --from=python-runtime /public-pydeps/provenance/ /usr/share/sdd-runtime-provenance/python/
+#12 DONE 0.0s
+
+#13 [stage-1  5/38] RUN node -e 'if(process.version!=="v"+process.env.EXPECTED_NODE_VERSION)process.exit(1)'   && python3 -I -c 'import sys,ssl,tarfile,hashlib,bz2,lzma,ctypes,sqlite3,readline,curses,dbm.gnu; assert sys.version.split()[0]==sys.argv[1]' "3.12.15"
+#13 DONE 0.3s
+
+#14 [stage-1  6/38] COPY tools/comet/ /build/repo/tools/comet/
+#14 DONE 0.0s
+
+#15 [stage-1  7/38] COPY integrations/comet/upstream.lock.json /build/repo/integrations/comet/upstream.lock.json
+#15 DONE 0.0s
+
+#16 [stage-1  8/38] COPY integrations/comet/patches/0001-matt-method-profile.patch /build/repo/integrations/comet/patches/0001-matt-method-profile.patch
+#16 DONE 0.0s
+
+#17 [stage-1  9/38] COPY integrations/comet/patches/tests/1_6.patch /build/repo/integrations/comet/patches/tests/1_6.patch
+#17 DONE 0.0s
+
+#18 [stage-1 10/38] COPY integrations/comet/patches/0002-managed-delivery-runtime.patch /build/repo/integrations/comet/patches/0002-managed-delivery-runtime.patch
+#18 DONE 0.0s
+
+#19 [stage-1 11/38] COPY integrations/comet/patches/tests/2_4.patch /build/repo/integrations/comet/patches/tests/2_4.patch
+#19 DONE 0.0s
+
+#20 [stage-1 12/38] COPY integrations/comet/patches/0003-post-archive-closeout.patch /build/repo/integrations/comet/patches/0003-post-archive-closeout.patch
+#20 DONE 0.0s
+
+#21 [stage-1 13/38] COPY integrations/comet/patches/tests/4_6.patch /build/repo/integrations/comet/patches/tests/4_6.patch
+#21 DONE 0.0s
+
+#22 [stage-1 14/38] COPY integrations/comet/patches/0004-upstream-security-backports.patch /build/repo/integrations/comet/patches/0004-upstream-security-backports.patch
+#22 DONE 0.0s
+
+#23 [stage-1 15/38] COPY .sdd/cache/runner-build/comet-source.tar.gz /build/comet-source.tar.gz
+#23 DONE 0.2s
+
+#24 [stage-1 16/38] COPY .sdd/cache/runner-build/openspec-1.11.0.tgz /build/openspec.tgz
+#24 DONE 0.0s
+
+#25 [stage-1 17/38] RUN echo "28a7e2faefa7817244bdc1e54fdca3443fb9e16d947f89df9d51391e45faaa1f  /build/comet-source.tar.gz" | sha256sum -c -   && echo "84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f  /build/openspec.tgz" | sha256sum -c -   && echo "14a93e69f98b4f35080cd5c0b7666cea2a7e95ce73e66c4aebefd400ee66d15b  /build/repo/integrations/comet/patches/0001-matt-method-profile.patch" | sha256sum -c -   && echo "8edd518897a035617b20e9fba9a4179a618efe45c0b2a92e72d48dab242e1ec9  /build/repo/integrations/comet/patches/tests/1_6.patch" | sha256sum -c -   && echo "861543fbf699bc6f8451333c9f459dfe129422a9d6390365776221ba1e93de63  /build/repo/integrations/comet/patches/0002-managed-delivery-runtime.patch" | sha256sum -c -   && echo "00786c45d0e9acfb6e6fc0c3243777f28247e1b6f4275d64ba690857a894eb77  /build/repo/integrations/comet/patches/tests/2_4.patch" | sha256sum -c -   && echo "b266706c207ae09db17e4a2e005dd42e785d99d84800af244da020a835c0bd2e  /build/repo/integrations/comet/patches/0003-post-archive-closeout.patch" | sha256sum -c -   && echo "34b3f1efd748296fae4da953f9032ad1f061c3423a49fc6c454958f86d50c0f5  /build/repo/integrations/comet/patches/tests/4_6.patch" | sha256sum -c -   && echo "1cec1ca2cdde459c97f230e0fd5ac2b218b85dd479523307fb713ed4a982359f  /build/repo/integrations/comet/patches/0004-upstream-security-backports.patch" | sha256sum -c -
+#25 0.265 /build/comet-source.tar.gz: OK
+#25 0.269 /build/openspec.tgz: OK
+#25 0.274 /build/repo/integrations/comet/patches/0001-matt-method-profile.patch: OK
+#25 0.277 /build/repo/integrations/comet/patches/tests/1_6.patch: OK
+#25 0.280 /build/repo/integrations/comet/patches/0002-managed-delivery-runtime.patch: OK
+#25 0.282 /build/repo/integrations/comet/patches/tests/2_4.patch: OK
+#25 0.284 /build/repo/integrations/comet/patches/0003-post-archive-closeout.patch: OK
+#25 0.285 /build/repo/integrations/comet/patches/tests/4_6.patch: OK
+#25 0.286 /build/repo/integrations/comet/patches/0004-upstream-security-backports.patch: OK
+#25 DONE 0.3s
+
+#26 [stage-1 18/38] COPY infra/delivery/runner/image.lock.json /build/repo/infra/delivery/runner/image.lock.json
+#26 DONE 0.0s
+
+#27 [stage-1 19/38] COPY .sdd/cache/runner-build/public/ /build/repo/.sdd/cache/runner-build/public/
+#27 DONE 0.8s
+
+#28 [stage-1 20/38] COPY .sdd/cache/runner-build/openspec-project/ /build/repo/.sdd/cache/runner-build/openspec-project/
+#28 DONE 0.1s
+
+#29 [stage-1 21/38] COPY .sdd/cache/runner-build/comet-pnpm-project/ /build/pnpm-seed/
+#29 DONE 0.1s
+
+#30 [stage-1 22/38] COPY .sdd/cache/runner-build/openspec-1.11.0.tgz /build/repo/.sdd/cache/runner-build/openspec-1.11.0.tgz
+#30 DONE 0.0s
+
+#31 [stage-1 23/38] COPY package.json package-lock.json /opt/sdd/
+#31 DONE 0.1s
+
+#32 [stage-1 24/38] COPY lib/ /opt/sdd/lib/
+#32 DONE 0.0s
+
+#33 [stage-1 25/38] COPY contracts/ /opt/sdd/contracts/
+#33 DONE 0.1s
+
+#34 [stage-1 26/38] COPY tools/infra/ /opt/sdd/tools/infra/
+#34 DONE 0.0s
+
+#35 [stage-1 27/38] COPY tools/comet/ /opt/sdd/tools/comet/
+#35 DONE 0.0s
+
+#36 [stage-1 28/38] COPY infra/delivery/ /opt/sdd/infra/delivery/
+#36 DONE 0.0s
+
+#37 [stage-1 29/38] COPY integrations/comet/ /opt/sdd/integrations/comet/
+#37 DONE 0.0s
+
+#38 [stage-1 30/38] RUN node --input-type=module - <<'JS'
+#38 1.890 Selecting previously unselected package perl-modules-5.36.
+#38 1.924 (Reading database ... 6090 files and directories currently installed.)
+#38 1.924 Preparing to unpack .../3d237ccb1ea32727b6573d43c67d78337aa928a81148d36cef54b369a07c240a.deb ...
+#38 1.926 Unpacking perl-modules-5.36 (5.36.0-7+deb12u3) ...
+#38 2.352 Selecting previously unselected package libgdbm6:arm64.
+#38 2.353 Preparing to unpack .../3c704feaf89c5f2709a76b84126ac8affe4ddff69dc0b91af0ca9910c7e75714.deb ...
+#38 2.358 Unpacking libgdbm6:arm64 (1.23-3) ...
+#38 2.387 Selecting previously unselected package libgdbm-compat4:arm64.
+#38 2.388 Preparing to unpack .../acc13a12acbf3b17dbacc77e3c22c6c273a552150cd50fdc9bd70cdb5169af73.deb ...
+#38 2.390 Unpacking libgdbm-compat4:arm64 (1.23-3) ...
+#38 2.414 Selecting previously unselected package libperl5.36:arm64.
+#38 2.415 Preparing to unpack .../9f88187766759ddc21b4b2fe2956929c4883a6674884cedde261e3ccf9a32d5c.deb ...
+#38 2.417 Unpacking libperl5.36:arm64 (5.36.0-7+deb12u3) ...
+#38 2.832 Selecting previously unselected package perl.
+#38 2.833 Preparing to unpack .../a11f259b6768c8eae0d8d2b1127621ff60dfbce7ae4f6cfc5e55e10a7cb15be4.deb ...
+#38 2.840 Unpacking perl (5.36.0-7+deb12u3) ...
+#38 2.879 Selecting previously unselected package libbrotli1:arm64.
+#38 2.881 Preparing to unpack .../131e62b9708da9aea88be990d275cb5c7b119e40beccf174c23ac8dc7246bb0f.deb ...
+#38 2.883 Unpacking libbrotli1:arm64 (1.0.9-2+deb12u1) ...
+#38 2.920 Selecting previously unselected package libkrb5support0:arm64.
+#38 2.922 Preparing to unpack .../3043fd4a54b945a1b503170749527f825dcfc7add2f8bf5abb4a329deeb48f4a.deb ...
+#38 2.924 Unpacking libkrb5support0:arm64 (1.20.1-2+deb12u5) ...
+#38 2.951 Selecting previously unselected package libk5crypto3:arm64.
+#38 2.952 Preparing to unpack .../8ae2c31cde0b3e6f80c573a495b0f90bf6d9efb4455d900728278bb54d9092e5.deb ...
+#38 2.955 Unpacking libk5crypto3:arm64 (1.20.1-2+deb12u5) ...
+#38 2.982 Selecting previously unselected package libkeyutils1:arm64.
+#38 2.984 Preparing to unpack .../aac46cb6faec4e737502b3c2290b7b02f8ba04e8accd5af7fd07934df0c867b1.deb ...
+#38 2.986 Unpacking libkeyutils1:arm64 (1.6.3-2) ...
+#38 3.012 Selecting previously unselected package libssl3:arm64.
+#38 3.013 Preparing to unpack .../026105b99749b437b03d0de5b3a58c0cabefb9791bc6f9cf916d18691ee7519a.deb ...
+#38 3.015 Unpacking libssl3:arm64 (3.0.22-1~deb12u1) ...
+#38 3.149 Selecting previously unselected package libkrb5-3:arm64.
+#38 3.150 Preparing to unpack .../c3c7227f5db903a7a8b8936d47d1d79643edcda36365c4c992e1a96bcc2d4c7e.deb ...
+#38 3.153 Unpacking libkrb5-3:arm64 (1.20.1-2+deb12u5) ...
+#38 3.199 Selecting previously unselected package libgssapi-krb5-2:arm64.
+#38 3.200 Preparing to unpack .../a00678963f692a929312968f19b77a61a8fc0011690d7dc909a8a2c4810fc7b3.deb ...
+#38 3.202 Unpacking libgssapi-krb5-2:arm64 (1.20.1-2+deb12u5) ...
+#38 3.232 Selecting previously unselected package libsasl2-modules-db:arm64.
+#38 3.233 Preparing to unpack .../56d9c35ac6729b02f78900175557dd36bef26611dab89584f29da15631628869.deb ...
+#38 3.236 Unpacking libsasl2-modules-db:arm64 (2.1.28+dfsg-10) ...
+#38 3.256 Selecting previously unselected package libsasl2-2:arm64.
+#38 3.257 Preparing to unpack .../61dcbb6560e2eb20bff256f1b445ac9af13aa61c6a6ae115ad8cb96c9c50ea38.deb ...
+#38 3.260 Unpacking libsasl2-2:arm64 (2.1.28+dfsg-10) ...
+#38 3.283 Selecting previously unselected package libldap-2.5-0:arm64.
+#38 3.284 Preparing to unpack .../71e6ae4291a20db999c62cd0a4f30a92a799c46b99205d5e787d4acd7c343b91.deb ...
+#38 3.287 Unpacking libldap-2.5-0:arm64 (2.5.13+dfsg-5) ...
+#38 3.316 Selecting previously unselected package libnghttp2-14:arm64.
+#38 3.317 Preparing to unpack .../7767833033739adb2e2e374f2c4b36134d9f36fcdfe8e2aab7029bf850146da9.deb ...
+#38 3.321 Unpacking libnghttp2-14:arm64 (1.52.0-1+deb12u3) ...
+#38 3.348 Selecting previously unselected package libpsl5:arm64.
+#38 3.349 Preparing to unpack .../90a68e4a6d9eb95abee32595762dbf67974f13c158e4ce4a05c7c2b54440db73.deb ...
+#38 3.351 Unpacking libpsl5:arm64 (0.21.2-1) ...
+#38 3.378 Selecting previously unselected package librtmp1:arm64.
+#38 3.379 Preparing to unpack .../a3a1a6e4b02bcd3254e932b1972ed744082fd7dd5cc1545eec3dd3d539ce6c93.deb ...
+#38 3.381 Unpacking librtmp1:arm64 (2.4+20151223.gitfa8646d.1-2+b2) ...
+#38 3.405 Selecting previously unselected package libssh2-1:arm64.
+#38 3.406 Preparing to unpack .../72db6dc64cb0dd4c8a6b0f1b998063338956a7b3eb8a27125beb27bee0d7cc46.deb ...
+#38 3.408 Unpacking libssh2-1:arm64 (1.10.0-3+deb12u1) ...
+#38 3.437 Selecting previously unselected package libcurl3-gnutls:arm64.
+#38 3.438 Preparing to unpack .../053f0518249c0be7f476b73b28d9c9922ea5597d744e86736f89ced17e4a1ec1.deb ...
+#38 3.440 Unpacking libcurl3-gnutls:arm64 (7.88.1-10+deb12u15) ...
+#38 3.479 Selecting previously unselected package libexpat1:arm64.
+#38 3.480 Preparing to unpack .../4a733e7f636de4a4483e3e5d7b02dc8e788b115361a04dd58df89461ce2ae65a.deb ...
+#38 3.483 Unpacking libexpat1:arm64 (2.5.0-1+deb12u5) ...
+#38 3.526 Selecting previously unselected package liberror-perl.
+#38 3.527 Preparing to unpack .../5a466348531b9c38c8e5ccb18c231f27a98b9fdab61b37ea22592553de5d2ced.deb ...
+#38 3.530 Unpacking liberror-perl (0.17029-2) ...
+#38 3.550 Selecting previously unselected package git-man.
+#38 3.551 Preparing to unpack .../904dbd8dbc3db34c6780fb0abfe35816d4a90a490126ef0a055a77a0c5dcab82.deb ...
+#38 3.553 Unpacking git-man (1:2.39.5-0+deb12u3) ...
+#38 3.665 Selecting previously unselected package git.
+#38 3.666 Preparing to unpack .../435176549a9f5c8bbadaa126b64a036b38ea34ad9f3eb128dc40b8407a5b5620.deb ...
+#38 3.672 Unpacking git (1:2.39.5-0+deb12u3) ...
+#38 4.076 Setting up perl-modules-5.36 (5.36.0-7+deb12u3) ...
+#38 4.083 Setting up libgdbm6:arm64 (1.23-3) ...
+#38 4.090 Setting up libgdbm-compat4:arm64 (1.23-3) ...
+#38 4.097 Setting up libperl5.36:arm64 (5.36.0-7+deb12u3) ...
+#38 4.104 Setting up perl (5.36.0-7+deb12u3) ...
+#38 4.119 Setting up libbrotli1:arm64 (1.0.9-2+deb12u1) ...
+#38 4.125 Setting up libkrb5support0:arm64 (1.20.1-2+deb12u5) ...
+#38 4.133 Setting up libk5crypto3:arm64 (1.20.1-2+deb12u5) ...
+#38 4.142 Setting up libkeyutils1:arm64 (1.6.3-2) ...
+#38 4.149 Setting up libssl3:arm64 (3.0.22-1~deb12u1) ...
+#38 4.157 Setting up libkrb5-3:arm64 (1.20.1-2+deb12u5) ...
+#38 4.164 Setting up libgssapi-krb5-2:arm64 (1.20.1-2+deb12u5) ...
+#38 4.173 Setting up libsasl2-modules-db:arm64 (2.1.28+dfsg-10) ...
+#38 4.179 Setting up libsasl2-2:arm64 (2.1.28+dfsg-10) ...
+#38 4.186 Setting up libldap-2.5-0:arm64 (2.5.13+dfsg-5) ...
+#38 4.192 Setting up libnghttp2-14:arm64 (1.52.0-1+deb12u3) ...
+#38 4.199 Setting up libpsl5:arm64 (0.21.2-1) ...
+#38 4.206 Setting up librtmp1:arm64 (2.4+20151223.gitfa8646d.1-2+b2) ...
+#38 4.213 Setting up libssh2-1:arm64 (1.10.0-3+deb12u1) ...
+#38 4.221 Setting up libcurl3-gnutls:arm64 (7.88.1-10+deb12u15) ...
+#38 4.228 Setting up libexpat1:arm64 (2.5.0-1+deb12u5) ...
+#38 4.235 Setting up liberror-perl (0.17029-2) ...
+#38 4.242 Setting up git-man (1:2.39.5-0+deb12u3) ...
+#38 4.249 Setting up git (1:2.39.5-0+deb12u3) ...
+#38 4.262 Processing triggers for libc-bin (2.36-9+deb12u14) ...
+#38 4.299 ldconfig: /lib/aarch64-linux-gnu/libz.so.1 is not a symbolic link
+#38 4.299 
+#38 4.299 ldconfig: /lib/aarch64-linux-gnu/libuuid.so.1 is not a symbolic link
+#38 4.299 
+#38 4.299 ldconfig: /lib/aarch64-linux-gnu/libtinfo.so.6 is not a symbolic link
+#38 4.299 
+#38 4.299 ldconfig: /lib/aarch64-linux-gnu/libbz2.so.1.0 is not a symbolic link
+#38 4.299 
+#38 4.299 ldconfig: /lib/aarch64-linux-gnu/liblzma.so.5 is not a symbolic link
+#38 4.299 
+#38 4.300 ldconfig: /lib/aarch64-linux-gnu/libcrypt.so.1 is not a symbolic link
+#38 4.300 
+#38 4.300 ldconfig: /lib/aarch64-linux-gnu/libcom_err.so.2 is not a symbolic link
+#38 4.300 
+#38 4.300 ldconfig: /lib/aarch64-linux-gnu/libffi.so.8 is not a symbolic link
+#38 4.300 
+#38 21.00 
+#38 21.00 added 10 packages in 274ms
+#38 23.72 
+#38 23.72 added 1 package in 3s
+#38 24.80 
+#38 24.80 added 80 packages in 1s
+#38 25.94 Processing /build/repo/.sdd/cache/runner-build/public/wheel/pyyaml-6.0.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
+#38 25.95 Installing collected packages: pyyaml
+#38 26.00 Successfully installed pyyaml-6.0.3
+#38 26.00 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#38 DONE 26.8s
+
+#39 [stage-1 31/38] COPY --from=python-runtime /public-pydeps/lib/ /lib/aarch64-linux-gnu/
+#39 DONE 0.1s
+
+#40 [stage-1 32/38] RUN ln -s /build/repo/.sdd/cache/runner-build/openspec-project/node_modules/.bin/openspec /usr/local/bin/openspec   && ln -s /opt/sdd/lib/adapters/comet-executor.js /opt/sdd/runner-host.mjs   && chmod -R a+rX /opt/sdd
+#40 DONE 0.3s
+
+#41 [stage-1 33/38] RUN node --input-type=module - <<'JS'
+#41 DONE 0.7s
+
+#42 [stage-1 34/38] RUN timeout --signal=TERM --kill-after=5s 300s node --max-old-space-size=1024 --input-type=module - <<'JS'
+#42 0.719 10.18.3
+#42 0.916 true
+#42 1.111 0
+#42 6.218 Importing packages to virtual store
+#42 6.218 Already up to date
+#42 6.218 Progress: resolved 1, reused 0, downloaded 0, added 0
+#42 6.218 Progress: resolved 429, reused 0, downloaded 55, added 51
+#42 6.218 Progress: resolved 429, reused 0, downloaded 219, added 216
+#42 6.218 Progress: resolved 429, reused 0, downloaded 392, added 392
+#42 6.218 Progress: resolved 429, reused 0, downloaded 429, added 429, done
+#42 6.218 
+#42 6.445 true
+#42 6.864 Importing packages to virtual store
+#42 6.864 Already up to date
+#42 6.864 
+#42 6.865 {"scope":"formal recipe public429 cache hydration only;not fullRunner qualification","constructionOnly":true,"productionQualified":false,"platform":"linux","arch":"arm64","sourceLockSha256":"8ecc821bf3920c5daf0f133dbed1213e8c675c7565833513d031969eaef1dbd6","requests":429,"listenerClosed":true,"terminal":{"code":null,"signal":"SIGTERM"},"offlineSecondFetch":true}
+#42 DONE 7.3s
+
+#43 [stage-1 35/38] RUN timeout --signal=TERM --kill-after=5s 300s node --max-old-space-size=1024 --input-type=module - <<'JS'
+#43 0.284 true
+#43 0.480 true
+#43 0.658 10.18.3
+#43 22.13 Lockfile is up to date, resolution step is skipped
+#43 22.13 Progress: resolved 1, reused 0, downloaded 0, added 0
+#43 22.13 Packages: +429
+#43 22.13 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 34
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 44
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 45
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 61
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 95
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 157
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 183
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 204
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 225
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 317
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 389
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 410
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 417
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 428
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 429
+#43 22.13 Progress: resolved 429, reused 429, downloaded 0, added 429, done
+#43 22.13 
+#43 22.13 dependencies:
+#43 22.13 + @ant-design/icons 6.3.2
+#43 22.13 + @inquirer/ansi 2.0.7
+#43 22.13 + @inquirer/core 12.0.1
+#43 22.13 + @inquirer/figures 2.0.8
+#43 22.13 + @inquirer/prompts 8.7.0
+#43 22.13 + @inquirer/type 4.1.0
+#43 22.13 + @vscode/ripgrep 1.18.0
+#43 22.13 + ajv 8.20.0
+#43 22.13 + antd 6.6.2
+#43 22.13 + commander 15.0.0
+#43 22.13 + dompurify 3.4.16
+#43 22.13 + highlight.js 11.12.0
+#43 22.13 + marked 18.0.11
+#43 22.13 + mermaid 11.17.2
+#43 22.13 + smol-toml 1.9.1
+#43 22.13 + yaml 2.9.0
+#43 22.13 
+#43 22.13 devDependencies:
+#43 22.13 + @ant-design/cssinjs 2.1.2
+#43 22.13 + @eslint/js 10.0.1
+#43 22.13 + @playwright/test 1.62.1
+#43 22.13 + @tailwindcss/vite 4.3.3
+#43 22.13 + @types/node 26.4.0
+#43 22.13 + @types/react 19.2.18
+#43 22.13 + @types/react-dom 19.2.5
+#43 22.13 + @vitejs/plugin-react 6.1.1
+#43 22.13 + @vitest/coverage-v8 4.1.11
+#43 22.13 + esbuild 0.28.2
+#43 22.13 + eslint 10.4.0
+#43 22.13 + husky 9.1.7
+#43 22.13 + jsdom 30.0.1
+#43 22.13 + lint-staged 17.4.1
+#43 22.13 + postcss 8.5.26
+#43 22.13 + prettier 3.9.6
+#43 22.13 + react 19.2.8
+#43 22.13 + react-dom 19.2.8
+#43 22.13 + tailwindcss 4.3.3
+#43 22.13 + typescript 5.9.3
+#43 22.13 + typescript-eslint 8.68.0
+#43 22.13 + vite 8.2.4
+#43 22.13 + vitest 4.1.11
+#43 22.13 
+#43 22.13 Done in 21.4s using pnpm v10.18.3
+#43 22.13 {"scope":"fresh Linux original-manifest install from reused hydrated store only;not Comet build/Role/source qualification","constructionOnly":true,"productionQualified":false,"platform":"linux","arch":"arm64","sourceLockSha256":"8ecc821bf3920c5daf0f133dbed1213e8c675c7565833513d031969eaef1dbd6","manifestSha256":"594d4f6334e09e317f08fdb8bb4f177817b236ddfdd9c390a31a1f8b15883a09","initialNodeModulesAbsent":true,"oldVirtualStoreNotReused":true,"resolved":429,"reused":429,"downloaded":0,"added":429,"listenerFromPriorLayerClosed":true}
+#43 DONE 22.9s
+
+#44 [stage-1 36/38] RUN node /build/repo/tools/comet/build.mjs       --archive /build/comet-source.tar.gz       --project /build/repo       --lock /build/repo/integrations/comet/upstream.lock.json
+#44 5.273 10.18.3
+#44 28.26 Lockfile is up to date, resolution step is skipped
+#44 28.26 Progress: resolved 1, reused 0, downloaded 0, added 0
+#44 28.26 Packages: +429
+#44 28.26 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 3
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 42
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 43
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 44
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 58
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 83
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 96
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 150
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 169
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 187
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 214
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 289
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 348
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 394
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 407
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 422
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 428
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 429
+#44 28.26 Progress: resolved 429, reused 429, downloaded 0, added 429, done
+#44 28.26 
+#44 28.26 dependencies:
+#44 28.26 + @ant-design/icons 6.3.2
+#44 28.26 + @inquirer/ansi 2.0.7
+#44 28.26 + @inquirer/core 12.0.1
+#44 28.26 + @inquirer/figures 2.0.8
+#44 28.26 + @inquirer/prompts 8.7.0
+#44 28.26 + @inquirer/type 4.1.0
+#44 28.26 + @vscode/ripgrep 1.18.0
+#44 28.26 + ajv 8.20.0
+#44 28.26 + antd 6.6.2
+#44 28.26 + commander 15.0.0
+#44 28.26 + dompurify 3.4.16
+#44 28.26 + highlight.js 11.12.0
+#44 28.26 + marked 18.0.11
+#44 28.26 + mermaid 11.17.2
+#44 28.26 + smol-toml 1.9.1
+#44 28.26 + yaml 2.9.0
+#44 28.26 
+#44 28.26 devDependencies:
+#44 28.26 + @ant-design/cssinjs 2.1.2
+#44 28.26 + @eslint/js 10.0.1
+#44 28.26 + @playwright/test 1.62.1
+#44 28.26 + @tailwindcss/vite 4.3.3
+#44 28.26 + @types/node 26.4.0
+#44 28.26 + @types/react 19.2.18
+#44 28.26 + @types/react-dom 19.2.5
+#44 28.26 + @vitejs/plugin-react 6.1.1
+#44 28.26 + @vitest/coverage-v8 4.1.11
+#44 28.26 + esbuild 0.28.2
+#44 28.26 + eslint 10.4.0
+#44 28.26 + husky 9.1.7
+#44 28.26 + jsdom 30.0.1
+#44 28.26 + lint-staged 17.4.1
+#44 28.26 + postcss 8.5.26
+#44 28.26 + prettier 3.9.6
+#44 28.26 + react 19.2.8
+#44 28.26 + react-dom 19.2.8
+#44 28.26 + tailwindcss 4.3.3
+#44 28.26 + typescript 5.9.3
+#44 28.26 + typescript-eslint 8.68.0
+#44 28.26 + vite 8.2.4
+#44 28.26 + vitest 4.1.11
+#44 28.26 
+#44 28.26 Done in 22.9s using pnpm v10.18.3
+#44 46.63 Building Comet...
+#44 46.63 
+#44 46.63 Building Classic runtime...
+#44 46.63 Building Native runtime...
+#44 46.63 Building entry resolver runtime...
+#44 46.63 Compiling TypeScript...
+#44 46.63 Version 5.9.3
+#44 46.63 Building Dashboard frontend...
+#44 46.63 [36mvite v8.2.4 [32mbuilding client environment for production...[36m[39m
+#44 46.63 transforming...
+#44 46.63 ✓ 5407 modules transformed.
+#44 46.63 rendering chunks...
+#44 46.63 computing gzip size...
+#44 46.63 dist/domains/dashboard/web/index.html                                           0.57 kB │ gzip:   0.34 kB
+#44 46.63 dist/domains/dashboard/web/assets/index-BHwAXIlh.css                          211.90 kB │ gzip:  32.28 kB
+#44 46.63 dist/domains/dashboard/web/assets/array-BifhSqXX.js                             0.10 kB │ gzip:   0.11 kB
+#44 46.63 dist/domains/dashboard/web/assets/channel-DAJtS9lT.js                           0.11 kB │ gzip:   0.12 kB
+#44 46.63 dist/domains/dashboard/web/assets/pie-WAS4IAKB-C_JkC70i.js                      0.12 kB │ gzip:   0.12 kB
+#44 46.63 dist/domains/dashboard/web/assets/info-A6RAGUB7-p-DaqkrL.js                     0.12 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/radar-RG4KPBEZ-F0ajhaW4.js                    0.12 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/packet-AYTQ26CC-BzyxWW8C.js                   0.12 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/cynefin-OW5HDTMX-Cjg1KXNf.js                  0.12 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/treemap-WGGIJYW6-BDxmaVCJ.js                  0.12 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/wardley-WFR3VGLG-Bb_qozSP.js                  0.12 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/gitGraph-4MIJSDKK-CViwBq_R.js                 0.12 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/railroad-74A4TZTK-BteqltIt.js                 0.12 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/treeView-Q6P3EWNA-CauT6vao.js                 0.12 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/railroad-peg-WCYAUIDC-NVnNAsQp.js             0.13 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/architecture-7GRP2DOG-CCleY6Ls.js             0.13 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/railroad-abnf-HS5TGJTU-C7hg6SvV.js            0.13 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/railroad-ebnf-LZEXJU2U-DKuvlgw_.js            0.13 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/eventmodeling-NTZA5JFV-DsO7KrOB.js            0.13 kB │ gzip:   0.13 kB
+#44 46.63 dist/domains/dashboard/web/assets/init-C-OQMol4.js                              0.14 kB │ gzip:   0.12 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-Y2CYZVJY-DsF7k-Jl.js                    0.15 kB │ gzip:   0.14 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-2Q5K7J3B-C1jixKkw.js                    0.19 kB │ gzip:   0.16 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-JWPE2WC7-DVXcaiue.js                    0.22 kB │ gzip:   0.17 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-XXDRQBXY-Bcd47F-4.js                    0.26 kB │ gzip:   0.22 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-5VM5RSS4-ZNzvKenW.js                    0.36 kB │ gzip:   0.27 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-POPQ4Y6H-BbdLGdxA.js                    0.57 kB │ gzip:   0.40 kB
+#44 46.63 dist/domains/dashboard/web/assets/flowDiagram-HODETNUW-DsKBbuaY.js              0.57 kB │ gzip:   0.31 kB
+#44 46.63 dist/domains/dashboard/web/assets/infoDiagram-27XIBGKW-DVccyFzM.js              0.65 kB │ gzip:   0.42 kB
+#44 46.63 dist/domains/dashboard/web/assets/classDiagram-ZZMXUADV-DNKBTgqQ.js             0.77 kB │ gzip:   0.45 kB
+#44 46.63 dist/domains/dashboard/web/assets/classDiagram-v2-VYDZK3BY-DNKBTgqQ.js          0.77 kB │ gzip:   0.45 kB
+#44 46.63 dist/domains/dashboard/web/assets/stateDiagram-v2-MP3YSRHH-DH9_Ujkf.js          0.78 kB │ gzip:   0.45 kB
+#44 46.63 dist/domains/dashboard/web/assets/swimlanesDiagram-VR7AAH4N-DOaRl-uF.js         0.83 kB │ gzip:   0.48 kB
+#44 46.63 dist/domains/dashboard/web/assets/sizeCapture-INFHLROL-B0uUizjq.js              0.87 kB │ gzip:   0.51 kB
+#44 46.63 dist/domains/dashboard/web/assets/line-CFfQEOVF.js                              0.94 kB │ gzip:   0.47 kB
+#44 46.63 dist/domains/dashboard/web/assets/ordinal-BDEzSJ7C.js                           1.17 kB │ gzip:   0.56 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-GVQU2GXP-BkbCxbRS.js                    1.41 kB │ gzip:   0.79 kB
+#44 46.63 dist/domains/dashboard/web/assets/railroadDiagram-O6MQD6OU-5eTyUOkK.js          1.65 kB │ gzip:   0.77 kB
+#44 46.63 dist/domains/dashboard/web/assets/abnfDiagram-VCTEODGH-DhTWokR-.js              1.84 kB │ gzip:   0.89 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-P2QGCYS3-Cf8A69yp.js                    1.94 kB │ gzip:   0.95 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-F27PBJKO-Dp6TbLP5.js                    1.97 kB │ gzip:   0.88 kB
+#44 46.63 dist/domains/dashboard/web/assets/pegDiagram-XKGWAZYB-DB8GVe-t.js               2.01 kB │ gzip:   0.94 kB
+#44 46.63 dist/domains/dashboard/web/assets/ebnfDiagram-PWID7BFC-Cxe6Kt72.js              2.05 kB │ gzip:   0.89 kB
+#44 46.63 dist/domains/dashboard/web/assets/dist-Cia_lBmF.js                              2.16 kB │ gzip:   0.97 kB
+#44 46.63 dist/domains/dashboard/web/assets/path-fybaL0A-.js                              2.27 kB │ gzip:   0.98 kB
+#44 46.63 dist/domains/dashboard/web/assets/arc-DPVhpdg7.js                               3.47 kB │ gzip:   1.46 kB
+#44 46.63 dist/domains/dashboard/web/assets/diagram-Z3DM3KII-5KD9JthF.js                  4.28 kB │ gzip:   1.84 kB
+#44 46.63 dist/domains/dashboard/web/assets/defaultLocale-BFoDCU3G.js                     4.63 kB │ gzip:   2.12 kB
+#44 46.63 dist/domains/dashboard/web/assets/linear-BEpTXOSx.js                            5.51 kB │ gzip:   2.25 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-PWAF6VOD-DY1clmn4.js                    5.83 kB │ gzip:   2.68 kB
+#44 46.63 dist/domains/dashboard/web/assets/diagram-UQ7AKVKN-thjjrsxg.js                  6.07 kB │ gzip:   2.56 kB
+#44 46.63 dist/domains/dashboard/web/assets/pieDiagram-E7YTZNPT-DmMr9wTM.js               6.22 kB │ gzip:   2.59 kB
+#44 46.63 dist/domains/dashboard/web/assets/diagram-S7CK7UJ4-COmXvLCV.js                  8.19 kB │ gzip:   3.65 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-L3NEJ4N5-D4rjHDgg.js                    9.68 kB │ gzip:   2.93 kB
+#44 46.63 dist/domains/dashboard/web/assets/cynefinDiagram-5FMLGOSQ-D6iYPtG8.js           9.94 kB │ gzip:   3.51 kB
+#44 46.63 dist/domains/dashboard/web/assets/stateDiagram-D77RDMKH-dtppgF-w.js            10.64 kB │ gzip:   3.74 kB
+#44 46.63 dist/domains/dashboard/web/assets/diagram-VSXAHHWV-CUf38hL8.js                 10.65 kB │ gzip:   4.12 kB
+#44 46.63 dist/domains/dashboard/web/assets/dagre-GXQ25YYZ-DNOJzeR4.js                   10.97 kB │ gzip:   4.15 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-SVP7TREG-D-9zOlq2.js                   15.64 kB │ gzip:   4.35 kB
+#44 46.63 dist/domains/dashboard/web/assets/diagram-VX7I27RA-DKDSJ1CS.js                 15.75 kB │ gzip:   5.52 kB
+#44 46.63 dist/domains/dashboard/web/assets/mermaid-parser.core-CLU-v1Ig.js              16.58 kB │ gzip:   3.92 kB
+#44 46.63 dist/domains/dashboard/web/assets/ishikawaDiagram-5VMMS53U-B6yzWH94.js         17.31 kB │ gzip:   6.53 kB
+#44 46.63 dist/domains/dashboard/web/assets/kanban-definition-UXKFOSKX-vKPKWA6I.js       20.26 kB │ gzip:   7.15 kB
+#44 46.63 dist/domains/dashboard/web/assets/sankeyDiagram-P5KCCOFB-DSxZsP4G.js           22.79 kB │ gzip:   8.25 kB
+#44 46.63 dist/domains/dashboard/web/assets/journeyDiagram-3NMN7TZE-DyCTCXXn.js          23.15 kB │ gzip:   8.16 kB
+#44 46.63 dist/domains/dashboard/web/assets/mindmap-definition-YA3MSWOX-CE0mBEIG.js      23.44 kB │ gzip:   8.01 kB
+#44 46.63 dist/domains/dashboard/web/assets/graphlib-DS17s2tU.js                         23.90 kB │ gzip:   8.31 kB
+#44 46.63 dist/domains/dashboard/web/assets/wardleyDiagram-VM6X3IG4-Bbm05Fyo.js          25.20 kB │ gzip:   6.55 kB
+#44 46.63 dist/domains/dashboard/web/assets/rough.esm-Dy-Kn_BL.js                        27.10 kB │ gzip:   8.85 kB
+#44 46.63 dist/domains/dashboard/web/assets/purify.es-Bvo9QlJ8.js                        28.08 kB │ gzip:  11.08 kB
+#44 46.63 dist/domains/dashboard/web/assets/gitGraphDiagram-WWUBYQGX-BB5l2g3A.js         29.00 kB │ gzip:   8.55 kB
+#44 46.63 dist/domains/dashboard/web/assets/timeline-definition-24CTP7MA-B9Tn4Fm_.js     30.37 kB │ gzip:   9.97 kB
+#44 46.63 dist/domains/dashboard/web/assets/erDiagram-RLTQ6QDP-pIMFUMb2.js               30.69 kB │ gzip:  10.57 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-75Z2AOVW-DpCclqLU.js                   30.75 kB │ gzip:   8.50 kB
+#44 46.63 dist/domains/dashboard/web/assets/requirementDiagram-BXWQKSXE-xPi7ddTt.js      31.00 kB │ gzip:   9.78 kB
+#44 46.63 dist/domains/dashboard/web/assets/quadrantDiagram-AXDQQJYC-B7qXLFyW.js         33.51 kB │ gzip:   9.74 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-OSK3NFVY-DHttr8F4.js                   36.46 kB │ gzip:   7.96 kB
+#44 46.63 dist/domains/dashboard/web/assets/dagre-PrKaheQc.js                            36.85 kB │ gzip:  13.22 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-IMKFNOWR-VeNV5WRx.js                   37.67 kB │ gzip:  12.29 kB
+#44 46.63 dist/domains/dashboard/web/assets/vennDiagram-4TSXK5OY-CYbOXGNr.js             41.15 kB │ gzip:  15.11 kB
+#44 46.63 dist/domains/dashboard/web/assets/blockDiagram-I7D4REHJ-B51ZlTv7.js            41.44 kB │ gzip:  13.36 kB
+#44 46.63 dist/domains/dashboard/web/assets/marked.esm-BtJme7Pf.js                       42.89 kB │ gzip:  12.76 kB
+#44 46.63 dist/domains/dashboard/web/assets/xychartDiagram-S5SC5T6Z-Dxu-WDbS.js          44.14 kB │ gzip:  12.22 kB
+#44 46.63 dist/domains/dashboard/web/assets/src-BJ05ZKAu.js                              45.67 kB │ gzip:  16.00 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-TICWLB2K-NT5EneZV.js                   48.81 kB │ gzip:  15.78 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-GMAD6QVW-_1pw4AXQ.js                   51.83 kB │ gzip:  16.68 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-SHT3W25Y-C7oD18iZ.js                   61.23 kB │ gzip:  19.86 kB
+#44 46.63 dist/domains/dashboard/web/assets/c4Diagram-7LVT6UL2-D2Xh86jq.js               64.74 kB │ gzip:  18.53 kB
+#44 46.63 dist/domains/dashboard/web/assets/ganttDiagram-EL5Y4UJY-DYVAe1kh.js            69.34 kB │ gzip:  22.73 kB
+#44 46.63 dist/domains/dashboard/web/assets/demo-FmeUulND.js                             72.79 kB │ gzip:  23.28 kB
+#44 46.63 dist/domains/dashboard/web/assets/cose-bilkent-JH36ORCC-O7G19B_D.js            81.25 kB │ gzip:  21.55 kB
+#44 46.63 dist/domains/dashboard/web/assets/mermaid.core-DyzmJm-o.js                     90.45 kB │ gzip:  30.87 kB
+#44 46.63 dist/domains/dashboard/web/assets/browser-CgwPGwaV.js                          96.22 kB │ gzip:  29.96 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-4HAMMTFA-Dbuy_GR0.js                  104.85 kB │ gzip:  25.62 kB
+#44 46.63 dist/domains/dashboard/web/assets/swimlanes-42K2YHIH-Bdude7_V.js              111.16 kB │ gzip:  38.01 kB
+#44 46.63 dist/domains/dashboard/web/assets/sequenceDiagram-WJ2MYXX4-CWLVWzSi.js        115.74 kB │ gzip:  30.58 kB
+#44 46.63 dist/domains/dashboard/web/assets/architectureDiagram-5GKGNRK7-AUATSxs0.js    148.91 kB │ gzip:  41.12 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-DU6HZSFF-rhE_XvP_.js                  208.58 kB │ gzip:  27.46 kB
+#44 46.63 dist/domains/dashboard/web/assets/katex-D29apahB.js                           258.18 kB │ gzip:  77.48 kB
+#44 46.63 dist/domains/dashboard/web/assets/cytoscape.esm-CGd-uY3x.js                   434.92 kB │ gzip: 137.81 kB
+#44 46.63 dist/domains/dashboard/web/assets/chunk-FOHPRMQF-DHwB1DNv.js                  662.12 kB │ gzip: 143.15 kB
+#44 46.63 dist/domains/dashboard/web/assets/es-C-iexBXa.js                              921.01 kB │ gzip: 307.41 kB
+#44 46.63 dist/domains/dashboard/web/assets/index-82zAXmhN.js                         1,088.75 kB │ gzip: 338.10 kB
+#44 46.63 
+#44 46.63 [32m✓ built in 2.26s[39m
+#44 46.63 
+#44 46.63 Build completed successfully!
+#44 46.63 [33m[plugin builtin:vite-reporter] 
+#44 46.63 (!) Some chunks are larger than 500 kB after minification. Consider:
+#44 46.63 - Using dynamic import() to code-split the application
+#44 46.63 - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+#44 46.63 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+#44 48.53 0.4.5
+#44 64.39 {"buildRoot":"/build/repo/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69","entrypoint":"/build/repo/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69/work/bin/comet.js","sourceCommit":"c90af44a4474662d7853aae76ce785404974fb0a","fingerprint":"3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69","reused":false}
+#44 DONE 64.9s
+
+#45 [stage-1 37/38] RUN useradd --uid 10001 --user-group --create-home comet   && mkdir -p /comet/state /comet/receipts /comet/issuance /workspace   && test -f "/build/repo/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69/work/bin/comet.js"   && chmod a+rx "/build/repo/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a"   && chmod -R a+rX "/build/repo/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69"   && ln -s "/build/repo/.sdd/vendor/comet/c90af44a4474662d7853aae76ce785404974fb0a/builds/3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69/work/bin/comet.js" /usr/local/bin/comet-runner   && chown -R comet:comet /comet /workspace
+#45 DONE 46.4s
+
+#46 [stage-1 38/38] WORKDIR /workspace
+#46 DONE 0.0s
+
+#47 exporting to image
+#47 exporting layers
+#47 exporting layers 27.2s done
+#47 writing image sha256:fad4c6a6ee25a0c65a0c665a7599d2b192ebe42e9bb490b2702c0fd1e718736c done
+#47 DONE 27.2s
+
+ [33m2 warnings found (use docker --debug to expand):
+[0m - InvalidDefaultArgInFrom: Default value for ARG ${PYTHON_BASE_IMAGE} results in empty or invalid base image name (line 11)
+ - InvalidDefaultArgInFrom: Default value for ARG ${RUNNER_BASE_IMAGE} results in empty or invalid base image name (line 43)
