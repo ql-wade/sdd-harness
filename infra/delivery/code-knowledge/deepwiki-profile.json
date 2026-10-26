@@ -7,6 +7,8 @@
     "kind": "selfhost-deepwiki-open",
     "publicHostedServiceSubstitute": false,
     "substitutePolicy": "敏感代码不得用公共托管服务作为自托管 code wiki 的替代；本字段翻转为 true 即结构性违规",
+    "knowledgeAuthority": false,
+    "knowledgePolicy": "代码 Wiki 不构成正式团队知识：其解释与索引只是辅助阅读材料，Kp/Kt 知识闭环与团队知识库（LLMWiki/Outline）权威不由它承担；新鲜度/来源事实永远不得把它升格为设计事实",
     "upstream": {
       "repository": "https://github.com/AsyncFuncAI/deepwiki-open",
       "repositoryId": 975318071,
@@ -85,6 +87,23 @@
     "readbackPolicy": "policy 要求 code wiki 时必须真实 API/MCP 独立读回；私有认证/分页/版本暴露能力必须实证后才能 VERIFIED",
     "status": "UNVERIFIED",
     "reason": "No native authenticated immutable-ID/commit readback has been qualified; auth-code UI settings do not establish per-project reader ACL."
+  },
+  "deployment": {
+    "status": "NOT_DEPLOYED",
+    "policy": "按真实需要自托管：只在真实需要出现时部署，不做无需要的部署（compose 仅声明，不自动启动）",
+    "noNeedNoDeployment": true,
+    "onDemandTrigger": {
+      "condition": "设计阶段实际消费代码解释：当设计任务需要超出静态阅读可得的代码解释、且现有本地事实不足时，才构成部署的真实需要",
+      "status": "NOT_TRIGGERED"
+    },
+    "prerequisites": [
+      "images.lock.json 必需组件 digest 独立认证（当前 digestAuthenticated=false）",
+      "repository-scope.json 批准源授权：immutableID + 固定 commit + grantRef（当前 approvedSources 为空）",
+      "images.lock.json upGate 显式开启（当前 enabled=false）",
+      "运行时 secret-ref 凭据实际供给（当前 NOT_PROVISIONED）"
+    ],
+    "localSupplyObserved": "2026-10-26 盘点：.sdd/repos 无 deepwiki-open 源码供给；docker（daemon 29.6.2 可用）无 deepwiki/codewiki 容器、镜像或卷；infra/delivery/registry.json 无 code-knowledge 资源条目",
+    "evidenceRef": "worker-reports/I05-comet-050/report.md"
   },
   "project": "sdd-harness-pilot",
   "validationRuntime": {

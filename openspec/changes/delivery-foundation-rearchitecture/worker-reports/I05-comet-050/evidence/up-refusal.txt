@@ -1,0 +1,106 @@
+$ PATH="$HOME/.nvm/versions/node/v24.15.0/bin:$PATH" node tools/infra/code-knowledge.mjs up --registry infra/delivery/registry.json --json
+{
+  "interface": "Qualification.v1",
+  "command": "up",
+  "domain": "code-knowledge",
+  "refused": true,
+  "ready": false,
+  "error": "UP_REFUSED_IMAGES_LOCK_NOT_READY: 1 required component images lack current independent qualification; public source/image metadata is not runtime authority",
+  "unverifiedComponents": [
+    {
+      "component": "codewiki-app",
+      "status": "UNVERIFIED",
+      "reason": "reference=recorded, digest=recorded, digestAuthenticated=false"
+    }
+  ],
+  "receipt": {
+    "interface": "Qualification.v1",
+    "domain": "code-knowledge",
+    "dir": "infra/delivery/code-knowledge",
+    "ready": false,
+    "unverifiedCount": 8,
+    "catalogGaps": [],
+    "categories": {
+      "image-digest-authenticated": {
+        "status": "UNVERIFIED",
+        "reason": "required components still lack independent current image qualification (codewiki-app); recorded source/image metadata does not establish runtime or action authority"
+      },
+      "upstream-release-selected": {
+        "status": "UNVERIFIED",
+        "reason": "upstream recorded as selected; exact release/digest/license/startup-API contract still require execution-time verification"
+      },
+      "source-authorization": {
+        "status": "UNVERIFIED",
+        "reason": "deny-by-default scope authorizes nothing yet; startup/ingest refuse until a source is approved with immutableID + pinned commit by an authorized grant"
+      },
+      "secret-refs-registered": {
+        "status": "RECORDED",
+        "reason": "all 3 code-knowledge refs present in the I01 catalog; all remain NOT_PROVISIONED"
+      },
+      "credentials-provisioned": {
+        "status": "UNVERIFIED",
+        "reason": "all 3 secret refs are NOT_PROVISIONED; no runtime secret store authorization exists"
+      },
+      "wiki-generation-manifest": {
+        "status": "UNVERIFIED",
+        "reason": "no wiki generation manifest observed; requires a real self-hosted generation for an approved pinned commit"
+      },
+      "wiki-freshness": {
+        "status": "UNVERIFIED",
+        "reason": "freshness policy undecided (maxCommitAgeDays/languageCoverageMin unset): fail-closed — freshness can never report pass until the pilot language/repo-scale/update policy is decided"
+      },
+      "api-mcp-readback": {
+        "status": "UNVERIFIED",
+        "reason": "no live instance; authenticated API/MCP pagination/version-exposure capabilities are unproven"
+      },
+      "wiki-deployment-demand": {
+        "status": "RECORDED",
+        "reason": "not deployed; deployment is on-demand only — no deployment without the real need (设计阶段实际消费代码解释且现有本地事实不足); admission prerequisites (digest authentication, authorized source scope, up gate, provisioned credentials) unchanged"
+      },
+      "graph-optional-disabled": {
+        "status": "RECORDED",
+        "reason": "graph is disabled or absent; no graph runtime, coverage or whole correctness journey is claimed by this declaration"
+      },
+      "backup-compatibility": {
+        "status": "UNVERIFIED",
+        "reason": "no restore drill registered for generation policy/source versions/authorization mapping and required wiki artifacts"
+      }
+    },
+    "inputs": {
+      "registrySha256": "ccde085d9bc7c99a6d559aacf79a4e5e439075427f3a330cfb6d141c6afc3647",
+      "domainFiles": {
+        "compose.yaml": "2710605af107df9d0f47dd1846a73786ec6a7835b97a03c7dc20a268ad6418a8",
+        "images.lock.json": "ae8ac70ed94272c1c04e8cae0e915d80b12467c3e9c0b2c7724d7f610d764529",
+        "deepwiki-profile.json": "e9e5fc25e86eb8028298556f1bd5e66770db719a2165048d96cabb35e8e37c27",
+        "graph-profile.json": "c938f0309fd39937c24a45bc1f7b8cad70a6f44680190c4dcba375ccf7c18bcf",
+        "repository-scope.json": "35bf9d1ea67af544ec226f65f82fe91b74be4c91c248881eb83d2b8ebea81008"
+      }
+    },
+    "unreadyComponents": [
+      {
+        "component": "codewiki-app",
+        "status": "UNVERIFIED",
+        "reason": "reference=recorded, digest=recorded, digestAuthenticated=false"
+      }
+    ],
+    "scope": {
+      "approvedSources": 0,
+      "authorizedSources": 0
+    },
+    "composeParser": {
+      "command": "python3",
+      "flags": [
+        "-I"
+      ],
+      "implementation": "PyYAML",
+      "requiredVersion": "6.0.3",
+      "version": "6.0.3",
+      "proofLayer": "component-parser",
+      "attempted": true,
+      "executed": true,
+      "status": "AVAILABLE"
+    }
+  },
+  "checkedAt": "2026-10-26T11:00:58.897Z"
+}
+exit=2

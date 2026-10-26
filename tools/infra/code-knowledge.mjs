@@ -490,6 +490,10 @@ function validateWikiProfile(profile) {
   if (service.publicHostedServiceSubstitute !== false) {
     add('PUBLIC_SERVICE_SUBSTITUTE_FORBIDDEN', `${at}:service`, { reason: 'sensitive code must never be delegated to a public hosted service' });
   }
+  // CodeWiki.v1：代码 Wiki 不构成正式团队知识——新鲜度/来源事实不得把它升格为设计事实。
+  if (service.knowledgeAuthority !== false) {
+    add('WIKI_KNOWLEDGE_AUTHORITY_FORBIDDEN', `${at}:service`, { reason: 'the code wiki is never official team knowledge; freshness/source facts never promote it into design facts' });
+  }
   // 上游选定必须固定精确 commit；未选定保持 null（严禁虚构）。
   const upstream = service.upstream ?? {};
   if (upstream.status && upstream.status !== 'UNSELECTED') {
@@ -507,6 +511,29 @@ function validateWikiProfile(profile) {
   const access = profile.access ?? {};
   if (access.apiAuthRequired !== true || access.mcpReadbackRequired !== true) {
     add('WIKI_READBACK_POLICY_MISSING', `${at}:access`, { reason: 'policy requires an authenticated, independently read-back API/MCP' });
+  }
+  return violations;
+}
+
+// CodeWiki.v1 部署登记门（修订 2026-10-26-comet-050-adoption-v1）：按真实需要自托管——
+// 未部署必须如实登记 NOT_DEPLOYED + 按需触发条件（真实需要 = 设计阶段消费代码解释）；
+// 未过镜像认证/upGate 准入不得自称任何已部署状态。
+function validateWikiDeployment(profile, lock) {
+  const violations = [];
+  const add = (code, at, extra) => violations.push({ code, at, ...(extra ?? {}) });
+  const at = 'deepwiki-profile.json';
+  const deployment = profile?.deployment;
+  if (!isObject(deployment)) {
+    add('WIKI_DEPLOYMENT_STATUS_UNREGISTERED', at, { reason: 'the deployment state (NOT_DEPLOYED + on-demand trigger) must be explicitly registered' });
+    return violations;
+  }
+  if (deployment.status === 'NOT_DEPLOYED') {
+    const condition = deployment.onDemandTrigger?.condition;
+    if (typeof condition !== 'string' || condition.trim() === '') {
+      add('WIKI_ON_DEMAND_TRIGGER_UNREGISTERED', `${at}:deployment`, { reason: 'a NOT_DEPLOYED wiki must register its on-demand trigger condition (real need = design-phase code-explanation consumption)' });
+    }
+  } else if (lock?.upGate?.enabled !== true) {
+    add('WIKI_DEPLOYMENT_STATUS_NOT_ADMITTED', `${at}:deployment`, { status: deployment.status, reason: 'claiming any deployed status requires the images lock up gate to be explicitly admitted first' });
   }
   return violations;
 }
@@ -621,6 +648,7 @@ function validateDomain({ registry, refsDoc, files }) {
 
   violations.push(...validateLock(lock).violations);
   violations.push(...validateWikiProfile(profile));
+  violations.push(...validateWikiDeployment(profile, lock));
   violations.push(...validateGraphProfile(graph));
   const scopeResult = validateRepositoryScope(scope, registry);
   violations.push(...scopeResult.violations);
@@ -675,6 +703,9 @@ function buildQualification({ registryText, dir, files, catalogGaps, scopeSource
       ? UNVERIFIED('freshness policy decided but never exercised against a real generation manifest + live readback')
       : UNVERIFIED('freshness policy undecided (maxCommitAgeDays/languageCoverageMin unset): fail-closed — freshness can never report pass until the pilot language/repo-scale/update policy is decided'),
     'api-mcp-readback': UNVERIFIED('no live instance; authenticated API/MCP pagination/version-exposure capabilities are unproven'),
+    'wiki-deployment-demand': (profile.deployment?.status === 'NOT_DEPLOYED' && nonBlank(profile.deployment?.onDemandTrigger?.condition))
+      ? RECORDED('not deployed; deployment is on-demand only — no deployment without the real need (设计阶段实际消费代码解释且现有本地事实不足); admission prerequisites (digest authentication, authorized source scope, up gate, provisioned credentials) unchanged')
+      : UNVERIFIED('deployment registration missing or inconsistent (NOT_DEPLOYED status / on-demand trigger condition)'),
     'graph-optional-disabled': graph.enabled === false
       ? RECORDED('graph is disabled or absent; no graph runtime, coverage or whole correctness journey is claimed by this declaration')
       : UNVERIFIED('graph enabled flag is not the committed disabled state; coverage evidence still requires a live component'),
@@ -935,6 +966,11 @@ async function main(argv) {
         access: {
           apiAuthRequired: profile.access?.apiAuthRequired ?? null,
           mcpReadbackRequired: profile.access?.mcpReadbackRequired ?? null,
+        },
+        deployment: {
+          status: profile.deployment?.status ?? null,
+          onDemandTriggerRegistered: typeof profile.deployment?.onDemandTrigger?.condition === 'string' && profile.deployment.onDemandTrigger.condition.trim() !== '',
+          knowledgeAuthority: profile.service?.knowledgeAuthority ?? null,
         },
       },
       graph: {

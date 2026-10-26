@@ -1,0 +1,54 @@
+$ PATH="$HOME/.nvm/versions/node/v24.15.0/bin:$PATH" node tools/infra/code-knowledge.mjs probe --case graph-disabled-correctness --json
+{
+  "interface": "CodeKnowledgeInfra.v1",
+  "command": "probe",
+  "case": "graph-disabled-correctness",
+  "dir": "infra/delivery/code-knowledge",
+  "executed": true,
+  "status": "VERIFIED",
+  "proofLayer": "component-configuration",
+  "composeParser": {
+    "command": "python3",
+    "flags": [
+      "-I"
+    ],
+    "implementation": "PyYAML",
+    "requiredVersion": "6.0.3",
+    "version": "6.0.3",
+    "proofLayer": "component-parser",
+    "attempted": true,
+    "executed": true,
+    "status": "AVAILABLE"
+  },
+  "reason": "the component configuration validation chain passed without requiring a graph runtime; actual correctness tests and Comet retrieval still require independent execution",
+  "requiredInputs": [
+    "committed code-knowledge domain files (--dir; no live runtime required)"
+  ],
+  "plannedSteps": [
+    "read the committed graph-profile and record the enabled flag and authority declarations",
+    "re-run the full main validation chain (validateDomain) against the domain for real — not a flag-text read",
+    "assert the main chain is green with graph disabled and that graph holds no gate/knowledge authority"
+  ],
+  "observedSteps": [
+    {
+      "step": "read committed graph-profile enabled flag",
+      "status": "VERIFIED",
+      "enabled": false
+    },
+    {
+      "step": "main validation chain re-run (graph-disabled correctness)",
+      "status": "VERIFIED",
+      "violations": 0,
+      "codes": []
+    }
+  ],
+  "graph": {
+    "enabled": false,
+    "declarationPresent": true,
+    "runtimeVerified": false,
+    "gateAuthority": false,
+    "knowledgeAuthority": false
+  },
+  "checkedAt": "2026-10-26T11:00:21.168Z"
+}
+exit=0

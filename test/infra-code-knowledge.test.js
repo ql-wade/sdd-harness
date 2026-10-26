@@ -945,6 +945,76 @@ test('CodeGraph.v1: removable optimization, no gate/knowledge authority; graph-d
   assert.ok(codes(parseJsonOut(removableRun, 'validate')).includes('GRAPH_REMOVABILITY_REQUIRED'));
 });
 
+test('I05 NOT_DEPLOYED registration: on-demand trigger and no-official-team-knowledge boundary are machine-checked', () => {
+  // 修订 2026-10-26-comet-050-adoption-v1：按真实需要自托管 deepwiki-open——未部署必须如实登记
+  // NOT_DEPLOYED + 按需部署触发条件（真实需要 = 设计阶段消费代码解释），不做无需要的部署；
+  // code wiki 任何时候不构成正式团队知识——新鲜度/来源事实永远不得把它升格为设计事实。
+  const profile = readDomainJson('deepwiki-profile.json');
+  assert.equal(profile.service.runtime.status, 'NOT_DEPLOYED', 'no local deployment exists; the runtime state must stay honestly NOT_DEPLOYED');
+  assert.equal(profile.service.knowledgeAuthority, false, 'the code wiki is never official team knowledge');
+  const deployment = profile.deployment;
+  assert.ok(deployment, 'the deployment registration section must be present');
+  assert.equal(deployment.status, 'NOT_DEPLOYED');
+  assert.equal(deployment.noNeedNoDeployment, true, 'no deployment without a real need');
+  assert.ok(deployment.onDemandTrigger, 'the on-demand trigger must be registered');
+  assert.equal(deployment.onDemandTrigger.status, 'NOT_TRIGGERED');
+  assert.match(deployment.onDemandTrigger.condition, /设计/);
+  assert.match(deployment.onDemandTrigger.condition, /代码解释/);
+  assert.ok(Array.isArray(deployment.prerequisites) && deployment.prerequisites.length > 0, 'admission prerequisites must be listed');
+
+  // 读回 oracle：validate/qualify 回执必须携带登记事实。
+  const validate = runCli(['validate', '--registry', registryPath, '--dir', domainDir, '--json']);
+  assert.equal(validate.status, 0, validate.stdout || validate.stderr);
+  const validateReport = parseJsonOut(validate, 'validate');
+  assert.equal(validateReport.wiki.deployment.status, 'NOT_DEPLOYED');
+  assert.equal(validateReport.wiki.deployment.onDemandTriggerRegistered, true);
+  const qualify = runCli(['qualify', '--registry', registryPath, '--dir', domainDir, '--json']);
+  assert.equal(qualify.status, 2, 'qualify stays honestly NOT_READY while evidence is unready');
+  const qualifyReport = parseJsonOut(qualify, 'qualify');
+  assert.equal(qualifyReport.categories['wiki-deployment-demand'].status, 'RECORDED');
+  assert.match(qualifyReport.categories['wiki-deployment-demand'].reason, /设计阶段/);
+
+  // 负例：登记被删（unregistered）→ 主校验链拒绝。
+  const unregistered = makeFixtureDir(({ json, writeJson }) => {
+    const fixtureProfile = json('deepwiki-profile.json');
+    delete fixtureProfile.deployment;
+    writeJson('deepwiki-profile.json', fixtureProfile);
+  });
+  const unregisteredRun = runCli(['validate', '--registry', registryPath, '--dir', unregistered, '--json']);
+  assert.equal(unregisteredRun.status, 2, 'a missing deployment registration must be rejected');
+  assert.ok(codes(parseJsonOut(unregisteredRun, 'unregistered deployment')).includes('WIKI_DEPLOYMENT_STATUS_UNREGISTERED'));
+
+  // 负例：NOT_DEPLOYED 但触发条件缺失 → 拒绝（按需部署条件是登记义务，不可省略）。
+  const noTrigger = makeFixtureDir(({ json, writeJson }) => {
+    const fixtureProfile = json('deepwiki-profile.json');
+    delete fixtureProfile.deployment.onDemandTrigger.condition;
+    writeJson('deepwiki-profile.json', fixtureProfile);
+  });
+  const noTriggerRun = runCli(['validate', '--registry', registryPath, '--dir', noTrigger, '--json']);
+  assert.equal(noTriggerRun.status, 2, 'a NOT_DEPLOYED wiki without its on-demand trigger condition must be rejected');
+  assert.ok(codes(parseJsonOut(noTriggerRun, 'no trigger')).includes('WIKI_ON_DEMAND_TRIGGER_UNREGISTERED'));
+
+  // 负例：未过 upGate/镜像认证即自称已部署 → 拒绝（不许无准入事实自称 DEPLOYED）。
+  const fakeDeployed = makeFixtureDir(({ json, writeJson }) => {
+    const fixtureProfile = json('deepwiki-profile.json');
+    fixtureProfile.deployment.status = 'DEPLOYED';
+    writeJson('deepwiki-profile.json', fixtureProfile);
+  });
+  const fakeRun = runCli(['validate', '--registry', registryPath, '--dir', fakeDeployed, '--json']);
+  assert.equal(fakeRun.status, 2, 'a deployed status claim without an admitted up gate must be rejected');
+  assert.ok(codes(parseJsonOut(fakeRun, 'fake deployed')).includes('WIKI_DEPLOYMENT_STATUS_NOT_ADMITTED'));
+
+  // 负例：把 code wiki 声明成知识权威（正式团队知识）→ 拒绝。
+  const knowledgeAuthority = makeFixtureDir(({ json, writeJson }) => {
+    const fixtureProfile = json('deepwiki-profile.json');
+    fixtureProfile.service.knowledgeAuthority = true;
+    writeJson('deepwiki-profile.json', fixtureProfile);
+  });
+  const authorityRun = runCli(['validate', '--registry', registryPath, '--dir', knowledgeAuthority, '--json']);
+  assert.equal(authorityRun.status, 2, 'the code wiki must never claim official team-knowledge authority');
+  assert.ok(codes(parseJsonOut(authorityRun, 'wiki knowledge authority')).includes('WIKI_KNOWLEDGE_AUTHORITY_FORBIDDEN'));
+});
+
 test('CodeWiki.v1 profile gates: selfhost pinned-upstream structure, manifest/freshness/readback policies must be declared', () => {
   const profile = readDomainJson('deepwiki-profile.json');
   assert.equal(profile.interface, 'CodeWiki.v1');

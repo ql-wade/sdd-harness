@@ -1,0 +1,30 @@
+$ PATH="$HOME/.nvm/versions/node/v24.15.0/bin:$PATH" node tools/infra/code-knowledge.mjs probe --case pinned-code-wiki --json
+{
+  "interface": "CodeKnowledgeInfra.v1",
+  "command": "probe",
+  "case": "pinned-code-wiki",
+  "endpoint": null,
+  "manifest": null,
+  "executed": false,
+  "status": "UNVERIFIED",
+  "liveReadback": false,
+  "evaluationBasis": "declared-artifact-only",
+  "reason": "no live self-hosted code-wiki endpoint configured; freshness requires a real authenticated API/MCP readback for the approved pinned commit (up refuses until the images lock qualifies, the source scope is authorized and admission is granted). Pass --endpoint <url> once the stack exists — this command never mocks and never skips.",
+  "freshness": null,
+  "requiredInputs": [
+    "live self-hosted code-wiki instance endpoint (--endpoint <url>; public hosted services are not an allowed substitute)",
+    "provider credential resolved via secret-ref:sdd-harness-pilot/codewiki-provider (runtime authorization; no token borrowing)",
+    "an authorized repository-scope entry with immutableID + pinned commit and grant secret-ref:sdd-harness-pilot/codewiki-source-read",
+    "a wiki generation manifest for the exact approved commit (--manifest <file> enables the local manifest-level freshness evaluation)"
+  ],
+  "plannedSteps": [
+    "GET endpoint — instance reachable and identity observed",
+    "authenticated provider API/MCP readback of the wiki for repoID/immutableID/commit (pagination/version exposure verified)",
+    "compare repoID/immutableID/commit against the repository-scope approved entry and the generation manifest",
+    "sample wiki references for accuracy; verify language coverage meets the decided policy",
+    "record the freshness verdict as fact — the outer gate decides per the pre-committed policy"
+  ],
+  "observedSteps": [],
+  "checkedAt": "2026-10-26T11:00:58.807Z"
+}
+exit=2
