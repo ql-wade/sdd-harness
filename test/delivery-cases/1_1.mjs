@@ -69,7 +69,7 @@ test('runtime claims record executed probes with existing evidence logs', async 
     await fs.access(path.join(projectRoot, claim.evidence));
   }
   const versionClaim = claims.find((entry) => entry.id === 'comet-cli-version');
-  assert.match(versionClaim.observed, /0\.4\.5/);
+  assert.match(versionClaim.observed, /0\.5\.0/);
   const teamaiClaim = claims.find((entry) => entry.id === 'teamai-cli-version');
   assert.match(teamaiClaim.observed, /0\.22\.0/);
 });
