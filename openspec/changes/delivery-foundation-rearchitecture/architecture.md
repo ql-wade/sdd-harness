@@ -40,3 +40,7 @@ P3_2首个真实R→V切片不等待六容器/I02完整镜像、Outline/代码Wi
 
 - `docs/architecture/comet-ai-devops-convergence.md` SHA256 `0e5ff079c4ff6d1b447a7866ef31c2aa024fc0c84a57634eae841d726d155049`
 - `docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md` SHA256 `eab105e6f356215709fa798164332d935357863ba45bab82cf14dfca5c69d1a9`
+
+## 修订 2026-10-26-comet-050-adoption-v1
+
+依据ADR-0022（Proposed）：基线升级Comet 0.5.0；门禁实现由0.4.5补丁链（0001/0002）改为官方classic-full组合应用——replacements承载Matt方法技能、extensions落R/A/T/P/V/Kp检查点并经bindings.mjs委托lib/delivery纯组件；0004随上游安全修复删除；0003由最小后继补丁0005（Kt完成谓词，B1）接替。并行执行启用：宿主并发子代理派发已实测、worker独立worktree、同波所有权无重叠；串行仅P3_2/P4_2/P4_8/P5_1/VERIFY。P0_1–P0_4与P2_1接纳原样保留，P3_1完成待提交，P1_1重开做0.5.0资格重验。本修订为计划层，未实施、未激活goal。

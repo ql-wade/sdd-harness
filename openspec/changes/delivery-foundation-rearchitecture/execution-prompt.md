@@ -1,16 +1,3 @@
-# 当前项目交接约束（优先于下方通用执行模板）
-
-本文件是2026-10-26-command-first-v1的未来执行指令。用户本次只要更新架构与计划；当前不得启动实施、模型/MCP、部署/清理、Goal或工人。接收者在随后明确实施指令到达后才登记唯一控制器并按本计划执行，不能把本文件生成或被读取当作实施授权。
-
-- 先读HANDOFF-EXECUTION-2026-10-26.md与ADR-0021，复用现有tasks/DAG/state/ledger和适用Goal/监督，不另建第二套。
-- 使用Comet原生命令和现有宿主真实技能/独立Agent/工具；先R→V，取消六角色常驻、固定镜像和私有RPC/S0闭包前置。Docker只必要依赖或明确需要的临时作业。
-- 保留本期129required/103场景及F10正向另期；原四摘要必须匹配，旧结果不认证当前修订。
-- 20分钟是观察间隔，只对实质变化/失败/完成/需要人类动作通知，不每次重复状态。
-- 原Comet/SpecAdapter是实际规格归档唯一入口。下方通用closeout helper只用静态freeze/check/prepare审阅能力，不按通用模板直接finalize业务归档；以execution-contract.closeout_override为准。
-- 原有源差异/用户改动、卷、知识、旧Run和失败证据保留；当前交接不授凭据读取、真实外部写或删除数据权。
-
----
-
 # Agent Execution Controller
 
 Execute this frozen plan with its included goal settings, recurring 20-minute
@@ -24,10 +11,10 @@ paths relative to it, verifying the repository identity before any write:
 plan `tasks.md`, architecture `architecture.md`, DAG `task-dag.json`,
 lock `drift-lock.json`, execution contract `execution-contract.json`.
 
-Locked plan SHA-256: `3907b1f690ca160f40414cfa8ca7a710cabf639c6bbc9c4f0a1a1ee5d0b0efea` (checkbox-normalized-v1).
-Architecture SHA-256: `13d298ae949fa92a3b7b92b7bbab7a1d8324c05d6be42272fe7c59001b995596` (raw bytes).
-DAG SHA-256: `24cb5549fd126eb9a4b9fb1d259d01209b021387fbb9face30e9dd840b03f53b` (raw bytes).
-Execution-contract SHA-256: `216a24c2e724444aceefdf5c15393a713dfb09022c5323a505d200109d2aa022` (raw bytes).
+Locked plan SHA-256: `4665b60125ece30f320d3fc4f43d06dc6d36cdd401997fc20f5bb77e51b7fddc` (checkbox-normalized-v1).
+Architecture SHA-256: `0c28289751d5e7b6f2926c8982b545d516a1c912b01ed48de84e5fa4d0a4638e` (raw bytes).
+DAG SHA-256: `3bdef65214c79f261395aa9dbd2bf93c4e06e2bc683a05fa0764f32d28519cb2` (raw bytes).
+Execution-contract SHA-256: `613e39ad8260cf0ae3798d5b52d0e76904ea4ca1ca41663b87bc0a8152b19651` (raw bytes).
 Normalize CRLF to LF and change only line-leading Markdown checked boxes to
 unchecked for the plan digest; preserve fenced code exactly. Verify all four
 hashes before dispatch and integration; mismatch means HALT_AND_REPLAN.

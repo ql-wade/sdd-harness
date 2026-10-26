@@ -1,0 +1,186 @@
+{
+  "id": "2026-10-26-comet-050-adoption-v1",
+  "authority": "User direction 2026-10-26: leverage latest official capabilities to minimize custom workload; architecture proposed (ADR-0022) and aligned via multi-round Q&A; parallel TDD detailed plan requested via claude-parallel-tdd-planner before implementation activation",
+  "status": "PLAN_REVISION_PREPARED_PENDING_ADR0022_APPROVAL",
+  "depends_on_adr": "docs/architecture/adr/0022-comet-0.5.0-native-composition.md (Proposed)",
+  "evidence_base": [
+    "docs/research/2026-10-26-comet-classic-workflow-deep-dive.md",
+    "docs/research/2026-10-26-comet-0.5.0-adoption-proposal.md",
+    "docs/research/2026-10-20-comet-official-architecture-review.md"
+  ],
+  "preserved": {
+    "nodes": 39,
+    "parent_tasks": 30,
+    "work_packages": 69,
+    "scenarios": 104,
+    "checks": 130,
+    "current_required": {
+      "checks": 129,
+      "scenarios": 103
+    },
+    "F10": "NOT-EXERCISED_DEFERRED"
+  },
+  "baseline_change": {
+    "comet": {
+      "old": "0.4.5 (c90af44) + patches 0001-0004",
+      "new": "0.5.0 (tag 0.5.0, exact commit to be locked in P1_1 re-qualification) + composition package + minimal Kt successor patch 0005"
+    },
+    "patch_disposition": {
+      "0001": "deleted; replaced by bundled Matt skills in composition package (replacements) + no-reinstall assertions",
+      "0002": "shrink; R/A/T/P/V/Kp gates become checkpoint extensions; validators bind to lib/delivery pure components via bindings.mjs; rework budget/invalidation generations remain extension business rules",
+      "0003": "succeeded by minimal 0005 Kt completion-predicate patch on 0.5.0 resolver (option B1); post-archive same-Run pending semantics preserved",
+      "0004": "deleted; upstream 0.5.0 pins vite 8.2.4 and contains remaining backports"
+    }
+  },
+  "dependency_changes": {
+    "P2_4": {
+      "old": [
+        "P1_1",
+        "P2_3",
+        "P3_1"
+      ],
+      "new": [
+        "P1_1",
+        "P2_3",
+        "P3_1",
+        "P1_6"
+      ],
+      "reason": "composition package compilation consumes P1_6 bundled skill replacements"
+    },
+    "P2_1": {
+      "old": [
+        "P1_1"
+      ],
+      "new": [],
+      "reason": "version-agnostic pure data contracts; 0.4.5-specific ordering edge removed because P1_1 reopens for 0.5.0 re-qualification while P2_1 acceptance carries (suite green, independent of comet version); re-verified at VERIFY"
+    }
+  },
+  "interface_replacements": {
+    "Comet.DistributionBuild.v1 (0.4.5 patch chain build)": "Comet.Application.v1: compiler-produced classic-full composition package (replacements + extensions + bindings.mjs, deterministic byte digest) installed via comet application install",
+    "Gate injection via patch 0002 into classic-store": "Comet.Extension.v1: required checkpoint extensions at open.evidence / design.evidence / build.plan.evidence / verify.check.evidence with validators delegating to lib/delivery pure components",
+    "Kt completion predicate via patch 0003 on 0.4.5 archive path": "Minimal successor patch 0005 on 0.5.0 classic-resolver completed predicate (B1)",
+    "Escape-door neutralization via Runner env hygiene": "Native 0.5.0 SDK-format semantics (state set restricted, FORCE_PHASE not honored) + launch env hygiene for COMET_OPENSPEC and pinned supply"
+  },
+  "task_disposition_delta": {
+    "P1_1": "re-qualify baseline for 0.5.0: lock new commit/integrity, rebuild vendored source+build, re-run source/build/security suites; 0.4.5 facts remain historical evidence",
+    "P1_6": "package Matt method skills into composition application assets; keep no-reinstall (init/update/doctor) assertions; 0001 retired",
+    "P2_4": "work packages rescoped: 2.4.a composition manifest+compile verification, 2.4.b R/A/T/P/V/Kp extensions + bindings, 2.4.c shared-guard negative replay (conservative invalidation equivalence), 2.4.d minimal Kt patch 0005; 0002 retired",
+    "P1_3": "adapters rewritten to 0.5.0: comet-executor to SDK dispatch/application install, comet.js to comet-state.yaml + runtime dispatch entry; host-probes refreshed",
+    "P1_4": "mode qualification re-run on 0.5.0 (escape doors verified native-closed for SDK runs; COMET_OPENSPEC pinned supply)",
+    "P3_4": "spec adapter readback paths updated to new state file; semantics unchanged",
+    "I02": "retire six-role deployment; also dispose pending runner/iso worktree diffs per snapshot",
+    "P1_2": "distribution gains composition package asset + target-project MCP registration step; bootstrap remains idempotent"
+  },
+  "parallel_design": {
+    "host_capability_observed": "concurrent subagent dispatch verified in this session (multiple background research/review agents); worker isolation via per-worker worktrees as previously practiced",
+    "serial_only": [
+      "P3_2",
+      "P4_2",
+      "P4_8",
+      "P5_1",
+      "VERIFY"
+    ],
+    "serial_reason": "P3_2 drives the single live pilot R->V; P4_2 touches target environment deploy/rollback; P4_8 performs external revocation/isolation operations; P5_1 exercises real team hosts; VERIFY consumes all",
+    "waves": [
+      [
+        "P1_1",
+        "I01"
+      ],
+      [
+        "P1_6",
+        "P2_2",
+        "I03",
+        "I06"
+      ],
+      [
+        "P1_2",
+        "P2_3",
+        "I04",
+        "I05"
+      ],
+      [
+        "P2_4"
+      ],
+      [
+        "P2_5",
+        "I07"
+      ],
+      [
+        "P1_3"
+      ],
+      [
+        "P1_4",
+        "I02"
+      ],
+      [
+        "P1_5"
+      ],
+      [
+        "P3_2"
+      ],
+      [
+        "P3_3"
+      ],
+      [
+        "P3_4"
+      ],
+      [
+        "P4_6"
+      ],
+      [
+        "P4_2"
+      ],
+      [
+        "P4_1"
+      ],
+      [
+        "P4_7"
+      ],
+      [
+        "P4_4"
+      ],
+      [
+        "P4_5"
+      ],
+      [
+        "I08"
+      ],
+      [
+        "P4_8"
+      ],
+      [
+        "P4_3"
+      ],
+      [
+        "P5_1"
+      ],
+      [
+        "P5_3"
+      ],
+      [
+        "VERIFY"
+      ]
+    ],
+    "completed_before_this_revision": [
+      "P0_1",
+      "P0_2",
+      "P0_3",
+      "P0_4",
+      "P2_1"
+    ],
+    "held": {
+      "P3_1": "work complete + review APPROVE; commit held by user pause; carried as accepted-on-commit in this revision"
+    },
+    "deferred": [
+      "P5_2"
+    ]
+  },
+  "review_scope": "document/plan revision only; runtime acceptance explicitly not claimed; ADR-0022 approval + Kt B1 selection remain the user gate before activation",
+  "not_executed": [
+    "implementation",
+    "0.5.0 supply relock",
+    "composition compile",
+    "goal activation",
+    "worker dispatch"
+  ]
+}

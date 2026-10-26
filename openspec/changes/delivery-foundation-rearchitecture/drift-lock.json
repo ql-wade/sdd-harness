@@ -2,10 +2,10 @@
   "schema_version": 2,
   "feature": "delivery-foundation-rearchitecture",
   "hash_mode": "checkbox-normalized-v1",
-  "plan_sha256": "3907b1f690ca160f40414cfa8ca7a710cabf639c6bbc9c4f0a1a1ee5d0b0efea",
-  "architecture_sha256": "13d298ae949fa92a3b7b92b7bbab7a1d8324c05d6be42272fe7c59001b995596",
-  "dag_sha256": "24cb5549fd126eb9a4b9fb1d259d01209b021387fbb9face30e9dd840b03f53b",
-  "execution_contract_sha256": "216a24c2e724444aceefdf5c15393a713dfb09022c5323a505d200109d2aa022",
+  "plan_sha256": "4665b60125ece30f320d3fc4f43d06dc6d36cdd401997fc20f5bb77e51b7fddc",
+  "architecture_sha256": "0c28289751d5e7b6f2926c8982b545d516a1c912b01ed48de84e5fa4d0a4638e",
+  "dag_sha256": "3bdef65214c79f261395aa9dbd2bf93c4e06e2bc683a05fa0764f32d28519cb2",
+  "execution_contract_sha256": "613e39ad8260cf0ae3798d5b52d0e76904ea4ca1ca41663b87bc0a8152b19651",
   "acceptance_ids": [
     "A01",
     "A02",
@@ -198,9 +198,7 @@
       "tools/comet/prepare-source.mjs",
       "tools/comet/build.mjs",
       "test/comet-source-preparation.test.js",
-      "test/comet-build.test.js",
-      "integrations/comet/patches/0004-upstream-security-backports.patch",
-      "test/comet-security-backports.test.js"
+      "test/comet-build.test.js"
     ],
     "P2_1": [
       "contracts/delivery",
@@ -224,12 +222,12 @@
       ".agents/skills",
       "docs/agent/skill-architecture.md",
       "openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json",
-      "integrations/comet/patches/0001-matt-method-profile.patch",
       "test/delivery-cases/1_6.mjs",
-      "integrations/comet/patches/tests/1_6.patch",
       "foundation/profiles/comet-managed.json",
       "test/comet-method-binding.test.js",
-      "scripts/check.sh"
+      "scripts/check.sh",
+      "integrations/comet/application/skills",
+      "integrations/comet/application/manifest.json"
     ],
     "P1_2": [
       "foundation",
@@ -255,9 +253,11 @@
       "test/delivery-cases/2_3.mjs"
     ],
     "P2_4": [
-      "integrations/comet/patches/0002-managed-delivery-runtime.patch",
-      "test/delivery-cases/2_4.mjs",
-      "integrations/comet/patches/tests/2_4.patch"
+      "integrations/comet/application/composition.json",
+      "integrations/comet/application/bindings.mjs",
+      "integrations/comet/application/extensions",
+      "integrations/comet/patches/0005-comet-050-kt-closeout.patch",
+      "test/delivery-cases/2_4.mjs"
     ],
     "P2_5": [
       "lib/adapters/architecture-review.js",
@@ -462,7 +462,8 @@
     "Old source/build/component observations remain reusable only within their exact original scope; affected approvals must be revalidated.",
     "Existing Agent host capabilities are to be discovered, not replaced by custom Agent platform.",
     "No implementation, Docker cleanup, provider startup, external write or new credential access performed by this revision.",
-    "All129 current checks/103 functional scenarios remain unverified on command-first; F10 positive deferred."
+    "All129 current checks/103 functional scenarios remain unverified on command-first; F10 positive deferred.",
+    "ADR-0022 (Proposed) approval and Kt B1 selection are the activation gate; this revision is plan-only, no goal activation, no worker dispatch."
   ],
   "change_policy": "halt-and-replan",
   "scope": "USER_AUTHORIZED_COMET_CONVERGENCE_NOT_YET_ACCEPTED",
@@ -865,6 +866,11 @@
       "changes": "native host commands; retire resident role topology, rewrite related oracles/interfaces, remove infra-before-RV dependencies",
       "not_authorized": "implementation, live cleanup, model/API/ACL/credential actions",
       "review": "APPROVE independent spec and plan document review; final formatting/hash readback recorded separately; no product acceptance"
+    },
+    {
+      "id": "2026-10-26-comet-050-adoption-v1",
+      "approved_by": "user direction 2026-10-26 (minimize custom workload via official 0.5.0 composition; parallel TDD plan requested); ADR-0022 approval pending before activation",
+      "content": "Comet 0.5.0 adoption: composition package replaces patch chain 0001/0002/0004; minimal Kt successor 0005 (B1); parallel waves enabled with worktree isolation; P2_1 dep edge on P1_1 removed (version-agnostic); P1_1 reopened for 0.5.0 re-qualification; identities 39/30/69/104/130 preserved; replans/2026-10-26-comet-050-adoption holds before-state"
     }
   ]
 }

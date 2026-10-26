@@ -1,0 +1,870 @@
+{
+  "schema_version": 2,
+  "feature": "delivery-foundation-rearchitecture",
+  "hash_mode": "checkbox-normalized-v1",
+  "plan_sha256": "3907b1f690ca160f40414cfa8ca7a710cabf639c6bbc9c4f0a1a1ee5d0b0efea",
+  "architecture_sha256": "13d298ae949fa92a3b7b92b7bbab7a1d8324c05d6be42272fe7c59001b995596",
+  "dag_sha256": "24cb5549fd126eb9a4b9fb1d259d01209b021387fbb9face30e9dd840b03f53b",
+  "execution_contract_sha256": "216a24c2e724444aceefdf5c15393a713dfb09022c5323a505d200109d2aa022",
+  "acceptance_ids": [
+    "A01",
+    "A02",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A10",
+    "A11",
+    "A12",
+    "A13",
+    "A14",
+    "A15",
+    "A16",
+    "A17",
+    "A18",
+    "A19",
+    "A20",
+    "B01",
+    "B02",
+    "B03",
+    "B04",
+    "B05",
+    "B06",
+    "B07",
+    "B08",
+    "B09",
+    "B10",
+    "F01",
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F07",
+    "F08",
+    "F09",
+    "F10",
+    "C01",
+    "C02",
+    "C03",
+    "C04",
+    "C05",
+    "C06",
+    "C07",
+    "C08",
+    "D01",
+    "D02",
+    "D03",
+    "D04",
+    "D05",
+    "D06",
+    "D07",
+    "D08",
+    "E01",
+    "E02",
+    "E03",
+    "E04",
+    "E05",
+    "E06",
+    "H01",
+    "H02",
+    "H03",
+    "H04",
+    "H05",
+    "H06",
+    "H07",
+    "H08",
+    "H09",
+    "U01",
+    "U02",
+    "U03",
+    "U04",
+    "U05",
+    "U06",
+    "U07",
+    "U08",
+    "L01",
+    "L02",
+    "L03",
+    "L04",
+    "L05",
+    "L06",
+    "L07",
+    "L08",
+    "L09",
+    "L10",
+    "L11",
+    "M01",
+    "M02",
+    "N01",
+    "N02",
+    "N03",
+    "N04",
+    "N05",
+    "N06",
+    "N07",
+    "N08",
+    "N09",
+    "N10",
+    "N11",
+    "N12"
+  ],
+  "frozen_interfaces": [
+    "Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase",
+    "SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch",
+    "Knowledge.Closeout.v1: Kp before archive, Kt before overall completion",
+    "Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state",
+    "Comet.SourcePreparation.v1: prepareCometSource({projectRoot,lock,archivePath}) returns canonical pristine source and verified provenance",
+    "Comet.DistributionBuild.v1: buildCometDistribution({projectRoot,lock,archivePath}) returns buildRoot, entrypoint, sourceCommit, fingerprint with exact toolchain precondition",
+    "Registry.v1 -> project/resource/owner/credentialRef/lockRef/authority/domain/retention, no secret values",
+    "SecretRef.v1 -> existing authenticated connector or purpose-bound native host reference, no new secret service or mandatory model API key",
+    "Qualification.v2 -> exact installed command or necessary service identity, version/license/permissions/readback/recovery, image evidence only for deployed dependencies",
+    "HostInfra.v2 -> existing host command/tool permission evidence and retirement of resident role deployment, optional temporary jobs only",
+    "Host.RoleBoundary.v2 -> real independent sessions, native read/tool/path scopes and protected CI or connector authorization, no mandatory role containers",
+    "Authority.v2 -> one original Comet writer and workspace under native lock and transaction",
+    "host invocation refuses conflicting original Run writers and does not create a peer controller",
+    "OutlineInfra.v1 validate|qualify|up|probe|stop -> actual API/UI/storage/principal evidence",
+    "OutlineDomain.v1 -> instance/collection immutable IDs, actual effective reader set and registered owner",
+    "OutlineState.v1 -> durable database+attachment storage",
+    "cache is not rights authority",
+    "API contracts include fixed create UUID and lastRevision only if verified",
+    "ProjectWikiInfra.v1 validate|qualify|probe -> canonical project/wiki/index identity and MCP read/write observations",
+    "ProjectRoot.v1 -> projectID/repoID/wikiRoot/worktree mapping, contained paths only",
+    "KnowledgeWrite.v1 -> approved curated entry plus source/revision and independent readback",
+    "no task/phase/spec authority",
+    "CodeKnowledgeInfra.v1 validate|qualify|probe -> selfhost code-wiki and separate graph provenance/freshness evidence",
+    "CodeWiki.v1 -> repository immutableID/commit and wiki generation manifest, approved code access scope",
+    "CodeGraph.v1 -> structure-only index with exact input commit/coverage",
+    "removable optimization, no gate or knowledge authority",
+    "PlatformInfra.v1 validate|probe -> repository identity/permissions/check policy/registry/environment evidence, no implicit remote policy writes",
+    "IntegrationIdentity.v1 -> PR head/mergeSHA -> build artifact digest -> target deployment identity",
+    "Environment.v1 -> isolated endpoint/owner/rollback authorization and readback oracle",
+    "Health.v1 -> heartbeat_age, complete_scan_watermark, unresolved_isolation/deadlines and authority identity",
+    "read-only",
+    "Monitor.v1 -> external fault-domain registration and alert delivery/ack/escalation only, never business phase/retry/ACL",
+    "Supervisor.v2 -> existing scheduler invokes original Comet maintenance and recovery after checking the old writer, no resident controller requirement",
+    "bounded attempts and escalation",
+    "Backup.v1 -> consistent manifest of Comet state/transaction/receipts/approved payload plus knowledge/database/objects/config refs",
+    "Restore.v1 -> restore into quarantine, authenticate current permissions, fence old writer, verify same operation and readback before release",
+    "Retention.v1 -> R10 A: unresolved Run/knowledge obligation retains sole workspace",
+    "cleanup requires verified completed or separately approved migration+restore proof",
+    "SDD.Verification.Journey.v2: observer requires exact targets and typed terminal readback and observes real Comet Run without controlling phase or recovery",
+    "Comet.GateRevision.v2: same Run persists monotonic requirement and design revisions and trusted reviewer result binding and never revives invalidated receipts by restoring bytes"
+  ],
+  "global_constraints": [
+    "Comet Classic is the sole business workflow owner; TeamAI distributes only",
+    "Use native Comet commands and existing host skills/tools; no resident six-role services or replacement Agent RPC/control plane",
+    "Matt methods and test-authoring/independent Whitebox remain separate; product planner P is plan-only",
+    "Preserve all39 node IDs,30 parent IDs,69 workpackage IDs,104 scenario IDs and130 check IDs; F10 alone remains deferred",
+    "One canonical tasks/DAG/state/ledger; no worker or hook owns a second lifecycle",
+    "R/A/T independently gated; requirement/design changes invalidate all downstream and restored bytes never revive retired approvals",
+    "Native host enforced read/tool/path scopes and real independent execution evidence are required; do not claim malicious same-OS-user isolation from local signatures",
+    "Docker only for necessary knowledge infrastructure or justified temporary jobs; no mandatory Runner image rebuild before R-to-V",
+    "Kp blocks archive; Kt blocks overall completed; preserve same Run/operation recovery and genuine source permissions/audience/grants",
+    "R10 retains unresolved workspaces; G15 normal discovery3min plus isolation2min and separate failure/alert timing remain",
+    "No production/ACL/publication/credential actions implied by this planning-only revision",
+    "Planning validates structure only; no old fixture/container/image PASS qualifies the command-first delivery"
+  ],
+  "allowed_paths_by_task": {
+    "P0_1": [
+      "docs/architecture/comet-ai-devops-convergence.md",
+      "docs/architecture/adr/0020-comet-command-knowledge-convergence.md",
+      "docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md"
+    ],
+    "P0_2": [
+      "openspec/changes/delivery-foundation-rearchitecture/proposal.md",
+      "openspec/changes/delivery-foundation-rearchitecture/design.md",
+      "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md"
+    ],
+    "P0_3": [
+      "README.md",
+      "AGENTS.md",
+      "docs/architecture/scaffold-architecture.md",
+      "docs/agent/skill-architecture.md"
+    ],
+    "P0_4": [
+      "docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md",
+      "openspec/changes/delivery-foundation-rearchitecture/architecture-review"
+    ],
+    "P1_1": [
+      "openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json",
+      "openspec/changes/delivery-foundation-rearchitecture/package-probes",
+      "integrations/comet/upstream.lock.json",
+      "test/delivery-cases/1_1.mjs",
+      "tools/comet/source.js",
+      "tools/comet/prepare-source.mjs",
+      "tools/comet/build.mjs",
+      "test/comet-source-preparation.test.js",
+      "test/comet-build.test.js",
+      "integrations/comet/patches/0004-upstream-security-backports.patch",
+      "test/comet-security-backports.test.js"
+    ],
+    "P2_1": [
+      "contracts/delivery",
+      "lib/delivery/baseline.js",
+      "lib/delivery/test-contract.js",
+      "test/delivery-baseline.test.js",
+      "test/delivery-test-contract.test.js",
+      "test/delivery-cases/2_1.mjs",
+      "contracts/delivery/action-binding.schema.js",
+      "package.json",
+      "package-lock.json"
+    ],
+    "P3_1": [
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-contract.md",
+      "tools/verify/delivery-journey.mjs",
+      "tools/verify/delivery-case-schema.json",
+      "test/delivery-cases/3_1.mjs",
+      "test/comet-flow-acceptance.test.js"
+    ],
+    "P1_6": [
+      ".agents/skills",
+      "docs/agent/skill-architecture.md",
+      "openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json",
+      "integrations/comet/patches/0001-matt-method-profile.patch",
+      "test/delivery-cases/1_6.mjs",
+      "integrations/comet/patches/tests/1_6.patch",
+      "foundation/profiles/comet-managed.json",
+      "test/comet-method-binding.test.js",
+      "scripts/check.sh"
+    ],
+    "P1_2": [
+      "foundation",
+      "tools/foundation-export.mjs",
+      "tools/bootstrap.sh",
+      "tools/adapters/claude-code.sh",
+      "test/foundation-distribution.test.js",
+      "hooks.yaml",
+      "test/delivery-cases/1_2.mjs",
+      "test/legacy-workflow-routing.test.js"
+    ],
+    "P2_2": [
+      "lib/delivery/evidence.js",
+      "lib/delivery/gate.js",
+      "test/delivery-evidence.test.js",
+      "test/delivery-gate.test.js",
+      "test/delivery-cases/2_2.mjs"
+    ],
+    "P2_3": [
+      "bin/cli.js",
+      "lib/adapters/legacy-evidence.js",
+      "test/delivery-cli.test.js",
+      "test/delivery-cases/2_3.mjs"
+    ],
+    "P2_4": [
+      "integrations/comet/patches/0002-managed-delivery-runtime.patch",
+      "test/delivery-cases/2_4.mjs",
+      "integrations/comet/patches/tests/2_4.patch"
+    ],
+    "P2_5": [
+      "lib/adapters/architecture-review.js",
+      "test/architecture-review-adapter.test.js",
+      "test/delivery-cases/2_5.mjs"
+    ],
+    "P1_3": [
+      "lib/adapters/comet.js",
+      "lib/adapters/harness.js",
+      "test/comet-driver.test.js",
+      "openspec/changes/delivery-foundation-rearchitecture/host-probes",
+      "test/delivery-cases/1_3.mjs",
+      "lib/adapters/comet-executor.js",
+      "test/comet-execution-binding.test.js",
+      "mcp-capabilities.yaml",
+      ".mcp.json",
+      "tools/register-mcps.mjs"
+    ],
+    "P1_4": [
+      "openspec/changes/delivery-foundation-rearchitecture/mode-qualification.json",
+      "openspec/changes/delivery-foundation-rearchitecture/mode-probes",
+      "test/delivery-cases/1_4.mjs"
+    ],
+    "P1_5": [
+      "test/classic-integration.test.js",
+      "openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes",
+      "test/delivery-cases/1_5.mjs"
+    ],
+    "P3_2": [
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-journey",
+      "test/delivery-cases/3_2.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.case.json"
+    ],
+    "P3_3": [
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery",
+      "test/delivery-cases/3_3.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.case.json"
+    ],
+    "P3_4": [
+      "lib/adapters/spec.js",
+      "test/spec-closeout.test.js",
+      "test/delivery-cases/3_4.mjs"
+    ],
+    "I01": [
+      "infra/delivery/registry.json",
+      "infra/delivery/registry.schema.json",
+      "infra/delivery/secrets.refs.example.json",
+      "infra/delivery/qualification-policy.json",
+      "tools/infra/registry.mjs",
+      "tools/infra/secret-refs.mjs",
+      "test/infra-registry.test.js"
+    ],
+    "I02": [
+      "infra/delivery/runner/compose.yaml",
+      "infra/delivery/runner/Dockerfile",
+      "infra/delivery/runner/image.lock.json",
+      "infra/delivery/runner/role-policy.json",
+      "infra/delivery/runner/workspace-mounts.json",
+      "infra/delivery/runner/authority-registration.example.json",
+      "tools/infra/runner.mjs",
+      "test/infra-runner-isolation.test.js"
+    ],
+    "I03": [
+      "infra/delivery/outline/compose.yaml",
+      "infra/delivery/outline/images.lock.json",
+      "infra/delivery/outline/outline.env.example",
+      "infra/delivery/outline/oidc-registration.example.json",
+      "infra/delivery/outline/storage-policy.json",
+      "infra/delivery/outline/collection-registration.example.json",
+      "tools/infra/outline.mjs",
+      "test/infra-outline.test.js"
+    ],
+    "I04": [
+      "infra/delivery/llmwiki/package.lock.json",
+      "infra/delivery/llmwiki/project-root-policy.json",
+      "infra/delivery/llmwiki/index-policy.json",
+      "infra/delivery/llmwiki/mcp-profile.json",
+      "tools/infra/llmwiki.mjs",
+      "test/infra-llmwiki-paths.test.js"
+    ],
+    "I05": [
+      "infra/delivery/code-knowledge/compose.yaml",
+      "infra/delivery/code-knowledge/images.lock.json",
+      "infra/delivery/code-knowledge/deepwiki-profile.json",
+      "infra/delivery/code-knowledge/graph-profile.json",
+      "infra/delivery/code-knowledge/repository-scope.json",
+      "tools/infra/code-knowledge.mjs",
+      "test/infra-code-knowledge.test.js"
+    ],
+    "I06": [
+      "infra/delivery/platform/repository-registration.json",
+      "infra/delivery/platform/ci-policy.json",
+      "infra/delivery/platform/registry-registration.example.json",
+      "infra/delivery/platform/environment-registration.example.json",
+      "infra/delivery/platform/artifact-retention.json",
+      "tools/infra/platform.mjs",
+      "test/infra-platform.test.js"
+    ],
+    "P4_6": [
+      "integrations/comet/patches/0003-post-archive-closeout.patch",
+      "test/delivery-cases/4_6.mjs",
+      "integrations/comet/patches/tests/4_6.patch"
+    ],
+    "P4_7": [
+      "lib/adapters/knowledge-authorization.js",
+      "test/knowledge-authorization.test.js",
+      "openspec/changes/delivery-foundation-rearchitecture/authorization-journey",
+      "test/delivery-cases/4_7.mjs",
+      "tools/infra/knowledge-authz.mjs",
+      "infra/delivery/knowledge"
+    ],
+    "P4_4": [
+      "lib/adapters/llmwiki.js",
+      "lib/adapters/outline.js",
+      "lib/adapters/code-wiki.js",
+      "lib/sdd-paths.js",
+      "tools/mcp/llmwiki.sh",
+      "test/knowledge-closeout.test.js",
+      "lib/knowledge-seed.js",
+      "bin/cli.js",
+      "test/delivery-cases/4_4.mjs"
+    ],
+    "P4_1": [
+      ".github/workflows/delivery-gate.yml",
+      "tools/ci/verify-delivery.mjs",
+      "test/ci-delivery-gate.test.js",
+      "test/delivery-cases/4_1.mjs"
+    ],
+    "P4_2": [
+      "tools/ci/release.mjs",
+      "test/release-protocol.test.js",
+      "openspec/changes/delivery-foundation-rearchitecture/release-journey",
+      "test/delivery-cases/4_2.mjs"
+    ],
+    "P4_5": [
+      "hooks.yaml",
+      "hooks",
+      "tools/adapters/claude-code.sh",
+      "test/delivery-hook-assembly.test.js",
+      "test/delivery-cases/4_5.mjs"
+    ],
+    "I07": [
+      "infra/delivery/monitor/monitor-registration.example.json",
+      "infra/delivery/monitor/health-contract.json",
+      "infra/delivery/monitor/alert-policy.json",
+      "infra/delivery/monitor/supervisor-policy.json",
+      "infra/delivery/monitor/fault-domain-policy.json",
+      "tools/infra/monitor.mjs",
+      "test/infra-monitor.test.js"
+    ],
+    "I08": [
+      "infra/delivery/recovery/backup-policy.json",
+      "infra/delivery/recovery/restore-policy.json",
+      "infra/delivery/recovery/retention-policy.json",
+      "infra/delivery/recovery/authority-transfer.schema.json",
+      "infra/delivery/recovery/operations-runbook.md",
+      "tools/infra/recovery.mjs",
+      "test/infra-recovery.test.js",
+      "infra/delivery/backup",
+      "tools/infra/backup-restore.mjs",
+      "test/infra-backup-restore.test.js",
+      "test/delivery-cases/i08.mjs"
+    ],
+    "P4_8": [
+      "lib/adapters/knowledge-revocation.js",
+      "test/knowledge-revocation.test.js",
+      "openspec/changes/delivery-foundation-rearchitecture/revocation-journey",
+      "test/delivery-cases/4_8.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/revocation-journey/post-delivery-permissions.case.json"
+    ],
+    "P4_3": [
+      "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json",
+      "openspec/changes/delivery-foundation-rearchitecture/verification.md",
+      "test/delivery-cases/4_3.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/legacy-entry-inventory.json"
+    ],
+    "P5_1": [
+      "openspec/changes/delivery-foundation-rearchitecture/team-host-matrix",
+      "test/delivery-cases/5_1.mjs"
+    ],
+    "P5_2": [
+      "services/delivery-control",
+      "test/delivery-control.test.js",
+      "test/delivery-cases/5_2.mjs"
+    ],
+    "P5_3": [
+      "openspec/changes/delivery-foundation-rearchitecture/operations-runbook.md",
+      "openspec/changes/delivery-foundation-rearchitecture/team-recovery",
+      "test/delivery-cases/5_3.mjs"
+    ],
+    "VERIFY": [
+      "openspec/changes/delivery-foundation-rearchitecture/verification-report.md",
+      "openspec/changes/delivery-foundation-rearchitecture/grill-report.md",
+      "openspec/changes/delivery-foundation-rearchitecture/verification-results.json",
+      "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json",
+      "openspec/changes/delivery-foundation-rearchitecture/execution-state.json",
+      "openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl"
+    ]
+  },
+  "assumptions": [
+    "Human selected command-first simplification; only documents/plan delivered now.",
+    "Old source/build/component observations remain reusable only within their exact original scope; affected approvals must be revalidated.",
+    "Existing Agent host capabilities are to be discovered, not replaced by custom Agent platform.",
+    "No implementation, Docker cleanup, provider startup, external write or new credential access performed by this revision.",
+    "All129 current checks/103 functional scenarios remain unverified on command-first; F10 positive deferred."
+  ],
+  "change_policy": "halt-and-replan",
+  "scope": "USER_AUTHORIZED_COMET_CONVERGENCE_NOT_YET_ACCEPTED",
+  "identity_map_sha256": "d617ea8db9c3af01160c8b34e3c928d82b2d04981d0d71f4537cef4d7c3b08e3",
+  "amendments": [
+    {
+      "id": "ponytail-supplement-20261020",
+      "approved_by": "user decision A (2026-10-20 实施会话裁决: 'A接纳，你审视下我们架构，hook关系')",
+      "content": "Ponytail 五层职责/原生 Hook/注册分工/full 方法默认/模式隔离/验收细项 (classic-closeout-and-hook-contract.md §6-8 + architecture.md 冻结后补充注记)",
+      "old_architecture_sha256": "8bd5316106944a28b58ab2a0f1468537227ce7b78dd7009ece0bdbdf9ec97aed",
+      "old_execution_contract_sha256": "9f36b3d9a8c13865a19cdc3b5113c658fced5ca5b1fd71dc13e8a32907328824",
+      "delta_checks": [
+        "V_P1_6_PONYTAIL_ASSETS",
+        "V_P1_2_PLUGIN_REGISTRATION_DIVISION",
+        "V_I02_METHOD_STATE_SCOPE"
+      ],
+      "delta_review_required": [
+        "P1_6",
+        "P1_2",
+        "I02"
+      ],
+      "external_overlay_candidate": "V_OV01-08 + V_OVERLAY_REVIEW + OVR/OVQ 任务 + 锁/契约/计划的外部 overlay 编辑已全部移除，存档 .local/plan-history/ponytail-supplement-20261020/；OPEN_DECISION: OV_OVERLAY_CANDIDATE 待用户另行裁决",
+      "recorded_at": "2026-10-20T09:01:56.803571+00:00",
+      "new_spec_baseline_sha256": "cc8fd58ad200c0402c26a848525d76b07e6c25909f652dfe84801adb8a294a4b"
+    },
+    {
+      "id": "2026-10-22-seven-p1",
+      "approved_by": "current user request: 按7个P1修订Claude TDD plan，沿用原任务和唯一DAG",
+      "record": "replan-record.json",
+      "old_hashes": {
+        "plan_sha256": "aac0152e4ea360d3e03f2f5f7f14cc203f74b4525de48fde04e6fbe359cb6ad9",
+        "architecture_sha256": "91bc1a334005a9abc7c70754622c5e241ff7cd0839843f1ef492a9e6f6b49228",
+        "dag_sha256": "c402254ba67a80106fbf2484a38d55f5899fa59a426fe7cbdb252c4a8d4f5d0b",
+        "execution_contract_sha256": "0250b905377c681b7d3cb93833adefe1365566696283f4017dc9a2d2b31e2a8a"
+      },
+      "old_check_count": 108,
+      "new_check_count": 118,
+      "task_count_unchanged": 39,
+      "scenario_count_unchanged": 92
+    },
+    {
+      "id": "env-capability-20261022",
+      "approved_by": "user directives 2026-10-22 会话裁决: \"llmwiki项目化\" + \"确认docker的权限\"(实测终端通道可用)",
+      "content": "SDD 分发项目化(SDD_HOME=<repo>/.sdd, 克隆 pin 075c5b4, venv llmwiki-311, wiki 根项目内) + Docker 终端面板通道执行能力(daemon UP server 29.6.2, 沙箱拒 socket 属实) + 环境门控纪律重申; tasks.md P1_1 描述句 + architecture.md 环境能力裁决节 + infrastructure-plan.md 注记; dag/contract 零改动; 共识决议修复(r2 codex findings): journey_execution.order_semantics + V_RW 同Run窗口先行 + replan-record 哈希刷新; contract hash 相应更新",
+      "recorded_at": "2026-10-22T02:00:03.395531+00:00",
+      "supersedes_hashes": {
+        "plan": "eb7ed2cb",
+        "architecture": "66ac6e36"
+      },
+      "prior_amendment": "seven-p1 replan (amendment 2) 哈希保持在其记录中"
+    },
+    {
+      "id": "contract-command-reconciliation-20261023",
+      "approved_by": "controller pre-VERIFY obligation (execution-state P3_1 notes: \"check 116 命令串调和 pre-VERIFY 归 P3_1/控制器\") under user end-to-end execution mandate 2026-10-22",
+      "content": "checks[114]/[116]/[117] (V_RW_REAL_COMET_RECOVERY / V_SAME_RUN_DELIVERY / V_POST_DELIVERY_PERMISSIONS) 命令串去除冗余 --scenario：runner 的 --scenario/--journey 互斥是 P3_1 验收设计（journey 配方自带 scenario，same-run-delivery.case.json=E06、real-comet-recovery.case.json=L11），合并 flag 会在 VERIFY 输入校验即失败。scenario 记录保留于 acceptance_ids 与配方文件；语义零变化，post-delivery-permissions 配方仍归 P4_8 返工交付",
+      "recorded_at": "2026-10-22T22:51:20.208393+00:00",
+      "supersedes_hashes": {
+        "execution_contract": "73c64d27"
+      },
+      "prior_amendment": "env-capability-20261022 (amendment 3) 哈希保持在其记录中"
+    },
+    {
+      "id": "2026-10-24-comet-convergence",
+      "authorization": "User explicit: clear old flow, implement latest architecture and complete end-to-end; restore original infrastructure/knowledge-driven AI DevOps intent",
+      "history": "replan-history/2026-10-24-comet-convergence/previous",
+      "identity_preserved": {
+        "nodes": 39,
+        "parents": 30,
+        "workpackages": 69,
+        "original_scenarios": 92,
+        "original_checks": 118
+      },
+      "new_scenarios": [
+        "N01",
+        "N02",
+        "N03",
+        "N04",
+        "N05",
+        "N06",
+        "N07",
+        "N08",
+        "N09",
+        "N10",
+        "N11",
+        "N12"
+      ],
+      "new_totals": {
+        "scenarios": 104,
+        "checks": 130
+      },
+      "historical_pass_inheritance": false
+    },
+    {
+      "id": "2026-10-25-p1_6-selftest-caller",
+      "at": "2026-10-25T01:22:12.110780+00:00",
+      "task_id": "P1_6",
+      "change": "add scripts/check.sh as required caller ownership for source-owned full selftest after whole snapshot upgrade",
+      "reviews": [
+        "native Spec approved necessary scope-only caller sync",
+        "native Standards approved minimal scope; no new controller or relaxed verification"
+      ],
+      "reviewed_architecture_receipt": "architecture-review/comet-convergence-r1/receipt.json",
+      "requirements_interfaces_and_task_ids_unchanged": true,
+      "old_hashes": {
+        "tasks.md": "8b709ab2b9055acedd7192cc30f7acaed2e2dd1467edd9ac4fc03cc035926f08",
+        "task-dag.json": "dc03a3d9d1a6564975c451f56d7541c1daee5a3947840bcb2638a70b5166c628",
+        "drift-lock.json": "a111e49df9285a1dc90342bf4da46a50617382bd139eaef050ff2fa7a901653d",
+        "convergence-replan-record.json": "c5fe8bc6a777508c0e8921de59707319b153fdd4fa2b328753fc1f25b726f8b4"
+      },
+      "runtime_evidence_inherited": false,
+      "binding_update_reason": "Ownership-only tasks header changed normalized source; update only that source digest plus its chained baseline/contract pins. No scenario or public interface changed."
+    },
+    {
+      "id": "2026-10-25-p2_1-markdown-parser",
+      "at": "2026-10-25T01:48:02.842184+00:00",
+      "task_id": "P2_1",
+      "only_added_paths": [
+        "package.json",
+        "package-lock.json"
+      ],
+      "purpose": "fixed CommonMark AST avoids repeated scanner digest collisions; actual progress only, other raw bytes retained",
+      "dependency_pin": "commonmark@0.31.2 with registry integrity lock",
+      "reviews": [
+        "native Spec scope/prototype accepted27/27",
+        "native Standards scope/prototype accepted27/27"
+      ],
+      "no_task_dependency_acceptance_or_controller_change": true,
+      "old_hashes": {
+        "tasks.md": "cfa30631b49fe84fb19b34c7e1e87a637c1a2e77cd1bd9900b1152390a54a0b1",
+        "task-dag.json": "69d3c6bf950dc4d4cec6fd5cce4c35203d35f2b0c0b49104508ad750c5c10c5f",
+        "drift-lock.json": "cb45eaa9aef32c42ef82e0c4999b0a1d9d2a610a327e677cf7b5e7c3e83a45fb",
+        "spec-baseline.json": "ab17443f65f74a20f7f7816678fcfb8afa46460e93ca573f95a60e0224a8de9b",
+        "execution-contract.json": "5bccfa254613cf0e399cfc3ab4aa7ae2a22a49e4ad244dfd1b227edc2048fa17"
+      },
+      "current_tally_unchanged": true
+    },
+    {
+      "id": "2026-10-25-p3_1-f3-f4-followups",
+      "at": "2026-10-25T02:23:51.049015+00:00",
+      "architecture_receipt": "architecture-review/comet-convergence-r1/receipt.json",
+      "scope": "Close unanimously accepted nonblocking F3/F4 and explicit final ownership only; no new task/edge/requirement/oracle/evidence waiver",
+      "before_sha256": {
+        "execution-contract.json": "9dfa31987285e1b9ac2048e2fded7767059597eaabf7562672cfdd598fc9c223",
+        "verification-case-plan.json": "977bc4c5681e92ab1fb5bd17e4118c1e6716e2646d9ecde760d284dc6ceb63f6"
+      },
+      "counts": {
+        "checks": 130,
+        "cases": 104,
+        "profile_commands_corrected": 95,
+        "missing_intended_commands_filled": 12,
+        "execution_owner_explicit": 115
+      },
+      "runtime_pass_inherited": false,
+      "status": "APPLIED_AFTER_TWO_INDEPENDENT_REVIEWS",
+      "reviews": [
+        "native Spec: exact other fields/IDs/requirements/denominators unchanged; permitted within original P3_1/root scope",
+        "native Standards: same independent reconstruction and candidate hash match; no business or external effects approved"
+      ],
+      "historical_journeys": "replan-history/2026-10-25-f3-f4/historical-journey-definitions.json",
+      "after_sha256": {
+        "execution-contract.json": "589c4532d986e47d29009115373ace0d740765057de370fc9b5d5d98db6f478c",
+        "verification-case-plan.json": "fe3e8eacd78c793618b5559ced7de9a9d250a82b7b6e65869be817db330d8952"
+      }
+    },
+    {
+      "id": "2026-10-25-p1_6-supplier-construction-edge",
+      "at": "2026-10-25T02:56:00.251891+00:00",
+      "task_id": "P1_2",
+      "dependency": "P1_6",
+      "purpose": "consumer needs exact reviewed method-source artifact before actual cold-host/runtime parent qualification can finish",
+      "old_contract_sha256": "589c4532d986e47d29009115373ace0d740765057de370fc9b5d5d98db6f478c",
+      "new_contract_sha256": "75099c1581cb308608afc5933a23988a4e86a3fe5c4c7fa83afc1052d9ad2185",
+      "artifact_commit": "3f69f9c5c3c49f0146974fb28c90c1ed8f403496",
+      "artifact_evidence": ".local/comet-reset/p1_6-integration/integration-checks.json",
+      "reviews": [
+        "independent Spec supports only this construction edge; fullparent proof still required",
+        "independent Standards supports root3f69f9c supplier artifact; VERIFY has no exception"
+      ],
+      "constraints": [
+        "original DAG node identities/edges39/69 unchanged",
+        "P1_6 remains unaccepted at whole-task/runtime scope",
+        "all130 checks and104 scenarios remain required",
+        "other dependencies must hold",
+        "VERIFY requires full parent task acceptance",
+        "no new credential/endpoint/disclosure/service/business execution authority"
+      ]
+    },
+    {
+      "id": "2026-10-25-explicit-human-f10-first-delivery-scope",
+      "at": "2026-10-25T03:38:54.202046+00:00",
+      "decision_ref": "f10-current-scope-decision.json",
+      "source_question_call_id": "call_437a3f02d8cc40b6b68accc2f9b8165f",
+      "source": "explicit human choice A",
+      "old_hashes": {
+        "execution-contract.json": "75099c1581cb308608afc5933a23988a4e86a3fe5c4c7fa83afc1052d9ad2185",
+        "verification-case-plan.json": "fe3e8eacd78c793618b5559ced7de9a9d250a82b7b6e65869be817db330d8952"
+      },
+      "new_hashes": {
+        "execution-contract.json": "a8abf1f2394f08b859a4d9fbe6fafa2f0f6c591a2cca65c964e2bd1ece222d2e",
+        "verification-case-plan.json": "56e3967c0cfd1212831d1fe24d1e55e2ad7e2cc71c52e318948309f756eb18a2",
+        "f10-current-scope-decision.json": "33b2847b8e284f31dde90f40dea9829c4e3bdf996e3d55bd3dc754bb6935431c"
+      },
+      "reviews": [
+        "independent Spec reconstructed130records/104IDs and unchanged originalF10 semantics; only named currentcompletion disposition",
+        "independent Standards verified same exact hashes/fields andP5_1/P5_3 preservation; no generic JSON exclusions"
+      ],
+      "preserved_record_counts": {
+        "nodes": 39,
+        "workpackages": 69,
+        "checks": 130,
+        "scenarios": 104
+      },
+      "current_scope_counts": {
+        "nodes": 38,
+        "checks": 129,
+        "scenarios": 103
+      },
+      "deferred_not_accepted": {
+        "task": "P5_2",
+        "scenario": "F10",
+        "check": "V_F10",
+        "status": "NOT-EXERCISED"
+      },
+      "future_control_api_certificate": "UNVERIFIED_NOT_ENABLED",
+      "other_business_and_permission_gates": "UNCHANGED",
+      "sealed_architecture_artifact_modified": false
+    },
+    {
+      "id": "2026-10-25-reviewed-registry-and-admission-construction-edges",
+      "at": "2026-10-25T03:49:12.828839+00:00",
+      "limited_artifact_edges_added": [
+        {
+          "task": "P2_3",
+          "dependency": "P2_2"
+        },
+        {
+          "task": "I02",
+          "dependency": "I01"
+        },
+        {
+          "task": "I03",
+          "dependency": "I01"
+        },
+        {
+          "task": "I04",
+          "dependency": "I01"
+        },
+        {
+          "task": "I05",
+          "dependency": "I01"
+        },
+        {
+          "task": "I06",
+          "dependency": "I01"
+        }
+      ],
+      "old_contract_sha256": "a8abf1f2394f08b859a4d9fbe6fafa2f0f6c591a2cca65c964e2bd1ece222d2e",
+      "new_contract_sha256": "4414780dde6a9a48375409e46125c6f7f09f46a224be7a9ad1d0beef4b290bd4",
+      "exact_integrated_artifacts": {
+        "P2_2": {
+          "worker": "b69aa69ad26d518099503375f36f42567b2a8436",
+          "main": "327302b0f57dd471877c6c665fef6c805e6e4942",
+          "main_short": "327302b",
+          "evidence": ".local/comet-reset/p2_2-integration/integration-checks.json",
+          "focused": "121/121 zero skip"
+        },
+        "I01": {
+          "worker": "b85e751bd73c096eb22f3c427db34fd746a32219",
+          "main": "ce98a2c72b0cc245304278e9783ea59d2f8cbba7",
+          "evidence": ".local/comet-reset/i01-convergence-integration/integration-checks.json",
+          "focused": "41/41 zero skip",
+          "related": "92/98;6prior-baseline I02 PATCH_LOCK_MISMATCH/FINGERPRINT_STALE remain open"
+        }
+      },
+      "reviews": [
+        "independent Spec finalP2_2 andI01 construction components PASS; named edges conditional on exact main integration/retest",
+        "independent Standards finalP2_2 andI01 components PASS; same narrow construction edges supported"
+      ],
+      "preserved": [
+        "39nodes/69workpackages/DAG identities/edges",
+        "130checkrecords/104scenarioIDs and originaloracles",
+        "explicit humanF10 current129/103scope only",
+        "all nonlisted dependency rules",
+        "VERIFY no construction artifact exception;all in-scope full task duties remain"
+      ],
+      "no_new_authority": "no secret read, disclosure, service start, publish/isolate/grant or business state action permission",
+      "parent_nodes_accepted": false
+    },
+    {
+      "id": "2026-10-25-legacy-cli-construction-edge",
+      "at": "2026-10-25T04:20:10.971540+00:00",
+      "edge": {
+        "task": "P2_4",
+        "dependency": "P2_3"
+      },
+      "artifact_worker_commit": "1431aa6129c6a9609f9cb6f0e6d8cd6b145ecc04",
+      "artifact_main_commit": "ea2e07dc663ffc264efad56c61cfd02f8df0ab9e",
+      "main_evidence": ".local/comet-reset/p2_3-integration/integration-checks.json",
+      "main_tests": "31CLI+60admissioncompat zero skip",
+      "reviews": [
+        "independentSpec31+badshapes/protecteddispatch0 passed;edgeconditionalonly",
+        "independentStandards31+extra7badshapes passed;edgeconditionalonly"
+      ],
+      "old_contract_sha256": "4414780dde6a9a48375409e46125c6f7f09f46a224be7a9ad1d0beef4b290bd4",
+      "new_contract_sha256": "d375853ed96e06adf53e2277fa7f4ea1f12571212aca711eefb2259239202fb6",
+      "whole_parent_accepted": false,
+      "constraints": [
+        "onlyexactCLIartifactconstruction",
+        "otherP2_4dependencieshold",
+        "VERIFYnoartifactexception",
+        "original39/69/130/104recordsandcurrenthuman129/103scopeunchanged",
+        "noadditionalcredential/provider/API/service/businessauthority"
+      ]
+    },
+    {
+      "id": "2026-10-25-observer-construction-dependency-edges",
+      "at": "2026-10-25T04:36:02.729512+00:00",
+      "edges": [
+        {
+          "task": "P2_4",
+          "dependency": "P3_1"
+        },
+        {
+          "task": "I02",
+          "dependency": "P3_1"
+        }
+      ],
+      "worker_commit": "8b25259deed9a6215c363218116885310a12368a",
+      "main_artifact_commit": "c82096f33c9a5ebdc10c968ad20b17b1c36d1b49",
+      "root_evidence": ".local/comet-reset/p3_1-integration/integration-checks.json",
+      "main_tests": "72/72 Node24matchingPATH zero skip;formalA01exit2/0actions",
+      "reviews": [
+        "independent Spec72 pluscwd/typeCLIcases PASS limitedartifact;edgesconditional",
+        "independent Standards72 plus4independentCLIcases PASS;originalhostPATHmismatchretained",
+        "all153workerhistory/raw/configbytespreserved"
+      ],
+      "old_contract_sha256": "d375853ed96e06adf53e2277fa7f4ea1f12571212aca711eefb2259239202fb6",
+      "new_contract_sha256": "dff53cec6b7a2ebc048d76e380e46cd1839ac6a667cfdfa759be3ea87b5fc5a8",
+      "full_parent_accepted": false,
+      "mapping104": "onlystaticproposal,28ownerrefresh/76anchors;alltypedterminalcommands/paths/valuesunqualified",
+      "constraints": [
+        "13namedartifactedgesonly,notgenericdependencybypass",
+        "allotherdependencieshold",
+        "VERIFYnoconstructionartifactexception",
+        "noidentity/phase/queue/permissionstoreadded",
+        "noadditionalcredential/API/provider/service/businesswrites",
+        "39/69/130/104recordidentitiesandhumanF10scope129/103preserved"
+      ]
+    },
+    {
+      "id": "2026-10-26-p1_1-security-backport-ownership",
+      "at": "2026-10-25T16:54:55.587282+00:00",
+      "task": "P1_1",
+      "added_paths": [
+        "integrations/comet/patches/0004-upstream-security-backports.patch",
+        "test/comet-security-backports.test.js"
+      ],
+      "scope": "two file ownership only for reviewed0.4 safety backports;no new workflow,task,workpackage,check,scenario,interface,dependency,exception,permission or productionpin",
+      "source_applicability_report_sha256": "f28bd366fe3eefca5eb3b6cbbab2008b30c6426b42a24c99538e70b501443100",
+      "old_contract_sha256": "680f5be65f90d68516a9b0d2129e04d7617cdfd908356fe5082b71000d7f2326",
+      "new_contract_sha256": "41fc7da2604e31b4b85ac99d2092e554f31155ccfa08c49fae7726eaa538dc41",
+      "old_tasks_normalized_sha256": "618d3431cf0514a8bff25b0a2e8120b9d13f4032818bd54594b580f4e9a9a0c3",
+      "new_tasks_normalized_sha256": "8b91e35e764ae52b5628507174d7aadf8cff2927c3a9fddebe62771360fa84e5",
+      "old_results": "historical only;new source/patch pin requires current complete sourcebuild/generated/runtime and applicable backport tests before acceptance"
+    },
+    {
+      "id": "2026-10-26-two-named-host-preparation-edges",
+      "at": "2026-10-25T17:41:24.510473+00:00",
+      "edges_added": [
+        {
+          "task": "P1_3",
+          "dependency": "P1_2"
+        },
+        {
+          "task": "P1_5",
+          "dependency": "P1_4"
+        }
+      ],
+      "edge_scope_refined": "P1_3<-I02 code construction distinguished from required actual OS/image/identity qualification",
+      "artifact_root_commits": [
+        "67095e2a615d525c354234fb7e7723ded39acb38",
+        "9c9b70b92f1c5f548c5f84cad24c644657a4c30d"
+      ],
+      "old_contract_sha256": "41fc7da2604e31b4b85ac99d2092e554f31155ccfa08c49fae7726eaa538dc41",
+      "new_contract_sha256": "a3cf328a8e46e0f48aa8420257aacf275b41aad6d3bdd6406f4f0e83aabc87ad",
+      "frozen_counts": "39/69/130/104;current129/103;F10onlydeferral",
+      "no_change": "taskIDs,workpackages,steps/checkboxes,deps,interfaces,checks,scenarios,scope,permissions and whole acceptance conditions unchanged",
+      "exception_count": "18->20 named only;no generic preparation waiver",
+      "production_effects_authorized": false,
+      "supplier_custody": "9c9 existing code/Root71 observation preserved;new independent exact construction reports required before host consumer start"
+    },
+    {
+      "id": "2026-10-26-command-first-v1",
+      "authority": "human command-first docs-only request 2026-10-26",
+      "record": "replans/2026-10-26-command-first/amendment.json",
+      "before_manifest_sha256": "dc4fba285f5c4b3758ee6391c52348dc12da4791dcc96d47b343a9da2646b75c",
+      "old_contract_sha256": "a3cf328a8e46e0f48aa8420257aacf275b41aad6d3bdd6406f4f0e83aabc87ad",
+      "new_contract_sha256": "216a24c2e724444aceefdf5c15393a713dfb09022c5323a505d200109d2aa022",
+      "preserved_ids": "39 nodes /69 workpackages /104 scenarios /130 checks; current129/103 and F10-only deferral",
+      "changes": "native host commands; retire resident role topology, rewrite related oracles/interfaces, remove infra-before-RV dependencies",
+      "not_authorized": "implementation, live cleanup, model/API/ACL/credential actions",
+      "review": "APPROVE independent spec and plan document review; final formatting/hash readback recorded separately; no product acceptance"
+    }
+  ]
+}
