@@ -1,40 +1,31 @@
 ## Why
 
-现有 scaffold 有方法和机械检查，但不能保证产品到发布的状态恢复、独立验收及可信放行。需要迁移已形成的六环节与 Foundation 方案，并消除多 controller 和文档冲突。
+原目标是由Comet命令流程和知识设施完成团队AI DevOps。旧实施把职责分工扩成六个常驻角色服务、固定Runner镜像和自建Agent通信/签发前置，真实纵向闭环迟迟未接通。用户于2026-10-26明确要求收敛，只交更新架构和详细计划给其他Agent实施。
 
 ## What Changes
 
-- 增加 ADR-0019、统一交付架构、共享契约与逐批验收计划。
-- 目标采用 Foundation（TeamAI 仅分发）+ Comet 唯一主控候选 + 无调度权检查器 + 受保护 CI/CD。
-- 保留基础 scaffold；架构评审通过后按批实施契约、源码补丁、接入与独立验收，以实证启用 delivery profile。
-
-## Options
-
-1. 叠加技能：成本低但无法解决可信状态。
-2. 全量 Comet：开发复用多，但六环节与发布不足。
-3. 分层组合（推荐）：复用设施，明确单一所有权，增加契约/适配成本。
-
-## Non-goals
-
-不恢复九阶段 CLI，不改全局技能，不手改 vendored 正文；必要快照显式升级，不立即部署 API，不引入模型路由、MQ、中央浏览器池，不修改生产流水线。
-
-## Success Metrics
-
-设计 strict 校验通过；92 项场景可追踪（原 40 项、Classic 接入 8 项、运行时门禁 8 项、架构方法与关闭 6 项、归档恢复 9 项、发布授权 8 项、权限维护 11 项、方法迁移 2 项）；实际启用必须通过组合幂等、单任务闭环、真实平台阻断与独立读回；未运行项保持未完成。
+- 同一Comet Classic原生命令/Run/Guard连接现有Agent宿主技能、独立审查和实际工具，不重建Agent执行循环。
+- 从默认交付路线退休六角色常驻部署及其镜像/OS身份/自建RPC前置。Docker只保留必要知识依赖或确需的临时作业。
+- R/A/T独立门、P只做计划、测试自动化/TDD/审查/Whitebox分离；Kp阻归档、Kt阻完成，权限/平台/恢复义务保持。
+- 修订原tasks/DAG/contract/源码基线，保留39节点、30父任务、69工作包、104场景及130检查身份；本期129/103，F10正向另期。
 
 ## Capabilities
 
 ### New Capabilities
-- `delivery-foundation`: 六环节、所有权、可信证据、恢复、收尾和平台门禁。
+- `delivery-foundation`: 原生阶段命令、硬门、知识与平台闭环、可信执行和恢复。
 
 ### Modified Capabilities
 
-无；基础 scaffold 兼容保留。
+无；基础scaffold定位不变。本Change内的拓扑/证明方式按ADR-0021修订。
+
+## Non-goals
+
+本次不实施、启动工人/Goal、调用模型/知识API、部署或删除容器/卷/知识数据；不升级Comet0.5，不新增控制API、消息队列、模型网关、统一secret服务或阶段账本。
 
 ## Impact
 
-入口文档、ADR、架构视图、OpenSpec及分批运行实现。用户已授权实施与验证；触及 contracts/lib/adapters/hooks/CI 和 Comet 源补丁时逐批实证，未通过项保持未完成。
+当前架构以docs/architecture/comet-ai-devops-convergence.md与ADR-0021为准。旧ADR/票/报告及待集成代码原样保全，旧PASS不认证新流程；主检出已有未接纳九文件差异和用户改动不得覆盖。具体依赖改动、接口替换和处置在replans/2026-10-26-command-first/amendment.json。
 
-## 2026-10-24 收敛执行范围
+## Success Metrics
 
-用户要求对齐最初AI DevOps及两类知识设施目标，清理旧流程并按已选Comet单主控实际完成。保留原92场景与39任务，新增12贯通场景及检查：现104场景、130required。旧命令/迁移薄壳/退役依赖退出发现，所有新流程从新基线验收；原代码和证据保留复用，不删除真实知识/Run/工作树，不新增第二调度器或默认跨机器API。
+当前仅以计划结构、OpenSpec strict、身份/覆盖/依赖/原始证据保存及独立文档审查判断交接质量。实际完成仍要求最终候选同Run的129required/103场景、真实宿主与平台/知识终态、独立Whitebox/Grill和唯一Comet收尾，不以本次文档检查为通过。

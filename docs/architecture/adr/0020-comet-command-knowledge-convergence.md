@@ -1,3 +1,5 @@
+> **2026-10-26更新：** [ADR-0021](0021-comet-command-first-no-resident-role-services.md)覆盖本ADR中固定受管Runner/六角色部署等首版前置。原单主控、知识与功能门禁仍有效；旧共识票不认证新摘要。
+
 # ADR-0020：收敛Command与知识驱动的Comet交付Profile
 
 - 状态：冻结修订已于2026-10-25经独立三方全票批准实施（见[原票与回执](../../../openspec/changes/delivery-foundation-rearchitecture/architecture-review/comet-convergence-r1/receipt.json)）；运行、profile启用及发布仍未验收或授权。

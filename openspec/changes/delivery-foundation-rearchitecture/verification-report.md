@@ -1,40 +1,11 @@
-# Comet 架构端到端核验：尚未通过
+# 当前修订验证状态：仅规划，运行未验收
 
-当前主代码`9f912d1`支持回归1090/1090，业务仍未验。I02最终候选7e48作者106/106后被独立Standards有效P2退回：真实OpenSpec离线ci/CLI链接只留注释文本，坏recipe仍能exit0给构建argv；没有伪造runtime资格，但违背坏recipe拒绝。Root未合入、完整D/E未执行，原作者修执行内容识别。原始3次公共CLI与修改文件见worker-reports/I02-fullrecipe-review-rework/。
+2026-10-26-command-first-v1只交付更新架构/原计划/交接。未实施、运行产品测试/模型/MCP、部署、清理资源或恢复Goal。
 
-Core正在将旧40非法准备恢复为真实Native作者前置，R/Design/P已有10条原语义通过，测试/Builder/独立审查/task-complete仍在接。知识creator与实际writer来源缺口不靠空名单/角色/假SKILL填补；沿原pending/trajectory/artifacts/collection关联的工具CODE方案正在收口。真实CLI隔离发现版本实际开关与配置继承限制，尚未启动CLI、认证或模型，字段存在不当无旁路证明。
+- 原39节点/69工作包/104场景/130检查身份完整保留；本期129/103，F10正向NOT-EXERCISED另期。
+- 当前真实业务PASS为0，129项未验证；旧6节点接纳保留原范围，不认证改变后的部署/宿主接线。不是要求重写可复用基础代码。
+- plan_guard与OpenSpec strict、重冻结摘要、完整身份/依赖/未改产品文件检查用于证明计划可交接，不证明功能可交付。详细输出见validation-report及replans/2026-10-26-command-first。
+- 原最后未插桩全仓1161/1164与知识run16的2通过2失败仍保留。新用户决定允许退休过度部署专属路径，但仍被新流程消费的失败必须修，不能删除正常测试/改变期望凑绿。
+- 新流程的实际阶段技能、独立审查、知识权限、平台、恢复和最终Whitebox/Grill/Comet收尾全部待后继实施与验收。
 
-已证明freshLinux原manifest/锁、429reused/0downloaded/429added只闭合离线依赖维度。6节点接纳/32待办/1F10另期、129required/103场景业务未验不变；平台/知识/权限恢复/Whitebox/Grill/唯一closeout均未完成，Goal/监督保持，整体上海时区ETA未知。
-
-以下均为先前历史快照，不作为当前计数。
-
-
-当前更新（2026-10-26）：主代码`a497b7b`，实际完整`bash scripts/check.sh`退出0：944/944、零失败/跳过，Whitebox全6组、共识gate、YAML/JSON(84/3)通过。P1_5原两项失败已修复；首轮SIGKILL截断heartbeat夹具失败保留，原子发布的一行修复经独立审查，原kill/恢复断言未改。用户/活配置8项及139方法文件字节/mtime不变。仓库回归是支持证据，129/103实际业务检查仍0通过；安全f678候选及原生producer端口未验。5节点接纳/33待办/1F10另期不变。
-
-以下原有段落作为本轮之前的历史支持快照；其中941/939/2或“check仍失败”不再描述当前仓库回归，不能据历史green替代真实旅程。
-
-## 历史支持快照（原文保留）
-
-
-当前建设代码为 `master@751d6ab`（I02集成为67095e2）。官方实践对齐采用原生五 phase，明确 R/A/T/P、测试作者/Builder、V 与 Kp→Archive→Kt；本轮继续冻结的 Comet 0.4.5，0.5 研究不构成升级前置。
-
-39 节点、69 工作包、130 检查/104 场景总记录保留。本轮必须实际通过 129 检查/103 场景；F10 跨机器 API 正向另期，保留 NOT-EXERCISED。当前接纳 5 个节点（P0_1–P0_4文档及P2_1共享合同）；P1_1第12/13步因已证安全缺口重开，原工具链资格保留历史，业务场景接纳0。
-
-| 当前证据 | 实际结果与边界 |
-| --- | --- |
-| I02 通用建设 | 636 最终候选经独立双审；Root 主 81/81、关联 I01 41/41，0 skip，8 项用户文件/活配置不变；已集成67095e2。完整 context 拒绝额外内容，物理三口不拥有阶段/调度权。不是镜像、OS、身份或 whole I02 资格 |
-| 最新全仓回归 | 941 项：939 pass、2 fail、0 skip。原 I02 六处失败关闭；剩余原 P1_5 的 OpenSpec 负例版本和方法快照登记问题，仍 FAIL |
-| Root 首轮环境校准 | 原941/938/3保留；额外一项由移除现有HOME导致。继承原HOME后窄8/8、再跑全仓得到941/939/2，未改产品断言 |
-| 官方0.5研究 | 精确包机械full经双审/Root四进程复跑；另loader/CLI切片作者自检、180文件Root保全。均为synthetic角色/决定，不计业务或旧Run迁移证明 |
-| 官方安全适用性 | 当前0.4 Hook shell参数和Eval文件链接读取存在未修代码风险；原P1_1已获两个具名修复路径，代码尚待实施/审查/重建。Vite区分普通CLI与开发服务器，不以平台标签豁免 |
-| 私有设计写门修复 | 5ec/40de已双审限定construction，Root尚未联编接纳。44及345+4skip属于作者记录，不能称真实角色/OS资格 |
-| 元数据所有权修订 | 六份冻结工件按双审草案增加两条P1_1路径，39/69/130/104及全部依赖/18工件边不变；pilot仅显式跟随任务摘要，仍NOT_VERIFIED；plan_guard及隔离OpenSpec1.11 strict实际0 |
-| 正式A01预检 | 新元数据下实际exit2、NOT-EXERCISED、proof-registration-missing、0动作，无源漂移；未提升为PASS |
-
-原始集成及校准见 `worker-reports/I02-main-integration/` 与 `.local/comet-reset/i02-main-integration/`。Docker9次/gh2次尝试均被离线guard拒绝，不是当前服务成功；无模型调用。历史快照保留于本次replan-history及Git父版本，不能替代当前结果。
-
-当前缺口仍包括：真实宿主Comet入口/步骤显示与方法发现、固定P1_3执行者/受保护来源/独立角色、逐渠道Edit/Shell/MCP、真实平台SHA/checks/digest部署读回、项目Kp阻归档、唯一规格归档、Outline Kt同Run恢复、预授权/完整受众/撤权隔离告警及原生备份恢复。129/103必须在最终候选、实际产品Run及关联维护中完成；Whitebox/Grill/唯一closeout未完成。
-
-15份材料一次外发和Outline owner三API一次只读许可均已消耗，不复用。总体Goal和20分钟监督继续active；上海时区整体ETA未知。
-
-检查入口补充：751d6ab将上游Whitebox完整自测在临时副本执行，原139文件字节/mtime不变；实际check.sh六组Whitebox及共识gate自测通过，随后npm941/939/2/0skip，仍被原P1_5两项失败阻断，YAML/JSON尾阶段未运行。原受保护源mtime失败和两项取证环境校准记录均保留；没有修改方法快照或削减检查。
+旧报告逐字保全在本次replans/before，不改写或移植原PASS。详读HANDOFF-EXECUTION-2026-10-26.md。

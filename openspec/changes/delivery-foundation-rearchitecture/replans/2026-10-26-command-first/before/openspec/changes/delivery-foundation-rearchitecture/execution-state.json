@@ -1,0 +1,2961 @@
+{
+  "schema_version": 2,
+  "status": "IMPLEMENTATION_ACTIVE",
+  "revision": "2026-10-24-comet-convergence",
+  "objective": "按照我们架构，结合comet 官方最佳实践，端到端完成实施，并且验证，出具验证报告",
+  "run_id": "comet-convergence-20261024-r1",
+  "source_head": "1f6ec33",
+  "target_controller": "Comet Classic sole product runtime",
+  "implementation_executor": "native isolated implementation agents; root sole migration planner",
+  "progress_source": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
+  "total_plan_nodes": 39,
+  "accepted_plan_nodes": 6,
+  "pending_plan_nodes": 32,
+  "total_tasks": 30,
+  "accepted_tasks": 6,
+  "required_scenarios": 104,
+  "required_checks": 130,
+  "runtime_verified_scenarios": 0,
+  "remaining_tasks": [
+    "P3_1",
+    "P1_6",
+    "P1_2",
+    "P2_2",
+    "P2_3",
+    "P2_4",
+    "P2_5",
+    "I01",
+    "I02",
+    "P1_3",
+    "P1_4",
+    "P1_5",
+    "P3_4",
+    "I03",
+    "I04",
+    "I05",
+    "I06",
+    "P3_2",
+    "P3_3",
+    "P4_6",
+    "P4_7",
+    "P4_1",
+    "P4_2",
+    "P4_4",
+    "P4_5",
+    "I07",
+    "I08",
+    "P4_8",
+    "P4_3",
+    "P5_1",
+    "P5_3",
+    "VERIFY"
+  ],
+  "remaining_waves": [
+    [
+      "P3_1"
+    ],
+    [
+      "P1_6"
+    ],
+    [
+      "P1_2"
+    ],
+    [
+      "P2_2"
+    ],
+    [
+      "P2_3"
+    ],
+    [
+      "P2_4"
+    ],
+    [
+      "P2_5"
+    ],
+    [
+      "I01"
+    ],
+    [
+      "I02"
+    ],
+    [
+      "P1_3"
+    ],
+    [
+      "P1_4"
+    ],
+    [
+      "P1_5"
+    ],
+    [
+      "P3_4"
+    ],
+    [
+      "I03"
+    ],
+    [
+      "I04"
+    ],
+    [
+      "I05"
+    ],
+    [
+      "I06"
+    ],
+    [
+      "P3_2"
+    ],
+    [
+      "P3_3"
+    ],
+    [
+      "P4_6"
+    ],
+    [
+      "P4_7"
+    ],
+    [
+      "P4_1"
+    ],
+    [
+      "P4_2"
+    ],
+    [
+      "P4_4"
+    ],
+    [
+      "P4_5"
+    ],
+    [
+      "I07"
+    ],
+    [
+      "I08"
+    ],
+    [
+      "P4_8"
+    ],
+    [
+      "P4_3"
+    ],
+    [
+      "P5_1"
+    ],
+    [
+      "P5_3"
+    ],
+    [
+      "VERIFY"
+    ]
+  ],
+  "node_status": {
+    "P0_1": {
+      "status": "ACCEPTED",
+      "acceptance_scope": "documentation/design contract only; not a runtime scenario or profile enablement",
+      "evidence": [
+        "architecture-review/comet-convergence-r1/receipt.json",
+        ".local/comet-reset/toolchain/strict-results.json"
+      ],
+      "independent_document_review": "P0_3 Spec and Standards passed four default entry documents; P0_1/P0_2 current design/spec covered by unanimous review"
+    },
+    "P0_2": {
+      "status": "ACCEPTED",
+      "acceptance_scope": "documentation/design contract only; not a runtime scenario or profile enablement",
+      "evidence": [
+        "architecture-review/comet-convergence-r1/receipt.json",
+        ".local/comet-reset/toolchain/strict-results.json"
+      ],
+      "independent_document_review": "P0_3 Spec and Standards passed four default entry documents; P0_1/P0_2 current design/spec covered by unanimous review"
+    },
+    "P0_3": {
+      "status": "ACCEPTED",
+      "acceptance_scope": "documentation/design contract only; not a runtime scenario or profile enablement",
+      "evidence": [
+        "architecture-review/comet-convergence-r1/receipt.json",
+        ".local/comet-reset/toolchain/strict-results.json"
+      ],
+      "independent_document_review": "P0_3 Spec and Standards passed four default entry documents; P0_1/P0_2 current design/spec covered by unanimous review"
+    },
+    "P0_4": {
+      "status": "ACCEPTED",
+      "acceptance_scope": "documentation/design contract only; not a runtime scenario or profile enablement",
+      "evidence": [
+        "architecture-review/comet-convergence-r1/receipt.json",
+        ".local/comet-reset/toolchain/strict-results.json"
+      ],
+      "independent_document_review": "P0_3 Spec and Standards passed four default entry documents; P0_1/P0_2 current design/spec covered by unanimous review"
+    },
+    "P1_1": {
+      "status": "ACCEPTED",
+      "acceptance_scope": "current exact base source/toolchain/CLI/security backport/frozen transport only;not role/OS/runtime business readiness",
+      "worker_commit": "4e89ae001c3f9f2ae1f41f580866176d61fd0173",
+      "integrated_commit": "14bda75",
+      "evidence": [
+        "worker-reports/P1_1-convergence/evidence-manifest.json",
+        ".local/comet-reset/p1_1-integration/integration-checks.json"
+      ],
+      "independent_reviews": [
+        "Spec original evidence/declared scope pass",
+        "Standards path/current-vs-history corrections pass"
+      ],
+      "step_evidence": {
+        "1-2": "fresh public artifact sha512 + observed toolchain baseline",
+        "3-4": "actual host-vs-legacy probe RED/GREEN and compatibility matrix",
+        "5-6": "source/build regression9/9 + fresh sixpatch build d437",
+        "7-8": "independent reviews + scoped integration c797aa3",
+        "9-10": "real dashboard BUILD_BASELINE_DRIFT and restoration; full base generated/runtime smoke255pass2skip",
+        "11": "only owned paths integrated; raw evidence retained and normalized with hashes",
+        "12-13": "Current Root fresh3056 build/Core44/security19/compat24/Runner81/native257+2platformskip/3generated,Gitanchored3ab requireBodies+sourceResolve,245methods Gitcomplete,1650oldfilespreserved,currentcheck959/959;role/OS/knowledge unaccepted."
+      },
+      "prior_status": "ACCEPTED_BASE_TOOLCHAIN_HISTORY_RETAINED",
+      "reopened_steps": [
+        12,
+        13
+      ],
+      "reason": "Exact current0.4 build still has applicable Hook/Eval risks;newly owned0004 source and final fingerprint require fresh qualification. Prior source integrity remains historical evidence,not new safety acceptance.",
+      "prior_acceptance_scope": "base toolchain/source-build/distribution/CLI qualification only; method/runtime role integration belongs P1_5/P1_6 and final F01/F03 stays VERIFY",
+      "current_export_commit": "60a75c5",
+      "sourceCommit": "ace45cd971622af864f387202cc5a533bde1c864",
+      "current_fingerprint": "3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69",
+      "current_exportDigest": "3ab11336d65dc223739a2d946d237289751b17e0706036a706fb55f7afaa27f6",
+      "new_evidence": [
+        "worker-reports/Root-joint-runtime-3056/integration.json",
+        "worker-reports/Root-foundation-3056/integration.json"
+      ],
+      "reopened_steps_closed": [
+        12,
+        13
+      ]
+    },
+    "P2_1": {
+      "status": "ACCEPTED",
+      "acceptance_scope": "shared data/schema/baseline/execution-denominator component only; no authenticated role, Comet transition or runtime scenario accepted",
+      "worker_commit": "784f2ced332664dc434ad4563039d5606c0cab2f",
+      "integrated_commit": "c26d43cd5f5e93fb23245066b5c7b280802c82e2",
+      "evidence": [
+        "worker-reports/P2_1-convergence/evidence-manifest.json",
+        ".local/comet-reset/p2_1-integration/main-checks.json"
+      ],
+      "independent_reviews": [
+        "Spec:61/61+production27/27; all69 original hashes and18input identities verified",
+        "Standards:61/61+production27/27; exact registry dependencies and raw scanner removal verified"
+      ],
+      "step_evidence": {
+        "1-2": "shared contracts and ActionBinding strict parse; realRED/GREEN01/07/08/19",
+        "3-4": "full input classes, scope, current identity; realRED/GREEN02/03/04; finalproductionAST27/27",
+        "5-6": "real zero/allskip/environment/cancel/contradictoryexit and requiredcase/command tests05/06/11/14/16/22/24",
+        "7-8": "two independent reviewers, worker784f2ce integratedc26d43c, main61/61",
+        "9-10": "immutable ActionBinding data only; no dispatch/state store; independent reviews current candidate; full journey deferredVERIFY"
+      }
+    },
+    "P3_1": {
+      "status": "INTEGRATED_AWAITING_REAL_QUALIFICATION",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "worker": "/root/observer_qualification",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-observer-qualification/sdd-harness",
+      "worker_commit": "8b25259deed9a6215c363218116885310a12368a",
+      "scope": "observer/typed case construction plus mapping proposal, real backend/wholeJourney unverified",
+      "open_finding": "relative inspect path readcaller cwd rather than repoRoot, wrong target canPASS; originaltypedfile/commandP2closed",
+      "integrated_commit": "c82096f33c9a5ebdc10c968ad20b17b1c36d1b49",
+      "component_evidence": ".local/comet-reset/p3_1-integration/integration-checks.json",
+      "construction_exception": "p3_1-artifact-readiness-amendment.json",
+      "full_task_unmet": [
+        "realprotectedsource/OS/identity/backend",
+        "per-casefrozenassertion/proof/typedreadbackregistrations",
+        "actualbusinesslayerterminalproof"
+      ]
+    },
+    "P1_6": {
+      "status": "INTEGRATED_AWAITING_REAL_QUALIFICATION",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "worker": "/root/method_profile",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-method-profile/sdd-harness",
+      "worker_commit": "4761130158a90c38f9e90c551fcff5e472643f50",
+      "scope": "method supply/profile data only; no actual role/gate qualification",
+      "review": "Spec supplier PASS; Standards supplier PASS after portable metadata closure",
+      "integrated_commit": "3f69f9c5c3c49f0146974fb28c90c1ed8f403496",
+      "component_scope": "verbatim method source/data-profile/install/update/doctor supplier only",
+      "full_task_unmet": [
+        "actual cold Agent discovery",
+        "actual role/method application and no nested controller at runtime"
+      ],
+      "evidence": [
+        "worker-reports/P1_6-convergence/evidence-index.json",
+        ".local/comet-reset/p1_6-integration/integration-checks.json"
+      ],
+      "artifact_consumer_exception": "p1_6-artifact-readiness-amendment.json"
+    },
+    "P1_2": {
+      "status": "INTEGRATED_AWAITING_REAL_QUALIFICATION",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "evidence": ".local/comet-reset/p1_2-convergence-integration/integration-checks.json",
+      "focused_result": "7/7 PASS on main; no whole task/flow acceptance",
+      "test_isolation": {
+        "status": "REVIEWED_INTEGRATED_COMPONENT_ONLY",
+        "commit": "291ccc8",
+        "tests": "8/8 on main, 0skip; independent three-source-state and failure-cleanup probes pass",
+        "evidence": ".local/comet-reset/adapter-test-integration/integration.json"
+      },
+      "worker": "/root/method_profile",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-method-profile/sdd-harness",
+      "worker_commit": "3ee372302d3029331fe43a8f674e946638df1379",
+      "construction_only": true,
+      "review_entry": "worker-reports/P1_2-convergence-current/rework/CURRENT.md",
+      "reported_component_result": "63/63, Node24.15.0,0skip; not independently accepted",
+      "prior_findings": [
+        "compiled.envsymlinkcanoverwriteexternaluserfile",
+        "cacheTree__proto__extraentryignored",
+        "hooksharedresolvehelpermissingfromsealedassets"
+      ],
+      "spec_review": {
+        "status": "PASS_CONSTRUCTION_ONLY",
+        "candidate": "358736ee303d15127a6d50a4ea5700db0ba5eb94",
+        "agent": "/root/preparer_spec_review",
+        "actual_result": "63/63 pinned Node24; independent symlink/cache/helper/cold-target probes",
+        "whole_parent_accepted": false
+      },
+      "independent_evidence": ".local/comet-reset/construction-rework-findings/20261025T0535",
+      "reported_result": "66/66 Node24.15; pending independent review, not whole acceptance",
+      "integrated_commits": [
+        "a213bee042a184513864b68d4e13437168cb8b2b",
+        "869d79c24165c3926ab10172c1f66567862a8841"
+      ],
+      "component_evidence": ".local/comet-reset/p1_2-convergence-integration/integration-checks.json",
+      "root_repair": {
+        "files": [
+          "tools/foundation-export.mjs",
+          "test/foundation-distribution.test.js"
+        ],
+        "evidence": ".local/comet-reset/p1_2-convergence-integration/transport-order-rework/",
+        "result": "1RED->GREEN plus actual fresh committed self-verifier0",
+        "independent_review": "SPEC_AND_STANDARDS_SOURCE_PASS",
+        "release_regeneration": "SOURCE6433_ASSET2509_MAIN67_AND_FRESH_ARCHIVE_PASS",
+        "whole_task_accepted": false
+      },
+      "integrated_commit": "9c9b70b92f1c5f548c5f84cad24c644657a4c30d",
+      "source_commit": "6433df617f77e8796b6122ff36d3f0900c059e90",
+      "root_result": "67/67,0skip;fresh committed noGit/noModules self verifier0;old816cache bytes/fiveconfigs unchanged",
+      "whole_task_accepted": false,
+      "open_obligations": [
+        "Step9 actual TeamAI0.22 native pull/update/uninstall distribution path not yet executed;bootstrap/cold skills evidence not substitute"
+      ],
+      "artifact": "worker-reports/P1_2-main-integration/integration.json",
+      "component": "Root71/71 and actualnativecontent lifecycle author evidence dualreviewed;245source/release/Git bytes preserved",
+      "cold_qualification": "nativeTeamAI and canonicalasset proved;actual coding-agent cold protocol plan prepared only,not executed",
+      "business_accepted": false
+    },
+    "P2_2": {
+      "status": "INTEGRATED_AWAITING_REAL_QUALIFICATION",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "worker": "/root/comet_source_probe",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-delivery-contracts/sdd-harness",
+      "worker_commit": "b69aa69ad26d518099503375f36f42567b2a8436",
+      "open_finding": "strict single gate accepted one actual assertion despite frozen totalCases5; current artifact not accepted",
+      "scope": "source-binding/pure-gate library only; actual OS/Runner/source qualification pending I02/P1_3",
+      "integrated_commit": "327302b0f57dd471877c6c665fef6c805e6e4942",
+      "evidence": ".local/comet-reset/p2_2-integration/integration-checks.json",
+      "construction_exception": "registry-admission-artifact-readiness-amendment.json"
+    },
+    "P2_3": {
+      "status": "INTEGRATED_AWAITING_REAL_QUALIFICATION",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "worker": "/root/comet_source_probe",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-delivery-contracts/sdd-harness",
+      "worker_commit": "1431aa6129c6a9609f9cb6f0e6d8cd6b145ecc04",
+      "open_finding": "identitynull/objectversion/objectclock causeTypeError instead of coded finite-scope rejection",
+      "integrated_commit": "ea2e07dc663ffc264efad56c61cfd02f8df0ab9e",
+      "component_evidence": ".local/comet-reset/p2_3-integration/integration-checks.json",
+      "construction_exception": "p2_3-artifact-readiness-amendment.json",
+      "full_task_unmet": "completeintegratednpm/check andrealA20/B10notpassed"
+    },
+    "P2_4": {
+      "status": "INTEGRATED_AWAITING_REAL_QUALIFICATION",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "worker": "/root/comet_source_probe",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-toolchain/sdd-harness",
+      "private_companion_validation": {
+        "decision": ".local/comet-reset/post-archive-mapper-intake/private-validation-decision.json",
+        "official0003_changed": true,
+        "scope": "Root dualreview exactjoint integrated/rebuilt;whole P4_6 remains unaccepted"
+      },
+      "latest_component_observation": {
+        "at": "2026-10-25T12:10:09.046162+00:00",
+        "evidence": "worker-reports/P2_4-main-integration/integration.json",
+        "scope": "Root official SDK localmechanisms38/38 and257/2skip/generated0;notrealroles"
+      },
+      "continuation": "worker-reports/P2_4-convergence/CONTINUATION.md in original tree",
+      "checkpoint_sha_verification": "Root18files matched and all known handles terminal before same-agent followup",
+      "managed_plan_root_decision": "fixed docs/comet/plans derived view via protected code port; no editable secondDAG/configCLIenv;OpenSpec remains authority",
+      "completion_integrity_boundary": {
+        "confirmed": "Original RunStatus.completed is terminal; preserve legitimate completion lifecycle/trajectory, expose later current-integrity fault as RECOVERY_REQUIRED without new currentdone/continuation",
+        "before_completion": "unknown/bad delivery still cannot newly complete; original sameRun waiting->firstcompletion recovery preserved",
+        "maintenance": "only original sameComet engine futurelinked maintenance, no second controller; unimplemented remainsblocked",
+        "oracle_change": "supplementary postreceiptforeign/tamper timing corrected explicitly, not removed safety condition"
+      },
+      "observation_history": [
+        {
+          "at": "2026-10-25T05:44:11.857529+00:00",
+          "source": ".local/P2_4/non-distribution/32-control-write-red.txt in original worker tree",
+          "actual_result": "Native hook-guard .comet/config.yaml allowed exit0 vs expected2;1failed/71unselected",
+          "status": "ORIGINAL_WORKER_FIXING",
+          "formal_acceptance": false
+        }
+      ],
+      "integrated_commit": "ddb7849190c19e6d28f6d5dafeb00740def4e330",
+      "build_fingerprint": "6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a",
+      "construction_readiness": "comet-runtime-construction-readiness.json"
+    },
+    "P2_5": {
+      "status": "INTEGRATED_AWAITING_REAL_QUALIFICATION",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "artifact_dependency": "ddb7849190c19e6d28f6d5dafeb00740def4e330",
+      "scope": "named construction only,no external models/credentials/business approval",
+      "whole_accepted": false,
+      "integrated_commit": "cbde39e6b811b94fec89fd6ae11a31b009704097",
+      "root_evidence": "worker-reports/review-spec-main-integration/integration.json"
+    },
+    "I01": {
+      "status": "INTEGRATED_AWAITING_REAL_QUALIFICATION",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "evidence": ".local/comet-reset/i01-convergence-integration/integration-checks.json",
+      "component_tests": "26/26 PASS on main; zero skip",
+      "live_readback": ".local/comet-reset/registry-integration/live-github-readback.json",
+      "business_grants": "NOT_CLAIMED",
+      "caller_alignment": {
+        "status": "REVIEWED_INTEGRATED_COMPONENT_ONLY",
+        "commit": "36fcf5c",
+        "main_tests": "77/77, zero skip",
+        "platform_validate_exit": 0,
+        "llmwiki_validate_exit": 0,
+        "evidence": ".local/comet-reset/identity-callers-integration/integration.json"
+      },
+      "worker_commit": "b85e751bd73c096eb22f3c427db34fd746a32219",
+      "scope": "typed metadata/registry/gates only;24refs, full audience and actual resource qualification remain unverified",
+      "review": "null/nonarray refs prevalidation crashes allfour CLI without JSON; principal/role path leakage in direct resolver API",
+      "open_finding": "policy.roles/evidenceCategories shape must be validated before shared use; original two P2 closed",
+      "integrated_commit": "ce98a2c72b0cc245304278e9783ea59d2f8cbba7",
+      "construction_exception": "registry-admission-artifact-readiness-amendment.json"
+    },
+    "I02": {
+      "status": "INTEGRATED_AWAITING_REAL_QUALIFICATION",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "artifact_dependencies": "exact committed Coreddb and P2_5cbde;no whole inheritance",
+      "worker_commit": "636dfb83acc94e901192875c0feeec8e5f47f128",
+      "integrated_commit": "67095e2a615d525c354234fb7e7723ded39acb38",
+      "root_evidence": "worker-reports/I02-main-integration/integration.json",
+      "acceptance_scope": "common input admission/context-tree and physical ports only;no actual image/role/OS/action qualification"
+    },
+    "P1_3": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "mcp_registration_ownership_intake": {
+        "status": "FROZEN_METADATA_ONLY",
+        "paths": [
+          "mcp-capabilities.yaml",
+          ".mcp.json",
+          "tools/register-mcps.mjs"
+        ],
+        "proposed_owner": "P1_3 protected execution and host assembly",
+        "boundary": "source capability declaration+generated registration only, no second fact source/controller;P4_4 retains launcher/knowledge adapters",
+        "needs": "independent ownership amendment review before edit",
+        "draft": ".local/comet-reset/mcp-registration-ownership/proposal.json",
+        "guard": ".local/comet-reset/mcp-registration-ownership/guard-final.stdout.json",
+        "invariant_audit": ".local/comet-reset/mcp-registration-ownership/invariant-audit.json",
+        "guard_valid": true,
+        "canonical_applied": true,
+        "commit": "47528ef087d80fec8fc5fdd78e419f20f16c5210",
+        "pilot_derived_pointer": "pilot-owner-freeze-amendment.json;qualifiedNOT_VERIFIED"
+      },
+      "native_goal_capability_intake": {
+        "evidence": ".local/comet-reset/native-host-readonly-intake/result.json",
+        "observed": "codex0.163 stablegoals=true",
+        "obligation": "worker plan-only capability must be enforced/verified rather than only skill prompt",
+        "current_product_violation_claimed": false
+      }
+    },
+    "P1_4": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "P1_5": {
+      "status": "INTEGRATED_AWAITING_REAL_QUALIFICATION",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "integrated_commit": "a497b7b",
+      "scope": "two test/probe repairs only;real C01-C08 role/host/method integration still unqualified",
+      "evidence": "worker-reports/P1_5-main-integration/integration.json"
+    },
+    "P3_4": {
+      "status": "INTEGRATED_AWAITING_REAL_QUALIFICATION",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "artifact_dependency": "ddb7849190c19e6d28f6d5dafeb00740def4e330",
+      "scope": "named construction only,no external models/credentials/business approval",
+      "whole_accepted": false,
+      "integrated_commit": "cbde39e6b811b94fec89fd6ae11a31b009704097",
+      "root_evidence": "worker-reports/review-spec-main-integration/integration.json"
+    },
+    "I03": {
+      "status": "DUAL_REVIEWED_INTEGRATED_CONSTRUCTION_ONLY",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "worker": "/root/registry_qualification",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-registry-qualification/sdd-harness",
+      "limits": "single-ownerkeythreeAPIgrantconsumed; fullaudience/grant/OIDC/storage/license/restoreunqualified",
+      "worker_commit": "84fdceccd1406dde25d542bd22868ac5788f0f6a",
+      "report": "worker-reports/I03-convergence/REPORT.md",
+      "actual_scope": "23/23 mechanism +82/82 component regression; synthetic actual Compose config; live ACL/API/UI/restore unverified",
+      "independent_evidence": ".local/comet-reset/construction-rework-findings/20261025T0535",
+      "reported_result": "24 top-level/TAP43 +82 related pass0skip; whole unverified",
+      "integrated_commit": "afae696eb0fc8a93ef5c1e0fe5deb5472d4589f0",
+      "evidence": ".local/comet-reset/i03-integration/integration-checks.json",
+      "root_result": "43/43 +82/82 corrected targets,0skip;5liveconfig hashes unchanged",
+      "whole_task_accepted": false
+    },
+    "I04": {
+      "status": "DUAL_REVIEWED_INTEGRATED_CONSTRUCTION_ONLY",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "worker": "/root/observer_qualification",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-observer-qualification/sdd-harness",
+      "known_intake": "Common admission bypass and self-created index proof under repair; main distribution clone absent, historical cache not current qualification; shared getWikiHome remains P4_4 authority",
+      "source_distribution": {
+        "status": "SOURCE_DISTRIBUTION_ONLY_VERIFIED",
+        "evidence": ".local/comet-reset/llmwiki-distribution-install/result.json",
+        "commit": "075c5b4996ff4e07f9d3c57c1f14fd2b54a955db",
+        "tree": "47a6f755b04189ac57586e3825989140519a2bd2",
+        "files": 300,
+        "requirements_sha256": "678bd7301d80a602336e8fd3a81f98adcd4c5beaec4e2f1f2bfb8d2e04a9e732",
+        "venv_or_live_configuration_changed": false,
+        "host_or_Kp_accepted": false
+      },
+      "native_host_fixture": {
+        "status": "WORKER_OBSERVED_PASS_PENDING_INDEPENDENT_CANDIDATE_REVIEW",
+        "tools_discovered": 10,
+        "fixture_calls": [
+          "create",
+          "read",
+          "search"
+        ],
+        "same_entry_native_db_and_FTS": "reported actual readback",
+        "model_turns": 0,
+        "new_goals": 0,
+        "user_tasks": 0,
+        "process_exit": 0,
+        "normal_host_runtime_bookkeeping_possible": true,
+        "global_database_directly_queried_or_copied": false,
+        "operational_Kp_or_role_accepted": false
+      },
+      "whole_task_accepted": false,
+      "worker_commit": "66339134ad31ebd66266422aab8c50a8ac6f457e",
+      "reported_result": "43/43,0skip;common raw-type preflight, unchanged prior nativehost evidence;not accepted",
+      "last_candidate": "4ed312dec99e4563131193186a3f1a93655cc968",
+      "integrated_commit": "07bf4958581ff28eb0e44efb0904bf34e5222e40",
+      "evidence": ".local/comet-reset/i04-integration/integration-checks.json",
+      "root_result": "53/53;6inputs/5configs unchanged;no nativehost restart"
+    },
+    "I05": {
+      "status": "DUAL_REVIEWED_INTEGRATED_CONSTRUCTION_ONLY",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "worker": "/root/registry_qualification",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-registry-qualification/sdd-harness",
+      "scope": "Seven owned code-knowledge files, common admission/current source/optionalGraph construction; no actual ingestion/model/provider/deployment authorization inferred",
+      "last_candidate": "6a82aa0c5c2f5eb0ce165f80de088957f66b0a85",
+      "whole_task_accepted": false,
+      "worker_commit": "f9858003c4b956124b8369e5da3c7c34b06fcb00",
+      "integrated_commit": "05e36d0d177ce808e7e1976e33fa74de9d6efe2b",
+      "evidence": ".local/comet-reset/i05-diagnostic-integration/integration-checks.json",
+      "root_result": "99/99,0skip,offlineCLI/fetch0;twoinputs/5configs unchanged"
+    },
+    "I06": {
+      "status": "DUAL_REVIEWED_INTEGRATED_CONSTRUCTION_ONLY",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "readonly_intake": {
+        "at": "2026-10-25T05:44:11.857529+00:00",
+        "evidence": ".local/comet-reset/i06-live-readonly-intake/evidence-index.json",
+        "authenticated_user_id": 262266039,
+        "repository_id": 1285806550,
+        "repo_matches_registry": true,
+        "branch_head": "cd64618563d6e08c5c2f35b1bdf92d37e58a9d7d",
+        "branch_protected": false,
+        "required_checks": [],
+        "rulesets": [],
+        "active_workflows": 2,
+        "deployments_observed": 0,
+        "connector_admin_detail": "403 capability, not account permission proof",
+        "gh_admin_detail": "current identity matched; Branch not protected404 corroborates branch metadata",
+        "limitation": "No Runner secret-ref/runtime identity/action authority bound; no platform mutation or candidate CI/deploy accepted"
+      },
+      "worker": "/root/method_profile",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-method-profile/sdd-harness",
+      "scope": "Seven platform files; common input/catalog and live readonly metadata only;no remote policy/release/deploy/rollback authority",
+      "worker_commit": "8acfecbb970dd16435d007504aabbd0c872144b8",
+      "whole_task_accepted": false,
+      "integrated_commit": "9324d7b7194c3e72e2fa18652c688770dbcfacbe",
+      "evidence": ".local/comet-reset/i06-integration/integration-checks.json",
+      "root_result": "96/96 corrected Fetch guard +rollback6/6;7inputs/5configs unchanged"
+    },
+    "P3_2": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "P3_3": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "P4_6": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "P4_7": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "P4_1": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "P4_2": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "P4_4": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "path_intake": {
+        "status": "CONFIRMED_PRIVATE_COMPONENT_FINDING_PENDING_ORIGINAL_OWNER",
+        "evidence": ".local/comet-reset/i04-path-intake/finding.json",
+        "scope": "No real wiki write or business acceptance"
+      }
+    },
+    "P4_5": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "I07": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "I08": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "P4_8": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "P4_3": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "P5_1": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "P5_2": {
+      "status": "DEFERRED_BY_EXPLICIT_HUMAN_CURRENT_SCOPE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+      "decision": "f10-current-scope-decision.json",
+      "task_accepted": false,
+      "positive_api_qualification": "UNVERIFIED",
+      "future_enablement_requires": "new explicit scope plus complete realF10 certification"
+    },
+    "P5_3": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    },
+    "VERIFY": {
+      "status": "NOT_VERIFIED_ON_NEW_PROFILE",
+      "history": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json"
+    }
+  },
+  "workers": [
+    {
+      "task": "P1_2",
+      "worktree": ".claude/worktrees/comet-entry-cleanup",
+      "pid": 76069,
+      "session_handle": 93971,
+      "status": "TERMINAL_EXIT_0",
+      "round": 2,
+      "prior_round": "REJECTED_BY_INDEPENDENT_REVIEWS",
+      "evidence": ".local/comet-reset/claude-entry-worker/process.json",
+      "review": "SPEC_AND_STANDARDS_PASSED_SAFETY_SUBSTEP",
+      "integrated": true
+    },
+    {
+      "task": "I01",
+      "worktree": ".claude/worktrees/comet-registry-identity",
+      "pid": 51578,
+      "session_handle": 57405,
+      "status": "TERMINAL_EXIT_0_REVIEWED_INTEGRATED",
+      "scope": "existing registry/readback bugfix; no new architecture packet or business-profile enablement",
+      "evidence": ".local/comet-reset/claude-registry-worker/process.json",
+      "round": 2,
+      "review": "SPEC_AND_STANDARDS_PASSED_IDENTITY_SUBSTEP",
+      "integrated": true
+    },
+    {
+      "task": "P1_2",
+      "scope": "test isolation safety repair only",
+      "worktree": ".claude/worktrees/comet-entry-cleanup",
+      "pid": 1038,
+      "session_handle": 17222,
+      "status": "TERMINAL_EXIT_143_FOR_P2_REWORK",
+      "evidence": ".local/comet-reset/claude-adapter-isolation-worker/process.json",
+      "owned_files": [
+        "test/adapter-quoting.test.js",
+        "worker-reports/P1_2-test-isolation/"
+      ],
+      "review": "SPEC_P2_BLOCK; candidate not integrated"
+    },
+    {
+      "task": "P1_2",
+      "round": 2,
+      "scope": "P2 test-source-config coupling rework",
+      "pid": 9812,
+      "session_handle": 89818,
+      "worktree": ".claude/worktrees/comet-entry-cleanup",
+      "status": "TERMINAL_EXIT_0_REVIEWED_INTEGRATED",
+      "evidence": ".local/comet-reset/claude-adapter-isolation-worker/round2/process.json",
+      "integrated": true,
+      "commit": "291ccc8"
+    },
+    {
+      "task": "I01",
+      "scope": "registry caller labels and platform identity-check gap only",
+      "pid": 11689,
+      "session_handle": 81784,
+      "worktree": ".claude/worktrees/comet-registry-identity",
+      "status": "TERMINAL_EXIT_143_FOR_P1_REWORK",
+      "evidence": ".local/comet-reset/claude-identity-callers-worker/process.json",
+      "review": "SPEC_P1_IDENTITY_BYPASS; NOT_INTEGRATED"
+    },
+    {
+      "task": "I01",
+      "round": 2,
+      "scope": "P1 direct-probe/invalid-source/API-identity rework",
+      "pid": 89756,
+      "session_handle": 14750,
+      "worktree": ".claude/worktrees/comet-registry-identity",
+      "status": "TERMINAL_EXIT_0_REVIEW_P1_CLOSED_P2_SPAWN_ERROR_REWORK",
+      "evidence": ".local/comet-reset/claude-identity-callers-worker/round2/process.json",
+      "review": "3 originalP1 closed independently; P2 missing executable crashes before structured receipt"
+    },
+    {
+      "task": "I01",
+      "round": 3,
+      "scope": "structured failure for missing/nonexecutable gh only",
+      "pid": 1806,
+      "session_handle": 76513,
+      "worktree": ".claude/worktrees/comet-registry-identity",
+      "status": "TERMINAL_EXIT_0_REVIEWED_INTEGRATED",
+      "evidence": ".local/comet-reset/claude-identity-callers-worker/round3/process.json",
+      "integrated": true,
+      "commit": "36fcf5c"
+    },
+    {
+      "task": "P1_1",
+      "executor": "native subagent",
+      "agent_name": "/root/comet_source_probe",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-toolchain/sdd-harness",
+      "base_head": "36fcf5c4780dc4caa2b85a98b5d0bf70c360af97",
+      "status": "TERMINAL_REVIEWED_INTEGRATED",
+      "scope": "owned toolchain qualification only; no external model review or plan writes",
+      "commit": "c797aa3",
+      "worker_commit": "4e89ae0"
+    },
+    {
+      "task": "I01",
+      "executor": "native subagent",
+      "agent_name": "/root/registry_qualification",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-registry-qualification/sdd-harness",
+      "base_head": "36fcf5c",
+      "status": "TERMINAL_DUAL_REVIEWED_INTEGRATED_CONSTRUCTION_ONLY",
+      "worker_commit": "b85e751bd73c096eb22f3c427db34fd746a32219",
+      "scope": "registry and restricted read-only metadata; full audience/runtime refs/resource/action qualification unverified",
+      "round": 3,
+      "commit": "ce98a2c72b0cc245304278e9783ea59d2f8cbba7"
+    },
+    {
+      "task": "P2_1",
+      "agent_name": "/root/comet_source_probe",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-delivery-contracts/sdd-harness",
+      "status": "TERMINAL_REVIEWED_INTEGRATED",
+      "worker_commit": "784f2ced332664dc434ad4563039d5606c0cab2f",
+      "commit": "c26d43cd5f5e93fb23245066b5c7b280802c82e2"
+    },
+    {
+      "task": "P1_6",
+      "agent_name": "/root/method_profile",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-method-profile/sdd-harness",
+      "status": "TERMINAL_REVIEWED_INTEGRATED_SUPPLIER_ONLY",
+      "worker_commit": "4761130158a90c38f9e90c551fcff5e472643f50",
+      "round": 2,
+      "commit": "3f69f9c5c3c49f0146974fb28c90c1ed8f403496"
+    },
+    {
+      "task": "P3_1",
+      "executor": "native subagent",
+      "agent_name": "/root/observer_qualification",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-observer-qualification/sdd-harness",
+      "base_head": "c26d43cd5f5e93fb23245066b5c7b280802c82e2",
+      "status": "TERMINAL_DUAL_REVIEWED_INTEGRATED_CONSTRUCTION_ONLY",
+      "scope": "observer component qualification only; no product state or final business acceptance",
+      "worker_commit": "8b25259deed9a6215c363218116885310a12368a",
+      "round": 3,
+      "commit": "c82096f33c9a5ebdc10c968ad20b17b1c36d1b49"
+    },
+    {
+      "task": "P2_2",
+      "executor": "native subagent",
+      "agent_name": "/root/comet_source_probe",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-delivery-contracts/sdd-harness",
+      "base_head": "ed4d61a",
+      "branch": "codex/comet-evidence-admission",
+      "status": "TERMINAL_DUAL_REVIEWED_INTEGRATED_CONSTRUCTION_ONLY",
+      "scope": "evidence origin admission and pure gate only; no controller/state or actual permission claims",
+      "round": 3,
+      "worker_commit": "b69aa69ad26d518099503375f36f42567b2a8436",
+      "commit": "327302b0f57dd471877c6c665fef6c805e6e4942"
+    },
+    {
+      "task": "P1_2",
+      "executor": "native subagent",
+      "agent_name": "/root/method_profile",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-method-profile/sdd-harness",
+      "branch": "codex/comet-distribution-cleanup",
+      "base_head": "f49795b",
+      "status": "TERMINAL_DUAL_REVIEWED_INTEGRATED_CONSTRUCTION_ONLY",
+      "dependency_artifact": "3f69f9c via reviewed p1_6-artifact-readiness-amendment",
+      "scope": "install/export/upgrade/uninstall/cold discovery construction; whole product flow still unqualified",
+      "worker_commit": "3ee372302d3029331fe43a8f674e946638df1379",
+      "round": 3,
+      "commits": [
+        "a213bee",
+        "869d79c24165c3926ab10172c1f66567862a8841"
+      ],
+      "commit": "2509fe95997b6c19cb0e980aec1041a3f534e87b",
+      "source_commit": "6433df617f77e8796b6122ff36d3f0900c059e90"
+    },
+    {
+      "task": "P2_3",
+      "agent_name": "/root/comet_source_probe",
+      "executor": "native subagent",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-delivery-contracts/sdd-harness",
+      "branch": "codex/comet-legacy-cli-compat",
+      "base_head": "ce98a2c",
+      "status": "TERMINAL_DUAL_REVIEWED_INTEGRATED_CONSTRUCTION_ONLY",
+      "scope": "thinCLI/legacy report compatibility construction only; protected source runtime duties not closed",
+      "round": 2,
+      "worker_commit": "1431aa6129c6a9609f9cb6f0e6d8cd6b145ecc04",
+      "commit": "ea2e07dc663ffc264efad56c61cfd02f8df0ab9e"
+    },
+    {
+      "task": "I03",
+      "agent_name": "/root/registry_qualification",
+      "executor": "native subagent",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-registry-qualification/sdd-harness",
+      "branch": "codex/comet-outline-qualification",
+      "base_head": "2a45bb4",
+      "status": "TERMINAL_DUAL_REVIEWED_INTEGRATED_CONSTRUCTION_ONLY",
+      "dependency_artifact": "I01exactmaince98a2c via reviewed named construction edge",
+      "scope": "Outline component mechanisms and authorized metadata qualification only; no new credential/API/ACL/grant authority",
+      "worker_commit": "84fdceccd1406dde25d542bd22868ac5788f0f6a",
+      "round": 2,
+      "commit": "afae696eb0fc8a93ef5c1e0fe5deb5472d4589f0"
+    },
+    {
+      "task": "P2_4",
+      "agent_name": "/root/comet_source_probe",
+      "executor": "native subagent",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-toolchain/sdd-harness",
+      "branch": "codex/comet-runtime-gates",
+      "base_head": "d8c1c2def433baac0527fd638164802824451368",
+      "status": "TERMINAL_DUAL_REVIEWED_PENDING_ROOT_OFFICIAL_REBUILD",
+      "dependencies": "P1_1 accepted; exact reviewed P2_3 ea2e07d/P3_1c82096f construction edges",
+      "scope": "patch only originalComet Runtime/gates/locks/transactions; no second controller or unqualified source claims",
+      "round": 2,
+      "checkpoint_verified": true,
+      "candidate_fingerprint": "84d7415338bf90ddb5d1f159a4254957bab0e5a50fe5134330eab6bf70d0ce14",
+      "candidate_manifest_sha256": "2106d444ef1b3b768b40985415332b58b13de24b09221150865f037a39999017",
+      "owned_session": 28366,
+      "native_generated_session": 88406,
+      "pre_review": "Standards P2 executable identity blocks; Spec source-only no independent blocker; original matrix unchanged until terminal",
+      "review_evidence": ".local/comet-reset/p2_4-pre-review-84/review-summary.json",
+      "last_frozen_matrix": {
+        "fingerprint": "84d7415338bf90ddb5d1f159a4254957bab0e5a50fe5134330eab6bf70d0ce14",
+        "owned_exit": 1,
+        "tests": 33,
+        "pass": 32,
+        "fail": 1,
+        "skip": 0,
+        "cause": "test31 child110s timeout; not behaviorRED",
+        "inputs_unchanged": true,
+        "native_generated_exit": 0,
+        "evidence": ".local/comet-reset/p2_4-pre-review-84/terminal"
+      },
+      "owned_session_status": "TERMINAL_EXIT1",
+      "native_generated_session_status": "TERMINAL_EXIT0",
+      "latest_private_diagnostics": {
+        "identity_actual_red_session": 46316,
+        "identity_actual_red_exit": 1,
+        "fake_version": "1.11.0",
+        "fake_executed": true,
+        "actual_specs_changed": true,
+        "bridge_registered": true,
+        "performance_before": {
+          "session": 34519,
+          "exit": 0,
+          "raw_reads": 762,
+          "elapsed_ms": 78869
+        },
+        "performance_after_private_map": {
+          "session": 6810,
+          "exit": 0,
+          "raw_reads": 42,
+          "elapsed_ms": 5475
+        },
+        "scope": "private component diagnostics only; no new accepted fingerprint",
+        "evidence": ".local/comet-reset/p2_4-pre-review-84/diagnostics"
+      },
+      "platform_error": {
+        "reason": "agent content flagged possible cybersecurity risk",
+        "specific_action": "not identified in platform response",
+        "not_a_test_failure": true,
+        "resumed_scope": "read-only session/hash checkpoint audit only; no retry of flagged content or new test/process/product writes"
+      },
+      "current_exec_sessions": [],
+      "recovery_checkpoint_sha256": "86c815478edec37f130fbead91492da2dd79951a39d32f6ed7f1a958e6c3ec4b",
+      "recovery_verified_files": 267,
+      "known_uncompleted_handles_at_recovery": [],
+      "continuation_scope": "ordinary artifact/manifest integrity verification and existing real CLI workflows/data-only rejection tests;no regeneration/reexecution of substitute-program payloads or flagged content",
+      "defensive_compile_history": [
+        {
+          "record": 169,
+          "exit": 0
+        },
+        {
+          "record": 170,
+          "exit": 2,
+          "reason": "TypeScript null-narrowing;notbehaviorRED"
+        }
+      ],
+      "public_test_scope": "genuine fixedCLI and data-only integrity denials;no substitute executable generation;real tooling only privatecopies;production qualification UNVERIFIED",
+      "latest_fresh_fingerprint": "d2a6a22801af47c141a319c5bffa4af2b68ec6ec3a78d6dbe601ad1528155494",
+      "continuation_checkpoint_sha256": "291f5479c715db9385c321ff7e798a7ccaedeccfa03fd9f229ef3c632068d08c",
+      "continuation_hashes_verified_at_handoff": 276,
+      "narrow_matrix": {
+        "record": 179,
+        "session": 18424,
+        "tests": 6,
+        "pass": 6,
+        "fail": 0,
+        "skip": 0,
+        "duration_ms": 39642,
+        "budget_unchanged_ms": 110000,
+        "scope": "component only,ownedfixture canonical-root correction;not final acceptance"
+      },
+      "latest_frozen_failed_matrix": {
+        "record": 177,
+        "tests": 6,
+        "pass": 4,
+        "fail": 2,
+        "skip": 0,
+        "setup_only_failures": "privatecopy containment alias",
+        "superseded_by_narrow179": true
+      },
+      "current_native_regression": {
+        "record": 181,
+        "files": 12,
+        "tests": 520,
+        "pass": 515,
+        "platform_skip": 5,
+        "actual_exit": 0,
+        "session": 46272,
+        "status": "TERMINAL"
+      },
+      "current_generated": {
+        "record": 182,
+        "groups": 3,
+        "exit": 0,
+        "session": 46272,
+        "status": "TERMINAL"
+      },
+      "candidate_hashes_root_verified": 13,
+      "full_acceptance": false,
+      "worker_commit": "5a5bf5c8daf9069c09c6a0d3ee1dd4ab9787253a",
+      "current_owned_matrix": {
+        "record": 180,
+        "tests": 38,
+        "pass": 38,
+        "fail": 0,
+        "skip": 0,
+        "duration_ms": 507122.718209,
+        "input_bytes_unchanged": true,
+        "exit": 0
+      },
+      "root_raw180_182_verified": true,
+      "preflight_owned_apply": "PASS_READONLY_NO_MAIN_SOURCE_WRITTEN"
+    },
+    {
+      "task": "I04",
+      "agent_name": "/root/observer_qualification",
+      "executor": "native subagent",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-observer-qualification/sdd-harness",
+      "branch": "codex/comet-llmwiki-convergence",
+      "base_head": "93753a4",
+      "status": "TERMINAL_DUAL_REVIEWED_INTEGRATED_CONSTRUCTION_ONLY",
+      "scope": "Six owned files; actual curated fixture stdio/native-index proof and safe common admission; no real knowledge write or second controller",
+      "worker_commit": "6633913",
+      "round": 2,
+      "commit": "07bf4958581ff28eb0e44efb0904bf34e5222e40"
+    },
+    {
+      "task": "I05",
+      "agent_name": "/root/registry_qualification",
+      "executor": "native subagent",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-registry-qualification/sdd-harness",
+      "branch": "codex/comet-code-knowledge-convergence",
+      "base_head": "afae696",
+      "status": "TERMINAL_DUAL_REVIEWED_INTEGRATED_CONSTRUCTION_ONLY",
+      "scope": "Own seven files; no second scheduler or credential/model/ingestion/deployment action without bound authority",
+      "worker_commit": "f985800",
+      "round": 2,
+      "commit": "05e36d0d177ce808e7e1976e33fa74de9d6efe2b"
+    },
+    {
+      "task": "I06",
+      "agent_name": "/root/method_profile",
+      "executor": "native subagent",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-method-profile/sdd-harness",
+      "branch": "codex/comet-platform-convergence",
+      "base_head": "2509fe9",
+      "status": "TERMINAL_DUAL_REVIEWED_INTEGRATED_CONSTRUCTION_ONLY",
+      "scope": "Seven owned platform files/read-only qualification;no new controller or remote writes",
+      "worker_commit": "8acfecb",
+      "commit": "9324d7b7194c3e72e2fa18652c688770dbcfacbe"
+    },
+    {
+      "task": "P1_2",
+      "work_package": "1.2.b/Step9 nativeTeamAI distribution gap",
+      "agent_name": "/root/method_profile",
+      "executor": "native subagent",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-method-profile/sdd-harness",
+      "branch": "codex/comet-teamai-distribution",
+      "base_head": "0c228bd",
+      "status": "TERMINAL_DUAL_REVIEWED_ROOT71_INTEGRATED_CONSTRUCTION_ONLY",
+      "scope": "24 exact Debian additions;88base unchanged;fixed TeamAI62integrity entries;offline fixedbase fixture build only;native runtime options pending",
+      "build_plan_sha256": "37934aecf2e660e05354a3ae2eea3c37f9d32ea7987ec01dbaa91b2074be28cd",
+      "native_distribution": "ACTUALLY_EXECUTED_COMPLETE_TRANSPORT_RED",
+      "current_processes": "first probe terminal; labelled container removed",
+      "dependency_manifest_sha256": "f22215c860bcfbb4b20e7b076e682c38787591ff10dcf909c079627b5b1a8f67",
+      "build_admission_evidence": ".local/comet-reset/p1_2-teamai-build-admission/root-review.json",
+      "derived_image_id": "sha256:b05a0a6f66594050b79d06a75dc334eef33220f0fdf471e07fe4bc8fa8055766",
+      "image_versions": {
+        "node": "24.15.0",
+        "git": "2.39.5",
+        "teamai": "0.22.0"
+      },
+      "prior_sessions_terminal": {
+        "48846": 0,
+        "13357": 0,
+        "2073": 0,
+        "98290": 0
+      },
+      "runtime_plan_sha256": "51dc03e38ee733a7720b7183c01cdf3fae651293dfe87e5362e1029662ec8689",
+      "runtime_admission": ".local/comet-reset/p1_2-teamai-build-admission/runtime-root-review.json",
+      "native_harness_sha256": "873bf59256301b037b7408c9d661138672ffe392f716123dfbbbcfe3da38c143",
+      "native_input_digest": "d58cb1a71200f4ab419e375ad03e724bc0be569c61d564c27055a15fefb32f60",
+      "native_input_files": 558,
+      "native_input_bytes": 3980060,
+      "harness_root_sha_verified": true,
+      "latest_terminal_sessions": [
+        {
+          "session": 63663,
+          "result": "setup guard noexec failed;native0;container removed"
+        },
+        {
+          "session": 78327,
+          "result": "native init/pull/repeat exits0,guard genuine reject,558expected0transported;container removed"
+        }
+      ],
+      "native_evidence": ".local/comet-reset/p1_2-teamai-native-baseline",
+      "native_raw_methods": "245/245 unchanged;12 builtin extras only staging",
+      "python_probe": "ENOENT;adapter segment not exercised;minimal signed stdlib closure pending",
+      "python_fixture_job": {
+        "session": 93383,
+        "status": "TERMINAL_BUILD_SUCCESS_AFTER_PRESERVED_PREDEPENDS_SETUP_FAILURE",
+        "new_image": "sha256:7a70334c7f3be0f2aa5e3fc27bad6838d356dba584c469d7a9723d6fe7426505",
+        "root_image_identity_readback": true,
+        "packages": 124,
+        "base112_unchanged": true,
+        "scope": "adapterfixture Python3.11.2,not Comet/I02>=3.12"
+      },
+      "packet_edit_review": {
+        "cell": 49,
+        "status": "TERMINAL_REVIEW_TIMEOUT_NO_EXEC_PROCESS_CREATED",
+        "safety_rejection": false,
+        "next": "one smaller same-ownscope edit retry allowed;no native duplicate"
+      },
+      "native_packet_green": {
+        "session": 7210,
+        "container_removed": true,
+        "files": 558,
+        "missing": 0,
+        "different": 0,
+        "extra": 0,
+        "methods_raw": 245,
+        "builtins_only_staging": 12,
+        "settings_preserved": true,
+        "uninstall_settings_preserved": true,
+        "guard_actual_reject": true,
+        "nonmember_attempts_after_calibration": 0,
+        "evidence": ".local/comet-reset/p1_2-teamai-native-baseline/packet-green-result.json"
+      },
+      "remaining": "actual owner-source fastforward v1→v2 + nativepull/newexpected/stalerejection/oldcache parity;adapter order/cold/retirement;independent review;not accepted",
+      "worker_commit": "8220ea35daaef46fef71ff2b43ca6bde3e54cb19",
+      "commit": "9c9b70b92f1c5f548c5f84cad24c644657a4c30d",
+      "root_baseline": "2aba3aa5457885338dba393613098606a7344b2da25893f79ec3fee8f6390c78",
+      "root_main71": "71/71/0skip",
+      "cold_intake": "terminal plan only;no hoststart/model/thread/globalDB/Auth read;MCP-disable+globalCometregistry gaps remain"
+    },
+    {
+      "task": "I02",
+      "agent_name": "/root/registry_qualification",
+      "executor": "native subagent read-only intake",
+      "status": "TERMINAL_DUAL_REVIEWED_ROOT_TESTED_INTEGRATED_CONSTRUCTION_ONLY",
+      "scope": "Read main fixedRunner registration/old failures and external authorization gaps only; no source/plan/state writes,containers,processes,API or dispatch; Core artifact not consumed",
+      "started_at": "2026-10-25T10:43:16.591180+00:00",
+      "findings": {
+        "authority_example": "id/workspace/controllerPrincipal null and registrations empty",
+        "Runner_refs": "runner-authority,runner-source-read,worker-author-api,worker-review-api catalog NOT_PROVISIONED",
+        "regression_I02_failures": 6,
+        "failure_categories": "old patch lock/fingerprint and oracle/build-plan drift,not Docker permission proof",
+        "runtime": "actual role principal/channel/launch/sameRun qualification missing",
+        "scope": "CLI fixedRunner;no7300/controlAPI requirement;F10deferred",
+        "UID_note": "sameUID across containers neither proof nor automatic failure; actual namespace/mount/operation tests required"
+      },
+      "worker_commit": "636dfb83acc94e901192875c0feeec8e5f47f128",
+      "reported_checks": "owned65/65;I01related41/41;0skip;notwholeI02",
+      "physical_execution": "no Docker build/pull/start/stop;actual recipe requires final source/identity/resource qualification",
+      "prior_candidate": "70a2c08763b98cf450380d13d99611f4a8f5042a",
+      "prior_review": "SPEC_P1_CONTEXT_EXTRA_FILES_REQUEST_CHANGES",
+      "author_checks": "81/81+I01related41/41,0skip;notwholeI02",
+      "manifest_sha256": "f6f90a5ead89966e3d66494095909e0757b2a71e668b57338276ed8fe887e886",
+      "integrated_commit": "67095e2a615d525c354234fb7e7723ded39acb38",
+      "root_tests": "81/81+41/41;full941/939/2/0skip,originalP1_5twofail"
+    },
+    {
+      "task": "P2_5",
+      "agent_name": "/root/registry_qualification",
+      "executor": "native subagent",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-delivery-contracts/sdd-harness",
+      "branch": "codex/comet-architecture-review-convergence",
+      "base_head": "ddb7849190c19e6d28f6d5dafeb00740def4e330",
+      "status": "TERMINAL_DUAL_REVIEWED_ROOT_TESTED_INTEGRATED_CONSTRUCTION_ONLY",
+      "scope": "semantic source admission construction only;ownerFS not ToolWrite",
+      "last_author_tests": {
+        "owned": 67,
+        "top_level": 35,
+        "parameter_subcases": 32,
+        "skip": 0,
+        "related": 74,
+        "input_bytes_unchanged": true,
+        "scope": "author verified;Rootreview/mainpending"
+      },
+      "known_open_handles": "none at last worker report;do not infer global absence",
+      "native_author_write_boundary": "fixture owner fs.appendFileSync,authorizeWrite=false;not Tool.Write/real author permission proof;report/TestPack corrected without raw or code edits",
+      "worker_commit": "83864475924e78e0a3e4accfd201d95f0c5c3065",
+      "root_main_owned_session": 30439,
+      "root_main_related_session": 59380,
+      "commit": "cbde39e6b811b94fec89fd6ae11a31b009704097",
+      "current_session": null
+    },
+    {
+      "task": "P3_4",
+      "agent_name": "/root/comet_source_probe",
+      "executor": "native subagent",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-toolchain/sdd-harness",
+      "branch": "codex/comet-spec-adapter-convergence",
+      "base_head": "ddb7849190c19e6d28f6d5dafeb00740def4e330",
+      "status": "TERMINAL_DUAL_REVIEWED_ROOT_TESTED_INTEGRATED_CONSTRUCTION_ONLY",
+      "scope": "sameowned3 files only;noSDK/lock/mainwrites;no acceptance",
+      "latest_owned": {
+        "tests": 29,
+        "pass": 29,
+        "fail": 0,
+        "skip": 0,
+        "duration_ms": 155197,
+        "original_cases_preserved": 23,
+        "new_boundary_cases": 6,
+        "scope": "author retest only;newcandidate/independent review pending"
+      },
+      "current_session": null,
+      "current_session_phase": "scripts/check.sh after completedowned",
+      "recovery": "actual originalarchive-reopen confirmed,not SDKgap;sameRun V/Kp re-review and terminal reopen refusal preserved",
+      "rejected_candidate": "f585c2a4faf76c129042cc0b175300b95ed5705a",
+      "standards_finding": "P2 managed inspect/readback can follow out-of-project symlink before Native;null Run JSON TypeError",
+      "spec_review": "source-only supports construction;cannot override Standards block",
+      "current_phase": "all29/full/strict terminal;newcandidate packaging",
+      "latest_supporting": {
+        "tests": 836,
+        "pass": 825,
+        "fail": 11,
+        "skip": 0,
+        "strict_exit": 0,
+        "inputs_unchanged": true
+      },
+      "known_open_handles": [],
+      "worker_commit": "ee52a45f49a847972aa1f086ad18905da8d11240",
+      "root_main_owned_session": 71241,
+      "standards_P2_status": "independent recheck closed;mainretest pending",
+      "commit": "cbde39e6b811b94fec89fd6ae11a31b009704097"
+    },
+    {
+      "task": "P2_4",
+      "scope": "exact authenticated registeredDesign testIntent write target + phase-aware A/T guidance only;original3 owns;no transition expansion/newcontroller",
+      "agent_name": "/root/observer_qualification",
+      "status": "RUNNING_CONTROLLED_ORIGINAL_P2_4_NARROW_REWORK",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-observer-qualification/sdd-harness",
+      "implementation_started": true,
+      "branch": "codex/comet-registered-test-intent-write",
+      "base_head": "9c9b70b92f1c5f548c5f84cad24c644657a4c30d",
+      "preserved_branch": "codex/comet-llmwiki-convergence@66339134ad31ebd66266422aab8c50a8ac6f457e",
+      "latest_private_build": "40de314253079e045ab09445ef8f6e52fc28f1ee9c5e0d023c359de89a0eb814",
+      "build_exit": 0,
+      "original_companion_bytes_unchanged": true,
+      "current_session": 94843,
+      "current_scope": "Core44 full,original38+new6,private40de only",
+      "last_native_session": {
+        "id": 88133,
+        "exit": 0,
+        "tests": 3,
+        "pass": 3,
+        "skip": 0,
+        "scope": "private registration/ToolWrite/guidance mechanisms only"
+      },
+      "new_boundary_red": {
+        "record": "07",
+        "case": "registered testIntent replaced by project-outside symlink",
+        "actual": "inspectClassicHookGuard allowed by outside-scope early exemption",
+        "status": "realRED retained;rootcause repair pending",
+        "old_fingerprint": "2699f077 retained"
+      },
+      "root_instruction": "inspect same-root protection of existing managed targets before targeted early-exemption correction;nonmanaged/trueexternal semantics unchanged;newfingerprint required",
+      "last_boundary_tests": {
+        "record": 10,
+        "tests": 6,
+        "pass": 6,
+        "skip": 0,
+        "exit": 0,
+        "inputs_stable": true,
+        "raw_sha256": "0b4a8318311a70f9e87b23ade24593e68d9e93e4f81b69174bcfb00474d58a13"
+      },
+      "native_related": {
+        "files": 4,
+        "tests": 349,
+        "pass": 345,
+        "platform_skip": 4,
+        "exit": 0,
+        "inputs_stable": true,
+        "Root_raw_sha_matched": true
+      },
+      "prior_setup_failure": {
+        "session": 35422,
+        "cause": "collector cwd wrong,285setupfail",
+        "not_behavior_RED": true
+      }
+    },
+    {
+      "task": "I02",
+      "agent_name": "/root/registry_qualification",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-delivery-contracts/sdd-harness",
+      "branch": "codex/comet-runner-isolation-convergence",
+      "base_head": "cbde39e6b811b94fec89fd6ae11a31b009704097",
+      "status": "TERMINAL_DUAL_REVIEWED_ROOT_TESTED_INTEGRATED_CONSTRUCTION_ONLY",
+      "scope": "original8 owned files,actualCLI/OS qualification;no model/credential/remote writes granted",
+      "artifact_readiness": "architecture-review-construction-readiness.json",
+      "last_author_tests": {
+        "first_build_chain": 7,
+        "common_admission": 13,
+        "fail": 0,
+        "scope": "author narrow mechanisms only"
+      },
+      "known_open_handles": [],
+      "runtime_projection": {
+        "daemon": "29.6.2 linux aarch64",
+        "old_image": "4dfd prefix present",
+        "old_six_containers": "exited1",
+        "scope": "safe projection only,noEnv/volume values/no runtime mutation"
+      },
+      "interface_proposal": "I02 physical startCliJob/observeCliJob/stopCliJob;P1_3 fixedhost+identity/dispatch;no phase/semantic/queue",
+      "actual_build_or_runtime_started": false,
+      "worker_commit": "636dfb83acc94e901192875c0feeec8e5f47f128",
+      "reported_checks": "owned65/65;I01related41/41;0skip;notwholeI02",
+      "physical_execution": "no Docker build/pull/start/stop;actual recipe requires final source/identity/resource qualification",
+      "prior_candidate": "70a2c08763b98cf450380d13d99611f4a8f5042a",
+      "prior_review": "SPEC_P1_CONTEXT_EXTRA_FILES_REQUEST_CHANGES",
+      "author_checks": "81/81+I01related41/41,0skip;notwholeI02",
+      "manifest_sha256": "f6f90a5ead89966e3d66494095909e0757b2a71e668b57338276ed8fe887e886",
+      "integrated_commit": "67095e2a615d525c354234fb7e7723ded39acb38",
+      "root_tests": "81/81+41/41;full941/939/2/0skip,originalP1_5twofail"
+    },
+    {
+      "task": "I03",
+      "agent_name": "/root/comet_source_probe",
+      "status": "TERMINAL_READONLY_ACTION_PREPARATION_NOT_EXECUTABLE",
+      "scope": "fixed resource/permission/secretresolver/API action proposal only;no API,key,DB,env,service/container/browser/model operations;oldonce readgrant consumed",
+      "raw": "/Volumes/mac-extend/codex/worktrees/comet-toolchain/sdd-harness/.local/I03-action-preparation/20261025T140839Z",
+      "limitation": "Proposal only; no secret/API/service execution, publisher/isolator/issuer still unqualified"
+    },
+    {
+      "task": "P1_1",
+      "agent_name": "/root/official_comet_fit",
+      "status": "TERMINAL_FROZEN_ROOT_REPRODUCED_PENDING_INDEPENDENT_REVIEWS",
+      "scope": "tmp-only publicAPI/no model/service/credential/main/Run migration",
+      "package": "0.5.0 exactpublicpin",
+      "work_package": "official public package/interface qualification for controlled sameDAG revision",
+      "consuming_original_tasks": [
+        "P1_6",
+        "P1_3"
+      ],
+      "manifest_sha256": "5d4979ea48ee3e4b2d13445b36ca2659e82dfe231d2da6f270947bdd8324eaf5",
+      "evidence": ".local/comet-reset/official-public-qualification/root-verification.json",
+      "acceptance": "MECHANICAL_ONLY_NO_PRODUCTION_MIGRATION"
+    },
+    {
+      "task": "P1_1",
+      "agent_name": "/root/comet_source_probe",
+      "status": "RUNNING_SCOPE_PREFLIGHT_SECURITY_BACKPORTS",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-toolchain/sdd-harness",
+      "requested_branch": "codex/comet-upstream-security-backports",
+      "base_head": "22bec9b",
+      "scope": "0004-upstream-security-backports.patch and security Node test only;Root sharedlock;no0.5Runtime or external effects",
+      "native_handle_verified": "collaboration.list_agents reports running",
+      "source_version": "0.4.5/c90 exact current base; private5ec joint integration reserved Root"
+    },
+    {
+      "task": "P1_3",
+      "agent_name": "/root/registry_qualification",
+      "status": "RUNNING_FIXED_HOST_CONSTRUCTION",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-registry-qualification/sdd-harness",
+      "branch": "codex/comet-fixed-host-executor",
+      "base_head": "2d2506f",
+      "scope": "five adapter/test paths;no actual resource/model/secret/phase activation",
+      "diagnostic": "authority override component RED closed by author14/14;originalHost glue still in progress",
+      "whole_accepted": false
+    },
+    {
+      "task": "P1_5",
+      "agent_name": "/root/method_profile",
+      "status": "RUNNING_TWO_PROBE_TEST_REPAIR",
+      "worktree": "/Volumes/mac-extend/codex/worktrees/comet-method-profile/sdd-harness",
+      "branch": "codex/comet-classic-probe-repair",
+      "base_head": "2d2506f",
+      "scope": "C08 legacy/current/isolated tool separation and approved methods pin only; no mode guarantee",
+      "diagnostic": "original2 failures actually reproduced;history/approved source trace in progress",
+      "whole_accepted": false
+    }
+  ],
+  "safety_cleanup": {
+    "retired_entries": 18,
+    "legacy_discovery_remaining": 0,
+    "rollback_manifest": ".local/retired-flow/2026-10-24-comet-reset/manifest.json",
+    "preserved_evidence": ".local/comet-reset/evidence-retention.json"
+  },
+  "architecture_review": {
+    "converged_artifacts": "APPROVED_FROZEN_REVISION",
+    "original_design_authorization": "User explicitly selected existing latest architecture and ordered cleanup/E2E; this does not claim review of new artifacts passed",
+    "status": "PASSED_IMPLEMENTATION_ONLY",
+    "artifact_sha256": "9784847e35f5c1cbfdb154cc22f604035486458181959410420158b0fedbefa4",
+    "artifact": ".local/comet-reset/architecture-consensus/artifact-r1",
+    "participants": [
+      "claude-code",
+      "zcode",
+      "codex-agent"
+    ],
+    "automatic_approval_result": "REJECTED: prior one-time14-artifact grant consumed, current15-artifact disclosure not specifically authorized",
+    "pending_question": false,
+    "retry_policy": "no alternate channel or retry before explicit authorization; no quorum downgrade",
+    "new_material_authorization_pending": false,
+    "consecutive_goal_turns_observed_since_execution_resume": 0,
+    "authorization_evidence": ".local/comet-reset/architecture-consensus/authorization.json",
+    "authorized_max_total_rounds": 3,
+    "authorized_run": "/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/sdd-comet-consensus-x19u6ju6/continuation-01/run-r1",
+    "session_handle": 16889,
+    "pid": 11741,
+    "round": 1,
+    "total_rounds_dispatched": 2,
+    "max_total_rounds": 3,
+    "prior_round_outcome": "DEBATE_REQUIRED: two read-visibility abstentions; one approval; no approval carried forward",
+    "catalog_rebind_receipt": ".local/comet-reset/architecture-consensus/catalog-rebind-receipt.json",
+    "nonblocking_followups_from_round00": [
+      {
+        "id": "F3",
+        "owner": "P3_1",
+        "status": "METADATA_CLOSED_CODE_QUALIFICATION_PENDING_P3_1",
+        "action": "unify current verification profile token across original and new commands; do not inherit old-profile passes",
+        "evidence": "p3_1-f3-f4-amendment.json"
+      },
+      {
+        "id": "F4",
+        "owner": "P3_2",
+        "status": "CURRENT_TAGS_CLOSED_HISTORY_RETAINED_RECIPES_PENDING_ORIGINAL_OWNERS",
+        "action": "retire stale IMPLEMENTED/PASS journey-definition labels from current projection; keep history",
+        "evidence": "p3_1-f3-f4-amendment.json"
+      }
+    ],
+    "receipt": "openspec/changes/delivery-foundation-rearchitecture/architecture-review/comet-convergence-r1/receipt.json",
+    "rounds_used": 2,
+    "job_status": "TERMINAL_EXIT_0_FINALIZED",
+    "authorization_consumed_for_completed_review": true
+  },
+  "goal_binding": {
+    "native_option": "auto",
+    "status": "active",
+    "objective": "按照我们架构，结合comet 官方最佳实践，端到端完成实施，并且验证，出具验证报告",
+    "observed_at": "2026-10-25T17:35:41.505886+00:00",
+    "source": "native get_goal confirmed human-updated objective and active status",
+    "objective_preserved": true,
+    "authorization_block_resolved": true,
+    "native_status_last_observed": "active",
+    "human_reported_resumed": true,
+    "human_updated": true
+  },
+  "monitor": {
+    "id": "sdd",
+    "status": "ACTIVE_READBACK",
+    "interval_minutes": 20,
+    "timezone": "Asia/Shanghai",
+    "target_thread": "01a15314-be07-77f2-b11d-93ad347f9420",
+    "readback_at": "2026-10-25T17:30:39.398943+00:00",
+    "scope": "observation only; no second dispatcher",
+    "current_goal_prompt": "actualGoal-driven;retain0.4.5;P1_1securityreopened5accepted/33pending/1deferred;I02limitedintegration/private5ecpendingRootbuild;129103unchanged;ACTIVE savedprompt readback matched"
+  },
+  "eta": {
+    "status": "UNKNOWN",
+    "timezone": "Asia/Shanghai",
+    "basis": "architecture consensus completed; method/source integration, real execution gates, knowledge/publication authority and final same-Run journey still open"
+  },
+  "updated_at": "2026-10-26T02:33:43.532869+00:00",
+  "last_progress_at": "2026-10-26T02:33:43.532869+00:00",
+  "current_focus": "User requested handoff to another Agent; original controller stopped new dispatch; all registered tests terminal and workers frozen. Latest uninstrumented repository1161/1164, not accepted; full business0.",
+  "historical_execution_state": "replan-history/2026-10-24-comet-convergence/previous/execution-state.json",
+  "lifecycle_guard": {
+    "path": ".agents/skills/openspec-lifecycle-guard/SKILL.md",
+    "sha256": "e04ba2a8894eaa5d5f9bc521fea3d5f3fc468672ecd39749788e424a1d9a7850",
+    "loaded": true,
+    "application": "Explicit replan preserves original task/scenario identities, moves prior status to history, no fake checkbox completion or archive.",
+    "current_local_strict_validation": {
+      "version": "1.11.0",
+      "command": "isolated openspec validate delivery-foundation-rearchitecture --strict --json",
+      "exit_code": 0,
+      "evidence": ".local/comet-reset/toolchain/strict-results.json",
+      "scope": "spec structure only; no runtime acceptance",
+      "telemetry_disabled": true
+    }
+  },
+  "open_decisions": [
+    {
+      "id": "UTILS_SECRET_REF",
+      "raised": "2026-10-20T04:26:09.546774+00:00",
+      "by": "I03 worker",
+      "question": "Outline UTILS_SECRET lacks a plan ref; add ref (plan amendment) or map to existing secret at deployment gate"
+    },
+    {
+      "id": "PUBLISHER_ISOLATOR_CREDS",
+      "raised": "2026-10-20T06:56:03.525611+00:00",
+      "by": "I02 worker",
+      "question": "publisher/isolator dedicated credentials not in frozen I02 ref set; UNASSIGNED marked; decide ref expansion at enablement gate"
+    },
+    {
+      "id": "EVIDENCE_INPUT_MISSING_EXIT_CODE",
+      "raised": "2026-10-20T06:57:00.054381+00:00",
+      "by": "P2_3 worker",
+      "question": "contract wording 1 vs pinned oracle 2 for EVIDENCE_INPUT_MISSING; pinned value kept; adjudicate at VERIFY",
+      "rework_disposition": "Engineering diagnosis/reconciliation by original owner; preserve authorization boundary; not a waiver or mandatory user approval for routine fix"
+    },
+    {
+      "id": "DELIVERY_CASES_NODE_PIN",
+      "raised": "2026-10-20T12:06:25.182211+00:00",
+      "by": "P1_5 worker",
+      "question": "delivery-cases Node-24 sensitivity: pin acceptance commands to host node 22.13.1 (recommended) or fix TAP-format dependency",
+      "rework_disposition": "Engineering diagnosis/reconciliation by original owner; preserve authorization boundary; not a waiver or mandatory user approval for routine fix"
+    },
+    {
+      "id": "I08_FILENAME_DEVIATION",
+      "summary": "I08 简报独占清单(backup/*+backup-restore.mjs)与 canonical(infrastructure-plan.md I08/tasks.json I08.owns: recovery/*、retention-policy.json、authority-transfer.schema.json、operations-runbook.md、recovery.mjs、infra-recovery.test.js)不一致; worker按简报执行,语义规格取自plan I08小节",
+      "owner": "user/plan-owner",
+      "status": "OPEN",
+      "candidate_resolution": "接受现状+集成波次机械改名+plan owner修canonical引用(待评审员建议)",
+      "reviewer_recommendation": "接受现状+机械改名+canonical 修正+runbook 补写或移出 owns; 见 worker-reports/I08.review.json",
+      "rework_disposition": "Engineering diagnosis/reconciliation by original owner; preserve authorization boundary; not a waiver or mandatory user approval for routine fix"
+    },
+    {
+      "id": "OV_OVERLAY_CANDIDATE",
+      "owner": "user",
+      "status": "OPEN",
+      "summary": "官方 comet-five-phase overlay 重规划候选语料已归档(41节点/100场景/114检查); A 裁决明确排除在本次接纳外, 单独裁决后另行处理; 相关文档改动仍以未提交工作区形式保留在主检出(docs/architecture/adr/0019 + delivery-architecture.md + openspec/config.yaml + draft 目录)"
+    },
+    {
+      "id": "HOST_OPENSPEC_DRIFT",
+      "owner": "user",
+      "status": "OPEN",
+      "summary": "宿主全局 openspec 已从 pin 1.3.1 漂移到 1.14.3(homebrew 路径); fail-closed 正确阻塞 C08/B08 套件(known-env fail 之二); 选项: 重钉 1.3.1 / 迁移基线到 1.14.3 / 保持阻塞; 用户裁决前 known-env 集合不变"
+    },
+    {
+      "id": "REMOTE_URL_DISCREPANCY",
+      "owner": "user",
+      "status": "OPEN",
+      "summary": "worktree remote 显示 ql-wade/sdd-harness 与 registry rpamis/sdd-harness 不一致; 影响 push/PR 目标, 不影响本地验收",
+      "rework_disposition": "Engineering diagnosis/reconciliation by original owner; preserve authorization boundary; not a waiver or mandatory user approval for routine fix"
+    },
+    {
+      "id": "GH_AUTH_TOKEN",
+      "owner": "user",
+      "status": "OPEN",
+      "summary": "gh CLI TLS 拦截(x509 OSStatus -26276); I01 authority readback 保持 UNVERIFIED 直到网络/证书修复或用户提供 token; 不阻塞本地实施",
+      "rework_disposition": "Engineering diagnosis/reconciliation by original owner; preserve authorization boundary; not a waiver or mandatory user approval for routine fix"
+    },
+    {
+      "id": "CONSUMER_CLOSEOUT_FORGED_RECORDS",
+      "raised": "2026-10-22T23:35:11.456514+00:00",
+      "by": "P4_4 reviewer NB1",
+      "question": "spec.js requireKnowledgeCloseout/comet.js sealCloseout 接受形状正确的伪造记录(P3_4/P1_3 属地,零运行时调用方,纵深防御缺口)——是否补绑由用户裁决"
+    },
+    {
+      "id": "LEDGER_CHANNELS_PERSISTENCE",
+      "raised": "2026-10-22T23:35:11.456514+00:00",
+      "by": "P4_4 reviewer NB2",
+      "question": "patch0003 knowledge-observe 账本级持久化 channels 并校验(向后兼容小跟进)——是否纳入后续 change 由用户裁决"
+    },
+    {
+      "id": "BACKUP_V1_SHAPE_MAPPING",
+      "raised": "2026-10-23T00:20:03.865111+00:00",
+      "by": "I08 reviewer Q1",
+      "question": "Backup.v1 前置字段(authorityId+epoch)与真实 Comet build run-state 形状(仅 runId)的映射语义——扩展 recovery.mjs 读真实形状 vs 让 Comet 写契约字段;recovery.mjs 已 fail-closed,风险方向安全"
+    },
+    {
+      "id": "RETENTION_LIVE_SHAPE_INTAKE",
+      "raised": "2026-10-23T00:20:03.865111+00:00",
+      "by": "I08 reviewer Q2",
+      "question": "R10 'cleanup 门禁使用 Comet 真实义务'对 live closeout 记录形状的摄入缺口(扫描器只识别 I08 目录形态;工具无删除路径,风险仅在消费方自动化)——与 BACKUP_V1_SHAPE_MAPPING 同根,owner 裁决"
+    },
+    {
+      "id": "F10_CURRENT_DELIVERY_SCOPE",
+      "status": "ANSWERED_A_CONTROLLED_SCOPE_APPLIED",
+      "raised": "2026-10-25T02:56:00.251891+00:00",
+      "source": "tasks.md:796 P5_2 Step7 and conditional_batch5",
+      "question": "first CLI+fixedRunner delivery with explicit F10 positive deferred outside current completion, or include real crossmachine API/F10 now",
+      "unanswered_behavior": "retain all130required and F10UNVERIFIED;noAPIenable/noautomaticwaiver;continueunaffectedwork",
+      "answer": "A：首版不含跨机器 API，F10 正向另期，明确排除本轮完成条件（推荐）",
+      "source_question_call_id": "call_437a3f02d8cc40b6b68accc2f9b8165f",
+      "evidence": "f10-scope-amendment.json",
+      "answered_at": "2026-10-25T03:25:05.841007+00:00"
+    }
+  ],
+  "method_source_drift": {
+    "task": "P1_6",
+    "skill": "multi-agent-consensus-review",
+    "pinned": "50d5ff30833bae1846d60b0a19560037dcf0c47905aad847005ff26e22f820fc",
+    "actual": "95ec28149e642fdef6d08d928c99956dafcef1bd9961f001666403fe0c5a3260",
+    "status": "UNQUALIFIED_DO_NOT_REFRESH_HASH_WITHOUT_EXPLICIT_SNAPSHOT_PROVENANCE",
+    "evidence": ".local/comet-reset/method-snapshot-audit.json",
+    "whitebox_fixture_diagnosis": {
+      "positive_missing_original_inputs": 6,
+      "negative_missing_input": true,
+      "positive_private_restoration": "STRUCTURE_PASS with original digest-matching bytes",
+      "negative_legacy_source_hash_matches": false,
+      "project_snapshot_changed": false,
+      "whole_shared_candidate": {
+        "file_count": 139,
+        "offline_run_all_exit": 0,
+        "negative_cases_pass": 15,
+        "invariants_pass": 3
+      },
+      "evidence": ".local/comet-reset/fixture-diagnosis/diagnosis.json"
+    }
+  },
+  "git_authority_observation": {
+    "channel": "unsandboxed authorized read-only gh CLI",
+    "repo_id": 1285806550,
+    "repo": "ql-wade/sdd-harness",
+    "principal_id": 262266039,
+    "principal": "ql-wade",
+    "observed_permissions": [
+      "admin",
+      "maintain",
+      "pull",
+      "push",
+      "triage"
+    ],
+    "scope": "identity/readback only; no authorization to mutate remote protections or publish new material",
+    "registry_mismatch": "current source/readback hardcoded rpamis, original I01 repair running"
+  },
+  "implementation_head": "1f6ec33",
+  "active_worker_count": 0,
+  "runtime_readonly": {
+    "evidence": ".local/comet-reset/runtime-readonly/container-state.json",
+    "outline": "running healthy",
+    "runner": "controller/author exited1, CLI entrypoint without command; sixrole containers all exited",
+    "scope": "read-only status, not capability qualification"
+  },
+  "verification_job": {
+    "status": "TERMINAL_CURRENT_SOURCE_REPOSITORY_PASS_NOT_BUSINESS_ACCEPTANCE",
+    "command": "actual bash scripts/check.sh,exactsource3056+adapter/frozen3ab",
+    "session_handle": 41932,
+    "source_commit": "ace45cd971622af864f387202cc5a533bde1c864",
+    "asset_commit": "60a75c5",
+    "counts": {
+      "tests": 959,
+      "pass": 959,
+      "fail": 0,
+      "skipped": 0
+    },
+    "selftests": "Whiteboxfull6+consensusPASS",
+    "YAMLJSON": "PASS84/3",
+    "relatedOriginalF04B09": "75/75nooraclechanges",
+    "explicitSourceInputsUnchanged": 19,
+    "evidence": "worker-reports/Root-foundation-3056/integration.json",
+    "final_journey_acceptance": false
+  },
+  "required_check_results": {
+    "source": "verification-results.json",
+    "scope": "129 in current delivery await final realRun; all130records retained, one explicit human F10 positive deferral",
+    "pass": 0,
+    "fail": 0,
+    "not_verified": 129,
+    "deferred_not_exercised": 1
+  },
+  "block_audit": {
+    "result": "BLOCKED",
+    "consecutive_goal_turns": 3,
+    "same_condition": "new15-artifact disclosure authorization unanswered after automatic approval rejection",
+    "pending_artifact_sha256": "9784847e35f5c1cbfdb154cc22f604035486458181959410420158b0fedbefa4",
+    "live_handle_check": "previous implementation76513 and verification84855 handles now unknown/absent; both were observed terminal before this audit",
+    "available_safe_repairs": "previous scoped entry/identity/isolation repairs integrated and tested; remaining core work blocked by P0_4 dependency",
+    "blocked_next_nodes": [
+      "P1_1",
+      "P1_6",
+      "P3_1",
+      "I02",
+      "P1_3"
+    ],
+    "not_complete": true
+  },
+  "outline_readonly_authorization": {
+    "status": "EXECUTED_ONCE_SANITIZED_METADATA_VERIFIED",
+    "question_id": "call_d02eaa0619b4495a9ecd760d91bc919e",
+    "plan_payload_sha256": "f505d1fb99874eb82ca040bdc9af69e66ec461f0d9ec3afa19ac551003b77613",
+    "origin": "http://127.0.0.1:3000",
+    "endpoints": [
+      "auth.info",
+      "collections.info",
+      "collections.memberships"
+    ],
+    "scope": "fixed registered owner/team/collection; key memory only; no publish/isolate/issue grant or remote mutation",
+    "script_sha256": "9185662c4f6694f3e26e9423facbbeec5df3f472bb5490b427ae88073819c826",
+    "attempt": ".local/comet-reset/outline-readonly-authorization/one-shot-attempt.json",
+    "metadata_sha256": "c5c538218fe6d48ba2cc066b82247a36e8a72fd362c11518490e9095e3e60c99",
+    "full_audience": "UNVERIFIED",
+    "actions_granted": false
+  },
+  "reviews": [
+    {
+      "task": "P1_6",
+      "axis": "Spec",
+      "agent": "/root/preparer_spec_review",
+      "status": "PASSED_DECLARED_SUPPLIER_SCOPE",
+      "candidate": "1da48bee8dd4fcc782a1d0a31015e43a22f82de7",
+      "secondary_scope": "F3/F4 metadata-only draft; not applied",
+      "started_at": "2026-10-25T02:16:34.509445+00:00",
+      "finished_at": "2026-10-25T02:23:51.049015+00:00"
+    },
+    {
+      "task": "P1_6",
+      "axis": "Standards",
+      "agent": "/root/preparer_standards_review",
+      "status": "PASSED_AFTER_P2_PORTABILITY_CLOSURE",
+      "candidate": "1da48bee8dd4fcc782a1d0a31015e43a22f82de7",
+      "at": "2026-10-25T02:37:14.522442+00:00",
+      "finding": "project-owned metadata/logs retain machine paths; raw method bodies must stay verbatim",
+      "closure_commit": "4761130158a90c38f9e90c551fcff5e472643f50"
+    },
+    {
+      "task": "I01",
+      "axis": "Spec",
+      "agent": "/root/preparer_spec_review",
+      "status": "P2_REWORK_REQUIRED",
+      "candidate": "09b422b7f0147b601331010249ff4b59870b0766",
+      "at": "2026-10-25T02:37:14.522442+00:00",
+      "readiness_proposal": "conditionally supported5construction edges; no apply before repaired artifact dual review/rootintegration"
+    },
+    {
+      "task": "P1_2",
+      "axis": "Spec",
+      "candidate": "358736ee303d15127a6d50a4ea5700db0ba5eb94",
+      "agent": "/root/preparer_spec_review",
+      "status": "PASS_CONSTRUCTION_ONLY",
+      "at": "2026-10-25T05:30:03.760631+00:00"
+    },
+    {
+      "task": "P1_2",
+      "axis": "Standards",
+      "candidate": "358736ee303d15127a6d50a4ea5700db0ba5eb94",
+      "agent": "/root/preparer_standards_review",
+      "status": "HISTORICAL_START_OBSERVATION_SUPERSEDED",
+      "at": "2026-10-25T05:30:03.760631+00:00",
+      "original_status": "RUNNING",
+      "current": false,
+      "reconciliation": "Original reviewer has since completed/resumed different tasks; retain start observation without inventing a result; later worker integration records carry actual verdicts"
+    },
+    {
+      "task": "I03",
+      "axis": "Spec",
+      "candidate": "5d5707c0dbffc39422b3d074515996f356d5bdc8",
+      "agent": "/root/preparer_spec_review",
+      "status": "HISTORICAL_START_OBSERVATION_SUPERSEDED",
+      "at": "2026-10-25T05:30:03.760631+00:00",
+      "original_status": "RUNNING",
+      "current": false,
+      "reconciliation": "Original reviewer has since completed/resumed different tasks; retain start observation without inventing a result; later worker integration records carry actual verdicts"
+    },
+    {
+      "task": "P1_2",
+      "candidate": "358736ee303d15127a6d50a4ea5700db0ba5eb94",
+      "status": "BLOCKED_CONSTRUCTION_INDEPENDENT_REPRO",
+      "axis": "Standards",
+      "finding": "Release skill root symlink: full verification false-green and exporter overwrites external private sentinel",
+      "at": "2026-10-25T05:33:28.399669+00:00"
+    },
+    {
+      "task": "I03",
+      "candidate": "5d5707c0dbffc39422b3d074515996f356d5bdc8",
+      "status": "BLOCKED_CONSTRUCTION_INDEPENDENT_REPRO",
+      "axis": "Spec",
+      "finding": "HTTP401/404/429 inferred absence not blocked; declaration claims preconditions hold",
+      "at": "2026-10-25T05:33:28.399669+00:00"
+    },
+    {
+      "task": "I03",
+      "axis": "Standards",
+      "candidate": "84fdceccd1406dde25d542bd22868ac5788f0f6a",
+      "agent": "/root/preparer_standards_review",
+      "status": "HISTORICAL_START_OBSERVATION_SUPERSEDED",
+      "at": "2026-10-25T05:44:11.857529+00:00",
+      "original_status": "RUNNING",
+      "current": false,
+      "reconciliation": "Original reviewer has since completed/resumed different tasks; retain start observation without inventing a result; later worker integration records carry actual verdicts"
+    },
+    {
+      "task": "I03",
+      "axis": "Spec",
+      "candidate": "84fdcec",
+      "status": "PASS_CONSTRUCTION_ONLY",
+      "actual_tests": "43/43 and independent unknownHTTP counterexamples,0skip",
+      "at": "2026-10-25T06:01:36.305773+00:00"
+    },
+    {
+      "task": "I03",
+      "axis": "Standards",
+      "candidate": "84fdcec plus root portable prepared",
+      "status": "PASS_CONSTRUCTION_ONLY_METADATA_P2_CLOSED",
+      "actual_tests": "43/43 and independent negative probes;55originals/8inputs/32manifest entries independently match",
+      "at": "2026-10-25T06:01:36.305773+00:00"
+    },
+    {
+      "task": "P1_2",
+      "axis": "Standards",
+      "candidate": "3ee3723",
+      "agent": "/root/preparer_standards_review",
+      "status": "HISTORICAL_START_OBSERVATION_SUPERSEDED",
+      "at": "2026-10-25T06:01:36.305773+00:00",
+      "original_status": "RUNNING",
+      "current": false,
+      "reconciliation": "Original reviewer has since completed/resumed different tasks; retain start observation without inventing a result; later worker integration records carry actual verdicts"
+    },
+    {
+      "task": "I04",
+      "axis": "Standards",
+      "agent": "/root/preparer_standards_review",
+      "candidate": "4ed312dec99e4563131193186a3f1a93655cc968",
+      "status": "HISTORICAL_START_OBSERVATION_SUPERSEDED",
+      "at": "2026-10-25T08:26:03.916128+00:00",
+      "original_status": "RUNNING",
+      "current": false,
+      "reconciliation": "Original reviewer has since completed/resumed different tasks; retain start observation without inventing a result; later worker integration records carry actual verdicts"
+    },
+    {
+      "task": "I04",
+      "axis": "Standards",
+      "candidate": "4ed312d",
+      "status": "TYPE_P2_CLOSED_DIAGNOSTIC_P2_BLOCKS",
+      "at": "2026-10-25T08:38:10.778507+00:00",
+      "evidence": "private malformed JSON sentinel leaked through error.message;43 independently passed"
+    },
+    {
+      "scope": "five named construction qualification rules",
+      "axes": [
+        "Spec",
+        "Standards"
+      ],
+      "status": "APPROVED_METADATA_ONLY_AND_CANONICAL_GUARD_PASS",
+      "commit": "0c228bd9671ffb2f206ceb363f23710ac18e18d5",
+      "contract_sha256": "680f5be65f90d68516a9b0d2129e04d7617cdfd908356fe5082b71000d7f2326",
+      "artifact_or_business_ready_granted": false,
+      "at": "2026-10-25T10:00:54.073062+00:00"
+    },
+    {
+      "task": "P2_4",
+      "axis": "Standards",
+      "agent": "/root/preparer_standards_review",
+      "candidate": "84d7415338bf90ddb5d1f159a4254957bab0e5a50fe5134330eab6bf70d0ce14",
+      "status": "SOURCE_ONLY_P2_REWORK_REQUIRED",
+      "current": false,
+      "evidence": ".local/comet-reset/p2_4-pre-review-84/review-summary.json"
+    },
+    {
+      "task": "P2_4",
+      "axis": "Spec",
+      "agent": "/root/preparer_spec_review",
+      "candidate": "84d7415338bf90ddb5d1f159a4254957bab0e5a50fe5134330eab6bf70d0ce14",
+      "status": "SOURCE_ONLY_NO_INDEPENDENT_BLOCKER_NOT_ACCEPTED",
+      "current": false,
+      "evidence": ".local/comet-reset/p2_4-pre-review-84/review-summary.json"
+    },
+    {
+      "task": "P2_4",
+      "axis": "Standards",
+      "agent": "/root/preparer_standards_review",
+      "candidate": "5a5bf5c8daf9069c09c6a0d3ee1dd4ab9787253a",
+      "status": "PASS_EXACT_JOINT_CONSTRUCTION_ONLY",
+      "scope": "d2 sixpatch+privatecompanion;not production/whole",
+      "at": "2026-10-25T11:35:55.585613+00:00"
+    },
+    {
+      "task": "P2_4",
+      "axis": "Spec",
+      "agent": "/root/preparer_spec_review",
+      "candidate": "5a5bf5c8daf9069c09c6a0d3ee1dd4ab9787253a",
+      "status": "PASS_EXACT_JOINT_CONSTRUCTION_ONLY",
+      "at": "2026-10-25T11:35:55.585613+00:00",
+      "finished_at": "2026-10-25T11:42:00.389659+00:00"
+    },
+    {
+      "task": "P3_4",
+      "candidate": "f585c2a4faf76c129042cc0b175300b95ed5705a",
+      "axis": "Standards",
+      "status": "P2_REWORK_REQUIRED",
+      "at": "2026-10-25T13:10:05.969302+00:00"
+    },
+    {
+      "task": "P3_4",
+      "candidate": "f585c2a4faf76c129042cc0b175300b95ed5705a",
+      "axis": "Spec",
+      "status": "SOURCE_ONLY_CONSTRUCTION_SUPPORT_NOT_ACCEPTED",
+      "at": "2026-10-25T13:10:05.969302+00:00"
+    },
+    {
+      "task": "P2_5",
+      "candidate": "83864475924e78e0a3e4accfd201d95f0c5c3065",
+      "axis": "Standards",
+      "status": "PASS_EXACT_CONSTRUCTION_ONLY",
+      "at": "2026-10-25T13:40:56.936895+00:00"
+    },
+    {
+      "task": "P2_5",
+      "candidate": "83864475924e78e0a3e4accfd201d95f0c5c3065",
+      "axis": "Spec",
+      "status": "PASS_EXACT_CONSTRUCTION_ONLY",
+      "at": "2026-10-25T13:40:56.936895+00:00"
+    },
+    {
+      "task": "P3_4",
+      "candidate": "ee52a45f49a847972aa1f086ad18905da8d11240",
+      "axis": "Standards",
+      "status": "PASS_EXACT_CONSTRUCTION_ONLY",
+      "at": "2026-10-25T13:40:56.936895+00:00"
+    },
+    {
+      "task": "P3_4",
+      "candidate": "ee52a45f49a847972aa1f086ad18905da8d11240",
+      "axis": "Spec",
+      "status": "PASS_EXACT_CONSTRUCTION_ONLY",
+      "at": "2026-10-25T13:40:56.936895+00:00"
+    }
+  ],
+  "build_job": {
+    "task": "P2_4",
+    "executor": "Root main controlled integration",
+    "session_handle": 60284,
+    "status": "TERMINAL_OFFICIAL_BUILD_AND_ROOT_VERIFICATION_SCOPED_PASS",
+    "candidate_worker": "5a5bf5c8daf9069c09c6a0d3ee1dd4ab9787253a",
+    "expected_fingerprint": "6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a",
+    "worker_fingerprint": "d2a6a22801af47c141a319c5bffa4af2b68ec6ec3a78d6dbe601ad1528155494",
+    "equivalence": "exactsame6patch bytes;officialpath names differ,thus rebuild/reverify",
+    "evidence": ".local/comet-reset/p2_4-integration",
+    "whole_accepted": false,
+    "build_session": 60284,
+    "reused": false,
+    "actual_fingerprint": "6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a",
+    "build_exit": 0,
+    "config5_user3_unchanged_after_build": true,
+    "distribution_check_session": 75974,
+    "full_check_session": 16172,
+    "distribution_check_exit": 0,
+    "runtimeSmoke": {
+      "files": 4,
+      "pass": 257,
+      "platform_skip": 2
+    },
+    "main_owned": {
+      "session": 40162,
+      "pass": 38,
+      "fail": 0,
+      "skip": 0,
+      "inputs_unchanged": true
+    }
+  },
+  "historical_verification_jobs": [
+    {
+      "command": "npm test",
+      "status": "HISTORICAL_TERMINAL_EXIT_1_NEW_CANDIDATE_RETEST_REQUIRED",
+      "session_handle": 84855,
+      "source_head": "36fcf5c4780dc4caa2b85a98b5d0bf70c360af97",
+      "tests": 496,
+      "pass": 489,
+      "fail": 7,
+      "skip": 0,
+      "config_unchanged": true,
+      "evidence": ".local/comet-reset/final-regression/round2/result.json",
+      "current_candidate": false
+    },
+    {
+      "command": "Node24.15.0 PYTHONDONTWRITEBYTECODE=1 bash scripts/check.sh",
+      "status": "HISTORICAL_TERMINAL_EXIT_1_NEW_CLI_SOURCE_RETEST_FINAL_REQUIRED",
+      "session_handle": 74850,
+      "execution_head": "ce98a2c72b0cc245304278e9783ea59d2f8cbba7",
+      "tests": 560,
+      "pass": 546,
+      "fail": 14,
+      "skip": 0,
+      "config_unchanged": true,
+      "evidence": ".local/comet-reset/post-admission-regression/result.json",
+      "final_journey_acceptance": false,
+      "current_candidate": false
+    },
+    {
+      "command": "Node24.15 PATH/PYTHONDONTWRITEBYTECODE=1 bash scripts/check.sh",
+      "status": "RUNNING_ROOT_MAIN_SUPPORTING_REGRESSION",
+      "session_handle": 16172,
+      "execution_head": "904b8696bd63a43ca54422bc2835f7b9348b0b2c",
+      "uncommitted_source_fingerprint": "6da90e893105b4b00fc756260076b49e12bdbe40bc4426e4908a75e1d5732a9a",
+      "input_hashes": ".local/comet-reset/p2_4-integration/preflight.json",
+      "evidence": ".local/comet-reset/p2_4-integration/full-check",
+      "final_journey_acceptance": false
+    },
+    {
+      "status": "TERMINAL_EXIT1_EIGHT_OLD_FAILURES_REQUIRED",
+      "command": "Node24.15/PYTHONDONTWRITE1 + externalCLI guards bash scripts/check.sh",
+      "session_handle": 9307,
+      "integrated_code_commit": "cbde39e6b811b94fec89fd6ae11a31b009704097",
+      "counts": {
+        "tests": 880,
+        "pass": 872,
+        "fail": 8,
+        "skipped": 0
+      },
+      "no_new_failure_locations": true,
+      "blocked_external_attempts": {
+        "docker": 9,
+        "gh": 2
+      },
+      "scope": "supporting repository only,not OS/platform qualification",
+      "evidence": ".local/comet-reset/review-spec-integration/full/failure-summary.json",
+      "final_journey_acceptance": false
+    },
+    {
+      "status": "TERMINAL_EXIT1_TWO_ORIGINAL_P1_5_FAILURES",
+      "command": "calibrated offline guard + actual bash scripts/check.sh after caller temp fixture repair",
+      "session_handle": 90493,
+      "code_commit": "751d6ab",
+      "counts": {
+        "tests": 941,
+        "pass": 939,
+        "fail": 2,
+        "skipped": 0
+      },
+      "selftests": {
+        "whitebox": "all6RUN_ALL_PASS",
+        "consensusGate": "PASS",
+        "whiteboxSourceFiles": 139,
+        "originalHashAndMtimeUnchanged": true
+      },
+      "remaining_failures": [
+        "test/classic-integration.test.js:476",
+        "test/classic-integration.test.js:559"
+      ],
+      "evidence": ".local/comet-reset/i02-main-integration/required-check-temp-fixture/metadata.json",
+      "YAML_JSON_tail": "NOT_REACHED_AFTER_NPM_FAILURE",
+      "scope": "repository support only,not129business acceptance",
+      "blocked_external_attempts": {
+        "docker": 9,
+        "gh": 2
+      },
+      "final_journey_acceptance": false
+    },
+    {
+      "status": "TERMINAL_REPOSITORY_CHECK_PASS_NOT_BUSINESS_ACCEPTANCE",
+      "command": "actual bash scripts/check.sh with calibrated offline guards",
+      "session_handle": 28871,
+      "code_commit": "a497b7b",
+      "counts": {
+        "tests": 944,
+        "pass": 944,
+        "fail": 0,
+        "skipped": 0
+      },
+      "WhiteboxAndConsensusSelftests": "PASS",
+      "YAML_JSON": "PASS84YAML3JSON",
+      "evidence": "worker-reports/P1_5-main-integration/integration.json",
+      "originalFailurePreserved": "realSIGKILL heartbeatpartialJSON in first944/943/1;fixedatomicfixture reviewed",
+      "blocked_external_attempts": {
+        "docker": 9,
+        "gh": 2
+      },
+      "whole_acceptance": false,
+      "final_journey_acceptance": false
+    }
+  ],
+  "scope_decision": {
+    "id": "F10_CURRENT_DELIVERY_SCOPE",
+    "status": "EXPLICIT_HUMAN_SCOPE_DECISION",
+    "recorded_at": "2026-10-25T03:25:05.841007+00:00",
+    "source_question_call_id": "call_437a3f02d8cc40b6b68accc2f9b8165f",
+    "source": "human reply in current controller conversation",
+    "answer": "A：首版不含跨机器 API，F10 正向另期，明确排除本轮完成条件（推荐）",
+    "answer_sha256": "25bc49fd7b3a87395c65cbd1c0b1aaa1500d33c59f3a1f30e35e8ca52a81d42b",
+    "current_delivery": "CLI plus fixed managed Runner",
+    "deferred_task": "P5_2",
+    "deferred_scenario": "F10",
+    "deferred_check": "V_F10",
+    "positive_api_status": "NOT-EXERCISED",
+    "included_in_current_completion": false,
+    "required_before_future_control_api_enablement": true,
+    "control_api_enabled_by_this_decision": false,
+    "all_other_knowledge_platform_permissions_recovery_and_journey_obligations": "unchanged",
+    "record_identity_preserved": {
+      "nodes": 39,
+      "workpackages": 69,
+      "scenarios": 104,
+      "checks": 130
+    },
+    "current_completion_expected_after_reviewed_contract_update": {
+      "in_scope_nodes": 38,
+      "in_scope_scenarios": 103,
+      "in_scope_required_checks": 129,
+      "explicit_deferred_positive_checks": 1
+    },
+    "formal_contract_change": "APPLIED_AFTER_TWO_INDEPENDENT_TECHNICAL_REVIEWS",
+    "evidence": "f10-current-scope-decision.json",
+    "amendment": "f10-scope-amendment.json"
+  },
+  "current_delivery_scope": {
+    "total_record_nodes": 39,
+    "required_nodes": 38,
+    "total_record_scenarios": 104,
+    "required_scenarios": 103,
+    "total_record_checks": 130,
+    "required_checks": 129,
+    "deferred_nodes": [
+      "P5_2"
+    ],
+    "deferred_scenarios": [
+      "F10"
+    ],
+    "deferred_checks": [
+      "V_F10"
+    ],
+    "decision": "f10-current-scope-decision.json",
+    "positive_F10": "NOT-EXERCISED",
+    "API_enabled": false
+  },
+  "deferred_plan_nodes": 1,
+  "deferred_tasks": [
+    "P5_2"
+  ],
+  "required_checks_current_scope": 129,
+  "required_scenarios_current_scope": 103,
+  "controller_checkpoint": {
+    "at": "2026-10-26T02:33:43.532869+00:00",
+    "root": "/Users/mac/Code/sdd-harness",
+    "native_goal": "active",
+    "code_head": "1f6ec33",
+    "goal_complete": false,
+    "active_native_handles": [],
+    "active_controller_exec_handles": [],
+    "last_terminal_controller_exec": {
+      "fullRunnerBuild": {
+        "session": 3289,
+        "exit": 0
+      },
+      "isolatedImageReadback": {
+        "session": 41886,
+        "exit": 0
+      },
+      "repository": {
+        "session": 89464,
+        "tests": 1104,
+        "pass": 1104,
+        "exit": 0
+      },
+      "repositoryLatest": {
+        "session": 94581,
+        "tests": 1164,
+        "pass": 1161,
+        "fail": 3,
+        "skip": 0,
+        "exit": 1,
+        "instrumented": false
+      },
+      "corePrivateKnowledge": {
+        "session": 14436,
+        "tests": 4,
+        "pass": 2,
+        "fail": 2,
+        "skip": 0,
+        "exit": 1,
+        "source": "private only not integrated",
+        "lockPid44985": "not present at exact-PID observation; raw control preserved"
+      }
+    },
+    "next_action": "Successor only: revalidate handoff snapshots and take over one original DAG; diagnose final test failures before accepting pending source.",
+    "uncommitted_source_repair": {
+      "candidates": [
+        "d4de54683c48e6ec12d2afa5af73dee93b7f1315",
+        "ab90cc25ce194453ff63f346b20c39ba4deb02f9"
+      ],
+      "dualReview": "APPROVE_COMPONENT_ONLY",
+      "mainRelated": {
+        "session": 40328,
+        "tests": 240,
+        "pass": 240,
+        "fail": 0,
+        "skip": 0
+      },
+      "mainRepository": {
+        "session": 94581,
+        "tests": 1164,
+        "pass": 1161,
+        "fail": 3,
+        "skip": 0,
+        "exit": 1,
+        "inputsUnchanged": true
+      },
+      "failure": "missing-manifest child and parent: OPENSPEC_INPUTS_UNVERIFIED before expected CONTEXT_CONFLICT",
+      "accepted": false
+    }
+  },
+  "historical_build_jobs": [
+    {
+      "task": "P1_6",
+      "session_handle": 77164,
+      "scope": "formal rootsource distribution/CLI supplier, not managed run",
+      "status": "TERMINAL_EXIT_0_FRESH_BUILD_AND_VERIFIED",
+      "candidate_worker_commit": "4761130158a90c38f9e90c551fcff5e472643f50",
+      "official_source_commit": "c90af44a4474662d7853aae76ce785404974fb0a",
+      "expected_fingerprint": "b11b20e1b6401533d75a4838e85e0b8b5389d1b0e819fc67c8d69adff696a2ed",
+      "evidence": ".local/comet-reset/p1_6-integration/",
+      "build_session": 77164,
+      "verify_session": 98338,
+      "cli_session": 1362,
+      "full_check_session": 95887,
+      "full_check_exit": 1,
+      "summary": "fresh build +3generatedPASS+255smoke2skip+8CLI; fullcheck521/507/14fail0skip"
+    }
+  ],
+  "open_interface_followups": [
+    {
+      "task": "P2_4",
+      "id": "DESIGN_REPAIR_GUIDANCE_PHASE_MISMATCH",
+      "status": "CONTROLLED_ORIGINAL_P2_4_IMPLEMENTATION_AUTHORIZED",
+      "agent": "/root/observer_qualification",
+      "evidence": "P2_5 original46672 failed event inDesign;62706 legalDesignauthor edit/newT chain passes",
+      "constraint": "useexistingDesignauthor repair;keepbuild/verifycontrolled event;no newphase/ledger/defaulttransition expansion",
+      "actual_business_acceptance": false,
+      "additional_write_boundary": "6da hook openSpecAllowed excludes registered test-intent target despite priorauth branch;read-only finding,needs authentic Tool.Write mechanism test",
+      "P2_5_fixture_boundary": "owner directFS only;no realauthorwrite claim",
+      "implementation_started": true,
+      "allowed_scope": "exactregistered testIntent authenticatedwrite + phase-aware existingroute text",
+      "forbidden": "newphase/ledger/defaulttransition expansion;no6da mutation"
+    }
+  ],
+  "official_alignment": {
+    "status": "RESEARCH_QUALIFIED_CURRENT_DELIVERY_RETAINS_FROZEN_0_4_5",
+    "reference": "official-comet-best-practices-review.md",
+    "command_proposal": "eightaction grammar deferred;use nativephase/step display first",
+    "current_main_package": "0.4.5/c90af44 with reviewed patches",
+    "candidate": "0.5.0/aeb1a6598034e28ce46b8422d4dbd8785e607bd7",
+    "candidate_tarball_sha256": "a36d88cd065e92266d483a6bf4946f9d61149a12f3075df107bfde3f4ad9c47f",
+    "public_imports": "Node24.15/env-i runtime,applications/classic,applications actualexit0",
+    "public_dependency_count": 13,
+    "dependency_integrity": "upstreamlock+registrySRI verified,no lifecycle/install",
+    "qualification_agent": "/root/official_comet_fit",
+    "qualification_dir": "/private/tmp/comet-official-fit-20261025",
+    "pending": [
+      "current0.4 official Security applicability/backports",
+      "current0.4 host/method/role/gate and actual knowledge/platform full qualification"
+    ],
+    "old_run_migration": "not automatic;localpatched fields not covered by officialcompat guarantee",
+    "old_tests_inherited": false,
+    "main_package_upgraded": false,
+    "native_stage_binding": "Built-in comet state rejects custom applications; full entry/action/evidence/Wait/resume must bind same public application dispatch, not menu-only routing",
+    "native_approvals": "Protected native user approvals retained; synthetic qualification decisions never constitute human authorization",
+    "research_review": "Independent Spec review running; no production approval from research",
+    "mechanical_root_verification": {
+      "status": "PASS_LIMITED_SCOPE",
+      "evidence": ".local/comet-reset/official-public-qualification/root-verification.json",
+      "root_session": 90083,
+      "terminal_exit": 0,
+      "processes": 4,
+      "root_run_dir": "qualification-WOp14F",
+      "run_revision": 51,
+      "runtime_status": "completed",
+      "synthetic_roles_and_decisions": true,
+      "production_toolchain_qualified": false,
+      "loader_cli_host_qualified": false,
+      "business_accepted_delta": 0
+    },
+    "production_version_decision": {
+      "version": "0.4.5",
+      "source_commit": "c90af44a4474662d7853aae76ce785404974fb0a",
+      "reason": "Human goal requires official practices, not an upgrade; independent Spec supports current complete-scope delivery without new0.5 prerequisite.",
+      "requirements_removed": false,
+      "checks": 129,
+      "scenarios": 103,
+      "security_owner": "P1_4"
+    },
+    "research_reviews": {
+      "spec": {
+        "path": "worker-reports/P1_1-official-public-qualification/reviews/spec.md",
+        "sha256": "87462813805f4e279c83e6704611cb0237c58d591e5b7dd20b0006f9d2924f2d"
+      },
+      "standards": {
+        "path": "worker-reports/P1_1-official-public-qualification/reviews/standards.md",
+        "sha256": "faed0b71093a5fb73b9f5e5173adbec13cccb214135a9fed0b7247cfef0196c5"
+      },
+      "result": "PASS_RESEARCH_ONLY_PRODUCTION_NO_GO"
+    },
+    "public_loader_cli_research": {
+      "manifest_sha256": "acdd3fef3eef5fe7128e44451a98b0a286beb506b4db76e7f8850f4ffe077e14",
+      "preserved_files": 180,
+      "evidence": ".local/comet-reset/official-public-dispatch-research",
+      "author": "PASS_LIMITED_A_T_COLD_RECOVERY",
+      "root": "HASH_AND_BYTE_READBACK_ONLY_NOT_RERUN",
+      "production_dependency": false
+    }
+  },
+  "secret_transport_intake": {
+    "generic_storage_question": "WITHDRAWN_AFTER_HUMAN_ASKED_WHY_SECRET",
+    "decision": "No generic secret-store choice or managed-file approval inferred. Reuse existing purpose-specific service identities when concretely qualified; exact new secret operations require their own authorization.",
+    "new_secret_read_or_generation": false
+  },
+  "private_runtime_design_write": {
+    "candidate": "5ec97b25db76241658b16f64e2eda1468da07424",
+    "fingerprint": "40de314253079e045ab09445ef8f6e52fc28f1ee9c5e0d023c359de89a0eb814",
+    "status": "DUAL_REVIEWED_CONSTRUCTION_ONLY_NOT_MAIN_INTEGRATED",
+    "spec_report": "worker-reports/P2_4-design-write-review/spec.md",
+    "spec_sha256": "8947972503ece8963fc17d8bc34e843bc3c756fea81576840d9043a2a6132ca8",
+    "standards_report": "worker-reports/P2_4-design-write-review/standards.md",
+    "standards_sha256": "903c61aa1f9d352103229da8be8f1318a34db8669c5dfe9c80c22f22bda0eec1",
+    "root_joint_source_reconstruction": "PENDING",
+    "real_role_OS_qualification": false
+  },
+  "upstream_security_backports": {
+    "owner": "P1_1",
+    "scope": "separate0004 safety patch and regression;no0.5Runtime",
+    "status": "DUAL_REVIEWED_AND_ROOT_JOINT_SOURCE_TESTED_INTEGRATED_CONSTRUCTION_ONLY",
+    "assessment": "worker-reports/P1_4-official-security-applicability/REPORT.md",
+    "history": "replan-history/2026-10-26-security-ownership",
+    "current_contract_sha256": "41fc7da2604e31b4b85ac99d2092e554f31155ccfa08c49fae7726eaa538dc41",
+    "P1_1_reopened_steps": [
+      12,
+      13
+    ],
+    "requirements_removed": false,
+    "scope_expansion": "Root authorized existingP1_1 tools/comet/build.mjs and test/comet-build.test.js for confirmed JSON FAIL/exit0 CLI bug",
+    "reported_tests": "fresh0.4.5 build;security19/19;Hook99/99;runtime257pass2platformskip;3generated0;notRootverified",
+    "shared_lock_changed": false,
+    "whole_accepted": false,
+    "candidate": "f6789e02c84b4bffa84fd25fdeaedfc8528c06f1",
+    "spec_report": "/private/tmp/P1_1-security-spec-review-20261026.md",
+    "spec_sha256": "234bae2f0abe3396d70c4a7dc452f294583ec05859be570d0b249f223c5b727a",
+    "blocking_finding": "POSIX unsupported secure backend error swallowed;fixture judge/save proceeds empty. Original19passed did not cover it.",
+    "RootManifestPreflight": "84/84 matched;not accepted",
+    "old_rejected_candidate": "aa170bedf6db4b1bce4dd380b1c3f6e5887f5d2f",
+    "new_patch_sha256": "1cec1ca2cdde459c97f230e0fd5ac2b218b85dd479523307fb713ed4a982359f",
+    "reported_fingerprint": "0d908904c0071c5133383a523eb8f22c71fdf95db704d2edef9c686758f7a6d4",
+    "Root_joint5ec_rebuild": true,
+    "manifestSha256": "c51cb345379d1e41de2962d37b5e3cf1edd883cbc1bfe63efad4ff5481953e0a",
+    "author_tests": "19/19+Python52pass16Windowsunexercised+native257pass2skip/generated0",
+    "integrated_commit": "14bda75",
+    "Root_joint_fingerprint": "3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69"
+  },
+  "selftest_caller_repair": {
+    "task": "P1_6",
+    "commit": "751d6ab",
+    "source": "scripts/check.sh",
+    "reviews": "independentSpecAndStandardsPASS",
+    "evidence": "worker-reports/P1_6-selftest-caller/integration.json",
+    "method_snapshot_changed": false,
+    "whitebox139SourceHashAndMtimeUnchanged": true,
+    "whole_P1_6_accepted": false
+  },
+  "host_execution_gap": {
+    "owner": "P1_3",
+    "executor_file": "lib/adapters/comet-executor.js present;Gate construction checkpoint integrated884880a",
+    "existing_adapters": "fixed Gate executor with original Native and P2_2 collector;thin main/nonGate/current source qualification incomplete",
+    "inspect_boundary": "fixed shared authority precedence;actual foreign authority regression refused,Root22+65/full981",
+    "next": "thin main/originalproducer ports/perexecution readonlyresolve and exactcurrent source/real role qualification",
+    "authority_override_actual_diagnostic": {
+      "evidence": ".local/comet-reset/host-construction-readiness/authority-override-before.json",
+      "fixedAuthorityForeignDispatch": "FORGED_DISPATCH refused",
+      "callerAuthorityOverride": "oktrue componentonly",
+      "managedClosureEligible": false,
+      "status": "CONFIRMED_COMPONENT_BOUNDARY_BUG_REPAIR_P1_3",
+      "noActualDriverExecuted": true
+    },
+    "non_gate_native_intents": {
+      "status": "NATIVE_RUN_PORT_EXTENSION_REQUIRED_DESIGN_INTAKE_COMPLETE",
+      "reported": "six aggregate exports expose gate host;original author/test-code/Builder current-intent and recovery ports need fullCLI/state inspection",
+      "required": "all original roles must connect;gate-only chain cannot finishP1_3",
+      "prohibited": "no host-owned author ledger,phase machine or self-issued production qualified flag",
+      "design": "worker-reports/P2_4-native-action-port-intake/DESIGN-INTAKE.md",
+      "sha256": "65abe33436db1583104685052776313e9e5f1889fb5082531d50140210a56ac4",
+      "reuse": "originalEngineAction/Run.pending/pendingRef/lock/journal only",
+      "confirmed_engine_defect": "resolver narrow action discarded by static action lookup;pending bytes absent from original journal",
+      "wholeTarget": "requirements/architecture/test-design/plan/test-code/Builder,independent gates and sameexecution recovery,not gate-only"
+    },
+    "gate_checkpoint": {
+      "commit": "884880a3d7cb27ed70fb5da2cca33eb8b3c5ea24",
+      "evidence": "worker-reports/Root-P1_3-fixed-host-integration/integration.json",
+      "wholeP1_3": "UNVERIFIED"
+    },
+    "bootstrap_review": {
+      "status": "R1_INTERFACE_AND_CODE_REVIEWED_ROOT_TESTED_INTEGRATED_CONSTRUCTION",
+      "commit": "1c66edf",
+      "evidence": "worker-reports/Root-P1_3-bootstrap-integration/integration.json",
+      "Root": "65/65 and1022/1022,0skip",
+      "rejected3056Patch": "NOT_APPLIED_NOT_RETRIED;R1onlyold6dacomponent",
+      "productionProvider": "MISSING_UNVERIFIED",
+      "wholeP1_3": "UNVERIFIED"
+    },
+    "native_stdio_transport": {
+      "status": "REVIEWED_ROOT_TESTED_CODE_INTEGRATED",
+      "source": "c8f687providerintake",
+      "actualRuntime": "UNVERIFIED",
+      "scope": "boundedfixedapp-serverstdioCODE,existingmodule/test,actualNodepeeronly,noactualCLI/auth/model/phase/ledger",
+      "agent": "/root/registry_qualification",
+      "authorProgress": {
+        "ownedPass": 76,
+        "relatedBindingPass": 52,
+        "skip": 0,
+        "oldOwnedFailure": "75/1fixture in-flight prerequisite;preserved",
+        "actualCLIOrModelStartup": false,
+        "status": "freezingcandidate;notRootaccepted"
+      },
+      "candidate": "8b0f937fde6209a31175f4a167ffecbf43185919",
+      "Standards": "25/25PASSconstruction",
+      "Spec": {
+        "report": "worker-reports/P1_3-stdio-review-rework/spec-P2.md",
+        "priority": "P2",
+        "proof": "currentepochchangesafterturncompletebeforeclose;doneoldObservedTerminal",
+        "historicalExit0AndClosedRetained": true
+      },
+      "authorRework": "/root/registry_qualification",
+      "realCLIOrModel": "NOT_RUN",
+      "authorReworkProgress": {
+        "targetedGreen": 5,
+        "ownedPass": 81,
+        "relatedPass": 52,
+        "skip": 0,
+        "candidate": "notfrozenyet",
+        "actualCLIModel": false
+      },
+      "authorOwned": 81,
+      "authorRelated": 52,
+      "independentR2": {
+        "tested": 5,
+        "behaviorPass": 0,
+        "setupBlocked": 5,
+        "reason": "fs.watchEMFILE;independenttmpwatchsame",
+        "systemLimitsChanged": false,
+        "candidateSourceChangedByReview": false
+      },
+      "originalAuthorNext": "replaceonlyfixturewatchdependency withactualdeterministicclosebarrier;productsourceunchanged",
+      "RootIntegrated": true,
+      "commit": "9f912d1",
+      "independentR3": "Spec5/5+Standards5/5;closeP2closedconstruction",
+      "RootRelevant": 133,
+      "RootRepository": 1090,
+      "realCLIModel": "NOT_STARTED_UNQUALIFIED",
+      "wholeP1_3": "UNVERIFIED",
+      "evidence": "worker-reports/Root-P1_3-stdio-integration/integration.json"
+    },
+    "lifecycle_independent_review": {
+      "candidate": "50eec4a077506de96d63de7d635e3d271cd3bf7f",
+      "owned_controlled_replay": {
+        "tests": 111,
+        "pass": 111,
+        "fail": 0,
+        "skip": 0
+      },
+      "verdict": "APPROVE_REPAIR_COMPONENT_ONLY",
+      "finding": "initialized notification capture overflow overwrites sticky UNKNOWN",
+      "fixedNode24CounterexampleExit": 1,
+      "report": "worker-reports/P1_3-lifecycle-review-rework/P1_3-lifecycle-spec-review-20261026.md",
+      "owner": "/root/registry_qualification",
+      "integrated": false,
+      "businessAcceptedDelta": 0,
+      "repairCandidate": "d4de54683c48e6ec12d2afa5af73dee93b7f1315",
+      "independentSpecReplayExit": 0,
+      "mainRelatedPass": 240,
+      "repositoryCheck": "1162/1164: Runner precondition failure unrelated identity not yet attributed"
+    },
+    "latest_root_regression": {
+      "relatedPass": 240,
+      "instrumentedPass": 1164,
+      "latestUninstrumented": {
+        "total": 1164,
+        "pass": 1161,
+        "fail": 3
+      },
+      "accepted": false,
+      "report": "worker-reports/Root-P1_3-host-components-integration/REPORT.md"
+    }
+  },
+  "host_preparation_readiness": {
+    "rule_revision": "2026-10-26-two-named-host-preparation-edges",
+    "contract_sha256": "a3cf328a8e46e0f48aa8420257aacf275b41aad6d3bdd6406f4f0e83aabc87ad",
+    "reviews": "Spec+conservativeaddendum+StandardsPASS_RULES_ONLY",
+    "P1_3_from_I02": "CODE_CONSTRUCTION_ONLY_67095;realimage/OS/action proof pending",
+    "P1_3_from_P1_2": {
+      "status": "EXACT_TRANSPORT_CONSTRUCTION_SCOPE_READY",
+      "artifact": "9c9b70b92f1c5f548c5f84cad24c644657a4c30d",
+      "current_independent_reviews": [
+        "worker-reports/P1_2-transport-recertification/spec.md",
+        "worker-reports/P1_2-transport-recertification/standards.md"
+      ],
+      "Root71": "raw verified",
+      "scope": "packet/sealed bytes only;no Hook installation or actual host/role",
+      "condition_resolution": "new actual review custody satisfies conditional rule;frozen draft pending is review-time snapshot,not runtime/role authority"
+    },
+    "P1_5_from_P1_4": "TWO_STALE_TEST_METADATA_PREPARATION_ONLY;no mode guarantee",
+    "actual_runtime_role_activation": false,
+    "whole_acceptance_waiver": false
+  },
+  "repo_hook_mixed_handler_issue": {
+    "owner": "P1_2",
+    "status": "ORIGINAL_MIXED_PRESERVATION_FIXED_BUT_INDEPENDENT_NONCOMMAND_P2_REWORK",
+    "source": "tools/adapters/claude-code.sh upsert_hook_array/is_ours",
+    "proof": "new independent9c9Spec pure in-memory projection;Std source confirmation",
+    "required": "preserve user handlers/metadata in mixed entry;new negative then fix and assembly regression",
+    "packet_scope_review_pass_unaffected": true,
+    "actual_Hook_qualification": false,
+    "rework_candidate": "d0b7c0f171dca7c5afb7f57a4db98e2397733745",
+    "new_P2": "distinct prompt/noncommand handlers collapsed to empty command in duplicate scan;actual tmpinstall exit1;no prompt executed",
+    "review": "/private/tmp/P1_2-mixed-hook-standards-review-20261026.md",
+    "new_rework_author": "originalP1_2/comet_source_probe"
+  },
+  "probe_repair_candidate": {
+    "task": "P1_5",
+    "candidate": "aad310f1122c0edf5408b5e524a7155b5850fbb0",
+    "status": "DUAL_REVIEWED_ROOT24_AND_FULL944_INTEGRATED_COMPONENT_ONLY",
+    "spec_report": "/private/tmp/P1_5-probe-spec-review-20261026.md",
+    "spec_sha256": "a08bfe0946769e311c2bb38a3e50ca9b900c0e3e07edf77c12584964b81b79e5",
+    "spec_independent_tests": "24/24 zero skip",
+    "whole_accepted": false,
+    "integrated_commit": "a497b7b",
+    "Root_evidence": "worker-reports/P1_5-main-integration/integration.json"
+  },
+  "joint_source_integration": {
+    "status": "COMMITTED_CURRENT_SOURCE_AND_REPOSITORY_VERIFIED_BUSINESS_UNACCEPTED",
+    "inputs": [
+      "f6789e02c84b4bffa84fd25fdeaedfc8528c06f1",
+      "5ec97b25db76241658b16f64e2eda1468da07424"
+    ],
+    "fingerprint": "3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69",
+    "ordered_patches": 7,
+    "build": {
+      "session": 19311,
+      "exit": 0,
+      "reused": false,
+      "offline": true
+    },
+    "Root_related": {
+      "session": 2026,
+      "exit": 0,
+      "tests": 19,
+      "pass": 19,
+      "skip": 0
+    },
+    "Root_distribution": {
+      "session": 46692,
+      "exit": 0,
+      "nativePass": 257,
+      "nativePlatformSkip": 2,
+      "generatedFamiliesPass": 3
+    },
+    "Root_compatibility": {
+      "session": 88263,
+      "exit": 0,
+      "tests": 24,
+      "pass": 24,
+      "predicateBytesUnchanged": true,
+      "explicitDerivedFingerprintRebind": true
+    },
+    "Root_Core44": {
+      "initialSession": 84193,
+      "initialStatus": "preservedcaptureSETUPtimeout300,notproductRED",
+      "retrySession": 5976,
+      "exit": 0,
+      "tests": 44,
+      "pass": 44,
+      "fail": 0,
+      "skip": 0,
+      "durationSeconds": 414.59
+    },
+    "live_source_is_not_last_repository_pass": false,
+    "last_repository_pass_commit": "9f912d1",
+    "pending": [
+      "original Nativeproducer ports/P1_3 fullrole main/I02 slots",
+      "actualimage/OS/roles/permissions/platform/knowledge/final129103"
+    ],
+    "commit": "14bda75",
+    "Root_RunnerPin": {
+      "initialSession": 97697,
+      "initialResult": "80pass1oldcount6",
+      "correctedSession": 19141,
+      "tests": 81,
+      "pass": 81,
+      "fail": 0,
+      "skip": 0,
+      "imageQualified": false
+    },
+    "Root_evidence": "worker-reports/Root-joint-runtime-3056/integration.json",
+    "current_repository_full_verified": true,
+    "Root_currentFull": {
+      "session": 41932,
+      "tests": 959,
+      "pass": 959,
+      "fail": 0,
+      "skip": 0
+    },
+    "Root_Foundation": {
+      "exportDigest": "3ab11336d65dc223739a2d946d237289751b17e0706036a706fb55f7afaa27f6",
+      "sourceCommit": "ace45cd971622af864f387202cc5a533bde1c864",
+      "assetCommit": "60a75c5",
+      "oldFilesUnchanged": 1650,
+      "requireBodiesExit": 0,
+      "resolveBaselineOk": true,
+      "related75": true
+    },
+    "accepted_scope": "base source/distribution only;business unaccepted",
+    "Root_RunnerBound81": {
+      "session": 55056,
+      "exit": 0,
+      "pass": 81,
+      "inputsUnchanged": true,
+      "evidence": ".local/comet-reset/joint-runtime-integration/runner-bound81/metadata.json"
+    }
+  },
+  "current_asset_commit": "60a75c5",
+  "runner_public_runtime_intake": {
+    "status": "BOUNDED_PUBLIC_RESOURCE_EXPERIMENT_PASS_NOT_RUNNER_QUALIFICATION",
+    "evidence": "worker-reports/I02-public-runtime-intake/REPORT.md",
+    "imageId": "sha256:a2698311297c1361d0027fa9bb0b50462efff96e145651b57e45522ee7f9d94e",
+    "Node": "24.15.0",
+    "Python": "3.12.15",
+    "originalAbiFailure": "libssl.so.3 missing;preserved",
+    "projectMounts": 0,
+    "businessAcceptedDelta": 0
+  },
+  "I02_execution_slot_review": {
+    "candidate": "2b7fce91984c739a7243ac48e2beeb1ec3545135",
+    "status": "R2_REVIEWED_ROOT_TESTED_INTEGRATED_CONSTRUCTION",
+    "review": "worker-reports/I02-execution-slot-review-rework/standards.md",
+    "actualIndependent": "7/8;one P2 shared JSON fixture race",
+    "author": "/root/method_profile",
+    "next": "atomic state publication and nonlosing trace;preserve overlap/assertions/raw;newfreeze and independentreviews",
+    "commit": "beeff57",
+    "reviews": "worker-reports/Root-I02-execution-slot-integration/reviews/",
+    "Root": "127/127 and992/992,0skip",
+    "oldFailure": "6870 independent7/8 preserved;P2fixture repaired without weaker assertions",
+    "P1_3NewResolveConsumer": "notyetbound",
+    "wholeI02": "UNVERIFIED"
+  },
+  "native_producer_port_rework": {
+    "owner": "P2_4",
+    "agent": "/root/observer_qualification",
+    "currentCandidate": "afa7b8de16017b3fbf87d3a2a33188782790c9f3d1aa3fe4edfdb28e310df28f",
+    "status": "REQUEST_CHANGES_P1_SAME_AUTHENTICATED_PRINCIPAL_SELF_REVIEW",
+    "priorMatrix": "50/65,15actualarchiveTargetFailures;old40deD07alsofailed;preserved",
+    "priorRelated": "458pass4WindowsSkip supportingonly",
+    "additionalActualRed": [
+      "R/A/T/P rejection couldnot rerun author",
+      "realtestpass-wrapperexit7 stillaccepted",
+      "sameexecution launch facts replaceable",
+      "UTC/local OpenSpec target mismatch and originalarchive checkpointguard"
+    ],
+    "currentTargeted": "9/9 privateCurrentCandidate;notproduction",
+    "lastReportedToolHandles": {
+      "old99591": "terminal0",
+      "old58073": "terminal0",
+      "current": "originalauthorrework,nativeagentrunning,noRootpollornewlaunch"
+    },
+    "RootContextRebase": "worker-reports/Root-post-archive-context-rebase/rebase-proof.json",
+    "shared0003Modified": false,
+    "productionQualification": false,
+    "lastReportedETA": "withdrawn afterindependentP1;overallunknown",
+    "candidateCommit": "5e19890d1b5a0ff3d332799041afac64229e907c",
+    "authorCompleteMatrix": {
+      "pass": 74,
+      "fail": 0,
+      "skip": 0
+    },
+    "authorRelated": {
+      "pass": 481,
+      "WindowsNotExercised": 4
+    },
+    "independentStandards": "8/8PASSconstruction",
+    "independentSpec": {
+      "status": "REQUEST_CHANGES",
+      "priority": "P1",
+      "report": "worker-reports/P2_4-native-producer-review-rework/spec-P1.md",
+      "proof": "sameauthenticatedprincipal,differentexecutions,originalNativepassandreceipt1",
+      "signatureAndCollectionUntampered": true
+    },
+    "integrated": false,
+    "authorRework": "/root/observer_qualification",
+    "authorReworkProgress": {
+      "privateFingerprint": "fd360f348fbba2d8bb7cd462a4f61dfa0601642ecf695f417b09fa944c3d481e",
+      "targetedPass": 16,
+      "skip": 0,
+      "sourceInputsUnchanged": true,
+      "covers": [
+        "RATP sameprincipal differentexecution refusal",
+        "missingprofile/history/collection/principal blocked",
+        "expiredauthorqualification retainsidentity",
+        "missingthenrestoredsource remains stale",
+        "legitimate distinctprincipal RATP/test/Builder",
+        "reject->author->newreview"
+      ],
+      "fullPriorMatrix": "notrunonthisversionyet",
+      "independentP1Closure": "pending",
+      "originalIndependentFixtureRecheck": {
+        "session": 85764,
+        "testExit": 0,
+        "NativeExit": 2,
+        "receiptCount": 0,
+        "sameAuthenticatedPrincipalAndDifferentExecutions": true,
+        "fixtureCollectorGateUnchanged": true,
+        "rawShaPrefix": "bc65f435",
+        "independentClosure": "stillpending"
+      },
+      "currentFullMatrix": {
+        "session": 78235,
+        "total": 90,
+        "status": "agentreportedrunning;strictauthorshipprerequisitesnotwaived"
+      },
+      "VKnowledgeTargeted": {
+        "pass": 4,
+        "taskCLI": "actualtask-complete/id/expect",
+        "oldBuilderNoTickClaim": "priorUsagecollisionSETUP;notinherited"
+      },
+      "additionalSnapshotRed": "tamperedGateDispatchinputSnapshotcouldclaim;sharedsync/read/claim/acceptintegrityfixinprogress",
+      "newSourceCandidate": "25295eca privatebuild;notaccepted",
+      "newTargetedPass": 21,
+      "newRelated": {
+        "session": 67384,
+        "exit": 0,
+        "pass": 481,
+        "WindowsNotExercised": 4
+      }
+    },
+    "reworkCandidate": "d0b0d07302e1732463179130c9824b3ef6ced69c",
+    "reworkScopeStatus": "frozenconstruction21targeted,but90matrix50pass40missingprerequisite;notwhole",
+    "remaining": [
+      "legitimateNativeproducerpreconditions forold40",
+      "authenticatedknowledgewriter collection/code method binding",
+      "independentP1andinputSnapshot integrityreview"
+    ],
+    "RootIntegrated": false,
+    "legalFixtureRestoration": {
+      "agent": "/root/observer_qualification",
+      "RDesignPlanPass": 10,
+      "sourceUnchangedFromd0b0": true,
+      "setupFailure": "missingensureRuninitialattemptretained",
+      "remaining": "realtest/Builder/review/taskcompletionpremises;knowledgecreator/writerCODEinterface"
+    },
+    "knowledgeInterfaceDecision": {
+      "source": "worker-reports/P2_4-native-fixtures-r2/KNOWLEDGE-INSERTION-PLAN.md in originalworker",
+      "Kp": "original full.archive.execute beforeSpecarchive",
+      "Kt": "original full.closeout.knowledge afterarchive beforecompleted",
+      "stateOwner": "originalRun.pending/trajectory/artifacts/collection",
+      "extra0003CreatorWriterFields": false,
+      "methods": "registeredrealCODEdescriptorsnotfakeSKILL;missingprovenanceblocks",
+      "order": "creator->independentcontentreview+authorization->actualwriter->independentreadback",
+      "actualMcpOrOutlineActivated": false,
+      "implementation": "originalP2_4scope authorised;crossownertransportnotchanged"
+    }
+  },
+  "provider_execution_intake": {
+    "agent": "/root/registry_qualification",
+    "status": "QUALIFICATION_CODE_CONFIG_PLAN_ACTIVE_NO_REAL_CLI_STARTED",
+    "observed": [
+      "I02hardnetworknone and no job.argv/frame execution",
+      "no canonical output transfer",
+      "Codex0.163actualCLI/schema generated without auth/model",
+      "schema environments=[] and dynamicTools declarations;noactualbridgequalification"
+    ],
+    "notSelected": [
+      "newAPIkeyrequirement",
+      "modelgateway/newcontroller",
+      "productioncredentialbackend"
+    ],
+    "remaining": "actual sameRun tool/model/source/handle/output/journal binding and role/OSnegativeproof",
+    "candidate": "c8f687d27ef5d06c0611790540ca22239e99092b",
+    "report": "worker-reports/P1_3-provider-intake/REPORT.md",
+    "implementationScope": "existingownedmodule+existingtest,versionedboundedstdio/client/routeronly",
+    "realCLIStartup": "NOT_AUTHORIZED_NOT_RUN",
+    "authentication": "existingCLIreusecandidateonly;notverifiedandnotsecret-refresolved",
+    "noNewControlPlane": true,
+    "qualificationFindings": [
+      "version0.163disabledPluginIdsdoesnotfiltercapabilities",
+      "multiAgentModeignored",
+      "shell_toolfalseindependentfromenvironmentsempty",
+      "mcp_servers={}recursivelymergesnotdenyunknownservers",
+      "notifyindependentfromhooksfalse",
+      "fixedHostactivechangeDirandstateonlyentrynotpostarchiveSpec/knowledgebridge"
+    ],
+    "nextCODEInterfaces": [
+      "initializeconnectionseparatefromthreadturnstart",
+      "allowtruedynamicToolsemptywithoutfaketool",
+      "HostresolveactualsingleRunlocationviaexistingSpecAdapternotlatestarchive",
+      "fixedCODEarchive/knowledgeadmissionnotarbitraryCLIforward"
+    ],
+    "S0StartupBoundary": {
+      "initOnly": "no client thread/turn,butnotzeroauth/network/write",
+      "sourceFact": "AuthManager/cloudconfig/EnvironmentManager/SQLitebeforeinitialize",
+      "strictConfigRequired": true,
+      "actualCLIStarted": false,
+      "profileNext": "exact effectiveconfigclosure/no inheritedunknownmcp/notify;noHOMEmutation"
+    }
+  },
+  "I02_toolchain_bootstrap": {
+    "agent": "/root/method_profile",
+    "sourceCode": "1c66edf",
+    "phase": "ACTUAL_STAGE_A_TDD_RUNNING_PUBLIC_B_AND_WHEEL_DONE",
+    "plan": "worker-reports/Root-I02-bootstrap-plan/plan.md",
+    "scope": "5existingownedpaths;exactpublicactionsawaitRootreview;noReady/secret/upGate",
+    "nativeResumption": "followupaftercompletedread-onlyturn;priorSourceAuthorizationMessagealoneneverclaimedlaunched",
+    "B": {
+      "scope": "publicimmutableimageowner/license/versionhash",
+      "commands": 2,
+      "exit": [
+        0,
+        0
+      ],
+      "session": 35570,
+      "modelOrCredentials": false
+    },
+    "PyYAML": {
+      "metadataHTTP": 200,
+      "wheelBytes": 775116,
+      "wheelSha256": "9149cad251584d5fb4981be1ecde53a1ca46c891a79788c0df828d2f166bda28",
+      "downloaded": true,
+      "installed": false
+    },
+    "fullImageBuild": "CONSTRUCTION_BUILD_AND_ISOLATED_READBACK_EXIT0",
+    "whole": "UNVERIFIED",
+    "C_HEAD": {
+      "session": 46382,
+      "requests": 481,
+      "status200": 481,
+      "contentLengthAbsent": 481,
+      "lengthQualification": "UNVERIFIED",
+      "binaryGETAtThatPoint": 0,
+      "retry": 0,
+      "plan": "3c47d995c223aa724ce2a26b9793cfc67185944a8fe7cfc196507a3cf43f7794"
+    },
+    "C_GET_scope": {
+      "urls": "same481exactfrozenSRIfromplan",
+      "perFileMaxBytes": 33554432,
+      "aggregateMaxBytes": 268435456,
+      "concurrency": 4,
+      "auth": false,
+      "redirect": false,
+      "scripts": false,
+      "status": "boundeddownloadauthorized;actualresultsawaited"
+    },
+    "C_GET_actual": {
+      "session": 94972,
+      "requests": 481,
+      "http200": 481,
+      "streamBytes": 118362711,
+      "largestBytes": 17796365,
+      "downloadProgramStatus": "AttributeError on final socketdeadline;all481originalUNVERIFIED receipts preserved",
+      "newNetworkOnReconciliation": 0,
+      "localReconciliation": "481size/SHA/frozenSRI verified then atomicpublish",
+      "closureInstalled": false
+    },
+    "PM_hydration_prototype": {
+      "session": 74722,
+      "listenerOwnedPID": 1296,
+      "listenerClosed": true,
+      "outsideNetwork": 0,
+      "result": "officialpnpm import ERR_PNPM_NO_OFFLINE_META;no forgedmetadata",
+      "newFixtureLock": "notauthorized",
+      "next": "minimalLinux originalCometlock/fixedpublictar officialfetch plan awaited",
+      "fullImageBuild": "notrun"
+    },
+    "codeCheckpoint": {
+      "commit": "205aa3c47030b562176731ccc5ddc63a112109de",
+      "ownPass": 14,
+      "prior92": "NOT_REVALIDATED",
+      "whole": "UNVERIFIED",
+      "RootIntegrated": false
+    },
+    "LinuxMechanism": {
+      "planSha256": "41531bc3d578bb63483adb67296004176009a1b35a2e95741d09a1849cdf77ce",
+      "RootSession": 27955,
+      "pid": 20441,
+      "exit": 0,
+      "imageId": "sha256:e0b77edb0b681efc0178359e9bee11bf14ef8a363d1fcf4d3408ea915d4e19c1",
+      "verifiedInputFiles": 434,
+      "inputBytes": 116952314,
+      "loopbackMemberGET": 429,
+      "sourceLockUnchanged": true,
+      "listenerClosed": true,
+      "sameSeedOfflineFetch": true,
+      "freshWorkspaceStoreProof": false,
+      "fullRunner": false,
+      "evidence": "worker-reports/Root-linux-pnpm-cache-mechanism/REPORT.md"
+    },
+    "FreshLinuxInstall": {
+      "session": 68287,
+      "pid": 30400,
+      "exit": 0,
+      "imageId": "sha256:b4697a8ddafcf4150da93880b94c271be5293ebc535fdce0fb061e941e2449d9",
+      "verifiedFiles": 435,
+      "inputBytes": 116963203,
+      "originalManifestLockUnchanged": true,
+      "initialNodeModulesAbsent": true,
+      "oldVirtualStoreNotReused": true,
+      "resolved": 429,
+      "reused": 429,
+      "downloaded": 0,
+      "added": 429,
+      "physicalNetwork": "none",
+      "listenerClosed": true,
+      "fullCometBuild": false,
+      "wholeRunnerQualified": false,
+      "evidence": "worker-reports/Root-linux-pnpm-fresh-install/REPORT.md"
+    },
+    "next": "Close producer provenance and actual host execution before a production Runner qualification; current image retains frozen old SDK.",
+    "full106Latest": {
+      "session": 48536,
+      "pass": 106,
+      "fail": 0,
+      "skip": 0,
+      "sourceInputsUnchanged": true,
+      "original103_3": "preserved",
+      "oracleSemantics": "samepinnedOpenSpec+projectlock+offlineci+CLI;allotherassertionsretained",
+      "RootIndependentReview": "awaitfinalcommit",
+      "fullImage": "NOT_EXECUTED"
+    },
+    "fullImageCandidate": {
+      "planSha256": "406a7427ada211cb57a591c2e127cdce53760d83e004246a8194e71d2b488649",
+      "contextManifestSha256": "a612a7bf3caeccb4fe7b2a386c62ef9bfa1a84bd7b788101d71cb45427847e5a",
+      "files": 582,
+      "bytes": 182715915,
+      "bootstrap": "55ac772e81495c5575ccae0dacb9ef7ff140383b10d9516b39f3885ab93fb9f3",
+      "executed": true,
+      "previous918541": "NOT_RUN_RETIRED_CANDIDATE",
+      "RootCode": "1f6ec33",
+      "buildExit": 0,
+      "readbackExit": 0,
+      "imageId": "sha256:fad4c6a6ee25a0c65a0c665a7599d2b192ebe42e9bb490b2702c0fd1e718736c",
+      "imageIdKind": "local config ID; RepoDigests empty",
+      "report": "worker-reports/Root-I02-full-runner-build/REPORT.md",
+      "productionQualified": false
+    },
+    "finalCodeCandidate": {
+      "commit": "7e48fbebe8af726838c84e16566e123cba125e3d",
+      "authorFullPass": 106,
+      "skip": 0,
+      "RootIntegrated": false,
+      "independentStandards": "REQUEST_CHANGES_P2",
+      "reason": "comment-onlyOpenSpecinstall/linkacceptedandbuildargvemitted",
+      "runtimeQualificationForged": false,
+      "proof": "worker-reports/I02-fullrecipe-review-rework/standards-P2.md",
+      "originalAuthorRework": "/root/method_profile"
+    },
+    "recipeP2RepairDecision": {
+      "scope": "originalI02sameownedpaths",
+      "approach": "protectedrunner-code pinned complete executable template size/SHA;not callerlock",
+      "tail": "only nonexecutingcomments/blankaftercomplete template;originalsecret/pathscanretained",
+      "badVariants": [
+        "comment-onlyCLIlink",
+        "commentednpmci",
+        "blockcomments",
+        "if(false)",
+        "extraexecutionaftertemplate"
+      ],
+      "newGenericInterpreter": false,
+      "old918541Build": "stillNOT_EXECUTED",
+      "status": "DUAL_REVIEWED_ROOT_INTEGRATED_CONSTRUCTION_ONLY",
+      "authorCompleteRegression": {
+        "session": 65071,
+        "pid": 3439,
+        "pass": 106,
+        "fail": 0,
+        "skip": 0,
+        "templateAndImageLockChanged": false,
+        "prior106PrefixUnchangedBytes": 112099,
+        "variantsByCallers": "17x7 plus safetail/unsafe suffix",
+        "independentReview": "pendingnewfrozencommit",
+        "fullImage": "stillNOT_RUN"
+      },
+      "frozenCandidate": "7bdb16dbfce5507943bb7d3099d191e7b719cffc",
+      "independentReview": "Standards R2 18/18; Spec source support; Root original missing-manifest mutation passed",
+      "integrationCommit": "1f6ec33",
+      "RootOwnedAndCallers": {
+        "tests": 239,
+        "pass": 239,
+        "fail": 0,
+        "skip": 0,
+        "inputStable": true
+      },
+      "RootRepository": {
+        "tests": 1104,
+        "pass": 1104,
+        "fail": 0,
+        "skip": 0,
+        "inputStable": true
+      },
+      "originalFailuresPreserved": true,
+      "evidence": "worker-reports/Root-I02-formal-recipe-integration/REPORT.md"
+    }
+  },
+  "controller_handoff": {
+    "status": "READY_FOR_SUCCESSOR_NOT_DELIVERY_COMPLETE",
+    "requestedBy": "human current conversation",
+    "document": "HANDOFF-EXECUTION-2026-10-26.md",
+    "originalControllerDispatchAllowed": false,
+    "currentTaskWriters": 0,
+    "sourceChangesAlreadyApplied": true,
+    "pendingSourceFilesManifest": "worker-reports/Root-handoff-20261026/snapshot.json",
+    "pendingSourcePatch": "worker-reports/Root-handoff-20261026/pending-source.patch",
+    "sameDagRequired": true,
+    "monitor": "sdd ACTIVE observer-only; no auto dispatch or original controller resume",
+    "goalStatus": "active; not claimed complete or paused",
+    "successorFirstAction": "read handoff, revalidate processes/source and register sole takeover in original state/ledger"
+  }
+}

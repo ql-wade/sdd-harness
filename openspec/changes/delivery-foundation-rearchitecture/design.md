@@ -1,41 +1,35 @@
-> 2026-10-20：三方同摘要架构共识已通过，允许分批实施；本文件描述目标，运行启用尚未验收。原92场景与所有权不变。
-
 ## Context
 
-现场基线 c42d3ce，OpenSpec 1.3.1，无已有活动变更。既有 ADR-0015 排除编排；历史 Foundation 设计曾评估 TeamAI workflow；本轮用户已确认 TeamAI 只分发、Comet 唯一交付主控候选、目标后默认自动推进。
+2026-10-26用户明确收敛为原生Comet命令、现有Agent宿主技能调用和硬门；六角色常驻服务及其强制资格化退休。旧设计及票已保存于replans/2026-10-26-command-first/before，不能把旧批准改绑到新摘要。
 
 ## Goals / Non-Goals
 
-目标：六环节输入/输出与失败路由明确，状态单写者、证据可信、固定基线、恢复和 CI/CD 闭环。非目标：重造调度器、批量修改技能、首期多服务部署。
+目标：需求、架构、测试设计各自过门，计划/测试自动化/实现/验收分别执行；沿原Run完成项目知识、唯一OpenSpec归档、团队发布与持续权限维护。非目标：重造Agent通信/调度系统、强制角色服务、常驻controller端口或首期Control API。
 
 ## Decisions
 
-采用 [统一设计](../../../docs/architecture/delivery-architecture.md) 与 [ADR-0019](../../../docs/architecture/adr/0019-delivery-foundation.md)。TeamAI 首期只分发，Comet 为唯一交付主控候选，Gate 无 current-stage，Spec Adapter 在 Comet 唯一收尾路径中工作；所选模式和硬门禁接入仍需实证。默认旧 scaffold，实证后显式启用 delivery profile。
+当前权威为[命令优先架构](../../../docs/architecture/comet-ai-devops-convergence.md)和[ADR-0021](../../../docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md)。此处覆盖旧统一架构中与该决定冲突的部署要求；ADR-0015定位及原单主控、权限、恢复、G15/R10功能边界继续。
 
-## Risks / Trade-offs
-
-- 上游源码与分发包不一致：固定产物与完整性，真实探针。
-- 双 Guard/配置覆盖：正反序装配、用户条目保留、单 reconciler，失败 NO-GO。
-- 自评伪造证据：受管 Runner/受保护策略；本机模式明确协作信任限制。
-- 状态重复或漂移：唯一 owner、关联 ID、旧 attempt 拒绝、恢复读回。
-- 旧技能 controller 活跃：profile 切换需显式停用/接管实证，不能仅改文案。
-
-## Breaking Changes
-
-本批仅文档，无 CLI/config/schema 破坏变更。目标 profile 会改变技能调用职责；旧报告经 adapter 兼容，不静默重写。未来 schema 或上游 pin 变化需要显式迁移。
+- /comet与五个原阶段入口均使用原状态和共同Guard；A/T独立，P只产唯一计划。
+- 当前宿主提供真实模型、技能、独立Agent、MCP及权限；不自建app-server transport、签发平台或第二执行队列。
+- Docker仅实际依赖，LLMWiki默认stdio MCP，Outline团队知识、deepwiki-open代码Wiki、CodeGraph可选。
+- 原始事件/测试/CI/资源回读证明来源；角色名、自写pass或同用户签名不能证明独立。不能强制权限的宿主如实不支持，不假称安全隔离。
+- 需求/设计变更使全部下游单调失效。知识正文产出后冻结，输出按原精确check-policy提前声明，不事后排除源码/权限保住旧V。
+- Kp在archive之前，Kt在整体completed之前；归档后同Run pending与未知结果先观察原operation。
 
 ## Migration Plan
 
-Batch 0 文档；Batch 1 固定产物与装配实证；Batch 2 契约/Gate；Batch 3 单任务；Batch 4 CI/CD；Batch 5 团队扩展。详见 tasks.md。启用前保留配置备份和旧入口；停用 profile 不删除历史，外部副作用独立恢复。
+沿原39节点/69工作包，先打通P1_3/P2_4/P2_5/P1_5/P3_2的真实R→V；取消对I02镜像与全部知识栈的先行依赖。随后真实知识与平台/维护恢复。I02改为退休默认六角色部署、保全旧资源与可选临时作业，不删数据；P5_2/F10正向另期不阻本期P5_3。
+
+每项TDD、文件、RED/GREEN和退出条件见tasks.md，依赖见唯一task-dag.json，完整检查见execution-contract.json。保留所有原节点/场景/检查ID和历史失败；改变的是拓扑和合理证明方式，不是删除功能性验收。
+
+## Risks / Trade-offs
+
+- 简化成提示词：所有真实入口共同硬门和实际来源/独立审查必须验证。
+- 宿主权限不足：核实际能力，不以角色标签充当权限，不暗中回建六服务。
+- 权限撤销/未知写入：保留正常发现3分钟/隔离2分钟目标及故障告警/补偿，既有调度只触发同Comet维护。
+- 历史证据漂移：旧镜像、私有SDK及fixture仅原范围复用，新revision重新验收；当前九文件未接纳源差异不能盲目应用两次。
 
 ## Validation
 
-92 个 Given/When/Then 场景见 specs/delivery-foundation/spec.md。分四层报告：内核/夹具、CLI/装配、真实宿主、业务/CI。结构校验不等于产品 PASS。具体业务试点和环境在 Batch 3 前选择。
-
-## 2026-10-22 修复验收补充
-
-用户授权修订同一计划以关闭7个P1，不扩张控制器/平台/知识源选型。按既有C01、D01–D04、E03–E04和L10–L11落实正式设计前R门、真实独立A/T接纳、单调失效代际以及实际Comet故障恢复；observer必须验证每个required目标/终态读回。原92场景及原任务不增删。新增10个检查强化这些既有要求，并以同产品Run完整交付、归档后恢复、关联维护的真实资源终态为最终oracle。原有纯函数/CLI/fixture保留为支持证据，不能替代跨边界验收。
-
-## 2026-10-24 实施收敛
-
-按用户最新要求执行旧入口退出/防再生及新Comet流程。细化架构见docs/architecture/comet-ai-devops-convergence.md和ADR-0020。追加N01–N12，保留原92场景、任务身份和唯一DAG。新profile0验收，原证据历史保存。知识上下文检索、真实方法/角色、独立审查、平台、Kp→归档→Kt与持续权限维护形成实际链；不把旧测试编舞视为新业务Run。
+104场景身份保留，本期103与129required必须在最终真实Run验证；F10明确NOT-EXERCISED。当前只验证计划和OpenSpec结构，不运行产品测试或原型，不触发新资料外发/知识写/ACL。

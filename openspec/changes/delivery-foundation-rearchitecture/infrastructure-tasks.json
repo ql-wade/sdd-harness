@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
   "kind": "infrastructure-planning-dag-augmentation",
-  "execution_scope": "PLAN_AND_HANDOFF_ONLY_NO_IMPLEMENTATION_OR_DISPATCH",
-  "target_runtime": "Comet Classic sole controller",
+  "execution_scope": "PLANNING_ONLY: native host commands and necessary infrastructure",
+  "target_runtime": "Comet Classic original Run on existing Agent host",
   "planning_controller": "claude-parallel-tdd-planner only for plan/handoff; no activation by these artifacts",
   "canonical_plan": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
   "original_parent_count": 30,
@@ -117,7 +117,7 @@
   "tasks": [
     {
       "id": "I01",
-      "title": "独立资源登记、版本准入与秘密引用",
+      "title": "必要资源与既有连接器登记",
       "depends_on": [
         "P0_4"
       ],
@@ -127,6 +127,7 @@
         "I04",
         "I05",
         "I06",
+        "I07",
         "VERIFY"
       ],
       "original_task_ids": [
@@ -152,12 +153,12 @@
       ],
       "interfaces": [
         "Registry.v1 -> project/resource/owner/credentialRef/lockRef/authority/domain/retention, no secret values",
-        "SecretRef.v1 -> purpose-bound opaque reference resolved only by allowed service principal",
-        "Qualification.v1 -> exact source commit, image digest/platform/size, license, health API and backup compatibility evidence before up"
+        "SecretRef.v1 -> existing authenticated connector or purpose-bound native host reference, no new secret service or mandatory model API key",
+        "Qualification.v2 -> exact installed command or necessary service identity, version/license/permissions/readback/recovery, image evidence only for deployed dependencies"
       ],
       "inputs": [
         "项目owner ql-wade与可信委托范围；GitHub仓库1285806550、主体262266039须在执行时重新读回",
-        "每资源独立service principal、owner/备用owner与用途/受众；公开仓库不代表所有外部知识/附件可公开",
+        "每资源实际既有连接器/宿主授权范围、owner/备用owner与用途/受众；公开仓库不代表所有外部知识/附件可公开",
         "独立秘密存储/运行时引用机制与可验证授权；不得复用既有PAV项目资源、凭据、网络、数据库或卷",
         "各服务候选上游地址/发行物、平台架构、许可证和镜像来源待准入；锁未ready不得启动"
       ],
@@ -176,14 +177,10 @@
         "secret-ref:sdd-harness-pilot/backup-encryption"
       ],
       "red": [
-        "未知owner/用途或凭据引用跨项目解析失败；将普通Agent身份访问签发/发布材料实际拒绝",
-        "未固定镜像digest、缺许可证/平台/备份兼容证据时up入口拒绝；浮动tag或假digest不通过",
-        "引用包含秘密明文、宿主绝对路径或同一个凭据被不同高权角色复用时校验拒绝"
+        "不因服务账号可读、key存在、同名组或本地目录就认定权限/受众资格"
       ],
       "green": [
-        "仅实现注册表schema、只读解析与逐资源qualification gate；秘密只通过运行时授权挂载/secret store，不写入Git/报告",
-        "生成各组件配置所需引用，但不写mcp-capabilities/hooks等其它owner的唯一源；由对应P任务串行接纳",
-        "所有启动工具先解析相同registry与组件lock，状态ready前仅可validate/qualify"
+        "只登记实际试点、资料域、Outline文集、源/目标owner和已有身份引用"
       ],
       "probes": [
         "node --test test/infra-registry.test.js",
@@ -191,16 +188,16 @@
         "node tools/infra/registry.mjs qualify --resource <registered-resource-id> --json"
       ],
       "oracle": [
-        "原始owner/权限读回与拒绝日志匹配project1285806550和真实principal；无秘密值输出",
-        "资格回执绑定实际image digest/commit、平台和输入摘要；配置有效与运行ready分开"
+        "Actual required command/service/permission/readback evidence on current revision; no mock-only qualification",
+        "No role container/image requirement unless this is an explicitly selected temporary job; old evidence remains historical"
       ],
       "backup": [
         "登记每资源RPO/RTO、保留期、加密/恢复owner与销毁前置，未确认不可启用自动清理",
         "秘密备份与数据备份分离；引用不存在或恢复密钥不可用则停止恢复，不生成新密钥掩盖原密文不可读"
       ],
       "parallel_safe": false,
-      "status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
-      "requires_before_start": "I01 registry qualification and component image/source digest/owner/secrets readiness verified",
+      "status": "PLANNED_COMMAND_FIRST_NOT_IMPLEMENTED",
+      "requires_before_start": "Registered real resource/owner and scope-specific authorization for actual side effects; no role-service or custom RPC prerequisites",
       "evidence": {
         "data": "required",
         "logs": "required",
@@ -208,23 +205,18 @@
       },
       "not_applicable_reasons": {
         "screenshots": "该基础设施任务以真实CLI/进程/权限/存储读回为主；对应原UI/浏览器验收仍由92场景单独保留，不因工具缺失豁免。"
-      }
+      },
+      "planning_revision": "2026-10-26-command-first-v1"
     },
     {
       "id": "I02",
-      "title": "固定Comet Runner及真实OS/container角色隔离",
+      "title": "退休六角色常驻部署与按需临时作业边界",
       "depends_on": [
         "I01",
         "P1_1",
-        "P2_4",
-        "P2_5",
-        "P3_1"
+        "P1_3"
       ],
       "before": [
-        "P1_3",
-        "P3_2",
-        "I07",
-        "I08",
         "VERIFY"
       ],
       "original_task_ids": [
@@ -260,49 +252,35 @@
         "test/infra-runner-isolation.test.js"
       ],
       "interfaces": [
-        "RunnerInfra.v1 validate|qualify|up|probe|stop -> process/mount/principal observations only",
-        "RoleBoundary.v1 -> immutable tool image, distinct principal/mount/credential scopes for controller/author/test-author/reviewer/publisher/isolator",
-        "Authority.v1 -> one fixed Comet authority and workspace; startup refuses copied state or concurrent writer"
+        "HostInfra.v2 -> existing host command/tool permission evidence and retirement of resident role deployment, optional temporary jobs only",
+        "Host.RoleBoundary.v2 -> real independent sessions, native read/tool/path scopes and protected CI or connector authorization, no mandatory role containers",
+        "Authority.v2 -> one original Comet writer and workspace under native lock and transaction; host invocation refuses conflicting original Run writers and does not create a peer controller"
       ],
       "inputs": [
-        "Runner实际owner、单实例服务标识、可持久卷与authority登记；本机交互式宿主不直接标secure Runner",
-        "角色工作空间的真实sandbox实现与UID/GID/容器权限、只读输入/结果输出渠道；支持能力不足即cooperative-local/NO-GO",
-        "受控Comet源补丁构建产物、完整摘要和生成入口；依赖P1_1固定工具链和后续P2_4行为门禁",
-        "所有worker无Docker socket、宿主HOME、控制状态/策略/签发材料读写权；controller发布凭据也按动作隔离"
+        "Current native host permission/session/tool evidence from P1_3",
+        "Inventory of old role compose/install/default probe references and existing containers/volumes",
+        "Explicit cleanup boundary; unresolved Run/data must be preserved"
       ],
-      "secret_refs": [
-        "secret-ref:sdd-harness-pilot/runner-authority",
-        "secret-ref:sdd-harness-pilot/worker-author-api",
-        "secret-ref:sdd-harness-pilot/worker-review-api",
-        "secret-ref:sdd-harness-pilot/runner-source-read"
-      ],
+      "secret_refs": [],
       "red": [
-        "以实际worker身份经Edit/Shell/MCP分别写.comet/run-state.json、策略、回执与签发目录；实际拒绝并保留errno/请求",
-        "挂载宿主凭据/访问Docker socket、使用只读driver写产品文件、复制state后第二实例启动分别拒绝",
-        "杀掉controller后不能由worker自行领取phase/重试；旧owner/attempt结果由Comet拒绝，基础设施不伪造新operation"
+        "默认安装/命令不能创建六角色服务；缺临时Docker不阻普通命令；未批准不删知识/控制卷；只读与控制写仍由宿主权限/CI拒绝"
       ],
       "green": [
-        "镜像由精确已锁Comet源及项目补丁构建，启动前固定image digest；只读根文件系统、最小capabilities/权限和独立角色挂载",
-        "唯一Comet状态/锁/事务仍在其受管持久卷；infra仅启动/停止进程，不维护DAG/phase/job queue",
-        "工件/角色结果通过受控入口交原Comet；普通Agent不可构造可信dispatch身份，不能只靠env角色字符串或同主体签名"
+        "退出六服务compose及默认启动/资格前置，保留必要通用检查和按需作业；记录旧容器/卷/镜像归属"
       ],
       "probes": [
-        "node --test test/infra-runner-isolation.test.js",
-        "node tools/infra/runner.mjs validate --registry infra/delivery/registry.json --json",
-        "node tools/infra/runner.mjs probe --case role-denial --json",
-        "node tools/infra/runner.mjs probe --case duplicate-authority --json"
+        "node --test test/infra-runner-isolation.test.js # owner first rewrites oracle for retired deployment and native/optional-job boundaries"
       ],
       "oracle": [
-        "真实container inspect/UID/mount/权限和负向写结果，分别对应Edit/Shell/MCP，不以容器配置文本代替实测",
-        "原RunID和operation恢复读回；两个启动请求只有一个有效Comet写者，控制目录不存在worker可写路径"
+        "Actual required command/service/permission/readback evidence on current revision; no mock-only qualification",
+        "No role container/image requirement unless this is an explicitly selected temporary job; old evidence remains historical"
       ],
       "backup": [
-        "持久化Comet Run、锁/事务恢复资料、工件/回执与批准payload；临时worker工作区与控制卷分开",
-        "restart policy仅原实例监督；未确认旧写者终止不得复制卷另启；跨主机恢复交I08证明受控迁移"
+        "Preserve old image/role-volume identity and unresolved original Run/data before retirement; never delete volumes in this planning revision"
       ],
       "parallel_safe": false,
-      "status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
-      "requires_before_start": "I01 registry qualification and component image/source digest/owner/secrets readiness verified",
+      "status": "PLANNED_COMMAND_FIRST_NOT_IMPLEMENTED",
+      "requires_before_start": "Registered real resource/owner and scope-specific authorization for actual side effects; no role-service or custom RPC prerequisites",
       "evidence": {
         "data": "required",
         "logs": "required",
@@ -310,16 +288,18 @@
       },
       "not_applicable_reasons": {
         "screenshots": "该基础设施任务以真实CLI/进程/权限/存储读回为主；对应原UI/浏览器验收仍由92场景单独保留，不因工具缺失豁免。"
-      }
+      },
+      "planning_revision": "2026-10-26-command-first-v1"
     },
     {
       "id": "I03",
-      "title": "Outline独立资料域、Postgres/Redis、OIDC与对象存储",
+      "title": "必要Outline栈与受管文集",
       "depends_on": [
         "I01"
       ],
       "before": [
         "P4_7",
+        "P4_4",
         "I08",
         "VERIFY"
       ],
@@ -375,14 +355,10 @@
         "secret-ref:sdd-harness-pilot/outline-isolator"
       ],
       "red": [
-        "未登录/普通读者/离组用户对集合、页面、子树、公开分享、搜索和附件逐通道访问负例；实际拒绝/残留路径分别报告",
-        "来源交集不包含目标读者、分页失败、无法映射principal、过期grant时受管发布阻断；不能以admin读得到替代",
-        "重启应用/数据库后测试页和附件可读回；更新冲突409不盲覆盖；超时/403不能解释为目标不存在"
+        "healthy不是发布权限；额外对象存储无实际需要不增建，缺owner/受众不能自动发布"
       ],
       "green": [
-        "锁定镜像后搭建独立Postgres/Redis/应用/存储和最小网络权限；loopback暴露不得自动开公网",
-        "接OIDC及专用受管文集，保存真实ID和有效受众查询能力；一般用户不能改issuer/secret/isolator角色",
-        "分别验证健康、登录、CRUD/readback/附件持久化、权限负例和受管发布/隔离API的真实参数；缺MCP参数时对应P任务建设薄adapter"
+        "复用必要Outline/Postgres/Redis和既有附件方案，验证真实API/权限/数据持久化与恢复"
       ],
       "probes": [
         "node --test test/infra-outline.test.js",
@@ -393,26 +369,27 @@
         "managed-publish"
       ],
       "oracle": [
-        "原生浏览器登录/页面/分享行为截图+关联请求，独立用户权限/API/数据库与对象存储读回；不共享其它应用会话",
-        "effective audience闭包含collection/parents/page/groups/shares/public入口，未覆盖访问路径不能宣称隔离；记录附件URL缓存残留风险"
+        "Actual required command/service/permission/readback evidence on current revision; no mock-only qualification",
+        "No role container/image requirement unless this is an explicitly selected temporary job; old evidence remains historical"
       ],
       "backup": [
         "一致性备份Postgres、附件对象和配置引用/issuer映射；Redis角色与恢复策略按部署选型证明，不当权威授权库",
         "还原到独立资源先保持封闭访问，当前OIDC成员和源权限重验后才由Comet安排恢复；不回放旧ACL重加离组成员"
       ],
       "parallel_safe": false,
-      "status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
-      "requires_before_start": "I01 registry qualification and component image/source digest/owner/secrets readiness verified",
+      "status": "PLANNED_COMMAND_FIRST_NOT_IMPLEMENTED",
+      "requires_before_start": "Registered real resource/owner and scope-specific authorization for actual side effects; no role-service or custom RPC prerequisites",
       "evidence": {
         "data": "required",
         "logs": "required",
         "screenshots": "required"
       },
-      "not_applicable_reasons": {}
+      "not_applicable_reasons": {},
+      "planning_revision": "2026-10-26-command-first-v1"
     },
     {
       "id": "I04",
-      "title": "项目LLMWiki MCP、索引与worktree安全路径",
+      "title": "项目LLMWiki stdio MCP",
       "depends_on": [
         "I01",
         "P1_1"
@@ -460,14 +437,10 @@
         "secret-ref:sdd-harness-pilot/llmwiki-source-read"
       ],
       "red": [
-        "不同worktree/CLI/MCP指向另一wiki、目录穿越/符号链接越域、错误project ID分别拒绝",
-        "源码/正式spec或任务勾选被当wiki事实权威时拒绝；未经批准全Git代码摄入不允许",
-        "MCP写成功但独立索引/存储读回不一致时Kp失败，不因本地文件存在放行归档"
+        "跨项目路径/绕索引写、整仓入库、无授权或错误schema拒绝；不新增常驻HTTP服务"
       ],
       "green": [
-        "固定真实目录与项目标识、可重建索引和最小MCP能力；保持项目知识与OpenSpec specs/tasks及Comet状态分离",
-        "用隔离配置验证CLI/MCP/worktree同一规范路径；新宿主真实发现工具后完成知识写入及独立查询",
-        "清楚区分raw/staging/curated及index缓存，索引不能覆盖源记录或改知识授权"
+        "由现有宿主启动项目MCP，实际检索/精华写入/索引与版本读回"
       ],
       "probes": [
         "node --test test/infra-llmwiki-paths.test.js",
@@ -476,16 +449,16 @@
         "node tools/infra/llmwiki.mjs probe --case escape-denial --json"
       ],
       "oracle": [
-        "同一批准条目通过真实MCP写入、独立CLI/文件/索引查询同一项目读回；两工作树canonical root一致",
-        "未通过门禁时同一Comet Run的归档保持阻断；基础设施只返回事实，不签Kp回执"
+        "Actual required command/service/permission/readback evidence on current revision; no mock-only qualification",
+        "No role container/image requirement unless this is an explicitly selected temporary job; old evidence remains historical"
       ],
       "backup": [
         "wiki精华源工件/来源与版本必须备份，索引可重建但要校验摘要和权限过滤；不能只备份向量/索引",
         "R10下未完成Run引用的wiki staging与唯一批准payload不得因索引重建或worktree回收丢失"
       ],
       "parallel_safe": false,
-      "status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
-      "requires_before_start": "I01 registry qualification and component image/source digest/owner/secrets readiness verified",
+      "status": "PLANNED_COMMAND_FIRST_NOT_IMPLEMENTED",
+      "requires_before_start": "Registered real resource/owner and scope-specific authorization for actual side effects; no role-service or custom RPC prerequisites",
       "evidence": {
         "data": "required",
         "logs": "required",
@@ -493,17 +466,17 @@
       },
       "not_applicable_reasons": {
         "screenshots": "该基础设施任务以真实CLI/进程/权限/存储读回为主；对应原UI/浏览器验收仍由92场景单独保留，不因工具缺失豁免。"
-      }
+      },
+      "planning_revision": "2026-10-26-command-first-v1"
     },
     {
       "id": "I05",
-      "title": "自托管deepwiki-open及独立CodeGraph",
+      "title": "代码Wiki与可选Graph",
       "depends_on": [
         "I01",
         "P1_1"
       ],
       "before": [
-        "P4_4",
         "VERIFY"
       ],
       "original_task_ids": [
@@ -543,14 +516,10 @@
         "secret-ref:sdd-harness-pilot/codegraph-source-read"
       ],
       "red": [
-        "未固定commit/镜像、未授权源码或错误项目源时拒绝启动/摄入；敏感代码不得用public服务作为替代",
-        "wiki生成失败/commit陈旧/语言覆盖不足不得提供新鲜度通过；graph缺失不能阻断正确性协议",
-        "删除/停用graph后正确性协议保持可执行，错误服务实例或其它PAV索引不可被当项目结果"
+        "新鲜度/来源不明不能充当设计事实；禁Graph仍正确，不把代码Wiki当正式团队知识"
       ],
       "green": [
-        "固定自托管版本和专用存储/网络，生成精确commit的code wiki；graph部署成可选独立结构查询组件",
-        "分别输出wiki生成manifest与graph coverage，外层纯gate按事前policy判断，不建立自己的调度/阶段",
-        "optional关闭时报告未启用且不称已验证；若policy要求code wiki则必须真实API/MCP独立读回"
+        "按真实需要自托管deepwiki-open并绑定repo/commit；CodeGraph默认可关闭"
       ],
       "probes": [
         "node --test test/infra-code-knowledge.test.js",
@@ -559,16 +528,16 @@
         "node tools/infra/code-knowledge.mjs probe --case graph-disabled-correctness --json"
       ],
       "oracle": [
-        "实际容器/进程、认证API/MCP响应、repoID/commit与生成manifest一致；抽查wiki引用准确性，结构查询有独立coverage",
-        "错误commit/私有源越权/语言缺口真实负例；停graph后相同候选正确性测试真实重跑，不靠配置开关文本"
+        "Actual required command/service/permission/readback evidence on current revision; no mock-only qualification",
+        "No role container/image requirement unless this is an explicitly selected temporary job; old evidence remains historical"
       ],
       "backup": [
         "备份生成策略/源版本/授权映射与必要wiki工件；graph可重建，重建必须当前权限重新拉取",
         "恢复不得复用已撤销代码源缓存公开服务；worker/provider密钥不放在生成wiki或索引备份中"
       ],
       "parallel_safe": false,
-      "status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
-      "requires_before_start": "I01 registry qualification and component image/source digest/owner/secrets readiness verified",
+      "status": "PLANNED_COMMAND_FIRST_NOT_IMPLEMENTED",
+      "requires_before_start": "Registered real resource/owner and scope-specific authorization for actual side effects; no role-service or custom RPC prerequisites",
       "evidence": {
         "data": "required",
         "logs": "required",
@@ -576,11 +545,12 @@
       },
       "not_applicable_reasons": {
         "screenshots": "该基础设施任务以真实CLI/进程/权限/存储读回为主；对应原UI/浏览器验收仍由92场景单独保留，不因工具缺失豁免。"
-      }
+      },
+      "planning_revision": "2026-10-26-command-first-v1"
     },
     {
       "id": "I06",
-      "title": "Git/CI、Registry、制品与隔离目标环境连通",
+      "title": "已有Git/CI/制品与目标环境",
       "depends_on": [
         "I01"
       ],
@@ -633,14 +603,10 @@
         "secret-ref:sdd-harness-pilot/pilot-rollback"
       ],
       "red": [
-        "无远端修改授权时申请配置required checks拒绝；开发身份不能读取release/rollback secret",
-        "新head/mergeSHA复用旧check、缺项/skip/超时、tag改指不同digest实际阻断候选提升",
-        "部署成功但响应丢失先按原关联ID查询；未批准回滚请求被拒绝，已批准回滚要独立业务终态"
+        "错SHA/外repo/不明身份/排队或历史artifact不能当本次生产成功；真实外部写要具体授权"
       ],
       "green": [
-        "只登记读回Git/CI/Registry/隔离环境身份和权限；提供最小scope专用credential引用",
-        "将精确integration SHA、build digest、部署receipt与目标readback贯通；平台writer归既有P任务和Comet closeout授权",
-        "无真实平台写授权则本地试点保持LOCAL_ONLY，不伪报required checks已配置或生产交付"
+        "登记实际平台/required checks/构建digest/目标owner，沿已有流水线提供事实"
       ],
       "probes": [
         "node --test test/infra-platform.test.js",
@@ -649,16 +615,16 @@
         "node tools/infra/platform.mjs probe --case registry-environment-identity --json"
       ],
       "oracle": [
-        "实际Git/平台只读回执、精确SHA/digest与隔离部署身份；后续P4_1真实缺check阻断合并记录另验",
-        "禁止只以workflow YAML、管理员可读、模拟Status green或本地push成功宣称平台已保护"
+        "Actual required command/service/permission/readback evidence on current revision; no mock-only qualification",
+        "No role container/image requirement unless this is an explicitly selected temporary job; old evidence remains historical"
       ],
       "backup": [
         "保留精确源/策略/制品manifest和受保护check历史，恢复后旧证据不能给新SHA放行",
         "回滚同digest并保留上一已批准制品；凭据轮换或撤销后重新核验，备份不能恢复已撤权能力"
       ],
       "parallel_safe": false,
-      "status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
-      "requires_before_start": "I01 registry qualification and component image/source digest/owner/secrets readiness verified",
+      "status": "PLANNED_COMMAND_FIRST_NOT_IMPLEMENTED",
+      "requires_before_start": "Registered real resource/owner and scope-specific authorization for actual side effects; no role-service or custom RPC prerequisites",
       "evidence": {
         "data": "required",
         "logs": "required",
@@ -666,13 +632,14 @@
       },
       "not_applicable_reasons": {
         "screenshots": "该基础设施任务以真实CLI/进程/权限/存储读回为主；对应原UI/浏览器验收仍由92场景单独保留，不因工具缺失豁免。"
-      }
+      },
+      "planning_revision": "2026-10-26-command-first-v1"
     },
     {
       "id": "I07",
-      "title": "独立监控、告警与原Runner进程监督",
+      "title": "复用既有调度和外部告警",
       "depends_on": [
-        "I02",
+        "I01",
         "P2_4"
       ],
       "before": [
@@ -704,27 +671,21 @@
       "interfaces": [
         "Health.v1 -> heartbeat_age, complete_scan_watermark, unresolved_isolation/deadlines and authority identity; read-only",
         "Monitor.v1 -> external fault-domain registration and alert delivery/ack/escalation only, never business phase/retry/ACL",
-        "Supervisor.v1 -> restart same fixed Comet authority only after old writer gone; bounded attempts and escalation"
+        "Supervisor.v2 -> existing scheduler invokes original Comet maintenance and recovery after checking the old writer, no resident controller requirement; bounded attempts and escalation"
       ],
       "inputs": [
-        "Runner故障域之外的真实监控实例/owner/网络与持久性登记；同宿主container可证明进程故障，不能证明主机宕机2分钟发现",
-        "真实平台值班、知识权限值班、备用人/渠道与告警投递授权；当前任务不隐含通知发送授权",
-        "细分时限沿原契约：30秒心跳/30秒检查、>90秒心跳或>2分钟完整扫描无进展告警；最迟2分钟发现，另30秒投递目标，须容量/故障实证冻结",
-        "建议原实例10分钟内恢复并开始对账、5分钟最多3次重启；不是故障期5分钟隔离保证"
+        "Existing host/CI scheduler and authorized external alert channel",
+        "Same Comet maintenance command, scan watermark and deadlines"
       ],
       "secret_refs": [
         "secret-ref:sdd-harness-pilot/monitor-health-read",
         "secret-ref:sdd-harness-pilot/monitor-alert"
       ],
       "red": [
-        "Comet进程宕机、主机不可达、心跳正常扫描卡死分别注入；同机监控随主机停止时必须标故障域未满足，不能PASS",
-        "首次隔离失败即时事件未投递/主渠道失败转备用/值班未确认升级真实计时；未经授权仅prepare不发送",
-        "监督器不得改phase、创建Comet维护operation或直接写Outline ACL；重启原实例与停止旧写者分别审计"
+        "漏事件/不进水位/离线/隔离失败必须告警并由原Comet补偿；不得起独立controller服务"
       ],
       "green": [
-        "外部监控读既有Comet事实，分开心跳/接收游标/完整扫描水位/隔离结果；告警投递重投与业务重试分离",
-        "监督器仅进程级restart，Comet自己恢复事务、补偿、重试；未知旧写者存活或存储归属不明时停止双启",
-        "未登记外部监控和投递渠道则无人值守发布pre-enable阻断，允许标本地进程探针完成但不偷换主机故障能力"
+        "已有CI/宿主定时器触发同Comet权限维护；监控只观察水位/期限并告警"
       ],
       "probes": [
         "node --test test/infra-monitor.test.js",
@@ -734,28 +695,27 @@
         "node tools/infra/monitor.mjs probe --case scan-watermark-stall --json"
       ],
       "oracle": [
-        "外部时间戳+失联起点+监控判定+已授权渠道送达/升级回执，分别计算检测与投递，不把告警当已隔离",
-        "原authority/RunID恢复后仍只有一个业务owner；遗漏权限由Comet全量对账接纳，不让monitor维护第二重试循环"
+        "Actual required command/service/permission/readback evidence on current revision; no mock-only qualification",
+        "No role container/image requirement unless this is an explicitly selected temporary job; old evidence remains historical"
       ],
       "backup": [
-        "监控配置/值班映射与告警投递审计独立于Runner备份；不能因Runner卷故障丢全部告警证据",
-        "告警重投只恢复投递状态，不恢复业务phase/ACL；监控本身故障需独立既有平台监控发现，未登记保持准入缺口"
+        "Keep existing scheduler configuration and native Comet recovery records; no new resident controller"
       ],
       "parallel_safe": false,
-      "status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
-      "requires_before_start": "I01 registry qualification and component image/source digest/owner/secrets readiness verified",
+      "status": "PLANNED_COMMAND_FIRST_NOT_IMPLEMENTED",
+      "requires_before_start": "Registered real resource/owner and scope-specific authorization for actual side effects; no role-service or custom RPC prerequisites",
       "evidence": {
         "data": "required",
         "logs": "required",
         "screenshots": "required"
       },
-      "not_applicable_reasons": {}
+      "not_applicable_reasons": {},
+      "planning_revision": "2026-10-26-command-first-v1"
     },
     {
       "id": "I08",
-      "title": "备份恢复、单权威迁移与R10未完成保留",
+      "title": "原生状态与知识数据备份恢复",
       "depends_on": [
-        "I02",
         "I03",
         "I04",
         "P4_4",
@@ -801,10 +761,9 @@
         "Retention.v1 -> R10 A: unresolved Run/knowledge obligation retains sole workspace; cleanup requires verified completed or separately approved migration+restore proof"
       ],
       "inputs": [
-        "各数据owner签发备份读取/加密/恢复与保留授权、独立备份目标和密钥恢复owner/备用人",
-        "RPO/RTO、频率/保留期/容量阈值由试点实测及owner确认；未确认不编造恢复时限或自动清理期限",
-        "原Runner永久丢失时的受控归属迁移批准、旧writer隔离证据和新的authority登记；不能共享目录冒充分布式fencing",
-        "所有恢复资源使用专用隔离项目，禁止覆盖现有PAV/其它项目数据或使用其凭据"
+        "Actual native Comet state/transaction/knowledge obligation locations",
+        "Existing knowledge DB/attachments and config-reference backup scope",
+        "Old writer observation and authorized restore target"
       ],
       "secret_refs": [
         "secret-ref:sdd-harness-pilot/backup-writer",
@@ -812,14 +771,10 @@
         "secret-ref:sdd-harness-pilot/restore-reader"
       ],
       "red": [
-        "pending Outline发布/未知远端结果/唯一payload在工作区时cleanup实际拒绝；磁盘压力只告警不静默清理",
-        "不完整备份、校验不符、缺密钥、DB/附件时间点不一致、旧writer未隔离时恢复不启用",
-        "恢复旧ACL或重加离组成员、恢复旧grant/旧attempt结果、复制状态另开writer实际拒绝"
+        "缺附件/未完成义务/旧写者仍活不得释放恢复；不复制一套可并行运行的业务状态"
       ],
       "green": [
-        "备份包含原Run权威文件/事务/操作/回执/批准payload与版本；数据库和附件可一致恢复，索引可重建且校验",
-        "隔离恢复后先冻结新发布、调和未知写、完整权限对账和优先隔离，独立验证后由同Comet继续",
-        "原已完成产品历史保留；权限维护仍由同引擎关联作业处理；cleanup门禁使用Comet真实义务不只archived/git complete"
+        "实际备份Comet原目录/事务/义务及知识DB/附件，隔离恢复后重新核权限并读回"
       ],
       "probes": [
         "node --test test/infra-recovery.test.js",
@@ -829,36 +784,31 @@
         "node tools/infra/recovery.mjs probe --case old-writer-denial --json"
       ],
       "oracle": [
-        "真实备份manifest摘要、恢复资源ID/版本、同Run/operation与权限独立读回；记录停机起点/恢复/补偿结束和暴露违约",
-        "容量告警证据和cleanup失败状态可重现；恢复前后唯一owner证明，已下载数据不能声称可追回"
+        "Actual required command/service/permission/readback evidence on current revision; no mock-only qualification",
+        "No role container/image requirement unless this is an explicitly selected temporary job; old evidence remains historical"
       ],
       "backup": [
-        "本任务验证备份本身可恢复：至少一次真实DB+附件+Run一致恢复演练与破坏/撤权负例",
-        "R10 A不能用“有备份”提前清掉唯一未完成工作区；只有另行确认迁移且恢复已证明才允许变更该边界"
+        "Consistent native state + knowledge DB/attachments; no duplicate active business writer; no credential values in reports"
       ],
       "parallel_safe": false,
-      "status": "PLANNED_NOT_IMPLEMENTED_NOT_EXECUTED",
-      "requires_before_start": "I01 registry qualification and component image/source digest/owner/secrets readiness verified",
+      "status": "PLANNED_COMMAND_FIRST_NOT_IMPLEMENTED",
+      "requires_before_start": "Registered real resource/owner and scope-specific authorization for actual side effects; no role-service or custom RPC prerequisites",
       "evidence": {
         "data": "required",
         "logs": "required",
         "screenshots": "required"
       },
-      "not_applicable_reasons": {}
+      "not_applicable_reasons": {},
+      "planning_revision": "2026-10-26-command-first-v1"
     }
   ],
   "existing_node_count": 39,
   "total_candidate_node_count": 39,
   "ownership_check": "PASS exact infrastructure paths disjoint from each other and current canonical DAG",
   "dependency_check": "ACYCLIC",
-  "images_policy": {
-    "fixed_versions": "NOT_YET_QUALIFIED",
-    "invented_tags_or_digests": false,
-    "startup_gate": "All relevant image/source locks qualified before any component startup; absent lock fails closed",
-    "no_implicit_resources": "No reuse of PAV or any existing project credentials/resources"
-  },
+  "images_policy": "Pin and verify actual Docker dependencies only; no six-role image/UID/volume prerequisites",
   "permissions": "Local-only planning; no production deployment, branch-protection mutation, live notifications or external publication implied",
-  "acceptance_policy": "All92 original scenarios preserved. Infra probes supplement, never replace, required runtime/UI/platform/knowledge behavior checks. Conditional Batch5 remains pre-enable certification, unexecuted positives remain UNVERIFIED.",
-  "canonical_dependency_source": "task-dag.json (this file is a read-only detailed infrastructure projection, not a second plan or scheduler)",
-  "rework_revision": "2026-10-22-seven-p1"
+  "acceptance_policy": "All historical records retained; true current functional checks and same-Run closure required; retirement is not PASS",
+  "canonical_dependency_source": "task-dag.json",
+  "rework_revision": "2026-10-26-command-first-v1"
 }

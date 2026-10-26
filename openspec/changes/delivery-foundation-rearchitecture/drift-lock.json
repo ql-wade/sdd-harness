@@ -2,10 +2,10 @@
   "schema_version": 2,
   "feature": "delivery-foundation-rearchitecture",
   "hash_mode": "checkbox-normalized-v1",
-  "plan_sha256": "8b91e35e764ae52b5628507174d7aadf8cff2927c3a9fddebe62771360fa84e5",
-  "architecture_sha256": "36e14eb296995562f75f801a5087096fd53ed3e34529cd1f236b8eaf6503e589",
-  "dag_sha256": "1211ec6cadc58aeeac4a300749d9738037b6158fccec44222e6157dfebaa43cc",
-  "execution_contract_sha256": "a3cf328a8e46e0f48aa8420257aacf275b41aad6d3bdd6406f4f0e83aabc87ad",
+  "plan_sha256": "3907b1f690ca160f40414cfa8ca7a710cabf639c6bbc9c4f0a1a1ee5d0b0efea",
+  "architecture_sha256": "13d298ae949fa92a3b7b92b7bbab7a1d8324c05d6be42272fe7c59001b995596",
+  "dag_sha256": "24cb5549fd126eb9a4b9fb1d259d01209b021387fbb9face30e9dd840b03f53b",
+  "execution_contract_sha256": "216a24c2e724444aceefdf5c15393a713dfb09022c5323a505d200109d2aa022",
   "acceptance_ids": [
     "A01",
     "A02",
@@ -120,12 +120,12 @@
     "Comet.SourcePreparation.v1: prepareCometSource({projectRoot,lock,archivePath}) returns canonical pristine source and verified provenance",
     "Comet.DistributionBuild.v1: buildCometDistribution({projectRoot,lock,archivePath}) returns buildRoot, entrypoint, sourceCommit, fingerprint with exact toolchain precondition",
     "Registry.v1 -> project/resource/owner/credentialRef/lockRef/authority/domain/retention, no secret values",
-    "SecretRef.v1 -> purpose-bound opaque reference resolved only by allowed service principal",
-    "Qualification.v1 -> exact source commit, image digest/platform/size, license, health API and backup compatibility evidence before up",
-    "RunnerInfra.v1 validate|qualify|up|probe|stop -> process/mount/principal observations only",
-    "RoleBoundary.v1 -> immutable tool image, distinct principal/mount/credential scopes for controller/author/test-author/reviewer/publisher/isolator",
-    "Authority.v1 -> one fixed Comet authority and workspace",
-    "startup refuses copied state or concurrent writer",
+    "SecretRef.v1 -> existing authenticated connector or purpose-bound native host reference, no new secret service or mandatory model API key",
+    "Qualification.v2 -> exact installed command or necessary service identity, version/license/permissions/readback/recovery, image evidence only for deployed dependencies",
+    "HostInfra.v2 -> existing host command/tool permission evidence and retirement of resident role deployment, optional temporary jobs only",
+    "Host.RoleBoundary.v2 -> real independent sessions, native read/tool/path scopes and protected CI or connector authorization, no mandatory role containers",
+    "Authority.v2 -> one original Comet writer and workspace under native lock and transaction",
+    "host invocation refuses conflicting original Run writers and does not create a peer controller",
     "OutlineInfra.v1 validate|qualify|up|probe|stop -> actual API/UI/storage/principal evidence",
     "OutlineDomain.v1 -> instance/collection immutable IDs, actual effective reader set and registered owner",
     "OutlineState.v1 -> durable database+attachment storage",
@@ -145,7 +145,7 @@
     "Health.v1 -> heartbeat_age, complete_scan_watermark, unresolved_isolation/deadlines and authority identity",
     "read-only",
     "Monitor.v1 -> external fault-domain registration and alert delivery/ack/escalation only, never business phase/retry/ACL",
-    "Supervisor.v1 -> restart same fixed Comet authority only after old writer gone",
+    "Supervisor.v2 -> existing scheduler invokes original Comet maintenance and recovery after checking the old writer, no resident controller requirement",
     "bounded attempts and escalation",
     "Backup.v1 -> consistent manifest of Comet state/transaction/receipts/approved payload plus knowledge/database/objects/config refs",
     "Restore.v1 -> restore into quarantine, authenticate current permissions, fence old writer, verify same operation and readback before release",
@@ -155,23 +155,24 @@
     "Comet.GateRevision.v2: same Run persists monotonic requirement and design revisions and trusted reviewer result binding and never revives invalidated receipts by restoring bytes"
   ],
   "global_constraints": [
-    "Comet Classic is sole target runtime controller; TeamAI distributes only",
-    "Matt reusable methods only; no Superpowers restart or nested planner/implement-spec controller",
-    "Preserve original parent IDs and workpackage IDs; aliases are parser adapter keys only",
-    "One canonical tasks/DAG/progress source; no worker-owned lifecycle writer",
-    "Managed Runner OS/container separation is a required real negative gate, not local signature evidence",
-    "R10 A retains sole workspace until overall completion; G15 A healthy-dependency five-minute containment only",
-    "Batch5 is conditional pre-enable certification; never silently waive F10 or claim untested team API",
-    "No production effects or remote branch protection mutation implied; honor registered grants before live writes",
-    "Parent task completion requires all its required workpackages and current acceptance evidence",
-    "Any scope/interface/input hash drift halts and requires reviewed replan; no silent lock refresh"
+    "Comet Classic is the sole business workflow owner; TeamAI distributes only",
+    "Use native Comet commands and existing host skills/tools; no resident six-role services or replacement Agent RPC/control plane",
+    "Matt methods and test-authoring/independent Whitebox remain separate; product planner P is plan-only",
+    "Preserve all39 node IDs,30 parent IDs,69 workpackage IDs,104 scenario IDs and130 check IDs; F10 alone remains deferred",
+    "One canonical tasks/DAG/state/ledger; no worker or hook owns a second lifecycle",
+    "R/A/T independently gated; requirement/design changes invalidate all downstream and restored bytes never revive retired approvals",
+    "Native host enforced read/tool/path scopes and real independent execution evidence are required; do not claim malicious same-OS-user isolation from local signatures",
+    "Docker only for necessary knowledge infrastructure or justified temporary jobs; no mandatory Runner image rebuild before R-to-V",
+    "Kp blocks archive; Kt blocks overall completed; preserve same Run/operation recovery and genuine source permissions/audience/grants",
+    "R10 retains unresolved workspaces; G15 normal discovery3min plus isolation2min and separate failure/alert timing remain",
+    "No production/ACL/publication/credential actions implied by this planning-only revision",
+    "Planning validates structure only; no old fixture/container/image PASS qualifies the command-first delivery"
   ],
   "allowed_paths_by_task": {
     "P0_1": [
-      "docs/architecture/delivery-architecture.md",
-      "docs/architecture/adr/0019-delivery-foundation.md",
       "docs/architecture/comet-ai-devops-convergence.md",
-      "docs/architecture/adr/0020-comet-command-knowledge-convergence.md"
+      "docs/architecture/adr/0020-comet-command-knowledge-convergence.md",
+      "docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md"
     ],
     "P0_2": [
       "openspec/changes/delivery-foundation-rearchitecture/proposal.md",
@@ -185,7 +186,7 @@
       "docs/agent/skill-architecture.md"
     ],
     "P0_4": [
-      "docs/architecture/adr/0019-delivery-foundation.md",
+      "docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md",
       "openspec/changes/delivery-foundation-rearchitecture/architecture-review"
     ],
     "P1_1": [
@@ -263,25 +264,6 @@
       "test/architecture-review-adapter.test.js",
       "test/delivery-cases/2_5.mjs"
     ],
-    "I01": [
-      "infra/delivery/registry.json",
-      "infra/delivery/registry.schema.json",
-      "infra/delivery/secrets.refs.example.json",
-      "infra/delivery/qualification-policy.json",
-      "tools/infra/registry.mjs",
-      "tools/infra/secret-refs.mjs",
-      "test/infra-registry.test.js"
-    ],
-    "I02": [
-      "infra/delivery/runner/compose.yaml",
-      "infra/delivery/runner/Dockerfile",
-      "infra/delivery/runner/image.lock.json",
-      "infra/delivery/runner/role-policy.json",
-      "infra/delivery/runner/workspace-mounts.json",
-      "infra/delivery/runner/authority-registration.example.json",
-      "tools/infra/runner.mjs",
-      "test/infra-runner-isolation.test.js"
-    ],
     "P1_3": [
       "lib/adapters/comet.js",
       "lib/adapters/harness.js",
@@ -304,10 +286,39 @@
       "openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes",
       "test/delivery-cases/1_5.mjs"
     ],
+    "P3_2": [
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-journey",
+      "test/delivery-cases/3_2.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.case.json"
+    ],
+    "P3_3": [
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery",
+      "test/delivery-cases/3_3.mjs",
+      "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.case.json"
+    ],
     "P3_4": [
       "lib/adapters/spec.js",
       "test/spec-closeout.test.js",
       "test/delivery-cases/3_4.mjs"
+    ],
+    "I01": [
+      "infra/delivery/registry.json",
+      "infra/delivery/registry.schema.json",
+      "infra/delivery/secrets.refs.example.json",
+      "infra/delivery/qualification-policy.json",
+      "tools/infra/registry.mjs",
+      "tools/infra/secret-refs.mjs",
+      "test/infra-registry.test.js"
+    ],
+    "I02": [
+      "infra/delivery/runner/compose.yaml",
+      "infra/delivery/runner/Dockerfile",
+      "infra/delivery/runner/image.lock.json",
+      "infra/delivery/runner/role-policy.json",
+      "infra/delivery/runner/workspace-mounts.json",
+      "infra/delivery/runner/authority-registration.example.json",
+      "tools/infra/runner.mjs",
+      "test/infra-runner-isolation.test.js"
     ],
     "I03": [
       "infra/delivery/outline/compose.yaml",
@@ -345,16 +356,6 @@
       "tools/infra/platform.mjs",
       "test/infra-platform.test.js"
     ],
-    "P3_2": [
-      "openspec/changes/delivery-foundation-rearchitecture/pilot-journey",
-      "test/delivery-cases/3_2.mjs",
-      "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.case.json"
-    ],
-    "P3_3": [
-      "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery",
-      "test/delivery-cases/3_3.mjs",
-      "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.case.json"
-    ],
     "P4_6": [
       "integrations/comet/patches/0003-post-archive-closeout.patch",
       "test/delivery-cases/4_6.mjs",
@@ -368,6 +369,17 @@
       "tools/infra/knowledge-authz.mjs",
       "infra/delivery/knowledge"
     ],
+    "P4_4": [
+      "lib/adapters/llmwiki.js",
+      "lib/adapters/outline.js",
+      "lib/adapters/code-wiki.js",
+      "lib/sdd-paths.js",
+      "tools/mcp/llmwiki.sh",
+      "test/knowledge-closeout.test.js",
+      "lib/knowledge-seed.js",
+      "bin/cli.js",
+      "test/delivery-cases/4_4.mjs"
+    ],
     "P4_1": [
       ".github/workflows/delivery-gate.yml",
       "tools/ci/verify-delivery.mjs",
@@ -379,17 +391,6 @@
       "test/release-protocol.test.js",
       "openspec/changes/delivery-foundation-rearchitecture/release-journey",
       "test/delivery-cases/4_2.mjs"
-    ],
-    "P4_4": [
-      "lib/adapters/llmwiki.js",
-      "lib/adapters/outline.js",
-      "lib/adapters/code-wiki.js",
-      "lib/sdd-paths.js",
-      "tools/mcp/llmwiki.sh",
-      "test/knowledge-closeout.test.js",
-      "lib/knowledge-seed.js",
-      "bin/cli.js",
-      "test/delivery-cases/4_4.mjs"
     ],
     "P4_5": [
       "hooks.yaml",
@@ -457,10 +458,11 @@
     ]
   },
   "assumptions": [
-    "Current plan and all118 required checks are unexecuted for this rework revision.",
-    "Existing partial components remain reusable only at their proved scope; no inherited business PASS.",
-    "Current dirty OpenSpec config bytes are observed/frozen inputs, not acceptance of unrelated overlay candidate.",
-    "Receiver must receive full plan and exact frozen inputs before creating execution worktree."
+    "Human selected command-first simplification; only documents/plan delivered now.",
+    "Old source/build/component observations remain reusable only within their exact original scope; affected approvals must be revalidated.",
+    "Existing Agent host capabilities are to be discovered, not replaced by custom Agent platform.",
+    "No implementation, Docker cleanup, provider startup, external write or new credential access performed by this revision.",
+    "All129 current checks/103 functional scenarios remain unverified on command-first; F10 positive deferred."
   ],
   "change_policy": "halt-and-replan",
   "scope": "USER_AUTHORIZED_COMET_CONVERGENCE_NOT_YET_ACCEPTED",
@@ -851,6 +853,18 @@
       "exception_count": "18->20 named only;no generic preparation waiver",
       "production_effects_authorized": false,
       "supplier_custody": "9c9 existing code/Root71 observation preserved;new independent exact construction reports required before host consumer start"
+    },
+    {
+      "id": "2026-10-26-command-first-v1",
+      "authority": "human command-first docs-only request 2026-10-26",
+      "record": "replans/2026-10-26-command-first/amendment.json",
+      "before_manifest_sha256": "dc4fba285f5c4b3758ee6391c52348dc12da4791dcc96d47b343a9da2646b75c",
+      "old_contract_sha256": "a3cf328a8e46e0f48aa8420257aacf275b41aad6d3bdd6406f4f0e83aabc87ad",
+      "new_contract_sha256": "216a24c2e724444aceefdf5c15393a713dfb09022c5323a505d200109d2aa022",
+      "preserved_ids": "39 nodes /69 workpackages /104 scenarios /130 checks; current129/103 and F10-only deferral",
+      "changes": "native host commands; retire resident role topology, rewrite related oracles/interfaces, remove infra-before-RV dependencies",
+      "not_authorized": "implementation, live cleanup, model/API/ACL/credential actions",
+      "review": "APPROVE independent spec and plan document review; final formatting/hash readback recorded separately; no product acceptance"
     }
   ]
 }
