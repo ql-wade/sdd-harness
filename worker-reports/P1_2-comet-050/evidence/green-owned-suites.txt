@@ -1,0 +1,120 @@
+✔ CLI export produces a contract-valid lock and verify accepts it (real repo) (4982.498083ms)
+✔ V_F04: CLI verify fails on drifted assets and check-run blocks an active run (explicit migration path) (191.059833ms)
+✔ CLI check-run refuses a second writer on an active run (B09) and allows the owner (863.358167ms)
+✔ V_F02: forward then reverse composition: init, user edit, re-pull, uninstall, re-init (1241.6325ms)
+✔ plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched (913.860458ms)
+✔ duplicate same event/command registration (plugin entry wrapping the managed command) is refused via bootstrap with a conflict list (137.231625ms)
+✔ V_F02: repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable (1414.473625ms)
+✔ exporter builds a contract-valid lock from the unique sources (real repo) (337.824791ms)
+✔ lock emission gates: full digests, no machine paths, no floating versions (169.477709ms)
+✔ exporter refuses to emit when an MCP registration floats (@latest) (26.784417ms)
+✔ release view + lock are byte-stable across repeated exports (repeat-pull idempotency) (132.341583ms)
+✔ dual-write drift is detected in both directions (source edit and hand-edited view) (200.703666ms)
+✔ committed foundation artifacts match live sources (repo-level drift gate) (414.088458ms)
+✔ kb-write-protection denies the registered canonical wiki landing .sdd/wiki/<slug>/wiki/ (I04 hook gap) (380.681ms)
+✔ kb-write-protection canonical coverage is deny-only: hooks.yaml never regresses to substring-only (0.322917ms)
+✔ composition package bytes are frozen in the export digest, distributed and sealed (716.41275ms)
+✔ real repo composition package is bound and distributed with the managed profile (2951.920959ms)
+✔ composition requires adapter fixture isolation and uninstall capability (0.128375ms)
+✔ reverse order A: existing user config survives bootstrap, guard installed once (163.417959ms)
+✔ reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept (488.690125ms)
+✔ upgrade: stale managed entry in an older command format is replaced, not duplicated (165.104916ms)
+✔ uninstall removes managed entries only, is idempotent, and re-init restores (613.072959ms)
+✔ uninstall is locale-safe: UTF-8 locale must not crash bootstrap (regression: unbraced $var before a multibyte char) (291.216833ms)
+✔ owned control-plane scripts never place an unbraced variable expansion adjacent to multibyte text (0.246584ms)
+✔ matcher registration and gate script behavior are tested together (423.435084ms)
+✔ adapter declares the fixed event set and the plugin registration division (0.188834ms)
+✔ plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall (463.479708ms)
+✔ same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched (149.05475ms)
+✔ duplicate user entries for the same event/command are refused, not composed twice (153.203916ms)
+✔ hooks.yaml events outside the adapter fixed event set are refused, never silently dropped (137.03475ms)
+✔ plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2) (131.350334ms)
+✔ exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts (15.909667ms)
+✔ bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo (797.2ms)
+✔ bootstrap target mode registers the distributed MCP set into the target project (merge, honest, idempotent) (1240.658916ms)
+✔ legacy workflow: retired source-command-sdd-code source under .agents/skills refuses activation with zero mutations (direct-discovery refusal) (255.679125ms)
+✔ legacy workflow: every retired naming family refuses with per-name diagnostics, bodies untouched, no artifacts (105.620584ms)
+✔ legacy workflow: unowned retired-name directory with user files is preserved and blocks install (no prefix deletion) (107.7015ms)
+✔ legacy workflow: retired-name symlink pointing at an external .agents/skills path is preserved (exact-ownership proof required) (119.528958ms)
+✔ legacy workflow: exact adapter-owned stale link to a retired name is removed on install; valid sources assemble settings and stay idempotent (552.335209ms)
+✔ legacy workflow: uninstall removes only adapter-owned links — unowned dirs, external retired-name links and user config survive (290.41325ms)
+✔ legacy workflow: refusal is readonly and reversible — human disposal of the residue unblocks activation (417.9535ms)
+✔ old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline) (374.102708ms)
+✔ active run blocks silent re-baseline after asset drift; closed run only notes it (371.6605ms)
+✔ unresolvable pinned baseline is blocked explicitly, never silently swapped (228.99225ms)
+✔ B09: a second writer cannot take over an active run (827.063458ms)
+✔ explicit migration re-pins only with ownership and a resolvable old baseline (433.254416ms)
+✔ cold package keeps declared dot files and binary source bytes (87.064958ms)
+✔ cold package verification refuses a missing copied source file (91.035583ms)
+✔ current managed distribution binds the exact profile data and all 245 source files (4163.691834ms)
+✔ export refuses retired sources instead of distributing a valid-looking old workflow (4.795542ms)
+✔ legacy asset ownership helper never acquires or rewrites an actual native Comet Run (1470.098833ms)
+✔ complete copied distribution refuses a removed method directory and an injected file (198.657625ms)
+✔ frozen pure assets resolve after transport without Git history and reject corruption or symlink escape (202.885458ms)
+✔ sealed cache parents cannot redirect writes and release references cannot float (65.669375ms)
+✔ sealed cache refuses an injected prototype-named file in the complete set (301.361167ms)
+ℹ {"clean":{"ok":true,"resolvable":true,"reason":"sealed pure assets verified byte-for-byte and whole exportDigest","resolvedSkills":["alpha","beta"],"missing":[],"source":"sealed-assets"},"modified":{"ok":false,"resolvable":false,"reason":"STATE_SYNC_REQUIRED: unexpected or missing sealed asset","resolvedSkills":[],"missing":["sealed-assets"]},"files":["__proto__","foundation-lock.json","manifest.json","source"]}
+✔ legal prototype-named source files round trip byte-exact through release and sealed cache (293.498125ms)
+✔ sealed cache complete set rejects extra special-named files, directories and symlinks (401.443333ms)
+✔ managed hook resolver changes invalidate the lock and are sealed as explicit code assets (543.652125ms)
+ℹ {"before":"53dda3d7ee020287df9ed8bb299291eb2a2529814ceeabba1edee8081d2cc50b","after":"479bdce82db0b73bcc02012a822423a39d87d00fd9b99c6c05e850e3b449fa78","verify":{"ok":false,"drifts":[{"kind":"lock","item":"exportDigest","detail":"complete asset set drifted"},{"kind":"release","item":"code","detail":"project code closure bytes or complete file set differs"}]},"cacheHasResolver":true}
+✔ every project code dependency and pin metadata is bound in digest, release and immutable cache (4399.499708ms)
+✔ transported closure executes exporter and adapter without parent source modules; missing Python refuses cleanly (1333.549417ms)
+ℹ {"export":{"exit":0,"stdout":"✅ foundation export: 34 files under /var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/fdn-transport-code-jDuE6m/foundation (release commit aaaaaaaa, exportDigest 53dda3d7ee02)\n","stderr":""},"verify":{"exit":0,"stdout":"✅ foundation verify: lock, sources and release view are consistent\n","stderr":""},"adapter":{"exit":0,"stdout":"✅ hooks 策略已编译：hooks/.compiled.env + .claude/settings.json (1 deny 策略)\n✅ selected method links installed; unrelated user entries preserved\n","stderr":""},"gate":{"exit":2,"stderr":"❌ 禁止执行「git push --force」：blocked（hooks.yaml dangerous-command-blocklist）\n"},"missingPython":{"exit":1,"stderr":"❌ python3 required by claude-code adapter\n"},"parentModules":false}
+✔ copied method directory symlinks refuse verification and export without changing user bytes (134.106708ms)
+ℹ {"verify":{"ok":false,"error":"lock unreadable: symlink asset refused: skills/alpha","drifts":[]},"exportRejected":true,"error":"symlink asset refused: skills/alpha","before":"1fd0d20e25f00bb273c3891b885729613ad25d24e3f331d5ede0cdd69e681537","after":"1fd0d20e25f00bb273c3891b885729613ad25d24e3f331d5ede0cdd69e681537"}
+✔ export and verify reject linked package roots, every view ancestor and output file before any mutation (3477.810458ms)
+ℹ {"slot":"package-root","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+ℹ {"slot":"package-ancestor","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+ℹ {"slot":"foundation-lock.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+ℹ {"slot":"release","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+ℹ {"slot":"release/skills","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+ℹ {"slot":"release/skills/alpha","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+ℹ {"slot":"release/skills/alpha/SKILL.md","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+ℹ {"slot":"release/skills/MANIFEST.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"2b5629f0d08890d8a180020d317963782175969acb5388d81adfbaadb1986bd6"}
+ℹ {"slot":"release/hooks","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+ℹ {"slot":"release/hooks/hooks.yaml","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+ℹ {"slot":"release/mcp","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"57eefe7379a348936054bfef83361655671bca3cc51f34b75575fd86c4245f46"}
+ℹ {"slot":"release/mcp/mcp.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"57eefe7379a348936054bfef83361655671bca3cc51f34b75575fd86c4245f46"}
+✔ managed code/profile outputs and existing output aliases cannot redirect export or verification (2843.674333ms)
+ℹ {"slot":"release/profile","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/profile/binding.json","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/profile/comet-managed.json","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code/tools","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code/tools/bootstrap.sh","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code/MANIFEST.json","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"hardlink","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"fifo","verification":false,"wholeFixtureUnchanged":true}
+✔ Git exports remain verifiable after transport without Git (262.070292ms)
+✔ TeamAI packet roundtrip preserves the externally frozen full file set (15899.324625ms)
+✔ TeamAI packet rejects tamper, omission, duplicate, escape, unsafe mode and stale source before writing (8682.192958ms)
+✔ original Foundation CLI connects TeamAI view export and externally pinned receive (13953.594125ms)
+✔ Bash project caller equivalence leaves unrelated user scripts and Ponytail plugin entries unchanged (301.775583ms)
+✔ managed discovery links only selected methods and preserves unrelated source directories (183.845834ms)
+✔ managed discovery refuses old command migration inputs without deleting user data (89.5465ms)
+✔ managed discovery refuses selected-name user directories before any configuration write (95.345291ms)
+✔ managed configuration refuses malformed settings before creating compiled policy (139.717417ms)
+✔ managed policy output refuses an external compiled symlink without changing either tree (76.610917ms)
+ℹ {"exit":1,"stderr":"unsafe managed output; user object preserved: hooks/.compiled.env\n","before":[["user.env","file","03f9d2650b2b33a5b04e1bd95dfaccc796f5ee48348138f5e7ebbff57de4d48d"]],"after":[["user.env","file","03f9d2650b2b33a5b04e1bd95dfaccc796f5ee48348138f5e7ebbff57de4d48d"]]}
+✔ managed I/O preflights every output and ancestor for install and uninstall (579.486084ms)
+ℹ {"rel":".claude","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-M2V2XF"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude/skills","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/skills","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-ObVkY2"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude/settings.json","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/settings.json","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-2eGl50/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":"hooks","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-esj5Cx"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":"hooks/.compiled.env","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","directory"],["hooks/.compiled.env","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-GfeT3V/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-sZOk9c"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude/skills","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/skills","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-dKNdMS"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude/settings.json","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/settings.json","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-K9U2tE/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":"hooks","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-U2s4zE"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":"hooks/.compiled.env","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","directory"],["hooks/.compiled.env","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-YwZqoa/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+✔ managed I/O preserves unowned policy, special outputs and hardlinked user files (730.025166ms)
+✔ managed replacement is atomic and repeat install/uninstall preserves user settings and quoted policy (824.486291ms)
+ℹ tests 76
+ℹ suites 0
+ℹ pass 76
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 73856.805

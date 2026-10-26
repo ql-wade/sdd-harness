@@ -209,6 +209,136 @@ test('committed foundation artifacts match live sources (repo-level drift gate)'
 });
 
 // ---------------------------------------------------------------------------
+// I04 hook gap (ledger I04_EVIDENCE_RECORDED_HOOK_GAP_ROUTED, routed to P1_2
+// as the hooks.yaml owner): the llmwiki registration lands wiki content under
+// the canonical root $SDD_HOME/wiki/<slug>/wiki/ (default $HOME/.sdd →
+// '.sdd/wiki/<slug>/wiki/'), and the kb-write-protection deny target must
+// cover that landing — the compiled substring 'llmwiki/wiki/' alone lets a
+// direct synthetic Write to the canonical landing pass (exit 0). Fix is
+// owned here in hooks.yaml (add '.sdd/wiki/' coverage, keep the old
+// substring): deny semantics only tighten, never loosen.
+// ---------------------------------------------------------------------------
+
+// Isolated gate assembly: real adapter + real hooks.yaml (source-repo
+// fallback), gate scripts copied next to the freshly compiled policy so the
+// behavior probe exercises the exact product an assembled host would run.
+function makeGateRoot(t) {
+  const targetRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-p1_2-gate-'));
+  t.after(() => fs.rmSync(targetRoot, { recursive: true, force: true }));
+  const hooksDir = path.join(targetRoot, 'hooks');
+  fs.mkdirSync(hooksDir, { recursive: true });
+  for (const name of ['pre-tool-gate.sh', '_resolve-project-dir.sh']) {
+    fs.copyFileSync(path.join(projectRoot, 'hooks', name), path.join(hooksDir, name));
+  }
+  const run = runAdapter(targetRoot);
+  assert.equal(run.status, 0, run.stderr || run.stdout);
+  assert.ok(fs.existsSync(path.join(hooksDir, '.compiled.env')), 'gate fixture must compile the real policy');
+  return { gate: path.join(hooksDir, 'pre-tool-gate.sh'), compiled: path.join(hooksDir, '.compiled.env') };
+}
+
+function gateWrite(gate, file_path) {
+  return spawnSync('bash', [gate], {
+    input: JSON.stringify({ tool_name: 'Write', tool_input: { file_path } }),
+    encoding: 'utf8',
+  });
+}
+
+compositionTest('kb-write-protection denies the registered canonical wiki landing .sdd/wiki/<slug>/wiki/ (I04 hook gap)', (t) => {
+  const { gate, compiled } = makeGateRoot(t);
+  // Assembly half of the AGENTS red line: the compiled product (not just the
+  // YAML source) must carry the canonical prefix alongside the old substring.
+  const raw = fs.readFileSync(compiled, 'utf8');
+  assert.match(raw, /\.sdd\/wiki\//, 'compiled KB_PROTECT_PATHS must cover the canonical .sdd/wiki/ landing');
+  assert.match(raw, /llmwiki\/wiki\//, 'old llmwiki/wiki/ substring coverage must be kept (only tighten)');
+
+  // Script-behavior half: synthetic Write payloads against the same assembly.
+  const canonical = gateWrite(gate, '/Users/x/.sdd/wiki/sdd-harness/wiki/curated/x.md');
+  assert.equal(canonical.status, 2, 'direct write to the registered canonical landing must deny (I04: exits 0 before the fix)');
+  assert.match(canonical.stderr, /mcp__llmwiki__create/, 'denial must route to the indexed MCP path');
+  const legacy = gateWrite(gate, '/p/llmwiki/wiki/product/x.md');
+  assert.equal(legacy.status, 2, 'old llmwiki/wiki/ direct writes must stay denied');
+  const benign = gateWrite(gate, '/Users/x/.sdd/run-state.json');
+  assert.equal(benign.status, 0, 'deny must not leak beyond the wiki landing (non-wiki .sdd state stays writable)');
+});
+
+compositionTest('kb-write-protection canonical coverage is deny-only: hooks.yaml never regresses to substring-only', () => {
+  const raw = fs.readFileSync(path.join(projectRoot, 'hooks.yaml'), 'utf8');
+  const block = raw.split('- id: kb-write-protection')[1]?.split('- id:')[0] ?? '';
+  assert.ok(block.length > 0, 'kb-write-protection policy must exist in hooks.yaml');
+  const targets = [...block.matchAll(/^\s+- "?(.+?)"?\s*$/gm)].map((m) => m[1]);
+  assert.ok(targets.includes('.sdd/wiki/'), 'policy targets must pin the canonical landing prefix: ' + JSON.stringify(targets));
+  assert.ok(targets.includes('llmwiki/wiki/'), 'policy targets must keep the old substring: ' + JSON.stringify(targets));
+  assert.match(block, /action: deny/, 'kb-write-protection must stay a deny policy');
+});
+
+// ---------------------------------------------------------------------------
+// comet-050 adoption delta: distribution gains the composition package asset
+// (integrations/comet/application, P1_6 verbatim skill packaging bound to the
+// re-locked 0.5.0 upstream). The exporter must freeze it in the export
+// digest, distribute it in the release view, seal it in baselines and detect
+// hand edits in either direction — the packaging manifest alone is not a
+// distribution.
+// ---------------------------------------------------------------------------
+
+const COMPOSITION_REL = 'integrations/comet/application';
+const fixtureComposition = (root) => {
+  fs.mkdirSync(path.join(root, COMPOSITION_REL, 'skills/kb-gate'), { recursive: true });
+  fs.writeFileSync(path.join(root, COMPOSITION_REL, 'manifest.json'), JSON.stringify({ schema_version: 1, kind: 'comet-application-skill-assets' }) + '\n');
+  fs.writeFileSync(path.join(root, COMPOSITION_REL, 'skills/kb-gate/SKILL.md'), '# packaged kb-gate v1\n');
+};
+
+test('composition package bytes are frozen in the export digest, distributed and sealed', async () => {
+  const root = makeManagedCodeFixture();
+  fixtureComposition(root);
+  try {
+    const out = path.join(root, 'foundation');
+    const { lock } = await exporter.exportRelease(root, out, { releaseCommit: FIXED_COMMIT, freezeBaseline: true });
+    const cache = path.join(out, 'baselines', lock.release.exportDigest);
+    for (const rel of [`${COMPOSITION_REL}/manifest.json`, `${COMPOSITION_REL}/skills/kb-gate/SKILL.md`]) {
+      const original = fs.readFileSync(path.join(root, rel));
+      assert.ok(fs.existsSync(path.join(out, 'release/comet-application', rel.slice(COMPOSITION_REL.length + 1))), rel + ' must be distributed in the release view');
+      assert.deepEqual(fs.readFileSync(path.join(out, 'release/comet-application', rel.slice(COMPOSITION_REL.length + 1))), original);
+      assert.deepEqual(fs.readFileSync(path.join(cache, 'source', rel)), original, rel + ' must be sealed in the frozen baseline');
+      fs.writeFileSync(path.join(root, rel), Buffer.concat([original, Buffer.from('\n# drifted\n')]));
+      assert.equal((await exporter.verifyLock(path.join(out, 'foundation-lock.json'), root)).ok, false, 'packaged-byte drift must invalidate the lock');
+      assert.notEqual((await exporter.buildLock(root, { releaseCommit: FIXED_COMMIT })).release.exportDigest, lock.release.exportDigest, 'packaged bytes must move the export digest');
+      fs.writeFileSync(path.join(root, rel), original);
+    }
+    assert.equal((await exporter.verifyLock(path.join(out, 'foundation-lock.json'), root)).ok, true, 'restored package verifies clean');
+    assert.equal((await exporter.resolveBaseline(root, lock)).ok, true, 'sealed composition assets stay resolvable');
+    fs.unlinkSync(path.join(out, 'release/comet-application/manifest.json'));
+    assert.equal((await exporter.verifyLock(path.join(out, 'foundation-lock.json'), root)).ok, false, 'removed view copy must be detected');
+    fs.writeFileSync(path.join(out, 'release/comet-application/injected.md'), 'second source\n');
+    assert.equal((await exporter.verifyLock(path.join(out, 'foundation-lock.json'), root)).ok, false, 'injected view file must be detected');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('real repo composition package is bound and distributed with the managed profile', async () => {
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'fdn-composition-'));
+  try {
+    const { lock } = await exporter.exportRelease(projectRoot, out, { releaseCommit: FIXED_COMMIT });
+    const packaged = JSON.parse(fs.readFileSync(path.join(projectRoot, COMPOSITION_REL, 'manifest.json'), 'utf8'));
+    for (const skill of packaged.skills) {
+      const view = path.join(out, 'release/comet-application/skills', skill.name, 'SKILL.md');
+      assert.ok(fs.existsSync(view), 'packaged skill ' + skill.name + ' must ship in the release view');
+      assert.deepEqual(fs.readFileSync(view), fs.readFileSync(path.join(projectRoot, COMPOSITION_REL, 'skills', skill.name, 'SKILL.md')));
+    }
+    assert.deepEqual(fs.readFileSync(path.join(out, 'release/comet-application/manifest.json')), fs.readFileSync(path.join(projectRoot, COMPOSITION_REL, 'manifest.json')));
+    assert.equal((await exporter.verifyLock(path.join(out, 'foundation-lock.json'), projectRoot)).ok, true);
+    // Packaging drift on the real tree is proven without mutating the repo:
+    // a fixture clone of the real package re-hashes to a different digest.
+    const clone = makeManagedCodeFixture();
+    try {
+      fs.cpSync(path.join(projectRoot, COMPOSITION_REL), path.join(clone, COMPOSITION_REL), { recursive: true });
+      const withPackage = await exporter.buildLock(clone, { releaseCommit: FIXED_COMMIT });
+      fs.appendFileSync(path.join(clone, COMPOSITION_REL, 'skills/tdd/SKILL.md'), '\n# tampered package byte\n');
+      const tampered = await exporter.buildLock(clone, { releaseCommit: FIXED_COMMIT });
+      assert.notEqual(withPackage.release.exportDigest, tampered.release.exportDigest, 'composition package bytes must be part of the frozen asset set');
+    } finally { fs.rmSync(clone, { recursive: true, force: true }); }
+  } finally { fs.rmSync(out, { recursive: true, force: true }); }
+});
+
+// ---------------------------------------------------------------------------
 // 1.2.b composition idempotency + managed-block handover (isolated fixtures)
 // ---------------------------------------------------------------------------
 
@@ -629,6 +759,49 @@ compositionTest('bootstrap target mode composes adapter + exporter against $TMPD
   }
 });
 
+compositionTest('bootstrap target mode registers the distributed MCP set into the target project (merge, honest, idempotent)', () => {
+  const root = makeFixture();
+  try {
+    const repoMcpBefore = fs.readFileSync(repoMcpJsonPath, 'utf8');
+    const targetMcpPath = path.join(root, '.mcp.json');
+    const runBootstrap = () => spawnSync('bash', [bootstrapPath], {
+      cwd: projectRoot, encoding: 'utf8', env: { ...process.env, SDD_TARGET_ROOT: root },
+    });
+    assert.equal(runBootstrap().status, 0, 'first target bootstrap');
+
+    // Registration step ran and merged the distribution set into the target.
+    assert.ok(fs.existsSync(targetMcpPath), 'target .mcp.json must be produced by the target MCP registration step');
+    const merged = JSON.parse(fs.readFileSync(targetMcpPath, 'utf8'));
+    assert.ok(merged.mcpServers.probe, 'pre-existing target servers must survive the merge');
+    const view = JSON.parse(fs.readFileSync(path.join(root, 'foundation/release/mcp/mcp.json'), 'utf8'));
+    for (const [name, entry] of Object.entries(view.mcpServers)) {
+      if (entry.command === 'npx') {
+        assert.deepEqual(merged.mcpServers[name], entry, 'pinned npx server ' + name + ' must be registered verbatim from the distributed registration artifact');
+      }
+    }
+    // Honest registration: wrapper-based servers whose local file the target
+    // does not carry must not dangle in the target registration.
+    assert.ok(!merged.mcpServers.llmwiki, 'wrapper-based server must not be registered into a target without the wrapper file');
+
+    // A target that does carry the wrapper file gets the registration.
+    fs.mkdirSync(path.join(root, 'tools/mcp'), { recursive: true });
+    fs.copyFileSync(path.join(projectRoot, 'tools/mcp/llmwiki.sh'), path.join(root, 'tools/mcp/llmwiki.sh'));
+    assert.equal(runBootstrap().status, 0, 'bootstrap after adding the wrapper');
+    const withWrapper = JSON.parse(fs.readFileSync(targetMcpPath, 'utf8'));
+    assert.ok(withWrapper.mcpServers.llmwiki, 'wrapper-based server must register once the wrapper file exists in the target');
+
+    // Idempotent repeat pull: target registration and lock stay byte-stable.
+    const mcpBytes = fs.readFileSync(targetMcpPath, 'utf8');
+    const lockBytes = fs.readFileSync(path.join(root, 'foundation/foundation-lock.json'), 'utf8');
+    assert.equal(runBootstrap().status, 0, 'repeat pull');
+    assert.equal(fs.readFileSync(targetMcpPath, 'utf8'), mcpBytes, 'repeat pull must keep target .mcp.json byte-identical');
+    assert.equal(fs.readFileSync(path.join(root, 'foundation/foundation-lock.json'), 'utf8'), lockBytes, 'repeat pull must keep the lock byte-identical');
+    assert.equal(fs.readFileSync(repoMcpJsonPath, 'utf8'), repoMcpBefore, 'repo .mcp.json must never be written in target mode');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Legacy workflow retirement (2026-10-24 entry cleanup, round-2 contract):
 // the retired 9-stage workflow (sdd-*, ADR-0015), the trinity-* engine, the
@@ -1037,15 +1210,28 @@ test('legacy asset ownership helper never acquires or rewrites an actual native 
     const cli = path.join(projectRoot, '.sdd/vendor/comet', lock.source.commit, 'builds',fingerprint,'work/bin/comet.js');
     assert.ok(fs.existsSync(cli), 'UNVERIFIED: fixed existing Comet distribution required for native-shape observation');
     const run=(args)=>spawnSync(process.execPath,[cli,...args,'--json'],{cwd:root,env:{...process.env,GIT_CEILING_DIRECTORIES:root},encoding:'utf8'});
-    assert.equal(run(['state','init','native-assets','full','--isolation','current']).status,0);
-    run(['guard','native-assets','open']); // Preview only; missing business artifacts are not an acceptance/RED.
+    const init=run(['state','init','native-assets','full','--isolation','current']);
+    assert.equal(init.status,0,init.stderr);
+    // 0.5.0 native layout (observed against the pinned build): single Run
+    // state at <change>/comet-state.yaml — the legacy .comet/run-state.json
+    // layout is retired with the 0.4.5 patch stack.
+    const stateFile=path.join(root,'openspec/changes/native-assets/comet-state.yaml');
+    assert.ok(fs.existsSync(stateFile),'pinned 0.5.0 build must write <change>/comet-state.yaml');
+    run(['guard','native-assets','open']); // Preview only; missing business artifacts are not an acceptance/RED. (0.5.0: the guard itself appends to the state file — snapshot after Comet's own writes, then prove the HELPER never mutates it.)
+    const before=fs.readFileSync(stateFile);
     const runDir=path.join(root,'openspec/changes/native-assets/.comet');
-    const stateFile=path.join(runDir,'run-state.json');const before=fs.readFileSync(stateFile);
-    assert.equal(JSON.parse(before).skill,'comet-classic');
+    fs.mkdirSync(runDir,{recursive:true});
     fs.writeFileSync(path.join(runDir,'foundation-lock.json'),JSON.stringify(await exporter.buildLock(projectRoot)));
     const result=await exporter.checkRun(runDir,projectRoot,{acquire:true,owner:'not-a-Comet-authority'});
     assert.equal(result.ok,false);
     assert.equal(result.reason,'native-run-readonly');
+    assert.deepEqual(fs.readFileSync(stateFile),before);
+    // Same refusal when the helper lock sits directly beside the native state
+    // file (run dir is the change dir, not a `.comet` basename).
+    fs.renameSync(path.join(runDir,'foundation-lock.json'),path.join(root,'openspec/changes/native-assets/foundation-lock.json'));
+    const flat=await exporter.checkRun(path.join(root,'openspec/changes/native-assets'),projectRoot,{acquire:true,owner:'not-a-Comet-authority'});
+    assert.equal(flat.ok,false,'a run dir carrying comet-state.yaml is native regardless of its name');
+    assert.equal(flat.reason,'native-run-readonly');
     assert.deepEqual(fs.readFileSync(stateFile),before);
   } finally { fs.rmSync(root,{recursive:true,force:true}); }
 });

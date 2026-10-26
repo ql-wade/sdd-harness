@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "SOURCE_BOUND_RUNTIME_UNQUALIFIED",
+  "status": "APPLICATION_ASSETS_PACKAGED_RUNTIME_UNQUALIFIED",
   "created_at": "2026-10-20T13:05:00+08:00",
   "created_by": "P1_6 convergence worker; isolated original task, baseline 7dd64e1",
   "briefing": "openspec/changes/delivery-foundation-rearchitecture/matt-method-profile-migration.md",
@@ -12,7 +12,7 @@
   ],
   "method_profile": {
     "controller": "comet-classic",
-    "controller_basis": "@rpamis/comet@0.4.5 pinned by integrations/comet/upstream.lock.json; patches in integrations/comet/patches applied reproducibly by tools/comet/build.mjs; exactly one delivery controller",
+    "controller_basis": "@rpamis/comet@0.5.0 pinned by integrations/comet/upstream.lock.json (commit aeb1a6598034e28ce46b8422d4dbd8785e607bd7, lock.patches == [] — patch chain retired per ADR-0022); exactly one delivery controller",
     "implementation_method": "matt-primitives",
     "implementation_method_detail": "implementation defaults: Matt tdd (test-first), Matt diagnosing-bugs (diagnosis loop), Matt code-review (Standards/Spec review); specialized methods keep their own responsibilities",
     "spec_source": "openspec",
@@ -29,8 +29,8 @@
     ],
     "consensus": "architecture via grill-me + multi-agent-consensus-review unanimous gate; test design independently auto-reviewed (test-authoring); Matt user-entry policy unchanged (no implicit to-spec/to-tickets substitution)",
     "superpowers": {
-      "status": "globally disabled upstream; not an installation or execution dependency anywhere in this delivery",
-      "init_install_path": "removed by integrations/comet/patches/0001-matt-method-profile.patch from init selection and all init/update installer calls",
+      "status": "not an installation or execution dependency anywhere in this delivery; upstream 0.5.0 baseline (patch chain retired) again offers Superpowers at init — the managed profile must never select it",
+      "init_install_path": "upstream baseline init calls `skills add obra/superpowers ...` again (RED evidence: worker-reports/P1_6-comet-050/evidence/red-1-delivery-case-1_6.txt); managed delivery excludes it via 0.5.0 application composition whose packaged assets (integrations/comet/application/skills) contain no superpowers/sdd-*/trinity names; enforcing exclusion at the real init/update seam is owned by the downstream composition and managed-init tasks per ADR-0022 migration order",
       "legacy_layout_paths": "docs/superpowers / classic-superpowers-root names remain controlled compatibility artifact paths only; per briefing they grant no permission to execute Superpowers",
       "attribution_links": "method-source links inside snapshots (e.g. whitebox-verify references to Superpowers TDD) are attribution references, not runtime dependencies; kept per briefing"
     }
@@ -494,23 +494,25 @@
       "source_metadata_sha256": "c72fef7ddde87f091cb719ad85719e5cc870d6fb2351dc3d7319342c0aa7f708"
     }
   ],
+  "application_packaging": {
+    "status": "ASSETS_PACKAGED",
+    "revision": "2026-10-26-comet-050-adoption-v1",
+    "manifest": "integrations/comet/application/manifest.json",
+    "packaged_root": "integrations/comet/application/skills",
+    "packaged_from": "every snapshot under snapshots[] is copied verbatim (byte-identical, real directories, no symlinks) to integrations/comet/application/skills/<name>",
+    "role": "supply side of the 0.5.0 native application composition (ADR-0022): execution-skill replacements consume these packaged assets; composition wiring, stepId/output-contract preservation and managed init remain downstream tasks",
+    "naming_rule": "no packaged skill name and no path component under the packaged root may match superpowers/sdd-*/trinity (case-insensitive); attribution references inside verbatim bodies are kept per method_profile.superpowers.attribution_links",
+    "runtime_accepted": false
+  },
   "comet_integration": {
-    "patches_registered_in": "integrations/comet/upstream.lock.json; controller must integrate current patch hashes serially",
+    "upstream_lock": "integrations/comet/upstream.lock.json",
+    "upstream_version": "0.5.0",
+    "upstream_commit": "aeb1a6598034e28ce46b8422d4dbd8785e607bd7",
+    "patch_chain_status": "retired per ADR-0022 (lock.patches == []); legacy patch files under integrations/comet/patches/ remain on disk as historical evidence only and are never applied — their disposition is owned by I02",
+    "composition_route": "0.5.0 native application composition (base=classic-full); execution-skill replacements are supplied from integrations/comet/application/skills per application_packaging; validators bind to host-side lib/delivery/* via bindings.mjs (downstream)",
     "profile_data": "comet-managed-v2",
     "runtime_accepted": false,
-    "patches": [
-      {
-        "path": "integrations/comet/patches/0001-matt-method-profile.patch",
-        "scope": "init/update actual dependency installers, doctor diagnostic, native Hook plan-recovery guidance, bilingual Classic assets and asset manifest",
-        "role": "Comet init/update can no longer select or install Superpowers. Actual shipped methods use Matt and the selected specialist snapshots; planning loads only original protocol sections, not the planner controller."
-      },
-      {
-        "path": "integrations/comet/patches/tests/1_6.patch",
-        "scope": "test/app/init-e2e.test.ts, test/app/update.test.ts, test/app/doctor.test.ts, test/app/matt-method-profile.test.ts, test/domains/comet-classic/classic-hook-guard.test.ts",
-        "role": "Public platform installation seam verifies bilingual method data and assets; no runtime role/gate acceptance is signed."
-      }
-    ],
-    "behavioral_probes": "test/delivery-cases/1_6.mjs runs the actual locked CLI in fresh isolated HOME/project roots for both languages; no external provider review is launched"
+    "behavioral_probes": "test/delivery-cases/1_6.mjs pins the locked 0.5.0 build presence and the packaged application asset manifest (supplier qualification); no external provider review is launched"
   },
   "unverified": [
     {
@@ -556,5 +558,6 @@
   "current_profile_id": "comet-managed-v2",
   "profile_data": "foundation/profiles/comet-managed.json",
   "runtime_accepted": false,
-  "updated_at": "2026-10-25T02:08:24.706860+00:00"
+  "updated_at": "2026-10-26T18:40:00+08:00",
+  "updated_by": "P1_6 worker, revision 2026-10-26-comet-050-adoption-v1: upstream relocked to 0.5.0 (patch chain retired per ADR-0022), skill assets packaged under integrations/comet/application, supplier tests re-pointed at the application manifest"
 }

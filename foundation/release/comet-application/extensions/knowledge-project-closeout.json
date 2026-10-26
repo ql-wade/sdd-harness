@@ -1,0 +1,24 @@
+{
+  "schema": "sdd.comet.classic.extension.v1",
+  "id": "knowledge-project-closeout",
+  "gate": "Kp",
+  "afterStep": "full.verify.check.evidence",
+  "skillId": "openspec-lifecycle-guard",
+  "artifactRefs": [
+    {
+      "ref": ".sdd/delivery/gates/kp/receipt-bundle.json",
+      "kind": "gate-receipt-bundle",
+      "hashBinding": "artifactHashes",
+      "writtenBy": "extension-execution"
+    }
+  ],
+  "validator": { "id": "sdd.delivery.gate.kp", "version": "1" },
+  "verdictProtocol": {
+    "verdicts": ["pass", "repair", "revise-requirements"],
+    "sourceHash": "domain-bound",
+    "artifactHashes": "domain-bound"
+  },
+  "semantics": "Kp (Knowledge.Closeout.v1): project-knowledge body frozen and the write independently read back BEFORE the archive entry; because this extension sits on full.verify.check.evidence, the upstream archive-time validateOutcome re-verifies its artifact hashes inside the archive directory (pristine classic-application.ts L621-L752). Team knowledge (Kt) is NOT here: it is the 0005 minimal patch so that Kt may resume after archive in the SAME Run.",
+  "bindings": "integrations/comet/application/bindings.mjs",
+  "judgment": "lib/delivery/gate.js evaluate (pure SDD.Gate.v1) over the payload's inputs/receipts/policy, reached only through bindings.mjs delegation; the readback evidence must already be admitted — this validator never fabricates or trusts a self-reported knowledge pass."
+}

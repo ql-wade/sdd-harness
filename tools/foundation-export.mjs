@@ -107,6 +107,18 @@ function sourceFile(root, relative) {
 }
 const EXCLUDED = new Set(['__pycache__', '.DS_Store', '.git']);
 
+// comet-050 adoption (task_disposition_delta.P1_2): the P1_6 composition
+// package — verbatim application skill assets bound to the re-locked 0.5.0
+// upstream — is a distributed asset set. Enumerated by filesystem walk so
+// fixtures without the directory bind nothing and pre-composition baselines
+// keep their historical export digests byte-for-byte.
+const COMPOSITION_REL = 'integrations/comet/application';
+function compositionFiles(root) {
+  const dir = path.join(root, COMPOSITION_REL);
+  if (!fs.existsSync(dir)) return [];
+  return walkFiles(dir).map((f) => ({ rel: `${COMPOSITION_REL}/${f.rel}`, abs: f.abs }));
+}
+
 function walkFiles(dir, prefix = '', out = [], excludeGenerated = true) {
   if (!rejectLinkedPath(dir)?.isDirectory()) throw new Error(`not a real asset directory: ${dir}`);
   for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
@@ -295,6 +307,10 @@ export async function buildLock(root, options = {}) {
 
   const assetCode = profileBinding ? assetDictionary(CODE_ASSETS.map((rel)=>[rel,sha256Bytes(fs.readFileSync(sourceFile(root,rel)))])) : null;
   const assetData = profileBinding ? assetDictionary(DEPENDENCY_METADATA.map((rel)=>[rel,sha256Bytes(fs.readFileSync(sourceFile(root,rel)))])) : null;
+  // Bound whenever the package is present (not only under a profile binding):
+  // the packaging manifest (P1_6) alone is not a distribution — the bytes
+  // under integrations/comet/application are part of the frozen asset set.
+  const composition = assetDictionary(compositionFiles(root).map((f)=>[f.rel,sha256Bytes(fs.readFileSync(f.abs))]));
   const commit = options.releaseCommit ?? gitRevParseHead(root);
 
   const lock = {
@@ -308,6 +324,7 @@ export async function buildLock(root, options = {}) {
         methodProfile,
         toolchain,
         ...(profileBinding ? { assetCode, assetData, capabilities: fs.existsSync(path.join(root, 'mcp-capabilities.yaml')) ? sha256Bytes(fs.readFileSync(path.join(root, 'mcp-capabilities.yaml'))) : null } : {}),
+        ...(Object.keys(composition).length ? { composition } : {}),
       })),
     },
     skills: skills.map(({ name, digest }) => ({ name, digest })),
@@ -323,7 +340,7 @@ export async function buildLock(root, options = {}) {
     throw new Error(`foundation export refused by emission gates:\n  - ${gate.errors.join('\n  - ')}`);
   }
   // Non-enumerable carrier for view writers; excluded from JSON and digests.
-  Object.defineProperty(lock, '__sources', { enumerable: false, value: { skills, profileBinding, assetCode, assetData } });
+  Object.defineProperty(lock, '__sources', { enumerable: false, value: { skills, profileBinding, assetCode, assetData, composition } });
   return lock;
 }
 
@@ -423,6 +440,15 @@ export async function exportRelease(root, outDir, options = {}) {
     emit(path.join(outDir, 'release/profile/binding.json'), JSON.stringify(lock.__sources.profileBinding, null, 2) + '\n');
     viewFiles.push('release/profile/binding.json');
   }
+  // Composition package view (comet-050 adoption): package-root-relative
+  // copies under release/comet-application/, byte-identical to the source
+  // package. Emitted whenever the package is present, independent of the
+  // profile binding, mirroring the digest rule in buildLock.
+  for (const rel of Object.keys(lock.__sources.composition ?? {})) {
+    const dest = `release/comet-application/${rel.slice(COMPOSITION_REL.length + 1)}`;
+    emit(path.join(outDir, dest), fs.readFileSync(sourceFile(root, rel)));
+    viewFiles.push(dest);
+  }
   rejectLinkedPath(outDir);
   const releaseRoot = path.join(outDir, 'release');
   if (rejectLinkedPath(releaseRoot)) walkFiles(releaseRoot, '', [], false);
@@ -445,6 +471,7 @@ function pureAssets(root, lock) {
   }
   const metadata = ['hooks.yaml','package.json',COMET_LOCK_REL,PROFILE_REL,PROFILE_DATA_REL,'mcp-capabilities.yaml',...CODE_ASSETS,...DEPENDENCY_METADATA];
   for (const rel of metadata) if (fs.existsSync(path.join(root,rel))) result[rel] = fs.readFileSync(sourceFile(root,rel));
+  for (const f of compositionFiles(root)) result[f.rel] = fs.readFileSync(f.abs);
   if (fs.existsSync(path.join(root,'.mcp.json'))) result['.mcp.json'] = Buffer.from(JSON.stringify({mcpServers:JSON.parse(fs.readFileSync(sourceFile(root,'.mcp.json'),'utf8')).mcpServers??{}},null,2)+'\n');
   return result;
 }
@@ -565,6 +592,26 @@ export async function verifyLock(lockPath, root, { requireBodies = false } = {})
     if (fs.existsSync(bindingFile) && readOutputFile(bindingFile, 'utf8') !== JSON.stringify(current.__sources.profileBinding, null, 2) + '\n') drifts.push({kind:'release',item:'profile-binding',detail:'profile binding drifted'});
   }
 
+  // Composition package view vs sources (comet-050 adoption): the packaging
+  // manifest alone is not a distribution — the view must mirror the source
+  // package byte-for-byte, with no missing, extra or hand-edited files.
+  const compositionViewRoot = path.join(outDir, 'release/comet-application');
+  const currentComposition = current.__sources.composition ?? {};
+  try {
+    if (Object.keys(currentComposition).length === 0) {
+      if (fs.existsSync(compositionViewRoot) && walkFiles(compositionViewRoot, '', [], false).length > 0) {
+        drifts.push({ kind: 'release', item: 'comet-application', detail: 'composition view present but the source package is absent (stale view)' });
+      }
+    } else {
+      if (fs.lstatSync(compositionViewRoot).isSymbolicLink()) throw new Error('symlink composition view');
+      const actual = cacheTree(compositionViewRoot);
+      const expected = assetDictionary(Object.entries(currentComposition).map(([rel, digest]) => [rel.slice(COMPOSITION_REL.length + 1), digest]));
+      if (canonicalJson(actual) !== canonicalJson(expected)) drifts.push({ kind: 'release', item: 'comet-application', detail: 'composition package view bytes or complete file set differs' });
+    }
+  } catch (error) {
+    drifts.push({ kind: 'release', item: 'comet-application', detail: error.message });
+  }
+
   // Release view vs sources (second-source detection).
   const hooksView = path.join(outDir, 'release/hooks/hooks.yaml');
   if (fs.existsSync(hooksView)) {
@@ -677,6 +724,19 @@ export async function resolveBaseline(root, lock) {
     const fields={skills:lock.skills,policy:lock.policy,mcps:lock.mcps,methodProfile:lock.methodProfile,toolchain:lock.toolchain};
     const sourceManifest=JSON.parse(manifest.out);
     if (sourceManifest.current_profile_id && lock.profile===sourceManifest.current_profile_id) { const caps=show('mcp-capabilities.yaml');fields.capabilities=caps.status===0?sha256Bytes(caps.out):null;fields.assetCode=assetDictionary(CODE_ASSETS.map((rel)=>{const file=show(rel);if(file.status!==0)throw new Error('historical code asset missing');return [rel,sha256Bytes(file.out)];}));fields.assetData=assetDictionary(DEPENDENCY_METADATA.map((rel)=>{const file=show(rel);if(file.status!==0)throw new Error('historical dependency metadata missing');return [rel,sha256Bytes(file.out)];})); }
+    // Composition package at the frozen commit (same presence rule as
+    // buildLock: bound whenever the tree carries files under the package
+    // path, so historical digests recompute with the identical payload).
+    const compositionLs = git(['ls-tree','-r','--name-only',commit,'--',COMPOSITION_REL]);
+    if (compositionLs.status===0 && compositionLs.out.toString('utf8').trim()) {
+      const entries=[];
+      for (const rel of compositionLs.out.toString('utf8').trim().split('\n')) {
+        const file = git(['show',`${commit}:${rel}`]);
+        if (file.status!==0) throw new Error('historical composition asset missing: '+rel);
+        entries.push([rel, sha256Bytes(file.out)]);
+      }
+      fields.composition = assetDictionary(entries);
+    }
     if (sha256Bytes(canonicalJson(fields))!==lock.release.exportDigest) missing.push('complete export digest (historical mismatch)');
   } catch { missing.push('historical asset metadata unavailable'); }
 
@@ -700,7 +760,14 @@ function readRunDir(runDir) {
 export async function checkRun(runDir, root, options = {}) {
   let material;try {material=readRunDir(runDir);} catch(error) {return {ok:false,action:'check',reason:'baseline-unresolvable',status:'STATE_SYNC_REQUIRED',detail:error.message};}
   const {lock,state,stateFile}=material;
-  const native = (typeof state.skill === 'string' && typeof state.skillHash === 'string') || path.basename(runDir)==='.comet' || fs.existsSync(path.join(runDir,'../.comet.yaml'));
+  // Native Comet Run markers across the re-locked line: the 0.4.5 patch stack
+  // wrote <change>/.comet.yaml + .comet/run-state.json; the 0.5.0 pinned build
+  // keeps a single Run state at <change>/comet-state.yaml (verified against
+  // the fixed build). A run directory that is, or sits inside, either layout
+  // is native: Foundation helpers observe assets only and never acquire or
+  // mutate the Run.
+  const native = (typeof state.skill === 'string' && typeof state.skillHash === 'string') || path.basename(runDir)==='.comet' || fs.existsSync(path.join(runDir,'../.comet.yaml'))
+    || fs.existsSync(path.join(runDir,'comet-state.yaml')) || fs.existsSync(path.join(runDir,'../comet-state.yaml'));
   if (native && (options.acquire || options.migrate)) return {ok:false,action:'check',reason:'native-run-readonly',status:'STATE_SYNC_REQUIRED',detail:'Foundation helpers cannot acquire or mutate a native Comet Run; use the same Comet kernel'};
   const current = await buildLock(root, { releaseCommit: lock.release.commit });
   const drift = current.release.exportDigest !== lock.release.exportDigest;

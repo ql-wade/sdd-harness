@@ -1,0 +1,1202 @@
+{
+ "schema_version": "3.0",
+ "plan": {
+  "plan_id": "green-fixture-plan-0001",
+  "status": "frozen",
+  "frozen_at": "2025-01-01T00:00:00+00:00",
+  "digest": "f8456cb3f9981b0987898d4d78ed513db1d892a0b85e0efb558a06f3d6e20e2c",
+  "evidence": [
+   "EV_SCOPE"
+  ]
+ },
+ "run": {
+  "run_id": "green-fixture-run-0001",
+  "status": "executed",
+  "started_at": "2025-01-01T00:30:00+00:00",
+  "completed_at": "2025-01-01T01:30:00+00:00",
+  "environment": "synthetic-fixture-env",
+  "sources": [
+   {
+    "component": "PRODUCER",
+    "repo": "fixture/repo",
+    "revision": "rev-green-0001",
+    "dirty_fingerprint": "clean",
+    "build_digest": "build-0001",
+    "identity_evidence": [
+     "EV_SOURCE"
+    ]
+   }
+  ],
+  "services": [
+   {
+    "component": "PRODUCER",
+    "mode": "local-process",
+    "start_or_deployment": "fixture-start",
+    "endpoint": "http://localhost:1",
+    "auth_fixture": "none",
+    "readiness_evidence": [
+     "EV_LIFECYCLE"
+    ],
+    "lifecycle_evidence": [
+     "EV_LIFECYCLE"
+    ],
+    "log_evidence": [
+     "EV_SERVICE_LOG"
+    ]
+   }
+  ],
+  "commands": [
+   {
+    "command_id": "CMD_RED",
+    "phase": "red",
+    "kind": "test",
+    "expected": "fail",
+    "exit_code": 1,
+    "command": "pytest fixture/t/a.py -q",
+    "outputs": [
+     "EV_RED_RUNNER"
+    ],
+    "started_at": "2025-01-01T01:00:00+00:00",
+    "completed_at": "2025-01-01T01:00:00+00:00",
+    "test_identity": "fixture::t/a.py::test_a",
+    "source_revisions": {
+     "PRODUCER": "rev-green-0001"
+    },
+    "source_fingerprints": {
+     "PRODUCER": "pre-fix-dirty"
+    },
+    "evidence": [
+     "EV_CMD_CMD_RED"
+    ]
+   },
+   {
+    "command_id": "CMD_GREEN",
+    "phase": "green",
+    "kind": "test",
+    "expected": "pass",
+    "exit_code": 0,
+    "command": "pytest fixture/t/a.py -q",
+    "outputs": [
+     "EV_RUNNER_GREEN"
+    ],
+    "started_at": "2025-01-01T01:00:00+00:00",
+    "completed_at": "2025-01-01T01:30:00+00:00",
+    "test_identity": "fixture::t/a.py::test_a",
+    "source_revisions": {
+     "PRODUCER": "rev-green-0001"
+    },
+    "source_fingerprints": {
+     "PRODUCER": "green-clean"
+    },
+    "evidence": [
+     "EV_CMD_CMD_GREEN"
+    ]
+   },
+   {
+    "command_id": "CMD_CONTRACT",
+    "phase": "contract",
+    "kind": "contract",
+    "expected": "pass",
+    "exit_code": 0,
+    "command": "pytest fixture/t/contract.py -q",
+    "outputs": [
+     "EV_RUNNER_CONTRACT",
+     "EV_CONTRACT"
+    ],
+    "started_at": "2025-01-01T01:00:00+00:00",
+    "completed_at": "2025-01-01T01:30:00+00:00",
+    "test_identity": "fixture::t/contract.py::test_hop1",
+    "source_revisions": {
+     "PRODUCER": "rev-green-0001"
+    },
+    "source_fingerprints": {
+     "PRODUCER": "clean"
+    },
+    "evidence": [
+     "EV_CMD_CMD_CONTRACT"
+    ]
+   },
+   {
+    "command_id": "CMD_JOURNEY",
+    "phase": "journey",
+    "kind": "other",
+    "expected": "pass",
+    "exit_code": 0,
+    "command": "curl -s localhost:1/fixture/state",
+    "outputs": [
+     "EV_READBACK"
+    ],
+    "started_at": "2025-01-01T01:00:00+00:00",
+    "completed_at": "2025-01-01T01:30:00+00:00",
+    "test_identity": "fixture::t/journey.py::test_e2e",
+    "source_revisions": {
+     "PRODUCER": "rev-green-0001"
+    },
+    "source_fingerprints": {
+     "PRODUCER": "clean"
+    },
+    "evidence": [
+     "EV_CMD_CMD_JOURNEY"
+    ]
+   },
+   {
+    "command_id": "CMD_SRC",
+    "phase": "identity",
+    "kind": "source-identity",
+    "command": "git rev-parse HEAD",
+    "test_identity": "fixture::source",
+    "outputs": [
+     "EV_SOURCE"
+    ],
+    "evidence": [
+     "EV_CMD_CMD_SRC"
+    ],
+    "expected": "pass",
+    "exit_code": 0,
+    "started_at": "2025-01-01T01:05:00+00:00",
+    "completed_at": "2025-01-01T01:06:00+00:00",
+    "source_revisions": {
+     "PRODUCER": "rev-green-0001"
+    },
+    "source_fingerprints": {
+     "PRODUCER": "clean"
+    }
+   },
+   {
+    "command_id": "CMD_LIFE",
+    "phase": "lifecycle",
+    "kind": "lifecycle",
+    "command": "fixture-start PRODUCER",
+    "test_identity": "fixture::lifecycle",
+    "outputs": [
+     "EV_LIFECYCLE",
+     "EV_SERVICE_LOG"
+    ],
+    "evidence": [
+     "EV_CMD_CMD_LIFE"
+    ],
+    "expected": "pass",
+    "exit_code": 0,
+    "started_at": "2025-01-01T01:05:00+00:00",
+    "completed_at": "2025-01-01T01:06:00+00:00",
+    "source_revisions": {
+     "PRODUCER": "rev-green-0001"
+    },
+    "source_fingerprints": {
+     "PRODUCER": "clean"
+    }
+   },
+   {
+    "command_id": "CMD_REDACT",
+    "phase": "security",
+    "kind": "redaction",
+    "command": "fixture-redact --all",
+    "test_identity": "fixture::redaction",
+    "outputs": [
+     "EV_REDACTION"
+    ],
+    "evidence": [
+     "EV_CMD_CMD_REDACT"
+    ],
+    "expected": "pass",
+    "exit_code": 0,
+    "started_at": "2025-01-01T01:05:00+00:00",
+    "completed_at": "2025-01-01T01:06:00+00:00",
+    "source_revisions": {
+     "PRODUCER": "rev-green-0001"
+    },
+    "source_fingerprints": {
+     "PRODUCER": "clean"
+    }
+   }
+  ],
+  "runner_reports": [
+   {
+    "report_id": "RR_RED",
+    "command_id": "CMD_RED",
+    "phase": "red",
+    "failed": 1,
+    "evidence": [
+     "EV_RED_RUNNER"
+    ],
+    "authority": "real-stack",
+    "project": "fixture/repo",
+    "source_revisions": {
+     "PRODUCER": "rev-green-0001"
+    },
+    "journey_ids": [
+     "JOURNEY_1"
+    ],
+    "case_ids": [
+     "CASE_RED_GREEN"
+    ],
+    "hop_ids": [
+     "HOP_1"
+    ],
+    "passed": 0,
+    "skipped": 0,
+    "retried": 0,
+    "flaky": 0
+   },
+   {
+    "report_id": "RR_GREEN",
+    "command_id": "CMD_GREEN",
+    "phase": "green",
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "retried": 0,
+    "flaky": 0,
+    "evidence": [
+     "EV_RUNNER_GREEN"
+    ],
+    "authority": "real-stack",
+    "project": "fixture/repo",
+    "source_revisions": {
+     "PRODUCER": "rev-green-0001"
+    },
+    "journey_ids": [
+     "JOURNEY_1"
+    ],
+    "case_ids": [
+     "CASE_RED_GREEN"
+    ],
+    "hop_ids": [
+     "HOP_1"
+    ],
+    "dimension_results": {
+     "A": {
+      "status": "pass",
+      "test_obligations": [
+       "{\"actual\":\"report.logical_count\",\"expected\":1,\"operator\":\"eq\",\"test_id\":\"fixture::t/a.py::test_a\"}"
+      ]
+     },
+     "E": {
+      "status": "pass",
+      "test_obligations": [
+       "{\"actual\":\"authorization.denied_count\",\"expected\":0,\"operator\":\"eq\",\"test_id\":\"fixture::t/e.py::test_e\"}"
+      ]
+     },
+     "H": {
+      "status": "pass",
+      "test_obligations": [
+       "{\"actual\":\"recovery.compensated_count\",\"expected\":1,\"operator\":\"eq\",\"test_id\":\"fixture::t/h.py::test_h\"}"
+      ]
+     },
+     "J": {
+      "status": "pass",
+      "test_obligations": [
+       "{\"actual\":\"runner.failed_count\",\"expected\":0,\"operator\":\"eq\",\"test_id\":\"fixture::t/j.py::test_j\"}"
+      ]
+     }
+    }
+   },
+   {
+    "report_id": "RR_CONTRACT",
+    "command_id": "CMD_CONTRACT",
+    "phase": "contract",
+    "authority": "contract",
+    "project": "fixture/repo",
+    "source_revisions": {
+     "PRODUCER": "rev-green-0001"
+    },
+    "journey_ids": [
+     "JOURNEY_1"
+    ],
+    "case_ids": [
+     "CASE_RED_GREEN"
+    ],
+    "hop_ids": [
+     "HOP_1"
+    ],
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "retried": 0,
+    "flaky": 0,
+    "evidence": [
+     "EV_RUNNER_CONTRACT"
+    ],
+    "dimension_results": {
+     "F": {
+      "status": "pass",
+      "test_obligations": [
+       "{\"actual\":\"contract.match_count\",\"expected\":1,\"operator\":\"eq\",\"test_id\":\"fixture::t/contract.py::test_hop1\"}"
+      ]
+     }
+    }
+   }
+  ],
+  "subagents": [
+   {
+    "agent_id": "agent-sub_mapper",
+    "role": "journey mapper",
+    "journey_id": "JOURNEY_1",
+    "evidence": [
+     "EV_SUB_1"
+    ],
+    "status": "completed",
+    "journey_ids": [
+     "JOURNEY_1"
+    ],
+    "source_revisions": {
+     "PRODUCER": "rev-green-0001"
+    }
+   },
+   {
+    "agent_id": "agent-sub_runner",
+    "role": "test/contract designer",
+    "journey_id": "JOURNEY_1",
+    "evidence": [
+     "EV_SUB_2"
+    ],
+    "status": "completed",
+    "journey_ids": [
+     "JOURNEY_1"
+    ],
+    "source_revisions": {
+     "PRODUCER": "rev-green-0001"
+    }
+   },
+   {
+    "agent_id": "agent-sub_grill",
+    "role": "grill reviewer",
+    "journey_id": "JOURNEY_1",
+    "evidence": [
+     "EV_SUB_3"
+    ],
+    "status": "completed",
+    "journey_ids": [
+     "JOURNEY_1"
+    ],
+    "source_revisions": {
+     "PRODUCER": "rev-green-0001"
+    }
+   }
+  ],
+  "provenance": {
+   "level": "local-observed",
+   "observer": "fixture-observer",
+   "tool_output_capture": true,
+   "evidence": [
+    "EV_PROVENANCE"
+   ]
+  },
+  "redaction": {
+   "status": "pass",
+   "evidence": [
+    "EV_REDACTION"
+   ]
+  },
+  "ci": {
+   "required": false,
+   "evidence": [
+    "EV_CI"
+   ],
+   "reason": "fixture: ci not required for synthetic single-journey slice"
+  }
+ },
+ "evidence_catalog": {
+  "EV_SOURCE": {
+   "artifact_type": "source-identity",
+   "path": "green/source.json",
+   "sha256": "b1c0c75ccca71ecb313e37cd71e06a16a95855983dcc9d4cde4bf8d12a15b3c6",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_LIFECYCLE": {
+   "artifact_type": "lifecycle-report",
+   "path": "green/lifecycle.json",
+   "sha256": "1cac4fb275385fd0c0ab6f8e7dfcc9b1fad5228c06f5c99893e11be951f4b0c4",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_RED_RUNNER": {
+   "artifact_type": "runner-report",
+   "path": "green/rr-red.json",
+   "sha256": "bb9389f68a2dad48ddf1e8104b667ff74a57111f46f84209a3e4e163a1e341d7",
+   "correlation_values": [
+    "corr-green-0001"
+   ],
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [
+    "CASE_RED_GREEN"
+   ],
+   "hop_ids": [
+    "HOP_1"
+   ]
+  },
+  "EV_GREEN_RUNNER": {
+   "artifact_type": "runner-report",
+   "path": "green/rr-green.json",
+   "sha256": "fe9625e955d988dc954cefdac136074374373482522d0976bd65609fec225dc3",
+   "correlation_values": [
+    "corr-green-0001"
+   ],
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [
+    "CASE_RED_GREEN"
+   ],
+   "hop_ids": [
+    "HOP_1"
+   ]
+  },
+  "EV_CONTRACT": {
+   "artifact_type": "contract-report",
+   "path": "green/contract.json",
+   "sha256": "9d6e44c9a708fd0856a0ce3e9d887dbefd46e62e2fdf9eb66f827ad4317b3121",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [],
+   "hop_ids": [
+    "HOP_1"
+   ],
+   "correlation_values": []
+  },
+  "EV_READBACK": {
+   "artifact_type": "readback-report",
+   "path": "green/readback.json",
+   "sha256": "b030a2fb0fb302705e1e2a277d68b189f05d5eb7f784e98f5d32c1bde0fc39a1",
+   "correlation_values": [
+    "corr-green-0001"
+   ],
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [
+    "CASE_RED_GREEN"
+   ],
+   "hop_ids": []
+  },
+  "EV_PROVENANCE": {
+   "artifact_type": "provenance-report",
+   "path": "green/provenance.json",
+   "sha256": "b0ed2d33e462e90c4f05e99a9720c06b6e103c5e3b85e45c09b11052dbf7fb1a",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_REDACTION": {
+   "artifact_type": "redaction-report",
+   "path": "green/redaction.json",
+   "sha256": "61e9d13b715f4fc68076de42714274b579ee3b9ffb2c57bc778174923e0210a7",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_SUB_1": {
+   "artifact_type": "subagent-report",
+   "path": "green/sub1.json",
+   "sha256": "77934c00fc6e8ff13c2364023ac3dfbf0965b6cdffd9169d238dafdc72752d26",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_SUB_2": {
+   "artifact_type": "subagent-report",
+   "path": "green/sub2.json",
+   "sha256": "f89d612f5b9d22e5ae3a78d9a12d6eb9b82ce425ab4e7f3c2c17095fc4291dea",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_SUB_3": {
+   "artifact_type": "subagent-report",
+   "path": "green/sub3.json",
+   "sha256": "e9a628c7db38e9bfe0c19bbba74be9df0d2dbe935157303e81051ee5ddf694b5",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_PRODUCER": {
+   "artifact_type": "raw-log",
+   "path": "green/producer.log",
+   "sha256": "849a632d887b1ff5dd3510f6048b41dcd018aaed78504e538122a727e6a1f5cb",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [
+    "CASE_RED_GREEN"
+   ],
+   "hop_ids": [
+    "HOP_1"
+   ],
+   "correlation_values": [
+    "corr-green-0001"
+   ]
+  },
+  "EV_WIRE": {
+   "artifact_type": "raw-log",
+   "path": "green/wire.log",
+   "sha256": "99cbe68f424214c9aa5ae82eddb91959182b7fed66cead47bebea8b5ca17124a",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [
+    "CASE_RED_GREEN"
+   ],
+   "hop_ids": [
+    "HOP_1"
+   ],
+   "correlation_values": [
+    "corr-green-0001"
+   ]
+  },
+  "EV_CONSUMER": {
+   "artifact_type": "raw-log",
+   "path": "green/consumer.log",
+   "sha256": "01e81a61e31d775a65e1e57fe1503821ffe593de23797c29d682e48db3836081",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [
+    "CASE_RED_GREEN"
+   ],
+   "hop_ids": [
+    "HOP_1"
+   ],
+   "correlation_values": [
+    "corr-green-0001"
+   ]
+  },
+  "EV_RISK": {
+   "artifact_type": "raw-log",
+   "path": "green/risk.log",
+   "sha256": "2cbe9180d6eb183fb2327f13d56db5e589f2a6ba31b5140b0c407c266508426f",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [
+    "CASE_RED_GREEN"
+   ],
+   "hop_ids": [
+    "HOP_1"
+   ],
+   "correlation_values": [
+    "corr-green-0001"
+   ]
+  },
+  "EV_SERVICE_LOG": {
+   "artifact_type": "raw-log",
+   "path": "green/service.log",
+   "sha256": "53369c8306c76c67ed2b6df0ae57a0acb55ebe412321717b24e3b19d7dbdde8e",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_CMD_CMD_RED": {
+   "artifact_type": "command-report",
+   "path": "green/cmd-cmd_red.json",
+   "sha256": "63bc847a4f4977c2b9579a61ae4a88c85837b9aed71e72c25d323f1b2c5220d1",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_CMD_CMD_GREEN": {
+   "artifact_type": "command-report",
+   "path": "green/cmd-cmd_green.json",
+   "sha256": "f2ee49df3de58e8d3436838a3fa86830dbf6eb03f4356a3fd7b857dabc2e6d85",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_CMD_CMD_CONTRACT": {
+   "artifact_type": "command-report",
+   "path": "green/cmd-cmd_contract.json",
+   "sha256": "291686fe24448ac33e2c4d287d474b188e7cfa41c5f6bb0dbbda5030e131e8f9",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_CMD_CMD_JOURNEY": {
+   "artifact_type": "command-report",
+   "path": "green/cmd-cmd_journey.json",
+   "sha256": "46ed64f2771851a35dc28b399f540ccd89da408f975ed95640bbcb92dd127195",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [
+    "CASE_RED_GREEN"
+   ],
+   "hop_ids": [],
+   "correlation_values": [
+    "corr-green-0001"
+   ]
+  },
+  "EV_CMD_CMD_SRC": {
+   "artifact_type": "command-report",
+   "path": "green/cmd-cmd_src.json",
+   "sha256": "ab0fb51c46b64f25fd32e7e030188010e102fe943779eb1502f435d24fc2b24f",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_CMD_CMD_LIFE": {
+   "artifact_type": "command-report",
+   "path": "green/cmd-cmd_life.json",
+   "sha256": "60ca97020995729b916f6029266d71b43bba04139a69d1a0ba761b54b9bcb150",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_CMD_CMD_REDACT": {
+   "artifact_type": "command-report",
+   "path": "green/cmd-cmd_redact.json",
+   "sha256": "6ae50219fee9b928b7106c3c6bfa1a3a94acd01d2ddc9a566e7d3bd0b0520656",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_RUNNER_GREEN": {
+   "artifact_type": "runner-report",
+   "path": "green/rr-green2.json",
+   "sha256": "5fd1af19cf3571f63a30652c347e766e77de551831a308d722c055d7bb84bce0",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [
+    "CASE_RED_GREEN"
+   ],
+   "hop_ids": [
+    "HOP_1"
+   ],
+   "correlation_values": [
+    "corr-green-0001"
+   ]
+  },
+  "EV_RUNNER_CONTRACT": {
+   "artifact_type": "runner-report",
+   "path": "green/rr-contract.json",
+   "sha256": "b1ccb182f5e75b8e399753db3a027497149aa5cf53c5b99508e03057ba314712",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [
+    "CASE_RED_GREEN"
+   ],
+   "hop_ids": [
+    "HOP_1"
+   ],
+   "correlation_values": [
+    "corr-green-0001"
+   ]
+  },
+  "EV_SURFACE": {
+   "artifact_type": "raw-log",
+   "path": "green/surface.log",
+   "sha256": "3ddde7bc2dd5163e2de9c524166bd4ab15d65b60fb51e9160ca93b485bb997e9",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [
+    "JOURNEY_1"
+   ],
+   "case_ids": [
+    "CASE_RED_GREEN"
+   ],
+   "hop_ids": [
+    "HOP_1"
+   ],
+   "correlation_values": [
+    "corr-green-0001"
+   ]
+  },
+  "EV_CI": {
+   "artifact_type": "raw-log",
+   "path": "green/ci.json",
+   "sha256": "6d1dcd58c654d9ef537bd025e43833770e3976d1f5548c8781bb451d522ff078",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T01:10:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  },
+  "EV_SCOPE": {
+   "artifact_type": "scope-plan",
+   "path": "green/scope.json",
+   "sha256": "f8456cb3f9981b0987898d4d78ed513db1d892a0b85e0efb558a06f3d6e20e2c",
+   "run_id": "green-fixture-run-0001",
+   "captured_at": "2025-01-01T00:45:00+00:00",
+   "source_revisions": {
+    "PRODUCER": "rev-green-0001"
+   },
+   "journey_ids": [],
+   "case_ids": [],
+   "hop_ids": [],
+   "correlation_values": []
+  }
+ },
+ "journeys": [
+  {
+   "journey_id": "JOURNEY_1",
+   "business_outcome": "fixture terminal business outcome",
+   "dimensions": {
+    "A": {
+     "status": "pass",
+     "required_case_ids": [
+      "CASE_RED_GREEN"
+     ],
+     "required_hop_ids": [
+      "HOP_1"
+     ],
+     "required_authority": "real-stack",
+     "test_obligations": [
+      "{\"actual\":\"report.logical_count\",\"expected\":1,\"operator\":\"eq\",\"test_id\":\"fixture::t/a.py::test_a\"}"
+     ],
+     "evidence": [
+      "EV_RUNNER_GREEN"
+     ]
+    },
+    "B": {
+     "status": "n_a",
+     "reason": "no browser surface",
+     "evidence": [
+      "EV_SUB_1"
+     ]
+    },
+    "C": {
+     "status": "n_a",
+     "reason": "no browser surface",
+     "evidence": [
+      "EV_SUB_1"
+     ]
+    },
+    "D": {
+     "status": "n_a",
+     "reason": "no datastore hop",
+     "evidence": [
+      "EV_SUB_1"
+     ]
+    },
+    "E": {
+     "status": "pass",
+     "required_case_ids": [
+      "CASE_RED_GREEN"
+     ],
+     "required_hop_ids": [
+      "HOP_1"
+     ],
+     "required_authority": "real-stack",
+     "test_obligations": [
+      "{\"actual\":\"authorization.denied_count\",\"expected\":0,\"operator\":\"eq\",\"test_id\":\"fixture::t/e.py::test_e\"}"
+     ],
+     "evidence": [
+      "EV_RUNNER_GREEN"
+     ]
+    },
+    "F": {
+     "status": "pass",
+     "required_case_ids": [
+      "CASE_RED_GREEN"
+     ],
+     "required_hop_ids": [
+      "HOP_1"
+     ],
+     "required_authority": "contract",
+     "test_obligations": [
+      "{\"actual\":\"contract.match_count\",\"expected\":1,\"operator\":\"eq\",\"test_id\":\"fixture::t/contract.py::test_hop1\"}"
+     ],
+     "evidence": [
+      "EV_RUNNER_CONTRACT"
+     ]
+    },
+    "G": {
+     "status": "n_a",
+     "reason": "no message/event transport",
+     "evidence": [
+      "EV_SUB_1"
+     ]
+    },
+    "H": {
+     "status": "pass",
+     "required_case_ids": [
+      "CASE_RED_GREEN"
+     ],
+     "required_hop_ids": [
+      "HOP_1"
+     ],
+     "required_authority": "real-stack",
+     "test_obligations": [
+      "{\"actual\":\"recovery.compensated_count\",\"expected\":1,\"operator\":\"eq\",\"test_id\":\"fixture::t/h.py::test_h\"}"
+     ],
+     "evidence": [
+      "EV_RUNNER_GREEN"
+     ]
+    },
+    "I": {
+     "status": "n_a",
+     "reason": "no compatibility surface",
+     "evidence": [
+      "EV_SUB_1"
+     ]
+    },
+    "J": {
+     "status": "pass",
+     "required_case_ids": [
+      "CASE_RED_GREEN"
+     ],
+     "required_hop_ids": [
+      "HOP_1"
+     ],
+     "required_authority": "real-stack",
+     "test_obligations": [
+      "{\"actual\":\"runner.failed_count\",\"expected\":0,\"operator\":\"eq\",\"test_id\":\"fixture::t/j.py::test_j\"}"
+     ],
+     "evidence": [
+      "EV_RUNNER_GREEN"
+     ]
+    }
+   },
+   "required_paths": [
+    {
+     "path_id": "PATH_HAPPY",
+     "path_type": "happy",
+     "mandatory": true,
+     "closure_case_id": "CASE_RED_GREEN",
+     "required_hop_ids": [
+      "HOP_1"
+     ],
+     "risk_obligations": [
+      "retry"
+     ]
+    }
+   ],
+   "cases": [
+    {
+     "case_id": "CASE_RED_GREEN",
+     "path_id": "PATH_HAPPY",
+     "correlation": "corr-green-0001",
+     "runner_project": "fixture/repo",
+     "hop_ids": [
+      "HOP_1"
+     ],
+     "risk_obligations": [
+      "retry"
+     ],
+     "preconditions": "fixture precondition",
+     "action": "fixture action",
+     "terminal_oracle": "state==completed",
+     "required_authority": "real-stack",
+     "test_double_ids": []
+    }
+   ],
+   "case_results": [
+    {
+     "case_id": "CASE_RED_GREEN",
+     "result": "pass",
+     "runner_report_ids": [
+      "RR_GREEN"
+     ],
+     "evidence": [
+      "EV_GREEN_RUNNER"
+     ]
+    }
+   ],
+   "terminal_oracle": {
+    "status": "pass",
+    "claim": "fixture state reached completed",
+    "case_id": "CASE_RED_GREEN",
+    "authority_components": [
+     "PRODUCER"
+    ],
+    "authority_evidence": [
+     "EV_READBACK"
+    ],
+    "readback_expectations": [
+     {
+      "authority_component": "PRODUCER",
+      "query_type": "http-read-model",
+      "query": "GET /fixture/state",
+      "expected": "completed",
+      "timeout_ms": 5000,
+      "command_id": "CMD_JOURNEY",
+      "command": "curl -s localhost:1/fixture/state"
+     }
+    ],
+    "surface_evidence": [
+     "EV_SURFACE"
+    ]
+   },
+   "tdd": {
+    "case_id": "CASE_RED_GREEN",
+    "red": {
+     "command_id": "CMD_RED",
+     "runner_report_id": "RR_RED",
+     "evidence": [
+      "EV_RED_RUNNER"
+     ],
+     "method": "pre-fix",
+     "failure_signature": "AssertionError: endpoint behavior not implemented",
+     "control_evidence": [
+      "EV_RED_RUNNER"
+     ]
+    },
+    "green": {
+     "command_id": "CMD_GREEN",
+     "runner_report_id": "RR_GREEN",
+     "evidence": [
+      "EV_GREEN_RUNNER"
+     ],
+     "method": "minimal-pass"
+    },
+    "test_identity": "fixture::t/a.py::test_a",
+    "method": "red-green-refactor"
+   },
+   "expected_hops": [
+    {
+     "hop_id": "HOP_1",
+     "mandatory": true,
+     "contract_required": true,
+     "contract_digest": "sha256:fc6ea52eb0fadaa1c559b87c3249b2bb986b1146af74dff63716e54df7938db6",
+     "interaction_ids": [
+      "INTERACTION_1"
+     ],
+     "provider_state_ids": [
+      "STATE_1"
+     ],
+     "risk_obligations": [
+      "retry"
+     ],
+     "producer": "PRODUCER",
+     "consumer": "PRODUCER",
+     "producer_scope": "first_party",
+     "consumer_scope": "first_party",
+     "transport": "http/rpc",
+     "contract": "fixture-contract",
+     "contract_version": "v1",
+     "verification_mode": "consumer-provider",
+     "producer_build_digest": "build-0001",
+     "consumer_build_digest": "build-0001",
+     "required_authority": "real-stack",
+     "consistency": "eventual",
+     "producer_oracle": "producer log entry",
+     "wire_oracle": "http 200 with body",
+     "consumer_oracle": "state completed",
+     "allowed_double_ids": []
+    }
+   ],
+   "observed_hops": [
+    {
+     "hop_id": "HOP_1",
+     "case_id": "CASE_RED_GREEN",
+     "producer_evidence": [
+      "EV_PRODUCER"
+     ],
+     "wire_evidence": [
+      "EV_WIRE"
+     ],
+     "consumer_evidence": [
+      "EV_CONSUMER"
+     ],
+     "contract_evidence": [
+      "EV_CONTRACT"
+     ],
+     "risk_evidence": {
+      "retry": [
+       "EV_RISK"
+      ]
+     }
+    }
+   ],
+   "ci_required": false,
+   "requirement_ids": [
+    "REQ_FIXTURE_1"
+   ],
+   "entry": {
+    "kind": "api",
+    "description": "fixture api ingress"
+   },
+   "first_party_components": [
+    "PRODUCER"
+   ],
+   "test_doubles": [],
+   "ci_expectations": [],
+   "browser": {
+    "required": true,
+    "case_id": "CASE_RED_GREEN",
+    "route": "/fixture/state",
+    "browser": "chromium",
+    "project": "fixture/repo",
+    "persona": "fixture-persona-a",
+    "viewports": [
+     "1280x720"
+    ],
+    "expected_network_failures": [],
+    "expected_actions": [
+     "click the primary submit control"
+    ],
+    "expected_dom_assertions": [
+     "{\"expected\":true,\"operator\":\"eq\",\"selector\":\"#fixture-status\"}"
+    ],
+    "expected_network_observations": [
+     "{\"method\":\"GET\",\"status\":200,\"url\":\"/fixture/state\"}"
+    ]
+   },
+   "grill": {
+    "status": "pass",
+    "evidence": [
+     "EV_SUB_3"
+    ],
+    "findings": []
+   }
+  }
+ ]
+}

@@ -1,0 +1,216 @@
+✔ CLI export produces a contract-valid lock and verify accepts it (real repo) (1134.524834ms)
+✔ V_F04: CLI verify fails on drifted assets and check-run blocks an active run (explicit migration path) (189.548042ms)
+✔ CLI check-run refuses a second writer on an active run (B09) and allows the owner (747.884166ms)
+✔ V_F02: forward then reverse composition: init, user edit, re-pull, uninstall, re-init (1036.8085ms)
+✔ plugin registration division: plugin lifecycle hooks survive bootstrap init, re-pull and uninstall untouched (785.78825ms)
+✔ duplicate same event/command registration (plugin entry wrapping the managed command) is refused via bootstrap with a conflict list (133.068459ms)
+✔ V_F02: repeat pull idempotency: repeated bootstrap keeps lock bytes and entry counts stable (1412.555209ms)
+✔ exporter builds a contract-valid lock from the unique sources (real repo) (437.142584ms)
+✔ lock emission gates: full digests, no machine paths, no floating versions (184.470167ms)
+✔ exporter refuses to emit when an MCP registration floats (@latest) (20.374583ms)
+✔ release view + lock are byte-stable across repeated exports (repeat-pull idempotency) (84.412917ms)
+✔ dual-write drift is detected in both directions (source edit and hand-edited view) (172.434417ms)
+✖ committed foundation artifacts match live sources (repo-level drift gate) (442.719584ms)
+✔ composition requires adapter fixture isolation and uninstall capability (0.092167ms)
+✔ reverse order A: existing user config survives bootstrap, guard installed once (171.81125ms)
+✔ reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept (491.392292ms)
+✔ upgrade: stale managed entry in an older command format is replaced, not duplicated (166.031541ms)
+✔ uninstall removes managed entries only, is idempotent, and re-init restores (558.431167ms)
+✔ uninstall is locale-safe: UTF-8 locale must not crash bootstrap (regression: unbraced $var before a multibyte char) (286.325166ms)
+✔ owned control-plane scripts never place an unbraced variable expansion adjacent to multibyte text (0.216375ms)
+✔ matcher registration and gate script behavior are tested together (436.139667ms)
+✔ adapter declares the fixed event set and the plugin registration division (0.16075ms)
+✔ plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall (452.781166ms)
+✔ same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched (124.654417ms)
+✔ duplicate user entries for the same event/command are refused, not composed twice (126.241375ms)
+✔ hooks.yaml events outside the adapter fixed event set are refused, never silently dropped (128.967042ms)
+✔ plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2) (131.954875ms)
+✔ exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts (16.404333ms)
+✔ bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo (832.474959ms)
+✔ legacy workflow: retired source-command-sdd-code source under .agents/skills refuses activation with zero mutations (direct-discovery refusal) (125.903666ms)
+✔ legacy workflow: every retired naming family refuses with per-name diagnostics, bodies untouched, no artifacts (153.177375ms)
+✔ legacy workflow: unowned retired-name directory with user files is preserved and blocks install (no prefix deletion) (117.688834ms)
+✔ legacy workflow: retired-name symlink pointing at an external .agents/skills path is preserved (exact-ownership proof required) (119.480416ms)
+✔ legacy workflow: exact adapter-owned stale link to a retired name is removed on install; valid sources assemble settings and stay idempotent (492.72425ms)
+✔ legacy workflow: uninstall removes only adapter-owned links — unowned dirs, external retired-name links and user config survive (300.113708ms)
+✔ legacy workflow: refusal is readonly and reversible — human disposal of the residue unblocks activation (425.044417ms)
+✖ old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline) (341.954083ms)
+✔ active run blocks silent re-baseline after asset drift; closed run only notes it (332.532583ms)
+✔ unresolvable pinned baseline is blocked explicitly, never silently swapped (214.908083ms)
+✔ B09: a second writer cannot take over an active run (670.40525ms)
+✔ explicit migration re-pins only with ownership and a resolvable old baseline (366.248167ms)
+✔ cold package keeps declared dot files and binary source bytes (104.257291ms)
+✔ cold package verification refuses a missing copied source file (88.377125ms)
+✔ current managed distribution binds the exact profile data and all 245 source files (2674.11225ms)
+✔ export refuses retired sources instead of distributing a valid-looking old workflow (3.794083ms)
+✖ legacy asset ownership helper never acquires or rewrites an actual native Comet Run (1053.251125ms)
+✔ complete copied distribution refuses a removed method directory and an injected file (153.077042ms)
+✔ frozen pure assets resolve after transport without Git history and reject corruption or symlink escape (152.752791ms)
+✔ sealed cache parents cannot redirect writes and release references cannot float (49.616458ms)
+✔ sealed cache refuses an injected prototype-named file in the complete set (129.304083ms)
+ℹ {"clean":{"ok":true,"resolvable":true,"reason":"sealed pure assets verified byte-for-byte and whole exportDigest","resolvedSkills":["alpha","beta"],"missing":[],"source":"sealed-assets"},"modified":{"ok":false,"resolvable":false,"reason":"STATE_SYNC_REQUIRED: unexpected or missing sealed asset","resolvedSkills":[],"missing":["sealed-assets"]},"files":["__proto__","foundation-lock.json","manifest.json","source"]}
+✔ legal prototype-named source files round trip byte-exact through release and sealed cache (253.150459ms)
+✔ sealed cache complete set rejects extra special-named files, directories and symlinks (360.001667ms)
+✔ managed hook resolver changes invalidate the lock and are sealed as explicit code assets (438.046792ms)
+ℹ {"before":"da9bd0a95953f7daaae89329dd827afa65f89440c3f2d62404b34935ff1af4e2","after":"df089a0835ff63a26a76a8dc34776d0ba3ebbad63d5e9ba938bf24e9836ebba9","verify":{"ok":false,"drifts":[{"kind":"lock","item":"exportDigest","detail":"complete asset set drifted"},{"kind":"release","item":"code","detail":"project code closure bytes or complete file set differs"}]},"cacheHasResolver":true}
+✔ every project code dependency and pin metadata is bound in digest, release and immutable cache (2811.808583ms)
+✔ transported closure executes exporter and adapter without parent source modules; missing Python refuses cleanly (2297.070958ms)
+ℹ {"export":{"exit":0,"stdout":"✅ foundation export: 34 files under /var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/fdn-transport-code-J7xDA3/foundation (release commit aaaaaaaa, exportDigest da9bd0a95953)\n","stderr":""},"verify":{"exit":0,"stdout":"✅ foundation verify: lock, sources and release view are consistent\n","stderr":""},"adapter":{"exit":0,"stdout":"✅ hooks 策略已编译：hooks/.compiled.env + .claude/settings.json (1 deny 策略)\n✅ selected method links installed; unrelated user entries preserved\n","stderr":""},"gate":{"exit":2,"stderr":"❌ 禁止执行「git push --force」：blocked（hooks.yaml dangerous-command-blocklist）\n"},"missingPython":{"exit":1,"stderr":"❌ python3 required by claude-code adapter\n"},"parentModules":false}
+✔ copied method directory symlinks refuse verification and export without changing user bytes (185.975083ms)
+ℹ {"verify":{"ok":false,"error":"lock unreadable: symlink asset refused: skills/alpha","drifts":[]},"exportRejected":true,"error":"symlink asset refused: skills/alpha","before":"1fd0d20e25f00bb273c3891b885729613ad25d24e3f331d5ede0cdd69e681537","after":"1fd0d20e25f00bb273c3891b885729613ad25d24e3f331d5ede0cdd69e681537"}
+✔ export and verify reject linked package roots, every view ancestor and output file before any mutation (1259.155667ms)
+ℹ {"slot":"package-root","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+ℹ {"slot":"package-ancestor","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+ℹ {"slot":"foundation-lock.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+ℹ {"slot":"release","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+ℹ {"slot":"release/skills","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+ℹ {"slot":"release/skills/alpha","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+ℹ {"slot":"release/skills/alpha/SKILL.md","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+ℹ {"slot":"release/skills/MANIFEST.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"2b5629f0d08890d8a180020d317963782175969acb5388d81adfbaadb1986bd6"}
+ℹ {"slot":"release/hooks","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+ℹ {"slot":"release/hooks/hooks.yaml","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+ℹ {"slot":"release/mcp","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"57eefe7379a348936054bfef83361655671bca3cc51f34b75575fd86c4245f46"}
+ℹ {"slot":"release/mcp/mcp.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"57eefe7379a348936054bfef83361655671bca3cc51f34b75575fd86c4245f46"}
+✔ managed code/profile outputs and existing output aliases cannot redirect export or verification (2373.982333ms)
+ℹ {"slot":"release/profile","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/profile/binding.json","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/profile/comet-managed.json","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code/tools","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code/tools/bootstrap.sh","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code/MANIFEST.json","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"hardlink","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"fifo","verification":false,"wholeFixtureUnchanged":true}
+✔ Git exports remain verifiable after transport without Git (213.647458ms)
+✔ TeamAI packet roundtrip preserves the externally frozen full file set (9140.268541ms)
+✔ TeamAI packet rejects tamper, omission, duplicate, escape, unsafe mode and stale source before writing (6757.861875ms)
+✔ original Foundation CLI connects TeamAI view export and externally pinned receive (8701.921792ms)
+✔ Bash project caller equivalence leaves unrelated user scripts and Ponytail plugin entries unchanged (284.13025ms)
+✔ managed discovery links only selected methods and preserves unrelated source directories (192.0845ms)
+✔ managed discovery refuses old command migration inputs without deleting user data (106.656833ms)
+✔ managed discovery refuses selected-name user directories before any configuration write (98.890792ms)
+✔ managed configuration refuses malformed settings before creating compiled policy (155.369584ms)
+✔ managed policy output refuses an external compiled symlink without changing either tree (73.904375ms)
+ℹ {"exit":1,"stderr":"unsafe managed output; user object preserved: hooks/.compiled.env\n","before":[["user.env","file","03f9d2650b2b33a5b04e1bd95dfaccc796f5ee48348138f5e7ebbff57de4d48d"]],"after":[["user.env","file","03f9d2650b2b33a5b04e1bd95dfaccc796f5ee48348138f5e7ebbff57de4d48d"]]}
+✔ managed I/O preflights every output and ancestor for install and uninstall (550.842333ms)
+ℹ {"rel":".claude","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-d7HJ2m"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude/skills","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/skills","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-wHiooN"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude/settings.json","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/settings.json","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-PAJH3D/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":"hooks","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-HiYkOV"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":"hooks/.compiled.env","args":[],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","directory"],["hooks/.compiled.env","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-wx4CMk/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-te789O"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude/skills","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/skills","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-QmyKeh"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":".claude/settings.json","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],[".claude","directory"],[".claude/settings.json","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-Np8i13/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":"hooks","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-lo3LZB"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+ℹ {"rel":"hooks/.compiled.env","args":["--uninstall"],"exit":1,"target":[[".agents","directory"],[".agents/skills","directory"],[".agents/skills/alpha","directory"],[".agents/skills/alpha/SKILL.md","file","a6098732ccd311fb1f4cf46a2e05389ac24f7207f9be513a0d1d423d8109b2c7"],[".agents/skills/beta","directory"],[".agents/skills/beta/SKILL.md","file","7bb1347a5ed27cba09c239e19bc971d2ca4848c7b0b427ac540fcd80ae2fb11c"],["hooks","directory"],["hooks/.compiled.env","link","/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/foundation-io-outside-l648nz/sentinel"],["hooks.yaml","file","e00a8ae7738c630403d805debf9e18bd604fb2fdc1ce906acde3c7041d29bb58"]],"external":[["sentinel","file","8b2d4a52000b0dc01e92782e52bd4b2afafe285fc09cb91ccc60fa02bfcb9bdb"]]}
+✔ managed I/O preserves unowned policy, special outputs and hardlinked user files (568.906209ms)
+✔ managed replacement is atomic and repeat install/uninstall preserves user settings and quoted policy (736.186083ms)
+ℹ tests 71
+ℹ suites 0
+ℹ pass 68
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 48525.155334
+
+✖ failing tests:
+
+test at test/foundation-distribution.test.js:196:1
+✖ committed foundation artifacts match live sources (repo-level drift gate) (442.719584ms)
+  AssertionError [ERR_ASSERTION]: committed foundation drifted from sources: [{"kind":"lock","item":"method-profile","expected":"98589991aaabbce3fb927957acb3685ab1f932d6164f106b0c4c7b4bae17de96","actual":"23d454218373a3f054d72cc26e70a8850d7920ff552005573ccd4c5ae5228f77","detail":"method profile drifted"},{"kind":"lock","item":"toolchain","expected":"{\"cli\":{\"name\":\"sdd\",\"version\":\"0.2.4\"},\"runner\":{\"name\":\"comet\",\"version\":\"0.4.5\"},\"node\":\"24.15.0\",\"platforms\":[\"darwin\",\"linux\"]}","actual":"{\"cli\":{\"name\":\"sdd\",\"version\":\"0.2.4\"},\"runner\":{\"name\":\"comet\",\"version\":\"0.5.0\"},\"node\":\"24.15.0\",\"platforms\":[\"darwin\",\"linux\"]}","detail":"toolchain versions drifted"},{"kind":"lock","item":"exportDigest","detail":"complete asset set drifted"},{"kind":"release","item":"release/mcp/mcp-capabilities.yaml","detail":"required distribution file missing or drifted"},{"kind":"release","item":"release/profile/manifest.json","detail":"required distribution file missing or drifted"},{"kind":"release","item":"release/profile/comet-managed.json","detail":"required distribution file missing or drifted"},{"kind":"release","item":"code","detail":"project code closure bytes or complete file set differs"},{"kind":"release","item":"profile-binding","detail":"profile binding drifted"}]
+  + actual - expected
+  
+  + [
+  +   {
+  +     actual: '23d454218373a3f054d72cc26e70a8850d7920ff552005573ccd4c5ae5228f77',
+  +     detail: 'method profile drifted',
+  +     expected: '98589991aaabbce3fb927957acb3685ab1f932d6164f106b0c4c7b4bae17de96',
+  +     item: 'method-profile',
+  +     kind: 'lock'
+  +   },
+  +   {
+  +     actual: '{"cli":{"name":"sdd","version":"0.2.4"},"runner":{"name":"comet","version":"0.5.0"},"node":"24.15.0","platforms":["darwin","linux"]}',
+  +     detail: 'toolchain versions drifted',
+  +     expected: '{"cli":{"name":"sdd","version":"0.2.4"},"runner":{"name":"comet","version":"0.4.5"},"node":"24.15.0","platforms":["darwin","linux"]}',
+  +     item: 'toolchain',
+  +     kind: 'lock'
+  +   },
+  +   {
+  +     detail: 'complete asset set drifted',
+  +     item: 'exportDigest',
+  +     kind: 'lock'
+  +   },
+  +   {
+  +     detail: 'required distribution file missing or drifted',
+  +     item: 'release/mcp/mcp-capabilities.yaml',
+  +     kind: 'release'
+  +   },
+  +   {
+  +     detail: 'required distribution file missing or drifted',
+  +     item: 'release/profile/manifest.json',
+  +     kind: 'release'
+  +   },
+  +   {
+  +     detail: 'required distribution file missing or drifted',
+  +     item: 'release/profile/comet-managed.json',
+  +     kind: 'release'
+  +   },
+  +   {
+  +     detail: 'project code closure bytes or complete file set differs',
+  +     item: 'code',
+  +     kind: 'release'
+  +   },
+  +   {
+  +     detail: 'profile binding drifted',
+  +     item: 'profile-binding',
+  +     kind: 'release'
+  +   }
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/foundation-distribution.test.js:200:10)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ { kind: 'lock', item: 'method-profile', expected: '98589991aaabbce3fb927957acb3685ab1f932d6164f106b0c4c7b4bae17de96', actual: '23d454218373a3f054d72cc26e70a8850d7920ff552005573ccd4c5ae5228f77', detail: 'method profile drifted' }, { kind: 'lock', item: 'toolchain', expected: '{"cli":{"name":"sdd","version":"0.2.4"},"runner":{"name":"comet","version":"0.4.5"},"node":"24.15.0","platforms":["darwin","linux"]}', actual: '{"cli":{"name":"sdd","version":"0.2.4"},"runner":{"name":"comet","version":"0.5.0"},"node":"24.15.0","platforms":["darwin","linux"]}', detail: 'toolchain versions drifted' }, { kind: 'lock', item: 'exportDigest', detail: 'complete asset set drifted' }, { kind: 'release', item: 'release/mcp/mcp-capabilities.yaml', detail: 'required distribution file missing or drifted' }, { kind: 'release', item: 'release/profile/manifest.json', detail: 'required distribution file missing or drifted' }, { kind: 'release', item: 'release/profile/comet-managed.json', detail: 'required distribution file missing or drifted' }, { kind: 'release', item: 'code', detail: 'project code closure bytes or complete file set differs' }, { kind: 'release', item: 'profile-binding', detail: 'profile binding drifted' } ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/foundation-distribution.test.js:865:1
+✖ old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline) (341.954083ms)
+  AssertionError [ERR_ASSERTION]: {"ok":false,"action":"check","reason":"silent-rebaseline-blocked","drift":true,"baseline":{"ok":true,"resolvable":true,"reason":"sealed pure assets verified byte-for-byte and whole exportDigest","resolvedSkills":["claude-parallel-tdd-planner","code-review","diagnosing-bugs","grill-me","grilling","multi-agent-consensus-review","openspec-lifecycle-guard","ponytail","tdd","test-authoring","whitebox-verify"],"missing":[],"source":"sealed-assets"},"migration":"explicit paths: (1) rerun with --migrate --owner <run-owner> after review, or (2) close this run and start a new run against commit ace45cd9 — a run is never silently re-baselined"}
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/foundation-distribution.test.js:870:12)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/foundation-distribution.test.js:1028:1
+✖ legacy asset ownership helper never acquires or rewrites an actual native Comet Run (1053.251125ms)
+  Error: ENOENT: no such file or directory, open '/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/sdd-fdn-7lCxDJ/openspec/changes/native-assets/.comet/run-state.json'
+      at Object.openSync (node:fs:561:18)
+      at Object.readFileSync (node:fs:445:35)
+      at TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/foundation-distribution.test.js:1043:72)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/sdd-fdn-7lCxDJ/openspec/changes/native-assets/.comet/run-state.json'
+  }

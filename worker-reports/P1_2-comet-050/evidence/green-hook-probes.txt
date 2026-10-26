@@ -1,0 +1,8 @@
+# P1_2 comet-050 GREEN hook probes (after fix + re-assembly)
+date: 2026-10-26T12:42:30Z
+
+assembly: bash tools/adapters/claude-code.sh at repo root -> hooks/.compiled.env KB_PROTECT_PATHS='.sdd/wiki/:llmwiki/wiki/'
+probe 1 Write .sdd/wiki/sdd-harness/wiki/curated/x.md -> exit 2  # canonical landing now denied
+probe 2 Write /p/llmwiki/wiki/product/x.md -> exit 2 (old substring still denied)
+probe 3 Write /Users/mac/.sdd/run-state.json -> exit 0 (non-wiki .sdd state stays allowed)
+probe 4 Bash 'git push --force origin main' -> exit 2 (dangerous-command-blocklist regression guard)

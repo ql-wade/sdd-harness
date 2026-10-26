@@ -1,0 +1,8 @@
+# P1_2 comet-050 RED probe: I04 hook gap (hooks.yaml kb-write-protection)
+date: 2026-10-26T12:29:44Z
+node: v24.15.0
+
+setup: isolated TARGET_ROOT, real hooks.yaml fallback compile via tools/adapters/claude-code.sh, gate=hooks/pre-tool-gate.sh copy
+probe 1 Write .sdd/wiki/sdd-harness/wiki/curated/x.md (registered canonical landing) -> exit 0  # BYPASS (the gap)
+probe 2 Write /p/llmwiki/wiki/product/x.md (old substring) -> exit 2
+probe 3 Write /Users/mac/.sdd/run-state.json (non-wiki .sdd state) -> exit 0

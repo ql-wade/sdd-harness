@@ -1,0 +1,17 @@
+# P1_2 comet-050 assembly-level verification
+date: 2026-10-26T12:51:05Z
+
+1) adapter re-assembly at repo root: bash tools/adapters/claude-code.sh
+   exit 0; hooks/.compiled.env KB_PROTECT_PATHS='.sdd/wiki/:llmwiki/wiki/'
+   .claude/settings.json PreToolUse matcher='Write|Edit|MultiEdit|NotebookEdit|Bash' (deny union)
+
+2) exporter verify (committed distribution vs live sources): exit 0 (POST_TEST_VERIFY_EXIT=0)
+   exportDigest=90ffe99f2678f247 baseline sealed (255 composition files)
+
+3) behavior probes on freshly compiled isolated assembly (see green-hook-probes.txt):
+   canonical .sdd/wiki/sdd-harness/wiki/curated/x.md -> exit 2 (was 0 before fix)
+   old llmwiki/wiki/ -> exit 2 (kept)
+   .sdd/run-state.json -> exit 0 (no over-block)
+   'git push --force origin main' -> exit 2 (blocklist regression)
+
+4) related suite (not owned, kb-write-protection consumers): test/adapter-quoting.test.js 13/13 pass

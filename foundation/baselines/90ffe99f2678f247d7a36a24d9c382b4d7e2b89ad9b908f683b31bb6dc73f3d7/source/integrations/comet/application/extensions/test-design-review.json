@@ -1,0 +1,24 @@
+{
+  "schema": "sdd.comet.classic.extension.v1",
+  "id": "test-design-review",
+  "gate": "T",
+  "afterStep": "full.design.evidence",
+  "skillId": "test-authoring",
+  "artifactRefs": [
+    {
+      "ref": ".sdd/delivery/gates/t/receipt-bundle.json",
+      "kind": "gate-receipt-bundle",
+      "hashBinding": "artifactHashes",
+      "writtenBy": "extension-execution"
+    }
+  ],
+  "validator": { "id": "sdd.delivery.gate.t", "version": "1" },
+  "verdictProtocol": {
+    "verdicts": ["pass", "repair", "revise-requirements"],
+    "sourceHash": "domain-bound",
+    "artifactHashes": "domain-bound"
+  },
+  "semantics": "T (D03/D05): TestPack plus independent sufficiency review at the SAME design checkpoint as A but as a SEPARATE extension — A passing cannot substitute for T and vice versa (same-checkpoint AND semantics, upstream classic-application.ts chains). Sufficiency-review independence is enforced by the gate evaluation over admitted receipts, not by the executing skill's identity.",
+  "bindings": "integrations/comet/application/bindings.mjs",
+  "judgment": "lib/delivery/gate.js evaluate (pure SDD.Gate.v1) over the payload's inputs/receipts/policy, reached only through bindings.mjs delegation; authoring-only coverage (B03) and identity conflicts (A06) are rejected inside that evaluation."
+}

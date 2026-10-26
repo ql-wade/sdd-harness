@@ -19,6 +19,12 @@ policies:
     matcher: Write|Edit|MultiEdit|NotebookEdit
     action: deny
     target:
+      # canonical 落点：llmwiki 注册把 wiki 内容落在 $SDD_HOME/wiki/<slug>/wiki/
+      # （默认 $HOME/.sdd → '.sdd/wiki/<slug>/wiki/'）——I04 实证旧子串
+      # 'llmwiki/wiki/' 不覆盖该落点（合成直写 exit 0 放行），由 P1_2 修复
+      # （ledger I04_EVIDENCE_RECORDED_HOOK_GAP_ROUTED）。语义只收紧：
+      # deny / fail-closed 不变，旧子串保留。
+      - ".sdd/wiki/"
       - "llmwiki/wiki/"
     message: "直接写知识库 wiki/ 会绕过索引（SQLite+FTS），必须走 mcp__llmwiki__create / edit / append"
 
