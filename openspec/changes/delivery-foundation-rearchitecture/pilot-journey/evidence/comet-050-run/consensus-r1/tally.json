@@ -1,0 +1,136 @@
+{
+  "artifact_changed": false,
+  "artifact_error": null,
+  "artifact_sha256": "85e6835f1924eea8156451b3440eb607411c080cde6ce74db92f7439d9fac87f",
+  "ballots": [
+    {
+      "agent": "claude-code",
+      "blocking_findings": 0,
+      "min_criterion": 8.0,
+      "overall": 8.6,
+      "summary": "The design correctly and minimally adds a --version flag to tools/verify/delivery-journey.mjs. Verified against the actual pilot target file: the short-circuit sits immediately after strict parseArgs and before the mutual-exclusion (line 501), required-argument (line 507) and evidence-dir creation (line 520) paths, so AC1 (exit 0, bare one-line stdout), AC2 (no required args, zero filesystem side effects) and AC3 for known options all hold; returning EXIT_PASS through the tool's normal return path preserves the process.exitCode style and leaves the 0/1/2 exit contract and all journey/verdict semantics untouched (AC4). The diff is ~6 lines with explicit non-goals and a frozen constant justified in the grill record. Two non-blocking weaknesses: the precedence claim is overstated for unknown options (strict parsing still rejects them with exit 1 before the short-circuit — fail-closed, but the AC text should say 'known options'), and tasks.md lacks an explicit test task despite AC1-AC4 being trivially testable. Provenance caveat: the tar itself is binary-unreadable with the permitted read-only reader; the three bundle files were read from the identically-named change inside the scope-designated read-only pilot project, and the supplied digest could not be recomputed — hence reduced confidence, though the content matches the review scope exactly and was judged against the real target file.",
+      "verdict": "APPROVE"
+    },
+    {
+      "agent": "zcode",
+      "blocking_findings": 0,
+      "min_criterion": 8.0,
+      "overall": 8.8,
+      "summary": "APPROVE. The bundle designs exactly the gated change and nothing more: a frozen TOOL_VERSION='0.1.0' constant, a --version short-circuit placed immediately after option parsing and before the mutual-exclusion/required-argument checks (D1, AC2), version-wins precedence modeled on the sibling CLI's commander behavior (D3, AC3), and an untouched 0/1/2 exit contract reached via the tool's existing exit path rather than a raw process.exit (D4, AC4). The change surface is confined to one file plus one usage line (~6 lines) with explicit, repeated non-goals; rejecting a runtime package.json read removes the only new I/O failure mode (D2); no new inputs, env vars, or filesystem work are introduced, so security/operations posture is unchanged while gaining the operator pinning the proposal motivates. Two non-blocking minors: AC3's wording should carve out unknown-option combinations to stay consistent with AC4 and the parse-time behavior the design actually produces, and tasks.md lacks an explicit test/verification task for the acceptance criteria. Findings F1-F3 are advisory; all criteria are at or above 8 and I would authorize the next step now.",
+      "verdict": "APPROVE"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking_findings": 1,
+      "min_criterion": 6.0,
+      "overall": 7.5,
+      "summary": "冻结常量、提前返回及沿用退出码路径的方案足够小，但参数解析可能先失败，导致声明的版本优先级无法保证；当前不授权进入下一步。",
+      "verdict": "REJECT"
+    }
+  ],
+  "blocking_findings": [
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "版本分支晚于完整参数解析，无法兑现无条件优先级。",
+      "evidence": "design.md:25 声明 --version 在任何组合中优先，其他无效组合不会被报告；但 design.md:35-36 先调用 parseArgs，再检查 options.version。proposal.md:26-28 要求保留未知选项拒绝行为，:45 记录了解析阶段的 Unknown option 错误。因此，--version 与未知选项混用时仍会在版本分支之前失败，与上述优先级声明冲突。",
+      "id": "F1",
+      "recommendation": "明确解析错误与 --version 的优先关系。若保留无条件优先约定，需在解析错误返回前处理有效版本标志，并明确选项值及 -- 分隔符的边界；补充与未知选项、缺失参数值、互斥选项混用的验证，同时保持未带 --version 时的退出契约。",
+      "severity": "MAJOR"
+    }
+  ],
+  "created_at": "2026-10-26T18:39:26Z",
+  "current_artifact_sha256": "85e6835f1924eea8156451b3440eb607411c080cde6ce74db92f7439d9fac87f",
+  "dissenters": [
+    "codex-agent"
+  ],
+  "finding_fingerprint": "3915538041efda17625e73381e8fca09cc7593ec7738c301c84def0c002d8bca",
+  "findings": [
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "The short-circuit placement and the frozen-constant design are verified correct against the actual target file: inserting the check immediately after parseArgs and before the mutual-exclusion check satisfies AC1-AC3, and because evidence-dir creation (fs.mkdirSync, delivery-journey.mjs line 520) and the first writeJson only occur after validation, a --version invocation produces zero filesystem side effects (AC2).",
+      "evidence": "delivery-journey.mjs: parseArgs strict:true with declared options at lines 479-492; --journey/--scenario exclusivity at line 501; required-arg check at line 507; SCENARIO_ID_RE check at line 510; evidence-dir symlink/emptiness checks and mkdirSync at lines 518-524; first evidence write (writeJson) only later. design.md D1 places the short-circuit 'immediately after parseArgs returns, before the journeyName && scenario exclusivity check'; the snippet adds version:{type:'boolean',default:false} which is required for strict parseArgs to accept the flag at all (confirmed by grill Q1: today --version yields Unknown option, exit 1).",
+      "id": "AJV-1",
+      "severity": "NOTE"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "AC3/D3's precedence claim is overstated for unknown options: with strict:true parseArgs, an invocation like `--version --bogus` fails during parsing with INVALID_INPUT exit 1 before the --version short-circuit can run, so --version does not literally 'win whenever present'.",
+      "evidence": "proposal.md AC3: 'when --version is combined with other options it still wins'; design.md D3: '--version wins whenever present, exactly like commander's built-in version handling'. But the design keeps strict parseArgs (snippet only adds the version option), and the parseArgs try/catch at lines 478-495 returns failInput (exit 1) for any unknown option before the short-circuit executes. For all KNOWN options (--scenario, --json, --case-plan, etc.) the short-circuit does win and exits 0.",
+      "id": "AJV-2",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "tasks.md contains a single implementation task with no explicit verification/test task, while design.md D6 leans on an unverifiable claim that 'the existing input-contract test shape' asserts the usage string.",
+      "evidence": "tasks.md has only '- [ ] 1.1 Add --version handling ... (frozen TOOL_VERSION constant, short-circuit before validation, precedence over other options, usage line)'. design.md D6: 'the only shared surface is the usage string, asserted by the existing input-contract test shape' — no such test is in the bundle and the pilot copy's test set was not part of the reviewed evidence. AC1-AC4 are concretely testable via CLI invocations (exit code + stdout + absence of evidence dir), so the gap is task coverage, not testability of the ACs.",
+      "id": "AJV-3",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "claude-code",
+      "blocking": false,
+      "claim": "The frozen TOOL_VERSION duplicates the package version and can drift from package.json; this tradeoff is explicitly and reasonably accepted in the requirements grill.",
+      "evidence": "proposal.md grill Q2/Q3: 'A frozen TOOL_VERSION constant in the tool (not a package.json read: keeps the flag side-effect-free and deterministic)'; 'bumping is an explicit edit, never inferred'; Non-goals: 'no version-from-package.json filesystem read at runtime'. This also honors the tool's contract that a non-verification path stays I/O-free, mirroring how failInput (lines 93-97) already bypasses verdict writing.",
+      "id": "AJV-4",
+      "severity": "NOTE"
+    },
+    {
+      "agent": "codex-agent",
+      "blocking": true,
+      "claim": "版本分支晚于完整参数解析，无法兑现无条件优先级。",
+      "evidence": "design.md:25 声明 --version 在任何组合中优先，其他无效组合不会被报告；但 design.md:35-36 先调用 parseArgs，再检查 options.version。proposal.md:26-28 要求保留未知选项拒绝行为，:45 记录了解析阶段的 Unknown option 错误。因此，--version 与未知选项混用时仍会在版本分支之前失败，与上述优先级声明冲突。",
+      "id": "F1",
+      "severity": "MAJOR"
+    },
+    {
+      "agent": "zcode",
+      "blocking": false,
+      "claim": "AC3's literal wording ('when --version is combined with other options it still wins') can be read to require --version to override unknown-option errors, which conflicts with AC4 ('unknown options other than --version are still INVALID_INPUT exit 1'); the designed short-circuit sits after parseArgs, so an unknown option in the same invocation fails at parse time before the version check, exactly matching AC4 and commander parity (D3), but AC3 does not state this carve-out.",
+      "evidence": "proposal.md AC3 vs AC4; design.md D1 (short-circuit 'immediately after parseArgs returns') and D3 ('other invalid combinations are never even reported' — covering only mutual-exclusion/required-arg conflicts, not parse-time unknown-option errors).",
+      "id": "F1",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "zcode",
+      "blocking": false,
+      "claim": "tasks.md contains only the implementation task (1.1); no task covers updating or running the input-contract/usage test or verifying AC1-AC4, even though design.md D6 asserts the usage string is covered by an existing input-contract test.",
+      "evidence": "tasks.md is a single checkbox: 'Add --version handling to tools/verify/delivery-journey.mjs (frozen TOOL_VERSION constant, short-circuit before validation, precedence over other options, usage line)'; design.md D6 references 'the existing input-contract test shape' with no corresponding task.",
+      "id": "F2",
+      "severity": "MINOR"
+    },
+    {
+      "agent": "zcode",
+      "blocking": false,
+      "claim": "The design's correctness rests on codebase claims (validation order inside runDeliveryJourney, existence of an EXIT_PASS/exit-contract return path, parseArgs options shape, current 'Unknown option' RED behavior) that are supported by cited exploration records but are not independently checkable from the artifact alone.",
+      "evidence": "design.md D1-D4 and the code sketch ('options = parseArgs(...); if (options.version) { console.log(TOOL_VERSION); return EXIT_PASS; }') state tool internals; proposal.md grill record cites 'live run in the pilot copy (r-explore-version.txt)' which is not in the bundle.",
+      "id": "F3",
+      "severity": "NOTE"
+    }
+  ],
+  "invalid_ballots": [],
+  "missing_agents": [],
+  "next_action": "open debate round 01, resolve dissent, and re-ballot",
+  "participants": [
+    "claude-code",
+    "zcode",
+    "codex-agent"
+  ],
+  "present_agents": [
+    "claude-code",
+    "codex-agent",
+    "zcode"
+  ],
+  "review_id": "add-journey-version-a-r1",
+  "round": 0,
+  "status": "DEBATE_REQUIRED",
+  "version": 1,
+  "votes": {
+    "ABSTAIN": 0,
+    "APPROVE": 2,
+    "REJECT": 1
+  }
+}

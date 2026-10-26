@@ -1,0 +1,60 @@
+{
+  "agent": "zcode",
+  "artifact_sha256": "1eefc22a7c6e5c562b7347372abbf8a288cb74b1a3fa9ee6f14d423a5d43ddba",
+  "assumptions": [
+    "Bundle codebase claims were independently verified against the read-only pilot target file /private/tmp/p32-pilot-1793038407-25674/project/tools/verify/delivery-journey.mjs: parseArgs strict at lines 479-495, mutual-exclusion at 501-505, required-arg check at 507, evidence-dir mkdirSync at 520, args default process.argv.slice(2) at 476, entry contract process.exitCode = await runDeliveryJourney() at 1194-1196, usage() block at 75-91.",
+    "TOOL_VERSION value '0.1.0' matching the pilot package.json (grill Q3) was not independently verified; package.json was not read.",
+    "Import-time silence of the five imported lib modules is assumed (the r1-approved design had identical import-time behavior, so the pre-scan changes nothing there).",
+    "The 'Shape of the change' code sketch is read as a function-level plan (a top-level return would be a SyntaxError), which is the only consistent reading.",
+    "Node util.parseArgs in strict mode rejects unknown options and boolean options with attached values, consistent with the grill's live-run observation of Unknown option '--version' exit 1."
+  ],
+  "confidence": 0.9,
+  "findings": [
+    {
+      "blocking": false,
+      "claim": "tasks.md is unchanged from round 1 and no longer matches the revised mechanism: task 1.1 still says 'short-circuit before validation' (the r1 post-parse design) and never mentions the argv pre-scan or 'before parsing'; no verification/test task was added, even though codex-agent's r1 recommendation explicitly asked for verification with unknown-option/missing-value/mutex combinations and two r1 MINOR findings flagged the missing test task.",
+      "evidence": "tasks.md contains only '- [ ] 1.1 Add --version handling to tools/verify/delivery-journey.mjs (frozen TOOL_VERSION constant, short-circuit before validation, precedence over other options, usage line)'; design.md D1/D3 and proposal.md AC3 (r2) specify a pre-parse process.argv scan instead; preceding-r1-tally.json codex-agent F1 recommendation: '补充与未知选项、缺失参数值、互斥选项混用的验证'.",
+      "id": "AJV2-R2-F1",
+      "recommendation": "Rewrite task 1.1's parenthetical to 'argv pre-scan before strict parseArgs (unconditional precedence)' and add an explicit verification task covering AC1-AC4, spawn-based against the real CLI since the precedence path is only reproducible at the process level (see AJV2-R2-F2).",
+      "severity": "MINOR"
+    },
+    {
+      "blocking": false,
+      "claim": "The design sketch scans the global process.argv instead of the function's canonical args parameter, making the AC3 unconditional-precedence path unreachable through in-process invocation: runDeliveryJourney({ args: ['--version','--bogus'] }) would miss the pre-scan (the test runner's own argv lacks the token), fall into parseArgs, and exit 1 via the unknown-option catch, contradicting AC3's letter outside the real CLI. The retained post-parse 'if (options.version)' branch partially compensates but cannot handle the mixed invalid combination.",
+      "evidence": "delivery-journey.mjs:476 'export async function runDeliveryJourney({ args = process.argv.slice(2), ... })'; design.md sketch 'if (process.argv.includes(\\'--version\\') ) { ...; return 0; }' followed by a second 'if (options.version)' branch; parseArgs catch at delivery-journey.mjs:493-495 returns failInput for '--bogus'. For the real CLI the two scans are equivalent (node/script paths can never equal the token '--version'), so AC1-AC4 as written (CLI form) all hold.",
+      "id": "AJV2-R2-F2",
+      "recommendation": "Scan 'args' (the parameter) rather than the global process.argv — identical CLI behavior by the default binding, and the precedence mechanism becomes injection-testable; alternatively document why both the pre-scan and the post-parse fallback branch exist (the fallback is the in-process/unit-test path).",
+      "severity": "MINOR"
+    },
+    {
+      "blocking": false,
+      "claim": "The option-value/-- boundary codex-agent asked to clarify is only half-addressed: the exact-token match settles '--version=<value>' (not the flag; parseArgs rejects a value on the boolean), but a '--' separator is not discussed — after the change, 'delivery-journey.mjs -- --version' prints the version instead of today's INVALID_INPUT. Immaterial in practice because the CLI accepts no positional arguments at all (parseArgs strict without allowPositionals rejects every positional, so no legitimate invocation ever carries '--version' as data).",
+      "evidence": "proposal.md AC3 'scans process.argv for the exact token --version'; design.md D1 same; codex-agent r1 F1 recommendation '明确选项值及 -- 分隔符的边界'; delivery-journey.mjs:479-492 declares no allowPositionals.",
+      "id": "AJV2-R2-F3",
+      "recommendation": "Add one sentence to D1/D3 stating the boundary explicitly: any exact '--version' token anywhere in argv wins, including after '--', which is safe because the tool has no positional surface; or make the pre-scan stop at '--' if strict GNU parity is preferred.",
+      "severity": "NOTE"
+    },
+    {
+      "blocking": false,
+      "claim": "AC4's literal wording ('every other exit-path behavior is unchanged: unknown options other than --version are still INVALID_INPUT exit 1') read in isolation still contradicts AC3's combination case ('--bogus --version' now exits 0); design D3 carries the needed carve-out ('unknown-option rejection still applies to invocations WITHOUT --version') but AC4 itself does not.",
+      "evidence": "proposal.md AC3 vs AC4; design.md D3 'unknown-option rejection still applies to invocations WITHOUT --version (fail-closed preserved)'.",
+      "id": "AJV2-R2-F4",
+      "recommendation": "Tighten AC4 to 'unknown options are still INVALID_INPUT exit 1 in invocations without --version' so the two ACs are self-consistent without needing D3.",
+      "severity": "NOTE"
+    }
+  ],
+  "review_id": "add-journey-version-a-r2",
+  "round": 0,
+  "score": {
+    "criteria": {
+      "boundaries": 9,
+      "evolution_testability": 7.5,
+      "reliability": 8,
+      "requirements_fit": 9,
+      "security_operations": 9
+    },
+    "overall": 8.5
+  },
+  "summary": "APPROVE. The r1 blocking finding (codex-agent F1: strict parseArgs fails before a post-parse short-circuit, so declared precedence was not guaranteed) is genuinely resolved by the r2 revision, verified against the pilot target file: delivery-journey.mjs:479-495 runs parseArgs with strict:true inside a try/catch that returns failInput (exit 1) on any unknown option, so only a scan placed BEFORE parsing can give --version unconditional precedence — exactly what revised AC3 and design D1/D3 now specify (process.argv exact-token pre-scan). With the pre-scan, --version combined with unknown options, mutex violations, or missing required args prints the bare version and exits 0 (AC1/AC3); unknown-option rejection and the whole 0/1/2 exit contract are preserved for argv without --version (AC4), and no filesystem side effect occurs (first mkdir is at line 520, far after the pre-scan; exit goes through the tool's process.exitCode entry at 1194-1196, per D4). The change stays inside the single mandated file plus one usage line, adds no I/O, env, or runtime version read (frozen constant), and the redundancy of also declaring the version option keeps an in-process degraded path. Remaining items are advisory: tasks.md was not updated to the pre-scan mechanism and still lacks a verification task (F1); the sketch scans global process.argv rather than the args parameter, leaving AC3's combination case untestable via in-process injection (F2); the '--'-separator boundary codex asked about is undocumented but immaterial for a positionals-free CLI (F3); AC4's wording needs the without---version carve-out that D3 already states (F4). All criteria are at or above 7.5 and I would authorize the next step now.",
+  "verdict": "APPROVE"
+}

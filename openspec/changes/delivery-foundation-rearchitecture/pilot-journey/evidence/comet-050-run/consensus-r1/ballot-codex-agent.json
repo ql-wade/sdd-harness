@@ -1,0 +1,32 @@
+{
+  "agent": "codex-agent",
+  "artifact_sha256": "85e6835f1924eea8156451b3440eb607411c080cde6ce74db92f7439d9fac87f",
+  "assumptions": [
+    "仅审查归档内三份文档；现有解析及退出行为以文档记录为依据，未读取项目源码。"
+  ],
+  "confidence": 0.9,
+  "findings": [
+    {
+      "blocking": true,
+      "claim": "版本分支晚于完整参数解析，无法兑现无条件优先级。",
+      "evidence": "design.md:25 声明 --version 在任何组合中优先，其他无效组合不会被报告；但 design.md:35-36 先调用 parseArgs，再检查 options.version。proposal.md:26-28 要求保留未知选项拒绝行为，:45 记录了解析阶段的 Unknown option 错误。因此，--version 与未知选项混用时仍会在版本分支之前失败，与上述优先级声明冲突。",
+      "id": "F1",
+      "recommendation": "明确解析错误与 --version 的优先关系。若保留无条件优先约定，需在解析错误返回前处理有效版本标志，并明确选项值及 -- 分隔符的边界；补充与未知选项、缺失参数值、互斥选项混用的验证，同时保持未带 --version 时的退出契约。",
+      "severity": "MAJOR"
+    }
+  ],
+  "review_id": "add-journey-version-a-r1",
+  "round": 0,
+  "score": {
+    "criteria": {
+      "boundaries": 9,
+      "evolution_testability": 7,
+      "reliability": 6.5,
+      "requirements_fit": 6,
+      "security_operations": 9
+    },
+    "overall": 7.5
+  },
+  "summary": "冻结常量、提前返回及沿用退出码路径的方案足够小，但参数解析可能先失败，导致声明的版本优先级无法保证；当前不授权进入下一步。",
+  "verdict": "REJECT"
+}

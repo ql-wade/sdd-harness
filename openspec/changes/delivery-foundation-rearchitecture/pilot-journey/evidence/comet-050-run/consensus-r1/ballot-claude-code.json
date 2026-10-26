@@ -1,0 +1,58 @@
+{
+  "agent": "claude-code",
+  "artifact_sha256": "85e6835f1924eea8156451b3440eb607411c080cde6ce74db92f7439d9fac87f",
+  "assumptions": [
+    "The supplied .tar is binary and the only permitted read-only reader rejects it, and no pre-extracted copy exists under the consensus directory; the three bundle files (proposal.md, design.md, tasks.md) were instead read from the identically-named pilot change at /private/tmp/p32-pilot-1793038407-25674/project/openspec/changes/add-journey-version/, the read-only pilot project the review scope itself designates as the design's target. The ballot assumes the tar packages exactly these three files.",
+    "The artifact SHA-256 could not be recomputed (no hash tool available in this read-only pass); the supplied digest is used verbatim.",
+    "Claims about the sibling bin/cli.js commander convention and the pilot package.json version '0.1.0' (grill Q2/Q3 basis) could not be independently verified because those files are outside the artifact bundle."
+  ],
+  "confidence": 0.72,
+  "findings": [
+    {
+      "blocking": false,
+      "claim": "The short-circuit placement and the frozen-constant design are verified correct against the actual target file: inserting the check immediately after parseArgs and before the mutual-exclusion check satisfies AC1-AC3, and because evidence-dir creation (fs.mkdirSync, delivery-journey.mjs line 520) and the first writeJson only occur after validation, a --version invocation produces zero filesystem side effects (AC2).",
+      "evidence": "delivery-journey.mjs: parseArgs strict:true with declared options at lines 479-492; --journey/--scenario exclusivity at line 501; required-arg check at line 507; SCENARIO_ID_RE check at line 510; evidence-dir symlink/emptiness checks and mkdirSync at lines 518-524; first evidence write (writeJson) only later. design.md D1 places the short-circuit 'immediately after parseArgs returns, before the journeyName && scenario exclusivity check'; the snippet adds version:{type:'boolean',default:false} which is required for strict parseArgs to accept the flag at all (confirmed by grill Q1: today --version yields Unknown option, exit 1).",
+      "id": "AJV-1",
+      "recommendation": "None — this is a confirmation that the design is correct and minimal (~6 line diff: constant, options entry, if-block, usage line) with no journey-semantics surface touched (runner invariant comment lines 5-11 untouched).",
+      "severity": "NOTE"
+    },
+    {
+      "blocking": false,
+      "claim": "AC3/D3's precedence claim is overstated for unknown options: with strict:true parseArgs, an invocation like `--version --bogus` fails during parsing with INVALID_INPUT exit 1 before the --version short-circuit can run, so --version does not literally 'win whenever present'.",
+      "evidence": "proposal.md AC3: 'when --version is combined with other options it still wins'; design.md D3: '--version wins whenever present, exactly like commander's built-in version handling'. But the design keeps strict parseArgs (snippet only adds the version option), and the parseArgs try/catch at lines 478-495 returns failInput (exit 1) for any unknown option before the short-circuit executes. For all KNOWN options (--scenario, --json, --case-plan, etc.) the short-circuit does win and exits 0.",
+      "id": "AJV-2",
+      "recommendation": "Tighten AC3/D3 wording to '--version takes precedence over all known options'; the actual fail-closed behavior for unknown options is safe and consistent with AC4 and should be kept, but the acceptance text should not promise precedence it cannot deliver via strict parsing.",
+      "severity": "MINOR"
+    },
+    {
+      "blocking": false,
+      "claim": "tasks.md contains a single implementation task with no explicit verification/test task, while design.md D6 leans on an unverifiable claim that 'the existing input-contract test shape' asserts the usage string.",
+      "evidence": "tasks.md has only '- [ ] 1.1 Add --version handling ... (frozen TOOL_VERSION constant, short-circuit before validation, precedence over other options, usage line)'. design.md D6: 'the only shared surface is the usage string, asserted by the existing input-contract test shape' — no such test is in the bundle and the pilot copy's test set was not part of the reviewed evidence. AC1-AC4 are concretely testable via CLI invocations (exit code + stdout + absence of evidence dir), so the gap is task coverage, not testability of the ACs.",
+      "id": "AJV-3",
+      "recommendation": "Add an explicit test/evidence task covering: --version alone (exit 0, exact one-line output, no evidence dir created), --version combined with a known option (precedence), and --version combined with an unknown option (still exit 1 per AC4) — the last case pins the AJV-2 semantics.",
+      "severity": "MINOR"
+    },
+    {
+      "blocking": false,
+      "claim": "The frozen TOOL_VERSION duplicates the package version and can drift from package.json; this tradeoff is explicitly and reasonably accepted in the requirements grill.",
+      "evidence": "proposal.md grill Q2/Q3: 'A frozen TOOL_VERSION constant in the tool (not a package.json read: keeps the flag side-effect-free and deterministic)'; 'bumping is an explicit edit, never inferred'; Non-goals: 'no version-from-package.json filesystem read at runtime'. This also honors the tool's contract that a non-verification path stays I/O-free, mirroring how failInput (lines 93-97) already bypasses verdict writing.",
+      "id": "AJV-4",
+      "recommendation": "Optionally note the constant's provenance next to it (// pilot package version — bump explicitly) so future bumps are deliberate.",
+      "severity": "NOTE"
+    }
+  ],
+  "review_id": "add-journey-version-a-r1",
+  "round": 0,
+  "score": {
+    "criteria": {
+      "boundaries": 9,
+      "evolution_testability": 8,
+      "reliability": 9,
+      "requirements_fit": 9,
+      "security_operations": 9
+    },
+    "overall": 8.6
+  },
+  "summary": "The design correctly and minimally adds a --version flag to tools/verify/delivery-journey.mjs. Verified against the actual pilot target file: the short-circuit sits immediately after strict parseArgs and before the mutual-exclusion (line 501), required-argument (line 507) and evidence-dir creation (line 520) paths, so AC1 (exit 0, bare one-line stdout), AC2 (no required args, zero filesystem side effects) and AC3 for known options all hold; returning EXIT_PASS through the tool's normal return path preserves the process.exitCode style and leaves the 0/1/2 exit contract and all journey/verdict semantics untouched (AC4). The diff is ~6 lines with explicit non-goals and a frozen constant justified in the grill record. Two non-blocking weaknesses: the precedence claim is overstated for unknown options (strict parsing still rejects them with exit 1 before the short-circuit — fail-closed, but the AC text should say 'known options'), and tasks.md lacks an explicit test task despite AC1-AC4 being trivially testable. Provenance caveat: the tar itself is binary-unreadable with the permitted read-only reader; the three bundle files were read from the identically-named change inside the scope-designated read-only pilot project, and the supplied digest could not be recomputed — hence reduced confidence, though the content matches the review scope exactly and was judged against the real target file.",
+  "verdict": "APPROVE"
+}

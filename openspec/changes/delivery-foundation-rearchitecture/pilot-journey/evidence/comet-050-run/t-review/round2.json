@@ -1,0 +1,12 @@
+{
+  "sufficient": false,
+  "oracleStrength": "weak",
+  "findings": [
+    "AC2: c1 compares shallow directory listings, which cannot detect modifications to existing files or changes inside existing subdirectories. The probe directory is not explicitly bound to --evidence-dir. Add recursive content snapshots and a version invocation supplying an explicit, initially absent evidence path; assert that path remains absent.",
+    "AC4: c4c's expected exit 2 is unsupported by the supplied pilot environment: the default verification-case-plan.json is absent, so this invocation reaches INVALID_INPUT exit 1. Pin a readable registry fixture excluding A01. Also specify whether the structured verdict is read from verdict.json or requested using --json; the documented invocation emits a human-readable stdout summary.",
+    "AC4: declaring the existing success path out of scope leaves preservation of exit 0 untested. Version-path success does not establish that ordinary successful verification still returns 0. Reference an existing executable success regression or provide a controlled passing fixture.",
+    "AC3: unknown-before-version and known-after-version do not establish order independence for unknown options. Add --version --definitely-not-a-flag, with exact stdout 0.1.0\\n, empty stderr and exit 0. Also cover version precedence over conflicting arguments. The --version-extra rejection does address the original prefix-matching gap.",
+    "The claimed test/version.test.js suite is absent from the supplied workspace, and the cited RED log is unavailable there. Direct subprocess checks confirm observable behavioral RED for c1/c2/c3a, but cannot verify the claimed encoded assertions. The recorded c3a diagnostic is also inaccurate: its first rejected token is --definitely-not-a-flag, not --version."
+  ],
+  "summary": "Every AC has a nominal mapping, and exact rejection codes and a near-match token case improve the revision. Behavioral RED is directly observable. However, filesystem boundaries remain insufficient, the exit-2 fixture expectation contradicts the supplied environment, ordinary exit-0 preservation is excluded, and order independence remains incompletely tested. The claimed executable suite is also missing, so the round-1 findings are not fully resolved."
+}

@@ -1,0 +1,50 @@
+{
+  "agent": "zcode",
+  "artifact_sha256": "85e6835f1924eea8156451b3440eb607411c080cde6ce74db92f7439d9fac87f",
+  "assumptions": [
+    "Artifact-only review per instructions: I did not open files under the pilot project copy; claims about the current structure of tools/verify/delivery-journey.mjs (validation order, parseArgs usage, EXIT_PASS/exit-contract style) are taken from the bundle's own cited grill evidence (live RED run r-explore-version.txt, exploration notes) which is referenced but not included in the tar.",
+    "The tar's ._add-journey-version-a-r1-bundle* and PaxHeader/* entries are macOS AppleDouble/path metadata, not review content; only proposal.md, design.md and tasks.md were reviewed.",
+    "Computed SHA-256 over the artifact bytes matches the supplied digest, so the reviewed bytes are the gated artifact."
+  ],
+  "confidence": 0.85,
+  "findings": [
+    {
+      "blocking": false,
+      "claim": "AC3's literal wording ('when --version is combined with other options it still wins') can be read to require --version to override unknown-option errors, which conflicts with AC4 ('unknown options other than --version are still INVALID_INPUT exit 1'); the designed short-circuit sits after parseArgs, so an unknown option in the same invocation fails at parse time before the version check, exactly matching AC4 and commander parity (D3), but AC3 does not state this carve-out.",
+      "evidence": "proposal.md AC3 vs AC4; design.md D1 (short-circuit 'immediately after parseArgs returns') and D3 ('other invalid combinations are never even reported' — covering only mutual-exclusion/required-arg conflicts, not parse-time unknown-option errors).",
+      "id": "F1",
+      "recommendation": "Tighten AC3 to '--version combined with other KNOWN options' or add a one-line note that unknown options still fail per AC4, so the verifying test cannot be written to the wrong reading.",
+      "severity": "MINOR"
+    },
+    {
+      "blocking": false,
+      "claim": "tasks.md contains only the implementation task (1.1); no task covers updating or running the input-contract/usage test or verifying AC1-AC4, even though design.md D6 asserts the usage string is covered by an existing input-contract test.",
+      "evidence": "tasks.md is a single checkbox: 'Add --version handling to tools/verify/delivery-journey.mjs (frozen TOOL_VERSION constant, short-circuit before validation, precedence over other options, usage line)'; design.md D6 references 'the existing input-contract test shape' with no corresponding task.",
+      "id": "F2",
+      "recommendation": "Add a small verification task (update the usage assertion if the usage line changes shape, and exercise --version, --version-with-other-flags, and an unknown-option regression) so the ACs are checked, not just implemented.",
+      "severity": "MINOR"
+    },
+    {
+      "blocking": false,
+      "claim": "The design's correctness rests on codebase claims (validation order inside runDeliveryJourney, existence of an EXIT_PASS/exit-contract return path, parseArgs options shape, current 'Unknown option' RED behavior) that are supported by cited exploration records but are not independently checkable from the artifact alone.",
+      "evidence": "design.md D1-D4 and the code sketch ('options = parseArgs(...); if (options.version) { console.log(TOOL_VERSION); return EXIT_PASS; }') state tool internals; proposal.md grill record cites 'live run in the pilot copy (r-explore-version.txt)' which is not in the bundle.",
+      "id": "F3",
+      "recommendation": "None needed for this gate; the implementing stage should re-confirm the two-check validation order and the EXIT_PASS return convention before applying the ~6-line change.",
+      "severity": "NOTE"
+    }
+  ],
+  "review_id": "add-journey-version-a-r1",
+  "round": 0,
+  "score": {
+    "criteria": {
+      "boundaries": 9,
+      "evolution_testability": 8,
+      "reliability": 9,
+      "requirements_fit": 9,
+      "security_operations": 9
+    },
+    "overall": 8.8
+  },
+  "summary": "APPROVE. The bundle designs exactly the gated change and nothing more: a frozen TOOL_VERSION='0.1.0' constant, a --version short-circuit placed immediately after option parsing and before the mutual-exclusion/required-argument checks (D1, AC2), version-wins precedence modeled on the sibling CLI's commander behavior (D3, AC3), and an untouched 0/1/2 exit contract reached via the tool's existing exit path rather than a raw process.exit (D4, AC4). The change surface is confined to one file plus one usage line (~6 lines) with explicit, repeated non-goals; rejecting a runtime package.json read removes the only new I/O failure mode (D2); no new inputs, env vars, or filesystem work are introduced, so security/operations posture is unchanged while gaining the operator pinning the proposal motivates. Two non-blocking minors: AC3's wording should carve out unknown-option combinations to stay consistent with AC4 and the parse-time behavior the design actually produces, and tasks.md lacks an explicit test/verification task for the acceptance criteria. Findings F1-F3 are advisory; all criteria are at or above 8 and I would authorize the next step now.",
+  "verdict": "APPROVE"
+}

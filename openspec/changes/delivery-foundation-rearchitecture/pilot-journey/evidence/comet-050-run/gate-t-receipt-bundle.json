@@ -1,0 +1,154 @@
+{
+  "schema": "sdd.delivery.gate.receipt-bundle.v1",
+  "kind": "gate-receipt-bundle",
+  "gate": "T",
+  "artifactRef": ".sdd/delivery/gates/t/receipt-bundle.json",
+  "hashBinding": "artifactHashes",
+  "writtenBy": "extension-execution",
+  "run": "add-journey-version-r3",
+  "sourceHash": "2797e0f26d67209debfbf749bfd38b4052ad051a97cc7d6acbce6880b4f4a0e9",
+  "inputs": {
+    "inputDigest": "c43adfaf07e4c92afd245bf025e4afbd3e20f5c2cefd89d4f0397d6850771ab8",
+    "testContract": {
+      "schemaVersion": 1,
+      "project": "p32-pilot",
+      "change": "add-journey-version-r3",
+      "cases": [
+        {
+          "id": "c1",
+          "ac": "D03",
+          "oracle": "independent test-design sufficiency review with an adequate oracle",
+          "checkIds": [
+            "g1"
+          ]
+        }
+      ],
+      "requiredChecks": [
+        {
+          "id": "g1",
+          "level": "design",
+          "capability": "test-design-sufficient",
+          "caseIds": [
+            "c1"
+          ]
+        }
+      ],
+      "executionDenominator": {
+        "totalCases": 1
+      },
+      "cleanup": {
+        "environment": "pilot world under /private/tmp",
+        "data": "none persisted outside the pilot"
+      },
+      "dependencyBaselines": [
+        {
+          "kind": "comet-build",
+          "digest": "de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a"
+        }
+      ]
+    },
+    "builderExecution": "exec-builder-candidate"
+  },
+  "receipts": [
+    {
+      "digest": "86864954e3e4862e2ddececf2c39a83301ca267ea70b4222756c0f9b779913b7",
+      "envelope": {
+        "schemaVersion": 1,
+        "candidateDigest": "c43adfaf07e4c92afd245bf025e4afbd3e20f5c2cefd89d4f0397d6850771ab8",
+        "caseId": "c1",
+        "check": "test-design-sufficient",
+        "origin": {
+          "kind": "registered-runner",
+          "id": "p32-pilot-host"
+        },
+        "execution": {
+          "id": "exec-t-canonical"
+        },
+        "environment": "p32-pilot-r3 /private/tmp world",
+        "toolchain": "node v24.15.0",
+        "executions": {
+          "total": 1,
+          "valid": 1
+        },
+        "result": "pass",
+        "evidence": [
+          {
+            "uri": "openspec/changes/add-journey-version-r3/test-intent.md",
+            "sha256": "2d2817e7b697f044b16b11e4f874b6edea42139ac7a0f10c437c945b0f84bde1"
+          }
+        ],
+        "expiry": "2199-01-01T00:00:00.000Z"
+      },
+      "class": "independent-acceptance",
+      "origin": "p32-pilot-host",
+      "execution": "exec-t-canonical",
+      "dispatch": {
+        "runnerId": "p32-pilot-host",
+        "run": "add-journey-version-r3",
+        "gate": "test-design-sufficient",
+        "inputDigest": "c43adfaf07e4c92afd245bf025e4afbd3e20f5c2cefd89d4f0397d6850771ab8",
+        "policyDigest": "f42063d6c07358cc9312fdaf0ac7b827624fd0588ea78b9dcaff82675003d617",
+        "attempt": 1,
+        "epoch": 1,
+        "role": "verifier",
+        "execution": "exec-t-canonical",
+        "integrity": "59a71ee0b848d4f2f5524c67515c6ae069c514fbb2e83d11a99c211515b5f39d"
+      },
+      "scope": "component/dispatch-binding",
+      "managedClosureEligible": false
+    }
+  ],
+  "policy": {
+    "ref": "pilot/p32r3/t-gate",
+    "digest": "f42063d6c07358cc9312fdaf0ac7b827624fd0588ea78b9dcaff82675003d617"
+  },
+  "evaluatedBy": "sdd.delivery.gate.t@1 (packaged bindings -> lib/delivery/gate.js evaluate)",
+  "verdict": "pass",
+  "receipt": {
+    "scope": "component/receipt-coverage",
+    "managedClosureEligible": false,
+    "schemaVersion": 1,
+    "policy": {
+      "ref": "pilot/p32r3/t-gate",
+      "digest": "f42063d6c07358cc9312fdaf0ac7b827624fd0588ea78b9dcaff82675003d617"
+    },
+    "inputDigest": "c43adfaf07e4c92afd245bf025e4afbd3e20f5c2cefd89d4f0397d6850771ab8",
+    "evidence": [
+      "86864954e3e4862e2ddececf2c39a83301ca267ea70b4222756c0f9b779913b7"
+    ],
+    "requiredDenominator": {
+      "required": 1,
+      "valid": 1
+    },
+    "blocked": [],
+    "sourceAttestation": {
+      "origin": "p32-pilot-host",
+      "execution": "exec-t-canonical"
+    },
+    "verdict": "pass"
+  },
+  "skill": {
+    "id": "test-authoring",
+    "contentHash": "29871479d1c224d6f52bcc752f926fd491ad7b57a5b320a575cf43a5cb4a4ca1",
+    "execution": "p32 worker LLM session authored the TestPack + executable suite; independent sufficiency review by real codex-agent subprocess (6 rounds, r1-r5 REJECT with substantive findings each addressed, r6 sufficient=true oracleStrength=strong)"
+  },
+  "context": {
+    "testDesignReview": {
+      "reviewer": "codex-agent (gpt-6.1-sol, real subprocess, read-only)",
+      "rounds": 6,
+      "roundsRejected": 5,
+      "final": {
+        "sufficient": true,
+        "oracleStrength": "strong"
+      },
+      "rework": [
+        "r1: pinned exit codes, fs snapshot oracle, order+token boundaries",
+        "r2: executable suite landed, exit-2 oracle corrected to live-observed",
+        "r3: stderr silence, evidence-dir untouched, exit-2 case",
+        "r4: c5 stream corrected to stdout",
+        "r5: c6 direct exit-0 journey case"
+      ],
+      "suite": "test/version.test.js (10 cases; RED 4 fail = feature / 6 pass = contract)"
+    }
+  }
+}

@@ -5,7 +5,7 @@
   "requiredAssertions": [
     "E06",
     "V_E06:rv-slice-real-cli",
-    "V_E06:p25-consensus-consumption",
+    "V_E06:kp-block",
     "V_E06:recipe-tracking"
   ],
   "caseModule": "test/delivery-cases/3_2.mjs",
@@ -21,6 +21,11 @@
       "scenario": "E06"
     },
     {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/evidence/comet-050-run/run-state/all-runs.json",
+      "requirement": "The comet-050 composition-run ledger of the live pilot world: gate-extension passes R/A/T/P on run add-journey-version-r3, rework verdicts, cancellations of the superseded runs",
+      "scenario": "E06"
+    },
+    {
       "path": "openspec/changes/delivery-foundation-rearchitecture/execution-contract.json",
       "requirement": "journey_execution.construction_task_scopes.P3_2",
       "scenario": "E06"
@@ -30,8 +35,7 @@
     {
       "type": "spawn",
       "command": "node --test test/delivery-cases/3_2.mjs",
-      "expected": "exit 0; the case module executes the same-run journey's declared construction scope: (1) V_E06:rv-slice-real-cli drives the real managed Comet CLI (repo lock fingerprint d4370930) through R confirm -> A grill+unanimous consensus -> T independent review -> P -> TDD build -> Whitebox V over the CLI's real gate/transition/resume surfaces, with the enter-design (no R refused), unanimous-quorum and oracle-strength negatives exercised live; (2) V_E06:p25-consensus-consumption admits this run's real r3 unanimous consensus only through a trusted-launcher dispatch; (3) V_E06:recipe-tracking binds this recipe to its journey_definitions registration and asserts the full step plan (steps 7-11: Kp -> real archive -> Outline unknown/restart recovery -> Kt -> completed) stays execution_owner=VERIFY; TAP summary fail=0 with pass>0 and every required assertion mapped to executed ok points"
-      ,
+      "expected": "exit 0; the case module attests the DECLARED CONSTRUCTION SCOPE of the comet-050 revision: (1) V_E06:rv-slice-real-cli pins the recorded real composition journey — the installed sdd-managed-delivery package driven through comet runtime dispatch, gate extensions R/A/T/P accepted by the packaged validators, a real three-agent consensus (round-1 live REJECT with a blocking finding -> revision -> round-2 unanimous), a real independent test-design sufficiency review (five live rejects -> sufficient/strong), a real code review (live REJECT with a reproduced defect -> fix -> APPROVE), TDD RED->GREEN (11/11), and the honest blockers (isolation initialState contract, submissionId collision, write-once per-gate artifact vs revise loops) recorded as blockers with the superseded runs cancelled; (2) V_E06:kp-block exercises the archive lock live (application-ownership refusal recorded from the real run) and the packaged Kp validator's refusal of a knowledge-less pass, plus the typed verify-slice readback; (3) V_E06:recipe-tracking binds this recipe to its journey_definitions registration and keeps the Kp -> real archive -> Outline -> Kt -> completed tail execution_owner=VERIFY; TAP summary fail=0 with pass>0 and every required assertion mapped to executed ok points",
       "expect": { "kind": "exitCode", "value": 0 }
     },
     {
@@ -42,7 +46,7 @@
     },
     {
       "type": "inspect",
-      "path": "git rev-parse HEAD",
+      "command": "git rev-parse HEAD",
       "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
       "required": false
     }
@@ -57,9 +61,9 @@
     ]
   },
   "verdictSemantics": {
-    "PASS": "the recipe's actions executed (execution count > 0) and every expected outcome was met against live observation. This attests the DECLARED CONSTRUCTION SCOPE only: the real-CLI R-to-V role slice, the P2_5 consensus/test-design consumption contract, and the recipe/registration tracking of the full step plan. It NEVER asserts the full same-run terminal state — steps 7-11 (Kp, real OpenSpec archive, Outline unknown-result/restart recovery, Kt, completed) are execution_owner=VERIFY (execution-contract journey_execution); recipe validation alone does not close E01/E02/E06.",
-    "FAIL": "the declared construction scope executed and the observed outcome contradicted the frozen THEN (a slice negative passed when it must refuse, a dispatch binding was accepted without its evidence, the recipe/registration binding drifted, or the case module reported failures)",
-    "NOT-EXERCISED": "a prerequisite was missing (registered recipe, schema-valid definition, frozen pilot baseline, identity or environment — e.g. the patched Comet build d4370930 is absent); structured refusal with nonzero exit, never converted into a pass",
+    "PASS": "the recipe's actions executed (execution count > 0) and every expected outcome was met against live observation. This attests the DECLARED CONSTRUCTION SCOPE of the comet-050 revision only: the recorded-and-pinned real composition journey through the R/A/T/P gate extensions (real consensus, real independent reviews, real TDD), the live Kp/archive lock refusals, and the recipe/registration tracking of the full step plan. It NEVER asserts the full same-run terminal state — steps 7-11 (Kp, real OpenSpec archive, Outline unknown-result/restart recovery, Kt, completed) are execution_owner=VERIFY (execution-contract journey_execution); recipe validation alone does not close E01/E02/E06. The honest blockers of the pilot world (isolation initialState, submissionId collision, write-once per-gate artifacts across revise loops) are attested AS blockers; a PASS here never converts them into verified capability.",
+    "FAIL": "the declared construction scope executed and the observed outcome contradicted the frozen THEN (a pinned consensus ballot or run-ledger digest drifted, the packaged Kp validator accepted a knowledge-less pass, a superseded run is recorded completed, or the case module reported failures)",
+    "NOT-EXERCISED": "a prerequisite was missing (registered recipe, schema-valid definition, frozen pilot baseline, identity or environment — e.g. the pinned comet-050 build or the packaged composition is absent); structured refusal with nonzero exit, never converted into a pass",
     "NOT-APPLICABLE": "explicitly out of scope for the registered profile with a recorded reason; still nonzero; the runner never self-assigns it"
   }
 }

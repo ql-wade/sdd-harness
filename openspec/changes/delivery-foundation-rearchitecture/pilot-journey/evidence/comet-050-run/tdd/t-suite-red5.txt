@@ -1,0 +1,138 @@
+✖ c1 (AC1+AC2): --version alone exits 0 printing exactly 0.1.0 with zero filesystem side effects (95.364792ms)
+✖ c2 (AC3): a known option after --version does not change the outcome (49.301166ms)
+✖ c3a (AC3): an unknown option BEFORE --version still yields the version (order independence) (48.445041ms)
+✖ c1b (AC2): an explicitly passed evidence dir is never created by the version path (51.569ms)
+✔ c5 (AC4): the pre-existing NOT-EXERCISED exit-2 entrance is preserved verbatim (71.59ms)
+✔ c3b (AC3): near-miss tokens never trigger the version path (exact-token matching) (49.561958ms)
+✔ c4a (AC4): no arguments remains the exact invalid-input exit 1 (50.641709ms)
+✔ c4b (AC4): mutually exclusive journey+scenario remains the exact invalid-input exit 1 (49.780125ms)
+✔ c4c (AC4): the full-invocation input-contract shape is unchanged (live-observed on this copy) (56.424625ms)
+✔ c6 (AC4): a minimal REAL journey execution still exits 0 (direct exit-0 preservation) (180.974334ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 6
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 775.5925
+
+✖ failing tests:
+
+test at test/version.test.js:40:1
+✖ c1 (AC1+AC2): --version alone exits 0 printing exactly 0.1.0 with zero filesystem side effects (95.364792ms)
+  AssertionError [ERR_ASSERTION]: exit must be 0, got 1
+  stderr: {
+    "error": "INVALID_INPUT",
+    "message": "argument error: Unknown option '--version'"
+  }
+  Usage: node tools/verify/delivery-journey.mjs --scenario <ID> --profile <profile> --evidence-dir <dir> [--json]
+         [--case-plan <path>] [--pilot-contract <path>] [--case-definition <path>]
+  
+    --scenario <ID>       scenario id from verification-case-plan.json (e.g. A01)
+    --journey <name>      registered journey (same-run-delivery | real-comet-recovery | post-delivery-permissions)
+    --profile <profile>   registered journey profile (comet-managed-v2)
+    --evidence-dir <dir>  fresh empty directory for verdict.json + action evidence
+    --json                print the verdict JSON to stdout
+    --case-plan <path>    override the scenario registry (default: change verification-case-plan.json)
+    --pilot-contract <path>  override the pilot contract (default: change pilot-contract.md)
+    --case-definition <path>  execute an explicit schema-validated case definition
+  
+  Exit codes: 0=PASS, 1=invalid input/prerequisite, 2=verification failure/UNVERIFIED.
+  
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///private/tmp/p32-pilot-1793038407-25674/project/test/version.test.js:42:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.start (node:internal/test_runner/test:1096:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/version.test.js:51:1
+✖ c2 (AC3): a known option after --version does not change the outcome (49.301166ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///private/tmp/p32-pilot-1793038407-25674/project/test/version.test.js:53:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/version.test.js:58:1
+✖ c3a (AC3): an unknown option BEFORE --version still yields the version (order independence) (48.445041ms)
+  AssertionError [ERR_ASSERTION]: unknown-before-version must still exit 0, got 1
+  stderr: {
+    "error": "INVALID_INPUT",
+    "message": "argument error: Unknown option '--definitely-not-a-flag'"
+  }
+  Usage: node tools/verify/delivery-journey.mjs --scenario <ID> --profile <profile> --evidence-dir <dir> [--json]
+         [--case-plan <path>] [--pilot-contract <path>] [--case-definition <path>]
+  
+    --scenario <ID>       scenario id from verification-case-plan.json (e.g. A01)
+    --journey <name>      registered journey (same-run-delivery | real-comet-recovery | post-delivery-permissions)
+    --profile <profile>   registered journey profile (comet-managed-v2)
+    --evidence-dir <dir>  fresh empty directory for verdict.json + action evidence
+    --json                print the verdict JSON to stdout
+    --case-plan <path>    override the scenario registry (default: change verification-case-plan.json)
+    --pilot-contract <path>  override the pilot contract (default: change pilot-contract.md)
+    --case-definition <path>  execute an explicit schema-validated case definition
+  
+  Exit codes: 0=PASS, 1=invalid input/prerequisite, 2=verification failure/UNVERIFIED.
+  
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///private/tmp/p32-pilot-1793038407-25674/project/test/version.test.js:60:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/version.test.js:65:1
+✖ c1b (AC2): an explicitly passed evidence dir is never created by the version path (51.569ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 0
+  
+      at TestContext.<anonymous> (file:///private/tmp/p32-pilot-1793038407-25674/project/test/version.test.js:69:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,74 @@
+{
+  "agent": "claude-code",
+  "artifact_sha256": "1eefc22a7c6e5c562b7347372abbf8a288cb74b1a3fa9ee6f14d423a5d43ddba",
+  "assumptions": [
+    "The tar bundle is unreadable by my only permitted read-only mechanism (binary tar; no shell/extraction tool available), so I reviewed the change's working copies at project/openspec/changes/add-journey-version/{proposal,design,tasks}.md in the read-only pilot project; their content matches the review scope's stated revision (AC3/D1/D3 argv pre-scan) and the exact r1 tally anchors (claude 8.6 / zcode 8.8 / codex REJECT 7.5 blocking), so I treat them as the bundle contents.",
+    "The design 'shape of the change' snippet is indicative; D1/D3 prose (pre-scan BEFORE parseArgs, strict rejection preserved without --version) is the binding specification for the implementation stage.",
+    "The target file tools/verify/delivery-journey.mjs as read from the read-only pilot project is the file the change will modify."
+  ],
+  "confidence": 0.8,
+  "findings": [
+    {
+      "blocking": false,
+      "claim": "The r2 revision genuinely resolves codex-agent's r1 blocking finding: an argv pre-scan BEFORE strict parseArgs makes --version precedence unconditional.",
+      "evidence": "Target file tools/verify/delivery-journey.mjs lines 476-495: runDeliveryJourney calls parseArgs({args, strict:true, options:{...}}) with no 'version' option; a throw is caught and failInput() returns EXIT_INPUT (exit 1), so today '--version' yields {\"error\":\"INVALID_INPUT\",\"message\":\"argument error: Unknown option '--version'\"} exit 1 and any '--version --bogus' combination would also exit 1 before a post-parse branch could run — confirming r1. design.md D1/D3 and 'Debate resolution (r1 -> r2)' now specify scanning for the exact token '--version' BEFORE parseArgs with an immediate version print + exit 0, and proposal.md AC3 states the same ('scans process.argv for the exact token --version BEFORE strict option parsing, so even combined with unknown options it prints the version and exits 0'), while D3/AC4 preserve unknown-option rejection for invocations without --version. A pre-parse scan cannot be preempted by the strict-parse throw, so the precedence claim is now guaranteed.",
+      "id": "R2-1",
+      "recommendation": "None — the mechanism is correct; ensure the implementation performs the scan before the parseArgs try block exactly as specified.",
+      "severity": "NOTE"
+    },
+    {
+      "blocking": false,
+      "claim": "The pre-scan as sketched inspects process.argv inside runDeliveryJourney, whose injectable args parameter is process.argv.slice(2); this makes the AC3 precedence path unreachable through the exported programmatic interface and creates a behavioral divergence.",
+      "evidence": "design.md 'Shape of the change' shows `if (process.argv.includes('--version')) ...` placed before `options = parseArgs({...})` inside runDeliveryJourney; the target file (line 476) defines `runDeliveryJourney({ args = process.argv.slice(2) } = {})`. Consequently runDeliveryJourney({args:['--version','--bogus']}) would still hit the strict-parse throw (exit 1) while the same CLI argv returns 0, and unit tests cannot exercise the pre-scan branch; the redundant post-parse `if (options.version)` branch only covers the injected-args path.",
+      "id": "R2-2",
+      "recommendation": "Scan the args parameter (e.g. `if (args.includes('--version'))`) instead of process.argv so precedence is unconditional on both entry paths and directly unit-testable; keep or drop the post-parse branch accordingly.",
+      "severity": "MINOR"
+    },
+    {
+      "blocking": false,
+      "claim": "Exact-token pre-scan means '--version' anywhere in argv (including as an option value, e.g. `--scenario --version`) short-circuits to version output, changing that edge from INVALID_INPUT exit 1 to exit 0.",
+      "evidence": "proposal.md AC3 ('--version wins unconditionally ... scans process.argv for the exact token'); design.md D3. In the current tool such argv would fail scenario validation (SCENARIO_ID_RE at line 510-512 rejects it) with exit 1.",
+      "id": "R2-3",
+      "recommendation": "Acceptable and explicitly declared (mirrors commander-style .version() precedence); implementers must keep the exact-token equality match (no prefix/substring/'--version=...' variants, which should remain unknown options under AC4) and note the value-position edge in the implementation comment.",
+      "severity": "NOTE"
+    },
+    {
+      "blocking": false,
+      "claim": "The file-header exit-code contract comment ('0 = PASS') gains an exception: --version exits 0 without producing a verdict, but tasks.md only adds the usage line.",
+      "evidence": "Target file header lines 13-21 document exit 0 = PASS for verification runs; design.md D5 adds only a usage line and tasks.md 1.1 lists only 'usage line' alongside the flag; no task updates the header comment.",
+      "id": "R2-4",
+      "recommendation": "Add one comment line to the header (e.g. '--version prints TOOL_VERSION and exits 0 without running a journey') during implementation so operators do not read --version's exit 0 as a PASS verdict.",
+      "severity": "NOTE"
+    },
+    {
+      "blocking": false,
+      "claim": "tasks.md contains a single implementation checkbox with no explicit test task for AC1-AC4.",
+      "evidence": "tasks.md: only '- [ ] 1.1 Add --version handling ... (frozen TOOL_VERSION constant, short-circuit before validation, precedence over other options, usage line)'; design.md D6 leans on 'the existing input-contract test shape' for the usage string only.",
+      "id": "R2-5",
+      "recommendation": "In the T/P stage, add verification steps (CLI invocations asserting: exit 0 + exact one-line stdout for --version; exit 0 with --version --bogus; exit 1 for --bogus alone; no evidence dir created) so the AC3/AC4 precedence and side-effect-free properties are locked by tests rather than only by review.",
+      "severity": "NOTE"
+    },
+    {
+      "blocking": false,
+      "claim": "Evidence-integrity caveat: the artifact tar could not be opened by the available read-only reader, so its bytes were not independently digest-verified against the supplied SHA-256.",
+      "evidence": "Read of /private/tmp/p32-pilot-1793038407-25674/consensus/add-journey-version-a-r2.tar returned 'cannot read binary files'; no shell/extraction tool is available to me, and no unpacked copy exists under the consensus directory (probed review-id, bundle/, artifact/, r2/ paths). Review proceeded on project/openspec/changes/add-journey-version/*.md whose content matches the scope's revision description and exact r1 tally figures.",
+      "id": "R2-6",
+      "recommendation": "Other participants should confirm the tar's SHA-256 and member contents directly; if any member differs materially from the working copies, treat this ballot's positive verification as re-opened.",
+      "severity": "NOTE"
+    }
+  ],
+  "review_id": "add-journey-version-a-r2",
+  "round": 0,
+  "score": {
+    "criteria": {
+      "boundaries": 8,
+      "evolution_testability": 7.5,
+      "reliability": 8,
+      "requirements_fit": 9,
+      "security_operations": 9
+    },
+    "overall": 8.3
+  },
+  "summary": "Round-2 A-gate review of the add-journey-version design revision. Verified against the actual target file tools/verify/delivery-journey.mjs that the r1 blocking finding was real (parseArgs strict:true throws on unknown '--version' at lines 479-495 → failInput exit 1 before any post-parse branch) and that the r2 revision — an exact-token argv pre-scan BEFORE strict parsing (proposal AC3, design D1/D3 and the 'Debate resolution (r1 -> r2)' section) — makes --version precedence unconditional while preserving unknown-option rejection for argv without --version (AC4), with no filesystem side effects (AC2) and a frozen constant output (AC1, D2/D4). The change is a ~6-line single-file diff that does not touch journey semantics, verdict computation, evidence handling or the runner invariant. Non-blocking improvements: scan the injectable args parameter instead of process.argv so AC3 is testable via the exported interface (R2-2), keep exact-token matching at the value-position edge (R2-3), update the header exit-code comment (R2-4), and add explicit AC tests in the T/P stage (R2-5). Caveat: the tar itself is binary-unreadable with my read-only tooling, so the review used the byte-identical-appearing working copies in the read-only pilot project, corroborated by the scope's r1 tally and revision wording (R2-6). Approving: the gated revision demonstrably resolves the sole r1 blocker.",
+  "verdict": "APPROVE"
+}

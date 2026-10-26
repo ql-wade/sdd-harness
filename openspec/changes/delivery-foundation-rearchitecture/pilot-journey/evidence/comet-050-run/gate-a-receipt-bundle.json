@@ -1,0 +1,158 @@
+{
+  "schema": "sdd.delivery.gate.receipt-bundle.v1",
+  "kind": "gate-receipt-bundle",
+  "gate": "A",
+  "artifactRef": ".sdd/delivery/gates/a/receipt-bundle.json",
+  "hashBinding": "artifactHashes",
+  "writtenBy": "extension-execution",
+  "run": "add-journey-version-r3",
+  "sourceHash": "2797e0f26d67209debfbf749bfd38b4052ad051a97cc7d6acbce6880b4f4a0e9",
+  "inputs": {
+    "inputDigest": "c43adfaf07e4c92afd245bf025e4afbd3e20f5c2cefd89d4f0397d6850771ab8",
+    "testContract": {
+      "schemaVersion": 1,
+      "project": "p32-pilot",
+      "change": "add-journey-version-r3",
+      "cases": [
+        {
+          "id": "c1",
+          "ac": "D02",
+          "oracle": "unanimous independent architecture consensus bound to the current design digest",
+          "checkIds": [
+            "g1"
+          ]
+        }
+      ],
+      "requiredChecks": [
+        {
+          "id": "g1",
+          "level": "design",
+          "capability": "architecture-consensus-unanimous",
+          "caseIds": [
+            "c1"
+          ]
+        }
+      ],
+      "executionDenominator": {
+        "totalCases": 1
+      },
+      "cleanup": {
+        "environment": "pilot world under /private/tmp",
+        "data": "none persisted outside the pilot"
+      },
+      "dependencyBaselines": [
+        {
+          "kind": "comet-build",
+          "digest": "de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a"
+        }
+      ]
+    },
+    "builderExecution": "exec-builder-candidate"
+  },
+  "receipts": [
+    {
+      "digest": "8ea1d6081d47d4a396e7dbb376c9514bf34b39dad78a635640f7fb897be605e8",
+      "envelope": {
+        "schemaVersion": 1,
+        "candidateDigest": "c43adfaf07e4c92afd245bf025e4afbd3e20f5c2cefd89d4f0397d6850771ab8",
+        "caseId": "c1",
+        "check": "architecture-consensus-unanimous",
+        "origin": {
+          "kind": "registered-runner",
+          "id": "p32-pilot-host"
+        },
+        "execution": {
+          "id": "exec-a-canonical"
+        },
+        "environment": "p32-pilot-r3 /private/tmp world",
+        "toolchain": "node v24.15.0",
+        "executions": {
+          "total": 1,
+          "valid": 1
+        },
+        "result": "pass",
+        "evidence": [
+          {
+            "uri": "openspec/changes/add-journey-version-r3/design.md",
+            "sha256": "c43adfaf07e4c92afd245bf025e4afbd3e20f5c2cefd89d4f0397d6850771ab8"
+          }
+        ],
+        "expiry": "2199-01-01T00:00:00.000Z"
+      },
+      "class": "independent-acceptance",
+      "origin": "p32-pilot-host",
+      "execution": "exec-a-canonical",
+      "dispatch": {
+        "runnerId": "p32-pilot-host",
+        "run": "add-journey-version-r3",
+        "gate": "architecture-consensus-unanimous",
+        "inputDigest": "c43adfaf07e4c92afd245bf025e4afbd3e20f5c2cefd89d4f0397d6850771ab8",
+        "policyDigest": "ee86343dda4d534094bbcf1b66a682255f80486d6fb1139ea628f8c3a4a0d514",
+        "attempt": 1,
+        "epoch": 1,
+        "role": "verifier",
+        "execution": "exec-a-canonical",
+        "integrity": "9a99cf9ef349e9fc662875e4cc53f196d8103ade4f32cdc40759499b9fb86141"
+      },
+      "scope": "component/dispatch-binding",
+      "managedClosureEligible": false
+    }
+  ],
+  "policy": {
+    "ref": "pilot/p32r3/a-gate",
+    "digest": "ee86343dda4d534094bbcf1b66a682255f80486d6fb1139ea628f8c3a4a0d514"
+  },
+  "evaluatedBy": "sdd.delivery.gate.a@1 (packaged bindings -> lib/delivery/gate.js evaluate)",
+  "verdict": "pass",
+  "receipt": {
+    "scope": "component/receipt-coverage",
+    "managedClosureEligible": false,
+    "schemaVersion": 1,
+    "policy": {
+      "ref": "pilot/p32r3/a-gate",
+      "digest": "ee86343dda4d534094bbcf1b66a682255f80486d6fb1139ea628f8c3a4a0d514"
+    },
+    "inputDigest": "c43adfaf07e4c92afd245bf025e4afbd3e20f5c2cefd89d4f0397d6850771ab8",
+    "evidence": [
+      "8ea1d6081d47d4a396e7dbb376c9514bf34b39dad78a635640f7fb897be605e8"
+    ],
+    "requiredDenominator": {
+      "required": 1,
+      "valid": 1
+    },
+    "blocked": [],
+    "sourceAttestation": {
+      "origin": "p32-pilot-host",
+      "execution": "exec-a-canonical"
+    },
+    "verdict": "pass"
+  },
+  "skill": {
+    "id": "multi-agent-consensus-review",
+    "contentHash": "cb9ff81d5c138f927b8cbf9b9eb74fc553a5cd2762aa7ea80222cd60afe8bc6b",
+    "execution": "real three-agent silent-CLI run (claude-code/zcode/codex-agent), mechanical review_gate tally+finalize"
+  },
+  "context": {
+    "consensus": {
+      "round1": {
+        "status": "DEBATE_REQUIRED",
+        "ballots": {
+          "claude-code": "APPROVE 8.6",
+          "zcode": "APPROVE 8.8",
+          "codex-agent": "REJECT 7.5 (1 blocking: strict parseArgs fails before post-parse short-circuit)"
+        }
+      },
+      "resolution": "artifacts revised (AC3 + design D1/D3 argv pre-scan); same Run looped via revise-requirements verdict",
+      "round2": {
+        "status": "PASSED unanimous",
+        "ballots": {
+          "claude-code": "APPROVE 8.3",
+          "zcode": "APPROVE 8.5",
+          "codex-agent": "APPROVE 8.5 (r1 blocker withdrawn)"
+        }
+      },
+      "reviewId": "add-journey-version-a-r2",
+      "artifactSha256": "1eefc22a7c6e5c562b7347372abbf8a288cb74b1a3fa9ee6f14d423a5d43ddba"
+    }
+  }
+}

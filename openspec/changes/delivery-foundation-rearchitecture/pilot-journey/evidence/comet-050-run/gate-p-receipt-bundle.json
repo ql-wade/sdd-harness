@@ -1,0 +1,150 @@
+{
+  "schema": "sdd.delivery.gate.receipt-bundle.v1",
+  "kind": "gate-receipt-bundle",
+  "gate": "P",
+  "artifactRef": ".sdd/delivery/gates/p/receipt-bundle.json",
+  "hashBinding": "artifactHashes",
+  "writtenBy": "extension-execution",
+  "run": "add-journey-version-r3",
+  "inputs": {
+    "inputDigest": "1ce48bd62302ffa08e9c1a9eebff816b3444ef2ea8a09c8ec1e1a22a1cf4ec79",
+    "testContract": {
+      "schemaVersion": 1,
+      "project": "p32-pilot",
+      "change": "add-journey-version-r3",
+      "cases": [
+        {
+          "id": "c1",
+          "ac": "D04",
+          "oracle": "a unique build plan for this change bound to the plan digest",
+          "checkIds": [
+            "g1"
+          ]
+        }
+      ],
+      "requiredChecks": [
+        {
+          "id": "g1",
+          "level": "build",
+          "capability": "build-plan-unique",
+          "caseIds": [
+            "c1"
+          ]
+        }
+      ],
+      "executionDenominator": {
+        "totalCases": 1
+      },
+      "cleanup": {
+        "environment": "pilot world under /private/tmp",
+        "data": "none persisted outside the pilot"
+      },
+      "dependencyBaselines": [
+        {
+          "kind": "comet-build",
+          "digest": "de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a"
+        }
+      ]
+    },
+    "builderExecution": "exec-builder-candidate"
+  },
+  "receipts": [
+    {
+      "digest": "679c66f7aa410464df1be467c1bd97ef3d38738772b1a395689431a7137316aa",
+      "envelope": {
+        "schemaVersion": 1,
+        "candidateDigest": "1ce48bd62302ffa08e9c1a9eebff816b3444ef2ea8a09c8ec1e1a22a1cf4ec79",
+        "caseId": "c1",
+        "check": "build-plan-unique",
+        "origin": {
+          "kind": "registered-runner",
+          "id": "p32-pilot-host"
+        },
+        "execution": {
+          "id": "exec-p-canonical"
+        },
+        "environment": "p32-pilot-r3 /private/tmp world",
+        "toolchain": "node v24.15.0",
+        "executions": {
+          "total": 1,
+          "valid": 1
+        },
+        "result": "pass",
+        "evidence": [
+          {
+            "uri": "docs/superpowers/plans/add-journey-version-r3.md",
+            "sha256": "2006737435a93a2981662c266143b858adf3b2f607394722f295ef50b8f7818d"
+          },
+          {
+            "uri": "openspec/changes/add-journey-version-r3/tasks.md",
+            "sha256": "d0a87a316922ab014858a3e91c1ed88697991ec7a9aa549f120542e4098ccfca"
+          }
+        ],
+        "expiry": "2199-01-01T00:00:00.000Z"
+      },
+      "class": "independent-acceptance",
+      "origin": "p32-pilot-host",
+      "execution": "exec-p-canonical",
+      "dispatch": {
+        "runnerId": "p32-pilot-host",
+        "run": "add-journey-version-r3",
+        "gate": "build-plan-unique",
+        "inputDigest": "1ce48bd62302ffa08e9c1a9eebff816b3444ef2ea8a09c8ec1e1a22a1cf4ec79",
+        "policyDigest": "2acd5434f196336c3fccfece5f55e6a90b3ce7ab06023c0728f47090122ac586",
+        "attempt": 1,
+        "epoch": 1,
+        "role": "verifier",
+        "execution": "exec-p-canonical",
+        "integrity": "ab8103e4f1d9e0a5c540adfb65b682fc0cad21ae91254f06148c3289a94f2107"
+      },
+      "scope": "component/dispatch-binding",
+      "managedClosureEligible": false
+    }
+  ],
+  "policy": {
+    "ref": "pilot/p32r3/p-gate",
+    "digest": "2acd5434f196336c3fccfece5f55e6a90b3ce7ab06023c0728f47090122ac586"
+  },
+  "evaluatedBy": "sdd.delivery.gate.p@1 (packaged bindings -> lib/delivery/gate.js evaluate)",
+  "verdict": "pass",
+  "receipt": {
+    "scope": "component/receipt-coverage",
+    "managedClosureEligible": false,
+    "schemaVersion": 1,
+    "policy": {
+      "ref": "pilot/p32r3/p-gate",
+      "digest": "2acd5434f196336c3fccfece5f55e6a90b3ce7ab06023c0728f47090122ac586"
+    },
+    "inputDigest": "1ce48bd62302ffa08e9c1a9eebff816b3444ef2ea8a09c8ec1e1a22a1cf4ec79",
+    "evidence": [
+      "679c66f7aa410464df1be467c1bd97ef3d38738772b1a395689431a7137316aa"
+    ],
+    "requiredDenominator": {
+      "required": 1,
+      "valid": 1
+    },
+    "blocked": [],
+    "sourceAttestation": {
+      "origin": "p32-pilot-host",
+      "execution": "exec-p-canonical"
+    },
+    "verdict": "pass"
+  },
+  "skill": {
+    "id": "claude-parallel-tdd-planner",
+    "contentHash": "2e101811d5699d0be05e5dd6a4121da763d6befc598e47e6c1156e2a0a5ff701",
+    "execution": "p32 worker session per pinned planner SKILL.md"
+  },
+  "context": {
+    "plan": {
+      "planRef": "docs/superpowers/plans/add-journey-version-r3.md",
+      "canonical": true,
+      "taskAuthority": "openspec/changes/add-journey-version-r3/tasks.md",
+      "taskRefs": [
+        "p32-t-0001"
+      ],
+      "singlePlan": true,
+      "method": "claude-parallel-tdd-planner micro DAG"
+    }
+  }
+}

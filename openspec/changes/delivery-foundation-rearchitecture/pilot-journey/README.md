@@ -115,3 +115,19 @@ found+ok，13/13 测试点，四断言全 satisfied）；V_B02/V_B04/V_B05/V_F08
 - 固定合同命令 `--scenario E06 --journey same-run-delivery` 被当前 runner 判
   INVALID_INPUT（--journey 与 --scenario 互斥，runner 归 P3_1；配方自带 scenario），
   已如实记录；`--journey same-run-delivery`（runner 支持形）为本次验证通道。
+
+## comet-050 增量（P3_2，修订 2026-10-26-comet-050-adoption-v1）
+
+旧 0.4.5 兼容面（state dispatch-gate/accept-gate）已随修订退役。本任务的受管交付
+改为 comet-050 组合应用 Run：`comet application install` 安装 sdd-managed-delivery
+包，`comet runtime dispatch --application-file` 驱动，六门为组合扩展、由打包验证器
+（integrations/comet/application/bindings.mjs → lib/delivery/gate.js）判定。真实执行
+（/private/tmp 一次性试点世界）固化于 `evidence/comet-050-run/`：R/A/T/P 门在 Run
+add-journey-version-r3 上真实通过（A 门含真实三代理共识一轮真拒绝→修订→全票；T 门
+含真实独立充分性审查 5 轮真拒绝→sufficient/strong；代码审查 1 轮真拒绝（复现
+argv/args 缺陷）→修复→APPROVE；TDD RED 4 fail→GREEN 11/11）；同候选真实旅程
+PASS exit=0 含 typed readback 与一次真实 frozen-baseline-drift 拒绝；Kp 阻断在归档
+所有权锁与打包 Kp 验证器两层实测。三个真实上游发现（isolation initialState 死锁、
+跨 epoch submissionId 唯一性、write-once 每门工件 × revise 回环冲突）如实登记为
+blocker——完整 Kp→归档→Kt 尾段仍归 VERIFY。worker-reports/P3_2-comet-050/record.md
+为完整命令与结果台账。

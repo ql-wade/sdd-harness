@@ -1,0 +1,20 @@
+diff --git a/tools/verify/delivery-journey.mjs b/tools/verify/delivery-journey.mjs
+index 8379082..aeb7642 100644
+--- a/tools/verify/delivery-journey.mjs
++++ b/tools/verify/delivery-journey.mjs
+@@ -478,10 +478,11 @@ async function observeRuntime({ definition, observer, candidate, actions, eviden
+ // --- verdict ------------------------------------------------------------------
+ 
+ export async function runDeliveryJourney({ args = process.argv.slice(2), observeProtectedSource = cometAdapter.observeProtectedSource } = {}) {
+-  // add-journey-version (AC3, debate r1 resolution): unconditional precedence —
+-  // scan argv for the exact token BEFORE strict parsing so unknown options
+-  // cannot void the version request; everything else stays fail-closed.
+-  if (process.argv.includes('--version')) {
++  // add-journey-version (AC3, debate r1 resolution; code-review r1 fix): the
++  // version request is honored on the CALLER'S argv (the args parameter — the
++  // function's input contract), never on the host process.argv, so programmatic
++  // calls are covered and a host --version never leaks into other invocations.
++  if (args.includes('--version')) {
+     console.log(TOOL_VERSION);
+     return EXIT_PASS;
+   }

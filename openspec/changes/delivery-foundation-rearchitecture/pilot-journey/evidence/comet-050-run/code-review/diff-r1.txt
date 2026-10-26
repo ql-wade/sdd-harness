@@ -1,0 +1,36 @@
+diff --git a/tools/verify/delivery-journey.mjs b/tools/verify/delivery-journey.mjs
+index 4e50054..8379082 100644
+--- a/tools/verify/delivery-journey.mjs
++++ b/tools/verify/delivery-journey.mjs
+@@ -38,6 +38,9 @@ import { parseContract } from '../../contracts/delivery/index.js';
+ import { classifyRunOutcome, parseTapSummary } from '../../lib/delivery/test-contract.js';
+ 
+ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
++// add-journey-version: the tool's frozen version identity (never read from
++// package.json at runtime — the flag contract is zero side effects).
++const TOOL_VERSION = '0.1.0';
+ const EXIT_PASS = 0;
+ const EXIT_INPUT = 1;
+ const EXIT_VERIFY = 2;
+@@ -80,6 +83,7 @@ function usage() {
+     '  --scenario <ID>       scenario id from verification-case-plan.json (e.g. A01)',
+     '  --journey <name>      registered journey (same-run-delivery | real-comet-recovery | post-delivery-permissions)',
+     '  --profile <profile>   registered journey profile (comet-managed-v2)',
++    '  --version             print the tool version and exit 0',
+     '  --evidence-dir <dir>  fresh empty directory for verdict.json + action evidence',
+     '  --json                print the verdict JSON to stdout',
+     '  --case-plan <path>    override the scenario registry (default: change verification-case-plan.json)',
+@@ -474,6 +478,13 @@ async function observeRuntime({ definition, observer, candidate, actions, eviden
+ // --- verdict ------------------------------------------------------------------
+ 
+ export async function runDeliveryJourney({ args = process.argv.slice(2), observeProtectedSource = cometAdapter.observeProtectedSource } = {}) {
++  // add-journey-version (AC3, debate r1 resolution): unconditional precedence —
++  // scan argv for the exact token BEFORE strict parsing so unknown options
++  // cannot void the version request; everything else stays fail-closed.
++  if (process.argv.includes('--version')) {
++    console.log(TOOL_VERSION);
++    return EXIT_PASS;
++  }
+   let options;
+   try {
+     options = parseArgs({

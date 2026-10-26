@@ -1,0 +1,139 @@
+{
+  "schema": "sdd.delivery.gate.receipt-bundle.v1",
+  "kind": "gate-receipt-bundle",
+  "gate": "R",
+  "artifactRef": ".sdd/delivery/gates/r/receipt-bundle.json",
+  "hashBinding": "artifactHashes",
+  "writtenBy": "extension-execution",
+  "run": "add-journey-version-r3",
+  "sourceHash": "6f9dce86830c053995df2ee022ab097b1f3f24b5987889f6b8db29922d15e372",
+  "inputs": {
+    "inputDigest": "f9b856f8e5b0354dbc22a668e646675833f15fc191a3fc63be063bca005a7721",
+    "testContract": {
+      "schemaVersion": 1,
+      "project": "p32-pilot",
+      "change": "add-journey-version-r3",
+      "cases": [
+        {
+          "id": "c1",
+          "ac": "D01",
+          "oracle": "goal/scope/non-goals/AC closed and bound to the open artifacts digest",
+          "checkIds": [
+            "g1"
+          ]
+        }
+      ],
+      "requiredChecks": [
+        {
+          "id": "g1",
+          "level": "requirements",
+          "capability": "requirements-open-confirmed",
+          "caseIds": [
+            "c1"
+          ]
+        }
+      ],
+      "executionDenominator": {
+        "totalCases": 1
+      },
+      "cleanup": {
+        "environment": "pilot world under /private/tmp",
+        "data": "none persisted outside the pilot"
+      },
+      "dependencyBaselines": [
+        {
+          "kind": "comet-build",
+          "digest": "de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a"
+        }
+      ]
+    },
+    "builderExecution": "exec-builder-candidate"
+  },
+  "receipts": [
+    {
+      "digest": "2a94c59b4b16d7edc1f8eb84e223373e50efb6d69153635882b60d9bc99db20c",
+      "envelope": {
+        "schemaVersion": 1,
+        "candidateDigest": "f9b856f8e5b0354dbc22a668e646675833f15fc191a3fc63be063bca005a7721",
+        "caseId": "c1",
+        "check": "requirements-open-confirmed",
+        "origin": {
+          "kind": "registered-runner",
+          "id": "p32-pilot-host"
+        },
+        "execution": {
+          "id": "exec-r-canonical"
+        },
+        "environment": "p32-pilot-r3 /private/tmp world",
+        "toolchain": "node v24.15.0",
+        "executions": {
+          "total": 1,
+          "valid": 1
+        },
+        "result": "pass",
+        "evidence": [
+          {
+            "uri": "openspec/changes/add-journey-version-r3/proposal.md",
+            "sha256": "afd3653602f42605c97c17afda955f2dcdf2c904fc36c6b593c9e7842b66f761"
+          },
+          {
+            "uri": "openspec/changes/add-journey-version-r3/design.md",
+            "sha256": "c43adfaf07e4c92afd245bf025e4afbd3e20f5c2cefd89d4f0397d6850771ab8"
+          }
+        ],
+        "expiry": "2199-01-01T00:00:00.000Z"
+      },
+      "class": "independent-acceptance",
+      "origin": "p32-pilot-host",
+      "execution": "exec-r-canonical",
+      "dispatch": {
+        "runnerId": "p32-pilot-host",
+        "run": "add-journey-version-r3",
+        "gate": "requirements-open-confirmed",
+        "inputDigest": "f9b856f8e5b0354dbc22a668e646675833f15fc191a3fc63be063bca005a7721",
+        "policyDigest": "8e96086c9224b98a3dde9d4ee7858ad2abce9941d36e6d6931a532ff9d524e41",
+        "attempt": 1,
+        "epoch": 1,
+        "role": "verifier",
+        "execution": "exec-r-canonical",
+        "integrity": "4c1546c21d9a1a573f8dfc739b8356b7f2eb4af467c4589de8e43f631efaf105"
+      },
+      "scope": "component/dispatch-binding",
+      "managedClosureEligible": false
+    }
+  ],
+  "policy": {
+    "ref": "pilot/p32r3/r-gate",
+    "digest": "8e96086c9224b98a3dde9d4ee7858ad2abce9941d36e6d6931a532ff9d524e41"
+  },
+  "evaluatedBy": "sdd.delivery.gate.r@1 (packaged bindings -> lib/delivery/gate.js evaluate)",
+  "verdict": "pass",
+  "receipt": {
+    "scope": "component/receipt-coverage",
+    "managedClosureEligible": false,
+    "schemaVersion": 1,
+    "policy": {
+      "ref": "pilot/p32r3/r-gate",
+      "digest": "8e96086c9224b98a3dde9d4ee7858ad2abce9941d36e6d6931a532ff9d524e41"
+    },
+    "inputDigest": "f9b856f8e5b0354dbc22a668e646675833f15fc191a3fc63be063bca005a7721",
+    "evidence": [
+      "2a94c59b4b16d7edc1f8eb84e223373e50efb6d69153635882b60d9bc99db20c"
+    ],
+    "requiredDenominator": {
+      "required": 1,
+      "valid": 1
+    },
+    "blocked": [],
+    "sourceAttestation": {
+      "origin": "p32-pilot-host",
+      "execution": "exec-r-canonical"
+    },
+    "verdict": "pass"
+  },
+  "skill": {
+    "id": "grill-me",
+    "execution": "p32 worker LLM session"
+  },
+  "context": null
+}
