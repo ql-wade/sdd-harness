@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
   "task": "P1_5",
-  "scope": "C06 Kp/Kt readback gates: Knowledge.Closeout.v1 ordering (Kp before archive), single-owner sealing, forged seal refusal, native archive-entry zero-knowledge observation (B5) and built-in memory boundary",
-  "generatedBy": "live generator run (worktree impl/p1-5-classic-integration); test/classic-integration.test.js and test/delivery-cases/1_5.mjs re-run every scenario fresh and must agree",
-  "reproduction": "node --test test/classic-integration.test.js test/delivery-cases/1_5.mjs",
-  "ktBoundary": "the driver seal freezes the recorded Kp closeout; the Kt (pre-overall-completion) enforcement seat is the closeout contract run-level wiring owned by task 2.4 (registered, not implementable in this task without touching lib/)",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "scope": "C06 Kp/Kt readback gates on the 0.5.0 face: Knowledge.Closeout.v1 ordering (Kp before archive) and single-owner sealing at the driver (lib/adapters/comet.js sealCloseout), plus the 0.5.0 Kt mechanism — the 0005 read-side predicate that parks the SAME Run before overall completion (lib/adapters/comet.js knowledgeCloseoutBlocked, mirrored by the comet-executor ktCloseout port). The B5 native-face observation (the compat archive entry carries no knowledge receipt) and the real archive drive are owned by test/delivery-cases/1_3.mjs on the same pinned build",
+  "generatedBy": "P1_5 probe regeneration for the comet-050 adoption revision; test/classic-integration.test.js re-runs every scenario fresh and must agree",
+  "reproduction": "node --test test/classic-integration.test.js",
+  "ktBoundary": "Kp is sealed by the driver exactly once; Kt is NOT an extension of the composition (no sdd.delivery.gate.kt validator exists — see assembly-probes.json executor-six-gate-packaged-acceptance): it is the upstream-minimal 0005 predicate over the optional knowledgeCloseout state field, whose WRITE path stays the supply/admission wave (UNVERIFIED)",
   "records": [
     {
       "id": "kp-required-before-archive",
-      "entry": "lib/adapters/comet.js sealCloseout over a real CLI-read sealable state without a knowledge closeout",
+      "entry": "lib/adapters/comet.js sealCloseout over a sealable archive state without a knowledge closeout",
       "oracle": "Knowledge.Closeout.v1: the knowledge obligation (Kp) must be recorded before the archive seal",
       "observed": {
         "code": "KNOWLEDGE_CLOSEOUT_REQUIRED"
@@ -23,37 +24,44 @@
       }
     },
     {
+      "id": "forged-seal-refused",
+      "entry": "sealCloseout over a non-sealable state (phase build, verify pending) and over an already-archived seal",
+      "oracle": "a forged seal state is refused at the entry check and a second closeout execution is refused outright even though the upstream CLI converges idempotently",
+      "observed": {
+        "notSealable": "ARCHIVE_ENTRY_INVALID",
+        "alreadySealed": "ARCHIVE_ALREADY_SEALED"
+      }
+    },
+    {
       "id": "seal-exactly-once",
-      "entry": "sealCloseout over the real CLI-read sealable state (phase archive, verify pass, archive confirmed, archived false, epoch read by readArchiveSeal)",
+      "entry": "sealCloseout over the sealable state (phase archive, verify pass, archive confirmed, archived false, epoch read by readArchiveSeal)",
       "oracle": "the seal succeeds exactly once and freezes the knowledge closeout and the sealed-from epoch",
       "observed": {
         "archived": true,
         "execution": "exec-closeout-1",
         "knowledgeCloseoutFrozen": true,
-        "sealedFromEpoch": 5
+        "sealedFromEpoch": 6
       }
     },
     {
-      "id": "native-archive-entry-zero-knowledge",
-      "entry": "comet state check <change> archive at the archive phase (run driven through the registered COMET_SKIP_BUILD escape, B4)",
-      "oracle": "the native archive entry check set carries no knowledge obligation at all — the Kp seat is the driver gate, never the native gate (B5)",
+      "id": "kt-0005-fail-open-default",
+      "entry": "knowledgeCloseoutBlocked over states without the optional field (every upstream and legacy ClassicState)",
+      "oracle": "the 0005 predicate is fail-open by default: an absent/null knowledgeCloseout keeps the original unconditional completion",
       "observed": {
-        "exitCode": 0,
-        "checks": {
-          "passed": 5,
-          "total": 5,
-          "blocked": false
-        },
-        "mentionsKnowledge": false
+        "absentFieldBlocks": false,
+        "nullFieldBlocks": false,
+        "malformedField": "KT_STATE_INVALID"
       }
     },
     {
-      "id": "builtin-memory-not-a-receipt",
-      "entry": "comet knowledge remember under an isolated HOME",
-      "oracle": "the built-in project memory stores into a HOME cache, never an LLMWiki/Outline/DeepWiki artifact, and cannot serve as a Kp/Kt receipt",
+      "id": "kt-0005-required-unmet-parks-same-run",
+      "entry": "knowledgeCloseoutBlocked { required: true } / { required: true, completed: true } + comet-executor ktCloseout",
+      "oracle": "Kt parks the SAME Run before overall completion only while required is true and completed is not; the executor port reports the block honestly and never claims the write path",
       "observed": {
-        "exitCode": 0,
-        "storageShape": "<HOME>/Library/Caches/Comet/project-knowledge/classic-d99c87ff/memory/<slug>.md"
+        "requiredUnmetBlocks": true,
+        "requiredCompletedBlocks": false,
+        "overallCompletionEligibleWhenBlocked": false,
+        "writePath": "UNVERIFIED"
       }
     }
   ]

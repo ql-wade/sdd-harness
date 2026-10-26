@@ -1,50 +1,59 @@
 {
   "schemaVersion": 1,
   "task": "P1_5",
-  "scope": "C07 — all seven managed entrances enforce the same precondition rule with zero check evidence (extends P1_4 mode-qualification.json c07Entrances, which registered transition/guard preview/guard --apply/next/archive/write-hook; this registration adds the state check entrance semantics and re-verifies all seven on the same patched build)",
-  "generatedBy": "live generator run (worktree impl/p1-5-classic-integration); test/delivery-cases/1_5.mjs re-runs every entrance fresh and must agree",
-  "reproduction": "node --test test/delivery-cases/1_5.mjs",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "scope": "C07/e on the 0.5.0 pinned build (aeb1a659… + 0005, build fingerprint de39629a…): with the host hook registration REMOVED (.claude/settings.local.json moved away for the whole session), the CLI-side common gates still refuse every gate-skipping entrance — guard, transition, archive, and both runtime-dispatch package refusals. The hook is the edit-channel attribution (A09, probed by P1_3); the common gates are CLI-side and survive its absence",
+  "environment": {
+    "node": "24.15.0",
+    "build": ".sdd/vendor/comet/aeb1a6598034e28ce46b8422d4dbd8785e607bd7/builds/de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a/work/bin/comet.js",
+    "probeHome": "one-time /tmp scratch home (HOME/COMET_PROJECT_ROOT isolated); repo and real home untouched",
+    "hooksAbsent": ".claude/settings.local.json moved away before every probe and restored after",
+    "changeDrivenTo": "classic compat run driven to the build phase (init, state init/select, artifacts, open-complete, complete-design, design-complete, build_mode set, task completed, manual record-check recorded)",
+    "boundary": "read-only/rejection paths only: no composition package install, no dispatch inside a live composition Run, no model calls (P1_4/P3_2/VERIFY)",
+    "generatedBy": "P1_5 live probe session (revision 2026-10-26-comet-050-adoption-v1); test/delivery-cases/1_5.mjs re-runs every entrance fresh with the same hooks-absent isolation and must agree",
+    "reproduction": "node --test test/delivery-cases/1_5.mjs"
+  },
   "records": [
     {
-      "id": "transition",
-      "entry": "comet state transition build-complete (patched build CLI)",
-      "oracle": "the direct transition entrance refuses without the build check and names the failed rule",
+      "id": "guard-preview",
+      "entry": "comet guard <change> build --json (hooks absent)",
+      "oracle": "the guard entrance refuses without the build check evidence and reports the blocked check set",
       "observed": {
         "exitCode": 1,
-        "message": "=== Guard: build → verify ===",
-        "namedRule": "Build passes",
-        "guardRefusalSentence": "Change p15-integrate is not ready to leave the build stage yet: 1 of 14 checks failed. The failing items below are the Agent's checklist, not user actions."
-      }
-    },
-    {
-      "id": "guard-preview",
-      "entry": "comet guard <change> build (preview)",
-      "oracle": "the guard preview refuses without the build check",
-      "observed": {
-        "exitCode": 1
+        "blocked": true
       }
     },
     {
       "id": "guard-apply",
-      "entry": "comet guard <change> build --apply",
-      "oracle": "the guard apply refuses without the build check and the phase does not move",
+      "entry": "comet guard <change> build --apply --json (hooks absent)",
+      "oracle": "a refused guard --apply does not advance the phase",
       "observed": {
         "exitCode": 1,
+        "blocked": true,
         "phaseAfter": "build"
       }
     },
     {
+      "id": "transition-manual-declaration",
+      "entry": "comet state transition <change> build-complete --json after a recorded manual record-check (hooks absent)",
+      "oracle": "a manual record-check declaration never satisfies the guard: the transition entrance refuses",
+      "observed": {
+        "exitCode": 1,
+        "message": "Manual declarations never satisfy the guard"
+      }
+    },
+    {
       "id": "next-continuation",
-      "entry": "comet state next <change>",
-      "oracle": "an interrupted run resumes as continuation guidance, never as a completion claim past the missing check",
+      "entry": "comet state next <change> --json (hooks absent)",
+      "oracle": "an interrupted run resumes as continuation guidance (kind plan), never a completion claim",
       "observed": {
         "exitCode": 0,
         "kind": "plan"
       }
     },
     {
-      "id": "archive",
-      "entry": "comet archive <change>",
+      "id": "archive-outside-phase",
+      "entry": "comet archive <change> --json from the build phase (hooks absent)",
       "oracle": "the archive entrance refuses outside the archive phase",
       "observed": {
         "exitCode": 1,
@@ -52,26 +61,22 @@
       }
     },
     {
-      "id": "write-hook",
-      "entry": "lib/adapters/comet.js probeWriteChannels over .claude/settings.local.json PreToolUse comet-hook-router.mjs",
-      "oracle": "the attributed edit channel refuses a cross-phase product write with the guard contract exit code; unattributed channels stay recorded capability gaps (A09), never blocked claims",
+      "id": "dispatch-entry-name",
+      "entry": "comet runtime dispatch --application-file <path not named application.json> --request <next request> --json (hooks absent)",
+      "oracle": "the single composition-Run dispatch entrance refuses a package whose entry file is not application.json — no arbitrary program can be smuggled through the selector",
       "observed": {
-        "exitCode": 2,
-        "outcome": "rejected",
-        "unattributedGaps": [
-          "shell",
-          "mcp"
-        ]
+        "exitCode": 65,
+        "error": "INVALID_WORKFLOW"
       }
     },
     {
-      "id": "state-check",
-      "entry": "comet state check <change> <phase>",
-      "oracle": "state check answers the ENTRY check set of the phase being entered, never itself advances a phase; the archive entry set is unsatisfied from the build phase with zero evidence",
+      "id": "dispatch-missing-package",
+      "entry": "comet runtime dispatch --application-file <missing-dir>/application.json --request <next request> --json (hooks absent)",
+      "oracle": "the dispatch entrance refuses a missing application package — dispatch without a package cannot advance or create anything",
       "observed": {
-        "buildEntryExit": 0,
-        "phaseAfterBuildCheck": "build",
-        "archiveFromBuildExit": 1
+        "exitCode": 70,
+        "error": "RUNTIME_ERROR",
+        "cause": "ENOENT"
       }
     }
   ]

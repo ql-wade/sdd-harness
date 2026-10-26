@@ -1,76 +1,54 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "task": "P1_5",
-  "scope": "C08 preparation only: replay the original real OpenSpec1.3.1 status response as history; separately execute current host1.14.3 and fixed isolated1.11.0 version/status against the unmodified pinned Classic requiredArtifactClosure. This does not qualify Classic initialization, recovery, roles, or full C01-C08.",
-  "fixedEnvironment": {
-    "isolatedInstall": ".sdd/tools/openspec-1.11.0",
-    "installBasis": "pinned registry tarball @fission-ai/openspec@1.11.0 (tarball_sha256 84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f, verified at P1_1); installed with an isolated npm cache and private package.json — never a global upgrade",
-    "scratchRecipe": "fresh scratch project: openspec/config.yaml schema spec-driven; change .openspec.yaml schema spec-driven + skip_specs true; proposal.md; tasks.md — identical input to both CLIs",
-    "predicateSource": "Unmodified requiredArtifactClosure from the fixed six-patch Core6da build; build fingerprint and module bytes are pinned below. No old CLI is simulated.",
-    "predicateBuildFingerprint": "3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69",
-    "predicateSha256": "205cf16fc1b6308c400bae02436f3cd0f383139d7836de1df6c82c25120edf81"
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "qualification": {
+    "source": "compatibility predicate observation only",
+    "methodExecution": "NOT_EXECUTED",
+    "wholeP1_5": "assembly + rejection paths verified; real host Run is P3_2/VERIFY",
+    "C01_C08_businessAcceptance": "NOT_VERIFIED"
   },
-  "generatedBy": "P1_5 bounded probe repair: current author observations and historical real-response replay; test/classic-integration.test.js repeats the declared scope",
-  "reproduction": "node --test test/classic-integration.test.js",
+  "scope": "C08 compatibility observations against the 0.5.0 pinned build (aeb1a659… + 0005, fingerprint de39629a…): replay the original real OpenSpec 1.3.1 status response as history against the build's own requiredArtifactClosure predicate; observe the current host-global CLI and the fixed isolated 1.11.0 candidate. This does not qualify Classic initialization, recovery, roles, or full C01-C08.",
+  "fixedEnvironment": {
+    "buildFingerprint": "de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a",
+    "predicate": "work/dist/domains/comet-classic/classic-artifact-requirements.js",
+    "predicateSha256": "205cf16fc1b6308c400bae02436f3cd0f383139d7836de1df6c82c25120edf81",
+    "isolatedInstall": ".sdd/tools/openspec-1.11.0",
+    "scratchChange": "openspec/changes demo under a /tmp root (proposal + tasks, skip_specs)"
+  },
   "negative": {
-    "role": "historical real host-global1.3.1 response capture; binary is no longer present and is not re-created",
     "cliVersion": "1.3.1",
-    "statusExit": 0,
-    "artifactsRequireEdges": [
-      null,
-      null,
-      null,
-      null
-    ],
-    "closureResult": "REJECTED",
-    "closureError": "OpenSpec must expose dependency edges for every artifact; upgrade to a supported version",
     "observation": "HISTORICAL_RESPONSE_REPLAY",
     "replayInput": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/package-probes/1_1.b-green-openspec-status-131-input.json",
       "bytes": 538,
-      "sha256": "07e4c35d6ba821b7fc2b9810c0e14e67c6fdb126202a6db98c9b3a18c3903357",
-      "captureCommand": "openspec status --change delivery-foundation-rearchitecture --json",
-      "captureBasis": "Original P1_1.b capture, 2026-10-20; retained unchanged in Git history"
+      "sha256": "07e4c35d6ba821b7fc2b9810c0e14e67c6fdb126202a6db98c9b3a18c3903357"
     },
-    "originalReplayEvidence": {
-      "path": "openspec/changes/delivery-foundation-rearchitecture/package-probes/1_1.b-green-openspec-compat-replay.log",
-      "sha256": "a01d00a416d91d582b4b990c4db4990554dcbbcd497ce3124be8aac4b64162ac"
+    "closureError": "OpenSpec must expose dependency edges for every artifact; upgrade to a supported version",
+    "boundary": "the historical CLI binary no longer exists on this host; the capture is byte-pinned history, never impersonated by the current host"
+  },
+  "currentHost": {
+    "observation": "CURRENT_HOST_CLI",
+    "cliVersion": "1.15.0",
+    "cliVersionPolicy": "observed; host-global drift is an environmental fact (toolchain-baseline openspec.current=1.14.3 recorded earlier drift 1.3.1→1.14.3; upgrade_policy forbids global upgrades). The agreement oracle for this leg is the closure predicate over the live status response, not the environment version string",
+    "dependencyEdges": "exposed",
+    "closure": {
+      "proposal": "done",
+      "specs": "skipped",
+      "design": "ready",
+      "tasks": "done"
     }
   },
   "positive": {
-    "role": "isolated compatibility candidate",
     "isolatedInstall": ".sdd/tools/openspec-1.11.0",
     "cliVersion": "1.11.0",
-    "statusExit": 0,
-    "artifactsRequireEdgesExposed": true,
-    "closureResult": "ACCEPTED",
+    "dependencyEdges": "exposed",
     "closure": {
       "proposal": "done",
       "specs": "skipped",
       "design": "ready",
       "tasks": "done"
     },
-    "observation": "CURRENT_ISOLATED_CLI"
-  },
-  "noGlobalUpgrade": "No installation, upgrade, downgrade or global configuration mutation is performed. Historical1.3.1 is a captured-response replay; current host1.14.3 is observed separately and isolated1.11.0 remains the controlled compatible candidate.",
-  "currentHost": {
-    "role": "observed current host-global CLI; separately pinned by toolchain-baseline.json openspec.current",
-    "observation": "CURRENT_HOST_CLI",
-    "cliVersion": "1.14.3",
-    "statusExit": 0,
-    "artifactsRequireEdgesExposed": true,
-    "closureResult": "ACCEPTED",
-    "closure": {
-      "proposal": "done",
-      "specs": "skipped",
-      "design": "ready",
-      "tasks": "done"
-    }
-  },
-  "qualification": {
-    "source": "compatibility predicate and CLI preparation only",
-    "methodExecution": "NOT_EXECUTED",
-    "wholeP1_5": "NOT_VERIFIED",
-    "C01_C08_businessAcceptance": "NOT_VERIFIED"
+    "closureResult": "ACCEPTED"
   }
 }

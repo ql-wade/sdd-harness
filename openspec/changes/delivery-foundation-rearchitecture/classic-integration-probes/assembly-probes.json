@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "task": "P1_5",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "scope": "C01–C08 ASSEMBLY layer over the compiled composition package (integrations/comet/application/package, Comet 0.5.0 classic-full) and the P1_3 0.5.0 adapter: A/T extension independence at the same design checkpoint, P single plan surface with no second scheduling face, the classic.composition.confirm approval anchor preceding full.open, the nine-step replacement mapping (method variants vs managed domain-work skills), and the comet-executor six-gate receipt acceptance that has zero fallback outside the packaged bindings validators",
+  "environment": {
+    "node": "24.15.0",
+    "package": {
+      "root": "integrations/comet/application/package",
+      "runtimeVersion": "0.5.0",
+      "workflowId": "comet-classic-full",
+      "compositionHash": "dbcb0eeefd38dcfa8f9107240ebc870f423d78061a6037a7a6d913d27881b44b",
+      "contentHash": "f76778251fe6415ad946c26633ecfd293fc75bf11473d9e6df460fa572c50766",
+      "skills": 15,
+      "bindings": 15
+    },
+    "boundary": "assembly only: compiled artifacts + adapter + extension declarations. Installing the package into a live project and dispatching inside a real composition Run are P1_4/P3_2/VERIFY (UNVERIFIED here)",
+    "generatedBy": "P1_5 assembly probe generation (revision 2026-10-26-comet-050-adoption-v1); test/classic-integration.test.js re-runs every scenario fresh against the live package and adapter and must agree",
+    "reproduction": "node --test test/classic-integration.test.js"
+  },
+  "records": [
+    {
+      "id": "at-extensions-independent",
+      "entry": "package/application.json bindings + package/workflow.json steps/transitions",
+      "oracle": "A (architecture-consensus) and T (test-design-review) are separate extensions at the SAME full.design.evidence checkpoint, each with its own artifactRef bundle and its own validator; neither artifactRef nor validator is shared",
+      "observed": {
+        "sameCheckpoint": "full.design.evidence",
+        "chain": ["full.design.evidence", "classic.extension.architecture-consensus", "classic.extension.test-design-review", "full.build.configure"],
+        "aArtifactRef": ".sdd/delivery/gates/a/receipt-bundle.json",
+        "tArtifactRef": ".sdd/delivery/gates/t/receipt-bundle.json",
+        "aValidator": "comet-classic.extension.architecture-consensus-result",
+        "tValidator": "comet-classic.extension.test-design-review-result",
+        "artifactRefsDistinct": true,
+        "validatorsDistinct": true
+      }
+    },
+    {
+      "id": "at-cross-replay-refused",
+      "entry": "packaged bindings validators (package/bindings.mjs, via comet-executor acceptGateReceipt)",
+      "oracle": "gate evidence cannot be replayed across extensions: an A-bound pass payload is refused by the T validator and vice versa — A passing cannot substitute for T and vice versa",
+      "observed": {
+        "aPayloadOnT": "refused: payload is bound to gate A; gate evidence cannot be replayed across extensions",
+        "tPayloadOnA": "refused: payload is bound to gate T; gate evidence cannot be replayed across extensions"
+      }
+    },
+    {
+      "id": "plan-single-surface",
+      "entry": "package/workflow.json steps + package/application.json build-plan-unique binding + extensions/build-plan-unique.json",
+      "oracle": "the plan surface is single-authority: exactly one step produces a plan (full.build.plan, the managed claude-parallel-tdd-planner variant), exactly one await_evidence of kind classic-build-plan judges it, and exactly one extension (build-plan-unique, gate P) binds the single plan receipt-bundle artifact",
+      "observed": {
+        "planOutputSteps": ["full.build.plan"],
+        "planEvidenceSteps": ["full.build.plan.evidence"],
+        "extension": "build-plan-unique",
+        "artifactRefs": [".sdd/delivery/gates/p/receipt-bundle.json"],
+        "validator": "sdd.delivery.gate.p",
+        "afterStep": "full.build.plan.evidence"
+      }
+    },
+    {
+      "id": "no-second-scheduling-surface",
+      "entry": "package/workflow.json stateSchema + steps + the adapter's runtime dispatch construction",
+      "oracle": "no second scheduling surface exists in the assembled workflow: the state schema carries exactly one plan field, only one step declares a plan output, and the single dispatch entry for a composition Run is comet runtime dispatch --application-file (the adapter refuses --application/--workflow selectors)",
+      "observed": {
+        "stateSchemaPlanFields": ["plan"],
+        "stepsDeclaringPlanOutput": 1,
+        "dispatchSelectors": ["--application-file"],
+        "forbiddenSelectorsAbsent": ["--application", "--workflow"]
+      }
+    },
+    {
+      "id": "approval-anchor-precedes-open",
+      "entry": "package/workflow.json entry + transitions + classic.composition.confirm step",
+      "oracle": "user approval is the sequence precondition of full.open: the workflow entry is classic.composition.prepare, prepare only transitions to the ask_user classic.composition.confirm, and only the approved choice reaches full.open — no direct prepare→full.open edge exists",
+      "observed": {
+        "entry": ["classic.composition.prepare"],
+        "prepareSucceedsTo": ["classic.composition.confirm"],
+        "confirmApprovedTo": "full.open",
+        "confirmRejectedTo": "classic.composition.confirm",
+        "directPrepareToOpen": false,
+        "confirmType": "ask_user",
+        "confirmChoices": ["approved", "rejected"]
+      }
+    },
+    {
+      "id": "work-bindings-anchored-extensions-read-only",
+      "entry": "package/application.json bindings authorization anchors",
+      "oracle": "every write-side-effect work binding (the nine replaced execution steps) carries authorizationFrom classic.composition.confirm with authorizationChoices [approved]; the six read-only gate extension bindings carry no anchor",
+      "observed": {
+        "anchoredWorkBindings": 9,
+        "anchor": "classic.composition.confirm",
+        "anchorChoices": ["approved"],
+        "unanchoredGateBindings": 6,
+        "unanchoredCapabilities": ["grill-me.gate", "multi-agent-consensus-review.gate", "test-authoring.gate", "claude-parallel-tdd-planner.gate", "whitebox-verify.gate", "openspec-lifecycle-guard.gate"]
+      }
+    },
+    {
+      "id": "nine-step-mapping",
+      "entry": "composition.json replacements + managedSkillVariants mapped onto package/application.json skills",
+      "oracle": "the nine invoke_skill steps of classic-full map to distinct managed skills: method steps run on build-time verbatim variants of the packaged P1_6 method skills (method skills ARE the execution skills), domain steps run on managed domain-work skills, and every id is unique across the workflow",
+      "observed": {
+        "replacements": 9,
+        "distinctIds": true,
+        "methodVariants": [
+          { "stepId": "full.design.handoff", "skillId": "grill-me-full-design-handoff", "base": "grill-me" },
+          { "stepId": "full.design.document", "skillId": "grill-me-full-design-document", "base": "grill-me" },
+          { "stepId": "full.build.plan", "skillId": "claude-parallel-tdd-planner-full-build-plan", "base": "claude-parallel-tdd-planner" },
+          { "stepId": "full.build.execute", "skillId": "tdd-full-build-execute", "base": "tdd" }
+        ],
+        "domainWork": [
+          { "stepId": "full.open", "skillId": "comet-open-full-open" },
+          { "stepId": "full.build.configure", "skillId": "comet-build-full-build-configure" },
+          { "stepId": "full.verify.run", "skillId": "comet-verify-full-verify-run" },
+          { "stepId": "full.archive.prepare", "skillId": "comet-archive-full-archive-prepare" },
+          { "stepId": "full.archive.deliver", "skillId": "comet-archive-full-archive-deliver" }
+        ],
+        "extensionSkills": 6
+      }
+    },
+    {
+      "id": "executor-six-gate-packaged-acceptance",
+      "entry": "lib/adapters/comet-executor.js createCometExecutor + acceptGateReceipt over the packaged bindings validators",
+      "oracle": "a gate pass receipt is accepted ONLY through the packaged bindings validator of that gate (pure SDD.Gate.v1 evaluation of the gateEvidence payload); the composition declares exactly the six managed gates R/A/T/P/V/Kp and Kt is not an extension",
+      "observed": {
+        "gates": ["R", "A", "T", "P", "V", "Kp"],
+        "acceptedExample": { "gate": "A", "validatorId": "sdd.delivery.gate.a", "extensionId": "architecture-consensus" },
+        "ktRegisteredAsExtension": false,
+        "ktMechanism": "upstream-minimal-patch-0005"
+      }
+    },
+    {
+      "id": "executor-unregistered-and-nonpass-refused",
+      "entry": "comet-executor acceptGateReceipt negative face",
+      "oracle": "fail closed: an unregistered gate (Kt, X) is refused outright (ACTION_NOT_REGISTERED), a non-pass verdict claim never reaches a validator (EXTENSION_OUTCOME_INVALID), a payload without gateEvidence is refused by the validator, blocked coverage is refused with the blocked reasons, and the authority never signs outside an executor-scoped native call",
+      "observed": {
+        "unregisteredGate": "ACTION_NOT_REGISTERED",
+        "nonPassVerdict": "EXTENSION_OUTCOME_INVALID",
+        "missingPayload": "refused: the extension result carries no gateEvidence payload",
+        "blockedCoverage": "refused: SDD gate V blocked (MISSING_OBSERVATION)",
+        "ambientSigning": "ORIGINAL_NATIVE_CALL_REQUIRED"
+      }
+    },
+    {
+      "id": "kt-predicate-single-run-parking",
+      "entry": "lib/adapters/comet.js knowledgeCloseoutBlocked (patch 0005 read-side predicate) + comet-executor ktCloseout",
+      "oracle": "Kt parks the SAME Run instead of completing: fail-open for every state without the optional field, blocked only while required===true and completed!==true, with the write path honestly UNVERIFIED (supply/admission wave)",
+      "observed": {
+        "absentFieldBlocks": false,
+        "requiredUnmetBlocks": true,
+        "requiredCompletedBlocks": false,
+        "overallCompletionEligibleWhenBlocked": false,
+        "writePath": "UNVERIFIED"
+      }
+    }
+  ]
+}

@@ -1,0 +1,2029 @@
+diff --git a/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/bypass-recovery.json b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/bypass-recovery.json
+index 5b5b46a..59d8457 100644
+--- a/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/bypass-recovery.json
++++ b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/bypass-recovery.json
+@@ -1,88 +1,47 @@
+ {
+   "schemaVersion": 1,
+   "task": "P1_5",
+-  "scope": "C04 single tasks authority (write ticket) + C08 bypass/recovery negatives: hand-edited phase file, manual record-check, forged seal, direct phase write, floating global upgrade attempt; interruption recovery semantics; second closeout after real archive",
+-  "generatedBy": "live generator run (worktree impl/p1-5-classic-integration); test/delivery-cases/1_5.mjs re-runs every scenario fresh and must agree",
+-  "reproduction": "node --test test/delivery-cases/1_5.mjs",
++  "revision": "2026-10-26-comet-050-adoption-v1",
++  "scope": "C08 bypass negatives on the 0.5.0 pinned build, same hooks-absent /tmp probe session as entrances-c07.json: the control-state mutation family — direct phase write through the state command, shell-forged phase in the change state file, and the manual record-check declaration — none of which can carry a gate",
++  "environment": {
++    "node": "24.15.0",
++    "build": ".sdd/vendor/comet/aeb1a6598034e28ce46b8422d4dbd8785e607bd7/builds/de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a/work/bin/comet.js",
++    "probeHome": "one-time /tmp scratch home; hooks absent during every probe",
++    "stateFile": "docs/openspec/changes/<change>/.comet.yaml (0.5.0 compat run created the legacy name; restored after the forge)",
++    "boundary": "read-only/rejection paths only; the real archive drive and duplicate-closeout refusal are owned by test/delivery-cases/1_3.mjs on the same build",
++    "generatedBy": "P1_5 live probe session (revision 2026-10-26-comet-050-adoption-v1); test/delivery-cases/1_5.mjs re-runs every scenario fresh and must agree",
++    "reproduction": "node --test test/delivery-cases/1_5.mjs"
++  },
+   "records": [
+     {
+-      "id": "tasks-revision-ticket",
+-      "entry": "comet state tasks --assign-ids / task-complete --expect <revision> (patched build CLI)",
+-      "oracle": "tasks/DAG is the single writable authority: progress ticks never move the write ticket (checkbox-agnostic, same semantics as the frozen plan digest), definition drift from a second authority does, and a progress write with a stale ticket is refused with a reload instruction",
++      "id": "direct-phase-write",
++      "entry": "comet state set <change> phase archive --json (hooks absent)",
++      "oracle": "the pristine 0.5.0 state command refuses a direct phase write: it would bypass state machine evidence checks",
+       "observed": {
+-        "firstWriteExit": 0,
+-        "tickMovesRevision": false,
+-        "driftMovesRevision": true,
+-        "staleTicketExit": 70,
+-        "staleTicketMessage": "Task requirements changed; reload the task list before recording completion",
+-        "refreshedTicketWriteExit": 0,
+-        "noTicketWriteExit": 1
++        "exitCode": 1,
++        "message": "Setting 'phase' directly is not allowed; it bypasses state machine evidence checks"
+       }
+     },
+     {
+       "id": "tampered-phase-file",
+-      "entry": "hand edit of docs/openspec/changes/<change>/.comet.yaml phase field, then the managed entrances",
+-      "oracle": "a hand-edited phase file cannot carry the verify transition or the archive entry checks; the entrance checks consult the real state, so the bypass is refused on every downstream entrance",
++      "entry": "shell sed phase build→archive in the change state file, then comet state check <change> archive --json (hooks absent)",
++      "oracle": "a hand-edited phase file cannot carry the archive entry: the check verdict demands the real verification receipt (verify_result), not the phase string",
+       "observed": {
+-        "verifyPassExit": 1,
+-        "archiveExit": 1
++        "checkExit": 1,
++        "blocked": true,
++        "issueNames": [
++          "verify_result"
++        ]
+       }
+     },
+     {
+       "id": "manual-record-check",
+-      "entry": "comet state record-check then state transition build-complete",
+-      "oracle": "a manual check declaration never satisfies the guard — the transition still refuses and names the rule",
++      "entry": "comet state record-check <change> build --command node -e 0 --exit-code 0 --json, then the transition entrance (hooks absent)",
++      "oracle": "recording the manual declaration is allowed, but an authored receipt is not a real invocation and never satisfies the guard",
+       "observed": {
+         "recordExit": 0,
+         "transitionExit": 1,
+-        "message": "Manual declarations never satisfy the guard, and they shadow the earlier runtime evidence until a new runtime check runs."
+-      }
+-    },
+-    {
+-      "id": "forged-seal",
+-      "entry": "lib/adapters/comet.js sealCloseout over a CLI-read seal with phase forced to build",
+-      "oracle": "a seal whose phase/verify_result/archive_confirmation is forged is refused as not sealable (ARCHIVE_ENTRY_INVALID)",
+-      "observed": {
+-        "code": "ARCHIVE_ENTRY_INVALID"
+-      }
+-    },
+-    {
+-      "id": "direct-phase-write",
+-      "entry": "comet state set <change> phase archive",
+-      "oracle": "a direct phase write refuses by default and names the COMET_FORCE_PHASE escape instead of silently applying",
+-      "observed": {
+-        "exitCode": 1,
+-        "namesEscape": true
+-      }
+-    },
+-    {
+-      "id": "floating-global-upgrade-attempt",
+-      "entry": "comet init (classic) on a host without the required OpenSpec, under an isolated PATH with stub npm",
+-      "oracle": "the registered B6 attempt (npm install -g @fission-ai/openspec@latest) is observed and absorbed by the isolated environment; the host-global CLI stays at its pinned version",
+-      "observed": {
+-        "initExit": 0,
+-        "stubAbsorbed": true,
+-        "hostCliVersionAfter": "1.3.1",
+-        "pinnedHostVersion": "1.3.1"
+-      }
+-    },
+-    {
+-      "id": "recovery-continuation",
+-      "entry": "comet state next <change> after an interrupted build phase",
+-      "oracle": "interruption recovers as continuation guidance (kind plan), never as a completion claim past the missing evidence",
+-      "observed": {
+-        "exitCode": 0,
+-        "kind": "plan"
+-      }
+-    },
+-    {
+-      "id": "second-closeout-after-real-archive",
+-      "entry": "comet archive <change> twice; readArchiveSeal + sealCloseout between and after",
+-      "oracle": "the upstream CLI converges idempotently, but the driver gate is the single closeout owner: a second closeout execution is refused (ARCHIVE_ALREADY_SEALED) once archived is really true",
+-      "observed": {
+-        "firstArchiveExit": 0,
+-        "archivedAfterFirst": true,
+-        "secondCloseoutRefusal": "ARCHIVE_ALREADY_SEALED"
++        "message": "Manual declarations never satisfy the guard"
+       }
+     }
+   ]
+diff --git a/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/entrances-c07.json b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/entrances-c07.json
+index cc98f29..39d8767 100644
+--- a/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/entrances-c07.json
++++ b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/entrances-c07.json
+@@ -1,50 +1,59 @@
+ {
+   "schemaVersion": 1,
+   "task": "P1_5",
+-  "scope": "C07 — all seven managed entrances enforce the same precondition rule with zero check evidence (extends P1_4 mode-qualification.json c07Entrances, which registered transition/guard preview/guard --apply/next/archive/write-hook; this registration adds the state check entrance semantics and re-verifies all seven on the same patched build)",
+-  "generatedBy": "live generator run (worktree impl/p1-5-classic-integration); test/delivery-cases/1_5.mjs re-runs every entrance fresh and must agree",
+-  "reproduction": "node --test test/delivery-cases/1_5.mjs",
++  "revision": "2026-10-26-comet-050-adoption-v1",
++  "scope": "C07/e on the 0.5.0 pinned build (aeb1a659… + 0005, build fingerprint de39629a…): with the host hook registration REMOVED (.claude/settings.local.json moved away for the whole session), the CLI-side common gates still refuse every gate-skipping entrance — guard, transition, archive, and both runtime-dispatch package refusals. The hook is the edit-channel attribution (A09, probed by P1_3); the common gates are CLI-side and survive its absence",
++  "environment": {
++    "node": "24.15.0",
++    "build": ".sdd/vendor/comet/aeb1a6598034e28ce46b8422d4dbd8785e607bd7/builds/de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a/work/bin/comet.js",
++    "probeHome": "one-time /tmp scratch home (HOME/COMET_PROJECT_ROOT isolated); repo and real home untouched",
++    "hooksAbsent": ".claude/settings.local.json moved away before every probe and restored after",
++    "changeDrivenTo": "classic compat run driven to the build phase (init, state init/select, artifacts, open-complete, complete-design, design-complete, build_mode set, task completed, manual record-check recorded)",
++    "boundary": "read-only/rejection paths only: no composition package install, no dispatch inside a live composition Run, no model calls (P1_4/P3_2/VERIFY)",
++    "generatedBy": "P1_5 live probe session (revision 2026-10-26-comet-050-adoption-v1); test/delivery-cases/1_5.mjs re-runs every entrance fresh with the same hooks-absent isolation and must agree",
++    "reproduction": "node --test test/delivery-cases/1_5.mjs"
++  },
+   "records": [
+     {
+-      "id": "transition",
+-      "entry": "comet state transition build-complete (patched build CLI)",
+-      "oracle": "the direct transition entrance refuses without the build check and names the failed rule",
++      "id": "guard-preview",
++      "entry": "comet guard <change> build --json (hooks absent)",
++      "oracle": "the guard entrance refuses without the build check evidence and reports the blocked check set",
+       "observed": {
+         "exitCode": 1,
+-        "message": "=== Guard: build → verify ===",
+-        "namedRule": "Build passes",
+-        "guardRefusalSentence": "Change p15-integrate is not ready to leave the build stage yet: 1 of 14 checks failed. The failing items below are the Agent's checklist, not user actions."
++        "blocked": true
+       }
+     },
+     {
+-      "id": "guard-preview",
+-      "entry": "comet guard <change> build (preview)",
+-      "oracle": "the guard preview refuses without the build check",
++      "id": "guard-apply",
++      "entry": "comet guard <change> build --apply --json (hooks absent)",
++      "oracle": "a refused guard --apply does not advance the phase",
+       "observed": {
+-        "exitCode": 1
++        "exitCode": 1,
++        "blocked": true,
++        "phaseAfter": "build"
+       }
+     },
+     {
+-      "id": "guard-apply",
+-      "entry": "comet guard <change> build --apply",
+-      "oracle": "the guard apply refuses without the build check and the phase does not move",
++      "id": "transition-manual-declaration",
++      "entry": "comet state transition <change> build-complete --json after a recorded manual record-check (hooks absent)",
++      "oracle": "a manual record-check declaration never satisfies the guard: the transition entrance refuses",
+       "observed": {
+         "exitCode": 1,
+-        "phaseAfter": "build"
++        "message": "Manual declarations never satisfy the guard"
+       }
+     },
+     {
+       "id": "next-continuation",
+-      "entry": "comet state next <change>",
+-      "oracle": "an interrupted run resumes as continuation guidance, never as a completion claim past the missing check",
++      "entry": "comet state next <change> --json (hooks absent)",
++      "oracle": "an interrupted run resumes as continuation guidance (kind plan), never a completion claim",
+       "observed": {
+         "exitCode": 0,
+         "kind": "plan"
+       }
+     },
+     {
+-      "id": "archive",
+-      "entry": "comet archive <change>",
++      "id": "archive-outside-phase",
++      "entry": "comet archive <change> --json from the build phase (hooks absent)",
+       "oracle": "the archive entrance refuses outside the archive phase",
+       "observed": {
+         "exitCode": 1,
+@@ -52,26 +61,22 @@
+       }
+     },
+     {
+-      "id": "write-hook",
+-      "entry": "lib/adapters/comet.js probeWriteChannels over .claude/settings.local.json PreToolUse comet-hook-router.mjs",
+-      "oracle": "the attributed edit channel refuses a cross-phase product write with the guard contract exit code; unattributed channels stay recorded capability gaps (A09), never blocked claims",
++      "id": "dispatch-entry-name",
++      "entry": "comet runtime dispatch --application-file <path not named application.json> --request <next request> --json (hooks absent)",
++      "oracle": "the single composition-Run dispatch entrance refuses a package whose entry file is not application.json — no arbitrary program can be smuggled through the selector",
+       "observed": {
+-        "exitCode": 2,
+-        "outcome": "rejected",
+-        "unattributedGaps": [
+-          "shell",
+-          "mcp"
+-        ]
++        "exitCode": 65,
++        "error": "INVALID_WORKFLOW"
+       }
+     },
+     {
+-      "id": "state-check",
+-      "entry": "comet state check <change> <phase>",
+-      "oracle": "state check answers the ENTRY check set of the phase being entered, never itself advances a phase; the archive entry set is unsatisfied from the build phase with zero evidence",
++      "id": "dispatch-missing-package",
++      "entry": "comet runtime dispatch --application-file <missing-dir>/application.json --request <next request> --json (hooks absent)",
++      "oracle": "the dispatch entrance refuses a missing application package — dispatch without a package cannot advance or create anything",
+       "observed": {
+-        "buildEntryExit": 0,
+-        "phaseAfterBuildCheck": "build",
+-        "archiveFromBuildExit": 1
++        "exitCode": 70,
++        "error": "RUNTIME_ERROR",
++        "cause": "ENOENT"
+       }
+     }
+   ]
+diff --git a/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/gate-matrix.json b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/gate-matrix.json
+index d2a0d65..49c491d 100644
+--- a/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/gate-matrix.json
++++ b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/gate-matrix.json
+@@ -1,8 +1,9 @@
+ {
+   "schemaVersion": 1,
+   "task": "P1_5",
+-  "scope": "C01-C05 gate-level separation matrix over the accepted infrastructure entries (imports unmodified): gate.evaluate (SDD.Gate.v1), admitEvidence (Runner.Dispatch.v1 local), harness driver exclusivity, baseline frozen-plan semantics",
+-  "generatedBy": "live generator run (worktree impl/p1-5-classic-integration); test/classic-integration.test.js re-runs every scenario fresh and must agree",
++  "revision": "2026-10-26-comet-050-adoption-v1",
++  "scope": "C01-C05 gate-level separation matrix over the accepted infrastructure entries (imports unmodified): gate.evaluate (SDD.Gate.v1, the same pure judgment the 0.5.0 packaged bindings validators delegate to), admitEvidence (Runner.Dispatch.v1 local), harness driver exclusivity, baseline frozen-plan semantics. The 0.5.0 assembly layer over the compiled composition package is registered separately in assembly-probes.json",
++  "generatedBy": "P1_5 probe regeneration for the comet-050 adoption revision (lib/delivery judgment surface unchanged by 0.5.0); test/classic-integration.test.js re-runs every scenario fresh and must agree",
+   "reproduction": "node --test test/classic-integration.test.js",
+   "records": [
+     {
+diff --git a/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/knowledge-closeout.json b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/knowledge-closeout.json
+index c77cf61..61f95b4 100644
+--- a/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/knowledge-closeout.json
++++ b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/knowledge-closeout.json
+@@ -1,14 +1,15 @@
+ {
+   "schemaVersion": 1,
+   "task": "P1_5",
+-  "scope": "C06 Kp/Kt readback gates: Knowledge.Closeout.v1 ordering (Kp before archive), single-owner sealing, forged seal refusal, native archive-entry zero-knowledge observation (B5) and built-in memory boundary",
+-  "generatedBy": "live generator run (worktree impl/p1-5-classic-integration); test/classic-integration.test.js and test/delivery-cases/1_5.mjs re-run every scenario fresh and must agree",
+-  "reproduction": "node --test test/classic-integration.test.js test/delivery-cases/1_5.mjs",
+-  "ktBoundary": "the driver seal freezes the recorded Kp closeout; the Kt (pre-overall-completion) enforcement seat is the closeout contract run-level wiring owned by task 2.4 (registered, not implementable in this task without touching lib/)",
++  "revision": "2026-10-26-comet-050-adoption-v1",
++  "scope": "C06 Kp/Kt readback gates on the 0.5.0 face: Knowledge.Closeout.v1 ordering (Kp before archive) and single-owner sealing at the driver (lib/adapters/comet.js sealCloseout), plus the 0.5.0 Kt mechanism — the 0005 read-side predicate that parks the SAME Run before overall completion (lib/adapters/comet.js knowledgeCloseoutBlocked, mirrored by the comet-executor ktCloseout port). The B5 native-face observation (the compat archive entry carries no knowledge receipt) and the real archive drive are owned by test/delivery-cases/1_3.mjs on the same pinned build",
++  "generatedBy": "P1_5 probe regeneration for the comet-050 adoption revision; test/classic-integration.test.js re-runs every scenario fresh and must agree",
++  "reproduction": "node --test test/classic-integration.test.js",
++  "ktBoundary": "Kp is sealed by the driver exactly once; Kt is NOT an extension of the composition (no sdd.delivery.gate.kt validator exists — see assembly-probes.json executor-six-gate-packaged-acceptance): it is the upstream-minimal 0005 predicate over the optional knowledgeCloseout state field, whose WRITE path stays the supply/admission wave (UNVERIFIED)",
+   "records": [
+     {
+       "id": "kp-required-before-archive",
+-      "entry": "lib/adapters/comet.js sealCloseout over a real CLI-read sealable state without a knowledge closeout",
++      "entry": "lib/adapters/comet.js sealCloseout over a sealable archive state without a knowledge closeout",
+       "oracle": "Knowledge.Closeout.v1: the knowledge obligation (Kp) must be recorded before the archive seal",
+       "observed": {
+         "code": "KNOWLEDGE_CLOSEOUT_REQUIRED"
+@@ -22,38 +23,45 @@
+         "code": "KNOWLEDGE_CLOSEOUT_REQUIRED"
+       }
+     },
++    {
++      "id": "forged-seal-refused",
++      "entry": "sealCloseout over a non-sealable state (phase build, verify pending) and over an already-archived seal",
++      "oracle": "a forged seal state is refused at the entry check and a second closeout execution is refused outright even though the upstream CLI converges idempotently",
++      "observed": {
++        "notSealable": "ARCHIVE_ENTRY_INVALID",
++        "alreadySealed": "ARCHIVE_ALREADY_SEALED"
++      }
++    },
+     {
+       "id": "seal-exactly-once",
+-      "entry": "sealCloseout over the real CLI-read sealable state (phase archive, verify pass, archive confirmed, archived false, epoch read by readArchiveSeal)",
++      "entry": "sealCloseout over the sealable state (phase archive, verify pass, archive confirmed, archived false, epoch read by readArchiveSeal)",
+       "oracle": "the seal succeeds exactly once and freezes the knowledge closeout and the sealed-from epoch",
+       "observed": {
+         "archived": true,
+         "execution": "exec-closeout-1",
+         "knowledgeCloseoutFrozen": true,
+-        "sealedFromEpoch": 5
++        "sealedFromEpoch": 6
+       }
+     },
+     {
+-      "id": "native-archive-entry-zero-knowledge",
+-      "entry": "comet state check <change> archive at the archive phase (run driven through the registered COMET_SKIP_BUILD escape, B4)",
+-      "oracle": "the native archive entry check set carries no knowledge obligation at all — the Kp seat is the driver gate, never the native gate (B5)",
++      "id": "kt-0005-fail-open-default",
++      "entry": "knowledgeCloseoutBlocked over states without the optional field (every upstream and legacy ClassicState)",
++      "oracle": "the 0005 predicate is fail-open by default: an absent/null knowledgeCloseout keeps the original unconditional completion",
+       "observed": {
+-        "exitCode": 0,
+-        "checks": {
+-          "passed": 5,
+-          "total": 5,
+-          "blocked": false
+-        },
+-        "mentionsKnowledge": false
++        "absentFieldBlocks": false,
++        "nullFieldBlocks": false,
++        "malformedField": "KT_STATE_INVALID"
+       }
+     },
+     {
+-      "id": "builtin-memory-not-a-receipt",
+-      "entry": "comet knowledge remember under an isolated HOME",
+-      "oracle": "the built-in project memory stores into a HOME cache, never an LLMWiki/Outline/DeepWiki artifact, and cannot serve as a Kp/Kt receipt",
++      "id": "kt-0005-required-unmet-parks-same-run",
++      "entry": "knowledgeCloseoutBlocked { required: true } / { required: true, completed: true } + comet-executor ktCloseout",
++      "oracle": "Kt parks the SAME Run before overall completion only while required is true and completed is not; the executor port reports the block honestly and never claims the write path",
+       "observed": {
+-        "exitCode": 0,
+-        "storageShape": "<HOME>/Library/Caches/Comet/project-knowledge/classic-d99c87ff/memory/<slug>.md"
++        "requiredUnmetBlocks": true,
++        "requiredCompletedBlocks": false,
++        "overallCompletionEligibleWhenBlocked": false,
++        "writePath": "UNVERIFIED"
+       }
+     }
+   ]
+diff --git a/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/method-dispatch-content.json b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/method-dispatch-content.json
+index af352fd..cd56b72 100644
+--- a/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/method-dispatch-content.json
++++ b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/method-dispatch-content.json
+@@ -1,63 +1,29 @@
+ {
+-  "schemaVersion": 2,
++  "schemaVersion": 3,
+   "task": "P1_5",
+-  "scope": "P1_5 source-pin preparation for planner/test-authoring/Whitebox. Binds only to the already-approved P1_6 complete11-method/245-file source and sealed Foundation baseline; it does not record any actual R/A/T/P/V method execution or acceptance.",
+-  "generatedBy": "P1_5 bounded repair against reviewed P1_6 whole-source inventory; digests copied only after exact manifest and sealed byte verification",
+-  "reproduction": "node --test test/classic-integration.test.js",
+-  "note": "The old probe used a separate relative-path/order digest and an obsolete Whitebox snapshot. Original bytes are retained in worker-reports/P1_5-probe-repair/history/2d2506f/. This record now declares the exact approved P1_6/Foundation algorithm; re-hashing arbitrary new source is not approval.",
++  "revision": "2026-10-26-comet-050-adoption-v1",
++  "profile": "comet-classic-full-050",
++  "qualification": "PACKAGE_PIN_ONLY",
++  "methodExecution": "NOT_EXECUTED",
++  "scope": "P1_5 package-pin registration for the R/A/T/P/V/Kp method surface on the comet-050 revision: the compiled composition package (integrations/comet/application/package) binds 15 managed skills — 4 build-time method variants of the packaged P1_6 method skills (the method skills ARE the execution skills), 5 managed domain-work skills, and the 6 packaged extension skills. Byte-verbatim variant derivation from the P1_6 assets and the whole-package compile drift detector are owned by test/delivery-cases/2_4.mjs; this registration pins the mapping and the digests the assembly re-verifies",
++  "digestFormula": "application.json skills[].contentHash — the official compiler content hash over each packaged skill directory (pinned by the 2_4 compile manifest: compositionHash dbcb0eee… / contentHash f7677825…)",
+   "skills": [
+-    {
+-      "name": "claude-parallel-tdd-planner",
+-      "role": "P",
+-      "path": ".agents/skills/claude-parallel-tdd-planner",
+-      "version": null,
+-      "disposition": "P plan artifact protocol and pure validator only: references/plan-contract.md sections One root and acceptance source / DAG plus scripts/plan_guard.py. Complete planner SKILL/controller/Goal/supervision/dispatch/archive contracts are not loaded; no actual P execution is recorded here.",
+-      "digest": "d43f87a4d9e2983ee68be313736581f41e673f0e18c8dfa5455594a2161130d9",
+-      "files": 16,
+-      "digestFormula": "sha256 of UTF-8 complete lines \"<file sha256>  <skill-name>/<relative-file>\" sorted lexicographically and joined with LF, with no final LF; every approved file including dotfiles and fixture logs"
+-    },
+-    {
+-      "name": "test-authoring",
+-      "role": "T",
+-      "path": ".agents/skills/test-authoring",
+-      "version": "1.0.0",
+-      "disposition": "design mode writes test-intent artifacts only (case/oracle/coverage), automate mode writes authorized tests/fixtures and runs authoring self-checks; authoring self-checks never sign the T gate or the V gate (B03); oracle changes invalidate T and downstream",
+-      "digest": "f633b2a6fd1d24a16870728f2c695c6bf273a187f84dcb3ff50b04782b083c6d",
+-      "files": 17,
+-      "digestFormula": "sha256 of UTF-8 complete lines \"<file sha256>  <skill-name>/<relative-file>\" sorted lexicographically and joined with LF, with no final LF; every approved file including dotfiles and fixture logs"
+-    },
+-    {
+-      "name": "whitebox-verify",
+-      "role": "V",
+-      "path": ".agents/skills/whitebox-verify",
+-      "version": "2.5.0",
+-      "disposition": "independent acceptance only: read-only execution bound to the frozen candidate and TestPack, real command receipts; a Whitebox execution never writes source, tests or oracles, and its report is invalid once candidate or test set changes",
+-      "digest": "391296c90fea357c9e9d2401b7107b30cc69da6962232215d718fb8c93f93e22",
+-      "files": 139,
+-      "digestFormula": "sha256 of UTF-8 complete lines \"<file sha256>  <skill-name>/<relative-file>\" sorted lexicographically and joined with LF, with no final LF; every approved file including dotfiles and fixture logs"
+-    }
++    { "name": "grill-me-full-design-handoff", "role": "method-variant", "base": "grill-me", "stepId": "full.design.handoff", "disposition": "R-requirements interview handoff (managed extension skill grill-me is the gate face; this variant is the execution skill)", "digest": "a87693b070931b4b675e5a417bccf6ac779a59de531e815b1d28e1a8b3633b06" },
++    { "name": "grill-me-full-design-document", "role": "method-variant", "base": "grill-me", "stepId": "full.design.document", "disposition": "R-requirements interview design document", "digest": "253a49116c235fbbc683c3ac7e0d395a02855e3d1b2b1a4bbad66b766525f522" },
++    { "name": "claude-parallel-tdd-planner-full-build-plan", "role": "method-variant", "base": "claude-parallel-tdd-planner", "stepId": "full.build.plan", "disposition": "P: the planner method skill is the single plan-producing execution skill", "digest": "de9f42f79e9092cbb18992b3fc631972bb41561c4d97dcf9038887aad676c808" },
++    { "name": "tdd-full-build-execute", "role": "method-variant", "base": "tdd", "stepId": "full.build.execute", "disposition": "test automation: the TDD method skill is the build execution skill", "digest": "b54488e8e796eef4a7c285d56e961ccfc2f872d873c69ca4bdccd2bcfbc7e5d5" },
++    { "name": "comet-open-full-open", "role": "domain-work", "stepId": "full.open", "disposition": "managed domain-work skill for the open step", "digest": "12530b212439d08363ad05b43d6cf6f634baca65ace67d211e7d3da3b20734dd" },
++    { "name": "comet-build-full-build-configure", "role": "domain-work", "stepId": "full.build.configure", "disposition": "managed domain-work skill (Builder configuration); ponytail removed per composition.json removedReplacements", "digest": "b8c4234dca17580fee4569e34746a31cc1691a52027839c1482c8e2efc4460f1" },
++    { "name": "comet-verify-full-verify-run", "role": "domain-work", "stepId": "full.verify.run", "disposition": "managed domain-work skill for verification execution", "digest": "ce72211e995b73287ac91714f89f5e23d6b5479286001e09f81f32234d1bf2fd" },
++    { "name": "comet-archive-full-archive-prepare", "role": "domain-work", "stepId": "full.archive.prepare", "disposition": "managed domain-work skill for archive preparation", "digest": "214bdaeab821b9c1f2aabe3d4e74b7ec1c21e8e887abfcd426eb1a2804c4f3d8" },
++    { "name": "comet-archive-full-archive-deliver", "role": "domain-work", "stepId": "full.archive.deliver", "disposition": "managed domain-work skill for archive delivery (Reviewer-facing summary out)", "digest": "2749cb6117c05ccf4ab0dd24b524000c56805a6d6410c4b7a6d8f8fd5326a717" },
++    { "name": "grill-me", "role": "extension-skill", "gate": "R", "extensionId": "requirements-open", "disposition": "packaged P1_6 asset; read-only gate face, machine-check completion", "digest": "cf9d49f076e2e95f3ffda19c6b128758baced14805854e6f0d9b1196b463be40" },
++    { "name": "multi-agent-consensus-review", "role": "extension-skill", "gate": "A", "extensionId": "architecture-consensus", "disposition": "packaged P1_6 asset; read-only gate face", "digest": "cb9ff81d5c138f927b8cbf9b9eb74fc553a5cd2762aa7ea80222cd60afe8bc6b" },
++    { "name": "test-authoring", "role": "extension-skill", "gate": "T", "extensionId": "test-design-review", "disposition": "packaged P1_6 asset; read-only gate face", "digest": "29871479d1c224d6f52bcc752f926fd491ad7b57a5b320a575cf43a5cb4a4ca1" },
++    { "name": "claude-parallel-tdd-planner", "role": "extension-skill", "gate": "P", "extensionId": "build-plan-unique", "disposition": "packaged P1_6 asset; read-only gate face", "digest": "2e101811d5699d0be05e5dd6a4121da763d6befc598e47e6c1156e2a0a5ff701" },
++    { "name": "whitebox-verify", "role": "extension-skill", "gate": "V", "extensionId": "verify-whitebox", "disposition": "packaged P1_6 asset; read-only gate face", "digest": "59f15d6e12c00852ed9221968f747d7afa9010bea846e4121c4b0bec30dd816a" },
++    { "name": "openspec-lifecycle-guard", "role": "extension-skill", "gate": "Kp", "extensionId": "knowledge-project-closeout", "disposition": "packaged P1_6 asset; read-only gate face", "digest": "8b56dfb106416d22009fa184dea839d4a5a0c3bce8fbc491688132f8d9339329" }
+   ],
+-  "profile": "comet-managed-v2",
+-  "qualification": "SOURCE_PIN_ONLY",
+-  "methodExecution": "NOT_EXECUTED",
+-  "digestFormula": "sha256 of UTF-8 complete lines \"<file sha256>  <skill-name>/<relative-file>\" sorted lexicographically and joined with LF, with no final LF; every approved file including dotfiles and fixture logs",
+-  "sourceApproval": {
+-    "task": "P1_6",
+-    "approvedIntegrationCommit": "3f69f9c5c3c49f0146974fb28c90c1ed8f403496",
+-    "scope": "whole-source supply only; no runtime role, method application or product gate acceptance",
+-    "manifest": {
+-      "path": "openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json",
+-      "sha256": "8030fd622a48289e273e83898a44051c0b66de6b549f95b8df65dcb112e46d2e"
+-    },
+-    "sourceUpgrades": {
+-      "path": "worker-reports/P1_6-convergence/source-upgrades.json",
+-      "sha256": "f0da896abadc31f8961e9842cd7e7eb151358c9193eae0b8d6446b19c8141be4"
+-    },
+-    "sealedBaseline": {
+-      "exportDigest": "2aba3aa5457885338dba393613098606a7344b2da25893f79ec3fee8f6390c78",
+-      "manifestSha256": "93bb1a56eafcdbdf8430d76b883c4aaf1cc6f679732a0f968ee6d2db4423cbff"
+-    },
+-    "methodCount": 11,
+-    "fileCount": 245
+-  }
++  "generatedBy": "P1_5 package-pin regeneration for the comet-050 adoption revision (the retired comet-managed-v2/245-file whole-source pin moved with P1_6's rework; this registration pins the compiled package face the assembly re-verifies)",
++  "reproduction": "node --test test/classic-integration.test.js"
+ }
+diff --git a/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/openspec-compat.json b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/openspec-compat.json
+index c40ae1f..856168d 100644
+--- a/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/openspec-compat.json
++++ b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/openspec-compat.json
+@@ -1,76 +1,54 @@
+ {
+-  "schemaVersion": 2,
++  "schemaVersion": 3,
+   "task": "P1_5",
+-  "scope": "C08 preparation only: replay the original real OpenSpec1.3.1 status response as history; separately execute current host1.14.3 and fixed isolated1.11.0 version/status against the unmodified pinned Classic requiredArtifactClosure. This does not qualify Classic initialization, recovery, roles, or full C01-C08.",
++  "revision": "2026-10-26-comet-050-adoption-v1",
++  "qualification": {
++    "source": "compatibility predicate observation only",
++    "methodExecution": "NOT_EXECUTED",
++    "wholeP1_5": "assembly + rejection paths verified; real host Run is P3_2/VERIFY",
++    "C01_C08_businessAcceptance": "NOT_VERIFIED"
++  },
++  "scope": "C08 compatibility observations against the 0.5.0 pinned build (aeb1a659… + 0005, fingerprint de39629a…): replay the original real OpenSpec 1.3.1 status response as history against the build's own requiredArtifactClosure predicate; observe the current host-global CLI and the fixed isolated 1.11.0 candidate. This does not qualify Classic initialization, recovery, roles, or full C01-C08.",
+   "fixedEnvironment": {
++    "buildFingerprint": "de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a",
++    "predicate": "work/dist/domains/comet-classic/classic-artifact-requirements.js",
++    "predicateSha256": "205cf16fc1b6308c400bae02436f3cd0f383139d7836de1df6c82c25120edf81",
+     "isolatedInstall": ".sdd/tools/openspec-1.11.0",
+-    "installBasis": "pinned registry tarball @fission-ai/openspec@1.11.0 (tarball_sha256 84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f, verified at P1_1); installed with an isolated npm cache and private package.json — never a global upgrade",
+-    "scratchRecipe": "fresh scratch project: openspec/config.yaml schema spec-driven; change .openspec.yaml schema spec-driven + skip_specs true; proposal.md; tasks.md — identical input to both CLIs",
+-    "predicateSource": "Unmodified requiredArtifactClosure from the fixed six-patch Core6da build; build fingerprint and module bytes are pinned below. No old CLI is simulated.",
+-    "predicateBuildFingerprint": "3056292584ad17c49080c7504c1a689f1a382012e708665a8f12069d75a12a69",
+-    "predicateSha256": "205cf16fc1b6308c400bae02436f3cd0f383139d7836de1df6c82c25120edf81"
++    "scratchChange": "openspec/changes demo under a /tmp root (proposal + tasks, skip_specs)"
+   },
+-  "generatedBy": "P1_5 bounded probe repair: current author observations and historical real-response replay; test/classic-integration.test.js repeats the declared scope",
+-  "reproduction": "node --test test/classic-integration.test.js",
+   "negative": {
+-    "role": "historical real host-global1.3.1 response capture; binary is no longer present and is not re-created",
+     "cliVersion": "1.3.1",
+-    "statusExit": 0,
+-    "artifactsRequireEdges": [
+-      null,
+-      null,
+-      null,
+-      null
+-    ],
+-    "closureResult": "REJECTED",
+-    "closureError": "OpenSpec must expose dependency edges for every artifact; upgrade to a supported version",
+     "observation": "HISTORICAL_RESPONSE_REPLAY",
+     "replayInput": {
+       "path": "openspec/changes/delivery-foundation-rearchitecture/package-probes/1_1.b-green-openspec-status-131-input.json",
+       "bytes": 538,
+-      "sha256": "07e4c35d6ba821b7fc2b9810c0e14e67c6fdb126202a6db98c9b3a18c3903357",
+-      "captureCommand": "openspec status --change delivery-foundation-rearchitecture --json",
+-      "captureBasis": "Original P1_1.b capture, 2026-10-20; retained unchanged in Git history"
++      "sha256": "07e4c35d6ba821b7fc2b9810c0e14e67c6fdb126202a6db98c9b3a18c3903357"
+     },
+-    "originalReplayEvidence": {
+-      "path": "openspec/changes/delivery-foundation-rearchitecture/package-probes/1_1.b-green-openspec-compat-replay.log",
+-      "sha256": "a01d00a416d91d582b4b990c4db4990554dcbbcd497ce3124be8aac4b64162ac"
+-    }
++    "closureError": "OpenSpec must expose dependency edges for every artifact; upgrade to a supported version",
++    "boundary": "the historical CLI binary no longer exists on this host; the capture is byte-pinned history, never impersonated by the current host"
+   },
+-  "positive": {
+-    "role": "isolated compatibility candidate",
+-    "isolatedInstall": ".sdd/tools/openspec-1.11.0",
+-    "cliVersion": "1.11.0",
+-    "statusExit": 0,
+-    "artifactsRequireEdgesExposed": true,
+-    "closureResult": "ACCEPTED",
++  "currentHost": {
++    "observation": "CURRENT_HOST_CLI",
++    "cliVersion": "1.15.0",
++    "cliVersionPolicy": "observed; host-global drift is an environmental fact (toolchain-baseline openspec.current=1.14.3 recorded earlier drift 1.3.1→1.14.3; upgrade_policy forbids global upgrades). The agreement oracle for this leg is the closure predicate over the live status response, not the environment version string",
++    "dependencyEdges": "exposed",
+     "closure": {
+       "proposal": "done",
+       "specs": "skipped",
+       "design": "ready",
+       "tasks": "done"
+-    },
+-    "observation": "CURRENT_ISOLATED_CLI"
++    }
+   },
+-  "noGlobalUpgrade": "No installation, upgrade, downgrade or global configuration mutation is performed. Historical1.3.1 is a captured-response replay; current host1.14.3 is observed separately and isolated1.11.0 remains the controlled compatible candidate.",
+-  "currentHost": {
+-    "role": "observed current host-global CLI; separately pinned by toolchain-baseline.json openspec.current",
+-    "observation": "CURRENT_HOST_CLI",
+-    "cliVersion": "1.14.3",
+-    "statusExit": 0,
+-    "artifactsRequireEdgesExposed": true,
+-    "closureResult": "ACCEPTED",
++  "positive": {
++    "isolatedInstall": ".sdd/tools/openspec-1.11.0",
++    "cliVersion": "1.11.0",
++    "dependencyEdges": "exposed",
+     "closure": {
+       "proposal": "done",
+       "specs": "skipped",
+       "design": "ready",
+       "tasks": "done"
+-    }
+-  },
+-  "qualification": {
+-    "source": "compatibility predicate and CLI preparation only",
+-    "methodExecution": "NOT_EXECUTED",
+-    "wholeP1_5": "NOT_VERIFIED",
+-    "C01_C08_businessAcceptance": "NOT_VERIFIED"
++    },
++    "closureResult": "ACCEPTED"
+   }
+ }
+diff --git a/test/classic-integration.test.js b/test/classic-integration.test.js
+index 39e522a..e4f1b65 100644
+--- a/test/classic-integration.test.js
++++ b/test/classic-integration.test.js
+@@ -1,19 +1,29 @@
+-// P1_5 — Classic single-controller integration verified against the real
+-// managed entries (classic-integration-design.md; acceptance C01–C08).
++// P1_5 — R/A/T/P and the test-implementation step assembly, verified against
++// the REAL compiled composition package and the 0.5.0 adapter (revision
++// 2026-10-26-comet-050-adoption-v1; acceptance C01–C08).
+ //
+-// R/A/T separation, P single authority, V independent receipts and the
+-// Kp/Kt readback gates are exercised through the accepted infrastructure —
+-// lib/delivery/gate.js evaluate (SDD.Gate.v1, imported unmodified), the P2_2
+-// trusted launcher + admission (lib/delivery/evidence.js), the P1_3 driver
+-// exclusivity (lib/adapters/harness.js) and the single closeout owner
+-// (lib/adapters/comet.js sealCloseout) — never through mocks. The OpenSpec
+-// compatibility checks (C08) replay the captured historical 1.3.1 response
+-// and run the current host plus isolated 1.11.0 CLIs against the real
+-// requiredArtifactClosure of the patched pinned build. Probe records live in
+-// openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/
+-// and are the RED boundary: without them the behaviors have no registered
+-// evidence. The real-CLI lifecycle entrances (C07) and the bypass/recovery
+-// negatives live in test/delivery-cases/1_5.mjs.
++// Two layers, one registration:
++//  - the JUDGMENT layer (C01–C05) drives the accepted infrastructure imports
++//    unmodified — lib/delivery/gate.js evaluate (the same pure SDD.Gate.v1 the
++//    packaged bindings validators delegate to), the P2_2 trusted launcher +
++//    admission (lib/delivery/evidence.js), the driver exclusivity
++//    (lib/adapters/harness.js) and baseline frozen-plan semantics;
++//  - the ASSEMBLY layer parses the compiled package
++//    (integrations/comet/application/package: application.json + workflow.json,
++//    Comet 0.5.0 classic-full) and asserts the composed behavior: A/T extension
++//    independence at the shared design checkpoint, the single P plan surface
++//    with no second scheduling face, the classic.composition.confirm approval
++//    anchor preceding full.open, the nine-step replacement mapping (method
++//    variants ARE the execution skills; domain steps run managed domain-work
++//    skills), and the comet-executor six-gate receipt acceptance that has zero
++//    fallback outside the packaged bindings validators (P1_3 adapter face).
++// Probe records live in openspec/changes/delivery-foundation-rearchitecture/
++// classic-integration-probes/ and are the RED boundary: without them the
++// behaviors have no registered evidence. The hooks-absent real-CLI entrance
++// and bypass probes (C07/C08 rejection paths) live in
++// test/delivery-cases/1_5.mjs against the same pinned build. Installing the
++// package into a live project and dispatching inside a real composition Run
++// are P1_4/P3_2/VERIFY — UNVERIFIED here by design.
+ import assert from 'node:assert/strict';
+ import crypto from 'node:crypto';
+ import { spawnSync } from 'node:child_process';
+@@ -42,6 +52,17 @@ const isolatedOpenspecPkg = path.join(projectRoot, '.sdd/tools/openspec-1.11.0/n
+ const isolatedOpenspecBin = path.join(isolatedOpenspecPkg, 'bin/openspec.js');
+ const isolatedOpenspecReady = await fs.access(isolatedOpenspecBin).then(() => true, () => false);
+ 
++// The compiled composition package (P2_4 deliverable, byte-pinned by
++// test/delivery-cases/2_4.mjs): the single source this assembly layer reads.
++const applicationRoot = path.join(projectRoot, 'integrations/comet/application');
++const packageRoot = path.join(applicationRoot, 'package');
++const application = JSON.parse(await fs.readFile(path.join(packageRoot, 'application.json'), 'utf8'));
++const workflowDocument = JSON.parse(await fs.readFile(path.join(packageRoot, 'workflow.json'), 'utf8'));
++const composition = JSON.parse(await fs.readFile(path.join(applicationRoot, 'composition.json'), 'utf8'));
++const compileManifest = JSON.parse(await fs.readFile(path.join(applicationRoot, 'internal/compile-manifest.json'), 'utf8'));
++const workflow = workflowDocument.workflows.find((entry) => entry.id === 'comet-classic-full');
++const { createBindings } = await import(path.join(packageRoot, 'bindings.mjs'));
++
+ // --- the RED boundary: the structured probe registration of this task
+ async function loadProbe(name) {
+   try {
+@@ -59,7 +80,8 @@ async function loadProbe(name) {
+ // --- shared real-entry fixtures (trusted launcher + admission + gate)
+ const sha = (label) => crypto.createHash('sha256').update(label).digest('hex');
+ const SECRET = crypto.randomBytes(32).toString('hex');
+-const { cometLaunchAuthority, sealCloseout } = await import('../lib/adapters/comet.js');
++const { cometLaunchAuthority, sealCloseout, runtimeDispatchArgv, knowledgeCloseoutBlocked } = await import('../lib/adapters/comet.js');
++const { createCometExecutor } = await import('../lib/adapters/comet-executor.js');
+ const { defineDriver, requireWriteDriver } = await import('../lib/adapters/harness.js');
+ const { admitEvidence, createLaunchAuthority } = await import('../lib/delivery/evidence.js');
+ const gate = await import('../lib/delivery/gate.js');
+@@ -447,10 +469,410 @@ test('C06 positive: the seal succeeds exactly once and freezes the knowledge clo
+   assert.ok(Object.isFrozen(sealed) && Object.isFrozen(sealed.knowledgeCloseout));
+ });
+ 
++// ---------------------------------------------------------------------------
++// C06/Kt — the 0.5.0 Kt mechanism is the 0005 read-side predicate parking the
++// SAME Run before overall completion; fail-open default, no second surface.
++// ---------------------------------------------------------------------------
++
++test('C06/Kt: the 0005 predicate is fail-open by default and parks the same Run only while required and unmet', async () => {
++  const record = await loadProbe('knowledge-closeout.json');
++  const kt = record.records.find((entry) => entry.id === 'kt-0005-required-unmet-parks-same-run');
++  const failOpen = record.records.find((entry) => entry.id === 'kt-0005-fail-open-default');
++  assert.ok(kt && failOpen, 'the Kt predicate records must be registered');
++  // Every upstream and legacy state (absent/null field) keeps completion.
++  assert.equal(knowledgeCloseoutBlocked({ archived: true, phase: 'archive' }), false);
++  assert.equal(knowledgeCloseoutBlocked({ knowledgeCloseout: null }), false);
++  assert.equal(failOpen.observed.absentFieldBlocks, false);
++  assert.equal(failOpen.observed.nullFieldBlocks, false);
++  // Blocked ONLY while required === true and completed !== true.
++  assert.equal(knowledgeCloseoutBlocked({ knowledgeCloseout: { required: true } }), true);
++  assert.equal(knowledgeCloseoutBlocked({ knowledgeCloseout: { required: true, completed: false } }), true);
++  assert.equal(knowledgeCloseoutBlocked({ knowledgeCloseout: { required: true, completed: true } }), false);
++  assert.equal(knowledgeCloseoutBlocked({ knowledgeCloseout: { completed: true } }), false);
++  // A malformed field shape (unknown keys) is refused, never guessed.
++  assert.throws(() => knowledgeCloseoutBlocked({ knowledgeCloseout: { required: true, surprise: 1 } }), (error) => error.code === 'KT_STATE_INVALID');
++});
++
++// ---------------------------------------------------------------------------
++// ASSEMBLY layer — the compiled package is the composed behavior under test.
++// ---------------------------------------------------------------------------
++
++const steps = workflow.steps;
++const transitions = workflow.transitions;
++const hasTransition = (from, on, to) => transitions.some((transition) => transition.from === from && transition.on === on && transition.to === to);
++const bindingFor = (stepId) => application.bindings.find((binding) => binding.stepId === stepId);
++const extensionBindings = application.bindings.filter((binding) => binding.capability.endsWith('.gate'));
++const anchoredBindings = application.bindings.filter((binding) => binding.authorizationFrom === 'classic.composition.confirm');
++const planOutputSteps = (wf) => Object.entries(wf.steps)
++  .filter(([, step]) => step.type === 'invoke_skill' && step.outputSchema?.properties && 'plan' in step.outputSchema.properties)
++  .map(([id]) => id);
++const planEvidenceSteps = (wf) => Object.entries(wf.steps)
++  .filter(([, step]) => step.type === 'await_evidence' && step.kind === 'classic-build-plan')
++  .map(([id]) => id);
++
++test('P1_5 assembly: the compiled package identity is pinned to the comet-050 composition build', async () => {
++  const record = await loadProbe('assembly-probes.json');
++  assert.equal(record.environment.package.compositionHash, compileManifest.compositionHash);
++  assert.equal(record.environment.package.contentHash, compileManifest.contentHash);
++  assert.equal(application.runtimeVersion, '0.5.0');
++  assert.equal(application.schema, 'comet.workflow.application.v1');
++  assert.equal(application.base, 'classic-full');
++  assert.equal(application.id, 'sdd-managed-delivery');
++  assert.equal(application.skills.length, 15);
++  assert.equal(application.bindings.length, 15);
++  assert.equal(workflow.id, 'comet-classic-full');
++  assert.equal(workflowDocument.schema, 'comet.workflow.application.definition.v1');
++});
++
++test('P1_5 assembly: A and T are separate extensions at the same design checkpoint with independent artifactRefs and validators (C01/C03)', async () => {
++  const record = await loadProbe('assembly-probes.json');
++  const observed = record.records.find((entry) => entry.id === 'at-extensions-independent').observed;
++  const aStep = steps['classic.extension.architecture-consensus'];
++  const tStep = steps['classic.extension.test-design-review'];
++  assert.ok(aStep && tStep, 'both design-checkpoint extensions must be compiled steps');
++  // Each extension is its own invoke_skill step with its own skill and validator.
++  assert.equal(aStep.ref, 'multi-agent-consensus-review');
++  assert.equal(tStep.ref, 'test-authoring');
++  assert.equal(aStep.validator.id, 'comet-classic.extension.architecture-consensus-result');
++  assert.equal(tStep.validator.id, 'comet-classic.extension.test-design-review-result');
++  assert.notEqual(aStep.validator.id, tStep.validator.id, observed.oracle);
++  const aBinding = bindingFor('classic.extension.architecture-consensus');
++  assert.equal(aBinding.capability, 'multi-agent-consensus-review.gate');
++  assert.equal(aBinding.skillId, 'multi-agent-consensus-review');
++  assert.equal(aBinding.usage, 'action');
++  assert.equal(aBinding.workflowId, 'comet-classic-full');
++  assert.equal(aBinding.authorizationFrom, undefined, 'the read-only gate extension carries no approval anchor');
++  assert.equal(aBinding.authorizationChoices, undefined);
++  const tBinding = bindingFor('classic.extension.test-design-review');
++  assert.equal(tBinding.capability, 'test-authoring.gate');
++  assert.equal(tBinding.skillId, 'test-authoring');
++  assert.equal(tBinding.authorizationFrom, undefined, 'the read-only gate extension carries no approval anchor');
++  assert.equal(tBinding.authorizationChoices, undefined);
++  // Both sit after full.design.evidence and both must pass to reach the build
++  // configuration (the same-checkpoint AND chain).
++  assert.ok(hasTransition('full.design.evidence', 'succeeded', 'classic.extension.architecture-consensus'));
++  assert.ok(hasTransition('classic.extension.architecture-consensus', 'succeeded', 'classic.extension.test-design-review'));
++  assert.ok(hasTransition('classic.extension.test-design-review', 'succeeded', 'full.build.configure'));
++  // Independent artifact bundles and validators, read from the typed
++  // declarations the package was compiled from (single source: composition).
++  const declared = async (id) => JSON.parse(await fs.readFile(path.join(applicationRoot, 'extensions', `${id}.json`), 'utf8'));
++  const aDeclared = await declared('architecture-consensus');
++  const tDeclared = await declared('test-design-review');
++  assert.deepEqual(aDeclared.artifactRefs.map((ref) => ref.ref), ['.sdd/delivery/gates/a/receipt-bundle.json']);
++  assert.deepEqual(tDeclared.artifactRefs.map((ref) => ref.ref), ['.sdd/delivery/gates/t/receipt-bundle.json']);
++  assert.deepEqual(aDeclared.validator, { id: 'sdd.delivery.gate.a', version: '1' });
++  assert.deepEqual(tDeclared.validator, { id: 'sdd.delivery.gate.t', version: '1' });
++  assert.notDeepEqual(aDeclared.artifactRefs, tDeclared.artifactRefs, 'A passing cannot substitute for T and vice versa — the bundles are independent');
++  assert.equal(observed.aArtifactRef, '.sdd/delivery/gates/a/receipt-bundle.json');
++  assert.equal(observed.tArtifactRef, '.sdd/delivery/gates/t/receipt-bundle.json');
++});
++
++test('P1_5 assembly: gate evidence cannot be replayed across extensions — the packaged validators refuse the cross-gate payload', async () => {
++  const record = await loadProbe('assembly-probes.json');
++  assert.ok(record.records.some((entry) => entry.id === 'at-cross-replay-refused'));
++  const bindings = await createBindings();
++  const validator = (id) => bindings.validators.find((candidate) => candidate.id === id);
++  const aValidator = validator('sdd.delivery.gate.a');
++  const tValidator = validator('sdd.delivery.gate.t');
++  assert.ok(aValidator && tValidator, 'the packaged validators for A and T must be registered');
++  // A real pass payload per gate (admitted receipt + contract, pure evaluation).
++  const passPayload = (gateName, capability) => {
++    const entry = receipt({ gateName, capability, execution: `exec-${gateName.toLowerCase()}-x` });
++    assert.equal(entry.ok, true);
++    return { verdict: 'pass', sourceHash: sha(`source-${gateName}`),
++      artifactHashes: { [`.sdd/delivery/gates/${gateName.toLowerCase()}/receipt-bundle.json`]: sha(`bundle-${gateName}`) },
++      output: { gateEvidence: { gate: gateName,
++        inputs: { testContract: contractFixture([{ level: 'gate', capability }]), inputDigest: sha('candidate-r1'), builderExecution: 'exec-builder-1' },
++        receipts: [entry.entry], policy: POLICY } } };
++  };
++  const aPayload = passPayload('A', 'architecture-review');
++  const tPayload = passPayload('T', 'test-design-sufficiency');
++  const input = (payload) => ({ run: { runId: 'run-p15' }, action: { gate: payload.output.gateEvidence.gate }, outcome: payload });
++  // Own gate: accepted through the pure evaluation.
++  assert.equal(aValidator.validate(input(aPayload)).accepted, true, 'the A validator accepts a real A pass payload');
++  assert.equal(tValidator.validate(input(tPayload)).accepted, true, 'the T validator accepts a real T pass payload');
++  // Cross-gate replay: refused on both directions — one gate's evidence is
++  // never currency for the other, exactly like the judgment layer above.
++  assert.equal(tValidator.validate(input(aPayload)).accepted, false);
++  assert.match(tValidator.validate(input(aPayload)).reason, /cannot be replayed across extensions/);
++  assert.equal(aValidator.validate(input(tPayload)).accepted, false);
++  assert.match(aValidator.validate(input(tPayload)).reason, /cannot be replayed across extensions/);
++});
++
++test('P1_5 assembly: the plan surface is single-authority — one plan step, one plan evidence, one P extension (C04)', async () => {
++  const record = await loadProbe('assembly-probes.json');
++  const observed = record.records.find((entry) => entry.id === 'plan-single-surface').observed;
++  // Exactly one step produces a plan: the managed planner method variant.
++  assert.deepEqual(planOutputSteps(workflow), ['full.build.plan']);
++  assert.equal(steps['full.build.plan'].ref, 'claude-parallel-tdd-planner-full-build-plan');
++  assert.equal(steps['full.build.plan'].type, 'invoke_skill');
++  // Exactly one await_evidence of kind classic-build-plan judges it.
++  assert.deepEqual(planEvidenceSteps(workflow), ['full.build.plan.evidence']);
++  assert.equal(steps['full.build.plan.evidence'].validator.id, 'comet-classic-build-plan');
++  // Exactly one extension binds the plan gate (P) to one receipt-bundle artifact.
++  const declared = JSON.parse(await fs.readFile(path.join(applicationRoot, 'extensions', 'build-plan-unique.json'), 'utf8'));
++  assert.equal(declared.gate, 'P');
++  assert.equal(declared.afterStep, 'full.build.plan.evidence');
++  assert.deepEqual(declared.artifactRefs.map((ref) => ref.ref), ['.sdd/delivery/gates/p/receipt-bundle.json']);
++  assert.deepEqual(declared.validator, { id: 'sdd.delivery.gate.p', version: '1' });
++  assert.deepEqual(bindingFor('classic.extension.build-plan-unique').capability, 'claude-parallel-tdd-planner.gate');
++  assert.equal(observed.planOutputSteps.length, 1);
++  assert.equal(observed.planEvidenceSteps.length, 1);
++  // The plan gate extension sits after the plan evidence step and its pass is
++  // required before the build executes.
++  assert.ok(hasTransition('full.build.plan.evidence', 'succeeded', 'classic.extension.build-plan-unique'));
++  assert.ok(hasTransition('classic.extension.build-plan-unique', 'succeeded', 'full.build.execute'));
++});
++
++test('P1_5 assembly: no second scheduling surface — one plan field in the state schema and one dispatch selector', async () => {
++  const record = await loadProbe('assembly-probes.json');
++  assert.ok(record.records.some((entry) => entry.id === 'no-second-scheduling-surface'));
++  const planFields = Object.keys(workflow.stateSchema.properties).filter((key) => /plan/i.test(key));
++  assert.deepEqual(planFields, ['plan'], 'the assembled workflow carries exactly one plan-shaped state field');
++  assert.deepEqual(workflow.stateSchema.properties.plan.type, ['string', 'null']);
++  assert.equal(planOutputSteps(workflow).length, 1);
++  // The adapter constructs ONLY the --application-file dispatch face for a
++  // composition Run; --application/--workflow selectors are refused shapes.
++  const argv = runtimeDispatchArgv({
++    applicationFile: path.join(packageRoot, 'application.json'),
++    requestFile: path.join(packageRoot, 'request.json'),
++    projectRoot,
++  });
++  assert.deepEqual([...argv], ['runtime', 'dispatch', '--application-file', path.join(packageRoot, 'application.json'), '--request', path.join(packageRoot, 'request.json'), '--project-root', projectRoot, '--json']);
++  assert.equal(argv.includes('--application'), false);
++  assert.equal(argv.includes('--workflow'), false);
++  assert.throws(
++    () => runtimeDispatchArgv({ applicationFile: path.join(packageRoot, 'application.json'), requestFile: path.join(packageRoot, 'request.json'), workflow: 'comet-classic-full' }),
++    (error) => error.code === 'DISPATCH_OPTIONS_INVALID',
++    'the adapter refuses to construct any second dispatch selector face',
++  );
++});
++
++test('P1_5 assembly: user approval is the sequence precondition of full.open (workflow transitions)', async () => {
++  const record = await loadProbe('assembly-probes.json');
++  const anchor = record.records.find((entry) => entry.id === 'approval-anchor-precedes-open').observed;
++  const anchored = record.records.find((entry) => entry.id === 'work-bindings-anchored-extensions-read-only').observed;
++  // The workflow starts at the composition proposal, not at full.open.
++  assert.deepEqual(workflow.entry, ['classic.composition.prepare']);
++  assert.equal(steps['classic.composition.prepare'].type, 'call_tool');
++  // prepare only reaches the ask_user confirm step.
++  assert.ok(hasTransition('classic.composition.prepare', 'succeeded', 'classic.composition.confirm'));
++  const confirmStep = steps['classic.composition.confirm'];
++  assert.equal(confirmStep.type, 'ask_user');
++  assert.deepEqual(confirmStep.choices, ['approved', 'rejected']);
++  assert.deepEqual(confirmStep.proposalFrom, ['classic.composition.prepare']);
++  // Only the approved choice continues to full.open; rejection loops back.
++  assert.ok(hasTransition('classic.composition.confirm', 'approved', 'full.open'));
++  assert.ok(hasTransition('classic.composition.confirm', 'rejected', 'classic.composition.confirm'));
++  assert.equal(anchor.confirmApprovedTo, 'full.open');
++  assert.equal(anchor.directPrepareToOpen, false);
++  assert.equal(transitions.some((transition) => transition.from === 'classic.composition.prepare' && transition.to === 'full.open'), false,
++    'no direct prepare→full.open edge may exist — approval is not skippable in the assembled topology');
++  // The full.open binding itself is anchored to the confirmed approval.
++  const openBinding = bindingFor('full.open');
++  assert.equal(openBinding.authorizationFrom, 'classic.composition.confirm');
++  assert.deepEqual(openBinding.authorizationChoices, ['approved']);
++  // Every write-side-effect work binding is anchored; the six read-only gate
++  // extension bindings are not.
++  assert.equal(anchoredBindings.length, 9);
++  const replacementStepIds = composition.composition.replacements.map((entry) => entry.stepId);
++  assert.deepEqual([...anchoredBindings.map((binding) => binding.stepId)].sort(), [...replacementStepIds].sort());
++  for (const binding of anchoredBindings) {
++    assert.equal(binding.authorizationFrom, 'classic.composition.confirm');
++    assert.deepEqual(binding.authorizationChoices, ['approved']);
++  }
++  assert.deepEqual(extensionBindings.map((binding) => binding.authorizationFrom), [undefined, undefined, undefined, undefined, undefined, undefined],
++    'the read-only gate extensions carry no approval anchor');
++  assert.equal(anchored.anchoredWorkBindings, 9);
++  assert.equal(anchored.unanchoredGateBindings, 6);
++});
++
++test('P1_5 assembly negative mutants: a stripped anchor or a smuggled direct edge is detected, not accepted', async () => {
++  await loadProbe('assembly-probes.json');
++  // Mutant 1: an application without the full.open authorization anchor.
++  const strippedAnchor = structuredClone(application);
++  delete strippedAnchor.bindings.find((binding) => binding.stepId === 'full.open').authorizationFrom;
++  const anchoredIn = (doc) => doc.bindings.filter((binding) => binding.stepId === 'full.open' && binding.authorizationFrom === 'classic.composition.confirm' && JSON.stringify(binding.authorizationChoices) === '["approved"]');
++  assert.equal(anchoredIn(application).length, 1);
++  assert.equal(anchoredIn(strippedAnchor).length, 0, 'a stripped approval anchor must be detectable');
++  // Mutant 2: a workflow with a smuggled direct prepare→full.open edge.
++  const smuggledEdge = structuredClone(workflow);
++  smuggledEdge.transitions.push({ from: 'classic.composition.prepare', on: 'succeeded', to: 'full.open' });
++  const directEdges = (wf) => wf.transitions.filter((transition) => transition.from === 'classic.composition.prepare' && transition.to === 'full.open');
++  assert.equal(directEdges(workflow).length, 0);
++  assert.equal(directEdges(smuggledEdge).length, 1, 'a direct approval-skipping edge must be detectable');
++  // Mutant 3: a second plan-producing step.
++  const secondPlan = structuredClone(workflow);
++  secondPlan.steps['full.build.plan2'] = structuredClone(secondPlan.steps['full.build.plan']);
++  assert.equal(planOutputSteps(workflow).length, 1);
++  assert.equal(planOutputSteps(secondPlan).length, 2, 'a second scheduling face must be detectable');
++  // Mutant 4: a second state-schema plan field.
++  const secondField = structuredClone(workflow);
++  secondField.stateSchema.properties.plan2 = { type: ['string', 'null'] };
++  const planFields = (wf) => Object.keys(wf.stateSchema.properties).filter((key) => /plan/i.test(key));
++  assert.deepEqual(planFields(workflow), ['plan']);
++  assert.deepEqual(planFields(secondField), ['plan', 'plan2']);
++});
++
++test('P1_5 assembly: the nine replacement steps map to distinct managed skills — method variants for method steps, domain work for domain steps', async () => {
++  const record = await loadProbe('assembly-probes.json');
++  const observed = record.records.find((entry) => entry.id === 'nine-step-mapping').observed;
++  const replacements = composition.composition.replacements;
++  assert.equal(replacements.length, 9);
++  const replacementIds = replacements.map((entry) => entry.skillId);
++  assert.equal(new Set(replacementIds).size, 9, 'per-step skill ids must be pairwise distinct');
++  // The package binds exactly 15 skills: 9 replaced execution steps + 6 gate
++  // extension faces, all unique.
++  const packageSkillIds = application.skills.map((skill) => skill.id);
++  assert.equal(packageSkillIds.length, 15);
++  assert.equal(new Set(packageSkillIds).size, 15);
++  for (const skillId of replacementIds) {
++    assert.ok(packageSkillIds.includes(skillId), `the replaced execution skill ${skillId} must be a packaged skill`);
++  }
++  // Method steps run on build-time variants of the packaged P1_6 method
++  // skills — the method skills ARE the execution skills (including the test
++  // automation step full.build.execute on the tdd variant and the P step on
++  // the planner variant).
++  const variants = composition.managedSkillVariants.work;
++  const methodVariants = variants.filter((entry) => entry.kind === 'method-variant');
++  const domainWork = variants.filter((entry) => entry.kind === 'domain-work');
++  assert.equal(methodVariants.length, 4);
++  assert.equal(domainWork.length, 5);
++  assert.deepEqual(methodVariants.map((entry) => entry.stepId).sort(),
++    ['full.build.execute', 'full.build.plan', 'full.design.document', 'full.design.handoff'].sort());
++  for (const variant of methodVariants) {
++    assert.equal(variant.source, `skills/${variant.base}`);
++    assert.equal(steps[variant.stepId].ref, variant.skillId, 'the compiled step must run the declared per-step variant');
++    const packaged = application.skills.find((skill) => skill.id === variant.skillId);
++    assert.equal(packaged.root, `skills/${variant.skillId}`);
++    assert.equal(packaged.adapter.sideEffect, 'write');
++  }
++  for (const variant of domainWork) {
++    assert.match(variant.root, /^internal\/domain-skills\//, 'domain steps run managed domain-work skills');
++    assert.equal(steps[variant.stepId].ref, variant.skillId);
++  }
++  assert.deepEqual(observed.methodVariants.map((entry) => entry.skillId).sort(), methodVariants.map((entry) => entry.skillId).sort());
++  assert.deepEqual(observed.domainWork.map((entry) => entry.skillId).sort(), domainWork.map((entry) => entry.skillId).sort());
++  // R5 boundary: ponytail never re-entered the bound skills.
++  assert.equal(composition.removedReplacements.skillId, 'ponytail');
++  assert.ok(packageSkillIds.every((id) => !id.startsWith('ponytail-')), 'no per-step ponytail variant may be bound');
++  // The six gate faces are the packaged P1_6 assets (grill-me, multi-agent
++  // consensus review, test-authoring, planner, whitebox, lifecycle guard).
++  assert.deepEqual(extensionBindings.map((binding) => binding.skillId).sort(), [
++    'claude-parallel-tdd-planner', 'grill-me', 'multi-agent-consensus-review',
++    'openspec-lifecycle-guard', 'test-authoring', 'whitebox-verify',
++  ].sort());
++  assert.equal(observed.extensionSkills, 6);
++});
++
++// ---------------------------------------------------------------------------
++// Adapter layer — the six-gate receipt acceptance has zero fallback outside
++// the packaged bindings validators (P1_3 comet-executor face).
++// ---------------------------------------------------------------------------
++
++test('P1_5 adapter: comet-executor accepts a gate pass only through the packaged validator — zero fallback, fail closed', async (t) => {
++  const record = await loadProbe('assembly-probes.json');
++  const acceptance = record.records.find((entry) => entry.id === 'executor-six-gate-packaged-acceptance').observed;
++  const negatives = record.records.find((entry) => entry.id === 'executor-unregistered-and-nonpass-refused').observed;
++  const scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'p15-executor-'));
++  t.after(async () => { await fs.rm(scratch, { recursive: true, force: true }); });
++  const runAuthority = cometLaunchAuthority({ secret: SECRET, runId: 'p15-asmb' });
++  const executor = createCometExecutor({
++    native: { runCometCli: async () => ({ exitCode: 0, stdout: '{}\n' }) },
++    authority: runAuthority,
++    registration: {
++      schemaVersion: 1,
++      projectRoot: scratch,
++      change: 'p15-asmb',
++      runId: 'p15-asmb',
++      applicationFile: path.join(applicationRoot, 'application.json'),
++    },
++  });
++  // The composition declares exactly the six managed gates; Kt is not one of
++  // them (it is the 0005 predicate — see the Kt test above).
++  const described = executor.describeComposition();
++  assert.deepEqual(Object.keys(described.gates).sort(), ['A', 'Kp', 'P', 'R', 'T', 'V']);
++  assert.deepEqual(acceptance.gates, ['R', 'A', 'T', 'P', 'V', 'Kp']);
++  assert.equal(acceptance.ktRegisteredAsExtension, false);
++  assert.equal(described.kt.mechanism, 'upstream-minimal-patch-0005');
++
++  // A real pass payload for A: admitted receipt + contract, judged pass by the
++  // pure evaluation — accepted with the packaged validator id named.
++  const aReceipt = receipt({ gateName: 'A', capability: 'architecture-review', execution: 'exec-a-adapter' });
++  assert.equal(aReceipt.ok, true);
++  const aOutcome = {
++    verdict: 'pass',
++    sourceHash: sha('source-a-adapter'),
++    artifactHashes: { '.sdd/delivery/gates/a/receipt-bundle.json': sha('bundle-a-adapter') },
++    output: { gateEvidence: { gate: 'A',
++      inputs: { testContract: A_CONTRACT, inputDigest: sha('candidate-r1'), builderExecution: 'exec-builder-1' },
++      receipts: [aReceipt.entry], policy: POLICY } },
++  };
++  const accepted = await executor.acceptGateReceipt({ gate: 'A', execution: 'exec-a-adapter', outcome: aOutcome });
++  assert.equal(accepted.accepted, true);
++  assert.equal(accepted.validatorId, 'sdd.delivery.gate.a');
++  assert.equal(accepted.extensionId, 'architecture-consensus');
++
++  // Cross-gate replay is refused with the replay reason.
++  const crossGate = await executor.acceptGateReceipt({ gate: 'T', execution: 'exec-t-adapter', outcome: aOutcome });
++  assert.equal(crossGate.accepted, false);
++  assert.match(crossGate.reason, /cannot be replayed across extensions/);
++
++  // Blocked coverage (no receipts) is refused with the blocked reasons.
++  const blockedOutcome = {
++    verdict: 'pass',
++    sourceHash: sha('source-v-adapter'),
++    artifactHashes: { '.sdd/delivery/gates/v/receipt-bundle.json': sha('bundle-v-adapter') },
++    output: { gateEvidence: { gate: 'V',
++      inputs: { testContract: contractFixture([{ level: 'gate', capability: 'verify-execution' }]), inputDigest: sha('candidate-r1'), builderExecution: 'exec-builder-1' },
++      receipts: [], policy: POLICY } },
++  };
++  const blocked = await executor.acceptGateReceipt({ gate: 'V', execution: 'exec-v-adapter', outcome: blockedOutcome });
++  assert.equal(blocked.accepted, false);
++  assert.match(blocked.reason, /MISSING_OBSERVATION/);
++
++  // A claimed pass without a gateEvidence payload is refused by the validator.
++  const noPayload = await executor.acceptGateReceipt({
++    gate: 'T', execution: 'exec-t-nopayload',
++    outcome: { verdict: 'pass', sourceHash: sha('source-t'), artifactHashes: { '.sdd/delivery/gates/t/receipt-bundle.json': sha('bundle-t') }, output: {} },
++  });
++  assert.equal(noPayload.accepted, false);
++  assert.match(noPayload.reason, /carries no gateEvidence payload/);
++
++  // Unregistered gates never reach a validator: Kt and X are refused outright.
++  await assert.rejects(() => executor.acceptGateReceipt({ gate: 'Kt', execution: 'exec-kt', outcome: aOutcome }),
++    (error) => error.code === 'ACTION_NOT_REGISTERED');
++  await assert.rejects(() => executor.acceptGateReceipt({ gate: 'X', execution: 'exec-x', outcome: aOutcome }),
++    (error) => error.code === 'ACTION_NOT_REGISTERED');
++  assert.equal(negatives.unregisteredGate, 'ACTION_NOT_REGISTERED');
++
++  // A non-pass verdict claim never even reaches a validator.
++  await assert.rejects(() => executor.acceptGateReceipt({ gate: 'A', execution: 'exec-a-repair', outcome: { ...aOutcome, verdict: 'repair' } }),
++    (error) => error.code === 'EXTENSION_OUTCOME_INVALID');
++  assert.equal(negatives.nonPassVerdict, 'EXTENSION_OUTCOME_INVALID');
++
++  // The authority never signs outside an executor-scoped native call.
++  assert.throws(
++    () => executor.host.authority.issueDispatch({ runnerId: 'comet-classic', run: 'p15-asmb', gate: 'A', inputDigest: sha('candidate-r1'), policyDigest: POLICY.digest, attempt: 1, epoch: 1, role: 'verifier', execution: 'exec-a-adapter' }),
++    (error) => error.code === 'ORIGINAL_NATIVE_CALL_REQUIRED',
++  );
++  assert.equal(negatives.ambientSigning, 'ORIGINAL_NATIVE_CALL_REQUIRED');
++
++  // The Kt port reports honestly: blocked while required and unmet, the write
++  // path stays UNVERIFIED (supply/admission wave).
++  const kt = executor.ktCloseout({ knowledgeCloseout: { required: true } });
++  assert.equal(kt.gate, 'Kt');
++  assert.equal(kt.blocked, true);
++  assert.equal(kt.overallCompletionEligible, false);
++  assert.match(kt.writePath, /^UNVERIFIED/);
++  assert.equal(executor.ktCloseout({ knowledgeCloseout: { required: true, completed: true } }).overallCompletionEligible, true);
++  assert.equal(executor.ktCloseout({}).overallCompletionEligible, true);
++});
++
+ // ---------------------------------------------------------------------------
+ // C08 — OpenSpec compatibility is refused explicitly and resolved only by the
+ // fixed isolated candidate: real CLIs, real status JSON, real closure
+-// predicate from the patched build.
++// predicate from the pinned 0.5.0+0005 build.
+ // ---------------------------------------------------------------------------
+ 
+ const openspecScratch = async (t) => {
+@@ -473,7 +895,7 @@ const openspecStatus = (bin, root, useNode) => {
+   return result;
+ };
+ 
+-test('C08 negative: the captured historical OpenSpec 1.3.1 response is replayed, not impersonated by the current host', async () => {
++test('C08 negative: the captured historical OpenSpec 1.3.1 response is replayed against the pinned 0.5.0 build predicate, not impersonated by the current host', async () => {
+   const record = await loadProbe('openspec-compat.json');
+   assert.equal(record.negative?.cliVersion, '1.3.1');
+   assert.equal(record.negative?.observation, 'HISTORICAL_RESPONSE_REPLAY');
+@@ -487,9 +909,9 @@ test('C08 negative: the captured historical OpenSpec 1.3.1 response is replayed,
+   for (const artifact of statusJson.artifacts) {
+     assert.equal(artifact.requires, undefined, 'the captured legacy response exposes no dependency edges');
+   }
+-  assert.ok(built, 'fixed patched Comet build is required for historical compatibility replay');
+-  assert.equal(record.fixedEnvironment.predicateBuildFingerprint, fingerprint);
+-  assert.equal(sha(await fs.readFile(distRequirements)), record.fixedEnvironment.predicateSha256);
++  assert.ok(built, 'the pinned 0.5.0+0005 Comet build is required for the historical compatibility replay');
++  assert.equal(record.fixedEnvironment.buildFingerprint, fingerprint, 'the probe must pin the exact build the predicate came from');
++  assert.equal(record.fixedEnvironment.predicateSha256, sha(await fs.readFile(distRequirements)), 'the predicate bytes must stay pinned');
+   const { requiredArtifactClosure } = await import(distRequirements);
+   assert.throws(
+     () => requiredArtifactClosure(statusJson),
+@@ -498,31 +920,37 @@ test('C08 negative: the captured historical OpenSpec 1.3.1 response is replayed,
+   );
+ });
+ 
+-test('C08 current host: the observed CLI version and dependency edges are separate from the historical refusal', async (t) => {
++test('C08 current host: the live host CLI exposes dependency edges and the pinned predicate accepts them (drift is observed, never upgraded)', async (t) => {
+   const record = await loadProbe('openspec-compat.json');
+-  assert.equal(record.currentHost?.cliVersion, toolchain.openspec.current);
+   assert.equal(record.currentHost?.observation, 'CURRENT_HOST_CLI');
++  // The host-global CLI drifts outside this change (baseline recorded
++  // 1.3.1 → 1.14.3; observed 1.15.0 at registration). The upgrade policy
++  // forbids global upgrades, so the agreement oracle for this leg is the
++  // closure predicate over the live response, never the version string.
++  assert.match(record.currentHost.cliVersionPolicy, /drift.*environmental fact|environmental fact.*drift/s);
++  assert.match(toolchain.openspec.upgrade_policy, /No global upgrade/i);
+   const root = await openspecScratch(t);
+   const env = { ...process.env, HOME: root, USERPROFILE: root, XDG_CONFIG_HOME: path.join(root, 'config'), CI: 'true', DO_NOT_TRACK: '1', OPENSPEC_TELEMETRY: '0' };
+   const version = spawnSync('openspec', ['--version'], { cwd: root, encoding: 'utf8', timeout: 30_000, env });
+   assert.equal(version.status, 0, 'current host OpenSpec must be available; a missing CLI is not compatibility evidence');
+-  assert.equal(version.stdout.trim(), record.currentHost.cliVersion, 'observe current toolchain drift without relabelling legacy history');
++  assert.match(version.stdout.trim(), /^\d+\.\d+\.\d+$/, 'the host CLI must answer with a plain semver');
+   const status = openspecStatus('openspec', root, false);
+   assert.equal(status.status, 0, `current host openspec status failed: ${status.stderr}`);
+   const statusJson = JSON.parse(status.stdout);
+   assert.ok(statusJson.artifacts.every((artifact) => Array.isArray(artifact.requires)));
+-  assert.ok(built, 'fixed patched Comet build is required');
++  assert.ok(built, 'the pinned 0.5.0+0005 Comet build is required');
+   const { requiredArtifactClosure } = await import(distRequirements);
+   const closure = requiredArtifactClosure(statusJson);
+-  assert.deepEqual(Object.fromEntries(closure.map(({ id, status }) => [id, status])), record.currentHost.closure);
++  assert.deepEqual(Object.fromEntries(closure.map(({ id, status }) => [id, status])), record.currentHost.closure,
++    'the pinned predicate must accept the live host response with the registered closure');
+ });
+ 
+ test('C08 positive: the isolated 1.11.0 candidate exposes the edges and the same closure accepts it — no global upgrade', async (t) => {
+   const record = await loadProbe('openspec-compat.json');
+   assert.equal(record.positive?.isolatedInstall, '.sdd/tools/openspec-1.11.0');
+   assert.equal(record.positive?.cliVersion, toolchain.openspec.isolated_candidate);
+-  assert.ok(isolatedOpenspecReady, 'fixed isolated OpenSpec1.11.0 must be installed; no skip or global replacement');
+-  assert.ok(built, 'fixed patched Comet build is required');
++  assert.ok(isolatedOpenspecReady, 'fixed isolated OpenSpec 1.11.0 must be installed; no skip or global replacement');
++  assert.ok(built, 'the pinned 0.5.0+0005 Comet build is required');
+   const root = await openspecScratch(t);
+   const version = spawnSync(process.execPath, [isolatedOpenspecBin, '--version'], {
+     cwd: root, encoding: 'utf8', timeout: 30_000,
+@@ -561,145 +989,85 @@ test('C08 negative: missing or invalid dependency edges are refused without gues
+ });
+ 
+ // ---------------------------------------------------------------------------
+-// Probe registration consistency — the records cite real commands and match
++// Probe registration consistency — the records cite real entries and match
+ // the freshly observed behavior above.
+ // ---------------------------------------------------------------------------
+ 
+ test('P1_5 probe registration is complete and cites real-entry evidence', async () => {
+-  const names = ['gate-matrix.json', 'knowledge-closeout.json', 'entrances-c07.json', 'bypass-recovery.json'];
++  const names = ['gate-matrix.json', 'knowledge-closeout.json', 'assembly-probes.json', 'entrances-c07.json', 'bypass-recovery.json'];
+   for (const name of names) {
+     const record = await loadProbe(name);
+     assert.ok(record.schemaVersion, `${name} must pin its schema version`);
++    assert.equal(record.revision, '2026-10-26-comet-050-adoption-v1', `${name} must pin the comet-050 adoption revision`);
+     assert.ok(Array.isArray(record.records) && record.records.length > 0, `${name} must carry records`);
+     for (const entry of record.records) {
+       assert.ok(entry.id && entry.entry && entry.oracle && entry.observed !== undefined,
+         `${name} record without id/entry/oracle/observed: ${JSON.stringify(entry).slice(0, 140)}`);
+     }
+   }
+-  // openspec-compat.json pins the C08 pair as negative/positive observations.
+-  const compat = await loadProbe('openspec-compat.json');
+-  assert.ok(compat.negative?.cliVersion && compat.negative?.closureError, 'the C08 refusal must be registered with the pinned CLI version and the real predicate error');
+-  assert.equal(compat.positive?.closureResult, 'ACCEPTED');
+-  assert.equal(compat.fixedEnvironment?.isolatedInstall, '.sdd/tools/openspec-1.11.0');
+-  // method-dispatch-content.json pins the vendored skill snapshots as skills.
+-  const dispatchContent = await loadProbe('method-dispatch-content.json');
+-  assert.ok(Array.isArray(dispatchContent.skills) && dispatchContent.skills.length >= 3, 'the three method skills must be pinned');
+-  assert.ok(dispatchContent.skills.every((skill) => skill.digest && skill.role && skill.disposition), 'each pinned skill must carry digest, role and disposition');
+-  // C07: every managed entrance is registered, extending P1_4's six with the
+-  // state check entrance semantics.
++  // The assembly registration carries the composed behaviors (a–d + executor).
++  const assembly = await loadProbe('assembly-probes.json');
++  const assemblyIds = assembly.records.map((entry) => entry.id);
++  for (const id of [
++    'at-extensions-independent', 'at-cross-replay-refused',
++    'plan-single-surface', 'no-second-scheduling-surface',
++    'approval-anchor-precedes-open', 'work-bindings-anchored-extensions-read-only',
++    'nine-step-mapping', 'executor-six-gate-packaged-acceptance',
++    'executor-unregistered-and-nonpass-refused', 'kt-predicate-single-run-parking',
++  ]) assert.ok(assemblyIds.includes(id), `assembly record ${id} must be registered`);
++  // The knowledge registration carries Kp sealing and the 0005 Kt predicate.
++  const knowledge = await loadProbe('knowledge-closeout.json');
++  const knowledgeIds = knowledge.records.map((entry) => entry.id);
++  for (const id of ['kp-required-before-archive', 'readback-digest-required', 'forged-seal-refused', 'seal-exactly-once', 'kt-0005-fail-open-default', 'kt-0005-required-unmet-parks-same-run']) {
++    assert.ok(knowledgeIds.includes(id), `knowledge record ${id} must be registered`);
++  }
++  // C07: the hooks-absent CLI-side entrances are registered (the real-CLI
++  // re-run lives in test/delivery-cases/1_5.mjs against the same build).
+   const entrances = await loadProbe('entrances-c07.json');
+   const registered = entrances.records.map((entry) => entry.id);
+-  for (const entrance of ['transition', 'guard-preview', 'guard-apply', 'next-continuation', 'archive', 'write-hook', 'state-check']) {
++  for (const entrance of ['guard-preview', 'guard-apply', 'transition-manual-declaration', 'next-continuation', 'archive-outside-phase', 'dispatch-entry-name', 'dispatch-missing-package']) {
+     assert.ok(registered.includes(entrance), `C07 entrance ${entrance} must be registered`);
+   }
+-  const modeQualification = JSON.parse(await fs.readFile(path.join(changeRoot, 'mode-qualification.json'), 'utf8'));
+-  assert.ok(Array.isArray(modeQualification.c07Entrances) && modeQualification.c07Entrances.length >= 6,
+-    'P1_4 registered at least six entrances; this registration must extend, not contradict it');
+-});
+-
+-// Source pins are preparation evidence. The manifest and immutable cache are
+-// independently reviewed inputs; recomputing a digest cannot approve new bytes.
+-async function assertApprovedMethodPins(record, sourceRoot = projectRoot) {
+-  assert.equal(record.qualification, 'SOURCE_PIN_ONLY');
+-  assert.equal(record.methodExecution, 'NOT_EXECUTED');
+-  assert.equal(record.profile, 'comet-managed-v2');
+-  const approval = record.sourceApproval;
+-  assert.equal(approval.methodCount, 11);
+-  assert.equal(approval.fileCount, 245);
+-  assert.match(approval.sealedBaseline.exportDigest, /^[a-f0-9]{64}$/);
+-  assert.equal(approval.sourceUpgrades.path, 'worker-reports/P1_6-convergence/source-upgrades.json');
+-  assert.equal(approval.task, 'P1_6');
+-  const manifestRelative = 'openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json';
+-  assert.equal(approval.manifest.path, manifestRelative);
+-  const manifestBytes = await fs.readFile(path.join(projectRoot, manifestRelative));
+-  assert.equal(sha(manifestBytes), approval.manifest.sha256, 'approved P1_6 manifest drift');
+-  const manifest = JSON.parse(manifestBytes);
+-  assert.equal(manifest.current_profile_id, record.profile);
+-  const upgradeBytes = await fs.readFile(path.join(projectRoot, approval.sourceUpgrades.path));
+-  assert.equal(sha(upgradeBytes), approval.sourceUpgrades.sha256, 'P1_6 whole-source upgrade evidence drift');
+-  const sealedRoot = path.join(projectRoot, 'foundation/baselines', approval.sealedBaseline.exportDigest);
+-  const sealedBytes = await fs.readFile(path.join(sealedRoot, 'manifest.json'));
+-  assert.equal(sha(sealedBytes), approval.sealedBaseline.manifestSha256, 'sealed source manifest drift');
+-  const sealed = JSON.parse(sealedBytes);
+-  assert.equal(sealed.exportDigest, approval.sealedBaseline.exportDigest);
+-  assert.equal(sha(await fs.readFile(path.join(sealedRoot, 'source', manifestRelative))), approval.manifest.sha256,
+-    'the approved P1_6 manifest must itself be present unchanged in the sealed baseline');
+-  const snapshots = new Map(manifest.snapshots.map((item) => [item.name, item]));
+-  assert.equal(snapshots.size, 11);
+-  let checked = 0;
+-  for (const snapshot of snapshots.values()) {
+-    assert.equal(snapshot.snapshot_path, `.agents/skills/${snapshot.name}`);
+-    const skillRoot = path.join(sourceRoot, snapshot.snapshot_path);
+-    assert.ok((await fs.lstat(skillRoot)).isDirectory(), 'method source must be a real directory');
+-    const entries = await fs.readdir(skillRoot, { recursive: true, withFileTypes: true });
+-    assert.ok(entries.every((item) => item.isDirectory() || item.isFile()), 'method source contains a link or unsafe type');
+-    const files = entries.filter((item) => item.isFile()).map((item) =>
+-      `${snapshot.name}/${path.relative(skillRoot, path.join(item.parentPath ?? item.path, item.name)).split(path.sep).join('/')}`,
+-    ).sort();
+-    assert.deepEqual(files, Object.keys(snapshot.files).sort(), `approved file set drift: ${snapshot.name}`);
+-    assert.equal(files.length, snapshot.file_count);
+-    const lines = [];
+-    for (const file of files) {
+-      const relative = file.slice(snapshot.name.length + 1);
+-      const digest = sha(await fs.readFile(path.join(skillRoot, relative)));
+-      assert.equal(digest, snapshot.files[file], `approved source byte drift: ${file}`);
+-      const sourcePath = `source/.agents/skills/${file}`;
+-      assert.equal(sealed.files[sourcePath], digest, `sealed source pin mismatch: ${file}`);
+-      assert.equal(sha(await fs.readFile(path.join(sealedRoot, sourcePath))), digest, `sealed source byte drift: ${file}`);
+-      lines.push(`${digest}  ${file}`);
+-      checked++;
+-    }
+-    // Exact P1_6/Foundation formula: sort the complete hash-prefixed lines,
+-    // including the method name in each path, join LF without a final LF.
+-    const digest = sha(lines.sort().join('\n'));
+-    assert.equal(digest, snapshot.content_sha256);
+-    const skill = record.skills.find((item) => item.name === snapshot.name);
+-    if (skill) {
+-      assert.equal(skill.path, snapshot.snapshot_path);
+-      assert.equal(skill.digest, digest, `dispatch pin differs from the approved P1_6 source: ${skill.name}`);
+-      assert.equal(skill.files, files.length);
+-      assert.equal(skill.digestFormula, record.digestFormula);
+-      assert.ok(skill.role && skill.disposition);
+-    }
++  assert.equal(entrances.environment.hooksAbsent.split(' ')[0], '.claude/settings.local.json', 'the entrance registration must state the hooks-absent isolation');
++  const bypass = await loadProbe('bypass-recovery.json');
++  for (const id of ['direct-phase-write', 'tampered-phase-file', 'manual-record-check']) {
++    assert.ok(bypass.records.some((entry) => entry.id === id), `bypass record ${id} must be registered`);
+   }
+-  assert.equal(checked, 245, 'all approved methods, including dotfiles and fixture logs, must be checked');
+-  assert.deepEqual(record.skills.map(({ name }) => name).sort(), ['claude-parallel-tdd-planner', 'test-authoring', 'whitebox-verify']);
+-}
+-
+-test('P1_5 method dispatch content is pinned to the approved P1_6 and sealed 245-file source, without claiming execution', async () => {
+-  await assertApprovedMethodPins(await loadProbe('method-dispatch-content.json'));
++  // openspec-compat.json pins the C08 trio of observations.
++  const compat = await loadProbe('openspec-compat.json');
++  assert.ok(compat.negative?.cliVersion && compat.negative?.closureError, 'the C08 refusal must be registered with the pinned CLI version and the real predicate error');
++  assert.equal(compat.positive?.closureResult, 'ACCEPTED');
++  assert.equal(compat.fixedEnvironment?.isolatedInstall, '.sdd/tools/openspec-1.11.0');
++  assert.equal(compat.fixedEnvironment?.buildFingerprint, fingerprint);
+ });
+ 
+-test('P1_5 source drift is refused even when a caller re-hashes its modified dispatch content', async (t) => {
++// The package pin registration: the 15 managed skills of the compiled
++// package (method variants, domain work, extension faces) with the official
++// compiler content hashes. A drifted digest or role is refused.
++test('P1_5 method dispatch content is pinned to the compiled package without claiming execution', async () => {
+   const record = await loadProbe('method-dispatch-content.json');
+-  await assertApprovedMethodPins(record);
+-  const scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'p15-method-pin-'));
+-  t.after(async () => { await fs.rm(scratch, { recursive: true, force: true }); });
+-  const manifest = JSON.parse(await fs.readFile(path.join(projectRoot, record.sourceApproval.manifest.path), 'utf8'));
+-  for (const snapshot of manifest.snapshots) {
+-    const root = path.join(scratch, snapshot.snapshot_path);
+-    await fs.mkdir(path.dirname(root), { recursive: true });
+-    await fs.cp(path.join(projectRoot, snapshot.snapshot_path), root, { recursive: true });
++  assert.equal(record.qualification, 'PACKAGE_PIN_ONLY');
++  assert.equal(record.methodExecution, 'NOT_EXECUTED');
++  assert.equal(record.profile, 'comet-classic-full-050');
++  assert.equal(record.skills.length, 15);
++  assert.ok(record.skills.every((skill) => skill.digest && skill.role && skill.disposition), 'each pinned skill must carry digest, role and disposition');
++  const live = new Map(application.skills.map((skill) => [skill.id, skill.contentHash]));
++  for (const skill of record.skills) {
++    assert.equal(live.get(skill.name), skill.digest, `packaged skill ${skill.name} drifted from the registered pin`);
++  }
++  // The roles agree with the composition mapping.
++  const variants = new Map(composition.managedSkillVariants.work.map((entry) => [entry.skillId, entry.kind]));
++  const extensionSkillIds = new Set(extensionBindings.map((binding) => binding.skillId));
++  for (const skill of record.skills) {
++    if (skill.role === 'extension-skill') assert.ok(extensionSkillIds.has(skill.name), `${skill.name} must be a bound gate face`);
++    else assert.equal(variants.get(skill.name), skill.role === 'method-variant' ? 'method-variant' : 'domain-work', `${skill.name} role drifted from the composition mapping`);
+   }
+-  await assertApprovedMethodPins(record, scratch);
+-  const copied = path.join(scratch, '.agents/skills/whitebox-verify');
+-  const dotfile = path.join(copied, '.gitignore');
+-  const original = await fs.readFile(dotfile);
+-  await fs.appendFile(dotfile, '\n# private source drift fixture\n');
+-  const changed = structuredClone(record);
+-  const files = (await fs.readdir(copied, { recursive: true, withFileTypes: true }))
+-    .filter((item) => item.isFile())
+-    .map((item) => path.relative(copied, path.join(item.parentPath ?? item.path, item.name)).split(path.sep).join('/'));
+-  const changedLines = await Promise.all(files.map(async (file) => `${sha(await fs.readFile(path.join(copied, file)))}  whitebox-verify/${file}`));
+-  changed.skills.find(({ name }) => name === 'whitebox-verify').digest = sha(changedLines.sort().join('\n'));
+-  await assert.rejects(assertApprovedMethodPins(changed, scratch), /approved source byte drift: whitebox-verify\/\.gitignore/);
+-  await fs.writeFile(dotfile, original);
+-  await fs.rm(dotfile);
+-  await assert.rejects(assertApprovedMethodPins(record, scratch), /approved file set drift: whitebox-verify/);
+-  await fs.writeFile(dotfile, original);
+-  const extra = path.join(copied, 'unapproved-extra.txt');
+-  await fs.writeFile(extra, 'private unapproved source\n');
+-  await assert.rejects(assertApprovedMethodPins(record, scratch), /approved file set drift: whitebox-verify/);
+-  await fs.rm(extra);
+-  await assertApprovedMethodPins(record, scratch);
++  assert.equal(record.skills.filter((skill) => skill.role === 'method-variant').length, 4);
++  assert.equal(record.skills.filter((skill) => skill.role === 'domain-work').length, 5);
++  assert.equal(record.skills.filter((skill) => skill.role === 'extension-skill').length, 6);
++  // A re-hashed drift is still a drift: flipping one digest must be caught.
++  const drifted = structuredClone(record);
++  drifted.skills.find((skill) => skill.name === 'tdd-full-build-execute').digest = sha('private-drift');
++  assert.notEqual(live.get('tdd-full-build-execute'), drifted.skills.find((skill) => skill.name === 'tdd-full-build-execute').digest,
++    'a caller-side re-hash never approves new package bytes');
+ });
+diff --git a/test/delivery-cases/1_5.mjs b/test/delivery-cases/1_5.mjs
+index 53e1a16..2dca8ce 100644
+--- a/test/delivery-cases/1_5.mjs
++++ b/test/delivery-cases/1_5.mjs
+@@ -1,24 +1,22 @@
+-// P1_5 delivery case: the Classic integration gates over the real patched
+-// build (patched six-patch build qualified by stack identity, manifest-verified on reuse). Per
+-// classic-integration-design.md and acceptance C04/C06/C07/C08 this drives
+-// one real Classic run through the managed entrances and records that:
+-// C07 — all seven entrances (transition, guard preview, guard --apply,
+-//       next/continuation, archive, phase-guard write hook, state check)
+-//       enforce the same precondition rule with zero check evidence;
+-// C04 — tasks/DAG is the single writable authority: progress ticks never
+-//       move the write ticket, definition drift does, and a progress write
+-//       with a stale ticket is refused;
+-// C06 — the Kp/Kt readback gate seats at the driver: the native archive
+-//       entry carries no knowledge receipt at all (the registered B5 gap),
+-//       the driver seal requires the knowledge closeout, exactly once, and
+-//       a second closeout execution is refused after the real archive;
+-// C08 — bypass and recovery negatives: a hand-edited phase file, a manual
+-//       record-check declaration and a forged seal are all refused on every
+-//       downstream entrance, interruption recovers as continuation guidance,
+-//       and the pinned host OpenSpec incompatibility is resolved only by the
+-//       isolated candidate (the floating global upgrade attempt is observed
+-//       and neutralized in the isolated environment, never executed).
+-// Every Comet interaction runs in scratch projects under $TMPDIR with an
++// P1_5 delivery case, revision 2026-10-26-comet-050-adoption-v1: the
++// hooks-absent common-gate probes against the pinned 0.5.0 build
++// (aeb1a659… + exactly the 0005 Kt closeout patch, build fingerprint
++// de39629a…). C07/e and the C08 bypass family: with the host hook
++// registration REMOVED (.claude/settings.local.json moved away for the whole
++// probe session), the CLI-side common gates still refuse every gate-skipping
++// entrance —
++//   guard / guard --apply / transition (a manual record-check declaration
++//   never satisfies the guard) / archive outside the archive phase / the
++//   direct `state set phase` write / a shell-forged phase file that cannot
++//   carry the archive entry / and both `comet runtime dispatch` package
++//   refusals (wrong entry name INVALID_WORKFLOW, missing package ENOENT).
++// The hook is the edit-channel attribution (A09, probed by 1_3.mjs); the
++// common gates are CLI-side and survive its absence — hook absence is not a
++// gate bypass. What this case does NOT claim: installing the compiled
++// composition package into a live project and dispatching inside a real
++// composition Run (P1_4/P3_2/VERIFY — UNVERIFIED), and the full archive
++// drive with the duplicate-closeout refusal (1_3.mjs on the same build).
++// Every Comet interaction runs in a scratch project under $TMPDIR with an
+ // isolated HOME and PATH stubs; live host configuration is never touched.
+ import assert from 'node:assert/strict';
+ import crypto from 'node:crypto';
+@@ -44,8 +42,6 @@ const entrypoint = path.join(buildDir, 'work/bin/comet.js');
+ 
+ const built = await fs.access(path.join(buildDir, 'distribution.json')).then(() => true, () => false);
+ const prepared = await fs.access(path.join(projectRoot, '.sdd/vendor/comet', lock.source.commit, 'provenance.json')).then(() => true, () => false);
+-const isolatedOpenspecBin = path.join(projectRoot, '.sdd/tools/openspec-1.11.0/node_modules/@fission-ai/openspec/bin/openspec.js');
+-const isolatedOpenspecReady = await fs.access(isolatedOpenspecBin).then(() => true, () => false);
+ 
+ const pinnedNode = lock.toolchain.node;
+ let nodeExecutable = process.execPath;
+@@ -58,13 +54,13 @@ if (process.versions.node !== pinnedNode) {
+ const plain = (text) => String(text ?? '').replace(/\x1b\[[0-9;]*m/g, '');
+ 
+ // The structured probe registration is the RED boundary: without it the
+-// entrance/bypass/knowledge behaviors carry no registered real-entry evidence.
++// entrance/bypass behaviors carry no registered real-entry evidence.
+ async function loadProbe(name) {
+   try {
+     return JSON.parse(await fs.readFile(path.join(probesDir, name), 'utf8'));
+   } catch (error) {
+     if (error.code === 'ENOENT') {
+-      const failure = new Error(`classic-integration-probes/${name} is missing: the C01–C08 behaviors have no registered real-entry evidence (task P1_5 deliverable)`);
++      const failure = new Error(`classic-integration-probes/${name} is missing: the C07/C08 behaviors have no registered real-entry evidence (task P1_5 deliverable)`);
+       failure.code = 'CLASSIC_INTEGRATION_PROBE_MISSING';
+       throw failure;
+     }
+@@ -84,9 +80,8 @@ await fs.mkdir(stubs, { recursive: true });
+ const logger = '#!/bin/sh\necho "[stub] $0 $@" >> "${STUB_LOG:-/dev/null}"\nexit 0\n';
+ await fs.writeFile(path.join(stubs, 'npm'), logger, { mode: 0o755 });
+ await fs.writeFile(path.join(stubs, 'npx'), logger, { mode: 0o755 });
+-// A faithful-enough openspec stub: `init <dir>` creates the openspec root;
+-// `archive <change>` moves the change into the dated archive directory Comet
+-// expects (<today>-<change>) exactly like the upstream CLI.
++// A faithful-enough openspec stub: `init <dir>` creates the openspec root and
++// the tool output a real init would (the comet init command re-reads it).
+ await fs.writeFile(path.join(stubs, 'openspec'), `#!/bin/sh
+ echo "[stub] openspec $@" >> "\${STUB_LOG:-/dev/null}"
+ pos1=""; pos2=""; count=0
+@@ -98,19 +93,13 @@ if [ "$pos1" = "init" ] && [ -n "$pos2" ]; then
+   printf 'schema: openspec-1.0\\n' > "$pos2/openspec/config.yaml"
+   echo "fake skill" > "$pos2/.claude/commands/openspec.md"
+ fi
+-if [ "$pos1" = "archive" ] && [ -n "$pos2" ] && [ -n "$COMET_PROJECT_ROOT" ]; then
+-  cd "$COMET_PROJECT_ROOT" || exit 0
+-  if [ -d "docs/openspec/changes/$pos2" ]; then
+-    mkdir -p "docs/openspec/changes/archive"
+-    mv "docs/openspec/changes/$pos2" "docs/openspec/changes/archive/$(date +%Y-%m-%d)-$pos2"
+-  fi
+-fi
+ exit 0
+ `, { mode: 0o755 });
+ 
+ // The comet CLI is itself a Node program: the test runner's child context
+-// marker (NODE_TEST_CONTEXT) must never reach it, or it boots in test-child
+-// protocol mode and its stdout stops being the CLI's own output.
++// marker (NODE_TEST_CONTEXT) must never reach it, or its stdout stops being
++// the CLI's own output. cwd stays INSIDE the project (the 0.5.0 user-runtime
++// root refuses to live inside the current working tree).
+ const childEnv = (extra = {}) => {
+   const { NODE_TEST_CONTEXT: _stripped, ...inherited } = process.env;
+   return {
+@@ -123,9 +112,9 @@ const childEnv = (extra = {}) => {
+   };
+ };
+ 
+-function comet(args, { env = {}, timeout = 180_000, cwd = project } = {}) {
++function comet(args, { env = {}, timeout = 180_000 } = {}) {
+   const result = spawnSync(nodeExecutable, [entrypoint, ...args], {
+-    cwd,
++    cwd: project,
+     encoding: 'utf8',
+     timeout,
+     env: childEnv(env),
+@@ -135,306 +124,164 @@ function comet(args, { env = {}, timeout = 180_000, cwd = project } = {}) {
+   return { ...result, json };
+ }
+ 
+-const gateVerdict = (result) => {
+-  const issues = (result.json?.data?.issues ?? []).map((issue) => issue.message ?? '').join('\n');
+-  return { exitCode: result.json?.exitCode, issues: plain(issues) };
+-};
+-
+ const CHANGE = 'p15-integrate';
+-const SEALRUN = 'p15-seal-run';
+ const skipIfNoBuild = (t) => {
+   if (!prepared || !built) {
+-    t.skip('patched Comet build is not present in this project; run tools/comet/prepare-source.mjs && tools/comet/build.mjs --archive first');
++    t.skip('the pinned 0.5.0+0005 Comet build is not present in this project; run tools/comet/prepare-source.mjs && tools/comet/build.mjs --archive first');
+     return true;
+   }
+   return false;
+ };
+ 
+-const writeArtifacts = async (change) => {
+-  const dir = path.join(project, 'docs/openspec/changes', change);
+-  await fs.mkdir(dir, { recursive: true });
+-  await fs.writeFile(path.join(dir, 'proposal.md'), '# Proposal\n\nP1_5 integration probe.\n');
+-  await fs.writeFile(path.join(dir, 'tasks.md'), '# Tasks\n\n- [ ] 1.1 Implement probe product code\n');
+-  await fs.writeFile(path.join(dir, 'design.md'), '# Design\n\nClassic managed probe.\n');
+-  await fs.mkdir(path.join(project, 'src'), { recursive: true });
+-  await fs.writeFile(path.join(project, 'src/feature.js'), 'export const v1 = 1;\n');
+-  return dir;
+-};
+-
+-const driveToBuild = async (change) => {
+-  assert.equal(comet(['state', 'init', change, 'full', '--json']).json?.exitCode, 0);
+-  assert.equal(comet(['state', 'select', change, '--json']).json?.exitCode, 0);
+-  await writeArtifacts(change);
+-  assert.equal(comet(['state', 'transition', change, 'open-complete', '--json']).json?.exitCode, 0);
+-  // The strict design confirmation demands the frontmatter triple
+-  // (comet_change/role/canonical_spec); without it the command refuses after
+-  // registering the reference, and transition design-complete is the phase
+-  // driver — the same recipe as the recorded P1_4 probe evidence.
+-  comet(['state', 'complete-design', change, '--design-doc', `docs/openspec/changes/${change}/design.md`, '--json']);
+-  assert.equal(comet(['state', 'transition', change, 'design-complete', '--json']).json?.exitCode, 0);
+-  assert.equal(comet(['state', 'set', change, 'build_mode', 'executing-plans', 'tdd_mode', 'tdd', 'isolation', 'current', '--json']).json?.exitCode, 0);
+-  const tasks = comet(['state', 'tasks', change, '--assign-ids', '--json']).json;
+-  assert.equal(comet(['state', 'task-complete', change, tasks?.data?.tasks?.[0]?.id, '--expect', tasks?.data?.revision, '--json']).json?.exitCode, 0);
+-};
+-
+-const get = (change, field) => comet(['state', 'get', change, field]).stdout?.trim();
+-
+-test('setup: the patched pinned build named by the source lock is manifest-verified in this project', (t) => {
+-  // The case qualifies the six-patch stack by IDENTITY, not by byte
+-  // fingerprint: patch bytes revise without changing the stack's shape (the
+-  // P2_4 rework integrated the 0002 revision @ d4370930), while the original
+-  // discovery session's pre-0002 build (cb1151b4) must never satisfy it.
+-  // The identity asserts run BEFORE the build-presence skip: a drifted lock
+-  // must fail this qualification, not silently skip it (same bite as the
+-  // accepted 1_3/1_4 precedent).
+-  assert.equal(lock.patches.length, 6, 'the patched build must carry the six locked patches');
+-  assert.deepEqual(lock.patches.map((patch) => patch.path), [
+-    'integrations/comet/patches/0001-matt-method-profile.patch',
+-    'integrations/comet/patches/tests/1_6.patch',
+-    'integrations/comet/patches/0002-managed-delivery-runtime.patch',
+-    'integrations/comet/patches/tests/2_4.patch',
+-    'integrations/comet/patches/0003-post-archive-closeout.patch',
+-    'integrations/comet/patches/tests/4_6.patch',
+-  ], 'the locked stack must be exactly 0001 + tests/1_6 + 0002 (managed delivery runtime) + tests/2_4 + 0003 (post-archive closeout) + tests/4_6');
+-  assert.notEqual(fingerprint, 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187', 'the pre-0002 discovery build must not satisfy this case');
++const settingsFile = path.join(project, '.claude/settings.local.json');
++const stateFileOf = (change) => path.join(project, 'docs/openspec/changes', change, '.comet.yaml');
++
++test('setup: the pinned 0.5.0+0005 build named by the source lock is manifest-verified in this project', (t) => {
++  // ADR-0022 identity, same bite as 1_3: the retired 0.4.5 six-patch stack
++  // and the pre-0005 pristine 0.5.0 build must never satisfy this case.
++  assert.equal(lock.package.version, '0.5.0');
++  assert.equal(lock.source.commit, 'aeb1a6598034e28ce46b8422d4dbd8785e607bd7');
++  assert.deepEqual(lock.patches, [
++    { path: 'integrations/comet/patches/0005-comet-050-kt-closeout.patch', sha256: '74e6c8108967ac10b9ac31e2f4c3ba2dfa6d53930dcf2b5068fe7d9be003b18d' },
++  ], 'the pinned baseline is upstream 0.5.0 + exactly the 0005 Kt closeout patch');
++  assert.notEqual(fingerprint, 'cb1151b4f3a301c9f2e9da87695155bf05285c925ea4abbbcea7120c9413f187', 'the 0.4.5 discovery build must not satisfy this case');
++  assert.notEqual(fingerprint, '29f2332b4f624c1595d6d1304456f5de4e6b9b7642633995b79c0cab60ea1aad', 'the pristine 0.5.0 build (without 0005) must not satisfy this case');
+   if (skipIfNoBuild(t)) return;
+   const version = comet(['--version']);
+   assert.equal(version.status, 0);
+   assert.equal((version.stdout ?? '').trim(), lock.package.version);
+ });
+ 
+-test('C07: with zero check evidence all seven managed entrances refuse or stay short of completion', async (t) => {
++test('C07/e: with the host hook registration removed, the CLI-side common gates still refuse every gate-skipping entrance', async (t) => {
+   if (skipIfNoBuild(t)) return;
+   await loadProbe('entrances-c07.json');
++  // Drive one classic compat run to the build phase with the task completed
++  // and a manual record-check declared (the strictest refusal state).
+   const init = comet(['init', project, '--yes', '--scope', 'project', '--workflow', 'classic', '--platform', 'claude', '--codegraph', 'skip', '--language', 'en'], { timeout: 300_000 });
+   assert.equal(init.status, 0, `comet init (classic) failed: ${plain(init.stderr).slice(0, 400)}`);
+-  await driveToBuild(CHANGE);
+-
+-  // 1. direct transition
+-  const transition = gateVerdict(comet(['state', 'transition', CHANGE, 'build-complete', '--json']));
+-  assert.equal(transition.exitCode, 1, 'direct transition must refuse without the build check');
+-  assert.match(transition.issues, /Build passes/);
+-
+-  // 2. guard preview
+-  const guardPreview = gateVerdict(comet(['guard', CHANGE, 'build', '--json']));
+-  assert.equal(guardPreview.exitCode, 1, 'guard preview must refuse without the build check');
+-
+-  // 3. guard --apply (and the phase must not move)
+-  const guardApply = gateVerdict(comet(['guard', CHANGE, 'build', '--apply', '--json']));
+-  assert.equal(guardApply.exitCode, 1, 'guard --apply must refuse without the build check');
+-  assert.equal(get(CHANGE, 'phase'), 'build', 'a refused guard --apply must not advance the phase');
+-
+-  // 4. next/continuation recovery: guidance, never a completion claim
+-  const next = comet(['state', 'next', CHANGE, '--json']);
+-  assert.equal(next.json?.exitCode, 0);
+-  const nextKind = next.json?.data?.nextAction?.kind ?? next.json?.agent?.continuation?.kind;
+-  assert.equal(nextKind, 'plan', 'an interrupted run resumes as continuation guidance, not completion');
+-
+-  // 5. archive entrance
+-  const archive = comet(['archive', CHANGE, '--json']);
+-  assert.equal(archive.json?.exitCode, 1, 'the archive entrance must refuse outside the archive phase');
+-  assert.match(plain(archive.json?.stderr), /FATAL: phase is 'build', expected 'archive'/);
+-
+-  // 6. state check: the entrance check set of the phase being entered
+-  const checkBuild = comet(['state', 'check', CHANGE, 'build', '--json']);
+-  assert.equal(checkBuild.json?.exitCode, 0, 'the build ENTRY check set answers for the phase being entered');
+-  assert.equal(get(CHANGE, 'phase'), 'build', 'state check must not itself advance any phase');
+-  const checkArchive = comet(['state', 'check', CHANGE, 'archive', '--json']);
+-  assert.equal(checkArchive.json?.exitCode, 1, 'the archive entry set is not satisfied from the build phase with zero evidence');
+-
+-  // 7. phase-guard write hook (edit channel), probed through the adapter
+-  const { probeWriteChannels } = await import('../../lib/adapters/comet.js');
+-  const channels = await probeWriteChannels({ projectRoot: project, nodeExecutable, change: CHANGE, env: childEnv() });
+-  const edit = channels.find((channel) => channel.channel === 'edit');
+-  assert.equal(edit.outcome, 'rejected', 'the write-hook entrance must really refuse a cross-phase product write (C07)');
+-  assert.equal(edit.exitCode, 2);
+-
+-  // Registration consistency: the probe record cites these same refusals.
+-  const entrances = await loadProbe('entrances-c07.json');
+-  const byId = Object.fromEntries(entrances.records.map((record) => [record.id, record]));
+-  assert.equal(byId.transition?.observed?.exitCode, 1);
+-  assert.equal(byId['guard-preview']?.observed?.exitCode, 1);
+-  assert.equal(byId['guard-apply']?.observed?.exitCode, 1);
+-  assert.equal(byId.archive?.observed?.exitCode, 1);
+-  assert.equal(byId['write-hook']?.observed?.exitCode, 2);
+-  assert.equal(byId['next-continuation']?.observed?.kind, 'plan');
+-  assert.equal(byId['state-check']?.observed?.buildEntryExit, 0);
+-});
+-
+-test('C04: tasks is the single writable authority — ticks never move the ticket, definition drift does, stale tickets are refused', async (t) => {
+-  if (skipIfNoBuild(t)) return;
+-  const record = await loadProbe('bypass-recovery.json');
+-  const assigned = comet(['state', 'tasks', CHANGE, '--assign-ids', '--json']).json;
+-  const r1 = assigned?.data?.revision;
+-  const taskId = assigned?.data?.tasks?.[0]?.id;
+-  assert.ok(r1 && taskId, 'assign-ids must mint the write ticket and task ids');
+-  assert.equal(comet(['state', 'task-complete', CHANGE, taskId, '--expect', r1, '--json']).json?.exitCode, 0);
+-
+-  // (a) progress tick through the canonical file, markers preserved: the
+-  // ticket is checkbox-agnostic, exactly like the frozen plan digest.
+-  const tasksPath = path.join(project, 'docs/openspec/changes', CHANGE, 'tasks.md');
+-  const ticked = (await fs.readFile(tasksPath, 'utf8')).replace('- [ ] 1.1', '- [x] 1.1');
+-  await fs.writeFile(tasksPath, ticked);
+-  const rAfterTick = comet(['state', 'tasks', CHANGE, '--json']).json?.data?.revision;
+-  assert.equal(rAfterTick, r1, 'a progress tick is not a plan change: the ticket must not move');
+-
+-  // (b) a second authority rewrites the task definition: the ticket moves.
+-  await fs.writeFile(tasksPath, '# Tasks\n\n- [ ] 9.9 A different task entirely\n');
+-  const rAfterDrift = comet(['state', 'tasks', CHANGE, '--json']).json?.data?.revision;
+-  assert.notEqual(rAfterDrift, r1, 'definition drift from a second authority must move the ticket');
+-
+-  // (c) a progress write with the stale ticket is refused and told to reload.
+-  const stale = comet(['state', 'task-complete', CHANGE, taskId, '--expect', r1, '--json']);
+-  assert.equal(stale.json?.exitCode, 70, 'a progress write with a stale ticket must be refused');
+-  assert.match(JSON.stringify(stale.json?.data?.issues ?? []), /Task requirements changed; reload the task list/);
+-
+-  // (d) reload the ticket, then the write is admitted again.
+-  const refreshed = comet(['state', 'tasks', CHANGE, '--assign-ids', '--json']).json;
+-  assert.equal(comet(['state', 'task-complete', CHANGE, refreshed?.data?.tasks?.[0]?.id, '--expect', refreshed?.data?.revision, '--json']).json?.exitCode, 0);
+-  // and a progress write without any ticket is refused outright
+-  assert.equal(comet(['state', 'task-complete', CHANGE, refreshed?.data?.tasks?.[0]?.id, '--json']).json?.exitCode, 1);
+-
+-  const c04 = record.records.find((entry) => entry.id === 'tasks-revision-ticket');
+-  assert.equal(c04?.observed?.staleTicketExit, 70);
+-  assert.equal(c04?.observed?.tickMovesRevision, false);
+-  assert.equal(c04?.observed?.driftMovesRevision, true);
+-});
+-
+-test('C06: the archive seal requires the knowledge closeout, exactly once — the native gate itself carries no knowledge receipt', async (t) => {
+-  if (skipIfNoBuild(t)) return;
+-  await loadProbe('knowledge-closeout.json');
+-  // Drive a run to the archive entry. The COMET_SKIP_BUILD escape is the
+-  // registered B4/B5 gap (P1_4): it is how the native gate is observed
+-  // carrying zero knowledge obligations — the driver gate is the Kp seat.
+-  await driveToBuild(SEALRUN);
+-  const escape = { COMET_SKIP_BUILD: '1' };
+-  assert.equal(comet(['state', 'transition', SEALRUN, 'build-complete', '--json'], { env: escape }).json?.exitCode, 0);
+-  await fs.writeFile(path.join(project, 'docs/openspec/changes', SEALRUN, 'verification.md'), '# Verification Report\n\nProbe.\n');
+-  assert.equal(comet(['state', 'set', SEALRUN, 'verification_report', `docs/openspec/changes/${SEALRUN}/verification.md`, '--json']).json?.exitCode, 0);
+-  assert.equal(comet(['state', 'transition', SEALRUN, 'verify-pass', '--json'], { env: escape }).json?.exitCode, 0);
+-  assert.equal(comet(['state', 'transition', SEALRUN, 'archive-confirm', '--json'], { env: escape }).json?.exitCode, 0);
+-
+-  // The native archive entry check set: 5/5 passing, no knowledge anywhere.
+-  const archiveChecks = comet(['state', 'check', SEALRUN, 'archive', '--json']);
+-  assert.equal(archiveChecks.json?.exitCode, 0);
+-  assert.equal(archiveChecks.json?.data?.checks?.blocked, false);
+-  // B5 (lock revision: 4 patches @ 9b95a0ff, P2_4): the native archive ENTRY
+-  // CHECK VERDICT carries no knowledge consultation. The dormant
+-  // managed_delivery wire fields (e.g. knowledgeCloseoutRequired:false)
+-  // legitimately appear in the serialized configuration of any change; the
+-  // check verdict surface (counters + issues) is what this registration pins.
+-  const checkVerdict = JSON.stringify({
+-    checks: archiveChecks.json?.data?.checks ?? null,
+-    issues: archiveChecks.json?.data?.issues ?? [],
+-  });
+-  assert.doesNotMatch(checkVerdict, /llmwiki|outline|knowledge/i,
+-    'the native gate must not consult any knowledge receipt — B5 stays reproducible');
+-
+-  // The managed seal read (never a hand parse of the YAML).
+-  const { readArchiveSeal, sealCloseout } = await import('../../lib/adapters/comet.js');
+-  const seal = await readArchiveSeal({ projectRoot: project, change: SEALRUN, nodeExecutable, entrypoint, env: childEnv() });
+-  assert.equal(seal.phase, 'archive');
+-  assert.equal(seal.verifyResult, 'pass');
+-  assert.equal(seal.archiveConfirmation, 'confirmed');
+-  assert.equal(seal.archived, false);
+-
+-  // Negative: no knowledge closeout receipt, no seal (Kp before archive).
+-  assert.throws(
+-    () => sealCloseout({ seal, execution: 'exec-closeout-1', knowledgeCloseout: null }),
+-    (error) => error.code === 'KNOWLEDGE_CLOSEOUT_REQUIRED',
+-  );
+-  assert.throws(
+-    () => sealCloseout({ seal, execution: 'exec-closeout-1', knowledgeCloseout: { id: 'llmwiki:kp', digest: 'deadbeef' } }),
+-    (error) => error.code === 'KNOWLEDGE_CLOSEOUT_REQUIRED',
+-    'a knowledge closeout without a real content digest is not a readback',
+-  );
+-
+-  // Positive: the recorded closeout seals the archive exactly once.
+-  const knowledgeCloseout = { id: 'llmwiki:kp-p15', digest: crypto.createHash('sha256').update('kp-published-content').digest('hex') };
+-  const sealed = sealCloseout({ seal, execution: 'exec-closeout-1', knowledgeCloseout });
+-  assert.equal(sealed.archived, true);
+-  assert.deepEqual(sealed.knowledgeCloseout, knowledgeCloseout);
+-
+-  // The upstream CLI archive itself converges (idempotent by design)…
+-  const archive = comet(['archive', SEALRUN, '--json'], { env: escape });
+-  assert.equal(archive.json?.exitCode, 0, `the archive must succeed for the sealable run: ${plain(archive.json?.stderr).slice(0, 200)}`);
+-  // …and the second closeout execution is refused at the driver gate.
+-  const archivedSeal = await readArchiveSeal({ projectRoot: project, change: SEALRUN, nodeExecutable, entrypoint, env: childEnv() });
+-  assert.equal(archivedSeal.archived, true);
+-  assert.throws(
+-    () => sealCloseout({ seal: archivedSeal, execution: 'exec-closeout-2', knowledgeCloseout }),
+-    (error) => error.code === 'ARCHIVE_ALREADY_SEALED' && /exec-closeout-2/.test(error.message),
+-  );
+-
+-  // The built-in memory is a HOME cache, never an LLMWiki/Outline receipt.
+-  const remember = comet(['knowledge', 'remember', '--title', 'p15-lesson', '--text', 'probe knowledge body', '--json']);
+-  assert.equal(remember.status, 0);
+-  const storedFile = remember.json?.data?.file ?? remember.json?.file;
+-  assert.ok(storedFile.includes(fakeHome), 'the built-in memory must live in the isolated HOME cache');
+-  assert.doesNotMatch(storedFile, /llmwiki|outline|deepwiki/i, 'the built-in memory store must not be an LLMWiki/Outline/DeepWiki artifact');
++  assert.ok(await fs.access(settingsFile).then(() => true, () => false), 'init must install the host hook registration (removed only for the probes below)');
++  assert.equal(comet(['state', 'init', CHANGE, 'full', '--json']).json?.exitCode, 0);
++  assert.equal(comet(['state', 'select', CHANGE, '--json']).json?.exitCode, 0);
++  const changeDir = path.join(project, 'docs/openspec/changes', CHANGE);
++  await fs.mkdir(changeDir, { recursive: true });
++  await fs.writeFile(path.join(changeDir, 'proposal.md'), '# Proposal\n\nP1_5 hooks-absent probe.\n');
++  await fs.writeFile(path.join(changeDir, 'tasks.md'), '# Tasks\n\n- [ ] 1.1 Implement probe product code\n');
++  await fs.writeFile(path.join(changeDir, 'design.md'), '# Design\n\nCLI-side common gates.\n');
++  assert.equal(comet(['state', 'transition', CHANGE, 'open-complete', '--json']).json?.exitCode, 0);
++  comet(['state', 'complete-design', CHANGE, '--design-doc', `docs/openspec/changes/${CHANGE}/design.md`, '--json']);
++  assert.equal(comet(['state', 'transition', CHANGE, 'design-complete', '--json']).json?.exitCode, 0);
++  assert.equal(comet(['state', 'set', CHANGE, 'build_mode', 'executing-plans', 'tdd_mode', 'tdd', 'isolation', 'current', '--json']).json?.exitCode, 0);
++  const tasks = comet(['state', 'tasks', CHANGE, '--assign-ids', '--json']).json;
++  assert.equal(comet(['state', 'task-complete', CHANGE, tasks?.data?.tasks?.[0]?.id, '--expect', tasks?.data?.revision, '--json']).json?.exitCode, 0);
++  assert.equal(comet(['state', 'record-check', CHANGE, 'build', '--command', 'node -e 0', '--exit-code', '0', '--json']).json?.exitCode, 0, 'recording the manual declaration itself is allowed');
++
++  // HOOKS ABSENT for the whole probe session: the registration is moved away
++  // and restored in the finally below — the common gates must hold without it.
++  const settingsBackup = path.join(scratch, 'settings.local.json.moved');
++  await fs.rename(settingsFile, settingsBackup);
++  assert.ok(!(await fs.access(settingsFile).then(() => true, () => false)), 'the hook registration must really be absent during the probes');
++  const phase = () => comet(['state', 'get', CHANGE, 'phase']).stdout?.trim();
++  try {
++    // 1. guard preview: blocked without the real build check.
++    const guard = comet(['guard', CHANGE, 'build', '--json']);
++    assert.equal(guard.json?.exitCode, 1, 'the guard entrance must refuse without the build check');
++    assert.equal(guard.json?.data?.checks?.blocked, true);
++
++    // 2. guard --apply: refused AND the phase does not move.
++    const apply = comet(['guard', CHANGE, 'build', '--apply', '--json']);
++    assert.equal(apply.json?.exitCode, 1, 'a refused guard --apply must not pass');
++    assert.equal(phase(), 'build', 'a refused guard --apply must not advance the phase');
++
++    // 3. transition: the manual record-check declaration never satisfies it.
++    const transition = comet(['state', 'transition', CHANGE, 'build-complete', '--json']);
++    assert.equal(transition.json?.exitCode, 1, 'the transition entrance must refuse a manual declaration');
++    assert.ok(
++      (transition.json?.data?.issues ?? []).some((issue) => /Manual declarations never satisfy the guard/.test(issue.message ?? '')),
++      `the refusal must name the manual-declaration rule: ${JSON.stringify(transition.json?.data?.issues ?? []).slice(0, 200)}`,
++    );
++
++    // 4. next/continuation recovery: guidance, never a completion claim.
++    const next = comet(['state', 'next', CHANGE, '--json']);
++    assert.equal(next.json?.exitCode, 0);
++    const nextKind = next.json?.data?.nextAction?.kind ?? next.json?.agent?.continuation?.kind;
++    assert.equal(nextKind, 'plan', 'an interrupted run resumes as continuation guidance, not completion');
++
++    // 5. archive entrance outside the archive phase.
++    const archive = comet(['archive', CHANGE, '--json']);
++    assert.equal(archive.json?.exitCode, 1, 'the archive entrance must refuse outside the archive phase');
++    assert.match(plain(archive.json?.stderr), /FATAL: phase is 'build', expected 'archive'/);
++
++    // 6. dispatch entrance: a package whose entry file is not application.json.
++    const requestFile = path.join(scratch, 'request.json');
++    await fs.writeFile(requestFile, JSON.stringify({ operation: 'next', runId: CHANGE }));
++    const wrongName = comet(['runtime', 'dispatch', '--application-file', path.join(scratch, 'not-an-application.json'), '--request', requestFile, '--json']);
++    assert.equal(wrongName.status, 65, 'the dispatch entrance must refuse a wrong-name entry file');
++    assert.equal(wrongName.json?.error?.code, 'INVALID_WORKFLOW');
++
++    // 7. dispatch entrance: a missing package directory.
++    const missing = comet(['runtime', 'dispatch', '--application-file', path.join(scratch, 'missing-dir', 'application.json'), '--request', requestFile, '--json']);
++    assert.equal(missing.status, 70, 'the dispatch entrance must refuse a missing application package');
++    assert.equal(missing.json?.error?.code, 'RUNTIME_ERROR');
++    assert.match(missing.json?.error?.message ?? '', /ENOENT/);
++
++    // Registration consistency: the probe record cites these same refusals.
++    const entrances = await loadProbe('entrances-c07.json');
++    const byId = Object.fromEntries(entrances.records.map((record) => [record.id, record]));
++    assert.equal(byId['guard-preview']?.observed?.exitCode, 1);
++    assert.equal(byId['guard-apply']?.observed?.exitCode, 1);
++    assert.equal(byId['guard-apply']?.observed?.phaseAfter, 'build');
++    assert.equal(byId['transition-manual-declaration']?.observed?.exitCode, 1);
++    assert.equal(byId['next-continuation']?.observed?.kind, 'plan');
++    assert.equal(byId['archive-outside-phase']?.observed?.exitCode, 1);
++    assert.equal(byId['dispatch-entry-name']?.observed?.exitCode, 65);
++    assert.equal(byId['dispatch-missing-package']?.observed?.exitCode, 70);
++  } finally {
++    await fs.rename(settingsBackup, settingsFile);
++  }
++  assert.ok(await fs.access(settingsFile).then(() => true, () => false), 'the hook registration must be restored after the probes');
+ });
+ 
+-test('C08: bypass and recovery negatives — tampered phase file, manual record-check, forged seal and force-phase all refuse; the floating global upgrade attempt stays neutralized', async (t) => {
++test('C08 bypass negatives: the direct phase write, the forged phase file and the manual declaration cannot carry a gate (hooks absent)', async (t) => {
+   if (skipIfNoBuild(t)) return;
+   const record = await loadProbe('bypass-recovery.json');
+ 
+-  // (a) hand-edited phase file: downstream entrances still refuse.
+-  const cometYaml = path.join(project, 'docs/openspec/changes', CHANGE, '.comet.yaml');
+-  const original = await fs.readFile(cometYaml, 'utf8');
+-  await fs.writeFile(cometYaml, original.replace(/^phase: build$/m, 'phase: verify'));
+-  const tampered = gateVerdict(comet(['state', 'transition', CHANGE, 'verify-pass', '--json']));
+-  assert.equal(tampered.exitCode, 1, 'a tampered phase must not carry the verify gate');
+-  const tamperedArchive = comet(['archive', CHANGE, '--json']);
+-  assert.equal(tamperedArchive.json?.exitCode, 1, 'a tampered phase must not pass the archive entry checks');
+-  await fs.writeFile(cometYaml, original);
+-
+-  // (b) manual record-check declarations never satisfy the guard.
+-  const manual = comet(['state', 'record-check', CHANGE, 'build', '--command', 'node -e 0', '--exit-code', '0', '--json']);
+-  assert.equal(manual.json?.exitCode, 0, 'recording the manual declaration itself is allowed');
+-  const afterManual = gateVerdict(comet(['state', 'transition', CHANGE, 'build-complete', '--json']));
+-  assert.equal(afterManual.exitCode, 1, 'a manual declaration must not pass the gate');
+-  assert.match(afterManual.issues, /Manual declarations never satisfy the guard/);
+-
+-  // (c) a direct phase write refuses by default (the escape env is named).
+-  const refusedWrite = comet(['state', 'set', CHANGE, 'phase', 'archive', '--json']);
+-  assert.equal(refusedWrite.json?.exitCode, 1);
+-  assert.match(JSON.stringify(refusedWrite.json?.data ?? refusedWrite.json), /COMET_FORCE_PHASE/);
+-
+-  // (d) the floating global OpenSpec upgrade attempt is observed and
+-  // neutralized by the isolated environment (B6) — the stub npm log is the
+-  // witness that no real global mutation ran. The attempt only happens on a
+-  // host whose CLI is below the candidate, so a drifted pin skips honestly.
+-  const baselineToolchain = JSON.parse(await fs.readFile(path.join(changeRoot, 'toolchain-baseline.json'), 'utf8'));
+-  const hostBefore = spawnSync('openspec', ['--version'], { encoding: 'utf8', timeout: 30_000 });
+-  const hostPinned = hostBefore.status === 0 && hostBefore.stdout?.trim() === baselineToolchain.openspec.current;
+-  if (hostPinned) {
+-    const stubCalls = await fs.readFile(stubLog, 'utf8');
+-    assert.match(stubCalls, /npm install -g @fission-ai\/openspec@latest/,
+-      'classic init must attempt the floating global upgrade on a mismatched host (B6) — and the stub must have absorbed it');
+-    const hostAfter = spawnSync('openspec', ['--version'], { encoding: 'utf8', timeout: 30_000 });
+-    assert.equal(hostAfter.stdout?.trim(), baselineToolchain.openspec.current, 'the host-global CLI must remain at its pinned version after every probe');
+-  } else {
+-    t.skip(`host-global openspec is not at the toolchain-baseline pin ${baselineToolchain.openspec.current}; the B6 attempt probe premise does not hold here`);
+-  }
+-
+-  // (e) the fixed compatible environment is the isolated candidate install.
+-  const recordCompat = await loadProbe('openspec-compat.json');
+-  assert.equal(recordCompat.positive?.isolatedInstall, '.sdd/tools/openspec-1.11.0');
+-  if (isolatedOpenspecReady) {
+-    const version = spawnSync(nodeExecutable, [isolatedOpenspecBin, '--version'], { encoding: 'utf8', timeout: 60_000 });
+-    assert.equal(version.stdout?.trim(), '1.11.0', 'the isolated candidate must answer with its pinned version');
+-  } else {
+-    t.skip('isolated openspec 1.11.0 is not installed under .sdd/tools; run the isolated install (never a global upgrade)');
++  // Hooks absent again for the whole bypass session.
++  const settingsBackup = path.join(scratch, 'settings-bypass.moved');
++  await fs.rename(settingsFile, settingsBackup);
++  try {
++    // (a) direct phase write through the state command: refused by the CLI
++    // itself — it would bypass state machine evidence checks.
++    const direct = comet(['state', 'set', CHANGE, 'phase', 'archive', '--json']);
++    assert.equal(direct.json?.exitCode, 1, 'a direct phase write must be refused');
++    assert.ok(
++      (direct.json?.data?.issues ?? []).some((issue) => /Setting 'phase' directly is not allowed/.test(issue.message ?? '')),
++      'the refusal must name the evidence-check rule',
++    );
++
++    // (b) shell-forged phase in the change state file: the managed check
++    // verdict still demands the real verification receipt.
++    const stateFile = stateFileOf(CHANGE);
++    const original = await fs.readFile(stateFile, 'utf8');
++    await fs.writeFile(stateFile, original.replace(/^phase: build$/m, 'phase: archive'));
++    const check = comet(['state', 'check', CHANGE, 'archive', '--json']);
++    assert.equal(check.json?.exitCode, 1, 'a forged phase must not carry the archive entry');
++    assert.equal(check.json?.data?.checks?.blocked, true);
++    assert.match(JSON.stringify(check.json?.data?.issues ?? []), /verify_result/);
++    await fs.writeFile(stateFile, original);
++    assert.equal(comet(['state', 'get', CHANGE, 'phase']).stdout?.trim(), 'build', 'fixture must be restored state-independently');
++  } finally {
++    await fs.rename(settingsBackup, settingsFile);
+   }
+ 
+-  const bypass = record.records.find((entry) => entry.id === 'tampered-phase-file');
+-  assert.equal(bypass?.observed?.verifyPassExit, 1);
+-  assert.equal(bypass?.observed?.archiveExit, 1);
+-  const manualRecord = record.records.find((entry) => entry.id === 'manual-record-check');
+-  assert.equal(manualRecord?.observed?.transitionExit, 1);
+-  assert.match(manualRecord?.observed?.message ?? '', /Manual declarations never satisfy the guard/);
+-  const forged = record.records.find((entry) => entry.id === 'forged-seal');
+-  assert.equal(forged?.observed?.code, 'ARCHIVE_ENTRY_INVALID');
++  // Registration consistency.
++  const directRecord = record.records.find((entry) => entry.id === 'direct-phase-write');
++  assert.equal(directRecord?.observed?.exitCode, 1);
++  const tampered = record.records.find((entry) => entry.id === 'tampered-phase-file');
++  assert.equal(tampered?.observed?.checkExit, 1);
++  assert.equal(tampered?.observed?.blocked, true);
++  const manual = record.records.find((entry) => entry.id === 'manual-record-check');
++  assert.equal(manual?.observed?.recordExit, 0);
++  assert.equal(manual?.observed?.transitionExit, 1);
+ });
+ 
+ test('cleanup removes the scratch world', async (t) => {
+diff --git a/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/assembly-probes.json b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/assembly-probes.json
+new file mode 100644
+index 0000000..594aa4a
+--- /dev/null
++++ b/openspec/changes/delivery-foundation-rearchitecture/classic-integration-probes/assembly-probes.json
+@@ -0,0 +1,155 @@
++{
++  "schemaVersion": 1,
++  "task": "P1_5",
++  "revision": "2026-10-26-comet-050-adoption-v1",
++  "scope": "C01–C08 ASSEMBLY layer over the compiled composition package (integrations/comet/application/package, Comet 0.5.0 classic-full) and the P1_3 0.5.0 adapter: A/T extension independence at the same design checkpoint, P single plan surface with no second scheduling face, the classic.composition.confirm approval anchor preceding full.open, the nine-step replacement mapping (method variants vs managed domain-work skills), and the comet-executor six-gate receipt acceptance that has zero fallback outside the packaged bindings validators",
++  "environment": {
++    "node": "24.15.0",
++    "package": {
++      "root": "integrations/comet/application/package",
++      "runtimeVersion": "0.5.0",
++      "workflowId": "comet-classic-full",
++      "compositionHash": "dbcb0eeefd38dcfa8f9107240ebc870f423d78061a6037a7a6d913d27881b44b",
++      "contentHash": "f76778251fe6415ad946c26633ecfd293fc75bf11473d9e6df460fa572c50766",
++      "skills": 15,
++      "bindings": 15
++    },
++    "boundary": "assembly only: compiled artifacts + adapter + extension declarations. Installing the package into a live project and dispatching inside a real composition Run are P1_4/P3_2/VERIFY (UNVERIFIED here)",
++    "generatedBy": "P1_5 assembly probe generation (revision 2026-10-26-comet-050-adoption-v1); test/classic-integration.test.js re-runs every scenario fresh against the live package and adapter and must agree",
++    "reproduction": "node --test test/classic-integration.test.js"
++  },
++  "records": [
++    {
++      "id": "at-extensions-independent",
++      "entry": "package/application.json bindings + package/workflow.json steps/transitions",
++      "oracle": "A (architecture-consensus) and T (test-design-review) are separate extensions at the SAME full.design.evidence checkpoint, each with its own artifactRef bundle and its own validator; neither artifactRef nor validator is shared",
++      "observed": {
++        "sameCheckpoint": "full.design.evidence",
++        "chain": ["full.design.evidence", "classic.extension.architecture-consensus", "classic.extension.test-design-review", "full.build.configure"],
++        "aArtifactRef": ".sdd/delivery/gates/a/receipt-bundle.json",
++        "tArtifactRef": ".sdd/delivery/gates/t/receipt-bundle.json",
++        "aValidator": "comet-classic.extension.architecture-consensus-result",
++        "tValidator": "comet-classic.extension.test-design-review-result",
++        "artifactRefsDistinct": true,
++        "validatorsDistinct": true
++      }
++    },
++    {
++      "id": "at-cross-replay-refused",
++      "entry": "packaged bindings validators (package/bindings.mjs, via comet-executor acceptGateReceipt)",
++      "oracle": "gate evidence cannot be replayed across extensions: an A-bound pass payload is refused by the T validator and vice versa — A passing cannot substitute for T and vice versa",
++      "observed": {
++        "aPayloadOnT": "refused: payload is bound to gate A; gate evidence cannot be replayed across extensions",
++        "tPayloadOnA": "refused: payload is bound to gate T; gate evidence cannot be replayed across extensions"
++      }
++    },
++    {
++      "id": "plan-single-surface",
++      "entry": "package/workflow.json steps + package/application.json build-plan-unique binding + extensions/build-plan-unique.json",
++      "oracle": "the plan surface is single-authority: exactly one step produces a plan (full.build.plan, the managed claude-parallel-tdd-planner variant), exactly one await_evidence of kind classic-build-plan judges it, and exactly one extension (build-plan-unique, gate P) binds the single plan receipt-bundle artifact",
++      "observed": {
++        "planOutputSteps": ["full.build.plan"],
++        "planEvidenceSteps": ["full.build.plan.evidence"],
++        "extension": "build-plan-unique",
++        "artifactRefs": [".sdd/delivery/gates/p/receipt-bundle.json"],
++        "validator": "sdd.delivery.gate.p",
++        "afterStep": "full.build.plan.evidence"
++      }
++    },
++    {
++      "id": "no-second-scheduling-surface",
++      "entry": "package/workflow.json stateSchema + steps + the adapter's runtime dispatch construction",
++      "oracle": "no second scheduling surface exists in the assembled workflow: the state schema carries exactly one plan field, only one step declares a plan output, and the single dispatch entry for a composition Run is comet runtime dispatch --application-file (the adapter refuses --application/--workflow selectors)",
++      "observed": {
++        "stateSchemaPlanFields": ["plan"],
++        "stepsDeclaringPlanOutput": 1,
++        "dispatchSelectors": ["--application-file"],
++        "forbiddenSelectorsAbsent": ["--application", "--workflow"]
++      }
++    },
++    {
++      "id": "approval-anchor-precedes-open",
++      "entry": "package/workflow.json entry + transitions + classic.composition.confirm step",
++      "oracle": "user approval is the sequence precondition of full.open: the workflow entry is classic.composition.prepare, prepare only transitions to the ask_user classic.composition.confirm, and only the approved choice reaches full.open — no direct prepare→full.open edge exists",
++      "observed": {
++        "entry": ["classic.composition.prepare"],
++        "prepareSucceedsTo": ["classic.composition.confirm"],
++        "confirmApprovedTo": "full.open",
++        "confirmRejectedTo": "classic.composition.confirm",
++        "directPrepareToOpen": false,
++        "confirmType": "ask_user",
++        "confirmChoices": ["approved", "rejected"]
++      }
++    },
++    {
++      "id": "work-bindings-anchored-extensions-read-only",
++      "entry": "package/application.json bindings authorization anchors",
++      "oracle": "every write-side-effect work binding (the nine replaced execution steps) carries authorizationFrom classic.composition.confirm with authorizationChoices [approved]; the six read-only gate extension bindings carry no anchor",
++      "observed": {
++        "anchoredWorkBindings": 9,
++        "anchor": "classic.composition.confirm",
++        "anchorChoices": ["approved"],
++        "unanchoredGateBindings": 6,
++        "unanchoredCapabilities": ["grill-me.gate", "multi-agent-consensus-review.gate", "test-authoring.gate", "claude-parallel-tdd-planner.gate", "whitebox-verify.gate", "openspec-lifecycle-guard.gate"]
++      }
++    },
++    {
++      "id": "nine-step-mapping",
++      "entry": "composition.json replacements + managedSkillVariants mapped onto package/application.json skills",
++      "oracle": "the nine invoke_skill steps of classic-full map to distinct managed skills: method steps run on build-time verbatim variants of the packaged P1_6 method skills (method skills ARE the execution skills), domain steps run on managed domain-work skills, and every id is unique across the workflow",
++      "observed": {
++        "replacements": 9,
++        "distinctIds": true,
++        "methodVariants": [
++          { "stepId": "full.design.handoff", "skillId": "grill-me-full-design-handoff", "base": "grill-me" },
++          { "stepId": "full.design.document", "skillId": "grill-me-full-design-document", "base": "grill-me" },
++          { "stepId": "full.build.plan", "skillId": "claude-parallel-tdd-planner-full-build-plan", "base": "claude-parallel-tdd-planner" },
++          { "stepId": "full.build.execute", "skillId": "tdd-full-build-execute", "base": "tdd" }
++        ],
++        "domainWork": [
++          { "stepId": "full.open", "skillId": "comet-open-full-open" },
++          { "stepId": "full.build.configure", "skillId": "comet-build-full-build-configure" },
++          { "stepId": "full.verify.run", "skillId": "comet-verify-full-verify-run" },
++          { "stepId": "full.archive.prepare", "skillId": "comet-archive-full-archive-prepare" },
++          { "stepId": "full.archive.deliver", "skillId": "comet-archive-full-archive-deliver" }
++        ],
++        "extensionSkills": 6
++      }
++    },
++    {
++      "id": "executor-six-gate-packaged-acceptance",
++      "entry": "lib/adapters/comet-executor.js createCometExecutor + acceptGateReceipt over the packaged bindings validators",
++      "oracle": "a gate pass receipt is accepted ONLY through the packaged bindings validator of that gate (pure SDD.Gate.v1 evaluation of the gateEvidence payload); the composition declares exactly the six managed gates R/A/T/P/V/Kp and Kt is not an extension",
++      "observed": {
++        "gates": ["R", "A", "T", "P", "V", "Kp"],
++        "acceptedExample": { "gate": "A", "validatorId": "sdd.delivery.gate.a", "extensionId": "architecture-consensus" },
++        "ktRegisteredAsExtension": false,
++        "ktMechanism": "upstream-minimal-patch-0005"
++      }
++    },
++    {
++      "id": "executor-unregistered-and-nonpass-refused",
++      "entry": "comet-executor acceptGateReceipt negative face",
++      "oracle": "fail closed: an unregistered gate (Kt, X) is refused outright (ACTION_NOT_REGISTERED), a non-pass verdict claim never reaches a validator (EXTENSION_OUTCOME_INVALID), a payload without gateEvidence is refused by the validator, blocked coverage is refused with the blocked reasons, and the authority never signs outside an executor-scoped native call",
++      "observed": {
++        "unregisteredGate": "ACTION_NOT_REGISTERED",
++        "nonPassVerdict": "EXTENSION_OUTCOME_INVALID",
++        "missingPayload": "refused: the extension result carries no gateEvidence payload",
++        "blockedCoverage": "refused: SDD gate V blocked (MISSING_OBSERVATION)",
++        "ambientSigning": "ORIGINAL_NATIVE_CALL_REQUIRED"
++      }
++    },
++    {
++      "id": "kt-predicate-single-run-parking",
++      "entry": "lib/adapters/comet.js knowledgeCloseoutBlocked (patch 0005 read-side predicate) + comet-executor ktCloseout",
++      "oracle": "Kt parks the SAME Run instead of completing: fail-open for every state without the optional field, blocked only while required===true and completed!==true, with the write path honestly UNVERIFIED (supply/admission wave)",
++      "observed": {
++        "absentFieldBlocks": false,
++        "requiredUnmetBlocks": true,
++        "requiredCompletedBlocks": false,
++        "overallCompletionEligibleWhenBlocked": false,
++        "writePath": "UNVERIFIED"
++      }
++    }
++  ]
++}
