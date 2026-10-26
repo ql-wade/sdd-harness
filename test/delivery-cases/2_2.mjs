@@ -38,7 +38,7 @@ function runNodeTest(root, target) {
   // so the spawned run is a real top-level execution.
   const env = { ...process.env };
   delete env.NODE_TEST_CONTEXT;
-  return spawnSync(process.execPath, ['--test', target], { cwd: root, encoding: 'utf8', timeout: 60000, env });
+  return spawnSync(process.execPath, ['--test', '--test-reporter=tap', target], { cwd: root, encoding: 'utf8', timeout: 60000, env });
 }
 
 function makeProject(files) {
