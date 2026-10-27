@@ -1,4 +1,16 @@
 // P5_1 delivery case — rework (rework-seven-p1-r1), branch rework/p5-1, base 2b1e145.
+// Revision 2026-10-26-comet-050-adoption-v1: the parent-revalidation instrument
+// (5.1.a-4) now validates the CURRENT regenerated acceptance-index (schema 2,
+// 104 scenarios / 130 required checks, summary tallies derived from the
+// artifact's own status vocabulary, rw_completion coherence, on-disk
+// case-module pointers) — the 92/118 denominators of the prior run's index no
+// longer apply; the machine enablement record moved to the preserved replans
+// copy of the adjudicated architecture.md; the platform matrix gains the
+// zcode-session host (the real successor-controller session that executed
+// this revision) and the machine dimension registers the local availability
+// of the other registered agent CLIs (claude/codex) plus fresh 2026-10-27
+// in-session measurements. Acceptance events of the current revision
+// (*_ACCEPTED_COMET_050) must bind to real plan nodes and stay file-ordered.
 //
 // 5.1.a multi-worktree/DAG ordered integration over REAL run data, and 5.1.b the
 // per-host capability matrix, including the reworked additions:
@@ -86,6 +98,32 @@ function forTask(events, kind, task) {
 // Authorized reopen chain kinds on record (real events, real vocabulary).
 const REOPEN_KINDS = ['SEVEN_P1_REPLAN_AUTHORIZED', 'SEVEN_P1_HANDOFF_VALIDATED', 'HALT_AND_REPLAN'];
 const ACCEPTANCE_TASK = 'VERIFY';
+// Current-revision (comet-050 / command-first) acceptance events: the
+// controller's append-only per-plan-node acceptance vocabulary. Each must bind
+// to a REAL plan node and the class must stay file-ordered (append-only).
+const ACCEPTED_EVENT_RE = /^([A-Z][0-9]_\d+)_ACCEPTED_(?:COMET_050|COMMAND_FIRST)$/;
+const PLAN_TASK_IDS = [
+  'P0_1', 'P0_2', 'P0_3', 'P0_4', 'P1_1', 'P1_2', 'P1_3', 'P1_4', 'P1_5', 'P1_6',
+  'P2_1', 'P2_2', 'P2_3', 'P2_4', 'P2_5', 'P3_1', 'P3_2', 'P3_3', 'P3_4',
+  'P4_1', 'P4_2', 'P4_3', 'P4_4', 'P4_5', 'P4_6', 'P4_7', 'P4_8',
+  'P5_1', 'P5_2', 'P5_3', 'VERIFY',
+  'I01', 'I02', 'I03', 'I04', 'I05', 'I06', 'I07', 'I08',
+];
+function checkCurrentRunAcceptances(events) {
+  const v = [];
+  let prev = Number.NEGATIVE_INFINITY;
+  let seen = 0;
+  for (const e of events) {
+    const m = String(e.event ?? e.type ?? e.kind ?? '').match(ACCEPTED_EVENT_RE);
+    if (!m) continue;
+    seen += 1;
+    if (!PLAN_TASK_IDS.includes(m[1])) v.push(`acceptance event ${e.kind} binds to unknown plan node ${m[1]}`);
+    if (ts(e) < prev) v.push(`acceptance event ${e.kind} out of file order at ${e.at}`);
+    prev = ts(e);
+  }
+  if (seen < 15) v.push(`expected >=15 plan-node acceptance events on record, got ${seen}`);
+  return { ok: v.length === 0, violations: v };
+}
 
 // (1) parallel isolation -----------------------------------------------------
 function checkIsolation({ events, worktrees }) {
@@ -231,20 +269,25 @@ function checkParentRevalidation(events) {
   return { ok: v.length === 0, violations: v };
 }
 
-// (3b) parent re-validation instrument: the regenerated four-layer index -----
+// (3b) parent re-validation instrument: the regenerated index (comet-050
+// revision shape: scenario layers + status_rule vocabulary + status tallies +
+// rw_completion judge + case-module pointers). Same strength as the prior
+// four-layer summary check — hand-edited summaries, stripped layers, dangling
+// pointers and premature completion are all rejected (negatives below).
 const LAYERS = ['component_pass', 'env_qualification', 'same_run_finality'];
-const DENOMINATORS = { scenarios: 92, requiredChecks: 118 };
+const DENOMINATORS = { scenarios: 104, requiredChecks: 130 };
 function checkParentInstrument(index) {
   const v = [];
-  if (index.schema_version !== 2) v.push(`index schema_version ${index.schema_version} != 2 (regenerated four-layer index required)`);
+  if (index.schema_version !== 2) v.push(`index schema_version ${index.schema_version} != 2 (regenerated index required)`);
   const scenarios = index.scenarios ?? {};
   const ids = Object.keys(scenarios);
   if (ids.length !== DENOMINATORS.scenarios) {
     v.push(`index holds ${ids.length} scenarios, denominator is ${DENOMINATORS.scenarios}`);
   }
-  const checks = Object.keys(index.required_checks ?? {});
-  if (checks.length !== DENOMINATORS.requiredChecks) {
-    v.push(`index holds ${checks.length} required checks, denominator is ${DENOMINATORS.requiredChecks}`);
+  const checks = index.required_checks ?? {};
+  const checkIds = Object.keys(checks);
+  if (checkIds.length !== DENOMINATORS.requiredChecks) {
+    v.push(`index holds ${checkIds.length} required checks, denominator is ${DENOMINATORS.requiredChecks}`);
   }
   // status vocabulary comes from the index's own status_rule keys — the
   // artifact adjudicates itself; hand-edited statuses fall outside it.
@@ -258,47 +301,88 @@ function checkParentInstrument(index) {
     }
     if (!vocab.has(entry.deployment_status)) v.push(`${id}/deployment_status: "${entry.deployment_status}" outside status_rule vocabulary`);
     if (!vocab.has(entry.scenario_status)) v.push(`${id}/scenario_status: "${entry.scenario_status}" outside status_rule vocabulary`);
+    // cross-reference: every check a scenario counts must exist in the index
+    for (const rc of entry.required_checks ?? []) {
+      if (!checks[rc]) v.push(`${id}: references unknown required check ${rc}`);
+    }
   }
-  // summary must be consistent with the scenarios it summarizes
+  // required-check entries: the artifact carries two families — the scenario
+  // journey checks (layer = one of the three scenario layers: status_rule
+  // vocabulary, and a resolvable case module either on the check itself or on
+  // a scenario that counts it) and the supporting/gate checks
+  // (supporting_cli_check / gate_support / undefined: the summary tally
+  // vocabulary PASS/FAIL/UNVERIFIED).
+  const tallyVocab = new Set(['PASS', 'FAIL', 'UNVERIFIED']);
+  const checksCoveredByModule = new Set();
+  for (const entry of Object.values(scenarios)) {
+    if (typeof entry.case_module === 'string' && entry.case_module.length > 0) {
+      for (const rc of entry.required_checks ?? []) checksCoveredByModule.add(rc);
+    }
+  }
+  for (const [id, entry] of Object.entries(checks)) {
+    if (LAYERS.includes(entry.layer)) {
+      if (!vocab.has(entry.status)) v.push(`${id}: check status "${entry.status}" outside status_rule vocabulary`);
+      const hasOwnModule = typeof entry.case_module === 'string' && entry.case_module.length > 0;
+      if (!hasOwnModule && !checksCoveredByModule.has(id)) {
+        v.push(`${id}: scenario-layer check has no case_module of its own and no covering scenario module`);
+      }
+    } else if (!tallyVocab.has(entry.status)) {
+      v.push(`${id}: supporting/gate check status "${entry.status}" outside the PASS/FAIL/UNVERIFIED tally vocabulary`);
+    }
+  }
+  // summary must be consistent with the entries it summarizes (the artifact's
+  // own summary vocabulary: VERIFIED scenarios vs NOT_VERIFIED everything
+  // else; supporting_pass/failed/not_executed mirror PASS/FAIL/UNVERIFIED).
   const summary = index.summary ?? {};
-  if (summary.scenarios !== ids.length) v.push(`summary.scenarios ${summary.scenarios} != scenario count ${ids.length}`);
-  for (const layer of LAYERS) {
-    const counted = {};
-    for (const entry of Object.values(scenarios)) {
-      const s = entry?.[layer]?.status;
-      if (s) counted[s] = (counted[s] ?? 0) + 1;
-    }
-    const declared = summary.layer_statuses?.[layer] ?? {};
-    for (const [status, n] of Object.entries(declared)) {
-      if (counted[status] !== n) v.push(`summary.layer_statuses.${layer}.${status}=${n} but scenarios hold ${counted[status] ?? 0}`);
-    }
-    const declaredTotal = Object.values(declared).reduce((a, b) => a + b, 0);
-    if (declaredTotal !== ids.length) v.push(`summary.layer_statuses.${layer} totals ${declaredTotal} != ${ids.length}`);
+  if (summary.total !== ids.length) v.push(`summary.total ${summary.total} != scenario count ${ids.length}`);
+  if (summary.required_checks !== checkIds.length) v.push(`summary.required_checks ${summary.required_checks} != check count ${checkIds.length}`);
+  const scenarioTally = { VERIFIED: 0, NOT_VERIFIED: 0 };
+  for (const entry of Object.values(scenarios)) {
+    scenarioTally[entry.scenario_status === 'VERIFIED' ? 'VERIFIED' : 'NOT_VERIFIED'] += 1;
   }
-  // the completion judge must exist and be coherent
+  for (const key of Object.keys(scenarioTally)) {
+    if (summary[key] !== scenarioTally[key]) v.push(`summary.${key}=${summary[key]} but scenarios tally ${scenarioTally[key]}`);
+  }
+  const checkTally = { supporting_pass: 0, failed: 0, not_executed: 0 };
+  for (const entry of Object.values(checks)) {
+    const key = entry.status === 'PASS' ? 'supporting_pass' : entry.status === 'FAIL' ? 'failed' : 'not_executed';
+    checkTally[key] += 1;
+  }
+  for (const [key, n] of Object.entries(checkTally)) {
+    if (summary[key] !== n) v.push(`summary.${key}=${summary[key]} but required checks tally ${n}`);
+  }
+  // the completion judge must exist, stay coherent with the tallies and with
+  // the registered open-P1 list
   const rw = index.rw_completion ?? {};
   if (rw.rule !== 'RW_COMPLETION_REQUIRED') v.push(`rw_completion.rule "${rw.rule}" != RW_COMPLETION_REQUIRED`);
   if (typeof rw.complete !== 'boolean') v.push('rw_completion.complete is not a boolean');
-  for (const [k, n] of Object.entries(rw.blocking ?? {})) {
+  const blocking = rw.blocking ?? {};
+  if (blocking.checks_failed !== checkTally.failed) v.push(`rw_completion.blocking.checks_failed ${blocking.checks_failed} != FAIL tally ${checkTally.failed}`);
+  if (blocking.checks_not_executed !== checkTally.not_executed) v.push(`rw_completion.blocking.checks_not_executed ${blocking.checks_not_executed} != UNVERIFIED tally ${checkTally.not_executed}`);
+  if (blocking.scenarios_not_closed !== scenarioTally.NOT_VERIFIED) v.push(`rw_completion.blocking.scenarios_not_closed ${blocking.scenarios_not_closed} != open scenario tally ${scenarioTally.NOT_VERIFIED}`);
+  const openP1 = index.open_p1 ?? [];
+  if (blocking.open_p1 !== openP1.length) v.push(`rw_completion.blocking.open_p1 ${blocking.open_p1} != registered open_p1 list ${openP1.length}`);
+  for (const [k, n] of Object.entries(blocking)) {
     if (typeof n !== 'number' || n < 0) v.push(`rw_completion.blocking.${k} is not a non-negative number`);
+  }
+  // while any check is not passing, completion must stay false
+  if (rw.complete === true && (checkTally.failed + checkTally.not_executed > 0 || scenarioTally.NOT_VERIFIED > 0)) {
+    v.push('rw_completion.complete=true while failed/not-executed checks or open scenarios remain');
   }
   return { ok: v.length === 0, violations: v };
 }
 function indexPointersResolve(index, root) {
   const v = [];
-  const sha = /^[0-9a-f]{7,40}$/;
   for (const [id, entry] of Object.entries(index.scenarios ?? {})) {
+    if (typeof entry.case_module === 'string' && entry.case_module.length > 0) {
+      if (!fs.existsSync(path.join(root, entry.case_module))) v.push(`${id}: case_module does not resolve: ${entry.case_module}`);
+    }
     for (const layer of LAYERS) {
       const evs = entry?.[layer]?.evidence ?? [];
       for (const ptr of (Array.isArray(evs) ? evs : [evs])) {
+        if (ptr === undefined || ptr === null) continue;
         const rel = String(ptr).split(' :: ')[0].trim();
         if (rel.startsWith('/') || rel.includes('..')) { v.push(`${id}: non-repo-relative pointer ${rel}`); continue; }
-        const m = rel.match(/^commit:([0-9a-f]{7,40})$/);
-        if (m) {
-          const out = spawnSync('git', ['cat-file', '-t', m[1]], { cwd: root, encoding: 'utf8' });
-          if (out.status !== 0 || !sha.test(m[1])) v.push(`${id}: commit locator does not resolve: ${m[1]}`);
-          continue;
-        }
         if (!fs.existsSync(path.join(root, rel))) v.push(`${id}: pointer does not resolve: ${rel}`);
       }
     }
@@ -341,6 +425,10 @@ const HOST_SPECIFIC_EVIDENCE = {
   ],
   'code-wiki': [
     'lib/adapters/code-wiki.js',
+  ],
+  'zcode-session': [
+    'openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/',
+    'test/delivery-cases/5_1.mjs',
   ],
 };
 // Machine-measured evidence roots: only the machine that produced them may
@@ -585,12 +673,59 @@ test('5.1.a-3 parent re-validation: child green never closes the parent goal (ta
   assert.deepStrictEqual(res.violations, [], `parent-revalidation violations: ${res.violations.join('; ')}`);
 });
 
-test('5.1.a-4 parent re-validation instrument: four-layer index consistent, denominators held, pointers resolve', () => {
+test('5.1.a-4 parent re-validation instrument: index consistent, denominators held, pointers resolve', () => {
   const index = loadIndex();
   const res = checkParentInstrument(index);
   assert.deepStrictEqual(res.violations, [], `instrument violations: ${res.violations.join('; ')}`);
   const res2 = indexPointersResolve(index, projectRoot);
   assert.deepStrictEqual(res2.violations, [], `instrument pointer violations: ${res2.violations.join('; ')}`);
+});
+
+test('5.1.a-4b current-revision acceptance events bind to real plan nodes and stay file-ordered', () => {
+  const res = checkCurrentRunAcceptances(loadLedger());
+  assert.deepStrictEqual(res.violations, [], `acceptance-binding violations: ${res.violations.join('; ')}`);
+});
+
+test('5.1.a-4 negatives: hand-edited summary / stripped layer / dangling pointer / premature completion / forged acceptance are rejected', () => {
+  const index = loadIndex();
+
+  // a hand-edited summary (VERIFIED bumped without any scenario behind it)
+  const cooked = structuredClone(index);
+  cooked.summary.VERIFIED = 1;
+  cooked.summary.NOT_VERIFIED = 103;
+  const n1 = checkParentInstrument(cooked);
+  assert.equal(n1.ok, false, 'a hand-edited summary must be rejected');
+  assert.ok(n1.violations.some((x) => x.includes('summary.VERIFIED')), n1.violations.join('; '));
+
+  // a stripped layer
+  const stripped = structuredClone(index);
+  delete stripped.scenarios.A01.component_pass;
+  const n2 = checkParentInstrument(stripped);
+  assert.equal(n2.ok, false, 'a stripped layer must be rejected');
+  assert.ok(n2.violations.some((x) => x.includes('A01: layer component_pass missing')), n2.violations.join('; '));
+
+  // a dangling case-module pointer
+  const dangling = structuredClone(index);
+  dangling.scenarios.A01.case_module = 'test/delivery-cases/does-not-exist.mjs';
+  const n3 = indexPointersResolve(dangling, projectRoot);
+  assert.equal(n3.ok, false, 'a dangling case-module pointer must be rejected');
+  assert.ok(n3.violations.some((x) => x.includes('does-not-exist')), n3.violations.join('; '));
+
+  // premature completion while blocking work remains
+  const premature = structuredClone(index);
+  premature.rw_completion.complete = true;
+  const n4 = checkParentInstrument(premature);
+  assert.equal(n4.ok, false, 'premature completion must be rejected');
+  assert.ok(n4.violations.some((x) => x.includes('complete=true while')), n4.violations.join('; '));
+
+  // a forged acceptance event binding to an invented plan node (well-shaped
+  // node id, never part of the plan)
+  const forgedAcceptance = {
+    event: 'P9_9_ACCEPTED_COMET_050', at: '2026-10-27T00:00:00.000000+00:00', review: 'APPROVE',
+  };
+  const n5 = checkCurrentRunAcceptances([...loadLedger(), forgedAcceptance]);
+  assert.equal(n5.ok, false, 'an acceptance event for an invented node must be rejected');
+  assert.ok(n5.violations.some((x) => x.includes('unknown plan node')), n5.violations.join('; '));
 });
 
 test('5.1.a negatives: forged isolation / child-green-as-parent-pass / integrate-before-review / unclosable run are rejected', () => {

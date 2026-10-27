@@ -1,0 +1,49 @@
+# ZCode session host probes — 2026-10-27T05:09:32Z
+
+## host identity
+$ hostname
+MacBook-Wade-7.local
+$ uname -srm
+Darwin 24.6.0 arm64
+
+## command discovery (which + version)
+$ which node git claude codex comet openspec 2>&1
+node: /Users/mac/.nvm/versions/node/v22.13.1/bin/node
+git: /opt/homebrew/bin/git
+claude: /Users/mac/.local/bin/claude
+codex: /Users/mac/.nvm/versions/node/v22.13.1/bin/codex
+comet: /Users/mac/.nvm/versions/node/v22.13.1/bin/comet
+openspec: /Users/mac/.nvm/versions/node/v22.13.1/bin/openspec
+
+$ node --version
+v22.13.1
+$ git --version
+git version 2.40.1
+$ claude --version
+2.1.304 (Claude Code)
+$ codex --version
+codex-cli 0.163.0
+
+## session sandbox write-protection channel probes (real outcomes, gap is a gap)
+$ sysctl -n kern.hostname
+MacBook-Wade-7.local
+exit=0
+$ docker info (socket reachability)
+Client:
+ Version:    29.6.2
+ Context:    desktop-linux
+exit=
+
+## live worktree corroboration
+$ git worktree list --porcelain | grep -c '^worktree '
+73
+
+## docker daemon reachability (full)
+29.6.2
+exit=0
+
+## loopback HTTP probe (3000 = Outline via docker, kernel LISTEN per prior probes)
+200 exit=0
+
+## sandbox write boundary probe: write outside workspace (HOME scratch)
+WROTE_HOME_SCRATCH ok

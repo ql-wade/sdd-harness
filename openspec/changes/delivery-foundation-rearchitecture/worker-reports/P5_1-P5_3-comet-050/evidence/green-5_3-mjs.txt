@@ -1,0 +1,24 @@
+✔ J1: the runbook carries ≥10 machine-verified commands whose entries exist and whose direct rows really run with the documented exit codes (832.132292ms)
+✔ J1 negative: a runbook copy with a removed command row fails the ≥10 inventory contract (deleting runbook commands is caught mechanically) (0.632625ms)
+✔ J2: the three recovery drill receipts are structurally honest — monotonic real timestamps, monotonic attempts, one operationKey per drill, real exit codes (1.086167ms)
+✔ J2: the drills re-run live through the real executor with the same VERIFIED outcome (41119.551916ms)
+✔ J2 negative: a forged receipt timestamp (non-monotonic, and in the future) is rejected by the validator (2.752083ms)
+✔ J3: version rollback over the real protocol — unapproved and wrong-digest rollbacks are refused (exit 2), the approved same-digest rollback verifies (exit 0) and I06 independently confirms (282.420125ms)
+✔ J3b: the git-level rollback recipe (5.3.b) is machine-checkable — mandatory steps, real entries, known-set fail-closed expectation (1.317ms)
+✔ J3b negative (mutation M4): a rollback recipe with a mandatory recovery step deleted is refused (0.238042ms)
+✔ J4: the capability boundary ledger verifies single-host lease/fencing/background/rollback with on-disk evidence and records the cross-machine boundary honestly (1.305083ms)
+✔ J4 negative (mutation M1): marking a NOT_ENABLED cross-machine capability as VERIFIED is refused (not-enabled never passes) (0.49575ms)
+✔ J4 negative (mutation M2): a shared-local-directory masquerade of a cross-machine capability is refused (0.509917ms)
+✔ J4 negative (mutation M3): deleting the recheck triggers (or leaving them topic-incomplete) is refused (0.425083ms)
+✔ J4: the v2 enablement gate readback stays honestly closed — status OK with UNVERIFIED_NOT_ENABLED, start/release/implement denied, runtime records never trusted (185.713583ms)
+✔ J4: gate, machine matrix and capability ledger are same-source on the wildcard default-deny (1.284375ms)
+✔ J4: the runbook carries the v2 gate form, every known environment gate verbatim and the rework-run boundaries; no stale legacy reference survives (4.082125ms)
+✔ J4 negative: a runbook copy that hides one known environment gate is rejected (1.127625ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 42492.624083

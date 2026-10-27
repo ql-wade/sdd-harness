@@ -17,16 +17,26 @@
 //                                     SIGKILL enables it, epoch increments
 //                                     monotonically, masquerade approvals are
 //                                     refused (I08 BackupInfra/AuthorityTransfer).
-//   drill 3  lease-contention           the real Comet Classic state lock:
-//                                     double-open is rejected while a live
-//                                     holder owns .comet-state.lock; a real
-//                                     SIGKILL of the holder lets the next real
-//                                     CLI command recover the lease and resume
-//                                     the SAME operation idempotently; a
-//                                     planted real-schema transaction journal
+//   drill 3  lease-contention           the real Comet Classic state lock
+//                                     (0.5.0 composition-era surface, revision
+//                                     2026-10-26-comet-050-adoption-v1): the
+//                                     managed gate/dispatch classic face is
+//                                     retired, so the drill drives the real
+//                                     `comet state init/set` face and the
+//                                     per-change runtime lock under the
+//                                     workspace runtime root. Double-open is
+//                                     rejected while a live holder owns the
+//                                     lock; a real SIGKILL of the holder lets
+//                                     the next real CLI command recover the
+//                                     lease and re-apply the SAME write
+//                                     idempotently; a planted real-schema
+//                                     transaction journal at the runtime root
 //                                     is recovered on the next lock
-//                                     acquisition; a foreign-host lock owner is
-//                                     never recovered (cross-machine boundary).
+//                                     acquisition (a journal left in the
+//                                     LEGACY change dir is conservatively
+//                                     refused by the migration fence); a
+//                                     foreign-host lock owner is never
+//                                     recovered (cross-machine boundary).
 //
 // Usage:
 //   node run-drills.mjs --drill <1|2|3> --out <receipt.json> [--node <node>] [--json]
@@ -48,7 +58,7 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const MONITOR_CLI = path.join(projectRoot, 'tools/infra/monitor.mjs');
 const BACKUP_CLI = path.join(projectRoot, 'tools/infra/backup-restore.mjs');
 
-const HOST_PATH_REDACTION = /(^|[\s"'=(:/])\/(Users|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
+const HOST_PATH_REDACTION = /(^|[\s"'=(:/：=（])\/(Users|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
 const redact = (text) => String(text ?? '').replace(HOST_PATH_REDACTION, '$1<host-path-redacted>');
 const nowIso = () => new Date().toISOString();
 const EXIT_PASS = 0;
@@ -288,7 +298,26 @@ async function drill2(nodeExe) {
     : 'one or more fencing steps did not verify; see steps');
 }
 
-// --- drill 3: Comet Classic lease contention + recovery ----------------------
+// --- drill 3: Comet Classic lease contention + recovery (0.5.0 surface) ------
+//
+// Revision 2026-10-26-comet-050-adoption-v1: the 0.4.5 managed classic face
+// (`state init <change> full --managed-delivery` + `state dispatch-gate`) is
+// RETIRED in the pinned 0.5.0 build — it refuses with a usage error, and the
+// gates moved to the composition runtime (`comet runtime dispatch`). The
+// classic state face that still exists is `comet state init/set/get`; its
+// per-change state lock lives under the workspace runtime root
+// (<HOME>/.comet/workspaces/<id>/runtime/classic-changes/<uuid>/.comet-state.lock),
+// and the legacy change-dir `.comet-state.lock` location is now a migration
+// FENCE. This drill drives the real 0.5.0 face end to end:
+//   init -> state init -> baseline locked write -> (a) EEXIST second open of
+//   the REAL lock while a live holder owns it -> (b) real CLI write refused
+//   (lock timeout) while the lease is held -> (c) real SIGKILL of the holder:
+//   the next real CLI write recovers the lease and re-applies the same write
+//   idempotently -> (d) a planted real-schema transaction journal AT THE
+//   RUNTIME ROOT is recovered on the next lock acquisition (a journal left in
+//   the legacy change dir is conservatively refused by the migration fence —
+//   recorded as an honest refusal step) -> (e) a foreign-host lock owner is
+//   never recovered.
 
 async function drill3(nodeExe) {
   const build = resolveCometBuild();
@@ -296,7 +325,7 @@ async function drill3(nodeExe) {
     const receipt = newReceipt('lease-contention', 'comet-classic/lease:.comet-state.lock');
     return finalize(receipt, false, 'the patched Comet build is not present under .sdd — run tools/comet/prepare-source.mjs && tools/comet/build.mjs first');
   }
-  const receipt = newReceipt('lease-contention', `comet-classic/lease:.comet-state.lock:${build.fingerprint.slice(0, 12)}`);
+  const receipt = newReceipt('lease-contention', `comet-classic/lease:runtime-root/.comet-state.lock:${build.fingerprint.slice(0, 12)}`);
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'p53-drill3-'));
   const project = path.join(scratch, 'managed');
   const fakeHome = path.join(scratch, 'home');
@@ -329,56 +358,64 @@ exit 0
   };
   let ok = true;
   try {
-    // World: real init + a change driven to a dispatchable gate (R accepted).
+    // World: real init + a real classic change with one writable field.
     const init = comet(['init', project, '--yes', '--scope', 'project', '--workflow', 'classic', '--platform', 'claude', '--codegraph', 'skip', '--language', 'en'], { timeout: 300_000 });
     addStep(receipt, { step: 'comet-init-scratch-project', command: 'comet init <scratch> --yes --scope project --workflow classic --platform claude --codegraph skip --language en', exitCode: init.code, detail: `duration ${init.durationMs}ms (pinned node ${path.basename(nodeExe)})` });
     ok = ok && init.code === 0;
     if (!ok) return finalize(receipt, false, 'comet init failed — scratch world not established');
 
     const dir = path.join(project, 'docs/openspec/changes', change);
-    const plansDir = path.join(project, 'docs/superpowers/plans');
     fs.mkdirSync(dir, { recursive: true });
-    fs.mkdirSync(plansDir, { recursive: true });
-    fs.mkdirSync(path.join(project, 'src'), { recursive: true });
     fs.writeFileSync(path.join(dir, 'proposal.md'), '# Proposal\n\nLease drill.\n');
     fs.writeFileSync(path.join(dir, 'tasks.md'), '# Tasks\n\n- [ ] 1.1 Implement probe product code\n');
-    fs.writeFileSync(path.join(dir, 'design.md'), `---\ncomet_change: ${change}\nrole: technical-design\ncanonical_spec: openspec\n---\n\n# Design\n\nLease drill design v1.\n`);
-    fs.writeFileSync(path.join(dir, 'test-intent.md'), '# Test Intent\n\ncases: c1\noracle: probe behavior observed\n');
-    fs.writeFileSync(path.join(plansDir, `${change}-plan.md`), '# Plan\n\n- 1.1 Implement probe product code\n');
-    fs.writeFileSync(path.join(project, 'src/feature.js'), 'export const v1 = 1;\n');
+    fs.writeFileSync(path.join(dir, 'design.md'), '# Design\n\nLease drill design v1.\n');
+    fs.writeFileSync(path.join(dir, 'design2.md'), '# Design\n\nLease drill design v2.\n');
     const rel = `docs/openspec/changes/${change}`;
-    const drive = (cliArgs) => comet(cliArgs);
-    const sinit = drive(['state', 'init', change, 'full', '--managed-delivery', '--knowledge-closeout-required', 'true', '--json']);
-    addStep(receipt, { step: 'state-init-managed-change', command: `comet state init ${change} full --managed-delivery --knowledge-closeout-required true --json`, exitCode: sinit.code, detail: `duration ${sinit.durationMs}ms` });
+    const designDoc = `${rel}/design.md`;
+    const designDoc2 = `${rel}/design2.md`;
+
+    const sinit = comet(['state', 'init', change, 'full', '--json']);
+    addStep(receipt, { step: 'state-init-classic-change', command: `comet state init ${change} full --json  # 0.5.0 face: no --managed-delivery (managed gates moved to the composition runtime)`, exitCode: sinit.code, detail: `duration ${sinit.durationMs}ms` });
     ok = ok && sinit.code === 0;
-    drive(['state', 'select', change, '--json']);
-    drive(['state', 'set', change, 'design_doc', `${rel}/design.md`, 'test_intent', `${rel}/test-intent.md`, 'plan', `docs/superpowers/plans/${change}-plan.md`, '--json']);
-    drive(['state', 'transition', change, 'open-complete', '--json']);
-    // Accept gate R once so gate A becomes dispatchable.
-    const rDispatch = drive(['state', 'dispatch-gate', change, 'R', '--json']);
-    const rBinding = rDispatch.code === 0 ? JSON.parse(rDispatch.stdout.trim().split('\n').pop()) : null;
-    if (rBinding) {
-      const resultFile = path.join(scratch, 'result-R.json');
-      fs.writeFileSync(resultFile, JSON.stringify({ execution: rBinding.data?.dispatch?.execution ?? rBinding.data?.execution ?? rBinding.execution, attempt: rBinding.data?.dispatch?.attempt ?? rBinding.data?.attempt ?? rBinding.attempt, verdict: 'pass' }));
-      drive(['state', 'accept-gate', change, 'R', '--file', resultFile, '--json']);
-    }
+    if (!ok) return finalize(receipt, false, 'comet state init failed — no real classic change to contend on');
 
-    // Baseline dispatch of gate A: the operation identity this drill recovers.
-    const base = drive(['state', 'dispatch-gate', change, 'A', '--json']);
-    const baseBinding = base.code === 0 ? (JSON.parse(base.stdout.trim().split('\n').pop()).data?.dispatch ?? JSON.parse(base.stdout.trim().split('\n').pop())) : null;
+    const baseline = comet(['state', 'set', change, 'design_doc', designDoc, '--json']);
+    const baselineGet = comet(['state', 'get', change, 'design_doc', '--json']);
+    const baselineApplied = baseline.code === 0 && baselineGet.code === 0 && (baselineGet.stdout.includes(designDoc));
     addStep(receipt, {
-      step: 'baseline-dispatch-gate-A',
-      command: `comet state dispatch-gate ${change} A --json`,
-      exitCode: base.code,
-      detail: `execution ${baseBinding?.execution ?? 'n/a'}, attempt ${baseBinding?.attempt ?? 'n/a'}`,
-      stateFileShape: { execution: baseBinding?.execution ?? null, attempt: baseBinding?.attempt ?? null },
+      step: 'baseline-locked-write',
+      command: `comet state set ${change} design_doc ${designDoc} --json`,
+      exitCode: baseline.code,
+      detail: `duration ${baseline.durationMs}ms; readback ${baselineApplied ? designDoc : 'mismatch'}`,
+      stateFileShape: { designDoc: baselineApplied ? designDoc : null },
     });
-    ok = ok && base.code === 0 && !!baseBinding?.execution;
-    if (!ok) return finalize(receipt, false, 'baseline dispatch failed — the drill needs a real open operation');
+    ok = ok && baselineApplied;
 
-    const lockFile = path.join(dir, '.comet-state.lock');
+    // Resolve the REAL per-change runtime lock through the built dist module
+    // (the same resolver the store uses): <runtimeRoot>/.comet-state.lock.
+    const resolverScript = path.join(scratch, 'resolve-runtime.mjs');
+    fs.writeFileSync(resolverScript, `import { resolveClassicRunDirectory } from '${pathToFileURL(path.join(build.dist, 'domains/comet-classic/classic-runtime-paths.js')).href}';
+const changeDir = process.argv[2];
+const projectRoot = process.argv[3];
+process.stdout.write(String(await resolveClassicRunDirectory(changeDir, projectRoot)));
+`);
+    const resolved = spawnSync(nodeExe, [resolverScript, dir, project], { cwd: project, encoding: 'utf8', timeout: 60_000, env: childEnv() });
+    const runtimeRoot = (resolved.stdout ?? '').trim().split('\n').pop() ?? '';
+    const lockFile = path.join(runtimeRoot, '.comet-state.lock');
+    // macOS: /var is a symlink of /private/var — compare against the realpath
+    const homeReal = fs.realpathSync(fakeHome);
+    const runtimeRootIsolated = runtimeRoot.startsWith(homeReal);
+    addStep(receipt, {
+      step: 'resolve-runtime-lock-root',
+      command: 'node <drill-child> resolveClassicRunDirectory(<change>, <project>)  # real dist resolver',
+      exitCode: resolved.status,
+      detail: `runtime root resolved under the isolated HOME workspace runtime; legacy change-dir lock location is a migration fence (dir present: ${fs.existsSync(path.join(dir, '.comet-state.lock'))})`,
+      stateFileShape: { runtimeRootIsolated, legacyLockIsFence: fs.existsSync(path.join(dir, '.comet-state.lock')) },
+    });
+    ok = ok && resolved.status === 0 && runtimeRootIsolated;
+    if (!ok) return finalize(receipt, false, 'could not resolve the real per-change runtime lock root');
 
-    // Holder: a real child holding the REAL lock via the built dist module.
+    // Holder: a real child holding the REAL runtime lock via the built dist module.
     const holderScript = path.join(scratch, 'holder.mjs');
     fs.writeFileSync(holderScript, `import { withRecoverableFileLock } from '${pathToFileURL(path.join(build.dist, 'platform/fs/plugin-store.js')).href}';
 const lockPath = process.argv[2];
@@ -403,7 +440,7 @@ process.stdout.write('RELEASED\\n');
       return fs.existsSync(lockFile);
     };
 
-    // (a) EEXIST: a second exclusive open of the real lock file is rejected
+    // (a) EEXIST: a second exclusive open of the REAL lock file is rejected
     //     while the live holder owns the lease.
     const holderA = spawnHolder(45_000); // longer than the CLI's 30s lock timeout: the second writer must be REFUSED, not merely delayed
     const lockAppeared = await waitLock(5000);
@@ -421,20 +458,20 @@ catch (error) { console.log(error.code); process.exit(3); }
     });
     addStep(receipt, {
       step: 'second-exclusive-open-rejected-EEXIST',
-      command: 'node <drill-child> fs.open(.comet-state.lock, wx)  # real dist sibling of the CLI lock path',
+      command: 'node <drill-child> fs.open(<runtime-root>/.comet-state.lock, wx)  # real dist sibling of the CLI lock path',
       exitCode: eexist.code,
       detail: `open code ${eexist.out}; live holder pid ${holderA.pid}`,
       stateFileShape: { lockOwner: ownerBefore, holderPid: holderA.pid, holderAliveWhenProbed: isAlive(holderA.pid) },
     });
     ok = ok && lockAppeared && eexist.code === 3 && eexist.out === 'EEXIST';
 
-    // (b) Real CLI double-open: dispatch while the holder owns the lease —
-    //     the managed driver refuses to open a second writer and times out.
-    const contended = comet(['state', 'dispatch-gate', change, 'A', '--json'], { timeout: 60_000 });
+    // (b) Real CLI double-open: a locked state write while the holder owns the
+    //     lease — the classic store refuses to open a second writer and times out.
+    const contended = comet(['state', 'set', change, 'design_doc', designDoc, '--json'], { timeout: 60_000 });
     const refused = contended.code !== 0 && /Timed out waiting for file lock/i.test(`${contended.stderr}\n${contended.stdout}`);
     addStep(receipt, {
       step: 'cli-double-open-rejected-while-lease-held',
-      command: `comet state dispatch-gate ${change} A --json  # while a live holder owns .comet-state.lock`,
+      command: `comet state set ${change} design_doc <same-value> --json  # while a live holder owns the runtime lock`,
       exitCode: contended.code,
       detail: `duration ${contended.durationMs}ms; refusal ${refused ? 'Timed out waiting for file lock' : 'unexpected'}`,
       stateFileShape: { lockOwnerAfterTimeout: fs.existsSync(lockFile) ? JSON.parse(fs.readFileSync(lockFile, 'utf8')) : null },
@@ -445,11 +482,11 @@ catch (error) { console.log(error.code); process.exit(3); }
     await exited(holderA);
     await sleep(300);
 
-    // (c) SIGKILL of the holder mid-lease: the next real CLI command
-    //     recovers the lease and resumes the SAME operation idempotently.
+    // (c) SIGKILL of the holder mid-lease: the next real CLI command recovers
+    //     the lease and re-applies the SAME write idempotently.
     const holderB = spawnHolder(20000);
     const lockAgain = await waitLock(5000);
-    const contender = spawn(nodeExe, [build.entrypoint, 'state', 'dispatch-gate', change, 'A', '--json'], { cwd: project, env: childEnv() });
+    const contender = spawn(nodeExe, [build.entrypoint, 'state', 'set', change, 'design_doc', designDoc2, '--json'], { cwd: project, env: childEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
     let contenderOut = '';
     contender.stdout.on('data', (c) => { contenderOut += c; });
     const contenderDone = new Promise((resolve) => contender.once('close', resolve));
@@ -459,74 +496,77 @@ catch (error) { console.log(error.code); process.exit(3); }
     await exited(holderB);
     const holderGone = await (async () => { for (let i = 0; i < 100; i++) { if (!isAlive(holderB.pid)) return true; await sleep(50); } return false; })();
     const contenderCode = await contenderDone;
-    let recoveredBinding = null;
-    try { recoveredBinding = JSON.parse(contenderOut.trim().split('\n').pop()).data?.dispatch ?? JSON.parse(contenderOut.trim().split('\n').pop()); } catch { /* raw */ }
-    const idempotent = contenderCode === 0 && recoveredBinding?.execution === baseBinding.execution
-      && Number(recoveredBinding?.attempt) === Number(baseBinding.attempt);
+    const readback = comet(['state', 'get', change, 'design_doc', '--json']);
+    const readbackApplied = readback.code === 0 && readback.stdout.includes(designDoc2);
+    const resettle = comet(['state', 'set', change, 'design_doc', designDoc2, '--json']);
+    const idempotent = contenderCode === 0 && readbackApplied && resettle.code === 0;
     addStep(receipt, {
       step: 'sigkill-holder-lease-recovered-idempotent-resume',
-      command: 'comet state dispatch-gate <change> A --json  # started under the live lease, holder SIGKILLed at ~1.5s',
+      command: `comet state set ${change} design_doc <new-value> --json  # started under the live lease, holder SIGKILLed at ~1.5s`,
       exitCode: contenderCode,
-      detail: `holder ${holderB.pid} alive at kill: ${holderWasAlive}, confirmed gone: ${holderGone}; execution ${recoveredBinding?.execution ?? 'n/a'} (baseline ${baseBinding.execution}), attempt ${recoveredBinding?.attempt ?? 'n/a'} (baseline ${baseBinding.attempt})`,
+      detail: `holder ${holderB.pid} alive at kill: ${holderWasAlive}, confirmed gone: ${holderGone}; readback ${readbackApplied ? 'new value' : 'mismatch'}; same-value re-apply exit ${resettle.code}`,
       stateFileShape: {
-        recoveredExecution: recoveredBinding?.execution ?? null,
-        baselineExecution: baseBinding.execution,
-        attempts: { baseline: baseBinding.attempt, recovered: recoveredBinding?.attempt ?? null },
+        readbackDesignDoc: readbackApplied ? designDoc2 : null,
+        sameValueReapplyExit: resettle.code,
         lockRecovered: !fs.existsSync(lockFile),
       },
       verbatim: { exitCode: contenderCode, stdout: contenderOut.slice(0, 600) },
     });
     ok = ok && lockAgain && holderWasAlive && holderGone && idempotent;
 
-    // (d) Transaction journal recovery: a real-schema
-    //     comet.classic.state-transaction.v1 record (beforeYaml === current
-    //     bytes, run preserved) planted as an interrupted write; the next
-    //     real CLI lock acquisition must recover it — journal consumed, state
-    //     intact (A11: resume from the authoritative state, no re-execution).
+    // (d1) Honest refusal: a journal left at the LEGACY change-dir location is
+    //      NOT silently recovered by 0.5.0 — the workspace-runtime migration
+    //      fence conservatively refuses writes until the old runtime recovers.
     const yamlFile = path.join(dir, '.comet.yaml');
-    const runStateFile = path.join(dir, '.comet/run-state.json');
     const yamlBytes = fs.readFileSync(yamlFile, 'utf8');
-    let run = null;
-    try { run = JSON.parse(fs.readFileSync(runStateFile, 'utf8')); } catch { /* absent */ }
-    const camel = (value) => (run && typeof value === 'object' && !Array.isArray(value)) ? {
-      runId: value.run_id ?? value.runId ?? null,
-      skill: value.skill ?? null,
-      skillVersion: value.skill_version ?? value.skillVersion ?? null,
-      skillHash: value.skill_hash ?? value.skillHash ?? null,
-      orchestration: value.orchestration ?? null,
-      currentStep: value.current_step ?? value.currentStep ?? null,
-      iteration: value.iteration ?? null,
-      pending: value.pending ?? null,
-      pendingRef: value.pending_ref ?? value.pendingRef ?? null,
-      trajectoryRef: value.trajectory_ref ?? value.trajectoryRef ?? null,
-      contextRef: value.context_ref ?? value.contextRef ?? null,
-      artifactsRef: value.artifacts_ref ?? value.artifactsRef ?? null,
-      checkpointRef: value.checkpoint_ref ?? value.checkpointRef ?? null,
-      status: value.run_status ?? value.status ?? null,
-      retries: value.run_retries ?? value.retries ?? null,
-    } : null;
-    const runRecord = camel(run);
-    const transactionFile = path.join(dir, '.comet-state-transaction.json');
-    fs.writeFileSync(transactionFile, `${JSON.stringify({
+    const legacyJournal = path.join(dir, '.comet-state-transaction.json');
+    fs.writeFileSync(legacyJournal, `${JSON.stringify({
       schema: 'comet.classic.state-transaction.v1',
       beforeYaml: yamlBytes,
       afterYaml: yamlBytes,
-      beforeRun: runRecord,
-      afterRun: runRecord,
+      beforeRun: null,
+      afterRun: null,
     }, null, 2)}\n`);
-    const afterRecovery = comet(['state', 'gates', change, '--json']);
-    const journalConsumed = !fs.existsSync(transactionFile);
-    const yamlIntact = fs.readFileSync(yamlFile, 'utf8') === yamlBytes;
+    const legacyRefused = comet(['state', 'set', change, 'design_doc', designDoc2, '--json'], { timeout: 60_000 });
+    const legacyRefusalHonest = legacyRefused.code !== 0 && fs.existsSync(legacyJournal) && fs.readFileSync(yamlFile, 'utf8') === yamlBytes;
+    addStep(receipt, {
+      step: 'legacy-dir-journal-conservative-refusal',
+      command: `comet state set ${change} design_doc <same-value> --json  # with a real-schema journal planted at the LEGACY change-dir location`,
+      exitCode: legacyRefused.code,
+      detail: `0.5.0 migration fence refuses instead of auto-recovering a legacy-location journal; journal preserved: ${fs.existsSync(legacyJournal)}, yaml untouched`,
+      stateFileShape: { journalPreserved: fs.existsSync(legacyJournal), yamlIntact: fs.readFileSync(yamlFile, 'utf8') === yamlBytes },
+      verbatim: { exitCode: legacyRefused.code, stdout: legacyRefused.stdout.slice(0, 500) },
+    });
+    ok = ok && legacyRefusalHonest;
+    fs.rmSync(legacyJournal, { force: true });
+
+    // (d2) Transaction journal recovery at the REAL runtime root: a
+    //      real-schema comet.classic.state-transaction.v1 record (beforeYaml
+    //      === current bytes) planted as an interrupted write; the next real
+    //      CLI lock acquisition recovers it — journal consumed, state intact
+    //      (A11: resume from the authoritative state, no re-execution).
+    const journalFile = path.join(runtimeRoot, '.comet-state-transaction.json');
+    const yamlBefore = fs.readFileSync(yamlFile, 'utf8');
+    fs.writeFileSync(journalFile, `${JSON.stringify({
+      schema: 'comet.classic.state-transaction.v1',
+      stateFile: '.comet.yaml',
+      beforeYaml: yamlBefore,
+      afterYaml: yamlBefore,
+      beforeRun: null,
+      afterRun: null,
+    }, null, 2)}\n`);
+    const afterRecovery = comet(['state', 'set', change, 'design_doc', designDoc2, '--json'], { timeout: 60_000 });
+    const journalConsumed = !fs.existsSync(journalFile);
+    const yamlIntact = fs.readFileSync(yamlFile, 'utf8') === yamlBefore;
     addStep(receipt, {
       step: 'interrupted-transaction-journal-recovered-on-next-lock',
-      command: 'comet state gates <change> --json  # after planting a real-schema interrupted transaction journal',
+      command: 'comet state set <change> design_doc <same-value> --json  # after planting a real-schema interrupted journal at the runtime root',
       exitCode: afterRecovery.code,
       detail: `journal consumed: ${journalConsumed}; yaml unchanged: ${yamlIntact}; recovery ran inside the real state lock acquisition`,
       stateFileShape: {
         transactionSchema: 'comet.classic.state-transaction.v1',
         journalConsumed,
         yamlIntact,
-        runStatePreserved: fs.existsSync(runStateFile),
       },
     });
     ok = ok && afterRecovery.code === 0 && journalConsumed && yamlIntact;
@@ -569,7 +609,7 @@ try {
     }
 
     return finalize(receipt, ok, ok
-      ? 'the real Comet Classic state lock: second exclusive open rejected (EEXIST), real CLI double-open refused while the lease is held, real SIGKILL of the holder lets the next real CLI command recover the lease and resume the SAME operation idempotently, an interrupted transaction journal is recovered on the next lock acquisition, and a foreign-host lock owner is never recovered'
+      ? 'the real 0.5.0 per-change runtime lock: second exclusive open rejected (EEXIST), real CLI write refused while the lease is held, real SIGKILL of the holder lets the next real CLI write recover the lease and re-apply idempotently, a legacy-location journal is conservatively refused while a runtime-root journal is recovered on the next lock acquisition, and a foreign-host lock owner is never recovered'
       : 'one or more lease steps did not verify; see steps');
   } finally {
     fs.rmSync(scratch, { recursive: true, force: true });

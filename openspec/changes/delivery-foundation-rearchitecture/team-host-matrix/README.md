@@ -2,17 +2,25 @@
 
 `matrix.json` 是唯一事实源：每个 `host × capability` 格记录 `{status, evidence[], note?, holder?}`，
 状态只取固定四枚举，每格证据只绑定该宿主自身的真实工件。本 README 说明读法、证据指针约定与
-"不跨平台推断"原则。机械校验在 `test/delivery-cases/5_1.mjs`（5.1.b-1..7：平台格 5 项 + 机器维度 2 项；负例 3 平台 + 5 机器）。
+"不跨平台推断"原则。机械校验在 `test/delivery-cases/5_1.mjs`（5.1.a 台账/仪器 6 项 + 5.1.b 平台格 7 项 +
+机器维度 2 项；负例 5 平台 + 5 机器 + 5 仪器）。
+
+修订 `2026-10-26-comet-050-adoption-v1`（2026-10-27 更新）：新增第 6 个平台宿主 `zcode-session`
+（执行本修订派发的真实后继控制器会话）；机器维度登记 claude/codex CLI 本地可用性实测与
+2026-10-27 zcode 会话的渠道实测（与 2026-10-23 会话实测并存，互不覆盖）；启用裁决
+decision_record 改指 replans 保全副本（现行 architecture.md 经 replans 重写，裁决原文以
+`replans/2026-10-26-command-first/before/.../architecture.md` 为可解析事实源，台账 token 不变）。
 
 ## 宿主集（survey 自 lib/adapters/* 与装配面）
 
 | host | 判定依据 |
 |---|---|
 | claude-code | hook 装配宿主：`hooks.yaml`（唯一策略源）→ `tools/adapters/claude-code.sh` 落地原生配置 |
-| comet-classic | `lib/adapters/comet.js`（`RUNNER_ID=comet-classic`，pinned build `cb1151b4…`） |
+| comet-classic | `lib/adapters/comet.js`（`RUNNER_ID=comet-classic`，pinned 0.5.0 composition build） |
 | llmwiki | `lib/adapters/llmwiki.js`（Knowledge.Closeout.v1 的 Kp 面；MCP-only 写路径） |
 | outline | `lib/adapters/outline.js`（Kt 面；Runtime 指令 0003 驱动的团队发布） |
 | code-wiki | `lib/adapters/code-wiki.js`（pinned deepwiki profile 只读判定） |
+| zcode-session | 真实执行会话宿主（2026-10-27 实测登记，证据 `worker-reports/P5_1-P5_3-comet-050/evidence/`） |
 
 非宿主模块（不入矩阵）：`harness.js`（宿主 adapter 共享分层库）、`spec.js`（唯一归档 writer，
 A11 journey 在 3_4.mjs）、`architecture-review.js`、`knowledge-revocation.js`、`legacy-evidence.js`。
@@ -89,7 +97,10 @@ fs/git cat-file 可解析、RW_COMPLETION_REQUIRED 判官在位）；负例增�
 
 ## 环境注意事项
 
-- live worktree 对账下限（≥25 非 main worktree）绑定本交付机（2026-10-21 实测 34）；如环境清剪
+- live worktree 对账下限（≥25 非 main worktree）绑定本交付机（2026-10-21 实测 34；2026-10-27 实测 72）；如环境清剪
   worktree，请以 ledger 事件与 `worker-reports/P5_1/evidence/` 存证重定基线（与 1_3.mjs 的
   .sdd 装备工作树要求同类的环境绑定，见 acceptance-index known_environment_gates）。
 - 证据 .txt 中宿主绝对路径已按 `<repo>`/`<tmp>` 净化；提交内容零宿主绝对路径。
+- 渠道实测随会话沙箱而异：2026-10-23 claude-code 会话（docker socket EPERM / sysctl EPERM /
+  回环 ECONNREFUSED）与 2026-10-27 zcode 会话（docker daemon 可达 / sysctl exit 0 / 回环 HTTP 200）
+  的实测**并存保留**，各自属于各自会话条目，互不覆盖、互不推断。

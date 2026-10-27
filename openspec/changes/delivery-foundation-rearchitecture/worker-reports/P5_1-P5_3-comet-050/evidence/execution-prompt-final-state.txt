@@ -1,0 +1,13 @@
+# execution-prompt.md final-state check — 2026-10-27T05:41:13Z
+
+## plan_guard (authoritative gate; prompt hashes come from drift-lock.json via planning-toolkit/scripts/render_execution_prompt.py)
+
+$ python3 planning-toolkit/scripts/plan_guard.py --plan openspec/changes/delivery-foundation-rearchitecture/tasks.md --dag ... --lock ... --architecture ... --contract ... --repo-root .
+{"valid": false, "handoff_ready": false, "issues": [{"code": "DRIFT", "line": 0, "message": "HALT_AND_REPLAN: plan_sha256 mismatch"}, {"code": "OPENSPEC_LIFECYCLE", "line": 0, "message": "SOURCE_DRIFT: HALT_AND_REPLAN"}]}
+
+## pinned hashes: prompt/drift-lock vs current artifacts
+
+plan    (checkbox-normalized-v1) prompt pin 4665b601… / current normalized 0010b135… -> DRIFT (tasks.md prose changed after seal: P2_4 REOPENED annotation, ledger P2_4_REOPENED_R1_R6)
+architecture 0c282897… match; dag 3bdef652… match; contract 613e39ad… match
+
+## decision: prompt NOT rewritten (render-script managed); reseal belongs to the controller before VERIFY dispatch

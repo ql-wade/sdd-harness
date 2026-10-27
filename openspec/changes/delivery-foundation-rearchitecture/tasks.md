@@ -662,12 +662,12 @@
 
 原工作包身份：5.1.a, 5.1.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Test** 不同宿主不能互推支持；缺只读或必要权限能力标不支持，不重建六服务绕过；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 只在实际目标宿主验证命令发现、技能、权限、独立执行/会话恢复；并行worktree集成后父目标重验；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** 不同宿主不能互推支持；缺只读或必要权限能力标不支持，不重建六服务绕过；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 只在实际目标宿主验证命令发现、技能、权限、独立执行/会话恢复；并行worktree集成后父目标重验；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
 ### Task P5_2: F10正向明确另期
 
@@ -695,12 +695,12 @@
 
 原工作包身份：5.3.a, 5.3.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Test** 未知进程状态不得重启/删唯一工作区；不把本地锁假装分布式，不新增业务常驻服务；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 原命令/既有调度的恢复、升级/回退、知识维护、R10保留与必要依赖运维手册；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** 未知进程状态不得重启/删唯一工作区；不把本地锁假装分布式，不新增业务常驻服务；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 原命令/既有调度的恢复、升级/回退、知识维护、R10保留与必要依赖运维手册；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
 ### Task VERIFY: 同最终候选和实际Run全量验收
 

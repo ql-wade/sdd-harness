@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "interface": "P51.SessionCapabilityRecord.v1",
+  "recordedAt": "2026-10-27T05:09:32Z",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "host": "zcode-session",
+  "task": "P5_1+P5_3 (merged dispatch, parallel-safe pair)",
+  "purpose": "P5_1 real-host evidence: this agent session IS a real target host. All facts below were observed in-session on 2026-10-27; nothing is inferred from other hosts.",
+  "session_identity": {
+    "agent": "ZCode CLI agent (subagent worker session)",
+    "machine": "MacBook-Wade-7.local (Darwin 24.6.0 arm64)",
+    "execution_mode": "controller-dispatched independent subagent (merged P5_1+P5_3 wave, non-overlapping Owns)"
+  },
+  "capability_observations": {
+    "command_discovery": {
+      "method": "which + --version probes executed in-session (raw output: host-probes-20261027.txt)",
+      "observed": {
+        "node": "/Users/mac/.nvm/versions/node/v22.13.1/bin/node (v22.13.1)",
+        "git": "/opt/homebrew/bin/git (2.40.1)",
+        "claude": "/Users/mac/.local/bin/claude (2.1.304 (Claude Code))",
+        "codex": "/Users/mac/.nvm/versions/node/v22.13.1/bin/codex (codex-cli 0.163.0)",
+        "comet": "/Users/mac/.nvm/versions/node/v22.13.1/bin/comet",
+        "openspec": "/Users/mac/.nvm/versions/node/v22.13.1/bin/openspec"
+      }
+    },
+    "skill_discovery": {
+      "method": "host skill catalog surfaced to the session at start (Skill tool manifest, ~250 vendored/user skills incl. the repo's .agents/skills snapshot: tdd, test-authoring, code-review, diagnosing-bugs, whitebox-verify, grill-me, ponytail, openspec-lifecycle-guard ...)",
+      "note": "discovery = the session can enumerate and invoke skills; per F03 semantics, file existence alone never qualifies a skill run — this record only claims the discovery surface."
+    },
+    "tool_permission_surface": {
+      "bash_sandbox": "Bash tool runs sandboxed by default; escaping the sandbox requires an explicit approval-gated flag",
+      "read_write_tools": "Read/Write/Edit operate on the workspace; edits require prior Read (tool-enforced)",
+      "subagent_dispatch": "this session itself is a dispatched subagent; the controller dispatched the merged P5_1+P5_3 task with isolated Owns (real dispatch evidence, not simulated)"
+    },
+    "write_protection_channel_probes_20261027": {
+      "sysctl-kern-hostname": "ALLOWED_MEASURED (exit 0) — differs from the 2026-10-23 claude-code session (EPERM); channel outcomes are session-sandbox-dependent, both measurements kept",
+      "docker-socket": "ALLOWED_MEASURED (docker info reached daemon, ServerVersion 29.6.2) — differs from the 2026-10-23 session (socket EPERM)",
+      "loopback-http-3000": "ALLOWED_MEASURED (HTTP 200, Outline front channel via docker proxy)",
+      "home-scratch-write": "ALLOWED_MEASURED (wrote+removed a scratch file under HOME)",
+      "interpretation": "no hard write boundary was observed on these channels in THIS session; enforcement relies on the approval-gated sandbox escape and tool permission prompts — recorded as capability gaps/allowances per A09 (never as 'blocked')"
+    },
+    "independent_execution": {
+      "fact": "this session executed the merged P5_1+P5_3 dispatch end-to-end (RED observation -> implementation -> verification) as an independent worker",
+      "parallel_integration_context": "the revision's parallel worktree integration discipline was re-verified at P2_4-R3 and P3_2 (ledger: P2_4_REOPENED_R1_R6 / P2_4_REACCEPTED_R1_R6_REWORK_CLOSED / P2_4_R3_ACCEPTED_BLOCKERS_CLOSED / P3_2_ACCEPTED_FIRST_REAL_RV); the current run integrates on the main checkout under the single controller"
+    }
+  },
+  "honest_unverified": [
+    {
+      "item": "ZCode scripted kill-mid-session resume journey (session interruption + continuation of the same task)",
+      "holder": "后续脚本化 journey（宿主会话恢复正相证据；本记录只有 dispatch 事实与在跑会话）"
+    },
+    {
+      "item": "claude/codex CLI real journey use under the current revision (only which/version discovery measured here)",
+      "holder": "P5_1 真实团队宿主使用（G-T2-06；需真实团队/宿主使用记录，不由安装事实替代）"
+    },
+    {
+      "item": "native positive browser acceptance on this host (F08)",
+      "holder": "具备原生浏览器能力的试点环境（与 acceptance-index.json F08 同源 holder）"
+    }
+  ]
+}

@@ -1,8 +1,9 @@
 {
- "schema_version": 2,
+ "schema_version": 3,
  "matrix_id": "TEAM_HOST_CAPABILITY_MATRIX",
  "task": "P5_1",
- "generated_at": "2026-10-21",
+ "generated_at": "2026-10-27",
+ "revision": "2026-10-26-comet-050-adoption-v1",
  "semantics_source": [
   "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md :: A09-A12/F03/F08",
   "lib/adapters/* (实际存在的 adapter 集)",
@@ -26,14 +27,16 @@
   "comet-classic",
   "llmwiki",
   "outline",
-  "code-wiki"
+  "code-wiki",
+  "zcode-session"
  ],
  "host_taxonomy": {
   "claude-code": "hook 装配宿主：hooks.yaml（唯一策略源）经 tools/adapters/claude-code.sh 落地为原生配置",
-  "comet-classic": "Comet Classic 单 master 宿主（lib/adapters/comet.js, RUNNER_ID=comet-classic, pinned build cb1151b4…）",
+  "comet-classic": "Comet Classic 单 master 宿主（lib/adapters/comet.js, RUNNER_ID=comet-classic, pinned 0.5.0 composition build）",
   "llmwiki": "知识宿主 Kp 面（lib/adapters/llmwiki.js；MCP-only 写路径）",
   "outline": "知识宿主 Kt 面（lib/adapters/outline.js；Runtime 指令驱动的团队发布）",
-  "code-wiki": "代码知识新鲜度判定面（lib/adapters/code-wiki.js；pinned profile 只读判定）"
+  "code-wiki": "代码知识新鲜度判定面（lib/adapters/code-wiki.js；pinned profile 只读判定）",
+  "zcode-session": "真实后继控制器会话宿主（执行 2026-10-26-comet-050-adoption-v1 派发的 ZCode CLI agent 子代理会话；2026-10-27 实测登记，证据 worker-reports/P5_1-P5_3-comet-050/evidence/）"
  },
  "non_host_modules": {
   "lib/adapters/harness.js": "宿主 adapter 共享的 managed/read-only driver 分层库——非宿主",
@@ -262,6 +265,46 @@
     "lib/adapters/code-wiki.js :: evaluateCodeWikiReceipt — 每次求值绑定精确 pinned commit+digests，他 commit 回执即 stale 拒绝"
    ],
    "note": "无跨调用可恢复状态：每次求值重新绑定精确 digest，无状态可恢复——按缺席如实记录。"
+  },
+  {
+   "host": "zcode-session",
+   "capability": "discovery",
+   "status": "VERIFIED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/host-probes-20261027.txt :: which/--version 实测：node v22.13.1、git 2.40.1、claude 2.1.304、codex 0.163.0、comet、openspec 全部真实发现",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/zcode-session-capability-20261027.json :: 会话技能目录发现面（Skill manifest，含本仓 .agents/skills 快照）与工具权限面实测记录"
+   ],
+   "note": "本会话即真实目标宿主：命令与技能发现均为 2026-10-27 会话内实测（发现面合格；按 F03 语义，文件存在本身不构成技能运行合格——运行合格属各场景旅程）。"
+  },
+  {
+   "host": "zcode-session",
+   "capability": "write-protection",
+   "status": "SUPPORTED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/host-probes-20261027.txt :: 逐渠道实测：sysctl exit 0、docker daemon 可达（ServerVersion 29.6.2）、loopback 3000 HTTP 200、HOME 暂存写入成功",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/zcode-session-capability-20261027.json :: 权限面：默认沙箱 Bash + 提权需批准门 + Read 前置的写工具约束"
+   ],
+   "note": "A09 逐渠道如实记录：本会话四个探针渠道全部 ALLOWED_MEASURED（与 2026-10-23 claude-code 会话的 EPERM/ECONNREFUSED 实测并存——渠道结果随会话沙箱而异，两份实测都保留，互不推断）。写保护依赖批准门与提示，非硬边界，绝不记为已拦截。"
+  },
+  {
+   "host": "zcode-session",
+   "capability": "browser-evidence",
+   "status": "UNVERIFIED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json :: F08 scenario_status=UNVERIFIED"
+   ],
+   "note": "本环境未执行 F08 正相原生浏览器验收（宿主有 browser-use 技能面不等于正相验收已执行）。",
+   "holder": "具备原生浏览器能力的试点环境（UI 试点任务；与 acceptance-index.json F08 条目同一 holder 语义：正相原生浏览器验收 + 独立业务读回）"
+  },
+  {
+   "host": "zcode-session",
+   "capability": "recovery",
+   "status": "SUPPORTED",
+   "evidence": [
+    "openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl :: 控制器真实派发/接纳事件流（本会话即被派发的独立 worker；WORKER_LOST_REDISPATCH 在案：丢失 worker 原位重派不重复副作用）",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/zcode-session-capability-20261027.json :: 独立执行事实与并行集成语境（P2_4-R3/P3_2 重验，ledger 在案）"
+   ],
+   "note": "真实独立子代理派发/执行已发生（本任务）；脚本化的宿主会话中断-恢复 journey 未在本宿主执行（如实登记缺口，不以派发事实冒充恢复认证）。"
   }
  ],
  "machine_dimension": {
@@ -295,39 +338,58 @@
       "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: hostname / scutil / sysctl sections"
      ]
     },
-    "enablement": {
-     "scope": "本机实施范围：docker 经用户可见终端面板通道；llmwiki 项目化（SDD_HOME=<repo>/.sdd）；不含任何跨机器/团队范围",
-     "decision_record": "openspec/changes/delivery-foundation-rearchitecture/architecture.md :: 2026-10-22 环境能力裁决（amendment 3）",
-     "ledger": "openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl :: AMENDMENT_INTEGRATED env-capability-20261022 (2026-10-22T02:03:15Z)"
-    },
+     "enablement": {
+      "scope": "本机实施范围：docker 经用户可见终端面板通道；llmwiki 项目化（SDD_HOME=<repo>/.sdd）；不含任何跨机器/团队范围",
+      "decision_record": "openspec/changes/delivery-foundation-rearchitecture/replans/2026-10-26-command-first/before/openspec/changes/delivery-foundation-rearchitecture/architecture.md :: 2026-10-22 环境能力裁决（amendment 3）——现行 architecture.md 经 replans 重写后，裁决原文以 replans/before 保全副本为可解析事实源",
+      "ledger": "openspec/changes/delivery-foundation-rearchitecture/execution-ledger.jsonl :: AMENDMENT_INTEGRATED env-capability-20261022 (2026-10-22T02:03:15Z)"
+     },
     "capabilities": {
      "docker": {
       "status": "SUPPORTED",
-      "measured": "in-session: client 29.6.2 可执行；daemon socket permission denied（EPERM）——真实 daemon 操作走终端面板通道（I02-rework s5：daemon=29.6.2，六个 comet-runner 容器启动）",
+      "measured": "两份实测并存（渠道结果随会话沙箱而异，均保留）：2026-10-23 claude-code 会话沙箱内 client 29.6.2 可执行、daemon socket permission denied（EPERM），真实 daemon 操作走终端面板通道（I02-rework s5：daemon=29.6.2，六个 comet-runner 容器启动）；2026-10-27 zcode 会话内 docker info 直达 daemon（ServerVersion 29.6.2）",
       "evidence": [
        "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: docker version / docker info sections",
        "worker-reports/I02-rework/evidence/s5-precheck.txt :: daemon=29.6.2",
-       "worker-reports/I02-rework/evidence/s5-compose-up.txt :: six comet-runner containers started"
+       "worker-reports/I02-rework/evidence/s5-compose-up.txt :: six comet-runner containers started",
+       "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/host-probes-20261027.txt :: docker info --format {{.ServerVersion}} -> 29.6.2 (zcode 会话实测)"
       ],
-      "note": "缺口如实登记：会话沙箱内 socket EPERM、通道受限=终端面板；不冒充沙箱内可达。"
+      "note": "缺口如实登记：本矩阵只主张连接/读回实测；容器编排操作仍以 I02 面的真实执行记录为准，不冒充。"
      },
      "knowledge-stack-outline": {
       "status": "UNVERIFIED",
-      "measured": "监听状态=LISTENING：内核级 lsof -nP -iTCP:3000/5556 -sTCP:LISTEN → com.docker 双 LISTEN（2026-10-23 控制器复核+本 worker 复现）；同 run P4_4 step11/P4_8 已经 Playwright 浏览器同源通道在本栈完成真实写入+三通道独立读回（对象已清理）。会话沙箱 Bash curl 的 ECONNREFUSED（exit 7/000）是沙箱过滤回环 HTTP 的已知伪影——无效探针通道，不作服务状态证据",
+      "measured": "三份实测并存：2026-10-23 内核级 lsof -nP -iTCP:3000/5556 -sTCP:LISTEN → com.docker 双 LISTEN（控制器复核+P5_1 worker 复现）；同日 claude-code 会话沙箱 Bash curl 回环 ECONNREFUSED（该会话的沙箱伪影通道）；2026-10-27 zcode 会话内 curl 127.0.0.1:3000 → HTTP 200（该会话回环可达，与内核 LISTEN 一致）。同 run P4_4 step11/P4_8 已经 Playwright 浏览器同源通道在本栈完成真实写入+三通道独立读回（对象已清理）",
       "evidence": [
        "worker-reports/P5_1-rework/evidence/correction-outline-stack-listening.txt :: lsof kernel LISTEN re-check + sandbox-artifact reference chain",
        "worker-reports/P4_4-rework/evidence/outline-real-stack-verify.txt :: browser-channel real write 200 + 3-channel independent readback on this stack",
-       "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: raw curl artifact record (invalid probe channel)"
+       "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: raw curl artifact record (invalid probe channel in that session)",
+       "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/host-probes-20261027.txt :: zcode 会话 curl 127.0.0.1:3000 -> HTTP 200"
       ],
-      "holder": "VERIFY（same-run-delivery / real-comet-recovery 旅程执行 owner；栈已 LISTEN，live-use 验证语义不变）"
+      "holder": "VERIFY（same-run-delivery / real-comet-recovery 旅程执行 owner；栈已 LISTEN 且 zcode 会话回环 200，live-use 验证语义不变）"
      },
      "web-evidence-channel": {
       "status": "UNVERIFIED",
-      "measured": "会话内直连回环不可用（与 knowledge-stack-outline 同一实测记录）；原生浏览器正相验收（F08）本环境未执行",
+      "measured": "渠道实测随会话沙箱而异：2026-10-23 claude-code 会话直连回环不可用；2026-10-27 zcode 会话回环可达（HTTP 200）。原生浏览器正相验收（F08）本环境仍未执行",
       "evidence": [
-       "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json :: F08 scenario_status=UNVERIFIED"
+       "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json :: F08 scenario_status=UNVERIFIED",
+       "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/host-probes-20261027.txt :: loopback HTTP 200 (zcode session)"
       ],
       "holder": "具备原生浏览器能力的试点环境（与 acceptance-index F08 holder 同义：正相原生浏览器验收 + 独立业务读回）"
+     },
+     "agent-cli-claude-code": {
+      "status": "SUPPORTED",
+      "measured": "本机安装真实发现：which claude -> /Users/mac/.local/bin/claude；claude --version -> 2.1.304 (Claude Code)，2026-10-27 会话内实测",
+      "evidence": [
+       "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/host-probes-20261027.txt :: which claude / claude --version"
+      ],
+      "note": "安装+版本读回是发现面事实；当前修订下的真实团队使用旅程未执行（G-T2-06 holder）——不以安装事实冒充使用合格。"
+     },
+     "agent-cli-codex": {
+      "status": "SUPPORTED",
+      "measured": "本机安装真实发现：which codex -> ~/.nvm/.../bin/codex；codex --version -> codex-cli 0.163.0，2026-10-27 会话内实测",
+      "evidence": [
+       "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/host-probes-20261027.txt :: which codex / codex --version"
+      ],
+      "note": "安装+版本读回是发现面事实；当前修订下的真实团队使用旅程未执行（G-T2-06 holder）——不以安装事实冒充使用合格。"
      }
     },
     "write_protection": {
@@ -353,9 +415,30 @@
         "worker-reports/P5_1-rework/evidence/correction-outline-stack-listening.txt :: channel refusal reframe + kernel LISTEN",
         "worker-reports/P5_1-rework/evidence/host-probes-20261023.txt :: raw curl artifact record"
        ]
+      },
+      "zcode-session-20261027-sysctl": {
+       "outcome": "ALLOWED_MEASURED",
+       "measured": "zcode 会话（2026-10-27）：sysctl -n kern.hostname -> 正常返回（exit 0）——与 2026-10-23 会话 EPERM 并存；渠道结果随会话沙箱而异",
+       "evidence": [
+        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/host-probes-20261027.txt :: sysctl section"
+       ]
+      },
+      "zcode-session-20261027-docker-socket": {
+       "outcome": "ALLOWED_MEASURED",
+       "measured": "zcode 会话（2026-10-27）：docker info 直达 daemon（ServerVersion 29.6.2）——与 2026-10-23 会话 socket EPERM 并存",
+       "evidence": [
+        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/host-probes-20261027.txt :: docker daemon reachability section"
+       ]
+      },
+      "zcode-session-20261027-loopback-http-3000": {
+       "outcome": "ALLOWED_MEASURED",
+       "measured": "zcode 会话（2026-10-27）：curl 127.0.0.1:3000 -> HTTP 200——允许就是允许，如实记录，绝不记为已拦截",
+       "evidence": [
+        "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P5_1-P5_3-comet-050/evidence/host-probes-20261027.txt :: loopback HTTP probe section"
+       ]
       }
      },
-     "note": "A09 机器面：逐渠道记录实际拒绝或缺口；缺口（loopback 无监听）记为实测连接结果，绝不记为已拦截。"
+     "note": "A09 机器面：逐渠道记录实际拒绝或缺口；缺口（loopback 无监听）记为实测连接结果，绝不记为已拦截。不同会话沙箱的实测并存（2026-10-23 EPERM/ECONNREFUSED vs 2026-10-27 ALLOWED），互不覆盖、互不推断。"
     },
     "recovery": {
      "status": "SUPPORTED",

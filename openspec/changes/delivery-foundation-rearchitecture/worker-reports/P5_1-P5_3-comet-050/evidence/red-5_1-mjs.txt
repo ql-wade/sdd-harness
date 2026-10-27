@@ -1,0 +1,141 @@
+TAP version 13
+# Subtest: 5.1.a-1 parallel isolation: real ledger dispatches + live worktree set
+ok 1 - 5.1.a-1 parallel isolation: real ledger dispatches + live worktree set
+  ---
+  duration_ms: 19.101625
+  ...
+# Subtest: 5.1.a-2 serial integration: review-before-integrate, ordered merges, acceptance-integration rule
+ok 2 - 5.1.a-2 serial integration: review-before-integrate, ordered merges, acceptance-integration rule
+  ---
+  duration_ms: 2.9815
+  ...
+# Subtest: 5.1.a-3 parent re-validation: child green never closes the parent goal (task and run granularity)
+ok 3 - 5.1.a-3 parent re-validation: child green never closes the parent goal (task and run granularity)
+  ---
+  duration_ms: 1.708833
+  ...
+# Subtest: 5.1.a-4 parent re-validation instrument: four-layer index consistent, denominators held, pointers resolve
+not ok 4 - 5.1.a-4 parent re-validation instrument: four-layer index consistent, denominators held, pointers resolve
+  ---
+  duration_ms: 1.924333
+  location: '/Users/mac/Code/sdd-harness/test/delivery-cases/5_1.mjs:588:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    instrument violations: index holds 104 scenarios, denominator is 92; index holds 130 required checks, denominator is 118; summary.scenarios undefined != scenario count 104; summary.layer_statuses.component_pass totals 0 != 104; summary.layer_statuses.env_qualification totals 0 != 104; summary.layer_statuses.same_run_finality totals 0 != 104
+    + actual - expected
+    
+    + [
+    +   'index holds 104 scenarios, denominator is 92',
+    +   'index holds 130 required checks, denominator is 118',
+    +   'summary.scenarios undefined != scenario count 104',
+    +   'summary.layer_statuses.component_pass totals 0 != 104',
+    +   'summary.layer_statuses.env_qualification totals 0 != 104',
+    +   'summary.layer_statuses.same_run_finality totals 0 != 104'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'index holds 104 scenarios, denominator is 92'
+    1: 'index holds 130 required checks, denominator is 118'
+    2: 'summary.scenarios undefined != scenario count 104'
+    3: 'summary.layer_statuses.component_pass totals 0 != 104'
+    4: 'summary.layer_statuses.env_qualification totals 0 != 104'
+    5: 'summary.layer_statuses.same_run_finality totals 0 != 104'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/delivery-cases/5_1.mjs:591:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: 5.1.a negatives: forged isolation / child-green-as-parent-pass / integrate-before-review / unclosable run are rejected
+ok 5 - 5.1.a negatives: forged isolation / child-green-as-parent-pass / integrate-before-review / unclosable run are rejected
+  ---
+  duration_ms: 15.7625
+  ...
+# Subtest: 5.1.b-1 matrix completeness: hosts x capabilities, no empty cells, fixed enum
+ok 6 - 5.1.b-1 matrix completeness: hosts x capabilities, no empty cells, fixed enum
+  ---
+  duration_ms: 0.526292
+  ...
+# Subtest: 5.1.b-2 every matrix evidence pointer resolves on disk
+ok 7 - 5.1.b-2 every matrix evidence pointer resolves on disk
+  ---
+  duration_ms: 0.471625
+  ...
+# Subtest: 5.1.b-3 status obligations: UNSUPPORTED note, UNVERIFIED holder
+ok 8 - 5.1.b-3 status obligations: UNSUPPORTED note, UNVERIFIED holder
+  ---
+  duration_ms: 0.255083
+  ...
+# Subtest: 5.1.b-4 no cross-host evidence inference
+ok 9 - 5.1.b-4 no cross-host evidence inference
+  ---
+  duration_ms: 0.890084
+  ...
+# Subtest: 5.1.b-5 acceptance-index consistency (F03/F08/A09 semantics)
+ok 10 - 5.1.b-5 acceptance-index consistency (F03/F08/A09 semantics)
+  ---
+  duration_ms: 1.289667
+  ...
+# Subtest: 5.1.b-6 machine dimension: discovery anchors, enablement gate, refusal semantics, measured evidence
+not ok 11 - 5.1.b-6 machine dimension: discovery anchors, enablement gate, refusal semantics, measured evidence
+  ---
+  duration_ms: 1.223875
+  location: '/Users/mac/Code/sdd-harness/test/delivery-cases/5_1.mjs:679:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    machine-dimension violations: MacBook-Wade-7.local: decision record lacks the adjudication marker (环境能力裁决): openspec/changes/delivery-foundation-rearchitecture/architecture.md
+    + actual - expected
+    
+    + [
+    +   'MacBook-Wade-7.local: decision record lacks the adjudication marker (环境能力裁决): openspec/changes/delivery-foundation-rearchitecture/architecture.md'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'MacBook-Wade-7.local: decision record lacks the adjudication marker (环境能力裁决): openspec/changes/delivery-foundation-rearchitecture/architecture.md'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/delivery-cases/5_1.mjs:681:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: 5.1.b-7 no cross-machine inference: disabled hosts never cite enabled-host measured evidence
+ok 12 - 5.1.b-7 no cross-machine inference: disabled hosts never cite enabled-host measured evidence
+  ---
+  duration_ms: 0.300875
+  ...
+# Subtest: 5.1.b platform negatives: cross-host cell / missing cell / holderless UNVERIFIED are rejected
+ok 13 - 5.1.b platform negatives: cross-host cell / missing cell / holderless UNVERIFIED are rejected
+  ---
+  duration_ms: 0.818625
+  ...
+# Subtest: 5.1.b machine negatives: unrecorded enable / stripped refusals / claimed capability / cited evidence are rejected
+ok 14 - 5.1.b machine negatives: unrecorded enable / stripped refusals / claimed capability / cited evidence are rejected
+  ---
+  duration_ms: 2.931333
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 12
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 118.112375
+EXIT=1

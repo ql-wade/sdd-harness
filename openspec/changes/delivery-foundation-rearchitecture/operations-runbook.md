@@ -1,11 +1,14 @@
-# operations-runbook.md — 交付基础架构运维手册（P5_3，A10/A11/H09；返工 rework-seven-p1-r1）
+# operations-runbook.md — 交付基础架构运维手册（P5_3，A10/A11/H09；返工 rework-seven-p1-r1 + 修订 2026-10-26-comet-050-adoption-v1）
 
 > 所有者：P5_3（本手册）；机械校验由 `test/delivery-cases/5_3.mjs` 执行（J1 命令清单存在性+退出码、
 > J2 演练回执结构与复跑、J3 协议回退门、J3b git/.sdd 层回退配方、J4 能力边界台账——v2 门读回+逐字
 > 门清单+冒充突变拒绝）。删命令、藏门控、伪造回执时间戳、把 NOT_ENABLED 标进 PASS 位都会 RED。
 >
-> 范围区分：本手册覆盖本 run（rework-seven-p1-r1）的交付运维面；I08 的恢复/备份专属手册在
+> 范围区分：本手册覆盖本 run（rework-seven-p1-r1 及其 comet-050 修订）的交付运维面；I08 的恢复/备份专属手册在
 > `infra/delivery/recovery/operations-runbook.md`（权威迁移/恢复拒绝码细节以彼处为准），两者不互相替代。
+> 修订 `2026-10-26-comet-050-adoption-v1`（2026-10-27）：drill 3 重写到 0.5.0 组合期经典锁面（第 6 节）；
+> 新增升级/回退路径（第 7.3 节）、R10 保留运维入口与知识维护（第 6b/6c 节）、交接与 execution-prompt 终态核对（第 14b 节）；
+> 第 8 节已知环境门控清单改为当前 acceptance-index 形态的逐字清单。
 
 ## 1. 定位与读者
 
@@ -77,11 +80,16 @@ node openspec/changes/delivery-foundation-rearchitecture/team-recovery/run-drill
 - **drill 2（fencing 旧 writer 拒绝）**：存活 pid 持 lease 时恢复被拒（`RESTORE_REFUSED_OLD_WRITER_LIVE`），
   真实 SIGKILL + 终止确认后恢复启用；权威迁移缺批准（`REFUSAL_CONTROLLED_APPROVAL_REQUIRED`）、伪装围栏
   （`AUTHORITY_FENCE_NOT_PROCESS_LEVEL`）被拒；真实围栏下 epoch 严格单调 +1。复用 I08 手法。
-- **drill 3（lock 竞争双开拒绝）**：真实 Comet Classic 状态锁 `.comet-state.lock`——第二写者 `wx` 独占打开
-  被拒（EEXIST）；受管 CLI 在 lease 被持有期间双开被拒（30s 锁超时、非零退出）；持锁进程被真实 SIGKILL 后
-  下一条真实 CLI 命令恢复 lease 并幂等续作同一 operation（同 execution id、attempt 不变）；被中断的事务日志
-  `.comet-state-transaction.json`（comet.classic.state-transaction.v1，YAML rename = commit point）在下一次
-  锁获取时被恢复；异机锁 owner 永不被本地恢复（跨机边界保持关闭）。
+- **drill 3（lock 竞争双开拒绝，0.5.0 组合期经典锁面）**：修订 comet-050 后按 pinned 0.5.0 build 重做——
+  0.4.5 的 `state init <change> full --managed-delivery` + `state dispatch-gate` 托管门面已退役（usage error，
+  托管门移到组合运行时 `comet runtime dispatch`）。drill 驱动现行 `comet state init/set/get` 面与每变更
+  runtime 锁（`<HOME>/.comet/workspaces/<id>/runtime/classic-changes/<uuid>/.comet-state.lock`，legacy
+  change 目录的 `.comet-state.lock` 位置现是迁移围栏）：真实持锁子进程期间第二写者 `wx` 独占打开被拒
+  （EEXIST）；受管 CLI 锁定写在 lease 被持有期间被拒（30s 锁超时、非零退出）；持锁进程被真实 SIGKILL 后
+  下一条真实 CLI 写恢复 lease 并幂等重放同一写（读回+同值重放双证）；**legacy 位置残留事务日志被 0.5.0
+  迁移围栏保守拒绝**（不自动恢复、字节不动），而 **runtime 根上的真实 schema 事务日志
+  （comet.classic.state-transaction.v1）在下一次锁获取时被恢复**（日志消费、YAML 原样）；异机锁 owner
+  永不被本地恢复（跨机边界保持关闭）。
 
 恢复要点：恢复永远从权威状态 + 外部读回续接，不重复副作用（A11 的单机半）；另一机器复制的状态不能独立开
 第二写者——回原权威环境或走经确认的权威迁移（`backup-restore.mjs transfer`），不以普通会话标签绕过（H09
@@ -93,6 +101,37 @@ node openspec/changes/delivery-foundation-rearchitecture/team-recovery/run-drill
   证据指针、跨机 NOT_ENABLED 台账、缺席登记（daemon/分布式租约面）、冒充禁令、复审触发器（T1–T5）。
 - `team-recovery/rollback-recipe.json`（TeamRecovery.RollbackRecipe.v1）——git/.sdd 层候选回退配方
   （5.3.b），强制已知集 fail-closed 期望。
+- `team-recovery/comet-050-post-archive-kt-recovery-probe.json`——归档后同 Run pending Kt 义务的
+  发现/恢复探针（P4_6，0.5.0 面；知识维护入口见 6c）。
+
+### 6b. R10 保留运维（Retention.v1，I08 已建面——此处登记运维入口）
+
+R10 语义：未完结 Run/知识义务保留唯一工作区；清理必须以 verified completed 或经批准的迁移+恢复证明为前提。
+0.5.0 起原生工作区布局（`~/.comet/workspaces/<id>/`：runtime/ change-owners + sdk-runs checkpoints +
+observability/）由 `--form comet-050` 直接读写（run 身份与未完结状态从原生 schema
+comet.change-owner.v1 / comet.runtime-store-snapshot.v2 读回）。值班入口：
+
+```console
+node tools/infra/recovery.mjs validate --registry infra/delivery/registry.json --json   # 策略/清单一致性（catalogGaps 如实报，不当失败）
+node tools/infra/recovery.mjs retention --workspace <dir> [--form comet-050] [--disk-pressure <f>] [--migration-approval <f>] [--restore-proof <f>] --json
+node tools/infra/recovery.mjs probe --case pending-cleanup-denial --json               # 未完结义务阻止清理的正相探针
+```
+
+策略源：`infra/delivery/recovery/retention-policy.json`（备份/恢复/保留三策略与权威迁移 schema 同目录）。
+深度手册：`infra/delivery/recovery/operations-runbook.md`（I08 所有权威迁移/恢复拒绝码细节以彼处为准）。
+
+### 6c. 知识维护（Kp→归档→Kt 闭环的运维面）
+
+- **Kp 先于归档**：closeout 是单 owner 排他动作，Kp（知识收尾义务）缺失时归档被封印
+  （`KNOWLEDGE_CLOSEOUT_REQUIRED`）；重复 closeout 被拒（`ARCHIVE_ALREADY_SEALED`）。
+- **归档后同 Run Kt 恢复**（P4_6，0.5.0 面）：归档不等于 completed；pending Kt 义务按原 operation/目标
+  UUID/版本查询恢复，重复触发不重复写。探针：`team-recovery/comet-050-post-archive-kt-recovery-probe.json`；
+  旅程 `node --test test/delivery-cases/4_6.mjs`。
+- **周期维护/监督**（I07）：既有 CI/宿主定时器触发同 Comet 权限的维护作业（监督器重启预算 window 300s /
+  max 3，超限 STOP_AND_ESCALATE）；监控只观察水位/期限并告警，永不拥有业务 phase/retry/ACL 权。
+- **知识面工具**：LLMWiki 项目 MCP（Kp 面，写入必须走 MCP）；Outline 栈（Kt 面发布判定 + 撤销/恢复面
+  P4_8）。发布预授权/撤权细节见 `lib/adapters/knowledge-authorization.js` / `knowledge-revocation.js`
+  对应旅程（4_7/4_8）。
 
 ## 7. 回退（rollback）
 
@@ -129,24 +168,62 @@ node openspec/changes/delivery-foundation-rearchitecture/team-recovery/run-drill
 本 run 的真实演练记录（两时点回归签名 + 幂等证据）：`worker-reports/P5_3-rework/evidence/05-rollback-drill.txt`。
 回退不删除历史：旧产物与历史证据保持原位（回退只移动候选指针，不改写台账）。
 
+### 7.3 上游升级/回退路径（Comet 0.4.5 → 0.5.0 已走过；后续 0.5.x 照此）
+
+**已走过的 0.4.5 → 0.5.0（修订 2026-10-26-comet-050-adoption-v1，P1_1 relock 050）：**
+
+1. 重锁与资格重验：`integrations/comet/upstream.lock.json` 换 0.5.0 源（commit aeb1a659…）+ 重组补丁链——
+   0001/0002/0004 退役（组合路由取代），新增 0005（Kt closeout）；`toolchain-baseline.json` 重新 QUALIFIED
+   （0.4.5 事实保全为历史证据）。编译器实测按声明编译失败的真实返工证据：
+   `mode-probes/1_4-compiler-compile.json`（P2_4 R1-R6 重开的根因）。
+2. 表面迁移：0.4.5 托管经典门面（`state init --managed-delivery` / `dispatch-gate` / `accept-gate`）在 0.5.0
+   退役（usage error）；托管 Run 改由组合应用驱动（`comet runtime dispatch --application-file
+   <sdd-managed-delivery 包>`，见 3_3.mjs 的 C050 面）；经典 `state init/set/get` 面保留，锁与事务面移到
+   workspace runtime 根（drill 3 已按新面重做）。
+3. 工具链配套：OpenSpec 隔离钉版 1.11.0 → 1.15.0（台账 `OPENSPEC_PIN_BUMPED_1_11_0_TO_1_15_0`）；
+   `.sdd/vendor/comet/<commit>/builds/<fingerprint>/` 按新锁指纹重建（或按 I08 先例可审计复制同指纹缓存，
+   manifest 校验在任何字节漂移时失败）。
+4. 回归收口：comet 依赖用例（1_3/1_4/1_5/1_6/2_4/3_3/4_6 setup）与 5_3 drill 3 在新 build 上全部重跑；
+   旧 0.4.5 fixture PASS 只保留原证明范围，不得冒充新流程通过。
+
+**后续 0.5.x 注意事项（顺序不可颠倒）：**
+
+1. 先重验源/构建 seam（P1_1 的 source/build 测试与 `tools/comet/prepare-source.mjs && build.mjs`），任何
+   补丁链或 toolchain 漂移都会换 fingerprint——旧 `.sdd` build 缓存作废，不得复用旧指纹产物。
+2. 上游补丁面变化先核 `s5-runner-help` 类全命令清单（服务模式/分布式租约面是否引入——触发第 11 节 T2 复审）。
+3. 重跑 comet 依赖用例 + 本手册 drill 3 + `4_6.mjs`（post-archive Kt 恢复面最贴上游 schema）。
+4. 判定器/索引不受上游版本影响（`node test/delivery-cases/4_3.mjs --generate` 幂等性独立于 comet 版本）。
+5. 版本回退本身走第 7.1/7.2 节既有门（批准/同 digest/终态读回；git/.sdd 层回退保留两时点签名）。
+
 ## 8. 已知环境门控清单
 
-与 `acceptance-index.json :: environment_gates.from_partial_nodes` 逐字一致（J4 机械比对，隐瞒即 RED）：
+与 `acceptance-index.json :: environment_gates`（当前 comet-050 修订形态：readonly_observations +
+observation_rule）逐字一致（J4 机械比对，隐瞒即 RED）：
 
-| 任务 | 门控步 | 登记原文（逐字） |
-| --- | --- | --- |
-| I03 | Step 3 | 原生浏览器/独立读回: 无真实 Outline 实例/凭据/文集/OIDC/对象存储 — holder: user/Outline 部署波次 |
-| P1_6 | Step 5 | 宿主会话证明(真实 Runner/host) — holder: 真实 Runner 验证(manifest unverified[0]) |
-| I05 | Step 3 | 真实容器/认证API/MCP读回: docker 沙箱拒+上游未选定 — holder: user/runtime admission |
+| 观测项 | 登记原文（逐字） |
+| --- | --- |
+| docker_daemon | docker_daemon: available |
+| outline | outline: running healthy |
+| runner | runner: sixrole containers exited; inspected controller/author no command |
+| 证据指针 | evidence: .local/comet-reset/runtime-readonly/container-state.json |
 
-open decisions 登记（源 execution-state.json，清单见 acceptance-index.json
-`environment_gates.open_decisions`）含 `HOST_OPENSPEC_DRIFT`（宿主全局 openspec 漂移，owner: user，
-阻断 B08/C08 钉定复跑）等条目；运维注记：
+观测规则（逐字）：container health and readback availability do not prove source ACLs, grants, role execution or any business Journey
+
+`npm test` 基线（钉版 node 24.15.0，2026-10-27 本修订实测）：1159 tests / 1159 pass / 0 fail / 0 skipped，
+exit 0；`bash scripts/check.sh` 同机全绿（含 YAML/JSON 静态校验）。除已知项外零新增是回归门
+（旧 run 的 475/472/2/1 基线属 rework-seven-p1-r1 时点，见 rollback-recipe 的历史签名）。
+
+qualification_status=UNVERIFIED；open_decisions 登记（源 execution-state.json#open_decisions）含
+`HOST_OPENSPEC_DRIFT`（宿主全局 openspec 漂移，owner: user，阻断 B08/C08 钉定复跑）等条目。运维注记：
 
 - 主检出 adapter-quoting 2 例沙箱 EPERM（denyWithinAllow）— 集成回归须在 worktree 运行（65/65 已验证）。
 - llmwiki 会话 worktree venv ENOENT 分支 — 会话工件指向缺失副本，非宿主缺陷（LLMWIKI_RUNTIME_VERIFIED 更正）。
-- comet 依赖回归（1_3/1_4/1_5/1_6 setup）须在 .sdd 装备工作树运行。
+- comet 依赖回归（1_3/1_4/1_5/1_6/2_4/3_3/4_6 setup 与 5_3 drill 3）须在 .sdd 装备工作树运行（0.5.0 指纹
+  build；缺失时按第 5 节重建或按 I08 先例可审计复制）。
 - scripts/check.sh whitebox 夹具缺口在全新 worktree 为 base 起 pre-existing。
+- 历史注记：前一形态索引（from_partial_nodes 表：I03 原生浏览器/凭据、P1_6 宿主会话证明、I05 真实容器/MCP
+  读回）的逐字原文保存在旧索引 git 历史与 `replans/`；其运维语义仍真（无真实 Outline 凭据/文集/OIDC、
+  无 docker 认证 API 等），只是不再是当前机械比对清单。
 
 `npm test` 基线：475 tests / 472 pass / 2 fail（上表 C08、B08 两条已知环境项）/ 1 skipped，exit 1；
 除已知项外零新增是回归门。
@@ -263,6 +340,19 @@ J4 机械校验）。运维摘要：
 - **版本回退 version rollback：LOCAL_ONLY VERIFIED。** 回退四门 + 批准同 digest 正例 + I06 独立确认
   （J3 旅程）；git/.sdd 层候选回退演练按第 7.2 节配方真实执行（J3b 配方 + 两时点签名证据）。
   真实生产晋级/部署 UNVERIFIED（environment owner + runtime admission）。
+
+## 13b. 交接与 execution-prompt 终态核对（P5_3 交接面）
+
+- `execution-prompt.md` 由渲染脚本管理（`planning-toolkit/scripts/render_execution_prompt.py`，哈希取自
+  `drift-lock.json`），**手改无效、不要手写**——终态核对 = 跑
+  `planning-toolkit/scripts/plan_guard.py --plan tasks.md --dag task-dag.json --lock drift-lock.json
+  --architecture architecture.md --contract execution-contract.json --repo-root <repo>`，四哈希
+  （plan/architecture/DAG/contract）一致即终态一致；不一致即 `HALT_AND_REPLAN` 信号，交控制器重封。
+- 已知事实（2026-10-27 核对）：architecture/DAG/contract 三哈希一致；plan 哈希漂移——tasks.md 在
+  P2_4 REOPENED 标注（prose）落锁后被改而 drift-lock 未重封（台账 P2_4_REOPENED_R1_R6 在案）。处置：
+  VERIFY 派发前由控制器重封 drift-lock 并重渲染 prompt；值班不手改任何一侧。
+- 台账收尾：execution-ledger 由唯一控制器追加；worker 只在自身 worker-reports 记录（本修订见
+  `worker-reports/P5_1-P5_3-comet-050/`）。
 
 ## 14. 机械命令清单（machine-verified）
 
@@ -409,6 +499,20 @@ J2/J3/J4 旅程内复跑覆盖（journey 名与测试名对应）。`<...>` 为�
     "verify": "journey",
     "journey": "J4",
     "note": "team implement denied CROSS_MACHINE_SCOPE_NOT_ENABLED (refuse trio is same-source with enablement.json)"
+  },
+  {
+    "id": "R19",
+    "command": "node tools/infra/recovery.mjs validate --registry infra/delivery/registry.json --json",
+    "expectedExit": 0,
+    "verify": "direct",
+    "note": "R10/backup policy consistency readback (I08 surface): catalogGaps reported honestly, never as failures"
+  },
+  {
+    "id": "R20",
+    "command": "node tools/infra/recovery.mjs probe --case pending-cleanup-denial --json",
+    "expectedExit": 0,
+    "verify": "direct",
+    "note": "R10 retention semantics: unresolved Run/knowledge obligations deny workspace cleanup (verified completed or approved migration+restore required)"
   }
 ]
 ```

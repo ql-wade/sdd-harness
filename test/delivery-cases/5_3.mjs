@@ -2,6 +2,12 @@
 // 129cfdf. Operations runbook, team recovery, the capability boundary ledger
 // and the version-rollback recipe for the managed Comet driver (A10/A11/H09).
 //
+// Revision 2026-10-26-comet-050-adoption-v1: drill 3 drives the 0.5.0
+// composition-era classic face (the 0.4.5 `state init --managed-delivery` +
+// dispatch-gate face is retired — usage error); the J4 environment-gate list
+// is derived from the current acceptance-index shape (readonly observations +
+// observation rule instead of the retired from_partial_nodes table).
+//
 // The run's user did NOT enable the cross-machine scope (precondition
 // CROSS_MACHINE_SCOPE_NOT_ENABLED: enablement.json enabled=false + refuse
 // [start,release,implement] + f10_state UNVERIFIED_NOT_ENABLED; the P5_1
@@ -763,10 +769,15 @@ test('J4: gate, machine matrix and capability ledger are same-source on the wild
 test('J4: the runbook carries the v2 gate form, every known environment gate verbatim and the rework-run boundaries; no stale legacy reference survives', () => {
   const text = runbookText();
   const index = JSON.parse(fs.readFileSync(ACCEPTANCE_INDEX, 'utf8'));
-  const gatedStrings = (index.environment_gates?.from_partial_nodes ?? [])
-    .flatMap((entry) => Object.values(entry.gated ?? {}))
-    .map((value) => String(value));
-  assert.ok(gatedStrings.length >= 3, `expected the acceptance index to carry its known environment gates (P5_2 gate row intentionally dropped at acceptance, VF-7), found ${gatedStrings.length}`);
+  // comet-050 revision shape: the acceptance index carries its environment
+  // gates as readonly observations plus the observation rule. Hiding any of
+  // them from the runbook stays a RED.
+  const observations = index.environment_gates?.readonly_observations ?? {};
+  const gatedStrings = [
+    ...Object.entries(observations).map(([key, value]) => `${key}: ${value}`),
+    String(index.environment_gates?.observation_rule ?? ''),
+  ].filter((value) => value.length > 0);
+  assert.ok(gatedStrings.length >= 3, `expected the acceptance index to carry its known environment gates (readonly observations + rule), found ${gatedStrings.length}`);
   const issues = validateRunbookBoundary({ runbookText: text, gatedStrings });
   assert.deepEqual(issues, [], `runbook boundary declaration problems: ${issues.join(' | ')}`);
 });
@@ -774,9 +785,11 @@ test('J4: the runbook carries the v2 gate form, every known environment gate ver
 test('J4 negative: a runbook copy that hides one known environment gate is rejected', () => {
   const text = runbookText();
   const index = JSON.parse(fs.readFileSync(ACCEPTANCE_INDEX, 'utf8'));
-  const gatedStrings = (index.environment_gates?.from_partial_nodes ?? [])
-    .flatMap((entry) => Object.values(entry.gated ?? {}))
-    .map((value) => String(value));
+  const observations = index.environment_gates?.readonly_observations ?? {};
+  const gatedStrings = [
+    ...Object.entries(observations).map(([key, value]) => `${key}: ${value}`),
+    String(index.environment_gates?.observation_rule ?? ''),
+  ].filter((value) => value.length > 0);
   const victim = gatedStrings[0];
   assert.ok(text.includes(victim), 'the real runbook must carry the gate verbatim');
   const tampered = text.replace(victim, victim.slice(0, Math.max(10, Math.floor(victim.length / 2))));
