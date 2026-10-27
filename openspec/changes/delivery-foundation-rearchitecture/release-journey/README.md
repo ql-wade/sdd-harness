@@ -1,6 +1,7 @@
 # P4_2 提升/回滚执行证据（release-journey）
 
-Task P4_2（run impl-dfr-20261020-r1，分支 impl/p4-2-promotion-rollback，2026-10-21）。
+Task P4_2（run impl-dfr-20261020-r1，分支 impl/p4-2-promotion-rollback，2026-10-21；
+修订 2026-10-26-comet-050-adoption-v1 增补 foundation 分发链，见文末）。
 语义唯一来源：`specs/delivery-foundation/spec.md` 的 A14/A16/A17/F09 场景。
 执行器为真实 CLI：`tools/ci/release.mjs`（ReleaseProtocol.v1，本任务新建）；
 独立判定复用已接纳基建（未修改）：`tools/infra/platform.mjs`（I06
@@ -33,7 +34,37 @@ UNVERIFIED（承接者：环境 owner + P4_2 之后的运行时准入）。
 同一 CLI 的正负例矩阵（含 ISOLATED_RELEASE_ENVIRONMENT_REQUIRED、
 ENVIRONMENT_PROJECT_MISMATCH、ARTIFACT_NOT_FROM_MERGE、
 DEPLOYMENT_DIGEST_MISMATCH、READBACK_UNCONFIRMED、ROLLBACK_DIGEST_MISMATCH、
-ROLLBACK_RETENTION_MISSING、ROLLBACK_TERMINAL_STATE_UNCONFIRMED）由
-`test/release-protocol.test.js`（17 例）与 `test/delivery-cases/4_2.mjs`
-（6 例，含 P4_1 delivery-gate 真实前置）持续回归；本目录是一次真实完整
-旅程的落盘证据。
+ROLLBACK_RETENTION_MISSING、ROLLBACK_TERMINAL_STATE_UNCONFIRMED，以及
+foundation 面的 BUILD_DIGEST_DRIFT、SUPPLY_RUNNER_MISMATCH、SUPPLY_BUILD_DRIFT、
+SEALED_BASELINE_UNRESOLVABLE、RELEASE_PROTOCOLS_UNREGISTERED、
+DISTRIBUTION_LEDGER_REQUIRED、DISTRIBUTION_PROJECT_MISMATCH、
+ROLLBACK_BASELINE_UNRESOLVABLE）由
+`test/release-protocol.test.js`（30 例）与 `test/delivery-cases/4_2.mjs`
+（7 例，含 P4_1 delivery-gate 真实前置与 4.2.c foundation 旅程）持续回归；
+本目录是一次真实完整旅程的落盘证据。
+
+## foundation 分发链（修订 2026-10-26-comet-050-adoption-v1，2026-10-26/27）
+
+本仓库自身就是分发生产者：部署语义 = foundation-export 分发包的
+构建/发布/回滚。新增 `foundation-promote|foundation-reconcile|
+foundation-rollback` 三个子命令（同一 ReleaseProtocol.v1 CLI），复用
+exporter 原生模块接口（`buildLock`/`resolveBaseline`）；供应侧 build
+fingerprint 镜像 `tools/comet/build.mjs fingerprintOf` 公式，并在
+`.sdd/vendor/comet/<commit>/builds/<fp>/distribution.json` 存在时实测比对。
+
+发布协议登记：`release-protocols.json`（本目录，如实登记当前发布路径——
+git 分发 LOCAL_VERIFIED；npm publish 与 GitHub release 为 UNVERIFIED：
+本任务无发布凭据/授权，`.github/workflows` 仅有只读门
+delivery-gate.yml + quality-gates.yml，无发布流水线）。
+
+### foundation-*.json 旅程（全部真实提交字节，账本在 $TMPDIR，零仓库写入）
+
+| 记录 | 场景语义 | 判定要点 |
+| --- | --- | --- |
+| foundation-promote-v1-old-commit.json | 旧提交 60a75c53 的已提交分发（exportDigest 3ab11336…，runner 0.4.5 供应指纹 30562925…） | exit 0：以钉版 releaseCommit 重算 live build == 已提交 lock；sealed baseline 逐字节解析；发布记录绑定 exportDigest+供应指纹+releaseCommit |
+| foundation-promote-v2-current.json | 当前提交分发（bd4fe3be…，runner 0.5.0，供应指纹 de39629a… 与本机 `.sdd` vendored build 的 distribution.json 实测一致） | exit 0：顺序发布自身移动 tag；保留上一已批准 exportDigest（3ab1…）为唯一回滚目标 |
+| foundation-rollback-unapproved.json | A17 未批准拒绝 | exit 2，ROLLBACK_NOT_APPROVED，零状态变更 |
+| foundation-rollback-approved.json | A17 批准回滚到前一 exportDigest | exit 0：目标 3ab1… 的 sealed baseline 从**当前仓库** foundation/baselines/ 多版本保留中逐字节解析（source=sealed-assets）；active/tag/服务终态读回全部 = 回滚 digest |
+| foundation-reconcile-unknown.json | A16 未知关联 ID | exit 2，READBACK_UNCONFIRMED，found=false，绝不二次发布 |
+| foundation-drift-refusal-old-commit.json | A14/digest 锁真实拦截样本 | 历史提交 0e0d8341（lock 19df85e0…）在其自身提交上 live 重算即漂移（并行波次冻结竞态）：exit 2，BLOCKED [BUILD_DIGEST_DRIFT, SEALED_BASELINE_UNRESOLVABLE]，committed 19df85e0… vs built d34809dd…，零发布 |
+| foundation-run-manifest.txt | 运行清单 | 6 步真实 CLI 执行 exitCode：0/0/2/0/2/2 |

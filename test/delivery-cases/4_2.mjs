@@ -400,3 +400,120 @@ test('4.2.b boundary: no production release is claimed — an unregistered isola
     'real production promotion stays with the environment owner + runtime admission after P4_2');
   assert.doesNotMatch(JSON.stringify(receipt), /\/Users\//, 'no host private paths in structured receipts');
 });
+
+// ---------------------------------------------------------------------------
+// 4.2.c foundation-distribution journey (revision 2026-10-26-comet-050-
+// adoption-v1): this scaffold is the distribution producer, so deployment
+// semantics = build/publish/rollback of the foundation-export package. The
+// chain runs the REAL exporter to freeze a sealed distribution, then the
+// release protocol locks one exportDigest through build (live build == committed
+// lock), supply (the pinned runner's build fingerprint bound into the release
+// record), publication registration (the committed release-protocols.json;
+// every remote leg honestly UNVERIFIED), tag/active/readback, and rolls back
+// to the retained previous exportDigest whose sealed baseline still resolves
+// from the multi-version baselines directory.
+// ---------------------------------------------------------------------------
+
+const exporterPath = path.join(projectRoot, 'tools', 'foundation-export.mjs');
+const committedProtocolsPath = path.join(projectRoot, 'openspec', 'changes', 'delivery-foundation-rearchitecture', 'release-journey', 'release-protocols.json');
+const FX_COMMIT = (label) => crypto.createHash('sha256').update(`fx-commit-4-2-${label}`).digest('hex').slice(0, 40);
+
+function makeFoundationRoot(version) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'p4-2-journey-fdn-'));
+  fs.mkdirSync(path.join(root, '.agents/skills/alpha'), { recursive: true });
+  fs.writeFileSync(path.join(root, '.agents/skills/alpha/SKILL.md'), `# alpha ${version}\n`);
+  fs.writeFileSync(path.join(root, 'hooks.yaml'), ['policies:', '  - id: dangerous-command-blocklist', '    hook: PreToolUse', '    matcher: Bash', '    action: deny', '    patterns:', '      - "git push --force"', '    message: "blocked"'].join('\n') + '\n');
+  writeJson(root, '.mcp.json', { mcpServers: { probe: { command: 'npx', args: ['-y', 'probe-mcp@1.2.3'] } } });
+  writeJson(root, 'package.json', { name: 'fdn-journey', version: '1.0.0' });
+  writeJson(root, 'integrations/comet/upstream.lock.json', {
+    schemaVersion: 1,
+    package: { name: '@rpamis/comet', version: '0.5.0' },
+    source: { commit: FX_COMMIT('comet'), sha256: crypto.createHash('sha256').update(`archive-${version}`).digest('hex') },
+    toolchain: { node: '24.15.0', pnpm: '10.18.3' },
+    patches: [{ path: 'integrations/comet/patches/0005.patch', sha256: crypto.createHash('sha256').update(`patch-${version}`).digest('hex') }],
+  });
+  writeJson(root, 'openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json', {
+    schema_version: 1,
+    method_profile: { controller: 'fixture-profile' },
+  });
+  writeJson(root, 'ledger/registration.json', {
+    schemaVersion: 1,
+    interface: 'DistributionLedger.v1',
+    distribution: {
+      id: 'foundation-local-1',
+      project: 'sdd-harness-pilot',
+      rollback: { approvalRequired: true, sameDigestRequired: true, retainPreviousApproved: true },
+      readbackOracle: { kind: 'independent-distribution-readback', correlationIdRequired: true },
+    },
+    localOnly: true,
+  });
+  return root;
+}
+
+function runExporter(root, commit) {
+  return spawnSync(process.execPath, [exporterPath, 'export', '--root', root, '--out', path.join(root, 'foundation'),
+    '--release-commit', commit, '--freeze-baseline'], { cwd: projectRoot, encoding: 'utf8', timeout: RUN_TIMEOUT_MS, env: childEnv(root) });
+}
+
+const committedExportDigest = (root) => JSON.parse(fs.readFileSync(path.join(root, 'foundation', 'foundation-lock.json'), 'utf8')).release.exportDigest;
+
+test('4.2.c journey: the foundation distribution builds, promotes and rolls back on ONE exportDigest with remote publication honestly UNVERIFIED', (t) => {
+  const root = makeFoundationRoot('v1');
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const ledger = path.join(root, 'ledger');
+
+  // 1) build: the real exporter freezes the distribution and seals its baseline.
+  const build = runExporter(root, FX_COMMIT('r1'));
+  assert.equal(build.status, 0, `exporter stderr: ${build.stderr}`);
+  const digestV1 = committedExportDigest(root);
+
+  // 2) promote: the committed release-protocols registration drives the release; the same
+  //    digest threads supply fingerprint, tag, active release and readback.
+  const promoted = parseJson(runRelease(['foundation-promote', '--root', root, '--ledger', ledger,
+    '--protocols', committedProtocolsPath, '--tag', 'stable'], root), 'promote v1');
+  assert.equal(promoted.status, 'VERIFIED');
+  assert.equal(promoted.artifact.exportDigest, digestV1, 'F09: the promoted digest is the sealed exportDigest');
+  assert.match(promoted.artifact.supplyBuildFingerprint, /^[0-9a-f]{64}$/, 'the supply build fingerprint is bound');
+  assert.equal(promoted.protocols.remotePublication, 'UNVERIFIED', 'no remote publication is claimed on the journey');
+
+  // 3) negative red line: tag drift never promotes.
+  fs.writeFileSync(path.join(ledger, 'refs', 'tags', 'stable'), `${crypto.createHash('sha256').update('oob').digest('hex')}\n`);
+  fs.writeFileSync(path.join(root, '.agents/skills/alpha/SKILL.md'), '# alpha v2\n');
+  assert.equal(runExporter(root, FX_COMMIT('r2')).status, 0);
+  const drifted = runRelease(['foundation-promote', '--root', root, '--ledger', ledger,
+    '--protocols', committedProtocolsPath, '--tag', 'stable'], root);
+  assert.equal(drifted.status, 2);
+  assert.ok(parseJson(drifted, 'drift').codes.includes('TAG_DIGEST_DRIFT'));
+
+  // 4) restore the tag to the served reality and complete the sequential release.
+  fs.writeFileSync(path.join(ledger, 'refs', 'tags', 'stable'), `${digestV1}\n`);
+  const v2 = parseJson(runRelease(['foundation-promote', '--root', root, '--ledger', ledger,
+    '--protocols', committedProtocolsPath, '--tag', 'stable'], root), 'promote v2');
+  assert.equal(v2.status, 'VERIFIED');
+  const digestV2 = v2.artifact.exportDigest;
+  assert.notEqual(digestV2, digestV1);
+
+  // 5) rollback: approved rollback to the retained previous exportDigest whose sealed
+  //    baseline still resolves (multi-version retention under foundation/baselines).
+  const approval = writeJson(root, 'approval.json', {
+    schemaVersion: 1, interface: 'RollbackApproval.v1',
+    digest: digestV1, distribution: 'foundation-local-1', approver: 'release-owner', approvedAt: NOW,
+  });
+  const rolled = runRelease(['foundation-rollback', '--root', root, '--ledger', ledger,
+    '--digest', digestV1, '--approval', approval], root);
+  const rollbackReceipt = parseJson(rolled, 'rollback');
+  assert.equal(rolled.status, 0, `rollback stderr: ${rolled.stderr}`);
+  assert.equal(rollbackReceipt.status, 'VERIFIED');
+  assert.equal(rollbackReceipt.rollback.digest, digestV1);
+  assert.equal(rollbackReceipt.rollback.sealedBaseline.resolvable, true, 'the previous sealed baseline resolved byte-for-byte');
+  assert.equal(rollbackReceipt.rollback.sealedBaseline.exportDigest, digestV1, 'the resolvable baseline is the rollback digest itself');
+  assert.equal(rollbackReceipt.rollback.observed.businessTerminalState.serving, digestV1);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(ledger, 'business', 'state.json'), 'utf8')).serving, digestV1);
+
+  // 6) boundary: every journey receipt stays LOCAL_ONLY with the remote surface named, no host paths.
+  for (const receipt of [promoted, v2, rollbackReceipt]) {
+    assert.equal(receipt.mode, 'LOCAL_ONLY');
+    assert.match(receipt.note, /REMOTE_PUBLICATION|UNVERIFIED/i);
+    assert.doesNotMatch(JSON.stringify(receipt), /\/Users\//);
+  }
+});
