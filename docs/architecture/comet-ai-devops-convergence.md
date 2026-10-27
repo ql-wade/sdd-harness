@@ -68,7 +68,7 @@ R/A前检索；验证后提炼候选；Kp阻归档，Kt阻整体完成。Git规�
 
 | 处置 | 内容 |
 | --- | --- |
-| 保留 | Comet原生命令/状态/Guard、OpenSpec、Matt与专门方法、真实独立审查、知识MCP、权限/恢复、现有Git/CI/制品设施 |
+| 保留 | Comet原生命令/状态/Guard、OpenSpec（隔离钉版 **1.15.0**，2026-10-27 显式升级，经 `COMET_OPENSPEC` 注入；上游仍 @latest 无 pin；兼容闭包谓词实测通过）、Matt与专门方法、真实独立审查、知识MCP、权限/恢复、现有Git/CI/制品设施 |
 | 必要Docker | Outline及其PostgreSQL/Redis；附件存储按已有方案；deepwiki-open按实际运行需要。逐项版本/持久化/权限/恢复验证，不假称已部署 |
 | 默认不部署 | LLMWiki额外HTTP服务、CodeGraph、模型网关、队列、Control API、统一secret服务、独立浏览器池 |
 | 从默认路线退休 | 六角色compose、角色端口与常驻worker、按角色绑定UID/卷/镜像的前置、复制authority服务、私有app-server/S0闭包作为交付前置 |
