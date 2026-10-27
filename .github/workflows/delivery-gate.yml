@@ -50,6 +50,7 @@ jobs:
       - name: Collect protected check evidence for the exact merge SHA (read-only platform readback)
         env:
           MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha || github.event.merge_group.head_sha || github.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           HEAD_SHA="$(git rev-parse HEAD)"
