@@ -168,6 +168,9 @@ const decideArgs = (world, requestFile) => ['decide', '--request', requestFile, 
 const reasonCodes = (result) => {
   try { return JSON.parse(result.stdout).reasons.map((r) => r.code); } catch { return [`UNPARSABLE:${result.stdout.slice(0, 120)}`]; }
 };
+const violationCodes = (result) => {
+  try { return JSON.parse(result.stdout).violations.map((v) => v.code); } catch { return [`UNPARSABLE:${result.stdout.slice(0, 120)}`]; }
+};
 
 test('setup: the KnowledgeAuthz.v1 CLI and the committed authorization artifacts are present and validate clean', () => {
   const run = runCli(['validate',
@@ -503,6 +506,158 @@ test('U07: role isolation is enforced by real managed entrances and denials are 
 // U08: the legitimate path — valid owner preauthorization, complete sources,
 // matching payload and review — auto-publishes without repeated manual
 // confirmation, bound to exactly this object/version.
+// P4_7 revision 2026-10-26-comet-050-adoption-v1: the publication-surface
+// registration. Who may publish what to whom is a registered, evaluated face:
+// the pre-authorized collection domain carries each dimension (source
+// permission intersection / complete audience / grant validity / version) with
+// an honest UNVERIFIED or STRUCTURAL_ONLY status, the Kp LLMWiki surface is a
+// project-internal stdio MCP boundary (NOT_REQUIRED externally), the Kt Outline
+// surface is an external grant face whose every required entry is
+// NOT_PROVISIONED, and the three negative redlines (no author self-approval, no
+// policy mutation through this surface, no owner-key material copied from the
+// database) are evaluator assertions — weakening any of them in the committed
+// artifacts is a named validate violation.
+const SURFACE_FILE = path.join(knowledgeDir, 'publication-surface-registration.json');
+const POLICY_FILE = path.join(knowledgeDir, 'preauthorization-policy.json');
+const REDLINE_FLAGS = [
+  'authorSelfApprovalForbidden',
+  'policyMutationOutsideDecisionSurface',
+  'ownerKeyExfiltrationForbidden',
+  'consumedAuthorizationReuseForbidden',
+];
+
+test('comet-050 r1: the publication surfaces are registered with honest UNVERIFIED/NOT_PROVISIONED status and validate as part of the committed world', () => {
+  // The committed world (now including the surface registration) validates clean.
+  const run = runCli(['validate',
+    '--model', path.join(knowledgeDir, 'authorization-model.json'),
+    '--policy', POLICY_FILE,
+    '--ledger', path.join(knowledgeDir, 'grant-ledger.example.json'),
+    '--refs', refsPath, '--registry', registryPath, '--json']);
+  assert.equal(run.status, 0, `the committed world incl. the surface registration must validate clean: ${run.stderr || run.stdout}`);
+  const surface = JSON.parse(fs.readFileSync(SURFACE_FILE, 'utf8'));
+  assert.equal(surface.interface, 'KnowledgePublicationSurface.v1');
+  assert.equal(surface.revision, '2026-10-26-comet-050-adoption-v1');
+  // Pre-authorized collection domain: every dimension honestly UNVERIFIED or
+  // STRUCTURAL_ONLY — never a fabricated authorization.
+  const domain = surface.preauthorizedCollectionDomain;
+  assert.equal(domain.target, 'outline-managed-collection');
+  for (const dimension of ['sourcePermissionIntersection', 'completeAudience', 'grantValidity', 'version']) {
+    assert.ok(domain.dimensions[dimension], `dimension ${dimension} must be registered`);
+    assert.ok(['UNVERIFIED', 'STRUCTURAL_ONLY', 'HISTORICAL_PARTIAL'].includes(domain.dimensions[dimension].status),
+      `dimension ${dimension} must carry an honest status, got ${domain.dimensions[dimension].status}`);
+  }
+  // Kp surface: project-internal stdio MCP — no external grant, but a boundary.
+  const kp = surface.kpSurface;
+  assert.equal(kp.kind, 'project-internal-stdio-mcp');
+  assert.equal(kp.externalAuthorization, 'NOT_REQUIRED');
+  assert.equal(kp.status, 'BOUNDARY_REGISTERED');
+  for (const ref of kp.boundary.files) {
+    assert.ok(fs.existsSync(path.join(projectRoot, ref)), `Kp boundary file ${ref} must exist`);
+  }
+  // The Kp admission reference is a real I01 catalog shape: the llmwiki
+  // principal resolves it through the four catalog checks (UNRESOLVED — I01
+  // has no runtime secret store), and the catalog itself says the ref grants
+  // no write, publication or audience today.
+  const kpResolve = runCli(['resolve', '--ref', kp.boundary.curatedWriteAdmissionRef,
+    '--as', 'svc:sdd-harness-pilot/llmwiki', '--role', 'publisher', '--refs', refsPath, '--json']);
+  assert.equal(kpResolve.status, 0, `the Kp admission ref must be a registered catalog shape: ${kpResolve.stdout}`);
+  assert.equal(JSON.parse(kpResolve.stdout).status, 'UNRESOLVED');
+  // Kt surface: an external grant face that is NOT provisioned.
+  const kt = surface.ktSurface;
+  assert.equal(kt.kind, 'external-managed-collection-publish');
+  assert.equal(kt.externalGrant, 'REQUIRED');
+  assert.equal(kt.status, 'NOT_PROVISIONED');
+  assert.ok(kt.requiredEntries.length >= 5, 'every required grant-side entry must be listed');
+  for (const entry of kt.requiredEntries) {
+    assert.equal(entry.status, 'NOT_PROVISIONED', `entry ${entry.id} must be honestly NOT_PROVISIONED`);
+    assert.ok(entry.blocker, `entry ${entry.id} must name its current blocker`);
+  }
+});
+
+test('comet-050 r1: the negative redlines are evaluator assertions — weakening them in the committed artifacts is a named violation', () => {
+  const committed = JSON.parse(fs.readFileSync(SURFACE_FILE, 'utf8'));
+  const policy = JSON.parse(fs.readFileSync(POLICY_FILE, 'utf8'));
+  for (const flag of REDLINE_FLAGS) {
+    assert.equal(committed.redlines[flag], true, `surface redline ${flag} must be registered`);
+    assert.equal(policy.redlines[flag], true, `policy redline ${flag} must be registered`);
+  }
+  const base = ['validate',
+    '--model', path.join(knowledgeDir, 'authorization-model.json'),
+    '--ledger', path.join(knowledgeDir, 'grant-ledger.example.json'),
+    '--refs', refsPath, '--registry', registryPath, '--json'];
+  // (a) A redline flag flipped false in the policy.
+  const weakPolicy = structuredClone(policy);
+  weakPolicy.redlines.authorSelfApprovalForbidden = false;
+  const weakPolicyFile = writeTmp('r1-weak-policy.json', weakPolicy);
+  const weakPolicyRun = runCli([...base, '--policy', weakPolicyFile, '--json']);
+  assert.equal(weakPolicyRun.status, 2, 'a weakened redline must fail validate');
+  assert.ok(violationCodes(weakPolicyRun).includes('REDLINE_WEAKENED'));
+  // (b) The same flag missing from the surface registration.
+  const weakSurface = structuredClone(committed);
+  delete weakSurface.redlines.ownerKeyExfiltrationForbidden;
+  const weakSurfaceFile = writeTmp('r1-weak-surface.json', weakSurface);
+  const weakSurfaceRun = runCli([...base, '--policy', POLICY_FILE, '--surface', weakSurfaceFile, '--json']);
+  assert.equal(weakSurfaceRun.status, 2);
+  assert.ok(violationCodes(weakSurfaceRun).includes('REDLINE_WEAKENED'));
+  // (c) A consumed authorization re-flagged as reusable.
+  const reusable = structuredClone(committed);
+  reusable.consumedAuthorizations[0].reuseForbidden = false;
+  const reusableFile = writeTmp('r1-reusable-surface.json', reusable);
+  const reusableRun = runCli([...base, '--policy', POLICY_FILE, '--surface', reusableFile, '--json']);
+  assert.equal(reusableRun.status, 2, 'a consumed one-shot authorization cannot be re-flagged reusable');
+  assert.ok(violationCodes(reusableRun).includes('CONSUMED_AUTHORIZATION_RECORD_INVALID'));
+  // (d) A Kt required entry claimed PROVISIONED without evidence.
+  const provisioned = structuredClone(committed);
+  provisioned.ktSurface.requiredEntries[0].status = 'PROVISIONED';
+  const provisionedFile = writeTmp('r1-provisioned-surface.json', provisioned);
+  const provisionedRun = runCli([...base, '--policy', POLICY_FILE, '--surface', provisionedFile, '--json']);
+  assert.equal(provisionedRun.status, 2, 'an ungrounded NOT_PROVISIONED->PROVISIONED flip must be refused');
+  assert.ok(violationCodes(provisionedRun).includes('KT_GRANT_CLAIM_UNGROUNDED'));
+});
+
+test('comet-050 r1: the author cannot mutate the permission policy through this surface — no principal can, and nothing is written', () => {
+  const policyBefore = sha256(fs.readFileSync(POLICY_FILE));
+  const surfaceBefore = sha256(fs.readFileSync(SURFACE_FILE));
+  // The named entrance refuses the author...
+  const asAuthor = runCli(['authorize-policy-change', '--as', AUTHOR, '--reason', 'widen the audience allowlist', '--json']);
+  assert.equal(asAuthor.status, 2, 'the author must be refused policy mutation');
+  assert.equal(JSON.parse(asAuthor.stdout).code, 'POLICY_MUTATION_NOT_AUTHORIZED');
+  // ...the publisher, the isolator and the issuer-to-be equally...
+  for (const principal of [PUBLISHER, ISOLATOR, REVIEWER]) {
+    const refused = runCli(['authorize-policy-change', '--as', principal, '--reason', 'adjust trusted policy', '--json']);
+    assert.equal(refused.status, 2, `${principal} must be refused policy mutation`);
+    assert.equal(JSON.parse(refused.stdout).code, 'POLICY_MUTATION_NOT_AUTHORIZED');
+  }
+  // ...and even the registered owner: this decision surface holds NO mutation
+  // power for anyone — trusted artifacts change only as a new version through
+  // the protected issuance path (owner sign-off in governance config).
+  const asOwner = runCli(['authorize-policy-change', '--as', OWNER_PRINCIPAL, '--reason', 'owner edit', '--json']);
+  assert.equal(asOwner.status, 2, 'the owner too must use the protected issuance path, never this CLI');
+  assert.equal(JSON.parse(asOwner.stdout).code, 'POLICY_MUTATION_NOT_AUTHORIZED');
+  // A refused mutation writes nothing: both trusted artifacts are byte-identical.
+  assert.equal(sha256(fs.readFileSync(POLICY_FILE)), policyBefore, 'policy bytes must be unchanged');
+  assert.equal(sha256(fs.readFileSync(SURFACE_FILE)), surfaceBefore, 'surface registration bytes must be unchanged');
+});
+
+test('comet-050 r1: owner-key material copied from the database is refused in the publish request (SECRET_MATERIAL_IN_REQUEST)', () => {
+  const world = fixtureWorld();
+  // (a) A key-shaped field — an owner key literally copied out of the Outline
+  // database into the request — is refused by field shape alone.
+  const withKey = writeTmp('r1-owner-key.json', validRequest({ apiKey: 'ol_api_copied_from_the_outline_database' }));
+  const keyRun = runCli(decideArgs(world, withKey));
+  assert.equal(keyRun.status, 2, 'key material in the request must be a refusal');
+  assert.ok(reasonCodes(keyRun).includes('SECRET_MATERIAL_IN_REQUEST'), `expected SECRET_MATERIAL_IN_REQUEST, got ${keyRun.stdout}`);
+  // (b) A bearer-token-shaped value is refused by value shape, whatever the field name.
+  const withBearer = writeTmp('r1-bearer.json', validRequest({ credentialNote: 'Bearer jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj' }));
+  const bearerRun = runCli(decideArgs(world, withBearer));
+  assert.equal(bearerRun.status, 2);
+  assert.ok(reasonCodes(bearerRun).includes('SECRET_MATERIAL_IN_REQUEST'));
+  // Credential access has exactly one shape on this surface: the I01 ref gate.
+  const gate = runCli(['resolve', '--ref', 'secret-ref:sdd-harness-pilot/outline-publisher', '--as', PUBLISHER, '--role', 'publisher', '--refs', refsPath, '--json']);
+  assert.equal(gate.status, 0);
+  assert.equal(JSON.parse(gate.stdout).status, 'UNRESOLVED', 'the gate resolves principals, never values');
+});
+
 test('U08: a fully grounded publish auto-advances with a bound receipt and readback obligation, never extended to other objects or versions', () => {
   const world = fixtureWorld();
   const request = writeTmp('u08-request.json', validRequest());

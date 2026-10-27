@@ -1,0 +1,19 @@
+{
+  "observedAt": "2026-10-27T03:05:53.389159+00:00",
+  "scope": "credential-free loopback reachability only (mirrors I03-comet-050 api-probes-readonly.txt); reachability is NOT publish permission and NOT audience/grant/action authority",
+  "probes": [
+    {
+      "endpoint": "http://127.0.0.1:3000/_health",
+      "httpStatus": 200,
+      "body": "OK",
+      "bodySha256": "565339bc4d33d72817b583024112eb7f5cdf3e5eef0252d6ec1b9c9a94e12bb3"
+    },
+    {
+      "endpoint": "http://127.0.0.1:3000/api/documents.list",
+      "httpStatus": 404,
+      "error": "{\"ok\":false,\"error\":\"not_found\",\"status\":404,\"message\":\"Resource not found\"}",
+      "unauthenticated": true,
+      "note": "GET on a POST route returns 404 (I03's POST probe observed 401 authentication_required); either way unauthenticated calls are refused — reachability only, no audience observation"
+    }
+  ]
+}

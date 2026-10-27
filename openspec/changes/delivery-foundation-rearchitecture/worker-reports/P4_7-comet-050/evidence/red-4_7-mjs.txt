@@ -1,0 +1,145 @@
+TAP version 13
+# Subtest: setup: the KnowledgeAuthz.v1 CLI and the committed authorization artifacts are present and validate clean
+ok 1 - setup: the KnowledgeAuthz.v1 CLI and the committed authorization artifacts are present and validate clean
+  ---
+  duration_ms: 61.387916
+  ...
+# Subtest: U01: Comet rejects self-authored and unauthorized/expired/revoked grants — signature, PR merge and approved fields carry no weight
+ok 2 - U01: Comet rejects self-authored and unauthorized/expired/revoked grants — signature, PR merge and approved fields carry no weight
+  ---
+  duration_ms: 649.39275
+  ...
+# Subtest: U02: a review-passed multi-source candidate is still denied when the audience is in the union but not in the disclosure intersection
+ok 3 - U02: a review-passed multi-source candidate is still denied when the audience is in the union but not in the disclosure intersection
+  ---
+  duration_ms: 108.581833
+  ...
+# Subtest: U03: pre-write recheck blocks the old publish verdict after the grant shrinks; no auto-renewal of the same operation
+ok 4 - U03: pre-write recheck blocks the old publish verdict after the grant shrinks; no auto-renewal of the same operation
+  ---
+  duration_ms: 218.743458
+  ...
+# Subtest: U04: a payload change invalidates the old review/publish verdict — no semantic-similarity or same-document-id reuse
+ok 5 - U04: a payload change invalidates the old review/publish verdict — no semantic-similarity or same-document-id reuse
+  ---
+  duration_ms: 164.7915
+  ...
+# Subtest: U05: share/inheritance/public audience sources are refused on an allowlisted collection; no ACL mutation entrance exists
+ok 6 - U05: share/inheritance/public audience sources are refused on an allowlisted collection; no ACL mutation entrance exists
+  ---
+  duration_ms: 493.261375
+  ...
+# Subtest: U06: incomplete/unmapped/error/service-only permission evidence stays blocked and never degrades to empty-or-public
+ok 7 - U06: incomplete/unmapped/error/service-only permission evidence stays blocked and never degrades to empty-or-public
+  ---
+  duration_ms: 455.067625
+  ...
+# Subtest: U07: role isolation is enforced by real managed entrances and denials are auditable — author never issues, isolator never reads publisher material
+ok 8 - U07: role isolation is enforced by real managed entrances and denials are auditable — author never issues, isolator never reads publisher material
+  ---
+  duration_ms: 331.087041
+  ...
+# Subtest: comet-050 r1: the publication surfaces are registered with honest UNVERIFIED/NOT_PROVISIONED status and validate as part of the committed world
+not ok 9 - comet-050 r1: the publication surfaces are registered with honest UNVERIFIED/NOT_PROVISIONED status and validate as part of the committed world
+  ---
+  duration_ms: 56.010791
+  location: '/Users/mac/Code/sdd-harness/test/delivery-cases/4_7.mjs:529:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/infra/delivery/knowledge/publication-surface-registration.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/delivery-cases/4_7.mjs:537:33)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: comet-050 r1: the negative redlines are evaluator assertions — weakening them in the committed artifacts is a named violation
+not ok 10 - comet-050 r1: the negative redlines are evaluator assertions — weakening them in the committed artifacts is a named violation
+  ---
+  duration_ms: 0.394917
+  location: '/Users/mac/Code/sdd-harness/test/delivery-cases/4_7.mjs:577:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/infra/delivery/knowledge/publication-surface-registration.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.readFileSync (node:fs:442:20)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/delivery-cases/4_7.mjs:578:35)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: comet-050 r1: the author cannot mutate the permission policy through this surface — no principal can, and nothing is written
+not ok 11 - comet-050 r1: the author cannot mutate the permission policy through this surface — no principal can, and nothing is written
+  ---
+  duration_ms: 0.246666
+  location: '/Users/mac/Code/sdd-harness/test/delivery-cases/4_7.mjs:618:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, open '/Users/mac/Code/sdd-harness/infra/delivery/knowledge/publication-surface-registration.json'"
+  code: 'ENOENT'
+  stack: |-
+    Object.openSync (node:fs:562:18)
+    Object.readFileSync (node:fs:446:35)
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/delivery-cases/4_7.mjs:620:35)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: comet-050 r1: owner-key material copied from the database is refused in the publish request (SECRET_MATERIAL_IN_REQUEST)
+not ok 12 - comet-050 r1: owner-key material copied from the database is refused in the publish request (SECRET_MATERIAL_IN_REQUEST)
+  ---
+  duration_ms: 54.810542
+  location: '/Users/mac/Code/sdd-harness/test/delivery-cases/4_7.mjs:642:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    expected SECRET_MATERIAL_IN_REQUEST, got {
+      "interface": "KnowledgeAuthz.v1",
+      "command": "decide",
+      "verdict": "deny",
+      "reasons": [
+        {
+          "code": "UNKNOWN_REQUEST_FIELD",
+          "at": "apiKey",
+          "key": "apiKey"
+        }
+      ],
+      "checkedAt": "2026-10-27T03:12:32.208Z"
+    }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/delivery-cases/4_7.mjs:649:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: U08: a fully grounded publish auto-advances with a bound receipt and readback obligation, never extended to other objects or versions
+ok 13 - U08: a fully grounded publish auto-advances with a bound receipt and readback obligation, never extended to other objects or versions
+  ---
+  duration_ms: 413.985834
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 9
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3084.018875

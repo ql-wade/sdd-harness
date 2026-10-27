@@ -1,0 +1,74 @@
+{
+  "task": "P4_7（修订 2026-10-26-comet-050-adoption-v1）：知识发布预授权与最小权限——发布面登记 + 负向红线评估器断言 + Kp/Kt 授权面登记",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "worker": "P4_7 comet-050 implementation worker",
+  "final_status": "GREEN（本地可证子集；活体授权面全部如实 UNVERIFIED / NOT_PROVISIONED）",
+  "scope_note": "只改 tasks.md '### Task P4_7' Owns 文件 + worker-reports/P4_7-comet-050/；未 commit；未做任何真实外部发布、凭据访问或外发。外发授权（14 旧 + 15 新一次共识）与 Outline owner key 三 API 一次只读核验均已消耗——未重跑、未读值、未挪用；本修订唯一活体动作是无凭据 loopback 可达性观测（镜像 I03-comet-050 的探针面）。",
+  "registration_surface": {
+    "artifact": "infra/delivery/knowledge/publication-surface-registration.json (KnowledgePublicationSurface.v1)",
+    "evaluator": "tools/infra/knowledge-authz.mjs validate --surface（缺登记即 SURFACE_REGISTRATION_MISSING fail-closed）",
+    "preauthorizedCollectionDomain": {
+      "target": "outline-managed-collection",
+      "dimensions": {
+        "sourcePermissionIntersection": "UNVERIFIED — 源侧活体权限读回从未完成（gh TLS x509）；台账 disclosureAudience 保持空；交集规则由评估器强制但无活体输入，committed decide fail-closed",
+        "completeAudience": "HISTORICAL_PARTIAL — 唯一活体受众读回是 2026-10-22 试点观测（4/5 渠道 READ，attachment 从未观测）；本修订无凭据探针（2026-10-27T03:05Z）仅证 loopback 可达；collection-registration 受众 UNVERIFIED 为准",
+        "grantValidity": "STRUCTURAL_ONLY — grant-pilot-001/002 结构上有效至 2027-01-18（90 天上限、真实时钟）；但 issuanceCredential UNREGISTERED：owner 登记台账条目，不是活体授权",
+        "version": "STRUCTURAL_ONLY — 审查/判定绑定冻结 payload 摘要、decisionId 覆盖全回执、autoRenewal=false，全部评估器强制；尚无活体 payload 走过"
+      }
+    },
+    "kpSurface": "BOUNDARY_REGISTERED — 项目内 stdio MCP（llmwiki）：外部授权 NOT_REQUIRED；边界=唯一 canonical wiki root .sdd/wiki/sdd-harness + ProjectRoot.v1 无条件 containment + KnowledgeWrite.v1 分层准入（curated 唯一事实层、requiresApproval、独立读回）+ 摄入脱敏；curated-write 准入引用是 I01 目录形状（llmwiki-curated-write：目录自述无运行时秘密、不授予任何写/发布/受众）；边界文件逐一指向真实提交工件",
+    "ktSurface": "NOT_PROVISIONED — 外部 grant REQUIRED，五条所需条目逐项登记且全部 NOT_PROVISIONED：protected-issuance-workflow / source-permission-readback / target-audience-live-readback（attachment 从未观测）/ publisher-credential-materialization（ref 仅目录形状；已消耗 owner key 不得复用）/ fresh-outbound-authorization（14+15 一次共识授权已消耗）"
+  },
+  "negative_redlines_as_evaluator_assertions": {
+    "authorSelfApproval": "SELF_AUTHORED_GRANT / SELF_AUTHORED_APPROVAL / SELF_REVIEW_FORBIDDEN / AUTHOR_CLASSIFICATION_FORBIDDEN（既有，U01 面）+ 红线旗标登记（policy.redlines 与 surface.redlines 双处全 true）",
+    "policyMutation": "新命令 authorize-policy-change：对 author/reviewer/publisher/isolator 与注册 owner 全体 POLICY_MUTATION_NOT_AUTHORIZED（exit 2、mutated:[]、零写入）——可信工件只能经受保护签发路径出新版本；弱化红旗即 REDLINE_WEAKENED",
+    "ownerKeyExfiltration": "decide 请求面扫描：key 形状字段或 token 形状值（如从 Outline 数据库抄来的 owner key）→ SECRET_MATERIAL_IN_REQUEST 拒绝；凭据只经 I01 ref 门；已消耗授权记录 reuseForbidden 弱化即 CONSUMED_AUTHORIZATION_RECORD_INVALID；Kt 条目无证据翻 PROVISIONED 即 KT_GRANT_CLAIM_UNGROUNDED"
+  },
+  "unverified": [
+    { "item": "源侧活体权限读回（GitHub collaborator 全量分页等）", "reason": "gh api TLS x509 失败；交集维度保持 UNVERIFIED", "successor": "源连接器波次" },
+    { "item": "目标受众活体闭包（含 attachment 渠道）", "reason": "attachment 从未观测（上传基础设施错误）；本修订仅无凭据可达性观测", "successor": "Outline owner + 部署验证波次" },
+    { "item": "受保护签发工作流与 issuer 凭据", "reason": "I01 目录 24 refs 无签发凭据；model.issuers[0].issuanceCredential=UNREGISTERED", "successor": "治理/受保护基线波次（I01 修正案）" },
+    { "item": "Publisher 凭据物化", "reason": "outline-publisher ref 仅目录形状；已消耗 owner key 明确不得复用为 Publisher/Isolator/issuer", "successor": "治理波次 + 部署验证波次" },
+    { "item": "新的外发授权", "reason": "14 旧 + 15 新一次共识授权均已消耗；容器可启动/服务账号可读不推导任何 grant", "successor": "当前具体授权（有权人）" },
+    { "item": "Kp 活体闭环（canonical root 未初始化、hooks kb-write-protection 未覆盖 canonical 落点）", "reason": "canonicalRootPresentOnHost=false；controlPlaneHookGap 已登记给控制面 owner", "successor": "P4_4 + 控制面 owner" }
+  ],
+  "p44_consumable_prerequisites": [
+    "Kp 面：无需外部授权即可在项目边界内真实写入 LLMWiki（外部授权 NOT_REQUIRED、边界已登记）；Kp 的接纳判定归 Comet gate（P4_4），curated-write 准入 ref 不单独授予任何东西",
+    "Kt 面：P4_4 可在 fixture 世界上练习 decide/recheck；任何活体 Outline 发布宣称在五条所需条目全部 NOT_PROVISIONED 期间都不可成立（无证据翻绿 = KT_GRANT_CLAIM_UNGROUNDED）",
+    "决策面组合：lib/adapters/knowledge-authorization.js 新增 authorizePolicyChange；validate 默认连核 surface 登记工件"
+  ],
+  "commands": [
+    { "cmd": "node --test test/delivery-cases/4_7.mjs  # RED", "exit_code": 1, "note": "13 tests：9 pass / 4 fail（四个修订新臂全 not ok：surface 缺失→validate exit 2、authorize-policy-change 未知命令 exit 1、SECRET_MATERIAL_IN_REQUEST 不存在、红线旗标不存在）；日志 evidence/red-4_7-mjs.txt" },
+    { "cmd": "node --test test/knowledge-authorization.test.js  # RED", "exit_code": 1, "note": "模块加载失败（authorizePolicyChange 导出不存在）；日志 evidence/red-knowledge-authorization.txt。注：实现中途我引入过一次 DEFAULT_REFS 笔误并当场修复，从未计入 RED/GREEN 证据" },
+    { "cmd": "node --test test/delivery-cases/4_7.mjs  # GREEN", "exit_code": 0, "note": "13/13（U01–U08 + setup + 四个修订新臂）；evidence/green-4_7-mjs.txt" },
+    { "cmd": "node --test test/knowledge-authorization.test.js  # GREEN", "exit_code": 0, "note": "13/13；evidence/green-knowledge-authorization.txt" },
+    { "cmd": "相邻回归（钉版）", "exit_code": 0, "note": "infra-knowledge-authz 15/15、knowledge-closeout 20/20（与并行 P4_4 worker 的未提交改动共存下）、infra-registry 44/44、knowledge-revocation 17/17、delivery-cases/4_8 7/7、infra-outline 44/44、infra-llmwiki-paths 53/53；evidence/green-adjacent-regressions.txt" },
+    { "cmd": "npm test（全量）", "exit_code": 0, "note": "1155/1155 pass；首跑曾 26 fail、stash 基线跑 16 fail——两组失败同类（I08 backup 与 release-protocol 在并行全量下的环境抖动，单文件隔离均绿），复跑同命令 1155/1155 全绿、check.sh 内嵌 npm test 亦 1155/1155；evidence/green-npm-test-full.txt" },
+    { "cmd": "bash scripts/check.sh", "exit_code": 0, "note": "规则层 + 技能自测 + npm test 1155/1155 + YAML/JSON 静态校验全过（含新 JSON 工件）；evidence/green-check-sh.txt" },
+    { "cmd": "无凭据 loopback 探针（唯一活体动作）", "exit_code": 0, "note": "127.0.0.1:3000/_health 200（body sha 与 I03 观测一致）、未认证 API 调用被拒；可达≠发布权≠受众/grant/动作授权；evidence/loopback-probe.json" }
+  ],
+  "files_changed": [
+    "infra/delivery/knowledge/publication-surface-registration.json (new：KnowledgePublicationSurface.v1 发布面登记——文集域四维度/Kp/Kt/红线/已消耗授权)",
+    "infra/delivery/knowledge/preauthorization-policy.json (redlines 四旗标 + 说明；既有边界未动)",
+    "tools/infra/knowledge-authz.mjs (validate --surface + validateSurfaceRegistration；decide 请求面 SECRET_MATERIAL_IN_REQUEST 扫描；authorize-policy-change 命名拒绝入口；usage/头注)",
+    "lib/adapters/knowledge-authorization.js (新增 authorizePolicyChange 组合面；零授权逻辑不变)",
+    "test/delivery-cases/4_7.mjs (四个修订新臂：surface 登记核验/红线弱化负例/策略变更全主体拒绝+零写入/owner-key 请求拒绝)",
+    "test/knowledge-authorization.test.js (三个修订新臂：validate 连核 surface、authorizePolicyChange、SECRET_MATERIAL_IN_REQUEST)",
+    "openspec/changes/delivery-foundation-rearchitecture/authorization-journey/publication-surface.journey.json (new：发布面旅程登记，P4_4 可消费前提)",
+    "openspec/changes/delivery-foundation-rearchitecture/authorization-journey/README.md (发布面条目 + 现况授权边界)",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_7-comet-050/ (本报告 + evidence/)"
+  ],
+  "boundary_compliance": {
+    "no_commit": true,
+    "no_external_publish": true,
+    "no_credential_access": true,
+    "consumed_authorizations_reused": false,
+    "tasks_md_touched": false,
+    "note": "tasks.md 未动（步进勾选归唯一控制器）；测试均隔离 HOME/PATH stubs/TMPDIR，无活配置残留"
+  },
+  "blockers_or_questions": [
+    "并行 P4_4 worker 正在同一工作树落其 Owns 文件（lib/adapters/llmwiki.js、4_4.mjs、knowledge-closeout.test.js 均其未提交改动；4_4.mjs 会话中途从 0/6 翻 5/5）——与本任务文件零交集；knowledge-closeout 在双方改动共存下 20/20。控制器集成时按各 worker 报告归属即可。",
+    "全量 npm test 在本机并行下有既存抖动（I08/release-protocol 类，单文件隔离绿、复跑全绿）；已如实记录基线与复跑对照，不以此放宽任何断言。",
+    "Kt 五条所需条目翻绿的证据路径：issuance 凭据（I01 修正案）→ 源侧读回（连接器波次）→ 含 attachment 的五渠道受众读回（部署验证波次）→ publisher 凭据物化（治理+部署）→ 新外发授权（有权人）——翻转必须带 evidenceRef，否则 KT_GRANT_CLAIM_UNGROUNDED。"
+  ]
+}

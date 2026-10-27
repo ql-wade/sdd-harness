@@ -102,5 +102,12 @@
     "unionForbidden": true,
     "emptyIntersection": "fail-closed",
     "unknownReader": "fail-closed"
+  },
+  "redlines": {
+    "authorSelfApprovalForbidden": true,
+    "policyMutationOutsideDecisionSurface": true,
+    "ownerKeyExfiltrationForbidden": true,
+    "consumedAuthorizationReuseForbidden": true,
+    "note": "P4_7 修订 2026-10-26-comet-050-adoption-v1：负向红线是评估器断言（validate 弱化即 REDLINE_WEAKENED）——作者不能自批（SELF_AUTHORED_GRANT / SELF_AUTHORED_APPROVAL / SELF_REVIEW_FORBIDDEN）；任何人不能经本决策面改权限策略（authorize-policy-change 对全部主体 POLICY_MUTATION_NOT_AUTHORIZED 且零写入，可信工件只能经受保护签发路径出新版本）；不能把数据库里抄来的 owner key 之类凭据材料放进请求（SECRET_MATERIAL_IN_REQUEST，凭据只经 I01 ref 门）；已消耗授权不得重用（CONSUMED_AUTHORIZATION_RECORD_INVALID）。"
   }
 }

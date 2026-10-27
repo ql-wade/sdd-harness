@@ -21,6 +21,16 @@
 // 活源权限读回（gh TLS）与受保护签发工作流仍 UNVERIFIED/UNREGISTERED 如实
 // 标注，绝不 mock 转绿。
 //
+// 修订 2026-10-26-comet-050-adoption-v1（发布面登记）：
+// - validate 同时核 publication-surface-registration.json（文集域四维度如实
+//   UNVERIFIED/STRUCTURAL_ONLY、Kp 面项目内边界、Kt 面 grant 条目 NOT_PROVISIONED
+//   无证据不得翻绿、负向红线旗标 policy/surface 双处全 true、已消耗授权
+//   reuseForbidden）；缺登记即 SURFACE_REGISTRATION_MISSING fail-closed。
+// - decide 拒绝请求中的凭据材料（SECRET_MATERIAL_IN_REQUEST——从数据库抄来的
+//   owner key 之类永不随请求行走，凭据只经 I01 ref 门）。
+// - authorize-policy-change 是命名拒绝（POLICY_MUTATION_NOT_AUTHORIZED）：
+//   本面零策略变更权，作者/审查/发布/隔离主体与注册 owner 全体拒绝，零写入。
+//
 // 退出码契约：
 //   0 = PASS（validate 干净 / grant 有效 / decide=allow / recheck 新鲜 / resolve 主体通过四重检查）
 //   1 = 输入或前置无效（文件缺失/不可解析、参数错误、请求结构畸形）
@@ -42,6 +52,7 @@ const KNOWLEDGE_DIR = path.join(repoRoot, 'infra', 'delivery', 'knowledge');
 const DEFAULT_MODEL = path.join(KNOWLEDGE_DIR, 'authorization-model.json');
 const DEFAULT_POLICY = path.join(KNOWLEDGE_DIR, 'preauthorization-policy.json');
 const DEFAULT_LEDGER = path.join(KNOWLEDGE_DIR, 'grant-ledger.example.json');
+const DEFAULT_SURFACE = path.join(KNOWLEDGE_DIR, 'publication-surface-registration.json');
 const DEFAULT_REFS = path.join(repoRoot, 'infra', 'delivery', 'secrets.refs.example.json');
 const DEFAULT_REGISTRY = path.join(repoRoot, 'infra', 'delivery', 'registry.json');
 
@@ -66,17 +77,26 @@ const FORBIDDEN_REQUEST_FIELDS = {
   sensitivity: 'AUTHOR_CLASSIFICATION_FORBIDDEN',
 };
 const ALLOWED_REQUEST_FIELDS = new Set(['schemaVersion', 'requestedBy', 'execution', 'operation', 'payloadDigest', 'sources', 'review']);
+// P4_7 修订 2026-10-26：负向红线旗标（policy.redlines 与 surface.redlines 双处
+// 声明、全 true；弱化任一即 REDLINE_WEAKENED——红线是评估器断言，不是提示词纪律）。
+const REDLINE_FLAGS = [
+  'authorSelfApprovalForbidden',
+  'policyMutationOutsideDecisionSurface',
+  'ownerKeyExfiltrationForbidden',
+  'consumedAuthorizationReuseForbidden',
+];
 
 const COMMANDS = {
-  validate: ['model', 'policy', 'ledger', 'refs', 'registry', 'json'],
+  validate: ['model', 'policy', 'ledger', 'refs', 'registry', 'surface', 'json'],
   'verify-grant': ['grant', 'ledger', 'model', 'json'],
   revoke: ['grant', 'ledger', 'model', 'as', 'reason', 'json'],
   decide: ['request', 'ledger', 'model', 'policy', 'json'],
   recheck: ['decision', 'ledger', 'model', 'policy', 'payload-digest', 'json'],
   resolve: ['ref', 'as', 'role', 'refs', 'json'],
+  'authorize-policy-change': ['as', 'reason', 'json'],
 };
 // 每命令可缺省项（缺省时用仓库默认路径或语义可缺省）；其余选项必填。
-const OPTIONAL_OPTIONS = new Set(['json', 'refs', 'registry', 'payload-digest']);
+const OPTIONAL_OPTIONS = new Set(['json', 'refs', 'registry', 'surface', 'payload-digest']);
 
 const HOST_PATH_REDACTION = /(^|[\s"'=(:/])\/(Users|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
 const redactHostPaths = (text) => String(text ?? '').replace(HOST_PATH_REDACTION, '$1<host-path-redacted>');
@@ -98,12 +118,13 @@ const stableStringify = (value) => {
 function usage() {
   return [
     'usage:',
-    '  knowledge-authz.mjs validate     --model <f> --policy <f> --ledger <f> [--refs <f>] [--registry <f>] [--json]',
+    '  knowledge-authz.mjs validate     --model <f> --policy <f> --ledger <f> [--refs <f>] [--registry <f>] [--surface <f>] [--json]',
     '  knowledge-authz.mjs verify-grant --grant <id> --ledger <f> --model <f> [--json]',
     '  knowledge-authz.mjs revoke       --grant <id> --ledger <f> --model <f> --as <principal> --reason <text> [--json]',
     '  knowledge-authz.mjs decide       --request <f> --ledger <f> --model <f> --policy <f> [--json]',
     '  knowledge-authz.mjs recheck      --decision <f> --ledger <f> --model <f> --policy <f> [--payload-digest <sha256>] [--json]',
     '  knowledge-authz.mjs resolve      --ref <secret-ref> --as <principal> --role <role> [--refs <f>] [--json]',
+    '  knowledge-authz.mjs authorize-policy-change --as <principal> --reason <text> [--json]   (always refused; no mutation entrance exists)',
     '',
     'exit codes: 0=PASS, 1=invalid input/prerequisite, 2=verification failure (denied/expired/revoked/stale).',
     'there is no --now: validity is always judged against the real clock; agents cannot modify time.',
@@ -173,7 +194,7 @@ function checkGrant(grant, { model, nowMs }) {
 
 // --- validate ------------------------------------------------------------------
 
-function validateArtifacts({ model, policy, ledger, refsDoc, registry }) {
+function validateArtifacts({ model, policy, ledger, refsDoc, registry, surface }) {
   const violations = [];
   const add = (code, at, extra) => violations.push({ code, at, ...(extra ?? {}) });
   if (model.interface !== 'KnowledgeAuthzModel.v1') add('MODEL_INTERFACE_INVALID', 'authorization-model.json', { expected: 'KnowledgeAuthzModel.v1' });
@@ -186,6 +207,7 @@ function validateArtifacts({ model, policy, ledger, refsDoc, registry }) {
   for (const [name, doc] of [['model', model], ['policy', policy], ['ledger', ledger]]) {
     for (const item of scanForForbiddenValues(doc)) add(item.code, `${name}:${item.key}`, { reason: item.reason });
   }
+  validateSurfaceRegistration({ surface, policy, registry, violations });
   const catalogRefs = new Map((Array.isArray(refsDoc?.refs) ? refsDoc.refs : []).map((entry) => [entry.ref, entry]));
 
   // 四角色隔离：principal/ref 两两不同，且永不与 issuer 重合（U07 结构面）。
@@ -307,6 +329,88 @@ function validateArtifacts({ model, policy, ledger, refsDoc, registry }) {
   return violations;
 }
 
+// --- surface registration（P4_7 修订 2026-10-26-comet-050-adoption-v1）----------
+// 发布面登记的评估器断言：文集域四维度如实 UNVERIFIED/STRUCTURAL_ONLY/HISTORICAL_
+// PARTIAL；Kp 面是项目内 stdio MCP 边界（NOT_REQUIRED 但必须登记并指向真实工件）；
+// Kt 面是外部 grant 面（REQUIRED，逐条 NOT_PROVISIONED，无证据不得翻 PROVISIONED）；
+// 负向红线旗标在 policy 与 surface 双处声明且全 true（弱化即 REDLINE_WEAKENED）；
+// 已消耗授权记录完整且一律 reuseForbidden。缺登记文件本身即 fail-closed。
+
+function validateSurfaceRegistration({ surface, policy, registry, violations }) {
+  const add = (code, at, extra) => violations.push({ code, at, ...(extra ?? {}) });
+  const at = 'publication-surface-registration.json';
+  if (!surface || surface.error) {
+    add('SURFACE_REGISTRATION_MISSING', at, { reason: surface?.error ?? 'the publication-surface registration is part of the committed world and must exist' });
+    return;
+  }
+  if (surface.interface !== 'KnowledgePublicationSurface.v1') add('SURFACE_INTERFACE_INVALID', at, { expected: 'KnowledgePublicationSurface.v1' });
+  if (surface.project !== registry?.project?.id) add('PROJECT_MISMATCH', at, { project: surface.project ?? null, registry: registry?.project?.id ?? null });
+  for (const item of scanForForbiddenValues(surface)) add(item.code, `${at}:${item.key}`, { reason: item.reason });
+  // 负向红线：policy 与 surface 双处全 true；弱化（改 false 或删）即违规。
+  for (const flag of REDLINE_FLAGS) {
+    if (surface.redlines?.[flag] !== true) add('REDLINE_WEAKENED', `${at}:redlines.${flag}`, { reason: 'negative redlines are evaluator assertions; they cannot be weakened in the committed artifacts' });
+    if (policy.redlines?.[flag] !== true) add('REDLINE_WEAKENED', 'preauthorization-policy.json:redlines.' + flag, { reason: 'negative redlines are evaluator assertions; they cannot be weakened in the committed artifacts' });
+  }
+  // 已消耗授权：必须逐条 consumed + reuseForbidden（一次性授权不因时间或方便而复活）。
+  const consumed = Array.isArray(surface.consumedAuthorizations) ? surface.consumedAuthorizations : [];
+  if (consumed.length === 0) {
+    add('CONSUMED_AUTHORIZATION_RECORD_INVALID', `${at}:consumedAuthorizations`, { reason: 'the consumed one-shot authorizations must stay registered so reuse stays refusable' });
+  }
+  for (const [index, entry] of consumed.entries()) {
+    const entryAt = `${at}:consumedAuthorizations[${index}]:${entry.id ?? index}`;
+    if (typeof entry.id !== 'string' || entry.id.length === 0) add('CONSUMED_AUTHORIZATION_RECORD_INVALID', entryAt, { reason: 'each consumed authorization needs an id' });
+    if (entry.consumed !== true || entry.reuseForbidden !== true) {
+      add('CONSUMED_AUTHORIZATION_RECORD_INVALID', entryAt, { consumed: entry.consumed ?? null, reuseForbidden: entry.reuseForbidden ?? null, reason: 'a consumed one-shot authorization is consumed forever; re-flagging it reusable is a violation' });
+    }
+  }
+  // Kp 面：项目内 stdio MCP——外部授权 NOT_REQUIRED，但边界必须登记并指向真实存在
+  // 的已提交工件；curated-write 准入引用必须是本项目的 secret-ref 形状。
+  const kp = surface.kpSurface;
+  if (!kp || typeof kp !== 'object') {
+    add('KP_SURFACE_REGISTRATION_INVALID', `${at}:kpSurface`, { reason: 'the Kp LLMWiki authorization surface must be registered' });
+  } else {
+    if (kp.kind !== 'project-internal-stdio-mcp') add('KP_SURFACE_REGISTRATION_INVALID', `${at}:kpSurface.kind`, { kind: kp.kind ?? null });
+    if (kp.externalAuthorization !== 'NOT_REQUIRED') add('KP_SURFACE_REGISTRATION_INVALID', `${at}:kpSurface.externalAuthorization`, { value: kp.externalAuthorization ?? null, reason: 'the Kp surface is project-internal; if an external authorization were ever claimed it must be re-registered honestly' });
+    const files = Array.isArray(kp.boundary?.files) ? kp.boundary.files : [];
+    if (files.length === 0) add('KP_SURFACE_REGISTRATION_INVALID', `${at}:kpSurface.boundary.files`, { reason: 'the boundary must cite the committed llmwiki domain policies it is registered against' });
+    for (const rel of files) {
+      if (typeof rel !== 'string' || !fs.existsSync(path.join(repoRoot, rel))) add('KP_SURFACE_REGISTRATION_INVALID', `${at}:kpSurface.boundary.files`, { file: rel ?? null, reason: 'a cited boundary artifact must exist in the repository' });
+    }
+    const parsedAdmission = parseSecretRef(kp.boundary?.curatedWriteAdmissionRef ?? '');
+    if (!parsedAdmission.ok) add('KP_SURFACE_REGISTRATION_INVALID', `${at}:kpSurface.boundary.curatedWriteAdmissionRef`, { reason: parsedAdmission.error });
+    else if (registry?.project?.id && parsedAdmission.project !== registry.project.id) add('KP_SURFACE_REGISTRATION_INVALID', `${at}:kpSurface.boundary.curatedWriteAdmissionRef`, { project: parsedAdmission.project });
+  }
+  // Kt 面：外部 grant 必需；条目逐项声明，PROVISIONED 必须带证据，聚合 status 与
+  // 条目实况一致——无证据的翻绿是违规（KT_GRANT_CLAIM_UNGROUNDED）。
+  const kt = surface.ktSurface;
+  if (!kt || typeof kt !== 'object') {
+    add('KT_GRANT_CLAIM_UNGROUNDED', `${at}:ktSurface`, { reason: 'the Kt Outline authorization surface must be registered' });
+  } else {
+    if (kt.kind !== 'external-managed-collection-publish') add('KT_GRANT_CLAIM_UNGROUNDED', `${at}:ktSurface.kind`, { kind: kt.kind ?? null });
+    if (kt.externalGrant !== 'REQUIRED') add('KT_GRANT_CLAIM_UNGROUNDED', `${at}:ktSurface.externalGrant`, { value: kt.externalGrant ?? null, reason: 'publishing to the managed collection writes an external system; the grant requirement cannot be waived here' });
+    const entries = Array.isArray(kt.requiredEntries) ? kt.requiredEntries : [];
+    if (entries.length === 0) add('KT_GRANT_CLAIM_UNGROUNDED', `${at}:ktSurface.requiredEntries`, { reason: 'every required grant-side entry must be listed' });
+    let provisioned = 0;
+    for (const [index, entry] of entries.entries()) {
+      const entryAt = `${at}:ktSurface.requiredEntries[${index}]:${entry.id ?? index}`;
+      if (typeof entry.id !== 'string' || entry.id.length === 0) add('KT_GRANT_CLAIM_UNGROUNDED', entryAt, { reason: 'each required entry needs an id' });
+      if (!['NOT_PROVISIONED', 'PROVISIONED'].includes(entry.status)) add('KT_GRANT_CLAIM_UNGROUNDED', entryAt, { status: entry.status ?? null });
+      if (entry.status === 'PROVISIONED') {
+        provisioned += 1;
+        if (typeof entry.evidenceRef !== 'string' || entry.evidenceRef.length === 0) {
+          add('KT_GRANT_CLAIM_UNGROUNDED', entryAt, { reason: 'a NOT_PROVISIONED -> PROVISIONED flip requires an evidenceRef; an ungrounded provision claim is a violation' });
+        }
+      } else if (typeof entry.blocker !== 'string' || entry.blocker.length === 0) {
+        add('KT_GRANT_CLAIM_UNGROUNDED', entryAt, { reason: 'an unprovisioned entry must name its current blocker honestly' });
+      }
+    }
+    const expectedStatus = entries.length > 0 && provisioned === entries.length ? 'PROVISIONED' : provisioned > 0 ? 'PARTIALLY_PROVISIONED' : 'NOT_PROVISIONED';
+    if (!['NOT_PROVISIONED', 'PARTIALLY_PROVISIONED', 'PROVISIONED'].includes(kt.status) || kt.status !== expectedStatus) {
+      add('KT_GRANT_CLAIM_UNGROUNDED', `${at}:ktSurface.status`, { status: kt.status ?? null, expected: expectedStatus, reason: 'the aggregate status must match the entry evidence, never outrun it' });
+    }
+  }
+}
+
 // --- decide ---------------------------------------------------------------------
 
 function validateRequestShape(request) {
@@ -368,6 +472,12 @@ function decidePublication({ request, model, policy, ledger, ledgerDigest, model
   const push = (code, at, extra) => reasons.push({ code, at, ...(extra ?? {}) });
   const op = request.operation;
 
+  // 0) 凭据材料类：请求携带 key 形状字段或 token 形状值（如从 Outline 数据库抄来
+  // 的 owner key）本身就是拒绝（P4_7 修订：ownerKeyExfiltrationForbidden 红线的
+  // 请求面断言）——凭据只经 I01 secret-ref 解析门，永不随发布请求行走。
+  for (const finding of scanForForbiddenValues(request)) {
+    push('SECRET_MATERIAL_IN_REQUEST', finding.key, { finding: finding.code, reason: 'publish requests carry references, never credential values; key material belongs behind the I01 ref gate' });
+  }
   // 1) 自批输入类与未知字段：无论后续链多完整，这些字段本身就是拒绝（U01）。
   for (const key of Object.keys(request)) {
     if (FORBIDDEN_REQUEST_FIELDS[key]) push(FORBIDDEN_REQUEST_FIELDS[key], key, { reason: 'this input belongs to the issuer/owner chain, never to the publish request; its mere presence is a refusal' });
@@ -591,17 +701,43 @@ async function main(argv) {
   if (command === 'validate') {
     const world = loadWorld(opts, { withPolicy: true, withRegistry: true, withRefs: true });
     if (world.error) return failInput(world.error);
-    const violations = validateArtifacts({ model: world.model, policy: world.policy, ledger: world.ledger, refsDoc: world.refsDoc, registry: world.registry });
+    const surfaceFile = opts.surface ?? DEFAULT_SURFACE;
+    const surface = loadJson(surfaceFile, 'surface registration');
+    const violations = validateArtifacts({
+      model: world.model,
+      policy: world.policy,
+      ledger: world.ledger,
+      refsDoc: world.refsDoc,
+      registry: world.registry,
+      surface: surface.value ?? { error: surface.error },
+    });
     print({
       interface: 'KnowledgeAuthz.v1',
       command,
       model: displayPath(opts.model ?? DEFAULT_MODEL),
       policy: displayPath(opts.policy ?? DEFAULT_POLICY),
       ledger: displayPath(opts.ledger ?? DEFAULT_LEDGER),
+      surface: displayPath(surfaceFile),
       ok: violations.length === 0,
       violations,
     });
     return violations.length === 0 ? EXIT_PASS : EXIT_VERIFY;
+  }
+
+  // P4_7 修订：唯一的“策略变更”入口是一个命名拒绝——本决策面不持有任何可信工件
+  // 变更权：author/reviewer/publisher/isolator 全体拒绝，注册 owner 也拒绝（owner
+  // 的路径是受保护签发流程里的新版本，不是这个 CLI）；零写入。
+  if (command === 'authorize-policy-change') {
+    print({
+      interface: 'KnowledgeAuthz.v1',
+      command,
+      ok: false,
+      code: 'POLICY_MUTATION_NOT_AUTHORIZED',
+      as: opts.as,
+      mutated: [],
+      reason: 'trusted policy/model/issuance artifacts change only as a new version through the protected issuance path (owner sign-off in governance config); this decision surface holds no mutation entrance — not for author/reviewer/publisher/isolator principals, and not for the registered owner through this CLI',
+    });
+    return EXIT_VERIFY;
   }
 
   if (command === 'resolve') {

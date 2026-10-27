@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "journey": "knowledge-publication-surface",
+  "title": "P4_7 revision 2026-10-26: who may publish what to whom — registered surfaces, honest statuses and evaluator redlines",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "recipeOwner": "P4_7",
+  "executionOwner": "P4_4 (consumption) / VERIFY (final)",
+  "registrationArtifact": "infra/delivery/knowledge/publication-surface-registration.json",
+  "evaluator": "tools/infra/knowledge-authz.mjs (validate --surface | decide | authorize-policy-change)",
+  "acceptanceIds": ["U01", "U02", "U03", "U04", "U05", "U06", "U07", "U08", "N08"],
+  "surfaces": [
+    {
+      "id": "kp-llmwiki-write",
+      "question": "who may publish project knowledge into the LLMWiki (Kp)",
+      "surface": "project-internal stdio MCP over the registered canonical wiki root .sdd/wiki/sdd-harness",
+      "externalAuthorization": "NOT_REQUIRED — no external principal/tenant/audience is involved; the boundary is containment + tier policy, registered against the committed llmwiki domain policies (project-root-policy / index-policy / mcp-profile)",
+      "status": "BOUNDARY_REGISTERED",
+      "unverified": [
+        "canonical root not yet initialized on this host (project-root-policy revisionVerification.canonicalRootPresentOnHost=false)",
+        "hooks.yaml kb-write-protection does not cover the canonical landing path (controlPlaneHookGap, recorded for the control-plane owner)",
+        "Kp admission/closeout judgment belongs to the Comet gate (P4_4); the reserved curated-write admission ref grants nothing by itself"
+      ]
+    },
+    {
+      "id": "kt-outline-managed-collection-publish",
+      "question": "who may publish team knowledge to the Outline managed collection (Kt)",
+      "surface": "external managed-collection publish (outline-managed-collection)",
+      "externalAuthorization": "REQUIRED — external grant chain",
+      "status": "NOT_PROVISIONED",
+      "requiredEntries": [
+        "protected-issuance-workflow (issuanceCredential UNREGISTERED)",
+        "source-permission-readback (gh TLS x509; ledger disclosureAudience empty)",
+        "target-audience-live-readback (attachment channel never observed)",
+        "publisher-credential-materialization (ref is catalog shape only; consumed owner key may not be reused)",
+        "fresh-outbound-authorization (14 old + 15 new one-time consensus authorizations all consumed)"
+      ],
+      "p44Rule": "P4_4 may exercise decide/recheck over fixture worlds, but no live Outline publish may be claimed while any entry is NOT_PROVISIONED; an ungrounded NOT_PROVISIONED->PROVISIONED flip is KT_GRANT_CLAIM_UNGROUNDED"
+    }
+  ],
+  "preauthorizedCollectionDomain": {
+    "dimensions": {
+      "sourcePermissionIntersection": "UNVERIFIED",
+      "completeAudience": "HISTORICAL_PARTIAL (2026-10-22 readback preserved; attachment never READ; current revision observed loopback reachability only)",
+      "grantValidity": "STRUCTURAL_ONLY (grants structurally valid to 2027-01-18; issuanceCredential UNREGISTERED — not live authorizations)",
+      "version": "STRUCTURAL_ONLY (payload-digest + decisionId binding evaluator-enforced; no live payload yet)"
+    },
+    "rule": "no dimension may be upgraded from UNVERIFIED/STRUCTURAL_ONLY to a live claim without evidence; the committed decide fails closed"
+  },
+  "negativeRedlines": [
+    {
+      "redline": "the author cannot self-approve",
+      "evaluatorAssertions": ["SELF_AUTHORED_GRANT", "SELF_AUTHORED_APPROVAL", "SELF_REVIEW_FORBIDDEN", "AUTHOR_CLASSIFICATION_FORBIDDEN"]
+    },
+    {
+      "redline": "no one can mutate the permission policy through this surface",
+      "evaluatorAssertions": ["POLICY_MUTATION_NOT_AUTHORIZED (authorize-policy-change refuses every principal incl. the registered owner; mutated: []; trusted artifacts change only as a new version through the protected issuance path)", "REDLINE_WEAKENED (flipping/removing a redline flag in policy or surface fails validate)"]
+    },
+    {
+      "redline": "an owner key copied from the database never travels in a request",
+      "evaluatorAssertions": ["SECRET_MATERIAL_IN_REQUEST (key-shaped fields and token-shaped values in publish requests are refused; credentials only cross the I01 ref gate)", "CONSUMED_AUTHORIZATION_RECORD_INVALID (re-flagging a consumed one-shot authorization as reusable fails validate)"]
+    }
+  ],
+  "consumedAuthorizations": [
+    "consensus-outbound-14-old (consumed; reuse forbidden)",
+    "consensus-outbound-15-new (consumed; reuse forbidden)",
+    "outline-owner-key-three-api-readonly (consumed; no re-run, no value read, no repurposing as Publisher/Isolator/issuer)"
+  ],
+  "currentRevisionObservation": {
+    "observedAt": "2026-10-27T03:05:53Z",
+    "scope": "credential-free loopback reachability only (mirrors I03-comet-050); reachability is NOT publish permission and NOT audience/grant/action authority",
+    "evidenceRef": "worker-reports/P4_7-comet-050/evidence/loopback-probe.json"
+  },
+  "verdictSemantics": {
+    "PASS": "the surfaces are registered with honest statuses, the redlines hold under the evaluator's negative probes, and the adjacent regressions stay green",
+    "UNVERIFIED": "live source/target permission readback, attachment channel, protected issuance workflow, publisher credential materialization and a fresh outbound authorization are all UNVERIFIED/NOT_PROVISIONED — recorded honestly, never converted to PASS"
+  }
+}

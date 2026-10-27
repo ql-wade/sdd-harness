@@ -151,6 +151,7 @@ import {
   decidePublication,
   recheckDecision,
   resolvePrincipal,
+  authorizePolicyChange,
   isAutoPublishAllowed,
   denialCodes,
 } from '../lib/adapters/knowledge-authorization.js';
@@ -259,4 +260,33 @@ test('adapter: declared-only audience keeps the component-result provenance', ()
   assert.equal(result.status, PREAUTH_EXIT.PASS, result.stdout);
   assert.match(String(result.json.provenance.targetAudience), /DECLARED_ONLY/);
   assert.doesNotMatch(String(result.json.provenance.targetAudience), /LIVE_READBACK/);
+});
+
+// Revision 2026-10-26-comet-050-adoption-v1: the publication-surface arms.
+test('adapter: committed world validates clean including the publication-surface registration', () => {
+  const result = validateArtifacts();
+  assert.equal(result.status, PREAUTH_EXIT.PASS, JSON.stringify(result.json?.violations ?? result.stderr));
+  assert.deepEqual(result.json.violations, []);
+});
+
+test('adapter: authorizePolicyChange is a named refusal for every principal and writes nothing', () => {
+  for (const principal of [AUTHOR, REVIEWER, PUBLISHER, OWNER_PRINCIPAL]) {
+    const result = authorizePolicyChange({ as: principal, reason: 'widen the allowlist' });
+    assert.equal(result.status, PREAUTH_EXIT.DENIED, `${principal} must be refused`);
+    assert.equal(result.json.code, 'POLICY_MUTATION_NOT_AUTHORIZED');
+    assert.equal(result.json.mutated.length, 0, 'a refused mutation must name zero mutated artifacts');
+  }
+  const policyBefore = fs.readFileSync(path.join(knowledgeDir, 'preauthorization-policy.json'));
+  authorizePolicyChange({ as: AUTHOR, reason: 'again' });
+  assert.equal(fs.readFileSync(path.join(knowledgeDir, 'preauthorization-policy.json')).toString(), policyBefore.toString(),
+    'trusted policy bytes must be unchanged by a refused mutation');
+});
+
+test('adapter: owner-key material copied from the database is refused in the request', () => {
+  const world = fixtureWorld();
+  const withKey = baseRequest();
+  withKey.apiKey = 'ol_api_copied_from_the_outline_database';
+  const result = decidePublication(withKey, world);
+  assert.equal(result.status, PREAUTH_EXIT.DENIED);
+  assert.ok(denialCodes(result).includes('SECRET_MATERIAL_IN_REQUEST'));
 });
