@@ -37,6 +37,14 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const cliPath = path.join(projectRoot, 'bin', 'cli.js');
 const launcherPath = path.join(projectRoot, 'tools', 'mcp', 'llmwiki.sh');
 
+// The I04-admitted LIVE supply (registered project venv python + project
+// clone). The live round-trip test runs only when both are actually present;
+// absence is an explicit skip, never a silent pass.
+const livePythonPath = path.join(projectRoot, '.sdd/venvs/llmwiki-311/bin/python');
+const liveSupplySkip = () => (!fs.existsSync(livePythonPath) || !fs.existsSync(path.join(projectRoot, '.sdd/repos/llmwiki/mcp')))
+  ? 'UNVERIFIED: the I04-admitted LLMWiki supply (venv python + project clone) is not installed on this host'
+  : false;
+
 const knowledgeSeed = await import('../lib/knowledge-seed.js');
 const llmwiki = await import('../lib/adapters/llmwiki.js');
 const outline = await import('../lib/adapters/outline.js');
@@ -752,4 +760,48 @@ test('4.4.a: the CLI and the MCP launcher resolve the SAME canonical wiki root (
     env: childEnv({ SDD_HOME: fakeHome, SDD_WIKI_HOME: overrideRoot }),
   });
   assert.ok(overridden.stderr.includes(overrideRoot), `override must win: ${overridden.stderr}`);
+});
+
+// --- the LIVE local round trip (revision 2026-10-26-comet-050-adoption-v1) ------
+//
+// P4_4's /tmp closed-loop world proved the live server accepts the exact
+// frames invokeMcpPublish emits. This test keeps that proof in the suite: the
+// REAL launcher (tools/mcp/llmwiki.sh) drives the I04-admitted supply (venv
+// python + project clone) against a DISPOSABLE workspace — initialize
+// negotiates 2025-11-25, the live create arguments are accepted, and the
+// session readback returns the exact candidate bytes (disk bytes equal too).
+// This is NOT a canonical-root admission: SDD_WIKI_HOME pins a tmp workspace,
+// and the managed-host admission of the launcher stays UNVERIFIED (I04).
+test('P4_4 live: the REAL launcher round trip — initialize 2025-11-25, live create arguments accepted, session + disk readback byte-consistent', { skip: liveSupplySkip() }, async () => {
+  const livePython = path.join(projectRoot, '.sdd/venvs/llmwiki-311/bin/python');
+  const workspace = path.join(scratch, `live-ws-${Date.now()}`);
+  fs.mkdirSync(workspace, { recursive: true });
+  const body = [
+    '---', 'capability: live-closeout-probe', 'source: test/knowledge-closeout.test.js',
+    '---', '', '# live-closeout-probe', '',
+    '- Live stdio round trip through the real launcher and the real server.',
+    '',
+  ].join('\n');
+  const operation = llmwiki.buildKpOperation({
+    change: 'live-probe', entry: { capability: 'live-closeout-probe', digest: sha256(body) },
+  });
+  const result = await llmwiki.invokeMcpPublish({
+    operation,
+    launcherPath,
+    timeoutMs: 120_000,
+    content: body,
+    env: childEnv({
+      SDD_HOME: path.join(projectRoot, '.sdd'),
+      LLMWIKI_PYTHON: livePython,
+      SDD_WIKI_HOME: workspace,
+    }),
+  });
+  assert.equal(result.status, 'RESPONDED', `the live round trip must answer: ${JSON.stringify(result).slice(0, 400)}`);
+  assert.equal(result.readbackConsistent, true,
+    `the session readback must return the exact candidate bytes, got: ${String(result.readbackText ?? '').slice(0, 200)}`);
+  const diskFile = path.join(workspace, 'wiki', 'concepts', 'live-closeout-probe.md');
+  assert.ok(fs.existsSync(diskFile), 'the create landed on the filesystem (the truth channel)');
+  assert.equal(sha256(fs.readFileSync(diskFile)), operation.contentDigest,
+    'the disk bytes equal the frozen candidate digest');
+  assert.match(result.response, /"id":3/, 'the settle frame is the readback response');
 });

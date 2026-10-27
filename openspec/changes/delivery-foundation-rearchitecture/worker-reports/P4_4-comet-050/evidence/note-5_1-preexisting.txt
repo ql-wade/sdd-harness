@@ -1,0 +1,79 @@
+✔ 5.1.a-1 parallel isolation: real ledger dispatches + live worktree set (248.117083ms)
+✔ 5.1.a-2 serial integration: review-before-integrate, ordered merges, acceptance-integration rule (2.957875ms)
+✔ 5.1.a-3 parent re-validation: child green never closes the parent goal (task and run granularity) (1.978ms)
+✖ 5.1.a-4 parent re-validation instrument: four-layer index consistent, denominators held, pointers resolve (4.60975ms)
+✔ 5.1.a negatives: forged isolation / child-green-as-parent-pass / integrate-before-review / unclosable run are rejected (20.325167ms)
+✔ 5.1.b-1 matrix completeness: hosts x capabilities, no empty cells, fixed enum (1.197583ms)
+✔ 5.1.b-2 every matrix evidence pointer resolves on disk (3.450958ms)
+✔ 5.1.b-3 status obligations: UNSUPPORTED note, UNVERIFIED holder (0.379667ms)
+✔ 5.1.b-4 no cross-host evidence inference (1.039333ms)
+✔ 5.1.b-5 acceptance-index consistency (F03/F08/A09 semantics) (1.154917ms)
+✖ 5.1.b-6 machine dimension: discovery anchors, enablement gate, refusal semantics, measured evidence (3.478167ms)
+✔ 5.1.b-7 no cross-machine inference: disabled hosts never cite enabled-host measured evidence (0.457209ms)
+✔ 5.1.b platform negatives: cross-host cell / missing cell / holderless UNVERIFIED are rejected (1.371166ms)
+✔ 5.1.b machine negatives: unrecorded enable / stripped refusals / claimed capability / cited evidence are rejected (3.359917ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 12
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 421.365292
+
+✖ failing tests:
+
+test at test/delivery-cases/5_1.mjs:588:1
+✖ 5.1.a-4 parent re-validation instrument: four-layer index consistent, denominators held, pointers resolve (4.60975ms)
+  AssertionError [ERR_ASSERTION]: instrument violations: index holds 104 scenarios, denominator is 92; index holds 130 required checks, denominator is 118; summary.scenarios undefined != scenario count 104; summary.layer_statuses.component_pass totals 0 != 104; summary.layer_statuses.env_qualification totals 0 != 104; summary.layer_statuses.same_run_finality totals 0 != 104
+  + actual - expected
+  
+  + [
+  +   'index holds 104 scenarios, denominator is 92',
+  +   'index holds 130 required checks, denominator is 118',
+  +   'summary.scenarios undefined != scenario count 104',
+  +   'summary.layer_statuses.component_pass totals 0 != 104',
+  +   'summary.layer_statuses.env_qualification totals 0 != 104',
+  +   'summary.layer_statuses.same_run_finality totals 0 != 104'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/delivery-cases/5_1.mjs:591:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 'index holds 104 scenarios, denominator is 92', 'index holds 130 required checks, denominator is 118', 'summary.scenarios undefined != scenario count 104', 'summary.layer_statuses.component_pass totals 0 != 104', 'summary.layer_statuses.env_qualification totals 0 != 104', 'summary.layer_statuses.same_run_finality totals 0 != 104' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at test/delivery-cases/5_1.mjs:679:1
+✖ 5.1.b-6 machine dimension: discovery anchors, enablement gate, refusal semantics, measured evidence (3.478167ms)
+  AssertionError [ERR_ASSERTION]: machine-dimension violations: MacBook-Wade-7.local: decision record lacks the adjudication marker (环境能力裁决): openspec/changes/delivery-foundation-rearchitecture/architecture.md
+  + actual - expected
+  
+  + [
+  +   'MacBook-Wade-7.local: decision record lacks the adjudication marker (环境能力裁决): openspec/changes/delivery-foundation-rearchitecture/architecture.md'
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/delivery-cases/5_1.mjs:681:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 'MacBook-Wade-7.local: decision record lacks the adjudication marker (环境能力裁决): openspec/changes/delivery-foundation-rearchitecture/architecture.md' ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
