@@ -744,3 +744,106 @@ test('4.8.d: real fault injection — a real maintenance worker is SIGKILLed mid
     restarted.kill('SIGKILL');
   }
 });
+
+// --- comet-050 revision (2026-10-26): revocation surface matrix + G15 segments --
+
+// R18: the revocation surface matrix. Knowledge revocation is channel-scoped:
+// the local LLMWiki delete channel can be MEASURED only against live evidence;
+// the Outline audience-removal channels stay UNVERIFIED-NEEDS-GRANT naming the
+// P4_7 ktSurface required entries; an alert NEVER substitutes for isolation on
+// any channel (I07 alertIsNeverIsolation discipline).
+test('R18 (comet-050): evaluateRevocationSurface — LLMWiki delete needs live evidence, Outline removal is UNVERIFIED-NEEDS-GRANT over the P4_7 ktSurface entries, alerts never isolate', async () => {
+  const rev = await import('../lib/adapters/knowledge-revocation.js');
+  assert.equal(typeof rev.evaluateRevocationSurface, 'function', 'the comet-050 revision adds the revocation surface evaluator');
+
+  // (1) No live evidence, no grant entries → UNVERIFIED, never MEASURED.
+  const unmeasured = rev.evaluateRevocationSurface({ channel: 'llmwiki-delete' });
+  assert.equal(unmeasured.status, 'UNVERIFIED');
+  assert.equal(unmeasured.claimsIsolated, false);
+
+  // (2) Live delete evidence (independent readback showing the content gone)
+  // is the only basis that turns the local channel MEASURED.
+  const measured = rev.evaluateRevocationSurface({
+    channel: 'llmwiki-delete',
+    liveEvidence: {
+      deletedAt: '2026-10-27T05:00:00Z',
+      readback: { status: 'unreadable', basis: 'independent-readback' },
+      searchReadback: { status: 'unreadable', basis: 'independent-readback', hits: 0 },
+    },
+  });
+  assert.equal(measured.status, 'MEASURED');
+  assert.equal(measured.claimsIsolated, true);
+  // A label-only "deleted" flag without the two independent readbacks never
+  // measures the channel (L02 discipline transplanted onto the matrix).
+  const labelOnly = rev.evaluateRevocationSurface({
+    channel: 'llmwiki-delete',
+    liveEvidence: { deletedAt: '2026-10-27T05:00:00Z', label: 'deleted' },
+  });
+  assert.equal(labelOnly.status, 'UNVERIFIED');
+
+  // (3) Outline audience removal: no credentials exist (P4_7 ktSurface five
+  // required entries all NOT_PROVISIONED) → UNVERIFIED-NEEDS-GRANT naming
+  // exactly those entries; no alert or reachability fact upgrades it.
+  const outline = rev.evaluateRevocationSurface({ channel: 'outline-unpublish' });
+  assert.equal(outline.status, 'UNVERIFIED-NEEDS-GRANT');
+  assert.ok(outline.requiredGrantEntries.length >= 5, 'the P4_7 ktSurface five required entries are named');
+  assert.ok(outline.requiredGrantEntries.includes('publisher-credential-materialization'));
+  const alertedButNotIsolated = rev.evaluateRevocationSurface({
+    channel: 'outline-unpublish',
+    liveEvidence: { alert: { code: 'ISOLATION_FAILED', deliveredAt: '2026-10-27T05:00:10Z' } },
+  });
+  assert.equal(alertedButNotIsolated.status, 'UNVERIFIED-NEEDS-GRANT', 'an alert is never isolation evidence');
+  assert.equal(alertedButNotIsolated.alertIsNeverIsolation, true);
+
+  // (4) Unknown channel → refused.
+  assert.throws(() => rev.evaluateRevocationSurface({ channel: 'carrier-pigeon' }), (e) => e.code === 'CHANNEL_INVALID');
+});
+
+// R19: G15 segment timings. Discovery (≤180s), alert delivery (≤30s) and
+// isolation (≤120s) are timed as THREE separate segments from real timestamps
+// — mirroring I07 health-contract g15.segmentsTimedSeparately — and the
+// alert segment never counts toward the isolation segment.
+test('R19 (comet-050): computeSegmentTimings — fault exposure, alert delivery and isolation timed separately; missing stamps stay unknown; targets mirror the I07 health contract', async () => {
+  const rev = await import('../lib/adapters/knowledge-revocation.js');
+  assert.equal(typeof rev.computeSegmentTimings, 'function', 'the comet-050 revision adds the G15 segment-timing recorder');
+
+  const sourceChangedAt = Date.parse('2026-10-27T05:00:00Z');
+  const detectedAt = Date.parse('2026-10-27T05:02:00Z');     // +120s discovery
+  const alertedAt = Date.parse('2026-10-27T05:02:20Z');      // +20s alert delivery
+  const isolatedAt = Date.parse('2026-10-27T05:03:50Z');     // +90s isolation
+
+  const segments = rev.computeSegmentTimings({ sourceChangedAt, detectedAt, alertedAt, isolatedAt });
+  assert.equal(segments.faultExposure.ms, 120_000, 'discovery is measured from the real source change');
+  assert.equal(segments.alertDelivery.ms, 20_000, 'alert delivery is its own clock, not the exposure clock');
+  assert.equal(segments.isolation.ms, 110_000, 'isolation runs on its own clock from detection (not from the alert)');
+  assert.ok(segments.alertDelivery.ms !== segments.isolation.ms, 'the three clocks are never conflated');
+  assert.equal(segments.alertIsNeverIsolation, true);
+  assert.deepEqual(segments.segmentsTimedSeparately, ['fault_exposure', 'alert_delivery', 'isolation']);
+  assert.equal(segments.targets.discoverySeconds, 180);
+  assert.equal(segments.targets.alertDeliverySeconds, 30);
+  assert.equal(segments.targets.isolationSeconds, 120);
+  assert.equal(segments.withinTargets, true);
+  assert.equal(segments.isolated, true, 'with an isolation stamp the record shows isolated');
+  assert.equal(segments.alertedButNotIsolated, false);
+
+  // A missing isolatedAt keeps the record honest: alerted, unresolved, and
+  // the isolation segment unknown — never zero, never paused.
+  const unresolved = rev.computeSegmentTimings({ sourceChangedAt, detectedAt, alertedAt });
+  assert.equal(unresolved.isolated, false);
+  assert.equal(unresolved.alertedButNotIsolated, true);
+  assert.equal(unresolved.isolation.ms, null);
+  assert.equal(unresolved.isolation.status, 'unknown');
+  assert.equal(unresolved.isolatedAt, null);
+
+  // Over-target segments keep their violation on the record.
+  const late = rev.computeSegmentTimings({
+    sourceChangedAt,
+    detectedAt: sourceChangedAt + 200_000,
+    alertedAt: sourceChangedAt + 200_000 + 45_000,
+    isolatedAt: sourceChangedAt + 200_000 + 45_000 + 130_000,
+  });
+  assert.equal(late.withinTargets, false);
+  assert.ok(late.violations.some((v) => v.code === 'DISCOVERY_TARGET_EXCEEDED'));
+  assert.ok(late.violations.some((v) => v.code === 'ALERT_DELIVERY_TARGET_EXCEEDED'));
+  assert.ok(late.violations.some((v) => v.code === 'ISOLATION_TARGET_EXCEEDED'));
+});

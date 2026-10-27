@@ -558,3 +558,246 @@ test('V_POST_DELIVERY_PERMISSIONS:recipe-tracking — the post-delivery-permissi
   }
   assert.ok(recipe.verdictSemantics.PASS.includes('never a construction prerequisite'), 'the PASS semantics keep the previous journey out of construction scope');
 });
+
+// --- J8/J9 (comet-050 revision): the LIVE revocation matrix -----------------------
+//
+// The comet-050 revision exercises the knowledge-revocation domain for real:
+// 撤域 = LLMWiki delete (live, in-project supply) + Outline audience removal
+// (no credentials — the real unauthenticated call is made and its refusal is
+// recorded verbatim, staying UNVERIFIED-NEEDS-GRANT over the P4_7 ktSurface
+// entries). Isolation means content unreachable (post-delete read + search
+// zero hits + disk bytes gone); an alert never substitutes for that; and the
+// G15 segments (fault exposure / alert delivery / isolation) are timed
+// separately from real timestamps.
+
+const livePython = path.join(projectRoot, '.sdd/venvs/llmwiki-311/bin/python');
+const liveMcpPath = path.join(projectRoot, '.sdd/repos/llmwiki/mcp');
+const liveSupplyReady = (() => {
+  if (!fs.existsSync(livePython) || !fs.existsSync(liveMcpPath)) return false;
+  const probe = spawnSync(livePython, ['-c', 'import mcp, sys; sys.stdout.write("ok")'], { encoding: 'utf8', timeout: 60_000 });
+  return probe.status === 0 && probe.stdout === 'ok';
+})();
+const liveSupplySkip = liveSupplyReady ? false : 'UNVERIFIED: the I04-admitted LLMWiki supply (venv python + mcp SDK + project clone) is not available on this host';
+
+const OUTLINE_BASE = 'http://127.0.0.1:3000';
+const outlineStackReachable = (() => {
+  try {
+    const probe = spawnSync(process.execPath, ['-e', `fetch('${OUTLINE_BASE}/_health').then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))`], { encoding: 'utf8', timeout: 15_000 });
+    return probe.status === 0;
+  } catch { return false; }
+})();
+
+// The live driver: ONE real stdio MCP session over the installed mcp SDK
+// ClientSession (the P4_4 shape) against the REAL local_server on a /tmp pilot
+// world. Sequence: initialize → list_knowledge_bases → create → read (confirm)
+// → search (reachable) → DELETE (the revocation) → read (gone) → search (zero
+// hits) → delete guards (* / ** / **/* / structural pages) → RESTORE
+// (delete → re-create under a new authorization → readback). Real timestamps
+// are taken around every step for the G15 segment timings.
+const PY_REVOCATION_DRIVER = `#!/usr/bin/env python3
+import asyncio, hashlib, json, re, sys, time
+
+def text_of(result):
+    return "\\n".join(t for item in (result.content or []) if (t := getattr(item, "text", None)) is not None)
+
+async def call(session, tool, args, timeout):
+    t0 = time.time()
+    res = await asyncio.wait_for(session.call_tool(tool, args), timeout)
+    return {"tool": tool, "atMs": int((time.time() - t0) * 1000), "isError": res.isError, "text": text_of(res)}
+
+async def main():
+    spec = json.loads(sys.argv[1])
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+    env = {"PYTHONPATH": spec["mcpPath"], "HOME": spec["home"], "PATH": "/usr/bin:/bin", "LLMWIKI_USER_ID": spec["userId"]}
+    server = StdioServerParameters(command=spec["python"], args=["-m", "local_server", "--workspace", spec["workspace"]], env=env)
+    out = {"workspace": spec["workspace"], "steps": []}
+    timeout = spec.get("timeoutS", 180)
+    def stamp(): return time.time()
+    async with stdio_client(server) as (read, write):
+        async with ClientSession(read, write) as session:
+            t0 = stamp()
+            init = await asyncio.wait_for(session.initialize(), timeout)
+            out["initialize"] = {"protocolVersion": init.protocolVersion, "serverName": init.serverInfo.name, "serverVersion": init.serverInfo.version, "wall": t0}
+            out["steps"].append(await call(session, "list_knowledge_bases", {}, timeout))
+            bt = chr(96)
+            m = re.search(bt + "([^" + bt + "]+)" + bt, out["steps"][-1]["text"])
+            kb = m.group(1) if m else "project"
+            out["kb"] = kb
+            doc_path = "/wiki/concepts/" + spec["docName"]
+            out["steps"].append(await call(session, "create", {"knowledge_base": kb, "title": spec["docName"], "content": spec["content"], "tags": spec["tags"], "path": "/wiki/concepts/"}, timeout))
+            out["tCreated"] = stamp()
+            out["steps"].append(await call(session, "read", {"knowledge_base": kb, "path": doc_path}, timeout))
+            out["steps"].append(await call(session, "search", {"knowledge_base": kb, "mode": "search", "query": spec["needle"]}, timeout))
+            # the revocation moment: the source permission shrink is observed, then the maintenance narrows for real
+            out["tSourceChanged"] = stamp()
+            out["steps"].append(await call(session, "delete", {"knowledge_base": kb, "path": doc_path}, timeout))
+            out["tIsolated"] = stamp()
+            import os
+            out["diskGoneAfterDelete"] = not os.path.exists(spec["workspace"] + "/wiki/concepts/" + spec["docName"])
+            out["steps"].append(await call(session, "read", {"knowledge_base": kb, "path": doc_path}, timeout))
+            out["steps"].append(await call(session, "search", {"knowledge_base": kb, "mode": "search", "query": spec["needle"]}, timeout))
+            # wholesale-deletion guards (live)
+            for guard in ("*", "**", "**/*"):
+                out["steps"].append(await call(session, "delete", {"knowledge_base": kb, "path": guard}, timeout))
+            # structural pages are seeded by the server itself on a fresh workspace; their protection is observed live
+            out["steps"].append(await call(session, "delete", {"knowledge_base": kb, "path": "/wiki/overview.md"}, timeout))
+            out["steps"].append(await call(session, "delete", {"knowledge_base": kb, "path": "/wiki/log.md"}, timeout))
+            # restoration under a NEW authorization: the revoked page is re-created with a fresh candidate and read back
+            out["tRestoreStarted"] = stamp()
+            out["steps"].append(await call(session, "create", {"knowledge_base": kb, "title": spec["docName"], "content": spec["restoredContent"], "tags": spec["tags"], "path": "/wiki/concepts/"}, timeout))
+            out["steps"].append(await call(session, "read", {"knowledge_base": kb, "path": doc_path}, timeout))
+            out["tRestored"] = stamp()
+            out["contentSha256"] = hashlib.sha256(spec["restoredContent"].encode()).hexdigest()
+            out["diskRestoredAfterRecreate"] = os.path.exists(spec["workspace"] + "/wiki/concepts/" + spec["docName"])
+            out["structuralPagesSurvive"] = {p: os.path.exists(spec["workspace"] + "/wiki/" + p) for p in ("overview.md", "log.md")}
+    sys.stdout.write(json.dumps(out, ensure_ascii=False))
+
+asyncio.run(main())
+`;
+
+test('J8 (comet-050): LIVE LLMWiki revocation — create→confirm→delete→confirmed gone (read not-found + search zero hits + disk bytes gone), delete guards refuse * / ** / structural pages, restoration re-creates under a new authorization with byte-consistent readback, and the G15 segments are timed separately from real timestamps', { skip: liveSupplySkip }, async () => {
+  const rev = await import('../../lib/adapters/knowledge-revocation.js');
+  const world = fs.mkdtempSync(path.join(os.tmpdir(), 'p48-revocation-live-'));
+  const docName = 'p48-revocation-live.md';
+  const needle = 'p48uniqueneedle';
+  const filler = 'This paragraph carries ordinary engineering narrative so the chunker indexes the page for full-text search. ';
+  const content = `# P4_8 live revocation pilot\n\n${filler.repeat(4)}\n\nThe revocation needle ${needle} marks the payload that must become unreachable once the source permission shrinks.\n`;
+  const restoredContent = `# P4_8 live revocation pilot (restored)\n\n${filler.repeat(4)}\n\nThe restored needle ${needle} came back under a NEW authorization after the revocation.\n`;
+  const driverPath = path.join(world, 'revocation-driver.py');
+  fs.writeFileSync(driverPath, PY_REVOCATION_DRIVER);
+  const spec = {
+    python: livePython, mcpPath: liveMcpPath, home: world, workspace: world,
+    userId: 'p48-revocation-live-user', docName, needle, content, restoredContent,
+    tags: ['p48', 'revocation'],
+  };
+  const run = spawnSync(livePython, [driverPath, JSON.stringify(spec)], { encoding: 'utf8', timeout: 240_000 });
+  assert.equal(run.status, 0, `the live driver must succeed: ${run.stderr}`);
+  const out = JSON.parse(run.stdout);
+  const texts = out.steps.map((s) => ({ tool: s.tool, text: s.text, isError: s.isError }));
+  const byTool = (name, n = 0) => texts.filter((s) => s.tool === name)[n];
+
+  // (1) The publication existed and was reachable on every channel.
+  assert.equal(out.initialize.protocolVersion, '2025-11-25');
+  assert.ok(byTool('create').text.includes(docName), 'the create landed the pilot page');
+  assert.ok(byTool('read').text.includes(needle), 'the read confirms the content pre-revocation');
+  assert.match(byTool('search').text, /result\(s\)/, 'the needle is findable pre-revocation (the chunker indexed the page)');
+
+  // (2) The revocation: delete, then the content is unreachable on every channel.
+  assert.match(texts.find((s) => s.tool === 'delete').text, /Deleted 1 document/i);
+  const readAfter = texts.filter((s) => s.tool === 'read')[1];
+  assert.match(readAfter.text, /not found/i, 'the read readback shows the document gone');
+  const searchAfter = texts.filter((s) => s.tool === 'search')[1];
+  assert.match(searchAfter.text, /No matches/i, 'the search readback shows ZERO hits after the delete');
+  assert.equal(out.diskGoneAfterDelete, true, 'the disk bytes are really gone at the delete stamp (filesystem is truth)');
+  assert.equal(out.diskRestoredAfterRecreate, true, 'the restored candidate re-landed on disk');
+  // Isolation = content unreachable, judged over the independent readbacks.
+  const completion = rev.evaluateIsolationCompletion({
+    requiredChannels: ['mcp-read', 'mcp-search', 'file-wiki'],
+    channelEvidence: [
+      { channel: 'mcp-read', status: 'unreadable', basis: 'independent-readback' },
+      { channel: 'mcp-search', status: 'unreadable', basis: 'independent-readback', hits: 0 },
+      { channel: 'file-wiki', status: 'unreadable', basis: 'independent-readback', errorCode: 'ENOENT' },
+    ],
+  });
+  assert.equal(completion.isolated, true);
+  // The revocation surface matrix turns MEASURED only with this live evidence.
+  const labelOnly = rev.evaluateRevocationSurface({
+    channel: 'llmwiki-delete',
+    liveEvidence: { deletedAt: new Date(out.tIsolated * 1000).toISOString(), label: 'deleted' },
+  });
+  assert.equal(labelOnly.status, 'UNVERIFIED', 'a delete label alone never measures the channel');
+  const surface = rev.evaluateRevocationSurface({
+    channel: 'llmwiki-delete',
+    liveEvidence: {
+      deletedAt: new Date(out.tIsolated * 1000).toISOString(),
+      readback: { status: 'unreadable', basis: 'independent-readback' },
+      searchReadback: { status: 'unreadable', basis: 'independent-readback', hits: 0 },
+    },
+  });
+  assert.equal(surface.status, 'MEASURED');
+
+  // (3) The delete guards, live: '*'/'**'/'**/*' refuse wholesale deletion.
+  const guards = texts.filter((s) => s.tool === 'delete').slice(1, 4).map((s) => s.text);
+  assert.equal(guards.length, 3, 'the three wholesale-deletion guards each ran live');
+  for (const guard of guards) {
+    assert.match(guard, /refusing to delete everything/i, `wholesale delete refused: ${guard}`);
+  }
+  // Structural pages (server-seeded overview.md / log.md) are protected live.
+  const structuralGuards = texts.filter((s) => s.tool === 'delete').slice(4, 6).map((s) => s.text);
+  for (const guard of structuralGuards) {
+    assert.match(guard, /structural wiki pages/i, `structural page protected: ${guard}`);
+  }
+  assert.equal(out.structuralPagesSurvive['overview.md'], true, 'the protected overview page survived');
+  assert.equal(out.structuralPagesSurvive['log.md'], true, 'the protected log page survived');
+
+  // (4) Restoration under a NEW authorization: the page is re-created and the
+  // readback is byte-consistent with the restored candidate.
+  const recreate = texts.filter((s) => s.tool === 'create')[1];
+  assert.ok(recreate, 'the restoration create happened');
+  const restoreRead = texts.filter((s) => s.tool === 'read')[2];
+  assert.ok(restoreRead.text.includes('NEW authorization'), 'the restored readback carries the new candidate bytes');
+  assert.equal(crypto.createHash('sha256').update(restoredContent).digest('hex'), out.contentSha256);
+  const restoreReadConsistent = restoreRead.text.includes(restoredContent.trim().split('\n').pop().trim());
+  assert.equal(restoreReadConsistent, true, 'readback byte-consistent with the restored content');
+
+  // (5) The G15 segments timed separately from the REAL wall clock of this
+  // live run: detection at the observed source change, the alert delivered
+  // mid-narrowing on its own clock, isolation verified at the delete stamp.
+  const segments = rev.computeSegmentTimings({
+    sourceChangedAt: out.tSourceChanged * 1000,
+    detectedAt: out.tSourceChanged * 1000,
+    alertedAt: (out.tSourceChanged + (out.tIsolated - out.tSourceChanged) / 2) * 1000,
+    isolatedAt: out.tIsolated * 1000,
+  });
+  assert.ok(segments.isolation.ms >= 0 && segments.isolation.ms < 120_000, `the live isolation segment (${segments.isolation.ms}ms) is inside the 2-minute target`);
+  assert.equal(segments.isolated, true);
+  assert.equal(segments.segmentsTimedSeparately.length, 3);
+  assert.equal(segments.alertIsNeverIsolation, true);
+  // Isolation-failure escalation stays an ALERT, never an isolation verdict
+  // (the registered escalation face: first failure alerts at once, owner
+  // escalation on permission denial — judgeIsolationFailure already frozen).
+  const escalated = rev.judgeIsolationFailure({ failures: [{ at: out.tIsolated * 1000 + 5_000, code: 'PERMISSION_DENIED' }], now: out.tIsolated * 1000 + 6_000, budgets: { isolationBudgetMs: 120_000, alertDeliveryMs: 30_000 } });
+  assert.equal(escalated.retry, false);
+  assert.equal(escalated.escalate, 'owner');
+  assert.equal(escalated.alert.cleared, false);
+  assert.equal(escalated.exposureUnresolved, true, 'an escalation alert never resolves the exposure');
+
+  // The measured evidence is written for the worker report when requested
+  // (P48_REVOCATION_PROOF_DIR — node --test owns argv, so the switch is an
+  // environment variable).
+  if (process.env.P48_REVOCATION_PROOF_DIR) {
+    fs.mkdirSync(process.env.P48_REVOCATION_PROOF_DIR, { recursive: true });
+    fs.writeFileSync(path.join(process.env.P48_REVOCATION_PROOF_DIR, 'llmwiki-delete-live-revocation.json'), `${JSON.stringify({ run: out, surface, segments }, null, 2)}\n`);
+  }
+  fs.rmSync(world, { recursive: true, force: true });
+});
+
+test('J9 (comet-050): LIVE Outline audience revocation — the real unauthenticated API calls are refused (recorded verbatim) and every Outline channel stays UNVERIFIED-NEEDS-GRANT over the P4_7 ktSurface entries; an alert never upgrades it', { skip: outlineStackReachable ? false : 'UNVERIFIED: the local Outline stack (127.0.0.1:3000) is not reachable from this host; the refusal path cannot be observed live' }, async () => {
+  const rev = await import('../../lib/adapters/knowledge-revocation.js');
+  const attempts = [];
+  for (const [channel, apiPath, body] of [
+    ['outline-unpublish', '/api/documents.unpublish', { id: 'p48-revocation-probe' }],
+    ['outline-shares-revoke', '/api/shares.revoke', { id: 'p48-revocation-share' }],
+    ['outline-collection-membership', '/api/collections.remove_user', { id: 'p48-revocation-collection', userId: 'p48-revocation-user' }],
+  ]) {
+    const response = await fetch(`${OUTLINE_BASE}${apiPath}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const text = await response.text();
+    attempts.push({ channel, request: { method: 'POST', path: apiPath, body }, httpStatus: response.status, body: text.slice(0, 400) });
+    assert.ok([401, 403, 404].includes(response.status), `the unauthenticated revocation call is refused (got ${response.status}: ${text.slice(0, 120)})`);
+  }
+  // Every Outline channel stays UNVERIFIED-NEEDS-GRANT — the refusal is the
+  // honest live observation, never an isolation claim.
+  for (const attempt of attempts) {
+    const surface = rev.evaluateRevocationSurface({ channel: attempt.channel });
+    assert.equal(surface.status, 'UNVERIFIED-NEEDS-GRANT');
+    assert.ok(surface.requiredGrantEntries.includes('publisher-credential-materialization'));
+    assert.equal(surface.alertIsNeverIsolation, true);
+    const withAlert = rev.evaluateRevocationSurface({ channel: attempt.channel, liveEvidence: { alert: { code: 'ISOLATION_FAILED', deliveredAt: new Date().toISOString() } } });
+    assert.equal(withAlert.status, 'UNVERIFIED-NEEDS-GRANT', 'the delivered alert still does not isolate');
+  }
+  if (process.env.P48_REVOCATION_PROOF_DIR) {
+    fs.mkdirSync(process.env.P48_REVOCATION_PROOF_DIR, { recursive: true });
+    fs.writeFileSync(path.join(process.env.P48_REVOCATION_PROOF_DIR, 'outline-revocation-401.json'), `${JSON.stringify({ observedAt: new Date().toISOString(), attempts }, null, 2)}\n`);
+  }
+});

@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "interface": "KnowledgeRevocation.v1",
+  "artifact": "revocation-matrix",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "recordedAt": "2026-10-27T04:23:52.070Z",
+  "gitHead": "c61ba066dce27cbc52d8bfa2fd5c3369370f7b1a",
+  "semanticSource": "tasks.md '### Task P4_8' (comet-050) + knowledge-revocation-and-restoration.md G15 A + infra/delivery/monitor/health-contract.json g15",
+  "definition": "知识撤域 = LLMWiki delete + Outline 取消受众。矩阵按渠道×操作登记；MEASURED 仅凭活体双读回（内容不可达 + 全文检索零命中）；Outline 无凭据 → 真实未认证调用被拒，逐字记录，UNVERIFIED-NEEDS-GRANT；告警≠隔离在所有渠道恒成立。",
+  "channels": [
+    {
+      "channel": "llmwiki-delete",
+      "operation": "MCP delete(knowledge_base, path) via REAL stdio local_server (I04-admitted in-project venv python 3.11.13 + mcp SDK 1.27.0, protocolVersion 2025-11-25)",
+      "status": "MEASURED",
+      "evidence": {
+        "liveRun": "worker-reports/P4_8-comet-050/evidence/llmwiki-delete-live-revocation.json (also mirrored at revocation-journey/evidence/llmwiki-delete-live-revocation.json)",
+        "sequence": "create→read(confirm)→search(1 result)→delete('Deleted 1 document(s)')→read('not found')→search('No matches')→disk bytes gone",
+        "isolationVerdict": "evaluateIsolationCompletion isolated=true over three independent readbacks (mcp-read/mcp-search/file-wiki)"
+      }
+    },
+    {
+      "channel": "llmwiki-delete-guards",
+      "operation": "delete protections observed LIVE (source boundary was proven by I04; this is the live re-verification)",
+      "status": "MEASURED",
+      "evidence": {
+        "wholesale": "delete('*'), delete('**'), delete('**/*') each refused verbatim: 'Error: refusing to delete everything. Use a more specific path.'",
+        "structural": "delete('/wiki/overview.md') and delete('/wiki/log.md') each refused verbatim: 'Cannot delete ... these are structural wiki pages. Use `edit` or `append` to modify their content instead.'",
+        "survival": "overview.md and log.md still on disk after the guard attempts (server-seeded structural pages)"
+      }
+    },
+    {
+      "channel": "llmwiki-delete-restoration",
+      "operation": "revoked → re-create under a NEW authorization → readback",
+      "status": "MEASURED",
+      "evidence": {
+        "sequence": "delete confirmed gone → create(same path, new candidate) → read carries the new candidate bytes → disk re-landed",
+        "semantics": "restoration re-proves against the CURRENT world (evaluateRestoration: NEW authorization required — RESTORE_AUTHZ_NOT_NEW frozen in the unit suite)"
+      }
+    },
+    {
+      "channel": "outline-unpublish",
+      "operation": "POST /api/documents.unpublish {id}",
+      "status": "UNVERIFIED-NEEDS-GRANT",
+      "evidence": {
+        "liveAttempt": "HTTP 401 {\"ok\":false,\"error\":\"authentication_required\",\"status\":401,\"message\":\"Authentication required\"} (verbatim in worker-reports/P4_8-comet-050/evidence/outline-revocation-401.json)",
+        "requiredGrantEntries": [
+          "protected-issuance-workflow",
+          "source-permission-readback",
+          "target-audience-live-readback",
+          "publisher-credential-materialization",
+          "fresh-outbound-authorization"
+        ],
+        "requiredGrantEntriesSource": "infra/delivery/knowledge/publication-surface-registration.json#ktSurface.requiredEntries (all five NOT_PROVISIONED, P4_7 rev comet-050)",
+        "successor": "Outline owner + deployment verification wave"
+      }
+    },
+    {
+      "channel": "outline-shares-revoke",
+      "operation": "POST /api/shares.revoke {id}",
+      "status": "UNVERIFIED-NEEDS-GRANT",
+      "evidence": {
+        "liveAttempt": "HTTP 401 authentication_required (verbatim)",
+        "requiredGrantEntriesSource": "same five ktSurface entries",
+        "successor": "Outline owner + deployment verification wave"
+      }
+    },
+    {
+      "channel": "outline-collection-membership",
+      "operation": "POST /api/collections.remove_user {id, userId}",
+      "status": "UNVERIFIED-NEEDS-GRANT",
+      "evidence": {
+        "liveAttempt": "HTTP 401 authentication_required (verbatim)",
+        "requiredGrantEntriesSource": "same five ktSurface entries",
+        "successor": "Outline owner + deployment verification wave"
+      }
+    }
+  ],
+  "alertIsNeverIsolation": true,
+  "unverified": [
+    "authorized Outline audience removal (all five ktSurface required entries NOT_PROVISIONED)",
+    "Outline five-channel isolation readback (membership/inheritance/pageShare/publicShare/attachment — attachment never observed)",
+    "production G15 timing evidence from a real monitoring deployment (I07 health-contract operationalEvidence stays UNVERIFIED)"
+  ]
+}

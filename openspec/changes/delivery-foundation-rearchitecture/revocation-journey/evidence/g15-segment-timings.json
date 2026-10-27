@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "interface": "KnowledgeRevocation.v1",
+  "artifact": "g15-segment-timings",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "recordedAt": "2026-10-27T04:23:52.070Z",
+  "gitHead": "c61ba066dce27cbc52d8bfa2fd5c3369370f7b1a",
+  "semanticSource": "ADR-0021 + comet-ai-devops-convergence.md: discovery <=3min, isolation <=2min under normal dependencies; fault_exposure / alert_delivery / isolation timed separately; an alert never counts as isolation. Mirrors infra/delivery/monitor/health-contract.json g15.segmentsTimedSeparately and tools G15A_DEADLINES — one deadline set, not two.",
+  "targets": {
+    "discoverySeconds": 180,
+    "alertDeliverySeconds": 30,
+    "isolationSeconds": 120,
+    "endToEndTargetSeconds": 300
+  },
+  "locallyMeasured": {
+    "channel": "llmwiki-delete (live stdio MCP session)",
+    "isolationSegmentMs": 3.15087890625,
+    "withinTargets": true,
+    "basis": "real wall-clock stamps taken inside the live MCP session (tSourceChanged → delete executed/verified → tIsolated)",
+    "note": "the local delete latency is milliseconds-scale; it is the local segment of the G15 chain, not a production SLA claim"
+  },
+  "unverifiedSegments": [
+    {
+      "segment": "fault_exposure (discovery) in production",
+      "reason": "requires the real event+periodic verification chain against a live Outline deployment"
+    },
+    {
+      "segment": "alert_delivery in production",
+      "reason": "requires the I07 external alert channel actually delivering; the local alert clock is judged structurally (judgeIsolationFailure dueBy = first failure + 30s)"
+    },
+    {
+      "segment": "isolation on Outline channels",
+      "reason": "requires the five ktSurface grant entries; all NOT_PROVISIONED"
+    },
+    {
+      "segment": "monitor chain end-to-end",
+      "reason": "I07 registered both scheduling surfaces as UNREGISTERED; production timing evidence stays UNVERIFIED"
+    }
+  ],
+  "isolationFailureEscalation": {
+    "registered": true,
+    "semantics": "first failure alerts at once (never only after budget exhaustion); permission denial / revoked credential escalates to the owner without blind retry; the alert never resolves the exposure (exposureUnresolved=true, alert.cleared=false) — judgeIsolationFailure, asserted live in test/delivery-cases/4_8.mjs J8"
+  },
+  "alertIsNeverIsolation": true
+}

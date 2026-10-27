@@ -1,0 +1,60 @@
+{
+  "task": "P4_8（修订 2026-10-26-comet-050-adoption-v1）：撤权、隔离、告警与新授权恢复——撤权矩阵（渠道×操作×实测/UNVERIFIED）+ LLMWiki delete 活体闭环 + Outline 401 拒绝路径 + G15 三段分别计时登记",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "worker": "P4_8 comet-050 implementation worker",
+  "final_status": "GREEN（本地可证子集：LLMWiki delete 面活体 MEASURED；Outline 三撤权渠道活体 401 拒绝逐字记录并保持 UNVERIFIED-NEEDS-GRANT；生产 G15 计时与监控链 UNVERIFIED 如实登记）",
+  "scope_note": "只改 tasks.md '### Task P4_8' Owns 文件 + worker-reports/P4_8-comet-050/；未 commit；未做任何真实外部撤权（Outline 无凭据）；本地 LLMWiki 真实操作仅在 /tmp 一次性试点世界，测后删除；零授权消耗（P4_7 已消耗的 14+15 共识与 owner key 未触碰）。post-delivery-permissions.case.json 未动——其三个 pinned 断言继续全满足，避免 acceptance-index 分母漂移。",
+  "revocation_matrix": {
+    "llmwiki-delete": "MEASURED — 真实 stdio local_server（I04 供给 venv python 3.11.13 + mcp 1.27.0，protocolVersion 2025-11-25）：create→read 确认→search 1 result→delete('Deleted 1 document(s)')→read 'not found'→search 'No matches'→磁盘字节消失；evaluateIsolationCompletion 三信道判 isolated",
+    "llmwiki-delete-guards": "MEASURED — delete('*'/'**'/'**/*') 逐字拒 'refusing to delete everything'；/wiki/overview.md 与 /wiki/log.md 逐字拒 'structural wiki pages'（I04 源码边界的活体复证；结构页服务器自动播种并存活）",
+    "llmwiki-delete-restoration": "MEASURED — delete 确认消失→新授权 re-create 同路径→读回携带新候选字节（sha256 一致）、磁盘重落；判定层 RESTORE_AUTHZ_NOT_NEW（新授权方可恢复）既有冻结不动",
+    "outline-unpublish": "UNVERIFIED-NEEDS-GRANT — POST /api/documents.unpublish 真实调用 HTTP 401 authentication_required（逐字记录）；所需授权=P4_7 ktSurface 五条（全 NOT_PROVISIONED）",
+    "outline-shares-revoke": "UNVERIFIED-NEEDS-GRANT — POST /api/shares.revoke → HTTP 401（逐字）",
+    "outline-collection-membership": "UNVERIFIED-NEEDS-GRANT — POST /api/collections.remove_user → HTTP 401（逐字）",
+    "alertIsNeverIsolation": "全渠道恒真——已送达的告警（liveEvidence.alert）不升级任何 UNVERIFIED 渠道；隔离只认独立读回"
+  },
+  "g15_segments": {
+    "targets": { "discoverySeconds": 180, "alertDeliverySeconds": 30, "isolationSeconds": 120 },
+    "segmentsTimedSeparately": ["fault_exposure", "alert_delivery", "isolation"],
+    "locallyMeasured": "LLMWiki delete isolation 段 ~3ms（真实墙钟，within targets）",
+    "unverified": ["生产 fault_exposure/discovery 段", "生产 alert_delivery 段（I07 告警通道未部署）", "Outline isolation 段（五条 grant 未供）", "监控链端到端（I07 两调度面 UNREGISTERED）"],
+    "missingStampSemantics": "缺时间戳的段=unknown（绝不置零、绝不暂停）；超目标保留 violation"
+  },
+  "adapter_additions": "lib/adapters/knowledge-revocation.js（KnowledgeRevocation.v1，既有 L01–L11 判定零改动）新增 evaluateRevocationSurface / computeSegmentTimings / REVOCATION_CHANNEL_SURFACE / KT_REQUIRED_GRANT_ENTRIES（五条 ktSurface 条目镜像引用，非重定义）",
+  "commands": [
+    { "cmd": "node --test test/delivery-cases/4_8.mjs  # RED（新臂）", "exit_code": 1, "note": "9 tests 7 pass 2 fail（J8/J9：新判定面不存在）；evidence/RED-new-arms.txt；基线 7/7 见 RED-baseline.txt" },
+    { "cmd": "node --test test/knowledge-revocation.test.js  # RED（新臂）", "exit_code": 1, "note": "19 tests 17 pass 2 fail（R18/R19）；evidence/RED-new-arms.txt" },
+    { "cmd": "node --test test/delivery-cases/4_8.mjs  # GREEN ×2", "exit_code": 0, "note": "9/9 ×2（钉版 v24.15.0）；evidence/GREEN-own-suites.txt" },
+    { "cmd": "node --test test/knowledge-revocation.test.js  # GREEN ×2", "exit_code": 0, "note": "19/19 ×2；evidence/GREEN-own-suites.txt" },
+    { "cmd": "相邻回归（钉版）", "exit_code": 0, "note": "knowledge-closeout 21/21、knowledge-authorization 13/13、4_7 13/13、4_4 5/5、4_6 6/6、3_4 9/9；host node v22.13.1 knowledge-revocation 19/19 + 4_8 9/9；evidence/GREEN-adjacent-regressions.txt" },
+    { "cmd": "npm test（全量）", "exit_code": 0, "note": "1159/1159 pass（P4_7 期 1155 + 本任务 4 新臂）；evidence/npm-test-full.txt" },
+    { "cmd": "bash scripts/check.sh", "exit_code": 0, "note": "规则层 + 技能自测 + 内嵌 npm test + YAML/JSON 静态校验全过；evidence/green-check-sh.txt" },
+    { "cmd": "活体证据生成：P48_REVOCATION_PROOF_DIR=… node --test --test-name-pattern 'J8|J9' test/delivery-cases/4_8.mjs", "exit_code": 0, "note": "2/2；llmwiki-delete-live-revocation.json + outline-revocation-401.json 双落 worker-reports 与 revocation-journey/evidence" }
+  ],
+  "files_changed": [
+    "lib/adapters/knowledge-revocation.js（+撤权矩阵判定/三段计时/渠道冻结/五条目引用）",
+    "test/knowledge-revocation.test.js（+R18/R19）",
+    "test/delivery-cases/4_8.mjs（+J8/J9 活体臂与 P48_REVOCATION_PROOF_DIR 证据开关）",
+    "openspec/changes/delivery-foundation-rearchitecture/revocation-journey/evidence/{revocation-matrix,g15-segment-timings,llmwiki-delete-live-revocation,outline-revocation-401}.json",
+    "openspec/changes/delivery-foundation-rearchitecture/revocation-journey/README.md（comet-050 撤权矩阵段）",
+    "openspec/changes/delivery-foundation-rearchitecture/worker-reports/P4_8-comet-050/（本报告 + evidence/）"
+  ],
+  "unverified": [
+    { "item": "授权 Outline 受众撤除与五通道隔离读回", "reason": "无凭据（真实未认证调用 401 逐字记录）；P4_7 ktSurface 五条 requiredEntries 全 NOT_PROVISIONED，attachment 通道从未观测", "successor": "Outline owner + 部署验证波次（issuance 凭据→源侧读回→五通道受众读回→publisher 凭据→新外发授权）" },
+    { "item": "G15 生产计时（fault_exposure/alert_delivery/Outline isolation/监控链端到端）", "reason": "本地仅测 LLMWiki delete 段；I07 两调度面 UNREGISTERED", "successor": "真实监控部署 + I07 调度登记波次" },
+    { "item": "LLMWiki managed-host 接纳", "reason": "本任务证明组件 stdio 供给面（与 I04/P4_4 同口径）", "successor": "I04 接纳条件" }
+  ],
+  "boundary_compliance": {
+    "no_commit": true,
+    "no_external_revocation": true,
+    "no_credential_access": true,
+    "consumed_authorizations_reused": false,
+    "tasks_md_touched": false,
+    "note": "tasks.md 未动（步进勾选归唯一控制器）；活体世界全部 /tmp 一次性并清理；测试隔离（skip 而非假绿）"
+  },
+  "blockers_or_questions": [
+    "共享工作树 HEAD 在会话中由其他 worker 推进（d32e6e5→c61ba066）；本任务文件独立，控制器集成按各 worker 报告归属。",
+    "Outline 栈 127.0.0.1:3000 是本机开发栈：401 只证未认证被拒（授权面如实 UNVERIFIED-NEEDS-GRANT），不证生产行为。",
+    "J8 依赖活体供给（.sdd/venvs/llmwiki-311 + .sdd/repos/llmwiki）：缺供给环境按 P4_4 惯例 skip=UNVERIFIED，不假绿。"
+  ]
+}

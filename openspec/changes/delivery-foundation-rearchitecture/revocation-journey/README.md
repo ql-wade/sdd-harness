@@ -39,3 +39,31 @@ Task P4_8（分支 `impl/p4-8-knowledge-revocation`，基 `master@e04bac8`，202
 `test/delivery-cases/4_8.mjs`（5 例端到端旅程）持续回归；本目录是一次真实完整
 旅程的落盘证据。Live Outline Web 渠道读回、跨机恢复保持 UNVERIFIED（承接者：
 Outline owner + 部署验证波次）。
+
+## comet-050 修订（2026-10-26-comet-050-adoption-v1）：撤权矩阵与 G15 三段计时
+
+知识撤域按渠道×操作登记为**撤权矩阵**（`evidence/revocation-matrix.json`），
+判定面是 `lib/adapters/knowledge-revocation.js` 新增的
+`evaluateRevocationSurface` / `computeSegmentTimings`（单元正负例见
+`test/knowledge-revocation.test.js` R18/R19；活体旅程见
+`test/delivery-cases/4_8.mjs` J8/J9）：
+
+| 渠道 | 操作 | 状态 | 证据 |
+| --- | --- | --- | --- |
+| llmwiki-delete | 真实 stdio `local_server`（I04 供给）`create→read→search 命中→delete→read not found→search 零命中→磁盘字节消失` | **MEASURED**（活体双读回） | `evidence/llmwiki-delete-live-revocation.json` |
+| llmwiki-delete 保护 | `delete('*'/'**'/'**/*')` 逐字拒 "refusing to delete everything"；`/wiki/overview.md`、`/wiki/log.md` 拒 "structural wiki pages"（I04 源码边界的活体复证；结构页存活） | **MEASURED** | 同上 |
+| llmwiki-delete 恢复 | delete 确认消失 → 新授权 re-create → 读回逐字节一致 | **MEASURED** | 同上 |
+| outline-unpublish | `POST /api/documents.unpublish` → **HTTP 401 `authentication_required`**（逐字） | **UNVERIFIED-NEEDS-GRANT** | `evidence/outline-revocation-401.json` |
+| outline-shares-revoke | `POST /api/shares.revoke` → **HTTP 401**（逐字） | **UNVERIFIED-NEEDS-GRANT** | 同上 |
+| outline-collection-membership | `POST /api/collections.remove_user` → **HTTP 401**（逐字） | **UNVERIFIED-NEEDS-GRANT** | 同上 |
+
+Outline 三渠道所需的授权条目 = P4_7
+`publication-surface-registration.json#ktSurface.requiredEntries` 五条（全部
+NOT_PROVISIONED）；告警≠隔离在矩阵与所有渠道恒成立（已送达的告警不升级任何
+UNVERIFIED 渠道）。G15 三段计时（fault_exposure ≤180s / alert_delivery ≤30s /
+isolation ≤120s，与 I07 health-contract `g15.segmentsTimedSeparately` 同一
+deadline 集）登记于 `evidence/g15-segment-timings.json`：本地可测段（LLMWiki
+delete 延迟，毫秒级实测）已测；Outline/生产监控链各段保持 UNVERIFIED（I07 两
+调度面 UNREGISTERED、ktSurface 五条未供）。隔离失败告警升级面（首败即告警、
+权限拒绝升级 owner、告警不解除暴露）由 `judgeIsolationFailure` 冻结并在 J8
+活体断言。
