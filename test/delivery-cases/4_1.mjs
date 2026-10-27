@@ -324,3 +324,20 @@ test('P4_1: the workflow takes the check policy from the protected baseline and 
   const withoutRuns = JSON.stringify({ ...workflow, jobs: { 'delivery-gate': { ...job, steps: undefined } } });
   assert.ok(!withoutRuns.includes('requiredChecks'), 'the workflow must not fabricate required-check names itself');
 });
+
+test('P4_1 comet-050: the committed baseline registers the platform readback honestly — UNPROTECTED_READ_BACK keeps the set UNSELECTED', () => {
+  const policy = JSON.parse(fs.readFileSync(path.join(committedPolicyDir, 'ci-policy.json'), 'utf8'));
+  // The 2026-10-26 read-only readback observed master unprotected (404 branch
+  // protection, empty rulesets) with zero check-run evidence for both candidate
+  // names: an unprotected platform can never ground a registered set.
+  assert.equal(policy.requiredChecks.registrationStatus, 'UNSELECTED', 'an unprotected platform cannot ground a registered set');
+  assert.deepEqual(policy.requiredChecks.names, [], 'no required-check names may be fabricated while the platform enforces none');
+  const note = String(policy.provider.note ?? '');
+  assert.ok(note.includes('UNPROTECTED_READ_BACK'), 'the 2026-10-26 readback observation must stay recorded in the protected baseline');
+  assert.ok(note.includes('branches/master/protection'), 'the recorded observation must name the readback endpoint it came from');
+  // The blocking red lines stay complete in the live baseline (P4_1 four-code
+  // floor + I06 QUEUED extension).
+  for (const code of ['MISSING', 'SKIPPED', 'TIMED_OUT', 'STALE_EVIDENCE', 'QUEUED']) {
+    assert.ok(policy.requiredChecks.blockingSemantics.includes(code), `blocking semantics must keep ${code}`);
+  }
+});

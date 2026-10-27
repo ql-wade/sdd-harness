@@ -552,3 +552,49 @@ test('duplicate check runs for the same name+merge resolve to the latest run id 
   assert.equal(passVerdict.status, 'UNVERIFIED', 'platform admission stays honestly unverified in LOCAL_ONLY');
 });
 });
+
+// --- comet-050 readback registration (revision 2026-10-26-comet-050-adoption-v1) --
+//
+// The 2026-10-26 P4_1 read-only platform readback (gh api, authenticated as the
+// repository owner, evidence in worker-reports/P4_1-comet-050/evidence/) observed
+// master UNPROTECTED on the platform: GET branches/master/protection -> 404
+// "Branch not protected", rulesets -> [], branches/master -> protected=false.
+// There is therefore no required status-check context enforced anywhere, no
+// check-run evidence for either declared candidate check, and the delivery-gate
+// workflow is not even present on the platform. These tests pin the honesty of
+// that registration: an unprotected platform can never ground a REGISTERED set,
+// and the recorded observation itself must not be silently erased or upgraded.
+
+test('comet-050 readback: the committed ci-policy registers the real UNPROTECTED_READ_BACK state and stays unregistered', () => {
+  const policy = JSON.parse(fs.readFileSync(path.join(committedPolicyDir, 'ci-policy.json'), 'utf8'));
+  // An unprotected platform enforces no required checks: no registration may be
+  // claimed and no required-check name may appear (REQUIRED_CHECK_NAMES_UNREGISTERED).
+  assert.equal(policy.requiredChecks.registrationStatus, 'UNSELECTED');
+  assert.deepEqual(policy.requiredChecks.names, []);
+  // The observation must stay recorded with its marker, date and command so the
+  // UNSELECTED state stays grounded in a real readback, not in absence of work.
+  const note = String(policy.provider.note ?? '');
+  assert.ok(note.includes('UNPROTECTED_READ_BACK'), 'the readback observation marker must stay recorded');
+  assert.ok(note.includes('2026-10-26'), 'the readback date must stay recorded');
+  assert.ok(note.includes('branches/master/protection'), 'the readback command must stay recorded');
+  // The evaluator red-line floor stays intact in the live baseline: the four
+  // P4_1 blocking codes plus I06's QUEUED extension (a queued/in-progress
+  // check is never success evidence).
+  for (const code of ['MISSING', 'SKIPPED', 'TIMED_OUT', 'STALE_EVIDENCE', 'QUEUED']) {
+    assert.ok(policy.requiredChecks.blockingSemantics.includes(code), `blocking semantics must keep ${code}`);
+  }
+  assert.equal(policy.requiredChecks.failClosed, true);
+  // A readback observation is evidence, never authorization to write policy.
+  assert.equal(policy.authorization.remotePolicyWriteAuthorized, false);
+  assert.equal(policy.mode, 'LOCAL_ONLY');
+});
+
+test('comet-050 readback: the candidate declaration carries its platform-side counterpart observation', () => {
+  const policy = JSON.parse(fs.readFileSync(path.join(committedPolicyDir, 'ci-policy.json'), 'utf8'));
+  const declared = policy.requiredChecks.declaredCandidateChecks ?? {};
+  assert.deepEqual(declared.names, ['delivery-gate', 'checks'], 'the declared candidate set must stay the committed-workflow check names');
+  assert.equal(declared.sourceKind, 'committed-workflow-files');
+  const note = String(declared.note ?? '');
+  assert.ok(note.includes('UNPROTECTED_READ_BACK'), 'the candidate note must record the observed platform counterpart state');
+  assert.ok(note.includes('2026-10-26'), 'the observation date must stay recorded');
+});

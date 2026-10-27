@@ -1,0 +1,73 @@
+## command: node --test test/ci-delivery-gate.test.js (RED observation, pinned node v24.15.0, pre-registration)
+## node: v24.15.0
+## HEAD: 305e1727d7db5ea89c7fc3b21767f01c67bed125
+✔ RED->GREEN delivery-gate.yml exists and parses as the protected CI entry (6.3615ms)
+✔ delivery-gate.yml declares the gate job running tools/ci/verify-delivery.mjs (0.446625ms)
+✔ delivery-gate.yml pins collection and checkout to the exact integration SHA (A13) (0.725875ms)
+✔ delivery-gate.yml takes the required-check policy from the protected baseline, never hardcoded names (1.4405ms)
+✔ delivery-gate.yml fails closed: least-privilege permissions, serialized concurrency, launch secret from secrets (0.673625ms)
+✔ delivery-gate.yml wires only the launch authority secret — the CI identity never reads release or rollback material (0.23375ms)
+✔ GREEN chain with registered baseline: exact-SHA evidence and passing gate verify (exit 0) (65.3255ms)
+✔ A13 missing required check: the merge is blocked with CHECK_MISSING (exit 2) (45.107625ms)
+✔ A13 stale evidence on a new integration SHA: old boundSha is refused (CHECK_STALE_EVIDENCE, exit 2) (44.935583ms)
+✔ F09 skipped and timed-out checks are never passed (CHECK_SKIPPED / CHECK_TIMED_OUT, exit 2) (185.181583ms)
+✔ F06 workflow success never substitutes delivery: all checks green but the gate receipt is stale (exit 2) (45.013583ms)
+✔ F06 a forged dispatch never signs the gate (ADMISSION_REFUSED, exit 2) (42.911208ms)
+✔ F06 an empty evidence stream cannot satisfy the gate (blocked receipt, exit 2) (43.282458ms)
+✔ Platform precondition: committed UNSELECTED baseline blocks the platform-merge authorization (UNVERIFIED, exit 2) (42.015833ms)
+✔ Protected baseline drift: a chain claiming a different required set than the registered one is blocked (44.202292ms)
+✔ An invalid protected baseline fails closed (PROTECTED_BASELINE_INVALID, exit 2) (42.219458ms)
+✔ Missing launch authority keeps the gate unjudgeable — never a pass (UNVERIFIED, exit 2) (42.723833ms)
+✔ Invalid inputs are input failures (exit 1): unreadable file, bad JSON, bad SHA, missing gate section (203.473167ms)
+▶ The structured verdict records the candidate identity and never leaks host paths
+  ✔ duplicate check runs for the same name+merge resolve to the latest run id (fail-closed latest-wins, OBS-1) (86.968458ms)
+✔ The structured verdict records the candidate identity and never leaks host paths (131.909375ms)
+✖ comet-050 readback: the committed ci-policy registers the real UNPROTECTED_READ_BACK state and stays unregistered (0.53325ms)
+✖ comet-050 readback: the candidate declaration carries its platform-side counterpart observation (0.13175ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 20
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1098.701875
+
+✖ failing tests:
+
+test at test/ci-delivery-gate.test.js:568:1
+✖ comet-050 readback: the committed ci-policy registers the real UNPROTECTED_READ_BACK state and stays unregistered (0.53325ms)
+  AssertionError [ERR_ASSERTION]: the readback observation marker must stay recorded
+      at TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/ci-delivery-gate.test.js:577:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at test/ci-delivery-gate.test.js:592:1
+✖ comet-050 readback: the candidate declaration carries its platform-side counterpart observation (0.13175ms)
+  AssertionError [ERR_ASSERTION]: the candidate note must record the observed platform counterpart state
+      at TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/test/ci-delivery-gate.test.js:598:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+## exit=1

@@ -1,0 +1,33 @@
+## command: node --test test/ci-delivery-gate.test.js (GREEN, pinned node v24.15.0, post-registration)
+✔ RED->GREEN delivery-gate.yml exists and parses as the protected CI entry (1.524084ms)
+✔ delivery-gate.yml declares the gate job running tools/ci/verify-delivery.mjs (0.239ms)
+✔ delivery-gate.yml pins collection and checkout to the exact integration SHA (A13) (0.174875ms)
+✔ delivery-gate.yml takes the required-check policy from the protected baseline, never hardcoded names (0.175083ms)
+✔ delivery-gate.yml fails closed: least-privilege permissions, serialized concurrency, launch secret from secrets (0.726375ms)
+✔ delivery-gate.yml wires only the launch authority secret — the CI identity never reads release or rollback material (0.213833ms)
+✔ GREEN chain with registered baseline: exact-SHA evidence and passing gate verify (exit 0) (54.5785ms)
+✔ A13 missing required check: the merge is blocked with CHECK_MISSING (exit 2) (44.290041ms)
+✔ A13 stale evidence on a new integration SHA: old boundSha is refused (CHECK_STALE_EVIDENCE, exit 2) (44.962709ms)
+✔ F09 skipped and timed-out checks are never passed (CHECK_SKIPPED / CHECK_TIMED_OUT, exit 2) (225.823209ms)
+✔ F06 workflow success never substitutes delivery: all checks green but the gate receipt is stale (exit 2) (45.295916ms)
+✔ F06 a forged dispatch never signs the gate (ADMISSION_REFUSED, exit 2) (46.319041ms)
+✔ F06 an empty evidence stream cannot satisfy the gate (blocked receipt, exit 2) (43.271166ms)
+✔ Platform precondition: committed UNSELECTED baseline blocks the platform-merge authorization (UNVERIFIED, exit 2) (41.250792ms)
+✔ Protected baseline drift: a chain claiming a different required set than the registered one is blocked (44.415708ms)
+✔ An invalid protected baseline fails closed (PROTECTED_BASELINE_INVALID, exit 2) (43.7815ms)
+✔ Missing launch authority keeps the gate unjudgeable — never a pass (UNVERIFIED, exit 2) (50.016208ms)
+✔ Invalid inputs are input failures (exit 1): unreadable file, bad JSON, bad SHA, missing gate section (199.823709ms)
+▶ The structured verdict records the candidate identity and never leaks host paths
+  ✔ duplicate check runs for the same name+merge resolve to the latest run id (fail-closed latest-wins, OBS-1) (88.711583ms)
+✔ The structured verdict records the candidate identity and never leaks host paths (134.1805ms)
+✔ comet-050 readback: the committed ci-policy registers the real UNPROTECTED_READ_BACK state and stays unregistered (0.16775ms)
+✔ comet-050 readback: the candidate declaration carries its platform-side counterpart observation (0.107083ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1091.86675
+## exit=0
