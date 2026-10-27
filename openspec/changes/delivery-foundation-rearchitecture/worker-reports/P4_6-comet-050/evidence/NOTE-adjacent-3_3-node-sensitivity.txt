@@ -1,0 +1,17 @@
+P4_6 adjacent note — test/delivery-cases/3_3.mjs role-chain family node sensitivity
+=============================================================================
+
+Running the FULL 3_3.mjs under the pinned node v24.15.0 makes the four
+role-chain executor tests (V_A10/V_A11/V_F07/V_A12b) fail with
+"gate blocked, valid 0" (leaves admitted as unverified; run-recovery-chain
+exit 2, verdict DIVERGED). Under the HOST node — the way P3_3's own record
+ran it ("node --test test/delivery-cases/3_3.mjs, node v22.13.1") — the same
+file is 11/11 green (evidence/adjacent-3_3-host-node.txt). The five
+C050 composition-Run tests + recipe tracking pass under BOTH nodes.
+
+This sensitivity is pre-existing and outside P4_6's Owned files
+(pilot-recovery/run-recovery-chain.mjs + the role-chain fixtures); the pinned
+run is preserved in evidence/adjacent-3_3.txt for the record. P4_6 did not
+touch any file 3_3 consumes (git status of this work session: only
+test/delivery-cases/4_6.mjs modified, plus new files under
+team-recovery/ and worker-reports/P4_6-comet-050/).

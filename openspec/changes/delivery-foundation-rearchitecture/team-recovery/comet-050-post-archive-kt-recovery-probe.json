@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "interface": "TeamRecovery.PostArchiveKtRecovery.v1",
+  "task": "P4_6",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "caseModule": "test/delivery-cases/4_6.mjs",
+  "registeredBy": "P4_6-comet-050 worker report",
+  "scope": "SAME_RUN",
+  "supply": {
+    "upstream": "aeb1a6598034e28ce46b8422d4dbd8785e607bd7",
+    "package": "0.5.0",
+    "patch": "integrations/comet/patches/0005-comet-050-kt-closeout.patch",
+    "patchTarget": "domains/comet-classic/classic-resolver.ts",
+    "buildNote": "the pinned build directory is resolved from upstream.lock.json at test time; no concrete build fingerprint or content hash is pinned by this probe (the lock owns the pins)",
+    "retiredFace": "0003-post-archive-closeout.patch and patches/tests/4_6.patch stay retired (0005 is the only successor on the 0.5.0 baseline, ADR-0022 B1)"
+  },
+  "semantics": [
+    {
+      "id": "post-archive-same-run-kt-discovery-blocked-completion",
+      "semantic": "the archive move may complete first; while the Kt obligation is required and unmet the SAME Run parks at full.archive.execute and completed is never reported; the same-Run recovery entry (state next / managed recover) keeps discovering the pending Kt",
+      "face": "real classic Run driven open to archive-confirm through the public comet state/check surface on the pinned build; real comet archive through the managed spec adapter (pinned openspec 1.11.0 via COMET_OPENSPEC is the only archive writer); 0005 evaluated at the pinned build's patched resolver module over the run's real ClassicState and real collected evidence; same-Run identity proven by run_id across CLI, managed adapter and disk state bytes",
+      "pinnedBy": "KTA test in test/delivery-cases/4_6.mjs (proof rows RESOLVER_KT_PENDING_PARKED, RESOLVER_KT_PENDING_NOT_COMPLETED, POST_ARCHIVE_NEXT_KIND, POST_ARCHIVE_GUIDANCE_NO_REARCHIVE, RECOVER_SAME_RUN, RECOVER_ARCHIVED_NOT_COMPLETED, DISK_RUN_IDENTITY)"
+    },
+    {
+      "id": "kt-completion-flips-same-run-to-completed",
+      "semantic": "the write path is the optional knowledgeCloseout state field; once completed is true the SAME archived state resolves completed; the public 0.5.0 state face refuses the field write (CLASSIC_FIELD_UNKNOWN) — the persisted write is the declared supply/admission-wave obligation and is never faked",
+      "face": "pinned build resolver module over the run's real state (in-memory field per the 0005 header contract for the managed host layer) plus the driver-side mirror predicate lib/adapters/comet.js knowledgeCloseoutBlocked over the same real state, plus the live public-face refusal negative",
+      "pinnedBy": "KTB test (proof rows RESOLVER_KT_DONE_COMPLETED, MIRROR_TRUTH_TABLE_*, KT_FIELD_WRITE_FACE_REFUSED, KT_FIELD_WRITE_FACE_CODE, COMPLETION_COMPOSED)"
+    },
+    {
+      "id": "idempotent-reentry-no-second-archive-or-publish",
+      "semantic": "repeated hooks, callbacks and restarts never re-archive or re-publish: repeated managed closeout reconciles already-archived with zero native dispatch, repeated state next keeps the same delivery continuation, a real fresh CLI process re-enters archive idempotently with one archive directory and byte-stable main specs, and a second Kp seal is refused",
+      "face": "managed spec adapter closeout/recover on the real archived Run, repeated in-process CLI calls, and a real bin/comet.js subprocess (fresh process) driven with the pinned node in the isolated world",
+      "pinnedBy": "KTC test (proof rows REPEATED_CLOSEOUT_*, REPEATED_NEXT_STABLE, RESTART_*, SECOND_KP_SEAL_REFUSED)"
+    },
+    {
+      "id": "unknown-keeps-original-handle",
+      "semantic": "a publication timeout is unknown, never absence: the ORIGINAL operationKey/documentId stays the recovery target (the target id is derived deterministically — a retry re-targets the fixed document and cannot mint a second logical page), recovery may only read the original operation back (a non-executable directive is refused, a receipt minted from unknown is refused), and only a two-channel independent readback of the SAME operation satisfies Kt and composes the same-Run completion",
+      "face": "the runtime publish ledger judgment layer (lib/adapters/outline.js, consumed read-only; comet.classic.knowledge-publish.v1) composed with the same-Run discovery entry of the real archived Run; the live Outline API itself stays UNVERIFIED",
+      "pinnedBy": "KTD test (proof rows KT_UNKNOWN_BLOCKED, KT_UNKNOWN_CODE, KT_TARGET_ID_DETERMINISTIC, KT_UNKNOWN_DIRECTIVE_NOT_EXECUTABLE, KT_FOREIGN_TARGET_REFUSED, KT_RECEIPT_FROM_UNKNOWN_REFUSED, KT_READBACK_OUTCOME_EXISTS, KT_READBACK_SATISFIES, KT_SATISFIED_SAME_DOCUMENT, KT_RECEIPT_TARGET_IS_ORIGINAL)"
+    }
+  ],
+  "unverified": [
+    "the live Outline publication API (create/update/readback against a real instance): the judgment layer over the runtime publish ledger is the tested object here; the live write + readback stay with P4_4/P4_8 and the deployment verification wave",
+    "the persisted write of the knowledgeCloseout state field through a 0.5.0 public command: the public state face refuses the field (proven live); the managed admission that supplies the field is the supply/admission-wave obligation, so the parked row is proven at the patched resolver seam over the run's real state bytes",
+    "the composition-package Run face driven all the way to archive (the R to P slice is P3_2; the full composition journey to archive and its Kp extension refusal stay P4_4/VERIFY)"
+  ],
+  "coordination": {
+    "journeyOwner": "the full live Kp-to-archive-to-Kt journey (same-run-delivery steps 7-9) stays execution_owner=VERIFY in pilot-journey/same-run-delivery.journey.json",
+    "adjacentProofs": "P3_4 proved the already-archived zero-dispatch reconciliation; P3_3 proved the five composition-Run recovery semantics; this probe adds the post-archive Kt slice on the classic Run face"
+  }
+}

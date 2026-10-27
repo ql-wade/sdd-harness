@@ -482,12 +482,12 @@
 
 原工作包身份：4.6.a, 4.6.b, 4.6.c。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Test** 重复hook/回调/重启不得重复archive或发布；unknown维持原handle与操作，不把归档当completed；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 原归档后仍发现同Run pending知识义务；按原operation/目标UUID/版本查询恢复；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** 重复hook/回调/重启不得重复archive或发布；unknown维持原handle与操作，不把归档当completed；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 原归档后仍发现同Run pending知识义务；按原operation/目标UUID/版本查询恢复；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
 ### Task P4_7: 知识发布预授权与最小权限
 
