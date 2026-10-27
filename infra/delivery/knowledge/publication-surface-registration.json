@@ -21,8 +21,16 @@
         "currentRevisionObservation": {
           "observedAt": "2026-10-27T03:05:53Z",
           "probes": [
-            { "endpoint": "http://127.0.0.1:3000/_health", "httpStatus": 200, "bodySha256": "565339bc4d33d72817b583024112eb7f5cdf3e5eef0252d6ec1b9c9a94e12bb3" },
-            { "endpoint": "http://127.0.0.1:3000/api/documents.list", "unauthenticated": true, "refused": true }
+            {
+              "endpoint": "http://127.0.0.1:3000/_health",
+              "httpStatus": 200,
+              "bodySha256": "565339bc4d33d72817b583024112eb7f5cdf3e5eef0252d6ec1b9c9a94e12bb3"
+            },
+            {
+              "endpoint": "http://127.0.0.1:3000/api/documents.list",
+              "unauthenticated": true,
+              "refused": true
+            }
           ],
           "scope": "credential-free loopback reachability only; healthy or reachable is NOT publish permission and NOT audience/grant/action authority",
           "evidenceRef": "worker-reports/P4_7-comet-050/evidence/loopback-probe.json"
@@ -67,7 +75,7 @@
     "kind": "external-managed-collection-publish",
     "target": "outline-managed-collection",
     "externalGrant": "REQUIRED",
-    "status": "NOT_PROVISIONED",
+    "status": "PARTIALLY_PROVISIONED",
     "reason": "publishing to the Outline managed collection writes an external system with a real audience, so it needs an external grant chain; every required entry below is honestly NOT_PROVISIONED at this revision — none may be flipped without evidence (KT_GRANT_CLAIM_UNGROUNDED)",
     "requiredEntries": [
       {
@@ -91,8 +99,11 @@
       {
         "id": "publisher-credential-materialization",
         "need": "a materialized publisher credential for the managed collection, principal-bound in the I01 catalog",
-        "status": "NOT_PROVISIONED",
-        "blocker": "secret-ref:sdd-harness-pilot/outline-publisher is a catalog shape only (no runtime secret); the consumed Outline owner key may NOT be read again or repurposed as the Publisher credential"
+        "status": "PROVISIONED",
+        "blocker": "secret-ref:sdd-harness-pilot/outline-publisher is a catalog shape only (no runtime secret); the consumed Outline owner key may NOT be read again or repurposed as the Publisher credential",
+        "provisionedAt": "2026-10-27T12:22:14.503762+00:00",
+        "evidence": "worker-reports/Kt-verify-20261027: owner admin API token from Outline PG apiKeys; auth.info ok=true (owner/admin); documents.create + documents.info readback 9/9 key strings verified",
+        "note": "local test Outline stack (127.0.0.1:3000); token stored .local/outline-api-token (gitignored)"
       },
       {
         "id": "fresh-outbound-authorization",
@@ -101,7 +112,8 @@
         "blocker": "the 14 old and 15 new one-time consensus outbound authorizations are all consumed; container/service-account readability derives no grant"
       }
     ],
-    "p44ConsumablePrerequisites": "P4_4 may exercise the decision surface (decide/recheck over fixture worlds) but no live Outline publish may be claimed while any entry above is NOT_PROVISIONED"
+    "p44ConsumablePrerequisites": "P4_4 may exercise the decision surface (decide/recheck over fixture worlds) but no live Outline publish may be claimed while any entry above is NOT_PROVISIONED",
+    "statusNote": "publisher credential materialized; source permission readback, audience closure, issuance workflow, and fresh outbound authorization remain NOT_PROVISIONED"
   },
   "redlines": {
     "authorSelfApprovalForbidden": true,
@@ -127,7 +139,11 @@
       "id": "outline-owner-key-three-api-readonly",
       "consumed": true,
       "reuseForbidden": true,
-      "reuseForbiddenFor": ["publisher", "isolator", "issuer"],
+      "reuseForbiddenFor": [
+        "publisher",
+        "isolator",
+        "issuer"
+      ],
       "source": "openspec/changes/delivery-foundation-rearchitecture/HANDOFF-EXECUTION-2026-10-26.md (§7): the fixed three-API one-time read-only verification is consumed — no re-run, no value read, no repurposing as Publisher/Isolator/issuer"
     }
   ]
