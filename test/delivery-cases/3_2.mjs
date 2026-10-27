@@ -229,10 +229,13 @@ function assertCandidateAndEnvironmentRecorded(evidence) {
 
 // The suite runs the fixture's own test suite itself — an independent real
 // execution that does not trust the chain's claims.
+// 2026-10-27 VERIFY repair (G-T1-01): pin the TAP reporter — node>=24 changed
+// the piped default from TAP to spec, which broke the `# fail N` assertions
+// below under the pinned node24. Semantics unchanged; only the format is pinned.
 function runFixtureTest(project, testFile) {
   const env = { ...process.env };
   delete env.NODE_TEST_CONTEXT;
-  return spawnSync(process.execPath, ['--test', path.join('test', testFile)], {
+  return spawnSync(process.execPath, ['--test', '--test-reporter=tap', path.join('test', testFile)], {
     cwd: project, encoding: 'utf8', timeout: 60_000, env,
   });
 }

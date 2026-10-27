@@ -252,7 +252,12 @@ class RoleChain {
     const env = { ...process.env };
     delete env.NODE_TEST_CONTEXT;
     const started = Date.now();
-    const run = spawnSync(process.execPath, ['--test', target], { cwd, encoding: 'utf8', timeout: 60_000, env });
+    // 2026-10-27 VERIFY repair (G-T1-01): node>=24 changed the piped default
+    // reporter from TAP to spec, so the artifact named `*.tap.txt` no longer
+    // carried `# tests N` lines and classifyRunOutcome fail-closed as
+    // environment-failure (broke 3_2 parent runs under the pinned node24).
+    // Pin the reporter explicitly; oracle semantics unchanged.
+    const run = spawnSync(process.execPath, ['--test', '--test-reporter=tap', target], { cwd, encoding: 'utf8', timeout: 60_000, env });
     const output = run.stdout ?? '';
     const artifact = this.writeArtifact(role, `${label}.tap.txt`, output);
     const outcome = classifyRunOutcome({ exitCode: run.status, output, spawnError: run.error });

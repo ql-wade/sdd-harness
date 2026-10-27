@@ -226,7 +226,10 @@ function readDiskLedger(project) {
 function runFixtureTest(project, testFile, cwd = project) {
   const env = { ...process.env };
   delete env.NODE_TEST_CONTEXT;
-  return spawnSync(process.execPath, ['--test', path.join('test', testFile)], {
+  // 2026-10-27 VERIFY repair (G-T1-01): pin the TAP reporter — node>=24
+  // changed the piped default from TAP to spec, breaking the `# fail N`
+  // oracle below under the pinned node24. Format pinned; semantics unchanged.
+  return spawnSync(process.execPath, ['--test', '--test-reporter=tap', path.join('test', testFile)], {
     cwd, encoding: 'utf8', timeout: 60_000, env,
   });
 }

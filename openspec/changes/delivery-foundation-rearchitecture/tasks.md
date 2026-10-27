@@ -713,9 +713,9 @@
 
 原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [ ] **Step 1 [5 min]: Test** 旧PASS/fixture/安装成功/诊断轮绿色/缺资源都不能填分母；F10另期保留，运行和原始终态必须同版本；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [ ] **Step 2 [5 min]: Implement** 执行本期129required/103场景及关联维护、独立Whitebox/Grill与三报告；随后原Comet唯一closeout和后审；复用现有模块和原生接口，最小GREEN。
-- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+- [x] **Step 1 [5 min]: Test** 旧PASS/fixture/安装成功/诊断轮绿色/缺资源都不能填分母；F10另期保留，运行和原始终态必须同版本；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [x] **Step 2 [5 min]: Implement** 执行本期129required/103场景及关联维护、独立Whitebox/Grill与三报告；随后原Comet唯一closeout和后审；复用现有模块和原生接口，最小GREEN。
+- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。

@@ -1,0 +1,75 @@
+{
+ "tier_local": [
+  {
+   "id": "G-T1-01",
+   "gap": "run-recovery-chain / run-role-chain 在钉定 node24 下 10 个测试失败（3_3×4 + 3_2×6）",
+   "root_cause_found_this_round": "node>=24 把管道默认 test reporter 从 TAP 改为 spec；两链与两处 runFixtureTest 以裸 `node --test` 派发，parseTapSummary 找不到 `# tests N`，classifyRunOutcome fail-closed 为 environment-failure",
+   "resolution_this_round": "已根因修复：4 处 spawn 显式钉 --test-reporter=tap（run-recovery-chain.mjs WORKER_SCRIPT / run-role-chain.mjs runNodeTest / 3_2.mjs + 3_3.mjs runFixtureTest）；修复后 3_2=13/13、3_3=11/11（钉版 v24.15.0 复核）",
+   "status": "CLOSED_BY_VERIFY_ROOT_CAUSE"
+  },
+  {
+   "id": "G-T1-02",
+   "gap": "journey/scenario 分母登记：journey_definitions 无 case_definition_sha256；场景无 required_proof_level/required_assertions/required_readbacks；另有部分场景 case_module 绑定不含同名测试点（C04/C06/D07/D08/E06/H01-H05 等见 results.scenario_binding_gaps）",
+   "resolution_this_round": "未登记（verification-case-plan.json 不在 VERIFY Owns）。本轮以临时冻结分母 case-plan 预演三配方全绿（Phase C），并以组件面逐场景实跑暴露全部绑定缺口清单；归控制器落正式登记",
+   "status": "OPEN_CONTROLLER_REGISTRATION"
+  },
+  {
+   "id": "G-T1-03",
+   "gap": "delivery-gate 最终绿需真实 R→V 六门收据链 chain-gate.json 绑 merge SHA",
+   "resolution_this_round": "机制在盘且经测试钉定（.github/workflows/delivery-gate.yml 读 .whitebox/delivery-foundation/gate/chain-gate.json，verify-delivery.mjs 缺件拒放行）；平台侧执行被 G-T2-02/G-T3-02 阻塞，本地面已核",
+   "status": "MECHANISM_VERIFIED_PLATFORM_BLOCKED"
+  },
+  {
+   "id": "G-T1-04",
+   "gap": "I02 errata（报告数字错误 + foundation-drift 归因证据文件错标），归档前重生成",
+   "resolution_this_round": "errata 内容已在 execution-state node_status.I02.evidence.errata 结构化在案（1404 行/17308 字节 + 归因文件错标，结论经评审员独立复核为真）；重生成归 I02 owner 于归档前完成，VERIFY 不改写其冻结报告",
+   "status": "OPEN_OWNER_PREREQUISITE_BEFORE_ARCHIVE"
+  },
+  {
+   "id": "G-T1-05",
+   "gap": "hooks/pre-tool-gate.sh 内建 fallback 默认 KB_PROTECT_PATHS 仍旧子串 llmwiki/wiki/（未编译宿主边缘）",
+   "resolution_this_round": "已核：hooks.yaml canonical 为 ['.sdd/wiki/','llmwiki/wiki/']，编译产物 .compiled.env 正确含 .sdd/wiki/；仅 shell 内建 fallback 落后。影响面=未编译宿主；hooks/ 归 P1_2/P4_5 Owns，本轮不改",
+   "status": "OPEN_HOOKS_OWNER_EDGE_FALLBACK"
+  },
+  {
+   "id": "G-T1-06",
+   "gap": "4_6.mjs 仍解析 openspec-1.11.0（.sdd/tools 两版本并存）",
+   "resolution_this_round": "已核 1.11.0 与 1.15.0 CLI 均在盘可用（--version 应答正常）；4_6.mjs 语义面本轮经组件实跑（H 系列场景）真实执行。强迁移留待 owner 下次触碰",
+   "status": "VERIFIED_WORKING_MIGRATION_DEFERRED"
+  },
+  {
+   "id": "G-T1-07",
+   "gap": "P3_3 证据文件缺字面命令头（风格）",
+   "resolution_this_round": "本轮对全部 3_3 场景组件面复跑，产出带完整 command/argv/TAP 的新证据（.whitebox/verify-comet-050/component/A10|A12/ 等）；P3_3 冻结件风格修正留 owner",
+   "status": "SUBSTANCE_REVERIFIED_STYLE_OPEN"
+  },
+  {
+   "id": "G-T1-08",
+   "gap": "CI-parity 整改在途（治理失误：push 先于平台验证）+196 个被 *.log 忽略的 fixture 未入 git",
+   "resolution_this_round": "已核 worker-reports/ci-parity-050/ 终态：workflow 自足化完成（clone 全量 1134/1134 复现），遗留两件控制器待办（git add -f 196 fixtures；package.json 已恢复）；分支保护/push 授权归 G-T2-02",
+   "status": "LOCAL_DONE_PLATFORM_AND_FIXTURES_OPEN"
+  },
+  {
+   "id": "G-T1-09",
+   "gap": "【本轮新发现】宿主全局 openspec CLI 漂移 1.14.3→1.15.0：toolchain-baseline compatibility_matrix 无 1.15.0 观察行，1_1.mjs 依赖矩阵测试 TypeError 红（F01 组件面 behavior-red）",
+   "resolution_this_round": "已留存 1.15.0 CLI status --json 真实探针（evidence/grill/g-t1-09-openspec-1150-drift.txt，exit 0）；baseline 行补录+真实 replay 归 P1_1 owner",
+   "status": "OPEN_P1_1_OWNER_BASELINE_ROW"
+  }
+ ],
+ "tier_human": [
+  { "id": "G-T2-01", "gap": "Outline 授权（Kt 发布三次真实 401；P4_7 五条目 NOT_PROVISIONED）", "status": "UNVERIFIED_HOLDER_USER" },
+  { "id": "G-T2-02", "gap": "P4_1 人工门：master 分支保护+required checks 注册、push 授权（本地领先）、repo secret", "status": "UNVERIFIED_HOLDER_USER" },
+  { "id": "G-T2-03", "gap": "待裁决 open decisions（P2_3/P1_5/P4_4×2/I08×2 退出码与形态裁决）", "status": "UNVERIFIED_HOLDER_USER_VERIFY" },
+  { "id": "G-T2-04", "gap": "REMOTE_URL_DISCREPANCY + GH_AUTH_TOKEN TLS 拦截", "status": "UNVERIFIED_HOLDER_USER" },
+  { "id": "G-T2-05", "gap": "OV_OVERLAY_CANDIDATE overlay 语料单独裁决", "status": "UNVERIFIED_HOLDER_USER" },
+  { "id": "G-T2-06", "gap": "真实团队宿主能力/使用验证（多会话团队面）", "status": "UNVERIFIED_HOLDER_TEAM" }
+ ],
+ "tier_external": [
+  { "id": "G-T3-01", "gap": "Outline API 凭据/授权（Kt 发布、docker 卷恢复面）", "status": "UNVERIFIED_EXTERNAL" },
+  { "id": "G-T3-02", "gap": "远端 CI 平台证据（workflow 不在平台、gh TLS 拦截）", "status": "UNVERIFIED_EXTERNAL" },
+  { "id": "G-T3-03", "gap": "I04 五项宿主资源面", "status": "UNVERIFIED_EXTERNAL" },
+  { "id": "G-T3-04", "gap": "I05 八项（部署有意未执行）", "status": "UNVERIFIED_EXTERNAL" },
+  { "id": "G-T3-05", "gap": "I06/I07 远端运维证据 + P4_2 npm/GitHub 发布读回", "status": "UNVERIFIED_EXTERNAL" },
+  { "id": "G-T3-06", "gap": "F10 跨机器 Control API（决策 A NOT-EXERCISED，另立变更）", "status": "NOT_EXERCISED_SCOPE" }
+ ]
+}

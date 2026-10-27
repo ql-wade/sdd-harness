@@ -126,7 +126,13 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const [obsFile, cwd, testRel, opId, execution] = process.argv.slice(1); // node -e: argv[1] is the first script argument
 const started = Date.now();
-const run = spawnSync(process.execPath, ['--test', testRel], { cwd, encoding: 'utf8', timeout: 60000 });
+// 2026-10-27 VERIFY repair (G-T1-01): node>=24 changed the piped default
+// reporter from TAP to spec, so the "# tests N" summary lines disappeared
+// from the observation and classifyRunOutcome fail-closed every leaf as
+// environment-failure ("unverified", 0 valid executions). Pin the reporter
+// explicitly — same convention delivery-journey.mjs already applies to its
+// own spawns. Oracle semantics unchanged; only the consumed format is pinned.
+const run = spawnSync(process.execPath, ['--test', '--test-reporter=tap', testRel], { cwd, encoding: 'utf8', timeout: 60000 });
 const observation = {
   opId,
   execution,
