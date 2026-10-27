@@ -1207,7 +1207,7 @@ test('V_RW_REAL_COMET_RECOVERY:C050-single-writer — the composition Run keeps 
 
 // --- V_RW_REAL_COMET_RECOVERY:recipe-tracking (050 revision) -------------------
 
-test('V_RW_REAL_COMET_RECOVERY:L11-recipe-tracking — the real-comet-recovery recipe stays registered for the comet-050 revision with the five same-Run recovery pins bound to executed test points, the same-run journey step 9 stays VERIFY-owned, and the journey surface refuses unknown journeys and unfrozen registrations (never a default-success path)', () => {
+test('V_RW_REAL_COMET_RECOVERY:L11-recipe-tracking — the real-comet-recovery recipe stays registered for the comet-050 revision with the five same-Run recovery pins bound to executed test points, the same-run journey step 9 stays VERIFY-owned, and the journey surface refuses unknown journeys while the sha-frozen registration clears the freeze gate and refuses at the next unregistered denominator (never a default-success path)', () => {
   const base = 'openspec/changes/delivery-foundation-rearchitecture';
   const plan = JSON.parse(fs.readFileSync(path.join(projectRoot, base, 'verification-case-plan.json'), 'utf8'));
   const registration = plan.journey_definitions?.['real-comet-recovery'];
@@ -1255,9 +1255,20 @@ test('V_RW_REAL_COMET_RECOVERY:L11-recipe-tracking — the real-comet-recovery r
     assert.equal(step.executionOwner, 'VERIFY', `${stepId} stays VERIFY-owned — recipe validation never closes the live window`);
   }
 
-  // The journey runner surface: unknown journeys refuse structurally; the
-  // registered-but-unfrozen journey refuses NOT-EXERCISED (the denominator
-  // registration is a VERIFY-owned step — recorded honestly, never a pass).
+  // The journey runner surface: unknown journeys refuse structurally. The
+  // registered journey is sha-frozen (G-T1-02): the registration pins the
+  // recipe bytes, and the managed run clears the journey-recipe-freeze gate —
+  // its honest refusal is the NEXT unregistered managed denominator (proof
+  // level / assertions / readbacks stay controller-owned), never a
+  // default-success path and never the freeze family again.
+  // Freeze consistency is verified statically with the exact comparison the
+  // runner's own gate performs (plain sha256 over the recipe bytes, artifacts
+  // group); drift here would turn the managed run into
+  // registered-journey-recipe-drift and redden the run assertions below.
+  assert.match(String(registration.case_definition_sha256 ?? ''), /^[a-f0-9]{64}$/u, 'the journey registration freezes a case_definition_sha256');
+  assert.equal(registration.case_definition_sha256, digestFile(path.join(projectRoot, registration.path)),
+    'the frozen case_definition_sha256 equals the recipe bytes on disk (freeze is consistent, not just present)');
+
   const workdir = makeWorkdir('journey-negative');
   const runJourney = (journeyName) => spawnSync(process.execPath, [
     path.join(projectRoot, 'tools/verify/delivery-journey.mjs'),
@@ -1271,9 +1282,11 @@ test('V_RW_REAL_COMET_RECOVERY:L11-recipe-tracking — the real-comet-recovery r
   assert.match(unknownVerdict.reason, /journey-not-registered/, 'the refusal is the structured journey-not-registered reason');
 
   const registered = runJourney('real-comet-recovery');
-  assert.equal(registered.status, 2, 'the registered journey is nonzero unless the frozen denominator exists');
+  assert.equal(registered.status, 2, 'the registered journey stays nonzero until the managed denominator is registered');
   const registeredVerdict = JSON.parse(fs.readFileSync(path.join(workdir, 'real-comet-recovery', 'verdict.json'), 'utf8'));
-  assert.notEqual(registeredVerdict.verdict, 'PASS', 'a recipe without its frozen denominator never passes');
-  assert.match(String(registeredVerdict.reason), /journey-recipe-freeze|case_definition_sha256|journey-recipe-not-implemented|journey-registration-incomplete/u,
-    `the honest refusal names the missing prerequisite: ${registeredVerdict.reason}`);
+  assert.notEqual(registeredVerdict.verdict, 'PASS', 'a recipe without its managed denominator never passes');
+  assert.doesNotMatch(String(registeredVerdict.reason), /journey-recipe-freeze|registered-journey-recipe-drift/u,
+    `the frozen recipe clears the freeze gate (the freeze/oracle interlock is resolved): ${registeredVerdict.reason}`);
+  assert.match(String(registeredVerdict.reason), /proof-registration-missing/u,
+    `the honest refusal names the next missing prerequisite: ${registeredVerdict.reason}`);
 });

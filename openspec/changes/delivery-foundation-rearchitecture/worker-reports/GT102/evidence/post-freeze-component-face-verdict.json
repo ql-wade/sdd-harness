@@ -1,0 +1,318 @@
+{
+  "schemaVersion": 1,
+  "tool": "tools/verify/delivery-journey.mjs",
+  "runnerInvariant": "test action/observer adapter only — no phase, no DAG, no retries, no job lease, no auto-recovery",
+  "scenario": "L11",
+  "acceptanceIds": [
+    "D08",
+    "H01",
+    "H03",
+    "H07",
+    "L10",
+    "L11"
+  ],
+  "journey": {
+    "name": "real-comet-recovery",
+    "owner": "P3_3",
+    "requiredCheck": "V_RW_REAL_COMET_RECOVERY",
+    "recipePath": "openspec/changes/delivery-foundation-rearchitecture/pilot-recovery/real-comet-recovery.case.json",
+    "registeredStatus": "CURRENT_PROFILE_RETEST_REQUIRED"
+  },
+  "profile": "comet-managed-v2",
+  "scope": "component/observer-qualification",
+  "managedClosureEligible": false,
+  "sourceObservation": null,
+  "caseModule": "test/delivery-cases/3_3.mjs",
+  "sourceBinding": [
+    {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md",
+      "requirement": "Published knowledge revocation and restoration",
+      "scenario": "L11"
+    },
+    {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md",
+      "requirement": "Classic gate runtime enforcement",
+      "scenario": "D08"
+    },
+    {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/pilot-journey/same-run-delivery.journey.json",
+      "requirement": "V_SAME_RUN_DELIVERY step 9-outline-unknown-recovery: the V_RW_REAL_COMET_RECOVERY fault window embedded inside the same product Run (P3_3 owns the bounded composition-Run recovery recipe; the live Outline unknown-result window stays execution_owner=VERIFY)",
+      "scenario": "L11"
+    },
+    {
+      "path": "openspec/changes/delivery-foundation-rearchitecture/execution-contract.json",
+      "requirement": "journey_execution.construction_task_scopes.P3_3",
+      "scenario": "L11"
+    }
+  ],
+  "verdict": "PASS",
+  "reason": null,
+  "missing": [],
+  "drift": [],
+  "schemaErrors": [],
+  "execution": {
+    "command": "node --test test/delivery-cases/3_3.mjs",
+    "actions": [
+      {
+        "index": 1,
+        "id": null,
+        "type": "spawn",
+        "expected": "exit 0; the case module executes the recovery recipe's declared construction scope on the REAL comet-050 composition Run face (pinned 0.5.0 build, sdd-managed-delivery package driven through `comet runtime dispatch --application-file` in one-shot /tmp worlds with isolated HOME/TMPDIR and the pinned toolchain node): (1) C050-interrupt-resume — a real SIGKILL inside the run-record persistence window recovers through the ORIGINAL request (same runId/package/input): the run exists exactly once, identity and input survive byte-level, the run continues (trusted prepare, approval resolved exactly once, next step scheduled), and a refused write exposes the documented inspect recovery request face; (2) C050-idempotent-recovery — byte-identical start replays return the same single run with untouched record bytes, the same approval decision replayed N times never bumps the revision or mints a second decision, and a same-key start with different input is refused (RUN_CONFLICT); (3) C050-workflow-changed — mutated package content is refused with WORKFLOW_CHANGED on both the mutation and inspect faces, the refusals leave the run checkpoint bytes untouched, and restoring the original bytes lets the SAME run continue under its original package ownership; (4) C050-stale-evidence — wrong-claimToken and superseded-attempt receipts are refused STALE_ACTION by the engine before any business validator and never land (receipts stay zero); (5) C050-single-writer — a second host claim, a trusted-executor takeover of a host-claimed action and a stale expectedRevision are all refused (ACTION_ALREADY_CLAIMED / REVISION_CONFLICT) and the disk record holds exactly one claim owner; (6) L11-recipe-tracking binds this recipe to its journey_definitions registration and asserts the same-run journey step 9 stays execution_owner=VERIFY; TAP summary fail=0 with pass>0 and every required assertion mapped to executed ok points; no concrete compositionHash/contentHash value is ever pinned",
+        "required": true,
+        "expectation": {
+          "kind": "tapRequiredAssertions",
+          "assertions": [
+            "L11",
+            "V_RW_REAL_COMET_RECOVERY:C050-interrupt-resume",
+            "V_RW_REAL_COMET_RECOVERY:C050-idempotent-recovery",
+            "V_RW_REAL_COMET_RECOVERY:C050-workflow-changed",
+            "V_RW_REAL_COMET_RECOVERY:C050-stale-evidence",
+            "V_RW_REAL_COMET_RECOVERY:C050-single-writer",
+            "V_RW_REAL_COMET_RECOVERY:L11-recipe-tracking"
+          ]
+        },
+        "ok": true,
+        "exitCode": 0,
+        "durationMs": 120431,
+        "note": null,
+        "observed": null,
+        "argv": [
+          "node",
+          "--test",
+          "--test-reporter=tap",
+          "test/delivery-cases/3_3.mjs"
+        ],
+        "command": "node --test test/delivery-cases/3_3.mjs",
+        "testOutcome": {
+          "kind": "pass",
+          "signatures": [],
+          "summary": {
+            "tests": 11,
+            "suites": 0,
+            "pass": 11,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          }
+        },
+        "assertions": [
+          {
+            "id": "L11",
+            "status": "satisfied",
+            "matchedPoints": 1,
+            "ok": 1,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "id": "V_RW_REAL_COMET_RECOVERY:C050-interrupt-resume",
+            "status": "satisfied",
+            "matchedPoints": 1,
+            "ok": 1,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "id": "V_RW_REAL_COMET_RECOVERY:C050-idempotent-recovery",
+            "status": "satisfied",
+            "matchedPoints": 1,
+            "ok": 1,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "id": "V_RW_REAL_COMET_RECOVERY:C050-workflow-changed",
+            "status": "satisfied",
+            "matchedPoints": 1,
+            "ok": 1,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "id": "V_RW_REAL_COMET_RECOVERY:C050-stale-evidence",
+            "status": "satisfied",
+            "matchedPoints": 1,
+            "ok": 1,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "id": "V_RW_REAL_COMET_RECOVERY:C050-single-writer",
+            "status": "satisfied",
+            "matchedPoints": 1,
+            "ok": 1,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "id": "V_RW_REAL_COMET_RECOVERY:L11-recipe-tracking",
+            "status": "satisfied",
+            "matchedPoints": 1,
+            "ok": 1,
+            "failed": 0,
+            "skipped": 0
+          }
+        ],
+        "observedAt": "2026-10-27T12:47:25.826Z"
+      },
+      {
+        "index": 2,
+        "id": null,
+        "type": "readState",
+        "expected": "TAP evidence is persisted to disk and parseable with effective executions > 0 (zero effective execution never passes)",
+        "required": true,
+        "expectation": {
+          "kind": "nonEmptyFile"
+        },
+        "ok": true,
+        "exitCode": null,
+        "durationMs": 1,
+        "note": null,
+        "observed": {
+          "path": "<host-path-redacted>",
+          "bytes": 6582
+        },
+        "command": null,
+        "rawEvidence": [
+          "action-2-readback.txt"
+        ],
+        "observedAt": "2026-10-27T12:47:25.827Z"
+      },
+      {
+        "index": 3,
+        "id": null,
+        "type": "inspect",
+        "expected": "candidate digest is recorded in the verdict (observation only; does not gate)",
+        "required": false,
+        "expectation": null,
+        "ok": true,
+        "exitCode": 0,
+        "durationMs": 6,
+        "note": null,
+        "observed": "a611bd6e48f4c0b29524907adc0d0b944bd53ca6",
+        "command": "git rev-parse HEAD",
+        "argv": [
+          "git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "rawEvidence": [
+          "action-3-inspection-stdout.txt",
+          "action-3-inspection-stderr.txt"
+        ],
+        "observedAt": "2026-10-27T12:47:25.833Z"
+      }
+    ],
+    "tests": 11,
+    "pass": 11,
+    "fail": 0,
+    "skipped": 0,
+    "todo": 0,
+    "effectiveExecutions": 11,
+    "target": {
+      "token": "L11",
+      "mapping": "scenario-token",
+      "found": true,
+      "status": "ok"
+    },
+    "requiredAssertions": [
+      {
+        "id": "L11",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "id": "V_RW_REAL_COMET_RECOVERY:C050-interrupt-resume",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "id": "V_RW_REAL_COMET_RECOVERY:C050-idempotent-recovery",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "id": "V_RW_REAL_COMET_RECOVERY:C050-workflow-changed",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "id": "V_RW_REAL_COMET_RECOVERY:C050-stale-evidence",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "id": "V_RW_REAL_COMET_RECOVERY:C050-single-writer",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "id": "V_RW_REAL_COMET_RECOVERY:L11-recipe-tracking",
+        "status": "satisfied",
+        "matchedPoints": 1,
+        "ok": 1,
+        "failed": 0,
+        "skipped": 0
+      }
+    ],
+    "cancelled": 0
+  },
+  "candidate": {
+    "gitHead": "a611bd6e48f4c0b29524907adc0d0b944bd53ca6",
+    "node": "v24.15.0",
+    "platform": "darwin"
+  },
+  "timing": {
+    "startedAt": "2026-10-27T12:45:25.348Z",
+    "finishedAt": "2026-10-27T12:47:25.834Z",
+    "durationMs": 120486
+  },
+  "evidence": {
+    "dir": "<host-path-redacted>",
+    "files": [
+      "pilot-baseline.json",
+      "case-definition.json",
+      "action-1-stdout.txt",
+      "action-1-stderr.txt",
+      "action-2-readback.txt",
+      "action-3-inspection-stdout.txt",
+      "action-3-inspection-stderr.txt",
+      "verdict.json"
+    ],
+    "sha256": {
+      "pilot-baseline.json": "b3a9a1cd7bfa7d3b8bb9359ef0600a42cc6651db36fa70b45d72e6cde90648da",
+      "case-definition.json": "591d41c199c4465866c6fbcdeba2fc087511e5df5cf559603291611d659f4ff0",
+      "action-1-stdout.txt": "7f8e45079bcaa433213c657a99d6c3ac2f2715cb530f55ed3dbbd83b0fe0b2f3",
+      "action-1-stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "action-2-readback.txt": "7f8e45079bcaa433213c657a99d6c3ac2f2715cb530f55ed3dbbd83b0fe0b2f3",
+      "action-3-inspection-stdout.txt": "00298c0f28569ec148ca73294e9482f6c0886f1a46fd62d2315c1f31697ecabe",
+      "action-3-inspection-stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "exitCode": 0,
+  "legacyInspectionActions": {
+    "scope": "component/legacy-compatibility",
+    "indexes": [
+      3
+    ]
+  }
+}

@@ -193,14 +193,14 @@
       "title": "recipe and registration coordination for the comet-050 revision",
       "roleIdentity": "verification-case-plan journey_definitions + pilot-recovery recipe files",
       "executionOwner": "P3_3",
-      "constructionScope": "landed 2026-10-26-comet-050-adoption-v1 (V_RW_REAL_COMET_RECOVERY:recipe-tracking): the recipe pins the five C050 test points, pins no concrete package hash value, keeps the same-run journey step 9 VERIFY-owned, and the journey surface refuses unknown journeys and unfrozen registrations",
-      "gate": "never a default-success path; the frozen denominator registration stays a VERIFY-owned step",
+      "constructionScope": "landed 2026-10-26-comet-050-adoption-v1 (V_RW_REAL_COMET_RECOVERY:recipe-tracking; sha-freeze round G-T1-02 residual 2026-10-26): the recipe pins the five C050 test points, pins no concrete package hash value, keeps the same-run journey step 9 VERIFY-owned, and the journey surface refuses unknown journeys while the sha-frozen registration (case_definition_sha256 in journey_definitions) clears the freeze gate and refuses at the next unregistered managed denominator",
+      "gate": "never a default-success path; the journey-level managed denominator (proof level/assertions/readbacks) stays a controller-owned registration step",
       "premises": [
         "verification-case-plan.json registration present"
       ],
       "dispatchBinding": {
         "dispatch": "tools/verify/delivery-journey.mjs --journey real-comet-recovery --profile comet-managed-v2",
-        "accept": "structured NOT-EXERCISED refusals until the denominator is frozen"
+        "accept": "structured NOT-EXERCISED refusals; the freeze gate is cleared by the registered case_definition_sha256, the next honest refusal is the unregistered managed denominator"
       },
       "epoch": "n/a (registry face)",
       "recordFields": [
