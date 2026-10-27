@@ -1,0 +1,17 @@
+# P4_5 (comet-050) — 瞬态观察记录（如实）
+
+2026-10-27T03:41Z 前后，本轮第一次 `bash scripts/check.sh` 中内嵌的 `npm test`
+批次报 6 fail / 1151 pass（总 1157，duration 213s）。失败用例名未被该次 tail
+捕获（只留了计数），当时 P4_5 所属三个套件（delivery-hook-assembly /
+delivery-cases/4_5 / adapter-quoting）在本文件前一行的同批输出里全为 ok。
+
+后续钉版复跑（无并发、同机同版本）：
+1. `npm test` 单独跑：1157/1157 全绿（exit 0，duration 159s）。
+2. `bash scripts/check.sh` 完整跑：exit 0，0 个失败标记
+   （GREEN-check-full.log，duration 151s）。
+3. 时序敏感候选套件（infra-monitor / comet-driver / delivery-control /
+   ci-delivery-gate）连跑两轮：175/175 全绿 ×2。
+
+判定：6 个失败未复现，与本任务唯一改动（test/delivery-hook-assembly.test.js
+新增一个纯 tmpdir 确定性用例）无关联证据；按资源竞争/时序噪声如实登记，
+不作为行为回归关闭，也不据此放宽任何断言。若后续批次复现，归其属主套件处理。

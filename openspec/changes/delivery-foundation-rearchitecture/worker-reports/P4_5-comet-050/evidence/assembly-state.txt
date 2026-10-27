@@ -1,0 +1,67 @@
+# P4_5 (comet-050) — Ponytail hook 装配状态核对（只读事实，2026-10-27T03:4xZ）
+
+repo HEAD: 922659907068541ba98ee9997aae0d8faf4cbdde（未提交，无 commit）
+host: macOS darwin 24.6.0 arm64 / node v22.13.1 / python3 3.14.7
+
+## 1. hooks.yaml（唯一策略源）——无 Ponytail 条目，且不可有
+
+policies 共 4 条：kb-write-protection（deny，target 含 P1_2 修复的
+'.sdd/wiki/' + 旧 'llmwiki/wiki/'）、dangerous-command-blocklist（deny）、
+session-context-injection（SessionStart run）、stop-sediment-reminder（Stop run）。
+没有任何 Ponytail/插件来源条目。
+
+结构性原因（adapter 固定事件集 + 注册分工门，tools/adapters/claude-code.sh）：
+- FIXED_EVENT_SET = (PreToolUse, SessionStart, Stop)；固定集外事件（如
+  SubagentStart/UserPromptSubmit/PreCompact）在产物写入前被显式拒绝（§7.3）。
+- plugin_scripts 门：script 引用 CLAUDE_PLUGIN_ROOT / .claude/plugins/ 的策略
+  在产物写入前被显式拒绝（§7.2 插件生命周期 Hook 由插件入口注册，项目受管块
+  不得复制）。
+
+结论：Ponytail 相关注**不需要（也不允许）经 hooks.yaml 装配**——这是设计而非
+缺席。本次补上了 plugin-scripts 门的直接测试（既有测试只覆盖固定事件集那半）。
+
+## 2. 活配置装配一致性（本仓库工作树）
+
+.claude/settings.json hooks 段 = 恰好 3 个受管条目：
+- PreToolUse  matcher "Write|Edit|MultiEdit|NotebookEdit|Bash" → bash "$CLAUDE_PROJECT_DIR"/hooks/pre-tool-gate.sh
+- SessionStart matcher "startup|resume"                        → bash "$CLAUDE_PROJECT_DIR"/hooks/session-context.sh
+- Stop（无 matcher）                                            → bash "$CLAUDE_PROJECT_DIR"/hooks/stop-reminder.sh
+无插件条目、无用户条目（与 hook-doctor CONSISTENT 判定一致，见 4_5.mjs native
+assembly 用例）。hooks/.compiled.env 与 hooks.yaml 逐字对应（KB_PROTECT_PATHS
+含两个 wiki 子串）。
+
+活配置指纹（测试前后逐字节不变——测试污染红线）：
+- .claude/settings.json  sha256 f6c56f4e97f1cd64690bfb79067252b6a2f396cdd3880825bacc481ebf2b0558
+- hooks/.compiled.env    sha256 8829057fc8c5bc0ecd44e472e5835eb4ef1c5d85ecf283b3073366b8b929a508
+
+## 3. Ponytail 插件入口装配状态（本宿主）
+
+- 分发快照：.agents/skills/ponytail/（package.json version 5.3.2，
+  name @dietrichgebert/ponytail）；hooks/claude-codex-hooks.json 注册
+  SessionStart(startup|resume|clear|compact)/SubagentStart/UserPromptSubmit，
+  全部命令带 CLAUDE_PLUGIN_ROOT 来源标记。
+- 本宿主实际注册（ZCode 插件缓存）：~/.zcode/cli/plugins/cache/ponytail/
+  ponytail/5.2.0/hooks/claude-codex-hooks.json —— 与分发快照**结构全同**
+  （事件/matcher/命令/来源标记逐项一致），仅 timeout 5.2.0=5s vs 快照 5.3.2=15s。
+- 版本偏差事实：分发快照 5.3.2 vs 宿主注册 5.2.0（技能层与插件注册层各自演进，
+  hooks 装配结构不受影响）。机器特定路径不进产物，此对比仅记入本证据。
+
+## 4. 与矩阵/清单的一致性
+
+infra/delivery/lifecycle/registration-matrix.json（task: P4_5）三主体
+（plugin/managed/user）×事件面如实标注：SessionStart/clear、compact、
+SubagentStart、UserPromptSubmit、PostToolUse、PreCompact、SubagentStop 均为
+CAPABILITY_GAP（ponytailNative 归插件入口），受管面只生成固定 3 事件；
+duplicateRegistration.policy=REFUSE。method-profile-manifest 的
+hook_registration_division 与之一致（插件入口/hooks.yaml 不互相复制）。
+
+## 5. 可选状态登记（任务措辞要求的"登记可选状态+装配条件"）
+
+- 状态：hooks.yaml 侧无 Ponytail 装配（设计上排除）；插件入口侧在本宿主已注册
+  （ZCode 插件缓存 5.2.0）。Ponytail 为辅助提醒层（P2_4-R5 已从组合包移除，
+  不承担门禁职责；methodDefaults.ponytail="full" 只影响方法提醒注入）。
+- 装配条件：Ponytail 生命周期 Hook 的唯一合法装配路径 = 插件入口安装
+  （宿主插件系统）；hooks.yaml 追加插件脚本或固定集外事件均被 adapter 拒绝
+  （本次测试锁定两个方向）。
+- 升级/卸载：项目 adapter 只移交/清理自家受管块；插件条目安装/重复拉取/卸载
+  全程保留（1_2.mjs、adapter-quoting、hook-assembly 既有覆盖，见 record.md）。

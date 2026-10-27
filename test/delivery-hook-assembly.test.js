@@ -286,6 +286,33 @@ test('E06: compact and sub-session starts are not project-assembled — the adap
   assert.match(division.no_cross_copying, /不互相复制/);
 });
 
+test('E06: hooks.yaml can never assemble a Ponytail plugin-source script — the §7.2 plugin-source gate refuses it before any artifact write, even on an in-set event', (t) => {
+  const { world } = composeWorld(t);
+  const settingsBefore = readSettingsRaw(world);
+  const compiledBefore = sha(fsSync.readFileSync(path.join(world, 'hooks', '.compiled.env')));
+
+  // P4_5 comet-050 negative (closes the uncovered half of the registration
+  // division gate): a policy whose script references plugin infrastructure
+  // (the Ponytail entry's own form, e.g. "$CLAUDE_PLUGIN_ROOT"/hooks/...) must
+  // be refused even when the event itself is inside the fixed set — otherwise
+  // the plugin-source refusal would only be reachable via the event-set gate
+  // and the single-source boundary would be unproven in this direction.
+  for (const pluginScript of ['"$CLAUDE_PLUGIN_ROOT"/hooks/ponytail-activate.js', '.claude/plugins/ponytail/hooks/ponytail-activate.js']) {
+    const worldYaml = path.join(world, 'hooks.yaml');
+    fsSync.copyFileSync(path.join(projectRoot, 'hooks.yaml'), worldYaml);
+    const id = `probe-plugin-src-${pluginScript.includes('CLAUDE_PLUGIN_ROOT') ? 'env' : 'path'}`;
+    fsSync.appendFileSync(worldYaml, `\n  - id: ${id}\n    hook: SessionStart\n    action: run\n    script: ${pluginScript}\n`);
+    const refused = spawnSync('bash', [ADAPTER], { encoding: 'utf8', env: { ...process.env, SDD_TARGET_ROOT: world } });
+    assert.notEqual(refused.status, 0, `${id} must be refused: a plugin-source script never enters the project managed block`);
+    assert.match(refused.stderr, new RegExp(id), 'the refusal names the offending policy');
+    assert.match(refused.stderr, /插件来源|plugin/i, 'the refusal cites the §7.2 registration division');
+    fsSync.rmSync(worldYaml);
+    // The refusal happened before any artifact write: both views byte-identical.
+    assert.equal(readSettingsRaw(world), settingsBefore, 'a refused plugin-source policy never touches the native settings view');
+    assert.equal(sha(fsSync.readFileSync(path.join(world, 'hooks', '.compiled.env'))), compiledBefore, 'a refused plugin-source policy never rewrites the compiled env');
+  }
+});
+
 test('E05: three-subject coexistence on real plugin bytes — plugin and user entries survive composition verbatim, one managed entry per fixed event, idempotent repeat', (t) => {
   const { world } = composeWorld(t);
   const settingsPath = path.join(world, '.claude', 'settings.json');
