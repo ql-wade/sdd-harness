@@ -1,0 +1,145 @@
+{
+  "tier_local": [
+    {
+      "id": "G-T1-01",
+      "gap": "run-recovery-chain / run-role-chain 在钉定 node24 下 10 个测试失败（3_3×4 + 3_2×6）",
+      "status": "CLOSED_BY_VERIFY_ROOT_CAUSE",
+      "final_resolution": "r1 已根因修复（4 处 spawn 显式钉 --test-reporter=tap）；本轮 3_2=13/13、3_3=11/11、三旅程组件面 3/3 PASS 复核保持绿"
+    },
+    {
+      "id": "G-T1-02",
+      "gap": "journey/scenario 分母登记：journey_definitions 无 case_definition_sha256；场景无 required_proof_level/required_assertions/required_readbacks；部分场景 case_module 绑定不含同名测试点",
+      "status": "PARTIALLY_CLOSED_BY_FINAL_VERIFY_REGISTRATION",
+      "resolution_this_round": "103 场景分母已按控制器授权落入 verification-case-plan.json：76 component（含 F01/F03 以精确测试名绑定）+ 27 host（含 typed readback 槽）；9 个绑定调和（B01/C04/C06/C07/D02/E06/H02/N07/L11 → 真正承载同名测试点的模块），E06/L11 计划↔配方模块冲突随之消解，三配方组件面全 PASS；27 个 host 场景的 managed 拒绝从 proof-registration-missing 前进到 protected-source-unavailable（真阻塞：未安装合格的 Comet launcher 观察接口）",
+      "residuals": [
+        "journey case_definition_sha256 未落：3_3.mjs（P3_3 Owns）把 managed 旅程拒绝 oracle 钉在未冻结状态（journey-recipe-freeze|case_definition_sha256|...）；不经 owner 改 oracle 直接登记 sha 会把全绿的 3_3 模块染红（本轮实测）。冻结与 oracle 更新须由控制器随 P3_3 一并落",
+        "component 场景无法携带 required_readbacks：验收器 L859 要求 readback 绑定冻结配方的 id-anchored jsonFields/equals 动作，而组件面合成定义没有这类动作——readback 层随每场景冻结配方（owner 工程）落地",
+        "27 个 host 场景在其注册模块内无同名测试点（本注册如实分层为 host）；组件面不可满足，见 verification-results.json#scenario_binding_gaps"
+      ]
+    },
+    {
+      "id": "G-T1-03",
+      "gap": "delivery-gate 最终绿需真实 R→V 六门收据链 chain-gate.json 绑 merge SHA",
+      "status": "MECHANISM_VERIFIED_PLATFORM_BLOCKED",
+      "final_resolution": "机制在盘且经测试钉定；平台侧执行被 G-T2-02/G-T3-02 阻塞，本地面已核（r1 结论保持）"
+    },
+    {
+      "id": "G-T1-04",
+      "gap": "I02 errata（报告数字错误 + foundation-drift 归因证据文件错标），归档前重生成",
+      "status": "OPEN_OWNER_PREREQUISITE_BEFORE_ARCHIVE",
+      "final_resolution": "errata 结构化在案；重生成归 I02 owner 于归档前完成（r1 结论保持）"
+    },
+    {
+      "id": "G-T1-05",
+      "gap": "hooks/pre-tool-gate.sh 内建 fallback 默认 KB_PROTECT_PATHS 仍旧子串 llmwiki/wiki/（未编译宿主边缘）",
+      "status": "OPEN_HOOKS_OWNER_EDGE_FALLBACK",
+      "final_resolution": "canonical 与编译产物正确；仅未编译宿主边缘（r1 结论保持，hooks/ 归 P1_2/P4_5）"
+    },
+    {
+      "id": "G-T1-06",
+      "gap": "4_6.mjs 仍解析 openspec-1.11.0（.sdd/tools 两版本并存）",
+      "status": "VERIFIED_WORKING_MIGRATION_DEFERRED",
+      "final_resolution": "双 CLI 在盘可用；H 系列经本轮组件面真实执行（host 分层后如实分层，非组件判绿）；强迁移留 owner"
+    },
+    {
+      "id": "G-T1-07",
+      "gap": "P3_3 证据文件缺字面命令头（风格）",
+      "status": "SUBSTANCE_REVERIFIED_STYLE_OPEN",
+      "final_resolution": "r1 已产出带完整 command/argv/TAP 的新证据；本轮另有 .whitebox/final-verify/ 全量新证据；冻结件风格修正留 owner"
+    },
+    {
+      "id": "G-T1-08",
+      "gap": "CI-parity：196 个被 *.log 忽略的 fixture 未入 git（fresh clone 恒红）",
+      "status": "LOCAL_DONE_PLATFORM_AND_FIXTURES_OPEN",
+      "final_resolution": "workflow 自足化完成、clone 全量复现；git add -f 196 fixtures + 平台人工门归控制器（r1 结论保持）"
+    },
+    {
+      "id": "G-T1-09",
+      "gap": "宿主全局 openspec CLI 漂移 1.14.3→1.15.0：toolchain-baseline compatibility_matrix 无 1.15.0 观察行，1_1.mjs 依赖矩阵测试 TypeError 红（F01/F03）",
+      "status": "OPEN_P1_1_OWNER_BASELINE_ROW",
+      "resolution_this_round": "F01/F03 分母已注册（component + 精确测试名，含红点在内的 6/3 个测试名）——本轮组件面 verdict 如实保持 behavior-RED；1.15.0 真实探针在案（r1）。baseline 行补录+真实 replay 归 P1_1 owner，本 worker 无 toolchain-baseline.json 写权"
+    },
+    {
+      "id": "G-T1-10",
+      "gap": "openspec 1.15.0 --strict 对 spec.md「## ADDED Requirements」前置导语文本判 exit 1（1.11.0 面仍 valid 的版本严格度差异）",
+      "status": "CLOSED_BY_FINAL_VERIFY_PREAMBLE_REMOVAL",
+      "resolution_this_round": "控制器授权删除中文前导语行（P0_2 owns）；整条哈希链重封：spec.md(47396b7b) → spec-baseline sources → execution-contract baseline_sha256(27dfa1f4) → pilot-contract testContract → drift-lock execution_contract_sha256(a66bfbda)；openspec 1.15.0 --strict 现 exit 0 is valid（V_OPENSPEC_STRICT PASS）；3_1/2_1 冻结基线门复跑绿"
+    },
+    {
+      "id": "G-T1-11",
+      "gap": "【本轮收敛】4_3.mjs 陈旧 oracle 族：92/118 前收敛分母、层词汇（supporting_cli_check/缺层）、blocking 形态（无 checks_failed/checks_not_executed）、open_p1>0 世界断言（七 P1 寄存器已在 comet-050 重规划时移出 execution-state）",
+      "status": "CLOSED_BY_FINAL_VERIFY_ROOT_CAUSE",
+      "resolution_this_round": "oracle 更新为当前修订形态：104/130、classifyCheck 层词汇、7-key blocking（同时满足 5_1.a-4 复验词汇）、P1 寄存器真值=0（后继台账=分档 gap registry）；acceptance-index.json 以双仪器投影重建（4_3 + 5_1 词汇共存，一处 summary/blocking 同源）；V_RW_COMPLETION_REQUIRED 对最终工件复跑转绿"
+    },
+    {
+      "id": "G-T1-12",
+      "gap": "【本轮确认的既有红，非本轮引入】5_2.mjs J3 oracle 钉在 command-first 重规划前的接受态：断言 index F10 tasks.P5_2='ACCEPTED'/MECHANISM_AT_DECLARED_SCOPE，而重规划后 execution-state P5_2=DEFERRED_NOT_EXERCISED",
+      "status": "OPEN_P5_2_OWNER_ORACLE",
+      "resolution_this_round": "经 git worktree 在 HEAD 复跑证实 5_2 J3 在本轮之前已红（1/4）；与本轮注册/投影无关。5_2.mjs 归 P5_2 Owns；F10 场景与该模块均不在 103 现域分母与 21 条 direct 检查内，不影响本轮 tally。owner 需按 DEFERRED 真值更新 oracle 或随另期变更重启"
+    }
+  ],
+  "tier_human": [
+    {
+      "id": "G-T2-01",
+      "gap": "Outline 授权（Kt 发布三次真实 401；P4_7 五条目 NOT_PROVISIONED）",
+      "status": "UNVERIFIED_HOLDER_USER"
+    },
+    {
+      "id": "G-T2-02",
+      "gap": "P4_1 人工门：master 分支保护+required checks 注册、push 授权（本地领先）、repo secret",
+      "status": "UNVERIFIED_HOLDER_USER"
+    },
+    {
+      "id": "G-T2-03",
+      "gap": "待裁决 open decisions（P2_3/P1_5/P4_4×2/I08×2 退出码与形态裁决）",
+      "status": "UNVERIFIED_HOLDER_USER_VERIFY"
+    },
+    {
+      "id": "G-T2-04",
+      "gap": "REMOTE_URL_DISCREPANCY + GH_AUTH_TOKEN TLS 拦截",
+      "status": "UNVERIFIED_HOLDER_USER"
+    },
+    {
+      "id": "G-T2-05",
+      "gap": "OV_OVERLAY_CANDIDATE overlay 语料单独裁决",
+      "status": "UNVERIFIED_HOLDER_USER"
+    },
+    {
+      "id": "G-T2-06",
+      "gap": "真实团队宿主能力/使用验证（多会话团队面）",
+      "status": "UNVERIFIED_HOLDER_TEAM"
+    }
+  ],
+  "tier_external": [
+    {
+      "id": "G-T3-01",
+      "gap": "Outline API 凭据/授权（Kt 发布、docker 卷恢复面）",
+      "status": "UNVERIFIED_EXTERNAL"
+    },
+    {
+      "id": "G-T3-02",
+      "gap": "远端 CI 平台证据（workflow 不在平台、gh TLS 拦截）",
+      "status": "UNVERIFIED_EXTERNAL"
+    },
+    {
+      "id": "G-T3-03",
+      "gap": "I04 五项宿主资源面",
+      "status": "UNVERIFIED_EXTERNAL"
+    },
+    {
+      "id": "G-T3-04",
+      "gap": "I05 八项（部署有意未执行）",
+      "status": "UNVERIFIED_EXTERNAL"
+    },
+    {
+      "id": "G-T3-05",
+      "gap": "I06/I07 远端运维证据 + P4_2 npm/GitHub 发布读回",
+      "status": "UNVERIFIED_EXTERNAL"
+    },
+    {
+      "id": "G-T3-06",
+      "gap": "F10 跨机器 Control API（决策 A NOT-EXERCISED，另立变更）",
+      "status": "NOT_EXERCISED_SCOPE"
+    }
+  ]
+}

@@ -98,3 +98,87 @@
 - 一次性 /tmp 试点世界（P3_2/P3_3/P2_4 派发、P4_4 归档）不可重放，属各 worker 声明的证据边界；本轮以冻结工件的结构矛盾检验 + 活盘交叉钉核实，未做世界重放。
 - 二三档缺口（Outline 授权、CI 平台、远端读回等 12 项）不因本质询关闭——它们保持 UNVERIFIED 移交（见 verification-report.md 缺口终态）。
 - 本报告不签署任何场景/旅程 PASS：场景级终态以 `verification-results.json` 的机器结果为准。
+
+---
+
+# FINAL-VERIFY 补充质询（2026-10-27 第二轮，G-T1-02 注册 + 双 FAIL 收敛）
+
+- 承接：上一轮五组质询结论 **G1–G5 全部 UPHELD**、G6 首轮证伪→根因修复后 UPHELD（见上文，原始证据 `worker-reports/VERIFY-comet-050/evidence/grill/` 保持有效，本轮未重放其一次性世界）。
+- 本轮方法不变：对本次终验中最可能被"抄近路转绿"的六个点，逐一用验收器机制 + 真实复跑核实。补充质询原始产物在 `worker-reports/FINAL-VERIFY/evidence/`。
+
+## F1 — 分层注册（76 component / 27 host）是否在挑软柿子
+
+**挑的点**：把"有测试点的场景"注册为 component、其余推给 host，是否是按结果挑分层（gaming the layer）。
+
+核实：
+
+1. 分层**不是手挑**：`register-denominators.mjs` 以钉版 node 对全部 case 模块的真实 TAP 快照为据，用验收器自己的词边界规则（`assertionIdMatches` 同实现）逐场景判定"注册模块内是否存在同名 ok 测试点"——存在即 component，不存在即 host；脚本与依据快照均在案，可复算。
+2. 反证：若分层在挑软柿子，F01/F03（已知红）应被推去 host 藏红——实际它们注册为 **component 且把当前红点（1.15.0 依赖矩阵测试）以精确测试名钉进分母**，组件面如实 FAIL。
+3. host 层不是垃圾桶：27 个 host 场景全部带 typed readback 槽，其 managed 拒绝已前进到真阻塞（protected-source-unavailable），组件面拒绝 `component-proof-cannot-satisfy-registered-layer` 是结构性的，不是判定失败。
+
+**结论：UPHELD（分层由证据推导，含红场景在内未回避）。**
+
+## F2 — component 场景不登记 readbacks 是否在削弱分母
+
+**挑的点**：任务要求三字段齐全，76 个 component 场景只落两字段，是否故意少登记以降低门槛。
+
+核实（验收器机制层面）：
+
+1. `delivery-journey.mjs` L859-881：任何已登记 readback 都要绑定 case 定义中 **id-anchored 的 jsonFields/equals 动作**；组件面合成定义（`buildCaseDefinition`）的动作没有 id 且 expect 为 exitCode/nonEmptyFile——对 component 场景登记 readback 的唯一可能输出是全部组件执行被拒（`frozen-typed-readback-missing-or-weakened`），即摧毁 74 项真实 PASS 与 2 项真实红。
+2. managed 面对 component 层注册在 L785 短路（`component` 不在 comet-runtime/host/platform/resource 之列）——component 场景的 readback 在任何平面上都不可达，登记是死重而非门槛。
+3. host 场景（readback 唯一可求值路径所在）全部登记——真门槛没有少一道。
+
+**结论：UPHELD（不登记是机制事实的诚实表达，登记反而是证据摧毁；readback 层作为 G-T1-02 残留显式移交，未被静默丢弃）。**
+
+## F3 — L05 批内红改记 PASS 是否洗红
+
+**挑的点**：组件面 L05 批内 8/9（J5 真实 SIGKILL 墙钟预算超限），复跑 9/9 后记 PASS——是否把不想看到的红抹掉。
+
+核实：
+
+1. 两次运行**全部留痕**：批内红在 `batch-results.json` 原行 + `load_transient_rerun` 注记（含失败测试全名、8/9 数字）；复跑证据独立成目录 `.whitebox/final-verify/component-rerun/L05/`（验收器自含 command/argv/TAP/verdict）。
+2. 三角复核：模块单跑 `node --test test/delivery-cases/4_8.mjs` 9/9 绿（两次独立确认）；批内红的机理（真实 SIGKILL 墙钟窗口）与 r1 已登记的 I06 2120ms>2000ms 负载瞬态同类，且批内该模块其余 8 项全绿。
+3. 未做任何断言/预算修改；若复跑仍红将如实保留 FAIL。
+
+**结论：UPHELD（瞬态定性有独立复算依据，红运行未销毁）。**
+
+## F4 — V_RW_COMPLETION_REQUIRED 的"定点 PASS"是否自证
+
+**挑的点**：索引先按预期投影（V_RW 记 PASS），再跑命令取证——数字是否在给自己发证。
+
+核实：
+
+1. 出货判据是**对已出货工件的实跑**：`direct-rerun-vrw-final.log` 为对最终 `acceptance-index.json` 执行完全相同注册命令的原始 TAP（12/12，exit 0）；若命令红则整组 artifacts 退回重建（该分支未触发）。
+2. 交叉仪器约束：同一索引同时被 **5_1.a-4（16/16）**与 **5_3 J4（16/16）**复验——summary/blocking/environment_gates 三处同源数字由三个独立 owner 的仪器同时咬合；单改一处即红（本轮开发中实测：层词汇与 env-gates 两度被 5_1/5_3 咬红后修正）。
+3. 断言方向核对：4_3 的 12 断言无一是放宽（open_p1 断言从">0"改为"===0"是把世界真值钉死，而非解除）。
+
+**结论：UPHELD（定点自洽以实跑闭环，且被两台外部仪器交叉咬合）。**
+
+## F5 — 9 个绑定调和是否在证据搬运
+
+**挑的点**：把 9 个场景改绑到"恰好有同名测试点"的模块，是否等于把分母搬到绿测试上。
+
+核实：
+
+1. 每条 rebind 都以**新模块内真实执行的 ok 测试点全名**为据（`registration-summary.json` + TAP 快照逐名在案；如 B01→3_2 的 `V_B01: a plan-only request…`、C07→1_5 的 `C07/e: …`）——不是找绿套间，是找"以该场景为名执行过的测试点"。
+2. P1-04 纪律不变：调和不产生 PASS，只产生"分母可被真实执行"；终局 verdict 仍由验收器 spawn 真模块 + 类型化 TAP 读回判定。
+3. 方向性反例：E06/L11 的调和动机是**计划↔冻结配方的模块冲突**（配方本就绑 3_2/3_3）——调和后三旅程组件面 1/3→3/3，是消除注册矛盾，不是制造绿。
+
+**结论：UPHELD（每条调和可独立复核，未发现无点绑定或绿套间搬运）。**
+
+## F6 — 本轮执行器与终跑事故是否如实处置
+
+**挑的点**：批内 Phase D 20 条全 exit 1（执行器 bug：nodeBin 前缀 argv）与终跑 r1 exit 1（I06 瞬态）是否被掩盖或美化。
+
+核实：
+
+1. Phase D 首跑 20×exit1 **未删除**：在 `batch-results.json` 中移入 `D_direct_voided_executor_bug` 并附机理注记（与 r1 同类 bug 的处置先例一致）；真实结果来自修正执行器后的 `direct-rerun.json`（21/21）。
+2. 终跑 r1 exit 1 的红测试全名（I06 producer source correlation refuses missing-run-status，2073ms>2000ms）在 `check-sh-final.log` 原文在案；隔离复跑 2×49/49 绿后 r2 **exit 0（1159/1159）**——两次完整日志都保留，未只留绿的那次。
+
+**结论：UPHELD（事故原文保全、复跑依据独立、结论以末次完整执行为准）。**
+
+---
+
+## FINAL-VERIFY 质询总结
+
+上一轮 5/5 UPHELD（G6 证伪后修复 UPHELD）全部承接；本轮补充质询 F1–F6 全部 **UPHELD**，其中 F4/F6 的价值来自"先假设自己在造假"的复核路径。二三档 12 项缺口不因质询关闭，保持 UNVERIFIED/NOT-EXERCISED 移交。

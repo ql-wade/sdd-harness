@@ -54,7 +54,7 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
     },
     "testContract": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/specs/delivery-foundation/spec.md",
-      "sha256": "8bb67f81e9ec340c8a21394703590c6e9bcf69b055139339a38715188332703f"
+      "sha256": "47396b7b9fd2eaf91ab983e27310bb92f05f8c81ebf39390e29743f64e7b23a9"
     },
     "planBundle": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",

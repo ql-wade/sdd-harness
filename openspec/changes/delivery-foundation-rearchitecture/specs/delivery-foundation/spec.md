@@ -1,7 +1,5 @@
 ## ADDED Requirements
 
-当前部署与身份证明方式按ADR-0021的command-first修订；原104场景身份和功能边界保留。本次只规划，六常驻角色/固定Runner镜像不再作为前置。
-
 ### Requirement: Delivery contract and evidence
 系统 SHALL 对六环节的基线、候选、证据和发布事实执行可追踪、来源认证、保守失效的判定。
 
