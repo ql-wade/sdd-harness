@@ -46,12 +46,52 @@ non-zero exit — never skip-to-PASS, never mocked.
 
 ```
 recovery.mjs validate  --registry <file> [--dir <domain dir>] [--refs <file>] [--json]
-recovery.mjs backup    --workspace <dir> --target <dir> [--dir <domain dir>] [--json]
-recovery.mjs restore   --backup <dir> --quarantine <dir> [--fence-evidence <file>] [--dir <domain dir>] [--json]
-recovery.mjs retention --workspace <dir> [--disk-pressure <file>] [--migration-approval <file>] [--restore-proof <file>] [--dir <domain dir>] [--json]
+recovery.mjs backup    --workspace <dir> --target <dir> [--form directory|comet-050] [--dir <domain dir>] [--json]
+recovery.mjs restore   --backup <dir> --quarantine <dir> [--form directory|comet-050] [--fence-evidence <file>] [--dir <domain dir>] [--json]
+recovery.mjs retention --workspace <dir> [--form directory|comet-050] [--disk-pressure <file>] [--migration-approval <file>] [--restore-proof <file>] [--dir <domain dir>] [--json]
 recovery.mjs transfer  --state <run-state.json> --approval <file> --fence-evidence <file> --out <file> [--json]
-recovery.mjs probe     --case <pending-cleanup-denial|quarantine-restore|old-writer-denial|authority-transfer> [--json]
+recovery.mjs probe     --case <pending-cleanup-denial|quarantine-restore|old-writer-denial|authority-transfer|comet-050-restore> [--json]
 ```
+
+## Workspace forms
+
+- `directory` (default) — the legacy directory-form workspace
+  (`run-state.json` + `transactions/`/`operations/`/`approvals/`/`knowledge/`/
+  `db/`/`objects/`/`config/`/`permissions/`). Point-in-time consistency comes
+  from the db/objects watermarks; an open transaction refuses the backup.
+- `comet-050` — the native Comet 0.5.0 workspace
+  (`~/.comet/workspaces/<id>/: runtime/` change-owners + sdk-runs runtime-store
+  checkpoints + state-projections + `.change-owner-partitions.json`, plus
+  `observability/`). Run identity and its unresolved status are read from the
+  native schemas: `comet.change-owner.v1` (workflow/change/runId) and
+  `comet.runtime-store-snapshot.v2` (`record.status`). The runtime-store
+  checkpoint hash is the point-in-time anchor (a manifest without a checkpoint
+  carries no consistent anchor and never enables a restore). The same restore
+  gates apply unchanged: quarantine, process-level old-writer fence, no live
+  second writer, same-operation readback from the native schemas, publish
+  frozen through release.
+
+## Backup data surfaces (comet-050 adoption, revision 2026-10-26-comet-050-adoption-v1)
+
+The full inventory is registered item by item (anchor / format / restore
+prerequisites / honest status) in `backup-policy.json.comet050DataSurfaces`:
+
+- `comet-workspaces` — native Comet 0.5.0 state (`--form comet-050`), mechanism
+  verified locally plus a real-host drill in
+  `openspec/changes/delivery-foundation-rearchitecture/worker-reports/I08-comet-050/`.
+- `llmwiki-project` — the vendored LLMWiki project tree (repo-relative);
+  directory restore byte-verified in the real-host drill; MCP startup readback
+  belongs to the I03/I04 tools.
+- `llmwiki-wiki-home` — the LLMWiki wiki data home (`$SDD_WIKI_HOME`, else
+  `~/.sdd/wiki/<project-slug>`); no sdd-harness wiki DB exists locally as of
+  2026-10-26 (registered honestly; the only wiki under `~/.sdd/wiki` belongs to
+  another project).
+- `outline-stack` — Outline team knowledge stack (compose config + `outline_outline-db`
+  PostgreSQL volume + Redis); restore UNVERIFIED — requires deployment-wave
+  docker operations.
+- `outline-attachments` — the `outline_outline-attachments` object-store volume;
+  restore UNVERIFIED for the same reason, and it must stay point-in-time
+  consistent with the PG volume.
 
 ## Operating boundaries (spec-frozen)
 
@@ -66,9 +106,10 @@ recovery.mjs probe     --case <pending-cleanup-denial|quarantine-restore|old-wri
   authority re-authenticates; superseded-epoch receipts stay excluded.
 - R10 A: a sole workspace with pending obligations (pending Outline publish,
   unknown remote result, sole-copy payload, open transaction, pending knowledge
-  closeout) is never cleaned. The boundary moves only on verified completion or
-  a separately approved migration whose restore is proven
-  (`verified=true` + `sameOperationReadback=true`).
+  closeout, or an unresolved native comet run whose runtime-store checkpoint
+  `record.status` is not `completed`) is never cleaned. The boundary moves only
+  on verified completion or a separately approved migration whose restore is
+  proven (`verified=true` + `sameOperationReadback=true`).
 - Cross-machine / real-service restore, and the knowledge database + attachment
   backup channel (postgres/object storage), stay UNVERIFIED until the backup
   owner and the deployment wave prove them in their own environment. Never

@@ -1,0 +1,51 @@
+{
+  "interface": "I08HostDrill.v1",
+  "revision": "2026-10-26-comet-050-adoption-v1",
+  "executedAt": "2026-10-27T03:30-03:32Z",
+  "scope": "real ~/.comet/workspaces state, real LLMWiki tree, read-only Outline volume registration; zero deletion/overwrite of production data (all restore targets under /tmp)",
+  "steps": [
+    {
+      "step": "real-comet-workspace-backup",
+      "command": "recovery.mjs backup --form comet-050 --workspace <real-ws-61d6df4e> --target /tmp/i08-comet050-host-drill/backup-target --json",
+      "exit": 0,
+      "status": "VERIFIED",
+      "evidence": "host-drill-1-real-backup.json",
+      "facts": { "files": 6, "bytes": 35647, "runId": "native-assets", "runStatusAtBackup": "running", "pointInTimeAnchor": "runtime-store checkpoint hash 5f83946a...ad78" }
+    },
+    {
+      "step": "quarantined-restore-with-cli-readback",
+      "command": "recovery.mjs restore --form comet-050 --backup <backupId> --quarantine /tmp/i08-comet050-host-drill/quarantine --fence-evidence fence-evidence.json --json",
+      "exit": 0,
+      "status": "RELEASED",
+      "evidence": "host-drill-2-quarantine-restore.json",
+      "facts": { "sameOperationVerified": true, "runId": "native-assets", "runStatus": "running (preserved)", "nativeSchemasRead": ["comet.change-owner.v1", "comet.runtime-store-snapshot.v2"], "fence": "process-exit-confirmed (lsof: 0 processes holding workspace files; see host-drill-0-fence-observation.txt)" }
+    },
+    {
+      "step": "r10-retention-on-restored-quarantine",
+      "command": "recovery.mjs retention --form comet-050 --workspace /tmp/i08-comet050-host-drill/quarantine --json",
+      "exit": 2,
+      "status": "DENIED",
+      "evidence": "host-drill-3-retention-r10.json",
+      "facts": { "pending": ["unresolved-comet-run:native-assets (checkpoint status running)"], "ruleA": "RETAIN_SOLE_WORKSPACE" }
+    },
+    {
+      "step": "negative-live-second-writer",
+      "command": "restore --form comet-050 of a second real workspace (0094186d) into a quarantine holding a writer-lock.json with a live pid",
+      "exit": 2,
+      "status": "REFUSED",
+      "evidence": "host-drill-4-negative-live-writer.json, host-drill-4b-second-workspace-backup.json",
+      "facts": { "refusal": "RESTORE_REFUSED_SECOND_WRITER", "meaning": "restoring native state next to a live writer (a parallel business state) is forbidden" }
+    }
+  ],
+  "byteDiffNote": "diff -r between the source workspace and the quarantine is identical for every file; the source additionally carries two EMPTY lock directories (.change-owner-partitions.lock.contenders, .write.lock.contenders) which hold zero bytes anywhere on the host (61 workspaces scanned: 0 contender files) and are recreated by the comet runtime — recorded honestly as a directory-presence difference, not a byte loss",
+  "llmwikiDirectoryRestore": {
+    "status": "VERIFIED (byte-level)",
+    "facts": { "files": 341, "sizeKB": 14568, "diffR": "identical", "contentAggregateSha256": "53482e3436ef4c7fb1423b7d2cd43685bf5d91e6a7006937dc2db4e96f253f88 (src == restored)", "target": "/tmp/i08-llmwiki-drill (backup + restored copies)" },
+    "mcpStartupReadback": "UNVERIFIED in this task's timebox (belongs to I03/I04 tools; no sdd-harness wiki DB exists locally)"
+  },
+  "outlineVolumes": {
+    "registration": "read-only docker volume inspect captured in outline-volumes-readonly-registration.txt",
+    "volumes": ["outline_outline-db", "outline_outline-data", "outline_outline-attachments"],
+    "restoreStatus": "UNVERIFIED — PG/Redis/attachment volume restore requires deployment-wave docker operations, not performed here"
+  }
+}

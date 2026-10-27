@@ -867,3 +867,230 @@ test('probe cases run the real local mechanisms and verify them', () => {
   const unknown = runCli(['probe', '--case', 'not-a-case', '--json']);
   assert.equal(unknown.status, 1, 'unknown probe case is an input error');
 });
+
+// --- 8) comet-050 原生形态：数据面登记 + 原生状态备份/隔离恢复/R10 读回 -------------
+//
+// 修订 2026-10-26-comet-050-adoption-v1：Comet 0.5.0 状态在 ~/.comet/workspaces/<id>/
+// （runtime/ 的 change-owners + sdk-runs runtime-store checkpoints + state-projections +
+// observability/），知识数据在 LLMWiki 项目目录 + Outline 栈（PG/Redis/附件卷）。
+// R10 A = 未完成 Run/knowledge 义务保留唯一工作区（retention-policy.json canonical）。
+// 套件用与真实宿主逐字节同构的 fixture（comet.change-owner.v1 /
+// comet.runtime-store-snapshot.v2 原生 schema）证明机制；真实 ~/.comet 备份恢复的
+// 宿主 drill 证据另存 worker-reports/I08-comet-050/（测试作者/宿主证明范围分离）。
+
+// comet-050 fixture：真实 schema 字节的原生 workspace（形状取自真实
+// ~/.comet/workspaces/<id> 观察：runtime/change-owners/<owner>/<change>.json、
+// runtime/sdk-runs/<owner>/.runtime-store-v2/<hash>/checkpoint.json、
+// runtime/state-projections/<owner>/<change>.json、runtime/.change-owner-partitions.json、
+// observability/performance.sqlite）。
+function makeComet050Workspace(label, {
+  workspaceId = 'i08-fixture-ws',
+  owner = 'classic',
+  change = 'native-assets',
+  runId = 'native-assets',
+  runStatus = 'running',
+} = {}) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), `infra-i08-c050-${label}-`));
+  const workspace = path.join(root, workspaceId);
+  const files = {};
+  const put = (rel, value) => {
+    const file = path.join(workspace, rel);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const bytes = typeof value === 'string' || Buffer.isBuffer(value)
+      ? Buffer.from(value)
+      : Buffer.from(`${JSON.stringify(value, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(file, bytes);
+    files[rel] = bytes;
+    return file;
+  };
+  put(`runtime/change-owners/${owner}/${change}.json`, {
+    schema: 'comet.change-owner.v1', workflow: owner, change, format: 'sdk', application: 'classic-full', runId,
+  });
+  const runHash = sha256(Buffer.from(`${workspaceId}:${runId}`)).slice(0, 64);
+  put(`runtime/sdk-runs/${owner}/.runtime-store-v2/${runHash}/checkpoint.json`, {
+    schema: 'comet.runtime-store-snapshot.v2',
+    record: {
+      protocolVersion: 1, schemaVersion: 1, runId, revision: 1,
+      initialStateHash: sha256(Buffer.from(`${workspaceId}:initial`)),
+      status: runStatus, sequence: 4, actions: [],
+    },
+    legacyRevision: null,
+    hash: sha256(Buffer.from(`${workspaceId}:checkpoint:${runStatus}`)),
+  });
+  put(`runtime/sdk-runs/${owner}/${runHash}`, Buffer.from(`sdk-run:${runId}\n`));
+  put(`runtime/state-projections/${owner}/${change}.json`, {
+    schema: 'comet.state-projection.v1', change, runId, projection: 'assets',
+  });
+  put('runtime/.change-owner-partitions.json', {
+    schema: 'comet.change-owner-partitions.v1', token: 'i08-fixture-token', state: 'stable',
+  });
+  // 二进制观测面（sqlite 是真实备份范围内的二进制字节，fixture 用非文本 buffer 证明字节级复制）。
+  put('observability/performance.sqlite', Buffer.from(Array.from({ length: 128 }, (_, i) => (i * 17 + 3) & 0xff)));
+  return { root, workspace, files, runHash };
+}
+
+// 8.1) 数据面清单登记：五个备份面逐项有 anchor/format/恢复前提，且不带宿主绝对路径。
+test('comet-050 data surfaces are registered item by item (anchor/format/restore prerequisites) without host absolute paths', async () => {
+  const { scanForForbiddenValues } = await import(secretRefsModuleUrl);
+  const policy = readDomainJson('backup-policy.json');
+  const surfaces = policy.comet050DataSurfaces?.dataSurfaces ?? policy.dataSurfaces;
+  assert.ok(Array.isArray(surfaces) && surfaces.length >= 5, 'the comet-050 backup surfaces must be registered');
+  const byId = Object.fromEntries(surfaces.map((surface) => [surface.id, surface]));
+  for (const id of ['comet-workspaces', 'llmwiki-project', 'llmwiki-wiki-home', 'outline-stack', 'outline-attachments']) {
+    assert.ok(byId[id], `surface ${id} must be registered`);
+    assert.ok(typeof byId[id].anchor === 'string' && byId[id].anchor.length > 0, `${id}: anchor (env-anchored, never host-absolute) required`);
+    assert.ok(typeof byId[id].format === 'string' && byId[id].format.length > 0, `${id}: format required`);
+    assert.ok(Array.isArray(byId[id].restorePrerequisites) && byId[id].restorePrerequisites.length > 0, `${id}: restorePrerequisites required`);
+    assert.equal(scanForForbiddenValues(byId[id]).length, 0, `${id}: no host absolute paths / secret values in the registry`);
+  }
+  // R10 义务种类扩展：未完成的原生 Run 保留唯一工作区（retention-policy canonical）。
+  const retentionPolicy = readDomainJson('retention-policy.json');
+  assert.ok(retentionPolicy.retention.cleanupDenyWhenPending.includes('unresolved-comet-run'),
+    'an unresolved native comet run (checkpoint status != completed) must be a spec-registered pending obligation');
+  // 登记后 validate 仍然干净（数据面不破坏既有门）。
+  const result = runCli(['validate', '--registry', registryPath, '--json']);
+  assert.equal(result.status, 0, `validate must stay green after the data-surface registration\nstdout=${result.stdout}`);
+});
+
+// 8.2) 原生备份：manifest 携带原生 Run 身份（change-owner + runtime-store checkpoint）。
+test('comet-050 backup: native workspace bytes are captured with the native run identity in the manifest', () => {
+  const ws = makeComet050Workspace('bk', { runStatus: 'running' });
+  const tg = makeTarget('c050-bk');
+  const result = runCli(['backup', '--form', 'comet-050', '--workspace', ws.workspace, '--target', tg.target, '--json']);
+  assert.equal(result.status, 0, `comet-050 backup must exit 0\nstdout=${result.stdout}\nstderr=${result.stderr}`);
+  const receipt = parseJsonOut(result, 'c050-backup');
+  assert.equal(receipt.interface, 'Backup.v1');
+  assert.equal(receipt.status, 'VERIFIED');
+  assert.equal(receipt.form, 'comet-050');
+
+  const manifest = JSON.parse(fs.readFileSync(path.join(tg.target, receipt.backupId, 'manifest.json'), 'utf8'));
+  assert.equal(manifest.form, 'comet-050');
+  assert.equal(manifest.source.form, 'comet-050');
+  assert.equal(manifest.source.runId, 'native-assets');
+  assert.equal(manifest.source.runStatus, 'running');
+  assert.equal(manifest.source.workspaceId, 'i08-fixture-ws');
+  // 原生身份真实来自 change-owner 与 runtime-store checkpoint（套件独立复核，不信自述）。
+  const changeOwner = JSON.parse(fs.readFileSync(path.join(ws.workspace, 'runtime/change-owners/classic/native-assets.json'), 'utf8'));
+  assert.equal(manifest.source.runId, changeOwner.runId, 'runId must be read from comet.change-owner.v1');
+  // 原生字节全部入册（runtime/** + observability/**），逐文件 sha256 对真实字节。
+  for (const [rel, bytes] of Object.entries(ws.files)) {
+    const entry = manifest.files.find((item) => item.path === rel);
+    assert.ok(entry, `manifest must list native file ${rel}`);
+    assert.equal(entry.sha256, sha256(bytes), `${rel}: manifest digest must equal the native bytes`);
+    assert.equal(digestFile(path.join(tg.target, receipt.backupId, 'files', rel)), entry.sha256, `${rel}: backup target holds the same bytes`);
+  }
+  // 点位锚：comet-050 用 runtime-store checkpoint hash 作为一致点位（basis 如实说明）。
+  assert.equal(manifest.pointInTime.consistent, true);
+  assert.ok(typeof manifest.pointInTime.basis === 'string' && /comet-050/.test(manifest.pointInTime.basis));
+});
+
+// 8.3) 原生隔离恢复 + CLI 读回 + R10：恢复后 Run 身份一致；未完成 Run 保留唯一工作区。
+test('comet-050 restore: quarantined native restore reads back the same run identity and the unresolved run retains the workspace (R10)', () => {
+  const ws = makeComet050Workspace('rs', { runStatus: 'running' });
+  const tg = makeTarget('c050-rs');
+  const backupResult = runCli(['backup', '--form', 'comet-050', '--workspace', ws.workspace, '--target', tg.target, '--json']);
+  assert.equal(backupResult.status, 0);
+  const backupId = JSON.parse(backupResult.stdout).backupId;
+  const backupDir = path.join(tg.target, backupId);
+
+  const quarantine = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i08-c050-quar-')), 'quarantine');
+  const result = runCli(['restore', '--form', 'comet-050', '--backup', backupDir, '--quarantine', quarantine, '--fence-evidence', fenceEvidence(), '--json']);
+  assert.equal(result.status, 0, `comet-050 restore must exit 0\nstdout=${result.stdout}\nstderr=${result.stderr}`);
+  const receipt = parseJsonOut(result, 'c050-restore');
+  assert.equal(receipt.status, 'RELEASED');
+  // 同 operation 读回：恢复区由 CLI 重新解析原生 schema，比对 runId/change/owner/runStatus。
+  assert.equal(receipt.sameOperation.verified, true);
+  assert.equal(receipt.sameOperation.runId, 'native-assets');
+  assert.equal(receipt.sameOperation.runStatus, 'running');
+  assert.equal(receipt.readback.form, 'comet-050');
+  assert.ok(receipt.readback.nativeSchemasRead.includes('comet.change-owner.v1'));
+  assert.ok(receipt.readback.nativeSchemasRead.includes('comet.runtime-store-snapshot.v2'));
+  // 恢复区字节与源逐字节一致。
+  for (const [rel, bytes] of Object.entries(ws.files)) {
+    const restored = path.join(quarantine, rel);
+    assert.equal(fs.existsSync(restored), true, `${rel} must be restored`);
+    assert.equal(Buffer.compare(fs.readFileSync(restored), bytes), 0, `${rel} must be byte-identical`);
+  }
+  // 释放记录仍冻结发布、单 writer。
+  const release = JSON.parse(fs.readFileSync(path.join(quarantine, 'release-record.json'), 'utf8'));
+  assert.equal(release.publishFrozen, true);
+  assert.equal(release.singleWriter, true);
+
+  // R10 A：恢复区跑 retention —— checkpoint status=running → unresolved-comet-run → cleanup DENIED。
+  const retention = runCli(['retention', '--form', 'comet-050', '--workspace', quarantine, '--json']);
+  assert.equal(retention.status, 2, 'an unresolved native run must deny cleanup');
+  const verdict = parseJsonOut(retention, 'c050-retention');
+  assert.equal(verdict.cleanup, 'DENIED');
+  assert.ok(verdict.pending.some((item) => item.kind === 'unresolved-comet-run' && item.id === 'native-assets'),
+    `pending must name the unresolved native run: ${JSON.stringify(verdict.pending)}`);
+  assert.equal(verdict.r10.ruleA, 'RETAIN_SOLE_WORKSPACE');
+});
+
+// 8.4) 负向：completed 原生 Run 才放行 retention；活旧 writer / 二 writer 仍拒绝恢复。
+test('comet-050 negatives: a completed native run releases retention; a live old writer or a live second writer refuses the restore', async () => {
+  // completed → ELIGIBLE（verified-completed）。
+  {
+    const ws = makeComet050Workspace('done', { runStatus: 'completed' });
+    const result = runCli(['retention', '--form', 'comet-050', '--workspace', ws.workspace, '--json']);
+    assert.equal(result.status, 0, `completed run must be eligible\nstdout=${result.stdout}`);
+    const verdict = parseJsonOut(result, 'c050-retention-done');
+    assert.equal(verdict.cleanup, 'ELIGIBLE');
+    assert.equal(verdict.basis, 'verified-completed');
+    assert.equal(verdict.pending.length, 0);
+  }
+  // 非法 runStatus（不是 completed 的都算未闭合）→ DENIED。
+  {
+    const ws = makeComet050Workspace('failed-status', { runStatus: 'failed' });
+    const result = runCli(['retention', '--form', 'comet-050', '--workspace', ws.workspace, '--json']);
+    assert.equal(result.status, 2, 'a failed native run is not a verified completion');
+    assert.ok(parseJsonOut(result, 'c050-retention-failed').pending.some((item) => item.kind === 'unresolved-comet-run'));
+  }
+  // 活旧 writer：真实存活 pid → 恢复拒绝（原生形态同样强制进程级 fence）。
+  {
+    const ws = makeComet050Workspace('live', { runStatus: 'running' });
+    const tg = makeTarget('c050-live');
+    const backupResult = runCli(['backup', '--form', 'comet-050', '--workspace', ws.workspace, '--target', tg.target, '--json']);
+    assert.equal(backupResult.status, 0);
+    const backupDir = path.join(tg.target, JSON.parse(backupResult.stdout).backupId);
+    const child = spawnLiveChild();
+    try {
+      assert.equal(await waitUntilAlive(child.pid), true, 'fixture old writer must be alive');
+      const quarantine = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i08-c050-quar-')), 'q');
+      const liveFence = fenceEvidence({ pid: child.pid, confirmedGone: true, method: 'claimed' });
+      const refused = runCli(['restore', '--form', 'comet-050', '--backup', backupDir, '--quarantine', quarantine, '--fence-evidence', liveFence, '--json']);
+      assert.equal(refused.status, 2, 'a live old writer must refuse the comet-050 restore');
+      const receipt = parseJsonOut(refused, 'c050-live-writer');
+      assert.ok(receipt.refusals.some((refusal) => refusal.code === 'RESTORE_REFUSED_OLD_WRITER_LIVE'));
+      assert.equal(fs.existsSync(path.join(quarantine, 'release-record.json')), false, 'nothing releases while the old writer lives');
+
+      // 二 writer：恢复目标已有真实存活 writer → 拒绝（不复制出一套可并行运行的业务状态）。
+      fs.mkdirSync(quarantine, { recursive: true });
+      fs.writeFileSync(path.join(quarantine, 'writer-lock.json'), `${JSON.stringify({ pid: child.pid }, null, 2)}\n`);
+      const second = runCli(['restore', '--form', 'comet-050', '--backup', backupDir, '--quarantine', quarantine, '--fence-evidence', fenceEvidence(), '--json']);
+      assert.equal(second.status, 2, 'restoring native state next to a live writer must refuse');
+      assert.ok(parseJsonOut(second, 'c050-second-writer').refusals.some((refusal) => refusal.code === 'RESTORE_REFUSED_SECOND_WRITER'));
+    } finally {
+      child.kill('SIGKILL');
+    }
+  }
+  // 缺原生身份（无 change-owner）→ 备份拒绝（fail-closed，不静默当普通目录）。
+  {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i08-c050-bad-'));
+    fs.mkdirSync(path.join(root, 'runtime'), { recursive: true });
+    const tg = makeTarget('c050-bad');
+    const result = runCli(['backup', '--form', 'comet-050', '--workspace', root, '--target', tg.target, '--json']);
+    assert.equal(result.status, 2, 'a directory without native comet identity must refuse the comet-050 backup');
+    assert.ok(parseJsonOut(result, 'c050-bad').refusals.some((refusal) => refusal.code === 'WORKSPACE_INVALID'));
+  }
+});
+
+// 8.5) probe：原生旅程端到端机制探针。
+test('probe comet-050-restore runs the native backup/restore/readback/R10 journey end to end', () => {
+  const result = runCli(['probe', '--case', 'comet-050-restore', '--json']);
+  assert.equal(result.status, 0, `probe comet-050-restore must exit 0\nstdout=${result.stdout}\nstderr=${result.stderr}`);
+  const receipt = parseJsonOut(result, 'probe-c050');
+  assert.equal(receipt.case, 'comet-050-restore');
+  assert.equal(receipt.executed, true);
+  assert.equal(receipt.status, 'VERIFIED', JSON.stringify(receipt.observedSteps ?? receipt.reason));
+  assert.doesNotMatch(result.stdout, HOST_PATH_OUTPUT_RE);
+});

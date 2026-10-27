@@ -53,6 +53,15 @@ const SPEC_PENDING_OBLIGATIONS = ['pending-outline-publish', 'unknown-remote-res
 const PROCESS_FENCE_METHODS = ['SIGKILL', 'SIGTERM', 'process-exit-confirmed'];
 const SECTIONS_WITH_VERSIONS = ['approvals'];
 const CACHE_DIRECTORY = 'cache/';
+// 工作区形态（修订 2026-10-26-comet-050-adoption-v1）：
+//   directory = 旧目录形态工作区（run-state.json + transactions/operations/...）；
+//   comet-050 = Comet 0.5.0 原生工作区（runtime/ 的 change-owners + sdk-runs runtime-store
+//               checkpoints + state-projections + observability/），身份与 Run 状态从
+//               原生 schema（comet.change-owner.v1 / comet.runtime-store-snapshot.v2）读出。
+const FORMS = ['directory', 'comet-050'];
+const COMET_CHANGE_OWNER_SCHEMA = 'comet.change-owner.v1';
+const COMET_RUNTIME_STORE_SCHEMA = 'comet.runtime-store-snapshot.v2';
+const COMET_TERMINAL_RUN_STATUS = 'completed';
 
 // 宿主私有路径绝不进入结构化回执/报告；对外输出统一脱敏（与 secret-refs 的 ABSOLUTE_PATH_FORBIDDEN 同源规则）。
 const HOST_PATH_REDACTION = /(^|[\s"'=(:/])\/(Users|home|root|private|var|usr|etc|opt|tmp)\/\S*/g;
@@ -74,11 +83,17 @@ function usage() {
   return [
     'usage:',
     '  recovery.mjs validate  --registry <file> [--dir <recovery domain dir>] [--refs <file>] [--json]',
-    '  recovery.mjs backup    --workspace <dir> --target <dir> [--dir <recovery domain dir>] [--json]',
-    '  recovery.mjs restore   --backup <dir> --quarantine <dir> [--fence-evidence <file>] [--dir <recovery domain dir>] [--json]',
-    '  recovery.mjs retention --workspace <dir> [--disk-pressure <file>] [--migration-approval <file>] [--restore-proof <file>] [--dir <recovery domain dir>] [--json]',
+    '  recovery.mjs backup    --workspace <dir> --target <dir> [--form directory|comet-050] [--dir <recovery domain dir>] [--json]',
+    '  recovery.mjs restore   --backup <dir> --quarantine <dir> [--form directory|comet-050] [--fence-evidence <file>] [--dir <recovery domain dir>] [--json]',
+    '  recovery.mjs retention --workspace <dir> [--form directory|comet-050] [--disk-pressure <file>] [--migration-approval <file>] [--restore-proof <file>] [--dir <recovery domain dir>] [--json]',
     '  recovery.mjs transfer  --state <run-state.json> --approval <file> --fence-evidence <file> --out <file> [--json]',
-    '  recovery.mjs probe     --case <pending-cleanup-denial|quarantine-restore|old-writer-denial|authority-transfer> [--json]',
+    '  recovery.mjs probe     --case <pending-cleanup-denial|quarantine-restore|old-writer-denial|authority-transfer|comet-050-restore> [--json]',
+    '',
+    '  --form comet-050 targets the native Comet 0.5.0 workspace layout (~/.comet/workspaces/<id>/:',
+    '  runtime/ change-owners + sdk-runs runtime-store checkpoints + observability/); run identity and',
+    '  its unresolved status are read back from the native schemas (comet.change-owner.v1,',
+    '  comet.runtime-store-snapshot.v2). The backup data-surface inventory (comet workspaces,',
+    '  LLMWiki project + wiki home, Outline stack + attachments) is registered in backup-policy.json.',
   ].join('\n');
 }
 
@@ -178,24 +193,109 @@ function readRunState(workspace) {
   return readJson(path.join(workspace, 'run-state.json'));
 }
 
+// --- comet-050 原生身份读取 -----------------------------------------------------------
+//
+// 真实形态（观察自 ~/.comet/workspaces/<id>/）：runtime/change-owners/<owner>/<change>.json
+// （comet.change-owner.v1：workflow/change/runId）携带 Run 身份；
+// runtime/sdk-runs/<owner>/.runtime-store-v2/<hash>/checkpoint.json
+// （comet.runtime-store-snapshot.v2：record.runId/record.status/hash）携带 Run 状态与
+// 一致性锚。Run 未完成的唯一权威信号是 checkpoint 的 record.status —— 非 completed
+// 即 unresolved（R10 A 保留唯一工作区）；归档/git 状态永不替代它。
+function readCometNative(workspace) {
+  const runtimeDir = path.join(workspace, 'runtime');
+  if (!fs.existsSync(runtimeDir) || !fs.statSync(runtimeDir).isDirectory()) {
+    return { error: 'a comet-050 workspace requires a runtime/ directory' };
+  }
+  const changes = [];
+  const changeOwnersDir = path.join(runtimeDir, 'change-owners');
+  if (fs.existsSync(changeOwnersDir)) {
+    for (const rel of listWorkspaceFiles(changeOwnersDir)) {
+      try {
+        const doc = JSON.parse(fs.readFileSync(path.join(changeOwnersDir, rel), 'utf8'));
+        if (doc?.schema === COMET_CHANGE_OWNER_SCHEMA && typeof doc.runId === 'string') {
+          changes.push({
+            owner: typeof doc.workflow === 'string' ? doc.workflow : rel.split('/')[0],
+            change: typeof doc.change === 'string' ? doc.change : path.basename(rel, '.json'),
+            runId: doc.runId,
+            source: `runtime/change-owners/${rel}`,
+          });
+        }
+      } catch {
+        // 非 JSON 的 change-owner 文件不构成身份，跳过（清单里保留其字节）。
+      }
+    }
+  }
+  if (changes.length === 0) {
+    return { error: `no ${COMET_CHANGE_OWNER_SCHEMA} identity found under runtime/change-owners` };
+  }
+  const checkpoints = [];
+  const sdkRunsDir = path.join(runtimeDir, 'sdk-runs');
+  if (fs.existsSync(sdkRunsDir)) {
+    for (const rel of listWorkspaceFiles(sdkRunsDir)) {
+      if (!rel.endsWith('/checkpoint.json')) continue;
+      try {
+        const doc = JSON.parse(fs.readFileSync(path.join(sdkRunsDir, rel), 'utf8'));
+        if (doc?.schema === COMET_RUNTIME_STORE_SCHEMA && doc?.record && typeof doc.record.runId === 'string') {
+          checkpoints.push({
+            runId: doc.record.runId,
+            status: typeof doc.record.status === 'string' ? doc.record.status : null,
+            sequence: Number.isInteger(doc.record.sequence) ? doc.record.sequence : null,
+            hash: typeof doc.hash === 'string' ? doc.hash : null,
+            source: `runtime/sdk-runs/${rel}`,
+          });
+        }
+      } catch {
+        // 不可解析的 checkpoint 不是一致性锚；义务扫描会按未闭合处理（unresolved）。
+      }
+    }
+  }
+  let partitionsState = null;
+  try {
+    const partitions = readJson(path.join(runtimeDir, '.change-owner-partitions.json'));
+    partitionsState = typeof partitions?.state === 'string' ? partitions.state : null;
+  } catch {
+    partitionsState = null;
+  }
+  const identity = changes[0];
+  const checkpointForRun = checkpoints.find((cp) => cp.runId === identity.runId) ?? null;
+  return {
+    workspaceId: path.basename(path.resolve(workspace)),
+    identity,
+    changes,
+    checkpoints,
+    checkpoint: checkpointForRun,
+    runStatus: checkpointForRun?.status ?? null,
+    unresolved: checkpoints.filter((cp) => cp.status !== COMET_TERMINAL_RUN_STATUS),
+    partitionsState,
+  };
+}
+
 const refusal = (code, reason) => ({ code, reason });
 const refusedReceipt = (base, code, reason) => ({ ...base, status: 'REFUSED', refusals: [refusal(code, reason)] });
 
 // --- Backup.v1 ---------------------------------------------------------------------
 
-function backupWorkspace({ workspace, target, domain }) {
+function backupWorkspace({ workspace, target, domain, form = 'directory' }) {
   const registry = domain['registry.json'];
   const policy = domain['backup-policy.json'];
-  const base = { interface: 'Backup.v1', command: 'backup', capabilityScope: 'LOCAL_DIRECTORY_FORM', realRemoteBackup: REAL_SERVICE_RESTORE() };
+  const base = { interface: 'Backup.v1', command: 'backup', form, capabilityScope: 'LOCAL_DIRECTORY_FORM', realRemoteBackup: REAL_SERVICE_RESTORE() };
 
-  let runState;
-  try {
-    runState = readRunState(workspace);
-  } catch (error) {
-    return { receipt: refusedReceipt(base, 'WORKSPACE_INVALID', `run-state.json unreadable: ${redactHostPaths(error.message)}`), exit: EXIT_VERIFY };
-  }
-  if (!runState?.authorityId || !Number.isInteger(runState?.epoch) || !runState?.runId) {
-    return { receipt: refusedReceipt(base, 'WORKSPACE_INVALID', 'run-state.json must carry authorityId, epoch and runId'), exit: EXIT_VERIFY };
+  let runState = null;
+  let native = null;
+  if (form === 'comet-050') {
+    native = readCometNative(workspace);
+    if (native.error) {
+      return { receipt: refusedReceipt(base, 'WORKSPACE_INVALID', `comet-050 workspace unreadable: ${native.error}`), exit: EXIT_VERIFY };
+    }
+  } else {
+    try {
+      runState = readRunState(workspace);
+    } catch (error) {
+      return { receipt: refusedReceipt(base, 'WORKSPACE_INVALID', `run-state.json unreadable: ${redactHostPaths(error.message)}`), exit: EXIT_VERIFY };
+    }
+    if (!runState?.authorityId || !Number.isInteger(runState?.epoch) || !runState?.runId) {
+      return { receipt: refusedReceipt(base, 'WORKSPACE_INVALID', 'run-state.json must carry authorityId, epoch and runId'), exit: EXIT_VERIFY };
+    }
   }
 
   // 一致性门：存在 open 事务 = 没有一致点位，拒绝备份（fail-closed）。
@@ -228,20 +328,52 @@ function backupWorkspace({ workspace, target, domain }) {
       return null;
     }
   };
-  const dbWatermark = watermark('db');
-  const objectsWatermark = watermark('objects');
+  let pointInTime;
+  let source;
+  if (form === 'comet-050') {
+    // comet-050 点位锚：runtime-store checkpoint hash 是状态与投影共享的一致点位；
+    // 没有 checkpoint 就没有可证明的点位（恢复侧将拒绝，不伪造一致）。
+    const anchor = native.checkpoint?.hash ?? null;
+    pointInTime = {
+      db: anchor,
+      objects: anchor,
+      consistent: anchor !== null,
+      basis: 'comet-050: the runtime-store checkpoint hash is the point-in-time anchor for both state and projections',
+    };
+    source = {
+      form,
+      workspaceId: native.workspaceId,
+      owner: native.identity.owner,
+      change: native.identity.change,
+      runId: native.identity.runId,
+      runStatus: native.runStatus,
+    };
+  } else {
+    const dbWatermark = watermark('db');
+    const objectsWatermark = watermark('objects');
+    pointInTime = { db: dbWatermark, objects: objectsWatermark, consistent: dbWatermark !== null && dbWatermark === objectsWatermark };
+    source = { authorityId: runState.authorityId, epoch: runState.epoch, runId: runState.runId };
+  }
 
   const rels = listWorkspaceFiles(workspace);
   const files = rels.map((rel) => fileEntry(workspace, rel));
   const manifest = {
     schemaVersion: 1,
     interface: 'Backup.v1',
+    form,
     backupId: `backup-${new Date().toISOString().replace(/[-:.]/g, '')}-${process.pid}`,
     createdAt: new Date().toISOString(),
-    source: { authorityId: runState.authorityId, epoch: runState.epoch, runId: runState.runId },
+    source,
+    ...(form === 'comet-050' ? {
+      nativeIdentity: {
+        changes: native.changes,
+        checkpoints: native.checkpoints.map(({ runId, status, sequence, source: cpSource }) => ({ runId, status, sequence, source: cpSource })),
+        partitionsState: native.partitionsState,
+      },
+    } : {}),
     files,
     transactions: { committed: committedTransactions, open: openTransactions },
-    pointInTime: { db: dbWatermark, objects: objectsWatermark, consistent: dbWatermark !== null && dbWatermark === objectsWatermark },
+    pointInTime,
     encryptionRefs: policy?.encryption?.refs ?? [],
     restoreReaderRef: domain['restore-policy.json']?.restoreReaderRef ?? null,
     credentialRefs: collectDomainRefs(domain),
@@ -371,9 +503,9 @@ function evaluateFence({ fenceFile, codes, purpose }) {
   };
 }
 
-function restoreBackup({ backupDir, quarantine, fenceFile, domain, refsDoc }) {
+function restoreBackup({ backupDir, quarantine, fenceFile, domain, refsDoc, form = 'directory' }) {
   const policy = domain['restore-policy.json'];
-  const base = { interface: 'Restore.v1', command: 'restore', capabilityScope: 'LOCAL_DIRECTORY_FORM', realServiceRestore: REAL_SERVICE_RESTORE(), refusals: [] };
+  const base = { interface: 'Restore.v1', command: 'restore', form, capabilityScope: 'LOCAL_DIRECTORY_FORM', realServiceRestore: REAL_SERVICE_RESTORE(), refusals: [] };
 
   let manifest;
   try {
@@ -383,6 +515,9 @@ function restoreBackup({ backupDir, quarantine, fenceFile, domain, refsDoc }) {
   }
   if (manifest?.interface !== 'Backup.v1') {
     return { receipt: refusedReceipt(base, 'BACKUP_INVALID_INPUT', 'manifest interface must be Backup.v1'), exit: EXIT_VERIFY };
+  }
+  if (form === 'comet-050' && manifest.form !== 'comet-050') {
+    return { receipt: refusedReceipt(base, 'BACKUP_INVALID_INPUT', 'a comet-050 restore requires a comet-050 backup manifest'), exit: EXIT_VERIFY };
   }
 
   // 1) 备份完整性：逐文件对真实字节重算 digest；不完整/不符 = 恢复不启用。
@@ -462,7 +597,13 @@ function restoreBackup({ backupDir, quarantine, fenceFile, domain, refsDoc }) {
 
   // 7) 权限对账：ACL/成员只是数据——不回放、不回填、需当前权限重新认证；
   //    旧 epoch 的 attempt 回执被排除出当前状态；撤销缓存绝不恢复。
-  const restoredRunState = readRunState(quarantine);
+  const restoredRunState = (() => {
+    try {
+      return readRunState(quarantine);
+    } catch {
+      return null;
+    }
+  })();
   const currentEpoch = restoredRunState?.epoch ?? null;
   const excludedSuperseded = [];
   const operationsDir = path.join(quarantine, 'operations');
@@ -498,15 +639,46 @@ function restoreBackup({ backupDir, quarantine, fenceFile, domain, refsDoc }) {
   };
   fs.writeFileSync(path.join(quarantine, 'restore-reconciliation.json'), `${JSON.stringify(reconciliation, null, 2)}\n`);
 
-  // 8) 同 operation 验证 + 释放记录。
-  const sameOperation = {
-    verified: manifest.source?.runId === restoredRunState?.runId
-      && manifest.source?.authorityId === restoredRunState?.authorityId
-      && manifest.source?.epoch === restoredRunState?.epoch,
-    runId: restoredRunState?.runId ?? null,
-    authorityId: restoredRunState?.authorityId ?? null,
-    epoch: restoredRunState?.epoch ?? null,
-  };
+  // 8) 同 operation 验证 + 释放记录。comet-050：恢复区由本 CLI 重新解析原生 schema
+  //    （comet.change-owner.v1 身份 + comet.runtime-store-snapshot.v2 Run 状态）比对
+  //    备份 manifest —— Run 身份一致且 Run 状态保留才释放；CLI 可读回即证据。
+  let sameOperation;
+  let readback = null;
+  if (form === 'comet-050') {
+    const nativeAfter = readCometNative(quarantine);
+    if (nativeAfter.error) {
+      return { receipt: refusedReceipt(base, 'RESTORE_SAME_OPERATION_UNVERIFIED', `the restored quarantine does not read back as a native comet workspace: ${nativeAfter.error}`), exit: EXIT_VERIFY };
+    }
+    sameOperation = {
+      verified: manifest.source?.runId === nativeAfter.identity.runId
+        && manifest.source?.change === nativeAfter.identity.change
+        && manifest.source?.owner === nativeAfter.identity.owner
+        && manifest.source?.runStatus === nativeAfter.runStatus,
+      form,
+      runId: nativeAfter.identity.runId,
+      owner: nativeAfter.identity.owner,
+      change: nativeAfter.identity.change,
+      runStatus: nativeAfter.runStatus,
+    };
+    readback = {
+      form,
+      nativeSchemasRead: [COMET_CHANGE_OWNER_SCHEMA, COMET_RUNTIME_STORE_SCHEMA],
+      identityFile: nativeAfter.identity.source,
+      checkpointFile: nativeAfter.checkpoint?.source ?? null,
+      runId: nativeAfter.identity.runId,
+      runStatus: nativeAfter.runStatus,
+      note: 'the CLI re-parses the native schemas from the quarantine and compares them against the backup manifest before release',
+    };
+  } else {
+    sameOperation = {
+      verified: manifest.source?.runId === restoredRunState?.runId
+        && manifest.source?.authorityId === restoredRunState?.authorityId
+        && manifest.source?.epoch === restoredRunState?.epoch,
+      runId: restoredRunState?.runId ?? null,
+      authorityId: restoredRunState?.authorityId ?? null,
+      epoch: restoredRunState?.epoch ?? null,
+    };
+  }
   if (!sameOperation.verified) {
     return { receipt: { ...refusedReceipt(base, 'RESTORE_SAME_OPERATION_UNVERIFIED', 'the restored run/operation identity does not match the backup manifest'), sameOperation }, exit: EXIT_VERIFY };
   }
@@ -530,6 +702,7 @@ function restoreBackup({ backupDir, quarantine, fenceFile, domain, refsDoc }) {
       keyAvailability: { encryptionRefs, restoreReaderRef: restoreReader, runtimeResolution: 'UNRESOLVED_NO_RUNTIME_SECRET_STORE' },
       fence: fenceOutcome.fence,
       sameOperation,
+      ...(readback ? { readback } : {}),
       filesRestored: manifest.files.length,
       reconciliationFile: 'restore-reconciliation.json',
       releaseFile: 'release-record.json',
@@ -541,8 +714,25 @@ function restoreBackup({ backupDir, quarantine, fenceFile, domain, refsDoc }) {
 
 // --- Retention.v1（R10 A）-----------------------------------------------------------
 
-function scanPendingObligations(workspace) {
+function scanPendingObligations(workspace, form = 'directory') {
   const pending = [];
+  // comet-050 原生义务：runtime-store checkpoint 的 record.status 非 completed 即
+  // 未完成 Run（R10 A 保留唯一工作区）；不可解析的 checkpoint 按未闭合处理。
+  if (form === 'comet-050') {
+    const native = readCometNative(workspace);
+    if (native.error) {
+      pending.push({ kind: 'unresolved-comet-run', id: 'unreadable-native-workspace', detail: `native workspace unreadable (${native.error}); an unreadable run state is never treated as resolved` });
+      return pending;
+    }
+    for (const cp of native.unresolved) {
+      pending.push({
+        kind: 'unresolved-comet-run',
+        id: cp.runId,
+        detail: `the native runtime-store checkpoint still reports status ${JSON.stringify(cp.status)}; an unresolved run retains the sole workspace (R10 A)`,
+      });
+    }
+    return pending;
+  }
   const transactionsDir = path.join(workspace, 'transactions');
   if (fs.existsSync(transactionsDir)) {
     for (const rel of listWorkspaceFiles(transactionsDir)) {
@@ -612,20 +802,26 @@ function readOptionalJson(file) {
   }
 }
 
-function runRetention({ workspace, policy, pressureFile, approvalFile, proofFile }) {
+function runRetention({ workspace, policy, pressureFile, approvalFile, proofFile, form = 'directory' }) {
   const base = {
     interface: 'Retention.v1',
     command: 'retention',
+    form,
     workspace: displayPath(workspace),
     r10: { ruleA: 'RETAIN_SOLE_WORKSPACE', ruleAText: policy?.retention?.ruleA ?? null },
     toolPerformsDeletion: false,
   };
 
-  if (!fs.existsSync(workspace) || !fs.existsSync(path.join(workspace, 'run-state.json'))) {
+  if (form === 'comet-050') {
+    const native = readCometNative(workspace);
+    if (!fs.existsSync(workspace) || native.error) {
+      return { receipt: refusedReceipt(base, 'WORKSPACE_INVALID', `a comet-050 workspace with readable runtime/ native identity is required (${native?.error ?? 'directory missing'})`), exit: EXIT_INPUT };
+    }
+  } else if (!fs.existsSync(workspace) || !fs.existsSync(path.join(workspace, 'run-state.json'))) {
     return { receipt: refusedReceipt(base, 'WORKSPACE_INVALID', 'the workspace directory with run-state.json is required'), exit: EXIT_INPUT };
   }
 
-  const pending = scanPendingObligations(workspace);
+  const pending = scanPendingObligations(workspace, form);
 
   // 磁盘压力只告警：记录告警事实，永远不触发清理。
   const pressure = readOptionalJson(pressureFile);
@@ -867,6 +1063,34 @@ function validateDomain({ domain, refsDoc, registry: projectRegistry, dir }) {
 // --- probe：真实本地机制注入 ---------------------------------------------------------
 
 const PROBE_RUN_STATE = { authorityId: 'comet-authority-i08-probe', epoch: 2, runId: 'run-i08-probe', updatedAt: null };
+
+// comet-050 probe 夹具：真实原生 schema 字节的工作区（与真实 ~/.comet/workspaces/<id>
+// 观察 同构：change-owner + runtime-store checkpoint + state-projection + partitions +
+// observability 二进制）。
+function buildProbeComet050Workspace(root, { runStatus = 'running' } = {}) {
+  const workspace = path.join(root, 'comet-workspace');
+  const put = (rel, value) => {
+    const file = path.join(workspace, rel);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, typeof value === 'string' || Buffer.isBuffer(value) ? Buffer.from(value) : Buffer.from(`${JSON.stringify(value, null, 2)}\n`, 'utf8'));
+  };
+  const runId = 'native-assets';
+  put('runtime/change-owners/classic/native-assets.json', {
+    schema: 'comet.change-owner.v1', workflow: 'classic', change: 'native-assets', format: 'sdk', application: 'classic-full', runId,
+  });
+  const runHash = 'probe-runtime-store-hash';
+  put(`runtime/sdk-runs/classic/.runtime-store-v2/${runHash}/checkpoint.json`, {
+    schema: 'comet.runtime-store-snapshot.v2',
+    record: { protocolVersion: 1, schemaVersion: 1, runId, revision: 1, initialStateHash: 'probe-initial-state-hash', status: runStatus, sequence: 2, actions: [] },
+    legacyRevision: null,
+    hash: `probe-checkpoint-hash-${runStatus}`,
+  });
+  put(`runtime/sdk-runs/classic/${runHash}`, Buffer.from(`sdk-run:${runId}\n`));
+  put('runtime/state-projections/classic/native-assets.json', { schema: 'comet.state-projection.v1', change: 'native-assets', runId, projection: 'assets' });
+  put('runtime/.change-owner-partitions.json', { schema: 'comet.change-owner-partitions.v1', token: 'probe-token', state: 'stable' });
+  put('observability/performance.sqlite', Buffer.from(Array.from({ length: 64 }, (_, i) => (i * 11 + 7) & 0xff)));
+  return workspace;
+}
 
 // 探针夹具作者：真实字节工作区（与套件同构；探针自建自清，不留残留）。
 function buildProbeWorkspace(root, { pending = false, supersededReceipt = true } = {}) {
@@ -1153,6 +1377,93 @@ async function probeAuthorityTransfer({ domain }) {
   return observation.status === 'VERIFIED' ? EXIT_PASS : EXIT_VERIFY;
 }
 
+async function probeComet050Restore({ domain, refsDoc }) {
+  const observation = {
+    interface: 'BackupInfra.v1', command: 'probe', case: 'comet-050-restore', executed: true, status: 'UNVERIFIED', observedSteps: [],
+  };
+  const step = (payload) => observation.observedSteps.push(payload);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'infra-i08-probe-c050-'));
+  let holder = null;
+  try {
+    // 原生备份：manifest 携带 change-owner + checkpoint 读出的 Run 身份。
+    const workspace = buildProbeComet050Workspace(root, { runStatus: 'running' });
+    const target = path.join(root, 'target');
+    const backup = backupWorkspace({ workspace, target, domain, form: 'comet-050' });
+    step({
+      step: 'native-backup-with-run-identity',
+      status: backup.exit === EXIT_PASS && backup.receipt.status === 'VERIFIED' ? 'VERIFIED' : 'UNVERIFIED',
+    });
+    const backupDir = path.join(target, backup.receipt.backupId);
+    const manifest = JSON.parse(fs.readFileSync(path.join(backupDir, 'manifest.json'), 'utf8'));
+    step({
+      step: 'manifest-carries-native-identity',
+      status: manifest.source?.form === 'comet-050' && manifest.source?.runId === 'native-assets' && manifest.source?.runStatus === 'running' ? 'VERIFIED' : 'UNVERIFIED',
+      source: manifest.source,
+    });
+
+    // 旧 writer 真实存活 → 原生形态恢复拒绝；真实 SIGKILL + 确认终止 → 启用。
+    holder = spawnHolder();
+    let alive = false;
+    for (let i = 0; i < 200 && !alive; i++) {
+      alive = isAlive(holder.pid);
+      if (!alive) await probeSleeper(25);
+    }
+    const quarantine = path.join(root, 'quarantine');
+    const lieFence = writeFenceFile(root, { pid: holder.pid, method: 'claimed' });
+    const refused = restoreBackup({ backupDir, quarantine, fenceFile: lieFence, domain, refsDoc, form: 'comet-050' });
+    step({
+      step: 'live-old-writer-refuses-native-restore',
+      status: refused.exit === EXIT_VERIFY && refused.receipt.refusals.some((item) => item.code === 'RESTORE_REFUSED_OLD_WRITER_LIVE') ? 'VERIFIED' : 'UNVERIFIED',
+      refusal: refused.receipt.refusals[0]?.code ?? null,
+    });
+    holder.kill('SIGKILL');
+    await exited(holder);
+    const realFence = writeFenceFile(root, { pid: holder.pid, observedAt: new Date().toISOString() });
+    const restored = restoreBackup({ backupDir, quarantine, fenceFile: realFence, domain, refsDoc, form: 'comet-050' });
+    step({
+      step: 'native-restore-released-after-fence',
+      status: restored.exit === EXIT_PASS && restored.receipt.status === 'RELEASED' ? 'VERIFIED' : 'UNVERIFIED',
+      sameOperation: restored.receipt.sameOperation,
+    });
+    step({
+      step: 'cli-reads-back-native-schemas',
+      status: restored.receipt.readback?.form === 'comet-050'
+        && restored.receipt.readback.nativeSchemasRead.includes('comet.change-owner.v1')
+        && restored.receipt.readback.nativeSchemasRead.includes('comet.runtime-store-snapshot.v2')
+        && restored.receipt.readback.runStatus === 'running'
+        ? 'VERIFIED' : 'UNVERIFIED',
+      readback: restored.receipt.readback,
+    });
+
+    // R10 A：未完成原生 Run（checkpoint status=running）→ cleanup 拒绝；completed → 放行。
+    const denied = runRetention({ workspace: quarantine, policy: domain['retention-policy.json'], form: 'comet-050' });
+    step({
+      step: 'unresolved-native-run-retains-workspace',
+      status: denied.exit === EXIT_VERIFY && denied.receipt.cleanup === 'DENIED'
+        && denied.receipt.pending.some((item) => item.kind === 'unresolved-comet-run' && item.id === 'native-assets')
+        ? 'VERIFIED' : 'UNVERIFIED',
+      pending: denied.receipt.pending.map((item) => item.kind),
+    });
+    const completed = buildProbeComet050Workspace(path.join(root, 'done'), { runStatus: 'completed' });
+    const eligible = runRetention({ workspace: completed, policy: domain['retention-policy.json'], form: 'comet-050' });
+    step({
+      step: 'completed-native-run-releases-retention',
+      status: eligible.exit === EXIT_PASS && eligible.receipt.basis === 'verified-completed' ? 'VERIFIED' : 'UNVERIFIED',
+      basis: eligible.receipt.basis,
+    });
+
+    observation.status = observation.observedSteps.every((entry) => entry.status === 'VERIFIED') ? 'VERIFIED' : 'UNVERIFIED';
+    observation.reason = observation.status === 'VERIFIED'
+      ? 'comet-050 native journey proven with real bytes: the manifest carries the native run identity read from comet.change-owner.v1 and the runtime-store checkpoint, a live old writer refuses the restore, the fenced quarantine restores and the CLI reads the native schemas back, and the unresolved run retains the sole workspace while a completed run releases retention'
+      : 'one or more observed steps did not verify; see observedSteps';
+  } finally {
+    if (holder && isAlive(holder.pid)) holder.kill('SIGKILL');
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+  print(observation);
+  return observation.status === 'VERIFIED' ? EXIT_PASS : EXIT_VERIFY;
+}
+
 // --- main ---------------------------------------------------------------------------
 
 async function main(argv) {
@@ -1162,7 +1473,7 @@ async function main(argv) {
 
   if (command === 'probe') {
     if (!opts.case) return failInput('probe requires --case');
-    if (!['pending-cleanup-denial', 'quarantine-restore', 'old-writer-denial', 'authority-transfer'].includes(opts.case)) {
+    if (!['pending-cleanup-denial', 'quarantine-restore', 'old-writer-denial', 'authority-transfer', 'comet-050-restore'].includes(opts.case)) {
       return failInput(`unknown probe case: ${opts.case}`);
     }
     const loaded = loadDomain(opts.dir ?? DEFAULT_DIR);
@@ -1177,6 +1488,7 @@ async function main(argv) {
     if (opts.case === 'pending-cleanup-denial') return probePendingCleanupDenial({ domain: loaded.docs });
     if (opts.case === 'quarantine-restore') return probeQuarantineRestore({ domain: loaded.docs, refsDoc });
     if (opts.case === 'old-writer-denial') return probeOldWriterDenial({ domain: loaded.docs, refsDoc });
+    if (opts.case === 'comet-050-restore') return probeComet050Restore({ domain: loaded.docs, refsDoc });
     return probeAuthorityTransfer({ domain: loaded.docs });
   }
 
@@ -1218,17 +1530,22 @@ async function main(argv) {
 
   if (command === 'backup') {
     if (!opts.workspace || !opts.target) return failInput('backup requires --workspace and --target');
-    if (!fs.existsSync(path.join(opts.workspace, 'run-state.json'))) return failInput(`workspace with run-state.json not found: ${displayPath(opts.workspace)}`);
+    const form = opts.form ?? 'directory';
+    if (!FORMS.includes(form)) return failInput(`unknown --form ${form} (supported: ${FORMS.join(', ')})`);
+    if (form === 'directory' && !fs.existsSync(path.join(opts.workspace, 'run-state.json'))) return failInput(`workspace with run-state.json not found: ${displayPath(opts.workspace)}`);
+    if (form === 'comet-050' && !fs.existsSync(opts.workspace)) return failInput(`comet-050 workspace not found: ${displayPath(opts.workspace)}`);
     if (!fs.existsSync(opts.target)) return failInput(`target directory not found: ${displayPath(opts.target)}`);
     const loaded = loadDomain(opts.dir ?? DEFAULT_DIR);
     if (loaded.error) return failInput(loaded.error);
-    const outcome = backupWorkspace({ workspace: opts.workspace, target: opts.target, domain: loaded.docs });
+    const outcome = backupWorkspace({ workspace: opts.workspace, target: opts.target, domain: loaded.docs, form });
     print(outcome.receipt);
     return outcome.exit;
   }
 
   if (command === 'restore') {
     if (!opts.backup || !opts.quarantine) return failInput('restore requires --backup and --quarantine');
+    const form = opts.form ?? 'directory';
+    if (!FORMS.includes(form)) return failInput(`unknown --form ${form} (supported: ${FORMS.join(', ')})`);
     if (!fs.existsSync(opts.backup)) return failInput(`backup directory not found: ${displayPath(opts.backup)}`);
     const loaded = loadDomain(opts.dir ?? DEFAULT_DIR);
     if (loaded.error) return failInput(loaded.error);
@@ -1238,13 +1555,16 @@ async function main(argv) {
     } catch (err) {
       return failInput(`refs catalog unreadable (${displayPath(opts.refs ?? DEFAULT_REFS)}): ${redactHostPaths(err.message)}`);
     }
-    const outcome = restoreBackup({ backupDir: opts.backup, quarantine: opts.quarantine, fenceFile: opts['fence-evidence'], domain: loaded.docs, refsDoc });
+    const outcome = restoreBackup({ backupDir: opts.backup, quarantine: opts.quarantine, fenceFile: opts['fence-evidence'], domain: loaded.docs, refsDoc, form });
     print(outcome.receipt);
     return outcome.exit;
   }
 
   if (command === 'retention') {
     if (!opts.workspace) return failInput('retention requires --workspace');
+    const form = opts.form ?? 'directory';
+    if (!FORMS.includes(form)) return failInput(`unknown --form ${form} (supported: ${FORMS.join(', ')})`);
+    if (!fs.existsSync(opts.workspace)) return failInput(`workspace not found: ${displayPath(opts.workspace)}`);
     const loaded = loadDomain(opts.dir ?? DEFAULT_DIR);
     if (loaded.error) return failInput(loaded.error);
     const outcome = runRetention({
@@ -1253,6 +1573,7 @@ async function main(argv) {
       pressureFile: opts['disk-pressure'],
       approvalFile: opts['migration-approval'],
       proofFile: opts['restore-proof'],
+      form,
     });
     print(outcome.receipt);
     return outcome.exit;

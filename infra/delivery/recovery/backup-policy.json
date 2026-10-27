@@ -46,6 +46,71 @@
       "note": "revoked code-source caches are recorded by reference with restored=false and their bytes are never copied; a restore must not reuse them"
     }
   },
+  "comet050DataSurfaces": {
+    "interface": "BackupDataSurfaces.v1",
+    "revision": "2026-10-26-comet-050-adoption-v1",
+    "note": "the comet-050 backup inventory: every data plane that must survive backup/restore is registered item by item with its anchor (env-anchored or repo-relative, never host-absolute), format and restore prerequisites; anchors without local presence or with restore channels outside this task's scope are honestly statused",
+    "dataSurfaces": [
+      {
+        "id": "comet-workspaces",
+        "kind": "comet-050-native-state",
+        "anchor": "~/.comet/workspaces/<workspaceId>/ (Comet 0.5.0 native, user-home anchored)",
+        "format": "native directory tree: runtime/ (change-owners/<owner>/<change>.json comet.change-owner.v1, sdk-runs/<owner>/.runtime-store-v2/<hash>/checkpoint.json comet.runtime-store-snapshot.v2, state-projections, .change-owner-partitions.json) plus observability/ (performance.sqlite)",
+        "restorePrerequisites": [
+          "process-level old-writer fence evidence (live pid refutes any gone-claim)",
+          "dedicated quarantine target with no live second writer",
+          "native schema readback of comet.change-owner.v1 and comet.runtime-store-snapshot.v2 proving the same run identity before release"
+        ],
+        "backupForm": "--form comet-050",
+        "status": "MECHANISM_VERIFIED_LOCALLY (fixtures + real-host drill evidence in worker-reports/I08-comet-050)"
+      },
+      {
+        "id": "llmwiki-project",
+        "kind": "knowledge-project-tree",
+        "anchor": ".sdd/repos/llmwiki (repo-relative vendored LLMWiki project)",
+        "format": "git project tree (Python stdio MCP, web app, converter) — bytes are the project, not derived state",
+        "restorePrerequisites": [
+          "byte-level copy verification against a per-file sha256 manifest",
+          "MCP startup readback belongs to the I03/I04 tools; this task restores and byte-verifies the tree"
+        ],
+        "status": "DIRECTORY_RESTORE_VERIFIED_LOCALLY (real-host drill in worker-reports/I08-comet-050); MCP startup readback UNVERIFIED in this task's timebox"
+      },
+      {
+        "id": "llmwiki-wiki-home",
+        "kind": "knowledge-wiki-data",
+        "anchor": "$SDD_WIKI_HOME, else ~/.sdd/wiki/<project-slug> (resolved by lib/sdd-paths.js getWikiHome)",
+        "format": "LLMWiki wiki home: .llmwiki/index.db (sqlite) plus the compiled wiki content tree",
+        "restorePrerequisites": [
+          "sqlite file restore requires the owning project stopped (no live writer on index.db)",
+          "restored wiki home must be re-bound through SDD_WIKI_HOME before any MCP readback"
+        ],
+        "status": "NO_SDD_HARNESS_WIKI_DB_EXISTS_LOCALLY as of 2026-10-26 (observed honestly; only a pav2 wiki exists under ~/.sdd/wiki and belongs to another project)"
+      },
+      {
+        "id": "outline-stack",
+        "kind": "team-knowledge-stack",
+        "anchor": ".sdd/outline/runtime/ (compose config; secrets referenced via secrets.env, never valued) plus docker volumes outline_outline-db (PostgreSQL) and outline_outline-data",
+        "format": "docker compose config + PostgreSQL volume + Redis volume backing the Outline team knowledge instance",
+        "restorePrerequisites": [
+          "docker volume restore requires deployment-wave authorization and a stopped Outline stack",
+          "secrets.env refs must be re-authorized through the I01 read-only gate before any restore drill",
+          "point-in-time consistency between the PG volume and its wal must be proven by the backup owner"
+        ],
+        "status": "UNVERIFIED — PG/Redis volume restore requires docker operations not performed in this task; volumes registered read-only"
+      },
+      {
+        "id": "outline-attachments",
+        "kind": "attachment-storage",
+        "anchor": "docker volume outline_outline-attachments (served by the outline-object-store service)",
+        "format": "object-store attachment bytes (uploaded documents/files referenced by Outline documents)",
+        "restorePrerequisites": [
+          "attachment restore must keep point-in-time consistency with the PG volume (db/objects watermarks must agree)",
+          "an attachment-missing restore must not be released as complete"
+        ],
+        "status": "UNVERIFIED — attachment volume restore requires docker operations not performed in this task; volume registered read-only"
+      }
+    ]
+  },
   "backupWriterRef": "secret-ref:sdd-harness-pilot/backup-writer",
   "neverIncluded": [
     "secret values (only secret-ref entries, never resolved)",
@@ -59,7 +124,8 @@
       "unknown-remote-result",
       "sole-payload-in-workspace",
       "open-transaction",
-      "pending-knowledge-closeout"
+      "pending-knowledge-closeout",
+      "unresolved-comet-run"
     ],
     "diskPressureWarnOnly": true,
     "cleanupAllowedOnlyWhen": [
@@ -68,7 +134,7 @@
     ],
     "autoCleanupEnabled": false,
     "toolPerformsDeletion": false,
-    "obligationSource": "Comet real obligations (open transactions, dispatched-but-unreceipted remote operations, pending knowledge closeouts, sole-copy approved payloads) — never just archived/git-complete state",
+    "obligationSource": "Comet real obligations (open transactions, dispatched-but-unreceipted remote operations, pending knowledge closeouts, sole-copy approved payloads, and the comet-050 native runtime-store checkpoint status of the run itself) — never just archived/git-complete state",
     "note": "capacity shortfalls raise warnings only; a silent or timed cleanup of the sole unfinished workspace is forbidden. The boundary moves only after verified completion, or after a separately approved controlled migration whose restore has been proven."
   },
   "localOnly": true

@@ -1,0 +1,36 @@
+{
+  "interface": "Retention.v1",
+  "command": "retention",
+  "form": "comet-050",
+  "workspace": "<host-path-redacted>",
+  "r10": {
+    "ruleA": "RETAIN_SOLE_WORKSPACE",
+    "ruleAText": "R10 A: an unresolved Run or knowledge obligation retains the sole workspace; the existence of a backup never justifies early cleanup"
+  },
+  "toolPerformsDeletion": false,
+  "pending": [
+    {
+      "kind": "unresolved-comet-run",
+      "id": "native-assets",
+      "detail": "the native runtime-store checkpoint still reports status \"running\"; an unresolved run retains the sole workspace (R10 A)"
+    }
+  ],
+  "pendingReasons": [
+    "cleanup requires verified completion or a separately approved migration whose restore has been proven (R10 A; spec-frozen obligations: pending-outline-publish, unknown-remote-result, sole-payload-in-workspace)",
+    "migration-approval missing or incomplete: an unapproved boundary change never moves R10 A",
+    "restore-proof missing or unverified: a proven restore (verified=true, sameOperationReadback=true) is required before the boundary may move"
+  ],
+  "diskPressure": {
+    "warned": false,
+    "cleanup": false
+  },
+  "cleanup": "DENIED",
+  "basis": null,
+  "refusals": [
+    {
+      "code": "RETENTION_CLEANUP_DENIED",
+      "reason": "pending obligations retain the sole workspace: unresolved-comet-run"
+    }
+  ],
+  "checkedAt": "2026-10-27T03:31:51.729Z"
+}

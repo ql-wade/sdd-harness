@@ -47,6 +47,12 @@
     "note": "release happens only after the restored quarantine is verified to carry the same run/operation identity with an independent byte-level readback"
   },
   "restoreReaderRef": "secret-ref:sdd-harness-pilot/restore-reader",
+  "nativeCometForm": {
+    "form": "comet-050",
+    "sameGatesApply": ["quarantine", "old-writer-fence", "no-live-second-writer", "same-operation-readback", "publish-frozen-release"],
+    "identitySources": ["runtime/change-owners/<owner>/<change>.json (comet.change-owner.v1)", "runtime/sdk-runs/<owner>/.runtime-store-v2/<hash>/checkpoint.json (comet.runtime-store-snapshot.v2)"],
+    "note": "revision 2026-10-26-comet-050-adoption-v1: the native comet-050 workspace form passes the same restore gates; the run identity and its unresolved status are read back from the native schemas, and the runtime-store checkpoint hash is the point-in-time anchor"
+  },
   "realServiceRestore": "UNVERIFIED",
   "authorityTransfer": {
     "interface": "AuthorityTransfer.v1",

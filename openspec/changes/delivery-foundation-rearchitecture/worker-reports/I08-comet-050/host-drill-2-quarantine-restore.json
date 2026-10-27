@@ -1,0 +1,60 @@
+{
+  "interface": "Restore.v1",
+  "command": "restore",
+  "form": "comet-050",
+  "capabilityScope": "LOCAL_DIRECTORY_FORM",
+  "realServiceRestore": {
+    "status": "UNVERIFIED",
+    "reason": "cross-machine and real-service restore can only be proven by the backup owner together with the deployment wave; this receipt covers the local directory-form mechanism only",
+    "successor": "backup owner + deployment wave (infrastructure-plan.md 交接前置输入 #6)"
+  },
+  "refusals": [],
+  "status": "RELEASED",
+  "backup": "<host-path-redacted>",
+  "quarantine": "<host-path-redacted>",
+  "keyAvailability": {
+    "encryptionRefs": [
+      {
+        "ref": "secret-ref:sdd-harness-pilot/backup-encryption",
+        "registered": true
+      }
+    ],
+    "restoreReaderRef": {
+      "ref": "secret-ref:sdd-harness-pilot/restore-reader",
+      "registered": false
+    },
+    "runtimeResolution": "UNRESOLVED_NO_RUNTIME_SECRET_STORE"
+  },
+  "fence": {
+    "oldWriterId": "comet-runtime:workspace-61d6df4e",
+    "method": "process-exit-confirmed",
+    "confirmedGone": true,
+    "pid": null,
+    "liveness": "NOT_CHECKED",
+    "observedAt": "2026-10-27T03:31:00.000Z"
+  },
+  "sameOperation": {
+    "verified": true,
+    "form": "comet-050",
+    "runId": "native-assets",
+    "owner": "classic",
+    "change": "native-assets",
+    "runStatus": "running"
+  },
+  "readback": {
+    "form": "comet-050",
+    "nativeSchemasRead": [
+      "comet.change-owner.v1",
+      "comet.runtime-store-snapshot.v2"
+    ],
+    "identityFile": "runtime/change-owners/classic/native-assets.json",
+    "checkpointFile": "runtime/sdk-runs/classic/.runtime-store-v2/f10da20d6e2453eb9df1f1d351691f494f88fb0d307e40f3288ba37c76740092/checkpoint.json",
+    "runId": "native-assets",
+    "runStatus": "running",
+    "note": "the CLI re-parses the native schemas from the quarantine and compares them against the backup manifest before release"
+  },
+  "filesRestored": 6,
+  "reconciliationFile": "restore-reconciliation.json",
+  "releaseFile": "release-record.json",
+  "checkedAt": "2026-10-27T03:31:05.720Z"
+}
