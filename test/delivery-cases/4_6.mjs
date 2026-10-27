@@ -1,955 +1,627 @@
-// P4_6 delivery case: post-archive continuation and idempotent control (patch
-// 0003) on the SAME Classic Run. H01–H09 over the real built CLI: an archived
-// managed run with an unmet knowledge obligation stays discoverable,
-// selectable and recoverable even when Git delivery is complete (H01); method
-// hooks stay advisory and never claim execution (H02); same job_key claims
-// are atomic — one open owner, others recover the same operation (H03); the
-// Outline document UUID is fixed before the first request and retries never
-// mint a second logical document, 403/timeout is never absence (H04);
-// lastRevision conflicts stay open and are never overwritten by a revision
-// refresh (H05); stale attempt results cannot complete a new task and a new
-// revision keeps its own manifest (H06); the native archive
-// completed/clear-current path keeps the run open until closeout (H07); a
-// lost run state is never fabricated and cleanup cannot remove the only
-// recovery copy (H08); a copied workspace is never a second writer — the
-// run's authority binding decides, and transfer is explicit (H09).
+// P4_6 delivery case — comet-050 revision (2026-10-26-comet-050-adoption-v1).
 //
-// Rework additions (rework-seven-p1-r1): R06's four closeout facts (candidate
-// acceptance, spec archive, team knowledge seat, overall completion) are
-// asserted as distinct facts (H07); Kp keeps the seal ahead of the archive —
-// the archive phase gate refuses the unmet obligation and an external
-// closeout needs the Runtime K dispatch; and a REAL OpenSpec archive (pinned
-// isolated 1.11.0 CLI over the COMET_OPENSPEC seam) leaves the same Run
-// pending Kt while an interrupted Outline write recovers the original
-// operation — fixed UUID, no second publish, no second archive, workspace
-// kept.
-// Every interaction runs the real built CLI in scratch projects under $TMPDIR
-// with an isolated HOME and PATH stubs; live host configuration is untouched.
+// Post-archive same-Run Kt recovery on the PINNED 0.5.0 supply
+// (upstream aeb1a659 + the 0005 Kt closeout patch, build de39629a…). The
+// retired 0.4.5 face of this case (patch 0003, `state init --managed-delivery`
+// / dispatch-gate / knowledge-publish under .comet-state.lock) is GONE on the
+// new supply — the honest RED for this revision (worker-reports/P4_6-comet-
+// 050/evidence/RED-pre050-old-face.txt, 12/12 fail) — and the retired patch
+// files stay retired (infra-runner-isolation pins their absence; 0003 was
+// superseded by 0005 per ADR-0022 B1).
 //
-// Build resolution: the fingerprint is derived from the Comet patch lock
-// (SDD_COMET_LOCK overrides the lock path, default
-// integrations/comet/upstream.lock.json). Before the integration wave
-// registers 0003-post-archive-closeout.patch, point SDD_COMET_LOCK at the
-// staged lock that carries the 0003 + tests/4_6 entries; after integration
-// the default lock resolves to the same build.
+// The four same-Run Kt semantics this revision proves, every one against the
+// REAL build in one-shot /tmp worlds (isolated HOME/TMPDIR/PATH, pinned node
+// 24.15.0, pinned openspec 1.11.0 through the COMET_OPENSPEC seam — the only
+// archive writer):
+//
+//   KTA post-archive discovery + blocked completion
+//        a REAL classic Run is driven open→archive-confirm through the public
+//        `comet state`/`comet check` surface, the Kp obligation is sealed
+//        BEFORE the archive (sealCloseout over a public-face seal read), the
+//        REAL `comet archive` moves the change exactly once — and on the SAME
+//        Run (run_id stable): the public continuation face (`state next`)
+//        keeps naming delivery ("do not archive again"), never a completion
+//        claim; the 0005-patched resolver of the pinned build — evaluated over
+//        the run's REAL ClassicState + REAL collected evidence — PARKS the
+//        archived run at full.archive.execute while knowledgeCloseout is
+//        required and unmet, and reports 'completed' only when the field is
+//        completed or absent (fail-open default preserved byte-for-byte).
+//   KTB Kt completion flips the SAME Run to completed
+//        the write path is the optional state field (the exact in-memory
+//        contract the 0005 header declares for the managed host layer): with
+//        completed=true the SAME real state resolves 'completed'; the managed
+//        mirror predicate (lib/adapters/comet.js) agrees on every truth-table
+//        row over the real state; and the live PUBLIC face proves the write
+//        gap honestly — `state set <change> knowledgeCloseout.* …` is refused
+//        CLASSIC_FIELD_UNKNOWN (the persisted-field write is the declared
+//        supply/admission-wave obligation, never faked here).
+//   KTC repeated hooks/callbacks/restart never re-archive or re-publish
+//        repeated managed closeout on the archived Run reconciles
+//        'already-archived' with ZERO native dispatch; repeated `state next`
+//        returns the same delivery continuation; a REAL fresh CLI process
+//        (bin/comet.js subprocess) re-enters `archive` idempotently — still
+//        exactly one archive directory, main specs byte-stable, same run_id;
+//        a second Kp seal is refused (single closeout owner).
+//   KTD unknown keeps the ORIGINAL handle
+//        a publication timeout on the registered Kt operation keeps the SAME
+//        operationKey/documentId (the target id is derived and deterministic —
+//        a retry re-targets the fixed document, never a second logical page);
+//        the ledger judgment stays blocked PUBLICATION_UNKNOWN ("unknown is
+//        never absence"), a non-executable directive is refused
+//        (DIRECTIVE_NOT_EXECUTABLE — recovery may only read the original
+//        operation back), a receipt minted from unknown is refused, and only a
+//        two-channel independent readback of the SAME operation satisfies Kt —
+//        composing the SAME-Run completion (resolver completed + ledger ok).
+//
+// Proven UNVERIFIED (registered in team-recovery/comet-050-post-archive-kt-
+// recovery-probe.json and the worker report, never papered over): the LIVE
+// Outline publication itself (P4_4/VERIFY boundary — here the judgment layer
+// over the ledger is the tested object), and the persisted-write of the
+// knowledgeCloseout state field through a 0.5.0 public command (supply/
+// admission wave; the parked row is proven at the patched resolver seam over
+// the run's real state bytes).
+//
+// Structure (same discipline as 3_3/3_4): the world work runs in a PINNED-node
+// scenario subprocess of this same file (`--kt-scenario post-archive-kt`)
+// that performs the real drive and emits a bounded proof JSON; the outer
+// tests assert the proof sections. Missing build/CLI/node prerequisites skip
+// with an explicit reason (P3_3 convention) — they never pass silently.
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
-import { spawn, spawnSync } from 'node:child_process';
-import fsSync from 'node:fs';
-import fs from 'node:fs/promises';
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const lockPath = process.env.SDD_COMET_LOCK ?? 'integrations/comet/upstream.lock.json';
-const lock = JSON.parse(await fs.readFile(path.resolve(projectRoot, lockPath), 'utf8'));
+const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 
-const fingerprint = crypto.createHash('sha256').update(JSON.stringify({
-  archive: lock.source.sha256,
-  patches: lock.patches.map(({ path, sha256 }) => ({ path, sha256 })),
-  toolchain: lock.toolchain,
-})).digest('hex');
-const F2 = '9b95a0ff54ee00abd03ba9fb507cd93f03c8a464a743658898c474a51dc89b10'; // 0001+1_6+0002+2_4
-const has0003 = lock.patches.some((entry) => String(entry.path).endsWith('0003-post-archive-closeout.patch'));
-const buildDir = path.join(projectRoot, '.sdd/vendor/comet', lock.source.commit, 'builds', fingerprint);
-const entrypoint = path.join(buildDir, 'work/bin/comet.js');
+// --- pinned supply resolution --------------------------------------------------
 
-const built = await fs.access(path.join(buildDir, 'distribution.json')).then(() => true, () => false);
-const prepared = await fs.access(path.join(projectRoot, '.sdd/vendor/comet', lock.source.commit, 'provenance.json')).then(() => true, () => false);
+const cometLockPath = path.join(projectRoot, 'integrations/comet/upstream.lock.json');
+const cometLock = JSON.parse(fs.readFileSync(cometLockPath, 'utf8'));
+const cometFingerprint = sha256(JSON.stringify({
+  archive: cometLock.source.sha256,
+  patches: cometLock.patches.map(({ path: patchPath, sha256: patchSha }) => ({ path: patchPath, sha256: patchSha })),
+  toolchain: cometLock.toolchain,
+}));
+const cometBuildDir = path.join(projectRoot, '.sdd/vendor/comet', cometLock.source.commit, 'builds', cometFingerprint);
+const cometEntrypoint = path.join(cometBuildDir, 'work/bin/comet.js');
+const cometBuildPresent = fs.existsSync(cometEntrypoint)
+  && fs.existsSync(path.join(cometBuildDir, 'distribution.json'))
+  && fs.existsSync(path.join(projectRoot, '.sdd/vendor/comet', cometLock.source.commit, 'provenance.json'));
+const openspecCli = path.join(projectRoot, '.sdd/tools/openspec-1.11.0/node_modules/.bin/openspec');
+const openspecReady = (() => {
+  const probe = spawnSync(openspecCli, ['--version'], { encoding: 'utf8', timeout: 30_000 });
+  return probe.status === 0 && Boolean(probe.stdout);
+})();
 
-// The REAL OpenSpec CLI archive face: the pinned isolated 1.11.0 candidate
-// (same install as 1_5/classic-integration — never a global upgrade).
-const isolatedOpenspecBin = path.join(projectRoot, '.sdd/tools/openspec-1.11.0/node_modules/@fission-ai/openspec/bin/openspec.js');
-const isolatedOpenspecReady = await fs.access(isolatedOpenspecBin).then(() => true, () => false);
-
-const pinnedNode = lock.toolchain.node;
-let nodeExecutable = process.execPath;
-if (process.versions.node !== pinnedNode) {
-  const candidate = path.join(process.env.HOME ?? '', '.nvm/versions/node', `v${pinnedNode}`, 'bin/node');
+let pinnedNode = process.execPath;
+if (process.versions.node !== cometLock.toolchain.node) {
+  const candidate = path.join(process.env.HOME ?? '', '.nvm/versions/node', `v${cometLock.toolchain.node}`, 'bin/node');
   const probe = spawnSync(candidate, ['--version'], { encoding: 'utf8' });
-  if (probe.status === 0 && probe.stdout.trim() === `v${pinnedNode}`) nodeExecutable = candidate;
+  if (probe.status === 0 && probe.stdout.trim() === `v${cometLock.toolchain.node}`) pinnedNode = candidate;
 }
+const pinnedNodeReady = pinnedNode !== process.execPath
+  || process.versions.node === cometLock.toolchain.node;
 
-const plain = (text) => String(text ?? '').replace(/\x1b\[[0-9;]*m/g, '');
-const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex');
+const scenarioSkip = !cometBuildPresent
+  ? `UNVERIFIED: patched Comet build ${cometFingerprint.slice(0, 8)} is not present; run tools/comet/prepare-source.mjs && tools/comet/build.mjs --archive first`
+  : !openspecReady
+    ? `UNVERIFIED: pinned openspec 1.11.0 CLI is not installed at ${path.relative(projectRoot, openspecCli)}`
+    : !pinnedNodeReady
+      ? `UNVERIFIED: the locked node v${cometLock.toolchain.node} is not available for the pinned-world scenario`
+      : false;
 
-// --- scratch world -----------------------------------------------------------
-const scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'p46-case-'));
-const fakeHome = path.join(scratch, 'home');
-const stubs = path.join(scratch, 'stubs');
-const project = path.join(scratch, 'managed');
-await fs.mkdir(fakeHome, { recursive: true });
-await fs.mkdir(stubs, { recursive: true });
-await fs.mkdir(project, { recursive: true });
-// The openspec stub creates the layout for init and performs the archive move
-// exactly like the upstream CLI; npm/npx are neutralized (registered B6 gap).
-await fs.writeFile(path.join(stubs, 'openspec'), `#!/bin/sh
-pos1=""; pos2=""; count=0
-for arg in "$@"; do
-  case "$arg" in --*) ;; *) count=$((count+1)); if [ "$count" -eq 1 ]; then pos1="$arg"; elif [ "$count" -eq 2 ]; then pos2="$arg"; fi ;; esac
-done
-if [ "$pos1" = "init" ] && [ -n "$pos2" ]; then
-  mkdir -p "$pos2/openspec" "$pos2/.claude/commands" "$pos2/.claude/skills"
-  printf 'schema: openspec-1.0\\n' > "$pos2/openspec/config.yaml"
-  echo "fake skill" > "$pos2/.claude/commands/openspec.md"
-fi
-if [ "$pos1" = "archive" ] && [ -n "$pos2" ] && [ -n "$COMET_PROJECT_ROOT" ]; then
-  cd "$COMET_PROJECT_ROOT" || exit 0
-  if [ -d "docs/openspec/changes/$pos2" ]; then
-    mkdir -p "docs/openspec/changes/archive"
-    mv "docs/openspec/changes/$pos2" "docs/openspec/changes/archive/$(date +%Y-%m-%d)-$pos2"
-  fi
-fi
-exit 0
-`, { mode: 0o755 });
-for (const name of ['npm', 'npx']) {
-  await fs.writeFile(path.join(stubs, name), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
-}
+const teamRecoveryProbePath = path.join(projectRoot,
+  'openspec/changes/delivery-foundation-rearchitecture/team-recovery/comet-050-post-archive-kt-recovery-probe.json');
 
-const childEnv = (extra = {}, overProject = project) => {
-  const { NODE_TEST_CONTEXT: _stripped, ...inherited } = process.env;
-  return {
-    ...inherited,
-    HOME: fakeHome,
-    COMET_PROJECT_ROOT: overProject,
-    PATH: `${stubs}:${process.env.PATH ?? ''}`,
-    ...extra,
-  };
-};
+// --- the pinned-node scenario (real drive + real archive + seams) --------------
 
-function comet(args, { env = {}, timeout = 180_000, cwd = project, root = undefined } = {}) {
-  const target = root ?? cwd;
-  const result = spawnSync(nodeExecutable, [entrypoint, ...args], {
-    cwd: target,
-    encoding: 'utf8',
-    timeout,
-    env: childEnv(env, target),
-  });
-  let json = null;
-  try { json = JSON.parse(result.stdout ?? ''); } catch { /* non-JSON output stays raw */ }
-  return { ...result, json };
-}
+const scenarioArgv = process.argv.indexOf('--kt-scenario');
+const proofArgv = process.argv.indexOf('--proof');
 
-const issuesOf = (result) => (result.json?.data?.issues ?? []).map((issue) => issue.message ?? '').join('\n');
-// Refusal text lands on stderr (plain mode) or in the JSON envelope's issues;
-// both carry the same machine refusal contract.
-const refusalText = (result) => {
-  const envelope = plain(issuesOf(result));
-  return `${envelope}\n${plain(result.stderr)}\n${plain(result.stdout)}`;
-};
-const changeDir = (change, root = project) => path.join(root, 'docs/openspec/changes', change);
-const archivedDir = async (change, root = project) => {
-  const entries = await fs.readdir(path.join(root, 'docs/openspec/changes/archive'));
-  return path.join(root, 'docs/openspec/changes/archive', entries.find((name) => name.endsWith(change)));
-};
-const runStateOf = async (dir) => JSON.parse(await fs.readFile(path.join(dir, '.comet', 'run-state.json'), 'utf8'));
+async function runScenario() {
+  assert.equal(process.versions.node, cometLock.toolchain.node,
+    'the world scenario runs on the exact locked Node, not a host alias');
+  assert.equal(cometLock.package.version, '0.5.0', 'the pinned supply must be the 0.5.0 baseline');
+  assert.equal(cometLock.source.commit, 'aeb1a6598034e28ce46b8422d4dbd8785e607bd7');
+  assert.deepEqual(cometLock.patches.map(({ path: patchPath }) => patchPath),
+    ['integrations/comet/patches/0005-comet-050-kt-closeout.patch'],
+    'the pinned supply must carry exactly the 0005 Kt closeout patch');
 
-const writeArtifacts = async (change, root = project) => {
-  const dir = changeDir(change, root);
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(path.join(dir, 'proposal.md'), '# Proposal\n\nPost-archive probe.\n');
-  await fs.writeFile(path.join(dir, 'tasks.md'), '# Tasks\n\n- [ ] 1.1 Implement probe product code\n');
-  await fs.writeFile(path.join(dir, 'design.md'), `---\ncomet_change: ${change}\nrole: technical-design\ncanonical_spec: openspec\n---\n\n# Design\n\nPost-archive probe design v1.\n`);
-  await fs.writeFile(path.join(dir, 'test-intent.md'), '# Test Intent\n\ncases: c1\noracle: probe behavior observed\n');
-  const plansDir = path.join(root, 'docs/superpowers/plans');
-  await fs.mkdir(plansDir, { recursive: true });
-  await fs.writeFile(path.join(plansDir, `${change}-plan.md`), '# Plan\n\n- 1.1 Implement probe product code\n');
-  await fs.mkdir(path.join(root, 'src'), { recursive: true });
-  await fs.writeFile(path.join(root, 'src/feature.js'), 'export const v1 = 1;\n');
-  return dir;
-};
+  const work = path.join(cometBuildDir, 'work');
+  const { pathToFileURL } = await import('node:url');
+  const native = await import(pathToFileURL(path.join(work, 'assets/skills/comet/scripts/comet-runtime.mjs')).href);
 
-const sha256Text = (text) => crypto.createHash('sha256').update(text).digest('hex');
-const GATE_ROLE_OF = { R: 'requirements-owner', A: 'reviewer', T: 'reviewer', P: 'planner', V: 'verifier', K: 'knowledge-publisher' };
-
-// P1-02 pass evidence (same canonical shape as 2_4.mjs): a Runtime dispatch
-// registration is not review evidence — a pass result must bind the dispatched
-// inputs, carry the original report with its digest, and the gate-specific
-// independent-review artifact (A: closed unanimous consensus tally; T:
-// test-design sufficiency with an attested oracle). This run's real unanimous
-// consensus receipt is the read-only positive control; the artifactDigest
-// re-binds to the scratch dispatch inputDigest because the reviewed artifact
-// is the scratch change. Reviewer independence itself stays the I02 boundary
-// and is not claimed here.
-const consensusDir = path.join(projectRoot, 'openspec/changes/delivery-foundation-rearchitecture/consensus/2026-10-22-plan-r3');
-const realTally = await fs.readFile(path.join(consensusDir, 'tally.json'), 'utf8').then((t) => JSON.parse(t), () => null);
-const realConsensusManifest = await fs.readFile(path.join(consensusDir, 'manifest.json'), 'utf8').then((t) => JSON.parse(t), () => null);
-
-const consensusForDispatch = (binding, overrides = {}) => ({
-  reviewId: realConsensusManifest?.review_id ?? 'seven-p1-plan-20261022-r3',
-  rule: 'unanimous',
-  status: 'CLOSED',
-  participants: (realConsensusManifest?.participants ?? ['claude-code', 'zcode', 'codex-agent']).slice(),
-  ballots: (realTally?.ballots ?? []).map((ballot) => ({
-    agent: ballot.agent,
-    verdict: ballot.verdict,
-    blockingFindings: ballot.blocking_findings,
-    summaryDigest: sha256Text(String(ballot.summary ?? '')),
-  })),
-  artifactDigest: binding.inputDigest,
-  ...overrides,
-});
-
-const testDesignForDispatch = (binding, overrides = {}) => ({
-  verdict: 'sufficient',
-  oracle: 'strong',
-  inputDigest: binding.inputDigest,
-  reviewer: 'test-authoring',
-  findings: [],
-  ...overrides,
-});
-
-const passEvidence = (gate, binding, extra = {}) => ({
-  execution: binding.execution,
-  attempt: binding.attempt,
-  verdict: 'pass',
-  role: GATE_ROLE_OF[gate],
-  inputDigest: binding.inputDigest,
-  report: `# Gate ${gate} independent review\n\nReviewed by ${GATE_ROLE_OF[gate]} over the dispatched inputs (${binding.inputDigest.slice(0, 12)}…).\n`,
-  reportDigest: null, // filled by withReportDigest
-  ...(gate === 'A' ? { consensus: consensusForDispatch(binding) } : {}),
-  ...(gate === 'T' ? { testDesignReview: testDesignForDispatch(binding) } : {}),
-  ...extra,
-});
-const withReportDigest = (result) => ({ ...result, reportDigest: sha256Text(result.report) });
-
-const acceptGate = (change, gate, { verdict = 'pass', findings, execution, attempt, root: over, env = {} } = {}) => {
-  const dispatched = comet(['state', 'dispatch-gate', change, gate, '--json'], { root: over, env });
-  assert.equal(dispatched.json?.exitCode, 0, `dispatch-gate ${gate} failed: ${refusalText(dispatched).slice(0, 400)}`);
-  const binding = dispatched.json?.data?.dispatch
-    ?? JSON.parse((dispatched.stdout ?? '').trim().split('\n').pop());
-  const result = withReportDigest({
-    ...passEvidence(gate, binding),
-    execution: execution ?? binding.execution,
-    attempt: attempt ?? binding.attempt,
-    ...(verdict !== 'pass' ? { verdict } : {}),
-    ...(findings ? { findings } : {}),
-  });
-  const resultFile = path.join(scratch, `result-${change}-${gate}-${Math.random().toString(36).slice(2)}.json`);
-  fsSync.writeFileSync(resultFile, JSON.stringify(result));
-  const accepted = comet(['state', 'accept-gate', change, gate, '--file', resultFile, '--json'], { root: over, env });
-  assert.equal(accepted.json?.exitCode, 0, `accept-gate ${gate} failed: ${refusalText(accepted).slice(0, 300)}`);
-  return { binding, result, accepted };
-};
-
-const acceptAll = (change, gates, over, env = {}) => {
-  for (const gate of gates) acceptGate(change, gate, { root: over, env });
-};
-
-const writeCheckPolicy = async (root = project) => {
-  await fs.mkdir(path.join(root, '.comet'), { recursive: true });
-  await fs.writeFile(path.join(root, '.comet/check-policy.json'), JSON.stringify({
-    version: 2,
-    commands: [
-      { argv: ['node', '-e', 'process.stdout.write("build-ok\\n")'], cwd: '.', requiredScope: 'build', files: ['src/feature.js'] },
-      { argv: ['node', '-e', 'process.stdout.write("verify-ok\\n")'], cwd: '.', requiredScope: 'verify', files: ['src/feature.js'] },
-    ],
-  }, null, 2));
-};
-
-// Managed drive: init → artifacts → R/A/T accepted → design confirmed →
-// build decisions → registered checks → task complete → V → archive-confirm.
-// Authority env is set at init: the binding is recorded by the runtime.
-async function driveToArchiveReady(change, { root = project, authority } = {}) {
-  await writeArtifacts(change, root);
-  // The authority environment is the RUNTIME configuration of the whole
-  // drive: init binds it and every mutating call re-presents it (H09).
-  const authorityEnv = authority ? { COMET_RUN_AUTHORITY: authority } : {};
-  const run = (args) => comet(args, { root, env: authorityEnv });
-  assert.equal(run(['state', 'init', change, 'full', '--managed-delivery', '--knowledge-closeout-required', 'true', '--json']).json?.exitCode, 0);
-  if (root === project) {
-    assert.equal(run(['state', 'select', change, '--json']).json?.exitCode, 0);
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'p46-kt-'));
+  const home = path.join(scratch, 'home');
+  const root = path.join(scratch, 'root');
+  fs.mkdirSync(home, { recursive: true });
+  for (const rel of ['openspec/changes/archive', 'openspec/specs/cap-a', 'openspec/changes/demo',
+    'docs/superpowers/plans', 'docs/superpowers/specs', 'docs/superpowers/reports', '.comet', '.whitebox']) {
+    fs.mkdirSync(path.join(root, rel), { recursive: true });
   }
-  const rel = `docs/openspec/changes/${change}`;
-  assert.equal(run(['state', 'set', change, 'design_doc', `${rel}/design.md`, 'test_intent', `${rel}/test-intent.md`, 'plan', `docs/superpowers/plans/${change}-plan.md`, '--json']).json?.exitCode, 0);
-  // P1-01/P1-02 (post-rework runtime): open-complete evaluates the
-  // enter-design premises, so the R receipt must be dispatched and accepted
-  // with bound review evidence before the transition.
-  acceptAll(change, ['R'], root, authorityEnv);
-  assert.equal(run(['state', 'transition', change, 'open-complete', '--json']).json?.exitCode, 0);
-  acceptAll(change, ['A', 'T', 'P'], root, authorityEnv);
-  assert.equal(run(['state', 'complete-design', change, '--design-doc', `${rel}/design.md`, '--json']).json?.exitCode, 0);
-  assert.equal(run(['state', 'set', change, 'build_mode', 'executing-plans', 'tdd_mode', 'tdd', 'isolation', 'current', '--json']).json?.exitCode, 0);
-  await writeCheckPolicy(root);
-  const tasks = run(['state', 'tasks', change, '--assign-ids', '--json']).json;
-  acceptAll(change, ['P'], root, authorityEnv);
-  assert.equal(run(['state', 'task-complete', change, tasks?.data?.tasks?.[0]?.id, '--expect', tasks?.data?.revision, '--json']).json?.exitCode, 0);
-  acceptAll(change, ['P'], root, authorityEnv);
-  assert.equal(run(['check', 'run', change, 'build', '--local', '--', 'node', '-e', 'process.stdout.write("build-ok\\n")']).status, 0);
-  assert.equal(run(['state', 'transition', change, 'build-complete', '--json']).json?.exitCode, 0);
-  await fs.writeFile(path.join(changeDir(change, root), 'verification.md'), '# Verification Report\n\nProbe.\n');
-  assert.equal(run(['state', 'set', change, 'verification_report', `docs/openspec/changes/${change}/verification.md`, '--json']).json?.exitCode, 0);
-  assert.equal(run(['check', 'run', change, 'verify', '--local', '--', 'node', '-e', 'process.stdout.write("verify-ok\\n")']).status, 0);
-  acceptAll(change, ['V'], root, authorityEnv);
-  assert.equal(run(['state', 'transition', change, 'verify-pass', '--json']).json?.exitCode, 0);
-  assert.equal(run(['state', 'transition', change, 'archive-confirm', '--json']).json?.exitCode, 0);
-  return changeDir(change, root);
-}
+  fs.writeFileSync(path.join(root, '.comet/config.yaml'),
+    'schema: comet.project.v1\ndefault_workflow: classic\nworkflows: [classic]\nclassic:\n  artifact_layout: legacy\n');
+  fs.writeFileSync(path.join(root, 'openspec/config.yaml'), 'schema: spec-driven\n');
+  fs.writeFileSync(path.join(root, 'openspec/specs/cap-a/spec.md'), [
+    '# cap-a Specification', '', '## Purpose', 'Purpose of cap-a is the P4_6 Kt recovery fixture.', '',
+    '## Requirements', '', '### Requirement: Existing auth flow', 'The system SHALL authenticate users.', '',
+    '#### Scenario: Valid login', '- **WHEN** valid credentials', '- **THEN** access granted', '',
+  ].join('\n'));
+  const delta = [
+    '## MODIFIED Requirements', '', '### Requirement: Existing auth flow',
+    'The system SHALL authenticate users with rate limiting.', '',
+    '#### Scenario: Valid login', '- **WHEN** valid credentials', '- **THEN** access granted', '',
+    '## ADDED Requirements', '', '### Requirement: Audit trail', 'The system SHALL log auth events.', '',
+    '#### Scenario: Login logged', '- **WHEN** any login attempt', '- **THEN** audit record written', '',
+  ].join('\n');
+  const changeDir = path.join(root, 'openspec/changes/demo');
+  fs.writeFileSync(path.join(changeDir, 'proposal.md'),
+    '## Why\nThe P4_6 Kt recovery case needs a real change with a meaningful why section.\n\n## What Changes\nRate-limit the auth flow and add an audit trail.\n\n## Impact\ncap-a.\n');
+  fs.writeFileSync(path.join(changeDir, 'tasks.md'),
+    '- [ ] 1.1 Implement the managed archive proof. <!-- comet-task:task1 -->\n');
+  fs.writeFileSync(path.join(changeDir, 'design.md'),
+    '---\ncomet_change: demo\nrole: technical-design\ncanonical_spec: openspec\n---\n# Design\nOne original Runtime owns the archive transaction.\n');
+  fs.mkdirSync(path.join(changeDir, 'specs/cap-a'), { recursive: true });
+  fs.writeFileSync(path.join(changeDir, 'specs/cap-a/spec.md'), delta);
 
-// A real Git coordination world: delivery authorization + an archive commit
-// make the native delivery verification report complete (H01/step 9).
-const makeGitWorld = async (name) => {
-  const gitRoot = path.join(scratch, name);
-  await fs.mkdir(gitRoot, { recursive: true });
-  const git = (args, cwd = gitRoot) => {
-    const result = spawnSync('git', ['-c', 'commit.gpgsign=false', ...args], { cwd, encoding: 'utf8', env: childEnv({}, gitRoot) });
-    assert.equal(result.status, 0, `git ${args.join(' ')} failed: ${plain(result.stderr).slice(0, 200)}`);
-    return result.stdout.trim();
+  const prior = { HOME: process.env.HOME, COMET_OPENSPEC: process.env.COMET_OPENSPEC };
+  process.env.HOME = home;
+  process.env.COMET_OPENSPEC = openspecCli;
+  const commands = [];
+  const cli = async (argv) => {
+    const result = await native.runClassicCli(['--json', ...argv], undefined,
+      { projectRoot: root, invocationCwd: root });
+    commands.push({ argv, exitCode: result.exitCode,
+      stdout: (result.stdout ?? '').slice(0, 2000), stderr: (result.stderr ?? '').slice(0, 2000) });
+    return result;
   };
-  git(['init', '-b', 'main']);
-  git(['config', 'user.email', 'p46@example.test']);
-  git(['config', 'user.name', 'p46']);
-  git(['commit', '--allow-empty', '-m', 'world init']);
-  const gitInit = comet(['init', gitRoot, '--yes', '--scope', 'project', '--workflow', 'classic', '--platform', 'claude', '--codegraph', 'skip', '--language', 'en'], { root: gitRoot, timeout: 300_000 });
-  assert.equal(gitInit.status, 0, `comet init (git world) failed: ${plain(gitInit.stderr).slice(0, 300)}`);
-  return { gitRoot, git };
-};
-
-// Drive through the real archive move: archived=true with the knowledge
-// closeout obligation unmet (the post-archive continuation state).
-async function driveToArchived(change, options = {}) {
-  await driveToArchiveReady(change, options);
-  const root = options.root ?? project;
-  assert.equal(comet(['archive', change, '--json'], { root }).status, 0, plain(comet(['archive', change]).stderr ?? ''));
-  return archivedDir(change, root);
-}
-
-const stateDigests = async (dir) => {
-  const read = async (relative) => {
-    try { return sha256(await fs.readFile(path.join(dir, relative), 'utf8')); } catch { return 'missing'; }
+  const ok = async (argv) => {
+    const result = await cli(argv);
+    assert.equal(result.exitCode, 0, `${argv.join(' ')} -> exit ${result.exitCode}: ${(result.stderr ?? result.stdout ?? '').slice(0, 400)}`);
+    return result;
   };
-  return {
-    yaml: await read('.comet.yaml'),
-    run: await read(path.join('.comet', 'run-state.json')),
-    dispatches: await read(path.join('.comet', 'gate-dispatches.json')),
-  };
-};
-
-const skipIfNoBuild = (t) => {
-  if (!prepared || !built) {
-    t.skip('patched Comet build is not present in this project; run tools/comet/prepare-source.mjs && tools/comet/build.mjs --archive first');
-    return true;
-  }
-  return false;
-};
-
-test('setup: the build is manifest-verified and carries the 0003 post-archive extension', (t) => {
-  if (skipIfNoBuild(t)) return;
-  assert.notEqual(fingerprint, F2, 'the 0003 post-archive patch must produce a new fingerprint');
-  assert.equal(has0003, true, 'the lock must register 0003-post-archive-closeout.patch');
-  const version = comet(['--version']);
-  assert.equal(version.status, 0);
-  assert.equal((version.stdout ?? '').trim(), lock.package.version);
-  assert.equal(worldReady, true, 'the scratch worlds must be comet-init (classic) projects');
-});
-
-// World setup runs at load (guarded on the build) so the probes below always
-// exercise real behavior; without a build every test skips instead.
-let worldReady = false;
-if (prepared && built) {
-  const init = comet(['init', project, '--yes', '--scope', 'project', '--workflow', 'classic', '--platform', 'claude', '--codegraph', 'skip', '--language', 'en'], { timeout: 300_000 });
-  if (init.status === 0) worldReady = true;
-  else process.stderr.write(`comet init (classic) failed: ${plain(init.stderr).slice(0, 400)}\n`);
-}
-
-test('H02: repeated method hooks stay advisory — no execution claim, no dispatch, no gate movement', async (t) => {
-  if (skipIfNoBuild(t)) return;
-  const change = 'p46-h02';
-  await writeArtifacts(change);
-  assert.equal(comet(['state', 'init', change, 'full', '--managed-delivery', '--knowledge-closeout-required', 'true', '--json']).json?.exitCode, 0);
-  assert.equal(comet(['state', 'select', change, '--json']).json?.exitCode, 0);
-  const rel = `docs/openspec/changes/${change}`;
-  comet(['state', 'set', change, 'design_doc', `${rel}/design.md`, 'test_intent', `${rel}/test-intent.md`, 'plan', `docs/superpowers/plans/${change}-plan.md`, '--json']);
-  comet(['state', 'transition', change, 'open-complete', '--json']);
-  acceptAll(change, ['R']);
-  // An open review dispatch is in flight; the hook storm must not touch it.
-  const dispatched = comet(['state', 'dispatch-gate', change, 'A', '--json']);
-  assert.equal(dispatched.json?.exitCode, 0);
-  const before = await stateDigests(changeDir(change));
-  const gatesBefore = comet(['state', 'gates', change, '--json']).json?.data?.evaluation;
-  const router = path.join(project, '.claude/skills/comet/scripts/comet-hook-router.mjs');
-  const hookPayload = (event, mode) => JSON.stringify({
-    session_id: `p46-hook-${Math.random().toString(36).slice(2)}`,
-    hook_event_name: event,
-    cwd: project,
-    ...(event === 'PreToolUse'
-      ? { tool_name: 'Write', tool_input: { file_path: path.join(project, 'src/feature.js'), content: 'probe' } }
-      : { ...(mode ? { mode } : {}) }),
-  });
-  for (const [event, mode] of [
-    ['SessionStart', undefined], ['SessionStart', undefined], ['SubagentStart', undefined],
-    ['UserPromptSubmit', 'plan'], ['SessionStart', 'bypassPermissions'],
-  ]) {
-    const probe = spawnSync(nodeExecutable, [router, '--platform', 'claude', '--project-root', project], {
-      cwd: project, encoding: 'utf8', timeout: 60_000,
-      input: hookPayload(event, mode), env: childEnv(),
+  const childEnv = { ...process.env };
+  delete childEnv.NODE_TEST_CONTEXT;
+  const subprocess = (argv) => {
+    const result = spawnSync(pinnedNode, [cometEntrypoint, ...argv, '--json'], {
+      cwd: root, encoding: 'utf8', timeout: 240_000, maxBuffer: 64 * 1024 * 1024, env: childEnv,
     });
-    assert.equal(probe.status, 0, `hook ${event} must stay advisory, got ${probe.status}: ${plain(probe.stderr).slice(0, 200)}`);
-    const decision = JSON.parse(probe.stdout || '{}');
-    assert.notEqual(decision.permissionDecision ?? decision.decision, 'deny', `advisory hook ${event} denied a session event`);
-  }
-  const after = await stateDigests(changeDir(change));
-  assert.deepEqual(after, before, 'repeated method hooks must not mutate Run state, receipts or the dispatch registry');
-  const gatesAfter = comet(['state', 'gates', change, '--json']).json?.data?.evaluation;
-  assert.deepEqual(gatesAfter?.missing, gatesBefore?.missing, 'a mode change must not alter the managed gate evaluation');
-  // The resume-probe entrance is equally read-only over the same state.
-  const probeRun = comet(['resume-probe', JSON.stringify({ utterance: 'continue', agent_context: { non_trivial_work: true, already_in_comet_flow: false } }), '--json']);
-  assert.equal(probeRun.status, 0, plain(probeRun.stderr).slice(0, 200));
-  const afterProbe = await stateDigests(changeDir(change));
-  assert.deepEqual(afterProbe, before, 'the resume probe must not write Run state');
-});
-
-test('H06: review job keys — an open job recovers in place; stale attempts cannot complete; new revisions keep their own manifest', async (t) => {
-  if (skipIfNoBuild(t)) return;
-  const change = 'p46-h06';
-  await writeArtifacts(change);
-  assert.equal(comet(['state', 'init', change, 'full', '--managed-delivery', '--knowledge-closeout-required', 'true', '--json']).json?.exitCode, 0);
-  assert.equal(comet(['state', 'select', change, '--json']).json?.exitCode, 0);
-  const rel = `docs/openspec/changes/${change}`;
-  comet(['state', 'set', change, 'design_doc', `${rel}/design.md`, 'test_intent', `${rel}/test-intent.md`, 'plan', `docs/superpowers/plans/${change}-plan.md`, '--json']);
-  comet(['state', 'transition', change, 'open-complete', '--json']);
-  acceptAll(change, ['R']);
-  const first = comet(['state', 'dispatch-gate', change, 'A', '--json']);
-  assert.equal(first.json?.exitCode, 0);
-  const firstBinding = first.json?.data?.dispatch;
-  // Session restart re-reads the same job: the SAME open operation must come
-  // back, not a second dispatch over the same inputs.
-  const again = comet(['state', 'dispatch-gate', change, 'A', '--json']);
-  assert.equal(again.json?.exitCode, 0);
-  const againBinding = again.json?.data?.dispatch;
-  assert.equal(againBinding.execution, firstBinding.execution, 'the same open job_key must recover the original dispatch');
-  assert.equal(againBinding.attempt, firstBinding.attempt, 'a recovered job is not a new attempt');
-  const registryPath = path.join(changeDir(change), '.comet', 'gate-dispatches.json');
-  const registry = JSON.parse(await fs.readFile(registryPath, 'utf8'));
-  const openForVersion = registry.dispatches.filter((d) => d.gate === 'A' && d.state === 'open');
-  assert.equal(openForVersion.length, 1, 'exactly one open dispatch may exist per job key');
-  // The accepted result consumes the dispatch; a late duplicate is refused.
-  acceptGate(change, 'A');
-  const late = path.join(scratch, 'h06-late.json');
-  await fs.writeFile(late, JSON.stringify({ execution: firstBinding.execution, attempt: firstBinding.attempt, verdict: 'pass' }));
-  const replay = comet(['state', 'accept-gate', change, 'A', '--file', late, '--json']);
-  assert.equal(replay.json?.exitCode !== 0, true, 'a consumed dispatch accepts exactly one result');
-  // A design revision creates a NEW job key: its own manifest/attempt space,
-  // and the old entry stays in the registry as history.
-  await fs.writeFile(path.join(changeDir(change), 'design.md'), `---\ncomet_change: ${change}\nrole: technical-design\ncanonical_spec: openspec\n---\n\n# Design\n\nRevised design (v2).\n`);
-  const revised = comet(['state', 'dispatch-gate', change, 'A', '--json']);
-  assert.equal(revised.json?.exitCode, 0);
-  const revisedBinding = revised.json?.data?.dispatch;
-  assert.equal(revisedBinding.attempt, 1, 'the attempt counter is per input version');
-  assert.notEqual(revisedBinding.inputDigest, firstBinding.inputDigest, 'a revised review package is a different job key');
-  // A result bound to the OLD (superseded) attempt cannot complete the new job.
-  const stale = path.join(scratch, 'h06-stale.json');
-  await fs.writeFile(stale, JSON.stringify({ execution: firstBinding.execution, attempt: firstBinding.attempt, verdict: 'pass' }));
-  const staleRefused = comet(['state', 'accept-gate', change, 'A', '--file', stale, '--json']);
-  assert.equal(staleRefused.json?.exitCode !== 0, true, 'an old attempt result cannot complete the new task');
-  const history = JSON.parse(await fs.readFile(registryPath, 'utf8'));
-  assert.ok(history.dispatches.length >= 2, 'old job history is retained, not deleted');
-});
-
-test('H03: same job_key claim is atomic — concurrent dispatchers converge on one open owner', async (t) => {
-  if (skipIfNoBuild(t)) return;
-  const change = 'p46-h03';
-  await writeArtifacts(change);
-  assert.equal(comet(['state', 'init', change, 'full', '--managed-delivery', '--knowledge-closeout-required', 'true', '--json']).json?.exitCode, 0);
-  assert.equal(comet(['state', 'select', change, '--json']).json?.exitCode, 0);
-  const rel = `docs/openspec/changes/${change}`;
-  comet(['state', 'set', change, 'design_doc', `${rel}/design.md`, 'test_intent', `${rel}/test-intent.md`, 'plan', `docs/superpowers/plans/${change}-plan.md`, '--json']);
-  comet(['state', 'transition', change, 'open-complete', '--json']);
-  acceptAll(change, ['R']);
-  // Two sessions race the same job_key through the real CLI at once.
-  const racer = () => new Promise((resolve) => {
-    const child = spawn(nodeExecutable, [entrypoint, 'state', 'dispatch-gate', change, 'A', '--json'], {
-      cwd: project, env: childEnv(),
-    });
-    let out = '';
-    child.stdout.on('data', (chunk) => { out += chunk; });
-    child.on('close', (code) => resolve({ code, out }));
-  });
-  const [left, right] = await Promise.all([racer(), racer()]);
-  assert.equal(left.code, 0, `the first claimant must resolve the job: ${plain(left.out).slice(0, 200)}`);
-  assert.equal(right.code, 0, `the second claimant must resolve the job: ${plain(right.out).slice(0, 200)}`);
-  const parse = (output) => {
-    const parsed = JSON.parse(output.trim().split('\n').pop());
-    return parsed.data?.dispatch ?? parsed;
+    let json = null;
+    try { json = JSON.parse(result.stdout ?? ''); } catch { /* keep raw */ }
+    commands.push({ argv: ['<subprocess>', ...argv], exitCode: result.status,
+      stdout: (result.stdout ?? '').slice(0, 2000), stderr: (result.stderr ?? '').slice(0, 500) });
+    return { ...result, json };
   };
-  const leftBinding = parse(left.out);
-  const rightBinding = parse(right.out);
-  assert.equal(leftBinding.execution, rightBinding.execution, 'both sessions must observe the same open operation');
-  assert.equal(leftBinding.attempt, rightBinding.attempt, 'no second attempt may be minted for the same open job');
-  const registry = JSON.parse(await fs.readFile(path.join(changeDir(change), '.comet', 'gate-dispatches.json'), 'utf8'));
-  const openForVersion = registry.dispatches.filter((d) => d.gate === 'A' && d.inputDigest === leftBinding.inputDigest);
-  assert.equal(openForVersion.length, 1, 'the registry holds exactly one open dispatch for the job key');
-  // The single owner accepts; the claim is consumed exactly once.
-  acceptGate(change, 'A', { execution: leftBinding.execution, attempt: leftBinding.attempt });
-});
+  const sections = {};
+  const proof = (id, expected, actual, observed = undefined) => {
+    assert.deepEqual(actual, expected, id);
+    sections[id] = { expected, actual, ...(observed === undefined ? {} : { observed }) };
+  };
+  const archiveDirs = () => fs.readdirSync(path.join(root, 'openspec/changes/archive'));
+  const mainSpec = () => fs.readFileSync(path.join(root, 'openspec/specs/cap-a/spec.md'), 'utf8');
+  const step = (name) => process.stderr.write(`[p46-step] ${name}\n`);
 
-test('H07: the native archive path keeps the run open — status, continuation and completion disagree with completed', async (t) => {
-  if (skipIfNoBuild(t)) return;
-  const change = 'p46-h07';
-  const dir = await driveToArchived(change);
-  // H07: archived proves the spec operation; the run itself must not be
-  // completed nor lose its recovery entry through the native completed path.
-  const run = await runStateOf(dir);
-  assert.notEqual(run.status, 'completed', 'a closeout-pending run must not be stamped completed by the archive path');
-  assert.equal(run.currentStep, 'full.closeout.knowledge');
-  const next = comet(['state', 'next', change, '--json']);
-  assert.equal(next.json?.data?.nextAction?.kind, 'knowledge-closeout');
-  const gates = comet(['state', 'gates', change, '--json']);
-  assert.equal(gates.json?.data?.completionBlocked, true);
-  // R06 four-fact separation: at this instant all four closeout facts coexist
-  // and stay distinct — (1) the product candidate acceptance is a recorded V
-  // receipt, (2) the spec archive happened, (3) the team knowledge seat is
-  // still empty, (4) the overall delivery is not completed. No fact implies
-  // another.
-  const vReceipt = gates.json?.data?.receipts?.find((entry) => entry.gate === 'V');
-  assert.equal(vReceipt?.verdict, 'pass', 'fact 1: the product candidate acceptance is its own recorded V receipt');
-  assert.equal(vReceipt?.execution?.length > 0, true, 'fact 1 binds its own dispatch execution');
-  assert.notEqual(run.status, 'completed', 'fact 2+3 do not imply fact 4: archived with an empty seat is not completed');
-  assert.equal(gates.json?.data?.knowledgeCloseoutRecorded, false, 'fact 3: the team knowledge seat is its own empty fact');
-  assert.equal(gates.json?.data?.knowledgeCloseoutRequired, true);
-  // Selection: the archive command must not have cleared the current-change
-  // recovery entry while the closeout is pending (needsAuthorization here).
-  const selection = JSON.parse(await fs.readFile(path.join(project, '.comet', 'current-change.json'), 'utf8'));
-  assert.equal(selection.selection?.change ?? selection.change, change, 'the closeout-pending run keeps its selection entry');
-  // Close the seat: only now does the same run complete.
-  const knowledgeFile = path.join(project, 'knowledge', `llmwiki-${change}.md`);
-  await fs.mkdir(path.dirname(knowledgeFile), { recursive: true });
-  await fs.writeFile(knowledgeFile, '# Project Knowledge\n\nPost-archive closeout probe.\n');
-  const receipt = path.join(scratch, `kc-${change}.json`);
-  await fs.writeFile(receipt, JSON.stringify({
-    targetKind: 'file',
-    target: path.relative(project, knowledgeFile),
-    revision: 'r1',
-    readbackDigest: sha256(await fs.readFile(knowledgeFile, 'utf8')),
-    execution: 'driver-exec-h07',
-    recordedAt: new Date().toISOString(),
-  }));
-  const recorded = comet(['state', 'knowledge-closeout', change, '--file', receipt, '--json']);
-  assert.equal(recorded.json?.exitCode, 0, plain(recorded.stderr).slice(0, 300));
-  const runAfter = await runStateOf(dir);
-  assert.equal(runAfter.status, 'completed', 'the same run completes only after the knowledge seat is filled');
-  void dir;
-});
-
-test('Kp before seal: the archive phase gate refuses the unmet obligation and an external closeout needs the Runtime K dispatch', async (t) => {
-  if (skipIfNoBuild(t)) return;
-  const change = 'p46-kp';
-  await driveToArchiveReady(change);
-  // Driver gate (Kp before seal, Knowledge.Closeout.v1): the archive phase
-  // refuses while the run-level knowledge obligation is unmet…
-  const premature = comet(['guard', change, 'archive']);
-  assert.equal(premature.status !== 0, true, 'the archive phase gate must refuse before the knowledge obligation is sealed');
-  assert.match(refusalText(premature), /run-level knowledge closeout obligation/);
-  assert.match(refusalText(premature), /archived does not complete this run/);
-  // …and an external closeout without a Runtime K dispatch is refused —
-  // driver-registered publication is required (the P3_2 same-run journey
-  // step 7 enforcement face).
-  const externalNoDispatch = path.join(scratch, `kp-external-nodispatch-${change}.json`);
-  await fs.writeFile(externalNoDispatch, JSON.stringify({
-    targetKind: 'external',
-    target: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
-    revision: 'rev-1',
-    readbackDigest: sha256('approved payload'),
-    execution: 'kp-no-such-execution',
-    recordedAt: new Date().toISOString(),
-  }));
-  const refusedExternal = comet(['state', 'knowledge-closeout', change, '--file', externalNoDispatch, '--json']);
-  assert.equal(refusedExternal.json?.exitCode !== 0, true, 'an external closeout without a Runtime K dispatch is refused');
-  assert.match(refusalText(refusedExternal), /no Runtime K dispatch/);
-  // Kp-first order: once the seat is sealed BEFORE the archive (the same-run
-  // seal route the refusal names), the obligation check clears and the same
-  // archive completes the run.
-  const knowledgeFile = path.join(project, 'knowledge', `llmwiki-${change}.md`);
-  await fs.mkdir(path.dirname(knowledgeFile), { recursive: true });
-  await fs.writeFile(knowledgeFile, '# Project Knowledge\n\nKp sealed before the archive.\n');
-  const receipt = path.join(scratch, `kc-${change}.json`);
-  await fs.writeFile(receipt, JSON.stringify({
-    targetKind: 'file',
-    target: path.relative(project, knowledgeFile),
-    revision: 'r1',
-    readbackDigest: sha256(await fs.readFile(knowledgeFile, 'utf8')),
-    execution: 'driver-exec-kp',
-    recordedAt: new Date().toISOString(),
-  }));
-  const sealed = comet(['state', 'knowledge-closeout', change, '--file', receipt, '--json']);
-  assert.equal(sealed.json?.exitCode, 0, `the Kp seal must record before the archive: ${plain(sealed.stderr).slice(0, 300)}`);
-  const cleared = comet(['guard', change, 'archive']);
-  assert.doesNotMatch(refusalText(cleared), /obligation is unmet/, 'after the seal the archive phase obligation check clears');
-  assert.equal(comet(['archive', change, '--json']).status, 0, 'the sealed run archives cleanly');
-  assert.equal((await runStateOf(await archivedDir(change))).status, 'completed', 'Kp sealed before the archive: the archive itself completes the same run');
-});
-
-test('H01: Git-delivery-complete but knowledge-pending — discovery, selection and re-entry still find the original run', async (t) => {
-  if (skipIfNoBuild(t)) return;
-  // A real Git coordination root: delivery authorization + an archive commit
-  // make the native delivery verification report complete.
-  const { gitRoot, git } = await makeGitWorld('git-world');
-  const change = 'p46-h01';
-  await driveToArchiveReady(change, { root: gitRoot });
-  // Authorization is recorded pre-archive (archive phase, verify pass, not
-  // archived). Progress input files live inside the project path base.
-  const authFile = path.join(gitRoot, 'h01-delivery-auth.json');
-  await fs.writeFile(authFile, JSON.stringify({ action: 'local', targetBranch: 'main' }));
-  assert.equal(comet(['state', 'delivery', change, '--file', 'h01-delivery-auth.json', '--json'], { root: gitRoot }).json?.exitCode, 0, refusalText(comet(['state', 'delivery', change, '--file', 'h01-delivery-auth.json'], { root: gitRoot })));
-  const dir = await (async () => {
-    assert.equal(comet(['archive', change, '--json'], { root: gitRoot }).status, 0);
-    return archivedDir(change, gitRoot);
-  })();
-  git(['add', '-A']);
-  git(['commit', '-m', 'archive p46-h01']);
-  const commit = git(['rev-parse', 'HEAD']);
-  const commitFile = path.join(gitRoot, 'h01-delivery-commit.json');
-  await fs.writeFile(commitFile, JSON.stringify({ action: 'local', targetBranch: 'main', commit }));
-  const deliveryWrite = comet(['state', 'delivery', change, '--file', 'h01-delivery-commit.json', '--json'], { root: gitRoot });
-  await fs.rm(commitFile);
-  assert.equal(deliveryWrite.json?.exitCode, 0, refusalText(deliveryWrite).slice(0, 400));
-  const delivery = comet(['state', 'delivery', change, '--json'], { root: gitRoot });
-  assert.equal(delivery.json?.data?.verification?.status, 'complete', 'the fixture must reach a complete Git delivery verification');
-  const runIdBefore = (await runStateOf(dir)).runId;
-  // H01 discovery: the resume probe must still find the pending archived run.
-  const probe = comet(['resume-probe', JSON.stringify({ utterance: 'continue', agent_context: { non_trivial_work: true, already_in_comet_flow: false } }), '--json'], { root: gitRoot });
-  let resolution = {};
   try {
-    resolution = probe.json?.action ? probe.json : JSON.parse(probe.json?.stdout ?? probe.stdout ?? '{}');
-  } catch {
-    resolution = { action: undefined, reason: plain(probe.stdout).slice(0, 200) };
+    step('drive-start');
+    // ---- the real drive, every step the public state/check surface ----------
+    await ok(['state', 'init', 'demo', 'full']);
+    await ok(['state', 'transition', 'demo', 'open-complete']);
+    await ok(['state', 'set', 'demo', 'design_doc', 'openspec/changes/demo/design.md']);
+    await ok(['state', 'complete-design', 'demo', '--design-doc', 'openspec/changes/demo/design.md']);
+    await ok(['state', 'set', 'demo', 'build_mode', 'autonomous', 'tdd_mode', 'tdd', 'isolation', 'current']);
+    const tasksRun = await ok(['state', 'tasks', 'demo', '--assign-ids']);
+    const tasksData = JSON.parse(tasksRun.stdout).data ?? {};
+    const task = (tasksData.tasks ?? [])[0];
+    assert.ok(task?.id, 'state tasks --assign-ids must return the stable task id');
+    await ok(['state', 'task-complete', 'demo', task.id, '--expect', tasksData.revision]);
+    fs.writeFileSync(path.join(root, 'docs/superpowers/plans/plan.md'),
+      `<!-- comet-task-authority: openspec/changes/demo/tasks.md -->\n# Plan\n\nStep one covers the task <!-- comet-task-ref:${task.id} -->.\n`);
+    await ok(['state', 'set', 'demo', 'plan', 'docs/superpowers/plans/plan.md']);
+    await ok(['check', 'run', 'demo', 'build', '--', process.execPath, '-e', '0']);
+    await ok(['state', 'transition', 'demo', 'build-complete']);
+    fs.writeFileSync(path.join(root, '.whitebox/verification.md'),
+      '# Component evidence\nP4_6 post-archive Kt recovery world.\n');
+    await ok(['state', 'set', 'demo', 'verification_report', '.whitebox/verification.md']);
+    await ok(['check', 'run', 'demo', 'verify', '--', process.execPath, '-e', '0']);
+    await ok(['state', 'transition', 'demo', 'verify-pass']);
+    await ok(['state', 'transition', 'demo', 'archive-confirm']);
+
+    step('drive-done');
+    // ---- Kp BEFORE the archive: the managed single-closeout-owner seal over a
+    // public-face seal read (Knowledge.Closeout.v1: Kp before every archive).
+    const { sealCloseout, knowledgeCloseoutBlocked } = await import(pathToFileURL(path.join(projectRoot, 'lib/adapters/comet.js')).href);
+    const sealRead = await ok(['state', 'get', 'demo', 'phase', 'verify_result', 'archive_confirmation', 'archived']);
+    const sealFields = JSON.parse(sealRead.stdout).data?.fields ?? {};
+    const seal = {
+      change: 'demo',
+      phase: sealFields.phase,
+      verifyResult: sealFields.verify_result,
+      archiveConfirmation: sealFields.archive_confirmation,
+      archived: sealFields.archived === 'true',
+    };
+    const kpKnowledge = { id: 'k-project-closeout-demo', digest: sha256('# Project Knowledge\n\nKp sealed before the archive.\n') };
+    const sealed = sealCloseout({ seal, execution: 'p46-exec-kp', knowledgeCloseout: kpKnowledge });
+    proof('KP_SEALED_BEFORE_ARCHIVE', true, sealed.archived === true);
+
+    // The run identity is fixed before the archive move.
+    const runIdRead = await ok(['state', 'get', 'demo', 'run_id']);
+    const runIdBefore = (JSON.parse(runIdRead.stdout).data?.fields ?? {}).run_id;
+    assert.ok(runIdBefore, 'state get run_id must answer on the active change');
+
+    // ---- the REAL archive through the managed adapter (native = exactly one
+    // `comet archive`, which invokes the pinned openspec CLI exactly once).
+    const { createManagedSpecAdapter } = await import(pathToFileURL(path.join(projectRoot, 'lib/adapters/spec.js')).href);
+    const runModule = await import(pathToFileURL(path.join(work, 'dist/domains/comet-classic/classic-runtime-run.js')).href);
+    const spec = createManagedSpecAdapter({
+      runtime: { runClassicCli: native.runClassicCli, ensureClassicRuntimeRun: runModule.ensureClassicRuntimeRun },
+      projectRoot: root,
+    });
+    const beforeArchive = spec.inspect({ change: 'demo' });
+    proof('PRE_ARCHIVE_INSPECT', { archived: false, phase: 'archive' },
+      { archived: beforeArchive.archived, phase: beforeArchive.phase });
+
+    const archiveResult = await spec.closeout({ change: 'demo' });
+    assert.equal(archiveResult.ok, true, `managed closeout failed: ${JSON.stringify(archiveResult).slice(0, 400)}`);
+    proof('ARCHIVE_OK_SAME_RUN', runIdBefore, archiveResult.runId);
+    proof('ARCHIVE_READBACK_OK', true, archiveResult.readback.ok);
+    proof('ARCHIVE_NOT_OVERALL_COMPLETION', false, archiveResult.overallCompletionEligible);
+    proof('ONE_ARCHIVE_DIR_AFTER_CLOSEOUT', 1, archiveDirs().length);
+    const mainAfterArchive = mainSpec();
+    assert.match(mainAfterArchive, /#### Scenario: Valid login/, 'the synced main spec keeps the old scenario');
+
+    step('closeout-done');
+    // ---- KTA: post-archive same-Run discovery + blocked completion ----------
+    const nextAfter = JSON.parse((await ok(['state', 'next', 'demo'])).stdout);
+    proof('POST_ARCHIVE_NEXT_KIND', 'delivery', nextAfter.data?.nextAction?.kind);
+    proof('POST_ARCHIVE_PHASE_ARCHIVED', { phase: 'archive', archived: true }, {
+      phase: nextAfter.data?.configuration?.phase,
+      archived: nextAfter.data?.configuration?.archived,
+    });
+    proof('POST_ARCHIVE_GUIDANCE_NO_REARCHIVE', true,
+      /do not archive again/i.test(`${nextAfter.data?.nextAction?.reason ?? ''} ${nextAfter.stdout ?? ''}`));
+    step('next-done');
+    const archivedName = archiveDirs()[0];
+    const archivedChange = path.join(root, 'openspec/changes/archive', archivedName);
+
+    // The run record on disk (authoritative bytes, never CLI memory).
+    const store = await import(pathToFileURL(path.join(work, 'dist/domains/comet-classic/classic-store.js')).href);
+    const evidenceMod = await import(pathToFileURL(path.join(work, 'dist/domains/comet-classic/classic-evidence.js')).href);
+    const resolver = await import(pathToFileURL(path.join(work, 'dist/domains/comet-classic/classic-resolver.js')).href);
+    const projection = await store.readClassicState(archivedChange);
+    const evidence = await evidenceMod.collectClassicEvidence(archivedChange, projection);
+    proof('DISK_RUN_IDENTITY', runIdBefore, projection.run?.runId);
+    proof('DISK_CLASSIC_ARCHIVED', { archived: true, phase: 'archive' },
+      { archived: projection.classic.archived, phase: projection.classic.phase });
+
+    // 0005 LIVE at the patched resolver seam over the run's REAL state.
+    step('store-read');
+    const ktPending = { ...projection.classic, knowledgeCloseout: { required: true, completed: false } };
+    const ktDone = { ...projection.classic, knowledgeCloseout: { required: true, completed: true } };
+    proof('RESOLVER_KT_PENDING_PARKED', 'full.archive.execute', resolver.resolveClassicStepId(ktPending, evidence));
+    proof('RESOLVER_KT_PENDING_NOT_COMPLETED', false, resolver.resolveClassicStepId(ktPending, evidence) === 'completed');
+    proof('RESOLVER_KT_DONE_COMPLETED', 'completed', resolver.resolveClassicStepId(ktDone, evidence));
+    proof('RESOLVER_FIELD_ABSENT_FAIL_OPEN', 'completed', resolver.resolveClassicStepId(projection.classic, evidence));
+    proof('RESOLVER_FIELD_NULL_FAIL_OPEN', 'completed',
+      resolver.resolveClassicStepId({ ...projection.classic, knowledgeCloseout: null }, evidence));
+    proof('RESOLVER_NOT_REQUIRED_FAIL_OPEN', 'completed',
+      resolver.resolveClassicStepId({ ...projection.classic, knowledgeCloseout: { required: false, completed: false } }, evidence));
+    // The managed mirror predicate agrees on every 0005 truth-table row over
+    // the same real state (the lib mirror is the driver-side twin of 0005).
+    for (const [label, state, expectedBlocked] of [
+      ['absent', projection.classic, false],
+      ['null', { ...projection.classic, knowledgeCloseout: null }, false],
+      ['pending', ktPending, true],
+      ['done', ktDone, false],
+      ['not_required', { ...projection.classic, knowledgeCloseout: { required: false } }, false],
+    ]) {
+      proof(`MIRROR_TRUTH_TABLE_${label.toUpperCase()}`, expectedBlocked, knowledgeCloseoutBlocked(state));
+    }
+
+    // The same-Run recovery entry keeps discovering the pending Kt.
+    step('recover-enter');
+    const pending = await spec.recover({ change: 'demo' });
+    proof('RECOVER_SAME_RUN', runIdBefore, pending.runId);
+    proof('RECOVER_ARCHIVED_NOT_COMPLETED', { archived: true, eligible: false },
+      { archived: pending.archived, eligible: pending.overallCompletionEligible });
+
+    // ---- KTB: the write path is the state field; the public face refuses it --
+    const writeRefused = await cli(['state', 'set', 'demo', 'knowledgeCloseout.completed', 'true']);
+    proof('KT_FIELD_WRITE_FACE_REFUSED', 1, writeRefused.exitCode);
+    proof('KT_FIELD_WRITE_FACE_CODE', 'CLASSIC_FIELD_UNKNOWN',
+      writeRefused.exitCode === 0 ? null : (JSON.parse(writeRefused.stdout ?? '{}').data?.issues ?? [{}])[0]?.code);
+    sections.KT_FIELD_WRITE_FACE = {
+      expected: 'the 0.5.0 public state face has no knowledgeCloseout write (supply/admission wave)',
+      actual: 'state set refused with CLASSIC_FIELD_UNKNOWN over the real archived run',
+      observed: (JSON.parse(writeRefused.stdout ?? '{}').data?.issues?.[0]?.message ?? '').slice(0, 200),
+    };
+
+    step('writeface-done');
+    // ---- KTD: unknown keeps the ORIGINAL handle (same-Run ledger semantics) --
+    const outline = await import(pathToFileURL(path.join(projectRoot, 'lib/adapters/outline.js')).href);
+    const capability = 'k-team-closeout-demo';
+    const payload = '# Team Knowledge\n\nPost-archive Kt closeout for demo.\n';
+    const payloadDigest = sha256(payload);
+    const documentId = outline.deriveOutlineTargetId({ change: 'demo', capability });
+    const operation = {
+      knowledgeId: capability,
+      operationKey: `demo:${capability}:epoch-0:op1`,
+      documentId,
+      collection: 'engineering',
+      payloadDigest,
+      state: 'pending',
+    };
+    operation.lastObservation = outline.buildTimeoutObservation({ operation, at: new Date(0).toISOString() });
+    const ledger = { schemaVersion: 1, interface: 'comet.classic.knowledge-publish.v1', operations: [operation] };
+    const required = [{ capability, digest: payloadDigest }];
+
+    const unknownJudged = outline.evaluateKtFromLedger({ required, ledger });
+    proof('KT_UNKNOWN_BLOCKED', false, unknownJudged.ok);
+    proof('KT_UNKNOWN_CODE', 'PUBLICATION_UNKNOWN', unknownJudged.blocked[0]?.code);
+    assert.match(unknownJudged.blocked[0]?.reason ?? '', /unknown is never absence/,
+      'the blocked reason names the unknown-is-never-absence rule');
+    proof('KT_TARGET_ID_DETERMINISTIC', documentId,
+      outline.deriveOutlineTargetId({ change: 'demo', capability }));
+    const differentCapabilityId = outline.deriveOutlineTargetId({ change: 'demo', capability: 'k-other' });
+    assert.notEqual(differentCapabilityId, documentId, 'a different logical entry derives a different fixed target');
+
+    // Recovery can only query the ORIGINAL operation — never a second publish.
+    const refusedDirective = { action: 'readback', documentId };
+    let directiveRefusal = null;
+    try { outline.buildPublishRequest({ directive: refusedDirective, operation }); }
+    catch (error) { directiveRefusal = error.code; }
+    proof('KT_UNKNOWN_DIRECTIVE_NOT_EXECUTABLE', 'DIRECTIVE_NOT_EXECUTABLE', directiveRefusal);
+    let foreignTargetRefusal = null;
+    try { outline.buildPublishRequest({ directive: { action: 'create', documentId: differentCapabilityId }, operation }); }
+    catch (error) { foreignTargetRefusal = error.code; }
+    proof('KT_FOREIGN_TARGET_REFUSED', 'TARGET_ID_MISMATCH', foreignTargetRefusal);
+    let unknownReceiptRefusal = null;
+    try { outline.buildCloseoutReceipt({ operation, observation: operation.lastObservation, execution: 'p46-exec-kt' }); }
+    catch (error) { unknownReceiptRefusal = error.code; }
+    proof('KT_RECEIPT_FROM_UNKNOWN_REFUSED', 'PUBLICATION_UNKNOWN', unknownReceiptRefusal);
+
+    // Only a two-channel independent readback of the SAME operation satisfies.
+    const readback = outline.buildReadbackObservation({
+      operation, revision: 'rev-1', readbackDigest: payloadDigest,
+      readbacks: [{ channel: 'api', digest: payloadDigest }, { channel: 'web', digest: payloadDigest }],
+    });
+    proof('KT_READBACK_OUTCOME_EXISTS', { outcome: 'exists', documentId },
+      { outcome: readback.outcome, documentId: readback.documentId });
+    const publishedLedger = {
+      ...ledger,
+      operations: [{ ...operation, state: 'published', lastObservation: readback }],
+    };
+    const publishedJudged = outline.evaluateKtFromLedger({ required, ledger: publishedLedger });
+    proof('KT_READBACK_SATISFIES', true, publishedJudged.ok);
+    proof('KT_SATISFIED_SAME_DOCUMENT', documentId, publishedJudged.satisfied[0]?.documentId);
+    const receipt = outline.buildCloseoutReceipt({
+      operation, observation: readback, execution: 'p46-exec-kt', recordedAt: new Date(0).toISOString(),
+    });
+    proof('KT_RECEIPT_TARGET_IS_ORIGINAL', documentId, receipt.target);
+
+    // The SAME-Run completion composition: Kt done flips the resolver row, the
+    // mirror predicate agrees, and the ledger satisfies — all three together.
+    proof('COMPLETION_COMPOSED', true,
+      resolver.resolveClassicStepId(ktDone, evidence) === 'completed'
+        && !knowledgeCloseoutBlocked(ktDone)
+        && publishedJudged.ok);
+
+    step('ktd-done');
+    // ---- KTC: repeated hooks/callbacks/restart never re-archive -------------
+    const again = await spec.closeout({ change: 'demo' });
+    proof('REPEATED_CLOSEOUT_RECONCILED', 'already-archived', again.reconciled);
+    proof('REPEATED_CLOSEOUT_ZERO_NATIVE', true, again.native === null);
+    proof('REPEATED_CLOSEOUT_SAME_RUN', runIdBefore, again.runId);
+    proof('REPEATED_CLOSEOUT_ONE_ARCHIVE', 1, archiveDirs().length);
+    proof('REPEATED_CLOSEOUT_MAIN_STABLE', sha256(mainAfterArchive), sha256(mainSpec()));
+
+    const nextReplays = [];
+    for (let replay = 1; replay <= 3; replay += 1) {
+      const next = JSON.parse((await ok(['state', 'next', 'demo'])).stdout);
+      nextReplays.push(next.data?.nextAction?.kind);
+    }
+    proof('REPEATED_NEXT_STABLE', ['delivery', 'delivery', 'delivery'], nextReplays);
+
+    step('restart-enter');
+    // A REAL fresh CLI process (restart) re-enters the archived run.
+    const restartArchive = subprocess(['archive', 'demo']);
+    proof('RESTART_ARCHIVE_EXIT', 0, restartArchive.status === 0 ? 0 : restartArchive.status);
+    proof('RESTART_ARCHIVE_ONE_DIR', 1, archiveDirs().length);
+    proof('RESTART_ARCHIVE_MAIN_STABLE', sha256(mainAfterArchive), sha256(mainSpec()));
+    const restartIdentity = subprocess(['state', 'get', 'demo', 'run_id']);
+    const restartRunId = restartIdentity.json?.data?.fields?.run_id
+      ?? (restartIdentity.status === 0 ? JSON.parse(restartIdentity.stdout).data?.fields?.run_id : null);
+    proof('RESTART_SAME_RUN_ID', runIdBefore, restartRunId);
+
+    step('restart-done');
+    // A second Kp seal is refused — the archive closeout is single-owner even
+    // though the upstream CLI converges idempotently.
+    let secondSealRefusal = null;
+    try { sealCloseout({ seal: { ...seal, archived: true }, execution: 'p46-exec-kp-2', knowledgeCloseout: kpKnowledge }); }
+    catch (error) { secondSealRefusal = error.code; }
+    proof('SECOND_KP_SEAL_REFUSED', 'ARCHIVE_ALREADY_SEALED', secondSealRefusal);
+
+    fs.writeFileSync(proofPath(), `${JSON.stringify({
+      scenario: 'post-archive-kt',
+      node: process.version,
+      buildFingerprint: cometFingerprint,
+      openspec: '1.11.0 (pinned, COMET_OPENSPEC seam)',
+      sections,
+      commands,
+      unverified: [
+        'the live Outline publication API (P4_4/VERIFY boundary): the judgment layer over the runtime publish ledger is the tested object here',
+        'the persisted write of the knowledgeCloseout state field through a 0.5.0 public command (supply/admission wave; proven at the patched resolver seam over the run real state instead)',
+        'the composition-package Run face to archive (P3_2 drove its R→P slice; the full composition journey to archive stays P4_4/VERIFY)',
+      ],
+    }, null, 2)}\n`);
+    process.stdout.write('P4_6 scenario post-archive-kt: PROOF-EMITTED\n');
+  } finally {
+    for (const [key, value] of Object.entries(prior)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    if (process.env.P46_KEEP_WORLD !== '1') fs.rmSync(scratch, { recursive: true, force: true });
+    else process.stderr.write(`P46 world kept at ${scratch}\n`);
   }
-  assert.equal(resolution.action, 'ask_user', `the pending archived run must be discovered, got ${resolution.action} (${resolution.reason}); raw ${plain(probe.stdout).slice(0, 200)}`);
-  assert.equal(resolution.changeName, change, 'discovery must name the archived change');
-  assert.match(resolution.reason ?? '', /archived/i);
-  // H01 selection: the archived closeout-pending change stays selectable and
-  // the archive path never cleared the recovery entry.
-  assert.equal(comet(['state', 'select', change, '--json'], { root: gitRoot }).json?.exitCode, 0, 'an archived closeout-pending run must remain selectable');
-  const selection = JSON.parse(await fs.readFile(path.join(gitRoot, '.comet', 'current-change.json'), 'utf8'));
-  assert.equal(selection.selection?.change ?? selection.change, change, 'the selection entry names the archived run');
-  const current = comet(['state', 'current', '--json'], { root: gitRoot });
-  assert.equal(current.status, 0, plain(current.stderr).slice(0, 200));
-  const currentName = String(current.json?.stdout ?? current.stdout ?? '').trim();
-  assert.equal(currentName, change, 'state current resolves the archived closeout-pending run');
-  // H01 continuation: next points at the closeout of the SAME run; the
-  // re-run archive command re-enters without archiving again.
-  const next = comet(['state', 'next', change, '--json'], { root: gitRoot });
-  assert.equal(next.json?.data?.nextAction?.kind, 'knowledge-closeout');
-  assert.equal(comet(['archive', change, '--json'], { root: gitRoot }).status, 0, 'archive re-entry must succeed without re-archiving');
-  const archiveEntries = await fs.readdir(path.join(gitRoot, 'docs/openspec/changes/archive'));
-  assert.equal(archiveEntries.filter((name) => name.endsWith(change)).length, 1, 're-entry must not create a second archive');
-  assert.equal((await runStateOf(dir)).runId, runIdBefore, 'the original run_id survives re-entry');
-});
+}
 
-test('H04: the Outline document UUID is fixed before the first request; a lost receipt recovers onto the same document and unknown is never absence', async (t) => {
-  if (skipIfNoBuild(t)) return;
-  const change = 'p46-h04';
-  const dir = await driveToArchived(change);
-  // The closeout window must still issue the Runtime K dispatch post-archive.
-  const dispatch = comet(['state', 'dispatch-gate', change, 'K', '--json']);
-  assert.equal(dispatch.json?.exitCode, 0, `the archived closeout window must dispatch K: ${plain(dispatch.stderr).slice(0, 300)}`);
-  const binding = dispatch.json?.data?.dispatch;
-  const documentId = '3f2504e0-4f89-11d3-9a0c-0305e82c3301';
-  const op = {
-    knowledgeId: 'k-llmwiki-closeout',
-    documentId,
-    collection: 'engineering',
-    payloadDigest: sha256('approved closeout payload v1'),
-  };
-  const opFile = path.join(scratch, 'h04-op.json');
-  await fs.writeFile(opFile, JSON.stringify(op));
-  const registered = comet(['state', 'knowledge-publish', change, '--file', opFile, '--json']);
-  assert.equal(registered.json?.exitCode, 0, `knowledge-publish refused: ${refusalText(registered).slice(0, 300)}`);
-  const operation = registered.json?.data?.operation;
-  assert.equal(operation.documentId, documentId, 'the client UUID is persisted as the fixed target identity');
-  assert.equal(operation.state, 'pending');
-  // Lost receipt: the retry (same job key) recovers the SAME operation and
-  // document — never a second logical document.
-  const retry = comet(['state', 'knowledge-publish', change, '--file', opFile, '--json']);
-  assert.equal(retry.json?.exitCode, 0);
-  assert.equal(retry.json?.data?.operation?.operationKey, operation.operationKey);
-  assert.equal(retry.json?.data?.operation?.documentId, documentId, 'the retry must reuse the fixed document UUID');
-  // A remote outcome of 403/timeout is UNKNOWN, not absence: the directive
-  // must not be create, and a receipt over unknown is refused.
-  const unknownFile = path.join(scratch, 'h04-unknown.json');
-  await fs.writeFile(unknownFile, JSON.stringify({ operationKey: operation.operationKey, documentId, outcome: 'unknown' }));
-  const observed = comet(['state', 'knowledge-observe', change, '--file', unknownFile, '--json']);
-  assert.equal(observed.json?.exitCode, 0, plain(observed.stderr).slice(0, 300));
-  assert.equal(observed.json?.data?.operation?.state, 'pending', 'an unknown outcome keeps the operation open');
-  assert.notEqual(observed.json?.data?.directive?.action, 'create', 'unknown must never degrade to create');
-  const premature = path.join(scratch, 'h04-premature.json');
-  await fs.writeFile(premature, JSON.stringify({
-    targetKind: 'external', target: documentId, revision: 'rev-1',
-    readbackDigest: op.payloadDigest, execution: binding.execution, recordedAt: new Date().toISOString(),
-  }));
-  const refused = comet(['state', 'knowledge-closeout', change, '--file', premature, '--json']);
-  assert.equal(refused.json?.exitCode !== 0, true, 'a receipt without an independent readback is refused');
-  // The readback lands (documents.info over the fixed UUID): only now does
-  // the closeout accept, and the same run completes.
-  const existsFile = path.join(scratch, 'h04-exists.json');
-  await fs.writeFile(existsFile, JSON.stringify({
-    operationKey: operation.operationKey, documentId, outcome: 'exists',
-    revision: 'rev-1', readbackDigest: op.payloadDigest,
-  }));
-  const readback = comet(['state', 'knowledge-observe', change, '--file', existsFile, '--json']);
-  assert.equal(readback.json?.exitCode, 0, plain(readback.stderr).slice(0, 300));
-  const recorded = comet(['state', 'knowledge-closeout', change, '--file', premature, '--json']);
-  assert.equal(recorded.json?.exitCode, 0, plain(recorded.stderr).slice(0, 300));
-  assert.equal((await runStateOf(dir)).status, 'completed', 'the recovered publication completes the same run');
-});
+const proofPath = () => (proofArgv >= 0 ? process.argv[proofArgv + 1] : '/tmp/p46-proof.json');
 
-test('Step 9 rework: after a REAL OpenSpec archive the same Run stays pending Kt; an interrupted Outline write recovers the original operation — fixed UUID, no second publish, no second archive, workspace kept', async (t) => {
-  if (skipIfNoBuild(t)) return;
-  if (!isolatedOpenspecReady) {
-    return t.skip('isolated openspec 1.11.0 is not installed under .sdd/tools; run the isolated install (never a global upgrade)');
-  }
-  const { gitRoot, git } = await makeGitWorld('git-world-step9');
-  const change = 'p46-s9';
-  await driveToArchiveReady(change, { root: gitRoot });
-  // REAL OpenSpec archive: the pinned isolated 1.11.0 CLI performs the move
-  // through the documented COMET_OPENSPEC seam (spec-driven schema, doc-only
-  // change), not the world's openspec stub.
-  await fs.writeFile(path.join(gitRoot, 'docs/openspec/config.yaml'), 'schema: spec-driven\n');
-  await fs.writeFile(path.join(changeDir(change, gitRoot), '.openspec.yaml'), 'schema: spec-driven\nskip_specs: true\n');
-  const authFile = path.join(gitRoot, 's9-delivery-auth.json');
-  await fs.writeFile(authFile, JSON.stringify({ action: 'local', targetBranch: 'main' }));
-  assert.equal(comet(['state', 'delivery', change, '--file', 's9-delivery-auth.json', '--json'], { root: gitRoot }).json?.exitCode, 0, refusalText(comet(['state', 'delivery', change, '--file', 's9-delivery-auth.json'], { root: gitRoot })).slice(0, 300));
-  const realArchive = comet(['archive', change, '--json'], { root: gitRoot, env: { COMET_OPENSPEC: isolatedOpenspecBin } });
-  assert.equal(realArchive.status, 0, `real openspec archive failed: ${refusalText(realArchive).slice(0, 400)}`);
-  assert.match(refusalText(realArchive), /OpenSpec archive completed/, 'the archive ran through the real OpenSpec CLI');
-  const dir = await archivedDir(change, gitRoot);
-  const entriesAfterRealArchive = (await fs.readdir(path.join(gitRoot, 'docs/openspec/changes/archive'))).filter((name) => name.endsWith(change));
-  assert.equal(entriesAfterRealArchive.length, 1, 'the real CLI performs exactly one archive move');
-  // R06 after the REAL archive: the same run is still pending Kt — archived
-  // is a spec fact, not the delivery completion, and discovery agrees.
-  const run = await runStateOf(dir);
-  const runIdBefore = run.runId;
-  assert.equal(run.status, 'waiting', 'a real-archived closeout-pending run stays open (waiting)');
-  assert.equal(run.currentStep, 'full.closeout.knowledge');
-  const next = comet(['state', 'next', change, '--json'], { root: gitRoot });
-  assert.equal(next.json?.data?.nextAction?.kind, 'knowledge-closeout');
-  const gates = comet(['state', 'gates', change, '--json'], { root: gitRoot });
-  assert.equal(gates.json?.data?.completionBlocked, true, 'Kt still blocks overall completion after the real archive');
-  git(['add', '-A']);
-  git(['commit', '-m', 'archive p46-s9']);
-  const commit = git(['rev-parse', 'HEAD']);
-  const commitFile = path.join(gitRoot, 's9-delivery-commit.json');
-  await fs.writeFile(commitFile, JSON.stringify({ action: 'local', targetBranch: 'main', commit }));
-  const deliveryWrite = comet(['state', 'delivery', change, '--file', 's9-delivery-commit.json', '--json'], { root: gitRoot });
-  await fs.rm(commitFile);
-  assert.equal(deliveryWrite.json?.exitCode, 0, refusalText(deliveryWrite).slice(0, 400));
-  const probe = comet(['resume-probe', JSON.stringify({ utterance: 'continue', agent_context: { non_trivial_work: true, already_in_comet_flow: false } }), '--json'], { root: gitRoot });
-  const resolution = probe.json?.action ? probe.json : JSON.parse(probe.json?.stdout ?? probe.stdout ?? '{}');
-  assert.equal(resolution.action, 'ask_user', `the real-archived pending run must be discovered, got ${resolution.action}`);
-  assert.equal(resolution.changeName, change, 'discovery must name the real-archived change');
-  assert.equal(comet(['state', 'select', change, '--json'], { root: gitRoot }).json?.exitCode, 0, 'the real-archived closeout-pending run stays selectable');
-  // Interruption window: the Outline write timed out / the Comet process died
-  // after registration — the operation is registered, the receipt never lands.
-  const dispatch = comet(['state', 'dispatch-gate', change, 'K', '--json'], { root: gitRoot });
-  assert.equal(dispatch.json?.exitCode, 0, `the archived closeout window must dispatch K: ${plain(dispatch.stderr).slice(0, 300)}`);
-  const binding = dispatch.json?.data?.dispatch;
-  const documentId = 'c41f2e9a-6d2c-4a7b-9b1e-5c0d4e6f7a8b';
-  const opFile = path.join(scratch, 's9-op.json');
-  await fs.writeFile(opFile, JSON.stringify({
-    knowledgeId: 'k-outline-closeout-s9',
-    documentId,
-    collection: 'engineering',
-    payloadDigest: sha256('approved closeout payload s9'),
-  }));
-  const registered = comet(['state', 'knowledge-publish', change, '--file', opFile, '--json'], { root: gitRoot });
-  assert.equal(registered.json?.exitCode, 0, `knowledge-publish refused: ${refusalText(registered).slice(0, 300)}`);
-  const operation = registered.json?.data?.operation;
-  assert.equal(operation.documentId, documentId, 'the client UUID is the fixed target identity');
-  const retry = comet(['state', 'knowledge-publish', change, '--file', opFile, '--json'], { root: gitRoot });
-  assert.equal(retry.json?.exitCode, 0);
-  assert.equal(retry.json?.data?.operation?.operationKey, operation.operationKey, 'the retry recovers the SAME operation');
-  assert.equal(retry.json?.data?.operation?.documentId, documentId, 'no second logical document after the interruption');
-  const unknownFile = path.join(scratch, 's9-unknown.json');
-  await fs.writeFile(unknownFile, JSON.stringify({ operationKey: operation.operationKey, documentId, outcome: 'unknown' }));
-  const observed = comet(['state', 'knowledge-observe', change, '--file', unknownFile, '--json'], { root: gitRoot });
-  assert.equal(observed.json?.exitCode, 0, plain(observed.stderr).slice(0, 300));
-  assert.equal(observed.json?.data?.operation?.state, 'pending', 'an unknown outcome keeps the operation open');
-  assert.notEqual(observed.json?.data?.directive?.action, 'create', 'unknown is never absence: no duplicate publish directive');
-  // Same-Run re-entry after the interruption: no second archive, the
-  // workspace and its recovery copies survive untouched.
-  assert.equal(comet(['archive', change, '--json'], { root: gitRoot, env: { COMET_OPENSPEC: isolatedOpenspecBin } }).status, 0, 'archive re-entry must succeed without re-archiving');
-  const entriesAfterReentry = (await fs.readdir(path.join(gitRoot, 'docs/openspec/changes/archive'))).filter((name) => name.endsWith(change));
-  assert.equal(entriesAfterReentry.length, 1, 're-entry must not create a second archive');
-  assert.equal((await runStateOf(dir)).runId, runIdBefore, 'the original run_id survives the re-entry');
-  assert.equal((await runStateOf(dir)).status, 'waiting', 'the recovered run stays pending Kt');
-  const selection = JSON.parse(await fs.readFile(path.join(gitRoot, '.comet', 'current-change.json'), 'utf8'));
-  assert.equal(selection.selection?.change ?? selection.change, change, 'the recovery entry is retained through the interruption window');
-  // The independent readback lands over the SAME fixed UUID: only now does
-  // the recovered publication close the seat and complete the SAME run.
-  const existsFile = path.join(scratch, 's9-exists.json');
-  await fs.writeFile(existsFile, JSON.stringify({
-    operationKey: operation.operationKey, documentId, outcome: 'exists',
-    revision: 'rev-1', readbackDigest: sha256('approved closeout payload s9'),
-  }));
-  const readback = comet(['state', 'knowledge-observe', change, '--file', existsFile, '--json'], { root: gitRoot });
-  assert.equal(readback.json?.exitCode, 0, plain(readback.stderr).slice(0, 300));
-  const receiptFile = path.join(scratch, `s9-closeout-${change}.json`);
-  await fs.writeFile(receiptFile, JSON.stringify({
-    targetKind: 'external',
-    target: documentId,
-    revision: 'rev-1',
-    readbackDigest: sha256('approved closeout payload s9'),
-    execution: binding.execution,
-    recordedAt: new Date().toISOString(),
-  }));
-  const recorded = comet(['state', 'knowledge-closeout', change, '--file', receiptFile, '--json'], { root: gitRoot });
-  assert.equal(recorded.json?.exitCode, 0, plain(recorded.stderr).slice(0, 300));
-  assert.equal((await runStateOf(dir)).status, 'completed', 'the recovered publication completes the SAME run');
-});
+// --- outer tests (NEVER registered in a scenario child — the scenario branch
+// above is the leaf: registering tests here would re-enter them recursively
+// under a plain `node` execution of this same file, the 3_4 discipline) -------
 
-test('H05: a lastRevision conflict stays open — no revision refresh, no blind overwrite, identity is owned', async (t) => {
-  if (skipIfNoBuild(t)) return;
-  const change = 'p46-h05';
-  const dir = await driveToArchived(change);
-  assert.equal(comet(['state', 'dispatch-gate', change, 'K', '--json']).json?.exitCode, 0);
-  const documentId = '9f2504e0-4f89-11d3-9a0c-0305e82c3302';
-  const create = {
-    knowledgeId: 'k-llmwiki-conflict',
-    documentId,
-    collection: 'engineering',
-    payloadDigest: sha256('conflict probe payload v1'),
-  };
-  const createFile = path.join(scratch, 'h05-create.json');
-  await fs.writeFile(createFile, JSON.stringify(create));
-  assert.equal(comet(['state', 'knowledge-publish', change, '--file', createFile, '--json']).json?.exitCode, 0);
-  const createOp = comet(['state', 'knowledge-publish', change, '--file', createFile, '--json']).json?.data?.operation;
-  const existsFile = path.join(scratch, 'h05-exists.json');
-  await fs.writeFile(existsFile, JSON.stringify({
-    operationKey: createOp.operationKey, documentId, outcome: 'exists',
-    revision: 'rev-1', readbackDigest: create.payloadDigest,
-  }));
-  assert.equal(comet(['state', 'knowledge-observe', change, '--file', existsFile, '--json']).json?.exitCode, 0);
-  // A revision update must build on the registered last revision and reuse
-  // the fixed document identity.
-  const update = { ...create, payloadDigest: sha256('conflict probe payload v2'), baseRevision: 'rev-1' };
-  const updateFile = path.join(scratch, 'h05-update.json');
-  await fs.writeFile(updateFile, JSON.stringify(update));
-  const updateOp = comet(['state', 'knowledge-publish', change, '--file', updateFile, '--json']);
-  assert.equal(updateOp.json?.exitCode, 0, plain(updateOp.stderr).slice(0, 300));
-  assert.equal(updateOp.json?.data?.operation?.documentId, documentId, 'an update reuses the same logical document');
-  // Another legitimate writer moves the remote revision first: 409 conflict.
-  const conflictFile = path.join(scratch, 'h05-conflict.json');
-  await fs.writeFile(conflictFile, JSON.stringify({ operationKey: updateOp.json.data.operation.operationKey, documentId, outcome: 'conflict' }));
-  const conflicted = comet(['state', 'knowledge-observe', change, '--file', conflictFile, '--json']);
-  assert.equal(conflicted.json?.exitCode, 0);
-  assert.equal(conflicted.json?.data?.operation?.state, 'conflict', 'the conflict is retained, not papered over');
-  assert.notEqual(conflicted.json?.data?.directive?.action, 'update', 'a conflict must not refresh into another blind update');
-  // Refreshing the revision and re-issuing the overwrite is refused.
-  const refreshed = { ...update, baseRevision: 'rev-9' };
-  const refreshFile = path.join(scratch, 'h05-refresh.json');
-  await fs.writeFile(refreshFile, JSON.stringify(refreshed));
-  const refreshRefused = comet(['state', 'knowledge-publish', change, '--file', refreshFile, '--json']);
-  assert.equal(refreshRefused.json?.exitCode !== 0, true, 'a revision refresh without readback evidence must be refused');
-  // A receipt claiming the overwrite landed is refused while unresolved.
-  const dispatch2 = comet(['state', 'dispatch-gate', change, 'K', '--json']);
-  const binding2 = dispatch2.json?.data?.dispatch;
-  const overwrite = path.join(scratch, 'h05-overwrite.json');
-  await fs.writeFile(overwrite, JSON.stringify({
-    targetKind: 'external', target: documentId, revision: 'rev-2',
-    readbackDigest: update.payloadDigest, execution: binding2.execution, recordedAt: new Date().toISOString(),
-  }));
-  const overwriteRefused = comet(['state', 'knowledge-closeout', change, '--file', overwrite, '--json']);
-  assert.equal(overwriteRefused.json?.exitCode !== 0, true, 'a conflicted update cannot be recorded as published');
-  assert.notEqual((await runStateOf(dir)).status, 'completed', 'the run stays open with an unresolved conflict');
-  // The independent readback shows the merged remote content (v2 at rev-2):
-  // the expected result exists, so the conflict resolves onto the receipt.
-  const mergedFile = path.join(scratch, 'h05-merged.json');
-  await fs.writeFile(mergedFile, JSON.stringify({
-    operationKey: updateOp.json.data.operation.operationKey, documentId, outcome: 'exists',
-    revision: 'rev-2', readbackDigest: update.payloadDigest,
-  }));
-  const mergedObserved = comet(['state', 'knowledge-observe', change, '--file', mergedFile, '--json']);
-  assert.equal(mergedObserved.json?.exitCode, 0, refusalText(mergedObserved).slice(0, 400));
-  // Document identity is owned: a different knowledge entry cannot claim it.
-  const identity = {
-    knowledgeId: 'k-other-entry',
-    documentId,
-    collection: 'engineering',
-    payloadDigest: sha256('a different payload'),
-  };
-  const identityFile = path.join(scratch, 'h05-identity.json');
-  await fs.writeFile(identityFile, JSON.stringify(identity));
-  const identityRefused = comet(['state', 'knowledge-publish', change, '--file', identityFile, '--json']);
-  assert.equal(identityRefused.json?.exitCode !== 0, true, 'a document UUID belongs to one knowledge entry');
-});
+let cachedProof = null;
+function loadProof() {
+  if (cachedProof) return cachedProof;
+  const proofFile = path.join(os.tmpdir(), `p46-proof-${process.pid}-${Date.now()}.json`);
+  const result = spawnSync(pinnedNode, [fileURLToPath(import.meta.url), '--kt-scenario', 'post-archive-kt', '--proof', proofFile], {
+    cwd: projectRoot, encoding: 'utf8', timeout: 600_000, maxBuffer: 64 * 1024 * 1024,
+    env: (() => { const env = { ...process.env }; delete env.NODE_TEST_CONTEXT; return env; })(),
+  });
+  assert.equal(result.status, 0,
+    `the pinned-world scenario must exit 0, got ${result.status}\nstdout: ${(result.stdout ?? '').slice(0, 800)}\nstderr: ${(result.stderr ?? '').slice(0, 800)}`);
+  cachedProof = JSON.parse(fs.readFileSync(proofFile, 'utf8'));
+  fs.rmSync(proofFile, { force: true });
+  return cachedProof;
+}
 
-test('H08: a lost run state is never fabricated — the workspace keeps its recovery copy until completed', async (t) => {
-  if (skipIfNoBuild(t)) return;
-  const change = 'p46-h08';
-  const dir = await driveToArchived(change);
-  const knowledgeFile = path.join(project, 'knowledge', `llmwiki-${change}.md`);
-  await fs.mkdir(path.dirname(knowledgeFile), { recursive: true });
-  await fs.writeFile(knowledgeFile, '# Project Knowledge\n\nCleanup probe.\n');
-  const receipt = path.join(scratch, `kc-${change}.json`);
-  await fs.writeFile(receipt, JSON.stringify({
-    targetKind: 'file',
-    target: path.relative(project, knowledgeFile),
-    revision: 'r1',
-    readbackDigest: sha256(await fs.readFile(knowledgeFile, 'utf8')),
-    execution: 'driver-exec-h08',
-    recordedAt: new Date().toISOString(),
-  }));
-  const runStateFile = path.join(dir, '.comet', 'run-state.json');
-  const preserved = await fs.readFile(runStateFile, 'utf8');
-  await fs.rm(runStateFile);
-  const yamlBefore = await fs.readFile(path.join(dir, '.comet.yaml'), 'utf8');
-  // The recovery entrance must refuse to mutate a run-less state instead of
-  // minting a replacement run.
-  const refused = comet(['state', 'knowledge-closeout', change, '--file', receipt, '--json']);
-  assert.equal(refused.json?.exitCode !== 0, true, 'a run-less closeout state must be refused as recovery-required');
-  assert.match(refusalText(refused), /run state|run_id|recovery/i);
-  const yamlAfter = await fs.readFile(path.join(dir, '.comet.yaml'), 'utf8');
-  assert.equal(yamlAfter, yamlBefore, 'the refused entrance must not mutate the change state');
-  await fs.writeFile(runStateFile, preserved);
-  // The original state restored, the same closeout completes the same run.
-  assert.equal(comet(['state', 'knowledge-closeout', change, '--file', receipt, '--json']).json?.exitCode, 0);
-  assert.equal((await runStateOf(dir)).status, 'completed');
-});
+if (scenarioArgv >= 0) {
+  await runScenario();
+} else {
+  test('setup: the pinned supply carries exactly the 0005 Kt patch and the retired 0003 face stays retired', () => {
+    assert.equal(cometLock.package.version, '0.5.0');
+    assert.equal(cometLock.source.commit, 'aeb1a6598034e28ce46b8422d4dbd8785e607bd7');
+    assert.deepEqual(cometLock.patches.map(({ path: patchPath }) => patchPath),
+      ['integrations/comet/patches/0005-comet-050-kt-closeout.patch'],
+      'the retired 0003 post-archive patch must stay retired — 0005 is its only successor on this baseline');
+    // The retired files this revision stands on (infra-runner-isolation pins the
+    // same disposition): recreating them would fork the supply.
+    for (const retired of [
+      'integrations/comet/patches/0003-post-archive-closeout.patch',
+      'integrations/comet/patches/tests/4_6.patch',
+    ]) {
+      assert.equal(fs.existsSync(path.join(projectRoot, retired)), false,
+        `the retired patch file must stay absent: ${retired}`);
+    }
+    assert.equal(fs.existsSync(path.join(projectRoot, 'integrations/comet/patches/0005-comet-050-kt-closeout.patch')), true);
+  });
 
-test('H09: the authority binding decides — a copied workspace is not a second writer and transfer is explicit', async (t) => {
-  if (skipIfNoBuild(t)) return;
-  const change = 'p46-h09';
-  const dir = await driveToArchived(change, { authority: 'auth-alpha' });
-  const binding = JSON.parse(await fs.readFile(path.join(dir, '.comet', 'run-authority.json'), 'utf8'));
-  assert.equal(binding.authorityId, 'auth-alpha', 'init records the run authority from the runtime environment');
-  const knowledgeFile = path.join(project, 'knowledge', `llmwiki-${change}.md`);
-  await fs.mkdir(path.dirname(knowledgeFile), { recursive: true });
-  await fs.writeFile(knowledgeFile, '# Project Knowledge\n\nAuthority probe.\n');
-  const receipt = path.join(scratch, `kc-${change}.json`);
-  await fs.writeFile(receipt, JSON.stringify({
-    targetKind: 'file',
-    target: path.relative(project, knowledgeFile),
-    revision: 'r1',
-    readbackDigest: sha256(await fs.readFile(knowledgeFile, 'utf8')),
-    execution: 'driver-exec-h09',
-    recordedAt: new Date().toISOString(),
-  }));
-  // A copied workspace (the "other machine" state) with a different
-  // environment authority must not become a second writer.
-  const copy = path.join(scratch, 'copy-of-managed');
-  await fs.cp(project, copy, { recursive: true });
-  const copied = comet(['state', 'knowledge-closeout', change, '--file', receipt, '--json'], { env: { COMET_RUN_AUTHORITY: 'auth-beta' }, root: copy });
-  assert.equal(copied.json?.exitCode !== 0, true, 'a copied workspace under a foreign authority is refused');
-  assert.match(refusalText(copied), /authorit/i);
-  // The original under a foreign authority is refused equally.
-  const foreign = comet(['state', 'knowledge-closeout', change, '--file', receipt, '--json'], { env: { COMET_RUN_AUTHORITY: 'auth-beta' } });
-  assert.equal(foreign.json?.exitCode !== 0, true, 'a foreign authority cannot write the bound run');
-  // Queries stay readable from any host; the run is untouched.
-  const beforeQuery = await stateDigests(dir);
-  const query = comet(['state', 'next', change, '--json'], { env: { COMET_RUN_AUTHORITY: 'auth-beta' } });
-  assert.equal(query.json?.data?.nextAction?.kind, 'knowledge-closeout', 'a foreign host may still read the next action');
-  assert.deepEqual(await stateDigests(dir), beforeQuery, 'a foreign read must not mutate the bound run');
-  // Migration is explicit and performed BY the authoritative environment.
-  const transferFile = path.join(scratch, 'h09-transfer.json');
-  await fs.writeFile(transferFile, JSON.stringify({ to: 'auth-beta', confirm: true }));
-  const transfer = comet(['state', 'authority-transfer', change, '--file', transferFile, '--json'], { env: { COMET_RUN_AUTHORITY: 'auth-alpha' } });
-  assert.equal(transfer.json?.exitCode, 0, refusalText(transfer).slice(0, 400));
-  const after = JSON.parse(await fs.readFile(path.join(dir, '.comet', 'run-authority.json'), 'utf8'));
-  assert.equal(after.authorityId, 'auth-beta', 'the confirmed transfer moves the binding');
-  assert.equal(comet(['state', 'knowledge-closeout', change, '--file', receipt, '--json'], { env: { COMET_RUN_AUTHORITY: 'auth-beta' } }).json?.exitCode, 0, 'the new authority completes the closeout');
-  assert.equal((await runStateOf(dir)).status, 'completed');
-  const oldAuthority = comet(['state', 'knowledge-closeout', change, '--file', receipt, '--json'], { env: { COMET_RUN_AUTHORITY: 'auth-alpha' } });
-  assert.equal(oldAuthority.json?.exitCode !== 0 || oldAuthority.json?.data?.alreadyRecorded === true, true);
-});
+  test('KTA: post-archive same-Run Kt discovery — the real archive completes, completed is blocked at the 0005 seam, the same Run stays discoverable', { skip: scenarioSkip }, () => {
+    const proof = loadProof();
+    assert.equal(proof.scenario, 'post-archive-kt');
+    assert.equal(proof.buildFingerprint, cometFingerprint, 'the proof names the build it ran on');
+    for (const id of [
+      'KP_SEALED_BEFORE_ARCHIVE',
+      'PRE_ARCHIVE_INSPECT',
+      'ARCHIVE_OK_SAME_RUN',
+      'ARCHIVE_READBACK_OK',
+      'ARCHIVE_NOT_OVERALL_COMPLETION',
+      'ONE_ARCHIVE_DIR_AFTER_CLOSEOUT',
+      'POST_ARCHIVE_NEXT_KIND',
+      'POST_ARCHIVE_PHASE_ARCHIVED',
+      'POST_ARCHIVE_GUIDANCE_NO_REARCHIVE',
+      'DISK_RUN_IDENTITY',
+      'DISK_CLASSIC_ARCHIVED',
+      'RESOLVER_KT_PENDING_PARKED',
+      'RESOLVER_KT_PENDING_NOT_COMPLETED',
+      'RESOLVER_KT_DONE_COMPLETED',
+      'RESOLVER_FIELD_ABSENT_FAIL_OPEN',
+      'RESOLVER_FIELD_NULL_FAIL_OPEN',
+      'RESOLVER_NOT_REQUIRED_FAIL_OPEN',
+      'RECOVER_SAME_RUN',
+      'RECOVER_ARCHIVED_NOT_COMPLETED',
+    ]) {
+      assert.ok(proof.sections[id], `the scenario must pin ${id}`);
+      assert.deepEqual(proof.sections[id].actual, proof.sections[id].expected, id);
+    }
+    assert.equal(proof.sections.RESOLVER_KT_PENDING_PARKED.actual, 'full.archive.execute',
+      'Kt pending parks the SAME archived Run at the existing archive step — the resolver never reports completed');
+  });
+
+  test('KTB: Kt completion flips the SAME Run to completed; the state-field write face is honestly recorded', { skip: scenarioSkip }, () => {
+    const proof = loadProof();
+    for (const id of [
+      'RESOLVER_KT_DONE_COMPLETED',
+      'MIRROR_TRUTH_TABLE_ABSENT',
+      'MIRROR_TRUTH_TABLE_NULL',
+      'MIRROR_TRUTH_TABLE_PENDING',
+      'MIRROR_TRUTH_TABLE_DONE',
+      'MIRROR_TRUTH_TABLE_NOT_REQUIRED',
+      'KT_FIELD_WRITE_FACE_REFUSED',
+      'KT_FIELD_WRITE_FACE_CODE',
+      'COMPLETION_COMPOSED',
+    ]) {
+      assert.ok(proof.sections[id], `the scenario must pin ${id}`);
+      assert.deepEqual(proof.sections[id].actual, proof.sections[id].expected, id);
+    }
+    assert.equal(proof.sections.KT_FIELD_WRITE_FACE_CODE.actual, 'CLASSIC_FIELD_UNKNOWN',
+      'the public 0.5.0 state face refuses the knowledgeCloseout write — the persisted write path is the supply/admission wave, never faked');
+  });
+
+  test('KTC: repeated hooks, callbacks and a real fresh-process restart never re-archive or re-publish', { skip: scenarioSkip }, () => {
+    const proof = loadProof();
+    for (const id of [
+      'REPEATED_CLOSEOUT_RECONCILED',
+      'REPEATED_CLOSEOUT_ZERO_NATIVE',
+      'REPEATED_CLOSEOUT_SAME_RUN',
+      'REPEATED_CLOSEOUT_ONE_ARCHIVE',
+      'REPEATED_CLOSEOUT_MAIN_STABLE',
+      'REPEATED_NEXT_STABLE',
+      'RESTART_ARCHIVE_EXIT',
+      'RESTART_ARCHIVE_ONE_DIR',
+      'RESTART_ARCHIVE_MAIN_STABLE',
+      'RESTART_SAME_RUN_ID',
+      'SECOND_KP_SEAL_REFUSED',
+    ]) {
+      assert.ok(proof.sections[id], `the scenario must pin ${id}`);
+      assert.deepEqual(proof.sections[id].actual, proof.sections[id].expected, id);
+    }
+    assert.equal(proof.sections.REPEATED_CLOSEOUT_ZERO_NATIVE.actual, true,
+      'a repeated closeout dispatches zero native archive commands (already-archived reconciliation only)');
+  });
+
+  test('KTD: an unknown publication outcome keeps the ORIGINAL operation handle — query-only recovery, no second operation', { skip: scenarioSkip }, () => {
+    const proof = loadProof();
+    for (const id of [
+      'KT_UNKNOWN_BLOCKED',
+      'KT_UNKNOWN_CODE',
+      'KT_TARGET_ID_DETERMINISTIC',
+      'KT_UNKNOWN_DIRECTIVE_NOT_EXECUTABLE',
+      'KT_FOREIGN_TARGET_REFUSED',
+      'KT_RECEIPT_FROM_UNKNOWN_REFUSED',
+      'KT_READBACK_OUTCOME_EXISTS',
+      'KT_READBACK_SATISFIES',
+      'KT_SATISFIED_SAME_DOCUMENT',
+      'KT_RECEIPT_TARGET_IS_ORIGINAL',
+    ]) {
+      assert.ok(proof.sections[id], `the scenario must pin ${id}`);
+      assert.deepEqual(proof.sections[id].actual, proof.sections[id].expected, id);
+    }
+    assert.equal(proof.sections.KT_UNKNOWN_CODE.actual, 'PUBLICATION_UNKNOWN',
+      'unknown is never absence — the same-Run entry keeps discovering the ORIGINAL pending operation');
+  });
+
+  test('registration: the team-recovery probe pins the four same-Run Kt semantics with honest UNVERIFIED scope', () => {
+    const probe = JSON.parse(fs.readFileSync(teamRecoveryProbePath, 'utf8'));
+    assert.equal(probe.schemaVersion, 1);
+    assert.equal(probe.interface, 'TeamRecovery.PostArchiveKtRecovery.v1');
+    assert.equal(probe.task, 'P4_6');
+    assert.equal(probe.caseModule, 'test/delivery-cases/4_6.mjs');
+    assert.equal(probe.supply.patch, 'integrations/comet/patches/0005-comet-050-kt-closeout.patch');
+    assert.ok(Array.isArray(probe.semantics) && probe.semantics.length === 4,
+      'the four semantics (discovery/block, completion, idempotent re-entry, unknown-handle) are registered');
+    for (const semantic of probe.semantics) {
+      assert.ok(semantic.id && semantic.face && semantic.pinnedBy, `each semantic names its live face and test point: ${JSON.stringify(semantic)}`);
+    }
+    assert.ok(Array.isArray(probe.unverified) && probe.unverified.length >= 2,
+      'the honest UNVERIFIED scope is part of the registration');
+    assert.doesNotMatch(JSON.stringify(probe), /"[a-f0-9]{64}"/,
+      'the probe pins no concrete hash value (the supply lock owns the pins)');
+  });
+
+}

@@ -427,7 +427,7 @@ test('RED retirement-record integrity: fingerprint, openspec pin and retired pat
     toolchain: record.sourceInputs.toolchain,
   })).digest('hex');
   assert.equal(record.sourceInputs.hostBuildFingerprint, recomputed, 'the committed record fingerprint derives from its own retired inputs');
-  assert.equal(record.sourceInputs.openspec.version, '1.11.0', 'the registry-referenced openspec pin stays exact');
+  assert.equal(record.sourceInputs.openspec.version, '1.15.0', 'the registry-referenced openspec pin stays exact');
   assert.equal(record.sourceInputs.patches.length, 7, 'the retired era is identified by its seven-patch chain');
 });
 

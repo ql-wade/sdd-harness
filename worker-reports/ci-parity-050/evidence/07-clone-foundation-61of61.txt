@@ -1,0 +1,94 @@
+✔ exporter builds a contract-valid lock from the unique sources (real repo) (389.975291ms)
+✔ lock emission gates: full digests, no machine paths, no floating versions (161.53825ms)
+✔ exporter refuses to emit when an MCP registration floats (@latest) (14.373083ms)
+✔ release view + lock are byte-stable across repeated exports (repeat-pull idempotency) (91.520125ms)
+✔ dual-write drift is detected in both directions (source edit and hand-edited view) (136.247ms)
+✔ committed foundation artifacts match live sources (repo-level drift gate) (459.519ms)
+✔ kb-write-protection denies the registered canonical wiki landing .sdd/wiki/<slug>/wiki/ (I04 hook gap) (347.564292ms)
+✔ kb-write-protection canonical coverage is deny-only: hooks.yaml never regresses to substring-only (0.317916ms)
+✔ composition package bytes are frozen in the export digest, distributed and sealed (563.372833ms)
+✔ real repo composition package is bound and distributed with the managed profile (4058.308583ms)
+✔ composition requires adapter fixture isolation and uninstall capability (0.127ms)
+✔ reverse order A: existing user config survives bootstrap, guard installed once (145.896625ms)
+✔ reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept (445.358375ms)
+✔ upgrade: stale managed entry in an older command format is replaced, not duplicated (149.803ms)
+✔ uninstall removes managed entries only, is idempotent, and re-init restores (500.658375ms)
+✔ uninstall is locale-safe: UTF-8 locale must not crash bootstrap (regression: unbraced $var before a multibyte char) (268.405833ms)
+✔ owned control-plane scripts never place an unbraced variable expansion adjacent to multibyte text (0.212875ms)
+✔ matcher registration and gate script behavior are tested together (359.200417ms)
+✔ adapter declares the fixed event set and the plugin registration division (0.188125ms)
+✔ plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall (389.648584ms)
+✔ same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched (113.250584ms)
+✔ duplicate user entries for the same event/command are refused, not composed twice (114.492667ms)
+✔ hooks.yaml events outside the adapter fixed event set are refused, never silently dropped (112.950625ms)
+✔ plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2) (118.146166ms)
+✔ exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts (13.964833ms)
+✔ bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo (719.494375ms)
+✔ bootstrap target mode registers the distributed MCP set into the target project (merge, honest, idempotent) (1129.027584ms)
+✔ legacy workflow: retired source-command-sdd-code source under .agents/skills refuses activation with zero mutations (direct-discovery refusal) (84.313916ms)
+✔ legacy workflow: every retired naming family refuses with per-name diagnostics, bodies untouched, no artifacts (94.689584ms)
+✔ legacy workflow: unowned retired-name directory with user files is preserved and blocks install (no prefix deletion) (83.371667ms)
+✔ legacy workflow: retired-name symlink pointing at an external .agents/skills path is preserved (exact-ownership proof required) (88.776834ms)
+✔ legacy workflow: exact adapter-owned stale link to a retired name is removed on install; valid sources assemble settings and stay idempotent (295.708583ms)
+✔ legacy workflow: uninstall removes only adapter-owned links — unowned dirs, external retired-name links and user config survive (255.073458ms)
+✔ legacy workflow: refusal is readonly and reversible — human disposal of the residue unblocks activation (375.29075ms)
+✔ old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline) (435.263916ms)
+✔ active run blocks silent re-baseline after asset drift; closed run only notes it (308.080625ms)
+✔ unresolvable pinned baseline is blocked explicitly, never silently swapped (234.267042ms)
+✔ B09: a second writer cannot take over an active run (725.411292ms)
+✔ explicit migration re-pins only with ownership and a resolvable old baseline (320.266042ms)
+✔ cold package keeps declared dot files and binary source bytes (77.042334ms)
+✔ cold package verification refuses a missing copied source file (81.765708ms)
+✔ current managed distribution binds the exact profile data and all 245 source files (6090.071042ms)
+✔ export refuses retired sources instead of distributing a valid-looking old workflow (2.826333ms)
+✔ legacy asset ownership helper never acquires or rewrites an actual native Comet Run (1187.287291ms)
+✔ complete copied distribution refuses a removed method directory and an injected file (147.156209ms)
+✔ frozen pure assets resolve after transport without Git history and reject corruption or symlink escape (143.715167ms)
+✔ sealed cache parents cannot redirect writes and release references cannot float (45.518166ms)
+✔ sealed cache refuses an injected prototype-named file in the complete set (131.007375ms)
+ℹ {"clean":{"ok":true,"resolvable":true,"reason":"sealed pure assets verified byte-for-byte and whole exportDigest","resolvedSkills":["alpha","beta"],"missing":[],"source":"sealed-assets"},"modified":{"ok":false,"resolvable":false,"reason":"STATE_SYNC_REQUIRED: unexpected or missing sealed asset","resolvedSkills":[],"missing":["sealed-assets"]},"files":["__proto__","foundation-lock.json","manifest.json","source"]}
+✔ legal prototype-named source files round trip byte-exact through release and sealed cache (243.626917ms)
+✔ sealed cache complete set rejects extra special-named files, directories and symlinks (341.988ms)
+✔ managed hook resolver changes invalidate the lock and are sealed as explicit code assets (408.414625ms)
+ℹ {"before":"53dda3d7ee020287df9ed8bb299291eb2a2529814ceeabba1edee8081d2cc50b","after":"479bdce82db0b73bcc02012a822423a39d87d00fd9b99c6c05e850e3b449fa78","verify":{"ok":false,"drifts":[{"kind":"lock","item":"exportDigest","detail":"complete asset set drifted"},{"kind":"release","item":"code","detail":"project code closure bytes or complete file set differs"}]},"cacheHasResolver":true}
+✔ every project code dependency and pin metadata is bound in digest, release and immutable cache (1992.076333ms)
+✔ transported closure executes exporter and adapter without parent source modules; missing Python refuses cleanly (1111.578542ms)
+ℹ {"export":{"exit":0,"stdout":"✅ foundation export: 34 files under /var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/fdn-transport-code-ld2ct1/foundation (release commit aaaaaaaa, exportDigest 53dda3d7ee02)\n","stderr":""},"verify":{"exit":0,"stdout":"✅ foundation verify: lock, sources and release view are consistent\n","stderr":""},"adapter":{"exit":0,"stdout":"✅ hooks 策略已编译：hooks/.compiled.env + .claude/settings.json (1 deny 策略)\n✅ selected method links installed; unrelated user entries preserved\n","stderr":""},"gate":{"exit":2,"stderr":"❌ 禁止执行「git push --force」：blocked（hooks.yaml dangerous-command-blocklist）\n"},"missingPython":{"exit":1,"stderr":"❌ python3 required by claude-code adapter\n"},"parentModules":false}
+✔ copied method directory symlinks refuse verification and export without changing user bytes (110.025584ms)
+ℹ {"verify":{"ok":false,"error":"lock unreadable: symlink asset refused: skills/alpha","drifts":[]},"exportRejected":true,"error":"symlink asset refused: skills/alpha","before":"1fd0d20e25f00bb273c3891b885729613ad25d24e3f331d5ede0cdd69e681537","after":"1fd0d20e25f00bb273c3891b885729613ad25d24e3f331d5ede0cdd69e681537"}
+✔ export and verify reject linked package roots, every view ancestor and output file before any mutation (1023.135125ms)
+ℹ {"slot":"package-root","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+ℹ {"slot":"package-ancestor","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+ℹ {"slot":"foundation-lock.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"3a725a695a73b296bf0d2f5a8943bc01bfbe221729e783b7c95c7a2877d822ba"}
+ℹ {"slot":"release","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+ℹ {"slot":"release/skills","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+ℹ {"slot":"release/skills/alpha","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+ℹ {"slot":"release/skills/alpha/SKILL.md","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"5437084f7f9dd31c6fd61974edc285516de9ef2251ccc21a9953a7dc81800958"}
+ℹ {"slot":"release/skills/MANIFEST.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"2b5629f0d08890d8a180020d317963782175969acb5388d81adfbaadb1986bd6"}
+ℹ {"slot":"release/hooks","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+ℹ {"slot":"release/hooks/hooks.yaml","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"8bd0522239e6f8f5fa636511c9d5386e245faccab4a5ab828d341b0b6c7be3f9"}
+ℹ {"slot":"release/mcp","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"57eefe7379a348936054bfef83361655671bca3cc51f34b75575fd86c4245f46"}
+ℹ {"slot":"release/mcp/mcp.json","verification":false,"wholeFixtureUnchanged":true,"sentinelSha256":"57eefe7379a348936054bfef83361655671bca3cc51f34b75575fd86c4245f46"}
+✔ managed code/profile outputs and existing output aliases cannot redirect export or verification (2287.090666ms)
+ℹ {"slot":"release/profile","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/profile/binding.json","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/profile/comet-managed.json","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code/tools","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code/tools/bootstrap.sh","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"release/code/MANIFEST.json","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"hardlink","verification":false,"wholeFixtureUnchanged":true}
+ℹ {"slot":"fifo","verification":false,"wholeFixtureUnchanged":true}
+✔ Git exports remain verifiable after transport without Git (214.82525ms)
+✔ TeamAI packet roundtrip preserves the externally frozen full file set (23896.644ms)
+✔ TeamAI packet rejects tamper, omission, duplicate, escape, unsafe mode and stale source before writing (13307.419917ms)
+✔ original Foundation CLI connects TeamAI view export and externally pinned receive (23579.164541ms)
+✔ Bash project caller equivalence leaves unrelated user scripts and Ponytail plugin entries unchanged (293.582458ms)
+ℹ tests 61
+ℹ suites 0
+ℹ pass 61
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 90905.93575

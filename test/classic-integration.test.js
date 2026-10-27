@@ -48,7 +48,7 @@ const buildDir = path.join(projectRoot, '.sdd/vendor/comet', lock.source.commit,
 const distRequirements = path.join(buildDir, 'work/dist/domains/comet-classic/classic-artifact-requirements.js');
 const built = await fs.access(path.join(buildDir, 'distribution.json')).then(() => true, () => false);
 
-const isolatedOpenspecPkg = path.join(projectRoot, '.sdd/tools/openspec-1.11.0/node_modules/@fission-ai/openspec');
+const isolatedOpenspecPkg = path.join(projectRoot, '.sdd/tools/openspec-1.15.0/node_modules/@fission-ai/openspec');
 const isolatedOpenspecBin = path.join(isolatedOpenspecPkg, 'bin/openspec.js');
 const isolatedOpenspecReady = await fs.access(isolatedOpenspecBin).then(() => true, () => false);
 
@@ -945,11 +945,11 @@ test('C08 current host: the live host CLI exposes dependency edges and the pinne
     'the pinned predicate must accept the live host response with the registered closure');
 });
 
-test('C08 positive: the isolated 1.11.0 candidate exposes the edges and the same closure accepts it — no global upgrade', async (t) => {
+test('C08 positive: the isolated 1.15.0 candidate exposes the edges and the same closure accepts it — no global upgrade', async (t) => {
   const record = await loadProbe('openspec-compat.json');
-  assert.equal(record.positive?.isolatedInstall, '.sdd/tools/openspec-1.11.0');
+  assert.equal(record.positive?.isolatedInstall, '.sdd/tools/openspec-1.15.0');
   assert.equal(record.positive?.cliVersion, toolchain.openspec.isolated_candidate);
-  assert.ok(isolatedOpenspecReady, 'fixed isolated OpenSpec 1.11.0 must be installed; no skip or global replacement');
+  assert.ok(isolatedOpenspecReady, 'fixed isolated OpenSpec 1.15.0 must be installed; no skip or global replacement');
   assert.ok(built, 'the pinned 0.5.0+0005 Comet build is required');
   const root = await openspecScratch(t);
   const version = spawnSync(process.execPath, [isolatedOpenspecBin, '--version'], {
@@ -1037,7 +1037,7 @@ test('P1_5 probe registration is complete and cites real-entry evidence', async 
   const compat = await loadProbe('openspec-compat.json');
   assert.ok(compat.negative?.cliVersion && compat.negative?.closureError, 'the C08 refusal must be registered with the pinned CLI version and the real predicate error');
   assert.equal(compat.positive?.closureResult, 'ACCEPTED');
-  assert.equal(compat.fixedEnvironment?.isolatedInstall, '.sdd/tools/openspec-1.11.0');
+  assert.equal(compat.fixedEnvironment?.isolatedInstall, '.sdd/tools/openspec-1.15.0');
   assert.equal(compat.fixedEnvironment?.buildFingerprint, fingerprint);
 });
 

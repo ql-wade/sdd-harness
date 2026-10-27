@@ -833,9 +833,9 @@ function validateImageLock(lock) {
     add('RETIRED_PATCH_RECORD_INVALID', 'image.lock.json:sourceInputs.patches', { reason: 'the retired seven-patch identification list (path + sha256 per entry) must stay well-formed' });
   }
   const openspec = source.openspec;
-  if (!openspec || openspec.package !== '@fission-ai/openspec' || openspec.version !== '1.11.0'
-    || openspec.tarballSha256 !== '84820b173b57204bd7582a47ddae65e85fd492724172acc8e434e97ea1c05c3f'
-    || openspec.registryTarball !== 'https://registry.npmmirror.com/@fission-ai/openspec/-/openspec-1.11.0.tgz' || openspec.tarballBytes !== 471694) {
+  if (!openspec || openspec.package !== '@fission-ai/openspec' || openspec.version !== '1.15.0'
+    || openspec.tarballSha256 !== '5c2274b7f5b2e52ebe8dc6c4d616837d0326a8c83eb7d3ca181539dedbf02644'
+    || openspec.registryTarball !== 'https://registry.npmmirror.com/@fission-ai/openspec/-/openspec-1.15.0.tgz' || openspec.tarballBytes !== 589333) {
     add('OPENSPEC_PIN_INVALID', 'image.lock.json:sourceInputs.openspec', { reason: 'the still-live openspec pin (registry-referenced by openspec-isolated-tools) must stay exactly as P1_1 recorded it' });
   }
   if (source.hostBuildFingerprint !== undefined && source.hostBuildFingerprint !== recordFingerprint(source)) {

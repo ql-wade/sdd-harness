@@ -1,7 +1,7 @@
 // Spec Adapter closeout tests (task P3_4, A11/B08) — Comet 0.5.0 face
 // (revision 2026-10-26-comet-050-adoption-v1).
 //
-// lib/adapters/spec.js: the openspec CLI (pinned 1.11.0, resolved through the
+// lib/adapters/spec.js: the openspec CLI (pinned 1.15.0, resolved through the
 // shared COMET_OPENSPEC seam) is the ONLY archive writer. The component-only
 // path wraps the real openspec CLI and owns rehearse -> drift-check ->
 // archive -> readback plus interruption recovery; the managed path binds the

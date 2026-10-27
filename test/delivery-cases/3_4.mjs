@@ -4,7 +4,7 @@
 //
 // 1. The component-only closeout path (default test() family): the Spec
 //    Adapter is the single closeout writer over the real pinned openspec CLI
-//    (1.11.0, resolved through the shared COMET_OPENSPEC seam) in a real
+//    (1.15.0, resolved through the shared COMET_OPENSPEC seam) in a real
 //    temporary OpenSpec project.
 //      V_A11 (3.4.a/3.4.b) — dispatch-to-archive interruption story: a
 //        rehearsal in a cloned project previews the target summary without
@@ -32,7 +32,7 @@
 //        closeout reconciliation without a second archive/sync, crash-after-
 //        commit resume, before-move target collision;
 //      - B08/N07 stale-inspection drift refusal.
-//    The openspec CLI (pinned 1.11.0 via COMET_OPENSPEC) stays the ONLY
+//    The openspec CLI (pinned 1.15.0 via COMET_OPENSPEC) stays the ONLY
 //    archive writer — invoked exactly once by Native's comet archive.
 //
 // Proven UNVERIFIED (honest scope): the composition-wired Kp refusal (P2_4
@@ -43,7 +43,7 @@
 //
 // All fixtures are generated under os.tmpdir(); no live configuration or
 // change-control file is written by this suite. The pinned openspec CLI must
-// exist at .sdd/tools/openspec-1.11.0; when it is absent the component family
+// exist at .sdd/tools/openspec-1.15.0; when it is absent the component family
 // fails UNVERIFIED (nonzero), never skips to pass.
 import assert from 'node:assert/strict';
 import { spawnSync, spawn } from 'node:child_process';
@@ -59,7 +59,7 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const adapterPath = path.join(projectRoot, 'lib/adapters/spec.js');
 const adapter = await import(adapterPath);
 
-const OPENSPEC_CLI = path.join(projectRoot, '.sdd/tools/openspec-1.11.0/node_modules/.bin/openspec');
+const OPENSPEC_CLI = path.join(projectRoot, '.sdd/tools/openspec-1.15.0/node_modules/.bin/openspec');
 const CLI_TIMEOUT_MS = 120_000;
 const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 
@@ -552,7 +552,7 @@ if (specRestart>=0) {
   test('P3_4 exact official SDK distribution is verified',async()=>{
     assert.equal(process.versions.node,lock.toolchain.node);
     assert.equal((await verifyCometDistribution({projectRoot:repository,lock})).status,'PASS');
-    assert.equal(hostVersion.stdout.trim(),'1.11.0');
+    assert.equal(hostVersion.stdout.trim(),'1.15.0');
   });
   for (const [id,name] of [['archive','A11/N07: actual Native archive refusal forwarding, same-Run archive and repeated-closeout reconciliation'],['drift','B08/N07: stale inspection and restored bytes cannot revive archive permission'],['restart','A11: actual archive writer crash resumes the original committed Run without repeat sync'],['premove','A11: before-move archive target conflict recovers on the same original Run']]) {
     test(name,{timeout:330000},()=>{

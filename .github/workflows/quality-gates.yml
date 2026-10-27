@@ -1,3 +1,31 @@
+# scaffold quality gates — the "checks" required-check candidate (ci-policy.json
+# provider.committedWorkflows; job id stays `checks`: that id IS the check-run
+# name infra-platform.test.js pins).
+#
+# CI parity contract (ci-parity-050): `npm test` is only meaningful on the same
+# environment the local green run uses. The regression suite is NOT
+# standalone-node-only — it consumes real pinned toolchain inputs that a bare
+# runner lacks, so this workflow assembles them from integrity-locked sources
+# before running the suite:
+#   1. full git history (foundation baseline resolution resolves pinned
+#      commits via git cat-file/show — a depth-1 clone cannot);
+#   2. Node 24.15.0 + pnpm 10.18.3 exactly as integrations/comet/upstream.lock.json
+#      toolchain pins them (tools/comet/build.mjs refuses any other version);
+#   3. the pinned Comet 0.5.0 vendored build under .sdd/vendor (sha256+bytes
+#      verified codeload archive -> tools/comet/prepare-source.mjs ->
+#      tools/comet/build.mjs) — C08/classic-integration, spec-closeout managed
+#      Run context, the legacy asset helper and the adoption registration all
+#      read that build;
+#   4. the isolated OpenSpec candidate (version is the single fact source
+#      openspec.isolated_candidate in toolchain-baseline.json — no hardcoded
+#      copy here; fallback 1.15.0) installed under
+#      .sdd/tools/openspec-<version> and wired to the COMET_OPENSPEC seam,
+#      plus a host-global openspec on PATH (the C08 current-host leg observes
+#      a real host CLI, never upgrades one);
+#   5. python3 with PyYAML 6.0.3 reachable in `python3 -I` isolated mode (the
+#      I02/I05 compose parsers pin that exact loader version; a venv's own
+#      site-packages survive -I). Docker is NOT provisioned: no gate under
+#      test contacts a container daemon by design.
 name: scaffold quality gates
 
 on:
@@ -11,13 +39,87 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout with full history (foundation baselines resolve pinned commits from git history)
+        uses: actions/checkout@v4
         with:
-          node-version: 22
+          fetch-depth: 0
+      - name: Setup the pinned Node toolchain (upstream.lock.json toolchain.node)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
           cache: npm
-      - run: npm install --no-audit --no-fund
+      - name: Install repository dependencies
+        run: npm install --no-audit --no-fund
+      - name: Provision the pinned pnpm (upstream.lock.json toolchain.pnpm)
+        run: npm install -g pnpm@10.18.3
+      - name: Assemble the pinned Comet 0.5.0 vendored build (integrity-locked codeload archive)
+        run: |
+          set -euo pipefail
+          archive="$PWD/.sdd/cache/runner-build/comet-source-0.5.0.tar.gz"
+          url="$(node -p "require('./integrations/comet/upstream.lock.json').source.url")"
+          expected_sha256="$(node -p "require('./integrations/comet/upstream.lock.json').source.sha256")"
+          expected_bytes="$(node -p "require('./integrations/comet/upstream.lock.json').source.bytes")"
+          mkdir -p .sdd/cache/runner-build
+          curl -fsSL --retry 3 -o "$archive" "$url"
+          echo "$expected_sha256  $archive" | sha256sum --check --strict
+          actual_bytes="$(stat -c%s "$archive")"
+          if [ "$actual_bytes" != "$expected_bytes" ]; then
+            echo "archive bytes $actual_bytes != locked $expected_bytes" >&2
+            exit 1
+          fi
+          # prepare-source re-verifies sha256+bytes against the lock and seals
+          # provenance; build compiles the pinned distribution the tests read.
+          node tools/comet/prepare-source.mjs --archive "$archive" --json
+          node tools/comet/build.mjs --archive "$archive" --json
+          # Second, historical identity: the comet-050 adoption registration
+          # (infra/delivery/registry.json) pins the ZERO-PATCH build of the
+          # same archive (fingerprintOf(lock, [])); infra-registry requires it
+          # on disk next to the current-lock build. Recreated from the same
+          # integrity-locked archive with a patches:[] copy of the lock kept
+          # outside the tree ($RUNNER_TEMP).
+          zero_patch_lock="$RUNNER_TEMP/upstream-zero-patch.lock.json"
+          node -e "
+            const fs = require('node:fs');
+            const lock = JSON.parse(fs.readFileSync('integrations/comet/upstream.lock.json', 'utf8'));
+            lock.patches = [];
+            fs.writeFileSync(process.argv[1], JSON.stringify(lock, null, 2) + '\n');
+          " "$zero_patch_lock"
+          node tools/comet/build.mjs --archive "$archive" --lock "$zero_patch_lock" --json
+      - name: Isolate the pinned OpenSpec candidate and provide the host CLI
+        run: |
+          set -euo pipefail
+          # Single fact source: the openspec.isolated_candidate pin in
+          # toolchain-baseline.json (controller revision: pin moved 1.11.0 ->
+          # 1.15.0). The fallback keeps the step honest if the field is absent;
+          # anything that is not an exact semver is refused, never guessed.
+          openspec_version="$(node -p "JSON.parse(require('fs').readFileSync('openspec/changes/delivery-foundation-rearchitecture/toolchain-baseline.json','utf8')).openspec?.isolated_candidate ?? '1.15.0'")"
+          case "$openspec_version" in
+            [0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "refusing non-exact openspec pin: $openspec_version" >&2; exit 1 ;;
+          esac
+          echo "isolated openspec version: $openspec_version"
+          tools_root=".sdd/tools/openspec-$openspec_version"
+          mkdir -p "$tools_root"
+          npm install --prefix "$tools_root" --no-audit --no-fund "@fission-ai/openspec@$openspec_version"
+          node "$tools_root/node_modules/@fission-ai/openspec/bin/openspec.js" --version
+          # Ephemeral runner "host" CLI for the C08 current-host observation
+          # leg (drift is observed, never upgraded — the runner starts clean).
+          npm install -g --no-audit --no-fund "@fission-ai/openspec@$openspec_version"
+          openspec --version
+          # The COMET_OPENSPEC seam (lib/adapters/spec.js) follows the same
+          # fact source; exported for the subsequent npm test step.
+          echo "COMET_OPENSPEC=$GITHUB_WORKSPACE/$tools_root/node_modules/.bin/openspec" >> "$GITHUB_ENV"
+      - name: Provision PyYAML 6.0.3 for the isolated compose parsers (I02/I05)
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/pyyaml-venv"
+          "$RUNNER_TEMP/pyyaml-venv/bin/python3" -m pip install --quiet pyyaml==6.0.3
+          # The parsers invoke `python3 -I`; a venv's own site-packages are the
+          # interpreter's, so isolated mode still resolves the exact version.
+          "$RUNNER_TEMP/pyyaml-venv/bin/python3" -I -c "import yaml; assert yaml.__version__ == '6.0.3', yaml.__version__"
+          echo "$RUNNER_TEMP/pyyaml-venv/bin" >> "$GITHUB_PATH"
       - name: Rule & skill layer integrity
         run: |
           bash scripts/agent-instructions-check.sh
