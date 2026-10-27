@@ -1,0 +1,36 @@
+# P1_2-convergence: pre-existence check of the 5 non-legacy-workflow suite failures
+# METHOD: temporarily restored HEAD versions of the two files this task owns, removed untracked .claude/ + hooks/.compiled.env left by the earlier suite run, re-ran the failing tests.
+# DATE: 2026-10-24T15:19:47.327Z
+
+== foundation-distribution (pattern: contract-valid lock|repo-level drift gate|keep-baseline|never silently swapped) EXIT 1 ==
+not ok 1 - exporter builds a contract-valid lock from the unique sources (real repo)
+not ok 2 - committed foundation artifacts match live sources (repo-level drift gate)
+not ok 3 - old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+not ok 4 - unresolvable pinned baseline is blocked explicitly, never silently swapped
+
+== lifecycle-hook (pattern: CONSISTENT and the live config) EXIT 0 ==
+ok 1 - doctor: the real composition of this repo is CONSISTENT and the live config is never touched
+
+CONCLUSION: all 5 failures reproduce on pristine HEAD => pre-existing on this branch (committed method-profile-manifest/foundation-lock pins predate the vendored multi-agent-consensus-review body from d481b5f; doctor test assumes a live .claude/settings.json which a fresh worktree lacks). Not caused by the legacy-workflow fix.
+
+
+== DECISIVE CHECK: same 4-file suite command on PRISTINE HEAD ==
+# CMD: node --test test/foundation-distribution.test.js test/adapter-quoting.test.js test/delivery-hook-assembly.test.js test/lifecycle-hook.test.js
+# EXIT: 1
+# FAILING TESTS (5):
+not ok 15 - exporter builds a contract-valid lock from the unique sources (real repo)
+not ok 20 - committed foundation artifacts match live sources (repo-level drift gate)
+not ok 37 - old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+not ok 39 - unresolvable pinned baseline is blocked explicitly, never silently swapped
+not ok 46 - doctor: the real composition of this repo is CONSISTENT and the live config is never touched
+
+# tests 52
+# suites 0
+# pass 47
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6948.35725
+
+CONCLUSION: identical failure set on pristine HEAD => none of the 5 failures are caused by the legacy-workflow fix; the doctor race is a pre-existing parallel-file interleaving (some test writes the live worktree .claude/settings.json while the doctor asserts it untouched).

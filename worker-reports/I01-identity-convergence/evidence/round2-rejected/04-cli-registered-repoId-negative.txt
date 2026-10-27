@@ -1,0 +1,52 @@
+SCENARIO B1 (review defect: invalid id still calls gh): registered project.github.repoId = -3, transport healthy
+command: node tools/infra/registry.mjs readback --kind github --registry /var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/infra-i01-registry-uFIL0U/registry.json --json   (PATH prefixed with the stub gh transport defined in this test file; registry input: temp fixture under os.tmpdir() (mutated copy of the committed registry))
+no network, no credentials: the stub records argv into calls.log and serves local route fixtures only
+
+exit code: 2
+
+--- stdout ---
+{
+  "interface": "Registry.v1",
+  "command": "readback",
+  "kind": "github",
+  "registry": "<host-path-redacted>",
+  "registeredIdentity": {
+    "repoFullname": "ql-wade/sdd-harness",
+    "repoId": -3,
+    "owner": "ql-wade",
+    "principalId": 262266039
+  },
+  "repoReadback": {
+    "status": "MISMATCH",
+    "via": "gh api repos/ql-wade/sdd-harness",
+    "mismatches": [
+      {
+        "field": "repoId",
+        "expected": -3,
+        "observed": 1285806550
+      }
+    ],
+    "reason": "gh api repos/ql-wade/sdd-harness answered for a different repository than the registered identity (repoId expected -3, observed 1285806550)"
+  },
+  "callerReadback": {
+    "status": "VERIFIED",
+    "via": "gh api user",
+    "principalId": 262266039,
+    "login": "ql-wade"
+  },
+  "status": "MISMATCH",
+  "error": "MISMATCH: gh api repos/ql-wade/sdd-harness answered for a different repository than the registered identity (repoId expected -3, observed 1285806550)",
+  "grants": {
+    "publication": "NOT_CLAIMED",
+    "ciMutation": "NOT_CLAIMED",
+    "qualification": "SEPARATE_GATE",
+    "note": "identity readback verifies repository identity and the authenticated caller only; it grants no publication, CI mutation, push or other business authorization"
+  },
+  "checkedAt": "2026-10-24T16:51:57.749Z"
+}
+
+
+--- stderr ---
+(empty)
+
+observed gh invocations (stub calls.log): [["api","repos/ql-wade/sdd-harness"],["api","user"]]

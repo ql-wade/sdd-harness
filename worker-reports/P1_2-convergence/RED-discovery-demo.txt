@@ -1,0 +1,14 @@
+# P1_2-convergence RED discovery demonstration (CURRENT adapter, pre-fix)
+# CMD: SDD_TARGET_ROOT=<tmp fixture> bash tools/adapters/claude-code.sh  (fixture injects .agents/skills/source-command-sdd-code/SKILL.md)
+# DATE: 2026-10-24T15:16:52.773Z
+# FIXTURE: /var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/sdd-p12-red-rRtU8j
+# ADAPTER_EXIT_CODE: 0
+
+-- adapter stdout --
+✅ hooks 策略已编译：hooks/.compiled.env + .claude/settings.json (1 deny 策略)  [SDD_TARGET_ROOT 隔离模式]
+✅ .claude/skills 注入 2 个技能软链（全部可解析）
+-- .claude/skills after install --
+[symlink -> ../../.agents/skills/alpha] alpha
+[symlink -> ../../.agents/skills/source-command-sdd-code] source-command-sdd-code
+-- discovery check --
+source-command-sdd-code exposed via .claude/skills: true  (=> retired /sdd:code command is discoverable again through installation)

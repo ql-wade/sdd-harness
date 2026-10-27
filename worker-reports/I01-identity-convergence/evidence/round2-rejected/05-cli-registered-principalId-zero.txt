@@ -1,0 +1,54 @@
+SCENARIO B2 (review defect: invalid id still calls gh): registered project.github.principalId = 0, transport healthy
+command: node tools/infra/registry.mjs readback --kind github --registry /var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/infra-i01-registry-HC1QYY/registry.json --json   (PATH prefixed with the stub gh transport defined in this test file; registry input: temp fixture under os.tmpdir() (mutated copy of the committed registry))
+no network, no credentials: the stub records argv into calls.log and serves local route fixtures only
+
+exit code: 2
+
+--- stdout ---
+{
+  "interface": "Registry.v1",
+  "command": "readback",
+  "kind": "github",
+  "registry": "<host-path-redacted>",
+  "registeredIdentity": {
+    "repoFullname": "ql-wade/sdd-harness",
+    "repoId": 1285806550,
+    "owner": "ql-wade",
+    "principalId": 0
+  },
+  "repoReadback": {
+    "status": "VERIFIED",
+    "via": "gh api repos/ql-wade/sdd-harness",
+    "repoId": 1285806550,
+    "repoFullname": "ql-wade/sdd-harness",
+    "owner": "ql-wade",
+    "defaultBranch": "master"
+  },
+  "callerReadback": {
+    "status": "MISMATCH",
+    "via": "gh api user",
+    "mismatches": [
+      {
+        "field": "principalId",
+        "expected": 0,
+        "observed": 262266039
+      }
+    ],
+    "reason": "authenticated caller is not the registered principal (principalId expected 0, observed 262266039); a publicly readable repository is not caller/owner authentication"
+  },
+  "status": "MISMATCH",
+  "error": "MISMATCH: authenticated caller is not the registered principal (principalId expected 0, observed 262266039); a publicly readable repository is not caller/owner authentication",
+  "grants": {
+    "publication": "NOT_CLAIMED",
+    "ciMutation": "NOT_CLAIMED",
+    "qualification": "SEPARATE_GATE",
+    "note": "identity readback verifies repository identity and the authenticated caller only; it grants no publication, CI mutation, push or other business authorization"
+  },
+  "checkedAt": "2026-10-24T16:51:58.022Z"
+}
+
+
+--- stderr ---
+(empty)
+
+observed gh invocations (stub calls.log): [["api","repos/ql-wade/sdd-harness"],["api","user"]]

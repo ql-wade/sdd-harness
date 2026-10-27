@@ -26,6 +26,12 @@ ADR-0015 有意收缩为 scaffold，无法独自保证产品到发布的状态�
 
 ## 结果、风险和回退
 
+### 2026-10-20 官方能力复用修订候选
+
+用户要求先预研后更新。隔离预研支持官方 five-phase overlay 作为原 Classic 上的方法/产物合同层；原生 canonical plan 与 handoff 优先复用。原92场景保留，新增 OV01–OV08 验证来源、产物归属、不可绕过、漂移/恢复和宿主装配；具体设计与证据见 [overlay 接入设计](../../../openspec/changes/delivery-foundation-rearchitecture/overlay-integration-design.md)。
+
+本修订保持单主控与既有权威边界，不授权 workflow-kernel/独立 Engine Run 嵌套。原架构采纳状态仅对应原冻结基线；新增 OVR 复审本次制品，未通过前不能据旧票启用新组合。overlay 原生标记可手工记录且预研中被生成 Guard 接受，不能据其 PASS 签发可信团队回执。Runtime 补丁范围按实证 gap 缩小，不预先自研方法生成器或任务映射协议。
+
 新增契约与适配器维护成本；上游接口、宿主 Guard、发布身份、完整快照仍待验证。兼容失败不接管配置；后端缺扩展点不伪造集成。保留旧 CLI 与配置回退；真实发布副作用按回执恢复。
 
 权威设计：[delivery-architecture.md](../delivery-architecture.md)。实施与验收：[OpenSpec](../../../openspec/changes/delivery-foundation-rearchitecture/tasks.md)。

@@ -1,0 +1,119 @@
+# P1_2-convergence RED (focused cycle, BEFORE adapter fix)
+# CMD: node --test --test-reporter=tap --test-name-pattern=legacy workflow test/foundation-distribution.test.js
+# EXIT_CODE: 1
+# DATE: 2026-10-24T15:16:42.308Z
+# RESULT: 5 tests, 0 pass, 5 fail (all genuine assertion failures; no zero-match, no setup/missing-module failures)
+
+TAP version 13
+# Subtest: legacy workflow: migrated source-command-sdd-code source is never exposed as a managed skill link
+not ok 1 - legacy workflow: migrated source-command-sdd-code source is never exposed as a managed skill link
+  ---
+  duration_ms: 64.134333
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:270:3'
+  failureType: 'testCodeFailure'
+  error: 'retired source-command-sdd-code must not be discoverable via .claude/skills after install (found: ["alpha","beta","source-command-sdd-code"])'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:665:12)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.start (node:internal/test_runner/test:829:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: legacy workflow: retired sdd-* / trinity-* / superpowers source directories are excluded with diagnostics, upstream bodies untouched
+not ok 2 - legacy workflow: retired sdd-* / trinity-* / superpowers source directories are excluded with diagnostics, upstream bodies untouched
+  ---
+  duration_ms: 73.510666
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:270:3'
+  failureType: 'testCodeFailure'
+  error: 'sdd-code must never receive a managed skill link (found: ["alpha","beta","sdd-code","sdd-grill","source-command-sdd-release","superpowers","trinity-build"])'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:696:14)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: legacy workflow: stale managed link to a retired source is repaired on install; user-owned retired-name symlink kept with a warning
+not ok 3 - legacy workflow: stale managed link to a retired source is repaired on install; user-owned retired-name symlink kept with a warning
+  ---
+  duration_ms: 59.115542
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:270:3'
+  failureType: 'testCodeFailure'
+  error: 'stale managed link to the retired source must be removed on install (found: ["alpha","beta","source-command-sdd-code"])'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:725:12)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: legacy workflow: legacy real retired directories under .claude/skills are cleaned up while unrelated user skill directories survive
+not ok 4 - legacy workflow: legacy real retired directories under .claude/skills are cleaned up while unrelated user skill directories survive
+  ---
+  duration_ms: 64.006291
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:270:3'
+  failureType: 'testCodeFailure'
+  error: 'legacy retired directory source-command-sdd-verify must be removed (found: ["alpha","beta","source-command-sdd-verify","superpowers","user-custom"])'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:750:14)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: legacy workflow: uninstall removes only managed entries and re-install never re-exposes retired sources (idempotence)
+not ok 5 - legacy workflow: uninstall removes only managed entries and re-install never re-exposes retired sources (idempotence)
+  ---
+  duration_ms: 112.037417
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:270:3'
+  failureType: 'testCodeFailure'
+  error: 'retired source must stay unexposed across repeat installs'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:770:12)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 0
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 460.396833

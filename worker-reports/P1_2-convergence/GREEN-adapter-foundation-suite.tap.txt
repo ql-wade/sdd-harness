@@ -1,0 +1,415 @@
+# P1_2-convergence GREEN: existing affected adapter/foundation suite (run once after green)
+# CMD: node --test test/foundation-distribution.test.js test/adapter-quoting.test.js test/delivery-hook-assembly.test.js test/lifecycle-hook.test.js
+# EXIT_CODE: 1
+# DATE: 2026-10-24T15:17:58.088Z
+
+TAP version 13
+# Subtest: claude-code adapter compiles hooks.yaml to safely-sourceable env
+ok 1 - claude-code adapter compiles hooks.yaml to safely-sourceable env
+  ---
+  duration_ms: 114.832625
+  ...
+# Subtest: sourcing .compiled.env has no side effects and preserves deny patterns
+ok 2 - sourcing .compiled.env has no side effects and preserves deny patterns
+  ---
+  duration_ms: 3.579542
+  ...
+# Subtest: pre-tool-gate denies blocked commands and allows normal ones
+ok 3 - pre-tool-gate denies blocked commands and allows normal ones
+  ---
+  duration_ms: 161.135375
+  ...
+# Subtest: pre-tool-gate fails closed on unparseable non-empty input (r2 F4)
+ok 4 - pre-tool-gate fails closed on unparseable non-empty input (r2 F4)
+  ---
+  duration_ms: 72.746083
+  ...
+# Subtest: .mcp.json carries pinned versions, never @latest (r2 F-001/zcode F1)
+ok 5 - .mcp.json carries pinned versions, never @latest (r2 F-001/zcode F1)
+  ---
+  duration_ms: 0.6555
+  ...
+# Subtest: pre-tool-gate denies direct wiki writes (kb-write-protection)
+ok 6 - pre-tool-gate denies direct wiki writes (kb-write-protection)
+  ---
+  duration_ms: 77.929042
+  ...
+# Subtest: compiled settings.json PreToolUse matcher covers every deny policy
+ok 7 - compiled settings.json PreToolUse matcher covers every deny policy
+  ---
+  duration_ms: 0.651834
+  ...
+# Subtest: adapter preserves user hook entries it does not own
+ok 8 - adapter preserves user hook entries it does not own
+  ---
+  duration_ms: 127.892917
+  ...
+# Subtest: H02: SessionStart startup/resume and Stop — native settings layer and script layer agree; repeats in mixed order stay advisory and byte-identical
+ok 9 - H02: SessionStart startup/resume and Stop — native settings layer and script layer agree; repeats in mixed order stay advisory and byte-identical
+  ---
+  duration_ms: 1259.009917
+  ...
+# Subtest: E06: compact and sub-session starts are not project-assembled — the adapter refuses them in YAML, the composed settings stay silent, and the real Ponytail plugin snapshot owns those surfaces
+ok 10 - E06: compact and sub-session starts are not project-assembled — the adapter refuses them in YAML, the composed settings stay silent, and the real Ponytail plugin snapshot owns those surfaces
+  ---
+  duration_ms: 105.798625
+  ...
+# Subtest: E05: three-subject coexistence on real plugin bytes — plugin and user entries survive composition verbatim, one managed entry per fixed event, idempotent repeat
+ok 11 - E05: three-subject coexistence on real plugin bytes — plugin and user entries survive composition verbatim, one managed entry per fixed event, idempotent repeat
+  ---
+  duration_ms: 116.092958
+  ...
+# Subtest: E05/E06: cross-session and cross-role crosstalk — hook output is role-independent, a switched shared mode never moves the gates, and the verbatim knownFacts reuse still holds after the I02 rework
+ok 12 - E05/E06: cross-session and cross-role crosstalk — hook output is role-independent, a switched shared mode never moves the gates, and the verbatim knownFacts reuse still holds after the I02 rework
+  ---
+  duration_ms: 807.018416
+  ...
+# Subtest: E05: failure, silence and timeout never fabricate a method receipt — and the required gates still actually block afterwards
+ok 13 - E05: failure, silence and timeout never fabricate a method receipt — and the required gates still actually block afterwards
+  ---
+  duration_ms: 795.149167
+  ...
+# Subtest: E06: user start/stop of the project assembly — uninstall keeps plugin and user subjects, re-init restores the managed block byte-identically
+ok 14 - E06: user start/stop of the project assembly — uninstall keeps plugin and user subjects, re-init restores the managed block byte-identically
+  ---
+  duration_ms: 152.854209
+  ...
+# Subtest: exporter builds a contract-valid lock from the unique sources (real repo)
+not ok 15 - exporter builds a contract-valid lock from the unique sources (real repo)
+  ---
+  duration_ms: 283.232959
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:77:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    skill multi-agent-consensus-review lock digest must match the method-profile manifest
+    + actual - expected
+    
+    + '95ec28149e642fdef6d08d928c99956dafcef1bd9961f001666403fe0c5a3260'
+    - '50d5ff30833bae1846d60b0a19560037dcf0c47905aad847005ff26e22f820fc'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: '50d5ff30833bae1846d60b0a19560037dcf0c47905aad847005ff26e22f820fc'
+  actual: '95ec28149e642fdef6d08d928c99956dafcef1bd9961f001666403fe0c5a3260'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:94:12)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: lock emission gates: full digests, no machine paths, no floating versions
+ok 16 - lock emission gates: full digests, no machine paths, no floating versions
+  ---
+  duration_ms: 141.648708
+  ...
+# Subtest: exporter refuses to emit when an MCP registration floats (@latest)
+ok 17 - exporter refuses to emit when an MCP registration floats (@latest)
+  ---
+  duration_ms: 16.726416
+  ...
+# Subtest: release view + lock are byte-stable across repeated exports (repeat-pull idempotency)
+ok 18 - release view + lock are byte-stable across repeated exports (repeat-pull idempotency)
+  ---
+  duration_ms: 30.529541
+  ...
+# Subtest: dual-write drift is detected in both directions (source edit and hand-edited view)
+ok 19 - dual-write drift is detected in both directions (source edit and hand-edited view)
+  ---
+  duration_ms: 54.390916
+  ...
+# Subtest: committed foundation artifacts match live sources (repo-level drift gate)
+not ok 20 - committed foundation artifacts match live sources (repo-level drift gate)
+  ---
+  duration_ms: 137.387041
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:196:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    committed foundation drifted from sources: [{"kind":"lock","item":"multi-agent-consensus-review","expected":"50d5ff30833bae1846d60b0a19560037dcf0c47905aad847005ff26e22f820fc","actual":"95ec28149e642fdef6d08d928c99956dafcef1bd9961f001666403fe0c5a3260","detail":"skill digest drifted from the pinned lock"},{"kind":"release","item":"release/skills/MANIFEST.json","detail":"release skill manifest drifted from sources"}]
+    + actual - expected
+    
+    + [
+    +   {
+    +     actual: '95ec28149e642fdef6d08d928c99956dafcef1bd9961f001666403fe0c5a3260',
+    +     detail: 'skill digest drifted from the pinned lock',
+    +     expected: '50d5ff30833bae1846d60b0a19560037dcf0c47905aad847005ff26e22f820fc',
+    +     item: 'multi-agent-consensus-review',
+    +     kind: 'lock'
+    +   },
+    +   {
+    +     detail: 'release skill manifest drifted from sources',
+    +     item: 'release/skills/MANIFEST.json',
+    +     kind: 'release'
+    +   }
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      kind: 'lock'
+      item: 'multi-agent-consensus-review'
+      expected: '50d5ff30833bae1846d60b0a19560037dcf0c47905aad847005ff26e22f820fc'
+      actual: '95ec28149e642fdef6d08d928c99956dafcef1bd9961f001666403fe0c5a3260'
+      detail: 'skill digest drifted from the pinned lock'
+    1:
+      kind: 'release'
+      item: 'release/skills/MANIFEST.json'
+      detail: 'release skill manifest drifted from sources'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:200:10)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: composition requires adapter fixture isolation and uninstall capability
+ok 21 - composition requires adapter fixture isolation and uninstall capability
+  ---
+  duration_ms: 0.078667
+  ...
+# Subtest: reverse order A: existing user config survives bootstrap, guard installed once
+ok 22 - reverse order A: existing user config survives bootstrap, guard installed once
+  ---
+  duration_ms: 52.968167
+  ...
+# Subtest: reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept
+ok 23 - reverse order B + repeat pull: re-bootstrap never duplicates Guard, user edits kept
+  ---
+  duration_ms: 156.039709
+  ...
+# Subtest: upgrade: stale managed entry in an older command format is replaced, not duplicated
+ok 24 - upgrade: stale managed entry in an older command format is replaced, not duplicated
+  ---
+  duration_ms: 58.739583
+  ...
+# Subtest: uninstall removes managed entries only, is idempotent, and re-init restores
+ok 25 - uninstall removes managed entries only, is idempotent, and re-init restores
+  ---
+  duration_ms: 189.829084
+  ...
+# Subtest: uninstall is locale-safe: UTF-8 locale must not crash bootstrap (regression: unbraced $var before a multibyte char)
+ok 26 - uninstall is locale-safe: UTF-8 locale must not crash bootstrap (regression: unbraced $var before a multibyte char)
+  ---
+  duration_ms: 96.536625
+  ...
+# Subtest: owned control-plane scripts never place an unbraced variable expansion adjacent to multibyte text
+ok 27 - owned control-plane scripts never place an unbraced variable expansion adjacent to multibyte text
+  ---
+  duration_ms: 0.227167
+  ...
+# Subtest: matcher registration and gate script behavior are tested together
+ok 28 - matcher registration and gate script behavior are tested together
+  ---
+  duration_ms: 201.215875
+  ...
+# Subtest: adapter declares the fixed event set and the plugin registration division
+ok 29 - adapter declares the fixed event set and the plugin registration division
+  ---
+  duration_ms: 0.219834
+  ...
+# Subtest: plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall
+ok 30 - plugin lifecycle hooks are source-marked: never absorbed by handover, dedup or uninstall
+  ---
+  duration_ms: 153.686667
+  ...
+# Subtest: same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched
+ok 31 - same event/command duplicate registration (plugin entry wrapping the managed command) is refused with a conflict list, settings untouched
+  ---
+  duration_ms: 39.1055
+  ...
+# Subtest: duplicate user entries for the same event/command are refused, not composed twice
+ok 32 - duplicate user entries for the same event/command are refused, not composed twice
+  ---
+  duration_ms: 38.756292
+  ...
+# Subtest: hooks.yaml events outside the adapter fixed event set are refused, never silently dropped
+ok 33 - hooks.yaml events outside the adapter fixed event set are refused, never silently dropped
+  ---
+  duration_ms: 38.401625
+  ...
+# Subtest: plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2)
+ok 34 - plugin lifecycle scripts in hooks.yaml are refused (registration division §7.2)
+  ---
+  duration_ms: 37.505334
+  ...
+# Subtest: exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts
+ok 35 - exporter refuses to freeze a policy source carrying plugin-managed lifecycle scripts
+  ---
+  duration_ms: 15.224
+  ...
+# Subtest: bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo
+ok 36 - bootstrap target mode composes adapter + exporter against $TMPDIR, never the repo
+  ---
+  duration_ms: 412.181083
+  ...
+# Subtest: legacy workflow: migrated source-command-sdd-code source is never exposed as a managed skill link
+ok 37 - legacy workflow: migrated source-command-sdd-code source is never exposed as a managed skill link
+  ---
+  duration_ms: 56.130625
+  ...
+# Subtest: legacy workflow: retired sdd-* / trinity-* / superpowers source directories are excluded with diagnostics, upstream bodies untouched
+ok 38 - legacy workflow: retired sdd-* / trinity-* / superpowers source directories are excluded with diagnostics, upstream bodies untouched
+  ---
+  duration_ms: 65.830708
+  ...
+# Subtest: legacy workflow: stale managed link to a retired source is repaired on install; user-owned retired-name symlink kept with a warning
+ok 39 - legacy workflow: stale managed link to a retired source is repaired on install; user-owned retired-name symlink kept with a warning
+  ---
+  duration_ms: 66.275292
+  ...
+# Subtest: legacy workflow: legacy real retired directories under .claude/skills are cleaned up while unrelated user skill directories survive
+ok 40 - legacy workflow: legacy real retired directories under .claude/skills are cleaned up while unrelated user skill directories survive
+  ---
+  duration_ms: 73.474875
+  ...
+# Subtest: legacy workflow: uninstall removes only managed entries and re-install never re-exposes retired sources (idempotence)
+ok 41 - legacy workflow: uninstall removes only managed entries and re-install never re-exposes retired sources (idempotence)
+  ---
+  duration_ms: 213.888959
+  ...
+# Subtest: old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+not ok 42 - old run pinned to the committed lock stays resolvable (real repo, F04 keep-baseline)
+  ---
+  duration_ms: 1503.713292
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:798:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"ok":false,"action":"check","reason":"silent-rebaseline-blocked","drift":true,"baseline":{"ok":true,"resolvable":true,"reason":"all pinned digests resolve from the frozen release commit","resolvedSkills":["claude-parallel-tdd-planner","code-review","diagnosing-bugs","grill-me","grilling","multi-agent-consensus-review","openspec-lifecycle-guard","ponytail","tdd","test-authoring","whitebox-verify"],"missing":[]},"migration":"explicit paths: (1) rerun with --migrate --owner <run-owner> after review, or (2) close this run and start a new run against commit 6ec46aab — a run is never silently re-baselined"}
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:803:12)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: active run blocks silent re-baseline after asset drift; closed run only notes it
+ok 43 - active run blocks silent re-baseline after asset drift; closed run only notes it
+  ---
+  duration_ms: 45.763334
+  ...
+# Subtest: unresolvable pinned baseline is blocked explicitly, never silently swapped
+not ok 44 - unresolvable pinned baseline is blocked explicitly, never silently swapped
+  ---
+  duration_ms: 130.987625
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:837:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'silent-rebaseline-blocked'
+    - 'baseline-unresolvable'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'baseline-unresolvable'
+  actual: 'silent-rebaseline-blocked'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/foundation-distribution.test.js:845:12)
+    async Test.run (node:internal/test_runner/test:932:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: B09: a second writer cannot take over an active run
+ok 45 - B09: a second writer cannot take over an active run
+  ---
+  duration_ms: 2826.141375
+  ...
+# Subtest: explicit migration re-pins only with ownership and a resolvable old baseline
+ok 46 - explicit migration re-pins only with ownership and a resolvable old baseline
+  ---
+  duration_ms: 236.029208
+  ...
+# Subtest: policy layer pins the read-only layering over the P1_2 single source and mirrors the live declaration
+ok 47 - policy layer pins the read-only layering over the P1_2 single source and mirrors the live declaration
+  ---
+  duration_ms: 1.898125
+  ...
+# Subtest: fixed event set matches the adapter compiler; every declared policy stays inside it
+ok 48 - fixed event set matches the adapter compiler; every declared policy stays inside it
+  ---
+  duration_ms: 0.511292
+  ...
+# Subtest: validation rules encode gap / unauthorized / duplicate / silent-failure / mode-crosstalk semantics
+ok 49 - validation rules encode gap / unauthorized / duplicate / silent-failure / mode-crosstalk semantics
+  ---
+  duration_ms: 0.451541
+  ...
+# Subtest: registration matrix models three subjects x event surfaces with the P1_2 source markers
+ok 50 - registration matrix models three subjects x event surfaces with the P1_2 source markers
+  ---
+  duration_ms: 0.492375
+  ...
+# Subtest: doctor: the real composition of this repo is CONSISTENT and the live config is never touched
+not ok 51 - doctor: the real composition of this repo is CONSISTENT and the live config is never touched
+  ---
+  duration_ms: 96.948458
+  location: '/Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/lifecycle-hook.test.js:178:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    live settings.json byte-identical after the doctor run
+    + actual - expected
+    
+    + '["{\\n  \\"hooks\\": {\\n    \\"PreToolUse\\": [\\n      {\\n        \\"matcher\\": \\"Write|Edit|MultiEdit|NotebookEdit|Bash\\",\\n        \\"hooks\\": [\\n          {\\n            \\"type\\": \\"command\\",\\n            \\"command\\": \\"\\\\\\"$CLAUDE_PROJECT_DIR\\\\\\"/hooks/pre-tool-gate.sh\\"\\n          }\\n        ]\\n      }\\n    ],\\n    \\"SessionStart\\": [\\n      {\\n        \\"matcher\\": \\"startup|resume\\",\\n        \\"hooks\\": [\\n          {\\n            \\"type\\": \\"command\\",\\n            \\"command\\": \\"\\\\\\"$CLAUDE_PROJECT_DIR\\\\\\"/hooks/session-context.sh\\"\\n          }\\n        ]\\n      }\\n    ],\\n    \\"Stop\\": [\\n      {\\n        \\"hooks\\": [\\n          {\\n            \\"type\\": \\"command\\",\\n            \\"command\\": \\"\\\\\\"$CLAUDE_PROJECT_DIR\\\\\\"/hooks/stop-reminder.sh\\"\\n          }\\n        ]\\n      }\\n    ]\\n  }\\n}",1792855070727.877]'
+    - null
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual: '["{\\n  \\"hooks\\": {\\n    \\"PreToolUse\\": [\\n      {\\n        \\"matcher\\": \\"Write|Edit|MultiEdit|NotebookEdit|Bash\\",\\n        \\"hooks\\": [\\n          {\\n            \\"type\\": \\"command\\",\\n            \\"command\\": \\"\\\\\\"$CLAUDE_PROJECT_DIR\\\\\\"/hooks/pre-tool-gate.sh\\"\\n          }\\n        ]\\n      }\\n    ],\\n    \\"SessionStart\\": [\\n      {\\n        \\"matcher\\": \\"startup|resume\\",\\n        \\"hooks\\": [\\n          {\\n            \\"type\\": \\"command\\",\\n            \\"command\\": \\"\\\\\\"$CLAUDE_PROJECT_DIR\\\\\\"/hooks/session-context.sh\\"\\n          }\\n        ]\\n      }\\n    ],\\n    \\"Stop\\": [\\n      {\\n        \\"hooks\\": [\\n          {\\n            \\"type\\": \\"command\\",\\n            \\"command\\": \\"\\\\\\"$CLAUDE_PROJECT_DIR\\\\\\"/hooks/stop-reminder.sh\\"\\n          }\\n        ]\\n      }\\n    ]\\n  }\\n}",1792855070727.877]'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/mac/Code/sdd-harness/.claude/worktrees/comet-entry-cleanup/test/lifecycle-hook.test.js:205:10)
+    Test.runInAsyncScope (node:async_hooks:211:14)
+    Test.run (node:internal/test_runner/test:931:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:629:18)
+    Test.postRun (node:internal/test_runner/test:1042:19)
+    Test.run (node:internal/test_runner/test:970:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:629:7)
+  ...
+# Subtest: doctor: declared but not generated is a structured gap — the adapter compiles silently, the doctor refuses
+ok 52 - doctor: declared but not generated is a structured gap — the adapter compiles silently, the doctor refuses
+  ---
+  duration_ms: 127.624875
+  ...
+# Subtest: doctor: generated but not declared is flagged as unauthorized generation
+ok 53 - doctor: generated but not declared is flagged as unauthorized generation
+  ---
+  duration_ms: 123.518167
+  ...
+# Subtest: doctor: duplicate event+command registration is reported with §7.2 semantics; plugin disposition stays at the plugin entry
+ok 54 - doctor: duplicate event+command registration is reported with §7.2 semantics; plugin disposition stays at the plugin entry
+  ---
+  duration_ms: 87.783833
+  ...
+# Subtest: doctor: an event beyond the fixed set keeps the adapter refusal and reports the capability gap without crashing
+ok 55 - doctor: an event beyond the fixed set keeps the adapter refusal and reports the capability gap without crashing
+  ---
+  duration_ms: 123.11275
+  ...
+# Subtest: silent failure: exit 0 without the declared effect is NOT execution — only the observed effect separates the two exit-0 runs
+ok 56 - silent failure: exit 0 without the declared effect is NOT execution — only the observed effect separates the two exit-0 runs
+  ---
+  duration_ms: 22.511542
+  ...
+# Subtest: mode crosstalk: last write wins on a shared mode file and never weakens the deny gate
+ok 57 - mode crosstalk: last write wins on a shared mode file and never weakens the deny gate
+  ---
+  duration_ms: 203.825125
+  ...
+1..57
+# tests 57
+# suites 0
+# pass 52
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7470.199625

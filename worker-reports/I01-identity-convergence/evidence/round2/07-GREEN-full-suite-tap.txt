@@ -1,0 +1,154 @@
+command: node --test test/infra-registry.test.js
+
+exit code: 0
+
+--- stdout ---
+TAP version 13
+# Subtest: V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract
+ok 1 - V_INFRA_I01 contract: committed registry validates clean and canonical commands honor exit contract
+  ---
+  duration_ms: 593.483916
+  ...
+# Subtest: RED owner gate: resource owned by an unregistered owner is rejected
+ok 2 - RED owner gate: resource owned by an unregistered owner is rejected
+  ---
+  duration_ms: 61.876959
+  ...
+# Subtest: RED cross-project gate: credentialRef resolving into another project (pav-*) is rejected
+ok 3 - RED cross-project gate: credentialRef resolving into another project (pav-*) is rejected
+  ---
+  duration_ms: 53.966834
+  ...
+# Subtest: RED principal gate: ordinary agent identity is denied publisher/isolator material
+ok 4 - RED principal gate: ordinary agent identity is denied publisher/isolator material
+  ---
+  duration_ms: 4.981792
+  ...
+# Subtest: RED image gate: floating tag and fake digest do not pass
+ok 5 - RED image gate: floating tag and fake digest do not pass
+  ---
+  duration_ms: 113.882833
+  ...
+# Subtest: RED evidence gate: license/platform/backup compatibility missing means NOT_READY and up refuses
+ok 6 - RED evidence gate: license/platform/backup compatibility missing means NOT_READY and up refuses
+  ---
+  duration_ms: 345.10575
+  ...
+# Subtest: RED digest binding: qualify receipt recomputes the actual input archive and rejects mismatch
+ok 7 - RED digest binding: qualify receipt recomputes the actual input archive and rejects mismatch
+  ---
+  duration_ms: 181.149958
+  ...
+# Subtest: RED plaintext gate: secret-shaped values and secret-value keys are rejected
+ok 8 - RED plaintext gate: secret-shaped values and secret-value keys are rejected
+  ---
+  duration_ms: 108.59475
+  ...
+# Subtest: RED host-path gate: host absolute paths are rejected in committed structure
+ok 9 - RED host-path gate: host absolute paths are rejected in committed structure
+  ---
+  duration_ms: 53.782208
+  ...
+# Subtest: RED role-reuse gate: one credential bound to two high-privilege roles is rejected
+ok 10 - RED role-reuse gate: one credential bound to two high-privilege roles is rejected
+  ---
+  duration_ms: 53.957
+  ...
+# Subtest: RED schema shape gate: type-invalid fields and duplicate resource ids are rejected
+ok 11 - RED schema shape gate: type-invalid fields and duplicate resource ids are rejected
+  ---
+  duration_ms: 218.206791
+  ...
+# Subtest: retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED
+ok 12 - retention gate: auto cleanup cannot be enabled while recovery fields are UNVERIFIED
+  ---
+  duration_ms: 54.519959
+  ...
+# Subtest: committed registry and refs catalog contain no secret material
+ok 13 - committed registry and refs catalog contain no secret material
+  ---
+  duration_ms: 1.497292
+  ...
+# Subtest: SecretRef.v1 format: parse accepts only well-formed project-bound refs
+ok 14 - SecretRef.v1 format: parse accepts only well-formed project-bound refs
+  ---
+  duration_ms: 0.112792
+  ...
+# Subtest: authority readback is honestly recorded as UNVERIFIED with the exact failure
+ok 15 - authority readback is honestly recorded as UNVERIFIED with the exact failure
+  ---
+  duration_ms: 834.950958
+  ...
+# Subtest: every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is registered with distinct purposes and bound roles
+ok 16 - every planned secret ref (I01+I02+I03+I05+I06+I07 freeze list, 24) is registered with distinct purposes and bound roles
+  ---
+  duration_ms: 0.248625
+  ...
+# Subtest: github readback: derives the GitHub target from the registered identity and verifies repo plus authenticated caller
+ok 17 - github readback: derives the GitHub target from the registered identity and verifies repo plus authenticated caller
+  ---
+  duration_ms: 287.024625
+  ...
+# Subtest: github readback: arbitrary alternate registered project fixture is honored, not the hardcoded repo
+ok 18 - github readback: arbitrary alternate registered project fixture is honored, not the hardcoded repo
+  ---
+  duration_ms: 275.600417
+  ...
+# Subtest: github readback: repo answering with a different repoId, fullname or owner is refused as MISMATCH
+ok 19 - github readback: repo answering with a different repoId, fullname or owner is refused as MISMATCH
+  ---
+  duration_ms: 818.492084
+  ...
+# Subtest: github readback: public repo readability with a different authenticated caller is NOT authority VERIFIED
+ok 20 - github readback: public repo readability with a different authenticated caller is NOT authority VERIFIED
+  ---
+  duration_ms: 313.863541
+  ...
+# Subtest: github readback: nonzero gh exit, error envelopes, non-repo JSON and caller failure are refused
+ok 21 - github readback: nonzero gh exit, error envelopes, non-repo JSON and caller failure are refused
+  ---
+  duration_ms: 1430.375292
+  ...
+# Subtest: github readback: malformed or missing registered identity is rejected before any gh call
+ok 22 - github readback: malformed or missing registered identity is rejected before any gh call
+  ---
+  duration_ms: 461.258458
+  ...
+# Subtest: github readback: committed registry identity labels point at the actual ql-wade project
+ok 23 - github readback: committed registry identity labels point at the actual ql-wade project
+  ---
+  duration_ms: 0.19625
+  ...
+# Subtest: github readback: null and non-object API payloads are structured UNVERIFIED with exit 2, never a crash
+ok 24 - github readback: null and non-object API payloads are structured UNVERIFIED with exit 2, never a crash
+  ---
+  duration_ms: 1366.762083
+  ...
+# Subtest: github readback: registered repoId/principalId must be positive safe integers, rejected before any gh call
+ok 25 - github readback: registered repoId/principalId must be positive safe integers, rejected before any gh call
+  ---
+  duration_ms: 367.275166
+  ...
+# Subtest: github readback: repoFullname owner segment must equal registered github.owner before any gh call
+ok 26 - github readback: repoFullname owner segment must equal registered github.owner before any gh call
+  ---
+  duration_ms: 104.582958
+  ...
+# Subtest: github readback evidence capture red-or-green (worker tooling; explicit selection only)
+ok 27 - github readback evidence capture red-or-green (worker tooling; explicit selection only) # SKIP explicit selection only
+  ---
+  duration_ms: 0.053583
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 26
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 8176.102416
+
+
+--- stderr ---
+(empty)

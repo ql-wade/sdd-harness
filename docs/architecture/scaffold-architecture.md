@@ -143,6 +143,16 @@ policies:
 
 扩展位（首日不实现）：steering/ADR 变更警告、PostToolUse 沉淀检测。新增策略 = 加 hooks.yaml 条目 + adapter 重跑，不写死在 agent 配置里。
 
+### 4.1 能力旁路封堵（引导 + 强制 + 裁决）
+
+"agent 必须走某条路径"的约束分三层，缺任何一层都退化为纯提示词约定：
+
+1. **引导**：技能正文与能力清单 `note` 说明为什么走正门（软约束，可被模型忽略）。
+2. **旁路封堵**：`hooks.yaml` PreToolUse deny 拦掉直写路径（硬约束）——MCP 工具不在 matcher 内，正门畅通、旁路全堵；gate 脚本对解析失败 fail closed，deny 失效比误拦更危险。
+3. **门禁裁决**：hook 拦不住的调用面（远程 API、浏览器操作）由交付门禁兜底——observation 命令绑定、产物读回；工具调用成功不等于门通过。
+
+两个事实源必须互相引用、可机械校验：清单侧 `enforcement: hook:<policy-id>` ↔ `hooks.yaml` 同名 deny 策略，漂移由 `test/adapter-quoting.test.js` 拦截。hook 拦不住的能力不配 `enforcement` 字段，其约束落在门禁证据上（如 playwright/chrome-devtools 由 whitebox-verify 的 Journey 回执裁决）。
+
 ## 5. MCP 能力清单（诚实标注）
 
 `mcp-capabilities.yaml` 是 MCP 层的唯一事实源，`bootstrap.sh` 据此注册，status 三态：
@@ -153,6 +163,7 @@ mcps:
     status: ready                 # ready | degraded | planned
     provides: [知识库 create/edit/append/read/search/lint, SQLite+FTS+引用索引]
     depends: [python3 venv + mcp 包]     # bootstrap 负责 venv
+    enforcement: hook:kb-write-protection    # 旁路封堵策略（§4.1），与 hooks.yaml 互相引用
     note: "写入必须走 MCP，直接 fs.write 绕过索引（hooks 策略 kb-write-protection 保护）"
 
   - name: chrome-devtools

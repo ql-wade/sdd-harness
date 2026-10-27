@@ -1,6 +1,6 @@
 # SDD Harness 交付架构
 
-> 状态：迁移设计，待架构评审；尚未实现。日期：2026-10-19。
+> 状态：原架构基线评审已通过，运行尚未验收；2026-10-20 官方 overlay 优先及 Ponytail 补充已据预研形成重规划候选，待 OVR 独立评审。原评审回执仅对应原冻结制品。
 > 决策入口：[ADR-0019](adr/0019-delivery-foundation.md)。实施与验收唯一清单：[OpenSpec 变更](../../openspec/changes/delivery-foundation-rearchitecture/tasks.md)。
 > 现有运行基线：`c42d3ce0360a66dbc14e299f33811ab94b392a68`，`ai-coding-scaffold@0.2.4`。旧 scaffold 继续可用；本文不将目标能力标记为 ready。
 
@@ -16,7 +16,7 @@
 | 直接使用原版 Comet | 状态/检查/恢复复用多 | 尚未证明全部测试、知识及发布义务不可绕过 | 不能直接验收为满足 |
 | Foundation 分发 + 单一交付主控 + 检查器 | 保留积累，避免重复调度 | Comet 候选需满足 OpenSpec、验证与知识硬门禁 | 当前验证方向 |
 
-以本轮用户决策为准：TeamAI 只分发，Comet 优先验证为唯一交付主控。先定统一交付义务和转换条件，再比较 Comet Classic/Native 的承载能力；接口不足则显式决定扩展或替换，不能静默增加 TeamAI workflow 或自建第二调度器。
+以本轮用户决策为准：TeamAI 只分发，Comet Classic 是当前唯一交付主控接入路径。固定工程过程与 OpenSpec 权威是选择 Classic 的依据；Native 仅作能力对照，不将其 Supervisor/独立验收协议计作 Classic 现成能力。方法层优先复用官方 comet-five-phase-overlay、来源解析、原生 handoff/canonical plan 和平台编译；共同判定、可信回执及收尾的实际缺口才做最小 Runtime 扩展。隔离预研与任务增量见 [overlay 接入设计](../../openspec/changes/delivery-foundation-rearchitecture/overlay-integration-design.md)。
 
 ## 2. 分层和唯一所有权
 
@@ -26,7 +26,8 @@ flowchart TB
   T --> H[宿主规则 技能 hooks MCP]
   H --> W[Comet 唯一交付主控候选]
   P[OpenSpec 产品 架构 测试契约] --> W
-  W --> A[Runner 驱动各角色 Agent]
+  W --> O[官方 overlay 方法绑定与附加证据]
+  O --> A[Runner 驱动各角色 Agent]
   A --> E[原始证据与知识产物]
   W --> G[无调度权的契约与知识检查器]
   E --> G
@@ -49,6 +50,8 @@ flowchart TB
 | 规格归档与读回 | Spec Adapter 独占该 Change closeout | Planner 和 Comet 同时归档 |
 
 本机原生配置每个受管块仅一个 reconciler。兼容验证前继续使用现有 CC adapter；验证通过后才逐块移交 TeamAI。deny 策略编译仍来自根 hooks.yaml，分发器只落地注册。Comet Guard 必须通过实证支持的入口组合，不能直接叠加两个阶段 Guard。
+
+overlay 从原 Classic 状态推导节点，不独立 init 或推进 phase，其 sidecar 不作任务进度/批准/可信身份源。control 节点保持原实现，design/plan producer 替换满足原 schema；Ponytail advisory、Matt 方法、测试作者和 Whitebox 按职责绑定。Required Skill 标记及字段存在性不是可信调用/业务结果证明，仍由 Gate/Runtime 核验真实来源。
 
 ## 3. 六环节契约与失败返回
 
@@ -198,7 +201,7 @@ Comet 单一主控决定下一个允许执行的角色；Gate 检查契约/证�
 
 用户已确认目标后自动推进，只在关键决策或阻塞时找人；TeamAI 首期只分发。调度、阶段推进、返工和恢复只由一个 Comet Runtime 持有，Runner 只实际启动/观察进程，检查器只给判定，技能只提供方法。
 
-Classic 已有 OpenSpec 集成，Native 有自身正式规格与独立候选验证协议；不能混用两套状态和归档。当前优先比较 Classic 的 OpenSpec 复用收益与 Native 的验证协议收益，选定模式前不宣称任一模式覆盖完整交付。完整证据、风险与能力差距见 [单主控审视](../../openspec/changes/delivery-foundation-rearchitecture/comet-single-controller-review.md)；旧双层推演留在 [Runtime Grill](../../openspec/changes/delivery-foundation-rearchitecture/runtime-grill.md) 作为历史，不再是实施依据。
+Classic 已有 OpenSpec 集成、任务 authority/ref 协议与可追溯 handoff；Native 有自身正式规格、候选验证及 Supervisor。当前固定 Classic，方法层先资格验证官方 overlay；不因模式差异新建第二调度器。初始证据见 [单主控审视](../../openspec/changes/delivery-foundation-rearchitecture/comet-single-controller-review.md)，后续能力修正和剩余缺口以 [overlay 接入设计](../../openspec/changes/delivery-foundation-rearchitecture/overlay-integration-design.md) 为准；旧双层推演只作历史。
 
 知识检查、Whitebox/测试作者的受控接入、强制检查集合、跳过入口和自动授权策略仍需实证。不能仅添加提示词或一个成功命令就声称硬门禁成立。适配器不保存第二套 current-stage；若上游缺强制扩展点，需要单独评审最小扩展，不能伪装为已可配置。
 
@@ -255,7 +258,7 @@ Comet 是唯一交付主控候选，知识 Gate 也应进入其同一个受约�
 
 用户已允许最小受控扩展，禁止再造主控。Classic 的原生/适配/扩展边界详见 [Classic 接入设计](../../openspec/changes/delivery-foundation-rearchitecture/classic-integration-design.md)。保留 Open/Design/Build/Verify/Archive，需求 R、架构 A、测试设计 T 是同一个 Comet Run 内的独立前置门，planner 在 Build 源码写入前经 P 门，Whitebox 经独立 V 门；知识义务经 Kp/Kt 门后才可对应收尾。
 
-这些回执和 sub-action 均为目标设计，不是原生配置项。必须统一 Guard、直接转换、源码写入、continuation/恢复与完成条件，不能只改提示词。当前本机 OpenSpec 1.3.1 的真实 status 被发行包依赖闭包判定函数拒绝；兼容环境、技能版本和 planner 计划路径冲突先解决，再做运行验收，不能直接全局升级。
+这些回执和 sub-action 均为目标设计，不是原生配置项。必须统一 Guard、直接转换、源码写入、continuation/恢复与完成条件，不能只改提示词。历史 OpenSpec 1.3.1 status 兼容失败已有隔离 1.11.0 探针补证，当前实际资格以 toolchain-baseline.json 为准；P1_5 的受管集成仍须验证，不能直接全局升级。计划接入优先使用原生 canonical authority/ref 合同，方法层先做 OVQ，剩余 Runtime gap 才进入 2.4。
 
 ### 6.8 门禁推进、返工和自动失效的运行时契约
 
@@ -267,7 +270,11 @@ A/T 已确认采用独立自动审查。具体机器接纳、共享推进谓词�
 
 架构 A 必须先用 grill-me 处理承重问题，再冻结制品并执行 multi-agent-consensus-review，全票同 digest、满足阈值、无 blocker 的机械结果才可被 Comet 接纳。测试 T 仍有独立自动审查，不被架构共识替代。R09 已确认保守失效；架构变化的旧票与全部下游证据不得用于新版本。
 
-关闭边界建议、Ponytail 5.3.2 的实际 hook 注册和三者协作方案见 [关闭与 Hook 契约](../../openspec/changes/delivery-foundation-rearchitecture/classic-closeout-and-hook-contract.md)。Ponytail 只作方法上下文辅助，不掌握业务阶段、不后台派发共识、不认定验收/知识通过；项目 hook 规则仍来自 hooks.yaml。
+Ponytail 是贯穿设计、流程、工具、规范与基础设施的最小完整实现方法：新增组件/依赖/状态前先查复用，改动覆盖调用者、测试、配置与导出，交付说明真实验证和已知限制。Matt 基础方法与 test-authoring 负责实现/作者测试，Whitebox 独立验收，Comet/Gate 持有推进/判定权；Ponytail 不降低已冻结的需求、安全、测试和知识义务。
+
+Ponytail 原生 Hook 提供 SessionStart 方法恢复、SubagentStart 子角色注入、UserPromptSubmit 模式切换；codebase map 只辅助发现可复用代码。它们与项目 hooks.yaml 的规则/恢复提示分别管理注册，TeamAI 仅分发固定资产；插件 Hook 不复制为第二套项目注册，不依赖 Hook 执行顺序获得正确性。当前 CC adapter 固定生成部分事件，新增 YAML 条目不代表其他事件已落地。
+
+首期受管方法 profile 默认 full；用户启停只改变方法上下文，不改变角色权限、业务状态或 Gate。当前同仓库模式可能互相覆盖，角色隔离与每次派发的有效模式必须实证；Hook exit 0、徽章与地图均不是已加载/已遵守的证明。完整职责、注册所有权、实际能力与验收对应见 [关闭与 Hook 契约 §6–8](../../openspec/changes/delivery-foundation-rearchitecture/classic-closeout-and-hook-contract.md)。本补充不表示插件已分发、Hook 已装配或跨宿主已认证。
 
 规格归档、正式团队知识发布和整体交付分别有回执/完成条件。建议必需项目知识先卡 Verify→Archive，必需 Outline 发布卡最终 completed；规格归档可独立成功，Run 继续待收尾。R06 已确认此关闭顺序，运行接线仍未实现。
 
@@ -290,6 +297,52 @@ G04 已确认预授权内独立审查后自动发布，超范围/敏感交有权
 G13 已确认首期受管源域/目标文集。失效回执与实际访问隔离分别核验；已完成产品 Run 保留历史，后续权限事件由同一 Comet 引擎的关联维护作业处理，不新建监听器主控。发布操作期限和已发布内容持续使用期限分开，隔离/恢复需原生 ACL 与独立读回，不能只打标签或假定 unpublish 等于撤权。详见 [撤权恢复契约](../../openspec/changes/delivery-foundation-rearchitecture/knowledge-revocation-and-restoration.md)，G14 已选事件＋周期核验；推荐健康条件下检测 3 分钟＋隔离读回 2 分钟，Runner 外监控 2 分钟发现宕机并另计告警送达。G15 已确认 A：正常依赖下以 5 分钟隔离为目标，故障时独立告警、恢复补偿和人工应急，允许超时但记录暴露窗口/违约；细分预算与运维参数仍需准入实证，单 Runner/目标 API 故障不承诺 5 分钟隔离。监控只告警、监督器只重启原实例，重试与补偿仍归 Comet。
 
 已读取指定技能整理聊天并核对本机路由/入口，Superpowers 已备份停用，后续使用 Matt 基础方法；本仓库旧快照与 Comet 原生调用仍需显式迁移，不能重新启用旧依赖。默认 planner controller 不覆盖本项目明确的 Comet 单主控目标，禁止嵌套第二调度器。具体证据与边界见 [Matt 方法迁移核对](../../openspec/changes/delivery-foundation-rearchitecture/matt-method-profile-migration.md)。
+
+### 6.13 节点与 CLI、MCP、Hook、基础设施的接线
+
+本节为首轮试运行的目标接线，不表示组件已安装或宿主已认证。节点推进走 Comet CLI/原 Runtime；宿主按 overlay 加载方法并实际执行；文件、CLI、MCP 是工具通道；Ponytail/项目 Hook 提供方法上下文或可观察操作约束；Runner 与平台提供真实身份、环境和持久化。
+
+```text
+Comet 返回允许动作 → 宿主加载 overlay 指定方法
+  → 角色经文件/CLI/MCP执行 → 保存原始结果与独立读回
+  → Gate核对当前身份/候选/必验项 → 原Comet接纳并推进
+```
+
+MCP 不持有阶段或业务重试，不提供通用 set-status=passed；方法包的发布也不等同知识内容发布授权。优先使用原生文件/CLI和已认证工具，不为统一协议新增中央 MCP 网关或每节点一台服务。
+
+| 节点 | 宿主工作与正式产物 | 工具通道 | 基础设施与写权限 |
+| --- | --- | --- | --- |
+| Open / R | 澄清目标/范围/AC/交付环境，形成需求基线 | 文件、OpenSpec/Comet CLI；按需只读知识检索 | 绑定Git工作区和源读取身份；业务决定由有权owner确认 |
+| Design / A | 设计、架构质询、冻结包与独立共识 | 源码/接口检索、文件/CLI、经授权知识MCP | 固定源码/规格基线；审查执行只读，资料外发范围先明确 |
+| Design / T | test-authoring design-only生成用例意图，独立审查T | 读代码/接口与写正式测试设计工件 | 允许路径登记为正式受保护工件；此时不写测试代码或产品源码 |
+| Build / P | 从冻结R/A/T生成唯一tasks/DAG与canonical plan引用 | 文件、原生计划校验和Comet CLI | tasks唯一可写任务权威；只读计划无第二checkbox |
+| Build / 实施 | 作者测试、Matt TDD、实现、自检和新候选 | 编辑/终端；按契约使用测试工具MCP | 隔离worktree/执行环境和测试数据；Builder无控制卷/发布凭据写权 |
+| Verify / V | Reviewer/Whitebox对冻结候选独立验证 | 宿主原生浏览器或认证MCP、API及持久化观察器 | 独立execution、只读候选与隔离验证环境；观察脚本/数据仅按授权写入 |
+| Archive / 收尾 | 唯一Spec收尾、知识与平台义务、整体完成判断 | Comet/OpenSpec CLI；Git/CI/Registry与知识API/MCP | 专用publisher/发布身份；源/目标授权及独立读回；原Run保留pending和恢复记录 |
+
+正常执行优先消费本次有效的 agent.continuation；恢复/工作区变化再查询 state next/check --recover，不按Session或Hook事件重开业务任务。check run保留命令结果与输入绑定，guard/transition申请推进；最终判定还须满足本项目必需集合和来源。CLI例子只使用固定版本公开接口，具体命令链见原Comet协议，不把Skill名当shell程序或虚构新的阶段命令。
+
+#### Hook 注册和身份边界
+
+- Ponytail生命周期Hook注入方法/代码地图并跟踪方法模式；项目Session/恢复Hook提供规则、ADR和任务入口，必要时只读查询当前动作；实际角色领取/执行仍回到Comet。完整职责和事件接线沿用 §6.9 及关闭与Hook契约，避免重复规则源。
+- Comet/项目PreToolUse检查宿主暴露的目标和允许路径，OS/容器/平台权限保护控制卷、策略和凭据；Hook失败、关闭Ponytail或未覆盖Shell/MCP写渠道时不能放松必需Gate。
+- 每受管块一个注册写者；插件Hook、项目hooks.yaml/adapter和Comet官方平台编译按归属组合，不依赖执行顺序。MCP清单/注册只证明配置，必须另证实际发现、权限、调用和读回。
+- 角色不是一组自填role/mode环境变量。启动器在执行前绑定Run、task/gate、输入与policy摘要、attempt/epoch、真实execution和允许路径；工具调用及原始结果关联该身份，Gate才可接纳。只读reviewer、Builder、publisher及isolator按用途分权，不因共用宿主而共享发布能力。
+
+#### 基础设施配合与首轮准入
+
+| 原任务 | 对节点提供的能力 | 准入证据 |
+| --- | --- | --- |
+| I01 | resource/owner/secret-ref/版本与用途登记 | 身份与授权真实有效、引用可解析，明文秘密不进入Git |
+| I02 | 固定Runner、角色/方法状态隔离、受管工作区 | worker不能改控制状态/策略或取发布凭据；实际启动与原Run绑定 |
+| I03/I04/I05 | 团队/项目/代码知识接口，按各自权限与版本访问 | 实际查询/必要写入和独立读回；无关节点不加载全库或强制全栈启动 |
+| I06 | Git/CI/Registry/隔离目标环境 | 精确SHA、required checks、同digest与目标业务读回，不只健康检查 |
+| I07 | Runner故障域外监控与原进程监督 | 监控只告警、监督器只重启；业务补偿归Comet，心跳不代表任务成功 |
+| I08 | Run/证据/知识一致备份、恢复与保留 | 旧writer隔离、权限重验和恢复读回；pending任务不自动清理 |
+
+首轮采用一个固定Runner、一个已认证宿主、一个真实Change，角色串行执行，独立审查使用单独执行身份。开始前冻结试点AC、环境、所需观察能力、知识/发布适用义务和授权；无能力标UNVERIFIED，不在失败后将必需项改为可选。新增资料/服务只在其义务实际需要时启用，缩小试点不等于豁免完整交付目标。
+
+试运行至少实证：①没有有效T/R/A/P回执不能实施，覆盖正常和直接入口；②Builder不能修改控制文件或取得发布权；③真实UI/API动作与独立持久读回一致；④中断恢复原Run/operation且不重复副作用。方法发现、Hook触发、真实执行、独立验收分别记录。当前OVR/OVQ、资源和宿主资格未闭合前不宣称试运行已启动，也不因此启用团队API或生产发布。原100场景/114检查及任务身份不因本说明新增、删除或勾选。
 
 ## 7. 目录和资产迁移
 
@@ -315,6 +368,8 @@ services/delivery-control/  团队阶段才启用
 | 旧技能 controller | 按 profile 停用并确认无重复派发/监控/归档；后续显式快照升级 |
 
 ## 8. 分批实施与准入
+
+2026-10-20 重规划增加 OVR/OVQ 前置：OVR 复审本次修订；OVQ 在剩余方法接入前给出官方能力复用/兼容与 gap 清单，不把原生缺口调查当受管产品验收。原30父任务/69工作包/92场景保留，新增 OV01–OV08 后共100场景，原 tasks/DAG 是唯一任务定义；本轮不接管现有执行状态或监控。
 
 | Batch | 工作 | 必须证据与停止条件 |
 | --- | --- | --- |

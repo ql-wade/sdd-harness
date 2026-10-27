@@ -20,6 +20,9 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+# 例外：foundation/ 下的 .log 是测试 fixture（whitebox-verify green-fixture / negative-corpus 及其
+# sealed baseline、release packaged 副本），不是运行时日志，必须可入库（2026-10-27 清理）
+!foundation/**/*.log
 
 # Test
 coverage/
@@ -52,5 +55,17 @@ CHANGELOG.bak
 
 # vendored skill runtime bytecode (digest pollution)
 __pycache__/
+
+# 本地工具目录（不入库）：Comet Runtime 本机状态 / codex 配置 / 插件根标记
+.comet/
+.codex/
+.v2c/
+.video_agent/
+
+# 本地草稿与测试残留（2026-10-27 清理判定：无入库价值）
+# draft_c237fbf6_folder/ = 文档图表操作的一次性草稿工作区（parse/readback 中间产物、权限二维码）
+/draft_c237fbf6_folder/
+# init/ = delivery-cases 测试 stub `openspec init <dir>` 在仓库根的残留（旧 schema config + fake skill）
+/init/
 
 .whitebox/

@@ -1,0 +1,52 @@
+SCENARIO B3 (review defect: inconsistent identity still calls gh): repoFullname mallory/sdd-harness while github.owner ql-wade, transport healthy
+command: node tools/infra/registry.mjs readback --kind github --registry /var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/infra-i01-registry-xTGpcg/registry.json --json   (PATH prefixed with the stub gh transport defined in this test file; registry input: temp fixture under os.tmpdir() (mutated copy of the committed registry))
+no network, no credentials: the stub records argv into calls.log and serves local route fixtures only
+
+exit code: 2
+
+--- stdout ---
+{
+  "interface": "Registry.v1",
+  "command": "readback",
+  "kind": "github",
+  "registry": "<host-path-redacted>",
+  "registeredIdentity": {
+    "repoFullname": "mallory/sdd-harness",
+    "repoId": 1285806550,
+    "owner": "ql-wade",
+    "principalId": 262266039
+  },
+  "repoReadback": {
+    "status": "MISMATCH",
+    "via": "gh api repos/mallory/sdd-harness",
+    "mismatches": [
+      {
+        "field": "repoFullname",
+        "expected": "mallory/sdd-harness",
+        "observed": "ql-wade/sdd-harness"
+      }
+    ],
+    "reason": "gh api repos/mallory/sdd-harness answered for a different repository than the registered identity (repoFullname expected \"mallory/sdd-harness\", observed \"ql-wade/sdd-harness\")"
+  },
+  "callerReadback": {
+    "status": "VERIFIED",
+    "via": "gh api user",
+    "principalId": 262266039,
+    "login": "ql-wade"
+  },
+  "status": "MISMATCH",
+  "error": "MISMATCH: gh api repos/mallory/sdd-harness answered for a different repository than the registered identity (repoFullname expected \"mallory/sdd-harness\", observed \"ql-wade/sdd-harness\")",
+  "grants": {
+    "publication": "NOT_CLAIMED",
+    "ciMutation": "NOT_CLAIMED",
+    "qualification": "SEPARATE_GATE",
+    "note": "identity readback verifies repository identity and the authenticated caller only; it grants no publication, CI mutation, push or other business authorization"
+  },
+  "checkedAt": "2026-10-24T16:51:58.290Z"
+}
+
+
+--- stderr ---
+(empty)
+
+observed gh invocations (stub calls.log): [["api","repos/mallory/sdd-harness"],["api","user"]]

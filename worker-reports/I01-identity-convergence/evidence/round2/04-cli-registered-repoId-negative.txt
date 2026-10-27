@@ -1,0 +1,20 @@
+SCENARIO B1 (review defect: invalid id still calls gh): registered project.github.repoId = -3, transport healthy
+command: node tools/infra/registry.mjs readback --kind github --registry /var/folders/xv/bkd_vyq16x7604ttfbfpgwfh0000gn/T/infra-i01-registry-v979EB/registry.json --json   (PATH prefixed with the stub gh transport defined in this test file; registry input: temp fixture under os.tmpdir() (mutated copy of the committed registry))
+no network, no credentials: the stub records argv into calls.log and serves local route fixtures only
+
+exit code: 1
+
+--- stdout ---
+(empty)
+
+--- stderr ---
+github readback: registered identity invalid (project.github.repoId must be a positive safe integer) — refusing before any gh call
+usage:
+  registry.mjs validate --registry <file> [--refs <file>] [--policy <file>]
+  registry.mjs qualify  --resource <id> --registry <file> [--archive <file>] [--npm-metadata <file>]
+  registry.mjs status   --registry <file>
+  registry.mjs up       --resource <id> --registry <file>
+  registry.mjs readback --kind github [--registry <file>]
+
+
+observed gh invocations (stub calls.log): []

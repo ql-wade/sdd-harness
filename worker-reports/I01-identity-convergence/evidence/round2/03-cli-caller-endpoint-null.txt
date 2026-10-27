@@ -1,0 +1,47 @@
+SCENARIO A2 (review defect: null body crash): gh api user exits 0 with body null; repo endpoint healthy
+command: node tools/infra/registry.mjs readback --kind github --registry /Users/mac/Code/sdd-harness/.claude/worktrees/comet-registry-identity/infra/delivery/registry.json --json   (PATH prefixed with the stub gh transport defined in this test file; registry input: committed infra/delivery/registry.json)
+no network, no credentials: the stub records argv into calls.log and serves local route fixtures only
+
+exit code: 2
+
+--- stdout ---
+{
+  "interface": "Registry.v1",
+  "command": "readback",
+  "kind": "github",
+  "registry": "infra/delivery/registry.json",
+  "registeredIdentity": {
+    "repoFullname": "ql-wade/sdd-harness",
+    "repoId": 1285806550,
+    "owner": "ql-wade",
+    "principalId": 262266039
+  },
+  "repoReadback": {
+    "status": "VERIFIED",
+    "via": "gh api repos/ql-wade/sdd-harness",
+    "repoId": 1285806550,
+    "repoFullname": "ql-wade/sdd-harness",
+    "owner": "ql-wade",
+    "defaultBranch": "master"
+  },
+  "callerReadback": {
+    "status": "UNVERIFIED",
+    "via": "gh api user",
+    "reason": "gh api user response is not an authenticated user object (not a JSON object: null)"
+  },
+  "status": "UNVERIFIED",
+  "error": "UNVERIFIED: gh api user response is not an authenticated user object (not a JSON object: null)",
+  "grants": {
+    "publication": "NOT_CLAIMED",
+    "ciMutation": "NOT_CLAIMED",
+    "qualification": "SEPARATE_GATE",
+    "note": "identity readback verifies repository identity and the authenticated caller only; it grants no publication, CI mutation, push or other business authorization"
+  },
+  "checkedAt": "2026-10-24T16:59:59.714Z"
+}
+
+
+--- stderr ---
+(empty)
+
+observed gh invocations (stub calls.log): [["api","repos/ql-wade/sdd-harness"],["api","user"]]
