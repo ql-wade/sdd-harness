@@ -76,7 +76,9 @@ jobs:
               project: policy.project.id,
               head: process.env.HEAD_SHA,
               merge: process.env.MERGE_SHA,
-              requiredChecks: policy.requiredChecks.names,
+              requiredChecks: policy.requiredChecks.names.length > 0
+                ? policy.requiredChecks.names
+                : policy.requiredChecks.declaredCandidateChecks?.names ?? [],
               checks: readback.checks ?? [],
               gate: gate,
             };
