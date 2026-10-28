@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Comet 0.5.0 wrapper — uses vendored build with pinned node and managed env
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+NODE_BIN="$HOME/.nvm/versions/node/v24.15.0/bin"
+export PATH="$NODE_BIN:$PATH"
+export COMET_OPENSPEC="${COMET_OPENSPEC:-$PROJECT_ROOT/.sdd/tools/openspec-1.15.0/node_modules/.bin/openspec}"
+COMET_JS="$PROJECT_ROOT/.sdd/vendor/comet/aeb1a6598034e28ce46b8422d4dbd8785e607bd7/builds/de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a/work/bin/comet.js"
+exec node "$COMET_JS" "$@"
