@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Minicraft</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #1c1f24; color: #e8e6e3;
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  body { display: flex; justify-content: center; padding: 16px 0; user-select: none; -webkit-user-select: none; }
+  #app { width: fit-content; }
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  #active { font-size: 13px; color: #b9b6b0; }
+  #board { display: block; background: #101216; cursor: crosshair; touch-action: none; }
+  #palette { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .swatch { width: 28px; height: 28px; border: 2px solid #3a3f47; border-radius: 4px; padding: 0; cursor: pointer; }
+  .swatch.selected { border-color: #ffffff; box-shadow: 0 0 0 1px #ffffff88; }
+  #reset { margin-left: auto; padding: 6px 12px; font-size: 13px; color: #e8e6e3;
+    background: #2a2f37; border: 1px solid #3a3f47; border-radius: 4px; cursor: pointer; }
+  #reset:active { background: #3a3f47; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Minicraft</h1>
+    <span id="active">Grass</span>
+  </header>
+  <canvas id="board" width="480" height="480"></canvas>
+  <div id="palette">
+    <button class="swatch selected" data-type="1" style="background:#5aa331" aria-label="Grass"></button>
+    <button class="swatch" data-type="2" style="background:#8a5a2b" aria-label="Dirt"></button>
+    <button class="swatch" data-type="3" style="background:#8c8c8c" aria-label="Stone"></button>
+    <button class="swatch" data-type="4" style="background:#a07840" aria-label="Wood"></button>
+    <button id="reset" type="button">Reset</button>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+
+  // ---- CONFIG & TYPES -------------------------------------------------------
+  var SIZE = 20;                       // 20 x 20 grid
+  var CELL = 24;                       // 24 px per cell -> 480 x 480 canvas
+  var STORAGE_KEY = 'minicraft-grid-v1';
+  var TYPES = {
+    1: { name: 'Grass', color: '#5aa331' },
+    2: { name: 'Dirt',  color: '#8a5a2b' },
+    3: { name: 'Stone', color: '#8c8c8c' },
+    4: { name: 'Wood',  color: '#a07840' }
+  };
+
+  // ---- STATE ----------------------------------------------------------------
+  var grid = new Uint8Array(SIZE * SIZE);
+  var selected = 1;
+  var hover = null;                    // {x, y} while pointer is over the board
+  var dragging = false;
+
+  // ---- PURE FUNCTIONS -------------------------------------------------------
+  // Deterministic initial terrain (design D2): no RNG anywhere.
+  function initialGrid() {
+    var cells = new Uint8Array(SIZE * SIZE);
+    for (var y = 0; y < SIZE; y++) {
+      var type = y < 4 ? 1 : y < 10 ? 2 : y < 18 ? 3 : 4;
+      for (var x = 0; x < SIZE; x++) cells[y * SIZE + x] = type;
+    }
+    return cells;
+  }
+
+  function cellFromEvent(e) {
+    var x = Math.floor(e.offsetX / CELL);
+    var y = Math.floor(e.offsetY / CELL);
+    if (x < 0 || y < 0 || x >= SIZE || y >= SIZE) return null;
+    return { x: x, y: y, index: y * SIZE + x };
+  }
+
+  function validSave(value) {
+    if (!value || value.version !== 1) return false;
+    if (!Array.isArray(value.cells) || value.cells.length !== SIZE * SIZE) return false;
+    for (var i = 0; i < value.cells.length; i++) {
+      var c = value.cells[i];
+      if (typeof c !== 'number' || !isFinite(c) || Math.floor(c) !== c || c < 0 || c > 4) return false;
+    }
+    return true;
+  }
+
+  function serializeGrid(cells) {
+    return JSON.stringify({ version: 1, cells: Array.prototype.slice.call(cells) });
+  }
+
+  // ---- PERSISTENCE (D5) -----------------------------------------------------
+  function storage() {
+    try { return window.localStorage; } catch (err) { return null; }
+  }
+
+  function loadGrid() {
+    var store = storage();
+    if (!store) return initialGrid();
+    var raw = null;
+    try { raw = store.getItem(STORAGE_KEY); } catch (err) { raw = null; }
+    if (raw === null) return initialGrid();
+    var parsed = null;
+    try { parsed = JSON.parse(raw); } catch (err) { parsed = null; }
+    if (!validSave(parsed)) return initialGrid();   // whole-save fail-soft fallback
+    return Uint8Array.from(parsed.cells);
+  }
+
+  function saveGrid() {
+    var store = storage();
+    if (!store) return;
+    try { store.setItem(STORAGE_KEY, serializeGrid(grid)); } catch (err) { /* private mode */ }
+  }
+
+  function clearGrid() {
+    var store = storage();
+    if (!store) return;
+    try { store.removeItem(STORAGE_KEY); } catch (err) { /* private mode */ }
+  }
+
+  // ---- RENDERING (D3) -------------------------------------------------------
+  var canvas = document.getElementById('board');
+  var ctx = canvas.getContext('2d');
+  var activeReadout = document.getElementById('active');
+
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#101216';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    for (var y = 0; y < SIZE; y++) {
+      for (var x = 0; x < SIZE; x++) {
+        var type = grid[y * SIZE + x];
+        if (type === 0) continue;
+        ctx.fillStyle = TYPES[type].color;
+        ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+        // deterministic per-cell texture: 2px darker inset at offset (x*31 + y*17) % 6
+        var inset = 3 + ((x * 31 + y * 17) % 6);
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.fillRect(x * CELL + inset, y * CELL + inset, CELL - inset * 2, CELL - inset * 2);
+      }
+    }
+    // hairline grid
+    ctx.strokeStyle = '#00000022';
+    ctx.lineWidth = 1;
+    for (var i = 0; i <= SIZE; i++) {
+      ctx.beginPath(); ctx.moveTo(i * CELL + 0.5, 0); ctx.lineTo(i * CELL + 0.5, SIZE * CELL); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, i * CELL + 0.5); ctx.lineTo(SIZE * CELL, i * CELL + 0.5); ctx.stroke();
+    }
+    // hover outline
+    if (hover) {
+      ctx.strokeStyle = '#ffffffcc';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(hover.x * CELL + 1, hover.y * CELL + 1, CELL - 2, CELL - 2);
+    }
+  }
+
+  function renderSelection() {
+    activeReadout.textContent = TYPES[selected].name;
+    var buttons = document.querySelectorAll('.swatch');
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].classList.toggle('selected', Number(buttons[i].getAttribute('data-type')) === selected);
+    }
+  }
+
+  // ---- INPUT (D4) -----------------------------------------------------------
+  function setState(mutate, persist) {
+    mutate();
+    if (persist !== false) saveGrid();   // every dig/place edit persists
+    render();
+  }
+
+  canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); }, false);
+
+  canvas.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    var cell = cellFromEvent(e);
+    if (!cell) return;
+    if (e.button === 0) {
+      dragging = true;
+      if (grid[cell.index] !== 0) {
+        setState(function () { grid[cell.index] = 0; });
+      }
+    } else if (e.button === 2) {
+      if (grid[cell.index] === 0) {          // place only into empty cells
+        setState(function () { grid[cell.index] = selected; });
+      }
+    }
+  }, false);
+
+  canvas.addEventListener('pointermove', function (e) {
+    var cell = cellFromEvent(e);
+    var newHover = cell ? { x: cell.x, y: cell.y } : null;
+    var hoverChanged = (newHover === null) !== (hover === null) ||
+      (newHover && hover && (newHover.x !== hover.x || newHover.y !== hover.y));
+    hover = newHover;
+    if (dragging && cell && grid[cell.index] !== 0) {
+      setState(function () { grid[cell.index] = 0; });
+    } else if (hoverChanged) {
+      render();
+    }
+  }, false);
+
+  function endDrag() { dragging = false; }
+  canvas.addEventListener('pointerup', endDrag, false);
+  canvas.addEventListener('pointerleave', function () { hover = null; endDrag(); render(); }, false);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key >= '1' && e.key <= '4') {
+      selected = Number(e.key);
+      renderSelection();
+    }
+  }, false);
+
+  var swatches = document.querySelectorAll('.swatch');
+  for (var s = 0; s < swatches.length; s++) {
+    swatches[s].addEventListener('click', function (e) {
+      selected = Number(e.currentTarget.getAttribute('data-type'));
+      renderSelection();
+    }, false);
+  }
+
+  document.getElementById('reset').addEventListener('click', function () {
+    grid = initialGrid();
+    clearGrid();                  // reset removes the key entirely (D5)
+    render();
+  }, false);
+
+  // ---- INIT -----------------------------------------------------------------
+  grid = loadGrid();
+  renderSelection();
+  render();
+})();
+</script>
+</body>
+</html>
