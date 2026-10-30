@@ -10,9 +10,11 @@ Usage: python3 render_journey_summary.py <ledger.json> [--json]
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import sys
 from pathlib import Path
+from journey_validation.api import validate_document
 
 SCHEMA_VERSION = "3.0"
 SEVERITIES = ("P0", "P1", "P2")
@@ -23,8 +25,31 @@ def build_summary(document: dict, ledger_path: str) -> dict:
     run = document.get("run") or {}
     dimensions: list[dict] = []
     findings: list[dict] = []
+    cases: list[dict] = []
+    catalog = document.get("evidence_catalog") or {}
     for journey in journeys:
         journey_id = journey.get("journey_id") or ""
+        results = [entry for entry in journey.get("case_results") or [] if isinstance(entry, dict)]
+        case_list = [entry for entry in journey.get("cases") or [] if isinstance(entry, dict)]
+        case_ids = {entry.get("case_id") for entry in case_list}
+        def append_case(case, result):
+            references = []
+            for evidence_id in result.get("evidence") or []:
+                item = catalog.get(evidence_id) or {}
+                references.append({"id": evidence_id, "path": item.get("path"), "sha256": item.get("sha256")})
+            cases.append({"journey": journey_id, "case_id": case.get("case_id"), "action": case.get("action"),
+                          "expected": case.get("terminal_oracle"), "result": result.get("result"),
+                          "actual": result.get("actual"), "attempt": result.get("attempt_id"),
+                          "runner_report_ids": result.get("runner_report_ids") or [], "evidence": references})
+        for case in case_list:
+            if not isinstance(case, dict):
+                continue
+            matches = [entry for entry in results if entry.get("case_id") == case.get("case_id")]
+            for result in matches or [{}]:
+                append_case(case, result)
+        for result in results:
+            if result.get("case_id") not in case_ids:
+                append_case({"case_id": result.get("case_id")}, result)
         for dim, entry in sorted((journey.get("dimensions") or {}).items()):
             if not isinstance(entry, dict):
                 continue
@@ -61,6 +86,7 @@ def build_summary(document: dict, ledger_path: str) -> dict:
         "schema_version": document.get("schema_version"),
         "run_id": run.get("run_id"),
         "counts": counts,
+        "cases": cases,
         "dimensions": dimensions,
         "findings": findings,
         "sources": [
@@ -78,11 +104,14 @@ def build_summary(document: dict, ledger_path: str) -> dict:
 
 def render_markdown(summary: dict) -> str:
     counts = summary["counts"]
+    def cell(value):
+        return html.escape(str(value if value is not None else "UNVERIFIED"), quote=False).replace("|", "\\|").replace("\n", "<br>")
     lines = [
         "# Journey Ledger Summary",
         "",
         f"derived-from-ledger: {summary['derived_from_ledger']}",
-        "（派生视图：由 STRUCTURE_PASS 账本渲染，不构成执行证据；真实性需独立验证）",
+        "（派生视图：不构成执行证据；真实性需独立验证）",
+        f"账本关闭校验: {summary.get('validation_status', '未执行')}；错误数: {summary.get('validation_error_count', '未知')}",
         "",
         f"run_id: `{summary['run_id']}`（schema {summary['schema_version']}）",
         "",
@@ -95,6 +124,18 @@ def render_markdown(summary: dict) -> str:
         f"| 预期 Hop | {counts['expected_hops']} |",
         f"| 强制 Hop | {counts['mandatory_hops']} |",
         f"| 强制 Path | {counts['mandatory_paths']} |",
+        "",
+        "## 逐用例记录（账本声明，须独立核验）",
+        "",
+        "| Journey | Case | 尝试 | 操作 | 预期终态 | 实际观察 | 记录结果 | Runner | 原始证据路径与摘要 |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    for case in summary["cases"]:
+        evidence = "; ".join(f"{item['id']}: {item['path']} (sha256:{item['sha256']})" for item in case["evidence"])
+        actual = '参见原始证据' if case["actual"] is None else case["actual"]
+        lines.append("| " + " | ".join(cell(value) for value in [case["journey"], case["case_id"], case["attempt"] or '未记录', case["action"],
+                     case["expected"], actual, case["result"], ", ".join(case["runner_report_ids"]), evidence]) + " |")
+    lines += [
         "",
         "## A-J 维度状态",
         "",
@@ -181,12 +222,19 @@ def main(argv: list[str] | None = None) -> int:
         print(f"INVALID: schema_version must be '{SCHEMA_VERSION}' (STRUCTURE_PASS ledger expected)",
               file=sys.stderr)
         return 2
-    summary = build_summary(document, str(args.ledger))
+    errors = validate_document(document, args.ledger.parent, verify_files=True)
+    try:
+        summary = build_summary(document, str(args.ledger))
+    except (AttributeError, TypeError, ValueError) as exc:
+        print(f"INVALID: ledger cannot be rendered: {exc}", file=sys.stderr)
+        return 1
+    summary['validation_status'] = 'STRUCTURE_PASS' if not errors else 'NOT_CLOSED'
+    summary['validation_error_count'] = len(errors)
     if args.json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
     else:
         print(render_markdown(summary))
-    return 0
+    return 1 if errors else 0
 
 
 if __name__ == "__main__":

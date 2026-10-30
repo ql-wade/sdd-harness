@@ -1,6 +1,8 @@
 # 当前实施证据与接口登记（command-first）
 
-本文件登记同一design/ADR-0021，不是第二设计权威。旧登记/接口/假设已在replans/2026-10-26-command-first/before/保存。当前新修订仅规划，Goal仍暂停。
+> 2026-10-29 接管修订：此前“仅规划、未实施”和旧版本状态均为历史；当前执行和验收状态以 execution-state.json 及原始证据为准。
+
+本文件登记同一design/ADR-0021，不是第二设计权威。旧登记/接口/假设已在replans/2026-10-26-command-first/before/保存。本文件记录架构和规划边界，不作为实时 Goal 或执行状态的事实来源。
 
 ## 证据现实矩阵
 
@@ -38,9 +40,17 @@ P3_2首个真实R→V切片不等待六容器/I02完整镜像、Outline/代码Wi
 
 ## 当前权威源摘要
 
-- `docs/architecture/comet-ai-devops-convergence.md` SHA256 `0e5ff079c4ff6d1b447a7866ef31c2aa024fc0c84a57634eae841d726d155049`
+- `docs/architecture/comet-ai-devops-convergence.md` SHA256 `179a5b1379afb2a183c2a8e0f2cbe439fdef06f615a65d5f3afd7eb82c291faf`
 - `docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md` SHA256 `eab105e6f356215709fa798164332d935357863ba45bab82cf14dfca5c69d1a9`
 
-## 修订 2026-10-26-comet-050-adoption-v1
+## 历史修订 2026-10-26-comet-050-adoption-v1
 
 依据ADR-0022（Proposed）：基线升级Comet 0.5.0；门禁实现由0.4.5补丁链（0001/0002）改为官方classic-full组合应用——replacements承载Matt方法技能、extensions落R/A/T/P/V/Kp检查点并经bindings.mjs委托lib/delivery纯组件；0004随上游安全修复删除；0003由最小后继补丁0005（Kt完成谓词，B1）接替。并行执行启用：宿主并发子代理派发已实测、worker独立worktree、同波所有权无重叠；串行仅P3_2/P4_2/P4_8/P5_1/VERIFY。P0_1–P0_4与P2_1接纳原样保留，P3_1完成待提交，P1_1重开做0.5.0资格重验。本修订为计划层，未实施、未激活goal。
+
+## 2026-10-29 试点返工：事实与控制边界
+
+以 ADR-0021/0022 和 command-first 架构为准，0.5.0 是上一轮锁定的历史基线；本段覆盖前文保留的 0.4.5 计划历史。真实 SDK 临时测试已确认跨 Run 组件回执被 R 扩展接纳，候选负例能拒绝但缺真实宿主正向来源。保留五阶段入口、R/A/T/P/V/Kp 独立证据、单一 Comet Run 与 Kp/归档/Kt，不新增常驻服务或调度；EC1 作为输入映射回原任务。正式接管前核验当前工作树、唯一控制者和用户数据，实验和组件绿不能视为最终接受。
+
+## 当前版本目标：Comet 0.5.1
+
+用户已要求 0.5.1，决策见 ADR-0023。沿原 DAG 重锁与验证，0.5.0 运行证据不继承；0005 已在隔离 0.5.1 源码实际应用并构建，上游 smoke 为 244 通过、2 跳过；这些仅证明该范围，Kt 真实写入/恢复、受保护来源、Matt 替换及全部受管命令旅程均待实测。版本无关组件证据仅保留原范围，未验不放行。

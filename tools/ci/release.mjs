@@ -93,7 +93,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { parseArgs } from 'node:util';
-import { buildLock, resolveBaseline } from '../foundation-export.mjs';
+import { buildLock, resolveBaseline, hasGitMarker } from '../foundation-export.mjs';
 
 const EXIT_PASS = 0;
 const EXIT_INPUT = 1;
@@ -983,7 +983,12 @@ async function foundationPromote(opts) {
   if (supply.runnerVersion !== (committed.toolchain?.runner?.version ?? null)) codes.push('SUPPLY_RUNNER_MISMATCH');
   if (built.release.exportDigest !== committed.release.exportDigest) codes.push('BUILD_DIGEST_DRIFT');
   const baseline = await resolveBaseline(root, committed);
+  const commitBinding = baseline.commitBinding ?? (baseline.ok ? 'verified' : 'unverified');
+  const commitFields = (declaredReleaseCommit) => ({ declaredReleaseCommit,
+    builtFromReleaseCommit: commitBinding === 'verified' ? declaredReleaseCommit : null, commitBinding });
   if (!baseline.ok) codes.push('SEALED_BASELINE_UNRESOLVABLE');
+  if (baseline.commitBinding === 'mismatch') codes.push('BASELINE_COMMIT_MISMATCH');
+  if (baseline.commitBinding === 'unverified' && hasGitMarker(root)) codes.push('BASELINE_COMMIT_UNVERIFIED');
   if (codes.length > 0) {
     const verdict = foundationReceipt({
       command: 'foundation-promote', project: ledger.registration.project, status: 'BLOCKED', codes,
@@ -993,10 +998,11 @@ async function foundationPromote(opts) {
           exportDigest: committed.release.exportDigest,
           committedExportDigest: committed.release.exportDigest,
           builtExportDigest: built.release.exportDigest,
-          builtFromReleaseCommit: built.release.commit,
+          ...commitFields(built.release.commit),
         },
         supply: { fingerprint: supply.fingerprint, runnerVersion: supply.runnerVersion, sourceCommit: supply.sourceCommit, buildPresent: supply.buildPresent, expectedRunnerVersion: committed.toolchain?.runner?.version ?? null },
-        sealedBaseline: { resolvable: baseline.ok, reason: baseline.ok ? null : baseline.reason },
+        sealedBaseline: { resolvable: baseline.ok, commitBinding: baseline.commitBinding ?? (baseline.ok ? 'verified-git' : 'unverified'),
+          reason: baseline.ok && baseline.commitBinding !== 'mismatch' ? null : baseline.reason },
         protocols: { registrationDigest: protocols.digest, kinds: protocols.doc.protocols.map((p) => p.kind), remotePublication: 'UNVERIFIED' },
       },
     });
@@ -1028,7 +1034,7 @@ async function foundationPromote(opts) {
           builtExportDigest: built.release.exportDigest,
           tagResolvedDigest: tagResolved,
           expectedDigest: active.exportDigest,
-          builtFromReleaseCommit: built.release.commit,
+          ...commitFields(built.release.commit),
         },
         supply: { fingerprint: supply.fingerprint, runnerVersion: supply.runnerVersion, buildPresent: supply.buildPresent },
         deployment: { released: false, idempotent: false, receipt: null },
@@ -1054,7 +1060,7 @@ async function foundationPromote(opts) {
         command: 'foundation-promote', project: ledger.registration.project, status: 'UNVERIFIED', codes: ['READBACK_UNCONFIRMED'],
         extra: {
           tag,
-          artifact: { exportDigest: digest, builtFromReleaseCommit: record.releaseCommit },
+          artifact: { exportDigest: digest, ...commitFields(record.releaseCommit) },
           supply: { fingerprint: record.supplyBuildFingerprint, runnerVersion: record.runnerVersion },
           deployment: { released: false, idempotent: true, receipt: record },
           readback: { correlationId: record.correlationId, observed: {} },
@@ -1067,7 +1073,7 @@ async function foundationPromote(opts) {
     if (record.status !== 'published') {
       writeJsonAtomic(path.join(ledgerDir, 'releases', `${record.correlationId}.json`), {
         ...record, status: 'published',
-        observed: { activeBinding: digest, tagRef: digest, businessTerminalState: state, sealedBaseline: { resolvable: true, source: baseline.source } },
+        observed: { activeBinding: digest, tagRef: digest, businessTerminalState: state, sealedBaseline: { resolvable: true, source: baseline.source, commitBinding } },
       });
     }
     const bound = ledgerReleaseRecord(ledgerDir, active.correlationId);
@@ -1075,9 +1081,9 @@ async function foundationPromote(opts) {
       command: 'foundation-promote', project: ledger.registration.project, status: 'VERIFIED',
       extra: {
         tag,
-        artifact: { exportDigest: digest, builtFromReleaseCommit: record.releaseCommit, supplyBuildFingerprint: record.supplyBuildFingerprint, runnerVersion: record.runnerVersion },
+        artifact: { exportDigest: digest, ...commitFields(record.releaseCommit), supplyBuildFingerprint: record.supplyBuildFingerprint, runnerVersion: record.runnerVersion },
         deployment: { released: false, idempotent: true, receipt: bound },
-        readback: { correlationId: bound.correlationId, activeBinding: digest, tagRef: digest, sealedBaseline: { resolvable: true, source: baseline.source } },
+        readback: { correlationId: bound.correlationId, activeBinding: digest, tagRef: digest, sealedBaseline: { resolvable: true, source: baseline.source, commitBinding } },
         protocols: { registrationDigest: protocols.digest, kinds: protocols.doc.protocols.map((p) => p.kind), remotePublication: 'UNVERIFIED' },
       },
     });
@@ -1135,7 +1141,7 @@ async function foundationPromote(opts) {
   const state = foundationReadback(ledgerDir);
   const artifactSection = {
     exportDigest: digest,
-    builtFromReleaseCommit: committed.release.commit,
+    ...commitFields(committed.release.commit),
     supplyBuildFingerprint: supply.fingerprint,
     runnerVersion: supply.runnerVersion,
   };
@@ -1159,7 +1165,7 @@ async function foundationPromote(opts) {
   }
   const confirmed = {
     ...record, status: 'published',
-    observed: { activeBinding: digest, tagRef: digest, businessTerminalState: state, sealedBaseline: { resolvable: true, source: baseline.source } },
+    observed: { activeBinding: digest, tagRef: digest, businessTerminalState: state, sealedBaseline: { resolvable: true, source: baseline.source, commitBinding } },
   };
   writeJsonAtomic(path.join(ledgerDir, 'releases', `${correlationId}.json`), confirmed);
   const verdict = foundationReceipt({
@@ -1172,7 +1178,7 @@ async function foundationPromote(opts) {
         correlationId,
         activeBinding: digest,
         tagRef: digest,
-        sealedBaseline: { resolvable: true, source: baseline.source, exportDigest: digest },
+        sealedBaseline: { resolvable: true, source: baseline.source, exportDigest: digest, commitBinding },
         observed: { businessTerminalState: state },
       },
       protocols: { registrationDigest: protocols.digest, kinds: protocols.doc.protocols.map((p) => p.kind), remotePublication: 'UNVERIFIED' },
@@ -1346,7 +1352,8 @@ async function foundationRollback(opts) {
     baseline = { ok: false, reason: `sealed baseline directory for ${target.slice(0, 12)}… is missing or does not pin that exportDigest` };
   } else {
     const resolved = await resolveBaseline(root, targetLock);
-    baseline = { ok: resolved.ok, reason: resolved.ok ? null : resolved.reason, source: resolved.source ?? null };
+    baseline = { ok: resolved.ok, reason: resolved.ok ? null : resolved.reason, source: resolved.source ?? null,
+      commitBinding: resolved.commitBinding ?? (resolved.ok ? 'verified' : 'unverified') };
   }
   if (!baseline.ok) {
     const verdict = foundationReceipt({
@@ -1368,7 +1375,7 @@ async function foundationRollback(opts) {
         extra: {
           rollback: {
             requested: true, approved: true, digest: target, previousApprovedDigest: retained.exportDigest,
-            sealedBaseline: { resolvable: true, source: baseline.source, exportDigest: target },
+            sealedBaseline: { resolvable: true, source: baseline.source, exportDigest: target, commitBinding: baseline.commitBinding },
             observed: { distribution: ledger.registration.id, businessTerminalState: state },
           },
           deployment: { released: false, idempotent: true, receipt: null },
@@ -1414,7 +1421,7 @@ async function foundationRollback(opts) {
   const state = foundationReadback(ledgerDir);
   const rollbackSection = {
     requested: true, approved: true, digest: target, previousApprovedDigest: retained.exportDigest,
-    sealedBaseline: { resolvable: true, source: baseline.source, exportDigest: target },
+    sealedBaseline: { resolvable: true, source: baseline.source, exportDigest: target, commitBinding: baseline.commitBinding },
   };
   const confirmed = effectApplied && state?.serving === target
     && ledgerActive(ledgerDir)?.exportDigest === target;

@@ -47,6 +47,10 @@ const fingerprint = crypto.createHash('sha256').update(JSON.stringify({
 const buildDir = path.join(projectRoot, '.sdd/vendor/comet', lock.source.commit, 'builds', fingerprint);
 const distRequirements = path.join(buildDir, 'work/dist/domains/comet-classic/classic-artifact-requirements.js');
 const built = await fs.access(path.join(buildDir, 'distribution.json')).then(() => true, () => false);
+// The historical replay must read the build that produced its recorded evidence.
+const historicalFingerprint = 'de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a';
+const historicalBuild = path.join(projectRoot, '.sdd/vendor/comet', 'aeb1a6598034e28ce46b8422d4dbd8785e607bd7', 'builds', historicalFingerprint);
+const historicalRequirements = path.join(historicalBuild, 'work/dist/domains/comet-classic/classic-artifact-requirements.js');
 
 const isolatedOpenspecPkg = path.join(projectRoot, '.sdd/tools/openspec-1.15.0/node_modules/@fission-ai/openspec');
 const isolatedOpenspecBin = path.join(isolatedOpenspecPkg, 'bin/openspec.js');
@@ -59,7 +63,6 @@ const packageRoot = path.join(applicationRoot, 'package');
 const application = JSON.parse(await fs.readFile(path.join(packageRoot, 'application.json'), 'utf8'));
 const workflowDocument = JSON.parse(await fs.readFile(path.join(packageRoot, 'workflow.json'), 'utf8'));
 const composition = JSON.parse(await fs.readFile(path.join(applicationRoot, 'composition.json'), 'utf8'));
-const compileManifest = JSON.parse(await fs.readFile(path.join(applicationRoot, 'internal/compile-manifest.json'), 'utf8'));
 const workflow = workflowDocument.workflows.find((entry) => entry.id === 'comet-classic-full');
 const { createBindings } = await import(path.join(packageRoot, 'bindings.mjs'));
 
@@ -309,7 +312,7 @@ test('C04 negative: a second writable plan authority is detected and refused', a
   // A report (or receipt) bound to the second authority is not currency for
   // the real one: the digest mismatch is the refusal, so no second checkbox
   // authority can silently stand in for tasks.md.
-  const refused = baseline.verifyReportCurrency({ report: { id: 'plan-view-2', inputDigest: secondAuthorityDigest }, currentDigest: authorityDigest });
+  const refused = baseline.verifyReportCurrency({ report: { id: 'plan-view-2', inputDigest: secondAuthorityDigest, generation: 2 }, currentDigest: authorityDigest, currentGeneration: 2 });
   assert.equal(refused.ok, false);
   assert.equal(refused.error, 'DIGEST_MISMATCH');
   assert.match(refused.reason, /but current full-input digest is/);
@@ -510,18 +513,22 @@ const planEvidenceSteps = (wf) => Object.entries(wf.steps)
   .filter(([, step]) => step.type === 'await_evidence' && step.kind === 'classic-build-plan')
   .map(([id]) => id);
 
-test('P1_5 assembly: the compiled package identity is pinned to the comet-050 composition build', async () => {
+test('historical P1_5 assembly remains pinned to its original comet-050 package only', async () => {
   const record = await loadProbe('assembly-probes.json');
-  assert.equal(record.environment.package.compositionHash, compileManifest.compositionHash);
-  assert.equal(record.environment.package.contentHash, compileManifest.contentHash);
-  assert.equal(application.runtimeVersion, '0.5.0');
-  assert.equal(application.schema, 'comet.workflow.application.v1');
-  assert.equal(application.base, 'classic-full');
-  assert.equal(application.id, 'sdd-managed-delivery');
-  assert.equal(application.skills.length, 15);
-  assert.equal(application.bindings.length, 15);
-  assert.equal(workflow.id, 'comet-classic-full');
-  assert.equal(workflowDocument.schema, 'comet.workflow.application.definition.v1');
+  const historicalRoot = path.join(projectRoot, 'foundation/baselines/bd4fe3be7c6df0ab2fec6798ee52c2bc8a31a8d75783978958caf006525d8245/source/integrations/comet/application');
+  const historicalManifest = JSON.parse(await fs.readFile(path.join(historicalRoot, 'internal/compile-manifest.json'), 'utf8'));
+  const historicalApplication = JSON.parse(await fs.readFile(path.join(historicalRoot, 'package/application.json'), 'utf8'));
+  const historicalWorkflow = JSON.parse(await fs.readFile(path.join(historicalRoot, 'package/workflow.json'), 'utf8'));
+  assert.equal(record.environment.package.compositionHash, historicalManifest.compositionHash);
+  assert.equal(record.environment.package.contentHash, historicalManifest.contentHash);
+  assert.equal(historicalApplication.runtimeVersion, '0.5.0');
+  assert.equal(historicalApplication.schema, 'comet.workflow.application.v1');
+  assert.equal(historicalApplication.base, 'classic-full');
+  assert.equal(historicalApplication.id, 'sdd-managed-delivery');
+  assert.equal(historicalApplication.skills.length, 15);
+  assert.equal(historicalApplication.bindings.length, 15);
+  assert.ok(historicalWorkflow.workflows.some((entry) => entry.id === 'comet-classic-full'));
+  assert.equal(historicalWorkflow.schema, 'comet.workflow.application.definition.v1');
 });
 
 test('P1_5 assembly: A and T are separate extensions at the same design checkpoint with independent artifactRefs and validators (C01/C03)', async () => {
@@ -909,10 +916,10 @@ test('C08 negative: the captured historical OpenSpec 1.3.1 response is replayed 
   for (const artifact of statusJson.artifacts) {
     assert.equal(artifact.requires, undefined, 'the captured legacy response exposes no dependency edges');
   }
-  assert.ok(built, 'the pinned 0.5.0+0005 Comet build is required for the historical compatibility replay');
-  assert.equal(record.fixedEnvironment.buildFingerprint, fingerprint, 'the probe must pin the exact build the predicate came from');
-  assert.equal(record.fixedEnvironment.predicateSha256, sha(await fs.readFile(distRequirements)), 'the predicate bytes must stay pinned');
-  const { requiredArtifactClosure } = await import(distRequirements);
+  assert.ok(await fs.access(path.join(historicalBuild, 'distribution.json')).then(() => true, () => false), 'the pinned 0.5.0+0005 Comet build is required for the historical compatibility replay');
+  assert.equal(record.fixedEnvironment.buildFingerprint, historicalFingerprint, 'the probe must pin the exact build the predicate came from');
+  assert.equal(record.fixedEnvironment.predicateSha256, sha(await fs.readFile(historicalRequirements)), 'the predicate bytes must stay pinned');
+  const { requiredArtifactClosure } = await import(historicalRequirements);
   assert.throws(
     () => requiredArtifactClosure(statusJson),
     (error) => error.message === record.negative.closureError,
@@ -1038,26 +1045,29 @@ test('P1_5 probe registration is complete and cites real-entry evidence', async 
   assert.ok(compat.negative?.cliVersion && compat.negative?.closureError, 'the C08 refusal must be registered with the pinned CLI version and the real predicate error');
   assert.equal(compat.positive?.closureResult, 'ACCEPTED');
   assert.equal(compat.fixedEnvironment?.isolatedInstall, '.sdd/tools/openspec-1.15.0');
-  assert.equal(compat.fixedEnvironment?.buildFingerprint, fingerprint);
+  assert.equal(compat.fixedEnvironment?.buildFingerprint, historicalFingerprint, 'the historical record must retain its original build identity');
 });
 
 // The package pin registration: the 15 managed skills of the compiled
 // package (method variants, domain work, extension faces) with the official
 // compiler content hashes. A drifted digest or role is refused.
-test('P1_5 method dispatch content is pinned to the compiled package without claiming execution', async () => {
+test('historical P1_5 method pins remain bound to the original 0.5.0 package without claiming execution', async () => {
   const record = await loadProbe('method-dispatch-content.json');
   assert.equal(record.qualification, 'PACKAGE_PIN_ONLY');
   assert.equal(record.methodExecution, 'NOT_EXECUTED');
   assert.equal(record.profile, 'comet-classic-full-050');
   assert.equal(record.skills.length, 15);
   assert.ok(record.skills.every((skill) => skill.digest && skill.role && skill.disposition), 'each pinned skill must carry digest, role and disposition');
-  const live = new Map(application.skills.map((skill) => [skill.id, skill.contentHash]));
+  const historicalRoot = path.join(projectRoot, 'foundation/baselines/bd4fe3be7c6df0ab2fec6798ee52c2bc8a31a8d75783978958caf006525d8245/source/integrations/comet/application');
+  const historicalApplication = JSON.parse(await fs.readFile(path.join(historicalRoot, 'package/application.json'), 'utf8'));
+  const historicalComposition = JSON.parse(await fs.readFile(path.join(historicalRoot, 'composition.json'), 'utf8'));
+  const live = new Map(historicalApplication.skills.map((skill) => [skill.id, skill.contentHash]));
   for (const skill of record.skills) {
     assert.equal(live.get(skill.name), skill.digest, `packaged skill ${skill.name} drifted from the registered pin`);
   }
   // The roles agree with the composition mapping.
-  const variants = new Map(composition.managedSkillVariants.work.map((entry) => [entry.skillId, entry.kind]));
-  const extensionSkillIds = new Set(extensionBindings.map((binding) => binding.skillId));
+  const variants = new Map(historicalComposition.managedSkillVariants.work.map((entry) => [entry.skillId, entry.kind]));
+  const extensionSkillIds = new Set(historicalApplication.bindings.filter((binding) => binding.capability.endsWith('.gate')).map((binding) => binding.skillId));
   for (const skill of record.skills) {
     if (skill.role === 'extension-skill') assert.ok(extensionSkillIds.has(skill.name), `${skill.name} must be a bound gate face`);
     else assert.equal(variants.get(skill.name), skill.role === 'method-variant' ? 'method-variant' : 'domain-work', `${skill.name} role drifted from the composition mapping`);

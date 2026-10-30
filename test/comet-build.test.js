@@ -6,8 +6,8 @@ import test from 'node:test';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { prepareCometSource } from '../tools/comet/source.js';
-import { buildCometDistribution } from '../tools/comet/build.mjs';
+import { prepareCometSource, SOURCE_EXTRACTION_POLICY } from '../tools/comet/source.js';
+import { buildCometDistribution, verifyCometDistribution } from '../tools/comet/build.mjs';
 
 test('rejects an exact Node pin mismatch before reading source or writing project state', async () => {
   const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'sdd-comet-build-node-'));
@@ -28,7 +28,7 @@ test('rejects an exact Node pin mismatch before reading source or writing projec
         bytes: 40474019,
         directory: 'comet-c90af44a4474662d7853aae76ce785404974fb0a',
       },
-      toolchain: { node: alternateNode, pnpm: '10.18.3', pythonMinimum: '3.12' },
+      toolchain: { node: alternateNode, pnpm: '10.18.3', pythonMinimum: '3.12', sourceExtractionPolicy: SOURCE_EXTRACTION_POLICY },
       patches: [],
     };
     const archivePath = path.join(projectRoot, 'nonexistent-source.tar.gz');
@@ -61,7 +61,7 @@ async function verificationFixture(t, observed) {
   assert.equal(tar.status,0,'SETUP tar fixture: '+tar.stderr);
   const hash=(bytes)=>createHash('sha256').update(bytes).digest('hex');
   const archive=await fs.readFile(archivePath);
-  const lock={schemaVersion:1,package:{name:'@rpamis/comet',version:'0.4.5'},source:{commit,directory:'comet-'+commit,sha256:hash(archive),bytes:archive.length},toolchain:{node:process.versions.node,pnpm:'10.18.3'},patches:[]};
+  const lock={schemaVersion:1,package:{name:'@rpamis/comet',version:'0.4.5'},source:{commit,directory:'comet-'+commit,sha256:hash(archive),bytes:archive.length},toolchain:{node:process.versions.node,pnpm:'10.18.3',pythonMinimum:'3.12',sourceExtractionPolicy:SOURCE_EXTRACTION_POLICY},patches:[]};
   const prepared=await prepareCometSource({projectRoot,lock,archivePath});
   const fingerprint=hash(JSON.stringify({archive:lock.source.sha256,patches:[],toolchain:lock.toolchain}));
   const buildRoot=path.join(projectRoot,'.sdd/vendor/comet',commit,'builds',fingerprint);
@@ -95,4 +95,90 @@ test('verification CLI invalid arguments keep input exit 1 and coded JSON',()=>{
   const result=spawnSync(process.execPath,[cli,'--unknown','--json'],{encoding:'utf8',timeout:10000});
   assert.equal(result.status,1);assert.equal(result.stdout,'');
   assert.equal(JSON.parse(result.stderr).code,'INPUT_INVALID');
+});
+
+test('P1_1: committed upstream identity pins Comet 0.5.1 and its reviewed source/patch', async () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const lock = JSON.parse(await fs.readFile(path.join(root, 'integrations/comet/upstream.lock.json'), 'utf8'));
+  assert.equal(lock.package.name, '@rpamis/comet');
+  assert.equal(lock.package.version, '0.5.1');
+  assert.equal(lock.package.integrity, 'sha512-ECcvdrS/6ysrJLhtD7LVeTiRHO0HqOQsK0KEaF1XqgF6O4rNYE2sAnYrB4zuvG+Fj9t5eXn0nPj27qYJ31Vw9A==');
+  assert.equal(lock.source.commit, '35c9860b77b42bafa0c2d80d8d695889f888a924');
+  assert.equal(lock.source.sha256, 'c1b6d2ff009f0ae0bf542169b3b52ab69c41a8d6418d5ce0822ce786fe968137');
+  assert.equal(lock.source.bytes, 57429570);
+  assert.equal(lock.source.directory, `comet-${lock.source.commit}`);
+  assert.equal(lock.toolchain.sourceExtractionPolicy, SOURCE_EXTRACTION_POLICY, 'active lock must pin the implemented source extraction policy');
+  assert.equal(lock.patches.length, 1);
+  const patch = lock.patches[0];
+  assert.equal(patch.path, 'integrations/comet/patches/0005-comet-050-kt-closeout.patch');
+  assert.equal(createHash('sha256').update(await fs.readFile(path.join(root, patch.path))).digest('hex'), patch.sha256);
+});
+
+test('P1_1: lock-only package version change refuses reuse and verify',async(t)=>{
+  const root=await verificationFixture(t,2);const lock=JSON.parse(await fs.readFile(path.join(root,'lock.json'),'utf8'));lock.package.version='0.5.1';
+  await assert.rejects(verifyCometDistribution({projectRoot:root,lock}),{code:'SOURCE_BASELINE_DRIFT'});
+  await assert.rejects(buildCometDistribution({projectRoot:root,lock,archivePath:path.join(root,'source.tar.gz')}),{code:'SOURCE_IDENTITY_MISMATCH'});
+});
+
+test('P1_1: forged provenance and lock cannot re-label source package',async(t)=>{
+  const root=await verificationFixture(t,2);const lock=JSON.parse(await fs.readFile(path.join(root,'lock.json'),'utf8'));lock.package.version='0.5.1';
+  const provenance=path.join(root,'.sdd/vendor/comet',lock.source.commit,'provenance.json');const data=JSON.parse(await fs.readFile(provenance,'utf8'));data.package.version='0.5.1';await fs.writeFile(provenance,JSON.stringify(data));
+  await assert.rejects(verifyCometDistribution({projectRoot:root,lock}),{code:'SOURCE_BASELINE_DRIFT'});
+});
+
+test('P1_1: rehashed build package cannot masquerade as locked identity',async(t)=>{
+  const root=await verificationFixture(t,2);const lock=JSON.parse(await fs.readFile(path.join(root,'lock.json'),'utf8'));
+  const builds=path.join(root,'.sdd/vendor/comet',lock.source.commit,'builds');const buildRoot=path.join(builds,(await fs.readdir(builds))[0]);const file=path.join(buildRoot,'work/package.json');
+  const body=JSON.parse(await fs.readFile(file,'utf8'));body.version='0.5.1';const bytes=JSON.stringify(body);await fs.writeFile(file,bytes);
+  const mf=path.join(buildRoot,'distribution.json');const record=JSON.parse(await fs.readFile(mf,'utf8'));record.files['package.json'].sha256=createHash('sha256').update(bytes).digest('hex');await fs.writeFile(mf,JSON.stringify(record));
+  await assert.rejects(verifyCometDistribution({projectRoot:root,lock}),{code:'BUILD_IDENTITY_MISMATCH'});
+  await assert.rejects(buildCometDistribution({projectRoot:root,lock,archivePath:path.join(root,'source.tar.gz')}),{code:'BUILD_IDENTITY_MISMATCH'});
+});
+
+test('P1_1: rehashed wrong build package is not reusable',async(t)=>{
+  const root=await verificationFixture(t,2);const lock=JSON.parse(await fs.readFile(path.join(root,'lock.json'),'utf8'));
+  const builds=path.join(root,'.sdd/vendor/comet',lock.source.commit,'builds');const buildRoot=path.join(builds,(await fs.readdir(builds))[0]);const file=path.join(buildRoot,'work/package.json');
+  const body=JSON.parse(await fs.readFile(file,'utf8'));body.name='@wrong/comet';const bytes=JSON.stringify(body);await fs.writeFile(file,bytes);
+  const mf=path.join(buildRoot,'distribution.json');const record=JSON.parse(await fs.readFile(mf,'utf8'));record.files['package.json'].sha256=createHash('sha256').update(bytes).digest('hex');await fs.writeFile(mf,JSON.stringify(record));
+  await assert.rejects(buildCometDistribution({projectRoot:root,lock,archivePath:path.join(root,'source.tar.gz')}),{code:'BUILD_IDENTITY_MISMATCH'});
+});
+
+test('P1_1: matching source and build remain reusable and verifiable',async(t)=>{
+  const root=await verificationFixture(t,2);const lock=JSON.parse(await fs.readFile(path.join(root,'lock.json'),'utf8'));
+  assert.equal((await verifyCometDistribution({projectRoot:root,lock})).status,'PASS');
+  assert.equal((await buildCometDistribution({projectRoot:root,lock,archivePath:path.join(root,'source.tar.gz')})).reused,true);
+});
+
+test('P1_1: malformed rehashed build package fails identity validation',async(t)=>{
+  const root=await verificationFixture(t,2);const lock=JSON.parse(await fs.readFile(path.join(root,'lock.json'),'utf8'));
+  const builds=path.join(root,'.sdd/vendor/comet',lock.source.commit,'builds');const buildRoot=path.join(builds,(await fs.readdir(builds))[0]);const file=path.join(buildRoot,'work/package.json');const bytes='{not json';await fs.writeFile(file,bytes);
+  const mf=path.join(buildRoot,'distribution.json');const record=JSON.parse(await fs.readFile(mf,'utf8'));record.files['package.json'].sha256=createHash('sha256').update(bytes).digest('hex');await fs.writeFile(mf,JSON.stringify(record));
+  await assert.rejects(verifyCometDistribution({projectRoot:root,lock}),{code:'BUILD_IDENTITY_MISMATCH'});
+  await assert.rejects(buildCometDistribution({projectRoot:root,lock,archivePath:path.join(root,'source.tar.gz')}),{code:'BUILD_IDENTITY_MISMATCH'});
+});
+
+test('P1_1: missing build package is not accepted even when manifest is altered',async(t)=>{
+  const root=await verificationFixture(t,2);const lock=JSON.parse(await fs.readFile(path.join(root,'lock.json'),'utf8'));
+  const builds=path.join(root,'.sdd/vendor/comet',lock.source.commit,'builds');const buildRoot=path.join(builds,(await fs.readdir(builds))[0]);await fs.unlink(path.join(buildRoot,'work/package.json'));
+  const mf=path.join(buildRoot,'distribution.json');const record=JSON.parse(await fs.readFile(mf,'utf8'));delete record.files['package.json'];await fs.writeFile(mf,JSON.stringify(record));
+  await assert.rejects(verifyCometDistribution({projectRoot:root,lock}),{code:'BUILD_IDENTITY_MISMATCH'});
+  await assert.rejects(buildCometDistribution({projectRoot:root,lock,archivePath:path.join(root,'source.tar.gz')}),{code:'BUILD_IDENTITY_MISMATCH'});
+});
+
+test('P1_1: build reuse and verify reject missing or unknown extraction policy',async(t)=>{
+  const root=await verificationFixture(t,2);const current=JSON.parse(await fs.readFile(path.join(root,'lock.json'),'utf8'));
+  for (const value of [undefined,'unrecognized-policy']) {
+    const lock=structuredClone(current);if(value===undefined)delete lock.toolchain.sourceExtractionPolicy;else lock.toolchain.sourceExtractionPolicy=value;
+    await assert.rejects(verifyCometDistribution({projectRoot:root,lock}),{code:'LOCK_INVALID'});
+    await assert.rejects(buildCometDistribution({projectRoot:root,lock,archivePath:path.join(root,'source.tar.gz')}),{code:'LOCK_INVALID'});
+  }
+});
+
+test('P1_1: active policy lives inside the unchanged fingerprint formula while retired image identity stays historical',async()=>{
+  const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');const lock=JSON.parse(await fs.readFile(path.join(root,'integrations/comet/upstream.lock.json'),'utf8'));
+  const sha=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
+  assert.equal(sha({archive:lock.source.sha256,patches:lock.patches.map(({path,sha256})=>({path,sha256})),toolchain:lock.toolchain}),'d6e72988122f4380124579dd4e3281e344d009f2ac280b29197f24011d7477c7');
+  const retired=JSON.parse(await fs.readFile(path.join(root,'infra/delivery/runner/image.lock.json'),'utf8')).sourceInputs;
+  assert.equal(Object.hasOwn(retired.toolchain,'sourceExtractionPolicy'),false);
+  assert.equal(sha({archive:retired.archiveSha256,patches:retired.patches.map(({path,sha256})=>({path,sha256})),toolchain:retired.toolchain}),retired.hostBuildFingerprint);
 });

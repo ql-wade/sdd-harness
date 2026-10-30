@@ -982,3 +982,26 @@ test('V_A15: an independent persistence readback fails the journey when a succes
   assert.equal(notPersisted.verdict, 'FAIL', 'not persisted means the journey fails, regardless of the success claim');
   assert.equal(notPersisted.reason, 'not-persisted');
 });
+
+test('P3_1: a skipped point sharing a required target cannot hide behind a passed point', () => {
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-mixed-target-'));
+  const modulePath = fixtureModule(root, 'x95.test.mjs', [
+    "test('V_X95: passed requirement', () => { assert.ok(true); });",
+    "test('V_X95: skipped requirement', { skip: true }, () => {});",
+  ].join('\n'));
+  const planPath = fixtureCasePlan(root, [{ scenario: 'X95', caseModule: modulePath }]);
+  const evidence = path.join(root, 'evidence');
+  const run = runJourney(['--scenario','X95','--profile','comet-managed-v2','--evidence-dir',evidence,'--case-plan',planPath,'--json']);
+  assert.equal(run.status, 2, 'one executed point must not hide an unexecuted required point');
+  assert.equal(readVerdict(run,evidence).verdict, 'NOT-EXERCISED');
+});
+
+test('P3_1: skipped nested execution cannot pass via its required parent', () => {
+  const root = makeTemp(path.join(os.tmpdir(), 'sdd-p31-nested-target-'));
+  const modulePath = fixtureModule(root, 'x96.test.mjs', "test('V_X96: parent', async t => { await t.test('required child', { skip: true }, () => {}); });");
+  const planPath = fixtureCasePlan(root, [{ scenario: 'X96', caseModule: modulePath }]);
+  const evidence = path.join(root, 'evidence');
+  const run = runJourney(['--scenario','X96','--profile','comet-managed-v2','--evidence-dir',evidence,'--case-plan',planPath,'--json']);
+  assert.equal(run.status, 2, 'a parent pass cannot hide a skipped child');
+  assert.equal(readVerdict(run,evidence).verdict, 'NOT-EXERCISED');
+});

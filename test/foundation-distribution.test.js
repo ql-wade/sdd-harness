@@ -1039,11 +1039,17 @@ test('old run pinned to the committed lock stays resolvable (real repo, F04 keep
   const lock = JSON.parse(fs.readFileSync(path.join(projectRoot, 'foundation/foundation-lock.json'), 'utf8'));
   const runDir = makeRunDir(lock, { schemaVersion: 1, runId: 'run-old', status: 'active', owner: 'alice', pinnedCommit: lock.release.commit });
   try {
+    const baseline = await exporter.resolveBaseline(projectRoot, lock);
+    assert.equal(baseline.resolvable, true, JSON.stringify(baseline));
+    assert.ok(baseline.resolvedSkills.includes('tdd'), 'pinned skills must resolve from the sealed baseline or git history');
+    const current = await exporter.buildLock(projectRoot, { releaseCommit: lock.release.commit });
+    const drift = current.release.exportDigest !== lock.release.exportDigest;
     const verdict = await exporter.checkRun(runDir, projectRoot, {});
-    assert.equal(verdict.ok, true, JSON.stringify(verdict));
-    assert.equal(verdict.baseline.resolvable, true);
-    assert.ok(verdict.baseline.resolvedSkills.includes('tdd'), 'pinned skills must resolve from git history');
-    assert.equal(verdict.drift, false);
+    assert.equal(verdict.baseline.resolvable, true, JSON.stringify(verdict));
+    assert.equal(verdict.drift, drift);
+    assert.equal(verdict.ok, !drift, JSON.stringify(verdict));
+    assert.equal(verdict.reason, drift ? 'silent-rebaseline-blocked' : 'baseline-current');
+    assert.equal(JSON.parse(fs.readFileSync(path.join(runDir, 'foundation-lock.json'), 'utf8')).release.exportDigest, lock.release.exportDigest, 'check never silently rewrites the pinned baseline');
   } finally {
     fs.rmSync(runDir, { recursive: true, force: true });
   }
@@ -1058,8 +1064,15 @@ test('active run blocks silent re-baseline after asset drift; closed run only no
     const activeDir = makeRunDir(lock, { schemaVersion: 1, runId: 'run-a', status: 'active', owner: 'alice' });
     const closedDir = makeRunDir(lock, { schemaVersion: 1, runId: 'run-c', status: 'closed', owner: 'alice' });
     try {
+      const before = await exporter.checkRun(activeDir, root, {});
+      assert.equal(before.baseline.resolvable, true, 'the frozen baseline resolves before drift');
+      assert.equal(before.ok, true, 'an active run can continue when its current assets still match');
+      assert.equal(before.drift, false);
+      assert.equal(before.reason, 'baseline-current');
       fs.writeFileSync(path.join(root, '.agents/skills/beta/SKILL.md'), '# beta v2\n');
       const active = await exporter.checkRun(activeDir, root, {});
+      assert.equal(active.baseline.resolvable, true, 'old baseline remains resolvable after drift');
+      assert.equal(active.drift, true);
       assert.equal(active.ok, false, 'resuming an active run on drifted assets must block');
       assert.equal(active.reason, 'silent-rebaseline-blocked');
       assert.match(active.migration, /--migrate|new run/i, 'block must carry an explicit migration path');
@@ -1100,8 +1113,13 @@ test('B09: a second writer cannot take over an active run', async () => {
     assert.equal(refused.reason, 'second-writer-refused');
     assert.equal(JSON.parse(fs.readFileSync(path.join(runDir, 'run-state.json'), 'utf8')).owner, 'alice', 'state unchanged by refused writer');
 
+    const current = await exporter.buildLock(projectRoot, { releaseCommit: lock.release.commit });
+    const drift = current.release.exportDigest !== lock.release.exportDigest;
     const reclaim = await exporter.checkRun(runDir, projectRoot, { acquire: true, owner: 'alice' });
-    assert.equal(reclaim.ok, true, 'owner re-claim allowed');
+    assert.equal(reclaim.baseline.resolvable, true, 'old locked baseline must still resolve');
+    assert.equal(reclaim.drift, drift);
+    assert.equal(reclaim.ok, !drift, 'owner may re-claim only while current assets match');
+    if (drift) assert.equal(reclaim.reason, 'silent-rebaseline-blocked');
   } finally {
     fs.rmSync(runDir, { recursive: true, force: true });
   }
@@ -1200,7 +1218,9 @@ test('export refuses retired sources instead of distributing a valid-looking old
 
 test('legacy asset ownership helper never acquires or rewrites an actual native Comet Run', async () => {
   const root = makeFixture();
+  let runtimeData;
   try {
+    runtimeData = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'sdd-native-data-'));
     spawnSync('git', ['init','-q','-b','main'], {cwd:root});
     const config = path.join(root, '.comet/config.yaml');fs.mkdirSync(path.dirname(config), {recursive:true});
     fs.writeFileSync(config, 'schema: comet.project.v1\ndefault_workflow: classic\nworkflows: [classic]\nclassic:\n  artifact_layout: legacy\n');
@@ -1209,7 +1229,7 @@ test('legacy asset ownership helper never acquires or rewrites an actual native 
     const fingerprint = sha256(JSON.stringify({archive:lock.source.sha256,patches:lock.patches.map(({path,sha256})=>({path,sha256})),toolchain:lock.toolchain}));
     const cli = path.join(projectRoot, '.sdd/vendor/comet', lock.source.commit, 'builds',fingerprint,'work/bin/comet.js');
     assert.ok(fs.existsSync(cli), 'UNVERIFIED: fixed existing Comet distribution required for native-shape observation');
-    const run=(args)=>spawnSync(process.execPath,[cli,...args,'--json'],{cwd:root,env:{...process.env,GIT_CEILING_DIRECTORIES:root},encoding:'utf8'});
+    const run=(args)=>spawnSync(process.execPath,[cli,...args,'--json'],{cwd:root,env:{...process.env,GIT_CEILING_DIRECTORIES:root,COMET_DATA_DIR:runtimeData},encoding:'utf8'});
     const init=run(['state','init','native-assets','full','--isolation','current']);
     assert.equal(init.status,0,init.stderr);
     // 0.5.0 native layout (observed against the pinned build): single Run
@@ -1233,7 +1253,10 @@ test('legacy asset ownership helper never acquires or rewrites an actual native 
     assert.equal(flat.ok,false,'a run dir carrying comet-state.yaml is native regardless of its name');
     assert.equal(flat.reason,'native-run-readonly');
     assert.deepEqual(fs.readFileSync(stateFile),before);
-  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+  } finally {
+    try { if (runtimeData) fs.rmSync(runtimeData,{recursive:true,force:true}); }
+    finally { fs.rmSync(root,{recursive:true,force:true}); }
+  }
 });
 
 test('complete copied distribution refuses a removed method directory and an injected file', async () => {
@@ -1250,6 +1273,71 @@ test('complete copied distribution refuses a removed method directory and an inj
   } finally {fs.rmSync(root,{recursive:true,force:true});}
 });
 
+test('sealed assets cannot claim an available Git commit whose bytes differ', async (t) => {
+  const root = makeFixture();
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const git = (...args) => {
+    const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  };
+  git('init', '-q');
+  git('add', '-A');
+  git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'fixture');
+  const commit = git('rev-parse', 'HEAD');
+  const out = path.join(root, 'foundation');
+  const clean = await exporter.exportRelease(root, out, { releaseCommit: commit, freezeBaseline: true });
+  assert.equal((await exporter.resolveBaseline(root, clean.lock)).ok, true, 'matching committed assets must remain resolvable');
+  fs.writeFileSync(path.join(root, '.agents/skills/alpha/SKILL.md'), '# changed but uncommitted\n');
+  const dirty = await exporter.exportRelease(root, out, { releaseCommit: commit, freezeBaseline: true });
+  const result = await exporter.resolveBaseline(root, dirty.lock);
+  assert.equal(result.ok, true, 'sealed bytes remain recoverable');
+  assert.equal(result.commitBinding, 'mismatch', 'a valid cache cannot attest unrelated committed bytes');
+  const run = path.join(root, 'run');
+  writeJson(path.join(run, 'foundation-lock.json'), dirty.lock);
+  const acquire = await exporter.checkRun(run, root, { acquire: true, owner: 'fixture-owner' });
+  assert.equal(acquire.ok, false, 'a mismatched commit cannot authorize the run');
+  assert.equal(acquire.reason, 'baseline-commit-unverified');
+  const readback = await exporter.checkRun(run, root);
+  assert.equal(readback.ok, false, 'readback cannot report a mismatched commit as the current baseline');
+  assert.equal(readback.reason, 'baseline-commit-unverified');
+  assert.equal(fs.existsSync(path.join(run, 'run-state.json')), false);
+});
+
+test('sealed bytes without an available Git commit remain recoverable but cannot acquire a Git-backed run', async (t) => {
+  const root = makeFixture();
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  for (const args of [['init', '-q'], ['add', '-A']]) {
+    const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+  }
+  const out = path.join(root, 'foundation');
+  const { lock } = await exporter.exportRelease(root, out, { releaseCommit: FIXED_COMMIT, freezeBaseline: true });
+  const resolved = await exporter.resolveBaseline(root, lock);
+  assert.equal(resolved.ok, true, 'the sealed bytes stay available for recovery');
+  assert.equal(resolved.commitBinding, 'unverified');
+  const run = path.join(root, 'run');
+  writeJson(path.join(run, 'foundation-lock.json'), lock);
+  const result = await exporter.checkRun(run, root, { acquire: true, owner: 'fixture-owner' });
+  assert.equal(result.ok, false, 'a missing Git commit cannot authorize the run');
+  assert.equal(result.reason, 'baseline-commit-unverified');
+  assert.equal(fs.existsSync(path.join(run, 'run-state.json')), false);
+});
+
+test('a broken Git worktree marker cannot downgrade an unverified commit into a writable run', async (t) => {
+  const root = makeFixture();
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const out = path.join(root, 'foundation');
+  const { lock } = await exporter.exportRelease(root, out, { releaseCommit: FIXED_COMMIT, freezeBaseline: true });
+  fs.writeFileSync(path.join(root, '.git'), 'gitdir: /nonexistent/sdd-fixture\n');
+  const run = path.join(root, 'run');
+  writeJson(path.join(run, 'foundation-lock.json'), lock);
+  const result = await exporter.checkRun(run, root, { acquire: true, owner: 'fixture-owner' });
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'baseline-commit-unverified');
+  assert.equal(fs.existsSync(path.join(run, 'run-state.json')), false);
+});
+
 test('frozen pure assets resolve after transport without Git history and reject corruption or symlink escape', async () => {
   const root=makeFixture();
   try {
@@ -1257,6 +1345,11 @@ test('frozen pure assets resolve after transport without Git history and reject 
     const {lock}=await exporter.exportRelease(root,out,{releaseCommit:FIXED_COMMIT,freezeBaseline:true});
     const resolved=await exporter.resolveBaseline(root,lock);
     assert.equal(resolved.ok,true,JSON.stringify(resolved));
+    assert.equal(resolved.commitBinding,'unverified');
+    const run=path.join(root,'offline-run');writeJson(path.join(run,'foundation-lock.json'),lock);
+    const readback=await exporter.checkRun(run,root);
+    assert.equal(readback.ok,true);
+    assert.match(readback.report,/Git commit was not verified/);
     const source=path.join(out,'baselines',lock.release.exportDigest,'source/.agents/skills/alpha/SKILL.md');
     const before=fs.readFileSync(path.join(out,'foundation-lock.json'));
     fs.writeFileSync(source,'corrupted old material\n');
@@ -1343,10 +1436,37 @@ test('sealed cache complete set rejects extra special-named files, directories a
 
 
 // Independently listed project call graph, not read from the exporter implementation.
+test('managed Foundation exports a self-contained Comet phase entry and its declared dependencies', async (t) => {
+  const out=fs.mkdtempSync(path.join(os.tmpdir(),'sdd-fdn-phase-entry-'));
+  t.after(()=>fs.rmSync(out,{recursive:true,force:true}));
+  await exporter.exportRelease(projectRoot,out,{releaseCommit:FIXED_COMMIT,skillsCopy:true});
+  const code=path.join(out,'release/code');
+  for(const rel of ['tools/comet/phase-entry.mjs','tools/comet/start-lock.py','lib/adapters/comet-start.js',
+    'lib/adapters/codex-host-source.js','lib/adapters/codex-test-observation.js','lib/delivery/test-contract.js','lib/delivery/evidence.js']) assert.ok(fs.statSync(path.join(code,rel)).isFile(),`${rel} must be distributed`);
+  for(const name of ['comet','comet-open','comet-design','comet-build','comet-verify','comet-archive']) {
+    const rel=`phase-entries/${name}/SKILL.md`;
+    assert.deepEqual(fs.readFileSync(path.join(out,'release/comet-application',rel)),fs.readFileSync(path.join(projectRoot,'integrations/comet/application',rel)),`${rel} must retain its source bytes`);
+  }
+  assert.ok(fs.statSync(path.join(out,'release/comet-application/phase-entries/install.py')).isFile());
+  const observation=spawnSync(process.execPath,['--input-type=module','-e',"import('./lib/adapters/codex-host-source.js').then(m => { if (typeof m.parseCodexTestEvent !== 'function') process.exitCode=1; })"],{cwd:code,encoding:'utf8',timeout:10000});
+  assert.equal(observation.status,0,observation.stderr);
+  const result=spawnSync(process.execPath,[path.join(code,'tools/comet/phase-entry.mjs')],{cwd:code,encoding:'utf8',timeout:10000});
+  assert.equal(result.status,2,result.stderr);assert.equal(JSON.parse(result.stderr).code,'INPUT_INVALID');
+  assert.doesNotMatch(result.stderr,/ERR_MODULE_NOT_FOUND/);
+});
+
+test('the committed pre-stage-entry Foundation baseline remains recoverable without inventing new assets', async () => {
+  const lock=JSON.parse(fs.readFileSync(path.join(projectRoot,'foundation/foundation-lock.json'),'utf8'));
+  const result=await exporter.resolveBaseline(projectRoot,lock);
+  assert.equal(result.ok,true,result.reason);
+  assert.match(result.source ?? '',/^sealed-assets/);
+});
+
 const managedCodeInputs = [
   'tools/foundation-export.mjs','tools/bootstrap.sh','tools/adapters/claude-code.sh','foundation/managed_io.py',
   'hooks/pre-tool-gate.sh','hooks/session-context.sh','hooks/stop-reminder.sh','hooks/_resolve-project-dir.sh',
   'tools/register-mcps.mjs','tools/mcp/llmwiki.sh','scripts/agent-instructions-check.sh','scripts/agent-skill-check.sh',
+  'tools/comet/phase-entry.mjs','tools/comet/start-lock.py','lib/adapters/comet-start.js','lib/adapters/codex-host-source.js','lib/adapters/codex-test-observation.js','lib/delivery/test-contract.js','lib/delivery/evidence.js',
   'contracts/delivery/index.js','contracts/delivery/schema-kernel.js','contracts/delivery/foundation-lock.schema.js',
   'contracts/delivery/baseline-ref.schema.js','contracts/delivery/test-contract.schema.js','contracts/delivery/plan-bundle.schema.js',
   'contracts/delivery/candidate-ref.schema.js','contracts/delivery/evidence-envelope.schema.js','contracts/delivery/gate-receipt.schema.js',
@@ -1541,12 +1661,46 @@ test('Git exports remain verifiable after transport without Git', async () => {
 
 // Native TeamAI init/pull/repeat returned0 but transported0 of558 nested
 // Foundation files. The top-level packet must survive that real transport.
+test('TeamAI export refuses a sealed snapshot that does not match the claimed Git commit', async (t) => {
+  const root = makeFixture();
+  const outer = fs.mkdtempSync(path.join(os.tmpdir(), 'foundation-teamai-commit-'));
+  t.after(() => { fs.rmSync(root, { recursive: true, force: true }); fs.rmSync(outer, { recursive: true, force: true }); });
+  const git = (...args) => { const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' }); assert.equal(result.status, 0, result.stderr); return result.stdout.trim(); };
+  git('init', '-q'); git('add', '-A'); git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'fixture');
+  const commit = git('rev-parse', 'HEAD');
+  fs.writeFileSync(path.join(root, '.agents/skills/alpha/SKILL.md'), '# uncommitted candidate\n');
+  const out = path.join(outer, 'foundation'), view = path.join(outer, 'view'), expected = path.join(outer, 'expected.json');
+  await exporter.exportRelease(root, out, { releaseCommit: commit, skillsCopy: true, freezeBaseline: true });
+  await assert.rejects(() => exporter.exportTeamaiView(out, view, expected, { repo: 'https://fixture.invalid/team/foundation.git', sourceRoot: root }), /commit|historical/i);
+  await assert.rejects(() => exporter.exportTeamaiView(out, view, expected, { repo: 'https://fixture.invalid/team/foundation.git' }), /source Git worktree required/);
+  assert.equal(fs.existsSync(view), false);
+  assert.equal(fs.existsSync(expected), false);
+  const cliOut = path.join(outer, 'cli-foundation');
+  const cli = spawnSync(process.execPath, [exporterPath, 'export', '--root', root, '--out', cliOut, '--release-commit', commit,
+    '--teamai-view', path.join(outer, 'cli-view'), '--teamai-expected', path.join(outer, 'cli-expected.json'),
+    '--teamai-repo', 'https://fixture.invalid/team/foundation.git'], { encoding: 'utf8', timeout: 60000 });
+  assert.notEqual(cli.status, 0);
+  assert.equal(fs.existsSync(cliOut), false, 'CLI must check the commit before emitting candidate artifacts');
+});
+
+async function committedFullTeamaiFixture(temp) {
+  const seed = path.join(temp, 'seed');
+  const { lock } = await exporter.exportRelease(projectRoot, seed, { releaseCommit: FIXED_COMMIT, profile: 'comet-managed-v2', skillsCopy: true, freezeBaseline: true });
+  const source = path.join(temp, 'committed-source');
+  fs.cpSync(path.join(seed, 'baselines', lock.release.exportDigest, 'source'), source, { recursive: true });
+  const git = (...args) => { const result = spawnSync('git', ['-C', source, ...args], { encoding: 'utf8' }); assert.equal(result.status, 0, result.stderr); return result.stdout.trim(); };
+  git('init', '-q'); git('add', '-f', '-A');
+  git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'fixture sources');
+  return { source, commit: git('rev-parse', 'HEAD') };
+}
+
 test('TeamAI packet roundtrip preserves the externally frozen full file set', async () => {
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'foundation-teamai-'));
   try {
     const out=path.join(temp,'foundation'),view=path.join(temp,'publisher'),expected=path.join(temp,'expected.json');
-    await exporter.exportRelease(projectRoot,out,{releaseCommit:FIXED_COMMIT,profile:'comet-managed-v2',skillsCopy:true,freezeBaseline:true});
-    const receipt=await exporter.exportTeamaiView(out,view,expected,{repo:'https://fixture.invalid/team/foundation.git'});
+    const fixture = await committedFullTeamaiFixture(temp);
+    await exporter.exportRelease(fixture.source,out,{releaseCommit:fixture.commit,profile:'comet-managed-v2',skillsCopy:true,freezeBaseline:true});
+    const receipt=await exporter.exportTeamaiView(out,view,expected,{repo:'https://fixture.invalid/team/foundation.git',sourceRoot:fixture.source});
     const accepted=await exporter.receiveTeamaiPacket(path.join(view,'docs/foundation-assets.json'),expected,receipt.expectedSha256,path.join(temp,'accepted'));
     const descriptor=JSON.parse(fs.readFileSync(expected));assert.equal(accepted.files,descriptor.files.length);
     assert.ok(descriptor.files.some(file=>file.path.endsWith('/whitebox-verify/.gitignore')));
@@ -1559,8 +1713,9 @@ test('TeamAI packet rejects tamper, omission, duplicate, escape, unsafe mode and
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'foundation-teamai-negative-'));
   try {
     const out=path.join(temp,'foundation'),view=path.join(temp,'publisher'),expected=path.join(temp,'expected.json');
-    await exporter.exportRelease(projectRoot,out,{releaseCommit:FIXED_COMMIT,profile:'comet-managed-v2',skillsCopy:true,freezeBaseline:true});
-    const receipt=await exporter.exportTeamaiView(out,view,expected,{repo:'https://fixture.invalid/team/foundation.git'});
+    const fixture = await committedFullTeamaiFixture(temp);
+    await exporter.exportRelease(fixture.source,out,{releaseCommit:fixture.commit,profile:'comet-managed-v2',skillsCopy:true,freezeBaseline:true});
+    const receipt=await exporter.exportTeamaiView(out,view,expected,{repo:'https://fixture.invalid/team/foundation.git',sourceRoot:fixture.source});
     const original=fs.readFileSync(path.join(view,'docs/foundation-assets.json'));const source=JSON.parse(original);
     const changes=[['tamper',p=>{p.files[0].base64='AAAA';}],['dotfile',p=>{p.files=p.files.filter(f=>!f.path.endsWith('/whitebox-verify/.gitignore'));}],['extra',p=>{p.files.push({...p.files[0],path:'unexpected'});}],['duplicate',p=>{p.files.push(p.files[0]);}],['escape',p=>{p.files[0].path='../outside';}],['absolute',p=>{p.files[0].path='/tmp/outside';}],['mode',p=>{p.files[0].mode=0o120777;}],['base64',p=>{p.files[0].base64='%%%';}],['field',p=>{p.files[0].unknown=true;}],['stale',p=>{p.sourceCommit='b'.repeat(40);}]];
     for(const [name,change] of changes){const packet=path.join(temp,name+'.json'),stage=path.join(temp,'stage-'+name);const modified=structuredClone(source);change(modified);writeJson(packet,modified);await assert.rejects(exporter.receiveTeamaiPacket(packet,expected,receipt.expectedSha256,stage),/STATE_SYNC_REQUIRED/);assert.equal(fs.existsSync(stage),false,name);}
@@ -1569,11 +1724,12 @@ test('TeamAI packet rejects tamper, omission, duplicate, escape, unsafe mode and
   } finally {fs.rmSync(temp,{recursive:true,force:true});}
 });
 
-test('original Foundation CLI connects TeamAI view export and externally pinned receive', () => {
+test('original Foundation CLI connects TeamAI view export and externally pinned receive', async () => {
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'foundation-teamai-cli-'));
   try {
     const out=path.join(temp,'foundation'),view=path.join(temp,'view'),expected=path.join(temp,'expected.json'),stage=path.join(temp,'received');
-    const exported=spawnSync(process.execPath,[exporterPath,'export','--root',projectRoot,'--out',out,'--release-commit',FIXED_COMMIT,'--profile','comet-managed-v2','--skills-copy','--teamai-view',view,'--teamai-expected',expected,'--teamai-repo','https://fixture.invalid/team/foundation.git'],{encoding:'utf8',timeout:60000});assert.equal(exported.status,0,exported.stderr);
+    const fixture = await committedFullTeamaiFixture(temp);
+    const exported=spawnSync(process.execPath,[exporterPath,'export','--root',fixture.source,'--out',out,'--release-commit',fixture.commit,'--profile','comet-managed-v2','--skills-copy','--teamai-view',view,'--teamai-expected',expected,'--teamai-repo','https://fixture.invalid/team/foundation.git'],{encoding:'utf8',timeout:60000});assert.equal(exported.status,0,exported.stderr);
     const expectedHash=sha256(fs.readFileSync(expected));const received=spawnSync(process.execPath,[exporterPath,'verify','--teamai-packet',path.join(view,'docs/foundation-assets.json'),'--teamai-expected',expected,'--teamai-expected-sha256',expectedHash,'--teamai-stage',stage],{encoding:'utf8',timeout:60000});assert.equal(received.status,0,received.stderr);assert.deepEqual(fs.readFileSync(path.join(stage,'foundation-lock.json')),fs.readFileSync(path.join(out,'foundation-lock.json')));
     const packet=path.join(view,'docs/foundation-assets.json');const large=path.join(temp,'oversized.json');fs.closeSync(fs.openSync(large,'w'));fs.truncateSync(large,96*1024*1024+1);const denied=spawnSync(process.execPath,[exporterPath,'verify','--teamai-packet',large,'--teamai-expected',expected,'--teamai-expected-sha256',expectedHash,'--teamai-stage',path.join(temp,'oversized-stage')],{encoding:'utf8',timeout:60000});assert.notEqual(denied.status,0);assert.equal(fs.existsSync(path.join(temp,'oversized-stage')),false);
     assert.ok(fs.statSync(packet).size>0);
@@ -1589,4 +1745,143 @@ test('Bash project caller equivalence leaves unrelated user scripts and Ponytail
     const actual=JSON.parse(fs.readFileSync(path.join(root,'.claude/settings.json')));assert.deepEqual(actual.hooks.Stop.slice(0,3),entries);assert.deepEqual(actual.permissions,original.permissions);
     const removed=spawnSync('bash',[adapterPath,'--uninstall'],{encoding:'utf8',env:{...process.env,SDD_TARGET_ROOT:root},timeout:30000});assert.equal(removed.status,0,removed.stderr);assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root,'.claude/settings.json'))),original);
   } finally {fs.rmSync(root,{recursive:true,force:true});}
+});
+
+// Every path and byte in this case is a disposable fixture; no real Comet
+// application, user project, source credential or external service is used.
+test('failed baseline publish preserves unexpected user bytes for safe inspection and retry',async()=>{
+ const root=makeFixture(),out=path.join(root,'export');let original,pending;
+ try {
+  fs.mkdirSync(out);original=fs.renameSync;
+  fs.renameSync=function(from,to,...rest){
+   if(path.basename(from).startsWith('.pending-') && path.basename(path.dirname(to))==='baselines'){
+    pending=from;const writer=spawnSync(process.execPath,['-e',"require('fs').writeFileSync(process.argv[1], 'preserve-this')",path.join(from,'unexpected-user-file')],{encoding:'utf8'});assert.equal(writer.status,0,writer.stderr);
+    const error=new Error('synthetic baseline publish EIO');error.code='EIO';throw error;
+   }
+   return original.call(this,from,to,...rest);
+  };
+  await assert.rejects(()=>exporter.exportRelease(root,out,{releaseCommit:FIXED_COMMIT,freezeBaseline:true}),/synthetic baseline publish EIO/);
+  fs.renameSync=original;original=null;
+  assert.ok(pending);assert.equal(fs.readFileSync(path.join(pending,'unexpected-user-file'),'utf8'),'preserve-this');
+  assert.equal(fs.existsSync(path.join(out,'foundation-lock.json')),false);
+  const retried=await exporter.exportRelease(root,out,{releaseCommit:FIXED_COMMIT,freezeBaseline:true});
+  assert.equal((await exporter.verifyLock(path.join(out,'foundation-lock.json'),root)).ok,true);
+  assert.equal(fs.readFileSync(path.join(pending,'unexpected-user-file'),'utf8'),'preserve-this','retry must not delete the abandoned stage');
+  assert.notEqual(path.join(out,'baselines',retried.lock.release.exportDigest),pending,'retry publishes a separately verified stage');
+ }finally{if(original)fs.renameSync=original;fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('baseline verification failure keeps an unexpected concurrent file and never publishes the lock',async()=>{
+ const root=makeFixture(),out=path.join(root,'export');let original,pending;
+ try {
+  fs.mkdirSync(out);original=fs.renameSync;
+  fs.renameSync=function(from,to,...rest){
+   const value=original.call(this,from,to,...rest);
+   if(path.basename(to)==='manifest.json' && path.basename(path.dirname(to)).startsWith('.pending-')){
+    pending=path.dirname(to);const writer=spawnSync(process.execPath,['-e',"require('fs').writeFileSync(process.argv[1], 'do-not-delete')",path.join(pending,'unexpected-user-file')],{encoding:'utf8'});assert.equal(writer.status,0,writer.stderr);
+   }
+   return value;
+  };
+  await assert.rejects(()=>exporter.exportRelease(root,out,{releaseCommit:FIXED_COMMIT,freezeBaseline:true}),/unexpected or missing sealed asset/);
+  fs.renameSync=original;original=null;
+  assert.ok(pending);assert.equal(fs.readFileSync(path.join(pending,'unexpected-user-file'),'utf8'),'do-not-delete');
+  assert.equal(fs.existsSync(path.join(out,'foundation-lock.json')),false);
+ }finally{if(original)fs.renameSync=original;fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('SIGKILL during baseline publish preserves prior stage; a new process retries without deleting user bytes',async()=>{
+ const root=makeFixture(),out=path.join(root,'export');
+ try {
+  fs.mkdirSync(out);const env={...process.env};delete env.NODE_TEST_CONTEXT;
+  const script=`import fs from 'node:fs';import {pathToFileURL} from 'node:url';const e=await import(pathToFileURL(process.argv[2]));const original=fs.renameSync;fs.renameSync=function(from,to,...rest){if(path.basename(from).startsWith('.pending-')&&path.basename(path.dirname(to))==='baselines'){fs.writeFileSync(path.join(from,'user-added'),'preserve');process.kill(process.pid,'SIGKILL');}return original.call(this,from,to,...rest)};await e.exportRelease(process.argv[3],process.argv[4],{releaseCommit:process.argv[5],freezeBaseline:true});`;
+  // path is imported in the child rather than inferred from the parent.
+  const childScript="import path from 'node:path';"+script;
+  const killed=spawnSync(process.execPath,['--input-type=module','-e',childScript,process.execPath,exporterPath,root,out,FIXED_COMMIT],{env,encoding:'utf8'});
+  assert.equal(killed.signal,'SIGKILL',killed.stderr);
+  const stages=fs.readdirSync(path.join(out,'baselines')).filter(x=>x.startsWith('.pending-'));
+  assert.equal(stages.length,1);const pending=path.join(out,'baselines',stages[0]);
+  assert.equal(fs.readFileSync(path.join(pending,'user-added'),'utf8'),'preserve');
+  const retryScript=`import {pathToFileURL} from 'node:url';const e=await import(pathToFileURL(process.argv[2]));await e.exportRelease(process.argv[3],process.argv[4],{releaseCommit:process.argv[5],freezeBaseline:true});`;
+  const retried=spawnSync(process.execPath,['--input-type=module','-e',retryScript,process.execPath,exporterPath,root,out,FIXED_COMMIT],{env,encoding:'utf8'});
+  assert.equal(retried.status,0,retried.stderr);
+  assert.equal((await exporter.verifyLock(path.join(out,'foundation-lock.json'),root)).ok,true);
+  assert.equal(fs.readFileSync(path.join(pending,'user-added'),'utf8'),'preserve','retry must not clean another stage');
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('published baseline with a concurrent late write is refused before lock exposure, preserving all bytes and retries', async () => {
+  for (const hasPriorLock of [false, true]) {
+    const root=makeFixture(), out=path.join(root, 'export');
+    const lockPath=path.join(out, 'foundation-lock.json');
+    let original, cache;
+    try {
+      fs.mkdirSync(out);
+      fs.writeFileSync(path.join(out, 'unrelated-user-data'), 'untouched');
+      if (hasPriorLock) fs.writeFileSync(lockPath, 'prior-user-lock-bytes');
+      original=fs.renameSync;
+      fs.renameSync=function(from,to,...rest) {
+        if (path.basename(from).startsWith('.pending-') && path.basename(path.dirname(to))==='baselines') {
+          cache=to;
+          const writer=spawnSync(process.execPath,['-e',"require('fs').writeFileSync(process.argv[1], 'late-user-bytes')",path.join(from,'late-user-data')],{encoding:'utf8'});
+          assert.equal(writer.status,0,writer.stderr);
+        }
+        return original.call(this,from,to,...rest);
+      };
+      await assert.rejects(() => exporter.exportRelease(root,out,{releaseCommit:FIXED_COMMIT,freezeBaseline:true}), /STATE_SYNC_REQUIRED/);
+      fs.renameSync=original; original=null;
+      assert.ok(cache && fs.existsSync(cache));
+      assert.equal(fs.readFileSync(path.join(cache,'late-user-data'),'utf8'),'late-user-bytes');
+      assert.equal(fs.readFileSync(path.join(out,'unrelated-user-data'),'utf8'),'untouched');
+      if (hasPriorLock) assert.equal(fs.readFileSync(lockPath,'utf8'),'prior-user-lock-bytes');
+      else assert.equal(fs.existsSync(lockPath),false);
+      await assert.rejects(() => exporter.exportRelease(root,out,{releaseCommit:FIXED_COMMIT,freezeBaseline:true}), /old cache preserved/);
+      assert.equal(fs.readFileSync(path.join(cache,'late-user-data'),'utf8'),'late-user-bytes');
+      if (hasPriorLock) assert.equal(fs.readFileSync(lockPath,'utf8'),'prior-user-lock-bytes');
+      else assert.equal(fs.existsSync(lockPath),false);
+      const cleanOut=path.join(root,'fresh-export');
+      await exporter.exportRelease(root,cleanOut,{releaseCommit:FIXED_COMMIT,freezeBaseline:true});
+      assert.equal((await exporter.verifyLock(path.join(cleanOut,'foundation-lock.json'),root)).ok,true);
+      assert.equal(fs.readFileSync(path.join(cache,'late-user-data'),'utf8'),'late-user-bytes');
+    } finally {
+      if(original) fs.renameSync=original;
+      fs.rmSync(root,{recursive:true,force:true});
+    }
+  }
+});
+
+test('legacy owner cannot acquire a drifted baseline; unchanged owner, second owner and native marker are protected', async () => {
+  const root=makeFixture(); let runDir;
+  try {
+    for (const args of [['init','-q'],['add','-A'],['-c','user.name=fixture','-c','user.email=fixture@example.invalid','commit','-qm','fixture']]) {
+      const result=spawnSync('git',args,{cwd:root,encoding:'utf8'});assert.equal(result.status,0,result.stderr);
+    }
+    const pinned=spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).stdout.trim();
+    const {lock}=await exporter.exportRelease(root,path.join(root,'foundation'),{releaseCommit:pinned});
+    runDir=makeRunDir(lock,{schemaVersion:1,runId:'legacy-only',status:'active',owner:'alice'});
+    const originalLock=fs.readFileSync(path.join(runDir,'foundation-lock.json'));
+    const owner=await exporter.checkRun(runDir,root,{acquire:true,owner:'alice'});
+    assert.equal(owner.ok,true,'same owner succeeds when assets match');
+    const afterOwner=fs.readFileSync(path.join(runDir,'run-state.json'));
+    const other=await exporter.checkRun(runDir,root,{acquire:true,owner:'bob'});
+    assert.equal(other.ok,false);assert.equal(other.reason,'second-writer-refused');
+    assert.deepEqual(fs.readFileSync(path.join(runDir,'run-state.json')),afterOwner);
+    fs.writeFileSync(path.join(root,'.agents/skills/beta/SKILL.md'),'# beta v2\n');
+    const check=await exporter.checkRun(runDir,root,{});
+    assert.equal(check.baseline.resolvable,true);assert.equal(check.reason,'silent-rebaseline-blocked');
+    const blocked=await exporter.checkRun(runDir,root,{acquire:true,owner:'alice'});
+    assert.equal(blocked.ok,false);assert.equal(blocked.reason,'silent-rebaseline-blocked');
+    assert.match(blocked.migration,/--migrate|new run/i);
+    assert.deepEqual(fs.readFileSync(path.join(runDir,'run-state.json')),afterOwner);
+    assert.deepEqual(fs.readFileSync(path.join(runDir,'foundation-lock.json')),originalLock);
+    const cli=spawnSync(process.execPath,[exporterPath,'check-run','--run-dir',runDir,'--root',root,'--acquire','--owner','alice'],{encoding:'utf8'});
+    assert.notEqual(cli.status,0);assert.match(cli.stderr,/silent-rebaseline-blocked/);
+    assert.deepEqual(fs.readFileSync(path.join(runDir,'run-state.json')),afterOwner);
+    assert.deepEqual(fs.readFileSync(path.join(runDir,'foundation-lock.json')),originalLock);
+    fs.writeFileSync(path.join(runDir,'comet-state.yaml'),'synthetic native marker');
+    const native=await exporter.checkRun(runDir,root,{acquire:true,owner:'alice'});
+    assert.equal(native.ok,false);assert.equal(native.reason,'native-run-readonly');
+    assert.equal(fs.readFileSync(path.join(runDir,'comet-state.yaml'),'utf8'),'synthetic native marker');
+    assert.deepEqual(fs.readFileSync(path.join(runDir,'run-state.json')),afterOwner);
+    assert.deepEqual(fs.readFileSync(path.join(runDir,'foundation-lock.json')),originalLock);
+  } finally { if(runDir) fs.rmSync(runDir,{recursive:true,force:true});fs.rmSync(root,{recursive:true,force:true}); }
 });

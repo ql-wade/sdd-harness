@@ -709,6 +709,39 @@ test('foundation setup: the tool declares the foundation-distribution surface an
   assert.match(source, /tools\/comet\/build\.mjs/, 'the supply fingerprint layering must be declared');
 });
 
+test('foundation promotion refuses a sealed snapshot that contradicts its available Git commit', (t) => {
+  const root = makeFoundationRoot('v1');
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const git = (...args) => { const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' }); assert.equal(result.status, 0, result.stderr); return result.stdout.trim(); };
+  git('init', '-q'); git('add', '-A'); git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'fixture');
+  const commit = git('rev-parse', 'HEAD');
+  fs.writeFileSync(path.join(root, '.agents/skills/alpha/SKILL.md'), '# uncommitted candidate\n');
+  const build = runExporter(root, commit);
+  assert.equal(build.status, 0, build.stderr);
+  const ledger = makeLedger(root);
+  const promoted = runRelease(fdnPromoteArgs(root, { ledger }), root);
+  const receipt = parseJson(promoted, 'foundation-promote');
+  assert.equal(promoted.status, 2);
+  assert.ok(receipt.codes.includes('BASELINE_COMMIT_MISMATCH'), JSON.stringify(receipt));
+  assert.equal(releaseRecords(ledger).length, 0, 'no release record may be issued');
+});
+
+test('foundation promotion refuses an unavailable commit in a Git-backed project', (t) => {
+  const root = makeFoundationRoot('v1');
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  for (const args of [['init', '-q'], ['add', '-A']]) {
+    const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+  }
+  assert.equal(runExporter(root, FX_COMMIT('missing')).status, 0);
+  const ledger = makeLedger(root);
+  const promoted = runRelease(fdnPromoteArgs(root, { ledger }), root);
+  const receipt = parseJson(promoted, 'foundation-promote');
+  assert.equal(promoted.status, 2);
+  assert.ok(receipt.codes.includes('BASELINE_COMMIT_UNVERIFIED'), JSON.stringify(receipt));
+  assert.equal(releaseRecords(ledger).length, 0);
+});
+
 test('F_A14/F09 positive: the real exporter freezes the distribution and foundation-promote locks one exportDigest through supply fingerprint, tag, active release and readback', (t) => {
   const root = makeFoundationRoot('v1');
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -721,7 +754,9 @@ test('F_A14/F09 positive: the real exporter freezes the distribution and foundat
   assert.equal(receipt.interface, 'ReleaseProtocol.v1');
   assert.equal(receipt.status, 'VERIFIED');
   assert.equal(receipt.artifact.exportDigest, committedExportDigest(root), 'the promoted digest is exactly the committed/sealed exportDigest');
-  assert.equal(receipt.artifact.builtFromReleaseCommit, FX_COMMIT('r1'), 'the build identity is the frozen release commit');
+  assert.equal(receipt.artifact.builtFromReleaseCommit, null, 'a fixture without Git history cannot claim the commit was verified');
+  assert.equal(receipt.artifact.declaredReleaseCommit, FX_COMMIT('r1'));
+  assert.equal(receipt.artifact.commitBinding, 'unverified');
   assert.equal(receipt.artifact.supplyBuildFingerprint, expectedSupplyFingerprint(root), 'the supply build fingerprint is bound (mirrors tools/comet/build.mjs fingerprintOf)');
   assert.equal(receipt.artifact.runnerVersion, '0.5.0', 'the pinned runner version is bound');
 
@@ -734,6 +769,7 @@ test('F_A14/F09 positive: the real exporter freezes the distribution and foundat
   assert.equal(releaseRecords(ledger).length, 1, 'exactly one release record exists');
   assert.equal(receipt.readback.sealedBaseline.resolvable, true, 'the sealed baseline resolves');
   assert.equal(receipt.readback.sealedBaseline.source, 'sealed-assets', 'the sealed baseline verified byte-for-byte');
+  assert.equal(receipt.readback.sealedBaseline.commitBinding, 'unverified', 'byte recovery is not Git provenance');
   assert.equal(receipt.protocols.remotePublication, 'UNVERIFIED', 'remote publication stays honestly UNVERIFIED');
   assert.match(receipt.note, /REMOTE_PUBLICATION/i, 'the receipt names the unauthorized remote surface');
   assert.doesNotMatch(JSON.stringify(receipt), /\/Users\//, 'no host private paths in the receipt');
@@ -858,6 +894,7 @@ test('F_A17 positive: sequential release retains the previous approved exportDig
   assert.equal(rollbackReceipt.rollback.observed.businessTerminalState.serving, digestV1, 'the distribution state serves the rolled-back digest');
   assert.equal(rollbackReceipt.rollback.sealedBaseline.resolvable, true, 'the previous sealed baseline resolved byte-for-byte');
   assert.equal(rollbackReceipt.rollback.sealedBaseline.source, 'sealed-assets');
+  assert.equal(rollbackReceipt.rollback.sealedBaseline.commitBinding, 'unverified');
   assert.equal(JSON.parse(fs.readFileSync(path.join(ledger, 'active.json'), 'utf8')).exportDigest, digestV1);
   assert.equal(fs.readFileSync(path.join(ledger, 'refs', 'tags', 'stable'), 'utf8').trim(), digestV1, 'the tag moved back to the rollback digest');
   assert.equal(distributionState(ledger).serving, digestV1);

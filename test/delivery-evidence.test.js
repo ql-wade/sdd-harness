@@ -418,7 +418,7 @@ const canonical = (value) => value && typeof value === 'object'
 const jsonSha = (value) => shaBytes(JSON.stringify(canonical(value)));
 const shaBytes = (value) => crypto.createHash('sha256').update(value).digest('hex');
 
-async function collectedProcessFixture(qualificationScope = 'component-local') {
+async function collectedProcessFixture(qualificationScope = 'component-local', { expiresAt = '2026-11-01T00:00:00.000Z', allowUnqualified = false } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'p22-collected-'));
   try {
     const file = path.join(root, 'observed.test.mjs');
@@ -430,7 +430,7 @@ async function collectedProcessFixture(qualificationScope = 'component-local') {
     const reportBytes = Buffer.from(run.stdout), resultBytes = Buffer.from(JSON.stringify({ exitCode: run.status, stdout: run.stdout }));
     const methodTraceBytes = Buffer.from(JSON.stringify({ event: 'actual-process-exit', exitCode: run.status, methodApplication: 'UNVERIFIED' }));
     const actionBinding = actionBindingFixture();
-    const qualification = { id: 'protocol-fixture-only', sourceId: 'local-process-port', revision: 'q1', scope: qualificationScope, status: 'qualified', expiresAt: '2026-11-01T00:00:00.000Z', evidenceRefs: [{ ref: 'local-test-only/not-deployment-proof', digest: shaBytes(reportBytes) }] };
+    const qualification = { id: 'protocol-fixture-only', sourceId: 'local-process-port', revision: 'q1', scope: qualificationScope, status: 'qualified', expiresAt, evidenceRefs: [{ ref: 'local-test-only/not-deployment-proof', digest: shaBytes(reportBytes) }] };
     const launcher = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex'), sourceVerifier: async (request) => {
       // Test-local recorded process readback, not echo of expected/worker facts.
       if (shaBytes(request.reportBytes) !== shaBytes(reportBytes) || shaBytes(request.resultBytes) !== shaBytes(resultBytes)
@@ -445,8 +445,8 @@ async function collectedProcessFixture(qualificationScope = 'component-local') {
     const dispatch = verifierDispatch(launcher, { actionBinding });
     const envelope = envelopeFixture({ executions: { total: 1, valid: 1 }, evidence: [{ uri: '.whitebox/real-process.txt', sha256: shaBytes(reportBytes) }] });
     const packet = { dispatch, envelope, launchRecord: { launchId: 'actual-local-process', execution: dispatch.execution, processId: run.pid, exitCode: run.status }, reportBytes, resultBytes, methodTraceBytes };
-    const collected = await launcher.collectResult(packet); assert.equal(collected.ok, true);
-    return { launcher, actionBinding, qualification, packet, collection: collected.collection };
+    const collected = await launcher.collectResult(packet); if (!allowUnqualified) assert.equal(collected.ok, true);
+    return { launcher, actionBinding, qualification, packet, collection: collected.collection, collected };
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 }
 
@@ -508,4 +508,108 @@ test('managed admission requires the protected observation clock rather than wor
   const f = await collectedProcessFixture('protected-source');
   const options = managedOptions(f); delete options.now;
   assert.equal(admitEvidence({ ...f.packet, collection: f.collection, now: NOW }, options).ok, false);
+});
+
+test('admission refuses an invalid clock and an envelope exactly at expiry', () => {
+  const launcher=authority(); const dispatch=verifierDispatch(launcher);
+  const envelope=envelopeFixture({expiry:'2026-10-20T12:00:00.000Z'});
+  assert.equal(admit(launcher,{envelope,dispatch,now:'2026-10-20T11:59:59.999Z'}).ok,true);
+  assert.equal(admit(launcher,{envelope,dispatch,now:'2026-10-20T12:00:00.000Z'}).ok,false);
+  for (const now of ['not-a-time','',null,0,{},'2026-10-32T12:00:00.000Z']) {
+    assert.equal(admit(launcher,{envelope,dispatch,now}).ok,false,`invalid clock ${String(now)} must not admit expired evidence`);
+  }
+});
+
+
+test('signed component admission requires real calendar dates and explicit ISO timezone', () => {
+  const launcher=authority(); const dispatch=verifierDispatch(launcher);
+  const valid=envelopeFixture({expiry:'2026-10-20T20:00:00+08:00'});
+  assert.equal(admit(launcher,{envelope:valid,dispatch,now:'2026-10-20T11:59:59.999Z'}).ok,true);
+  assert.equal(admit(launcher,{envelope:valid,dispatch,now:'2026-10-20T12:00:00Z'}).ok,false);
+  assert.equal(admit(launcher,{envelope:valid,dispatch,now:'2026-10-20T06:59:59-05:00'}).ok,true);
+  const nanos=envelopeFixture({expiry:'2026-10-20T12:00:00.000000002Z'});
+  assert.equal(admit(launcher,{envelope:nanos,dispatch,now:'2026-10-20T12:00:00.000000001Z'}).ok,true);
+  assert.equal(admit(launcher,{envelope:nanos,dispatch,now:'2026-10-20T12:00:00.000000002Z'}).ok,false);
+  const leap=envelopeFixture({expiry:'2024-03-01T00:00:00Z'});
+  assert.equal(admit(launcher,{envelope:leap,dispatch,now:'2024-02-29T23:59:59.999Z'}).ok,true);
+  for (const now of ['2025-02-29T12:00:00Z','2026-02-30T12:00:00Z','2026-10-20T12:00:00','2026-10-20','2026-10-20T24:00:00Z','2026-10-20T12:00:00+24:00']) {
+    assert.equal(admit(launcher,{envelope:valid,dispatch,now}).ok,false,`invalid current timestamp ${now}`);
+  }
+  for (const expiry of ['2027-02-29T12:00:00Z','2027-02-30T12:00:00Z','2027-10-20T12:00:00','2027-10-20']) {
+    assert.equal(admit(launcher,{envelope:envelopeFixture({expiry}),dispatch,now:NOW}).ok,false,`invalid expiry ${expiry}`);
+  }
+});
+
+test('managed collected source rejects invalid qualification expiration and clock', async () => {
+  for (const expiresAt of ['2027-02-29T00:00:00Z','2027-02-30T00:00:00Z','2027-02-28T00:00:00']) {
+    const f=await collectedProcessFixture('protected-source',{expiresAt,allowUnqualified:true});
+    assert.equal(f.collected.ok,false,`invalid source qualification expiration ${expiresAt}`);
+  }
+  const f=await collectedProcessFixture('protected-source');
+  assert.equal(admitEvidence({...f.packet,collection:f.collection},managedOptions(f,{now:'2026-02-30T00:00:00Z'})).ok,false);
+  const expiring=await collectedProcessFixture('protected-source',{expiresAt:'2026-10-20T20:00:00+08:00'});
+  const args={...expiring.packet,collection:expiring.collection};
+  assert.equal(admitEvidence(args,managedOptions(expiring,{now:'2026-10-20T11:59:59.999Z'})).ok,true);
+  assert.equal(admitEvidence(args,managedOptions(expiring,{now:'2026-10-20T12:00:00Z'})).ok,false);
+});
+
+test('evidence authorities reject asynchronous verification results without unhandled rejection or thenable execution', async () => {
+  const { runInNewContext }=await import('node:vm');
+  const f=await collectedProcessFixture('protected-source');
+  const originalVerify=f.launcher.verifyDispatch;
+  let thenCalls=0;
+  const cases=[
+    () => Promise.resolve({ok:true}),
+    () => Promise.reject(new Error('rejected authority port')),
+    () => runInNewContext("Promise.reject(new Error('cross realm authority port'))"),
+    () => ({then(){thenCalls++;}}),
+  ];
+  for (const make of cases) {
+    const dispatchAuthority={verifyDispatch:()=>make()};
+    const component=admitEvidence({envelope:f.packet.envelope,dispatch:f.packet.dispatch,authority:dispatchAuthority,current:currentFixture(),now:NOW});
+    assert.equal(component.ok,false);assert.equal(component.error,'ASYNC_AUTHORITY_PORT_REFUSED');
+    const managedAuthority={verifyCollection:()=>make()};
+    const managed=admitEvidence({...f.packet,collection:f.collection},managedOptions(f,{authority:managedAuthority}));
+    assert.equal(managed.ok,false);assert.equal(managed.error,'ASYNC_AUTHORITY_PORT_REFUSED');
+    f.launcher.verifyDispatch=()=>make();
+    try {
+      const collected=await f.launcher.collectResult(f.packet);
+      assert.equal(collected.ok,false);assert.equal(collected.error,'ASYNC_AUTHORITY_PORT_REFUSED');
+      const verified=f.launcher.verifyCollection({...f.packet,collection:f.collection});
+      assert.equal(verified.ok,false);assert.equal(verified.error,'ASYNC_AUTHORITY_PORT_REFUSED');
+    } finally {f.launcher.verifyDispatch=originalVerify;}
+  }
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(thenCalls,0,'rejecting an arbitrary thenable must not call its then method');
+});
+
+test('rejected synchronous authority promises do not escape as unhandled rejections', async () => {
+  const f=await collectedProcessFixture('protected-source');
+  const dispatchAuthority={verifyDispatch:()=>Promise.reject(new Error('dispatch port failure'))};
+  assert.equal(admitEvidence({envelope:f.packet.envelope,dispatch:f.packet.dispatch,authority:dispatchAuthority,current:currentFixture(),now:NOW}).ok,false);
+  const collectionAuthority={verifyCollection:()=>Promise.reject(new Error('collection port failure'))};
+  assert.equal(admitEvidence({...f.packet,collection:f.collection},managedOptions(f,{authority:collectionAuthority})).ok,false);
+  await new Promise(resolve=>setImmediate(resolve));
+});
+
+test('rejected synchronous collection authority promise does not escape as unhandled rejection', async () => {
+  const f=await collectedProcessFixture('protected-source');
+  const authority={verifyCollection:()=>Promise.reject(new Error('collection port failure'))};
+  assert.equal(admitEvidence({...f.packet,collection:f.collection},managedOptions(f,{authority})).ok,false);
+  await new Promise(resolve=>setImmediate(resolve));
+});
+
+test('malformed synchronous authority responses fail closed without throwing', async () => {
+  const f=await collectedProcessFixture('protected-source');
+  const responses=[() => null,() => undefined,() => ({ok:'yes'}),() => ({ok:false,error:'MALFORMED_DISPATCH'}),() => {throw Error('port failed');}];
+  for (const invoke of responses) {
+    assert.doesNotThrow(() => {
+      const result=admitEvidence({envelope:f.packet.envelope,dispatch:f.packet.dispatch,authority:{verifyDispatch:invoke},current:currentFixture(),now:NOW});
+      assert.equal(result.ok,false);
+    });
+    assert.doesNotThrow(() => {
+      const result=admitEvidence({...f.packet,collection:f.collection},managedOptions(f,{authority:{verifyCollection:invoke}}));
+      assert.equal(result.ok,false);
+    });
+  }
 });

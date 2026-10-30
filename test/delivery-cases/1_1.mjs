@@ -7,6 +7,7 @@
 // bodies. Environment-conditional behavior checks run the pinned contract
 // command against the integrated build when this project has prepared it.
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -20,24 +21,67 @@ const probeDir = path.join(changeDir, 'package-probes');
 const baseline = JSON.parse(await fs.readFile(path.join(changeDir, 'toolchain-baseline.json'), 'utf8'));
 const lock = JSON.parse(await fs.readFile(path.join(projectRoot, 'integrations/comet/upstream.lock.json'), 'utf8'));
 
+// Evidence paths are local inputs to this component test, not authenticated host sources.
+async function workspaceFile(relative) {
+  assert.equal(typeof relative, 'string');
+  assert.ok(relative && !path.isAbsolute(relative) && !relative.split(/[\\/]/).includes('..'), 'evidence must be a relative workspace path');
+  const resolved = await fs.realpath(path.resolve(projectRoot, relative));
+  const root = await fs.realpath(projectRoot);
+  assert.ok(resolved.startsWith(root + path.sep), 'evidence path escapes workspace');
+  const stat = await fs.stat(resolved);
+  assert.equal(stat.isFile(), true);
+  return resolved;
+}
+async function verifyArtifact(artifact, registryEvidence, expected) {
+  assert.equal(artifact.name, expected.name);
+  assert.equal(artifact.version, expected.version);
+  assert.equal(artifact.tarball_sha256_verified, true);
+  assert.equal(artifact.registry_integrity_matches, true);
+  const url = new URL(artifact.registry_tarball);
+  assert.equal(url.protocol, 'https:');
+  assert.equal(url.hostname, 'registry.npmjs.org');
+  assert.ok(url.pathname.endsWith(`-${expected.version}.tgz`), 'archive URL must match version');
+  const file = await workspaceFile(artifact.local_copy);
+  const bytes = await fs.readFile(file);
+  assert.equal(bytes.length, artifact.tarball_bytes);
+  assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), artifact.tarball_sha256);
+  assert.equal('sha512-' + crypto.createHash('sha512').update(bytes).digest('base64'), artifact.integrity);
+  assert.equal(crypto.createHash('sha1').update(bytes).digest('hex'), artifact.shasum);
+  const metadata = JSON.parse(await fs.readFile(await workspaceFile(registryEvidence), 'utf8'));
+  const record = metadata.package ?? metadata;
+  assert.equal(record.name, expected.name);
+  assert.equal(record.version, expected.version);
+  assert.equal(record.tarball, artifact.registry_tarball);
+  assert.equal(record.integrity ?? metadata.sha512_sri, artifact.integrity);
+  const archive = metadata.archive ?? metadata;
+  assert.equal(archive.sha256, artifact.tarball_sha256);
+  assert.equal(archive.bytes, artifact.tarball_bytes);
+  const extracted = spawnSync('tar', ['-xOf', file, 'package/package.json'], {encoding:'utf8', timeout:30000});
+  assert.equal(extracted.status, 0, 'archive package manifest must be readable');
+  const manifest = JSON.parse(extracted.stdout);
+  assert.equal(manifest.name, expected.name);
+  assert.equal(manifest.version, expected.version);
+}
+
 test('baseline is in a qualified state with qualification metadata', () => {
   assert.equal(baseline.status, 'QUALIFIED');
   assert.ok(!Number.isNaN(Date.parse(baseline.qualified_at)));
   assert.match(baseline.qualification_scope, /journey-level F01\/F03/i);
 });
 
-test('comet pins the npm distribution artifact, not only the source commit', () => {
+test('comet pins the npm distribution artifact, not only the source commit', async () => {
   assert.equal(baseline.comet.npm_artifact.name, '@rpamis/comet');
   assert.equal(baseline.comet.npm_artifact.version, lock.package.version);
   assert.equal(baseline.comet.npm_artifact.integrity, lock.package.integrity);
   assert.equal(baseline.comet.npm_artifact.registry_integrity_matches, true);
   assert.equal(baseline.comet.npm_artifact.tarball_sha256_verified, true);
+  await verifyArtifact(baseline.comet.npm_artifact, baseline.comet.npm_artifact.registry_evidence, {name:'@rpamis/comet',version:lock.package.version});
   assert.equal(baseline.comet.source_archive_reverified, true);
   assert.equal(baseline.comet.source_archive_sha256, lock.source.sha256);
   assert.equal(baseline.comet.source_archive_bytes, lock.source.bytes);
 });
 
-test('teamai and openspec distribution artifacts are pinned with re-verified integrity', () => {
+test('teamai and openspec distribution artifacts are pinned with re-verified integrity', async () => {
   assert.equal(baseline.teamai.npm_package, 'teamai-cli');
   assert.equal(baseline.teamai.version, '0.22.0');
   assert.equal(baseline.teamai.npm_artifact.registry_integrity_matches, true);
@@ -46,11 +90,23 @@ test('teamai and openspec distribution artifacts are pinned with re-verified int
   assert.equal(baseline.openspec.npm_artifact.version, baseline.openspec.isolated_candidate);
   assert.equal(baseline.openspec.npm_artifact.registry_integrity_matches, true);
   assert.equal(baseline.openspec.npm_artifact.tarball_sha256_verified, true);
+  await verifyArtifact(baseline.teamai.npm_artifact, baseline.teamai.npm_artifact.evidence, {name:'teamai-cli',version:baseline.teamai.version});
+  await verifyArtifact(baseline.openspec.npm_artifact, baseline.openspec.npm_artifact.evidence, {name:'@fission-ai/openspec',version:baseline.openspec.isolated_candidate});
 });
 
-test('host, toolchain and skills digests are recorded', () => {
+test('host, toolchain and skills digests are recorded', async () => {
   assert.equal(baseline.toolchain.node.pinned_for_comet_build, lock.toolchain.node);
-  assert.equal(baseline.toolchain.pnpm.observed, lock.toolchain.pnpm);
+  const pnpm = spawnSync('pnpm', ['--version'], {encoding:'utf8', timeout:30000});
+  assert.equal(pnpm.status, 0, 'host default pnpm version must be observed');
+  assert.equal(pnpm.stdout.trim(), baseline.toolchain.pnpm.observed, 'host default must match its own observation');
+  assert.match(baseline.toolchain.pnpm.observed_scope, /current PATH/i);
+  assert.ok(baseline.toolchain.pnpm.resolution.includes(`pnpm@${lock.toolchain.pnpm}`), 'the separate build context must pin the lock version');
+  const builtEntry = await workspaceFile(baseline.extension_delivery.built_entrypoint);
+  const buildRoot = path.dirname(path.dirname(path.dirname(builtEntry)));
+  const distribution = JSON.parse(await fs.readFile(path.join(buildRoot, 'distribution.json'), 'utf8'));
+  assert.equal(distribution.node, lock.toolchain.node, 'build manifest must record the pinned Node');
+  assert.equal(distribution.pnpm, lock.toolchain.pnpm, 'build manifest must record the pinned pnpm');
+  assert.equal(distribution.sourceCommit, lock.source.commit, 'build manifest must bind the pinned source');
   assert.match(baseline.host.digest, /^[a-f0-9]{64}$/);
   assert.ok(Array.isArray(baseline.skills_inventory) && baseline.skills_inventory.length > 0);
   for (const entry of baseline.skills_inventory) {
@@ -64,9 +120,12 @@ test('runtime claims record executed probes with existing evidence logs', async 
   for (const id of required) {
     const claim = claims.find((entry) => entry.id === id);
     assert.ok(claim, `runtime claim ${id} missing`);
+    assert.equal(claim.evidence_kind, 'current-runtime', `runtime claim ${id} is historical or unqualified`);
+    assert.ok(['PASS','VERIFIED'].includes(claim.current_status), `runtime claim ${id} is not verified`);
+    assert.equal(claim.exit_code, 0, `runtime claim ${id} did not succeed`);
     assert.ok(!Number.isNaN(Date.parse(claim.executed_at)));
     assert.equal(typeof claim.observed === 'string' && claim.observed.length > 0, true);
-    await fs.access(path.join(projectRoot, claim.evidence));
+    await workspaceFile(claim.evidence);
   }
   const versionClaim = claims.find((entry) => entry.id === 'comet-cli-version');
   assert.match(versionClaim.observed, /0\.5\.0/);

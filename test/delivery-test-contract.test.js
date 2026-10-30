@@ -677,3 +677,98 @@ test('a real zero-exit wrapper carrying a failed TAP assertion is not valid beha
     assert.equal(requireValidRed({ exitCode: null, output: normal.stdout }).ok, false);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+function filteredTap(names) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'p21-filtered-'));
+  try {
+    const files = names.map((name, index) => {
+      const file = `case-${index}.mjs`;
+      fs.writeFileSync(path.join(root, file), `import test from 'node:test'; test(${JSON.stringify(name)}, () => {});\n`);
+      return file;
+    });
+    const env = { ...process.env };
+    delete env.NODE_TEST_CONTEXT;
+    const result = spawnSync(process.execPath, ['--test', '--test-reporter=tap', '--test-name-pattern=TARGET', ...files], { cwd: root, env, encoding: 'utf8', timeout: 10000 });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout;
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}
+
+test('filtered file with zero leaf tests is not a passing execution', () => {
+  const output = filteredTap(['OTHER']);
+  assert.equal(classifyRunOutcome({ exitCode: 0, output }).kind, 'empty');
+  assert.equal(parseTapSummary(output).tests, 0);
+});
+
+test('mixed filtered files count only actual selected leaf tests', () => {
+  const output = filteredTap(['OTHER', 'TARGET']);
+  const outcome = classifyRunOutcome({ exitCode: 0, output });
+  assert.equal(outcome.kind, 'pass');
+  assert.equal(outcome.summary.tests, 1);
+  assert.equal(outcome.summary.pass, 1);
+});
+
+test('multiple filtered files with no selected leaves remain empty', () => {
+  const output = filteredTap(['OTHER', 'ANOTHER']);
+  const outcome = classifyRunOutcome({ exitCode: 0, output });
+  assert.equal(outcome.kind, 'empty');
+  assert.equal(outcome.summary.tests, 0);
+});
+
+test('required acceptance rejects skipped or todo test points even when another test passes', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'p21-required-'));
+  try {
+    for (const method of ['skip', 'todo']) {
+      fs.writeFileSync(path.join(root, 'case.mjs'), `import test from 'node:test'; test('executed', () => {}); test.${method}('missing', () => {});\n`);
+      const env = { ...process.env };
+      delete env.NODE_TEST_CONTEXT;
+      const result = spawnSync(process.execPath, ['--test', '--test-reporter=tap', 'case.mjs'], { cwd: root, env, encoding: 'utf8', timeout: 10000 });
+      assert.equal(result.status, 0, result.stderr);
+      const decision = evaluateExecution({ testContract: testContractFixture(), run: { exitCode: 0, output: result.stdout } });
+      assert.equal(decision.verdict, 'reject', `${method} needs explicit optionality proof`);
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('required acceptance rejects a passing parent whose nested test was skipped', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'p21-nested-'));
+  try {
+    fs.writeFileSync(path.join(root, 'case.mjs'), "import test from 'node:test'; test('parent', async t => { await t.test('child', { skip: true }, () => {}); });\n");
+    const env = { ...process.env };
+    delete env.NODE_TEST_CONTEXT;
+    const result = spawnSync(process.execPath, ['--test', '--test-reporter=tap', 'case.mjs'], { cwd: root, env, encoding: 'utf8', timeout: 10000 });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(evaluateExecution({ testContract: testContractFixture(), run: { exitCode: 0, output: result.stdout } }).verdict, 'reject');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('missing or signalled process exit cannot authenticate a passing TAP report', () => {
+  for (const run of [
+    { output: TAP_PASS },
+    { exitCode: null, output: TAP_PASS },
+    { exitCode: 0, signal: 'SIGTERM', output: TAP_PASS },
+    { exitCode: 1, signal: 'SIGKILL', output: TAP_BEHAVIOR_RED },
+    { exitCode: '0', output: TAP_PASS },
+  ]) {
+    assert.equal(classifyRunOutcome(run).kind, 'environment-failure');
+    assert.equal(evaluateExecution({ testContract: testContractFixture(), run }).verdict, 'reject');
+    assert.equal(requireValidRed(run).ok, false);
+  }
+  assert.equal(classifyRunOutcome({ exitCode: 0, output: TAP_PASS }).kind, 'pass');
+});
+
+test('a real process killed after writing passing TAP is not accepted', () => {
+  const child = spawnSync(process.execPath, ['-e', `process.stdout.write(${JSON.stringify(TAP_PASS)}, () => process.kill(process.pid, 'SIGTERM'));`], { encoding: 'utf8', timeout: 10000 });
+  assert.equal(child.status, null);
+  assert.equal(child.signal, 'SIGTERM');
+  assert.equal(child.stdout, TAP_PASS);
+  const run = { exitCode: child.status, signal: child.signal, output: child.stdout, spawnError: child.error };
+  assert.equal(classifyRunOutcome(run).kind, 'environment-failure');
+  assert.equal(evaluateExecution({ testContract: testContractFixture(), run }).verdict, 'reject');
+});

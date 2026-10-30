@@ -28,10 +28,14 @@ export function parseTapSummary(output) {
   };
   const tests = grab('tests');
   if (tests === null) return null;
+  // Node reports each filtered-empty file as one passing wrapper, not a test.
+  const emptyFiles = [...text.matchAll(/^1\.\.0\r?\n# Subtest: ([^\r\n]+)\r?\nok \d+ - \1\r?$/gm)].length;
+  const passed = grab('pass') ?? 0;
+  if (emptyFiles > tests || emptyFiles > passed) return null;
   return {
-    tests,
+    tests: tests - emptyFiles,
     suites: grab('suites') ?? 0,
-    pass: grab('pass') ?? 0,
+    pass: passed - emptyFiles,
     fail: grab('fail') ?? 0,
     cancelled: grab('cancelled') ?? 0,
     skipped: grab('skipped') ?? 0,
@@ -39,7 +43,7 @@ export function parseTapSummary(output) {
   };
 }
 
-export function classifyRunOutcome({ exitCode, output, spawnError } = {}) {
+export function classifyRunOutcome({ exitCode, output, spawnError, signal } = {}) {
   if (spawnError) {
     return {
       kind: 'environment-failure',
@@ -53,6 +57,12 @@ export function classifyRunOutcome({ exitCode, output, spawnError } = {}) {
     if (pattern.test(text)) signatures.push(label);
   }
   const summary = parseTapSummary(text);
+  if (signal !== undefined && signal !== null) {
+    return { kind: 'environment-failure', signatures: [`process terminated by signal ${signal}`], summary };
+  }
+  if (!Number.isInteger(exitCode) || exitCode < 0) {
+    return { kind: 'environment-failure', signatures: ['process exit code is unavailable or invalid'], summary };
+  }
   if (signatures.length > 0) {
     return { kind: 'environment-failure', signatures, summary };
   }
@@ -74,7 +84,7 @@ export function classifyRunOutcome({ exitCode, output, spawnError } = {}) {
     return { kind: 'behavior-red', signatures: [], summary };
   }
   if (summary.pass > 0) {
-    if (exitCode !== undefined && exitCode !== null && exitCode !== 0) {
+    if (exitCode !== 0) {
       return {
         kind: 'environment-failure',
         signatures: [`exit code ${exitCode} contradicts the passing TAP summary`],
@@ -143,6 +153,9 @@ export function evaluateExecution({ testContract, run }, { requireCommands = fal
     reasons.push(`environment failure is not valid acceptance evidence (${outcome.signatures.join('; ')})`);
   } else if (outcome.kind === 'behavior-red') {
     reasons.push(`run reports ${summary.fail} behavior failure(s); acceptance requires a passing run`);
+  }
+  if (summary && (summary.skipped > 0 || summary.todo > 0)) {
+    reasons.push('skipped or pending tests cannot prove required acceptance');
   }
   const denominator = evaluateExecutionDenominator({ summary });
   reasons.push(...denominator.reasons);

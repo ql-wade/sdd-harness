@@ -10,6 +10,7 @@ export const CONTRACT = defineContract({
   description: 'frozen test intent with execution denominator and oracles',
   fields: {
     commandBindingsRequired: { type: 'boolean', required: false },
+    sourceReadiness: { type: 'enum', values: ['design_only', 'ready_for_acceptance'], required: false },
     project: { type: 'string' },
     change: { type: 'string' },
     cases: {
@@ -31,6 +32,7 @@ export const CONTRACT = defineContract({
       items: {
         fields: {
           id: { type: 'string', required: false },
+          mode: { type: 'enum', values: ['manual', 'automated'], required: false },
           command: { type: 'string', required: false },
           caseIds: { type: 'array', min: 1, required: false, items: { type: 'string' } },
           level: { type: 'string' },
@@ -66,7 +68,11 @@ export const CONTRACT = defineContract({
 
 export function validateTestContract(payload) {
   const parsed = CONTRACT.validate(payload);
-  if (!parsed.ok || payload.commandBindingsRequired !== true) return parsed;
+  if (!parsed.ok) return parsed;
+  if (payload.dependencyBaselines.some(entry => entry.kind === 'domain-cases/v1:testpack') && payload.sourceReadiness !== 'design_only') {
+    return { ok: false, errors: ['domain-cases/v1 currently permits design_only until author source is qualified'] };
+  }
+  if (payload.commandBindingsRequired !== true) return parsed;
   const trace = traceAcToCases({ acceptanceIds: payload.cases.map((entry) => entry.ac), testContract: payload, requireCommands: true });
   const requiredCases = payload.cases.filter((entry) => entry.required !== false).length;
   const errors = [...trace.errors];

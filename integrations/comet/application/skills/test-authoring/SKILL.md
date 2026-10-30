@@ -6,7 +6,7 @@ description: >-
   支持只设计用例和设计加自动化两种模式，复用项目现有框架，产出可追溯交接包。
   仅验收、浏览器取证、判断功能是否通过转 whitebox-verify；不承担业务验收结论，不因编写测试而修改产品实现。
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Test Authoring
@@ -40,6 +40,8 @@ metadata:
 
 读 [dimension-mapping.md](references/dimension-mapping.md)。以语义为先，向 whitebox 导出固定 Journey-A…J 映射，Debug-A…H 单独映射，禁止混用或重新命名字母。每个维度写 required 或有源码依据的 N/A；适用但未知写缺口，不写 N/A。
 
+领域 Markdown 投影时读 [domain-cases.md](references/domain-cases.md)；已批准的旧 TestPack 或手工用例保留原入口。
+
 每条用例具备 ID、需求引用、风险/层级、前置身份与状态、输入、步骤、独立 oracle 与 authority、清理、证据计划。成功、相关拒绝/边界、持久化重入、并发/恢复等依适用性覆盖。设计用例目录可以先完整列出；代码按已确认的行为逐个落地。
 
 ### 3. 编写测试与数据夹具（仅 automate）
@@ -62,7 +64,7 @@ metadata:
 
 ### 5. 冻结交接包
 
-读 [test-pack-contract.md](references/test-pack-contract.md)。TestPack JSON 是唯一机读来源；CSV/YAML 为按需视图，不维护第二份独立规则。设计包状态 design_only，自动化准备就绪状态 ready_for_acceptance；两者都不是验收 verdict。
+读 [test-pack-contract.md](references/test-pack-contract.md)。新增领域用例以批准的 Markdown 正文为维护来源，记录稳定 Case ID、需求/设计依据、oracle 和证据计划；TestPack v1 是机读交接快照，不手工重复维护用例正文。项目提供 Markdown 投影工具时，冻结完整投影并校验当前源与派生内容；缺工具、格式不支持、来源漂移或引用无法核验时保留设计并阻断相应受管门禁，不把 JSON 结构通过当作门禁通过。既有 TestPack v1 保持原路径，已批准手工用例不强制迁移。设计包状态 design_only，自动化准备就绪状态 ready_for_acceptance；两者都不是验收 verdict。
 
 TestPack 记录真实 basis、case→需求→维度→测试映射、隔离数据/清理、oracle、运行命令、自检日志与内容哈希。用 [case.json](templates/case.json)、[coverage-matrix.csv](templates/coverage-matrix.csv)、[acceptance-handoff.md](templates/acceptance-handoff.md) 作结构参考，不把模板值当执行证据。
 
@@ -75,6 +77,8 @@ python3 scripts/validate_test_pack.py /actual/test-pack.json --project-root /act
 `PACK_STRUCTURE_VALID` 只证明结构/引用/现存文件哈希一致，不证明设计充分、命令实际执行、产品正确或验收通过。验证器不执行包内命令；日志哈希不是签名。设计包可保留明确 unresolved；自动化 ready 包不能有未解决预期。
 
 交给 whitebox 时说明必须执行的用例、已知 RED/环境限制、允许的人工步骤与自动化要求。验收者独立确认 trusted root、原始规范/测试/日志，核对包哈希并重跑测试或真实路径。缺用例/弱断言退回本技能；验收者不能直接改包、改测试或改产品后自行报绿。
+
+交接逐项列出：用例正文的权威来源及版本（未知就写未提供）、稳定 Case ID、需求/设计依据、作者自检与独立验收各自状态，以及按 Case/版本可追溯的原始证据；未发生的执行写未验证，不填写虚构路径。受管交接须明确标出实际流程主控，并说明技能不维护第二套状态或调度；主控未知就标未确认。旧包和已批准手工用例保留其原入口。
 
 ## 交付与质量门槛
 

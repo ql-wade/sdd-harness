@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { prepareCometSource } from '../tools/comet/source.js';
+import { prepareCometSource, verifyPreparedSource, SOURCE_EXTRACTION_POLICY } from '../tools/comet/source.js';
 
 // Fixed upstream identity from integrations/comet/upstream.lock.json.
 const lock = {
@@ -22,7 +22,7 @@ const lock = {
     bytes: 40474019,
     directory: 'comet-c90af44a4474662d7853aae76ce785404974fb0a',
   },
-  toolchain: { node: '24.15.0', pnpm: '10.18.3', pythonMinimum: '3.12' },
+  toolchain: { node: '24.15.0', pnpm: '10.18.3', pythonMinimum: '3.12', sourceExtractionPolicy: SOURCE_EXTRACTION_POLICY },
   patches: [],
 };
 
@@ -200,5 +200,95 @@ test('rejects an injected empty pristine directory without deleting it', async (
     assert.deepEqual(await fs.readdir(injectedPath), []);
   } finally {
     await fs.rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test('source preparation refuses an interpreter below the declared minimum before writing vendor state', async () => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'sdd-python-minimum-'));
+  try {
+    const { archivePath, syntheticLock } = await createSyntheticArchive(projectRoot);
+    syntheticLock.toolchain = { ...syntheticLock.toolchain, pythonMinimum: '99.0' };
+    await assert.rejects(prepareCometSource({ projectRoot, lock: syntheticLock, archivePath }), { code: 'TOOLCHAIN_MISMATCH' });
+    await assert.rejects(fs.stat(path.join(projectRoot, '.sdd')), { code: 'ENOENT' });
+  } finally { await fs.rm(projectRoot, { recursive: true, force: true }); }
+});
+
+test('source provenance identifies a normalized supported-Python extraction policy', async () => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'sdd-python-provenance-'));
+  try {
+    const { archivePath, syntheticLock } = await createSyntheticArchive(projectRoot, { executable: true });
+    const result = await prepareCometSource({ projectRoot, lock: syntheticLock, archivePath });
+    const provenance = JSON.parse(await fs.readFile(result.provenancePath, 'utf8'));
+    assert.equal(provenance.extraction?.policy, 'safe-data-owner-execute-v1');
+    assert.equal(provenance.extraction?.pythonMinimum, syntheticLock.toolchain.pythonMinimum);
+    assert.match(provenance.extraction?.pythonVersion ?? '', /^\d+\.\d+\.\d+$/);
+    assert.equal((await fs.stat(path.join(result.sourceDir, 'run.sh'))).mode & 0o777, 0o755);
+  } finally { await fs.rm(projectRoot, { recursive: true, force: true }); }
+});
+
+test('legacy provenance without extraction policy cannot certify the current source', async () => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'sdd-legacy-provenance-'));
+  try {
+    const { archivePath, syntheticLock } = await createSyntheticArchive(projectRoot);
+    const result = await prepareCometSource({ projectRoot, lock: syntheticLock, archivePath });
+    const provenance = JSON.parse(await fs.readFile(result.provenancePath, 'utf8'));
+    delete provenance.extraction;await fs.writeFile(result.provenancePath,JSON.stringify(provenance));
+    await assert.rejects(verifyPreparedSource({projectRoot,lock:syntheticLock}),{code:'SOURCE_BASELINE_DRIFT'});
+    assert.equal(await fs.readFile(path.join(result.sourceDir,'marker.txt'),'utf8'),'upstream baseline');
+  } finally { await fs.rm(projectRoot, { recursive: true, force: true }); }
+});
+
+test('normalized extraction strips unsafe modes and preserves only owner executable intent', async () => {
+  const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'sdd-safe-source-modes-'));
+  try {
+    const archivePath=path.join(projectRoot,'modes.tar.gz');
+    const script=String.raw`
+import io,json,sys,tarfile
+archive,root=sys.argv[1:]
+with tarfile.open(archive,'w:gz') as out:
+    for name,data,mode in [('package.json',json.dumps({'name':'@rpamis/comet','version':'0.4.5'}),0o644),('owner-exec','x',0o4755),('group-only-exec','x',0o001)]:
+        b=data.encode(); m=tarfile.TarInfo(root+'/'+name);m.mode=mode;m.size=len(b);out.addfile(m,io.BytesIO(b))
+    m=tarfile.TarInfo(root+'/restricted-dir');m.type=tarfile.DIRTYPE;m.mode=0o700;out.addfile(m)
+`;
+    const created=spawnSync('python3',['-c',script,archivePath,lock.source.directory],{encoding:'utf8'});assert.equal(created.status,0,created.stderr);
+    const archive=await fs.readFile(archivePath);const syntheticLock={...lock,source:{...lock.source,sha256:crypto.createHash('sha256').update(archive).digest('hex'),bytes:archive.length}};
+    const result=await prepareCometSource({projectRoot,lock:syntheticLock,archivePath});
+    assert.equal((await fs.stat(path.join(result.sourceDir,'owner-exec'))).mode & 0o7777,0o755);
+    assert.equal((await fs.stat(path.join(result.sourceDir,'group-only-exec'))).mode & 0o7777,0o644);
+    assert.equal((await fs.stat(path.join(result.sourceDir,'restricted-dir'))).mode & 0o7777,0o755);
+  } finally {await fs.rm(projectRoot,{recursive:true,force:true});}
+});
+
+test('normalized extraction still refuses symlink and hardlink archive entries', async () => {
+  for (const kind of ['sym','hard']) {
+    const projectRoot=await fs.mkdtemp(path.join(os.tmpdir(),'sdd-unsafe-source-links-'));
+    try {
+      const archivePath=path.join(projectRoot,'links.tar.gz');
+      const script=String.raw`
+import io,json,sys,tarfile
+archive,root,kind=sys.argv[1:]
+with tarfile.open(archive,'w:gz') as out:
+    b=json.dumps({'name':'@rpamis/comet','version':'0.4.5'}).encode();p=tarfile.TarInfo(root+'/package.json');p.size=len(b);p.mode=0o644;out.addfile(p,io.BytesIO(b))
+    m=tarfile.TarInfo(root+'/bad');m.type=tarfile.SYMTYPE if kind=='sym' else tarfile.LNKTYPE;m.linkname='package.json';out.addfile(m)
+`;
+      const created=spawnSync('python3',['-c',script,archivePath,lock.source.directory,kind],{encoding:'utf8'});assert.equal(created.status,0,created.stderr);
+      const archive=await fs.readFile(archivePath);const syntheticLock={...lock,source:{...lock.source,sha256:crypto.createHash('sha256').update(archive).digest('hex'),bytes:archive.length}};
+      await assert.rejects(prepareCometSource({projectRoot,lock:syntheticLock,archivePath}),{code:'UNSAFE_ARCHIVE'});
+      await assert.rejects(fs.stat(path.join(projectRoot,'.sdd/vendor/comet',lock.source.commit,'pristine')),{code:'ENOENT'});
+    } finally {await fs.rm(projectRoot,{recursive:true,force:true});}
+  }
+});
+
+test('source preparation refuses missing or unknown active extraction policy before writing vendor state', async () => {
+  for (const policy of [undefined, 'unknown-policy']) {
+    const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'sdd-python-policy-'));
+    try {
+      const { archivePath, syntheticLock } = await createSyntheticArchive(projectRoot);
+      syntheticLock.toolchain = { ...syntheticLock.toolchain };
+      if (policy === undefined) delete syntheticLock.toolchain.sourceExtractionPolicy;
+      else syntheticLock.toolchain.sourceExtractionPolicy = policy;
+      await assert.rejects(prepareCometSource({ projectRoot, lock: syntheticLock, archivePath }), { code: 'LOCK_INVALID' });
+      await assert.rejects(fs.stat(path.join(projectRoot, '.sdd')), { code: 'ENOENT' });
+    } finally { await fs.rm(projectRoot, { recursive: true, force: true }); }
   }
 });

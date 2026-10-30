@@ -2,10 +2,10 @@
   "schema_version": 2,
   "feature": "delivery-foundation-rearchitecture",
   "hash_mode": "checkbox-normalized-v1",
-  "plan_sha256": "0010b135f43dff0be51ee4cb22f384e58f07ab7af9fea71a67e40462727c52f2",
-  "architecture_sha256": "0c28289751d5e7b6f2926c8982b545d516a1c912b01ed48de84e5fa4d0a4638e",
-  "dag_sha256": "3bdef65214c79f261395aa9dbd2bf93c4e06e2bc683a05fa0764f32d28519cb2",
-  "execution_contract_sha256": "a66bfbdae48f202f86f7227fe667da8ae3a0fb13c9340bf12fba095efd6061d5",
+  "plan_sha256": "765b324e28be0c08ed9080f04ff507617ba89f690509e595d2577d94fdedb5de",
+  "architecture_sha256": "8d6b82cc36cbb4865a0b9a8e7fcce9d232071d1dda91a1e25ddc6db51a0844b6",
+  "dag_sha256": "655b37ca6bad5154ab293b22f59d1238724353e0f1e025c1caf732367ef1cb12",
+  "execution_contract_sha256": "a470c94bc97da693244cf915e265eb518fba7b696a15b9f05dd265c49ff49362",
   "acceptance_ids": [
     "A01",
     "A02",
@@ -172,7 +172,8 @@
     "P0_1": [
       "docs/architecture/comet-ai-devops-convergence.md",
       "docs/architecture/adr/0020-comet-command-knowledge-convergence.md",
-      "docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md"
+      "docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md",
+      "docs/architecture/adr/0023-comet-051-adoption.md"
     ],
     "P0_2": [
       "openspec/changes/delivery-foundation-rearchitecture/proposal.md",
@@ -216,10 +217,13 @@
       "tools/verify/delivery-journey.mjs",
       "tools/verify/delivery-case-schema.json",
       "test/delivery-cases/3_1.mjs",
-      "test/comet-flow-acceptance.test.js"
+      "test/comet-flow-acceptance.test.js",
+      "tools/verify/direct-target-test.mjs",
+      "test/direct-target-test.test.js",
+      "tools/verify/check-construction-artifact.mjs",
+      "test/check-construction-artifact.test.js"
     ],
     "P1_6": [
-      ".agents/skills",
       "docs/agent/skill-architecture.md",
       "openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json",
       "test/delivery-cases/1_6.mjs",
@@ -237,7 +241,11 @@
       "test/foundation-distribution.test.js",
       "hooks.yaml",
       "test/delivery-cases/1_2.mjs",
-      "test/legacy-workflow-routing.test.js"
+      "test/legacy-workflow-routing.test.js",
+      "scripts/init-comet.sh",
+      "bin/comet",
+      "test/init-comet.test.js",
+      "docs/user-guide.md"
     ],
     "P2_2": [
       "lib/delivery/evidence.js",
@@ -257,7 +265,12 @@
       "integrations/comet/application/bindings.mjs",
       "integrations/comet/application/extensions",
       "integrations/comet/patches/0005-comet-050-kt-closeout.patch",
-      "test/delivery-cases/2_4.mjs"
+      "test/delivery-cases/2_4.mjs",
+      "test/comet-managed-source.test.js",
+      "integrations/comet/application/package",
+      "integrations/comet/application/internal/compile-manifest.json",
+      "integrations/comet/application/internal/build-application.mjs",
+      "worker-reports/P2_4-construction-manifest.json"
     ],
     "P2_5": [
       "lib/adapters/architecture-review.js",
@@ -357,9 +370,9 @@
       "test/infra-platform.test.js"
     ],
     "P4_6": [
-      "integrations/comet/patches/0003-post-archive-closeout.patch",
       "test/delivery-cases/4_6.mjs",
-      "integrations/comet/patches/tests/4_6.patch"
+      "test/kt-post-archive-recovery.test.js",
+      "openspec/changes/delivery-foundation-rearchitecture/kt-recovery"
     ],
     "P4_7": [
       "lib/adapters/knowledge-authorization.js",
@@ -432,7 +445,9 @@
       "openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json",
       "openspec/changes/delivery-foundation-rearchitecture/verification.md",
       "test/delivery-cases/4_3.mjs",
-      "openspec/changes/delivery-foundation-rearchitecture/legacy-entry-inventory.json"
+      "openspec/changes/delivery-foundation-rearchitecture/legacy-entry-inventory.json",
+      "tools/verify/final-checks.mjs",
+      "test/final-checks.test.js"
     ],
     "P5_1": [
       "openspec/changes/delivery-foundation-rearchitecture/team-host-matrix",
@@ -871,6 +886,28 @@
       "id": "2026-10-26-comet-050-adoption-v1",
       "approved_by": "user direction 2026-10-26 (minimize custom workload via official 0.5.0 composition; parallel TDD plan requested); ADR-0022 approval pending before activation",
       "content": "Comet 0.5.0 adoption: composition package replaces patch chain 0001/0002/0004; minimal Kt successor 0005 (B1); parallel waves enabled with worktree isolation; P2_1 dep edge on P1_1 removed (version-agnostic); P1_1 reopened for 0.5.0 re-qualification; identities 39/30/69/104/130 preserved; replans/2026-10-26-comet-050-adoption holds before-state"
+    },
+    {
+      "id": "2026-10-29-isolated-proposal",
+      "status": "DRAFT_NOT_ACTIVATED",
+      "scope": "Map EC1 and trial rework to existing DAG; preserve identities and user changes in before snapshot; no automation",
+      "note": "not formal review or execution approval"
+    },
+    {
+      "id": "2026-10-29-p1-2-user-guide-ownership-candidate",
+      "status": "DRAFT_PENDING_INDEPENDENT_REVIEW",
+      "scope": "Add docs/user-guide.md to existing P1_2 ownership and clarify truthful current guide; no new DAG, check, disposition or authorization",
+      "record": "replans/2026-10-29-p1-2-user-guide/amendment.json",
+      "previous_contract_sha256": "97d846a9cb4914d3d056806f7e6aad13d779116383260e90b37f1f9396a0438c",
+      "previous_dag_sha256": "375d97565890357f755d731169ead0ad13ca96eac7523c5c7e696f851fca05e2",
+      "previous_plan_sha256": "b50f0f205d89f58fc604a157ff986ff31523a5975c2c62becfb4906e83043f38"
+    },
+    {
+      "id": "2026-10-29-p12-p24-cold-edge",
+      "status": "DRAFT_PENDING_INDEPENDENT_REVIEW",
+      "old_contract_sha256": "eb1c795b24360db6e7c976f2d84c27a580614afb81bc098015fe195491afea29",
+      "edge": "P1_2<-P2_4 isolated offline package construction only",
+      "record": "replans/2026-10-29-p12-p24-cold-edge/amendment.json"
     }
   ]
 }

@@ -1,5 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/bash -p
 set -euo pipefail
+printf '%s\n' 'Comet 0.5.1 initialization is blocked until managed entry qualification completes.' >&2
+exit 2
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NODE_BIN="$HOME/.nvm/versions/node/v24.15.0/bin"

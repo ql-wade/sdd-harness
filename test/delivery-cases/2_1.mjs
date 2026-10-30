@@ -92,20 +92,16 @@ test('V_A01: implementation dispatch without product/design/usecase baselines is
   assert.equal(accepted.ok, true);
 });
 
-test('V_A02: AC/scope change invalidates bound downstream receipts and old approvals only', () => {
-  const OLD = sha('product-r1');
-  const NEW = sha('product-r2');
-  const changed = { kind: 'product', digest: NEW, revision: 'r2' };
-  const result = invalidateOnScopeChange({
-    changed,
-    receipts: [
-      { id: 'gate-receipt-1', boundDigests: { product: OLD } },
-      { id: 'approval-ac-1', boundDigests: { product: OLD } },
-      { id: 'evidence-design-bound', boundDigests: { design: sha('design-r1') } },
-    ],
-  });
-  assert.deepEqual(result.invalidated.map((r) => r.id), ['gate-receipt-1', 'approval-ac-1']);
-  assert.deepEqual(result.valid.map((r) => r.id), ['evidence-design-bound']);
+test('V_A02: scope change invalidates all prior-generation downstream receipts', () => {
+  const changed = { kind: 'product', digest: sha('product-r2'), revision: 'r2' };
+  const result = invalidateOnScopeChange({ changed, currentGeneration: 2, receipts: [
+    { id: 'gate-receipt-1', generation: 1, boundDigests: { product: sha('product-r1') } },
+    { id: 'approval-ac-1', generation: 1, boundDigests: { product: sha('product-r1') } },
+    { id: 'evidence-design-bound', generation: 1, boundDigests: { design: sha('design-r1') } },
+    { id: 'new-evidence', generation: 2, boundDigests: { design: sha('design-r2') } },
+  ] });
+  assert.deepEqual(result.invalidated.map((r) => r.id), ['gate-receipt-1', 'approval-ac-1', 'evidence-design-bound']);
+  assert.deepEqual(result.valid.map((r) => r.id), ['new-evidence']);
 });
 
 test('V_A03: zero-test and all-skip runs are invalid executions for acceptance (real node --test)', () => {
@@ -183,12 +179,12 @@ test('V_A07: a passed report cannot be reused after source, lockfile or migratio
   const root = makeProject(files);
   const first = computeFullInputBaseline({ root, manifest });
   assert.equal(first.ok, true);
-  const report = { id: 'report-1', inputDigest: first.digest };
-  assert.equal(verifyReportCurrency({ report, currentDigest: first.digest }).ok, true);
+  const report = { id: 'report-1', inputDigest: first.digest, generation: 1 };
+  assert.equal(verifyReportCurrency({ report, currentDigest: first.digest, currentGeneration: 1 }).ok, true);
 
   fs.writeFileSync(path.join(root, 'package-lock.json'), '{"lockfileVersion": 3, "changed": true}\n');
   const second = computeFullInputBaseline({ root, manifest });
-  const reused = verifyReportCurrency({ report, currentDigest: second.digest });
+  const reused = verifyReportCurrency({ report, currentDigest: second.digest, currentGeneration: 2 });
   assert.equal(reused.ok, false, 'the old report must be refused after the lockfile changes');
   assert.equal(reused.error, 'DIGEST_MISMATCH');
   assert.equal(reused.currentDigest, second.digest);

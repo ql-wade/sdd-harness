@@ -505,6 +505,8 @@ program
       const report = {
         schemaVersion: 1,
         interface: 'Knowledge.Closeout.v1',
+        scope: 'component/knowledge-closeout',
+        managedClosureEligible: false,
         command: 'knowledge-closeout',
         project: projectDir,
         change: options.change,
@@ -518,14 +520,14 @@ program
       if (options.json) {
         console.log(JSON.stringify(report));
       } else {
-        console.log(chalk.blue('\n🧠 Knowledge Closeout\n'));
+        console.log(chalk.blue('\n🧠 Knowledge Closeout (component check; managed acceptance unverified)\n'));
         for (const line of blocked) console.log(chalk.red(`❌ ${line}`));
         if (report.pass) console.log(chalk.green('✅ knowledge closeout obligations are satisfied'));
         if (deploy) console.log(chalk.gray(`  deploy: ${deploy.status} (${deploy.action})`));
       }
       process.exitCode = report.pass ? 0 : 2;
     } catch (error) {
-      if (options.json) console.log(JSON.stringify({ schemaVersion: 1, interface: 'Knowledge.Closeout.v1', command: 'knowledge-closeout', pass: false, error: error.message }));
+      if (options.json) console.log(JSON.stringify({ schemaVersion: 1, interface: 'Knowledge.Closeout.v1', scope: 'component/knowledge-closeout', managedClosureEligible: false, command: 'knowledge-closeout', pass: false, error: error.message }));
       else console.error(chalk.red(`❌ Invalid knowledge-closeout input: ${error.message}`));
       process.exitCode = 1;
     }

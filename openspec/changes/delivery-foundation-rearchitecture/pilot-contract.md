@@ -46,7 +46,7 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
   "frozenArtifacts": {
     "product": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/proposal.md",
-      "sha256": "9a19fad29cf011d2f687ff754ed30b4ff9b45a32f1da79452ff5693d3ec3289c"
+      "sha256": "fa9924fd8d2401dd405fdd78bcfbcdd35acad2441973c7cbd0025a32b79fe601"
     },
     "design": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/design.md",
@@ -58,7 +58,7 @@ Task P3_1（run impl-dfr-20261020-r1，分支 impl/p3-1-journey-runner，2026-10
     },
     "planBundle": {
       "path": "openspec/changes/delivery-foundation-rearchitecture/tasks.md",
-      "sha256": "0010b135f43dff0be51ee4cb22f384e58f07ab7af9fea71a67e40462727c52f2",
+      "sha256": "765b324e28be0c08ed9080f04ff507617ba89f690509e595d2577d94fdedb5de",
       "digestNormalization": "checkbox-state-agnostic（与 lib/delivery/baseline.js taskDefinitionDigest 同一归一化；勾选状态不构成计划漂移）"
     }
   },
@@ -100,3 +100,13 @@ P1_1安全补丁所有权修订的显式派生登记：仅PlanBundle任务定义
 重冻结记录 3：2026-10-26 command-first 计划修订（replan 2026-10-26-command-first-v1，基线提交252401a，接管实施agent执行）按程序显式更新四件摘要：product `1f0311ab…`→`9a19fad2…`、design `688dd991…`→`24196530…`、testContract `a4193621…`→`8bb67f81…`、planBundle `8b91e35e…`→`3907b1f6…`（checkbox-state-agnostic 归一化）。四值由接管agent与P1_1独立复审者各自独立计算一致；重冻结前 journey 对 F01/F03/C07 均以 frozen-baseline-drift 结构化拒绝（A15 保守失效，见 .whitebox 对应 verdict）。本登记仍NOT_VERIFIED，不提供角色/权限/旅程批准，不自动续期任何票。审计JSON：worker-reports/P3_1-command-first/pilot-freeze-amendment-20261026.json。
 
 重冻结记录 4：2026-10-27 comet-050 采纳并行重规划（replans/2026-10-26-comet-050-adoption，ADR-0022 Accepted）重写 tasks.md（归一化摘要 `3907b1f6…`→`0010b135…`），仅 planBundle 按程序显式更新；product/design/testContract 三件实测未漂移。由接管控制器在 P1_5 集成点执行（本条即审计记录）。本登记仍 NOT_VERIFIED，不续期任何票或 grant。
+
+重冻结记录 5：2026-10-28 入口闭环任务挂载（tasks.md 新增 Task EC1 节，T1–T5 见 docs/superpowers/plans/2026-10-26-comet-entry-closure-tdd.md；双宇宙缺口与官方对齐依据见 docs/research/2026-10-26-comet-dual-universe-entry-gap.md 与 2026-10-26-comet-official-alignment.md）重写 tasks.md 任务清单（归一化摘要 `0010b135…`→`82a93a62…`），仅 planBundle 按程序显式更新；product/design/testContract 三件实测未漂移。由主会话在入口闭环实施中执行（本条即审计记录）。本登记仍 NOT_VERIFIED，不续期任何票或 grant。
+
+重冻结记录 6（待实际集成核验）：2026-10-29 用户确认唯一接管，保留旧 EC1 原文并映射原节点；按当前候选重算 proposal 与规范化 tasks 摘要。原始状态、正式审批及原验收不因摘要变化而自动有效，P3_1 需独立复核冻结及实际来源。
+
+重冻结记录 7（候选待实际集成独立复核）：用户指定 Comet 0.5.1，proposal 和 task 目标更新；原 0.5.0 证据保留历史范围，任何当前资格、用户批准或 grant 均不因重锁自动通过。
+
+候选重冻结记录（待独立审查及正式集成）：P1_2 新增用户指南所有权及其诚实状态义务，PlanBundle 从 `b50f0f205d89f58fc604a157ff986ff31523a5975c2c62becfb4906e83043f38` 改为 `7275abcc4b97266bb2aec9290e5e0a231539ed6053a35140cfb5a4b5aa17efea`；其他三件与功能范围、检查身份、已消耗授权均不改变，本记录不批准运行或复用旧票。
+
+候选重冻结记录（待独立审查，未激活）：仅新增 P1_2 消费 P2_4 构建工件的私有离线边；PlanBundle 原摘要 `7275abcc4b97266bb2aec9290e5e0a231539ed6053a35140cfb5a4b5aa17efea`，候选摘要 `765b324e28be0c08ed9080f04ff507617ba89f690509e595d2577d94fdedb5de`；其他试点基线、业务验收和权限不变。

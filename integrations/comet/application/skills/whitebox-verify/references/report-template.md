@@ -26,6 +26,14 @@
 | P1 缺陷 | {p1} |
 | P2 缺陷 | {p2} |
 
+## 逐用例验收
+
+| Case ID | 用例来源及版本 | 需求/设计依据 | 预期 | 实际与终态 | 结果 | 原始证据 |
+|---|---|---|---|---|---|---|
+| {approved case ID} | {Markdown path + content digest，或已有批准用例引用} | {source IDs + revision/digest} | {approved oracle} | {actual independent observation} | PASS / FAIL / UNVERIFIED / EVIDENCE_UNSTABLE | {accessible evidence references + digests} |
+
+表格关联同一 Run、候选和执行尝试；作者自检单独记录，不冒充独立验收。报告继承源资料权限，需跨受众展示时先验证脱敏；缺少真实执行或终态证据保持 UNVERIFIED。
+
 ## 缺陷清单
 
 | # | 级别 | 页面 | 交互 | 缺陷描述 | 根因 | 修复建议 |

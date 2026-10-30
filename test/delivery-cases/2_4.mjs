@@ -56,7 +56,7 @@ const packageRoot = path.join(applicationRoot, 'package');
 const patchPath = path.join(projectRoot, 'integrations/comet/patches/0005-comet-050-kt-closeout.patch');
 const pristineRoot = path.join(
   projectRoot,
-  '.sdd/vendor/comet/aeb1a6598034e28ce46b8422d4dbd8785e607bd7/pristine',
+  '.sdd/vendor/comet/35c9860b77b42bafa0c2d80d8d695889f888a924/pristine',
 );
 const classicApplicationSource = fs.readFileSync(
   path.join(pristineRoot, 'domains/comet-classic/classic-application.ts'),
@@ -182,7 +182,7 @@ function pristineStepBlock(stepId) {
 // ---- the composition requirements, encoded once -----------------------------
 
 const EXPECTED_GATES = [
-  { gate: 'R', extensionId: 'requirements-open', afterStep: 'full.open.evidence' },
+  { gate: 'R', extensionId: 'requirements-open', afterStep: 'full.open.revalidate' },
   { gate: 'A', extensionId: 'architecture-consensus', afterStep: 'full.design.evidence' },
   { gate: 'T', extensionId: 'test-design-review', afterStep: 'full.design.evidence' },
   { gate: 'P', extensionId: 'build-plan-unique', afterStep: 'full.build.plan.evidence' },
@@ -469,8 +469,10 @@ const executorContext = {
   },
 };
 const hostedBindings = await bindingsModule.createBindings(executorContext);
+// These legacy compatibility cases exercise pure component judgments. Hosted
+// source admission is covered separately by comet-managed-source/protocol tests.
 const validatorRegistry = new Map(
-  hostedBindings.validators.map((validator) => [`${validator.id}@${validator.version}`, validator]),
+  repoBindings.validators.map((validator) => [`${validator.id}@${validator.version}`, validator]),
 );
 const packagedSkills = new Set(assetsManifest.skills.map((skill) => skill.name));
 
@@ -622,7 +624,7 @@ function canonicalPassInput(gate, evidence, verdict) {
 // ---------------------------------------------------------------------------
 
 test('composition, bindings, typed declarations, the 0005 patch and the compiled package exist with cross-pinned bytes', () => {
-  assert.equal(composition.revision, '2026-10-26-comet-050-adoption-v1');
+  assert.equal(composition.revision, '2026-10-29-comet-051-adoption-v1');
   assert.equal(composition.runtimeAccepted, false, 'a source artifact must not claim runtime acceptance');
   assert.equal(composition.upstream.commit, upstreamLock.source.commit, 'composition must pin the locked upstream commit');
   assert.equal(composition.upstream.version, upstreamLock.package.version);
@@ -860,7 +862,7 @@ test('createBindings registers exactly the declared validators and, under a fact
   );
 });
 
-test('a claimed extension pass is accepted only when the real SDD.Gate.v1 evaluation passes (per gate)', async () => {
+test('component validator delegates each gate to the real SDD.Gate.v1 evaluation (not managed acceptance)', async () => {
   const launcher = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex') });
   const entry = admitOne(launcher);
   const inputs = inputsFixture([{ level: 'unit', capability: 'unit:node:test' }]);

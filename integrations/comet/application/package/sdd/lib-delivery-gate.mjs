@@ -17,6 +17,7 @@
 // substitution boundary — a service log is never a console) and
 // authoring-only coverage (B03).
 import { createHash } from 'node:crypto';
+import { types } from 'node:util';
 import { parseContract } from './contracts-delivery-index.mjs';
 import { admitEvidence, envelopeDigest } from './lib-delivery-evidence.mjs';
 import { evaluateExecutionDenominator } from './lib-delivery-test_contract.mjs';
@@ -27,15 +28,55 @@ const SHA256_RE = /^[a-f0-9]{64}$/;
 // evidence set; an honest empty set is digested rather than fabricated.
 export const EMPTY_EVIDENCE_SET_DIGEST = createHash('sha256').update('[]').digest('hex');
 
+function validPlanGraph(tasks) {
+  const pending = new Map();
+  const dependents = new Map();
+  for (const task of tasks) {
+    if (pending.has(task.id)) return false;
+    const deps = task.dependsOn ?? [];
+    if (new Set(deps).size !== deps.length) return false;
+    pending.set(task.id, deps.length);
+    dependents.set(task.id, []);
+  }
+  for (const task of tasks) for (const dep of task.dependsOn ?? []) {
+    if (!dependents.has(dep)) return false;
+    dependents.get(dep).push(task.id);
+  }
+  const ready = [...pending].filter(([, count]) => count === 0).map(([id]) => id);
+  let visited = 0;
+  while (ready.length) {
+    const id = ready.pop(); visited++;
+    for (const next of dependents.get(id)) {
+      pending.set(next, pending.get(next) - 1);
+      if (pending.get(next) === 0) ready.push(next);
+    }
+  }
+  return visited === pending.size;
+}
+
+function isAsyncResult(value) {
+  if (types.isPromise(value)) {
+    Promise.prototype.then.call(value, undefined, () => {});
+    return true;
+  }
+  return value !== null && (typeof value === 'object' || typeof value === 'function') && typeof value.then === 'function';
+}
+
 export function evaluate(inputs, receipts, policy, options = {}) {
   const boundary = { scope: options.requireManaged === true ? 'component/source-bound-coverage' : 'component/receipt-coverage', managedClosureEligible: false };
   // Frozen inputs must be valid before the gate judges anything.
-  const parsedContract = parseContract('SDD.Delivery.TestContract', inputs?.testContract);
+  const requirementsOrArchitecture = options.requireManaged === true && ['R', 'A'].includes(options.currentGate) && inputs?.testContract === undefined;
+  const planGate = options.requireManaged === true && options.currentGate === 'P';
+  const parsedPlan = planGate ? parseContract('SDD.Delivery.PlanBundle', inputs?.planBundle) : null;
+  if (parsedPlan && !parsedPlan.ok) throw new Error(`INVALID_PLAN_BUNDLE: the gate refuses to judge — ${parsedPlan.errors.join('; ')}`);
+  const parsedContract = requirementsOrArchitecture || planGate ? { ok: true, value: null } : parseContract('SDD.Delivery.TestContract', inputs?.testContract);
   if (!parsedContract.ok) {
     throw new Error(`INVALID_TEST_CONTRACT: the gate refuses to judge — ${parsedContract.errors.join('; ')}`);
   }
+  const preBuildGate = options.requireManaged === true && ['R', 'A', 'T', 'P'].includes(options.currentGate);
+  const builderMissingBeforeBuild = preBuildGate && inputs?.builderExecution === undefined;
   if (!inputs || typeof inputs.inputDigest !== 'string' || !SHA256_RE.test(inputs.inputDigest)
-    || typeof inputs.builderExecution !== 'string' || inputs.builderExecution.length === 0) {
+    || (!builderMissingBeforeBuild && (typeof inputs.builderExecution !== 'string' || inputs.builderExecution.length === 0))) {
     throw new Error('INVALID_INPUTS: the gate refuses to judge — inputs must carry a sha256 inputDigest and a non-empty builderExecution');
   }
   if (!policy || typeof policy !== 'object' || typeof policy.ref !== 'string' || policy.ref.length === 0
@@ -53,20 +94,62 @@ export function evaluate(inputs, receipts, policy, options = {}) {
   const invalidPolicy = options.requireManaged !== undefined && typeof options.requireManaged !== 'boolean';
   if (invalidPolicy) blocked.push('INVALID_PROTECTED_POLICY: requireManaged must be a protected boolean option');
   const managed = options.requireManaged === true;
+  const requirementsGate = managed && options.currentGate === 'R';
+  const testDesignGate = managed && options.currentGate === 'T';
+  const architectureGate = managed && options.currentGate === 'A';
+  const designReviewGate = requirementsGate || testDesignGate || architectureGate || planGate;
+  if (planGate && (typeof options.currentChange !== 'string' || !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(options.currentChange)
+    || ![`openspec/changes/${options.currentChange}`, `docs/openspec/changes/${options.currentChange}`].includes(options.currentChangeDir)
+    || parsedPlan.value.change !== options.currentChange || parsedPlan.value.schedulerOwner !== 'comet-classic'
+    || inputs.planSources?.tasks?.ref !== `${options.currentChangeDir}/tasks.md`
+    || inputs.planSources?.dag?.ref !== `${options.currentChangeDir}/task-dag.json`
+    || !SHA256_RE.test(inputs.planSources?.tasks?.digest ?? '')
+    || !SHA256_RE.test(inputs.planSources?.dag?.digest ?? ''))) {
+    blocked.push('PLAN_BINDING_REQUIRED: the plan must belong to the current Change and the Comet controller');
+  }
+  if (planGate && !validPlanGraph(parsedPlan.value.tasks)) blocked.push('PLAN_GRAPH_INVALID: duplicate, missing or cyclic task dependencies');
+  const manualDesign = managed && options.currentGate === 'V' && parsedContract.value.sourceReadiness === 'design_only';
+  let manualApproval = null;
+  if (manualDesign) {
+    const contract = parsedContract.value;
+    const requiredCases = contract.cases.filter((entry) => entry.required !== false).map((entry) => entry.id).sort();
+    try {
+      const result = typeof options.verifyManualApproval === 'function'
+        ? options.verifyManualApproval({runId:options.currentRunId, inputs, policy}) : null;
+      if (!isAsyncResult(result) && result?.ok === true && result.authority === 'human'
+        && typeof result.principal === 'string' && result.principal.trim()
+        && result.runId === options.currentRunId && result.inputDigest === inputs.inputDigest
+        && result.policyDigest === policy.digest && result.contractDigest === envelopeDigest(contract)
+        && SHA256_RE.test(result.evidenceDigest ?? '') && Array.isArray(result.caseIds)
+        && result.caseIds.every((id) => typeof id === 'string') && new Set(result.caseIds).size === result.caseIds.length
+        && JSON.stringify([...result.caseIds].sort()) === JSON.stringify(requiredCases)
+        && contract.requiredChecks.every((check) => check.mode === 'manual')) manualApproval = result;
+    } catch { /* unavailable approval is a refusal, never an implicit pass */ }
+    if (!manualApproval) blocked.push('TEST_DESIGN_ONLY_NOT_EXECUTABLE: manual cases need a current protected human approval and exclusively manual scope');
+  }
   const synchronous = (port) => typeof port === 'function' && !['AsyncFunction', 'GeneratorFunction', 'AsyncGeneratorFunction'].includes(port.constructor?.name);
   const managedPorts = synchronous(options.admissionOptionsFor) && synchronous(options.verifyReview);
-  const strictContract = !managed || parsedContract.value.commandBindingsRequired === true;
+  const managedScope = typeof options.currentRunId === 'string' && !!options.currentRunId.trim()
+    && typeof options.currentGate === 'string' && !!options.currentGate.trim();
+  const strictContract = !managed || requirementsOrArchitecture || planGate || parsedContract.value.commandBindingsRequired === true;
   if (!strictContract) blocked.push('STRICT_TEST_CONTRACT_REQUIRED: managed source coverage requires command-bound intent');
   if (managed && !managedPorts) blocked.push('MANAGED_SOURCE_REQUIRED: protected admission context and independent review verifier are required');
+  if (managed && !managedScope) blocked.push('MANAGED_SCOPE_REQUIRED: protected current Run and gate are required');
   const clean = [];
   const reviewEvidence = new Map();
   for (const submitted of receipts) {
     let entry = submitted;
     if (invalidPolicy) continue;
     if (managed) {
-      if (!managedPorts || !strictContract) continue;
+      if (!managedPorts || !strictContract || !managedScope) continue;
       try {
         let protectedContext = options.admissionOptionsFor(submitted);
+        if (isAsyncResult(protectedContext)) { blocked.push('ASYNC_MANAGED_PORT_REFUSED: source context must be synchronous'); continue; }
+        if (manualDesign && manualApproval && (!Array.isArray(protectedContext?.authoringPrincipals)
+          || !protectedContext.authoringPrincipals.length
+          || protectedContext.authoringPrincipals.some((principal) => typeof principal !== 'string' || !principal.trim()))) {
+          blocked.push('MANUAL_AUTHOR_IDENTITY_REQUIRED: independent acceptance requires known authors'); continue;
+        }
         // A protected readback of an already accepted receipt is not a new
         // issuance. Only exact equality with the owning Run's recorded entry
         // permits its own IDs to be excluded from replay checks here. A
@@ -85,6 +168,9 @@ export function evaluate(inputs, receipts, policy, options = {}) {
         if (!admitted.ok) { blocked.push(`MANAGED_SOURCE_REFUSED: ${admitted.error}`); continue; }
         if (submitted.digest !== admitted.entry.digest || submitted.class !== admitted.entry.class) { blocked.push('TAMPERED_RECEIPT: managed admission content/class mismatch'); continue; }
         entry = admitted.entry;
+        if (entry.dispatch.run !== options.currentRunId || entry.dispatch.gate !== options.currentGate) {
+          blocked.push('MANAGED_SCOPE_MISMATCH: evidence belongs to another Run or gate'); continue;
+        }
         // Source authentication is not semantic sufficiency. This protected
         // synchronous pure verifier consumes an ALREADY completed independent
         // review (host prepared via existing adapters), never starts one.
@@ -92,6 +178,7 @@ export function evaluate(inputs, receipts, policy, options = {}) {
         // This does not accept a
         // worker's role, oracle-strength label or read-skill trace.
         const review = options.verifyReview({ entry, inputs, policy });
+        if (isAsyncResult(review)) { blocked.push('ASYNC_MANAGED_PORT_REFUSED: review must be synchronous'); continue; }
         const source = entry.sourcePacket.collection;
         if (review?.ok !== true || review.sufficient !== true || !SHA256_RE.test(review.evidenceDigest ?? '')
           || review.envelopeDigest !== entry.digest || review.reportDigest !== source.reportDigest || review.actionDigest !== source.actionDigest
@@ -100,6 +187,22 @@ export function evaluate(inputs, receipts, policy, options = {}) {
           || [protectedContext.builderExecution, ...(protectedContext.authoringExecutions ?? [])].includes(review.execution)
           || [protectedContext.builderPrincipal, ...(protectedContext.authoringPrincipals ?? [])].includes(review.principal)) {
           blocked.push('INDEPENDENT_REVIEW_REQUIRED: raw report/method sufficiency has no current bound independent review'); continue;
+        }
+        if (testDesignGate && (review.kind !== 'independent-test-design-review'
+          || review.contractDigest !== envelopeDigest(parsedContract.value) || entry.envelope.result !== 'pass')) {
+          blocked.push('TEST_DESIGN_REVIEW_REQUIRED: an independent review must bind the current complete test contract'); continue;
+        }
+        if (architectureGate && (review.kind !== 'grill-exact-unanimous-consensus' || entry.envelope.result !== 'pass')) {
+          blocked.push('ARCHITECTURE_REVIEW_REQUIRED: the current independent architecture consensus is required'); continue;
+        }
+        if (requirementsGate && (review.kind !== 'requirements-scope-confirmation' || entry.envelope.result !== 'pass')) {
+          blocked.push('REQUIREMENTS_CONFIRMATION_REQUIRED: the current authorized scope confirmation is required'); continue;
+        }
+        if (planGate && (review.kind !== 'plan-unique-review' || review.change !== options.currentChange
+          || review.planDigest !== envelopeDigest(parsedPlan.value)
+          || review.tasksDigest !== inputs.planSources?.tasks?.digest || review.dagDigest !== inputs.planSources?.dag?.digest
+          || entry.envelope.result !== 'pass')) {
+          blocked.push('PLAN_REVIEW_REQUIRED: the current Change plan and its digest require a bound review'); continue;
         }
         reviewEvidence.set(entry.collectionId, review.evidenceDigest);
       } catch { blocked.push('MANAGED_SOURCE_REFUSED: protected source/review verification failed'); continue; }
@@ -136,9 +239,15 @@ export function evaluate(inputs, receipts, policy, options = {}) {
   }
 
   // Per-capability satisfaction over the structurally clean receipts.
-  const required = parsedContract.value.requiredChecks;
+  const required = parsedContract.value?.requiredChecks ?? [];
   let valid = 0;
+  if (requirementsGate && clean.length === 0) blocked.push('REQUIREMENTS_CONFIRMATION_REQUIRED: no admitted authorized confirmation');
+  if (testDesignGate && clean.length === 0) blocked.push('TEST_DESIGN_REVIEW_REQUIRED: no admitted independent design review');
+  if (architectureGate && clean.length === 0) blocked.push('ARCHITECTURE_REVIEW_REQUIRED: no admitted independent architecture review');
+  if (planGate && clean.length === 0) blocked.push('PLAN_REVIEW_REQUIRED: no admitted current plan review');
   for (const check of required) {
+    // R, A and T judge their frozen reviews; product command execution belongs to V.
+    if (designReviewGate) continue;
     if (managed) {
       if (!strictContract) continue;
       const requiredCases = check.caseIds.filter((id) => parsedContract.value.cases.some((item) => item.id === id && item.required !== false));
@@ -147,7 +256,8 @@ export function evaluate(inputs, receipts, policy, options = {}) {
         const observed = clean.some((entry) => entry.envelope.caseId === caseId && entry.envelope.check === check.capability
           && entry.class === 'independent-acceptance' && entry.envelope.result === 'pass'
           && entry.envelope.executions.valid >= 1 && entry.envelope.executions.valid <= entry.envelope.executions.total
-          && entry.sourcePacket.collection.source.facts.observations.some((item) => item.caseId === caseId && item.check === check.capability && item.command === check.command));
+          && entry.sourcePacket.collection.source.facts.observations.some((item) => item.caseId === caseId && item.check === check.capability && item.command === check.command
+            && (!manualDesign || item.method === 'manual')));
         if (!observed) { covered = false; blocked.push(`REQUIRED_COMMAND_OBSERVATION_MISSING: ${caseId}/${check.id}/${check.capability}`); }
       }
       if (covered && requiredCases.length) valid++;
@@ -175,7 +285,7 @@ export function evaluate(inputs, receipts, policy, options = {}) {
     valid += 1;
   }
 
-  if (managed) {
+  if (managed && !designReviewGate) {
     // Count only authenticated passing observations on the reciprocal frozen
     // case/check/command graph. Coverage declarations are never executions.
     const eligible = clean.filter((entry) => entry.class === 'independent-acceptance'
@@ -184,7 +294,8 @@ export function evaluate(inputs, receipts, policy, options = {}) {
         && required.some((check) => item.checkIds.includes(check.id) && check.caseIds.includes(item.id)
           && check.capability === entry.envelope.check
           && entry.sourcePacket.collection.source.facts.observations.some((observed) => observed.caseId === item.id
-            && observed.check === check.capability && observed.command === check.command))));
+            && observed.check === check.capability && observed.command === check.command
+            && (!manualDesign || observed.method === 'manual')))));
     const summary = { tests: 0, pass: 0, fail: 0, skipped: 0, cancelled: 0 };
     const seen = new Set();
     for (const entry of eligible) {
@@ -225,6 +336,7 @@ export function evaluate(inputs, receipts, policy, options = {}) {
     .sort();
   if (managed) {
     for (const entry of clean) judged.push(entry.collectionId, reviewEvidence.get(entry.collectionId));
+    if (manualApproval) judged.push(manualApproval.evidenceDigest);
     judged.sort();
   }
   const attested = clean;
@@ -236,7 +348,9 @@ export function evaluate(inputs, receipts, policy, options = {}) {
     policy: { ref: policy.ref, digest: policy.digest },
     inputDigest: inputs.inputDigest,
     evidence: judged.length > 0 ? judged : [EMPTY_EVIDENCE_SET_DIGEST],
-    requiredDenominator: { required: required.length, valid },
+    requiredDenominator: designReviewGate
+      ? { required: 1, valid: clean.length > 0 ? 1 : 0 }
+      : { required: required.length, valid },
     blocked,
     sourceAttestation: {
       origin: origins.length > 0 ? origins.join(',') : 'none',

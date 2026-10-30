@@ -143,44 +143,32 @@ test('A01: implementation dispatch is refused with the missing baseline list', (
   assert.deepEqual(complete.missing, []);
 });
 
-test('A02: scope change invalidates related downstream receipts and old approvals, keeps unrelated ones', () => {
-  const OLD = 'a'.repeat(64);
-  const NEW = 'b'.repeat(64);
-  const changed = { kind: 'product', digest: NEW, revision: 'r2' };
-  const receipts = [
-    { id: 'evidence-1', boundDigests: { product: OLD } },
-    { id: 'approval-1', boundDigests: { product: OLD } },
-    { id: 'evidence-design-only', boundDigests: { design: 'c'.repeat(64) } },
-  ];
-  const result = invalidateOnScopeChange({ changed, receipts });
-  assert.deepEqual(result.invalidated.map((r) => r.id), ['evidence-1', 'approval-1']);
-  assert.match(result.invalidated[0].reason, /product/);
-  assert.match(result.invalidated[0].reason, /does not match current digest/);
-  assert.deepEqual(result.valid.map((r) => r.id), ['evidence-design-only'], 'unrelated downstream receipts must stay valid');
-
-  const revisionDrift = invalidateOnScopeChange({
-    changed,
-    receipts: [{ id: 'evidence-same-digest', boundDigests: { product: NEW }, boundRevisions: { product: 'r1' } }],
-  });
-  assert.equal(revisionDrift.invalidated.length, 1);
-  assert.match(revisionDrift.invalidated[0].reason, /revision r1 does not match current revision r2/);
-
-  const current = invalidateOnScopeChange({
-    changed,
-    receipts: [{ id: 'evidence-current', boundDigests: { product: NEW }, boundRevisions: { product: 'r2' } }],
-  });
-  assert.deepEqual(current.invalidated, []);
-  assert.deepEqual(current.valid.map((r) => r.id), ['evidence-current']);
+test('A02: a new generation invalidates every older downstream receipt while current evidence remains usable', () => {
+  const changed = { kind: 'product', digest: 'b'.repeat(64), revision: 'r2' };
+  const result = invalidateOnScopeChange({ changed, currentGeneration: 2, receipts: [
+    { id: 'architecture', generation: 1, boundDigests: { product: 'a'.repeat(64) } },
+    { id: 'tests', generation: 1, boundDigests: { design: 'c'.repeat(64) } },
+    { id: 'implementation', generation: 1 },
+    { id: 'new-design-only', generation: 2, boundDigests: { design: 'c'.repeat(64) } },
+    { id: 'new-product', generation: 2, boundDigests: { product: changed.digest }, boundRevisions: { product: 'r2' } },
+  ] });
+  assert.deepEqual(result.invalidated.map((r) => r.id), ['architecture', 'tests', 'implementation']);
+  assert.deepEqual(result.valid.map((r) => r.id), ['new-design-only', 'new-product']);
+  const drift = invalidateOnScopeChange({ changed, currentGeneration: 2, receipts: [
+    { id: 'old-digest', generation: 2, boundDigests: { product: 'a'.repeat(64) } },
+    { id: 'old-revision', generation: 2, boundDigests: { product: changed.digest }, boundRevisions: { product: 'r1' } },
+  ] });
+  assert.deepEqual(drift.invalidated.map((r) => r.id), ['old-digest', 'old-revision']);
 });
 
 test('A02 real-drift anchor: invalidation is driven by a digest recomputed from real file bytes, not a self-declared value (nb-3)', () => {
   const root = makeProject(DEMO_FILES);
   const first = computeFullInputBaseline({ root, manifest: DEMO_MANIFEST });
   assert.equal(first.ok, true);
-  const receipt = { id: 'evidence-product', boundDigests: { product: first.digest } };
+  const receipt = { id: 'evidence-product', generation: 1, boundDigests: { product: first.digest } };
   const unchanged = invalidateOnScopeChange({
     changed: { kind: 'product', digest: first.digest, revision: 'r1' },
-    receipts: [receipt],
+    currentGeneration: 1, receipts: [receipt],
   });
   assert.deepEqual(unchanged.invalidated, []);
   assert.deepEqual(unchanged.valid.map((r) => r.id), ['evidence-product']);
@@ -190,7 +178,7 @@ test('A02 real-drift anchor: invalidation is driven by a digest recomputed from 
   assert.notEqual(second.digest, first.digest, 'precondition: the real migration drift moved the recomputed digest');
   const drifted = invalidateOnScopeChange({
     changed: { kind: 'product', digest: second.digest, revision: 'r2' },
-    receipts: [receipt],
+    currentGeneration: 1, receipts: [receipt],
   });
   assert.deepEqual(drifted.valid, [], 'a receipt bound to the pre-drift recomputed digest must not survive the real scope change');
   assert.deepEqual(drifted.invalidated.map((r) => r.id), ['evidence-product']);
@@ -200,12 +188,12 @@ test('A02 real-drift anchor: invalidation is driven by a digest recomputed from 
 test('A07: a passed report is refused after inputs change and accepted while current', () => {
   const root = makeProject(DEMO_FILES);
   const first = computeFullInputBaseline({ root, manifest: DEMO_MANIFEST });
-  const report = { id: 'report-1', inputDigest: first.digest };
-  assert.equal(verifyReportCurrency({ report, currentDigest: first.digest }).ok, true);
+  const report = { id: 'report-1', inputDigest: first.digest, generation: 1 };
+  assert.equal(verifyReportCurrency({ report, currentDigest: first.digest, currentGeneration: 1 }).ok, true);
 
   fs.writeFileSync(path.join(root, 'package-lock.json'), '{"lockfileVersion": 3, "patched": true}\n');
   const second = computeFullInputBaseline({ root, manifest: DEMO_MANIFEST });
-  const reused = verifyReportCurrency({ report, currentDigest: second.digest });
+  const reused = verifyReportCurrency({ report, currentDigest: second.digest, currentGeneration: 2 });
   assert.equal(reused.ok, false);
   assert.equal(reused.error, 'DIGEST_MISMATCH');
   assert.equal(reused.boundDigest, first.digest);
@@ -349,4 +337,86 @@ test('production AST normalization changes only located task characters, preserv
   assert.equal(normalizeTaskProgress(source), expected);
   assert.equal(Buffer.byteLength(normalizeTaskProgress(source)), Buffer.byteLength(source));
   assert.equal(normalizeTaskProgress('- \\[x] escaped\n'), '- \\[x] escaped\n');
+});
+
+test('A02: old downstream evidence cannot revive when requirement bytes are restored at a newer generation', () => {
+  const restored = { kind: 'product', digest: 'a'.repeat(64), revision: 'r3' };
+  const result = invalidateOnScopeChange({ changed: restored, currentGeneration: 3, receipts: [
+    { id: 'old-architecture', generation: 1, boundDigests: { product: restored.digest }, boundRevisions: { product: 'r1' } },
+    { id: 'old-test', generation: 1, boundDigests: { design: 'b'.repeat(64) } },
+    { id: 'new-test', generation: 3, boundDigests: { product: restored.digest }, boundRevisions: { product: 'r3' } },
+  ] });
+  assert.deepEqual(result.invalidated.map((r) => r.id), ['old-architecture', 'old-test']);
+  assert.deepEqual(result.valid.map((r) => r.id), ['new-test']);
+});
+
+test('A02: missing or malformed generation and changed baseline fail closed, including legacy calls', () => {
+  const changed = { kind: 'design', digest: 'd'.repeat(64), revision: 4 };
+  const receipt = { id: 'test', generation: 4, boundDigests: { design: changed.digest }, boundRevisions: { design: 4 } };
+  for (const input of [
+    { changed, receipts: [receipt] },
+    { changed, currentGeneration: -1, receipts: [receipt] },
+    { changed, currentGeneration: '4', receipts: [receipt] },
+    { changed, currentGeneration: 4, receipts: [{ id: 'legacy', boundDigests: { design: changed.digest } }] },
+    { changed, currentGeneration: 4, receipts: [{ ...receipt, generation: '4' }] },
+    { currentGeneration: 4, receipts: [receipt] },
+    { changed: { ...changed, digest: undefined }, currentGeneration: 4, receipts: [receipt] },
+  ]) {
+    const verdict = invalidateOnScopeChange(input);
+    assert.equal(verdict.invalidated.length, 1);
+    assert.deepEqual(verdict.valid, []);
+  }
+});
+
+test('A02: requirement and design changes expire architecture, tests and implementation across generation advances', () => {
+  for (const kind of ['product', 'design']) {
+    const changed = { kind, digest: 'e'.repeat(64), revision: 3 };
+    const all = ['architecture', 'test-design', 'test-results', 'implementation'].map(id => ({ id, generation: 1 }));
+    const current = { id: 'fresh', generation: 3, boundDigests: { unrelated: 'f'.repeat(64) } };
+    const result = invalidateOnScopeChange({ changed, currentGeneration: 3, receipts: [...all, current] });
+    assert.deepEqual(result.invalidated.map(x => x.id), all.map(x => x.id));
+    assert.deepEqual(result.valid.map(x => x.id), ['fresh']);
+  }
+});
+
+test('A07: restoring old input bytes cannot revive a report from an earlier generation', () => {
+  const root = makeProject({ 'requirements.txt': 'first' });
+  const manifest = { artifacts: ['requirements.txt'] };
+  const first = computeFullInputBaseline({ root, manifest });
+  const file = path.join(root, 'requirements.txt');
+  fs.writeFileSync(file, 'second');
+  assert.notEqual(computeFullInputBaseline({ root, manifest }).digest, first.digest);
+  fs.writeFileSync(file, 'first');
+  const restored = computeFullInputBaseline({ root, manifest });
+  assert.equal(restored.digest, first.digest);
+  const report = { id: 'old', inputDigest: first.digest, generation: 1 };
+  const verdict = verifyReportCurrency({ report, currentDigest: restored.digest, currentGeneration: 3 });
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.error, 'GENERATION_MISMATCH');
+  assert.equal(verifyReportCurrency({ report: { ...report, generation: 3 }, currentDigest: restored.digest, currentGeneration: 3 }).ok, true);
+});
+
+test('A07: missing or malformed generation fails closed, including legacy report calls', () => {
+  const digest = 'a'.repeat(64);
+  const report = { id: 'report', inputDigest: digest, generation: 4 };
+  for (const params of [
+    { report, currentDigest: digest },
+    { report, currentDigest: digest, currentGeneration: -1 },
+    { report, currentDigest: digest, currentGeneration: '4' },
+    { report: { id: 'legacy', inputDigest: digest }, currentDigest: digest, currentGeneration: 4 },
+    { report: { ...report, generation: '4' }, currentDigest: digest, currentGeneration: 4 },
+  ]) {
+    const verdict = verifyReportCurrency(params);
+    assert.equal(verdict.ok, false);
+    assert.equal(verdict.error, 'GENERATION_MISMATCH');
+  }
+});
+
+test('A02: a receipt that declares a stale revision is rejected even if it omits that digest', () => {
+  const changed = { kind: 'design', digest: 'd'.repeat(64), revision: 2 };
+  const result = invalidateOnScopeChange({ changed, currentGeneration: 2, receipts: [
+    { id: 'stale-revision', generation: 2, boundRevisions: { design: 1 } },
+  ] });
+  assert.deepEqual(result.valid, []);
+  assert.deepEqual(result.invalidated.map(r => r.id), ['stale-revision']);
 });

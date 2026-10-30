@@ -30,6 +30,22 @@ async function validatedPatches({ root, lock }) {
 
 const fingerprintOf = (lock, patches) => digest(JSON.stringify({ archive: lock.source.sha256, patches: patches.map(({path, sha256}) => ({path, sha256})), toolchain: lock.toolchain }));
 
+async function validateBuildIdentity(work, lock) {
+  let pkg;
+  try {
+    const file = path.join(work, 'package.json');
+    const stat = await fs.lstat(file);
+    if (!stat.isFile() || stat.isSymbolicLink()) fail('BUILD_IDENTITY_MISMATCH', 'Build package identity must be a regular file');
+    pkg = JSON.parse(await fs.readFile(file, 'utf8'));
+  } catch (error) {
+    if (error.code === 'BUILD_IDENTITY_MISMATCH') throw error;
+    fail('BUILD_IDENTITY_MISMATCH', 'Build package identity is missing or unreadable');
+  }
+  if (pkg?.name !== lock.package?.name || pkg?.version !== lock.package?.version) {
+    fail('BUILD_IDENTITY_MISMATCH', 'Build package identity differs from the fixed lock');
+  }
+}
+
 // Ephemeral tool caches that running the checks themselves may rewrite; they
 // are excluded from the manifest on both build and verification so the
 // manifest keeps attesting only real distribution content.
@@ -81,6 +97,7 @@ export async function buildCometDistribution({ projectRoot, lock, archivePath })
     const previous = JSON.parse(await fs.readFile(manifestFile, 'utf8'));
     const actual = await tree(work);
     if (previous.fingerprint !== fingerprint || JSON.stringify(actual) !== JSON.stringify(previous.files)) fail('BUILD_BASELINE_DRIFT', 'Existing build output has changed; preserve it for inspection');
+    await validateBuildIdentity(work, lock);
     return { buildRoot, entrypoint: path.join(work, 'bin/comet.js'), sourceCommit: lock.source.commit, fingerprint, reused: true };
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
@@ -109,6 +126,7 @@ export async function buildCometDistribution({ projectRoot, lock, archivePath })
   for (const family of ['classic', 'native', 'entry']) await run(process.execPath, [`scripts/build/build-${family}-runtime.mjs`, '--check']);
   const version = await run(process.execPath, ['bin/comet.js', '--version']);
   if (version !== lock.package.version) fail('BUILD_IDENTITY_MISMATCH', 'Built CLI version differs from locked package');
+  await validateBuildIdentity(work, lock);
   const files = await tree(work);
   await fs.writeFile(manifestFile, JSON.stringify({ schemaVersion: 1, fingerprint, sourceCommit: lock.source.commit, node: process.versions.node, pnpm: lock.toolchain.pnpm, files }, null, 2) + '\n', { flag: 'wx' });
   return { buildRoot, entrypoint: path.join(work, 'bin/comet.js'), sourceCommit: lock.source.commit, fingerprint, reused: false };
@@ -138,6 +156,7 @@ export async function verifyCometDistribution({ projectRoot, lock, checkGenerate
   const actual = await tree(work);
   const manifestFiles = Object.fromEntries(Object.entries(manifest.files).filter(([name]) => !isVolatileCache(name)));
   if (JSON.stringify(actual) !== JSON.stringify(manifestFiles)) fail('BUILD_BASELINE_DRIFT', 'Build output has changed since its manifest was written');
+  await validateBuildIdentity(work, lock);
   const childEnvironment = { ...process.env, PATH: `${path.dirname(process.execPath)}:${process.env.PATH}`, CI: 'true', COREPACK_HOME: path.join(root, '.sdd/cache/corepack'), COREPACK_ENABLE_AUTO_PIN: '0', npm_config_cache: path.join(root, '.sdd/cache/npm'), GIT_CEILING_DIRECTORIES: buildDir };
   for (const key of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR']) delete childEnvironment[key];
   const steps = [];

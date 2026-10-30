@@ -1,0 +1,76 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { readPlanSource } from '../lib/adapters/plan-source.js';
+
+test('plan source reads the same Change tasks and DAG and ignores only progress checkboxes', (t) => {
+  const root=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'comet-plan-source-'));
+  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+  const dir=path.join(root,'openspec/changes/feature');fs.mkdirSync(dir,{recursive:true});
+  const tasks='# Implementation Plan\n\n### Task A: tests\n\n**Dependencies:** none\n\n- [ ] write tests\n\n### Task B: implement\n\n**Dependencies:** A\n\n- [ ] implement\n';
+  fs.writeFileSync(path.join(dir,'tasks.md'),tasks);
+  const dag={schema_version:2,plan_path:'tasks.md',tasks:[{id:'A',depends_on:[]},{id:'B',depends_on:['A']}]};
+  fs.writeFileSync(path.join(dir,'task-dag.json'),JSON.stringify(dag));
+  const run={runId:'feature',input:{change:'feature',changeDir:'openspec/changes/feature'}};
+  const planBundle={schemaVersion:1,change:'feature',schedulerOwner:'comet-classic',tasks:[{id:'A',dependsOn:[]},{id:'B',dependsOn:['A']}],allowedPaths:['src/'],worktree:'current',acceptanceRefs:['AC1']};
+  const first=readPlanSource({projectRoot:root,run,planBundle});
+  assert.equal(first.ok,true,first.reason);
+  fs.writeFileSync(path.join(dir,'tasks.md'),tasks.replace('**Dependencies:** A','```md\n**Dependencies:** A\n```'));
+  assert.equal(readPlanSource({projectRoot:root,run,planBundle}).ok,false,'a fenced example is not an actual dependency declaration');
+  fs.writeFileSync(path.join(dir,'tasks.md'),tasks.replace('[ ] write tests','[x] write tests'));
+  const progress=readPlanSource({projectRoot:root,run,planBundle});
+  assert.equal(progress.ok,true,progress.reason);
+  assert.equal(progress.planSources.tasks.digest,first.planSources.tasks.digest);
+  fs.writeFileSync(path.join(dir,'tasks.md'),tasks.replace('write tests','write stronger tests'));
+  assert.notEqual(readPlanSource({projectRoot:root,run,planBundle}).planSources.tasks.digest,first.planSources.tasks.digest);
+  assert.equal(readPlanSource({projectRoot:root,run:{...run,input:{...run.input,change:'another'}},planBundle}).ok,false);
+  fs.writeFileSync(path.join(dir,'task-dag.json'),JSON.stringify({...dag,tasks:[...dag.tasks.slice(0,1),{id:'B',depends_on:[]}]}));
+  assert.equal(readPlanSource({projectRoot:root,run,planBundle}).ok,false);
+});
+
+test('plan readback refuses missing headings, duplicate tasks, and symlinked files', (t) => {
+  const root=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'comet-plan-source-'));
+  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+  const dir=path.join(root,'openspec/changes/feature');fs.mkdirSync(dir,{recursive:true});
+  const taskPath=path.join(dir,'tasks.md');const dagPath=path.join(dir,'task-dag.json');
+  const run={runId:'run-1',input:{change:'feature',changeDir:'openspec/changes/feature'}};
+  const planBundle={schemaVersion:1,change:'feature',schedulerOwner:'comet-classic',tasks:[{id:'A',dependsOn:[]}],allowedPaths:['src/'],worktree:'current',acceptanceRefs:['AC1']};
+  fs.writeFileSync(dagPath,JSON.stringify({plan_path:'tasks.md',tasks:[{id:'A',depends_on:[]}]}));
+  fs.writeFileSync(taskPath,'```md\n### Task A: forged heading\n```\n');
+  assert.equal(readPlanSource({projectRoot:root,run,planBundle}).ok,false);
+  fs.writeFileSync(taskPath,'### Task A: real\n### Task A: duplicate\n');
+  assert.equal(readPlanSource({projectRoot:root,run,planBundle}).ok,false);
+  fs.writeFileSync(taskPath,'### Task A: real\n');
+  fs.writeFileSync(dagPath,JSON.stringify({plan_path:'tasks.md',tasks:[{id:'A',depends_on:[]},{id:'A',depends_on:[]}]}));
+  assert.equal(readPlanSource({projectRoot:root,run,planBundle}).ok,false);
+  fs.writeFileSync(dagPath,JSON.stringify({plan_path:'tasks.md',tasks:[{id:'A',depends_on:[]}]}));
+  const external=path.join(root,'external.md');fs.writeFileSync(external,'### Task A: external\n');
+  fs.unlinkSync(taskPath);fs.symlinkSync(external,taskPath);
+  assert.equal(readPlanSource({projectRoot:root,run,planBundle}).ok,false);
+});
+
+test('plan readback follows the original Run through archive and refuses ambiguous archives', (t) => {
+  const root=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'comet-plan-archive-'));
+  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+  const dir=path.join(root,'openspec/changes/feature');fs.mkdirSync(dir,{recursive:true});
+  fs.writeFileSync(path.join(dir,'tasks.md'),'### Task A: task\n\n**Dependencies:** none\n\n- [ ] work\n');
+  fs.writeFileSync(path.join(dir,'task-dag.json'),JSON.stringify({plan_path:'tasks.md',tasks:[{id:'A',depends_on:[]}]}));
+  const run={runId:'feature',input:{change:'feature',changeDir:'openspec/changes/feature'},actions:[]};
+  const planBundle={schemaVersion:1,change:'feature',schedulerOwner:'comet-classic',tasks:[{id:'A',dependsOn:[]}],allowedPaths:['src/'],worktree:'current',acceptanceRefs:['AC1']};
+  const original=readPlanSource({projectRoot:root,run,planBundle});assert.equal(original.ok,true);
+  const archive=path.join(root,'openspec/changes/archive');fs.mkdirSync(archive);
+  const target=path.join(archive,'2026-10-30-feature');fs.renameSync(dir,target);
+  assert.equal(readPlanSource({projectRoot:root,run,planBundle}).ok,false,'an archive without this Run action is not accepted');
+  const activeArchive={...run,actions:[{ref:'classic-archive',status:'running'}]};
+  assert.deepEqual(readPlanSource({projectRoot:root,run:activeArchive,planBundle}).planSources,original.planSources);
+  const unrelated=path.join(archive,'2026-10-28-other-feature');fs.renameSync(target,unrelated);
+  assert.equal(readPlanSource({projectRoot:root,run:activeArchive,planBundle}).ok,false,'a different Change with a shared suffix is not this archive');
+  fs.renameSync(unrelated,target);
+  const completedArchive={...run,actions:[{ref:'classic-archive',status:'succeeded',outcome:{output:{archiveDirectory:'openspec/changes/archive/2026-10-30-feature'}}}]};
+  assert.deepEqual(readPlanSource({projectRoot:root,run:completedArchive,planBundle}).planSources,original.planSources);
+  fs.cpSync(target,path.join(archive,'2026-10-29-feature'),{recursive:true});
+  assert.equal(readPlanSource({projectRoot:root,run:activeArchive,planBundle}).ok,false,'an unknown in-flight archive cannot choose among multiple matches');
+  assert.deepEqual(readPlanSource({projectRoot:root,run:completedArchive,planBundle}).planSources,original.planSources,'a completed Run selects its recorded archive');
+});

@@ -86,7 +86,7 @@ function readOutputFile(file, encoding) {
 }
 // Explicit project call closure, audited in the P1_2 rework dependency inventory.
 // Host runtimes, npm modules and generated/user state are never recursively packed.
-const CODE_ASSETS = [
+const LEGACY_CODE_ASSETS = [
   'tools/foundation-export.mjs', 'tools/bootstrap.sh', 'tools/adapters/claude-code.sh',
   'foundation/managed_io.py',
   'hooks/pre-tool-gate.sh', 'hooks/session-context.sh', 'hooks/stop-reminder.sh', 'hooks/_resolve-project-dir.sh',
@@ -99,6 +99,11 @@ const CODE_ASSETS = [
   'contracts/delivery/gate-receipt.schema.js', 'contracts/delivery/release-receipt.schema.js',
   'contracts/delivery/action-binding.schema.js',
 ];
+const STAGE_ENTRY_ASSET = 'tools/comet/phase-entry.mjs';
+const STAGE_CODE_ASSETS = [...LEGACY_CODE_ASSETS, STAGE_ENTRY_ASSET, 'tools/comet/start-lock.py',
+  'lib/adapters/comet-start.js', 'lib/adapters/codex-host-source.js', 'lib/delivery/evidence.js'];
+const TEST_OBSERVATION_ASSET = 'lib/adapters/codex-test-observation.js';
+const CODE_ASSETS = [...STAGE_CODE_ASSETS, TEST_OBSERVATION_ASSET, 'lib/delivery/test-contract.js'];
 const DEPENDENCY_METADATA = ['package.json', 'package-lock.json', COMET_LOCK_REL];
 function sourceFile(root, relative) {
   const info = rejectLinkedPath(root, relative);
@@ -138,6 +143,11 @@ function walkFiles(dir, prefix = '', out = [], excludeGenerated = true) {
 function isGitWorkTree(root) {
   const probe = spawnSync('git', ['-C', root, 'rev-parse', '--show-toplevel'], {encoding:'utf8'});
   return probe.status === 0 && fs.realpathSync(probe.stdout.trim()) === fs.realpathSync(root);
+}
+
+export function hasGitMarker(root) {
+  try { fs.lstatSync(path.join(root, '.git')); return true; }
+  catch (error) { return error.code !== 'ENOENT'; }
 }
 
 // Enumerate a skill's distributable files. In a git work tree the basis is
@@ -237,7 +247,7 @@ function gitRevParseHead(root) {
 // Collect the full asset set from the unique sources and build the lock
 // payload. options: { releaseCommit?, profile?, mcpRaw? } (mcpRaw override is
 // for fixtures; default reads <root>/.mcp.json).
-export async function buildLock(root, options = {}) {
+async function buildLockFor(root, options, codeAssets) {
   const skillsDir = path.join(root, '.agents/skills');
   if (!fs.existsSync(skillsDir)) throw new Error(`unique skill source missing: ${skillsDir}`);
   const manifestPath = path.join(root, PROFILE_REL);
@@ -305,7 +315,7 @@ export async function buildLock(root, options = {}) {
     platforms: ['darwin', 'linux'],
   };
 
-  const assetCode = profileBinding ? assetDictionary(CODE_ASSETS.map((rel)=>[rel,sha256Bytes(fs.readFileSync(sourceFile(root,rel)))])) : null;
+  const assetCode = profileBinding ? assetDictionary(codeAssets.map((rel)=>[rel,sha256Bytes(fs.readFileSync(sourceFile(root,rel)))])) : null;
   const assetData = profileBinding ? assetDictionary(DEPENDENCY_METADATA.map((rel)=>[rel,sha256Bytes(fs.readFileSync(sourceFile(root,rel)))])) : null;
   // Bound whenever the package is present (not only under a profile binding):
   // the packaging manifest (P1_6) alone is not a distribution — the bytes
@@ -342,6 +352,13 @@ export async function buildLock(root, options = {}) {
   // Non-enumerable carrier for view writers; excluded from JSON and digests.
   Object.defineProperty(lock, '__sources', { enumerable: false, value: { skills, profileBinding, assetCode, assetData, composition } });
   return lock;
+}
+
+// New exports always require the complete current closure. The legacy list is
+// used only while verifying already-frozen historical bytes, never selected by
+// an exporter argument or by a worker-supplied flag.
+export async function buildLock(root, options = {}) {
+  return buildLockFor(root,options,CODE_ASSETS);
 }
 
 function writeIfChanged(file, content) {
@@ -469,7 +486,8 @@ function pureAssets(root, lock) {
     const rel = `.agents/skills/${skill.name}/${relative}`;
     result[rel] = fs.readFileSync(sourceFile(root, rel));
   }
-  const metadata = ['hooks.yaml','package.json',COMET_LOCK_REL,PROFILE_REL,PROFILE_DATA_REL,'mcp-capabilities.yaml',...CODE_ASSETS,...DEPENDENCY_METADATA];
+  const codeAssets=lock.__sources.profileBinding ? Object.keys(lock.__sources.assetCode) : CODE_ASSETS;
+  const metadata = ['hooks.yaml','package.json',COMET_LOCK_REL,PROFILE_REL,PROFILE_DATA_REL,'mcp-capabilities.yaml',...codeAssets,...DEPENDENCY_METADATA];
   for (const rel of metadata) if (fs.existsSync(path.join(root,rel))) result[rel] = fs.readFileSync(sourceFile(root,rel));
   for (const f of compositionFiles(root)) result[f.rel] = fs.readFileSync(f.abs);
   if (fs.existsSync(path.join(root,'.mcp.json'))) result['.mcp.json'] = Buffer.from(JSON.stringify({mcpServers:JSON.parse(fs.readFileSync(sourceFile(root,'.mcp.json'),'utf8')).mcpServers??{}},null,2)+'\n');
@@ -495,7 +513,12 @@ async function verifyCache(cache, expected) {
   const actual=cacheTree(cache);
   const pinned=JSON.parse(readOutputFile(path.join(cache,'foundation-lock.json'),'utf8'));
   if (canonicalJson(pinned)!==canonicalJson(expected)) throw new Error('frozen lock mismatch');
-  const rebuilt=await buildLock(source,{releaseCommit:pinned.release.commit});
+  // Old sealed snapshots predate the stage entry. Verify them with the exact
+  // historical fixed list; their original digest and complete cache manifest
+  // must still match. Any partial current snapshot cannot pass as legacy.
+  const codeAssets=fs.existsSync(path.join(source,TEST_OBSERVATION_ASSET)) ? CODE_ASSETS
+    : fs.existsSync(path.join(source,STAGE_ENTRY_ASSET)) ? STAGE_CODE_ASSETS : LEGACY_CODE_ASSETS;
+  const rebuilt=await buildLockFor(source,{releaseCommit:pinned.release.commit},codeAssets);
   if (canonicalJson(rebuilt)!==canonicalJson(pinned)) throw new Error('whole exportDigest or asset binding mismatch');
   const files=assetDictionary(Object.entries(pureAssets(source,rebuilt)).map(([p,b])=>['source/'+p,sha256Bytes(b)]));
   files['foundation-lock.json']=sha256Bytes(readOutputFile(path.join(cache,'foundation-lock.json')));
@@ -512,13 +535,14 @@ async function freezeBaseline(root,outDir,lock) {
   const cache=path.join(parent,lock.release.exportDigest);rejectLinkedPath(cache);
   if (fs.existsSync(cache)) {try {await verifyCache(cache,lock);return;} catch(error) {throw new Error(`STATE_SYNC_REQUIRED: old cache preserved: ${error.message}`);}}
   const temporary=fs.mkdtempSync(path.join(parent,'.pending-'));
-  try {
-    const files=assetDictionary();
-    for (const [rel,bytes] of Object.entries(pureAssets(root,lock))) {const dest=path.join(temporary,'source',rel);fs.mkdirSync(path.dirname(dest),{recursive:true});writeIfChanged(dest,bytes);files['source/'+rel]=sha256Bytes(bytes);}
-    const bytes=Buffer.from(JSON.stringify(lock,null,2)+'\n');writeIfChanged(path.join(temporary,'foundation-lock.json'),bytes);files['foundation-lock.json']=sha256Bytes(bytes);
-    writeIfChanged(path.join(temporary,'manifest.json'),JSON.stringify({schemaVersion:1,exportDigest:lock.release.exportDigest,files},null,2)+'\n');
-    await verifyCache(temporary,lock);fs.renameSync(temporary,cache);
-  } finally {if(fs.existsSync(temporary))fs.rmSync(temporary,{recursive:true,force:true});}
+  // A failed stage can contain data written by another actor. Preserve it for
+  // explicit inspection; a temporary-looking path is not a deletion grant.
+  const files=assetDictionary();
+  for (const [rel,bytes] of Object.entries(pureAssets(root,lock))) {const dest=path.join(temporary,'source',rel);fs.mkdirSync(path.dirname(dest),{recursive:true});writeIfChanged(dest,bytes);files['source/'+rel]=sha256Bytes(bytes);}
+  const bytes=Buffer.from(JSON.stringify(lock,null,2)+'\n');writeIfChanged(path.join(temporary,'foundation-lock.json'),bytes);files['foundation-lock.json']=sha256Bytes(bytes);
+  writeIfChanged(path.join(temporary,'manifest.json'),JSON.stringify({schemaVersion:1,exportDigest:lock.release.exportDigest,files},null,2)+'\n');
+  await verifyCache(temporary,lock);fs.renameSync(temporary,cache);
+  try {await verifyCache(cache,lock);} catch(error) {throw new Error(`STATE_SYNC_REQUIRED: published cache preserved: ${error.message}`);}
 }
 
 // Verify: lock vs live sources, and release view vs sources/lock. Read-only.
@@ -660,10 +684,25 @@ export async function verifyLock(lockPath, root, { requireBodies = false } = {})
 // Resolve a pinned baseline from git history at lock.release.commit: every
 // pinned digest must be re-derivable from the frozen commit (F04 keep-old-
 // baseline). Read-only.
-export async function resolveBaseline(root, lock) {
+export async function resolveBaseline(root, lock, { skipCache = false } = {}) {
   try {rejectLinkedPath(root,`foundation/baselines/${lock.release.exportDigest}`);} catch(error) {return {ok:false,resolvable:false,reason:error.message,resolvedSkills:[],missing:['unsafe-cache-path']};}
   const cache=path.join(root,'foundation/baselines',lock.release.exportDigest);
-  if (fs.existsSync(cache)) {try {await verifyCache(cache,lock);return {ok:true,resolvable:true,reason:'sealed pure assets verified byte-for-byte and whole exportDigest',resolvedSkills:lock.skills.map((s)=>s.name),missing:[],source:'sealed-assets'};} catch(error) {return {ok:false,resolvable:false,reason:`STATE_SYNC_REQUIRED: ${error.message}`,resolvedSkills:[],missing:['sealed-assets']};}}
+  if (!skipCache && fs.existsSync(cache)) {
+    try { await verifyCache(cache,lock); }
+    catch(error) { return {ok:false,resolvable:false,reason:`STATE_SYNC_REQUIRED: ${error.message}`,resolvedSkills:[],missing:['sealed-assets']}; }
+    // A cache can recover bytes without Git, but must not contradict a commit
+    // that is actually available in this repository.
+    const commit = lock?.release?.commit;
+    const available = isGitWorkTree(root) && typeof commit === 'string'
+      && spawnSync('git', ['-C', root, 'cat-file', '-e', `${commit}^{commit}`]).status === 0;
+    if (available) {
+      const historical = await resolveBaseline(root, lock, { skipCache: true });
+      if (!historical.ok) return {ok:true,resolvable:true,reason:`sealed bytes recoverable; Git commit mismatch: ${historical.reason}`,
+        resolvedSkills:lock.skills.map((s)=>s.name),missing:[],source:'sealed-assets',commitBinding:'mismatch'};
+      return { ...historical, reason:'sealed pure assets and available Git commit match', source:'sealed-assets+git', commitBinding:'verified' };
+    }
+    return {ok:true,resolvable:true,reason:'sealed pure assets verified byte-for-byte; Git commit not verified',resolvedSkills:lock.skills.map((s)=>s.name),missing:[],source:'sealed-assets',commitBinding:'unverified'};
+  }
   const resolvedSkills = [];
   const missing = [];
   const commit = lock?.release?.commit;
@@ -723,7 +762,7 @@ export async function resolveBaseline(root, lock) {
     if (lock.toolchain.cli.version!==pkg.version || lock.toolchain.runner.version!==upstream.package.version || lock.toolchain.node!==upstream.toolchain.node) missing.push('toolchain (historical mismatch)');
     const fields={skills:lock.skills,policy:lock.policy,mcps:lock.mcps,methodProfile:lock.methodProfile,toolchain:lock.toolchain};
     const sourceManifest=JSON.parse(manifest.out);
-    if (sourceManifest.current_profile_id && lock.profile===sourceManifest.current_profile_id) { const caps=show('mcp-capabilities.yaml');fields.capabilities=caps.status===0?sha256Bytes(caps.out):null;fields.assetCode=assetDictionary(CODE_ASSETS.map((rel)=>{const file=show(rel);if(file.status!==0)throw new Error('historical code asset missing');return [rel,sha256Bytes(file.out)];}));fields.assetData=assetDictionary(DEPENDENCY_METADATA.map((rel)=>{const file=show(rel);if(file.status!==0)throw new Error('historical dependency metadata missing');return [rel,sha256Bytes(file.out)];})); }
+    if (sourceManifest.current_profile_id && lock.profile===sourceManifest.current_profile_id) { const caps=show('mcp-capabilities.yaml');fields.capabilities=caps.status===0?sha256Bytes(caps.out):null;const codeAssets=git(['cat-file','-e',`${commit}:${TEST_OBSERVATION_ASSET}`]).status===0?CODE_ASSETS:git(['cat-file','-e',`${commit}:${STAGE_ENTRY_ASSET}`]).status===0?STAGE_CODE_ASSETS:LEGACY_CODE_ASSETS;fields.assetCode=assetDictionary(codeAssets.map((rel)=>{const file=show(rel);if(file.status!==0)throw new Error('historical code asset missing');return [rel,sha256Bytes(file.out)];}));fields.assetData=assetDictionary(DEPENDENCY_METADATA.map((rel)=>{const file=show(rel);if(file.status!==0)throw new Error('historical dependency metadata missing');return [rel,sha256Bytes(file.out)];})); }
     // Composition package at the frozen commit (same presence rule as
     // buildLock: bound whenever the tree carries files under the package
     // path, so historical digests recompute with the identical payload).
@@ -772,6 +811,7 @@ export async function checkRun(runDir, root, options = {}) {
   const current = await buildLock(root, { releaseCommit: lock.release.commit });
   const drift = current.release.exportDigest !== lock.release.exportDigest;
   const baseline = await resolveBaseline(root, lock);
+  const unverifiedGitBinding = ['unverified', 'mismatch'].includes(baseline.commitBinding) && (isGitWorkTree(root) || hasGitMarker(root));
 
   const migrationHint = `explicit paths: (1) rerun with --migrate --owner <run-owner> after review, or (2) close this run and start a new run against commit ${current.release.commit.slice(0, 8)} — a run is never silently re-baselined`;
 
@@ -782,6 +822,8 @@ export async function checkRun(runDir, root, options = {}) {
       return { ok: false, action: 'acquire', reason: 'second-writer-refused', detail: `active run is owned by ${state.owner} (B09: no second writer)`, drift, baseline };
     }
     if (!baseline.ok) return {ok:false,action:'acquire',reason:'baseline-unresolvable',status:'STATE_SYNC_REQUIRED',baseline,drift};
+    if (drift) return {ok:false,action:'acquire',reason:'silent-rebaseline-blocked',status:'STATE_SYNC_REQUIRED',baseline,drift,migration:migrationHint};
+    if (unverifiedGitBinding) return {ok:false,action:'acquire',reason:'baseline-commit-unverified',status:'STATE_SYNC_REQUIRED',baseline,drift};
     const next = { ...state, status: 'active', owner, pinnedCommit: lock.release.commit, baselineLock: 'foundation-lock.json' };
     fs.writeFileSync(stateFile, JSON.stringify(next, null, 2) + '\n');
     return { ok: true, action: 'acquire', owner, drift, baseline, runId: next.runId };
@@ -798,6 +840,7 @@ export async function checkRun(runDir, root, options = {}) {
     if (!baseline.ok) {
       return { ok: false, action: 'migrate', reason: 'baseline-unresolvable', detail: 'old baseline cannot be proven resolvable — manual re-verification required before any migration', migration: 're-run the affected acceptance checks against the new assets, then start a new run; the old pinned lock is preserved as-is', drift, baseline };
     }
+    if (unverifiedGitBinding) return {ok:false,action:'migrate',reason:'baseline-commit-unverified',status:'STATE_SYNC_REQUIRED',baseline,drift};
     const migrations = state.migrations ?? [];
     migrations.push({ from: { commit: lock.release.commit, exportDigest: lock.release.exportDigest }, to: { commit: current.release.commit, exportDigest: current.release.exportDigest } });
     const next = { ...state, migrations, pinnedCommit: current.release.commit };
@@ -807,12 +850,16 @@ export async function checkRun(runDir, root, options = {}) {
   }
 
   if (!baseline.ok) return {ok:false,action:'check',reason:'baseline-unresolvable',status:'STATE_SYNC_REQUIRED',baseline,drift,migration:migrationHint};
+  if (!drift && unverifiedGitBinding) return {ok:false,action:'check',reason:'baseline-commit-unverified',status:'STATE_SYNC_REQUIRED',baseline,drift};
   if (native) return {ok:!drift,action:'check',reason:drift?'silent-rebaseline-blocked':'native-assets-resolvable',status:drift?'STATE_SYNC_REQUIRED':'ASSETS_ONLY',baseline,drift,runId:state.runId,detail:'read-only asset observation; no Run or role authority granted'};
   if (!drift) {
     if (!baseline.ok) {
       return { ok: false, action: 'check', reason: 'baseline-unresolvable', drift, baseline, migration: migrationHint };
     }
-    return { ok: true, action: 'check', reason: 'baseline-current', drift, baseline, report: 'run baseline matches current sources and resolves from the frozen release commit' };
+    const report = baseline.commitBinding === 'unverified'
+      ? 'run baseline matches current sources and sealed bytes; the Git commit was not verified'
+      : 'run baseline matches current sources and resolves from the frozen release commit';
+    return { ok: true, action: 'check', reason: 'baseline-current', drift, baseline, report };
   }
 
   if (state.status === 'active') {
@@ -865,7 +912,7 @@ function sourceIdentity(value) {
       || !/^[a-f0-9]{64}$/.test(value.inputDigest)) throw new Error('STATE_SYNC_REQUIRED: invalid packet source');
 }
 
-export async function exportTeamaiView(foundationRoot, viewRoot, expectedFile, {repo} = {}) {
+export async function exportTeamaiView(foundationRoot, viewRoot, expectedFile, {repo, sourceRoot: gitRoot} = {}) {
   if (!/^https:\/\/[^/?#@]+\/[^?#]+$/.test(repo ?? '')) throw new Error('registered TeamAI Git URL required');
   foundationRoot = path.resolve(foundationRoot); viewRoot = path.resolve(viewRoot); expectedFile = path.resolve(expectedFile);
   for (const parent of [foundationRoot,viewRoot]) {
@@ -874,6 +921,9 @@ export async function exportTeamaiView(foundationRoot, viewRoot, expectedFile, {
   }
   if (viewRoot === foundationRoot || !path.relative(foundationRoot,viewRoot).startsWith('..'+path.sep)) throw new Error('TeamAI view must be separate from Foundation source');
   const lock = JSON.parse(readOutputFile(path.join(foundationRoot,'foundation-lock.json'),'utf8'));
+  if (typeof gitRoot !== 'string' || !isGitWorkTree(path.resolve(gitRoot))) throw new Error('STATE_SYNC_REQUIRED: source Git worktree required to verify the release commit');
+  const commit = await resolveBaseline(path.resolve(gitRoot), lock, {skipCache:true});
+  if (!commit.ok) throw new Error(`STATE_SYNC_REQUIRED: release commit does not match the distributed assets: ${commit.reason}`);
   const sourceRoot = path.join(foundationRoot,'baselines',lock.release.exportDigest,'source');
   const verified = await verifyLock(path.join(foundationRoot,'foundation-lock.json'),sourceRoot,{requireBodies:true});
   if (!verified.ok) throw new Error('STATE_SYNC_REQUIRED: Foundation source is not verified');
@@ -970,13 +1020,18 @@ async function main(argv) {
     const teamaiExpected = argValue(rest, '--teamai-expected');
     const teamaiRepo = argValue(rest, '--teamai-repo');
     if (rest.some(flag => ['--teamai-view','--teamai-expected','--teamai-repo'].includes(flag)) && ![teamaiView,teamaiExpected,teamaiRepo].every(Boolean)) throw new Error('TeamAI export requires view, external expected file and Git URL');
+    if (teamaiView) {
+      const proposed = await buildLock(root, { releaseCommit: argValue(rest, '--release-commit'), profile: argValue(rest, '--profile') });
+      const commit = await resolveBaseline(root, proposed, {skipCache:true});
+      if (!commit.ok) throw new Error(`STATE_SYNC_REQUIRED: release commit does not match the distributed assets: ${commit.reason}`);
+    }
     const { lock, files } = await exportRelease(root, out, {
       releaseCommit: argValue(rest, '--release-commit'),
       profile: argValue(rest, '--profile'),
       skillsCopy: rest.includes('--skills-copy'),
       freezeBaseline: rest.includes('--freeze-baseline') || !!teamaiView,
     });
-    if (teamaiView) await exportTeamaiView(out,path.resolve(teamaiView),path.resolve(teamaiExpected),{repo:teamaiRepo});
+    if (teamaiView) await exportTeamaiView(out,path.resolve(teamaiView),path.resolve(teamaiExpected),{repo:teamaiRepo,sourceRoot:root});
     process.stdout.write(`✅ foundation export: ${files.length} files under ${out} (release commit ${lock.release.commit.slice(0, 8)}, exportDigest ${lock.release.exportDigest.slice(0, 12)})\n`);
     return 0;
   }

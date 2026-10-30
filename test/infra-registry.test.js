@@ -947,10 +947,10 @@ test('comet-050 adoption registration: supply hashes stay honest across relock s
       'adoption payload must stay hash-free until P1_1 relocks 0.5.0',
     );
   } else {
-    // RELOCKED：哈希不得虚构——必须与已提交的 upstream.lock 源事实逐字一致，且构建指纹真实存在。
-    const lock = JSON.parse(fs.readFileSync(path.join(repoRoot, 'integrations/comet/upstream.lock.json'), 'utf8'));
-    assert.equal(adoption.commit, lock.source.commit, 'adoption commit must equal the committed lock source commit');
-    assert.equal(adoption.sourceArchiveSha256, lock.source.sha256, 'adoption archive digest must equal the committed lock digest');
+    // 0.5.0 记录属于历史锁；不能将原记录重绑定到之后的 0.5.1。
+    const lock = JSON.parse(fs.readFileSync(path.join(repoRoot, 'openspec/changes/delivery-foundation-rearchitecture/replans/2026-10-29-comet-051/before/upstream.lock.json'), 'utf8'));
+    assert.equal(adoption.commit, lock.source.commit, 'historical adoption must match its historical lock');
+    assert.equal(adoption.sourceArchiveSha256, lock.source.sha256, 'historical archive digest must match its historical lock');
     const buildDir = path.join(repoRoot, '.sdd/vendor/comet', adoption.commit, 'builds', adoption.buildFingerprint);
     assert.ok(fs.existsSync(buildDir), 'adoption build fingerprint must resolve to a real vendored build');
     assert.ok(!Number.isNaN(Date.parse(adoption.relockedAt)), 'relockedAt must be a parsable timestamp');
@@ -960,6 +960,26 @@ test('comet-050 adoption registration: supply hashes stay honest across relock s
   assert.equal(adoption.patchDisposition['0004'], 'retired; upstream 0.5.0 pins vite 8.2.4 and contains the remaining backports');
   assert.ok(fs.existsSync(path.join(repoRoot, adoption.amendmentRef)), 'amendment reference must resolve');
   assert.match(registry.project.authority.note, /pilot-contract\.md/, 'pilot facts must cite the verified registration');
+});
+
+test('current Comet 0.5.1 package observation is bound to its lock without claiming runtime qualification', () => {
+  const registry = loadCommittedRegistry();
+  const observed = registry.resources.find((r) => r.id === 'comet-source')?.observation?.currentSupply;
+  assert.ok(observed, 'the current supply needs its own observation, not a rewritten historical adoption');
+  const lock = JSON.parse(fs.readFileSync(path.join(repoRoot, 'integrations/comet/upstream.lock.json'), 'utf8'));
+  assert.equal(observed.status, 'PACKAGE_BYTES_OBSERVED_ONLY');
+  assert.equal(observed.version, lock.package.version);
+  assert.equal(observed.packageIntegrity, lock.package.integrity);
+  assert.equal(observed.sourceCommit, lock.source.commit);
+  assert.equal(observed.runtimeQualification, 'UNVERIFIED');
+  const evidenceFile = path.join(repoRoot, observed.evidenceRef);
+  const evidenceBytes = fs.readFileSync(evidenceFile);
+  assert.equal(crypto.createHash('sha256').update(evidenceBytes).digest('hex'), observed.evidenceSha256);
+  const evidence = JSON.parse(evidenceBytes);
+  assert.equal(evidence.status, 'PACKAGE_BYTES_MATCH_ONLY');
+  assert.equal(evidence.version, observed.version);
+  assert.equal(evidence.integrityMatches, true);
+  assert.equal(evidence.mismatchedOrMissing, 0);
 });
 
 test('knowledge stack registration: llmwiki and isolated openspec are inventory facts, not grants', () => {

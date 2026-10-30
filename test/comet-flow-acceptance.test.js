@@ -486,10 +486,12 @@ test('P31 root relative file names with whitespace use the same target for class
 
 test('P31 root cwd whitespace collisions do not redefine the component legacy command target', () => fixture(({ root, write, definition, execute }) => {
   write('node --version', 'cwd file is not the repository target');
-  const result = execute({ actions: [...definition.actions, { type: 'inspect', path: 'node --version', expected: 'legacy compatibility classification still uses the repository root', expect: { kind: 'equals', value: process.version } }] }, { cwd: root });
+  const nodeVersion = spawnSync('node', ['--version'], { cwd: root, encoding: 'utf8' });
+  assert.equal(nodeVersion.status, 0, nodeVersion.stderr);
+  const result = execute({ actions: [...definition.actions, { type: 'inspect', path: 'node --version', expected: 'legacy compatibility classification still uses the repository root', expect: { kind: 'equals', value: nodeVersion.stdout.trim() } }] }, { cwd: root });
   assert.equal(result.status, 0, result.stdout);
   assert.deepEqual(result.verdict.legacyInspectionActions, { scope: 'component/legacy-compatibility', indexes: [2] });
-  assert.equal(result.verdict.execution.actions.at(-1).observed, process.version);
+  assert.equal(result.verdict.execution.actions.at(-1).observed, nodeVersion.stdout.trim());
   assert.equal(result.verdict.managedClosureEligible, false);
 }));
 
@@ -529,4 +531,17 @@ test('P31 root a cwd file cannot hide a missing repository target', () => fixtur
   assert.deepEqual(action.observed, { path: name, exists: false });
   assert.equal(action.ok, false);
   assert.equal(action.rawEvidence, undefined);
+}));
+
+test('P31 optional skipped observation cannot block a separately passing required execution', () => fixture(({ write, definition, execute }) => {
+  const optional = write('optional-observation.test.mjs', "import test from 'node:test';\ntest('optional observation', {skip:true}, () => {});\n");
+  const result=execute({actions:[...definition.actions,{type:'spawn',command:`${process.execPath} --test --test-reporter=tap ${optional}`,required:false,expected:'optional read-only observation may be skipped',expect:{kind:'exitCode',value:0}}]});
+  assert.equal(result.status,0,result.stdout);assert.equal(result.verdict.verdict,'PASS');
+}));
+
+test('P31 optional passing observation cannot supply a missing required target', () => fixture(({write,execute}) => {
+  const required=write('required-other.test.mjs',"import test from 'node:test';\ntest('OTHER requirement',()=>{});\n");
+  const optional=write('optional-target.test.mjs',"import test from 'node:test';\ntest('V_A01: optional observation',()=>{});\n");
+  const result=execute({actions:[{type:'spawn',command:`${process.execPath} --test --test-reporter=tap ${required}`,expected:'mandatory execution',expect:{kind:'exitCode',value:0}},{type:'spawn',command:`${process.execPath} --test --test-reporter=tap ${optional}`,required:false,expected:'optional read-only observation',expect:{kind:'exitCode',value:0}}]});
+  assert.equal(result.status,2,result.stdout);assert.notEqual(result.verdict.verdict,'PASS');
 }));

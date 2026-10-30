@@ -253,7 +253,7 @@ test('managed coverage cannot promote a forged legacy class or a plain object ve
   const entry = admitOne(launcher);
   const forged = { ...entry, scope: 'component/source-bound', class: 'independent-acceptance', trusted: true, sourcePacket: { collection: { qualified: true } } };
   const verdict = evaluate(managedInputsFixture(), [forged], POLICY, {
-    requireManaged: true, admissionOptionsFor: () => ({ authority: launcher }), verifyReview: () => true,
+    requireManaged: true, currentRunId: 'run-1', currentGate: 'V', admissionOptionsFor: () => ({ authority: launcher }), verifyReview: () => true,
   });
   assert.equal(verdict.verdict, 'blocked');
   assert.equal(verdict.receipt.requiredDenominator.valid, 0);
@@ -261,7 +261,7 @@ test('managed coverage cannot promote a forged legacy class or a plain object ve
 });
 
 
-async function managedProtocolEntry(testCount = 1, { executionId = 'exec-verifier-1', caseId = 'c1', capability = 'unit:node:test', deterministicReport = false } = {}) {
+async function managedProtocolEntry(testCount = 1, { executionId = 'exec-verifier-1', caseId = 'c1', capability = 'unit:node:test', deterministicReport = false, runId = 'run-1', gateId = 'V' } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'p22-gate-source-'));
   const canonical = (v) => v && typeof v === 'object' ? Array.isArray(v) ? v.map(canonical) : Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonical(v[k])])) : v;
   const hash = (v) => crypto.createHash('sha256').update(v).digest('hex');
@@ -281,7 +281,7 @@ async function managedProtocolEntry(testCount = 1, { executionId = 'exec-verifie
     const reportBytes = Buffer.from(deterministicReport ? JSON.stringify(measured) : run.stdout);
     const resultBytes = Buffer.from(JSON.stringify(deterministicReport ? { exitCode: run.status, summary: measured } : { exitCode: run.status, stdout: run.stdout }));
     const methodTraceBytes = Buffer.from(JSON.stringify({ processId: run.pid, ...(deterministicReport ? { nativeTap: run.stdout } : {}), methodApplication: 'UNVERIFIED' }));
-    const actionBinding = { schemaVersion: 1, profile: 'comet-managed-v2', runnerId: 'runner-1', run: 'run-1', action: 'verify-case', gate: 'V', execution: executionId, role: 'verifier', revision: 'r1', attempt: 1, epoch: 1,
+    const actionBinding = { schemaVersion: 1, profile: 'comet-managed-v2', runnerId: 'runner-1', run: runId, action: 'verify-case', gate: gateId, execution: executionId, role: 'verifier', revision: 'r1', attempt: 1, epoch: 1,
       inputDigest: INPUT, policyDigest: POLICY_DIGEST, environmentDigest: sha('env'), workPackage: { id: 'wp-1', taskIds: ['2.2.b'] },
       methods: [{ name: 'whitebox-verify', version: '1.0.0', ref: '.agents/skills/whitebox-verify/SKILL.md', digest: sha('method') }], allowedPaths: ['.whitebox'], allowedTools: ['read_file'], inputs: [{ name: 'input', ref: 'src/app.js', digest: INPUT }], outputs: [{ name: 'report', ref: '.whitebox/report.json' }] };
     // Protocol-only test source port. This does NOT attest OS isolation or
@@ -289,13 +289,13 @@ async function managedProtocolEntry(testCount = 1, { executionId = 'exec-verifie
     const qualification = { id: 'unit-source-interface-not-deployment', sourceId: 'unit-source', revision: 'q1', scope: 'protected-source', status: 'qualified', expiresAt: '2026-11-01T00:00:00.000Z', evidenceRefs: [{ ref: 'unit-only/process-readback', digest: hash(reportBytes) }] };
     const authority = createLaunchAuthority({ secret: crypto.randomBytes(32).toString('hex'), sourceVerifier: async (request) => {
       if (hash(request.reportBytes) !== hash(reportBytes) || hash(request.resultBytes) !== hash(resultBytes) || hash(request.methodTraceBytes) !== hash(methodTraceBytes)) return { ok: false };
-      return { ok: true, qualification, facts: { actionDigest: jsonHash(actionBinding), dispatchDigest: jsonHash(dispatch), envelopeDigest: envelopeDigest(envelope), launchDigest: jsonHash(packet.launchRecord), reportDigest: hash(reportBytes), resultDigest: hash(resultBytes), methodTraceDigest: hash(methodTraceBytes), run: 'run-1', execution: actionBinding.execution, launchId: packet.launchRecord.launchId, environmentDigest: actionBinding.environmentDigest, principal: 'unit-process-principal', observations: [{ caseId: envelope.caseId, check: envelope.check, command: 'node --test --test-reporter=tap actual.test.mjs', result: run.status === 0 ? 'pass' : 'fail', executions: { total: measured.tests, valid: measured.pass + measured.fail } }] } };
+      return { ok: true, qualification, facts: { actionDigest: jsonHash(actionBinding), dispatchDigest: jsonHash(dispatch), envelopeDigest: envelopeDigest(envelope), launchDigest: jsonHash(packet.launchRecord), reportDigest: hash(reportBytes), resultDigest: hash(resultBytes), methodTraceDigest: hash(methodTraceBytes), run: runId, execution: actionBinding.execution, launchId: packet.launchRecord.launchId, environmentDigest: actionBinding.environmentDigest, principal: 'unit-process-principal', observations: [{ caseId: envelope.caseId, check: envelope.check, command: 'node --test --test-reporter=tap actual.test.mjs', result: run.status === 0 ? 'pass' : 'fail', executions: { total: measured.tests, valid: measured.pass + measured.fail } }] } };
     } });
     const dispatch = authority.issueDispatch({ ...actionBinding, actionBinding });
     const envelope = envelopeFixture({ caseId, check: capability, execution: { id: executionId }, executions: { total: measured.tests, valid: measured.pass + measured.fail }, evidence: [{ uri: '.whitebox/report.json', sha256: hash(reportBytes) }] });
     const packet = { dispatch, envelope, launchRecord: { launchId: `unit-real-process-${executionId}`, execution: actionBinding.execution, processId: run.pid }, reportBytes, resultBytes, methodTraceBytes };
     const collected = await authority.collectResult(packet); assert.equal(collected.ok, true);
-    const context = { authority, actionBinding, sourceQualification: qualification, environment: envelope.environment, purpose: 'independent-acceptance', builderExecution: 'exec-builder-1', builderPrincipal: 'builder-principal', authoringExecutions: [], authoringPrincipals: [], consumedCollections: [], issuedExecutions: [], now: NOW };
+    const context = { authority, actionBinding, sourceQualification: qualification, environment: envelope.environment, purpose: 'independent-acceptance', builderExecution: 'exec-builder-1', builderPrincipal: 'builder-principal', authoringExecutions: ['R','A','T'].includes(gateId) ? ['fixture-author'] : [], authoringPrincipals: ['R','A','T'].includes(gateId) ? ['fixture-author-principal'] : [], consumedCollections: [], issuedExecutions: [], now: NOW };
     const admitted = admitEvidence({ ...packet, collection: collected.collection }, { ...context, requireManaged: true }); assert.equal(admitted.ok, true);
     return { context, entry: admitted.entry };
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
@@ -307,7 +307,7 @@ test('authenticated collection bytes do not replace independent current report/m
   const source = entry.sourcePacket.collection;
   const echo = { ok: true, sufficient: true, evidenceDigest: sha('unit-only-review'), envelopeDigest: entry.digest, reportDigest: source.reportDigest, actionDigest: source.actionDigest, execution: 'review-fixture', principal: 'review-fixture-principal' };
   for (const value of [true, { ...echo, sufficient: false }, { ...echo, reportDigest: sha('other-raw-report') }, { ...echo, execution: context.builderExecution }, { ...echo, principal: context.builderPrincipal }, { ...echo, evidenceDigest: '' }]) {
-    const result = evaluate(inputs, [{ ...entry, review: { oracle: 'strong', pass: true } }], POLICY, { requireManaged: true, admissionOptionsFor: () => context, verifyReview: () => value });
+    const result = evaluate(inputs, [{ ...entry, review: { oracle: 'strong', pass: true } }], POLICY, { requireManaged: true, currentRunId: 'run-1', currentGate: 'V', admissionOptionsFor: () => context, verifyReview: () => value });
     assert.equal(result.verdict, 'blocked'); assert.equal(result.receipt.requiredDenominator.valid, 0);
     assert.match(result.receipt.blocked.join('\n'), /INDEPENDENT_REVIEW_REQUIRED/);
     assert.equal(result.managedClosureEligible, false);
@@ -319,12 +319,12 @@ test('Gate consumes an already completed independent verifier record without inv
   const { context, entry } = await managedProtocolEntry();
   const source = entry.sourcePacket.collection;
   const completedProtocolRecord = { ok: true, sufficient: true, evidenceDigest: sha('unit-only-consumed-record'), envelopeDigest: entry.digest, reportDigest: source.reportDigest, actionDigest: source.actionDigest, execution: entry.execution, principal: source.source.facts.principal };
-  const result = evaluate(managedInputsFixture(), [entry], POLICY, { requireManaged: true, admissionOptionsFor: () => context, verifyReview: () => completedProtocolRecord });
+  const result = evaluate(managedInputsFixture(), [entry], POLICY, { requireManaged: true, currentRunId: 'run-1', currentGate: 'V', admissionOptionsFor: () => context, verifyReview: () => completedProtocolRecord });
   assert.equal(result.verdict, 'pass');
   assert.equal(result.scope, 'component/source-bound-coverage');
   assert.equal(result.managedClosureEligible, false, 'a unit binding verdict is not deployed source or whole-Journey acceptance');
   let invoked = 0;
-  const noAsyncReview = evaluate(managedInputsFixture(), [entry], POLICY, { requireManaged: true, admissionOptionsFor: () => context, verifyReview: async () => { invoked++; return completedProtocolRecord; } });
+  const noAsyncReview = evaluate(managedInputsFixture(), [entry], POLICY, { requireManaged: true, currentRunId: 'run-1', currentGate: 'V', admissionOptionsFor: () => context, verifyReview: async () => { invoked++; return completedProtocolRecord; } });
   assert.equal(noAsyncReview.verdict, 'blocked'); assert.equal(invoked, 0, 'Gate must not invoke an asynchronous review/execution port');
 });
 
@@ -333,7 +333,7 @@ test('Gate can revalidate its protected recorded admission but cannot treat a su
   const source = entry.sourcePacket.collection;
   const review = { ok: true, sufficient: true, evidenceDigest: sha('unit-only-completed-review'), envelopeDigest: entry.digest, reportDigest: source.reportDigest, actionDigest: source.actionDigest, execution: entry.execution, principal: source.source.facts.principal };
   const recorded = { ...context, consumedCollections: [entry.collectionId], issuedExecutions: [entry.execution], acceptedEntry: entry };
-  const options = { requireManaged: true, admissionOptionsFor: () => recorded, verifyReview: () => review };
+  const options = { requireManaged: true, currentRunId: 'run-1', currentGate: 'V', admissionOptionsFor: () => recorded, verifyReview: () => review };
   assert.equal(evaluate(managedInputsFixture(), [entry], POLICY, options).verdict, 'pass');
   const { acceptedEntry, ...notRecorded } = recorded;
   assert.equal(evaluate(managedInputsFixture(), [{ ...entry, acceptedEntry: entry }], POLICY, { ...options, admissionOptionsFor: () => notRecorded }).verdict, 'blocked');
@@ -343,7 +343,7 @@ test('protected managed Gate cannot downgrade to a legacy non-command-bound Test
   const { context, entry } = await managedProtocolEntry();
   const source = entry.sourcePacket.collection;
   const completed = { ok: true, sufficient: true, evidenceDigest: sha('protocol-only-review'), envelopeDigest: entry.digest, reportDigest: source.reportDigest, actionDigest: source.actionDigest, execution: entry.execution, principal: source.source.facts.principal };
-  const result = evaluate(inputsFixture([{ level: 'unit', capability: 'unit:node:test' }]), [entry], POLICY, { requireManaged: true, admissionOptionsFor: () => context, verifyReview: () => completed });
+  const result = evaluate(inputsFixture([{ level: 'unit', capability: 'unit:node:test' }]), [entry], POLICY, { requireManaged: true, currentRunId: 'run-1', currentGate: 'V', admissionOptionsFor: () => context, verifyReview: () => completed });
   assert.equal(result.verdict, 'blocked');
   assert.match(result.receipt.blocked.join('\n'), /STRICT_TEST_CONTRACT_REQUIRED/);
 });
@@ -360,7 +360,7 @@ test('managed coverage requires every mandatory case and its actual frozen comma
   const { context, entry } = await managedProtocolEntry();
   const source = entry.sourcePacket.collection;
   const completed = { ok: true, sufficient: true, evidenceDigest: sha('protocol-only-consumed-review'), envelopeDigest: entry.digest, reportDigest: source.reportDigest, actionDigest: source.actionDigest, execution: entry.execution, principal: source.source.facts.principal };
-  const options = { requireManaged: true, admissionOptionsFor: () => context, verifyReview: () => completed };
+  const options = { requireManaged: true, currentRunId: 'run-1', currentGate: 'V', admissionOptionsFor: () => context, verifyReview: () => completed };
   const wrongCommand = managedInputsFixture(); wrongCommand.testContract.requiredChecks[0].command = 'node another.test.mjs';
   assert.equal(evaluate(wrongCommand, [entry], POLICY, options).verdict, 'blocked');
   const missingCase = managedInputsFixture(); missingCase.testContract.cases.push({ id: 'c2', ac: 'A18', oracle: 'second actual outcome', checkIds: ['check-1'] }); missingCase.testContract.requiredChecks[0].caseIds.push('c2'); missingCase.testContract.executionDenominator.totalCases = 2;
@@ -377,14 +377,14 @@ test('a partial owning-Run admission record remains recovery-required instead of
   const { context, entry } = await managedProtocolEntry();
   const source = entry.sourcePacket.collection;
   const completed = { ok: true, sufficient: true, evidenceDigest: sha('unit-only-completed-review'), envelopeDigest: entry.digest, reportDigest: source.reportDigest, actionDigest: source.actionDigest, execution: entry.execution, principal: source.source.facts.principal };
-  const result = evaluate(managedInputsFixture(), [entry], POLICY, { requireManaged: true, admissionOptionsFor: () => ({ ...context, acceptedEntry: entry, consumedCollections: [], issuedExecutions: [] }), verifyReview: () => completed });
+  const result = evaluate(managedInputsFixture(), [entry], POLICY, { requireManaged: true, currentRunId: 'run-1', currentGate: 'V', admissionOptionsFor: () => ({ ...context, acceptedEntry: entry, consumedCollections: [], issuedExecutions: [] }), verifyReview: () => completed });
   assert.equal(result.verdict, 'blocked'); assert.match(result.receipt.blocked.join('\n'), /RECOVERY_REQUIRED/);
 });
 
 test('managed GateReceipt binds the authenticated raw collection and completed review, not just envelope metadata', async () => {
   const { context, entry } = await managedProtocolEntry(); const source = entry.sourcePacket.collection;
   const completed = { ok: true, sufficient: true, evidenceDigest: sha('unit-only-original-review'), envelopeDigest: entry.digest, reportDigest: source.reportDigest, actionDigest: source.actionDigest, execution: entry.execution, principal: source.source.facts.principal };
-  const result = evaluate(managedInputsFixture(), [entry], POLICY, { requireManaged: true, admissionOptionsFor: () => context, verifyReview: () => completed });
+  const result = evaluate(managedInputsFixture(), [entry], POLICY, { requireManaged: true, currentRunId: 'run-1', currentGate: 'V', admissionOptionsFor: () => context, verifyReview: () => completed });
   assert.equal(result.verdict, 'pass');
   for (const digest of [entry.digest, entry.collectionId, completed.evidenceDigest]) assert.equal(result.receipt.evidence.includes(digest), true);
   assert.equal(result.managedClosureEligible, false);
@@ -392,7 +392,7 @@ test('managed GateReceipt binds the authenticated raw collection and completed r
 
 function completedSourceOptions({ context, entry }) {
   const source = entry.sourcePacket.collection;
-  return { requireManaged: true, admissionOptionsFor: () => context, verifyReview: () => ({
+  return { requireManaged: true, currentRunId: 'run-1', currentGate: 'V', admissionOptionsFor: () => context, verifyReview: () => ({
     ok: true, sufficient: true, evidenceDigest: sha('denominator-protocol-only-review'),
     envelopeDigest: entry.digest, reportDigest: source.reportDigest, actionDigest: source.actionDigest,
     execution: entry.execution, principal: source.source.facts.principal,
@@ -417,7 +417,7 @@ test('managed denominator refuses repeated source executions collections and env
   assert.match(repeated.receipt.blocked.join('\n'), /DUPLICATE_EXECUTION_EVIDENCE/);
   // Distinct signed collections/raw outputs cannot multiply one execution.
   const sameExecution = await managedProtocolEntry(4);
-  const optionsFor = (packets) => ({ requireManaged: true,
+  const optionsFor = (packets) => ({ requireManaged: true, currentRunId: 'run-1', currentGate: 'V',
     admissionOptionsFor: (entry) => packets.find((packet) => packet.entry.collectionId === entry.collectionId).context,
     verifyReview: ({ entry }) => completedSourceOptions(packets.find((packet) => packet.entry.collectionId === entry.collectionId)).verifyReview(),
   });
@@ -442,7 +442,7 @@ test('managed denominator sums distinct real executions once without multiplying
   const packets = [];
   for (let i = 0; i < 5; i++) packets.push(await managedProtocolEntry(1, { executionId: `measured-execution-${i}` }));
   const inputs = managedInputsFixture(); inputs.testContract.executionDenominator.totalCases = 5;
-  const options = { requireManaged: true,
+  const options = { requireManaged: true, currentRunId: 'run-1', currentGate: 'V',
     admissionOptionsFor: (entry) => packets.find((packet) => packet.entry.collectionId === entry.collectionId).context,
     verifyReview: ({ entry }) => completedSourceOptions(packets.find((packet) => packet.entry.collectionId === entry.collectionId)).verifyReview(),
   };
@@ -468,7 +468,7 @@ test('independent real processes with identical deterministic report and result 
   assert.notEqual(first.entry.sourcePacket.collection.launchId, second.entry.sourcePacket.collection.launchId);
   t.diagnostic(JSON.stringify({ processIds: [first, second].map(({ entry }) => entry.sourcePacket.launchRecord.processId), executions: [first.entry.execution, second.entry.execution], equalReportDigest: first.entry.sourcePacket.collection.reportDigest, equalResultDigest: first.entry.sourcePacket.collection.resultDigest, scope: 'protocol-only-not-deployment' }));
   const packets = [first, second];
-  const options = { requireManaged: true,
+  const options = { requireManaged: true, currentRunId: 'run-1', currentGate: 'V',
     admissionOptionsFor: (entry) => packets.find((packet) => packet.entry.collectionId === entry.collectionId).context,
     verifyReview: ({ entry }) => completedSourceOptions(packets.find((packet) => packet.entry.collectionId === entry.collectionId)).verifyReview(),
   };
@@ -483,7 +483,7 @@ test('managed denominator admits distinct authenticated case and check mappings 
   assert.deepEqual(first.entry.sourcePacket.reportBytes, second.entry.sourcePacket.reportBytes);
   assert.deepEqual(first.entry.sourcePacket.resultBytes, second.entry.sourcePacket.resultBytes);
   const packets = [first, second];
-  const options = { requireManaged: true,
+  const options = { requireManaged: true, currentRunId: 'run-1', currentGate: 'V',
     admissionOptionsFor: (entry) => packets.find((packet) => packet.entry.collectionId === entry.collectionId).context,
     verifyReview: ({ entry }) => completedSourceOptions(packets.find((packet) => packet.entry.collectionId === entry.collectionId)).verifyReview(),
   };
@@ -493,4 +493,53 @@ test('managed denominator admits distinct authenticated case and check mappings 
   const result = evaluate(inputs, packets.map(({ entry }) => entry), POLICY, options);
   assert.equal(result.verdict, 'pass', result.receipt.blocked.join('\n'));
   assert.deepEqual(result.receipt.requiredDenominator, { required: 2, valid: 2 });
+});
+
+
+test('managed Gate cannot combine a foreign Run or stage with same candidate to fill required execution denominator', async () => {
+  const first = await managedProtocolEntry(1, { executionId: 'current-v1', runId: 'run-1', gateId: 'V' });
+  const second = await managedProtocolEntry(1, { executionId: 'current-v2', runId: 'run-1', gateId: 'V' });
+  const foreign = await managedProtocolEntry(1, { executionId: 'foreign-v', runId: 'run-other', gateId: 'V' });
+  const wrongGate = await managedProtocolEntry(1, { executionId: 'current-a', runId: 'run-1', gateId: 'A' });
+  const all=[first,second,foreign,wrongGate];
+  const options={requireManaged:true, currentRunId:'run-1', currentGate:'V',
+    admissionOptionsFor:entry=>all.find(p=>p.entry.collectionId===entry.collectionId).context,
+    verifyReview:({entry})=>completedSourceOptions(all.find(p=>p.entry.collectionId===entry.collectionId)).verifyReview()};
+  const inputs=managedInputsFixture();inputs.testContract.executionDenominator.totalCases=2;
+  assert.equal(evaluate(inputs,[first.entry,second.entry],POLICY,options).verdict,'pass');
+  for (const adversary of [foreign,wrongGate]) {
+    const result=evaluate(inputs,[first.entry,adversary.entry],POLICY,options);
+    assert.equal(result.verdict,'blocked','foreign Run or gate must not fill this Gate denominator');
+  }
+});
+
+test('managed Gate requires protected current Run and gate identities', async () => {
+  const packet=await managedProtocolEntry();
+  const inputs=managedInputsFixture();
+  const good={...completedSourceOptions(packet),currentRunId:'run-1',currentGate:'V'};
+  assert.equal(evaluate(inputs,[packet.entry],POLICY,good).verdict,'pass');
+  for (const change of [{currentRunId:undefined},{currentGate:undefined},{currentRunId:''},{currentGate:''}]) {
+    const result=evaluate(inputs,[packet.entry],POLICY,{...good,...change});
+    assert.equal(result.verdict,'blocked','missing current protected scope must not pass');
+  }
+});
+
+test('ordinary synchronous ports returning a Promise are blocked without unhandled rejection', async () => {
+  const packet=await managedProtocolEntry();
+  const good={...completedSourceOptions(packet),currentRunId:'run-1',currentGate:'V'};
+  for (const field of ['admissionOptionsFor','verifyReview']) {
+    for (const promise of [Promise.resolve({ok:true}),Promise.reject(new Error('unexpected async port'))]) {
+      const result=evaluate(managedInputsFixture(),[packet.entry],POLICY,{...good,[field]:()=>promise});
+      assert.equal(result.verdict,'blocked',`${field} returned asynchronous result`);
+    }
+  }
+  const { runInNewContext } = await import('node:vm');
+  const foreignPromise = runInNewContext("Promise.reject(new Error('cross-realm async port'))");
+  assert.equal(evaluate(managedInputsFixture(),[packet.entry],POLICY,{...good,verifyReview:()=>foreignPromise}).verdict,'blocked');
+  let invoked = 0;
+  const thenable = { then() { invoked++; } };
+  const blocked = evaluate(managedInputsFixture(),[packet.entry],POLICY,{...good,admissionOptionsFor:()=>thenable});
+  assert.equal(blocked.verdict,'blocked');
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(invoked,0,'refusing a thenable must not invoke it');
 });

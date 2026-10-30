@@ -1,23 +1,22 @@
 {
   "schema": "sdd.comet.application.compile-manifest.v1",
-  "revision": "2026-10-26-comet-050-adoption-v1",
+  "revision": "2026-10-29-comet-051-adoption-v1",
   "build": {
-    "version": "0.5.0",
-    "commit": "aeb1a6598034e28ce46b8422d4dbd8785e607bd7",
-    "fingerprint": "de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a",
-    "patches": [
-      "integrations/comet/patches/0005-comet-050-kt-closeout.patch"
-    ]
+    "package": "@rpamis/comet",
+    "version": "0.5.1",
+    "packageMetadataSha256": "22696bc66e7b829a5c9500f89f6d13e557e9683bc8fc20210286b162679e9322",
+    "cliSha256": "d3c55ddd24c70deef4b96483f9308f159f34e4a9e5d492f8d2ce609df8a38e27",
+    "supplierQualification": "not-verified"
   },
   "node": "v24.15.0",
-  "compiler": "prepareWorkflowApplicationPlan + compileWorkflowApplication (official, from the pinned built dist)",
-  "command": "node integrations/comet/application/internal/build-application.mjs [--rebuild]",
-  "packageRoot": "integrations/comet/application/package",
-  "applicationFile": "integrations/comet/application/package/application.json",
-  "compositionHash": "df916df6784d1ac809693babc9f59908eab4575a10c02e3bdddf0319ba1d8949",
-  "contentHash": "ba88b84dc5c1bff2984509667cb20252abcf0be6ade3dc28fa0d5efceccbbb66",
+  "compiler": "prepareWorkflowApplicationPlan + compileWorkflowApplication (official global ESM exports)",
+  "command": "node integrations/comet/application/internal/build-application.mjs --out <absolute-external-new-directory>",
+  "packageRoot": "package",
+  "applicationFile": "package/application.json",
+  "compositionHash": "f482875de925ee16d72cae697b7efddfa9d7d0b57f3bf1250f2f3f67f9f7d4fe",
+  "contentHash": "d3ea82317d8494dfa52cc3364b52b87701cc00e19cf6f3df775f8f0bc504dad8",
   "workflowHashes": {
-    "comet-classic-full@1": "c6ace184530e3b3eeaf1502293938bdc3297f5903a100dce125e018837bbde9d"
+    "comet-classic-full@1": "97ace79f8e79aa165aafe4ceee9d8a0a995f69599cbe79b853f1641f47a333c9"
   },
   "approvals": {
     "anchor": "classic.composition.confirm",
@@ -31,8 +30,8 @@
     "sourceModule": "integrations/comet/application/bindings.mjs",
     "rebaseFrom": "from '../../../lib/delivery/gate.js'",
     "rebaseTo": "from './sdd/lib-delivery-gate.mjs'",
-    "sourceSha256": "2c42e43e42f94493e9e9675fda2a8c65e50b09bbbc317c6bfd6bf98ada0ae6e0",
-    "embeddedSha256": "a6a2db703f74530fd6fb705f5a19a36bcd3998368dba203b3baf77af03418f3c"
+    "sourceSha256": "5230a21d24d2628992a8efba4f2ac5be6c2d0915bb2768766e2bcd785d5ba596",
+    "embeddedSha256": "3cb2b4afe8cf86aa55c40ced426e711ff34ac8903bc535df75e5bcc20491db2d"
   },
   "vendoredModules": [
     {
@@ -98,26 +97,44 @@
     {
       "moduleRef": "sdd/contracts-delivery-test_contract_schema.mjs",
       "sourcePath": "contracts/delivery/test-contract.schema.js",
-      "sourceSha256": "327e388dcb62ae110c304a56a3c30cde14fa6aefdc49456030c81dcd8cb0f872",
-      "moduleSha256": "11620f29ccc147ad29d44dc95a2004151680f23e243db55ba3b9fb983e7d9126"
+      "sourceSha256": "abd8cc1bfd3ede10e07d949013b7f0c2d4489d803e127db24357a96fa3f87af8",
+      "moduleSha256": "796b1b77ebfd386c6763aaaae671a1d3a70b2c22b98a60f3e85d54dbfa2985f2"
+    },
+    {
+      "moduleRef": "sdd/lib-adapters-plan_source.mjs",
+      "sourcePath": "lib/adapters/plan-source.js",
+      "sourceSha256": "367ec50fe916e06977a94a8b526136fc2023be0d8095f1ca029b3ca32e66a9a9",
+      "moduleSha256": "e9d65d369c8459ddf5c89a6cce8d49ed25de1020c69179ae1b04da8475be86d7"
+    },
+    {
+      "moduleRef": "sdd/lib-delivery-baseline.mjs",
+      "sourcePath": "lib/delivery/baseline.js",
+      "sourceSha256": "eaa82a94566295ef071a2dd9fc695fb7b4831ad12ef58bfd27eee2b4f8898176",
+      "moduleSha256": "9bb400ac3077bd14ed560313b02c75b44b3cb054526d4b2fa06f3cce362ce6e7"
     },
     {
       "moduleRef": "sdd/lib-delivery-evidence.mjs",
       "sourcePath": "lib/delivery/evidence.js",
-      "sourceSha256": "94afdcb413a9e0073913730d21219d223891560eae27c3bcbd69f15c5b90c96b",
-      "moduleSha256": "af557c6a2caa1f39535b8bbfea58f5ca6349cc5b0a4f7f1ae51917370c163857"
+      "sourceSha256": "151d4f3bfad1b4b979a67a42b125555e328fb13ecbc2776b4fdae61efb6d5a0e",
+      "moduleSha256": "5c4f6b6095f6fdcc4ea8fa26b6523e05d9a4369469700a7a9893693bc5b4d02d"
     },
     {
       "moduleRef": "sdd/lib-delivery-gate.mjs",
       "sourcePath": "lib/delivery/gate.js",
-      "sourceSha256": "2b61f794ad3f828d2086fb34c9425c418ab6eb757b1ea62465306e9b5575fc4d",
-      "moduleSha256": "40b0e3bdbcdb5a102fc7f84d3f3d7e1bf445e9c7ab977a3e9fa4b67a42533c9e"
+      "sourceSha256": "6de36e41168e6c0c2771a72b6362bff3d7e71dea76adb55163d26225e5909a9e",
+      "moduleSha256": "d6aee80469bac556ae4b70b74be7195b130c7fd25ed508385386077e5ecec9d2"
     },
     {
       "moduleRef": "sdd/lib-delivery-test_contract.mjs",
       "sourcePath": "lib/delivery/test-contract.js",
-      "sourceSha256": "31ae51740ec3de351fad61844995ae4122f7d82d57a715b9f554fdc40fc8eb8c",
-      "moduleSha256": "821869dae8825f4ff4d8468dabfb45fa27295677a7f526f3fdcd7fae3ffffaf5"
+      "sourceSha256": "5782880ea1bb1f63f11b2c3cdf43a531febdf4a5378228cc2101d1c384ec116a",
+      "moduleSha256": "a5d02913cd76ffd82438bb26319bd2ebe8e920ef21db10a8c650cd8b5ccccc93"
+    },
+    {
+      "moduleRef": "sdd/vendor-commonmark.mjs",
+      "sourcePath": "node_modules/commonmark/dist/commonmark.min.js",
+      "sourceSha256": "2de0f8ecbca0a6470da57c8b2ad043777ae999c5132f9abf12e8c332d4e46164",
+      "moduleSha256": "98209a0b8435596f3c5b67f7e100b7eab66f7332219ba77e69ebbe3483800923"
     }
   ],
   "skills": [
@@ -127,7 +144,7 @@
       "base": "comet-open",
       "stepId": "full.open",
       "root": "internal/domain-skills/comet-open-full-open",
-      "contentHash": "12530b212439d08363ad05b43d6cf6f634baca65ace67d211e7d3da3b20734dd",
+      "contentHash": "1f30550a9643ad25a842c456ee4795386a6d4c8f9066dd29b17e7b0611d3ec42",
       "presetOutputSchema": false
     },
     {
@@ -223,7 +240,7 @@
       "kind": "extension",
       "stepId": "classic.extension.test-design-review",
       "root": "skills/test-authoring (P1_6 packaged asset)",
-      "contentHash": "29871479d1c224d6f52bcc752f926fd491ad7b57a5b320a575cf43a5cb4a4ca1",
+      "contentHash": "32af42f771e230952ec678049c8770290d75b986325a52d03ea81c40abe04eba",
       "presetOutputSchema": false
     },
     {
@@ -239,7 +256,7 @@
       "kind": "extension",
       "stepId": "classic.extension.verify-whitebox",
       "root": "skills/whitebox-verify (P1_6 packaged asset)",
-      "contentHash": "59f15d6e12c00852ed9221968f747d7afa9010bea846e4121c4b0bec30dd816a",
+      "contentHash": "2f13eafc7c1475e699cd50eb06740a8884f4bf417e5ba591ffdb3f4490f4037f",
       "presetOutputSchema": false
     },
     {
@@ -269,9 +286,12 @@
     "sdd/contracts-delivery-release_receipt_schema.mjs",
     "sdd/contracts-delivery-schema_kernel.mjs",
     "sdd/contracts-delivery-test_contract_schema.mjs",
+    "sdd/lib-adapters-plan_source.mjs",
+    "sdd/lib-delivery-baseline.mjs",
     "sdd/lib-delivery-evidence.mjs",
     "sdd/lib-delivery-gate.mjs",
     "sdd/lib-delivery-test_contract.mjs",
+    "sdd/vendor-commonmark.mjs",
     "SKILL.md",
     "skills/claude-parallel-tdd-planner/references/architecture-intake.md",
     "skills/claude-parallel-tdd-planner/references/automation.md",
@@ -342,6 +362,7 @@
     "skills/test-authoring/references/case-design.md",
     "skills/test-authoring/references/contracts.md",
     "skills/test-authoring/references/dimension-mapping.md",
+    "skills/test-authoring/references/domain-cases.md",
     "skills/test-authoring/references/property-testing.md",
     "skills/test-authoring/references/test-pack-contract.md",
     "skills/test-authoring/references/test-quality.md",
@@ -352,6 +373,8 @@
     "skills/test-authoring/templates/acceptance-handoff.md",
     "skills/test-authoring/templates/case.json",
     "skills/test-authoring/templates/coverage-matrix.csv",
+    "skills/test-authoring/templates/domain-case-config.json",
+    "skills/test-authoring/templates/domain-cases.md",
     "skills/test-authoring/tests/run_all.sh",
     "skills/test-authoring/tests/test_validate_test_pack.py",
     "skills/whitebox-verify/.gitignore",
@@ -493,6 +516,7 @@
     "skills/whitebox-verify/tests/negative-corpus/old_pkg/parse_js_module_graph.cjs",
     "skills/whitebox-verify/tests/negative-corpus/old_pkg/validate_journey_evidence.py",
     "skills/whitebox-verify/tests/run_all.sh",
+    "skills/whitebox-verify/tests/test_domain_report.py",
     "workflow.json"
   ]
 }

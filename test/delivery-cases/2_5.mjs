@@ -227,13 +227,15 @@ test('2.5.b E04: a requirements/design change conservatively invalidates; restor
   // downstream evidence bound to the review is invalidated with it (P2_1 reuse)
   const result = invalidateOnScopeChange({
     changed: { kind: ARCHITECTURE_REVIEW_BASELINE_KIND, digest: pkg2.artifactSha256, revision: 2 },
+    currentGeneration: 2,
     receipts: [
-      { id: 'review-bound-receipt', boundDigests: { [ARCHITECTURE_REVIEW_BASELINE_KIND]: first.pkg.artifactSha256 }, boundRevisions: { [ARCHITECTURE_REVIEW_BASELINE_KIND]: 1 } },
-      { id: 'product-bound-receipt', boundDigests: { product: sha('product-1') } },
+      { id: 'review-bound-receipt', generation: 1, boundDigests: { [ARCHITECTURE_REVIEW_BASELINE_KIND]: first.pkg.artifactSha256 }, boundRevisions: { [ARCHITECTURE_REVIEW_BASELINE_KIND]: 1 } },
+      { id: 'product-bound-receipt', generation: 1, boundDigests: { product: sha('product-1') } },
+      { id: 'new-product-receipt', generation: 2, boundDigests: { product: sha('product-1') } },
     ],
   });
-  assert.deepEqual(result.invalidated.map((entry) => entry.id), ['review-bound-receipt']);
-  assert.deepEqual(result.valid.map((entry) => entry.id), ['product-bound-receipt']);
+  assert.deepEqual(result.invalidated.map((entry) => entry.id), ['review-bound-receipt', 'product-bound-receipt']);
+  assert.deepEqual(result.valid.map((entry) => entry.id), ['new-product-receipt']);
 });
 
 // --- rework P1-02/P1-03: consumption through the REAL intake (not the pure

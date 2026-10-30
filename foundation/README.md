@@ -17,6 +17,8 @@ node tools/foundation-export.mjs verify --root . --lock <private-package>/founda
 
 `check-run` 对原生 `.comet/run-state.json` 只读。原 `--acquire/--migrate` 只保留有限 legacy 资产元数据兼容，不能获取或改变原生 Comet Run，也不是角色认证或第二控制器。实际派发、phase、重试、恢复、归档和完成仍由原 Comet 内核负责。
 
+封存资产在缺少 Git 历史时仍可读回，提交归属标为未验证；Git 仓库可读取原提交时，须核对完整资产集，提交缺失或不匹配时不能据此获取或迁移 Run 写权限。TeamAI 分发需要原 Git 工作树，并在生成分发视图前核对被声明的提交；这只证明本地提交与资产一致，不证明远端仓库或实际运行资格。
+
 缓存提供可核验的项目源字节，不携带外部Node/Python/Bash、npm模块或LLMWiki venv。Node/Comet精确版本来自原upstream lock；npm精确依赖来自原package-lock，运行时缺失不能作为已安装或已资格化。adapter明确要求Python3及POSIX no-follow/dir_fd支持，缺失即失败；本次实测宿主版本与必要调用依赖盘点见P1_2 `rework/CURRENT.md`。旧6脚本缓存逐字节保留，它缺少本次明确闭包，不能通过新规则冒充完整可重放材料；原锁未刷新，无法证明时保持STATE_SYNC_REQUIRED。
 
 export/verify共用分发路径检查，目录根、每级祖先和最终文件都拒绝用户符号链接及不安全类型。export先收齐全部输出并预检已有release树，再创建缓存/写入视图；写入普通文件采用no-follow读取与原子替换，多重硬链接拒绝。verify在读取锁与视图前检查包根和release树；完整正文比较也检查方法目录根，链接到另一checkout不能充当可分发正文。Darwin的/var、/tmp、/etc仅在准确解析到对应/private系统目录时作为OS命名空间处理，用户路径别名始终拒绝。

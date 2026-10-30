@@ -1,0 +1,53 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+
+const entry=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../tools/comet/phase-entry.mjs');
+function fixture(t,scenario,mode='--continue',phase='/comet-open',language='en'){
+  const root=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'phase-recovery-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+  fs.mkdirSync(path.join(root,'.comet'));
+  if(mode==='--continue')fs.writeFileSync(path.join(root,'.comet/current-change.json'),JSON.stringify({workflow:'application',applicationId:'sdd-managed-delivery',change:scenario==='other-selected'?'other':'fixture'}));
+  if(scenario==='symlink-comet'){fs.renameSync(path.join(root,'.comet'),path.join(root,'actual-comet'));fs.symlinkSync(path.join(root,'actual-comet'),path.join(root,'.comet'));}
+  if(scenario==='occupied')fs.writeFileSync(path.join(root,'.comet/current-change.json'),JSON.stringify({workflow:'application',applicationId:'sdd-managed-delivery',change:'existing-run'}));
+  const bin=path.join(root,'bin');fs.mkdirSync(bin);const log=path.join(root,'calls');const fake=path.join(root,'fake.cjs');
+  fs.writeFileSync(path.join(root,'package.json'),JSON.stringify({name:'@rpamis/comet',version:'0.5.1',type:'module'}));
+  const found=spawnSync('which',['comet'],{encoding:'utf8'});
+  assert.equal(found.status,0,'Comet 0.5.1 must be on PATH for this recovery fixture');
+  const comet=fs.realpathSync(found.stdout.trim());
+  const version=spawnSync(comet,['--version'],{encoding:'utf8'});
+  assert.equal(version.status,0);assert.equal(version.stdout.trim(),'0.5.1');
+  const official=path.dirname(path.dirname(comet));
+  fs.mkdirSync(path.join(root,'dist/platform/fs'),{recursive:true});fs.mkdirSync(path.join(root,'dist/domains'),{recursive:true});
+  fs.symlinkSync(path.join(official,'dist/platform/fs/plugin-store.js'),path.join(root,'dist/platform/fs/plugin-store.js'));
+  fs.symlinkSync(path.join(official,'dist/domains/workflow-contract'),path.join(root,'dist/domains/workflow-contract'));
+  fs.mkdirSync(path.join(root,'dist/domains/workflow-application'));
+  fs.writeFileSync(path.join(root,'dist/domains/workflow-application/index.js'),`import fs from 'node:fs'; export async function resolveWorkflowApplicationFile(){return '/fixture/application.json'} export async function listWorkflowApplicationRunRecords(){if(process.env.SCENARIO==='unreadable-run')return [{error:{code:'UNREADABLE'}}];if(['unselected-run','old-runtime'].includes(process.env.SCENARIO))return [{runId:'previous',record:{application:{runtimeVersion:process.env.SCENARIO==='old-runtime'?'0.5.0':'0.5.1'},run:{status:'running',lineage:[]}}}];return []} export async function invokeWorkflowApplicationSkill({request}){fs.appendFileSync(process.env.CALL_LOG,'start\\n');if(process.env.SCENARIO==='permission-error'){const e=Error('synthetic protected path');e.code='EPERM';throw e}if(['start-lost','start-error'].includes(process.env.SCENARIO))throw Error('synthetic unknown result');return {application:{id:'sdd-managed-delivery',version:'5',packageRoot:'/fixture'},run:{runId:request.runId}}} export async function readWorkflowApplicationRunRecord(projectRoot,id,runId){return {runId,application:{id,version:'5',runtimeVersion:'0.5.1',projectRoot,packageRoot:'/fixture',contentHash:process.env.SCENARIO==='bad-identity'?'bad':'a'.repeat(64)}}}`);
+  fs.writeFileSync(fake,`const fs=require('fs'); const args=process.argv.slice(2); if(args[0]==='--version'){console.log('0.5.1');process.exit(0)} const file=args[args.indexOf('--request')+1], req=JSON.parse(fs.readFileSync(file)); fs.appendFileSync(process.env.CALL_LOG,req.operation+'\\n'); const run={runId:'fixture',revision:7,status:'running',workflow:{id:'comet-classic-full'},state:{phase:'open'},actions:[{id:'a',status:process.env.SCENARIO==='running'?'running':'pending',claim:{token:'SYNTHETIC_SECRET'},input:{private:'SYNTHETIC_SECRET'}}],waits:[],evidenceWaits:[]}; if(req.operation==='start'){if(process.env.SCENARIO==='start-lost'){process.stdout.write('truncated');process.exit(0)} if(['start-error','sdk-only'].includes(process.env.SCENARIO)){console.log(JSON.stringify({status:'failed',error:{code:'RUNTIME_ERROR',message:'unexpected subprocess start'}}));process.exit(1)} console.log(JSON.stringify({status:'succeeded',application:{id:'sdd-managed-delivery'},data:run}));process.exit(0)} if(req.operation==='inspect'){console.log(JSON.stringify({status:'failed',error:{code:'RUNTIME_ERROR',message:'Classic SDK Run fixture requires recovery: the state projection or portable checkpoint is missing or stale.'}}));process.exit(1)} if(req.operation==='query'){if(process.env.SCENARIO==='start-readback'){process.stdout.write('truncated');process.exit(0)} console.log(JSON.stringify({status:'succeeded',...(process.env.SCENARIO==='foreign'?{application:{id:'wrong-app'}}:{}),data:run}));process.exit(0)} if(process.env.SCENARIO==='unknown'){process.stdout.write('truncated');process.exit(0)} if(process.env.SCENARIO==='no-progress'){console.log(JSON.stringify({status:'succeeded',application:{id:'sdd-managed-delivery'},data:run}));process.exit(0)} console.log(JSON.stringify({status:'failed',error:{code:'REVISION_CONFLICT',message:'revision changed'}}));process.exit(1);`);
+  fs.writeFileSync(path.join(bin,'comet'),`#!/bin/bash\nexec '${process.execPath}' '${fake}' "$@"\n`,{mode:0o755});
+  const result=spawnSync(process.execPath,[entry,phase,'--run-id','fixture','--project-root',root,mode,...(mode==='--start' && language!==null?['--language',language]:[])],{env:{...process.env,PATH:`${bin}:/usr/bin:/bin`,CALL_LOG:log,SCENARIO:scenario},encoding:'utf8',timeout:10000});
+  return {result,error:result.stderr?JSON.parse(result.stderr):null,value:result.stdout?JSON.parse(result.stdout):null,calls:fs.existsSync(log)?fs.readFileSync(log,'utf8').trim().split('\n'):[]};
+}
+test('recovery does not reschedule an active action or expose its claim',t=>{const f=fixture(t,'running');assert.equal(f.error.code,'RECOVERY_BLOCKED');assert.deepEqual(f.calls,['inspect','query']);assert.doesNotMatch(f.result.stderr,/SYNTHETIC_SECRET/);});
+test('recovery does not retry an unknown next outcome',t=>{const f=fixture(t,'unknown');assert.equal(f.error.code,'NEXT_OUTCOME_UNKNOWN');assert.deepEqual(f.calls,['inspect','query','next']);});
+test('recovery does not repeat a conflict without a newer revision',t=>{const f=fixture(t,'conflict');assert.equal(f.error.code,'RECOVERY_BLOCKED');assert.deepEqual(f.calls,['inspect','query','next','query']);});
+test('recovery rejects an explicitly foreign application identity',t=>{const f=fixture(t,'foreign');assert.equal(f.error.code,'RUN_IDENTITY_MISMATCH');assert.deepEqual(f.calls,['inspect','query']);});
+test('recovery does not repeat a successful no-op without a newer revision',t=>{const f=fixture(t,'no-progress');assert.equal(f.error.code,'RECOVERY_BLOCKED');assert.deepEqual(f.calls,['inspect','query','next','inspect','query']);});
+test('unknown Run start never retries creation',t=>{const f=fixture(t,'start-lost','--start');assert.equal(f.error.code,'START_OUTCOME_UNKNOWN');assert.deepEqual(f.calls,['start']);});
+test('failed start readback never retries creation',t=>{const f=fixture(t,'start-readback','--start');assert.equal(f.error.code,'START_OUTCOME_UNKNOWN');assert.deepEqual(f.calls,['start','query']);});
+test('a start runtime error does not assume the Run was never created',t=>{const f=fixture(t,'start-error','--start');assert.equal(f.error.code,'START_OUTCOME_UNKNOWN');assert.deepEqual(f.calls,['start']);});
+test('a permission-denied start keeps the original Run outcome unknown and explains the data directory',t=>{const f=fixture(t,'permission-error','--start');assert.equal(f.error.code,'START_OUTCOME_UNKNOWN');assert.equal(f.error.recovery.errorCategory,'PERMISSION_DENIED');assert.match(f.error.message,/data directory/i);assert.deepEqual(f.calls,['start']);});
+test('a non-Open entry cannot create a Run',t=>{const f=fixture(t,'start-lost','--start','/comet-design');assert.equal(f.error.code,'INPUT_INVALID');assert.deepEqual(f.calls,[]);});
+test('an unsupported artifact language cannot create a Run',t=>{const f=fixture(t,'start-lost','--start','/comet-open','unsupported');assert.equal(f.error.code,'REQUEST_LANGUAGE_INVALID');assert.deepEqual(f.calls,[]);});
+test('an unavailable official project configuration cannot create a Run',t=>{const f=fixture(t,'start-lost','--start','/comet-open',null);assert.equal(f.error.code,'COMET_CONFIG_UNAVAILABLE');assert.deepEqual(f.calls,[]);});
+test('a selected Run blocks creating another Run before dispatch',t=>{const f=fixture(t,'occupied','--start');assert.equal(f.error?.code,'CURRENT_SELECTION_EXISTS');assert.deepEqual(f.calls,[]);});
+test('start uses the lock-owning SDK process and returns the frozen Run identity',t=>{const f=fixture(t,'sdk-only','--start');assert.equal(f.result.status,0,f.result.stderr);assert.equal(f.value.runId,'fixture');assert.equal(f.value.application.contentHash,'a'.repeat(64));assert.equal(f.value.application.runtimeVersion,'0.5.1');assert.deepEqual(f.calls,['start','query']);});
+test('an invalid stored Run identity does not lead to a second start',t=>{const f=fixture(t,'bad-identity','--start');assert.equal(f.error.code,'START_OUTCOME_UNKNOWN');assert.deepEqual(f.calls,['start']);});
+test('an unfinished unselected 0.5.1 Run blocks a new start',t=>{const f=fixture(t,'unselected-run','--start');assert.equal(f.error?.code,'UNSELECTED_RUN_EXISTS');assert.deepEqual(f.calls,[]);});
+test('an unreadable Run registry blocks a new start',t=>{const f=fixture(t,'unreadable-run','--start');assert.equal(f.error?.code,'RUN_RECORDS_UNAVAILABLE');assert.deepEqual(f.calls,[]);});
+test('another selected Run blocks recovery before any Runtime request',t=>{const f=fixture(t,'other-selected');assert.equal(f.error?.code,'CURRENT_SELECTION_EXISTS');assert.deepEqual(f.calls,[]);});
+test('a symlinked Comet configuration directory blocks recovery',t=>{const f=fixture(t,'symlink-comet');assert.equal(f.error?.code,'CURRENT_SELECTION_UNAVAILABLE');assert.deepEqual(f.calls,[]);});
+test('preserved 0.5.0 runs do not become 0.5.1 start authority',t=>{const f=fixture(t,'old-runtime','--start');assert.equal(f.result.status,0,f.result.stderr);assert.deepEqual(f.calls,['start','query']);});

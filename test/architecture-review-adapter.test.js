@@ -29,7 +29,7 @@ const GATE_SCRIPT = path.join(projectRoot, '.agents/skills/multi-agent-consensus
 const { REVIEW_PARTICIPANTS, REVIEW_THRESHOLDS, ARCHITECTURE_CRITERIA, ARCHITECTURE_REVIEW_BASELINE_KIND,
   freezeReviewPackage, initConsensusRun, admitBallot, mechanicalTally, mechanicalFinalize,
   openLoadBearingQuestions, closeLoadBearingQuestion, loadBearingStatus,
-  judgeArchitectureGate, createReviewJobSeat, buildGateReceiptBundle } = await import(path.join(projectRoot, 'lib/adapters/architecture-review.js'));
+  judgeArchitectureGate, createReviewJobSeat, buildGateReceiptBundle, consumeRequirementsGate } = await import(path.join(projectRoot, 'lib/adapters/architecture-review.js'));
 const { admitEvidence, createLaunchAuthority, envelopeDigest } = await import(path.join(projectRoot, 'lib/delivery/evidence.js'));
 const { evaluate } = await import(path.join(projectRoot, 'lib/delivery/gate.js'));
 const { parseTapSummary } = await import(path.join(projectRoot, 'lib/delivery/test-contract.js'));
@@ -438,14 +438,15 @@ test('E04: restoring the old design bytes does not auto-revive the old consensus
   assert.ok(refusalCodes(oldReceiptJudged).includes('REVIEW_REVISION_MISMATCH'), 'the old review never matches a newer frozen revision');
 
   // downstream evidence bound to the architecture review follows the same
-  // conservative invalidation (P2_1 baseline semantics, reused unmodified)
+  // conservative invalidation using the current P2_1 generation contract
   const downstream = [
-    { id: 'gate-receipt-on-review', boundDigests: { [ARCHITECTURE_REVIEW_BASELINE_KIND]: first.pkg.artifactSha256 }, boundRevisions: { [ARCHITECTURE_REVIEW_BASELINE_KIND]: 1 } },
-    { id: 'unrelated-product-receipt', boundDigests: { product: sha('product-r1') } },
+    { id: 'gate-receipt-on-review', generation: 1, boundDigests: { [ARCHITECTURE_REVIEW_BASELINE_KIND]: first.pkg.artifactSha256 }, boundRevisions: { [ARCHITECTURE_REVIEW_BASELINE_KIND]: 1 } },
+    { id: 'unrelated-product-receipt', generation: 1, boundDigests: { product: sha('product-r1') } },
+    { id: 'new-current-receipt', generation: 2, boundDigests: { product: sha('product-r1') } },
   ];
-  const result = invalidateOnScopeChange({ changed: { kind: ARCHITECTURE_REVIEW_BASELINE_KIND, digest: pkg2.artifactSha256, revision: 2 }, receipts: downstream });
-  assert.deepEqual(result.invalidated.map((entry) => entry.id), ['gate-receipt-on-review'], 'all downstream evidence bound to the review is invalidated by the design change');
-  assert.deepEqual(result.valid.map((entry) => entry.id), ['unrelated-product-receipt'], 'receipts bound to other baselines keep their validity');
+  const result = invalidateOnScopeChange({ changed: { kind: ARCHITECTURE_REVIEW_BASELINE_KIND, digest: pkg2.artifactSha256, revision: 2 }, currentGeneration: 2, receipts: downstream });
+  assert.deepEqual(result.invalidated.map((entry) => entry.id), ['gate-receipt-on-review', 'unrelated-product-receipt'], 'the design change invalidates all older downstream evidence');
+  assert.deepEqual(result.valid.map((entry) => entry.id), ['new-current-receipt'], 'new evidence bound to the current generation remains valid');
 });
 
 // --- H06: one review job per Comet; resume, supersede and stale results ------
@@ -712,7 +713,7 @@ test('consumeTestDesignReview admits ONE independent review on sufficiency plus 
 
 // Signed, isolated data fixtures exercise the SDK's real collection protocol.
 // They deliberately provide no real reviewer, OS, model or source qualification.
-async function managedReviewFixture(gate = 'T') {
+async function managedReviewFixture(gate = 'T', { futureProductCheck = false } = {}) {
   const records = new Map();
   const policy = { ref: 'fixture/protected-policy', digest: sha('fixture-policy'), revision: 1 };
   const actionBinding = {
@@ -732,7 +733,9 @@ async function managedReviewFixture(gate = 'T') {
   const testContract = {
     schemaVersion: 1, commandBindingsRequired: true, project: 'fixture', change: 'fixture',
     cases: [{ id: 'design.case', ac: 'T-review', oracle: 'denied source cannot satisfy an independent review', checkIds: ['design.check'] }],
-    requiredChecks: [{ id: 'design.check', level: 'review', capability: 'test-design-review', command: 'fixture:semantic-review', caseIds: ['design.case'] }],
+    requiredChecks: [{ id: 'design.check', level: futureProductCheck ? 'unit' : 'review',
+      capability: futureProductCheck ? 'unit:future-product' : 'test-design-review',
+      command: futureProductCheck ? 'node --test future-product.test.mjs' : 'fixture:semantic-review', caseIds: ['design.case'] }],
     executionDenominator: { totalCases: 1 }, cleanup: { environment: 'remove private fixture', data: 'no production data' },
     dependencyBaselines: [{ kind: 'test-intent', digest: sha('fixture-test-intent') }],
   };
@@ -797,8 +800,8 @@ test('managed T consumes original collected semantic review bytes, never a dispa
   assert.equal(good.verifyReview({ ...query, policy: { ...f.policy, digest: sha('next-policy') } }, f.managed).ok, false, 'old policy preparation cannot revive');
 });
 
-async function managedArchitectureFixture({ dissent = false } = {}) {
-  const f = await managedReviewFixture('A');
+async function managedArchitectureFixture({ dissent = false, futureProductCheck = false } = {}) {
+  const f = await managedReviewFixture('A', { futureProductCheck });
   const root = makeTmp('sdd-p25-managed-a-');
   const questions = closeLoadBearingQuestion(openLoadBearingQuestions([{ id: 'ownership', question: 'Who owns state and recovery?' }]), 'ownership', 'The original Comet Run alone owns both; the adapter has no phase or retry store.');
   const grillResult = { schemaVersion: 1, requirementsDigest: sha('req'), designDigest: sha('design'), questions };
@@ -841,6 +844,88 @@ async function managedArchitectureFixture({ dissent = false } = {}) {
   return { ...f, pkg, runRoot, questions, packet, reviewers, grill, managed };
 }
 
+test('R admits confirmed requirements without a test contract only from separate authorized source records', async () => {
+  const f = await managedReviewFixture('R');
+  const requirementsDigest = sha('fixture-requirements');
+  const authorAction = { ...f.actionBinding, execution: 'fixture-requirements-author', role: 'requirements-author',
+    methods: [{ name: 'grill-me', version: 'fixture-only', ref: '.agents/skills/grill-me/SKILL.md', digest: sha('fixture-grill') }],
+    inputs: [{ name: 'requirements', ref: 'proposal.md', digest: requirementsDigest }] };
+  const clarification = { schemaVersion: 1, requirementsDigest, goal: 'Deliver the scoped capability', scope: 'Project A',
+    nonGoals: 'No unrelated project changes', acceptanceCriteria: ['The owner can observe the outcome'], deliveryTarget: 'Project A',
+    questions: [{ id: 'scope', question: 'Which project?', closed: true, resolution: 'Project A' }] };
+  const grill = await f.source({ action: authorAction, result: clarification, principal: 'fixture-requirements-author-principal' });
+  const confirmationAuthority = { principal: 'fixture-authorized-owner', policyDigest: f.policy.digest, status: 'qualified',
+    evidenceDigest: sha('fixture-only-authorization-readback'), expiresAt: '2099-01-01T00:00:00Z' };
+  const confirmationAction = { ...f.actionBinding, execution: 'fixture-requirements-confirmer', role: 'reviewer',
+    inputs: [{ name: 'requirements', ref: 'proposal.md', digest: requirementsDigest },
+      { name: 'clarification', ref: '.whitebox/clarification.json', digest: sha(grill.resultBytes) },
+      { name: 'confirmation-authority', ref: '.whitebox/confirmation-authority.json', digest: envelopeDigest(confirmationAuthority) }] };
+  const confirmation = { schemaVersion: 1, candidateDigest: confirmationAction.inputDigest, requirementsDigest,
+    clarificationDigest: sha(grill.resultBytes), decision: 'confirm', summary: 'The scope and acceptance criteria match the requested outcome.' };
+  const packet = await f.source({ action: confirmationAction, result: confirmation, principal: 'fixture-authorized-owner' });
+  const admissionOptions = { ...f.managed.admissionOptions,
+    authoringExecutions: ['fixture-requirements-author'], authoringPrincipals: ['fixture-requirements-author-principal'] };
+  const managed = { actionBinding: confirmationAction, policy: f.policy, packet, admissionOptions, jobKey: 'requirements-fixture',
+    grill: { packet: grill }, sourceBindings: [{ actionBinding: authorAction, sourceQualification: f.qualification }],
+    confirmationAuthority, verifyConfirmationAuthority: ({ authority, action }) =>
+      authority.evidenceDigest === sha('fixture-only-authorization-readback') && authority.principal === 'fixture-authorized-owner'
+      && action.run === confirmationAction.run && action.gate === 'R' };
+  const prepared = consumeRequirementsGate({ authority: f.authority, managed });
+  assert.equal(prepared.ok, true, prepared.error);
+  const admission = { ...admissionOptions, actionBinding: confirmationAction, authority: f.authority, requireManaged: true };
+  const admitted = admitEvidence(packet, admission);
+  assert.equal(admitted.ok, true);
+  const inputs = { inputDigest: confirmationAction.inputDigest, builderExecution: admission.builderExecution };
+  const options = { requireManaged: true, currentRunId: confirmationAction.run, currentGate: 'R',
+    admissionOptionsFor: () => admission, verifyReview: (request) => prepared.verifyReview(request, managed) };
+  const result = evaluate(inputs, [admitted.entry], f.policy, options);
+  assert.equal(result.verdict, 'pass', result.receipt.blocked.join('; '));
+  assert.deepEqual(result.receipt.requiredDenominator, { required: 1, valid: 1 });
+  assert.equal(result.managedClosureEligible, false);
+  const { createBindings } = await import(process.env.P24_BASELINE_BINDINGS || '../integrations/comet/application/bindings.mjs');
+  const ports = { verifyGateInputs: ({ run, gate }) => run.runId === confirmationAction.run && gate === 'R',
+    admissionOptionsFor: () => admission, verifyReview: (request) => prepared.verifyReview(request, managed), readSourcePacket: () => admitted.entry.sourcePacket };
+  const bindings = await createBindings({ manifest: { bindings: [] }, skills: new Map(), createSkillExecutor: (host) => host }, ports);
+  const validator = bindings.validators.find((item) => item.id === 'sdd.delivery.gate.r');
+  const input = { run: { runId: confirmationAction.run }, action: { id: 'fixture' }, outcome: { output: { gateEvidence: { gate: 'R', inputs, receipts: [admitted.entry], policy: f.policy } } } };
+  assert.equal((await validator.validate(input)).accepted, true);
+  assert.equal((await validator.validate({ ...input, run: { runId: 'different-run' } })).accepted, false);
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: { ...managed, confirmationAuthority: { ...managed.confirmationAuthority, principal: 'other-owner' } } }).ok, false);
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: { ...managed, confirmationAuthority: { ...managed.confirmationAuthority, status: 'revoked' } } }).ok, false);
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: { ...managed, confirmationAuthority: { ...managed.confirmationAuthority, expiresAt: '2020-01-01T00:00:00Z' } } }).ok, false);
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: { ...managed, confirmationAuthority: { ...managed.confirmationAuthority, expiresAt: '2099-02-29T00:00:00Z' } } }).ok, false, 'invalid calendar dates must not be normalized into valid authority');
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: { ...managed, confirmationAuthority: { ...managed.confirmationAuthority, expiresAt: '2099-01-01T00:00:00' } } }).ok, false, 'authority expiration must include a timezone');
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: { ...managed, verifyConfirmationAuthority: undefined } }).error, 'REQUIREMENTS_CONFIRMATION_UNAUTHORIZED');
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: { ...managed, verifyConfirmationAuthority: () => false } }).error, 'REQUIREMENTS_CONFIRMATION_UNAUTHORIZED');
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: { ...managed, verifyConfirmationAuthority: () => Promise.resolve(true) } }).error, 'REQUIREMENTS_CONFIRMATION_UNAUTHORIZED');
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: { ...managed, verifyConfirmationAuthority: () => Promise.reject(new Error('unavailable')) } }).error, 'REQUIREMENTS_CONFIRMATION_UNAUTHORIZED');
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: { ...managed, verifyConfirmationAuthority: () => { throw new Error('unavailable'); } } }).error, 'REQUIREMENTS_CONFIRMATION_UNAUTHORIZED');
+  const throwingPort = { ...managed, get verifyConfirmationAuthority() { throw new Error('unavailable'); } };
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: throwingPort }).error, 'REQUIREMENTS_CONFIRMATION_UNAUTHORIZED');
+  let touched = false;
+  const thenable = { get then() { touched = true; throw new Error('must not inspect thenable'); } };
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: { ...managed, verifyConfirmationAuthority: () => thenable } }).error, 'REQUIREMENTS_CONFIRMATION_UNAUTHORIZED');
+  assert.equal(touched, false);
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: { ...managed, grill: null } }).ok, false);
+  assert.equal(prepared.verifyReview({ entry: admitted.entry, inputs, policy: f.policy }, { ...managed, confirmationAuthority: { ...managed.confirmationAuthority, principal: 'other-owner' } }).ok, false);
+  assert.equal(prepared.verifyReview({ entry: admitted.entry, inputs, policy: f.policy }, { ...managed, verifyConfirmationAuthority: () => false }).ok, false, 'authority must be rechecked on readback');
+  const unboundAction = { ...confirmationAction, execution: 'fixture-unbound-authority', inputs: confirmationAction.inputs.filter((item) => item.name !== 'confirmation-authority') };
+  const unboundPacket = await f.source({ action: unboundAction, result: confirmation, principal: 'fixture-authorized-owner' });
+  assert.equal(consumeRequirementsGate({ authority: f.authority, managed: { ...managed, actionBinding: unboundAction, packet: unboundPacket } }).error,
+    'REQUIREMENTS_CONFIRMATION_MISMATCH', 'the dispatch must bind the authority readback');
+  const selfAction = { ...authorAction, execution: 'fixture-self-author' };
+  const self = await f.source({ action: selfAction, result: clarification, principal: 'fixture-authorized-owner' });
+  const selfResult = consumeRequirementsGate({ authority: f.authority, managed: { ...managed, grill: { packet: self },
+    sourceBindings: [{ actionBinding: selfAction, sourceQualification: f.qualification }] } });
+  assert.equal(selfResult.error, 'REQUIREMENTS_IDENTITY_CONFLICT', 'the author cannot confirm their own scope');
+  const openAction = { ...authorAction, execution: 'fixture-open-question' };
+  const open = await f.source({ action: openAction, result: { ...clarification, questions: [{ ...clarification.questions[0], closed: false, resolution: null }] }, principal: 'fixture-requirements-author-principal' });
+  const openResult = consumeRequirementsGate({ authority: f.authority, managed: { ...managed, grill: { packet: open },
+    sourceBindings: [{ actionBinding: openAction, sourceQualification: f.qualification }] } });
+  assert.equal(openResult.error, 'REQUIREMENTS_QUESTIONS_OPEN', 'an unresolved question blocks scope confirmation');
+  assert.throws(() => evaluate(inputs, [admitted.entry], f.policy, { ...options, currentGate: 'T' }), /INVALID_TEST_CONTRACT/);
+});
+
 test('managed A refuses missing or same-principal reviewer collections despite a real unanimous tally', async () => {
   const f = await managedArchitectureFixture();
   const rawJudgment = judgeArchitectureGate({ package: f.pkg, runRoot: f.runRoot, questions: f.questions });
@@ -858,13 +943,82 @@ test('managed A refuses missing or same-principal reviewer collections despite a
   assert.equal(conflict.error, 'REVIEWER_IDENTITY_CONFLICT');
 });
 
+test('A accepts the independent architecture consensus before future product tests run', async () => {
+  const f = await managedArchitectureFixture({ futureProductCheck: true });
+  const prepared = consumeArchitectureGate({ package: f.pkg, runRoot: f.runRoot, questions: f.questions, authority: f.authority, managed: f.managed });
+  assert.equal(prepared.ok, true, prepared.error);
+  const admission = { ...f.managed.admissionOptions, actionBinding: f.actionBinding, authority: f.authority, requireManaged: true };
+  const admitted = admitEvidence(f.packet, admission);
+  assert.equal(admitted.ok, true);
+  const inputs = { inputDigest: f.actionBinding.inputDigest, testContract: f.testContract, builderExecution: admission.builderExecution };
+  const options = { requireManaged: true, currentRunId: f.actionBinding.run, currentGate: 'A',
+    admissionOptionsFor: () => admission, verifyReview: (request) => prepared.verifyReview(request, f.managed) };
+  const result = evaluate(inputs, [admitted.entry], f.policy, options);
+  assert.equal(result.verdict, 'pass', result.receipt.blocked.join('; '));
+  assert.equal(result.managedClosureEligible, false, 'fixture-only consensus does not qualify a production host');
+  assert.equal(evaluate(inputs, [admitted.entry], f.policy, { ...options,
+    verifyReview: (request) => ({ ...prepared.verifyReview(request, f.managed), kind: 'independent-test-design-review' }) }).verdict, 'blocked', 'a T review cannot substitute for architecture consensus');
+  assert.equal(evaluate(inputs, [admitted.entry], f.policy, { ...options,
+    verifyReview: (request) => ({ ...prepared.verifyReview(request, f.managed), sufficient: false }) }).verdict, 'blocked', 'an insufficient consensus cannot pass');
+  assert.equal(evaluate(inputs, [admitted.entry], f.policy, { ...options, currentGate: 'V' }).verdict, 'blocked');
+  const { createBindings } = await import(process.env.P24_BASELINE_BINDINGS || '../integrations/comet/application/bindings.mjs');
+  const ports = { verifyGateInputs: ({ run, gate }) => run.runId === f.actionBinding.run && gate === 'A',
+    admissionOptionsFor: () => admission, verifyReview: (request) => prepared.verifyReview(request, f.managed), readSourcePacket: () => admitted.entry.sourcePacket };
+  const bindings = await createBindings({ manifest: { bindings: [] }, skills: new Map(), createSkillExecutor: (host) => host }, ports);
+  const validator = bindings.validators.find((item) => item.id === 'sdd.delivery.gate.a');
+  const input = { run: { runId: f.actionBinding.run }, action: { id: 'fixture' }, outcome: { output: { gateEvidence: { gate: 'A', inputs, receipts: [admitted.entry], policy: f.policy } } } };
+  assert.equal((await validator.validate(input)).accepted, true, 'the packaged A validator consumes the bound independent consensus');
+  assert.equal((await validator.validate({ ...input, run: { runId: 'other-run' } })).accepted, false);
+});
+
+test('A accepts a bound architecture review without a test-design contract', async () => {
+  const f = await managedArchitectureFixture();
+  const managed = { ...f.managed };
+  delete managed.testContract;
+  const prepared = consumeArchitectureGate({ package: f.pkg, runRoot: f.runRoot, questions: f.questions, authority: f.authority, managed });
+  assert.equal(prepared.ok, true, prepared.error);
+  const admission = { ...managed.admissionOptions, actionBinding: f.actionBinding, authority: f.authority, requireManaged: true };
+  const admitted = admitEvidence(f.packet, admission);
+  assert.equal(admitted.ok, true);
+  const inputs = { inputDigest: f.actionBinding.inputDigest, builderExecution: admission.builderExecution };
+  const options = { requireManaged: true, currentRunId: f.actionBinding.run, currentGate: 'A',
+    admissionOptionsFor: () => admission, verifyReview: (request) => prepared.verifyReview(request, managed) };
+  const result = evaluate(inputs, [admitted.entry], f.policy, options);
+  assert.equal(result.verdict, 'pass', result.receipt.blocked.join('; '));
+  assert.deepEqual(result.receipt.requiredDenominator, { required: 1, valid: 1 });
+  assert.equal(result.managedClosureEligible, false);
+  const stale = { ...inputs, inputDigest: sha('different-design') };
+  assert.equal(evaluate(stale, [admitted.entry], f.policy, options).verdict, 'blocked');
+  assert.equal(evaluate(inputs, [admitted.entry], f.policy, { ...options, verifyReview: () => null }).verdict, 'blocked');
+  assert.throws(() => evaluate({ ...inputs, testContract: null }, [admitted.entry], f.policy, options), /INVALID_TEST_CONTRACT/);
+  for (const gate of ['T', 'V']) assert.throws(() => evaluate(inputs, [admitted.entry], f.policy, { ...options, currentGate: gate }), /INVALID_TEST_CONTRACT/);
+  const { createBindings } = await import(process.env.P24_BASELINE_BINDINGS || '../integrations/comet/application/bindings.mjs');
+  const ports = { verifyGateInputs: ({ run, gate }) => run.runId === f.actionBinding.run && gate === 'A',
+    admissionOptionsFor: () => admission, verifyReview: (request) => prepared.verifyReview(request, managed), readSourcePacket: () => admitted.entry.sourcePacket };
+  const bindings = await createBindings({ manifest: { bindings: [] }, skills: new Map(), createSkillExecutor: (host) => host }, ports);
+  const validator = bindings.validators.find((item) => item.id === 'sdd.delivery.gate.a');
+  const input = { run: { runId: f.actionBinding.run }, action: { id: 'fixture' }, outcome: { output: { gateEvidence: { gate: 'A', inputs, receipts: [admitted.entry], policy: f.policy } } } };
+  assert.equal((await validator.validate(input)).accepted, true);
+  assert.equal((await validator.validate({ ...input, run: { runId: 'another-run' } })).accepted, false);
+});
+
 test('prepared review query requires fresh protected action, source qualification and clock on every Native readback', async () => {
   const f = await managedReviewFixture();
   const prepared = consumeTestDesignReview({ authority: f.authority, managed: f.managed });
   const admitted = admitEvidence(f.packet, { ...f.managed.admissionOptions, actionBinding: f.actionBinding, authority: f.authority, requireManaged: true });
   const request = { entry: admitted.entry, inputs: { inputDigest: f.actionBinding.inputDigest, testContract: f.testContract }, policy: f.policy };
   assert.equal(prepared.verifyReview(request).ok, false, 'a cached prepared result is not a current source/identity lookup');
-  assert.equal(prepared.verifyReview(request, f.managed).sufficient, true);
+  const currentReview = prepared.verifyReview(request, f.managed);
+  assert.equal(currentReview.sufficient, true);
+  assert.equal(currentReview.kind, 'independent-test-design-review');
+  assert.equal(currentReview.contractDigest, envelopeDigest(f.testContract));
+  const gate = evaluate({ ...request.inputs, builderExecution: f.managed.admissionOptions.builderExecution }, [admitted.entry], f.policy, {
+    requireManaged: true, currentRunId: f.actionBinding.run, currentGate: 'T',
+    admissionOptionsFor: () => ({ ...f.managed.admissionOptions, actionBinding: f.actionBinding, authority: f.authority }),
+    verifyReview: (input) => prepared.verifyReview(input, f.managed),
+  });
+  assert.equal(gate.verdict, 'pass', gate.receipt.blocked.join('; '));
+  assert.equal(gate.managedClosureEligible, false, 'data fixture does not qualify a real host');
   for (const [name, current] of [
     ['qualification revoked', { ...f.managed, admissionOptions: { ...f.managed.admissionOptions, sourceQualification: { ...f.qualification, status: 'revoked' } } }],
     ['qualification expired', { ...f.managed, admissionOptions: { ...f.managed.admissionOptions, now: '2100-01-01T00:00:00Z' } }],

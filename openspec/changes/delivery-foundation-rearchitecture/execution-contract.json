@@ -19,7 +19,7 @@
     "migration_executor": "One receiving planner owns original DAG; product P remains plan-only"
   },
   "goal": {
-    "objective": "按command-first修订完成原Comet阶段命令、真实技能与独立硬门、知识/权限/平台恢复全链路；保留39/69/104/130身份，本期129/103及F10另期。当前仅计划交接，不激活Goal或实施。",
+    "objective": "按command-first修订完成Comet 0.5.1 原生阶段命令、真实技能与独立硬门、知识/权限/平台恢复全链路；保留39/69/104/130身份，本期129/103及F10另期。已有用户目标实施并验收；此隔离候选本身不启动执行。",
     "native_option": "auto",
     "activation": "on-execution",
     "completion_acceptance_ids": [
@@ -133,11 +133,13 @@
     "resume_api": "DISCOVER_ON_RECEIVING_HOST"
   },
   "monitor": {
-    "interval_minutes": 20,
-    "backend": "native",
+    "interval_minutes": 30,
+    "backend": "manual",
     "activation": "on-execution",
     "timezone": "Asia/Shanghai",
-    "notification_policy": "Existing observer remains observe-only during handoff; receiver must claim sole controller, reuse one20min monitor, notify meaningful changes only; no planning-time activation."
+    "notification_policy": "用户2026-10-29要求每30分钟汇报进度及预计完成时间；自动审批拒绝创建，未生效，不绕过审批。G15 产品权限事件与周期核验义务保持。",
+    "desired_backend": "thread-heartbeat",
+    "status": "AUTO_REVIEW_REJECTED_NOT_ACTIVE"
   },
   "checks": [
     {
@@ -460,7 +462,7 @@
         "A10"
       ],
       "command": "node tools/verify/delivery-journey.mjs --scenario A10 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/A10 --json",
-      "expected": "- **GIVEN** 两个会话和旧租约执行者\n- **WHEN** 并发推进、重复派发及旧 epoch 回调\n- **THEN** 有效推进唯一、重复幂等、过期拒绝；实际执行大于0、绑定当前command-first修订和最终候选；缺资源/能力非零UNVERIFIED，不得skip转PASS。",
+      "expected": "- **GIVEN** 两个会话和旧租约执行者\n- **WHEN** 并发推进、重复派发及旧 epoch 回调\n- **THEN** 有效推进唯一、重复幂等、过期拒绝；实际执行大于0、绑定当前command-first修订和最终候选；缺资源/能力非零UNVERIFIED，不得skip转PASS。 另须验证受管初始化和恢复期间实际分支绑定正确，见 RUN_BRANCH_BOUND。",
       "required": true,
       "implementation_status": "PLANNED_REWORK_NOT_EXECUTED",
       "observation_scope": "real managed Runner/services/identity and independent remote/UI/persistence readback",
@@ -1912,7 +1914,7 @@
         "F01"
       ],
       "command": "node tools/verify/delivery-journey.mjs --scenario F01 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/F01 --json",
-      "expected": "- **GIVEN** 干净成员工作区\n- **WHEN** 接入同一 Foundation release\n- **THEN** 实际工具版本、技能、契约、hooks/MCP 内容与清单一致；实际执行大于0、绑定当前command-first修订和最终候选；缺资源/能力非零UNVERIFIED，不得skip转PASS。",
+      "expected": "- **GIVEN** 干净成员工作区\n- **WHEN** 接入同一 Foundation release\n- **THEN** 实际工具版本、技能、契约、hooks/MCP 内容与清单一致；实际执行大于0、绑定当前command-first修订和最终候选；缺资源/能力非零UNVERIFIED，不得skip转PASS。 另须在真实安装资产的受控执行前后验证 Skill 摘要不变、无缓存污染，见 SKILL_NO_CACHE_CONTAMINATION。",
       "required": true,
       "implementation_status": "PLANNED_REWORK_NOT_EXECUTED",
       "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
@@ -1981,7 +1983,7 @@
         "F03"
       ],
       "command": "node tools/verify/delivery-journey.mjs --scenario F03 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/F03 --json",
-      "expected": "- **GIVEN** 安装资产完成\n- **WHEN** 新宿主会话开始真实任务\n- **THEN** 实际发现所需技能与工具，文件存在不足以通过；实际执行大于0、绑定当前command-first修订和最终候选；缺资源/能力非零UNVERIFIED，不得skip转PASS。",
+      "expected": "- **GIVEN** 安装资产完成\n- **WHEN** 新宿主会话开始真实任务\n- **THEN** 实际发现所需技能与工具，文件存在不足以通过；实际执行大于0、绑定当前command-first修订和最终候选；缺资源/能力非零UNVERIFIED，不得skip转PASS。 另须验证实际宿主启动 Skill 不污染固定包，且受管 Run 初始化语言遵循配置，见 SKILL_NATIVE_EXECUTION_HASH_STABLE 和 RUN_LANGUAGE_FROM_CONFIG。",
       "required": true,
       "implementation_status": "PLANNED_REWORK_NOT_EXECUTED",
       "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
@@ -2015,7 +2017,7 @@
         "F04"
       ],
       "command": "node tools/verify/delivery-journey.mjs --scenario F04 --profile comet-managed-v2 --evidence-dir .whitebox/delivery-foundation/F04 --json",
-      "expected": "- **GIVEN** 已有冻结运行\n- **WHEN** pull 新资产后恢复旧 run\n- **THEN** 保持完整旧基线或显式迁移重验，不能静默换门禁；实际执行大于0、绑定当前command-first修订和最终候选；缺资源/能力非零UNVERIFIED，不得skip转PASS。",
+      "expected": "- **GIVEN** 已有冻结运行\n- **WHEN** pull 新资产后恢复旧 run\n- **THEN** 保持完整旧基线或显式迁移重验，不能静默换门禁；实际执行大于0、绑定当前command-first修订和最终候选；缺资源/能力非零UNVERIFIED，不得skip转PASS。 另须验证受管 Run 初始化及恢复所绑定的实际分支和资产版本一致，见 RUN_BRANCH_BOUND。",
       "required": true,
       "implementation_status": "PLANNED_REWORK_NOT_EXECUTED",
       "observation_scope": "real CLI/files/process transitions and independent persisted readback; fixtures alone insufficient for origin trust",
@@ -3753,8 +3755,8 @@
         "A03",
         "A15"
       ],
-      "command": "node --test --test-reporter=tap --test-name-pattern=RW_TARGET_REQUIRED test/delivery-cases/3_1.mjs",
-      "expected": "缺目标/错映射/复合目标缺任一必需子断言/全skip/无关全绿套件均非零；与当前case严格匹配且所有终态断言有真实观察才PASS。",
+      "command": "node tools/verify/direct-target-test.mjs --check-id V_RW_TARGET_REQUIRED",
+      "expected": "缺目标/错映射/复合目标缺任一必需子断言/全skip/无关全绿套件均非零；与当前case严格匹配且所有终态断言有真实观察才PASS。 同时必须逐条执行冻结的具名断言；零匹配、跳过、待办、重复和子用例缺失不得通过，不能仅凭名称存在替代语义。",
       "required": true,
       "availability": "TO_IMPLEMENT",
       "implementedBy": "P3_1",
@@ -3773,7 +3775,20 @@
       "current_status": "NOT_VERIFIED_ON_COMMAND_FIRST",
       "execution_owner": "VERIFY",
       "planning_revision": "2026-10-26-command-first-v1",
-      "revision_precondition": "Implement or confirm command-first oracle and real host/source provenance before this command result is eligible; old case-module PASS alone is stale."
+      "revision_precondition": "Implement or confirm command-first oracle and real host/source provenance before this command result is eligible; old case-module PASS alone is stale.",
+      "testTarget": {
+        "file": "test/delivery-cases/3_1.mjs",
+        "pattern": "RW_TARGET_REQUIRED",
+        "requiredNames": [
+          "RW_TARGET_REQUIRED: P1-04 counterexample — scenario A01 registered to an unrelated all-green arithmetic suite must exit nonzero, never PASS",
+          "RW_TARGET_REQUIRED: a declared required assertion with no matching test point (missing target / wrong mapping) is refused nonzero",
+          "RW_TARGET_REQUIRED: zero-target denominator (empty requiredAssertions) is refused at the schema layer",
+          "RW_TARGET_REQUIRED: composite scenario missing any required sub-assertion is refused nonzero",
+          "RW_TARGET_REQUIRED: all-skip module stays nonzero; a complete verifiable mapping passes"
+        ],
+        "minimumPerName": 1,
+        "uniquePerName": true
+      }
     },
     {
       "id": "V_RW_OBSERVATION_REQUIRED",
@@ -3787,8 +3802,8 @@
         "B06",
         "B07"
       ],
-      "command": "node --test --test-reporter=tap --test-name-pattern=RW_OBSERVATION_REQUIRED test/delivery-cases/3_1.mjs",
-      "expected": "必需inspect失败、空/旧读回、错误candidate或Run、仅存在非空文件均不能签PASS；无环境是UNVERIFIED而非行为RED。",
+      "command": "node tools/verify/direct-target-test.mjs --check-id V_RW_OBSERVATION_REQUIRED",
+      "expected": "必需inspect失败、空/旧读回、错误candidate或Run、仅存在非空文件均不能签PASS；无环境是UNVERIFIED而非行为RED。 同时必须逐条执行冻结的具名断言；零匹配、跳过、待办、重复和子用例缺失不得通过，不能仅凭名称存在替代语义。",
       "required": true,
       "availability": "TO_IMPLEMENT",
       "implementedBy": "P3_1",
@@ -3807,7 +3822,20 @@
       "current_status": "NOT_VERIFIED_ON_COMMAND_FIRST",
       "execution_owner": "VERIFY",
       "planning_revision": "2026-10-26-command-first-v1",
-      "revision_precondition": "Implement or confirm command-first oracle and real host/source provenance before this command result is eligible; old case-module PASS alone is stale."
+      "revision_precondition": "Implement or confirm command-first oracle and real host/source provenance before this command result is eligible; old case-module PASS alone is stale.",
+      "testTarget": {
+        "file": "test/delivery-cases/3_1.mjs",
+        "pattern": "RW_OBSERVATION_REQUIRED",
+        "requiredNames": [
+          "RW_OBSERVATION_REQUIRED: a required inspect whose live probe contradicts the typed expectation fails the journey — inspections are not free",
+          "RW_OBSERVATION_REQUIRED: a required inspect whose probe command itself fails (commandSucceeds) fails the journey",
+          "RW_OBSERVATION_REQUIRED: a non-empty state file whose bytes contradict the typed readback cannot sign PASS (fake/stale readback refused)",
+          "RW_OBSERVATION_REQUIRED: observed-version assertions anchor to an independent live probe (nb-3: registered value never self-attests)",
+          "RW_OBSERVATION_REQUIRED: wrong candidate is refused — a typed equals expectation on the live git HEAD mismatch fails nonzero"
+        ],
+        "minimumPerName": 1,
+        "uniquePerName": true
+      }
     },
     {
       "id": "V_RW_R_ENTRY",
@@ -3820,8 +3848,8 @@
         "C02",
         "C07"
       ],
-      "command": "node --test --test-reporter=tap --test-name-pattern=RW_R_ENTRY test/delivery-cases/2_4.mjs",
-      "expected": "无有效R时open-complete、正式架构动作、Guard/apply、直接转换、next/resume及恢复一致拒绝；可信R后正常进入Design。",
+      "command": "node tools/verify/direct-target-test.mjs --check-id V_RW_R_ENTRY",
+      "expected": "无有效R时open-complete、正式架构动作、Guard/apply、直接转换、next/resume及恢复一致拒绝；可信R后正常进入Design。 同时必须逐条执行冻结的具名断言；零匹配、跳过、待办、重复和子用例缺失不得通过，不能仅凭名称存在替代语义。",
       "required": true,
       "availability": "TO_IMPLEMENT",
       "implementedBy": "P2_4",
@@ -3840,7 +3868,27 @@
       "current_status": "NOT_VERIFIED_ON_COMMAND_FIRST",
       "execution_owner": "VERIFY",
       "planning_revision": "2026-10-26-command-first-v1",
-      "revision_precondition": "Implement or confirm command-first oracle and real host/source provenance before this command result is eligible; old case-module PASS alone is stale."
+      "revision_precondition": "Implement or confirm command-first oracle and real host/source provenance before this command result is eligible; old case-module PASS alone is stale.",
+      "testTarget": {
+        "file": "test/delivery-cases/2_4.mjs",
+        "pattern": "RW_R_ENTRY",
+        "requiredNames": [
+          "RW_R_ENTRY",
+          "RW_R_ENTRY OPEN_COMPLETE_BLOCKED",
+          "RW_R_ENTRY DESIGN_BLOCKED",
+          "RW_R_ENTRY GUARD_BLOCKED",
+          "RW_R_ENTRY TRANSITION_BLOCKED",
+          "RW_R_ENTRY NEXT_RESUME_BLOCKED",
+          "RW_R_ENTRY RECOVERY_BLOCKED",
+          "RW_R_ENTRY TRUSTED_PASS",
+          "RW_R_ENTRY CROSS_RUN_COMPONENT_REPLAY_BLOCKED",
+          "RW_R_ENTRY MISSING_MANAGED_MODE_BLOCKED",
+          "RW_R_ENTRY FALSE_MANAGED_MODE_BLOCKED",
+          "RW_R_ENTRY CURRENT_TRUSTED_SOURCE_PASS"
+        ],
+        "minimumPerName": 1,
+        "uniquePerName": true
+      }
     },
     {
       "id": "V_RW_TRUSTED_REVIEW",
@@ -3855,8 +3903,8 @@
         "E03",
         "E04"
       ],
-      "command": "node --test --test-reporter=tap --test-name-pattern=RW_TRUSTED_REVIEW test/delivery-cases/2_4.mjs",
-      "expected": "同调用者dispatch+空报告pass、伪执行身份、缺票/拒绝票/旧摘要、弱oracle的T审查都拒绝；真实独立A/T结果接通Runtime后正向自动放行。",
+      "command": "node tools/verify/direct-target-test.mjs --check-id V_RW_TRUSTED_REVIEW",
+      "expected": "同调用者dispatch+空报告pass、伪执行身份、缺票/拒绝票/旧摘要、弱oracle的T审查都拒绝；真实独立A/T结果接通Runtime后正向自动放行。 同时必须逐条执行冻结的具名断言；零匹配、跳过、待办、重复和子用例缺失不得通过，不能仅凭名称存在替代语义。",
       "required": true,
       "availability": "TO_IMPLEMENT",
       "implementedBy": "P2_4",
@@ -3875,7 +3923,21 @@
       "current_status": "NOT_VERIFIED_ON_COMMAND_FIRST",
       "execution_owner": "VERIFY",
       "planning_revision": "2026-10-26-command-first-v1",
-      "revision_precondition": "Implement or confirm command-first oracle and real host/source provenance before this command result is eligible; old case-module PASS alone is stale."
+      "revision_precondition": "Implement or confirm command-first oracle and real host/source provenance before this command result is eligible; old case-module PASS alone is stale.",
+      "testTarget": {
+        "file": "test/delivery-cases/2_4.mjs",
+        "pattern": "RW_TRUSTED_REVIEW",
+        "requiredNames": [
+          "RW_TRUSTED_REVIEW",
+          "RW_TRUSTED_REVIEW SELF_APPROVAL_BLOCKED",
+          "RW_TRUSTED_REVIEW FORGED_ID_BLOCKED",
+          "RW_TRUSTED_REVIEW MISSING_REJECTED_STALE_BALLOTS",
+          "RW_TRUSTED_REVIEW WEAK_ORACLE_BLOCKED",
+          "RW_TRUSTED_REVIEW INDEPENDENT_PASS"
+        ],
+        "minimumPerName": 1,
+        "uniquePerName": true
+      }
     },
     {
       "id": "V_RW_REVISION_NO_REVIVE",
@@ -3888,8 +3950,8 @@
         "D04",
         "E04"
       ],
-      "command": "node --test --test-reporter=tap --test-name-pattern=RW_REVISION_NO_REVIVE test/delivery-cases/2_4.mjs",
-      "expected": "设计/需求修改→失效→恢复原字节仍阻断；新revision独立重审后放行，旧attempt回调不能复活；合法历史事务可幂等恢复但不授权新动作。",
+      "command": "node tools/verify/direct-target-test.mjs --check-id V_RW_REVISION_NO_REVIVE",
+      "expected": "设计/需求修改→失效→恢复原字节仍阻断；新revision独立重审后放行，旧attempt回调不能复活；合法历史事务可幂等恢复但不授权新动作。 同时必须逐条执行冻结的具名断言；零匹配、跳过、待办、重复和子用例缺失不得通过，不能仅凭名称存在替代语义。",
       "required": true,
       "availability": "TO_IMPLEMENT",
       "implementedBy": "P2_4",
@@ -3908,7 +3970,21 @@
       "current_status": "NOT_VERIFIED_ON_COMMAND_FIRST",
       "execution_owner": "VERIFY",
       "planning_revision": "2026-10-26-command-first-v1",
-      "revision_precondition": "Implement or confirm command-first oracle and real host/source provenance before this command result is eligible; old case-module PASS alone is stale."
+      "revision_precondition": "Implement or confirm command-first oracle and real host/source provenance before this command result is eligible; old case-module PASS alone is stale.",
+      "testTarget": {
+        "file": "test/delivery-cases/2_4.mjs",
+        "pattern": "RW_REVISION_NO_REVIVE",
+        "requiredNames": [
+          "RW_REVISION_NO_REVIVE",
+          "RW_REVISION_NO_REVIVE INVALIDATES_DOWNSTREAM",
+          "RW_REVISION_NO_REVIVE OLD_BYTES_NO_REVIVE",
+          "RW_REVISION_NO_REVIVE NEW_REVIEW_PASS",
+          "RW_REVISION_NO_REVIVE STALE_ATTEMPT_BLOCKED",
+          "RW_REVISION_NO_REVIVE HISTORICAL_IDEMPOTENCE"
+        ],
+        "minimumPerName": 1,
+        "uniquePerName": true
+      }
     },
     {
       "id": "V_RW_RUNNER_BUILD",
@@ -3961,7 +4037,7 @@
         "L11"
       ],
       "command": "node tools/verify/delivery-journey.mjs --journey real-comet-recovery --profile comet-managed-v2 --evidence-dir .whitebox/rework/real-comet-recovery --json",
-      "expected": "在 V_SAME_RUN_DELIVERY 的同一产品 Run 进行中(其 completed 之前)于实际事务提交前/后或远端写成功而本地结果未知的窗口杀真实受管Comet；监督器只恢复原authority，同Run/operation恢复且无双写/重复发布；计数worker不算通过。",
+      "expected": "在 V_SAME_RUN_DELIVERY 的同一产品 Run 进行中(其 completed 之前)于实际事务提交前/后或远端写成功而本地结果未知的窗口杀真实受管Comet；监督器只恢复原authority，同Run/operation恢复且无双写/重复发布；计数worker不算通过。 另须验证首次 start、投影、inspect 和 next 的分支与语言状态，并独立读回同一 Run，见 RUN_BRANCH_BOUND 和 START_INSPECT_RESUME_SAME_RUN。",
       "required": true,
       "availability": "TO_IMPLEMENT",
       "implementedBy": "P3_3",
@@ -3993,8 +4069,8 @@
         "A20",
         "B10"
       ],
-      "command": "node --test --test-reporter=tap --test-name-pattern=RW_COMPLETION_REQUIRED test/delivery-cases/4_3.mjs",
-      "expected": "required中任何FAIL/GATED/UNVERIFIED/skip/未关闭P1/缺Whitebox都保持整体未完成；holder和显式处置不能代替通过；历史证据不自动继承。",
+      "command": "node tools/verify/final-checks.mjs --check-id V_RW_COMPLETION_REQUIRED",
+      "expected": "required中任何FAIL/GATED/UNVERIFIED/skip/未关闭P1/缺Whitebox都保持整体未完成；holder和显式处置不能代替通过；历史证据不自动继承。 同时必须逐条执行冻结的具名断言；零匹配、跳过、待办、重复和子用例缺失不得通过，不能仅凭名称存在替代语义。 聚合器先运行该检查的冻结断言集合，再验证其他128项当前必验检查、全部场景、返工义务、真实同候选/Run、独立验收及F10唯一处置；不得自引用或以自身未形成的PASS作为前置。",
       "required": true,
       "availability": "TO_IMPLEMENT",
       "implementedBy": "P4_3",
@@ -4013,7 +4089,31 @@
       "current_status": "NOT_VERIFIED_ON_COMMAND_FIRST",
       "execution_owner": "VERIFY",
       "planning_revision": "2026-10-26-command-first-v1",
-      "revision_precondition": "Implement or confirm command-first oracle and real host/source provenance before this command result is eligible; old case-module PASS alone is stale."
+      "revision_precondition": "Implement or confirm command-first oracle and real host/source provenance before this command result is eligible; old case-module PASS alone is stale.",
+      "testTarget": {
+        "file": "test/delivery-cases/4_3.mjs",
+        "pattern": "RW_COMPLETION_REQUIRED",
+        "requiredNames": [
+          "RW_COMPLETION_REQUIRED setup: schema-2 index and verification.md exist, four evidence-status layers declared, deployment separated",
+          "RW_COMPLETION_REQUIRED (a): 104 scenarios map 1:1 to spec.md and all 130 required checks are indexed with faithful contract fields",
+          "RW_COMPLETION_REQUIRED (b): every scenario wires exactly the contract aggregation of required checks",
+          "RW_COMPLETION_REQUIRED (c): component evidence resolves to real commits and never overclaims the controller ledger",
+          "RW_COMPLETION_REQUIRED (d): statuses and the gate verdict are computed from current sources, not asserted",
+          "RW_COMPLETION_REQUIRED (e): the current index is honestly incomplete — every unexecuted required check, scenario and journey still blocks",
+          "RW_COMPLETION_REQUIRED (f): holder and explicit disposition never upgrade — injecting them changes no status and no verdict",
+          "RW_COMPLETION_REQUIRED (g): historical 76/87 never inherits — replaying historical VERIFIED/PASS labels changes nothing",
+          "RW_COMPLETION_REQUIRED (h): an all-PASS index with recorded readbacks, closed journeys and zero open P1 flips the verdict — the gate judges",
+          "RW_COMPLETION_REQUIRED (i): any single FAIL/GATED/UNVERIFIED/skipped check or missing readback keeps the verdict NOT complete",
+          "RW_COMPLETION_REQUIRED (j): a missing journey definition keeps the verdict incomplete and fails validation",
+          "RW_COMPLETION_REQUIRED (k): deployment stays NOT_DELIVERED and cannot claim delivered without confirmation evidence",
+          "RW_COMPLETION_REQUIRED FINAL_RESULTS_FROM_CURRENT_EVIDENCE",
+          "RW_COMPLETION_REQUIRED SELF_REFERENCE_REAL_RESULT",
+          "RW_COMPLETION_REQUIRED F10_SCOPE_REQUIRES_OWNER_DECISION",
+          "RW_COMPLETION_REQUIRED ALL_REQUIRED_OBLIGATIONS_BOUND"
+        ],
+        "minimumPerName": 1,
+        "uniquePerName": true
+      }
     },
     {
       "id": "V_SAME_RUN_DELIVERY",
@@ -4473,11 +4573,11 @@
   "openspec": {
     "change_id": "delivery-foundation-rearchitecture",
     "policy": "in-change",
-    "baseline_sha256": "27dfa1f4de6f3bc6c6f2d993107907d2ccd799467cac8388f9125d2e292ddde7"
+    "baseline_sha256": "8db3d0d74b6bce59a1b234ccfc20f9499607d8d8ce0ffbc24f4c142dfbde06c6"
   },
   "verification_runner_invariant": "Observer only; same native Comet Run owns phase/retry/recovery. Original104 scenario IDs remain, command-first expected deployment evidence applies; no old six-container or image PASS can qualify. All129 current checks require actual current-version runs.",
   "handoff": {
-    "mode": "PLAN_ONLY_EXECUTION_PREPARED",
+    "mode": "ISOLATED_REPLAN_CANDIDATE_NOT_ACTIVE",
     "recipient": "Portable receiving Agent selected by human, after execution instruction and sole-controller claim",
     "task_nodes": 39,
     "original_parent_tasks": 30,
@@ -4488,17 +4588,17 @@
     "entry": "HANDOFF-EXECUTION-2026-10-26.md",
     "architecture": "docs/architecture/comet-ai-devops-convergence.md",
     "new_profile_business_acceptance": "NOT_VERIFIED",
-    "activation": "This request delivers documents only; no implementation starts from rendering or reading the plan. A later explicit execution instruction activates execution via mutable state, not a second frozen plan.",
-    "planning_revision": "2026-10-26-command-first-v1"
+    "activation": "当前用户目标授权实施；该隔离候选本身不启动执行，唯一控制器完成现场核验和独立审查后按原 DAG 接管；用户要求每30分钟进度汇报；自动审批拒绝，监控未生效，不绕过审批。保留产品 G15 周期权限核验。",
+    "planning_revision": "2026-10-29-comet-pilot-remediation-v1"
   },
   "repair_order": [
-    "P0_1..P0_4 current design/spec/plan and independent review",
-    "P1_1/P1_6/P1_2 native commands/method installation",
-    "P2_1/P2_2/P2_3/P2_4/P2_5 same native Guard and real evidence",
-    "P1_3/P1_4/P1_5/P3_1/P3_2 first real R-to-V",
-    "P3_3/P3_4/P4_6 with I03/I04/P4_7/P4_4 actual Kp/archive/Kt",
-    "I02 retirement; I05/I06 and P4_1/P4_2 platform; I07/I08/P4_8 maintenance",
-    "P4_3/P5_1/P5_3/VERIFY same candidate129/103, then unique Comet closeout"
+    "P0_1→P0_2→P0_3→P0_4：当前修订架构、需求/规格、计划和独立审查",
+    "P2_1→P3_1：先修 TAP 准入、验收器、施工工件核验器及其测试",
+    "依原 DAG 波次准备 I01/P1_1/P2_2，再准备 I03/I04/I05/I06/P1_6/P2_3；必要基础设施不阻 P3_2",
+    "依原 DAG 先 P2_4 编译及独立审查，再 P1_2 消费限定工件进行私有离线冷导出和恢复验证；P2_4 工件经 P3_1 已审检查器核验后 P1_3 可消费，但不标 P2_4 accepted",
+    "依原 DAG 完成 I07/P1_3/P2_5、P1_4、P1_5 后执行 P3_2 真实 R→V；I02 按自身依赖并行并在 VERIFY 前完成，不是 P3_2 前置",
+    "依原 DAG 完成 P3_3/P3_4、P4_1/P4_6、P4_7、P4_2、P4_4、I08/P4_5、P4_8 和 P4_3",
+    "P5_1/P5_3 和 VERIFY 在同最终候选及原 Run 验证 129/103、独立 Whitebox/Grill，再走唯一 Comet 收尾；F10 另期"
   ],
   "completion_predicate": {
     "all_required_checks": "All129 checks included in the explicitly approved current delivery scope must be current PASS. Preserve all130 records; V_F10 alone stays NOT-EXERCISED with the named human scope disposition, never converted to PASS or silently deleted. No other check is waived by known-env, holder, snapshot shape or local green.",
@@ -4510,7 +4610,7 @@
       "V_POST_DELIVERY_PERMISSIONS"
     ],
     "same_product_run": "Run identity remains same through archive, pending knowledge publication, restart and overall completed",
-    "maintenance": "After completion use same Comet engine linked maintenance Run with origin_run and knowledge/operation linkage; do not rewrite delivered history or create peer scheduler",
+    "maintenance": "After completion use the same Comet engine linked maintenance Run, binding canonical originRunId, knowledgeIds, linkedReceipt and operationKey to actual original Run and published knowledge; do not rewrite delivered history or create a peer scheduler.",
     "conditional_scope": "Original human F10 positive API deferral remains; current host-native topology follows ADR-0021. All other functional knowledge/platform/permissions/recovery obligations still required.",
     "closeout": "Migration Change archive/post-audit through sole Comet owner after VERIFY; no helper finalize",
     "failure": "Any in-scope FAIL/GATED/UNVERIFIED/EVIDENCE_UNSTABLE or missing required UI/raw readback prevents completion. Only the exact P5_2/F10/V_F10 scope disposition is allowed; incomplete source/knowledge/platform/permissions/recovery evidence cannot inherit it.",
@@ -4587,10 +4687,63 @@
       {
         "task": "P1_5",
         "dependency": "P1_4"
+      },
+      {
+        "task": "P1_3",
+        "dependency": "P2_4"
+      },
+      {
+        "task": "P1_3",
+        "dependency": "P3_1"
+      },
+      {
+        "task": "P3_2",
+        "dependency": "P3_1"
+      },
+      {
+        "task": "P5_1",
+        "dependency": "P4_3"
+      },
+      {
+        "task": "P3_1",
+        "dependency": "P2_1"
+      },
+      {
+        "task": "P2_2",
+        "dependency": "P2_1"
+      },
+      {
+        "task": "P1_6",
+        "dependency": "P1_1"
+      },
+      {
+        "task": "P2_4",
+        "dependency": "P1_1"
+      },
+      {
+        "task": "P2_4",
+        "dependency": "P1_6"
+      },
+      {
+        "task": "P1_2",
+        "dependency": "P2_4"
       }
     ],
-    "required_evidence": "current source/artifact hashes, related tests and independent review; old artifact history cannot close current host/business requirements",
-    "status_rule": "No mandatory I02 image qualification before P1_3/P3_2; dependency exceptions never waive actual gates/resources or VERIFY."
+    "required_evidence": "current source/artifact hashes, related tests and independent review; old artifact history cannot close current host/business requirements After 0.5.1 replan every limited edge must be independently re-admitted against the current 0.5.1 source, applicable build/lock, current source hashes and consumer. No 0.5.0 artifact qualifies 0.5.1 by label. P1_6 requires verified 0.5.1 version inputs and fresh method snapshot; P2_1/P3_1 version-independent components retain historical evidence only until source/contract re-review.",
+    "status_rule": "No mandatory I02 image qualification before P1_3/P3_2; dependency exceptions never waive actual gates/resources or VERIFY.",
+    "repair_cycle_rule": "P3_1 precedes P2_4 and P1_3 and must first implement/test tools/verify/check-construction-artifact.mjs without consuming P2_4 artifacts. P1_3 then consumes P2_4 construction artifact only after that verifier validates worker-reports/P2_4-construction-manifest.json against exact candidate source, compiled package, original test evidence and independent reviewer record; artifact cannot mark P2_4 accepted. P2_4 acceptance requires actual host source and independent review; VERIFY has no exception. P3_1 先产出独立复核并主控验证的验收器构建工件，P2_4/P1_3/P3_2 仅可按各自依赖的该工件及必要前置开展建设，不获得业务通过；P3_2 执行前还需验证当前试点/测试包与真实来源。P3_1 父任务不得提前 ACCEPTED。后续各任务交付测试后，唯一控制器按 P3_1 登记检查点整合全部断言、组织独立审查并更新原 contract、baseline 和 lock；不得更改检查身份或降低证明级别。P4_3 可先开发并独立复核汇总器 construction artifact，P5_1 仅可消费该工件进行建设，P4_3 不提前 ACCEPTED。全部测试定义及受保护来源 schema 登记并独立复核重锁后，形成最终候选，再由 VERIFY 调用真实汇总、核验全部原始来源；VERIFY 无 construction 例外。 VERIFY 对 P3_1/P4_3 使用机器可核验的 PREVERIFY_IMPLEMENTATION_READY：当前实现与注册代码摘要、67 项定义和受保护来源 schema 完整、必需组件测试及独立审查通过，原始证据可回读且建设工件、测试定义、来源 schema 和接线的独立审查无未处理 P0/P1；仍需真实业务旅程验证的缺口保持 OPEN 并由 VERIFY 关闭。此状态仅为启动 VERIFY 的前置，不是 construction artifact 或业务 PASS；其他依赖仍须按合同完成。VERIFY 在同一最终候选/实际 Run 执行全部测试和来源验证后才关闭最终业务义务。 P3_1 may consume P2_1 TAP construction artifact only after independent review and controller replay of raw tests, exact lib/delivery/test-contract.js and matching test hashes under the current lock. It may build acceptance tools only; this does not qualify a pilot, authorize a Run or accept P2_1. Any source or relevant lock change requires re-review. P2_1 full monotonic invalidation and user-source conflicts remain OPEN until P2_4 provides and validates current authoritative Comet Run/epoch and downstream projection; VERIFY has no construction exception. P3_1 machine checker must validate artifact identity and consumer. P2_2 may consume the independently reviewed current P2_1 TAP artifact only to build/test source adapters in isolation; it cannot qualify the host, advance a real Run or accept P2_1. P1_6 may consume the independently reviewed pinned Comet/OpenSpec/TeamAI public artifact and current method snapshot only to build/test method bindings in isolation; this is not a TeamAI project entry, dependency deployment, real method invocation or P1_1 acceptance. For both edges the unique controller and an independent reviewer must validate exact artifact, source and current contract hashes and consumer before dispatch; source or relevant lock changes revoke use. P2_4 final acceptance still requires P1_1 full qualification; the named P2_4 construction edge does not waive it, and VERIFY has no construction exception. P2_4 may consume P1_1 0.5.1 exact d6 supply and P1_6 current method asset construction solely for isolated source TDD/compilation after fresh independent review and exact current lock, source, patch, test and consumer hashes. Other P2_3/P3_1 prerequisites remain independently required. Missing or unknown sourceExtractionPolicy and old e0 build must be rejected. No real Run, publishing, authority or parent acceptance is granted. These edges are strictly non-transitive: P1_3/P2_5 may not inherit readiness; they require the P2_4 artifact and their own reviewed exact consumer-specific conditions. VERIFY has no construction exception. If 0005 or upstream lock changes, stop and independently requalify the fingerprint and build. P1_2 may consume the independently reviewed official P2_4 0.5.1 construction package contentHash 8e73083389637cc42d045246d057934517a89c7a465a2cc8345d39830028761f only after independent consumer-specific readmission against current contract, source, package, compiler manifest and test/review identities. Scope is private isolated offline Foundation cold export and recovery verification only; no real-project installation, product Run, publication, external effects, P2_4/P3_1 acceptance or transitive P1_3 readiness. Any input, lock, contract or consumer change revokes readmission. VERIFY has no exception. The offline fixture must never read or emit credentials or original business materials. If real MCP environment is unqualified, use synthetic fixture; real materials remain NOT-EXERCISED.",
+    "controller_owned_registration": "唯一控制器在各任务产出测试定义、代码和受保护来源 schema 后组织 P3_1 登记与独立复核，更新原 contract、baseline 和 lock；该登记不要求提前存在最终候选的业务结果。最终候选固定后 VERIFY 验证真实来源并关闭适用父义务；保留旧合同及审查证据，登记不自动使 P3_1 ACCEPTED。 P3_1/P4_3 可在符合 preverify_ready 的全部条件后登记 PREVERIFY_IMPLEMENTATION_READY，供 VERIFY 启动；该状态不宣布业务验收。",
+    "preverify_ready": {
+      "tasks": [
+        "P3_1",
+        "P4_3"
+      ],
+      "consumer": "VERIFY",
+      "status": "PREVERIFY_IMPLEMENTATION_READY",
+      "requirements": "current implementation and registered 67 assertion definitions, reviewed protected source schemas, required component tests and independent review with raw evidence; no unresolved P0/P1 in construction artifacts, test definitions, source schemas or integration wiring; pending real business journey evidence stays OPEN until VERIFY",
+      "not_equivalent": "construction artifact, final candidate evidence, business PASS or delivery completion",
+      "machine_enforcement": "P3_1 implements tools/verify/check-construction-artifact.mjs and test/check-construction-artifact.test.js to verify protected current contract/lock, all 67 registered definitions and schemas, exact code hashes, raw component evidence and independent review, reject forged status, absent or stale inputs, and consumers other than VERIFY. The unique controller must consume its result; a hand-edited state value never unlocks. Construction-artifact verification and PREVERIFY verification are separate modes with distinct output types and consumer allowlists; cross-mode substitution must fail closed."
+    }
   },
   "journey_execution": {
     "owner": "VERIFY",
@@ -5064,7 +5217,7 @@
     "current_scope_decision": "f10-current-scope-decision.json"
   },
   "flow_convergence": {
-    "revision": "2026-10-26-command-first-v1",
+    "revision": "2026-10-29-comet-pilot-remediation-v1",
     "architecture": "docs/architecture/comet-ai-devops-convergence.md",
     "adr": "docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md",
     "native_entrypoints": [
@@ -5102,7 +5255,7 @@
     ],
     "first_vertical_slice": "P3_2 real R-to-V before knowledge/platform all-ready",
     "evidence_rule": "current revision bound original host/tool/CI/resource events, not role labels or self-filled pass",
-    "no_implementation_in_this_revision": true
+    "no_implementation_in_this_revision": false
   },
   "current_delivery_scope": {
     "decision_ref": "f10-current-scope-decision.json",
@@ -5131,8 +5284,1560 @@
     "control_api_enablement": "NOT_AUTHORIZED_OR_CERTIFIED",
     "future_activation_requires": "fresh explicit activation, registered resources and actual complete F10 positive/negative identity/isolation/recovery evidence",
     "only_this_named_disposition": "all other missing/failed capability or evidence still blocks current delivery; no JSON/worker supplied arbitrary exclusions",
-    "topology_decision_ref": "replans/2026-10-26-command-first/amendment.json"
+    "topology_decision_ref": "replans/2026-10-26-command-first/amendment.json",
+    "maintenance_checks": [
+      "V_L01",
+      "V_L02",
+      "V_L03",
+      "V_L04",
+      "V_L05",
+      "V_L06",
+      "V_L07",
+      "V_L08",
+      "V_L09",
+      "V_L10",
+      "V_L11",
+      "V_POST_DELIVERY_PERMISSIONS"
+    ],
+    "maintenance_link_rule": "Direct primary evidence may use the linked maintenance Run only for maintenance_checks. Bind its canonical originRunId, knowledgeIds, linkedReceipt and operationKey to independently read original product Run, actual published knowledge and operation, with the same final candidate. V_N09 and V_N12 retain the product Run as primary identity and may reference the separately verified V_POST_DELIVERY_PERMISSIONS maintenance evidence by digest. No unverified originRun/origin_run alias, arbitrary ordinary check, second controller or history rewrite. Resolve linkedReceipt through the protected original publish record and independently verify its original publication operation and target; operationKey is the separate maintenance operation key, not the publication operation ID. Both identities must be linked and idempotently reconciled; they must not be equated.",
+    "maintenance_linked_reference_checks": [
+      "V_N09",
+      "V_N12"
+    ],
+    "maintenance_link_fields": {
+      "canonical_origin": "originRunId",
+      "knowledge_ids": "knowledgeIds",
+      "publish_receipt": "linkedReceipt",
+      "operation": "operationKey",
+      "kind": "knowledge-permission-maintenance",
+      "source": "lib/adapters/knowledge-revocation.js:evaluatePostCompletionMaintenance"
+    }
   },
-  "planning_revision": "2026-10-26-command-first-v1",
-  "plan_only": true
+  "planning_revision": "2026-10-29-comet-051-adoption-v1",
+  "plan_only": false,
+  "repair_obligations": {
+    "P1_2": "入口 RED：逐宿主检测 /comet 与五阶段入口、受管应用版本和 CLI 路由；修复后拒绝源码包缺依赖、旧入口与跳门，保留现有技能。 用户指南只说明真实受限诊断，旧安装/归档步骤不得作为当前流程；明确各阶段为目标、SDK直调绕行未关闭。",
+    "P1_3": "宿主 RED：不可由 Agent 回执自报资格；对接真实宿主可核验的执行来源、角色、只读权限和审查，缺能力如实阻断；初始化使用实际语言与分支。 签发/消费必须绑定可信当前 Run/action/claim、候选/策略/需求设计代际和完整动作；伪锁、旧执行、重审和 CAS 冲突拒绝，真实应用条件提交与恢复需验证。",
+    "P1_4": "绕行 RED：在真实受管 Run 和独立 stock 新建路径分别验证正常入口、直接 CLI、hook、恢复和归档；不得仅靠 wrapper。",
+    "P1_5": "装配 RED：R/A/T 独立过门，P 只产唯一计划，测试自动化与 TDD/代码审查独立留证；首次启动和中文配置不漂移。",
+    "P1_6": "技能 RED：通过实际宿主运行技能，不写缓存或其他包内临时物；保留现有技能正文及用户配置，复编译与恢复后摘要一致。",
+    "P2_1": "基线 RED：用户确认来源冲突拒绝；需求或设计变化使全部下游单调失效，恢复旧字节不复活票；测试意图与候选绑定。",
+    "P2_4": "来源 RED：真实 SDK 禁止另一 Run 的 component-only 回执或 worker 提交的 false/缺省选项通过；合格可信来源和独立审查有实际正向路径。 固定输入摘要下缩减测试合同或替换策略拒绝；冻结合同/策略及每条证据从当前可信来源核验，合格宿主保留正向路径。",
+    "P2_5": "审查 RED：架构 A 和测试 T 分开，审查者与作者独立；源版本改变、弱 oracle、缺测试意图和仅结构有效都拒绝。",
+    "P3_1": "验收器 RED：必验任务、案例、命令、执行源及最终候选必须逐一注册并执行；synthetic fixture 不冒充真实用户/模型或 managed PASS。",
+    "P3_2": "同一实际 Run 从用户确认的受控需求经 R/A/T/P/测试/TDD/独立审查到 V；任一阶段失败不能用局部测试填通过。",
+    "P3_3": "恢复 RED：重复入口、双会话、分支漂移、旧证据覆盖、首次投影、REVISION_CONFLICT 和未知结果均先查询同一 Run，不能重派或虚报成功。",
+    "P3_4": "归档 RED：Kp 缺失不可归档；记录唯一操作和主规范读回，重复请求及归档中断先核对原操作。",
+    "P4_4": "知识 RED：LLMWiki 项目精华与 Outline 团队内容分别审查授权并真实读回；代码 Wiki 不替代架构或需求。",
+    "P4_6": "Kt RED：归档后同一 Run 恢复发布，未知结果查询原 operation；未完成不得 completed。",
+    "P4_7": "权限 RED：真实源权限、目标受众、版本、grant 在写前核验，Agent 不得自批；无授权不发起外写。",
+    "P4_8": "维护 RED：源撤权/受众变化/过期后事件与周期核验、隔离、告警、重试和恢复分别留证，旧授权不得恢复。",
+    "P4_3": "汇总 RED：不同 revision、不同层级、旧验收或未执行不能合并成最终 PASS，检查状态源和轨迹一致。",
+    "VERIFY": "终验 RED：修订返工项与本期 129 required/103 场景在同最终候选和实际产品 Run 检查，独立 Whitebox/Grill、适用知识/平台恢复及唯一收尾；F10 NOT-EXERCISED。"
+  },
+  "repair_obligations_note": "Required along existing task and VERIFY, not a second DAG or substitute for 129/103. Independently verify raw evidence; no scheduled task.",
+  "repair_validation_rule": "P3_1 implements direct-target-test; P4_3 implements final-checks and its tests. V_RW_COMPLETION_REQUIRED runs final-checks, which first evaluates its frozen target names via direct-target-test and independently validates every other in-scope check, current scenario/obligation bindings and provenance for the same final candidate/Run, plus the exact F10 disposition. It must not require a pre-existing PASS for itself. VERIFY consumes this machine-readable result; textual mappings, names and exit codes alone are never semantic proof. The final aggregator must require and validate every entry in repair_obligation_bindings and all check-specific frozen target sets; merely mapping a task to an AC is not sufficient.",
+  "historical_false_passes": {
+    "ids": [
+      "V_RW_R_ENTRY",
+      "V_RW_TRUSTED_REVIEW",
+      "V_RW_REVISION_NO_REVIVE"
+    ],
+    "disposition": "INVALID_FOR_CURRENT_REVISION; preserve old original TAP and report; re-execute named real checks on final candidate",
+    "evidence": "worker-reports/P4_3-zero-tests-20261029/observation.json"
+  },
+  "repair_order_rule": "DAG waves remain authoritative; artifacts may pass only declared limited edges. Logical groups never override dependencies; no progress scheduler.",
+  "verification_order": {
+    "required_except": [
+      "V_RW_COMPLETION_REQUIRED"
+    ],
+    "final_check": "V_RW_COMPLETION_REQUIRED",
+    "exclude_scope": [
+      "V_F10"
+    ],
+    "rule": "Run all other 128 in-scope checks with applicable same-Run dependency order and current evidence before final-checks. The final check executes its own frozen assertions, verifies all other check and scenario/obligation evidence, then derives and records its own result; never trust a prefilled PASS. F10 remains explicit NOT-EXERCISED."
+  },
+  "self_reference_resolution": {
+    "check": "V_RW_COMPLETION_REQUIRED",
+    "scenarios": [
+      "A20",
+      "B10"
+    ],
+    "rule": "First execute this final check’s frozen own exact test targets and validate its two self-referential obligation assertions directly from current raw outputs and required proof levels, without relying on any pre-existing PASS. Evaluate A20/B10 and other obligations against their other checks and current evidence; derive the final check result in the same aggregation, then atomically substitute the real result into A20/B10 and the two obligations. Any missing, failed, stale or unqualified proof blocks; never prewrite PASS.",
+    "obligation_assertions": [
+      "FINAL_RESULTS_DERIVED_FROM_EVIDENCE",
+      "FINAL_SELF_REFERENCE_RESOLVED"
+    ]
+  },
+  "repair_obligation_bindings": [
+    {
+      "id": "ENTRY_PATHS",
+      "checks": [
+        "V_F02",
+        "V_F03",
+        "V_F04",
+        "V_C07"
+      ],
+      "required_observation": "both supported host menus and normal/direct/hook/next/resume/archive use same current Run and gates",
+      "evidence_rule": "Each linked required check must carry actual current candidate/Run or appropriately linked maintenance identity, raw result and source; target checks also prove all frozen testTarget.requiredNames; fixture/self-reported labels never satisfy host proof.",
+      "proof_levels": [
+        "host"
+      ],
+      "task_ids": [
+        "P1_2",
+        "P1_4"
+      ],
+      "assertion_ids": [
+        "ENTRY_EXISTING_USER_CONFIG",
+        "ENTRY_HOST_COMMAND_DISCOVERY",
+        "ENTRY_RESUME_PINNED",
+        "ENTRY_ALL_TRANSITIONS_GUARDED"
+      ],
+      "assertions": [
+        {
+          "id": "ENTRY_EXISTING_USER_CONFIG",
+          "check_ids": [
+            "V_F02"
+          ],
+          "required_proof_levels": [
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "ENTRY_HOST_COMMAND_DISCOVERY",
+          "check_ids": [
+            "V_F03"
+          ],
+          "required_proof_levels": [
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "ENTRY_RESUME_PINNED",
+          "check_ids": [
+            "V_F04"
+          ],
+          "required_proof_levels": [
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "ENTRY_ALL_TRANSITIONS_GUARDED",
+          "check_ids": [
+            "V_C07"
+          ],
+          "required_proof_levels": [
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        }
+      ]
+    },
+    {
+      "id": "R_SOURCE_BINDING",
+      "checks": [
+        "V_RW_R_ENTRY",
+        "V_RW_RUNNER_BUILD"
+      ],
+      "required_observation": "all frozen R negative and trusted positive cases; raw source and current Run/action/epoch, not component labels",
+      "evidence_rule": "Each linked required check must carry actual current candidate/Run or appropriately linked maintenance identity, raw result and source; target checks also prove all frozen testTarget.requiredNames; fixture/self-reported labels never satisfy host proof.",
+      "proof_levels": [
+        "comet-runtime",
+        "host"
+      ],
+      "task_ids": [
+        "P1_3",
+        "P2_4"
+      ],
+      "assertion_ids": [
+        "R_CROSS_RUN_COMPONENT_REPLAY",
+        "R_MANAGED_OPTION_MISSING",
+        "R_MANAGED_OPTION_FALSE",
+        "R_CURRENT_TRUSTED_SOURCE",
+        "R_FROZEN_CONTRACT_AND_POLICY",
+        "R_SCOPE_ALL_RECEIPTS"
+      ],
+      "assertions": [
+        {
+          "id": "R_CROSS_RUN_COMPONENT_REPLAY",
+          "check_ids": [
+            "V_RW_R_ENTRY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_R_ENTRY CROSS_RUN_COMPONENT_REPLAY_BLOCKED"
+        },
+        {
+          "id": "R_MANAGED_OPTION_MISSING",
+          "check_ids": [
+            "V_RW_R_ENTRY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_R_ENTRY MISSING_MANAGED_MODE_BLOCKED"
+        },
+        {
+          "id": "R_MANAGED_OPTION_FALSE",
+          "check_ids": [
+            "V_RW_R_ENTRY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_R_ENTRY FALSE_MANAGED_MODE_BLOCKED"
+        },
+        {
+          "id": "R_CURRENT_TRUSTED_SOURCE",
+          "check_ids": [
+            "V_RW_R_ENTRY",
+            "V_RW_RUNNER_BUILD"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_R_ENTRY CURRENT_TRUSTED_SOURCE_PASS"
+        },
+        {
+          "id": "R_FROZEN_CONTRACT_AND_POLICY",
+          "check_ids": [
+            "V_RW_R_ENTRY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "固定输入摘要下合同分母缩减、策略替换及核验后变更均拒绝；真实来源正向",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "evidence_schema_ref": "UNREGISTERED:P3_1"
+        },
+        {
+          "id": "R_SCOPE_ALL_RECEIPTS",
+          "check_ids": [
+            "V_RW_R_ENTRY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "每条回执绑定同 Run/gate/候选/策略；跨域补足拒绝、合法多回执通过",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "evidence_schema_ref": "UNREGISTERED:P3_1"
+        }
+      ]
+    },
+    {
+      "id": "ARCH_TEST_INDEPENDENCE",
+      "checks": [
+        "V_RW_TRUSTED_REVIEW",
+        "V_C03"
+      ],
+      "required_observation": "all frozen A/T rejection and independent positive cases, current author/reviewer and artifact versions",
+      "evidence_rule": "Each linked required check must carry actual current candidate/Run or appropriately linked maintenance identity, raw result and source; target checks also prove all frozen testTarget.requiredNames; fixture/self-reported labels never satisfy host proof.",
+      "proof_levels": [
+        "host"
+      ],
+      "task_ids": [
+        "P2_5"
+      ],
+      "assertion_ids": [
+        "ARCH_SELF_APPROVAL_REFUSED",
+        "ARCH_FORGED_IDENTITY_REFUSED",
+        "ARCH_INVALID_BALLOTS_REFUSED",
+        "TEST_WEAK_ORACLE_REFUSED",
+        "ARCH_TEST_INDEPENDENT_APPROVED"
+      ],
+      "assertions": [
+        {
+          "id": "ARCH_SELF_APPROVAL_REFUSED",
+          "check_ids": [
+            "V_RW_TRUSTED_REVIEW"
+          ],
+          "required_proof_levels": [
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_TRUSTED_REVIEW SELF_APPROVAL_BLOCKED"
+        },
+        {
+          "id": "ARCH_FORGED_IDENTITY_REFUSED",
+          "check_ids": [
+            "V_RW_TRUSTED_REVIEW"
+          ],
+          "required_proof_levels": [
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_TRUSTED_REVIEW FORGED_ID_BLOCKED"
+        },
+        {
+          "id": "ARCH_INVALID_BALLOTS_REFUSED",
+          "check_ids": [
+            "V_RW_TRUSTED_REVIEW"
+          ],
+          "required_proof_levels": [
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_TRUSTED_REVIEW MISSING_REJECTED_STALE_BALLOTS"
+        },
+        {
+          "id": "TEST_WEAK_ORACLE_REFUSED",
+          "check_ids": [
+            "V_RW_TRUSTED_REVIEW",
+            "V_C03"
+          ],
+          "required_proof_levels": [
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_TRUSTED_REVIEW WEAK_ORACLE_BLOCKED"
+        },
+        {
+          "id": "ARCH_TEST_INDEPENDENT_APPROVED",
+          "check_ids": [
+            "V_RW_TRUSTED_REVIEW"
+          ],
+          "required_proof_levels": [
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_TRUSTED_REVIEW INDEPENDENT_PASS"
+        }
+      ]
+    },
+    {
+      "id": "CHANGE_INVALIDATION",
+      "checks": [
+        "V_RW_REVISION_NO_REVIVE",
+        "V_A02"
+      ],
+      "required_observation": "all frozen change, restoration and stale-attempt cases with monotonic epoch",
+      "evidence_rule": "Each linked required check must carry actual current candidate/Run or appropriately linked maintenance identity, raw result and source; target checks also prove all frozen testTarget.requiredNames; fixture/self-reported labels never satisfy host proof.",
+      "proof_levels": [
+        "comet-runtime",
+        "host"
+      ],
+      "task_ids": [
+        "P2_1",
+        "P2_4"
+      ],
+      "assertion_ids": [
+        "REQUIREMENTS_CHANGE_INVALIDATES",
+        "DESIGN_CHANGE_INVALIDATES",
+        "OLD_BYTES_DO_NOT_REVIVE",
+        "NEW_REVIEW_REQUIRED",
+        "STALE_ATTEMPT_REFUSED",
+        "HISTORICAL_RECOVERY_IDEMPOTENT",
+        "OLD_EXECUTION_INVALID_AFTER_CHANGE",
+        "APPLICATION_CAS_RACE_NO_AUTH_LEAK"
+      ],
+      "assertions": [
+        {
+          "id": "REQUIREMENTS_CHANGE_INVALIDATES",
+          "check_ids": [
+            "V_A02",
+            "V_RW_REVISION_NO_REVIVE"
+          ],
+          "required_proof_levels": [
+            "comet-runtime"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "DESIGN_CHANGE_INVALIDATES",
+          "check_ids": [
+            "V_RW_REVISION_NO_REVIVE"
+          ],
+          "required_proof_levels": [
+            "comet-runtime"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_REVISION_NO_REVIVE INVALIDATES_DOWNSTREAM"
+        },
+        {
+          "id": "OLD_BYTES_DO_NOT_REVIVE",
+          "check_ids": [
+            "V_RW_REVISION_NO_REVIVE"
+          ],
+          "required_proof_levels": [
+            "comet-runtime"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_REVISION_NO_REVIVE OLD_BYTES_NO_REVIVE"
+        },
+        {
+          "id": "NEW_REVIEW_REQUIRED",
+          "check_ids": [
+            "V_RW_REVISION_NO_REVIVE"
+          ],
+          "required_proof_levels": [
+            "comet-runtime"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_REVISION_NO_REVIVE NEW_REVIEW_PASS"
+        },
+        {
+          "id": "STALE_ATTEMPT_REFUSED",
+          "check_ids": [
+            "V_RW_REVISION_NO_REVIVE"
+          ],
+          "required_proof_levels": [
+            "comet-runtime"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_REVISION_NO_REVIVE STALE_ATTEMPT_BLOCKED"
+        },
+        {
+          "id": "HISTORICAL_RECOVERY_IDEMPOTENT",
+          "check_ids": [
+            "V_RW_REVISION_NO_REVIVE"
+          ],
+          "required_proof_levels": [
+            "comet-runtime"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_REVISION_NO_REVIVE HISTORICAL_IDEMPOTENCE"
+        },
+        {
+          "id": "OLD_EXECUTION_INVALID_AFTER_CHANGE",
+          "check_ids": [
+            "V_RW_REVISION_NO_REVIVE"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "新代际后旧执行不得签发或消费，恢复旧字节不复活",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "evidence_schema_ref": "UNREGISTERED:P3_1"
+        },
+        {
+          "id": "APPLICATION_CAS_RACE_NO_AUTH_LEAK",
+          "check_ids": [
+            "V_RW_REVISION_NO_REVIVE"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "应用 Run 并发变化或 CAS 冲突不泄露授权；真实 SDK 正反与恢复",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "evidence_schema_ref": "UNREGISTERED:P3_1"
+        }
+      ]
+    },
+    {
+      "id": "CHECK_EXECUTION",
+      "checks": [
+        "V_RW_TARGET_REQUIRED",
+        "V_RW_OBSERVATION_REQUIRED",
+        "V_RW_COMPLETION_REQUIRED"
+      ],
+      "required_observation": "all frozen exact target sets, raw TAP, required source/observation and semantic oracle",
+      "evidence_rule": "Each linked required check must carry actual current candidate/Run or appropriately linked maintenance identity, raw result and source; target checks also prove all frozen testTarget.requiredNames; fixture/self-reported labels never satisfy host proof.",
+      "proof_levels": [
+        "comet-runtime",
+        "component"
+      ],
+      "task_ids": [
+        "P3_1",
+        "P4_3",
+        "VERIFY"
+      ],
+      "assertion_ids": [
+        "TARGETS_NONEMPTY_AND_EXACT",
+        "OBSERVATIONS_REAL_AND_CURRENT",
+        "FINAL_RESULTS_DERIVED_FROM_EVIDENCE"
+      ],
+      "assertions": [
+        {
+          "id": "TARGETS_NONEMPTY_AND_EXACT",
+          "check_ids": [
+            "V_RW_TARGET_REQUIRED"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "component"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "OBSERVATIONS_REAL_AND_CURRENT",
+          "check_ids": [
+            "V_RW_OBSERVATION_REQUIRED"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "component"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "FINAL_RESULTS_DERIVED_FROM_EVIDENCE",
+          "check_ids": [
+            "V_RW_COMPLETION_REQUIRED"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "component"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_COMPLETION_REQUIRED FINAL_RESULTS_FROM_CURRENT_EVIDENCE"
+        }
+      ]
+    },
+    {
+      "id": "TDD_AND_INDEPENDENT_V",
+      "checks": [
+        "V_B02",
+        "V_B03",
+        "V_C05",
+        "V_SAME_RUN_DELIVERY"
+      ],
+      "required_observation": "real test design and executable cases, TDD, independent review and Whitebox for same candidate",
+      "evidence_rule": "Each linked required check must carry actual current candidate/Run or appropriately linked maintenance identity, raw result and source; target checks also prove all frozen testTarget.requiredNames; fixture/self-reported labels never satisfy host proof.",
+      "proof_levels": [
+        "host"
+      ],
+      "task_ids": [
+        "P1_5",
+        "P3_2"
+      ],
+      "assertion_ids": [
+        "TEST_AUTHOR_DISTINCT",
+        "FINAL_CANDIDATE_VERIFIED_INDEPENDENTLY"
+      ],
+      "assertions": [
+        {
+          "id": "TEST_AUTHOR_DISTINCT",
+          "check_ids": [
+            "V_B02",
+            "V_B03"
+          ],
+          "required_proof_levels": [
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "FINAL_CANDIDATE_VERIFIED_INDEPENDENTLY",
+          "check_ids": [
+            "V_C05",
+            "V_SAME_RUN_DELIVERY"
+          ],
+          "required_proof_levels": [
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        }
+      ]
+    },
+    {
+      "id": "SAME_RUN_RECOVERY",
+      "checks": [
+        "V_A10",
+        "V_A11",
+        "V_RW_REAL_COMET_RECOVERY"
+      ],
+      "required_observation": "concurrent controller rejection, real interruption, original Run/action and no duplicate effects",
+      "evidence_rule": "Each linked required check must carry actual current candidate/Run or appropriately linked maintenance identity, raw result and source; target checks also prove all frozen testTarget.requiredNames; fixture/self-reported labels never satisfy host proof.",
+      "proof_levels": [
+        "comet-runtime",
+        "host"
+      ],
+      "task_ids": [
+        "P3_3"
+      ],
+      "assertion_ids": [
+        "ONE_WRITER_ENFORCED",
+        "NO_DUPLICATE_SIDE_EFFECTS",
+        "REAL_INTERRUPTION_SAME_RUN"
+      ],
+      "assertions": [
+        {
+          "id": "ONE_WRITER_ENFORCED",
+          "check_ids": [
+            "V_A10"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "NO_DUPLICATE_SIDE_EFFECTS",
+          "check_ids": [
+            "V_A11"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "REAL_INTERRUPTION_SAME_RUN",
+          "check_ids": [
+            "V_RW_REAL_COMET_RECOVERY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        }
+      ]
+    },
+    {
+      "id": "PROJECT_KP_AND_ARCHIVE",
+      "checks": [
+        "V_D06",
+        "V_C06",
+        "V_SAME_RUN_DELIVERY",
+        "V_N07"
+      ],
+      "required_observation": "real LLMWiki Kp write/readback before unique OpenSpec archive, current operation identity",
+      "evidence_rule": "Each linked required check must carry actual current candidate/Run or appropriately linked maintenance identity, raw result and source; target checks also prove all frozen testTarget.requiredNames; fixture/self-reported labels never satisfy host proof.",
+      "proof_levels": [
+        "comet-runtime",
+        "resource"
+      ],
+      "task_ids": [
+        "P3_4",
+        "P4_4"
+      ],
+      "assertion_ids": [
+        "PROJECT_KNOWLEDGE_READBACK",
+        "KP_REQUIRED_BEFORE_ARCHIVE",
+        "UNIQUE_ARCHIVE_SAME_RUN"
+      ],
+      "assertions": [
+        {
+          "id": "PROJECT_KNOWLEDGE_READBACK",
+          "check_ids": [
+            "V_D06",
+            "V_C06",
+            "V_SAME_RUN_DELIVERY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "KP_REQUIRED_BEFORE_ARCHIVE",
+          "check_ids": [
+            "V_N07"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "UNIQUE_ARCHIVE_SAME_RUN",
+          "check_ids": [
+            "V_SAME_RUN_DELIVERY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        }
+      ]
+    },
+    {
+      "id": "TEAM_KT_AND_PERMISSION",
+      "checks": [
+        "V_C06",
+        "V_U01",
+        "V_SAME_RUN_DELIVERY",
+        "V_N08",
+        "V_U02",
+        "V_U03",
+        "V_U04",
+        "V_U05",
+        "V_U06",
+        "V_U07",
+        "V_U08"
+      ],
+      "required_observation": "authorized Outline audience/source/grant/version and post-archive original operation readback",
+      "evidence_rule": "Each linked required check must carry actual current candidate/Run or appropriately linked maintenance identity, raw result and source; target checks also prove all frozen testTarget.requiredNames; fixture/self-reported labels never satisfy host proof.",
+      "proof_levels": [
+        "comet-runtime",
+        "resource"
+      ],
+      "task_ids": [
+        "P4_4",
+        "P4_6",
+        "P4_7"
+      ],
+      "assertion_ids": [
+        "KT_PENDING_BLOCKS_COMPLETION",
+        "OUTLINE_CURRENT_AUDIENCE_GRANT",
+        "OUTLINE_SINGLE_OPERATION",
+        "OUTLINE_OWNER_PREAUTH_BOUND",
+        "OUTLINE_CHANGED_PERMISSIONS_REFUSED",
+        "OUTLINE_CHANGED_PAYLOAD_REFUSED",
+        "OUTLINE_EXPANDED_AUDIENCE_REFUSED",
+        "OUTLINE_INCOMPLETE_PERMISSIONS_REFUSED",
+        "OUTLINE_WRITER_REVIEWER_SEPARATED",
+        "OUTLINE_AUTHORIZED_POSITIVE",
+        "OUTLINE_SOURCE_INTERSECTION"
+      ],
+      "assertions": [
+        {
+          "id": "KT_PENDING_BLOCKS_COMPLETION",
+          "check_ids": [
+            "V_C06"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "OUTLINE_CURRENT_AUDIENCE_GRANT",
+          "check_ids": [
+            "V_N08",
+            "V_U01"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "OUTLINE_SINGLE_OPERATION",
+          "check_ids": [
+            "V_SAME_RUN_DELIVERY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "OUTLINE_OWNER_PREAUTH_BOUND",
+          "check_ids": [
+            "V_U01",
+            "V_U08"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "authorized issuer proof and independently verified current grant plus same candidate/Run",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "OUTLINE_CHANGED_PERMISSIONS_REFUSED",
+          "check_ids": [
+            "V_U03"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "OUTLINE_CHANGED_PAYLOAD_REFUSED",
+          "check_ids": [
+            "V_U04"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "OUTLINE_EXPANDED_AUDIENCE_REFUSED",
+          "check_ids": [
+            "V_U05"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "OUTLINE_INCOMPLETE_PERMISSIONS_REFUSED",
+          "check_ids": [
+            "V_U06"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "OUTLINE_WRITER_REVIEWER_SEPARATED",
+          "check_ids": [
+            "V_U07"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "OUTLINE_AUTHORIZED_POSITIVE",
+          "check_ids": [
+            "V_U08"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "OUTLINE_SOURCE_INTERSECTION",
+          "check_ids": [
+            "V_U02"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "actual complete intersection of source permissions and target audience with current version",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        }
+      ]
+    },
+    {
+      "id": "PERMISSION_MAINTENANCE",
+      "checks": [
+        "V_L01",
+        "V_POST_DELIVERY_PERMISSIONS",
+        "V_L02",
+        "V_N09",
+        "V_N12"
+      ],
+      "required_observation": "event plus periodic checks, isolation, alerts and authorized recovery with elapsed times",
+      "evidence_rule": "Each linked required check must carry actual current candidate/Run or appropriately linked maintenance identity, raw result and source; target checks also prove all frozen testTarget.requiredNames; fixture/self-reported labels never satisfy host proof.",
+      "proof_levels": [
+        "comet-runtime",
+        "resource"
+      ],
+      "task_ids": [
+        "P4_8"
+      ],
+      "assertion_ids": [
+        "PERMISSION_REVOKE_ISOLATE",
+        "PERMISSION_EVENT_PERIODIC_AND_RECOVERY"
+      ],
+      "assertions": [
+        {
+          "id": "PERMISSION_REVOKE_ISOLATE",
+          "check_ids": [
+            "V_L01",
+            "V_L02",
+            "V_POST_DELIVERY_PERMISSIONS"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "PERMISSION_EVENT_PERIODIC_AND_RECOVERY",
+          "check_ids": [
+            "V_POST_DELIVERY_PERMISSIONS",
+            "V_N09",
+            "V_N12"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        }
+      ]
+    },
+    {
+      "id": "PLATFORM_DELIVERY",
+      "checks": [
+        "V_F09",
+        "V_A14",
+        "V_A17"
+      ],
+      "required_observation": "exact candidate/required checks/build digest and applicable real deploy or rollback evidence",
+      "evidence_rule": "Each linked required check must carry actual current candidate/Run or appropriately linked maintenance identity, raw result and source; target checks also prove all frozen testTarget.requiredNames; fixture/self-reported labels never satisfy host proof.",
+      "proof_levels": [
+        "platform"
+      ],
+      "task_ids": [
+        "VERIFY"
+      ],
+      "assertion_ids": [
+        "CI_INTEGRATION_IDENTITY",
+        "BUILD_DEPLOY_SAME_DIGEST",
+        "ROLLBACK_READBACK"
+      ],
+      "assertions": [
+        {
+          "id": "CI_INTEGRATION_IDENTITY",
+          "check_ids": [
+            "V_F09"
+          ],
+          "required_proof_levels": [
+            "platform"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "BUILD_DEPLOY_SAME_DIGEST",
+          "check_ids": [
+            "V_A14",
+            "V_F09"
+          ],
+          "required_proof_levels": [
+            "platform"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "ROLLBACK_READBACK",
+          "check_ids": [
+            "V_A17"
+          ],
+          "required_proof_levels": [
+            "platform"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        }
+      ]
+    },
+    {
+      "id": "OPTIONAL_CODE_GRAPH",
+      "checks": [
+        "V_A20",
+        "V_N05",
+        "V_INFRA_I05"
+      ],
+      "required_observation": "deepwiki source and revision boundary, CodeGraph disabled without correctness loss",
+      "evidence_rule": "Each linked required check must carry actual current candidate/Run or appropriately linked maintenance identity, raw result and source; target checks also prove all frozen testTarget.requiredNames; fixture/self-reported labels never satisfy host proof.",
+      "proof_levels": [
+        "host",
+        "resource"
+      ],
+      "task_ids": [
+        "VERIFY"
+      ],
+      "assertion_ids": [
+        "CODE_GRAPH_OPTIONAL",
+        "CODE_WIKI_VERSIONED_AND_AUTHORIZED"
+      ],
+      "assertions": [
+        {
+          "id": "CODE_GRAPH_OPTIONAL",
+          "check_ids": [
+            "V_A20"
+          ],
+          "required_proof_levels": [
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "CODE_WIKI_VERSIONED_AND_AUTHORIZED",
+          "check_ids": [
+            "V_N05",
+            "V_INFRA_I05"
+          ],
+          "required_proof_levels": [
+            "host",
+            "resource"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        }
+      ]
+    },
+    {
+      "id": "SKILL_CACHE_STABILITY",
+      "task_ids": [
+        "P1_6"
+      ],
+      "checks": [
+        "V_M01",
+        "V_F03",
+        "V_F01"
+      ],
+      "proof_levels": [
+        "component",
+        "host"
+      ],
+      "assertion_ids": [
+        "SKILL_NATIVE_EXECUTION_HASH_STABLE",
+        "SKILL_NO_CACHE_CONTAMINATION"
+      ],
+      "required_observation": "Real installed host skill execution and resume, before/after package hash; distinguish temporary -B fixture from actual host behavior.",
+      "evidence_rule": "Each assertion must resolve to a registered actual current execution and original log or resource readback at every stated proof level; labels and fixtures do not qualify as host evidence.",
+      "assertions": [
+        {
+          "id": "SKILL_NATIVE_EXECUTION_HASH_STABLE",
+          "check_ids": [
+            "V_M01",
+            "V_F03"
+          ],
+          "required_proof_levels": [
+            "component",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "SKILL_NO_CACHE_CONTAMINATION",
+          "check_ids": [
+            "V_F01",
+            "V_F03"
+          ],
+          "required_proof_levels": [
+            "component",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        }
+      ]
+    },
+    {
+      "id": "RUN_INITIAL_CONFIGURATION",
+      "task_ids": [
+        "P1_3",
+        "P1_5"
+      ],
+      "checks": [
+        "V_C01",
+        "V_F03",
+        "V_SAME_RUN_DELIVERY",
+        "V_A10",
+        "V_F04",
+        "V_RW_REAL_COMET_RECOVERY"
+      ],
+      "proof_levels": [
+        "component",
+        "comet-runtime",
+        "host"
+      ],
+      "assertion_ids": [
+        "RUN_LANGUAGE_FROM_CONFIG",
+        "RUN_BRANCH_BOUND",
+        "START_INSPECT_RESUME_SAME_RUN",
+        "AUTHORITY_AND_FULL_ACTION_BOUND",
+        "NATIVE_LOCK_OWNERSHIP_NOT_EXISTENCE",
+        "REJECTED_OR_SUPERSEDED_JUDGMENT_REVOKED"
+      ],
+      "required_observation": "Actual configured language, branch and startup projection, state readback and recovery with current revision.",
+      "evidence_rule": "Each assertion must resolve to a registered actual current execution and original log or resource readback at every stated proof level; labels and fixtures do not qualify as host evidence.",
+      "assertions": [
+        {
+          "id": "RUN_LANGUAGE_FROM_CONFIG",
+          "check_ids": [
+            "V_C01",
+            "V_F03"
+          ],
+          "required_proof_levels": [
+            "component",
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "RUN_BRANCH_BOUND",
+          "check_ids": [
+            "V_A10",
+            "V_F04",
+            "V_RW_REAL_COMET_RECOVERY"
+          ],
+          "required_proof_levels": [
+            "component",
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "START_INSPECT_RESUME_SAME_RUN",
+          "check_ids": [
+            "V_SAME_RUN_DELIVERY"
+          ],
+          "required_proof_levels": [
+            "component",
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "AUTHORITY_AND_FULL_ACTION_BOUND",
+          "check_ids": [
+            "V_A10"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "完整动作、Run、gate、role、attempt、epoch、候选和策略绑定，篡改拒绝",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "evidence_schema_ref": "UNREGISTERED:P3_1"
+        },
+        {
+          "id": "NATIVE_LOCK_OWNERSHIP_NOT_EXISTENCE",
+          "check_ids": [
+            "V_RW_REAL_COMET_RECOVERY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "假锁和普通文件拒绝，真实锁与应用条件提交边界在真实 SDK 验证",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "evidence_schema_ref": "UNREGISTERED:P3_1"
+        },
+        {
+          "id": "REJECTED_OR_SUPERSEDED_JUDGMENT_REVOKED",
+          "check_ids": [
+            "V_RW_REAL_COMET_RECOVERY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "失败重审、并发与恢复后旧资格失效；同一 Run 可重做",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "evidence_schema_ref": "UNREGISTERED:P3_1"
+        }
+      ]
+    },
+    {
+      "id": "USER_REQUIREMENT_ORIGIN",
+      "task_ids": [
+        "P2_1",
+        "P1_5"
+      ],
+      "checks": [
+        "V_A01",
+        "V_C01",
+        "V_RW_R_ENTRY"
+      ],
+      "proof_levels": [
+        "comet-runtime",
+        "host"
+      ],
+      "assertion_ids": [
+        "USER_DECISION_SOURCE_BOUND",
+        "CONFLICTING_REQUIREMENTS_BLOCKED"
+      ],
+      "required_observation": "Real user decision source and revision bound to OpenSpec and the Run; conflicting statements require decision; no synthetic decision as proof.",
+      "evidence_rule": "Each assertion must resolve to a registered actual current execution and original log or resource readback at every stated proof level; labels and fixtures do not qualify as host evidence.",
+      "assertions": [
+        {
+          "id": "USER_DECISION_SOURCE_BOUND",
+          "check_ids": [
+            "V_A01",
+            "V_C01"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "CONFLICTING_REQUIREMENTS_BLOCKED",
+          "check_ids": [
+            "V_RW_R_ENTRY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        }
+      ]
+    },
+    {
+      "id": "CROSS_RUN_ARTIFACT_ISOLATION",
+      "task_ids": [
+        "P3_3",
+        "P2_4"
+      ],
+      "checks": [
+        "V_A10",
+        "V_RW_REAL_COMET_RECOVERY",
+        "V_RW_R_ENTRY"
+      ],
+      "proof_levels": [
+        "comet-runtime",
+        "host"
+      ],
+      "assertion_ids": [
+        "CROSS_RUN_STALE_RECEIPT_BLOCKED",
+        "SAME_RUN_EVIDENCE_RECOVERY"
+      ],
+      "required_observation": "Actual SDK cross-Run stale component replay rejected, qualified current evidence accepted, original Run and artifacts survive rerun and recovery.",
+      "evidence_rule": "Each assertion must resolve to a registered actual current execution and original log or resource readback at every stated proof level; labels and fixtures do not qualify as host evidence.",
+      "assertions": [
+        {
+          "id": "CROSS_RUN_STALE_RECEIPT_BLOCKED",
+          "check_ids": [
+            "V_RW_R_ENTRY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_R_ENTRY CROSS_RUN_COMPONENT_REPLAY_BLOCKED"
+        },
+        {
+          "id": "SAME_RUN_EVIDENCE_RECOVERY",
+          "check_ids": [
+            "V_A10",
+            "V_RW_REAL_COMET_RECOVERY"
+          ],
+          "required_proof_levels": [
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        }
+      ]
+    },
+    {
+      "id": "FINAL_AGGREGATION",
+      "task_ids": [
+        "P4_3",
+        "VERIFY"
+      ],
+      "checks": [
+        "V_RW_TARGET_REQUIRED",
+        "V_RW_OBSERVATION_REQUIRED",
+        "V_RW_COMPLETION_REQUIRED"
+      ],
+      "proof_levels": [
+        "component",
+        "comet-runtime",
+        "host"
+      ],
+      "assertion_ids": [
+        "NO_ZERO_MATCH_PASS",
+        "ALL_REQUIRED_EVIDENCE_CURRENT",
+        "FINAL_SELF_REFERENCE_RESOLVED"
+      ],
+      "required_observation": "Actual targeted assertion sets, complete evidence mapping, exact candidate/Run, correct F10 disposition and atomic final aggregation.",
+      "evidence_rule": "Each assertion must resolve to a registered actual current execution and original log or resource readback at every stated proof level; labels and fixtures do not qualify as host evidence.",
+      "assertions": [
+        {
+          "id": "NO_ZERO_MATCH_PASS",
+          "check_ids": [
+            "V_RW_TARGET_REQUIRED"
+          ],
+          "required_proof_levels": [
+            "component",
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "ALL_REQUIRED_EVIDENCE_CURRENT",
+          "check_ids": [
+            "V_RW_OBSERVATION_REQUIRED"
+          ],
+          "required_proof_levels": [
+            "component",
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK"
+        },
+        {
+          "id": "FINAL_SELF_REFERENCE_RESOLVED",
+          "check_ids": [
+            "V_RW_COMPLETION_REQUIRED"
+          ],
+          "required_proof_levels": [
+            "component",
+            "comet-runtime",
+            "host"
+          ],
+          "evidence_binding": "current final candidate and applicable original Run/action plus raw output and independently verified host or resource source",
+          "registration": "REQUIRES_P3_1_REGISTER_REVIEW_AND_RELOCK",
+          "exact_test_name": "RW_COMPLETION_REQUIRED SELF_REFERENCE_REAL_RESULT"
+        }
+      ]
+    }
+  ],
+  "repair_obligation_closure": {
+    "required_task_ids": [
+      "P1_2",
+      "P1_3",
+      "P1_4",
+      "P1_5",
+      "P1_6",
+      "P2_1",
+      "P2_4",
+      "P2_5",
+      "P3_1",
+      "P3_2",
+      "P3_3",
+      "P3_4",
+      "P4_3",
+      "P4_4",
+      "P4_6",
+      "P4_7",
+      "P4_8",
+      "VERIFY"
+    ],
+    "required_obligation_ids": [
+      "ENTRY_PATHS",
+      "R_SOURCE_BINDING",
+      "ARCH_TEST_INDEPENDENCE",
+      "CHANGE_INVALIDATION",
+      "CHECK_EXECUTION",
+      "TDD_AND_INDEPENDENT_V",
+      "SAME_RUN_RECOVERY",
+      "PROJECT_KP_AND_ARCHIVE",
+      "TEAM_KT_AND_PERMISSION",
+      "PERMISSION_MAINTENANCE",
+      "PLATFORM_DELIVERY",
+      "OPTIONAL_CODE_GRAPH",
+      "SKILL_CACHE_STABILITY",
+      "RUN_INITIAL_CONFIGURATION",
+      "USER_REQUIREMENT_ORIGIN",
+      "CROSS_RUN_ARTIFACT_ISOLATION",
+      "FINAL_AGGREGATION"
+    ],
+    "proof_level_enum": [
+      "comet-runtime",
+      "component",
+      "host",
+      "platform",
+      "resource"
+    ],
+    "rule": "P3_1 must resolve every frozen atomic assertion to a concrete executable check and source/evidence schema, independently review and re-lock before VERIFY. The final aggregator rejects missing or duplicate atomic IDs, check mappings, any required current proof level, wrong candidate/Run or unavailable raw evidence; a name or fixture alone is never host proof. For atomic obligations that reference the final aggregation check itself, apply self_reference_resolution rather than requiring a prior PASS; their own raw assertions and source evidence are still mandatory. Separate maintenance Run evidence is accepted only for current_delivery_scope.maintenance_checks, with independently validated originRunId linkage and the same final candidate. Before VERIFY, P3_1 registers the actual canonical maintenance link fields originRunId, knowledgeIds, linkedReceipt and operationKey with trusted source proof; aliases are not evidence. SKILL_NO_CACHE_CONTAMINATION and RUN_BRANCH_BOUND require P3_1 to register dedicated exact executable subassertions under their mapped original checks and verify raw host/runtime evidence; existing generic V_F01/V_F03/V_F04/V_A10 pass alone never closes them. CODE_WIKI_VERSIONED_AND_AUTHORIZED requires both host and actual resource-level readback; Graph remains optional. Required maintenance proof rejects empty knowledgeIds, null/missing linkedReceipt or operationKey and mismatched original publication, source, audience or operation; originRunId alone does not qualify. Registration means tested executable definitions, immutable code versions and protected evidence schemas; final-candidate business execution and source attestation occur in VERIFY after P5. P4_3 construction artifact can unblock P5_1 only; it is not a final result. VERIFY may start on PREVERIFY_IMPLEMENTATION_READY for P3_1 and P4_3 only after the full readiness conditions and all other DAG prerequisites; it then performs final evidence closure.",
+    "atomic_assertion_ids": [
+      "ALL_REQUIRED_EVIDENCE_CURRENT",
+      "ARCH_FORGED_IDENTITY_REFUSED",
+      "ARCH_INVALID_BALLOTS_REFUSED",
+      "ARCH_SELF_APPROVAL_REFUSED",
+      "ARCH_TEST_INDEPENDENT_APPROVED",
+      "BUILD_DEPLOY_SAME_DIGEST",
+      "CI_INTEGRATION_IDENTITY",
+      "CODE_GRAPH_OPTIONAL",
+      "CODE_WIKI_VERSIONED_AND_AUTHORIZED",
+      "CONFLICTING_REQUIREMENTS_BLOCKED",
+      "CROSS_RUN_STALE_RECEIPT_BLOCKED",
+      "DESIGN_CHANGE_INVALIDATES",
+      "ENTRY_ALL_TRANSITIONS_GUARDED",
+      "ENTRY_EXISTING_USER_CONFIG",
+      "ENTRY_HOST_COMMAND_DISCOVERY",
+      "ENTRY_RESUME_PINNED",
+      "FINAL_CANDIDATE_VERIFIED_INDEPENDENTLY",
+      "FINAL_RESULTS_DERIVED_FROM_EVIDENCE",
+      "FINAL_SELF_REFERENCE_RESOLVED",
+      "HISTORICAL_RECOVERY_IDEMPOTENT",
+      "KP_REQUIRED_BEFORE_ARCHIVE",
+      "KT_PENDING_BLOCKS_COMPLETION",
+      "NEW_REVIEW_REQUIRED",
+      "NO_DUPLICATE_SIDE_EFFECTS",
+      "NO_ZERO_MATCH_PASS",
+      "OBSERVATIONS_REAL_AND_CURRENT",
+      "OLD_BYTES_DO_NOT_REVIVE",
+      "ONE_WRITER_ENFORCED",
+      "OUTLINE_AUTHORIZED_POSITIVE",
+      "OUTLINE_CHANGED_PAYLOAD_REFUSED",
+      "OUTLINE_CHANGED_PERMISSIONS_REFUSED",
+      "OUTLINE_CURRENT_AUDIENCE_GRANT",
+      "OUTLINE_EXPANDED_AUDIENCE_REFUSED",
+      "OUTLINE_INCOMPLETE_PERMISSIONS_REFUSED",
+      "OUTLINE_OWNER_PREAUTH_BOUND",
+      "OUTLINE_SINGLE_OPERATION",
+      "OUTLINE_SOURCE_INTERSECTION",
+      "OUTLINE_WRITER_REVIEWER_SEPARATED",
+      "PERMISSION_EVENT_PERIODIC_AND_RECOVERY",
+      "PERMISSION_REVOKE_ISOLATE",
+      "PROJECT_KNOWLEDGE_READBACK",
+      "REAL_INTERRUPTION_SAME_RUN",
+      "REQUIREMENTS_CHANGE_INVALIDATES",
+      "ROLLBACK_READBACK",
+      "RUN_BRANCH_BOUND",
+      "RUN_LANGUAGE_FROM_CONFIG",
+      "R_CROSS_RUN_COMPONENT_REPLAY",
+      "R_CURRENT_TRUSTED_SOURCE",
+      "R_MANAGED_OPTION_FALSE",
+      "R_MANAGED_OPTION_MISSING",
+      "SAME_RUN_EVIDENCE_RECOVERY",
+      "SKILL_NATIVE_EXECUTION_HASH_STABLE",
+      "SKILL_NO_CACHE_CONTAMINATION",
+      "STALE_ATTEMPT_REFUSED",
+      "START_INSPECT_RESUME_SAME_RUN",
+      "TARGETS_NONEMPTY_AND_EXACT",
+      "TEST_AUTHOR_DISTINCT",
+      "TEST_WEAK_ORACLE_REFUSED",
+      "UNIQUE_ARCHIVE_SAME_RUN",
+      "USER_DECISION_SOURCE_BOUND",
+      "R_FROZEN_CONTRACT_AND_POLICY",
+      "R_SCOPE_ALL_RECEIPTS",
+      "OLD_EXECUTION_INVALID_AFTER_CHANGE",
+      "APPLICATION_CAS_RACE_NO_AUTH_LEAK",
+      "AUTHORITY_AND_FULL_ACTION_BOUND",
+      "NATIVE_LOCK_OWNERSHIP_NOT_EXISTENCE",
+      "REJECTED_OR_SUPERSEDED_JUDGMENT_REVOKED"
+    ]
+  },
+  "target_version": {
+    "name": "@rpamis/comet",
+    "version": "0.5.1",
+    "commit": "35c9860b77b42bafa0c2d80d8d695889f888a924",
+    "decision": "user requested 2026-10-29",
+    "status": "SUPPLY_BUILT_DIAGNOSTIC_ONLY_NOT_RUNTIME_QUALIFIED",
+    "old_runtime_results": "historical 0.5.0 evidence only",
+    "revalidation": "source/package/toolchain/0005/compiler/phase commands/guard/host/recovery/Kp/archive/Kt/full final candidate",
+    "methods": "Matt; no Superpowers invocation",
+    "operation_safety": "validator is pure before CAS; source authorization and external side effects require current Comet-owned mechanism",
+    "adr_path": "docs/architecture/adr/0023-comet-051-adoption.md",
+    "adr_sha256": "cbf1bc99f8130a6e5076abca475755b0bf0f6e49b7a5b97ef33c70d115da4b3f",
+    "stale_inputs": [],
+    "stale_inputs_rule": "Current source lock and method-profile supply metadata identify 0.5.1; neither proves actual host method invocation, Superpowers exclusion, accepted composition or trusted Run. All construction consumers re-admit exact current source, artifact and contract hashes.",
+    "current_supply_observation": {
+      "lock_sha256": "6471805c706a27bb253aecd63d747374307cc64a44c2f3913d09c6dbe40d6b29",
+      "toolchain_baseline_sha256": "6768442a5b33f1015a23a524e774362766a015d2e074c3c68d5a196542ac2ce2",
+      "fingerprint": "d6e72988122f4380124579dd4e3281e344d009f2ac280b29197f24011d7477c7",
+      "evidence": "worker-reports/P1_1-comet-051-v4/root-cutover-readback.json",
+      "evidence_sha256": "074cbacd569f11b8314fbd0ce61b737ba454fae4d7e113ca342bcae1a9810f91",
+      "scope": "0005 actual isolated application/build, four-file upstream smoke 244 pass 2 skip and project diagnostic version only; no managed qualification"
+    },
+    "method_supply_observation": {
+      "version": "0.5.1",
+      "manifest_sha256": "fb3ce2ed05dfa02e48602a636f7039a508aec95daed67370dbc0c4df0575d7b0",
+      "evidence": "worker-reports/P1_6-method-051-20261029/integration-report.json",
+      "scope": "asset metadata and component tests only; runtime not qualified"
+    }
+  },
+  "p1_2_guide_replan": {
+    "scope": "P1_2 existing task owns user-guide current state; no new task, acceptance ID or authorization",
+    "guide_before_sha256": "d9dd022b56b01f96ab1fcd0fdba5ea5718706155d897388fc634cecea7971692",
+    "guide_candidate_sha256": "02ac2507ea6e434cbe3fed0631d2a7e04d5643f700a2c3d6df0f2dc8e4084e19",
+    "source_refs": {
+      "bin/comet": "b6678ddedda45a85ded25252d0fb7d26fd984baad40981a98ea5a68ff5561bcf",
+      "scripts/init-comet.sh": "90e84624d252a2709c8fcc75ece288f105415ac9c04bde37a1c53d2b463c6aba"
+    },
+    "rule": "Candidate guide is a reviewable proposal; controller verifies source and guide have not drifted before integration. Current wrapper is diagnostic-only, workflow commands and init blocked; direct SDK bypass unclosed. No runtime or delivery PASS is conferred."
+  },
+  "p1_2_p2_4_cold_edge_replan": {
+    "status": "DRAFT_NOT_ACTIVATED",
+    "task": "P1_2",
+    "dependency": "P2_4",
+    "allowed": "private offline isolated cold export and recovery validation only",
+    "package_content_hash": "8e73083389637cc42d045246d057934517a89c7a465a2cc8345d39830028761f",
+    "package_manifest_file_sha256": "cabf922373f1a9f3bfa7505c71c223b8980d4c245ee833b53c725c2a7d81e9e8",
+    "compiler_manifest_sha256": "adcbe3886c0897d4ff27235ee9ac3005d660902c77d707d377e5957cf987c6b5",
+    "sources": {
+      "composition_sha256": "b06e097e9d93b7b482f8b294cf1e6f01f6b4ebecb9de54f64e28140d3562c93e",
+      "bindings_sha256": "b7eeb2f7c214b034746a8edd1207ce6a328185ec4daf9719a2657010c9a90c31"
+    },
+    "review": "worker-reports/P2_4-051-20261029/wire-readback-integration.json",
+    "inspection": "worker-reports/P2_4-051-20261029/root-wire-package-inspection.json",
+    "revocation": "source, package, compiler, lock, contract or consumer change",
+    "prohibited": [
+      "real project install",
+      "product Run",
+      "publication",
+      "external effects",
+      "P2_4 or P3_1 task acceptance",
+      "transitive admission to P1_3"
+    ],
+    "input_boundary": {
+      "credentials": "do not read or output",
+      "business_originals": "do not read or output",
+      "unqualified_mcp": "synthetic fixtures only; real materials NOT-EXERCISED"
+    }
+  }
 }

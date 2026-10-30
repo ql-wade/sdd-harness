@@ -1,12 +1,11 @@
-// Spec Adapter closeout tests (task P3_4, A11/B08) — Comet 0.5.0 face
-// (revision 2026-10-26-comet-050-adoption-v1).
+// Spec Adapter closeout tests (task P3_4, A11/B08) — Comet 0.5.1 face.
 //
 // lib/adapters/spec.js: the openspec CLI (pinned 1.15.0, resolved through the
 // shared COMET_OPENSPEC seam) is the ONLY archive writer. The component-only
 // path wraps the real openspec CLI and owns rehearse -> drift-check ->
 // archive -> readback plus interruption recovery; the managed path binds the
-// pinned Comet 0.5.0 aggregate (upstream aeb1a659 + the 0005 Kt closeout
-// patch, build de39629a…) whose native `comet archive` is the single command
+// pinned Comet 0.5.1 aggregate (upstream 35c9860b + the 0005 Kt closeout
+// patch) whose native `comet archive` is the single command
 // that invokes the openspec CLI — no adapter path performs a second sync or
 // archive, and native refusals (including a missing Kp composition
 // obligation) are forwarded verbatim.
@@ -14,7 +13,7 @@
 // Same-Run context semantics reused from the 0.4.5-era candidate diffs
 // (ab90cc2+74607cc, preserved in worker-reports/Root-handoff-20261026):
 // fixed location/stat identity closure, assertCurrent at the native boundary,
-// native runId equality — re-targeted to the 0.5.0 dual-name change state
+// native runId equality — re-targeted to the dual-name change state
 // file (comet-state.yaml / .comet.yaml) and the pinned build's
 // ensureClassicRuntimeRun instead of the retired .comet/run-state.json read
 // and the retired 0.4.5 comet-runtime.mjs asset.
@@ -821,11 +820,11 @@ test('managed closeout refuses scenario-dropping MODIFIED deltas and stale inspe
   assert.equal(calls,0);
 });
 
-// --- same-Run context against the pinned 0.5.0 build ---------------------------
+// --- same-Run context against the pinned 0.5.1 build ---------------------------
 
 // The live fixture binds the REAL pinned aggregate named by
-// integrations/comet/upstream.lock.json (upstream 0.5.0 aeb1a659 + the 0005 Kt
-// closeout patch, build fingerprint de39629a…). runClassicCli comes from the
+// integrations/comet/upstream.lock.json (upstream 0.5.1 35c9860b + the 0005 Kt
+// closeout patch). runClassicCli comes from the
 // build's own runtime asset; ensureClassicRuntimeRun from its dist module.
 // Same-Run boundary semantics reused from the 0.4.5-era candidate
 // (ab90cc2+74607cc): location/stat identity closure + assertCurrent at the
@@ -838,8 +837,8 @@ const cometRuntimeUrl = pathToFileURL(path.join(cometBuild,'work/assets/skills/c
 const cometRunModuleUrl = pathToFileURL(path.join(cometBuild,'work/dist/domains/comet-classic/classic-runtime-run.js')).href;
 
 async function pinnedRunFixture(t, mutate = () => {}) {
-  assert.equal(lock.package.version,'0.5.0','the pinned Comet supply must be the 0.5.0 baseline');
-  assert.equal(lock.source.commit,'aeb1a6598034e28ce46b8422d4dbd8785e607bd7');
+  assert.equal(lock.package.version,'0.5.1','the pinned Comet supply must be the 0.5.1 baseline');
+  assert.equal(lock.source.commit,'35c9860b77b42bafa0c2d80d8d695889f888a924');
   const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'spec-pinned-run-'));
   t.after(()=>fs.rmSync(scratch,{recursive:true,force:true}));
   const root=path.join(scratch,'root');

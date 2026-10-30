@@ -1,10 +1,14 @@
 # Implementation Plan — Comet原生命令、技能与硬门禁收敛
 
-**Goal:** 沿原39节点/30父任务/69工作包完成现有Agent宿主中的Comet命令→技能→制品→硬门→知识/平台闭环；本次仅修订计划，不启动实施。
+**Goal:** 沿原39节点/30父任务/69工作包完成现有Agent宿主中的Comet命令→技能→制品→硬门→知识/平台闭环；实施并验证当前架构；2026-10-29 用户确认旧 Claude 已停止并授权本控制器唯一接管。
 **Architecture:** docs/architecture/comet-ai-devops-convergence.md 与 ADR-0021 为当前权威；design.md/architecture.md记录同一决定，旧六角色常驻前置退休。
-**Tech Stack:** Comet 0.5.0组合应用基线（精确锁待P1_1重验）、隔离钉版OpenSpec 1.11.0、现有Claude/Codex宿主、Matt方法/test-authoring/Whitebox、既有MCP/CI；Docker仅必要依赖。
+**Tech Stack:** Comet 0.5.1组合应用目标（精确来源/补丁/编译待P1_1重验）、隔离钉版OpenSpec 1.15.0、现有Claude/Codex宿主、Matt方法/test-authoring/Whitebox、既有MCP/CI；Docker仅必要依赖。
+
+当前版本修订 `2026-10-29-comet-051-adoption-v1`：用户明确选择 0.5.1。下文 0.5.0 的旧修订、勾选和回执均为历史范围；版本相关节点必须在 0.5.1 重新执行与独立验收，版本无关组件证据仅保留原范围。保持唯一 DAG、39/69/104/130 与本期 129/103；不得复用已消耗许可。
 
 ## Global Constraints
+
+本次隔离修订标识：`2026-10-29-comet-pilot-remediation-v1`。既有勾选与回执只保留原范围；本修订的新步骤必须重新执行并独立验收。
 
 - Comet Classic is the sole business workflow owner; TeamAI distributes only
 - Use native Comet commands and existing host skills/tools; no resident six-role services or replacement Agent RPC/control plane
@@ -16,31 +20,34 @@
 - Docker only for necessary knowledge infrastructure or justified temporary jobs; no mandatory Runner image rebuild before R-to-V
 - Kp blocks archive; Kt blocks overall completed; preserve same Run/operation recovery and genuine source permissions/audience/grants
 - R10 retains unresolved workspaces; G15 normal discovery3min plus isolation2min and separate failure/alert timing remain
-- No production/ACL/publication/credential actions implied by this planning-only revision
-- Planning validates structure only; no old fixture/container/image PASS qualifies the command-first delivery
+- No production, ACL, publication or credential operations without their actual existing authorization; this candidate does not itself initiate them
+- Plan structure alone does not validate delivery; no old fixture/container/image PASS qualifies the command-first delivery
 
 原身份、依赖修订、旧文本和证据均保存于replans/2026-10-26-command-first与replans/2026-10-26-comet-050-adoption；本期129required/103场景，F10另期。以下时间盒仅是单次检查点，不是功能工期。
 
-并行执行（本修订启用）：宿主并发子代理派发已实测；worker用独立worktree隔离；同波任务文件所有权无重叠（DAG强制）；串行仅P3_2/P4_2/P4_8/P5_1/VERIFY（活试点/目标环境/外部撤权/真实宿主/终验）。P0_1–P0_4、P2_1接纳原样保留；P3_1工作完成待提交；P1_1重开做0.5.0资格重验；P2_1的P1_1依赖边按版本无关契约移除（见amendment）。旧通过只保留原证明范围，不能替代新流程；实际owner按受领Agent指定。只有具体缺失能力或外部操作需要人处理，不为已经确认的方向重开泛化访谈。
+并行执行（本修订启用）：宿主并发子代理派发已实测；worker用独立worktree隔离；同波任务文件所有权无重叠（DAG强制）；串行仅P3_2/P4_2/P4_8/P5_1/VERIFY（活试点/目标环境/外部撤权/真实宿主/终验）。历史 P0_1–P0_4、P2_1 接纳只保留其原证据范围；受本修订影响的步骤须重验；P2_1的P1_1依赖边按版本无关契约移除（见amendment）。旧通过只保留原证明范围，不能替代新流程；实际owner按受领Agent指定。只有具体缺失能力或外部操作需要人处理，不为已经确认的方向重开泛化访谈。
 
 ## Schema2 执行任务投影
 
 ### Task P0_1: 架构与保留/退休/返工裁决
 
-**Files:** docs/architecture/comet-ai-devops-convergence.md, docs/architecture/adr/0020-comet-command-knowledge-convergence.md, docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md
+**Files:** docs/architecture/comet-ai-devops-convergence.md, docs/architecture/adr/0020-comet-command-knowledge-convergence.md, docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md, docs/architecture/adr/0023-comet-051-adoption.md
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
 **Dependencies:** none
-**Owns:** docs/architecture/comet-ai-devops-convergence.md, docs/architecture/adr/0020-comet-command-knowledge-convergence.md, docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md
+**Owns:** docs/architecture/comet-ai-devops-convergence.md, docs/architecture/adr/0020-comet-command-knowledge-convergence.md, docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md, docs/architecture/adr/0023-comet-051-adoption.md
 **Parallel safe:** true
 **Acceptance IDs:** A01, N01
 
-原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-comet-050-adoption-v1；command-first接纳原样保留。
+原工作包身份：该节点原无子工作包；不新增身份。历史修订：2026-10-26-comet-050-adoption-v1；command-first接纳原样保留。
 
 - [x] **Step 1 [5 min]: Record** 检查架构/默认入口/安装器仍要求六角色、端口或私有协议时提出冲突，不删除数据。
 - [x] **Step 2 [5 min]: Implement** 按ADR-0021固定原命令、宿主执行、最小Docker和知识/权限边界；盘点旧部署与实际消费者；仅文档，不改运行配置/代码。
 - [x] **Step 3 [5 min]: Review** 逐条核当前用户决定、所有场景映射与原始来源；独立审查不得复用旧摘要票。
 - [x] **Step 4 [5 min]: Verify** 运行同一plan_guard、OpenSpec strict与交接一致性校验；计划绿色不签业务通过。
 - [x] **Step 5 [5 min]: Commit** 只记录该任务文档/实际检查/未验项，保留原用户改动与旧冻结包。
+
+- [x] **Step 7 [5 min]: Review** 按当前修订和实际证据重新核对本节点；旧批准只保留原摘要范围，独立审查不以计划校验代替。
+- [x] **Step 8 [5 min]: Record** 记录当前证据摘要、独立结论和未关闭项，交唯一控制器同步原状态。
 
 ### Task P0_2: 原规范与验收映射修订
 
@@ -51,13 +58,16 @@
 **Parallel safe:** true
 **Acceptance IDs:** A01
 
-原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-comet-050-adoption-v1；command-first接纳原样保留。
+原工作包身份：该节点原无子工作包；不新增身份。历史修订：2026-10-26-comet-050-adoption-v1；command-first接纳原样保留。
 
 - [x] **Step 1 [5 min]: Record** 找出旧场景/检查还强制OS容器、固定镜像或自建RPC的地方；不删功能性权限/恢复场景。
 - [x] **Step 2 [5 min]: Implement** 保留104场景/130检查身份，修订受管身份和部署证明；保持F10处置与全部功能oracle；仅文档，不改运行配置/代码。
 - [x] **Step 3 [5 min]: Review** 逐条核当前用户决定、所有场景映射与原始来源；独立审查不得复用旧摘要票。
 - [x] **Step 4 [5 min]: Verify** 运行同一plan_guard、OpenSpec strict与交接一致性校验；计划绿色不签业务通过。
 - [x] **Step 5 [5 min]: Commit** 只记录该任务文档/实际检查/未验项，保留原用户改动与旧冻结包。
+
+- [x] **Step 7 [5 min]: Review** 按当前修订和实际证据重新核对本节点；旧批准只保留原摘要范围，独立审查不以计划校验代替。
+- [x] **Step 8 [5 min]: Record** 记录当前证据摘要、独立结论和未关闭项，交唯一控制器同步原状态。
 
 ### Task P0_3: 文档、安装说明和能力状态对齐
 
@@ -68,13 +78,16 @@
 **Parallel safe:** true
 **Acceptance IDs:** B10
 
-原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-comet-050-adoption-v1；command-first接纳原样保留。
+原工作包身份：该节点原无子工作包；不新增身份。历史修订：2026-10-26-comet-050-adoption-v1；command-first接纳原样保留。
 
 - [x] **Step 1 [5 min]: Record** 全新会话/默认安装不能重新发现旧sdd命令或六角色必需部署；保留用户原有条目。
 - [x] **Step 2 [5 min]: Implement** 更新README/AGENTS/技能矩阵等当前入口，只暴露原生Comet阶段；区分计划态和运行态；仅文档，不改运行配置/代码。
 - [x] **Step 3 [5 min]: Review** 逐条核当前用户决定、所有场景映射与原始来源；独立审查不得复用旧摘要票。
 - [x] **Step 4 [5 min]: Verify** 运行同一plan_guard、OpenSpec strict与交接一致性校验；计划绿色不签业务通过。
 - [x] **Step 5 [5 min]: Commit** 只记录该任务文档/实际检查/未验项，保留原用户改动与旧冻结包。
+
+- [x] **Step 7 [5 min]: Review** 按当前修订和实际证据重新核对本节点；旧批准只保留原摘要范围，独立审查不以计划校验代替。
+- [x] **Step 8 [5 min]: Record** 记录当前证据摘要、独立结论和未关闭项，交唯一控制器同步原状态。
 
 ### Task P0_4: 收敛架构独立技术审查
 
@@ -85,13 +98,16 @@
 **Parallel safe:** true
 **Acceptance IDs:** E03, E04
 
-原工作包身份：0.4.a, 0.4.b。当前修订：2026-10-26-comet-050-adoption-v1；command-first接纳原样保留。
+原工作包身份：0.4.a, 0.4.b。历史修订：2026-10-26-comet-050-adoption-v1；command-first接纳原样保留。
 
 - [x] **Step 1 [5 min]: Record** 旧15份共识票不能改绑到本修订；有必要外发时取得新包/目的地授权，缺票不伪造。
 - [x] **Step 2 [5 min]: Implement** 按新摘要独立审查计划和关键边界，保留原A门要求与用户已确认取舍；仅文档，不改运行配置/代码。
 - [x] **Step 3 [5 min]: Review** 逐条核当前用户决定、所有场景映射与原始来源；独立审查不得复用旧摘要票。
 - [x] **Step 4 [5 min]: Verify** 运行同一plan_guard、OpenSpec strict与交接一致性校验；计划绿色不签业务通过。
 - [x] **Step 5 [5 min]: Commit** 只记录该任务文档/实际检查/未验项，保留原用户改动与旧冻结包。
+
+- [x] **Step 7 [5 min]: Review** 按当前修订和实际证据重新核对本节点；旧批准只保留原摘要范围，独立审查不以计划校验代替。
+- [x] **Step 8 [5 min]: Record** 记录当前证据摘要、独立结论和未关闭项，交唯一控制器同步原状态。
 
 ### Task P1_1: 原生Comet与工具/方法版本基线
 
@@ -102,7 +118,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** F01, F03
 
-原工作包身份：1.1.a, 1.1.b, 1.1.c。当前修订：2026-10-26-comet-050-adoption-v1；重开0.5.0资格重验（0.4.5事实保全为历史证据）。
+原工作包身份：1.1.a, 1.1.b, 1.1.c。历史修订：2026-10-26-comet-050-adoption-v1；重开0.5.0资格重验（0.4.5事实保全为历史证据）。
 
 - [x] **Step 1 [5 min]: Test** 版本或方法内容漂移必须拒绝；不以完整私有SDK重建作为命令入口前置；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 复用已验证0.4.5源码/发行/安全补丁事实，只认证本次实际调用的命令与方法版本；复用现有模块和原生接口，最小GREEN。
@@ -110,6 +126,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 0.5.1 官方 npm 与源码身份、工具链及 0005 适用性先做真实 RED/版本资格检查；当前版本锁与 toolchain-baseline.json 已更新至 0.5.1，0005 隔离应用、构建与上游 smoke 244 通过/2 跳过只证明对应范围，P1_1 正式资格与受管业务仍未验。
+- [ ] **Step 8 [5 min]: Implement** 在原版本锁与供给接口更新精确 0.5.1 源/包/补丁摘要，保留旧材料；不可将文本 dry-run 当运行兼容。
+- [ ] **Step 9 [5 min]: Verify** 重新编译/检查当前发行物与必要原生命令，记录原始来源、构建与 smoke；缺能力保持未验。
+- [ ] **Step 10 [5 min]: Review** 独立审核版本和补丁来源；组件/模拟不替代真实业务门禁。
+- [ ] **Step 11 [5 min]: Commit** 提供可审查快照及来源哈希，由唯一控制器集成。
 
 ### Task P2_1: 当前基线与AC到测试的纯数据契约
 
@@ -120,7 +142,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** A01, A02, A03, A04, A07, A08
 
-原工作包身份：2.1.a, 2.1.b, 2.1.c。当前修订：2026-10-26-comet-050-adoption-v1；command-first接纳原样保留。
+原工作包身份：2.1.a, 2.1.b, 2.1.c。历史修订：2026-10-26-comet-050-adoption-v1；command-first接纳原样保留。
 
 - [x] **Step 1 [5 min]: Test** 零执行/全skip/环境故障冒充RED、缺文件类别或旧候选摘要都拒绝；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 复用基线/测试分母/版本契约，补宿主执行证据字段的最小需要；不建新控制层；复用现有模块和原生接口，最小GREEN。
@@ -129,16 +151,22 @@
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
+- [ ] **Step 7 [5 min]: Test** 基线与 TAP RED：classifyRunOutcome 必须拒绝空叶子计划冒充外层通过，针对真实嵌套 TAP、跳过、待办、混合用例建立行为回归；用户确认来源冲突拒绝；需求或设计变化使全部下游单调失效，恢复旧字节不复活票；测试意图与候选绑定。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
+
 ### Task P3_1: 试点与验收器资格化
 
-**Files:** openspec/changes/delivery-foundation-rearchitecture/pilot-contract.md, tools/verify/delivery-journey.mjs, tools/verify/delivery-case-schema.json, test/delivery-cases/3_1.mjs, test/comet-flow-acceptance.test.js
+**Files:** openspec/changes/delivery-foundation-rearchitecture/pilot-contract.md, tools/verify/delivery-journey.mjs, tools/verify/delivery-case-schema.json, test/delivery-cases/3_1.mjs, test/comet-flow-acceptance.test.js, tools/verify/direct-target-test.mjs, test/direct-target-test.test.js, tools/verify/check-construction-artifact.mjs, test/check-construction-artifact.test.js
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
 **Dependencies:** P0_4, P2_1
-**Owns:** openspec/changes/delivery-foundation-rearchitecture/pilot-contract.md, tools/verify/delivery-journey.mjs, tools/verify/delivery-case-schema.json, test/delivery-cases/3_1.mjs, test/comet-flow-acceptance.test.js
+**Owns:** openspec/changes/delivery-foundation-rearchitecture/pilot-contract.md, tools/verify/delivery-journey.mjs, tools/verify/delivery-case-schema.json, test/delivery-cases/3_1.mjs, test/comet-flow-acceptance.test.js, tools/verify/direct-target-test.mjs, test/direct-target-test.test.js, tools/verify/check-construction-artifact.mjs, test/check-construction-artifact.test.js
 **Parallel safe:** true
 **Acceptance IDs:** A01, A15, N05
 
-原工作包身份：3.1.a, 3.1.b。当前修订：2026-10-26-comet-050-adoption-v1；工作完成+独立复审APPROVE，提交按用户指示暂持。
+原工作包身份：3.1.a, 3.1.b。历史修订：2026-10-26-comet-050-adoption-v1；工作完成+独立复审APPROVE，提交按用户指示暂持。
 
 - [x] **Step 1 [5 min]: Test** target不存在/无实际执行/弱oracle/缺真实UI或资源均不能PASS；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 登记一个已有试点/owner/目标及AC/TestPack，先证明验收器会拒绝假绿；复用现有模块和原生接口，最小GREEN。
@@ -147,16 +175,25 @@
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
+- [ ] **Step 7 [5 min]: Test** 验收器 RED：先实现并独立复核构建工件核验器与 direct-target-test.mjs，构建工件按合同限定边供 P2_4/P1_3/P3_2 建设使用，不将 P3_1 标为 ACCEPTED；真实检查拒绝零匹配/跳过/待办/重复及只跳过的嵌套用例。在现有 check-construction-artifact.mjs 中实现可机器验证的 PREVERIFY_IMPLEMENTATION_READY 与限定消费者拒绝测试：核验受保护合同、全部 67 项定义、当前代码摘要、schema、原始组件证据和独立审查，不接受手填状态或 worker 自报；构建工件模式与仅 VERIFY 消费的 PREVERIFY 模式严格分开，不能跨模式替换；后续各任务产出真实测试和证据后，由唯一控制器协调 P3_1 登记全部义务、独立审查并更新合同/锁；先登记已实现的测试定义、案例、命令和受保护来源 schema 并复审重锁；最终候选与真实来源证明留待 VERIFY；独立审查后的全部实现、注册和组件测试通过时，P3_1 可登记 PREVERIFY_IMPLEMENTATION_READY 供 VERIFY 使用，不视为业务通过；synthetic fixture 不冒充真实用户/模型或 managed PASS。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
+
 ### Task P1_6: Matt方法与阶段调用绑定
 
-**Files:** .agents/skills, docs/agent/skill-architecture.md, openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json, test/delivery-cases/1_6.mjs, foundation/profiles/comet-managed.json, test/comet-method-binding.test.js, scripts/check.sh, integrations/comet/application/skills, integrations/comet/application/manifest.json
+**Files:** .agents/skills (只读来源), docs/agent/skill-architecture.md, openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json, test/delivery-cases/1_6.mjs, foundation/profiles/comet-managed.json, test/comet-method-binding.test.js, scripts/check.sh, integrations/comet/application/skills, integrations/comet/application/manifest.json
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
 **Dependencies:** P1_1
-**Owns:** .agents/skills, docs/agent/skill-architecture.md, openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json, test/delivery-cases/1_6.mjs, foundation/profiles/comet-managed.json, test/comet-method-binding.test.js, scripts/check.sh, integrations/comet/application/skills, integrations/comet/application/manifest.json
+**Owns:** docs/agent/skill-architecture.md, openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json, test/delivery-cases/1_6.mjs, foundation/profiles/comet-managed.json, test/comet-method-binding.test.js, scripts/check.sh, integrations/comet/application/skills, integrations/comet/application/manifest.json
 **Parallel safe:** true
 **Acceptance IDs:** M01, M02, B01, B09, N01, N02, N04
 
-原工作包身份：1.6.a, 1.6.b, 1.6.c。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：1.6.a, 1.6.b, 1.6.c。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
+
+
+**0.5.1 当前义务：** 0.5.1 官方 Classic 方法含 Superpowers 引用；method-profile-manifest.json 的供应元数据已对齐 0.5.1，但不构成实际方法调用资格。真实受控替换与恢复须执行 Matt 方法，技能文件存在不能算调用。
 
 - [x] **Step 1 [5 min]: Test** 停用的Superpowers/Trinity和嵌套planner不得再生；读取技能名不等于正确执行；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 原样版本化grill/consensus/test-authoring/tdd/review/Whitebox，原Comet调用真实方法；复用现有模块和原生接口，最小GREEN。
@@ -165,16 +202,28 @@
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
+- [ ] **Step 7 [5 min]: Test** 技能 RED：通过实际宿主运行技能，不写缓存或其他包内临时物；保留现有技能正文及用户配置，复编译与恢复后摘要一致。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
+
 ### Task P1_2: 原生命令分发与旧入口防再生
 
-**Files:** foundation, tools/foundation-export.mjs, tools/bootstrap.sh, tools/adapters/claude-code.sh, test/foundation-distribution.test.js, hooks.yaml, test/delivery-cases/1_2.mjs, test/legacy-workflow-routing.test.js
+**Files:** foundation, tools/foundation-export.mjs, tools/bootstrap.sh, tools/adapters/claude-code.sh, test/foundation-distribution.test.js, hooks.yaml, test/delivery-cases/1_2.mjs, test/legacy-workflow-routing.test.js, scripts/init-comet.sh, bin/comet, test/init-comet.test.js, docs/user-guide.md
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
-**Dependencies:** P1_6
-**Owns:** foundation, tools/foundation-export.mjs, tools/bootstrap.sh, tools/adapters/claude-code.sh, test/foundation-distribution.test.js, hooks.yaml, test/delivery-cases/1_2.mjs, test/legacy-workflow-routing.test.js
+**Dependencies:** P1_6, P2_4
+**Owns:** foundation, tools/foundation-export.mjs, tools/bootstrap.sh, tools/adapters/claude-code.sh, test/foundation-distribution.test.js, hooks.yaml, test/delivery-cases/1_2.mjs, test/legacy-workflow-routing.test.js, scripts/init-comet.sh, bin/comet, test/init-comet.test.js, docs/user-guide.md
 **Parallel safe:** true
 **Acceptance IDs:** F02, F04, B09, N01, N02, N11
 
-原工作包身份：1.2.a, 1.2.b, 1.2.c。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：1.2.a, 1.2.b, 1.2.c。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
+
+
+**0.5.1 当前义务：** 0.5.1 逐阶段原生 Skill、管理入口、冷安装与上游直调绕行重新实测；受保护门禁未接线前只读诊断不得冒充可交付正向。用户指南须如实说明诊断入口、阻断的工作流命令、SDK 直调绕行未关闭及五阶段目标未验，不得展示旧安装与归档命令为当前步骤。
+
+**限定构建依赖：** P1_2 仅可在当前合同、P2_4 官方构建包内容身份 `8e73083389637cc42d045246d057934517a89c7a465a2cc8345d39830028761f`、全部相关源码/编译清单及独立审查重新核验后，在私有离线隔离副本开展冷导出与恢复验证；不得读取或输出凭据、业务资料原件；真实 MCP 环境未资格化时使用合成 fixture，真实材料保持未验；不安装到真实项目、不运行产品 Run、不发布、不调用外部资源；不接受 P2_4/P3_1，不向 P1_3 传递资格。任何工件/源码/锁/合同或消费者变更须重审。
+
 
 - [x] **Step 1 [5 min]: Test** 原sdd命令/迁移副本及六角色自动启动入口不得重新注册；只有安装文件不算技能实际运行；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 沿现有Foundation/TeamAI只分发；冷安装/升级/卸载保留用户配置并退出旧命令/部署模板；复用现有模块和原生接口，最小GREEN。
@@ -182,6 +231,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 入口 RED：逐宿主检测 /comet 与五阶段入口、受管应用版本和 CLI 路由；修复后拒绝源码包缺依赖、旧入口与跳门，保留现有技能。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
 
 ### Task P2_2: 真实宿主/平台来源与独立证据准入
 
@@ -192,7 +247,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** A05, A06, A18, A19, B03, B06, B07
 
-原工作包身份：2.2.a, 2.2.b, 2.2.c。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：2.2.a, 2.2.b, 2.2.c。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** 同一执行者换role、自写pass、旧摘要/旧attempt/不明来源拒绝；不要求自建签发/通信服务；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 从现有宿主真实执行记录、测试进程/CI和资源读回绑定原Run与制品；Gate保持纯函数；复用现有模块和原生接口，最小GREEN。
@@ -210,7 +265,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** A20, B10
 
-原工作包身份：2.3.a, 2.3.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：2.3.a, 2.3.b。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** 输入错1/验证失败2/通过0按仓库契约；原生上游保持自身语义，历史报告不签新流程；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 保留必要机器检查退出码和只读旧报告，不恢复旧业务阶段命令；复用现有模块和原生接口，最小GREEN。
@@ -221,14 +276,17 @@
 
 ### Task P2_4: 原Comet共同硬门与保守失效
 
-**Files:** integrations/comet/application/composition.json, integrations/comet/application/bindings.mjs, integrations/comet/application/extensions, integrations/comet/patches/0005-comet-050-kt-closeout.patch, test/delivery-cases/2_4.mjs
+**Files:** integrations/comet/application/composition.json, integrations/comet/application/bindings.mjs, integrations/comet/application/extensions, integrations/comet/patches/0005-comet-050-kt-closeout.patch, test/delivery-cases/2_4.mjs, test/comet-managed-source.test.js, integrations/comet/application/package, integrations/comet/application/internal/compile-manifest.json, integrations/comet/application/internal/build-application.mjs, worker-reports/P2_4-construction-manifest.json
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
 **Dependencies:** P1_1, P2_3, P3_1, P1_6
-**Owns:** integrations/comet/application/composition.json, integrations/comet/application/bindings.mjs, integrations/comet/application/extensions, integrations/comet/patches/0005-comet-050-kt-closeout.patch, test/delivery-cases/2_4.mjs
+**Owns:** integrations/comet/application/composition.json, integrations/comet/application/bindings.mjs, integrations/comet/application/extensions, integrations/comet/patches/0005-comet-050-kt-closeout.patch, test/delivery-cases/2_4.mjs, test/comet-managed-source.test.js, integrations/comet/application/package, integrations/comet/application/internal/compile-manifest.json, integrations/comet/application/internal/build-application.mjs, worker-reports/P2_4-construction-manifest.json
 **Parallel safe:** true
 **Acceptance IDs:** D01, D02, D03, D04, D05, D06, D07, D08, C07, N03, N04, N06
 
-原工作包身份：2.4.a, 2.4.b, 2.4.c, 2.4.d。当前修订：2026-10-26-comet-050-adoption-v1；REOPENED（R1-R6 返工：编译器实测按声明编译失败，见 mode-probes/1_4-compiler-compile.json）。
+原工作包身份：2.4.a, 2.4.b, 2.4.c, 2.4.d。历史修订：2026-10-26-comet-050-adoption-v1；REOPENED（R1-R6 返工：编译器实测按声明编译失败，见 mode-probes/1_4-compiler-compile.json）。
+
+
+**0.5.1 当前义务：** 0.5.1 新 checkpoint、可信当前 Run/合同/策略接线与重编译需验证；0005 已在隔离源码实际应用并构建，Kt 写入/持久化及恢复不因此完成。
 
 - [x] **Step 1 [5 min]: Test** 缺R直接Design、跳transition/archive、手改回执、旧字节复活和控制写绕行均拒绝；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 在原Run/Guard/continuation上最小接R/A/T/P/V/Kp/Kt，不添加phase/队列/author账本；复用现有模块和原生接口，最小GREEN。
@@ -236,6 +294,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 来源 RED：真实 SDK 禁止另一 Run 的 component-only 回执或 worker 提交的 false/缺省选项通过；冻结合同和策略须从可信当前 Run/action/代际核验，拒绝缩减测试分母、替换策略和跨 Run 回执补足；核验后状态变化必须重核；模拟回调与无宿主上下文结果不能升级为受管资格。合格可信来源和独立审查有实际正向路径；P2_4 负责重新编译并绑定包和编译清单。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
 
 ### Task P2_5: 架构A的grill与独立共识
 
@@ -246,7 +310,10 @@
 **Parallel safe:** true
 **Acceptance IDs:** E03, E04, H06, N04, N06
 
-原工作包身份：2.5.a, 2.5.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：2.5.a, 2.5.b。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
+
+
+**0.5.1 当前义务：** 旧 0.4.5 fixture 的受保护 scope 回归按原 oracle 修正，不能作为 0.5.1 正式 Run 证据。
 
 - [x] **Step 1 [5 min]: Test** 作者自审、少票/旧票/改绑摘要拒绝；T维持独立充分性审查不强加相同quorum；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 现有宿主/技能执行grill及真实独立consensus，原manifest/原票/tally绑定同摘要；复用现有模块和原生接口，最小GREEN。
@@ -254,6 +321,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 审查 RED：架构 A 和测试 T 分开，审查者与作者独立；源版本改变、弱 oracle、缺测试意图和仅结构有效都拒绝。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
 
 ### Task P1_3: 原生宿主命令、技能与实际执行接线
 
@@ -264,7 +337,10 @@
 **Parallel safe:** true
 **Acceptance IDs:** F05, F07, A09, N01, N03
 
-原工作包身份：1.3.a, 1.3.b, 1.3.c。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：1.3.a, 1.3.b, 1.3.c。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
+
+
+**0.5.1 当前义务：** 0.5.1 原生 Run/action/claim 与可信来源、条件提交和消费边界重新实测；validator 不得在 CAS 前外发授权。
 
 - [x] **Step 1 [5 min]: Test** 命令可见但不执行、只检查gate_dispatches无作者动作、角色混用、只读权限绕行拒绝；不建app-server RPC或六服务；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 用现有Claude/Codex宿主实际调用原阶段、方法、独立Agent与工具；显示当前子步骤/阻塞/下一步；复用现有模块和原生接口，最小GREEN。
@@ -272,6 +348,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 宿主 RED：不可由 Agent 回执自报资格；校验 P2_4 当前构建工件与独立审查原始证据，对接真实宿主可核验的执行来源、角色、只读权限和审查，缺能力如实阻断；初始化使用实际语言与分支。签发和消费须绑定权威当前 Run/action/claim、候选、策略、需求设计代际和完整动作；伪锁、旧执行、重审失败、跨 Run 多回执与 CAS 并发不放行；不能将锁文件存在或 Classic 锁当作应用事务。先验证 SDK 原生条件提交接入点，冲突不暴露授权；外部操作用原 Run 幂等恢复，合法动作推进不机械要求 revision 不变。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
 
 ### Task P1_4: 原生Classic模式与入口绕行证明
 
@@ -282,7 +364,10 @@
 **Parallel safe:** true
 **Acceptance IDs:** C07, F06, M01
 
-原工作包身份：1.4.a, 1.4.b, 1.4.c。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：1.4.a, 1.4.b, 1.4.c。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
+
+
+**0.5.1 当前义务：** 0.5.1 直接原生 CLI 和全部阶段入口统一守卫、失败路径与版本绑定重新验证。
 
 - [x] **Step 1 [5 min]: Test** 成功的无关命令、手写通过、缺检查、force/skip逃生开关不能放行；不再泛研新版SDK；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 固定Classic，检查所有实际推进/恢复/写入入口共用门；方法与知识路由唯一；复用现有模块和原生接口，最小GREEN。
@@ -290,6 +375,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 绕行 RED：在真实受管 Run 和独立 stock 新建路径分别验证正常入口、直接 CLI、hook、恢复和归档；不得仅靠 wrapper。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
 
 ### Task P1_5: R/A/T/P与测试实现步骤装配
 
@@ -300,7 +391,10 @@
 **Parallel safe:** true
 **Acceptance IDs:** C01, C02, C03, C04, C05, C06, C07, C08
 
-原工作包身份：1.5.a, 1.5.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：1.5.a, 1.5.b。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
+
+
+**0.5.1 当前义务：** 0.5.1 当前配置与原 Run 断点恢复需实际验证，旧包的绿不继承。
 
 - [x] **Step 1 [5 min]: Test** A通过不代替T；弱TestPack不进Build；P不能派发第二DAG；hook缺席不能绕共同Guard；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 在同一原生阶段内明确A→T、P→测试自动化→Builder→Reviewer并实际调用技能；复用现有模块和原生接口，最小GREEN。
@@ -308,6 +402,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 装配 RED：R/A/T 独立过门，P 只产唯一计划，测试自动化与 TDD/代码审查独立留证；首次启动和中文配置不漂移。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
 
 ### Task P3_2: 首个真实R到V纵向切片
 
@@ -318,7 +418,10 @@
 **Parallel safe:** false
 **Acceptance IDs:** B01, B02, B03, B04, B05, B06, B07, F08, A15, N03, N04, N05, N06
 
-原工作包身份：3.2.a, 3.2.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：3.2.a, 3.2.b。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
+
+
+**0.5.1 当前义务：** 真实 0.5.1 同 Run 验证 R/A/T/P 与独立真实角色，模拟/历史复用不能签收。
 
 - [x] **Step 1 [5 min]: Test** 任何阶段缺证据回责任作者；真实修复后同候选重验；不得先等六角色镜像/全部知识服务或用mock角色替代；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 在现有宿主和一个真实Change上跑R/A/T/P、测试自动化、TDD、代码审查及独立Whitebox；复用现有模块和原生接口，最小GREEN。
@@ -326,6 +429,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 同一实际 Run 从用户确认的受控需求经 R/A/T/P/测试/TDD/独立审查到 V；任一阶段失败不能用局部测试填通过。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
 
 ### Task P3_3: 原Run恢复、重复和旧证据
 
@@ -336,7 +445,10 @@
 **Parallel safe:** true
 **Acceptance IDs:** A10, A11, A12, F07, N09, N11
 
-原工作包身份：3.3.a, 3.3.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：3.3.a, 3.3.b。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
+
+
+**0.5.1 当前义务：** 0.5.1 同 Run 修改、恢复、版本与输入失效重新验证。
 
 - [x] **Step 1 [5 min]: Test** 并发写者、旧attempt/失效epoch、失联结果未知不得新开operation或复活批准；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 中断后由原Comet重载当前版本/步骤/原执行，重复调用不重复副作用；复用现有模块和原生接口，最小GREEN。
@@ -344,6 +456,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 恢复 RED：重复入口、双会话、分支漂移、旧证据覆盖、首次投影、REVISION_CONFLICT 和未知结果均先查询同一 Run，不能重派或虚报成功。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
 
 ### Task P3_4: 原生OpenSpec唯一归档适配
 
@@ -354,7 +472,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** A11, B08, N07
 
-原工作包身份：3.4.a, 3.4.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：3.4.a, 3.4.b。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** Kp缺失拒绝；归档中断/目录移动/冲突先调和；不得再sync一次或新建第二closeout；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 保留必要SpecAdapter及active/archive同Run位置读回、场景合并、唯一归档操作；复用现有模块和原生接口，最小GREEN。
@@ -362,6 +480,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 归档 RED：Kp 缺失不可归档；记录唯一操作和主规范读回，重复请求及归档中断先核对原操作。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
 
 ### Task I01: 必要资源与既有连接器登记
 
@@ -372,7 +496,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** F01, A19, U01, U07, N08
 
-原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：该节点原无子工作包；不新增身份。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** 不因服务账号可读、key存在、同名组或本地目录就认定权限/受众资格；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 只登记实际试点、资料域、Outline文集、源/目标owner和已有身份引用；复用现有模块和原生接口，最小GREEN。
@@ -390,7 +514,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** A09, A10, A11, A19, C07, D01, D08, H03, H09, U07, F05, F07, M02, N03
 
-原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：该节点原无子工作包；不新增身份。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** 默认安装/命令不能创建六角色服务；缺临时Docker不阻普通命令；未批准不删知识/控制卷；只读与控制写仍由宿主权限/CI拒绝；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 退出六服务compose及默认启动/资格前置，保留必要通用检查和按需作业；记录旧容器/卷/镜像归属；复用现有模块和原生接口，最小GREEN。
@@ -408,7 +532,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** U01, U02, U03, U04, U05, U06, U07, U08, H04, H05, L02, L04, N05
 
-原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：该节点原无子工作包；不新增身份。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** healthy不是发布权限；额外对象存储无实际需要不增建，缺owner/受众不能自动发布；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 复用必要Outline/Postgres/Redis和既有附件方案，验证真实API/权限/数据持久化与恢复；复用现有模块和原生接口，最小GREEN。
@@ -426,7 +550,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** C04, C06, E01, E06, H08, F01, B09, N05
 
-原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：该节点原无子工作包；不新增身份。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** 跨项目路径/绕索引写、整仓入库、无授权或错误schema拒绝；不新增常驻HTTP服务；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 由现有宿主启动项目MCP，实际检索/精华写入/索引与版本读回；复用现有模块和原生接口，最小GREEN。
@@ -444,7 +568,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** F01, F03, A20, C06, N05
 
-原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：该节点原无子工作包；不新增身份。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** 新鲜度/来源不明不能充当设计事实；禁Graph仍正确，不把代码Wiki当正式团队知识；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 按真实需要自托管deepwiki-open并绑定repo/commit；CodeGraph默认可关闭；复用现有模块和原生接口，最小GREEN。
@@ -462,7 +586,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** A13, A14, A16, A17, A19, F06, F09, B08, N10
 
-原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：该节点原无子工作包；不新增身份。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** 错SHA/外repo/不明身份/排队或历史artifact不能当本次生产成功；真实外部写要具体授权；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 登记实际平台/required checks/构建digest/目标owner，沿已有流水线提供事实；复用现有模块和原生接口，最小GREEN。
@@ -473,14 +597,17 @@
 
 ### Task P4_6: 归档后同Run Kt恢复
 
-**Files:** integrations/comet/patches/0003-post-archive-closeout.patch, test/delivery-cases/4_6.mjs, integrations/comet/patches/tests/4_6.patch
+**Files:** integrations/comet/patches/0005-comet-050-kt-closeout.patch (P2_4只读输入), test/delivery-cases/4_6.mjs, test/kt-post-archive-recovery.test.js, openspec/changes/delivery-foundation-rearchitecture/kt-recovery
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
 **Dependencies:** P3_3, P3_4
-**Owns:** integrations/comet/patches/0003-post-archive-closeout.patch, test/delivery-cases/4_6.mjs, integrations/comet/patches/tests/4_6.patch
+**Owns:** test/delivery-cases/4_6.mjs, test/kt-post-archive-recovery.test.js, openspec/changes/delivery-foundation-rearchitecture/kt-recovery
 **Parallel safe:** true
 **Acceptance IDs:** H01, H02, H03, H04, H05, H06, H07, H08, H09, N07, N11
 
-原工作包身份：4.6.a, 4.6.b, 4.6.c。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：4.6.a, 4.6.b, 4.6.c。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
+
+
+**0.5.1 当前义务：** 0.5.1 Kp→归档→Kt 同 Run 读写及中断恢复需真实验证；上游归档修复不等于 Kt 功能。
 
 - [x] **Step 1 [5 min]: Test** 重复hook/回调/重启不得重复archive或发布；unknown维持原handle与操作，不把归档当completed；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 原归档后仍发现同Run pending知识义务；按原operation/目标UUID/版本查询恢复；复用现有模块和原生接口，最小GREEN。
@@ -488,6 +615,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** Kt RED：基于 P2_4 所有的 0005 当前接口验证归档后同一 Run 恢复发布；不复活已退休的 0003；，未知结果查询原 operation；未完成不得 completed。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
 
 ### Task P4_7: 知识发布预授权与最小权限
 
@@ -498,7 +631,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** U01, U02, U03, U04, U05, U06, U07, U08, N08
 
-原工作包身份：4.7.a, 4.7.b, 4.7.c。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：4.7.a, 4.7.b, 4.7.c。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** Agent自批/扩大受众/过期授权/内容版本漂移拒绝；不以新token服务或六OS账号代替权限证明；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 用已有平台/连接器权限核源交集、完整受众、有效grant及作者/审查/发布/owner职责；复用现有模块和原生接口，最小GREEN。
@@ -506,6 +639,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 权限 RED：真实源权限、目标受众、版本、grant 在写前核验，Agent 不得自批；无授权不发起外写。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
 
 ### Task P4_4: 实际Kp到归档到Kt知识闭环
 
@@ -516,7 +655,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** C06, D06, D07, E01, E02, E06, N07, N08
 
-原工作包身份：4.4.a, 4.4.b, 4.4.c, 4.4.d。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：4.4.a, 4.4.b, 4.4.c, 4.4.d。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** Kp阻归档、Kt阻完成；同Run重复触发不重复写；输出必须提前声明，不能排除源码/权限保住旧V；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 调用真实LLMWiki/Outline工具，作者产出后冻结，独立审查、实际写入与读回；复用现有模块和原生接口，最小GREEN。
@@ -524,6 +663,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 知识 RED：LLMWiki 项目精华与 Outline 团队内容分别审查授权并真实读回；代码 Wiki 不替代架构或需求。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
 
 ### Task P4_1: 受保护CI硬门
 
@@ -534,7 +679,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** A13, F06, F09, N10
 
-原工作包身份：4.1.a, 4.1.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：4.1.a, 4.1.b。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** 缺项/skip/超时/旧报告或worker可改的策略不得通过；不从本地测试推断远端保护生效；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 在精确集成SHA上验证必需检查与当前证据，用真实平台合并阻断读回；复用现有模块和原生接口，最小GREEN。
@@ -552,7 +697,7 @@
 **Parallel safe:** false
 **Acceptance IDs:** A14, A16, A17, F09, N10
 
-原工作包身份：4.2.a, 4.2.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：4.2.a, 4.2.b。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** tag漂移/错digest/未知部署结果先查原操作，不重复部署或假称流水线绿等于完成；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 沿既有CI/CD完成目标环境读回和已授权回滚，代码验收与部署事实分开；复用现有模块和原生接口，最小GREEN。
@@ -570,7 +715,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** E05, E06, H02, N02
 
-原工作包身份：4.5.a, 4.5.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：4.5.a, 4.5.b。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** hook缺席/重复/静默失败/会话压缩不能跳门，也不能拥有派发/phase/验收权；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 仅辅助事实提醒/触发原Comet检查，沿hooks.yaml单一源验证注册/升级/并存；复用现有模块和原生接口，最小GREEN。
@@ -588,7 +733,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** L08, L09, L10, L11, A11, H09, N09
 
-原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：该节点原无子工作包；不新增身份。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** 漏事件/不进水位/离线/隔离失败必须告警并由原Comet补偿；不得起独立controller服务；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 已有CI/宿主定时器触发同Comet权限维护；监控只观察水位/期限并告警；复用现有模块和原生接口，最小GREEN。
@@ -606,7 +751,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** A10, A11, H08, H09, L06, L11, B08, U07, N11
 
-原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：该节点原无子工作包；不新增身份。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** 缺附件/未完成义务/旧写者仍活不得释放恢复；不复制一套可并行运行的业务状态；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 实际备份Comet原目录/事务/义务及知识DB/附件，隔离恢复后重新核权限并读回；复用现有模块和原生接口，最小GREEN。
@@ -624,7 +769,7 @@
 **Parallel safe:** false
 **Acceptance IDs:** L01, L02, L03, L04, L05, L06, L07, L08, L09, L10, L11, N09
 
-原工作包身份：4.8.a, 4.8.b, 4.8.c, 4.8.d。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：4.8.a, 4.8.b, 4.8.c, 4.8.d。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** Web/分享/搜索/附件/MCP逐渠道实测；告警不能充当隔离，未知不当公开，新授权前不恢复；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 真实事件加周期全量核验，以原Comet维护作业实现3分钟发现/2分钟隔离及故障补偿；复用现有模块和原生接口，最小GREEN。
@@ -633,16 +778,22 @@
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
 
+- [ ] **Step 7 [5 min]: Test** 维护 RED：源撤权/受众变化/过期后事件与周期核验、隔离、告警、重试和恢复分别留证，旧授权不得恢复。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
+
 ### Task P4_3: 当前证据索引与分层交付
 
-**Files:** openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json, openspec/changes/delivery-foundation-rearchitecture/verification.md, test/delivery-cases/4_3.mjs, openspec/changes/delivery-foundation-rearchitecture/legacy-entry-inventory.json
+**Files:** openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json, openspec/changes/delivery-foundation-rearchitecture/verification.md, test/delivery-cases/4_3.mjs, openspec/changes/delivery-foundation-rearchitecture/legacy-entry-inventory.json, tools/verify/final-checks.mjs, test/final-checks.test.js
 **Interfaces:** Comet.Run.managedDelivery.v1: same RunState/lock/transaction, no second currentPhase; SDD.Gate.v1: pure evaluate(inputs,receipts,policy), no dispatch; Knowledge.Closeout.v1: Kp before archive, Kt before overall completion; Runner.Dispatch.v1: trusted launcher binds run/gate/input/policy/attempt/epoch, worker cannot write control state
 **Dependencies:** P4_5, P4_8
-**Owns:** openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json, openspec/changes/delivery-foundation-rearchitecture/verification.md, test/delivery-cases/4_3.mjs, openspec/changes/delivery-foundation-rearchitecture/legacy-entry-inventory.json
+**Owns:** openspec/changes/delivery-foundation-rearchitecture/acceptance-index.json, openspec/changes/delivery-foundation-rearchitecture/verification.md, test/delivery-cases/4_3.mjs, openspec/changes/delivery-foundation-rearchitecture/legacy-entry-inventory.json, tools/verify/final-checks.mjs, test/final-checks.test.js
 **Parallel safe:** true
 **Acceptance IDs:** B10, N12
 
-原工作包身份：4.3.a, 4.3.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：4.3.a, 4.3.b。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** 历史镜像/旧六角色probe或不存在目标不能充当新PASS；保留全部原失败；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 按修订和最终候选索引单测/装配/真实宿主/业务平台证据，明确缺口；复用现有模块和原生接口，最小GREEN。
@@ -650,6 +801,12 @@
 - [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
 - [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
 - [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 汇总 RED：先构建并独立复核 final-checks.mjs 工件，以限定边供 P5_1 建设使用，不签最终 PASS；登记测试定义与来源 schema、独立审查和组件测试完成后可登记 PREVERIFY_IMPLEMENTATION_READY；最终候选形成后由 VERIFY 执行汇总。拒绝 exit-0 但零匹配、不同 revision、不同层级、旧验收或未执行合并为最终 PASS，检查状态源和轨迹一致。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
 
 ### Task P5_1: 实际宿主能力与团队使用
 
@@ -660,7 +817,7 @@
 **Parallel safe:** false
 **Acceptance IDs:** A09, A10, A11, A12, F03, F08
 
-原工作包身份：5.1.a, 5.1.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：5.1.a, 5.1.b。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** 不同宿主不能互推支持；缺只读或必要权限能力标不支持，不重建六服务绕过；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 只在实际目标宿主验证命令发现、技能、权限、独立执行/会话恢复；并行worktree集成后父目标重验；复用现有模块和原生接口，最小GREEN。
@@ -678,7 +835,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** F10
 
-原工作包身份：5.2.a, 5.2.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行（F10另期NOT-EXERCISED）。
+原工作包身份：5.2.a, 5.2.b。历史修订：2026-10-26-comet-050-adoption-v1；未执行（F10另期NOT-EXERCISED）。
 
 - [ ] **Step 1 [5 min]: Record** 保持原NOT-EXERCISED与未来启用条件，不建设Control API或扩大本期完成条件。
 - [ ] **Step 2 [5 min]: Review** 不得把未启用拒绝负例算正向PASS，也不得让本期P5_3等依赖另期API。
@@ -693,7 +850,7 @@
 **Parallel safe:** true
 **Acceptance IDs:** A10, A11, H09, N11
 
-原工作包身份：5.3.a, 5.3.b。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：5.3.a, 5.3.b。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
 - [x] **Step 1 [5 min]: Test** 未知进程状态不得重启/删唯一工作区；不把本地锁假装分布式，不新增业务常驻服务；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
 - [x] **Step 2 [5 min]: Implement** 原命令/既有调度的恢复、升级/回退、知识维护、R10保留与必要依赖运维手册；复用现有模块和原生接口，最小GREEN。
@@ -711,11 +868,25 @@
 **Parallel safe:** false
 **Acceptance IDs:** A01, A02, A03, A04, A05, A06, A07, A08, A09, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, B01, B02, B03, B04, B05, B06, B07, B08, B09, B10, F01, F02, F03, F04, F05, F06, F07, F08, F09, F10, C01, C02, C03, C04, C05, C06, C07, C08, D01, D02, D03, D04, D05, D06, D07, D08, E01, E02, E03, E04, E05, E06, H01, H02, H03, H04, H05, H06, H07, H08, H09, U01, U02, U03, U04, U05, U06, U07, U08, L01, L02, L03, L04, L05, L06, L07, L08, L09, L10, L11, M01, M02, N01, N02, N03, N04, N05, N06, N07, N08, N09, N10, N11, N12
 
-原工作包身份：该节点原无子工作包；不新增身份。当前修订：2026-10-26-comet-050-adoption-v1；未执行。
+原工作包身份：该节点原无子工作包；不新增身份。历史修订：2026-10-26-comet-050-adoption-v1；未执行。
 
-- [x] **Step 1 [5 min]: Test** 旧PASS/fixture/安装成功/诊断轮绿色/缺资源都不能填分母；F10另期保留，运行和原始终态必须同版本；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
-- [x] **Step 2 [5 min]: Implement** 执行本期129required/103场景及关联维护、独立Whitebox/Grill与三报告；随后原Comet唯一closeout和后审；复用现有模块和原生接口，最小GREEN。
-- [x] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
-- [x] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
-- [x] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
-- [x] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+**0.5.1 当前义务：** 真实 0.5.1 最终候选及同 Run 重新执行全部当前 required 与场景，历史 0.5.0 运行结果不继承。
+
+- [ ] **Step 1 [5 min]: Test** 旧PASS/fixture/安装成功/诊断轮绿色/缺资源都不能填分母；F10另期保留，运行和原始终态必须同版本；先观察真实RED，记录当前Run/版本/原始输出，不以缺环境当行为RED。
+- [ ] **Step 2 [5 min]: Implement** 执行本期129required/103场景及关联维护、独立Whitebox/Grill与三报告；随后原Comet唯一closeout和后审；复用现有模块和原生接口，最小GREEN。
+- [ ] **Step 3 [5 min]: Verify** 保持原功能oracle，覆盖正向/拒绝/重复/失效/中断；执行现有公开seam的相关回归与实际读回，缺环境明确UNVERIFIED。
+- [ ] **Step 4 [5 min]: Review** 独立Spec/质量审查；测试作者不签Whitebox；声明fixture/真实宿主/资源各自证明范围。
+- [ ] **Step 5 [5 min]: Verify** 按execution-contract中本任务checks执行，记录新修订及当前候选；全量跨边界旅程归VERIFY，不以局部绿关闭父义务。
+- [ ] **Step 6 [5 min]: Commit** 只交所属文件、原始RED/GREEN、版本与未验证项，移交唯一控制器集成；不得写业务phase或另起DAG。
+
+- [ ] **Step 7 [5 min]: Test** 终验 RED：修订返工项与本期 129 required/103 场景在同最终候选和实际产品 Run 检查，独立 Whitebox/Grill、适用知识/平台恢复及唯一收尾；F10 NOT-EXERCISED。 先保存真实 RED 与版本。
+- [ ] **Step 8 [5 min]: Implement** 在本任务已有接口及登记的所有权内完成最小修复，不新建第二控制器。
+- [ ] **Step 9 [5 min]: Verify** 复跑针对性行为和实际入口，记录输出、退出码、证据摘要；缺能力保持未验证。
+- [ ] **Step 10 [5 min]: Review** 独立复核实际边界，保留旧证据与明确未验范围。
+- [ ] **Step 11 [5 min]: Commit** 按实际权限提供可审查变更或不可变快照，由唯一控制器整合。
+
+
+## 历史 EC1 输入与本次映射
+
+原工作区未提交的 EC1 原文在 `replans/2026-10-29-isolated-candidate/before/EC1-original.md`；T1–T5 分别映射至 P1_2/P1_3/P1_4/P3_1/P3_3，完整修复和证明以原节点及 VERIFY 为准。旧独立计划只作为审计输入，不另建 DAG 或提前关闭最终验收。

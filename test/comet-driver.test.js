@@ -1126,6 +1126,9 @@ test('0.5.0: the classic composition start/recovery requests mirror the upstream
     initialState: comet.MANAGED_COMPOSITION_INITIAL_STATE,
   });
   assert.ok(Object.isFrozen(start));
+  const chinese=comet.classicCompositionStartRequest({change:'demo',changeDir:'openspec/changes/demo',workflowId:'comet-classic-full',workflowVersion:'1',language:'zh-CN'});
+  assert.equal(chinese.initialState.language,'zh-CN');
+  assert.throws(()=>comet.classicCompositionStartRequest({change:'demo',changeDir:'openspec/changes/demo',workflowId:'comet-classic-full',workflowVersion:'1',language:'unsupported'}),(error)=>error.code==='REQUEST_LANGUAGE_INVALID');
   // The docs-root layout is equally valid (legacy artifact_layout).
   assert.equal(
     comet.classicCompositionStartRequest({ change: 'demo', changeDir: 'docs/openspec/changes/demo', workflowId: 'comet-classic-full', workflowVersion: '1' }).input.changeDir,

@@ -45,6 +45,7 @@
 // real host through the public SDK claim/report protocol (the generated
 // entry protocol), never by this module. No runtime acceptance is claimed.
 
+import { types, isDeepStrictEqual } from 'node:util';
 import { evaluate } from './sdd/lib-delivery-gate.mjs';
 
 // Gate specs mirror extensions/<id>.json (single source: composition.json).
@@ -182,6 +183,26 @@ function activationBindingProblem(run, action) {
   return null;
 }
 
+// The R extension follows the native Open confirmation and revalidation.
+// The official wrapper also revalidates this source; checking the approved
+// artifact identity here prevents a changed revalidation from recording an
+// R pass before Classic routes the change back to Open. The choice alone does
+// not authenticate a human; protected host confirmation remains mandatory.
+function nativeOpenConfirmationCurrent(run, action) {
+  const evidence=run?.outputs?.['full.open.evidence']?.value;
+  const confirmation=run?.outputs?.['full.open.confirm']?.value;
+  const approved=confirmation?.proposal?.outputs?.['full.open.evidence'];
+  const source=action?.input?.activation?.source?.event;
+  if (!evidence || typeof evidence.ref!=='string' || evidence.ref!==run?.input?.changeDir
+    || !/^[a-f0-9]{64}$/.test(evidence.contentHash ?? '') || confirmation?.choice!=='approved'
+    || approved?.ref!==evidence.ref || approved?.contentHash!==evidence.contentHash
+    || source?.kind!=='action-outcome' || source.stepId!=='full.open.revalidate'
+    || source.outcome?.status!=='succeeded' || source.outcome?.output?.contentHash!==evidence.contentHash) return false;
+  const actions=Array.isArray(run?.actions) ? run.actions.filter(item=>item?.id===source.outcome.actionId) : [];
+  return actions.length===1 && actions[0].stepId==='full.open.revalidate' && actions[0].status==='succeeded'
+    && isDeepStrictEqual({...actions[0].outcome,claimToken:'source-reference'},source.outcome);
+}
+
 // Shared fail-closed delegation for one gate extension. `input` is the
 // upstream RuntimeValidator input ({ run, action, outcome, context }); the
 // outcome has already passed the domain wrapper's verdict/sourceHash/
@@ -194,7 +215,7 @@ function activationBindingProblem(run, action) {
 // and the recorded artifact binding satisfies the content-address stability
 // rule (B-③). Refused judgments keep their evaluation reason (the failure
 // the caller must fix), so the contract checks only tighten ACCEPTED passes.
-function validateGateExtension(spec, input) {
+function validateGateExtension(spec, input, managedHost = null) {
   const output = input?.outcome?.output;
   const evidence = output?.gateEvidence;
   if (output === null || typeof output !== 'object' || typeof evidence !== 'object' || evidence === null) {
@@ -209,11 +230,93 @@ function validateGateExtension(spec, input) {
       reason: `SDD gate ${spec.gate}: payload is bound to gate ${String(evidence.gate)}; gate evidence cannot be replayed across extensions`,
     };
   }
+  if (managedHost && spec.gate==='R' && output.verdict==='pass' && !nativeOpenConfirmationCurrent(input?.run,input?.action)) {
+    return {accepted:false,reason:'SDD gate R: native Open confirmation and matching revalidation are required'};
+  }
   let result;
   try {
-    // Pure delegation: options pass through verbatim (including any managed
-    // admission context); this module never invents or relaxes options.
-    result = evaluate(evidence.inputs, evidence.receipts, evidence.policy, evidence.options);
+    // Repository callers may exercise pure component judgments. A loaded
+    // application is always managed: worker output cannot select its mode or
+    // supply source-verification callbacks. The host must explicitly provide
+    // protected, synchronous readback for the frozen Run and policy.
+    let options = evidence.options;
+    let inputs = evidence.inputs;
+    let policy = evidence.policy;
+    let receipts = evidence.receipts;
+    if (managedHost) {
+      const ports = managedHost.ports;
+      const runId = input?.run?.runId;
+      if (typeof runId !== 'string' || !runId.trim()
+        || typeof ports?.verifyGateInputs !== 'function'
+        || typeof ports?.admissionOptionsFor !== 'function'
+        || typeof ports?.verifyReview !== 'function') {
+        return { accepted: false, reason: `SDD gate ${spec.gate}: protected Run, input, policy and source readback are required` };
+      }
+      // Runtime's snapshots are defensive copies but are not necessarily
+      // deeply frozen. Own an independent judgment copy and never expose it,
+      // or the caller's Run/outcome, to externally supplied callbacks.
+      const owned = structuredClone({ run: input.run, action: input.action,
+        inputs, policy, receipts });
+      inputs = owned.inputs; policy = owned.policy; receipts = owned.receipts;
+      const frozenInputsVerified = ports.verifyGateInputs(structuredClone({
+        run: owned.run, action: owned.action, gate: spec.gate, inputs, policy }));
+      // Source ports are synchronous. Consume rejection only for genuine
+      // Promises, including cross-realm ones; never invoke or inspect an
+      // arbitrary thenable. Async results are rejected even when resolved.
+      if (types.isPromise(frozenInputsVerified)) {
+        Promise.prototype.then.call(frozenInputsVerified, undefined, () => {});
+      }
+      if (frozenInputsVerified !== true) {
+        return { accepted: false, reason: `SDD gate ${spec.gate}: protected Run, input, policy and source readback are required` };
+      }
+      // SDK outcomes are JSON; raw binary observations must come back from
+      // the protected source, never reconstructed from the worker's object.
+      const wireByHydrated = new WeakMap();
+      if (Array.isArray(receipts) && receipts.length) {
+        if (typeof ports.readSourcePacket !== 'function') {
+          return { accepted: false, reason: `SDD gate ${spec.gate}: protected raw source readback is required` };
+        }
+        receipts = receipts.map((entry) => {
+          const returnedPacket = ports.readSourcePacket(structuredClone({
+            run: owned.run, action: owned.action, gate: spec.gate, entry }));
+          if (types.isPromise(returnedPacket)) {
+            Promise.prototype.then.call(returnedPacket, undefined, () => {});
+            throw new Error('protected source readback must be synchronous');
+          }
+          const packet = structuredClone(returnedPacket);
+          if (!packet || typeof packet !== 'object'
+            || !isDeepStrictEqual(packet.dispatch, entry?.dispatch)
+            || !isDeepStrictEqual(packet.envelope, entry?.envelope)
+            || packet.collection?.collectionId !== entry?.collectionId) {
+            throw new Error('protected source packet identity differs from the submitted receipt');
+          }
+          const hydrated = { ...entry, sourcePacket: packet };
+          wireByHydrated.set(hydrated, entry);
+          return hydrated;
+        });
+      }
+      options = { requireManaged: true, currentRunId: runId, currentGate: spec.gate,
+        admissionOptionsFor: (entry) => {
+          const protectedContext = ports.admissionOptionsFor(structuredClone(entry));
+          if (types.isPromise(protectedContext)) return protectedContext;
+          if (!protectedContext || !protectedContext.acceptedEntry) return protectedContext;
+          // The authoritative record is the original JSON wire entry, not the
+          // hydrated view used internally by the gate. Only an exact match to
+          // the current wire may be translated into the gate's hydrated form.
+          // The gate still requires the matching consumed collection and
+          // issued execution; neither replay fence is removed here.
+          const wire = wireByHydrated.get(entry);
+          return { ...protectedContext,
+            acceptedEntry: wire && isDeepStrictEqual(protectedContext.acceptedEntry, wire)
+              ? structuredClone(entry) : {} };
+        },
+        verifyReview: (request) => ports.verifyReview(structuredClone(request)),
+        ...(typeof ports.verifyManualApproval === 'function' ? {
+          verifyManualApproval: (request) => ports.verifyManualApproval(structuredClone({ ...request, run:owned.run, action:owned.action })),
+        } : {}),
+        currentChange: owned.run?.input?.change, currentChangeDir: owned.run?.input?.changeDir };
+    }
+    result = evaluate(inputs, receipts, policy, options);
   } catch (error) {
     return {
       accepted: false,
@@ -241,11 +344,21 @@ function validateGateExtension(spec, input) {
   return { accepted: true };
 }
 
-export async function createBindings(context) {
+export async function createBindings(context, protectedHostPorts) {
+  const hosted = !!context && typeof context.createSkillExecutor === 'function';
+  const managedHost = hosted ? { ports: protectedHostPorts, projectRoot: context.projectRoot } : null;
   const validators = GATE_SPECS.map((spec) => ({
     id: spec.validatorId,
     version: VALIDATOR_VERSION,
-    validate: (input) => validateGateExtension(spec, input),
+    validate: (input) => {
+      if (!managedHost || spec.gate !== 'P') return validateGateExtension(spec, input, managedHost);
+      return import('./sdd/lib-adapters-plan_source.mjs').then(({ verifyPlanSource }) => {
+        if (!verifyPlanSource({ projectRoot: managedHost.projectRoot, run: input?.run, inputs: input?.outcome?.output?.gateEvidence?.inputs })) {
+          return { accepted:false, reason:'SDD gate P: current plan files could not be verified' };
+        }
+        return validateGateExtension(spec, input, managedHost);
+      }).catch(() => ({ accepted:false, reason:'SDD gate P: plan readback dependency unavailable' }));
+    },
   }));
 
   // The executor port exists ONLY as a port of a loaded workflow application:

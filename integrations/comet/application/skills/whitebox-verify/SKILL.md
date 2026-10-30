@@ -6,7 +6,7 @@ description: >-
   对含 UI 的功能验收优先发现并使用当前 agent harness 原生浏览器，连接请求证据、截图与业务终态回读；本地无 UI 规则走 Slice。
   写测试、设计用例、生成自动化脚本转 test-authoring；本技能只做独立验证和验收。纯翻译、一般网页阅读、仅截图无功能验收、仅颜色间距对齐不触发。
 metadata:
-  version: "2.5.0"
+  version: "2.6.0"
 ---
 
 # Whitebox Verify
@@ -94,7 +94,9 @@ Debug 的 Mode A=前端、Mode B=Agent/后端；与 Journey 维度无关。Debug
 
 ## 报告与校验
 
-报告使用 `references/report-template.md`；Agent/后端深度调试再读 `references/agent-debug-workflow.md`、`agent-debug-template.md`。报告保留 run/case、来源版本、harness/浏览器/tab/viewport、步骤→预期→实际→证据、失败与能力缺口、截图展示/产物、终态回读及回归命令。
+报告使用 `references/report-template.md`；Agent/后端深度调试再读 `references/agent-debug-workflow.md`、`agent-debug-template.md`。报告逐 Case 关联实际用例来源与版本（Markdown、已有 TestPack 或批准的手工用例）、同一 run/candidate、步骤→预期→实际→原始证据，区分作者自检和独立验收，保留 harness/浏览器/tab/viewport、失败与能力缺口、截图展示/产物、终态回读及回归命令。报告是可读呈现，不替代原始事实或受控门禁。
+
+交接逐项列出用例正文的实际权威来源及版本（未知就写未提供）、稳定 Case ID 和需求/设计版本；分别记录作者自检与独立验收状态，并给出按 Case/版本可追溯的原始证据或明确缺口。受管交接须明确标出实际流程主控，并说明验收技能不另设流程状态或调度；主控未知就标未确认。旧 TestPack 和已批准手工用例不强制迁移。
 
 - Debug 每维一行：`VERDICT|Debug-A|PASS/FAIL/UNVERIFIED/EVIDENCE_UNSTABLE|evidence-ref`，四态都要证据；终局禁 planned。执行 `python3 scripts/lint_debug_verdicts.py <report.md>`。
 - Journey 执行 `python3 scripts/validate_journey_evidence.py <ledger.json>`，失败保持 RED；`STRUCTURE_PASS` 只证明结构，执行与真实性仍需原始工具输出。`scripts/render_journey_summary.py` 仅渲染派生汇总。

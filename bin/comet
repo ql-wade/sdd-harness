@@ -1,10 +1,45 @@
-#!/usr/bin/env bash
-# Comet 0.5.0 wrapper — uses vendored build with pinned node and managed env
+#!/bin/bash -p
+# Diagnostic-only until the managed Comet gates are qualified.
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-NODE_BIN="$HOME/.nvm/versions/node/v24.15.0/bin"
-export PATH="$NODE_BIN:$PATH"
-export COMET_OPENSPEC="${COMET_OPENSPEC:-$PROJECT_ROOT/.sdd/tools/openspec-1.15.0/node_modules/.bin/openspec}"
-COMET_JS="$PROJECT_ROOT/.sdd/vendor/comet/aeb1a6598034e28ce46b8422d4dbd8785e607bd7/builds/de39629a80fb32f16f3fa12515523988d775f957a62e16941542438c3b61908a/work/bin/comet.js"
-exec node "$COMET_JS" "$@"
+if [ "$#" -ne 1 ]; then
+  printf '%s\n' 'Comet workflow commands are blocked until the managed gates are qualified.' >&2
+  exit 2
+fi
+case "$1" in
+  --version|--help|-h|help) ;;
+  *) printf '%s\n' 'Comet workflow commands are blocked until the managed gates are qualified.' >&2; exit 2 ;;
+esac
+if [ "${SDD_COMET_WRAPPER_GUARD-}" = 1 ]; then
+  printf '%s\n' 'Comet diagnostic refused a recursive wrapper on PATH.' >&2
+  exit 2
+fi
+export SDD_COMET_WRAPPER_GUARD=1
+unset BASH_ENV ENV NODE_OPTIONS NODE_PATH NODE_COMPILE_CACHE NODE_V8_COVERAGE
+export NODE_DISABLE_COMPILE_CACHE=1
+remaining=${PATH-}
+selected=''
+while :; do
+  directory=${remaining%%:*}
+  candidate=${directory:-.}/comet
+  if [ -f "$candidate" ] && [ -x "$candidate" ] && ! [ "$candidate" -ef "$0" ]; then
+    selected=$candidate
+    break
+  fi
+  case "$remaining" in *:*) remaining=${remaining#*:} ;; *) break ;; esac
+done
+if [ -z "$selected" ]; then
+  printf '%s\n' 'External Comet 0.5.1 executable not found on PATH.' >&2
+  exit 2
+fi
+if ! version=$("$selected" --version 2>/dev/null); then
+  printf '%s\n' 'External Comet version check failed; 0.5.1 is required.' >&2
+  exit 2
+fi
+if [ "$version" != '0.5.1' ]; then
+  printf '%s\n' 'External Comet version mismatch; 0.5.1 is required.' >&2
+  exit 2
+fi
+case "$1" in
+  --version) printf '%s\n' "$version" ;;
+  *) printf '%s\n' 'Diagnostic-only mode: managed workflow commands remain blocked.' 'Comet 0.5.1 requires Node ^22.16.0 or >=24.0.0; actual runtime is not verified by this version check.' >&2; exec "$selected" --help ;;
+esac

@@ -129,6 +129,7 @@ async function collectApplicationPackagingIssues({ appManifest, skillsRoot, sour
   if (appManifest.kind !== 'comet-application-skill-assets') no('manifest-kind', String(appManifest.kind));
   if (appManifest.status !== 'ASSETS_PACKAGED') no('manifest-status', String(appManifest.status));
   if (appManifest.runtime_accepted !== false) no('manifest-runtime-accepted', String(appManifest.runtime_accepted));
+  if (appManifest.basis?.upstream_version !== lock.package?.version) no('upstream-version-mismatch', `${appManifest.basis?.upstream_version} != ${lock.package?.version}`);
   if (appManifest.basis?.upstream_commit !== lock.source.commit) no('upstream-commit-mismatch', `${appManifest.basis?.upstream_commit} != ${lock.source.commit}`);
   if (JSON.stringify(appManifest.basis?.upstream_patches ?? null) !== JSON.stringify(lock.patches)) no('upstream-patches-mismatch', 'manifest basis patches differ from upstream lock patches');
   if (appManifest.basis?.method_profile_manifest !== 'openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json') no('basis-method-profile-manifest', String(appManifest.basis?.method_profile_manifest));
@@ -178,7 +179,7 @@ async function collectApplicationPackagingIssues({ appManifest, skillsRoot, sour
   return issues;
 }
 
-test('application packaging pins verbatim method assets for 0.5.0 composition with no retired names', async () => {
+test('application packaging pins verbatim method assets to current lock with no retired names', async () => {
   const appManifest = await readJson('integrations/comet/application/manifest.json');
   const methodManifest = await readJson('openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json');
   const profile = await readJson('foundation/profiles/comet-managed.json');
@@ -222,7 +223,7 @@ async function packagingFixture(t, mutate) {
     skills.push({ name, source_path: `.agents/skills/${name}`, packaged_path: `integrations/comet/application/skills/${name}`, verbatim_copy: true, file_count: Object.keys(files).length, content_sha256: contentSha });
     methods[name] = { sha256: contentSha };
   }
-  const lock = { source: { commit: 'c0mmit' }, patches: [] };
+  const lock = { package: { version: '0.5.1' }, source: { commit: 'c0mmit' }, patches: [] };
   const world = {
     sourceRoot, skillsRoot, lock,
     methodManifest: { snapshots },
@@ -230,7 +231,7 @@ async function packagingFixture(t, mutate) {
     appManifest: {
       kind: 'comet-application-skill-assets', status: 'ASSETS_PACKAGED', runtime_accepted: false,
       basis: {
-        upstream_commit: 'c0mmit', upstream_patches: [],
+        upstream_version: '0.5.1', upstream_commit: 'c0mmit', upstream_patches: [],
         method_profile_manifest: 'openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json',
         foundation_profile: 'foundation/profiles/comet-managed.json',
       },
@@ -291,4 +292,62 @@ test('P exposes original plan protocol and pure validation without the planner c
   assert.notEqual(bad.status, 0);
   assert.equal(JSON.parse(bad.stdout).valid, false);
   assert.deepEqual(await fs.readdir(scratch), ['tasks.md']);
+});
+
+test('method profile reports the current locked Comet patch instead of a retired empty chain', async () => {
+  const manifest = await readJson('openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json');
+  const lock = await readJson('integrations/comet/upstream.lock.json');
+  assert.equal(lock.patches.length, 1, 'current qualification is for the locked 0005 patch');
+  assert.equal(lock.patches[0].path, 'integrations/comet/patches/0005-comet-050-kt-closeout.patch');
+  for (const text of [manifest.method_profile.controller_basis, manifest.comet_integration.patch_chain_status]) {
+    assert.ok(text.includes(lock.patches[0].path), 'method documentation must point to the actual locked patch');
+    assert.doesNotMatch(text, /lock\.patches\s*==\s*\[\]/);
+  }
+  assert.equal(manifest.runtime_accepted, false, 'correcting supplier metadata must not grant runtime qualification');
+});
+
+test('method profile separates requirements, architecture, test design and their reviews', async () => {
+  const profile = await readJson('foundation/profiles/comet-managed.json');
+  const find = (name) => {
+    const matches = profile.actions.filter((item) => item.action === name);
+    assert.equal(matches.length, 1, `${name} must be unique`);
+    return matches[0];
+  };
+  assert.deepEqual([find('R').nativePhase, find('R').role, find('R').methods], ['open', 'requirements-author', ['grill-me']]);
+  assert.deepEqual([find('A').nativePhase, find('A').role, find('A').methods], ['design', 'architecture-author', ['grill-me']]);
+  assert.deepEqual([find('A.review').role, find('A.review').gate, find('A.review').methods], ['independent-architecture-review', 'A', ['multi-agent-consensus-review']]);
+  assert.deepEqual([find('T').nativePhase, find('T').role, find('T').methods], ['design', 'test-author', ['test-authoring']]);
+  assert.deepEqual([find('T.review').role, find('T.review').gate], ['independent-test-design-review', 'T']);
+  assert.ok(find('P').inputs.includes('approved-TestPack'));
+});
+
+test('method profile declares separate test author, builder, code review and independent verify roles', async () => {
+  const profile = await readJson('foundation/profiles/comet-managed.json');
+  const actions = Object.fromEntries(profile.actions.map((item) => [item.action, item]));
+  assert.deepEqual([actions['test.automate'].role, actions['test.automate'].methods], ['test-author', ['test-authoring']]);
+  assert.deepEqual([actions.build.role, actions.build.methods], ['builder', ['tdd', 'diagnosing-bugs']]);
+  assert.deepEqual([actions['code.review'].role, actions['code.review'].methods], ['independent-code-review', ['code-review']]);
+  assert.deepEqual([actions.V.role, actions.V.methods], ['independent-whitebox', ['whitebox-verify']]);
+  assert.equal(profile.isolation.testAuthorNotBuilder, true);
+  assert.equal(profile.isolation.verifierNotBuilderOrTestAuthor, true);
+  assert.equal(profile.runtimeAccepted, false, 'declared roles do not prove actual invocation');
+});
+
+test('method asset metadata targets the selected Comet 0.5.1 without claiming runtime qualification', async () => {
+  const lock = await readJson('integrations/comet/upstream.lock.json');
+  const method = await readJson('openspec/changes/delivery-foundation-rearchitecture/method-profile-manifest.json');
+  const assets = await readJson('integrations/comet/application/manifest.json');
+  const profile = await readJson('foundation/profiles/comet-managed.json');
+  const version = '0.5.1', commit = '35c9860b77b42bafa0c2d80d8d695889f888a924';
+  assert.equal(lock.package.version, version); assert.equal(lock.source.commit, commit);
+  assert.equal(method.comet_integration.upstream_version, version); assert.equal(method.comet_integration.upstream_commit, commit);
+  assert.equal(assets.basis.upstream_version, version); assert.equal(assets.basis.upstream_commit, commit);
+  assert.equal(profile.qualification.assetPackaging.upstreamCommit, commit);
+  assert.equal(method.runtime_accepted, false); assert.equal(assets.runtime_accepted, false); assert.equal(profile.runtimeAccepted, false);
+  assert.notEqual(profile.qualification.status, 'QUALIFIED');
+});
+
+test('application packaging validation rejects stale version despite matching commit', async (t) => {
+  const issues=await packagingFixture(t,async (world)=>{world.appManifest.basis.upstream_version='0.5.0'});
+  assert.ok(issues.some(issue=>issue.startsWith('upstream-version-mismatch:')),issues.join('\n'));
 });

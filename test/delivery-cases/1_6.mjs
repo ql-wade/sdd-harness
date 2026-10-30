@@ -1,7 +1,7 @@
-// P1_6 supplier qualification only, revision 2026-10-26-comet-050-adoption-v1.
-// ADR-0022: the upstream patch chain is retired and Comet is relocked to 0.5.0
-// (upstream.lock.json patches == []). This case now pins (a) the locked,
-// patch-free 0.5.0 build supply and (b) the packaged application skill assets
+// P1_6 supplier qualification only, revision 2026-10-29-comet-051-adoption-v1.
+// ADR-0022 retires the historical 0.4.5 patch chain; the 0.5.1 supply lock
+// applies the 0005 Kt closeout patch. This case pins (a) the locked build
+// and (b) the packaged application skill assets
 // (integrations/comet/application) that feed downstream composition
 // replacements. Deep verbatim/digest validation and negative fixtures live in
 // comet-method-binding.test.js, imported below. No model or MCP is started, and
@@ -29,9 +29,9 @@ const build = path.join(root, '.sdd/vendor/comet', lock.source.commit, 'builds',
 const retiredNamePattern = /(superpowers|sdd-|trinity)/i;
 const digest = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 
-test('M01/B09 supplier: the locked 0.5.0 build supply is present with exactly the supply-wave 0005 patch', async () => {
-  assert.equal(lock.package.version, '0.5.0');
-  assert.equal(lock.source.commit, 'aeb1a6598034e28ce46b8422d4dbd8785e607bd7');
+test('M01/B09 supplier: the locked 0.5.1 build supply is present with exactly the supply-wave 0005 patch', async () => {
+  assert.equal(lock.package.version, '0.5.1');
+  assert.equal(lock.source.commit, '35c9860b77b42bafa0c2d80d8d695889f888a924');
   // P1_4 supply re-lock (controller-granted exception): the baseline moved
   // from patch-free to exactly the 0005 Kt closeout patch; the retired 0.4.5
   // six-patch stack still never satisfies this case.

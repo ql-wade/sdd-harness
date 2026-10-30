@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
+import {spawn,spawnSync} from 'node:child_process';import {fileURLToPath,pathToFileURL} from 'node:url';
+import {classicCompositionStartRequest} from '../lib/adapters/comet.js';
+import {resolveCometForTest} from './helpers/comet-cli.js';
+const repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+
+test('a Run persisted before selection is discovered instead of creating another', {timeout:120000}, async(t)=>{
+  const scratch=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'sdd-start-gap-'));const root=path.join(scratch,'project'),home=path.join(scratch,'home');fs.mkdirSync(root);fs.mkdirSync(home);
+  let supervisor,childPid,retain=false;
+  t.after(async()=>{if(childPid)try{process.kill(childPid,'SIGKILL')}catch{}if(supervisor && supervisor.exitCode===null && supervisor.signalCode===null){const done=new Promise(r=>supervisor.once('close',r));supervisor.kill('SIGKILL');await done;}if(retain)t.diagnostic(`fixture retained for unknown outcome: ${scratch}`);else fs.rmSync(scratch,{recursive:true,force:true});});
+  const env={...process.env,HOME:home,USERPROFILE:home,XDG_CONFIG_HOME:path.join(home,'config'),PATH:`${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH}`,CI:'true',DO_NOT_TRACK:'1'};
+  delete env.NODE_OPTIONS;delete env.NODE_PATH;delete env.NODE_TEST_CONTEXT;
+  const comet=resolveCometForTest();
+  const call=(cmd,args)=>{const p=spawnSync(cmd,args,{cwd:root,env,encoding:'utf8',timeout:60000});let data;try{data=JSON.parse(p.stdout)}catch{data=null}return {status:p.status,data,stderr:p.stderr,stdout:p.stdout,error:p.error?.code,signal:p.signal}};
+  const ok=(cmd,args)=>{const r=call(cmd,args);assert.equal(r.status,0,r.stderr||r.stdout);return r.data;};
+  assert.equal(call(comet,['--version']).stdout.trim(),'0.5.1');ok('git',['init','-q']);fs.writeFileSync(path.join(root,'.gitignore'),'home/\n');ok('git',['add','.gitignore']);ok('git',['-c','user.name=Fixture','-c','user.email=fixture@example.invalid','commit','-qm','fixture']);
+  fs.mkdirSync(path.join(root,'.comet'));fs.writeFileSync(path.join(root,'.comet/config.yaml'),'schema: comet.project.v1\ndefault_workflow: classic\nworkflows:\n  - classic\nclassic:\n  artifact_layout: legacy\n  language: zh-CN\n');
+  for(const name of ['original','second']){const dir=path.join(root,'openspec/changes',name);fs.mkdirSync(dir,{recursive:true});for(const f of ['proposal.md','design.md','tasks.md'])fs.writeFileSync(path.join(dir,f),'# Synthetic fixture\n');}
+  const app=path.join(repo,'integrations/comet/application/package/application.json');const preview=ok(comet,['application','install',app,'--project',root,'--preview','--json']);const installed=ok(comet,['application','install',app,'--project',root,'--confirmation-hash',preview.confirmationHash,'--json']);
+  const sdkRoot=path.dirname(path.dirname(fs.realpathSync(comet)));
+  const application=pathToFileURL(path.join(sdkRoot,'dist/domains/workflow-application/index.js')).href;
+  const runtime=pathToFileURL(path.join(sdkRoot,'dist/domains/engine/runtime.js')).href;
+  const request=classicCompositionStartRequest({change:'original',changeDir:'openspec/changes/original',workflowId:'comet-classic-full',workflowVersion:'1',language:'zh-CN'});
+  const marker=path.join(scratch,'persisted');
+  const script=`import fs from 'node:fs';import {loadWorkflowApplication} from ${JSON.stringify(application)};import {createRuntime} from ${JSON.stringify(runtime)};const root=${JSON.stringify(root)};const app=await loadWorkflowApplication({file:${JSON.stringify(installed.file)},projectRoot:root});const runtime=createRuntime({...app.implementation,store:app.store});await runtime.start({...${JSON.stringify(request)},context:{projectRoot:root,invocationCwd:root,requestId:'fixture'}});fs.writeFileSync(${JSON.stringify(marker)},String(process.pid));await new Promise(()=>setInterval(()=>{},1000));`;
+  supervisor=spawn('python3',[path.join(repo,'tools/comet/start-lock.py'),path.join(root,'.comet/sdd-start.flock'),process.execPath,'--input-type=module','-e',script],{cwd:root,env,stdio:'ignore'});
+  for(let n=0;n<400&&!fs.existsSync(marker);n++)await new Promise(r=>setTimeout(r,50));assert.ok(fs.existsSync(marker),'original Run must be persisted before interruption');
+  childPid=Number(fs.readFileSync(marker,'utf8'));assert.ok(Number.isSafeInteger(childPid)&&childPid>0);const stopped=new Promise(r=>supervisor.once('close',r));process.kill(childPid,'SIGKILL');await stopped;childPid=null;
+  assert.equal(fs.existsSync(path.join(root,'.comet/current-change.json')),false,'the interrupted Run has no selection');
+  const second=call(process.execPath,[path.join(repo,'tools/comet/phase-entry.mjs'),'/comet-open','--run-id','second','--project-root',root,'--start']);
+  assert.equal(second.status,2);const refusal=JSON.parse(second.stderr);assert.equal(refusal.code,'UNSELECTED_RUN_EXISTS');assert.equal(refusal.current.runs[0].runId,'original');
+  const query=path.join(scratch,'query.json');fs.writeFileSync(query,JSON.stringify({operation:'query',view:'current',runId:'original'}));const original=ok(comet,['runtime','dispatch','--application','sdd-managed-delivery','--project-root',root,'--request',query,'--json']);assert.equal(original.data.runId,'original');
+  const resumed=call(process.execPath,[path.join(repo,'tools/comet/phase-entry.mjs'),'/comet-open','--run-id','original','--project-root',root,'--continue']);
+  if(resumed.status===null || /(?:RESUME|NEXT)_OUTCOME_UNKNOWN/.test(resumed.stderr))retain=true;
+  assert.equal(resumed.status,0,JSON.stringify({stderr:resumed.stderr,error:resumed.error,signal:resumed.signal}));assert.equal(resumed.data.runId,'original');
+  const restored=JSON.parse(fs.readFileSync(path.join(root,'.comet/current-change.json'),'utf8'));assert.equal(restored.workflow,'application');assert.equal(restored.change,'original');assert.equal(restored.applicationId,'sdd-managed-delivery');
+  fs.writeFileSync(query,JSON.stringify({operation:'query',view:'current',runId:'second'}));const missing=call(comet,['runtime','dispatch','--application','sdd-managed-delivery','--project-root',root,'--request',query,'--json']);assert.notEqual(missing.status,0);
+  t.diagnostic(JSON.stringify({scope:'isolated-no-model',interruption:'SIGKILL-after-persist-before-selection',original:'original',second:'not-created'}));
+});

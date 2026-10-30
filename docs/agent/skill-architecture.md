@@ -63,11 +63,13 @@
 | V | 独立 whitebox-verify | 当前候选、typed ledger、validator、真实业务终态读回 |
 | Kp/规格/Kt | 知识作者/独立审查、唯一 Spec Adapter、受管 Publisher | Kp 阻断所有归档入口，Kt 阻断整体完成；同 Run 继续与恢复 |
 
+新增领域用例以 Markdown 为维护来源，使用 [领域用例约定](../../.agents/skills/test-authoring/references/domain-cases.md) 派生 v1 机读视图；旧 TestPack 和已批准手工用例保留原入口。当前投影仅支持设计态，作者执行来源未资格化时自动化就绪被拒绝；设计态不能满足受管 V 门。Whitebox 报告按用例关联原始证据，结构校验不等于业务验收。实际 Comet 应用包及真实 T/V Run 仍待资格化。
+
 P 的允许列表是原样 `claude-parallel-tdd-planner/references/plan-contract.md` 的 `One root and acceptance source`、`DAG` 两节，以及只读 `scripts/plan_guard.py`。在 `Execution contract` 前停止；不得加载完整 SKILL、automation/parallel-execution/execution-prompt/completion/openspec-closeout 引用或 lifecycle/render/install 脚本。保留完整来源快照不表示激活其 Goal/监督/派发/归档合同；运行适配器仍须落实该允许列表。
 
-P1_6 已显式整份升级共识方法登记源码 19 文件与 Whitebox 139 文件，来源及逐文件清单见仓库根目录的 `worker-reports/P1_6-convergence/source-upgrades.json`。其余九份方法保留既有快照。Whitebox 的 `tests/run_all.sh` 自测完整供应内容，包含原八负例、增至十五负例及三不变量；这些是方法源自测，不签产品 Journey。仓库 `scripts/check.sh` 必须调用该入口，入口缺失或失败均阻断。
+P1_6 历史整份升级曾登记共识方法 19 文件与 Whitebox 139 文件，来源见 `worker-reports/P1_6-convergence/source-upgrades.json`；当前文件数和逐文件摘要以 method-profile-manifest 为准。Whitebox 的 `tests/run_all.sh` 自测完整供应内容，包含原八负例、增至十五负例及三不变量；这些是方法源自测，不签产品 Journey。仓库 `scripts/check.sh` 必须调用该入口，入口缺失或失败均阻断。
 
-Comet 的双语分发资产、init/update 安装调用、doctor 诊断及原生 Hook 计划恢复指引通过项目自有 `0001-matt-method-profile.patch` 修订，未修改这些原样方法正文。真实执行器、受信角色、结果来源、硬门及新宿主完整旅程分别归原下游任务与 VERIFY；缺能力返回 UNQUALIFIED，不回退退役方法，不因文件/hash/安装通过启用 profile。Ponytail full 只影响方法上下文，不改变权限或门禁；运行隔离限制仍须独立验证。
+历史实现记录曾使用 `0001-matt-method-profile.patch`；用户已指定 Comet 0.5.1；`integrations/comet/upstream.lock.json` 已锁定 0.5.1 和 0005，供给构建已做有限验证，但新版 Kt 写入、权限和同 Run 恢复仍未验证。双语分发、安装、诊断和 Hook 的现状需由 P1_2/P1_6 实测，不因历史补丁记录视为已实现。真实执行器、受信角色、结果来源、硬门及新宿主完整旅程分别归原下游任务与 VERIFY；缺能力返回 UNQUALIFIED，不回退退役方法，不因文件/hash/安装通过启用 profile。Ponytail full 只影响方法上下文，不改变权限或门禁；运行隔离限制仍须独立验证。
 
 ## 4. 触发矩阵
 

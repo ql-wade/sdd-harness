@@ -517,3 +517,165 @@ test('delivery-gate invalid JSON returns exit1 without echoing input contents or
     }
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('legacy issuance fails closed on throwing authority without exposing internals', async () => {
+  const { admitLegacyReport } = await import('../lib/adapters/legacy-evidence.js');
+  const report = legacyReportFixture();
+  const authority = { issueDispatch() { throw new Error('PRIVATE-SECRET'); }, verifyDispatch() { return { ok:true }; } };
+  let result;
+  assert.doesNotThrow(() => { result=admitLegacyReport({report,identity:{runnerId:'r',execution:'e',environment:ENVIRONMENT},authority,current:currentFor(report)}); });
+  assert.equal(result.ok,false);assert.equal(result.error,'AUTHORITY_PORT_FAILED');assert.equal(JSON.stringify(result).includes('PRIVATE-SECRET'),false);
+});
+
+test('legacy issuance rejects asynchronous authority without unhandled rejection', () => {
+  const source = `import {admitLegacyReport} from './lib/adapters/legacy-evidence.js';
+  const report={schemaVersion:1,pass:true,issues:[],change:'x',evidenceSha256:{sourceTree:'a'.repeat(64)}};
+  const authority={issueDispatch(){return Promise.reject(new Error('private'))},verifyDispatch(){return {ok:true}}};
+  const result=admitLegacyReport({report,identity:{runnerId:'r',execution:'e',environment:'env'},authority,current:{inputDigest:'a'.repeat(64),policyDigest:'b'.repeat(64),environment:'env'}});
+  console.log(JSON.stringify(result));`;
+  const child=spawnSync(process.execPath,['--input-type=module','-e',source],{cwd:repoRoot,encoding:'utf8',timeout:10000});
+  assert.equal(child.status,0,child.stderr);const result=JSON.parse(child.stdout);assert.equal(result.ok,false);assert.equal(result.error,'ASYNC_AUTHORITY_PORT_REFUSED');assert.equal(child.stderr,'');
+});
+
+test('legacy report refuses invalid calendar dates and timezone-free timestamps', async () => {
+  const { adaptLegacyReport, admitLegacyReport } = await import('../lib/adapters/legacy-evidence.js');
+  const { createLaunchAuthority } = await import('../lib/delivery/evidence.js');
+  const report=legacyReportFixture();let issued=0;const launcher=createLaunchAuthority({secret:crypto.randomBytes(32).toString('hex')});
+  const authority={...launcher,issueDispatch(...args){issued++;return launcher.issueDispatch(...args)}};
+  const identity={runnerId:'r',execution:'e',environment:ENVIRONMENT};
+  for(const [key,value] of [['now','2026-02-30T12:00:00Z'],['now','2025-02-29T12:00:00Z'],['now','2026-10-25T12:00:00'],['expiry','2026-02-30T12:00:00Z'],['expiry','2026-10-25T12:00:00']]) {
+    const who={...identity,[key]:value};const adapted=adaptLegacyReport(report,who);assert.equal(adapted.ok,false,`${key}=${value}`);assert.equal(adapted.error,'INVALID_LEGACY_IDENTITY');
+    const admitted=admitLegacyReport({report,identity:who,authority,current:currentFor(report)});assert.equal(admitted.ok,false);assert.equal(issued,0);
+  }
+  for(const time of ['2024-02-29T12:00:00Z','2026-10-25T12:00:00+08:00','2026-10-25T12:00:00.123456789Z']) {
+    const adapted=adaptLegacyReport(report,{...identity,now:time});assert.equal(adapted.ok,true,time);
+  }
+});
+
+test('legacy issuance rejects thenables without invoking their then and malformed responses', async () => {
+  const { admitLegacyReport }=await import('../lib/adapters/legacy-evidence.js');
+  const report=legacyReportFixture();const identity={runnerId:'r',execution:'e',environment:ENVIRONMENT};let called=0;
+  for(const value of [{then(){called++}},null,undefined,[],false,'bad',7]) {
+    const authority={issueDispatch:()=>value,verifyDispatch:()=>({ok:true})};const result=admitLegacyReport({report,identity,authority,current:currentFor(report)});
+    assert.equal(result.ok,false);assert.equal(result.error,typeof value?.then==='function'?'ASYNC_AUTHORITY_PORT_REFUSED':'INVALID_AUTHORITY_RESPONSE');
+  }
+  assert.equal(called,0);
+  const throwing={get then(){throw Error('private getter')}};
+  const result=admitLegacyReport({report,identity,authority:{issueDispatch:()=>throwing,verifyDispatch:()=>({ok:true})},current:currentFor(report)});
+  assert.equal(result.error,'AUTHORITY_PORT_FAILED');assert.equal(JSON.stringify(result).includes('private getter'),false);
+});
+
+test('legacy issuance handles fulfilled and cross-realm rejected promises without unhandled rejection', () => {
+  const source=`import vm from 'node:vm';import {admitLegacyReport} from './lib/adapters/legacy-evidence.js';
+    const report={schemaVersion:1,pass:true,issues:[],change:'x',evidenceSha256:{sourceTree:'a'.repeat(64)}};
+    const common={report,identity:{runnerId:'r',execution:'e',environment:'env'},current:{inputDigest:'a'.repeat(64),policyDigest:'b'.repeat(64),environment:'env'}};
+    for (const promise of [Promise.resolve({}),vm.runInNewContext("Promise.reject(new Error('private'))")]) {
+      const result=admitLegacyReport({...common,authority:{issueDispatch:()=>promise,verifyDispatch:()=>({ok:true})}});if(result.error!=='ASYNC_AUTHORITY_PORT_REFUSED')process.exitCode=1;
+    }`;
+  const child=spawnSync(process.execPath,['--input-type=module','-e',source],{cwd:repoRoot,encoding:'utf8',timeout:10000});assert.equal(child.status,0,child.stderr);assert.equal(child.stderr,'');
+});
+
+test('knowledge-closeout labels a locally supplied non-applicability claim as component only', () => {
+  const root=makeTmp('sdd-p23-closeout-scope-');
+  try {
+    const required=path.join(root,'required.json');
+    fs.writeFileSync(required,JSON.stringify([{capability:'no-project-entry',digest:sha('x'),source:'fixture',channel:'llmwiki',applicable:false,applicabilityBasis:'self-claimed'}]));
+    const run=runCli(['knowledge-closeout','--project',root,'--change','example','--required',required,'--json']);
+    assert.equal(run.status,2,run.stderr||run.stdout);const report=JSON.parse(run.stdout);
+    assert.equal(report.pass,false);assert.equal(report.kt.blocked[0].code,'KT_REQUIRED_MANIFEST_INVALID');assert.equal(report.scope,'component/knowledge-closeout');assert.equal(report.managedClosureEligible,false);
+  } finally {fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('legacy report refuses contradictory pass and audit issues before issuance', async () => {
+  const {adaptLegacyReport,admitLegacyReport}=await import('../lib/adapters/legacy-evidence.js');
+  const {createLaunchAuthority}=await import('../lib/delivery/evidence.js');
+  const launcher=createLaunchAuthority({secret:crypto.randomBytes(32).toString('hex')});let issued=0;
+  const authority={...launcher,issueDispatch(...args){issued++;return launcher.issueDispatch(...args)}};
+  const identity={runnerId:'r',execution:'e',environment:ENVIRONMENT};
+  for(const report of [legacyReportFixture({pass:true,issues:[{code:'FAILED',message:'real audit failure'}]}),legacyReportFixture({pass:false,issues:[]})]) {
+    const adapted=adaptLegacyReport(report,identity);assert.equal(adapted.ok,false);assert.equal(adapted.error,'INVALID_LEGACY_REPORT');
+    const admitted=admitLegacyReport({report,identity,authority,current:currentFor(report)});assert.equal(admitted.ok,false);assert.equal(issued,0);
+  }
+});
+
+test('knowledge-closeout text and invalid-input output preserve component boundary', () => {
+  const root=makeTmp('sdd-p23-closeout-output-');
+  try {
+    const required=path.join(root,'required.json');fs.writeFileSync(required,JSON.stringify([{capability:'local-only',digest:sha('x'),source:'fixture',channel:'llmwiki',applicable:false,applicabilityBasis:'local claim'}]));
+    const base=['knowledge-closeout','--project',root,'--change','example','--required',required];
+    const output=runCli(base);assert.equal(output.status,2,output.stderr);assert.match(output.stdout,/component/i);assert.match(output.stdout,/managed.*unverified/i);assert.match(output.stdout,/KT_REQUIRED_MANIFEST_INVALID/);
+    const invalid=runCli(['knowledge-closeout','--project',root,'--change','example','--required',path.join(root,'absent.json'),'--json']);assert.equal(invalid.status,1);const error=JSON.parse(invalid.stdout);assert.equal(error.scope,'component/knowledge-closeout');assert.equal(error.managedClosureEligible,false);
+  } finally {fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('legacy admission binds every returned signed dispatch field to the original request', async () => {
+  const {admitLegacyReport}=await import('../lib/adapters/legacy-evidence.js');
+  const {createLaunchAuthority}=await import('../lib/delivery/evidence.js');
+  const report=legacyReportFixture();const identity={runnerId:'runner-1',execution:'exec-1',environment:ENVIRONMENT};const current=currentFor(report);
+  const launcher=createLaunchAuthority({secret:crypto.randomBytes(32).toString('hex')});
+  const wrong={runnerId:'other-runner',run:'other-run',gate:'R',attempt:2,epoch:2,role:'builder',execution:'other-execution',inputDigest:sha('other-input'),policyDigest:sha('other-policy')};
+  for (const [key,value] of Object.entries(wrong)) {
+    let verified=0;const authority={issueDispatch(request){const result=launcher.issueDispatch({...request,[key]:value});assert.equal(launcher.verifyDispatch(result).ok,true);return result;},verifyDispatch(record){verified++;return launcher.verifyDispatch(record);}};
+    const result=admitLegacyReport({report,identity,current,authority});assert.equal(result.ok,false,key);assert.equal(result.error,'AUTHORITY_DISPATCH_BINDING_MISMATCH',key);assert.equal(verified,0,key);
+  }
+  for (const key of Object.keys(wrong)) {
+    let verified=0;const authority={issueDispatch(request){const result=launcher.issueDispatch(request);delete result[key];return result;},verifyDispatch(record){verified++;return launcher.verifyDispatch(record);}};
+    const result=admitLegacyReport({report,identity,current,authority});assert.equal(result.ok,false,key);assert.equal(result.error,'AUTHORITY_DISPATCH_BINDING_MISMATCH',key);assert.equal(verified,0,key);
+  }
+  const good=admitLegacyReport({report,identity,current,authority:launcher});assert.equal(good.ok,true,good.reason);assert.equal(good.managedClosureEligible,false);
+});
+
+test('legacy admission freezes request even when a signing callback mutates its argument', async () => {
+  const {admitLegacyReport}=await import('../lib/adapters/legacy-evidence.js');const {createLaunchAuthority}=await import('../lib/delivery/evidence.js');
+  const report=legacyReportFixture();const identity={runnerId:'runner-1',execution:'exec-1',environment:ENVIRONMENT};const current=currentFor(report);
+  const launcher=createLaunchAuthority({secret:crypto.randomBytes(32).toString('hex')});let verified=0;
+  const authority={issueDispatch(request){request.run='changed-by-signer';return launcher.issueDispatch(request);},verifyDispatch(record){verified++;return launcher.verifyDispatch(record);}};
+  const result=admitLegacyReport({report,identity,current,authority});assert.equal(result.ok,false);assert.equal(result.error,'AUTHORITY_DISPATCH_BINDING_MISMATCH');assert.equal(verified,0);
+});
+
+test('legacy admission rejects an unrequested signed actionBinding', async () => {
+  const {admitLegacyReport}=await import('../lib/adapters/legacy-evidence.js');const {createLaunchAuthority}=await import('../lib/delivery/evidence.js');
+  const report=legacyReportFixture();const identity={runnerId:'runner-1',execution:'exec-1',environment:ENVIRONMENT};const current=currentFor(report);
+  const launcher=createLaunchAuthority({secret:crypto.randomBytes(32).toString('hex')});let verified=0;
+  const authority={issueDispatch(request){const actionBinding={schemaVersion:1,profile:'comet-managed-v2',...request,action:'verify-case',revision:'r1',environmentDigest:sha('env'),workPackage:{id:'wp-1',taskIds:['2.3.a']},methods:[{name:'whitebox-verify',version:'1.0.0',ref:'.agents/skills/whitebox-verify/SKILL.md',digest:sha('method')}],allowedPaths:['.whitebox'],allowedTools:['read_file'],inputs:[{name:'input',ref:'src/app.js',digest:request.inputDigest}],outputs:[{name:'report',ref:'.whitebox/report.json'}]};const result=launcher.issueDispatch({...request,actionBinding});assert.equal(launcher.verifyDispatch(result).ok,true);return result;},verifyDispatch(record){verified++;return launcher.verifyDispatch(record);}};
+  const result=admitLegacyReport({report,identity,current,authority});assert.equal(result.ok,false);assert.equal(result.error,'AUTHORITY_DISPATCH_BINDING_MISMATCH');assert.equal(verified,0);
+});
+
+test('legacy admission refuses re-signed binding changes made by verifyDispatch', async () => {
+  const {admitLegacyReport}=await import('../lib/adapters/legacy-evidence.js');const {createLaunchAuthority}=await import('../lib/delivery/evidence.js');
+  const report=legacyReportFixture();const identity={runnerId:'runner-1',execution:'exec-1',environment:ENVIRONMENT};const current=currentFor(report);
+  const launcher=createLaunchAuthority({secret:crypto.randomBytes(32).toString('hex')});
+  for (const [key,value] of Object.entries({runnerId:'other-runner',run:'other-run',gate:'R',attempt:2,epoch:2,role:'test-author',execution:'other-execution',inputDigest:sha('other-input'),policyDigest:sha('other-policy')})) {
+    const authority={issueDispatch(request){return launcher.issueDispatch(request);},verifyDispatch(record){const altered=launcher.issueDispatch({...record,[key]:value});Object.assign(record,altered);return launcher.verifyDispatch(record);}};
+    const result=admitLegacyReport({report,identity,current,authority});assert.equal(result.ok,false,key);assert.equal(result.error,'AUTHORITY_DISPATCH_BINDING_MISMATCH',key);
+  }
+});
+
+test('legacy admission does not share its signed snapshot with the issuer', async () => {
+  const {admitLegacyReport}=await import('../lib/adapters/legacy-evidence.js');const {createLaunchAuthority}=await import('../lib/delivery/evidence.js');
+  const report=legacyReportFixture();const identity={runnerId:'runner-1',execution:'exec-1',environment:ENVIRONMENT};const current=currentFor(report);
+  const launcher=createLaunchAuthority({secret:crypto.randomBytes(32).toString('hex')});let issued;
+  const authority={issueDispatch(request){issued=launcher.issueDispatch(request);return issued;},verifyDispatch(record){const altered=launcher.issueDispatch({...record,run:'other-run'});Object.assign(issued,altered);return launcher.verifyDispatch(record);}};
+  const result=admitLegacyReport({report,identity,current,authority});assert.equal(result.ok,true,result.reason);assert.equal(result.entry.dispatch.run,report.change);assert.notEqual(result.entry.dispatch,issued);
+  issued.run='changed-after-return';assert.equal(result.entry.dispatch.run,report.change);
+});
+
+test('legacy verification rejects additional actionBinding and signature mutation', async () => {
+  const {admitLegacyReport}=await import('../lib/adapters/legacy-evidence.js');const {createLaunchAuthority}=await import('../lib/delivery/evidence.js');
+  const report=legacyReportFixture();const identity={runnerId:'runner-1',execution:'exec-1',environment:ENVIRONMENT};const current=currentFor(report);
+  const launcher=createLaunchAuthority({secret:crypto.randomBytes(32).toString('hex')});
+  for (const mode of ['extra-action','integrity']) {
+    const authority={issueDispatch:request=>launcher.issueDispatch(request),verifyDispatch(record){if(mode==='extra-action')record.actionBinding={unrequested:true};else record.integrity='0'.repeat(64);return {ok:true};}};
+    const result=admitLegacyReport({report,identity,current,authority});assert.equal(result.ok,false,mode);assert.equal(result.error,'AUTHORITY_DISPATCH_BINDING_MISMATCH',mode);
+  }
+});
+
+test('legacy verification rejects an asynchronously mutating authority without unhandled rejection', () => {
+  const source=`import {admitLegacyReport} from './lib/adapters/legacy-evidence.js';import {createLaunchAuthority} from './lib/delivery/evidence.js';
+    const report={schemaVersion:1,pass:true,issues:[],change:'x',evidenceSha256:{sourceTree:'a'.repeat(64)}};
+    const launcher=createLaunchAuthority({secret:'s'.repeat(32)});
+    const authority={issueDispatch:request=>launcher.issueDispatch(request),verifyDispatch(record){record.run='changed';return Promise.reject(new Error('private'))}};
+    const result=admitLegacyReport({report,identity:{runnerId:'r',execution:'e',environment:'env'},authority,current:{inputDigest:'a'.repeat(64),policyDigest:'b'.repeat(64),environment:'env'}});
+    if(result.ok!==false||result.error!=='ASYNC_AUTHORITY_PORT_REFUSED')process.exitCode=1;`;
+  const child=spawnSync(process.execPath,['--input-type=module','-e',source],{cwd:repoRoot,encoding:'utf8',timeout:10000});assert.equal(child.status,0,child.stderr);assert.equal(child.stderr,'');
+});

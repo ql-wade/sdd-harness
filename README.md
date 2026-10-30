@@ -92,3 +92,11 @@ npm install
 npm test               # gate/audit 回归套件
 bash scripts/check.sh  # 总检查（规则层 + 技能层 + 回归 + YAML/JSON）
 ```
+
+Comet 交付应用使用外部安装的 Comet 0.5.1 编译到仓库外的新目录：
+
+```bash
+node integrations/comet/application/internal/build-application.mjs --out /absolute/new-output-directory
+```
+
+这是应用候选构建，实际宿主、门禁和端到端运行需另行验证。

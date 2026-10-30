@@ -39,6 +39,8 @@
 - 实施目标：[Comet流程与知识收敛架构](docs/architecture/comet-ai-devops-convergence.md)，沿用ADR-0019单主控边界，实施细化见[ADR-0020](docs/architecture/adr/0020-comet-command-knowledge-convergence.md)，命令优先收敛（取消六角色常驻服务/Runner镜像/私有RPC前置）见[ADR-0021](docs/architecture/adr/0021-comet-command-first-no-resident-role-services.md)。
 - 执行和恢复先读当前Change的[HANDOFF](openspec/changes/delivery-foundation-rearchitecture/HANDOFF.md)，任务只消费同一[清单](openspec/changes/delivery-foundation-rearchitecture/tasks.md)与DAG；按实际资格和独立证据接纳，文档不宣称运行就绪。
 - 方法快照保持原样。当前profile绑定Comet原Run；TeamAI只分发。基础scaffold职责保留，历史蓝图仅供演进对照，不能作为当前阶段命令/知识库路由。
+- 项目专用 Codex 阶段入口源在 `integrations/comet/application/phase-entries/`；安装器先预览、再按预览摘要安装同名适配入口到项目 `.codex/skills/`，只对指定项目禁用旧入口路径，不改上游 Skill。此发现路径已在当前客户端隔离测试，其他客户端须另行验证；如旧版适配入口仍在 `.agents/skills/`，先安全迁移，避免两个同名入口。入口统一使用原 Comet 应用 Run 和阶段守卫；入口可见、安装或组件测试不代表宿主来源与硬门已资格化。
+- 构建项目自有 Comet 应用时使用 PATH 中的 Comet 0.5.1：`node integrations/comet/application/internal/build-application.mjs --out /absolute/new-output-directory`。输出目录须是仓库外尚不存在的路径；构建成功不等于运行资格或端到端验收。
 
 ### 局部 AGENTS.md 索引
 

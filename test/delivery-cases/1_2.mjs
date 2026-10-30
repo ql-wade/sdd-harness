@@ -113,22 +113,31 @@ test('V_F04: CLI verify fails on drifted assets and check-run blocks an active r
 });
 
 test('CLI check-run refuses a second writer on an active run (B09) and allows the owner', () => {
-  const lockPath = path.join(projectRoot, 'foundation', 'foundation-lock.json');
-  assert.ok(fs.existsSync(lockPath), 'committed foundation lock must exist');
-  const runDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-12run-'));
+  const root = makeFixture();
+  const out = path.join(root, 'foundation');
+  const runDir = path.join(root, 'run');
   try {
-    fs.copyFileSync(lockPath, path.join(runDir, 'foundation-lock.json'));
+    const built = runExporter(['export', '--root', root, '--out', out, '--release-commit', FIXED_COMMIT, '--freeze-baseline']);
+    assert.equal(built.status, 0, built.stderr || built.stdout);
+    fs.mkdirSync(runDir);
+    fs.copyFileSync(path.join(out, 'foundation-lock.json'), path.join(runDir, 'foundation-lock.json'));
     writeJson(path.join(runDir, 'run-state.json'), { schemaVersion: 1, runId: 'run-b09', status: 'active', owner: 'alice' });
-
-    const refused = runExporter(['check-run', '--run-dir', runDir, '--root', projectRoot, '--acquire', '--owner', 'bob']);
+    const refused = runExporter(['check-run', '--run-dir', runDir, '--root', root, '--acquire', '--owner', 'bob']);
     assert.notEqual(refused.status, 0, 'second writer refused');
     assert.match(refused.stderr + refused.stdout, /second-writer-refused|owner alice/);
     assert.equal(JSON.parse(fs.readFileSync(path.join(runDir, 'run-state.json'), 'utf8')).owner, 'alice');
-
-    const owner = runExporter(['check-run', '--run-dir', runDir, '--root', projectRoot, '--acquire', '--owner', 'alice']);
+    const owner = runExporter(['check-run', '--run-dir', runDir, '--root', root, '--acquire', '--owner', 'alice']);
     assert.equal(owner.status, 0, owner.stderr || owner.stdout);
+    const state = fs.readFileSync(path.join(runDir, 'run-state.json'));
+    const pinned = fs.readFileSync(path.join(runDir, 'foundation-lock.json'));
+    fs.writeFileSync(path.join(root, '.agents/skills/alpha/SKILL.md'), '# alpha drifted\n');
+    const stale = runExporter(['check-run', '--run-dir', runDir, '--root', root, '--acquire', '--owner', 'alice']);
+    assert.notEqual(stale.status, 0, 'same owner cannot acquire drifted live assets');
+    assert.match(stale.stderr + stale.stdout, /silent-rebaseline-blocked/);
+    assert.deepEqual(fs.readFileSync(path.join(runDir, 'run-state.json')), state);
+    assert.deepEqual(fs.readFileSync(path.join(runDir, 'foundation-lock.json')), pinned);
   } finally {
-    fs.rmSync(runDir, { recursive: true, force: true });
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 

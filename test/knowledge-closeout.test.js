@@ -199,6 +199,7 @@ test('D06: the MCP protocol layer reports a real launcher refusal structurally �
   const unavailable = await llmwiki.invokeMcpPublish({
     operation,
     launcherPath,
+    content: PAYLOAD_V1,
     timeoutMs: 15_000,
     env: childEnv({ SDD_HOME: path.join(scratch, 'empty-sdd-home') }),
   });
@@ -218,6 +219,7 @@ test('D06: a publication timeout resolves by independent readback of the origina
   const result = await llmwiki.invokeMcpPublish({
     operation,
     launcherPath: silentLauncher,
+    content: PAYLOAD_V1,
     timeoutMs: 400,
     env: childEnv(),
   });
@@ -498,11 +500,36 @@ test('E02: the closeout receipt is only built from a confirmed independent readb
     operation, observation: { outcome: 'conflict', readbackDigest: sha256('drifted'), revision: 'rev-1' }, execution: 'exec-k-1', recordedAt: '2026-10-21T00:00:00.000Z',
   }), (e) => e.code === 'READBACK_CONFLICT', 'drifted remote content requires reconciliation before recording (H05)');
   const receipt = outline.buildCloseoutReceipt({
-    operation, observation: { outcome: 'exists', readbackDigest: operation.payloadDigest, revision: 'rev-1' }, execution: 'exec-k-1', recordedAt: '2026-10-21T00:00:00.000Z',
+    operation, observation: outline.buildReadbackObservation({
+      operation, revision: 'rev-1', readbackDigest: operation.payloadDigest,
+      readbacks: [{ channel: 'api', digest: operation.payloadDigest }, { channel: 'web', digest: operation.payloadDigest }],
+    }), execution: 'exec-k-1', recordedAt: '2026-10-21T00:00:00.000Z',
   });
   assert.equal(receipt.targetKind, 'external');
   assert.equal(receipt.target, operation.documentId);
   assert.equal(receipt.readbackDigest, operation.payloadDigest);
+});
+
+test('E02: a closeout receipt rejects a readback from a different publication or document', () => {
+  const operation = { operationKey: 'original-operation', documentId: 'original-document', payloadDigest: sha256('same content') };
+  const readback = (source) => outline.buildReadbackObservation({
+    operation: source, revision: 'rev-1', readbackDigest: operation.payloadDigest,
+    readbacks: [{ channel: 'api', digest: operation.payloadDigest }, { channel: 'web', digest: operation.payloadDigest }],
+  });
+  for (const source of [
+    { ...operation, operationKey: 'different-operation' },
+    { ...operation, documentId: 'different-document' },
+  ]) {
+    assert.throws(() => outline.buildCloseoutReceipt({ operation, observation: readback(source), execution: 'exec-k-1' }),
+      (error) => error.code === 'KT_READBACK_IDENTITY_MISMATCH');
+  }
+});
+
+test('E02: a closeout receipt requires the observed document revision', () => {
+  const operation = { operationKey: 'original-operation', documentId: 'original-document', payloadDigest: sha256('same content') };
+  const observation = { ...operation, outcome: 'exists', readbackDigest: operation.payloadDigest, revision: '' };
+  assert.throws(() => outline.buildCloseoutReceipt({ operation, observation, execution: 'exec-k-1' }),
+    (error) => error.code === 'READBACK_INVALID');
 });
 
 // --- E02: the Kt completion predicate over the authoritative runtime ledger -------
@@ -553,13 +580,64 @@ test('E02: evaluateKtFromLedger reads the single runtime publish ledger — pend
       operations: [{
         operationKey: sha256('k'), knowledgeId: 'team-publication', documentId, collection: 'outline-managed-collection',
         payloadDigest: sha256('team publication payload v1'), baseRevision: null, lastRevision: 'rev-1', state: 'published',
-        attempts: 1, lastObservation: { outcome: 'exists', revision: 'rev-1', readbackDigest: sha256('team publication payload v1'), at: '2026-10-21T00:00:00.000Z' },
+        attempts: 1, lastObservation: { operationKey: sha256('k'), documentId, outcome: 'exists', revision: 'rev-1', readbackDigest: sha256('team publication payload v1'), at: '2026-10-21T00:00:00.000Z' },
         createdAt: '2026-10-21T00:00:00.000Z', updatedAt: '2026-10-21T00:00:00.000Z',
       }],
     },
   });
   assert.equal(satisfied.ok, true);
   assert.deepEqual(satisfied.satisfied.map((entry) => entry.capability), ['team-publication']);
+});
+
+test('E02: published ledger evidence for another operation, document, or missing revision does not satisfy Kt', () => {
+  const digest = sha256('team knowledge');
+  const operation = {
+    operationKey: 'operation-1', knowledgeId: 'team-guide', documentId: 'document-1', payloadDigest: digest, state: 'published',
+    lastObservation: { operationKey: 'operation-1', documentId: 'document-1', outcome: 'exists', readbackDigest: digest, revision: 'rev-1' },
+  };
+  for (const observation of [
+    { ...operation.lastObservation, operationKey: 'operation-2' },
+    { ...operation.lastObservation, documentId: 'document-2' },
+    { ...operation.lastObservation, revision: '' },
+  ]) {
+    const result = outline.evaluateKtFromLedger({
+      required: [{ capability: 'team-guide', digest }],
+      ledger: { schema: 'comet.classic.knowledge-publish.v1', operations: [{ ...operation, lastObservation: observation }] },
+    });
+    assert.equal(result.ok, false);
+  }
+});
+
+test('E02: a previous published operation cannot satisfy Kt while another operation is pending', () => {
+  const digest = sha256('team knowledge');
+  const published = {
+    operationKey: 'old-operation', knowledgeId: 'team-guide', documentId: 'document-1', payloadDigest: digest, state: 'published',
+    lastObservation: { operationKey: 'old-operation', documentId: 'document-1', outcome: 'exists', readbackDigest: digest, revision: 'rev-1' },
+  };
+  const pending = { ...published, operationKey: 'new-operation', state: 'pending', lastObservation: { outcome: 'unknown' } };
+  for (const operations of [[published, pending], [pending, published]]) {
+    const result = outline.evaluateKtFromLedger({ required: [{ capability: 'team-guide', digest }], ledger: { operations } });
+    assert.equal(result.ok, false);
+    assert.equal(result.blocked[0].code, 'KT_OPERATION_AMBIGUOUS');
+  }
+});
+
+test('E02: missing or empty Kt obligations do not prove an authorized non-applicability decision', () => {
+  for (const required of [undefined, null, []]) {
+    const result = outline.evaluateKtFromLedger({ required, ledger: { operations: [] } });
+    assert.equal(result.ok, false);
+    assert.equal(result.blocked[0].code, 'KT_REQUIRED_MANIFEST_INVALID');
+  }
+});
+
+test('E02: published ledger evidence cannot contradict the recorded published revision', () => {
+  const digest = sha256('team knowledge');
+  const operation = {
+    operationKey: 'operation-1', knowledgeId: 'team-guide', documentId: 'document-1', payloadDigest: digest, state: 'published', lastRevision: 'rev-2',
+    lastObservation: { operationKey: 'operation-1', documentId: 'document-1', outcome: 'exists', readbackDigest: digest, revision: 'rev-1' },
+  };
+  const result = outline.evaluateKtFromLedger({ required: [{ capability: 'team-guide', digest }], ledger: { operations: [operation] } });
+  assert.equal(result.ok, false);
 });
 
 // --- 4.4.c: the code knowledge freshness gate -------------------------------------
@@ -638,12 +716,14 @@ function closeoutArgs({ requiredFile, ledgerFile, deployFile, codePolicy, codeRe
 
 const emptyLedger = { schema: 'comet.classic.knowledge-publish.v1', operations: [] };
 
-// The CLI manifest binds the frozen candidate exactly as the K execution
-// wrote it: the closeout-order digest is re-derived from the real entry file.
-const requiredManifestForCli = () => knowledgeSeed.defineRequiredKnowledge([
-  { capability: 'closeout-order', digest: sha256(fs.readFileSync(path.join(wikiDir, 'concepts', 'closeout-order.md'))), source: 'docs/architecture/delivery-architecture.md', channel: 'llmwiki' },
-  { capability: 'team-publication', digest: sha256('team publication payload v1'), source: 'infra/delivery/knowledge/preauthorization-policy.json', channel: 'outline' },
-]);
+// Each CLI case creates its own matching Kp entry before judging Kt.
+const requiredManifestForCli = () => {
+  const entry = writeWikiEntry('closeout-order', PAYLOAD_V1, { source: 'docs/architecture/delivery-architecture.md' });
+  return knowledgeSeed.defineRequiredKnowledge([
+    { capability: 'closeout-order', digest: sha256(fs.readFileSync(entry)), source: 'docs/architecture/delivery-architecture.md', channel: 'llmwiki' },
+    { capability: 'team-publication', digest: sha256('team publication payload v1'), source: 'infra/delivery/knowledge/preauthorization-policy.json', channel: 'outline' },
+  ]);
+};
 
 test('CLI: a missing Kp entry blocks with exit 2 and names the capability; deploy evidence is retained read-only (no redeploy)', () => {
   const deployReceipt = { head: 'a'.repeat(40), merge: 'b'.repeat(40), project: 'managed-pilot', requiredChecks: ['delivery-gate'], checks: [] };
@@ -667,7 +747,6 @@ test('CLI: a missing Kp entry blocks with exit 2 and names the capability; deplo
 });
 
 test('CLI: valid Kp but pending Kt blocks overall completion while the Kp pass stands (E02 separated verification)', () => {
-  // 'closeout-order' already matches in wikiDir from the E01 positive test.
   const report = runCli(closeoutArgs({
     requiredFile: writeTmp('required.json', requiredManifestForCli()),
     ledgerFile: writeTmp('ledger.json', emptyLedger),
@@ -697,7 +776,7 @@ test('CLI: an absent publish ledger blocks as NO_PUBLISH_OPERATION; a malformed 
 });
 
 test('CLI: exit 0 requires Kp + Kt + code sections all green; invalid input exits 1', () => {
-  // Kt satisfied over the real ledger shape; code knowledge not mandatory.
+  // Synthetic ledger exercises the component judgment; no real publication is claimed.
   const ledger = {
     schema: 'comet.classic.knowledge-publish.v1',
     operations: [{
@@ -705,7 +784,7 @@ test('CLI: exit 0 requires Kp + Kt + code sections all green; invalid input exit
       documentId: outline.deriveOutlineTargetId({ change: 'p44-change', capability: 'team-publication' }),
       collection: 'outline-managed-collection', payloadDigest: sha256('team publication payload v1'),
       baseRevision: null, lastRevision: 'rev-1', state: 'published', attempts: 1,
-      lastObservation: { outcome: 'exists', revision: 'rev-1', readbackDigest: sha256('team publication payload v1'), at: '2026-10-21T00:00:00.000Z' },
+      lastObservation: { operationKey: sha256('k'), documentId: outline.deriveOutlineTargetId({ change: 'p44-change', capability: 'team-publication' }), outcome: 'exists', revision: 'rev-1', readbackDigest: sha256('team publication payload v1'), at: '2026-10-21T00:00:00.000Z' },
       createdAt: '2026-10-21T00:00:00.000Z', updatedAt: '2026-10-21T00:00:00.000Z',
     }],
   };
@@ -803,5 +882,7 @@ test('P4_4 live: the REAL launcher round trip — initialize 2025-11-25, live cr
   assert.ok(fs.existsSync(diskFile), 'the create landed on the filesystem (the truth channel)');
   assert.equal(sha256(fs.readFileSync(diskFile)), operation.contentDigest,
     'the disk bytes equal the frozen candidate digest');
-  assert.match(result.response, /"id":3/, 'the settle frame is the readback response');
+  const responses = result.response.split('\n').filter(Boolean).map((line) => JSON.parse(line));
+  assert.ok(responses.some((frame) => frame.id === result.readbackRequestId && Array.isArray(frame.result?.content)),
+    'the settle frame is the correlated readback response');
 });

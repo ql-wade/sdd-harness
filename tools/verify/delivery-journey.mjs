@@ -324,13 +324,13 @@ function buildCaseDefinition(scenario, entry, caseModule) {
 // assertion id — never from suite-level green, caller-supplied pass JSON or
 // pre-existing evidence bytes.
 
-function parseTapPoints(stdoutText) {
+export function parseTapPoints(stdoutText) {
   const points = [];
-  for (const match of String(stdoutText ?? '').matchAll(/^[ \t]*(ok|not ok)\s+\d+\s+-\s+(.+)$/gm)) {
-    const name = match[2];
+  for (const match of String(stdoutText ?? '').matchAll(/^([ \t]*)(ok|not ok)\s+\d+\s+-\s+(.+)$/gm)) {
+    const name = match[3];
     const todo = /#\s*TODO\b/i.test(name);
     const isSkip = /#\s*SKIP\b/i.test(name) || todo;
-    points.push({ ok: match[1] === 'ok', skipped: isSkip, todo, name: name.replace(/\s*#\s*(?:SKIP|TODO)\b.*$/i, '') });
+    points.push({ ok: match[2] === 'ok', skipped: isSkip, todo, name: name.replace(/\s*#\s*(?:SKIP|TODO)\b.*$/i, ''), indent: match[1].replace(/\t/g, '    ').length });
   }
   return points;
 }
@@ -346,7 +346,7 @@ function assertionIdMatches(pointName, id) {
 }
 
 // Typed evaluation of one required assertion id against executed points.
-function evaluateAssertionId(id, points) {
+export function evaluateAssertionId(id, points) {
   const matched = points.filter((point) => assertionIdMatches(point.name, id));
   const okCount = matched.filter((point) => point.ok && !point.skipped).length;
   const failedCount = matched.filter((point) => !point.ok && !point.skipped).length;
@@ -354,8 +354,8 @@ function evaluateAssertionId(id, points) {
   const status = matched.length === 0
     ? 'missing'
     : failedCount > 0 ? 'failed'
-      : okCount > 0 ? 'satisfied'
-        : skippedCount > 0 ? 'skipped' : 'missing';
+      : skippedCount > 0 ? 'skipped'
+        : okCount > 0 ? 'satisfied' : 'missing';
   return { id, status, matchedPoints: matched.length, ok: okCount, failed: failedCount, skipped: skippedCount };
 }
 
@@ -944,9 +944,11 @@ export async function runDeliveryJourney({ args = process.argv.slice(2), observe
       const stderrName = `action-${label}-stderr.txt`;
       writeEvidence(stdoutName, run.stdout ?? '');
       writeEvidence(stderrName, run.stderr ?? '');
-      spawnStdouts.push(run.stdout ?? '');
-      for (const point of parseTapPoints(run.stdout ?? '')) {
-        spawnPoints.push({ actionIndex: label, ...point });
+      if (isRequired) {
+        spawnStdouts.push(run.stdout ?? '');
+        for (const point of parseTapPoints(run.stdout ?? '')) {
+          spawnPoints.push({ actionIndex: label, ...point });
+        }
       }
       result.exitCode = run.status;
       if (run.error) {
@@ -1167,13 +1169,16 @@ export async function runDeliveryJourney({ args = process.argv.slice(2), observe
   }
   const skippedAssertion = evaluations.find((evaluation) => evaluation.status === 'skipped');
   if (skippedAssertion) {
-    return notExercised(`target-scenario-skipped: every executed test point for ${skippedAssertion.id} was skipped; skips are not execution`);
+    return notExercised(`target-scenario-skipped: one or more test points for ${skippedAssertion.id} were skipped; skips are not execution`);
   }
   const unresolved = evaluations.filter((evaluation) => evaluation.status !== 'satisfied');
   if (unresolved.length > 0) {
     return notExercised(`assertion-mapping-not-verifiable: no executed test point maps to required assertion(s) ${unresolved.map((evaluation) => evaluation.id).join(', ')} — a green suite without the registered target is not a scenario pass (P1-04)`, {
       missing: unresolved.map((evaluation) => evaluation.id),
     });
+  }
+  if (verdict.execution.skipped > 0 || verdict.execution.todo > 0) {
+    return notExercised('unverified-skipped-test: required execution contains skipped or pending points with no registered optionality proof');
   }
   if (!componentOnly || definition.runtimeBinding || typeof observeProtectedSource === 'function') {
     const source = await observeRuntime({ definition, observer: observeProtectedSource, candidate: verdict.candidate,
