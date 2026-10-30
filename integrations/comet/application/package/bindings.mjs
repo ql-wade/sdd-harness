@@ -47,6 +47,7 @@
 
 import { types, isDeepStrictEqual } from 'node:util';
 import { evaluate } from './sdd/lib-delivery-gate.mjs';
+import { createProtectedHostPorts } from './sdd/lib-adapters-comet_host_ports.mjs';
 
 // Gate specs mirror extensions/<id>.json (single source: composition.json).
 // `gate` is the Knowledge/managed gate identity the payload must carry;
@@ -314,6 +315,8 @@ function validateGateExtension(spec, input, managedHost = null) {
         ...(typeof ports.verifyManualApproval === 'function' ? {
           verifyManualApproval: (request) => ports.verifyManualApproval(structuredClone({ ...request, run:owned.run, action:owned.action })),
         } : {}),
+        // Domain automation stays refused in hosted Comet until the host
+        // validates the actual T action and the recomputed receipt bundle.
         currentChange: owned.run?.input?.change, currentChangeDir: owned.run?.input?.changeDir };
     }
     result = evaluate(inputs, receipts, policy, options);
@@ -346,7 +349,14 @@ function validateGateExtension(spec, input, managedHost = null) {
 
 export async function createBindings(context, protectedHostPorts) {
   const hosted = !!context && typeof context.createSkillExecutor === 'function';
-  const managedHost = hosted ? { ports: protectedHostPorts, projectRoot: context.projectRoot } : null;
+  // The official generated application.mjs calls createBindings(context) with
+  // no ports: the hosted path builds its real protected provider here instead
+  // of refusing for lack of one. Explicit ports remain supported for
+  // repo-side component tests only.
+  const ports = hosted && protectedHostPorts === undefined
+    ? createProtectedHostPorts({ context })
+    : protectedHostPorts;
+  const managedHost = hosted ? { ports, projectRoot: context.projectRoot } : null;
   const validators = GATE_SPECS.map((spec) => ({
     id: spec.validatorId,
     version: VALIDATOR_VERSION,

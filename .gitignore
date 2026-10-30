@@ -23,6 +23,12 @@ npm-debug.log*
 # 例外：foundation/ 下的 .log 是测试 fixture（whitebox-verify green-fixture / negative-corpus 及其
 # sealed baseline、release packaged 副本），不是运行时日志，必须可入库（2026-10-27 清理）
 !foundation/**/*.log
+# 例外（2026-10-30）：package/ 的打包副本与源共享同一受管 fixture 集（清单哈希含这些 .log）；
+# 无此豁免每次提交包都静默缺文件，fresh checkout 必然清单≠包、真实安装拒绝（ INVALID_WORKFLOW ）
+!integrations/comet/application/package/skills/**/*.log
+# 例外（2026-10-30）：worker-reports/ 是交接证据库，其中的 .log 是验证记录（check/回归原始输出），
+# 不是运行时日志，必须随证据入库
+!worker-reports/**/*.log
 
 # Test
 coverage/

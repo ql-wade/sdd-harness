@@ -1298,7 +1298,15 @@ test('the package on disk is byte-identical to the officially compiled plan (dri
     [...packageFileSet].sort(),
     'compile-manifest package file inventory must match the on-disk package',
   );
-  assert.equal(compileManifest.build.fingerprint, buildFingerprint, 'the compile ran on the locked build');
+  // The 051 adoption (ADR-0023) compiles with the PATH-selected official
+  // global 0.5.1; the manifest must record exactly that distribution identity.
+  // The 050-era vendor-tree fingerprint no longer describes the compile input,
+  // so the recorded identity — not the retired vendor fingerprint — is pinned.
+  assert.equal(compileManifest.build.package, upstreamLock.package.name);
+  assert.equal(compileManifest.build.version, upstreamLock.package.version);
+  assert.match(compileManifest.build.packageMetadataSha256, /^[0-9a-f]{64}$/);
+  assert.match(compileManifest.build.cliSha256, /^[0-9a-f]{64}$/);
+  assert.equal(compileManifest.build.supplierQualification, 'not-verified', 'the global distribution stays supply-unqualified in the record');
 });
 
 test('application.json: identity, per-step skills with content hashes, and the R4 approval anchors on every write binding', () => {
@@ -1387,11 +1395,18 @@ test('workflow.json: the approval anchor gates the entry and every invoke_skill 
 test('R1: the vendored sdd/ closure reproduces byte-for-byte from the repository sources; the embedded bindings import is rebased', () => {
   const REPO_IMPORT = "from '../../../lib/delivery/gate.js'";
   const REBASED_IMPORT = "from './sdd/lib-delivery-gate.mjs'";
-  // The embedded module is the repository module with exactly one mechanical
-  // rebase — no other difference is allowed.
+  const PLAN_IMPORT = "import('../../../lib/adapters/plan-source.js')";
+  const REBASED_PLAN_IMPORT = "import('./sdd/lib-adapters-plan_source.mjs')";
+  const HOST_PORTS_IMPORT = "from '../../../lib/adapters/comet-host-ports.js'";
+  const REBASED_HOST_PORTS_IMPORT = "from './sdd/lib-adapters-comet_host_ports.mjs'";
+  // The embedded module is the repository module with exactly these mechanical
+  // rebases (the same three the build pins) — no other difference is allowed.
   const repoBindingsSource = readText('integrations/comet/application/bindings.mjs');
   const packagedBindings = readText('integrations/comet/application/package/bindings.mjs');
-  assert.equal(packagedBindings, repoBindingsSource.split(REPO_IMPORT).join(REBASED_IMPORT));
+  assert.equal(packagedBindings, repoBindingsSource
+    .split(REPO_IMPORT).join(REBASED_IMPORT)
+    .split(PLAN_IMPORT).join(REBASED_PLAN_IMPORT)
+    .split(HOST_PORTS_IMPORT).join(REBASED_HOST_PORTS_IMPORT));
   // The vendored closure set matches the on-disk sdd/ directory exactly.
   const sddFiles = new Set([...packageFileSet].filter((ref) => ref.startsWith('sdd/')));
   assert.deepEqual(
@@ -1404,6 +1419,11 @@ test('R1: the vendored sdd/ closure reproduces byte-for-byte from the repository
   const refBySource = new Map(compileManifest.vendoredModules.map((entry) => [entry.sourcePath, entry.moduleRef]));
   const IMPORT_RE = /(import|export)\s+(?:[\w$]+(?:\s*,\s*\{[^}]*\})?|\{[^}]*\}|\*(?:\s+as\s+[\w$]+)?)\s+from\s+['"]([^'"]+)['"]/g;
   for (const entry of compileManifest.vendoredModules) {
+    // vendor-commonmark.mjs is synthesized (pinned license banner + export
+    // shims over the pinned 0.31.2 bytes; build-application.mjs verifies the
+    // pinned bytes and this manifest records its moduleSha256), so the
+    // byte-verbatim rule below applies only to vendored repository sources.
+    if (entry.moduleRef === 'sdd/vendor-commonmark.mjs') continue;
     const sourcePath = path.join(projectRoot, entry.sourcePath);
     assert.ok(fs.existsSync(sourcePath), `vendored source missing: ${entry.sourcePath}`);
     const source = fs.readFileSync(sourcePath, 'utf8');
@@ -1413,6 +1433,7 @@ test('R1: the vendored sdd/ closure reproduces byte-for-byte from the repository
     IMPORT_RE.lastIndex = 0;
     while ((match = IMPORT_RE.exec(source))) {
       const specifier = match[2];
+      if (specifier === 'commonmark') { renames.push([specifier, 'sdd/vendor-commonmark.mjs']); continue; }
       if (!specifier.startsWith('.')) continue;
       const resolved = path.relative(projectRoot, path.resolve(path.dirname(sourcePath), specifier)).split(path.sep).join('/');
       const ref = refBySource.get(resolved);

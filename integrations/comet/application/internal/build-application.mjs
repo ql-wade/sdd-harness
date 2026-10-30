@@ -379,7 +379,7 @@ function bundleGraph(entries) {
   for (const entry of entries) walk(entry);
   return modules;
 }
-const vendored = bundleGraph([path.join(repositoryRoot, 'lib/delivery/gate.js'), path.join(repositoryRoot, 'lib/adapters/plan-source.js')]);
+const vendored = bundleGraph([path.join(repositoryRoot, 'lib/delivery/gate.js'), path.join(repositoryRoot, 'lib/adapters/plan-source.js'), path.join(repositoryRoot, 'lib/adapters/comet-host-ports.js')]);
 const commonmarkFile = path.join(repositoryRoot, 'node_modules/commonmark/dist/commonmark.min.js');
 const commonmarkLicense = path.join(repositoryRoot, 'node_modules/commonmark/LICENSE');
 let commonmarkBytes, licenseBytes, packageLock, bundledLicenses;
@@ -399,8 +399,10 @@ vendored[commonmarkRef] = commonmarkModule;
 bundledModules.push({ moduleRef:commonmarkRef, sourcePath:'node_modules/commonmark/dist/commonmark.min.js', sourceSha256:sha256(commonmarkBytes), moduleSha256:sha256(commonmarkModule) });
 const gateModuleRef = 'sdd/lib-delivery-gate.mjs';
 const planSourceModuleRef = 'sdd/lib-adapters-plan_source.mjs';
+const hostPortsModuleRef = 'sdd/lib-adapters-comet_host_ports.mjs';
 if (!vendored[gateModuleRef]) fail(2, `bundler did not produce ${gateModuleRef}; keys: ${Object.keys(vendored).join(', ')}`);
 if (!vendored[planSourceModuleRef]) fail(2, `bundler did not produce ${planSourceModuleRef}`);
+if (!vendored[hostPortsModuleRef]) fail(2, `bundler did not produce ${hostPortsModuleRef}`);
 
 const bindingsSource = await fs.readFile(path.join(applicationRoot, 'bindings.mjs'), 'utf8');
 const REPO_IMPORT = "from '../../../lib/delivery/gate.js'";
@@ -409,8 +411,11 @@ const occurrences = bindingsSource.split(REPO_IMPORT).length - 1;
 if (occurrences !== 1) fail(1, `bindings.mjs must carry the pinned lib/delivery import exactly once (found ${occurrences}); update this build`);
 const PLAN_IMPORT = "import('../../../lib/adapters/plan-source.js')";
 if (bindingsSource.split(PLAN_IMPORT).length !== 2) fail(1, 'bindings.mjs must carry the plan-source import exactly once');
+const HOST_PORTS_IMPORT = "from '../../../lib/adapters/comet-host-ports.js'";
+if (bindingsSource.split(HOST_PORTS_IMPORT).length !== 2) fail(1, 'bindings.mjs must carry the comet-host-ports import exactly once; update this build');
 const embeddedBindings = bindingsSource.split(REPO_IMPORT).join(REBASED_IMPORT)
-  .split(PLAN_IMPORT).join(`import('./${planSourceModuleRef}')`);
+  .split(PLAN_IMPORT).join(`import('./${planSourceModuleRef}')`)
+  .split(HOST_PORTS_IMPORT).join(`from './${hostPortsModuleRef}'`);
 // No other repo-escaping import may remain in the embedded module.
 for (const match of embeddedBindings.matchAll(/from\s+['"](\.[^'"]+)['"]/g)) {
   if (!match[1].startsWith('./sdd/')) fail(2, `embedded bindings.mjs still carries a non-vendored relative import: ${match[1]}`);

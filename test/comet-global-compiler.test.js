@@ -15,7 +15,7 @@ test('the project application compiles using installed Comet 0.5.1 without a rep
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-global-compiler-'));
   t.after(() => fs.rmSync(scratch, { recursive: true, force: true }));
   const source = path.join(scratch, 'source');
-  for (const rel of ['lib/delivery', 'lib/adapters/plan-source.js', 'contracts/delivery', 'tools/comet', 'integrations/comet/application']) {
+  for (const rel of ['lib/delivery', 'lib/adapters/plan-source.js', 'lib/adapters/comet-host-ports.js', 'lib/adapters/codex-host-source.js', 'lib/adapters/codex-test-observation.js', 'contracts/delivery', 'tools/comet', 'integrations/comet/application']) {
     const target = path.join(source, rel);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.cpSync(path.join(root, rel), target, { recursive: true, filter: (item) => !['package', '__pycache__'].includes(path.basename(item)) });

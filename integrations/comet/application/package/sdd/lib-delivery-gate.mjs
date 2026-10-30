@@ -17,9 +17,9 @@
 // substitution boundary — a service log is never a console) and
 // authoring-only coverage (B03).
 import { createHash } from 'node:crypto';
-import { types } from 'node:util';
+import { types, isDeepStrictEqual } from 'node:util';
 import { parseContract } from './contracts-delivery-index.mjs';
-import { admitEvidence, envelopeDigest } from './lib-delivery-evidence.mjs';
+import { admitEvidence, envelopeDigest, instantNanos } from './lib-delivery-evidence.mjs';
 import { evaluateExecutionDenominator } from './lib-delivery-test_contract.mjs';
 
 const SHA256_RE = /^[a-f0-9]{64}$/;
@@ -108,8 +108,12 @@ export function evaluate(inputs, receipts, policy, options = {}) {
     blocked.push('PLAN_BINDING_REQUIRED: the plan must belong to the current Change and the Comet controller');
   }
   if (planGate && !validPlanGraph(parsedPlan.value.tasks)) blocked.push('PLAN_GRAPH_INVALID: duplicate, missing or cyclic task dependencies');
-  const manualDesign = managed && options.currentGate === 'V' && parsedContract.value.sourceReadiness === 'design_only';
+  const designOnly = managed && options.currentGate === 'V' && parsedContract.value.sourceReadiness === 'design_only';
+  const manualDesign = designOnly && parsedContract.value.requiredChecks.every(check=>check.mode==='manual');
+  const automatedDesign = designOnly && parsedContract.value.requiredChecks.every(check=>check.mode!=='manual');
   let manualApproval = null;
+  let domainAutomation = null;
+  let automationQualified = false;
   if (manualDesign) {
     const contract = parsedContract.value;
     const requiredCases = contract.cases.filter((entry) => entry.required !== false).map((entry) => entry.id).sort();
@@ -127,6 +131,35 @@ export function evaluate(inputs, receipts, policy, options = {}) {
     } catch { /* unavailable approval is a refusal, never an implicit pass */ }
     if (!manualApproval) blocked.push('TEST_DESIGN_ONLY_NOT_EXECUTABLE: manual cases need a current protected human approval and exclusively manual scope');
   }
+  if (automatedDesign) {
+    const contract=parsedContract.value;
+    const requiredCases=contract.cases.filter(entry=>entry.required!==false).map(entry=>entry.id).sort();
+    const packs=contract.dependencyBaselines.filter(entry=>entry.kind==='domain-cases/v1:testpack');
+    try {
+      const result=typeof options.verifyDomainAutomation==='function'
+        ? options.verifyDomainAutomation({runId:options.currentRunId,inputs,policy}) : null;
+      if (!isAsyncResult(result) && result?.ok===true && result.kind==='verified-domain-automation'
+        && result.sourceQualified===true && result.managedClosureEligible===false
+        && result.runId===options.currentRunId && result.inputDigest===inputs.inputDigest && result.policyDigest===policy.digest
+        && result.contractDigest===envelopeDigest(contract) && packs.length===1 && result.testPackDigest===packs[0].digest
+        && Array.isArray(result.caseIds) && result.caseIds.every(id=>typeof id==='string') && new Set(result.caseIds).size===result.caseIds.length
+        && JSON.stringify([...result.caseIds].sort())===JSON.stringify(requiredCases)
+        && typeof result.authorExecution==='string' && result.authorExecution.trim()
+        && typeof result.authorPrincipal==='string' && result.authorPrincipal.trim()
+        && result.designReviewRunId===options.currentRunId && result.designReviewContractDigest===envelopeDigest(contract)
+        && typeof result.designReviewActionId==='string' && result.designReviewActionId.trim()
+        && typeof result.designReviewerExecution==='string' && result.designReviewerExecution.trim()
+        && typeof result.designReviewerPrincipal==='string' && result.designReviewerPrincipal.trim()
+        && result.designReviewerExecution!==result.authorExecution && result.designReviewerPrincipal!==result.authorPrincipal
+        && result.qualification?.scope==='protected-source' && result.qualification?.status==='qualified'
+        && ['id','sourceId','revision'].every(key=>typeof result.qualification[key]==='string' && result.qualification[key].trim())
+        && Array.isArray(result.qualification.evidenceRefs) && result.qualification.evidenceRefs.length>0
+        && result.qualification.evidenceRefs.every(ref=>typeof ref?.ref==='string' && ref.ref.trim() && SHA256_RE.test(ref.digest ?? ''))
+        && [result.selfCheckDigest,result.automationMapDigest,result.designReviewDigest].every(digest=>SHA256_RE.test(digest ?? ''))) domainAutomation=result;
+    } catch { /* missing or invalid author source does not promote a design */ }
+    if (!domainAutomation) blocked.push('TEST_DESIGN_ONLY_NOT_EXECUTABLE: automated cases need current protected author evidence and design review');
+  }
+  if (designOnly && !manualDesign && !automatedDesign) blocked.push('TEST_DESIGN_ONLY_NOT_EXECUTABLE: mixed manual and automated cases require separate qualified paths');
   const synchronous = (port) => typeof port === 'function' && !['AsyncFunction', 'GeneratorFunction', 'AsyncGeneratorFunction'].includes(port.constructor?.name);
   const managedPorts = synchronous(options.admissionOptionsFor) && synchronous(options.verifyReview);
   const managedScope = typeof options.currentRunId === 'string' && !!options.currentRunId.trim()
@@ -145,6 +178,17 @@ export function evaluate(inputs, receipts, policy, options = {}) {
       try {
         let protectedContext = options.admissionOptionsFor(submitted);
         if (isAsyncResult(protectedContext)) { blocked.push('ASYNC_MANAGED_PORT_REFUSED: source context must be synchronous'); continue; }
+        if (automatedDesign && domainAutomation && (!isDeepStrictEqual(protectedContext?.domainAutomation,domainAutomation)
+          || !protectedContext?.authoringExecutions?.includes(domainAutomation.authorExecution)
+          || !protectedContext?.authoringPrincipals?.includes(domainAutomation.authorPrincipal)
+          || protectedContext.authoringExecutions.includes(domainAutomation.designReviewerExecution)
+          || protectedContext.authoringPrincipals.includes(domainAutomation.designReviewerPrincipal)
+          || domainAutomation.designReviewerExecution===protectedContext?.builderExecution
+          || domainAutomation.designReviewerPrincipal===protectedContext?.builderPrincipal
+          || instantNanos(protectedContext?.now)===null || instantNanos(domainAutomation.qualification.expiresAt)===null
+          || instantNanos(domainAutomation.qualification.expiresAt)<=instantNanos(protectedContext.now))) {
+          blocked.push('AUTOMATION_AUTHOR_IDENTITY_REQUIRED: protected author execution and principal must match'); continue;
+        }
         if (manualDesign && manualApproval && (!Array.isArray(protectedContext?.authoringPrincipals)
           || !protectedContext.authoringPrincipals.length
           || protectedContext.authoringPrincipals.some((principal) => typeof principal !== 'string' || !principal.trim()))) {
@@ -205,6 +249,7 @@ export function evaluate(inputs, receipts, policy, options = {}) {
           blocked.push('PLAN_REVIEW_REQUIRED: the current Change plan and its digest require a bound review'); continue;
         }
         reviewEvidence.set(entry.collectionId, review.evidenceDigest);
+        if (automatedDesign && domainAutomation) automationQualified=true;
       } catch { blocked.push('MANAGED_SOURCE_REFUSED: protected source/review verification failed'); continue; }
     }
     const label = entry?.execution ?? '<unknown>';
@@ -337,6 +382,8 @@ export function evaluate(inputs, receipts, policy, options = {}) {
   if (managed) {
     for (const entry of clean) judged.push(entry.collectionId, reviewEvidence.get(entry.collectionId));
     if (manualApproval) judged.push(manualApproval.evidenceDigest);
+    if (automationQualified) judged.push(domainAutomation.selfCheckDigest,domainAutomation.automationMapDigest,
+      domainAutomation.designReviewDigest,envelopeDigest(domainAutomation));
     judged.sort();
   }
   const attested = clean;
