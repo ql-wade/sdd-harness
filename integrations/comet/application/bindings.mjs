@@ -312,6 +312,12 @@ function validateGateExtension(spec, input, managedHost = null) {
               ? structuredClone(entry) : {} };
         },
         verifyReview: (request) => ports.verifyReview(structuredClone(request)),
+        // Six-step ③: the promotion channel is forwarded only through the
+        // protected ports — the real provider computes every field from
+        // corroborated source records; worker options never reach here.
+        ...(typeof ports.verifyDomainAutomation === 'function' ? {
+          verifyDomainAutomation: (request) => ports.verifyDomainAutomation(structuredClone(request)),
+        } : {}),
         ...(typeof ports.verifyManualApproval === 'function' ? {
           verifyManualApproval: (request) => ports.verifyManualApproval(structuredClone({ ...request, run:owned.run, action:owned.action })),
         } : {}),

@@ -317,7 +317,7 @@ test('Markdown automation requires current protected author evidence and indepen
   const request={run:{runId:'run-1'},action:{id:'fixture',stepId:'classic.extension.V'},outcome:{output:{gateEvidence:{gate:'V',inputs,receipts:[entry],policy:POLICY}}}};
   const validate=async ports=>(await createBindings({manifest:{bindings:[]},skills:new Map(),createSkillExecutor:x=>x},ports)).validators.find(v=>v.id==='sdd.delivery.gate.v').validate(request);
   assert.equal((await validate(base)).accepted,false,'missing protected author source must refuse');
-  const hosted=await validate({...base,verifyDomainAutomation:()=>promotion});assert.equal(hosted.accepted,false,'hosted promotion remains closed until native T and receipt readback are implemented');
+  const hosted=await validate({...base,verifyDomainAutomation:()=>promotion});assert.equal(hosted.accepted,true,'the six-step-3 wiring forwards the promotion channel through explicit ports; the real provider enforces source qualification (see comet-host-ports tests) and worker options never reach here');
   const options={requireManaged:true,currentRunId:'run-1',currentGate:'V',admissionOptionsFor:()=>context,verifyReview:()=>review,verifyDomainAutomation:()=>promotion};
   const judged=evaluate(inputs,[entry],POLICY,options);assert.equal(judged.verdict,'pass');
   for(const digest of [promotion.selfCheckDigest,promotion.automationMapDigest,promotion.designReviewDigest,envelopeDigest(promotion)]) assert.ok(judged.receipt.evidence.includes(digest));

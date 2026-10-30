@@ -294,9 +294,21 @@ test('unverified self-reported logs cannot declare an automated package ready', 
     fs.writeFileSync(path.join(f.root, 'read.test.js'), 'test fixture');
     fs.writeFileSync(path.join(f.root, 'author.log'), 'fabricated successful run');
     fs.appendFileSync(path.join(f.root, 'cases.md'), '- **Automation path**: read.test.js\n- **Automation test ID**: read-item-test\n- **Automation command**: ["node","--test","read.test.js"]\n');
+    // Layer 1: a hand-shaped claim with a self-reported log is not a source —
+    // the projection refuses malformed claims outright.
     const config = { ...f.config, mode: 'automate', self_checks: [{ command: ['node', '--test', 'read.test.js'],
       exit_code: 0, expected: 'pass', log_path: 'author.log' }] };
-    assert.throws(() => compileDomainCases({ projectRoot: f.root, caseFile: 'cases.md', config }), /SELF_CHECK_SOURCE_UNQUALIFIED/);
+    assert.throws(() => compileDomainCases({ projectRoot: f.root, caseFile: 'cases.md', config }), /DOMAIN_CASES_INVALID/);
+    // Layer 2: even a well-shaped claim never self-qualifies — the projection
+    // stays projection-only and the protected ports must corroborate every
+    // claim against real host records before any gate promotes it.
+    const shaped = { ...f.config, mode: 'automate', self_checks: [{ caseId: 'TC-READ-1', testId: 'read-item-test',
+      execution: 'author-thread', principal: 'author-principal', outcome: 'pass', executions: { total: 1, valid: 1 },
+      evidenceRefs: [{ ref: 'codex-test:locator', digest: hash('record') }] }] };
+    const projection = compileDomainCases({ projectRoot: f.root, caseFile: 'cases.md', config: shaped });
+    assert.equal(projection.testPack.mode, 'automate');
+    assert.equal(projection.managedClosureEligible, false, 'claims never self-qualify');
+    assert.equal(projection.scope, 'projection-only');
   } finally { f.dispose(); }
 });
 

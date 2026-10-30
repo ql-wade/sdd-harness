@@ -8,6 +8,7 @@
 // that is six-step ② against actual host records.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import crypto from 'node:crypto';
 import { createBindings } from '../integrations/comet/application/bindings.mjs';
 import { envelopeDigest } from '../lib/delivery/evidence.js';
@@ -165,4 +166,114 @@ test('verifyReview refuses without a prepared binding and corroborates a bound i
   const wrongKind = structuredClone(bound);
   wrongKind.sourcePacket.collection.source.independentReview.codex = { ...binding, kind: 'plan-unique-review' };
   assert.equal(corroborating.verifyReview({ entry: wrongKind }).ok, false);
+});
+
+test('V promotion derives every field from source recomputation and real-record corroboration', async () => {
+  const { createProtectedHostPorts } = await import('../lib/adapters/comet-host-ports.js');
+  const { compileDomainCases } = await import('../lib/delivery/domain-cases.js');
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const nodePath = await import('node:path');
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'v-promotion-')));
+  const change = 'synthetic-v', changeDir = `openspec/changes/${change}`;
+  fs.mkdirSync(nodePath.join(root, changeDir, 'tests'), { recursive: true });
+  fs.writeFileSync(nodePath.join(root, 'requirements.md'), '# Requirement\nA permitted user can read the item.\n');
+  fs.writeFileSync(nodePath.join(root, 'design.md'), '# Design\nRead is performed through the public API.\n');
+  fs.writeFileSync(nodePath.join(root, 'read.test.js'), 'test fixture');
+  fs.writeFileSync(nodePath.join(root, changeDir, 'tests', 'domain-cases.md'),
+    '<!-- domain-cases/v1 -->\n# Domain cases\n\n### TC-READ-1 — Read item\n\n- **Requirement IDs**: REQ-1\n- **Acceptance**: AC-1\n- **Dimensions**: Journey-A\n- **Level**: api\n- **Priority**: P1\n- **Precondition**: User is permitted\n- **Input**: Item exists\n- **Step**: Request the item\n- **Expected**: The item is returned\n- **Oracle basis**: REQ-1\n- **Oracle authority**: Public API response\n- **Cleanup**: Remove fixture data\n- **Evidence**: Request and response\n- **Check ID**: read-item\n- **Automation path**: read.test.js\n- **Automation test ID**: read-item-test\n- **Automation command**: ["node","--test","read.test.js"]\n');
+  const measuredDigest = sha('measured-output');
+  const authorThread = UUID, reviewerThread = UUID2, builderThread = 'f0e0d0c0-b0a0-0908-0706-050403020100';
+  const locator = JSON.stringify({ sessionPath: `/Users/x/.codex/sessions/2026/10/30/rollout-${authorThread}.jsonl`, threadId: authorThread,
+    offset: 0, length: 10, turnId: UUID2, itemId: `exec-${UUID2}`,
+    before: { offset: 0, length: 5, turnId: UUID2, itemId: `exec-${UUID2}`, commandDigest: sha('before') },
+    after: { offset: 20, length: 5, turnId: UUID2, itemId: `exec-${UUID2}`, commandDigest: sha('after') },
+    claimBefore: { ok: true }, claimAfter: { ok: true } });
+  const dimensions = Object.fromEntries('ABCDEFGHIJ'.split('').map(c => [`Journey-${c}`, {
+    required: c === 'A', reason: c === 'A' ? 'Required' : 'Not applicable', basis_ids: ['REQ-1'] }]));
+  const config = { project: 'fixture', change, mode: 'automate', design_basis_id: 'DESIGN-1',
+    basis: [{ id: 'REQ-1', kind: 'requirement', path: 'requirements.md' }, { id: 'DESIGN-1', kind: 'source', path: 'design.md' }],
+    dimensions, checks: [{ id: 'read-item', level: 'api', capability: 'api:read', command: 'node --test read.test.js' }],
+    cleanup: { environment: 'Dispose', data: 'none' },
+    self_checks: [{ caseId: 'TC-READ-1', testId: 'read-item-test', execution: authorThread, principal: authorThread,
+      outcome: 'pass', executions: { total: 1, valid: 1 }, evidenceRefs: [{ ref: locator, digest: measuredDigest }] }] };
+  fs.writeFileSync(nodePath.join(root, changeDir, 'tests', 'domain-cases.config.json'), JSON.stringify(config));
+  const projection = compileDomainCases({ projectRoot: root, caseFile: `${changeDir}/tests/domain-cases.md`, config });
+  const contract = projection.testContract;
+  const binding = { rootThreadId: builderThread, parentTurnId: UUID2, childThreadId: reviewerThread, childTurnId: UUID2,
+    spawnId: 'call_abc12345', reportDigest: sha('report'), childMeta: { offset: 0, length: 5 }, start: { offset: 1, length: 5 },
+    finish: { offset: 2, length: 5 }, spawn: { offset: 3, length: 5 }, completion: { offset: 4, length: 5 },
+    parentSessionPath: '/p.jsonl', childSessionPath: '/c.jsonl', evidenceDigest: sha('review-evidence') };
+  const tAction = { id: 'run:t', stepId: 'classic.extension.test-design-review', status: 'succeeded', attempt: 1,
+    input: { note: 't' }, inputHash: envelopeDigest({ note: 't' }), claim: { executorId: 't-exec', sessionId: builderThread, token: 'tok' },
+    outcome: { status: 'succeeded', output: { verdict: 'pass', gateEvidence: { gate: 'T', inputs: { testContract: contract },
+      receipts: [{ sourcePacket: { collection: { source: { independentReview: { codex: binding } } } } }] } } } };
+  const vInput = { note: 'v' };
+  const vAction = { id: 'run:v', stepId: 'classic.extension.verify-whitebox', status: 'running', attempt: 1,
+    input: vInput, inputHash: envelopeDigest(vInput), claim: { executorId: 'v-exec', sessionId: builderThread, token: 'tok2' } };
+  const run = { runId: change, revision: 4, status: 'running', input: { change, changeDir }, actions: [tAction, vAction] };
+  const makePorts = (overrides = {}) => createProtectedHostPorts({
+    context: { projectRoot: root, identity: { contentHash: sha('app'), runtimeVersion: '0.5.1' } },
+    readers: {
+      claimedTest: () => ({ ok: true, threadId: authorThread, outcome: 'pass', summary: { tests: 1, pass: 1, fail: 0, skipped: 0, cancelled: 0 }, outputDigest: measuredDigest }),
+      independentTurn: () => ({ ok: true, childThreadId: reviewerThread }),
+      ...overrides,
+    },
+  });
+  const inputs = { inputDigest: sha('candidate'), testContract: contract };
+  const policy = { ref: 'policy', digest: sha('policy') };
+  const ports = makePorts();
+  assert.equal(ports.verifyGateInputs({ run, action: vAction, gate: 'V', inputs, policy }), true);
+  const promotion = ports.verifyDomainAutomation({ runId: change, inputs, policy });
+  assert.equal(promotion.ok, true, JSON.stringify(promotion));
+  assert.equal(promotion.kind, 'verified-domain-automation');
+  assert.deepEqual(promotion.caseIds, ['TC-READ-1']);
+  assert.equal(promotion.authorExecution, authorThread);
+  assert.equal(promotion.designReviewerExecution, reviewerThread);
+  assert.equal(promotion.designReviewerExecution !== promotion.authorExecution, true);
+  assert.equal(promotion.qualification.scope, 'protected-source');
+  assert.equal(promotion.qualification.status, 'qualified');
+  assert.equal(promotion.sourceQualified, true);
+  assert.equal(promotion.managedClosureEligible, false);
+  for (const digest of [promotion.selfCheckDigest, promotion.automationMapDigest, promotion.designReviewDigest, promotion.contractDigest, promotion.testPackDigest]) {
+    assert.match(digest, /^[0-9a-f]{64}$/);
+  }
+  // admission serves the same promotion plus the author identity.
+  const options = ports.admissionOptionsFor({});
+  assert.deepEqual(options.domainAutomation, promotion);
+  assert.ok(options.authoringExecutions.includes(authorThread));
+  // Negatives: every shortcut is refused.
+  const expectRefused = (probe, pattern) => {
+    const p = makePorts();
+    p.verifyGateInputs({ run, action: vAction, gate: 'V', inputs, policy });
+    const result = p.verifyDomainAutomation(probe);
+    assert.equal(result.ok, false, JSON.stringify(result));
+    if (pattern) assert.match(result.reason, pattern);
+  };
+  expectRefused({ runId: 'other', inputs, policy }, /bind the current Run/);
+  expectRefused({ runId: change, inputs: { ...inputs, inputDigest: 'nope' }, policy }, /malformed/);
+  expectRefused({ runId: change, inputs: { ...inputs, testContract: { ...contract, project: 'tampered' } }, policy }, /differs from the change source/);
+  expectRefused({ runId: change, inputs, policy: { ref: 'p', digest: 'nope' } }, /malformed/);
+  const brokenReader = makePorts({ claimedTest: () => ({ ok: false }) });
+  brokenReader.verifyGateInputs({ run, action: vAction, gate: 'V', inputs, policy });
+  assert.equal(brokenReader.verifyDomainAutomation({ runId: change, inputs, policy }).ok, false, 'uncorroborated record refuses');
+  // A binding that claims the author as its own reviewer is refused — the
+  // turn-binding match catches a swapped thread, and a binding that genuinely
+  // names the author hits the independence guard.
+  const swappedThread = makePorts({ independentTurn: () => ({ ok: true, childThreadId: authorThread }) });
+  swappedThread.verifyGateInputs({ run, action: vAction, gate: 'V', inputs, policy });
+  assert.match(swappedThread.verifyDomainAutomation({ runId: change, inputs, policy }).reason, /no corroborated independent reviewer turn/);
+  const selfBinding = { ...binding, childThreadId: authorThread };
+  const selfReview = makePorts({ independentTurn: () => ({ ok: true, childThreadId: authorThread }) });
+  const selfRun = { ...run, actions: [{ ...tAction, outcome: { status: 'succeeded', output: { verdict: 'pass', gateEvidence: { gate: 'T', inputs: { testContract: contract }, receipts: [{ sourcePacket: { collection: { source: { independentReview: { codex: selfBinding } } } } }] } } } }, vAction] };
+  selfReview.verifyGateInputs({ run: selfRun, action: vAction, gate: 'V', inputs, policy });
+  assert.match(selfReview.verifyDomainAutomation({ runId: change, inputs, policy }).reason, /must differ from the author/);
+  const noT = makePorts();
+  noT.verifyGateInputs({ run: { ...run, actions: [vAction] }, action: vAction, gate: 'V', inputs, policy });
+  assert.match(noT.verifyDomainAutomation({ runId: change, inputs, policy }).reason, /no successful T review action/);
+  const staleT = makePorts();
+  const staleContract = { ...contract, project: 'other' };
+  staleT.verifyGateInputs({ run: { ...run, actions: [{ ...tAction, outcome: { status: 'succeeded', output: { verdict: 'pass', gateEvidence: { gate: 'T', inputs: { testContract: staleContract }, receipts: tAction.outcome.output.gateEvidence.receipts } } } }, vAction] }, action: vAction, gate: 'V', inputs, policy });
+  assert.match(staleT.verifyDomainAutomation({ runId: change, inputs, policy }).reason, /does not bind the current contract/);
+  fs.rmSync(root, { recursive: true, force: true });
 });
