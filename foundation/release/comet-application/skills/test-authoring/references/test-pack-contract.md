@@ -1,6 +1,6 @@
 # TestPack v1 (authoring handoff; not a closure ledger)
 
-Canonical JSON only; validator CLI: `python3 scripts/validate_test_pack.py <pack.json> --project-root <trusted-existing-repo>`.
+TestPack v1 is the machine-readable handoff; validator CLI: `python3 scripts/validate_test_pack.py <pack.json> --project-root <trusted-existing-repo>`. Existing v1 JSON remains valid without migration. For newly authored domain cases, approved Markdown is the maintained case body and the v1 JSON is a derived snapshot. Retain the frozen projection and its source/config hashes, regenerate and compare before consuming it. A missing or stale projection is a gap, not a reason to bypass validation or edit the generated case body.
 Validator is read-only, never executes commands or emits acceptance PASS. Exit0 means `PACK_STRUCTURE_VALID`, not tested/accepted. Do not trust pack.project_root instead of explicit trusted CLI root.
 
 Root fields:

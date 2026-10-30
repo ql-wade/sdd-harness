@@ -21,12 +21,14 @@ claim/report protocol.
 - Machine checks, user approvals and archive steps stay owned by the upstream
   classic domain. This skill never approves, archives, or bypasses a
   checkpoint, and it never acts as a second controller.
-- The managed gates R/A/T/P/V/Kp run as composition extensions after
-  `full.open.evidence`; this skill performs the open work those gates judge.
+- The R gate follows native Open confirmation and `full.open.revalidate`. A and T follow
+  `full.design.evidence`, P follows `full.build.plan.evidence`, and V and Kp
+  follow `full.verify.check.evidence`. This skill performs the open work R judges.
 
 ## Output contract
 
-`full.open` carries NO preset output schema upstream: the adapter schema of
-this skill (`{"type":"object"}`) is adopted by the workflow as the step
-output contract. Report the genuine open-phase result of the current action;
-never fabricate or forward a stale result.
+After the current open work is actually complete, report a succeeded SDK
+outcome whose output contains `{"event":"open-complete"}` and any genuine
+results of that action. Comet then requests Open evidence; this event is not
+R-gate acceptance or user approval. If a needed decision is unresolved, keep
+the action blocked and request that decision instead of reporting completion.

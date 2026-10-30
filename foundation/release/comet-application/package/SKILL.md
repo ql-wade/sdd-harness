@@ -24,8 +24,8 @@ description: 启动或恢复已确认的 sdd-managed-delivery 工作流应用。
 
 ## SDK 执行协议
 
-固定组合：df916df6784d1ac809693babc9f59908eab4575a10c02e3bdddf0319ba1d8949
-Runtime：0.5.0；基础流程：classic-full。
+固定组合：b06ab9a7a4d22ad2ef8ef10707e80f270e214343659c1f9c7cb8f1559fcc4b18
+Runtime：0.5.1；基础流程：classic-full。
 
 用 comet runtime dispatch --application-file <本目录>/application.json --project-root <项目> --request <临时JSON> 启动下列流程：
 - comet-classic-full@1

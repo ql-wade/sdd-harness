@@ -50,4 +50,7 @@ SKILL_LINES=$(wc -l < "$ROOT/SKILL.md" | tr -d ' ')
 [ "$SKILL_LINES" -le 500 ] || fail "SKILL.md exceeds 500-line budget"
 echo "SKILL.md budget OK: ${SKILL_BYTES} bytes / ${SKILL_LINES} lines"
 
+echo "== [case report] evidence and invalid-ledger regression =="
+python3 -B -m unittest discover -s "$ROOT/tests" -p 'test_domain_report.py' -v || fail "case report regression failed"
+
 echo "RUN_ALL_PASS"
