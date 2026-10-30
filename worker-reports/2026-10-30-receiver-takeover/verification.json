@@ -1,0 +1,71 @@
+{
+  "at": "2026-10-30T10:08:37.173+00:00",
+  "worktree": "/Volumes/mac-extend/claude-live/worktrees/sdd-harness/dazzling-dirac-4a8010",
+  "mainCheckout": "/Users/mac/Code/sdd-harness",
+  "checks": {
+    "noCodexProcess": {
+      "cmd": "pgrep -fl codex",
+      "exit": 3,
+      "stdout": "",
+      "stderr": "sysmon request failed with error: sysmond service not found\npgrep: Cannot get process list\n"
+    },
+    "noRunningNodeTests": {
+      "cmd": "pgrep -fl node --test",
+      "exit": 3,
+      "stdout": "",
+      "stderr": "sysmon request failed with error: sysmond service not found\npgrep: Cannot get process list\n"
+    },
+    "psNote": "ps aux is blocked by the session sandbox (operation not permitted); pgrep used instead",
+    "noLocalActivityAfterHandoffLog": {
+      "cmd": "find .local -type f -newer .local/comet-project-reinstall-efgrwupq/check-handoff-final-targeted-20261030.log",
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "gitHead": {
+      "cmd": "git log --oneline -1",
+      "exit": 0,
+      "stdout": "dfa4a75 wip: preserve Comet 0.5.1 delivery handoff\n",
+      "stderr": ""
+    },
+    "gitStatus": {
+      "cmd": "git status --porcelain",
+      "exit": 0,
+      "stdout": "?? worker-reports/2026-10-30-receiver-takeover/\n",
+      "stderr": ""
+    }
+  },
+  "ledgerLastEntryAt": "2026-10-29T15:49:01.192246+00:00",
+  "candidateDigests": {
+    "architecture.md": {
+      "expected": "8d6b82cc36cbb4865a0b9a8e7fcce9d232071d1dda91a1e25ddc6db51a0844b6",
+      "actual": "8d6b82cc36cbb4865a0b9a8e7fcce9d232071d1dda91a1e25ddc6db51a0844b6",
+      "match": true
+    },
+    "task-dag.json": {
+      "expected": "655b37ca6bad5154ab293b22f59d1238724353e0f1e025c1caf732367ef1cb12",
+      "actual": "655b37ca6bad5154ab293b22f59d1238724353e0f1e025c1caf732367ef1cb12",
+      "match": true
+    },
+    "execution-contract.json": {
+      "expected": "a470c94bc97da693244cf915e265eb518fba7b696a15b9f05dd265c49ff49362",
+      "actual": "a470c94bc97da693244cf915e265eb518fba7b696a15b9f05dd265c49ff49362",
+      "match": true
+    },
+    "pilot-contract.md": {
+      "expected": "765b324e28be0c08ed9080f04ff507617ba89f690509e595d2577d94fdedb5de",
+      "actual": "a51007b88edd63fb9595e5c89e01a7dff74ccc5d1a9efd36f73d4f70490244b6",
+      "match": false
+    }
+  },
+  "priorCodexTakeoverRef": {
+    "dir": "worker-reports/2026-10-29-codex-takeover (main checkout repo root)",
+    "exists": true,
+    "listing": {
+      "cmd": "ls worker-reports/2026-10-29-codex-takeover worker-reports/2026-10-29-codex-takeover/before",
+      "exit": 0,
+      "stdout": "worker-reports/2026-10-29-codex-takeover:\nP0-planning-review.json\nP1_6-input-readmission.json\nbefore\nconstruction-edge-readmission.json\nmanifest.json\np1-6-index-checkout.tap\np1-6-index-fixture-path.txt\n\nworker-reports/2026-10-29-codex-takeover/before:\nHANDOFF.md\narchitecture.md\ndesign.md\ndrift-lock.json\nexecution-contract.json\nexecution-ledger.jsonl\nexecution-prompt.md\nexecution-state.json\npilot-contract.md\nproposal.md\nspec-baseline.json\ntask-dag.json\ntasks.md\nvalidation-report.json\n",
+      "stderr": ""
+    }
+  }
+}

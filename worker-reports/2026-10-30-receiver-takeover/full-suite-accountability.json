@@ -1,0 +1,41 @@
+{
+  "at": "2026-10-30",
+  "question": "does the six-step-1 change introduce any regression relative to the dfa4a75 handoff baseline?",
+  "method": "same-command full-suite comparison plus a detached temp-worktree baseline for the delivery-cases channel",
+  "runs": [
+    {
+      "name": "main checkout, dfa4a75, no receiver changes, real .sdd",
+      "command": "npm test (node --test test/*.test.js)",
+      "result": "1433 tests, 1426 pass, 7 fail, REAL_EXIT:1",
+      "log": "worker-reports/2026-10-30-receiver-takeover/npm-test-full-main-baseline.log",
+      "failures": "worker-reports/2026-10-30-receiver-takeover/failures-main-baseline.txt"
+    },
+    {
+      "name": "this worktree, WITH six-step-1 changes, no .sdd (host-local vendor tree absent)",
+      "command": "npm test",
+      "result": "1438 tests, 1390 pass, 38 fail, REAL_EXIT:1",
+      "log": "worker-reports/2026-10-30-receiver-takeover/npm-test-full-claude-dazzling.log",
+      "failures": "worker-reports/2026-10-30-receiver-takeover/failures-worktree-nosdd.txt"
+    },
+    {
+      "name": "detached temp worktree at dfa4a75 (no receiver changes), .sdd symlinked, delivery-cases channel",
+      "command": "node --test test/delivery-cases/2_4.mjs",
+      "result": "21 pass, 3 fail — IDENTICAL to this worktree with the six-step-1 changes"
+    }
+  ],
+  "verdict": {
+    "npmTestScope": "the 7 baseline failures also fail in this worktree (diff contains no main-only entry); the 31 additional failures here are environment-only (no .sdd vendor tree, no native Comet runtime keyed to this checkout, no host CLI state). Zero new failures attributable to the receiver change.",
+    "deliveryCases": "2_4.mjs 21/3 at baseline and with the change — the 3 package-drift failures (byte-identical official compile, vendored sdd closure, packaged skill content hash) pre-exist at dfa4a75 and are the six-step-4 rebuild obligation.",
+    "newTests": "all 5 comet-host-ports tests pass in the full run; no comet-host-ports error lines.",
+    "bindingsSuites": "comet-managed-protocol, comet-managed-source, classic-integration, architecture-review-adapter pass with the change (their only failures are the host-environment ones classified above)."
+  },
+  "baseline7": [
+    "I06 registered OCI readback rehashes manifest/config and binds actual source SHA without claiming signing",
+    "I06 registered independent target readback matches project, SHA, digest, original operation and terminal state",
+    "actual Comet 0.5.1 retains the same synthetic Run when R lacks a protected source",
+    "committed foundation artifacts match live sources (repo-level drift gate)",
+    "global compiler preflight rejects wrong versions, escaping exports and existing output",
+    "real Comet keeps native and application Run ownership distinct and the phase entry uses the application Run",
+    "the project application compiles using installed Comet 0.5.1 without a repository vendor tree"
+  ]
+}
