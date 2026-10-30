@@ -1442,7 +1442,8 @@ test('managed Foundation exports a self-contained Comet phase entry and its decl
   await exporter.exportRelease(projectRoot,out,{releaseCommit:FIXED_COMMIT,skillsCopy:true});
   const code=path.join(out,'release/code');
   for(const rel of ['tools/comet/phase-entry.mjs','tools/comet/start-lock.py','lib/adapters/comet-start.js',
-    'lib/adapters/codex-host-source.js','lib/adapters/codex-test-observation.js','lib/delivery/test-contract.js','lib/delivery/evidence.js']) assert.ok(fs.statSync(path.join(code,rel)).isFile(),`${rel} must be distributed`);
+    'lib/adapters/codex-host-source.js','lib/adapters/codex-test-observation.js','lib/delivery/test-contract.js','lib/delivery/evidence.js',
+    'lib/delivery/domain-cases.js','lib/delivery/gate.js','tools/test-cases/compile-domain-cases.mjs']) assert.ok(fs.statSync(path.join(code,rel)).isFile(),`${rel} must be distributed`);
   for(const name of ['comet','comet-open','comet-design','comet-build','comet-verify','comet-archive']) {
     const rel=`phase-entries/${name}/SKILL.md`;
     assert.deepEqual(fs.readFileSync(path.join(out,'release/comet-application',rel)),fs.readFileSync(path.join(projectRoot,'integrations/comet/application',rel)),`${rel} must retain its source bytes`);
@@ -1466,7 +1467,7 @@ const managedCodeInputs = [
   'tools/foundation-export.mjs','tools/bootstrap.sh','tools/adapters/claude-code.sh','foundation/managed_io.py',
   'hooks/pre-tool-gate.sh','hooks/session-context.sh','hooks/stop-reminder.sh','hooks/_resolve-project-dir.sh',
   'tools/register-mcps.mjs','tools/mcp/llmwiki.sh','scripts/agent-instructions-check.sh','scripts/agent-skill-check.sh',
-  'tools/comet/phase-entry.mjs','tools/comet/start-lock.py','lib/adapters/comet-start.js','lib/adapters/codex-host-source.js','lib/adapters/codex-test-observation.js','lib/delivery/test-contract.js','lib/delivery/evidence.js',
+  'tools/comet/phase-entry.mjs','tools/comet/start-lock.py','lib/adapters/comet-start.js','lib/adapters/codex-host-source.js','lib/adapters/codex-test-observation.js','lib/delivery/test-contract.js','lib/delivery/evidence.js','lib/delivery/domain-cases.js','lib/delivery/gate.js','tools/test-cases/compile-domain-cases.mjs',
   'contracts/delivery/index.js','contracts/delivery/schema-kernel.js','contracts/delivery/foundation-lock.schema.js',
   'contracts/delivery/baseline-ref.schema.js','contracts/delivery/test-contract.schema.js','contracts/delivery/plan-bundle.schema.js',
   'contracts/delivery/candidate-ref.schema.js','contracts/delivery/evidence-envelope.schema.js','contracts/delivery/gate-receipt.schema.js',

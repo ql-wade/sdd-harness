@@ -42,7 +42,7 @@ test('the project application compiles using installed Comet 0.5.1 without a rep
   const manifest = JSON.parse(fs.readFileSync(path.join(output, 'compile-manifest.json'), 'utf8'));
   const currentManifest = JSON.parse(fs.readFileSync(path.join(root, 'integrations/comet/application/internal/compile-manifest.json'), 'utf8'));
   assert.equal(app.runtimeVersion, '0.5.1');
-  assert.equal(app.version, '9', 'changed gate code must not reuse the installed application version');
+  assert.equal(app.version, '10', 'the six-step-4 upgrade path must ship a new immutable application version, not reuse the installed v9 identity');
   assert.equal(manifest.build.version, '0.5.1');
   assert.equal(manifest.build.supplierQualification, 'not-verified');
   assert.equal(manifest.contentHash, currentManifest.contentHash, 'the current candidate must be reproducible from current sources');

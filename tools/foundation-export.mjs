@@ -103,7 +103,11 @@ const STAGE_ENTRY_ASSET = 'tools/comet/phase-entry.mjs';
 const STAGE_CODE_ASSETS = [...LEGACY_CODE_ASSETS, STAGE_ENTRY_ASSET, 'tools/comet/start-lock.py',
   'lib/adapters/comet-start.js', 'lib/adapters/codex-host-source.js', 'lib/delivery/evidence.js'];
 const TEST_OBSERVATION_ASSET = 'lib/adapters/codex-test-observation.js';
-const CODE_ASSETS = [...STAGE_CODE_ASSETS, TEST_OBSERVATION_ASSET, 'lib/delivery/test-contract.js'];
+// Six-step ④: the sealed baseline must stay READABLE — the domain-case
+// projection tool, its gate dependency and the source-form delivery modules
+// ship with the export so an archived lock can re-derive its projections.
+const CODE_ASSETS = [...STAGE_CODE_ASSETS, TEST_OBSERVATION_ASSET, 'lib/delivery/test-contract.js',
+  'lib/delivery/domain-cases.js', 'lib/delivery/gate.js', 'tools/test-cases/compile-domain-cases.mjs'];
 const DEPENDENCY_METADATA = ['package.json', 'package-lock.json', COMET_LOCK_REL];
 function sourceFile(root, relative) {
   const info = rejectLinkedPath(root, relative);
