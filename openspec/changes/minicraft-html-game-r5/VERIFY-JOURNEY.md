@@ -40,3 +40,27 @@ octet 校验、签名链完整性不受影响）；record-outcome 的解析层�
 本身插桩（或受管二进制旁路通道）才能定形，属上游波次。R 门最后一层
 （RAW_EVIDENCE_REQUIRED）之前的全部链路已真实打通并被 v14/v17 包内门禁
 逐项接受。
+
+## R 门真实 verdict PASS（2026-10-31，verify/r-gate-verdict wave）
+
+四波阻塞的根因落地：`rawBytes` 投影分支的正则笔误 `/^d+$/`（字面量 d，缺反斜杠）
+——所谓"运行时第四形状"其实就是驱动器一直写出的数字键投影对象（无 length 字段），
+本仓库分支是死代码。修复 `/^\d+$/`（严格 octet 校验不变，完整性仍由 collection
+签名与摘要承载），wave 顺序 v21（修复+形状探针）→ v22（+宿主端口作者身份修复）。
+
+新实证的两层宿主路径缺陷（历轮未触及）：
+1. `admissionOptionsFor` 把无 session 的 executor claim（prepare/revalidate）映射为
+   author 候选，`authoringPrincipals` 被 undefined 污染 → knownAuthors 永假 →
+   PROTECTED_CONTEXT_REQUIRED。修复：过滤无 session claim + 合并受管记录
+   （delivery-authority.json）的 authoring 名单（同一信任锚，转录读取器逐记录佐证）。
+2. `verifyReview` 要求 prepared claude review 绑定与 report/action 摘要位于观测
+   source 顶层（不在 facts 内）——驱动器 wire 形状已按此构造。
+
+真实链路：r18@v22 Open 全程重放（wrapper skill-invocation 入口——raw dispatch 不落
+分支绑定；branch binding 由写路径 heal）→ R 门认领 → 两个真实子代理（作者
+R17-REQUIREMENTS-CONFIRMED 38e5b5d98604f231；独立审查 R17-INDEPENDENT-REVIEW-OK，
+摘要绑定 envelope/report/action）→ record-outcome 真实通过，Run 推进至
+full.design.handoff（rev16）。回归：77/77 协议套件 + 7/7 host-ports，fail=0。
+
+死 Run 台账：r15（selection 引导）、r16（分支绑定发现）、r17（宿主层发现）。
+形状探针仍 vendored（lib-delivery-evidence.mjs），下一次 relock 波移除。

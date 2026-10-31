@@ -277,3 +277,53 @@ test('V promotion derives every field from source recomputation and real-record 
   assert.match(staleT.verifyDomainAutomation({ runId: change, inputs, policy }).reason, /does not bind the current contract/);
   fs.rmSync(root, { recursive: true, force: true });
 });
+
+test('admission context ignores session-less executor claims and merges the managed record authors', async () => {
+  const { createProtectedHostPorts } = await import('../lib/adapters/comet-host-ports.js');
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'host-ports-authors-'));
+  try {
+    const ctx = { ...context, projectRoot: root };
+    const input = { gate: 'R', note: 'frozen claim input' };
+    const action = { id: 'run:r7', stepId: 'classic.extension.requirements-open', status: 'running', attempt: 1,
+      input, inputHash: envelopeDigest(input),
+      claim: { executorId: 'sdd-managed-skill-host', sessionId: UUID, token: 'claim-token-bytes' } };
+    const openAction = { id: 'run:r3', stepId: 'full.open', status: 'succeeded', attempt: 1,
+      input: { note: 'open' }, inputHash: envelopeDigest({ note: 'open' }),
+      claim: { executorId: 'sdd-managed-skill-host', sessionId: UUID, token: 'open-token' } };
+    const plumbing = { id: 'run:r1', stepId: 'classic.composition.prepare', status: 'succeeded', attempt: 1,
+      input: { note: 'prepare' }, inputHash: envelopeDigest({ note: 'prepare' }),
+      claim: { executorId: 'comet-classic-composition-prepare' } };
+    const run = { runId: 'synthetic-run', revision: 7, status: 'running', input: { changeDir: 'changes/x' }, actions: [plumbing, openAction, action] };
+    const request = { run, action, gate: 'R', inputs: { inputDigest: sha('candidate') }, policy: { ref: 'policy', digest: sha('policy') } };
+    const ports = createProtectedHostPorts({ context: ctx });
+    assert.equal(ports.verifyGateInputs(request), true, 'fixture must corroborate');
+    // Without a record only claim-derived authors count: the same-executor
+    // open claim is the current identity's sibling and the session-less
+    // plumbing claim is not an authoring identity at all.
+    const bare = ports.admissionOptionsFor();
+    assert.deepEqual(bare.authoringExecutions, [], 'session-less executor claims must not become authors');
+    assert.deepEqual(bare.authoringPrincipals, [], 'no null principals may leak into the author set');
+    // The managed record's authoring attestation (same protected record that
+    // mints the run authority) merges validated identities in.
+    fs.mkdirSync(path.join(root, 'changes/x/.comet'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'changes/x/.comet', 'delivery-authority.json'), JSON.stringify({
+      runId: 'synthetic-run', secret: 's'.repeat(40),
+      authoringExecutions: ['agent-author-worker'], authoringPrincipals: ['agent-author-worker'],
+    }));
+    const merged = ports.admissionOptionsFor();
+    assert.deepEqual(merged.authoringExecutions, ['agent-author-worker']);
+    assert.deepEqual(merged.authoringPrincipals, ['agent-author-worker']);
+    assert.equal(merged.builderExecution, 'sdd-managed-skill-host');
+    assert.equal(merged.purpose, 'independent-acceptance');
+    // A malformed record list must be dropped, not partially trusted.
+    fs.writeFileSync(path.join(root, 'changes/x/.comet', 'delivery-authority.json'), JSON.stringify({
+      runId: 'synthetic-run', secret: 's'.repeat(40),
+      authoringExecutions: ['agent-author-worker', ''], authoringPrincipals: [42],
+    }));
+    const refused = ports.admissionOptionsFor();
+    assert.deepEqual(refused.authoringExecutions, [], 'malformed record authors must be dropped');
+    assert.deepEqual(refused.authoringPrincipals, []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

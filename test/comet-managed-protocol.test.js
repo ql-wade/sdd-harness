@@ -518,3 +518,58 @@ test('synthetic host gets current action, claim, attempt and epoch and rejects e
   {run:{...input.run,state:{checkEpoch:8}}},
  ]) assert.equal((await v.validate({...input,...patch})).accepted,false,'stale/mismatched current context must fail');
 });
+
+test('record-outcome wire byte shapes hydrate through managed admission with real readback semantics', async()=>{
+  // The real R-gate driver emits byte fields through the record-outcome JSON
+  // channel as numeric-keyed projections with no explicit length; the hosted
+  // port corroborates the locator and returns the submitted packet as-is.
+  const { context, entry } = await managedProtocolEntry();
+  const toWire = (bytes) => Object.fromEntries([...bytes].map((octet, index) => [String(index), octet]));
+  const wireShapes = {
+    'numeric-keyed projection without length': (bytes) => toWire(bytes),
+    'Buffer.toJSON array form': (bytes) => bytes.toJSON(),
+    'keyed projection with explicit length': (bytes) => ({ ...toWire(bytes), length: bytes.length }),
+  };
+  const review = { ok: true, sufficient: true, evidenceDigest: sha('wire-review'),
+    envelopeDigest: entry.digest, reportDigest: entry.sourcePacket.collection.reportDigest,
+    actionDigest: entry.sourcePacket.collection.actionDigest, execution: entry.execution,
+    principal: entry.sourcePacket.collection.source.facts.principal };
+  for (const [name, shape] of Object.entries(wireShapes)) {
+    const wire = JSON.parse(JSON.stringify(entry));
+    // structuredClone demoted the admission Buffer to a plain Uint8Array;
+    // the wire shapes are defined over real byte sequences.
+    const bytesOf = (value) => Buffer.from(value);
+    wire.sourcePacket.reportBytes = shape(bytesOf(entry.sourcePacket.reportBytes));
+    wire.sourcePacket.resultBytes = shape(bytesOf(entry.sourcePacket.resultBytes));
+    wire.sourcePacket.methodTraceBytes = shape(bytesOf(entry.sourcePacket.methodTraceBytes));
+    const provider = {
+      verifyGateInputs: ({ run, gate, inputs, policy }) => run.runId === 'run-1' && gate === 'V'
+        && inputs.inputDigest === INPUT && policy.digest === POLICY_DIGEST,
+      readSourcePacket: ({ run, gate }) => run.runId === 'run-1' && gate === 'V' ? structuredClone(wire.sourcePacket) : null,
+      admissionOptionsFor: () => context,
+      verifyReview: () => review,
+    };
+    const factory = { manifest: { bindings: [] }, skills: new Map(), createSkillExecutor: x => x };
+    const validator = (await createBindings(factory, provider)).validators.find(x => x.id === 'sdd.delivery.gate.v');
+    const input = { run: { runId: 'run-1' }, action: { id: 'fixture', stepId: 'classic.extension.V' },
+      outcome: { output: { gateEvidence: { gate: 'V', inputs: managedInputsFixture(), receipts: [JSON.parse(JSON.stringify(wire))], policy: { ...POLICY } } } } };
+    const result = await validator.validate(input);
+    assert.equal(result.accepted, true, `${name} must hydrate: ${result.reason ?? ''}`);
+  }
+  // A non-octet value anywhere in the projection stays refused (strict octet
+  // validation; integrity never comes from the wire shape itself).
+  const tampered = JSON.parse(JSON.stringify(entry));
+  tampered.sourcePacket.reportBytes = { ...toWire(entry.sourcePacket.reportBytes), 0: 256 };
+  const provider = {
+    verifyGateInputs: () => true,
+    readSourcePacket: () => structuredClone(tampered.sourcePacket),
+    admissionOptionsFor: () => context, verifyReview: () => review,
+  };
+  const factory = { manifest: { bindings: [] }, skills: new Map(), createSkillExecutor: x => x };
+  const validator = (await createBindings(factory, provider)).validators.find(x => x.id === 'sdd.delivery.gate.v');
+  const input = { run: { runId: 'run-1' }, action: { id: 'fixture', stepId: 'classic.extension.V' },
+    outcome: { output: { gateEvidence: { gate: 'V', inputs: managedInputsFixture(), receipts: [JSON.parse(JSON.stringify(tampered))], policy: { ...POLICY } } } } };
+  const refused = await validator.validate(input);
+  assert.equal(refused.accepted, false, 'non-octet projection values must not hydrate');
+  assert.match(refused.reason ?? '', /RAW_EVIDENCE_REQUIRED|MANAGED_SOURCE_REFUSED/);
+});
