@@ -181,6 +181,10 @@ function sameSignature(expected, given) {
 }
 
 function rawBytes(value) {
+  try {
+    const d = value && typeof value === 'object' ? { ctor: value.constructor?.name, type: value.type ?? null, len: value.length ?? null, keys: Object.keys(value).slice(0, 6), isArray: Array.isArray(value) } : { prim: typeof value, sample: String(value).slice(0, 40) };
+    fs.appendFileSync('/tmp/claude-501/rawbytes-shape-debug.jsonl', JSON.stringify({ at: new Date().toISOString(), ...d }) + '\n');
+  } catch { /* debug only */ }
   if (Buffer.isBuffer(value) || value instanceof Uint8Array) return Buffer.from(value);
   // The record-outcome JSON channel rehydrates byte fields as
   // { type: 'Buffer', data: [octets] } (Buffer.toJSON's own shape). Accept
