@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "project": "sdd-harness",
+  "change": "minicraft-html-game-r22",
+  "cases": [
+    {
+      "id": "r22-hard-block-3hit-crack",
+      "ac": "R22-AC-1",
+      "oracle": "Given a stone cell: click 1 leaves the cell present with crack overlay stage 1 and stone inventory unchanged; click 2 leaves it present with crack stage 2 and stone inventory unchanged; click 3 removes the cell and increments stone inventory by exactly 1 with the HUD count updating. A wood cell behaves identically (present through hits 1-2 with stages 1-2, removed on hit 3, +1 wood inventory).",
+      "checkIds": [
+        "check-r22-hard-block-3hit-crack"
+      ],
+      "required": true
+    },
+    {
+      "id": "r22-soft-block-single-click",
+      "ac": "R22-AC-2",
+      "oracle": "A single pointer click on a grass cell removes it immediately with no crack stage required and increments grass inventory by exactly 1; a dirt cell behaves the same (one-click removal, +1 dirt inventory).",
+      "checkIds": [
+        "check-r22-soft-block-single-click"
+      ],
+      "required": true
+    },
+    {
+      "id": "r22-place-decrement-refuse-at-zero",
+      "ac": "R22-AC-3",
+      "oracle": "With inventory[type] = 2, placing that type decrements the count by exactly 1 and writes the cell; with inventory[type] = 0 the placement attempt is refused: the target cell is unchanged and the count stays 0.",
+      "checkIds": [
+        "check-r22-place-decrement-refuse-at-zero"
+      ],
+      "required": true
+    },
+    {
+      "id": "r22-persist-reload-deep-equal-defaults",
+      "ac": "R22-AC-4",
+      "oracle": "After one dig and one place, the single localStorage key holds JSON deep-equal to {version, cells, inventory}; re-initializing from that storage (reload) restores world cells and per-type inventory deep-equal to the pre-reload state; with empty storage the game boots to the default world with an all-zero inventory.",
+      "checkIds": [
+        "check-r22-persist-reload-deep-equal-defaults"
+      ],
+      "required": true
+    }
+  ],
+  "requiredChecks": [
+    {
+      "id": "check-r22-hard-block-3hit-crack",
+      "level": "unit",
+      "capability": "minicraft:hard-block-crack",
+      "command": "node --test --test-reporter=tap --test-name-pattern=hard-block-3hit-crack tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "r22-hard-block-3hit-crack"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "check-r22-soft-block-single-click",
+      "level": "unit",
+      "capability": "minicraft:soft-block-dig",
+      "command": "node --test --test-reporter=tap --test-name-pattern=soft-block-single-click tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "r22-soft-block-single-click"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "check-r22-place-decrement-refuse-at-zero",
+      "level": "unit",
+      "capability": "minicraft:inventory-place-refusal",
+      "command": "node --test --test-reporter=tap --test-name-pattern=place-decrement-refuse-at-zero tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "r22-place-decrement-refuse-at-zero"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "check-r22-persist-reload-deep-equal-defaults",
+      "level": "integration",
+      "capability": "minicraft:persistence-storage",
+      "command": "node --test --test-reporter=tap --test-name-pattern=persist-reload-deep-equal-defaults tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "r22-persist-reload-deep-equal-defaults"
+      ],
+      "mode": "automated"
+    }
+  ],
+  "executionDenominator": {
+    "totalCases": 4
+  },
+  "cleanup": {
+    "environment": "Headless node --test run from the repo root; no browser, server, daemon or network connection is started and no environment state persists after the run.",
+    "data": "Tests run against an injected in-memory storage double; real localStorage, user profiles and repo files are never written; any temp fixture lives in a unique tmp directory and is removed in finally."
+  },
+  "dependencyBaselines": [
+    {
+      "kind": "product",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "commandBindingsRequired": true,
+  "sourceReadiness": "ready_for_acceptance"
+}
