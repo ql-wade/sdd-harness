@@ -366,3 +366,45 @@ test('per-gate authority record entries select by the submitted collection actio
     assert.deepEqual(refused.authoringExecutions, []);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('archive-phase record lookup falls back to the archived change dir copy', async () => {
+  const { createProtectedHostPorts } = await import('../lib/adapters/comet-host-ports.js');
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'host-ports-archive-'));
+  try {
+    const ctx = { ...context, projectRoot: root };
+    const input = { gate: 'V', note: 'frozen claim input' };
+    const action = { id: 'run:r9', stepId: 'classic.extension.verify-whitebox', status: 'running', attempt: 1,
+      input, inputHash: envelopeDigest(input),
+      claim: { executorId: 'sdd-managed-skill-host', sessionId: UUID, token: 'claim-token-bytes' } };
+    // The archive sweep runs with the run in the archive phase and the change
+    // dir already MOVED to openspec/changes/archive/<date>-<change>/.
+    const run = { runId: 'synthetic-run', revision: 9, status: 'running',
+      state: { phase: 'archive' },
+      input: { changeDir: 'changes/x' }, actions: [action] };
+    const request = { run, action, gate: 'V', inputs: { inputDigest: sha('candidate') }, policy: { ref: 'policy', digest: sha('policy') } };
+    const ports = createProtectedHostPorts({ context: ctx });
+    assert.equal(ports.verifyGateInputs(request), true, 'fixture must corroborate');
+    // The live change dir carries no record (the archive moved it away).
+    const bare = ports.admissionOptionsFor({});
+    assert.equal(bare.authority, undefined, 'no record — no managed authority');
+    // The archived copy of the record supplies the gate entry.
+    const archivedDir = path.join(root, 'openspec', 'changes', 'archive', '2026-11-01-synthetic-run');
+    fs.mkdirSync(path.join(archivedDir, '.comet'), { recursive: true });
+    fs.writeFileSync(path.join(archivedDir, '.comet', 'delivery-authority.json'), JSON.stringify({
+      runId: 'synthetic-run', secret: 'a'.repeat(40),
+      authoringExecutions: ['agent-archived-author'], authoringPrincipals: ['agent-archived-author'],
+    }));
+    const merged = ports.admissionOptionsFor({});
+    assert.equal(merged.authority !== undefined, true, 'archived record must mint the authority');
+    assert.deepEqual(merged.authoringExecutions, ['agent-archived-author']);
+    assert.deepEqual(merged.authoringPrincipals, ['agent-archived-author']);
+    // Outside the archive phase the live-dir absence still means no authority:
+    // the fallback must not mask a genuinely unpublished record mid-run.
+    const liveRun = { ...run, state: { phase: 'verify' } };
+    assert.equal(ports.verifyGateInputs({ ...request, run: liveRun }), true, 're-latch with verify phase');
+    const live = ports.admissionOptionsFor({});
+    assert.equal(live.authority, undefined, 'live-phase missing record must stay unresolved');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

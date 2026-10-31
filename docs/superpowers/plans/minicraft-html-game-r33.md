@@ -1,3 +1,7 @@
+---
+archived-with: 2026-10-31-minicraft-html-game-r33
+status: final
+---
 <!-- comet-task-authority: openspec/changes/minicraft-html-game-r33/tasks.md -->
 
 # Build Plan — minicraft-html-game-r33
