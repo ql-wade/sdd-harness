@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- demos/minicraft/index.html -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -44,10 +45,10 @@
   var CELL = 24;                       // 24 px per cell -> 480 x 480 canvas
   var STORAGE_KEY = 'minicraft-grid-v1';
   var TYPES = {
-    1: { name: 'Grass', color: '#5aa331' },
-    2: { name: 'Dirt',  color: '#8a5a2b' },
-    3: { name: 'Stone', color: '#8c8c8c' },
-    4: { name: 'Wood',  color: '#a07840' }
+    1: { name: 'Grass', color: '#5aa331', hardness: 1 },
+    2: { name: 'Dirt',  color: '#8a5a2b', hardness: 1 },
+    3: { name: 'Stone', color: '#8c8c8c', hardness: 3 },
+    4: { name: 'Wood',  color: '#a07840', hardness: 3 }
   };
 
   // ---- STATE ----------------------------------------------------------------
@@ -55,6 +56,9 @@
   var selected = 1;
   var hover = null;                    // {x, y} while pointer is over the board
   var dragging = false;
+  var damage = new Map();              // cell index -> hits; transient, never persisted
+  var inventory = { 1: 0, 2: 0, 3: 0, 4: 0 };   // mined-but-unplaced blocks per type
+  var lastHitCell = -1;                // cell-entry edge guard: one dig per cell entry
 
   // ---- PURE FUNCTIONS -------------------------------------------------------
   // Deterministic initial terrain (design D2): no RNG anywhere.
@@ -74,18 +78,36 @@
     return { x: x, y: y, index: y * SIZE + x };
   }
 
-  function validSave(value) {
-    if (!value || value.version !== 1) return false;
-    if (!Array.isArray(value.cells) || value.cells.length !== SIZE * SIZE) return false;
-    for (var i = 0; i < value.cells.length; i++) {
-      var c = value.cells[i];
+  function validCells(cells) {
+    if (!Array.isArray(cells) || cells.length !== SIZE * SIZE) return false;
+    for (var i = 0; i < cells.length; i++) {
+      var c = cells[i];
       if (typeof c !== 'number' || !isFinite(c) || Math.floor(c) !== c || c < 0 || c > 4) return false;
     }
     return true;
   }
 
+  function validInventory(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    for (var t = 1; t <= 4; t++) {
+      var n = value[t];
+      if (typeof n !== 'number' || !isFinite(n) || Math.floor(n) !== n || n < 0) return false;
+    }
+    return true;
+  }
+
+  function zeroInventory() { return { 1: 0, 2: 0, 3: 0, 4: 0 }; }
+
+  // validSave accepts v1 ({version, cells}) and v2 ({version, cells, inventory});
+  // an invalid inventory fails soft at load (stock zeroed), it never voids the world.
+  function validSave(value) {
+    if (!value) return false;
+    if (value.version !== 1 && value.version !== 2) return false;
+    return validCells(value.cells);
+  }
+
   function serializeGrid(cells) {
-    return JSON.stringify({ version: 1, cells: Array.prototype.slice.call(cells) });
+    return JSON.stringify({ version: 2, cells: Array.prototype.slice.call(cells), inventory: inventory });
   }
 
   // ---- PERSISTENCE (D5) -----------------------------------------------------
@@ -93,15 +115,22 @@
     try { return window.localStorage; } catch (err) { return null; }
   }
 
+  // Missing (v1) or invalid inventory migrates to all-zero stock.
+  function resetInventory(values) {
+    var src = validInventory(values) ? values : zeroInventory();
+    for (var t = 1; t <= 4; t++) inventory[t] = src[t];
+  }
+
   function loadGrid() {
     var store = storage();
-    if (!store) return initialGrid();
+    if (!store) { resetInventory(null); return initialGrid(); }
     var raw = null;
     try { raw = store.getItem(STORAGE_KEY); } catch (err) { raw = null; }
-    if (raw === null) return initialGrid();
+    if (raw === null) { resetInventory(null); return initialGrid(); }
     var parsed = null;
     try { parsed = JSON.parse(raw); } catch (err) { parsed = null; }
-    if (!validSave(parsed)) return initialGrid();   // whole-save fail-soft fallback
+    if (!validSave(parsed)) { resetInventory(null); return initialGrid(); }   // whole-save fail-soft
+    resetInventory(parsed.inventory);   // missing or invalid inventory -> zeros
     return Uint8Array.from(parsed.cells);
   }
 
@@ -122,6 +151,44 @@
   var ctx = canvas.getContext('2d');
   var activeReadout = document.getElementById('active');
 
+  // Deterministic crack overlay: a pure function of (x, y, stage), no RNG.
+  function drawCrack(x, y, stage) {
+    var cx = x * CELL + CELL / 2;
+    var cy = y * CELL + CELL / 2;
+    var arms = 2 + stage;
+    ctx.strokeStyle = 'rgba(15,15,15,0.6)';
+    ctx.lineWidth = 1;
+    for (var a = 0; a < arms; a++) {
+      var dir = ((a * 137 + x * 31 + y * 17 + stage * 53) % 360) * Math.PI / 180;
+      var mid = 3 + ((a * 7 + stage * 5 + x + y) % 5);
+      var reach = 6 + ((a * 11 + x * 3 + y * 5 + stage * 13) % 6);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(dir) * mid, cy + Math.sin(dir) * mid);
+      ctx.lineTo(cx + Math.cos(dir) * reach, cy + Math.sin(dir) * reach);
+      ctx.stroke();
+    }
+  }
+
+  function renderHud() {
+    var panelW = 92, rowH = 18;
+    var panelH = rowH * 4 + 10;
+    var px = canvas.width - panelW - 6;
+    var py = 6;
+    ctx.fillStyle = 'rgba(16,18,22,0.85)';
+    ctx.fillRect(px, py, panelW, panelH);
+    ctx.strokeStyle = '#3a3f47';
+    ctx.strokeRect(px + 0.5, py + 0.5, panelW - 1, panelH - 1);
+    ctx.font = '11px monospace';
+    for (var t = 1; t <= 4; t++) {
+      var ry = py + 5 + (t - 1) * rowH;
+      ctx.fillStyle = TYPES[t].color;
+      ctx.fillRect(px + 6, ry, 10, 10);
+      ctx.fillStyle = '#e8e6e3';
+      ctx.fillText(TYPES[t].name + ' x' + inventory[t], px + 22, ry + 9);
+    }
+  }
+
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#101216';
@@ -136,6 +203,9 @@
         var inset = 3 + ((x * 31 + y * 17) % 6);
         ctx.fillStyle = 'rgba(0,0,0,0.15)';
         ctx.fillRect(x * CELL + inset, y * CELL + inset, CELL - inset * 2, CELL - inset * 2);
+        // crack overlay after the texture, for hits in [1, hardness-1]
+        var hits = damage.get(y * SIZE + x);
+        if (hits >= 1 && hits < TYPES[type].hardness) drawCrack(x, y, hits);
       }
     }
     // hairline grid
@@ -151,13 +221,16 @@
       ctx.lineWidth = 2;
       ctx.strokeRect(hover.x * CELL + 1, hover.y * CELL + 1, CELL - 2, CELL - 2);
     }
+    renderHud();                       // right-top inventory panel, last in the pipeline
   }
 
   function renderSelection() {
     activeReadout.textContent = TYPES[selected].name;
     var buttons = document.querySelectorAll('.swatch');
     for (var i = 0; i < buttons.length; i++) {
-      buttons[i].classList.toggle('selected', Number(buttons[i].getAttribute('data-type')) === selected);
+      var type = Number(buttons[i].getAttribute('data-type'));
+      buttons[i].classList.toggle('selected', type === selected);
+      buttons[i].style.opacity = inventory[type] > 0 ? '' : '0.35';   // grey out empty stock
     }
   }
 
@@ -166,6 +239,35 @@
     mutate();
     if (persist !== false) saveGrid();   // every dig/place edit persists
     render();
+    renderSelection();                   // palette greying rides the same funnel
+  }
+
+  // One dig per cell-entry edge; same-cell pointermove never adds a hit.
+  function hitCell(cell) {
+    if (!cell || cell.index === lastHitCell) return false;
+    lastHitCell = cell.index;
+    var type = grid[cell.index];
+    if (type === 0) return false;
+    var hits = (damage.get(cell.index) || 0) + 1;
+    if (hits < TYPES[type].hardness) {
+      setState(function () { damage.set(cell.index, hits); }, false);   // transient: no save
+    } else {
+      setState(function () {
+        grid[cell.index] = 0;
+        damage.delete(cell.index);
+        inventory[type] += 1;
+      });
+    }
+    return true;
+  }
+
+  function placeAt(cell) {
+    if (!cell || grid[cell.index] !== 0) return;   // place only into empty cells
+    if ((inventory[selected] || 0) < 1) return;    // refuse at zero before any mutation
+    setState(function () {
+      grid[cell.index] = selected;
+      inventory[selected] -= 1;
+    });
   }
 
   canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); }, false);
@@ -176,13 +278,9 @@
     if (!cell) return;
     if (e.button === 0) {
       dragging = true;
-      if (grid[cell.index] !== 0) {
-        setState(function () { grid[cell.index] = 0; });
-      }
+      hitCell(cell);
     } else if (e.button === 2) {
-      if (grid[cell.index] === 0) {          // place only into empty cells
-        setState(function () { grid[cell.index] = selected; });
-      }
+      placeAt(cell);
     }
   }, false);
 
@@ -192,14 +290,13 @@
     var hoverChanged = (newHover === null) !== (hover === null) ||
       (newHover && hover && (newHover.x !== hover.x || newHover.y !== hover.y));
     hover = newHover;
-    if (dragging && cell && grid[cell.index] !== 0) {
-      setState(function () { grid[cell.index] = 0; });
-    } else if (hoverChanged) {
+    var acted = dragging && cell ? hitCell(cell) : false;
+    if (!acted && hoverChanged) {
       render();
     }
   }, false);
 
-  function endDrag() { dragging = false; }
+  function endDrag() { dragging = false; lastHitCell = -1; }
   canvas.addEventListener('pointerup', endDrag, false);
   canvas.addEventListener('pointerleave', function () { hover = null; endDrag(); render(); }, false);
 
@@ -219,9 +316,12 @@
   }
 
   document.getElementById('reset').addEventListener('click', function () {
-    grid = initialGrid();
-    clearGrid();                  // reset removes the key entirely (D5)
-    render();
+    setState(function () {
+      grid = initialGrid();
+      damage.clear();
+      resetInventory(null);         // stock back to zero
+      clearGrid();                  // reset removes the key entirely (D5)
+    }, false);
   }, false);
 
   // ---- INIT -----------------------------------------------------------------

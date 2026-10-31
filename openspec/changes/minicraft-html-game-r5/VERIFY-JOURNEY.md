@@ -64,3 +64,18 @@ full.design.handoff（rev16）。回归：77/77 协议套件 + 7/7 host-ports，
 
 死 Run 台账：r15（selection 引导）、r16（分支绑定发现）、r17（宿主层发现）。
 形状探针仍 vendored（lib-delivery-evidence.mjs），下一次 relock 波移除。
+
+## Build.execute 突破与 check-policy 墙（2026-10-31，verify/r-gate-verdict wave 续）
+
+r28@v26 单 Run 真实通过 R/A/T/P 四门 + 第二轮 P（re-arm 证据 :20 + 第二个
+build-plan-unique :21），并 record 了 full.build.execute（event build-complete）——
+首个到达 Build 执行阶段的 Run。TDD 实现真实存在：tests/minicraft.logic.test.mjs
+（node:vm 沙箱加载内联脚本 + __test 钩子，四个契约子测试）与
+demos/minicraft/index.html（hardness、瞬态 damage Map、inventory、v2 blob、
+确定性裂纹、canvas HUD、调色板置灰），四条契约命令 4/4 全绿。
+
+墙：full.build.check (:23) claim 拒绝 "checkCommands.build must declare literal
+argv"——composition prepare 在 START 时从 .comet/check-policy.json 内嵌
+checkCommands；本 worktree 启动时无此文件，action 冻结输入为空。下一波：
+启动前把主检出的 check-policy.json 复制进 worktree .comet/，且内嵌的
+bash scripts/check.sh 须在 worktree 全绿（历史基线 1436/1445 + 9 归因）。
