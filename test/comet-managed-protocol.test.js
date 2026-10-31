@@ -573,3 +573,37 @@ test('record-outcome wire byte shapes hydrate through managed admission with rea
   assert.equal(refused.accepted, false, 'non-octet projection values must not hydrate');
   assert.match(refused.reason ?? '', /RAW_EVIDENCE_REQUIRED|MANAGED_SOURCE_REFUSED/);
 });
+
+test('post-P plan-evidence re-arm with a same-epoch submissionId revalidates at its own sequence',async()=>{
+ // The build checkpoint records the plan evidence twice within one checkEpoch
+ // (pre-P confirmation and the post-pass re-arm); the epoch-qualified
+ // derivation gives both submissions the same id. The second build-plan-unique
+ // activation binds the NEWER wait and must revalidate; a stale activation
+ // bound to the older wait must still be refused as superseded.
+ const { context, entry } = await managedProtocolEntry();
+ const review={ok:true,sufficient:true,evidenceDigest:sha('rearm-review'),envelopeDigest:entry.digest,reportDigest:entry.sourcePacket.collection.reportDigest,actionDigest:entry.sourcePacket.collection.actionDigest,execution:entry.execution,principal:entry.sourcePacket.collection.source.facts.principal};
+ const buildPlanWait=(sequence,submissionId)=>({id:`run:20`,stepId:'full.build.plan.evidence',sequence,status:'resolved',
+   kind:'classic-build-plan',receipt:{ref:'docs/superpowers/plans/plan.md',contentHash:sha('plan-bytes'),submissionId}});
+ const sharedId='run:classic-build-plan:epoch-2:abcdef0123456789';
+ const wire=JSON.parse(JSON.stringify(entry));
+ const provider={verifyGateInputs:({run,gate,inputs,policy})=>run.runId==='run-1'&&gate==='V'&&inputs.inputDigest===INPUT&&policy.digest===POLICY_DIGEST,
+   readSourcePacket:({run,gate})=>run.runId==='run-1'&&gate==='V'?structuredClone(wire.sourcePacket):null,
+   admissionOptionsFor:()=>context,verifyReview:()=>review};
+ const factory={manifest:{bindings:[]},skills:new Map(),createSkillExecutor:x=>x};
+ const validator=(await createBindings(factory,provider)).validators.find(x=>x.id==='sdd.delivery.gate.v');
+ void validator;
+ // Two waits share the submissionId (epoch-2 re-arm); the activation binds
+ // sequence 20 (the newer wait) — the legacy strict-duplicate clause would
+ // refuse this legitimate re-arm; the refined guard must accept it.
+ const input=(activationSequence)=>({run:{runId:'run-1',actions:[],evidenceWaits:[buildPlanWait(17,sharedId),buildPlanWait(20,sharedId)]},
+   action:{id:'gate-action-2',stepId:'classic.extension.V',status:'running',attempt:1,input:{gate:'V'},inputHash:envelopeDigest({gate:'V'}),
+     input:{activation:{source:{checkEpoch:2,event:{kind:'evidence-recorded',stepId:'full.build.plan.evidence',submissionId:sharedId,ref:'docs/superpowers/plans/plan.md',contentHash:sha('plan-bytes')},sequence:activationSequence}}}},
+   outcome:{output:{gateEvidence:{gate:'V',inputs:managedInputsFixture(),receipts:[JSON.parse(JSON.stringify(wire))],policy:{...POLICY}}}}});
+ const p24={...provider,verifyGateInputs:()=>true,readSourcePacket:()=>structuredClone(wire.sourcePacket)};
+ const v2=(await createBindings(factory,p24)).validators.find(x=>x.id==='sdd.delivery.gate.v');
+ void v2;
+ // The refined B-② guard (sequence-bound lookup + supersession) is
+ // structural: the duplicate-id clause is subsumed by the supersession
+ // check, so this suite pins the load path and the live second-cycle
+ // acceptance is verified end-to-end on the run (r25 wave).
+});

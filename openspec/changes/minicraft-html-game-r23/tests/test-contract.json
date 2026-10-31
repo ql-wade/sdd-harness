@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "project": "sdd-harness",
+  "change": "minicraft-html-game-r23",
+  "cases": [
+    {
+      "id": "r23-hard-block-3hit-crack",
+      "ac": "Stone block: clicks 1-2 show crack stages, click 3 removes it and +1 stone inventory; HUD updates.",
+      "oracle": "Dig a stone (type 3) cell: click 1 leaves the cell present with per-cell damage hits=1 and the crack overlay at its first visible stage; click 2 leaves it present at a strictly deeper second crack stage (visible stages stay within 1..hardness-1 per the pure crack function of (x, y, stage)); click 3 removes the cell, clears its damage entry, and increments stone inventory by exactly 1 with the canvas HUD count updating. A wood (type 4) cell behaves identically. Damage accrues once per cell-entry edge: re-entering the cell adds a hit while holding the pointer inside the same cell adds none.",
+      "checkIds": [
+        "check-r23-hard-block-3hit-crack"
+      ],
+      "required": true
+    },
+    {
+      "id": "r23-soft-block-single-click",
+      "ac": "Grass block: single click removes, +1 grass inventory.",
+      "oracle": "A grass (type 1) cell is removed by a single click with no crack stage shown, incrementing grass inventory by exactly 1; a dirt (type 2) cell behaves the same because hardness 1 means the first hit reaches hardness: removal, +1 dirt inventory, and no damage entry survives the dig.",
+      "checkIds": [
+        "check-r23-soft-block-single-click"
+      ],
+      "required": true
+    },
+    {
+      "id": "r23-place-decrement-refuse-at-zero",
+      "ac": "Placing from palette decrements that type's inventory and refuses at 0.",
+      "oracle": "With inventory[type] = n >= 1, placing that type into an empty cell writes the cell and decrements that count by exactly 1 through the single setState edit path that persists; with inventory[type] = 0 the placement attempt is refused before any mutation: the target cell is unchanged, the count stays 0, and the palette swatch for that type is greyed out.",
+      "checkIds": [
+        "check-r23-place-decrement-refuse-at-zero"
+      ],
+      "required": true
+    },
+    {
+      "id": "r23-persist-reload-deep-equal-defaults",
+      "ac": "Reload persists both the world and the inventory (localStorage).",
+      "oracle": "After digging one block and placing one block, the single localStorage key holds one JSON blob deep-equal to the live state as {version: 2, cells, inventory} (world and inventory saved together atomically); re-initializing from that storage (reload) restores world cells and per-type inventory deep-equal to the pre-reload values with the transient damage map reset; with empty storage the game boots to the deterministic default world with an all-zero inventory.",
+      "checkIds": [
+        "check-r23-persist-reload-deep-equal-defaults"
+      ],
+      "required": true
+    }
+  ],
+  "requiredChecks": [
+    {
+      "id": "check-r23-hard-block-3hit-crack",
+      "level": "unit",
+      "capability": "minicraft:hard-block-crack",
+      "command": "node --test --test-reporter=tap --test-name-pattern=r23-hard-block-3hit-crack tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "r23-hard-block-3hit-crack"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "check-r23-soft-block-single-click",
+      "level": "unit",
+      "capability": "minicraft:soft-block-dig",
+      "command": "node --test --test-reporter=tap --test-name-pattern=r23-soft-block-single-click tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "r23-soft-block-single-click"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "check-r23-place-decrement-refuse-at-zero",
+      "level": "unit",
+      "capability": "minicraft:inventory-place-refusal",
+      "command": "node --test --test-reporter=tap --test-name-pattern=r23-place-decrement-refuse-at-zero tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "r23-place-decrement-refuse-at-zero"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "check-r23-persist-reload-deep-equal-defaults",
+      "level": "integration",
+      "capability": "minicraft:persistence-storage",
+      "command": "node --test --test-reporter=tap --test-name-pattern=r23-persist-reload-deep-equal-defaults tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "r23-persist-reload-deep-equal-defaults"
+      ],
+      "mode": "automated"
+    }
+  ],
+  "executionDenominator": {
+    "totalCases": 4
+  },
+  "cleanup": {
+    "environment": "Headless node --test run from the repo root; no browser, server, daemon or network connection is started and nothing in the environment persists after the run.",
+    "data": "Tests run against an injected in-memory storage double for the localStorage contract; real localStorage, user profiles and repo files are never written; any temp fixture lives in a unique tmp directory and is removed in finally."
+  },
+  "dependencyBaselines": [
+    {
+      "kind": "product",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "commandBindingsRequired": true,
+  "sourceReadiness": "ready_for_acceptance"
+}

@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "project": "sdd-harness",
+  "change": "minicraft-html-game-r25",
+  "cases": [
+    {
+      "id": "TC01-hard-crack",
+      "ac": "AC1-hard-3hits",
+      "oracle": "Fresh world (terrain rows y<4 grass, y<10 dirt, y<18 stone, else wood) with stone at (5,5): click 1 leaves the stone present, records cell damage hits=1 and draws crack overlay stage 1 as a pure function of (x, y, stage); click 2 leaves it present with hits=2 and crack stage 2 visually distinct from stage 1, with damage accumulating on cell-entry edges only (no extra hits from pointermove inside the same cell); click 3 reaches hardness 3, removes the stone (cell becomes empty), clears its damage-map entry, increments the stone (type 3) inventory by exactly 1, and the canvas HUD shows the incremented count; wood (type 4) behaves identically at hardness 3 while grass and dirt stay hardness 1 in the registry.",
+      "checkIds": [
+        "CHK01-hard-crack"
+      ],
+      "required": true
+    },
+    {
+      "id": "TC02-soft-single",
+      "ac": "AC2-soft-1click",
+      "oracle": "Fresh world with grass at (10,10): a single click removes the grass (cell empty), increments the grass (type 1) inventory by exactly 1, and leaves no damage-map entry and no crack overlay for that cell; dirt (type 2) is likewise removed on the first click (hardness 1).",
+      "checkIds": [
+        "CHK02-soft-single"
+      ],
+      "required": true
+    },
+    {
+      "id": "TC03-inventory-place",
+      "ac": "AC3-place-decrement-refuse-zero",
+      "oracle": "With stone inventory >= 1 after mining, placing stone from the palette onto an empty cell decrements stone inventory by exactly 1 and the cell becomes stone; with stone inventory exactly 0 a placement attempt is refused before any mutation: the cell stays empty, stone inventory stays 0, and the palette entry for that type renders greyed out at zero; counters remain non-negative integers over types 1..4 and never go negative.",
+      "checkIds": [
+        "CHK03-inventory-place"
+      ],
+      "required": true
+    },
+    {
+      "id": "TC04-persist-reload",
+      "ac": "AC4-persist-reload-deepequal",
+      "oracle": "After mining and placing so that both world cells and inventory changed, the save at the single localStorage key (minicraft-grid-v1) is one atomic blob {version:2, cells, inventory} with inventory as non-negative integers over keys 1..4; a reload (fresh boot reading the same key) restores world cells and inventory deep-equal to the pre-reload state while the transient damage map resets to empty; a stored v1 blob {version, cells} migrates on load with inventory defaulted to zero for every type; with empty localStorage the first boot yields the default terrain world and an all-zero inventory.",
+      "checkIds": [
+        "CHK04-persist-reload"
+      ],
+      "required": true
+    }
+  ],
+  "requiredChecks": [
+    {
+      "id": "CHK01-hard-crack",
+      "level": "unit",
+      "capability": "minicraft-logic-hardness-crack-overlay",
+      "command": "node --test --test-reporter=tap --test-name-pattern=hard-block-3hit-crack tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "TC01-hard-crack"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "CHK02-soft-single",
+      "level": "unit",
+      "capability": "minicraft-logic-soft-block-dig",
+      "command": "node --test --test-reporter=tap --test-name-pattern=soft-block-single-click tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "TC02-soft-single"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "CHK03-inventory-place",
+      "level": "unit",
+      "capability": "minicraft-logic-inventory-place-refuse",
+      "command": "node --test --test-reporter=tap --test-name-pattern=inventory-place-refuse-zero tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "TC03-inventory-place"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "CHK04-persist-reload",
+      "level": "unit",
+      "capability": "minicraft-logic-persistence-storage",
+      "command": "node --test --test-reporter=tap --test-name-pattern=persist-reload-defaults tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "TC04-persist-reload"
+      ],
+      "mode": "automated"
+    }
+  ],
+  "executionDenominator": {
+    "totalCases": 4
+  },
+  "cleanup": {
+    "environment": "Run from the repo root with the Node >= 18 built-in test runner; no browser, dev server or network access required; the run must leave no environment mutation.",
+    "data": "The logic suite injects an in-memory storage stub for the save key; no real browser localStorage, world blob or project file is written, and a completed run leaves no data artifacts."
+  },
+  "dependencyBaselines": [
+    {
+      "kind": "product",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "commandBindingsRequired": true,
+  "sourceReadiness": "ready_for_acceptance"
+}
