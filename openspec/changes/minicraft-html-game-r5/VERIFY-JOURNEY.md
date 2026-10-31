@@ -30,3 +30,13 @@
 
 运行时可恢复：`VERIFY-JOURNEY.md` 前述恢复命令（HOME=tmp 运行时 +
 v14 包）。
+
+## 材料化缝攻坚记录（2026-10-31）
+
+三轮修复均被运行时解析后的字节形状变体驳回：{type,data} 数组形 → 数字键
+290 键对象形 → 键控连续投影形（v17）。rawBytes 已按三种形状扩展（纯
+octet 校验、签名链完整性不受影响）；record-outcome 的解析层仍在验证前把
+字节转换为未知的第四种形状——需对 vendored classic record-outcome 解析器
+本身插桩（或受管二进制旁路通道）才能定形，属上游波次。R 门最后一层
+（RAW_EVIDENCE_REQUIRED）之前的全部链路已真实打通并被 v14/v17 包内门禁
+逐项接受。
