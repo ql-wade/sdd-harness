@@ -1,10 +1,12 @@
 ---
-comet_change: minicraft-html-game-r33
+comet_change: minicraft-html-game-r34
 role: technical-design
 canonical_spec: openspec
+archived-with: 2026-11-01-minicraft-html-game-r34
+status: final
 ---
 
-# Design — minicraft-html-game-r33
+# Design — minicraft-html-game-r34
 
 Single-file constraint kept: all logic inside demos/minicraft/index.html.
 

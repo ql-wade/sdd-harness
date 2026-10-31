@@ -1,6 +1,6 @@
 ---
-archived-with: 2026-10-31-minicraft-html-game-r34
 status: final
+archived-with: 2026-11-01-minicraft-html-game-r34
 ---
 <!-- comet-task-authority: openspec/changes/minicraft-html-game-r34/tasks.md -->
 
