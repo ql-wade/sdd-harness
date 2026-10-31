@@ -1,4 +1,10 @@
-# Design — minicraft-html-game-r4
+---
+comet_change: minicraft-html-game-r18
+role: technical-design
+canonical_spec: openspec
+---
+
+# Design — minicraft-html-game-r18
 
 Single-file constraint kept: all logic inside demos/minicraft/index.html.
 

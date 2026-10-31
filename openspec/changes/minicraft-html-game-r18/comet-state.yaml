@@ -13,7 +13,7 @@ bound_branch: verify/r-gate-verdict
 verify_mode: null
 auto_transition: true
 base_ref: null
-design_doc: null
+design_doc: openspec/changes/minicraft-html-game-r18/design.md
 plan: null
 verify_result: pending
 verify_failures: 0
@@ -25,13 +25,13 @@ verified_at: null
 archive_confirmation: null
 archived: false
 direct_override: null
-handoff_context: null
-handoff_hash: null
+handoff_context: openspec/changes/minicraft-html-game-r18/.comet/handoff/design-context.json
+handoff_hash: e4ce63393498a0e8a02dff90c500b6959ec5413558c2e118f3a05d29fe736f51
 classic_profile: full
 classic_migration: 1
 run_checkpoint:
   schema: comet.workflow-run-checkpoint.v2
-  hash: 0050da0989a2acddcddd5e29583485d2e5c84f866e3e433db8e233616b3b83b6
+  hash: 8bbcc2ef950a89b3df73a41dbb75bd1fbebeb3b8fe5a3b853504f797dbe86391
   run:
     protocolVersion: 1
     schemaVersion: 1
@@ -61,10 +61,10 @@ run_checkpoint:
       classicProfile: full
       contextCompression: off
       createdAt: null
-      designDoc: null
+      designDoc: openspec/changes/minicraft-html-game-r18/design.md
       directOverride: null
-      handoffContext: null
-      handoffHash: null
+      handoffContext: openspec/changes/minicraft-html-game-r18/.comet/handoff/design-context.json
+      handoffHash: e4ce63393498a0e8a02dff90c500b6959ec5413558c2e118f3a05d29fe736f51
       isolation: current
       language: en
       phase: design
@@ -78,8 +78,8 @@ run_checkpoint:
       verifyMode: null
       verifyResult: pending
       workflow: full
-    status: running
-    sequence: 8
+    status: waiting
+    sequence: 11
     actions:
       - attempt: 1
         claim:
@@ -1839,6 +1839,15 @@ run_checkpoint:
         stepId: classic.extension.requirements-open
         type: invoke_skill
       - attempt: 1
+        claim:
+          executorId: sdd-managed-skill-host
+          sessionId: 4da29787-2439-4b93-a7b0-5377d2ccb05a
+          token: portable-35a6f953e16e59c21d0b81ca846ac8404cd37951f2ebdcaeabc63d11e83069a6
+        executionOrigin:
+          workflow:
+            hash: 97ace79f8e79aa165aafe4ceee9d8a0a995f69599cbe79b853f1641f47a333c9
+            id: comet-classic-full
+            version: "1"
         id: minicraft-html-game-r18:8
         input:
           input:
@@ -1846,21 +1855,95 @@ run_checkpoint:
             changeDir: openspec/changes/minicraft-html-game-r18
           outputs: {}
         inputHash: dd6e13af1ffa6b25142643a8fb5c102d2abab7c27554021c789bd7ddd8476752
+        outcome:
+          actionId: minicraft-html-game-r18:8
+          attempt: 1
+          claimToken: portable-35a6f953e16e59c21d0b81ca846ac8404cd37951f2ebdcaeabc63d11e83069a6
+          inputHash: dd6e13af1ffa6b25142643a8fb5c102d2abab7c27554021c789bd7ddd8476752
+          outcomeId: skill-1bb86e6cb35a7a39f6462f216af21cff016b01b396a97d3e6a298345f950af70
+          output:
+            handoffContext: openspec/changes/minicraft-html-game-r18/.comet/handoff/design-context.json
+            handoffHash: e4ce63393498a0e8a02dff90c500b6959ec5413558c2e118f3a05d29fe736f51
+            proposal: >-
+              Design proposal for minicraft-html-game-r18 (bounded enhancement
+              of demos/minicraft/index.html, zero-dependency single-file game):
+
+              1. Hard-block breakage: stone/wood blocks require 3 hits; a crack
+              overlay shows per-block break progress (stages at 1 and 2 hits);
+              soft blocks (grass) break in 1 hit as today.
+
+              2. Inventory HUD: per-block-type counters of mined-but-not-placed
+              blocks, rendered as part of the existing HUD; placing a block
+              decrements its counter; placing with a zero counter is refused.
+
+              3. Persistence: world edits and inventory counters persist via
+              localStorage and restore on load.
+
+              Non-goals: no new dependencies, no gameplay systems beyond the two
+              enhancements, no multiplayer/sound. Acceptance is
+              whitebox-verifiable in the browser (crack stages visible, HUD
+              decrements, zero-count placement refused, persistence across
+              reload).
+          status: succeeded
         protocolVersion: 1
-        receipts: []
+        receipts:
+          - hash: 29af9e321d9da6a97414e6566702ef67ef7010567705cff0eebd86640c1fca20
+            outcomeId: skill-1bb86e6cb35a7a39f6462f216af21cff016b01b396a97d3e6a298345f950af70
         reconciliations: []
         ref: grill-me-full-design-handoff
         requiredCapabilities:
           - skill-host
         retry: manual
         runId: minicraft-html-game-r18
-        status: pending
+        status: succeeded
         stepId: full.design.handoff
+        type: invoke_skill
+      - attempt: 1
+        claim:
+          executorId: sdd-managed-skill-host
+          sessionId: 4da29787-2439-4b93-a7b0-5377d2ccb05a
+          token: portable-b0553268827ab7790c6acd50bc0e55a2d98be03a8ab63c299d1e3e56a233f5fc
+        executionOrigin:
+          workflow:
+            hash: 97ace79f8e79aa165aafe4ceee9d8a0a995f69599cbe79b853f1641f47a333c9
+            id: comet-classic-full
+            version: "1"
+        id: minicraft-html-game-r18:10
+        input:
+          input:
+            change: minicraft-html-game-r18
+            changeDir: openspec/changes/minicraft-html-game-r18
+          outputs: {}
+        inputHash: 9594ca305845cb85958838c194047a22a5b85fb45d3c31d0d680e2a8992bbb16
+        outcome:
+          actionId: minicraft-html-game-r18:10
+          attempt: 1
+          claimToken: portable-b0553268827ab7790c6acd50bc0e55a2d98be03a8ab63c299d1e3e56a233f5fc
+          inputHash: 9594ca305845cb85958838c194047a22a5b85fb45d3c31d0d680e2a8992bbb16
+          outcomeId: skill-6b06a2adbc3f6cc555192a7a296a908ccc540b95fe9cb42273a5fdf52a60764b
+          output:
+            designDoc: openspec/changes/minicraft-html-game-r18/design.md
+          status: succeeded
+        protocolVersion: 1
+        receipts:
+          - hash: 25bfb1a673dca75586c38a7d7e784a9ce195fd458dfe8ec299a1281b32340d59
+            outcomeId: skill-6b06a2adbc3f6cc555192a7a296a908ccc540b95fe9cb42273a5fdf52a60764b
+        reconciliations: []
+        ref: grill-me-full-design-document
+        requiredCapabilities:
+          - skill-host
+        retry: manual
+        runId: minicraft-html-game-r18
+        status: succeeded
+        stepId: full.design.document
         type: invoke_skill
     actionContexts:
       minicraft-html-game-r18:1:
         results: {}
         sequence: 1
+      minicraft-html-game-r18:10:
+        results: {}
+        sequence: 10
       minicraft-html-game-r18:3:
         results: {}
         sequence: 3
@@ -1980,6 +2063,49 @@ run_checkpoint:
           id: human-delegate-requirements-approval-minicraft-html-game-r18
           choice: approved
           proposalHash: b17a0e1b895f1e56abdeaa8dcf96502510d6a1bcdee516428c313f3195bfbbbe
+      - id: minicraft-html-game-r18:9
+        stepId: full.design.confirm
+        sequence: 9
+        status: resolved
+        proposal:
+          input:
+            change: minicraft-html-game-r18
+            changeDir: openspec/changes/minicraft-html-game-r18
+          outputs:
+            full.design.handoff:
+              handoffContext: openspec/changes/minicraft-html-game-r18/.comet/handoff/design-context.json
+              handoffHash: e4ce63393498a0e8a02dff90c500b6959ec5413558c2e118f3a05d29fe736f51
+              proposal: >-
+                Design proposal for minicraft-html-game-r18 (bounded enhancement
+                of demos/minicraft/index.html, zero-dependency single-file
+                game):
+
+                1. Hard-block breakage: stone/wood blocks require 3 hits; a
+                crack overlay shows per-block break progress (stages at 1 and 2
+                hits); soft blocks (grass) break in 1 hit as today.
+
+                2. Inventory HUD: per-block-type counters of
+                mined-but-not-placed blocks, rendered as part of the existing
+                HUD; placing a block decrements its counter; placing with a zero
+                counter is refused.
+
+                3. Persistence: world edits and inventory counters persist via
+                localStorage and restore on load.
+
+                Non-goals: no new dependencies, no gameplay systems beyond the
+                two enhancements, no multiplayer/sound. Acceptance is
+                whitebox-verifiable in the browser (crack stages visible, HUD
+                decrements, zero-count placement refused, persistence across
+                reload).
+        proposalHash: c1da2ec906dd190a9683a7647b1c262e64d49a2186c13ddebc4ad8a079db384f
+        choices:
+          - approved
+          - rejected
+        results: {}
+        decision:
+          id: human-delegate-design-proposal-r18
+          choice: approved
+          proposalHash: c1da2ec906dd190a9683a7647b1c262e64d49a2186c13ddebc4ad8a079db384f
     evidenceWaits:
       - id: minicraft-html-game-r18:4
         stepId: full.open.evidence
@@ -1991,13 +2117,19 @@ run_checkpoint:
           ref: openspec/changes/minicraft-html-game-r18
           contentHash: 3421b87699a51db8f8f6aea904d8b8f9f89666f7d97a9c6cf6094bfb3c425903
           submissionId: minicraft-html-game-r18:classic-open-artifacts:epoch-0:10fdeab5a9dc6f43
+      - id: minicraft-html-game-r18:11
+        stepId: full.design.evidence
+        sequence: 11
+        kind: classic-design-document
+        status: pending
+        results: {}
     ready: []
     joins: {}
     outputs: {}
     children: []
     lineage: []
-  sourceRevision: 16
-  sourceHash: 623c39996eab5d090e44a9150440a8366560bdfe5b85a729608b6ccb12e9843d
+  sourceRevision: 21
+  sourceHash: 425fe2e6ee205396beb668f13e1034858be9001d4231a1af2fb4351168a060ba
   pool:
     version: 3
     values:
@@ -3677,6 +3809,58 @@ run_checkpoint:
                   "825": 130
         sourceHash: c80b719a2e78d489fa650cb52c967856555fd4692df2e3e7e63a68a60e91c463
         verdict: pass
+      - choice: approved
+        proposal:
+          input:
+            change: minicraft-html-game-r18
+            changeDir: openspec/changes/minicraft-html-game-r18
+          outputs:
+            full.design.handoff:
+              handoffContext: openspec/changes/minicraft-html-game-r18/.comet/handoff/design-context.json
+              handoffHash: e4ce63393498a0e8a02dff90c500b6959ec5413558c2e118f3a05d29fe736f51
+              proposal: >-
+                Design proposal for minicraft-html-game-r18 (bounded enhancement
+                of demos/minicraft/index.html, zero-dependency single-file
+                game):
+
+                1. Hard-block breakage: stone/wood blocks require 3 hits; a
+                crack overlay shows per-block break progress (stages at 1 and 2
+                hits); soft blocks (grass) break in 1 hit as today.
+
+                2. Inventory HUD: per-block-type counters of
+                mined-but-not-placed blocks, rendered as part of the existing
+                HUD; placing a block decrements its counter; placing with a zero
+                counter is refused.
+
+                3. Persistence: world edits and inventory counters persist via
+                localStorage and restore on load.
+
+                Non-goals: no new dependencies, no gameplay systems beyond the
+                two enhancements, no multiplayer/sound. Acceptance is
+                whitebox-verifiable in the browser (crack stages visible, HUD
+                decrements, zero-count placement refused, persistence across
+                reload).
+      - handoffContext: openspec/changes/minicraft-html-game-r18/.comet/handoff/design-context.json
+        handoffHash: e4ce63393498a0e8a02dff90c500b6959ec5413558c2e118f3a05d29fe736f51
+        proposal: >-
+          Design proposal for minicraft-html-game-r18 (bounded enhancement of
+          demos/minicraft/index.html, zero-dependency single-file game):
+
+          1. Hard-block breakage: stone/wood blocks require 3 hits; a crack
+          overlay shows per-block break progress (stages at 1 and 2 hits); soft
+          blocks (grass) break in 1 hit as today.
+
+          2. Inventory HUD: per-block-type counters of mined-but-not-placed
+          blocks, rendered as part of the existing HUD; placing a block
+          decrements its counter; placing with a zero counter is refused.
+
+          3. Persistence: world edits and inventory counters persist via
+          localStorage and restore on load.
+
+          Non-goals: no new dependencies, no gameplay systems beyond the two
+          enhancements, no multiplayer/sound. Acceptance is whitebox-verifiable
+          in the browser (crack stages visible, HUD decrements, zero-count
+          placement refused, persistence across reload).
       - sequence: 2
         value:
           choice: approved
@@ -3814,31 +3998,6 @@ run_checkpoint:
                 - .sdd/delivery/gates
               skillId: openspec-lifecycle-guard
               stepId: classic.extension.knowledge-project-closeout
-      - sequence: 3
-        value:
-          event: open-complete
-          performedBy: human-delegate-session
-      - sequence: 5
-        value:
-          choice: approved
-          proposal:
-            input:
-              change: minicraft-html-game-r18
-              changeDir: openspec/changes/minicraft-html-game-r18
-            outputs:
-              full.open:
-                event: open-complete
-                performedBy: human-delegate-session
-              full.open.evidence:
-                contentHash: 3421b87699a51db8f8f6aea904d8b8f9f89666f7d97a9c6cf6094bfb3c425903
-                ref: openspec/changes/minicraft-html-game-r18
-      - sequence: 4
-        value:
-          contentHash: 3421b87699a51db8f8f6aea904d8b8f9f89666f7d97a9c6cf6094bfb3c425903
-          ref: openspec/changes/minicraft-html-game-r18
-      - sequence: 6
-        value:
-          contentHash: 3421b87699a51db8f8f6aea904d8b8f9f89666f7d97a9c6cf6094bfb3c425903
       - sequence: 7
         value:
           artifactHashes:
@@ -5368,6 +5527,91 @@ run_checkpoint:
                     "825": 130
           sourceHash: c80b719a2e78d489fa650cb52c967856555fd4692df2e3e7e63a68a60e91c463
           verdict: pass
+      - sequence: 9
+        value:
+          choice: approved
+          proposal:
+            input:
+              change: minicraft-html-game-r18
+              changeDir: openspec/changes/minicraft-html-game-r18
+            outputs:
+              full.design.handoff:
+                handoffContext: openspec/changes/minicraft-html-game-r18/.comet/handoff/design-context.json
+                handoffHash: e4ce63393498a0e8a02dff90c500b6959ec5413558c2e118f3a05d29fe736f51
+                proposal: >-
+                  Design proposal for minicraft-html-game-r18 (bounded
+                  enhancement of demos/minicraft/index.html, zero-dependency
+                  single-file game):
+
+                  1. Hard-block breakage: stone/wood blocks require 3 hits; a
+                  crack overlay shows per-block break progress (stages at 1 and
+                  2 hits); soft blocks (grass) break in 1 hit as today.
+
+                  2. Inventory HUD: per-block-type counters of
+                  mined-but-not-placed blocks, rendered as part of the existing
+                  HUD; placing a block decrements its counter; placing with a
+                  zero counter is refused.
+
+                  3. Persistence: world edits and inventory counters persist via
+                  localStorage and restore on load.
+
+                  Non-goals: no new dependencies, no gameplay systems beyond the
+                  two enhancements, no multiplayer/sound. Acceptance is
+                  whitebox-verifiable in the browser (crack stages visible, HUD
+                  decrements, zero-count placement refused, persistence across
+                  reload).
+      - sequence: 8
+        value:
+          handoffContext: openspec/changes/minicraft-html-game-r18/.comet/handoff/design-context.json
+          handoffHash: e4ce63393498a0e8a02dff90c500b6959ec5413558c2e118f3a05d29fe736f51
+          proposal: >-
+            Design proposal for minicraft-html-game-r18 (bounded enhancement of
+            demos/minicraft/index.html, zero-dependency single-file game):
+
+            1. Hard-block breakage: stone/wood blocks require 3 hits; a crack
+            overlay shows per-block break progress (stages at 1 and 2 hits);
+            soft blocks (grass) break in 1 hit as today.
+
+            2. Inventory HUD: per-block-type counters of mined-but-not-placed
+            blocks, rendered as part of the existing HUD; placing a block
+            decrements its counter; placing with a zero counter is refused.
+
+            3. Persistence: world edits and inventory counters persist via
+            localStorage and restore on load.
+
+            Non-goals: no new dependencies, no gameplay systems beyond the two
+            enhancements, no multiplayer/sound. Acceptance is
+            whitebox-verifiable in the browser (crack stages visible, HUD
+            decrements, zero-count placement refused, persistence across
+            reload).
+      - sequence: 3
+        value:
+          event: open-complete
+          performedBy: human-delegate-session
+      - sequence: 5
+        value:
+          choice: approved
+          proposal:
+            input:
+              change: minicraft-html-game-r18
+              changeDir: openspec/changes/minicraft-html-game-r18
+            outputs:
+              full.open:
+                event: open-complete
+                performedBy: human-delegate-session
+              full.open.evidence:
+                contentHash: 3421b87699a51db8f8f6aea904d8b8f9f89666f7d97a9c6cf6094bfb3c425903
+                ref: openspec/changes/minicraft-html-game-r18
+      - sequence: 4
+        value:
+          contentHash: 3421b87699a51db8f8f6aea904d8b8f9f89666f7d97a9c6cf6094bfb3c425903
+          ref: openspec/changes/minicraft-html-game-r18
+      - sequence: 6
+        value:
+          contentHash: 3421b87699a51db8f8f6aea904d8b8f9f89666f7d97a9c6cf6094bfb3c425903
+      - sequence: 10
+        value:
+          designDoc: openspec/changes/minicraft-html-game-r18/design.md
     nodes:
       - key: classic.composition.prepare
         value: 1
@@ -5444,115 +5688,265 @@ run_checkpoint:
         left: 13
         right: 9
         height: 4
-      - key: classic.composition.prepare
-        value: 8
+      - key: classic.extension.requirements-open
+        value: 6
         left: null
         right: null
         height: 1
-      - key: classic.composition.confirm
-        value: 7
-        left: null
+      - key: classic.composition.prepare
+        value: 1
+        left: 2
         right: 15
         height: 2
-      - key: classic.composition.confirm
-        value: 7
+      - key: full.design.handoff
+        value: 8
         left: null
         right: null
         height: 1
       - key: full.open
+        value: 2
+        left: 17
+        right: null
+        height: 2
+      - key: full.design.confirm
+        value: 7
+        left: 16
+        right: 18
+        height: 3
+      - key: full.open.confirm
+        value: 3
+        left: 19
+        right: 9
+        height: 4
+      - key: classic.composition.confirm
         value: 9
         left: null
         right: null
         height: 1
-      - key: full.open.evidence
-        value: 11
-        left: null
-        right: null
-        height: 1
-      - key: full.open.confirm
-        value: 10
-        left: 18
-        right: 19
-        height: 2
-      - key: classic.composition.prepare
-        value: 8
-        left: 17
-        right: 20
-        height: 3
-      - key: classic.composition.prepare
-        value: 8
-        left: 17
-        right: 18
-        height: 2
-      - key: full.open.revalidate
-        value: 12
-        left: null
-        right: null
-        height: 1
-      - key: full.open.evidence
-        value: 11
-        left: null
-        right: 23
-        height: 2
-      - key: full.open.confirm
-        value: 10
-        left: 22
-        right: 24
-        height: 3
       - key: classic.extension.requirements-open
+        value: 11
+        left: null
+        right: null
+        height: 1
+      - key: classic.composition.prepare
+        value: 10
+        left: 21
+        right: 22
+        height: 2
+      - key: full.design.handoff
         value: 13
         left: null
         right: null
         height: 1
-      - key: full.open
-        value: 9
-        left: 26
-        right: null
-        height: 2
-      - key: classic.composition.prepare
-        value: 8
-        left: 17
-        right: 27
-        height: 3
       - key: full.open.confirm
-        value: 10
-        left: 28
-        right: 24
-        height: 4
-      - key: classic.composition.prepare
-        value: 8
+        value: 15
         left: null
         right: null
         height: 1
-      - key: classic.composition.confirm
-        value: 7
+      - key: full.open.revalidate
+        value: 17
         left: null
         right: null
         height: 1
       - key: full.open.evidence
+        value: 16
+        left: 25
+        right: 26
+        height: 2
+      - key: full.open
+        value: 14
+        left: 24
+        right: 27
+        height: 3
+      - key: full.design.confirm
+        value: 12
+        left: 23
+        right: 28
+        height: 4
+      - key: classic.composition.prepare
+        value: 10
+        left: null
+        right: null
+        height: 1
+      - key: classic.composition.confirm
+        value: 9
+        left: null
+        right: 30
+        height: 2
+      - key: classic.composition.confirm
+        value: 9
+        left: null
+        right: null
+        height: 1
+      - key: full.open
+        value: 14
+        left: null
+        right: null
+        height: 1
+      - key: full.open.evidence
+        value: 16
+        left: null
+        right: null
+        height: 1
+      - key: full.open.confirm
+        value: 15
+        left: 33
+        right: 34
+        height: 2
+      - key: classic.composition.prepare
+        value: 10
+        left: 32
+        right: 35
+        height: 3
+      - key: classic.composition.prepare
+        value: 10
+        left: 32
+        right: 33
+        height: 2
+      - key: full.open.revalidate
+        value: 17
+        left: null
+        right: null
+        height: 1
+      - key: full.open.evidence
+        value: 16
+        left: null
+        right: 38
+        height: 2
+      - key: full.open.confirm
+        value: 15
+        left: 37
+        right: 39
+        height: 3
+      - key: classic.extension.requirements-open
         value: 11
         left: null
         right: null
         height: 1
       - key: full.open
-        value: 9
-        left: null
-        right: 32
+        value: 14
+        left: 41
+        right: null
         height: 2
       - key: classic.composition.prepare
-        value: 8
-        left: 31
-        right: 33
+        value: 10
+        left: 32
+        right: 42
         height: 3
-      - key: full.open
-        value: 9
+      - key: full.open.confirm
+        value: 15
+        left: 43
+        right: 39
+        height: 4
+      - key: classic.extension.requirements-open
+        value: 11
         left: null
         right: null
         height: 1
       - key: classic.composition.prepare
-        value: 8
-        left: 31
-        right: 35
+        value: 10
+        left: 32
+        right: 45
+        height: 2
+      - key: full.design.document
+        value: 18
+        left: null
+        right: null
+        height: 1
+      - key: full.open
+        value: 14
+        left: null
+        right: null
+        height: 1
+      - key: full.design.handoff
+        value: 13
+        left: 47
+        right: 48
+        height: 2
+      - key: full.design.confirm
+        value: 12
+        left: 46
+        right: 49
+        height: 3
+      - key: full.open.confirm
+        value: 15
+        left: 50
+        right: 39
+        height: 4
+      - key: classic.composition.prepare
+        value: 10
+        left: null
+        right: null
+        height: 1
+      - key: classic.composition.confirm
+        value: 9
+        left: null
+        right: null
+        height: 1
+      - key: full.open.evidence
+        value: 16
+        left: null
+        right: null
+        height: 1
+      - key: full.open
+        value: 14
+        left: null
+        right: 54
+        height: 2
+      - key: classic.composition.prepare
+        value: 10
+        left: 53
+        right: 55
+        height: 3
+      - key: classic.composition.prepare
+        value: 10
+        left: 53
+        right: null
+        height: 2
+      - key: full.design.handoff
+        value: 13
+        left: null
+        right: null
+        height: 1
+      - key: full.open.confirm
+        value: 15
+        left: null
+        right: null
+        height: 1
+      - key: full.open.revalidate
+        value: 17
+        left: null
+        right: null
+        height: 1
+      - key: full.open.evidence
+        value: 16
+        left: 59
+        right: 60
+        height: 2
+      - key: full.open
+        value: 14
+        left: 58
+        right: 61
+        height: 3
+      - key: classic.extension.requirements-open
+        value: 11
+        left: 57
+        right: 62
+        height: 4
+      - key: classic.composition.confirm
+        value: 9
+        left: null
+        right: null
+        height: 1
+      - key: full.open
+        value: 14
+        left: null
+        right: null
+        height: 1
+      - key: classic.composition.prepare
+        value: 10
+        left: 64
+        right: 65
         height: 2
     maps:
       - null
@@ -5560,13 +5954,17 @@ run_checkpoint:
       - 6
       - 10
       - 14
-      - 16
-      - 21
-      - 25
+      - 20
       - 29
-      - 30
-      - 34
+      - 31
       - 36
+      - 40
+      - 44
+      - 51
+      - 52
+      - 56
+      - 63
+      - 66
     bindings:
       - path:
           - actions
@@ -5599,49 +5997,70 @@ run_checkpoint:
           - outputs
         map: 4
       - path:
+          - actions
+          - "5"
+          - input
+          - outputs
+        map: 5
+      - path:
           - actionContexts
           - minicraft-html-game-r18:1
           - results
         map: 0
       - path:
           - actionContexts
-          - minicraft-html-game-r18:3
-          - results
-        map: 5
-      - path:
-          - actionContexts
-          - minicraft-html-game-r18:6
+          - minicraft-html-game-r18:10
           - results
         map: 6
       - path:
           - actionContexts
-          - minicraft-html-game-r18:7
+          - minicraft-html-game-r18:3
           - results
         map: 7
       - path:
           - actionContexts
-          - minicraft-html-game-r18:8
+          - minicraft-html-game-r18:6
           - results
         map: 8
       - path:
+          - actionContexts
+          - minicraft-html-game-r18:7
+          - results
+        map: 9
+      - path:
+          - actionContexts
+          - minicraft-html-game-r18:8
+          - results
+        map: 10
+      - path:
           - outputs
-        map: 8
+        map: 11
       - path:
           - waits
           - "0"
           - results
-        map: 9
+        map: 12
       - path:
           - waits
           - "1"
           - results
-        map: 10
+        map: 13
+      - path:
+          - waits
+          - "2"
+          - results
+        map: 14
       - path:
           - evidenceWaits
           - "0"
           - results
+        map: 15
+      - path:
+          - evidenceWaits
+          - "1"
+          - results
         map: 11
-  storageHash: 2fc31f9d28b4d3e600b5a9d2b580424c344d5e64d68b1cce5de53e8f76a9ad78
+  storageHash: 578aadf29dda50806bef043ba0ea94eea55ff3f53ff8fc632b7e0de1b37ce392
 application_checkpoint:
   id: sdd-managed-delivery
   version: "22"
@@ -5650,3 +6069,4 @@ application_checkpoint:
   projectRoot: /Users/mac/Code/claude_tmp/r-verify-wt
   packageRoot: /Users/mac/Code/claude_tmp/r-verify-wt/.comet/applications/sdd-managed-delivery/versions/8dbd23b22a6efbec3d8029f1631e72b92af24d3f08747af6ca53083b4c987872
   contentHash: c689ecb94fe16ebae44b3c7ae62c1c9e04691299e4500bf91400d9c81490cd76
+change_id: 3d50eed2-7738-4bae-a8a5-31ad8e88dfc0

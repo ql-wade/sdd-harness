@@ -327,3 +327,42 @@ test('admission context ignores session-less executor claims and merges the mana
     assert.deepEqual(refused.authoringPrincipals, []);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('per-gate authority record entries select by the submitted collection actionDigest', async () => {
+  const { createProtectedHostPorts } = await import('../lib/adapters/comet-host-ports.js');
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'host-ports-entries-'));
+  try {
+    const ctx = { ...context, projectRoot: root };
+    const input = { gate: 'R', note: 'frozen claim input' };
+    const action = { id: 'run:r7', stepId: 'classic.extension.requirements-open', status: 'running', attempt: 1,
+      input, inputHash: envelopeDigest(input),
+      claim: { executorId: 'sdd-managed-skill-host', sessionId: UUID, token: 'claim-token-bytes' } };
+    const run = { runId: 'synthetic-run', revision: 7, status: 'running', input: { changeDir: 'changes/x' }, actions: [action] };
+    const request = { run, action, gate: 'R', inputs: { inputDigest: sha('candidate') }, policy: { ref: 'policy', digest: sha('policy') } };
+    fs.mkdirSync(path.join(root, 'changes/x/.comet'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'changes/x/.comet', 'delivery-authority.json'), JSON.stringify({
+      schema: 'sdd.delivery.authority.v2', runId: 'synthetic-run', environment: 'comet-classic-managed',
+      entries: [
+        { gate: 'R', secret: 'r'.repeat(40), actionBinding: { schemaVersion: 1, gate: 'R' }, sourceQualification: { scope: 'protected-source' },
+          authoringExecutions: ['author-1'], authoringPrincipals: ['author-1'], actionDigest: 'a'.repeat(64) },
+        { gate: 'A', secret: 'a'.repeat(40), actionBinding: { schemaVersion: 1, gate: 'A' }, sourceQualification: { scope: 'protected-source' },
+          authoringExecutions: ['author-1'], authoringPrincipals: ['author-1'], actionDigest: 'b'.repeat(64) },
+      ],
+    }));
+    const ports = createProtectedHostPorts({ context: ctx });
+    assert.equal(ports.verifyGateInputs(request), true);
+    // Submitted receipt whose collection carries the R entry's actionDigest
+    const rReceipt = { sourcePacket: { collection: { actionDigest: 'a'.repeat(64) } } };
+    const rContext = ports.admissionOptionsFor(rReceipt);
+    assert.equal(typeof rContext.authority, 'object');
+    assert.deepEqual(rContext.authoringExecutions, ['author-1']);
+    assert.equal(rContext.environment, 'comet-classic-managed');
+    // A receipt with an unknown actionDigest must fail closed (no record)
+    const xReceipt = { sourcePacket: { collection: { actionDigest: 'c'.repeat(64) } } };
+    const refused = ports.admissionOptionsFor(xReceipt);
+    assert.equal(refused.authority, undefined);
+    assert.deepEqual(refused.authoringExecutions, []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
