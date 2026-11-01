@@ -58,12 +58,16 @@ comet application install integrations/comet/application/package/application.jso
   --project "$PWD" --platform codex --preview --json
 comet application install ... --platform codex --confirmation-hash <哈希> --json
 
-# 3) 创建变更目录（名字即 runId）
-mkdir -p openspec/changes/<my-first-change>
-# 写 proposal.md（Why/What Changes/非目标/验收）、design.md、tasks.md
+# 3) 一行命令创建变更并初始化工作流（native 通道）
+comet state init <my-first-change> full
+
+# 之后随时查看状态与下一步
+comet status
+comet state next <my-first-change>
+
 ```
 
-然后进入第 5 节的交付旅程。首个变更建议选**小而可白盒验证**的增量（参考已归档的 minicraft r34）。
+> 变更目录与工作流状态由 comet 创建；proposal/design 内容在 Open/Design 阶段由代理撰写、由你确认（propose-design / decide-design 命令或经驱动会话审批）。若走 SDK 组合应用（六门收据束），可用 `comet state init <name> full --runtime sdk` 绑定 SDK 运行时（本指南 §5 的验证旅程即此通道，用 runtime dispatch 驱动）。首个变更建议选**小而可白盒验证**的增量（参考已归档的 minicraft r34）。
 
 ## 4. 存量项目接入
 
