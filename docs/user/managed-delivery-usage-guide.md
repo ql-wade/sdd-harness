@@ -69,6 +69,20 @@ comet state next <my-first-change>
 
 > 变更目录与工作流状态由 comet 创建；proposal/design 内容在 Open/Design 阶段由代理撰写、由你确认（propose-design / decide-design 命令或经驱动会话审批）。若走 SDK 组合应用（六门收据束），可用 `comet state init <name> full --runtime sdk` 绑定 SDK 运行时（本指南 §5 的验证旅程即此通道，用 runtime dispatch 驱动）。首个变更建议选**小而可白盒验证**的增量（参考已归档的 minicraft r34）。
 
+## 3.1 后续新变更（两类项目通用，同样一行命令）
+
+每个新变更 = 同一条命令 + 新名字；旧变更 `comet archive <旧名>` 归档后名字即可复用：
+
+```bash
+comet state init <新change名> full                 # 完整六门旅程（本指南 §5）
+comet state init <新名> hotfix                     # 快速修复（精简门流程）
+comet state init <新名> tweak                      # 轻量调整（精简门流程）
+comet state init <新名> full --isolation worktree  # 并行开发隔离（branch/worktree/current）
+comet state init <新名> full --json                # 脚本化输出
+```
+
+注意：`comet change` 子命令**不存在**（已验证，会打印通用帮助）；创建后的推进/审批/归档命令面见 §5 各阶段与 `comet state --help`。
+
 ## 4. 存量项目接入
 
 差异只有三点，其余与新项目相同：
