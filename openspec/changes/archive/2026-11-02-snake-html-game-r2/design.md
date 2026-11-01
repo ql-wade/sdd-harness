@@ -2,6 +2,8 @@
 comet_change: snake-html-game-r2
 role: technical-design
 canonical_spec: openspec
+archived-with: 2026-11-02-snake-html-game-r2
+status: final
 ---
 
 # Design — snake-html-game-r2
