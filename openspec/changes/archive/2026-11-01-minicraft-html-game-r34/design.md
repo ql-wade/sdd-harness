@@ -2,7 +2,7 @@
 comet_change: minicraft-html-game-r34
 role: technical-design
 canonical_spec: openspec
-archived-with: 2026-10-31-minicraft-html-game-r34
+archived-with: 2026-11-01-minicraft-html-game-r34
 status: final
 ---
 
