@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8"><title>llmwiki 知识库 — minicraft-html-game-r34 closeout（文件通道证据）</title>
+<style>body{font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:900px;margin:32px auto;padding:0 24px;color:#e8e6e3;background:#1c1f24;line-height:1.6}
+.banner{background:#2d4a22;border:1px solid #5aa331;border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:15px}
+.banner b{color:#8fd06a} pre{white-space:pre-wrap;background:#101216;border:1px solid #3a3f47;border-radius:8px;padding:20px;font-size:13.5px}
+.meta{color:#b9b6b0;font-size:13px;margin-bottom:16px} h1{font-size:24px} h2{border-bottom:1px solid #3a3f47;padding-bottom:6px;margin-top:32px}</style></head><body>
+<div class="banner"><b>Kt 交付证据 — 文件通道（llmwiki 知识库）</b><br>
+本页渲染 llmwiki 知识库工作区 <b>/Users/mac/.sdd/wiki/sdd-harness</b> 中的实际文件
+<b>wiki/concepts/minicraft-html-game-r34.md</b>（已通过 `llmwiki reindex` 纳入索引，Indexed 3 files；独立读回 sha256 <b>d60b86661a5b9f67</b>）。
+文件通道为用户认可的受管旁路（llmwiki MCP 通道缺陷已另行记录）。</div>
+<div class="meta">文件 frontmatter：</div><pre>title: minicraft-html-game-r34 closeout
+tags: [sdd, delivery, minicraft]
+date: 2026-11-01
+source: sdd-managed-delivery run minicraft-html-game-r34 (classic-full, v27)</pre>
+<div class="meta">文件正文（逐字渲染）：</div>
+
+<pre style="font-size:14px">
+# Closeout — minicraft-html-game-r34
+
+Candidate: demos/minicraft/index.html (334 lines) + tests/minicraft.logic.test.mjs (451 lines).
+Contract: 4/4 cases required, all automated, all verified.
+
+## Gate results on this run (v27 application package)
+
+- R requirements-open: pass (r31 requirement sessions reused; proposal bytes identical).
+- A architecture-consensus: pass (fresh grill worker + independent reviewer binding design 5448fd2567687098).
+- T test-design-review: pass (fresh author + independent reviewer binding contract 2f6ebe6a415cac8b).
+- P build-plan-unique: pass (fresh mapping worker + independent reviewer binding plan 1619010b281c4943).
+- build.execute + build.check (epoch 2, contentHash 558c922f…) + verify.run with the report at
+  docs/superpowers/reports/minicraft-html-game-r34-verification.md (frozen at 65f3a5c1ecc3e0bd)
+  + verify.check (epoch 3) recorded with exit 0.
+- V verify-whitebox: pass (four per-case receipts: real contract-command executions +
+  independent acceptance). Disclosed non-blocking defect: the frozen report&#x27;s Evidence column
+  references 01-place-refuse-zero.png and 02-reload-persisted.png while the r34 evidence dir
+  holds only 01-reload-persisted.png — an inherited naming defect (the report is content-frozen
+  at its recorded digest and cannot be edited). One earlier worker session honestly judged this
+  defect blocking (its statement binds its own failure summary, not the report digest); the
+  accepting sessions disclose it. The underlying browser evidence files are intact and the
+  r31/r32/r33 journeys hold the same-state visuals.
+
+## Verification summary
+
+Browser journey (real pointer events, localStorage + canvas pixel readbacks):
+3-hit stone with stage-differentiated cracks (35 px → 38 px), 1-hit grass, place consumes +
+restores, refuse-at-zero byte-identical, reload persists world + inventory, HUD counts +
+palette greying, v1→v2 migration with zeroed stock and upgrade-on-write. Machine: 4/4 pass,
+0 fail, 0 skipped. The candidate files are byte-identical since r28; the per-run journeys
+re-execute the same procedure on the same bytes.
+
+## Reusable knowledge for the project ledger
+
+1. classic-full `full.verify.run` must report the verification report path as
+   docs/superpowers/reports/&lt;change&gt;-verification.md (direct child); the validator refuses
+   anything else and there is no in-run repair after the transition freezes state.
+2. Run input `checkCommands` must declare BOTH `build` and `verify` scopes at start.
+3. Synthetic browser events: Chrome constructor PointerEvents carry offsetX === clientX;
+   define offsetX/offsetY explicitly when driving canvas handlers that read them.
+4. Gate drivers must pass the builder host principal
+   (4da29787-2439-4b93-a7b0-5377d2ccb05a) as the authoring identity, never the verifier
+   transcript id (admission IDENTITY_CONFLICT otherwise).
+5. Change-id rollovers are rename-only clones; the guard-enforced fields are design.md
+   `comet_change`, the plan&#x27;s `comet-task-authority` path and the contract `change` field.
+   Proposal bytes may stay identical, keeping earlier requirement-session transcripts valid
+   for the R gate.
+6. record-outcome retries MUST use a fresh outcomeId: a stored rejection is replayed
+   verbatim (no re-evaluation, no file reads) when the outcomeId matches, masking any
+   post-rejection fixes.
+7. The verification report file is content-frozen at its recorded digest; write it right
+   the first time (including evidence references) — post-pass edits break all subsequent
+   run operations.
+8. The archive executor moves the change dir (and the published authority record with it)
+   BEFORE the post-move sweep; the admission record lookup needs the archived-location
+   fallback (lib/adapters/comet-host-ports.js archive-phase fallback, v27+).
+</pre>
+</body></html>
