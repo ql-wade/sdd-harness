@@ -1,4 +1,4 @@
-# Tasks — snake-html-game-r1
+# Tasks — snake-html-game-r2
 
 - [ ] T1 核心循环与碰撞 <!-- comet-task:T1 -->
 - [ ] T2 食物、计分与 HUD <!-- comet-task:T2 -->

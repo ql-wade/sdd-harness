@@ -1,4 +1,4 @@
-# snake-html-game-r1
+# snake-html-game-r2
 
 ## Why
 
@@ -12,8 +12,8 @@ r31–r34 的 minicraft 交付复用同一实现，无法证明流程对"从零�
   - 定时步进；食物随机出现在空闲格；吃到 +10 分并增长一节。
   - 撞墙或撞自身 → 游戏结束覆盖层；R 键或按钮重开。
   - 右上分数 HUD；localStorage 持久化最高分（key `snake-high-score-v1`）。
-- 新增 `tests/snake.logic.test.mjs`：node:vm 沙箱 + DOM/canvas/localStorage stub
-  + `__test` 钩子，四条契约测试（与 minicraft 同一测试策略）。
+- 新增 `tests/snake-html-game-r2.logic.test.mjs`：node:vm 沙箱 + DOM/canvas/localStorage stub
+  + `__test` 钩子，五条契约测试（与 minicraft 同一测试策略）。
 
 ## 非目标
 
@@ -22,7 +22,7 @@ r31–r34 的 minicraft 交付复用同一实现，无法证明流程对"从零�
 
 ## 验收
 
-- AC-1 移动与撞墙：方向键改变方向；蛇头触墙 → 游戏结束，蛇不再越界。
+- AC-1 移动与撞墙：方向键改变方向（180° 掉头被忽略）；蛇头触墙 → 游戏结束，蛇不再越界。
 - AC-2 自撞：蛇头进入自身身体格 → 游戏结束。
 - AC-3 食物与计分：吃到食物长度 +1、分数 +10；HUD 同步。
 - AC-4 结束与重开：游戏结束覆盖层出现；重开后棋盘/分数归零，最高分从 localStorage 恢复。

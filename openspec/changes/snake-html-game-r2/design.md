@@ -1,10 +1,10 @@
 ---
-comet_change: snake-html-game-r1
+comet_change: snake-html-game-r2
 role: technical-design
 canonical_spec: openspec
 ---
 
-# Design — snake-html-game-r1
+# Design — snake-html-game-r2
 
 单文件约束保持：所有逻辑在 `demos/snake/index.html` 的 IIFE 内。
 

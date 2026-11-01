@@ -35,7 +35,7 @@ insp() {
   node "$SDK" inspect "${BASE[@]}" > "$JDIR/view.json" 2> "$JDIR/err.txt" && return 0
   if grep -qiE 'recovery|REVISION_CONFLICT|requires recovery|Run 已变化' "$JDIR/view.json" "$JDIR/err.txt"; then
     printf '{"operation":"next","runId":"%s"}' "$CHANGE" > "$JDIR/next.json"
-    comet runtime dispatch --application sdd-managed-delivery --project-root "$ROOT" --request "$JDIR/next.json" --json > /dev/null 2>&1 || true
+    comet runtime dispatch --application-file "$APP" --project-root "$ROOT" --request "$JDIR/next.json" --json > /dev/null 2>&1 || true
     node "$SDK" inspect "${BASE[@]}" > "$JDIR/view.json" 2> "$JDIR/err.txt" && return 0
   fi
   echo "❌ inspect 失败："; head -c 400 "$JDIR/view.json" "$JDIR/err.txt" 2>/dev/null; echo; return 1
@@ -53,7 +53,7 @@ claim() {
 record() {
   local rc="$JDIR/last-claim-receipt.json"
   [ -f "$rc" ] || rc="$JDIR/step.json"
-  step record-outcome --project-root "$ROOT" --receipt "$(jq -r '.receipts.actions[0]' "$rc")" --result-file "$2";
+  step record-outcome --project-root "$ROOT" --receipt "$(jq -r '.receipts.actions[0]' "$rc")" --result-file "$1";
 }
 HUMAN_MODE="${HUMAN_AUTO:-interactive}"
 human() {
@@ -71,7 +71,7 @@ const argv1 = process.argv[1];
 const input = { change: argv1, changeDir: 'openspec/changes/' + argv1,
   checkCommands: { build: { argv: ['node', '--test', '--test-reporter=tap', 'tests/' + argv1 + '.logic.test.mjs'], cwd: '.', reusable: false },
                    verify: { argv: ['node', '--test', '--test-reporter=tap', 'tests/' + argv1 + '.logic.test.mjs'], cwd: '.', reusable: false } } };
-const state = { workflow:'full', language:'en', phase:'open', contextCompression:'off', buildMode:null, buildPause:null, subagentDispatch:null, tddMode:null, reviewMode:'standard', isolation:'current', boundBranch:null, verifyMode:null, autoTransition:true, baseRef:null, designDoc:null, plan:null, verifyResult:'pending', verifyFailures:0, checkEpoch:0, verificationReport:null, branchStatus:'pending', createdAt:null, verifiedAt:null, archiveConfirmation:null, archived:false, directOverride:null, handoffContext:null, handoffHash:null, classicProfile:'full', classicMigration:1 };
+const state = { workflow:'full', language:'zh-CN', phase:'open', contextCompression:'off', buildMode:null, buildPause:null, subagentDispatch:null, tddMode:null, reviewMode:'standard', isolation:'current', boundBranch:null, verifyMode:null, autoTransition:true, baseRef:null, designDoc:null, plan:null, verifyResult:'pending', verifyFailures:0, checkEpoch:0, verificationReport:null, branchStatus:'pending', createdAt:null, verifiedAt:null, archiveConfirmation:null, archived:false, directOverride:null, handoffContext:null, handoffHash:null, classicProfile:'full', classicMigration:1 };
 fs.writeFileSync(process.argv[2], JSON.stringify(input));
 fs.writeFileSync(process.argv[3], JSON.stringify(state));" "$CHANGE" "$JDIR/input.json" "$JDIR/state.json"
   node "$SDK" start "${BASE[@]}" --workflow-id comet-classic-full \
