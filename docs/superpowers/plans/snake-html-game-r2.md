@@ -1,5 +1,6 @@
 ---
 status: final
+archived-with: 2026-11-02-snake-html-game-r2
 ---
 <!-- comet-task-authority: openspec/changes/snake-html-game-r2/tasks.md -->
 
