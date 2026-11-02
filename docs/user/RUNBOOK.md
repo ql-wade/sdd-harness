@@ -90,7 +90,9 @@ node tools/gate-bundle.mjs --project "$PWD" --gate R --action my-change:19 \
 ```
 先 `--check-only` 预校验（真实受保护端口本地验证，不过不落盘），通过后落盘束与
 record-outcome 载荷再提交。前提：claim 必须来自带 `--session-id`（UUID）的认领；
-独立评审者 ≠ 代理作者（签收者≠作者）。
+独立评审者 ≠ 代理作者（签收者≠作者）。`.comet/delivery-authority.json` 是**按门合并的
+entries**（每门一条 secret，工具自动保留前面门的条目）——手工覆盖成单条目会让
+outcome sweep 重准录先前门时 FORGED_COLLECTION 卡死整个 Run（r3 实证，别手改）。
 
 > **A 门协议要点（sdd-test r2 实证）**：design handoff 的 outcome 必须携带
 > `sourceEvidence` + `requirementsEvidence`（open 证据回执）——官方执行器自动带；
