@@ -51,3 +51,22 @@ sdd-test 验证实例追加诉求：沙箱化 agent 每条运行时命令都要�
 沙箱实证：临时项目 + COMET_DATA_DIR=scratch，状态落 override（workspaces/1），
 全局 ~/.comet/workspaces 122→122 零新增；项目内仅出现 362B 迁移 fence 标记文件（无害）。
 验证标准对接：实例侧在纯沙箱（仅项目目录可写 + 授权 scratch）跑 install→archive 全程零拒绝。
+
+## 2026-11-02（第四批）：A 门 handoff 协议缺口 + gate-bundle 三 bug 回纳（sdd-test r2 交叉验证）
+
+R 门交叉验证成功（rev14 用 gate-bundle.mjs 复跑通过）；实例回流三 bug 与一个 A 门硬卡点：
+- gate-bundle 回纳：①默认 clock=Date.now 立即求值为数字（应为函数引用 Date.now）——补默认路径回归；
+  ②身份必须走官方 loadWorkflowApplication（readOnly，cometDist 从 runtime-json 上溯 3 级）——
+  application.json 无 contentHash 字段，静默 undefined 使 verifyGateInputs 恒 false；
+  生产路径 loader 失败响亮报错，opts.identity 仅供测试注入；③host.claude 定位器 sessionPath
+  用完整转录路径（HOME/.claude/projects/<slug>/<session>.jsonl），commandDigest 须对应真实命令（args.hostCommand）。
+- A 门协议缺口固化（classic-sdk-design.js:88-117 源码实锤：官方 handoff 执行器 outcome 自动携带
+  sourceEvidence + requirementsEvidence 双回执；allowDesignDocumentChanges 仅在
+  proposal.sourceEvidence&&proposal.requirementsEvidence 时开启）：
+  RUNBOOK A 门要点 + tools/design-handoff.mjs（手工 handoff 生成器，导入运行时
+  handoffSourceHash/classicOpenEvidenceReceipt 补齐双回执，杜绝字节锁死）。
+- **合法续行（回答实例①，classic-sdk-design.js:41 运行时原文）**：
+  `comet state revise-design <change> --expected-revision <rev>` → propose → approve →
+  design 循环重放（handoff 重录时官方执行器带双回执）。前置：先修 design.md frontmatter
+  comet_change 与 change 名一致（handoff 之前定稿）。不废弃 Run。
+上游开放问题追加：design handoff outcome 契约（双回执必带）应写进官方 skill/RUNBOOK 上游文案。

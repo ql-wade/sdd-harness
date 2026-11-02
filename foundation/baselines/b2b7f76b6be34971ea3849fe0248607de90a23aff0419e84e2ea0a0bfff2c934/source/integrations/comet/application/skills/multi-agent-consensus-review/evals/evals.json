@@ -1,0 +1,19 @@
+{
+  "skill_name": "multi-agent-consensus-review",
+  "evals": [
+    {
+      "id": 1,
+      "name": "unanimous-code-review-gate",
+      "prompt": "Run an end-to-end code review of the supplied artifact with Claude Code, zcode, and Codex Agent. Require unanimous approval, structured scores, evidence, and a final next-step plan.",
+      "expected_output": "All three fresh reviewers submit valid ballots for the same artifact digest and the deterministic gate emits PASSED only when every threshold is met.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "bounded-debate-on-disagreement",
+      "prompt": "Run the same review when one reviewer raises a material finding. Organize a bounded Ralph-style debate, re-ballot every participant, and either reach unanimous approval or produce a BLOCKED report without lowering quorum.",
+      "expected_output": "The first dissent produces DEBATE_REQUIRED; later rounds use immutable ballots and a debate log, and the loop stops only at PASSED or BLOCKED.",
+      "files": []
+    }
+  ]
+}
