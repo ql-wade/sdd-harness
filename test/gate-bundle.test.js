@@ -62,7 +62,7 @@ test('refuse semantics: a bare synthetic run blocks at evaluate with named revie
   await assert.rejects(() => tool.buildGateBundle({
     gate: 'R', action: 'bare-change:1', claim: path.join(root, 'claim.json'),
     openEvidence: path.join(root, 'open-ev.json'), args: path.join(root, 'args.json'),
-    project: root,
+    project: root, identity: { contentHash: 'e'.repeat(64), runtimeVersion: '0.5.1' },
   }, { now: () => '2026-11-02T00:00:00.000Z', clock: () => 1793577600000 }), (error) => {
     assert.match(error.message, /GATE BLOCKED/);
     assert.match(error.message, /INDEPENDENT_REVIEW_REQUIRED/);
@@ -105,6 +105,79 @@ test('parameter discipline: missing args / wrong gate / non-running action refus
     () => tool.buildGateBundle({ gate: 'R', action: 'neg:1', claim: path.join(root, 'claim.json'), openEvidence: path.join(root, 'ev.json'), args: path.join(root, 'missing.json'), project: root }),
     /--args 文件不存在/,
   );
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+// 回归（sdd-test r2 实证三 bug）：
+
+// bug 1：默认 clock 路径——不注入时钟时曾把 Date.now() 立即求值为数字再当函数调用，
+// 报 "clock is not a function"。修复后默认路径必须走到语义裁决（GATE BLOCKED），
+// 而不是先死在 TypeError 上。
+test('default clock path works (no Date.now() eager-call TypeError)', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-gate-bundle-clock-'));
+  const { envelopeDigest } = await import(pathToFileURL(path.join(repoRoot, 'lib/delivery/evidence.js')).href);
+  const actionInput = { gate: 'R', runId: 'clk-change', change: 'clk-change', changeDir: 'openspec/changes/clk-change' };
+  const claim = {
+    run: { current: { runId: 'clk-change', revision: 1, phase: 'open',
+      actions: [{ id: 'clk-change:1', stepId: 'classic.extension.requirements-open', status: 'running',
+        input: actionInput, inputHash: envelopeDigest(actionInput),
+        claim: { executorId: 'sdd-managed-skill-host', sessionId: '55555555-5555-4555-8555-555555555555', token: 'tok' } }] } },
+  };
+  fs.writeFileSync(path.join(root, 'claim.json'), JSON.stringify(claim));
+  fs.mkdirSync(path.join(root, 'openspec/changes/clk-change'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'openspec/changes/clk-change/proposal.md'), '# bare\n');
+  fs.writeFileSync(path.join(root, 'ev.json'), JSON.stringify({ contentHash: 'f'.repeat(64) }));
+  fs.writeFileSync(path.join(root, 'reviewer.jsonl'), 'transcript');
+  fs.writeFileSync(path.join(root, 'args.json'), JSON.stringify({
+    reviewerTranscript: path.join(root, 'reviewer.jsonl'), reviewerId: 'agent-clk',
+    statement: 'statement', hostSession: '66666666-6666-4666-8666-666666666666', taskIds: ['1.1'],
+  }));
+  const appDir = path.join(root, '.comet/applications/sdd-managed-delivery/versions/1');
+  fs.mkdirSync(path.join(appDir, 'skills/grill-me'), { recursive: true });
+  fs.writeFileSync(path.join(appDir, 'skills/grill-me/SKILL.md'), 'name: grill-me\nversion: 1.0.0\n');
+  fs.writeFileSync(path.join(appDir, 'application.json'), JSON.stringify({ contentHash: 'd'.repeat(64), runtimeVersion: '0.5.1' }));
+
+  await assert.rejects(() => tool.buildGateBundle({
+    gate: 'R', action: 'clk-change:1', claim: path.join(root, 'claim.json'),
+    openEvidence: path.join(root, 'ev.json'), args: path.join(root, 'args.json'),
+    project: root, identity: { contentHash: 'd'.repeat(64), runtimeVersion: '0.5.1' },
+    // 不注入 now/clock——走默认路径
+  }), (error) => {
+    assert.doesNotMatch(error.message, /clock is not a function/, 'default clock must be a function reference');
+    assert.match(error.message, /GATE BLOCKED|找不到已安装 comet/);
+    return true;
+  });
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+// bug 2（协议面）：身份不得从 application.json 静默读取（该文件没有 contentHash 字段，
+// undefined 曾使 verifyGateInputs 恒 false）。生产路径必须走官方 loader 且失败即响亮报错；
+// 测试注入走 opts.identity。
+test('production identity path refuses silent application.json fallback', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-gate-bundle-ident-'));
+  const claim = { run: { current: { runId: 'idn', revision: 1, actions: [{ id: 'idn:1', status: 'running', stepId: 'classic.extension.requirements-open', input: {}, inputHash: '0'.repeat(64), claim: { executorId: 'x', sessionId: '77777777-7777-4777-8777-777777777777', token: 't' } }] } } };
+  fs.writeFileSync(path.join(root, 'claim.json'), JSON.stringify(claim));
+  fs.writeFileSync(path.join(root, 'ev.json'), JSON.stringify({ contentHash: '1'.repeat(64) }));
+  fs.writeFileSync(path.join(root, 'args.json'), JSON.stringify({
+    reviewerTranscript: path.join(root, 'reviewer.jsonl'), reviewerId: 'a', statement: 's',
+    hostSession: '88888888-8888-4888-8888-888888888888', taskIds: ['1'],
+  }));
+  fs.writeFileSync(path.join(root, 'reviewer.jsonl'), 't');
+  const appDir = path.join(root, '.comet/applications/sdd-managed-delivery/versions/1');
+  fs.mkdirSync(path.join(appDir, 'skills/grill-me'), { recursive: true });
+  fs.writeFileSync(path.join(appDir, 'skills/grill-me/SKILL.md'), 'name: grill-me\nversion: 1.0.0\n');
+  fs.mkdirSync(path.join(root, 'openspec/changes/idn'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'openspec/changes/idn/proposal.md'), '# bare\n');
+  // 最小合成包：官方 loader 必然拒绝（缺 module/entrySkill 等）——工具必须响亮报 loader 错误。
+  fs.writeFileSync(path.join(appDir, 'application.json'), JSON.stringify({ id: 'sdd-managed-delivery', version: '1', runtimeVersion: '0.5.1' }));
+  await assert.rejects(() => tool.buildGateBundle({
+    gate: 'R', action: 'idn:1', claim: path.join(root, 'claim.json'),
+    openEvidence: path.join(root, 'ev.json'), args: path.join(root, 'args.json'),
+    project: root,
+  }), (error) => {
+    assert.match(error.message, /找不到已安装 comet|loader|application|身份|Skill|模块|INVALID_WORKFLOW/);
+    return true;
+  });
   fs.rmSync(root, { recursive: true, force: true });
 });
 

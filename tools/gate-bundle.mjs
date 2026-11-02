@@ -99,7 +99,7 @@ function parseArgv(argv) {
   return opts;
 }
 
-export async function buildGateBundle(opts, { now = () => new Date().toISOString(), clock = Date.now() } = {}) {
+export async function buildGateBundle(opts, { now = () => new Date().toISOString(), clock = Date.now } = {}) {
   const defaults = GATE_DEFAULTS[opts.gate];
   if (!defaults) throw new Error(`--gate 必须是 ${Object.keys(GATE_DEFAULTS).join('/')} 之一`);
   for (const [key, file] of [['claim', opts.claim], ['args', opts.args], ['open-evidence', opts.openEvidence]]) {
@@ -137,7 +137,10 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
   const appVersionDir = readdirSync(versionsDir).sort().at(-1) ?? null;
   if (!appVersionDir) throw new Error('应用版本目录为空');
   const APP = path.join(versionsDir, appVersionDir);
-  const appIdentity = JSON.parse(readFileSync(path.join(APP, 'application.json'), 'utf8'));
+  // 身份必须来自官方 loader——application.json 本身没有 contentHash 字段（sdd-test 实证：
+  // 静默读 undefined → verifyGateInputs 恒 false）。opts.identity 仅供回归测试注入合成身份，
+  // CLI 永不传入：真实流程一律走 loadWorkflowApplication，杜绝假身份。
+  const identity = await loadAppIdentity({ project: opts.project, appDir: APP, cometRoot: opts.cometRoot, identity: opts.identity });
   const skillName = defaults.skill;
   const gateSkillFile = path.join(APP, 'skills', skillName, 'SKILL.md');
   if (!existsSync(gateSkillFile)) throw new Error(`安装的应用包缺门技能 ${skillName}（${gateSkillFile}）——应用包版本与运行时不一致？`);
@@ -205,7 +208,13 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
       observations: [{ caseId, check, command: `independent read-only review (claude subagent transcript) of ${check}`, result: 'pass', executions: { total: 1, valid: 1 } }] },
   };
   const body = { domain: 'SDD.Delivery.CollectedResult.v1', ...binding, source,
-    host: { claude: { sessionPath: hostSession, transcriptId: hostSession, commandDigest: sha256('node tools/gate-bundle.mjs') } } };
+    host: { claude: {
+      // 宿主回读定位器：sessionPath 必须是完整转录路径（claude-host-source 按它回读）；
+      // commandDigest 须对应宿主里真实发生过的命令文本（args.hostCommand 可覆盖）。
+      sessionPath: A.hostSessionPath ?? `${process.env.HOME}/.claude/projects/${opts.project.replaceAll('/', '-')}/${hostSession}.jsonl`,
+      transcriptId: hostSession,
+      commandDigest: sha256(A.hostCommand ?? 'node tools/gate-bundle.mjs'),
+    } } };
   const collectionId = sha256(canonicalJson(body));
   const integrity = createHmac('sha256', secret).update(canonicalJson({ ...body, collectionId })).digest('hex');
   const collection = { ...body, collectionId, integrity };
@@ -227,7 +236,7 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
     authoringExecutions: [builderExecution], authoringPrincipals: [hostSession],
   }, null, 2) + '\n');
 
-  const ports = createProtectedHostPorts({ context: { identity: { contentHash: appIdentity.contentHash, runtimeVersion: appIdentity.runtimeVersion }, projectRoot: opts.project } });
+  const ports = createProtectedHostPorts({ context: { identity: { contentHash: identity.contentHash, runtimeVersion: identity.runtimeVersion }, projectRoot: opts.project } });
   const inputs = { inputDigest, builderExecution };
   const runInput = action.input?.input ?? action.input;
   const gateOk = ports.verifyGateInputs({ run: { runId, input: runInput, state: { phase: cur.phase ?? 'open' }, actions: cur.actions }, action, gate: opts.gate, inputs, policy });
@@ -252,6 +261,21 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
 export function buildBundleBytes({ gate, artifactRef, inputs, receipts, policy, verdict, evaluatedBy }) {
   const bundle = { schema: 'sdd.delivery.gate.receipt-bundle.v1', kind: 'gate-receipt-bundle', gate, artifactRef, hashBinding: 'artifactHashes', writtenBy: 'extension-execution', inputs, receipts, policy, evaluatedBy, verdict, receipt: verdict.receipt ?? null };
   return Buffer.from(`${JSON.stringify(canonicalize(bundle), null, 2)}\n`, 'utf8');
+}
+
+// 身份加载：官方 loadWorkflowApplication（readOnly）。cometDist 从 runtime-json 上溯 3 级
+// （engine → domains → dist）。loader 失败必须响亮报错——静默降级就是 sdd-test 实证的 bug 形状。
+async function loadAppIdentity({ project, appDir, cometRoot, identity: injected }) {
+  if (injected) return injected;
+  const runtimeJsonPath = resolveCometRuntimeJson(cometRoot);
+  if (!runtimeJsonPath) throw new Error('找不到已安装 comet：身份必须经官方 loadWorkflowApplication 校验（PATH 上无 comet 或布局不识别；可用 --comet-root 指向包根）');
+  const cometDist = path.dirname(path.dirname(path.dirname(runtimeJsonPath)));
+  const { loadWorkflowApplication } = await import(pathToFileURL(path.join(cometDist, 'domains', 'workflow-application', 'application.js')).href);
+  const loaded = await loadWorkflowApplication({ file: path.join(appDir, 'application.json'), projectRoot: path.resolve(project), readOnly: true });
+  if (!loaded?.identity?.contentHash || !/^[a-f0-9]{64}$/.test(loaded.identity.contentHash)) {
+    throw new Error('官方 loader 未产出合法 identity.contentHash——应用包不完整或版本不匹配');
+  }
+  return loaded.identity;
 }
 
 // sourceHash 需要 runtime 的 hashRuntimeValue（逐字节同源）；动态解析，允许 --comet-root。

@@ -90,7 +90,17 @@ node tools/gate-bundle.mjs --project "$PWD" --gate R --action my-change:19 \
 ```
 先 `--check-only` 预校验（真实受保护端口本地验证，不过不落盘），通过后落盘束与
 record-outcome 载荷再提交。前提：claim 必须来自带 `--session-id`（UUID）的认领；
-独立评审者 ≠ 代理作者（签收者≠作者）。你只需要在弹出等待时做决策：
+独立评审者 ≠ 代理作者（签收者≠作者）。
+
+> **A 门协议要点（sdd-test r2 实证）**：design handoff 的 outcome 必须携带
+> `sourceEvidence` + `requirementsEvidence`（open 证据回执）——官方执行器自动带；
+> 手工构造用 `node tools/design-handoff.mjs --project "$PWD" --change my-change`
+> （自动补齐双回执）。缺 `requirementsEvidence` → design.md 被字节锁死，任何改动
+> （哪怕只修 frontmatter 的 `comet_change`）都会报 `Classic Design handoff has changed`。
+> **卡住的合法续行**：`comet state revise-design <change> --expected-revision <rev>`
+> → propose → approve → 循环重放（handoff 重录时带上双回执）。
+> design.md 的 frontmatter `comet_change` 必须与 change 名一致——在 handoff 之前修正。
+> 你只需要在弹出等待时做决策：
 
 | 门 | 阶段 | 你的决策 | 你批准什么 | 交付物（阶段结束时的文件） |
 | --- | --- | --- | --- | --- |
