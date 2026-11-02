@@ -14,3 +14,26 @@
 ## 2026-11-02 架构符合性审核与深度迭代（本轮 remediation 记录）
 
 多 agent 审核（53 agents：18 审核单元 + 对抗性核查 + 完备性批评；29 条确认违规 + 批评员重立案 2 条）后按四簇修复：A 纯净线大扫除（29 个实例 change 目录、tests/、docs/superpowers/、根目录会话 json、plugin_root 指针全部移出框架线；FRAMEWORK.md 重写为规则式纯净表述；.gitignore 锚定修正使 tracked-but-ignored 714→0）；B 控制平面单一事实源（pre-tool-gate.sh 回退默认与 hooks.yaml 逐字同步、四 hook 脚本补 set -euo pipefail、先红后绿新增两条不变量测试、llmwiki controlPlaneGap 复测写回 RESOLVED）；C provenance 链（evidence.js 移除 shape probe 与死分支恢复纯判定边界声明、官方编译器重锁 v27 包与 compile-manifest（构建字节可复现）、upgrade 测试去机器路径改 env 注入）；D 事实源机械同步（§2/§7 台账对账、知识文档历史标识、overlay 死链注记、doctor 退出码 1→2 修正、registry 证据迁入 change 工件并重指向）。验收门：npm test 全绿 + check.sh 通过 + tracked-but-ignored 归零。
+
+## 2026-11-02（第二批）：sdd-test 实例验证回流固化（R 门收据束构造器 + RUNBOOK 应用先行）
+
+sdd-test 新项目验证实例（minecraft-3d）R 门打通（rev37）后回流 5 项框架缺口，本轮固化：
+1. `tools/gate-bundle.mjs`——六门收据束构造器进框架（R 门实证配方参数化：六门 case/skill 映射、
+   comet runtime-json 动态解析不硬编码机器路径、delivery-authority 先落盘再 evaluate、
+   真实受保护端口本地预校验不过不落盘；--check-only；B-③ 字节确定性提取为纯函数）。
+   测试 test/gate-bundle.test.js（5 用例：映射/拒绝语义/B-③/参数纪律/解析器）。
+   实证范围如实标注：R 门全流程实证；A/T/P 同配方由验证线复跑交叉验证；V/Kp 形状不符时
+   evaluate 拒绝不伪造。
+2. RUNBOOK 第 1 步改为应用先行（建目录，不跑 state init）——state init 在 0.5.1 git 根默认
+   runtime=sdk 归属内建 classic-full，与第 3 步应用 start 结构性冲突（源码级审计实锤：
+   classic-app.js:620 / store.js:116-121）；原 state init 移入陷阱表并附外科手术恢复配方
+  （owner/投影/sdk-run 四件套 + marker/checkpoint，cancel/restore 均不释放归属）。
+3. RUNBOOK 开始前补 `command -v comet` 兼容检查；drive-journey.sh 启动时同步早失败。
+4. 陷阱表 +5 行：owner 冲突外科手术 / portable checkpoint / Runtime-owned field /
+   comet not found / 审批词中止（仅退驱动器，重跑续跑）。
+5. drive-journey.sh human() 接受确认词集合（approved/同意/y/yes，大小写不敏感）；
+   手工 dispatch 段改为如实标注完整请求形状要求（不再给不可复现的残缺配方）。
+README 受管交付段同步应用先行。foundation 导出清单 + gate-bundle，基线重冻结。
+上游开放问题（登记备裁）：state init 在 0.5.1 的目标用户/legacy 定位；classic owner
+「一次绑定永不释放」是否有意；`state forget` 类官方工具提案；comet status 对 app-owned
+Run 的展示行为未实测。

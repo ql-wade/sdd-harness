@@ -1467,7 +1467,7 @@ const managedCodeInputs = [
   'tools/foundation-export.mjs','tools/bootstrap.sh','tools/adapters/claude-code.sh','foundation/managed_io.py',
   'hooks/pre-tool-gate.sh','hooks/session-context.sh','hooks/stop-reminder.sh','hooks/_resolve-project-dir.sh',
   'tools/register-mcps.mjs','tools/mcp/llmwiki.sh','scripts/agent-instructions-check.sh','scripts/agent-skill-check.sh',
-  'tools/comet/phase-entry.mjs','tools/comet/start-lock.py','lib/adapters/comet-start.js','lib/adapters/codex-host-source.js','lib/adapters/codex-test-observation.js','lib/delivery/test-contract.js','lib/delivery/evidence.js','lib/delivery/domain-cases.js','lib/delivery/gate.js','tools/test-cases/compile-domain-cases.mjs','tools/drive-journey.sh','tools/journey-helpers/open-evidence.mjs','tools/journey-helpers/make-evidence-request.mjs',
+  'tools/comet/phase-entry.mjs','tools/comet/start-lock.py','lib/adapters/comet-start.js','lib/adapters/codex-host-source.js','lib/adapters/codex-test-observation.js','lib/delivery/test-contract.js','lib/delivery/evidence.js','lib/delivery/domain-cases.js','lib/delivery/gate.js','tools/test-cases/compile-domain-cases.mjs','tools/drive-journey.sh','tools/journey-helpers/open-evidence.mjs','tools/journey-helpers/make-evidence-request.mjs','tools/gate-bundle.mjs',
   'contracts/delivery/index.js','contracts/delivery/schema-kernel.js','contracts/delivery/foundation-lock.schema.js',
   'contracts/delivery/baseline-ref.schema.js','contracts/delivery/test-contract.schema.js','contracts/delivery/plan-bundle.schema.js',
   'contracts/delivery/candidate-ref.schema.js','contracts/delivery/evidence-envelope.schema.js','contracts/delivery/gate-receipt.schema.js',
