@@ -83,8 +83,15 @@ comet state next my-change     # 随时查看下一步
 | R | 需求确认 | **批准需求** | proposal 内容与你的意图一致 | gates/r 收据束；需求冻结 |
 | A | 架构共识 | **批准设计** | 技术方案经多方评审一致 | design.md；gates/a 束 |
 | T | 测试设计 | **批准测试设计** | 先于实现定义"怎么算对" | tests/test-contract.json；gates/t 束 |
+
+> **T 门硬规则（升级版 test-authoring v1.1.0）**：用例先经 test-authoring 写入
+> **domain-cases 用例库**（稳定 Case ID，跨变更维护）→ 投影 TestPack v1 → 门禁绑定。
+> 直接手写契约 = 流程缺口（r34/snake 两轮实证未走库，已修正）。
 | P | 构建计划 | **批准计划** | 任务 DAG/顺序合理 | task-dag.json；gates/p 束 |
 | Build | 实现 | （代理干活） | — | 实现代码 + 测试原始日志 |
+
+> **Build 硬规则**：可执行测试必须晋升到仓库常驻 `tests/` 目录（回归本体留在活套件）；
+> 归档的是证据快照——r34 曾漏晋升，已修正。
 | V | 白盒验证 | **确认验证结果** | 真实浏览器/机器证据、NOT-EXERCISED 如实列明 | verification 三件套 + 截图；gates/v 束 |
 | Kp | 知识收尾 | （代理收尾） | — | closeout；gates/kp 束 |
 | 归档 | 收档 | **批准归档** | 全部通过 | archive/<date>-<change>/ |
