@@ -83,3 +83,19 @@ entries 选择（lib/adapters/comet-host-ports.js 注释与实现早已双形状
 P=plan-unique-review（:245）；R 原本就对（:242）；V/Kp 无硬约束保留类比缺省。
 回归 +2：双门序列（R→A→R secret 原样保留→同门重跑替换不增长）、kind 映射对齐断言。全套 8/8。
 RUNBOOK gate-bundle 段补「authority 按门合并，勿手改单条目」警示。
+
+## 2026-11-02（第六批）：app-owned Run 的 design 修订续行缺口（bug#5，上游波次）
+
+sdd-test r4 实证：design.evidence 受理后共识评审触发 design.md 修订 → A outcome sweep
+按已录 contentHash 重验拒绝（classic-sdk-application.js:835 无条件相等）→ 三条路全死：
+①state revise-design 被 app-owned 组合检查拒；②invalidate-evidence 报 EVIDENCE_WAIT_RESOLVED；
+③重交 outcome 旧哈希固化。runtime 操作面穷举（19 个 op）无一可重开已解决证据等待；
+revise-wait 仅作用 pending proposal 确认等待。allowDesignDocumentChanges 分支
+（classic-handoff.js:363-375）只豁免 handoff 上下文核对中的 design.md 哈希，不触及证据绑定。
+步骤顺序属上游内建 comet-classic-full 工作流（consensus 在 evidence 后），scaffold 包不定义排序。
+结论：0.5.1 app-owned 无合法修订重证路径 = 上游缺口。RUNBOOK A 门固化时序纪律
+（design.md 冻结点 = design.evidence 提交时刻；共识迭代做在提交之前）。
+上游修复请求（三项，与 state forget 同批）：design 证据重开 op；sweep 在 handoff 双回执时
+采用 allowDesignDocumentChanges 口径比较；composition 步序调整（consensus 先于 evidence）。
+r4 处置建议已答复实例：r4 无在手 claim 弃 Run 成本低，推荐 r5 按 evidence-last 时序重跑
+（预审迭代定稿 → evidence=定稿签名 → 正式 consensus 全票 → A 束一次过）。
