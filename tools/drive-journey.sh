@@ -14,7 +14,9 @@ SESSION_ID="${SDD_SESSION_ID:?usage: export SDD_SESSION_ID=<本次任务的稳�
 NVBIN=$(ls -d "$HOME"/.nvm/versions/node/v2*/bin 2>/dev/null | sort -V | tail -1)
 if [ -n "$NVBIN" ]; then export PATH="$NVBIN:$PATH"; fi
 command -v node >/dev/null 2>&1 || { echo "❌ 未找到 node：请安装 node>=20 或先 export PATH=<node>/bin"; exit 1; }
-echo "▶ node $(node --version)"
+# comet 装在某个特定 nvm 版本的 global bin——锚定"最新 v2x"不保证命中（sdd-test 实证）。
+command -v comet >/dev/null 2>&1 || { echo "❌ 未找到 comet：锚定 node 后丢了 comet 的 bin。把装了 comet 的那个版本 bin 加回 PATH（command -v comet 应可解析）"; exit 1; }
+echo "▶ node $(node --version) | comet $(comet --version)"
 
 # ── 解析最新已安装应用 ──────────────────────────────────────────────
 VDIR=""; BEST=-1
@@ -60,7 +62,10 @@ human() {
   echo "── ★ 人类审批点：$1"
   if [ "$HUMAN_MODE" = "approved" ]; then echo "   （自动批准 HUMAN_AUTO=approved）"; return 0; fi
   read -r -p "   输入 approved 继续: " a </dev/tty
-  [ "$a" = "approved" ] || { echo "已中止"; exit 1; }
+  case "$(printf '%s' "$a" | tr '[:upper:]' '[:lower:]')" in
+    approved|同意|y|yes) return 0 ;;
+    *) echo "已中止（仅退出驱动器，Run 状态与已记录批准不受影响；重跑同一命令续跑）"; exit 1 ;;
+  esac
 }
 
 # ── S0 启动（幂等） ─────────────────────────────────────────────────

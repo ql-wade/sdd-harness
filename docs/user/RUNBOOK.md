@@ -26,6 +26,9 @@
 ```bash
 # node 退化陷阱：先锚定 node24（有 nvm 用 nvm，没有就取最新 v2x）
 nvm use 24 2>/dev/null || export PATH="$(ls -d "$HOME"/.nvm/versions/node/v2*/bin | sort -V | tail -1):$PATH"
+# comet 只装在某个特定 nvm 版本的 global bin——锚定后可能丢 comet（sdd-test 实证）
+command -v comet >/dev/null 2>&1 || { echo "comet 丢了：把装了 comet 的那个版本 bin 加回 PATH"; exit 1; }
+comet --version
 ```
 
 ## 第 0 步：把"餐厅"开进你的项目（装应用）
@@ -40,13 +43,19 @@ comet application install <sdd-harness>/integrations/comet/application/package/a
 **你会看到**：JSON 输出带 version 与 contentHash。`.comet/applications/` 出现版本目录。
 **装的是什么**：一个"流程应用"——它定义了六道门的顺序和每门的验收规则。
 
-## 第 1 步：开一个变更（一行命令）
+## 第 1 步：开一个变更（建目录，不要跑 state init）
 
 ```bash
-comet state init my-change full
+mkdir -p openspec/changes/my-change
 ```
-**人话**：在质检经理那里开一张新工单，选择"完整流程"。hotfix/tweak 是精简流程。
-**你会看到**：`openspec/changes/my-change/` 出现，`comet status` 显示它。
+**人话**：变更 = 一个目录 + 一张 Run 工单。目录现在建；Run 在第 3 步由驱动器启动时
+自动登记给 sdd-managed-delivery 应用。
+**陷阱**：不要运行 `comet state init`。git 仓库里它默认 `runtime=sdk`，会把变更绑给内建
+应用 classic-full，第 3 步的应用 start 会报 `Classic change 已归属另一个应用`；
+`--runtime compat` 同样写归属，不是出路；且 init 写的 comet-state.yaml 嵌有不带
+application_checkpoint 的 run_checkpoint，任何应用都无法导入（报 `Classic portable
+checkpoint requires its original fixed Application package`）。误绑后无 CLI 恢复命令，
+只能外科手术（见陷阱表）。
 
 ## 第 2 步：写需求（proposal.md）——这是你的菜谱初稿
 
@@ -59,25 +68,29 @@ $EDITOR openspec/changes/my-change/proposal.md
 
 ## 第 3 步：起 Run（通知质检经理开工）
 
-用驱动脚本（推荐，全自动推进 + 在审批点叫你）：
+用驱动脚本（推荐，全自动推进 + 在审批点叫你；审批输入接受 approved / 同意 / y / yes）：
 ```bash
 export SDD_SESSION_ID="$(uuidgen)"   # 本次任务的稳定标识；断点续跑重跑时保持同一个值
 bash tools/drive-journey.sh my-change
 ```
-或手工逐步（命令逐条透明）：
-```bash
-# 写启动请求（change/changeDir 换成你的）
-# 然后：
-comet runtime dispatch --application sdd-managed-delivery \
-  --project-root "$PWD" --request input.json --json
-comet state next my-change     # 随时查看下一步
-```
+驱动器会自举全部 Run 状态（输入形状、初始状态、owner 登记都由它代写）。手工
+`comet runtime dispatch` 需要完整请求形状（`runId` / `workflow{id,version}` / `input` /
+可选 `initialState`，缺一即 INVALID_REQUEST）——仅排障时用，日常不提供手工配方。
 **你会看到**：`prepare` 动作执行 → 一个**确认等待**弹出 → 这是第一道人工审批。
 
 ## 第 4～8 步：六道门（每道门节奏相同）
 
 每道门的循环：**代理认领 → 做该门的技能工作 → 独立代理评审 → 构造证据链 →
-提交 → 运行时校验 → 通过 → 下一阶段**。你只需要在弹出等待时做决策：
+提交 → 运行时校验 → 通过 → 下一阶段**。「构造证据链」用框架工具（别手搓）：
+
+```bash
+node tools/gate-bundle.mjs --project "$PWD" --gate R --action my-change:19 \
+  --claim <claim.json> --open-evidence <open证据事件.json> \
+  --args <args.json>          # {reviewerTranscript, reviewerId, statement, hostSession, taskIds}
+```
+先 `--check-only` 预校验（真实受保护端口本地验证，不过不落盘），通过后落盘束与
+record-outcome 载荷再提交。前提：claim 必须来自带 `--session-id`（UUID）的认领；
+独立评审者 ≠ 代理作者（签收者≠作者）。你只需要在弹出等待时做决策：
 
 | 门 | 阶段 | 你的决策 | 你批准什么 | 交付物（阶段结束时的文件） |
 | --- | --- | --- | --- | --- |
@@ -142,6 +155,11 @@ comet state next my-change     # 随时查看下一步
 | 断线重连 | `printf '{"operation":"next"}' > next.json && comet runtime dispatch --application <app> --request next.json --json` |
 | 写文件被 hook 拦 | 产品守卫真实生效——按拒绝信息恢复对应流程，不要绕过 |
 | 迁移 fence 报无效工作区 | 工作树残留跨 clone 旧布局 `.comet/runtime`——移出后按 recovery argv 重放；若报 RUN_NOT_FOUND 则 selection 已过期，移除 `.comet/current-change.json` 让 Hook 回中立 |
+| `Classic change 已归属另一个应用` | 变更被 `state init` 误绑给内建应用。恢复（无 CLI，外科手术）：删变更目录（含 comet-state.yaml）+ 删运行时侧 owner（`<workspace>/change-owners/classic/<change>.json`）、投影（`state-projections/classic/<change>.json`）、Run 记录（`sdk-runs/classic/<change>`，hash 定位可经 checkpoint.json 的 runId 确认）后回第 1 步。`cancel`/`state restore` 均不释放归属 |
+| `Classic portable checkpoint requires its original fixed Application package` | comet-state.yaml 带无 application_checkpoint 的 run_checkpoint（state init 产物），任何应用导入必拒。按上行整目录恢复 |
+| `changed a Runtime-owned field` | comet-state.yaml 与 Run 状态不一致（手工编辑或 init 遗留）。仅 language/contextCompression/autoTransition/reviewMode 四字段允许用户改；其余一律以 Run 为准——应用在跑时删掉 YAML 会由 store 自愈重建，手工对齐追不平 |
+| `command not found: comet` | comet 装在某个特定 nvm 版本的 global bin，锚定「最新 v2x」不保证命中。锚定后先 `command -v comet` 验证；失败则把装了 comet 的那个 bin 加入 PATH |
+| 审批点输入了别的词被中止 | 仅驱动器退出，Run 状态与已记录批准不受影响；重跑同一命令续跑（确认词接受 approved / 同意 / y / yes） |
 
 ## 升级应用（要新功能/修复时）
 

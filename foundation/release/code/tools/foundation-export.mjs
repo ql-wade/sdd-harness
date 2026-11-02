@@ -108,7 +108,8 @@ const TEST_OBSERVATION_ASSET = 'lib/adapters/codex-test-observation.js';
 // ship with the export so an archived lock can re-derive its projections.
 const CODE_ASSETS = [...STAGE_CODE_ASSETS, TEST_OBSERVATION_ASSET, 'lib/delivery/test-contract.js',
   'lib/delivery/domain-cases.js', 'lib/delivery/gate.js', 'tools/test-cases/compile-domain-cases.mjs',
-  'tools/drive-journey.sh', 'tools/journey-helpers/open-evidence.mjs', 'tools/journey-helpers/make-evidence-request.mjs'];
+  'tools/drive-journey.sh', 'tools/journey-helpers/open-evidence.mjs', 'tools/journey-helpers/make-evidence-request.mjs',
+  'tools/gate-bundle.mjs'];
 const DEPENDENCY_METADATA = ['package.json', 'package-lock.json', COMET_LOCK_REL];
 function sourceFile(root, relative) {
   const info = rejectLinkedPath(root, relative);

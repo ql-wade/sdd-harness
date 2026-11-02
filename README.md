@@ -87,15 +87,19 @@ node bin/cli.js doctor                                               # 环境自
 
 ## 受管交付（六门）
 
-安装流程应用 → 一行建 change → 沿六门推进，每门强制独立证据链，人只在审批点拍板：
+安装流程应用 → 建变更目录 → 驱动器起 Run（自动登记归属 + 自举全部状态）→
+沿六门推进，每门强制独立证据链，人只在审批点拍板：
 
 ```bash
 comet application install <scaffold>/integrations/comet/application/package/application.json \
   --project "$PWD" --preview --json          # 预览 → 记下 confirmationHash
-comet state init my-change full              # 一行开 change（hotfix/tweak 为精简流程）
+mkdir -p openspec/changes/my-change          # 建目录（不要跑 comet state init——见 RUNBOOK 陷阱表）
+export SDD_SESSION_ID="$(uuidgen)"
+bash tools/drive-journey.sh my-change        # 起 Run，自动推进 + 审批点叫你
 ```
 
-完整步骤、每门交付物与陷阱恢复见 [RUNBOOK](docs/user/RUNBOOK.md)；全自动推进可用 `tools/drive-journey.sh`（需 `SDD_SESSION_ID`）。
+完整步骤、每门交付物与陷阱恢复见 [RUNBOOK](docs/user/RUNBOOK.md)；证据链用
+`tools/gate-bundle.mjs` 构造（六门收据束构造器，预校验不过不落盘）。
 
 ## 开发（本仓库自身）
 
