@@ -45,11 +45,13 @@ const canonicalize = (v) => Array.isArray(v) ? v.map(canonicalize) : (v !== null
 const canonicalJson = (v) => JSON.stringify(canonicalize(v));
 
 // 门 → 缺省 case 语义（与 hooks/comet classic extension 步一一对应；skill = 该门扩展技能）。
+// kind 对齐 lib/delivery/gate.js 的 review.kind 硬约束（:235 T、:239 A、:242 R、:245 P）；
+// V/Kp 当前无 kind 硬约束，保留类比缺省（args.kind 可覆盖）。
 export const GATE_DEFAULTS = {
   R: { caseId: 'requirements-confirmation', check: 'requirements-confirmation', kind: 'requirements-scope-confirmation', dir: 'r', skill: 'grill-me' },
-  A: { caseId: 'architecture-consensus', check: 'architecture-consensus', kind: 'architecture-consensus-confirmation', dir: 'a', skill: 'multi-agent-consensus-review' },
-  T: { caseId: 'test-design-review', check: 'test-design-review', kind: 'test-design-review-confirmation', dir: 't', skill: 'test-authoring' },
-  P: { caseId: 'build-plan-unique', check: 'build-plan-unique', kind: 'build-plan-unique-confirmation', dir: 'p', skill: 'claude-parallel-tdd-planner' },
+  A: { caseId: 'architecture-consensus', check: 'architecture-consensus', kind: 'grill-exact-unanimous-consensus', dir: 'a', skill: 'multi-agent-consensus-review' },
+  T: { caseId: 'test-design-review', check: 'test-design-review', kind: 'independent-test-design-review', dir: 't', skill: 'test-authoring' },
+  P: { caseId: 'build-plan-unique', check: 'build-plan-unique', kind: 'plan-unique-review', dir: 'p', skill: 'claude-parallel-tdd-planner' },
   V: { caseId: 'verify-whitebox', check: 'verify-whitebox', kind: 'verify-whitebox-confirmation', dir: 'v', skill: 'whitebox-verify' },
   Kp: { caseId: 'knowledge-project-closeout', check: 'knowledge-project-closeout', kind: 'knowledge-project-closeout-confirmation', dir: 'kp', skill: 'openspec-lifecycle-guard' },
 };
@@ -230,11 +232,28 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
   const entry = admitted.entry;
 
   // delivery-authority.json 必须先落盘再 evaluate——admissionOptionsFor 从 <changeDir>/.comet/ 读它。
-  mkdirSync(path.join(changeDir, '.comet'), { recursive: true });
-  writeFileSync(path.join(changeDir, '.comet', 'delivery-authority.json'), JSON.stringify({
-    runId, environment, secret, actionBinding, sourceQualification: qualification,
+  // 【按门合并 entries，sdd-test r3 严重教训】单条目覆盖会丢前面门的签发 secret——
+  // outcome sweep 重准录先前门收据时 FORGED_COLLECTION，整个 Run 卡死。文件形状
+  // {runId, environment, entries:[{runId, gate, secret, actionDigest, ...}]}，
+  // admissionOptionsFor 原生按 runId+gate+actionDigest 逐条选择（本门条目替换、他门保留）。
+  const authorityPath = path.join(changeDir, '.comet', 'delivery-authority.json');
+  mkdirSync(path.dirname(authorityPath), { recursive: true });
+  let previousEntries = [];
+  if (existsSync(authorityPath)) {
+    try {
+      const raw = JSON.parse(readFileSync(authorityPath, 'utf8'));
+      previousEntries = Array.isArray(raw?.entries) ? raw.entries : (raw?.secret !== undefined ? [raw] : []);
+    } catch { previousEntries = []; }
+  }
+  const authorityEntry = {
+    runId, gate: opts.gate, secret, actionDigest: binding.actionDigest,
+    actionBinding, sourceQualification: qualification,
     authoringExecutions: [builderExecution], authoringPrincipals: [hostSession],
-  }, null, 2) + '\n');
+    environment,
+  };
+  const entries = previousEntries.filter((e) => !(e.gate === authorityEntry.gate && e.actionDigest === authorityEntry.actionDigest));
+  entries.push(authorityEntry);
+  writeFileSync(authorityPath, JSON.stringify({ runId, environment, entries }, null, 2) + '\n');
 
   const ports = createProtectedHostPorts({ context: { identity: { contentHash: identity.contentHash, runtimeVersion: identity.runtimeVersion }, projectRoot: opts.project } });
   const inputs = { inputDigest, builderExecution };

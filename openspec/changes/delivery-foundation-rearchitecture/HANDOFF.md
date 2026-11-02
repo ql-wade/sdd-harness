@@ -70,3 +70,16 @@ R 门交叉验证成功（rev14 用 gate-bundle.mjs 复跑通过）；实例回�
   design 循环重放（handoff 重录时官方执行器带双回执）。前置：先修 design.md frontmatter
   comet_change 与 change 名一致（handoff 之前定稿）。不废弃 Run。
 上游开放问题追加：design handoff outcome 契约（双回执必带）应写进官方 skill/RUNBOOK 上游文案。
+
+## 2026-11-02（第五批）：gate-bundle bug#4 严重修复（authority 按门合并）+ kind 对齐 gate.js
+
+sdd-test r3 实证严重 bug：gate-bundle 单条目覆盖 delivery-authority.json → 丢前面门签发
+secret → outcome sweep 重准录先前门收据 FORGED_COLLECTION → 整个 Run 卡死（多门必踩，r3 已 cancel）。
+修复：authority 文件改 {runId, environment, entries:[{runId, gate, secret, actionDigest, ...}]}
+按门合并——本门同 gate+actionDigest 替换自身、他门条目原样保留；admissionOptionsFor 原生支持
+entries 选择（lib/adapters/comet-host-ports.js 注释与实现早已双形状兼容，无需改动）。
+另：GATE_DEFAULTS kind 对齐 lib/delivery/gate.js review.kind 硬约束——A=grill-exact-unanimous-consensus
+（:239，原自造值被 evaluate 拒绝，实例已实证）、T=independent-test-design-review（:235）、
+P=plan-unique-review（:245）；R 原本就对（:242）；V/Kp 无硬约束保留类比缺省。
+回归 +2：双门序列（R→A→R secret 原样保留→同门重跑替换不增长）、kind 映射对齐断言。全套 8/8。
+RUNBOOK gate-bundle 段补「authority 按门合并，勿手改单条目」警示。
