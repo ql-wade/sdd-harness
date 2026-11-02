@@ -1,10 +1,10 @@
 # AI Coding Scaffold
 
-> 当前交付实施：[Comet流程与知识收敛架构](docs/architecture/comet-ai-devops-convergence.md) · [执行入口](openspec/changes/delivery-foundation-rearchitecture/HANDOFF.md) · [唯一任务清单](openspec/changes/delivery-foundation-rearchitecture/tasks.md)。已有基础设施与部分交付机制，完整受管流程仍在实施和独立验收中。
+> **人类入口**：受管交付（六门 R→A→T→P→V→Kp）从 [docs/user/RUNBOOK.md](docs/user/RUNBOOK.md)（cookbook）开始——安装应用、一行建 change、在审批点拍板。当前交付实施：[Comet流程与知识收敛架构](docs/architecture/comet-ai-devops-convergence.md) · [唯一任务清单](openspec/changes/delivery-foundation-rearchitecture/tasks.md)。
 
 团队 AI coding 项目的脚手架：**统一规则入口 + 方法论技能 + hooks 控制平面 + MCP 能力清单 + 验证工具**。
 
-不规定工作流——阶段划分、任务编排、模型选择由执行 agent 和团队自定。scaffold 只提供设施和方法论（[ADR-0015](docs/architecture/adr/0015-scaffold-repositioning.md)）。
+不规定工作流——阶段划分、任务编排、模型选择由执行 agent 和团队自定。scaffold 只提供设施和方法论（[ADR-0015](docs/architecture/adr/0015-scaffold-repositioning.md)）。六门受管交付流程经两轮完整试点实证（六门+归档+Kt 双通道），新项目按 RUNBOOK 复验；框架自身纯净分发，实例验证在实例/证据线。
 
 ## 分层
 
@@ -78,12 +78,24 @@ node bin/cli.js doctor                                               # 环境自
 
 策略定义一次（[hooks.yaml](hooks.yaml)），adapter 落地：
 
-- `kb-write-protection` — 禁止直接写 `llmwiki/wiki/`（绕过索引），必须走 MCP
+- `kb-write-protection` — 禁止直接写知识库 wiki 落点（`.sdd/wiki/`、`llmwiki/wiki/`，绕过索引），必须走 MCP
 - `dangerous-command-blocklist` — `git push --force` / `git reset --hard` / `rm -rf /` 等禁入
 - `session-context-injection` — SessionStart 注入规则入口 + ADR 索引
 - `stop-sediment-reminder` — Stop 时提醒未沉淀的 findings/ADR
 
 新增 agent 支持 = 写一个 `tools/adapters/<agent>.sh`；首日只实现 Claude Code。
+
+## 受管交付（六门）
+
+安装流程应用 → 一行建 change → 沿六门推进，每门强制独立证据链，人只在审批点拍板：
+
+```bash
+comet application install <scaffold>/integrations/comet/application/package/application.json \
+  --project "$PWD" --preview --json          # 预览 → 记下 confirmationHash
+comet state init my-change full              # 一行开 change（hotfix/tweak 为精简流程）
+```
+
+完整步骤、每门交付物与陷阱恢复见 [RUNBOOK](docs/user/RUNBOOK.md)；全自动推进可用 `tools/drive-journey.sh`（需 `SDD_SESSION_ID`）。
 
 ## 开发（本仓库自身）
 

@@ -7,7 +7,7 @@
 
 | 目录 | 是什么 | 给谁用 |
 | --- | --- | --- |
-| `integrations/comet/` | 六门管理应用（SDK 组合应用 v20：bindings 门禁校验器 + 六技能组合 + 证据端口） | Comet 运行时 |
+| `integrations/comet/` | 六门管理应用（SDK 组合应用：bindings 门禁校验器 + 六技能组合 + 证据端口；manifestVersion 单调递增，当前 v27） | Comet 运行时 |
 | `lib/delivery/` | 证据机器：launch authority、收据束、六门 evaluate、字节材料化 | 框架内核 |
 | `lib/adapters/` | comet/claude-host/codex-host/outline/llmwiki 适配器（协议+已验证传输） | 集成层 |
 | `contracts/delivery/` | 冻结 schema（收据/信封/合同/绑定） | 门禁依据 |
