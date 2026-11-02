@@ -16,8 +16,7 @@
 | `test/` | 门禁与证据链测试（66+，全部绿） | 回归 |
 | `docs/user/` | RUNBOOK（cookbook）、STATUS（现状评估）、使用指南 | **人类从这里开始** |
 | `foundation/` | 封存基线导出（Foundation lock + release，5133 文件） | 审计回读 |
-| `openspec/` | 规格 + 两个已归档的完整参考交付（minicraft r34、snake r2） | 参考实现 |
-| `demos/` | 两个已交付的游戏（minicraft、snake，单文件 HTML5，可直接打开玩） | 参考实现 |
+| `openspec/` | 规格与工作流状态（纯净 scaffold：实例验证在新项目按 RUNBOOK 进行） | 参考实现 |
 
 ## 上手
 
@@ -29,5 +28,6 @@ bash tools/bootstrap.sh      # 工具链与 hooks 落地
 ## 完整性
 
 - 六门证据：`.sdd/delivery/gates/{r,a,t,p,v,kp}/receipt-bundle.json`（两轮交付）
-- Kt 双通道读回验证：Outline d1e4b2f9 + llmwiki d60b8666
-- 会话级完整证据链在 `evidence/r34-snake` 线（含 worker-reports），框架线不含
+- 六门收据束：`.sdd/delivery/gates/{r,a,t,p,v,kp}/`（框架自举交付）
+- 实例验证（minicraft r34、snake r2：六门+归档+Kt 双通道+截图）在实例验证线，
+  不随纯净 scaffold 分发——新项目按 RUNBOOK 产出自己的实例证据

@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "project": "sdd-harness",
+  "change": "minicraft-html-game-r24",
+  "cases": [
+    {
+      "id": "TC01-hard-crack",
+      "ac": "AC1-hard-3hits",
+      "oracle": "Fresh world with stone at (5,5): click 1 leaves the stone present with crack overlay stage 1 and cell damage hits=1; click 2 leaves it present with crack stage 2 and hits=2; click 3 removes the stone (cell empty), clears its damage entry, increments stone inventory by exactly 1, and the HUD shows the incremented count; wood behaves identically at hardness 3 while grass and dirt stay hardness 1 in the registry.",
+      "checkIds": [
+        "CHK01-hard-crack"
+      ],
+      "required": true
+    },
+    {
+      "id": "TC02-soft-single",
+      "ac": "AC2-soft-1click",
+      "oracle": "Fresh world with grass at (10,10): a single click removes the grass (cell empty), increments grass inventory by exactly 1, and leaves no persistent crack overlay or damage entry; dirt and leaf blocks are likewise removed on the first click (hardness 1).",
+      "checkIds": [
+        "CHK02-soft-single"
+      ],
+      "required": true
+    },
+    {
+      "id": "TC03-inventory-place",
+      "ac": "AC3-place-decrement-refuse-zero",
+      "oracle": "With stone inventory >= 1, placing stone on an empty cell from the palette decrements stone inventory by exactly 1 and the cell becomes stone; with stone inventory exactly 0 a placement attempt is refused before any mutation: the cell stays empty, stone inventory stays 0, and the palette entry for that type renders greyed out at zero.",
+      "checkIds": [
+        "CHK03-inventory-place"
+      ],
+      "required": true
+    },
+    {
+      "id": "TC04-persist-reload",
+      "ac": "AC4-persist-reload-deepequal",
+      "oracle": "After mining and placing so that world cells and inventory both change, the saved blob at the single localStorage key is {version,cells,inventory} with per-type inventory as non-negative integers; a reload (fresh boot reading the same key) restores world cells and inventory deep-equal to the pre-reload state and the transient damage map resets to empty; with empty localStorage the first boot yields the default world and all-zero inventory.",
+      "checkIds": [
+        "CHK04-persist-reload"
+      ],
+      "required": true
+    }
+  ],
+  "requiredChecks": [
+    {
+      "id": "CHK01-hard-crack",
+      "level": "unit",
+      "capability": "minicraft-logic-hardness-crack-overlay",
+      "command": "node --test --test-reporter=tap --test-name-pattern=hard-block-crack tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "TC01-hard-crack"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "CHK02-soft-single",
+      "level": "unit",
+      "capability": "minicraft-logic-soft-block-dig",
+      "command": "node --test --test-reporter=tap --test-name-pattern=soft-block-single-click tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "TC02-soft-single"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "CHK03-inventory-place",
+      "level": "unit",
+      "capability": "minicraft-logic-inventory-place-refuse",
+      "command": "node --test --test-reporter=tap --test-name-pattern=inventory-place-refuse tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "TC03-inventory-place"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "CHK04-persist-reload",
+      "level": "unit",
+      "capability": "minicraft-logic-persistence-storage",
+      "command": "node --test --test-reporter=tap --test-name-pattern=persist-reload-deepequal tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "TC04-persist-reload"
+      ],
+      "mode": "automated"
+    }
+  ],
+  "executionDenominator": {
+    "totalCases": 4
+  },
+  "cleanup": {
+    "environment": "Run from the repo root with the Node >= 18 built-in test runner; no browser, dev server or network access required; the run must leave no environment mutation.",
+    "data": "The logic suite injects an in-memory storage stub for the save key; no real browser localStorage, world blob or project file is written, and a completed run leaves no data artifacts."
+  },
+  "dependencyBaselines": [
+    {
+      "kind": "product",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "commandBindingsRequired": true,
+  "sourceReadiness": "ready_for_acceptance"
+}

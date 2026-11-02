@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "project": "sdd-harness",
+  "change": "minicraft-html-game-r29",
+  "cases": [
+    {
+      "id": "hard-block-3hits",
+      "ac": "AC-1-hard-block-3hits-crack-two-stage",
+      "oracle": "Boot the inline game from demos/minicraft/index.html in a vm sandbox with DOM/canvas/localStorage stubs and drive the real pointerdown/pointerup handlers on the same stone (type 3) cell: TYPES[1].hardness==1, TYPES[2].hardness==1, TYPES[3].hardness==3, TYPES[4].hardness==3; hit 1 leaves grid[cell]==3 with damage==1 and exactly one visible crack stage whose draw is a pure deterministic function of (x,y,stage); hit 2 leaves grid[cell]==3 with damage==2 and a distinct second crack stage; hit 3 sets grid[cell]==0, deletes the damage entry and inventory[3]==1 exactly, with a canvas HUD fillText showing the incremented stone count in the top-right quadrant. Wood (type 4) shows the identical 3-hit removal and inventory[4]==1. Same-cell pointermove never adds a hit (damage accrues on cell-entry edges only). Inventory stays a non-negative integer for types 1..4 throughout.",
+      "required": true,
+      "checkIds": [
+        "check-hard-block-3hits"
+      ]
+    },
+    {
+      "id": "soft-block-single",
+      "ac": "AC-2-soft-block-single-click",
+      "oracle": "One pointerdown/pointerup on a grass (type 1) cell sets grid[cell]==0, inventory[1]==1, creates no damage entry and draws no crack strokes; the same single click on a dirt (type 2) cell removes it with inventory[2]==1; digging an already-empty cell is a no-op: grid, inventory and the exact saved localStorage blob string are all unchanged.",
+      "required": true,
+      "checkIds": [
+        "check-soft-block-single"
+      ]
+    },
+    {
+      "id": "inventory-place-zero",
+      "ac": "AC-3-inventory-decrement-refuse-at-zero",
+      "oracle": "Digging one block of each type 1..4 accrues exactly +1 of that type (inventory[t]==1 after the hardness-th hit); selecting the type from the palette and right-click-placing on the emptied cell writes type t back and decrements that type's inventory by exactly 1 (1->0); with stock 0 the placement is refused before any mutation: target cell stays 0, inventory deep-equals its previous value and the saved blob string is byte-identical; after a type reaches 0 every palette swatch greys out (opacity 0.35).",
+      "required": true,
+      "checkIds": [
+        "check-inventory-place-zero"
+      ]
+    },
+    {
+      "id": "persist-reload",
+      "ac": "AC-4-persist-reload-deep-equal-empty-default",
+      "oracle": "After shaping the world (one stone, one grass and one wood destroyed plus a second stone cracked to stage 2) storage holds exactly one localStorage key whose parsed blob deep-equals {version:2, cells:<400-entry grid>, inventory:{1:1,2:0,3:1,4:1}} with keys exactly [cells,inventory,version] and no damage field; a fresh boot on the same storage restores grid and inventory deep-equal with a transient empty damage map and the cracked stone intact; boot on empty storage yields the default 20x20 world and inventory all-zero {1:0,2:0,3:0,4:0}. A stored legacy v1 blob {version:1, cells} migrates on load with inventory defaulted to 0 for every type while the world cells are restored.",
+      "required": true,
+      "checkIds": [
+        "check-persist-reload"
+      ]
+    }
+  ],
+  "requiredChecks": [
+    {
+      "id": "check-hard-block-3hits",
+      "level": "contract",
+      "capability": "minicraft-hard-block-dig",
+      "command": "node --test --test-reporter=tap --test-name-pattern=hard-block-3hits tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "hard-block-3hits"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "check-soft-block-single",
+      "level": "contract",
+      "capability": "minicraft-soft-block-dig",
+      "command": "node --test --test-reporter=tap --test-name-pattern=soft-block-single tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "soft-block-single"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "check-inventory-place-zero",
+      "level": "contract",
+      "capability": "minicraft-inventory-place-refuse",
+      "command": "node --test --test-reporter=tap --test-name-pattern=inventory-place-zero tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "inventory-place-zero"
+      ],
+      "mode": "automated"
+    },
+    {
+      "id": "check-persist-reload",
+      "level": "contract",
+      "capability": "minicraft-localstorage-persist",
+      "command": "node --test --test-reporter=tap --test-name-pattern=persist-reload tests/minicraft.logic.test.mjs",
+      "caseIds": [
+        "persist-reload"
+      ],
+      "mode": "automated"
+    }
+  ],
+  "executionDenominator": {
+    "totalCases": 4
+  },
+  "cleanup": {
+    "environment": "Each check runs node --test in a short-lived child process on the repo worktree; tests load the inline game script into a node:vm sandbox with DOM/canvas/localStorage stubs. No daemons, ports, browsers, global env or settings files are touched.",
+    "data": "localStorage is a per-boot in-memory Map stub discarded with the sandbox; no files, real localStorage or persistent state are written, so no data cleanup is required."
+  },
+  "dependencyBaselines": [
+    {
+      "kind": "product",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "commandBindingsRequired": true,
+  "sourceReadiness": "ready_for_acceptance"
+}
