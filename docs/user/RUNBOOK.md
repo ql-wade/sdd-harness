@@ -160,6 +160,29 @@ record-outcome 载荷再提交。前提：claim 必须来自带 `--session-id`�
 | `changed a Runtime-owned field` | comet-state.yaml 与 Run 状态不一致（手工编辑或 init 遗留）。仅 language/contextCompression/autoTransition/reviewMode 四字段允许用户改；其余一律以 Run 为准——应用在跑时删掉 YAML 会由 store 自愈重建，手工对齐追不平 |
 | `command not found: comet` | comet 装在某个特定 nvm 版本的 global bin，锚定「最新 v2x」不保证命中。锚定后先 `command -v comet` 验证；失败则把装了 comet 的那个 bin 加入 PATH |
 | 审批点输入了别的词被中止 | 仅驱动器退出，Run 状态与已记录批准不受影响；重跑同一命令续跑（确认词接受 approved / 同意 / y / yes） |
+| 换了 `COMET_DATA_DIR` 后 Run「不见了」 | Run 状态按 workspace 哈希存在数据根下——同一旅程从头到尾固定同一个值；换根 = 换了一套 Run 记录。迁回旧根即可找回 |
+
+## 沙箱化 agent（默认沙箱只授权项目目录）
+
+comet 0.5.1 默认把 Run 状态放在全局 `~/.comet/workspaces/<workspace哈希>/`，沙箱化
+agent 写不了。**上游支持 `COMET_DATA_DIR` 环境变量**替代整个用户级数据根
+（`workspace-runtime.js`：非空绝对路径；缺省 `~/.comet`）：
+
+```bash
+export COMET_DATA_DIR="${TMPDIR:-/tmp}/comet-data-$(basename "$PWD")"   # 会被创建
+```
+
+三条纪律（源码级实证）：
+1. **必须绝对路径，且不能在当前工作区内**——上游显式拒绝「用户级 Runtime 数据根
+   不能位于当前工作区内」（`workspace-runtime.js` 守卫）。放在沙箱已授权的
+   scratch 区（如 `$TMPDIR`、项目同级工作区目录）即可，无需 HOME 授权。
+2. **第 0 步安装之前就设好，全程固定**——Run 状态按 workspace 哈希落在数据根下，
+   中途换根 = 换了一套 Run 记录（见陷阱表末行）。
+3. 跨天旅程别用易清理的 `$TMPDIR`——改用稳定的 scratch 目录（如会话工作区同级），
+   否则系统清 tmp 会把 Run 状态一起清掉。
+
+默认不设 = 维持全局 `~/.comet`（既有行为，跨 clone 隔离由 workspace 哈希保证）。
+项目内落点（`<project>/.comet/runtime/`）被上游设计禁止，scaffold 不提供。
 
 ## 升级应用（要新功能/修复时）
 

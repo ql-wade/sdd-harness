@@ -37,3 +37,17 @@ README 受管交付段同步应用先行。foundation 导出清单 + gate-bundle
 上游开放问题（登记备裁）：state init 在 0.5.1 的目标用户/legacy 定位；classic owner
 「一次绑定永不释放」是否有意；`state forget` 类官方工具提案；comet status 对 app-owned
 Run 的展示行为未实测。
+
+## 2026-11-02（第三批）：comet 运行时状态沙箱友好性（COMET_DATA_DIR 文档化）
+
+sdd-test 验证实例追加诉求：沙箱化 agent 每条运行时命令都要宿主终端授权 ~/.comet。
+源码级核查（dist/platform/paths/workspace-runtime.js:91-94 + fc() 守卫）结论：
+1. 上游官方支持 `COMET_DATA_DIR`（非空绝对路径）替代整个用户级数据根（缺省 ~/.comet），
+   workspaceRoot = <dataRoot>/workspaces/<workspace哈希>/runtime。
+2. **项目内落点被上游设计禁止**（fc() 守卫「用户级 Runtime 数据根不能位于当前工作区内」）
+   ——实例首选方案不可行，scaffold 不提供，按实例允许的最低成本方案走 env + 文档化。
+固化：RUNBOOK 新增「沙箱化 agent」节（三条纪律：绝对路径且不可在工作区内；
+第 0 步前设好全程固定；跨天旅程勿用易清理 tmp）+ 陷阱表 +1 行（换根后 Run「不见」）。
+沙箱实证：临时项目 + COMET_DATA_DIR=scratch，状态落 override（workspaces/1），
+全局 ~/.comet/workspaces 122→122 零新增；项目内仅出现 362B 迁移 fence 标记文件（无害）。
+验证标准对接：实例侧在纯沙箱（仅项目目录可写 + 授权 scratch）跑 install→archive 全程零拒绝。
