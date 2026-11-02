@@ -15,7 +15,7 @@ test('the project application compiles using installed Comet 0.5.1 without a rep
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-global-compiler-'));
   t.after(() => fs.rmSync(scratch, { recursive: true, force: true }));
   const source = path.join(scratch, 'source');
-  for (const rel of ['lib/delivery', 'lib/adapters/plan-source.js', 'lib/adapters/comet-host-ports.js', 'lib/adapters/codex-host-source.js', 'lib/adapters/codex-test-observation.js', 'contracts/delivery', 'tools/comet', 'integrations/comet/application']) {
+  for (const rel of ['lib/delivery', 'lib/adapters/plan-source.js', 'lib/adapters/comet-host-ports.js', 'lib/adapters/claude-host-source.js', 'lib/adapters/codex-host-source.js', 'lib/adapters/codex-test-observation.js', 'contracts/delivery', 'tools/comet', 'integrations/comet/application']) {
     const target = path.join(source, rel);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.cpSync(path.join(root, rel), target, { recursive: true, filter: (item) => !['package', '__pycache__'].includes(path.basename(item)) });
@@ -42,7 +42,10 @@ test('the project application compiles using installed Comet 0.5.1 without a rep
   const manifest = JSON.parse(fs.readFileSync(path.join(output, 'compile-manifest.json'), 'utf8'));
   const currentManifest = JSON.parse(fs.readFileSync(path.join(root, 'integrations/comet/application/internal/compile-manifest.json'), 'utf8'));
   assert.equal(app.runtimeVersion, '0.5.1');
-  assert.equal(app.version, '10', 'the six-step-4 upgrade path must ship a new immutable application version, not reuse the installed v9 identity');
+  // 不变量：新构建必须是比 v9 fixture 更新的不可变版本，绝不复用已安装的 v9 身份。
+  // 不钉具体快照值——composition.json 的 manifestVersion 随每次源码变更单调递增。
+  assert.notEqual(app.version, '9', 'the six-step-4 upgrade path must ship a new immutable application version, not reuse the installed v9 identity');
+  assert.ok(Number(app.version) > 9, `the built application version must advance past the installed v9, got ${app.version}`);
   assert.equal(manifest.build.version, '0.5.1');
   assert.equal(manifest.build.supplierQualification, 'not-verified');
   assert.equal(manifest.contentHash, currentManifest.contentHash, 'the current candidate must be reproducible from current sources');

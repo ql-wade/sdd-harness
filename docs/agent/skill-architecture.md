@@ -67,7 +67,7 @@
 
 P 的允许列表是原样 `claude-parallel-tdd-planner/references/plan-contract.md` 的 `One root and acceptance source`、`DAG` 两节，以及只读 `scripts/plan_guard.py`。在 `Execution contract` 前停止；不得加载完整 SKILL、automation/parallel-execution/execution-prompt/completion/openspec-closeout 引用或 lifecycle/render/install 脚本。保留完整来源快照不表示激活其 Goal/监督/派发/归档合同；运行适配器仍须落实该允许列表。
 
-P1_6 历史整份升级曾登记共识方法 19 文件与 Whitebox 139 文件，来源见 `worker-reports/P1_6-convergence/source-upgrades.json`；当前文件数和逐文件摘要以 method-profile-manifest 为准。Whitebox 的 `tests/run_all.sh` 自测完整供应内容，包含原八负例、增至十五负例及三不变量；这些是方法源自测，不签产品 Journey。仓库 `scripts/check.sh` 必须调用该入口，入口缺失或失败均阻断。
+P1_6 历史整份升级曾登记共识方法 19 文件与 Whitebox 139 文件，来源记录在验证线的 `worker-reports/P1_6-convergence/source-upgrades.json`（纯 scaffold 线不跟踪该证据，当前文件数和逐文件摘要以 method-profile-manifest 为准）。Whitebox 的 `tests/run_all.sh` 自测完整供应内容，包含原八负例、增至十五负例及三不变量；这些是方法源自测，不签产品 Journey。仓库 `scripts/check.sh` 必须调用该入口，入口缺失或失败均阻断。
 
 历史实现记录曾使用 `0001-matt-method-profile.patch`；用户已指定 Comet 0.5.1；`integrations/comet/upstream.lock.json` 已锁定 0.5.1 和 0005，供给构建已做有限验证，但新版 Kt 写入、权限和同 Run 恢复仍未验证。双语分发、安装、诊断和 Hook 的现状需由 P1_2/P1_6 实测，不因历史补丁记录视为已实现。真实执行器、受信角色、结果来源、硬门及新宿主完整旅程分别归原下游任务与 VERIFY；缺能力返回 UNQUALIFIED，不回退退役方法，不因文件/hash/安装通过启用 profile。Ponytail full 只影响方法上下文，不改变权限或门禁；运行隔离限制仍须独立验证。
 

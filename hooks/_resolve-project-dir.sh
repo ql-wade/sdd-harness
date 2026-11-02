@@ -11,6 +11,8 @@
 #   4. GIT_PREFIX          (git hooks)
 #   5. PWD                  (last resort)
 
+set -euo pipefail
+
 resolve_sdd_project_dir() {
   local dir="${CLAUDE_PROJECT_DIR:-${CODEX_PROJECT_DIR:-${OPENCODE_PROJECT_DIR:-${OPENCODE_ROOT:-${GIT_PREFIX:-}}}}}"
   if [ -z "$dir" ] || [ ! -d "$dir" ]; then
@@ -41,7 +43,7 @@ resolve_sdd_wiki_home() {
   local common main_repo slug
   common=$(git -C "$SDD_PROJECT_DIR" rev-parse --git-common-dir 2>/dev/null || true)
   if [ -n "$common" ]; then
-    main_repo=$(cd "$SDD_PROJECT_DIR/$common/.." 2>/dev/null && pwd)
+    main_repo=$(cd "$SDD_PROJECT_DIR/$common/.." 2>/dev/null && pwd) || true
   fi
   slug=$(basename "${main_repo:-$SDD_PROJECT_DIR}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_-]/-/g')
   echo "$sdd_home/wiki/${slug:-default}"

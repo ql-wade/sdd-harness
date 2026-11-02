@@ -1,5 +1,9 @@
 # Context Persistence Best Practices
 
+> **历史外部参考（非现役流程）**：本文描述的外部 OpenSpec + planning-with-files 组合实践是历史参考。
+> 本仓库现行方法论由 ADR-0015（技能 vendoring 进 `.agents/skills/`，不装 `~/.claude`）与
+> ADR-0016（Superpowers 已移除）取代——下文 Installation 节对本仓库不适用，仅作外部来源存档。
+
 > Integrating OpenSpec with planning-with-files for persistent AI agent context
 
 ## Overview
@@ -195,7 +199,8 @@ A complete CLI tool implementing these patterns:
 ### Installation
 
 ```bash
-# Install prerequisite skills
+# 历史外部参考：此安装方式已被 ADR-0015/0016 取代——技能走本仓库 .agents/skills/ vendored 快照，
+# 不 clone 到 ~/.claude；Superpowers 已从本仓库移除
 git clone https://github.com/OthmanAdi/planning-with-files ~/.claude/skills/planning-with-files
 git clone https://github.com/obra/superpowers ~/.claude/skills/superpowers
 

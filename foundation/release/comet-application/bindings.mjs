@@ -166,19 +166,28 @@ function activationBindingProblem(run, action) {
   }
   if (source.event.kind !== 'evidence-recorded') return null;
   const waits = Array.isArray(run?.evidenceWaits) ? run.evidenceWaits : [];
-  const bySubmissionId = waits.filter((wait) => wait?.receipt?.submissionId === source.event.submissionId);
-  if (bySubmissionId.length > 1) {
-    return `SDD gate activation binds a colliding submissionId (${String(source.event.submissionId)}) shared by ${String(bySubmissionId.length)} evidence waits; submissionIds must be unique per wait (epoch-qualified)`;
-  }
-  const bound = bySubmissionId[0];
-  if (!bound || bound.sequence !== source.sequence || bound.stepId !== source.event.stepId
+  // The build checkpoint legitimately records the plan evidence twice within
+  // one checkEpoch (pre-P-gate confirmation and the post-pass re-arm), and
+  // the epoch-qualified derivation yields the same submissionId for both.
+  // A stale activation is still caught below: the activation must bind the
+  // wait at its own sequence, and any newer resolved wait of the same step
+  // supersedes it.
+  const bound = waits.find((wait) => wait?.receipt?.submissionId === source.event.submissionId
+    && wait.sequence === source.sequence);
+  if (!bound || bound.stepId !== source.event.stepId
     || bound.receipt.contentHash !== source.event.contentHash || bound.receipt.ref !== source.event.ref) {
     return `SDD gate activation binds submissionId ${String(source.event.submissionId)} but no evidence wait matches its recorded binding (sequence/step/hash/ref); the activation is stale`;
   }
   const newestOfStep = waits
     .filter((wait) => wait.stepId === source.event.stepId && wait.status === 'resolved')
     .reduce((best, wait) => (best === null || wait.sequence > best.sequence ? wait : best), null);
-  if (newestOfStep && newestOfStep.sequence > bound.sequence) {
+  // Supersession blocks only LIVE claims: the build checkpoint legitimately
+  // re-arms the plan evidence after a recorded gate pass, so the outcome
+  // sweep revalidating that recorded pass finds a newer resolved wait of the
+  // same step — a flow property, not tampering. The recorded pass's CONTENT
+  // is still fully re-checked (receipt re-admission, digests, sourceCurrent).
+  // A live claim on a superseded wait stays refused.
+  if (liveRecording && newestOfStep && newestOfStep.sequence > bound.sequence) {
     return `SDD gate activation binds a superseded evidence wait (sequence ${String(bound.sequence)}; newest resolved of ${String(source.event.stepId)} is ${String(newestOfStep.sequence)}); re-record the checkpoint evidence with an epoch-qualified submissionId and re-arm`;
   }
   return null;

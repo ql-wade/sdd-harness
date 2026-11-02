@@ -343,3 +343,54 @@ test('distinct non-command handlers survive mixed install repeat and uninstall w
   assert.equal(removed.status, 0, removed.stderr || removed.stdout);
   assert.deepEqual(JSON.parse(fs.readFileSync(settingsPath, 'utf8')).hooks, { Stop: [kept] });
 });
+
+// ---- 回归（2026-11-02 架构审核）----
+
+// hooks.yaml 是控制平面策略唯一事实源。pre-tool-gate.sh 无编译产物时的内置回退默认
+// 必须与 hooks.yaml 逐字同步——回退漂移 = deny 语义静默变窄（kb 目标缺 '.sdd/wiki/'
+// 曾实际放行直写落点），这正是本仓库定义的 F-HOOKS-001 死代码模式的回退版。
+function hooksYamlPolicyBlocks() {
+  const hooksYaml = fs.readFileSync(path.join(repoRoot, 'hooks.yaml'), 'utf8');
+  return hooksYaml.split(/^ {2}- id: /m).slice(1);
+}
+
+test('pre-tool-gate.sh fallback defaults stay in lockstep with hooks.yaml (no drift)', () => {
+  const script = fs.readFileSync(path.join(repoRoot, 'hooks', 'pre-tool-gate.sh'), 'utf8');
+  const elseBlock = script.match(/\nelse\n([\s\S]*?)\nfi\n/);
+  assert.ok(elseBlock, 'fallback else block not found in pre-tool-gate.sh');
+  const fb = elseBlock[1];
+  const fallbackVal = (name) => {
+    const m = fb.match(new RegExp(`${name}="([^"]*)"`));
+    assert.ok(m, `${name} missing from pre-tool-gate.sh fallback block`);
+    return m[1];
+  };
+
+  const blocks = hooksYamlPolicyBlocks();
+  const kbBlock = blocks.find((b) => b.startsWith('kb-write-protection'));
+  const denyBlock = blocks.find((b) => b.startsWith('dangerous-command-blocklist'));
+  assert.ok(kbBlock && denyBlock, 'hooks.yaml must keep both deny policies');
+
+  const targets = [...kbBlock.matchAll(/^\s*-\s+"([^"]+)"/gm)].map((m) => m[1]);
+  const patterns = [...denyBlock.matchAll(/^\s*-\s+"([^"]+)"/gm)].map((m) => m[1]);
+  assert.ok(targets.length >= 2 && patterns.length >= 2, 'policy item parse came back suspiciously small');
+
+  assert.deepEqual(fallbackVal('KB_PROTECT_PATHS').split(':').filter(Boolean), targets, 'KB_PROTECT_PATHS drifted from hooks.yaml kb-write-protection targets');
+  assert.deepEqual(fallbackVal('DENY_PATTERNS').split('|'), patterns, 'DENY_PATTERNS drifted from hooks.yaml dangerous-command-blocklist patterns');
+  const denyMessage = denyBlock.match(/^\s*message:\s+"([^"]+)"/m)?.[1];
+  assert.ok(denyMessage, 'deny policy message missing in hooks.yaml');
+  assert.equal(fallbackVal('DENY_MESSAGE'), denyMessage, 'DENY_MESSAGE drifted from hooks.yaml');
+});
+
+// mcp-capabilities.yaml 的 enforcement: hook:<policy-id> 必须解析到 hooks.yaml 中
+// 同名且 action: deny 的策略——否则该能力声明的是一条死代码防线（scaffold-architecture §4.1）。
+test('mcp-capabilities enforcement bindings resolve to deny policies in hooks.yaml', () => {
+  const manifest = fs.readFileSync(path.join(repoRoot, 'mcp-capabilities.yaml'), 'utf8');
+  const ids = [...manifest.matchAll(/enforcement:\s+"?hook:([\w-]+)"?/g)].map((m) => m[1]);
+  assert.ok(ids.length >= 1, 'expected at least one enforcement binding in mcp-capabilities.yaml');
+  const blocks = hooksYamlPolicyBlocks();
+  for (const id of ids) {
+    const block = blocks.find((b) => b.startsWith(`${id}\n`));
+    assert.ok(block, `enforcement hook:${id} has no policy block in hooks.yaml`);
+    assert.match(block, /^\s*action: deny$/m, `enforcement hook:${id} must bind a deny policy, not a soft one`);
+  }
+});

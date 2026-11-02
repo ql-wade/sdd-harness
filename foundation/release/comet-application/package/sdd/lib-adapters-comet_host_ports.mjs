@@ -24,7 +24,7 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import path from 'node:path';
-import { envelopeDigest } from './lib-delivery-evidence.mjs';
+import { createLaunchAuthority, envelopeDigest } from './lib-delivery-evidence.mjs';
 import { compileDomainCases } from './lib-delivery-domain_cases.mjs';
 import {
   readCodexClaimedTest,
@@ -32,6 +32,7 @@ import {
   readCodexIndependentTurn,
   readCodexTestEvent,
 } from './lib-adapters-codex_host_source.mjs';
+import { readClaudeCommandEvent, readClaudeStatement } from './lib-adapters-claude_host_source.mjs';
 
 const SHA256_RE = /^[0-9a-f]{64}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -72,6 +73,8 @@ export function createProtectedHostPorts({ context, readers } = {}) {
     command: readers?.command ?? readCodexCommandEvent,
     test: readers?.test ?? readCodexTestEvent,
     claimedTest: readers?.claimedTest ?? readCodexClaimedTest,
+    claudeCommand: readers?.claudeCommand ?? readClaudeCommandEvent,
+    claudeStatement: readers?.claudeStatement ?? readClaudeStatement,
     independentTurn: readers?.independentTurn ?? readCodexIndependentTurn,
   };
   // verifyGateInputs always runs before admission/review in the packaged
@@ -256,6 +259,7 @@ export function createProtectedHostPorts({ context, readers } = {}) {
           break;
         }
         if (!reviewer) return refusedPromotion('the T review action has no corroborated independent reviewer turn');
+        // (claude path handled in verifyReview below via independentReview.claude)
         if (reviewer.childThreadId === authorExecution || reviewer.childThreadId === authorPrincipal
           || reviewer.childThreadId === currentClaim.executorId || reviewer.childThreadId === currentClaim.sessionId
           || runClaims.some(item => item.execution === reviewer.childThreadId || item.principal === reviewer.childThreadId)) {
@@ -312,6 +316,18 @@ export function createProtectedHostPorts({ context, readers } = {}) {
       if (!packet || typeof packet !== 'object') throw new Error('receipt carries no source packet');
       const collection = packet.collection;
       if (!collection || typeof collection !== 'object') throw new Error('source packet has no collection');
+      const claudeLocator = collection.host?.claude ?? collection.source?.facts?.host?.claude ?? null;
+      if (claudeLocator && typeof claudeLocator === 'object') {
+        if (!SHA256_RE.test(claudeLocator.commandDigest ?? '')) throw new Error('claude locator commandDigest is not a sha256 digest');
+        const observedClaude = read.claudeCommand({
+          sessionPath: claudeLocator.sessionPath, transcriptId: claudeLocator.transcriptId, commandDigest: claudeLocator.commandDigest });
+        if (!observedClaude?.ok) throw new Error(`claude host record did not corroborate: ${String(observedClaude?.reason ?? 'refused')}`);
+        const claudeRecorded = collection.source?.facts?.outputDigest;
+        if (claudeRecorded !== undefined && claudeRecorded !== observedClaude.outputDigest) {
+          throw new Error(`raw claude record output digest ${String(observedClaude.outputDigest).slice(0, 8)}… does not match the collection's recorded output digest`);
+        }
+        return packet;
+      }
       const locator = collection.host?.codex ?? null;
       const locatorProblem = codexLocatorProblem(locator);
       if (locatorProblem) throw new Error(`source collection embeds no usable codex host locator: ${locatorProblem}`);
@@ -332,20 +348,108 @@ export function createProtectedHostPorts({ context, readers } = {}) {
     // record: the reporting action's claim is the builder identity, every
     // other claimed execution in the run is an author identity — so a review
     // sharing any of them is refused downstream (independence).
-    admissionOptionsFor() {
+    admissionOptionsFor(submitted) {
       if (!latched) throw new Error('protected admission context ran before verifyGateInputs corroborated the run');
       const current = latched.action.claim;
+      // Executor-only claims (prepare/revalidate-style runtime plumbing) carry
+      // no session and therefore no principal; they are not authoring
+      // identities and must not poison the principal list with nulls.
       const others = (Array.isArray(latched.run.actions) ? latched.run.actions : [])
-        .filter((item) => item?.claim && typeof item.claim.executorId === 'string' && item.claim.executorId !== current.executorId)
+        .filter((item) => item?.claim && typeof item.claim.executorId === 'string' && item.claim.executorId !== current.executorId
+          && typeof item.claim.sessionId === 'string' && item.claim.sessionId.trim())
         .map((item) => ({ execution: item.claim.executorId, principal: item.claim.sessionId }));
-      const authoringExecutions = [...new Set(others.map((item) => item.execution))];
-      const authoringPrincipals = [...new Set(others.map((item) => item.principal))];
+      // The managed delivery authority record is published per Run by the
+      // protected driver into the change's own .comet directory; the host
+      // reads its verification side back from that managed location. A record
+      // may be single-gate (the original shape) or carry per-gate entries —
+      // each entry pins its own secret/binding and is selected by the
+      // submitted collection's actionDigest, so every gate's already-recorded
+      // receipt keeps verifying against its own issuing authority when the
+      // run's outcome sweep revalidates prior gates.
+      let managed = null;
+      let managedEnvironment = null;
+      try {
+        // Record lookup order: the live change dir first, then — when the Run
+        // sits in the archive phase — the archived copy. The classic archive
+        // executor moves the change dir (the published record with it) to
+        // openspec/changes/archive/<date>-<change>/ BEFORE the post-move
+        // outcome sweep revalidates prior gates, so without the archived
+        // fallback every recorded pass would fail re-admission at archive
+        // time (the sweep needs the record; the completion check needs the
+        // active dir gone — only a fallback can satisfy both).
+        const changeDir = latched.run.input?.changeDir ?? '';
+        const recordPaths = [path.join(context.projectRoot, changeDir, '.comet', 'delivery-authority.json')];
+        if (latched.run.state?.phase === 'archive') {
+          const archiveRoot = path.join(context.projectRoot, 'openspec', 'changes', 'archive');
+          let dated = [];
+          try { dated = fs.readdirSync(archiveRoot).filter((name) => name.endsWith(`-${latched.run.runId}`)); } catch { dated = []; }
+          for (const name of dated) {
+            recordPaths.push(path.join(archiveRoot, name, '.comet', 'delivery-authority.json'));
+          }
+        }
+        let candidates = [];
+        let environment0 = 'comet-classic-managed';
+        let recordRunId = null;
+        for (const recordPath of recordPaths) {
+          try {
+            const raw = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
+            candidates = Array.isArray(raw?.entries) ? raw.entries : (raw && raw.secret !== undefined ? [raw] : []);
+            environment0 = raw?.environment ?? 'comet-classic-managed';
+            recordRunId = raw?.runId ?? null;
+            break;
+          } catch (error) {
+            if (error?.code !== 'ENOENT') throw error;
+          }
+        }
+        const submittedDigest = submitted?.sourcePacket?.collection?.actionDigest
+          ?? submitted?.collection?.actionDigest ?? null;
+        for (const entry of candidates) {
+          const entryRunId = entry?.runId ?? recordRunId;
+          if (entryRunId !== latched.run.runId) continue;
+          if (typeof entry?.secret !== 'string' || entry.secret.length < 32) continue;
+          if (entry.gate !== undefined && entry.gate !== latched.gate) continue;
+          if (entry.actionDigest !== undefined && entry.actionDigest !== submittedDigest) continue;
+          managed = {
+            runId: entryRunId,
+            secret: entry.secret,
+            actionBinding: entry.actionBinding,
+            sourceQualification: entry.sourceQualification,
+            authoringExecutions: entry.authoringExecutions,
+            authoringPrincipals: entry.authoringPrincipals,
+          };
+          managedEnvironment = entry.environment ?? environment0;
+          break;
+        }
+      } catch { managed = null; }
+      // The record's authoring attestation names the real authoring
+      // identities of the Run (the same trust anchor that mints the
+      // authority); the transcript readers corroborate them record-by-record
+      // downstream, so an unfounded list cannot survive verification.
+      const recordIdentities = (list) => Array.isArray(list) && list.every((value) => typeof value === 'string' && value.trim())
+        ? list : [];
+      const authoringExecutions = [...new Set([
+        ...others.map((item) => item.execution),
+        ...recordIdentities(managed?.authoringExecutions),
+      ])];
+      const authoringPrincipals = [...new Set([
+        ...others.map((item) => item.principal),
+        ...recordIdentities(managed?.authoringPrincipals),
+      ])];
       // When the V promotion qualified an author source, that author belongs
       // in the protected authoring identity set (gate.js requires it).
       if (promotion) {
         authoringExecutions.push(promotion.authorExecution);
         authoringPrincipals.push(promotion.authorPrincipal);
       }
+      const managedContext = managed ? {
+        authority: createLaunchAuthority({ secret: managed.secret }),
+        actionBinding: managed.actionBinding,
+        sourceQualification: managed.sourceQualification,
+        purpose: 'independent-acceptance',
+        environment: managedEnvironment ?? 'comet-classic-managed',
+        consumedCollections: [],
+        issuedExecutions: [],
+      } : {};
       return {
         builderExecution: current.executorId,
         builderPrincipal: current.sessionId,
@@ -353,6 +457,7 @@ export function createProtectedHostPorts({ context, readers } = {}) {
         authoringPrincipals,
         now: new Date().toISOString(),
         ...(promotion ? { domainAutomation: structuredClone(promotion) } : {}),
+        ...managedContext,
       };
     },
 
@@ -362,6 +467,45 @@ export function createProtectedHostPorts({ context, readers } = {}) {
     verifyReview({ entry } = {}) {
       if (!latched) return refused('protected review verification ran before verifyGateInputs corroborated the run');
       const source = entry?.sourcePacket?.collection?.source;
+      const claudeBinding = source?.independentReview?.claude ?? null;
+      if (claudeBinding && typeof claudeBinding === 'object') {
+        const statement = read.claudeStatement({
+          sessionPath: claudeBinding.sessionPath, transcriptId: claudeBinding.transcriptId, statementDigest: claudeBinding.statementDigest });
+        if (!statement?.ok) return refused(`prepared independent-review statement did not corroborate: ${String(statement?.reason ?? 'refused')}`);
+        if (claudeBinding.envelopeDigest !== entry.digest
+          || claudeBinding.reportDigest !== source.reportDigest
+          || claudeBinding.actionDigest !== source.actionDigest) {
+          return refused('prepared claude review binding does not bind this receipt (envelope/report/action digests differ)');
+        }
+        const currentClaimC = latched.action.claim;
+        const runClaimsC = (Array.isArray(latched.run.actions) ? latched.run.actions : [])
+          .filter((item) => item?.claim && typeof item.claim.executorId === 'string')
+          .flatMap((item) => [item.claim.executorId, item.claim.sessionId]);
+        if (claudeBinding.transcriptId === currentClaimC.executorId || claudeBinding.transcriptId === currentClaimC.sessionId
+          || runClaimsC.includes(claudeBinding.transcriptId)) {
+          return refused('the independent reviewer must differ from the builder and every claimed run execution');
+        }
+        const requiredKindC = REVIEW_KIND_BY_GATE[latched.gate];
+        if (requiredKindC !== undefined && claudeBinding.kind !== requiredKindC) {
+          return refused(`prepared review kind ${String(claudeBinding.kind)} does not match the ${latched.gate} gate's required review`);
+        }
+        // The prepared binding may carry gate-specific sufficiency fields the
+        // pure gate re-checks (contractDigest for T; change/planDigest/
+        // tasksDigest/dagDigest for P). They pass through verbatim — the
+        // binding was corroborated record-by-record above, and the gate
+        // compares them against the judged contract/plan inputs.
+        return {
+          ok: true, sufficient: true, kind: claudeBinding.kind,
+          evidenceDigest: claudeBinding.evidenceDigest,
+          envelopeDigest: entry.digest, reportDigest: source.reportDigest, actionDigest: source.actionDigest,
+          execution: claudeBinding.transcriptId, principal: claudeBinding.transcriptId,
+          ...(claudeBinding.contractDigest !== undefined ? { contractDigest: claudeBinding.contractDigest } : {}),
+          ...(claudeBinding.change !== undefined ? { change: claudeBinding.change } : {}),
+          ...(claudeBinding.planDigest !== undefined ? { planDigest: claudeBinding.planDigest } : {}),
+          ...(claudeBinding.tasksDigest !== undefined ? { tasksDigest: claudeBinding.tasksDigest } : {}),
+          ...(claudeBinding.dagDigest !== undefined ? { dagDigest: claudeBinding.dagDigest } : {}),
+        };
+      }
       const binding = source?.independentReview?.codex ?? null;
       if (!binding || typeof binding !== 'object') return refused('receipt embeds no prepared independent-review binding');
       const turn = read.independentTurn({

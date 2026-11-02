@@ -16,33 +16,10 @@
 // ledger; nothing is dispatched, written or phase-stored (SDD.Gate.v1).
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { types } from 'node:util';
-import { appendFileSync } from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import { parseContract } from './contracts-delivery-index.mjs';
 
 const SHA256_RE = /^[a-f0-9]{64}$/;
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
-
-// TEMPORARY shape probe (verify/r-gate-verdict wave, removed at the next
-// relock): records every rawBytes input shape so the real record-outcome
-// wire can be compared against the accepted forms. Never throws.
-function probeRawBytesShape(value) {
-  try {
-    const record = {
-      at: new Date().toISOString(),
-      pid: process.pid,
-      typeof: typeof value,
-      constructor: value?.constructor?.name ?? null,
-      isArray: Array.isArray(value),
-      length: typeof value?.length === 'number' ? value.length : null,
-      keys: value && typeof value === 'object' ? Object.keys(value).slice(0, 8) : null,
-      keyCount: value && typeof value === 'object' ? Object.keys(value).length : null,
-      preview: (() => { try { return JSON.stringify(value)?.slice(0, 200) ?? null; } catch { return '<unserializable>'; } })(),
-    };
-    appendFileSync(path.join(os.tmpdir(), 'r-shape.log'), `${JSON.stringify(record)}\n`);
-  } catch { /* probe must never affect admission */ }
-}
 
 function synchronousAuthorityResult(invoke) {
   try {
@@ -204,7 +181,6 @@ function sameSignature(expected, given) {
 }
 
 function rawBytes(value) {
-  probeRawBytesShape(value);
   if (Buffer.isBuffer(value) || value instanceof Uint8Array) return Buffer.from(value);
   // The record-outcome JSON channel rehydrates byte fields as
   // { type: 'Buffer', data: [octets] } (Buffer.toJSON's own shape). Accept
@@ -237,16 +213,6 @@ function rawBytes(value) {
       out[index] = octet;
     }
     return out;
-  }
-  if (false) {
-    const out = Buffer.alloc(value.length);
-    let ok = true;
-    for (let index = 0; index < value.length; index++) {
-      const octet = value[index];
-      if (!Number.isInteger(octet) || octet < 0 || octet > 255) { ok = false; break; }
-      out[index] = octet;
-    }
-    if (ok) return out;
   }
   return null;
 }

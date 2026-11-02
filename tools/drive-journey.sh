@@ -8,12 +8,12 @@ set -euo pipefail
 
 CHANGE="${1:?usage: drive-journey.sh <change-name> [project-root]}"
 ROOT="${2:-$PWD}"
+SESSION_ID="${SDD_SESSION_ID:?usage: export SDD_SESSION_ID=<本次任务的稳定 UUID，断点续跑保持一致>}"
 
-# ── node 锚定：即使 HOME 被覆盖也找到现代 node ──────────────────────
-NVM_SCAN="$HOME"
-[ -d "$NVM_SCAN/.nvm/versions/node" ] || NVM_SCAN="/Users/mac"
-NVBIN=$(ls -d "$NVM_SCAN"/.nvm/versions/node/v2*/bin 2>/dev/null | sort -V | tail -1)
-[ -n "$NVBIN" ] && export PATH="$NVBIN:$PATH"
+# ── node 锚定：优先用 $HOME/.nvm 的新 node；没有则要求调用方自行导出 PATH ──
+NVBIN=$(ls -d "$HOME"/.nvm/versions/node/v2*/bin 2>/dev/null | sort -V | tail -1)
+if [ -n "$NVBIN" ]; then export PATH="$NVBIN:$PATH"; fi
+command -v node >/dev/null 2>&1 || { echo "❌ 未找到 node：请安装 node>=20 或先 export PATH=<node>/bin"; exit 1; }
 echo "▶ node $(node --version)"
 
 # ── 解析最新已安装应用 ──────────────────────────────────────────────
@@ -47,7 +47,7 @@ step() {
 }
 claim() {
   step claim "${BASE[@]}" --action-id "$1" --executor-id sdd-managed-skill-host \
-    --session-id 4da29787-2439-4b93-a7b0-5377d2ccb05a --capability skill-host
+    --session-id "$SESSION_ID" --capability skill-host
   cp "$JDIR/step.json" "$JDIR/last-claim-receipt.json" 2>/dev/null || true
 }
 record() {
@@ -136,7 +136,7 @@ for round in $(seq 1 40); do
       claim "$AID"
       cat << 'GATE_EOF'
 ━━ R 门证据构造 ━━
-按 openspec/changes/minicraft-html-game-r5/VERIFY-JOURNEY.md 清单：
+按 docs/user/RUNBOOK.md「R 门证据」清单：
  1. 孵化作者子代理（读 proposal 执行确认命令）+ 独立审查者子代理；
  2. 驱动器构造 evidence chain（authority→ActionBinding→dispatch→
     collection→managed admission）；
@@ -151,7 +151,7 @@ GATE_EOF
     classic.extension.architecture-consensus|classic.extension.test-design-review|classic.extension.build-plan-unique|classic.extension.verify-whitebox|classic.extension.knowledge-project-closeout)
       echo "━━ 门证据点 [$STEP] ━━"
       echo "  按门构造证据链（worker+独立审查者+收据束）后 record-outcome；"
-      echo "  清单见 VERIFY-JOURNEY.md；构造完成后重跑本脚本继续。"
+      echo "  清单见 docs/user/RUNBOOK.md 对应门证据节；构造完成后重跑本脚本继续。"
       exit 2;;
     *)
       echo "未知步骤 $STEP（$AID）"; exit 1;;

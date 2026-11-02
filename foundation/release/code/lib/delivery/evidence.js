@@ -181,7 +181,40 @@ function sameSignature(expected, given) {
 }
 
 function rawBytes(value) {
-  return Buffer.isBuffer(value) || value instanceof Uint8Array ? Buffer.from(value) : null;
+  if (Buffer.isBuffer(value) || value instanceof Uint8Array) return Buffer.from(value);
+  // The record-outcome JSON channel rehydrates byte fields as
+  // { type: 'Buffer', data: [octets] } (Buffer.toJSON's own shape). Accept
+  // exactly that shape and re-anchor it to a real Buffer; integrity stays
+  // with the collection signature and digests, which the re-anchored bytes
+  // must reproduce or every verification refuses.
+  if (value && typeof value === 'object' && value.type === 'Buffer' && Array.isArray(value.data)
+    && value.data.length > 0 && value.data.length <= 2 * 1024 * 1024
+    && value.data.every((octet) => Number.isInteger(octet) && octet >= 0 && octet <= 255)) {
+    return Buffer.from(value.data);
+  }
+  // The runtime's value projection materializes byte arrays as array-like
+  // objects keyed by index ({ 0: octet, 1: octet, ..., length: n }); accept
+  // that shape under the same octet validation.
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    // Projection forms: with an explicit integer length, or keyed purely by
+    // contiguous numeric indices whose maximum defines the length.
+    let length = Number.isInteger(value.length) ? value.length : -1;
+    const keys = Object.keys(value).filter((key) => /^\d+$/.test(key)).map(Number).sort((a, b) => a - b);
+    if (length < 0) {
+      if (!keys.length || keys[0] !== 0 || keys[keys.length - 1] !== keys.length - 1
+        || keys.length > 2 * 1024 * 1024) return null;
+      length = keys.length;
+    }
+    if (length < 1 || length > 2 * 1024 * 1024) return null;
+    const out = Buffer.alloc(length);
+    for (let index = 0; index < length; index++) {
+      const octet = value[index];
+      if (!Number.isInteger(octet) || octet < 0 || octet > 255) return null;
+      out[index] = octet;
+    }
+    return out;
+  }
+  return null;
 }
 
 function collectionInputs({ dispatch, envelope, launchRecord, reportBytes, resultBytes, methodTraceBytes } = {}, authority) {

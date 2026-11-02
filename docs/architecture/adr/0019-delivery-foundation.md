@@ -35,3 +35,9 @@ ADR-0015 有意收缩为 scaffold，无法独自保证产品到发布的状态�
 新增契约与适配器维护成本；上游接口、宿主 Guard、发布身份、完整快照仍待验证。兼容失败不接管配置；后端缺扩展点不伪造集成。保留旧 CLI 与配置回退；真实发布副作用按回执恢复。
 
 权威设计：[delivery-architecture.md](../delivery-architecture.md)。实施与验收：[OpenSpec](../../../openspec/changes/delivery-foundation-rearchitecture/tasks.md)。
+
+> 注（2026-11-02，导航修订，不改决策）：§「2026-10-20 官方能力复用修订候选」引用的
+> `overlay-integration-design.md` 已随 OPEN_DECISION OV_OVERLAY_CANDIDATE 回退删除（7969f62）；
+> 现役设计见 [comet-ai-devops-convergence.md](../comet-ai-devops-convergence.md)。
+> 另：本文旧称 delivery-architecture.md 为「权威设计」，ADR-0021 后续已改道（command-first，
+> 无常驻角色服务）——两份权威指针的取舍属项目所有者裁决，登记于 change HANDOFF 的 OPEN 项。

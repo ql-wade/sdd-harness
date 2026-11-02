@@ -951,8 +951,14 @@ test('comet-050 adoption registration: supply hashes stay honest across relock s
     const lock = JSON.parse(fs.readFileSync(path.join(repoRoot, 'openspec/changes/delivery-foundation-rearchitecture/replans/2026-10-29-comet-051/before/upstream.lock.json'), 'utf8'));
     assert.equal(adoption.commit, lock.source.commit, 'historical adoption must match its historical lock');
     assert.equal(adoption.sourceArchiveSha256, lock.source.sha256, 'historical archive digest must match its historical lock');
-    const buildDir = path.join(repoRoot, '.sdd/vendor/comet', adoption.commit, 'builds', adoption.buildFingerprint);
-    assert.ok(fs.existsSync(buildDir), 'adoption build fingerprint must resolve to a real vendored build');
+    // operator-local vendored 树（.sdd/vendor）不随 scaffold 分发：其对应 commit 目录存在时
+    // 才做 build 解析断言；否则断言指纹形状，保持声明可机械校验（2026-11-02 审计裁决）
+    assert.match(adoption.buildFingerprint, /^[0-9a-f]{64}$/, 'adoption build fingerprint must be a sha256 hex digest');
+    const vendoredCommit = path.join(repoRoot, '.sdd/vendor/comet', adoption.commit);
+    if (fs.existsSync(vendoredCommit)) {
+      const buildDir = path.join(vendoredCommit, 'builds', adoption.buildFingerprint);
+      assert.ok(fs.existsSync(buildDir), 'adoption build fingerprint must resolve to a real vendored build');
+    }
     assert.ok(!Number.isNaN(Date.parse(adoption.relockedAt)), 'relockedAt must be a parsable timestamp');
   }
   assert.match(comet.lockRef, /integrations\/comet\/upstream\.lock\.json/);
@@ -962,7 +968,7 @@ test('comet-050 adoption registration: supply hashes stay honest across relock s
   assert.match(registry.project.authority.note, /pilot-contract\.md/, 'pilot facts must cite the verified registration');
 });
 
-test('current Comet 0.5.1 package observation is bound to its lock without claiming runtime qualification', () => {
+test('current Comet 0.5.1 package observation is bound to its lock without claiming runtime qualification', (t) => {
   const registry = loadCommittedRegistry();
   const observed = registry.resources.find((r) => r.id === 'comet-source')?.observation?.currentSupply;
   assert.ok(observed, 'the current supply needs its own observation, not a rewritten historical adoption');
@@ -973,6 +979,11 @@ test('current Comet 0.5.1 package observation is bound to its lock without claim
   assert.equal(observed.sourceCommit, lock.source.commit);
   assert.equal(observed.runtimeQualification, 'UNVERIFIED');
   const evidenceFile = path.join(repoRoot, observed.evidenceRef);
+  // 证据文件属验证项目产物，不随纯 scaffold 线分发（2026-11-02 裁决）：操作者本地存在时才做绑定回验。
+  if (!fs.existsSync(evidenceFile)) {
+    t.skip(`operator-local verification evidence not distributed (${observed.evidenceRef}); registry-evidence binding cannot be re-verified on the scaffold line`);
+    return;
+  }
   const evidenceBytes = fs.readFileSync(evidenceFile);
   assert.equal(crypto.createHash('sha256').update(evidenceBytes).digest('hex'), observed.evidenceSha256);
   const evidence = JSON.parse(evidenceBytes);

@@ -18,12 +18,14 @@ const v10AppFile = path.join(repo, 'integrations/comet/application/package/appli
 const comet = resolveCometForTest();
 
 test('v10 upgrade preserves the old Run on its original v9 package and lands the six entries', async (t) => {
-  // The old Run's ACTUAL fixed package: the registry's installed v9 copy
-  // (host-local evidence; the git-committed v9 predates the fixture-log
-  // gitignore repair and is refused by the real installer).
-  const registryV9 = '/Users/mac/Code/sdd-harness/.comet/applications/sdd-managed-delivery/versions/d3ea82317d8494dfa52cc3364b52b87701cc00e19cf6f3df775f8f0bc504dad8';
-  if (!fs.existsSync(path.join(registryV9, 'application.json'))) {
-    t.skip('the host registry has no installed v9; the upgrade-path evaluation needs the old Run fixed package');
+  // The old Run's ACTUAL fixed package: the operator registry's installed v9
+  // copy (host-local evidence; the git-committed v9 predates the fixture-log
+  // gitignore repair and is refused by the real installer). A scaffold
+  // checkout has no such host path — the operator supplies it via env, and
+  // the case skips with an explicit reason rather than inventing a fixture.
+  const registryV9 = process.env.SDD_TEST_V9_PACKAGE ?? '';
+  if (!registryV9 || !fs.existsSync(path.join(registryV9, 'application.json'))) {
+    t.skip('no v9 fixed package available (operator sets SDD_TEST_V9_PACKAGE to the installed v9 copy); the upgrade-path evaluation needs the old Run fixed package');
     return;
   }
   const v9Root = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'sdd-v9-pkg-'));

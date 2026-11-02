@@ -77,7 +77,7 @@
           "the admission receipt is produced by the owning P task against mcp-capabilities.yaml as the single source of truth; this component profile never self-verifies discovery and never writes live config"
         ]
       },
-      "controlPlaneGap": "hooks.yaml kb-write-protection compiled target 'llmwiki/wiki/' is a substring match and does not cover the registered canonical wiki landing .sdd/wiki/sdd-harness/wiki/; a direct fs write to the canonical landing is currently NOT denied by that hook (synthetic-payload probe: exit 0 on canonical landing vs exit 2 on the legacy substring). Recorded as a risk for the control-plane owner; this file changes no hook"
+      "controlPlaneGap": "RESOLVED-ROUTED-AND-REMEASURED (2026-11-02): P1_2 routed the fix (ledger I04_EVIDENCE_RECORDED_HOOK_GAP_ROUTED) — hooks.yaml kb-write-protection now targets both '.sdd/wiki/' and 'llmwiki/wiki/', and the pre-tool-gate.sh built-in fallback was re-synced verbatim (drift now intercepted by test/adapter-quoting.test.js). Same synthetic payloads re-probed on 2026-11-02: canonical landing .sdd/wiki/sdd-harness/wiki/ → exit 2 (was exit 0 pre-fix), legacy substring → exit 2, normal command → exit 0. This file changes no hook"
     }
   }
 }

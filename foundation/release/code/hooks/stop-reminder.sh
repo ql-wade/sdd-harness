@@ -2,6 +2,8 @@
 # Stop hook — 会话结束提醒（stdout 进 agent 上下文）
 # 检查"该写而没写"的沉淀项并提醒。只提醒，不阻塞。
 
+set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/_resolve-project-dir.sh"
 
@@ -21,7 +23,7 @@ if [ -d "$ROOT/openspec/changes" ]; then
   for d in "$ROOT"/openspec/changes/*/; do
     [ -d "$d" ] || continue
     base=$(basename "$d")
-    [ "$base" = "archive" ] || [ "$base" = ".gitkeep" ] && continue
+    if [ "$base" = "archive" ] || [ "$base" = ".gitkeep" ]; then continue; fi
     [ -f "$d/progress.md" ] || reminders+=("- openspec/changes/${base}：缺 progress.md（交接证据未落盘）")
   done
 fi

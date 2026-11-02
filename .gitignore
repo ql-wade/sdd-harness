@@ -26,6 +26,10 @@ npm-debug.log*
 # 例外（2026-10-30）：package/ 的打包副本与源共享同一受管 fixture 集（清单哈希含这些 .log）；
 # 无此豁免每次提交包都静默缺文件，fresh checkout 必然清单≠包、真实安装拒绝（ INVALID_WORKFLOW ）
 !integrations/comet/application/package/skills/**/*.log
+# 例外（2026-11-02）：vendored whitebox-verify 技能自身的测试 fixture .log（源 .agents/skills/
+# 与组合包源 skills/ 副本共享同一 fixture 集，清单哈希含这些 .log），是语料 fixture 不是运行时日志
+!.agents/skills/whitebox-verify/tests/**/*.log
+!integrations/comet/application/skills/whitebox-verify/tests/**/*.log
 # 例外（2026-10-30）：worker-reports/ 是交接证据库，其中的 .log 是验证记录（check/回归原始输出），
 # 不是运行时日志，必须随证据入库
 !worker-reports/**/*.log
@@ -88,6 +92,8 @@ __pycache__/
 **/comet/archive/*/runtime
 **/.comet/run-state.json
 **/.comet/pending-action.json
+# 根目录一次性 dispatch 请求残留（与 pending-action 同类运行时产物，2026-11-02 审计）
+/recover.json
 **/.comet/trajectory.jsonl
 **/.comet/context.md
 **/.comet/artifacts.json
@@ -100,12 +106,25 @@ __pycache__/
 .comet-state-transaction.json
 # <<< Comet managed project state <<<
 
-# ---- 会话证据产物不入框架线（保留在 evidence 线与本地） ----
-worker-reports/
-review-runs/
+# ---- 会话证据产物不入框架线（保留在 evidence 线与本地）----
+# 仅锚定仓库根：openspec/changes/<change>/ 内的 worker-reports/、review-runs/ 是 change
+# 交付工件（execution-ledger 证据链），入库（2026-11-02 审计裁决）
+/worker-reports/
+/review-runs/
 .journey-*/
 .kt-staging/
 .kt-evidence/
+/outline-readback.json
+
+# ---- 实例/dogfooding 残留不入框架线（ADR-0016；纯净 scaffold 线，2026-11-02 清理）----
+# scaffold 自身回归在 test/；新项目按 RUNBOOK 在项目本地建自己的 tests/
+/tests/
+/docs/superpowers/
+
+# 例外：openspec change 内的验证/评审工件是 change 工件（execution-ledger 证据链），入库
+!openspec/changes/*/package-probes/**/*.log
+!openspec/changes/*/grill-report.md
+!openspec/changes/*/verification-report.md
 
 # ---- 归档 Run 的运行时凭据与中间迭代投影不入框架线 ----
 openspec/changes/archive/*/.comet/delivery-authority.json

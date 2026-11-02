@@ -1,5 +1,9 @@
 # 受管交付快速走查（新 session 集成指南）
 
+> **状态（2026-11-02）**：本文是 2026-10-23 冷启探针的历史走查记录，基于 0.5.0 时代 vendor 构建
+> 工作流。ADR-0021 已取消六角色常驻服务与 Runner 前置，ADR-0023 已改用 PATH 中的 comet 0.5.1 +
+> 官方编译器——**现行流程以 `docs/user/RUNBOOK.md`（cookbook）为准**，本文仅作历史命令参考。
+
 > 本文由零上下文冷启探针实测产出（2026-10-23，fresh-session-probe）：每条命令都真实执行过。
 > 适用前提：项目内已有指纹钉定的 Comet 构建（`.sdd/vendor/comet/<commit>/builds/<fp>/work/bin/comet.js`）。
 
@@ -17,7 +21,7 @@
 ## 动手走查（10 步，探针逐条实测）
 
 ```bash
-COMET=.sdd/vendor/comet/*/builds/*/work/bin/comet.js   # gitignored，主检出处
+COMET=$(ls .sdd/vendor/comet/*/builds/*/work/bin/comet.js 2>/dev/null | head -1)   # gitignored，主检出处（赋值不展开 glob，须用命令替换）
 mkdir -p "$TMPDIR/probe-proj" && cd "$TMPDIR/probe-proj" && git init
 
 # 1. 项目脚手架（--platform 合法值：claude-code 等；首次某组件 failed 属已知怪癖，原样重跑即 complete）

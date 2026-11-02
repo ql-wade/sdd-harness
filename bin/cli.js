@@ -131,7 +131,9 @@ program
       console.log(`  ${c.pass ? chalk.green('✅') : chalk.red('❌')} ${c.name}${c.detail ? chalk.gray(`  ${c.detail}`) : ''}`);
     }
     console.log('');
-    process.exitCode = fail ? 1 : 0;
+    // 退出码契约（AGENTS.md §5）：doctor 是无输入的骨架自检，检查失败属
+    // 「验证不通过」= 2；1 只留给「输入无效」。
+    process.exitCode = fail ? 2 : 0;
   });
 
 // ---- probe ----

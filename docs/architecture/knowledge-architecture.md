@@ -1,5 +1,9 @@
 # 知识架构（终版）— AI DevOps 知识闭环
 
+> **历史文档标识（2026-11-02）**：本文是 v4.5 提案的设计深化视图。现行知识栈的决策记录是
+> ADR-0020 决定4 与 delivery-architecture §6.1（LLMWiki + Outline + deepwiki-open + CodeGraph 可选）；
+> 本文仅作演进对照保留，不作为当前阶段的命令/知识库路由依据。
+>
 > 状态：**已定稿**（knowledge-layer-plan v4.5 + 用户裁决接受 2/3 + documented dissent）。
 > 本文是 AI DevOps 总纲（[ai-devops-architecture.md](ai-devops-architecture.md)）中**知识环节（11-12 + recall 上下文源）的深化视图**；完整规格（谓词、journal schema、门禁五要素、29 项闭合账）见 [knowledge-layer-plan.md](knowledge-layer-plan.md)。
 > 共识状态：claude-code 8.8 ✅ / zcode 8.8 ✅ / codex-agent 6.1 ❌（3 项规格级 dissent 存证 [consensus-runs/knowledge-v45-final-verdict.md](consensus-runs/knowledge-v45-final-verdict.md)，转入 K 阶段实现时验收）。

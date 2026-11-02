@@ -24,8 +24,8 @@
 | 代理 CLI 已登录 | 打开 Claude Code 能对话 | — |
 
 ```bash
-# node 退化陷阱：先锚定 node24
-export PATH="$HOME/.nvm/versions/node/v24.15.0/bin:$PATH"
+# node 退化陷阱：先锚定 node24（有 nvm 用 nvm，没有就取最新 v2x）
+nvm use 24 2>/dev/null || export PATH="$(ls -d "$HOME"/.nvm/versions/node/v2*/bin | sort -V | tail -1):$PATH"
 ```
 
 ## 第 0 步：把"餐厅"开进你的项目（装应用）
@@ -61,6 +61,7 @@ $EDITOR openspec/changes/my-change/proposal.md
 
 用驱动脚本（推荐，全自动推进 + 在审批点叫你）：
 ```bash
+export SDD_SESSION_ID="$(uuidgen)"   # 本次任务的稳定标识；断点续跑重跑时保持同一个值
 bash tools/drive-journey.sh my-change
 ```
 或手工逐步（命令逐条透明）：
@@ -86,12 +87,12 @@ comet state next my-change     # 随时查看下一步
 
 > **T 门硬规则（升级版 test-authoring v1.1.0）**：用例先经 test-authoring 写入
 > **domain-cases 用例库**（稳定 Case ID，跨变更维护）→ 投影 TestPack v1 → 门禁绑定。
-> 直接手写契约 = 流程缺口（r34/snake 两轮实证未走库，已修正）。
+> 直接手写契约 = 流程缺口（试点轮次实证未走库，已修正）。
 | P | 构建计划 | **批准计划** | 任务 DAG/顺序合理 | task-dag.json；gates/p 束 |
 | Build | 实现 | （代理干活） | — | 实现代码 + 测试原始日志 |
 
 > **Build 硬规则**：可执行测试必须晋升到仓库常驻 `tests/` 目录（回归本体留在活套件）；
-> 归档的是证据快照——r34 曾漏晋升，已修正。
+> 归档的是证据快照——历史轮次曾漏晋升，已修正。
 | V | 白盒验证 | **确认验证结果** | 真实浏览器/机器证据、NOT-EXERCISED 如实列明 | verification 三件套 + 截图；gates/v 束 |
 | Kp | 知识收尾 | （代理收尾） | — | closeout；gates/kp 束 |
 | 归档 | 收档 | **批准归档** | 全部通过 | archive/<date>-<change>/ |
@@ -106,7 +107,8 @@ comet state next my-change     # 随时查看下一步
 
 把本次交付的 closeout 经验发布到团队知识库：
 - **Outline 通道**：API key（Outline Settings > API 创建）+ `documents.create` 发布到 collection，`published: true`，独立读回验证（`documents.export` 对比哈希）。
-- **llmwiki 通道**：写入 `~/.sdd/wiki/<项目>/wiki/concepts/<change>.md` + reindex + 读回哈希对比。
+- **llmwiki 通道**：走 MCP 正门 `mcp__llmwiki__create/edit/append` 写入 + reindex + 读回哈希对比。
+  直接 fs 写 `~/.sdd/wiki/` 会被 hooks 策略 `kb-write-protection` 拦截——这是设计而非障碍（防绕过索引）。
 
 ## 第 10 步：验收（人的最终签字）
 
@@ -137,8 +139,9 @@ comet state next my-change     # 随时查看下一步
 | Run 绑定旧版本 | 正常：升级应用后新 Run 用新版，旧 Run 绑旧包 |
 | `SCOPE_HELD` | 旧 Run 的认领未释放——取消旧 Run（带 reason）或 `acknowledge-stopped`（需 claimToken，在运行时 checkpoint 里） |
 | 分支绑定未记录 | 同上恢复命令跑一次即可 |
-| 断线重连 | `comet runtime dispatch --application <app> --request next` |
+| 断线重连 | `printf '{"operation":"next"}' > next.json && comet runtime dispatch --application <app> --request next.json --json` |
 | 写文件被 hook 拦 | 产品守卫真实生效——按拒绝信息恢复对应流程，不要绕过 |
+| 迁移 fence 报无效工作区 | 工作树残留跨 clone 旧布局 `.comet/runtime`——移出后按 recovery argv 重放；若报 RUN_NOT_FOUND 则 selection 已过期，移除 `.comet/current-change.json` 让 Hook 回中立 |
 
 ## 升级应用（要新功能/修复时）
 

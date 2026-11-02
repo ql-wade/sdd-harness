@@ -71,13 +71,16 @@
 │   ├── agent-instructions-check.sh  # 规则文件完整性 + CLAUDE.md 软链
 │   └── agent-skill-check.sh         # 必需技能存在 + 原始技能未被篡改
 ├── bin/cli.js                       # 薄 CLI：init/bootstrap + 验证工具入口
-├── lib/                             # gate/audit 程序化验证库（见 §7 保留项）
+├── lib/                             # gate/audit 程序化验证库（见 §7 保留项；现含 delivery/ 与 adapters/ 子模块）
 │   ├── generation-gate.js           # 测试清单比对（用例编写完整性）
 │   ├── probe-validator.js           # probe 行为验证（真实路径证据）
 │   ├── deliverable-audit.js         # 交付物审计
 │   ├── workflow-audit.js            # 运行状态审计
 │   └── knowledge-seed.js            # 知识源发现 + raw/ 复制
 ├── test/                            # 上述库的测试（随库保留）
+├── FRAMEWORK.md                     # 框架结构图（人类入口导读；本仓库根）
+├── CHANGELOG.md                     # 版本条目（test/version-consistency 校验）
+├── .github/workflows/               # CI：quality-gates / delivery-gate（toolchain pin 与 upstream.lock 对齐）
 ├── .mcp.json                        # MCP 注册（bootstrap 生成/合并）
 ├── mcp-capabilities.yaml            # MCP 能力清单（见 §5）
 └── .gitignore                       # git 卫生（见 §6）
@@ -205,6 +208,12 @@ mcps:
 | lib/deliverable-audit.js（交付物审计） | **保留** |
 | lib/workflow-audit.js（运行状态审计） | **保留** |
 | lib/knowledge-seed.js | **保留** — LLMWiki 集成（raw/ 复制；llmwiki-sediment 已删，ADR-0017） |
+| lib/stage-gates.js | **保留** — 阶段门验证（六门机械证据链） |
+| lib/evidence-audit.js | **保留** — 证据审计命令后端 |
+| lib/project-test-gate.js | **保留** — 项目测试门（可执行测试晋升 tests/ 的机械校验） |
+| lib/sdd-paths.js | **保留** — SDD 路径解析共享件 |
+| lib/delivery/*（evidence / gate / domain-cases / test-contract / baseline） | **保留** — 受管交付证据机（ADR-0019/0022） |
+| lib/adapters/*（comet / claude / codex host source、comet-host-ports、outline、llmwiki 等） | **保留** — 宿主与知识栈适配器（ADR-0022/0023） |
 | lib 中的 DoS 加固、symlink 跳过等防御手法 | **保留**（已在库内，check 脚本沿用同思路） |
 | test/（64 个 gate/audit 测试） | **保留**，随库走；stage 专属测试随 stage 代码删除 |
 | templates/claude/skills/sdd-*（9 个 stage skill） | 删除（工作流出局） |

@@ -16,7 +16,7 @@
 | 直接使用原版 Comet | 状态/检查/恢复复用多 | 尚未证明全部测试、知识及发布义务不可绕过 | 不能直接验收为满足 |
 | Foundation 分发 + 单一交付主控 + 检查器 | 保留积累，避免重复调度 | Comet 候选需满足 OpenSpec、验证与知识硬门禁 | 当前验证方向 |
 
-以本轮用户决策为准：TeamAI 只分发，Comet Classic 是当前唯一交付主控接入路径。固定工程过程与 OpenSpec 权威是选择 Classic 的依据；Native 仅作能力对照，不将其 Supervisor/独立验收协议计作 Classic 现成能力。方法层优先复用官方 comet-five-phase-overlay、来源解析、原生 handoff/canonical plan 和平台编译；共同判定、可信回执及收尾的实际缺口才做最小 Runtime 扩展。隔离预研与任务增量见 [overlay 接入设计](../../openspec/changes/delivery-foundation-rearchitecture/overlay-integration-design.md)。
+以本轮用户决策为准：TeamAI 只分发，Comet Classic 是当前唯一交付主控接入路径。固定工程过程与 OpenSpec 权威是选择 Classic 的依据；Native 仅作能力对照，不将其 Supervisor/独立验收协议计作 Classic 现成能力。方法层优先复用官方 comet-five-phase-overlay、来源解析、原生 handoff/canonical plan 和平台编译；共同判定、可信回执及收尾的实际缺口才做最小 Runtime 扩展。隔离预研与任务增量原见 overlay 接入设计——该文件已随 OPEN_DECISION OV_OVERLAY_CANDIDATE 回退删除（7969f62），现役设计以 [comet-ai-devops-convergence.md](comet-ai-devops-convergence.md) 为准。
 
 ## 2. 分层和唯一所有权
 
@@ -201,7 +201,7 @@ Comet 单一主控决定下一个允许执行的角色；Gate 检查契约/证�
 
 用户已确认目标后自动推进，只在关键决策或阻塞时找人；TeamAI 首期只分发。调度、阶段推进、返工和恢复只由一个 Comet Runtime 持有，Runner 只实际启动/观察进程，检查器只给判定，技能只提供方法。
 
-Classic 已有 OpenSpec 集成、任务 authority/ref 协议与可追溯 handoff；Native 有自身正式规格、候选验证及 Supervisor。当前固定 Classic，方法层先资格验证官方 overlay；不因模式差异新建第二调度器。初始证据见 [单主控审视](../../openspec/changes/delivery-foundation-rearchitecture/comet-single-controller-review.md)，后续能力修正和剩余缺口以 [overlay 接入设计](../../openspec/changes/delivery-foundation-rearchitecture/overlay-integration-design.md) 为准；旧双层推演只作历史。
+Classic 已有 OpenSpec 集成、任务 authority/ref 协议与可追溯 handoff；Native 有自身正式规格、候选验证及 Supervisor。当前固定 Classic，方法层先资格验证官方 overlay；不因模式差异新建第二调度器。初始证据见 [单主控审视](../../openspec/changes/delivery-foundation-rearchitecture/comet-single-controller-review.md)，后续能力修正和剩余缺口原以 overlay 接入设计为准——该文件已随 OPEN_DECISION OV_OVERLAY_CANDIDATE 回退删除（7969f62），现役设计见 [comet-ai-devops-convergence.md](comet-ai-devops-convergence.md)；旧双层推演只作历史。
 
 知识检查、Whitebox/测试作者的受控接入、强制检查集合、跳过入口和自动授权策略仍需实证。不能仅添加提示词或一个成功命令就声称硬门禁成立。适配器不保存第二套 current-stage；若上游缺强制扩展点，需要单独评审最小扩展，不能伪装为已可配置。
 

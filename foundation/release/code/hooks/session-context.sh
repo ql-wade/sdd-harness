@@ -2,6 +2,8 @@
 # SessionStart hook — 注入项目上下文（stdout 进 agent 上下文）
 # 内容：规则入口提醒 + ADR 索引 + 验证入口。保持轻量，不做重活。
 
+set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/_resolve-project-dir.sh"
 
@@ -24,7 +26,7 @@ fi
 # 变更工件入口
 if [ -d "$ROOT/openspec/changes" ]; then
   n=$(find "$ROOT/openspec/changes" -maxdepth 1 -type d ! -path "$ROOT/openspec/changes" ! -name "archive" 2>/dev/null | wc -l | tr -d ' ')
-  [ "$n" != "0" ] && lines+=("🔄 活跃 OpenSpec changes：${n} 个（openspec/changes/）")
+  if [ "$n" != "0" ]; then lines+=("🔄 活跃 OpenSpec changes：${n} 个（openspec/changes/）"); fi
 fi
 
 lines+=("✅ 提交前验证：bash scripts/check.sh")

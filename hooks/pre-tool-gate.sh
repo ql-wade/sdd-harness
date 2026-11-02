@@ -7,6 +7,8 @@
 #
 # stdin JSON: {tool_name, tool_input:{file_path|notebook_path|command, ...}}
 
+set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OLDIFS="${IFS:-}"
 source "${SCRIPT_DIR}/_resolve-project-dir.sh"
@@ -16,9 +18,11 @@ if [ -f "$COMPILED" ]; then
   # shellcheck disable=SC1090
   source "$COMPILED"
 else
-  # 无编译产物时用内置默认（与 hooks.yaml 保持一致）
-  KB_PROTECT_PATHS="llmwiki/wiki/"
-  DENY_PATTERNS="git push --force|git push -f |git reset --hard|rm -rf /|DROP TABLE|DROP DATABASE"
+  # 无编译产物时用内置默认——必须与 hooks.yaml 逐字同步，
+  # 漂移由 test/adapter-quoting.test.js「fallback defaults stay in lockstep」拦截。
+  KB_PROTECT_PATHS=".sdd/wiki/:llmwiki/wiki/"
+  DENY_KB_MESSAGE="直接写知识库 wiki/ 会绕过索引（SQLite+FTS），必须走 mcp__llmwiki__create / edit / append"
+  DENY_PATTERNS="git push --force|git push -f|git reset --hard|rm -rf /|DROP TABLE|DROP DATABASE"
   DENY_MESSAGE="破坏性命令在团队禁入清单，确需执行请人工操作"
 fi
 
@@ -47,7 +51,7 @@ case "$TOOL_NAME" in
       OLDIFS="$IFS"; IFS=":"
       for prefix in $KB_PROTECT_PATHS; do
         IFS="$OLDIFS"
-        [ -z "$prefix" ] && continue
+        if [ -z "$prefix" ]; then continue; fi
         if [[ "$TARGET_PATH" == *"$prefix"* ]]; then
           echo "❌ 禁止直接写入 ${prefix}*：${DENY_KB_MESSAGE:-直接写 wiki 会绕过索引，必须走 mcp__llmwiki__create / edit / append}" >&2
           exit 2
@@ -63,7 +67,7 @@ case "$TOOL_NAME" in
       IFS="|"
       for pattern in $DENY_PATTERNS; do
         IFS="|"
-        [ -z "$pattern" ] && continue
+        if [ -z "$pattern" ]; then continue; fi
         if [[ "$COMMAND" == *"$pattern"* ]]; then
           echo "❌ 禁止执行「${pattern}」：${DENY_MESSAGE}（hooks.yaml dangerous-command-blocklist）" >&2
           exit 2
