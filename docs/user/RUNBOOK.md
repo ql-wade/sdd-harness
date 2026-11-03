@@ -103,10 +103,12 @@ outcome sweep 重准录先前门时 FORGED_COLLECTION 卡死整个 Run（r3 实�
 > `node tools/gate-bundle.mjs --project "$PWD" --gate A --verdict revise-requirements \
 >   --action my-change:N --claim <claim.json> --reason "consensus revisions"`。
 > **已过扩展门之后需要修订**（如 build 相位 claim 被 sweep 拒，r6 实证）——走 workflow 命令门，
-> 无需在手动作：`node tools/gate-bundle.mjs --project "$PWD" --gate A --verdict \
->   revise-requirements --claim <claim.json>` 产出 dispatch-command 请求文件 →
+> 无需在手动作（命令与步骤由运行时在应用构造时程序化添加，静态 workflow.json 看不到属正常）：
+> `node tools/gate-bundle.mjs --project "$PWD" --gate A --verdict \
+>   revise-requirements --claim <claim.json> --reason "consensus-approved design revisions"` 产出请求文件 →
 > `comet runtime dispatch --application sdd-managed-delivery --project-root "$PWD" \
 >   --request .sdd/delivery/gates/a-revise-command.json --json`。
+> **input 必须携带非空 reason**（命令校验器要求，null 直接拒）。
 > 单次循环内 evidence 提交后 design.md 仍冻结——要改就走 revise 重放，**不要手工碰哈希**：
 > `revise-design`（app-owned 被组合检查拒）、`invalidate-evidence`（已解决等待不可作废）、
 > 重交同哈希 outcome（永久拒）三条手工路径确认死路（r4 实证）。
