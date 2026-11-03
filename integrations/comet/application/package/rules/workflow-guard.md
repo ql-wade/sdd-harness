@@ -1,6 +1,6 @@
 # sdd-managed-delivery 应用规则
 
-固定应用 sdd-managed-delivery@27；Runtime 0.5.1；基础流程 classic-full。Skill 入口与 Runtime 属于同一应用，SDK Run 是进度、执行尝试、批准与恢复的唯一依据。
+固定应用 sdd-managed-delivery@28；Runtime 0.5.1；基础流程 classic-full。Skill 入口与 Runtime 属于同一应用，SDK Run 是进度、执行尝试、批准与恢复的唯一依据。
 
 ## 当前工作与批准
 

@@ -25,7 +25,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { createLaunchAuthority, envelopeDigest } from './lib-delivery-evidence.mjs';
-import { compileDomainCases } from './lib-delivery-domain_cases.mjs';
+import { compileDomainCases, mergeDomainCaseConfigs } from './lib-delivery-domain_cases.mjs';
 import {
   readCodexClaimedTest,
   readCodexCommandEvent,
@@ -158,18 +158,85 @@ export function createProtectedHostPorts({ context, readers } = {}) {
         const override = latched.run.input?.domainCases;
         const caseFile = override && typeof override.cases === 'string' ? override.cases : `${changeDir}/tests/domain-cases.md`;
         const configFile = override && typeof override.config === 'string' ? override.config : `${changeDir}/tests/domain-cases.config.json`;
+        // Archive fallback (same shape as the authority-record lookup below):
+        // the classic archive executor moves the change dir BEFORE the
+        // post-move sweep revalidates the recorded V pass, so the projection
+        // recompute must read the archived copy of the change's own sources
+        // when the live dir is gone. Only the canonical changeDir prefix is
+        // remapped (archive-annotation semantics); run-input overrides are
+        // taken as-is, and config.basis entries under the change dir are
+        // remapped alongside so basis digests keep matching.
+        const archivedVariant = (relative) => {
+          if (!relative.startsWith(`${changeDir}/`)) return null;
+          const archiveRoot = path.join(context.projectRoot, 'openspec', 'changes', 'archive');
+          let dated = [];
+          try { dated = fs.readdirSync(archiveRoot).filter((name) => name.endsWith(`-${latched.run.runId}`)); } catch { dated = []; }
+          for (const name of dated) {
+            const candidate = `openspec/changes/archive/${name}/${relative.slice(changeDir.length + 1)}`;
+            if (fs.existsSync(path.join(context.projectRoot, candidate))) return candidate;
+          }
+          return null;
+        };
+        const resolveProjectRelative = (relative) => {
+          if (fs.existsSync(path.join(context.projectRoot, relative))) return relative;
+          if (latched.run.state?.phase === 'archive') return archivedVariant(relative) ?? relative;
+          return relative;
+        };
         // (a) Recompute the projection from the change's own sources.
         let projection;
         try {
-          const configBytes = fs.readFileSync(path.join(context.projectRoot, configFile));
-          const config = JSON.parse(configBytes.toString('utf8'));
-          projection = compileDomainCases({ projectRoot: context.projectRoot, caseFile, config });
+          const caseFileResolved = resolveProjectRelative(caseFile);
+          const configFileResolved = resolveProjectRelative(configFile);
+          const configBytes = fs.readFileSync(path.join(context.projectRoot, configFileResolved));
+          const changeLevel = JSON.parse(configBytes.toString('utf8'));
+          if (configFileResolved !== configFile && Array.isArray(changeLevel.basis)) {
+            changeLevel.basis = changeLevel.basis.map((item) => {
+              if (typeof item.path !== 'string' || !item.path.startsWith(`${changeDir}/`)) return item;
+              const remapped = archivedVariant(item.path);
+              return remapped ? { ...item, path: remapped } : item;
+            });
+          }
+          // Two-layer merge (proposal v2.5 §1): the library-level ① config
+          // (tests/domain-cases/domain-cases.config.json — F-ID requirement
+          // basis + Journey dimensions) is the base; the change-level ② read
+          // above overrides same-name keys and unions basis by id. ① is
+          // project-level and never archived, so it needs no remap; a missing
+          // ① falls back to ② alone (pre-two-layer changes stay valid).
+          const libraryConfigPath = path.join(context.projectRoot, 'tests', 'domain-cases', 'domain-cases.config.json');
+          const libraryConfig = fs.existsSync(libraryConfigPath)
+            ? JSON.parse(fs.readFileSync(libraryConfigPath, 'utf8')) : null;
+          const config = mergeDomainCaseConfigs(libraryConfig, changeLevel);
+          projection = compileDomainCases({ projectRoot: context.projectRoot, caseFile: caseFileResolved, config });
         } catch (error) {
           return refusedPromotion(`the change's Markdown projection is not computable: ${String(error?.message ?? error).slice(0, 200)}`);
         }
         const contract = projection.testContract;
         if (!contract) return refusedPromotion('the projection has no runnable TestContract');
-        const contractDigest = envelopeDigest(contract);
+        // Archive-move path normalization: after the change dir is moved, the
+        // recompute reads from the archived copy and embeds archive-prefixed
+        // paths in the projection. The recorded contract (computed pre-move)
+        // embedded live-relative paths. Normalize the archived layout back to
+        // the live layout (inverse of the upstream archive-annotation mapping,
+        // restricted to this Run's own archive dir) so CONTENT equality — not
+        // layout — decides the re-validation.
+        let normalizedContract = contract;
+        if (latched.run.state?.phase === 'archive') {
+          const normalizedPack = structuredClone(projection.testPack);
+          for (const item of normalizedPack.basis) {
+            if (typeof item.path !== 'string' || !item.path.startsWith('openspec/changes/archive/')) continue;
+            const rest = item.path.slice('openspec/changes/archive/'.length);
+            const slash = rest.indexOf('/');
+            // 本 Run 自己的归档目录（<date>-<runId>）内的路径回映射为活布局；
+            // 其他 Run 的归档条目不属于本 Run，保留原样。
+            if (slash > 0 && rest.slice(0, slash).endsWith(`-${latched.run.runId}`)) {
+              item.path = `${changeDir}/${rest.slice(slash + 1)}`;
+            }
+          }
+          normalizedContract = structuredClone(contract);
+          const packEntry = normalizedContract.dependencyBaselines?.find(entry => entry?.kind === 'domain-cases/v1:testpack');
+          if (packEntry) packEntry.digest = envelopeDigest(normalizedPack);
+        }
+        const contractDigest = envelopeDigest(normalizedContract);
         if (!inputs.testContract || typeof inputs.testContract !== 'object' || envelopeDigest(inputs.testContract) !== contractDigest) {
           return refusedPromotion('the claimed test contract differs from the change source');
         }
