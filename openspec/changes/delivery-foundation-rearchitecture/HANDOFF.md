@@ -114,3 +114,16 @@ RUNBOOK 补两条修订门（扩展动作在手录 verdict / 已过扩展门走�
 上游定性修正：非「缺能力缺口」——重放机制上游原生支持；缺的是错误信息到操作面的
 文档桥（本轮已固化）。上游三项改进请求维持登记（体验优化）。
 r6 处置：执行 revise 命令重放（R/A/T 束可按 entries 快速复验，consensus 3/3 复核即过）。
+
+## 2026-11-03（第八批）：r6 救回实验结论——failed-terminal 无复活通道（终态语义实锤）
+
+实例按修正配方执行命令门实验（a88cf46 工具 + 非空 reason + expectedRevision 实时刷新）：
+dispatch-command revise-requirements → RUN_TERMINAL（已停止的 Run 不能接受命令）。
+结论实锤：命令门只救「运行中 + sweep 拒绝」的 Run；failed-terminal Run 的三门
+（retry=OUTCOME_ALREADY_RECORDED / invalidate-evidence=EVIDENCE_WAIT_RESOLVED /
+revise=RUN_TERMINAL）全封，无复活通道——这是终态语义设计而非缺陷。
+处置：r6 弃 Run 保留证据链；r7 已按 evidence-last 正序重启（共识先于 Run 启动，
+2/3 PASS 对抗席出票中）。方案 a 管线（build 守卫豁免的运行时补丁）**建议不启动**：
+evidence-last 纪律已把该拒绝类整体前置消除，补丁会松动有连贯设计依据的冻结语义；
+上游 UX 请求（错误信息附 dispatch-command argv）维持登记。RUNBOOK 陷阱表补
+RUN_TERMINAL 终态行。
