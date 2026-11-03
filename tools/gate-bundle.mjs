@@ -85,7 +85,7 @@ export function readRunView(claimRaw, actionId) {
 }
 
 function parseArgv(argv) {
-  const opts = { gate: null, action: null, claim: null, openEvidence: null, args: null, project: process.cwd(), cometRoot: null, checkOnly: false, verdict: null, reason: null };
+  const opts = { gate: null, action: null, claim: null, openEvidence: null, args: null, project: process.cwd(), cometRoot: null, checkOnly: false, verdict: null, reason: null, planBundle: null, testContract: null };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     if (k === '--gate') opts.gate = argv[++i];
@@ -98,6 +98,8 @@ function parseArgv(argv) {
     else if (k === '--check-only') opts.checkOnly = true;
     else if (k === '--verdict') opts.verdict = argv[++i];
     else if (k === '--reason') opts.reason = argv[++i];
+    else if (k === '--plan-bundle') opts.planBundle = argv[++i];
+    else if (k === '--test-contract') opts.testContract = argv[++i];
     else if (k === '--help' || k === '-h') opts.help = true;
   }
   return opts;
@@ -194,6 +196,22 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
     environmentDigest: dispatch.actionBinding.environmentDigest,
   };
   const envelopeDigest0 = envelopeDigest(envelope);
+  // P 门充分性绑定：independentReview.claude 须携带 change/planDigest/tasksDigest/dagDigest
+  // （gate.js planGate 复检，:245；planDigest=envelopeDigest(planBundle)，tasks/dag=文件 sha256）。
+  // 先算绑定值（source 构造早于 inputs 声明）；planSources 在 inputs 处挂载。r7 P 门实证形状。
+  let planReviewBinding = {};
+  let planBundleParsed = null;
+  if (opts.planBundle) {
+    if (!existsSync(opts.planBundle)) throw new Error(`--plan-bundle 文件不存在: ${opts.planBundle}`);
+    planBundleParsed = JSON.parse(readFileSync(opts.planBundle, 'utf8'));
+    const changeDirRel = `openspec/changes/${runId}`;
+    planReviewBinding = {
+      change: runId,
+      planDigest: envelopeDigest(planBundleParsed),
+      tasksDigest: sha256(readFileSync(path.join(opts.project, changeDirRel, 'tasks.md'))),
+      dagDigest: sha256(readFileSync(path.join(opts.project, changeDirRel, 'task-dag.json'))),
+    };
+  }
   const qualification = {
     id: check, sourceId: 'claude-code-subagent', revision: String(cur.revision),
     scope: 'protected-source', status: 'qualified', expiresAt: new Date(clock() + 86400_000).toISOString(),
@@ -207,6 +225,7 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
       kind: reviewKind, envelopeDigest: envelopeDigest0,
       reportDigest: binding.reportDigest, actionDigest: binding.actionDigest,
       evidenceDigest: sha256(reviewerBytes),
+      ...planReviewBinding,
     } },
     facts: { principal: A.reviewerId, ...binding,
       observations: [{ caseId, check, command: `independent read-only review (claude subagent transcript) of ${check}`, result: 'pass', executions: { total: 1, valid: 1 } }] },
@@ -259,12 +278,27 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
 
   const ports = createProtectedHostPorts({ context: { identity: { contentHash: identity.contentHash, runtimeVersion: identity.runtimeVersion }, projectRoot: opts.project } });
   const inputs = { inputDigest, builderExecution };
+  // 按门实证形状（r7 P 门拒绝信息回流）：P 门要求 inputs.planBundle（SDD.Delivery.PlanBundle，
+  // schemaVersion 必填）+ inputs.planSources（tasks/dag 绑定）；T 门可带 inputs.testContract。
+  if (planBundleParsed) {
+    inputs.planBundle = planBundleParsed;
+    const changeDirRel = `openspec/changes/${runId}`;
+    inputs.planSources = {
+      tasks: { ref: `${changeDirRel}/tasks.md`, digest: planReviewBinding.tasksDigest },
+      dag: { ref: `${changeDirRel}/task-dag.json`, digest: planReviewBinding.dagDigest },
+    };
+  }
+  if (opts.testContract) {
+    if (!existsSync(opts.testContract)) throw new Error(`--test-contract 文件不存在: ${opts.testContract}`);
+    inputs.testContract = JSON.parse(readFileSync(opts.testContract, 'utf8'));
+  }
   const runInput = action.input?.input ?? action.input;
   const gateOk = ports.verifyGateInputs({ run: { runId, input: runInput, state: { phase: cur.phase ?? 'open' }, actions: cur.actions }, action, gate: opts.gate, inputs, policy });
   if (!gateOk) throw new Error('gate inputs refused——claim/run 形状与当前门不符（核对 claim 是否来自带 session-id 的 claim、input 是否为 Run 平铺 input）');
 
   const verdict = evaluate(inputs, [entry], policy, {
     requireManaged: true, currentGate: opts.gate, currentRunId: runId,
+    currentChange: runId, currentChangeDir: `openspec/changes/${runId}`,
     admissionOptionsFor: ports.admissionOptionsFor, verifyReview: ports.verifyReview,
   });
   if (verdict.verdict !== 'pass') {
