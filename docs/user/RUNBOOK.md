@@ -182,6 +182,7 @@ outcome sweep 重准录先前门时 FORGED_COLLECTION 卡死整个 Run（r3 实�
 | `changed a Runtime-owned field` | comet-state.yaml 与 Run 状态不一致（手工编辑或 init 遗留）。仅 language/contextCompression/autoTransition/reviewMode 四字段允许用户改；其余一律以 Run 为准——应用在跑时删掉 YAML 会由 store 自愈重建，手工对齐追不平 |
 | `command not found: comet` | comet 装在某个特定 nvm 版本的 global bin，锚定「最新 v2x」不保证命中。锚定后先 `command -v comet` 验证；失败则把装了 comet 的那个 bin 加入 PATH |
 | 审批点输入了别的词被中止 | 仅驱动器退出，Run 状态与已记录批准不受影响；重跑同一命令续跑（确认词接受 approved / 同意 / y / yes） |
+| `RUN_TERMINAL: 已停止的 Run 不能接受命令` | 该 Run 已 failed-terminal（如 sweep 拒绝把 attempt 打入终态）——**无任何复活通道**（retry/invalidate-evidence/revise 命令三门全封，r6 实证）。唯一出路：弃 Run 保留证据链，按 RUNBOOK 重跑。预防：修订做在 evidence 提交之前（evidence-last）；旅程中改动用上面的 revise 命令门（仅对未终态 Run 有效） |
 | 换了 `COMET_DATA_DIR` 后 Run「不见了」 | Run 状态按 workspace 哈希存在数据根下——同一旅程从头到尾固定同一个值；换根 = 换了一套 Run 记录。迁回旧根即可找回 |
 
 ## 沙箱化 agent（默认沙箱只授权项目目录）
