@@ -144,6 +144,10 @@ export async function buildTConstructionEvidence({ project, runId, testContractP
   const config1Path = path.join(project, 'tests/domain-cases/domain-cases.config.json');
   const config1 = existsSync(config1Path) ? JSON.parse(readFileSync(config1Path, 'utf8')) : null;
   const merged = mergeDomainCaseConfigs(config1, config2);
+  // 复刻 CLI 投影装配（compile-domain-cases.mjs 向 config.basis 注入 DOMAIN-CONFIG 绑定
+  // ② config 字节）——不同步注入则盘上 pack 恒多一条 DOMAIN-CONFIG，(b) 深比较永拒，
+  // RUNBOOK ②→③ 文档链断裂（四轮独立验证 finding 2）。
+  merged.basis.push({ id: 'DOMAIN-CONFIG', kind: 'source', path: config2Rel });
   if (!existsSync(path.join(project, caseFile))) {
     throw new Error(`T 构造期复验：cases 缺席（${caseFile}）`);
   }
@@ -200,6 +204,22 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
   if (opts.gate === 'T' && !opts.testContract) throw new Error('T 门构造必须带 --test-contract（T 必填缺件拒，AC-2）');
   if (opts.gate !== 'T' && opts.testContract) throw new Error(`--test-contract 仅 T 门接受（旗标-门矩阵：${opts.gate} 传入即拒，拒收落在构造期）`);
   if (opts.gate === 'T' && !existsSync(opts.testContract)) throw new Error(`--test-contract 文件不存在: ${opts.testContract}`);
+  // V/Kp 契约来源 = T 快照链同源重构（proposal §2 矩阵 V/Kp 行：gate.js:72 对非 R/A/P 门
+  // 无条件 parse inputs.testContract，缺失即 INVALID_TEST_CONTRACT——快照缺席/畸形必须在
+  // 构造期响亮拒绝，不得静默跳过、不得让 Run 卡死在 evaluate）。四轮独立验证 finding 1/4/5。
+  let vkContract = null;
+  if (opts.gate === 'V' || opts.gate === 'Kp') {
+    const vkSnapshotPath = path.join(opts.project, '.sdd/delivery/gates/t/test-contract.snapshot.json');
+    if (!existsSync(vkSnapshotPath)) {
+      throw new Error('V/Kp 构造必须已有 T 门契约快照（T 快照链同源重构）：.sdd/delivery/gates/t/test-contract.snapshot.json 缺席——先完成 T 门构造');
+    }
+    try { vkContract = JSON.parse(readFileSync(vkSnapshotPath, 'utf8')); } catch (error) {
+      throw new Error(`T 契约快照不可解析（${vkSnapshotPath}）：${error.message}`);
+    }
+    if (!vkContract || typeof vkContract !== 'object' || Array.isArray(vkContract)) {
+      throw new Error(`T 契约快照形状不符（必须是 JSON 对象）：${vkSnapshotPath}`);
+    }
+  }
   for (const [key, file] of [['claim', opts.claim], ['args', opts.args], ['open-evidence', opts.openEvidence]]) {
     if (!file) throw new Error(`缺少 --${key}`);
     if (!existsSync(file)) throw new Error(`--${key} 文件不存在: ${file}`);
@@ -462,6 +482,8 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
   if (opts.testContract) {
     if (!existsSync(opts.testContract)) throw new Error(`--test-contract 文件不存在: ${opts.testContract}`);
     inputs.testContract = tConstruction ? tConstruction.contractParsed : JSON.parse(readFileSync(opts.testContract, 'utf8'));
+  } else if (vkContract) {
+    inputs.testContract = vkContract;
   }
   const runInput = action.input?.input ?? action.input;
   const gateOk = ports.verifyGateInputs({ run: { runId, input: runInput, state: { phase: cur.phase ?? 'open' }, actions: cur.actions }, action, gate: opts.gate, inputs, policy });

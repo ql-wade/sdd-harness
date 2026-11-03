@@ -189,13 +189,6 @@ export function createProtectedHostPorts({ context, readers } = {}) {
           const configFileResolved = resolveProjectRelative(configFile);
           const configBytes = fs.readFileSync(path.join(context.projectRoot, configFileResolved));
           const changeLevel = JSON.parse(configBytes.toString('utf8'));
-          if (configFileResolved !== configFile && Array.isArray(changeLevel.basis)) {
-            changeLevel.basis = changeLevel.basis.map((item) => {
-              if (typeof item.path !== 'string' || !item.path.startsWith(`${changeDir}/`)) return item;
-              const remapped = archivedVariant(item.path);
-              return remapped ? { ...item, path: remapped } : item;
-            });
-          }
           // Two-layer merge (proposal v2.5 §1): the library-level ① config
           // (tests/domain-cases/domain-cases.config.json — F-ID requirement
           // basis + Journey dimensions) is the base; the change-level ② read
@@ -206,6 +199,22 @@ export function createProtectedHostPorts({ context, readers } = {}) {
           const libraryConfig = fs.existsSync(libraryConfigPath)
             ? JSON.parse(fs.readFileSync(libraryConfigPath, 'utf8')) : null;
           const config = mergeDomainCaseConfigs(libraryConfig, changeLevel);
+          // Canonical projection convention: ② artifacts are CLI-produced, and the
+          // CLI binds the ② config bytes by injecting DOMAIN-CONFIG into basis
+          // (compile-domain-cases.mjs). The recompute must replicate the same
+          // assembly or every CLI-projected change would drift the deep-compare.
+          config.basis.push({ id: 'DOMAIN-CONFIG', kind: 'source', path: configFile });
+          if (configFileResolved !== configFile && Array.isArray(config.basis)) {
+            // Archive-move layout: the recorded contract embedded live-relative
+            // paths; the recompute reads the archived copy — remap every
+            // changeDir-prefixed basis path (including the injected
+            // DOMAIN-CONFIG) to the archived variant so digests keep matching.
+            config.basis = config.basis.map((item) => {
+              if (typeof item.path !== 'string' || !item.path.startsWith(`${changeDir}/`)) return item;
+              const remapped = archivedVariant(item.path);
+              return remapped ? { ...item, path: remapped } : item;
+            });
+          }
           projection = compileDomainCases({ projectRoot: context.projectRoot, caseFile: caseFileResolved, config });
         } catch (error) {
           return refusedPromotion(`the change's Markdown projection is not computable: ${String(error?.message ?? error).slice(0, 200)}`);
