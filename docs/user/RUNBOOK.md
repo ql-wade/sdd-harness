@@ -64,7 +64,7 @@ $EDITOR openspec/changes/my-change/proposal.md
 ```
 写清：**Why**（为什么做）、**What Changes**（做什么）、**非目标**（明确不做什么）、
 **验收**（怎么算完成）。写得越具体，后面五道门越顺。
-**跳过的后果**：R 门（需求确认）会因为你自己的确认与文件不符而拒绝。
+**跳过的后果**：需求确认门（R）会因为你自己的确认与文件不符而拒绝。
 
 ## 第 3 步：起 Run（通知质检经理开工）
 
@@ -94,7 +94,7 @@ record-outcome 载荷再提交。前提：claim 必须来自带 `--session-id`�
 entries**（每门一条 secret，工具自动保留前面门的条目）——手工覆盖成单条目会让
 outcome sweep 重准录先前门时 FORGED_COLLECTION 卡死整个 Run（r3 实证，别手改）。
 
-> **P 门配方（r7 实证）**：构造加 `--plan-bundle <planBundle.json>`（SDD.Delivery.PlanBundle，
+> **构建计划门（P）配方（r7 实证）**：构造加 `--plan-bundle <planBundle.json>`（SDD.Delivery.PlanBundle，
 > schemaVersion 必填）——inputs 自动挂 planSources（tasks/dag 绑定），评审绑定自动携带
 > change/planDigest/tasksDigest/dagDigest（planGate 复检项）。canonical 计划契约：plan 单标记
 > `comet-task-authority` + 0 复选框 + 每 task `comet-task-ref`；tasks.md 每个 checkbox 须
@@ -103,7 +103,7 @@ outcome sweep 重准录先前门时 FORGED_COLLECTION 卡死整个 Run（r3 实�
 > **评审者转录锚定**：必须在 `~/.claude/projects/` 下且名为 `<id>.jsonl` 或 `agent-<id>.jsonl`
 > （其他位置不被佐证）。宿主转录任意大小可佐证（流式扫描，无大小上限）。
 
-> **门内修订的通用机制（每个门内建，R/A 实证）**：workflow 契约里每个扩展门的
+> **门内修订的通用机制（每个门内建，需求确认/架构共识实证）**：workflow 契约里每个扩展门的
 > verdict 词汇都是 `pass / repair / revise-requirements`。录
 > `verdict:'revise-requirements'` → 运行时重置 designDoc/plan/handoffContext +
 > phase:open → **同一 Run 从 composition.prepare 全旅程重放**（classic-application.js:386-404），
@@ -123,22 +123,22 @@ outcome sweep 重准录先前门时 FORGED_COLLECTION 卡死整个 Run（r3 实�
 > 重交同哈希 outcome（永久拒）三条手工路径确认死路（r4 实证）。
 > 你只需要在弹出等待时做决策：
 
-| 门 | 阶段 | 你的决策 | 你批准什么 | 交付物（阶段结束时的文件） |
+| 门（代号） | 阶段 | 你的决策 | 你批准什么 | 交付物（阶段结束时的文件） |
 | --- | --- | --- | --- | --- |
-| R | 需求确认 | **批准需求** | proposal 内容与你的意图一致 | gates/r 收据束；需求冻结 |
-| A | 架构共识 | **批准设计** | 技术方案经多方评审一致 | design.md；gates/a 束 |
-| T | 测试设计 | **批准测试设计** | 先于实现定义"怎么算对" | tests/test-contract.json；gates/t 束 |
+| 需求确认（R） | 需求确认 | **批准需求** | proposal 内容与你的意图一致 | gates/r 收据束；需求冻结 |
+| 架构共识（A） | 架构共识 | **批准设计** | 技术方案经多方评审一致 | design.md；gates/a 束 |
+| 测试设计（T） | 测试设计 | **批准测试设计** | 先于实现定义"怎么算对" | tests/test-contract.json；gates/t 束 |
 
-> **T 门硬规则（升级版 test-authoring v1.1.0）**：用例先经 test-authoring 写入
+> **测试设计门（T）硬规则（升级版 test-authoring v1.1.0）**：用例先经 test-authoring 写入
 > **domain-cases 用例库**（稳定 Case ID，跨变更维护）→ 投影 TestPack v1 → 门禁绑定。
 > 直接手写契约 = 流程缺口（试点轮次实证未走库，已修正）。
-| P | 构建计划 | **批准计划** | 任务 DAG/顺序合理 | task-dag.json；gates/p 束 |
-| Build | 实现 | （代理干活） | — | 实现代码 + 测试原始日志 |
+| 构建计划（P） | 构建计划 | **批准计划** | 任务 DAG/顺序合理 | task-dag.json；gates/p 束 |
+| 实现阶段 | 实现 | （代理干活） | — | 实现代码 + 测试原始日志 |
 
 > **Build 硬规则**：可执行测试必须晋升到仓库常驻 `tests/` 目录（回归本体留在活套件）；
 > 归档的是证据快照——历史轮次曾漏晋升，已修正。
-| V | 白盒验证 | **确认验证结果** | 真实浏览器/机器证据、NOT-EXERCISED 如实列明 | verification 三件套 + 截图；gates/v 束 |
-| Kp | 知识收尾 | （代理收尾） | — | closeout；gates/kp 束 |
+| 白盒验证（V） | 白盒验证 | **确认验证结果** | 真实浏览器/机器证据、NOT-EXERCISED 如实列明 | verification 三件套 + 截图；gates/v 束 |
+| 知识收尾（Kp） | 知识收尾 | （代理收尾） | — | closeout；gates/kp 束 |
 | 归档 | 收档 | **批准归档** | 全部通过 | archive/<date>-<change>/ |
 
 **费曼提醒**：为什么每门都要"独立评审"？——写菜谱的人不能自己试菜。门禁强制
@@ -173,7 +173,7 @@ outcome sweep 重准录先前门时 FORGED_COLLECTION 卡死整个 Run（r3 实�
 | V | verification 三件套、截图 | gates/v | 验证确认 |
 | Kp | closeout | gates/kp | — |
 | Archive | archive/<date>-<change>/ | — | 归档确认 |
-| Kt | — | — | Outline/知识库授权 |
+| 知识发布（Kt） | — | — | Outline/知识库授权 |
 
 ## 出问题怎么办（实证陷阱速查）
 

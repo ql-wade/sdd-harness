@@ -42,6 +42,12 @@ import { evaluate } from '../lib/delivery/gate.js';
 import { createProtectedHostPorts } from '../lib/adapters/comet-host-ports.js';
 
 const sha256 = (d) => createHash('sha256').update(d).digest('hex');
+// 门名中文别名——--gate 参数接受人读名称或字母代号，内部统一映射为字母。
+const GATE_ALIAS = {
+  '需求确认': 'R', '架构共识': 'A', '测试设计': 'T',
+  '构建计划': 'P', '白盒验证': 'V', '知识收尾': 'Kp',
+};
+const canonicalGate = (gate) => GATE_ALIAS[gate] ?? gate;
 const canonicalize = (v) => Array.isArray(v) ? v.map(canonicalize) : (v !== null && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonicalize(v[k])])) : v);
 const canonicalJson = (v) => JSON.stringify(canonicalize(v));
 
@@ -89,7 +95,7 @@ function parseArgv(argv) {
   const opts = { gate: null, action: null, claim: null, openEvidence: null, args: null, project: process.cwd(), cometRoot: null, checkOnly: false, verdict: null, reason: null, planBundle: null, testContract: null };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
-    if (k === '--gate') opts.gate = argv[++i];
+    if (k === '--gate') opts.gate = canonicalGate(argv[++i]);
     else if (k === '--action') opts.action = argv[++i];
     else if (k === '--claim') opts.claim = argv[++i];
     else if (k === '--open-evidence') opts.openEvidence = argv[++i];
@@ -107,7 +113,7 @@ function parseArgv(argv) {
 }
 
 export async function buildGateBundle(opts, { now = () => new Date().toISOString(), clock = Date.now } = {}) {
-  const defaults = GATE_DEFAULTS[opts.gate];
+  const defaults = GATE_DEFAULTS[canonicalGate(opts.gate)];
   if (!defaults) throw new Error(`--gate 必须是 ${Object.keys(GATE_DEFAULTS).join('/')} 之一`);
   for (const [key, file] of [['claim', opts.claim], ['args', opts.args], ['open-evidence', opts.openEvidence]]) {
     if (!file) throw new Error(`缺少 --${key}`);
